@@ -282,6 +282,21 @@ void cpu_thread::operator()()
 		thread_ctrl::set_native_priority(-1);
 	}
 
+	if (id_type() == 2)
+	{
+		// force input/output denormals to zero for SPU threads (FTZ/DAZ)
+		_mm_setcsr( _mm_getcsr() | 0x8040 );
+
+		const volatile int a = 0x1fc00000;
+		__m128 b = _mm_castsi128_ps(_mm_set1_epi32(a));
+		int c = _mm_cvtsi128_si32(_mm_castps_si128(_mm_mul_ps(b,b)));
+
+		if (c != 0)
+		{
+			LOG_FATAL(GENERAL,"could not disable denormals");
+		}
+	}
+
 	if (id_type() == 1 && false)
 	{
 		g_fxo->get<cpu_profiler>()->registered.push(id);
@@ -343,10 +358,6 @@ void cpu_thread::operator()()
 			try
 			{
 				cpu_task();
-			}
-			catch (cpu_flag _s)
-			{
-				state += _s;
 			}
 			catch (const std::exception& e)
 			{

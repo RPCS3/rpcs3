@@ -564,7 +564,7 @@ namespace rsx
 				entries.push_back(tmp);
 			}
 
-			if ((entry_count = (u32)entries.size()) <= 2)
+			if ((entry_count = ::size32(entries)) <= 2)
 				return;
 
 			root.rewind();
@@ -611,7 +611,7 @@ namespace rsx
 				}
 				f.read<u8>(bytes, f.size());
 
-				auto entry = unpack(*(pipeline_data*)bytes.data());
+				auto entry = unpack(*reinterpret_cast<pipeline_data*>(bytes.data()));
 				m_storage.preload_programs(std::get<1>(entry), std::get<2>(entry));
 				unpacked.push_back(entry);
 
@@ -780,7 +780,7 @@ namespace rsx
 			RSXFragmentProgram fp = {};
 			fragment_program_data[program_hash] = data;
 			fp.addr = fragment_program_data[program_hash].data();
-			fp.ucode_length = (u32)data.size();
+			fp.ucode_length = ::size32(data);
 
 			return fp;
 		}
@@ -849,7 +849,7 @@ namespace rsx
 				{
 					for (auto &address : vp.jump_table)
 					{
-						data_block.vp_jump_table[index++] = (u16)address;
+						data_block.vp_jump_table[index++] = static_cast<u16>(address);
 					}
 				}
 				else

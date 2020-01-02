@@ -44,6 +44,14 @@ void progress_dialog::SetValue(int progress)
 	QProgressDialog::setValue(value);
 }
 
+void progress_dialog::SignalFailure()
+{
+#ifdef _WIN32
+	m_tb_progress->stop();
+#endif
+	// TODO: Implement an equivalent for Linux, if possible
+}
+
 #ifdef HAVE_QTDBUS
 void progress_dialog::UpdateProgress(int progress, bool disable)
 {
@@ -57,7 +65,7 @@ void progress_dialog::UpdateProgress(int progress, bool disable)
 	else
 		properties.insert(QStringLiteral("progress-visible"), true);
 	//Progress takes a value from 0.0 to 0.1
-	properties.insert(QStringLiteral("progress"), (double)progress / (double)maximum());
+	properties.insert(QStringLiteral("progress"), 1. * progress / maximum());
 	message << QStringLiteral("application://rpcs3.desktop") << properties;
 	QDBusConnection::sessionBus().send(message);
 }

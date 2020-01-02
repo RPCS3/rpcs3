@@ -80,7 +80,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	QJsonObject json_cpu_spu = json_cpu.value("SPU").toObject();
 	QJsonObject json_cpu_cbs = json_cpu.value("checkboxes").toObject();
 	QJsonObject json_cpu_cbo = json_cpu.value("comboboxes").toObject();
-	QJsonObject json_cpu_lib = json_cpu.value("libraries").toObject();
 
 	QJsonObject json_gpu      = json_obj.value("gpu").toObject();
 	QJsonObject json_gpu_cbo  = json_gpu.value("comboboxes").toObject();
@@ -92,7 +91,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	QJsonObject json_sys   = json_obj.value("system").toObject();
 	QJsonObject json_net   = json_obj.value("network").toObject();
 
-	QJsonObject json_advanced = json_obj.value("advanced").toObject();
+	QJsonObject json_advanced      = json_obj.value("advanced").toObject();
+	QJsonObject json_advanced_libs = json_advanced.value("libraries").toObject();
 
 	QJsonObject json_emu         = json_obj.value("emulator").toObject();
 	QJsonObject json_emu_misc    = json_emu.value("misc").toObject();
@@ -240,9 +240,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeTooltip(ui->ppu_llvm, json_cpu_ppu["LLVM"].toString());
 
 	QButtonGroup *ppuBG = new QButtonGroup(this);
-	ppuBG->addButton(ui->ppu_precise, (int)ppu_decoder_type::precise);
-	ppuBG->addButton(ui->ppu_fast,    (int)ppu_decoder_type::fast);
-	ppuBG->addButton(ui->ppu_llvm,    (int)ppu_decoder_type::llvm);
+	ppuBG->addButton(ui->ppu_precise, static_cast<int>(ppu_decoder_type::precise));
+	ppuBG->addButton(ui->ppu_fast,    static_cast<int>(ppu_decoder_type::fast));
+	ppuBG->addButton(ui->ppu_llvm,    static_cast<int>(ppu_decoder_type::llvm));
 
 	{ // PPU Stuff
 		QString selectedPPU = qstr(xemu_settings->GetSetting(emu_settings::PPUDecoder));
@@ -269,10 +269,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeTooltip(ui->spu_llvm,    json_cpu_spu["LLVM"].toString());
 
 	QButtonGroup *spuBG = new QButtonGroup(this);
-	spuBG->addButton(ui->spu_precise, (int)spu_decoder_type::precise);
-	spuBG->addButton(ui->spu_fast,    (int)spu_decoder_type::fast);
-	spuBG->addButton(ui->spu_asmjit,  (int)spu_decoder_type::asmjit);
-	spuBG->addButton(ui->spu_llvm,    (int)spu_decoder_type::llvm);
+	spuBG->addButton(ui->spu_precise, static_cast<int>(spu_decoder_type::precise));
+	spuBG->addButton(ui->spu_fast,    static_cast<int>(spu_decoder_type::fast));
+	spuBG->addButton(ui->spu_asmjit,  static_cast<int>(spu_decoder_type::asmjit));
+	spuBG->addButton(ui->spu_llvm,    static_cast<int>(spu_decoder_type::llvm));
 
 	{ // Spu stuff
 		QString selectedSPU = qstr(xemu_settings->GetSetting(emu_settings::SPUDecoder));
@@ -308,151 +308,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	ui->ppu_llvm->setEnabled(false);
 	ui->spu_llvm->setEnabled(false);
 #endif
-
-	// lib options tool tips
-	SubscribeTooltip(ui->lib_manu, json_cpu_lib["manual"].toString());
-	SubscribeTooltip(ui->lib_both, json_cpu_lib["both"].toString());
-	SubscribeTooltip(ui->lib_lv2,  json_cpu_lib["liblv2"].toString());
-	SubscribeTooltip(ui->lib_lv2b, json_cpu_lib["liblv2both"].toString());
-	SubscribeTooltip(ui->lib_lv2l, json_cpu_lib["liblv2list"].toString());
-
-	// creating this in ui file keeps scrambling the order...
-	QButtonGroup *libModeBG = new QButtonGroup(this);
-	libModeBG->addButton(ui->lib_manu, (int)lib_loading_type::manual);
-	libModeBG->addButton(ui->lib_both, (int)lib_loading_type::hybrid);
-	libModeBG->addButton(ui->lib_lv2,  (int)lib_loading_type::liblv2only);
-	libModeBG->addButton(ui->lib_lv2b, (int)lib_loading_type::liblv2both);
-	libModeBG->addButton(ui->lib_lv2l, (int)lib_loading_type::liblv2list);
-
-	{// Handle lib loading options
-		QString selectedLib = qstr(xemu_settings->GetSetting(emu_settings::LibLoadOptions));
-		QStringList libmode_list = xemu_settings->GetSettingOptions(emu_settings::LibLoadOptions);
-
-		for (int i = 0; i < libmode_list.count(); i++)
-		{
-			libModeBG->button(i)->setText(libmode_list[i]);
-
-			if (libmode_list[i] == selectedLib)
-			{
-				libModeBG->button(i)->setChecked(true);
-			}
-
-			connect(libModeBG->button(i), &QAbstractButton::clicked, [=]()
-			{
-				xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(libmode_list[i]));
-			});
-		}
-	}
-
-	// Sort string vector alphabetically
-	static const auto sort_string_vector = [](std::vector<std::string>& vec)
-	{
-		std::sort(vec.begin(), vec.end(), [](const std::string &str1, const std::string &str2) { return str1 < str2; });
-	};
-
-	std::vector<std::string> loadedLibs = xemu_settings->GetLoadedLibraries();
-
-	sort_string_vector(loadedLibs);
-
-	for (const auto& lib : loadedLibs)
-	{
-		QListWidgetItem* item = new QListWidgetItem(qstr(lib), ui->lleList);
-		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
-		item->setCheckState(Qt::Checked); // AND initialize check state
-		ui->lleList->addItem(item);
-	}
-
-	const std::string lle_dir = g_cfg.vfs.get_dev_flash() + "sys/external/";
-
-	std::unordered_set<std::string> set(loadedLibs.begin(), loadedLibs.end());
-	std::vector<std::string> lle_module_list_unselected;
-
-	for (const auto& prxf : fs::dir(lle_dir))
-	{
-		// List found unselected modules
-		if (prxf.is_directory || (prxf.name.substr(std::max<size_t>(size_t(3), prxf.name.length()) - 4)) != "sprx")
-		{
-			continue;
-		}
-		if (verify_npdrm_self_headers(fs::file(lle_dir + prxf.name)) && !set.count(prxf.name))
-		{
-			lle_module_list_unselected.push_back(prxf.name);
-		}
-	}
-
-	sort_string_vector(lle_module_list_unselected);
-
-	for (const auto& lib : lle_module_list_unselected)
-	{
-		QListWidgetItem* item = new QListWidgetItem(qstr(lib), ui->lleList);
-		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
-		item->setCheckState(Qt::Unchecked); // AND initialize check state
-		ui->lleList->addItem(item);
-	}
-
-	ui->searchBox->setPlaceholderText(tr("Search libraries"));
-
-	auto l_OnLibButtonClicked = [=](int ind)
-	{
-		if (ind != (int)lib_loading_type::liblv2only)
-		{
-			ui->searchBox->setEnabled(true);
-			ui->lleList->setEnabled(true);
-		}
-		else
-		{
-			ui->searchBox->setEnabled(false);
-			ui->lleList->setEnabled(false);
-		}
-	};
-
-	auto l_OnSearchBoxTextChanged = [=](QString text)
-	{
-		QString searchTerm = text.toLower();
-		std::vector<QListWidgetItem*> items;
-
-		// duplicate current items, we need clones to preserve checkstates
-		for (int i = 0; i < ui->lleList->count(); i++)
-		{
-			items.push_back(ui->lleList->item(i)->clone());
-		}
-
-		// sort items: checked items first then alphabetical order
-		std::sort(items.begin(), items.end(), [](QListWidgetItem *i1, QListWidgetItem *i2)
-		{
-			return (i1->checkState() != i2->checkState()) ? (i1->checkState() > i2->checkState()) : (i1->text() < i2->text());
-		});
-
-		// refill library list
-		ui->lleList->clear();
-
-		for (uint i = 0; i < items.size(); i++)
-		{
-			ui->lleList->addItem(items[i]);
-
-			// only show items filtered for search text
-			ui->lleList->setRowHidden(i, !items[i]->text().contains(searchTerm));
-		}
-	};
-
-	// Events
-	connect(libModeBG, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), l_OnLibButtonClicked);
-	connect(ui->searchBox, &QLineEdit::textChanged, l_OnSearchBoxTextChanged);
-
-	// enable multiselection (there must be a better way)
-	connect(ui->lleList, &QListWidget::itemChanged, [&](QListWidgetItem* item)
-	{
-		for (auto cb : ui->lleList->selectedItems())
-		{
-			cb->setCheckState(item->checkState());
-		}
-	});
-
-	int buttid = libModeBG->checkedId();
-	if (buttid != -1)
-	{
-		l_OnLibButtonClicked(buttid);
-	}
 
 	//     _____ _____  _    _   _______    _
 	//    / ____|  __ \| |  | | |__   __|  | |
@@ -1068,6 +923,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, json_advanced["disableOnDiskShaderCache"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->relaxedZCULL, emu_settings::RelaxedZCULL);
+	SubscribeTooltip(ui->relaxedZCULL, json_advanced["relaxedZCULL"].toString());
+
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings::MaxSPURSThreads, true);
@@ -1106,6 +964,151 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	{
 		SubscribeTooltip(ui->vblank, json_advanced["vblankRate"].toString());
 		SubscribeTooltip(ui->clockScale, json_advanced["clocksScale"].toString());
+	}
+
+	// lib options tool tips
+	SubscribeTooltip(ui->lib_manu, json_advanced_libs["manual"].toString());
+	SubscribeTooltip(ui->lib_both, json_advanced_libs["both"].toString());
+	SubscribeTooltip(ui->lib_lv2,  json_advanced_libs["liblv2"].toString());
+	SubscribeTooltip(ui->lib_lv2b, json_advanced_libs["liblv2both"].toString());
+	SubscribeTooltip(ui->lib_lv2l, json_advanced_libs["liblv2list"].toString());
+
+	// creating this in ui file keeps scrambling the order...
+	QButtonGroup *libModeBG = new QButtonGroup(this);
+	libModeBG->addButton(ui->lib_manu, static_cast<int>(lib_loading_type::manual));
+	libModeBG->addButton(ui->lib_both, static_cast<int>(lib_loading_type::hybrid));
+	libModeBG->addButton(ui->lib_lv2,  static_cast<int>(lib_loading_type::liblv2only));
+	libModeBG->addButton(ui->lib_lv2b, static_cast<int>(lib_loading_type::liblv2both));
+	libModeBG->addButton(ui->lib_lv2l, static_cast<int>(lib_loading_type::liblv2list));
+
+	{// Handle lib loading options
+		QString selectedLib = qstr(xemu_settings->GetSetting(emu_settings::LibLoadOptions));
+		QStringList libmode_list = xemu_settings->GetSettingOptions(emu_settings::LibLoadOptions);
+
+		for (int i = 0; i < libmode_list.count(); i++)
+		{
+			libModeBG->button(i)->setText(libmode_list[i]);
+
+			if (libmode_list[i] == selectedLib)
+			{
+				libModeBG->button(i)->setChecked(true);
+			}
+
+			connect(libModeBG->button(i), &QAbstractButton::clicked, [=]()
+			{
+				xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(libmode_list[i]));
+			});
+		}
+	}
+
+	// Sort string vector alphabetically
+	static const auto sort_string_vector = [](std::vector<std::string>& vec)
+	{
+		std::sort(vec.begin(), vec.end(), [](const std::string &str1, const std::string &str2) { return str1 < str2; });
+	};
+
+	std::vector<std::string> loadedLibs = xemu_settings->GetLoadedLibraries();
+
+	sort_string_vector(loadedLibs);
+
+	for (const auto& lib : loadedLibs)
+	{
+		QListWidgetItem* item = new QListWidgetItem(qstr(lib), ui->lleList);
+		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
+		item->setCheckState(Qt::Checked); // AND initialize check state
+		ui->lleList->addItem(item);
+	}
+
+	const std::string lle_dir = g_cfg.vfs.get_dev_flash() + "sys/external/";
+
+	std::unordered_set<std::string> set(loadedLibs.begin(), loadedLibs.end());
+	std::vector<std::string> lle_module_list_unselected;
+
+	for (const auto& prxf : fs::dir(lle_dir))
+	{
+		// List found unselected modules
+		if (prxf.is_directory || (prxf.name.substr(std::max<size_t>(size_t(3), prxf.name.length()) - 4)) != "sprx")
+		{
+			continue;
+		}
+		if (verify_npdrm_self_headers(fs::file(lle_dir + prxf.name)) && !set.count(prxf.name))
+		{
+			lle_module_list_unselected.push_back(prxf.name);
+		}
+	}
+
+	sort_string_vector(lle_module_list_unselected);
+
+	for (const auto& lib : lle_module_list_unselected)
+	{
+		QListWidgetItem* item = new QListWidgetItem(qstr(lib), ui->lleList);
+		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
+		item->setCheckState(Qt::Unchecked); // AND initialize check state
+		ui->lleList->addItem(item);
+	}
+
+	ui->searchBox->setPlaceholderText(tr("Search libraries"));
+
+	auto l_OnLibButtonClicked = [=](int ind)
+	{
+		if (ind != static_cast<int>(lib_loading_type::liblv2only))
+		{
+			ui->searchBox->setEnabled(true);
+			ui->lleList->setEnabled(true);
+		}
+		else
+		{
+			ui->searchBox->setEnabled(false);
+			ui->lleList->setEnabled(false);
+		}
+	};
+
+	auto l_OnSearchBoxTextChanged = [=](QString text)
+	{
+		QString searchTerm = text.toLower();
+		std::vector<QListWidgetItem*> items;
+
+		// duplicate current items, we need clones to preserve checkstates
+		for (int i = 0; i < ui->lleList->count(); i++)
+		{
+			items.push_back(ui->lleList->item(i)->clone());
+		}
+
+		// sort items: checked items first then alphabetical order
+		std::sort(items.begin(), items.end(), [](QListWidgetItem *i1, QListWidgetItem *i2)
+		{
+			return (i1->checkState() != i2->checkState()) ? (i1->checkState() > i2->checkState()) : (i1->text() < i2->text());
+		});
+
+		// refill library list
+		ui->lleList->clear();
+
+		for (uint i = 0; i < items.size(); i++)
+		{
+			ui->lleList->addItem(items[i]);
+
+			// only show items filtered for search text
+			ui->lleList->setRowHidden(i, !items[i]->text().contains(searchTerm));
+		}
+	};
+
+	// Events
+	connect(libModeBG, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), l_OnLibButtonClicked);
+	connect(ui->searchBox, &QLineEdit::textChanged, l_OnSearchBoxTextChanged);
+
+	// enable multiselection (there must be a better way)
+	connect(ui->lleList, &QListWidget::itemChanged, [&](QListWidgetItem* item)
+	{
+		for (auto cb : ui->lleList->selectedItems())
+		{
+			cb->setCheckState(item->checkState());
+		}
+	});
+
+	int buttid = libModeBG->checkedId();
+	if (buttid != -1)
+	{
+		l_OnLibButtonClicked(buttid);
 	}
 
 	//    ______                 _       _               _______    _
@@ -1170,6 +1173,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	});
 	ui->perfOverlayMarginY->setEnabled(!ui->perfOverlayCenterY->isChecked());
 
+	xemu_settings->EnhanceCheckBox(ui->perfOverlayFramerateGraphEnabled, emu_settings::PerfOverlayFramerateGraphEnabled);
+	SubscribeTooltip(ui->perfOverlayFramerateGraphEnabled, json_emu_overlay["perfOverlayFramerateGraphEnabled"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->perfOverlayFrametimeGraphEnabled, emu_settings::PerfOverlayFrametimeGraphEnabled);
+	SubscribeTooltip(ui->perfOverlayFrametimeGraphEnabled, json_emu_overlay["perfOverlayFrametimeGraphEnabled"].toString());
+
 	xemu_settings->EnhanceCheckBox(ui->perfOverlayEnabled, emu_settings::PerfOverlayEnabled);
 	SubscribeTooltip(ui->perfOverlayEnabled, json_emu_overlay["perfOverlayEnabled"].toString());
 	auto EnablePerfOverlayOptions = [this](bool enabled)
@@ -1186,10 +1195,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->perfOverlayUpdateInterval->setEnabled(enabled);
 		ui->perfOverlayFontSize->setEnabled(enabled);
 		ui->perfOverlayOpacity->setEnabled(enabled);
-		ui->perfOverlayMarginX->setEnabled(enabled);
-		ui->perfOverlayMarginY->setEnabled(enabled);
+		ui->perfOverlayMarginX->setEnabled(enabled && !ui->perfOverlayCenterX->isChecked());
+		ui->perfOverlayMarginY->setEnabled(enabled && !ui->perfOverlayCenterY->isChecked());
 		ui->perfOverlayCenterX->setEnabled(enabled);
 		ui->perfOverlayCenterY->setEnabled(enabled);
+		ui->perfOverlayFramerateGraphEnabled->setEnabled(enabled);
+		ui->perfOverlayFrametimeGraphEnabled->setEnabled(enabled);
 	};
 	EnablePerfOverlayOptions(ui->perfOverlayEnabled->isChecked());
 	connect(ui->perfOverlayEnabled, &QCheckBox::clicked, EnablePerfOverlayOptions);
@@ -1328,6 +1339,22 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		connect(ui->discordState, &QLineEdit::editingFinished, [this]()
 		{
 			m_discord_state = ui->discordState->text();
+		});
+
+		// Log and TTY:
+		SubscribeTooltip(ui->log_limit, json_gui["log_limit"].toString());
+		SubscribeTooltip(ui->tty_limit, json_gui["tty_limit"].toString());
+
+		ui->spinbox_log_limit->setValue(xgui_settings->GetValue(gui::l_limit).toInt());
+		connect(ui->spinbox_log_limit, &QSpinBox::editingFinished, [=]()
+		{
+			xgui_settings->SetValue(gui::l_limit, ui->spinbox_log_limit->value());
+		});
+
+		ui->spinbox_tty_limit->setValue(xgui_settings->GetValue(gui::l_limit_tty).toInt());
+		connect(ui->spinbox_tty_limit, &QSpinBox::editingFinished, [=]()
+		{
+			xgui_settings->SetValue(gui::l_limit_tty, ui->spinbox_tty_limit->value());
 		});
 
 		// colorize preview icons

@@ -228,6 +228,7 @@
     <addaction name="actionManage_RAP_Licences"/>
     <addaction name="actionManage_Trophy_Data"/>
     <addaction name="actionManage_Skylanders_Portal"/>
+    <addaction name="actionManage_Cheats"/>
    </widget>
    <widget class="QMenu" name="menuUtilities">
     <property name="title">
@@ -1009,6 +1010,11 @@
   <action name="actionManage_Skylanders_Portal">
    <property name="text">
     <string>Skylanders Portal</string>
+   </property>
+  </action>
+  <action name="actionManage_Cheats">
+   <property name="text">
+    <string>Cheats</string>
    </property>
   </action>
  </widget>

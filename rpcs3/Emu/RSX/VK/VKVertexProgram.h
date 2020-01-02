@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "../Common/VertexProgramDecompiler.h"
 #include "Emu/RSX/RSXVertexProgram.h"
 #include "Utilities/Thread.h"
@@ -10,6 +10,13 @@ struct VKVertexDecompilerThread : public VertexProgramDecompiler
 	std::string &m_shader;
 	std::vector<vk::glsl::program_input> inputs;
 	class VKVertexProgram *vk_prog;
+
+	struct
+	{
+		bool emulate_conditional_rendering;
+	}
+	m_device_props;
+
 protected:
 	std::string getFloatTypeName(size_t elementCount) override;
 	std::string getIntTypeName(size_t elementCount) override;

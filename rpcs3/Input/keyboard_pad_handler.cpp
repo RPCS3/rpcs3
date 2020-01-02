@@ -80,7 +80,7 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			bool is_max = pad->m_sticks[i].m_keyCodeMax == code;
 			bool is_min = pad->m_sticks[i].m_keyCodeMin == code;
 
-			u16 normalized_value = std::max(u16(1), static_cast<u16>(std::floor((double)value / 2.0)));
+			u16 normalized_value = std::max<u16>(1, static_cast<u16>(std::floor(value / 2.0)));
 
 			if (is_max)
 				m_stick_max[i] = pressed ? 128 + normalized_value : 128;
@@ -155,6 +155,9 @@ bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 			break;
 		case QEvent::MouseMove:
 			mouseMoveEvent(static_cast<QMouseEvent*>(ev));
+			break;
+		case QEvent::Wheel:
+			mouseWheelEvent(static_cast<QWheelEvent*>(ev));
 			break;
 		default:
 			break;
@@ -267,22 +270,22 @@ void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 			return;
 		case Qt::Key_K:
 			m_multi_y = std::min(m_multi_y + 0.1, 5.0);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %d", (int)(m_multi_y * 100));
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %d", static_cast<int>(m_multi_y * 100));
 			event->ignore();
 			return;
 		case Qt::Key_J:
 			m_multi_y = std::max(0.0, m_multi_y - 0.1);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %d", (int)(m_multi_y * 100));
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %d", static_cast<int>(m_multi_y * 100));
 			event->ignore();
 			return;
 		case Qt::Key_H:
 			m_multi_x = std::min(m_multi_x + 0.1, 5.0);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %d", (int)(m_multi_x * 100));
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %d", static_cast<int>(m_multi_x * 100));
 			event->ignore();
 			return;
 		case Qt::Key_G:
 			m_multi_x = std::max(0.0, m_multi_x - 0.1);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %d", (int)(m_multi_x * 100));
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %d", static_cast<int>(m_multi_x * 100));
 			event->ignore();
 			return;
 		default:
@@ -318,19 +321,19 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 
 	if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen && m_target->isActive())
 	{
-		// get the screen dimensions 
+		// get the screen dimensions
 		const QSize screen = m_target->size();
 
-		// get the center of the screen in global coordinates 
+		// get the center of the screen in global coordinates
 		QPoint p_center = m_target->geometry().topLeft() + QPoint(screen.width() / 2, screen.height() / 2);
 
-		// reset the mouse to the center for consistent results since edge movement won't be registered 
+		// reset the mouse to the center for consistent results since edge movement won't be registered
 		QCursor::setPos(m_target->screen(), p_center);
 
-		// convert the center into screen coordinates 
+		// convert the center into screen coordinates
 		p_center = m_target->mapFromGlobal(p_center);
 
-		// get the delta of the mouse position to the screen center 
+		// get the delta of the mouse position to the screen center
 		const QPoint p_delta = event->pos() - p_center;
 
 		movement_x = p_delta.x();
@@ -345,8 +348,8 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 		last_pos_y = event->y();
 	}
 
-	movement_x = m_multi_x * (double)movement_x;
-	movement_y = m_multi_y * (double)movement_y;
+	movement_x = m_multi_x * movement_x;
+	movement_y = m_multi_y * movement_y;
 
 	if (movement_x < 0)
 	{
@@ -376,6 +379,46 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 	}
 
 	event->ignore();
+}
+
+void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
+{
+	QPoint direction = event->angleDelta();
+
+	if (direction.isNull())
+	{
+		// Scrolling started/ended event, no direction given
+		return;
+	}
+
+	if (const int x = direction.x())
+	{
+		bool to_left = event->inverted() ? x < 0 : x > 0;
+		if (to_left)
+		{
+			Key(mouse::wheel_left, true);
+			m_last_wheel_move_left = std::chrono::steady_clock::now();
+		}
+		else
+		{
+			Key(mouse::wheel_right, true);
+			m_last_wheel_move_right = std::chrono::steady_clock::now();
+		}
+	}
+	if (const int y = direction.y())
+	{
+		bool to_up = event->inverted() ? y < 0 : y > 0;
+		if (to_up)
+		{
+			Key(mouse::wheel_up, true);
+			m_last_wheel_move_up = std::chrono::steady_clock::now();
+		}
+		else
+		{
+			Key(mouse::wheel_down, true);
+			m_last_wheel_move_down = std::chrono::steady_clock::now();
+		}
+	}
 }
 
 std::vector<std::string> keyboard_pad_handler::ListDevices()
@@ -525,8 +568,8 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 
 	m_deadzone_x = p_profile->mouse_deadzone_x;
 	m_deadzone_y = p_profile->mouse_deadzone_y;
-	m_multi_x = (double)p_profile->mouse_acceleration_x / 100.0;
-	m_multi_y = (double)p_profile->mouse_acceleration_y / 100.0;
+	m_multi_x = p_profile->mouse_acceleration_x / 100.0;
+	m_multi_y = p_profile->mouse_acceleration_y / 100.0;
 	m_l_stick_lerp_factor = p_profile->l_stick_lerp_factor / 100.0f;
 	m_r_stick_lerp_factor = p_profile->r_stick_lerp_factor / 100.0f;
 
@@ -642,8 +685,8 @@ void keyboard_pad_handler::ThreadProc()
 					// we already applied the following values on keypress if we used factor 1
 					if (stick_lerp_factor < 1.0f)
 					{
-						const f32 v0 = (f32)bindings[i]->m_sticks[j].m_value;
-						const f32 v1 = (f32)m_stick_val[j];
+						const f32 v0 = static_cast<f32>(bindings[i]->m_sticks[j].m_value);
+						const f32 v1 = static_cast<f32>(m_stick_val[j]);
 
 						// linear interpolation from the current stick value v0 to the desired stick value v1
 						f32 res = lerp(v0, v1, stick_lerp_factor);
@@ -651,12 +694,38 @@ void keyboard_pad_handler::ThreadProc()
 						// round to the correct direction to prevent sticky sticks on small factors
 						res = (v0 <= v1) ? std::ceil(res) : std::floor(res);
 
-						bindings[i]->m_sticks[j].m_value = (u16)res;
+						bindings[i]->m_sticks[j].m_value = static_cast<u16>(res);
 					}
 				}
 
 				m_stick_time = now;
 			}
 		}
+	}
+
+	// Releases the wheel buttons 0,1 sec after they've been triggered
+	// Next activation is set to distant future to avoid activating this on every proc
+	std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+	const auto update_treshold = std::chrono::milliseconds(100);
+	const auto delay = std::chrono::hours(24);
+	if (now >= m_last_wheel_move_up + update_treshold)
+	{
+		Key(mouse::wheel_up, false);
+		m_last_wheel_move_up = now + delay;
+	}
+	if (now >= m_last_wheel_move_down + update_treshold)
+	{
+		Key(mouse::wheel_down, false);
+		m_last_wheel_move_down = now + delay;
+	}
+	if (now >= m_last_wheel_move_left + update_treshold)
+	{
+		Key(mouse::wheel_left, false);
+		m_last_wheel_move_left = now + delay;
+	}
+	if (now >= m_last_wheel_move_right + update_treshold)
+	{
+		Key(mouse::wheel_right, false);
+		m_last_wheel_move_right = now + delay;
 	}
 }

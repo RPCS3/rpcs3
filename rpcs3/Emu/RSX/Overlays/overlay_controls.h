@@ -43,6 +43,14 @@ namespace rsx
 			backbuffer = 255  // Use current backbuffer contents
 		};
 
+		enum class primitive_type : u8
+		{
+			quad_list = 0,
+			triangle_strip = 1,
+			line_list = 2,
+			line_strip = 3
+		};
+
 		struct vertex
 		{
 			float values[4];
@@ -66,7 +74,7 @@ namespace rsx
 
 			vertex(int x, int y, int z, int w)
 			{
-				vec4((f32)x, (f32)y, (f32)z, (f32)w);
+				vec4(static_cast<f32>(x), static_cast<f32>(y), static_cast<f32>(z), static_cast<f32>(w));
 			}
 
 			float& operator[](int index)
@@ -157,7 +165,7 @@ namespace rsx
 						return f.get();
 				}
 
-				fonts.push_back(std::make_unique<font>(name, (f32)size));
+				fonts.push_back(std::make_unique<font>(name, static_cast<f32>(size)));
 				return fonts.back().get();
 			}
 
@@ -201,12 +209,12 @@ namespace rsx
 				std::vector<u8> bytes;
 				fs::file f(filename);
 				f.read(bytes, f.size());
-				data = stbi_load_from_memory(bytes.data(), (s32)f.size(), &w, &h, &bpp, STBI_rgb_alpha);
+				data = stbi_load_from_memory(bytes.data(), ::narrow<int>(f.size()), &w, &h, &bpp, STBI_rgb_alpha);
 			}
 
 			image_info(const std::vector<u8>& bytes)
 			{
-				data = stbi_load_from_memory(bytes.data(), (s32)bytes.size(), &w, &h, &bpp, STBI_rgb_alpha);
+				data = stbi_load_from_memory(bytes.data(), ::narrow<int>(bytes.size()), &w, &h, &bpp, STBI_rgb_alpha);
 			}
 
 			~image_info()
@@ -353,6 +361,8 @@ namespace rsx
 		{
 			struct command_config
 			{
+				primitive_type primitives = primitive_type::quad_list;
+
 				color4f color = { 1.f, 1.f, 1.f, 1.f };
 				bool pulse_glow = false;
 
@@ -495,8 +505,8 @@ namespace rsx
 
 			virtual void translate(s16 _x, s16 _y)
 			{
-				x = (u16)(x + _x);
-				y = (u16)(y + _y);
+				x = static_cast<u16>(x + _x);
+				y = static_cast<u16>(y + _y);
 
 				is_compiled = false;
 			}
@@ -505,12 +515,12 @@ namespace rsx
 			{
 				if (origin_scaling)
 				{
-					x = (u16)(_x * x);
-					y = (u16)(_y * y);
+					x = static_cast<u16>(_x * x);
+					y = static_cast<u16>(_y * y);
 				}
 
-				w = (u16)(_x * w);
-				h = (u16)(_y * h);
+				w = static_cast<u16>(_x * w);
+				h = static_cast<u16>(_y * h);
 
 				is_compiled = false;
 			}
@@ -616,7 +626,7 @@ namespace rsx
 						// Apply transform.
 						// (0, 0) has text sitting one line off the top left corner (text is outside the rect) hence the offset by text height
 						v.values[0] += x + padding_left;
-						v.values[1] += y + padding_top + (f32)renderer->size_px;
+						v.values[1] += y + padding_top + static_cast<f32>(renderer->size_px);
 					}
 
 					if (alignment == center)
@@ -701,7 +711,7 @@ namespace rsx
 
 						cmd_text.config.set_font(font_ref ? font_ref : fontmgr::get("Arial", 12));
 						cmd_text.config.color = fore_color;
-						cmd_text.verts = render_text(text.c_str(), (f32)x, (f32)y);
+						cmd_text.verts = render_text(text.c_str(), static_cast<f32>(x), static_cast<f32>(y));
 
 						if (!cmd_text.verts.empty())
 							compiled_resources.add(std::move(compiled_resources_temp), margin_left, margin_top);
@@ -727,13 +737,13 @@ namespace rsx
 				f32 unused = 0.f;
 				f32 max_w = 0.f;
 				f32 last_word = 0.f;
-				height = (u16)renderer->size_px;
+				height = static_cast<u16>(renderer->size_px);
 
 				for (auto c : text)
 				{
 					if (c == '\n')
 					{
-						height += (u16)renderer->size_px + 2;
+						height += static_cast<u16>(renderer->size_px + 2);
 						max_w = std::max(max_w, text_width);
 						text_width = 0.f;
 						last_word = 0.f;
@@ -745,7 +755,7 @@ namespace rsx
 						last_word = text_width;
 					}
 
-					if (u8(c) > renderer->char_count)
+					if (static_cast<u8>(c) > renderer->char_count)
 					{
 						// Non-existent glyph
 						text_width += renderer->em_size;
@@ -761,13 +771,13 @@ namespace rsx
 						{
 							max_w = std::max(max_w, last_word);
 							text_width -= (last_word + renderer->em_size);
-							height += (u16)renderer->size_px + 2;
+							height += static_cast<u16>(renderer->size_px + 2);
 						}
 					}
 				}
 
 				max_w = std::max(max_w, text_width);
-				width = (u16)ceilf(max_w);
+				width = static_cast<u16>(ceilf(max_w));
 			}
 		};
 
@@ -807,8 +817,8 @@ namespace rsx
 
 			void set_pos(u16 _x, u16 _y) override
 			{
-				s16 dx = (s16)(_x - x);
-				s16 dy = (s16)(_y - y);
+				s16 dx = static_cast<s16>(_x - x);
+				s16 dy = static_cast<s16>(_y - y);
 				translate(dx, dy);
 			}
 
@@ -867,12 +877,12 @@ namespace rsx
 				if (!is_compiled)
 				{
 					compiled_resource result = overlay_element::get_compiled();
-					const f32 global_y_offset = (f32)-scroll_offset_value;
+					const f32 global_y_offset = static_cast<f32>(-scroll_offset_value);
 
 					for (auto &item : m_items)
 					{
-						const s32 item_y_limit = (s32)(item->y + item->h) - scroll_offset_value - y;
-						const s32 item_y_base = (s32)item->y - scroll_offset_value - y;
+						const s32 item_y_limit = s32{item->y} + item->h - scroll_offset_value - y;
+						const s32 item_y_base = s32{item->y} - scroll_offset_value - y;
 
 						if (item_y_limit < 0 || item_y_base > h)
 						{
@@ -882,7 +892,7 @@ namespace rsx
 						else if (item_y_limit > h || item_y_base < 0)
 						{
 							// Partial render
-							areaf clip_rect = { (f32)x, (f32)y, (f32)(x + w), (f32)(y + h) };
+							areaf clip_rect = areai{ x, y, (x + w), (y + h) };
 							result.add(item->get_compiled(), 0.f, global_y_offset, clip_rect);
 						}
 						else
@@ -941,12 +951,12 @@ namespace rsx
 				if (!is_compiled)
 				{
 					compiled_resource result = overlay_element::get_compiled();
-					const f32 global_x_offset = (f32)-scroll_offset_value;
+					const f32 global_x_offset = static_cast<f32>(-scroll_offset_value);
 
 					for (auto &item : m_items)
 					{
-						const s32 item_x_limit = (s32)(item->x + item->w) - scroll_offset_value - w;
-						const s32 item_x_base = (s32)item->x - scroll_offset_value - w;
+						const s32 item_x_limit = s32{item->x} + item->w - scroll_offset_value - w;
+						const s32 item_x_base = s32{item->x} - scroll_offset_value - w;
 
 						if (item_x_limit < 0 || item_x_base > h)
 						{
@@ -956,7 +966,7 @@ namespace rsx
 						else if (item_x_limit > h || item_x_base < 0)
 						{
 							// Partial render
-							areaf clip_rect = { (f32)x, (f32)y, (f32)(x + w), (f32)(y + h) };
+							areaf clip_rect = areai{ x, y, (x + w), (y + h) };
 							result.add(item->get_compiled(), global_x_offset, 0.f, clip_rect);
 						}
 						else
@@ -1213,6 +1223,33 @@ namespace rsx
 			void insert_text(const std::string& str);
 			void erase();
 
+			compiled_resource& get_compiled() override;
+		};
+
+		struct graph : public overlay_element
+		{
+		private:
+			std::string m_title;
+			std::vector<f32> m_datapoints;
+			u32 m_datapoint_count{};
+			color4f m_color;
+			f32 m_min{};
+			f32 m_max{};
+			f32 m_guide_interval{};
+			label m_label{};
+
+		public:
+			graph();
+			void set_pos(u16 _x, u16 _y) override;
+			void set_size(u16 _w, u16 _h) override;
+			void set_title(const char* title);
+			void set_font(const char* font_name, u16 font_size) override;
+			void set_font_size(u16 font_size);
+			void set_count(u32 datapoint_count);
+			void set_color(color4f color);
+			void set_guide_interval(f32 guide_interval);
+			void record_datapoint(f32 datapoint);
+			void update();
 			compiled_resource& get_compiled() override;
 		};
 	}

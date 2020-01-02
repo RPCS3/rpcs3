@@ -135,7 +135,7 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	}
 
 	const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
-	const u32 context_base = area ? area->alloc(0x300000) : 0; 
+	const u32 context_base = area ? area->alloc(0x300000) : 0;
 
 	if (!context_base)
 	{
@@ -433,7 +433,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		render->display_buffers[id].pitch = pitch;
 		render->display_buffers[id].offset = offset;
 
-		render->display_buffers_count = std::max((u32)id + 1, render->display_buffers_count);
+		render->display_buffers_count = std::max<u32>(id + 1, render->display_buffers_count);
 	}
 	break;
 
@@ -536,7 +536,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		// we only ever use head 1 for now
 		driverInfo.head[1].flipFlags |= 0x80000000;
 		driverInfo.head[1].lastFlipTime = rsxTimeStamp(); // should rsxthread set this?
-		driverInfo.head[1].flipBufferId = (u32)a3;
+		driverInfo.head[1].flipBufferId = static_cast<u32>(a3);
 
 		// seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
 		vm::_ref<u32>(render->label_addr + 0x10) = 0;
@@ -597,7 +597,7 @@ error_code sys_rsx_device_map(vm::ptr<u64> dev_addr, vm::ptr<u64> a2, u32 dev_id
 	if (!rsx_cfg->device_addr)
 	{
 		const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
-		const u32 addr = area ? area->alloc(0x100000) : 0; 
+		const u32 addr = area ? area->alloc(0x100000) : 0;
 
 		if (!addr)
 		{

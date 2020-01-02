@@ -4,35 +4,35 @@ namespace utils
 {
 	class dynamic_library
 	{
-		void *m_handle = nullptr;
+		void* m_handle = nullptr;
 
 	public:
 		dynamic_library() = default;
-		dynamic_library(const std::string &path);
+		dynamic_library(const std::string& path);
 
 		~dynamic_library();
 
-		bool load(const std::string &path);
+		bool load(const std::string& path);
 		void close();
 
 	private:
-		void *get_impl(const std::string &name) const;
+		void* get_impl(const std::string& name) const;
 
 	public:
-		template<typename Type = void>
-		Type *get(const std::string &name) const
+		template <typename Type = void>
+		Type* get(const std::string& name) const
 		{
-			Type *result;
-			*(void **)(&result) = get_impl(name);
+			Type* result;
+			*reinterpret_cast<void**>(&result) = get_impl(name);
 			return result;
 		}
 
-		template<typename Type>
-		bool get(Type *&function, const std::string &name) const
+		template <typename Type>
+		bool get(Type*& function, const std::string& name) const
 		{
-			*(void **)(&function) = get_impl(name);
+			*reinterpret_cast<void**>(&function) = get_impl(name);
 
-			return !!function;
+			return function != nullptr;
 		}
 
 		bool loaded() const;
@@ -51,15 +51,15 @@ namespace utils
 	template <typename R, typename... Args>
 	struct dynamic_import<R(Args...)>
 	{
-		R(*ptr)(Args...);
+		R (*ptr)(Args...);
 		const char* const lib;
 		const char* const name;
 
 		// Constant initialization
 		constexpr dynamic_import(const char* lib, const char* name)
-			: ptr(nullptr)
-			, lib(lib)
-			, name(name)
+		    : ptr(nullptr)
+		    , lib(lib)
+		    , name(name)
 		{
 		}
 
@@ -68,7 +68,7 @@ namespace utils
 			if (!ptr)
 			{
 				// TODO: atomic
-				ptr = reinterpret_cast<R(*)(Args...)>(get_proc_address(lib, name));
+				ptr = reinterpret_cast<R (*)(Args...)>(get_proc_address(lib, name));
 			}
 		}
 

@@ -28,8 +28,10 @@ class gdb_thread
 	char read_char();
 	//reads pairs of hex characters and returns their integer value
 	u8 read_hexbyte();
-	//tries to read command, throws exceptions if anything goes wrong
-	void try_read_cmd(gdb_cmd& out_cmd);
+
+	// Tries to read command, returns false on error
+	bool try_read_cmd(gdb_cmd& out_cmd);
+
 	//reads commands until receiveing one with valid checksum
 	//in case of other exception (i.e. wrong first char of command)
 	//it will log exception text and return false

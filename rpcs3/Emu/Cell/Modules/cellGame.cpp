@@ -150,12 +150,15 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 {
 	cellGame.error("cellHddGameCheck(version=%d, dirName=%s, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
-	std::string dir = dirName.get_ptr();
-
-	if (dir.size() != 9)
+	if (!dirName || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
+
+	std::string dir = dirName.get_ptr();
+
+	// TODO: Find error code
+	verify(HERE), dir.size() == 9;
 
 	vm::var<CellHddGameCBResult> result;
 	vm::var<CellHddGameStatGet> get;
@@ -301,19 +304,18 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 {
 	cellGame.warning("cellGameBootCheck(type=*0x%x, attributes=*0x%x, size=*0x%x, dirName=*0x%x)", type, attributes, size, dirName);
 
-	if (size)
-	{
-		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
-
-		// TODO: Calculate data size for HG and DG games, if necessary.
-		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
-		size->sysSizeKB = 0;
-	}
-
-	if (!type)
+	if (!type || !attributes)
 	{
 		return CELL_GAME_ERROR_PARAM;
+	}
+
+	const auto perm = g_fxo->get<content_permission>();
+
+	const auto init = perm->init.init();
+
+	if (!init)
+	{
+		return CELL_GAME_ERROR_BUSY;
 	}
 
 	std::string dir;
@@ -331,7 +333,6 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	{
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
-		if (dirName) strcpy_trunc(*dirName, Emu.GetTitleID()); // ???
 
 		sfo = psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")));
 	}
@@ -339,19 +340,24 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	{
 		*type = CELL_GAME_GAMETYPE_HDD;
 		*attributes = 0; // TODO
-		if (dirName) strcpy_trunc(*dirName, Emu.GetTitleID());
 
 		sfo = psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")));
 		dir = Emu.GetTitleID();
 	}
 
-	const auto perm = g_fxo->get<content_permission>();
-
-	const auto init = perm->init.init();
-
-	if (!init)
+	if (size)
 	{
-		return CELL_GAME_ERROR_BUSY;
+		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+
+		// TODO: Calculate data size for HG and DG games, if necessary.
+		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
+		size->sysSizeKB = 4;
+	}
+
+	if (*type == CELL_GAME_GAMETYPE_HDD && dirName)
+	{
+		strcpy_trunc(*dirName, Emu.GetTitleID());
 	}
 
 	perm->dir = std::move(dir);
@@ -367,16 +373,6 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 {
 	cellGame.warning("cellGamePatchCheck(size=*0x%x, reserved=*0x%x)", size, reserved);
 
-	if (size)
-	{
-		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
-
-		// TODO: Calculate data size for patch data, if necessary.
-		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
-		size->sysSizeKB = 0;
-	}
-
 	if (Emu.GetCat() != "GD")
 	{
 		return CELL_GAME_ERROR_NOTPATCH;
@@ -391,6 +387,16 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 	if (!init)
 	{
 		return CELL_GAME_ERROR_BUSY;
+	}
+
+	if (size)
+	{
+		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+
+		// TODO: Calculate data size for patch data, if necessary.
+		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
+		size->sysSizeKB = 0; // TODO
 	}
 
 	perm->dir = Emu.GetTitleID();
@@ -411,16 +417,6 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		return {CELL_GAME_ERROR_PARAM, type};
 	}
 
-	if (size)
-	{
-		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
-
-		// TODO: Calculate data size for game data, if necessary.
-		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
-		size->sysSizeKB = 0;
-	}
-
 	std::string name;
 
 	if (type != CELL_GAME_GAMETYPE_DISC)
@@ -439,6 +435,16 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	if (!init)
 	{
 		return CELL_GAME_ERROR_BUSY;
+	}
+
+	if (size)
+	{
+		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+
+		// TODO: Calculate data size for game data, if necessary.
+		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
+		size->sysSizeKB = 0; // TODO
 	}
 
 	perm->dir = std::move(name);
@@ -464,7 +470,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 {
 	cellGame.warning("cellGameContentPermit(contentInfoPath=*0x%x, usrdirPath=*0x%x)", contentInfoPath, usrdirPath);
 
-	if (!contentInfoPath && !usrdirPath)
+	if (!contentInfoPath || !usrdirPath)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
@@ -546,7 +552,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	// TODO: calculate data size, if necessary
 	cbGet->sizeKB = CELL_GAMEDATA_SIZEKB_NOTCALC;
-	cbGet->sysSizeKB = 0;
+	cbGet->sysSizeKB = 0; // TODO
 
 	psf::registry sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 
@@ -566,7 +572,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
 
-	switch ((s32)cbResult->result)
+	switch (cbResult->result)
 	{
 	case CELL_GAMEDATA_CBRESULT_OK_CANCEL:
 	{
@@ -962,7 +968,7 @@ s32 cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileName, u32
 {
 	cellGame.todo("cellGameThemeInstall(usrdirPath=%s, fileName=%s, option=0x%x)", usrdirPath, fileName, option);
 
-	if (!fileName || !usrdirPath || usrdirPath.size() > CELL_GAME_PATH_MAX)
+	if (!fileName || !usrdirPath || !memchr(usrdirPath.get_ptr(), '\0', CELL_GAME_PATH_MAX))
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}

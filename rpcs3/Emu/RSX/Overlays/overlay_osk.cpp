@@ -239,7 +239,7 @@ namespace rsx
 			auto on_accept = [&]()
 			{
 				const u32 current_index = (selected_y * num_columns) + selected_x;
-				const u32 output_count = (u32)m_grid[current_index].outputs.size();
+				const u32 output_count = ::size32(m_grid[current_index].outputs);
 
 				if (output_count)
 				{

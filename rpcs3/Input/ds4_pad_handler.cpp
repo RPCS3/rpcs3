@@ -11,6 +11,7 @@ namespace
 	const u32 DS4_GYRO_RES_PER_DEG_S = 16; // technically this could be 1024, but keeping it at 16 keeps us within 16 bits of precision
 	const u32 DS4_FEATURE_REPORT_0x02_SIZE = 37;
 	const u32 DS4_FEATURE_REPORT_0x05_SIZE = 41;
+	const u32 DS4_FEATURE_REPORT_0x12_SIZE = 16;
 	const u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
 	const u32 DS4_INPUT_REPORT_0x11_SIZE = 78;
 	const u32 DS4_OUTPUT_REPORT_0x05_SIZE = 32;
@@ -64,14 +65,14 @@ namespace
 		return std::tuple<u16, u16>(Clamp0To255((outX + 1) * 127.f), Clamp0To255(((outY * -1) + 1) * 127.f));
 	}*/
 
-	inline s16 GetS16LEData(const u8* buf)
+	inline s16 read_s16(const void* buf)
 	{
-		return (s16)(((u16)buf[0] << 0) + ((u16)buf[1] << 8));
+		return *reinterpret_cast<const s16*>(buf);
 	}
 
-	inline u32 GetU32LEData(const u8* buf)
+	inline u32 read_u32(const void* buf)
 	{
-		return (u32)(((u32)buf[0] << 0) + ((u32)buf[1] << 8) + ((u32)buf[2] << 16) + ((u32)buf[3] << 24));
+		return *reinterpret_cast<const u32*>(buf);
 	}
 }
 
@@ -384,7 +385,7 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 			const u8 btHdr = 0xA3;
 			const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
 			const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), (DS4_FEATURE_REPORT_0x05_SIZE - 4), crcTable, crcHdr);
-			const u32 crcReported = GetU32LEData(&buf[DS4_FEATURE_REPORT_0x05_SIZE - 4]);
+			const u32 crcReported = read_u32(&buf[DS4_FEATURE_REPORT_0x05_SIZE - 4]);
 			if (crcCalc != crcReported)
 				LOG_WARNING(HLE, "[DS4] Calibration CRC check failed! Will retry up to 3 times. Received 0x%x, Expected 0x%x", crcReported, crcCalc);
 			else break;
@@ -402,31 +403,43 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 		}
 	}
 
-	ds4Dev->calibData[DS4CalibIndex::PITCH].bias = GetS16LEData(&buf[1]);
-	ds4Dev->calibData[DS4CalibIndex::YAW].bias = GetS16LEData(&buf[3]);
-	ds4Dev->calibData[DS4CalibIndex::ROLL].bias = GetS16LEData(&buf[5]);
+	ds4Dev->calibData[DS4CalibIndex::PITCH].bias = read_s16(&buf[1]);
+	ds4Dev->calibData[DS4CalibIndex::YAW].bias = read_s16(&buf[3]);
+	ds4Dev->calibData[DS4CalibIndex::ROLL].bias = read_s16(&buf[5]);
 
 	s16 pitchPlus, pitchNeg, rollPlus, rollNeg, yawPlus, yawNeg;
-	if (ds4Dev->btCon)
+
+	// Check for calibration data format
+	// It's going to be either alternating +/- or +++---
+	if (read_s16(&buf[9]) < 0 && read_s16(&buf[7]) > 0)
 	{
-		pitchPlus = GetS16LEData(&buf[7]);
-		yawPlus   = GetS16LEData(&buf[9]);
-		rollPlus  = GetS16LEData(&buf[11]);
-		pitchNeg  = GetS16LEData(&buf[13]);
-		yawNeg    = GetS16LEData(&buf[15]);
-		rollNeg   = GetS16LEData(&buf[17]);
+		// Wired mode for OEM controllers
+		pitchPlus = read_s16(&buf[7]);
+		pitchNeg  = read_s16(&buf[9]);
+		yawPlus   = read_s16(&buf[11]);
+		yawNeg    = read_s16(&buf[13]);
+		rollPlus  = read_s16(&buf[15]);
+		rollNeg   = read_s16(&buf[17]);
 	}
 	else
 	{
-		pitchPlus = GetS16LEData(&buf[7]);
-		pitchNeg  = GetS16LEData(&buf[9]);
-		yawPlus   = GetS16LEData(&buf[11]);
-		yawNeg    = GetS16LEData(&buf[13]);
-		rollPlus  = GetS16LEData(&buf[15]);
-		rollNeg   = GetS16LEData(&buf[17]);
+		// Bluetooth mode and wired mode for some 3rd party controllers
+		pitchPlus = read_s16(&buf[7]);
+		yawPlus   = read_s16(&buf[9]);
+		rollPlus  = read_s16(&buf[11]);
+		pitchNeg  = read_s16(&buf[13]);
+		yawNeg    = read_s16(&buf[15]);
+		rollNeg   = read_s16(&buf[17]);
 	}
 
-	const s32 gyroSpeedScale = GetS16LEData(&buf[19]) + GetS16LEData(&buf[21]);
+	// Confirm correctness. Need confirmation with dongle with no active controller
+	if (pitchPlus <= 0 || yawPlus <= 0 || rollPlus <= 0 ||
+		pitchNeg >= 0 || yawNeg >= 0 || rollNeg >= 0)
+	{
+		return false;
+	}
+
+	const s32 gyroSpeedScale = read_s16(&buf[19]) + read_s16(&buf[21]);
 
 	ds4Dev->calibData[DS4CalibIndex::PITCH].sensNumer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
 	ds4Dev->calibData[DS4CalibIndex::PITCH].sensDenom = pitchPlus - pitchNeg;
@@ -437,12 +450,12 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 	ds4Dev->calibData[DS4CalibIndex::ROLL].sensNumer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
 	ds4Dev->calibData[DS4CalibIndex::ROLL].sensDenom = rollPlus - rollNeg;
 
-	const s16 accelXPlus = GetS16LEData(&buf[23]);
-	const s16 accelXNeg  = GetS16LEData(&buf[25]);
-	const s16 accelYPlus = GetS16LEData(&buf[27]);
-	const s16 accelYNeg  = GetS16LEData(&buf[29]);
-	const s16 accelZPlus = GetS16LEData(&buf[31]);
-	const s16 accelZNeg  = GetS16LEData(&buf[33]);
+	const s16 accelXPlus = read_s16(&buf[23]);
+	const s16 accelXNeg  = read_s16(&buf[25]);
+	const s16 accelYPlus = read_s16(&buf[27]);
+	const s16 accelYNeg  = read_s16(&buf[29]);
+	const s16 accelZPlus = read_s16(&buf[31]);
+	const s16 accelZNeg  = read_s16(&buf[33]);
 
 	const s32 accelXRange = accelXPlus - accelXNeg;
 	ds4Dev->calibData[DS4CalibIndex::X].bias = accelXPlus - accelXRange / 2;
@@ -479,8 +492,19 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hid
 	// Let's try getting 0x81 feature report, which should will return mac address on wired, and should error on bluetooth
 	std::array<u8, 64> buf{};
 	buf[0] = 0x81;
-	if (hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x81_SIZE) > 0)
+	if (const auto length = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x81_SIZE); length > 0)
 	{
+		if (length != DS4_FEATURE_REPORT_0x81_SIZE)
+		{
+			// Controller may not be genuine. These controllers do not have feature 0x81 implemented and calibration data is in bluetooth format even in USB mode!
+			LOG_WARNING(HLE, "DS4 controller may not be genuine. Workaround enabled.");
+
+			// Read feature report 0x12 instead which is what the console uses.
+			buf[0] = 0x12;
+			buf[1] = 0;
+			hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x12_SIZE);
+		}
+
 		serial = fmt::format("%x%x%x%x%x%x", buf[6], buf[5], buf[4], buf[3], buf[2], buf[1]);
 	}
 	else
@@ -684,7 +708,7 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 		const u8 btHdr = 0xA1;
 		const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
 		const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), (DS4_INPUT_REPORT_0x11_SIZE - 4), crcTable, crcHdr);
-		const u32 crcReported = GetU32LEData(&buf[DS4_INPUT_REPORT_0x11_SIZE - 4]);
+		const u32 crcReported = read_u32(&buf[DS4_INPUT_REPORT_0x11_SIZE - 4]);
 		if (crcCalc != crcReported)
 		{
 			LOG_WARNING(HLE, "[DS4] Data packet CRC check failed, ignoring! Received 0x%x, Expected 0x%x", crcReported, crcCalc);
@@ -712,10 +736,10 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 		int calibOffset = offset + DS4_INPUT_REPORT_GYRO_X_OFFSET;
 		for (int i = 0; i < DS4CalibIndex::COUNT; ++i)
 		{
-			const s16 rawValue = GetS16LEData(&buf[calibOffset]);
+			const s16 rawValue = read_s16(&buf[calibOffset]);
 			const s16 calValue = ApplyCalibration(rawValue, device->calibData[i]);
-			buf[calibOffset++] = ((u16)calValue >> 0) & 0xFF;
-			buf[calibOffset++] = ((u16)calValue >> 8) & 0xFF;
+			buf[calibOffset++] = (static_cast<u16>(calValue) >> 0) & 0xFF;
+			buf[calibOffset++] = (static_cast<u16>(calValue) >> 8) & 0xFF;
 		}
 	}
 	memcpy(device->padData.data(), &buf[offset], 64);
@@ -823,9 +847,9 @@ void ds4_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 	// all we need to do is convert to ds3 range
 
 	// accel
-	f32 accelX = (((s16)((u16)(buf[20] << 8) | buf[19])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
-	f32 accelY = (((s16)((u16)(buf[22] << 8) | buf[21])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
-	f32 accelZ = (((s16)((u16)(buf[24] << 8) | buf[23])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
+	f32 accelX = static_cast<s16>((buf[20] << 8) | buf[19]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
+	f32 accelY = static_cast<s16>((buf[22] << 8) | buf[21]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
+	f32 accelZ = static_cast<s16>((buf[24] << 8) | buf[23]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
 
 	// now just use formula from ds3
 	accelX = accelX * 113 + 512;
@@ -837,7 +861,7 @@ void ds4_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 	pad->m_sensors[2].m_value = Clamp0To1023(accelZ);
 
 	// gyroX is yaw, which is all that we need
-	f32 gyroX = (((s16)((u16)(buf[16] << 8) | buf[15])) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S)) * -1;
+	f32 gyroX = static_cast<s16>((buf[16] << 8) | buf[15]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
 	//const int gyroY = ((u16)(buf[14] << 8) | buf[13]) / 256;
 	//const int gyroZ = ((u16)(buf[18] << 8) | buf[17]) / 256;
 

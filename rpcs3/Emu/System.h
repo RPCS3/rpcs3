@@ -126,6 +126,7 @@ enum class move_handler
 {
 	null,
 	fake,
+	mouse,
 };
 
 enum class microphone_handler
@@ -250,6 +251,7 @@ class Emulator final
 	u32 m_usrid{1};
 
 	bool m_force_boot = false;
+	bool m_has_gui = true;
 
 public:
 	Emulator() = default;
@@ -285,6 +287,7 @@ public:
 	std::vector<u8> data;
 	std::vector<u8> klic;
 	std::string disc;
+	std::string hdd1;
 
 	const std::string& GetBoot() const
 	{
@@ -371,6 +374,9 @@ public:
 	bool IsStopped() const { return m_state == system_state::stopped; }
 	bool IsReady()   const { return m_state == system_state::ready; }
 	auto GetStatus() const { return m_state.load(); }
+
+	bool HasGui() const { return m_has_gui; }
+	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
 };
 
 extern Emulator Emu;
@@ -420,7 +426,7 @@ struct cfg_root : cfg::node
 		cfg::_bool hle_lwmutex{this, "HLE lwmutex"}; // Force alternative lwmutex/lwcond implementation
 
 		cfg::_int<10, 1000> clocks_scale{this, "Clocks scale", 100}; // Changing this from 100 (percentage) may affect game speed in unexpected ways
-		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{this, "Sleep Timers Accuracy", 
+		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{this, "Sleep Timers Accuracy",
 #ifdef __linux__
 		sleep_timers_accuracy_level::_as_host};
 #else
@@ -491,6 +497,7 @@ struct cfg_root : cfg::node
 		cfg::_bool strict_texture_flushing{this, "Strict Texture Flushing", false};
 		cfg::_bool disable_native_float16{this, "Disable native float16 support", false};
 		cfg::_bool multithreaded_rsx{this, "Multithreaded RSX", false};
+		cfg::_bool relaxed_zcull_sync{this, "Relaxed ZCULL Sync", false};
 		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames To Draw", 1};
 		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
 		cfg::_int<50, 800> resolution_scale_percent{this, "Resolution Scale", 100};
@@ -513,21 +520,23 @@ struct cfg_root : cfg::node
 		{
 			node_perf_overlay(cfg::node* _this) : cfg::node(_this, "Performance Overlay") {}
 
-			cfg::_bool perf_overlay_enabled{this, "Enabled", false};
-			cfg::_enum<detail_level> level{this, "Detail level", detail_level::medium};
-			cfg::_int<30, 5000> update_interval{ this, "Metrics update interval (ms)", 350 };
-			cfg::_int<4, 36> font_size{ this, "Font size (px)", 10 };
-			cfg::_enum<screen_quadrant> position{this, "Position", screen_quadrant::top_left};
-			cfg::string font{this, "Font", "n023055ms.ttf"};
-			cfg::_int<0, 1280> margin_x{this, "Horizontal Margin (px)", 50}; // horizontal distance to the screen border relative to the screen_quadrant in px
-			cfg::_int<0, 720> margin_y{this, "Vertical Margin (px)", 50}; // vertical distance to the screen border relative to the screen_quadrant in px
-			cfg::_bool center_x{ this, "Center Horizontally", false };
-			cfg::_bool center_y{ this, "Center Vertically", false };
-			cfg::_int<0, 100> opacity{this, "Opacity (%)", 70};
-			cfg::string color_body{ this, "Body Color (hex)", "#FFE138FF" };
-			cfg::string background_body{ this, "Body Background (hex)", "#002339FF" };
-			cfg::string color_title{ this, "Title Color (hex)", "#F26C24FF" };
-			cfg::string background_title{ this, "Title Background (hex)", "#00000000" };
+			cfg::_bool perf_overlay_enabled{ this, "Enabled", false, true };
+			cfg::_bool framerate_graph_enabled{ this, "Enable Framerate Graph", false, true };
+			cfg::_bool frametime_graph_enabled{ this, "Enable Frametime Graph", false, true };
+			cfg::_enum<detail_level> level{ this, "Detail level", detail_level::medium, true };
+			cfg::_int<30, 5000> update_interval{ this, "Metrics update interval (ms)", 350, true };
+			cfg::_int<4, 36> font_size{ this, "Font size (px)", 10, true };
+			cfg::_enum<screen_quadrant> position{ this, "Position", screen_quadrant::top_left, true };
+			cfg::string font{ this, "Font", "n023055ms.ttf", true };
+			cfg::_int<0, 1280> margin_x{ this, "Horizontal Margin (px)", 50, true }; // horizontal distance to the screen border relative to the screen_quadrant in px
+			cfg::_int<0, 720> margin_y{ this, "Vertical Margin (px)", 50, true }; // vertical distance to the screen border relative to the screen_quadrant in px
+			cfg::_bool center_x{ this, "Center Horizontally", false, true };
+			cfg::_bool center_y{ this, "Center Vertically", false, true };
+			cfg::_int<0, 100> opacity{ this, "Opacity (%)", 70, true };
+			cfg::string color_body{ this, "Body Color (hex)", "#FFE138FF", true };
+			cfg::string background_body{ this, "Body Background (hex)", "#002339FF", true };
+			cfg::string color_title{ this, "Title Color (hex)", "#F26C24FF", true };
+			cfg::string background_title{ this, "Title Background (hex)", "#00000000", true };
 
 		} perf_overlay{this};
 
@@ -535,8 +544,8 @@ struct cfg_root : cfg::node
 		{
 			node_shader_compilation_hint(cfg::node* _this) : cfg::node(_this, "Shader Compilation Hint") {}
 
-			cfg::_int<0, 1280> pos_x{this, "Position X (px)", 20}; // horizontal position starting from the upper border in px
-			cfg::_int<0, 720> pos_y{this, "Position Y (px)", 690}; // vertical position starting from the left border in px
+			cfg::_int<0, 1280> pos_x{ this, "Position X (px)", 20, true }; // horizontal position starting from the upper border in px
+			cfg::_int<0, 720> pos_y{ this, "Position Y (px)", 690, true }; // vertical position starting from the left border in px
 
 		} shader_compilation_hint{this};
 
@@ -544,9 +553,9 @@ struct cfg_root : cfg::node
 		{
 			node_shader_preloading_dialog(cfg::node* _this) : cfg::node(_this, "Shader Loading Dialog"){}
 
-			cfg::_bool use_custom_background{this, "Allow custom background", true};
-			cfg::_int<0, 100> darkening_strength{this, "Darkening effect strength", 30};
-			cfg::_int<0, 100> blur_strength{this, "Blur effect strength", 0};
+			cfg::_bool use_custom_background{ this, "Allow custom background", true, true };
+			cfg::_int<0, 100> darkening_strength{ this, "Darkening effect strength", 30, true };
+			cfg::_int<0, 100> blur_strength{ this, "Blur effect strength", 0, true };
 
 		} shader_preloading_dialog{this};
 
@@ -578,7 +587,6 @@ struct cfg_root : cfg::node
 
 		cfg::_enum<keyboard_handler> keyboard{this, "Keyboard", keyboard_handler::null};
 		cfg::_enum<mouse_handler> mouse{this, "Mouse", mouse_handler::basic};
-		cfg::_enum<pad_handler> pad{this, "Pad", pad_handler::keyboard};
 		cfg::_enum<camera_handler> camera{this, "Camera", camera_handler::null};
 		cfg::_enum<fake_camera_type> camera_type{this, "Camera type", fake_camera_type::unknown};
 		cfg::_enum<move_handler> move{this, "Move", move_handler::null};
@@ -588,8 +596,8 @@ struct cfg_root : cfg::node
 	{
 		node_sys(cfg::node* _this) : cfg::node(_this, "System") {}
 
-		cfg::_enum<CellSysutilLang> language{this, "Language", (CellSysutilLang)1}; // CELL_SYSUTIL_LANG_ENGLISH_US
-		cfg::_enum<CellKbMappingType> keyboard_type{this, "Keyboard Type", (CellKbMappingType)0}; // CELL_KB_MAPPING_101 = US
+		cfg::_enum<CellSysutilLang> language{this, "Language", CellSysutilLang{1}}; // CELL_SYSUTIL_LANG_ENGLISH_US
+		cfg::_enum<CellKbMappingType> keyboard_type{this, "Keyboard Type", CellKbMappingType{0}}; // CELL_KB_MAPPING_101 = US
 		cfg::_enum<enter_button_assign> enter_button_assignment{this, "Enter button assignment", enter_button_assign::cross};
 
 	} sys{this};
@@ -607,19 +615,21 @@ struct cfg_root : cfg::node
 	{
 		node_misc(cfg::node* _this) : cfg::node(_this, "Miscellaneous") {}
 
-		cfg::_bool autostart{this, "Automatically start games after boot", true};
-		cfg::_bool autoexit{this, "Exit RPCS3 when process finishes"};
-		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
+		cfg::_bool autostart{ this, "Automatically start games after boot", true, true };
+		cfg::_bool autoexit{ this, "Exit RPCS3 when process finishes", false, true };
+		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode", false, true };
 		cfg::_bool prevent_display_sleep{ this, "Prevent display sleep while running games", true};
-		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
-		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true};
-		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true };
+		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true, true };
+		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true, true };
+		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true, true };
 		cfg::_bool use_native_interface{ this, "Use native user interface", true };
 		cfg::string gdb_server{this, "GDB Server", "127.0.0.1:2345"};
 
 	} misc{this};
 
 	cfg::log_entry log{this, "Log"};
+
+	std::string name;
 };
 
 extern cfg_root g_cfg;

@@ -251,6 +251,8 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 	if (!info)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
+	std::memset(info.get_ptr(), 0, info.size());
+
 	std::lock_guard<std::mutex> lock(handler->m_mutex);
 
 	const KbInfo& current_info = handler->GetInfo();
@@ -290,7 +292,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 	KbData& current_data = handler->GetData(port_no);
 	data->led = current_data.led;
 	data->mkey = current_data.mkey;
-	data->len = std::min((s32)CELL_KB_MAX_KEYCODES, current_data.len);
+	data->len = std::min<s32>(CELL_KB_MAX_KEYCODES, current_data.len);
 
 	for (s32 i = 0; i < current_data.len; i++)
 	{

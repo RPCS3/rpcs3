@@ -128,6 +128,7 @@ static fs::error to_error(DWORD e)
 	case ERROR_SHARING_VIOLATION: return fs::error::acces;
 	case ERROR_DIR_NOT_EMPTY: return fs::error::notempty;
 	case ERROR_NOT_READY: return fs::error::noent;
+	case ERROR_FILENAME_EXCED_RANGE: return fs::error::toolong;
 	//case ERROR_INVALID_PARAMETER: return fs::error::inval;
 	default: fmt::throw_exception("Unknown Win32 error: %u.", e);
 	}
@@ -175,6 +176,27 @@ static fs::error to_error(int e)
 }
 
 #endif
+
+static std::string path_append(std::string_view path, std::string_view more)
+{
+	std::string result;
+
+	if (const size_t src_slash_pos = path.find_last_not_of('/'); src_slash_pos != path.npos)
+	{
+		path.remove_suffix(path.length() - src_slash_pos - 1);
+		result = path;
+	}
+
+	result.push_back('/');
+
+	if (const size_t dst_slash_pos = more.find_first_not_of('/'); dst_slash_pos != more.npos)
+	{
+		more.remove_prefix(dst_slash_pos);
+		result.append(more);
+	}
+
+	return result;
+}
 
 namespace fs
 {
@@ -911,7 +933,7 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 
 void fs::file::xnull() const
 {
-	fmt::throw_exception<std::logic_error>("fs::file is null");
+	fmt::throw_exception("fs::file is null");
 }
 
 void fs::file::xfail() const
@@ -1234,7 +1256,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			static_assert(sizeof(iovec) == sizeof(iovec_clone), "Weird iovec size");
 			static_assert(offsetof(iovec, iov_len) == offsetof(iovec_clone, iov_len), "Weird iovec::iov_len offset");
 
-			const auto result = ::writev(m_fd, (const iovec*)buffers, buf_count);
+			const auto result = ::writev(m_fd, reinterpret_cast<const iovec*>(buffers), buf_count);
 			verify("file::write_gather" HERE), result != -1;
 
 			return result;
@@ -1328,18 +1350,9 @@ fs::native_handle fs::file::get_handle() const
 #endif
 }
 
-#ifdef _WIN32
-bool fs::file::set_delete(bool autodelete) const
-{
-	FILE_DISPOSITION_INFO disp;
-	disp.DeleteFileW = autodelete;
-	return SetFileInformationByHandle(get_handle(), FileDispositionInfo, &disp, sizeof(disp)) != 0;
-}
-#endif
-
 void fs::dir::xnull() const
 {
-	fmt::throw_exception<std::logic_error>("fs::dir is null");
+	fmt::throw_exception("fs::dir is null");
 }
 
 bool fs::dir::open(const std::string& path)
@@ -1594,7 +1607,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 
 			if (entry.is_directory == false)
 			{
-				if (!remove_file(path + '/' + entry.name))
+				if (!remove_file(path_append(path, entry.name)))
 				{
 					return false;
 				}
@@ -1602,7 +1615,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 
 			if (entry.is_directory == true)
 			{
-				if (!remove_all(path + '/' + entry.name))
+				if (!remove_all(path_append(path, entry.name)))
 				{
 					return false;
 				}
@@ -1640,7 +1653,7 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 
 		if (entry.is_directory == true)
 		{
-			result += get_dir_size(path + '/' + entry.name, rounding_alignment);
+			result += get_dir_size(path_append(path, entry.name), rounding_alignment);
 		}
 	}
 
@@ -1795,6 +1808,7 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 		case fs::error::notempty: return "Not empty";
 		case fs::error::readonly: return "Read only";
 		case fs::error::isdir: return "Is a directory";
+		case fs::error::toolong: return "Path too long";
 		}
 
 		return unknown;

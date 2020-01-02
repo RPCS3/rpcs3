@@ -7,6 +7,7 @@
 #include "_discord_utils.h"
 #endif
 
+#include "Emu/RSX/Overlays/overlay_perf_metrics.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
@@ -36,7 +37,7 @@ void gui_application::Init()
 	m_gui_settings.reset(new gui_settings());
 
 	// Force init the emulator
-	InitializeEmulator(m_gui_settings->GetCurrentUser().toStdString(), true);
+	InitializeEmulator(m_gui_settings->GetCurrentUser().toStdString(), true, m_show_gui);
 
 	// Create the main window
 	if (m_show_gui)
@@ -75,9 +76,15 @@ void gui_application::Init()
 
 void gui_application::InitializeConnects()
 {
+	connect(this, &gui_application::OnEmulatorRun, this, &gui_application::StartPlaytime);
+	connect(this, &gui_application::OnEmulatorStop, this, &gui_application::StopPlaytime);
+	connect(this, &gui_application::OnEmulatorPause, this, &gui_application::StopPlaytime);
+	connect(this, &gui_application::OnEmulatorResume, this, &gui_application::StartPlaytime);
+
 	if (m_main_window)
 	{
 		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
+		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, &gui_application::OnEmuSettingsChange);
 
 		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
 		connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
@@ -173,8 +180,8 @@ void gui_application::InitializeCallbacks()
 	};
 
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
-	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return std::make_shared<msg_dialog_frame>(); };
-	callbacks.get_osk_dialog  = []() -> std::shared_ptr<OskDialogBase> { return std::make_shared<osk_dialog_frame>(); };
+	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
+	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
 	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
@@ -190,15 +197,45 @@ void gui_application::InitializeCallbacks()
 		{
 			switch (type)
 			{
-			case 0: ((gs_frame*)m_game_window)->progress_reset(value); break;
-			case 1: ((gs_frame*)m_game_window)->progress_increment(value); break;
-			case 2: ((gs_frame*)m_game_window)->progress_set_limit(value); break;
+			case 0: static_cast<gs_frame*>(m_game_window)->progress_reset(value); break;
+			case 1: static_cast<gs_frame*>(m_game_window)->progress_increment(value); break;
+			case 2: static_cast<gs_frame*>(m_game_window)->progress_set_limit(value); break;
 			default: LOG_FATAL(GENERAL, "Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value); break;
 			}
 		}
 	};
 
 	Emu.SetCallbacks(std::move(callbacks));
+}
+
+void gui_application::StartPlaytime()
+{
+	const QString serial = qstr(Emu.GetTitleID());
+	if (serial.isEmpty())
+	{
+		return;
+	}
+
+	m_gui_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
+	m_timer_playtime.start();
+}
+
+void gui_application::StopPlaytime()
+{
+	if (!m_timer_playtime.isValid())
+		return;
+
+	const QString serial = qstr(Emu.GetTitleID());
+	if (serial.isEmpty())
+	{
+		m_timer_playtime.invalidate();
+		return;
+	}
+
+	const qint64 playtime = m_gui_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
+	m_gui_settings->SetPlaytime(serial, playtime);
+	m_gui_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
+	m_timer_playtime.invalidate();
 }
 
 /*
@@ -281,6 +318,11 @@ void gui_application::OnChangeStyleSheetRequest(const QString& path)
 	{
 		m_main_window->RepaintGui();
 	}
+}
+
+void gui_application::OnEmuSettingsChange()
+{
+	rsx::overlays::reset_performance_overlay();
 }
 
 /**

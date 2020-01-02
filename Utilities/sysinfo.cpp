@@ -69,6 +69,12 @@ bool utils::has_xop()
 	return g_value;
 }
 
+bool utils::has_clwb()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x1000000) == 0x1000000;
+	return g_value;
+}
+
 std::string utils::get_system_info()
 {
 	std::string result;

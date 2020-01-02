@@ -37,13 +37,13 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		}
 	};
 
-	auto archive_read = [&](const void *data_ptr, const u64 num_bytes)
+	auto archive_read = [&](void* data_ptr, const u64 num_bytes)
 	{
 		u64 num_bytes_left = filelist[cur_file].size() - cur_file_offset;
 		//check if it continues in another file
 		if (num_bytes > num_bytes_left)
 		{
-			filelist[cur_file].read((u8 *)data_ptr, num_bytes_left);
+			filelist[cur_file].read(data_ptr, num_bytes_left);
 			if ((cur_file + 1) < filelist.size()) cur_file++;
 			else
 			{
@@ -51,13 +51,13 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 				cur_file_offset = filelist[cur_file].size();
 				return num_bytes_left;
 			}
-			u64 num_read = filelist[cur_file].read((u8 *)data_ptr + num_bytes_left, num_bytes - num_bytes_left);
+			u64 num_read = filelist[cur_file].read(static_cast<u8*>(data_ptr) + num_bytes_left, num_bytes - num_bytes_left);
 			cur_offset += (num_read + num_bytes_left);
 			cur_file_offset = num_read;
 			return (num_read+num_bytes_left);
 		}
 
-		u64 num_read = filelist[cur_file].read((u8 *)data_ptr, num_bytes);
+		u64 num_read = filelist[cur_file].read(data_ptr, num_bytes);
 
 		cur_offset += num_read;
 		cur_file_offset += num_read;
@@ -153,7 +153,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 			be_t<u32> id;
 			be_t<u32> size;
 		} packet;
-		
+
 		archive_read(&packet, sizeof(packet));
 
 		// TODO
@@ -244,7 +244,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 					u8 data[20];
 					u128 _v128;
 				} hash;
-				
+
 				sha1(reinterpret_cast<const u8*>(input), sizeof(input), hash.data);
 
 				buf[i] ^= hash._v128;
@@ -295,6 +295,8 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		decrypt(0, header.file_count * sizeof(PKGEntry), header.pkg_platform == PKG_PLATFORM_TYPE_PSP ? PKG_AES_KEY2 : dec_key.data());
 	}
 
+	size_t num_failures = 0;
+
 	std::vector<PKGEntry> entries(header.file_count);
 
 	std::memcpy(entries.data(), buf.get(), entries.size() * sizeof(PKGEntry));
@@ -305,6 +307,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 		if (entry.name_size > 256)
 		{
+			num_failures++;
 			LOG_ERROR(LOADER, "PKG name size is too big (0x%x)", entry.name_size);
 			continue;
 		}
@@ -341,18 +344,21 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 			if (fs::file out{path, fs::rewrite})
 			{
+				bool extract_success = true;
 				for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
 				{
 					const u64 block_size = std::min<u64>(BUF_SIZE, entry.file_size - pos);
 
 					if (decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : dec_key.data()) != block_size)
 					{
+						extract_success = false;
 						LOG_ERROR(LOADER, "Failed to extract file %s", path);
 						break;
 					}
 
 					if (out.write(buf.get(), block_size) != block_size)
 					{
+						extract_success = false;
 						LOG_ERROR(LOADER, "Failed to write file %s", path);
 						break;
 					}
@@ -372,17 +378,25 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 					}
 				}
 
-				if (did_overwrite)
-				{
-					LOG_WARNING(LOADER, "Overwritten file %s", name);
+				if (extract_success)
+				{	
+					if (did_overwrite)
+					{
+						LOG_WARNING(LOADER, "Overwritten file %s", name);
+					}
+					else
+					{
+						LOG_NOTICE(LOADER, "Created file %s", name);
+					}
 				}
 				else
 				{
-					LOG_NOTICE(LOADER, "Created file %s", name);
+					num_failures++;
 				}
 			}
 			else
 			{
+				num_failures++;
 				LOG_ERROR(LOADER, "Failed to create file %s", path);
 			}
 
@@ -404,6 +418,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 			}
 			else
 			{
+				num_failures++;
 				LOG_ERROR(LOADER, "Failed to create directory %s", path);
 			}
 
@@ -412,11 +427,20 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 		default:
 		{
+			num_failures++;
 			LOG_ERROR(LOADER, "Unknown PKG entry type (0x%x) %s", entry.type, name);
 		}
 		}
 	}
 
-	LOG_SUCCESS(LOADER, "Package successfully installed to %s", dir);
-	return true;
+	if (num_failures == 0)
+	{
+		LOG_SUCCESS(LOADER, "Package successfully installed to %s", dir);
+	}
+	else
+	{
+		fs::remove_all(dir, true);
+		LOG_ERROR(LOADER, "Package installation failed: %s", dir);
+	}
+	return num_failures == 0;
 }

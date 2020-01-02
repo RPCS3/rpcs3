@@ -26,7 +26,9 @@
 #include <QGuiApplication>
 #include <qpa/qplatformnativeinterface.h>
 #endif
+#ifdef HAVE_X11
 #include <X11/Xlib.h>
+#endif
 #endif
 
 constexpr auto qstr = QString::fromStdString;
@@ -218,16 +220,16 @@ void gs_frame::show()
 display_handle_t gs_frame::handle() const
 {
 #ifdef _WIN32
-	return (HWND) this->winId();
+	return reinterpret_cast<HWND>(this->winId());
 #elif defined(__APPLE__)
-	return (void*) this->winId(); //NSView
+	return reinterpret_cast<void*>(this->winId()); //NSView
 #else
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 	QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
 	struct wl_display *wl_dpy = static_cast<struct wl_display *>(
 		native->nativeResourceForWindow("display", NULL));
 	struct wl_surface *wl_surf = static_cast<struct wl_surface *>(
-		native->nativeResourceForWindow("surface", (QWindow *)this));
+		native->nativeResourceForWindow("surface", const_cast<QWindow*>(static_cast<const QWindow*>(this))));
 	if (wl_dpy != nullptr && wl_surf != nullptr)
 	{
 		return std::make_pair(wl_dpy, wl_surf);
@@ -235,7 +237,11 @@ display_handle_t gs_frame::handle() const
 	else
 	{
 #endif
-		return std::make_pair(XOpenDisplay(0), (unsigned long)(this->winId()));
+#ifdef HAVE_X11
+		return std::make_pair(XOpenDisplay(0), static_cast<ulong>(this->winId()));
+#else
+		fmt::throw_exception("Vulkan X11 support disabled at compile-time.");
+#endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 	}
 #endif
@@ -298,7 +304,7 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 
 		if ((m_show_fps_in_title = g_cfg.misc.show_fps_in_title.get()))
 		{
-			fps_title = qstr(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
+			fps_title = qstr(fmt::format("FPS: %.2f", m_frames / fps_t.GetElapsedTimeInSec()));
 
 			if (!m_windowTitle.isEmpty())
 			{
@@ -338,8 +344,8 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 			}
 
 			std::vector<u8> sshot_data_alpha(sshot_data.size());
-			const u32* sshot_ptr = (const u32*)sshot_data.data();
-			u32* alpha_ptr       = (u32*)sshot_data_alpha.data();
+			const u32* sshot_ptr = reinterpret_cast<const u32*>(sshot_data.data());
+			u32* alpha_ptr       = reinterpret_cast<u32*>(sshot_data_alpha.data());
 
 			for (size_t index = 0; index < sshot_data.size() / sizeof(u32); index++)
 			{
@@ -354,13 +360,13 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 			std::vector<u8*> rows(sshot_height);
 			for (size_t y = 0; y < sshot_height; y++)
-				rows[y] = (u8*)sshot_data_alpha.data() + y * sshot_width * 4;
+				rows[y] = sshot_data_alpha.data() + y * sshot_width * 4;
 
 			png_set_rows(write_ptr, info_ptr, &rows[0]);
 			png_set_write_fn(write_ptr, &encoded_png,
 				[](png_structp png_ptr, png_bytep data, png_size_t length)
 				{
-					std::vector<u8>* p = (std::vector<u8>*)png_get_io_ptr(png_ptr);
+					std::vector<u8>* p = static_cast<std::vector<u8>*>(png_get_io_ptr(png_ptr));
 					p->insert(p->end(), data, data + length);
 				},
 				nullptr);
@@ -419,7 +425,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (m_disable_mouse) return;
+	if (m_disable_mouse || g_cfg.io.move == move_handler::mouse) return;
 
 	if (ev->button() == Qt::LeftButton)
 	{
@@ -531,7 +537,7 @@ void gs_frame::UpdateProgress(int progress, bool disable)
 	else
 		properties.insert(QStringLiteral("progress-visible"), true);
 	//Progress takes a value from 0.0 to 0.1
-	properties.insert(QStringLiteral("progress"), (double)progress / (double)m_gauge_max);
+	properties.insert(QStringLiteral("progress"), 1. * progress / m_gauge_max);
 	message << QStringLiteral("application://rpcs3.desktop") << properties;
 	QDBusConnection::sessionBus().send(message);
 }

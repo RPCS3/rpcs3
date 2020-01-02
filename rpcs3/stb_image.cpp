@@ -2,27 +2,21 @@
 // Defines STB_IMAGE_IMPLEMENTATION *once* for stb_image.h includes (Should this be placed somewhere else?)
 #define STB_IMAGE_IMPLEMENTATION
 
-// This header generates lots of errors, so we ignore those (not rpcs3 code)
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Weverything"
-#include <stb_image.h>
-#pragma clang diagnostic pop
+// Sneak in truetype as well.
+#define STB_TRUETYPE_IMPLEMENTATION
 
-#elif defined(__GNUC__) || defined(__GNUG__)
+// This header generates lots of errors, so we ignore those (not rpcs3 code)
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#include <stb_image.h>
+#include <stb_truetype.h>
+#pragma warning(pop)
+#else
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 #include <stb_image.h>
+#include <stb_truetype.h>
 #pragma GCC diagnostic pop
-
-#elif defined(_MSC_VER)
-// TODO Turn off warnings for MSVC. Using the normal push warning levels simply
-// creates a new warning about warnings being supressed (ie fuck msvc)
-// #pragma warning( push, 4 )
-#include <stb_image.h>
-// #pragma warning( pop )
-
-#else
-#include <stb_image.h>
 #endif

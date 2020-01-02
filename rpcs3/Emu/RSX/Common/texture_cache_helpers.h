@@ -61,7 +61,6 @@ namespace rsx
 	struct blit_op_result
 	{
 		bool succeeded = false;
-		bool is_depth = false;
 		u32 real_dst_address = 0;
 		u32 real_dst_size = 0;
 
@@ -121,6 +120,18 @@ namespace rsx
 
 			LOG_ERROR(RSX, "Unsupported depth conversion (0x%X)", gcm_format);
 			return gcm_format;
+		}
+
+		static inline u32 get_sized_blit_format(bool _32_bit, bool depth_format)
+		{
+			if (LIKELY(_32_bit))
+			{
+				return (!depth_format) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_DEPTH24_D8;
+			}
+			else
+			{
+				return (!depth_format) ? CELL_GCM_TEXTURE_R5G6B5 : CELL_GCM_TEXTURE_DEPTH16;
+			}
 		}
 
 		static inline bool is_compressed_gcm_format(u32 format)
@@ -278,8 +289,8 @@ namespace rsx
 					return;
 				}
 
-				const auto slice_begin = u32(slice * attr.slice_h);
-				const auto slice_end = u32(slice_begin + attr.height);
+				const u32 slice_begin = slice * attr.slice_h;
+				const u32 slice_end = slice_begin + attr.height;
 
 				const auto dst_y = std::get<1>(clipped).y;
 				const auto dst_h = std::get<2>(clipped).height;
@@ -291,9 +302,9 @@ namespace rsx
 					return;
 				}
 
-				const u16 dst_w = (u16)std::get<2>(clipped).width;
-				const u16 src_w = u16(dst_w * attr.bpp) / section_bpp;
-				const u16 height = (u16)std::get<2>(clipped).height;
+				const u16 dst_w = static_cast<u16>(std::get<2>(clipped).width);
+				const u16 src_w = static_cast<u16>(dst_w * attr.bpp) / section_bpp;
+				const u16 height = static_cast<u16>(std::get<2>(clipped).height);
 
 				if (scaling)
 				{
@@ -303,10 +314,10 @@ namespace rsx
 						section->get_raw_texture(),
 						surface_transform::identity,
 						0,
-						(u16)std::get<0>(clipped).x,
-						(u16)std::get<0>(clipped).y,
-						rsx::apply_resolution_scale((u16)std::get<1>(clipped).x, true),
-						rsx::apply_resolution_scale((u16)std::get<1>(clipped).y, true),
+						static_cast<u16>(std::get<0>(clipped).x),
+						static_cast<u16>(std::get<0>(clipped).y),
+						rsx::apply_resolution_scale(static_cast<u16>(std::get<1>(clipped).x), true),
+						rsx::apply_resolution_scale(static_cast<u16>(std::get<1>(clipped).y), true),
 						slice,
 						src_w,
 						height,
@@ -321,10 +332,10 @@ namespace rsx
 						section->get_raw_texture(),
 						surface_transform::identity,
 						0,
-						(u16)std::get<0>(clipped).x,
-						(u16)std::get<0>(clipped).y,
-						(u16)std::get<1>(clipped).x,
-						(u16)std::get<1>(clipped).y,
+						static_cast<u16>(std::get<0>(clipped).x),
+						static_cast<u16>(std::get<0>(clipped).y),
+						static_cast<u16>(std::get<1>(clipped).x),
+						static_cast<u16>(std::get<1>(clipped).y),
 						0,
 						src_w,
 						height,

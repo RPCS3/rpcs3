@@ -45,6 +45,8 @@ namespace utils
 
 	bool has_xop();
 
+	bool has_clwb();
+
 	std::string get_system_info();
 
 	std::string get_firmware_version();

@@ -278,13 +278,12 @@ public:
 	void clear()
 	{
 		values.release({});
-		value3.release(0);
 	}
 
 	// push unconditionally (overwriting latest value), returns true if needs signaling
 	void push(cpu_thread& spu, u32 value)
 	{
-		value3.store(value);
+		value3.release(value);
 
 		if (values.atomic_op([=](sync_var_t& data) -> bool
 		{
@@ -353,7 +352,7 @@ struct spu_int_ctrl_t
 	atomic_t<u64> mask;
 	atomic_t<u64> stat;
 
-	std::shared_ptr<struct lv2_int_tag> tag;
+	std::weak_ptr<struct lv2_int_tag> tag;
 
 	void set(u64 ints);
 
@@ -366,7 +365,7 @@ struct spu_int_ctrl_t
 	{
 		mask.release(0);
 		stat.release(0);
-		tag = nullptr;
+		tag.reset();
 	}
 };
 
@@ -510,7 +509,7 @@ public:
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
 
-	spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name);
+	spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id);
 
 	u32 pc = 0;
 
@@ -547,15 +546,15 @@ public:
 	spu_channel ch_stall_stat;
 	spu_channel ch_atomic_stat;
 
-	spu_channel_4_t ch_in_mbox;
+	spu_channel_4_t ch_in_mbox{};
 
 	spu_channel ch_out_mbox;
 	spu_channel ch_out_intr_mbox;
 
 	u64 snr_config = 0; // SPU SNR Config Register
 
-	spu_channel ch_snr1; // SPU Signal Notification Register 1
-	spu_channel ch_snr2; // SPU Signal Notification Register 2
+	spu_channel ch_snr1{}; // SPU Signal Notification Register 1
+	spu_channel ch_snr2{}; // SPU Signal Notification Register 2
 
 	atomic_t<u32> ch_event_mask;
 	atomic_t<u32> ch_event_stat;
@@ -575,7 +574,10 @@ public:
 
 	const u32 index; // SPU index
 	const u32 offset; // SPU LS offset
-	lv2_spu_group* const group; // SPU Thread Group
+private:
+	lv2_spu_group* const group; // SPU Thread Group (only safe to access in the spu thread itself)
+public:
+	const u32 lv2_id; // The actual id that is used by syscalls
 
 	lf_value<std::string> spu_name; // Thread name
 

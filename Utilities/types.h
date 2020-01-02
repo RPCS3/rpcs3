@@ -171,11 +171,6 @@ using get_uint_t = typename get_int_impl<N>::utype;
 template <std::size_t N>
 using get_sint_t = typename get_int_impl<N>::stype;
 
-namespace gsl
-{
-	using std::byte;
-}
-
 // Formatting helper, type-specific preprocessing for improving safety and functionality
 template <typename T, typename = void>
 struct fmt_unveil;
@@ -445,10 +440,29 @@ union alignas(2) f16
 
 CHECK_SIZE_ALIGN(f16, 2, 2);
 
-template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
-constexpr T align(const T& value, ullong align)
+template <typename T, typename = std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value>>
+constexpr T align(T value, ullong align)
 {
-	return static_cast<T>((value + (align - 1)) & ~(align - 1));
+	return static_cast<T>((value + (align - 1)) & (0 - align));
+}
+
+// General purpose aligned division, the result is rounded up not truncated
+template <typename T, typename = std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value>>
+constexpr T aligned_div(T value, ullong align)
+{
+	return static_cast<T>((value + align - 1) / align);
+}
+
+// General purpose aligned division, the result is rounded to nearest
+template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
+constexpr T rounded_div(T value, std::conditional_t<std::is_signed<T>::value, llong, ullong> align)
+{
+	if constexpr (std::is_unsigned<T>::value)
+	{
+		return static_cast<T>((value + (align / 2)) / align);
+	}
+
+	return static_cast<T>((value + (value < 0 ? 0 - align : align) / 2) / align);
 }
 
 template <typename T, typename T2>
@@ -515,33 +529,33 @@ struct offset32_detail<T3 T4::*>
 };
 
 // Helper function, used by ""_u16, ""_u32, ""_u64
-constexpr u8 to_u8(char c)
+constexpr u32 to_u8(char c)
 {
 	return static_cast<u8>(c);
 }
 
 // Convert 2-byte string to u16 value like reinterpret_cast does
-constexpr u16 operator""_u16(const char* s, std::size_t length)
+constexpr u16 operator""_u16(const char* s, std::size_t /*length*/)
 {
-	return length != 2 ? throw s :
+	return
 #if IS_LE_MACHINE == 1
-		to_u8(s[1]) << 8 | to_u8(s[0]);
+		static_cast<u16>(to_u8(s[1]) << 8 | to_u8(s[0]));
 #endif
 }
 
 // Convert 4-byte string to u32 value like reinterpret_cast does
-constexpr u32 operator""_u32(const char* s, std::size_t length)
+constexpr u32 operator""_u32(const char* s, std::size_t /*length*/)
 {
-	return length != 4 ? throw s :
+	return
 #if IS_LE_MACHINE == 1
 		to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
 #endif
 }
 
 // Convert 8-byte string to u64 value like reinterpret_cast does
-constexpr u64 operator""_u64(const char* s, std::size_t length)
+constexpr u64 operator""_u64(const char* s, std::size_t /*length*/)
 {
-	return length != 8 ? throw s :
+	return
 #if IS_LE_MACHINE == 1
 		static_cast<u64>(to_u8(s[7]) << 24 | to_u8(s[6]) << 16 | to_u8(s[5]) << 8 | to_u8(s[4])) << 32 | to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
 #endif

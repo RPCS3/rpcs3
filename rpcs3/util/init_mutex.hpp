@@ -262,5 +262,18 @@ namespace stx
 		{
 			return (m_state & c_init_bit) != 0;
 		}
+
+		// Wait for access()
+		void wait_for_initialized() const noexcept
+		{
+			const u32 state = m_state;
+
+			if (state & c_init_bit)
+			{
+				return;
+			}
+
+			m_state.wait(state);
+		}
 	};
 }

@@ -230,6 +230,7 @@ Q_SIGNALS:
 	void GameListFrameClosed();
 	void RequestBoot(const game_info& game, bool force_global_config = false);
 	void RequestIconSizeChange(const int& val);
+	void NotifyEmuSettingsChange();
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
@@ -244,7 +245,7 @@ private:
 	void SortGameList();
 
 	int PopulateGameList();
-	bool SearchMatchesApp(const std::string& name, const std::string& serial);
+	bool SearchMatchesApp(const QString& name, const QString& serial) const;
 
 	bool RemoveCustomConfiguration(const std::string& title_id, game_info game = nullptr, bool is_interactive = false);
 	bool RemoveCustomPadConfiguration(const std::string& title_id, game_info game = nullptr, bool is_interactive = false);
@@ -253,6 +254,8 @@ private:
 	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
 	bool CreatePPUCache(const game_info& game);
 
+	QString GetLastPlayedBySerial(const QString& serial);
+	QString GetPlayTimeBySerial(const QString& serial);
 	std::string GetCacheDirBySerial(const std::string& serial);
 	std::string GetDataDirBySerial(const std::string& serial);
 	std::string CurrentSelectionIconPath();

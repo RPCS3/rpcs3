@@ -738,8 +738,8 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		LOG_NOTICE(LOADER, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
 		// Hash big-endian values
-		sha1_update(&sha, (uchar*)&prog.p_type, sizeof(prog.p_type));
-		sha1_update(&sha, (uchar*)&prog.p_flags, sizeof(prog.p_flags));
+		sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_type), sizeof(prog.p_type));
+		sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_flags), sizeof(prog.p_flags));
 
 		switch (const u32 p_type = prog.p_type)
 		{
@@ -764,8 +764,8 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 				LOG_WARNING(LOADER, "**** Loaded to 0x%x (size=0x%x)", addr, mem_size);
 
 				// Hash segment
-				sha1_update(&sha, (uchar*)&prog.p_vaddr, sizeof(prog.p_vaddr));
-				sha1_update(&sha, (uchar*)&prog.p_memsz, sizeof(prog.p_memsz));
+				sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_vaddr), sizeof(prog.p_vaddr));
+				sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_memsz), sizeof(prog.p_memsz));
 				sha1_update(&sha, prog.bin.data(), prog.bin.size());
 
 				// Initialize executable code if necessary
@@ -1054,7 +1054,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	u32 tls_vsize = 0;
 
 	// Process information
-	u32 sdk_version = 0x360001;
+	u32 sdk_version = 0xffffffff;
 	s32 primary_prio = 1001;
 	u32 primary_stacksize = 0x100000;
 	u32 malloc_pagesize = 0x100000;
@@ -1077,8 +1077,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		_seg.filesz = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
 
 		// Hash big-endian values
-		sha1_update(&sha, (uchar*)&prog.p_type, sizeof(prog.p_type));
-		sha1_update(&sha, (uchar*)&prog.p_flags, sizeof(prog.p_flags));
+		sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_type), sizeof(prog.p_type));
+		sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_flags), sizeof(prog.p_flags));
 
 		if (type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
@@ -1090,8 +1090,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 			// Copy segment data, hash it
 			std::memcpy(vm::base(addr), prog.bin.data(), prog.bin.size());
-			sha1_update(&sha, (uchar*)&prog.p_vaddr, sizeof(prog.p_vaddr));
-			sha1_update(&sha, (uchar*)&prog.p_memsz, sizeof(prog.p_memsz));
+			sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_vaddr), sizeof(prog.p_vaddr));
+			sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_memsz), sizeof(prog.p_memsz));
 			sha1_update(&sha, prog.bin.data(), prog.bin.size());
 
 			// Initialize executable code if necessary
@@ -1160,6 +1160,27 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		}
 	}
 
+	// Read control flags (0 if doesn't exist)
+	g_ps3_process_info.ctrl_flags1 = 0;
+
+	if (bool not_found = true)
+	{
+		for (const auto& ctrl : g_ps3_process_info.self_info.ctrl_info)
+		{
+			if (ctrl.type == 1)
+			{
+				if (!std::exchange(not_found, false))
+				{
+					LOG_ERROR(LOADER, "More than one control flags header found! (flags1=0x%x)",
+						ctrl.control_flags.ctrl_flag1);
+					break;
+				}
+
+				g_ps3_process_info.ctrl_flags1 |= ctrl.control_flags.ctrl_flag1;
+			}
+		}
+	}
+
 	// Load other programs
 	for (auto& prog : elf.progs)
 	{
@@ -1207,7 +1228,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 				{
 					sdk_version = info.sdk_version;
 
-					if (s32 prio = info.primary_prio; prio < 3072 && prio >= 0)
+					if (s32 prio = info.primary_prio; prio < 3072 
+						&& (prio >= (g_ps3_process_info.debug_or_root() ? 0 : -512)))
 					{
 						primary_prio = prio;
 					}
@@ -1548,8 +1570,8 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 		_seg.filesz = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
 
 		// Hash big-endian values
-		sha1_update(&sha, (uchar*)&prog.p_type, sizeof(prog.p_type));
-		sha1_update(&sha, (uchar*)&prog.p_flags, sizeof(prog.p_flags));
+		sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_type), sizeof(prog.p_type));
+		sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_flags), sizeof(prog.p_flags));
 
 		if (type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
@@ -1561,8 +1583,8 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 
 			// Copy segment data, hash it
 			std::memcpy(vm::base(addr), prog.bin.data(), prog.bin.size());
-			sha1_update(&sha, (uchar*)&prog.p_vaddr, sizeof(prog.p_vaddr));
-			sha1_update(&sha, (uchar*)&prog.p_memsz, sizeof(prog.p_memsz));
+			sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_vaddr), sizeof(prog.p_vaddr));
+			sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_memsz), sizeof(prog.p_memsz));
 			sha1_update(&sha, prog.bin.data(), prog.bin.size());
 
 			// Initialize executable code if necessary

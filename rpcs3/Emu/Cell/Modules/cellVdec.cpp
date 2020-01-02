@@ -6,12 +6,25 @@
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
 #include "sysPrxForUser.h"
 
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 extern "C"
 {
 #include "libavcodec/avcodec.h"
 #include "libavutil/imgutils.h"
 #include "libswscale/swscale.h"
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
+#endif
 
 #include "cellPamf.h"
 #include "cellVdec.h"
@@ -69,10 +82,10 @@ struct vdec_frame
 	};
 
 	std::unique_ptr<AVFrame, frame_dtor> avf;
-	u64 dts;
-	u64 pts;
-	u64 userdata;
-	u32 frc;
+	u64 dts{};
+	u64 pts{};
+	u64 userdata{};
+	u32 frc{};
 	bool PicItemRecieved = false;
 
 	AVFrame* operator ->() const
@@ -214,8 +227,8 @@ struct vdec_context final
 
 					packet.data = vm::_ptr<u8>(au_addr);
 					packet.size = au_size;
-					packet.pts = au_pts != -1 ? au_pts : AV_NOPTS_VALUE;
-					packet.dts = au_dts != -1 ? au_dts : AV_NOPTS_VALUE;
+					packet.pts = au_pts != -1 ? au_pts : INT64_MIN;
+					packet.dts = au_dts != -1 ? au_dts : INT64_MIN;
 
 					if (next_pts == 0 && au_pts != -1)
 					{
@@ -235,8 +248,8 @@ struct vdec_context final
 				}
 				else
 				{
-					packet.pts = AV_NOPTS_VALUE;
-					packet.dts = AV_NOPTS_VALUE;
+					packet.pts = INT64_MIN;
+					packet.dts = INT64_MIN;
 					cellVdec.trace("End sequence...");
 				}
 
@@ -291,12 +304,12 @@ struct vdec_context final
 							fmt::throw_exception("Repeated frames not supported (0x%x)", frame->repeat_pict);
 						}
 
-						if (packet.pts != AV_NOPTS_VALUE)
+						if (packet.pts != INT64_MIN)
 						{
 							next_pts = packet.pts;
 						}
 
-						if (frame->pkt_dts != AV_NOPTS_VALUE)
+						if (frame->pkt_dts != INT64_MIN)
 						{
 							next_dts = frame->pkt_dts;
 						}
@@ -559,7 +572,7 @@ error_code cellVdecEndSeq(u32 handle)
 
 error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInfo> auInfo)
 {
-	cellVdec.trace("cellVdecDecodeAu(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, (s32)mode, auInfo);
+	cellVdec.trace("cellVdecDecodeAu(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, +mode, auInfo);
 
 	const auto vdec = idm::get<vdec_context>(handle);
 
@@ -758,16 +771,18 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 
 	info->codecType = vdec->type;
 	info->startAddr = 0x00000123; // invalid value (no address for picture)
-	info->size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
+	const int buffer_size = av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1);
+	verify(HERE), (buffer_size >= 0);
+	info->size = align<u32>(buffer_size, 128);
 	info->auNum = 1;
-	info->auPts[0].lower = (u32)(pts);
-	info->auPts[0].upper = (u32)(pts >> 32);
-	info->auPts[1].lower = (u32)CODEC_TS_INVALID;
-	info->auPts[1].upper = (u32)CODEC_TS_INVALID;
-	info->auDts[0].lower = (u32)(dts);
-	info->auDts[0].upper = (u32)(dts >> 32);
-	info->auDts[1].lower = (u32)CODEC_TS_INVALID;
-	info->auDts[1].upper = (u32)CODEC_TS_INVALID;
+	info->auPts[0].lower = static_cast<u32>(pts);
+	info->auPts[0].upper = static_cast<u32>(pts >> 32);
+	info->auPts[1].lower = -1;
+	info->auPts[1].upper = -1;
+	info->auDts[0].lower = static_cast<u32>(dts);
+	info->auDts[0].upper = static_cast<u32>(dts >> 32);
+	info->auDts[1].lower = -1;
+	info->auDts[1].upper = -1;
 	info->auUserData[0] = usrd;
 	info->auUserData[1] = 0;
 	info->status = CELL_OK;
@@ -914,7 +929,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 
 error_code cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 {
-	cellVdec.trace("cellVdecSetFrameRate(handle=0x%x, frc=0x%x)", handle, (s32)frc);
+	cellVdec.trace("cellVdecSetFrameRate(handle=0x%x, frc=0x%x)", handle, +frc);
 
 	const auto vdec = idm::get<vdec_context>(handle);
 

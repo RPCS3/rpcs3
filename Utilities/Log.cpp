@@ -391,10 +391,10 @@ logs::file_writer::file_writer(const std::string& name)
 		// Initialize memory mapped file
 #ifdef _WIN32
 		m_fmap = CreateFileMappingW(m_file.get_handle(), 0, PAGE_READWRITE, s_log_size >> 32, s_log_size & 0xffffffff, 0);
-		m_fptr = m_fmap ? (uchar*)MapViewOfFile(m_fmap, FILE_MAP_WRITE, 0, 0, 0) : nullptr;
+		m_fptr = m_fmap ? static_cast<uchar*>(MapViewOfFile(m_fmap, FILE_MAP_WRITE, 0, 0, 0)) : nullptr;
 #else
 		m_file.trunc(s_log_size);
-		m_fptr = (uchar*)::mmap(0, s_log_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_file.get_handle(), 0);
+		m_fptr = static_cast<uchar*>(::mmap(0, s_log_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_file.get_handle(), 0));
 #endif
 
 		verify(name.c_str()), m_fptr;
@@ -415,7 +415,9 @@ logs::file_writer::file_writer(const std::string& name)
 
 #ifdef _WIN32
 		// Autodelete compressed log file
-		m_fout2.set_delete();
+		FILE_DISPOSITION_INFO disp;
+		disp.DeleteFileW = true;
+		SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 #endif
 	}
 	catch (const std::exception& e)
@@ -495,7 +497,9 @@ logs::file_writer::~file_writer()
 
 #ifdef _WIN32
 	// Cancel compressed log file autodeletion
-	m_fout2.set_delete(false);
+	FILE_DISPOSITION_INFO disp;
+	disp.DeleteFileW = false;
+	SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 
 	UnmapViewOfFile(m_fptr);
 	CloseHandle(m_fmap);

@@ -445,19 +445,18 @@ void save_manager_dialog::OnEntriesRemove()
 // Pop-up a small context-menu, being a replacement for save_data_manage_dialog
 void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 {
-	bool selectedItems = m_list->selectionModel()->selectedRows().size() > 1;
-
-	QPoint globalPos = m_list->mapToGlobal(pos);
-	QMenu* menu = new QMenu();
 	int idx = m_list->currentRow();
 	if (idx == -1)
 	{
 		return;
 	}
 
+	const bool selectedItems = m_list->selectionModel()->selectedRows().size() > 1;
+
 	QAction* removeAct = new QAction(tr("&Remove"), this);
 	QAction* showDirAct = new QAction(tr("&Open Save Directory"), this);
 
+	QMenu* menu = new QMenu();
 	menu->addAction(removeAct);
 	menu->addAction(showDirAct);
 
@@ -478,7 +477,7 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 		QDesktopServices::openUrl(QUrl("file:///" + path));
 	});
 
-	menu->exec(globalPos);
+	menu->exec(m_list->viewport()->mapToGlobal(pos));
 }
 
 void save_manager_dialog::SetIconSize(int size)

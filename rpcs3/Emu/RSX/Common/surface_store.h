@@ -1,18 +1,18 @@
 ﻿#pragma once
 
-#include "Utilities/GSL.h"
 #include "Emu/Memory/vm.h"
 #include "surface_utils.h"
 #include "../GCM.h"
 #include "../rsx_utils.h"
+#include "Utilities/span.h"
 #include <list>
 
 namespace
 {
 	template <typename T>
-	gsl::span<T> as_const_span(gsl::span<const gsl::byte> unformated_span)
+	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
 	}
 }
 
@@ -428,7 +428,7 @@ namespace rsx
 					if (pitch_compatible)
 					{
 						// Preserve memory outside the area to be inherited if needed
-						split_surface_region<depth>(command_list, address, Traits::get(surface), (u16)width, (u16)height, bpp, antialias);
+						split_surface_region<depth>(command_list, address, Traits::get(surface), static_cast<u16>(width), static_cast<u16>(height), bpp, antialias);
 						old_surface = Traits::get(surface);
 					}
 
@@ -444,7 +444,7 @@ namespace rsx
 			{
 				// Range test
 				const auto aa_factor_v = get_aa_factor_v(antialias);
-				rsx::address_range range = rsx::address_range::start_length(address, u32(pitch * height * aa_factor_v));
+				rsx::address_range range = rsx::address_range::start_length(address, static_cast<u32>(pitch * height * aa_factor_v));
 				*storage_bounds = range.get_min_max(*storage_bounds);
 
 				// Search invalidated resources for a suitable surface
@@ -496,7 +496,7 @@ namespace rsx
 				if (Traits::surface_is_pitch_compatible(aliased_surface->second, pitch))
 				{
 					auto surface = Traits::get(aliased_surface->second);
-					split_surface_region<!depth>(command_list, address, surface, (u16)width, (u16)height, bpp, antialias);
+					split_surface_region<!depth>(command_list, address, surface, static_cast<u16>(width), static_cast<u16>(height), bpp, antialias);
 
 					if (!old_surface || old_surface->last_use_tag < surface->last_use_tag)
 					{

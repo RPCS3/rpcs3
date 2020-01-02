@@ -1,22 +1,22 @@
 ﻿#include "main_application.h"
 
-#include "pad_thread.h"
+#include "Input/pad_thread.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "Emu/Io/Null/NullMouseHandler.h"
 #include "Emu/Io/KeyboardHandler.h"
 #include "Emu/Io/PadHandler.h"
 #include "Emu/Io/MouseHandler.h"
-#include "basic_keyboard_handler.h"
-#include "basic_mouse_handler.h"
-#include "keyboard_pad_handler.h"
-#include "ds4_pad_handler.h"
+#include "Input/basic_keyboard_handler.h"
+#include "Input/basic_mouse_handler.h"
+#include "Input/keyboard_pad_handler.h"
+#include "Input/ds4_pad_handler.h"
 #ifdef _WIN32
-#include "xinput_pad_handler.h"
-#include "mm_joystick_handler.h"
+#include "Input/xinput_pad_handler.h"
+#include "Input/mm_joystick_handler.h"
 #endif
 #ifdef HAVE_LIBEVDEV
-#include "evdev_joystick_handler.h"
+#include "Input/evdev_joystick_handler.h"
 #endif
 
 #include "Emu/Audio/AudioBackend.h"
@@ -44,8 +44,10 @@
 #endif
 
 /** Emu.Init() wrapper for user manager */
-bool main_application::InitializeEmulator(const std::string& user, bool force_init)
+bool main_application::InitializeEmulator(const std::string& user, bool force_init, bool show_gui)
 {
+	Emu.SetHasGui(show_gui);
+
 	// try to set a new user
 	const bool user_was_set = Emu.SetUsr(user);
 
@@ -98,7 +100,15 @@ EmuCallbacks main_application::CreateCallbacks()
 		{
 		case mouse_handler::null:
 		{
-			g_fxo->init<MouseHandlerBase, NullMouseHandler>();
+			if (g_cfg.io.move == move_handler::mouse)
+			{
+				basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>();
+				ret->moveToThread(get_thread());
+				ret->SetTargetWindow(m_game_window);
+			}
+			else
+				g_fxo->init<MouseHandlerBase, NullMouseHandler>();
+
 			break;
 		}
 		case mouse_handler::basic:

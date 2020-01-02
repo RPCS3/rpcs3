@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "PPUFunction.h"
 #include "PPUCallback.h"
@@ -7,13 +7,13 @@
 #include "Emu/Memory/vm_var.h"
 
 // Helper function
-constexpr const char* ppu_select_name(const char* name, u32 id)
+constexpr const char* ppu_select_name(const char* name, u32 /*id*/)
 {
 	return name;
 }
 
 // Helper function
-constexpr const char* ppu_select_name(const char* name, const char* orig_name)
+constexpr const char* ppu_select_name(const char* /*name*/, const char* orig_name)
 {
 	return orig_name;
 }
@@ -285,7 +285,7 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 	return func(ppu, args...);
 }
 
-#define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<&func>(#module, ppu_select_name(#func, nid), BIND_FUNC(func, ppu.cia = (u32)ppu.lr & ~3), ppu_generate_id(nid))
+#define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<&func>(#module, ppu_select_name(#func, nid), BIND_FUNC(func, ppu.cia = static_cast<u32>(ppu.lr) & ~3), ppu_generate_id(nid))
 
 #define REG_FUNC(module, func) REG_FNID(module, #func, func)
 
@@ -293,4 +293,4 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 
 #define REG_VAR(module, var) REG_VNID(module, #var, var)
 
-#define UNIMPLEMENTED_FUNC(module) module.todo("%s", __func__)
+#define UNIMPLEMENTED_FUNC(module) module.todo("%s()", __func__)

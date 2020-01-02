@@ -60,11 +60,7 @@ void pad_thread::Init()
 		}
 	}
 
-	const PadInfo pad_info(m_info);
-	std::memset(&m_info, 0, sizeof(m_info));
 	m_info.now_connect = 0;
-	m_info.system_info |= pad_info.system_info;
-	m_info.ignore_input = pad_info.ignore_input;
 
 	handlers.clear();
 
@@ -92,8 +88,8 @@ void pad_thread::Init()
 			{
 			case pad_handler::keyboard:
 				keyptr = std::make_shared<keyboard_pad_handler>();
-				keyptr->moveToThread((QThread *)curthread);
-				keyptr->SetTargetWindow((QWindow *)curwindow);
+				keyptr->moveToThread(static_cast<QThread*>(curthread));
+				keyptr->SetTargetWindow(static_cast<QWindow*>(curwindow));
 				cur_pad_handler = keyptr;
 				break;
 			case pad_handler::ds3:

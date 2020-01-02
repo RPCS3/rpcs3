@@ -3,6 +3,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "cellAudio.h"
 #include <atomic>
@@ -454,12 +455,14 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 
 	// send aftermix event (normal audio event)
 	std::array<std::shared_ptr<lv2_event_queue>, MAX_AUDIO_EVENT_QUEUES> queues;
+	std::array<u64, MAX_AUDIO_EVENT_QUEUES> event_sources;
 	u32 queue_count = 0;
 
-	for (u64 key : keys)
+	for (const auto& key_pair : keys)
 	{
-		if (auto queue = lv2_event_queue::find(key))
+		if (auto queue = lv2_event_queue::find(key_pair.first))
 		{
+			event_sources[queue_count] = key_pair.second;
 			queues[queue_count++] = queue;
 		}
 	}
@@ -468,7 +471,7 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 
 	for (u32 i = 0; i < queue_count; i++)
 	{
-		queues[i]->send(0, 0, 0, 0); // TODO: check arguments
+		queues[i]->send(event_sources[i], 0, 0, 0);
 	}
 }
 
@@ -978,6 +981,7 @@ error_code cellAudioQuit(ppu_thread& ppu)
 
 	// TODO
 	g_audio->keys.clear();
+	g_audio->key_count = 0;
 	g_audio->init = 0;
 
 	return CELL_OK;
@@ -1115,7 +1119,7 @@ error_code cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> port
 	case audio_port_state::closed: portConfig->status = CELL_AUDIO_STATUS_CLOSE; break;
 	case audio_port_state::opened: portConfig->status = CELL_AUDIO_STATUS_READY; break;
 	case audio_port_state::started: portConfig->status = CELL_AUDIO_STATUS_RUN; break;
-	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, (u32)state);
+	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
 	}
 
 	portConfig->nChannel = port.num_channels;
@@ -1148,7 +1152,7 @@ error_code cellAudioPortStart(u32 portNum)
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	case audio_port_state::started: return CELL_AUDIO_ERROR_PORT_ALREADY_RUN;
 	case audio_port_state::opened: return CELL_OK;
-	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, (u32)state);
+	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
 	}
 }
 
@@ -1175,7 +1179,7 @@ error_code cellAudioPortClose(u32 portNum)
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	case audio_port_state::started: return CELL_OK;
 	case audio_port_state::opened: return CELL_OK;
-	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, (u32)state);
+	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
 	}
 }
 
@@ -1202,7 +1206,7 @@ error_code cellAudioPortStop(u32 portNum)
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_RUN;
 	case audio_port_state::started: return CELL_OK;
 	case audio_port_state::opened: return CELL_AUDIO_ERROR_PORT_NOT_RUN;
-	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, (u32)state);
+	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
 	}
 }
 
@@ -1318,13 +1322,11 @@ error_code cellAudioSetPortLevel(u32 portNum, float level)
 	return CELL_OK;
 }
 
-error_code cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
+static error_code AudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key, u32 queue_type)
 {
-	cellAudio.warning("cellAudioCreateNotifyEventQueue(id=*0x%x, key=*0x%x)", id, key);
-
 	vm::var<sys_event_queue_attribute_t> attr;
 	attr->protocol = SYS_SYNC_FIFO;
-	attr->type     = SYS_PPU_QUEUE;
+	attr->type     = queue_type;
 	attr->name_u64 = 0;
 
 	for (u64 i = 0; i < MAX_AUDIO_EVENT_QUEUES; i++)
@@ -1332,7 +1334,11 @@ error_code cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 		// Create an event queue "bruteforcing" an available key
 		const u64 key_value = 0x80004d494f323221ull + i;
 
-		if (const s32 res = sys_event_queue_create(id, attr, key_value, 32))
+		// This originally reads from a global sdk value set by cellAudioInit
+		// So check initialization as well
+		const u32 queue_depth = g_fxo->get<cell_audio>()->init && g_ps3_process_info.sdk_ver <= 0x35FFFF ? 2 : 8;
+
+		if (CellError res{sys_event_queue_create(id, attr, key_value, queue_depth) + 0u})
 		{
 			if (res != CELL_EEXIST)
 			{
@@ -1349,18 +1355,24 @@ error_code cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 	return CELL_AUDIO_ERROR_EVENT_QUEUE;
 }
 
+error_code cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
+{
+	cellAudio.warning("cellAudioCreateNotifyEventQueue(id=*0x%x, key=*0x%x)", id, key);
+
+	return AudioCreateNotifyEventQueue(id, key, SYS_PPU_QUEUE);
+}
+
 error_code cellAudioCreateNotifyEventQueueEx(vm::ptr<u32> id, vm::ptr<u64> key, u32 iFlags)
 {
-	cellAudio.todo("cellAudioCreateNotifyEventQueueEx(id=*0x%x, key=*0x%x, iFlags=0x%x)", id, key, iFlags);
+	cellAudio.warning("cellAudioCreateNotifyEventQueueEx(id=*0x%x, key=*0x%x, iFlags=0x%x)", id, key, iFlags);
 
 	if (iFlags & ~CELL_AUDIO_CREATEEVENTFLAG_SPU)
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	// TODO
-
-	return CELL_AUDIO_ERROR_EVENT_QUEUE;
+	const u32 queue_type = (iFlags & CELL_AUDIO_CREATEEVENTFLAG_SPU) ? SYS_SPU_QUEUE : SYS_PPU_QUEUE;
+	return AudioCreateNotifyEventQueue(id, key, queue_type);
 }
 
 error_code cellAudioSetNotifyEventQueue(u64 key)
@@ -1376,15 +1388,22 @@ error_code cellAudioSetNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	for (auto k : g_audio->keys) // check for duplicates
+	if (!lv2_event_queue::find(key))
 	{
-		if (k == key)
+		return CELL_AUDIO_ERROR_TRANS_EVENT;
+	}
+
+	for (const auto& k : g_audio->keys) // check for duplicates
+	{
+		if (k.first == key)
 		{
 			return CELL_AUDIO_ERROR_TRANS_EVENT;
 		}
 	}
 
-	g_audio->keys.emplace_back(key);
+	// Set unique source associated with the key
+	g_audio->keys.emplace_back(key, ((process_getpid() + 1ull) << 32) + (lv2_event_port::id_base + g_audio->key_count * lv2_event_port::id_step));
+	g_audio->key_count = (g_audio->key_count + 1) % lv2_event_port::id_count;
 
 	return CELL_OK;
 }
@@ -1411,9 +1430,9 @@ error_code cellAudioRemoveNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	for (auto i = g_audio->keys.begin(); i != g_audio->keys.end(); i++)
+	for (auto i = g_audio->keys.cbegin(); i != g_audio->keys.cend(); i++)
 	{
-		if (*i == key)
+		if (i->first == key)
 		{
 			g_audio->keys.erase(i);
 
@@ -1464,6 +1483,8 @@ error_code cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float 
 
 	lock.unlock();
 
+	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
+
 	for (u32 i = 0; i < samples * port.num_channels; i++)
 	{
 		dst[i] += src[i] * volume; // mix all channels
@@ -1502,6 +1523,8 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 	const auto dst = port.get_vm_ptr();
 
 	lock.unlock();
+
+	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
 
 	if (port.num_channels == 2)
 	{
@@ -1568,6 +1591,8 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 	const auto dst = port.get_vm_ptr();
 
 	lock.unlock();
+
+	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
 
 	if (port.num_channels == 6)
 	{

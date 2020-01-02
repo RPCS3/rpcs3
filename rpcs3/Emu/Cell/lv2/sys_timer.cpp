@@ -238,7 +238,7 @@ error_code sys_timer_connect_event_queue(ppu_thread& ppu, u32 timer_id, u32 queu
 
 		// Connect event queue
 		timer.port   = std::static_pointer_cast<lv2_event_queue>(found->second);
-		timer.source = name ? name : ((u64)process_getpid() << 32) | timer_id;
+		timer.source = name ? name : (s64{process_getpid()} << 32) | u64{timer_id};
 		timer.data1  = data1;
 		timer.data2  = data2;
 		return {};

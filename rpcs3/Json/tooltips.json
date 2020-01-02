@@ -1,10 +1,18 @@
 ﻿{
 	"advanced": {
+		"libraries": {
+			"manual": "Allows the user to manually choose the LLE libraries to load.\nIf unsure, don't use this option. Nothing will work if you use this.",
+			"both": "Load libsysmodule.sprx and chosen list of libraries. Option for backward compatibility.\nIf unsure, don't use this option.",
+			"liblv2both": "Loads liblv2.sprx and chosen list of libraries.\nIf unsure, don't use this option.",
+			"liblv2list": "Loads liblv2.sprx and nothing but selected libraries.\nDon't use this option.",
+			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this.\nThis is the preferred option."
+		},
 		"debugConsoleMode": "Increases the amount of usable system memory to match a DECR console and more.\nCauses some software to behave differently than on retail hardware.",
 		"readColor": "Initializes render target memory using vm memory.",
 		"readDepth": "Initializes render target memory using vm memory.",
 		"dumpDepth": "Writes depth buffer values to vm memory.",
 		"disableOnDiskShaderCache": "Disables the loading and saving of shaders from and to the shader cache in the data directory.",
+		"relaxedZCULL": "Changes ZCULL report synchronization behaviour to be more forgiving to PC architecture.\nCan improve performance in some games but can also cause stability issues or drastically reduced performance in others.\nUse with caution and if performance or stability is compromised, keep this disabled.",
 		"maxSPURSThreads": "Limits the maximum number of SPURS threads in each thread group.\nMay improve performance in some cases, especially on systems with limited number of hardware threads.\nLimiting the number of threads is likely to cause crashes; it's recommended to keep this at default value.",
 		"sleepTimersAccuracy": "Changes the sleep period accuracy.\n'As Host' uses default accuracy of the underlying operating system, while 'All Timers' attempts to improve it.\n'Usleep Only' limits the adjustments to usleep syscall only.\nCan affect perfomance in unexpected ways.",
 		"vblankRate": "Adjusts the frequency of vertical blanking signals that the emulator sends.\nAffects timing of events which rely on these signals.",
@@ -22,7 +30,7 @@
 		"audioBufferDuration": "Target buffer duration in milliseconds.\nHigher values make the buffering algorithm's job easier, but may introduce noticeable audio latency.",
 		"enableTimeStretching": "Enables time stretching - requires buffering to be enabled.\nReduces crackle/stutter further, but may cause a very noticeable reduction in audio quality on slower CPUs.",
 		"timeStretchingThreshold": "Buffer fill level (in percentage) below which time stretching will start.",
-		"microphoneBox": "Standard should be used for most games.\nSingstar emulates a singstar device and should be used with Singstar games.\nReal Singstar should only be used with a REAL Singstar device with Singstar games.\nRocksmith should be used with a Rocksmith dongle."
+		"microphoneBox": "Standard should be used for most games.\nSingStar emulates a SingStar device and should be used with SingStar games.\nReal SingStar should only be used with a REAL SingStar device with SingStar games.\nRocksmith should be used with a Rocksmith dongle."
 	},
 	"cpu": {
 		"PPU": {
@@ -35,13 +43,6 @@
 			"fast": "This is slower than the SPU Recompiler but significantly faster than the precise interpreter.\nGames rarely need this however.",
 			"ASMJIT": "This is the fast option with very good compatibility.\nIf unsure, use this option.",
 			"LLVM": "This is the fastest option with very good compatibility.\nRecompiles the game's SPU LLVM cache before running which adds extra start-up time.\nIf you experience issues, use the ASMJIT Recompiler."
-		},
-		"libraries": {
-			"manual": "Allows the user to manually choose the LLE libraries to load.\nIf unsure, don't use this option. Nothing will work if you use this.",
-			"both": "Load libsysmodule.sprx and chosen list of libraries. Option for backward compatibility.\nIf unsure, don't use this option.",
-			"liblv2both": "Loads liblv2.sprx and chosen list of libraries.\nIf unsure, don't use this option.",
-			"liblv2list": "Loads liblv2.sprx and nothing but selected libraries.\nDon't use this option.",
-			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this.\nThis is the preferred option."
 		},
 		"checkboxes": {
 			"accurateXFloat": "Fixes bugs in various games at the cost of performance.\nThis setting is only applied when SPU LLVM is active.",
@@ -91,6 +92,8 @@
 		},
 		"overlay": {
 			"perfOverlayEnabled": "Enables or disables the performance overlay.",
+			"perfOverlayFramerateGraphEnabled": "Enables or disables the framerate graph.",
+			"perfOverlayFrametimeGraphEnabled": "Enables or disables the frametime graph.",
 			"perfOverlayPosition": "Sets the on-screen position (quadrant) of the performance overlay.",
 			"perfOverlayDetailLevel": "Controls the amount of information displayed on the performance overlay.",
 			"perfOverlayUpdateInterval": "Sets the time interval in which the performance overlay is being updated (measured in milliseconds).",
@@ -132,6 +135,8 @@
 		}
 	},
 	"gui": {
+		"log_limit": "Sets the maximum amount of blocks that the log can display.\nThis usually equals the number of lines.\nSet 0 in order to remove the limit.",
+		"tty_limit": "Sets the maximum amount of blocks that the tty can display.\nThis usually equals the number of lines.\nSet 0 in order to remove the limit.",
 		"configs": "Only useful to developers.\nIf unsure, don't use this option.",
 		"stylesheets": "Changes the overall look of RPCS3.\nChoose a stylesheet and click Apply to change between styles.",
 		"show_welcome": "Shows the initial welcome screen upon starting RPCS3.",
@@ -151,7 +156,7 @@
 		"mouseHandlerBox": "Some games support native mouse input.\nBasic will work in these cases.",
 		"cameraBox": "Camera support is not implemented, leave this on null.",
 		"cameraTypeBox": "Camera support is not implemented, leave this on unknown.",
-		"moveBox": "PlayStation Move support.\nFake: Experimental! This maps Move controls to DS4 controller mappings."
+		"moveBox": "PlayStation Move support.\nFake: Experimental! This maps Move controls to DS3 controller mappings.\nMouse: Emulate PSMove with Mouse handler."
 	},
 	"network": {
 		"netStatusBox": "Leave as disconnected unless you're debugging.\nRPCS3 has no online support."

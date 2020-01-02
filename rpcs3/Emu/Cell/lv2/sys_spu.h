@@ -39,6 +39,13 @@ enum : u64
 	SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY = 0xFFFFFFFF53505504ull,
 };
 
+enum
+{
+	SYS_SPU_THREAD_GROUP_LOG_ON         = 0x0,
+	SYS_SPU_THREAD_GROUP_LOG_OFF        = 0x1,
+	SYS_SPU_THREAD_GROUP_LOG_GET_STATUS = 0x2,
+};
+
 enum : u32
 {
 	SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED,
@@ -234,6 +241,7 @@ struct lv2_spu_group
 	const u32 max_num;
 	const s32 type; // SPU Thread Group Type
 	const u32 ct; // Memory Container Id
+	u32 max_run;
 
 	shared_mutex mutex;
 
@@ -247,9 +255,10 @@ struct lv2_spu_group
 	atomic_t<u64> stop_count;
 	class ppu_thread* waiter = nullptr;
 
-	std::array<std::shared_ptr<named_thread<spu_thread>>, 256> threads; // SPU Threads
-	std::array<std::pair<sys_spu_image, std::vector<sys_spu_segment>>, 256> imgs; // SPU Images
-	std::array<std::array<u64, 4>, 256> args; // SPU Thread Arguments
+	std::array<std::shared_ptr<named_thread<spu_thread>>, 8> threads; // SPU Threads
+	std::array<s8, 256> threads_map; // SPU Threads map based number
+	std::array<std::pair<sys_spu_image, std::vector<sys_spu_segment>>, 8> imgs; // SPU Images
+	std::array<std::array<u64, 4>, 8> args; // SPU Thread Arguments
 
 	std::weak_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
 	std::weak_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
@@ -259,6 +268,7 @@ struct lv2_spu_group
 		: id(idm::last_id())
 		, name(name)
 		, max_num(num)
+		, max_run(num)
 		, init(0)
 		, prio(prio)
 		, type(type)
@@ -269,6 +279,7 @@ struct lv2_spu_group
 		, running(0)
 		, stop_count(0)
 	{
+		threads_map.fill(-1);
 	}
 
 	void send_run_event(u64 data1, u64 data2, u64 data3)
@@ -294,6 +305,8 @@ struct lv2_spu_group
 			queue->send(SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3);
 		}
 	}
+
+	static std::pair<named_thread<spu_thread>*, std::shared_ptr<lv2_spu_group>> get_thread(u32 id);
 };
 
 class ppu_thread;
@@ -322,6 +335,7 @@ error_code sys_spu_thread_group_connect_event(ppu_thread&, u32 id, u32 eq, u32 e
 error_code sys_spu_thread_group_disconnect_event(ppu_thread&, u32 id, u32 et);
 error_code sys_spu_thread_group_connect_event_all_threads(ppu_thread&, u32 id, u32 eq_id, u64 req, vm::ptr<u8> spup);
 error_code sys_spu_thread_group_disconnect_event_all_threads(ppu_thread&, u32 id, u8 spup);
+error_code sys_spu_thread_group_log(ppu_thread&, s32 command, vm::ptr<s32> stat);
 error_code sys_spu_thread_write_ls(ppu_thread&, u32 id, u32 address, u64 value, u32 type);
 error_code sys_spu_thread_read_ls(ppu_thread&, u32 id, u32 address, vm::ptr<u64> value, u32 type);
 error_code sys_spu_thread_write_spu_mb(ppu_thread&, u32 id, u32 value);

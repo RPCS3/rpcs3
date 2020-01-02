@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
@@ -74,7 +74,7 @@ void kernel_explorer::Update()
 	const u32 total_memory_usage = dct->used;
 
 	QTreeWidgetItem* root = new QTreeWidgetItem();
-	root->setText(0, qstr(fmt::format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024))));
+	root->setText(0, qstr(fmt::format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, 1.f * total_memory_usage / (1024 * 1024))));
 	m_tree->addTopLevelItem(root);
 
 	union name64
@@ -83,8 +83,9 @@ void kernel_explorer::Update()
 		char string[8];
 
 		name64(u64 data)
-			: u64_data(data & 0x00ffffffffffffffull)
+			: u64_data(data)
 		{
+			string[7] = '\0';
 		}
 
 		const char* operator+() const
@@ -277,10 +278,10 @@ void kernel_explorer::Update()
 
 	lv2_types.emplace_back(l_addTreeChild(root, "SPU Threads"));
 
-	idm::select<named_thread<spu_thread>>([&](u32 id, spu_thread& spu)
+	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
 	{
 		lv2_types.back().count++;
-		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("SPU Thread: ID = 0x%08x '%s'", id, spu.spu_name.get())));
+		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("SPU Thread: ID = 0x%08x '%s'", spu.lv2_id, spu.spu_name.get())));
 	});
 
 	lv2_types.emplace_back(l_addTreeChild(root, "SPU Thread Groups"));

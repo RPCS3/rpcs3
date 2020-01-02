@@ -10,6 +10,7 @@
 #include "Emu/System.h"
 #include "Loader/PSF.h"
 #include "Utilities/types.h"
+#include "Utilities/lockless.h"
 
 #include <algorithm>
 #include <iterator>
@@ -105,6 +106,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	AddColumn(gui::column_resolution, tr("Supported Resolutions"), tr("Show Supported Resolutions"));
 	AddColumn(gui::column_sound,      tr("Sound Formats"),         tr("Show Sound Formats"));
 	AddColumn(gui::column_parental,   tr("Parental Level"),        tr("Show Parental Levels"));
+	AddColumn(gui::column_last_play,  tr("Last Played"),           tr("Show Last Played"));
+	AddColumn(gui::column_playtime,   tr("Time Played"),           tr("Show Time Played"));
 	AddColumn(gui::column_compat,     tr("Compatibility"),         tr("Show Compatibility"));
 
 	// Events
@@ -116,11 +119,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	{
 		QMenu* configure = new QMenu(this);
 		configure->addActions(m_columnActs);
-		configure->exec(mapToGlobal(pos));
-
-		QMenu* pad_configure = new QMenu(this);
-		pad_configure->addActions(m_columnActs);
-		pad_configure->exec(mapToGlobal(pos));
+		configure->exec(m_gameList->horizontalHeader()->viewport()->mapToGlobal(pos));
 	});
 
 	connect(m_xgrid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
@@ -291,8 +290,9 @@ bool game_list_frame::IsEntryVisible(const game_info& game)
 		return category::CategoryInMap(game->info.category, category::cat_boot);
 	};
 
-	bool is_visible = m_show_hidden || !m_hidden_list.contains(qstr(game->info.serial));
-	return is_visible && matches_category() && SearchMatchesApp(game->info.name, game->info.serial);
+	const QString serial = qstr(game->info.serial);
+	bool is_visible = m_show_hidden || !m_hidden_list.contains(serial);
+	return is_visible && matches_category() && SearchMatchesApp(qstr(game->info.name), serial);
 }
 
 void game_list_frame::SortGameList()
@@ -360,6 +360,87 @@ void game_list_frame::SortGameList()
 
 	// Shorten the last section to remove horizontal scrollbar if possible
 	m_gameList->resizeColumnToContents(gui::column_count - 1);
+}
+
+QString game_list_frame::GetLastPlayedBySerial(const QString& serial)
+{
+	return m_gui_settings->GetLastPlayed(serial);
+}
+
+QString game_list_frame::GetPlayTimeBySerial(const QString& serial)
+{
+	const qint64 elapsed_ms = m_gui_settings->GetPlaytime(serial);
+
+	if (elapsed_ms <= 0)
+	{
+		return "";
+	}
+
+	const qint64 elapsed_seconds = (elapsed_ms / 1000) + ((elapsed_ms % 1000) > 0 ? 1 : 0);
+	const qint64 hours_played    = elapsed_seconds / 3600;
+	const qint64 minutes_played  = (elapsed_seconds % 3600) / 60;
+	const qint64 seconds_played  = (elapsed_seconds % 3600) % 60;
+
+	// For anyone who was wondering why there need to be so many cases:
+	// 1. Using variables won't work for future localization due to varying sentence structure in different languages.
+	// 2. The provided Qt functionality only works if localization is already enabled
+	// 3. The provided Qt functionality only works for single variables
+
+	if (hours_played <= 0)
+	{
+		if (minutes_played <= 0)
+		{
+			if (seconds_played == 1)
+			{
+				return tr("%0 second").arg(seconds_played);
+			}
+			return tr("%0 seconds").arg(seconds_played);
+		}
+
+		if (seconds_played <= 0)
+		{
+			if (minutes_played == 1)
+			{
+				return tr("%0 minute").arg(minutes_played);
+			}
+			return tr("%0 minutes").arg(minutes_played);
+		}
+		if (minutes_played == 1 && seconds_played == 1)
+		{
+			return tr("%0 minute and %1 second").arg(minutes_played).arg(seconds_played);
+		}
+		if (minutes_played == 1)
+		{
+			return tr("%0 minute and %1 seconds").arg(minutes_played).arg(seconds_played);
+		}
+		if (seconds_played == 1)
+		{
+			return tr("%0 minutes and %1 second").arg(minutes_played).arg(seconds_played);
+		}
+		return tr("%0 minutes and %1 seconds").arg(minutes_played).arg(seconds_played);
+	}
+
+	if (minutes_played <= 0)
+	{
+		if (hours_played == 1)
+		{
+			return tr("%0 hour").arg(hours_played);
+		}
+		return tr("%0 hours").arg(hours_played);
+	}
+	if (hours_played == 1 && minutes_played == 1)
+	{
+		return tr("%0 hour and %1 minute").arg(hours_played).arg(minutes_played);
+	}
+	if (hours_played == 1)
+	{
+		return tr("%0 hour and %1 minutes").arg(hours_played).arg(minutes_played);
+	}
+	if (minutes_played == 1)
+	{
+		return tr("%0 hours and %1 minute").arg(hours_played).arg(minutes_played);
+	}
+	return tr("%0 hours and %1 minutes").arg(hours_played).arg(minutes_played);
 }
 
 std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
@@ -455,6 +536,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		for (size_t i = 0; i < path_list.size(); ++i)
 			indices.append(i);
 
+		lf_queue<game_info> games;
+
 		QtConcurrent::blockingMap(indices, [&](size_t& i)
 		{
 			const std::string dir = path_list[i];
@@ -493,10 +576,22 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 					return;
 				}
 
-				QString serial = qstr(game.serial);
-				m_notes[serial] = m_gui_settings->GetValue(gui::notes, serial, "").toString();
-				m_titles[serial] = m_gui_settings->GetValue(gui::titles, serial, "").toString().simplified();
+				const QString serial = qstr(game.serial);
+				const QString note = m_gui_settings->GetValue(gui::notes, serial, "").toString();
+				const QString title = m_gui_settings->GetValue(gui::titles, serial, "").toString().simplified();
+				m_gui_settings->SetLastPlayed(serial, m_gui_settings->GetValue(gui::last_played, serial, "").toString());
+				m_gui_settings->SetPlaytime(serial, m_gui_settings->GetValue(gui::playtime, serial, 0).toInt());
 				serials.insert(serial);
+
+				if (!note.isEmpty())
+				{
+					m_notes.insert(serial, note);
+				}
+
+				if (!title.isEmpty())
+				{
+					m_titles.insert(serial, title);
+				}
 
 				auto cat = category::cat_boot.find(game.category);
 				if (cat != category::cat_boot.end())
@@ -537,7 +632,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				const QColor color = getGridCompatibilityColor(compat.color);
 				const QPixmap pxmap = PaintedPixmap(icon, hasCustomConfig, hasCustomPadConfig, color);
 
-				m_game_data.push_back(game_info(new gui_game_info{ game, compat, icon, pxmap, hasCustomConfig, hasCustomPadConfig }));
+				games.push(std::make_shared<gui_game_info>(gui_game_info{game, compat, icon, pxmap, hasCustomConfig, hasCustomPadConfig}));
 			}
 			catch (const std::exception& e)
 			{
@@ -545,6 +640,11 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				return;
 			}
 		});
+
+		for (auto&& g : games.pop_all())
+		{
+			m_game_data.push_back(std::move(g));
+		}
 
 		// Try to update the app version for disc games if there is a patch
 		for (const auto& entry : m_game_data)
@@ -593,10 +693,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		// Sort by name at the very least.
 		std::sort(m_game_data.begin(), m_game_data.end(), [&](const game_info& game1, const game_info& game2)
 		{
-			const QString custom_title1 = m_titles[qstr(game1->info.serial)];
-			const QString custom_title2 = m_titles[qstr(game2->info.serial)];
-			const QString title1 = custom_title1.isEmpty() ? qstr(game1->info.name) : custom_title1;
-			const QString title2 = custom_title2.isEmpty() ? qstr(game2->info.name) : custom_title2;
+			const QString title1 = m_titles.value(qstr(game1->info.serial), qstr(game1->info.name));
+			const QString title2 = m_titles.value(qstr(game2->info.serial), qstr(game2->info.name));
 			return title1.toLower() < title2.toLower();
 		});
 
@@ -730,13 +828,13 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	if (m_isListLayout)
 	{
 		item = m_gameList->item(m_gameList->indexAt(pos).row(), gui::column_icon);
-		globalPos = m_gameList->mapToGlobal(pos);
+		globalPos = m_gameList->viewport()->mapToGlobal(pos);
 	}
 	else
 	{
 		QModelIndex mi = m_xgrid->indexAt(pos);
 		item = m_xgrid->item(mi.row(), mi.column());
-		globalPos = m_xgrid->mapToGlobal(pos);
+		globalPos = m_xgrid->viewport()->mapToGlobal(pos);
 	}
 
 	game_info gameinfo = GetGameInfoFromItem(item);
@@ -878,10 +976,14 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(configure, &QAction::triggered, [=]
 	{
 		settings_dialog dlg(m_gui_settings, m_emu_settings, 0, this, &currGame);
-		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomConfig)
+		if (dlg.exec() == QDialog::Accepted)
 		{
-			gameinfo->hasCustomConfig = true;
-			ShowCustomConfigIcon(item);
+			if (!gameinfo->hasCustomConfig)
+			{
+				gameinfo->hasCustomConfig = true;
+				ShowCustomConfigIcon(item);
+			}
+			Q_EMIT NotifyEmuSettingsChange();
 		}
 	});
 	connect(pad_configure, &QAction::triggered, [=]
@@ -985,7 +1087,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 			else
 			{
-				m_titles[serial] = new_title;
+				m_titles.insert(serial, new_title);
 				m_gui_settings->SetValue(gui::titles, serial, new_title);
 			}
 			Refresh(true); // full refresh in order to reliably sort the list
@@ -1006,7 +1108,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 			else
 			{
-				m_notes[serial] = new_notes;
+				m_notes.insert(serial, new_notes);
 				m_gui_settings->SetValue(gui::notes, serial, new_notes);
 			}
 			Refresh();
@@ -1146,24 +1248,25 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 	u32 caches_removed = 0;
 	u32 caches_total   = 0;
 
-	QDirIterator dir_iter(qstr(base_dir), QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	const QStringList filter{ QStringLiteral("shaders_cache") };
+
+	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+
 	while (dir_iter.hasNext())
 	{
 		const QString filepath = dir_iter.next();
 
-		if (dir_iter.fileName() == "shaders_cache")
+		if (QDir(filepath).removeRecursively())
 		{
-			if (QDir(filepath).removeRecursively())
-			{
-				++caches_removed;
-				LOG_NOTICE(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
-			}
-			else
-			{
-				LOG_WARNING(GENERAL, "Could not completely remove shaders cache dir: %s", sstr(filepath));
-			}
-			++caches_total;
+			++caches_removed;
+			LOG_NOTICE(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
 		}
+		else
+		{
+			LOG_WARNING(GENERAL, "Could not completely remove shaders cache dir: %s", sstr(filepath));
+		}
+
+		++caches_total;
 	}
 
 	const bool success = caches_total == caches_removed;
@@ -1187,24 +1290,25 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	u32 files_removed = 0;
 	u32 files_total = 0;
 
-	QDirIterator dir_iter(qstr(base_dir), QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	const QStringList filter{ QStringLiteral("v*.obj"), QStringLiteral("v*.obj.gz") };
+
+	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+
 	while (dir_iter.hasNext())
 	{
 		const QString filepath = dir_iter.next();
 
-		if (QString::compare(dir_iter.fileInfo().suffix(), QStringLiteral("obj"), Qt::CaseInsensitive) == 0)
+		if (QFile::remove(filepath))
 		{
-			if (QFile::remove(filepath))
-			{
-				++files_removed;
-				LOG_NOTICE(GENERAL, "Removed PPU cache file: %s", sstr(filepath));
-			}
-			else
-			{
-				LOG_WARNING(GENERAL, "Could not remove PPU cache file: %s", sstr(filepath));
-			}
-			++files_total;
+			++files_removed;
+			LOG_NOTICE(GENERAL, "Removed PPU cache file: %s", sstr(filepath));
 		}
+		else
+		{
+			LOG_WARNING(GENERAL, "Could not remove PPU cache file: %s", sstr(filepath));
+		}
+
+		++files_total;
 	}
 
 	const bool success = files_total == files_removed;
@@ -1228,24 +1332,25 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 	u32 files_removed = 0;
 	u32 files_total = 0;
 
-	QDirIterator dir_iter(qstr(base_dir), QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	const QStringList filter{ QStringLiteral("spu*.dat"), QStringLiteral("spu*.dat.gz"), QStringLiteral("spu*.obj"), QStringLiteral("spu*.obj.gz") };
+
+	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+
 	while (dir_iter.hasNext())
 	{
 		const QString filepath = dir_iter.next();
 
-		if (QString::compare(dir_iter.fileInfo().suffix(), QStringLiteral("dat"), Qt::CaseInsensitive) == 0)
+		if (QFile::remove(filepath))
 		{
-			if (QFile::remove(filepath))
-			{
-				++files_removed;
-				LOG_NOTICE(GENERAL, "Removed SPU cache file: %s", sstr(filepath));
-			}
-			else
-			{
-				LOG_WARNING(GENERAL, "Could not remove SPU cache file: %s", sstr(filepath));
-			}
-			++files_total;
+			++files_removed;
+			LOG_NOTICE(GENERAL, "Removed SPU cache file: %s", sstr(filepath));
 		}
+		else
+		{
+			LOG_WARNING(GENERAL, "Could not remove SPU cache file: %s", sstr(filepath));
+		}
+
+		++files_total;
 	}
 
 	const bool success = files_total == files_removed;
@@ -1576,8 +1681,7 @@ void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item)
 
 	if (!m_isListLayout)
 	{
-		const QString custom_title = m_titles[QString::fromStdString(game->info.serial)];
-		const QString title = custom_title.isEmpty() ? qstr(game->info.name) : custom_title;
+		const QString title = m_titles.value(qstr(game->info.serial), qstr(game->info.name));
 		const QColor color = getGridCompatibilityColor(game->compat.color);
 
 		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
@@ -1767,7 +1871,7 @@ int game_list_frame::PopulateGameList()
 	std::string selected_item = CurrentSelectionIconPath();
 
 	m_gameList->clearContents();
-	m_gameList->setRowCount((int)m_game_data.size());
+	m_gameList->setRowCount(m_game_data.size());
 
 	int row = 0, index = -1;
 	for (const auto& game : m_game_data)
@@ -1778,9 +1882,8 @@ int game_list_frame::PopulateGameList()
 			continue;
 
 		const QString serial = qstr(game->info.serial);
-		const QString custom_title = m_titles[serial];
-		const QString title = custom_title.isEmpty() ? qstr(game->info.name) : custom_title;
-		const QString notes = m_notes[serial];
+		const QString title = m_titles.value(serial, qstr(game->info.name));
+		const QString notes = m_notes.value(serial);
 
 		// Icon
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
@@ -1851,6 +1954,8 @@ int game_list_frame::PopulateGameList()
 		m_gameList->setItem(row, gui::column_resolution, new custom_table_widget_item(GetStringFromU32(game->info.resolution, resolution::mode, true)));
 		m_gameList->setItem(row, gui::column_sound,      new custom_table_widget_item(GetStringFromU32(game->info.sound_format, sound::format, true)));
 		m_gameList->setItem(row, gui::column_parental,   new custom_table_widget_item(GetStringFromU32(game->info.parental_lvl, parental::level), Qt::UserRole, game->info.parental_lvl));
+		m_gameList->setItem(row, gui::column_last_play,  new custom_table_widget_item(GetLastPlayedBySerial(serial)));
+		m_gameList->setItem(row, gui::column_playtime,   new custom_table_widget_item(GetPlayTimeBySerial(serial)));
 		m_gameList->setItem(row, gui::column_compat,     compat_item);
 
 		if (selected_item == game->info.icon_path)
@@ -1915,9 +2020,8 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 	for (const auto& app : matching_apps)
 	{
 		const QString serial = qstr(app->info.serial);
-		const QString custom_title = m_titles[serial];
-		const QString title = custom_title.isEmpty() ? qstr(app->info.name) : custom_title;
-		const QString notes = m_notes[serial];
+		const QString title = m_titles.value(serial, qstr(app->info.name));
+		const QString notes = m_notes.value(serial);
 
 		m_xgrid->addItem(app->pxmap, title, r, c);
 		m_xgrid->item(r, c)->setData(gui::game_role, QVariant::fromValue(app));
@@ -1962,12 +2066,12 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 /**
 * Returns false if the game should be hidden because it doesn't match search term in toolbar.
 */
-bool game_list_frame::SearchMatchesApp(const std::string& name, const std::string& serial)
+bool game_list_frame::SearchMatchesApp(const QString& name, const QString& serial) const
 {
 	if (!m_search_text.isEmpty())
 	{
-		QString searchText = m_search_text.toLower();
-		return qstr(name).toLower().contains(searchText) || qstr(serial).toLower().contains(searchText);
+		const QString searchText = m_search_text.toLower();
+		return m_titles.value(serial, name).toLower().contains(searchText) || serial.toLower().contains(searchText);
 	}
 	return true;
 }

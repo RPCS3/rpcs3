@@ -1,8 +1,22 @@
 ﻿#include "stdafx.h"
 #include "VKCommonDecompiler.h"
+
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 #include "restore_new.h"
 #include "SPIRV/GlslangToSpv.h"
 #include "define_new_memleakdetect.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
+#endif
 
 namespace vk
 {
@@ -155,7 +169,7 @@ namespace vk
 
 		shader_object.setStrings(&shader_text, 1);
 
-		EShMessages msg = (EShMessages)(EShMsgVulkanRules | EShMsgSpvRules);
+		EShMessages msg = static_cast<EShMessages>(EShMsgVulkanRules | EShMsgSpvRules);
 		if (shader_object.parse(&g_default_config, 400, EProfile::ECoreProfile, false, true, msg))
 		{
 			program.addShader(&shader_object);

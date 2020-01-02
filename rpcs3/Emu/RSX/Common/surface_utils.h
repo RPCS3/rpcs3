@@ -56,8 +56,8 @@ namespace rsx
 			ret.height = height;
 			ret.transfer_scale_x = transfer_scale_x;
 			ret.transfer_scale_y = transfer_scale_y;
-			ret.target = (T)(target);
-			ret.source = (T)(source);
+			ret.target = static_cast<T>(target);
+			ret.source = static_cast<T>(source);
 
 			return ret;
 		}
@@ -233,7 +233,7 @@ namespace rsx
 					spp = 4;
 					break;
 				default:
-					fmt::throw_exception("Unknown AA mode 0x%x", (u32)aa);
+					fmt::throw_exception("Unknown AA mode 0x%x", static_cast<u8>(aa));
 			}
 		}
 

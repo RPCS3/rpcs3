@@ -73,6 +73,9 @@
     <ClCompile Include="util\atomic.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="util\atomic2.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\bin_patch.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -236,6 +239,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellSync.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSync2.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysconf.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysCache.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutil.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAp.cpp" />
@@ -303,7 +307,6 @@
     <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp" />
     <ClCompile Include="Emu\RSX\Common\FragmentProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\Common\ProgramStateCache.cpp" />
-    <ClCompile Include="Emu\RSX\Common\ShaderParam.cpp" />
     <ClCompile Include="Emu\RSX\Common\surface_store.cpp" />
     <ClCompile Include="Emu\RSX\Common\TextureUtils.cpp" />
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp" />
@@ -385,11 +388,14 @@
   <ItemGroup>
     <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellCrossController.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellRemotePlay.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellStorage.h" />
     <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_perf_metrics.h" />
     <ClInclude Include="util\atomic.hpp" />
-    <ClInclude Include="..\Utilities\AtomicPtr.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\bin_patch.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
@@ -399,9 +405,7 @@
     <ClInclude Include="..\Utilities\CRC.h" />
     <ClInclude Include="..\Utilities\date_time.h" />
     <ClInclude Include="..\Utilities\dynamic_library.h" />
-    <ClInclude Include="..\Utilities\event.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
-    <ClInclude Include="..\Utilities\GSL.h" />
     <ClInclude Include="..\Utilities\hash.h" />
     <ClInclude Include="..\Utilities\JIT.h" />
     <ClInclude Include="..\Utilities\lockless.h" />

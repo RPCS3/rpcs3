@@ -184,7 +184,7 @@ error_code sceNpSnsFbGetAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTokenPa
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_SNS_ERROR_NOT_SIGN_IN;
+		return not_an_error(SCE_NP_SNS_ERROR_NOT_SIGN_IN);
 	}
 
 	// TODO
@@ -309,7 +309,7 @@ error_code sceNpSnsFbGetLongAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTok
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_SNS_ERROR_NOT_SIGN_IN;
+		return not_an_error(SCE_NP_SNS_ERROR_NOT_SIGN_IN);
 	}
 
 	return CELL_OK;

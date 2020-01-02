@@ -13,15 +13,15 @@
 
 #include "Emu/Io/Null/NullPadHandler.h"
 
-#include "keyboard_pad_handler.h"
-#include "ds3_pad_handler.h"
-#include "ds4_pad_handler.h"
+#include "Input/keyboard_pad_handler.h"
+#include "Input/ds3_pad_handler.h"
+#include "Input/ds4_pad_handler.h"
 #ifdef _WIN32
-#include "xinput_pad_handler.h"
-#include "mm_joystick_handler.h"
+#include "Input/xinput_pad_handler.h"
+#include "Input/mm_joystick_handler.h"
 #endif
 #ifdef HAVE_LIBEVDEV
-#include "evdev_joystick_handler.h"
+#include "Input/evdev_joystick_handler.h"
 #endif
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -55,7 +55,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 
 	// load input config
 	g_cfg_input.from_default();
-	
+
 	if (game)
 	{
 		m_title_id = game->serial;
@@ -109,7 +109,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 		{
 			return;
 		}
-		const pad_info info = ui->chooseDevice->itemData(index).value<pad_info>();
+		const pad_device_info info = ui->chooseDevice->itemData(index).value<pad_device_info>();
 		m_device_name = info.name;
 		if (!g_cfg_input.player[m_tabs->currentIndex()]->device.from_string(m_device_name))
 		{
@@ -422,12 +422,12 @@ void pad_settings_dialog::InitButtons()
 	{
 		for (int i = 0; i < ui->chooseDevice->count(); i++)
 		{
-			if (!ui->chooseDevice->itemData(i).canConvert<pad_info>())
+			if (!ui->chooseDevice->itemData(i).canConvert<pad_device_info>())
 			{
 				LOG_FATAL(GENERAL, "Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
 				continue;
 			}
-			const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
+			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
 			m_handler->get_next_button_press(info.name, [=](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 		}
 	});
@@ -447,12 +447,12 @@ void pad_settings_dialog::SwitchPadInfo(const std::string& pad_name, bool is_con
 {
 	for (int i = 0; i < ui->chooseDevice->count(); i++)
 	{
-		const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
+		const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
 		if (info.name == pad_name)
 		{
 			if (info.is_connected != is_connected)
 			{
-				ui->chooseDevice->setItemData(i, QVariant::fromValue(pad_info{ pad_name, is_connected }));
+				ui->chooseDevice->setItemData(i, QVariant::fromValue(pad_device_info{ pad_name, is_connected }));
 				ui->chooseDevice->setItemText(i, is_connected ? qstr(pad_name) : (qstr(pad_name) + Disconnected_suffix));
 			}
 
@@ -508,9 +508,9 @@ void pad_settings_dialog::ReloadButtons()
 	updateButton(button_ids::id_pad_rstick_right, ui->b_rstick_right, &m_handler_cfg.rs_right);
 	updateButton(button_ids::id_pad_rstick_up, ui->b_rstick_up, &m_handler_cfg.rs_up);
 
-	ui->chb_vibration_large->setChecked((bool)m_handler_cfg.enable_vibration_motor_large);
-	ui->chb_vibration_small->setChecked((bool)m_handler_cfg.enable_vibration_motor_small);
-	ui->chb_vibration_switch->setChecked((bool)m_handler_cfg.switch_vibration_motors);
+	ui->chb_vibration_large->setChecked(static_cast<bool>(m_handler_cfg.enable_vibration_motor_large));
+	ui->chb_vibration_small->setChecked(static_cast<bool>(m_handler_cfg.enable_vibration_motor_small));
+	ui->chb_vibration_switch->setChecked(static_cast<bool>(m_handler_cfg.switch_vibration_motors));
 
 	m_min_force = m_handler->vibration_min;
 	m_max_force = m_handler->vibration_max;
@@ -529,20 +529,20 @@ void pad_settings_dialog::ReloadButtons()
 	// Enable Mouse Acceleration
 	std::vector<std::string> mouse_accel_range_x = m_handler_cfg.mouse_acceleration_x.to_list();
 	ui->mouse_accel_x->setRange(std::stod(mouse_accel_range_x.front()) / 100.0, std::stod(mouse_accel_range_x.back()) / 100.0);
-	ui->mouse_accel_x->setValue((double)m_handler_cfg.mouse_acceleration_x / 100.0);
+	ui->mouse_accel_x->setValue(m_handler_cfg.mouse_acceleration_x / 100.0);
 
 	std::vector<std::string> mouse_accel_range_y = m_handler_cfg.mouse_acceleration_y.to_list();
 	ui->mouse_accel_y->setRange(std::stod(mouse_accel_range_y.front()) / 100.0, std::stod(mouse_accel_range_y.back()) / 100.0);
-	ui->mouse_accel_y->setValue((double)m_handler_cfg.mouse_acceleration_y / 100.0);
+	ui->mouse_accel_y->setValue(m_handler_cfg.mouse_acceleration_y / 100.0);
 
 	// Enable Stick Lerp Factors
 	std::vector<std::string> left_stick_lerp_range = m_handler_cfg.l_stick_lerp_factor.to_list();
 	ui->left_stick_lerp->setRange(std::stod(left_stick_lerp_range.front()) / 100.0, std::stod(left_stick_lerp_range.back()) / 100.0);
-	ui->left_stick_lerp->setValue((double)m_handler_cfg.l_stick_lerp_factor / 100.0);
+	ui->left_stick_lerp->setValue(m_handler_cfg.l_stick_lerp_factor / 100.0);
 
 	std::vector<std::string> right_stick_lerp_range = m_handler_cfg.r_stick_lerp_factor.to_list();
 	ui->right_stick_lerp->setRange(std::stod(right_stick_lerp_range.front()) / 100.0, std::stod(right_stick_lerp_range.back()) / 100.0);
-	ui->right_stick_lerp->setValue((double)m_handler_cfg.r_stick_lerp_factor / 100.0);
+	ui->right_stick_lerp->setValue(m_handler_cfg.r_stick_lerp_factor / 100.0);
 
 	// Enable Vibration Checkboxes
 	m_enable_rumble = m_handler->has_rumble();
@@ -660,7 +660,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 	}
 	else
 	{
-		m_cfg_entries[m_button_id].key = ((keyboard_pad_handler*)m_handler.get())->GetKeyName(keyEvent);
+		m_cfg_entries[m_button_id].key = (static_cast<keyboard_pad_handler*>(m_handler.get()))->GetKeyName(keyEvent);
 		m_cfg_entries[m_button_id].text = qstr(m_cfg_entries[m_button_id].key);
 	}
 
@@ -685,10 +685,65 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 	}
 	else
 	{
-		m_cfg_entries[m_button_id].key = ((keyboard_pad_handler*)m_handler.get())->GetMouseName(event);
+		m_cfg_entries[m_button_id].key = (static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(event);
 		m_cfg_entries[m_button_id].text = qstr(m_cfg_entries[m_button_id].key);
 	}
 
+	ReactivateButtons();
+}
+
+void pad_settings_dialog::wheelEvent(QWheelEvent *event)
+{
+	if (m_handler->m_type != pad_handler::keyboard)
+	{
+		return;
+	}
+
+	if (m_button_id == button_ids::id_pad_begin)
+	{
+		return;
+	}
+
+	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
+	{
+		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		return;
+	}
+
+	QPoint direction = event->angleDelta();
+	if (direction.isNull())
+	{
+		// Scrolling started/ended event, no direction given
+		return;
+	}
+
+	u32 key;
+	if (const int x = direction.x())
+	{
+		bool to_left = event->inverted() ? x < 0 : x > 0;
+		if (to_left)
+		{
+			key = mouse::wheel_left;
+		}
+		else
+		{
+			key = mouse::wheel_right;
+		}
+	}
+	if (const int y = direction.y())
+	{
+		bool to_up = event->inverted() ? y < 0 : y > 0;
+		if (to_up)
+		{
+			key = mouse::wheel_up;
+		}
+		else
+		{
+			key = mouse::wheel_down;
+		}
+	}
+	m_cfg_entries[m_button_id].key = (static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key);
+	m_cfg_entries[m_button_id].text = qstr(m_cfg_entries[m_button_id].key);
 	ReactivateButtons();
 }
 
@@ -735,7 +790,7 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* /*event*/)
 
 		if (key != 0)
 		{
-			m_cfg_entries[m_button_id].key = ((keyboard_pad_handler*)m_handler.get())->GetMouseName(key);
+			m_cfg_entries[m_button_id].key = (static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key);
 			m_cfg_entries[m_button_id].text = qstr(m_cfg_entries[m_button_id].key);
 			ReactivateButtons();
 		}
@@ -751,7 +806,7 @@ bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 	}
 	if (event->type() == QEvent::MouseMove)
 	{
-		mouseMoveEvent((QMouseEvent*)event);
+		mouseMoveEvent(static_cast<QMouseEvent*>(event));
 	}
 	return QDialog::eventFilter(object, event);
 }
@@ -762,9 +817,9 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 	{
 		if (m_handler->has_rumble())
 		{
-			ui->chb_vibration_large->setChecked((bool)m_handler_cfg.enable_vibration_motor_large);
-			ui->chb_vibration_small->setChecked((bool)m_handler_cfg.enable_vibration_motor_small);
-			ui->chb_vibration_switch->setChecked((bool)m_handler_cfg.switch_vibration_motors);
+			ui->chb_vibration_large->setChecked(static_cast<bool>(m_handler_cfg.enable_vibration_motor_large));
+			ui->chb_vibration_small->setChecked(static_cast<bool>(m_handler_cfg.enable_vibration_motor_small));
+			ui->chb_vibration_switch->setChecked(static_cast<bool>(m_handler_cfg.switch_vibration_motors));
 		}
 
 		if (m_handler->has_deadzones())
@@ -990,7 +1045,7 @@ void pad_settings_dialog::ChangeInputType()
 		for (size_t i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
 		{
 			const QString device_name = name_string + QString::number(i);
-			ui->chooseDevice->addItem(device_name, QVariant::fromValue(pad_info{ sstr(device_name), true }));
+			ui->chooseDevice->addItem(device_name, QVariant::fromValue(pad_device_info{ sstr(device_name), true }));
 		}
 		force_enable = true;
 		break;
@@ -999,7 +1054,7 @@ void pad_settings_dialog::ChangeInputType()
 	{
 		for (size_t i = 0; i < device_list.size(); i++)
 		{
-			ui->chooseDevice->addItem(qstr(device_list[i]), QVariant::fromValue(pad_info{ device_list[i], true }));
+			ui->chooseDevice->addItem(qstr(device_list[i]), QVariant::fromValue(pad_device_info{ device_list[i], true }));
 		}
 		break;
 	}
@@ -1014,12 +1069,12 @@ void pad_settings_dialog::ChangeInputType()
 	{
 		for (int i = 0; i < ui->chooseDevice->count(); i++)
 		{
-			if (!ui->chooseDevice->itemData(i).canConvert<pad_info>())
+			if (!ui->chooseDevice->itemData(i).canConvert<pad_device_info>())
 			{
 				LOG_FATAL(GENERAL, "Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
 				continue;
 			}
-			const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
+			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
 			m_handler->get_next_button_press(info.name, [=](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 			if (info.name == device)
 			{
@@ -1091,28 +1146,28 @@ void pad_settings_dialog::ChangeProfile()
 	switch (m_handler->m_type)
 	{
 	case pad_handler::null:
-		((NullPadHandler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
+		static_cast<NullPadHandler*>(m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 	case pad_handler::keyboard:
-		((keyboard_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
+		static_cast<keyboard_pad_handler*>(m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 	case pad_handler::ds3:
-		((ds3_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
+		static_cast<ds3_pad_handler*>(m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 	case pad_handler::ds4:
-		((ds4_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
+		static_cast<ds4_pad_handler*>(m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 #ifdef _WIN32
 	case pad_handler::xinput:
-		((xinput_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
+		static_cast<xinput_pad_handler*>(m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 	case pad_handler::mm:
-		((mm_joystick_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
+		static_cast<mm_joystick_handler*>(m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
-		((evdev_joystick_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
+		static_cast<evdev_joystick_handler*>(m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 #endif
 	default:

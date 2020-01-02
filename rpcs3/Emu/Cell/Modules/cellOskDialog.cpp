@@ -1,9 +1,9 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/RSX/Overlays/overlays.h"
-#include "pad_thread.h"
+#include "Input/pad_thread.h"
 
 #include "cellSysutil.h"
 #include "cellOskDialog.h"
@@ -105,7 +105,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	}
 
 	// Get the OSK options
-	u32 maxLength = (inputFieldInfo->limit_length >= CELL_OSKDIALOG_STRING_SIZE) ? 511 : (u32)inputFieldInfo->limit_length;
+	u32 maxLength = (inputFieldInfo->limit_length >= CELL_OSKDIALOG_STRING_SIZE) ? 511 : u32{inputFieldInfo->limit_length};
 	u32 options = dialogParam->prohibitFlgs;
 
 	// Get init text and prepare return value
@@ -113,7 +113,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	std::memset(osk->osk_text, 0, sizeof(osk->osk_text));
 	std::memset(osk->osk_text_old, 0, sizeof(osk->osk_text_old));
 
-	if (inputFieldInfo->init_text.addr() != 0)
+	if (inputFieldInfo->init_text)
 	{
 		for (u32 i = 0; (i < maxLength) && (inputFieldInfo->init_text[i] != 0); i++)
 		{
@@ -124,10 +124,9 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	// Get message to display above the input field
 	// Guarantees 0 terminated (+1). In praxis only 128 but for now lets display all of it
-	char16_t message[CELL_OSKDIALOG_STRING_SIZE + 1];
-	std::memset(message, 0, sizeof(message));
+	char16_t message[CELL_OSKDIALOG_STRING_SIZE + 1]{};
 
-	if (inputFieldInfo->message.addr() != 0)
+	if (inputFieldInfo->message)
 	{
 		for (u32 i = 0; (i < CELL_OSKDIALOG_STRING_SIZE) && (inputFieldInfo->message[i] != 0); i++)
 		{
@@ -176,7 +175,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 				sysutil_register_cb([&, length = i](ppu_thread& cb_ppu) -> s32
 				{
-					return_value = ccb(cb_ppu, string_to_send, (s32)length);
+					return_value = ccb(cb_ppu, string_to_send, static_cast<s32>(length));
 					cellOskDialog.warning("osk_confirm_callback return_value=%d", return_value);
 
 					for (u32 i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)

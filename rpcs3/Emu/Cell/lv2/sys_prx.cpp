@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_prx.h"
 
 #include "Emu/System.h"
@@ -257,6 +257,11 @@ error_code _sys_prx_start_module(u32 id, u64 flags, vm::ptr<sys_prx_start_stop_m
 {
 	sys_prx.warning("_sys_prx_start_module(id=0x%x, flags=0x%x, pOpt=*0x%x)", id, flags, pOpt);
 
+	if (id == 0 || !pOpt)
+	{
+		return CELL_EINVAL;
+	}
+
 	const auto prx = idm::get<lv2_obj, lv2_prx>(id);
 
 	if (!prx)
@@ -301,7 +306,7 @@ error_code _sys_prx_unload_module(u32 id, u64 flags, vm::ptr<sys_prx_unload_modu
 
 	if (!prx)
 	{
-		return CELL_ESRCH;
+		return CELL_PRX_ERROR_UNKNOWN_MODULE;
 	}
 
 	ppu_unload_prx(*prx);
@@ -365,9 +370,19 @@ error_code _sys_prx_get_module_info(u32 id, u64 flags, vm::ptr<sys_prx_module_in
 
 	const auto prx = idm::get<lv2_obj, lv2_prx>(id);
 
-	if (!pOpt || !pOpt->info || !prx)
+	if (!pOpt)
+	{
+		return CELL_EFAULT;
+	}
+
+	if (pOpt->size != pOpt.size() || !pOpt->info)
 	{
 		return CELL_EINVAL;
+	}
+
+	if (!prx)
+	{
+		return CELL_PRX_ERROR_UNKNOWN_MODULE;
 	}
 
 	std::memset(pOpt->info->name, 0, 30);

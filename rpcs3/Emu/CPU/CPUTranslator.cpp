@@ -18,8 +18,6 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 
 	const auto cpu = m_engine->getTargetMachine()->getTargetCPU();
 
-	m_use_ssse3 = true;
-
 	// Test SSSE3 feature (TODO)
 	if (cpu == "generic" ||
 		cpu == "k8" ||
@@ -33,6 +31,31 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "barcelona")
 	{
 		m_use_ssse3 = false;
+	}
+
+	// Test FMA feature (TODO)
+	if (cpu == "haswell" ||
+		cpu == "broadwell" ||
+		cpu == "skylake" ||
+		cpu == "bdver2" ||
+		cpu == "bdver3" ||
+		cpu == "bdver4" ||
+		cpu.substr(0, 5) == "znver")
+	{
+		m_use_fma = true;
+	}
+
+	// Test AVX-512 feature (TODO)
+	if (cpu == "skylake-avx512" ||
+		cpu == "cascadelake" ||
+		cpu == "cannonlake" ||
+		cpu == "cooperlake" ||
+		cpu == "icelake" ||
+		cpu == "icelake-client" ||
+		cpu == "icelake-server" ||
+		cpu == "tigerlake")
+	{
+		m_use_fma = true;
 	}
 }
 
@@ -149,27 +172,27 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t)
 
 	if (sct->isIntegerTy(8))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef((const u8*)v._bytes, 16));
+		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(v._bytes), 16));
 	}
 	else if (sct->isIntegerTy(16))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef((const u16*)v._bytes, 8));
+		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u16*>(v._bytes), 8));
 	}
 	else if (sct->isIntegerTy(32))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef((const u32*)v._bytes, 4));
+		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u32*>(v._bytes), 4));
 	}
 	else if (sct->isIntegerTy(64))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef((const u64*)v._bytes, 2));
+		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u64*>(v._bytes), 2));
 	}
 	else if (sct->isFloatTy())
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef((const f32*)v._bytes, 4));
+		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const f32*>(v._bytes), 4));
 	}
 	else if (sct->isDoubleTy())
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef((const f64*)v._bytes, 2));
+		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const f64*>(v._bytes), 2));
 	}
 
 	fmt::raw_error("No supported constant type" HERE);

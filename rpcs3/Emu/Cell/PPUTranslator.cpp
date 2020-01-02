@@ -2794,7 +2794,7 @@ void PPUTranslator::LHZUX(ppu_opcode_t op)
 
 void PPUTranslator::XOR(ppu_opcode_t op)
 {
-	const auto result = op.rs == op.rb ? (Value*)m_ir->getInt64(0) : m_ir->CreateXor(GetGpr(op.rs), GetGpr(op.rb));
+	const auto result = op.rs == op.rb ? static_cast<Value*>(m_ir->getInt64(0)) : m_ir->CreateXor(GetGpr(op.rs), GetGpr(op.rb));
 	SetGpr(op.ra, result);
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
@@ -2896,7 +2896,7 @@ void PPUTranslator::STHX(ppu_opcode_t op)
 
 void PPUTranslator::ORC(ppu_opcode_t op)
 {
-	const auto result = op.rs == op.rb ? (Value*)m_ir->getInt64(-1) : m_ir->CreateOr(GetGpr(op.rs), m_ir->CreateNot(GetGpr(op.rb)));
+	const auto result = op.rs == op.rb ? static_cast<Value*>(m_ir->getInt64(-1)) : m_ir->CreateOr(GetGpr(op.rs), m_ir->CreateNot(GetGpr(op.rb)));
 	SetGpr(op.ra, result);
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
@@ -4004,8 +4004,10 @@ void PPUTranslator::FRSP(ppu_opcode_t op)
 void PPUTranslator::FCTIW(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	SetFpr(op.frd, m_ir->CreateSelect(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), f64(INT32_MAX))), m_ir->getInt32(INT32_MAX),
-	Call(GetType<s32>(), "llvm.x86.sse2.cvtsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
+	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(31.))), GetType<s32>());
+
+	// fix result saturation (0x80000000 -> 0x7fffffff)
+	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s32>(), "llvm.x86.sse2.cvtsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fr", b));
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fi", b));

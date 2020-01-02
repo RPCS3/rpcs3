@@ -9,8 +9,9 @@
 #include <unordered_map>
 #include <variant>
 #include <stack>
+#include <deque>
 
-#if !defined(_WIN32) && !defined(__APPLE__)
+#ifdef HAVE_X11
 #include <X11/Xutil.h>
 #endif
 
@@ -39,8 +40,9 @@
 #define FRAGMENT_STATE_BIND_SLOT 3
 #define FRAGMENT_TEXTURE_PARAMS_BIND_SLOT 4
 #define VERTEX_BUFFERS_FIRST_BIND_SLOT 5
-#define TEXTURES_FIRST_BIND_SLOT 8
-#define VERTEX_TEXTURES_FIRST_BIND_SLOT 24 //8+16
+#define CONDITIONAL_RENDER_PREDICATE_SLOT 8
+#define TEXTURES_FIRST_BIND_SLOT 9
+#define VERTEX_TEXTURES_FIRST_BIND_SLOT (TEXTURES_FIRST_BIND_SLOT + 16)
 
 #define VK_NUM_DESCRIPTOR_BINDINGS (VERTEX_TEXTURES_FIRST_BIND_SLOT + 4)
 
@@ -70,8 +72,14 @@ namespace vk
 							void *pUserData);
 
 	//VkAllocationCallbacks default_callbacks();
+	enum runtime_state
+	{
+		uninterruptible = 1,
+		heap_dirty = 2,
+		heap_changed = 3
+	};
 
-	enum driver_vendor
+	enum class driver_vendor
 	{
 		unknown,
 		AMD,
@@ -95,6 +103,17 @@ namespace vk
 		NV_turing
 	};
 
+	enum // special remap_encoding enums
+	{
+		VK_REMAP_IDENTITY = 0xCAFEBABE,             // Special view encoding to return an identity image view
+		VK_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF     // Special encoding for multisampled images; returns a multisampled image view
+	};
+
+	enum // callback commands
+	{
+		rctrl_queue_submit = 0x80000000
+	};
+
 	class context;
 	class render_device;
 	class swap_chain_image;
@@ -103,10 +122,11 @@ namespace vk
 	class image;
 	struct image_view;
 	struct buffer;
-	struct data_heap;
+	class data_heap;
 	class mem_allocator_base;
 	struct memory_type_mapping;
 	struct gpu_formats_support;
+	struct fence;
 
 	const vk::context *get_current_thread_ctx();
 	void set_current_thread_ctx(const vk::context &ctx);
@@ -120,6 +140,7 @@ namespace vk
 	bool emulate_primitive_restart(rsx::primitive_type type);
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
+	bool emulate_conditional_rendering();
 	VkFlags get_heap_compatible_buffer_types();
 	driver_vendor get_driver_vendor();
 	chip_class get_chip_family(uint32_t vendor_id, uint32_t device_id);
@@ -140,9 +161,10 @@ namespace vk
 	memory_type_mapping get_memory_mapping(const physical_device& dev);
 	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
 
-	//Sync helpers around vkQueueSubmit
+	// Sync helpers around vkQueueSubmit
 	void acquire_global_submit_lock();
 	void release_global_submit_lock();
+	void queue_submit(VkQueue queue, const VkSubmitInfo* info, fence* pfence, VkBool32 flush = VK_FALSE);
 
 	template<class T>
 	T* get_compute_task();
@@ -197,7 +219,9 @@ namespace vk
 		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask,
 		const VkImageSubresourceRange& range);
 
-	//Manage 'uininterruptible' state where secondary operations (e.g violation handlers) will have to wait
+	void raise_status_interrupt(runtime_state status);
+	void clear_status_interrupt(runtime_state status);
+	bool test_status_interrupt(runtime_state status);
 	void enter_uninterruptible();
 	void leave_uninterruptible();
 	bool is_uninterruptible();
@@ -208,8 +232,8 @@ namespace vk
 	const u64 get_last_completed_frame_id();
 
 	// Fence reset with driver workarounds in place
-	void reset_fence(VkFence *pFence);
-	VkResult wait_for_fence(VkFence pFence, u64 timeout = 0ull);
+	void reset_fence(fence* pFence);
+	VkResult wait_for_fence(fence* pFence, u64 timeout = 0ull);
 	VkResult wait_for_event(VkEvent pEvent, u64 timeout = 0ull);
 
 	// Handle unexpected submit with dangling occlusion query
@@ -396,24 +420,24 @@ namespace vk
 		void free(mem_handle_t mem_handle) override
 		{
 			vmm_notify_memory_freed(mem_handle);
-			vkFreeMemory(m_device, (VkDeviceMemory)mem_handle, nullptr);
+			vkFreeMemory(m_device, static_cast<VkDeviceMemory>(mem_handle), nullptr);
 		}
 
 		void *map(mem_handle_t mem_handle, u64 offset, u64 size) override
 		{
 			void *data = nullptr;
-			CHECK_RESULT(vkMapMemory(m_device, (VkDeviceMemory)mem_handle, offset, std::max<u64>(size, 1u), 0, &data));
+			CHECK_RESULT(vkMapMemory(m_device, static_cast<VkDeviceMemory>(mem_handle), offset, std::max<u64>(size, 1u), 0, &data));
 			return data;
 		}
 
 		void unmap(mem_handle_t mem_handle) override
 		{
-			vkUnmapMemory(m_device, (VkDeviceMemory)mem_handle);
+			vkUnmapMemory(m_device, static_cast<VkDeviceMemory>(mem_handle));
 		}
 
 		VkDeviceMemory get_vk_device_memory(mem_handle_t mem_handle) override
 		{
-			return (VkDeviceMemory)mem_handle;
+			return static_cast<VkDeviceMemory>(mem_handle);
 		}
 
 		u64 get_vk_device_memory_offset(mem_handle_t /*mem_handle*/) override
@@ -524,6 +548,8 @@ namespace vk
 		gpu_shader_types_support shader_types_support{};
 		VkPhysicalDeviceDriverPropertiesKHR driver_properties{};
 		bool stencil_export_support = false;
+		bool conditional_render_support = false;
+		bool host_query_reset_support = false;
 
 		friend class render_device;
 private:
@@ -563,7 +589,7 @@ private:
 					features2.pNext = &driver_properties;
 				}
 
-				auto getPhysicalDeviceFeatures2KHR = (PFN_vkGetPhysicalDeviceFeatures2KHR)vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR");
+				auto getPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
 				verify("vkGetInstanceProcAddress failed to find entry point!" HERE), getPhysicalDeviceFeatures2KHR;
 				getPhysicalDeviceFeatures2KHR(dev, &features2);
 
@@ -573,6 +599,8 @@ private:
 			}
 
 			stencil_export_support = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
+			conditional_render_support = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+			host_query_reset_support = device_extensions.is_supported(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
 		}
 
 	public:
@@ -665,7 +693,7 @@ private:
 			case driver_vendor::NVIDIA:
 			{
 				// 10 + 8 + 8 + 6
-				const auto major_version = VK_VERSION_MAJOR(props.driverVersion);
+				const auto major_version = props.driverVersion >> 22;
 				const auto minor_version = (props.driverVersion >> 14) & 0xff;
 				const auto patch = (props.driverVersion >> 6) & 0xff;
 				const auto revision = (props.driverVersion & 0x3f);
@@ -676,9 +704,9 @@ private:
 			{
 				// 10 + 10 + 12 (standard vulkan encoding created with VK_MAKE_VERSION)
 				return fmt::format("%u.%u.%u",
-					VK_VERSION_MAJOR(props.driverVersion),
-					VK_VERSION_MINOR(props.driverVersion),
-					VK_VERSION_PATCH(props.driverVersion));
+					(props.driverVersion >> 22),
+					(props.driverVersion >> 12) & 0x3ff,
+					(props.driverVersion) & 0x3ff);
 			}
 			}
 		}
@@ -691,7 +719,7 @@ private:
 		uint32_t get_queue_count() const
 		{
 			if (!queue_props.empty())
-				return (u32)queue_props.size();
+				return ::size32(queue_props);
 
 			uint32_t count = 0;
 			vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
@@ -744,6 +772,12 @@ private:
 		VkDevice dev = VK_NULL_HANDLE;
 
 	public:
+		// Exported device endpoints
+		PFN_vkCmdBeginConditionalRenderingEXT cmdBeginConditionalRenderingEXT = nullptr;
+		PFN_vkCmdEndConditionalRenderingEXT cmdEndConditionalRenderingEXT = nullptr;
+		PFN_vkResetQueryPoolEXT resetQueryPoolEXT = nullptr;
+
+	public:
 		render_device() = default;
 		~render_device() = default;
 
@@ -770,15 +804,76 @@ private:
 			// 1. Anisotropic sampling
 			// 2. DXT support
 			// 3. Indexable storage buffers
-			VkPhysicalDeviceFeatures available_features = pgpu->features;
+			VkPhysicalDeviceFeatures enabled_features{};
 			if (pgpu->shader_types_support.allow_float16)
 			{
 				requested_extensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
 			}
 
-			available_features.samplerAnisotropy = VK_TRUE;
-			available_features.textureCompressionBC = VK_TRUE;
-			available_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+			if (pgpu->conditional_render_support)
+			{
+				requested_extensions.push_back(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+			}
+
+			if (pgpu->host_query_reset_support)
+			{
+				requested_extensions.push_back(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
+			}
+
+			enabled_features.robustBufferAccess = VK_TRUE;
+			enabled_features.fullDrawIndexUint32 = VK_TRUE;
+			enabled_features.independentBlend = VK_TRUE;
+			enabled_features.logicOp = VK_TRUE;
+			enabled_features.depthClamp = VK_TRUE;
+			enabled_features.depthBounds = VK_TRUE;
+			enabled_features.wideLines = VK_TRUE;
+			enabled_features.largePoints = VK_TRUE;
+
+			if (g_cfg.video.antialiasing_level != msaa_level::none)
+			{
+				// MSAA features
+				if (!pgpu->features.shaderStorageImageMultisample ||
+					!pgpu->features.shaderStorageImageWriteWithoutFormat)
+				{
+					// TODO: Slow fallback to emulate this
+					// Just warn and let the driver decide whether to crash or not
+					LOG_FATAL(RSX, "Your GPU driver does not support some required MSAA features. Expect problems.");
+				}
+
+				enabled_features.sampleRateShading = VK_TRUE;
+				enabled_features.alphaToOne = VK_TRUE;
+				enabled_features.shaderStorageImageMultisample = VK_TRUE;
+				// enabled_features.shaderStorageImageReadWithoutFormat = VK_TRUE;  // Unused currently, may be needed soon
+				enabled_features.shaderStorageImageWriteWithoutFormat = VK_TRUE;
+			}
+
+			// enabled_features.shaderSampledImageArrayDynamicIndexing = TRUE;  // Unused currently but will be needed soon
+			enabled_features.shaderClipDistance = VK_TRUE;
+			// enabled_features.shaderCullDistance = VK_TRUE;  // Alt notation of clip distance
+
+			enabled_features.samplerAnisotropy = VK_TRUE;
+			enabled_features.textureCompressionBC = VK_TRUE;
+			enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+
+			// Optionally disable unsupported stuff
+			if (!pgpu->features.depthBounds)
+			{
+				LOG_ERROR(RSX, "Your GPU does not support depth bounds testing. Graphics may not work correctly.");
+				enabled_features.depthBounds = VK_FALSE;
+			}
+
+			if (!pgpu->features.sampleRateShading && enabled_features.sampleRateShading)
+			{
+				LOG_ERROR(RSX, "Your GPU does not support sample rate shading for multisampling. Graphics may be inaccurate when MSAA is enabled.");
+				enabled_features.sampleRateShading = VK_FALSE;
+			}
+
+			if (!pgpu->features.alphaToOne && enabled_features.alphaToOne)
+			{
+				// AMD proprietary drivers do not expose alphaToOne support
+				LOG_ERROR(RSX, "Your GPU does not support alpha-to-one for multisampling. Graphics may be inaccurate when MSAA is enabled.");
+				enabled_features.alphaToOne = VK_FALSE;
+			}
 
 			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -787,9 +882,9 @@ private:
 			device.pQueueCreateInfos = &queue;
 			device.enabledLayerCount = 0;
 			device.ppEnabledLayerNames = nullptr; // Deprecated
-			device.enabledExtensionCount = (u32)requested_extensions.size();
+			device.enabledExtensionCount = ::size32(requested_extensions);
 			device.ppEnabledExtensionNames = requested_extensions.data();
-			device.pEnabledFeatures = &available_features;
+			device.pEnabledFeatures = &enabled_features;
 
 			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
 			if (pgpu->shader_types_support.allow_float16)
@@ -807,6 +902,18 @@ private:
 			}
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
+
+			// Import optional function endpoints
+			if (pgpu->conditional_render_support)
+			{
+				cmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT"));
+				cmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
+			}
+
+			if (pgpu->host_query_reset_support)
+			{
+				resetQueryPoolEXT = reinterpret_cast<PFN_vkResetQueryPoolEXT>(vkGetDeviceProcAddr(dev, "vkResetQueryPoolEXT"));
+			}
 
 			memory_map = vk::get_memory_mapping(pdev);
 			m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
@@ -897,6 +1004,26 @@ private:
 			return pgpu->stencil_export_support;
 		}
 
+		bool get_depth_bounds_support() const
+		{
+			return pgpu->features.depthBounds != VK_FALSE;
+		}
+
+		bool get_alpha_to_one_support() const
+		{
+			return pgpu->features.alphaToOne != VK_FALSE;
+		}
+
+		bool get_conditional_render_support() const
+		{
+			return pgpu->conditional_render_support;
+		}
+
+		bool get_host_query_reset_support() const
+		{
+			return pgpu->host_query_reset_support;
+		}
+
 		mem_allocator_base* get_allocator() const
 		{
 			return m_allocator.get();
@@ -947,12 +1074,55 @@ private:
 		}
 	};
 
+	struct fence
+	{
+		volatile bool flushed = false;
+		VkFence handle        = VK_NULL_HANDLE;
+		VkDevice owner        = VK_NULL_HANDLE;
+
+		fence(VkDevice dev)
+		{
+			owner = dev;
+			VkFenceCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+			CHECK_RESULT(vkCreateFence(dev, &info, nullptr, &handle));
+		}
+
+		~fence()
+		{
+			if (handle)
+			{
+				vkDestroyFence(owner, handle, nullptr);
+				handle = VK_NULL_HANDLE;
+			}
+		}
+
+		void reset()
+		{
+			vkResetFences(owner, 1, &handle);
+			flushed = false;
+		}
+
+		void wait_flush()
+		{
+			while (!flushed)
+			{
+				_mm_pause();
+			}
+		}
+
+		operator bool() const
+		{
+			return (handle != VK_NULL_HANDLE);
+		}
+	};
+
 	class command_buffer
 	{
 	private:
 		bool is_open = false;
 		bool is_pending = false;
-		VkFence m_submit_fence = VK_NULL_HANDLE;
+		fence* m_submit_fence = nullptr;
 
 	protected:
 		vk::command_pool *pool = nullptr;
@@ -972,7 +1142,8 @@ private:
 			cb_has_blit_transfer = 2,
 			cb_has_dma_transfer = 4,
 			cb_has_open_query = 8,
-			cb_load_occluson_task = 16
+			cb_load_occluson_task = 16,
+			cb_has_conditional_render = 32
 		};
 		u32 flags = 0;
 
@@ -985,15 +1156,13 @@ private:
 			VkCommandBufferAllocateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 			infos.commandBufferCount = 1;
-			infos.commandPool = (VkCommandPool)cmd_pool;
+			infos.commandPool = +cmd_pool;
 			infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 			CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
 
 			if (auto_reset)
 			{
-				VkFenceCreateInfo info = {};
-				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-				CHECK_RESULT(vkCreateFence(cmd_pool.get_owner(), &info, nullptr, &m_submit_fence));
+				m_submit_fence = new fence(cmd_pool.get_owner());
 			}
 
 			pool = &cmd_pool;
@@ -1005,7 +1174,9 @@ private:
 
 			if (m_submit_fence)
 			{
-				vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+				//vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+				delete m_submit_fence;
+				m_submit_fence = nullptr;
 			}
 		}
 
@@ -1041,7 +1212,8 @@ private:
 				wait_for_fence(m_submit_fence);
 				is_pending = false;
 
-				CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+				//CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+				reset_fence(m_submit_fence);
 				CHECK_RESULT(vkResetCommandBuffer(commands, 0));
 			}
 
@@ -1071,7 +1243,7 @@ private:
 			is_open = false;
 		}
 
-		void submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
+		void submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, fence* pfence, VkPipelineStageFlags pipeline_stage_flags)
 		{
 			if (is_open)
 			{
@@ -1082,10 +1254,10 @@ private:
 			// Check for hanging queries to avoid driver hang
 			verify("close and submit of commandbuffer with a hanging query!" HERE), (flags & cb_has_open_query) == 0;
 
-			if (!fence)
+			if (!pfence)
 			{
-				fence = m_submit_fence;
-				is_pending = (fence != VK_NULL_HANDLE);
+				pfence = m_submit_fence;
+				is_pending = bool(pfence);
 			}
 
 			VkSubmitInfo infos = {};
@@ -1106,10 +1278,7 @@ private:
 				infos.pSignalSemaphores = &signal_semaphore;
 			}
 
-			acquire_global_submit_lock();
-			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
-			release_global_submit_lock();
-
+			queue_submit(queue, &infos, pfence);
 			clear_flags();
 		}
 	};
@@ -1310,10 +1479,10 @@ private:
 		u32 encoded_component_map() const
 		{
 #if	(VK_DISABLE_COMPONENT_SWIZZLE)
-			u32 result = (u32)info.components.a - 1;
-			result |= ((u32)info.components.r - 1) << 3;
-			result |= ((u32)info.components.g - 1) << 6;
-			result |= ((u32)info.components.b - 1) << 9;
+			u32 result = static_cast<u32>(info.components.a) - 1;
+			result |= (static_cast<u32>(info.components.r) - 1) << 3;
+			result |= (static_cast<u32>(info.components.g) - 1) << 6;
+			result |= (static_cast<u32>(info.components.b) - 1) << 9;
 
 			return result;
 #else
@@ -1361,6 +1530,17 @@ private:
 		virtual image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
 		{
+			if (remap_encoding == VK_REMAP_IDENTITY)
+			{
+				if (native_component_map.a == VK_COMPONENT_SWIZZLE_A &&
+					native_component_map.r == VK_COMPONENT_SWIZZLE_R &&
+					native_component_map.g == VK_COMPONENT_SWIZZLE_G &&
+					native_component_map.b == VK_COMPONENT_SWIZZLE_B)
+				{
+					remap_encoding = 0xAAE4;
+				}
+			}
+
 			auto found = views.equal_range(remap_encoding);
 			for (auto It = found.first; It != found.second; ++It)
 			{
@@ -1371,17 +1551,21 @@ private:
 			}
 
 			VkComponentMapping real_mapping;
-			if (remap_encoding == 0xAAE4)
+			switch (remap_encoding)
 			{
+			case VK_REMAP_IDENTITY:
+				real_mapping = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
+				break;
+			case 0xAAE4:
 				real_mapping = native_component_map;
-			}
-			else
-			{
+				break;
+			default:
 				real_mapping = vk::apply_swizzle_remap
 				(
 					{ native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b },
 					remap
 				);
+				break;
 			}
 
 			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, aspect() & mask);
@@ -1457,7 +1641,7 @@ private:
 
 		u32 size() const
 		{
-			return (u32)info.size;
+			return static_cast<u32>(info.size);
 		}
 
 		buffer(const buffer&) = delete;
@@ -1496,7 +1680,7 @@ private:
 			if (address < info.offset)
 				return false;
 
-			const u32 _offset = address - (u32)info.offset;
+			const u32 _offset = address - static_cast<u32>(info.offset);
 			if (info.range < _offset)
 				return false;
 
@@ -1558,8 +1742,9 @@ private:
 			if (info.magFilter != mag_filter || info.minFilter != min_filter || info.mipmapMode != mipmap_mode ||
 				info.addressModeU != clamp_u || info.addressModeV != clamp_v || info.addressModeW != clamp_w ||
 				info.compareEnable != depth_compare || info.unnormalizedCoordinates != unnormalized_coordinates ||
-				info.mipLodBias != mipLodBias || info.maxAnisotropy != max_anisotropy || info.maxLod != max_lod ||
-				info.minLod != min_lod || info.compareOp != depth_compare_mode || info.borderColor != border_color)
+				!rsx::fcmp(info.maxLod, max_lod) || !rsx::fcmp(info.mipLodBias, mipLodBias) || !rsx::fcmp(info.minLod, min_lod) ||
+				!rsx::fcmp(info.maxAnisotropy, max_anisotropy) ||
+				info.compareOp != depth_compare_mode || info.borderColor != border_color)
 				return false;
 
 			return true;
@@ -1644,58 +1829,9 @@ private:
 		VkDevice m_device;
 	};
 
-	class swapchain_image_WSI
+	struct swapchain_image_WSI
 	{
-		VkImageView view = nullptr;
-		VkImage image = nullptr;
-		VkFormat internal_format;
-		vk::render_device *owner = nullptr;
-
-	public:
-		swapchain_image_WSI() = default;
-
-		void create(vk::render_device &dev, VkImage &swap_image, VkFormat format)
-		{
-			VkImageViewCreateInfo color_image_view = {};
-
-			color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			color_image_view.format = format;
-
-			color_image_view.components.r = VK_COMPONENT_SWIZZLE_R;
-			color_image_view.components.g = VK_COMPONENT_SWIZZLE_G;
-			color_image_view.components.b = VK_COMPONENT_SWIZZLE_B;
-			color_image_view.components.a = VK_COMPONENT_SWIZZLE_A;
-
-			color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			color_image_view.subresourceRange.baseMipLevel = 0;
-			color_image_view.subresourceRange.levelCount = 1;
-			color_image_view.subresourceRange.baseArrayLayer = 0;
-			color_image_view.subresourceRange.layerCount = 1;
-
-			color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
-
-			color_image_view.image = swap_image;
-			vkCreateImageView(dev, &color_image_view, nullptr, &view);
-
-			image = swap_image;
-			internal_format = format;
-			owner = &dev;
-		}
-
-		void discard(vk::render_device &dev)
-		{
-			vkDestroyImageView(dev, view, nullptr);
-		}
-
-		operator VkImage&()
-		{
-			return image;
-		}
-
-		operator VkImageView&()
-		{
-			return view;
-		}
+		VkImage value = VK_NULL_HANDLE;
 	};
 
 	class swapchain_image_RPCS3 : public image
@@ -1787,7 +1923,7 @@ public:
 		virtual bool init() = 0;
 
 		virtual u32 get_swap_image_count() const = 0;
-		virtual VkImage& get_image(u32 index) = 0;
+		virtual VkImage get_image(u32 index) = 0;
 		virtual VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) = 0;
 		virtual void end_frame(command_buffer& cmd, u32 index) = 0;
 		virtual VkResult present(VkSemaphore semaphore, u32 index) = 0;
@@ -1846,7 +1982,7 @@ public:
 
 		u32 get_swap_image_count() const override
 		{
-			return (u32)swapchain_images.size();
+			return ::size32(swapchain_images);
 		}
 
 		using swapchain_base::init;
@@ -1945,7 +2081,7 @@ public:
 
 	class swapchain_MacOS : public native_swapchain_base
 	{
-		void* nsView = NULL;
+		void* nsView = nullptr;
 
 	public:
 		swapchain_MacOS(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
@@ -1987,14 +2123,14 @@ public:
 		{
 			fmt::throw_exception("Native macOS swapchain is not implemented yet!");
 		}
-#else
+#elif defined(HAVE_X11)
 
 	class swapchain_X11 : public native_swapchain_base
 	{
-		Display *display = NULL;
-		Window window = (Window)NULL;
-		XImage* pixmap = NULL;
-		GC gc = NULL;
+		Display* display = nullptr;
+		Window window = 0;
+		XImage* pixmap = nullptr;
+		GC gc = nullptr;
 		int bit_depth = 24;
 
 	public:
@@ -2027,7 +2163,10 @@ public:
 			}
 
 			XVisualInfo visual{};
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 			if (!XMatchVisualInfo(display, DefaultScreen(display), bit_depth, TrueColor, &visual))
+#pragma GCC diagnostic pop
 			{
 				LOG_ERROR(RSX, "Could not find matching visual info!" HERE);
 				return false;
@@ -2056,7 +2195,10 @@ public:
 				return;
 			}
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 			gc = DefaultGC(display, DefaultScreen(display));
+#pragma GCC diagnostic pop
 		}
 
 		void destroy(bool full=true) override
@@ -2076,7 +2218,7 @@ public:
 			auto& src = swapchain_images[index];
 			if (pixmap)
 			{
-				pixmap->data = (char*)src.second->get_pixels();
+				pixmap->data = static_cast<char*>(src.second->get_pixels());
 
 				XPutImage(display, window, gc, pixmap, 0, 0, 0, 0, m_width, m_height);
 				XFlush(display);
@@ -2087,6 +2229,37 @@ public:
 			//Release reference
 			src.first = false;
 			return VK_SUCCESS;
+		}
+#else
+
+	class swapchain_Wayland : public native_swapchain_base
+	{
+
+	public:
+		swapchain_Wayland(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		{}
+
+		~swapchain_Wayland(){}
+
+		bool init() override
+		{
+			fmt::throw_exception("Native Wayland swapchain is not implemented yet!");
+		}
+
+		void create(display_handle_t& window_handle) override
+		{
+			fmt::throw_exception("Native Wayland swapchain is not implemented yet!");
+		}
+
+		void destroy(bool full=true) override
+		{
+			fmt::throw_exception("Native Wayland swapchain is not implemented yet!");
+		}
+
+		VkResult present(VkSemaphore /*semaphore*/, u32 index) override
+		{
+			fmt::throw_exception("Native Wayland swapchain is not implemented yet!");
 		}
 #endif
 
@@ -2113,9 +2286,9 @@ public:
 			swapchain_images[index].second->do_dma_transfer(cmd);
 		}
 
-		VkImage& get_image(u32 index) override
+		VkImage get_image(u32 index) override
 		{
-			return (VkImage&)(*swapchain_images[index].second);
+			return swapchain_images[index].second->value;
 		}
 
 		VkImageLayout get_optimal_present_layout() override
@@ -2164,7 +2337,7 @@ public:
 			swapchain_images.resize(nb_swap_images);
 			for (u32 i = 0; i < nb_swap_images; ++i)
 			{
-				swapchain_images[i].create(dev, vk_images[i], m_surface_format);
+				swapchain_images[i].value = vk_images[i];
 			}
 		}
 
@@ -2172,11 +2345,11 @@ public:
 		swapchain_WSI(vk::physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space, bool force_wm_reporting_off)
 			: WSI_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{
-			createSwapchainKHR = (PFN_vkCreateSwapchainKHR)vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR");
-			destroySwapchainKHR = (PFN_vkDestroySwapchainKHR)vkGetDeviceProcAddr(dev, "vkDestroySwapchainKHR");
-			getSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)vkGetDeviceProcAddr(dev, "vkGetSwapchainImagesKHR");
-			acquireNextImageKHR = (PFN_vkAcquireNextImageKHR)vkGetDeviceProcAddr(dev, "vkAcquireNextImageKHR");
-			queuePresentKHR = (PFN_vkQueuePresentKHR)vkGetDeviceProcAddr(dev, "vkQueuePresentKHR");
+			createSwapchainKHR = reinterpret_cast<PFN_vkCreateSwapchainKHR>(vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR"));
+			destroySwapchainKHR = reinterpret_cast<PFN_vkDestroySwapchainKHR>(vkGetDeviceProcAddr(dev, "vkDestroySwapchainKHR"));
+			getSwapchainImagesKHR = reinterpret_cast<PFN_vkGetSwapchainImagesKHR>(vkGetDeviceProcAddr(dev, "vkGetSwapchainImagesKHR"));
+			acquireNextImageKHR = reinterpret_cast<PFN_vkAcquireNextImageKHR>(vkGetDeviceProcAddr(dev, "vkAcquireNextImageKHR"));
+			queuePresentKHR = reinterpret_cast<PFN_vkQueuePresentKHR>(vkGetDeviceProcAddr(dev, "vkQueuePresentKHR"));
 
 			m_surface = surface;
 			m_color_space = color_space;
@@ -2187,8 +2360,11 @@ public:
 				{
 				case driver_vendor::AMD:
 					break;
-				case driver_vendor::NVIDIA:
 				case driver_vendor::INTEL:
+#ifdef _WIN32
+				break;
+#endif
+				case driver_vendor::NVIDIA:
 				case driver_vendor::RADV:
 					m_wm_reports_flag = true;
 					break;
@@ -2203,15 +2379,12 @@ public:
 		void create(display_handle_t&) override
 		{}
 
-		void destroy(bool=true) override
+		void destroy(bool = true) override
 		{
-			if (VkDevice pdev = (VkDevice)dev)
+			if (VkDevice pdev = dev)
 			{
 				if (m_vk_swapchain)
 				{
-					for (auto &img : swapchain_images)
-						img.discard(dev);
-
 					destroySwapchainKHR(pdev, m_vk_swapchain, nullptr);
 				}
 
@@ -2244,7 +2417,7 @@ public:
 			}
 
 			VkExtent2D swapchainExtent;
-			if (surface_descriptors.currentExtent.width == (uint32_t)-1)
+			if (surface_descriptors.currentExtent.width == UINT32_MAX)
 			{
 				swapchainExtent.width = m_width;
 				swapchainExtent.height = m_height;
@@ -2344,9 +2517,6 @@ public:
 			{
 				if (!swapchain_images.empty())
 				{
-					for (auto &img : swapchain_images)
-						img.discard(dev);
-
 					swapchain_images.clear();
 				}
 
@@ -2385,9 +2555,9 @@ public:
 			return queuePresentKHR(vk_present_queue, &present);
 		}
 
-		VkImage& get_image(u32 index) override
+		VkImage get_image(u32 index) override
 		{
-			return (VkImage&)swapchain_images[index];
+			return swapchain_images[index].value;
 		}
 
 		VkImageLayout get_optimal_present_layout() override
@@ -2400,9 +2570,8 @@ public:
 	{
 	private:
 		std::vector<physical_device> gpus;
-
-		std::vector<VkInstance> m_vk_instances;
-		VkInstance m_instance;
+		VkInstance m_instance = VK_NULL_HANDLE;
+		VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 
 		PFN_vkDestroyDebugReportCallbackEXT destroyDebugReportCallback = nullptr;
 		PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback = nullptr;
@@ -2412,20 +2581,17 @@ public:
 
 	public:
 
-		context()
-		{
-			m_instance = nullptr;
-		}
+		context() = default;
 
 		~context()
 		{
-			if (m_instance || !m_vk_instances.empty())
+			if (m_instance)
 				close();
 		}
 
 		void close()
 		{
-			if (m_vk_instances.empty()) return;
+			if (!m_instance) return;
 
 			if (m_debugger)
 			{
@@ -2433,13 +2599,14 @@ public:
 				m_debugger = nullptr;
 			}
 
-			for (VkInstance &inst : m_vk_instances)
+			if (m_surface)
 			{
-				vkDestroyInstance(inst, nullptr);
+				vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+				m_surface = VK_NULL_HANDLE;
 			}
 
-			m_instance = nullptr;
-			m_vk_instances.clear();
+			vkDestroyInstance(m_instance, nullptr);
+			m_instance = VK_NULL_HANDLE;
 		}
 
 		void enable_debugging()
@@ -2448,8 +2615,8 @@ public:
 
 			PFN_vkDebugReportCallbackEXT callback = vk::dbgFunc;
 
-			createDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT");
-			destroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(m_instance, "vkDestroyDebugReportCallbackEXT");
+			createDebugReportCallback = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT"));
+			destroyDebugReportCallback = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(m_instance, "vkDestroyDebugReportCallbackEXT"));
 
 			VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = {};
 			dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
@@ -2459,7 +2626,7 @@ public:
 			CHECK_RESULT(createDebugReportCallback(m_instance, &dbgCreateInfo, NULL, &m_debugger));
 		}
 
-		uint32_t createInstance(const char *app_name, bool fast = false)
+		bool createInstance(const char *app_name, bool fast = false)
 		{
 			//Initialize a vulkan instance
 			VkApplicationInfo app = {};
@@ -2497,11 +2664,13 @@ public:
 				extensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
 #else
 				bool found_surface_ext = false;
+#ifdef HAVE_X11
 				if (support.is_supported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
 				{
 					extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 					found_surface_ext = true;
 				}
+#endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 				if (support.is_supported(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
 				{
@@ -2527,47 +2696,34 @@ public:
 			instance_info.enabledExtensionCount = fast ? 0 : static_cast<uint32_t>(extensions.size());
 			instance_info.ppEnabledExtensionNames = fast ? nullptr : extensions.data();
 
-			VkInstance instance;
-			if (VkResult result = vkCreateInstance(&instance_info, nullptr, &instance); result != VK_SUCCESS)
+			if (VkResult result = vkCreateInstance(&instance_info, nullptr, &m_instance); result != VK_SUCCESS)
 			{
 				if (result == VK_ERROR_LAYER_NOT_PRESENT)
 				{
 					LOG_FATAL(RSX,"Could not initialize layer VK_LAYER_KHRONOS_validation");
 				}
-				return 0;
+
+				return false;
 			}
 
-			m_vk_instances.push_back(instance);
-			return (u32)m_vk_instances.size();
+			return true;
 		}
 
-		void makeCurrentInstance(uint32_t instance_id)
+		void makeCurrentInstance()
 		{
-			if (!instance_id || instance_id > m_vk_instances.size())
-				fmt::throw_exception("Invalid instance passed to makeCurrentInstance (%u)" HERE, instance_id);
-
+			// Register some global states
 			if (m_debugger)
 			{
 				destroyDebugReportCallback(m_instance, m_debugger, nullptr);
 				m_debugger = nullptr;
 			}
 
-			instance_id--;
-			m_instance = m_vk_instances[instance_id];
+			enable_debugging();
 		}
 
 		VkInstance getCurrentInstance()
 		{
 			return m_instance;
-		}
-
-		VkInstance getInstanceById(uint32_t instance_id)
-		{
-			if (!instance_id || instance_id > m_vk_instances.size())
-				fmt::throw_exception("Invalid instance passed to getInstanceById (%u)" HERE, instance_id);
-
-			instance_id--;
-			return m_vk_instances[instance_id];
 		}
 
 		std::vector<physical_device>& enumerateDevices()
@@ -2593,7 +2749,6 @@ public:
 
 		swapchain_base* createSwapChain(display_handle_t window_handle, vk::physical_device &dev)
 		{
-			VkSurfaceKHR surface;
 			bool force_wm_reporting_off = false;
 #ifdef _WIN32
 			using swapchain_NATIVE = swapchain_WIN32;
@@ -2604,7 +2759,7 @@ public:
 			createInfo.hinstance = hInstance;
 			createInfo.hwnd = window_handle;
 
-			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface));
+			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &m_surface));
 
 #elif defined(__APPLE__)
 			using swapchain_NATIVE = swapchain_MacOS;
@@ -2612,37 +2767,44 @@ public:
 			createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
 			createInfo.pView = window_handle;
 
-			CHECK_RESULT(vkCreateMacOSSurfaceMVK(m_instance, &createInfo, NULL, &surface));
+			CHECK_RESULT(vkCreateMacOSSurfaceMVK(m_instance, &createInfo, NULL, &m_surface));
 #else
+#ifdef HAVE_X11
 			using swapchain_NATIVE = swapchain_X11;
+#else
+			using swapchain_NATIVE = swapchain_Wayland;
+#endif
 
 			std::visit([&](auto&& p)
 			{
 				using T = std::decay_t<decltype(p)>;
 
+#ifdef HAVE_X11
 				if constexpr (std::is_same_v<T, std::pair<Display*, Window>>)
 				{
 					VkXlibSurfaceCreateInfoKHR createInfo = {};
 					createInfo.sType                      = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
 					createInfo.dpy                        = p.first;
 					createInfo.window                     = p.second;
-					CHECK_RESULT(vkCreateXlibSurfaceKHR(this->m_instance, &createInfo, nullptr, &surface));
+					CHECK_RESULT(vkCreateXlibSurfaceKHR(this->m_instance, &createInfo, nullptr, &m_surface));
 				}
+				else
+#endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-				else if constexpr (std::is_same_v<T, std::pair<wl_display*, wl_surface*>>)
+				if constexpr (std::is_same_v<T, std::pair<wl_display*, wl_surface*>>)
 				{
 					VkWaylandSurfaceCreateInfoKHR createInfo = {};
 					createInfo.sType                         = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
 					createInfo.display                       = p.first;
 					createInfo.surface                       = p.second;
-					CHECK_RESULT(vkCreateWaylandSurfaceKHR(this->m_instance, &createInfo, nullptr, &surface));
+					CHECK_RESULT(vkCreateWaylandSurfaceKHR(this->m_instance, &createInfo, nullptr, &m_surface));
 					force_wm_reporting_off = true;
 				}
 				else
+#endif
 				{
 					static_assert(std::conditional_t<true, std::false_type, T>::value, "Unhandled window_handle type in std::variant");
 				}
-#endif
 			}, window_handle);
 #endif
 
@@ -2652,7 +2814,7 @@ public:
 
 			for (u32 index = 0; index < device_queues; index++)
 			{
-				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, surface, &supportsPresent[index]);
+				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, m_surface, &supportsPresent[index]);
 			}
 
 			for (const auto &value : supportsPresent)
@@ -2728,10 +2890,10 @@ public:
 
 			// Get the list of VkFormat's that are supported:
 			uint32_t formatCount;
-			CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, surface, &formatCount, nullptr));
+			CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, m_surface, &formatCount, nullptr));
 
 			std::vector<VkSurfaceFormatKHR> surfFormats(formatCount);
-			CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, surface, &formatCount, surfFormats.data()));
+			CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, m_surface, &formatCount, surfFormats.data()));
 
 			VkFormat format;
 			VkColorSpaceKHR color_space;
@@ -2758,7 +2920,7 @@ public:
 
 			color_space = surfFormats[0].colorSpace;
 
-			return new swapchain_WSI(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, format, surface, color_space, force_wm_reporting_off);
+			return new swapchain_WSI(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, format, m_surface, color_space, force_wm_reporting_off);
 		}
 	};
 
@@ -2829,11 +2991,62 @@ public:
 
 	class occlusion_query_pool
 	{
+		struct query_slot_info
+		{
+			bool any_passed;
+			bool active;
+			bool ready;
+		};
+
 		VkQueryPool query_pool = VK_NULL_HANDLE;
 		vk::render_device* owner = nullptr;
 
-		std::stack<u32> available_slots;
-		std::vector<bool> query_active_status;
+		std::deque<u32> available_slots;
+		std::vector<query_slot_info> query_slot_status;
+
+		inline bool poke_query(query_slot_info& query, u32 index)
+		{
+			// Query is ready if:
+			// 1. Any sample has been determined to have passed the Z test
+			// 2. The backend has fully processed the query and found no hits
+
+			u32 result[2] = { 0, 0 };
+			switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_PARTIAL_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
+			{
+			case VK_SUCCESS:
+			{
+				if (result[0])
+				{
+					query.any_passed = true;
+					query.ready = true;
+					return true;
+				}
+				else if (result[1])
+				{
+					query.any_passed = false;
+					query.ready = true;
+					return true;
+				}
+
+				return false;
+			}
+			case VK_NOT_READY:
+			{
+				if (result[0])
+				{
+					query.any_passed = true;
+					query.ready = true;
+					return true;
+				}
+
+				return false;
+			}
+			default:
+				die_with_error(HERE, error);
+				return false;
+			}
+		}
+
 	public:
 
 		void create(vk::render_device &dev, u32 num_entries)
@@ -2846,12 +3059,8 @@ public:
 			CHECK_RESULT(vkCreateQueryPool(dev, &info, nullptr, &query_pool));
 			owner = &dev;
 
-			query_active_status.resize(num_entries, false);
-
-			for (u32 n = 0; n < num_entries; ++n)
-			{
-				available_slots.push(n);
-			}
+			// From spec: "After query pool creation, each query must be reset before it is used."
+			query_slot_status.resize(num_entries, {});
 		}
 
 		void destroy()
@@ -2865,16 +3074,31 @@ public:
 			}
 		}
 
+		void initialize(vk::command_buffer &cmd)
+		{
+			const u32 count = ::size32(query_slot_status);
+			vkCmdResetQueryPool(cmd, query_pool, 0, count);
+
+			query_slot_info value{};
+			std::fill(query_slot_status.begin(), query_slot_status.end(), value);
+
+			for (u32 n = 0; n < count; ++n)
+			{
+				available_slots.push_back(n);
+			}
+		}
+
 		void begin_query(vk::command_buffer &cmd, u32 index)
 		{
-			if (query_active_status[index])
+			if (query_slot_status[index].active)
 			{
 				//Synchronization must be done externally
 				vkCmdResetQueryPool(cmd, query_pool, index, 1);
+				query_slot_status[index] = {};
 			}
 
 			vkCmdBeginQuery(cmd, query_pool, index, 0);//VK_QUERY_CONTROL_PRECISE_BIT);
-			query_active_status[index] = true;
+			query_slot_status[index].active = true;
 		}
 
 		void end_query(vk::command_buffer &cmd, u32 index)
@@ -2884,36 +3108,35 @@ public:
 
 		bool check_query_status(u32 index)
 		{
-			u32 result[2] = {0, 0};
-			switch (VkResult status = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
-			{
-			case VK_SUCCESS:
-				break;
-			case VK_NOT_READY:
-				return false;
-			default:
-				vk::die_with_error(HERE, status);
-			}
-
-			return result[1] != 0;
+			return poke_query(query_slot_status[index], index);
 		}
 
 		u32 get_query_result(u32 index)
 		{
-			u32 result = 0;
-			CHECK_RESULT(vkGetQueryPoolResults(*owner, query_pool, index, 1, 4, &result, 4, VK_QUERY_RESULT_WAIT_BIT));
+			// Check for cached result
+			auto& query_info = query_slot_status[index];
 
-			return result == 0u? 0u: 1u;
+			while (!query_info.ready)
+			{
+				poke_query(query_info, index);
+			}
+
+			return query_info.any_passed ? 1 : 0;
+		}
+
+		void get_query_result_indirect(vk::command_buffer &cmd, u32 index, VkBuffer dst, VkDeviceSize dst_offset)
+		{
+			vkCmdCopyQueryPoolResults(cmd, query_pool, index, 1, dst, dst_offset, 4, VK_QUERY_RESULT_WAIT_BIT);
 		}
 
 		void reset_query(vk::command_buffer &cmd, u32 index)
 		{
-			if (query_active_status[index])
+			if (query_slot_status[index].active)
 			{
 				vkCmdResetQueryPool(cmd, query_pool, index, 1);
 
-				query_active_status[index] = false;
-				available_slots.push(index);
+				query_slot_status[index] = {};
+				available_slots.push_back(index);
 			}
 		}
 
@@ -2926,9 +3149,9 @@ public:
 
 		void reset_all(vk::command_buffer &cmd)
 		{
-			for (u32 n = 0; n < query_active_status.size(); n++)
+			for (u32 n = 0; n < query_slot_status.size(); n++)
 			{
-				if (query_active_status[n])
+				if (query_slot_status[n].active)
 					reset_query(cmd, n);
 			}
 		}
@@ -2940,10 +3163,10 @@ public:
 				return ~0u;
 			}
 
-			u32 result = available_slots.top();
-			available_slots.pop();
+			u32 result = available_slots.front();
+			available_slots.pop_front();
 
-			verify(HERE), !query_active_status[result];
+			verify(HERE), !query_slot_status[result].active;
 			return result;
 		}
 	};
@@ -3226,6 +3449,7 @@ public:
 					std::string shader_type = type == ::glsl::program_domain::glsl_vertex_program ? "vertex" :
 						type == ::glsl::program_domain::glsl_fragment_program ? "fragment" : "compute";
 
+					LOG_NOTICE(RSX, "%s", m_source);
 					fmt::throw_exception("Failed to compile %s shader" HERE, shader_type);
 				}
 
@@ -3233,10 +3457,10 @@ public:
 				vs_info.codeSize = m_compiled.size() * sizeof(u32);
 				vs_info.pNext = nullptr;
 				vs_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-				vs_info.pCode = (uint32_t*)m_compiled.data();
+				vs_info.pCode = m_compiled.data();
 				vs_info.flags = 0;
 
-				VkDevice dev = (VkDevice)*vk::get_current_renderer();
+				VkDevice dev = *vk::get_current_renderer();
 				vkCreateShaderModule(dev, &vs_info, nullptr, &m_handle);
 
 				return m_handle;
@@ -3249,7 +3473,7 @@ public:
 
 				if (m_handle)
 				{
-					VkDevice dev = (VkDevice)*vk::get_current_renderer();
+					VkDevice dev = *vk::get_current_renderer();
 					vkDestroyShaderModule(dev, m_handle, nullptr);
 					m_handle = nullptr;
 				}
@@ -3310,32 +3534,41 @@ public:
 		};
 	}
 
-	struct data_heap : public ::data_heap
+	class data_heap : public ::data_heap
 	{
-		std::unique_ptr<buffer> heap;
+	private:
+		size_t initial_size = 0;
 		bool mapped = false;
 		void *_ptr = nullptr;
 
+		bool notify_on_grow = false;
+
 		std::unique_ptr<buffer> shadow;
 		std::vector<VkBufferCopy> dirty_ranges;
+
+	protected:
+		bool grow(size_t size) override;
+
+	public:
+		std::unique_ptr<buffer> heap;
 
 		// NOTE: Some drivers (RADV) use heavyweight OS map/unmap routines that are insanely slow
 		// Avoid mapping/unmapping to keep these drivers from stalling
 		// NOTE2: HOST_CACHED flag does not keep the mapped ptr around in the driver either
 
-		void create(VkBufferUsageFlags usage, size_t size, const char *name = "unnamed", size_t guard = 0x10000)
+		void create(VkBufferUsageFlags usage, size_t size, const char *name, size_t guard = 0x10000, VkBool32 notify = VK_FALSE)
 		{
 			::data_heap::init(size, name, guard);
 
 			const auto device = get_current_renderer();
-			const auto memory_map = device->get_memory_mapping();
+			const auto& memory_map = device->get_memory_mapping();
 
 			VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 			auto memory_index = memory_map.host_visible_coherent;
 
 			if (!(get_heap_compatible_buffer_types() & usage))
 			{
-				LOG_WARNING(RSX, "Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", (u32)usage);
+				LOG_WARNING(RSX, "Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", usage);
 
 				shadow = std::make_unique<buffer>(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0);
 				usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -3344,6 +3577,9 @@ public:
 			}
 
 			heap = std::make_unique<buffer>(*device, size, memory_index, memory_flags, usage, 0);
+
+			initial_size = size;
+			notify_on_grow = bool(notify);
 		}
 
 		void destroy()
@@ -3372,9 +3608,10 @@ public:
 			if (shadow)
 			{
 				dirty_ranges.push_back({offset, offset, size});
+				raise_status_interrupt(runtime_state::heap_dirty);
 			}
 
-			return (u8*)_ptr + offset;
+			return static_cast<u8*>(_ptr) + offset;
 		}
 
 		void unmap(bool force = false)
@@ -3401,7 +3638,7 @@ public:
 			if (!dirty_ranges.empty())
 			{
 				verify (HERE), shadow, heap;
-				vkCmdCopyBuffer(cmd, shadow->value, heap->value, (u32)dirty_ranges.size(), dirty_ranges.data());
+				vkCmdCopyBuffer(cmd, shadow->value, heap->value, ::size32(dirty_ranges), dirty_ranges.data());
 				dirty_ranges.clear();
 
 				insert_buffer_memory_barrier(cmd, heap->value, 0, heap->size(),
@@ -3409,10 +3646,24 @@ public:
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 			}
 		}
+
+		bool is_critical() const override
+		{
+			if (!::data_heap::is_critical())
+				return false;
+
+			// By default, allow the size to grow upto 8x larger
+			// This value is arbitrary, theoretically it is possible to allow infinite stretching to improve performance
+			const size_t soft_limit = initial_size * 8;
+			if ((m_size + m_min_guard_size) < soft_limit)
+				return false;
+
+			return true;
+		}
 	};
 
 	struct blitter
 	{
-		void scale_image(vk::command_buffer& cmd, vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, bool /*is_depth*/, const rsx::typeless_xfer& xfer_info);
+		void scale_image(vk::command_buffer& cmd, vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, const rsx::typeless_xfer& xfer_info);
 	};
 }

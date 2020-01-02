@@ -208,7 +208,7 @@ namespace vk
 			VkImageSubresourceRange range{ surface->aspect(), 0, 1, 0, 1 };
 			if (surface->aspect() & VK_IMAGE_ASPECT_COLOR_BIT)
 			{
-				VkClearColorValue color = { 0.f, 0.f, 0.f, 1.f };
+				VkClearColorValue color = {{0.f, 0.f, 0.f, 1.f}};
 				vkCmdClearColorImage(cmd, surface->value, surface->current_layout, &color, 1, &range);
 			}
 			else
@@ -241,11 +241,11 @@ namespace vk
 			}
 
 			rsx_subresource_layout subres{};
-			subres.width_in_block = surface_width * samples_x;
-			subres.height_in_block = surface_height * samples_y;
+			subres.width_in_block = subres.width_in_texel = surface_width * samples_x;
+			subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
 			subres.pitch_in_block = rsx_pitch / get_bpp();
 			subres.depth = 1;
-			subres.data = { (const gsl::byte*)vm::get_super_ptr(base_addr), s32(rsx_pitch * surface_height * samples_y) };
+			subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<gsl::span<const std::byte>::index_type>(rsx_pitch * surface_height * samples_y) };
 
 			if (LIKELY(g_cfg.video.resolution_scale_percent == 100 && samples() == 1))
 			{
@@ -276,7 +276,7 @@ namespace vk
 				if (content != final_dst)
 				{
 					vk::copy_scaled_image(cmd, content->value, final_dst->value, content->current_layout, final_dst->current_layout,
-						{ 0, 0, subres.width_in_block, subres.height_in_block }, { 0, 0, (s32)final_dst->width(), (s32)final_dst->height() },
+						{ 0, 0, subres.width_in_block, subres.height_in_block }, { 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
 						1, aspect(), true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST,
 						format(), format());
 				}
@@ -350,19 +350,19 @@ namespace vk
 		image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT) override
 		{
-			if (remap_encoding != 0xDEADBEEF && resolve_surface)
+			if (remap_encoding == VK_REMAP_VIEW_MULTISAMPLED)
 			{
-				return resolve_surface->get_view(remap_encoding, remap, mask);
+				// Special remap flag, intercept here
+				return vk::viewable_image::get_view(VK_REMAP_IDENTITY, remap, mask);
+			}
+
+			if (LIKELY(!resolve_surface))
+			{
+				return vk::viewable_image::get_view(remap_encoding, remap, mask);
 			}
 			else
 			{
-				if (remap_encoding == 0xDEADBEEF)
-				{
-					// Special encoding to skip the resolve target fetch
-					remap_encoding = 0xAAE4;
-				}
-
-				return vk::viewable_image::get_view(remap_encoding, remap, mask);
+				return resolve_surface->get_view(remap_encoding, remap, mask);
 			}
 		}
 
@@ -456,8 +456,7 @@ namespace vk
 					{
 						typeless_info.src_is_typeless = true;
 						typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
-						typeless_info.src_native_format_override = (u32)info.format;
-						typeless_info.src_is_depth = is_depth;
+						typeless_info.src_native_format_override = static_cast<u32>(info.format);
 						typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
 					}
 				}
@@ -502,7 +501,7 @@ namespace vk
 					this->get_surface(rsx::surface_access::transfer),
 					src_area,
 					dst_area,
-					/*linear?*/false, /*depth?(unused)*/false, typeless_info);
+					/*linear?*/false, typeless_info);
 
 				optimize_copy = optimize_copy && !memory_load;
 				newest_tag = src_texture->last_use_tag;
@@ -593,7 +592,7 @@ namespace rsx
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
-				static_cast<uint32_t>(rsx::apply_resolution_scale((u16)width, true)), static_cast<uint32_t>(rsx::apply_resolution_scale((u16)height, true)), 1, 1, 1,
+				static_cast<uint32_t>(rsx::apply_resolution_scale(static_cast<u16>(width), true)), static_cast<uint32_t>(rsx::apply_resolution_scale(static_cast<u16>(height), true)), 1, 1, 1,
 				static_cast<VkSampleCountFlagBits>(samples),
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -608,10 +607,10 @@ namespace rsx
 			rtt->memory_usage_flags = rsx::surface_usage_flags::attachment;
 			rtt->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			rtt->native_component_map = fmt.second;
-			rtt->rsx_pitch = (u16)pitch;
-			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format) * rtt->samples_x;
-			rtt->surface_width = (u16)width;
-			rtt->surface_height = (u16)height;
+			rtt->rsx_pitch = static_cast<u16>(pitch);
+			rtt->native_pitch = static_cast<u16>(width) * get_format_block_size_in_bytes(format) * rtt->samples_x;
+			rtt->surface_width = static_cast<u16>(width);
+			rtt->surface_height = static_cast<u16>(height);
 			rtt->queue_tag(address);
 
 			rtt->add_ref();
@@ -651,7 +650,7 @@ namespace rsx
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
-				static_cast<uint32_t>(rsx::apply_resolution_scale((u16)width, true)), static_cast<uint32_t>(rsx::apply_resolution_scale((u16)height, true)), 1, 1, 1,
+				static_cast<uint32_t>(rsx::apply_resolution_scale(static_cast<u16>(width), true)), static_cast<uint32_t>(rsx::apply_resolution_scale(static_cast<u16>(height), true)), 1, 1, 1,
 				static_cast<VkSampleCountFlagBits>(samples),
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -667,13 +666,13 @@ namespace rsx
 			ds->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			ds->native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
 
-			ds->native_pitch = (u16)width * 2 * ds->samples_x;
+			ds->native_pitch = static_cast<u16>(width) * 2 * ds->samples_x;
 			if (format == rsx::surface_depth_format::z24s8)
 				ds->native_pitch *= 2;
 
-			ds->rsx_pitch = (u16)pitch;
-			ds->surface_width = (u16)width;
-			ds->surface_height = (u16)height;
+			ds->rsx_pitch = static_cast<u16>(pitch);
+			ds->surface_width = static_cast<u16>(width);
+			ds->surface_height = static_cast<u16>(height);
 			ds->queue_tag(address);
 
 			ds->add_ref();
@@ -776,7 +775,7 @@ namespace rsx
 
 		static void invalidate_surface_contents(vk::command_buffer& /*cmd*/, vk::render_target *surface, u32 address, size_t pitch)
 		{
-			surface->rsx_pitch = (u16)pitch;
+			surface->rsx_pitch = static_cast<u16>(pitch);
 			surface->queue_tag(address);
 			surface->last_use_tag = 0;
 			surface->stencil_init_flags = 0;
@@ -821,7 +820,7 @@ namespace rsx
 
 			return (surface->info.format == format &&
 				surface->get_spp() == get_format_sample_count(antialias) &&
-				surface->matches_dimensions((u16)width, (u16)height));
+				surface->matches_dimensions(static_cast<u16>(width), static_cast<u16>(height)));
 		}
 
 		static bool surface_matches_properties(

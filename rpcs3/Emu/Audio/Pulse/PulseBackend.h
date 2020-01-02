@@ -1,6 +1,9 @@
 #pragma once
 
-#ifdef HAVE_PULSE
+#ifndef HAVE_PULSE
+#error "PulseAudio support disabled but still being built."
+#endif
+
 #include <pulse/simple.h>
 #include "Emu/Audio/AudioBackend.h"
 
@@ -23,5 +26,3 @@ public:
 private:
 	pa_simple *connection = nullptr;
 };
-
-#endif

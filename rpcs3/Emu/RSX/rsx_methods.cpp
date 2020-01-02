@@ -42,7 +42,7 @@ namespace rsx
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
 		const u32 cmd = rsx->get_fifo_cmd();
-		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg, 
+		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg,
 		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
 		rsx->invalid_command_interrupt_raised = true;
 	}
@@ -86,7 +86,7 @@ namespace rsx
 				if (Emu.IsStopped())
 					return;
 
-				if (const auto tdr = (u64)g_cfg.video.driver_recovery_timeout)
+				if (const auto tdr = static_cast<u64>(g_cfg.video.driver_recovery_timeout))
 				{
 					if (Emu.IsPaused())
 					{
@@ -125,8 +125,8 @@ namespace rsx
 
 			// By avoiding doing this on flip's semaphore release
 			// We allow last gcm's registers reset to occur in case of a crash
-			const bool is_flip_sema = (offset == 0x10 && ctxt == CELL_GCM_CONTEXT_DMA_SEMAPHORE_R);
-			if (!is_flip_sema)
+			if (const bool is_flip_sema = (offset == 0x10 && ctxt == CELL_GCM_CONTEXT_DMA_SEMAPHORE_R);
+				!is_flip_sema)
 			{
 				rsx->sync_point_request = true;
 			}
@@ -152,11 +152,7 @@ namespace rsx
 	{
 		void clear(thread* rsx, u32 _reg, u32 arg)
 		{
-			// TODO: every backend must override method table to insert its own handlers
-			if (!rsx->do_method(NV4097_CLEAR_SURFACE, arg))
-			{
-				//
-			}
+			rsx->clear_surface(arg);
 
 			if (capture_current_frame)
 			{
@@ -166,8 +162,6 @@ namespace rsx
 
 		void clear_zcull(thread* rsx, u32 _reg, u32 arg)
 		{
-			rsx->do_method(NV4097_CLEAR_ZCULL_SURFACE, arg);
-
 			if (capture_current_frame)
 			{
 				rsx->capture_frame("clear zcull memory");
@@ -212,11 +206,6 @@ namespace rsx
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
 			const u32 offset = method_registers.semaphore_offset_4097() & -16;
-			if (offset > 63 * 4 && !rsx->do_method(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg))
-			{
-				//
-			}
-
 			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097())).store(
 			{
 				arg,
@@ -228,14 +217,10 @@ namespace rsx
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Full pipeline barrier
-			const u32 offset = method_registers.semaphore_offset_4097() & -16;
-			if (offset > 63 * 4 && !rsx->do_method(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
-			{
-				//
-			}
-
 			rsx->sync();
-			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
+
+			const u32 offset = method_registers.semaphore_offset_4097() & -16;
+			const u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
 			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097())).store(
 			{
 				val,
@@ -464,9 +449,19 @@ namespace rsx
 
 		void set_begin_end(thread* rsxthr, u32 _reg, u32 arg)
 		{
-			if (arg)
+			// Ignore upper bits
+			if (const u8 prim = static_cast<u8>(arg))
 			{
-				rsx::method_registers.current_draw_clause.reset(to_primitive_type(arg));
+				rsx::method_registers.current_draw_clause.reset(to_primitive_type(prim));
+
+				if (rsx::method_registers.current_draw_clause.primitive == rsx::primitive_type::invalid)
+				{
+					rsxthr->in_begin_end = true;
+
+					LOG_WARNING(RSX, "Invalid NV4097_SET_BEGIN_END value: 0x%x", arg);
+					return;
+				}
+
 				rsxthr->begin();
 				return;
 			}
@@ -496,6 +491,15 @@ namespace rsx
 
 			if (!rsx::method_registers.current_draw_clause.empty())
 			{
+				if (rsx::method_registers.current_draw_clause.primitive == rsx::primitive_type::invalid)
+				{
+					// Recover from invalid primitive only if draw clause is not empty
+					rsxthr->invalid_command_interrupt_raised = true;
+
+					LOG_ERROR(RSX, "NV4097_SET_BEGIN_END aborted due to invalid primitive!");
+					return;
+				}
+
 				rsx::method_registers.current_draw_clause.compile();
 				rsxthr->end();
 			}
@@ -576,14 +580,11 @@ namespace rsx
 			switch (mode)
 			{
 			case 1:
-				rsx->conditional_render_enabled = false;
-				rsx->conditional_render_test_failed = false;
+				rsx->disable_conditional_rendering();
 				return;
 			case 2:
-				rsx->conditional_render_enabled = true;
 				break;
 			default:
-				rsx->conditional_render_enabled = false;
 				LOG_ERROR(RSX, "Unknown render mode %d", mode);
 				return;
 			}
@@ -593,15 +594,12 @@ namespace rsx
 
 			if (!address_ptr)
 			{
-				rsx->conditional_render_test_failed = false;
 				LOG_ERROR(RSX, "Bad argument passed to NV4097_SET_RENDER_ENABLE, arg=0x%X", arg);
 				return;
 			}
 
 			// Defer conditional render evaluation
-			rsx->sync_hint(FIFO_hint::hint_conditional_render_eval, address_ptr);
-			rsx->conditional_render_test_address = address_ptr;
-			rsx->conditional_render_test_failed = false;
+			rsx->enable_conditional_rendering(address_ptr);
 		}
 
 		void set_zcull_render_enable(thread* rsx, u32, u32 arg)
@@ -834,7 +832,7 @@ namespace rsx
 					vm::write32(address, color);
 					break;
 				case 2:
-					vm::write16(address, (u16)(color));
+					vm::write16(address, static_cast<u16>(color));
 					break;
 				default:
 					fmt::throw_exception("Unreachable" HERE);
@@ -868,8 +866,8 @@ namespace rsx
 
 			// NOTE: Do not round these value up!
 			// Sub-pixel offsets are used to signify pixel centers and do not mean to read from the next block (fill convention)
-			auto in_x = (u16)std::floor(method_registers.blit_engine_in_x());
-			auto in_y = (u16)std::floor(method_registers.blit_engine_in_y());
+			auto in_x = static_cast<u16>(std::floor(method_registers.blit_engine_in_x()));
+			auto in_y = static_cast<u16>(std::floor(method_registers.blit_engine_in_y()));
 
 			// Clipping
 			// Validate that clipping rect will fit onto both src and dst regions
@@ -904,12 +902,12 @@ namespace rsx
 			case blit_engine::transfer_origin::center:
 				break;
 			default:
-				LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", (u8)in_origin);
+				LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", static_cast<u8>(in_origin));
 			}
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
 			{
-				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown operation (%d)" HERE, (u8)operation);
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown operation (%d)" HERE, static_cast<u8>(operation));
 			}
 
 			const u32 src_offset = method_registers.blit_engine_input_offset();
@@ -920,6 +918,7 @@ namespace rsx
 			rsx::blit_engine::transfer_destination_format dst_color_format;
 			u32 out_pitch = 0;
 			u32 out_alignment = 64;
+			bool is_block_transfer = false;
 
 			switch (method_registers.blit_engine_context_surface())
 			{
@@ -930,6 +929,7 @@ namespace rsx
 				dst_color_format = method_registers.blit_engine_nv3062_color_format();
 				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
 				out_alignment = method_registers.blit_engine_output_alignment_nv3062();
+				is_block_transfer = fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f);
 				break;
 			}
 			case blit_engine::context_surface::swizzle2d:
@@ -940,7 +940,7 @@ namespace rsx
 				break;
 			}
 			default:
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", (u8)method_registers.blit_engine_context_surface());
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", static_cast<u8>(method_registers.blit_engine_context_surface()));
 				return;
 			}
 
@@ -954,8 +954,7 @@ namespace rsx
 
 			if (UNLIKELY(in_x == 1 || in_y == 1))
 			{
-				const bool is_graphics_op = scale_x < 0.f || scale_y < 0.f || in_bpp != out_bpp || !rsx::fcmp(scale_x, 1.f) || !rsx::fcmp(scale_y, 1.f);
-				if (!is_graphics_op)
+				if (is_block_transfer && in_bpp == out_bpp)
 				{
 					// No scaling factor, so size in src == size in dst
 					// Check for texel wrapping where (offset + size) > size by 1 pixel
@@ -968,6 +967,8 @@ namespace rsx
 					// Graphics operation, ignore subpixel correction offsets
 					if (in_x == 1) in_x = 0;
 					if (in_y == 1) in_y = 0;
+
+					is_block_transfer = false;
 				}
 			}
 
@@ -977,16 +978,35 @@ namespace rsx
 			const u32 src_address = get_address(src_offset, src_dma);
 			const u32 dst_address = get_address(dst_offset, dst_dma);
 
+			const u32 src_line_length = (in_w * in_bpp);
+			if (is_block_transfer && (clip_h == 1 || (in_pitch == out_pitch && src_line_length == in_pitch)))
+			{
+				const u32 nb_lines = std::min(clip_h, in_h);
+				const u32 data_length = nb_lines * src_line_length;
+
+				if (const auto result = rsx->read_barrier(src_address, data_length, false);
+					result == rsx::result_zcull_intr)
+				{
+					if (rsx->copy_zcull_stats(src_address, data_length, dst_address) == data_length)
+					{
+						// All writes deferred
+						return;
+					}
+				}
+			}
+			else
+			{
+				const u32 data_length = in_pitch * (in_h - 1) + src_line_length;
+				rsx->read_barrier(src_address, dst_address, true);
+			}
+
 			u8* pixels_src = vm::_ptr<u8>(src_address + in_offset);
 			u8* pixels_dst = vm::_ptr<u8>(dst_address + out_offset);
-
-			const auto read_address = get_address(src_offset, src_dma);
-			rsx->read_barrier(read_address, in_pitch * (in_h - 1) + (in_w * in_bpp));
 
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
 			{
-				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)" HERE, (u8)dst_color_format);
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)" HERE, static_cast<u8>(dst_color_format));
 			}
 
 			if (src_color_format != rsx::blit_engine::transfer_source_format::r5g6b5 &&
@@ -1000,12 +1020,12 @@ namespace rsx
 				else
 				{
 					// TODO: Support more formats
-					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)" HERE, (u8)src_color_format);
+					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)" HERE, static_cast<u8>(src_color_format));
 				}
 			}
 
-			u32 convert_w = (u32)(std::abs(scale_x) * in_w);
-			u32 convert_h = (u32)(std::abs(scale_y) * in_h);
+			u32 convert_w = static_cast<u32>(std::abs(scale_x) * in_w);
+			u32 convert_h = static_cast<u32>(std::abs(scale_y) * in_h);
 
 			if (convert_w == 0 || convert_h == 0)
 			{
@@ -1056,12 +1076,12 @@ namespace rsx
 				const u32 packed_pitch = in_w * in_bpp;
 				temp1.resize(packed_pitch * in_h);
 
-				const s32 stride_y = (scale_y < 0 ? -1 : 1) * (s32)in_pitch;
+				const s32 stride_y = (scale_y < 0 ? -1 : 1) * s32{in_pitch};
 
 				for (u32 y = 0; y < in_h; ++y)
 				{
 					u8 *dst = temp1.data() + (packed_pitch * y);
-					u8 *src = pixels_src + ((s32)y * stride_y);
+					u8 *src = pixels_src + (static_cast<s32>(y) * stride_y);
 
 					if (scale_x < 0)
 					{
@@ -1172,7 +1192,7 @@ namespace rsx
 				{
 					if (need_clip)
 					{
-						temp2.resize(out_pitch * std::max(convert_h, (u32)clip_h));
+						temp2.resize(out_pitch * std::max<u32>(convert_h, clip_h));
 
 						convert_scale_image(temp2.data(), out_format, convert_w, convert_h, out_pitch,
 							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
@@ -1196,7 +1216,7 @@ namespace rsx
 
 						if (need_convert)
 						{
-							temp2.resize(out_pitch * std::max(convert_h, (u32)clip_h));
+							temp2.resize(out_pitch * std::max<u32>(convert_h, clip_h));
 
 							convert_scale_image(temp2.data(), out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
@@ -1263,13 +1283,13 @@ namespace rsx
 				switch (out_bpp)
 				{
 				case 1:
-					convert_linear_swizzle<u8>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch, false);
+					convert_linear_swizzle<u8, false>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch);
 					break;
 				case 2:
-					convert_linear_swizzle<u16>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch, false);
+					convert_linear_swizzle<u16, false>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch);
 					break;
 				case 4:
-					convert_linear_swizzle<u32>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch, false);
+					convert_linear_swizzle<u32, false>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch);
 					break;
 				}
 			}
@@ -1310,15 +1330,28 @@ namespace rsx
 			u32 dst_offset = method_registers.nv0039_output_offset();
 			u32 dst_dma = method_registers.nv0039_output_location();
 
+			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch == line_length);
 			const auto read_address = get_address(src_offset, src_dma);
-			rsx->read_barrier(read_address, in_pitch * (line_count - 1) + line_length);
+			const auto write_address = get_address(dst_offset, dst_dma);
+			const auto data_length = in_pitch * (line_count - 1) + line_length;
 
-			u8 *dst = vm::_ptr<u8>(get_address(dst_offset, dst_dma));
+			if (const auto result = rsx->read_barrier(read_address, data_length, !is_block_transfer);
+				result == rsx::result_zcull_intr)
+			{
+				// This transfer overlaps will zcull data pool
+				if (rsx->copy_zcull_stats(read_address, data_length, write_address) == data_length)
+				{
+					// All writes deferred
+					return;
+				}
+			}
+
+			u8 *dst = vm::_ptr<u8>(write_address);
 			const u8 *src = vm::_ptr<u8>(read_address);
 
 			const bool is_overlapping = dst_dma == src_dma && [&]() -> bool
 			{
-				const u32 src_max = src_offset + (in_pitch * (line_count - 1) + line_length);
+				const u32 src_max = src_offset + data_length;
 				const u32 dst_max = dst_offset + (out_pitch * (line_count - 1) + line_length);
 				return (src_offset >= dst_offset && src_offset < dst_max) ||
 				 (dst_offset >= src_offset && dst_offset < src_max);
@@ -1326,7 +1359,7 @@ namespace rsx
 
 			if (is_overlapping)
 			{
-				if (in_pitch == out_pitch && out_pitch == line_length)
+				if (is_block_transfer)
 				{
 					std::memmove(dst, src, line_length * line_count);
 				}
@@ -1354,7 +1387,7 @@ namespace rsx
 			}
 			else
 			{
-				if (in_pitch == out_pitch && out_pitch == line_length)
+				if (is_block_transfer)
 				{
 					std::memcpy(dst, src, line_length * line_count);
 				}

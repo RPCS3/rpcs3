@@ -134,7 +134,7 @@ namespace rsx
 
 				cs.buffer_state.buffers[i] = buf;
 				sys_rsx_context_attribute(context_id, 0x104, i,
-					(u64)dbstate.buffers[i].width << 32 | dbstate.buffers[i].height, (u64)dbstate.buffers[i].pitch << 32 | dbstate.buffers[i].offset, 0);
+					u64{dbstate.buffers[i].width} << 32 | dbstate.buffers[i].height, u64{dbstate.buffers[i].pitch} << 32 | dbstate.buffers[i].offset, 0);
 			}
 			cs.display_buffer_hash = replay_cmd.display_buffer_state;
 		}
@@ -153,7 +153,7 @@ namespace rsx
 					continue;
 
 				cs.tile_state.tiles[i] = ti;
-				sys_rsx_context_attribute(context_id, 0x300, i, (u64)ti.tile << 32 | ti.limit, (u64)ti.pitch << 32 | ti.format, 0);
+				sys_rsx_context_attribute(context_id, 0x300, i, u64{ti.tile} << 32 | ti.limit, u64{ti.pitch} << 32 | ti.format, 0);
 			}
 
 			for (u32 i = 0; i < limits::zculls_count; ++i)
@@ -163,7 +163,7 @@ namespace rsx
 					continue;
 
 				cs.tile_state.zculls[i] = zci;
-				sys_rsx_context_attribute(context_id, 0x301, i, (u64)zci.region << 32 | zci.size, (u64)zci.start << 32 | zci.offset, (u64)zci.status0 << 32 | zci.status1);
+				sys_rsx_context_attribute(context_id, 0x301, i, u64{zci.region} << 32 | zci.size, u64{zci.start} << 32 | zci.offset, u64{zci.status0} << 32 | zci.status1);
 			}
 
 			cs.tile_hash = replay_cmd.tile_state;

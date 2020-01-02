@@ -146,7 +146,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 		result = -1;
 		if (code <= size)
 		{
-			memcpy(out, (const void *)(in + 5), code);
+			memcpy(out, in + 5, code);
 			result = static_cast<int>(start - out);
 		}
 	}
@@ -165,7 +165,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 				if (start == end) return static_cast<int>(start - out);
 
 				// Locate first section.
-				int sect = (((((((int)(start - out)) & 7) << 8) + prev) >> head) & 7) * 0xFF - 1;
+				int sect = ((((((static_cast<int>(start - out)) & 7) << 8) + prev) >> head) & 7) * 0xFF - 1;
 				tmp_sect1 = tmp + sect;
 				int index = 1;
 
@@ -198,7 +198,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 				if ((index >= 0) || (bit_flag != 0))
 				{
 					// Locate next section.
-					int sect = (index << 5) | (((((int)(start - out)) << index) & 3) << 3) | (offset & 7);
+					int sect = (index << 5) | ((((static_cast<int>(start - out)) << index) & 3) << 3) | (offset & 7);
 					tmp_sect1 = tmp + 0xBA8 + sect;
 
 					// Decode the data length (8 bit fields).
@@ -265,7 +265,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 				}
 
 				// Update offset.
-				offset = ((((int)(buf_end - out)) + 1) & 1) + 6;
+				offset = (((static_cast<int>(buf_end - out)) + 1) & 1) + 6;
 
 				// Copy data.
 				do

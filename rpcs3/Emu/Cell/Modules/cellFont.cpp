@@ -2,8 +2,6 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-// Defines STB_TRUETYPE_IMPLEMENTATION *once* before including stb_truetype.h (as noted in stb_truetype.h's comments)
-#define STB_TRUETYPE_IMPLEMENTATION
 #include <stb_truetype.h>
 
 #include "cellFont.h"
@@ -51,7 +49,7 @@ s32 cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr, u32 f
 {
 	cellFont.warning("cellFontOpenFontMemory(library=*0x%x, fontAddr=0x%x, fontSize=%d, subNum=%d, uniqueId=%d, font=*0x%x)", library, fontAddr, fontSize, subNum, uniqueId, font);
 
-	font->stbfont = (stbtt_fontinfo*)((u8*)&(font->stbfont) + sizeof(void*)); // hack: use next bytes of the struct
+	font->stbfont = vm::_ptr<stbtt_fontinfo>(font.addr() + font.size()); // hack: use next bytes of the struct
 
 	if (!stbtt_InitFont(font->stbfont, vm::_ptr<unsigned char>(fontAddr), 0))
 		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
@@ -92,7 +90,7 @@ s32 cellFontOpenFontset(ppu_thread& ppu, vm::ptr<CellFontLibrary> library, vm::p
 	}
 
 	std::string file;
-	switch((u32)fontType->type)
+	switch (fontType->type)
 	{
 	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LATIN:         file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF";  break;
 	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LIGHT_LATIN:   file = "/dev_flash/data/font/SCE-PS3-RD-L-LATIN.TTF";  break;
@@ -321,22 +319,22 @@ s32 cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::ptr<CellF
 	s32 baseLineY;
 	s32 ascent, descent, lineGap;
 	stbtt_GetFontVMetrics(font->stbfont, &ascent, &descent, &lineGap);
-	baseLineY = (int)((float)ascent * scale); // ???
+	baseLineY = static_cast<int>(ascent * scale); // ???
 
 	// Move the rendered character to the surface
 	unsigned char* buffer = vm::_ptr<unsigned char>(surface->buffer.addr());
-	for (u32 ypos = 0; ypos < (u32)height; ypos++)
+	for (u32 ypos = 0; ypos < static_cast<u32>(height); ypos++)
 	{
-		if ((u32)y + ypos + yoff + baseLineY >= (u32)surface->height)
+		if (static_cast<u32>(y) + ypos + yoff + baseLineY >= static_cast<u32>(surface->height))
 			break;
 
-		for (u32 xpos = 0; xpos < (u32)width; xpos++)
+		for (u32 xpos = 0; xpos < static_cast<u32>(width); xpos++)
 		{
-			if ((u32)x + xpos >= (u32)surface->width)
+			if (static_cast<u32>(x) + xpos >= static_cast<u32>(surface->width))
 				break;
 
 			// TODO: There are some oddities in the position of the character in the final buffer
-			buffer[((s32)y + ypos + yoff + baseLineY)*surface->width + (s32)x + xpos] = box[ypos * width + xpos];
+			buffer[(static_cast<s32>(y) + ypos + yoff + baseLineY) * surface->width + static_cast<s32>(x) + xpos] = box[ypos * width + xpos];
 		}
 	}
 	stbtt_FreeBitmap(box, 0);
@@ -407,9 +405,9 @@ s32 cellFontGetCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFo
 	// TODO: Add the rest of the information
 	metrics->width = (x1-x0) * scale;
 	metrics->height = (y1-y0) * scale;
-	metrics->h_bearingX = (float)leftSideBearing * scale;
+	metrics->h_bearingX = leftSideBearing * scale;
 	metrics->h_bearingY = 0.f;
-	metrics->h_advance = (float)advanceWidth * scale;
+	metrics->h_advance = advanceWidth * scale;
 	metrics->v_bearingX = 0.f;
 	metrics->v_bearingY = 0.f;
 	metrics->v_advance = 0.f;

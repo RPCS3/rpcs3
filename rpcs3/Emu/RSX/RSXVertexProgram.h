@@ -245,6 +245,6 @@ struct RSXVertexProgram
 
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const
 	{
-		return (rsx::texture_dimension_extended)((texture_dimensions >> (id * 2)) & 0x3);
+		return rsx::texture_dimension_extended{static_cast<u8>((texture_dimensions >> (id * 2)) & 0x3)};
 	}
 };

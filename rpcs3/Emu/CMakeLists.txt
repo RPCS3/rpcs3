@@ -25,6 +25,7 @@ target_include_directories(rpcs3_emu
 # Utilities
 target_sources(rpcs3_emu PRIVATE
 	../util/atomic.cpp
+	../util/atomic2.cpp
 	../../Utilities/bin_patch.cpp
 	../../Utilities/cond.cpp
 	../../Utilities/Config.cpp
@@ -48,7 +49,7 @@ target_include_directories(rpcs3_emu PUBLIC "${CMAKE_SOURCE_DIR}")
 target_link_libraries(rpcs3_emu
 	PUBLIC
 		3rdparty::pugixml
-		3rdparty::gsl)
+		3rdparty::span)
 
 if (MSVC)
 	set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES COMPILE_FLAGS /GR-)
@@ -88,10 +89,25 @@ target_sources(rpcs3_emu PRIVATE
 target_sources(rpcs3_emu PRIVATE
 	Audio/AudioDumper.cpp
 	Audio/AL/OpenALBackend.cpp
-	Audio/ALSA/ALSABackend.cpp
-	Audio/Pulse/PulseBackend.cpp
-	Audio/FAudio/FAudioBackend.cpp
 )
+
+if(USE_ALSA)
+	find_package(ALSA)
+	if(ALSA_FOUND)
+		target_sources(rpcs3_emu PRIVATE Audio/ALSA/ALSABackend.cpp)
+		target_link_libraries(rpcs3_emu PUBLIC 3rdparty::alsa)
+	endif()
+endif()
+
+if(USE_PULSE AND PULSE_FOUND)
+	target_sources(rpcs3_emu PRIVATE Audio/Pulse/PulseBackend.cpp)
+	target_link_libraries(rpcs3_emu PUBLIC 3rdparty::pulse)
+endif()
+
+if(USE_FAUDIO AND SDL2_FOUND AND NOT SDL2_VERSION VERSION_LESS 2.0.9)
+	target_sources(rpcs3_emu PRIVATE Audio/FAudio/FAudioBackend.cpp)
+	target_link_libraries(rpcs3_emu PUBLIC 3rdparty::faudio)
+endif()
 
 if(WIN32)
 	target_sources(rpcs3_emu PRIVATE
@@ -105,7 +121,7 @@ endif()
 
 target_link_libraries(rpcs3_emu
 	PUBLIC
-		3rdparty::alsa 3rdparty::pulse 3rdparty::openal 3rdparty::faudio)
+		3rdparty::openal)
 
 
 # Cell
@@ -230,6 +246,7 @@ target_sources(rpcs3_emu PRIVATE
 	Cell/Modules/cellSync2.cpp
 	Cell/Modules/cellSync.cpp
 	Cell/Modules/cellSysconf.cpp
+	Cell/Modules/cellSysCache.cpp
 	Cell/Modules/cellSysmodule.cpp
 	Cell/Modules/cellSysutilAp.cpp
 	Cell/Modules/cellSysutilAvc2.cpp
@@ -338,7 +355,6 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/Common/BufferUtils.cpp
 	RSX/Common/FragmentProgramDecompiler.cpp
 	RSX/Common/ProgramStateCache.cpp
-	RSX/Common/ShaderParam.cpp
 	RSX/Common/surface_store.cpp
 	RSX/Common/TextureUtils.cpp
 	RSX/Common/VertexProgramDecompiler.cpp
@@ -369,6 +385,7 @@ target_sources(rpcs3_emu PRIVATE
 
 if(TARGET 3rdparty_vulkan)
 	target_sources(rpcs3_emu PRIVATE
+		RSX/VK/VKCommandStream.cpp
 		RSX/VK/VKCommonDecompiler.cpp
 		RSX/VK/VKDMA.cpp
 		RSX/VK/VKFormats.cpp
@@ -384,7 +401,6 @@ if(TARGET 3rdparty_vulkan)
 		RSX/VK/VKTexture.cpp
 		RSX/VK/VKVertexBuffers.cpp
 		RSX/VK/VKVertexProgram.cpp
-		RSX/VK/VulkanAPI.cpp
 	)
 endif()
 
@@ -395,7 +411,7 @@ target_link_libraries(rpcs3_emu
 		3rdparty::vulkan 3rdparty::glew
 		3rdparty::libusb
 	PRIVATE
-		3rdparty::gsl 3rdparty::xxhash
+		3rdparty::span 3rdparty::xxhash
 )
 
 

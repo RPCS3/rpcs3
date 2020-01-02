@@ -15,7 +15,6 @@ namespace rsx
 		{
 			if (fcmp(src_scaling_hint, dst_scaling_hint) && !fcmp(src_scaling_hint, 1.f))
 			{
-				verify(HERE), src_is_depth == dst_is_depth;
 				src_is_typeless = dst_is_typeless = false;
 				src_scaling_hint = dst_scaling_hint = 1.f;
 			}
@@ -28,15 +27,15 @@ namespace
 	// FIXME: GSL as_span break build if template parameter is non const with current revision.
 	// Replace with true as_span when fixed.
 	template <typename T>
-	gsl::span<T> as_span_workaround(gsl::span<gsl::byte> unformated_span)
+	gsl::span<T> as_span_workaround(gsl::span<std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
 	}
 
 	template <typename T>
-	gsl::span<T> as_const_span(gsl::span<const gsl::byte> unformated_span)
+	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
 	}
 
 	// TODO: Make this function part of GSL
@@ -107,7 +106,7 @@ struct copy_unmodified_block_swizzled
 	{
 		if (std::is_same<T, U>::value && dst_pitch_in_block == width_in_block && words_per_block == 1 && !border)
 		{
-			rsx::convert_linear_swizzle_3d<T>((void*)src.data(), (void*)dst.data(), width_in_block, row_count, depth);
+			rsx::convert_linear_swizzle_3d<T>(src.data(), dst.data(), width_in_block, row_count, depth);
 		}
 		else
 		{
@@ -128,20 +127,20 @@ struct copy_unmodified_block_swizzled
 
 			if (LIKELY(words_per_block == 1))
 			{
-				rsx::convert_linear_swizzle_3d<T>((void*)src.data(), tmp.data(), padded_width, padded_height, depth);
+				rsx::convert_linear_swizzle_3d<T>(src.data(), tmp.data(), padded_width, padded_height, depth);
 			}
 			else
 			{
 				switch (words_per_block * sizeof(T))
 				{
 				case 4:
-					rsx::convert_linear_swizzle_3d<u32>((void*)src.data(), tmp.data(), padded_width, padded_height, depth);
+					rsx::convert_linear_swizzle_3d<u32>(src.data(), tmp.data(), padded_width, padded_height, depth);
 					break;
 				case 8:
-					rsx::convert_linear_swizzle_3d<u64>((void*)src.data(), tmp.data(), padded_width, padded_height, depth);
+					rsx::convert_linear_swizzle_3d<u64>(src.data(), tmp.data(), padded_width, padded_height, depth);
 					break;
 				case 16:
-					rsx::convert_linear_swizzle_3d<u128>((void*)src.data(), tmp.data(), padded_width, padded_height, depth);
+					rsx::convert_linear_swizzle_3d<u128>(src.data(), tmp.data(), padded_width, padded_height, depth);
 					break;
 				default:
 					fmt::throw_exception("Failed to decode swizzled format, words_per_block=%d, src_type_size=%d", words_per_block, sizeof(T));
@@ -304,7 +303,7 @@ struct copy_rgb655_block_swizzled
 		u32 size = padded_width * padded_height * depth * 2;
 		std::vector<U> tmp(size);
 
-		rsx::convert_linear_swizzle_3d<U>((void*)src.data(), tmp.data(), padded_width, padded_height, depth);
+		rsx::convert_linear_swizzle_3d<U>(src.data(), tmp.data(), padded_width, padded_height, depth);
 
 		gsl::span<const U> src_span = tmp;
 		copy_rgb655_block::copy_mipmap_level(dst, src_span, width_in_block, row_count, depth, border, dst_pitch_in_block, padded_width);
@@ -326,7 +325,7 @@ namespace
 	 * Sometimes texture provides a pitch even if texture is swizzled (and then packed) and in such case it's ignored. It's passed via suggested_pitch and is used only if padded_row is false.
 	 */
 	template <u8 block_edge_in_texel, typename SRC_TYPE>
-	std::vector<rsx_subresource_layout> get_subresources_layout_impl(const gsl::byte *texture_data_pointer, u16 width_in_texel, u16 height_in_texel, u16 depth, u8 layer_count, u16 mipmap_count, u32 suggested_pitch_in_bytes, bool padded_row, bool border)
+	std::vector<rsx_subresource_layout> get_subresources_layout_impl(const std::byte *texture_data_pointer, u16 width_in_texel, u16 height_in_texel, u16 depth, u8 layer_count, u16 mipmap_count, u32 suggested_pitch_in_bytes, bool padded_row, bool border)
 	{
 		/**
 		* Note about size type: RSX texture width is stored in a 16 bits int and pitch is stored in a 20 bits int.
@@ -338,10 +337,6 @@ namespace
 		std::vector<rsx_subresource_layout> result;
 		size_t offset_in_src = 0;
 
-		// Always lower than width/height so fits in u16
-		u16 texture_height_in_block = (height_in_texel + block_edge_in_texel - 1) / block_edge_in_texel;
-		u16 texture_width_in_block = (width_in_texel + block_edge_in_texel - 1) / block_edge_in_texel;
-
 		u8 border_size = border ? (padded_row ? 1 : 4) : 0;
 		u32 src_pitch_in_block;
 		u32 full_height_in_block;
@@ -349,43 +344,58 @@ namespace
 
 		for (unsigned layer = 0; layer < layer_count; layer++)
 		{
-			u16 miplevel_height_in_block = texture_height_in_block, miplevel_width_in_block = texture_width_in_block;
+			u16 miplevel_width_in_texel = width_in_texel, miplevel_height_in_texel = height_in_texel;
 			for (unsigned mip_level = 0; mip_level < mipmap_count; mip_level++)
 			{
-				rsx_subresource_layout current_subresource_layout = {};
-				// Since <= width/height, fits on 16 bits
-				current_subresource_layout.height_in_block = miplevel_height_in_block;
-				current_subresource_layout.width_in_block = miplevel_width_in_block;
+				result.push_back({});
+				rsx_subresource_layout& current_subresource_layout = result.back();
+
+				current_subresource_layout.width_in_texel = miplevel_width_in_texel;
+				current_subresource_layout.height_in_texel = miplevel_height_in_texel;
+				current_subresource_layout.level = mip_level;
+				current_subresource_layout.layer = layer;
 				current_subresource_layout.depth = depth;
 				current_subresource_layout.border = border_size;
+
+				if constexpr (block_edge_in_texel == 1)
+				{
+					current_subresource_layout.width_in_block = miplevel_width_in_texel;
+					current_subresource_layout.height_in_block = miplevel_height_in_texel;
+				}
+				else
+				{
+					current_subresource_layout.width_in_block = aligned_div(miplevel_width_in_texel, block_edge_in_texel);
+					current_subresource_layout.height_in_block = aligned_div(miplevel_height_in_texel, block_edge_in_texel);
+				}
 
 				if (padded_row)
 				{
 					src_pitch_in_block = suggested_pitch_in_bytes / block_size_in_bytes;
-					full_height_in_block = miplevel_height_in_block + border_size + border_size;
+					full_height_in_block = current_subresource_layout.height_in_block + (border_size + border_size);
 				}
 				else if (!border)
 				{
-					src_pitch_in_block = miplevel_width_in_block + border_size + border_size;
-					full_height_in_block = miplevel_height_in_block;
+					src_pitch_in_block = current_subresource_layout.width_in_block;
+					full_height_in_block = current_subresource_layout.height_in_block;
 				}
 				else
 				{
-					src_pitch_in_block = rsx::next_pow2(miplevel_width_in_block + border_size + border_size);
-					full_height_in_block = rsx::next_pow2(miplevel_height_in_block + border_size + border_size);
+					src_pitch_in_block = rsx::next_pow2(current_subresource_layout.width_in_block + border_size + border_size);
+					full_height_in_block = rsx::next_pow2(current_subresource_layout.height_in_block + border_size + border_size);
 				}
 
 				slice_sz = src_pitch_in_block * block_size_in_bytes * full_height_in_block * depth;
 				current_subresource_layout.pitch_in_block = src_pitch_in_block;
-				current_subresource_layout.data = gsl::span<const gsl::byte>(texture_data_pointer + offset_in_src, slice_sz);
+				current_subresource_layout.data = gsl::span<const std::byte>(texture_data_pointer + offset_in_src, slice_sz);
 
-				result.push_back(current_subresource_layout);
 				offset_in_src += slice_sz;
-				miplevel_height_in_block = std::max(miplevel_height_in_block / 2, 1);
-				miplevel_width_in_block = std::max(miplevel_width_in_block / 2, 1);
+				miplevel_width_in_texel = std::max(miplevel_width_in_texel / 2, 1);
+				miplevel_height_in_texel = std::max(miplevel_height_in_texel / 2, 1);
 			}
+
 			offset_in_src = align(offset_in_src, 128);
 		}
+
 		return result;
 	}
 }
@@ -450,7 +460,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout_impl(const RsxTextur
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
 	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
-	auto pixels = vm::_ptr<const gsl::byte>(texaddr);
+	auto pixels = vm::_ptr<const std::byte>(texaddr);
 
 	const bool is_swizzled = !(texture.format() & CELL_GCM_TEXTURE_LN);
 	const bool has_border = !texture.border_type();
@@ -505,7 +515,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::vertex_te
 	return get_subresources_layout_impl(texture);
 }
 
-texture_memory_info upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps)
+texture_memory_info upload_texture_subresource(gsl::span<std::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps)
 {
 	u16 w = src_layout.width_in_block;
 	u16 h = src_layout.height_in_block;
@@ -657,17 +667,28 @@ texture_memory_info upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, 
 		{
 			result.require_swap = true;
 			result.element_size = word_size;
+			result.block_length = words_per_block;
 
 			if (word_size == 2)
 			{
 				if (is_swizzled)
+				{
+					if (((word_size * words_per_block) & 3) == 0 && caps.supports_hw_deswizzle)
+					{
+						result.require_deswizzle = true;
+					}
+				}
+
+				if (is_swizzled && !result.require_deswizzle)
 					copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const u16>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
 				else
 					copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const u16>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 			}
 			else if (word_size == 4)
 			{
-				if (is_swizzled)
+				result.require_deswizzle = (is_swizzled && caps.supports_hw_deswizzle);
+
+				if (is_swizzled && !caps.supports_hw_deswizzle)
 					copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
 				else
 					copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
@@ -797,7 +818,7 @@ u8 get_format_block_size_in_bytes(rsx::surface_color_format format)
 	case rsx::surface_color_format::w32z32y32x32:
 		return 16;
 	default:
-		fmt::throw_exception("Invalid color format 0x%x" HERE, (u32)format);
+		fmt::throw_exception("Invalid color format 0x%x" HERE, static_cast<u32>(format));
 	}
 }
 
@@ -869,7 +890,7 @@ size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 form
 	}
 
 	// Mipmap, height and width aren't allowed to be zero
-	return verify("Texture params" HERE, result) * (cubemap ? 6 : 1); 
+	return verify("Texture params" HERE, result) * (cubemap ? 6 : 1);
 }
 
 size_t get_placed_texture_storage_size(const rsx::fragment_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment)
@@ -1005,7 +1026,7 @@ std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format)
 	case rsx::surface_color_format::x32:
 		return{ CELL_GCM_TEXTURE_X32_FLOAT, true }; //verified
 	default:
-		fmt::throw_exception("Unhandled surface format 0x%x", (u32)format);
+		fmt::throw_exception("Unhandled surface format 0x%x", static_cast<u32>(format));
 	}
 }
 

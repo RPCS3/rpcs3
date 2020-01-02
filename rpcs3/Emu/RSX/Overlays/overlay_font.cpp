@@ -99,7 +99,7 @@ namespace rsx
 			stbtt_PackSetOversampling(&context, oversample, oversample);
 
 			// Convert pt to px
-			size_px = ceilf((f32)size * 96.f / 72.f);
+			size_px = ceilf(size * 96.f / 72.f);
 			size_pt = size;
 
 			if (!stbtt_PackFontRange(&context, bytes.data(), 0, size_px, 0, 256, pack_info.data()))

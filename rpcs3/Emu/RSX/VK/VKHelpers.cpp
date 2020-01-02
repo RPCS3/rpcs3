@@ -7,7 +7,10 @@
 #include "VKResolveHelper.h"
 #include "VKResourceManager.h"
 #include "VKDMA.h"
+#include "VKCommandStream.h"
+
 #include "Utilities/mutex.h"
+#include "Utilities/lockless.h"
 
 namespace vk
 {
@@ -78,7 +81,7 @@ namespace vk
 
 	VkSampler g_null_sampler = nullptr;
 
-	atomic_t<bool> g_cb_no_interrupt_flag { false };
+	rsx::atomic_bitmask_t<runtime_state, u64> g_runtime_state;
 
 	// Driver compatibility workarounds
 	VkFlags g_heap_compatible_buffer_types = 0;
@@ -87,12 +90,10 @@ namespace vk
 	bool g_drv_no_primitive_restart_flag = false;
 	bool g_drv_sanitize_fp_values = false;
 	bool g_drv_disable_fence_reset = false;
+	bool g_drv_emulate_cond_render = false;
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
-
-	// global submit guard to prevent race condition on queue submit
-	shared_mutex g_submit_mutex;
 
 	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
@@ -125,6 +126,56 @@ namespace vk
 #else
 		std::abort();
 #endif
+	}
+
+	bool data_heap::grow(size_t size)
+	{
+		// Create new heap. All sizes are aligned up by 64M, upto 1GiB
+		const size_t size_limit = 1024 * 0x100000;
+		const size_t aligned_new_size = align(m_size + size, 64 * 0x100000);
+
+		if (aligned_new_size >= size_limit)
+		{
+			// Too large
+			return false;
+		}
+
+		if (shadow)
+		{
+			// Shadowed. Growing this can be messy as it requires double allocation (macOS only)
+			return false;
+		}
+
+		// Wait for DMA activity to end
+		rsx::g_dma_manager.sync();
+
+		if (mapped)
+		{
+			// Force reset mapping
+			unmap(true);
+		}
+
+		VkBufferUsageFlags usage = heap->info.usage;
+
+		const auto device = get_current_renderer();
+		const auto& memory_map = device->get_memory_mapping();
+
+		VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		auto memory_index = memory_map.host_visible_coherent;
+
+		// Update heap information and reset the allocator
+		::data_heap::init(aligned_new_size, m_name, m_min_guard_size);
+
+		// Discard old heap and create a new one. Old heap will be garbage collected when no longer needed
+		get_resource_manager()->dispose(heap);
+		heap = std::make_unique<buffer>(*device, aligned_new_size, memory_index, memory_flags, usage, 0);
+
+		if (notify_on_grow)
+		{
+			raise_status_interrupt(vk::heap_changed);
+		}
+
+		return true;
 	}
 
 	memory_type_mapping get_memory_mapping(const vk::physical_device& dev)
@@ -261,7 +312,7 @@ namespace vk
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
 		};
 
-		auto &ptr = g_typeless_textures[(u32)format];
+		auto& ptr = g_typeless_textures[+format];
 		if (!ptr || ptr->width() < requested_width || ptr->height() < requested_height)
 		{
 			if (ptr)
@@ -293,20 +344,10 @@ namespace vk
 	{
 		if (!g_upload_heap.heap)
 		{
-			g_upload_heap.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 64 * 0x100000, "auxilliary upload heap");
+			g_upload_heap.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 64 * 0x100000, "auxilliary upload heap", 0x100000);
 		}
 
 		return &g_upload_heap;
-	}
-
-	void acquire_global_submit_lock()
-	{
-		g_submit_mutex.lock();
-	}
-
-	void release_global_submit_lock()
-	{
-		g_submit_mutex.unlock();
 	}
 
 	void reset_compute_tasks()
@@ -381,10 +422,11 @@ namespace vk
 	void set_current_renderer(const vk::render_device &device)
 	{
 		g_current_renderer = &device;
-		g_cb_no_interrupt_flag.store(false);
+		g_runtime_state.clear();
 		g_drv_no_primitive_restart_flag = false;
 		g_drv_sanitize_fp_values = false;
 		g_drv_disable_fence_reset = false;
+		g_drv_emulate_cond_render = (g_cfg.video.relaxed_zcull_sync && !g_current_renderer->get_conditional_render_support());
 		g_num_processed_frames = 0;
 		g_num_total_frames = 0;
 		g_heap_compatible_buffer_types = 0;
@@ -491,6 +533,11 @@ namespace vk
 	bool fence_reset_disabled()
 	{
 		return g_drv_disable_fence_reset;
+	}
+
+	bool emulate_conditional_rendering()
+	{
+		return g_drv_emulate_cond_render;
 	}
 
 	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask)
@@ -735,19 +782,34 @@ namespace vk
 		image->current_layout = new_layout;
 	}
 
+	void raise_status_interrupt(runtime_state status)
+	{
+		g_runtime_state |= status;
+	}
+
+	void clear_status_interrupt(runtime_state status)
+	{
+		g_runtime_state.clear(status);
+	}
+
+	bool test_status_interrupt(runtime_state status)
+	{
+		return g_runtime_state & status;
+	}
+
 	void enter_uninterruptible()
 	{
-		g_cb_no_interrupt_flag = true;
+		raise_status_interrupt(runtime_state::uninterruptible);
 	}
 
 	void leave_uninterruptible()
 	{
-		g_cb_no_interrupt_flag = false;
+		clear_status_interrupt(runtime_state::uninterruptible);
 	}
 
 	bool is_uninterruptible()
 	{
-		return g_cb_no_interrupt_flag;
+		return test_status_interrupt(runtime_state::uninterruptible);
 	}
 
 	void advance_completed_frame_counter()
@@ -771,31 +833,30 @@ namespace vk
 		return (g_num_processed_frames > 0)? g_num_processed_frames - 1: 0;
 	}
 
-	void reset_fence(VkFence *pFence)
+	void reset_fence(fence *pFence)
 	{
 		if (g_drv_disable_fence_reset)
 		{
-			vkDestroyFence(*g_current_renderer, *pFence, nullptr);
-
-			VkFenceCreateInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-			CHECK_RESULT(vkCreateFence(*g_current_renderer, &info, nullptr, pFence));
+			delete pFence;
+			pFence = new fence(*g_current_renderer);
 		}
 		else
 		{
-			CHECK_RESULT(vkResetFences(*g_current_renderer, 1, pFence));
+			pFence->reset();
 		}
 	}
 
-	VkResult wait_for_fence(VkFence fence, u64 timeout)
+	VkResult wait_for_fence(fence* pFence, u64 timeout)
 	{
+		pFence->wait_flush();
+
 		if (timeout)
 		{
-			return vkWaitForFences(*g_current_renderer, 1, &fence, VK_FALSE, timeout * 1000ull);
+			return vkWaitForFences(*g_current_renderer, 1, &pFence->handle, VK_FALSE, timeout * 1000ull);
 		}
 		else
 		{
-			while (auto status = vkGetFenceStatus(*g_current_renderer, fence))
+			while (auto status = vkGetFenceStatus(*g_current_renderer, pFence->handle))
 			{
 				switch (status)
 				{

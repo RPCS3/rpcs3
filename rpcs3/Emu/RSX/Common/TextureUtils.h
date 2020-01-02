@@ -1,9 +1,9 @@
 ﻿#pragma once
 
 #include "../RSXTexture.h"
+#include "Utilities/span.h"
 
 #include <vector>
-#include "Utilities/GSL.h"
 
 namespace rsx
 {
@@ -68,8 +68,6 @@ namespace rsx
 	{
 		bool src_is_typeless = false;
 		bool dst_is_typeless = false;
-		bool src_is_depth = false;
-		bool dst_is_depth = false;
 		bool flip_vertical = false;
 		bool flip_horizontal = false;
 
@@ -88,10 +86,14 @@ namespace rsx
 
 struct rsx_subresource_layout
 {
-	gsl::span<const gsl::byte> data;
+	gsl::span<const std::byte> data;
+	u16 width_in_texel;
+	u16 height_in_texel;
 	u16 width_in_block;
 	u16 height_in_block;
 	u16 depth;
+	u16 level;
+	u16 layer;
 	u8  border;
 	u8  reserved;
 	u32 pitch_in_block;
@@ -100,13 +102,16 @@ struct rsx_subresource_layout
 struct texture_memory_info
 {
 	int element_size;
+	int block_length;
 	bool require_swap;
+	bool require_deswizzle;
 };
 
 struct texture_uploader_capabilities
 {
 	bool supports_byteswap;
 	bool supports_vtc_decoding;
+	bool supports_hw_deswizzle;
 	size_t alignment;
 };
 
@@ -125,7 +130,7 @@ size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_
 std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture);
 std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::vertex_texture &texture);
 
-texture_memory_info upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps);
+texture_memory_info upload_texture_subresource(gsl::span<std::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps);
 
 u8 get_format_block_size_in_bytes(int format);
 u8 get_format_block_size_in_texel(int format);

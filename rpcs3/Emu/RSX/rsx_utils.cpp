@@ -6,10 +6,23 @@
 #include "Overlays/overlays.h"
 #include "Utilities/sysinfo.h"
 
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 extern "C"
 {
 #include "libswscale/swscale.h"
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
+#endif
 
 namespace rsx
 {
@@ -26,7 +39,7 @@ namespace rsx
 
 	void clip_image(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch)
 	{
-		u8 *pixels_src = (u8*)src + clip_y * src_pitch + clip_x * bpp;
+		const u8* pixels_src = src + clip_y * src_pitch + clip_x * bpp;
 		u8 *pixels_dst = dst;
 		const u32 row_length = clip_w * bpp;
 
@@ -130,13 +143,13 @@ namespace rsx
 		switch (element_size)
 		{
 		case 1:
-			scale_image_fallback_impl<u8, u8>((u8*)dst, (const u8*)src, src_width, src_height, dst_pitch, src_pitch, element_size, samples_u, samples_v);
+			scale_image_fallback_impl<u8, u8>(static_cast<u8*>(dst), static_cast<const u8*>(src), src_width, src_height, dst_pitch, src_pitch, element_size, samples_u, samples_v);
 			break;
 		case 2:
-			scale_image_fallback_impl<u16, u16>((u16*)dst, (const u16*)src, src_width, src_height, dst_pitch, src_pitch, element_size, samples_u, samples_v);
+			scale_image_fallback_impl<u16, u16>(static_cast<u16*>(dst), static_cast<const u16*>(src), src_width, src_height, dst_pitch, src_pitch, element_size, samples_u, samples_v);
 			break;
 		case 4:
-			scale_image_fallback_impl<u32, u32>((u32*)dst, (const u32*)src, src_width, src_height, dst_pitch, src_pitch, element_size, samples_u, samples_v);
+			scale_image_fallback_impl<u32, u32>(static_cast<u32*>(dst), static_cast<const u32*>(src), src_width, src_height, dst_pitch, src_pitch, element_size, samples_u, samples_v);
 			break;
 		default:
 			fmt::throw_exception("unsupported element size %d" HERE, element_size);
@@ -148,13 +161,13 @@ namespace rsx
 		switch (element_size)
 		{
 		case 1:
-			scale_image_fallback_impl<u8, u8>((u8*)dst, (const u8*)src, src_width, src_height, dst_pitch, src_pitch, element_size, samples_u, samples_v);
+			scale_image_fallback_impl<u8, u8>(static_cast<u8*>(dst), static_cast<const u8*>(src), src_width, src_height, dst_pitch, src_pitch, element_size, samples_u, samples_v);
 			break;
 		case 2:
-			scale_image_fallback_impl<u16, be_t<u16>>((u16*)dst, (const be_t<u16>*)src, src_width, src_height, dst_pitch, src_pitch, element_size, samples_u, samples_v);
+			scale_image_fallback_impl<u16, be_t<u16>>(static_cast<u16*>(dst), static_cast<const be_t<u16>*>(src), src_width, src_height, dst_pitch, src_pitch, element_size, samples_u, samples_v);
 			break;
 		case 4:
-			scale_image_fallback_impl<u32, be_t<u32>>((u32*)dst, (const be_t<u32>*)src, src_width, src_height, dst_pitch, src_pitch, element_size, samples_u, samples_v);
+			scale_image_fallback_impl<u32, be_t<u32>>(static_cast<u32*>(dst), static_cast<const be_t<u32>*>(src), src_width, src_height, dst_pitch, src_pitch, element_size, samples_u, samples_v);
 			break;
 		default:
 			fmt::throw_exception("unsupported element size %d" HERE, element_size);
@@ -191,16 +204,16 @@ namespace rsx
 		switch (element_size)
 		{
 		case 1:
-			scale_image_impl<u8, u8, N>((u8*)dst, (const u8*)src, src_width, src_height, padding);
+			scale_image_impl<u8, u8, N>(static_cast<u8*>(dst), static_cast<const u8*>(src), src_width, src_height, padding);
 			break;
 		case 2:
-			scale_image_impl<u16, u16, N>((u16*)dst, (const u16*)src, src_width, src_height, padding);
+			scale_image_impl<u16, u16, N>(static_cast<u16*>(dst), static_cast<const u16*>(src), src_width, src_height, padding);
 			break;
 		case 4:
-			scale_image_impl<u32, u32, N>((u32*)dst, (const u32*)src, src_width, src_height, padding);
+			scale_image_impl<u32, u32, N>(static_cast<u32*>(dst), static_cast<const u32*>(src), src_width, src_height, padding);
 			break;
 		case 8:
-			scale_image_impl<u64, u64, N>((u64*)dst, (const u64*)src, src_width, src_height, padding);
+			scale_image_impl<u64, u64, N>(static_cast<u64*>(dst), static_cast<const u64*>(src), src_width, src_height, padding);
 			break;
 		default:
 			fmt::throw_exception("unsupported pixel size %d" HERE, element_size);
@@ -213,16 +226,16 @@ namespace rsx
 		switch (element_size)
 		{
 		case 1:
-			scale_image_impl<u8, u8, N>((u8*)dst, (const u8*)src, src_width, src_height, padding);
+			scale_image_impl<u8, u8, N>(static_cast<u8*>(dst), static_cast<const u8*>(src), src_width, src_height, padding);
 			break;
 		case 2:
-			scale_image_impl<u16, be_t<u16>, N>((u16*)dst, (const be_t<u16>*)src, src_width, src_height, padding);
+			scale_image_impl<u16, be_t<u16>, N>(static_cast<u16*>(dst), static_cast<const be_t<u16>*>(src), src_width, src_height, padding);
 			break;
 		case 4:
-			scale_image_impl<u32, be_t<u32>, N>((u32*)dst, (const be_t<u32>*)src, src_width, src_height, padding);
+			scale_image_impl<u32, be_t<u32>, N>(static_cast<u32*>(dst), static_cast<const be_t<u32>*>(src), src_width, src_height, padding);
 			break;
 		case 8:
-			scale_image_impl<u64, be_t<u64>, N>((u64*)dst, (const be_t<u64>*)src, src_width, src_height, padding);
+			scale_image_impl<u64, be_t<u64>, N>(static_cast<u64*>(dst), static_cast<const be_t<u64>*>(src), src_width, src_height, padding);
 			break;
 		default:
 			fmt::throw_exception("unsupported pixel size %d" HERE, element_size);
@@ -313,8 +326,8 @@ namespace rsx
 
 		const auto num_iterations = (num_pixels >> 2);
 
-		__m128i* dst_ptr = (__m128i*)dst;
-		__m128i* src_ptr = (__m128i*)src;
+		__m128i* dst_ptr = static_cast<__m128i*>(dst);
+		__m128i* src_ptr = static_cast<__m128i*>(src);
 
 		const __m128 scale_vector = _mm_set1_ps(16777214.f);
 
@@ -332,7 +345,7 @@ namespace rsx
 			for (u32 n = 0; n < num_iterations; ++n)
 			{
 				const __m128i src_vector = _mm_loadu_si128(src_ptr);
-				const __m128i result = _mm_cvtps_epi32(_mm_mul_ps((__m128&)src_vector, scale_vector));
+				const __m128i result = _mm_cvtps_epi32(_mm_mul_ps(_mm_castsi128_ps(src_vector), scale_vector));
 				const __m128i shuffled_vector = _mm_shuffle_epi8(result, swap_mask);
 				_mm_stream_si128(dst_ptr, shuffled_vector);
 				++dst_ptr;
@@ -350,7 +363,7 @@ namespace rsx
 		for (u32 n = 0; n < num_iterations; ++n)
 		{
 			const __m128i src_vector = _mm_loadu_si128(src_ptr);
-			const __m128i result = _mm_cvtps_epi32(_mm_mul_ps((__m128&)src_vector, scale_vector));
+			const __m128i result = _mm_cvtps_epi32(_mm_mul_ps(_mm_castsi128_ps(src_vector), scale_vector));
 
 			const __m128i v1 = _mm_and_si128(result, mask1);
 			const __m128i v2 = _mm_and_si128(_mm_slli_epi32(result, 16), mask2);
@@ -370,8 +383,8 @@ namespace rsx
 
 		const auto num_iterations = (num_pixels >> 2);
 
-		__m128i* dst_ptr = (__m128i*)dst;
-		__m128i* src_ptr = (__m128i*)src;
+		__m128i* dst_ptr = static_cast<__m128i*>(dst);
+		__m128i* src_ptr = static_cast<__m128i*>(src);
 
 #if defined (_MSC_VER) || defined (__SSSE3__)
 		if (LIKELY(utils::has_ssse3()))
@@ -422,8 +435,8 @@ namespace rsx
 
 		const auto num_iterations = (num_pixels >> 2);
 
-		__m128i* dst_ptr = (__m128i*)dst;
-		__m128i* src_ptr = (__m128i*)src;
+		__m128i* dst_ptr = static_cast<__m128i*>(dst);
+		__m128i* src_ptr = static_cast<__m128i*>(src);
 
 		const __m128 scale_vector = _mm_set1_ps(1.f / 16777214.f);
 		const __m128i mask = _mm_set1_epi32(0x00FFFFFF);
@@ -431,7 +444,7 @@ namespace rsx
 		{
 			const __m128 src_vector = _mm_cvtepi32_ps(_mm_and_si128(mask, _mm_loadu_si128(src_ptr)));
 			const __m128 normalized_vector = _mm_mul_ps(src_vector, scale_vector);
-			_mm_stream_si128(dst_ptr, (__m128i&)normalized_vector);
+			_mm_stream_si128(dst_ptr, _mm_castps_si128(normalized_vector));
 			++dst_ptr;
 			++src_ptr;
 		}

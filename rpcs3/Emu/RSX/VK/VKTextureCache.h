@@ -185,8 +185,8 @@ namespace vk
 			src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 			const auto internal_bpp = vk::get_format_texel_width(src->format());
-			const auto transfer_width = (u32)src_area.width();
-			const auto transfer_height = (u32)src_area.height();
+			const auto transfer_width = static_cast<u32>(src_area.width());
+			const auto transfer_height = static_cast<u32>(src_area.height());
 			real_pitch = internal_bpp * transfer_width;
 			rsx_pitch = pitch;
 
@@ -343,7 +343,7 @@ namespace vk
 				const auto filter = (target->aspect() == VK_IMAGE_ASPECT_COLOR_BIT) ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
 
 				vk::copy_scaled_image(cmd, locked_resource->value, target->value, locked_resource->current_layout, target->current_layout,
-					{ 0, 0, (s32)locked_resource->width(), (s32)locked_resource->height() }, { 0, 0, (s32)transfer_width, (s32)transfer_height },
+					{ 0, 0, static_cast<s32>(locked_resource->width()), static_cast<s32>(locked_resource->height()) }, { 0, 0, static_cast<s32>(transfer_width), static_cast<s32>(transfer_height) },
 					1, target->aspect(), true, filter, vram_texture->format(), target->format());
 
 				target->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -374,8 +374,8 @@ namespace vk
 			}
 
 			areai src_area;
-			src_area.x1 = (s32)transfer_x;
-			src_area.y1 = (s32)transfer_y;
+			src_area.x1 = static_cast<s32>(transfer_x);
+			src_area.y1 = static_cast<s32>(transfer_y);
 			src_area.x2 = s32(transfer_x + transfer_width);
 			src_area.y2 = s32(transfer_y + transfer_height);
 			dma_transfer(cmd, target, src_area, valid_range, rsx_pitch);
@@ -709,7 +709,7 @@ namespace vk
 							}
 
 							vk::copy_scaled_image(cmd, tmp->value, _dst->value, tmp->current_layout, _dst->current_layout,
-								areai{ 0, 0, src_w, (s32)src_h },
+								areai{ 0, 0, src_w, static_cast<s32>(src_h) },
 								coordi{ { dst_x, dst_y }, { section.dst_w, section.dst_h } },
 								1, new_src_aspect, tmp->info.format == _dst->info.format,
 								VK_FILTER_NEAREST, tmp->info.format, _dst->info.format);
@@ -1025,11 +1025,11 @@ namespace vk
 			return result;
 		}
 
-		vk::image_view* generate_2d_mipmaps_from_images(vk::command_buffer& cmd, u32 gcm_format, u16 width, u16 height,
+		vk::image_view* generate_2d_mipmaps_from_images(vk::command_buffer& cmd, u32 /*gcm_format*/, u16 width, u16 height,
 			const std::vector<copy_region_descriptor>& sections_to_copy, const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			const auto _template = sections_to_copy.front().src;
-			const auto mipmaps = (u8)sections_to_copy.size();
+			const auto mipmaps = ::narrow<u8>(sections_to_copy.size());
 
 			std::unique_ptr<vk::viewable_image> image;
 			if (image = find_temporary_image(_template->format(), width, height, 1, mipmaps); !image)
@@ -1287,7 +1287,7 @@ namespace vk
 			{
 			default:
 				//TODO
-				warn_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)vk_format, gcm_format);
+				warn_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", static_cast<u32>(vk_format), gcm_format);
 				return false;
 			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 				return (vk_format == VK_FORMAT_R16G16B16A16_SFLOAT);
@@ -1336,15 +1336,10 @@ namespace vk
 			if (cmd.access_hint != vk::command_buffer::access_type_hint::all)
 			{
 				// Primary access command queue, must restart it after
-				VkFence submit_fence;
-				VkFenceCreateInfo info{};
-				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-				vkCreateFence(*m_device, &info, nullptr, &submit_fence);
+				vk::fence submit_fence(*m_device);
+				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, &submit_fence, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
-				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, submit_fence, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-
-				vk::wait_for_fence(submit_fence, GENERAL_WAIT_TIMEOUT);
-				vkDestroyFence(*m_device, submit_fence, nullptr);
+				vk::wait_for_fence(&submit_fence, GENERAL_WAIT_TIMEOUT);
 
 				CHECK_RESULT(vkResetCommandBuffer(cmd, 0));
 				cmd.begin();
@@ -1465,14 +1460,14 @@ namespace vk
 			void* mem = image->memory->map(0, layout.rowPitch * height);
 
 			u32 row_pitch = width * 4;
-			char *src = (char *)vm::base(address);
-			char *dst = (char *)mem;
+			auto src = vm::_ptr<const char>(address);
+			auto dst = static_cast<char*>(mem);
 
 			//TODO: SSE optimization
 			for (u32 row = 0; row < height; ++row)
 			{
-				be_t<u32>* casted_src = (be_t<u32>*)src;
-				u32* casted_dst = (u32*)dst;
+				auto casted_src = reinterpret_cast<const be_t<u32>*>(src);
+				auto casted_dst = reinterpret_cast<u32*>(dst);
 
 				for (u32 col = 0; col < width; ++col)
 					casted_dst[col] = casted_src[col];
@@ -1514,7 +1509,7 @@ namespace vk
 
 		const u32 get_unreleased_textures_count() const override
 		{
-			return baseclass::get_unreleased_textures_count() + (u32)m_temporary_storage.size();
+			return baseclass::get_unreleased_textures_count() + ::size32(m_temporary_storage);
 		}
 
 		const u32 get_temporary_memory_in_use()

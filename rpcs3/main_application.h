@@ -9,7 +9,7 @@ class main_application
 public:
 	virtual void Init() = 0;
 
-	static bool InitializeEmulator(const std::string& user, bool force_init);
+	static bool InitializeEmulator(const std::string& user, bool force_init, bool show_gui);
 
 protected:
 	virtual QThread* get_thread() = 0;

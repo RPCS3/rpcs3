@@ -14,7 +14,7 @@
 #include "lz.h"
 #include "ec.h"
 
-// Auxiliary functions (endian swap, xor, prng and file name).
+// Auxiliary functions (endian swap, xor, and file name).
 inline u16 swap16(u16 i)
 {
 #if defined(__GNUG__)
@@ -45,11 +45,10 @@ inline u64 swap64(u64 i)
 void xor_key(unsigned char *dest, const u8* src1, const u8* src2);
 inline void xor_key_sse(u8* dest, const u8* src1, const u8* src2)
 {
-	_mm_storeu_si128(&(((__m128i*)dest)[0]),
-		_mm_xor_si128(_mm_loadu_si128((__m128i*)src1), _mm_loadu_si128((__m128i*)src2)));
+	_mm_storeu_si128(reinterpret_cast<__m128i*>(dest),
+		_mm_xor_si128(_mm_loadu_si128(reinterpret_cast<const __m128i*>(src1)), _mm_loadu_si128(reinterpret_cast<const __m128i*>(src2))));
 }
 
-void prng(unsigned char *dest, int size);
 char* extract_file_name(const char* file_path, char real_file_name[MAX_PATH]);
 
 // Hex string conversion auxiliary functions.

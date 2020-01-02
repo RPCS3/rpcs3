@@ -166,7 +166,7 @@ public:
 	u64 rtime{0};
 	u64 rdata{0}; // Reservation data
 
-	atomic_t<u32> prio{0}; // Thread priority (0..3071)
+	atomic_t<s32> prio{0}; // Thread priority (0..3071)
 	const u32 stack_size; // Stack size
 	const u32 stack_addr; // Stack address
 
@@ -276,12 +276,12 @@ struct ppu_gpr_cast_impl<vm::_ref_base<T, AT>, void>
 template <>
 struct ppu_gpr_cast_impl<vm::null_t, void>
 {
-	static inline u64 to(const vm::null_t& value)
+	static inline u64 to(const vm::null_t& /*value*/)
 	{
 		return 0;
 	}
 
-	static inline vm::null_t from(const u64 reg)
+	static inline vm::null_t from(const u64 /*reg*/)
 	{
 		return vm::null;
 	}

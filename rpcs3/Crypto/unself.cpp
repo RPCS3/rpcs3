@@ -885,11 +885,16 @@ SELFDecrypter::SELFDecrypter(const fs::file& s)
 {
 }
 
-bool SELFDecrypter::LoadHeaders(bool isElf32)
+bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 {
 	// Read SCE header.
 	self_f.seek(0);
 	sce_hdr.Load(self_f);
+
+	if (out_info)
+	{
+		out_info->valid = false;
+	}
 
 	// Check SCE magic.
 	if (!sce_hdr.CheckMagic())
@@ -904,6 +909,11 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	// Read the APP INFO.
 	self_f.seek(self_hdr.se_appinfooff);
 	app_info.Load(self_f);
+
+	if (out_info)
+	{
+		out_info->app_info = app_info;
+	}
 
 	// Read ELF header.
 	self_f.seek(self_hdr.se_elfoff);
@@ -967,13 +977,17 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	ctrlinfo_arr.clear();
 	self_f.seek(self_hdr.se_controloff);
 
-	u32 i = 0;
-	while(i < self_hdr.se_controlsize)
+	for (u64 i = 0; i < self_hdr.se_controlsize;)
 	{
 		ctrlinfo_arr.emplace_back();
 		ControlInfo &cinfo = ctrlinfo_arr.back();
 		cinfo.Load(self_f);
 		i += cinfo.size;
+	}
+
+	if (out_info)
+	{
+		out_info->ctrl_info = ctrlinfo_arr;
 	}
 
 	// Read ELF section headers.
@@ -1011,6 +1025,11 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 			shdr64_arr.emplace_back();
 			shdr64_arr.back().Load(self_f);
 		}
+	}
+
+	if (out_info)
+	{
+		out_info->valid = true;
 	}
 
 	return true;
@@ -1081,7 +1100,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	// If not, the data has no NPDRM layer.
 	if (!ctrl)
 	{
-		LOG_NOTICE(LOADER, "SELF: No NPDRM control info found!");
+		LOG_TRACE(LOADER, "SELF: No NPDRM control info found!");
 		return true;
 	}
 
@@ -1293,10 +1312,10 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 
 	// Try to find a matching RAP file under exdata folder.
 	const std::string ci_str = reinterpret_cast<const char*>(content_id);
-	const std::string rap_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + ci_str + ".rap";
+	const std::string rap_path = Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + ci_str + ".rap";
 
 	// Open the RAP file and read the key.
-	const fs::file rap_file(vfs::get(rap_path));
+	const fs::file rap_file(rap_path);
 
 	if (!rap_file)
 	{
@@ -1374,8 +1393,13 @@ static bool CheckDebugSelf(fs::file& s)
 	return false;
 }
 
-extern fs::file decrypt_self(fs::file elf_or_self, u8* klic_key)
+fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* out_info)
 {
+	if (out_info)
+	{
+		out_info->valid = false;
+	}
+
 	if (!elf_or_self)
 	{
 		return fs::file{};
@@ -1393,7 +1417,7 @@ extern fs::file decrypt_self(fs::file elf_or_self, u8* klic_key)
 		SELFDecrypter self_dec(elf_or_self);
 
 		// Load the SELF file headers.
-		if (!self_dec.LoadHeaders(isElf32))
+		if (!self_dec.LoadHeaders(isElf32, out_info))
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to load SELF file headers!");
 			return fs::file{};
@@ -1420,7 +1444,7 @@ extern fs::file decrypt_self(fs::file elf_or_self, u8* klic_key)
 	return elf_or_self;
 }
 
-extern bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
+bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 {
 	if (!self)
 		return false;

@@ -22,10 +22,12 @@ typedef BOOL (WINAPI* PFNWGLSWAPINTERVALEXTPROC) (int interval);
 #include <OpenGL/glu.h>
 
 #else
-#include <GL/glxew.h>
 #include <GL/gl.h>
+#ifdef HAVE_X11
+#include <GL/glxew.h>
 #include <GL/glx.h>
 #include <GL/glxext.h>
+#endif
 #endif
 
 #ifndef GL_TEXTURE_BUFFER_BINDING

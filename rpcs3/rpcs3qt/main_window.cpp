@@ -29,6 +29,7 @@
 #include "pad_settings_dialog.h"
 #include "progress_dialog.h"
 #include "skylander_dialog.h"
+#include "cheat_manager.h"
 
 #include <thread>
 
@@ -436,6 +437,8 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 	// Synchronization variable
 	atomic_t<double> progress(0.);
 
+	bool cancelled = false;
+
 	// Run PKG unpacking asynchronously
 	named_thread worker("PKG Installer", [&]
 	{
@@ -448,6 +451,7 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 		{
 			if (pdlg.wasCanceled())
 			{
+				cancelled = true;
 				progress -= 1.;
 				break;
 			}
@@ -464,6 +468,11 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 			pdlg.SetValue(pdlg.maximum());
 			std::this_thread::sleep_for(100ms);
 		}
+		else
+		{
+			pdlg.setHidden(true);
+			pdlg.SignalFailure();
+		}
 	}
 
 	if (worker())
@@ -471,6 +480,11 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 		m_gameListFrame->Refresh(true);
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
 		guiSettings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package!"), gui::ib_pkg_success, this);
+	}
+	else if (!cancelled)
+	{
+		LOG_ERROR(GENERAL, "Failed to install %s.", fileName);
+		QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package %1!").arg(filePath));
 	}
 }
 
@@ -851,6 +865,12 @@ void main_window::OnEmuPause()
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
 	ui->toolbar_start->setToolTip(tr("Resume emulation"));
+
+	// Refresh game list in order to update time played
+	if (m_gameListFrame)
+	{
+		m_gameListFrame->Refresh();
+	}
 }
 
 void main_window::OnEmuStop()
@@ -883,6 +903,12 @@ void main_window::OnEmuStop()
 		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
 	ui->actionManage_Users->setEnabled(true);
+
+	// Refresh game list in order to update time played
+	if (m_gameListFrame)
+	{
+		m_gameListFrame->Refresh();
+	}
 }
 
 void main_window::OnEmuReady()
@@ -1242,6 +1268,8 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, this, &main_window::ConfigureGuiFromSettings);
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
 		connect(&dlg, &settings_dialog::GuiRepaintRequest, this, &main_window::RepaintGui);
+		connect(&dlg, &settings_dialog::accepted, this, &main_window::NotifyEmuSettingsChange);
+		connect(&dlg, &settings_dialog::accepted, m_logFrame, &log_frame::LoadSettings);
 		dlg.exec();
 	};
 
@@ -1307,6 +1335,12 @@ void main_window::CreateConnects()
 		skylander_dialog* sky_diag = skylander_dialog::get_dlg(this);
 		sky_diag->show();
 	});
+	
+	connect(ui->actionManage_Cheats, &QAction::triggered, [=]
+	{
+		cheat_manager_dialog* cheat_manager = cheat_manager_dialog::get_dlg(this);
+		cheat_manager->show();
+ 	});
 
 	connect(ui->actionManage_Users, &QAction::triggered, [=]
 	{
@@ -1573,6 +1607,8 @@ void main_window::CreateDockWindows()
 	{
 		Boot(game->info.path, game->info.serial, false, false, force_global_config);
 	});
+
+	connect(m_gameListFrame, &game_list_frame::NotifyEmuSettingsChange, this, &main_window::NotifyEmuSettingsChange);
 }
 
 void main_window::ConfigureGuiFromSettings(bool configure_all)
@@ -1692,7 +1728,7 @@ void main_window::SetIconSizeActions(int idx)
 
 void main_window::RemoveDiskCache()
 {
-	std::string cacheDir = Emulator::GetHdd1Dir() + "/cache";
+	std::string cacheDir = Emulator::GetHdd1Dir() + "/caches";
 
 	if (fs::is_dir(cacheDir) && fs::remove_all(cacheDir, false))
 	{

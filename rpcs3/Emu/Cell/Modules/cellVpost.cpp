@@ -3,10 +3,23 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 extern "C"
 {
 #include "libswscale/swscale.h"
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
+#endif
 
 #include "cellVpost.h"
 
@@ -76,15 +89,15 @@ s32 cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostCtrlPara
 	u32 oh = ctrlParam->outHeight;
 
 	//ctrlParam->inWindow; // ignored
-	if (ctrlParam->inWindow.x) cellVpost.notice("*** inWindow.x = %d", (u32)ctrlParam->inWindow.x);
-	if (ctrlParam->inWindow.y) cellVpost.notice("*** inWindow.y = %d", (u32)ctrlParam->inWindow.y);
-	if (ctrlParam->inWindow.width != w) cellVpost.notice("*** inWindow.width = %d", (u32)ctrlParam->inWindow.width);
-	if (ctrlParam->inWindow.height != h) cellVpost.notice("*** inWindow.height = %d", (u32)ctrlParam->inWindow.height);
+	if (ctrlParam->inWindow.x) cellVpost.notice("*** inWindow.x = %d", ctrlParam->inWindow.x);
+	if (ctrlParam->inWindow.y) cellVpost.notice("*** inWindow.y = %d", ctrlParam->inWindow.y);
+	if (ctrlParam->inWindow.width != w) cellVpost.notice("*** inWindow.width = %d", ctrlParam->inWindow.width);
+	if (ctrlParam->inWindow.height != h) cellVpost.notice("*** inWindow.height = %d", ctrlParam->inWindow.height);
 	//ctrlParam->outWindow; // ignored
-	if (ctrlParam->outWindow.x) cellVpost.notice("*** outWindow.x = %d", (u32)ctrlParam->outWindow.x);
-	if (ctrlParam->outWindow.y) cellVpost.notice("*** outWindow.y = %d", (u32)ctrlParam->outWindow.y);
-	if (ctrlParam->outWindow.width != ow) cellVpost.notice("*** outWindow.width = %d", (u32)ctrlParam->outWindow.width);
-	if (ctrlParam->outWindow.height != oh) cellVpost.notice("*** outWindow.height = %d", (u32)ctrlParam->outWindow.height);
+	if (ctrlParam->outWindow.x) cellVpost.notice("*** outWindow.x = %d", ctrlParam->outWindow.x);
+	if (ctrlParam->outWindow.y) cellVpost.notice("*** outWindow.y = %d", ctrlParam->outWindow.y);
+	if (ctrlParam->outWindow.width != ow) cellVpost.notice("*** outWindow.width = %d", ctrlParam->outWindow.width);
+	if (ctrlParam->outWindow.height != oh) cellVpost.notice("*** outWindow.height = %d", ctrlParam->outWindow.height);
 	//ctrlParam->execType; // ignored
 	//ctrlParam->scalerType; // ignored
 	//ctrlParam->ipcType; // ignored

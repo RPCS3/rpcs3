@@ -42,13 +42,8 @@ namespace vk
 	class resource_manager
 	{
 	private:
-		std::unordered_multimap<u64, std::unique_ptr<vk::sampler>> m_sampler_pool;
+		std::unordered_map<u64, std::unique_ptr<vk::sampler>> m_sampler_pool;
 		std::deque<eid_scope_t> m_eid_map;
-
-		bool value_compare(const f32& a, const f32& b)
-		{
-			return fabsf(a - b) < 0.0000001f;
-		}
 
 		eid_scope_t& get_current_eid_scope()
 		{
@@ -64,6 +59,28 @@ namespace vk
 
 			m_eid_map.emplace_back(eid);
 			return m_eid_map.back();
+		}
+
+		template<bool _signed = false>
+		u16 encode_fxp(f32 value)
+		{
+			u16 raw = u16(std::abs(value) * 256.);
+
+			if constexpr (!_signed)
+			{
+				return raw;
+			}
+			else
+			{
+				if (LIKELY(value >= 0.f))
+				{
+					return raw;
+				}
+				else
+				{
+					return u16(0 - raw) & 0x1fff;
+				}
+			}
 		}
 
 	public:
@@ -83,26 +100,21 @@ namespace vk
 			VkBool32 depth_compare = VK_FALSE, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
 		{
 			u64 key = u16(clamp_u) | u64(clamp_v) << 3 | u64(clamp_w) << 6;
-			key |= u64(unnormalized_coordinates) << 9; // 1 bit
+			key |= u64(unnormalized_coordinates) << 9;            // 1 bit
 			key |= u64(min_filter) << 10 | u64(mag_filter) << 11; // 1 bit each
-			key |= u64(mipmap_mode) << 12; // 1 bit
-			key |= u64(border_color) << 13; // 3 bits
+			key |= u64(mipmap_mode) << 12;   // 1 bit
+			key |= u64(border_color) << 13;  // 3 bits
 			key |= u64(depth_compare) << 16; // 1 bit
-			key |= u64(depth_compare_mode) << 17; // 3 bits
+			key |= u64(depth_compare_mode) << 17;  // 3 bits
+			key |= u64(encode_fxp(min_lod)) << 20; // 12 bits
+			key |= u64(encode_fxp(max_lod)) << 32; // 12 bits
+			key |= u64(encode_fxp<true>(mipLodBias)) << 44; // 13 bits
+			key |= u64(max_anisotropy) << 57;               // 4 bits
 
-			const auto found = m_sampler_pool.equal_range(key);
-			for (auto It = found.first; It != found.second; ++It)
+			if (const auto found = m_sampler_pool.find(key);
+				found != m_sampler_pool.end())
 			{
-				const auto& info = It->second->info;
-				if (!value_compare(info.mipLodBias, mipLodBias) ||
-					!value_compare(info.maxAnisotropy, max_anisotropy) ||
-					!value_compare(info.minLod, min_lod) ||
-					!value_compare(info.maxLod, max_lod))
-				{
-					continue;
-				}
-
-				return It->second.get();
+				return found->second.get();
 			}
 
 			auto result = std::make_unique<vk::sampler>(
@@ -112,7 +124,7 @@ namespace vk
 				depth_compare, depth_compare_mode);
 
 			auto It = m_sampler_pool.emplace(key, std::move(result));
-			return It->second.get();
+			return It.first->second.get();
 		}
 
 		void dispose(std::unique_ptr<vk::buffer>& buf)

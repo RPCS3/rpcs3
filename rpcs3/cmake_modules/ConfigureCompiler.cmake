@@ -28,6 +28,8 @@ else()
 	add_compile_options(-msse -msse2 -mcx16)
 	add_compile_options(-fno-strict-aliasing)
 
+	add_compile_options(-Werror=old-style-cast)
+
 	#TODO Clean the code so these are removed
 	add_compile_options(-Wno-unused-variable)
 	add_compile_options(-Wno-reorder)
@@ -37,8 +39,6 @@ else()
 	add_compile_options(-Wno-attributes)
 	add_compile_options(-Wno-enum-compare)
 	add_compile_options(-Wno-comment)
-	add_compile_options(-Wno-overloaded-virtual)
-	add_compile_options(-Wno-missing-braces)
 	add_compile_options(-Wno-sign-compare)
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")

@@ -173,9 +173,6 @@
     <ClCompile Include="Emu\RSX\Common\FragmentProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Common\ShaderParam.cpp">
-      <Filter>Emu\GPU\RSX\Common</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
@@ -521,6 +518,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellSysconf.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellSysCache.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellSysmodule.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -830,6 +830,9 @@
     <ClCompile Include="util\atomic.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="util\atomic2.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
     <ClCompile Include="Crypto\aesni.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
@@ -1046,9 +1049,6 @@
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\types.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\event.h">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\BitField.h">
@@ -1372,12 +1372,6 @@
     <ClInclude Include="Emu\VFS.h">
       <Filter>Emu</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\GSL.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\AtomicPtr.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\StrUtil.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1577,6 +1571,18 @@
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_perf_metrics.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellCrossController.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellRemotePlay.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellStorage.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
   </ItemGroup>

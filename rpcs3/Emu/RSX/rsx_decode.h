@@ -3257,6 +3257,35 @@ struct registers_decoder<NV4097_SET_POINT_SIZE>
 };
 
 template<>
+struct registers_decoder<NV4097_SET_POINT_SPRITE_CONTROL>
+{
+	struct decoded_type
+	{
+	private:
+		u32 value;
+
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		bool enabled() const
+		{
+			return bf_decoder<0, 1, bool>(value);
+		}
+
+		u16 texcoord_mask() const
+		{
+			return bf_decoder<8, 10>(value);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Point sprite: enabled = " + print_boolean(decoded_values.enabled()) +
+			"override mask = " + fmt::format("0x%x", decoded_values.texcoord_mask());
+	}
+};
+
+template<>
 struct registers_decoder<NV4097_SET_SURFACE_FORMAT>
 {
 	struct decoded_type
@@ -3357,7 +3386,7 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_DMA>
 	private:
 		u32 value;
 
-		u32 type_raw() const { return bf_decoder<4, 28>(value); }
+		u8 type_raw() const { return bf_decoder<4, 8>(value); }
 
 	public:
 		decoded_type(u32 value) : value(value) {}
@@ -3369,8 +3398,8 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_DMA>
 
 		index_array_type type() const
 		{
-			// Why truncate??
-			return to_index_array_type(static_cast<u8>(type_raw()));
+			// Must be a valid value
+			return static_cast<index_array_type>(type_raw());
 		}
 	};
 

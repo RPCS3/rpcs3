@@ -365,7 +365,7 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 	static inline bool bts(T& dest, uint bit)
 	{
 		bool result;
-		ushort _bit = (ushort)bit;
+		ushort _bit = static_cast<ushort>(bit);
 		__asm__("lock btsw %2, %0\n" "setc %1" : "+m" (dest), "=r" (result) : "Ir" (_bit) : "cc");
 		return result;
 	}
@@ -373,7 +373,7 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 	static inline bool btr(T& dest, uint bit)
 	{
 		bool result;
-		ushort _bit = (ushort)bit;
+		ushort _bit = static_cast<ushort>(bit);
 		__asm__("lock btrw %2, %0\n" "setc %1" : "+m" (dest), "=r" (result) : "Ir" (_bit) : "cc");
 		return result;
 	}
@@ -381,7 +381,7 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 	static inline bool btc(T& dest, uint bit)
 	{
 		bool result;
-		ushort _bit = (ushort)bit;
+		ushort _bit = static_cast<ushort>(bit);
 		__asm__("lock btcw %2, %0\n" "setc %1" : "+m" (dest), "=r" (result) : "Ir" (_bit) : "cc");
 		return result;
 	}

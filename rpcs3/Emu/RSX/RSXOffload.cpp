@@ -57,6 +57,9 @@ namespace rsx
 								static_cast<rsx::primitive_type>(m_current_job->aux_param0),
 								m_current_job->length);
 							break;
+						case callback:
+							rsx::get_current_renderer()->renderctl(m_current_job->aux_param0, m_current_job->src);
+							break;
 						default:
 							ASSUME(0);
 							fmt::throw_exception("Unreachable" HERE);
@@ -117,6 +120,15 @@ namespace rsx
 			++m_enqueued_count;
 			m_work_queue.push(dst, primitive, count);
 		}
+	}
+
+	// Backend callback
+	void dma_manager::backend_ctrl(u32 request_code, void* args)
+	{
+		verify(HERE), g_cfg.video.multithreaded_rsx;
+
+		++m_enqueued_count;
+		m_work_queue.push(request_code, args);
 	}
 
 	// Synchronization

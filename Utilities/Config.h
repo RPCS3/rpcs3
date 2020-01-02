@@ -42,11 +42,13 @@ namespace cfg
 		const type m_type;
 
 	protected:
+		bool m_dynamic = true;
+
 		// Ownerless entry constructor
 		_base(type _type);
 
 		// Owned entry constructor
-		_base(type _type, class node* owner, const std::string& name);
+		_base(type _type, class node* owner, const std::string& name, bool dynamic = true);
 
 	public:
 		_base(const _base&) = delete;
@@ -55,6 +57,9 @@ namespace cfg
 
 		// Get type
 		type get_type() const { return m_type; }
+
+		// Get dynamic property for reloading configs during games
+		bool get_is_dynamic() const { return m_dynamic; };
 
 		// Reset defaults
 		virtual void from_default() = 0;
@@ -66,7 +71,7 @@ namespace cfg
 		}
 
 		// Try to convert from string (optional)
-		virtual bool from_string(const std::string&);
+		virtual bool from_string(const std::string&, bool /*dynamic*/ = false);
 
 		// Get string list (optional)
 		virtual std::vector<std::string> to_list() const
@@ -93,8 +98,8 @@ namespace cfg
 		}
 
 		// Registered node constructor
-		node(node* owner, const std::string& name)
-			: _base(type::node, owner, name)
+		node(node* owner, const std::string& name, bool dynamic = true)
+			: _base(type::node, owner, name, dynamic)
 		{
 		}
 
@@ -108,7 +113,7 @@ namespace cfg
 		std::string to_string() const override;
 
 		// Deserialize node
-		bool from_string(const std::string& value) override;
+		bool from_string(const std::string& value, bool dynamic = false) override;
 
 		// Set default values
 		void from_default() override;
@@ -121,8 +126,8 @@ namespace cfg
 	public:
 		bool def;
 
-		_bool(node* owner, const std::string& name, bool def = false)
-			: _base(type::_bool, owner, name)
+		_bool(node* owner, const std::string& name, bool def = false, bool dynamic = false)
+			: _base(type::_bool, owner, name, dynamic)
 			, m_value(def)
 			, def(def)
 		{
@@ -145,7 +150,7 @@ namespace cfg
 			return m_value ? "true" : "false";
 		}
 
-		bool from_string(const std::string& value) override
+		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
 		{
 			if (value == "false")
 				m_value = false;
@@ -172,8 +177,8 @@ namespace cfg
 	public:
 		const T def;
 
-		_enum(node* owner, const std::string& name, T value = {})
-			: _base(type::_enum, owner, name)
+		_enum(node* owner, const std::string& name, T value = {}, bool dynamic = false)
+			: _base(type::_enum, owner, name, dynamic)
 			, m_value(value)
 			, def(value)
 		{
@@ -201,7 +206,7 @@ namespace cfg
 			return result; // TODO: ???
 		}
 
-		bool from_string(const std::string& value) override
+		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
 		{
 			u64 result;
 
@@ -239,8 +244,8 @@ namespace cfg
 		static const s64 max = Max;
 		static const s64 min = Min;
 
-		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)))
-			: _base(type::_int, owner, name)
+		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)), bool dynamic = false)
+			: _base(type::_int, owner, name, dynamic)
 			, m_value(def)
 			, def(def)
 		{
@@ -266,7 +271,7 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
-		bool from_string(const std::string& value) override
+		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
 		{
 			s64 result;
 			if (try_to_int64(&result, value, Min, Max))
@@ -304,8 +309,8 @@ namespace cfg
 	public:
 		std::string def;
 
-		string(node* owner, const std::string& name, const std::string& def = {})
-			: _base(type::string, owner, name)
+		string(node* owner, const std::string& name, const std::string& def = {}, bool dynamic = false)
+			: _base(type::string, owner, name, dynamic)
 			, m_name(name)
 			, m_value(def)
 			, def(def)
@@ -339,7 +344,7 @@ namespace cfg
 			return m_value;
 		}
 
-		bool from_string(const std::string& value) override
+		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
 		{
 			m_value = value;
 			return true;
@@ -353,8 +358,8 @@ namespace cfg
 
 	public:
 		// Default value is empty list in current implementation
-		set_entry(node* owner, const std::string& name)
-			: _base(type::set, owner, name)
+		set_entry(node* owner, const std::string& name, bool dynamic = false)
+			: _base(type::set, owner, name, dynamic)
 		{
 		}
 

@@ -1,4 +1,4 @@
-#include "trophy_notification_helper.h"
+﻿#include "trophy_notification_helper.h"
 
 #include "trophy_notification_frame.h"
 
@@ -10,6 +10,11 @@ s32 trophy_notification_helper::ShowTrophyNotification(const SceNpTrophyDetails&
 	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 	{
 		return manager->create<rsx::overlays::trophy_notification>()->show(trophy, trophy_icon_buffer);
+	}
+
+	if (!Emu.HasGui())
+	{
+		return 0;
 	}
 
 	Emu.CallAfter([=]

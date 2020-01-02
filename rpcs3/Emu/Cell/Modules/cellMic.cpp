@@ -17,8 +17,8 @@ void fmt_class_string<microphone_handler>::format(std::string& out, u64 arg)
 		{
 		case microphone_handler::null: return "Null";
 		case microphone_handler::standard: return "Standard";
-		case microphone_handler::singstar: return "Singstar";
-		case microphone_handler::real_singstar: return "Real Singstar";
+		case microphone_handler::singstar: return "SingStar";
+		case microphone_handler::real_singstar: return "Real SingStar";
 		case microphone_handler::rocksmith: return "Rocksmith";
 		}
 
@@ -124,8 +124,8 @@ void microphone_device::variable_byteswap(const void* src, void* dst, const u32 
 {
 	switch (bytesize)
 	{
-	case 4: *(u32*)dst = *(be_t<u32>*)src; break;
-	case 2: *(u16*)dst = *(be_t<u16>*)src; break;
+	case 4: *static_cast<u32*>(dst) = *static_cast<const be_t<u32>*>(src); break;
+	case 2: *static_cast<u16*>(dst) = *static_cast<const be_t<u16>*>(src); break;
 	}
 }
 
@@ -160,11 +160,11 @@ s32 microphone_device::open_microphone(const u8 type, const u32 dsp_r, const u32
 		break;
 	case microphone_handler::singstar:
 	case microphone_handler::real_singstar:
-		// Singstar mic has always 2 channels, each channel represent a physical microphone
+		// SingStar mic has always 2 channels, each channel represent a physical microphone
 		ASSERT(num_channels >= 2);
 		if (num_channels > 2)
 		{
-			cellMic.error("Tried to open a singstar-type device with num_channels = %d", num_channels);
+			cellMic.error("Tried to open a SingStar-type device with num_channels = %d", num_channels);
 			num_channels = 2;
 		}
 		break;
@@ -177,7 +177,7 @@ s32 microphone_device::open_microphone(const u8 type, const u32 dsp_r, const u32
 	{
 	case 1: num_al_channels = AL_FORMAT_MONO16; break;
 	case 2:
-		// If we're using singstar each device needs to be mono
+		// If we're using SingStar each device needs to be mono
 		if (device_type == microphone_handler::singstar)
 			num_al_channels = AL_FORMAT_MONO16;
 		else
@@ -224,7 +224,7 @@ s32 microphone_device::open_microphone(const u8 type, const u32 dsp_r, const u32
 		if (alcGetError(device) != ALC_NO_ERROR)
 		{
 			// Ignore it and move on
-			cellMic.error("Error opening 2nd singstar capture device %s", device_name[1]);
+			cellMic.error("Error opening 2nd SingStar capture device %s", device_name[1]);
 		}
 		else
 		{
@@ -668,7 +668,7 @@ s32 cellMicStop(u32 dev_num)
 
 s32 cellMicGetDeviceAttr(u32 dev_num, CellMicDeviceAttr deviceAttributes, vm::ptr<u32> arg1, vm::ptr<u32> arg2)
 {
-	cellMic.trace("cellMicGetDeviceAttr(dev_num=%d, deviceAttribute=%d, arg1=*0x%x, arg2=*0x%x)", dev_num, (u32)deviceAttributes, arg1, arg2);
+	cellMic.trace("cellMicGetDeviceAttr(dev_num=%d, deviceAttribute=%d, arg1=*0x%x, arg2=*0x%x)", dev_num, +deviceAttributes, arg1, arg2);
 
 	if (!arg1 || (!arg2 && deviceAttributes == CELLMIC_DEVATTR_CHANVOL))
 		return CELL_MIC_ERROR_PARAM;
@@ -699,7 +699,7 @@ s32 cellMicGetDeviceAttr(u32 dev_num, CellMicDeviceAttr deviceAttributes, vm::pt
 
 s32 cellMicSetDeviceAttr(u32 dev_num, CellMicDeviceAttr deviceAttributes, u32 arg1, u32 arg2)
 {
-	cellMic.trace("cellMicSetDeviceAttr(dev_num=%d, deviceAttributes=%d, arg1=%d, arg2=%d)", dev_num, (u32)deviceAttributes, arg1, arg2);
+	cellMic.trace("cellMicSetDeviceAttr(dev_num=%d, deviceAttributes=%d, arg1=%d, arg2=%d)", dev_num, +deviceAttributes, arg1, arg2);
 
 	const auto mic_thr = g_fxo->get<mic_thread>();
 	const std::lock_guard lock(mic_thr->mutex);
@@ -714,7 +714,7 @@ s32 cellMicSetDeviceAttr(u32 dev_num, CellMicDeviceAttr deviceAttributes, u32 ar
 	switch (deviceAttributes)
 	{
 	case CELLMIC_DEVATTR_CHANVOL:
-		// Used by Singstar to set the volume of each mic
+		// Used by SingStar to set the volume of each mic
 		if (arg1 > 2)
 			return CELL_MIC_ERROR_PARAM;
 		device.attr_chanvol[arg1] = arg2;
@@ -732,27 +732,27 @@ s32 cellMicSetDeviceAttr(u32 dev_num, CellMicDeviceAttr deviceAttributes, u32 ar
 
 s32 cellMicGetSignalAttr(u32 dev_num, CellMicSignalAttr sig_attrib, vm::ptr<void> value)
 {
-	cellMic.todo("cellMicGetSignalAttr(dev_num=%d, sig_attrib=%d, value=*0x%x)", dev_num, (u32)sig_attrib, value);
+	cellMic.todo("cellMicGetSignalAttr(dev_num=%d, sig_attrib=%d, value=*0x%x)", dev_num, +sig_attrib, value);
 	return CELL_OK;
 }
 
 s32 cellMicSetSignalAttr(u32 dev_num, CellMicSignalAttr sig_attrib, vm::ptr<void> value)
 {
-	cellMic.todo("cellMicSetSignalAttr(dev_num=%d, sig_attrib=%d, value=*0x%x)", dev_num, (u32)sig_attrib, value);
+	cellMic.todo("cellMicSetSignalAttr(dev_num=%d, sig_attrib=%d, value=*0x%x)", dev_num, +sig_attrib, value);
 	return CELL_OK;
 }
 
 s32 cellMicGetSignalState(u32 dev_num, CellMicSignalState sig_state, vm::ptr<void> value)
 {
-	cellMic.todo("cellMicGetSignalState(dev_num=%d, sig_state=%d, value=*0x%x)", dev_num, (u32)sig_state, value);
+	cellMic.todo("cellMicGetSignalState(dev_num=%d, sig_state=%d, value=*0x%x)", dev_num, +sig_state, value);
 
 	const auto mic_thr = g_fxo->get<mic_thread>();
 	const std::lock_guard lock(mic_thr->mutex);
 	if (!mic_thr->init)
 		return CELL_MIC_ERROR_NOT_INIT;
 
-	be_t<u32>* ival = (be_t<u32>*)value.get_ptr();
-	be_t<f32>* fval = (be_t<f32>*)value.get_ptr();
+	be_t<u32>* ival = vm::_ptr<u32>(value.addr());
+	be_t<f32>* fval = vm::_ptr<f32>(value.addr());
 
 	switch (sig_state)
 	{
@@ -897,8 +897,7 @@ s32 cellMicReadRaw(u32 dev_num, vm::ptr<void> data, u32 maxBytes)
 	if (!mic.is_opened() || !(mic.get_signal_types() & CELLMIC_SIGTYPE_RAW))
 		return CELL_MIC_ERROR_NOT_OPEN;
 
-	u8* res_buf = (u8*)data.get_ptr();
-	return mic.read_raw(res_buf, maxBytes);
+	return mic.read_raw(vm::_ptr<u8>(data.addr()), maxBytes);
 }
 
 s32 cellMicRead(u32 dev_num, vm::ptr<void> data, u32 maxBytes)
@@ -918,8 +917,7 @@ s32 cellMicRead(u32 dev_num, vm::ptr<void> data, u32 maxBytes)
 	if (!mic.is_opened() || !(mic.get_signal_types() & CELLMIC_SIGTYPE_DSP))
 		return CELL_MIC_ERROR_NOT_OPEN;
 
-	u8* res_buf = (u8*)data.get_ptr();
-	return mic.read_dsp(res_buf, maxBytes);
+	return mic.read_dsp(vm::_ptr<u8>(data.addr()), maxBytes);
 }
 
 s32 cellMicReadAux(u32 dev_num, vm::ptr<void> data, s32 max_bytes)

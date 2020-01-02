@@ -49,6 +49,11 @@ private:
 	void InitializeCallbacks();
 	void InitializeConnects();
 
+	void StartPlaytime();
+	void StopPlaytime();
+
+	QElapsedTimer m_timer_playtime;
+
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<gui_settings> m_gui_settings;
 
@@ -57,6 +62,7 @@ private:
 
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest(const QString& path);
+	void OnEmuSettingsChange();
 
 Q_SIGNALS:
 	void OnEmulatorRun();

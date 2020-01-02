@@ -45,7 +45,7 @@ namespace vk
 		default:
 			break;
 		}
-		fmt::throw_exception("Invalid format (0x%x)" HERE, (u32)format);
+		fmt::throw_exception("Invalid format (0x%x)" HERE, static_cast<u32>(format));
 	}
 
 	minification_filter get_min_filter(rsx::texture_minify_filter min_filter)
@@ -77,7 +77,7 @@ namespace vk
 			ASSUME(0);
 			break;
 		}
-		fmt::throw_exception("Invalid mag filter (0x%x)" HERE, (u32)mag_filter);
+		fmt::throw_exception("Invalid mag filter (0x%x)" HERE, static_cast<u32>(mag_filter));
 	}
 
 	VkBorderColor get_border_color(u32 color)
@@ -151,7 +151,7 @@ namespace vk
 			break;
 		}
 
-		fmt::throw_exception("Texture anisotropy error: bad max aniso (%d)" HERE, (u32)gcm_aniso);
+		fmt::throw_exception("Texture anisotropy error: bad max aniso (%d)" HERE, static_cast<u32>(gcm_aniso));
 	}
 
 
@@ -325,7 +325,7 @@ namespace vk
 			break;
 		}
 
-		fmt::throw_exception("Unexpected vkFormat 0x%X", (u32)format);
+		fmt::throw_exception("Unexpected vkFormat 0x%X", static_cast<u32>(format));
 	}
 
 	std::pair<u8, u8> get_format_element_size(VkFormat format)
@@ -386,7 +386,7 @@ namespace vk
 			break;
 		}
 
-		fmt::throw_exception("Unexpected vkFormat 0x%X", (u32)format);
+		fmt::throw_exception("Unexpected vkFormat 0x%X", static_cast<u32>(format));
 	}
 
 	std::pair<bool, u32> get_format_convert_flags(VkFormat format)
@@ -438,7 +438,7 @@ namespace vk
 			break;
 		}
 
-		fmt::throw_exception("Unknown vkFormat 0x%x" HERE, (u32)format);
+		fmt::throw_exception("Unknown vkFormat 0x%x" HERE, static_cast<u32>(format));
 	}
 
 	bool formats_are_bitcast_compatible(VkFormat format1, VkFormat format2)

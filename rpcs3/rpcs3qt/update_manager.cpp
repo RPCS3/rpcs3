@@ -33,12 +33,20 @@ update_manager::update_manager()
 
 void update_manager::check_for_updates(bool automatic, QWidget* parent)
 {
+#ifdef __linux__
+	if (automatic && !::getenv("APPIMAGE"))
+	{
+		// Don't check for updates on startup if RPCS3 is not running from an AppImage.
+		return;
+	}
+#endif
+
 	if (QSslSocket::supportsSsl() == false)
 	{
-		LOG_ERROR(GENERAL, "Unable to update RPCS3!Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
+		LOG_ERROR(GENERAL, "Unable to update RPCS3! Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
 		if (!automatic)
 		{
-			const QString message = tr("Unable to update RPCS3!<br>Please make sure your system supports SSL.<br>Visit our <a href='https://rpcs3.net/quickstart'>quickstart guide</a> for more information.");
+			const QString message = tr("Unable to update RPCS3!<br>Please make sure your system supports SSL.<br>Visit our <a href='https://rpcs3.net/quickstart'>Quickstart</a> guide for more information.");
 			QMessageBox box(QMessageBox::Icon::Warning, tr("Auto-updater"), message, QMessageBox::StandardButton::Ok, parent);
 			box.setTextFormat(Qt::RichText);
 			box.exec();
@@ -69,7 +77,7 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 	connect(reply_json, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), this, &update_manager::handle_error);
 	connect(reply_json, &QNetworkReply::finished, [=]()
 	{
-		handle_reply(reply_json, &update_manager::handle_json, automatic, "Retrieved Json Info");
+		handle_reply(reply_json, &update_manager::handle_json, automatic, "Retrieved JSON Info");
 	});
 	// clang-format on
 }
@@ -108,7 +116,7 @@ bool update_manager::handle_reply(QNetworkReply* reply, std::function<bool(updat
 		m_progress_dialog->close();
 
 		if (!automatic)
-			QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occured during the auto-updating process.\nCheck the log for more information."));
+			QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
 	}
 
 	return true;
@@ -141,7 +149,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 		// If a user clicks "Check for Updates" with a custom build ask him if he's sure he wants to update to latest version
 		if (!automatic && return_code == -1)
 		{
-			if (QMessageBox::question(m_progress_dialog, tr("Auto-updater"), tr("You're currently using a custom or PR build.\n\nDo you want to update to the latest official rpcs3 version?"),
+			if (QMessageBox::question(m_progress_dialog, tr("Auto-updater"), tr("You're currently using a custom or PR build.\n\nDo you want to update to the latest official RPCS3 version?"),
 			        QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
 			{
 				m_progress_dialog->close();
@@ -159,7 +167,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 	const auto& latest = json_data["latest_build"];
 	if (!latest.isObject())
 	{
-		LOG_ERROR(GENERAL, "[Auto-updater] Json doesn't contain latest_build section");
+		LOG_ERROR(GENERAL, "[Auto-updater] JSON doesn't contain latest_build section");
 		return false;
 	}
 
@@ -170,7 +178,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 #elif defined(__linux__)
 	os = "linux";
 #else
-	LOG_ERROR(GENERAL, "[Auto-updater] Your os isn't currently supported by the auto-updater");
+	LOG_ERROR(GENERAL, "[Auto-updater] Your OS isn't currently supported by the auto-updater");
 	return false;
 #endif
 
@@ -219,7 +227,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 			time_t cur_time = mktime(&cur_tm);
 			time_t lts_time = mktime(&lts_tm);
 
-			s64 u_timediff = (s64)std::difftime(lts_time, cur_time);
+			s64 u_timediff = static_cast<s64>(std::difftime(lts_time, cur_time));
 			timediff       = tr("Your version is %1 day(s), %2 hour(s) and %3 minute(s) old.").arg(u_timediff / (60 * 60 * 24)).arg((u_timediff / (60 * 60)) % 24).arg((u_timediff / 60) % 60);
 		}
 
@@ -274,7 +282,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 	mbedtls_sha256_context ctx;
 	mbedtls_sha256_init(&ctx);
 	mbedtls_sha256_starts_ret(&ctx, 0);
-	mbedtls_sha256_update_ret(&ctx, (const unsigned char*)rpcs3_data.data(), rpcs3_data.size());
+	mbedtls_sha256_update_ret(&ctx, reinterpret_cast<const unsigned char*>(rpcs3_data.data()), rpcs3_data.size());
 	mbedtls_sha256_finish_ret(&ctx, res_hash);
 
 	std::string res_hash_string("0000000000000000000000000000000000000000000000000000000000000000");
@@ -299,7 +307,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 	if (appimage_path != nullptr)
 	{
 		replace_path = appimage_path;
-		LOG_NOTICE(GENERAL, "[Auto-updater] Found appimage path: %s", appimage_path);
+		LOG_NOTICE(GENERAL, "[Auto-updater] Found AppImage path: %s", appimage_path);
 	}
 	else
 	{
@@ -322,7 +330,8 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 	m_progress_dialog->setWindowTitle(tr("Updating RPCS3"));
 
 	// Move the appimage/exe and replace with new appimage
-	fs::rename(replace_path, "/tmp/rpcs3_old", true);
+	std::string move_dest = replace_path + "_old";
+	fs::rename(replace_path, move_dest, true);
 	fs::file new_appimage(replace_path, fs::read + fs::write + fs::create + fs::trunc);
 	if (!new_appimage)
 	{
@@ -423,7 +432,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 		case SZ_ERROR_UNSUPPORTED: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder doesn't support this archive"); break;
 		case SZ_ERROR_MEM: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder failed to allocate memory"); break;
 		case SZ_ERROR_CRC: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder CRC error"); break;
-		default: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder error: %d", (u64)res); break;
+		default: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder error: %d", static_cast<u64>(res)); break;
 		}
 	};
 
@@ -470,12 +479,12 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 		{
 			if (temp_u16[index] > 0xFF)
 			{
-				LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder error: Failed to convert utf-16 to utf-8");
+				LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder error: Failed to convert UTF-16 to UTF-8");
 				error_free7z();
 				return false;
 			}
 
-			temp_u8[index] = (u8)temp_u16[index];
+			temp_u8[index] = static_cast<u8>(temp_u16[index]);
 		}
 		temp_u8[len] = 0;
 		std::string name((char*)temp_u8);

@@ -256,11 +256,11 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::get_evdev_device(const std::string& device)
 {
 	// Add device if not yet present
-	m_pad_index = add_device(device, nullptr, true);
-	if (m_pad_index < 0)
+	int pad_index = add_device(device, nullptr, true);
+	if (pad_index < 0)
 		return nullptr;
 
-	auto dev = bindings[m_pad_index];
+	auto dev = bindings[pad_index];
 
 	// Check if our device is connected
 	if (!update_device(dev.first))
@@ -611,8 +611,8 @@ std::vector<std::string> evdev_joystick_handler::ListDevices()
 
 int evdev_joystick_handler::add_device(const std::string& device, const std::shared_ptr<Pad>& pad, bool in_settings)
 {
-	if (in_settings && m_pad_index >= 0)
-		return m_pad_index;
+	if (in_settings && settings_added.count(device))
+		return settings_added.at(device);
 
 	// Now we need to find the device with the same name, and make sure not to grab any duplicates.
 	std::unordered_map<std::string, u32> unique_names;
@@ -660,6 +660,12 @@ int evdev_joystick_handler::add_device(const std::string& device, const std::sha
 					libevdev_free(dev);
 					close(fd);
 					continue;
+				}
+
+				if (in_settings)
+				{
+					m_dev = std::make_shared<EvdevDevice>();
+					settings_added[device] = bindings.size();
 				}
 
 				// Alright, now that we've confirmed we haven't added this joystick yet, les do dis.
@@ -880,6 +886,8 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 	std::unordered_map<int, bool> axis_orientations;
 	int i = 0; // increment to know the axis location (17-24). Be careful if you ever add more find_key() calls in here (BUTTON_COUNT = 17)
 	int last_type = EV_ABS;
+
+	m_dev = std::make_shared<EvdevDevice>();
 
 	int index = static_cast<int>(bindings.size());
 	m_pad_configs[index].load();

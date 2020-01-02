@@ -59,7 +59,7 @@ struct search_object_t
 
 error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<void> userData)
 {
-	cellSearch.warning("cellSearchInitialize(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x)", (u32) mode, container, func, userData);
+	cellSearch.warning("cellSearchInitialize(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x)", +mode, container, func, userData);
 
 	const auto search = g_fxo->get<search_info>();
 	search->func = func;
@@ -91,7 +91,7 @@ error_code cellSearchFinalize()
 
 error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartListSearch(type=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32) type, (u32) sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartListSearch(type=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", +type, +sortOrder, outSearchId);
 
 	if (!outSearchId)
 	{
@@ -117,7 +117,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 
 error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> listId, CellSearchSortKey sortKey, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartContentSearchInList(listId=*0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", listId, (u32) sortKey, (u32) sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartContentSearchInList(listId=*0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", listId, +sortKey, +sortOrder, outSearchId);
 
 	if (!listId || !outSearchId)
 	{
@@ -143,7 +143,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 
 error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSearchSortKey sortKey, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartContentSearch(type=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32) type, (u32) sortKey, (u32) sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartContentSearch(type=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", +type, +sortKey, +sortOrder, outSearchId);
 
 	if (!outSearchId)
 	{
@@ -169,7 +169,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 
 error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> videoId, CellSearchSceneSearchType searchType, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartSceneSearchInVideo(videoId=*0x%x, searchType=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", videoId, (u32) searchType, (u32) sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartSceneSearchInVideo(videoId=*0x%x, searchType=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", videoId, +searchType, +sortOrder, outSearchId);
 
 	if (!videoId || !outSearchId)
 	{
@@ -195,7 +195,7 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 
 error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::cptr<char> gameTitle, vm::cpptr<char> tags, u32 tagNum, CellSearchSortKey sortKey, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartSceneSearch(searchType=0x%x, gameTitle=%s, tags=**0x%x, tagNum=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32) searchType, gameTitle, tags, tagNum, (u32) sortKey, (u32) sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartSceneSearch(searchType=0x%x, gameTitle=%s, tags=**0x%x, tagNum=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", +searchType, gameTitle, tags, tagNum, +sortKey, +sortOrder, outSearchId);
 
 	if (!gameTitle || !outSearchId)
 	{
@@ -302,7 +302,7 @@ error_code cellSearchGetContentInfoGameComment(vm::cptr<CellSearchContentId> con
 
 error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<CellSearchContentId> contentId, CellSearchRepeatMode repeatMode, CellSearchContextOption option, vm::ptr<CellMusicSelectionContext> outContext)
 {
-	cellSearch.todo("cellSearchGetMusicSelectionContext(searchId=0x%x, contentId=*0x%x, repeatMode=0x%x, option=0x%x, outContext=*0x%x)", searchId, contentId, (u32) repeatMode, (u32) option, outContext);
+	cellSearch.todo("cellSearchGetMusicSelectionContext(searchId=0x%x, contentId=*0x%x, repeatMode=0x%x, option=0x%x, outContext=*0x%x)", searchId, contentId, +repeatMode, +option, outContext);
 
 	if (!outContext)
 	{

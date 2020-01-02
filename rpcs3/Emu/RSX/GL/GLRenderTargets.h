@@ -93,7 +93,7 @@ namespace gl
 		texture* get_surface(rsx::surface_access /*access_type*/) override
 		{
 			// TODO
-			return (gl::texture*)this;
+			return static_cast<gl::texture*>(this);
 		}
 
 		u32 raw_handle() const
@@ -141,15 +141,15 @@ struct gl_render_target_traits
 	{
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
 
-		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale((u16)width, true),
-			rsx::apply_resolution_scale((u16)height, true), (GLenum)format.internal_format));
+		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale(static_cast<u16>(width), true),
+			rsx::apply_resolution_scale(static_cast<u16>(height), true), static_cast<GLenum>(format.internal_format)));
 
 		result->set_aa_mode(antialias);
-		result->set_native_pitch((u16)width * get_format_block_size_in_bytes(surface_color_format) * result->samples_x);
-		result->set_surface_dimensions((u16)width, (u16)height, (u16)pitch);
+		result->set_native_pitch(static_cast<u16>(width) * get_format_block_size_in_bytes(surface_color_format) * result->samples_x);
+		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u16>(pitch));
 		result->set_format(surface_color_format);
 
-		std::array<GLenum, 4> native_layout = { (GLenum)format.swizzle.a, (GLenum)format.swizzle.r, (GLenum)format.swizzle.g, (GLenum)format.swizzle.b };
+		std::array<GLenum, 4> native_layout = { static_cast<GLenum>(format.swizzle.a), static_cast<GLenum>(format.swizzle.r), static_cast<GLenum>(format.swizzle.g), static_cast<GLenum>(format.swizzle.b) };
 		result->set_native_component_layout(native_layout);
 
 		result->memory_usage_flags = rsx::surface_usage_flags::attachment;
@@ -168,14 +168,14 @@ struct gl_render_target_traits
 		)
 	{
 		auto format = rsx::internals::surface_depth_format_to_gl(surface_depth_format);
-		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale((u16)width, true),
-				rsx::apply_resolution_scale((u16)height, true), (GLenum)format.internal_format));
+		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale(static_cast<u16>(width), true),
+				rsx::apply_resolution_scale(static_cast<u16>(height), true), static_cast<GLenum>(format.internal_format)));
 
 		result->set_aa_mode(antialias);
-		result->set_surface_dimensions((u16)width, (u16)height, (u16)pitch);
+		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u16>(pitch));
 		result->set_format(surface_depth_format);
 
-		u16 native_pitch = (u16)width * 2 * result->samples_x;
+		u16 native_pitch = static_cast<u16>(width) * 2 * result->samples_x;
 		if (surface_depth_format == rsx::surface_depth_format::z24s8)
 			native_pitch *= 2;
 
@@ -199,7 +199,7 @@ struct gl_render_target_traits
 	{
 		if (!sink)
 		{
-			auto internal_format = (GLenum)ref->get_internal_format();
+			auto internal_format = static_cast<GLenum>(ref->get_internal_format());
 			const auto new_w = rsx::apply_resolution_scale(prev.width, true, ref->get_surface_width(rsx::surface_metrics::pixels));
 			const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height(rsx::surface_metrics::pixels));
 
@@ -266,7 +266,7 @@ struct gl_render_target_traits
 	static
 	void invalidate_surface_contents(gl::command_context&, gl::render_target *surface, u32 address, size_t pitch)
 	{
-		surface->set_rsx_pitch((u16)pitch);
+		surface->set_rsx_pitch(static_cast<u16>(pitch));
 		surface->queue_tag(address);
 		surface->last_use_tag = 0;
 		surface->stencil_init_flags = 0;
@@ -309,7 +309,7 @@ struct gl_render_target_traits
 
 		return surface->get_internal_format() == format &&
 			surface->get_spp() == get_format_sample_count(antialias) &&
-			surface->matches_dimensions((u16)width, (u16)height);
+			surface->matches_dimensions(static_cast<u16>(width), static_cast<u16>(height));
 	}
 
 	static

@@ -17,7 +17,8 @@ namespace rsx
 		{
 			raw_copy = 0,
 			vector_copy = 1,
-			index_emulate = 2
+			index_emulate = 2,
+			callback = 3
 		};
 
 		struct transport_packet
@@ -40,6 +41,10 @@ namespace rsx
 
 			transport_packet(void *_dst, rsx::primitive_type prim, u32 len)
 				: dst(_dst), aux_param0(static_cast<u8>(prim)), length(len), type(op::index_emulate)
+			{}
+
+			transport_packet(u32 command, void* args)
+				: aux_param0(command), src(args), type(op::callback)
 			{}
 		};
 
@@ -66,6 +71,9 @@ namespace rsx
 
 		// Vertex utilities
 		void emulate_as_indexed(void *dst, rsx::primitive_type primitive, u32 count);
+
+		// Renderer callback
+		void backend_ctrl(u32 request_code, void* args);
 
 		// Synchronization
 		bool is_current_thread() const;

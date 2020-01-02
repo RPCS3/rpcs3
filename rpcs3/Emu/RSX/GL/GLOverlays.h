@@ -37,7 +37,7 @@ namespace gl
 			saved_sampler_state(GLuint _unit, const gl::sampler_state& sampler)
 			{
 				glActiveTexture(GL_TEXTURE0 + _unit);
-				glGetIntegerv(GL_SAMPLER_BINDING, (GLint*)&saved);
+				glGetIntegerv(GL_SAMPLER_BINDING, reinterpret_cast<GLint*>(&saved));
 
 				unit = _unit;
 				sampler.bind(_unit);
@@ -132,7 +132,7 @@ namespace gl
 			glBindVertexArray(old_vao);
 		}
 
-		virtual void run(const areau& region, GLuint target_texture, bool depth_target, bool use_blending = false)
+		void run(const areau& region, GLuint target_texture, bool depth_target, bool use_blending = false)
 		{
 			if (!compiled)
 			{
@@ -240,7 +240,7 @@ namespace gl
 					glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
 				}
 
-				glUseProgram((GLuint)program);
+				glUseProgram(program);
 
 				glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 				glColorMask(color_writes[0], color_writes[1], color_writes[2], color_writes[3]);
@@ -358,7 +358,7 @@ namespace gl
 		std::unordered_map<u64, std::unique_ptr<gl::texture_view>> temp_view_cache;
 		std::unordered_map<u64, std::unique_ptr<gl::texture>> font_cache;
 		std::unordered_map<u64, std::unique_ptr<gl::texture_view>> view_cache;
-		bool is_font_draw = false;
+		rsx::overlays::primitive_type m_current_primitive_type = rsx::overlays::primitive_type::quad_list;
 
 		ui_overlay_renderer()
 		{
@@ -493,8 +493,8 @@ namespace gl
 			}
 			else
 			{
-				u64 key = (u64)desc;
-				temp_image_cache[key] = std::move(std::make_pair(owner_uid, std::move(tex)));
+				u64 key = reinterpret_cast<u64>(desc);
+				temp_image_cache[key] = std::make_pair(owner_uid, std::move(tex));
 				temp_view_cache[key] = std::move(view);
 			}
 
@@ -544,13 +544,13 @@ namespace gl
 
 		gl::texture_view* find_font(rsx::overlays::font *font)
 		{
-			u64 key = (u64)font;
+			u64 key = reinterpret_cast<u64>(font);
 			auto found = view_cache.find(key);
 			if (found != view_cache.end())
 				return found->second.get();
 
 			//Create font file
-			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, (int)font->width, (int)font->height, 1, 1, GL_R8);
+			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, font->width, font->height, 1, 1, GL_R8);
 			tex->copy_from(font->glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte, {});
 
 			GLenum remap[] = { GL_RED, GL_RED, GL_RED, GL_RED };
@@ -565,7 +565,7 @@ namespace gl
 
 		gl::texture_view* find_temp_image(rsx::overlays::image_info *desc, u32 owner_uid)
 		{
-			auto key = (u64)desc;
+			auto key = reinterpret_cast<u64>(desc);
 			auto cached = temp_view_cache.find(key);
 			if (cached != temp_view_cache.end())
 			{
@@ -577,14 +577,32 @@ namespace gl
 			}
 		}
 
+		void set_primitive_type(rsx::overlays::primitive_type type)
+		{
+			m_current_primitive_type = type;
+
+			switch (type)
+			{
+				case rsx::overlays::primitive_type::quad_list:
+				case rsx::overlays::primitive_type::triangle_strip:
+					primitives = GL_TRIANGLE_STRIP;
+					break;
+				case rsx::overlays::primitive_type::line_list:
+					primitives = GL_LINES;
+					break;
+				case rsx::overlays::primitive_type::line_strip:
+					primitives = GL_LINE_STRIP;
+					break;
+				default:
+					fmt::throw_exception("Unexpected primitive type %d" HERE, static_cast<s32>(type));
+			}
+		}
+
 		void emit_geometry() override
 		{
-			if (!is_font_draw)
+			if (m_current_primitive_type == rsx::overlays::primitive_type::quad_list)
 			{
-				overlay_pass::emit_geometry();
-			}
-			else
-			{
+				// Emulate quads with disjointed triangle strips
 				int num_quads = num_drawable_elements / 4;
 				std::vector<GLint> firsts;
 				std::vector<GLsizei> counts;
@@ -606,21 +624,25 @@ namespace gl
 
 				glBindVertexArray(old_vao);
 			}
+			else
+			{
+				overlay_pass::emit_geometry();
+			}
 		}
 
 		void run(const areau& viewport, GLuint target, rsx::overlays::overlay& ui)
 		{
-			program_handle.uniforms["viewport"] = color2f((f32)viewport.width(), (f32)viewport.height());
-			program_handle.uniforms["ui_scale"] = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
-			program_handle.uniforms["time"] = (f32)(get_system_time() / 1000) * 0.005f;
+			program_handle.uniforms["viewport"] = color2f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()));
+			program_handle.uniforms["ui_scale"] = color4f(static_cast<f32>(ui.virtual_width), static_cast<f32>(ui.virtual_height), 1.f, 1.f);
+			program_handle.uniforms["time"] = static_cast<f32>(get_system_time() / 1000) * 0.005f;
 
 			saved_sampler_state saved(31, m_sampler);
 
 			for (auto &cmd : ui.get_compiled().draw_commands)
 			{
-				upload_vertex_data((f32*)cmd.verts.data(), (u32)cmd.verts.size() * 4u);
-				num_drawable_elements = (u32)cmd.verts.size();
-				is_font_draw = false;
+				set_primitive_type(cmd.config.primitives);
+				upload_vertex_data(reinterpret_cast<f32*>(cmd.verts.data()), ::size32(cmd.verts) * 4u);
+				num_drawable_elements = ::size32(cmd.verts);
 				GLint texture_exists = GL_TRUE;
 
 				switch (cmd.config.texture_ref)
@@ -636,12 +658,11 @@ namespace gl
 				}
 				case rsx::overlays::image_resource_id::raw_image:
 				{
-					glBindTexture(GL_TEXTURE_2D, find_temp_image((rsx::overlays::image_info*)cmd.config.external_data_ref, ui.uid)->id());
+					glBindTexture(GL_TEXTURE_2D, find_temp_image(static_cast<rsx::overlays::image_info*>(cmd.config.external_data_ref), ui.uid)->id());
 					break;
 				}
 				case rsx::overlays::image_resource_id::font_file:
 				{
-					is_font_draw = true;
 					glBindTexture(GL_TEXTURE_2D, find_font(cmd.config.font_ref)->id());
 					break;
 				}
@@ -654,9 +675,9 @@ namespace gl
 
 				program_handle.uniforms["color"] = cmd.config.color;
 				program_handle.uniforms["read_texture"] = texture_exists;
-				program_handle.uniforms["pulse_glow"] = (s32)cmd.config.pulse_glow;
-				program_handle.uniforms["blur_strength"] = (s32)cmd.config.blur_strength;
-				program_handle.uniforms["clip_region"] = (s32)cmd.config.clip_region;
+				program_handle.uniforms["pulse_glow"] = static_cast<s32>(cmd.config.pulse_glow);
+				program_handle.uniforms["blur_strength"] = static_cast<s32>(cmd.config.blur_strength);
+				program_handle.uniforms["clip_region"] = static_cast<s32>(cmd.config.clip_region);
 				program_handle.uniforms["clip_bounds"] = cmd.config.clip_rect;
 				overlay_pass::run(viewport, target, false, true);
 			}
@@ -707,7 +728,7 @@ namespace gl
 		void run(const areau& viewport, GLuint source, f32 gamma, bool limited_rgb)
 		{
 			program_handle.uniforms["gamma"] = gamma;
-			program_handle.uniforms["limit_range"] = (int)limited_rgb;
+			program_handle.uniforms["limit_range"] = limited_rgb + 0;
 
 			saved_sampler_state saved(31, m_sampler);
 			glBindTexture(GL_TEXTURE_2D, source);

@@ -34,7 +34,7 @@ void gl::init()
 #ifdef __unix__
 	glewExperimental = true;
 	glewInit();
-#ifndef __APPLE__
+#ifdef HAVE_X11
 	glxewInit();
 #endif
 #endif
@@ -44,7 +44,7 @@ void gl::set_swapinterval(int interval)
 {
 #ifdef _WIN32
 	wglSwapIntervalEXT(interval);
-#elif !defined(__APPLE__)
+#elif defined(HAVE_X11)
 	if (glXSwapIntervalEXT)
 	{
 		if (auto window = glXGetCurrentDrawable())

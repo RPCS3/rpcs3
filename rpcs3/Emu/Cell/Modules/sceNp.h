@@ -480,7 +480,7 @@ enum SceNpCustomMenuActionMask : u32
 enum
 {
 	SCE_NP_CUSTOM_MENU_INDEX_BITS       = (sizeof(SceNpCustomMenuIndexMask) * 8),
-	SCE_NP_CUSTOM_MENU_INDEX_BITS_ALL   = ((SceNpCustomMenuIndexMask) - 1),
+	SCE_NP_CUSTOM_MENU_INDEX_BITS_ALL   = (static_cast<SceNpCustomMenuIndexMask>(-1)),
 	SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT = 5,
 	SCE_NP_CUSTOM_MENU_INDEX_BITS_MASK  = (SCE_NP_CUSTOM_MENU_INDEX_BITS - 1),
 	SCE_NP_CUSTOM_MENU_INDEX_BITS_MAX   = 127,
@@ -587,7 +587,7 @@ enum SceNpBasicMessageSubType : u16
 };
 
 // Applicable features of messages
-#define SCE_NP_BASIC_MESSAGE_FEATURES_EXP_MIN(min) ((((u32)min << 16) | (0 << 15)) & 0xFFFF8000)
+#define SCE_NP_BASIC_MESSAGE_FEATURES_EXP_MIN(min) (((static_cast<u32>(min) << 16) | (0 << 15)) & 0xFFFF8000)
 enum SceNpBasicMessageFeatures : u32
 {
 	SCE_NP_BASIC_MESSAGE_FEATURES_MULTI_RECEIPIENTS = 0x00000001,

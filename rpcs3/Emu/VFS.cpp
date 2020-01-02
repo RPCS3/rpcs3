@@ -6,6 +6,10 @@
 #include "Utilities/mutex.h"
 #include "Utilities/StrUtil.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 struct vfs_directory
 {
 	// Real path (empty if root or not exists)
@@ -239,7 +243,7 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir)
 	return std::string{result_base} + vfs::escape(fmt::merge(result, "/"));
 }
 
-std::string vfs::escape(std::string_view path)
+std::string vfs::escape(std::string_view path, bool escape_slash)
 {
 	std::string result;
 	result.reserve(path.size());
@@ -329,6 +333,17 @@ std::string vfs::escape(std::string_view path)
 		case '*':
 		{
 			result += u8"＊";
+			break;
+		}
+		case '/':
+		{
+			if (escape_slash)
+			{
+				result += u8"／";
+				break;
+			}
+
+			result += c;
 			break;
 		}
 		case char{u8"！"[0]}:
@@ -571,7 +586,11 @@ bool vfs::host::rename(const std::string& from, const std::string& to, bool over
 bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 {
 #ifdef _WIN32
-	if (path.size() < 2 || reinterpret_cast<const u16&>(path.front()) != "//"_u16)
+	if (auto device = fs::get_virtual_device(path))
+	{
+		return device->remove(path);
+	}
+	else
 	{
 		// Rename to special dummy name which will be ignored by VFS (but opened file handles can still read or write it)
 		const std::string dummy = fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
@@ -584,20 +603,23 @@ bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 		if (fs::file f{dummy, fs::read + fs::write})
 		{
 			// Set to delete on close on last handle
-			f.set_delete();
+			FILE_DISPOSITION_INFO disp;
+			disp.DeleteFileW = true;
+			SetFileInformationByHandle(f.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 			return true;
 		}
 
 		// TODO: what could cause this and how to handle it
 		return true;
 	}
-#endif
-
+#else
 	return fs::remove_file(path);
+#endif
 }
 
 bool vfs::host::remove_all(const std::string& path, const std::string& dev_root, bool remove_root)
 {
+#ifdef _WIN32
 	if (remove_root)
 	{
 		// Rename to special dummy folder which will be ignored by VFS (but opened file handles can still read or write it)
@@ -608,7 +630,12 @@ bool vfs::host::remove_all(const std::string& path, const std::string& dev_root,
 			return false;
 		}
 
-		if (!fs::remove_all(dummy))
+		if (!vfs::host::remove_all(dummy, dev_root, false))
+		{
+			return false;
+		}
+
+		if (!fs::remove_dir(dummy))
 		{
 			return false;
 		}
@@ -647,4 +674,7 @@ bool vfs::host::remove_all(const std::string& path, const std::string& dev_root,
 	}
 
 	return true;
+#else
+	return fs::remove_all(path, remove_root);
+#endif
 }

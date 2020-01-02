@@ -14,8 +14,8 @@ struct WAVHeader
 		RIFFHeader() = default;
 
 		RIFFHeader(u32 size)
-			: ID(*(u32*)"RIFF")
-			, WAVE(*(u32*)"WAVE")
+			: ID("RIFF"_u32)
+			, WAVE("WAVE"_u32)
 			, Size(size)
 		{
 		}
@@ -35,7 +35,7 @@ struct WAVHeader
 		FMTHeader() = default;
 
 		FMTHeader(u16 ch)
-			: ID(*(u32*)"fmt ")
+			: ID("fmt "_u32)
 			, Size(16)
 			, AudioFormat(3)
 			, NumChannels(ch)
@@ -53,7 +53,7 @@ struct WAVHeader
 	WAVHeader() = default;
 
 	WAVHeader(u16 ch)
-		: ID(*(u32*)"data")
+		: ID("data"_u32)
 		, Size(0)
 		, FMT(ch)
 		, RIFF(sizeof(RIFFHeader) + sizeof(FMTHeader))
@@ -65,7 +65,7 @@ class AudioDumper
 {
 	WAVHeader m_header;
 	fs::file m_output;
-	
+
 public:
 	AudioDumper(u16 ch);
 	~AudioDumper();

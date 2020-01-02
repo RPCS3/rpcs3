@@ -117,7 +117,7 @@ error_code cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm
 			if (!flagBits[i-1])
 				continue;
 			// If we're loading cert 6 (the baltimore cert), then we need set that we're loading the 'normal' set of certs.
-			*required += (u32)(getCert(certPath, i, flagBits[BaltimoreCert-1]).size());
+			*required += ::size32(getCert(certPath, i, flagBits[BaltimoreCert-1]));
 		}
 	}
 	else

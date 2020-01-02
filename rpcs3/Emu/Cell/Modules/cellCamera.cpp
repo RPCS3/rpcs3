@@ -587,7 +587,7 @@ error_code cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 
 s32 cellCameraIsAvailable(s32 dev_num)
 {
-	cellCamera.todo("cellCameraIsAvailable(dev_num=%d)", dev_num);
+	cellCamera.warning("cellCameraIsAvailable(dev_num=%d)", dev_num);
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
@@ -611,7 +611,7 @@ s32 cellCameraIsAvailable(s32 dev_num)
 
 s32 cellCameraIsAttached(s32 dev_num)
 {
-	cellCamera.todo("cellCameraIsAttached(dev_num=%d)", dev_num);
+	cellCamera.warning("cellCameraIsAttached(dev_num=%d)", dev_num);
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
@@ -650,7 +650,7 @@ s32 cellCameraIsAttached(s32 dev_num)
 
 s32 cellCameraIsOpen(s32 dev_num)
 {
-	cellCamera.todo("cellCameraIsOpen(dev_num=%d)", dev_num);
+	cellCamera.warning("cellCameraIsOpen(dev_num=%d)", dev_num);
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
@@ -674,9 +674,9 @@ s32 cellCameraIsOpen(s32 dev_num)
 	return g_camera->is_open;
 }
 
-error_code cellCameraIsStarted(s32 dev_num)
+s32 cellCameraIsStarted(s32 dev_num)
 {
-	cellCamera.todo("cellCameraIsStarted(dev_num=%d)", dev_num);
+	cellCamera.warning("cellCameraIsStarted(dev_num=%d)", dev_num);
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{

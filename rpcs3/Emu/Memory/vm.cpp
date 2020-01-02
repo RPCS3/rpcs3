@@ -19,34 +19,34 @@
 
 namespace vm
 {
-	static u8* memory_reserve_4GiB(std::uintptr_t _addr = 0)
+	static u8* memory_reserve_4GiB(void* _addr, u64 size = 0x100000000)
 	{
-		for (u64 addr = _addr + 0x100000000;; addr += 0x100000000)
+		for (u64 addr = reinterpret_cast<u64>(_addr) + 0x100000000;; addr += 0x100000000)
 		{
-			if (auto ptr = utils::memory_reserve(0x100000000, (void*)addr))
+			if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr)))
 			{
 				return static_cast<u8*>(ptr);
 			}
 		}
 
 		// TODO: a condition to break loop
-		return static_cast<u8*>(utils::memory_reserve(0x100000000));
+		return static_cast<u8*>(utils::memory_reserve(size));
 	}
 
 	// Emulated virtual memory
-	u8* const g_base_addr = memory_reserve_4GiB(0x2'0000'0000);
+	u8* const g_base_addr = memory_reserve_4GiB(reinterpret_cast<void*>(0x2'0000'0000));
 
 	// Unprotected virtual memory mirror
-	u8* const g_sudo_addr = memory_reserve_4GiB((std::uintptr_t)g_base_addr);
+	u8* const g_sudo_addr = memory_reserve_4GiB(g_base_addr);
 
 	// Auxiliary virtual memory for executable areas
-	u8* const g_exec_addr = memory_reserve_4GiB((std::uintptr_t)g_sudo_addr);
+	u8* const g_exec_addr = memory_reserve_4GiB(g_sudo_addr, 0x200000000);
 
 	// Stats for debugging
-	u8* const g_stat_addr = memory_reserve_4GiB((std::uintptr_t)g_exec_addr);
+	u8* const g_stat_addr = memory_reserve_4GiB(g_exec_addr);
 
 	// Reservation stats (compressed x16)
-	u8* const g_reservations = memory_reserve_4GiB((std::uintptr_t)g_stat_addr);
+	u8* const g_reservations = memory_reserve_4GiB(g_stat_addr);
 
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
@@ -128,7 +128,7 @@ namespace vm
 		if (LIKELY(test_addr(g_addr_lock.load(), addr, end)))
 		{
 			// Optimistic path (hope that address range is not locked)
-			_ret = _register_range_lock((u64)end << 32 | addr);
+			_ret = _register_range_lock(u64{end} << 32 | addr);
 
 			if (LIKELY(test_addr(g_addr_lock.load(), addr, end)))
 			{
@@ -140,7 +140,7 @@ namespace vm
 
 		{
 			::reader_lock lock(g_mutex);
-			_ret = _register_range_lock((u64)end << 32 | addr);
+			_ret = _register_range_lock(u64{end} << 32 | addr);
 		}
 
 		return _ret;
@@ -540,7 +540,7 @@ namespace vm
 
 		if (!block)
 		{
-			fmt::throw_exception("Invalid memory location (%u)" HERE, (uint)location);
+			fmt::throw_exception("Invalid memory location (%u)" HERE, +location);
 		}
 
 		return block->alloc(size, align);
@@ -552,7 +552,7 @@ namespace vm
 
 		if (!block)
 		{
-			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, (uint)location, addr);
+			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, +location, addr);
 		}
 
 		return block->falloc(addr, size);
@@ -564,7 +564,7 @@ namespace vm
 
 		if (!block)
 		{
-			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, (uint)location, addr);
+			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, +location, addr);
 		}
 
 		return block->dealloc(addr);
@@ -576,7 +576,7 @@ namespace vm
 
 		if (!block)
 		{
-			LOG_ERROR(MEMORY, "vm::dealloc(): invalid memory location (%u, addr=0x%x)\n", (uint)location, addr);
+			LOG_ERROR(MEMORY, "vm::dealloc(): invalid memory location (%u, addr=0x%x)\n", +location, addr);
 			return;
 		}
 
@@ -1076,6 +1076,47 @@ namespace vm
 		}
 
 		return _map(addr, area_size, flags);
+	}
+
+	bool try_access(u32 addr, void* ptr, u32 size, bool is_write)
+	{
+		vm::reader_lock lock;
+
+		if (size == 0)
+		{
+			return true;
+		}
+
+		if (vm::check_addr(addr, size, is_write ? page_writable : page_readable))
+		{
+			void* src = vm::g_sudo_addr + addr;
+			void* dst = ptr;
+
+			if (is_write)
+				std::swap(src, dst);
+
+			if (size <= 16 && utils::popcnt32(size) == 1 && (addr & (size - 1)) == 0)
+			{
+				if (is_write)
+				{
+					switch (size)
+					{
+					case 1: atomic_storage<u8>::release(*static_cast<u8*>(dst), *static_cast<u8*>(src)); break;
+					case 2: atomic_storage<u16>::release(*static_cast<u16*>(dst), *static_cast<u16*>(src)); break;
+					case 4: atomic_storage<u32>::release(*static_cast<u32*>(dst), *static_cast<u32*>(src)); break;
+					case 8: atomic_storage<u64>::release(*static_cast<u64*>(dst), *static_cast<u64*>(src)); break;
+					case 16: _mm_store_si128(static_cast<__m128i*>(dst), _mm_loadu_si128(static_cast<__m128i*>(src))); break;
+					}
+
+					return true;
+				}
+			}
+
+			std::memcpy(dst, src, size);
+			return true;
+		}
+
+		return false;
 	}
 
 	inline namespace ps3_

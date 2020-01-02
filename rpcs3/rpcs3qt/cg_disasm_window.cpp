@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 
 #include "cg_disasm_window.h"
 
@@ -87,7 +87,24 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 		ShowDisasm();
 	});
 
-	myMenu.exec(mapToGlobal(pos));
+	const auto obj = qobject_cast<QTextEdit*>(sender());
+
+	QPoint origin;
+
+	if (obj == m_disasm_text)
+	{
+		origin = m_disasm_text->viewport()->mapToGlobal(pos);
+	}
+	else if (obj == m_glsl_text)
+	{
+		origin = m_glsl_text->viewport()->mapToGlobal(pos);
+	}
+	else
+	{
+		origin = mapToGlobal(pos);
+	}
+
+	myMenu.exec(origin);
 }
 
 void cg_disasm_window::ShowDisasm()

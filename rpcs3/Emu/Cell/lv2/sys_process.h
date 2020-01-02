@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crypto/unself.h"
 #include "Emu/Memory/vm_ptr.h"
 
 // Process Local Object Type
@@ -40,6 +41,12 @@ struct ps3_process_info_t
 {
 	u32 sdk_ver;
 	u32 ppc_seg;
+	SelfAdditionalInfo self_info;
+	u32 ctrl_flags1 = 0;
+
+	bool has_root_perm() const;
+	bool has_debug_perm() const;
+	bool debug_or_root() const;
 };
 
 extern ps3_process_info_t  g_ps3_process_info;

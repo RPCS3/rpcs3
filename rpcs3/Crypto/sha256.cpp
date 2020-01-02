@@ -42,8 +42,8 @@
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
-#define SHA256_VALIDATE_RET(cond) 
-#define SHA256_VALIDATE(cond) 
+#define SHA256_VALIDATE_RET(cond)
+#define SHA256_VALIDATE(cond)
 
 #if !defined(MBEDTLS_SHA256_ALT)
 
@@ -53,27 +53,27 @@
 #ifndef GET_UINT32_BE
 #define GET_UINT32_BE(n,b,i)                            \
 do {                                                    \
-    (n) = ( (uint32_t) (b)[(i)    ] << 24 )             \
-        | ( (uint32_t) (b)[(i) + 1] << 16 )             \
-        | ( (uint32_t) (b)[(i) + 2] <<  8 )             \
-        | ( (uint32_t) (b)[(i) + 3]       );            \
+    (n) = ( static_cast<uint32_t>((b)[(i)    ]) << 24 ) \
+        | ( static_cast<uint32_t>((b)[(i) + 1]) << 16 ) \
+        | ( static_cast<uint32_t>((b)[(i) + 2]) <<  8 ) \
+        | ( static_cast<uint32_t>((b)[(i) + 3])       );\
 } while( 0 )
 #endif
 
 #ifndef PUT_UINT32_BE
 #define PUT_UINT32_BE(n,b,i)                            \
 do {                                                    \
-    (b)[(i)    ] = (unsigned char) ( (n) >> 24 );       \
-    (b)[(i) + 1] = (unsigned char) ( (n) >> 16 );       \
-    (b)[(i) + 2] = (unsigned char) ( (n) >>  8 );       \
-    (b)[(i) + 3] = (unsigned char) ( (n)       );       \
+    (b)[(i)    ] = static_cast<unsigned char> ( (n) >> 24 );       \
+    (b)[(i) + 1] = static_cast<unsigned char> ( (n) >> 16 );       \
+    (b)[(i) + 2] = static_cast<unsigned char> ( (n) >>  8 );       \
+    (b)[(i) + 3] = static_cast<unsigned char> ( (n)       );       \
 } while( 0 )
 #endif
 
 /* Implementation that should never be optimized out by the compiler */
 static void mbedtls_zeroize_sha256(void* v, size_t n)
 {
-	volatile unsigned char* p = (volatile unsigned char*)v;
+	auto p = const_cast<volatile char*>(static_cast<char*>(v));
 	while (n--)
 		*p++ = 0;
 }
@@ -288,15 +288,15 @@ int mbedtls_sha256_update_ret( mbedtls_sha256_context *ctx,
     left = ctx->total[0] & 0x3F;
     fill = 64 - left;
 
-    ctx->total[0] += (uint32_t) ilen;
+    ctx->total[0] += static_cast<uint32_t>(ilen);
     ctx->total[0] &= 0xFFFFFFFF;
 
-    if( ctx->total[0] < (uint32_t) ilen )
+    if( ctx->total[0] < static_cast<uint32_t>(ilen) )
         ctx->total[1]++;
 
     if( left && ilen >= fill )
     {
-        memcpy( (void *) (ctx->buffer + left), input, fill );
+        memcpy( ctx->buffer + left, input, fill );
 
         if( ( ret = mbedtls_internal_sha256_process( ctx, ctx->buffer ) ) != 0 )
             return( ret );
@@ -316,7 +316,7 @@ int mbedtls_sha256_update_ret( mbedtls_sha256_context *ctx,
     }
 
     if( ilen > 0 )
-        memcpy( (void *) (ctx->buffer + left), input, ilen );
+        memcpy( ctx->buffer + left, input, ilen );
 
     return( 0 );
 }

@@ -122,7 +122,7 @@ struct SceNpTrophyData
 
 struct SceNpTrophyFlagArray
 {
-	u32 flag_bits[SCE_NP_TROPHY_FLAG_SETSIZE >> SCE_NP_TROPHY_FLAG_BITS_SHIFT];
+	be_t<u32> flag_bits[SCE_NP_TROPHY_FLAG_SETSIZE >> SCE_NP_TROPHY_FLAG_BITS_SHIFT];
 };
 
 enum
@@ -153,11 +153,4 @@ public:
 	virtual ~TrophyNotificationBase();
 
 	virtual s32 ShowTrophyNotification(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophyIconBfr) = 0;
-};
-
-// fxm objects
-
-struct sce_np_trophy_manager
-{
-	std::atomic<bool> is_initialized = false;
 };

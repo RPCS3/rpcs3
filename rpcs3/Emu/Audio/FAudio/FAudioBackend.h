@@ -1,6 +1,8 @@
 #pragma once
 
-#ifdef HAVE_FAUDIO
+#ifndef HAVE_FAUDIO
+#error "FAudio support disabled but still being built."
+#endif
 
 #include "Emu/Audio/AudioBackend.h"
 #include "3rdparty/FAudio/include/FAudio.h"
@@ -40,5 +42,3 @@ public:
 	virtual u64 GetNumEnqueuedSamples() override;
 	virtual f32 SetFrequencyRatio(f32 new_ratio) override;
 };
-
-#endif

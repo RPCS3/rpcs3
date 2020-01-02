@@ -213,7 +213,7 @@ public:
 
 		for (auto &entry : glyph_map)
 		{
-			entry.glyph_point_offset = (u32)result.size();
+			entry.glyph_point_offset = ::size32(result);
 
 			for (std::size_t j = 0; j < entry.plot.size(); ++j)
 			{
@@ -226,14 +226,14 @@ public:
 					if (line & (1 << i))
 					{
 						// Font is inverted, so we correct it for conventional renderers
-						const auto x = (float)(7 - i);
-						const auto y = (float)(15 - j);
+						const auto x = static_cast<float>(7 - i);
+						const auto y = static_cast<float>(15 - j);
 						result.emplace_back(x, y);
 					}
 				}
 			}
 
-			entry.points_count = (u32)result.size() - entry.glyph_point_offset;
+			entry.points_count = ::size32(result) - entry.glyph_point_offset;
 		}
 
 		return result;

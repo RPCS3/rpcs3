@@ -185,7 +185,10 @@ struct voice_manager
 	};
 
 	// See cellVoiceCreatePort
-	u32 id_ctr = 0;
+	u8 id_ctr = 0;
+
+	// For cellVoiceSetNotifyEventQueue
+	u32 port_source = 0;
 
 	std::unordered_map<u16, port_t> ports;
 	std::unordered_map<u64, std::deque<u64>> queue_keys;
@@ -194,7 +197,7 @@ struct voice_manager
 	port_t* access_port(u32 id)
 	{
 		// Upper 16 bits are ignored
-		auto pos = ports.find((u16)id);
+		auto pos = ports.find(static_cast<u16>(id));
 
 		if (pos == ports.end())
 		{
