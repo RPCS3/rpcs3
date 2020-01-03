@@ -359,6 +359,7 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/Common/TextureUtils.cpp
 	RSX/Common/VertexProgramDecompiler.cpp
 	RSX/Null/NullGSRender.cpp
+	RSX/Overlays/overlay_animation.cpp
 	RSX/Overlays/overlay_edit_text.cpp
 	RSX/Overlays/overlay_font.cpp
 	RSX/Overlays/overlay_list_view.cpp

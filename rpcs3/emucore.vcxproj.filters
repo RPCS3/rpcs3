@@ -773,6 +773,9 @@
     <ClCompile Include="Emu\RSX\Overlays\overlays.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_animation.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_perf_metrics.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
@@ -1518,6 +1521,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Capture\rsx_capture.h">
       <Filter>Emu\GPU\RSX\Capture</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_animation.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_controls.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>

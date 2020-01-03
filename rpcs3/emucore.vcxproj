@@ -320,6 +320,7 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlays.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_animation.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_edit_text.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_font.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_list_view.cpp" />
@@ -591,6 +592,7 @@
     <ClInclude Include="Emu\RSX\gcm_enums.h" />
     <ClInclude Include="Emu\RSX\gcm_printing.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlays.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_animation.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_controls.h" />
     <ClInclude Include="Emu\RSX\RSXFIFO.h" />
     <ClInclude Include="Emu\RSX\RSXOffload.h" />
