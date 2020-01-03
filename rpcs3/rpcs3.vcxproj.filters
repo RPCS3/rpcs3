@@ -788,6 +788,21 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_cheat_manager.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_pkg_install_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_pkg_install_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_pkg_install_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_pkg_install_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\pkg_install_dialog.cpp">
+      <Filter>Gui\misc dialogs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -1040,6 +1055,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\cheat_manager.h">
       <Filter>Gui\cheat manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\pkg_install_dialog.h">
+      <Filter>Gui\misc dialogs</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
