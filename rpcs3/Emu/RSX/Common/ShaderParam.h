@@ -6,7 +6,8 @@
 #include "Utilities/StrUtil.h"
 #include "Utilities/types.h"
 
-enum class FUNCTION {
+enum class FUNCTION
+{
 	FUNCTION_DP2,
 	FUNCTION_DP2A,
 	FUNCTION_DP3,
@@ -47,7 +48,8 @@ enum class FUNCTION {
 	FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA
 };
 
-enum class COMPARE {
+enum class COMPARE
+{
 	FUNCTION_SEQ,
 	FUNCTION_SGE,
 	FUNCTION_SGT,
