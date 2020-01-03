@@ -370,10 +370,8 @@ void main_window::BootRsxCapture(std::string path)
 	}
 }
 
-bool main_window::InstallPkg(const QString& dropPath, bool show_confirm, bool show_success)
+bool main_window::InstallPkg(QString filePath, bool show_confirm, bool show_success)
 {
-	QString filePath = dropPath;
-
 	if (filePath.isEmpty())
 	{
 		QString path_last_PKG = guiSettings->GetValue(gui::fd_install_pkg).toString();
@@ -463,10 +461,8 @@ bool main_window::InstallPkg(const QString& dropPath, bool show_confirm, bool sh
 	return false;
 }
 
-void main_window::InstallPup(const QString& dropPath)
+void main_window::InstallPup(QString filePath)
 {
-	QString filePath = dropPath;
-
 	if (filePath.isEmpty())
 	{
 		QString path_last_PUP = guiSettings->GetValue(gui::fd_install_pup).toString();
@@ -482,7 +478,7 @@ void main_window::InstallPup(const QString& dropPath)
 		}
 	}
 
-	if (filePath == NULL)
+	if (filePath.isEmpty())
 	{
 		return;
 	}
