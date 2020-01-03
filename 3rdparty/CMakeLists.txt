@@ -375,6 +375,7 @@ else()
 
 		if (WIN32)
 			set(FFMPEG_LIB_DIR "ffmpeg/windows/x86_64")
+			target_link_libraries(3rdparty_ffmpeg INTERFACE "Bcrypt.lib")
 		elseif(CMAKE_SYSTEM MATCHES "Linux")
 			set(FFMPEG_LIB_DIR "ffmpeg/linux/x86_64")
 		elseif(APPLE)
