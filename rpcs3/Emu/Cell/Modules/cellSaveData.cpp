@@ -961,9 +961,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (fixedSet->option != CELL_SAVEDATA_OPTION_NOCONFIRM &&
 				(operation == SAVEDATA_OP_FIXED_SAVE || operation == SAVEDATA_OP_FIXED_LOAD || operation == SAVEDATA_OP_FIXED_DELETE))
 			{
-				// Yield
-				lv2_obj::sleep(ppu);
-
 				std::string message;
 
 				if (selected == -1)
