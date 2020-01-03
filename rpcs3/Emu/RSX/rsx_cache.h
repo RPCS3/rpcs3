@@ -417,6 +417,7 @@ namespace rsx
 		std::string version_prefix;
 		std::string root_path;
 		std::string pipeline_class_name;
+		std::mutex fpd_mutex;
 		std::unordered_map<u64, std::vector<u8>> fragment_program_data;
 
 		backend_storage& m_storage;
@@ -494,73 +495,57 @@ namespace rsx
 			dlg->update_msg(0, getMessage(0, 0, entry_count));
 			dlg->update_msg(1, getMessage(0, 0, entry_count));
 
-			// Setup worker threads
-			unsigned nb_threads = std::thread::hardware_concurrency();
-			std::vector<std::thread> worker_threads(nb_threads);
-
 			// Preload everything needed to compile the shaders
-			// Can probably be parallelized too, but since it's mostly reading files it's probably not worth it
 			std::vector<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>> unpacked;
 			std::chrono::time_point<steady_clock> last_update;
 			u32 processed_since_last_update = 0;
-
-			for (u32 i = 0; (i < entry_count) && !Emu.IsStopped(); i++)
-			{
-				fs::dir_entry tmp = entries[i];
-
-				const auto filename = directory_path + "/" + tmp.name;
-				std::vector<u8> bytes;
-				fs::file f(filename);
-				if (f.size() != sizeof(pipeline_data))
-				{
-					LOG_ERROR(RSX, "Cached pipeline object %s is not binary compatible with the current shader cache", tmp.name.c_str());
-					invalid_entries.push_back(filename);
-					continue;
-				}
-				f.read<u8>(bytes, f.size());
-
-				auto entry = unpack(*reinterpret_cast<pipeline_data*>(bytes.data()));
-				m_storage.preload_programs(std::get<1>(entry), std::get<2>(entry));
-				unpacked.push_back(entry);
-
-				// Only update the screen at about 10fps since updating it everytime slows down the process
-				std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
-				processed_since_last_update++;
-				if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (i == entry_count - 1))
-				{
-					dlg->update_msg(0, getMessage(0, i + 1, entry_count));
-					dlg->inc_value(0, processed_since_last_update);
-					last_update = now;
-					processed_since_last_update = 0;
-				}
-			}
-
-			// Account for any invalid entries
-			entry_count = u32(unpacked.size());
-
-			atomic_t<u32> processed(0);
-			std::function<void(u32)> shader_comp_worker = [&](u32 index)
-			{
-				u32 pos;
-				while (((pos = processed++) < entry_count) && !Emu.IsStopped())
-				{
-					auto& entry = unpacked[pos];
-					m_storage.add_pipeline_entry(std::get<1>(entry), std::get<2>(entry), std::get<0>(entry), std::forward<Args>(args)...);
-				}
-			};
-
+						
 			if (g_cfg.video.renderer == video_renderer::vulkan)
 			{
+				std::mutex inv_entries_mutex;
+				std::mutex unpacked_mutex;
+				atomic_t<u32> processed(0);
+
+				// Setup worker threads
+				unsigned nb_threads = std::thread::hardware_concurrency();
+				std::vector<std::thread> worker_threads(nb_threads);
+
+				std::function<void(u32)> shader_load_worker = [&](u32 index) {
+					u32 pos;
+					while (((pos = processed++) < entry_count) && !Emu.IsStopped())
+					{
+						fs::dir_entry tmp = entries[pos];
+
+						const auto filename = directory_path + "/" + tmp.name;
+						std::vector<u8> bytes;
+						fs::file f(filename);
+						if (f.size() != sizeof(pipeline_data))
+						{
+							LOG_ERROR(RSX, "Cached pipeline object %s is not binary compatible with the current shader cache", tmp.name.c_str());
+							std::lock_guard<std::mutex> lock(inv_entries_mutex);
+							invalid_entries.push_back(filename);
+							continue;
+						}
+						f.read<u8>(bytes, f.size());
+
+						auto entry = unpack(*reinterpret_cast<pipeline_data*>(bytes.data()));
+						m_storage.preload_programs(std::get<1>(entry), std::get<2>(entry));
+						{
+							std::lock_guard<std::mutex> lock(unpacked_mutex);
+							unpacked.push_back(entry);
+						}
+					}
+				};
+
 				// Start workers
 				for (u32 i = 0; i < nb_threads; i++)
 				{
-					worker_threads[i] = std::thread(shader_comp_worker, i);
+					worker_threads[i] = std::thread(shader_load_worker, i);
 				}
 
 				// Wait for the workers to finish their task while updating UI
 				u32 current_progress = 0;
 				u32 last_update_progress = 0;
-
 				while ((current_progress < entry_count) && !Emu.IsStopped())
 				{
 					std::this_thread::sleep_for(100ms); // Around 10fps should be good enough
@@ -571,18 +556,90 @@ namespace rsx
 
 					if (processed_since_last_update > 0)
 					{
-						dlg->update_msg(1, getMessage(0, current_progress, entry_count));
+						dlg->update_msg(0, getMessage(0, current_progress, entry_count));
+						dlg->inc_value(0, processed_since_last_update);
+					}
+				}
+				for (std::thread& worker_thread : worker_threads)
+					worker_thread.join();
+
+				// Account for any invalid entries
+				entry_count = u32(unpacked.size());
+
+				// Now that shader preload is done, reset and now count how many shaders are compiled
+				processed = 0;
+
+				std::function<void(u32)> shader_comp_worker = [&](u32 index) {
+					u32 pos;
+					while (((pos = processed++) < entry_count) && !Emu.IsStopped())
+					{
+						auto& entry = unpacked[pos];
+						m_storage.add_pipeline_entry(std::get<1>(entry), std::get<2>(entry), std::get<0>(entry), std::forward<Args>(args)...);
+					}
+				};
+
+				// Start workers
+				for (u32 i = 0; i < nb_threads; i++)
+				{
+					worker_threads[i] = std::thread(shader_comp_worker, i);
+				}
+
+				// Again, wait for the workers to finish their task while updating UI
+				// TODO: Maybe turn this into a private method? It's basically the same as above
+				current_progress = 0;
+				last_update_progress = 0;
+				while ((current_progress < entry_count) && !Emu.IsStopped())
+				{
+					std::this_thread::sleep_for(100ms); // Around 10fps should be good enough
+
+					current_progress = std::min(processed.load(), entry_count);
+					processed_since_last_update = current_progress - last_update_progress;
+					last_update_progress = current_progress;
+
+					if (processed_since_last_update > 0)
+					{
+						dlg->update_msg(1, getMessage(1, current_progress, entry_count));
 						dlg->inc_value(1, processed_since_last_update);
 					}
 				}
-
-				// Need to join the threads to be absolutely sure shader compilation is done.
 				for (std::thread& worker_thread : worker_threads)
 					worker_thread.join();
 			}
 			else
 			{
+				for (u32 i = 0; (i < entry_count) && !Emu.IsStopped(); i++)
+				{
+					fs::dir_entry tmp = entries[i];
+
+					const auto filename = directory_path + "/" + tmp.name;
+					std::vector<u8> bytes;
+					fs::file f(filename);
+					if (f.size() != sizeof(pipeline_data))
+					{
+						LOG_ERROR(RSX, "Cached pipeline object %s is not binary compatible with the current shader cache", tmp.name.c_str());
+						invalid_entries.push_back(filename);
+						continue;
+					}
+					f.read<u8>(bytes, f.size());
+
+					auto entry = unpack(*reinterpret_cast<pipeline_data*>(bytes.data()));
+					m_storage.preload_programs(std::get<1>(entry), std::get<2>(entry));
+					unpacked.push_back(entry);
+
+					// Only update the screen at about 10fps since updating it everytime slows down the process
+					std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
+					processed_since_last_update++;
+					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (i == entry_count - 1))
+					{
+						dlg->update_msg(0, getMessage(0, i + 1, entry_count));
+						dlg->inc_value(0, processed_since_last_update);
+						last_update = now;
+						processed_since_last_update = 0;
+					}
+				}
+
 				u32 pos;
+				u32 processed = 0;
 				while (((pos = processed++) < entry_count) && !Emu.IsStopped())
 				{
 					auto& entry = unpacked[pos];
@@ -593,7 +650,7 @@ namespace rsx
 					processed_since_last_update++;
 					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (pos == entry_count - 1))
 					{
-						dlg->update_msg(1, getMessage(0, pos + 1, entry_count));
+						dlg->update_msg(1, getMessage(1, pos + 1, entry_count));
 						dlg->inc_value(1, processed_since_last_update);
 						last_update = now;
 						processed_since_last_update = 0;
@@ -686,8 +743,11 @@ namespace rsx
 			f.read<u8>(data, f.size());
 
 			RSXFragmentProgram fp = {};
-			fragment_program_data[program_hash] = data;
-			fp.addr = fragment_program_data[program_hash].data();
+			{
+				std::lock_guard<std::mutex> lock(fpd_mutex);
+				fragment_program_data[program_hash] = data;
+				fp.addr                             = fragment_program_data[program_hash].data();
+			}
 			fp.ucode_length = ::size32(data);
 
 			return fp;
