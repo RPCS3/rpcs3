@@ -5,9 +5,9 @@
 #include "Emu/Memory/vm.h"
 #include "gcm_enums.h"
 #include "Common/ProgramStateCache.h"
-#include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/System.h"
 #include "Common/texture_cache_checker.h"
+#include "Overlays/Shaders/shader_loading_dialog.h"
 
 #include "rsx_utils.h"
 #include <thread>
@@ -423,104 +423,6 @@ namespace rsx
 
 	public:
 
-		struct progress_dialog_helper
-		{
-			std::shared_ptr<MsgDialogBase> dlg;
-			atomic_t<int> ref_cnt;
-
-			virtual void create()
-			{
-				dlg = Emu.GetCallbacks().get_msg_dialog();
-				if (dlg)
-				{
-					dlg->type.se_normal          = true;
-					dlg->type.bg_invisible       = true;
-					dlg->type.progress_bar_count = 2;
-					dlg->ProgressBarSetTaskbarIndex(-1); // -1 to combine all progressbars in the taskbar progress
-					dlg->on_close = [](s32 status)
-					{
-						Emu.CallAfter([]()
-						{
-							Emu.Stop();
-						});
-					};
-
-					ref_cnt++;
-
-					Emu.CallAfter([&]()
-					{
-						dlg->Create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
-						ref_cnt--;
-					});
-				}
-
-				while (ref_cnt.load() && !Emu.IsStopped())
-				{
-					_mm_pause();
-				}
-			}
-
-			virtual void update_msg(u32 index, u32 processed, u32 entry_count)
-			{
-				if (!dlg)
-				{
-					return;
-				}
-
-				ref_cnt++;
-
-				Emu.CallAfter([&, index, processed, entry_count]()
-				{
-					const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
-					dlg->ProgressBarSetMsg(index, fmt::format(text, processed, entry_count));
-					ref_cnt--;
-				});
-			}
-
-			virtual void inc_value(u32 index, u32 value)
-			{
-				if (!dlg)
-				{
-					return;
-				}
-
-				ref_cnt++;
-
-				Emu.CallAfter([&, index, value]()
-				{
-					dlg->ProgressBarInc(index, value);
-					ref_cnt--;
-				});
-			}
-
-			virtual void set_limit(u32 index, u32 limit)
-			{
-				if (!dlg)
-				{
-					return;
-				}
-
-				ref_cnt++;
-
-				Emu.CallAfter([&, index, limit]()
-				{
-					dlg->ProgressBarSetLimit(index, limit);
-					ref_cnt--;
-				});
-			}
-
-			virtual void refresh()
-			{}
-
-			virtual void close()
-			{
-				while (ref_cnt.load() && !Emu.IsStopped())
-				{
-					_mm_pause();
-				}
-			}
-		};
-
 		shaders_cache(backend_storage& storage, std::string pipeline_class, std::string version_prefix_str = "v1")
 			: version_prefix(std::move(version_prefix_str))
 			, pipeline_class_name(std::move(pipeline_class))
@@ -533,7 +435,7 @@ namespace rsx
 		}
 
 		template <typename... Args>
-		void load(progress_dialog_helper* dlg, Args&& ...args)
+		void load(shader_loading_dialog* dlg, Args&& ...args)
 		{
 			if (g_cfg.video.disable_on_disk_shader_cache)
 			{
@@ -573,18 +475,24 @@ namespace rsx
 			std::vector<std::string> invalid_entries;
 
 			// Progress dialog
-			std::unique_ptr<progress_dialog_helper> fallback_dlg;
+			std::unique_ptr<shader_loading_dialog> fallback_dlg;
 			if (!dlg)
 			{
-				fallback_dlg = std::make_unique<progress_dialog_helper>();
+				fallback_dlg = std::make_unique<shader_loading_dialog>();
 				dlg = fallback_dlg.get();
 			}
 
-			dlg->create();
+			const auto getMessage = [](u32 index, u32 processed, u32 entry_count) -> std::string
+			{
+				const char* text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
+				return fmt::format(text, processed, entry_count);
+			};
+
+			dlg->create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
 			dlg->set_limit(0, entry_count);
 			dlg->set_limit(1, entry_count);
-			dlg->update_msg(0, 0, entry_count);
-			dlg->update_msg(1, 0, entry_count);
+			dlg->update_msg(0, getMessage(0, 0, entry_count));
+			dlg->update_msg(1, getMessage(0, 0, entry_count));
 
 			// Setup worker threads
 			unsigned nb_threads = std::thread::hardware_concurrency();
@@ -620,7 +528,7 @@ namespace rsx
 				processed_since_last_update++;
 				if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (i == entry_count - 1))
 				{
-					dlg->update_msg(0, i + 1, entry_count);
+					dlg->update_msg(0, getMessage(0, i + 1, entry_count));
 					dlg->inc_value(0, processed_since_last_update);
 					last_update = now;
 					processed_since_last_update = 0;
@@ -663,7 +571,7 @@ namespace rsx
 
 					if (processed_since_last_update > 0)
 					{
-						dlg->update_msg(1, current_progress, entry_count);
+						dlg->update_msg(1, getMessage(0, current_progress, entry_count));
 						dlg->inc_value(1, processed_since_last_update);
 					}
 				}
@@ -685,7 +593,7 @@ namespace rsx
 					processed_since_last_update++;
 					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (pos == entry_count - 1))
 					{
-						dlg->update_msg(1, pos + 1, entry_count);
+						dlg->update_msg(1, getMessage(0, pos + 1, entry_count));
 						dlg->inc_value(1, processed_since_last_update);
 						last_update = now;
 						processed_since_last_update = 0;
