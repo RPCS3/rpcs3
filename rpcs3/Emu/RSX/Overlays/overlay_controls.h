@@ -781,16 +781,6 @@ namespace rsx
 			}
 		};
 
-		struct animation_base
-		{
-			float duration = 0.f;
-			float t = 0.f;
-			overlay_element *ref = nullptr;
-
-			virtual void update(float /*elapsed*/) {}
-			void reset() { t = 0.f; }
-		};
-
 		struct layout_container : public overlay_element
 		{
 			std::vector<std::unique_ptr<overlay_element>> m_items;
