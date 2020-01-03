@@ -33,7 +33,7 @@ namespace rsx
 		trophy_notification::trophy_notification()
 		{
 			frame.set_pos(0, 0);
-			frame.set_size(260, 80);
+			frame.set_size(300, 80);
 			frame.back_color.a = 0.85f;
 
 			image.set_pos(8, 8);
@@ -42,7 +42,7 @@ namespace rsx
 
 			text_view.set_pos(85, 0);
 			text_view.set_padding(0, 0, 24, 0);
-			text_view.set_font("Arial", 8);
+			text_view.set_font("Arial", 9);
 			text_view.align_text(overlay_element::text_align::center);
 			text_view.back_color.a = 0.f;
 
