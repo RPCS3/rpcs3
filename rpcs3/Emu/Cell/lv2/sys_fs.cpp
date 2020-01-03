@@ -1323,16 +1323,16 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 
 	sys_fs.trace("sys_fs_lseek(fd=%d, offset=0x%llx, whence=0x%x, pos=*0x%x)", fd, offset, whence, pos);
 
-	if (whence >= 3)
-	{
-		return {CELL_EINVAL, whence};
-	}
-
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
 		return CELL_EBADF;
+	}
+
+	if (whence + 0u >= 3)
+	{
+		return {CELL_EINVAL, whence};
 	}
 
 	std::lock_guard lock(file->mp->mutex);
