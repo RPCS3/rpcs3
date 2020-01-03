@@ -116,8 +116,8 @@ private:
 	void CreateDockWindows();
 	void EnableMenus(bool enabled);
 	void ShowTitleBars(bool show);
-	bool InstallPkg(const QString& dropPath = "", bool show_confirm = true, bool show_success = true);
-	void InstallPup(const QString& dropPath = "");
+	bool InstallPkg(QString filePath = "", bool show_confirm = true, bool show_success = true);
+	void InstallPup(QString filePath = "");
 
 	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
 	void AddGamesFromDir(const QString& path);
