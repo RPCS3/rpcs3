@@ -69,6 +69,9 @@
     <Filter Include="Emu\GPU\RSX\Overlays">
       <UniqueIdentifier>{7536c5ad-d58f-40a7-96db-74d959fa4c02}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Overlays\Shaders">
+      <UniqueIdentifier>{f368580d-07bc-4c8b-b488-a4198f2dd17d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -836,6 +839,12 @@
     <ClCompile Include="Crypto\aesni.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1584,6 +1593,12 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellStorage.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.h">
+      <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h">
+      <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

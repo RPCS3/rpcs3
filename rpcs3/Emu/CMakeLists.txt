@@ -370,6 +370,8 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/Overlays/overlays.cpp
 	RSX/Overlays/overlay_shader_compile_notification.cpp
 	RSX/Overlays/overlay_trophy_notification.cpp
+	RSX/Overlays/Shaders/shader_loading_dialog.cpp
+	RSX/Overlays/Shaders/shader_loading_dialog_native.cpp
 	RSX/Capture/rsx_capture.cpp
 	RSX/Capture/rsx_replay.cpp
 	RSX/GL/GLCommonDecompiler.cpp
