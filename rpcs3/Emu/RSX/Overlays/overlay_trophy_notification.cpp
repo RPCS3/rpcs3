@@ -20,12 +20,35 @@ namespace rsx
 			text_view.set_font("Arial", 8);
 			text_view.align_text(overlay_element::text_align::center);
 			text_view.back_color.a = 0.f;
+
+			sliding_animation.direction = { 1, 0, 0 };
+			sliding_animation.speed = 10;
+			sliding_animation.progress = { -int(frame.w), 0, 0 };
+			sliding_animation.progress_limit = { 0, 0, 0};
+			sliding_animation.active = true;
 		}
 		void trophy_notification::update()
 		{
 			u64 t = get_system_time();
 			if (((t - creation_time) / 1000) > 7500)
-				close();
+			{
+				if (!sliding_animation.active)
+				{
+					sliding_animation.direction.x = -1;
+					sliding_animation.progress_limit = { -int(frame.w), 0, 0 };
+					sliding_animation.on_finish = [this]
+					{
+						close();
+					};
+
+					sliding_animation.active = true;
+				}
+			}
+
+			if (sliding_animation.active)
+			{
+				sliding_animation.update(t);
+			}
 		}
 
 		compiled_resource trophy_notification::get_compiled()
@@ -34,6 +57,7 @@ namespace rsx
 			result.add(image.get_compiled());
 			result.add(text_view.get_compiled());
 
+			sliding_animation.apply(result);
 			return result;
 		}
 

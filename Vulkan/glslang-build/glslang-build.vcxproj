@@ -41,24 +41,24 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <NMakeBuildCommandLine>cmake -G $(CmakeGenerator) -A x64 -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ../glslang
-msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Release /m</NMakeBuildCommandLine>
+msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Release /p:ForceImportBeforeCppTargets=$(SolutionDir)rpcs3_glslang.props /m</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>cmake -G $(CmakeGenerator) -A x64 -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ../glslang
-msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Release /m</NMakeReBuildCommandLine>
+msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Release /p:ForceImportBeforeCppTargets=$(SolutionDir)rpcs3_glslang.props /m</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>cmake -G $(CmakeGenerator) -A x64 -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ../glslang
-msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Release /m</NMakeCleanCommandLine>
+msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Release /p:ForceImportBeforeCppTargets=$(SolutionDir)rpcs3_glslang.props /m</NMakeCleanCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <NMakeBuildCommandLine>
       cmake -G $(CmakeGenerator) -A x64 -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ../glslang
-      msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug /m
+      msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug /p:ForceImportBeforeCppTargets=$(SolutionDir)rpcs3_glslang.props /m
     </NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>
       cmake -G $(CmakeGenerator) -A x64 -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ../glslang
-      msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Debug /m
+      msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Debug /p:ForceImportBeforeCppTargets=$(SolutionDir)rpcs3_glslang.props /m
     </NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>
       cmake -G $(CmakeGenerator) -A x64 -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ../glslang
-      msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Debug /m
+      msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Debug /p:ForceImportBeforeCppTargets=$(SolutionDir)rpcs3_glslang.props /m
     </NMakeCleanCommandLine>
   </PropertyGroup>
   <ItemDefinitionGroup>

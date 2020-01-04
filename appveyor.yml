@@ -7,7 +7,7 @@ environment:
   QTDIR: C:\Qt\5.13\msvc2017_64
   QT_URL: https://cdn.discordapp.com/attachments/442667232489897997/614126952953020416/msvc2017_64.7z
   LLVMLIBS: https://github.com/RPCS3/llvm/releases/download/continuous-master/llvmlibs.7z
-  GLSLANG: https://www.dropbox.com/s/ku2qgwmtfptzbvx/glslang.7z?dl=1
+  GLSLANG: https://www.dropbox.com/s/6e8w6t5dxh3ad4l/glslang.7z?dl=1
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
   VULKAN_SDK: "C:\\VulkanSDK\\1.1.126.0"
   VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.126.0/windows/VulkanSDK-1.1.126.0-Installer.exe

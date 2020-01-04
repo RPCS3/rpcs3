@@ -2,6 +2,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "VKGSRender.h"
+#include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "../rsx_methods.h"
 #include "../rsx_utils.h"
 #include "../Common/BufferUtils.h"
@@ -1879,63 +1880,10 @@ void VKGSRender::on_init_thread()
 	}
 	else
 	{
-		struct native_helper : vk::shader_cache::progress_dialog_helper
-		{
-			rsx::thread *owner = nullptr;
-			std::shared_ptr<rsx::overlays::message_dialog> dlg;
-
-			native_helper(VKGSRender *ptr) :
-				owner(ptr) {}
-
-			void create() override
-			{
-				MsgDialogType type = {};
-				type.disable_cancel = true;
-				type.progress_bar_count = 2;
-
-				dlg = g_fxo->get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>(!!g_cfg.video.shader_preloading_dialog.use_custom_background);
-				dlg->progress_bar_set_taskbar_index(-1);
-				dlg->show(false, "Loading precompiled shaders from disk...", type, [](s32 status)
-				{
-					if (status != CELL_OK)
-						Emu.Stop();
-				});
-			}
-
-			void update_msg(u32 index, u32 processed, u32 entry_count) override
-			{
-				const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
-				dlg->progress_bar_set_message(index, fmt::format(text, processed, entry_count));
-				owner->flip({});
-			}
-
-			void inc_value(u32 index, u32 value) override
-			{
-				dlg->progress_bar_increment(index, static_cast<f32>(value));
-				owner->flip({});
-			}
-
-			void set_limit(u32 index, u32 limit) override
-			{
-				dlg->progress_bar_set_limit(index, limit);
-				owner->flip({});
-			}
-
-			void refresh() override
-			{
-				dlg->refresh();
-			}
-
-			void close() override
-			{
-				dlg->return_code = CELL_OK;
-				dlg->close();
-			}
-		}
-		helper(this);
+		rsx::shader_loading_dialog_native dlg(this);
 
 		// TODO: Handle window resize messages during loading on GPUs without OUT_OF_DATE_KHR support
-		m_shaders_cache->load(&helper, *m_device, pipeline_layout);
+		m_shaders_cache->load(&dlg, *m_device, pipeline_layout);
 	}
 }
 
@@ -2876,6 +2824,8 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	// NOTE: There is no need to wait for dma sync. When MTRSX is enabled, the commands are submitted in order anyway due to CSMT
 	if (vk::test_status_interrupt(vk::heap_dirty))
 	{
+		rsx::g_dma_manager.sync();
+
 		if (m_attrib_ring_info.dirty() ||
 			m_fragment_env_ring_info.dirty() ||
 			m_vertex_env_ring_info.dirty() ||
