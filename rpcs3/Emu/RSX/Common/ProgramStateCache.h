@@ -7,6 +7,7 @@
 #include "Utilities/mutex.h"
 #include "Utilities/Log.h"
 #include "Utilities/span.h"
+#include "Utilities/lockless.h"
 
 #include <deque>
 
@@ -159,6 +160,8 @@ public:
 
 		std::vector<u8> tmp_cache;
 
+		async_decompile_task_entry() = default;
+
 		async_decompile_task_entry(RSXVertexProgram _V)
 			: vp(std::move(_V)), is_fp(false)
 		{
@@ -177,7 +180,6 @@ protected:
 	std::mutex m_vertex_mutex;
 	std::mutex m_fragment_mutex;
 	shared_mutex m_pipeline_mutex;
-	shared_mutex m_decompiler_mutex;
 
 	atomic_t<size_t> m_next_id = 0;
 	bool m_cache_miss_flag; // Set if last lookup did not find any usable cached programs
@@ -188,7 +190,7 @@ protected:
 	std::unordered_map <pipeline_key, pipeline_storage_type, pipeline_key_hash, pipeline_key_compare> m_storage;
 
 	std::unordered_map <pipeline_key, std::unique_ptr<async_link_task_entry>, pipeline_key_hash, pipeline_key_compare> m_link_queue;
-	std::deque<async_decompile_task_entry> m_decompile_queue;
+	lf_fifo<async_decompile_task_entry, 32> m_decompile_queue; // TODO: Determine best size
 
 	vertex_program_type __null_vertex_program;
 	fragment_program_type __null_fragment_program;
@@ -341,34 +343,24 @@ public:
 	{
 		// Decompile shaders and link one pipeline object per 'run'
 		// NOTE: Linking is much slower than decompilation step, so always decompile at least 1 unit
-		// TODO: Use try_lock instead
 		bool busy = false;
 		u32 count = 0;
-		std::unique_ptr<async_decompile_task_entry> decompile_task;
 
-		while (true)
+		u32 pos = m_decompile_queue.peek();
+		while (m_decompile_queue.size() > 0)
 		{
-			{
-				std::lock_guard lock(m_decompiler_mutex);
-				if (m_decompile_queue.empty())
-				{
-					break;
-				}
-				else
-				{
-					decompile_task = std::make_unique<async_decompile_task_entry>(std::move(m_decompile_queue.front()));
-					m_decompile_queue.pop_front();
-				}
-			}
+			async_decompile_task_entry decompile_task = m_decompile_queue[pos];
 
-			if (decompile_task->is_fp)
+			if (decompile_task.is_fp)
 			{
-				search_fragment_program(decompile_task->fp);
+				search_fragment_program(decompile_task.fp);
 			}
 			else
 			{
-				search_vertex_program(decompile_task->vp);
+				search_vertex_program(decompile_task.vp);
 			}
+
+			pos = m_decompile_queue.pop_end();
 
 			if (++count >= max_decompile_count)
 			{
@@ -377,7 +369,7 @@ public:
 				busy = true;
 				break;
 			}
-		};
+		}
 
 		async_link_task_entry* link_entry;
 		pipeline_key key;
@@ -481,33 +473,34 @@ public:
 		}
 		else
 		{
-			reader_lock lock(m_decompiler_mutex);
+			bool add_vertex_program = true, add_fragment_program = true;
 
-			auto vertex_program_found = std::find_if(m_decompile_queue.begin(), m_decompile_queue.end(), [&](const auto& V)
+			for (int i = 0; i < m_decompile_queue.size(); ++i)
 			{
-				if (V.is_fp) return false;
-				return program_hash_util::vertex_program_compare()(V.vp, vertexShader);
-			});
+				auto& P = m_decompile_queue[i];
 
-			auto fragment_program_found = std::find_if(m_decompile_queue.begin(), m_decompile_queue.end(), [&](const auto& F)
-			{
-				if (!F.is_fp) return false;
-				return program_hash_util::fragment_program_compare()(F.fp, fragmentShader);
-			});
+				if (P.is_fp && program_hash_util::fragment_program_compare()(P.fp, fragmentShader)) add_fragment_program = false;
+				else if (program_hash_util::vertex_program_compare()(P.vp, vertexShader)) add_vertex_program = false;
 
-			const bool add_vertex_program = (vertex_program_found == m_decompile_queue.end());
-			const bool add_fragment_program = (fragment_program_found == m_decompile_queue.end());
-
+				if (!add_fragment_program && !add_vertex_program) break;
+			}
+			
 			if (add_vertex_program)
 			{
-				lock.upgrade();
-				m_decompile_queue.emplace_back(vertexShader);
+				// Reserve queue space
+				const u32 pos = m_decompile_queue.push_begin();
+
+				// Write object
+				m_decompile_queue[pos] = vertexShader;
 			}
 
 			if (add_fragment_program)
 			{
-				lock.upgrade();
-				m_decompile_queue.emplace_back(fragmentShader);
+				// Reserve queue space
+				const u32 pos = m_decompile_queue.push_begin();
+
+				// Write object
+				m_decompile_queue[pos] = fragmentShader;
 			}
 		}
 
