@@ -199,8 +199,9 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 	if (!path[0])
 		return CELL_ENOENT;
 
+	std::string processed_path;
 	const std::string_view vpath = path.get_ptr();
-	const std::string local_path = vfs::get(vpath);
+	const std::string local_path = vfs::get(vpath, nullptr, &processed_path);
 
 	if (vpath.find_first_not_of('/') == -1)
 	{
@@ -369,7 +370,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 		}
 	}
 
-	if (const u32 id = idm::make<lv2_fs_object, lv2_file>(path.get_ptr(), std::move(file), mode, flags))
+	if (const u32 id = idm::make<lv2_fs_object, lv2_file>(processed_path.c_str(), std::move(file), mode, flags))
 	{
 		*fd = id;
 		return CELL_OK;
@@ -480,9 +481,12 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 	if (!path[0])
 		return CELL_ENOENT;
 
+	std::string processed_path;
 	std::vector<std::string> ext;
 	const std::string_view vpath = path.get_ptr();
-	const std::string local_path = vfs::get(vpath, &ext);
+	const std::string local_path = vfs::get(vpath, &ext, &processed_path);
+
+	processed_path += "/";
 
 	if (local_path.empty() && ext.empty())
 	{
@@ -568,7 +572,7 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 
 	data.erase(last, data.end());
 
-	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(path.get_ptr(), std::move(data)))
+	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(processed_path.c_str(), std::move(data)))
 	{
 		*fd = id;
 		return CELL_OK;
