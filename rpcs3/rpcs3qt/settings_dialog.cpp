@@ -538,6 +538,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 					xemu_settings->SetSetting(render->type, sstr(render->old_adapter));
 				}
 			}
+
+			// Enable/disable MSAA depending on renderer
+			ui->antiAliasing->setEnabled(renderer.has_msaa);
+			ui->antiAliasing->blockSignals(true);
+			ui->antiAliasing->setCurrentText(renderer.has_msaa ? qstr(xemu_settings->GetSetting(emu_settings::MSAA)) : tr("Disabled"));
+			ui->antiAliasing->blockSignals(false);
+
 			// Fill combobox with placeholder if no adapters needed
 			if (!renderer.has_adapters)
 			{
