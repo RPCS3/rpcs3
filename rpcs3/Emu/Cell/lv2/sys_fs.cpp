@@ -2,8 +2,6 @@
 #include "sys_sync.h"
 #include "sys_fs.h"
 
-#include <mutex>
-
 #include "Emu/Cell/PPUThread.h"
 #include "Crypto/unedat.h"
 #include "Emu/VFS.h"
@@ -14,15 +12,17 @@ LOG_CHANNEL(sys_fs);
 
 struct lv2_fs_mount_point
 {
-	std::mutex mutex;
+	const bs_t<lv2_mp_flag> flags{};
+
+	shared_mutex mutex;
 };
 
 lv2_fs_mount_point g_mp_sys_dev_hdd0;
-lv2_fs_mount_point g_mp_sys_dev_hdd1;
-lv2_fs_mount_point g_mp_sys_dev_usb;
-lv2_fs_mount_point g_mp_sys_dev_bdvd;
+lv2_fs_mount_point g_mp_sys_dev_hdd1{lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_usb{lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_bdvd{lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_app_home;
-lv2_fs_mount_point g_mp_sys_host_root;
+lv2_fs_mount_point g_mp_sys_host_root{lv2_mp_flag::no_uid_gid};
 
 bool verify_mself(u32 fd, fs::file const& mself_file)
 {
@@ -57,9 +57,27 @@ bool verify_mself(u32 fd, fs::file const& mself_file)
 	return true;
 }
 
-lv2_fs_mount_point* lv2_fs_object::get_mp(const char* filename)
+lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 {
-	// TODO
+	const auto mp_begin = filename.find_first_not_of('/');
+
+	if (mp_begin + 1)
+	{
+		const auto mp_name = filename.substr(mp_begin, filename.find_first_of('/', mp_begin));
+
+		if (mp_name == "dev_hdd1"sv)
+			return &g_mp_sys_dev_hdd1;
+		if (mp_name.substr(0, 7) == "dev_usb"sv)
+			return &g_mp_sys_dev_usb;
+		if (mp_name == "dev_bdvd"sv)
+			return &g_mp_sys_dev_bdvd;
+		if (mp_name == "app_home"sv)
+			return &g_mp_sys_app_home;
+		if (mp_name == "host_root"sv)
+			return &g_mp_sys_host_root;
+	}
+
+	// Default
 	return &g_mp_sys_dev_hdd0;
 }
 
@@ -370,7 +388,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 		}
 	}
 
-	if (const u32 id = idm::make<lv2_fs_object, lv2_file>(processed_path.c_str(), std::move(file), mode, flags))
+	if (const u32 id = idm::make<lv2_fs_object, lv2_file>(processed_path, std::move(file), mode, flags))
 	{
 		*fd = id;
 		return CELL_OK;
@@ -572,7 +590,7 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 
 	data.erase(last, data.end());
 
-	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(processed_path.c_str(), std::move(data)))
+	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(processed_path, std::move(data)))
 	{
 		*fd = id;
 		return CELL_OK;
@@ -695,10 +713,11 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 		}
 	}
 
-	const bool supports_id = vpath.size() < (first_name_ch + 8) || !vpath.compare(first_name_ch, 8, "dev_hdd1"sv); // TODO
+	const auto mp = lv2_fs_object::get_mp(vpath);
+
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-	sb->uid = supports_id ? 0 : -1;
-	sb->gid = supports_id ? 0 : -1;
+	sb->uid = mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
+	sb->gid = mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime;
@@ -730,10 +749,9 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 
 	const fs::stat_t& info = file->file.stat();
 
-	const bool supports_id = std::memcmp("/dev_hdd1", file->name.data(), 9) != 0; // TODO
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-	sb->uid = supports_id ? 0 : -1;
-	sb->gid = supports_id ? 0 : -1;
+	sb->uid = file->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
+	sb->gid = file->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime; // ctime may be incorrect
@@ -1233,10 +1251,9 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			{
 				auto& entry = arg->ptr[arg->_size++];
 
-				const bool supports_id = std::memcmp("/dev_hdd1", directory->name.data(), 9) != 0; // TODO
 				entry.attribute.mode = info->is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-				entry.attribute.uid = supports_id ? 0 : -1;
-				entry.attribute.gid = supports_id ? 0 : -1;
+				entry.attribute.uid = directory->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
+				entry.attribute.gid = directory->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 				entry.attribute.atime = info->atime;
 				entry.attribute.mtime = info->mtime;
 				entry.attribute.ctime = info->ctime;
