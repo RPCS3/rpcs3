@@ -485,11 +485,10 @@ namespace rsx
 					do
 					{
 						start_time += period_time;
+						vblank_count++;
 
 						if (isHLE)
 						{
-							vblank_count++;
-
 							if (vblank_handler)
 							{
 								intr_thread->cmd_list
