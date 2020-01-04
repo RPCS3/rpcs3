@@ -385,6 +385,8 @@ namespace rsx
 	template <typename pipeline_storage_type, typename backend_storage>
 	class shaders_cache
 	{
+		using unpacked_type = lf_fifo<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>, 1000>; // TODO: Determine best size
+
 		struct pipeline_data
 		{
 			u64 vertex_program_hash;
@@ -427,12 +429,10 @@ namespace rsx
 			return fmt::format(text, processed, entry_count);
 		};
 
-		void load_shaders(std::vector<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>>& unpacked, std::string& directory_path, std::vector<fs::dir_entry>& entries, u32 entry_count,
+		void load_shaders(unpacked_type& unpacked, std::string& directory_path, std::vector<fs::dir_entry>& entries, u32& entry_count,
 		    shader_loading_dialog* dlg)
 		{
 			atomic_t<u32> processed(0);
-			std::mutex inv_entries_mutex;
-			std::mutex unpacked_mutex;
 
 			std::function<void(u32)> shader_load_worker = [&](u32 index) {
 				u32 pos;
@@ -453,10 +453,8 @@ namespace rsx
 
 					auto entry = unpack(*reinterpret_cast<pipeline_data*>(bytes.data()));
 					m_storage.preload_programs(std::get<1>(entry), std::get<2>(entry));
-					{
-						std::lock_guard<std::mutex> lock(unpacked_mutex);
-						unpacked.push_back(entry);
-					}
+
+					unpacked[unpacked.push_begin()] = entry;
 				}
 			};
 
@@ -464,7 +462,7 @@ namespace rsx
 		}
 
 		template <typename... Args>
-		void compile_shaders(std::vector<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>>& unpacked, u32 entry_count, shader_loading_dialog* dlg, Args&&... args)
+		void compile_shaders(unpacked_type& unpacked, u32 entry_count, shader_loading_dialog* dlg, Args&&... args)
 		{
 			atomic_t<u32> processed(0);
 
@@ -579,14 +577,14 @@ namespace rsx
 			dlg->update_msg(1, getMessage(1, 0, entry_count));
 
 			// Preload everything needed to compile the shaders
-			std::vector<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>> unpacked;
+			unpacked_type unpacked;
 
 			if (g_cfg.video.renderer == video_renderer::vulkan)
 			{
 				load_shaders(unpacked, directory_path, entries, entry_count, dlg);
 
 				// Account for any invalid entries
-				entry_count = u32(unpacked.size());
+				entry_count = unpacked.size();
 
 				compile_shaders(unpacked, entry_count, dlg, std::forward<Args>(args)...);
 			}
@@ -612,7 +610,7 @@ namespace rsx
 
 					auto entry = unpack(*reinterpret_cast<pipeline_data*>(bytes.data()));
 					m_storage.preload_programs(std::get<1>(entry), std::get<2>(entry));
-					unpacked.push_back(entry);
+					unpacked[unpacked.push_begin()] = entry;
 
 					// Only update the screen at about 10fps since updating it everytime slows down the process
 					std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
@@ -625,6 +623,9 @@ namespace rsx
 						processed_since_last_update = 0;
 					}
 				}
+
+				// Account for any invalid entries
+				entry_count = unpacked.size();
 
 				u32 pos;
 				u32 processed = 0;
