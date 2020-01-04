@@ -503,6 +503,7 @@ namespace rsx
 			image_view image;
 			label text_view;
 
+			u64 display_sched_id = 0;
 			u64 creation_time = 0;
 			std::unique_ptr<image_info> icon_info;
 

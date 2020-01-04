@@ -1,6 +1,6 @@
 [submodule "rpcs3-ffmpeg"]
 	path = 3rdparty/ffmpeg
-	url = https://github.com/Vita3K/ffmpeg-core
+	url = https://github.com/RPCS3/ffmpeg-core
 	ignore = dirty
 [submodule "asmjit"]
 	path = asmjit
