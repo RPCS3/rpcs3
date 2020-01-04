@@ -483,7 +483,7 @@ namespace rsx
 		void await_workers(u8 step, std::function<void(u32)>& worker, atomic_t<u32>& processed, u32 entry_count, shader_loading_dialog* dlg)
 		{
 			// Setup worker threads
-			unsigned nb_threads = g_cfg.video.renderer == video_renderer::vulkan ? std::thread::hardware_concurrency() : 1;
+			unsigned nb_threads = std::thread::hardware_concurrency();
 			std::vector<std::thread> worker_threads(nb_threads);
 
 			// Start workers
@@ -580,12 +580,71 @@ namespace rsx
 
 			// Preload everything needed to compile the shaders
 			std::vector<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>> unpacked;
-			load_shaders(unpacked, directory_path, entries, entry_count, dlg);
 
-			// Account for any invalid entries
-			entry_count = u32(unpacked.size());
+			if (g_cfg.video.renderer == video_renderer::vulkan)
+			{
+				load_shaders(unpacked, directory_path, entries, entry_count, dlg);
 
-			compile_shaders(unpacked, entry_count, dlg, std::forward<Args>(args)...);
+				// Account for any invalid entries
+				entry_count = u32(unpacked.size());
+
+				compile_shaders(unpacked, entry_count, dlg, std::forward<Args>(args)...);
+			}
+			else
+			{
+				std::chrono::time_point<steady_clock> last_update;
+				u32 processed_since_last_update = 0;
+
+				for (u32 i = 0; (i < entry_count) && !Emu.IsStopped(); i++)
+				{
+					fs::dir_entry tmp = entries[i];
+
+					const auto filename = directory_path + "/" + tmp.name;
+					std::vector<u8> bytes;
+					fs::file f(filename);
+					if (f.size() != sizeof(pipeline_data))
+					{
+						LOG_ERROR(RSX, "Removing cached pipeline object %s since it's not binary compatible with the current shader cache", tmp.name.c_str());
+						fs::remove_file(filename);
+						continue;
+					}
+					f.read<u8>(bytes, f.size());
+
+					auto entry = unpack(*reinterpret_cast<pipeline_data*>(bytes.data()));
+					m_storage.preload_programs(std::get<1>(entry), std::get<2>(entry));
+					unpacked.push_back(entry);
+
+					// Only update the screen at about 10fps since updating it everytime slows down the process
+					std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
+					processed_since_last_update++;
+					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (i == entry_count - 1))
+					{
+						dlg->update_msg(0, getMessage(0, i + 1, entry_count));
+						dlg->inc_value(0, processed_since_last_update);
+						last_update = now;
+						processed_since_last_update = 0;
+					}
+				}
+
+				u32 pos;
+				u32 processed = 0;
+				while (((pos = processed++) < entry_count) && !Emu.IsStopped())
+				{
+					auto& entry = unpacked[pos];
+					m_storage.add_pipeline_entry(std::get<1>(entry), std::get<2>(entry), std::get<0>(entry), std::forward<Args>(args)...);
+
+					// Update screen at about 10fps
+					std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
+					processed_since_last_update++;
+					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (pos == entry_count - 1))
+					{
+						dlg->update_msg(1, getMessage(1, pos + 1, entry_count));
+						dlg->inc_value(1, processed_since_last_update);
+						last_update = now;
+						processed_since_last_update = 0;
+					}
+				}
+			}
 
 			dlg->refresh();
 			dlg->close();
