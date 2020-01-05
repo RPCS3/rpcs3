@@ -177,8 +177,8 @@ public:
 	};
 
 protected:
-	std::mutex m_vertex_mutex;
-	std::mutex m_fragment_mutex;
+	shared_mutex m_vertex_mutex;
+	shared_mutex m_fragment_mutex;
 	shared_mutex m_pipeline_mutex;
 
 	atomic_t<size_t> m_next_id = 0;
@@ -199,9 +199,10 @@ protected:
 	/// bool here to inform that the program was preexisting.
 	std::tuple<const vertex_program_type&, bool> search_vertex_program(const RSXVertexProgram& rsx_vp, bool force_load = true)
 	{
+		bool recompile = false;
 		vertex_program_type* new_shader;
 		{
-			std::lock_guard lock(m_vertex_mutex);
+			reader_lock lock(m_vertex_mutex);
 
 			const auto& I = m_vertex_shader_cache.find(rsx_vp);
 			if (I != m_vertex_shader_cache.end())
@@ -215,9 +216,15 @@ protected:
 			}
 
 			LOG_NOTICE(RSX, "VP not found in buffer!");
-			new_shader = &m_vertex_shader_cache[rsx_vp];
+
+			lock.upgrade();
+			auto [it, inserted] = m_vertex_shader_cache.try_emplace(rsx_vp);
+			new_shader = &(it->second);
+			recompile = inserted;
 		}
-		backend_traits::recompile_vertex_program(rsx_vp, *new_shader, m_next_id++);
+
+		if(recompile)
+			backend_traits::recompile_vertex_program(rsx_vp, *new_shader, m_next_id++);
 
 		return std::forward_as_tuple(*new_shader, false);
 	}
@@ -225,9 +232,11 @@ protected:
 	/// bool here to inform that the program was preexisting.
 	std::tuple<const fragment_program_type&, bool> search_fragment_program(const RSXFragmentProgram& rsx_fp, bool force_load = true)
 	{
+		bool recompile = false;
 		fragment_program_type* new_shader;
+		void* fragment_program_ucode_copy;
 		{
-			std::lock_guard lock(m_fragment_mutex);
+			reader_lock lock(m_fragment_mutex);
 
 			const auto& I = m_fragment_shader_cache.find(rsx_fp);
 			if (I != m_fragment_shader_cache.end())
@@ -241,16 +250,24 @@ protected:
 			}
 
 			LOG_NOTICE(RSX, "FP not found in buffer!");
-			void* fragment_program_ucode_copy = malloc(rsx_fp.ucode_length);
+			fragment_program_ucode_copy = malloc(rsx_fp.ucode_length);
 
 			verify("malloc() failed!" HERE), fragment_program_ucode_copy;
 			std::memcpy(fragment_program_ucode_copy, rsx_fp.addr, rsx_fp.ucode_length);
 
 			RSXFragmentProgram new_fp_key = rsx_fp;
-			new_fp_key.addr               = fragment_program_ucode_copy;
-			new_shader                    = &m_fragment_shader_cache[new_fp_key];
+			new_fp_key.addr = fragment_program_ucode_copy;
+
+			lock.upgrade();
+			auto [it, inserted] = m_fragment_shader_cache.try_emplace(new_fp_key);
+			new_shader = &(it->second);
+			recompile = inserted;
 		}
-		backend_traits::recompile_fragment_program(rsx_fp, *new_shader, m_next_id++);
+
+		if (recompile)
+			backend_traits::recompile_fragment_program(rsx_fp, *new_shader, m_next_id++);
+		else
+			free(fragment_program_ucode_copy);
 
 		return std::forward_as_tuple(*new_shader, false);
 	}
