@@ -705,27 +705,27 @@ void keyboard_pad_handler::ThreadProc()
 
 	// Releases the wheel buttons 0,1 sec after they've been triggered
 	// Next activation is set to distant future to avoid activating this on every proc
-	std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-	const auto update_treshold = std::chrono::milliseconds(100);
-	const auto delay = std::chrono::hours(24);
-	if (now >= m_last_wheel_move_up + update_treshold)
+	const auto now = std::chrono::steady_clock::now();
+	const auto update_threshold = now - std::chrono::milliseconds(100);
+	const auto distant_future = now + std::chrono::hours(24);
+	if (update_threshold >= m_last_wheel_move_up)
 	{
 		Key(mouse::wheel_up, false);
-		m_last_wheel_move_up = now + delay;
+		m_last_wheel_move_up = distant_future;
 	}
-	if (now >= m_last_wheel_move_down + update_treshold)
+	if (update_threshold >= m_last_wheel_move_down)
 	{
 		Key(mouse::wheel_down, false);
-		m_last_wheel_move_down = now + delay;
+		m_last_wheel_move_down = distant_future;
 	}
-	if (now >= m_last_wheel_move_left + update_treshold)
+	if (update_threshold >= m_last_wheel_move_left)
 	{
 		Key(mouse::wheel_left, false);
-		m_last_wheel_move_left = now + delay;
+		m_last_wheel_move_left = distant_future;
 	}
-	if (now >= m_last_wheel_move_right + update_treshold)
+	if (update_threshold >= m_last_wheel_move_right)
 	{
 		Key(mouse::wheel_right, false);
-		m_last_wheel_move_right = now + delay;
+		m_last_wheel_move_right = distant_future;
 	}
 }

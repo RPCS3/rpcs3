@@ -186,7 +186,7 @@ emu_settings::Render_Creator::Render_Creator()
 #endif
 
 	// Graphics Adapter
-	Vulkan = Render_Info(name_Vulkan, vulkanAdapters, supportsVulkan, emu_settings::VulkanAdapter);
+	Vulkan = Render_Info(name_Vulkan, vulkanAdapters, supportsVulkan, emu_settings::VulkanAdapter, true);
 	OpenGL = Render_Info(name_OpenGL);
 	NullRender = Render_Info(name_Null);
 

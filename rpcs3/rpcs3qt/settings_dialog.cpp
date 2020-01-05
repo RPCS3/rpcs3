@@ -538,6 +538,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 					xemu_settings->SetSetting(render->type, sstr(render->old_adapter));
 				}
 			}
+
+			// Enable/disable MSAA depending on renderer
+			ui->antiAliasing->setEnabled(renderer.has_msaa);
+			ui->antiAliasing->blockSignals(true);
+			ui->antiAliasing->setCurrentText(renderer.has_msaa ? qstr(xemu_settings->GetSetting(emu_settings::MSAA)) : tr("Disabled"));
+			ui->antiAliasing->blockSignals(false);
+
 			// Fill combobox with placeholder if no adapters needed
 			if (!renderer.has_adapters)
 			{
@@ -754,7 +761,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	for (s32 index = 3; index >= 0; index--)
 	{
-		if (xemu_settings->m_microphone_creator.sel_list[index] == "" || mics_combo[index]->findText(qstr(xemu_settings->m_microphone_creator.sel_list[index])) == -1)
+		if (xemu_settings->m_microphone_creator.sel_list[index].empty() || mics_combo[index]->findText(qstr(xemu_settings->m_microphone_creator.sel_list[index])) == -1)
 		{
 			mics_combo[index]->setCurrentText(xemu_settings->m_microphone_creator.mic_none);
 			ChangeMicrophoneDevice(index+1, xemu_settings->m_microphone_creator.mic_none); // Ensures the value is set in config
@@ -764,6 +771,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	}
 
 	xemu_settings->EnhanceComboBox(ui->microphoneBox, emu_settings::MicrophoneType);
+	ui->microphoneBox->setItemText(ui->microphoneBox->findData("Null"), tr("Disabled"));
 	SubscribeTooltip(ui->microphoneBox, json_audio["microphoneBox"].toString());
 	connect(ui->microphoneBox, &QComboBox::currentTextChanged, ChangeMicrophoneType);
 	PropagateUsedDevices(); // Enables/Disables comboboxes and checks values from config for sanity

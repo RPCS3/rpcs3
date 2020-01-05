@@ -199,8 +199,9 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 	if (!path[0])
 		return CELL_ENOENT;
 
+	std::string processed_path;
 	const std::string_view vpath = path.get_ptr();
-	const std::string local_path = vfs::get(vpath);
+	const std::string local_path = vfs::get(vpath, nullptr, &processed_path);
 
 	if (vpath.find_first_not_of('/') == -1)
 	{
@@ -369,7 +370,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 		}
 	}
 
-	if (const u32 id = idm::make<lv2_fs_object, lv2_file>(path.get_ptr(), std::move(file), mode, flags))
+	if (const u32 id = idm::make<lv2_fs_object, lv2_file>(processed_path.c_str(), std::move(file), mode, flags))
 	{
 		*fd = id;
 		return CELL_OK;
@@ -480,9 +481,12 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 	if (!path[0])
 		return CELL_ENOENT;
 
+	std::string processed_path;
 	std::vector<std::string> ext;
 	const std::string_view vpath = path.get_ptr();
-	const std::string local_path = vfs::get(vpath, &ext);
+	const std::string local_path = vfs::get(vpath, &ext, &processed_path);
+
+	processed_path += "/";
 
 	if (local_path.empty() && ext.empty())
 	{
@@ -568,7 +572,7 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 
 	data.erase(last, data.end());
 
-	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(path.get_ptr(), std::move(data)))
+	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(processed_path.c_str(), std::move(data)))
 	{
 		*fd = id;
 		return CELL_OK;
@@ -635,7 +639,9 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == -1)
+	const auto first_name_ch = vpath.find_first_not_of('/');
+
+	if (first_name_ch == -1)
 	{
 		*sb = {CELL_FS_S_IFDIR | 0444};
 		return CELL_OK;
@@ -689,9 +695,10 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 		}
 	}
 
+	const bool supports_id = vpath.size() < (first_name_ch + 8) || !vpath.compare(first_name_ch, 8, "dev_hdd1"sv); // TODO
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-	sb->uid = 0; // Always zero
-	sb->gid = 0; // Always zero
+	sb->uid = supports_id ? 0 : -1;
+	sb->gid = supports_id ? 0 : -1;
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime;
@@ -723,9 +730,10 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 
 	const fs::stat_t& info = file->file.stat();
 
+	const bool supports_id = std::memcmp("/dev_hdd1", file->name.data(), 9) != 0; // TODO
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-	sb->uid = 0; // Always zero
-	sb->gid = 0; // Always zero
+	sb->uid = supports_id ? 0 : -1;
+	sb->gid = supports_id ? 0 : -1;
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime; // ctime may be incorrect
@@ -1214,15 +1222,21 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return CELL_EBADF;
 		}
 
-		for (; arg->_size < arg->max; arg->_size++)
+		arg->_size = 0; // This write is not really useful for cellFs but do it anyways
+
+		// NOTE: This function is actually capable of reading only one entry at a time
+		if (arg->max)
 		{
+			std::memset(arg->ptr.get_ptr(), 0, arg->max * arg->ptr.size());
+
 			if (auto* info = directory->dir_read())
 			{
-				auto& entry = arg->ptr[arg->_size];
+				auto& entry = arg->ptr[arg->_size++];
 
+				const bool supports_id = std::memcmp("/dev_hdd1", directory->name.data(), 9) != 0; // TODO
 				entry.attribute.mode = info->is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-				entry.attribute.uid = 0;
-				entry.attribute.gid = 0;
+				entry.attribute.uid = supports_id ? 0 : -1;
+				entry.attribute.gid = supports_id ? 0 : -1;
 				entry.attribute.atime = info->atime;
 				entry.attribute.mtime = info->mtime;
 				entry.attribute.ctime = info->ctime;
@@ -1232,10 +1246,6 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 				entry.entry_name.d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
 				entry.entry_name.d_namlen = u8(std::min<size_t>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
 				strcpy_trunc(entry.entry_name.d_name, info->name);
-			}
-			else
-			{
-				break;
 			}
 		}
 
@@ -1317,16 +1327,16 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 
 	sys_fs.trace("sys_fs_lseek(fd=%d, offset=0x%llx, whence=0x%x, pos=*0x%x)", fd, offset, whence, pos);
 
-	if (whence >= 3)
-	{
-		return {CELL_EINVAL, whence};
-	}
-
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
 		return CELL_EBADF;
+	}
+
+	if (whence + 0u >= 3)
+	{
+		return {CELL_EINVAL, whence};
 	}
 
 	std::lock_guard lock(file->mp->mutex);
