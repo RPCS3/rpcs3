@@ -264,11 +264,6 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 		open_mode += fs::trunc;
 	}
 
-	if (flags & CELL_FS_O_APPEND)
-	{
-		open_mode += fs::append;
-	}
-
 	if (flags & CELL_FS_O_MSELF)
 	{
 		open_mode = fs::read;
@@ -492,6 +487,11 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 		}
 
 		return CELL_EBUSY;
+	}
+
+	if (file->flags & CELL_FS_O_APPEND)
+	{
+		file->file.seek(0, fs::seek_end);
 	}
 
 	*nwrite = file->op_write(buf, nbytes);
@@ -1081,6 +1081,11 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return CELL_EBADF;
 		}
 
+		if (op == 0x8000000b && file->flags & CELL_FS_O_APPEND)
+		{
+			return CELL_EBADF;
+		}
+
 		if (op == 0x8000000b && file->mp->flags & lv2_mp_flag::read_only)
 		{
 			return CELL_EROFS;
@@ -1612,16 +1617,7 @@ error_code sys_fs_ftruncate(ppu_thread& ppu, u32 fd, u64 size)
 		return CELL_EBUSY;
 	}
 
-	if (file->flags & CELL_FS_O_APPEND)
-	{
-		const u64 fsize = file->file.size();
-
-		if (size > fsize && !file->file.write(std::vector<u8>(size - fsize)))
-		{
-			return CELL_ENOSPC;
-		}
-	}
-	else if (!file->file.trunc(size))
+	if (!file->file.trunc(size))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
