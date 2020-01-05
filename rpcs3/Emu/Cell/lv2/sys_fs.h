@@ -121,6 +121,14 @@ struct FsMselfEntry
 
 struct lv2_fs_mount_point;
 
+enum class lv2_mp_flag
+{
+	read_only,
+	no_uid_gid,
+
+	__bitset_enum_max
+};
+
 struct lv2_fs_object
 {
 	using id_type = lv2_fs_object;
@@ -135,29 +143,25 @@ struct lv2_fs_object
 	// File Name (max 1055)
 	const std::array<char, 0x420> name;
 
-	lv2_fs_object(lv2_fs_mount_point* mp, const char* filename)
+	lv2_fs_object(lv2_fs_mount_point* mp, std::string_view filename)
 		: mp(mp)
 		, name(get_name(filename))
 	{
 	}
 
-	static lv2_fs_mount_point* get_mp(const char* filename);
+	static lv2_fs_mount_point* get_mp(std::string_view filename);
 
-	static std::array<char, 0x420> get_name(const char* filename)
+	static std::array<char, 0x420> get_name(std::string_view filename)
 	{
 		std::array<char, 0x420> name;
 
-		for (auto& c : name)
+		if (filename.size() >= 0x420)
 		{
-			c = *filename++;
-
-			if (!c)
-			{
-				return name;
-			}
+			filename = filename.substr(0, 0x420 - 1);
 		}
 
-		name.back() = 0;
+		filename.copy(name.data(), filename.size());
+		name[filename.size()] = 0;
 		return name;
 	}
 };
@@ -171,7 +175,7 @@ struct lv2_file final : lv2_fs_object
 	// Stream lock
 	atomic_t<u32> lock{0};
 
-	lv2_file(const char* filename, fs::file&& file, s32 mode, s32 flags)
+	lv2_file(std::string_view filename, fs::file&& file, s32 mode, s32 flags)
 		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
 		, file(std::move(file))
 		, mode(mode)
@@ -207,7 +211,7 @@ struct lv2_dir final : lv2_fs_object
 	// Current reading position
 	atomic_t<u64> pos{0};
 
-	lv2_dir(const char* filename, std::vector<fs::dir_entry>&& entries)
+	lv2_dir(std::string_view filename, std::vector<fs::dir_entry>&& entries)
 		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
 		, entries(std::move(entries))
 	{

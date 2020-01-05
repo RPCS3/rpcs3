@@ -392,7 +392,7 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 		const QString path = qstr(game_trophy_data->path) + "TROP" + padding + QString::number(trophy_id) + ".PNG";
 		if (!trophy_icon.load(path))
 		{
-			LOG_ERROR(GENERAL, "Failed to load trophy icon for trophy %n %s", trophy_id, game_trophy_data->path);
+			LOG_ERROR(GENERAL, "Failed to load trophy icon for trophy %d %s", trophy_id, game_trophy_data->path);
 		}
 		game_trophy_data->trophy_images.emplace_back(std::move(trophy_icon));
 	}

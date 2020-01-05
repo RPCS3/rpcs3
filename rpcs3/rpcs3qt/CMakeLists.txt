@@ -29,6 +29,7 @@
 	msg_dialog_frame.cpp
 	osk_dialog_frame.cpp
 	pad_settings_dialog.cpp
+	pkg_install_dialog.cpp
 	progress_dialog.cpp
 	qt_utils.cpp
 	register_editor_dialog.cpp

@@ -30,6 +30,7 @@
 #include "progress_dialog.h"
 #include "skylander_dialog.h"
 #include "cheat_manager.h"
+#include "pkg_install_dialog.h"
 
 #include <thread>
 
@@ -369,59 +370,26 @@ void main_window::BootRsxCapture(std::string path)
 	}
 }
 
-void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
+bool main_window::InstallPkg(QString filePath, bool show_confirm, bool show_success)
 {
-	QString filePath = dropPath;
-
-	if (m_install_bulk == QMessageBox::NoToAll)
-	{
-		LOG_NOTICE(LOADER, "PKG: Skipped installation from drop. File: %s", sstr(filePath));
-		return;
-	}
-	else if (m_install_bulk == QMessageBox::YesToAll)
-	{
-		LOG_NOTICE(LOADER, "PKG: Continuing bulk installation from drop. File: %s", sstr(filePath));
-	}
-	else if (filePath.isEmpty())
+	if (filePath.isEmpty())
 	{
 		QString path_last_PKG = guiSettings->GetValue(gui::fd_install_pkg).toString();
 		filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
 	}
-	else if (is_bulk)
-	{
-		QMessageBox::StandardButton ret = QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(filePath),
-			QMessageBox::Yes | QMessageBox::YesToAll | QMessageBox::NoToAll | QMessageBox::No, QMessageBox::No);
-
-		if (ret == QMessageBox::No)
-		{
-			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(filePath));
-			return;
-		}
-		else if (ret == QMessageBox::NoToAll)
-		{
-			LOG_NOTICE(LOADER, "PKG: Cancelled bulk installation from drop. File: %s", sstr(filePath));
-			m_install_bulk = ret;
-			return;
-		}
-		else if (ret == QMessageBox::YesToAll)
-		{
-			LOG_NOTICE(LOADER, "PKG: Accepted bulk installation from drop. File: %s", sstr(filePath));
-			m_install_bulk = ret;
-		}
-	}
-	else
+	else if (show_confirm)
 	{
 		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(filePath),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
 			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(filePath));
-			return;
+			return false;
 		}
 	}
 
 	if (filePath.isEmpty())
 	{
-		return;
+		return false;
 	}
 
 	Emu.SetForceBoot(true);
@@ -479,19 +447,22 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 	{
 		m_gameListFrame->Refresh(true);
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
-		guiSettings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package!"), gui::ib_pkg_success, this);
+		if (show_success)
+		{
+			guiSettings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
+		}
+		return true;
 	}
 	else if (!cancelled)
 	{
 		LOG_ERROR(GENERAL, "Failed to install %s.", fileName);
 		QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package %1!").arg(filePath));
 	}
+	return false;
 }
 
-void main_window::InstallPup(const QString& dropPath)
+void main_window::InstallPup(QString filePath)
 {
-	QString filePath = dropPath;
-
 	if (filePath.isEmpty())
 	{
 		QString path_last_PUP = guiSettings->GetValue(gui::fd_install_pup).toString();
@@ -507,7 +478,7 @@ void main_window::InstallPup(const QString& dropPath)
 		}
 	}
 
-	if (filePath == NULL)
+	if (filePath.isEmpty())
 	{
 		return;
 	}
@@ -1922,11 +1893,25 @@ void main_window::dropEvent(QDropEvent* event)
 	case drop_type::drop_error:
 		break;
 	case drop_type::drop_pkg: // install the packages
-		for (const auto& path : dropPaths)
+		if (dropPaths.count() > 1)
 		{
-			InstallPkg(path, dropPaths.count() > 1);
+			pkg_install_dialog dlg(dropPaths, this);
+			connect(&dlg, &QDialog::accepted, [this, &dlg]()
+			{
+				const QStringList paths = dlg.GetPathsToInstall();
+
+				for (int i = 0, count = paths.count(); i < count; i++)
+				{
+					if (!InstallPkg(paths.at(i), false, i == count - 1))
+						break;
+				}
+			});
+			dlg.exec();
 		}
-		m_install_bulk = QMessageBox::NoButton;
+		else
+		{
+			InstallPkg(dropPaths.front(), true);
+		}
 		break;
 	case drop_type::drop_pup: // install the firmware
 		InstallPup(dropPaths.first());
