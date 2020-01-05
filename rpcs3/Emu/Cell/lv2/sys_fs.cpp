@@ -729,14 +729,12 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 		{
 			// Try to analyse split file (TODO)
 			u64 total_size = 0;
-			u32 total_count = 0;
 
-			for (u32 i = 66600; i <= 66699; i++)
+			for (u32 i = 66601; i <= 66699; i++)
 			{
 				if (fs::stat(fmt::format("%s.%u", local_path, i), info) && !info.is_directory)
 				{
 					total_size += info.size;
-					total_count++;
 				}
 				else
 				{
@@ -745,10 +743,10 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 			}
 
 			// Use attributes from the first fragment (consistently with sys_fs_open+fstat)
-			if (total_count > 1 && fs::stat(local_path + ".66600", info) && !info.is_directory)
+			if (fs::stat(local_path + ".66600", info) && !info.is_directory)
 			{
 				// Success
-				info.size = total_size;
+				info.size += total_size;
 				break;
 			}
 
