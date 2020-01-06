@@ -424,7 +424,8 @@ namespace rsx
 
 		backend_storage& m_storage;
 
-		std::string getMessage(u32 index, u32 processed, u32 entry_count) {
+		std::string get_message(u32 index, u32 processed, u32 entry_count)
+		{
 			const char* text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
 			return fmt::format(text, processed, entry_count);
 		};
@@ -434,7 +435,8 @@ namespace rsx
 		{
 			atomic_t<u32> processed(0);
 
-			std::function<void(u32)> shader_load_worker = [&](u32 stop_at) {
+			std::function<void(u32)> shader_load_worker = [&](u32 stop_at)
+			{
 				u32 pos;
 				while (((pos = processed++) < stop_at) && !Emu.IsStopped())
 				{
@@ -466,7 +468,8 @@ namespace rsx
 		{
 			atomic_t<u32> processed(0);
 
-			std::function<void(u32)> shader_comp_worker = [&](u32 stop_at) {
+			std::function<void(u32)> shader_comp_worker = [&](u32 stop_at)
+			{
 				u32 pos;
 				while (((pos = processed++) < stop_at) && !Emu.IsStopped())
 				{
@@ -500,7 +503,7 @@ namespace rsx
 					processed_since_last_update += inc;
 					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (stop_at == entry_count))
 					{
-						dlg->update_msg(step, getMessage(step, stop_at, entry_count));
+						dlg->update_msg(step, get_message(step, stop_at, entry_count));
 						dlg->inc_value(step, processed_since_last_update);
 						last_update = now;
 						processed_since_last_update = 0;
@@ -529,13 +532,15 @@ namespace rsx
 
 					if (processed_since_last_update > 0)
 					{
-						dlg->update_msg(step, getMessage(step, current_progress, entry_count));
+						dlg->update_msg(step, get_message(step, current_progress, entry_count));
 						dlg->inc_value(step, processed_since_last_update);
 					}
 				}
 
 				for (std::thread& worker_thread : worker_threads)
+				{
 					worker_thread.join();
+				}
 			}
 		}
 
@@ -600,8 +605,8 @@ namespace rsx
 			dlg->create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
 			dlg->set_limit(0, entry_count);
 			dlg->set_limit(1, entry_count);
-			dlg->update_msg(0, getMessage(0, 0, entry_count));
-			dlg->update_msg(1, getMessage(1, 0, entry_count));
+			dlg->update_msg(0, get_message(0, 0, entry_count));
+			dlg->update_msg(1, get_message(1, 0, entry_count));
 
 			// Preload everything needed to compile the shaders
 			unpacked_type unpacked;

@@ -223,8 +223,10 @@ protected:
 			recompile = inserted;
 		}
 
-		if(recompile)
+		if (recompile)
+		{
 			backend_traits::recompile_vertex_program(rsx_vp, *new_shader, m_next_id++);
+		}
 
 		return std::forward_as_tuple(*new_shader, false);
 	}
@@ -265,9 +267,13 @@ protected:
 		}
 
 		if (recompile)
+		{
 			backend_traits::recompile_fragment_program(rsx_fp, *new_shader, m_next_id++);
+		}
 		else
+		{
 			free(fragment_program_ucode_copy);
+		}
 
 		return std::forward_as_tuple(*new_shader, false);
 	}
@@ -494,30 +500,31 @@ public:
 
 			for (int i = 0; i < m_decompile_queue.size(); ++i)
 			{
-				auto& P = m_decompile_queue[i];
+				const auto& program = m_decompile_queue[i];
 
-				if (P.is_fp && program_hash_util::fragment_program_compare()(P.fp, fragmentShader)) add_fragment_program = false;
-				else if (program_hash_util::vertex_program_compare()(P.vp, vertexShader)) add_vertex_program = false;
+				if (program.is_fp && program_hash_util::fragment_program_compare()(program.fp, fragmentShader))
+				{
+					add_fragment_program = false;
+				}
+				else if (program_hash_util::vertex_program_compare()(program.vp, vertexShader))
+				{
+					add_vertex_program = false;
+				}
 
-				if (!add_fragment_program && !add_vertex_program) break;
+				if (!add_fragment_program && !add_vertex_program)
+				{
+					break;
+				}
 			}
 			
 			if (add_vertex_program)
 			{
-				// Reserve queue space
-				const u32 pos = m_decompile_queue.push_begin();
-
-				// Write object
-				m_decompile_queue[pos] = vertexShader;
+				m_decompile_queue[m_decompile_queue.push_begin()] = vertexShader;
 			}
 
 			if (add_fragment_program)
 			{
-				// Reserve queue space
-				const u32 pos = m_decompile_queue.push_begin();
-
-				// Write object
-				m_decompile_queue[pos] = fragmentShader;
+				m_decompile_queue[m_decompile_queue.push_begin()] = fragmentShader;
 			}
 		}
 
