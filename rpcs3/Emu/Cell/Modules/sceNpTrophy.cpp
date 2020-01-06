@@ -819,9 +819,19 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 	}
 
 	if (trophyId < 0 || trophyId >= static_cast<s32>(ctxt->tropusr->GetTrophiesCount()))
+	{
 		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
+	}
+
+	if (ctxt->tropusr->GetTrophyGrade(trophyId) == SCE_NP_TROPHY_GRADE_PLATINUM)
+	{
+		return SCE_NP_TROPHY_ERROR_CANNOT_UNLOCK_PLATINUM;
+	}
+
 	if (ctxt->tropusr->GetTrophyUnlockState(trophyId))
+	{
 		return SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED;
+	}
 
 	ctxt->tropusr->UnlockTrophy(trophyId, 0, 0); // TODO: add timestamps
 
