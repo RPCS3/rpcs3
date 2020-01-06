@@ -86,6 +86,7 @@ public:
 
 	virtual u32 GetUnlockedPlatinumID(u32 trophy_id, const std::string& config_path);
 
+	virtual u32 GetTrophyGrade(u32 id);
 	virtual u32 GetTrophyUnlockState(u32 id);
 	virtual u64 GetTrophyTimestamp(u32 id);
 
