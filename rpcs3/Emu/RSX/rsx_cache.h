@@ -2,6 +2,7 @@
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/hash.h"
 #include "Utilities/File.h"
+#include "Utilities/lockless.h"
 #include "Emu/Memory/vm.h"
 #include "gcm_enums.h"
 #include "Common/ProgramStateCache.h"
