@@ -31,11 +31,13 @@ vfs_dialog_tab::vfs_dialog_tab(vfs_settings_info settingsInfo, std::shared_ptr<g
 
 	m_dirList->setMinimumWidth(m_dirList->sizeHintForColumn(0));
 
-	QPushButton* addDir = new QPushButton(tr("+"));
+	QPushButton* addDir = new QPushButton(QStringLiteral("+"));
+	addDir->setToolTip(tr("Add new directory"));
 	addDir->setFixedWidth(addDir->sizeHint().height()); // Make button square
 	connect(addDir, &QAbstractButton::clicked, this, &vfs_dialog_tab::AddNewDirectory);
 
-	QPushButton* removeDir = new QPushButton(tr("-"));
+	QPushButton* removeDir = new QPushButton(QStringLiteral("-"));
+	removeDir->setToolTip(tr("Remove directory"));
 	removeDir->setFixedWidth(removeDir->sizeHint().height()); // Make button square
 	removeDir->setEnabled(false);
 	connect(removeDir, &QAbstractButton::clicked, this, &vfs_dialog_tab::RemoveDirectory);

@@ -154,7 +154,35 @@ void fmt_class_string<SceNpTrophyError>::format(std::string& out, u64 arg)
 	});
 }
 
+// Helpers
+
+void show_trophy_notification(u32 context, u32 handle, u32 trophyId, const std::string& context_name)
+{
+	// Get icon for the notification.
+	const std::string padded_trophy_id = fmt::format("%03u", trophyId);
+	const std::string trophy_icon_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + context_name + "/TROP" + padded_trophy_id + ".PNG";
+	fs::file trophy_icon_file = fs::file(vfs::get(trophy_icon_path));
+	std::vector<uchar> trophy_icon_data;
+	trophy_icon_file.read(trophy_icon_data, trophy_icon_file.size());
+
+	vm::var<SceNpTrophyDetails> details({ 0 });
+	vm::var<SceNpTrophyData> _({ 0 });
+
+	const s32 ret = sceNpTrophyGetTrophyInfo(context, handle, trophyId, details, _);
+	if (ret != CELL_OK)
+	{
+		sceNpTrophy.error("Failed to get info for trophy dialog. Error code %x", ret);
+		*details = SceNpTrophyDetails();
+	}
+
+	if (auto trophy_notification_dialog = Emu.GetCallbacks().get_trophy_notification_dialog())
+	{
+		trophy_notification_dialog->ShowTrophyNotification(*details, trophy_icon_data);
+	}
+}
+
 // Functions
+
 error_code sceNpTrophyInit(vm::ptr<void> pool, u32 poolSize, u32 containerId, u64 options)
 {
 	sceNpTrophy.warning("sceNpTrophyInit(pool=*0x%x, poolSize=0x%x, containerId=0x%x, options=0x%llx)", pool, poolSize, containerId, options);
@@ -795,37 +823,40 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 	if (ctxt->tropusr->GetTrophyUnlockState(trophyId))
 		return SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED;
 
-	ctxt->tropusr->UnlockTrophy(trophyId, 0, 0); // TODO
-	std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPUSR.DAT";
-	ctxt->tropusr->Save(trophyPath);
+	ctxt->tropusr->UnlockTrophy(trophyId, 0, 0); // TODO: add timestamps
+
+	// TODO: Make sure that unlocking platinum trophies is properly implemented and improve upon it
+	const std::string& config_path = vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPCONF.SFM");
+	const u32 unlocked_platinum_id = ctxt->tropusr->GetUnlockedPlatinumID(trophyId, config_path);
+
+	if (unlocked_platinum_id != SCE_NP_TROPHY_INVALID_TROPHY_ID)
+	{
+		sceNpTrophy.warning("sceNpTrophyUnlockTrophy: All requirements for unlocking the platinum trophy (ID = %d) were met.)", unlocked_platinum_id);
+
+		if (ctxt->tropusr->UnlockTrophy(unlocked_platinum_id, 0, 0)) // TODO: add timestamps
+		{
+			sceNpTrophy.success("You unlocked a platinum trophy! Hooray!!!");
+		}
+	}
 
 	if (platinumId)
 	{
-		*platinumId = SCE_NP_TROPHY_INVALID_TROPHY_ID; // TODO
+		*platinumId = unlocked_platinum_id;
+		sceNpTrophy.warning("sceNpTrophyUnlockTrophy: platinumId was set to %d)", unlocked_platinum_id);
 	}
+
+	const std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPUSR.DAT";
+	ctxt->tropusr->Save(trophyPath);
 
 	if (g_cfg.misc.show_trophy_popups)
 	{
-		// Get icon for the notification.
-		const std::string padded_trophy_id = fmt::format("%03u", trophyId);
-		const std::string trophy_icon_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROP" + padded_trophy_id + ".PNG";
-		fs::file trophy_icon_file = fs::file(vfs::get(trophy_icon_path));
-		std::vector<uchar> trophy_icon_data;
-		trophy_icon_file.read(trophy_icon_data, trophy_icon_file.size());
+		// Enqueue popup for the regular trophy
+		show_trophy_notification(context, handle, trophyId, ctxt->trp_name);
 
-		vm::var<SceNpTrophyDetails> details({0});
-		vm::var<SceNpTrophyData> _({0});
-
-		const s32 ret = sceNpTrophyGetTrophyInfo(context, handle, trophyId, details, _);
-		if (ret != CELL_OK)
+		if (unlocked_platinum_id != SCE_NP_TROPHY_INVALID_TROPHY_ID)
 		{
-			sceNpTrophy.error("Failed to get info for trophy dialog. Error code %x", ret);
-			*details = SceNpTrophyDetails();
-		}
-
-		if (auto trophy_notification_dialog = Emu.GetCallbacks().get_trophy_notification_dialog())
-		{
-			trophy_notification_dialog->ShowTrophyNotification(*details, trophy_icon_data);
+			// Enqueue popup for the holy platinum trophy
+			show_trophy_notification(context, handle, unlocked_platinum_id, ctxt->trp_name);
 		}
 	}
 

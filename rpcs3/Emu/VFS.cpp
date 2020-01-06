@@ -84,7 +84,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 			}
 
 			// Go back one level
-			list.resize(list.size() - 1);
+			list.pop_back();
 			continue;
 		}
 
@@ -108,7 +108,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 	}
 }
 
-std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir)
+std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, std::string* out_path)
 {
 	const auto table = g_fxo->get<vfs_manager>();
 
@@ -125,6 +125,14 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir)
 	{
 		// Empty relative path (reuse further return)
 		vpath = ".";
+	}
+
+	// Fragments for out_path
+	std::vector<std::string_view> name_list;
+
+	if (out_path)
+	{
+		name_list.reserve(vpath.size() / 2);
 	}
 
 	for (std::vector<const vfs_directory*> list{&table->root};;)
@@ -196,13 +204,23 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir)
 			}
 
 			// Go back one level
-			list.resize(list.size() - 1);
-			result.resize(result.size() - 1);
+			if (out_path)
+			{
+				name_list.pop_back();
+			}
+
+			list.pop_back();
+			result.pop_back();
 			continue;
 		}
 
 		const auto last = list.back();
 		list.push_back(nullptr);
+
+		if (out_path)
+		{
+			name_list.push_back(name);
+		}
 
 		result.push_back(name);
 
@@ -225,6 +243,13 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir)
 					}
 
 					// Handle /host_root (not escaped, not processed)
+					if (out_path)
+					{
+						*out_path =  "/";
+						*out_path += fmt::merge(name_list, "/");
+						*out_path += vpath;
+					}
+
 					return std::string{vpath.substr(1)};
 				}
 
@@ -240,6 +265,12 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir)
 	}
 
 	// Escape and merge path fragments
+	if (out_path)
+	{
+		*out_path =  "/";
+		*out_path += fmt::merge(name_list, "/");
+	}
+
 	return std::string{result_base} + vfs::escape(fmt::merge(result, "/"));
 }
 

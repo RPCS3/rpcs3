@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "restore_new.h"
 #include "Utilities/rXml.h"
 #include "define_new_memleakdetect.h"
@@ -159,18 +159,19 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 		if (n->GetName() == "trophy")
 		{
 			const u32 trophy_id = std::atoi(n->GetAttribute("id").c_str());
+			const u32 trophy_pid = std::atoi(n->GetAttribute("pid").c_str());
 
 			u32 trophy_grade;
 			switch (n->GetAttribute("ttype")[0])
 			{
-			case 'B': trophy_grade = 4; break;
-			case 'S': trophy_grade = 3; break;
-			case 'G': trophy_grade = 2; break;
-			case 'P': trophy_grade = 1; break;
-			default: trophy_grade = 0;
+			case 'B': trophy_grade = trophy_grade::bronze; break;
+			case 'S': trophy_grade = trophy_grade::silver; break;
+			case 'G': trophy_grade = trophy_grade::gold; break;
+			case 'P': trophy_grade = trophy_grade::platinum; break;
+			default: trophy_grade = trophy_grade::unknown; break;
 			}
 
-			TROPUSREntry4 entry4 = { 4, u32{sizeof(TROPUSREntry4)} - 0x10, ::size32(m_table4), 0, trophy_id, trophy_grade, 0xFFFFFFFF };
+			TROPUSREntry4 entry4 = { 4, u32{sizeof(TROPUSREntry4)} - 0x10, ::size32(m_table4), 0, trophy_id, trophy_grade, trophy_pid };
 			TROPUSREntry6 entry6 = { 6, u32{sizeof(TROPUSREntry6)} - 0x10, ::size32(m_table6), 0, trophy_id };
 
 			m_table4.push_back(entry4);
@@ -216,6 +217,80 @@ u32 TROPUSRLoader::GetUnlockedTrophiesCount()
 	return count;
 }
 
+u32 TROPUSRLoader::GetUnlockedPlatinumID(u32 trophy_id, const std::string& config_path)
+{
+	constexpr u32 invalid_trophy_id = -1; // SCE_NP_TROPHY_INVALID_TROPHY_ID;
+
+	if (trophy_id >= m_table6.size() || trophy_id >= m_table4.size())
+	{
+		LOG_WARNING(LOADER, "TROPUSRLoader::GetUnlockedPlatinumID: Invalid id=%d", trophy_id);
+		return invalid_trophy_id;
+	}
+
+	if (m_table6.size() != m_table4.size())
+	{
+		LOG_WARNING(LOADER, "TROPUSRLoader::GetUnlockedPlatinumID: Table size mismatch: %d vs. %d", m_table6.size(), m_table4.size());
+		return invalid_trophy_id;
+	}
+
+	// We need to read the trophy info from file here and update it for backwards compatibility.
+	// TROPUSRLoader::Generate will currently not be called on existing trophy data which might lack the pid.
+	fs::file config(config_path);
+
+	if (!config)
+	{
+		return invalid_trophy_id;
+	}
+
+	rXmlDocument doc;
+	doc.Read(config.to_string());
+
+	auto trophy_base = doc.GetRoot();
+	if (trophy_base->GetChildren()->GetName() == "trophyconf")
+	{
+		trophy_base = trophy_base->GetChildren();
+	}
+
+	const size_t trophy_count = m_table4.size();
+
+	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
+	{
+		if (n->GetName() == "trophy")
+		{
+			const u32 trophy_id = std::atoi(n->GetAttribute("id").c_str());
+			const u32 trophy_pid = std::atoi(n->GetAttribute("pid").c_str());
+
+			// We currently assume that trophies are ordered
+			if (trophy_id < trophy_count && m_table4[trophy_id].trophy_id == trophy_id)
+			{
+				// Update the pid for backwards compatibility
+				m_table4[trophy_id].trophy_pid = trophy_pid;
+			}
+		}
+	}
+
+	// Get this trophy's platinum link id
+	const u32 pid = m_table4[trophy_id].trophy_pid;
+
+	// The platinum trophy has to have a valid id and must still be locked
+	if (pid == invalid_trophy_id || GetTrophyUnlockState(pid)) // the first check is redundant but I'll keep it to prevent regressions
+	{
+		return invalid_trophy_id;
+	}
+
+	// The platinum trophy stays locked if any relevant trophy is still locked
+	for (size_t i = 0; i < trophy_count; i++)
+	{
+		if (m_table4[i].trophy_pid == pid && !m_table6[i].trophy_state)
+		{
+			return invalid_trophy_id;
+		}
+	}
+
+	// All relevant trophies for this platinum link id were unlocked
+	return pid;
+}
+
 u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 {
 	if (id >= m_table6.size())
@@ -243,6 +318,7 @@ bool TROPUSRLoader::UnlockTrophy(u32 id, u64 timestamp1, u64 timestamp2)
 {
 	if (id >= m_table6.size())
 	{
+		LOG_WARNING(LOADER, "TROPUSRLoader::UnlockTrophy: Invalid id=%d", id);
 		return false;
 	}
 
