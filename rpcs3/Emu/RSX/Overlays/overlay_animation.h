@@ -1,67 +1,10 @@
 #pragma once
 #include "Utilities/types.h"
 #include "Utilities/geometry.h"
+#include "overlay_utils.h"
 
 namespace rsx
 {
-    template<typename T>
-    struct vector3_base : public position3_base<T>
-    {
-        using position3_base<T>::position3_base;
-
-        vector3_base<T>(T x, T y, T z)
-        {
-            this->x = x;
-            this->y = y;
-            this->z = z;
-        }
-
-        vector3_base<T>(const position3_base<T>& other)
-        {
-            this->x = other.x;
-            this->y = other.y;
-            this->z = other.z;
-        }
-
-        vector3_base<T> operator * (const vector3_base<T>& rhs) const
-        {
-            return { this->x * rhs.x, this->y * rhs.y, this->z * rhs.z };
-        }
-
-        vector3_base<T> operator * (T rhs) const
-        {
-            return { this->x * rhs, this->y * rhs, this->z * rhs };
-        }
-
-         void operator *= (const vector3_base<T>& rhs)
-        {
-            this->x *= rhs.x;
-            this->y *= rhs.y;
-            this->z *= rhs.z;
-        }
-
-        void operator *= (T rhs)
-        {
-            this->x *= rhs;
-            this->y *= rhs;
-            this->z *= rhs;
-        }
-
-        T dot(const vector3_base<T>& rhs) const
-        {
-            return (this->x * rhs.x) + (this->y * rhs.y) + (this->z * rhs.z);
-        }
-
-        T distance(const vector3_base<T>& rhs) const
-        {
-            const vector3_base<T> d = *this - rhs;
-            return d.dot(d);
-        }
-    };
-
-    using vector3i = vector3_base<int>;
-    using vector3f = vector3_base<float>;
-
     namespace overlays
     {
         struct compiled_resource;
