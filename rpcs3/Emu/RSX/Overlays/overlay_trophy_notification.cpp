@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "overlays.h"
+#include "Emu/RSX/RSXThread.h"
 
 namespace rsx
 {
@@ -46,10 +47,10 @@ namespace rsx
 			text_view.align_text(overlay_element::text_align::center);
 			text_view.back_color.a = 0.f;
 
-			sliding_animation.direction = { 1, 0, 0 };
-			sliding_animation.speed = 10;
-			sliding_animation.progress = { -int(frame.w), 0, 0 };
-			sliding_animation.progress_limit = { 0, 0, 0};
+			sliding_animation.duration = 1.5;
+			sliding_animation.type = animation_type::ease_in_out_cubic;
+			sliding_animation.current = { -f32(frame.w), 0, 0 };
+			sliding_animation.end = { 0, 0, 0};
 			sliding_animation.active = true;
 		}
 
@@ -73,8 +74,7 @@ namespace rsx
 			{
 				if (!sliding_animation.active)
 				{
-					sliding_animation.direction.x = -1;
-					sliding_animation.progress_limit = { -int(frame.w), 0, 0 };
+					sliding_animation.end = { -f32(frame.w), 0, 0 };
 					sliding_animation.on_finish = [this]
 					{
 						s_trophy_semaphore.release();
@@ -87,7 +87,7 @@ namespace rsx
 
 			if (sliding_animation.active)
 			{
-				sliding_animation.update(t);
+				sliding_animation.update(rsx::get_current_renderer()->vblank_count);
 			}
 		}
 
