@@ -964,11 +964,11 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 	return open_exit_dialog(errorMsg, type > CELL_GAME_ERRDIALOG_NOSPACE);
 }
 
-s32 cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileName, u32 option)
+error_code cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileName, u32 option)
 {
 	cellGame.todo("cellGameThemeInstall(usrdirPath=%s, fileName=%s, option=0x%x)", usrdirPath, fileName, option);
 
-	if (!fileName || !usrdirPath || !memchr(usrdirPath.get_ptr(), '\0', CELL_GAME_PATH_MAX))
+	if (!usrdirPath || !fileName || !memchr(usrdirPath.get_ptr(), '\0', CELL_GAME_PATH_MAX) || option > CELL_GAME_THEME_OPTION_APPLY)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
@@ -979,6 +979,11 @@ s32 cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileName, u32
 error_code cellGameThemeInstallFromBuffer(u32 fileSize, u32 bufSize, vm::ptr<void> buf, vm::ptr<CellGameThemeInstallCallback> func, u32 option)
 {
 	cellGame.todo("cellGameThemeInstallFromBuffer(fileSize=%d, bufSize=%d, buf=*0x%x, func=*0x%x, option=0x%x)", fileSize, bufSize, buf, func, option);
+
+	if (!buf || !fileSize || (fileSize > bufSize && !func) || bufSize <= 4095 || option > CELL_GAME_THEME_OPTION_APPLY)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
 
 	return CELL_OK;
 }
