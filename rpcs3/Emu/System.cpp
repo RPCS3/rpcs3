@@ -157,7 +157,6 @@ void fmt_class_string<video_aspect>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case video_aspect::_auto: return "Auto";
 		case video_aspect::_4_3: return "4:3";
 		case video_aspect::_16_9: return "16:9";
 		}
