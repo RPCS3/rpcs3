@@ -533,7 +533,22 @@ public:
 	u32 mfc_size = 0;
 	u32 mfc_barrier = -1;
 	u32 mfc_fence = -1;
+
+	// MFC proxy command data
+	spu_mfc_cmd mfc_prxy_cmd;
+	shared_mutex mfc_prxy_mtx;
 	atomic_t<u32> mfc_prxy_mask;
+
+	// Tracks writes to MFC proxy command data
+	union
+	{
+		u8 all;
+		bf_t<u8, 0, 1> lsa;
+		bf_t<u8, 1, 1> eal;
+		bf_t<u8, 2, 1> eah;
+		bf_t<u8, 3, 1> tag_size;
+		bf_t<u8, 4, 1> cmd;
+	} mfc_prxy_write_state{};
 
 	// Reservation Data
 	u64 rtime = 0;

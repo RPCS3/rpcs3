@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -8,8 +8,23 @@
 
 #include <atomic>
 
-// Originally, SPU MFC registers are accessed externally in a concurrent manner (don't mix with channels, SPU MFC channels are isolated)
-thread_local spu_mfc_cmd g_tls_mfc[8] = {};
+inline void try_start(spu_thread& spu)
+{
+	if (spu.status.fetch_op([](u32& status)
+	{
+		if (status & SPU_STATUS_RUNNING)
+		{
+			return false;
+		}
+
+		status = SPU_STATUS_RUNNING;
+		return true;
+	}).second)
+	{
+		spu.state -= cpu_flag::stop;
+		thread_ctrl::notify(static_cast<named_thread<spu_thread>&>(spu));
+	}
+};
 
 bool spu_thread::read_reg(const u32 addr, u32& value)
 {
@@ -19,8 +34,76 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 	{
 	case MFC_CMDStatus_offs:
 	{
-		value = g_tls_mfc[index].cmd;
-		return true;
+		spu_mfc_cmd cmd;
+
+		// All arguments must be written for all command types, even for sync barriers
+		if (std::scoped_lock lock(mfc_prxy_mtx); mfc_prxy_write_state.all == 0x1f)
+		{
+			cmd = mfc_prxy_cmd;
+			mfc_prxy_write_state.all = 0;
+		}
+		else
+		{
+			value = MFC_PPU_DMA_CMD_SEQUENCE_ERROR;
+			return true;
+		}
+
+		switch (cmd.cmd)
+		{
+		case MFC_SNDSIG_CMD:
+		case MFC_SNDSIGB_CMD:
+		case MFC_SNDSIGF_CMD:
+		{
+			if (cmd.size != 4)
+			{
+				// Invalid for MFC but may be different for MFC proxy (TODO)
+				break;
+			}
+
+			[[fallthrough]];
+		}
+		case MFC_PUT_CMD:
+		case MFC_PUTB_CMD:
+		case MFC_PUTF_CMD:
+		case MFC_PUTS_CMD:
+		case MFC_PUTBS_CMD:
+		case MFC_PUTFS_CMD:
+		case MFC_PUTR_CMD:
+		case MFC_PUTRF_CMD:
+		case MFC_PUTRB_CMD:
+		case MFC_GET_CMD:
+		case MFC_GETB_CMD:
+		case MFC_GETF_CMD:
+		case MFC_GETS_CMD:
+		case MFC_GETBS_CMD:
+		case MFC_GETFS_CMD:
+		{
+			if (cmd.size)
+			{
+				// Perform transfer immediately
+				do_dma_transfer(cmd);
+			}
+
+			if (cmd.cmd & MFC_START_MASK)
+			{
+				try_start(*this);
+			}
+
+			value = MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
+			return true;
+		}
+		case MFC_BARRIER_CMD:
+		case MFC_EIEIO_CMD:
+		case MFC_SYNC_CMD:
+		{
+			std::atomic_thread_fence(std::memory_order_seq_cst);
+			value = MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
+			return true;
+		}
+		default: break;
+		}
+
+		break;
 	}
 
 	case MFC_QStatus_offs:
@@ -73,24 +156,6 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 
 bool spu_thread::write_reg(const u32 addr, const u32 value)
 {
-	auto try_start = [this]()
-	{
-		if (status.atomic_op([](u32& status)
-		{
-			if (status & SPU_STATUS_RUNNING)
-			{
-				return false;
-			}
-
-			status = SPU_STATUS_RUNNING;
-			return true;
-		}))
-		{
-			state -= cpu_flag::stop;
-			thread_ctrl::notify(static_cast<named_thread<spu_thread>&>(*this));
-		}
-	};
-
 	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
 
 	switch (offset)
@@ -102,85 +167,43 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 			break;
 		}
 
-		g_tls_mfc[index].lsa = value;
+		std::lock_guard lock(mfc_prxy_mtx);
+		mfc_prxy_cmd.lsa = value;
+		mfc_prxy_write_state.lsa = true;
 		return true;
 	}
 
 	case MFC_EAH_offs:
 	{
-		g_tls_mfc[index].eah = value;
+		std::lock_guard lock(mfc_prxy_mtx);
+		mfc_prxy_cmd.eah = value;
+		mfc_prxy_write_state.eah = true;
 		return true;
 	}
 
 	case MFC_EAL_offs:
 	{
-		g_tls_mfc[index].eal = value;
+		std::lock_guard lock(mfc_prxy_mtx);
+		mfc_prxy_cmd.eal = value;
+		mfc_prxy_write_state.eal = true;
 		return true;
 	}
 
 	case MFC_Size_Tag_offs:
 	{
-		g_tls_mfc[index].tag = value & 0x1f;
-		g_tls_mfc[index].size = (value >> 16) & 0x7fff;
+		std::lock_guard lock(mfc_prxy_mtx);
+		mfc_prxy_cmd.tag = value & 0x1f;
+		mfc_prxy_cmd.size = (value >> 16) & 0x7fff;
+		mfc_prxy_write_state.tag_size = true;
 		return true;
 	}
 
 	case MFC_Class_CMD_offs:
 	{
-		g_tls_mfc[index].cmd = MFC(value & 0xff);
-
-		switch (value & 0xff)
-		{
-		case MFC_SNDSIG_CMD:
-		case MFC_SNDSIGB_CMD:
-		case MFC_SNDSIGF_CMD:
-		{
-			g_tls_mfc[index].size = 4;
-			// Fallthrough
-		}
-		case MFC_PUT_CMD:
-		case MFC_PUTB_CMD:
-		case MFC_PUTF_CMD:
-		case MFC_PUTS_CMD:
-		case MFC_PUTBS_CMD:
-		case MFC_PUTFS_CMD:
-		case MFC_PUTR_CMD:
-		case MFC_PUTRB_CMD:
-		case MFC_PUTRF_CMD:
-		case MFC_GET_CMD:
-		case MFC_GETB_CMD:
-		case MFC_GETF_CMD:
-		case MFC_GETS_CMD:
-		case MFC_GETBS_CMD:
-		case MFC_GETFS_CMD:
-		{
-			if (g_tls_mfc[index].size)
-			{
-				// Perform transfer immediately
-				do_dma_transfer(g_tls_mfc[index]);
-			}
-
-			// .cmd should be zero, which is equal to MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL
-			g_tls_mfc[index] = {};
-
-			if (value & MFC_START_MASK)
-			{
-				try_start();
-			}
-
-			return true;
-		}
-		case MFC_BARRIER_CMD:
-		case MFC_EIEIO_CMD:
-		case MFC_SYNC_CMD:
-		{
-			g_tls_mfc[index] = {};
-			std::atomic_thread_fence(std::memory_order_seq_cst);
-			return true;
-		}
-		}
-
-		break;
+		std::lock_guard lock(mfc_prxy_mtx);
+		mfc_prxy_cmd.cmd = MFC(value & 0xff);
+		mfc_prxy_write_state.cmd = true;
+		return true;
 	}
 
 	case Prxy_QueryType_offs:
@@ -219,7 +242,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 	{
 		if (value == SPU_RUNCNTL_RUN_REQUEST)
 		{
-			try_start();
+			try_start(*this);
 		}
 		else if (value == SPU_RUNCNTL_STOP_REQUEST)
 		{

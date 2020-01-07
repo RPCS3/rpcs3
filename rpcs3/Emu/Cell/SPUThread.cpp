@@ -1040,7 +1040,6 @@ void spu_thread::cpu_init()
 	mfc_fence = 0;
 	ch_tag_upd = 0;
 	ch_tag_mask = 0;
-	mfc_prxy_mask = 0;
 	ch_tag_stat.data.raw() = {};
 	ch_stall_mask = 0;
 	ch_stall_stat.data.raw() = {};
@@ -1064,6 +1063,9 @@ void spu_thread::cpu_init()
 		ch_snr2.data.raw() = {};
 
 		snr_config = 0;
+
+		mfc_prxy_mask.raw() = 0;
+		mfc_prxy_write_state = {};
 	}
 
 	run_ctrl.raw() = 0;
