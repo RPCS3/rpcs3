@@ -1792,12 +1792,7 @@ error_code sys_fs_lsn_lock(ppu_thread& ppu, u32 fd)
 		return CELL_EBADF;
 	}
 
-	// TODO: research correct implementation
-	if (!file->lock.compare_and_swap_test(0, 1))
-	{
-		return CELL_EBUSY;
-	}
-
+	// TODO: seems to do nothing
 	return CELL_OK;
 }
 
@@ -1812,12 +1807,7 @@ error_code sys_fs_lsn_unlock(ppu_thread& ppu, u32 fd)
 		return CELL_EBADF;
 	}
 
-	// TODO: research correct implementation
-	if (!file->lock.compare_and_swap_test(1, 0))
-	{
-		return CELL_EPERM;
-	}
-
+	// TODO: seems to do nothing
 	return CELL_OK;
 }
 
