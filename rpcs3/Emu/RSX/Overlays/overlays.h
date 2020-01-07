@@ -394,6 +394,9 @@ namespace rsx
 
 			std::vector<cell> m_grid;
 
+			// Fade in/out
+			animation_color_interpolate fade_animation;
+
 			bool m_visible = false;
 			bool m_update = true;
 			compiled_resource m_cached_resource;
@@ -408,6 +411,7 @@ namespace rsx
 			void Close(bool ok) override;
 
 			void initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::string& title, const std::string& initial_text);
+			void update() override;
 
 			void on_button_pressed(pad_button button_press) override;
 			void on_text_changed();
