@@ -740,15 +740,39 @@ namespace gl
 			fs_src =
 				"#version 420\n\n"
 				"layout(binding=31) uniform sampler2D fs0;\n"
+				"layout(binding=30) uniform sampler2D fs1;\n"
 				"layout(location=0) in vec2 tc0;\n"
 				"layout(location=0) out vec4 ocol;\n"
 				"\n"
 				"uniform float gamma;\n"
 				"uniform int limit_range;\n"
+				"uniform int stereo;\n"
+				"uniform int stereo_image_count;\n"
+				"\n"
+				"vec4 read_source()\n"
+				"{\n"
+				"	if (stereo == 0) return texture(fs0, tc0);\n"
+				"\n"
+				"	vec4 left, right;\n"
+				"	if (stereo_image_count == 2)\n"
+				"	{\n"
+				"		left = texture(fs0, tc0);\n"
+				"		right = texture(fs1, tc0);\n"
+				"	}\n"
+				"	else\n"
+				"	{\n"
+				"		vec2 coord_left = tc0 * vec2(1.f, 0.4898f);\n"
+				"		vec2 coord_right = coord_left + vec2(0.f, 0.510204f);\n"
+				"		left = texture(fs0, coord_left);\n"
+				"		right = texture(fs0, coord_right);\n"
+				"	}\n"
+				"\n"
+				"	return vec4(left.r, right.g, right.b, 1.);\n"
+				"}\n"
 				"\n"
 				"void main()\n"
 				"{\n"
-				"	vec4 color = texture(fs0, tc0);\n"
+				"	vec4 color = read_source();\n"
 				"	color.rgb = pow(color.rgb, vec3(gamma));\n"
 				"	if (limit_range > 0)\n"
 				"		ocol = ((color * 220.) + 16.) / 255.;\n"
@@ -759,13 +783,19 @@ namespace gl
 			input_filter = GL_LINEAR;
 		}
 
-		void run(const areau& viewport, GLuint source, f32 gamma, bool limited_rgb)
+		void run(const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d)
 		{
 			program_handle.uniforms["gamma"] = gamma;
 			program_handle.uniforms["limit_range"] = limited_rgb + 0;
+			program_handle.uniforms["stereo"] = _3d + 0;
+			program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
 
 			saved_sampler_state saved(31, m_sampler);
-			glBindTexture(GL_TEXTURE_2D, source);
+			glBindTexture(GL_TEXTURE_2D, source[0]);
+
+			saved_sampler_state saved2(30, m_sampler);
+			glBindTexture(GL_TEXTURE_2D, source[1]);
+
 			overlay_pass::run(viewport, GL_NONE, false, false);
 		}
 	};

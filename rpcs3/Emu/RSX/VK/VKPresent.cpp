@@ -431,7 +431,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	// Scan memory for required data. This is done early to optimize waiting for the driver image acquire below.
-	vk::image* image_to_flip = nullptr;
+	vk::image *image_to_flip = nullptr, *image_to_flip2 = nullptr;
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		vk::present_surface_info present_info;
@@ -442,6 +442,27 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL, HERE);
 
 		image_to_flip = get_present_source(&present_info, avconfig);
+
+		if (avconfig->_3d) [[unlikely]]
+		{
+			const auto min_expected_height = rsx::apply_resolution_scale(buffer_height + 30, true);
+			if (image_to_flip->height() < min_expected_height)
+			{
+				// Get image for second eye
+				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffers[info.buffer].offset;
+				present_info.width = buffer_width;
+				present_info.height = buffer_height;
+				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL, HERE);
+
+				image_to_flip2 = get_present_source(&present_info, avconfig);
+			}
+			else
+			{
+				// Account for possible insets
+				buffer_height = std::min<u32>(image_to_flip->height() - min_expected_height, rsx::apply_resolution_scale(buffer_height, true));
+			}
+		}
+
 		buffer_width = present_info.width;
 		buffer_height = present_info.height;
 	}
@@ -526,7 +547,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	VkRenderPass single_target_pass = VK_NULL_HANDLE;
 	vk::framebuffer_holder* direct_fbo = nullptr;
-	vk::viewable_image* calibration_src = nullptr;
+	rsx::simple_array<vk::viewable_image*> calibration_src;
 
 	if (!image_to_flip || aspect_ratio.width < csize.width || aspect_ratio.height < csize.height)
 	{
@@ -540,13 +561,19 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (image_to_flip)
 	{
-		if (!g_cfg.video.full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f)) [[unlikely]]
+		if (!g_cfg.video.full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f) || avconfig->_3d) [[unlikely]]
 		{
-			calibration_src = dynamic_cast<vk::viewable_image*>(image_to_flip);
-			verify("Image handle not viewable!" HERE), calibration_src;
+			calibration_src.push_back(dynamic_cast<vk::viewable_image*>(image_to_flip));
+			verify("Image not viewable" HERE), calibration_src.front();
+
+			if (image_to_flip2)
+			{
+				calibration_src.push_back(dynamic_cast<vk::viewable_image*>(image_to_flip2));
+				verify("Image not viewable" HERE), calibration_src.back();
+			}
 		}
 
-		if (!calibration_src) [[likely]]
+		if (calibration_src.empty()) [[likely]]
 		{
 			vk::copy_scaled_image(*m_current_command_buffer, image_to_flip->value, target_image, image_to_flip->current_layout, target_layout,
 				{ 0, 0, static_cast<s32>(buffer_width), static_cast<s32>(buffer_height) }, aspect_ratio, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);
@@ -564,7 +591,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			direct_fbo->add_ref();
 
 			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			m_video_output_pass->run(*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src, avconfig->gamma, !g_cfg.video.full_rgb_range_output, single_target_pass);
+			m_video_output_pass->run(*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src, avconfig->gamma, !g_cfg.video.full_rgb_range_output, avconfig->_3d, single_target_pass);
 			image_to_flip->pop_layout(*m_current_command_buffer);
 
 			direct_fbo->release();
