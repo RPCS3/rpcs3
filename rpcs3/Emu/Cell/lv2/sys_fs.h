@@ -381,7 +381,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> arg, u32 
 error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos);
 error_code sys_fs_fdatasync(ppu_thread& ppu, u32 fd);
 error_code sys_fs_fsync(ppu_thread& ppu, u32 fd);
-error_code sys_fs_fget_block_size(ppu_thread& ppu, u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<s32> arg5);
+error_code sys_fs_fget_block_size(ppu_thread& ppu, u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<s32> out_flags);
 error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4);
 error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size);
 error_code sys_fs_ftruncate(ppu_thread& ppu, u32 fd, u64 size);

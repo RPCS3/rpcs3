@@ -1507,9 +1507,9 @@ error_code sys_fs_fsync(ppu_thread& ppu, u32 fd)
 	return CELL_OK;
 }
 
-error_code sys_fs_fget_block_size(ppu_thread& ppu, u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<s32> arg5)
+error_code sys_fs_fget_block_size(ppu_thread& ppu, u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<s32> out_flags)
 {
-	sys_fs.warning("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", fd, sector_size, block_size, arg4, arg5);
+	sys_fs.warning("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, out_flags=*0x%x)", fd, sector_size, block_size, arg4, out_flags);
 
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
@@ -1522,7 +1522,7 @@ error_code sys_fs_fget_block_size(ppu_thread& ppu, u32 fd, vm::ptr<u64> sector_s
 	*sector_size = 4096;
 	*block_size = 4096;
 	*arg4 = 0;
-	*arg5 = file->mode;
+	*out_flags = file->flags;
 
 	return CELL_OK;
 }
