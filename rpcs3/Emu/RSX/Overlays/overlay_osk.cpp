@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "overlays.h"
+#include "Emu/RSX/RSXThread.h"
 
 namespace rsx
 {
@@ -7,16 +8,25 @@ namespace rsx
 	{
 		void osk_dialog::Close(bool ok)
 		{
-			if (on_osk_close)
-			{
-				Emu.CallAfter([this, ok]()
-				{
-					on_osk_close(ok ? CELL_MSGDIALOG_BUTTON_OK : CELL_MSGDIALOG_BUTTON_ESCAPE);
-				});
-			}
+			fade_animation.current = color4f(1.f);
+			fade_animation.end = color4f(0.f);
+			fade_animation.duration = 0.5f;
 
-			m_visible = false;
-			close();
+			fade_animation.on_finish = [this, ok]
+			{
+				if (on_osk_close)
+				{
+					Emu.CallAfter([this, ok]()
+					{
+						on_osk_close(ok ? CELL_MSGDIALOG_BUTTON_OK : CELL_MSGDIALOG_BUTTON_ESCAPE);
+					});
+				}
+
+				m_visible = false;
+				close();
+			};
+
+			fade_animation.active = true;
 		}
 
 		void osk_dialog::initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::string& title, const std::string& initial_text)
@@ -171,6 +181,11 @@ namespace rsx
 			m_visible = true;
 			m_update = true;
 			exit = false;
+
+			fade_animation.current = color4f(0.f);
+			fade_animation.end = color4f(1.f);
+			fade_animation.duration = 0.5f;
+			fade_animation.active = true;
 
 			thread_ctrl::spawn("osk input thread", [this]
 			{
@@ -469,6 +484,15 @@ namespace rsx
 			}
 		}
 
+		void osk_dialog::update()
+		{
+			if (fade_animation.active)
+			{
+				fade_animation.update(rsx::get_current_renderer()->vblank_count);
+				m_update = true;
+			}
+		}
+
 		compiled_resource osk_dialog::get_compiled()
 		{
 			if (!m_visible)
@@ -565,6 +589,7 @@ namespace rsx
 				m_update = false;
 			}
 
+			fade_animation.apply(m_cached_resource);
 			return m_cached_resource;
 		}
 
