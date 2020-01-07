@@ -21,7 +21,7 @@ lv2_fs_mount_point g_mp_sys_dev_hdd0;
 lv2_fs_mount_point g_mp_sys_dev_hdd1{lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_usb{lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_bdvd{lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_app_home;
+lv2_fs_mount_point g_mp_sys_app_home{lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_host_root{lv2_mp_flag::no_uid_gid};
 
 bool verify_mself(u32 fd, fs::file const& mself_file)
