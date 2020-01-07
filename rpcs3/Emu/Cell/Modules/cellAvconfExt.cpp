@@ -300,6 +300,14 @@ error_code cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<f32> screenSize)
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 	}
 
+	if (g_cfg.video.enable_3d)
+	{
+		// Return Playstation 3D display value
+		// Some games call this function when 3D is enabled
+		*screenSize = 24.f;
+		return CELL_OK;
+	}
+
 	//	TODO: Use virtual screen size
 #ifdef _WIN32
 	//	HDC screen = GetDC(NULL);
