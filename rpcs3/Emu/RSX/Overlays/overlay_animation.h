@@ -19,8 +19,23 @@ namespace rsx
 
         struct animation_base
         {
+        protected:
+            u64 frame_start = 0;
+            u64 frame_end = 0;
+
+            void begin_animation(u64 frame);
+            f32 get_progress_ratio(u64 frame) const;
+
+            template<typename T>
+            T lerp(const T& a, const T& b, f32 t) const
+            {
+                return (a * (1.f - t)) + (b * t);
+            }
+
+        public:
             bool active = false;
             animation_type type { animation_type::linear };
+            f32 duration = 1.f; // in seconds
 
             std::function<void()> on_finish;
 
@@ -34,12 +49,23 @@ namespace rsx
             vector3f start{}; // Set `current` instead of this
                               // NOTE: Necessary because update() is called after rendering,
                               //       resulting in one frame of incorrect translation
-            u64 frame_start = 0;
-            u64 frame_end = 0;
         public:
             vector3f current{};
             vector3f end{};
-            f32 duration{}; // in seconds
+
+            void apply(compiled_resource& data) override;
+            void update(u64 frame) override;
+            void finish();
+        };
+
+        struct animation_color_interpolate : animation_translate
+        {
+        private:
+            color4f start{};
+
+        public:
+            color4f current{};
+            color4f end{};
 
             void apply(compiled_resource& data) override;
             void update(u64 frame) override;
