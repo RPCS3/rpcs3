@@ -116,7 +116,7 @@ private:
 	void CreateDockWindows();
 	void EnableMenus(bool enabled);
 	void ShowTitleBars(bool show);
-	bool InstallPkg(QString filePath = "", bool show_confirm = true, bool show_success = true);
+	void InstallPackages(QStringList file_paths = QStringList(), bool show_confirm = true);
 	void InstallPup(QString filePath = "");
 
 	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
