@@ -12,17 +12,19 @@ LOG_CHANNEL(sys_fs);
 
 struct lv2_fs_mount_point
 {
+	const u64 sector_size = 512;
+	const u64 block_size = 4096;
 	const bs_t<lv2_mp_flag> flags{};
 
 	shared_mutex mutex;
 };
 
 lv2_fs_mount_point g_mp_sys_dev_hdd0;
-lv2_fs_mount_point g_mp_sys_dev_hdd1{lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_dev_usb{lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_dev_bdvd{lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_app_home{lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_host_root{lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_hdd1{512, 4096, lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_usb{512, 4096, lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_bdvd{2048, 2048, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_app_home{512, 512, lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_host_root{512, 512, lv2_mp_flag::no_uid_gid};
 
 bool verify_mself(u32 fd, fs::file const& mself_file)
 {
@@ -767,7 +769,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime;
 	sb->size = info.size;
-	sb->blksize = 4096; // ???
+	sb->blksize = mp->block_size;
 
 	return CELL_OK;
 }
@@ -801,7 +803,7 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime; // ctime may be incorrect
 	sb->size = info.size;
-	sb->blksize = 4096; // ???
+	sb->blksize = file->mp->block_size;
 
 	return CELL_OK;
 }
@@ -1172,6 +1174,8 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		const std::string_view device_path = vpath.substr(0, vpath.find_first_of('/', non_slash));
 		const std::string local_path = vfs::get(device_path);
 
+		const auto mp = lv2_fs_object::get_mp(vpath);
+
 		if (local_path.empty())
 		{
 			return {CELL_ENOTMOUNTED, vpath};
@@ -1190,8 +1194,8 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		}
 
 		arg->out_code = CELL_OK;
-		arg->out_block_size = 4096;
-		arg->out_block_count = info.avail_free / 4096;
+		arg->out_block_size = mp->block_size;
+		arg->out_block_count = info.avail_free / mp->block_size;
 		return CELL_OK;
 	}
 
@@ -1354,7 +1358,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 				entry.attribute.mtime = info->mtime;
 				entry.attribute.ctime = info->ctime;
 				entry.attribute.size = info->size;
-				entry.attribute.blksize = 4096; // ???
+				entry.attribute.blksize = directory->mp->block_size;
 
 				entry.entry_name.d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
 				entry.entry_name.d_namlen = u8(std::min<size_t>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
@@ -1519,9 +1523,9 @@ error_code sys_fs_fget_block_size(ppu_thread& ppu, u32 fd, vm::ptr<u64> sector_s
 	}
 
 	// TODO
-	*sector_size = 4096;
-	*block_size = 4096;
-	*arg4 = 0;
+	*sector_size = file->mp->sector_size;
+	*block_size = file->mp->block_size;
+	*arg4 = file->mp->sector_size;
 	*out_flags = file->flags;
 
 	return CELL_OK;
@@ -1531,10 +1535,42 @@ error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u
 {
 	sys_fs.warning("sys_fs_get_block_size(path=%s, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", path, sector_size, block_size, arg4);
 
+	if (!path)
+		return CELL_EFAULT;
+
+	if (!path[0])
+		return CELL_ENOENT;
+
+	const std::string_view vpath = path.get_ptr();
+	const std::string local_path = vfs::get(vpath);
+
+	if (vpath.find_first_not_of('/') == -1)
+	{
+		return {CELL_EISDIR, path};
+	}
+
+	if (local_path.empty())
+	{
+		return {CELL_ENOTMOUNTED, path};
+	}
+
+	const auto mp = lv2_fs_object::get_mp(vpath);
+
+	if (!fs::is_file(local_path))
+	{
+		switch (auto error = fs::g_tls_error)
+		{
+		case fs::error::noent: return {CELL_ENOENT, path};
+		default: sys_fs.error("sys_fs_get_block_size(): unknown error %s", error);
+		}
+
+		return {CELL_EIO, path}; // ???
+	}
+
 	// TODO
-	*sector_size = 4096;
-	*block_size = 4096;
-	*arg4 = 0;
+	*sector_size = mp->sector_size;
+	*block_size = mp->block_size;
+	*arg4 = mp->sector_size;
 
 	return CELL_OK;
 }
