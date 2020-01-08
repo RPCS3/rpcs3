@@ -238,7 +238,8 @@ namespace
 {
 	std::tuple<VkPipelineLayout, VkDescriptorSetLayout> get_shared_pipeline_layout(VkDevice dev)
 	{
-		std::array<VkDescriptorSetLayoutBinding, VK_NUM_DESCRIPTOR_BINDINGS> bindings = {};
+		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
+		std::vector<VkDescriptorSetLayoutBinding> bindings(binding_table.total_descriptor_bindings);
 
 		size_t idx = 0;
 
@@ -248,58 +249,60 @@ namespace
 			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
 			bindings[idx].descriptorCount = 1;
 			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			bindings[idx].binding = VERTEX_BUFFERS_FIRST_BIND_SLOT + i;
+			bindings[idx].binding = binding_table.vertex_buffers_first_bind_slot + i;
 			idx++;
 		}
 
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT;
+		bindings[idx].binding = binding_table.fragment_constant_buffers_bind_slot;
 
 		idx++;
 
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = FRAGMENT_STATE_BIND_SLOT;
+		bindings[idx].binding = binding_table.fragment_state_bind_slot;
 
 		idx++;
 
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = FRAGMENT_TEXTURE_PARAMS_BIND_SLOT;
+		bindings[idx].binding = binding_table.fragment_texture_params_bind_slot;
 
 		idx++;
 
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = VERTEX_CONSTANT_BUFFERS_BIND_SLOT;
+		bindings[idx].binding = binding_table.vertex_constant_buffers_bind_slot;
 
 		idx++;
 
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
-		bindings[idx].binding = VERTEX_PARAMS_BIND_SLOT;
+		bindings[idx].binding = binding_table.vertex_params_bind_slot;
 
 		idx++;
 
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = CONDITIONAL_RENDER_PREDICATE_SLOT;
+		bindings[idx].binding = binding_table.conditional_render_predicate_slot;
 
 		idx++;
 
-		for (int i = 0; i < rsx::limits::fragment_textures_count; i++)
+		for (auto binding = binding_table.textures_first_bind_slot;
+			 binding < binding_table.vertex_textures_first_bind_slot;
+			 binding++)
 		{
 			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			bindings[idx].descriptorCount = 1;
 			bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			bindings[idx].binding = TEXTURES_FIRST_BIND_SLOT + i;
+			bindings[idx].binding = binding;
 			idx++;
 		}
 
@@ -308,11 +311,11 @@ namespace
 			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			bindings[idx].descriptorCount = 1;
 			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			bindings[idx].binding = VERTEX_TEXTURES_FIRST_BIND_SLOT + i;
+			bindings[idx].binding = binding_table.vertex_textures_first_bind_slot + i;
 			idx++;
 		}
 
-		verify(HERE), idx == VK_NUM_DESCRIPTOR_BINDINGS;
+		verify(HERE), idx == binding_table.total_descriptor_bindings;
 
 		std::array<VkPushConstantRange, 1> push_constants;
 		push_constants[0].offset = 0;
@@ -1105,6 +1108,8 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	auto volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
 	bool update_descriptors = false;
 
+	const auto& binding_table = m_device->get_pipeline_binding_table();
+
 	if (sub_index == 0)
 	{
 		update_descriptors = true;
@@ -1128,9 +1133,9 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	{
 		// Need to update descriptors; make a copy for the next draw
 		VkDescriptorSet new_descriptor_set = allocate_descriptor_set();
-		std::array<VkCopyDescriptorSet, VK_NUM_DESCRIPTOR_BINDINGS> copy_set;
+		std::vector<VkCopyDescriptorSet> copy_set(binding_table.total_descriptor_bindings);
 
-		for (u32 n = 0; n < VK_NUM_DESCRIPTOR_BINDINGS; ++n)
+		for (u32 n = 0; n < binding_table.total_descriptor_bindings; ++n)
 		{
 			copy_set[n] =
 			{
@@ -1146,7 +1151,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 			};
 		}
 
-		vkUpdateDescriptorSets(*m_device, 0, 0, VK_NUM_DESCRIPTOR_BINDINGS, copy_set.data());
+		vkUpdateDescriptorSets(*m_device, 0, 0, binding_table.total_descriptor_bindings, copy_set.data());
 		m_current_frame->descriptor_set = new_descriptor_set;
 
 		update_descriptors = true;
@@ -1158,9 +1163,9 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	verify(HERE), m_vertex_layout_storage;
 	if (update_descriptors)
 	{
-		m_program->bind_uniform(persistent_buffer, VERTEX_BUFFERS_FIRST_BIND_SLOT, m_current_frame->descriptor_set);
-		m_program->bind_uniform(volatile_buffer, VERTEX_BUFFERS_FIRST_BIND_SLOT + 1, m_current_frame->descriptor_set);
-		m_program->bind_uniform(m_vertex_layout_storage->value, VERTEX_BUFFERS_FIRST_BIND_SLOT + 2, m_current_frame->descriptor_set);
+		m_program->bind_uniform(persistent_buffer, binding_table.vertex_buffers_first_bind_slot, m_current_frame->descriptor_set);
+		m_program->bind_uniform(volatile_buffer, binding_table.vertex_buffers_first_bind_slot + 1, m_current_frame->descriptor_set);
+		m_program->bind_uniform(m_vertex_layout_storage->value, binding_table.vertex_buffers_first_bind_slot + 2, m_current_frame->descriptor_set);
 	}
 
 	if (!m_render_pass_open)
@@ -2750,19 +2755,18 @@ void VKGSRender::load_program_env()
 		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 256 };
 	}
 
-	//if (1)
-	{
-		m_program->bind_uniform(m_vertex_env_buffer_info, VERTEX_PARAMS_BIND_SLOT, m_current_frame->descriptor_set);
-		m_program->bind_uniform(m_vertex_constants_buffer_info, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
-		m_program->bind_uniform(m_fragment_constants_buffer_info, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
-		m_program->bind_uniform(m_fragment_env_buffer_info, FRAGMENT_STATE_BIND_SLOT, m_current_frame->descriptor_set);
-		m_program->bind_uniform(m_fragment_texture_params_buffer_info, FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, m_current_frame->descriptor_set);
-	}
+	const auto& binding_table = m_device->get_pipeline_binding_table();
+
+	m_program->bind_uniform(m_vertex_env_buffer_info, binding_table.vertex_params_bind_slot, m_current_frame->descriptor_set);
+	m_program->bind_uniform(m_vertex_constants_buffer_info, binding_table.vertex_constant_buffers_bind_slot, m_current_frame->descriptor_set);
+	m_program->bind_uniform(m_fragment_constants_buffer_info, binding_table.fragment_constant_buffers_bind_slot, m_current_frame->descriptor_set);
+	m_program->bind_uniform(m_fragment_env_buffer_info, binding_table.fragment_state_bind_slot, m_current_frame->descriptor_set);
+	m_program->bind_uniform(m_fragment_texture_params_buffer_info, binding_table.fragment_texture_params_bind_slot, m_current_frame->descriptor_set);
 
 	if (vk::emulate_conditional_rendering())
 	{
 		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer()->value;
-		m_program->bind_buffer({ predicate, 0, 4 }, CONDITIONAL_RENDER_PREDICATE_SLOT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
+		m_program->bind_buffer({ predicate, 0, 4 }, binding_table.conditional_render_predicate_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
 	}
 
 	//Clear flags
