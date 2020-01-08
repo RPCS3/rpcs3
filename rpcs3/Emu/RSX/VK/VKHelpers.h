@@ -3004,14 +3004,14 @@ public:
 		std::deque<u32> available_slots;
 		std::vector<query_slot_info> query_slot_status;
 
-		inline bool poke_query(query_slot_info& query, u32 index)
+		inline bool poke_query(query_slot_info& query, u32 index, VkQueryResultFlags flags)
 		{
 			// Query is ready if:
 			// 1. Any sample has been determined to have passed the Z test
 			// 2. The backend has fully processed the query and found no hits
 
 			u32 result[2] = { 0, 0 };
-			switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_PARTIAL_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
+			switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, flags | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
 			{
 			case VK_SUCCESS:
 			{
@@ -3108,7 +3108,11 @@ public:
 
 		bool check_query_status(u32 index)
 		{
-			return poke_query(query_slot_status[index], index);
+			// NOTE: Keeps NVIDIA driver from using partial results as they are broken (always returns true)
+			const VkQueryResultFlags flags =
+				(vk::get_driver_vendor() == vk::driver_vendor::NVIDIA ? 0 : VK_QUERY_RESULT_PARTIAL_BIT);
+
+			return poke_query(query_slot_status[index], index, flags);
 		}
 
 		u32 get_query_result(u32 index)
@@ -3116,9 +3120,13 @@ public:
 			// Check for cached result
 			auto& query_info = query_slot_status[index];
 
+			// Wait for full result on NVIDIA to avoid getting garbage results
+			const VkQueryResultFlags flags =
+				(vk::get_driver_vendor() == vk::driver_vendor::NVIDIA ? VK_QUERY_RESULT_WAIT_BIT : VK_QUERY_RESULT_PARTIAL_BIT);
+
 			while (!query_info.ready)
 			{
-				poke_query(query_info, index);
+				poke_query(query_info, index, flags);
 			}
 
 			return query_info.any_passed ? 1 : 0;
