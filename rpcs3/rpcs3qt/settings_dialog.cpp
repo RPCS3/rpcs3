@@ -945,6 +945,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Sliders
 
+	EnhanceSlider(emu_settings::DriverWakeUpDelay, ui->wakeupDelay, ui->wakeupText, tr(u8"%0 µs"));
+	int wakeupDef = stoi(xemu_settings->GetSettingDefault(emu_settings::DriverWakeUpDelay));
+	connect(ui->wakeupReset, &QAbstractButton::clicked, [=]()
+	{
+		ui->wakeupDelay->setValue(wakeupDef);
+	});
+
 	EnhanceSlider(emu_settings::VBlankRate, ui->vblank, ui->vblankText, tr("%0 Hz"));
 	int vblankDef = stoi(xemu_settings->GetSettingDefault(emu_settings::VBlankRate));
 	connect(ui->vblankReset, &QAbstractButton::clicked, [=]()
