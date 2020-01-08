@@ -84,6 +84,7 @@ public:
 		MultithreadedRSX,
 		VBlankRate,
 		RelaxedZCULL,
+		DriverWakeUpDelay,
 
 		// Performance Overlay
 		PerfOverlayEnabled,
@@ -315,6 +316,7 @@ private:
 		{ MinimumScalableDimension,   { "Video", "Minimum Scalable Dimension"}},
 		{ VulkanAdapter,              { "Video", "Vulkan", "Adapter"}},
 		{ VBlankRate,                 { "Video", "Vblank Rate"}},
+		{ DriverWakeUpDelay,          { "Video", "Driver Wake-Up Delay"}},
 
 		// Performance Overlay
 		{ PerfOverlayEnabled,               { "Video", "Performance Overlay", "Enabled" } },
