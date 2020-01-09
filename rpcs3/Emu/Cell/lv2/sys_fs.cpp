@@ -65,7 +65,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 
 	if (mp_begin + 1)
 	{
-		const auto mp_name = filename.substr(mp_begin, filename.find_first_of('/', mp_begin));
+		const auto mp_name = filename.substr(mp_begin, filename.find_first_of('/', mp_begin) - mp_begin);
 
 		if (mp_name == "dev_hdd1"sv)
 			return &g_mp_sys_dev_hdd1;
@@ -1203,7 +1203,9 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000006>(_arg);
 
-		sys_fs.warning("0xc0000006: 0x%x, 0x%x, 0x%x, %s, 0x%x, 0x%x, 0x%x", arg->size, arg->_x4, arg->_x8, arg->name, arg->_x14, arg->_x18, arg->_x1c);
+		sys_fs.warning("0xc0000006: 0x%x, 0x%x, 0x%x, %s, 0x%x, 0x%x, 0x%x", arg->size, arg->_x4, arg->_x8, arg->name, arg->_x14, arg->code, arg->_x1c);
+
+		arg->code = CELL_ENOTSUP;
 		return CELL_OK;
 	}
 
@@ -1533,7 +1535,7 @@ error_code sys_fs_fget_block_size(ppu_thread& ppu, u32 fd, vm::ptr<u64> sector_s
 
 error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4)
 {
-	sys_fs.warning("sys_fs_get_block_size(path=%s, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", path, sector_size, block_size, arg4);
+	sys_fs.warning("sys_fs_get_block_size(path=%s, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x)", path, sector_size, block_size, arg4);
 
 	if (!path)
 		return CELL_EFAULT;
