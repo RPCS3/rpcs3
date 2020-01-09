@@ -1015,7 +1015,7 @@ struct SceNpEntitlementId
 };
 
 // Callback for getting the connection status
-using SceNpManagerCallback = void(s32 event, s32 result, u32 arg_addr);
+using SceNpManagerCallback = void(s32 event, s32 result, vm::ptr<void> arg_addr);
 
 // Score data unique to the application
 struct SceNpScoreGameInfo
@@ -1303,17 +1303,18 @@ using SceNpManagerSubSigninCallback = void(s32 result, vm::ptr<SceNpId> npId, vm
 
 struct sce_np_manager
 {
-	std::atomic<bool> is_initialized = false;
+	atomic_t<bool> is_initialized = false;
+	atomic_t<bool> callback_registered = false;
 };
 
 struct sce_np_lookup_manager
 {
-	std::atomic<bool> is_initialized = false;
+	atomic_t<bool> is_initialized = false;
 };
 
 struct sce_np_score_manager
 {
-	std::atomic<bool> is_initialized = false;
+	atomic_t<bool> is_initialized = false;
 };
 
 extern s32 g_psn_connection_status;

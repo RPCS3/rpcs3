@@ -419,6 +419,7 @@ error_code sceNpTerm()
 	}
 
 	manager->is_initialized = false;
+	manager->callback_registered = false;
 
 	return CELL_OK;
 }
@@ -2241,11 +2242,18 @@ error_code sceNpLookupTitleSmallStorageAsync(s32 transId, vm::ptr<void> data, u6
 	return CELL_OK;
 }
 
-error_code sceNpManagerRegisterCallback(vm::ptr<SceNpManagerCallback> callback, vm::ptr<void> arg)
+struct sce_np_manager_callback_registered
+{
+	atomic_t<bool> registered = false;
+};
+
+error_code sceNpManagerRegisterCallback(ppu_thread& ppu, vm::ptr<SceNpManagerCallback> callback, vm::ptr<void> arg)
 {
 	sceNp.todo("sceNpManagerRegisterCallback(callback=*0x%x, arg=*0x%x)", callback, arg);
 
-	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	const auto manager = g_fxo->get<sce_np_manager>();
+
+	if (!manager->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2255,6 +2263,17 @@ error_code sceNpManagerRegisterCallback(vm::ptr<SceNpManagerCallback> callback, 
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
 
+	// Use the first callback registered to send offline event
+	if (!manager->callback_registered.exchange(true))
+	{
+		sysutil_register_cb([=](ppu_thread& ppu) -> s32
+		{
+			// TODO: Test event value
+			callback(ppu, 0, SCE_NP_MANAGER_STATUS_OFFLINE, arg);
+			return CELL_OK;
+		});
+	}
+
 	return CELL_OK;
 }
 
@@ -2262,11 +2281,14 @@ error_code sceNpManagerUnregisterCallback()
 {
 	sceNp.todo("sceNpManagerUnregisterCallback()");
 
-	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	const auto manager = g_fxo->get<sce_np_manager>();
+
+	if (!manager->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
+	manager->callback_registered.release(false);
 	return CELL_OK;
 }
 
