@@ -1203,7 +1203,9 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000006>(_arg);
 
-		sys_fs.warning("0xc0000006: 0x%x, 0x%x, 0x%x, %s, 0x%x, 0x%x, 0x%x", arg->size, arg->_x4, arg->_x8, arg->name, arg->_x14, arg->_x18, arg->_x1c);
+		sys_fs.warning("0xc0000006: 0x%x, 0x%x, 0x%x, %s, 0x%x, 0x%x, 0x%x", arg->size, arg->_x4, arg->_x8, arg->name, arg->_x14, arg->code, arg->_x1c);
+
+		arg->code = CELL_ENOTSUP;
 		return CELL_OK;
 	}
 

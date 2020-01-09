@@ -339,7 +339,7 @@ struct lv2_file_c0000006 : lv2_file_op
 	be_t<u32> _xc;  // 0x9
 	vm::bcptr<char> name;
 	be_t<u32> _x14; // 0
-	be_t<u32> _x18; // 0x80010003
+	be_t<u32> code; // 0x80010003
 	be_t<u32> _x1c; // 0
 };
 
