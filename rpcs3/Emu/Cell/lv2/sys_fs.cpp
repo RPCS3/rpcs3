@@ -65,7 +65,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 
 	if (mp_begin + 1)
 	{
-		const auto mp_name = filename.substr(mp_begin, filename.find_first_of('/', mp_begin));
+		const auto mp_name = filename.substr(mp_begin, filename.find_first_of('/', mp_begin) - mp_begin);
 
 		if (mp_name == "dev_hdd1"sv)
 			return &g_mp_sys_dev_hdd1;
