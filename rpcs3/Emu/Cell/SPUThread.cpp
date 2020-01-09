@@ -2767,7 +2767,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{
-		state += cpu_flag::wait;
+		state += cpu_flag::stop + cpu_flag::wait;
 		status.atomic_op([code](u32& status)
 		{
 			status = (status & 0xffff) | (code << 16);
@@ -2776,7 +2776,6 @@ bool spu_thread::stop_and_signal(u32 code)
 		});
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
-		state += cpu_flag::stop;
 		check_state();
 		return true;
 	}
@@ -3120,6 +3119,8 @@ void spu_thread::halt()
 
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{
+		state += cpu_flag::stop + cpu_flag::wait;
+
 		status.atomic_op([](u32& status)
 		{
 			status |= SPU_STATUS_STOPPED_BY_HALT;
@@ -3128,7 +3129,6 @@ void spu_thread::halt()
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_HALT_OR_STEP_INT);
 
-		state += cpu_flag::stop;
 		spu_runtime::g_escape(this);
 	}
 
