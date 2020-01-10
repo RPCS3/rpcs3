@@ -1682,16 +1682,45 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 		return CELL_EINVAL;
 
 	const std::string_view vpath = path.get_ptr();
-	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == -1)
+	if (vpath == "/"sv)
 	{
-		return {CELL_EPERM, path};
+		return CELL_ENOTSUP;
 	}
+
+	// It seems max length is 31, and multiple / at the start aren't supported
+	if (vpath.size() > 31)
+	{
+		return {CELL_ENAMETOOLONG, path};
+	}
+
+	if (vpath.find_first_not_of('/') != 1)
+	{
+		return {CELL_EINVAL, path};
+	}
+
+	// Get only device path
+	const std::string local_path = vfs::get(vpath.substr(0, vpath.find_first_of('/', 1)));
 
 	if (local_path.empty())
 	{
-		return {CELL_ENOTMOUNTED, path};
+		return {CELL_EINVAL, path};
+	}
+
+	const auto mp = lv2_fs_object::get_mp(vpath);
+
+	if (mp->flags & lv2_mp_flag::strict_get_block_size)
+	{
+		// TODO:
+		return {CELL_ENOTSUP, path};
+	}
+
+	if (mp->flags & lv2_mp_flag::read_only)
+	{
+		// TODO: check /dev_bdvd
+		*total_free = 0;
+		*avail_free = 0;
+		return CELL_OK;
 	}
 
 	fs::device_stat info;
