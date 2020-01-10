@@ -23,8 +23,8 @@ lv2_fs_mount_point g_mp_sys_dev_hdd0;
 lv2_fs_mount_point g_mp_sys_dev_hdd1{512, 4096, lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_usb{512, 4096, lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_bdvd{2048, 2048, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_app_home{512, 512, lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_host_root{512, 512, lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_app_home{512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_host_root{512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
 
 bool verify_mself(u32 fd, fs::file const& mself_file)
 {
@@ -1558,10 +1558,12 @@ error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
 
-	if (!fs::is_file(local_path))
+	// It appears that /dev_hdd0 mount point is special in this function
+	if (mp != &g_mp_sys_dev_hdd0 && (mp->flags & lv2_mp_flag::strict_get_block_size ? !fs::is_file(local_path) : !fs::exists(local_path)))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::exist: return {CELL_EISDIR, path};
 		case fs::error::noent: return {CELL_ENOENT, path};
 		default: sys_fs.error("sys_fs_get_block_size(): unknown error %s", error);
 		}
