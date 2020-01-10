@@ -1162,38 +1162,15 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000002>(_arg);
 
-		const std::string_view vpath = arg->path.get_ptr();
-		const std::size_t non_slash = vpath.find_first_not_of('/');
-
-		if (non_slash == -1)
-		{
-			return {CELL_EPERM, vpath};
-		}
-
-		// Extract device from path
-		const std::string_view device_path = vpath.substr(0, vpath.find_first_of('/', non_slash));
-		const std::string local_path = vfs::get(device_path);
-
-		const auto mp = lv2_fs_object::get_mp(vpath);
-
-		if (local_path.empty())
-		{
-			return {CELL_ENOTMOUNTED, vpath};
-		}
+		const auto mp = lv2_fs_object::get_mp("/dev_hdd0");
 
 		fs::device_stat info;
-		if (!fs::statfs(local_path, info))
+		if (!fs::statfs(vfs::get("/dev_hdd0"), info))
 		{
-			switch (auto error = fs::g_tls_error)
-			{
-			case fs::error::noent: return {CELL_ENOENT, vpath};
-			default: sys_fs.error("sys_fs_fcntl(0xc0000002): unknown error %s", error);
-			}
-
+			sys_fs.error("sys_fs_fcntl(0xc0000002): unexpected error %s", fs::g_tls_error);
 			return CELL_EIO; // ???
 		}
 
-		arg->out_code = CELL_OK;
 		arg->out_block_size = mp->block_size;
 		arg->out_block_count = info.avail_free / mp->block_size;
 		return CELL_OK;
