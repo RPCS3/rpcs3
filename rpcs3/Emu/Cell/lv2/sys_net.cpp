@@ -1786,7 +1786,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 	sys_net_fd_set rexcept{};
 	u64 timeout = !_timeout ? 0 : _timeout->tv_sec * 1000000ull + _timeout->tv_usec;
 
-	if (nfds >= 0)
+	if (nfds > 0 && nfds <= 1024)
 	{
 		std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
 
