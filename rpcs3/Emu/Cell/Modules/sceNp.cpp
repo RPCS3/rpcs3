@@ -375,7 +375,7 @@ void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 	});
 }
 
-s32 g_psn_connection_status = SCE_NP_MANAGER_STATUS_ONLINE;
+s32 g_psn_connection_status = SCE_NP_MANAGER_STATUS_OFFLINE;
 
 error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 {
