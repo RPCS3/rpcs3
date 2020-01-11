@@ -22,7 +22,7 @@ struct lv2_fs_mount_point
 lv2_fs_mount_point g_mp_sys_dev_hdd0;
 lv2_fs_mount_point g_mp_sys_dev_hdd1{512, 32768, lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_usb{512, 4096, lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_dev_bdvd{2048, 2048, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_bdvd{2048, 65536, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_app_home{512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_host_root{512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
 
