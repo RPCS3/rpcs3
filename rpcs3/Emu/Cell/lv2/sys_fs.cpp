@@ -251,6 +251,14 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 	case CELL_FS_O_RDWR: open_mode += fs::read + fs::write; break;
 	}
 
+	if (mp->flags & lv2_mp_flag::read_only)
+	{
+		if (flags & CELL_FS_O_ACCMODE || flags & (CELL_FS_O_CREAT | CELL_FS_O_TRUNC))
+		{
+			return {CELL_EPERM, path};
+		}
+	}
+
 	if (flags & CELL_FS_O_CREAT)
 	{
 		open_mode += fs::create;
@@ -771,6 +779,12 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 	sb->size = info.size;
 	sb->blksize = mp->block_size;
 
+	if (mp->flags & lv2_mp_flag::read_only)
+	{
+		// Remove write permissions
+		sb->mode &= ~0222;
+	}
+
 	return CELL_OK;
 }
 
@@ -804,6 +818,12 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 	sb->ctime = info.ctime; // ctime may be incorrect
 	sb->size = info.size;
 	sb->blksize = file->mp->block_size;
+
+	if (file->mp->flags & lv2_mp_flag::read_only)
+	{
+		// Remove write permissions
+		sb->mode &= ~0222;
+	}
 
 	return CELL_OK;
 }
@@ -1338,6 +1358,12 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 				entry.attribute.ctime = info->ctime;
 				entry.attribute.size = info->size;
 				entry.attribute.blksize = directory->mp->block_size;
+
+				if (directory->mp->flags & lv2_mp_flag::read_only)
+				{
+					// Remove write permissions
+					entry.attribute.mode &= ~0222;
+				}
 
 				entry.entry_name.d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
 				entry.entry_name.d_namlen = u8(std::min<size_t>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
