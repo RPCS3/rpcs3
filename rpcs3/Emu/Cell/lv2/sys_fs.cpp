@@ -1838,7 +1838,13 @@ error_code sys_fs_lsn_lock(ppu_thread& ppu, u32 fd)
 		return CELL_EBADF;
 	}
 
-	// TODO: seems to do nothing
+	// TODO: seems to do nothing on /dev_hdd0 or /host_root
+	if (file->mp == &g_mp_sys_dev_hdd0 || file->mp->flags & lv2_mp_flag::strict_get_block_size)
+	{
+		return CELL_OK;
+	}
+
+	file->lock.compare_and_swap(0, 1);
 	return CELL_OK;
 }
 
@@ -1853,7 +1859,8 @@ error_code sys_fs_lsn_unlock(ppu_thread& ppu, u32 fd)
 		return CELL_EBADF;
 	}
 
-	// TODO: seems to do nothing
+	// Unlock unconditionally
+	file->lock.compare_and_swap(1, 0);
 	return CELL_OK;
 }
 
