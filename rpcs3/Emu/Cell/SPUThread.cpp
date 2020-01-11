@@ -1033,7 +1033,7 @@ std::string spu_thread::dump() const
 
 void spu_thread::cpu_init()
 {
-	gpr = {};
+	std::memset(gpr.data(), 0, gpr.size() * sizeof(gpr[0]));
 	fpscr.Reset();
 
 	ch_mfc_cmd = {};
