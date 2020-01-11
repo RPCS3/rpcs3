@@ -4,7 +4,7 @@ version: '{build}'
 image: Visual Studio 2019
 
 environment:
-  QTDIR: C:\Qt\5.13\msvc2017_64
+  QTDIR: C:\Qt\5.14\msvc2017_64
   QT_URL: https://cdn.discordapp.com/attachments/442667232489897997/614126952953020416/msvc2017_64.7z
   LLVMLIBS: https://github.com/RPCS3/llvm/releases/download/continuous-master/llvmlibs.7z
   GLSLANG: https://www.dropbox.com/s/6e8w6t5dxh3ad4l/glslang.7z?dl=1
