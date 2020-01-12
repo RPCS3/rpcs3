@@ -1,39 +1,12 @@
 ﻿#pragma once
 
+#include "settings.h"
 #include "Utilities/Log.h"
 
-#include <QSettings>
 #include <QDir>
 #include <QVariant>
 #include <QSize>
 #include <QColor>
-
-struct gui_save
-{
-	QString key;
-	QString name;
-	QVariant def;
-
-	gui_save()
-	{
-		key = "";
-		name = "";
-		def = QVariant();
-	}
-
-	gui_save(const QString& k, const QString& n, const QVariant& d)
-	{
-		key = k;
-		name = n;
-		def = d;
-	}
-};
-
-typedef std::map<std::string, const QString> q_from_char;
-typedef QPair<QString, QString> q_string_pair;
-typedef QPair<QString, QSize> q_size_pair;
-typedef QList<q_string_pair> q_pair_list;
-typedef QList<q_size_pair> q_size_list;
 
 namespace gui
 {
@@ -137,8 +110,6 @@ namespace gui
 	const QString users       = "Users";
 	const QString notes       = "Notes";
 	const QString titles      = "Titles";
-	const QString playtime    = "Playtime";
-	const QString last_played = "LastPlayed";
 
 	const QColor gl_icon_color = QColor(240, 240, 240, 255);
 
@@ -165,7 +136,7 @@ namespace gui
 	const gui_save mw_titleBarsVisible = gui_save(main_window, "titleBarsVisible", true);
 	const gui_save mw_geometry         = gui_save(main_window, "geometry",         QByteArray());
 	const gui_save mw_windowState      = gui_save(main_window, "windowState",      QByteArray());
-	const gui_save mw_mwState          = gui_save(main_window, "wwState",          QByteArray());
+	const gui_save mw_mwState          = gui_save(main_window, "mwState",          QByteArray());
 
 	const gui_save cat_hdd_game    = gui_save(game_list, "categoryVisibleHDDGame",    true);
 	const gui_save cat_disc_game   = gui_save(game_list, "categoryVisibleDiscGame",   true);
@@ -249,25 +220,19 @@ namespace gui
 
 /** Class for GUI settings..
 */
-class gui_settings : public QObject
+class gui_settings : public settings
 {
 	Q_OBJECT
 
 public:
 	explicit gui_settings(QObject* parent = nullptr);
-	~gui_settings();
 
 	QString GetCurrentUser();
-	QString GetSettingsDir();
 
 	/** Changes the settings file to the destination preset*/
 	bool ChangeToConfig(const QString& friendly_name);
 
 	bool GetCategoryVisibility(int cat);
-	QVariant GetValue(const gui_save& entry);
-	QVariant GetValue(const QString& key, const QString& name, const QString& def);
-	QVariant List2Var(const q_pair_list& list);
-	q_pair_list Var2List(const QVariant &var);
 
 	void ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent);
 	void ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent);
@@ -283,19 +248,6 @@ public:
 public Q_SLOTS:
 	void Reset(bool removeMeta = false);
 
-	/** Remove entry */
-	void RemoveValue(const QString& key, const QString& name);
-
-	/** Write value to entry */
-	void SetValue(const gui_save& entry, const QVariant& value);
-	void SetValue(const QString& key, const QString& name, const QVariant& value);
-
-	void SetPlaytime(const QString& serial, const qint64& elapsed);
-	qint64 GetPlaytime(const QString& serial);
-
-	void SetLastPlayed(const QString& serial, const QString& date);
-	QString GetLastPlayed(const QString& serial);
-
 	/** Sets the visibility of the chosen category. */
 	void SetCategoryVisibility(int cat, const bool& val);
 
@@ -309,13 +261,8 @@ public Q_SLOTS:
 	static gui_save GetGuiSaveForColumn(int col);
 
 private:
-	QString ComputeSettingsDir();
 	void BackupSettingsToTarget(const QString& friendly_name);
 	void ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, bool always_on_top);
 
-	QSettings m_settings;
-	QDir m_settingsDir;
 	QString m_current_name;
-	QMap<QString, qint64> m_playtime;
-	QMap<QString, QString> m_last_played;
 };
