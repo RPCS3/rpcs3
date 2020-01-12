@@ -15,6 +15,7 @@
 #include "debugger_frame.h"
 #include "game_list_frame.h"
 #include "gui_settings.h"
+#include "persistent_settings.h"
 #include "update_manager.h"
 
 #include <memory>
@@ -67,7 +68,7 @@ class main_window : public QMainWindow
 	};
 
 public:
-	explicit main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent = 0);
+	explicit main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent = 0);
 	void Init();
 	~main_window();
 	QIcon GetAppIcon();
@@ -141,6 +142,7 @@ private:
 	game_list_frame* m_gameListFrame = nullptr;
 	std::shared_ptr<gui_settings> guiSettings;
 	std::shared_ptr<emu_settings> emuSettings;
+	std::shared_ptr<persistent_settings> m_persistent_settings;
 
 	update_manager m_updater;
 };

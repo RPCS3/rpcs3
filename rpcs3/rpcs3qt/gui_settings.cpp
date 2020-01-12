@@ -8,22 +8,17 @@
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-gui_settings::gui_settings(QObject* parent) : QObject(parent)
+gui_settings::gui_settings(QObject* parent) : settings(parent)
 	, m_current_name(gui::Settings)
-	, m_settings(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent)
-	, m_settingsDir(ComputeSettingsDir())
 {
+	m_settings = new QSettings(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent);
+
 	const QString settings_name = GetValue(gui::m_currentConfig).toString();
 
 	if (settings_name != m_current_name)
 	{
 		ChangeToConfig(settings_name);
 	}
-}
-
-gui_settings::~gui_settings()
-{
-	m_settings.sync();
 }
 
 QString gui_settings::GetCurrentUser()
@@ -43,16 +38,6 @@ QString gui_settings::GetCurrentUser()
 	return QString();
 }
 
-QString gui_settings::GetSettingsDir()
-{
-	return m_settingsDir.absolutePath();
-}
-
-QString gui_settings::ComputeSettingsDir()
-{
-	return QString::fromStdString(fs::get_config_dir()) + "/GuiConfigs/";
-}
-
 bool gui_settings::ChangeToConfig(const QString& friendly_name)
 {
 	if (m_current_name == friendly_name)
@@ -68,27 +53,27 @@ bool gui_settings::ChangeToConfig(const QString& friendly_name)
 		}
 		else
 		{
-			QSettings tmp(m_settingsDir.absoluteFilePath(gui::Settings + ".ini"), QSettings::Format::IniFormat, parent());
+			QSettings tmp(m_settings_dir.absoluteFilePath(gui::Settings + ".ini"), QSettings::Format::IniFormat, parent());
 			tmp.beginGroup(gui::m_currentConfig.key);
 			tmp.setValue(gui::m_currentConfig.name, friendly_name);
 			tmp.endGroup();
 		}
 	}
 
-	m_settings.sync();
+	m_settings->sync();
 
 	Reset(true);
 
-	QSettings other(m_settingsDir.absoluteFilePath(friendly_name + ".ini"), QSettings::IniFormat);
+	QSettings other(m_settings_dir.absoluteFilePath(friendly_name + ".ini"), QSettings::IniFormat);
 
 	for (const QString& key : other.allKeys())
 	{
-		m_settings.setValue(key, other.value(key));
+		m_settings->setValue(key, other.value(key));
 	}
 
 	SetValue(gui::m_currentConfig, friendly_name);
 
-	m_settings.sync();
+	m_settings->sync();
 
 	m_current_name = friendly_name;
 
@@ -99,84 +84,14 @@ void gui_settings::Reset(bool removeMeta)
 {
 	if (removeMeta)
 	{
-		m_settings.clear();
+		m_settings->clear();
 	}
 	else
 	{
-		m_settings.remove(gui::logger);
-		m_settings.remove(gui::main_window);
-		m_settings.remove(gui::game_list);
+		m_settings->remove(gui::logger);
+		m_settings->remove(gui::main_window);
+		m_settings->remove(gui::game_list);
 	}
-}
-
-void gui_settings::RemoveValue(const QString& key, const QString& name)
-{
-	m_settings.beginGroup(key);
-	m_settings.remove(name);
-	m_settings.endGroup();
-}
-
-QVariant gui_settings::GetValue(const gui_save& entry)
-{
-	return m_settings.value(entry.key + "/" + entry.name, entry.def);
-}
-
-QVariant gui_settings::GetValue(const QString& key, const QString& name, const QString& def)
-{
-	return m_settings.value(key + "/" + name, def);
-}
-
-QVariant gui_settings::List2Var(const q_pair_list& list)
-{
-	QByteArray ba;
-	QDataStream stream(&ba, QIODevice::WriteOnly);
-	stream << list;
-	return QVariant(ba);
-}
-
-q_pair_list gui_settings::Var2List(const QVariant& var)
-{
-	q_pair_list list;
-	QByteArray ba = var.toByteArray();
-	QDataStream stream(&ba, QIODevice::ReadOnly);
-	stream >> list;
-	return list;
-}
-
-void gui_settings::SetValue(const gui_save& entry, const QVariant& value)
-{
-	m_settings.beginGroup(entry.key);
-	m_settings.setValue(entry.name, value);
-	m_settings.endGroup();
-}
-
-void gui_settings::SetValue(const QString& key, const QString& name, const QVariant& value)
-{
-	m_settings.beginGroup(key);
-	m_settings.setValue(name, value);
-	m_settings.endGroup();
-}
-
-void gui_settings::SetPlaytime(const QString& serial, const qint64& elapsed)
-{
-	m_playtime[serial] = elapsed;
-	SetValue(gui::playtime, serial, elapsed);
-}
-
-qint64 gui_settings::GetPlaytime(const QString& serial)
-{
-	return m_playtime[serial];
-}
-
-void gui_settings::SetLastPlayed(const QString& serial, const QString& date)
-{
-	m_last_played[serial] = date;
-	SetValue(gui::last_played, serial, date);
-}
-
-QString gui_settings::GetLastPlayed(const QString& serial)
-{
-	return m_last_played[serial];
 }
 
 QStringList gui_settings::GetGameListCategoryFilters()
@@ -325,11 +240,11 @@ void gui_settings::SaveCurrentConfig(const QString& friendly_name)
 		if (m_current_name == gui::Settings)
 		{
 			SetValue(gui::m_currentConfig, friendly_name);
-			m_settings.sync();
+			m_settings->sync();
 		}
 		else
 		{
-			QSettings tmp(m_settingsDir.absoluteFilePath(gui::Settings + ".ini"), QSettings::Format::IniFormat, parent());
+			QSettings tmp(m_settings_dir.absoluteFilePath(gui::Settings + ".ini"), QSettings::Format::IniFormat, parent());
 			tmp.beginGroup(gui::m_currentConfig.key);
 			tmp.setValue(gui::m_currentConfig.name, friendly_name);
 			tmp.endGroup();
@@ -359,7 +274,7 @@ QStringList gui_settings::GetConfigEntries()
 {
 	QStringList nameFilter;
 	nameFilter << "*.ini";
-	QFileInfoList entries = m_settingsDir.entryInfoList(nameFilter, QDir::Files);
+	QFileInfoList entries = m_settings_dir.entryInfoList(nameFilter, QDir::Files);
 	QStringList res;
 	for (const QFileInfo &entry : entries)
 	{
@@ -373,11 +288,11 @@ void gui_settings::BackupSettingsToTarget(const QString& friendly_name)
 {
 	QSettings target(ComputeSettingsDir() + friendly_name + ".ini", QSettings::Format::IniFormat);
 
-	for (const QString& key : m_settings.allKeys())
+	for (const QString& key : m_settings->allKeys())
 	{
 		if (!key.startsWith(gui::meta))
 		{
-			target.setValue(key, m_settings.value(key));
+			target.setValue(key, m_settings->value(key));
 		}
 	}
 
@@ -387,7 +302,7 @@ void gui_settings::BackupSettingsToTarget(const QString& friendly_name)
 QStringList gui_settings::GetStylesheetEntries()
 {
 	QStringList nameFilter = QStringList("*.qss");
-	QStringList res = gui::utils::get_dir_entries(m_settingsDir, nameFilter);
+	QStringList res = gui::utils::get_dir_entries(m_settings_dir, nameFilter);
 #if !defined(_WIN32)
 	// Makes stylesheets load if using AppImage (App Bundle) or installed to /usr/bin
 #ifdef __APPLE__
@@ -415,7 +330,7 @@ QString gui_settings::GetCurrentStylesheetPath()
 		return "-";
 	}
 
-	return m_settingsDir.absoluteFilePath(stylesheet + ".qss");
+	return m_settings_dir.absoluteFilePath(stylesheet + ".qss");
 }
 
 QSize gui_settings::SizeFromSlider(int pos)

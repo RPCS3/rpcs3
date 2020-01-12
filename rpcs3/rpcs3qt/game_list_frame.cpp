@@ -31,8 +31,11 @@
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
-	: custom_dock_widget(tr("Game List"), parent), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
+game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
+	: custom_dock_widget(tr("Game List"), parent)
+	, m_gui_settings(guiSettings)
+	, m_emu_settings(emuSettings)
+	, m_persistent_settings(persistent_settings)
 {
 	m_isListLayout    = m_gui_settings->GetValue(gui::gl_listMode).toBool();
 	m_Margin_Factor   = m_gui_settings->GetValue(gui::gl_marginFactor).toReal();
@@ -364,12 +367,12 @@ void game_list_frame::SortGameList()
 
 QString game_list_frame::GetLastPlayedBySerial(const QString& serial)
 {
-	return m_gui_settings->GetLastPlayed(serial);
+	return m_persistent_settings->GetLastPlayed(serial);
 }
 
 QString game_list_frame::GetPlayTimeBySerial(const QString& serial)
 {
-	const qint64 elapsed_ms = m_gui_settings->GetPlaytime(serial);
+	const qint64 elapsed_ms = m_persistent_settings->GetPlaytime(serial);
 
 	if (elapsed_ms <= 0)
 	{
@@ -579,8 +582,32 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				const QString serial = qstr(game.serial);
 				const QString note = m_gui_settings->GetValue(gui::notes, serial, "").toString();
 				const QString title = m_gui_settings->GetValue(gui::titles, serial, "").toString().simplified();
-				m_gui_settings->SetLastPlayed(serial, m_gui_settings->GetValue(gui::last_played, serial, "").toString());
-				m_gui_settings->SetPlaytime(serial, m_gui_settings->GetValue(gui::playtime, serial, 0).toInt());
+
+				// Read persistent_settings values
+				QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
+				int playtime        = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toInt();
+
+				// Read deprecated gui_setting values first for backwards compatibility (older than January 12th 2020).
+				// Restrict this to empty persistent settings to keep continuity.
+				if (last_played.isEmpty())
+				{
+					last_played = m_gui_settings->GetValue(gui::persistent::last_played, serial, "").toString();
+				}
+				if (playtime <= 0)
+				{
+					playtime = m_gui_settings->GetValue(gui::persistent::playtime, serial, 0).toInt();
+				}
+
+				// Set persistent_settings values if values exist
+				if (!last_played.isEmpty())
+				{
+					m_persistent_settings->SetLastPlayed(serial, last_played);
+				}
+				if (playtime > 0)
+				{
+					m_persistent_settings->SetPlaytime(serial, playtime);
+				}
+
 				serials.insert(serial);
 
 				if (!note.isEmpty())

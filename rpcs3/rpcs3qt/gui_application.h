@@ -10,6 +10,7 @@
 #include "main_application.h"
 #include "emu_settings.h"
 #include "gui_settings.h"
+#include "persistent_settings.h"
 #include "gs_frame.h"
 #include "gl_gs_frame.h"
 
@@ -56,6 +57,7 @@ private:
 
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<gui_settings> m_gui_settings;
+	std::shared_ptr<persistent_settings> m_persistent_settings;
 
 	bool m_show_gui = true;
 	bool m_use_cli_style = false;

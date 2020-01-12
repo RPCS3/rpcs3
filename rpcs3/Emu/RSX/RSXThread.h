@@ -745,7 +745,7 @@ namespace rsx
 		void run_FIFO();
 
 	public:
-		virtual void clear_surface(u32 arg) {};
+		virtual void clear_surface(u32 /*arg*/) {};
 		virtual void begin();
 		virtual void end();
 		virtual void execute_nop_draw();
