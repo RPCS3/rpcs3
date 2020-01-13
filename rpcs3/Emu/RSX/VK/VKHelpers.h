@@ -1087,9 +1087,9 @@ private:
 
 	struct fence
 	{
-		volatile bool flushed = false;
-		VkFence handle        = VK_NULL_HANDLE;
-		VkDevice owner        = VK_NULL_HANDLE;
+		atomic_t<bool> flushed = false;
+		VkFence handle         = VK_NULL_HANDLE;
+		VkDevice owner         = VK_NULL_HANDLE;
 
 		fence(VkDevice dev)
 		{
@@ -1111,7 +1111,12 @@ private:
 		void reset()
 		{
 			vkResetFences(owner, 1, &handle);
-			flushed = false;
+			flushed.release(false);
+		}
+
+		void signal_flushed()
+		{
+			flushed.release(true);
 		}
 
 		void wait_flush()
@@ -1254,7 +1259,7 @@ private:
 			is_open = false;
 		}
 
-		void submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, fence* pfence, VkPipelineStageFlags pipeline_stage_flags)
+		void submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, fence* pfence, VkPipelineStageFlags pipeline_stage_flags, VkBool32 flush = VK_FALSE)
 		{
 			if (is_open)
 			{
@@ -1289,7 +1294,7 @@ private:
 				infos.pSignalSemaphores = &signal_semaphore;
 			}
 
-			queue_submit(queue, &infos, pfence);
+			queue_submit(queue, &infos, pfence, flush);
 			clear_flags();
 		}
 	};

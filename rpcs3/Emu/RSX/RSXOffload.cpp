@@ -137,12 +137,12 @@ namespace rsx
 		return (std::this_thread::get_id() == m_thread_id);
 	}
 
-	void dma_manager::sync()
+	bool dma_manager::sync()
 	{
 		if (LIKELY(m_enqueued_count.load() == m_processed_count))
 		{
 			// Nothing to do
-			return;
+			return true;
 		}
 
 		if (auto rsxthr = get_current_renderer(); rsxthr->is_current_thread())
@@ -150,7 +150,7 @@ namespace rsx
 			if (m_mem_fault_flag)
 			{
 				// Abort if offloader is in recovery mode
-				return;
+				return false;
 			}
 
 			while (m_enqueued_count.load() != m_processed_count)
@@ -164,6 +164,8 @@ namespace rsx
 			while (m_enqueued_count.load() != m_processed_count)
 				_mm_pause();
 		}
+
+		return true;
 	}
 
 	void dma_manager::join()

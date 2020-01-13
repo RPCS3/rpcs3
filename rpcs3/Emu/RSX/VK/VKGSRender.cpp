@@ -2418,7 +2418,6 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 		// Clear offloader deadlock
 		// NOTE: It is not possible to handle regular flush requests before this is cleared
 		// NOTE: This may cause graphics corruption due to unsynchronized modification
-		flush_command_queue();
 		on_invalidate_memory_range(m_offloader_fault_range, m_offloader_fault_cause);
 		m_queue_status.clear(flush_queue_state::deadlock);
 	}
@@ -2825,11 +2824,13 @@ void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
 
 void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkPipelineStageFlags pipeline_stage_flags)
 {
-	// NOTE: There is no need to wait for dma sync. When MTRSX is enabled, the commands are submitted in order anyway due to CSMT
+	// Workaround for deadlock occuring during RSX offloader fault
+	// TODO: Restructure command submission infrastructure to avoid this condition
+	const bool sync_success = rsx::g_dma_manager.sync();
+	const VkBool32 force_flush = !sync_success;
+
 	if (vk::test_status_interrupt(vk::heap_dirty))
 	{
-		rsx::g_dma_manager.sync();
-
 		if (m_attrib_ring_info.dirty() ||
 			m_fragment_env_ring_info.dirty() ||
 			m_vertex_env_ring_info.dirty() ||
@@ -2856,7 +2857,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 			m_secondary_command_buffer.end();
 
 			m_secondary_command_buffer.submit(m_swapchain->get_graphics_queue(),
-				VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+				VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, force_flush);
 		}
 
 		vk::clear_status_interrupt(vk::heap_dirty);
@@ -2888,7 +2889,12 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	m_current_command_buffer->tag();
 
 	m_current_command_buffer->submit(m_swapchain->get_graphics_queue(),
-		wait_semaphore, signal_semaphore, pFence, pipeline_stage_flags);
+		wait_semaphore, signal_semaphore, pFence, pipeline_stage_flags, force_flush);
+
+	if (force_flush)
+	{
+		verify(HERE), m_current_command_buffer->submit_fence->flushed;
+	}
 }
 
 void VKGSRender::open_command_buffer()

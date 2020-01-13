@@ -77,7 +77,7 @@ namespace rsx
 
 		// Synchronization
 		bool is_current_thread() const;
-		void sync();
+		bool sync();
 		void join();
 		void set_mem_fault_flag();
 		void clear_mem_fault_flag();
