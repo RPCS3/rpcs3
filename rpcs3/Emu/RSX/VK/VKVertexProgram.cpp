@@ -66,7 +66,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "};\n\n";
 
 	vk::glsl::program_input in;
-	in.location = VERTEX_PARAMS_BIND_SLOT;
+	in.location = m_binding_table.vertex_params_bind_slot;;
 	in.domain = glsl::glsl_vertex_program;
 	in.name = "VertexContextBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
@@ -80,19 +80,19 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 	OS << "layout(set=0, binding=7) uniform usamplerBuffer vertex_layout_stream;\n";       // Data stream defining vertex data layout
 
 	vk::glsl::program_input in;
-	in.location = VERTEX_BUFFERS_FIRST_BIND_SLOT;
+	in.location = m_binding_table.vertex_buffers_first_bind_slot;
 	in.domain = glsl::glsl_vertex_program;
 	in.name = "persistent_input_stream";
 	in.type = vk::glsl::input_type_texel_buffer;
 	this->inputs.push_back(in);
 
-	in.location = VERTEX_BUFFERS_FIRST_BIND_SLOT + 1;
+	in.location = m_binding_table.vertex_buffers_first_bind_slot + 1;
 	in.domain = glsl::glsl_vertex_program;
 	in.name = "volatile_input_stream";
 	in.type = vk::glsl::input_type_texel_buffer;
 	this->inputs.push_back(in);
 
-	in.location = VERTEX_BUFFERS_FIRST_BIND_SLOT + 2;
+	in.location = m_binding_table.vertex_buffers_first_bind_slot + 2;
 	in.domain = glsl::glsl_vertex_program;
 	in.name = "vertex_layout_stream";
 	in.type = vk::glsl::input_type_texel_buffer;
@@ -107,7 +107,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	OS << "};\n\n";
 
 	vk::glsl::program_input in;
-	in.location = VERTEX_CONSTANT_BUFFERS_BIND_SLOT;
+	in.location = m_binding_table.vertex_constant_buffers_bind_slot;
 	in.domain = glsl::glsl_vertex_program;
 	in.name = "VertexConstantsBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
@@ -115,7 +115,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	inputs.push_back(in);
 
 
-	u32 location = VERTEX_TEXTURES_FIRST_BIND_SLOT;
+	u32 location = m_binding_table.vertex_textures_first_bind_slot;
 	for (const ParamType &PT : constants)
 	{
 		for (const ParamItem &PI : PT.items)
@@ -310,6 +310,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 void VKVertexDecompilerThread::Task()
 {
 	m_device_props.emulate_conditional_rendering = vk::emulate_conditional_rendering();
+	m_binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
 
 	m_shader = Decompile();
 	vk_prog->SetInputs(inputs);

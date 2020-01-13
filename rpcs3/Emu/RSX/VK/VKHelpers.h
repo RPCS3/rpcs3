@@ -34,18 +34,6 @@
 #define DESCRIPTOR_MAX_DRAW_CALLS 16384
 #define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
 
-#define VERTEX_PARAMS_BIND_SLOT 0
-#define VERTEX_CONSTANT_BUFFERS_BIND_SLOT 1
-#define FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 2
-#define FRAGMENT_STATE_BIND_SLOT 3
-#define FRAGMENT_TEXTURE_PARAMS_BIND_SLOT 4
-#define VERTEX_BUFFERS_FIRST_BIND_SLOT 5
-#define CONDITIONAL_RENDER_PREDICATE_SLOT 8
-#define TEXTURES_FIRST_BIND_SLOT 9
-#define VERTEX_TEXTURES_FIRST_BIND_SLOT (TEXTURES_FIRST_BIND_SLOT + 16)
-
-#define VK_NUM_DESCRIPTOR_BINDINGS (VERTEX_TEXTURES_FIRST_BIND_SLOT + 4)
-
 #define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
 #define GENERAL_WAIT_TIMEOUT  2000000ull  // 2 seconds
 
@@ -127,6 +115,7 @@ namespace vk
 	struct memory_type_mapping;
 	struct gpu_formats_support;
 	struct fence;
+	struct pipeline_binding_table;
 
 	const vk::context *get_current_thread_ctx();
 	void set_current_thread_ctx(const vk::context &ctx);
@@ -160,6 +149,7 @@ namespace vk
 
 	memory_type_mapping get_memory_mapping(const physical_device& dev);
 	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
+	pipeline_binding_table get_pipeline_binding_table(const physical_device& dev);
 
 	// Sync helpers around vkQueueSubmit
 	void acquire_global_submit_lock();
@@ -241,6 +231,20 @@ namespace vk
 	void do_query_cleanup(vk::command_buffer& cmd);
 
 	void die_with_error(const char* faulting_addr, VkResult error_code);
+
+	struct pipeline_binding_table
+	{
+		u8 vertex_params_bind_slot = 0;
+		u8 vertex_constant_buffers_bind_slot = 1;
+		u8 fragment_constant_buffers_bind_slot = 2;
+		u8 fragment_state_bind_slot = 3;
+		u8 fragment_texture_params_bind_slot = 4;
+		u8 vertex_buffers_first_bind_slot = 5;
+		u8 conditional_render_predicate_slot = 8;
+		u8 textures_first_bind_slot = 9;
+		u8 vertex_textures_first_bind_slot = 9;  // Invalid, has to be initialized properly
+		u8 total_descriptor_bindings = vertex_textures_first_bind_slot; // Invalid, has to be initialized properly
+	};
 
 	struct memory_type_mapping
 	{
@@ -768,6 +772,7 @@ private:
 		physical_device *pgpu = nullptr;
 		memory_type_mapping memory_map{};
 		gpu_formats_support m_formats_support{};
+		pipeline_binding_table m_pipeline_binding_table{};
 		std::unique_ptr<mem_allocator_base> m_allocator;
 		VkDevice dev = VK_NULL_HANDLE;
 
@@ -917,6 +922,7 @@ private:
 
 			memory_map = vk::get_memory_mapping(pdev);
 			m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
+			m_pipeline_binding_table = vk::get_pipeline_binding_table(pdev);
 
 			if (g_cfg.video.disable_vulkan_mem_allocator)
 				m_allocator = std::make_unique<vk::mem_allocator_vk>(dev, pdev);
@@ -992,6 +998,11 @@ private:
 		const gpu_formats_support& get_formats_support() const
 		{
 			return m_formats_support;
+		}
+
+		const pipeline_binding_table& get_pipeline_binding_table() const
+		{
+			return m_pipeline_binding_table;
 		}
 
 		const gpu_shader_types_support& get_shader_types_support() const
@@ -3004,14 +3015,14 @@ public:
 		std::deque<u32> available_slots;
 		std::vector<query_slot_info> query_slot_status;
 
-		inline bool poke_query(query_slot_info& query, u32 index)
+		inline bool poke_query(query_slot_info& query, u32 index, VkQueryResultFlags flags)
 		{
 			// Query is ready if:
 			// 1. Any sample has been determined to have passed the Z test
 			// 2. The backend has fully processed the query and found no hits
 
 			u32 result[2] = { 0, 0 };
-			switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_PARTIAL_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
+			switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, flags | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
 			{
 			case VK_SUCCESS:
 			{
@@ -3108,7 +3119,11 @@ public:
 
 		bool check_query_status(u32 index)
 		{
-			return poke_query(query_slot_status[index], index);
+			// NOTE: Keeps NVIDIA driver from using partial results as they are broken (always returns true)
+			const VkQueryResultFlags flags =
+				(vk::get_driver_vendor() == vk::driver_vendor::NVIDIA ? 0 : VK_QUERY_RESULT_PARTIAL_BIT);
+
+			return poke_query(query_slot_status[index], index, flags);
 		}
 
 		u32 get_query_result(u32 index)
@@ -3116,9 +3131,13 @@ public:
 			// Check for cached result
 			auto& query_info = query_slot_status[index];
 
+			// Wait for full result on NVIDIA to avoid getting garbage results
+			const VkQueryResultFlags flags =
+				(vk::get_driver_vendor() == vk::driver_vendor::NVIDIA ? VK_QUERY_RESULT_WAIT_BIT : VK_QUERY_RESULT_PARTIAL_BIT);
+
 			while (!query_info.ready)
 			{
-				poke_query(query_info, index);
+				poke_query(query_info, index, flags);
 			}
 
 			return query_info.any_passed ? 1 : 0;
@@ -3529,8 +3548,6 @@ public:
 			void bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, VkDescriptorSet &descriptor_set);
 
 			void bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set);
-
-			u64 get_vertex_input_attributes_mask();
 		};
 	}
 

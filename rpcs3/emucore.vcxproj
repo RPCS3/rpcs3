@@ -398,6 +398,7 @@
     <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_perf_metrics.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.h" />
     <ClInclude Include="util\atomic.hpp" />

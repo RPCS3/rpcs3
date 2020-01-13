@@ -237,9 +237,9 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 
 				if (dir.second.path == "/"sv)
 				{
-					if (vpath.empty())
+					if (vpath.size() <= 1)
 					{
-						return {};
+						return fs::get_config_dir() + "delete_this_dir.../delete_this...";
 					}
 
 					// Handle /host_root (not escaped, not processed)

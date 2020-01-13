@@ -227,6 +227,17 @@ namespace vk
 		return result;
 	}
 
+	pipeline_binding_table get_pipeline_binding_table(const vk::physical_device& dev)
+	{
+		pipeline_binding_table result{};
+
+		// Need to check how many samplers are supported by the driver
+		const auto usable_samplers = std::min(dev.get_limits().maxPerStageDescriptorSampledImages, 32u);
+		result.vertex_textures_first_bind_slot = result.textures_first_bind_slot + usable_samplers;
+		result.total_descriptor_bindings = result.vertex_textures_first_bind_slot + 4;
+		return result;
+	}
+
 	chip_class get_chip_family(uint32_t vendor_id, uint32_t device_id)
 	{
 		if (vendor_id == 0x10DE)

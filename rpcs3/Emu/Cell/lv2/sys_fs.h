@@ -125,6 +125,7 @@ enum class lv2_mp_flag
 {
 	read_only,
 	no_uid_gid,
+	strict_get_block_size,
 
 	__bitset_enum_max
 };
@@ -339,7 +340,7 @@ struct lv2_file_c0000006 : lv2_file_op
 	be_t<u32> _xc;  // 0x9
 	vm::bcptr<char> name;
 	be_t<u32> _x14; // 0
-	be_t<u32> _x18; // 0x80010003
+	be_t<u32> code; // 0x80010003
 	be_t<u32> _x1c; // 0
 };
 
@@ -381,7 +382,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> arg, u32 
 error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos);
 error_code sys_fs_fdatasync(ppu_thread& ppu, u32 fd);
 error_code sys_fs_fsync(ppu_thread& ppu, u32 fd);
-error_code sys_fs_fget_block_size(ppu_thread& ppu, u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<s32> arg5);
+error_code sys_fs_fget_block_size(ppu_thread& ppu, u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<s32> out_flags);
 error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4);
 error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size);
 error_code sys_fs_ftruncate(ppu_thread& ppu, u32 fd, u64 size);

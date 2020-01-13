@@ -34,7 +34,6 @@ const extern std::unordered_map<video_resolution, CellVideoOutResolutionId, valu
 
 const extern std::unordered_map<video_aspect, CellVideoOutDisplayAspect, value_hash<video_aspect>> g_video_out_aspect_id
 {
-	{ video_aspect::_auto, CELL_VIDEO_OUT_ASPECT_AUTO },
 	{ video_aspect::_16_9, CELL_VIDEO_OUT_ASPECT_16_9 },
 	{ video_aspect::_4_3,  CELL_VIDEO_OUT_ASPECT_4_3 },
 };
@@ -61,11 +60,21 @@ void fmt_class_string<CellVideoOutError>::format(std::string& out, u64 arg)
 	});
 }
 
+error_code cellVideoOutGetNumberOfDevice(u32 videoOut);
+
 error_code cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutState> state)
 {
 	cellSysutil.trace("cellVideoOutGetState(videoOut=%d, deviceIndex=%d, state=*0x%x)", videoOut, deviceIndex, state);
 
-	if (deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+	if (!state)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	if (deviceIndex >= cellVideoOutGetNumberOfDevice(videoOut))
+	{
+		return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+	}
 
 	switch (videoOut)
 	{
@@ -183,6 +192,11 @@ error_code cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfig
 {
 	cellSysutil.warning("cellVideoOutGetConfiguration(videoOut=%d, config=*0x%x, option=*0x%x)", videoOut, config, option);
 
+	if (!config)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	if (option) *option = {};
 	*config = {};
 
@@ -208,7 +222,15 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 {
 	cellSysutil.warning("cellVideoOutGetDeviceInfo(videoOut=%d, deviceIndex=%d, info=*0x%x)", videoOut, deviceIndex, info);
 
-	if (deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+	if (!info)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	if (deviceIndex >= cellVideoOutGetNumberOfDevice(videoOut))
+	{
+		return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+	}
 
 	// Use standard dummy values for now.
 	info->portType = CELL_VIDEO_OUT_PORT_HDMI;
