@@ -59,7 +59,7 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 	const std::string request_url = m_update_url + rpcs3::get_commit_and_hash().second;
 	QNetworkReply* reply_json     = m_manager.get(QNetworkRequest(QUrl(QString::fromStdString(request_url))));
 
-	m_progress_dialog = new progress_dialog(tr("Checking For Updates"), tr("Please wait..."), tr("Abort"), 0, 100, parent);
+	m_progress_dialog = new progress_dialog(tr("Checking For Updates"), tr("Please wait..."), tr("Abort"), 0, 100, true, parent);
 	m_progress_dialog->setAutoClose(false);
 	m_progress_dialog->setAutoReset(false);
 	m_progress_dialog->show();

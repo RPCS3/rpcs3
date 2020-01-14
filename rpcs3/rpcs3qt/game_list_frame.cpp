@@ -1373,7 +1373,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Creation"), tr("Creating all PPU caches"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Creation"), tr("Creating all PPU caches"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1418,7 +1418,7 @@ void game_list_frame::BatchRemovePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Removal"), tr("Removing all PPU caches"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Removal"), tr("Removing all PPU caches"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1503,7 +1503,7 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1548,7 +1548,7 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Custom Pad Configuration Batch Removal"), tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Pad Configuration Batch Removal"), tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1590,7 +1590,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
