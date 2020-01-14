@@ -1371,8 +1371,6 @@ extern void ppu_initialize(const ppu_module& info)
 			{ "__stvlx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_stvlx) : reinterpret_cast<u64>(sse_cellbe_stvlx_v0) },
 			{ "__stvrx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_stvrx) : reinterpret_cast<u64>(sse_cellbe_stvrx_v0) },
 			{ "__resupdate", reinterpret_cast<u64>(vm::reservation_update) },
-			// TODO: Remove in the next PPU cache version bump
-			{ "sys_process_get_id", reinterpret_cast<u64>(ppu_get_syscall(29)) },
 			{ "sys_config_io_event", reinterpret_cast<u64>(ppu_get_syscall(523)) },
 		};
 
