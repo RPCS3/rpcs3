@@ -291,6 +291,17 @@ u32 TROPUSRLoader::GetUnlockedPlatinumID(u32 trophy_id, const std::string& confi
 	return pid;
 }
 
+u32 TROPUSRLoader::GetTrophyGrade(u32 id)
+{
+	if (id >= m_table4.size())
+	{
+		LOG_WARNING(LOADER, "TROPUSRLoader::GetTrophyGrade: Invalid id=%d", id);
+		return trophy_grade::unknown;
+	}
+
+	return m_table4[id].trophy_grade; // Let's assume the trophies are stored ordered
+}
+
 u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 {
 	if (id >= m_table6.size())
