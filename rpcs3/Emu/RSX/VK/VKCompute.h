@@ -351,7 +351,7 @@ namespace vk
 			m_data_length = data_length;
 
 			const auto num_bytes_per_invocation = optimal_group_size * kernel_size * 4;
-			const auto num_bytes_to_process = align(data_length, num_bytes_per_invocation);
+			const auto num_bytes_to_process = rsx::align2(data_length, num_bytes_per_invocation);
 			const auto num_invocations = num_bytes_to_process / num_bytes_per_invocation;
 
 			if ((num_bytes_to_process + data_offset) > data->size())
