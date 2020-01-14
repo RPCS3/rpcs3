@@ -656,6 +656,7 @@ namespace rsx
 		u32 label_addr;
 
 		u32 main_mem_size{0};
+		u32 local_mem_size{0};
 
 		bool m_rtts_dirty;
 		bool m_textures_dirty[16];
