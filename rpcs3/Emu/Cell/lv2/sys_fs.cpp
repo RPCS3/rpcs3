@@ -20,11 +20,11 @@ struct lv2_fs_mount_point
 };
 
 lv2_fs_mount_point g_mp_sys_dev_hdd0;
-lv2_fs_mount_point g_mp_sys_dev_hdd1{512, 4096, lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_hdd1{512, 32768, lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_usb{512, 4096, lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_dev_bdvd{2048, 2048, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_app_home{512, 512, lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_host_root{512, 512, lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_bdvd{2048, 65536, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_app_home{512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_host_root{512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
 
 bool verify_mself(u32 fd, fs::file const& mself_file)
 {
@@ -249,6 +249,14 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 	case CELL_FS_O_RDONLY: open_mode += fs::read; break;
 	case CELL_FS_O_WRONLY: open_mode += fs::write; break;
 	case CELL_FS_O_RDWR: open_mode += fs::read + fs::write; break;
+	}
+
+	if (mp->flags & lv2_mp_flag::read_only)
+	{
+		if (flags & CELL_FS_O_ACCMODE || flags & (CELL_FS_O_CREAT | CELL_FS_O_TRUNC))
+		{
+			return {CELL_EPERM, path};
+		}
 	}
 
 	if (flags & CELL_FS_O_CREAT)
@@ -771,6 +779,12 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 	sb->size = info.size;
 	sb->blksize = mp->block_size;
 
+	if (mp->flags & lv2_mp_flag::read_only)
+	{
+		// Remove write permissions
+		sb->mode &= ~0222;
+	}
+
 	return CELL_OK;
 }
 
@@ -804,6 +818,12 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 	sb->ctime = info.ctime; // ctime may be incorrect
 	sb->size = info.size;
 	sb->blksize = file->mp->block_size;
+
+	if (file->mp->flags & lv2_mp_flag::read_only)
+	{
+		// Remove write permissions
+		sb->mode &= ~0222;
+	}
 
 	return CELL_OK;
 }
@@ -1162,38 +1182,15 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000002>(_arg);
 
-		const std::string_view vpath = arg->path.get_ptr();
-		const std::size_t non_slash = vpath.find_first_not_of('/');
-
-		if (non_slash == -1)
-		{
-			return {CELL_EPERM, vpath};
-		}
-
-		// Extract device from path
-		const std::string_view device_path = vpath.substr(0, vpath.find_first_of('/', non_slash));
-		const std::string local_path = vfs::get(device_path);
-
-		const auto mp = lv2_fs_object::get_mp(vpath);
-
-		if (local_path.empty())
-		{
-			return {CELL_ENOTMOUNTED, vpath};
-		}
+		const auto mp = lv2_fs_object::get_mp("/dev_hdd0");
 
 		fs::device_stat info;
-		if (!fs::statfs(local_path, info))
+		if (!fs::statfs(vfs::get("/dev_hdd0"), info))
 		{
-			switch (auto error = fs::g_tls_error)
-			{
-			case fs::error::noent: return {CELL_ENOENT, vpath};
-			default: sys_fs.error("sys_fs_fcntl(0xc0000002): unknown error %s", error);
-			}
-
+			sys_fs.error("sys_fs_fcntl(0xc0000002): unexpected error %s", fs::g_tls_error);
 			return CELL_EIO; // ???
 		}
 
-		arg->out_code = CELL_OK;
 		arg->out_block_size = mp->block_size;
 		arg->out_block_count = info.avail_free / mp->block_size;
 		return CELL_OK;
@@ -1361,6 +1358,12 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 				entry.attribute.ctime = info->ctime;
 				entry.attribute.size = info->size;
 				entry.attribute.blksize = directory->mp->block_size;
+
+				if (directory->mp->flags & lv2_mp_flag::read_only)
+				{
+					// Remove write permissions
+					entry.attribute.mode &= ~0222;
+				}
 
 				entry.entry_name.d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
 				entry.entry_name.d_namlen = u8(std::min<size_t>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
@@ -1558,10 +1561,12 @@ error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
 
-	if (!fs::is_file(local_path))
+	// It appears that /dev_hdd0 mount point is special in this function
+	if (mp != &g_mp_sys_dev_hdd0 && (mp->flags & lv2_mp_flag::strict_get_block_size ? !fs::is_file(local_path) : !fs::exists(local_path)))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::exist: return {CELL_EISDIR, path};
 		case fs::error::noent: return {CELL_ENOENT, path};
 		default: sys_fs.error("sys_fs_get_block_size(): unknown error %s", error);
 		}
@@ -1703,16 +1708,45 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 		return CELL_EINVAL;
 
 	const std::string_view vpath = path.get_ptr();
-	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == -1)
+	if (vpath == "/"sv)
 	{
-		return {CELL_EPERM, path};
+		return CELL_ENOTSUP;
 	}
+
+	// It seems max length is 31, and multiple / at the start aren't supported
+	if (vpath.size() > 31)
+	{
+		return {CELL_ENAMETOOLONG, path};
+	}
+
+	if (vpath.find_first_not_of('/') != 1)
+	{
+		return {CELL_EINVAL, path};
+	}
+
+	// Get only device path
+	const std::string local_path = vfs::get(vpath.substr(0, vpath.find_first_of('/', 1)));
 
 	if (local_path.empty())
 	{
-		return {CELL_ENOTMOUNTED, path};
+		return {CELL_EINVAL, path};
+	}
+
+	const auto mp = lv2_fs_object::get_mp(vpath);
+
+	if (mp->flags & lv2_mp_flag::strict_get_block_size)
+	{
+		// TODO:
+		return {CELL_ENOTSUP, path};
+	}
+
+	if (mp->flags & lv2_mp_flag::read_only)
+	{
+		// TODO: check /dev_bdvd
+		*total_free = 0;
+		*avail_free = 0;
+		return CELL_OK;
 	}
 
 	fs::device_stat info;
@@ -1830,7 +1864,13 @@ error_code sys_fs_lsn_lock(ppu_thread& ppu, u32 fd)
 		return CELL_EBADF;
 	}
 
-	// TODO: seems to do nothing
+	// TODO: seems to do nothing on /dev_hdd0 or /host_root
+	if (file->mp == &g_mp_sys_dev_hdd0 || file->mp->flags & lv2_mp_flag::strict_get_block_size)
+	{
+		return CELL_OK;
+	}
+
+	file->lock.compare_and_swap(0, 1);
 	return CELL_OK;
 }
 
@@ -1845,7 +1885,8 @@ error_code sys_fs_lsn_unlock(ppu_thread& ppu, u32 fd)
 		return CELL_EBADF;
 	}
 
-	// TODO: seems to do nothing
+	// Unlock unconditionally
+	file->lock.compare_and_swap(1, 0);
 	return CELL_OK;
 }
 
