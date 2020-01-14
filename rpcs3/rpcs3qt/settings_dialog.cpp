@@ -974,11 +974,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->clockScale->setDisabled(true);
 		ui->clockScaleReset->setDisabled(true);
 		SubscribeTooltip(ui->clockScale, json_advanced["disabledFromGlobal"].toString());
+		ui->wakeupDelay->setDisabled(true);
+		ui->wakeupReset->setDisabled(true);
+		SubscribeTooltip(ui->wakeupDelay, json_advanced["disabledFromGlobal"].toString());
 	}
 	else
 	{
 		SubscribeTooltip(ui->vblank, json_advanced["vblankRate"].toString());
 		SubscribeTooltip(ui->clockScale, json_advanced["clocksScale"].toString());
+		SubscribeTooltip(ui->wakeupDelay, json_advanced["wakeupDelay"].toString());
 	}
 
 	// lib options tool tips
