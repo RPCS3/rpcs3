@@ -210,6 +210,7 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	render->current_display_buffer = 0;
 	render->label_addr = *lpar_reports;
 	render->device_addr = rsx_cfg->device_addr;
+	render->local_mem_size = rsx_cfg->memory_size;
 	render->init(*lpar_dma_control);
 
 	rsx_cfg->context_base = context_base;
