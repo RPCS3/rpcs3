@@ -280,7 +280,8 @@ namespace vk
 				"void main()\n"
 				"{\n"
 				"	uint invocations_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);"
-				"	uint index = (gl_GlobalInvocationID.y * invocations_x) + gl_GlobalInvocationID.x;\n"
+				"	uint invocation_id = (gl_GlobalInvocationID.y * invocations_x) + gl_GlobalInvocationID.x;\n"
+				"	uint index = invocation_id * KERNEL_SIZE;\n"
 				"	uint value;\n"
 				"	%vars"
 				"\n";
