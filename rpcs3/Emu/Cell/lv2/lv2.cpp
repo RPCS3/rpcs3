@@ -97,7 +97,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(_sys_process_exit2),                          //26  (0x01A)
 	null_func,//BIND_FUNC(),                                //27  (0x01B)  DBG
 	null_func,//BIND_FUNC(_sys_process_get_number_of_object)//28  (0x01C)  ROOT
-	BIND_FUNC(sys_process_get_id),                          //29  (0x01D)  ROOT
+	BIND_FUNC(sys_process_get_id2),                          //29  (0x01D)  ROOT
 	BIND_FUNC(_sys_process_get_paramsfo),                   //30  (0x01E)
 	null_func,//BIND_FUNC(sys_process_get_ppu_guid),        //31  (0x01F)
 
