@@ -2589,6 +2589,19 @@ namespace rsx
 				dst_subres.surface->on_write_copy(rsx::get_shared_tag());
 				m_rtts.notify_memory_structure_changed();
 
+				// Reset this object's synchronization status if it is locked
+				lock.upgrade();
+
+				if (const auto found = find_cached_texture(dst_subres.surface->get_memory_range(), 0, false, false))
+				{
+					if (found->is_locked())
+					{
+						verify(HERE), found->is_flushable();
+						found->touch(m_cache_update_tag);
+						update_cache_tag();
+					}
+				}
+
 				if (src_is_render_target)
 				{
 					if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format) !=
