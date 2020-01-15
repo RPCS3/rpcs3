@@ -428,6 +428,7 @@ s32 _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 
 	render->isHLE = true;
 	render->label_addr = gcm_cfg->gcm_info.label_addr;
 	render->device_addr = gcm_cfg->gcm_info.context_addr;
+	render->local_mem_size = local_size;
 	render->init(gcm_cfg->gcm_info.control_addr - 0x40);
 
 	return CELL_OK;
