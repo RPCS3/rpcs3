@@ -453,8 +453,18 @@ namespace vk
 					if (src_rect.x1 > src_rect.x2) src_rect2.flip_horizontal();
 					if (src_rect.y1 > src_rect.y2) src_rect2.flip_vertical();
 
+					insert_image_memory_barrier(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
+						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+
 					copy_scaled_image(cmd, typeless, typeless, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
 						src_rect2, { 0, src_h, dst_w, (src_h + dst_h) }, 1, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_COLOR_BIT, filter);
+
+					insert_image_memory_barrier(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
+						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
 					//3. Copy back the aspect bits
 					info.imageExtent = { static_cast<u32>(dst_w), static_cast<u32>(dst_h), 1 };
