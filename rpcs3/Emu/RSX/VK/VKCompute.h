@@ -529,7 +529,7 @@ namespace vk
 				"		stencil_offset = (index / 4);\n"
 				"		stencil_shift = (index % 4) * 8;\n"
 				"		stencil = (value & 0xFF) << stencil_shift;\n"
-				"		data[stencil_offset + s_offset] |= stencil;\n";
+				"		atomicOr(data[stencil_offset + s_offset], stencil);\n";
 
 			cs_shuffle_base::build("");
 		}
@@ -548,7 +548,7 @@ namespace vk
 				"		stencil_offset = (index / 4);\n"
 				"		stencil_shift = (index % 4) * 8;\n"
 				"		stencil = (value & 0xFF) << stencil_shift;\n"
-				"		data[stencil_offset + s_offset] |= stencil;\n";
+				"		atomicOr(data[stencil_offset + s_offset], stencil);\n";
 
 			cs_shuffle_base::build("");
 		}
