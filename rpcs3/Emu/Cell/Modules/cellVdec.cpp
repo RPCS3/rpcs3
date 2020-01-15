@@ -931,13 +931,13 @@ error_code cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 
 	const auto vdec = idm::get<vdec_context>(handle);
 
-	if (!vdec)
+	// 0x80 seems like a common prefix
+	if (!vdec || (frc & 0xf0) != 0x80)
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	// TODO: check frc value
-	vdec->in_cmd.push(frc);
+	vdec->in_cmd.push(CellVdecFrameRate{frc & 0x87});
 	return CELL_OK;
 }
 
