@@ -517,7 +517,10 @@ namespace vk
 					// Since the typeless transfer itself violates spec, the only way to make it work is to use a D32S8 intermediate
 					// Copy from src->intermediate then intermediate->dst for each aspect separately
 
-					auto typeless_depth = vk::get_typeless_helper(VK_FORMAT_R32_SFLOAT, typeless_w, typeless_h);
+					// NOTE: While it may seem intuitive to use R32_SFLOAT as the carrier for the depth aspect, this does not work properly
+					// Floating point interpolation is non-linear from a bit-by-bit perspective and generates undesirable effects
+
+					auto typeless_depth = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM, typeless_w, typeless_h);
 					auto typeless_stencil = vk::get_typeless_helper(VK_FORMAT_R8_UNORM, typeless_w, typeless_h);
 					change_image_layout(cmd, typeless_depth, VK_IMAGE_LAYOUT_GENERAL);
 					change_image_layout(cmd, typeless_stencil, VK_IMAGE_LAYOUT_GENERAL);
