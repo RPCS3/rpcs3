@@ -1715,7 +1715,7 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 	}
 
 	// It seems max length is 31, and multiple / at the start aren't supported
-	if (vpath.size() > 31)
+	if (vpath.size() > CELL_FS_MAX_MP_LENGTH)
 	{
 		return {CELL_ENAMETOOLONG, path};
 	}
