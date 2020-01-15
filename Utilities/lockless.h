@@ -54,51 +54,46 @@ public:
 template<typename T, std::size_t N>
 class lf_fifo : public lf_array<T, N>
 {
-	struct alignas(8) ctrl_t
-	{
-		u32 push;
-		u32 pop;
-	};
-
-	atomic_t<ctrl_t> m_ctrl{};
+	// LSB 32-bit: push, MSB 32-bit: pop
+	atomic_t<u64> m_ctrl{};
 
 public:
 	constexpr lf_fifo() = default;
 
-	// Get current "push" position
+	// Get number of elements in the queue
 	u32 size() const
 	{
-		return m_ctrl.load().push;
+		const u64 ctrl = m_ctrl.load();
+		return static_cast<u32>(ctrl - (ctrl >> 32));
 	}
 
 	// Acquire the place for one or more elements.
 	u32 push_begin(u32 count = 1)
 	{
-		return std::bit_cast<atomic_t<u64>*>(&m_ctrl)->fetch_add(count); // Hack
+		return m_ctrl.fetch_add(count);
 	}
 
 	// Get current "pop" position
 	u32 peek() const
 	{
-		return m_ctrl.load().pop;
+		return static_cast<u32>(m_ctrl >> 32);
 	}
 
 	// Acknowledge processed element, return number of the next one.
 	// Perform clear if possible, zero is returned in this case.
 	u32 pop_end(u32 count = 1)
 	{
-		return m_ctrl.atomic_op([&](ctrl_t& ctrl)
+		return m_ctrl.atomic_op([&](u64& ctrl)
 		{
-			ctrl.pop += count;
+			ctrl += u64{count} << 32;
 
-			if (ctrl.pop == ctrl.push)
+			if (ctrl >> 32 == static_cast<u32>(ctrl))
 			{
 				// Clean if possible
-				ctrl.push = 0;
-				ctrl.pop = 0;
+				ctrl = 0;
 			}
 
-			return ctrl.pop;
+			return static_cast<u32>(ctrl >> 32);
 		});
 	}
 };
