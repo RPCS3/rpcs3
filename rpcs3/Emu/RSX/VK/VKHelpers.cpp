@@ -338,12 +338,20 @@ namespace vk
 		return ptr.get();
 	}
 
-	vk::buffer* get_scratch_buffer()
+	vk::buffer* get_scratch_buffer(u32 min_required_size)
 	{
+		if (g_scratch_buffer && g_scratch_buffer->size() < min_required_size)
+		{
+			// Scratch heap cannot fit requirements. Discard it and allocate a new one.
+			vk::get_resource_manager()->dispose(g_scratch_buffer);
+		}
+
 		if (!g_scratch_buffer)
 		{
-			// 128M disposable scratch memory
-			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, 128 * 0x100000,
+			// Choose optimal size
+			const u64 alloc_size = std::max<u64>(64 * 0x100000, align(min_required_size, 0x100000));
+
+			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, alloc_size,
 				g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0);
 		}

@@ -221,7 +221,6 @@ namespace vk
 			src->push_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
 		}
 
-		auto scratch_buf = vk::get_scratch_buffer();
 		VkBufferImageCopy src_copy{}, dst_copy{};
 		src_copy.imageExtent = { u32(src_rect.x2 - src_rect.x1), u32(src_rect.y2 - src_rect.y1), 1 };
 		src_copy.imageOffset = { src_rect.x1, src_rect.y1, 0 };
@@ -230,6 +229,21 @@ namespace vk
 		dst_copy.imageExtent = { u32(dst_rect.x2 - dst_rect.x1), u32(dst_rect.y2 - dst_rect.y1), 1 };
 		dst_copy.imageOffset = { dst_rect.x1, dst_rect.y1, 0 };
 		dst_copy.imageSubresource = { dst_aspect & dst_transfer_mask, 0, 0, 1 };
+
+		const auto src_texel_size = vk::get_format_texel_width(src->info.format);
+		const auto src_length = src_texel_size * src_copy.imageExtent.width * src_copy.imageExtent.height;
+		u64 min_scratch_size = src_length;
+
+		// Check for DS manipulation which will affect scratch memory requirements
+		if (const VkFlags combined_aspect =  src->aspect() | dst->aspect();
+			(combined_aspect & VK_IMAGE_ASPECT_STENCIL_BIT) != 0)
+		{
+			// At least one depth-stencil merge/extract required; requirements change to 2(w*h*bpp) + (w*h)
+			min_scratch_size = (src_length * 2) + (src_length / src_texel_size);
+		}
+
+		// Initialize scratch memory
+		auto scratch_buf = vk::get_scratch_buffer(min_scratch_size);
 
 		for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
 		{
@@ -247,10 +261,7 @@ namespace vk
 				}
 				else
 				{
-					const auto elem_size = vk::get_format_texel_width(src->info.format);
-					const auto length = elem_size * src_copy.imageExtent.width * src_copy.imageExtent.height;
-
-					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, src_length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
 					vk::cs_shuffle_base *shuffle_kernel = nullptr;
@@ -275,9 +286,9 @@ namespace vk
 						}
 					}
 
-					shuffle_kernel->run(cmd, scratch_buf, length);
+					shuffle_kernel->run(cmd, scratch_buf, src_length);
 
-					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, length, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, src_length, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 				}
 			}
@@ -742,7 +753,7 @@ namespace vk
 			{
 				if (!scratch_buf)
 				{
-					scratch_buf = vk::get_scratch_buffer();
+					scratch_buf = vk::get_scratch_buffer(image_linear_size * 2);
 					buffer_copies.reserve(subresource_layout.size());
 				}
 

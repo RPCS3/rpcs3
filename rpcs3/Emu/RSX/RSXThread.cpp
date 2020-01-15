@@ -48,13 +48,19 @@ namespace rsx
 
 	u32 get_address(u32 offset, u32 location)
 	{
+		const auto render = get_current_renderer();
 
 		switch (location)
 		{
 		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
 		case CELL_GCM_LOCATION_LOCAL:
 		{
-			return rsx::constants::local_mem_base + offset;
+			if (offset < render->local_mem_size)
+			{
+				return rsx::constants::local_mem_base + offset;
+			}
+
+			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): Local RSX offset out of range" HERE, offset, location);
 		}
 
 		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
@@ -69,7 +75,14 @@ namespace rsx
 		}
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL:
-			return get_current_renderer()->label_addr + 0x1400 + offset;
+		{
+			if (offset < sizeof(RsxReports::report) /*&& (offset % 0x10) == 0*/)
+			{
+				return render->label_addr + 0x1400 + offset;
+			}
+
+			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): Local RSX REPORT offset out of range" HERE, offset, location);
+		}
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
 		{
@@ -81,21 +94,36 @@ namespace rsx
 			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
 		}
 
+		// They are handled elsewhere for targeted methods, so it's unexpected for them to be passed here
 		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0:
-			fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0 (offset=0x%x, location=0x%x)" HERE, offset, location);
+			fmt::throw_exception("Unexpected CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0 (offset=0x%x, location=0x%x)" HERE, offset, location);
 
 		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0:
-			fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 (offset=0x%x, location=0x%x)" HERE, offset, location);
+			fmt::throw_exception("Unexpected CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 (offset=0x%x, location=0x%x)" HERE, offset, location);
 
 		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
 		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
-			return get_current_renderer()->label_addr + offset;
+		{
+			if (offset < sizeof(RsxReports::semaphore) /*&& (offset % 0x10) == 0*/)
+			{
+				return render->label_addr + offset;
+			}
+
+			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): DMA SEMAPHORE offset out of range" HERE, offset, location);
+		}
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
-			return get_current_renderer()->device_addr + offset;
-
 		case CELL_GCM_CONTEXT_DMA_DEVICE_R:
-			return get_current_renderer()->device_addr + offset;
+		{ 
+			if (offset < 0x100000 /*&& (offset % 0x10) == 0*/)
+			{
+				return render->device_addr + offset;
+			}
+
+			// TODO: What happens here? It could wrap around or access other segments of rsx internal memory etc
+			// Or can simply throw access violation error
+			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): DMA DEVICE offset out of range" HERE, offset, location);
+		}
 
 		default:
 		{
