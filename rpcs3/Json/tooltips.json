@@ -17,6 +17,7 @@
 		"sleepTimersAccuracy": "Changes the sleep period accuracy.\n'As Host' uses default accuracy of the underlying operating system, while 'All Timers' attempts to improve it.\n'Usleep Only' limits the adjustments to usleep syscall only.\nCan affect perfomance in unexpected ways.",
 		"vblankRate": "Adjusts the frequency of vertical blanking signals that the emulator sends.\nAffects timing of events which rely on these signals.",
 		"clocksScale": "Changes the scale of emulated system time.\nAffects software which uses system time to calculate things such as dynamic timesteps.",
+		"wakeupDelay": "Try fiddling with this setting when encountering unstable games. The higher value, the better stability it may provide.\nIncrements/Decrements for each test should be around 100μs to 200μs until finding the best value for optimal stability.\nValues above 1000μs may cause noticeable performance penalties, use with caution.",
 		"disabledFromGlobal": "Do not change this setting globally.\nRight-click the game in game list and choose \"Configure\" instead."
 	},
 	"audio": {

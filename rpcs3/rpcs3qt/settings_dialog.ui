@@ -1760,6 +1760,49 @@
             </widget>
            </item>
            <item>
+            <widget class="QGroupBox" name="gb_wakeupDelay">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="title">
+              <string>Driver Wake-Up Delay</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_92">
+              <item>
+               <widget class="QSlider" name="wakeupDelay">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_31" stretch="1,0">
+                <item>
+                 <widget class="QLabel" name="wakeupText">
+                  <property name="text">
+                   <string>1 µs</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="wakeupReset">
+                  <property name="text">
+                   <string>Reset</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
             <widget class="QGroupBox" name="gb_vblank">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
