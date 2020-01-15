@@ -468,6 +468,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	{
 		ui->resolutionScale->setValue(resolutionScaleDef);
 	});
+	SnapSlider(ui->resolutionScale, 25);
 
 	xemu_settings->EnhanceSlider(ui->minimumScalableDimension, emu_settings::MinimumScalableDimension);
 	SubscribeTooltip(ui->gb_minimumScalableDimension, json_gpu_slid["minimumScalableDimension"].toString());
@@ -953,6 +954,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	});
 
 	EnhanceSlider(emu_settings::VBlankRate, ui->vblank, ui->vblankText, tr("%0 Hz"));
+	SnapSlider(ui->vblank, 30);
 	int vblankDef = stoi(xemu_settings->GetSettingDefault(emu_settings::VBlankRate));
 	connect(ui->vblankReset, &QAbstractButton::clicked, [=]()
 	{
@@ -960,6 +962,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	});
 
 	EnhanceSlider(emu_settings::ClocksScale, ui->clockScale, ui->clockScaleText, tr("%0 %"));
+	SnapSlider(ui->clockScale, 10);
 	int clocksScaleDef = stoi(xemu_settings->GetSettingDefault(emu_settings::ResolutionScale));
 	connect(ui->clockScaleReset, &QAbstractButton::clicked, [=]()
 	{
@@ -1627,6 +1630,28 @@ void settings_dialog::EnhanceSlider(emu_settings::SettingsType settings_type, QS
 			label->setText(label_text.arg(value));
 		});
 	}
+}
+
+void settings_dialog::SnapSlider(QSlider *slider, int interval)
+{
+	connect(slider, &QSlider::sliderPressed, [this, slider]()
+	{
+		m_currentSlider = slider;
+	});
+
+	connect(slider, &QSlider::sliderReleased, [this]()
+	{
+		m_currentSlider = nullptr;
+	});
+
+	connect(slider, &QSlider::valueChanged, [this, slider, interval](int value)
+	{
+		if (slider != m_currentSlider)
+		{
+			return;
+		}
+		slider->setValue(::rounded_div(value, interval) * interval);
+	});
 }
 
 void settings_dialog::AddConfigs()

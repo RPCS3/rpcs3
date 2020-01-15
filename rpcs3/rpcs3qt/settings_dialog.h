@@ -36,6 +36,10 @@ private Q_SLOTS:
 private:
 	void EnhanceSlider(emu_settings::SettingsType settings_type, QSlider* slider, QLabel* label, const QString& label_text);
 
+	// Snapping of sliders when moved with mouse
+	void SnapSlider(QSlider* slider, int interval);
+	QSlider* m_currentSlider = nullptr;
+
 	// Emulator tab
 	void AddConfigs();
 	void AddStylesheets();
