@@ -949,6 +949,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	EnhanceSlider(emu_settings::DriverWakeUpDelay, ui->wakeupDelay, ui->wakeupText, tr(u8"%0 µs"));
 	SnapSlider(ui->wakeupDelay, 200);
 	ui->wakeupDelay->setMaximum(7000); // Very large values must be entered with config.yml changes
+	ui->wakeupDelay->setPageStep(200);
 	int wakeupDef = stoi(xemu_settings->GetSettingDefault(emu_settings::DriverWakeUpDelay));
 	connect(ui->wakeupReset, &QAbstractButton::clicked, [=]()
 	{
@@ -957,6 +958,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	EnhanceSlider(emu_settings::VBlankRate, ui->vblank, ui->vblankText, tr("%0 Hz"));
 	SnapSlider(ui->vblank, 30);
+	ui->vblank->setPageStep(60);
 	int vblankDef = stoi(xemu_settings->GetSettingDefault(emu_settings::VBlankRate));
 	connect(ui->vblankReset, &QAbstractButton::clicked, [=]()
 	{
@@ -965,6 +967,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	EnhanceSlider(emu_settings::ClocksScale, ui->clockScale, ui->clockScaleText, tr("%0 %"));
 	SnapSlider(ui->clockScale, 10);
+	ui->clockScale->setPageStep(50);
 	int clocksScaleDef = stoi(xemu_settings->GetSettingDefault(emu_settings::ResolutionScale));
 	connect(ui->clockScaleReset, &QAbstractButton::clicked, [=]()
 	{
