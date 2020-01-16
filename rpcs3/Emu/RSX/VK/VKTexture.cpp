@@ -876,6 +876,34 @@ namespace vk
 		vk::image* real_src = src;
 		vk::image* real_dst = dst;
 
+		// Optimization pass; check for pass-through data transfer
+		if (!xfer_info.flip_horizontal && !xfer_info.flip_vertical && src_area.height() == dst_area.height())
+		{
+			auto src_w = src_area.width();
+			auto dst_w = dst_area.width();
+
+			if (xfer_info.src_is_typeless) src_w *= xfer_info.src_scaling_hint;
+			if (xfer_info.dst_is_typeless) dst_w *= xfer_info.dst_scaling_hint;
+
+			if (src_w == dst_w)
+			{
+				// Final dimensions are a match
+				if (xfer_info.src_is_typeless || xfer_info.dst_is_typeless)
+				{
+					const areai src_rect = src_area * size2f{ xfer_info.src_scaling_hint, 1.f };
+					const areai dst_rect = dst_area * size2f{ xfer_info.dst_scaling_hint, 1.f };
+					vk::copy_image_typeless(cmd, src, dst, src_rect, dst_rect, 1, src->aspect(), dst->aspect());
+				}
+				else
+				{
+					copy_image(cmd, src->value, dst->value, src->current_layout, dst->current_layout,
+						src_area, dst_area, 1, src->aspect(), dst->aspect());
+				}
+
+				return;
+			}
+		}
+
 		if (xfer_info.src_is_typeless)
 		{
 			const auto format = xfer_info.src_native_format_override ?
