@@ -1618,7 +1618,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 
 QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
 {
-	const int device_pixel_ratio = devicePixelRatio();
+	const qreal device_pixel_ratio = devicePixelRatioF();
 	const QSize original_size = icon.size();
 
 	QPixmap canvas = QPixmap(original_size * device_pixel_ratio);
@@ -1921,7 +1921,7 @@ int game_list_frame::PopulateGameList()
 		compat_item->setToolTip(game->compat.tooltip);
 		if (!game->compat.color.isEmpty())
 		{
-			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color, devicePixelRatio() * 2));
+			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color, devicePixelRatioF() * 2));
 		}
 
 		// Version

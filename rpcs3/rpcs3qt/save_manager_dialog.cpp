@@ -326,7 +326,7 @@ void save_manager_dialog::HandleRepaintUiRequest()
 
 QPixmap save_manager_dialog::GetResizedIcon(int i)
 {
-	const int dpr = devicePixelRatio();
+	const qreal dpr = devicePixelRatioF();
 	const int width = m_icon_size.width() * dpr;
 	const int height = m_icon_size.height() * dpr * 176 / 320;
 
