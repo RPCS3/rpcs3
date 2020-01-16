@@ -515,24 +515,16 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 
 	sys_fs.trace("sys_fs_close(fd=%d)", fd);
 
-	const auto file = idm::withdraw<lv2_fs_object, lv2_file>(fd, [](lv2_file& file) -> CellError
-	{
-		if (file.lock == 1)
-		{
-			return CELL_EBUSY;
-		}
-
-		return {};
-	});
+	const auto file = idm::withdraw<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
 		return CELL_EBADF;
 	}
 
-	if (file.ret)
+	if (file->lock == 1)
 	{
-		return file.ret;
+		return CELL_EBUSY;
 	}
 
 	return CELL_OK;
@@ -1715,7 +1707,7 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 	}
 
 	// It seems max length is 31, and multiple / at the start aren't supported
-	if (vpath.size() > 31)
+	if (vpath.size() > CELL_FS_MAX_MP_LENGTH)
 	{
 		return {CELL_ENAMETOOLONG, path};
 	}
