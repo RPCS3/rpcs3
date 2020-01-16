@@ -492,7 +492,7 @@ namespace rsx
 
 				// Call the worker function directly, stoping it prematurely to be able update the screen
 				u8 inc = 10;
-				u32 stop_at;
+				u32 stop_at = 0;
 				do
 				{
 					stop_at = std::min(stop_at + inc, entry_count);
