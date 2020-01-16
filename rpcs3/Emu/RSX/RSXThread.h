@@ -27,38 +27,32 @@
 extern u64 get_guest_system_time();
 extern u64 get_system_time();
 
-struct RSXIOTable
-{
-	atomic_t<u16> ea[4096];
-	atomic_t<u16> io[3072];
-
-	// try to get the real address given a mapped address
-	// return non zero on success
-	inline u32 RealAddr(u32 offs)
-	{
-		u32 result = this->ea[offs >> 20].load();
-
-		if (static_cast<s16>(result) < 0)
-		{
-			return 0;
-		}
-
-		result <<= 20; result |= (offs & 0xFFFFF);
-
-		ASSUME(result != 0);
-
-		return result;
-	}
-};
-
 extern bool user_asked_for_frame_capture;
 extern bool capture_current_frame;
 extern rsx::frame_trace_data frame_debug;
 extern rsx::frame_capture_data frame_capture;
-extern RSXIOTable RSXIOMem;
 
 namespace rsx
 {
+	struct rsx_iomap_table
+	{
+		std::array<atomic_t<u32>, 4096> ea;
+		std::array<atomic_t<u32>, 4096> io;
+
+		rsx_iomap_table() noexcept
+		{
+			std::fill(ea.begin(), ea.end(), -1);
+			std::fill(io.begin(), io.end(), -1);
+		}
+
+		// Try to get the real address given a mapped address
+		// Returns -1 on failure
+		u32 get_addr(u32 offs) const noexcept
+		{
+			return this->ea[offs >> 20] | (offs & 0xFFFFF);
+		}
+	};
+
 	enum framebuffer_creation_context : u8
 	{
 		context_draw = 0,
@@ -603,6 +597,7 @@ namespace rsx
 
 	public:
 		RsxDmaControl* ctrl = nullptr;
+		rsx_iomap_table iomap_table;
 		u32 restore_point = 0;
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };

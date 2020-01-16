@@ -208,7 +208,11 @@ namespace rsx
 				return;
 			}
 
-			vm::_ref<atomic_t<RsxNotify>>(verify(HERE, RSXIOMem.RealAddr(0xf100000 + (index * 0x40)))).store(
+			const u32 addr = rsx->iomap_table.get_addr(0xf100000 + (index * 0x40));
+
+			verify(HERE), addr != -1;
+
+			vm::_ref<atomic_t<RsxNotify>>(addr).store(
 			{
 				rsx->timestamp(),
 				0
