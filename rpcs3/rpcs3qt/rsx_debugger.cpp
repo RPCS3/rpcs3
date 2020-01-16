@@ -120,12 +120,10 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 		return table;
 	};
 
-	if (const auto render = rsx::get_current_renderer())
+	if (const auto render = rsx::get_current_renderer(); render &&
+		render->iomap_table.get_addr(render->ctrl->get) + 1)
 	{
-		if (RSXIOMem.RealAddr(render->ctrl->get.load()))
-		{
-			m_addr = render->ctrl->get.load();
-		}
+		m_addr = render->ctrl->get;
 	}
 
 	m_list_commands = l_addRSXTab(m_list_commands, tr("RSX Commands"), 4);
@@ -210,24 +208,20 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	//Events
 	connect(b_goto_get, &QAbstractButton::clicked, [this]()
 	{
-		if (const auto render = rsx::get_current_renderer())
+		if (const auto render = rsx::get_current_renderer(); render &&
+			render->iomap_table.get_addr(render->ctrl->get) + 1)
 		{
-			if (RSXIOMem.RealAddr(render->ctrl->get.load()))
-			{
-				m_addr = render->ctrl->get.load();
-				UpdateInformation();
-			}
+			m_addr = render->ctrl->get;
+			UpdateInformation();
 		}
 	});
 	connect(b_goto_put, &QAbstractButton::clicked, [this]()
 	{
-		if (const auto render = rsx::get_current_renderer())
+		if (const auto render = rsx::get_current_renderer(); render &&
+			render->iomap_table.get_addr(render->ctrl->put) + 1)
 		{
-			if (RSXIOMem.RealAddr(render->ctrl->put.load()))
-			{
-				m_addr = render->ctrl->put.load();
-				UpdateInformation();
-			}
+			m_addr = render->ctrl->put;
+			UpdateInformation();
 		}
 	});
 	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
@@ -604,9 +598,10 @@ void rsx_debugger::GetMemory()
 		address_item->setData(Qt::UserRole, addr);
 		m_list_commands->setItem(i, 0, address_item);
 
-		if (vm::check_addr(RSXIOMem.RealAddr(addr)))
+		if (const u32 ea = rsx::get_current_renderer()->iomap_table.get_addr(addr);
+			ea + 1)
 		{
-			u32 cmd = *vm::get_super_ptr<u32>(RSXIOMem.RealAddr(addr));
+			u32 cmd = *vm::get_super_ptr<u32>(ea);
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
 			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr)));
@@ -843,7 +838,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 	}
 	else
 	{
-		auto args = vm::get_super_ptr<u32>(RSXIOMem.RealAddr(ioAddr + 4));
+		const auto args = vm::get_super_ptr<u32>(rsx::get_current_renderer()->iomap_table.get_addr(ioAddr + 4));
 
 		u32 index = 0;
 		switch((cmd & 0x3ffff) >> 2)
