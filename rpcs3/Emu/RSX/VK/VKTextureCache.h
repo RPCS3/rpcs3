@@ -607,6 +607,20 @@ namespace vk
 					const u16 convert_w = u16(src_w * src_bpp) / dst_bpp;
 					const u16 convert_x = u16(src_x * src_bpp) / dst_bpp;
 
+					if (convert_w == section.dst_w && src_h == section.dst_h &&
+						transform == rsx::surface_transform::identity &&
+						section.level == 0 && section.dst_z == 0)
+					{
+						// Optimization to avoid double transfer
+						// TODO: Handle level and layer offsets
+						const areai src_rect = coordi{{ src_x, src_y }, { src_w, src_h }};
+						const areai dst_rect = coordi{{ section.dst_x, section.dst_y }, { section.dst_w, section.dst_h }};
+						vk::copy_image_typeless(cmd, section.src, dst, src_rect, dst_rect, 1, section.src->aspect(), dst_aspect);
+
+						section.src->pop_layout(cmd);
+						continue;
+					}
+
 					src_image = vk::get_typeless_helper(dst->info.format, convert_x + convert_w, src_y + src_h);
 					src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
