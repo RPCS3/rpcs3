@@ -945,6 +945,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Sliders
 
+	EnhanceSlider(emu_settings::DriverWakeUpDelay, ui->wakeupDelay, ui->wakeupText, tr(u8"%0 µs"));
+	int wakeupDef = stoi(xemu_settings->GetSettingDefault(emu_settings::DriverWakeUpDelay));
+	connect(ui->wakeupReset, &QAbstractButton::clicked, [=]()
+	{
+		ui->wakeupDelay->setValue(wakeupDef);
+	});
+
 	EnhanceSlider(emu_settings::VBlankRate, ui->vblank, ui->vblankText, tr("%0 Hz"));
 	int vblankDef = stoi(xemu_settings->GetSettingDefault(emu_settings::VBlankRate));
 	connect(ui->vblankReset, &QAbstractButton::clicked, [=]()
@@ -967,11 +974,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->clockScale->setDisabled(true);
 		ui->clockScaleReset->setDisabled(true);
 		SubscribeTooltip(ui->clockScale, json_advanced["disabledFromGlobal"].toString());
+		ui->wakeupDelay->setDisabled(true);
+		ui->wakeupReset->setDisabled(true);
+		SubscribeTooltip(ui->wakeupDelay, json_advanced["disabledFromGlobal"].toString());
 	}
 	else
 	{
 		SubscribeTooltip(ui->vblank, json_advanced["vblankRate"].toString());
 		SubscribeTooltip(ui->clockScale, json_advanced["clocksScale"].toString());
+		SubscribeTooltip(ui->wakeupDelay, json_advanced["wakeupDelay"].toString());
 	}
 
 	// lib options tool tips

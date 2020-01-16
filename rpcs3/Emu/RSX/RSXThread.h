@@ -607,6 +607,7 @@ namespace rsx
 		atomic_t<bool> external_interrupt_ack{ false };
 		void flush_fifo();
 		void recover_fifo();
+		void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd();
 
 		// Performance approximation counters
