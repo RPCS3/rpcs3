@@ -494,7 +494,7 @@ QPixmap trophy_manager_dialog::GetResizedGameIcon(int index)
 		return QPixmap();
 	}
 	const QPixmap icon = item->data(Qt::UserRole).value<QPixmap>();
-	const int dpr = devicePixelRatio();
+	const qreal dpr = devicePixelRatioF();
 
 	QPixmap new_icon = QPixmap(icon.size() * dpr);
 	new_icon.setDevicePixelRatio(dpr);
@@ -542,7 +542,7 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 		return;
 
 	const int db_pos = m_game_combo->currentData().toInt();
-	const int dpr = devicePixelRatio();
+	const qreal dpr = devicePixelRatioF();
 	const int new_height = m_icon_height * dpr;
 
 	QList<int> indices;
