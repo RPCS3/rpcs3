@@ -515,24 +515,16 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 
 	sys_fs.trace("sys_fs_close(fd=%d)", fd);
 
-	const auto file = idm::withdraw<lv2_fs_object, lv2_file>(fd, [](lv2_file& file) -> CellError
-	{
-		if (file.lock == 1)
-		{
-			return CELL_EBUSY;
-		}
-
-		return {};
-	});
+	const auto file = idm::withdraw<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
 		return CELL_EBADF;
 	}
 
-	if (file.ret)
+	if (file->lock == 1)
 	{
-		return file.ret;
+		return CELL_EBUSY;
 	}
 
 	return CELL_OK;
