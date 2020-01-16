@@ -76,7 +76,7 @@ Q_SIGNALS:
 class compat_pixmap : public QPixmap
 {
 public:
-	compat_pixmap(const QColor& color, int pixel_ratio) : QPixmap(16 * pixel_ratio, 16 * pixel_ratio)
+	compat_pixmap(const QColor& color, qreal pixel_ratio) : QPixmap(16 * pixel_ratio, 16 * pixel_ratio)
 	{
 		fill(Qt::transparent);
 
