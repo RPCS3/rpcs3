@@ -18,12 +18,9 @@ struct sys_hid_info_5
 
 struct sys_hid_info_2
 {
-	be_t<u32> unk1;
-	be_t<u32> unk2;
-	be_t<u32> unk3;
-	be_t<u32> unk4;
-	be_t<u32> unk5;
-	u8 unk6;
+	be_t<u16> vid;
+	be_t<u16> pid;
+	u8 unk[17];
 };
 
 struct sys_hid_ioctl_68
