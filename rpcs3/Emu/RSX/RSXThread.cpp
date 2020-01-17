@@ -665,6 +665,9 @@ namespace rsx
 		std::this_thread::sleep_for(10ms);
 		do_local_task(rsx::FIFO_state::lock_wait);
 
+		user_asked_for_frame_capture = false;
+		capture_current_frame = false;
+
 		m_rsx_thread_exiting = true;
 		g_dma_manager.join();
 	}
