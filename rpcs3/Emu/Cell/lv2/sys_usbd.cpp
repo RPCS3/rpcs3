@@ -437,7 +437,7 @@ UsbTransfer& usb_handler_thread::get_transfer(u32 transfer_id)
 	return transfers[transfer_id];
 }
 
-s32 sys_usbd_initialize(vm::ptr<u32> handle)
+error_code sys_usbd_initialize(vm::ptr<u32> handle)
 {
 	sys_usbd.warning("sys_usbd_initialize(handle=*0x%x)", handle);
 
@@ -454,7 +454,7 @@ s32 sys_usbd_initialize(vm::ptr<u32> handle)
 	return CELL_OK;
 }
 
-s32 sys_usbd_finalize(ppu_thread& ppu, u32 handle)
+error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 {
 	sys_usbd.warning("sys_usbd_finalize(handle=0x%x)", handle);
 
@@ -477,7 +477,7 @@ s32 sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 	return CELL_OK;
 }
 
-s32 sys_usbd_get_device_list(u32 handle, vm::ptr<UsbInternalDevice> device_list, u32 max_devices)
+error_code sys_usbd_get_device_list(u32 handle, vm::ptr<UsbInternalDevice> device_list, u32 max_devices)
 {
 	sys_usbd.warning("sys_usbd_get_device_list(handle=0x%x, device_list=*0x%x, max_devices=0x%x)", handle, device_list, max_devices);
 
@@ -495,10 +495,10 @@ s32 sys_usbd_get_device_list(u32 handle, vm::ptr<UsbInternalDevice> device_list,
 		device_list[index] = usbh->handled_devices[index].first;
 	}
 
-	return i_tocopy;
+	return not_an_error(i_tocopy);
 }
 
-s32 sys_usbd_register_extra_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max)
+error_code sys_usbd_register_extra_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max)
 {
 	sys_usbd.warning("sys_usbd_register_extra_ldd(handle=0x%x, s_product=%s, slen_product=0x%x, id_vendor=0x%x, id_product_min=0x%x, id_product_max=0x%x)",
 		handle, s_product, slen_product, id_vendor, id_product_min, id_product_max);
@@ -512,10 +512,10 @@ s32 sys_usbd_register_extra_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_pr
 	s32 res = usbh->add_ldd(s_product, slen_product, id_vendor, id_product_min, id_product_max);
 	usbh->check_devices_vs_ldds();
 
-	return res; // To check
+	return not_an_error(res); // To check
 }
 
-s32 sys_usbd_get_descriptor_size(u32 handle, u32 device_handle)
+error_code sys_usbd_get_descriptor_size(u32 handle, u32 device_handle)
 {
 	sys_usbd.trace("sys_usbd_get_descriptor_size(handle=0x%x, deviceNumber=0x%x)", handle, device_handle);
 
@@ -528,10 +528,10 @@ s32 sys_usbd_get_descriptor_size(u32 handle, u32 device_handle)
 		return CELL_EINVAL;
 	}
 
-	return usbh->handled_devices[device_handle].second->device.get_size();
+	return not_an_error(usbh->handled_devices[device_handle].second->device.get_size());
 }
 
-s32 sys_usbd_get_descriptor(u32 handle, u32 device_handle, vm::ptr<void> descriptor, u32 desc_size)
+error_code sys_usbd_get_descriptor(u32 handle, u32 device_handle, vm::ptr<void> descriptor, u32 desc_size)
 {
 	sys_usbd.trace("sys_usbd_get_descriptor(handle=0x%x, deviceNumber=0x%x, descriptor=0x%x, desc_size=0x%x)", handle, device_handle, descriptor, desc_size);
 
@@ -551,20 +551,20 @@ s32 sys_usbd_get_descriptor(u32 handle, u32 device_handle, vm::ptr<void> descrip
 }
 
 // This function is used for psp(cellUsbPspcm), dongles in ps3 arcade cabinets(PS3A-USJ), ps2 cam(eyetoy), generic usb camera?(sample_usb2cam)
-s32 sys_usbd_register_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product)
+error_code sys_usbd_register_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product)
 {
 	sys_usbd.todo("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x)", handle, s_product, slen_product);
 	return CELL_OK;
 }
 
-s32 sys_usbd_unregister_ldd()
+error_code sys_usbd_unregister_ldd()
 {
 	sys_usbd.todo("sys_usbd_unregister_ldd()");
 	return CELL_OK;
 }
 
 // TODO: determine what the unknown params are
-s32 sys_usbd_open_pipe(u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 unk3, u32 endpoint, u64 unk4)
+error_code sys_usbd_open_pipe(u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 unk3, u32 endpoint, u64 unk4)
 {
 	sys_usbd.warning("sys_usbd_open_pipe(handle=0x%x, device_handle=0x%x, unk1=0x%x, unk2=0x%x, unk3=0x%x, endpoint=0x%x, unk4=0x%x)",
 		handle, device_handle, unk1, unk2, unk3, endpoint, unk4);
@@ -578,10 +578,10 @@ s32 sys_usbd_open_pipe(u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 un
 		return CELL_EINVAL;
 	}
 
-	return usbh->open_pipe(device_handle, static_cast<u8>(endpoint));
+	return not_an_error(usbh->open_pipe(device_handle, static_cast<u8>(endpoint)));
 }
 
-s32 sys_usbd_open_default_pipe(u32 handle, u32 device_handle)
+error_code sys_usbd_open_default_pipe(u32 handle, u32 device_handle)
 {
 	sys_usbd.trace("sys_usbd_open_default_pipe(handle=0x%x, device_handle=0x%x)", handle, device_handle);
 
@@ -594,10 +594,10 @@ s32 sys_usbd_open_default_pipe(u32 handle, u32 device_handle)
 		return CELL_EINVAL;
 	}
 
-	return usbh->open_pipe(device_handle, 0);
+	return not_an_error(usbh->open_pipe(device_handle, 0));
 }
 
-s32 sys_usbd_close_pipe(u32 handle, u32 pipe_handle)
+error_code sys_usbd_close_pipe(u32 handle, u32 pipe_handle)
 {
 	sys_usbd.todo("sys_usbd_close_pipe(handle=0x%x, pipe_handle=0x%x)", handle, pipe_handle);
 
@@ -621,7 +621,7 @@ s32 sys_usbd_close_pipe(u32 handle, u32 pipe_handle)
 // *arg1 = 3 will do some extra processing right away(notification of transfer finishing)
 // *arg1 < 1 || *arg1 > 4 are ignored(rewait instantly for event)
 // *arg1 == 1 || *arg1 == 2 will send a sys_event to internal CellUsbd event queue with same parameters as received and loop(attach and detach event)
-s32 sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1, vm::ptr<u64> arg2, vm::ptr<u64> arg3)
+error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1, vm::ptr<u64> arg2, vm::ptr<u64> arg3)
 {
 	sys_usbd.trace("sys_usbd_receive_event(handle=%u, arg1=*0x%x, arg2=*0x%x, arg3=*0x%x)", handle, arg1, arg2, arg3);
 
@@ -663,22 +663,22 @@ s32 sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1, vm::p
 	return CELL_OK;
 }
 
-s32 sys_usbd_detect_event()
+error_code sys_usbd_detect_event()
 {
 	sys_usbd.todo("sys_usbd_detect_event()");
 	return CELL_OK;
 }
 
-s32 sys_usbd_attach(u32 handle)
+error_code sys_usbd_attach(u32 handle)
 {
 	sys_usbd.todo("sys_usbd_attach(handle=0x%x)", handle);
 	return CELL_OK;
 }
 
-s32 sys_usbd_transfer_data(u32 handle, u32 id_pipe, vm::ptr<u8> buf, u32 buf_size, vm::ptr<UsbDeviceRequest> request, u32 type_transfer)
+error_code sys_usbd_transfer_data(u32 handle, u32 id_pipe, vm::ptr<u8> buf, u32 buf_size, vm::ptr<UsbDeviceRequest> request, u32 type_transfer)
 {
 	sys_usbd.trace("sys_usbd_transfer_data(handle=0x%x, id_pipe=0x%x, buf=*0x%x, buf_length=0x%x, request=*0x%x, type=0x%x)", handle, id_pipe, buf, buf_size, request, type_transfer);
-	if (sys_usbd.enabled == logs::level::trace && request.addr())
+	if (sys_usbd.enabled == logs::level::trace && request)
 	{
 		sys_usbd.trace("RequestType:0x%x, Request:0x%x, wValue:0x%x, wIndex:0x%x, wLength:0x%x", request->bmRequestType, request->bRequest, request->wValue, request->wIndex, request->wLength);
 		if ((request->bmRequestType & 0x80) == 0 && buf && buf_size != 0)
@@ -713,7 +713,7 @@ s32 sys_usbd_transfer_data(u32 handle, u32 id_pipe, vm::ptr<u8> buf, u32 buf_siz
 	// Default endpoint is control endpoint
 	if (pipe.endpoint == 0)
 	{
-		if (!request.addr())
+		if (!request)
 		{
 			sys_usbd.error("Tried to use control pipe without proper request pointer");
 			return CELL_EINVAL;
@@ -739,10 +739,10 @@ s32 sys_usbd_transfer_data(u32 handle, u32 id_pipe, vm::ptr<u8> buf, u32 buf_siz
 		usbh->fake_transfers.push_back(&transfer);
 
 	// returns an identifier specific to the transfer
-	return id_transfer;
+	return not_an_error(id_transfer);
 }
 
-s32 sys_usbd_isochronous_transfer_data(u32 handle, u32 id_pipe, vm::ptr<UsbDeviceIsoRequest> iso_request)
+error_code sys_usbd_isochronous_transfer_data(u32 handle, u32 id_pipe, vm::ptr<UsbDeviceIsoRequest> iso_request)
 {
 	sys_usbd.todo("sys_usbd_isochronous_transfer_data(handle=0x%x, id_pipe=0x%x, iso_request=*0x%x)", handle, id_pipe, iso_request);
 
@@ -763,10 +763,10 @@ s32 sys_usbd_isochronous_transfer_data(u32 handle, u32 id_pipe, vm::ptr<UsbDevic
 	pipe.device->isochronous_transfer(&transfer);
 
 	// returns an identifier specific to the transfer
-	return id_transfer;
+	return not_an_error(id_transfer);
 }
 
-s32 sys_usbd_get_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<u32> result, vm::ptr<u32> count)
+error_code sys_usbd_get_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<u32> result, vm::ptr<u32> count)
 {
 	sys_usbd.trace("sys_usbd_get_transfer_status(handle=0x%x, id_transfer=0x%x, unk1=0x%x, result=*0x%x, count=*0x%x)", handle, id_transfer, unk1, result, count);
 
@@ -785,7 +785,7 @@ s32 sys_usbd_get_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<
 	return CELL_OK;
 }
 
-s32 sys_usbd_get_isochronous_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<UsbDeviceIsoRequest> request, vm::ptr<u32> result)
+error_code sys_usbd_get_isochronous_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<UsbDeviceIsoRequest> request, vm::ptr<u32> result)
 {
 	sys_usbd.todo("sys_usbd_get_isochronous_transfer_status(handle=0x%x, id_transfer=0x%x, unk1=0x%x, request=*0x%x, result=*0x%x)", handle, id_transfer, unk1, request, result);
 
@@ -804,19 +804,19 @@ s32 sys_usbd_get_isochronous_transfer_status(u32 handle, u32 id_transfer, u32 un
 	return CELL_OK;
 }
 
-s32 sys_usbd_get_device_location()
+error_code sys_usbd_get_device_location()
 {
 	sys_usbd.todo("sys_usbd_get_device_location()");
 	return CELL_OK;
 }
 
-s32 sys_usbd_send_event()
+error_code sys_usbd_send_event()
 {
 	sys_usbd.todo("sys_usbd_send_event()");
 	return CELL_OK;
 }
 
-s32 sys_usbd_event_port_send(u32 handle, u64 arg1, u64 arg2, u64 arg3)
+error_code sys_usbd_event_port_send(u32 handle, u64 arg1, u64 arg2, u64 arg3)
 {
 	sys_usbd.warning("sys_usbd_event_port_send(handle=0x%x, arg1=0x%x, arg2=0x%x, arg3=0x%x)", handle, arg1, arg2, arg3);
 
@@ -832,19 +832,19 @@ s32 sys_usbd_event_port_send(u32 handle, u64 arg1, u64 arg2, u64 arg3)
 	return CELL_OK;
 }
 
-s32 sys_usbd_allocate_memory()
+error_code sys_usbd_allocate_memory()
 {
 	sys_usbd.todo("sys_usbd_allocate_memory()");
 	return CELL_OK;
 }
 
-s32 sys_usbd_free_memory()
+error_code sys_usbd_free_memory()
 {
 	sys_usbd.todo("sys_usbd_free_memory()");
 	return CELL_OK;
 }
 
-s32 sys_usbd_get_device_speed()
+error_code sys_usbd_get_device_speed()
 {
 	sys_usbd.todo("sys_usbd_get_device_speed()");
 	return CELL_OK;
