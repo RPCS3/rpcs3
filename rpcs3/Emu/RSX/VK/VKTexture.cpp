@@ -890,9 +890,7 @@ namespace vk
 				// Final dimensions are a match
 				if (xfer_info.src_is_typeless || xfer_info.dst_is_typeless)
 				{
-					const areai src_rect = src_area * size2f{ xfer_info.src_scaling_hint, 1.f };
-					const areai dst_rect = dst_area * size2f{ xfer_info.dst_scaling_hint, 1.f };
-					vk::copy_image_typeless(cmd, src, dst, src_rect, dst_rect, 1, src->aspect(), dst->aspect());
+					vk::copy_image_typeless(cmd, src, dst, src_area, dst_area, 1, src->aspect(), dst->aspect());
 				}
 				else
 				{
