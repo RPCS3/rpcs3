@@ -456,10 +456,13 @@ VKGSRender::VKGSRender() : GSRender()
 		m_occlusion_query_data[n].driver_handle = n;
 
 	//Generate frame contexts
+	const auto& binding_table = m_device->get_pipeline_binding_table();
+	const u32 num_fs_samplers = binding_table.vertex_textures_first_bind_slot - binding_table.textures_first_bind_slot;
+
 	std::vector<VkDescriptorPoolSize> sizes;
 	sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * DESCRIPTOR_MAX_DRAW_CALLS });
 	sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * DESCRIPTOR_MAX_DRAW_CALLS });
-	sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 20 * DESCRIPTOR_MAX_DRAW_CALLS });
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , (num_fs_samplers + 4) * DESCRIPTOR_MAX_DRAW_CALLS });
 
 	// Conditional rendering predicate slot; refactor to allow skipping this when not needed
 	sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 * DESCRIPTOR_MAX_DRAW_CALLS });
