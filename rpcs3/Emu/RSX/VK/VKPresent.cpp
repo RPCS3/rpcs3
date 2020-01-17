@@ -57,10 +57,10 @@ void VKGSRender::reinitialize_swapchain()
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, target_layout, range);
 	}
 
-	//Will have to block until rendering is completed
+	// Will have to block until rendering is completed
 	vk::fence resize_fence(*m_device);
 
-	//Flush the command buffer
+	// Flush the command buffer
 	close_and_submit_command_buffer(&resize_fence);
 	vk::wait_for_fence(&resize_fence);
 
@@ -104,10 +104,10 @@ void VKGSRender::advance_queued_frames()
 	// Check all other frames for completion and clear resources
 	check_present_status();
 
-	//m_rtts storage is double buffered and should be safe to tag on frame boundary
+	// m_rtts storage is double buffered and should be safe to tag on frame boundary
 	m_rtts.free_invalidated();
 
-	//texture cache is also double buffered to prevent use-after-free
+	// Texture cache is also double buffered to prevent use-after-free
 	m_texture_cache.on_frame_end();
 	m_samplers_dirty.store(true);
 
@@ -221,7 +221,7 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resou
 		{
 			m_last_heap_sync_time = ctx->last_frame_sync_time;
 
-			//Heap cleanup; deallocates memory consumed by the frame if it is still held
+			// Heap cleanup; deallocates memory consumed by the frame if it is still held
 			m_attrib_ring_info.m_get_pos = ctx->attrib_heap_ptr;
 			m_vertex_env_ring_info.m_get_pos = ctx->vtx_env_heap_ptr;
 			m_fragment_env_ring_info.m_get_pos = ctx->frag_env_heap_ptr;
@@ -263,71 +263,71 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resou
 
 vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const rsx::avconf* avconfig)
 {
-    vk::image* image_to_flip = nullptr;
+	vk::image* image_to_flip = nullptr;
 
-    // Check the surface store first
-    const auto format_bpp = get_format_block_size_in_bytes(info->format);
-    const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer,
-        info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::read);
+	// Check the surface store first
+	const auto format_bpp = get_format_block_size_in_bytes(info->format);
+	const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer,
+		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::read);
 
-    if (!overlap_info.empty())
-    {
-        const auto& section = overlap_info.back();
-        auto surface = vk::as_rtt(section.surface);
+	if (!overlap_info.empty())
+	{
+		const auto& section = overlap_info.back();
+		auto surface = vk::as_rtt(section.surface);
 
-        if (section.base_address >= info->address)
-        {
-            // Check for intentional 'borders'
-            const u32 inset_offset = section.base_address - info->address;
-            const u32 inset_y = inset_offset / info->pitch;
-            const u32 inset_x = (inset_offset % info->pitch) / format_bpp;
+		if (section.base_address >= info->address)
+		{
+			// Check for intentional 'borders'
+			const u32 inset_offset = section.base_address - info->address;
+			const u32 inset_y = inset_offset / info->pitch;
+			const u32 inset_x = (inset_offset % info->pitch) / format_bpp;
 
-            const u32 full_width = surface->get_surface_width(rsx::surface_metrics::samples) + inset_x + inset_x;
-            const u32 full_height = surface->get_surface_height(rsx::surface_metrics::samples) + inset_y + inset_y;
+			const u32 full_width = surface->get_surface_width(rsx::surface_metrics::samples) + inset_x + inset_x;
+			const u32 full_height = surface->get_surface_height(rsx::surface_metrics::samples) + inset_y + inset_y;
 
-            if (full_width == info->width && full_height == info->height)
-            {
-                surface->read_barrier(*m_current_command_buffer);
-                image_to_flip = section.surface->get_surface(rsx::surface_access::read);
+			if (full_width == info->width && full_height == info->height)
+			{
+				surface->read_barrier(*m_current_command_buffer);
+				image_to_flip = section.surface->get_surface(rsx::surface_access::read);
 
-                info->width = rsx::apply_resolution_scale(full_width - (inset_x + inset_x), true);
-                info->height = rsx::apply_resolution_scale(full_height - (inset_y + inset_y), true);
-            }
-        }
-    }
-    else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(info->address, info->format, info->width, info->height))
-    {
-        // Hack - this should be the first location to check for output
-        // The render might have been done offscreen or in software and a blit used to display
-        image_to_flip = surface->get_raw_texture();
-    }
+				info->width = rsx::apply_resolution_scale(full_width - (inset_x + inset_x), true);
+				info->height = rsx::apply_resolution_scale(full_height - (inset_y + inset_y), true);
+			}
+		}
+	}
+	else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(info->address, info->format, info->width, info->height))
+	{
+		// Hack - this should be the first location to check for output
+		// The render might have been done offscreen or in software and a blit used to display
+		image_to_flip = surface->get_raw_texture();
+	}
 
-    if (!image_to_flip)
-    {
-        // Read from cell
-        const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
-        const u32  lookup_mask = rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::framebuffer_storage;
-        const auto overlap = m_texture_cache.find_texture_from_range<true>(range, 0, lookup_mask);
+	if (!image_to_flip)
+	{
+		// Read from cell
+		const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
+		const u32  lookup_mask = rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::framebuffer_storage;
+		const auto overlap = m_texture_cache.find_texture_from_range<true>(range, 0, lookup_mask);
 
-        for (const auto & section : overlap)
-        {
-            if (!section->is_synchronized())
-            {
-                section->copy_texture(*m_current_command_buffer, true);
-            }
-        }
+		for (const auto & section : overlap)
+		{
+			if (!section->is_synchronized())
+			{
+				section->copy_texture(*m_current_command_buffer, true);
+			}
+		}
 
-        if (m_current_command_buffer->flags & vk::command_buffer::cb_has_dma_transfer)
-        {
-            // Submit for processing to lower hard fault penalty
-            flush_command_queue();
-        }
+		if (m_current_command_buffer->flags & vk::command_buffer::cb_has_dma_transfer)
+		{
+			// Submit for processing to lower hard fault penalty
+			flush_command_queue();
+		}
 
-        m_texture_cache.invalidate_range(*m_current_command_buffer, range, rsx::invalidation_cause::read);
-        image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, info->address, info->width, info->height);
-    }
+		m_texture_cache.invalidate_range(*m_current_command_buffer, range, rsx::invalidation_cause::read);
+		image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, info->address, info->width, info->height);
+	}
 
-    return image_to_flip;
+	return image_to_flip;
 }
 
 void VKGSRender::flip(const rsx::display_flip_info_t& info)
@@ -415,20 +415,20 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			buffer_pitch = buffer_width * 4;
 	}
 
-    // Scan memory for required data. This is done early to optimize waiting for the driver image acquire below.
-    vk::image* image_to_flip = nullptr;
+	// Scan memory for required data. This is done early to optimize waiting for the driver image acquire below.
+	vk::image* image_to_flip = nullptr;
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
-        vk::present_surface_info present_info;
-        present_info.width = buffer_width;
-        present_info.height = buffer_height;
-        present_info.pitch = buffer_pitch;
-        present_info.format = av_format;
-        present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
+		vk::present_surface_info present_info;
+		present_info.width = buffer_width;
+		present_info.height = buffer_height;
+		present_info.pitch = buffer_pitch;
+		present_info.format = av_format;
+		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
-        image_to_flip = get_present_source(&present_info, avconfig);
-        buffer_width = present_info.width;
-        buffer_height = present_info.height;
+		image_to_flip = get_present_source(&present_info, avconfig);
+		buffer_width = present_info.width;
+		buffer_height = present_info.height;
 	}
 
 	// Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
@@ -471,30 +471,30 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	// Confirm that the driver did not silently fail
 	verify(HERE), m_current_frame->present_image != UINT32_MAX;
 
-    // Calculate output dimensions. Done after swapchain acquisition in case it was recreated.
-    coordi aspect_ratio;
-    sizei csize = m_swapchain_dims;
-    sizei new_size = csize;
+	// Calculate output dimensions. Done after swapchain acquisition in case it was recreated.
+	coordi aspect_ratio;
+	sizei csize = m_swapchain_dims;
+	sizei new_size = csize;
 
-    if (!g_cfg.video.stretch_to_display_area)
-    {
-        const double aq = 1. * buffer_width / buffer_height;
-        const double rq = 1. * new_size.width / new_size.height;
-        const double q = aq / rq;
+	if (!g_cfg.video.stretch_to_display_area)
+	{
+		const double aq = 1. * buffer_width / buffer_height;
+		const double rq = 1. * new_size.width / new_size.height;
+		const double q = aq / rq;
 
-        if (q > 1.0)
-        {
-            new_size.height = static_cast<int>(new_size.height / q);
-            aspect_ratio.y = (csize.height - new_size.height) / 2;
-        }
-        else if (q < 1.0)
-        {
-            new_size.width = static_cast<int>(new_size.width * q);
-            aspect_ratio.x = (csize.width - new_size.width) / 2;
-        }
-    }
+		if (q > 1.0)
+		{
+			new_size.height = static_cast<int>(new_size.height / q);
+			aspect_ratio.y = (csize.height - new_size.height) / 2;
+		}
+		else if (q < 1.0)
+		{
+			new_size.width = static_cast<int>(new_size.width * q);
+			aspect_ratio.x = (csize.width - new_size.width) / 2;
+		}
+	}
 
-    aspect_ratio.size = new_size;
+	aspect_ratio.size = new_size;
 
 	// Blit contents to screen..
 	VkImage target_image = m_swapchain->get_image(m_current_frame->present_image);
@@ -548,42 +548,42 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			direct_fbo->release();
 		}
 
-        if (m_frame->screenshot_toggle == true)
-        {
-            m_frame->screenshot_toggle = false;
+		if (m_frame->screenshot_toggle == true)
+		{
+			m_frame->screenshot_toggle = false;
 
-            const size_t sshot_size = buffer_height * buffer_width * 4;
+			const size_t sshot_size = buffer_height * buffer_width * 4;
 
-            vk::buffer sshot_vkbuf(*m_device, align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+			vk::buffer sshot_vkbuf(*m_device, align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
 
-            VkBufferImageCopy copy_info;
-            copy_info.bufferOffset                    = 0;
-            copy_info.bufferRowLength                 = 0;
-            copy_info.bufferImageHeight               = 0;
-            copy_info.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-            copy_info.imageSubresource.baseArrayLayer = 0;
-            copy_info.imageSubresource.layerCount     = 1;
-            copy_info.imageSubresource.mipLevel       = 0;
-            copy_info.imageOffset.x                   = 0;
-            copy_info.imageOffset.y                   = 0;
-            copy_info.imageOffset.z                   = 0;
-            copy_info.imageExtent.width               = buffer_width;
-            copy_info.imageExtent.height              = buffer_height;
-            copy_info.imageExtent.depth               = 1;
+			VkBufferImageCopy copy_info;
+			copy_info.bufferOffset                    = 0;
+			copy_info.bufferRowLength                 = 0;
+			copy_info.bufferImageHeight               = 0;
+			copy_info.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+			copy_info.imageSubresource.baseArrayLayer = 0;
+			copy_info.imageSubresource.layerCount     = 1;
+			copy_info.imageSubresource.mipLevel       = 0;
+			copy_info.imageOffset.x                   = 0;
+			copy_info.imageOffset.y                   = 0;
+			copy_info.imageOffset.z                   = 0;
+			copy_info.imageExtent.width               = buffer_width;
+			copy_info.imageExtent.height              = buffer_height;
+			copy_info.imageExtent.depth               = 1;
 
-            image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-            vk::copy_image_to_buffer(*m_current_command_buffer, image_to_flip, &sshot_vkbuf, copy_info);
-            image_to_flip->pop_layout(*m_current_command_buffer);
+			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			vk::copy_image_to_buffer(*m_current_command_buffer, image_to_flip, &sshot_vkbuf, copy_info);
+			image_to_flip->pop_layout(*m_current_command_buffer);
 
-            flush_command_queue(true);
-            auto src = sshot_vkbuf.map(0, sshot_size);
-            std::vector<u8> sshot_frame(sshot_size);
-            memcpy(sshot_frame.data(), src, sshot_size);
-            sshot_vkbuf.unmap();
+			flush_command_queue(true);
+			auto src = sshot_vkbuf.map(0, sshot_size);
+			std::vector<u8> sshot_frame(sshot_size);
+			memcpy(sshot_frame.data(), src, sshot_size);
+			sshot_vkbuf.unmap();
 
-            m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
-        }
+			m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
+		}
 	}
 	else
 	{
