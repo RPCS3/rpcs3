@@ -5,46 +5,34 @@ GLuint GLGSRender::get_present_source(gl::present_surface_info* info, const rsx:
 {
     GLuint image = GL_NONE;
 
-    if (auto render_target_texture = m_rtts.get_color_surface_at(info->address))
+    // Check the surface store first
+    gl::command_context cmd = { gl_state };
+    const auto format_bpp = get_format_block_size_in_bytes(info->format);
+    const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd,
+        info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::read);
+
+    if (!overlap_info.empty())
     {
-        if (render_target_texture->last_use_tag == m_rtts.write_tag)
+        const auto& section = overlap_info.back();
+        auto surface = gl::as_rtt(section.surface);
+
+        if (section.base_address >= info->address)
         {
-            image = render_target_texture->raw_handle();
-        }
-        else
-        {
-            gl::command_context cmd = { gl_state };
-            const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd, info->address, info->width, info->height, info->pitch, render_target_texture->get_bpp(), rsx::surface_access::read);
+            // Check for intentional 'borders'
+            const u32 inset_offset = section.base_address - info->address;
+            const u32 inset_y = inset_offset / info->pitch;
+            const u32 inset_x = (inset_offset % info->pitch) / format_bpp;
 
-            if (!overlap_info.empty() && overlap_info.back().surface == render_target_texture)
+            const u32 full_width = surface->get_surface_width(rsx::surface_metrics::samples) + inset_x + inset_x;
+            const u32 full_height = surface->get_surface_height(rsx::surface_metrics::samples) + inset_y + inset_y;
+
+            if (full_width == info->width && full_height == info->height)
             {
-                // Confirmed to be the newest data source in that range
-                image = render_target_texture->raw_handle();
-            }
-        }
+                surface->read_barrier(cmd);
+                image = section.surface->get_surface(rsx::surface_access::read)->id();
 
-        if (image)
-        {
-            const auto buffer_width = rsx::apply_resolution_scale(info->width, true);
-            const auto buffer_height = rsx::apply_resolution_scale(info->height, true);
-
-            if (buffer_width > render_target_texture->width() ||
-                buffer_height > render_target_texture->height())
-            {
-                // TODO: Should emit only once to avoid flooding the log file
-                // TODO: Take AA scaling into account
-                LOG_WARNING(RSX, "Selected output image does not satisfy the video configuration. Display buffer resolution=%dx%d, avconf resolution=%dx%d, surface=%dx%d",
-                    info->width, info->height,
-                    avconfig->state * avconfig->resolution_x, avconfig->state * avconfig->resolution_y,
-                    render_target_texture->get_surface_width(rsx::surface_metrics::pixels), render_target_texture->get_surface_height(rsx::surface_metrics::pixels));
-
-                info->width = render_target_texture->width();
-                info->height = render_target_texture->height();
-            }
-            else
-            {
-                info->width = buffer_width;
-                info->height = buffer_height;
+                info->width = rsx::apply_resolution_scale(full_width - (inset_x + inset_x), true);
+                info->height = rsx::apply_resolution_scale(full_height - (inset_y + inset_y), true);
             }
         }
     }
@@ -118,7 +106,24 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	gl::screen.bind();
 	gl::screen.clear(gl::buffers::color);
 
-	// Calculate blit coordinates
+    GLuint image_to_flip = GL_NONE;
+
+	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
+	{
+		// Find the source image
+        gl::present_surface_info present_info;
+        present_info.width = buffer_width;
+        present_info.height = buffer_height;
+        present_info.pitch = buffer_pitch;
+        present_info.format = av_format;
+        present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
+
+        image_to_flip = get_present_source(&present_info, avconfig);
+        buffer_width = present_info.width;
+        buffer_height = present_info.height;
+    }
+
+    // Calculate blit coordinates
 	coordi aspect_ratio;
 	sizei csize(m_frame->client_width(), m_frame->client_height());
 	sizei new_size = csize;
@@ -143,20 +148,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	aspect_ratio.size = new_size;
 
-	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
-	{
-		// Find the source image
-        gl::present_surface_info present_info;
-        present_info.width = buffer_width;
-        present_info.height = buffer_height;
-        present_info.pitch = buffer_pitch;
-        present_info.format = av_format;
-        present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
-
-        const GLuint image = get_present_source(&present_info, avconfig);
-        buffer_width = present_info.width;
-        buffer_height = present_info.height;
-
+    if (image_to_flip)
+    {
 		if (m_frame->screenshot_toggle == true)
 		{
 			m_frame->screenshot_toggle = false;
@@ -167,9 +160,9 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			pack_settings.apply();
 
 			if (gl::get_driver_caps().ARB_dsa_supported)
-				glGetTextureImage(image, 0, GL_BGRA, GL_UNSIGNED_BYTE, buffer_height * buffer_width * 4, sshot_frame.data());
+				glGetTextureImage(image_to_flip, 0, GL_BGRA, GL_UNSIGNED_BYTE, buffer_height * buffer_width * 4, sshot_frame.data());
 			else
-				glGetTextureImageEXT(image, GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, sshot_frame.data());
+				glGetTextureImageEXT(image_to_flip, GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, sshot_frame.data());
 
 			if (GLenum err; (err = glGetError()) != GL_NO_ERROR)
 				LOG_ERROR(GENERAL, "[Screenshot] Failed to capture image: 0x%x", err);
@@ -184,7 +177,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			// Blit source image to the screen
 			m_flip_fbo.recreate();
 			m_flip_fbo.bind();
-			m_flip_fbo.color = image;
+			m_flip_fbo.color = image_to_flip;
 			m_flip_fbo.read_buffer(m_flip_fbo.color);
 			m_flip_fbo.draw_buffer(m_flip_fbo.color);
 			m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
@@ -195,7 +188,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			const bool limited_range = !g_cfg.video.full_rgb_range_output;
 
 			gl::screen.bind();
-			m_video_output_pass.run(areau(aspect_ratio), image, gamma, limited_range);
+			m_video_output_pass.run(areau(aspect_ratio), image_to_flip, gamma, limited_range);
 		}
 	}
 

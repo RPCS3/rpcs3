@@ -265,51 +265,40 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 {
     vk::image* image_to_flip = nullptr;
 
-    if (auto render_target_texture = m_rtts.get_color_surface_at(info->address))
+    // Check the surface store first
+    const auto format_bpp = get_format_block_size_in_bytes(info->format);
+    const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer,
+        info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::read);
+
+    if (!overlap_info.empty())
     {
-        if (render_target_texture->last_use_tag == m_rtts.write_tag)
-        {
-            image_to_flip = render_target_texture;
-        }
-        else
-        {
-            const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer, info->address, info->width, info->height, info->pitch, render_target_texture->get_bpp(), rsx::surface_access::read);
-            if (!overlap_info.empty() && overlap_info.back().surface == render_target_texture)
-            {
-                // Confirmed to be the newest data source in that range
-                image_to_flip = render_target_texture;
-            }
-        }
+        const auto& section = overlap_info.back();
+        auto surface = vk::as_rtt(section.surface);
 
-        if (image_to_flip)
+        if (section.base_address >= info->address)
         {
-            const auto buffer_width = rsx::apply_resolution_scale(info->width, true);
-            const auto buffer_height = rsx::apply_resolution_scale(info->height, true);
+            // Check for intentional 'borders'
+            const u32 inset_offset = section.base_address - info->address;
+            const u32 inset_y = inset_offset / info->pitch;
+            const u32 inset_x = (inset_offset % info->pitch) / format_bpp;
 
-            if (buffer_width > render_target_texture->width() ||
-                buffer_height > render_target_texture->height())
-            {
-                // TODO: Should emit only once to avoid flooding the log file
-                // TODO: Take AA scaling into account
-                LOG_WARNING(RSX, "Selected output image does not satisfy the video configuration. Display buffer resolution=%dx%d, avconf resolution=%dx%d, surface=%dx%d",
-                    info->width, info->height,
-                    avconfig->state * avconfig->resolution_x, avconfig->state * avconfig->resolution_y,
-                    render_target_texture->get_surface_width(rsx::surface_metrics::pixels), render_target_texture->get_surface_height(rsx::surface_metrics::pixels));
+            const u32 full_width = surface->get_surface_width(rsx::surface_metrics::samples) + inset_x + inset_x;
+            const u32 full_height = surface->get_surface_height(rsx::surface_metrics::samples) + inset_y + inset_y;
 
-                info->width = render_target_texture->width();
-                info->height = render_target_texture->height();
-            }
-            else
+            if (full_width == info->width && full_height == info->height)
             {
-                info->width = buffer_width;
-                info->height = buffer_height;
+                surface->read_barrier(*m_current_command_buffer);
+                image_to_flip = section.surface->get_surface(rsx::surface_access::read);
+
+                info->width = rsx::apply_resolution_scale(full_width - (inset_x + inset_x), true);
+                info->height = rsx::apply_resolution_scale(full_height - (inset_y + inset_y), true);
             }
         }
     }
     else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(info->address, info->format, info->width, info->height))
     {
-        //Hack - this should be the first location to check for output
-        //The render might have been done offscreen or in software and a blit used to display
+        // Hack - this should be the first location to check for output
+        // The render might have been done offscreen or in software and a blit used to display
         image_to_flip = surface->get_raw_texture();
     }
 
@@ -426,32 +415,23 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			buffer_pitch = buffer_width * 4;
 	}
 
-	coordi aspect_ratio;
-
-	sizei csize = m_swapchain_dims;
-	sizei new_size = csize;
-
-	if (!g_cfg.video.stretch_to_display_area)
+    // Scan memory for required data. This is done early to optimize waiting for the driver image acquire below.
+    vk::image* image_to_flip = nullptr;
+	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
-		const double aq = 1. * buffer_width / buffer_height;
-		const double rq = 1. * new_size.width / new_size.height;
-		const double q = aq / rq;
+        vk::present_surface_info present_info;
+        present_info.width = buffer_width;
+        present_info.height = buffer_height;
+        present_info.pitch = buffer_pitch;
+        present_info.format = av_format;
+        present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
-		if (q > 1.0)
-		{
-			new_size.height = static_cast<int>(new_size.height / q);
-			aspect_ratio.y = (csize.height - new_size.height) / 2;
-		}
-		else if (q < 1.0)
-		{
-			new_size.width = static_cast<int>(new_size.width * q);
-			aspect_ratio.x = (csize.width - new_size.width) / 2;
-		}
+        image_to_flip = get_present_source(&present_info, avconfig);
+        buffer_width = present_info.width;
+        buffer_height = present_info.height;
 	}
 
-	aspect_ratio.size = new_size;
-
-	//Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
+	// Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
 	verify(HERE), m_current_frame->present_image == UINT32_MAX;
 	verify(HERE), m_current_frame->swap_command_buffer == nullptr;
 
@@ -463,14 +443,14 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		case VK_TIMEOUT:
 		case VK_NOT_READY:
 		{
-			//In some cases, after a fullscreen switch, the driver only allows N-1 images to be acquirable, where N = number of available swap images.
-			//This means that any acquired images have to be released
-			//before acquireNextImage can return successfully. This is despite the driver reporting 2 swap chain images available
-			//This makes fullscreen performance slower than windowed performance as throughput is lowered due to losing one presentable image
-			//Found on AMD Crimson 17.7.2
+			// In some cases, after a fullscreen switch, the driver only allows N-1 images to be acquirable, where N = number of available swap images.
+			// This means that any acquired images have to be released
+			// before acquireNextImage can return successfully. This is despite the driver reporting 2 swap chain images available
+			// This makes fullscreen performance slower than windowed performance as throughput is lowered due to losing one presentable image
+			// Found on AMD Crimson 17.7.2
 
 
-			//Whatever returned from status, this is now a spin
+			// Whatever returned from status, this is now a spin
 			timeout = 0ull;
 			check_present_status();
 			continue;
@@ -488,26 +468,35 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 	}
 
-	//Confirm that the driver did not silently fail
+	// Confirm that the driver did not silently fail
 	verify(HERE), m_current_frame->present_image != UINT32_MAX;
 
-	//Blit contents to screen..
-	vk::image* image_to_flip = nullptr;
+    // Calculate output dimensions. Done after swapchain acquisition in case it was recreated.
+    coordi aspect_ratio;
+    sizei csize = m_swapchain_dims;
+    sizei new_size = csize;
 
-	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
-	{
-        vk::present_surface_info present_info;
-        present_info.width = buffer_width;
-        present_info.height = buffer_height;
-        present_info.pitch = buffer_pitch;
-        present_info.format = av_format;
-        present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
+    if (!g_cfg.video.stretch_to_display_area)
+    {
+        const double aq = 1. * buffer_width / buffer_height;
+        const double rq = 1. * new_size.width / new_size.height;
+        const double q = aq / rq;
 
-        image_to_flip = get_present_source(&present_info, avconfig);
-        buffer_width = present_info.width;
-        buffer_height = present_info.height;
-	}
+        if (q > 1.0)
+        {
+            new_size.height = static_cast<int>(new_size.height / q);
+            aspect_ratio.y = (csize.height - new_size.height) / 2;
+        }
+        else if (q < 1.0)
+        {
+            new_size.width = static_cast<int>(new_size.width * q);
+            aspect_ratio.x = (csize.width - new_size.width) / 2;
+        }
+    }
 
+    aspect_ratio.size = new_size;
+
+	// Blit contents to screen..
 	VkImage target_image = m_swapchain->get_image(m_current_frame->present_image);
 	const auto present_layout = m_swapchain->get_optimal_present_layout();
 
@@ -558,53 +547,53 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			direct_fbo->release();
 		}
+
+        if (m_frame->screenshot_toggle == true)
+        {
+            m_frame->screenshot_toggle = false;
+
+            const size_t sshot_size = buffer_height * buffer_width * 4;
+
+            vk::buffer sshot_vkbuf(*m_device, align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+
+            VkBufferImageCopy copy_info;
+            copy_info.bufferOffset                    = 0;
+            copy_info.bufferRowLength                 = 0;
+            copy_info.bufferImageHeight               = 0;
+            copy_info.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            copy_info.imageSubresource.baseArrayLayer = 0;
+            copy_info.imageSubresource.layerCount     = 1;
+            copy_info.imageSubresource.mipLevel       = 0;
+            copy_info.imageOffset.x                   = 0;
+            copy_info.imageOffset.y                   = 0;
+            copy_info.imageOffset.z                   = 0;
+            copy_info.imageExtent.width               = buffer_width;
+            copy_info.imageExtent.height              = buffer_height;
+            copy_info.imageExtent.depth               = 1;
+
+            image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+            vk::copy_image_to_buffer(*m_current_command_buffer, image_to_flip, &sshot_vkbuf, copy_info);
+            image_to_flip->pop_layout(*m_current_command_buffer);
+
+            flush_command_queue(true);
+            auto src = sshot_vkbuf.map(0, sshot_size);
+            std::vector<u8> sshot_frame(sshot_size);
+            memcpy(sshot_frame.data(), src, sshot_size);
+            sshot_vkbuf.unmap();
+
+            m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
+        }
 	}
 	else
 	{
-		//No draw call was issued!
-		//TODO: Upload raw bytes from cpu for rendering
+		// No draw call was issued!
+		// TODO: Upload raw bytes from cpu for rendering
 		VkClearColorValue clear_black {};
 		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
 		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
 
 		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	}
-
-	if (m_frame->screenshot_toggle == true)
-	{
-		m_frame->screenshot_toggle = false;
-
-		const size_t sshot_size = buffer_height * buffer_width * 4;
-
-		vk::buffer sshot_vkbuf(*m_device, align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		    VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
-
-		VkBufferImageCopy copy_info;
-		copy_info.bufferOffset                    = 0;
-		copy_info.bufferRowLength                 = 0;
-		copy_info.bufferImageHeight               = 0;
-		copy_info.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-		copy_info.imageSubresource.baseArrayLayer = 0;
-		copy_info.imageSubresource.layerCount     = 1;
-		copy_info.imageSubresource.mipLevel       = 0;
-		copy_info.imageOffset.x                   = 0;
-		copy_info.imageOffset.y                   = 0;
-		copy_info.imageOffset.z                   = 0;
-		copy_info.imageExtent.width               = buffer_width;
-		copy_info.imageExtent.height              = buffer_height;
-		copy_info.imageExtent.depth               = 1;
-
-		image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-		vk::copy_image_to_buffer(*m_current_command_buffer, image_to_flip, &sshot_vkbuf, copy_info);
-		image_to_flip->pop_layout(*m_current_command_buffer);
-
-		flush_command_queue(true);
-		auto src = sshot_vkbuf.map(0, sshot_size);
-		std::vector<u8> sshot_frame(sshot_size);
-		memcpy(sshot_frame.data(), src, sshot_size);
-		sshot_vkbuf.unmap();
-
-		m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
 	}
 
 	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
