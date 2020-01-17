@@ -4,6 +4,7 @@
 #include "GLGSRender.h"
 #include "GLCompute.h"
 #include "GLVertexProgram.h"
+#include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
 #include "../rsx_utils.h"
@@ -911,62 +912,9 @@ void GLGSRender::on_init_thread()
 	}
 	else
 	{
-		struct native_helper : gl::shader_cache::progress_dialog_helper
-		{
-			rsx::thread *owner = nullptr;
-			std::shared_ptr<rsx::overlays::message_dialog> dlg;
+		rsx::shader_loading_dialog_native dlg(this);
 
-			native_helper(GLGSRender *ptr) :
-				owner(ptr) {}
-
-			void create() override
-			{
-				MsgDialogType type = {};
-				type.disable_cancel = true;
-				type.progress_bar_count = 2;
-
-				dlg = g_fxo->get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>(!!g_cfg.video.shader_preloading_dialog.use_custom_background);
-				dlg->progress_bar_set_taskbar_index(-1);
-				dlg->show(false, "Loading precompiled shaders from disk...", type, [](s32 status)
-				{
-					if (status != CELL_OK)
-						Emu.Stop();
-				});
-			}
-
-			void update_msg(u32 index, u32 processed, u32 entry_count) override
-			{
-				const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
-				dlg->progress_bar_set_message(index, fmt::format(text, processed, entry_count));
-				owner->flip({});
-			}
-
-			void inc_value(u32 index, u32 value) override
-			{
-				dlg->progress_bar_increment(index, static_cast<f32>(value));
-				owner->flip({});
-			}
-
-			void set_limit(u32 index, u32 limit) override
-			{
-				dlg->progress_bar_set_limit(index, limit);
-				owner->flip({});
-			}
-
-			void refresh() override
-			{
-				dlg->refresh();
-			}
-
-			void close() override
-			{
-				dlg->return_code = CELL_OK;
-				dlg->close();
-			}
-		}
-		helper(this);
-
-		m_shaders_cache->load(&helper);
+		m_shaders_cache->load(&dlg);
 	}
 }
 

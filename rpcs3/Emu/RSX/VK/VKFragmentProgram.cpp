@@ -116,7 +116,7 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
-	u32 location = TEXTURES_FIRST_BIND_SLOT;
+	u32 location = m_binding_table.textures_first_bind_slot;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type != "sampler1D" &&
@@ -166,9 +166,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		}
 	}
 
-	// Some drivers (macOS) do not support more than 16 texture descriptors per stage
-	// TODO: If any application requires more than this, the layout can be restructured a bit
-	verify("Too many sampler descriptors!" HERE), location <= VERTEX_TEXTURES_FIRST_BIND_SLOT;
+	verify("Too many sampler descriptors!" HERE), location <= m_binding_table.vertex_textures_first_bind_slot;
 
 	std::string constants_block;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
@@ -211,17 +209,17 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "};\n\n";
 
 	vk::glsl::program_input in;
-	in.location = FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT;
+	in.location = m_binding_table.fragment_constant_buffers_bind_slot;
 	in.domain = glsl::glsl_fragment_program;
 	in.name = "FragmentConstantsBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
 	inputs.push_back(in);
 
-	in.location = FRAGMENT_STATE_BIND_SLOT;
+	in.location = m_binding_table.fragment_state_bind_slot;
 	in.name = "FragmentStateBuffer";
 	inputs.push_back(in);
 
-	in.location = FRAGMENT_TEXTURE_PARAMS_BIND_SLOT;
+	in.location = m_binding_table.fragment_texture_params_bind_slot;
 	in.name = "TextureParametersBuffer";
 	inputs.push_back(in);
 }
@@ -345,9 +343,12 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1"))
 		{
-			//Depth writes are always from a fp32 register. See issues section on nvidia's NV_fragment_program spec
-			//https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
-			OS << "	gl_FragDepth = r1.z;\n";
+			// NOTE: Depth writes are always from a fp32 register. See issues section on nvidia's NV_fragment_program spec
+			// https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
+
+			// NOTE: Depth writes in OpenGL (and by extension RSX) are clamped to 0,1 range.
+			// Indeed, hardware tests on realhw prove that even in depth float mode, values outside this range are clamped.
+			OS << "	gl_FragDepth = _saturate(r1.z);\n";
 		}
 		else
 		{
@@ -361,6 +362,7 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::Task()
 {
+	m_binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
 	m_shader = Decompile();
 	vk_prog->SetInputs(inputs);
 }

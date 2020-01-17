@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "SPUInterpreter.h"
 
 #include "Emu/System.h"
@@ -1903,21 +1903,29 @@ inline bool isdenormal(double x)
 bool spu_interpreter_precise::FREST(spu_thread& spu, spu_opcode_t op)
 {
 	fesetround(FE_TOWARDZERO);
+	const auto ra = spu.gpr[op.ra];
+	auto res = v128::fromF(_mm_rcp_ps(ra.vf));
 	for (int i = 0; i < 4; i++)
 	{
-		const float a = spu.gpr[op.ra]._f[i];
-		float result;
-		if (fexpf(a) == 0)
+		const auto a = ra._f[i];
+		switch (fexpf(a))
+		{
+		case 0:
 		{
 			spu.fpscr.setDivideByZeroFlag(i);
-			result = extended(std::signbit(a), 0x7FFFFF);
+			res._f[i] = extended(std::signbit(a), 0x7FFFFF);
+			break;
 		}
-		else if (isextended(a))
-			result = 0.0f;
-		else
-			result = 1 / a;
-		spu.gpr[op.rt]._f[i] = result;
+		case (0x7e800000 >> 23): // Special case for value not handled properly in rcpps
+		{
+			res._f[i] = 0.0f;
+			break;
+		}
+		default: break;
+		}
 	}
+
+	spu.gpr[op.rt] = res;
 	return true;
 }
 

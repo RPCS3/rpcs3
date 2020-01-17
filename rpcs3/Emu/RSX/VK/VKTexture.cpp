@@ -221,7 +221,6 @@ namespace vk
 			src->push_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
 		}
 
-		auto scratch_buf = vk::get_scratch_buffer();
 		VkBufferImageCopy src_copy{}, dst_copy{};
 		src_copy.imageExtent = { u32(src_rect.x2 - src_rect.x1), u32(src_rect.y2 - src_rect.y1), 1 };
 		src_copy.imageOffset = { src_rect.x1, src_rect.y1, 0 };
@@ -230,6 +229,21 @@ namespace vk
 		dst_copy.imageExtent = { u32(dst_rect.x2 - dst_rect.x1), u32(dst_rect.y2 - dst_rect.y1), 1 };
 		dst_copy.imageOffset = { dst_rect.x1, dst_rect.y1, 0 };
 		dst_copy.imageSubresource = { dst_aspect & dst_transfer_mask, 0, 0, 1 };
+
+		const auto src_texel_size = vk::get_format_texel_width(src->info.format);
+		const auto src_length = src_texel_size * src_copy.imageExtent.width * src_copy.imageExtent.height;
+		u64 min_scratch_size = src_length;
+
+		// Check for DS manipulation which will affect scratch memory requirements
+		if (const VkFlags combined_aspect =  src->aspect() | dst->aspect();
+			(combined_aspect & VK_IMAGE_ASPECT_STENCIL_BIT) != 0)
+		{
+			// At least one depth-stencil merge/extract required; requirements change to 2(w*h*bpp) + (w*h)
+			min_scratch_size = (src_length * 2) + (src_length / src_texel_size);
+		}
+
+		// Initialize scratch memory
+		auto scratch_buf = vk::get_scratch_buffer(min_scratch_size);
 
 		for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
 		{
@@ -247,10 +261,7 @@ namespace vk
 				}
 				else
 				{
-					const auto elem_size = vk::get_format_texel_width(src->info.format);
-					const auto length = elem_size * src_copy.imageExtent.width * src_copy.imageExtent.height;
-
-					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, src_length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
 					vk::cs_shuffle_base *shuffle_kernel = nullptr;
@@ -275,9 +286,9 @@ namespace vk
 						}
 					}
 
-					shuffle_kernel->run(cmd, scratch_buf, length);
+					shuffle_kernel->run(cmd, scratch_buf, src_length);
 
-					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, length, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, src_length, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 				}
 			}
@@ -442,8 +453,18 @@ namespace vk
 					if (src_rect.x1 > src_rect.x2) src_rect2.flip_horizontal();
 					if (src_rect.y1 > src_rect.y2) src_rect2.flip_vertical();
 
+					insert_image_memory_barrier(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
+						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+
 					copy_scaled_image(cmd, typeless, typeless, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
 						src_rect2, { 0, src_h, dst_w, (src_h + dst_h) }, 1, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_COLOR_BIT, filter);
+
+					insert_image_memory_barrier(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
+						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
 					//3. Copy back the aspect bits
 					info.imageExtent = { static_cast<u32>(dst_w), static_cast<u32>(dst_h), 1 };
@@ -496,7 +517,10 @@ namespace vk
 					// Since the typeless transfer itself violates spec, the only way to make it work is to use a D32S8 intermediate
 					// Copy from src->intermediate then intermediate->dst for each aspect separately
 
-					auto typeless_depth = vk::get_typeless_helper(VK_FORMAT_R32_SFLOAT, typeless_w, typeless_h);
+					// NOTE: While it may seem intuitive to use R32_SFLOAT as the carrier for the depth aspect, this does not work properly
+					// Floating point interpolation is non-linear from a bit-by-bit perspective and generates undesirable effects
+
+					auto typeless_depth = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM, typeless_w, typeless_h);
 					auto typeless_stencil = vk::get_typeless_helper(VK_FORMAT_R8_UNORM, typeless_w, typeless_h);
 					change_image_layout(cmd, typeless_depth, VK_IMAGE_LAYOUT_GENERAL);
 					change_image_layout(cmd, typeless_stencil, VK_IMAGE_LAYOUT_GENERAL);
@@ -742,7 +766,7 @@ namespace vk
 			{
 				if (!scratch_buf)
 				{
-					scratch_buf = vk::get_scratch_buffer();
+					scratch_buf = vk::get_scratch_buffer(image_linear_size * 2);
 					buffer_copies.reserve(subresource_layout.size());
 				}
 
@@ -851,6 +875,34 @@ namespace vk
 	{
 		vk::image* real_src = src;
 		vk::image* real_dst = dst;
+
+		// Optimization pass; check for pass-through data transfer
+		if (!xfer_info.flip_horizontal && !xfer_info.flip_vertical && src_area.height() == dst_area.height())
+		{
+			auto src_w = src_area.width();
+			auto dst_w = dst_area.width();
+
+			if (xfer_info.src_is_typeless) src_w *= xfer_info.src_scaling_hint;
+			if (xfer_info.dst_is_typeless) dst_w *= xfer_info.dst_scaling_hint;
+
+			if (src_w == dst_w)
+			{
+				// Final dimensions are a match
+				if (xfer_info.src_is_typeless || xfer_info.dst_is_typeless)
+				{
+					const areai src_rect = src_area * size2f{ xfer_info.src_scaling_hint, 1.f };
+					const areai dst_rect = dst_area * size2f{ xfer_info.dst_scaling_hint, 1.f };
+					vk::copy_image_typeless(cmd, src, dst, src_rect, dst_rect, 1, src->aspect(), dst->aspect());
+				}
+				else
+				{
+					copy_image(cmd, src->value, dst->value, src->current_layout, dst->current_layout,
+						src_area, dst_area, 1, src->aspect(), dst->aspect());
+				}
+
+				return;
+			}
+		}
 
 		if (xfer_info.src_is_typeless)
 		{

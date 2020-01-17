@@ -70,6 +70,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Emu\Io\KeyboardHandler.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp" />
     <ClCompile Include="util\atomic.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -318,6 +320,7 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlays.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_animation.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_edit_text.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_font.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_list_view.cpp" />
@@ -395,6 +398,9 @@
     <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_perf_metrics.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h" />
+    <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h" />
+    <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.h" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\bin_patch.h" />
@@ -587,6 +593,7 @@
     <ClInclude Include="Emu\RSX\gcm_enums.h" />
     <ClInclude Include="Emu\RSX\gcm_printing.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlays.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_animation.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_controls.h" />
     <ClInclude Include="Emu\RSX\RSXFIFO.h" />
     <ClInclude Include="Emu\RSX\RSXOffload.h" />

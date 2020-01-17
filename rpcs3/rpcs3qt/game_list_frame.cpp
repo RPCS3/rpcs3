@@ -31,8 +31,11 @@
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
-	: custom_dock_widget(tr("Game List"), parent), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
+game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
+	: custom_dock_widget(tr("Game List"), parent)
+	, m_gui_settings(guiSettings)
+	, m_emu_settings(emuSettings)
+	, m_persistent_settings(persistent_settings)
 {
 	m_isListLayout    = m_gui_settings->GetValue(gui::gl_listMode).toBool();
 	m_Margin_Factor   = m_gui_settings->GetValue(gui::gl_marginFactor).toReal();
@@ -364,12 +367,12 @@ void game_list_frame::SortGameList()
 
 QString game_list_frame::GetLastPlayedBySerial(const QString& serial)
 {
-	return m_gui_settings->GetLastPlayed(serial);
+	return m_persistent_settings->GetLastPlayed(serial);
 }
 
 QString game_list_frame::GetPlayTimeBySerial(const QString& serial)
 {
-	const qint64 elapsed_ms = m_gui_settings->GetPlaytime(serial);
+	const qint64 elapsed_ms = m_persistent_settings->GetPlaytime(serial);
 
 	if (elapsed_ms <= 0)
 	{
@@ -579,8 +582,32 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				const QString serial = qstr(game.serial);
 				const QString note = m_gui_settings->GetValue(gui::notes, serial, "").toString();
 				const QString title = m_gui_settings->GetValue(gui::titles, serial, "").toString().simplified();
-				m_gui_settings->SetLastPlayed(serial, m_gui_settings->GetValue(gui::last_played, serial, "").toString());
-				m_gui_settings->SetPlaytime(serial, m_gui_settings->GetValue(gui::playtime, serial, 0).toInt());
+
+				// Read persistent_settings values
+				QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
+				int playtime        = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toInt();
+
+				// Read deprecated gui_setting values first for backwards compatibility (older than January 12th 2020).
+				// Restrict this to empty persistent settings to keep continuity.
+				if (last_played.isEmpty())
+				{
+					last_played = m_gui_settings->GetValue(gui::persistent::last_played, serial, "").toString();
+				}
+				if (playtime <= 0)
+				{
+					playtime = m_gui_settings->GetValue(gui::persistent::playtime, serial, 0).toInt();
+				}
+
+				// Set persistent_settings values if values exist
+				if (!last_played.isEmpty())
+				{
+					m_persistent_settings->SetLastPlayed(serial, last_played);
+				}
+				if (playtime > 0)
+				{
+					m_persistent_settings->SetPlaytime(serial, playtime);
+				}
+
 				serials.insert(serial);
 
 				if (!note.isEmpty())
@@ -730,7 +757,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			games_per_row = width() / (m_Icon_Size.width() + m_Icon_Size.width() * m_xgrid->getMarginFactor() * 2);
 		}
 
-		int scroll_position = m_xgrid->verticalScrollBar()->value();
+		const int scroll_position = m_xgrid->verticalScrollBar()->value();
 		PopulateGameGrid(games_per_row, m_Icon_Size, m_Icon_Color);
 		connect(m_xgrid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 		connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
@@ -888,7 +915,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (RemoveCustomConfiguration(currGame.serial, gameinfo, true))
 			{
-				ShowCustomConfigIcon(item);
+				ShowCustomConfigIcon(gameinfo);
 			}
 		});
 	}
@@ -899,7 +926,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (RemoveCustomPadConfiguration(currGame.serial, gameinfo, true))
 			{
-				ShowCustomConfigIcon(item);
+				ShowCustomConfigIcon(gameinfo);
 			}
 		});
 	}
@@ -981,7 +1008,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			if (!gameinfo->hasCustomConfig)
 			{
 				gameinfo->hasCustomConfig = true;
-				ShowCustomConfigIcon(item);
+				ShowCustomConfigIcon(gameinfo);
 			}
 			Q_EMIT NotifyEmuSettingsChange();
 		}
@@ -1004,7 +1031,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomPadConfig)
 		{
 			gameinfo->hasCustomPadConfig = true;
-			ShowCustomConfigIcon(item);
+			ShowCustomConfigIcon(gameinfo);
 		}
 		if (!Emu.IsStopped())
 		{
@@ -1373,7 +1400,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Creation"), tr("Creating all PPU caches"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Creation"), tr("Creating all PPU caches"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1418,7 +1445,7 @@ void game_list_frame::BatchRemovePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Removal"), tr("Removing all PPU caches"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Removal"), tr("Removing all PPU caches"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1503,7 +1530,7 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1548,7 +1575,7 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Custom Pad Configuration Batch Removal"), tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Pad Configuration Batch Removal"), tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1590,7 +1617,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1618,7 +1645,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 
 QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
 {
-	const int device_pixel_ratio = devicePixelRatio();
+	const qreal device_pixel_ratio = devicePixelRatioF();
 	const QSize original_size = icon.size();
 
 	QPixmap canvas = QPixmap(original_size * device_pixel_ratio);
@@ -1671,32 +1698,27 @@ QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_ic
 	return canvas.scaled(m_Icon_Size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
 }
 
-void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item)
+void game_list_frame::ShowCustomConfigIcon(game_info game)
 {
-	auto game = GetGameInfoFromItem(item);
-	if (game == nullptr)
+	if (!game)
 	{
 		return;
 	}
 
-	if (!m_isListLayout)
-	{
-		const QString title = m_titles.value(qstr(game->info.serial), qstr(game->info.name));
-		const QColor color = getGridCompatibilityColor(game->compat.color);
+	const std::string serial      = game->info.serial;
+	const bool hasCustomConfig    = game->hasCustomConfig;
+	const bool hasCustomPadConfig = game->hasCustomPadConfig;
 
-		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
-		int r = m_xgrid->currentItem()->row(), c = m_xgrid->currentItem()->column();
-		m_xgrid->addItem(game->pxmap, title.simplified(), r, c);
-		m_xgrid->item(r, c)->setData(gui::game_role, QVariant::fromValue(game));
+	for (auto other_game : m_game_data)
+	{
+		if (other_game->info.serial == serial)
+		{
+			other_game->hasCustomConfig    = hasCustomConfig;
+			other_game->hasCustomPadConfig = hasCustomPadConfig;
+		}
 	}
-	else if (game->hasCustomConfig && game->hasCustomPadConfig)
-		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/combo_config_bordered.png"));
-	else if (game->hasCustomConfig)
-		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/custom_config.png"));
-	else if (game->hasCustomPadConfig)
-		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/controllers.png"));
-	else
-		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon());
+
+	RepaintIcons();
 }
 
 void game_list_frame::ResizeIcons(const int& sliderPos)
@@ -1728,7 +1750,7 @@ void game_list_frame::RepaintIcons(const bool& fromSettings)
 	QtConcurrent::blockingMap(indices, [this](int& i)
 	{
 		auto game = m_game_data[i];
-		QColor color = getGridCompatibilityColor(game->compat.color);
+		const QColor color = getGridCompatibilityColor(game->compat.color);
 		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
 	});
 
@@ -1926,7 +1948,7 @@ int game_list_frame::PopulateGameList()
 		compat_item->setToolTip(game->compat.tooltip);
 		if (!game->compat.color.isEmpty())
 		{
-			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color, devicePixelRatio() * 2));
+			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color, devicePixelRatioF() * 2));
 		}
 
 		// Version
@@ -1976,11 +1998,11 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 	int r = 0;
 	int c = 0;
 
-	std::string selected_item = CurrentSelectionIconPath();
+	const std::string selected_item = CurrentSelectionIconPath();
 
 	m_xgrid->deleteLater();
 
-	bool showText = m_icon_size_index > gui::gl_max_slider_pos * 2 / 5;
+	const bool showText = m_icon_size_index > gui::gl_max_slider_pos * 2 / 5;
 
 	if (m_icon_size_index < gui::gl_max_slider_pos * 2 / 3)
 	{
@@ -2002,7 +2024,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 		}
 	}
 
-	int entries = matching_apps.count();
+	const int entries = matching_apps.count();
 
 	// Edge cases!
 	if (entries == 0)
@@ -2012,8 +2034,8 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	maxCols = std::clamp(maxCols, 1, entries);
 
-	int needsExtraRow = (entries % maxCols) != 0;
-	int maxRows = needsExtraRow + entries / maxCols;
+	const int needsExtraRow = (entries % maxCols) != 0;
+	const int maxRows = needsExtraRow + entries / maxCols;
 	m_xgrid->setRowCount(maxRows);
 	m_xgrid->setColumnCount(maxCols);
 

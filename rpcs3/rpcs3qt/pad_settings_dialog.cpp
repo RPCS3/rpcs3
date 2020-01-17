@@ -730,8 +730,9 @@ void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 			key = mouse::wheel_right;
 		}
 	}
-	if (const int y = direction.y())
+	else
 	{
+		const int y = direction.y();
 		bool to_up = event->inverted() ? y < 0 : y > 0;
 		if (to_up)
 		{

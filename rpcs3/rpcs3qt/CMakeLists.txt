@@ -29,6 +29,8 @@
 	msg_dialog_frame.cpp
 	osk_dialog_frame.cpp
 	pad_settings_dialog.cpp
+	persistent_settings.cpp
+	pkg_install_dialog.cpp
 	progress_dialog.cpp
 	qt_utils.cpp
 	register_editor_dialog.cpp
@@ -37,6 +39,7 @@
 	save_data_info_dialog.cpp
 	save_data_list_dialog.cpp
 	save_manager_dialog.cpp
+	settings.cpp
 	settings_dialog.cpp
 	skylander_dialog.cpp
 	syntax_highlighter.cpp

@@ -50,7 +50,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 		std::lock_guard lock(id_manager::g_mutex);
 
 		// Schedule joiner and unqueue
-		lv2_obj::awake(idm::check_unlocked<named_thread<ppu_thread>>(jid), -2);
+		lv2_obj::awake(idm::check_unlocked<named_thread<ppu_thread>>(jid));
 	}
 
 	// Unqueue

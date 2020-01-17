@@ -280,7 +280,8 @@ namespace vk
 				"void main()\n"
 				"{\n"
 				"	uint invocations_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);"
-				"	uint index = (gl_GlobalInvocationID.y * invocations_x) + gl_GlobalInvocationID.x;\n"
+				"	uint invocation_id = (gl_GlobalInvocationID.y * invocations_x) + gl_GlobalInvocationID.x;\n"
+				"	uint index = invocation_id * KERNEL_SIZE;\n"
 				"	uint value;\n"
 				"	%vars"
 				"\n";
@@ -350,7 +351,7 @@ namespace vk
 			m_data_length = data_length;
 
 			const auto num_bytes_per_invocation = optimal_group_size * kernel_size * 4;
-			const auto num_bytes_to_process = align(data_length, num_bytes_per_invocation);
+			const auto num_bytes_to_process = rsx::align2(data_length, num_bytes_per_invocation);
 			const auto num_invocations = num_bytes_to_process / num_bytes_per_invocation;
 
 			if ((num_bytes_to_process + data_offset) > data->size())
@@ -528,7 +529,7 @@ namespace vk
 				"		stencil_offset = (index / 4);\n"
 				"		stencil_shift = (index % 4) * 8;\n"
 				"		stencil = (value & 0xFF) << stencil_shift;\n"
-				"		data[stencil_offset + s_offset] |= stencil;\n";
+				"		atomicOr(data[stencil_offset + s_offset], stencil);\n";
 
 			cs_shuffle_base::build("");
 		}
@@ -547,7 +548,7 @@ namespace vk
 				"		stencil_offset = (index / 4);\n"
 				"		stencil_shift = (index % 4) * 8;\n"
 				"		stencil = (value & 0xFF) << stencil_shift;\n"
-				"		data[stencil_offset + s_offset] |= stencil;\n";
+				"		atomicOr(data[stencil_offset + s_offset], stencil);\n";
 
 			cs_shuffle_base::build("");
 		}

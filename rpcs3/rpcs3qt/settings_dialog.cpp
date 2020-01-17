@@ -538,6 +538,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 					xemu_settings->SetSetting(render->type, sstr(render->old_adapter));
 				}
 			}
+
+			// Enable/disable MSAA depending on renderer
+			ui->antiAliasing->setEnabled(renderer.has_msaa);
+			ui->antiAliasing->blockSignals(true);
+			ui->antiAliasing->setCurrentText(renderer.has_msaa ? qstr(xemu_settings->GetSetting(emu_settings::MSAA)) : tr("Disabled"));
+			ui->antiAliasing->blockSignals(false);
+
 			// Fill combobox with placeholder if no adapters needed
 			if (!renderer.has_adapters)
 			{
@@ -754,7 +761,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	for (s32 index = 3; index >= 0; index--)
 	{
-		if (xemu_settings->m_microphone_creator.sel_list[index] == "" || mics_combo[index]->findText(qstr(xemu_settings->m_microphone_creator.sel_list[index])) == -1)
+		if (xemu_settings->m_microphone_creator.sel_list[index].empty() || mics_combo[index]->findText(qstr(xemu_settings->m_microphone_creator.sel_list[index])) == -1)
 		{
 			mics_combo[index]->setCurrentText(xemu_settings->m_microphone_creator.mic_none);
 			ChangeMicrophoneDevice(index+1, xemu_settings->m_microphone_creator.mic_none); // Ensures the value is set in config
@@ -764,6 +771,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	}
 
 	xemu_settings->EnhanceComboBox(ui->microphoneBox, emu_settings::MicrophoneType);
+	ui->microphoneBox->setItemText(ui->microphoneBox->findData("Null"), tr("Disabled"));
 	SubscribeTooltip(ui->microphoneBox, json_audio["microphoneBox"].toString());
 	connect(ui->microphoneBox, &QComboBox::currentTextChanged, ChangeMicrophoneType);
 	PropagateUsedDevices(); // Enables/Disables comboboxes and checks values from config for sanity
@@ -937,6 +945,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Sliders
 
+	EnhanceSlider(emu_settings::DriverWakeUpDelay, ui->wakeupDelay, ui->wakeupText, tr(u8"%0 µs"));
+	int wakeupDef = stoi(xemu_settings->GetSettingDefault(emu_settings::DriverWakeUpDelay));
+	connect(ui->wakeupReset, &QAbstractButton::clicked, [=]()
+	{
+		ui->wakeupDelay->setValue(wakeupDef);
+	});
+
 	EnhanceSlider(emu_settings::VBlankRate, ui->vblank, ui->vblankText, tr("%0 Hz"));
 	int vblankDef = stoi(xemu_settings->GetSettingDefault(emu_settings::VBlankRate));
 	connect(ui->vblankReset, &QAbstractButton::clicked, [=]()
@@ -959,11 +974,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->clockScale->setDisabled(true);
 		ui->clockScaleReset->setDisabled(true);
 		SubscribeTooltip(ui->clockScale, json_advanced["disabledFromGlobal"].toString());
+		ui->wakeupDelay->setDisabled(true);
+		ui->wakeupReset->setDisabled(true);
+		SubscribeTooltip(ui->wakeupDelay, json_advanced["disabledFromGlobal"].toString());
 	}
 	else
 	{
 		SubscribeTooltip(ui->vblank, json_advanced["vblankRate"].toString());
 		SubscribeTooltip(ui->clockScale, json_advanced["clocksScale"].toString());
+		SubscribeTooltip(ui->wakeupDelay, json_advanced["wakeupDelay"].toString());
 	}
 
 	// lib options tool tips

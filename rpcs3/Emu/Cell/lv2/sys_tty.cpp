@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "sys_tty.h"
@@ -125,7 +125,7 @@ error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwrit
 	{
 		if (!msg.empty())
 		{
-			sys_tty.notice("sys_tty_write(): “%s”", msg);
+			sys_tty.notice(u8"sys_tty_write(): “%s”", msg);
 
 			if (g_tty)
 			{

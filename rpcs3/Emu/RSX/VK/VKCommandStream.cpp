@@ -30,7 +30,7 @@ namespace vk
 			release_global_submit_lock();
 
 			// Signal fence
-			pfence->flushed = true;
+			pfence->signal_flushed();
 		}
 	}
 }

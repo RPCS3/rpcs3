@@ -279,7 +279,6 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 		cellSysutil.error("%s", msgString);
 	}
 
-
 	return open_msg_dialog(false, type, msgString, callback, userData, extParam);
 }
 

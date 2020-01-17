@@ -22,7 +22,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 25: return "sys_process_get_sdk_version";
 	case 26: return "_sys_process_exit2";
 	case 28: return "_sys_process_get_number_of_object";
-	case 29: return "sys_process_get_id";
+	case 29: return "sys_process_get_id2";
 	case 30: return "_sys_process_get_paramsfo";
 	case 31: return "sys_process_get_ppu_guid";
 	case 41: return "_sys_ppu_thread_exit";

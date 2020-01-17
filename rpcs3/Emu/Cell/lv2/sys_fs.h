@@ -121,6 +121,15 @@ struct FsMselfEntry
 
 struct lv2_fs_mount_point;
 
+enum class lv2_mp_flag
+{
+	read_only,
+	no_uid_gid,
+	strict_get_block_size,
+
+	__bitset_enum_max
+};
+
 struct lv2_fs_object
 {
 	using id_type = lv2_fs_object;
@@ -135,29 +144,25 @@ struct lv2_fs_object
 	// File Name (max 1055)
 	const std::array<char, 0x420> name;
 
-	lv2_fs_object(lv2_fs_mount_point* mp, const char* filename)
+	lv2_fs_object(lv2_fs_mount_point* mp, std::string_view filename)
 		: mp(mp)
 		, name(get_name(filename))
 	{
 	}
 
-	static lv2_fs_mount_point* get_mp(const char* filename);
+	static lv2_fs_mount_point* get_mp(std::string_view filename);
 
-	static std::array<char, 0x420> get_name(const char* filename)
+	static std::array<char, 0x420> get_name(std::string_view filename)
 	{
 		std::array<char, 0x420> name;
 
-		for (auto& c : name)
+		if (filename.size() >= 0x420)
 		{
-			c = *filename++;
-
-			if (!c)
-			{
-				return name;
-			}
+			filename = filename.substr(0, 0x420 - 1);
 		}
 
-		name.back() = 0;
+		filename.copy(name.data(), filename.size());
+		name[filename.size()] = 0;
 		return name;
 	}
 };
@@ -171,7 +176,7 @@ struct lv2_file final : lv2_fs_object
 	// Stream lock
 	atomic_t<u32> lock{0};
 
-	lv2_file(const char* filename, fs::file&& file, s32 mode, s32 flags)
+	lv2_file(std::string_view filename, fs::file&& file, s32 mode, s32 flags)
 		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
 		, file(std::move(file))
 		, mode(mode)
@@ -207,7 +212,7 @@ struct lv2_dir final : lv2_fs_object
 	// Current reading position
 	atomic_t<u64> pos{0};
 
-	lv2_dir(const char* filename, std::vector<fs::dir_entry>&& entries)
+	lv2_dir(std::string_view filename, std::vector<fs::dir_entry>&& entries)
 		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
 		, entries(std::move(entries))
 	{
@@ -335,7 +340,7 @@ struct lv2_file_c0000006 : lv2_file_op
 	be_t<u32> _xc;  // 0x9
 	vm::bcptr<char> name;
 	be_t<u32> _x14; // 0
-	be_t<u32> _x18; // 0x80010003
+	be_t<u32> code; // 0x80010003
 	be_t<u32> _x1c; // 0
 };
 
@@ -377,7 +382,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> arg, u32 
 error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos);
 error_code sys_fs_fdatasync(ppu_thread& ppu, u32 fd);
 error_code sys_fs_fsync(ppu_thread& ppu, u32 fd);
-error_code sys_fs_fget_block_size(ppu_thread& ppu, u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<s32> arg5);
+error_code sys_fs_fget_block_size(ppu_thread& ppu, u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<s32> out_flags);
 error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4);
 error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size);
 error_code sys_fs_ftruncate(ppu_thread& ppu, u32 fd, u64 size);

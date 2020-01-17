@@ -2492,13 +2492,15 @@ namespace rsx
 					}
 				}
 
-				const u32 section_length = std::max(write_end, block_end) - dst.rsx_address;
-				dst_dimensions.height = align2(section_length, dst.pitch) / dst.pitch;
+				const u32 usable_section_length = std::max(write_end, block_end) - dst.rsx_address;
+				dst_dimensions.height = align2(usable_section_length, dst.pitch) / dst.pitch;
+
+				const u32 full_section_length = ((dst_dimensions.height - 1) * dst.pitch) + (dst_dimensions.width * dst_bpp);
+				const auto rsx_range = address_range::start_length(dst.rsx_address, full_section_length);
 
 				lock.upgrade();
 
 				// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
-				const auto rsx_range = address_range::start_length(dst.rsx_address, section_length);
 				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
 
 				if (LIKELY(use_null_region))
@@ -2588,6 +2590,19 @@ namespace rsx
 				// Need to lock the affected memory range and actually attach this subres to a locked_region
 				dst_subres.surface->on_write_copy(rsx::get_shared_tag());
 				m_rtts.notify_memory_structure_changed();
+
+				// Reset this object's synchronization status if it is locked
+				lock.upgrade();
+
+				if (const auto found = find_cached_texture(dst_subres.surface->get_memory_range(), 0, false, false))
+				{
+					if (found->is_locked())
+					{
+						verify(HERE), found->is_flushable();
+						found->touch(m_cache_update_tag);
+						update_cache_tag();
+					}
+				}
 
 				if (src_is_render_target)
 				{

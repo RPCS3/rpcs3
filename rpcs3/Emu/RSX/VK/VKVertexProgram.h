@@ -10,6 +10,7 @@ struct VKVertexDecompilerThread : public VertexProgramDecompiler
 	std::string &m_shader;
 	std::vector<vk::glsl::program_input> inputs;
 	class VKVertexProgram *vk_prog;
+	vk::pipeline_binding_table m_binding_table{};
 
 	struct
 	{
