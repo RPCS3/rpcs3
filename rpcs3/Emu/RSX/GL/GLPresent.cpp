@@ -3,67 +3,67 @@
 
 GLuint GLGSRender::get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig)
 {
-    GLuint image = GL_NONE;
+	GLuint image = GL_NONE;
 
-    // Check the surface store first
-    gl::command_context cmd = { gl_state };
-    const auto format_bpp = get_format_block_size_in_bytes(info->format);
-    const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd,
-        info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::read);
+	// Check the surface store first
+	gl::command_context cmd = { gl_state };
+	const auto format_bpp = get_format_block_size_in_bytes(info->format);
+	const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd,
+		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::read);
 
-    if (!overlap_info.empty())
-    {
-        const auto& section = overlap_info.back();
-        auto surface = gl::as_rtt(section.surface);
+	if (!overlap_info.empty())
+	{
+		const auto& section = overlap_info.back();
+		auto surface = gl::as_rtt(section.surface);
 
-        if (section.base_address >= info->address)
-        {
-            // Check for intentional 'borders'
-            const u32 inset_offset = section.base_address - info->address;
-            const u32 inset_y = inset_offset / info->pitch;
-            const u32 inset_x = (inset_offset % info->pitch) / format_bpp;
+		if (section.base_address >= info->address)
+		{
+			// Check for intentional 'borders'
+			const u32 inset_offset = section.base_address - info->address;
+			const u32 inset_y = inset_offset / info->pitch;
+			const u32 inset_x = (inset_offset % info->pitch) / format_bpp;
 
-            const u32 full_width = surface->get_surface_width(rsx::surface_metrics::samples) + inset_x + inset_x;
-            const u32 full_height = surface->get_surface_height(rsx::surface_metrics::samples) + inset_y + inset_y;
+			const u32 full_width = surface->get_surface_width(rsx::surface_metrics::samples) + inset_x + inset_x;
+			const u32 full_height = surface->get_surface_height(rsx::surface_metrics::samples) + inset_y + inset_y;
 
-            if (full_width == info->width && full_height == info->height)
-            {
-                surface->read_barrier(cmd);
-                image = section.surface->get_surface(rsx::surface_access::read)->id();
+			if (full_width == info->width && full_height == info->height)
+			{
+				surface->read_barrier(cmd);
+				image = section.surface->get_surface(rsx::surface_access::read)->id();
 
-                info->width = rsx::apply_resolution_scale(full_width - (inset_x + inset_x), true);
-                info->height = rsx::apply_resolution_scale(full_height - (inset_y + inset_y), true);
-            }
-        }
-    }
-    else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions<true>(info->address, info->format, info->width, info->height))
-    {
-        //Hack - this should be the first location to check for output
-        //The render might have been done offscreen or in software and a blit used to display
-        if (const auto tex = surface->get_raw_texture(); tex) image = tex->id();
-    }
+				info->width = rsx::apply_resolution_scale(full_width - (inset_x + inset_x), true);
+				info->height = rsx::apply_resolution_scale(full_height - (inset_y + inset_y), true);
+			}
+		}
+	}
+	else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions<true>(info->address, info->format, info->width, info->height))
+	{
+		// Hack - this should be the first location to check for output
+		// The render might have been done offscreen or in software and a blit used to display
+		if (const auto tex = surface->get_raw_texture(); tex) image = tex->id();
+	}
 
-    if (!image)
-    {
-        LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
+	if (!image)
+	{
+		LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
 
-        gl::pixel_unpack_settings unpack_settings;
-        unpack_settings.alignment(1).row_length(info->pitch / 4);
+		gl::pixel_unpack_settings unpack_settings;
+		unpack_settings.alignment(1).row_length(info->pitch / 4);
 
-        if (!m_flip_tex_color || m_flip_tex_color->size2D() != sizei{ static_cast<int>(info->width), static_cast<int>(info->height) })
-        {
-            m_flip_tex_color = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, GL_RGBA8);
-        }
+		if (!m_flip_tex_color || m_flip_tex_color->size2D() != sizei{ static_cast<int>(info->width), static_cast<int>(info->height) })
+		{
+			m_flip_tex_color = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, GL_RGBA8);
+		}
 
-        gl::command_context cmd{ gl_state };
-        const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
-        m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
+		gl::command_context cmd{ gl_state };
+		const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
+		m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
-        m_flip_tex_color->copy_from(vm::base(info->address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
-        image = m_flip_tex_color->id();
-    }
+		m_flip_tex_color->copy_from(vm::base(info->address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
+		image = m_flip_tex_color->id();
+	}
 
-    return image;
+	return image;
 }
 
 void GLGSRender::flip(const rsx::display_flip_info_t& info)
@@ -106,24 +106,24 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	gl::screen.bind();
 	gl::screen.clear(gl::buffers::color);
 
-    GLuint image_to_flip = GL_NONE;
+	GLuint image_to_flip = GL_NONE;
 
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		// Find the source image
-        gl::present_surface_info present_info;
-        present_info.width = buffer_width;
-        present_info.height = buffer_height;
-        present_info.pitch = buffer_pitch;
-        present_info.format = av_format;
-        present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
+		gl::present_surface_info present_info;
+		present_info.width = buffer_width;
+		present_info.height = buffer_height;
+		present_info.pitch = buffer_pitch;
+		present_info.format = av_format;
+		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
-        image_to_flip = get_present_source(&present_info, avconfig);
-        buffer_width = present_info.width;
-        buffer_height = present_info.height;
-    }
+		image_to_flip = get_present_source(&present_info, avconfig);
+		buffer_width = present_info.width;
+		buffer_height = present_info.height;
+	}
 
-    // Calculate blit coordinates
+	// Calculate blit coordinates
 	coordi aspect_ratio;
 	sizei csize(m_frame->client_width(), m_frame->client_height());
 	sizei new_size = csize;
@@ -148,8 +148,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	aspect_ratio.size = new_size;
 
-    if (image_to_flip)
-    {
+	if (image_to_flip)
+	{
 		if (m_frame->screenshot_toggle == true)
 		{
 			m_frame->screenshot_toggle = false;
