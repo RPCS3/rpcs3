@@ -194,7 +194,7 @@ public:
 	const u64 minimum_block_period = audio_block_period / 2; // the block period will not be dynamically lowered below this value (usecs)
 	const u64 maximum_block_period = (6 * audio_block_period) / 5; // the block period will not be dynamically increased above this value (usecs)
 
-	const u32 desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 1 : 2;
+	const u32 desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 3 : 2;
 	const u32 num_allocated_buffers = desired_full_buffers + EXTRA_AUDIO_BUFFERS; // number of ringbuffer buffers
 
 	const f32 period_average_alpha = 0.02f; // alpha factor for the m_average_period rolling average
