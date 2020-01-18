@@ -1218,9 +1218,36 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000006>(_arg);
 
-		sys_fs.warning("0xc0000006: 0x%x, 0x%x, 0x%x, %s, 0x%x, 0x%x, 0x%x", arg->size, arg->_x4, arg->_x8, arg->name, arg->_x14, arg->code, arg->_x1c);
+		if (arg->size != 0x20)
+		{
+			sys_fs.error("sys_fs_fcntl(0xc0000006): invalid size (0x%x)", arg->size);
+			break;
+		}
 
-		arg->code = CELL_ENOTSUP;
+		if (arg->_x4 != 0x10 || arg->_x8 != 0x18)
+		{
+			sys_fs.error("sys_fs_fcntl(0xc0000006): invalid args (0x%x, 0x%x)", arg->_x4, arg->_x8);
+			break;
+		}
+
+		// Load mountpoint (doesn't support multiple // at the start)
+		std::string_view vpath{arg->name.get_ptr(), arg->name_size};
+
+		sys_fs.notice("sys_fs_fcntl(0xc0000006): %s", vpath);
+
+		// Check only mountpoint
+		vpath = vpath.substr(0, vpath.find_first_of("/", 1));
+
+		// Some mountpoints seem to be handled specially
+		if (false)
+		{
+			// TODO: /dev_hdd1, /dev_usb000, /dev_flash
+			//arg->out_code = CELL_OK;
+			//arg->out_id = 0x1b5;
+		}
+
+		arg->out_code = CELL_ENOTSUP;
+		arg->out_id = 0;
 		return CELL_OK;
 	}
 
