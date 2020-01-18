@@ -15,24 +15,38 @@ GLuint GLGSRender::get_present_source(gl::present_surface_info* info, const rsx:
 	{
 		const auto& section = overlap_info.back();
 		auto surface = gl::as_rtt(section.surface);
+		bool viable = false;
 
 		if (section.base_address >= info->address)
 		{
-			// Check for intentional 'borders'
-			const u32 inset_offset = section.base_address - info->address;
-			const u32 inset_y = inset_offset / info->pitch;
-			const u32 inset_x = (inset_offset % info->pitch) / format_bpp;
+			const auto surface_width = surface->get_surface_width(rsx::surface_metrics::samples);
+			const auto surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
 
-			const u32 full_width = surface->get_surface_width(rsx::surface_metrics::samples) + inset_x + inset_x;
-			const u32 full_height = surface->get_surface_height(rsx::surface_metrics::samples) + inset_y + inset_y;
+			if (section.base_address == info->address)
+			{
+				// Check for fit or crop
+				viable = (surface_width >= info->width && surface_height >= info->height);
+			}
+			else
+			{
+				// Check for borders and letterboxing
+				const u32 inset_offset = section.base_address - info->address;
+				const u32 inset_y = inset_offset / info->pitch;
+				const u32 inset_x = (inset_offset % info->pitch) / format_bpp;
 
-			if (full_width == info->width && full_height == info->height)
+				const u32 full_width = surface_width + inset_x + inset_x;
+				const u32 full_height = surface_height + inset_y + inset_y;
+
+				viable = (full_width == info->width && full_height == info->height);
+			}
+
+			if (viable)
 			{
 				surface->read_barrier(cmd);
 				image = section.surface->get_surface(rsx::surface_access::read)->id();
 
-				info->width = rsx::apply_resolution_scale(full_width - (inset_x + inset_x), true);
-				info->height = rsx::apply_resolution_scale(full_height - (inset_y + inset_y), true);
+				info->width = rsx::apply_resolution_scale(std::min(surface_width, static_cast<u16>(info->width)), true);
+				info->height = rsx::apply_resolution_scale(std::min(surface_height, static_cast<u16>(info->height)), true);
 			}
 		}
 	}
