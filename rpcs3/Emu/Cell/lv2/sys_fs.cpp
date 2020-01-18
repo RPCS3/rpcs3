@@ -445,8 +445,14 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 
 	sys_fs.trace("sys_fs_read(fd=%d, buf=*0x%x, nbytes=0x%llx, nread=*0x%x)", fd, buf, nbytes, nread);
 
+	if (!nread)
+	{
+		return CELL_EFAULT;
+	}
+
 	if (!buf)
 	{
+		nread.try_write(0);
 		return CELL_EFAULT;
 	}
 
@@ -454,6 +460,7 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 
 	if (!file || file->flags & CELL_FS_O_WRONLY)
 	{
+		nread.try_write(0); // nread writing is allowed to fail, error code is unchanged
 		return CELL_EBADF;
 	}
 
@@ -461,6 +468,7 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 
 	if (file->lock == 2)
 	{
+		nread.try_write(0);
 		return CELL_EIO;
 	}
 
@@ -475,15 +483,28 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 
 	sys_fs.trace("sys_fs_write(fd=%d, buf=*0x%x, nbytes=0x%llx, nwrite=*0x%x)", fd, buf, nbytes, nwrite);
 
+	if (!nwrite)
+	{
+		return CELL_EFAULT;
+	}
+
+	if (!buf)
+	{
+		nwrite.try_write(0);
+		return CELL_EFAULT;
+	}
+
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
+		nwrite.try_write(0); // nwrite writing is allowed to fail, error code is unchanged
 		return CELL_EBADF;
 	}
 
 	if (file->mp->flags & lv2_mp_flag::read_only)
 	{
+		nwrite.try_write(0);
 		return CELL_EROFS;
 	}
 
@@ -493,9 +514,11 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 	{
 		if (file->lock == 2)
 		{
+			nwrite.try_write(0);
 			return CELL_EIO;
 		}
 
+		nwrite.try_write(0);
 		return CELL_EBUSY;
 	}
 
