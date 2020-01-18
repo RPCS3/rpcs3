@@ -25,6 +25,7 @@ lv2_fs_mount_point g_mp_sys_dev_usb{512, 4096, lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_bdvd{2048, 65536, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_app_home{512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_host_root{512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_flash{512, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
 
 bool verify_mself(u32 fd, fs::file const& mself_file)
 {
@@ -77,6 +78,8 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 			return &g_mp_sys_app_home;
 		if (mp_name == "host_root"sv)
 			return &g_mp_sys_host_root;
+		if (mp_name == "dev_flash"sv)
+			return &g_mp_sys_dev_flash;
 	}
 
 	// Default
