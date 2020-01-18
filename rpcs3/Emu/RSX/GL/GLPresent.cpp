@@ -115,10 +115,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	// Disable scissor test (affects blit, clear, etc)
 	gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 
-	// Clear the window background to black
-	gl_state.clear_color(0, 0, 0, 0);
+	// Enable drawing to window backbuffer
 	gl::screen.bind();
-	gl::screen.clear(gl::buffers::color);
 
 	GLuint image_to_flip = GL_NONE;
 
@@ -161,6 +159,13 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	aspect_ratio.size = new_size;
+
+	if (!image_to_flip || aspect_ratio.width < csize.width || aspect_ratio.height < csize.height)
+	{
+		// Clear the window background to black
+		gl_state.clear_color(0, 0, 0, 0);
+		gl::screen.clear(gl::buffers::color);
+	}
 
 	if (image_to_flip)
 	{

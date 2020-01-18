@@ -521,17 +521,18 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	vk::framebuffer_holder* direct_fbo = nullptr;
 	vk::viewable_image* calibration_src = nullptr;
 
+	if (!image_to_flip || aspect_ratio.width < csize.width || aspect_ratio.height < csize.height)
+	{
+		// Clear the window background to black
+		VkClearColorValue clear_black {};
+		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
+
+		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	}
+
 	if (image_to_flip)
 	{
-		if (aspect_ratio.x || aspect_ratio.y)
-		{
-			VkClearColorValue clear_black {};
-			vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-			vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
-
-			target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		}
-
 		if (UNLIKELY(!g_cfg.video.full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f)))
 		{
 			calibration_src = dynamic_cast<vk::viewable_image*>(image_to_flip);
@@ -598,16 +599,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
 		}
-	}
-	else
-	{
-		// No draw call was issued!
-		// TODO: Upload raw bytes from cpu for rendering
-		VkClearColorValue clear_black {};
-		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
-
-		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
 
 	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
