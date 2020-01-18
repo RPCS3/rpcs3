@@ -1130,13 +1130,13 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		std::lock_guard lock(file->mp->mutex);
 
+		if (file->lock == 2)
+		{
+			return CELL_EIO;
+		}
+
 		if (op == 0x8000000b && file->lock)
 		{
-			if (file->lock == 2)
-			{
-				return CELL_EIO;
-			}
-
 			return CELL_EBUSY;
 		}
 
