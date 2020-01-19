@@ -89,18 +89,48 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 u64 lv2_file::op_read(vm::ptr<void> buf, u64 size)
 {
 	// Copy data from intermediate buffer (avoid passing vm pointer to a native API)
-	std::unique_ptr<u8[]> local_buf(new u8[size]);
-	const u64 result = file.read(local_buf.get(), size);
-	std::memcpy(buf.get_ptr(), local_buf.get(), result);
+	uchar local_buf[65536];
+
+	u64 result = 0;
+
+	while (result < size)
+	{
+		const u64 block = std::min<u64>(size - result, sizeof(local_buf));
+		const u64 nread = file.read(+local_buf, block);
+
+		std::memcpy(static_cast<uchar*>(buf.get_ptr()) + result, local_buf, nread);
+		result += nread;
+
+		if (nread < block)
+		{
+			break;
+		}
+	}
+
 	return result;
 }
 
 u64 lv2_file::op_write(vm::cptr<void> buf, u64 size)
 {
 	// Copy data to intermediate buffer (avoid passing vm pointer to a native API)
-	std::unique_ptr<u8[]> local_buf(new u8[size]);
-	std::memcpy(local_buf.get(), buf.get_ptr(), size);
-	return file.write(local_buf.get(), size);
+	uchar local_buf[65536];
+
+	u64 result = 0;
+
+	while (result < size)
+	{
+		const u64 block = std::min<u64>(size - result, sizeof(local_buf));
+		std::memcpy(local_buf, static_cast<const uchar*>(buf.get_ptr()), block);
+		const u64 nwrite = file.write(+local_buf, block);
+		result += nwrite;
+
+		if (nwrite < block)
+		{
+			break;
+		}
+	}
+
+	return result;
 }
 
 struct lv2_file::file_view : fs::file_base
