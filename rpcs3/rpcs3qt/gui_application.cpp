@@ -35,6 +35,7 @@ void gui_application::Init()
 
 	m_emu_settings.reset(new emu_settings());
 	m_gui_settings.reset(new gui_settings());
+	m_persistent_settings.reset(new persistent_settings());
 
 	// Force init the emulator
 	InitializeEmulator(m_gui_settings->GetCurrentUser().toStdString(), true, m_show_gui);
@@ -42,7 +43,7 @@ void gui_application::Init()
 	// Create the main window
 	if (m_show_gui)
 	{
-		m_main_window = new main_window(m_gui_settings, m_emu_settings, nullptr);
+		m_main_window = new main_window(m_gui_settings, m_emu_settings, m_persistent_settings, nullptr);
 	}
 
 	// Create callbacks from the emulator, which reference the handlers.
@@ -216,7 +217,7 @@ void gui_application::StartPlaytime()
 		return;
 	}
 
-	m_gui_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
+	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
 	m_timer_playtime.start();
 }
 
@@ -232,9 +233,9 @@ void gui_application::StopPlaytime()
 		return;
 	}
 
-	const qint64 playtime = m_gui_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
-	m_gui_settings->SetPlaytime(serial, playtime);
-	m_gui_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
+	const qint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
+	m_persistent_settings->SetPlaytime(serial, playtime);
+	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
 	m_timer_playtime.invalidate();
 }
 

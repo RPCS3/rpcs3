@@ -379,6 +379,7 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/GL/GLFragmentProgram.cpp
 	RSX/GL/GLGSRender.cpp
 	RSX/GL/GLHelpers.cpp
+	RSX/GL/GLPresent.cpp
 	RSX/GL/GLRenderTargets.cpp
 	RSX/GL/GLTexture.cpp
 	RSX/GL/GLVertexBuffers.cpp
@@ -397,6 +398,7 @@ if(TARGET 3rdparty_vulkan)
 		RSX/VK/VKGSRender.cpp
 		RSX/VK/VKHelpers.cpp
 		RSX/VK/VKMemAlloc.cpp
+		RSX/VK/VKPresent.cpp
 		RSX/VK/VKProgramPipeline.cpp
 		RSX/VK/VKRenderPass.cpp
 		RSX/VK/VKResolveHelper.cpp

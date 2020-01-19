@@ -382,6 +382,35 @@ namespace gl
 		const gl::texture* real_src = src;
 		const gl::texture* real_dst = dst;
 
+		// Optimization pass; check for pass-through data transfer
+		if (!xfer_info.flip_horizontal && !xfer_info.flip_vertical && src_rect.height() == dst_rect.height())
+		{
+			auto src_w = src_rect.width();
+			auto dst_w = dst_rect.width();
+
+			if (xfer_info.src_is_typeless) src_w *= xfer_info.src_scaling_hint;
+			if (xfer_info.dst_is_typeless) dst_w *= xfer_info.dst_scaling_hint;
+
+			if (src_w == dst_w)
+			{
+				// Final dimensions are a match
+				if (xfer_info.src_is_typeless || xfer_info.dst_is_typeless)
+				{
+					const coord3i src_region = { { src_rect.x1, src_rect.y1, 0 }, { src_w, src_rect.height(), 1 } };
+					const coord3i dst_region = { { dst_rect.x1, dst_rect.y1, 0 }, { src_w, src_rect.height(), 1 } };
+					gl::copy_typeless(dst, src, dst_region, src_region);
+				}
+				else
+				{
+					glCopyImageSubData(src->id(), dst->id(), 0, src_rect.x1, src_rect.y1, 0,
+						dst->id(), GL_TEXTURE_2D, 0, dst_rect.x1, dst_rect.y1, 0,
+						src_w, src_rect.height(), 1);
+				}
+
+				return;
+			}
+		}
+
 		if (xfer_info.src_is_typeless)
 		{
 			const auto internal_fmt = xfer_info.src_native_format_override ?

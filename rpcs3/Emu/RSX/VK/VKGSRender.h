@@ -50,74 +50,85 @@ namespace vk
 using rsx::flags32_t;
 extern u64 get_system_time();
 
-enum
+namespace vk
 {
-	VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE = 0x1,
-	VK_HEAP_CHECK_VERTEX_STORAGE = 0x2,
-	VK_HEAP_CHECK_VERTEX_ENV_STORAGE = 0x4,
-	VK_HEAP_CHECK_FRAGMENT_ENV_STORAGE = 0x8,
-	VK_HEAP_CHECK_TEXTURE_ENV_STORAGE = 0x10,
-	VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE = 0x20,
-	VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE = 0x40,
-	VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE = 0x80,
-
-	VK_HEAP_CHECK_MAX_ENUM = VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE,
-	VK_HEAP_CHECK_ALL = 0xFF,
-};
-
-struct command_buffer_chunk: public vk::command_buffer
-{
-	vk::fence* submit_fence = nullptr;
-	VkDevice m_device = VK_NULL_HANDLE;
-
-	std::atomic_bool pending = { false };
-	u64 eid_tag = 0;
-	u64 reset_id = 0;
-	shared_mutex guard_mutex;
-
-	command_buffer_chunk() = default;
-
-	void init_fence(VkDevice dev)
+	struct command_buffer_chunk: public vk::command_buffer
 	{
-		m_device = dev;
-		submit_fence = new vk::fence(dev);
-	}
+		vk::fence* submit_fence = nullptr;
+		VkDevice m_device = VK_NULL_HANDLE;
 
-	void destroy()
-	{
-		vk::command_buffer::destroy();
-		delete submit_fence;
-	}
+		std::atomic_bool pending = { false };
+		u64 eid_tag = 0;
+		u64 reset_id = 0;
+		shared_mutex guard_mutex;
 
-	void tag()
-	{
-		eid_tag = vk::get_event_id();
-	}
+		command_buffer_chunk() = default;
 
-	void reset()
-	{
-		if (pending)
-			poke();
-
-		if (pending)
-			wait(FRAME_PRESENT_TIMEOUT);
-
-		++reset_id;
-		CHECK_RESULT(vkResetCommandBuffer(commands, 0));
-	}
-
-	bool poke()
-	{
-		reader_lock lock(guard_mutex);
-
-		if (!pending)
-			return true;
-
-		if (!submit_fence->flushed)
-			return false;
-
-		if (vkGetFenceStatus(m_device, submit_fence->handle) == VK_SUCCESS)
+		void init_fence(VkDevice dev)
 		{
+			m_device = dev;
+			submit_fence = new vk::fence(dev);
+		}
+
+		void destroy()
+		{
+			vk::command_buffer::destroy();
+			delete submit_fence;
+		}
+
+		void tag()
+		{
+			eid_tag = vk::get_event_id();
+		}
+
+		void reset()
+		{
+			if (pending)
+				poke();
+
+			if (pending)
+				wait(FRAME_PRESENT_TIMEOUT);
+
+			++reset_id;
+			CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+		}
+
+		bool poke()
+		{
+			reader_lock lock(guard_mutex);
+
+			if (!pending)
+				return true;
+
+			if (!submit_fence->flushed)
+				return false;
+
+			if (vkGetFenceStatus(m_device, submit_fence->handle) == VK_SUCCESS)
+			{
+				lock.upgrade();
+
+				if (pending)
+				{
+					vk::reset_fence(submit_fence);
+					vk::on_event_completed(eid_tag);
+
+					pending = false;
+					eid_tag = 0;
+				}
+			}
+
+			return !pending;
+		}
+
+		VkResult wait(u64 timeout = 0ull)
+		{
+			reader_lock lock(guard_mutex);
+
+			if (!pending)
+				return VK_SUCCESS;
+
+			const auto ret = vk::wait_for_fence(submit_fence, timeout);
+
 			lock.upgrade();
 
 			if (pending)
@@ -128,210 +139,212 @@ struct command_buffer_chunk: public vk::command_buffer
 				pending = false;
 				eid_tag = 0;
 			}
+
+			return ret;
 		}
 
-		return !pending;
-	}
-
-	VkResult wait(u64 timeout = 0ull)
-	{
-		reader_lock lock(guard_mutex);
-
-		if (!pending)
-			return VK_SUCCESS;
-
-		const auto ret = vk::wait_for_fence(submit_fence, timeout);
-
-		lock.upgrade();
-
-		if (pending)
+		void flush()
 		{
-			vk::reset_fence(submit_fence);
-			vk::on_event_completed(eid_tag);
+			reader_lock lock(guard_mutex);
 
-			pending = false;
-			eid_tag = 0;
+			if (!pending)
+				return;
+
+			submit_fence->wait_flush();
 		}
+	};
 
-		return ret;
-	}
-
-	void flush()
+	struct occlusion_data
 	{
-		reader_lock lock(guard_mutex);
+		rsx::simple_array<u32> indices;
+		command_buffer_chunk* command_buffer_to_wait = nullptr;
+		u64 command_buffer_sync_id = 0;
 
-		if (!pending)
-			return;
-
-		submit_fence->wait_flush();
-	}
-};
-
-struct occlusion_data
-{
-	rsx::simple_array<u32> indices;
-	command_buffer_chunk* command_buffer_to_wait = nullptr;
-	u64 command_buffer_sync_id = 0;
-
-	bool is_current(command_buffer_chunk* cmd) const
-	{
-		return (command_buffer_to_wait == cmd && command_buffer_sync_id == cmd->reset_id);
-	}
-
-	void set_sync_command_buffer(command_buffer_chunk* cmd)
-	{
-		command_buffer_to_wait = cmd;
-		command_buffer_sync_id = cmd->reset_id;
-	}
-
-	void sync()
-	{
-		if (command_buffer_to_wait->reset_id == command_buffer_sync_id)
+		bool is_current(command_buffer_chunk* cmd) const
 		{
-			// Allocation stack is FIFO and very long so no need to actually wait for fence signal
-			command_buffer_to_wait->flush();
+			return (command_buffer_to_wait == cmd && command_buffer_sync_id == cmd->reset_id);
 		}
-	}
-};
 
-enum frame_context_state : u32
-{
-	dirty = 1
-};
-
-struct frame_context_t
-{
-	VkSemaphore acquire_signal_semaphore = VK_NULL_HANDLE;
-	VkSemaphore present_wait_semaphore = VK_NULL_HANDLE;
-	VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
-
-	vk::descriptor_pool descriptor_pool;
-	u32 used_descriptors = 0;
-
-	flags32_t flags = 0;
-
-	std::vector<std::unique_ptr<vk::buffer_view>> buffer_views_to_clean;
-
-	u32 present_image = UINT32_MAX;
-	command_buffer_chunk* swap_command_buffer = nullptr;
-
-	//Heap pointers
-	s64 attrib_heap_ptr = 0;
-	s64 vtx_env_heap_ptr = 0;
-	s64 frag_env_heap_ptr = 0;
-	s64 frag_const_heap_ptr = 0;
-	s64 vtx_const_heap_ptr = 0;
-	s64 vtx_layout_heap_ptr = 0;
-	s64 frag_texparam_heap_ptr = 0;
-	s64 index_heap_ptr = 0;
-	s64 texture_upload_heap_ptr = 0;
-
-	u64 last_frame_sync_time = 0;
-
-	//Copy shareable information
-	void grab_resources(frame_context_t &other)
-	{
-		present_wait_semaphore = other.present_wait_semaphore;
-		acquire_signal_semaphore = other.acquire_signal_semaphore;
-		descriptor_set = other.descriptor_set;
-		descriptor_pool = other.descriptor_pool;
-		used_descriptors = other.used_descriptors;
-		flags = other.flags;
-
-		attrib_heap_ptr = other.attrib_heap_ptr;
-		vtx_env_heap_ptr = other.vtx_env_heap_ptr;
-		frag_env_heap_ptr = other.frag_env_heap_ptr;
-		vtx_layout_heap_ptr = other.vtx_layout_heap_ptr;
-		frag_texparam_heap_ptr = other.frag_texparam_heap_ptr;
-		frag_const_heap_ptr = other.frag_const_heap_ptr;
-		vtx_const_heap_ptr = other.vtx_const_heap_ptr;
-		index_heap_ptr = other.index_heap_ptr;
-		texture_upload_heap_ptr = other.texture_upload_heap_ptr;
-	}
-
-	//Exchange storage (non-copyable)
-	void swap_storage(frame_context_t &other)
-	{
-		std::swap(buffer_views_to_clean, other.buffer_views_to_clean);
-	}
-
-	void tag_frame_end(s64 attrib_loc, s64 vtxenv_loc, s64 fragenv_loc, s64 vtxlayout_loc, s64 fragtex_loc, s64 fragconst_loc,s64 vtxconst_loc, s64 index_loc, s64 texture_loc)
-	{
-		attrib_heap_ptr = attrib_loc;
-		vtx_env_heap_ptr = vtxenv_loc;
-		frag_env_heap_ptr = fragenv_loc;
-		vtx_layout_heap_ptr = vtxlayout_loc;
-		frag_texparam_heap_ptr = fragtex_loc;
-		frag_const_heap_ptr = fragconst_loc;
-		vtx_const_heap_ptr = vtxconst_loc;
-		index_heap_ptr = index_loc;
-		texture_upload_heap_ptr = texture_loc;
-
-		last_frame_sync_time = get_system_time();
-	}
-
-	void reset_heap_ptrs()
-	{
-		last_frame_sync_time = 0;
-	}
-};
-
-struct flush_request_task
-{
-	atomic_t<bool> pending_state{ false };  //Flush request status; true if rsx::thread is yet to service this request
-	atomic_t<int> num_waiters{ 0 };  //Number of threads waiting for this request to be serviced
-	bool hard_sync = false;
-
-	flush_request_task() = default;
-
-	void post(bool _hard_sync)
-	{
-		hard_sync = (hard_sync || _hard_sync);
-		pending_state = true;
-		num_waiters++;
-	}
-
-	void remove_one()
-	{
-		num_waiters--;
-	}
-
-	void clear_pending_flag()
-	{
-		hard_sync = false;
-		pending_state.store(false);
-	}
-
-	bool pending() const
-	{
-		return pending_state.load();
-	}
-
-	void consumer_wait() const
-	{
-		while (num_waiters.load() != 0)
+		void set_sync_command_buffer(command_buffer_chunk* cmd)
 		{
-			_mm_pause();
+			command_buffer_to_wait = cmd;
+			command_buffer_sync_id = cmd->reset_id;
 		}
-	}
 
-	void producer_wait() const
-	{
-		while (pending_state.load())
+		void sync()
 		{
-			std::this_thread::yield();
+			if (command_buffer_to_wait->reset_id == command_buffer_sync_id)
+			{
+				// Allocation stack is FIFO and very long so no need to actually wait for fence signal
+				command_buffer_to_wait->flush();
+			}
 		}
-	}
-};
+	};
 
-enum flush_queue_state : u32
-{
-	ok = 0,
-	deadlock = 1
-};
+	struct frame_context_t
+	{
+		VkSemaphore acquire_signal_semaphore = VK_NULL_HANDLE;
+		VkSemaphore present_wait_semaphore = VK_NULL_HANDLE;
+		VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+
+		vk::descriptor_pool descriptor_pool;
+		u32 used_descriptors = 0;
+
+		flags32_t flags = 0;
+
+		std::vector<std::unique_ptr<vk::buffer_view>> buffer_views_to_clean;
+
+		u32 present_image = UINT32_MAX;
+		command_buffer_chunk* swap_command_buffer = nullptr;
+
+		//Heap pointers
+		s64 attrib_heap_ptr = 0;
+		s64 vtx_env_heap_ptr = 0;
+		s64 frag_env_heap_ptr = 0;
+		s64 frag_const_heap_ptr = 0;
+		s64 vtx_const_heap_ptr = 0;
+		s64 vtx_layout_heap_ptr = 0;
+		s64 frag_texparam_heap_ptr = 0;
+		s64 index_heap_ptr = 0;
+		s64 texture_upload_heap_ptr = 0;
+
+		u64 last_frame_sync_time = 0;
+
+		//Copy shareable information
+		void grab_resources(frame_context_t &other)
+		{
+			present_wait_semaphore = other.present_wait_semaphore;
+			acquire_signal_semaphore = other.acquire_signal_semaphore;
+			descriptor_set = other.descriptor_set;
+			descriptor_pool = other.descriptor_pool;
+			used_descriptors = other.used_descriptors;
+			flags = other.flags;
+
+			attrib_heap_ptr = other.attrib_heap_ptr;
+			vtx_env_heap_ptr = other.vtx_env_heap_ptr;
+			frag_env_heap_ptr = other.frag_env_heap_ptr;
+			vtx_layout_heap_ptr = other.vtx_layout_heap_ptr;
+			frag_texparam_heap_ptr = other.frag_texparam_heap_ptr;
+			frag_const_heap_ptr = other.frag_const_heap_ptr;
+			vtx_const_heap_ptr = other.vtx_const_heap_ptr;
+			index_heap_ptr = other.index_heap_ptr;
+			texture_upload_heap_ptr = other.texture_upload_heap_ptr;
+		}
+
+		//Exchange storage (non-copyable)
+		void swap_storage(frame_context_t &other)
+		{
+			std::swap(buffer_views_to_clean, other.buffer_views_to_clean);
+		}
+
+		void tag_frame_end(s64 attrib_loc, s64 vtxenv_loc, s64 fragenv_loc, s64 vtxlayout_loc, s64 fragtex_loc, s64 fragconst_loc,s64 vtxconst_loc, s64 index_loc, s64 texture_loc)
+		{
+			attrib_heap_ptr = attrib_loc;
+			vtx_env_heap_ptr = vtxenv_loc;
+			frag_env_heap_ptr = fragenv_loc;
+			vtx_layout_heap_ptr = vtxlayout_loc;
+			frag_texparam_heap_ptr = fragtex_loc;
+			frag_const_heap_ptr = fragconst_loc;
+			vtx_const_heap_ptr = vtxconst_loc;
+			index_heap_ptr = index_loc;
+			texture_upload_heap_ptr = texture_loc;
+
+			last_frame_sync_time = get_system_time();
+		}
+
+		void reset_heap_ptrs()
+		{
+			last_frame_sync_time = 0;
+		}
+	};
+
+	struct flush_request_task
+	{
+		atomic_t<bool> pending_state{ false };  //Flush request status; true if rsx::thread is yet to service this request
+		atomic_t<int> num_waiters{ 0 };  //Number of threads waiting for this request to be serviced
+		bool hard_sync = false;
+
+		flush_request_task() = default;
+
+		void post(bool _hard_sync)
+		{
+			hard_sync = (hard_sync || _hard_sync);
+			pending_state = true;
+			num_waiters++;
+		}
+
+		void remove_one()
+		{
+			num_waiters--;
+		}
+
+		void clear_pending_flag()
+		{
+			hard_sync = false;
+			pending_state.store(false);
+		}
+
+		bool pending() const
+		{
+			return pending_state.load();
+		}
+
+		void consumer_wait() const
+		{
+			while (num_waiters.load() != 0)
+			{
+				_mm_pause();
+			}
+		}
+
+		void producer_wait() const
+		{
+			while (pending_state.load())
+			{
+				std::this_thread::yield();
+			}
+		}
+	};
+
+	struct present_surface_info
+	{
+		u32 address;
+		u32 format;
+		u32 width;
+		u32 height;
+		u32 pitch;
+	};
+}
 
 class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
+private:
+	enum
+	{
+		VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE = 0x1,
+		VK_HEAP_CHECK_VERTEX_STORAGE = 0x2,
+		VK_HEAP_CHECK_VERTEX_ENV_STORAGE = 0x4,
+		VK_HEAP_CHECK_FRAGMENT_ENV_STORAGE = 0x8,
+		VK_HEAP_CHECK_TEXTURE_ENV_STORAGE = 0x10,
+		VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE = 0x20,
+		VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE = 0x40,
+		VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE = 0x80,
+
+		VK_HEAP_CHECK_MAX_ENUM = VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE,
+		VK_HEAP_CHECK_ALL = 0xFF,
+	};
+
+	enum frame_context_state : u32
+	{
+		dirty = 1
+	};
+
+	enum flush_queue_state : u32
+	{
+		ok = 0,
+		deadlock = 1
+	};
+
 private:
 	VKFragmentProgram m_fragment_prog;
 	VKVertexProgram m_vertex_prog;
@@ -382,15 +395,15 @@ private:
 	vk::occlusion_query_pool m_occlusion_query_pool;
 	bool m_occlusion_query_active = false;
 	rsx::reports::occlusion_query_info *m_active_query_info = nullptr;
-	std::vector<occlusion_data> m_occlusion_map;
+	std::vector<vk::occlusion_data> m_occlusion_map;
 
 	shared_mutex m_secondary_cb_guard;
 	vk::command_pool m_secondary_command_buffer_pool;
 	vk::command_buffer m_secondary_command_buffer;  //command buffer used for setup operations
 
 	u32 m_current_cb_index = 0;
-	std::array<command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
-	command_buffer_chunk* m_current_command_buffer = nullptr;
+	std::array<vk::command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
+	vk::command_buffer_chunk* m_current_command_buffer = nullptr;
 
 	VkDescriptorSetLayout descriptor_layouts;
 	VkPipelineLayout pipeline_layout;
@@ -421,13 +434,13 @@ private:
 	VkDescriptorBufferInfo m_fragment_constants_buffer_info;
 	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info;
 
-	std::array<frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
+	std::array<vk::frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
 	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
-	frame_context_t m_aux_frame_context;
+	vk::frame_context_t m_aux_frame_context;
 
 	u32 m_current_queue_index = 0;
-	frame_context_t* m_current_frame = nullptr;
-	std::deque<frame_context_t*> m_queued_frames;
+	vk::frame_context_t* m_current_frame = nullptr;
+	std::deque<vk::frame_context_t*> m_queued_frames;
 
 	VkViewport m_viewport{};
 	VkRect2D m_scissor{};
@@ -435,7 +448,7 @@ private:
 	std::vector<u8> m_draw_buffers;
 
 	shared_mutex m_flush_queue_mutex;
-	flush_request_task m_flush_requests;
+	vk::flush_request_task m_flush_requests;
 
 	// Offloader thread deadlock recovery
 	rsx::atomic_bitmask_t<flush_queue_state> m_queue_status;
@@ -471,10 +484,12 @@ private:
 
 	void flush_command_queue(bool hard_sync = false);
 	void queue_swap_request();
-	void frame_context_cleanup(frame_context_t *ctx, bool free_resources = false);
+	void frame_context_cleanup(vk::frame_context_t *ctx, bool free_resources = false);
 	void advance_queued_frames();
-	void present(frame_context_t *ctx);
+	void present(vk::frame_context_t *ctx);
 	void reinitialize_swapchain();
+
+	vk::image* get_present_source(vk::present_surface_info* info, const rsx::avconf* avconfig);
 
 	void begin_render_pass();
 	void close_render_pass();

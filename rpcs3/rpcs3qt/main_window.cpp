@@ -57,8 +57,13 @@
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
-	: QMainWindow(parent), guiSettings(guiSettings), emuSettings(emuSettings), m_sys_menu_opened(false), ui(new Ui::main_window)
+main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
+	: QMainWindow(parent)
+	, guiSettings(guiSettings)
+	, emuSettings(emuSettings)
+	, m_persistent_settings(persistent_settings)
+	, m_sys_menu_opened(false)
+	, ui(new Ui::main_window)
 {
 }
 
@@ -1557,7 +1562,7 @@ void main_window::CreateDockWindows()
 	m_mw = new QMainWindow();
 	m_mw->setContextMenuPolicy(Qt::PreventContextMenu);
 
-	m_gameListFrame = new game_list_frame(guiSettings, emuSettings, m_mw);
+	m_gameListFrame = new game_list_frame(guiSettings, emuSettings, m_persistent_settings, m_mw);
 	m_gameListFrame->setObjectName("gamelist");
 	m_debuggerFrame = new debugger_frame(guiSettings, m_mw);
 	m_debuggerFrame->setObjectName("debugger");
