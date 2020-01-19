@@ -696,8 +696,11 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 
 		switch (frame->format)
 		{
-		case AV_PIX_FMT_YUV420P: in_f = alpha_plane ? AV_PIX_FMT_YUVA420P : AV_PIX_FMT_YUV420P; break;
-
+		case AV_PIX_FMT_YUVJ420P:
+			cellVdec.error("cellVdecGetPicture(): experimental AVPixelFormat (%d). This may cause suboptimal video quality.", frame->format);
+		case AV_PIX_FMT_YUV420P:
+			in_f = alpha_plane ? AV_PIX_FMT_YUVA420P : static_cast<AVPixelFormat>(frame->format);
+			break;
 		default:
 		{
 			fmt::throw_exception("Unknown format (%d)" HERE, frame->format);
