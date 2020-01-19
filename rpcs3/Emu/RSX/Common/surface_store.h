@@ -271,8 +271,9 @@ namespace rsx
 			}
 			else
 			{
+				const auto reserve = list1.size() + list2.size();
 				surface_info = std::move(list1);
-				surface_info.reserve(list1.size() + list2.size());
+				surface_info.reserve(reserve);
 
 				for (const auto& e : list2) surface_info.push_back(e);
 			}
@@ -475,6 +476,7 @@ namespace rsx
 				}
 			}
 
+			const bool not_old_surface_storage = !old_surface_storage;
 			// Check for stale storage
 			if (old_surface_storage)
 			{
@@ -543,7 +545,7 @@ namespace rsx
 				(*primary_storage)[address] = std::move(new_surface_storage);
 			}
 
-			verify(HERE), !old_surface_storage, new_surface->get_spp() == get_format_sample_count(antialias);
+			verify(HERE), not_old_surface_storage, new_surface->get_spp() == get_format_sample_count(antialias);
 			return new_surface;
 		}
 
