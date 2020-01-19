@@ -71,7 +71,9 @@ error_code cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideo
 		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	if (deviceIndex >= cellVideoOutGetNumberOfDevice(videoOut))
+	const auto device_count = cellVideoOutGetNumberOfDevice(videoOut);
+
+	if (device_count < 0 || deviceIndex >= static_cast<u32>(device_count))
 	{
 		return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
 	}
@@ -227,7 +229,9 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	if (deviceIndex >= cellVideoOutGetNumberOfDevice(videoOut))
+	const auto device_count = cellVideoOutGetNumberOfDevice(videoOut);
+
+	if (device_count < 0 || deviceIndex >= static_cast<u32>(device_count))
 	{
 		return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
 	}
