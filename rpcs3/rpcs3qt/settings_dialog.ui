@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>6</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -726,7 +726,7 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_25">
            <item>
-            <widget class="QGroupBox" name="groupBox_30">
+            <widget class="QGroupBox" name="gb_audio_out">
              <property name="title">
               <string>Audio Out</string>
              </property>
@@ -738,7 +738,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="groupBox_49">
+            <widget class="QGroupBox" name="gb_audio_settings">
              <property name="title">
               <string>Audio Settings</string>
              </property>
@@ -791,29 +791,47 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_37">
            <item>
-            <widget class="QGroupBox" name="groupBox_6">
+            <widget class="QGroupBox" name="gb_audio_volume">
              <property name="title">
               <string>Volume</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_74">
               <item>
-               <widget class="QLabel" name="masterVolumeLabel">
-                <property name="text">
-                 <string>Master: 0%</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QSlider" name="masterVolume">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="tickPosition">
-                 <enum>QSlider::TicksBelow</enum>
-                </property>
-                <property name="tickInterval">
-                 <number>50</number>
-                </property>
+               <widget class="QWidget" name="master_volume" native="true">
+                <layout class="QVBoxLayout" name="layout_master_volume">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="masterVolumeLabel">
+                   <property name="text">
+                    <string>Master: 0%</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSlider" name="masterVolume">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="tickPosition">
+                    <enum>QSlider::TicksBelow</enum>
+                   </property>
+                   <property name="tickInterval">
+                    <number>50</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
               <item>
@@ -840,7 +858,7 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_71">
            <item>
-            <widget class="QGroupBox" name="groupBox_8">
+            <widget class="QGroupBox" name="gb_audio_buffering">
              <property name="title">
               <string>Buffering</string>
              </property>
@@ -853,23 +871,41 @@
                </widget>
               </item>
               <item>
-               <widget class="QLabel" name="audioBufferDurationLabel">
-                <property name="text">
-                 <string>Audio Buffer Duration: 0ms</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QSlider" name="audioBufferDuration">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="tickPosition">
-                 <enum>QSlider::TicksBelow</enum>
-                </property>
-                <property name="tickInterval">
-                 <number>10</number>
-                </property>
+               <widget class="QWidget" name="audio_buffer_duration" native="true">
+                <layout class="QVBoxLayout" name="layout_audio_buffer_duration">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="audioBufferDurationLabel">
+                   <property name="text">
+                    <string>Audio Buffer Duration: 0ms</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSlider" name="audioBufferDuration">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="tickPosition">
+                    <enum>QSlider::TicksBelow</enum>
+                   </property>
+                   <property name="tickInterval">
+                    <number>10</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
               <item>
@@ -880,23 +916,41 @@
                </widget>
               </item>
               <item>
-               <widget class="QLabel" name="timeStretchingThresholdLabel">
-                <property name="text">
-                 <string>Time Stretching Threshold: 0%</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QSlider" name="timeStretchingThreshold">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="tickPosition">
-                 <enum>QSlider::TicksBelow</enum>
-                </property>
-                <property name="tickInterval">
-                 <number>10</number>
-                </property>
+               <widget class="QWidget" name="time_stretching_threshold" native="true">
+                <layout class="QVBoxLayout" name="layout_time_stretching_threshold">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="timeStretchingThresholdLabel">
+                   <property name="text">
+                    <string>Time Stretching Threshold: 0%</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSlider" name="timeStretchingThreshold">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="tickPosition">
+                    <enum>QSlider::TicksBelow</enum>
+                   </property>
+                   <property name="tickInterval">
+                    <number>10</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
              </layout>
@@ -1111,7 +1165,7 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="1,1,1">
          <item>
-          <widget class="QGroupBox" name="groupBox_51">
+          <widget class="QGroupBox" name="gb_keyboard_handler">
            <property name="title">
             <string>Keyboard Handler</string>
            </property>
@@ -1123,7 +1177,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QGroupBox" name="groupBox_31">
+          <widget class="QGroupBox" name="gb_camera_type">
            <property name="title">
             <string>Camera Input</string>
            </property>
@@ -1135,7 +1189,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QGroupBox" name="groupBox_2">
+          <widget class="QGroupBox" name="gb_move_handler">
            <property name="title">
             <string>Move Handler</string>
            </property>
@@ -1151,7 +1205,7 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="1,1,1">
          <item>
-          <widget class="QGroupBox" name="groupBox_53">
+          <widget class="QGroupBox" name="gb_mouse_handler">
            <property name="title">
             <string>Mouse Handler</string>
            </property>
@@ -1163,7 +1217,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QGroupBox" name="groupBox_54">
+          <widget class="QGroupBox" name="gb_camera_setting">
            <property name="title">
             <string>Camera Settings</string>
            </property>
@@ -1277,7 +1331,7 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="1,1,1">
          <item>
-          <widget class="QGroupBox" name="groupBox_33">
+          <widget class="QGroupBox" name="gb_console_region">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -1286,7 +1340,7 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_36">
             <item>
-             <widget class="QComboBox" name="comboBox_12"/>
+             <widget class="QComboBox" name="console_region"/>
             </item>
            </layout>
           </widget>
@@ -1435,7 +1489,7 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="1,1,1">
          <item>
-          <widget class="QGroupBox" name="groupBox_32">
+          <widget class="QGroupBox" name="gb_network_status">
            <property name="title">
             <string>Network Status</string>
            </property>
@@ -2238,24 +2292,60 @@
                </widget>
               </item>
               <item>
-               <widget class="QLabel" name="label_detail_level">
-                <property name="text">
-                 <string>Detail Level:</string>
-                </property>
+               <widget class="QWidget" name="perf_overlay_detail_level" native="true">
+                <layout class="QVBoxLayout" name="layout_perf_overlay_detail_level">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_detail_level">
+                   <property name="text">
+                    <string>Detail Level:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="perfOverlayDetailLevel"/>
+                 </item>
+                </layout>
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="perfOverlayDetailLevel"/>
-              </item>
-              <item>
-               <widget class="QLabel" name="label_position">
-                <property name="text">
-                 <string>Position:</string>
-                </property>
+               <widget class="QWidget" name="perf_overlay_position" native="true">
+                <layout class="QVBoxLayout" name="layout_perf_overlay_position">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_position">
+                   <property name="text">
+                    <string>Position:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="perfOverlayPosition"/>
+                 </item>
+                </layout>
                </widget>
-              </item>
-              <item>
-               <widget class="QComboBox" name="perfOverlayPosition"/>
               </item>
               <item>
                <widget class="QLabel" name="label_margin_x">
@@ -2300,51 +2390,105 @@
                </layout>
               </item>
               <item>
-               <widget class="QLabel" name="label_update_interval">
-                <property name="text">
-                 <string>Update Interval:</string>
-                </property>
+               <widget class="QWidget" name="perf_overlay_update_interval" native="true">
+                <layout class="QVBoxLayout" name="layout_perf_overlay_update_interval">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_update_interval">
+                   <property name="text">
+                    <string>Update Interval:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSlider" name="perfOverlayUpdateInterval">
+                   <property name="singleStep">
+                    <number>10</number>
+                   </property>
+                   <property name="pageStep">
+                    <number>100</number>
+                   </property>
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
               <item>
-               <widget class="QSlider" name="perfOverlayUpdateInterval">
-                <property name="singleStep">
-                 <number>10</number>
-                </property>
-                <property name="pageStep">
-                 <number>100</number>
-                </property>
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
+               <widget class="QWidget" name="perf_overlay_font_size" native="true">
+                <layout class="QVBoxLayout" name="layout_perf_overlay_font_size">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_font_size">
+                   <property name="text">
+                    <string>Font Size: </string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSlider" name="perfOverlayFontSize">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
               <item>
-               <widget class="QLabel" name="label_font_size">
-                <property name="text">
-                 <string>Font Size: </string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QSlider" name="perfOverlayFontSize">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="label_opacity">
-                <property name="text">
-                 <string>Opacity:</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QSlider" name="perfOverlayOpacity">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
+               <widget class="QWidget" name="perf_overlay_opacity" native="true">
+                <layout class="QVBoxLayout" name="layout_perf_overlay_opacity">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_opacity">
+                   <property name="text">
+                    <string>Opacity:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSlider" name="perfOverlayOpacity">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
               <item>
