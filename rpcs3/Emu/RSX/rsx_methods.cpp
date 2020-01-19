@@ -219,6 +219,10 @@ namespace rsx
 		{
 			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
 			rsx::g_dma_manager.sync();
+			if (g_cfg.video.strict_rendering_mode)
+			{
+				rsx->sync();
+			}
 
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
