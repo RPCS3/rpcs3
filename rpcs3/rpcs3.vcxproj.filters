@@ -797,12 +797,6 @@
     <ClCompile Include="rpcs3qt\pkg_install_dialog.cpp">
       <Filter>Gui\misc dialogs</Filter>
     </ClCompile>
-    <ClCompile Include="Input\ds3_pad_handler.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="Input\keyboard_pad_handler.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\settings.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
@@ -844,6 +838,12 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\persistent_settings.cpp">
       <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\ds3_pad_handler.cpp">
+      <Filter>Io\DS3</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\keyboard_pad_handler.cpp">
+      <Filter>Io\Keyboard</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -932,13 +932,13 @@
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Input\ds3_pad_handler.h">
-      <Filter>Generated Files</Filter>
+      <Filter>Io\DS3</Filter>
     </ClInclude>
     <ClInclude Include="Input\keyboard_pad_handler.h">
-      <Filter>Generated Files</Filter>
+      <Filter>Io\Keyboard</Filter>
     </ClInclude>
     <ClInclude Include="Input/mm_joystick_handler.h">
-      <Filter>Generated Files</Filter>
+      <Filter>Io\MMJoystick</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
