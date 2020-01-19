@@ -193,16 +193,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->spuBlockSize, emu_settings::SPUBlockSize);
-	SubscribeTooltip(ui->spuBlockSize, json_cpu_cbo["spuBlockSize"].toString());
+	SubscribeTooltip(ui->gb_spuBlockSize, json_cpu_cbo["spuBlockSize"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings::PreferredSPUThreads, true);
-	SubscribeTooltip(ui->preferredSPUThreads, json_cpu_cbo["preferredSPUThreads"].toString());
+	SubscribeTooltip(ui->gb_spu_threads, json_cpu_cbo["preferredSPUThreads"].toString());
 	ui->preferredSPUThreads->setItemText(ui->preferredSPUThreads->findData("0"), tr("Auto"));
 
 	if (utils::has_rtm())
 	{
 		xemu_settings->EnhanceComboBox(ui->enableTSX, emu_settings::EnableTSX);
-		SubscribeTooltip(ui->enableTSX, json_cpu_cbo["enableTSX"].toString());
+		SubscribeTooltip(ui->gb_tsx, json_cpu_cbo["enableTSX"].toString());
 
 		static const QString tsx_forced = qstr(fmt::format("%s", tsx_usage::forced));
 		static const QString tsx_default = qstr(xemu_settings->GetSettingDefault(emu_settings::EnableTSX));
@@ -320,14 +320,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Comboboxes
 	xemu_settings->EnhanceComboBox(ui->renderBox, emu_settings::Renderer);
-	SubscribeTooltip(ui->renderBox, json_gpu_cbo["renderBox"].toString());
-	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox"].toString());
+	SubscribeTooltip(ui->gb_renderer, json_gpu_cbo["renderBox"].toString());
+	SubscribeTooltip(ui->gb_graphicsAdapter, json_gpu_cbo["graphicsAdapterBox"].toString());
 
 	// Change displayed renderer names
 	ui->renderBox->setItemText(ui->renderBox->findData("Null"), render_creator.name_Null);
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
-	SubscribeTooltip(ui->resBox, json_gpu_cbo["resBox"].toString());
+	SubscribeTooltip(ui->gb_default_resolution, json_gpu_cbo["resBox"].toString());
 	// remove unsupported resolutions from the dropdown
 	const int saved_index = ui->resBox->currentIndex();
 	bool saved_index_removed = false;
@@ -378,16 +378,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	}
 
 	xemu_settings->EnhanceComboBox(ui->aspectBox, emu_settings::AspectRatio);
-	SubscribeTooltip(ui->aspectBox, json_gpu_cbo["aspectBox"].toString());
+	SubscribeTooltip(ui->gb_aspectRatio, json_gpu_cbo["aspectBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->frameLimitBox, emu_settings::FrameLimit);
-	SubscribeTooltip(ui->frameLimitBox, json_gpu_cbo["frameLimitBox"].toString());
+	SubscribeTooltip(ui->gb_frameLimit, json_gpu_cbo["frameLimitBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->antiAliasing, emu_settings::MSAA);
-	SubscribeTooltip(ui->antiAliasing, json_gpu_cbo["antiAliasing"].toString());
+	SubscribeTooltip(ui->gb_antiAliasing, json_gpu_cbo["antiAliasing"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->anisotropicFilterOverride, emu_settings::AnisotropicFilterOverride, true);
-	SubscribeTooltip(ui->anisotropicFilterOverride, json_gpu_cbo["anisotropicFilterOverride"].toString());
+	SubscribeTooltip(ui->gb_anisotropicFilter, json_gpu_cbo["anisotropicFilterOverride"].toString());
 	// only allow values 0,2,4,8,16
 	for (int i = ui->anisotropicFilterOverride->count() - 1; i >= 0; i--)
 	{
@@ -738,9 +738,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceComboBox(ui->audioOutBox, emu_settings::AudioRenderer);
 #ifdef WIN32
-	SubscribeTooltip(ui->audioOutBox, json_audio["audioOutBox"].toString());
+	SubscribeTooltip(ui->gb_audio_out, json_audio["audioOutBox"].toString());
 #else
-	SubscribeTooltip(ui->audioOutBox, json_audio["audioOutBox_Linux"].toString());
+	SubscribeTooltip(ui->gb_audio_out, json_audio["audioOutBox_Linux"].toString());
 #endif
 	// Change displayed backend names
 	ui->audioOutBox->setItemText(ui->renderBox->findData("Null"), tr("Disable Audio Output"));
@@ -801,13 +801,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Sliders
 
 	EnhanceSlider(emu_settings::MasterVolume, ui->masterVolume, ui->masterVolumeLabel, tr("Master: %0 %"));
-	SubscribeTooltip(ui->masterVolume, json_audio["masterVolume"].toString());
+	SubscribeTooltip(ui->master_volume, json_audio["masterVolume"].toString());
 
 	EnhanceSlider(emu_settings::AudioBufferDuration, ui->audioBufferDuration, ui->audioBufferDurationLabel, tr("Audio Buffer Duration: %0 ms"));
-	SubscribeTooltip({ ui->audioBufferDuration, ui->audioBufferDurationLabel }, json_audio["audioBufferDuration"].toString());
+	SubscribeTooltip(ui->audio_buffer_duration, json_audio["audioBufferDuration"].toString());
 
 	EnhanceSlider(emu_settings::TimeStretchingThreshold, ui->timeStretchingThreshold, ui->timeStretchingThresholdLabel, tr("Time Stretching Threshold: %0 %"));
-	SubscribeTooltip({ ui->timeStretchingThreshold, ui->timeStretchingThresholdLabel }, json_audio["timeStretchingThreshold"].toString());
+	SubscribeTooltip(ui->time_stretching_threshold, json_audio["timeStretchingThreshold"].toString());
 
 	//    _____       __   ____    _______    _
 	//   |_   _|     / /  / __ \  |__   __|  | |
@@ -819,19 +819,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->keyboardHandlerBox, emu_settings::KeyboardHandler);
-	SubscribeTooltip(ui->keyboardHandlerBox, json_input["keyboardHandlerBox"].toString());
+	SubscribeTooltip(ui->gb_keyboard_handler, json_input["keyboardHandlerBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->mouseHandlerBox, emu_settings::MouseHandler);
-	SubscribeTooltip(ui->mouseHandlerBox, json_input["mouseHandlerBox"].toString());
+	SubscribeTooltip(ui->gb_mouse_handler, json_input["mouseHandlerBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->cameraTypeBox, emu_settings::CameraType);
-	SubscribeTooltip(ui->cameraTypeBox, json_input["cameraTypeBox"].toString());
+	SubscribeTooltip(ui->gb_camera_type, json_input["cameraTypeBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->cameraBox, emu_settings::Camera);
-	SubscribeTooltip(ui->cameraBox, json_input["cameraBox"].toString());
+	SubscribeTooltip(ui->gb_camera_setting, json_input["cameraBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->moveBox, emu_settings::Move);
-	SubscribeTooltip(ui->moveBox, json_input["moveBox"].toString());
+	SubscribeTooltip(ui->gb_move_handler, json_input["moveBox"].toString());
 
 	//     _____           _                   _______    _
 	//    / ____|         | |                 |__   __|  | |
@@ -845,10 +845,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->sysLangBox, emu_settings::Language, false, false, 0, true);
-	SubscribeTooltip(ui->sysLangBox, json_sys["sysLangBox"].toString());
+	SubscribeTooltip(ui->gb_sysLang, json_sys["sysLangBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->keyboardType, emu_settings::KeyboardType, false, false, 0, true);
-	SubscribeTooltip(ui->keyboardType, json_sys["keyboardType"].toString());
+	SubscribeTooltip(ui->gb_keyboardType, json_sys["keyboardType"].toString());
 
 	// Checkboxes
 
@@ -856,13 +856,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeTooltip(ui->enableHostRoot, json_sys["enableHostRoot"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->enableCacheClearing, emu_settings::LimitCacheSize);
-	SubscribeTooltip(ui->enableCacheClearing, json_sys["limitCacheSize"].toString());
+	SubscribeTooltip(ui->gb_DiskCacheClearing, json_sys["limitCacheSize"].toString());
 	connect(ui->enableCacheClearing, &QCheckBox::stateChanged, ui->maximumCacheSize, &QSlider::setEnabled);
 
 	// Sliders
 
 	EnhanceSlider(emu_settings::MaximumCacheSize, ui->maximumCacheSize, ui->maximumCacheSizeLabel, tr("Maximum size: %0 MB"));
-	SubscribeTooltip(ui->maximumCacheSize, json_sys["limitCacheSize"].toString());
 	ui->maximumCacheSize->setEnabled(ui->enableCacheClearing->isChecked());
 
 	// Radio Buttons
@@ -904,7 +903,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings::ConnectionStatus);
-	SubscribeTooltip(ui->netStatusBox, json_net["netStatusBox"].toString());
+	SubscribeTooltip(ui->gb_network_status, json_net["netStatusBox"].toString());
 
 
 	//                _                               _   _______    _
@@ -939,10 +938,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings::MaxSPURSThreads, true);
 	ui->maxSPURSThreads->setItemText(ui->maxSPURSThreads->findData("6"), tr("Unlimited (Default)"));
-	SubscribeTooltip(ui->maxSPURSThreads, json_advanced["maxSPURSThreads"].toString());
+	SubscribeTooltip(ui->gb_max_spurs_threads, json_advanced["maxSPURSThreads"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->sleepTimersAccuracy, emu_settings::SleepTimersAccuracy);
-	SubscribeTooltip(ui->sleepTimersAccuracy, json_advanced["sleepTimersAccuracy"].toString());
+	SubscribeTooltip(ui->gb_sleep_timers_accuracy, json_advanced["sleepTimersAccuracy"].toString());
 
 	// Sliders
 
@@ -978,19 +977,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	{
 		ui->vblank->setDisabled(true);
 		ui->vblankReset->setDisabled(true);
-		SubscribeTooltip(ui->vblank, json_advanced["disabledFromGlobal"].toString());
+		SubscribeTooltip(ui->gb_vblank, json_advanced["disabledFromGlobal"].toString());
 		ui->clockScale->setDisabled(true);
 		ui->clockScaleReset->setDisabled(true);
-		SubscribeTooltip(ui->clockScale, json_advanced["disabledFromGlobal"].toString());
+		SubscribeTooltip(ui->gb_clockScale, json_advanced["disabledFromGlobal"].toString());
 		ui->wakeupDelay->setDisabled(true);
 		ui->wakeupReset->setDisabled(true);
-		SubscribeTooltip(ui->wakeupDelay, json_advanced["disabledFromGlobal"].toString());
+		SubscribeTooltip(ui->gb_wakeupDelay, json_advanced["disabledFromGlobal"].toString());
 	}
 	else
 	{
-		SubscribeTooltip(ui->vblank, json_advanced["vblankRate"].toString());
-		SubscribeTooltip(ui->clockScale, json_advanced["clocksScale"].toString());
-		SubscribeTooltip(ui->wakeupDelay, json_advanced["wakeupDelay"].toString());
+		SubscribeTooltip(ui->gb_vblank, json_advanced["vblankRate"].toString());
+		SubscribeTooltip(ui->gb_clockScale, json_advanced["clocksScale"].toString());
+		SubscribeTooltip(ui->gb_wakeupDelay, json_advanced["wakeupDelay"].toString());
 	}
 
 	// lib options tool tips
@@ -1148,14 +1147,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->maxLLVMThreads, emu_settings::MaxLLVMThreads, true, true, std::thread::hardware_concurrency());
-	SubscribeTooltip(ui->maxLLVMThreads, json_emu_misc["maxLLVMThreads"].toString());
+	SubscribeTooltip(ui->gb_max_llvm, json_emu_misc["maxLLVMThreads"].toString());
 	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData("0"), tr("All (%1)").arg(std::thread::hardware_concurrency()));
 
 	xemu_settings->EnhanceComboBox(ui->perfOverlayDetailLevel, emu_settings::PerfOverlayDetailLevel);
-	SubscribeTooltip(ui->perfOverlayDetailLevel, json_emu_overlay["perfOverlayDetailLevel"].toString());
+	SubscribeTooltip(ui->perf_overlay_detail_level, json_emu_overlay["perfOverlayDetailLevel"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->perfOverlayPosition, emu_settings::PerfOverlayPosition);
-	SubscribeTooltip(ui->perfOverlayPosition, json_emu_overlay["perfOverlayPosition"].toString());
+	SubscribeTooltip(ui->perf_overlay_position, json_emu_overlay["perfOverlayPosition"].toString());
 
 	// Checkboxes
 
@@ -1247,13 +1246,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Sliders
 
 	EnhanceSlider(emu_settings::PerfOverlayUpdateInterval, ui->perfOverlayUpdateInterval, ui->label_update_interval, tr("Update Interval: %0 ms"));
-	SubscribeTooltip(ui->perfOverlayUpdateInterval, json_emu_overlay["perfOverlayUpdateInterval"].toString());
+	SubscribeTooltip(ui->perf_overlay_update_interval, json_emu_overlay["perfOverlayUpdateInterval"].toString());
 
 	EnhanceSlider(emu_settings::PerfOverlayFontSize, ui->perfOverlayFontSize, ui->label_font_size, tr("Font Size: %0 px"));
-	SubscribeTooltip(ui->perfOverlayFontSize, json_emu_overlay["perfOverlayFontSize"].toString());
+	SubscribeTooltip(ui->perf_overlay_font_size, json_emu_overlay["perfOverlayFontSize"].toString());
 
 	EnhanceSlider(emu_settings::PerfOverlayOpacity, ui->perfOverlayOpacity, ui->label_opacity, tr("Opacity: %0 %"));
-	SubscribeTooltip(ui->perfOverlayOpacity, json_emu_overlay["perfOverlayOpacity"].toString());
+	SubscribeTooltip(ui->perf_overlay_opacity, json_emu_overlay["perfOverlayOpacity"].toString());
 
 	EnhanceSlider(emu_settings::ShaderLoadBgDarkening, ui->shaderLoadBgDarkening, ui->label_shaderLoadBgDarkening, tr("Background darkening: %0 %"));
 	SubscribeTooltip(ui->shaderLoadBgDarkening, json_emu_shaders["shaderLoadBgDarkening"].toString());
@@ -1328,7 +1327,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		// Comboboxes
 		SubscribeTooltip(ui->combo_configs, json_gui["configs"].toString());
 
-		SubscribeTooltip(ui->combo_stylesheets, json_gui["stylesheets"].toString());
+		SubscribeTooltip(ui->gb_stylesheets, json_gui["stylesheets"].toString());
 
 		// Checkboxes:
 		SubscribeTooltip(ui->cb_custom_colors, json_gui["custom_colors"].toString());
@@ -1804,14 +1803,6 @@ void settings_dialog::SubscribeTooltip(QObject* object, const QString& tooltip)
 	object->installEventFilter(this);
 }
 
-void settings_dialog::SubscribeTooltip(QList<QObject*> objects, const QString& tooltip)
-{
-	for (auto obj : objects)
-	{
-		SubscribeTooltip(obj, tooltip);
-	}
-}
-
 // Thanks Dolphin
 bool settings_dialog::eventFilter(QObject* object, QEvent* event)
 {
@@ -1820,7 +1811,7 @@ bool settings_dialog::eventFilter(QObject* object, QEvent* event)
 		return QDialog::eventFilter(object, event);
 	}
 
-	int i = ui->tab_widget_settings->currentIndex();
+	const int i = ui->tab_widget_settings->currentIndex();
 	QLabel* label = m_description_labels[i].first;
 
 	if (event->type() == QEvent::Enter)
