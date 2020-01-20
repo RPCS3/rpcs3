@@ -1076,6 +1076,12 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	spu.jit->init();
 
 	// Compile
+	if (spu._ref<u32>(spu.pc) == 0)
+	{
+		spu_runtime::g_escape(&spu);
+		return;
+	}
+
 	const auto func = spu.jit->compile(spu.jit->analyse(spu._ptr<u32>(0), spu.pc));
 
 	if (!func)

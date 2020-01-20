@@ -1148,6 +1148,12 @@ void spu_thread::cpu_task()
 					break;
 			}
 
+			if (_ref<u32>(pc) == 0x0)
+			{
+				spu_thread::stop_and_signal(0x0);
+				continue;
+			}
+
 			spu_runtime::g_gateway(*this, vm::_ptr<u8>(offset), nullptr);
 		}
 
