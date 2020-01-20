@@ -42,6 +42,9 @@ namespace stx
 		// Combined borrowed refcounter and object pointer
 		mutable ptr_type m_val;
 
+		template <typename T, bool Const>
+		friend class atomic_cptr;
+
 		constexpr atomic_base() noexcept
 			: m_val(0)
 		{
@@ -130,7 +133,7 @@ namespace stx
 		long long fetch_add(long long value)
 		{
 	#ifdef _MSC_VER
-			return _InterlockedExchangeAdd64(&m_ref_count, &value);
+			return _InterlockedExchangeAdd64(&m_ref_count, value);
 	#else
 			return __atomic_fetch_add(&m_ref_count, value, __ATOMIC_SEQ_CST);
 	#endif
@@ -225,6 +228,9 @@ namespace stx
 	class shared_cptr : protected atomic_base
 	{
 		using cb = atomic_base;
+
+	protected:
+		using atomic_base::m_val;
 
 	public:
 		constexpr shared_cptr() noexcept
@@ -338,7 +344,7 @@ namespace stx
 
 		std::conditional_t<Const, const T*, T*> get() const noexcept
 		{
-			return &this->ptr_get<T>()->m_value;
+			return &this->ptr_get<T>()->m_data;
 		}
 
 		std::conditional_t<Const, const T&, T&> operator*() const noexcept
@@ -418,13 +424,13 @@ namespace stx
 		base load() const noexcept
 		{
 			base result;
-			result->m_val = this->ref_load();
+			static_cast<cb&>(result).m_val = this->ref_load();
 
 			if (result)
 			{
 				// TODO: obtain max-1 and try to return as much as possible
 				this->template ptr_get<T>()->fetch_add(1);
-				this->ref_fix(result->m_val);
+				this->ref_fix(static_cast<cb&>(result).m_val);
 			}
 
 			return result;
@@ -437,7 +443,7 @@ namespace stx
 
 		base exchange(base value) noexcept
 		{
-			value->m_val = this->val_exchange(value->m_val);
+			static_cast<cb&>(value).m_val = this->val_exchange(static_cast<cb&>(value).m_val);
 			return value;
 		}
 
@@ -478,6 +484,8 @@ namespace stx
 		// }
 
 		// void atomic_op();
+
+		using base::make;
 	};
 
 	template <typename T>
