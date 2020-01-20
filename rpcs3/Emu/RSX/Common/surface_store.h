@@ -476,7 +476,6 @@ namespace rsx
 				}
 			}
 
-			const bool not_old_surface_storage = !old_surface_storage;
 			// Check for stale storage
 			if (old_surface_storage)
 			{
@@ -545,7 +544,7 @@ namespace rsx
 				(*primary_storage)[address] = std::move(new_surface_storage);
 			}
 
-			verify(HERE), not_old_surface_storage, new_surface->get_spp() == get_format_sample_count(antialias);
+			verify(HERE), !old_surface_storage, new_surface->get_spp() == get_format_sample_count(antialias);
 			return new_surface;
 		}
 
