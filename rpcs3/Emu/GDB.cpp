@@ -116,7 +116,9 @@ void gdb_thread::start_server()
 	// IPv4 address:port in format 127.0.0.1:2345
 	static const std::regex ipv4_regex("^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})\\:([0-9]{1,5})$");
 
-	if (g_cfg.misc.gdb_server.get()[0] == '\0')
+	auto [sname, sshared] = g_cfg.misc.gdb_server.get();
+
+	if (sname[0] == '\0')
 	{
 		// Empty string or starts with null: GDB server disabled
 		GDB.notice("GDB Server is disabled.");
@@ -126,7 +128,7 @@ void gdb_thread::start_server()
 	// Try to detect socket type
 	std::smatch match;
 
-	if (std::regex_match(g_cfg.misc.gdb_server.get(), match, ipv4_regex))
+	if (std::regex_match(sname, match, ipv4_regex))
 	{
 		struct addrinfo hints{};
 		struct addrinfo* info;
@@ -142,7 +144,7 @@ void gdb_thread::start_server()
 
 			if (server_socket == -1)
 			{
-				GDB.error("Error creating IP socket for '%s'.", g_cfg.misc.gdb_server.get());
+				GDB.error("Error creating IP socket for '%s'.", sname);
 				freeaddrinfo(info);
 				return;
 			}
@@ -151,7 +153,7 @@ void gdb_thread::start_server()
 
 			if (bind(server_socket, info->ai_addr, static_cast<int>(info->ai_addrlen)) != 0)
 			{
-				GDB.error("Failed to bind socket on '%s'.", g_cfg.misc.gdb_server.get());
+				GDB.error("Failed to bind socket on '%s'.", sname);
 				freeaddrinfo(info);
 				return;
 			}
@@ -160,11 +162,11 @@ void gdb_thread::start_server()
 
 			if (listen(server_socket, 1) != 0)
 			{
-				GDB.error("Failed to listen on '%s'.", g_cfg.misc.gdb_server.get());
+				GDB.error("Failed to listen on '%s'.", sname);
 				return;
 			}
 
-			GDB.notice("Started listening on '%s'.", g_cfg.misc.gdb_server.get());
+			GDB.notice("Started listening on '%s'.", sname);
 			return;
 		}
 	}
@@ -179,27 +181,27 @@ void gdb_thread::start_server()
 	}
 
 	// Delete existing socket (TODO?)
-	fs::remove_file(g_cfg.misc.gdb_server.get());
+	fs::remove_file(sname);
 
 	set_nonblocking(server_socket);
 
 	sockaddr_un unix_saddr;
 	unix_saddr.sun_family = AF_UNIX;
-	strcpy_trunc(unix_saddr.sun_path, g_cfg.misc.gdb_server.get());
+	strcpy_trunc(unix_saddr.sun_path, sname);
 
 	if (bind(server_socket, reinterpret_cast<struct sockaddr*>(&unix_saddr), sizeof(unix_saddr)) != 0)
 	{
-		GDB.error("Failed to bind Unix socket '%s'.", g_cfg.misc.gdb_server.get());
+		GDB.error("Failed to bind Unix socket '%s'.", sname);
 		return;
 	}
 
 	if (listen(server_socket, 1) != 0)
 	{
-		GDB.error("Failed to listen on Unix socket '%s'.", g_cfg.misc.gdb_server.get());
+		GDB.error("Failed to listen on Unix socket '%s'.", sname);
 		return;
 	}
 
-	GDB.notice("Started listening on Unix socket '%s'.", g_cfg.misc.gdb_server.get());
+	GDB.notice("Started listening on Unix socket '%s'.", sname);
 }
 
 int gdb_thread::read(void* buf, int cnt)
