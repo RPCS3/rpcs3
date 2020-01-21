@@ -998,13 +998,9 @@ std::string spu_thread::dump() const
 {
 	std::string ret = cpu_thread::dump();
 
-	if (group)
-	{
-		fmt::append(ret, "\nGroup ID: 0x%x", group->id);
-	}
-
 	fmt::append(ret, "\nBlock Weight: %u (Retreats: %u)", block_counter, block_failure);
 	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
+	fmt::append(ret, "\nLocal Storage: 0x%08x..0x%08x", offset, offset + 0x3ffff);
 	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
 	fmt::append(ret, "\nMFC Stall: 0x%08x", ch_stall_mask);
 	fmt::append(ret, "\nMFC Queue Size: %u", mfc_size);
