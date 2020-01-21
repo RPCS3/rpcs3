@@ -7767,9 +7767,6 @@ public:
 			m_ir->CreateStore(&*(m_function->arg_begin() + 2), spu_ptr<u32>(&spu_thread::pc))->setVolatile(true);
 		else
 			update_pc();
-		const auto pstatus = spu_ptr<u32>(&spu_thread::status);
-		const auto chalt = m_ir->getInt32(SPU_STATUS_STOPPED_BY_HALT);
-		m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Or, pstatus, chalt, llvm::AtomicOrdering::Release)->setVolatile(true);
 		const auto ptr = _ptr<u32>(m_memptr, 0xffdead00);
 		m_ir->CreateStore(m_ir->getInt32("HALT"_u32), ptr)->setVolatile(true);
 		m_ir->CreateBr(next);
