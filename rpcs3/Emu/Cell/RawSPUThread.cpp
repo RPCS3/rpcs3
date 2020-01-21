@@ -8,14 +8,14 @@
 
 inline void try_start(spu_thread& spu)
 {
-	if (spu.status.fetch_op([](u32& status)
+	if (spu.status_npc.fetch_op([](typename spu_thread::status_npc_sync_var& value)
 	{
-		if (status & SPU_STATUS_RUNNING)
+		if (value.status & SPU_STATUS_RUNNING)
 		{
 			return false;
 		}
 
-		status = SPU_STATUS_RUNNING;
+		value.status = SPU_STATUS_RUNNING;
 		return true;
 	}).second)
 	{
@@ -124,7 +124,7 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 
 	case SPU_Status_offs:
 	{
-		value = status;
+		value = status_npc.load().status;
 		return true;
 	}
 
@@ -136,8 +136,8 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 
 	case SPU_NPC_offs:
 	{
-		//npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
-		value = npc;
+		const auto current = status_npc.load();
+		value = !(current.status & SPU_STATUS_RUNNING) ? current.npc : 0;
 		return true;
 	}
 
@@ -238,13 +238,15 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 
 	case SPU_RunCntl_offs:
 	{
+		run_ctrl = value;
+
 		if (value == SPU_RUNCNTL_RUN_REQUEST)
 		{
 			try_start(*this);
 		}
 		else if (value == SPU_RUNCNTL_STOP_REQUEST)
 		{
-			status &= ~SPU_STATUS_RUNNING;
+			// TODO: Wait for the SPU to stop?
 			state += cpu_flag::stop;
 		}
 		else
@@ -252,18 +254,22 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 			break;
 		}
 
-		run_ctrl = value;
 		return true;
 	}
 
 	case SPU_NPC_offs:
 	{
-		if ((value & 2) || value >= 0x40000)
+		status_npc.fetch_op([value = value & 0x3fffd](status_npc_sync_var& state)
 		{
-			break;
-		}
+			if (!(state.status & SPU_STATUS_RUNNING))
+			{
+				state.npc = value;
+				return true;
+			}
 
-		npc = value;
+			return false;
+		});
+
 		return true;
 	}
 
@@ -300,5 +306,5 @@ void spu_load_exec(const spu_exec_object& elf)
 		}
 	}
 
-	spu->npc = elf.header.e_entry;
+	spu->status_npc = {SPU_STATUS_RUNNING, elf.header.e_entry};
 }
