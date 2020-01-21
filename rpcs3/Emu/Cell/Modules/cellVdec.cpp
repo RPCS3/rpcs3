@@ -971,7 +971,7 @@ error_code cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frameRateCode)
 	const auto vdec = idm::get<vdec_context>(handle);
 
 	// 0x80 seems like a common prefix
-	if (!vdec || (frameRateCode & 0xf0) != 0x80)
+	if (!vdec || (frameRateCode & 0xf8) != 0x80)
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
