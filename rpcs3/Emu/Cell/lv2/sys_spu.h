@@ -225,9 +225,13 @@ struct lv2_spu_image : lv2_obj
 	static const u32 id_base = 0x22000000;
 
 	const u32 e_entry;
+	const vm::ptr<sys_spu_segment> segs;
+	const s32 nsegs;
 
-	lv2_spu_image(u32 entry)
+	lv2_spu_image(u32 entry, vm::ptr<sys_spu_segment> segs, s32 nsegs)
 		: e_entry(entry)
+		, segs(segs)
+		, nsegs(nsegs)
 	{
 	}
 };
