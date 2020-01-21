@@ -1073,6 +1073,7 @@ void spu_thread::cpu_init()
 	run_ctrl.raw() = 0;
 	status.raw() = 0;
 	npc.raw() = 0;
+	skip_npc_set = false;
 
 	int_ctrl[0].clear();
 	int_ctrl[1].clear();
@@ -1086,7 +1087,14 @@ void spu_thread::cpu_stop()
 	if (!group && offset >= RAW_SPU_BASE_ADDR)
 	{
 		// Save next PC and current SPU Interrupt Status
-		npc = pc | (interrupts_enabled);
+		if (skip_npc_set)
+		{
+			skip_npc_set = false;
+		}
+		else
+		{
+			npc = pc | interrupts_enabled;
+		}
 	}
 	else if (group && is_stopped())
 	{
@@ -1126,6 +1134,8 @@ void spu_thread::cpu_task()
 	// Get next PC and SPU Interrupt status
 	pc = npc.exchange(0);
 
+	skip_npc_set = false;
+
 	set_interrupt_status((pc & 1) != 0);
 
 	pc &= 0x3fffc;
@@ -1150,7 +1160,8 @@ void spu_thread::cpu_task()
 
 			if (_ref<u32>(pc) == 0x0)
 			{
-				spu_thread::stop_and_signal(0x0);
+				if (spu_thread::stop_and_signal(0x0))
+					pc += 4;
 				continue;
 			}
 
@@ -2773,6 +2784,9 @@ bool spu_thread::stop_and_signal(u32 code)
 
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{
+		// Save next PC and current SPU Interrupt Status
+		npc = (pc + 4) | (interrupts_enabled);
+		skip_npc_set = true;
 		state += cpu_flag::stop + cpu_flag::wait;
 		status.atomic_op([code](u32& status)
 		{
