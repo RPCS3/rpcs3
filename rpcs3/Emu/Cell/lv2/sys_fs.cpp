@@ -120,7 +120,7 @@ u64 lv2_file::op_write(vm::cptr<void> buf, u64 size)
 	while (result < size)
 	{
 		const u64 block = std::min<u64>(size - result, sizeof(local_buf));
-		std::memcpy(local_buf, static_cast<const uchar*>(buf.get_ptr()), block);
+		std::memcpy(local_buf, static_cast<const uchar*>(buf.get_ptr()) + result, block);
 		const u64 nwrite = file.write(+local_buf, block);
 		result += nwrite;
 
