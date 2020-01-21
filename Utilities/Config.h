@@ -3,6 +3,8 @@
 #include "Utilities/types.h"
 #include "Utilities/StrFmt.h"
 #include "Utilities/Log.h"
+#include "util/atomic.hpp"
+#include "util/shared_cptr.hpp"
 
 #include <utility>
 #include <string>
@@ -121,10 +123,10 @@ namespace cfg
 
 	class _bool final : public _base
 	{
-		bool m_value;
+		atomic_t<bool> m_value;
 
 	public:
-		bool def;
+		const bool def;
 
 		_bool(node* owner, const std::string& name, bool def = false, bool dynamic = false)
 			: _base(type::_bool, owner, name, dynamic)
@@ -138,7 +140,7 @@ namespace cfg
 			return m_value;
 		}
 
-		const bool& get() const
+		bool get() const
 		{
 			return m_value;
 		}
@@ -172,7 +174,7 @@ namespace cfg
 	template <typename T>
 	class _enum final : public _base
 	{
-		T m_value;
+		atomic_t<T> m_value;
 
 	public:
 		const T def;
@@ -189,7 +191,7 @@ namespace cfg
 			return m_value;
 		}
 
-		const T& get() const
+		T get() const
 		{
 			return m_value;
 		}
@@ -202,7 +204,7 @@ namespace cfg
 		std::string to_string() const override
 		{
 			std::string result;
-			fmt_class_string<T>::format(result, fmt_unveil<T>::get(m_value));
+			fmt_class_string<T>::format(result, fmt_unveil<T>::get(m_value.load()));
 			return result; // TODO: ???
 		}
 
@@ -235,7 +237,7 @@ namespace cfg
 		// Prefer 32 bit type if possible
 		using int_type = std::conditional_t<Min >= INT32_MIN && Max <= INT32_MAX, s32, s64>;
 
-		int_type m_value;
+		atomic_t<int_type> m_value;
 
 	public:
 		int_type def;
@@ -256,7 +258,7 @@ namespace cfg
 			return m_value;
 		}
 
-		const int_type& get() const
+		int_type get() const
 		{
 			return m_value;
 		}
@@ -303,50 +305,56 @@ namespace cfg
 	// Simple string entry with mutex
 	class string final : public _base
 	{
-		std::string m_name;
-		std::string m_value;
+		const std::string m_name;
+
+		stx::atomic_cptr<std::string> m_value;
 
 	public:
 		std::string def;
 
-		string(node* owner, const std::string& name, const std::string& def = {}, bool dynamic = false)
+		string(node* owner, std::string name, std::string def = {}, bool dynamic = false)
 			: _base(type::string, owner, name, dynamic)
-			, m_name(name)
-			, m_value(def)
-			, def(def)
+			, m_name(std::move(name))
+			, m_value(m_value.make(def))
+			, def(std::move(def))
 		{
 		}
 
 		operator std::string() const
 		{
-			return m_value;
+			return *m_value.load().get();
 		}
 
-		const std::string& get() const
+		std::pair<const std::string&, stx::shared_cptr<std::string>> get() const
 		{
-			return m_value;
+			auto v = m_value.load();
+
+			if (auto s = v.get())
+			{
+				return {*s, std::move(v)};
+			}
+			else
+			{
+				static const std::string _empty;
+				return {_empty, {}};
+			}
 		}
 
-		std::string get_name() const
+		const std::string& get_name() const
 		{
 			return m_name;
-		}
-
-		std::size_t size() const
-		{
-			return m_value.size();
 		}
 
 		void from_default() override;
 
 		std::string to_string() const override
 		{
-			return m_value;
+			return *m_value.load().get();
 		}
 
 		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
 		{
-			m_value = value;
+			m_value = m_value.make(value);
 			return true;
 		}
 	};
