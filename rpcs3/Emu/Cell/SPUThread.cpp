@@ -1132,6 +1132,7 @@ void spu_thread::cpu_task()
 
 	skip_npc_set = false;
 
+	// Note: works both on RawSPU and threaded SPU!
 	set_interrupt_status((pc & 1) != 0);
 
 	pc &= 0x3fffc;

@@ -45,25 +45,30 @@ void sys_spu_image::load(const fs::file& stream)
 		}
 	}
 
-	type        = SYS_SPU_IMAGE_TYPE_KERNEL;
-
-	nsegs       = sys_spu_image::get_nsegs(obj.progs);
+	this->type = SYS_SPU_IMAGE_TYPE_KERNEL;
+	const s32 nsegs = sys_spu_image::get_nsegs(obj.progs);
 
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
-	segs        = vm::cast(vm::alloc(mem_size, vm::main));
+	const vm::ptr<sys_spu_segment> segs = vm::cast(vm::alloc(mem_size, vm::main));
 
-	// Write ID and save entry
-	entry_point = idm::make<lv2_obj, lv2_spu_image>(+obj.header.e_entry);
+	const u32 entry = obj.header.e_entry;
 
 	const u32 src = segs.addr() + nsegs * sizeof(sys_spu_segment);
 
 	stream.seek(0);
 	stream.read(vm::base(src), stream.size());
 
-	if (nsegs < 0 || sys_spu_image::fill(segs, nsegs, obj.progs, src) != nsegs)
+	if (nsegs <= 0 || nsegs > 0x20 || sys_spu_image::fill(segs, nsegs, obj.progs, src) != nsegs)
 	{
 		fmt::throw_exception("Failed to load SPU segments (%d)" HERE, nsegs);
 	}
+
+	// Write ID and save entry
+	this->entry_point = idm::make<lv2_obj, lv2_spu_image>(+obj.header.e_entry, segs, nsegs);
+
+	// Unused and set to 0
+	this->nsegs = 0;
+	this->segs = vm::null;
 
 	vm::page_protect(segs.addr(), ::align(mem_size, 4096), 0, 0, vm::page_writable);
 }
@@ -200,7 +205,7 @@ error_code _sys_spu_image_get_information(ppu_thread& ppu, vm::ptr<sys_spu_image
 	}
 
 	*entry_point = image->e_entry;
-	*nsegs       = img->nsegs;
+	*nsegs       = image->nsegs;
 	return CELL_OK;
 }
 
@@ -243,12 +248,14 @@ error_code _sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 		return CELL_EINVAL;
 	}
 
-	if (!idm::remove<lv2_obj, lv2_spu_image>(img->entry_point))
+	const auto handle = idm::withdraw<lv2_obj, lv2_spu_image>(img->entry_point);
+
+	if (!handle)
 	{
 		return CELL_ESRCH;
 	}
 
-	vm::dealloc(img->segs.addr(), vm::main);
+	verify(HERE), vm::dealloc(handle->segs.addr(), vm::main);
 	return CELL_OK;
 }
 
@@ -258,8 +265,20 @@ error_code _sys_spu_image_get_segments(ppu_thread& ppu, vm::ptr<sys_spu_image> i
 
 	sys_spu.error("_sys_spu_image_get_segments(img=*0x%x, segments=*0x%x, nseg=%d)", img, segments, nseg);
 
+	if (nseg <= 0 || nseg > 0x20 || img->type != SYS_SPU_IMAGE_TYPE_KERNEL)
+	{
+		return CELL_EINVAL;
+	}
+
+	const auto handle = idm::get<lv2_obj, lv2_spu_image>(img->entry_point);
+
+	if (!handle)
+	{
+		return CELL_ESRCH;
+	}
+
 	// TODO: apply SPU patches
-	std::memcpy(segments.get_ptr(), img->segs.get_ptr(), sizeof(sys_spu_segment) * nseg);
+	std::memcpy(segments.get_ptr(), handle->segs.get_ptr(), sizeof(sys_spu_segment) * std::min<s32>(nseg, handle->nsegs));
 	return CELL_OK;
 }
 
@@ -274,14 +293,11 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		return CELL_EINVAL;
 	}
 
-	if (img->type != SYS_SPU_IMAGE_TYPE_KERNEL && img->type != SYS_SPU_IMAGE_TYPE_USER)
+	sys_spu_image image;
+
+	switch (img->type)
 	{
-		return CELL_EINVAL;
-	}
-
-	sys_spu_image image = *img;
-
-	if (img->type == SYS_SPU_IMAGE_TYPE_KERNEL)
+	case SYS_SPU_IMAGE_TYPE_KERNEL:
 	{
 		const auto handle = idm::get<lv2_obj, lv2_spu_image>(img->entry_point);
 
@@ -290,8 +306,24 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 			return CELL_ESRCH;
 		}
 
-		// Save actual entry point
+		// Image information is stored in IDM
 		image.entry_point = handle->e_entry;
+		image.nsegs = handle->nsegs;
+		image.segs = handle->segs;
+		image.type = SYS_SPU_IMAGE_TYPE_KERNEL;
+		break;
+	}
+	case SYS_SPU_IMAGE_TYPE_USER:
+	{
+		if (img->entry_point > 0x3fffc || img->nsegs <= 0 || img->nsegs > 0x20)
+		{
+			return CELL_EINVAL;
+		}
+
+		image = *img;
+		break;
+	}
+	default: return CELL_EINVAL;
 	}
 
 	// Read thread name
