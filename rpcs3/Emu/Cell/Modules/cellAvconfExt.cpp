@@ -206,7 +206,7 @@ error_code cellAudioInGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioInDevic
 {
 	cellAvconfExt.todo("cellAudioInGetAvailableDeviceInfo(count=0x%x, info=*0x%x)", count, device_info);
 
-	if (count > 16 || !device_info.addr())
+	if (count > 16 || !device_info)
 	{
 		return CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER;
 	}
