@@ -271,7 +271,8 @@ error_code cellAudioInRegisterDevice(u64 deviceType, vm::cptr<char> name, vm::pt
 {
 	cellAvconfExt.todo("cellAudioInRegisterDevice(deviceType=0x%llx, name=%s, option=*0x%x, config=*0x%x)", deviceType, name, option, config);
 
-	if (!option || !config || !name) // TODO: check first member of option for > 5 ?
+	// option must be null, volume can be 1 (soft) to 5 (loud) (raises question about check for volume = 0)
+	if (option || !config || !name || config->volume > 5)
 	{
 		return CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER;
 	}
