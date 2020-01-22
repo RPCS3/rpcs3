@@ -423,7 +423,6 @@ bool gdb_thread::select_thread(u64 id)
 
 std::string gdb_thread::get_reg(ppu_thread* thread, u32 rid)
 {
-	std::string result;
 	//ids from gdb/features/rs6000/powerpc-64.c
 	//pc
 	switch (rid) {

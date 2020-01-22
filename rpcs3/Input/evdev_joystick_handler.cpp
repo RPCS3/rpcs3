@@ -697,7 +697,6 @@ PadHandlerBase::connection evdev_joystick_handler::update_connection(const std::
 
 void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
 {
-	std::unordered_map<u64, u16> values;
 	m_dev = std::static_pointer_cast<EvdevDevice>(device);
 	if (!m_dev || !pad)
 		return;

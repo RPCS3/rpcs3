@@ -50,8 +50,6 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 
 void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 {
-	std::vector<std::string> inputs_to_declare;
-
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem& PI : PT.items)
