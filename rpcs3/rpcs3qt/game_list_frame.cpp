@@ -43,7 +43,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_Icon_Color      = m_gui_settings->GetValue(gui::gl_iconColor).value<QColor>();
 	m_colSortOrder    = m_gui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
 	m_sortColumn      = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
-	m_hidden_list     = m_gui_settings->GetValue(gui::gl_hidden_list).toStringList().toSet();
+	m_hidden_list     = gui::utils::list_to_set(m_gui_settings->GetValue(gui::gl_hidden_list).toStringList());
 
 	m_oldLayoutIsList = m_isListLayout;
 
@@ -727,7 +727,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		// clean up hidden games list
 		m_hidden_list.intersect(serials);
-		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.toList()));
+		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.values()));
 	}
 
 	// Fill Game List / Game Grid
@@ -1045,7 +1045,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		else
 			m_hidden_list.remove(serial);
 
-		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.toList()));
+		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.values()));
 		Refresh();
 	});
 	connect(createPPUCache, &QAction::triggered, [=]
