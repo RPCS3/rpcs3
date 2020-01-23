@@ -221,8 +221,8 @@ namespace rsx
 				u16 min_x = external_subresource_desc.width, min_y = external_subresource_desc.height,
 					max_x = 0, max_y = 0;
 
-				// Require at least 50% coverage
-				const u32 target_area = (min_x * min_y) / 2;
+				// Require at least 90% coverage
+				const u32 target_area = ((min_x * min_y) * 90u) / 100u;
 
 				for (const auto &section : external_subresource_desc.sections_to_copy)
 				{
@@ -1553,6 +1553,14 @@ namespace rsx
 				{
 					if (cached_texture->matches(attr.address, attr.gcm_format, attr.width, attr.height, attr.depth, 0))
 					{
+#ifdef TEXTURE_CACHE_DEBUG
+						if (!memory_range.inside(cached_texture->get_confirmed_range()))
+						{
+							// TODO. This is easily possible for blit_dst textures if the blit is incomplete in Y
+							// The possibility that a texture will be split into parts on the CPU like this is very rare
+							continue;
+						}
+#endif
 						return{ cached_texture->get_view(encoded_remap, remap), cached_texture->get_context(), cached_texture->get_format_type(), scale, cached_texture->get_image_type() };
 					}
 				}
