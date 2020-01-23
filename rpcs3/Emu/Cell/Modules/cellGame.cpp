@@ -123,6 +123,7 @@ struct content_permission final
 	stx::init_mutex init;
 
 	atomic_t<u32> can_create = 0;
+	atomic_t<bool> restrict_sfo_params = true;
 
 	content_permission() = default;
 
@@ -462,6 +463,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		return not_an_error(CELL_GAME_RET_NONE);
 	}
 
+	perm->restrict_sfo_params = false;
 	perm->sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 	return CELL_OK;
 }
@@ -753,40 +755,56 @@ error_code cellGameGetParamInt(s32 id, vm::ptr<s32> value)
 	return CELL_OK;
 }
 
-static const char* get_param_string_key(s32 id)
+// String key restriction flags
+enum class strkey_flag : u32
+{
+	get, // reading is restricted
+	set, // writing is restricted
+	read_only, // writing is disallowed (don't mind set flag in this case)
+
+	__bitset_enum_max
+};
+
+struct string_key_info
+{
+	std::string_view name;
+	bs_t<strkey_flag> flags;
+};
+
+static string_key_info get_param_string_key(s32 id)
 {
 	switch (id)
 	{
-	case CELL_GAME_PARAMID_TITLE:                    return "TITLE"; // TODO: Is this value correct?
-	case CELL_GAME_PARAMID_TITLE_DEFAULT:            return "TITLE";
-	case CELL_GAME_PARAMID_TITLE_JAPANESE:           return "TITLE_00";
-	case CELL_GAME_PARAMID_TITLE_ENGLISH:            return "TITLE_01";
-	case CELL_GAME_PARAMID_TITLE_FRENCH:             return "TITLE_02";
-	case CELL_GAME_PARAMID_TITLE_SPANISH:            return "TITLE_03";
-	case CELL_GAME_PARAMID_TITLE_GERMAN:             return "TITLE_04";
-	case CELL_GAME_PARAMID_TITLE_ITALIAN:            return "TITLE_05";
-	case CELL_GAME_PARAMID_TITLE_DUTCH:              return "TITLE_06";
-	case CELL_GAME_PARAMID_TITLE_PORTUGUESE:         return "TITLE_07";
-	case CELL_GAME_PARAMID_TITLE_RUSSIAN:            return "TITLE_08";
-	case CELL_GAME_PARAMID_TITLE_KOREAN:             return "TITLE_09";
-	case CELL_GAME_PARAMID_TITLE_CHINESE_T:          return "TITLE_10";
-	case CELL_GAME_PARAMID_TITLE_CHINESE_S:          return "TITLE_11";
-	case CELL_GAME_PARAMID_TITLE_FINNISH:            return "TITLE_12";
-	case CELL_GAME_PARAMID_TITLE_SWEDISH:            return "TITLE_13";
-	case CELL_GAME_PARAMID_TITLE_DANISH:             return "TITLE_14";
-	case CELL_GAME_PARAMID_TITLE_NORWEGIAN:          return "TITLE_15";
-	case CELL_GAME_PARAMID_TITLE_POLISH:             return "TITLE_16";
-	case CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL:  return "TITLE_17";
-	case CELL_GAME_PARAMID_TITLE_ENGLISH_UK:         return "TITLE_18";
-	case CELL_GAME_PARAMID_TITLE_TURKISH:            return "TITLE_19";
+	case CELL_GAME_PARAMID_TITLE:                    return {"TITLE", strkey_flag::set}; // TODO: Is this value correct?
+	case CELL_GAME_PARAMID_TITLE_DEFAULT:            return {"TITLE", strkey_flag::set};
+	case CELL_GAME_PARAMID_TITLE_JAPANESE:           return {"TITLE_00", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_ENGLISH:            return {"TITLE_01", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_FRENCH:             return {"TITLE_02", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_SPANISH:            return {"TITLE_03", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_GERMAN:             return {"TITLE_04", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_ITALIAN:            return {"TITLE_05", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_DUTCH:              return {"TITLE_06", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_PORTUGUESE:         return {"TITLE_07", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_RUSSIAN:            return {"TITLE_08", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_KOREAN:             return {"TITLE_09", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_CHINESE_T:          return {"TITLE_10", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_CHINESE_S:          return {"TITLE_11", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_FINNISH:            return {"TITLE_12", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_SWEDISH:            return {"TITLE_13", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_DANISH:             return {"TITLE_14", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_NORWEGIAN:          return {"TITLE_15", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_POLISH:             return {"TITLE_16", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL:  return {"TITLE_17", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_ENGLISH_UK:         return {"TITLE_18", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_TURKISH:            return {"TITLE_19", strkey_flag::set + strkey_flag::get};
 
-	case CELL_GAME_PARAMID_TITLE_ID:                 return "TITLE_ID";
-	case CELL_GAME_PARAMID_VERSION:                  return "VERSION";
-	case CELL_GAME_PARAMID_PS3_SYSTEM_VER:           return "PS3_SYSTEM_VER";
-	case CELL_GAME_PARAMID_APP_VER:                  return "APP_VER";
+	case CELL_GAME_PARAMID_TITLE_ID:                 return {"TITLE_ID", strkey_flag::read_only};
+	case CELL_GAME_PARAMID_VERSION:                  return {"VERSION", strkey_flag::get + strkey_flag::read_only};
+	case CELL_GAME_PARAMID_PS3_SYSTEM_VER:           return {"PS3_SYSTEM_VER"}; // TODO
+	case CELL_GAME_PARAMID_APP_VER:                  return {"APP_VER", strkey_flag::read_only};
 	}
 
-	return nullptr;
+	return {};
 }
 
 error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
@@ -809,12 +827,17 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 
 	const auto key = get_param_string_key(id);
 
-	if (!key)
+	if (key.name.empty())
 	{
 		return CELL_GAME_ERROR_INVALID_ID;
 	}
 
-	std::string value = psf::get_string(prm->sfo, key);
+	if (key.flags & strkey_flag::get && prm->restrict_sfo_params)
+	{
+		return CELL_GAME_ERROR_NOTSUPPORTED;
+	}
+
+	std::string value = psf::get_string(prm->sfo, std::string(key.name));
 	value.resize(bufsize - 1);
 
 	std::memcpy(buf.get_ptr(), value.c_str(), bufsize);
@@ -842,22 +865,24 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 
 	const auto key = get_param_string_key(id);
 
-	if (!key)
+	if (key.name.empty())
 	{
 		return CELL_GAME_ERROR_INVALID_ID;
+	}
+
+	if (key.flags & strkey_flag::read_only || (key.flags & strkey_flag::set && prm->restrict_sfo_params))
+	{
+		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
 
 	u32 max_size = CELL_GAME_SYSP_TITLE_SIZE;
 
 	switch (id)
 	{
-	case CELL_GAME_PARAMID_TITLE_ID:       max_size = CELL_GAME_SYSP_TITLEID_SIZE; break;
-	case CELL_GAME_PARAMID_VERSION:        max_size = CELL_GAME_SYSP_VERSION_SIZE; break;
-	case CELL_GAME_PARAMID_PS3_SYSTEM_VER: max_size = CELL_GAME_SYSP_PS3_SYSTEM_VER_SIZE; break;
-	case CELL_GAME_PARAMID_APP_VER:        max_size = CELL_GAME_SYSP_APP_VER_SIZE; break;
+	case CELL_GAME_PARAMID_VERSION:        max_size = CELL_GAME_SYSP_VERSION_SIZE; break; // ??
 	}
 
-	psf::assign(prm->sfo, key, psf::string(max_size, buf.get_ptr()));
+	psf::assign(prm->sfo, std::string(key.name), psf::string(max_size, buf.get_ptr()));
 
 	return CELL_OK;
 }
