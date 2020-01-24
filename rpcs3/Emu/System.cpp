@@ -1847,12 +1847,16 @@ void Emulator::Stop(bool restart)
 
 std::string cfg_root::node_vfs::get(const cfg::string& _cfg, const char* _def) const
 {
-	if (_cfg.get().empty())
+	auto [spath, sshared] = _cfg.get();
+
+	if (spath.empty())
 	{
 		return fs::get_config_dir() + _def;
 	}
 
-	return fmt::replace_all(_cfg.get(), "$(EmulatorDir)", emulator_dir.get().empty() ? fs::get_config_dir() : emulator_dir.get());
+	auto [semudir, sshared2] = emulator_dir.get();
+
+	return fmt::replace_all(spath, "$(EmulatorDir)", semudir.empty() ? fs::get_config_dir() : semudir);
 }
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)
