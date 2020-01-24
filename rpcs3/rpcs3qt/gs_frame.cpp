@@ -137,7 +137,8 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		if (keyEvent->modifiers() == Qt::AltModifier) { toggle_fullscreen(); return; }
 		break;
 	case Qt::Key_Escape:
-		QWindow::close();
+		if (!Emu.HasGui()) { QWindow::close(); }
+		else if (visibility() == FullScreen) { toggle_fullscreen(); return; }
 		break;
 	case Qt::Key_P:
 		if (keyEvent->modifiers() == Qt::ControlModifier && Emu.IsRunning()) { Emu.Pause(); return; }
