@@ -246,6 +246,14 @@ namespace vk
 				}
 				else
 				{
+					if (context != rsx::texture_upload_context::dma)
+					{
+						// Partial load for the bits outside the existing image
+						// NOTE: A true DMA section would have been prepped beforehand
+						// TODO: Parial range load/flush
+						vk::load_dma(valid_range.start, section_length);
+					}
+
 					std::vector<VkBufferCopy> copy;
 					copy.reserve(transfer_height);
 
