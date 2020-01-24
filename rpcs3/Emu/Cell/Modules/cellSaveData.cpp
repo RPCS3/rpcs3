@@ -1750,8 +1750,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 
 			// Read from memory file to vm
-			const u64 sr = file->second.seek(fileSet->fileOffset);
-			const u64 rr = lv2_file::op_read(file->second, fileSet->fileBuf, fileSet->fileSize);
+			const u64 sr = file.seek(fileSet->fileOffset);
+			const u64 rr = lv2_file::op_read(file, fileSet->fileBuf, fileSet->fileSize).first;
 			fileGet->excSize = ::narrow<u32>(rr);
 			break;
 		}
@@ -1781,7 +1781,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			// Write to memory file and truncate
 			const u64 sr = file.seek(fileSet->fileOffset);
-			const u64 wr = lv2_file::op_write(file, fileSet->fileBuf, fileSet->fileSize);
+			const u64 wr = lv2_file::op_write(file, fileSet->fileBuf, fileSet->fileSize).first;
 			file.trunc(sr + wr);
 			fileGet->excSize = ::narrow<u32>(wr);
 			all_times.erase(file_path);
@@ -1833,7 +1833,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			// Write to memory file normally
 			const u64 sr = file.seek(fileSet->fileOffset);
-			const u64 wr = lv2_file::op_write(file, fileSet->fileBuf, fileSet->fileSize);
+			const u64 wr = lv2_file::op_write(file, fileSet->fileBuf, fileSet->fileSize).first;
 			fileGet->excSize = ::narrow<u32>(wr);
 			all_times.erase(file_path);
 			add_to_blist(file_path);

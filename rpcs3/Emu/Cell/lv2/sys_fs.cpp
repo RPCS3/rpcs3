@@ -77,7 +77,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 	return &g_mp_sys_dev_hdd0;
 }
 
-u64 lv2_file::op_read(const fs::file& file, vm::ptr<void> buf, u64 size)
+std::pair<u64, CellError> lv2_file::op_read(const fs::file& file, vm::ptr<void> buf, u64 size)
 {
 	// Copy data from intermediate buffer (avoid passing vm pointer to a native API)
 	uchar local_buf[65536];
@@ -86,10 +86,28 @@ u64 lv2_file::op_read(const fs::file& file, vm::ptr<void> buf, u64 size)
 
 	while (result < size)
 	{
+		// TODO: Changes with cellFsSetIoBuffer
 		const u64 block = std::min<u64>(size - result, sizeof(local_buf));
 		const u64 nread = file.read(+local_buf, block);
 
-		std::memcpy(static_cast<uchar*>(buf.get_ptr()) + result, local_buf, nread);
+		if (!vm::try_access(static_cast<u32>(buf.addr() + result), local_buf, nread, true))
+		{
+			sys_fs.error("lv2_file::op_read(): Memory access failure (buf=*0x%x, position=0x%llx, size=0x%llx, block=0x%llx",
+				buf, result, size, block);
+
+			// Fix position and abort
+			file.seek(-::narrow<s64>(nread), fs::seek_cur);
+
+			if (result == 0)
+			{
+				// First block could not be processed, return error code
+				return {result, CELL_EFAULT};
+			}
+
+			// Unrevertable changes make the error code remain CELL_OK
+			break;
+		}
+
 		result += nread;
 
 		if (nread < block)
@@ -98,10 +116,10 @@ u64 lv2_file::op_read(const fs::file& file, vm::ptr<void> buf, u64 size)
 		}
 	}
 
-	return result;
+	return {result, {}};
 }
 
-u64 lv2_file::op_write(const fs::file& file, vm::cptr<void> buf, u64 size)
+std::pair<u64, CellError> lv2_file::op_write(const fs::file& file, vm::cptr<void> buf, u64 size)
 {
 	// Copy data to intermediate buffer (avoid passing vm pointer to a native API)
 	uchar local_buf[65536];
@@ -110,8 +128,25 @@ u64 lv2_file::op_write(const fs::file& file, vm::cptr<void> buf, u64 size)
 
 	while (result < size)
 	{
+		// TODO: Changes with cellFsSetIoBuffer
 		const u64 block = std::min<u64>(size - result, sizeof(local_buf));
-		std::memcpy(local_buf, static_cast<const uchar*>(buf.get_ptr()) + result, block);
+
+		if (!vm::try_access(static_cast<u32>(buf.addr() + result), local_buf, block, false))
+		{
+			sys_fs.error("lv2_file::op_write(): Memory access failure (buf=*0x%x, position=0x%llx, size=0x%llx, block=0x%llx",
+				buf, result, size, block);
+
+
+			if (result == 0)
+			{
+				// First block could not be processed, return error code
+				return {result, CELL_EFAULT};
+			}
+
+			// Unrevertable changes make the error code remain CELL_OK
+			break;
+		}
+
 		const u64 nwrite = file.write(+local_buf, block);
 		result += nwrite;
 
@@ -121,7 +156,7 @@ u64 lv2_file::op_write(const fs::file& file, vm::cptr<void> buf, u64 size)
 		}
 	}
 
-	return result;
+	return {result, {}};
 }
 
 struct lv2_file::file_view : fs::file_base
@@ -554,8 +589,15 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 		return CELL_EIO;
 	}
 
-	*nread = file->op_read(buf, nbytes);
+	const auto [rd, error] = file->op_read(buf, nbytes);
 
+	if (error)
+	{
+		nread.try_write(0);
+		return error;
+	}
+
+	*nread = rd;
 	return CELL_OK;
 }
 
@@ -609,8 +651,15 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 		file->file.seek(0, fs::seek_end);
 	}
 
-	*nwrite = file->op_write(buf, nbytes);
+	const auto [wr, error] = file->op_write(buf, nbytes);
 
+	if (error)
+	{
+		nwrite.try_write(0);
+		return error;
+	}
+
+	*nwrite = wr;
 	return CELL_OK;
 }
 
@@ -1231,11 +1280,20 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		const u64 old_pos = file->file.pos();
 		const u64 new_pos = file->file.seek(arg->offset);
 
-		arg->out_size = op == 0x8000000a
+		const auto [out_size, out_code] = op == 0x8000000a
 			? file->op_read(arg->buf, arg->size)
 			: file->op_write(arg->buf, arg->size);
 
 		verify(HERE), old_pos == file->file.seek(old_pos);
+
+		if (!out_code)
+		{
+			arg->out_size = out_size;
+		}
+		else
+		{
+			return out_code;
+		}
 
 		arg->out_code = CELL_OK;
 		return CELL_OK;

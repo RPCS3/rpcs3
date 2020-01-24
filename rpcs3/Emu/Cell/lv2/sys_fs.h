@@ -222,17 +222,17 @@ struct lv2_file final : lv2_fs_object
 	static open_result_t open(std::string_view path, s32 flags, s32 mode, const void* arg = {}, u64 size = 0);
 
 	// File reading with intermediate buffer
-	static u64 op_read(const fs::file& file, vm::ptr<void> buf, u64 size);
+	static std::pair<u64, CellError> op_read(const fs::file& file, vm::ptr<void> buf, u64 size);
 
-	u64 op_read(vm::ptr<void> buf, u64 size)
+	std::pair<u64, CellError> op_read(vm::ptr<void> buf, u64 size)
 	{
 		return op_read(file, buf, size);
 	}
 
 	// File writing with intermediate buffer
-	static u64 op_write(const fs::file& file, vm::cptr<void> buf, u64 size);
+	static std::pair<u64, CellError> op_write(const fs::file& file, vm::cptr<void> buf, u64 size);
 
-	u64 op_write(vm::cptr<void> buf, u64 size)
+	std::pair<u64, CellError> op_write(vm::cptr<void> buf, u64 size)
 	{
 		return op_write(file, buf, size);
 	}

@@ -893,7 +893,7 @@ struct fs_aio_thread : ppu_thread
 
 				const auto old_pos = file->file.pos(); file->file.seek(aio->offset);
 
-				result = type == 2
+				std::tie(result, error) = type == 2
 					? file->op_write(aio->buf, aio->size)
 					: file->op_read(aio->buf, aio->size);
 
