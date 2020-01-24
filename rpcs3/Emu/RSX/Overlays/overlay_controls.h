@@ -1167,6 +1167,7 @@ namespace rsx
 			void set_count(u32 datapoint_count);
 			void set_color(color4f color);
 			void set_guide_interval(f32 guide_interval);
+			u16 get_height() const;
 			void record_datapoint(f32 datapoint);
 			void update();
 			compiled_resource& get_compiled() override;
