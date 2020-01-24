@@ -1269,7 +1269,34 @@ namespace vk
 
 			vk::leave_uninterruptible();
 
-			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subres_range);
+			// Insert appropriate barrier depending on use
+			VkImageLayout preferred_layout;
+			switch (context)
+			{
+			default:
+				preferred_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				break;
+			case rsx::texture_upload_context::blit_engine_dst:
+				preferred_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				break;
+			case rsx::texture_upload_context::blit_engine_src:
+				preferred_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				break;
+			}
+
+			if (preferred_layout != image->current_layout)
+			{
+				change_image_layout(cmd, image, preferred_layout, subres_range);
+			}
+			else
+			{
+				// Insert ordering barrier
+				verify(HERE), preferred_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				insert_image_memory_barrier(cmd, image->value, image->current_layout, preferred_layout,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+					subres_range);
+			}
 
 			section->last_write_tag = rsx::get_shared_tag();
 			return section;

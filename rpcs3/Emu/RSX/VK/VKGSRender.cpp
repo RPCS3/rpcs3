@@ -1592,6 +1592,10 @@ void VKGSRender::end()
 						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
 						raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 						break;
+					case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src;
+						raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+						break;
 					case VK_IMAGE_LAYOUT_GENERAL:
 						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
 						if (!sampler_state->is_cyclic_reference)
@@ -1722,6 +1726,10 @@ void VKGSRender::end()
 				break;
 			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 				verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
+				raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				break;
+			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+				verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src;
 				raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 				break;
 			case VK_IMAGE_LAYOUT_GENERAL:
