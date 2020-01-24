@@ -517,6 +517,11 @@ namespace vm
 
 	bool check_addr(u32 addr, u32 size, u8 flags)
 	{
+		if (size == 0)
+		{
+			return true;
+		}
+
 		// Overflow checking
 		if (addr + size < addr && (addr + size) != 0)
 		{
