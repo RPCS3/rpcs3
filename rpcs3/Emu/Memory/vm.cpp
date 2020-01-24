@@ -395,13 +395,21 @@ namespace vm
 
 		const u8 flags_both = flags_set & flags_clear;
 
-		flags_test  |= page_allocated;
+		if (!((flags_set | flags_clear) & page_fault_notification))
+		{
+			flags_test |= page_allocated;
+		}
+		else
+		{
+			flags_test &= ~page_allocated;
+		}
+
 		flags_set   &= ~flags_both;
 		flags_clear &= ~flags_both;
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if ((g_pages[i].flags & flags_test) != (flags_test | page_allocated))
+			if ((g_pages[i].flags & flags_test) != flags_test)
 			{
 				return false;
 			}
@@ -529,14 +537,40 @@ namespace vm
 		}
 
 		// Always check this flag
-		flags |= page_allocated;
+		auto test_flags = (flags | page_allocated) & ~page_fault_notification;
 
-		for (u32 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max; i++)
+		for (u32 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max;)
 		{
-			if ((g_pages[i].flags & flags) != flags) [[unlikely]]
+			const auto pflags = +g_pages[i].flags;
+
+			if ((pflags & test_flags) != test_flags) [[unlikely]]
 			{
-				return false;
+				// If this flag is set and passed by 'flags', ignore failure
+				if (!((pflags & flags) & page_fault_notification))
+				{
+					return false;
+				}
+
+				i++;
+				continue;
 			}
+
+			// Optimization
+			if (const auto page_size = pflags & (page_1m_size | page_64k_size))
+			{
+				if (page_size & page_1m_size)
+				{
+					i = ::align<u32>(i + 1, 0x100000 / 4096);
+				}
+				else // if (page_size & page_64k_size)
+				{
+					i = ::align<u32>(i + 1, 0x10000 / 4096);
+				}
+
+				continue;
+			}
+
+			i++;
 		}
 
 		return true;
@@ -1095,43 +1129,85 @@ namespace vm
 
 	bool try_access(u32 addr, void* ptr, u32 size, bool is_write)
 	{
-		vm::reader_lock lock;
-
 		if (size == 0)
 		{
 			return true;
 		}
 
-		if (vm::check_addr(addr, size, is_write ? page_writable : page_readable))
+		for (bool touch_mem = false;;)
 		{
-			void* src = vm::g_sudo_addr + addr;
-			void* dst = ptr;
-
-			if (is_write)
-				std::swap(src, dst);
-
-			if (size <= 16 && utils::popcnt32(size) == 1 && (addr & (size - 1)) == 0)
+			if (touch_mem)
 			{
-				if (is_write)
+				decltype(get(vm::any, 0)) block;
+
+				for (u32 i = addr, end = addr + size - 1;;)
 				{
-					switch (size)
+					// Ensures the block exists while touching the memory
+					if ((i % 0x10000000) == 0)
 					{
-					case 1: atomic_storage<u8>::release(*static_cast<u8*>(dst), *static_cast<u8*>(src)); break;
-					case 2: atomic_storage<u16>::release(*static_cast<u16*>(dst), *static_cast<u16*>(src)); break;
-					case 4: atomic_storage<u32>::release(*static_cast<u32*>(dst), *static_cast<u32*>(src)); break;
-					case 8: atomic_storage<u64>::release(*static_cast<u64*>(dst), *static_cast<u64*>(src)); break;
-					case 16: _mm_store_si128(static_cast<__m128i*>(dst), _mm_loadu_si128(static_cast<__m128i*>(src))); break;
+						block = get(vm::any, i);
 					}
 
-					return true;
+					// Touch memory
+					if (is_write)
+					{
+						// Write the expected value, avoid reads
+						vm::_ref<atomic_t<uchar>>(i).release(static_cast<uchar*>(ptr)[i - addr]); 
+					}
+					else
+					{
+						+vm::_ref<const volatile char>(i);
+					}
+
+					const u32 next = ::align(i + 1, 4096);
+
+					if (next < i || next > end)
+					{
+						break;
+					}
+
+					i = next;
 				}
 			}
 
-			std::memcpy(dst, src, size);
-			return true;
-		}
+			vm::reader_lock lock;
 
-		return false;
+			if (vm::check_addr(addr, size, (is_write ? page_writable : page_readable)))
+			{
+				void* src = vm::g_sudo_addr + addr;
+				void* dst = ptr;
+
+				if (is_write)
+					std::swap(src, dst);
+
+				if (size <= 16 && utils::popcnt32(size) == 1 && (addr & (size - 1)) == 0)
+				{
+					if (is_write)
+					{
+						switch (size)
+						{
+						case 1: atomic_storage<u8>::release(*static_cast<u8*>(dst), *static_cast<u8*>(src)); break;
+						case 2: atomic_storage<u16>::release(*static_cast<u16*>(dst), *static_cast<u16*>(src)); break;
+						case 4: atomic_storage<u32>::release(*static_cast<u32*>(dst), *static_cast<u32*>(src)); break;
+						case 8: atomic_storage<u64>::release(*static_cast<u64*>(dst), *static_cast<u64*>(src)); break;
+						case 16: _mm_store_si128(static_cast<__m128i*>(dst), _mm_loadu_si128(static_cast<__m128i*>(src))); break;
+						}
+
+						return true;
+					}
+				}
+
+				std::memcpy(dst, src, size);
+				return true;
+			}
+
+			touch_mem = vm::check_addr(addr, size, page_fault_notification | (is_write ? page_writable : page_readable));
+
+			if (!touch_mem)
+			{
+				return false;
+			}
+		}
 	}
 
 	inline namespace ps3_

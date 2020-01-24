@@ -497,6 +497,7 @@ error_code sys_mmapper_free_address(ppu_thread& ppu, u32 addr)
 	}
 	if (ind_to_remove != pf_entries->entries.end())
 	{
+		verify(HERE), vm::page_protect(addr, area->size, 0, 0, vm::page_fault_notification);
 		pf_entries->entries.erase(ind_to_remove);
 	}
 
@@ -700,7 +701,7 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 	auto queue = idm::get<lv2_obj, lv2_event_queue>(event_queue_id);
 
 	if (!queue)
-	{ // Can't connect the queue if it doesn't exist.
+	{
 		return CELL_ESRCH;
 	}
 
@@ -708,9 +709,9 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 	error_code res = sys_event_port_create(port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
 	sys_event_port_connect_local(*port_id, event_queue_id);
 
-	if (res + 0u == CELL_EAGAIN)
+	if (res)
 	{
-		// Not enough system resources.
+		verify(HERE), res + 0u == CELL_EAGAIN;
 		return CELL_EAGAIN;
 	}
 
@@ -729,6 +730,7 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 		}
 	}
 
+	verify(HERE), vm::page_protect(start_addr, mem->size, 0, vm::page_fault_notification, 0);
 	page_fault_notification_entry entry{ start_addr, event_queue_id, port_id->value() };
 	pf_entries->entries.emplace_back(entry);
 

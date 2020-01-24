@@ -311,12 +311,9 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 
 	vm::reader_lock rlock;
 
-	for (u32 addr = ea, end = ea + size; addr < end; addr += 0x100000)
+	if (!vm::check_addr(ea, size, vm::page_readable | (ea < 0x20000000 ? 0 : vm::page_1m_size)))
 	{
-		if (!vm::check_addr(addr, 1, vm::page_readable | (addr < 0x20000000 ? 0 : vm::page_1m_size)))
-		{
-			return CELL_EINVAL;
-		}
+		return {CELL_EINVAL, ea};
 	}
 
 	io >>= 20, ea >>= 20, size >>= 20;
