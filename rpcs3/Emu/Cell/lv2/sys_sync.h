@@ -171,13 +171,13 @@ public:
 	static void cleanup();
 
 	template <typename T, typename F>
-	static error_code create(u32 pshared, u64 ipc_key, s32 flags, F&& make)
+	static error_code create(u32 pshared, u64 ipc_key, s32 flags, F&& make, bool key_not_zero = true)
 	{
 		switch (pshared)
 		{
 		case SYS_SYNC_PROCESS_SHARED:
 		{
-			if (ipc_key == 0)
+			if (key_not_zero && ipc_key == 0)
 			{
 				return CELL_EINVAL;
 			}
