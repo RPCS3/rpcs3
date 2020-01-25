@@ -1656,31 +1656,36 @@ namespace rsx
 					}
 
 					if (const auto section_count = result.external_subresource_desc.sections_to_copy.size();
-						section_count > 0 && result.atlas_covers_target_area(section_count == 1? 99 : 90))
+						section_count > 0)
 					{
-						// TODO: Overlapped section persistance is required for framebuffer resources to work with this!
-						// Yellow filter in SCV is because of a 384x384 surface being reused as 160x90 (and likely not getting written to)
-						// Its then sampled again here as 384x384 and this does not work! (obviously)
+						// TODO: Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).
+						// Seen in APF2k8 - this causes missing bits to be reuploaded from CPU which can cause WCB requirement.
+						// Properly fix this by introducing partial data upload into the surface cache in such cases and making RCB/RDB
+						// enabled by default. Blit engine already handles this correctly.
 
-						// Optionally disallow caching if resource is being written to as it is being read from
-						for (const auto& section : overlapping_fbos)
+						if (_pool == 0 || /* Hack to avoid WCB requirement for some games with wrongly declared sampler dimensions */
+							result.atlas_covers_target_area(section_count == 1? 99 : 90))
 						{
-							if (m_rtts.address_is_bound(section.base_address))
+							// Optionally disallow caching if resource is being written to as it is being read from
+							for (const auto& section : overlapping_fbos)
 							{
-								if (result.external_subresource_desc.op == deferred_request_command::copy_image_static)
+								if (m_rtts.address_is_bound(section.base_address))
 								{
-									result.external_subresource_desc.op = deferred_request_command::copy_image_dynamic;
-								}
-								else
-								{
-									result.external_subresource_desc.do_not_cache = true;
-								}
+									if (result.external_subresource_desc.op == deferred_request_command::copy_image_static)
+									{
+										result.external_subresource_desc.op = deferred_request_command::copy_image_dynamic;
+									}
+									else
+									{
+										result.external_subresource_desc.do_not_cache = true;
+									}
 
-								break;
+									break;
+								}
 							}
-						}
 
-						return result;
+							return result;
+						}
 					}
 				}
 			}
