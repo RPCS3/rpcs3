@@ -2869,8 +2869,9 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		spu_log.trace("sys_spu_thread_receive_event(spuq=0x%x)", spuq);
 
-		if (group->type & SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT) // this check may be inaccurate
+		if (!group->has_scheduler_context /*|| group->type & 0xf00*/)
 		{
+			spu_log.error("sys_spu_thread_receive_event(): Incompatible group type = 0x%x", group->type);
 			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
 		}
 
