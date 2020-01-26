@@ -152,6 +152,8 @@ namespace rsx
 
 				if (m_frametime_graph_enabled)
 				{
+					m_frametime_graph.update();
+
 					u16 padding = 0;
 
 					if (m_framerate_graph_enabled)
