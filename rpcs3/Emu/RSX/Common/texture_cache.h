@@ -213,7 +213,8 @@ namespace rsx
 				}
 			}
 
-			bool atlas_covers_target_area() const
+			// Returns true if at least threshold% is covered in pixels
+			bool atlas_covers_target_area(u32 threshold) const
 			{
 				if (external_subresource_desc.op != deferred_request_command::atlas_gather)
 					return true;
@@ -221,8 +222,8 @@ namespace rsx
 				u16 min_x = external_subresource_desc.width, min_y = external_subresource_desc.height,
 					max_x = 0, max_y = 0;
 
-				// Require at least 50% coverage
-				const u32 target_area = (min_x * min_y) / 2;
+				// Require at least 90% coverage
+				const u32 target_area = ((min_x * min_y) * threshold) / 100u;
 
 				for (const auto &section : external_subresource_desc.sections_to_copy)
 				{
@@ -1553,6 +1554,14 @@ namespace rsx
 				{
 					if (cached_texture->matches(attr.address, attr.gcm_format, attr.width, attr.height, attr.depth, 0))
 					{
+#ifdef TEXTURE_CACHE_DEBUG
+						if (!memory_range.inside(cached_texture->get_confirmed_range()))
+						{
+							// TODO. This is easily possible for blit_dst textures if the blit is incomplete in Y
+							// The possibility that a texture will be split into parts on the CPU like this is very rare
+							continue;
+						}
+#endif
 						return{ cached_texture->get_view(encoded_remap, remap), cached_texture->get_context(), cached_texture->get_format_type(), scale, cached_texture->get_image_type() };
 					}
 				}
@@ -1646,32 +1655,37 @@ namespace rsx
 						return {};
 					}
 
-					if (!result.external_subresource_desc.sections_to_copy.empty() &&
-						(_pool == 0 || result.atlas_covers_target_area()))
+					if (const auto section_count = result.external_subresource_desc.sections_to_copy.size();
+						section_count > 0)
 					{
-						// TODO: Overlapped section persistance is required for framebuffer resources to work with this!
-						// Yellow filter in SCV is because of a 384x384 surface being reused as 160x90 (and likely not getting written to)
-						// Its then sampled again here as 384x384 and this does not work! (obviously)
+						// TODO: Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).
+						// Seen in APF2k8 - this causes missing bits to be reuploaded from CPU which can cause WCB requirement.
+						// Properly fix this by introducing partial data upload into the surface cache in such cases and making RCB/RDB
+						// enabled by default. Blit engine already handles this correctly.
 
-						// Optionally disallow caching if resource is being written to as it is being read from
-						for (const auto& section : overlapping_fbos)
+						if (_pool == 0 || /* Hack to avoid WCB requirement for some games with wrongly declared sampler dimensions */
+							result.atlas_covers_target_area(section_count == 1? 99 : 90))
 						{
-							if (m_rtts.address_is_bound(section.base_address))
+							// Optionally disallow caching if resource is being written to as it is being read from
+							for (const auto& section : overlapping_fbos)
 							{
-								if (result.external_subresource_desc.op == deferred_request_command::copy_image_static)
+								if (m_rtts.address_is_bound(section.base_address))
 								{
-									result.external_subresource_desc.op = deferred_request_command::copy_image_dynamic;
-								}
-								else
-								{
-									result.external_subresource_desc.do_not_cache = true;
-								}
+									if (result.external_subresource_desc.op == deferred_request_command::copy_image_static)
+									{
+										result.external_subresource_desc.op = deferred_request_command::copy_image_dynamic;
+									}
+									else
+									{
+										result.external_subresource_desc.do_not_cache = true;
+									}
 
-								break;
+									break;
+								}
 							}
-						}
 
-						return result;
+							return result;
+						}
 					}
 				}
 			}
@@ -1913,6 +1927,7 @@ namespace rsx
 
 			const bool is_copy_op = (fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f));
 			const bool is_format_convert = (dst_is_argb8 != src_is_argb8);
+			bool skip_if_collision_exists = false;
 
 			// Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			// Reproject final clip onto source...
@@ -2067,6 +2082,9 @@ namespace rsx
 							return false;
 						}
 					}
+
+					// If a matching section exists with a different use-case, fall back to CPU memcpy
+					skip_if_collision_exists = true;
 				}
 
 				if (!g_cfg.video.use_gpu_texture_scaling)
@@ -2168,9 +2186,20 @@ namespace rsx
 			if (!dst_is_render_target)
 			{
 				// Check for any available region that will fit this one
-				const auto required_type = (use_null_region) ? texture_upload_context::dma : texture_upload_context::blit_engine_dst;
+				u32 required_type_mask;
+				if (use_null_region)
+				{
+					required_type_mask = texture_upload_context::dma;
+				}
+				else
+				{
+					required_type_mask = texture_upload_context::blit_engine_dst;
+					if (skip_if_collision_exists) required_type_mask |= texture_upload_context::shader_read;
+				}
+
 				const auto dst_range = address_range::start_length(dst_address, dst_payload_length);
-				auto overlapping_surfaces = find_texture_from_range(dst_range, dst.pitch, required_type);
+				auto overlapping_surfaces = find_texture_from_range(dst_range, dst.pitch, required_type_mask);
+
 				for (const auto &surface : overlapping_surfaces)
 				{
 					if (!surface->is_locked())
@@ -2186,23 +2215,30 @@ namespace rsx
 						continue;
 					}
 
+					if (!dst_range.inside(surface->get_section_range()))
+					{
+						// Hit test failed
+						continue;
+					}
+
 					if (use_null_region)
 					{
-						if (dst_range.inside(surface->get_section_range()))
-						{
-							// Attach to existing region
-							cached_dest = surface;
-						}
+
+						// Attach to existing region
+						cached_dest = surface;
 
 						// Technically it is totally possible to just extend a pre-existing section
 						// Will leave this as a TODO
 						continue;
 					}
 
-					const auto this_address = surface->get_section_base();
-					if (this_address > dst_address)
+					if (UNLIKELY(skip_if_collision_exists))
 					{
-						continue;
+						if (surface->get_context() != texture_upload_context::blit_engine_dst)
+						{
+							// This section is likely to be 'flushed' to CPU for reupload soon anyway
+							return false;
+						}
 					}
 
 					switch (surface->get_gcm_format())
@@ -2219,7 +2255,8 @@ namespace rsx
 						continue;
 					}
 
-					if (const u32 address_offset = dst_address - this_address)
+					if (const auto this_address = surface->get_section_base();
+						const u32 address_offset = dst_address - this_address)
 					{
 						const u16 offset_y = address_offset / dst.pitch;
 						const u16 offset_x = address_offset % dst.pitch;

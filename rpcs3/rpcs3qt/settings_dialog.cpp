@@ -52,6 +52,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	if (game)
 	{
 		ui->tab_widget_settings->removeTab(8);
+		ui->buttonBox->button(QDialogButtonBox::StandardButton::Save)->setText(tr("Save custom configuration"));
 	}
 
 	// Add description labels
