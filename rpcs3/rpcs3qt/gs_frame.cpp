@@ -130,6 +130,9 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 {
 	switch (keyEvent->key())
 	{
+	case Qt::Key_Backspace:
+		if (keyEvent->modifiers() == Qt::ControlModifier) { QWindow::close(); return; }
+		break;
 	case Qt::Key_L:
 		if (keyEvent->modifiers() == Qt::AltModifier) { static int count = 0; LOG_SUCCESS(GENERAL, "Made forced mark %d in log", ++count); }
 		break;
