@@ -12,6 +12,7 @@ struct VKFragmentDecompilerThread : public FragmentProgramDecompiler
 	std::vector<vk::glsl::program_input> inputs;
 	class VKFragmentProgram *vk_prog;
 	glsl::shader_properties m_shader_props{};
+	vk::pipeline_binding_table m_binding_table{};
 
 public:
 	VKFragmentDecompilerThread(std::string& shader, ParamArray& parr, const RSXFragmentProgram &prog, u32& size, class VKFragmentProgram& dst)

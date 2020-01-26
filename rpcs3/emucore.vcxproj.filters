@@ -839,6 +839,9 @@
     <ClCompile Include="util\atomic2.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="util\shared_cptr.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
     <ClCompile Include="Crypto\aesni.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
@@ -1605,6 +1608,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

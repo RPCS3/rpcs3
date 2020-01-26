@@ -607,6 +607,7 @@ namespace rsx
 		atomic_t<bool> external_interrupt_ack{ false };
 		void flush_fifo();
 		void recover_fifo();
+		void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd();
 
 		// Performance approximation counters
@@ -656,6 +657,7 @@ namespace rsx
 		u32 label_addr;
 
 		u32 main_mem_size{0};
+		u32 local_mem_size{0};
 
 		bool m_rtts_dirty;
 		bool m_textures_dirty[16];
@@ -743,7 +745,7 @@ namespace rsx
 		void run_FIFO();
 
 	public:
-		virtual void clear_surface(u32 arg) {};
+		virtual void clear_surface(u32 /*arg*/) {};
 		virtual void begin();
 		virtual void end();
 		virtual void execute_nop_draw();
@@ -758,7 +760,7 @@ namespace rsx
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
 
 		// control
-		virtual void renderctl(u32 request_code, void* args) {}
+		virtual void renderctl(u32 /*request_code*/, void* /*args*/) {}
 
 		// zcull
 		void notify_zcull_info_changed();

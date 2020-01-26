@@ -9,7 +9,9 @@ s32 trophy_notification_helper::ShowTrophyNotification(const SceNpTrophyDetails&
 {
 	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 	{
-		return manager->create<rsx::overlays::trophy_notification>()->show(trophy, trophy_icon_buffer);
+		// Allow adding more than one trophy notification. The notification class manages scheduling
+		auto popup = std::make_shared<rsx::overlays::trophy_notification>();
+		return manager->add(popup, false)->show(trophy, trophy_icon_buffer);
 	}
 
 	if (!Emu.HasGui())

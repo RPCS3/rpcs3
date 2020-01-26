@@ -30,6 +30,7 @@
 #include "progress_dialog.h"
 #include "skylander_dialog.h"
 #include "cheat_manager.h"
+#include "pkg_install_dialog.h"
 
 #include <thread>
 
@@ -56,8 +57,13 @@
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
-	: QMainWindow(parent), guiSettings(guiSettings), emuSettings(emuSettings), m_sys_menu_opened(false), ui(new Ui::main_window)
+main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
+	: QMainWindow(parent)
+	, guiSettings(guiSettings)
+	, emuSettings(emuSettings)
+	, m_persistent_settings(persistent_settings)
+	, m_sys_menu_opened(false)
+	, ui(new Ui::main_window)
 {
 }
 
@@ -369,69 +375,34 @@ void main_window::BootRsxCapture(std::string path)
 	}
 }
 
-void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
+void main_window::InstallPackages(QStringList file_paths, bool show_confirm)
 {
-	QString filePath = dropPath;
-
-	if (m_install_bulk == QMessageBox::NoToAll)
-	{
-		LOG_NOTICE(LOADER, "PKG: Skipped installation from drop. File: %s", sstr(filePath));
-		return;
-	}
-	else if (m_install_bulk == QMessageBox::YesToAll)
-	{
-		LOG_NOTICE(LOADER, "PKG: Continuing bulk installation from drop. File: %s", sstr(filePath));
-	}
-	else if (filePath.isEmpty())
+	if (file_paths.isEmpty())
 	{
 		QString path_last_PKG = guiSettings->GetValue(gui::fd_install_pkg).toString();
-		filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
-	}
-	else if (is_bulk)
-	{
-		QMessageBox::StandardButton ret = QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(filePath),
-			QMessageBox::Yes | QMessageBox::YesToAll | QMessageBox::NoToAll | QMessageBox::No, QMessageBox::No);
+		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
 
-		if (ret == QMessageBox::No)
+		if (!file_path.isEmpty())
 		{
-			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(filePath));
-			return;
-		}
-		else if (ret == QMessageBox::NoToAll)
-		{
-			LOG_NOTICE(LOADER, "PKG: Cancelled bulk installation from drop. File: %s", sstr(filePath));
-			m_install_bulk = ret;
-			return;
-		}
-		else if (ret == QMessageBox::YesToAll)
-		{
-			LOG_NOTICE(LOADER, "PKG: Accepted bulk installation from drop. File: %s", sstr(filePath));
-			m_install_bulk = ret;
+			file_paths.append(file_path);
 		}
 	}
-	else
+	else if (show_confirm)
 	{
-		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(filePath),
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(file_paths.front()),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
-			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(filePath));
+			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(file_paths.front()));
 			return;
 		}
 	}
 
-	if (filePath.isEmpty())
+	if (file_paths.isEmpty())
 	{
 		return;
 	}
 
-	Emu.SetForceBoot(true);
-	Emu.Stop();
-
-	guiSettings->SetValue(gui::fd_install_pkg, QFileInfo(filePath).path());
-	const std::string fileName = sstr(QFileInfo(filePath).fileName());
-	const std::string path = sstr(filePath);
-
-	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
+	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, false, this);
 	pdlg.show();
 
 	// Synchronization variable
@@ -439,13 +410,30 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 
 	bool cancelled = false;
 
-	// Run PKG unpacking asynchronously
-	named_thread worker("PKG Installer", [&]
+	for (int i = 0, count = file_paths.count(); i < count; i++)
 	{
-		 return pkg_install(path, progress);
-	});
+		progress = 0.;
 
-	{
+		pdlg.SetValue(0);
+		pdlg.setLabelText(tr("Installing package %0/%1 ... please wait ...").arg(i + 1).arg(count));
+		pdlg.show();
+
+		Emu.SetForceBoot(true);
+		Emu.Stop();
+
+		const QString file_path = file_paths.at(i);
+		const QFileInfo file_info(file_path);
+		const std::string path = sstr(file_path);
+		const std::string file_name = sstr(file_info.fileName());
+
+		guiSettings->SetValue(gui::fd_install_pkg, file_info.path());
+
+		// Run PKG unpacking asynchronously
+		named_thread worker("PKG Installer", [path, &progress]
+		{
+			return pkg_install(path, progress);
+		});
+
 		// Wait for the completion
 		while (std::this_thread::sleep_for(5ms), worker != thread_state::finished)
 		{
@@ -473,25 +461,37 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 			pdlg.setHidden(true);
 			pdlg.SignalFailure();
 		}
-	}
 
-	if (worker())
-	{
-		m_gameListFrame->Refresh(true);
-		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
-		guiSettings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package!"), gui::ib_pkg_success, this);
-	}
-	else if (!cancelled)
-	{
-		LOG_ERROR(GENERAL, "Failed to install %s.", fileName);
-		QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package %1!").arg(filePath));
+		if (worker())
+		{
+			m_gameListFrame->Refresh(true);
+			LOG_SUCCESS(GENERAL, "Successfully installed %s.", file_name);
+
+			if (i == (count - 1))
+			{
+				guiSettings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
+			}
+		}
+		else
+		{
+			if (!cancelled)
+			{
+				LOG_ERROR(GENERAL, "Failed to install %s.", file_name);
+				QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package %1!").arg(file_path));
+			}
+			return;
+		}
+
+		// return if the thread was still running after cancel 
+		if (cancelled)
+		{
+			return;
+		}
 	}
 }
 
-void main_window::InstallPup(const QString& dropPath)
+void main_window::InstallPup(QString filePath)
 {
-	QString filePath = dropPath;
-
 	if (filePath.isEmpty())
 	{
 		QString path_last_PUP = guiSettings->GetValue(gui::fd_install_pup).toString();
@@ -507,7 +507,7 @@ void main_window::InstallPup(const QString& dropPath)
 		}
 	}
 
-	if (filePath == NULL)
+	if (filePath.isEmpty())
 	{
 		return;
 	}
@@ -583,7 +583,7 @@ void main_window::InstallPup(const QString& dropPath)
 		return;
 	}
 
-	progress_dialog pdlg(tr("RPCS3 Firmware Installer"), tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
+	progress_dialog pdlg(tr("RPCS3 Firmware Installer"), tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), false, this);
 	pdlg.show();
 
 	// Synchronization variable
@@ -1232,7 +1232,7 @@ void main_window::CreateConnects()
 		guiSettings->SetValue(gui::rg_freeze, checked);
 	});
 
-	connect(ui->bootInstallPkgAct, &QAction::triggered, [this] {InstallPkg(); });
+	connect(ui->bootInstallPkgAct, &QAction::triggered, [this] {InstallPackages(); });
 	connect(ui->bootInstallPupAct, &QAction::triggered, [this] {InstallPup(); });
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 
@@ -1562,7 +1562,7 @@ void main_window::CreateDockWindows()
 	m_mw = new QMainWindow();
 	m_mw->setContextMenuPolicy(Qt::PreventContextMenu);
 
-	m_gameListFrame = new game_list_frame(guiSettings, emuSettings, m_mw);
+	m_gameListFrame = new game_list_frame(guiSettings, emuSettings, m_persistent_settings, m_mw);
 	m_gameListFrame->setObjectName("gamelist");
 	m_debuggerFrame = new debugger_frame(guiSettings, m_mw);
 	m_debuggerFrame->setObjectName("debugger");
@@ -1922,11 +1922,23 @@ void main_window::dropEvent(QDropEvent* event)
 	case drop_type::drop_error:
 		break;
 	case drop_type::drop_pkg: // install the packages
-		for (const auto& path : dropPaths)
+		if (dropPaths.count() > 1)
 		{
-			InstallPkg(path, dropPaths.count() > 1);
+			pkg_install_dialog dlg(dropPaths, this);
+			connect(&dlg, &QDialog::accepted, [this, &dlg]()
+			{
+				const QStringList paths = dlg.GetPathsToInstall();
+				if (!paths.isEmpty())
+				{
+					InstallPackages(paths, false);
+				}
+			});
+			dlg.exec();
 		}
-		m_install_bulk = QMessageBox::NoButton;
+		else
+		{
+			InstallPackages(dropPaths, true);
+		}
 		break;
 	case drop_type::drop_pup: // install the firmware
 		InstallPup(dropPaths.first());

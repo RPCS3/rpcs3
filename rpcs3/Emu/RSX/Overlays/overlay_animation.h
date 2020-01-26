@@ -1,93 +1,74 @@
-#pragma once
+﻿#pragma once
 #include "Utilities/types.h"
 #include "Utilities/geometry.h"
+#include "overlay_utils.h"
 
 namespace rsx
 {
-    template<typename T>
-    struct vector3_base : public position3_base<T>
-    {
-        using position3_base<T>::position3_base;
-
-        vector3_base<T>(T x, T y, T z)
-        {
-            this->x = x;
-            this->y = y;
-            this->z = z;
-        }
-
-        vector3_base<T>(const position3_base<T>& other)
-        {
-            this->x = other.x;
-            this->y = other.y;
-            this->z = other.z;
-        }
-
-        vector3_base<T> operator * (const vector3_base<T>& rhs) const
-        {
-            return { this->x * rhs.x, this->y * rhs.y, this->z * rhs.z };
-        }
-
-        vector3_base<T> operator * (T rhs) const
-        {
-            return { this->x * rhs, this->y * rhs, this->z * rhs };
-        }
-
-         void operator *= (const vector3_base<T>& rhs)
-        {
-            this->x *= rhs.x;
-            this->y *= rhs.y;
-            this->z *= rhs.z;
-        }
-
-        void operator *= (T rhs)
-        {
-            this->x *= rhs;
-            this->y *= rhs;
-            this->z *= rhs;
-        }
-
-        T dot(const vector3_base<T>& rhs) const
-        {
-            return (this->x * rhs.x) + (this->y * rhs.y) + (this->z * rhs.z);
-        }
-
-        T distance(const vector3_base<T>& rhs) const
-        {
-            const vector3_base<T> d = *this - rhs;
-            return d.dot(d);
-        }
-    };
-
-    using vector3i = vector3_base<int>;
-    using vector3f = vector3_base<float>;
-
     namespace overlays
     {
         struct compiled_resource;
 
+        enum class animation_type
+        {
+            linear,
+            ease_in_quad,
+            ease_out_quad,
+            ease_in_out_cubic,
+        };
+
         struct animation_base
         {
+        protected:
+            u64 frame_start = 0;
+            u64 frame_end = 0;
+
+            void begin_animation(u64 frame);
+            f32 get_progress_ratio(u64 frame) const;
+
+            template<typename T>
+            T lerp(const T& a, const T& b, f32 t) const
+            {
+                return (a * (1.f - t)) + (b * t);
+            }
+
+        public:
             bool active = false;
+            animation_type type { animation_type::linear };
+            f32 duration = 1.f; // in seconds
+
+            std::function<void()> on_finish;
 
             virtual void apply(compiled_resource&) = 0;
-            virtual void update(u64 t) = 0;
+            virtual void update(u64 frame) = 0;
         };
 
         struct animation_translate : animation_base
         {
-            vector3i direction{};
-            vector3i progress{};
-            vector3i progress_limit{};
-
-            std::function<void()> on_finish;
-
-            int speed = 0;
-            int distance = -1;
-            u64 time = 0;
+        private:
+            vector3f start{}; // Set `current` instead of this
+                              // NOTE: Necessary because update() is called after rendering,
+                              //       resulting in one frame of incorrect translation
+        public:
+            vector3f current{};
+            vector3f end{};
 
             void apply(compiled_resource& data) override;
-            void update(u64 t) override;
+            void update(u64 frame) override;
+            void finish();
+        };
+
+        struct animation_color_interpolate : animation_translate
+        {
+        private:
+            color4f start{};
+
+        public:
+            color4f current{};
+            color4f end{};
+
+            void apply(compiled_resource& data) override;
+            void update(u64 frame) override;
             void finish();
         };
     }

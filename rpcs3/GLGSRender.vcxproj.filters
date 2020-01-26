@@ -8,6 +8,7 @@
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLPresent.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLRenderTargets.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexBuffers.cpp" />
   </ItemGroup>

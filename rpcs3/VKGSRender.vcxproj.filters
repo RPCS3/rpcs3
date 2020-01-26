@@ -8,6 +8,7 @@
     <ClCompile Include="Emu\RSX\VK\VKFramebuffer.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKHelpers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKPresent.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKProgramPipeline.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKRenderPass.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKResolveHelper.cpp" />

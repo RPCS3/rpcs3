@@ -48,13 +48,19 @@ namespace rsx
 
 	u32 get_address(u32 offset, u32 location)
 	{
+		const auto render = get_current_renderer();
 
 		switch (location)
 		{
 		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
 		case CELL_GCM_LOCATION_LOCAL:
 		{
-			return rsx::constants::local_mem_base + offset;
+			if (offset < render->local_mem_size)
+			{
+				return rsx::constants::local_mem_base + offset;
+			}
+
+			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): Local RSX offset out of range" HERE, offset, location);
 		}
 
 		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
@@ -69,7 +75,14 @@ namespace rsx
 		}
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL:
-			return get_current_renderer()->label_addr + 0x1400 + offset;
+		{
+			if (offset < sizeof(RsxReports::report) /*&& (offset % 0x10) == 0*/)
+			{
+				return render->label_addr + 0x1400 + offset;
+			}
+
+			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): Local RSX REPORT offset out of range" HERE, offset, location);
+		}
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
 		{
@@ -81,21 +94,36 @@ namespace rsx
 			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
 		}
 
+		// They are handled elsewhere for targeted methods, so it's unexpected for them to be passed here
 		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0:
-			fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0 (offset=0x%x, location=0x%x)" HERE, offset, location);
+			fmt::throw_exception("Unexpected CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0 (offset=0x%x, location=0x%x)" HERE, offset, location);
 
 		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0:
-			fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 (offset=0x%x, location=0x%x)" HERE, offset, location);
+			fmt::throw_exception("Unexpected CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 (offset=0x%x, location=0x%x)" HERE, offset, location);
 
 		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
 		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
-			return get_current_renderer()->label_addr + offset;
+		{
+			if (offset < sizeof(RsxReports::semaphore) /*&& (offset % 0x10) == 0*/)
+			{
+				return render->label_addr + offset;
+			}
+
+			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): DMA SEMAPHORE offset out of range" HERE, offset, location);
+		}
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
-			return get_current_renderer()->device_addr + offset;
-
 		case CELL_GCM_CONTEXT_DMA_DEVICE_R:
-			return get_current_renderer()->device_addr + offset;
+		{ 
+			if (offset < 0x100000 /*&& (offset % 0x10) == 0*/)
+			{
+				return render->device_addr + offset;
+			}
+
+			// TODO: What happens here? It could wrap around or access other segments of rsx internal memory etc
+			// Or can simply throw access violation error
+			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): DMA DEVICE offset out of range" HERE, offset, location);
+		}
 
 		default:
 		{
@@ -485,11 +513,10 @@ namespace rsx
 					do
 					{
 						start_time += period_time;
+						vblank_count++;
 
 						if (isHLE)
 						{
-							vblank_count++;
-
 							if (vblank_handler)
 							{
 								intr_thread->cmd_list
@@ -2243,6 +2270,61 @@ namespace rsx
 		{
 			execute_nop_draw();
 			rsx::thread::end();
+		}
+	}
+
+	void thread::fifo_wake_delay(u64 div)
+	{
+		// TODO: Nanoseconds accuracy
+		u64 remaining = g_cfg.video.driver_wakeup_delay;
+
+		if (!remaining)
+		{
+			return;
+		}
+
+		// Some cases do not need full delay
+		remaining = ::aligned_div(remaining, div);
+		const u64 until = get_system_time() + remaining;
+
+		while (true)
+		{
+#ifdef __linux__
+			// NOTE: Assumption that timer initialization has succeeded
+			u64 host_min_quantum = remaining <= 1000 ? 10 : 50;
+#else
+			// Host scheduler quantum for windows (worst case)
+			// NOTE: On ps3 this function has very high accuracy
+			constexpr u64 host_min_quantum = 500;
+#endif
+			if (remaining >= host_min_quantum)
+			{
+#ifdef __linux__
+				// Do not wait for the last quantum to avoid loss of accuracy
+				thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum), false);
+#else
+				// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
+				thread_ctrl::wait_for(remaining - (remaining % host_min_quantum), false);
+#endif
+			}
+			// TODO: Determine best value for yield delay
+			else if (remaining >= host_min_quantum / 2)
+			{
+				std::this_thread::yield();
+			}
+			else
+			{
+				busy_wait(100);
+			}
+
+			const u64 current = get_system_time();
+
+			if (current >= until)
+			{
+				break;
+			}
+
+			remaining = until - current;
 		}
 	}
 

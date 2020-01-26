@@ -227,21 +227,5 @@ namespace vk
 			vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
 			attribute_location_mask |= (1ull << binding_point);
 		}
-
-		u64 program::get_vertex_input_attributes_mask()
-		{
-			if (vertex_attributes_mask)
-				return vertex_attributes_mask;
-
-			for (const auto &uniform : uniforms[program_input_type::input_type_texel_buffer])
-			{
-				if (uniform.domain == program_domain::glsl_vertex_program)
-				{
-					vertex_attributes_mask |= (1ull << (uniform.location - VERTEX_BUFFERS_FIRST_BIND_SLOT));
-				}
-			}
-
-			return vertex_attributes_mask;
-		}
 	}
 }

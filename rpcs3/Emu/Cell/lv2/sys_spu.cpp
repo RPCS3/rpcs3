@@ -267,17 +267,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	sys_spu.warning("sys_spu_thread_initialize(thread=*0x%x, group=0x%x, spu_num=%d, img=*0x%x, attr=*0x%x, arg=*0x%x)", thread, group_id, spu_num, img, attr, arg);
 
-	// Read thread name
-	const std::string thread_name(attr->name.get_ptr(), attr->name ? attr->name_len - 1 : 0);
-
-	const auto group = idm::get<lv2_spu_group>(group_id);
-
-	if (!group)
-	{
-		return CELL_ESRCH;
-	}
-
-	if (spu_num >= group->threads_map.size())
+	if (attr->name_len > 0x80 || attr->option & ~(SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE | SYS_SPU_THREAD_OPTION_ASYNC_INTR_ENABLE))
 	{
 		return CELL_EINVAL;
 	}
@@ -285,13 +275,6 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	if (img->type != SYS_SPU_IMAGE_TYPE_KERNEL && img->type != SYS_SPU_IMAGE_TYPE_USER)
 	{
 		return CELL_EINVAL;
-	}
-
-	std::lock_guard lock(group->mutex);
-
-	if (group->threads_map[spu_num] != -1 || group->run_state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
-	{
-		return CELL_EBUSY;
 	}
 
 	sys_spu_image image = *img;
@@ -307,6 +290,28 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 		// Save actual entry point
 		image.entry_point = handle->e_entry;
+	}
+
+	// Read thread name
+	const std::string thread_name(attr->name.get_ptr(), std::max<u32>(attr->name_len, 1) - 1);
+
+	const auto group = idm::get<lv2_spu_group>(group_id);
+
+	if (!group)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (spu_num >= group->threads_map.size())
+	{
+		return CELL_EINVAL;
+	}
+
+	std::lock_guard lock(group->mutex);
+
+	if (group->threads_map[spu_num] != -1 || group->run_state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
+	{
+		return CELL_EBUSY;
 	}
 
 	if (u32 option = attr->option)
@@ -357,6 +362,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	}
 
+	sys_spu.warning(u8"sys_spu_thread_initialize(): Thread “%s” created (id=0x%x)", thread_name, tid);
 	return CELL_OK;
 }
 
@@ -421,8 +427,15 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 		sys_spu.warning("sys_spu_thread_group_create(): SPU Thread Group type (0x%x)", attr->type);
 	}
 
-	*id = idm::make<lv2_spu_group>(std::string(attr->name.get_ptr(), std::max<u32>(attr->nsize, 1) - 1), num, prio, attr->type, attr->ct);
+	const auto group = idm::make_ptr<lv2_spu_group>(std::string(attr->name.get_ptr(), std::max<u32>(attr->nsize, 1) - 1), num, prio, attr->type, attr->ct);
 
+	if (!group)
+	{
+		return CELL_EAGAIN;
+	}
+
+	*id = idm::last_id();
+	sys_spu.warning(u8"sys_spu_thread_group_create(): Thread group “%s” created (id=0x%x)", group->name, idm::last_id()); 
 	return CELL_OK;
 }
 

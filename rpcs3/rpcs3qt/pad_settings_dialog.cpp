@@ -60,12 +60,12 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	{
 		m_title_id = game->serial;
 		g_cfg_input.load(game->serial);
-		setWindowTitle(tr("Gamepads Settings: [%0] %1").arg(qstr(game->serial)).arg(qstr(game->name).simplified()));
+		setWindowTitle(tr("Gamepad Settings: [%0] %1").arg(qstr(game->serial)).arg(qstr(game->name).simplified()));
 	}
 	else
 	{
 		g_cfg_input.load();
-		setWindowTitle(tr("Gamepads Settings"));
+		setWindowTitle(tr("Gamepad Settings"));
 	}
 
 	// Load tooltips
@@ -730,8 +730,9 @@ void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 			key = mouse::wheel_right;
 		}
 	}
-	if (const int y = direction.y())
+	else
 	{
+		const int y = direction.y();
 		bool to_up = event->inverted() ? y < 0 : y > 0;
 		if (to_up)
 		{

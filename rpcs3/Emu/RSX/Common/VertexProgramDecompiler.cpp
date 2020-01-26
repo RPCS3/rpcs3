@@ -66,7 +66,7 @@ std::string VertexProgramDecompiler::GetDST(bool is_sca)
 
 			const auto reg_type = getFloatTypeName(4);
 			const auto reg_name = std::string("dst_reg") + std::to_string(d3.dst);
-			const auto default_value = (d3.dst == 0 ? reg_type + "(0.0f, 0.0f, 0.0f, 1.0f)" : reg_type + "(0.0, 0.0, 0.0, 0.0)");
+			const auto default_value = reg_type + "(0.0f, 0.0f, 0.0f, 1.0f)";
 			ret += m_parr.AddParam(PF_PARAM_OUT, reg_type, reg_name, default_value) + mask;
 		}
 	}
