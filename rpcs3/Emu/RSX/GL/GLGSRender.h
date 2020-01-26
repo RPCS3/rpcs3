@@ -157,7 +157,6 @@ private:
 	GLuint get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig);
 
 public:
-	void read_buffers();
 	void set_viewport();
 	void set_scissor(bool clip_viewport);
 
