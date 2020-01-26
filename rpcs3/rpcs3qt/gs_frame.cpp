@@ -130,6 +130,9 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 {
 	switch (keyEvent->key())
 	{
+	case Qt::Key_Backspace:
+		QWindow::close();
+		break;
 	case Qt::Key_L:
 		if (keyEvent->modifiers() == Qt::AltModifier) { static int count = 0; LOG_SUCCESS(GENERAL, "Made forced mark %d in log", ++count); }
 		break;
@@ -137,8 +140,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		if (keyEvent->modifiers() == Qt::AltModifier) { toggle_fullscreen(); return; }
 		break;
 	case Qt::Key_Escape:
-		if (!Emu.HasGui()) { QWindow::close(); }
-		else if (visibility() == FullScreen) { toggle_fullscreen(); return; }
+		if (visibility() == FullScreen) { toggle_fullscreen(); return; }
 		break;
 	case Qt::Key_P:
 		if (keyEvent->modifiers() == Qt::ControlModifier && Emu.IsRunning()) { Emu.Pause(); return; }
