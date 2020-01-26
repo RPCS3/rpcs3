@@ -429,30 +429,53 @@ void GLGSRender::read_buffers()
 	// TODO
 }
 
-void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init)
+void gl::render_target::clear_memory(gl::command_context& cmd)
 {
-	auto clear_surface_impl = [&]()
+	if (aspect() & gl::image_aspect::depth)
 	{
-		if (aspect() & gl::image_aspect::depth)
-		{
-			gl::g_hw_blitter->fast_clear_image(cmd, this, 1.f, 255);
-		}
-		else
-		{
-			gl::g_hw_blitter->fast_clear_image(cmd, this, {});
-		}
+		gl::g_hw_blitter->fast_clear_image(cmd, this, 1.f, 255);
+	}
+	else
+	{
+		gl::g_hw_blitter->fast_clear_image(cmd, this, {});
+	}
 
-		state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
-	};
+	state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+}
+
+void gl::render_target::load_memory(gl::command_context& cmd)
+{
+	// TODO
+	clear_memory(cmd);
+}
+
+void gl::render_target::initialize_memory(gl::command_context& cmd, bool /*read_access*/)
+{
+	const bool memory_load = is_depth_surface() ?
+		!!g_cfg.video.read_depth_buffer :
+		!!g_cfg.video.read_color_buffers;
+
+	if (!memory_load)
+	{
+		clear_memory(cmd);
+	}
+	else
+	{
+		load_memory(cmd);
+	}
+}
+
+void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_access access)
+{
+	const bool read_access = (access != rsx::surface_access::write);
 
 	if (old_contents.empty())
 	{
 		// No memory to inherit
-		if (dirty() && (force_init || state_flags & rsx::surface_state_flags::erase_bkgnd))
+		if (dirty() && (read_access || state_flags & rsx::surface_state_flags::erase_bkgnd))
 		{
 			// Initialize memory contents if we did not find anything usable
-			// TODO: Properly sync with Cell
-			clear_surface_impl();
+			initialize_memory(cmd, true);
 			on_write();
 		}
 
@@ -496,7 +519,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 			const auto area = section.dst_rect();
 			if (area.x1 > 0 || area.y1 > 0 || unsigned(area.x2) < width() || unsigned(area.y2) < height())
 			{
-				clear_surface_impl();
+				initialize_memory(cmd, false);
 			}
 			else
 			{
