@@ -2,14 +2,18 @@
 
 #include <QLabel>
 
-progress_dialog::progress_dialog(const QString &windowTitle, const QString &labelText, const QString &cancelButtonText, int minimum, int maximum, QWidget *parent, Qt::WindowFlags flags)
+progress_dialog::progress_dialog(const QString &windowTitle, const QString &labelText, const QString &cancelButtonText, int minimum, int maximum, bool delete_on_close, QWidget *parent, Qt::WindowFlags flags)
 	: QProgressDialog(labelText, cancelButtonText, minimum, maximum, parent, flags)
 {
 	setWindowTitle(windowTitle);
 	setFixedSize(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width(), sizeHint().height());
 	setValue(0);
 	setWindowModality(Qt::WindowModal);
-	connect(this, &QProgressDialog::canceled, this, &QProgressDialog::deleteLater);
+
+	if (delete_on_close)
+	{
+		connect(this, &QProgressDialog::canceled, this, &QProgressDialog::deleteLater);
+	}
 
 #ifdef _WIN32
 	m_tb_button = std::make_unique<QWinTaskbarButton>();

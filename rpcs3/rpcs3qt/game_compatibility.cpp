@@ -130,7 +130,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	QNetworkReply* network_reply = m_network_access_manager->get(m_network_request);
 
 	// Show Progress
-	m_progress_dialog = new progress_dialog(tr("Downloading Database"), tr(".Please wait."), tr("Abort"), 0, 100);
+	m_progress_dialog = new progress_dialog(tr("Downloading Database"), tr(".Please wait."), tr("Abort"), 0, 100, true);
 	m_progress_dialog->show();
 
 	// Animate progress dialog a bit more

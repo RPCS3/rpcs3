@@ -8,14 +8,14 @@ s32 sys_mmapper_allocate_memory(ppu_thread& ppu, u32 size, u64 flags, vm::ptr<u3
 {
 	sysPrxForUser.notice("sys_mmapper_allocate_memory(size=0x%x, flags=0x%llx, mem_id=*0x%x)", size, flags, mem_id);
 
-	return sys_mmapper_allocate_shared_memory(ppu, 0xffff000000000000ull, size, flags, mem_id);
+	return sys_mmapper_allocate_shared_memory(ppu, SYS_MMAPPER_NO_SHM_KEY, size, flags, mem_id);
 }
 
 s32 sys_mmapper_allocate_memory_from_container(ppu_thread& ppu, u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id)
 {
 	sysPrxForUser.notice("sys_mmapper_allocate_memory_from_container(size=0x%x, cid=0x%x, flags=0x%llx, mem_id=*0x%x)", size, cid, flags, mem_id);
 
-	return sys_mmapper_allocate_shared_memory_from_container(ppu, 0xffff000000000000ull, size, cid, flags, mem_id);
+	return sys_mmapper_allocate_shared_memory_from_container(ppu, SYS_MMAPPER_NO_SHM_KEY, size, cid, flags, mem_id);
 }
 
 s32 sys_mmapper_map_memory(ppu_thread& ppu, u32 addr, u32 mem_id, u64 flags)

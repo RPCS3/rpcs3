@@ -26,6 +26,7 @@ target_include_directories(rpcs3_emu
 target_sources(rpcs3_emu PRIVATE
 	../util/atomic.cpp
 	../util/atomic2.cpp
+	../util/shared_cptr.cpp
 	../../Utilities/bin_patch.cpp
 	../../Utilities/cond.cpp
 	../../Utilities/Config.cpp
@@ -359,6 +360,7 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/Common/TextureUtils.cpp
 	RSX/Common/VertexProgramDecompiler.cpp
 	RSX/Null/NullGSRender.cpp
+	RSX/Overlays/overlay_animation.cpp
 	RSX/Overlays/overlay_edit_text.cpp
 	RSX/Overlays/overlay_font.cpp
 	RSX/Overlays/overlay_list_view.cpp
@@ -370,12 +372,15 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/Overlays/overlays.cpp
 	RSX/Overlays/overlay_shader_compile_notification.cpp
 	RSX/Overlays/overlay_trophy_notification.cpp
+	RSX/Overlays/Shaders/shader_loading_dialog.cpp
+	RSX/Overlays/Shaders/shader_loading_dialog_native.cpp
 	RSX/Capture/rsx_capture.cpp
 	RSX/Capture/rsx_replay.cpp
 	RSX/GL/GLCommonDecompiler.cpp
 	RSX/GL/GLFragmentProgram.cpp
 	RSX/GL/GLGSRender.cpp
 	RSX/GL/GLHelpers.cpp
+	RSX/GL/GLPresent.cpp
 	RSX/GL/GLRenderTargets.cpp
 	RSX/GL/GLTexture.cpp
 	RSX/GL/GLVertexBuffers.cpp
@@ -394,6 +399,7 @@ if(TARGET 3rdparty_vulkan)
 		RSX/VK/VKGSRender.cpp
 		RSX/VK/VKHelpers.cpp
 		RSX/VK/VKMemAlloc.cpp
+		RSX/VK/VKPresent.cpp
 		RSX/VK/VKProgramPipeline.cpp
 		RSX/VK/VKRenderPass.cpp
 		RSX/VK/VKResolveHelper.cpp

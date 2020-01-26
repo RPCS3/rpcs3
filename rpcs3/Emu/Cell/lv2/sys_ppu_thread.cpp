@@ -329,7 +329,9 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 
 		if (threadname)
 		{
-			ppu_name = threadname.get_ptr();
+			constexpr u32 max_size = 27; // max size including null terminator
+			const auto pname = threadname.get_ptr();
+			ppu_name.assign(pname, std::find(pname, pname + max_size, '\0'));
 			fmt::append(full_name, " (%s)", ppu_name);
 		}
 
@@ -422,8 +424,11 @@ error_code sys_ppu_thread_rename(u32 thread_id, vm::cptr<char> name)
 		return CELL_EFAULT;
 	}
 
+	constexpr u32 max_size = 27; // max size including null terminator
+	const auto pname = name.get_ptr();
+
 	// thread_ctrl name is not changed (TODO)
-	thread->ppu_name.assign(name.get_ptr());
+	thread->ppu_name.assign(pname, std::find(pname, pname + max_size, '\0'));
 	return CELL_OK;
 }
 

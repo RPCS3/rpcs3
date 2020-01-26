@@ -2,6 +2,7 @@
 #include "Utilities/types.h"
 #include "Utilities/geometry.h"
 #include "Utilities/File.h"
+#include "overlay_utils.h"
 #include "Emu/System.h"
 
 #include <string>
@@ -49,78 +50,6 @@ namespace rsx
 			triangle_strip = 1,
 			line_list = 2,
 			line_strip = 3
-		};
-
-		struct vertex
-		{
-			float values[4];
-
-			vertex() = default;
-
-			vertex(float x, float y)
-			{
-				vec2(x, y);
-			}
-
-			vertex(float x, float y, float z)
-			{
-				vec3(x, y, z);
-			}
-
-			vertex(float x, float y, float z, float w)
-			{
-				vec4(x, y, z, w);
-			}
-
-			vertex(int x, int y, int z, int w)
-			{
-				vec4(static_cast<f32>(x), static_cast<f32>(y), static_cast<f32>(z), static_cast<f32>(w));
-			}
-
-			float& operator[](int index)
-			{
-				return values[index];
-			}
-
-			void vec2(float x, float y)
-			{
-				values[0] = x;
-				values[1] = y;
-				values[2] = 0.f;
-				values[3] = 1.f;
-			}
-
-			void vec3(float x, float y, float z)
-			{
-				values[0] = x;
-				values[1] = y;
-				values[2] = z;
-				values[3] = 1.f;
-			}
-
-			void vec4(float x, float y, float z, float w)
-			{
-				values[0] = x;
-				values[1] = y;
-				values[2] = z;
-				values[3] = w;
-			}
-
-			void operator += (const vertex& other)
-			{
-				values[0] += other.values[0];
-				values[1] += other.values[1];
-				values[2] += other.values[2];
-				values[3] += other.values[3];
-			}
-
-			void operator -= (const vertex& other)
-			{
-				values[0] -= other.values[0];
-				values[1] -= other.values[1];
-				values[2] -= other.values[2];
-				values[3] -= other.values[3];
-			}
 		};
 
 		struct font
@@ -779,16 +708,6 @@ namespace rsx
 				max_w = std::max(max_w, text_width);
 				width = static_cast<u16>(ceilf(max_w));
 			}
-		};
-
-		struct animation_base
-		{
-			float duration = 0.f;
-			float t = 0.f;
-			overlay_element *ref = nullptr;
-
-			virtual void update(float /*elapsed*/) {}
-			void reset() { t = 0.f; }
 		};
 
 		struct layout_container : public overlay_element

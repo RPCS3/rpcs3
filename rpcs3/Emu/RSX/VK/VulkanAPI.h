@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -13,8 +13,3 @@
 #include <vulkan/vk_sdk_platform.h>
 #include "define_new_memleakdetect.h"
 #include "Utilities/types.h"
-
-namespace vk
-{
-	void init();
-}

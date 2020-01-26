@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "overlay_animation.h"
 #include "overlay_controls.h"
 
 #include "../../../Utilities/date_time.h"
@@ -393,6 +394,9 @@ namespace rsx
 
 			std::vector<cell> m_grid;
 
+			// Fade in/out
+			animation_color_interpolate fade_animation;
+
 			bool m_visible = false;
 			bool m_update = true;
 			compiled_resource m_cached_resource;
@@ -407,6 +411,7 @@ namespace rsx
 			void Close(bool ok) override;
 
 			void initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::string& title, const std::string& initial_text);
+			void update() override;
 
 			void on_button_pressed(pad_button button_press) override;
 			void on_text_changed();
@@ -502,8 +507,11 @@ namespace rsx
 			image_view image;
 			label text_view;
 
+			u64 display_sched_id = 0;
 			u64 creation_time = 0;
 			std::unique_ptr<image_info> icon_info;
+
+			animation_translate sliding_animation;
 
 		public:
 			trophy_notification();

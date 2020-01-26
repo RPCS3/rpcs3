@@ -7,6 +7,7 @@
 #include "game_list.h"
 #include "game_list_grid.h"
 #include "emu_settings.h"
+#include "persistent_settings.h"
 #include "game_compatibility.h"
 
 #include <QMainWindow>
@@ -182,7 +183,7 @@ class game_list_frame : public custom_dock_widget
 	Q_OBJECT
 
 public:
-	explicit game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent = nullptr);
+	explicit game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent = nullptr);
 	~game_list_frame();
 
 	/** Fix columns with width smaller than the minimal section size */
@@ -289,6 +290,7 @@ private:
 	// Data
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<emu_settings> m_emu_settings;
+	std::shared_ptr<persistent_settings> m_persistent_settings;
 	QList<game_info> m_game_data;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};

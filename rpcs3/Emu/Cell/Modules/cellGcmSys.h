@@ -3,7 +3,7 @@
 #include "Emu/RSX/GCM.h"
 #include "Emu/Memory/vm_ptr.h"
 
-enum
+enum CellGcmError : u32
 {
 	CELL_GCM_ERROR_FAILURE           = 0x802100ff,
 	CELL_GCM_ERROR_NO_IO_PAGE_TABLE  = 0x80210001,
@@ -20,6 +20,3 @@ struct CellGcmOffsetTable
 };
 
 void InitOffsetTable();
-
-// Auxiliary functions
-s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict);

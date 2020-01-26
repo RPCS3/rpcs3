@@ -331,7 +331,7 @@ void debugger_frame::UpdateUnitList()
 
 	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
-		QVariant var_cpu = qVariantFromValue<void*>(&cpu);
+		QVariant var_cpu = QVariant::fromValue<void*>(&cpu);
 		m_choice_units->addItem(qstr(cpu.get_name()), var_cpu);
 		if (old_cpu == var_cpu) m_choice_units->setCurrentIndex(m_choice_units->count() - 1);
 	};

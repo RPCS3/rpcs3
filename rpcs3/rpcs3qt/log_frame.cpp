@@ -363,7 +363,7 @@ void log_frame::CreateAndConnectActions()
 		}
 		else
 		{
-			text = fmt::format("%s > %s\n", "Ch.%d", m_tty_channel, text);
+			text = fmt::format("Ch.%d > %s\n", m_tty_channel, text);
 		}
 
 		if (g_tty)

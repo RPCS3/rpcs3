@@ -71,7 +71,7 @@ u32 idm_get_count()
 	return idm::select<T, Get>([&](u32, Get&) {});
 }
 
-s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
+error_code sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 {
 	sys_process.error("sys_process_get_number_of_object(object=0x%x, nump=*0x%x)", object, nump);
 
@@ -117,10 +117,8 @@ void idm_get_set(std::set<u32>& out)
 	});
 }
 
-s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size)
+static error_code process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size)
 {
-	sys_process.error("sys_process_get_id(object=0x%x, buffer=*0x%x, size=%d, set_size=*0x%x)", object, buffer, size, set_size);
-
 	std::set<u32> objects;
 
 	switch (object)
@@ -143,8 +141,7 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 	case SYS_FS_FD_OBJECT: idm_get_set<lv2_fs_object, lv2_fs_object>(objects); break;
 	case SYS_LWCOND_OBJECT: idm_get_set<lv2_obj, lv2_lwcond>(objects); break;
 	case SYS_EVENT_FLAG_OBJECT: idm_get_set<lv2_obj, lv2_event_flag>(objects); break;
-
-	case SYS_SPUPORT_OBJECT: // Unallowed
+	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT" HERE);
 	default:
 	{
 		return CELL_EINVAL;
@@ -153,7 +150,8 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 
 	u32 i = 0;
 
-	for (auto id = objects.begin(); i < size && id != objects.end(); id++, i++)
+	// NOTE: Treats negative and 0 values as 1 due to signed checks and "do-while" behavior of fw
+	for (auto id = objects.begin(); i < std::max<s32>(size, 1) + 0u && id != objects.end(); id++, i++)
 	{
 		buffer[i] = *id;
 	}
@@ -163,7 +161,33 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 	return CELL_OK;
 }
 
-s32 process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
+error_code sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size)
+{
+	sys_process.error("sys_process_get_id(object=0x%x, buffer=*0x%x, size=%d, set_size=*0x%x)", object, buffer, size, set_size);
+
+	if (object == SYS_SPUPORT_OBJECT)
+	{
+		// Unallowed for this syscall
+		return CELL_EINVAL;
+	}
+
+	return process_get_id(object, buffer, size, set_size);
+}
+
+error_code sys_process_get_id2(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size)
+{
+	sys_process.error("sys_process_get_id2(object=0x%x, buffer=*0x%x, size=%d, set_size=*0x%x)", object, buffer, size, set_size);
+
+	if (!g_ps3_process_info.has_root_perm())
+	{
+		// This syscall is more capable than sys_process_get_id but also needs a root perm check
+		return CELL_ENOSYS;
+	}
+
+	return process_get_id(object, buffer, size, set_size);
+}
+
+error_code process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 {
 	if (!flags || flags & ~(SYS_MEMORY_ACCESS_RIGHT_SPU_THR | SYS_MEMORY_ACCESS_RIGHT_RAW_SPU))
 	{
@@ -174,14 +198,14 @@ s32 process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 	return CELL_OK;
 }
 
-s32 sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
+error_code sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 {
 	sys_process.warning("sys_process_is_spu_lock_line_reservation_address(addr=0x%x, flags=0x%llx)", addr, flags);
 
 	return process_is_spu_lock_line_reservation_address(addr, flags);
 }
 
-s32 _sys_process_get_paramsfo(vm::ptr<char> buffer)
+error_code _sys_process_get_paramsfo(vm::ptr<char> buffer)
 {
 	sys_process.warning("_sys_process_get_paramsfo(buffer=0x%x)", buffer);
 
@@ -204,15 +228,15 @@ s32 process_get_sdk_version(u32 pid, s32& ver)
 	return CELL_OK;
 }
 
-s32 sys_process_get_sdk_version(u32 pid, vm::ptr<s32> version)
+error_code sys_process_get_sdk_version(u32 pid, vm::ptr<s32> version)
 {
 	sys_process.warning("sys_process_get_sdk_version(pid=0x%x, version=*0x%x)", pid, version);
 
 	s32 sdk_ver;
-	s32 ret = process_get_sdk_version(pid, sdk_ver);
+	const s32 ret = process_get_sdk_version(pid, sdk_ver);
 	if (ret != CELL_OK)
 	{
-		return ret; // error code
+		return CellError{ret + 0u}; // error code
 	}
 	else
 	{
@@ -221,34 +245,34 @@ s32 sys_process_get_sdk_version(u32 pid, vm::ptr<s32> version)
 	}
 }
 
-s32 sys_process_kill(u32 pid)
+error_code sys_process_kill(u32 pid)
 {
 	sys_process.todo("sys_process_kill(pid=0x%x)", pid);
 	return CELL_OK;
 }
 
-s32 sys_process_wait_for_child(u32 pid, vm::ptr<u32> status, u64 unk)
+error_code sys_process_wait_for_child(u32 pid, vm::ptr<u32> status, u64 unk)
 {
 	sys_process.todo("sys_process_wait_for_child(pid=0x%x, status=*0x%x, unk=0x%llx", pid, status, unk);
 
 	return CELL_OK;
 }
 
-s32 sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5, u64 unk6)
+error_code sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5, u64 unk6)
 {
 	sys_process.todo("sys_process_wait_for_child2(unk1=0x%llx, unk2=0x%llx, unk3=0x%llx, unk4=0x%llx, unk5=0x%llx, unk6=0x%llx)",
 		unk1, unk2, unk3, unk4, unk5, unk6);
 	return CELL_OK;
 }
 
-s32 sys_process_get_status(u64 unk)
+error_code sys_process_get_status(u64 unk)
 {
 	sys_process.todo("sys_process_get_status(unk=0x%llx)", unk);
 	//vm::write32(CPU.gpr[4], GetPPUThreadStatus(CPU));
 	return CELL_OK;
 }
 
-s32 sys_process_detach_child(u64 unk)
+error_code sys_process_detach_child(u64 unk)
 {
 	sys_process.todo("sys_process_detach_child(unk=0x%llx)", unk);
 	return CELL_OK;

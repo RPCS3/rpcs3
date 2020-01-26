@@ -197,7 +197,7 @@ namespace vk
 				const auto transfer_pitch = real_pitch;
 				const auto task_length = transfer_pitch * src_area.height();
 
-				auto working_buffer = vk::get_scratch_buffer();
+				auto working_buffer = vk::get_scratch_buffer(task_length);
 				auto final_mapping = vk::map_dma(cmd, valid_range.start, section_length);
 
 				VkBufferImageCopy region = {};
@@ -246,6 +246,14 @@ namespace vk
 				}
 				else
 				{
+					if (context != rsx::texture_upload_context::dma)
+					{
+						// Partial load for the bits outside the existing image
+						// NOTE: A true DMA section would have been prepped beforehand
+						// TODO: Parial range load/flush
+						vk::load_dma(valid_range.start, section_length);
+					}
+
 					std::vector<VkBufferCopy> copy;
 					copy.reserve(transfer_height);
 
@@ -607,6 +615,20 @@ namespace vk
 					const u16 convert_w = u16(src_w * src_bpp) / dst_bpp;
 					const u16 convert_x = u16(src_x * src_bpp) / dst_bpp;
 
+					if (convert_w == section.dst_w && src_h == section.dst_h &&
+						transform == rsx::surface_transform::identity &&
+						section.level == 0 && section.dst_z == 0)
+					{
+						// Optimization to avoid double transfer
+						// TODO: Handle level and layer offsets
+						const areai src_rect = coordi{{ src_x, src_y }, { src_w, src_h }};
+						const areai dst_rect = coordi{{ section.dst_x, section.dst_y }, { section.dst_w, section.dst_h }};
+						vk::copy_image_typeless(cmd, section.src, dst, src_rect, dst_rect, 1, section.src->aspect(), dst_aspect);
+
+						section.src->pop_layout(cmd);
+						continue;
+					}
+
 					src_image = vk::get_typeless_helper(dst->info.format, convert_x + convert_w, src_y + src_h);
 					src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -678,10 +700,10 @@ namespace vk
 						copy.imageOffset = { src_x, src_y, 0 };
 						copy.imageSubresource = { src_image->aspect(), 0, 0, 1 };
 
-						auto scratch_buf = vk::get_scratch_buffer();
+						const auto mem_length = src_w * src_h * dst_bpp;
+						auto scratch_buf = vk::get_scratch_buffer(mem_length);
 						vkCmdCopyImageToBuffer(cmd, src_image->value, src_image->current_layout, scratch_buf->value, 1, &copy);
 
-						const auto mem_length = src_w * src_h * dst_bpp;
 						vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, mem_length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 							VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
@@ -1255,7 +1277,34 @@ namespace vk
 
 			vk::leave_uninterruptible();
 
-			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subres_range);
+			// Insert appropriate barrier depending on use
+			VkImageLayout preferred_layout;
+			switch (context)
+			{
+			default:
+				preferred_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				break;
+			case rsx::texture_upload_context::blit_engine_dst:
+				preferred_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				break;
+			case rsx::texture_upload_context::blit_engine_src:
+				preferred_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				break;
+			}
+
+			if (preferred_layout != image->current_layout)
+			{
+				change_image_layout(cmd, image, preferred_layout, subres_range);
+			}
+			else
+			{
+				// Insert ordering barrier
+				verify(HERE), preferred_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				insert_image_memory_barrier(cmd, image->value, image->current_layout, preferred_layout,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+					subres_range);
+			}
 
 			section->last_write_tag = rsx::get_shared_tag();
 			return section;
@@ -1337,7 +1386,7 @@ namespace vk
 			{
 				// Primary access command queue, must restart it after
 				vk::fence submit_fence(*m_device);
-				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, &submit_fence, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, &submit_fence, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_TRUE);
 
 				vk::wait_for_fence(&submit_fence, GENERAL_WAIT_TIMEOUT);
 
@@ -1347,7 +1396,7 @@ namespace vk
 			else
 			{
 				// Auxilliary command queue with auto-restart capability
-				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_TRUE);
 			}
 
 			verify(HERE), cmd.flags == 0;

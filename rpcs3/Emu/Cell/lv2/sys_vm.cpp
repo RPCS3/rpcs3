@@ -5,6 +5,8 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Memory/vm_locking.h"
 
+extern u64 get_timebased_time();
+
 sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, lv2_memory_container* ct, u32 psize)
 	: ct(ct)
 	, psize(psize)
@@ -383,7 +385,7 @@ error_code sys_vm_get_statistics(ppu_thread& ppu, u32 addr, vm::ptr<sys_vm_stati
 	stat->page_out = 0;
 	stat->pmem_total = block->psize;
 	stat->pmem_used = 0;
-	stat->timestamp = 0;
+	stat->timestamp = get_timebased_time();
 
 	return CELL_OK;
 }

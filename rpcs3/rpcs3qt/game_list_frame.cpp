@@ -31,8 +31,11 @@
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
-	: custom_dock_widget(tr("Game List"), parent), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
+game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
+	: custom_dock_widget(tr("Game List"), parent)
+	, m_gui_settings(guiSettings)
+	, m_emu_settings(emuSettings)
+	, m_persistent_settings(persistent_settings)
 {
 	m_isListLayout    = m_gui_settings->GetValue(gui::gl_listMode).toBool();
 	m_Margin_Factor   = m_gui_settings->GetValue(gui::gl_marginFactor).toReal();
@@ -40,7 +43,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_Icon_Color      = m_gui_settings->GetValue(gui::gl_iconColor).value<QColor>();
 	m_colSortOrder    = m_gui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
 	m_sortColumn      = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
-	m_hidden_list     = m_gui_settings->GetValue(gui::gl_hidden_list).toStringList().toSet();
+	m_hidden_list     = gui::utils::list_to_set(m_gui_settings->GetValue(gui::gl_hidden_list).toStringList());
 
 	m_oldLayoutIsList = m_isListLayout;
 
@@ -364,12 +367,12 @@ void game_list_frame::SortGameList()
 
 QString game_list_frame::GetLastPlayedBySerial(const QString& serial)
 {
-	return m_gui_settings->GetLastPlayed(serial);
+	return m_persistent_settings->GetLastPlayed(serial);
 }
 
 QString game_list_frame::GetPlayTimeBySerial(const QString& serial)
 {
-	const qint64 elapsed_ms = m_gui_settings->GetPlaytime(serial);
+	const qint64 elapsed_ms = m_persistent_settings->GetPlaytime(serial);
 
 	if (elapsed_ms <= 0)
 	{
@@ -579,8 +582,32 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				const QString serial = qstr(game.serial);
 				const QString note = m_gui_settings->GetValue(gui::notes, serial, "").toString();
 				const QString title = m_gui_settings->GetValue(gui::titles, serial, "").toString().simplified();
-				m_gui_settings->SetLastPlayed(serial, m_gui_settings->GetValue(gui::last_played, serial, "").toString());
-				m_gui_settings->SetPlaytime(serial, m_gui_settings->GetValue(gui::playtime, serial, 0).toInt());
+
+				// Read persistent_settings values
+				QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
+				int playtime        = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toInt();
+
+				// Read deprecated gui_setting values first for backwards compatibility (older than January 12th 2020).
+				// Restrict this to empty persistent settings to keep continuity.
+				if (last_played.isEmpty())
+				{
+					last_played = m_gui_settings->GetValue(gui::persistent::last_played, serial, "").toString();
+				}
+				if (playtime <= 0)
+				{
+					playtime = m_gui_settings->GetValue(gui::persistent::playtime, serial, 0).toInt();
+				}
+
+				// Set persistent_settings values if values exist
+				if (!last_played.isEmpty())
+				{
+					m_persistent_settings->SetLastPlayed(serial, last_played);
+				}
+				if (playtime > 0)
+				{
+					m_persistent_settings->SetPlaytime(serial, playtime);
+				}
+
 				serials.insert(serial);
 
 				if (!note.isEmpty())
@@ -700,7 +727,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		// clean up hidden games list
 		m_hidden_list.intersect(serials);
-		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.toList()));
+		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.values()));
 	}
 
 	// Fill Game List / Game Grid
@@ -1018,7 +1045,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		else
 			m_hidden_list.remove(serial);
 
-		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.toList()));
+		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.values()));
 		Refresh();
 	});
 	connect(createPPUCache, &QAction::triggered, [=]
@@ -1038,18 +1065,26 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		mb->deleteLater();
 		if (mb->exec() == QMessageBox::Yes)
 		{
-			if (mb->checkBox()->isChecked())
+			const bool remove_caches = mb->checkBox()->isChecked();
+			if (fs::remove_all(currGame.path))
 			{
-				RemoveShadersCache(cache_base_dir);
-				RemovePPUCache(cache_base_dir);
-				RemoveSPUCache(cache_base_dir);
-				RemoveCustomConfiguration(currGame.serial);
-				RemoveCustomPadConfiguration(currGame.serial);
+				if (remove_caches)
+				{
+					RemoveShadersCache(cache_base_dir);
+					RemovePPUCache(cache_base_dir);
+					RemoveSPUCache(cache_base_dir);
+					RemoveCustomConfiguration(currGame.serial);
+					RemoveCustomPadConfiguration(currGame.serial);
+				}
+				m_game_data.erase(std::remove(m_game_data.begin(), m_game_data.end(), gameinfo), m_game_data.end());
+				LOG_SUCCESS(GENERAL, "Removed %s %s in %s", currGame.category, currGame.name, currGame.path);
+				Refresh(true);
 			}
-			fs::remove_all(currGame.path);
-			m_game_data.erase(std::remove(m_game_data.begin(), m_game_data.end(), gameinfo), m_game_data.end());
-			LOG_SUCCESS(GENERAL, "Removed %s %s in %s", currGame.category, currGame.name, currGame.path);
-			Refresh(true);
+			else
+			{
+				LOG_ERROR(GENERAL, "Failed to remove %s %s in %s (%s)", currGame.category, currGame.name, currGame.path, fs::g_tls_error);
+				QMessageBox::critical(this, tr("Failure!"), tr(remove_caches ? "Failed to remove %0 from drive!\nPath: %1\nCaches and custom configs have been left intact." : "Failed to remove %0 from drive!\nPath: %1").arg(name).arg(qstr(currGame.path)));
+			}
 		}
 	});
 	connect(openGameFolder, &QAction::triggered, [=]()
@@ -1373,7 +1408,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Creation"), tr("Creating all PPU caches"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Creation"), tr("Creating all PPU caches"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1418,7 +1453,7 @@ void game_list_frame::BatchRemovePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Removal"), tr("Removing all PPU caches"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Removal"), tr("Removing all PPU caches"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1503,7 +1538,7 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1548,7 +1583,7 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Custom Pad Configuration Batch Removal"), tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Pad Configuration Batch Removal"), tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1590,7 +1625,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1618,7 +1653,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 
 QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
 {
-	const int device_pixel_ratio = devicePixelRatio();
+	const qreal device_pixel_ratio = devicePixelRatioF();
 	const QSize original_size = icon.size();
 
 	QPixmap canvas = QPixmap(original_size * device_pixel_ratio);
@@ -1921,7 +1956,7 @@ int game_list_frame::PopulateGameList()
 		compat_item->setToolTip(game->compat.tooltip);
 		if (!game->compat.color.isEmpty())
 		{
-			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color, devicePixelRatio() * 2));
+			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color, devicePixelRatioF() * 2));
 		}
 
 		// Version

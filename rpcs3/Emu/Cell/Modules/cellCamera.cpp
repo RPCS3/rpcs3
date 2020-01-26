@@ -273,7 +273,6 @@ static error_code check_camera_info(const CellCameraInfoEx& info)
 
 std::pair<u32, u32> get_video_resolution(const CellCameraInfoEx& info)
 {
-	std::pair<u32, u32> res;
 	switch (info.resolution)
 	{
 	case CELL_CAMERA_VGA: return{ 640, 480 };
