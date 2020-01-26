@@ -897,8 +897,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		boot->setFont(f);
 	}
 	myMenu.addAction(boot);
-	QAction* configure = myMenu.addAction(tr("&Configure"));
-	QAction* pad_configure = myMenu.addAction(tr("&Configure pads"));
+	myMenu.addSeparator();
+	QAction* configure = myMenu.addAction(gameinfo->hasCustomConfig ? tr("&Change Custom Configuration") : tr("&Create Custom Configuration"));
+	QAction* pad_configure = myMenu.addAction(gameinfo->hasCustomPadConfig ? tr("&Change Custom Gamepad Configuration") : tr("&Create Custom Gamepad Configuration"));
 	QAction* createPPUCache = myMenu.addAction(tr("&Create PPU Cache"));
 	myMenu.addSeparator();
 	QAction* renameTitle = myMenu.addAction(tr("&Rename In Game List"));
@@ -921,7 +922,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	}
 	if (gameinfo->hasCustomPadConfig)
 	{
-		QAction* remove_custom_pad_config = remove_menu->addAction(tr("&Remove Custom Pad Configuration"));
+		QAction* remove_custom_pad_config = remove_menu->addAction(tr("&Remove Custom Gamepad Configuration"));
 		connect(remove_custom_pad_config, &QAction::triggered, [=]()
 		{
 			if (RemoveCustomPadConfiguration(currGame.serial, gameinfo, true))
