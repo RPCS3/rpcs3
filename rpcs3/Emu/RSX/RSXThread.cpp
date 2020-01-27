@@ -502,8 +502,8 @@ namespace rsx
 #endif
 			u64 start_time = get_system_time();
 
-			const u64 period_time = 1000000 / g_cfg.video.vblank_rate;
-			const u64 wait_sleep = period_time - u64{period_time >= host_min_quantum} * host_min_quantum;
+			u64 period_time = 1000000 / g_cfg.video.vblank_rate;
+			u64 wait_sleep = period_time - u64{period_time >= host_min_quantum} * host_min_quantum;
 
 			// TODO: exit condition
 			while (!Emu.IsStopped() && !m_rsx_thread_exiting)
@@ -537,6 +537,8 @@ namespace rsx
 					while (get_system_time() - start_time >= period_time);
 
 					thread_ctrl::wait_for(wait_sleep);
+					period_time = 1000000 / g_cfg.video.vblank_rate; // Update its value
+					wait_sleep = period_time - u64{period_time >= host_min_quantum} * host_min_quantum;
 					continue;
 				}
 
