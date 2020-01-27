@@ -32,11 +32,10 @@ void usb_device_ghltar::control_transfer(u8 bmRequestType, u8 bRequest, u16 wVal
 	case 0x21:
 		switch (bRequest)
 		{
-		case 0x09:
-				break;
-			default: ghltar_log.error("Unhandled Query Type: 0x%02X", buf[0]); break;
-			}
-			break;
+		case 0x09: break;
+		default: ghltar_log.error("Unhandled Query Type: 0x%02X", buf[0]); break;
+		}
+		break;
 		break;
 	default: usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer); break;
 	}
@@ -49,6 +48,8 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, 
 	transfer->expected_result = HC_CC_NOERR;
 	// Interrupt transfers are slow(6ms, TODO accurate measurement)
 	transfer->expected_time = get_timestamp() + 6000;
+
+	memset(buf, 0, buf_size);
 
 	buf[0] = 0x00; // Frets
 	// FRET HEXMASK:
@@ -84,7 +85,7 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, 
 	buf[6]  = 0x80; // Whammy
 	buf[19] = 0x80; // Accelerometer
 
-	buf[3] = 0x80; // Unknown, always 0x80
+	buf[3]  = 0x80; // Unknown, always 0x80
 	buf[22] = 0x01; // Unknown, always 0x01
 	buf[24] = 0x02; // Unknown, always 0x02
 	buf[26] = 0x02; // Unknown, always 0x02
@@ -177,6 +178,7 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, 
 				if (button.m_pressed)
 					buf[1] += 0x01; // Hero Power
 				break;
+			default: break;
 			}
 		}
 	}
@@ -190,8 +192,10 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, 
 			break;
 		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
 			buf[19] = stick.m_value; // Tilt
-			if (buf[19] >= 0xF0) buf[5] = 0xFF;
-			if (buf[19] <= 0x10) buf[5] = 0x00;
+			if (buf[19] >= 0xF0)
+				buf[5] = 0xFF;
+			if (buf[19] <= 0x10)
+				buf[5] = 0x00;
 			pad->m_analog_right_y = stick.m_value;
 			break;
 		default: break;

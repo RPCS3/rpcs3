@@ -331,6 +331,7 @@ target_sources(rpcs3_emu PRIVATE
 	Io/PadHandler.cpp
 	Io/usb_device.cpp
 	Io/Skylander.cpp
+	Io/GHLtar.cpp
 )
 
 
