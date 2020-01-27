@@ -336,12 +336,12 @@ struct lv2_file_c0000006 : lv2_file_op
 {
 	be_t<u32> size; // 0x20
 	be_t<u32> _x4;  // 0x10
-	be_t<u32> _x8;  // 0x18
-	be_t<u32> _xc;  // 0x9
+	be_t<u32> _x8;  // 0x18 - offset of out_code
+	be_t<u32> name_size;
 	vm::bcptr<char> name;
 	be_t<u32> _x14; // 0
-	be_t<u32> code; // 0x80010003
-	be_t<u32> _x1c; // 0
+	be_t<u32> out_code; // 0x80010003
+	be_t<u32> out_id; // set to 0, may return 0x1b5
 };
 
 CHECK_SIZE(lv2_file_c0000006, 0x20);

@@ -75,7 +75,7 @@ s32 cellSslGetMemoryInfo()
 	return CELL_OK;
 }
 
-std::string getCert(const std::string certPath, const int certID, const bool isNormalCert)
+std::string getCert(const std::string& certPath, const int certID, const bool isNormalCert)
 {
 	int newID = certID;
 

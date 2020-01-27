@@ -211,7 +211,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 325: return "sys_memory_container_destroy";
 	case 326: return "sys_mmapper_allocate_fixed_address";
 	case 327: return "sys_mmapper_enable_page_fault_notification";
-	case 328: return "sys_mmapper_allocate_shared_memory_ext";
+	case 328: return "sys_mmapper_allocate_shared_memory_from_container_ext";
 	case 329: return "sys_mmapper_free_shared_memory";
 	case 330: return "sys_mmapper_allocate_address";
 	case 331: return "sys_mmapper_free_address";
@@ -222,6 +222,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 336: return "sys_mmapper_change_address_access_right";
 	case 337: return "sys_mmapper_search_and_map";
 	case 338: return "sys_mmapper_get_shared_memory_attribute";
+	case 339: return "sys_mmapper_allocate_shared_memory_ext";
 	case 341: return "sys_memory_container_create";
 	case 342: return "sys_memory_container_destroy";
 	case 343: return "sys_memory_container_get_size";

@@ -271,8 +271,9 @@ namespace rsx
 			}
 			else
 			{
+				const auto reserve = list1.size() + list2.size();
 				surface_info = std::move(list1);
-				surface_info.reserve(list1.size() + list2.size());
+				surface_info.reserve(reserve);
 
 				for (const auto& e : list2) surface_info.push_back(e);
 			}

@@ -998,13 +998,9 @@ std::string spu_thread::dump() const
 {
 	std::string ret = cpu_thread::dump();
 
-	if (group)
-	{
-		fmt::append(ret, "\nGroup ID: 0x%x", group->id);
-	}
-
 	fmt::append(ret, "\nBlock Weight: %u (Retreats: %u)", block_counter, block_failure);
 	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
+	fmt::append(ret, "\nLocal Storage: 0x%08x..0x%08x", offset, offset + 0x3ffff);
 	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
 	fmt::append(ret, "\nMFC Stall: 0x%08x", ch_stall_mask);
 	fmt::append(ret, "\nMFC Queue Size: %u", mfc_size);
@@ -1073,6 +1069,7 @@ void spu_thread::cpu_init()
 	run_ctrl.raw() = 0;
 	status.raw() = 0;
 	npc.raw() = 0;
+	skip_npc_set = false;
 
 	int_ctrl[0].clear();
 	int_ctrl[1].clear();
@@ -1086,7 +1083,14 @@ void spu_thread::cpu_stop()
 	if (!group && offset >= RAW_SPU_BASE_ADDR)
 	{
 		// Save next PC and current SPU Interrupt Status
-		npc = pc | (interrupts_enabled);
+		if (skip_npc_set)
+		{
+			skip_npc_set = false;
+		}
+		else
+		{
+			npc = pc | interrupts_enabled;
+		}
 	}
 	else if (group && is_stopped())
 	{
@@ -1126,6 +1130,8 @@ void spu_thread::cpu_task()
 	// Get next PC and SPU Interrupt status
 	pc = npc.exchange(0);
 
+	skip_npc_set = false;
+
 	set_interrupt_status((pc & 1) != 0);
 
 	pc &= 0x3fffc;
@@ -1146,6 +1152,13 @@ void spu_thread::cpu_task()
 			{
 				if (check_state())
 					break;
+			}
+
+			if (_ref<u32>(pc) == 0x0)
+			{
+				if (spu_thread::stop_and_signal(0x0))
+					pc += 4;
+				continue;
 			}
 
 			spu_runtime::g_gateway(*this, vm::_ptr<u8>(offset), nullptr);
@@ -2767,7 +2780,10 @@ bool spu_thread::stop_and_signal(u32 code)
 
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{
-		state += cpu_flag::wait;
+		// Save next PC and current SPU Interrupt Status
+		npc = (pc + 4) | (interrupts_enabled);
+		skip_npc_set = true;
+		state += cpu_flag::stop + cpu_flag::wait;
 		status.atomic_op([code](u32& status)
 		{
 			status = (status & 0xffff) | (code << 16);
@@ -2776,7 +2792,6 @@ bool spu_thread::stop_and_signal(u32 code)
 		});
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
-		state += cpu_flag::stop;
 		check_state();
 		return true;
 	}
@@ -3120,6 +3135,8 @@ void spu_thread::halt()
 
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{
+		state += cpu_flag::stop + cpu_flag::wait;
+
 		status.atomic_op([](u32& status)
 		{
 			status |= SPU_STATUS_STOPPED_BY_HALT;
@@ -3128,7 +3145,6 @@ void spu_thread::halt()
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_HALT_OR_STEP_INT);
 
-		state += cpu_flag::stop;
 		spu_runtime::g_escape(this);
 	}
 

@@ -1163,7 +1163,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Read control flags (0 if doesn't exist)
 	g_ps3_process_info.ctrl_flags1 = 0;
 
-	if (bool not_found = true)
+	if (bool not_found = g_ps3_process_info.self_info.valid)
 	{
 		for (const auto& ctrl : g_ps3_process_info.self_info.ctrl_info)
 		{
@@ -1179,6 +1179,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 				g_ps3_process_info.ctrl_flags1 |= ctrl.control_flags.ctrl_flag1;
 			}
 		}
+
+		LOG_NOTICE(LOADER, "SELF header information found: ctrl_flags1=0x%x, authid=0x%llx", 
+			g_ps3_process_info.ctrl_flags1, g_ps3_process_info.self_info.app_info.authid);
 	}
 
 	// Load other programs

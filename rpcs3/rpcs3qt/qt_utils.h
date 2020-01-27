@@ -13,6 +13,16 @@ namespace gui
 {
 	namespace utils
 	{
+		template<typename T>
+		static QSet<T> list_to_set(const QList<T>& list)
+		{
+#if QT_VERSION >= QT_VERSION_CHECK(5,14,0)
+			return QSet<T>(list.begin(), list.end());
+#else
+			return QSet<T>::fromList(list);
+#endif
+		}
+
 		// Creates a frame geometry rectangle with given width height that's centered inside the origin,
 		// while still considering screen boundaries.
 		QRect create_centered_window_geometry(const QRect& origin, s32 width, s32 height);

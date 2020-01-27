@@ -170,6 +170,11 @@ error_code cellAudioInGetDeviceInfo(u32 deviceNumber, u32 deviceIndex, vm::ptr<C
 {
 	cellAvconfExt.todo("cellAudioInGetDeviceInfo(deviceNumber=0x%x, deviceIndex=0x%x, info=*0x%x)", deviceNumber, deviceIndex, info);
 
+	if (deviceIndex != 0 || !info)
+	{
+		return CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	auto av_manager = g_fxo->get<avconf_manager>();
 
 	if (deviceNumber >= av_manager->devices.size())
@@ -206,7 +211,7 @@ error_code cellAudioInGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioInDevic
 {
 	cellAvconfExt.todo("cellAudioInGetAvailableDeviceInfo(count=0x%x, info=*0x%x)", count, device_info);
 
-	if (count > 16 || !device_info.addr())
+	if (count > 16 || !device_info)
 	{
 		return CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER;
 	}
@@ -271,7 +276,8 @@ error_code cellAudioInRegisterDevice(u64 deviceType, vm::cptr<char> name, vm::pt
 {
 	cellAvconfExt.todo("cellAudioInRegisterDevice(deviceType=0x%llx, name=%s, option=*0x%x, config=*0x%x)", deviceType, name, option, config);
 
-	if (!option || !config || !name) // TODO: check first member of option for > 5 ?
+	// option must be null, volume can be 1 (soft) to 5 (loud) (raises question about check for volume = 0)
+	if (option || !config || !name || config->volume > 5)
 	{
 		return CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER;
 	}
