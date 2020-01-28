@@ -718,9 +718,9 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 	void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
 	{
-#ifdef _WIN32
 		// Lock memory manager
 		std::lock_guard lock(s_mutex);
+#ifdef _WIN32
 		// Fix RUNTIME_FUNCTION records (.pdata section)
 		decltype(s_unwater)::value_type pdata_entry = std::move(s_unwater.front());
 		s_unwater.pop_front();
@@ -784,7 +784,11 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 	{
 #ifndef _WIN32
 		RTDyldMemoryManager::registerEHFramesInProcess(addr, size);
-		s_unfire.push_front(std::make_pair(addr, size));
+		{
+			// Lock memory manager
+			std::lock_guard lock(s_mutex);
+			s_unfire.push_front(std::make_pair(addr, size));
+		}
 #endif
 	}
 
