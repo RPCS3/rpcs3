@@ -2,8 +2,8 @@
 #include "GHLtar.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Input/pad_thread.h"
-#include <Emu\Cell\Modules\cellPad.cpp>
-#include <Emu\RSX\GL\GLHelpers.h>
+#include "Emu/Cell/Modules/cellPad.cpp"
+#include "Emu/RSX/GL/GLHelpers.h"
 
 LOG_CHANNEL(ghltar_log);
 
@@ -28,16 +28,18 @@ void usb_device_ghltar::control_transfer(u8 bmRequestType, u8 bRequest, u16 wVal
 	// Control transfers are nearly instant
 	switch (bmRequestType)
 	{
-	// HID Host 2 Device
-	case 0x21:
-		switch (bRequest)
-		{
-		case 0x09: break;
-		default: ghltar_log.error("Unhandled Query Type: 0x%02X", buf[0]); break;
-		}
-		break;
-		break;
-	default: usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer); break;
+		case 0x21:
+			switch (bRequest)
+			{
+				case 0x09: break;
+				default:
+					ghltar_log.error("Unhandled Query Type: 0x%02X", buf[0]);
+					break;
+			}
+			break;
+		default:
+			usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
+			break;
 	}
 }
 
@@ -108,37 +110,38 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, 
 
 			switch (button.m_outKeyCode)
 			{
-			case CELL_PAD_CTRL_SQUARE:
-				pad->m_press_square = button.m_value;
-				if (button.m_pressed)
-					buf[0] += 0x01; // W1
-				break;
-			case CELL_PAD_CTRL_CROSS:
-				pad->m_press_cross = button.m_value;
-				if (button.m_pressed)
-					buf[0] += 0x02; // B1
-				break;
-			case CELL_PAD_CTRL_CIRCLE:
-				pad->m_press_circle = button.m_value;
-				if (button.m_pressed)
-					buf[0] += 0x04; // B2
-				break;
-			case CELL_PAD_CTRL_TRIANGLE:
-				pad->m_press_triangle = button.m_value;
-				if (button.m_pressed)
-					buf[0] += 0x08; // B3
-				break;
-			case CELL_PAD_CTRL_R1:
-				pad->m_press_R1 = button.m_value;
-				if (button.m_pressed)
-					buf[0] += 0x20; // W3
-				break;
-			case CELL_PAD_CTRL_L1:
-				pad->m_press_L1 = button.m_value;
-				if (button.m_pressed)
-					buf[0] += 0x10; // W2
-				break;
-			default: break;
+				case CELL_PAD_CTRL_SQUARE:
+					pad->m_press_square = button.m_value;
+					if (button.m_pressed)
+						buf[0] += 0x01; // W1
+					break;
+				case CELL_PAD_CTRL_CROSS:
+					pad->m_press_cross = button.m_value;
+					if (button.m_pressed)
+						buf[0] += 0x02; // B1
+					break;
+				case CELL_PAD_CTRL_CIRCLE:
+					pad->m_press_circle = button.m_value;
+					if (button.m_pressed)
+						buf[0] += 0x04; // B2
+					break;
+				case CELL_PAD_CTRL_TRIANGLE:
+					pad->m_press_triangle = button.m_value;
+					if (button.m_pressed)
+						buf[0] += 0x08; // B3
+					break;
+				case CELL_PAD_CTRL_R1:
+					pad->m_press_R1 = button.m_value;
+					if (button.m_pressed)
+						buf[0] += 0x20; // W3
+					break;
+				case CELL_PAD_CTRL_L1:
+					pad->m_press_L1 = button.m_value;
+					if (button.m_pressed)
+						buf[0] += 0x10; // W2
+					break;
+				default:
+					break;
 			}
 		}
 		else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
@@ -150,35 +153,36 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, 
 
 			switch (button.m_outKeyCode)
 			{
-			case CELL_PAD_CTRL_DOWN:
-				pad->m_press_down = button.m_value;
-				if (button.m_pressed)
-					buf[4] = 0xFF; // Strum Down
-				break;
-			case CELL_PAD_CTRL_UP:
-				pad->m_press_up = button.m_value;
-				if (button.m_pressed)
-					buf[4] = 0x00; // Strum Up
-				break;
-			case CELL_PAD_CTRL_LEFT:
-				pad->m_press_down = button.m_value;
-				if (button.m_pressed)
-					buf[2] = 0x02; // Left D-Pad (Unused)
-				break;
-			case CELL_PAD_CTRL_RIGHT:
-				pad->m_press_up = button.m_value;
-				if (button.m_pressed)
-					buf[2] = 0x06; // Right D-Pad (Unused)
-				break;
-			case CELL_PAD_CTRL_START:
-				if (button.m_pressed)
-					buf[1] += 0x02; // Pause
-				break;
-			case CELL_PAD_CTRL_SELECT:
-				if (button.m_pressed)
-					buf[1] += 0x01; // Hero Power
-				break;
-			default: break;
+				case CELL_PAD_CTRL_DOWN:
+					pad->m_press_down = button.m_value;
+					if (button.m_pressed)
+						buf[4] = 0xFF; // Strum Down
+					break;
+				case CELL_PAD_CTRL_UP:
+					pad->m_press_up = button.m_value;
+					if (button.m_pressed)
+						buf[4] = 0x00; // Strum Up
+					break;
+				case CELL_PAD_CTRL_LEFT:
+					pad->m_press_down = button.m_value;
+					if (button.m_pressed)
+						buf[2] = 0x02; // Left D-Pad (Unused)
+					break;
+				case CELL_PAD_CTRL_RIGHT:
+					pad->m_press_up = button.m_value;
+					if (button.m_pressed)
+						buf[2] = 0x06; // Right D-Pad (Unused)
+					break;
+				case CELL_PAD_CTRL_START:
+					if (button.m_pressed)
+						buf[1] += 0x02; // Pause
+					break;
+				case CELL_PAD_CTRL_SELECT:
+					if (button.m_pressed)
+						buf[1] += 0x01; // Hero Power
+					break;
+				default:
+					break;
 			}
 		}
 	}
@@ -186,19 +190,20 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, 
 	{
 		switch (stick.m_offset)
 		{
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-			buf[6]                = ~(stick.m_value) + 0x01; // Whammy
-			pad->m_analog_right_x = stick.m_value;
-			break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-			buf[19] = stick.m_value; // Tilt
-			if (buf[19] >= 0xF0)
-				buf[5] = 0xFF;
-			if (buf[19] <= 0x10)
-				buf[5] = 0x00;
-			pad->m_analog_right_y = stick.m_value;
-			break;
-		default: break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
+				buf[6]                = ~(stick.m_value) + 0x01; // Whammy
+				pad->m_analog_right_x = stick.m_value;
+				break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
+				buf[19] = stick.m_value; // Tilt
+				if (buf[19] >= 0xF0)
+					buf[5] = 0xFF;
+				if (buf[19] <= 0x10)
+					buf[5] = 0x00;
+				pad->m_analog_right_y = stick.m_value;
+				break;
+			default:
+				break;
 		}
 	}
 }
