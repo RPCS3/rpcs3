@@ -1,4 +1,6 @@
-﻿#include "stdafx.h"
+﻿// Guitar Hero Live controller emulator
+
+#include "stdafx.h"
 #include "GHLtar.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Input/pad_thread.h"
@@ -31,7 +33,9 @@ void usb_device_ghltar::control_transfer(u8 bmRequestType, u8 bRequest, u16 wVal
 		case 0x21:
 			switch (bRequest)
 			{
-				case 0x09: break;
+				case 0x09:
+					// Do nothing here - not sure what it should do.
+					break;
 				default:
 					ghltar_log.error("Unhandled Query Type: 0x%02X", buf[0]);
 					break;
@@ -97,8 +101,10 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, 
 	const auto handler = pad::get_current_handler();
 	const auto& pads   = handler->GetPads();
 	const auto pad     = pads[6];
+
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return;
+
 	for (Button& button : pad->m_buttons)
 	{
 		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
