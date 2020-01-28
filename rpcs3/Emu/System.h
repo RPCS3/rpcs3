@@ -404,7 +404,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<spu_decoder_type> spu_decoder{this, "SPU Decoder", spu_decoder_type::llvm};
 		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
 		cfg::_bool spu_debug{this, "SPU Debug"};
-		cfg::_int<0, 6> preferred_spu_threads{this, "Preferred SPU Threads", 0}; //Numnber of hardware threads dedicated to heavy simultaneous spu tasks
+		cfg::_int<0, 6> preferred_spu_threads{this, "Preferred SPU Threads", 0, true}; //Numnber of hardware threads dedicated to heavy simultaneous spu tasks
 		cfg::_int<0, 16> spu_delay_penalty{this, "SPU delay penalty", 3}; //Number of milliseconds to block a thread if a virtual 'core' isn't free
 		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
 		cfg::_int<0, 6> max_spurs_threads{this, "Max SPURS Threads", 6}; // HACK. If less then 6, max number of running SPURS threads in each thread group.
@@ -481,14 +481,14 @@ struct cfg_root : cfg::node
 		cfg::_bool overlay{this, "Debug overlay"};
 		cfg::_bool gl_legacy_buffers{this, "Use Legacy OpenGL Buffers"};
 		cfg::_bool use_gpu_texture_scaling{this, "Use GPU texture scaling", false};
-		cfg::_bool stretch_to_display_area{this, "Stretch To Display Area"};
+		cfg::_bool stretch_to_display_area{this, "Stretch To Display Area", false, true};
 		cfg::_bool force_high_precision_z_buffer{this, "Force High Precision Z buffer"};
-		cfg::_bool strict_rendering_mode{this, "Strict Rendering Mode"};
-		cfg::_bool disable_zcull_queries{this, "Disable ZCull Occlusion Queries", false};
+		cfg::_bool strict_rendering_mode{this, "Strict Rendering Mode", false, true};
+		cfg::_bool disable_zcull_queries{this, "Disable ZCull Occlusion Queries", false, true};
 		cfg::_bool disable_vertex_cache{this, "Disable Vertex Cache", false};
 		cfg::_bool disable_FIFO_reordering{this, "Disable FIFO Reordering", false};
 		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip", false};
-		cfg::_bool force_cpu_blit_processing{this, "Force CPU Blit", false}; // Debugging option
+		cfg::_bool force_cpu_blit_processing{this, "Force CPU Blit", false, true}; // Debugging option
 		cfg::_bool disable_on_disk_shader_cache{this, "Disable On-Disk Shader Cache", false};
 		cfg::_bool disable_vulkan_mem_allocator{this, "Disable Vulkan Memory Allocator", false};
 		cfg::_bool full_rgb_range_output{this, "Use full RGB output range", true}; // Video out dynamic range
@@ -496,12 +496,12 @@ struct cfg_root : cfg::node
 		cfg::_bool strict_texture_flushing{this, "Strict Texture Flushing", false};
 		cfg::_bool disable_native_float16{this, "Disable native float16 support", false};
 		cfg::_bool multithreaded_rsx{this, "Multithreaded RSX", false};
-		cfg::_bool relaxed_zcull_sync{this, "Relaxed ZCULL Sync", false};
+		cfg::_bool relaxed_zcull_sync{this, "Relaxed ZCULL Sync", false, true};
 		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames To Draw", 1};
 		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
 		cfg::_int<50, 800> resolution_scale_percent{this, "Resolution Scale", 100};
-		cfg::_int<0, 16> anisotropic_level_override{this, "Anisotropic Filter Override", 0};
-		cfg::_int<1, 1024> min_scalable_dimension{this, "Minimum Scalable Dimension", 16};
+		cfg::_int<0, 16> anisotropic_level_override{this, "Anisotropic Filter Override", 0, true};
+		cfg::_int<1, 1024> min_scalable_dimension{this, "Minimum Scalable Dimension", 16, true};
 		cfg::_int<0, 30000000> driver_recovery_timeout{this, "Driver Recovery Timeout", 1000000, true};
 		cfg::_int<0, 16667> driver_wakeup_delay{this, "Driver Wake-Up Delay", 1, true};
 		cfg::_int<1, 500> vblank_rate{this, "Vblank Rate", 60}; // Changing this from 60 may affect game speed in unexpected ways
