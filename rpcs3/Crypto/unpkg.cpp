@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "utils.h"
 #include "aes.h"
 #include "sha1.h"
@@ -10,6 +10,12 @@
 
 bool pkg_install(const std::string& path, atomic_t<double>& sync)
 {
+	if (!fs::is_file(path))
+	{
+		LOG_ERROR(LOADER, "PKG file not found!");
+		return false;
+	}
+
 	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
 
 	std::vector<fs::file> filelist;
