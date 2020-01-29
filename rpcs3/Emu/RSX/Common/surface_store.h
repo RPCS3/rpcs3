@@ -94,6 +94,7 @@ namespace rsx
 				}
 
 				surface_storage_type sink;
+				surface_type invalidated = 0;
 				if (const auto found = data.find(new_address);
 					found != data.end())
 				{
@@ -104,16 +105,44 @@ namespace rsx
 					}
 					else
 					{
-						// TODO: Merge the 2 regions
 						invalidated_resources.push_back(std::move(found->second));
 						data.erase(new_address);
 
 						auto &old = invalidated_resources.back();
 						Traits::notify_surface_invalidated(old);
+
+						if (Traits::surface_is_pitch_compatible(old, prev_surface->get_rsx_pitch()))
+						{
+							if (UNLIKELY(old->last_use_tag >= prev_surface->last_use_tag))
+							{
+								invalidated = Traits::get(old);
+							}
+						}
 					}
 				}
 
 				Traits::clone_surface(cmd, sink, region.source, new_address, region);
+
+				if (UNLIKELY(invalidated))
+				{
+					// Halfplement the merge by crude inheritance. Should recursively split the memory blocks instead.
+					if (LIKELY(sink->old_contents.empty()))
+					{
+						sink->set_old_contents(invalidated);
+					}
+					else
+					{
+						const auto existing = sink->get_normalized_memory_area();
+						const auto incoming = invalidated->get_normalized_memory_area();
+
+						deferred_clipped_region<surface_type> region{};
+						region.source = invalidated;
+						region.target = Traits::get(sink);
+						region.width = std::min(existing.x2, incoming.x2);
+						region.height = std::min(existing.y2, incoming.y2);
+						sink->set_old_contents_region(region, true);
+					}
+				}
 
 				verify(HERE), region.target == Traits::get(sink);
 				orphaned_surfaces.push_back(region.target);
