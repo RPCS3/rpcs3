@@ -1320,7 +1320,7 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 	if (!rap_file)
 	{
 		LOG_FATAL(LOADER, "Failed to load RAP file: %s.", rap_path);
-		LOG_ERROR(LOADER, "RPCS3 could not find the license file(s) required to launch the game. Ensure the .rap license file is located in dev_hdd0/home/00000001/exdata folder and has a lowercase file extension. If you need assistance on dumping the license file from your PS3, read our quickstart guide: https://rpcs3.net/quickstart");
+		LOG_ERROR(LOADER, "RPCS3 could not find the license file(s) required to launch the game. Ensure the .rap license file is placed in the dev_hdd0/home/00000001/exdata folder with a lowercase file extension. If you need assistance on dumping the license file from your PS3, read our quickstart guide: https://rpcs3.net/quickstart");
 		return false;
 	}
 
