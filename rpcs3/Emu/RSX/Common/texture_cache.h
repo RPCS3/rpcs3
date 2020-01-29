@@ -2056,52 +2056,15 @@ namespace rsx
 			else
 			{
 				// Surface exists in local memory.
-				// 1. Invalidate surfaces in range
-				// 2. Proceed as normal, blit into a 'normal' surface and any upload routines should catch it
-				m_rtts.invalidate_range(utils::address_range::start_length(dst_address, dst.pitch * dst_h));
 				use_null_region = (is_copy_op && !is_format_convert);
+
+				// Invalidate surfaces in range. Sample tests should catch overlaps in theory.
+				m_rtts.invalidate_range(utils::address_range::start_length(dst_address, dst.pitch* dst_h));
 			}
 
 			// TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
 			auto src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, src_bpp, false);
 			src_is_render_target = src_subres.surface != nullptr;
-
-			// Always use GPU blit if src or dst is in the surface store
-			if (!src_is_render_target && !dst_is_render_target)
-			{
-				const bool is_trivial_copy = is_copy_op && !is_format_convert && !dst.swizzled;
-				if (is_trivial_copy)
-				{
-					// Check if trivial memcpy can perform the same task
-					// Used to copy programs and arbitrary data to the GPU in some cases
-					// NOTE: This case overrides the GPU texture scaling option
-					if ((src_h == 1 && dst_h == 1) || (dst_w == src_w && dst_h == src_h && src.pitch == dst.pitch))
-					{
-						if (dst.scale_x > 0.f && dst.scale_y > 0.f)
-						{
-							return false;
-						}
-					}
-
-					// If a matching section exists with a different use-case, fall back to CPU memcpy
-					skip_if_collision_exists = true;
-				}
-
-				if (!g_cfg.video.use_gpu_texture_scaling)
-				{
-					if (dst.swizzled)
-					{
-						// Swizzle operation requested. Use fallback
-						return false;
-					}
-
-					if (is_trivial_copy && get_location(dst_address) != CELL_GCM_LOCATION_LOCAL)
-					{
-						// Trivial copy and the destination is in XDR memory
-						return false;
-					}
-				}
-			}
 
 			if (src_is_render_target)
 			{
@@ -2128,6 +2091,55 @@ namespace rsx
 					// Must go through a scaling operation due to resolution scaling being present
 					verify(HERE), g_cfg.video.resolution_scale_percent != 100;
 					use_null_region = false;
+				}
+			}
+			else
+			{
+				// Determine whether to perform this transfer on CPU or GPU (src data may not be graphical)
+				const bool is_trivial_copy = is_copy_op && !is_format_convert && !dst.swizzled;
+				const bool is_block_transfer = (dst_w == src_w && dst_h == src_h && (src.pitch == dst.pitch || src_h == 1));
+				const bool is_mirror_op = (dst.scale_x < 0.f || dst.scale_y < 0.f);
+
+				if (dst_is_render_target)
+				{
+					if (is_trivial_copy && src_h == 1)
+					{
+						dst_is_render_target = false;
+						dst_subres = {};
+					}
+				}
+
+				// Always use GPU blit if src or dst is in the surface store
+				if (!dst_is_render_target)
+				{
+					if (is_trivial_copy)
+					{
+						// Check if trivial memcpy can perform the same task
+						// Used to copy programs and arbitrary data to the GPU in some cases
+						// NOTE: This case overrides the GPU texture scaling option
+						if (is_block_transfer && !is_mirror_op)
+						{
+							return false;
+						}
+
+						// If a matching section exists with a different use-case, fall back to CPU memcpy
+						skip_if_collision_exists = true;
+					}
+
+					if (!g_cfg.video.use_gpu_texture_scaling)
+					{
+						if (dst.swizzled)
+						{
+							// Swizzle operation requested. Use fallback
+							return false;
+						}
+
+						if (is_trivial_copy && get_location(dst_address) != CELL_GCM_LOCATION_LOCAL)
+						{
+							// Trivial copy and the destination is in XDR memory
+							return false;
+						}
+					}
 				}
 			}
 
