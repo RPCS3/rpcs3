@@ -838,7 +838,7 @@ void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
 		game = GetGameInfoFromItem(item);
 	}
 
-	if (game.get() == nullptr)
+	if (!game)
 	{
 		return;
 	}
@@ -865,7 +865,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	}
 
 	game_info gameinfo = GetGameInfoFromItem(item);
-	if (gameinfo.get() == nullptr)
+	if (!gameinfo)
 	{
 		return;
 	}
@@ -879,12 +879,16 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	// Make Actions
 	QMenu myMenu;
-	QAction* boot = new QAction(gameinfo->hasCustomConfig ? tr("&Boot with global configuration") : tr("&Boot"));
+
+	const bool is_current_running_game = (Emu.IsRunning() || Emu.IsPaused()) && currGame.serial == Emu.GetTitleID();
+
+	QAction* boot = new QAction(gameinfo->hasCustomConfig ? tr(is_current_running_game ? "&Reboot with global configuration" : "&Boot with global configuration") : tr("&Boot"));
 	QFont f = boot->font();
 	f.setBold(true);
+
 	if (gameinfo->hasCustomConfig)
 	{
-		QAction* boot_custom = myMenu.addAction(tr("&Boot with custom configuration"));
+		QAction* boot_custom = myMenu.addAction(tr(is_current_running_game ? "&Reboot with custom configuration" : "&Boot with custom configuration"));
 		boot_custom->setFont(f);
 		connect(boot_custom, &QAction::triggered, [=]
 		{
@@ -896,8 +900,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		boot->setFont(f);
 	}
+
 	myMenu.addAction(boot);
 	myMenu.addSeparator();
+
 	QAction* configure = myMenu.addAction(gameinfo->hasCustomConfig ? tr("&Change Custom Configuration") : tr("&Create Custom Configuration"));
 	QAction* pad_configure = myMenu.addAction(gameinfo->hasCustomPadConfig ? tr("&Change Custom Gamepad Configuration") : tr("&Create Custom Gamepad Configuration"));
 	QAction* createPPUCache = myMenu.addAction(tr("&Create PPU Cache"));
@@ -1852,7 +1858,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 
 				game_info gameinfo = GetGameInfoFromItem(item);
 
-				if (gameinfo.get() == nullptr)
+				if (!gameinfo)
 					return false;
 
 				LOG_NOTICE(LOADER, "Booting from gamelist by pressing %s...", keyEvent->key() == Qt::Key_Enter ? "Enter" : "Return");

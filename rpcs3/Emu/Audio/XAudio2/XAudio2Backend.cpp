@@ -34,7 +34,7 @@ void XAudio2Backend::Pause()
 
 void XAudio2Backend::Open(u32 /* num_buffers */)
 {
-	if (lib.get() == nullptr)
+	if (!lib)
 	{
 		void* hmodule;
 
