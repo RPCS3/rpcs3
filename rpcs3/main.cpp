@@ -221,7 +221,7 @@ int main(int argc, char** argv)
 	const bool use_cli_style = find_arg(arg_style, argc, argv) || find_arg(arg_stylesheet, argc, argv);
 
 	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
-	app->setApplicationVersion(qstr(rpcs3::version.to_string()));
+	app->setApplicationVersion(qstr(rpcs3::get_version().to_string()));
 	app->setApplicationName("RPCS3");
 
 	// Command line args

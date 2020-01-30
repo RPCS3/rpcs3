@@ -79,7 +79,7 @@ namespace stx
 		// Destroy all objects and keep them in uninitialized state, must be called first
 		void reset() noexcept
 		{
-			const auto total_count = stx::typelist_v<typeinfo>.count();
+			const auto total_count = stx::typelist<typeinfo>().count();
 
 			if (!m_list)
 			{
@@ -96,13 +96,13 @@ namespace stx
 				void(*destroy)(void*& ptr) noexcept;
 			};
 
-			auto all_data = std::make_unique<destroy_info[]>(stx::typelist_v<typeinfo>.count());
+			auto all_data = std::make_unique<destroy_info[]>(stx::typelist<typeinfo>().count());
 
 			// Actual number of created objects
 			unsigned _max = 0;
 
 			// Create destroy list
-			for (auto& type : stx::typelist_v<typeinfo>)
+			for (auto& type : stx::typelist<typeinfo>())
 			{
 				if (m_order[type.index()] == 0)
 				{
@@ -136,7 +136,7 @@ namespace stx
 		// Default initialize all objects if possible and not already initialized
 		void init() noexcept
 		{
-			for (auto& type : stx::typelist_v<typeinfo>)
+			for (auto& type : stx::typelist<typeinfo>())
 			{
 				type.create(m_list[type.index()]);
 

@@ -629,7 +629,7 @@ logs::file_listener::file_listener(const std::string& name)
 	ver.m.ch  = nullptr;
 	ver.m.sev = level::always;
 	ver.stamp = 0;
-	ver.text  = fmt::format("RPCS3 v%s | %s%s\n%s", rpcs3::version.to_string(), rpcs3::get_branch(), firmware_string, utils::get_system_info());
+	ver.text  = fmt::format("RPCS3 v%s | %s%s\n%s", rpcs3::get_version().to_string(), rpcs3::get_branch(), firmware_string, utils::get_system_info());
 
 	file_writer::log(logs::level::always, ver.text.data(), ver.text.size());
 	file_writer::log(logs::level::always, "\n", 1);
