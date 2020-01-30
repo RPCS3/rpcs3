@@ -71,7 +71,7 @@ namespace rsx
 		void semaphore_acquire(thread* rsx, u32 /*_reg*/, u32 arg)
 		{
 			rsx->sync_point_request = true;
-			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
+			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e(), HERE);
 
 			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
 
@@ -146,7 +146,7 @@ namespace rsx
 				rsx->sync_point_request = true;
 			}
 
-			const u32 addr = get_address(offset, ctxt);
+			const u32 addr = get_address(offset, ctxt, HERE);
 
 			if (g_use_rtm) [[likely]]
 			{
@@ -227,7 +227,7 @@ namespace rsx
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
 			const u32 offset = method_registers.semaphore_offset_4097() & -16;
-			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097())).store(
+			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097(), HERE)).store(
 			{
 				arg,
 				0,
@@ -243,7 +243,7 @@ namespace rsx
 
 			const u32 offset = method_registers.semaphore_offset_4097() & -16;
 			const u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097())).store(
+			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097(), HERE)).store(
 			{
 				val,
 				0,
@@ -545,7 +545,7 @@ namespace rsx
 				return vm::addr_t(0);
 			}
 
-			return vm::cast(get_address(offset, location));
+			return vm::cast(get_address(offset, location, HERE));
 		}
 
 		void get_report(thread* rsx, u32 _reg, u32 arg)
@@ -823,7 +823,7 @@ namespace rsx
 				const u16 x = method_registers.nv308a_x();
 				const u16 y = method_registers.nv308a_y();
 				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x * write_len);
-				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + (index * write_len), method_registers.blit_engine_output_location_nv3062());
+				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + (index * write_len), method_registers.blit_engine_output_location_nv3062(), HERE);
 
 				switch (write_len)
 				{
@@ -974,8 +974,8 @@ namespace rsx
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
 			const u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			const u32 src_address = get_address(src_offset, src_dma);
-			const u32 dst_address = get_address(dst_offset, dst_dma);
+			const u32 src_address = get_address(src_offset, src_dma, HERE);
+			const u32 dst_address = get_address(dst_offset, dst_dma, HERE);
 
 			const u32 src_line_length = (in_w * in_bpp);
 			if (is_block_transfer && (clip_h == 1 || (in_pitch == out_pitch && src_line_length == in_pitch)))
@@ -1330,8 +1330,8 @@ namespace rsx
 			u32 dst_dma = method_registers.nv0039_output_location();
 
 			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch == line_length);
-			const auto read_address = get_address(src_offset, src_dma);
-			const auto write_address = get_address(dst_offset, dst_dma);
+			const auto read_address = get_address(src_offset, src_dma, HERE);
+			const auto write_address = get_address(dst_offset, dst_dma, HERE);
 			const auto data_length = in_pitch * (line_count - 1) + line_length;
 
 			if (const auto result = rsx->read_barrier(read_address, data_length, !is_block_transfer);
