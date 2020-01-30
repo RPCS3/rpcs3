@@ -402,7 +402,7 @@ void main_window::InstallPackages(QStringList file_paths, bool show_confirm)
 		return;
 	}
 
-	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package, please wait…"), tr("Cancel"), 0, 1000, false, this);
+	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package, please wait..."), tr("Cancel"), 0, 1000, false, this);
 	pdlg.show();
 
 	// Synchronization variable
@@ -415,7 +415,7 @@ void main_window::InstallPackages(QStringList file_paths, bool show_confirm)
 		progress = 0.;
 
 		pdlg.SetValue(0);
-		pdlg.setLabelText(tr("Installing package (%0/%1), please wait…").arg(i + 1).arg(count));
+		pdlg.setLabelText(tr("Installing package (%0/%1), please wait...").arg(i + 1).arg(count));
 		pdlg.show();
 
 		Emu.SetForceBoot(true);
