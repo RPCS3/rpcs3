@@ -424,7 +424,7 @@ struct cfg_root : cfg::node
 		cfg::set_entry load_libraries{this, "Load libraries"};
 		cfg::_bool hle_lwmutex{this, "HLE lwmutex"}; // Force alternative lwmutex/lwcond implementation
 
-		cfg::_int<10, 1000> clocks_scale{this, "Clocks scale", 100}; // Changing this from 100 (percentage) may affect game speed in unexpected ways
+		cfg::_int<10, 3000> clocks_scale{this, "Clocks scale", 100, true}; // Changing this from 100 (percentage) may affect game speed in unexpected ways
 		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{this, "Sleep Timers Accuracy",
 #ifdef __linux__
 		sleep_timers_accuracy_level::_as_host};
@@ -504,7 +504,7 @@ struct cfg_root : cfg::node
 		cfg::_int<1, 1024> min_scalable_dimension{this, "Minimum Scalable Dimension", 16};
 		cfg::_int<0, 30000000> driver_recovery_timeout{this, "Driver Recovery Timeout", 1000000, true};
 		cfg::_int<0, 16667> driver_wakeup_delay{this, "Driver Wake-Up Delay", 1, true};
-		cfg::_int<1, 500> vblank_rate{this, "Vblank Rate", 60}; // Changing this from 60 may affect game speed in unexpected ways
+		cfg::_int<1, 1800> vblank_rate{this, "Vblank Rate", 60, true}; // Changing this from 60 may affect game speed in unexpected ways
 
 		struct node_vk : cfg::node
 		{
