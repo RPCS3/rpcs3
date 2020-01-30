@@ -384,10 +384,10 @@ void Buffer::ShowWindowed()
 	if (m_isTex)
 	{
 		/*	u8 location = render->textures[m_cur_texture].location();
-			if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location))
+			if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location, HERE))
 				&& render->textures[m_cur_texture].width() && render->textures[m_cur_texture].height())
 				memory_viewer_panel::ShowImage(this,
-					rsx::get_address(render->textures[m_cur_texture].offset(), location), 1,
+					rsx::get_address(render->textures[m_cur_texture].offset(), location, HERE), 1,
 					render->textures[m_cur_texture].width(),
 					render->textures[m_cur_texture].height(), false);*/
 	}
@@ -704,7 +704,7 @@ void rsx_debugger::GetBuffers()
 	if(location > 1)
 		return;
 
-	u32 TexBuffer_addr = rsx::get_address(offset, location);
+	u32 TexBuffer_addr = rsx::get_address(offset, location, HERE);
 
 	if(!vm::check_addr(TexBuffer_addr))
 		return;
