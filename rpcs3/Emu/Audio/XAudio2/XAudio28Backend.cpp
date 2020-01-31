@@ -9,6 +9,8 @@
 #include "XAudio2Backend.h"
 #include "3rdparty/minidx12/Include/xaudio2.h"
 
+LOG_CHANNEL(XAudio);
+
 class XAudio28Library : public XAudio2Backend::XAudio2Library
 {
 	const HMODULE tls_xaudio2_lib;
@@ -27,7 +29,7 @@ public:
 		hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 		if (FAILED(hr))
 		{
-			LOG_ERROR(GENERAL, "XAudio2Backend : CoInitializeEx() failed(0x%08x)", (u32)hr);
+			XAudio.error("CoInitializeEx() failed(0x%08x)", (u32)hr);
 			Emu.Pause();
 			return;
 		}
@@ -35,7 +37,7 @@ public:
 		hr = create(&tls_xaudio2_instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
 		if (FAILED(hr))
 		{
-			LOG_ERROR(GENERAL, "XAudio2Backend : XAudio2Create() failed(0x%08x)", (u32)hr);
+			XAudio.error("XAudio2Create() failed(0x%08x)", (u32)hr);
 			Emu.Pause();
 			return;
 		}
@@ -43,7 +45,7 @@ public:
 		hr = tls_xaudio2_instance->CreateMasteringVoice(&tls_master_voice, g_cfg.audio.downmix_to_2ch ? 2 : 8, 48000);
 		if (FAILED(hr))
 		{
-			LOG_ERROR(GENERAL, "XAudio2Backend : CreateMasteringVoice() failed(0x%08x)", (u32)hr);
+			XAudio.error("CreateMasteringVoice() failed(0x%08x)", (u32)hr);
 			tls_xaudio2_instance->Release();
 			Emu.Pause();
 		}
@@ -80,7 +82,7 @@ public:
 		HRESULT hr = tls_source_voice->Start();
 		if (FAILED(hr))
 		{
-			LOG_ERROR(GENERAL, "XAudio2Backend : Start() failed(0x%08x)", (u32)hr);
+			XAudio.error("Start() failed(0x%08x)", (u32)hr);
 			Emu.Pause();
 		}
 	}
@@ -92,7 +94,7 @@ public:
 		HRESULT hr = tls_source_voice->FlushSourceBuffers();
 		if (FAILED(hr))
 		{
-			LOG_ERROR(GENERAL, "XAudio2Backend : FlushSourceBuffers() failed(0x%08x)", (u32)hr);
+			XAudio.error("FlushSourceBuffers() failed(0x%08x)", (u32)hr);
 			Emu.Pause();
 		}
 	}
@@ -104,7 +106,7 @@ public:
 		HRESULT hr = tls_source_voice->Stop();
 		if (FAILED(hr))
 		{
-			LOG_ERROR(GENERAL, "XAudio2Backend : Stop() failed(0x%08x)", (u32)hr);
+			XAudio.error("Stop() failed(0x%08x)", (u32)hr);
 			Emu.Pause();
 		}
 	}
@@ -139,7 +141,7 @@ public:
 		hr = tls_xaudio2_instance->CreateSourceVoice(&tls_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO);
 		if (FAILED(hr))
 		{
-			LOG_ERROR(GENERAL, "XAudio2Backend : CreateSourceVoice() failed(0x%08x)", (u32)hr);
+			XAudio.error("CreateSourceVoice() failed(0x%08x)", (u32)hr);
 			Emu.Pause();
 			return;
 		}
@@ -157,7 +159,7 @@ public:
 
 		if (state.BuffersQueued >= MAX_AUDIO_BUFFERS)
 		{
-			LOG_WARNING(GENERAL, "XAudio2Backend : too many buffers enqueued (%d)", state.BuffersQueued);
+			XAudio.warning("Too many buffers enqueued (%d)", state.BuffersQueued);
 			return false;
 		}
 
@@ -176,7 +178,7 @@ public:
 		HRESULT hr = tls_source_voice->SubmitSourceBuffer(&buffer);
 		if (FAILED(hr))
 		{
-			LOG_ERROR(GENERAL, "XAudio2Backend : AddData() failed(0x%08x)", (u32)hr);
+			XAudio.error("AddData() failed(0x%08x)", (u32)hr);
 			Emu.Pause();
 			return false;
 		}
@@ -200,7 +202,7 @@ public:
 		HRESULT hr = tls_source_voice->SetFrequencyRatio(new_ratio);
 		if (FAILED(hr))
 		{
-			LOG_ERROR(GENERAL, "XAudio2Backend : SetFrequencyRatio() failed(0x%08x)", (u32)hr);
+			XAudio.error("SetFrequencyRatio() failed(0x%08x)", (u32)hr);
 			Emu.Pause();
 			return 1.0f;
 		}

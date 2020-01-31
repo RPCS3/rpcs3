@@ -8,6 +8,8 @@
 #include "XAudio2Backend.h"
 #include <Windows.h>
 
+LOG_CHANNEL(XAudio);
+
 XAudio2Backend::XAudio2Backend()
 {
 }
@@ -43,19 +45,19 @@ void XAudio2Backend::Open(u32 /* num_buffers */)
 			// XAudio 2.9 uses the same code as XAudio 2.8
 			lib.reset(xa28_init(hmodule));
 
-			LOG_SUCCESS(GENERAL, "XAudio 2.9 initialized");
+			XAudio.success("XAudio 2.9 initialized");
 		}
 		else if (hmodule = LoadLibraryExW(L"XAudio2_8.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32))
 		{
 			lib.reset(xa28_init(hmodule));
 
-			LOG_SUCCESS(GENERAL, "XAudio 2.8 initialized");
+			XAudio.success("XAudio 2.8 initialized");
 		}
 		else if (hmodule = LoadLibraryExW(L"XAudio2_7.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32))
 		{
 			lib.reset(xa27_init(hmodule));
 
-			LOG_SUCCESS(GENERAL, "XAudio 2.7 initialized");
+			XAudio.success("XAudio 2.7 initialized");
 		}
 		else
 		{

@@ -4,6 +4,8 @@
 
 #include "FAudioBackend.h"
 
+LOG_CHANNEL(FAudio);
+
 FAudioBackend::FAudioBackend()
 {
 	u32 res;
@@ -11,13 +13,15 @@ FAudioBackend::FAudioBackend()
 	res = FAudioCreate(&m_instance, 0, FAUDIO_DEFAULT_PROCESSOR);
 	if (res)
 	{
-		fmt::throw_exception("FAudioCreate() failed(0x%08x)", res);
+		FAudio.fatal("FAudioCreate() failed(0x%08x)", res);
+		return;
 	}
 
 	res = FAudio_CreateMasteringVoice(m_instance, &m_master_voice, g_cfg.audio.downmix_to_2ch ? 2 : 8, 48000, 0, 0, nullptr);
 	if (res)
 	{
-		fmt::throw_exception("FAudio_CreateMasteringVoice() failed(0x%08x)", res);
+		FAudio.fatal("FAudio_CreateMasteringVoice() failed(0x%08x)", res);
+		return;
 	}
 }
 
@@ -48,7 +52,7 @@ void FAudioBackend::Play()
 	u32 res = FAudioSourceVoice_Start(m_source_voice, 0, FAUDIO_COMMIT_NOW);
 	if (res)
 	{
-		LOG_ERROR(GENERAL, "FAudioSourceVoice_Start() failed(0x%08x)", res);
+		FAudio.error("FAudioSourceVoice_Start() failed(0x%08x)", res);
 		Emu.Pause();
 	}
 }
@@ -60,7 +64,7 @@ void FAudioBackend::Pause()
 	u32 res = FAudioSourceVoice_Stop(m_source_voice, 0, FAUDIO_COMMIT_NOW);
 	if (res)
 	{
-		LOG_ERROR(GENERAL, "FAudioSourceVoice_Stop() failed(0x%08x)", res);
+		FAudio.error("FAudioSourceVoice_Stop() failed(0x%08x)", res);
 		Emu.Pause();
 	}
 }
@@ -72,7 +76,7 @@ void FAudioBackend::Flush()
 	u32 res = FAudioSourceVoice_FlushSourceBuffers(m_source_voice);
 	if (res)
 	{
-		LOG_ERROR(GENERAL, "FAudioSourceVoice_FlushSourceBuffers() failed(0x%08x)", res);
+		FAudio.error("FAudioSourceVoice_FlushSourceBuffers() failed(0x%08x)", res);
 		Emu.Pause();
 	}
 }
@@ -111,7 +115,7 @@ void FAudioBackend::Open(u32 /* num_buffers */)
 	u32 res = FAudio_CreateSourceVoice(m_instance, &m_source_voice, &waveformatex, 0, FAUDIO_DEFAULT_FREQ_RATIO, nullptr, nullptr, nullptr);
 	if (res)
 	{
-		LOG_ERROR(GENERAL, "FAudio_CreateSourceVoice() failed(0x%08x)", res);
+		FAudio.error("FAudio_CreateSourceVoice() failed(0x%08x)", res);
 		Emu.Pause();
 	}
 
@@ -128,7 +132,7 @@ bool FAudioBackend::AddData(const void* src, u32 num_samples)
 
 	if (state.BuffersQueued >= MAX_AUDIO_BUFFERS)
 	{
-		LOG_WARNING(GENERAL, "XAudio2Backend : too many buffers enqueued (%d)", state.BuffersQueued);
+		FAudio.warning("Too many buffers enqueued (%d)", state.BuffersQueued);
 		return false;
 	}
 
@@ -146,7 +150,7 @@ bool FAudioBackend::AddData(const void* src, u32 num_samples)
 	u32 res = FAudioSourceVoice_SubmitSourceBuffer(m_source_voice, &buffer, nullptr);
 	if (res)
 	{
-		LOG_ERROR(GENERAL, "FAudioSourceVoice_SubmitSourceBuffer() failed(0x%08x)", res);
+		FAudio.error("FAudioSourceVoice_SubmitSourceBuffer() failed(0x%08x)", res);
 		Emu.Pause();
 		return false;
 	}
@@ -170,7 +174,7 @@ f32 FAudioBackend::SetFrequencyRatio(f32 new_ratio)
 	u32 res = FAudioSourceVoice_SetFrequencyRatio(m_source_voice, new_ratio, FAUDIO_COMMIT_NOW);
 	if (res)
 	{
-		LOG_ERROR(GENERAL, "FAudioSourceVoice_SetFrequencyRatio() failed(0x%08x)", res);
+		FAudio.error("FAudioSourceVoice_SetFrequencyRatio() failed(0x%08x)", res);
 		Emu.Pause();
 		return 1.0f;
 	}
