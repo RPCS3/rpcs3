@@ -87,12 +87,6 @@ namespace rsx
 				deferred_clipped_region<surface_type>& region,
 				std::unordered_map<u32, surface_storage_type>& data)
 			{
-				verify(HERE), prev_surface;
-				if (prev_surface->read_barrier(cmd); !prev_surface->test())
-				{
-					return;
-				}
-
 				surface_storage_type sink;
 				surface_type invalidated = 0;
 				if (const auto found = data.find(new_address);
@@ -100,6 +94,12 @@ namespace rsx
 				{
 					if (Traits::is_compatible_surface(Traits::get(found->second), region.source, region.width, region.height, 1))
 					{
+						if (found->second->last_use_tag >= prev_surface->last_use_tag)
+						{
+							// If memory in this block is newer, do not overwrite with stale data
+							return;
+						}
+
 						// There is no need to erase due to the reinsertion below
 						sink = std::move(found->second);
 					}
@@ -159,6 +159,19 @@ namespace rsx
 
 			_new.width = width * bpp * get_aa_factor_u(aa);
 			_new.height = height * get_aa_factor_v(aa);
+
+			if (old.width <= _new.width && old.height <= _new.height)
+			{
+				// No extra memory to be preserved
+				return;
+			}
+
+			// One-time data validity test
+			verify(HERE), prev_surface;
+			if (prev_surface->read_barrier(cmd); !prev_surface->test())
+			{
+				return;
+			}
 
 			if (old.width > _new.width)
 			{
