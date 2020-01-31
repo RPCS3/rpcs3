@@ -186,6 +186,22 @@ namespace logs
 		}
 	}
 
+	level get_level(const std::string& ch_name)
+	{
+		std::lock_guard lock(g_mutex);
+
+		auto found = get_logger()->channels.equal_range(ch_name);
+
+		if (found.first != found.second)
+		{
+			return found.first->second->enabled;
+		}
+		else
+		{
+			return level::always;
+		}
+	}
+
 	// Must be called in main() to stop accumulating messages in g_messages
 	void set_init()
 	{

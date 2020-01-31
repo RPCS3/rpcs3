@@ -92,6 +92,9 @@ namespace logs
 
 	// Log level control: register channel if necessary, set channel level
 	void set_level(const std::string&, level);
+
+	// Log level control: get channel level
+	level get_level(const std::string&);
 }
 
 #define LOG_CHANNEL(ch, ...) inline ::logs::channel ch(#ch, ##__VA_ARGS__)
