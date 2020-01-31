@@ -749,6 +749,14 @@ namespace rsx
 							tex.is_flushable() &&
 							tex.get_section_base() != fault_range_in.start)
 						{
+							if (tex.get_context() == texture_upload_context::framebuffer_storage &&
+								tex.inside(fault_range, section_bounds::full_range))
+							{
+								// FBO data 'lives on' in the new region. Surface cache handles memory intersection for us.
+								verify(HERE), tex.inside(fault_range, section_bounds::locked_range);
+								tex.discard(false);
+							}
+
 							// HACK: When being superseded by an fbo, we preserve overlapped flushables unless the start addresses match
 							continue;
 						}
