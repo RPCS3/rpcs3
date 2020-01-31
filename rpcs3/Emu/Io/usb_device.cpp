@@ -7,7 +7,7 @@
 #include "Emu/Io/usb_device.h"
 #include <libusb.h>
 
-extern logs::channel sys_usbd;
+LOG_CHANNEL(sys_usbd);
 
 extern void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer);
 

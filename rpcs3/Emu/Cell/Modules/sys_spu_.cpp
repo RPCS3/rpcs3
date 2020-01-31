@@ -8,7 +8,7 @@
 #include "Loader/ELF.h"
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 spu_printf_cb_t g_spu_printf_agcb;
 spu_printf_cb_t g_spu_printf_dgcb;

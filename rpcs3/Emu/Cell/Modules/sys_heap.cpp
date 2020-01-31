@@ -5,7 +5,7 @@
 
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 struct HeapInfo
 {

@@ -11,8 +11,7 @@
 
 #include "sysPrxForUser.h"
 
-
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 using sys_mempool_t = u32;
 
