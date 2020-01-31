@@ -381,7 +381,6 @@ void usb_handler_thread::check_devices_vs_ldds()
 				handled_devices.emplace(dev_counter, std::pair(UsbInternalDevice{0x00, dev_counter, 0x02, 0x40}, dev));
 				send_message(SYS_USBD_ATTACH, dev_counter);
 				dev_counter++;
-				return;
 			}
 		}
 	}
