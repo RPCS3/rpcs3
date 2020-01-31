@@ -3,7 +3,7 @@
 
 #include "cellAudioOut.h"
 
-extern logs::channel cellSysutil;
+LOG_CHANNEL(cellSysutil);
 
 template<>
 void fmt_class_string<CellAudioOutError>::format(std::string& out, u64 arg)

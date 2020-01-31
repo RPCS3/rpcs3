@@ -24,7 +24,7 @@ constexpr auto qstr = QString::fromStdString;
 
 struct gui_listener : logs::listener
 {
-	atomic_t<logs::level> enabled{logs::level::_uninit};
+	atomic_t<logs::level> enabled{logs::level{UINT_MAX}};
 
 	struct packet_t
 	{

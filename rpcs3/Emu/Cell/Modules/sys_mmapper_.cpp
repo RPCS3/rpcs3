@@ -2,7 +2,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 s32 sys_mmapper_allocate_memory(ppu_thread& ppu, u32 size, u64 flags, vm::ptr<u32> mem_id)
 {

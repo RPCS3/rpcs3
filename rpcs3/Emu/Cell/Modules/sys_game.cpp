@@ -6,7 +6,8 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
+
 extern vm::gvar<u32> g_ppu_exit_mutex;
 extern vm::gvar<vm::ptr<void()>> g_ppu_atexitspawn;
 extern vm::gvar<vm::ptr<void()>> g_ppu_at_Exitspawn;

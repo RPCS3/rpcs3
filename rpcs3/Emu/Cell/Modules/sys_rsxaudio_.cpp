@@ -4,7 +4,7 @@
 
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 s32 sys_rsxaudio_close_connection()
 {
