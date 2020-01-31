@@ -8,7 +8,7 @@
 #include "util/init_mutex.hpp"
 #include "Utilities/StrUtil.h"
 
-extern logs::channel cellSysutil;
+LOG_CHANNEL(cellSysutil);
 
 template<>
 void fmt_class_string<CellSysCacheError>::format(std::string& out, u64 arg)

@@ -6,7 +6,7 @@
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 extern vm::gvar<sys_lwmutex_t> g_ppu_prx_lwm;
 

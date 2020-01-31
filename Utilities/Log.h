@@ -17,8 +17,6 @@ namespace logs
 		warning,
 		notice,
 		trace, // Lowest severity (usually disabled)
-
-		_uninit = UINT_MAX, // Special value for delayed initialization
 	};
 
 	struct channel;
@@ -63,12 +61,8 @@ namespace logs
 		// The lowest logging level enabled for this channel (used for early filtering)
 		atomic_t<level> enabled;
 
-		// Constant initialization: channel name
-		constexpr channel(const char* name)
-			: name(name)
-			, enabled(level::_uninit)
-		{
-		}
+		// Initialize and register channel
+		channel(const char* name);
 
 #define GEN_LOG_METHOD(_sev)\
 		const message msg_##_sev{this, level::_sev};\
@@ -93,26 +87,32 @@ namespace logs
 #undef GEN_LOG_METHOD
 	};
 
-	/* Small set of predefined channels */
-
-	extern channel GENERAL;
-	extern channel LOADER;
-	extern channel MEMORY;
-	extern channel RSX;
-	extern channel HLE;
-	extern channel PPU;
-	extern channel SPU;
-
 	// Log level control: set all channels to level::notice
 	void reset();
 
 	// Log level control: register channel if necessary, set channel level
 	void set_level(const std::string&, level);
+
+	// Log level control: get channel level
+	level get_level(const std::string&);
 }
 
-#define LOG_CHANNEL(ch, ...) ::logs::channel ch(#ch, ##__VA_ARGS__)
+#define LOG_CHANNEL(ch, ...) inline ::logs::channel ch(#ch, ##__VA_ARGS__)
 
 // Legacy:
+
+namespace logs
+{
+	/* Small set of predefined channels */
+
+	inline channel GENERAL("");
+	inline channel LOADER("LDR");
+	inline channel MEMORY("MEM");
+	LOG_CHANNEL(RSX);
+	LOG_CHANNEL(HLE);
+	LOG_CHANNEL(PPU);
+	LOG_CHANNEL(SPU);
+}
 
 #define LOG_SUCCESS(ch, fmt, ...) logs::ch.success("" fmt, ##__VA_ARGS__)
 #define LOG_NOTICE(ch, fmt, ...)  logs::ch.notice ("" fmt, ##__VA_ARGS__)

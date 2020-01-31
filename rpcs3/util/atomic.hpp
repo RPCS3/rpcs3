@@ -2,6 +2,7 @@
 
 #include "Utilities/types.h"
 #include <functional>
+#include <mutex>
 
 #ifdef _MSC_VER
 #include <atomic>
@@ -1150,3 +1151,358 @@ public:
 		atomic_storage_futex::notify_all(&m_data);
 	}
 };
+
+template <typename T, unsigned BitWidth = 0>
+class atomic_with_lock_bit
+{
+	// Simply internal type
+	using type = std::conditional_t<std::is_pointer_v<T>, std::uintptr_t, T>;
+
+	// Check space for lock bit
+	static_assert(BitWidth < sizeof(T) * 8, "No space for lock bit");
+	static_assert(sizeof(T) <= 8, "Not supported");
+	static_assert(std::is_pointer_v<T> == (BitWidth == 0), "BitWidth should be 0 for pointers");
+	static_assert(!std::is_pointer_v<T> || (alignof(std::remove_pointer_t<T>) > 1), "Pointer type should have align 2 or more");
+
+	// Use the most significant bit as a mutex
+	atomic_t<type> m_data;
+
+public:
+	using base_type = T;
+
+	static bool is_locked(type old_val)
+	{
+		if constexpr (std::is_signed_v<type> && BitWidth == sizeof(T) * 8 - 1)
+		{
+			return old_val < 0;
+		}
+		else if constexpr (std::is_pointer_v<T>)
+		{
+			return (old_val & 1) != 0;
+		}
+		else
+		{
+			return (old_val & (type{1} << BitWidth)) != 0;
+		}
+	}
+
+	static type clamp_value(type old_val)
+	{
+		if constexpr (std::is_signed_v<type>)
+		{
+			return static_cast<type>(static_cast<std::make_unsigned_t<type>>(old_val) << (sizeof(T) * 8 - BitWidth)) >> (sizeof(T) * 8 - BitWidth);
+		}
+		else if constexpr (std::is_pointer_v<T>)
+		{
+			return old_val & 0xffff'ffff'ffff'fffeull;
+		}
+		else
+		{
+			return old_val & static_cast<type>(0xffff'ffff'ffff'ffffull >> (64 - BitWidth));
+		}
+	}
+
+	// Define simple type
+	using simple_type = simple_t<T>;
+
+	atomic_with_lock_bit() noexcept = default;
+
+	atomic_with_lock_bit(const atomic_with_lock_bit&) = delete;
+
+	atomic_with_lock_bit& operator =(const atomic_with_lock_bit&) = delete;
+
+	constexpr atomic_with_lock_bit(T value) noexcept
+		: m_data(clamp_value(reinterpret_cast<type>(value)))
+	{
+	}
+
+	// Unsafe read
+	type raw_load() const
+	{
+		return clamp_value(m_data.load());
+	}
+
+	// Unsafe write and unlock
+	void raw_release(type value)
+	{
+		m_data.release(clamp_value(value));
+		m_data.notify_all();
+	}
+
+	void lock()
+	{
+		while (UNLIKELY(m_data.bts(BitWidth)))
+		{
+			type old_val = m_data.load();
+
+			if (is_locked(old_val))
+			{
+				m_data.wait(old_val);
+				old_val = m_data.load();
+			}
+		}
+	}
+
+	bool try_lock()
+	{
+		return !m_data.bts(BitWidth);
+	}
+
+	void unlock()
+	{
+		m_data.btr(BitWidth);
+		m_data.notify_all();
+	}
+
+	T load()
+	{
+		type old_val = m_data.load();
+
+		while (UNLIKELY(is_locked(old_val)))
+		{
+			m_data.wait(old_val);
+			old_val = m_data.load();
+		}
+
+		return reinterpret_cast<T>(clamp_value(old_val));
+	}
+
+	void store(T value)
+	{
+		type old_val = m_data.load();
+
+		while (UNLIKELY(is_locked(old_val) || !m_data.compare_and_swap_test(old_val, clamp_value(reinterpret_cast<type>(value)))))
+		{
+			m_data.wait(old_val);
+			old_val = m_data.load();
+		}
+	}
+
+	template <typename F, typename RT = std::invoke_result_t<F, type&>>
+	RT atomic_op(F func)
+	{
+		type _new, old;
+		old.m_data = m_data.load();
+
+		while (true)
+		{
+			if (UNLIKELY(is_locked(old.m_data)))
+			{
+				m_data.wait(old.m_data);
+				old.m_data = m_data.load();
+				continue;
+			}
+
+			_new = old;
+
+			if constexpr (std::is_void_v<RT>)
+			{
+				std::invoke(func, reinterpret_cast<T&>(_new));
+
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old.m_data, clamp_value(_new.m_data))))
+				{
+					return;
+				}
+			}
+			else
+			{
+				RT result = std::invoke(func, reinterpret_cast<T&>(_new));
+
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old.m_data, clamp_value(_new.m_data))))
+				{
+					return result;
+				}
+			}
+		}
+	}
+
+	type fetch_add(const type& rhs)
+	{
+		return atomic_op([&](T& v)
+		{
+			return std::exchange(v, v += rhs);
+		});
+	}
+
+	auto operator +=(const type& rhs)
+	{
+		return atomic_op([&](T& v)
+		{
+			return v += rhs;
+		});
+	}
+
+	type fetch_sub(const type& rhs)
+	{
+		return atomic_op([&](T& v)
+		{
+			return std::exchange(v, v -= rhs);
+		});
+	}
+
+	auto operator -=(const type& rhs)
+	{
+		return atomic_op([&](T& v)
+		{
+			return v -= rhs;
+		});
+	}
+
+	type fetch_and(const type& rhs)
+	{
+		return atomic_op([&](T& v)
+		{
+			return std::exchange(v, v &= rhs);
+		});
+	}
+
+	auto operator &=(const type& rhs)
+	{
+		return atomic_op([&](T& v)
+		{
+			return v &= rhs;
+		});
+	}
+
+	type fetch_or(const type& rhs)
+	{
+		return atomic_op([&](T& v)
+		{
+			return std::exchange(v, v |= rhs);
+		});
+	}
+
+	auto operator |=(const type& rhs)
+	{
+		return atomic_op([&](T& v)
+		{
+			return v |= rhs;
+		});
+	}
+
+	type fetch_xor(const type& rhs)
+	{
+		return atomic_op([&](T& v)
+		{
+			return std::exchange(v, v ^= rhs);
+		});
+	}
+
+	auto operator ^=(const type& rhs)
+	{
+		return atomic_op([&](T& v)
+		{
+			return v ^= rhs;
+		});
+	}
+
+	auto operator ++()
+	{
+		return atomic_op([](T& v)
+		{
+			return ++v;
+		});
+	}
+
+	auto operator --()
+	{
+		return atomic_op([](T& v)
+		{
+			return --v;
+		});
+	}
+
+	auto operator ++(int)
+	{
+		return atomic_op([](T& v)
+		{
+			return v++;
+		});
+	}
+
+	auto operator --(int)
+	{
+		return atomic_op([](T& v)
+		{
+			return v--;
+		});
+	}
+};
+
+using fat_atomic_u1 = atomic_with_lock_bit<u8, 1>;
+using fat_atomic_u7 = atomic_with_lock_bit<u8, 7>;
+using fat_atomic_s7 = atomic_with_lock_bit<s8, 7>;
+using fat_atomic_u8 = atomic_with_lock_bit<u16, 8>;
+using fat_atomic_s8 = atomic_with_lock_bit<s16, 8>;
+
+using fat_atomic_u15 = atomic_with_lock_bit<u16, 15>;
+using fat_atomic_s15 = atomic_with_lock_bit<s16, 15>;
+using fat_atomic_u16 = atomic_with_lock_bit<u32, 16>;
+using fat_atomic_s16 = atomic_with_lock_bit<s32, 16>;
+
+using fat_atomic_u31 = atomic_with_lock_bit<u32, 31>;
+using fat_atomic_s31 = atomic_with_lock_bit<s32, 31>;
+using fat_atomic_u32 = atomic_with_lock_bit<u64, 32>;
+using fat_atomic_s32 = atomic_with_lock_bit<s64, 32>;
+using fat_atomic_u63 = atomic_with_lock_bit<u64, 63>;
+using fat_atomic_s63 = atomic_with_lock_bit<s64, 63>;
+
+template <typename Ptr>
+using fat_atomic_ptr = atomic_with_lock_bit<Ptr*, 0>;
+
+namespace detail
+{
+	template <typename Arg, typename... Args>
+	struct mao_func_t
+	{
+		template <typename... TArgs>
+		using RT = typename mao_func_t<Args...>::template RT<TArgs..., Arg>;
+	};
+
+	template <typename Arg>
+	struct mao_func_t<Arg>
+	{
+		template <typename... TArgs>
+		using RT = std::invoke_result_t<Arg, simple_t<TArgs>&...>;
+	};
+
+	template <typename... Args>
+	using mao_result = typename mao_func_t<std::decay_t<Args>...>::template RT<>;
+
+	template <typename RT, typename... Args, std::size_t... I>
+	RT multi_atomic_op(std::index_sequence<I...>, Args&&... args)
+	{
+		// Tie all arguments (function is the latest)
+		auto vars = std::tie(args...);
+
+		// Lock all variables
+		std::lock(std::get<I>(vars)...);
+
+		// Load initial values
+		auto values = std::make_tuple(std::get<I>(vars).raw_load()...);
+
+		if constexpr (std::is_void_v<RT>)
+		{
+			std::invoke(std::get<(sizeof...(Args) - 1)>(vars), reinterpret_cast<typename std::remove_reference_t<decltype(std::get<I>(vars))>::base_type&>(std::get<I>(values))...);
+
+			// Unlock and return
+			(std::get<I>(vars).raw_release(std::get<I>(values)), ...);
+		}
+		else
+		{
+			RT result = std::invoke(std::get<(sizeof...(Args) - 1)>(vars), reinterpret_cast<typename std::remove_reference_t<decltype(std::get<I>(vars))>::base_type&>(std::get<I>(values))...);
+
+			// Unlock and return the result
+			(std::get<I>(vars).raw_release(std::get<I>(values)), ...);
+
+			return result;
+		}
+	}
+}
+
+// Atomic operation; returns function result value, function is the lambda
+template <typename... Args, typename RT = detail::mao_result<Args...>>
+RT multi_atomic_op(Args&&... args)
+{
+	return detail::multi_atomic_op<RT>(std::make_index_sequence<(sizeof...(Args) - 1)>(), std::forward<Args>(args)...);
+}

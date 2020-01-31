@@ -3,8 +3,7 @@
 #include "cellSysutil.h"
 #include "cellStorage.h"
 
-
-extern logs::channel cellSysutil;
+LOG_CHANNEL(cellSysutil);
 
 template <>
 void fmt_class_string<CellStorageError>::format(std::string& out, u64 arg)

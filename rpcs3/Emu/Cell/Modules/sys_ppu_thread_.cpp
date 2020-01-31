@@ -9,7 +9,7 @@
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 vm::gvar<sys_lwmutex_t> g_ppu_atexit_lwm;
 vm::gvar<vm::ptr<void()>[8]> g_ppu_atexit;

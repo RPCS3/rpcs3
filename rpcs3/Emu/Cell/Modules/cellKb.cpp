@@ -6,7 +6,7 @@
 #include "Emu/Io/KeyboardHandler.h"
 #include "cellKb.h"
 
-extern logs::channel sys_io;
+LOG_CHANNEL(sys_io);
 
 template<>
 void fmt_class_string<CellKbError>::format(std::string& out, u64 arg)

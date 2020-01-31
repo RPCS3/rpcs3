@@ -13,7 +13,7 @@
 
 #include "util/init_mutex.hpp"
 
-extern logs::channel cellSysutil;
+LOG_CHANNEL(cellSysutil);
 
 template<>
 void fmt_class_string<CellMsgDialogError>::format(std::string& out, u64 arg)

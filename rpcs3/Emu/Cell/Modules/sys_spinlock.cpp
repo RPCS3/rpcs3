@@ -4,7 +4,7 @@
 
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
 {

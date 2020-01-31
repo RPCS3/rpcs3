@@ -49,7 +49,6 @@ void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
 		case logs::level::warning: return "Warning";
 		case logs::level::notice: return "Notice";
 		case logs::level::trace: return "Trace";
-		case logs::level::_uninit: return unknown;
 		}
 
 		return unknown;
@@ -94,22 +93,6 @@ namespace logs
 		void log(logs::level sev, const char* text, std::size_t size);
 	};
 
-	struct channel_info
-	{
-		channel* pointer = nullptr;
-		level enabled = level::notice;
-
-		void set_level(level value)
-		{
-			enabled = value;
-
-			if (pointer)
-			{
-				pointer->enabled = value;
-			}
-		}
-	};
-
 	struct stored_message
 	{
 		message m;
@@ -128,7 +111,7 @@ namespace logs
 		virtual void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override;
 
 		// Channel registry
-		std::unordered_map<std::string, channel_info> channels;
+		std::unordered_multimap<std::string, channel*> channels;
 
 		// Messages for delayed listener initialization
 		std::vector<stored_message> messages;
@@ -174,19 +157,11 @@ namespace logs
 		return timebase.get();
 	}
 
-	channel GENERAL("");
-	channel LOADER("LDR");
-	channel MEMORY("MEM");
-	channel RSX("RSX");
-	channel HLE("HLE");
-	channel PPU("PPU");
-	channel SPU("SPU");
-
 	// Channel registry mutex
-	shared_mutex g_mutex;
+	static shared_mutex g_mutex;
 
 	// Must be set to true in main()
-	atomic_t<bool> g_init{false};
+	static atomic_t<bool> g_init{false};
 
 	void reset()
 	{
@@ -194,7 +169,7 @@ namespace logs
 
 		for (auto&& pair : get_logger()->channels)
 		{
-			pair.second.set_level(level::notice);
+			pair.second->enabled = level::notice;
 		}
 	}
 
@@ -202,7 +177,29 @@ namespace logs
 	{
 		std::lock_guard lock(g_mutex);
 
-		get_logger()->channels[ch_name].set_level(value);
+		auto found = get_logger()->channels.equal_range(ch_name);
+
+		while (found.first != found.second)
+		{
+			found.first->second->enabled = value;
+			found.first++;
+		}
+	}
+
+	level get_level(const std::string& ch_name)
+	{
+		std::lock_guard lock(g_mutex);
+
+		auto found = get_logger()->channels.equal_range(ch_name);
+
+		if (found.first != found.second)
+		{
+			return found.first->second->enabled;
+		}
+		else
+		{
+			return level::always;
+		}
 	}
 
 	// Must be called in main() to stop accumulating messages in g_messages
@@ -211,6 +208,7 @@ namespace logs
 		if (!g_init)
 		{
 			std::lock_guard lock(g_mutex);
+			printf("DEBUG: %zu log messages accumulated. %zu channels registered.\n", get_logger()->messages.size(), get_logger()->channels.size());
 			get_logger()->messages.clear();
 			g_init = true;
 		}
@@ -241,34 +239,19 @@ void logs::listener::add(logs::listener* _new)
 	}
 }
 
+logs::channel::channel(const char* name)
+	: name(name)
+	, enabled(level::notice)
+{
+	std::lock_guard lock(g_mutex);
+
+	get_logger()->channels.emplace(name, this);
+}
+
 void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) const
 {
 	// Get timestamp
 	const u64 stamp = get_stamp();
-
-	// Register channel
-	if (ch->enabled == level::_uninit)
-	{
-		std::lock_guard lock(g_mutex);
-
-		auto& info = get_logger()->channels[ch->name];
-
-		if (info.pointer && info.pointer != ch)
-		{
-			fmt::throw_exception("logs::channel repetition: %s", ch->name);
-		}
-		else if (!info.pointer)
-		{
-			info.pointer = ch;
-			ch->enabled  = info.enabled;
-
-			// Check level again
-			if (info.enabled < sev)
-			{
-				return;
-			}
-		}
-	}
 
 	// Get text, extract va_args
 	thread_local std::string text;
@@ -629,7 +612,7 @@ logs::file_listener::file_listener(const std::string& name)
 	ver.m.ch  = nullptr;
 	ver.m.sev = level::always;
 	ver.stamp = 0;
-	ver.text  = fmt::format("RPCS3 v%s | %s%s\n%s", rpcs3::version.to_string(), rpcs3::get_branch(), firmware_string, utils::get_system_info());
+	ver.text  = fmt::format("RPCS3 v%s | %s%s\n%s", rpcs3::get_version().to_string(), rpcs3::get_branch(), firmware_string, utils::get_system_info());
 
 	file_writer::log(logs::level::always, ver.text.data(), ver.text.size());
 	file_writer::log(logs::level::always, "\n", 1);
@@ -662,7 +645,6 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	case level::warning: text = u8"·W "; break;
 	case level::notice:  text = u8"·! "; break;
 	case level::trace:   text = u8"·T "; break;
-	case level::_uninit: text = u8"·  "; break;
 	}
 
 	// Print µs timestamp

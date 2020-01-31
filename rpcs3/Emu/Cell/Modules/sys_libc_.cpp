@@ -5,7 +5,7 @@
 #include <string.h>
 #include <ctype.h>
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 // cfmt implementation (TODO)
 
