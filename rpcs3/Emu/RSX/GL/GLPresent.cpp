@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
 
+LOG_CHANNEL(screenshot);
+
 GLuint GLGSRender::get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig)
 {
 	GLuint image = GL_NONE;
@@ -184,7 +186,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				glGetTextureImageEXT(image_to_flip, GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, sshot_frame.data());
 
 			if (GLenum err; (err = glGetError()) != GL_NO_ERROR)
-				LOG_ERROR(GENERAL, "[Screenshot] Failed to capture image: 0x%x", err);
+				screenshot.error("Failed to capture image: 0x%x", err);
 			else
 				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
 		}

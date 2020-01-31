@@ -48,6 +48,8 @@
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
 
+LOG_CHANNEL(sys_log);
+
 stx::manual_fixed_typemap<void> g_fixed_typemap;
 
 cfg_root g_cfg;
@@ -314,7 +316,7 @@ void Emulator::Init()
 
 		if (!g_tty)
 		{
-			LOG_FATAL(GENERAL, "Failed to create TTY log: %s (%s)", tty_path, fs::g_tls_error);
+			sys_log.fatal("Failed to create TTY log: %s (%s)", tty_path, fs::g_tls_error);
 		}
 	}
 
@@ -335,7 +337,7 @@ void Emulator::Init()
 	}
 	else
 	{
-		LOG_FATAL(GENERAL, "Failed to access global config: %s (%s)", cfg_path, fs::g_tls_error);
+		sys_log.fatal("Failed to access global config: %s (%s)", cfg_path, fs::g_tls_error);
 	}
 
 	// Create directories (can be disabled if necessary)
@@ -348,7 +350,7 @@ void Emulator::Init()
 	{
 		if (!fs::create_path(path))
 		{
-			LOG_FATAL(GENERAL, "Failed to create path: %s (%s)", path, fs::g_tls_error);
+			sys_log.fatal("Failed to create path: %s (%s)", path, fs::g_tls_error);
 		}
 	};
 
@@ -373,7 +375,7 @@ void Emulator::Init()
 		{
 			if (fs::g_tls_error != fs::error::exist)
 			{
-				LOG_FATAL(GENERAL, "Failed to create file: %shome/%s/localusername (%s)", dev_hdd0, m_usr, fs::g_tls_error);
+				sys_log.fatal("Failed to create file: %shome/%s/localusername (%s)", dev_hdd0, m_usr, fs::g_tls_error);
 			}
 		}
 
@@ -396,23 +398,23 @@ void Emulator::Init()
 				// Finalize interrupted saving
 				if (!fs::rename(pending, save_path + desired, false))
 				{
-					LOG_FATAL(GENERAL, "Failed to fix save data: %s (%s)", pending, fs::g_tls_error);
+					sys_log.fatal("Failed to fix save data: %s (%s)", pending, fs::g_tls_error);
 					continue;
 				}
 				else
 				{
-					LOG_SUCCESS(GENERAL, "Fixed save data: %s", desired);
+					sys_log.success("Fixed save data: %s", desired);
 				}
 			}
 
 			// Remove pending backup data
 			if (!fs::remove_all(save_path + entry.name))
 			{
-				LOG_FATAL(GENERAL, "Failed to remove save data backup: %s%s (%s)", save_path, entry.name, fs::g_tls_error);
+				sys_log.fatal("Failed to remove save data backup: %s%s (%s)", save_path, entry.name, fs::g_tls_error);
 			}
 			else
 			{
-				LOG_SUCCESS(GENERAL, "Removed save data backup: %s%s", save_path, entry.name);
+				sys_log.success("Removed save data backup: %s%s", save_path, entry.name);
 			}
 		}
 	}
@@ -649,7 +651,7 @@ void Emulator::LimitCacheSize()
 	const std::string cache_location = Emulator::GetHdd1Dir() + "/caches";
 	if (!fs::is_dir(cache_location))
 	{
-		LOG_WARNING(GENERAL, "Cache does not exist (%s)", cache_location);
+		sys_log.warning("Cache does not exist (%s)", cache_location);
 		return;
 	}
 
@@ -659,22 +661,22 @@ void Emulator::LimitCacheSize()
 	if (max_size == 0) // Everything must go, so no need to do checks
 	{
 		fs::remove_all(cache_location, false);
-		LOG_SUCCESS(GENERAL, "Cleared disk cache");
+		sys_log.success("Cleared disk cache");
 		return;
 	}
 
 	if (size <= max_size)
 	{
-		LOG_TRACE(GENERAL, "Cache size below limit: %llu/%llu", size, max_size);
+		sys_log.trace("Cache size below limit: %llu/%llu", size, max_size);
 		return;
 	}
 
-	LOG_SUCCESS(GENERAL, "Cleaning disk cache...");
+	sys_log.success("Cleaning disk cache...");
 	std::vector<fs::dir_entry> file_list{};
 	fs::dir cache_dir{};
 	if (!cache_dir.open(cache_location))
 	{
-		LOG_ERROR(GENERAL, "Could not open cache directory");
+		sys_log.error("Could not open cache directory");
 		return;
 	}
 
@@ -715,7 +717,7 @@ void Emulator::LimitCacheSize()
 			break;
 	}
 
-	LOG_SUCCESS(GENERAL, "Cleaned disk cache, removed %.2f MB", size / 1024.0 / 1024.0);
+	sys_log.success("Cleaned disk cache, removed %.2f MB", size / 1024.0 / 1024.0);
 }
 
 bool Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
@@ -783,7 +785,7 @@ bool Emulator::BootGame(const std::string& path, const std::string& title_id, bo
 
 bool Emulator::InstallPkg(const std::string& path)
 {
-	LOG_SUCCESS(GENERAL, "Installing package: %s", path);
+	sys_log.success("Installing package: %s", path);
 
 	atomic_t<double> progress(0.);
 	int int_progress = 0;
@@ -806,7 +808,7 @@ bool Emulator::InstallPkg(const std::string& path)
 			if (static_cast<int>(pval) > int_progress)
 			{
 				int_progress = static_cast<int>(pval);
-				LOG_SUCCESS(GENERAL, "... %u%%", int_progress);
+				sys_log.success("... %u%%", int_progress);
 			}
 		}
 	}
@@ -1047,7 +1049,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 
 		if (g_use_rtm && !utils::has_mpx())
 		{
-			LOG_WARNING(GENERAL, "TSX forced by User");
+			sys_log.warning("TSX forced by User");
 		}
 
 		// Load patches from different locations
@@ -1688,7 +1690,7 @@ bool Emulator::Pause()
 	// Update pause start time
 	if (m_pause_start_time.exchange(start))
 	{
-		LOG_ERROR(GENERAL, "Emulator::Pause() error: concurrent access");
+		sys_log.error("Emulator::Pause() error: concurrent access");
 	}
 
 	auto on_select = [](u32, cpu_thread& cpu)
@@ -1757,7 +1759,7 @@ void Emulator::Resume()
 
 	if (!time)
 	{
-		LOG_ERROR(GENERAL, "Emulator::Resume() error: concurrent access");
+		sys_log.error("Emulator::Resume() error: concurrent access");
 	}
 
 	auto on_select = [](u32, cpu_thread& cpu)
@@ -1792,7 +1794,7 @@ void Emulator::Stop(bool restart)
 	const bool full_stop = !restart && !m_force_boot;
 	const bool do_exit   = full_stop && g_cfg.misc.autoexit;
 
-	LOG_NOTICE(GENERAL, "Stopping emulator...");
+	sys_log.notice("Stopping emulator...");
 
 	GetCallbacks().on_stop();
 
@@ -1801,7 +1803,7 @@ void Emulator::Stop(bool restart)
 	lv2_obj::cleanup();
 	idm::clear();
 
-	LOG_NOTICE(GENERAL, "Objects cleared...");
+	sys_log.notice("Objects cleared...");
 
 	vm::close();
 
@@ -1873,7 +1875,7 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 			{
 				if (pair.second > 3)
 				{
-					LOG_ERROR(GENERAL, "Stat: %s [x%u]", pair.first, pair.second);
+					sys_log.error("Stat: %s [x%u]", pair.first, pair.second);
 				}
 			}
 
@@ -1882,7 +1884,7 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 		}
 	}
 
-	logs::channel* channel = &logs::GENERAL;
+	logs::channel* channel = &sys_log;
 	const char* func = "Unknown function";
 
 	if (auto thread = get_current_cpu_thread())

@@ -1186,8 +1186,8 @@ void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip) tr
 catch (const std::exception& e)
 {
 	Emu.Pause();
-	LOG_FATAL(GENERAL, "%s thrown: %s", typeid(e).name(), e.what());
-	LOG_NOTICE(GENERAL, "\n%s", spu.dump());
+	LOG_FATAL(SPU, "%s thrown: %s", typeid(e).name(), e.what());
+	LOG_NOTICE(SPU, "\n%s", spu.dump());
 }
 
 spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)

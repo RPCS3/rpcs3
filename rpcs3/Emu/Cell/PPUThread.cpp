@@ -404,13 +404,13 @@ extern bool ppu_patch(u32 addr, u32 value)
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm && Emu.GetStatus() != system_state::ready)
 	{
 		// TODO: support recompilers
-		LOG_FATAL(GENERAL, "Patch failed at 0x%x: LLVM recompiler is used.", addr);
+		LOG_FATAL(PPU, "Patch failed at 0x%x: LLVM recompiler is used.", addr);
 		return false;
 	}
 
 	if (!vm::try_access(addr, &value, sizeof(value), true))
 	{
-		LOG_FATAL(GENERAL, "Patch failed at 0x%x: invalid memory address.", addr);
+		LOG_FATAL(PPU, "Patch failed at 0x%x: invalid memory address.", addr);
 		return false;
 	}
 

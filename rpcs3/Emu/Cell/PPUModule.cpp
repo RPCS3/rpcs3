@@ -1165,11 +1165,11 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 		applied = 0;
 
-		// Executable hash 
+		// Executable hash
 		sha1_context sha2;
 		sha1_starts(&sha2);
 		u8 sha1_hash[20];
-	
+
 		for (const auto& prog : obj.progs)
 		{
 			// Only hash the data, we are not loading it
@@ -1193,7 +1193,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 				fmt::append(dump, "\n\tSPUNAME: '%s'", spu_name);
 			}
 		}
-		
+
 		sha1_finish(&sha2, sha1_hash);
 
 		// Format patch name
@@ -1219,7 +1219,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		}
 
 		LOG_NOTICE(LOADER, "SPU executable hash: %s (<- %u)%s", hash, applied, dump);
-		
+
 	}
 
 	// Static HLE patching
@@ -1254,7 +1254,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			}
 		}
 
-		LOG_NOTICE(LOADER, "SELF header information found: ctrl_flags1=0x%x, authid=0x%llx", 
+		LOG_NOTICE(LOADER, "SELF header information found: ctrl_flags1=0x%x, authid=0x%llx",
 			g_ps3_process_info.ctrl_flags1, g_ps3_process_info.self_info.app_info.authid);
 	}
 
@@ -1305,7 +1305,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 				{
 					sdk_version = info.sdk_version;
 
-					if (s32 prio = info.primary_prio; prio < 3072 
+					if (s32 prio = info.primary_prio; prio < 3072
 						&& (prio >= (g_ps3_process_info.debug_or_root() ? 0 : -512)))
 					{
 						primary_prio = prio;
@@ -1404,7 +1404,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 		if (!fs::is_dir(lle_dir) || !fs::is_file(lle_dir + "libsysmodule.sprx"))
 		{
-			LOG_ERROR(GENERAL, "PS3 firmware is not installed or the installed firmware is invalid."
+			LOG_ERROR(LOADER, "PS3 firmware is not installed or the installed firmware is invalid."
 				"\nYou should install the PS3 Firmware (Menu: File -> Install Firmware)."
 				"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
 		}

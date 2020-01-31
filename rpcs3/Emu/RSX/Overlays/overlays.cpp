@@ -2,6 +2,8 @@
 #include "overlays.h"
 #include "../GSRender.h"
 
+LOG_CHANNEL(overlays);
+
 static auto s_ascii_lowering_map = []()
 {
 	std::unordered_map<u32, u8> _map;
@@ -81,7 +83,7 @@ std::string utf8_to_ascii8(const std::string& utf8_string)
 		if ((index + extra_bytes) > end)
 		{
 			// Malformed string, abort
-			LOG_ERROR(GENERAL, "Failed to decode supossedly malformed utf8 string '%s'", utf8_string);
+			overlays.error("Failed to decode supossedly malformed utf8 string '%s'", utf8_string);
 			break;
 		}
 

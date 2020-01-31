@@ -15,6 +15,9 @@
 DECLARE(cpu_thread::g_threads_created){0};
 DECLARE(cpu_thread::g_threads_deleted){0};
 
+LOG_CHANNEL(profiler);
+LOG_CHANNEL(sys_log);
+
 template <>
 void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 {
@@ -115,7 +118,7 @@ struct cpu_prof
 				}
 			}
 
-			LOG_NOTICE(GENERAL, "Thread [0x%08x]: %u samples (%.4f%% idle):%s", id, samples, 100. * idle / samples, results);
+			profiler.notice("Thread [0x%08x]: %u samples (%.4f%% idle):%s", id, samples, 100. * idle / samples, results);
 		}
 	};
 
@@ -149,7 +152,7 @@ struct cpu_prof
 				}
 				else
 				{
-					LOG_FATAL(GENERAL, "Invalid Thread ID: 0x%08x", id);
+					profiler.error("Invalid Thread ID: 0x%08x", id);
 					continue;
 				}
 
@@ -211,7 +214,7 @@ struct cpu_prof
 
 			if (flush)
 			{
-				LOG_SUCCESS(GENERAL, "Flushing profiling results...");
+				profiler.success("Flushing profiling results...");
 
 				// Print all results and cleanup
 				for (auto& [id, info] : threads)
@@ -293,7 +296,7 @@ void cpu_thread::operator()()
 
 		if (c != 0)
 		{
-			LOG_FATAL(GENERAL,"could not disable denormals");
+			sys_log.fatal("Could not disable denormals.");
 		}
 	}
 
@@ -310,7 +313,7 @@ void cpu_thread::operator()()
 	// Register thread in g_cpu_array
 	if (!g_cpu_array_sema.try_inc(sizeof(g_cpu_array_bits) * 8))
 	{
-		LOG_FATAL(GENERAL, "Too many threads");
+		sys_log.fatal("Too many threads.");
 		Emu.Pause();
 		return;
 	}
@@ -362,8 +365,8 @@ void cpu_thread::operator()()
 			catch (const std::exception& e)
 			{
 				Emu.Pause();
-				LOG_FATAL(GENERAL, "%s thrown: %s", typeid(e).name(), e.what());
-				LOG_NOTICE(GENERAL, "\n%s", dump());
+				sys_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
+				sys_log.notice("\n%s", dump());
 				break;
 			}
 
@@ -609,7 +612,7 @@ void cpu_thread::stop_all() noexcept
 	if (g_tls_current_cpu_thread)
 	{
 		// Report unsupported but unnecessary case
-		LOG_FATAL(GENERAL, "cpu_thread::stop_all() has been called from a CPU thread.");
+		sys_log.fatal("cpu_thread::stop_all() has been called from a CPU thread.");
 		return;
 	}
 	else
@@ -623,7 +626,7 @@ void cpu_thread::stop_all() noexcept
 		});
 	}
 
-	LOG_NOTICE(GENERAL, "All CPU threads have been signaled.");
+	sys_log.notice("All CPU threads have been signaled.");
 
 	while (g_cpu_array_sema)
 	{
@@ -633,14 +636,14 @@ void cpu_thread::stop_all() noexcept
 	// Workaround for remaining threads (TODO)
 	std::this_thread::sleep_for(1300ms);
 
-	LOG_NOTICE(GENERAL, "All CPU threads have been stopped.");
+	sys_log.notice("All CPU threads have been stopped.");
 }
 
 void cpu_thread::flush_profilers() noexcept
 {
 	if (!g_fxo->get<cpu_profiler>())
 	{
-		LOG_FATAL(GENERAL, "cpu_thread::flush_profilers() has been called incorrectly." HERE);
+		profiler.fatal("cpu_thread::flush_profilers() has been called incorrectly." HERE);
 		return;
 	}
 

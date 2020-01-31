@@ -234,7 +234,7 @@ public:
 
 	std::string GetCgParamRes(u32 /*offset*/) const
 	{
-		// LOG_WARNING(GENERAL, "GetCgParamRes offset 0x%x", offset);
+		// LOG_WARNING(RSX, "GetCgParamRes offset 0x%x", offset);
 		// TODO
 		return "";
 	}
