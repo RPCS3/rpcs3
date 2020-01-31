@@ -202,6 +202,24 @@ namespace logs
 		}
 	}
 
+	std::vector<std::string> get_channels()
+	{
+		std::vector<std::string> result;
+
+		std::lock_guard lock(g_mutex);
+
+		for (auto&& p : get_logger()->channels)
+		{
+			// Copy names removing duplicates
+			if (result.empty() || result.back() != p.first)
+			{
+				result.push_back(p.first);
+			}
+		}
+
+		return result;
+	}
+
 	// Must be called in main() to stop accumulating messages in g_messages
 	void set_init()
 	{

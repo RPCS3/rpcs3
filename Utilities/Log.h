@@ -95,6 +95,9 @@ namespace logs
 
 	// Log level control: get channel level
 	level get_level(const std::string&);
+
+	// Get all registered log channels
+	std::vector<std::string> get_channels();
 }
 
 #define LOG_CHANNEL(ch, ...) inline ::logs::channel ch(#ch, ##__VA_ARGS__)
