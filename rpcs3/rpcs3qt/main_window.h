@@ -117,8 +117,12 @@ private:
 	void CreateDockWindows();
 	void EnableMenus(bool enabled);
 	void ShowTitleBars(bool show);
+
 	void InstallPackages(QStringList file_paths = QStringList(), bool show_confirm = true);
+	void HandlePackageInstallation(QStringList file_paths = QStringList());
+
 	void InstallPup(QString filePath = "");
+	void HandlePupInstallation(QString file_path = "");
 
 	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
 	void AddGamesFromDir(const QString& path);

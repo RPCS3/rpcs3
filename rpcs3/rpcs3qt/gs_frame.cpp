@@ -456,14 +456,20 @@ bool gs_frame::event(QEvent* ev)
 				toggle_fullscreen();
 			}
 
-			int result;
+			int result = QMessageBox::Yes;
+			atomic_t<bool> called = false;
 
-			Emu.CallAfter([this, &result]()
+			Emu.CallAfter([this, &result, &called]()
 			{
 				m_gui_settings->ShowConfirmationBox(tr("Exit Game?"),
 					tr("Do you really want to exit the game?\n\nAny unsaved progress will be lost!\n"),
 					gui::ib_confirm_exit, &result, nullptr);
+
+				called = true;
+				called.notify_one();
 			});
+
+			called.wait(false);
 
 			if (result != QMessageBox::Yes)
 			{
