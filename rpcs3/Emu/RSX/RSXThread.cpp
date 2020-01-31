@@ -81,7 +81,7 @@ namespace rsx
 		{
 			if (offset < sizeof(RsxReports::report) /*&& (offset % 0x10) == 0*/)
 			{
-				return render->label_addr + 0x1400 + offset;
+				return render->label_addr + ::offset32(&RsxReports::report) + offset;
 			}
 
 			msg = "Local RSX REPORT offset out of range!"sv;
