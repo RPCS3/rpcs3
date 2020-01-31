@@ -17,6 +17,8 @@
 #include <thread>
 #include <deque>
 
+LOG_CHANNEL(vm_log);
+
 namespace vm
 {
 	static u8* memory_reserve_4GiB(void* _addr, u64 size = 0x100000000)
@@ -576,13 +578,13 @@ namespace vm
 
 		if (!block)
 		{
-			LOG_ERROR(MEMORY, "vm::dealloc(): invalid memory location (%u, addr=0x%x)\n", +location, addr);
+			vm_log.error("vm::dealloc(): invalid memory location (%u, addr=0x%x)\n", +location, addr);
 			return;
 		}
 
 		if (!block->dealloc(addr))
 		{
-			LOG_ERROR(MEMORY, "vm::dealloc(): deallocation failed (addr=0x%x)\n", addr);
+			vm_log.error("vm::dealloc(): deallocation failed (addr=0x%x)\n", addr);
 			return;
 		}
 	}

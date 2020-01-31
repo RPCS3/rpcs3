@@ -107,7 +107,6 @@ namespace logs
 
 	inline channel GENERAL("");
 	inline channel LOADER("LDR");
-	inline channel MEMORY("MEM");
 	LOG_CHANNEL(RSX);
 	LOG_CHANNEL(HLE);
 	LOG_CHANNEL(PPU);
