@@ -142,7 +142,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 		cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
 	}
 
-	return vm::ptr<CellGcmReportData>::make(g_fxo->get<gcm_config>()->gcm_info.label_addr + 0x1400 + index * 0x10);
+	return vm::ptr<CellGcmReportData>::make(g_fxo->get<gcm_config>()->gcm_info.label_addr + ::offset32(&RsxReports::report) + index * 0x10);
 }
 
 u64 cellGcmGetTimeStamp(u32 index)
@@ -154,7 +154,7 @@ u64 cellGcmGetTimeStamp(u32 index)
 		cellGcmSys.error("cellGcmGetTimeStamp: Wrong local index (%d)", index);
 	}
 
-	return vm::read64(g_fxo->get<gcm_config>()->gcm_info.label_addr + 0x1400 + index * 0x10);
+	return vm::read64(g_fxo->get<gcm_config>()->gcm_info.label_addr + ::offset32(&RsxReports::report) + index * 0x10);
 }
 
 u32 cellGcmGetCurrentField()
@@ -181,7 +181,7 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
  */
 vm::ptr<CellGcmReportData> _cellGcmFunc12()
 {
-	return vm::ptr<CellGcmReportData>::make(g_fxo->get<gcm_config>()->gcm_info.label_addr + 0x1400); // TODO
+	return vm::ptr<CellGcmReportData>::make(g_fxo->get<gcm_config>()->gcm_info.label_addr + ::offset32(&RsxReports::report)); // TODO
 }
 
 u32 cellGcmGetReport(u32 type, u32 index)
@@ -210,7 +210,7 @@ u32 cellGcmGetReportDataAddress(u32 index)
 		cellGcmSys.error("cellGcmGetReportDataAddress: Wrong local index (%d)", index);
 	}
 
-	return g_fxo->get<gcm_config>()->gcm_info.label_addr + 0x1400 + index * 0x10;
+	return g_fxo->get<gcm_config>()->gcm_info.label_addr + ::offset32(&RsxReports::report) + index * 0x10;
 }
 
 u32 cellGcmGetReportDataLocation(u32 index, u32 location)
@@ -230,7 +230,7 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 			cellGcmSys.error("cellGcmGetTimeStampLocation: Wrong local index (%d)", index);
 			return 0;
 		}
-		return vm::read64(g_fxo->get<gcm_config>()->gcm_info.label_addr + 0x1400 + index * 0x10);
+		return vm::read64(g_fxo->get<gcm_config>()->gcm_info.label_addr + ::offset32(&RsxReports::report) + index * 0x10);
 	}
 
 	if (location == CELL_GCM_LOCATION_MAIN) {
@@ -1049,12 +1049,14 @@ error_code cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 		{
 			if (unmap_count >= (size >> 20))
 			{
-				if (auto error = gcmMapEaIoAddress(io << 20, ea, size, false))
+				io <<= 20;
+
+				if (auto error = gcmMapEaIoAddress(ea, io, size, false))
 				{
 					return error;
 				}
 
-				*offset = io << 20;
+				*offset = io;
 				return CELL_OK;
 			}
 		}
