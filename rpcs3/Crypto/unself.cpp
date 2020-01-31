@@ -1319,7 +1319,9 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 
 	if (!rap_file)
 	{
-		LOG_FATAL(LOADER, "Failed to load RAP file: %s. Make sure the file extension is lowercase.", rap_path);
+		LOG_FATAL(LOADER, "Failed to locate the game license file: %s."
+				  "\nEnsure the .rap license file is placed in the dev_hdd0/home/00000001/exdata folder with a lowercase file extension."
+				  "\nIf you need assistance on dumping the license file from your PS3, read our quickstart guide: https://rpcs3.net/quickstart", rap_path);
 		return false;
 	}
 
