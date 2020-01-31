@@ -242,7 +242,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 {
 	if (!Emu.IsStopped())
 	{
-		int result;
+		int result = QMessageBox::Yes;
 		guiSettings->ShowConfirmationBox(tr("Close Running Game?"),
 			tr("Booting another game will close the current game.\nDo you really want to boot another game?\n\nAny unsaved progress will be lost!\n"),
 			gui::ib_confirm_boot, &result, this);
@@ -1801,7 +1801,7 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 {
 	if (!Emu.IsStopped() && guiSettings->GetValue(gui::ib_confirm_exit).toBool())
 	{
-		int result;
+		int result = QMessageBox::Yes;
 
 		guiSettings->ShowConfirmationBox(tr("Exit RPCS3?"),
 			tr("A game is currently running. Do you really want to close RPCS3?\n\nAny unsaved progress will be lost!\n"),
