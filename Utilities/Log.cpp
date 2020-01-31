@@ -173,6 +173,16 @@ namespace logs
 		}
 	}
 
+	void silence()
+	{
+		std::lock_guard lock(g_mutex);
+
+		for (auto&& pair : get_logger()->channels)
+		{
+			pair.second->enabled = level::always;
+		}
+	}
+
 	void set_level(const std::string& ch_name, level value)
 	{
 		std::lock_guard lock(g_mutex);

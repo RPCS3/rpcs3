@@ -90,6 +90,9 @@ namespace logs
 	// Log level control: set all channels to level::notice
 	void reset();
 
+	// Log level control: set all channels to level::always
+	void silence();
+
 	// Log level control: register channel if necessary, set channel level
 	void set_level(const std::string&, level);
 
@@ -100,7 +103,7 @@ namespace logs
 	std::vector<std::string> get_channels();
 }
 
-#define LOG_CHANNEL(ch, ...) inline ::logs::channel ch(#ch, ##__VA_ARGS__)
+#define LOG_CHANNEL(ch) inline ::logs::channel ch(#ch)
 
 // Legacy:
 
