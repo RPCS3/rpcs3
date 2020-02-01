@@ -1341,7 +1341,7 @@ namespace rsx
 
 		void on_miss()
 		{
-			LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", get_section_base());
+			rsx_log.warning("Cache miss at address 0x%X. This is gonna hurt...", get_section_base());
 			m_tex_cache->on_miss(*derived());
 		}
 
@@ -1456,7 +1456,7 @@ namespace rsx
 				const auto num_exclusions = flush_exclusions.size();
 				if (num_exclusions > 0)
 				{
-					LOG_WARNING(RSX, "Slow imp_flush path triggered with non-empty flush_exclusions (%d exclusions, %d bytes), performance might suffer", num_exclusions, valid_length);
+					rsx_log.warning("Slow imp_flush path triggered with non-empty flush_exclusions (%d exclusions, %d bytes), performance might suffer", num_exclusions, valid_length);
 				}
 
 				for (s32 remaining = s32(valid_length); remaining > 0; remaining -= rsx_pitch)

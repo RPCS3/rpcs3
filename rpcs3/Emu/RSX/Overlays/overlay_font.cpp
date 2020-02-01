@@ -68,7 +68,7 @@ namespace rsx
 						file_path  = fallback_font;
 						font_found = true;
 
-						LOG_NOTICE(RSX, "Found font file '%s' as a replacement for '%s'", fallback_font.c_str(), ttf_name);
+						rsx_log.notice("Found font file '%s' as a replacement for '%s'", fallback_font.c_str(), ttf_name);
 						break;
 					}
 				}
@@ -82,7 +82,7 @@ namespace rsx
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Failed to initialize font '%s.ttf'", ttf_name);
+				rsx_log.error("Failed to initialize font '%s.ttf'", ttf_name);
 				return;
 			}
 
@@ -92,7 +92,7 @@ namespace rsx
 			stbtt_pack_context context;
 			if (!stbtt_PackBegin(&context, glyph_data.data(), width, height, 0, 1, nullptr))
 			{
-				LOG_ERROR(RSX, "Font packing failed");
+				rsx_log.error("Font packing failed");
 				return;
 			}
 
@@ -104,7 +104,7 @@ namespace rsx
 
 			if (!stbtt_PackFontRange(&context, bytes.data(), 0, size_px, 0, 256, pack_info.data()))
 			{
-				LOG_ERROR(RSX, "Font packing failed");
+				rsx_log.error("Font packing failed");
 				stbtt_PackEnd(&context);
 				return;
 			}

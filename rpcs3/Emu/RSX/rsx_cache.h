@@ -34,7 +34,7 @@ namespace rsx
 	{
 		verify(HERE), range.is_page_range();
 
-		//LOG_ERROR(RSX, "memory_protect(0x%x, 0x%x, %x)", static_cast<u32>(range.start), static_cast<u32>(range.length()), static_cast<u32>(prot));
+		//rsx_log.error("memory_protect(0x%x, 0x%x, %x)", static_cast<u32>(range.start), static_cast<u32>(range.length()), static_cast<u32>(prot));
 		utils::memory_protect(vm::base(range.start), range.length(), prot);
 
 #ifdef TEXTURE_CACHE_DEBUG
@@ -448,7 +448,7 @@ namespace rsx
 					fs::file f(filename);
 					if (f.size() != sizeof(pipeline_data))
 					{
-						LOG_ERROR(RSX, "Removing cached pipeline object %s since it's not binary compatible with the current shader cache", tmp.name.c_str());
+						rsx_log.error("Removing cached pipeline object %s since it's not binary compatible with the current shader cache", tmp.name.c_str());
 						fs::remove_file(filename);
 						continue;
 					}
@@ -594,7 +594,7 @@ namespace rsx
 				return;
 
 			root.rewind();
-			
+
 			// Progress dialog
 			std::unique_ptr<shader_loading_dialog> fallback_dlg;
 			if (!dlg)
@@ -633,7 +633,7 @@ namespace rsx
 
 			if (vp.jump_table.size() > 32)
 			{
-				LOG_ERROR(RSX, "shaders_cache: vertex program has more than 32 jump addresses. Entry not saved to cache");
+				rsx_log.error("shaders_cache: vertex program has more than 32 jump addresses. Entry not saved to cache");
 				return;
 			}
 

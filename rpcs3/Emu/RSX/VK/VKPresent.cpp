@@ -36,7 +36,7 @@ void VKGSRender::reinitialize_swapchain()
 	// Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
 	if (!m_swapchain->init(m_swapchain_dims.width, m_swapchain_dims.height))
 	{
-		LOG_WARNING(RSX, "Swapchain initialization failed. Request ignored [%dx%d]", m_swapchain_dims.width, m_swapchain_dims.height);
+		rsx_log.warning("Swapchain initialization failed. Request ignored [%dx%d]", m_swapchain_dims.width, m_swapchain_dims.height);
 		swapchain_unavailable = true;
 		open_command_buffer();
 		return;
@@ -381,7 +381,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		if (info.stats.draw_calls > 0)
 		{
 			// This can be 'legal' if the window was being resized and no polling happened because of swapchain_unavailable flag
-			LOG_ERROR(RSX, "Possible data corruption on frame context storage detected");
+			rsx_log.error("Possible data corruption on frame context storage detected");
 		}
 
 		// There were no draws and back-to-back flips happened
@@ -473,7 +473,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			should_reinitialize_swapchain = true;
 			break;
 		case VK_ERROR_OUT_OF_DATE_KHR:
-			LOG_WARNING(RSX, "vkAcquireNextImageKHR failed with VK_ERROR_OUT_OF_DATE_KHR. Flip request ignored until surface is recreated.");
+			rsx_log.warning("vkAcquireNextImageKHR failed with VK_ERROR_OUT_OF_DATE_KHR. Flip request ignored until surface is recreated.");
 			swapchain_unavailable = true;
 			reinitialize_swapchain();
 			continue;

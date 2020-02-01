@@ -300,11 +300,11 @@ void GLVertexProgram::Compile()
 			char* buf = new char[r + 1]();
 			GLsizei len;
 			glGetShaderInfoLog(id, r, &len, buf);
-			LOG_ERROR(RSX, "Failed to compile vertex shader: %s", buf);
+			rsx_log.error("Failed to compile vertex shader: %s", buf);
 			delete[] buf;
 		}
 
-		LOG_NOTICE(RSX, "%s", shader.c_str());
+		rsx_log.notice("%s", shader.c_str());
 		Emu.Pause();
 	}
 }
@@ -317,7 +317,7 @@ void GLVertexProgram::Delete()
 	{
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(RSX, "GLVertexProgram::Delete(): glDeleteShader(%d) avoided", id);
+			rsx_log.warning("GLVertexProgram::Delete(): glDeleteShader(%d) avoided", id);
 		}
 		else
 		{

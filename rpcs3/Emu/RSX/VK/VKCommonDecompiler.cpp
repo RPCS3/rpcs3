@@ -184,8 +184,8 @@ namespace vk
 		}
 		else
 		{
-			LOG_ERROR(RSX, "%s", shader_object.getInfoLog());
-			LOG_ERROR(RSX, "%s", shader_object.getInfoDebugLog());
+			rsx_log.error("%s", shader_object.getInfoLog());
+			rsx_log.error("%s", shader_object.getInfoDebugLog());
 		}
 
 		return success;

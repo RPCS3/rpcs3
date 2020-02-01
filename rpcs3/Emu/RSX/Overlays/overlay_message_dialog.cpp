@@ -212,7 +212,7 @@ namespace rsx
 				{
 					if (auto error = run_input_loop())
 					{
-						LOG_ERROR(RSX, "Dialog input loop exited with error code=%d", error);
+						rsx_log.error("Dialog input loop exited with error code=%d", error);
 						return error;
 					}
 				}
@@ -235,7 +235,7 @@ namespace rsx
 					{
 						if (auto error = run_input_loop())
 						{
-							LOG_ERROR(RSX, "Dialog input loop exited with error code=%d", error);
+							rsx_log.error("Dialog input loop exited with error code=%d", error);
 						}
 					}
 					else

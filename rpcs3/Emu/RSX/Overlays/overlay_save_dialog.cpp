@@ -136,7 +136,7 @@ namespace rsx
 				m_list->select_next(10);
 				break;
 			default:
-				LOG_TRACE(RSX, "[ui] Button %d pressed", static_cast<u8>(button_press));
+				rsx_log.trace("[ui] Button %d pressed", static_cast<u8>(button_press));
 			}
 		}
 

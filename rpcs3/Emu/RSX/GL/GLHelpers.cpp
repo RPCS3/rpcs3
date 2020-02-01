@@ -49,12 +49,12 @@ namespace gl
 		{
 		case GL_DEBUG_TYPE_ERROR:
 		{
-			LOG_ERROR(RSX, "%s", message);
+			rsx_log.error("%s", message);
 			return;
 		}
 		default:
 		{
-			LOG_WARNING(RSX, "%s", message);
+			rsx_log.warning("%s", message);
 			return;
 		}
 		}
@@ -120,7 +120,7 @@ namespace gl
 
 		if (status != GL_FRAMEBUFFER_COMPLETE)
 		{
-			LOG_ERROR(RSX, "FBO check failed: 0x%04x", status);
+			rsx_log.error("FBO check failed: 0x%04x", status);
 			return false;
 		}
 

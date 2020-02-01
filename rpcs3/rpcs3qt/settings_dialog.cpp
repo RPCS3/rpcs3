@@ -569,11 +569,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				idx = 0;
 				if (renderer.old_adapter.isEmpty())
 				{
-					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(renderer.name));
+					rsx_log.warning("%s adapter config empty: setting to default!", sstr(renderer.name));
 				}
 				else
 				{
-					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(renderer.name));
+					rsx_log.warning("Last used %s adapter not found: setting to default!", sstr(renderer.name));
 				}
 			}
 			ui->graphicsAdapterBox->setCurrentIndex(idx);

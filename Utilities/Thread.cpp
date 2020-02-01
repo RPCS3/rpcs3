@@ -1117,7 +1117,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		}
 		catch (const std::exception& e)
 		{
-			LOG_FATAL(RSX, "g_access_violation_handler(0x%x, %d): %s", addr, is_writing, e.what());
+			rsx_log.fatal("g_access_violation_handler(0x%x, %d): %s", addr, is_writing, e.what());
 
 			if (cpu)
 			{

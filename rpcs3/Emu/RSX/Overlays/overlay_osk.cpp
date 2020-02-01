@@ -191,7 +191,7 @@ namespace rsx
 			{
 				if (auto error = run_input_loop())
 				{
-					LOG_ERROR(RSX, "Osk input loop exited with error code=%d", error);
+					rsx_log.error("Osk input loop exited with error code=%d", error);
 				}
 			});
 		}

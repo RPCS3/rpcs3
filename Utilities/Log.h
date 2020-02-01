@@ -122,7 +122,6 @@ namespace logs
 namespace logs
 {
 	/* Small set of predefined channels */
-	LOG_CHANNEL(RSX);
 	LOG_CHANNEL(HLE);
 	LOG_CHANNEL(PPU);
 	LOG_CHANNEL(SPU);
@@ -135,3 +134,5 @@ namespace logs
 #define LOG_TODO(ch, fmt, ...)    logs::ch.todo   ("" fmt, ##__VA_ARGS__)
 #define LOG_TRACE(ch, fmt, ...)   logs::ch.trace  ("" fmt, ##__VA_ARGS__)
 #define LOG_FATAL(ch, fmt, ...)   logs::ch.fatal  ("" fmt, ##__VA_ARGS__)
+
+LOG_CHANNEL(rsx_log, "RSX");

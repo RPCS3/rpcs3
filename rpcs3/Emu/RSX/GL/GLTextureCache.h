@@ -184,11 +184,11 @@ namespace gl
 					// AMD driver bug
 					// Pixel transfer fails with GL_OUT_OF_MEMORY. Usually happens with float textures or operations attempting to swap endianness.
 					// Failed operations also leak a large amount of memory
-					LOG_ERROR(RSX, "Memory transfer failure (AMD bug). Please update your driver to Adrenalin 19.4.3 or newer. Format=0x%x, Type=0x%x, Swap=%d", static_cast<u32>(format), static_cast<u32>(type), pack_unpack_swap_bytes);
+					rsx_log.error("Memory transfer failure (AMD bug). Please update your driver to Adrenalin 19.4.3 or newer. Format=0x%x, Type=0x%x, Swap=%d", static_cast<u32>(format), static_cast<u32>(type), pack_unpack_swap_bytes);
 				}
 				else
 				{
-					LOG_ERROR(RSX, "Memory transfer failed with error 0x%x. Format=0x%x, Type=0x%x", error, static_cast<u32>(format), static_cast<u32>(type));
+					rsx_log.error("Memory transfer failed with error 0x%x. Format=0x%x, Type=0x%x", error, static_cast<u32>(format), static_cast<u32>(type));
 				}
 			}
 
@@ -730,7 +730,7 @@ namespace gl
 
 			if (GLenum err = glGetError())
 			{
-				LOG_WARNING(RSX, "Failed to copy image subresource with GL error 0x%X", err);
+				rsx_log.warning("Failed to copy image subresource with GL error 0x%X", err);
 				return nullptr;
 			}
 
@@ -752,7 +752,7 @@ namespace gl
 
 			if (GLenum err = glGetError())
 			{
-				LOG_WARNING(RSX, "Failed to copy image subresource with GL error 0x%X", err);
+				rsx_log.warning("Failed to copy image subresource with GL error 0x%X", err);
 				return nullptr;
 			}
 

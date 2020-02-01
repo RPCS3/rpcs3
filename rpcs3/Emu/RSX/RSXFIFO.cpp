@@ -206,7 +206,7 @@ namespace rsx
 		{
 			if (enabled)
 			{
-				LOG_WARNING(RSX, "FIFO optimizations have been disabled as the application is not compatible with per-frame analysis");
+				rsx_log.warning("FIFO optimizations have been disabled as the application is not compatible with per-frame analysis");
 
 				reset(false);
 				fifo_hint = optimization_hint::application_not_compatible;
@@ -307,7 +307,7 @@ namespace rsx
 				}
 				else
 				{
-					LOG_ERROR(RSX, "Fifo flattener misalignment, disable FIFO reordering and report to developers");
+					rsx_log.error("Fifo flattener misalignment, disable FIFO reordering and report to developers");
 					begin_end_ctr = 0;
 					flush_cmd = 0u;
 				}
@@ -400,7 +400,7 @@ namespace rsx
 			}
 			case FIFO::FIFO_ERROR:
 			{
-				LOG_ERROR(RSX, "FIFO error: possible desync event (last cmd = 0x%x)", fifo_ctrl->last_cmd());
+				rsx_log.error("FIFO error: possible desync event (last cmd = 0x%x)", fifo_ctrl->last_cmd());
 				recover_fifo();
 				return;
 			}
@@ -422,7 +422,7 @@ namespace rsx
 					performance_counters.state = FIFO_state::spinning;
 				}
 
-				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
+				//rsx_log.warning("rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
 				fifo_ctrl->set_get(offs);
 				return;
 			}
@@ -441,7 +441,7 @@ namespace rsx
 					performance_counters.state = FIFO_state::spinning;
 				}
 
-				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
+				//rsx_log.warning("rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
 				fifo_ctrl->set_get(offs);
 				return;
 			}
@@ -450,7 +450,7 @@ namespace rsx
 				if (fifo_ret_addr != RSX_CALL_STACK_EMPTY)
 				{
 					// Only one layer is allowed in the call stack.
-					LOG_ERROR(RSX, "FIFO: CALL found inside a subroutine. Discarding subroutine");
+					rsx_log.error("FIFO: CALL found inside a subroutine. Discarding subroutine");
 					fifo_ctrl->set_get(std::exchange(fifo_ret_addr, RSX_CALL_STACK_EMPTY));
 					return;
 				}
@@ -464,7 +464,7 @@ namespace rsx
 			{
 				if (fifo_ret_addr == RSX_CALL_STACK_EMPTY)
 				{
-					LOG_ERROR(RSX, "FIFO: RET found without corresponding CALL. Discarding queue");
+					rsx_log.error("FIFO: RET found without corresponding CALL. Discarding queue");
 					fifo_ctrl->set_get(ctrl->put);
 					return;
 				}

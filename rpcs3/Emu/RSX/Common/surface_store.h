@@ -746,7 +746,7 @@ namespace rsx
 		{
 			if (address_is_bound(addr))
 			{
-				LOG_ERROR(RSX, "Cannot invalidate a currently bound render target!");
+				rsx_log.error("Cannot invalidate a currently bound render target!");
 				return;
 			}
 
@@ -802,7 +802,7 @@ namespace rsx
 			// Sanity check
 			if (UNLIKELY(surface_internal_pitch > required_pitch))
 			{
-				LOG_WARNING(RSX, "Invalid 2D region descriptor. w=%d, h=%d, bpp=%d, pitch=%d",
+				rsx_log.warning("Invalid 2D region descriptor. w=%d, h=%d, bpp=%d, pitch=%d",
 							required_width, required_height, required_bpp, required_pitch);
 				return {};
 			}

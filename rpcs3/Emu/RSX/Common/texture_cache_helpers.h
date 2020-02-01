@@ -118,7 +118,7 @@ namespace rsx
 				return CELL_GCM_TEXTURE_DEPTH16;
 			}
 
-			LOG_ERROR(RSX, "Unsupported depth conversion (0x%X)", gcm_format);
+			rsx_log.error("Unsupported depth conversion (0x%X)", gcm_format);
 			return gcm_format;
 		}
 
@@ -398,11 +398,11 @@ namespace rsx
 				if (found_slices > 0)
 				{
 					//TODO: Gather remaining sides from the texture cache or upload from cpu (too slow?)
-					LOG_ERROR(RSX, "Could not gather all required slices for cubemap/3d generation");
+					rsx_log.error("Could not gather all required slices for cubemap/3d generation");
 				}
 				else
 				{
-					LOG_WARNING(RSX, "Could not gather textures into an atlas; using CPU fallback...");
+					rsx_log.warning("Could not gather textures into an atlas; using CPU fallback...");
 				}
 			}
 		}

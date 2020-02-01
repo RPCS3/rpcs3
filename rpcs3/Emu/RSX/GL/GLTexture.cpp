@@ -146,7 +146,7 @@ namespace gl
 		case GL_RGBA8:
 			return GL_SRGB8_ALPHA8;
 		default:
-			//LOG_ERROR(RSX, "No gamma conversion for format 0x%X", in_format);
+			//rsx_log.error("No gamma conversion for format 0x%X", in_format);
 			return in_format;
 		}
 	}
@@ -165,7 +165,7 @@ namespace gl
 		case rsx::texture_wrap_mode::mirror_once_clamp: return GL_MIRROR_CLAMP_EXT;
 		}
 
-		LOG_ERROR(RSX, "Texture wrap error: bad wrap (%d)", static_cast<u32>(wrap));
+		rsx_log.error("Texture wrap error: bad wrap (%d)", static_cast<u32>(wrap));
 		return GL_REPEAT;
 	}
 
@@ -183,7 +183,7 @@ namespace gl
 		case rsx::texture_max_anisotropy::x16: return 16.0f;
 		}
 
-		LOG_ERROR(RSX, "Texture anisotropy error: bad max aniso (%d)", static_cast<u32>(aniso));
+		rsx_log.error("Texture anisotropy error: bad max aniso (%d)", static_cast<u32>(aniso));
 		return 1.0f;
 	}
 
@@ -245,7 +245,7 @@ namespace gl
 				case GL_LINEAR_MIPMAP_LINEAR:
 					min_filter = GL_LINEAR; break;
 				default:
-					LOG_ERROR(RSX, "No mipmap fallback defined for rsx_min_filter = 0x%X", static_cast<u32>(tex.min_filter()));
+					rsx_log.error("No mipmap fallback defined for rsx_min_filter = 0x%X", static_cast<u32>(tex.min_filter()));
 					min_filter = GL_NEAREST;
 				}
 			}
@@ -591,7 +591,7 @@ namespace gl
 			switch (remap_lookup[channel])
 			{
 			default:
-				LOG_ERROR(RSX, "Unknown remap function 0x%X", remap_lookup[channel]);
+				rsx_log.error("Unknown remap function 0x%X", remap_lookup[channel]);
 			case CELL_GCM_TEXTURE_REMAP_REMAP:
 				remap_values[channel] = swizzle_remap[remap_inputs[channel]];
 				break;

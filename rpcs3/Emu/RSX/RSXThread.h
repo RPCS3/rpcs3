@@ -538,7 +538,7 @@ namespace rsx
 			while (!buffer_queue.empty());
 
 			// Need to observe this happening in the wild
-			LOG_ERROR(RSX, "Display queue was discarded while not empty!");
+			rsx_log.error("Display queue was discarded while not empty!");
 			return false;
 		}
 	};

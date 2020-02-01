@@ -159,7 +159,7 @@ namespace rsx
 			if (!old_contents.empty())
 			{
 				// Cascade resource derefs
-				LOG_ERROR(RSX, "Resource was destroyed whilst holding a resource reference!");
+				rsx_log.error("Resource was destroyed whilst holding a resource reference!");
 			}
 		}
 

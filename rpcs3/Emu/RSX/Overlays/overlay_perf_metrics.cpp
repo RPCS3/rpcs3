@@ -34,7 +34,7 @@ namespace rsx
 			}
 			catch (const std::exception& e)
 			{
-				LOG_ERROR(RSX, "Overlays: tried to convert incompatible color code: '%s' exception: '%s'", hex_color, e.what());
+				rsx_log.error("Overlays: tried to convert incompatible color code: '%s' exception: '%s'", hex_color, e.what());
 				return color4f(0.0f, 0.0f, 0.0f, 0.0f);
 			}
 

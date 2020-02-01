@@ -35,7 +35,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 		case 7: code = "(" + code + " / "; modifier = "8."; break;
 
 		default:
-			LOG_ERROR(RSX, "Bad scale: %d", u32{ src1.scale });
+			rsx_log.error("Bad scale: %d", u32{ src1.scale });
 			break;
 		}
 
@@ -288,7 +288,7 @@ std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 p
 		// Doesn't seem to do anything to the input from hw tests, same as 0
 		break;
 	default:
-		LOG_ERROR(RSX, "Unexpected precision modifier (%d)\n", precision);
+		rsx_log.error("Unexpected precision modifier (%d)\n", precision);
 		break;
 	}
 
@@ -609,7 +609,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			// UNK
 			if (reg_var == "unk")
 			{
-				LOG_ERROR(RSX, "Bad src reg num: %d", u32{ dst.src_attr_reg_num });
+				rsx_log.error("Bad src reg num: %d", u32{ dst.src_attr_reg_num });
 			}
 
 			ret += reg_var;
@@ -633,7 +633,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		break;
 
 	case RSX_FP_REGISTER_TYPE_UNKNOWN: // ??? Used by a few games, what is it?
-		LOG_ERROR(RSX, "Src type 3 used, opcode=0x%X, dst=0x%X s0=0x%X s1=0x%X s2=0x%X",
+		rsx_log.error("Src type 3 used, opcode=0x%X, dst=0x%X s0=0x%X s1=0x%X s2=0x%X",
 				dst.opcode, dst.HEX, src0.HEX, src1.HEX, src2.HEX);
 
 		ret += AddType3();
@@ -641,7 +641,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		break;
 
 	default:
-		LOG_ERROR(RSX, "Bad src type %d", u32{ src.reg_type });
+		rsx_log.error("Bad src type %d", u32{ src.reg_type });
 		Emu.Pause();
 		break;
 	}
@@ -714,7 +714,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 		if (!properties.has_discard_op)
 		{
 			// NOTE: Discard operation overrides output
-			LOG_WARNING(RSX, "Shader does not write to any output register and will be NOPed");
+			rsx_log.warning("Shader does not write to any output register and will be NOPed");
 			main = "/*" + main + "*/";
 		}
 	}
@@ -1127,10 +1127,10 @@ std::string FragmentProgramDecompiler::Decompile()
 			{
 			case RSX_FP_OPCODE_BRK:
 				if (m_loop_count) AddFlowOp("break");
-				else LOG_ERROR(RSX, "BRK opcode found outside of a loop");
+				else rsx_log.error("BRK opcode found outside of a loop");
 				break;
 			case RSX_FP_OPCODE_CAL:
-				LOG_ERROR(RSX, "Unimplemented SIP instruction: CAL");
+				rsx_log.error("Unimplemented SIP instruction: CAL");
 				break;
 			case RSX_FP_OPCODE_FENCT:
 				AddCode("//FENCT");
@@ -1212,7 +1212,7 @@ std::string FragmentProgramDecompiler::Decompile()
 			if (handle_sct_scb(opcode)) break;
 			forced_unit = FORCE_NONE;
 
-			LOG_ERROR(RSX, "Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, prev_force_unit);
+			rsx_log.error("Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, prev_force_unit);
 			break;
 		}
 
@@ -1226,7 +1226,7 @@ std::string FragmentProgramDecompiler::Decompile()
 
 	while (m_code_level > 1)
 	{
-		LOG_ERROR(RSX, "Hanging block found at end of shader. Malformed shader?");
+		rsx_log.error("Hanging block found at end of shader. Malformed shader?");
 
 		m_code_level--;
 		AddCode("}");

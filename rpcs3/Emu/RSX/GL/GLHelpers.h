@@ -125,7 +125,7 @@ namespace gl
 		{
 			if (ext_name == test)
 			{
-				LOG_NOTICE(RSX, "Extension %s is supported", ext_name);
+				rsx_log.notice("Extension %s is supported", ext_name);
 				return true;
 			}
 
@@ -230,7 +230,7 @@ namespace gl
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Failed to get vendor string from driver. Are we missing a context?");
+				rsx_log.error("Failed to get vendor string from driver. Are we missing a context?");
 				vendor_string = "intel"; //lowest acceptable value
 			}
 
@@ -362,7 +362,7 @@ namespace gl
 						switch (err)
 						{
 						default:
-							LOG_ERROR(RSX, "gl::fence sync returned unknown error 0x%X", err);
+							rsx_log.error("gl::fence sync returned unknown error 0x%X", err);
 						case GL_ALREADY_SIGNALED:
 						case GL_CONDITION_SATISFIED:
 							done = true;
@@ -997,7 +997,7 @@ namespace gl
 				}
 				else
 				{
-					LOG_ERROR(RSX, "OOM Error: Ring buffer was likely being used without notify() being called");
+					rsx_log.error("OOM Error: Ring buffer was likely being used without notify() being called");
 					glFinish();
 				}
 
@@ -1832,7 +1832,7 @@ namespace gl
 				}
 				else
 				{
-					LOG_WARNING(RSX, "Cubemap upload via texture::copy_from is halfplemented!");
+					rsx_log.warning("Cubemap upload via texture::copy_from is halfplemented!");
 					auto ptr = static_cast<const u8*>(src);
 					const auto end = std::min(6u, region.z + region.depth);
 					for (unsigned face = region.z; face < end; ++face)
@@ -2760,7 +2760,7 @@ public:
 						error_msg = buf.get();
 					}
 
-					LOG_ERROR(RSX, "Validation failed: %s", error_msg.c_str());
+					rsx_log.error("Validation failed: %s", error_msg.c_str());
 				}
 			}
 

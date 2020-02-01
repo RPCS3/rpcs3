@@ -140,7 +140,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 				if (m_shadow_sampled_textures & mask)
 				{
 					if (m_2d_sampled_textures & mask)
-						LOG_ERROR(RSX, "Texture unit %d is sampled as both a shadow texture and a depth texture", index);
+						rsx_log.error("Texture unit %d is sampled as both a shadow texture and a depth texture", index);
 					else
 						samplerType = "sampler2DShadow";
 				}
@@ -397,12 +397,12 @@ void GLFragmentProgram::Compile()
 			char* buf = new char[infoLength]; // Buffer to store infoLog
 
 			glGetShaderInfoLog(id, infoLength, &len, buf); // Retrieve the shader info log into our buffer
-			LOG_ERROR(RSX, "Failed to compile shader: %s", buf); // Write log to the console
+			rsx_log.error("Failed to compile shader: %s", buf); // Write log to the console
 
 			delete[] buf;
 		}
 
-		LOG_NOTICE(RSX, "%s", shader); // Log the text of the shader that failed to compile
+		rsx_log.notice("%s", shader); // Log the text of the shader that failed to compile
 		Emu.Pause(); // Pause the emulator, we can't really continue from here
 	}
 }
@@ -415,7 +415,7 @@ void GLFragmentProgram::Delete()
 	{
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(RSX, "GLFragmentProgram::Delete(): glDeleteShader(%d) avoided", id);
+			rsx_log.warning("GLFragmentProgram::Delete(): glDeleteShader(%d) avoided", id);
 		}
 		else
 		{

@@ -353,9 +353,9 @@ namespace rsx
 				return;
 
 			if (error)
-				LOG_ERROR(RSX, "%s", *result.first);
+				rsx_log.error("%s", *result.first);
 			else
-				LOG_WARNING(RSX, "%s", *result.first);
+				rsx_log.warning("%s", *result.first);
 		}
 
 		template <typename... Args>
@@ -510,7 +510,7 @@ namespace rsx
 						count++;
 					}
 				}
-				//LOG_ERROR(RSX, "Set protection of %d blocks to 0x%x", count, static_cast<u32>(prot));
+				//rsx_log.error("Set protection of %d blocks to 0x%x", count, static_cast<u32>(prot));
 			};
 
 			auto discard_set = [this](std::vector<section_storage_type*>& _set)
@@ -1032,7 +1032,7 @@ namespace rsx
 			if (dimensions_mismatch != nullptr)
 			{
 				auto &tex = *dimensions_mismatch;
-				LOG_WARNING(RSX, "Cached object for address 0x%X was found, but it does not match stored parameters (width=%d vs %d; height=%d vs %d; depth=%d vs %d; mipmaps=%d vs %d)",
+				rsx_log.warning("Cached object for address 0x%X was found, but it does not match stored parameters (width=%d vs %d; height=%d vs %d; depth=%d vs %d; mipmaps=%d vs %d)",
 					range.start, width, tex.get_width(), height, tex.get_height(), depth, tex.get_depth(), mipmaps, tex.get_mipmaps());
 			}
 
@@ -1170,7 +1170,7 @@ namespace rsx
 			if (region_ptr == nullptr)
 			{
 				AUDIT(m_flush_always_cache.find(memory_range) == m_flush_always_cache.end());
-				LOG_ERROR(RSX, "set_memory_flags(0x%x, 0x%x, %d): region_ptr == nullptr", memory_range.start, memory_range.end, static_cast<u32>(flags));
+				rsx_log.error("set_memory_flags(0x%x, 0x%x, %d): region_ptr == nullptr", memory_range.start, memory_range.end, static_cast<u32>(flags));
 				return;
 			}
 
@@ -1766,7 +1766,7 @@ namespace rsx
 				}
 				else
 				{
-					LOG_ERROR(RSX, "Unimplemented unnormalized sampling for texture type %d", static_cast<u32>(extended_dimension));
+					rsx_log.error("Unimplemented unnormalized sampling for texture type %d", static_cast<u32>(extended_dimension));
 				}
 			}
 
@@ -1962,7 +1962,7 @@ namespace rsx
 				if (UNLIKELY((src_h + src.offset_y) > src.height))
 				{
 					// TODO: Special case that needs wrapping around (custom blit)
-					LOG_ERROR(RSX, "Transfer cropped in Y, src_h=%d, offset_y=%d, block_h=%d", src_h, src.offset_y, src.height);
+					rsx_log.error("Transfer cropped in Y, src_h=%d, offset_y=%d, block_h=%d", src_h, src.offset_y, src.height);
 
 					src_h = src.height - src.offset_y;
 					dst_h = u16(src_h * scale_y + 0.000001f);
@@ -1971,7 +1971,7 @@ namespace rsx
 				if (UNLIKELY((src_w + src.offset_x) > src.width))
 				{
 					// TODO: Special case that needs wrapping around (custom blit)
-					LOG_ERROR(RSX, "Transfer cropped in X, src_w=%d, offset_x=%d, block_w=%d", src_w, src.offset_x, src.width);
+					rsx_log.error("Transfer cropped in X, src_w=%d, offset_x=%d, block_w=%d", src_w, src.offset_x, src.width);
 
 					src_w = src.width - src.offset_x;
 					dst_w = u16(src_w * scale_x + 0.000001f);
@@ -2188,7 +2188,7 @@ namespace rsx
 				}
 				else
 				{
-					//LOG_TRACE(RSX, "Blit transfer to surface with dims %dx%d", dst_dimensions.width, dst.height);
+					//rsx_log.trace("Blit transfer to surface with dims %dx%d", dst_dimensions.width, dst.height);
 				}
 			}
 
@@ -2315,7 +2315,7 @@ namespace rsx
 						if (cached_dest->is_depth_texture() != src_is_depth)
 						{
 							// Opt to cancel the destination. Can also use typeless convert
-							LOG_WARNING(RSX, "Format mismatch on blit destination block. Performance warning.");
+							rsx_log.warning("Format mismatch on blit destination block. Performance warning.");
 
 							// The invalidate call before creating a new target will remove this section
 							cached_dest = nullptr;

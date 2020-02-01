@@ -250,7 +250,7 @@ namespace rsx
 		}
 		catch (const std::exception& e)
 		{
-			LOG_FATAL(RSX, "%s thrown: %s", typeid(e).name(), e.what());
+			rsx_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
 			Emu.Pause();
 		}
 	}
