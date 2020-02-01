@@ -17,6 +17,8 @@
 #include <cstdio>
 #include <cmath>
 
+LOG_CHANNEL(evdev_log);
+
 evdev_joystick_handler::evdev_joystick_handler() : PadHandlerBase(pad_handler::evdev)
 {
 	init_configs();
@@ -150,7 +152,7 @@ bool evdev_joystick_handler::update_device(const std::shared_ptr<PadDevice>& dev
 			dev = nullptr;
 		}
 
-		LOG_ERROR(GENERAL, "Joystick %s is not present or accessible [previous status: %d]", path.c_str(), was_connected ? 1 : 0);
+		evdev_log.error("Joystick %s is not present or accessible [previous status: %d]", path.c_str(), was_connected ? 1 : 0);
 		return false;
 	}
 
@@ -161,18 +163,18 @@ bool evdev_joystick_handler::update_device(const std::shared_ptr<PadDevice>& dev
 	if (fd == -1)
 	{
 		int err = errno;
-		LOG_ERROR(GENERAL, "Failed to open joystick: %s [errno %d]", strerror(err), err);
+		evdev_log.error("Failed to open joystick: %s [errno %d]", strerror(err), err);
 		return false;
 	}
 
 	int ret = libevdev_new_from_fd(fd, &dev);
 	if (ret < 0)
 	{
-		LOG_ERROR(GENERAL, "Failed to initialize libevdev for joystick: %s [errno %d]", strerror(-ret), -ret);
+		evdev_log.error("Failed to initialize libevdev for joystick: %s [errno %d]", strerror(-ret), -ret);
 		return false;
 	}
 
-	LOG_NOTICE(GENERAL, "Opened joystick: '%s' at %s (fd %d)", get_device_name(dev), path, fd);
+	evdev_log.notice("Opened joystick: '%s' at %s (fd %d)", get_device_name(dev), path, fd);
 	return true;
 }
 
@@ -526,7 +528,7 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, const std::sha
 		// get the button value and return its code
 		if (button_list.find(code) == button_list.end())
 		{
-			LOG_ERROR(GENERAL, "Evdev button %s (%d) is unknown. Please add it to the button list.", libevdev_event_code_get_name(EV_KEY, code), code);
+			evdev_log.error("Evdev button %s (%d) is unknown. Please add it to the button list.", libevdev_event_code_get_name(EV_KEY, code), code);
 			return -1;
 		}
 
@@ -583,7 +585,7 @@ std::vector<std::string> evdev_joystick_handler::ListDevices()
 			{
 				// If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
 				if (rc != -9)
-					LOG_WARNING(GENERAL, "Failed to connect to device at %s, the error was: %s", "/dev/input/" + et.name, strerror(-rc));
+					evdev_log.warning("Failed to connect to device at %s, the error was: %s", "/dev/input/" + et.name, strerror(-rc));
 				libevdev_free(dev);
 				close(fd);
 				continue;
@@ -631,7 +633,7 @@ int evdev_joystick_handler::add_device(const std::string& device, const std::sha
 			{
 				// If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
 				if (rc != -9)
-					LOG_WARNING(GENERAL, "Failed to connect to device at %s, the error was: %s", path, strerror(-rc));
+					evdev_log.warning("Failed to connect to device at %s, the error was: %s", path, strerror(-rc));
 				libevdev_free(dev);
 				close(fd);
 				continue;
@@ -712,7 +714,7 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 	// Grab any pending sync event.
 	if (ret == LIBEVDEV_READ_STATUS_SYNC)
 	{
-		LOG_NOTICE(GENERAL, "Captured sync event");
+		evdev_log.notice("Captured sync event");
 		ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_SYNC, &evt);
 	}
 
@@ -720,7 +722,7 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 	{
 		// -EAGAIN signifies no available events, not an actual *error*.
 		if (ret != -EAGAIN)
-			LOG_ERROR(GENERAL, "Failed to read latest event from joystick: %s [errno %d]", strerror(-ret), -ret);
+			evdev_log.error("Failed to read latest event from joystick: %s [errno %d]", strerror(-ret), -ret);
 		return;
 	}
 

@@ -26,6 +26,8 @@
 #include <sys/stat.h>
 #endif
 
+LOG_CHANNEL(update_log);
+
 update_manager::update_manager()
 {
 	m_manager.setRedirectPolicy(QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -43,7 +45,7 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 
 	if (QSslSocket::supportsSsl() == false)
 	{
-		LOG_ERROR(GENERAL, "Unable to update RPCS3! Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
+		update_log.error("Unable to update RPCS3! Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
 		if (!automatic)
 		{
 			const QString message = tr("Unable to update RPCS3!<br>Please make sure your system supports SSL.<br>Visit our <a href='https://rpcs3.net/quickstart'>Quickstart</a> guide for more information.");
@@ -96,7 +98,7 @@ void update_manager::handle_error(QNetworkReply::NetworkError error)
 		if (error != QNetworkReply::OperationCanceledError)
 		{
 			QString error = reply->errorString();
-			LOG_ERROR(GENERAL, "[Auto-updater] Network Error: %s", error.toStdString());
+			update_log.error("[Auto-updater] Network Error: %s", error.toStdString());
 		}
 	}
 }
@@ -110,7 +112,7 @@ bool update_manager::handle_reply(QNetworkReply* reply, std::function<bool(updat
 	const QByteArray data = reply->readAll();
 	reply->deleteLater();
 
-	LOG_NOTICE(GENERAL, "[Auto-updater] %s", message);
+	update_log.notice("[Auto-updater] %s", message);
 	if (!func(*this, data, automatic))
 	{
 		m_progress_dialog->close();
@@ -142,9 +144,9 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 		}
 
 		if (return_code != -1)
-			LOG_ERROR(GENERAL, "[Auto-updater] error: %s return code: %d", error_message, return_code);
+			update_log.error("[Auto-updater] error: %s return code: %d", error_message, return_code);
 		else
-			LOG_WARNING(GENERAL, "[Auto-updater] error: %s return code: %d", error_message, return_code);
+			update_log.warning("[Auto-updater] error: %s return code: %d", error_message, return_code);
 
 		// If a user clicks "Check for Updates" with a custom build ask him if he's sure he wants to update to latest version
 		if (!automatic && return_code == -1)
@@ -167,7 +169,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 	const auto& latest = json_data["latest_build"];
 	if (!latest.isObject())
 	{
-		LOG_ERROR(GENERAL, "[Auto-updater] JSON doesn't contain latest_build section");
+		update_log.error("[Auto-updater] JSON doesn't contain latest_build section");
 		return false;
 	}
 
@@ -178,7 +180,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 #elif defined(__linux__)
 	os = "linux";
 #else
-	LOG_ERROR(GENERAL, "[Auto-updater] Your OS isn't currently supported by the auto-updater");
+	update_log.error("[Auto-updater] Your OS isn't currently supported by the auto-updater");
 	return false;
 #endif
 
@@ -187,13 +189,13 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 	    !latest["datetime"].isString() ||
 	    (hash_found && (!json_data["current_build"].isObject() || !json_data["current_build"]["version"].isString() || !json_data["current_build"]["datetime"].isString())))
 	{
-		LOG_ERROR(GENERAL, "[Auto-updater] Some information seems unavailable");
+		update_log.error("[Auto-updater] Some information seems unavailable");
 		return false;
 	}
 
 	if (hash_found && return_code == 0)
 	{
-		LOG_SUCCESS(GENERAL, "[Auto-updater] RPCS3 is up to date!");
+		update_log.success("[Auto-updater] RPCS3 is up to date!");
 		m_progress_dialog->close();
 
 		if (!automatic)
@@ -274,7 +276,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 {
 	if (m_expected_size != rpcs3_data.size())
 	{
-		LOG_ERROR(GENERAL, "[Auto-updater] Download size mismatch: %d expected: %d", rpcs3_data.size(), m_expected_size);
+		update_log.error("[Auto-updater] Download size mismatch: %d expected: %d", rpcs3_data.size(), m_expected_size);
 		return false;
 	}
 
@@ -295,7 +297,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 
 	if (m_expected_hash != res_hash_string)
 	{
-		LOG_ERROR(GENERAL, "[Auto-updater] Hash mismatch: %s expected: %s", res_hash_string, m_expected_hash);
+		update_log.error("[Auto-updater] Hash mismatch: %s expected: %s", res_hash_string, m_expected_hash);
 		return false;
 	}
 
@@ -307,22 +309,22 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 	if (appimage_path != nullptr)
 	{
 		replace_path = appimage_path;
-		LOG_NOTICE(GENERAL, "[Auto-updater] Found AppImage path: %s", appimage_path);
+		update_log.notice("[Auto-updater] Found AppImage path: %s", appimage_path);
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "[Auto-updater] Failed to find AppImage path");
+		update_log.warning("[Auto-updater] Failed to find AppImage path");
 		char exe_path[PATH_MAX];
 		ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
 
 		if (len == -1)
 		{
-			LOG_ERROR(GENERAL, "[Auto-updater] Failed to find executable path");
+			update_log.error("[Auto-updater] Failed to find executable path");
 			return false;
 		}
 
 		exe_path[len] = '\0';
-		LOG_TRACE(GENERAL, "[Auto-updater] Found exec path: %s", exe_path);
+		update_log.trace("[Auto-updater] Found exec path: %s", exe_path);
 
 		replace_path = exe_path;
 	}
@@ -335,22 +337,22 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 	fs::file new_appimage(replace_path, fs::read + fs::write + fs::create + fs::trunc);
 	if (!new_appimage)
 	{
-		LOG_ERROR(GENERAL, "[Auto-updater] Failed to create new AppImage file: %s", replace_path);
+		update_log.error("[Auto-updater] Failed to create new AppImage file: %s", replace_path);
 		return false;
 	}
 	if (new_appimage.write(rpcs3_data.data(), rpcs3_data.size()) != rpcs3_data.size())
 	{
-		LOG_ERROR(GENERAL, "[Auto-updater] Failed to write new AppImage file: %s", replace_path);
+		update_log.error("[Auto-updater] Failed to write new AppImage file: %s", replace_path);
 		return false;
 	}
 	if (fchmod(new_appimage.get_handle(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == -1)
 	{
-		LOG_ERROR(GENERAL, "[Auto-updater] Failed to chmod rwxrxrx %s", replace_path);
+		update_log.error("[Auto-updater] Failed to chmod rwxrxrx %s", replace_path);
 		return false;
 	}
 	new_appimage.close();
 
-	LOG_SUCCESS(GENERAL, "[Auto-updater] Successfully updated %s!", replace_path);
+	update_log.success("[Auto-updater] Successfully updated %s!", replace_path);
 
 #elif defined(_WIN32)
 
@@ -365,12 +367,12 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 	fs::file tmpfile(tmpfile_path, fs::read + fs::write + fs::create + fs::trunc);
 	if (!tmpfile)
 	{
-		LOG_ERROR(GENERAL, "[Auto-updater] Failed to create temporary file: %s", tmpfile_path);
+		update_log.error("[Auto-updater] Failed to create temporary file: %s", tmpfile_path);
 		return false;
 	}
 	if (tmpfile.write(rpcs3_data.data(), rpcs3_data.size()) != rpcs3_data.size())
 	{
-		LOG_ERROR(GENERAL, "[Auto-updater] Failed to write temporary file: %s", tmpfile_path);
+		update_log.error("[Auto-updater] Failed to write temporary file: %s", tmpfile_path);
 		return false;
 	}
 	tmpfile.close();
@@ -396,7 +398,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 
 	if (InFile_Open(&archiveStream.file, tmpfile_path.c_str()))
 	{
-		LOG_ERROR(GENERAL, "[Auto-updater] Failed to open temporary storage file: %s", tmpfile_path);
+		update_log.error("[Auto-updater] Failed to open temporary storage file: %s", tmpfile_path);
 		return false;
 	}
 
@@ -429,10 +431,10 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 		switch (res)
 		{
 		case SZ_OK: break;
-		case SZ_ERROR_UNSUPPORTED: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder doesn't support this archive"); break;
-		case SZ_ERROR_MEM: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder failed to allocate memory"); break;
-		case SZ_ERROR_CRC: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder CRC error"); break;
-		default: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder error: %d", static_cast<u64>(res)); break;
+		case SZ_ERROR_UNSUPPORTED: update_log.error("[Auto-updater] 7z decoder doesn't support this archive"); break;
+		case SZ_ERROR_MEM: update_log.error("[Auto-updater] 7z decoder failed to allocate memory"); break;
+		case SZ_ERROR_CRC: update_log.error("[Auto-updater] 7z decoder CRC error"); break;
+		default: update_log.error("[Auto-updater] 7z decoder error: %d", static_cast<u64>(res)); break;
 		}
 	};
 
@@ -467,7 +469,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 
 		if (len >= PATH_MAX)
 		{
-			LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder error: filename longer or equal to PATH_MAX");
+			update_log.error("[Auto-updater] 7z decoder error: filename longer or equal to PATH_MAX");
 			error_free7z();
 			return false;
 		}
@@ -479,7 +481,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 		{
 			if (temp_u16[index] > 0xFF)
 			{
-				LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder error: Failed to convert UTF-16 to UTF-8");
+				update_log.error("[Auto-updater] 7z decoder error: Failed to convert UTF-16 to UTF-8");
 				error_free7z();
 				return false;
 			}
@@ -500,13 +502,13 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 
 		if (size_t pos = name.find_last_of('/'); pos != std::string::npos)
 		{
-			LOG_TRACE(GENERAL, "[Auto-updater] Creating path: %s", name.substr(0, pos));
+			update_log.trace("[Auto-updater] Creating path: %s", name.substr(0, pos));
 			fs::create_path(name.substr(0, pos));
 		}
 
 		if (isDir)
 		{
-			LOG_TRACE(GENERAL, "[Auto-updater] Creating dir: %s", name);
+			update_log.trace("[Auto-updater] Creating dir: %s", name);
 			fs::create_dir(name);
 			continue;
 		}
@@ -525,10 +527,10 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 			// Moving to temp is not an option on windows as it will fail if the disk is different
 			// So we create a folder in config dir and move stuff there
 			const std::string rename_target = tmp_folder + filename;
-			LOG_TRACE(GENERAL, "[Auto-updater] Renaming %s to %s", name, rename_target);
+			update_log.trace("[Auto-updater] Renaming %s to %s", name, rename_target);
 			if (!fs::rename(name, rename_target, true))
 			{
-				LOG_ERROR(GENERAL, "[Auto-updater] Failed to rename %s to %s", name, rename_target);
+				update_log.error("[Auto-updater] Failed to rename %s to %s", name, rename_target);
 				res = SZ_ERROR_FAIL;
 				break;
 			}
@@ -536,7 +538,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 			outfile.open(name, fs::read + fs::write + fs::create + fs::trunc);
 			if (!outfile)
 			{
-				LOG_ERROR(GENERAL, "[Auto-updater] can not open output file %s", name);
+				update_log.error("[Auto-updater] can not open output file %s", name);
 				res = SZ_ERROR_FAIL;
 				break;
 			}
@@ -544,7 +546,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 
 		if (outfile.write(outBuffer + offset, outSizeProcessed) != outSizeProcessed)
 		{
-			LOG_ERROR(GENERAL, "[Auto-updater] can not write output file: %s", name);
+			update_log.error("[Auto-updater] can not write output file: %s", name);
 			res = SZ_ERROR_FAIL;
 			break;
 		}
@@ -573,7 +575,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 #endif
 	if (ret == -1)
 	{
-		LOG_ERROR(GENERAL, "[Auto-updater] Relaunching failed with result: %d(%s)", ret, strerror(errno));
+		update_log.error("[Auto-updater] Relaunching failed with result: %d(%s)", ret, strerror(errno));
 		return false;
 	}
 

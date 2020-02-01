@@ -18,6 +18,8 @@
 
 #include <clocale>
 
+LOG_CHANNEL(gui_log);
+
 gui_application::gui_application(int& argc, char** argv) : QApplication(argc, argv)
 {
 }
@@ -201,7 +203,7 @@ void gui_application::InitializeCallbacks()
 			case 0: static_cast<gs_frame*>(m_game_window)->progress_reset(value); break;
 			case 1: static_cast<gs_frame*>(m_game_window)->progress_increment(value); break;
 			case 2: static_cast<gs_frame*>(m_game_window)->progress_set_limit(value); break;
-			default: LOG_FATAL(GENERAL, "Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value); break;
+			default: gui_log.fatal("Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value); break;
 			}
 		}
 	};

@@ -110,8 +110,6 @@ namespace logs
 namespace logs
 {
 	/* Small set of predefined channels */
-
-	inline channel GENERAL("");
 	inline channel LOADER("LDR");
 	LOG_CHANNEL(RSX);
 	LOG_CHANNEL(HLE);

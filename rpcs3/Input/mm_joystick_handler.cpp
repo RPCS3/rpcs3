@@ -1,6 +1,8 @@
 ﻿#ifdef _WIN32
 #include "mm_joystick_handler.h"
 
+LOG_CHANNEL(input_log);
+
 mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
 {
 	init_configs();
@@ -81,11 +83,11 @@ bool mm_joystick_handler::Init()
 
 	if (supported_joysticks <= 0)
 	{
-		LOG_ERROR(GENERAL, "mmjoy: Driver doesn't support Joysticks");
+		input_log.error("mmjoy: Driver doesn't support Joysticks");
 		return false;
 	}
 
-	LOG_NOTICE(GENERAL, "mmjoy: Driver supports %u joysticks", supported_joysticks);
+	input_log.notice("mmjoy: Driver supports %u joysticks", supported_joysticks);
 
 	for (u32 i = 0; i < supported_joysticks; i++)
 	{
@@ -191,7 +193,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 		id = GetIDByName(padId);
 		if (id < 0)
 		{
-			LOG_ERROR(GENERAL, "MMJOY get_next_button_press for device [%s] failed with id = %d", padId, id);
+			input_log.error("MMJOY get_next_button_press for device [%s] failed with id = %d", padId, id);
 			return fail_callback(padId);
 		}
 	}
@@ -447,7 +449,7 @@ bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev)
 	char drv[32];
 	wcstombs(drv, js_caps.szPname, 31);
 
-	LOG_NOTICE(GENERAL, "Joystick nr.%d found. Driver: %s", index, drv);
+	input_log.notice("Joystick nr.%d found. Driver: %s", index, drv);
 
 	dev->device_id = index;
 	dev->device_name = m_name_string + std::to_string(index + 1); // Controllers 1-n in GUI

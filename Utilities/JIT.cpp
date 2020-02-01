@@ -14,6 +14,8 @@
 #define CAN_OVERCOMMIT
 #endif
 
+LOG_CHANNEL(jit_log);
+
 static u8* get_jit_memory()
 {
 	// Reserve 2G memory (magic static)
@@ -80,7 +82,7 @@ static u8* add_jit_memory(std::size_t size, uint align)
 
 	if (UNLIKELY(pos == -1))
 	{
-		LOG_WARNING(GENERAL, "JIT: Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
+		jit_log.warning("JIT: Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
 		return nullptr;
 	}
 
@@ -532,7 +534,7 @@ extern void jit_finalize()
 	{
 		if (!RtlDeleteFunctionTable(unwind.data()))
 		{
-			LOG_FATAL(GENERAL, "RtlDeleteFunctionTable() failed! Error %u", GetLastError());
+			jit_log.fatal("RtlDeleteFunctionTable() failed! Error %u", GetLastError());
 		}
 	}
 
@@ -579,11 +581,11 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 			if (addr)
 			{
-				LOG_WARNING(GENERAL, "LLVM: Symbol requested: %s -> 0x%016llx", name, addr);
+				jit_log.warning("LLVM: Symbol requested: %s -> 0x%016llx", name, addr);
 			}
 			else
 			{
-				LOG_ERROR(GENERAL, "LLVM: Linkage failed: %s", name);
+				jit_log.error("LLVM: Linkage failed: %s", name);
 				addr = reinterpret_cast<u64>(null);
 			}
 		}
@@ -661,13 +663,13 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 		if (ptr == nullptr)
 		{
-			LOG_FATAL(GENERAL, "LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
+			jit_log.fatal("LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
 			return nullptr;
 		}
 		utils::memory_commit(ptr, size, utils::protection::wx);
 		m_code_addr = static_cast<u8*>(ptr);
 
-		LOG_NOTICE(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), ptr, size, align);
+		jit_log.notice("LLVM: Code section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), ptr, size, align);
 		return static_cast<u8*>(ptr);
 	}
 
@@ -685,7 +687,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 		if (ptr == nullptr)
 		{
-			LOG_FATAL(GENERAL, "LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
+			jit_log.fatal("LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
 			return nullptr;
 		}
 
@@ -695,7 +697,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 		utils::memory_commit(ptr, size);
 
-		LOG_NOTICE(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), ptr, size, align, is_ro ? "ro" : "rw");
+		jit_log.notice("LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), ptr, size, align, is_ro ? "ro" : "rw");
 		return static_cast<u8*>(ptr);
 	}
 
@@ -738,7 +740,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		// Register .xdata UNWIND_INFO structs
 		if (!RtlAddFunctionTable(pdata.data(), (DWORD)pdata.size(), segment_start))
 		{
-			LOG_ERROR(GENERAL, "RtlAddFunctionTable() failed! Error %u", GetLastError());
+			jit_log.error("RtlAddFunctionTable() failed! Error %u", GetLastError());
 		}
 		else
 		{
@@ -942,14 +944,14 @@ public:
 		}
 		default:
 		{
-			LOG_ERROR(GENERAL, "LLVM: Failed to compress module: %s", module->getName().data());
+			jit_log.error("LLVM: Failed to compress module: %s", module->getName().data());
 			deflateEnd(&zs);
 			return;
 		}
 		}
 
 		fs::file(name, fs::rewrite).write(zbuf.get(), zsz - zs.avail_out);
-		LOG_NOTICE(GENERAL, "LLVM: Created module: %s", module->getName().data());
+		jit_log.notice("LLVM: Created module: %s", module->getName().data());
 	}
 
 	static std::unique_ptr<llvm::MemoryBuffer> load(const std::string& path)
@@ -1020,7 +1022,7 @@ public:
 
 		if (auto buf = load(path))
 		{
-			LOG_NOTICE(GENERAL, "LLVM: Loaded module: %s", module->getName().data());
+			jit_log.notice("LLVM: Loaded module: %s", module->getName().data());
 			return buf;
 		}
 
@@ -1186,7 +1188,7 @@ void jit_compiler::add(const std::string& path)
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "ObjectCache: Adding failed: %s", path);
+		jit_log.error("ObjectCache: Adding failed: %s", path);
 	}
 }
 

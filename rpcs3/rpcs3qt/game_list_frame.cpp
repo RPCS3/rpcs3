@@ -29,6 +29,8 @@
 #include <QApplication>
 #include <QClipboard>
 
+LOG_CHANNEL(game_list_log);
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
@@ -648,7 +650,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 				if (game.icon_path.empty() || !icon.load(qstr(game.icon_path)))
 				{
-					LOG_WARNING(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
+					game_list_log.warning("Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
 				}
 
 				const auto compat = m_game_compat->GetCompatibility(game.serial);
@@ -663,7 +665,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			}
 			catch (const std::exception& e)
 			{
-				LOG_FATAL(GENERAL, "Failed to update game list at %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
+				game_list_log.fatal("Failed to update game list at %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
 				return;
 			}
 		});
@@ -703,7 +705,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 						}
 						catch (const std::exception& e)
 						{
-							LOG_ERROR(GENERAL, "Failed to update the displayed version numbers for title ID %s\n%s thrown: %s", entry->info.serial, typeid(e).name(), e.what());
+							game_list_log.error("Failed to update the displayed version numbers for title ID %s\n%s thrown: %s", entry->info.serial, typeid(e).name(), e.what());
 						}
 
 						const std::string key = "GD" + other->info.name;
@@ -1063,7 +1065,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		if (currGame.path.empty())
 		{
-			LOG_FATAL(GENERAL, "Cannot remove game. Path is empty");
+			game_list_log.fatal("Cannot remove game. Path is empty");
 			return;
 		}
 
@@ -1084,12 +1086,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 					RemoveCustomPadConfiguration(currGame.serial);
 				}
 				m_game_data.erase(std::remove(m_game_data.begin(), m_game_data.end(), gameinfo), m_game_data.end());
-				LOG_SUCCESS(GENERAL, "Removed %s %s in %s", currGame.category, currGame.name, currGame.path);
+				game_list_log.success("Removed %s %s in %s", currGame.category, currGame.name, currGame.path);
 				Refresh(true);
 			}
 			else
 			{
-				LOG_ERROR(GENERAL, "Failed to remove %s %s in %s (%s)", currGame.category, currGame.name, currGame.path, fs::g_tls_error);
+				game_list_log.error("Failed to remove %s %s in %s (%s)", currGame.category, currGame.name, currGame.path, fs::g_tls_error);
 				QMessageBox::critical(this, tr("Failure!"), tr(remove_caches ? "Failed to remove %0 from drive!\nPath: %1\nCaches and custom configs have been left intact." : "Failed to remove %0 from drive!\nPath: %1").arg(name).arg(qstr(currGame.path)));
 			}
 		}
@@ -1193,11 +1195,11 @@ bool game_list_frame::CreatePPUCache(const game_info& game)
 
 	if (success)
 	{
-		LOG_WARNING(GENERAL, "Creating PPU Cache for %s", game->info.path);
+		game_list_log.warning("Creating PPU Cache for %s", game->info.path);
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "Could not create PPU Cache for %s", game->info.path);
+		game_list_log.error("Could not create PPU Cache for %s", game->info.path);
 	}
 	return success;
 }
@@ -1227,11 +1229,11 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, gam
 			{
 				game->hasCustomConfig = false;
 			}
-			LOG_SUCCESS(GENERAL, "Removed configuration file: %s", path);
+			game_list_log.success("Removed configuration file: %s", path);
 		}
 		else
 		{
-			LOG_FATAL(GENERAL, "Failed to remove configuration file: %s\nError: %s", path, fs::g_tls_error);
+			game_list_log.fatal("Failed to remove configuration file: %s\nError: %s", path, fs::g_tls_error);
 			result = false;
 		}
 	}
@@ -1268,13 +1270,13 @@ bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, 
 			Emu.GetCallbacks().reset_pads(title_id);
 			Emu.GetCallbacks().enable_pads(true);
 		}
-		LOG_NOTICE(GENERAL, "Removed pad configuration directory: %s", config_dir);
+		game_list_log.notice("Removed pad configuration directory: %s", config_dir);
 		return true;
 	}
 	else if (is_interactive)
 	{
 		QMessageBox::warning(this, tr("Warning!"), tr("Failed to completely remove pad configuration directory!"));
-		LOG_FATAL(GENERAL, "Failed to completely remove pad configuration directory: %s\nError: %s", config_dir, fs::g_tls_error);
+		game_list_log.fatal("Failed to completely remove pad configuration directory: %s\nError: %s", config_dir, fs::g_tls_error);
 	}
 	return false;
 }
@@ -1301,11 +1303,11 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 		if (QDir(filepath).removeRecursively())
 		{
 			++caches_removed;
-			LOG_NOTICE(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
+			game_list_log.notice("Removed shaders cache dir: %s", sstr(filepath));
 		}
 		else
 		{
-			LOG_WARNING(GENERAL, "Could not completely remove shaders cache dir: %s", sstr(filepath));
+			game_list_log.warning("Could not completely remove shaders cache dir: %s", sstr(filepath));
 		}
 
 		++caches_total;
@@ -1314,9 +1316,9 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 	const bool success = caches_total == caches_removed;
 
 	if (success)
-		LOG_SUCCESS(GENERAL, "Removed shaders cache in %s", base_dir);
+		game_list_log.success("Removed shaders cache in %s", base_dir);
 	else
-		LOG_FATAL(GENERAL, "Only %d/%d shaders cache dirs could be removed in %s", caches_removed, caches_total, base_dir);
+		game_list_log.fatal("Only %d/%d shaders cache dirs could be removed in %s", caches_removed, caches_total, base_dir);
 
 	return success;
 }
@@ -1343,11 +1345,11 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 		if (QFile::remove(filepath))
 		{
 			++files_removed;
-			LOG_NOTICE(GENERAL, "Removed PPU cache file: %s", sstr(filepath));
+			game_list_log.notice("Removed PPU cache file: %s", sstr(filepath));
 		}
 		else
 		{
-			LOG_WARNING(GENERAL, "Could not remove PPU cache file: %s", sstr(filepath));
+			game_list_log.warning("Could not remove PPU cache file: %s", sstr(filepath));
 		}
 
 		++files_total;
@@ -1356,9 +1358,9 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	const bool success = files_total == files_removed;
 
 	if (success)
-		LOG_SUCCESS(GENERAL, "Removed PPU cache in %s", base_dir);
+		game_list_log.success("Removed PPU cache in %s", base_dir);
 	else
-		LOG_FATAL(GENERAL, "Only %d/%d PPU cache files could be removed in %s", files_removed, files_total, base_dir);
+		game_list_log.fatal("Only %d/%d PPU cache files could be removed in %s", files_removed, files_total, base_dir);
 
 	return success;
 }
@@ -1385,11 +1387,11 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 		if (QFile::remove(filepath))
 		{
 			++files_removed;
-			LOG_NOTICE(GENERAL, "Removed SPU cache file: %s", sstr(filepath));
+			game_list_log.notice("Removed SPU cache file: %s", sstr(filepath));
 		}
 		else
 		{
-			LOG_WARNING(GENERAL, "Could not remove SPU cache file: %s", sstr(filepath));
+			game_list_log.warning("Could not remove SPU cache file: %s", sstr(filepath));
 		}
 
 		++files_total;
@@ -1398,9 +1400,9 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 	const bool success = files_total == files_removed;
 
 	if (success)
-		LOG_SUCCESS(GENERAL, "Removed SPU cache in %s", base_dir);
+		game_list_log.success("Removed SPU cache in %s", base_dir);
 	else
-		LOG_FATAL(GENERAL, "Only %d/%d SPU cache files could be removed in %s", files_removed, files_total, base_dir);
+		game_list_log.fatal("Only %d/%d SPU cache files could be removed in %s", files_removed, files_total, base_dir);
 
 	return success;
 }
@@ -1425,7 +1427,7 @@ void game_list_frame::BatchCreatePPUCaches()
 	{
 		if (pdlg->wasCanceled())
 		{
-			LOG_NOTICE(GENERAL, "PPU Cache Batch Creation was canceled");
+			game_list_log.notice("PPU Cache Batch Creation was canceled");
 			break;
 		}
 		QApplication::processEvents();
@@ -1470,7 +1472,7 @@ void game_list_frame::BatchRemovePPUCaches()
 	{
 		if (pdlg->wasCanceled())
 		{
-			LOG_NOTICE(GENERAL, "PPU Cache Batch Removal was canceled");
+			game_list_log.notice("PPU Cache Batch Removal was canceled");
 			break;
 		}
 		QApplication::processEvents();
@@ -1511,7 +1513,7 @@ void game_list_frame::BatchRemoveSPUCaches()
 	{
 		if (pdlg->wasCanceled())
 		{
-			LOG_NOTICE(GENERAL, "SPU Cache Batch Removal was canceled. %d/%d folders cleared", removed, total);
+			game_list_log.notice("SPU Cache Batch Removal was canceled. %d/%d folders cleared", removed, total);
 			break;
 		}
 		QApplication::processEvents();
@@ -1555,7 +1557,7 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 	{
 		if (pdlg->wasCanceled())
 		{
-			LOG_NOTICE(GENERAL, "Custom Configuration Batch Removal was canceled. %d/%d custom configurations cleared", removed, total);
+			game_list_log.notice("Custom Configuration Batch Removal was canceled. %d/%d custom configurations cleared", removed, total);
 			break;
 		}
 		QApplication::processEvents();
@@ -1600,7 +1602,7 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 	{
 		if (pdlg->wasCanceled())
 		{
-			LOG_NOTICE(GENERAL, "Custom Pad Configuration Batch Removal was canceled. %d/%d custom pad configurations cleared", removed, total);
+			game_list_log.notice("Custom Pad Configuration Batch Removal was canceled. %d/%d custom pad configurations cleared", removed, total);
 			break;
 		}
 		QApplication::processEvents();
@@ -1642,7 +1644,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 	{
 		if (pdlg->wasCanceled())
 		{
-			LOG_NOTICE(GENERAL, "Shader Cache Batch Removal was canceled");
+			game_list_log.notice("Shader Cache Batch Removal was canceled");
 			break;
 		}
 		QApplication::processEvents();

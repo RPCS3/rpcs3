@@ -3,6 +3,8 @@
 #include "File.h"
 #include "Config.h"
 
+LOG_CHANNEL(patch_log);
+
 template <>
 void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 {
@@ -40,7 +42,7 @@ void patch_engine::append(const std::string& patch)
 		}
 		catch (const std::exception& e)
 		{
-			LOG_FATAL(GENERAL, "Failed to load patch file %s\n%s thrown: %s", patch, typeid(e).name(), e.what());
+			patch_log.fatal("Failed to load patch file %s\n%s thrown: %s", patch, typeid(e).name(), e.what());
 			return;
 		}
 

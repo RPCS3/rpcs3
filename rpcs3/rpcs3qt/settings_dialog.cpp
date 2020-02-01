@@ -32,6 +32,8 @@
 #include "_discord_utils.h"
 #endif
 
+LOG_CHANNEL(cfg_log);
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
@@ -1685,7 +1687,7 @@ void settings_dialog::AddConfigs()
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "Trying to set an invalid config index %d", index);
+		cfg_log.warning("Trying to set an invalid config index %d", index);
 	}
 }
 
@@ -1713,7 +1715,7 @@ void settings_dialog::AddStylesheets()
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "Trying to set an invalid stylesheets index: %d (%s)", index, sstr(m_currentStylesheet));
+		cfg_log.warning("Trying to set an invalid stylesheets index: %d (%s)", index, sstr(m_currentStylesheet));
 	}
 }
 
