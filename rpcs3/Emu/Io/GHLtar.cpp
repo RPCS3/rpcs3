@@ -4,8 +4,6 @@
 #include "GHLtar.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Input/pad_thread.h"
-#include "Emu/Cell/Modules/cellPad.cpp"
-#include "Emu/RSX/GL/GLHelpers.h"
 
 LOG_CHANNEL(ghltar_log);
 
@@ -163,11 +161,13 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, 
 					pad->m_press_down = button.m_value;
 					if (button.m_pressed)
 						buf[4] = 0xFF; // Strum Down
+						buf[2] = 0x04;  // Down D-Pad (Unused)
 					break;
 				case CELL_PAD_CTRL_UP:
 					pad->m_press_up = button.m_value;
 					if (button.m_pressed)
 						buf[4] = 0x00; // Strum Up
+						buf[2] = 0x00;  // Up D-Pad (Unused)
 					break;
 				case CELL_PAD_CTRL_LEFT:
 					pad->m_press_down = button.m_value;

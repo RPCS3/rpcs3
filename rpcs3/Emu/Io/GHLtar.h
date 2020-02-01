@@ -1,8 +1,6 @@
 ﻿#pragma once
 
 #include "Emu/Io/usb_device.h"
-#include <queue>
-#include <mutex>
 
 class usb_device_ghltar : public usb_device_emulated
 {
