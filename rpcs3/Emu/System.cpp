@@ -1657,6 +1657,12 @@ void Emulator::Run()
 	m_pause_amend_time = 0;
 	m_state = system_state::running;
 
+	if (g_cfg.misc.silence_all_logs)
+	{
+		sys_log.notice("Now disabling logging...");
+		logs::silence();
+	}
+
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.state -= cpu_flag::stop;

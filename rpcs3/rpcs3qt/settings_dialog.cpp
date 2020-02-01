@@ -920,6 +920,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->debugConsoleMode, emu_settings::DebugConsoleMode);
 	SubscribeTooltip(ui->debugConsoleMode, json_advanced["debugConsoleMode"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->silenceAllLogs, emu_settings::SilenceAllLogs);
+	SubscribeTooltip(ui->silenceAllLogs, json_advanced["silenceAllLogs"].toString());
+
 	xemu_settings->EnhanceCheckBox(ui->readColor, emu_settings::ReadColorBuffers);
 	SubscribeTooltip(ui->readColor, json_advanced["readColor"].toString());
 
