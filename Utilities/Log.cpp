@@ -169,7 +169,7 @@ namespace logs
 
 		for (auto&& pair : get_logger()->channels)
 		{
-			pair.second->enabled = level::notice;
+			pair.second->enabled.store(level::notice, std::memory_order_relaxed);
 		}
 	}
 
@@ -179,7 +179,7 @@ namespace logs
 
 		for (auto&& pair : get_logger()->channels)
 		{
-			pair.second->enabled = level::always;
+			pair.second->enabled.store(level::always, std::memory_order_relaxed);
 		}
 	}
 
@@ -191,7 +191,7 @@ namespace logs
 
 		while (found.first != found.second)
 		{
-			found.first->second->enabled = value;
+			found.first->second->enabled.store(value, std::memory_order_relaxed);
 			found.first++;
 		}
 	}
@@ -204,7 +204,7 @@ namespace logs
 
 		if (found.first != found.second)
 		{
-			return found.first->second->enabled;
+			return found.first->second->enabled.load(std::memory_order_relaxed);
 		}
 		else
 		{

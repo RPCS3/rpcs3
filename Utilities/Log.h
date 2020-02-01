@@ -1,9 +1,9 @@
 #pragma once
 
 #include "types.h"
-#include "util/atomic.hpp"
 #include "StrFmt.h"
-#include <climits>
+#include "util/atomic.hpp"
+#include <atomic>
 
 namespace logs
 {
@@ -59,7 +59,7 @@ namespace logs
 		const char* const name;
 
 		// The lowest logging level enabled for this channel (used for early filtering)
-		atomic_t<level> enabled;
+		std::atomic<level> enabled;
 
 		// Initialize and register channel
 		channel(const char* name);
@@ -69,7 +69,7 @@ namespace logs
 		template <std::size_t N, typename... Args>\
 		void _sev(const char(&fmt)[N], const Args&... args)\
 		{\
-			if (UNLIKELY(level::_sev <= enabled))\
+			if (UNLIKELY(level::_sev <= enabled.load(std::memory_order_relaxed)))\
 			{\
 				static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
 				msg_##_sev.broadcast(fmt, type_list, u64{fmt_unveil<Args>::get(args)}...);\
