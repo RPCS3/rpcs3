@@ -324,7 +324,7 @@ void emu_settings::SaveSettings()
 
 		if (!Emu.IsStopped()) // Don't spam the log while emulation is stopped. The config will be logged on boot anyway.
 		{
-			LOG_NOTICE(LOADER, "Updated configuration:\n%s\n", g_cfg.to_string());
+			cfg_log.notice("Updated configuration:\n%s\n", g_cfg.to_string());
 		}
 	}
 

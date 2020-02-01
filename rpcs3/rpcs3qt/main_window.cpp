@@ -262,7 +262,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 	if (Emu.BootGame(path, title_id, direct, add_only, force_global_config))
 	{
-		LOG_SUCCESS(LOADER, "Boot successful.");
+		gui_log.success("Boot successful.");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		if (!add_only)
 		{
@@ -309,7 +309,7 @@ void main_window::BootElf()
 	guiSettings->SetValue(gui::fd_boot_elf, filePath);
 	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
-	LOG_NOTICE(LOADER, "Booting from BootElf...");
+	gui_log.notice("Booting from BootElf...");
 	Boot(path, "", true);
 }
 
@@ -335,7 +335,7 @@ void main_window::BootGame()
 	guiSettings->SetValue(gui::fd_boot_game, QFileInfo(dirPath).path());
 	const std::string path = sstr(dirPath);
 
-	LOG_NOTICE(LOADER, "Booting from BootGame...");
+	gui_log.notice("Booting from BootGame...");
 	Boot(path);
 }
 
@@ -373,7 +373,7 @@ void main_window::BootRsxCapture(std::string path)
 	}
 	else
 	{
-		LOG_SUCCESS(LOADER, "Capture Boot Success. path: %s", path);
+		gui_log.success("Capture Boot Success. path: %s", path);
 	}
 }
 
@@ -394,7 +394,7 @@ void main_window::InstallPackages(QStringList file_paths, bool show_confirm)
 		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(file_paths.front()),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
-			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(file_paths.front()));
+			gui_log.notice("PKG: Cancelled installation from drop. File: %s", sstr(file_paths.front()));
 			return;
 		}
 	}
@@ -516,7 +516,7 @@ void main_window::InstallPup(QString file_path)
 		if (QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Install firmware: %1?").arg(file_path),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
-			LOG_NOTICE(LOADER, "Firmware: Cancelled installation from drop. File: %s", sstr(file_path));
+			gui_log.notice("Firmware: Cancelled installation from drop. File: %s", sstr(file_path));
 			return;
 		}
 	}
@@ -1041,7 +1041,7 @@ void main_window::BootRecentAction(const QAction* act)
 		return;
 	}
 
-	LOG_NOTICE(LOADER, "Booting from recent games list...");
+	gui_log.notice("Booting from recent games list...");
 	Boot(path, "", true);
 }
 
@@ -1124,7 +1124,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	}
 	else if (m_rg_entries.count() > 9)
 	{
-		LOG_ERROR(LOADER, "Recent games entrylist too big");
+		gui_log.error("Recent games entrylist too big");
 	}
 
 	if (m_rg_entries.count() < 9)

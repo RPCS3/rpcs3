@@ -57,7 +57,7 @@ namespace
 
 			if (psf.empty())
 			{
-				LOG_ERROR(LOADER, "Failed to load savedata: %s", base_dir + "/" + entry.name);
+				gui_log.error("Failed to load savedata: %s", base_dir + "/" + entry.name);
 				continue;
 			}
 

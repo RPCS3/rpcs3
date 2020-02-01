@@ -30,6 +30,7 @@
 #include <QClipboard>
 
 LOG_CHANNEL(game_list_log);
+LOG_CHANNEL(sys_log);
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -845,7 +846,7 @@ void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
 		return;
 	}
 
-	LOG_NOTICE(LOADER, "Booting from gamelist per doubleclick...");
+	sys_log.notice("Booting from gamelist per doubleclick...");
 	Q_EMIT RequestBoot(game);
 }
 
@@ -894,7 +895,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		boot_custom->setFont(f);
 		connect(boot_custom, &QAction::triggered, [=]
 		{
-			LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
+			sys_log.notice("Booting from gamelist per context menu...");
 			Q_EMIT RequestBoot(gameinfo);
 		});
 	}
@@ -1006,7 +1007,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	connect(boot, &QAction::triggered, [=]
 	{
-		LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
+		sys_log.notice("Booting from gamelist per context menu...");
 		Q_EMIT RequestBoot(gameinfo, gameinfo->hasCustomConfig);
 	});
 	connect(configure, &QAction::triggered, [=]
@@ -1863,7 +1864,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 				if (!gameinfo)
 					return false;
 
-				LOG_NOTICE(LOADER, "Booting from gamelist by pressing %s...", keyEvent->key() == Qt::Key_Enter ? "Enter" : "Return");
+				sys_log.notice("Booting from gamelist by pressing %s...", keyEvent->key() == Qt::Key_Enter ? "Enter" : "Return");
 				Q_EMIT RequestBoot(gameinfo);
 
 				return true;

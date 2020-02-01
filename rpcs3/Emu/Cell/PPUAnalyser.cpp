@@ -8,6 +8,8 @@
 #include "yaml-cpp/yaml.h"
 #include "Utilities/asm.h"
 
+LOG_CHANNEL(ppu_validator);
+
 const ppu_decoder<ppu_itype> s_ppu_itype;
 
 template<>
@@ -68,14 +70,14 @@ void ppu_module::validate(u32 reloc)
 
 				while (addr > found && index + 1 < funcs.size())
 				{
-					LOG_WARNING(LOADER, "%s.yml : unexpected function at 0x%x (0x%x, 0x%x)", path, found, addr, size);
+					ppu_validator.warning("%s.yml : unexpected function at 0x%x (0x%x, 0x%x)", path, found, addr, size);
 					index++;
 					found = funcs[index].addr - reloc;
 				}
 
 				if (addr < found)
 				{
-					LOG_ERROR(LOADER, "%s.yml : function not found (0x%x, 0x%x)", path, addr, size);
+					ppu_validator.error("%s.yml : function not found (0x%x, 0x%x)", path, addr, size);
 					continue;
 				}
 
@@ -83,7 +85,7 @@ void ppu_module::validate(u32 reloc)
 				{
 					if (size + 4 != funcs[index].size || vm::read32(addr + size) != ppu_instructions::NOP())
 					{
-						LOG_ERROR(LOADER, "%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", path, found, funcs[index].size, addr, size);
+						ppu_validator.error("%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", path, found, funcs[index].size, addr, size);
 					}
 				}
 
@@ -91,7 +93,7 @@ void ppu_module::validate(u32 reloc)
 			}
 			else
 			{
-				LOG_ERROR(LOADER, "%s.yml : function not found at the end (0x%x, 0x%x)", path, addr, size);
+				ppu_validator.error("%s.yml : function not found at the end (0x%x, 0x%x)", path, addr, size);
 				break;
 			}
 		}
@@ -105,13 +107,13 @@ void ppu_module::validate(u32 reloc)
 		{
 			if (funcs[index].size)
 			{
-				LOG_ERROR(LOADER, "%s.yml : function not covered at 0x%x (size=0x%x)", path, funcs[index].addr, funcs[index].size);
+				ppu_validator.error("%s.yml : function not covered at 0x%x (size=0x%x)", path, funcs[index].addr, funcs[index].size);
 			}
 
 			index++;
 		}
 
-		LOG_SUCCESS(LOADER, "%s.yml : validation completed", path);
+		ppu_validator.success("%s.yml : validation completed", path);
 	}
 }
 

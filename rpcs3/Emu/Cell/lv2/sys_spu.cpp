@@ -139,7 +139,7 @@ void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::_ptr<u8>(loc));
 	}
 
-	LOG_NOTICE(LOADER, "Loaded SPU image: %s (<- %u)%s", hash, applied, dump);
+	LOG_NOTICE(SPU, "Loaded SPU image: %s (<- %u)%s", hash, applied, dump);
 }
 
 // Get spu thread ptr, returns group ptr as well for refcounting
@@ -435,7 +435,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	}
 
 	*id = idm::last_id();
-	sys_spu.warning(u8"sys_spu_thread_group_create(): Thread group “%s” created (id=0x%x)", group->name, idm::last_id()); 
+	sys_spu.warning(u8"sys_spu_thread_group_create(): Thread group “%s” created (id=0x%x)", group->name, idm::last_id());
 	return CELL_OK;
 }
 
