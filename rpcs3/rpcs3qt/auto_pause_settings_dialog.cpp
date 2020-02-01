@@ -1,6 +1,8 @@
 ﻿
 #include "auto_pause_settings_dialog.h"
 
+LOG_CHANNEL(autopause_log, "AutoPause");
+
 constexpr auto qstr = QString::fromStdString;
 
 auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialog(parent)
@@ -46,7 +48,7 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 	connect(saveButton, &QAbstractButton::clicked, [=]
 	{
 		SaveEntries();
-		LOG_SUCCESS(HLE, "Auto Pause: File pause.bin was updated.");
+		autopause_log.success("File pause.bin was updated.");
 	});
 	connect(cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 
@@ -115,7 +117,7 @@ void auto_pause_settings_dialog::UpdateList(void)
 		callItem->setFlags(callItem->flags() & ~Qt::ItemIsEditable);
 		typeItem->setFlags(typeItem->flags() & ~Qt::ItemIsEditable);
 		if (m_entries[i] != 0xFFFFFFFF)
-		{	
+		{
 			callItem->setData(Qt::DisplayRole, qstr(fmt::format("%08x", m_entries[i])));
 		}
 		else
@@ -195,7 +197,7 @@ void auto_pause_settings_dialog::keyPressEvent(QKeyEvent *event)
 	}
 }
 
-AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_settings_dialog* apsd, bool newEntry, u32 *entry) 
+AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_settings_dialog* apsd, bool newEntry, u32 *entry)
 	: QDialog(parent), m_presult(entry), m_newEntry(newEntry), m_apsd(apsd)
 {
 	m_entry = *m_presult;
@@ -211,7 +213,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 
 	m_current_converted = new QLabel(tr("Currently it gets an id of \"Unset\"."), this);
 	m_current_converted->setWordWrap(true);
-	
+
 	m_id = new QLineEdit(this);
 	m_id->setText(qstr(fmt::format("%08x", m_entry)));
 	m_id->setPlaceholderText("ffffffff");
@@ -219,7 +221,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 	m_id->setMaxLength(8);
 	m_id->setFixedWidth(65);
 	setWindowTitle("Auto Pause Setting: " + m_id->text());
-	
+
 	connect(button_cancel, &QAbstractButton::clicked, this, &AutoPauseConfigDialog::OnCancel);
 	connect(button_ok, &QAbstractButton::clicked, this, &AutoPauseConfigDialog::OnOk);
 	connect(m_id, &QLineEdit::textChanged, this, &AutoPauseConfigDialog::OnUpdateValue);
@@ -229,7 +231,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 	configHBox->addWidget(button_ok);
 	configHBox->addWidget(button_cancel);
 	configHBox->setAlignment(Qt::AlignCenter);
-	
+
 	QVBoxLayout* mainLayout = new QVBoxLayout(this);
 	mainLayout->addWidget(description);
 	mainLayout->addLayout(configHBox);
@@ -266,6 +268,6 @@ void AutoPauseConfigDialog::OnUpdateValue()
 	bool ok;
 	ullong value = m_id->text().toULongLong(&ok, 16);
 	const bool is_ok = ok && value <= UINT32_MAX;
-	
+
 	m_current_converted->setText(qstr(fmt::format("Current value: %08x (%s)", u32(value), is_ok ? "OK" : "conversion failed")));
 }

@@ -2,6 +2,8 @@
 
 #include <thread>
 
+LOG_CHANNEL(ds3_log, "DS3");
+
 ds3_pad_handler::ds3_pad_handler() : PadHandlerBase(pad_handler::ds3)
 {
 	button_list =
@@ -67,7 +69,7 @@ bool ds3_pad_handler::init_usb()
 {
 	if (hid_init() != 0)
 	{
-		LOG_FATAL(HLE, "[DS3] Failed to init hidapi for the DS3 pad handler");
+		ds3_log.fatal("Failed to init hidapi for the DS3 pad handler");
 		return false;
 	}
 	return true;
@@ -118,18 +120,18 @@ bool ds3_pad_handler::Init()
 
 	if (warn_about_drivers)
 	{
-		LOG_ERROR(HLE, "[DS3] One or more DS3 pads were detected but couldn't be interacted with directly");
+		ds3_log.error("One or more DS3 pads were detected but couldn't be interacted with directly");
 #if defined(_WIN32) || defined(__linux__)
-		LOG_ERROR(HLE, "[DS3] Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
+		ds3_log.error("Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
 #endif
 	}
 	else if (controllers.empty())
 	{
-		LOG_WARNING(HLE, "[DS3] No controllers found!");
+		ds3_log.warning("No controllers found!");
 	}
 	else
 	{
-		LOG_SUCCESS(HLE, "[DS3] Controllers found: %d", controllers.size());
+		ds3_log.success("Controllers found: %d", controllers.size());
 	}
 
 	is_init = true;
@@ -301,7 +303,7 @@ ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_d
 		}
 		else
 		{
-			LOG_WARNING(HLE, "[DS3] Unknown packet received:0x%02x", dbuf[0]);
+			ds3_log.warning("Unknown packet received:0x%02x", dbuf[0]);
 			return DS3Status::Connected;
 		}
 	}

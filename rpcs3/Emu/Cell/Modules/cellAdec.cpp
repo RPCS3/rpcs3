@@ -453,7 +453,7 @@ public:
 				reader.addr = task.au.addr;
 				reader.size = task.au.size;
 				reader.has_ats = use_ats_headers;
-				//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
+				//cellAdec.notice("Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
 
 				if (just_started)
 				{
@@ -610,7 +610,7 @@ public:
 						frame.userdata = task.au.userdata;
 						frame.size = frame.data->nb_samples * frame.data->channels * nbps;
 
-						//LOG_NOTICE(HLE, "got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
+						//cellAdec.notice("got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
 							//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate, nbps);
 
 						if (frames.push(frame, &is_closed))
@@ -714,7 +714,7 @@ next:
 			adec.reader.addr = adec.task.au.addr;
 			adec.reader.size = adec.task.au.size;
 			adec.reader.has_ats = adec.use_ats_headers;
-			//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
+			//cellAdec.notice("Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
 		}
 		break;
 

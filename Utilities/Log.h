@@ -122,7 +122,6 @@ namespace logs
 namespace logs
 {
 	/* Small set of predefined channels */
-	LOG_CHANNEL(HLE);
 	LOG_CHANNEL(PPU);
 	LOG_CHANNEL(SPU);
 }

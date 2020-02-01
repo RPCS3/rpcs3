@@ -47,7 +47,7 @@ void fmt_class_string<ppu_syscall_code>::format(std::string& out, u64 arg)
 
 static bool null_func(ppu_thread& ppu)
 {
-	LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_syscall_code(ppu.gpr[11]));
+	LOG_TODO(PPU, "Unimplemented syscall %s -> CELL_OK", ppu_syscall_code(ppu.gpr[11]));
 	ppu.gpr[3] = 0;
 	ppu.cia += 4;
 	return false;
@@ -55,7 +55,7 @@ static bool null_func(ppu_thread& ppu)
 
 static bool uns_func(ppu_thread& ppu)
 {
-	LOG_TRACE(HLE, "Unused syscall %d -> ENOSYS", ppu.gpr[11]);
+	LOG_TRACE(PPU, "Unused syscall %d -> ENOSYS", ppu.gpr[11]);
 	ppu.gpr[3] = CELL_ENOSYS;
 	ppu.cia += 4;
 	return false;

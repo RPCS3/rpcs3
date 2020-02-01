@@ -387,7 +387,7 @@ void pad_settings_dialog::InitButtons()
 			return;
 		}
 
-		LOG_NOTICE(HLE, "get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
+		cfg_log.notice("get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
 		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end)
 		{
 			m_cfg_entries[m_button_id].key  = name;
@@ -658,7 +658,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 	}
 	else
 	{
@@ -683,7 +683,7 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 	}
 	else
 	{
@@ -708,7 +708,7 @@ void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 		return;
 	}
 
@@ -764,7 +764,7 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* /*event*/)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 	}
 	else
 	{

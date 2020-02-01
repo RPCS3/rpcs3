@@ -1403,7 +1403,7 @@ void camera_context::set_attr(s32 attrib, u32 arg1, u32 arg2)
 	{
 		if (arg1 != CELL_CAMERA_READ_FUNCCALL && arg1 != CELL_CAMERA_READ_DIRECT)
 		{
-			LOG_WARNING(HLE, "Unknown read mode set: %d", arg1);
+			cellCamera.warning("Unknown read mode set: %d", arg1);
 			arg1 = CELL_CAMERA_READ_FUNCCALL;
 		}
 		read_mode.exchange(arg1);
