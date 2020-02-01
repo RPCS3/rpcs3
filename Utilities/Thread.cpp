@@ -46,7 +46,7 @@
 #include "Log.h"
 
 LOG_CHANNEL(sig_log);
-LOG_CHANNEL(vm_log);
+LOG_CHANNEL(vm_log, "VM");
 
 thread_local u64 g_tls_fault_all = 0;
 thread_local u64 g_tls_fault_rsx = 0;

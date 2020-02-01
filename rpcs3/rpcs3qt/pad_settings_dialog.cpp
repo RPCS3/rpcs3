@@ -24,7 +24,7 @@
 #include "Input/evdev_joystick_handler.h"
 #endif
 
-LOG_CHANNEL(cfg_log);
+LOG_CHANNEL(cfg_log, "CFG");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;

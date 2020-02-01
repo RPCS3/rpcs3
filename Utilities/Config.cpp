@@ -6,7 +6,7 @@
 #include <typeinfo>
 #include <charconv>
 
-LOG_CHANNEL(cfg_log);
+LOG_CHANNEL(cfg_log, "CFG");
 
 namespace cfg
 {

@@ -1,7 +1,7 @@
 ﻿#ifdef _WIN32
 #include "mm_joystick_handler.h"
 
-LOG_CHANNEL(input_log);
+LOG_CHANNEL(input_log, "Input");
 
 mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
 {

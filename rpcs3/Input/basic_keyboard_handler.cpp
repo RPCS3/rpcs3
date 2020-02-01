@@ -9,7 +9,7 @@
 #include "windows.h"
 #endif
 
-LOG_CHANNEL(input_log);
+LOG_CHANNEL(input_log, "Input");
 
 void basic_keyboard_handler::Init(const u32 max_connect)
 {

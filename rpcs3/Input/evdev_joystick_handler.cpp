@@ -17,7 +17,7 @@
 #include <cstdio>
 #include <cmath>
 
-LOG_CHANNEL(evdev_log);
+LOG_CHANNEL(evdev_log, "evdev");
 
 evdev_joystick_handler::evdev_joystick_handler() : PadHandlerBase(pad_handler::evdev)
 {

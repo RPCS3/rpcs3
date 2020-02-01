@@ -2,7 +2,7 @@
 
 #include <QLabel>
 
-LOG_CHANNEL(gui_log);
+LOG_CHANNEL(gui_log, "GUI");
 
 memory_string_searcher::memory_string_searcher(QWidget* parent)
 	: QDialog(parent)

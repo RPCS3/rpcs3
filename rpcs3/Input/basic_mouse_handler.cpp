@@ -3,7 +3,7 @@
 #include <QApplication>
 #include <QCursor>
 
-LOG_CHANNEL(input_log);
+LOG_CHANNEL(input_log, "Input");
 
 void basic_mouse_handler::Init(const u32 max_connect)
 {

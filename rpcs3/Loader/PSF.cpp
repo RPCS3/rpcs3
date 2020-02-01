@@ -1,7 +1,7 @@
 ﻿#include "stdafx.h"
 #include "PSF.h"
 
-LOG_CHANNEL(psf_log);
+LOG_CHANNEL(psf_log, "PSF");
 
 template<>
 void fmt_class_string<psf::format>::format(std::string& out, u64 arg)

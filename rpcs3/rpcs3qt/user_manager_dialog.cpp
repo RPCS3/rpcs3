@@ -15,7 +15,7 @@
 #include <QScreen>
 #include <QKeyEvent>
 
-LOG_CHANNEL(gui_log);
+LOG_CHANNEL(gui_log, "GUI");
 
 namespace
 {

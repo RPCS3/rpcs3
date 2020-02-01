@@ -48,7 +48,7 @@
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
 
-LOG_CHANNEL(sys_log);
+LOG_CHANNEL(sys_log, "SYS");
 
 stx::manual_fixed_typemap<void> g_fixed_typemap;
 

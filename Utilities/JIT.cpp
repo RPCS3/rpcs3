@@ -14,7 +14,7 @@
 #define CAN_OVERCOMMIT
 #endif
 
-LOG_CHANNEL(jit_log);
+LOG_CHANNEL(jit_log, "JIT");
 
 static u8* get_jit_memory()
 {

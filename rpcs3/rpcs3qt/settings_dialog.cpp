@@ -32,7 +32,7 @@
 #include "_discord_utils.h"
 #endif
 
-LOG_CHANNEL(cfg_log);
+LOG_CHANNEL(cfg_log, "CFG");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }

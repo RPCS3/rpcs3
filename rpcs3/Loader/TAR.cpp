@@ -5,7 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 
-LOG_CHANNEL(tar_log);
+LOG_CHANNEL(tar_log, "TAR");
 
 tar_object::tar_object(const fs::file& file, size_t offset)
 	: m_file(file)

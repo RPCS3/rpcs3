@@ -6,7 +6,7 @@
 #include <QCoreApplication>
 #include <QMessageBox>
 
-LOG_CHANNEL(cfg_log);
+LOG_CHANNEL(cfg_log, "CFG");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 

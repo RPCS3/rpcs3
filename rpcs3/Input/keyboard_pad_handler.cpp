@@ -3,7 +3,7 @@
 #include <QApplication>
 #include <QThread>
 
-LOG_CHANNEL(input_log);
+LOG_CHANNEL(input_log, "Input");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;

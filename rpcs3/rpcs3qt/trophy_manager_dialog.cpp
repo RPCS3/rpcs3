@@ -35,7 +35,7 @@
 #include <QGuiApplication>
 #include <QScreen>
 
-LOG_CHANNEL(gui_log);
+LOG_CHANNEL(gui_log, "GUI");
 
 namespace
 {

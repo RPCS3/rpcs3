@@ -7,7 +7,7 @@
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
 
-LOG_CHANNEL(self_log);
+LOG_CHANNEL(self_log, "SELF");
 
 struct AppInfo
 {

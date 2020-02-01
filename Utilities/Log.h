@@ -101,9 +101,21 @@ namespace logs
 
 	// Get all registered log channels
 	std::vector<std::string> get_channels();
+
+	// Helper: no additional name specified
+	constexpr const char* make_channel_name(const char* name)
+	{
+		return name;
+	}
+
+	// Helper: special channel name specified
+	constexpr const char* make_channel_name(const char*, const char* name, ...)
+	{
+		return name;
+	}
 }
 
-#define LOG_CHANNEL(ch) inline ::logs::channel ch(#ch)
+#define LOG_CHANNEL(ch, ...) inline ::logs::channel ch(::logs::make_channel_name(#ch, ##__VA_ARGS__))
 
 // Legacy:
 

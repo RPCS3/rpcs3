@@ -29,8 +29,8 @@
 #include <QApplication>
 #include <QClipboard>
 
-LOG_CHANNEL(game_list_log);
-LOG_CHANNEL(sys_log);
+LOG_CHANNEL(game_list_log, "GameList");
+LOG_CHANNEL(sys_log, "SYS");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 

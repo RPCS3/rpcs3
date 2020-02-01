@@ -5,7 +5,7 @@
 #include "Emu/System.h"
 #include "TROPUSR.h"
 
-LOG_CHANNEL(trp_log);
+LOG_CHANNEL(trp_log, "Trophy");
 
 bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configpath)
 {

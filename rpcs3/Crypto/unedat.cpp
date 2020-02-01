@@ -4,7 +4,7 @@
 
 #include <cmath>
 
-LOG_CHANNEL(edat_log);
+LOG_CHANNEL(edat_log, "EDAT");
 
 void generate_key(int crypto_mode, int version, unsigned char *key_final, unsigned char *iv_final, unsigned char *key, unsigned char *iv)
 {

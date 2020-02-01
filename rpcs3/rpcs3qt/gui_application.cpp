@@ -18,7 +18,7 @@
 
 #include <clocale>
 
-LOG_CHANNEL(gui_log);
+LOG_CHANNEL(gui_log, "GUI");
 
 gui_application::gui_application(int& argc, char** argv) : QApplication(argc, argv)
 {

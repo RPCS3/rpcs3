@@ -19,7 +19,7 @@
 
 #include "3rdparty/OpenAL/include/alext.h"
 
-LOG_CHANNEL(cfg_log);
+LOG_CHANNEL(cfg_log, "CFG");
 
 extern std::string g_cfg_defaults; //! Default settings grabbed from Utilities/Config.h
 

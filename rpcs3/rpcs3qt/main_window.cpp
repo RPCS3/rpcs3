@@ -55,7 +55,7 @@
 
 #include "ui_main_window.h"
 
-LOG_CHANNEL(gui_log);
+LOG_CHANNEL(gui_log, "GUI");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 

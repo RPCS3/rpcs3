@@ -17,7 +17,7 @@
 #include <thread>
 #include <deque>
 
-LOG_CHANNEL(vm_log);
+LOG_CHANNEL(vm_log, "VM");
 
 namespace vm
 {

@@ -10,7 +10,7 @@
 #include "keyboard_pad_handler.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 
-LOG_CHANNEL(input_log);
+LOG_CHANNEL(input_log, "Input");
 
 namespace pad
 {

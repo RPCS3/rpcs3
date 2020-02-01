@@ -8,7 +8,7 @@
 #include "Emu/VFS.h"
 #include "unpkg.h"
 
-LOG_CHANNEL(pkg_log);
+LOG_CHANNEL(pkg_log, "PKG");
 
 bool pkg_install(const std::string& path, atomic_t<double>& sync)
 {

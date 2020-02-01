@@ -1,6 +1,6 @@
 #include "user_account.h"
 
-LOG_CHANNEL(gui_log);
+LOG_CHANNEL(gui_log, "GUI");
 
 UserAccount::UserAccount(const std::string& user_id)
 {
