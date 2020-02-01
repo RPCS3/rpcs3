@@ -595,7 +595,7 @@ std::string Emulator::PPUCache() const
 
 	if (!_main || _main->cache.empty())
 	{
-		LOG_WARNING(PPU, "PPU Cache location not initialized.");
+		ppu_log.warning("PPU Cache location not initialized.");
 		return {};
 	}
 
@@ -1754,7 +1754,7 @@ void Emulator::Resume()
 			}
 		}
 
-		LOG_NOTICE(PPU, "[RESUME] Dumping instruction stats:%s", dump);
+		ppu_log.notice("[RESUME] Dumping instruction stats:%s", dump);
 	}
 
 	// Try to resume

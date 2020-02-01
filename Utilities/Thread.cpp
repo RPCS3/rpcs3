@@ -1447,7 +1447,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		{
 			if (auto last_func = static_cast<ppu_thread*>(cpu)->current_function)
 			{
-				LOG_FATAL(PPU, "Function aborted: %s", last_func);
+				ppu_log.fatal("Function aborted: %s", last_func);
 			}
 
 			lv2_obj::sleep(*cpu);

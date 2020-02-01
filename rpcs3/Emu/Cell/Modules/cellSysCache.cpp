@@ -48,7 +48,7 @@ struct syscache_info
 				cache_id.resize(cache_id.size() - 1);
 			cache_id = cache_id.substr(cache_id.find_last_of('/') + 1);
 
-			LOG_SUCCESS(PPU, "Retained cache from parent process: %s", Emu.hdd1);
+			cellSysutil.success("Retained cache from parent process: %s", Emu.hdd1);
 			return;
 		}
 
