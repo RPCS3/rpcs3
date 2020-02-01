@@ -22,6 +22,8 @@
 #include <QPainter>
 #include <QScreen>
 
+LOG_CHANNEL(gui_log, "GUI");
+
 namespace
 {
 	// Helper converters
@@ -55,7 +57,7 @@ namespace
 
 			if (psf.empty())
 			{
-				LOG_ERROR(LOADER, "Failed to load savedata: %s", base_dir + "/" + entry.name);
+				gui_log.error("Failed to load savedata: %s", base_dir + "/" + entry.name);
 				continue;
 			}
 
@@ -254,7 +256,7 @@ void save_manager_dialog::UpdateList()
 		QPixmap icon = QPixmap(320, 176);
 		if (!icon.loadFromData(entry.iconBuf.data(), static_cast<uint>(entry.iconBuf.size())))
 		{
-			LOG_WARNING(GENERAL, "Loading icon for save %s failed", entry.dirName);
+			gui_log.warning("Loading icon for save %s failed", entry.dirName);
 			icon = QPixmap(320, 176);
 			icon.fill(m_icon_color);
 		}

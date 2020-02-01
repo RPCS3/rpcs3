@@ -752,7 +752,7 @@ u8 get_format_block_size_in_bytes(int format)
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return 16;
 	default:
-		LOG_ERROR(RSX, "Unimplemented block size in bytes for texture format: 0x%x", format);
+		rsx_log.error("Unimplemented block size in bytes for texture format: 0x%x", format);
 		return 1;
 	}
 }
@@ -789,7 +789,7 @@ u8 get_format_block_size_in_texel(int format)
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return 4;
 	default:
-		LOG_ERROR(RSX, "Unimplemented block size in texels for texture format: 0x%x", format);
+		rsx_log.error("Unimplemented block size in texels for texture format: 0x%x", format);
 		return 1;
 	}
 }
@@ -916,7 +916,7 @@ static size_t get_texture_size(u32 format, u16 width, u16 height, u16 depth, u32
 		if (width > 1 || height > 1)
 		{
 			// If width == 1, the scanning just returns texel 0, so it is a valid setup
-			LOG_ERROR(RSX, "Invalid texture pitch setup, width=%d, height=%d, format=0x%x(0x%x)",
+			rsx_log.error("Invalid texture pitch setup, width=%d, height=%d, format=0x%x(0x%x)",
 				width, height, format, gcm_format);
 		}
 

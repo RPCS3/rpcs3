@@ -1582,6 +1582,13 @@
                 </property>
                </widget>
               </item>
+              <item>
+               <widget class="QCheckBox" name="silenceAllLogs">
+                <property name="text">
+                 <string>Silence All Logs</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>

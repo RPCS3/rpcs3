@@ -3,6 +3,8 @@
 #include <QApplication>
 #include <QThread>
 
+LOG_CHANNEL(input_log, "Input");
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
 
@@ -179,7 +181,7 @@ void keyboard_pad_handler::SetTargetWindow(QWindow* target)
 		QApplication::instance()->installEventFilter(this);
 		// If this is hit, it probably means that some refactoring occurs because currently a gsframe is created in Load.
 		// We still want events so filter from application instead since target is null.
-		LOG_ERROR(GENERAL, "Trying to set pad handler to a null target window.");
+		input_log.error("Trying to set pad handler to a null target window.");
 	}
 }
 
@@ -250,42 +252,42 @@ void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 		{
 		case Qt::Key_I:
 			m_deadzone_y = std::min(m_deadzone_y + 1, 255);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone y = %d", m_deadzone_y);
+			input_log.success("mouse move adjustment: deadzone y = %d", m_deadzone_y);
 			event->ignore();
 			return;
 		case Qt::Key_U:
 			m_deadzone_y = std::max(0, m_deadzone_y - 1);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone y = %d", m_deadzone_y);
+			input_log.success("mouse move adjustment: deadzone y = %d", m_deadzone_y);
 			event->ignore();
 			return;
 		case Qt::Key_Y:
 			m_deadzone_x = std::min(m_deadzone_x + 1, 255);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone x = %d", m_deadzone_x);
+			input_log.success("mouse move adjustment: deadzone x = %d", m_deadzone_x);
 			event->ignore();
 			return;
 		case Qt::Key_T:
 			m_deadzone_x = std::max(0, m_deadzone_x - 1);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone x = %d", m_deadzone_x);
+			input_log.success("mouse move adjustment: deadzone x = %d", m_deadzone_x);
 			event->ignore();
 			return;
 		case Qt::Key_K:
 			m_multi_y = std::min(m_multi_y + 0.1, 5.0);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %d", static_cast<int>(m_multi_y * 100));
+			input_log.success("mouse move adjustment: multiplier y = %d", static_cast<int>(m_multi_y * 100));
 			event->ignore();
 			return;
 		case Qt::Key_J:
 			m_multi_y = std::max(0.0, m_multi_y - 0.1);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %d", static_cast<int>(m_multi_y * 100));
+			input_log.success("mouse move adjustment: multiplier y = %d", static_cast<int>(m_multi_y * 100));
 			event->ignore();
 			return;
 		case Qt::Key_H:
 			m_multi_x = std::min(m_multi_x + 0.1, 5.0);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %d", static_cast<int>(m_multi_x * 100));
+			input_log.success("mouse move adjustment: multiplier x = %d", static_cast<int>(m_multi_x * 100));
 			event->ignore();
 			return;
 		case Qt::Key_G:
 			m_multi_x = std::max(0.0, m_multi_x - 0.1);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %d", static_cast<int>(m_multi_x * 100));
+			input_log.success("mouse move adjustment: multiplier x = %d", static_cast<int>(m_multi_x * 100));
 			event->ignore();
 			return;
 		default:
@@ -550,7 +552,7 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 	if (seq.count() == 1)
 		keyCode = seq[0];
 	else
-		LOG_NOTICE(GENERAL, "GetKeyCode(%s): seq.count() = %d", sstr(keyName), seq.count());
+		input_log.notice("GetKeyCode(%s): seq.count() = %d", sstr(keyName), seq.count());
 
 	return keyCode;
 }

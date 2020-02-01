@@ -4750,7 +4750,7 @@ bool ppu_interpreter_precise::FNMADDS(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::MTFSB1(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u32 bit = op.crbd;
-	if (bit < 16 || bit > 19) LOG_WARNING(PPU, "MTFSB1(%d)", bit);
+	if (bit < 16 || bit > 19) ppu_log.warning("MTFSB1(%d)", bit);
 	ppu.fpscr.bits[bit] = 1;
 	if (UNLIKELY(op.rc)) ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
@@ -4758,7 +4758,7 @@ bool ppu_interpreter::MTFSB1(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MCRFS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	if (op.crfs != 4) LOG_WARNING(PPU, "MCRFS(%d)", op.crfs);
+	if (op.crfs != 4) ppu_log.warning("MCRFS(%d)", op.crfs);
 	ppu.cr.fields[op.crfd] = ppu.fpscr.fields[op.crfs];
 	return true;
 }
@@ -4766,7 +4766,7 @@ bool ppu_interpreter::MCRFS(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::MTFSB0(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u32 bit = op.crbd;
-	if (bit < 16 || bit > 19) LOG_WARNING(PPU, "MTFSB0(%d)", bit);
+	if (bit < 16 || bit > 19) ppu_log.warning("MTFSB0(%d)", bit);
 	ppu.fpscr.bits[bit] = 0;
 	if (UNLIKELY(op.rc)) ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
@@ -4779,7 +4779,7 @@ bool ppu_interpreter::MTFSFI(ppu_thread& ppu, ppu_opcode_t op)
 	if (bf != 4)
 	{
 		// Do nothing on non-FPCC field (TODO)
-		LOG_WARNING(PPU, "MTFSFI(%d)", op.crfd);
+		ppu_log.warning("MTFSFI(%d)", op.crfd);
 	}
 	else
 	{
@@ -4809,7 +4809,7 @@ bool ppu_interpreter::MTFSFI(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MFFS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "MFFS");
+	ppu_log.warning("MFFS");
 	ppu.fpr[op.frd] = std::bit_cast<f64>(u64{ppu.fpscr.fl} << 15 | u64{ppu.fpscr.fg} << 14 | u64{ppu.fpscr.fe} << 13 | u64{ppu.fpscr.fu} << 12);
 	if (UNLIKELY(op.rc)) ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
@@ -4817,7 +4817,7 @@ bool ppu_interpreter::MFFS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MTFSF(ppu_thread& ppu, ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "MTFSF");
+	ppu_log.warning("MTFSF");
 	if (UNLIKELY(op.rc)) ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }

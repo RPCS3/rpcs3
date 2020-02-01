@@ -6,6 +6,8 @@
 #include <typeinfo>
 #include <charconv>
 
+LOG_CHANNEL(cfg_log, "CFG");
+
 namespace cfg
 {
 	_base::_base(type _type)
@@ -72,13 +74,13 @@ bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 
 	if (ret.ec != std::errc() || ret.ptr != end)
 	{
-		if (out) LOG_ERROR(GENERAL, "cfg::try_to_int('%s'): invalid integer", value);
+		if (out) cfg_log.error("cfg::try_to_int('%s'): invalid integer", value);
 		return false;
 	}
 
 	if (result < min || result > max)
 	{
-		if (out) LOG_ERROR(GENERAL, "cfg::try_to_int('%s'): out of bounds (%lld..%lld)", value, min, max);
+		if (out) cfg_log.error("cfg::try_to_int('%s'): out of bounds (%lld..%lld)", value, min, max);
 		return false;
 	}
 
@@ -127,13 +129,13 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 
 	if (ret.ec != std::errc() || ret.ptr != end)
 	{
-		if (out) LOG_ERROR(GENERAL, "cfg::try_to_enum_value('%s'): invalid enum or integer", value);
+		if (out) cfg_log.error("cfg::try_to_enum_value('%s'): invalid enum or integer", value);
 		return false;
 	}
 
 	if (result > max)
 	{
-		if (out) LOG_ERROR(GENERAL, "cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
+		if (out) cfg_log.error("cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
 		return false;
 	}
 
@@ -307,7 +309,7 @@ bool cfg::node::from_string(const std::string& value, bool dynamic) try
 }
 catch (const std::exception& e)
 {
-	LOG_FATAL(GENERAL, "%s thrown: %s", typeid(e).name(), e.what());
+	cfg_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
 	return false;
 }
 

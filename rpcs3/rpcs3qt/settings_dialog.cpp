@@ -32,6 +32,8 @@
 #include "_discord_utils.h"
 #endif
 
+LOG_CHANNEL(cfg_log, "CFG");
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
@@ -567,11 +569,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				idx = 0;
 				if (renderer.old_adapter.isEmpty())
 				{
-					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(renderer.name));
+					rsx_log.warning("%s adapter config empty: setting to default!", sstr(renderer.name));
 				}
 				else
 				{
-					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(renderer.name));
+					rsx_log.warning("Last used %s adapter not found: setting to default!", sstr(renderer.name));
 				}
 			}
 			ui->graphicsAdapterBox->setCurrentIndex(idx);
@@ -919,6 +921,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->debugConsoleMode, emu_settings::DebugConsoleMode);
 	SubscribeTooltip(ui->debugConsoleMode, json_advanced["debugConsoleMode"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->silenceAllLogs, emu_settings::SilenceAllLogs);
+	SubscribeTooltip(ui->silenceAllLogs, json_advanced["silenceAllLogs"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->readColor, emu_settings::ReadColorBuffers);
 	SubscribeTooltip(ui->readColor, json_advanced["readColor"].toString());
@@ -1682,7 +1687,7 @@ void settings_dialog::AddConfigs()
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "Trying to set an invalid config index %d", index);
+		cfg_log.warning("Trying to set an invalid config index %d", index);
 	}
 }
 
@@ -1710,7 +1715,7 @@ void settings_dialog::AddStylesheets()
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "Trying to set an invalid stylesheets index: %d (%s)", index, sstr(m_currentStylesheet));
+		cfg_log.warning("Trying to set an invalid stylesheets index: %d (%s)", index, sstr(m_currentStylesheet));
 	}
 }
 

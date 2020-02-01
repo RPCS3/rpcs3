@@ -357,7 +357,7 @@ namespace vk
 			if ((num_bytes_to_process + data_offset) > data->size())
 			{
 				// Technically robust buffer access should keep the driver from crashing in OOB situations
-				LOG_ERROR(RSX, "Inadequate buffer length submitted for a compute operation."
+				rsx_log.error("Inadequate buffer length submitted for a compute operation."
 					"Required=%d bytes, Available=%d bytes", num_bytes_to_process, data->size());
 			}
 

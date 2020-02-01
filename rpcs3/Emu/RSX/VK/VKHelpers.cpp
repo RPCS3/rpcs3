@@ -468,10 +468,10 @@ namespace vk
 			break;
 		case driver_vendor::INTEL:
 		default:
-			LOG_WARNING(RSX, "Unsupported device: %s", gpu_name);
+			rsx_log.warning("Unsupported device: %s", gpu_name);
 		}
 
-		LOG_NOTICE(RSX, "Vulkan: Renderer initialized on device '%s'", gpu_name);
+		rsx_log.notice("Vulkan: Renderer initialized on device '%s'", gpu_name);
 
 		{
 			// Buffer memory tests, only useful for portability on macOS
@@ -917,7 +917,7 @@ namespace vk
 
 				if ((get_system_time() - t) > timeout)
 				{
-					LOG_ERROR(RSX, "[vulkan] vk::wait_for_event has timed out!");
+					rsx_log.error("[vulkan] vk::wait_for_event has timed out!");
 					return VK_TIMEOUT;
 				}
 			}
@@ -1029,7 +1029,7 @@ namespace vk
 		case 0:
 			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s%s", error_message.c_str(), faulting_addr);
 		case 1:
-			LOG_ERROR(RSX, "Vulkan API call has failed with an error but will continue: %s%s", error_message.c_str(), faulting_addr);
+			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message.c_str(), faulting_addr);
 			break;
 		case 2:
 			break;
@@ -1044,11 +1044,11 @@ namespace vk
 		{
 			if (strstr(pMsg, "IMAGE_VIEW_TYPE_1D")) return false;
 
-			LOG_ERROR(RSX, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+			rsx_log.error("ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
 		}
 		else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
 		{
-			LOG_WARNING(RSX, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+			rsx_log.warning("WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
 		}
 		else
 		{

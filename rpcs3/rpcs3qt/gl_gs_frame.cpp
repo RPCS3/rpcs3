@@ -95,7 +95,7 @@ void gl_gs_frame::delete_context(draw_context_t ctx)
 	}
 	__except(GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 	{
-		LOG_FATAL(RSX, "Your graphics driver just crashed whilst cleaning up. All consumed VRAM should have been released, but you may want to restart the emulator just in case");
+		rsx_log.fatal("Your graphics driver just crashed whilst cleaning up. All consumed VRAM should have been released, but you may want to restart the emulator just in case");
 	}
 #else
 	delete gl_ctx->handle;

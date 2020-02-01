@@ -211,7 +211,7 @@ namespace rsx
 				{
 					if (++pad_index >= CELL_PAD_MAX_PORT_NUM)
 					{
-						LOG_FATAL(RSX, "The native overlay cannot handle more than 7 pads! Current number of pads: %d", pad_index + 1);
+						rsx_log.fatal("The native overlay cannot handle more than 7 pads! Current number of pads: %d", pad_index + 1);
 						continue;
 					}
 

@@ -10,7 +10,7 @@
 LOG_CHANNEL(OpenAL);
 
 #define checkForAlError(sit) do { ALenum g_last_al_error = alGetError(); if(g_last_al_error != AL_NO_ERROR) OpenAL.error("%s: OpenAL error 0x%04x", sit, g_last_al_error); } while(0)
-#define checkForAlcError(sit) do { ALCenum g_last_alc_error = alcGetError(m_device); if(g_last_alc_error != ALC_NO_ERROR) OpenAL.error("%s: OpenALC error 0x%04x", sit, g_last_alc_error); return; } while(0)
+#define checkForAlcError(sit) do { ALCenum g_last_alc_error = alcGetError(m_device); if(g_last_alc_error != ALC_NO_ERROR) { OpenAL.error("%s: OpenALC error 0x%04x", sit, g_last_alc_error); return; }} while(0)
 
 OpenALBackend::OpenALBackend()
 	: m_sampling_rate(get_sampling_rate())

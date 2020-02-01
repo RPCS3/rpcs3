@@ -55,6 +55,8 @@
 
 #include "ui_main_window.h"
 
+LOG_CHANNEL(gui_log, "GUI");
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
@@ -105,7 +107,7 @@ void main_window::Init()
 	if (false)
 #endif
 	{
-		LOG_WARNING(GENERAL, "Experimental Build Warning! Build origin: " STRINGIZE(BRANCH));
+		gui_log.warning("Experimental Build Warning! Build origin: " STRINGIZE(BRANCH));
 
 		QMessageBox msg;
 		msg.setWindowTitle(tr("Experimental Build Warning"));
@@ -260,7 +262,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 	if (Emu.BootGame(path, title_id, direct, add_only, force_global_config))
 	{
-		LOG_SUCCESS(LOADER, "Boot successful.");
+		gui_log.success("Boot successful.");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		if (!add_only)
 		{
@@ -269,7 +271,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "Boot failed: %s", path);
+		gui_log.error("Boot failed: %s", path);
 	}
 
 	m_gameListFrame->Refresh(true);
@@ -307,7 +309,7 @@ void main_window::BootElf()
 	guiSettings->SetValue(gui::fd_boot_elf, filePath);
 	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
-	LOG_NOTICE(LOADER, "Booting from BootElf...");
+	gui_log.notice("Booting from BootElf...");
 	Boot(path, "", true);
 }
 
@@ -333,7 +335,7 @@ void main_window::BootGame()
 	guiSettings->SetValue(gui::fd_boot_game, QFileInfo(dirPath).path());
 	const std::string path = sstr(dirPath);
 
-	LOG_NOTICE(LOADER, "Booting from BootGame...");
+	gui_log.notice("Booting from BootGame...");
 	Boot(path);
 }
 
@@ -367,11 +369,11 @@ void main_window::BootRsxCapture(std::string path)
 
 	if (!Emu.BootRsxCapture(path))
 	{
-		LOG_ERROR(GENERAL, "Capture Boot Failed. path: %s", path);
+		gui_log.error("Capture Boot Failed. path: %s", path);
 	}
 	else
 	{
-		LOG_SUCCESS(LOADER, "Capture Boot Success. path: %s", path);
+		gui_log.success("Capture Boot Success. path: %s", path);
 	}
 }
 
@@ -392,7 +394,7 @@ void main_window::InstallPackages(QStringList file_paths, bool show_confirm)
 		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(file_paths.front()),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
-			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(file_paths.front()));
+			gui_log.notice("PKG: Cancelled installation from drop. File: %s", sstr(file_paths.front()));
 			return;
 		}
 	}
@@ -477,7 +479,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		if (worker())
 		{
 			m_gameListFrame->Refresh(true);
-			LOG_SUCCESS(GENERAL, "Successfully installed %s.", file_name);
+			gui_log.success("Successfully installed %s.", file_name);
 
 			if (i == (count - 1))
 			{
@@ -488,13 +490,13 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		{
 			if (!cancelled)
 			{
-				LOG_ERROR(GENERAL, "Failed to install %s.", file_name);
+				gui_log.error("Failed to install %s.", file_name);
 				QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package %1!").arg(file_path));
 			}
 			return;
 		}
 
-		// return if the thread was still running after cancel 
+		// return if the thread was still running after cancel
 		if (cancelled)
 		{
 			return;
@@ -514,7 +516,7 @@ void main_window::InstallPup(QString file_path)
 		if (QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Install firmware: %1?").arg(file_path),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
-			LOG_NOTICE(LOADER, "Firmware: Cancelled installation from drop. File: %s", sstr(file_path));
+			gui_log.notice("Firmware: Cancelled installation from drop. File: %s", sstr(file_path));
 			return;
 		}
 	}
@@ -545,14 +547,14 @@ void main_window::HandlePupInstallation(QString file_path)
 	fs::file pup_f(path);
 	if (!pup_f)
 	{
-		LOG_ERROR(GENERAL, "Error opening PUP file %s", path);
+		gui_log.error("Error opening PUP file %s", path);
 		QMessageBox::critical(this, tr("Failure!"), tr("The selected firmware file couldn't be opened."));
 		return;
 	}
 
 	if (pup_f.size() < sizeof(PUPHeader))
 	{
-		LOG_ERROR(GENERAL, "Too small PUP file: %llu", pup_f.size());
+		gui_log.error("Too small PUP file: %llu", pup_f.size());
 		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file size is invalid."));
 		return;
 	}
@@ -563,7 +565,7 @@ void main_window::HandlePupInstallation(QString file_path)
 
 	if (header.header_length + header.data_length != pup_f.size())
 	{
-		LOG_ERROR(GENERAL, "Firmware size mismatch, expected: %llu, actual: %llu + %llu", pup_f.size(), header.header_length, header.data_length);
+		gui_log.error("Firmware size mismatch, expected: %llu, actual: %llu + %llu", pup_f.size(), header.header_length, header.data_length);
 		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file is corrupted."));
 		return;
 	}
@@ -571,14 +573,14 @@ void main_window::HandlePupInstallation(QString file_path)
 	pup_object pup(pup_f);
 	if (!pup)
 	{
-		LOG_ERROR(GENERAL, "Error while installing firmware: PUP file is invalid.");
+		gui_log.error("Error while installing firmware: PUP file is invalid.");
 		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file is invalid."));
 		return;
 	}
 
 	if (!pup.validate_hashes())
 	{
-		LOG_ERROR(GENERAL, "Error while installing firmware: Hash check failed. ");
+		gui_log.error("Error while installing firmware: Hash check failed. ");
 		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file contents are invalid."));
 		return;
 	}
@@ -630,7 +632,7 @@ void main_window::HandlePupInstallation(QString file_path)
 				auto dev_flash_tar_f = self_dec.MakeFile();
 				if (dev_flash_tar_f.size() < 3)
 				{
-					LOG_ERROR(GENERAL, "Error while installing firmware: PUP contents are invalid.");
+					gui_log.error("Error while installing firmware: PUP contents are invalid.");
 					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP contents are invalid."));
 					progress = -1;
 				}
@@ -638,7 +640,7 @@ void main_window::HandlePupInstallation(QString file_path)
 				tar_object dev_flash_tar(dev_flash_tar_f[2]);
 				if (!dev_flash_tar.extract(g_cfg.vfs.get_dev_flash(), "dev_flash/"))
 				{
-					LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
+					gui_log.error("Error while installing firmware: TAR contents are invalid.");
 					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: TAR contents are invalid."));
 					progress = -1;
 				}
@@ -673,7 +675,7 @@ void main_window::HandlePupInstallation(QString file_path)
 
 	if (progress > 0)
 	{
-		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware version %s.", version_string);
+		gui_log.success("Successfully installed PS3 firmware version %s.", version_string);
 		guiSettings->ShowInfoBox(tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), gui::ib_pup_success, this);
 
 		Emu.SetForceBoot(true);
@@ -699,7 +701,7 @@ void main_window::DecryptSPRXLibraries()
 
 	guiSettings->SetValue(gui::fd_decrypt_sprx, QFileInfo(modules.first()).path());
 
-	LOG_NOTICE(GENERAL, "Decrypting binaries...");
+	gui_log.notice("Decrypting binaries...");
 
 	for (const QString& module : modules)
 	{
@@ -719,21 +721,21 @@ void main_window::DecryptSPRXLibraries()
 				if (fs::file new_file{new_path, fs::rewrite})
 				{
 					new_file.write(elf_file.to_string());
-					LOG_SUCCESS(GENERAL, "Decrypted %s", old_path);
+					gui_log.success("Decrypted %s", old_path);
 				}
 				else
 				{
-					LOG_ERROR(GENERAL, "Failed to create %s", new_path);
+					gui_log.error("Failed to create %s", new_path);
 				}
 			}
 			else
 			{
-				LOG_ERROR(GENERAL, "Failed to decrypt %s", old_path);
+				gui_log.error("Failed to decrypt %s", old_path);
 			}
 		}
 	}
 
-	LOG_NOTICE(GENERAL, "Finished decrypting all binaries.");
+	gui_log.notice("Finished decrypting all binaries.");
 }
 
 /** Needed so that when a backup occurs of window state in guisettings, the state is current.
@@ -1021,7 +1023,7 @@ void main_window::BootRecentAction(const QAction* act)
 
 			guiSettings->SetValue(gui::rg_entries, guiSettings->List2Var(m_rg_entries));
 
-			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", path);
+			gui_log.error("Recent Game not valid, removed from Boot Recent list: %s", path);
 
 			// refill menu with actions
 			for (int i = 0; i < m_recentGameActs.count(); i++)
@@ -1031,15 +1033,15 @@ void main_window::BootRecentAction(const QAction* act)
 				ui->bootRecentMenu->addAction(m_recentGameActs[i]);
 			}
 
-			LOG_WARNING(GENERAL, "Boot Recent list refreshed");
+			gui_log.warning("Boot Recent list refreshed");
 			return;
 		}
 
-		LOG_ERROR(GENERAL, "Path invalid and not in m_rg_paths: %s", path);
+		gui_log.error("Path invalid and not in m_rg_paths: %s", path);
 		return;
 	}
 
-	LOG_NOTICE(LOADER, "Booting from recent games list...");
+	gui_log.notice("Booting from recent games list...");
 	Boot(path, "", true);
 }
 
@@ -1050,7 +1052,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	{
 		if (m_rg_entries.contains(entry))
 		{
-			LOG_WARNING(GENERAL, "Recent Game not valid, removing from Boot Recent list: %s", sstr(entry.first));
+			gui_log.warning("Recent Game not valid, removing from Boot Recent list: %s", sstr(entry.first));
 
 			int idx = m_rg_entries.indexOf(entry);
 			m_rg_entries.removeAt(idx);
@@ -1122,7 +1124,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	}
 	else if (m_rg_entries.count() > 9)
 	{
-		LOG_ERROR(LOADER, "Recent games entrylist too big");
+		gui_log.error("Recent games entrylist too big");
 	}
 
 	if (m_rg_entries.count() < 9)
@@ -1359,7 +1361,7 @@ void main_window::CreateConnects()
 		skylander_dialog* sky_diag = skylander_dialog::get_dlg(this);
 		sky_diag->show();
 	});
-	
+
 	connect(ui->actionManage_Cheats, &QAction::triggered, [=]
 	{
 		cheat_manager_dialog* cheat_manager = cheat_manager_dialog::get_dlg(this);
@@ -1465,7 +1467,7 @@ void main_window::CreateConnects()
 		else if (act == ui->showCatGameDataAct)   categories += category::data, id = Category::Data;
 		else if (act == ui->showCatUnknownAct)    categories += category::unknown, id = Category::Unknown_Cat;
 		else if (act == ui->showCatOtherAct)      categories += category::others, id = Category::Others;
-		else LOG_WARNING(GENERAL, "categoryVisibleActGroup: category action not found");
+		else gui_log.warning("categoryVisibleActGroup: category action not found");
 
 		if (!categories.isEmpty())
 		{
@@ -1841,7 +1843,7 @@ void main_window::AddGamesFromDir(const QString& path)
 	// search dropped path first or else the direct parent to an elf is wrongly skipped
 	if (Emu.BootGame(s_path, "", false, true))
 	{
-		LOG_NOTICE(GENERAL, "Returned from game addition by drag and drop: %s", s_path);
+		gui_log.notice("Returned from game addition by drag and drop: %s", s_path);
 	}
 
 	// search direct subdirectories, that way we can drop one folder containing all games
@@ -1852,7 +1854,7 @@ void main_window::AddGamesFromDir(const QString& path)
 
 		if (Emu.BootGame(pth, "", false, true))
 		{
-			LOG_NOTICE(GENERAL, "Returned from game addition by drag and drop: %s", pth);
+			gui_log.notice("Returned from game addition by drag and drop: %s", pth);
 		}
 	}
 }
@@ -1974,11 +1976,11 @@ void main_window::dropEvent(QDropEvent* event)
 
 			if (!fs::copy_file(sstr(rap), Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + rapname, false))
 			{
-				LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
+				gui_log.warning("Could not copy rap file by drop: %s", rapname);
 			}
 			else
 			{
-				LOG_SUCCESS(GENERAL, "Successfully copied rap file by drop: %s", rapname);
+				gui_log.success("Successfully copied rap file by drop: %s", rapname);
 			}
 		}
 
@@ -1995,14 +1997,14 @@ void main_window::dropEvent(QDropEvent* event)
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)
 		if (Emu.BootGame(sstr(dropPaths.first()), "", true))
 		{
-			LOG_SUCCESS(GENERAL, "Elf Boot from drag and drop done: %s", sstr(dropPaths.first()));
+			gui_log.success("Elf Boot from drag and drop done: %s", sstr(dropPaths.first()));
 		}
 		m_gameListFrame->Refresh(true);
 		break;
 	case drop_type::drop_rrc: // replay a rsx capture file
 		BootRsxCapture(sstr(dropPaths.first()));
 	default:
-		LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
+		gui_log.warning("Invalid dropType in gamelist dropEvent");
 		break;
 	}
 }

@@ -61,7 +61,7 @@ GLuint GLGSRender::get_present_source(gl::present_surface_info* info, const rsx:
 
 	if (!image)
 	{
-		LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
+		rsx_log.warning("Flip texture was not found in cache. Uploading surface from CPU");
 
 		gl::pixel_unpack_settings unpack_settings;
 		unpack_settings.alignment(1).row_length(info->pitch / 4);

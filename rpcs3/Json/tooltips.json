@@ -8,6 +8,7 @@
 			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this.\nThis is the preferred option."
 		},
 		"debugConsoleMode": "Increases the amount of usable system memory to match a DECR console and more.\nCauses some software to behave differently than on retail hardware.",
+		"silenceAllLogs": "Stop writing any logs after game startup. Don't use unless you believe it's necessary.",
 		"readColor": "Initializes render target memory using vm memory.",
 		"readDepth": "Initializes render target memory using vm memory.",
 		"dumpDepth": "Writes depth buffer values to vm memory.",

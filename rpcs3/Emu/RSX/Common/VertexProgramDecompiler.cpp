@@ -56,12 +56,12 @@ std::string VertexProgramDecompiler::GetDST(bool is_sca)
 		{
 			if (d3.dst > 15)
 			{
-				LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
+				rsx_log.error("dst index out of range: %u", d3.dst);
 			}
 
 			if (is_address_reg)
 			{
-				LOG_ERROR(RSX, "ARL opcode writing to output register!");
+				rsx_log.error("ARL opcode writing to output register!");
 			}
 
 			const auto reg_type = getFloatTypeName(4);
@@ -120,7 +120,7 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 		}
 		else
 		{
-			LOG_ERROR(RSX, "Bad input src num: %d", u32{ d1.input_src });
+			rsx_log.error("Bad input src num: %d", u32{ d1.input_src });
 			ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), "in_unk", d1.input_src);
 		}
 		break;
@@ -130,7 +130,7 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 		break;
 
 	default:
-		LOG_ERROR(RSX, "Bad src%u reg type: %d", n, u32{ src[n].reg_type });
+		rsx_log.error("Bad src%u reg type: %d", n, u32{ src[n].reg_type });
 		Emu.Pause();
 		break;
 	}
@@ -192,7 +192,7 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 	else
 	{
 		// Broken instruction?
-		LOG_ERROR(RSX, "Operation has no output defined! (0x%x, 0x%x, 0x%x, 0x%x)", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
+		rsx_log.error("Operation has no output defined! (0x%x, 0x%x, 0x%x, 0x%x)", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
 		dest = " //";
 	}
 
@@ -284,7 +284,7 @@ std::string VertexProgramDecompiler::GetOptionalBranchCond()
 {
 	std::string cond_operator = d3.brb_cond_true ? " != " : " == ";
 	std::string cond = "(transform_branch_bits & (1 << " + std::to_string(d3.branch_index) + "))" + cond_operator + "0";
-	
+
 	return "if (" + cond + ")";
 }
 
@@ -386,7 +386,7 @@ std::string VertexProgramDecompiler::BuildCode()
 	bool is_valid = m_parr.HasParam(PF_PARAM_OUT, getFloatTypeName(4), "dst_reg0");
 	if (!is_valid)
 	{
-		LOG_WARNING(RSX, "Vertex program has no POS output, shader will be NOPed");
+		rsx_log.warning("Vertex program has no POS output, shader will be NOPed");
 		main_body = "/*" + main_body + "*/";
 	}
 
@@ -488,7 +488,7 @@ std::string VertexProgramDecompiler::Decompile()
 
 		while (!m_call_stack.empty())
 		{
-			LOG_ERROR(RSX, "vertex program end in subroutine call!");
+			rsx_log.error("vertex program end in subroutine call!");
 			do_function_return();
 		}
 
@@ -612,7 +612,7 @@ std::string VertexProgramDecompiler::Decompile()
 		}
 		default:
 			AddCode(fmt::format("//Unknown vp opcode 0x%x", u32{ d1.vec_opcode }));
-			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", u32{ d1.vec_opcode });
+			rsx_log.error("Unknown vp opcode 0x%x", u32{ d1.vec_opcode });
 			program_end = true;
 			break;
 		}
@@ -646,7 +646,7 @@ std::string VertexProgramDecompiler::Decompile()
 			else
 			{
 				//TODO
-				LOG_ERROR(RSX, "BRA opcode found in subroutine!");
+				rsx_log.error("BRA opcode found in subroutine!");
 			}
 		}
 		break;
@@ -667,7 +667,7 @@ std::string VertexProgramDecompiler::Decompile()
 			else
 			{
 				//TODO
-				LOG_ERROR(RSX, "BRI opcode found in subroutine!");
+				rsx_log.error("BRI opcode found in subroutine!");
 			}
 		}
 		break;
@@ -678,7 +678,7 @@ std::string VertexProgramDecompiler::Decompile()
 			break;
 		case RSX_SCA_OPCODE_CLI:
 			// works same as BRI
-			LOG_ERROR(RSX, "Unimplemented VP opcode CLI");
+			rsx_log.error("Unimplemented VP opcode CLI");
 			AddCode("//CLI");
 			do_function_call("$ifcond");
 			break;
@@ -709,7 +709,7 @@ std::string VertexProgramDecompiler::Decompile()
 			else
 			{
 				//TODO
-				LOG_ERROR(RSX, "BRA opcode found in subroutine!");
+				rsx_log.error("BRA opcode found in subroutine!");
 			}
 
 			break;
@@ -721,16 +721,16 @@ std::string VertexProgramDecompiler::Decompile()
 			break;
 		case RSX_SCA_OPCODE_PSH:
 			// works differently (PSH o[1].x A0;)
-			LOG_ERROR(RSX, "Unimplemented sca_opcode PSH");
+			rsx_log.error("Unimplemented sca_opcode PSH");
 			break;
 		case RSX_SCA_OPCODE_POP:
 			// works differently (POP o[1].x;)
-			LOG_ERROR(RSX, "Unimplemented sca_opcode POP");
+			rsx_log.error("Unimplemented sca_opcode POP");
 			break;
 
 		default:
 			AddCode(fmt::format("//Unknown vp sca_opcode 0x%x", u32{ d1.sca_opcode }));
-			LOG_ERROR(RSX, "Unknown vp sca_opcode 0x%x", u32{ d1.sca_opcode });
+			rsx_log.error("Unknown vp sca_opcode 0x%x", u32{ d1.sca_opcode });
 			program_end = true;
 			break;
 		}
@@ -744,7 +744,7 @@ std::string VertexProgramDecompiler::Decompile()
 				if ((i + 1) < m_instr_count)
 				{
 					// In rare cases, this might be harmless (large coalesced program blocks controlled via branches aka ubershaders)
-					LOG_ERROR(RSX, "Vertex program block aborts prematurely. Expect glitches");
+					rsx_log.error("Vertex program block aborts prematurely. Expect glitches");
 				}
 
 				break;

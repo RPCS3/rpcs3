@@ -10,6 +10,8 @@
 #include "keyboard_pad_handler.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 
+LOG_CHANNEL(input_log, "Input");
+
 namespace pad
 {
 	atomic_t<pad_thread*> g_current = nullptr;
@@ -123,7 +125,7 @@ void pad_thread::Init()
 		if (cur_pad_handler->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string()) == false)
 		{
 			// Failed to bind the device to cur_pad_handler so binds to NullPadHandler
-			LOG_ERROR(GENERAL, "Failed to bind device %s to handler %s", g_cfg_input.player[i]->device.to_string(), handler_type.to_string());
+			input_log.error("Failed to bind device %s to handler %s", g_cfg_input.player[i]->device.to_string(), handler_type.to_string());
 			nullpad->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string());
 		}
 	}

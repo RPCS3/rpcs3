@@ -509,7 +509,7 @@ namespace vk
 
 			if (UNLIKELY(!any_valid_writes))
 			{
-				LOG_WARNING(RSX, "Surface at 0x%x inherited stale references", base_addr);
+				rsx_log.warning("Surface at 0x%x inherited stale references", base_addr);
 
 				clear_rw_barrier();
 				shuffle_tag();

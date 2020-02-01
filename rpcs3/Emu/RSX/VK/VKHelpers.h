@@ -620,14 +620,14 @@ private:
 			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
 			get_physical_device_features(allow_extensions);
 
-			LOG_NOTICE(RSX, "Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
+			rsx_log.notice("Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
 
 			if (get_driver_vendor() == driver_vendor::RADV &&
 				get_name().find("LLVM 8.0.0") != std::string::npos)
 			{
 				// Serious driver bug causing black screens
 				// See https://bugs.freedesktop.org/show_bug.cgi?id=110970
-				LOG_FATAL(RSX, "RADV drivers have a major driver bug with LLVM 8.0.0 resulting in no visual output. Upgrade to LLVM version 8.0.1 or greater to avoid this issue.");
+				rsx_log.fatal("RADV drivers have a major driver bug with LLVM 8.0.0 resulting in no visual output. Upgrade to LLVM version 8.0.1 or greater to avoid this issue.");
 			}
 
 			if (get_chip_class() == chip_class::AMD_vega)
@@ -842,7 +842,7 @@ private:
 				{
 					// TODO: Slow fallback to emulate this
 					// Just warn and let the driver decide whether to crash or not
-					LOG_FATAL(RSX, "Your GPU driver does not support some required MSAA features. Expect problems.");
+					rsx_log.fatal("Your GPU driver does not support some required MSAA features. Expect problems.");
 				}
 
 				enabled_features.sampleRateShading = VK_TRUE;
@@ -863,20 +863,20 @@ private:
 			// Optionally disable unsupported stuff
 			if (!pgpu->features.depthBounds)
 			{
-				LOG_ERROR(RSX, "Your GPU does not support depth bounds testing. Graphics may not work correctly.");
+				rsx_log.error("Your GPU does not support depth bounds testing. Graphics may not work correctly.");
 				enabled_features.depthBounds = VK_FALSE;
 			}
 
 			if (!pgpu->features.sampleRateShading && enabled_features.sampleRateShading)
 			{
-				LOG_ERROR(RSX, "Your GPU does not support sample rate shading for multisampling. Graphics may be inaccurate when MSAA is enabled.");
+				rsx_log.error("Your GPU does not support sample rate shading for multisampling. Graphics may be inaccurate when MSAA is enabled.");
 				enabled_features.sampleRateShading = VK_FALSE;
 			}
 
 			if (!pgpu->features.alphaToOne && enabled_features.alphaToOne)
 			{
 				// AMD proprietary drivers do not expose alphaToOne support
-				LOG_ERROR(RSX, "Your GPU does not support alpha-to-one for multisampling. Graphics may be inaccurate when MSAA is enabled.");
+				rsx_log.error("Your GPU does not support alpha-to-one for multisampling. Graphics may be inaccurate when MSAA is enabled.");
 				enabled_features.alphaToOne = VK_FALSE;
 			}
 
@@ -899,11 +899,11 @@ private:
 				shader_support_info.shaderFloat16 = VK_TRUE;
 				device.pNext = &shader_support_info;
 
-				LOG_NOTICE(RSX, "GPU/driver supports float16 data types natively. Using native float16_t variables if possible.");
+				rsx_log.notice("GPU/driver supports float16 data types natively. Using native float16_t variables if possible.");
 			}
 			else
 			{
-				LOG_NOTICE(RSX, "GPU/driver lacks support for float16 data types. All float16_t arithmetic will be emulated with float32_t.");
+				rsx_log.notice("GPU/driver lacks support for float16 data types. All float16_t arithmetic will be emulated with float32_t.");
 			}
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
@@ -1251,7 +1251,7 @@ private:
 		{
 			if (!is_open)
 			{
-				LOG_ERROR(RSX, "commandbuffer->end was called but commandbuffer is not in a recording state");
+				rsx_log.error("commandbuffer->end was called but commandbuffer is not in a recording state");
 				return;
 			}
 
@@ -1263,7 +1263,7 @@ private:
 		{
 			if (is_open)
 			{
-				LOG_ERROR(RSX, "commandbuffer->submit was called whilst the command buffer is in a recording state");
+				rsx_log.error("commandbuffer->submit was called whilst the command buffer is in a recording state");
 				return;
 			}
 
@@ -2035,7 +2035,7 @@ public:
 
 			if (m_width == 0 || m_height == 0)
 			{
-				LOG_ERROR(RSX, "Invalid window dimensions %d x %d", m_width, m_height);
+				rsx_log.error("Invalid window dimensions %d x %d", m_width, m_height);
 				return false;
 			}
 
@@ -2114,7 +2114,7 @@ public:
 
 			if (m_width == 0 || m_height == 0)
 			{
-				LOG_ERROR(RSX, "Invalid window dimensions %d x %d", m_width, m_height);
+				rsx_log.error("Invalid window dimensions %d x %d", m_width, m_height);
 				return false;
 			}
 
@@ -2174,7 +2174,7 @@ public:
 
 			if (m_width == 0 || m_height == 0)
 			{
-				LOG_ERROR(RSX, "Invalid window dimensions %d x %d", m_width, m_height);
+				rsx_log.error("Invalid window dimensions %d x %d", m_width, m_height);
 				return false;
 			}
 
@@ -2184,7 +2184,7 @@ public:
 			if (!XMatchVisualInfo(display, DefaultScreen(display), bit_depth, TrueColor, &visual))
 #pragma GCC diagnostic pop
 			{
-				LOG_ERROR(RSX, "Could not find matching visual info!" HERE);
+				rsx_log.error("Could not find matching visual info!" HERE);
 				return false;
 			}
 
@@ -2207,7 +2207,7 @@ public:
 
 			if (display == NULL)
 			{
-				LOG_FATAL(RSX, "Could not create virtual display on this window protocol (Wayland?)");
+				rsx_log.fatal("Could not create virtual display on this window protocol (Wayland?)");
 				return;
 			}
 
@@ -2413,7 +2413,7 @@ public:
 		{
 			if (vk_present_queue == VK_NULL_HANDLE)
 			{
-				LOG_ERROR(RSX, "Cannot create WSI swapchain without a present queue");
+				rsx_log.error("Cannot create WSI swapchain without a present queue");
 				return false;
 			}
 
@@ -2426,7 +2426,7 @@ public:
 			if (surface_descriptors.maxImageExtent.width < m_width ||
 				surface_descriptors.maxImageExtent.height < m_height)
 			{
-				LOG_ERROR(RSX, "Swapchain: Swapchain creation failed because dimensions cannot fit. Max = %d, %d, Requested = %d, %d",
+				rsx_log.error("Swapchain: Swapchain creation failed because dimensions cannot fit. Max = %d, %d, Requested = %d, %d",
 					surface_descriptors.maxImageExtent.width, surface_descriptors.maxImageExtent.height, m_width, m_height);
 
 				return false;
@@ -2442,7 +2442,7 @@ public:
 			{
 				if (surface_descriptors.currentExtent.width == 0 || surface_descriptors.currentExtent.height == 0)
 				{
-					LOG_WARNING(RSX, "Swapchain: Current surface extent is a null region. Is the window minimized?");
+					rsx_log.warning("Swapchain: Current surface extent is a null region. Is the window minimized?");
 					return false;
 				}
 
@@ -2488,7 +2488,7 @@ public:
 					break;
 			}
 
-			LOG_NOTICE(RSX, "Swapchain: present mode %d in use.", static_cast<int>(swapchain_present_mode));
+			rsx_log.notice("Swapchain: present mode %d in use.", static_cast<int>(swapchain_present_mode));
 
 			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
 			if (surface_descriptors.maxImageCount > 0)
@@ -2696,7 +2696,7 @@ public:
 #endif //(WAYLAND)
 				if (!found_surface_ext)
 				{
-					LOG_ERROR(RSX, "Could not find a supported Vulkan surface extension");
+					rsx_log.error("Could not find a supported Vulkan surface extension");
 					return 0;
 				}
 #endif //(WIN32, __APPLE__)
@@ -2716,7 +2716,7 @@ public:
 			{
 				if (result == VK_ERROR_LAYER_NOT_PRESENT)
 				{
-					LOG_FATAL(RSX,"Could not initialize layer VK_LAYER_KHRONOS_validation");
+					rsx_log.fatal("Could not initialize layer VK_LAYER_KHRONOS_validation");
 				}
 
 				return false;
@@ -2844,7 +2844,7 @@ public:
 
 			if (!present_possible)
 			{
-				LOG_ERROR(RSX, "It is not possible for the currently selected GPU to present to the window (Likely caused by NVIDIA driver running the current display)");
+				rsx_log.error("It is not possible for the currently selected GPU to present to the window (Likely caused by NVIDIA driver running the current display)");
 			}
 
 			// Search for a graphics and a present queue in the array of queue
@@ -2885,7 +2885,7 @@ public:
 
 			if (graphicsQueueNodeIndex == UINT32_MAX)
 			{
-				LOG_FATAL(RSX, "Failed to find a suitable graphics queue" HERE);
+				rsx_log.fatal("Failed to find a suitable graphics queue" HERE);
 				return nullptr;
 			}
 
@@ -2898,7 +2898,7 @@ public:
 			if (!present_possible)
 			{
 				//Native(sw) swapchain
-				LOG_WARNING(RSX, "Falling back to software present support (native windowing API)");
+				rsx_log.warning("Falling back to software present support (native windowing API)");
 				auto swapchain = new swapchain_NATIVE(dev, UINT32_MAX, graphicsQueueNodeIndex);
 				swapchain->create(window_handle);
 				return swapchain;
@@ -3473,7 +3473,7 @@ public:
 					std::string shader_type = type == ::glsl::program_domain::glsl_vertex_program ? "vertex" :
 						type == ::glsl::program_domain::glsl_fragment_program ? "fragment" : "compute";
 
-					LOG_NOTICE(RSX, "%s", m_source);
+					rsx_log.notice("%s", m_source);
 					fmt::throw_exception("Failed to compile %s shader" HERE, shader_type);
 				}
 
@@ -3590,7 +3590,7 @@ public:
 
 			if (!(get_heap_compatible_buffer_types() & usage))
 			{
-				LOG_WARNING(RSX, "Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", usage);
+				rsx_log.warning("Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", usage);
 
 				shadow = std::make_unique<buffer>(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0);
 				usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;

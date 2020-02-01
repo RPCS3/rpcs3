@@ -23,7 +23,7 @@
 #include <set>
 #include <algorithm>
 
-
+LOG_CHANNEL(ppu_loader);
 
 extern void ppu_initialize_syscalls();
 extern std::string ppu_get_function_name(const std::string& module, u32 fnid);
@@ -308,7 +308,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 	// "Use" all the modules for correct linkage
 	for (auto& module : registered)
 	{
-		LOG_TRACE(LOADER, "Registered static module: %s", module->name);
+		ppu_loader.trace("Registered static module: %s", module->name);
 	}
 
 	for (auto& pair : ppu_module_manager::get())
@@ -318,7 +318,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 
 		for (auto& function : module->functions)
 		{
-			LOG_TRACE(LOADER, "** 0x%08X: %s", function.first, function.second.name);
+			ppu_loader.trace("** 0x%08X: %s", function.first, function.second.name);
 
 			if (is_first)
 			{
@@ -337,7 +337,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 
 		for (auto& variable : module->variables)
 		{
-			LOG_TRACE(LOADER, "** &0x%08X: %s (size=0x%x, align=0x%x)", variable.first, variable.second.name, variable.second.size, variable.second.align);
+			ppu_loader.trace("** &0x%08X: %s (size=0x%x, align=0x%x)", variable.first, variable.second.name, variable.second.size, variable.second.align);
 
 			// Allocate HLE variable
 			if (variable.second.size >= 4096 || variable.second.align >= 4096)
@@ -367,7 +367,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 				variable.second.var->set(variable.second.addr);
 			}
 
-			LOG_TRACE(LOADER, "Allocated HLE variable %s.%s at 0x%x", module->name, variable.second.name, variable.second.var->addr());
+			ppu_loader.trace("Allocated HLE variable %s.%s at 0x%x", module->name, variable.second.name, variable.second.var->addr());
 
 			// Initialize HLE variable
 			if (variable.second.init)
@@ -399,7 +399,7 @@ static void ppu_patch_refs(std::vector<ppu_reloc>* out_relocs, u32 fref, u32 fad
 
 	for (auto ref = vm::ptr<ref_t>::make(fref); ref->type; ref++)
 	{
-		if (ref->addend) LOG_WARNING(LOADER, "**** REF(%u): Addend value(0x%x, 0x%x)", ref->type, ref->addr, ref->addend);
+		if (ref->addend) ppu_loader.warning("**** REF(%u): Addend value(0x%x, 0x%x)", ref->type, ref->addr, ref->addend);
 
 		const u32 raddr = ref->addr;
 		const u32 rtype = ref->type;
@@ -421,32 +421,32 @@ static void ppu_patch_refs(std::vector<ppu_reloc>* out_relocs, u32 fref, u32 fad
 		case 1:
 		{
 			const u32 value = vm::_ref<u32>(ref->addr) = rdata;
-			LOG_TRACE(LOADER, "**** REF(1): 0x%x <- 0x%x", ref->addr, value);
+			ppu_loader.trace("**** REF(1): 0x%x <- 0x%x", ref->addr, value);
 			break;
 		}
 
 		case 4:
 		{
 			const u16 value = vm::_ref<u16>(ref->addr) = static_cast<u16>(rdata);
-			LOG_TRACE(LOADER, "**** REF(4): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
+			ppu_loader.trace("**** REF(4): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
 			break;
 		}
 
 		case 6:
 		{
 			const u16 value = vm::_ref<u16>(ref->addr) = static_cast<u16>(rdata >> 16) + (rdata & 0x8000 ? 1 : 0);
-			LOG_TRACE(LOADER, "**** REF(6): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
+			ppu_loader.trace("**** REF(6): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
 			break;
 		}
 
 		case 57:
 		{
 			const u16 value = vm::_ref<ppu_bf_t<be_t<u16>, 0, 14>>(ref->addr) = static_cast<u16>(rdata) >> 2;
-			LOG_TRACE(LOADER, "**** REF(57): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
+			ppu_loader.trace("**** REF(57): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
 			break;
 		}
 
-		default: LOG_ERROR(LOADER, "**** REF(%u): Unknown/Illegal type (0x%x, 0x%x)", rtype, raddr, ref->addend);
+		default: ppu_loader.error("**** REF(%u): Unknown/Illegal type (0x%x, 0x%x)", rtype, raddr, ref->addend);
 		}
 	}
 }
@@ -492,11 +492,11 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 
 				if (i < lib.num_func)
 				{
-					LOG_NOTICE(LOADER, "** Special: [%s] at 0x%x", ppu_get_function_name({}, nid), addr);
+					ppu_loader.notice("** Special: [%s] at 0x%x", ppu_get_function_name({}, nid), addr);
 				}
 				else
 				{
-					LOG_NOTICE(LOADER, "** Special: &[%s] at 0x%x", ppu_get_variable_name({}, nid), addr);
+					ppu_loader.notice("** Special: &[%s] at 0x%x", ppu_get_variable_name({}, nid), addr);
 				}
 
 				result.emplace(nid, addr);
@@ -508,11 +508,11 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 
 		const std::string module_name(lib.name.get_ptr());
 
-		LOG_NOTICE(LOADER, "** Exported module '%s' (0x%x, 0x%x, 0x%x, 0x%x)", module_name, lib.vnids, lib.vstubs, lib.unk4, lib.unk5);
+		ppu_loader.notice("** Exported module '%s' (0x%x, 0x%x, 0x%x, 0x%x)", module_name, lib.vnids, lib.vstubs, lib.unk4, lib.unk5);
 
 		if (lib.num_tlsvar)
 		{
-			LOG_FATAL(LOADER, "Unexpected num_tlsvar (%u)!", lib.num_tlsvar);
+			ppu_loader.fatal("Unexpected num_tlsvar (%u)!", lib.num_tlsvar);
 		}
 
 		// Static module
@@ -529,7 +529,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 		{
 			const u32 fnid = fnids[i];
 			const u32 faddr = faddrs[i];
-			LOG_NOTICE(LOADER, "**** %s export: [%s] at 0x%x", module_name, ppu_get_function_name(module_name, fnid), faddr);
+			ppu_loader.notice("**** %s export: [%s] at 0x%x", module_name, ppu_get_function_name(module_name, fnid), faddr);
 
 			// Function linkage info
 			auto& flink = mlink.functions[fnid];
@@ -541,7 +541,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 
 			if (flink.export_addr)
 			{
-				LOG_ERROR(LOADER, "Already linked function '%s' in module '%s'", ppu_get_function_name(module_name, fnid), module_name);
+				ppu_loader.error("Already linked function '%s' in module '%s'", ppu_get_function_name(module_name, fnid), module_name);
 			}
 			//else
 			{
@@ -566,7 +566,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 					}
 					else
 					{
-						LOG_FATAL(LOADER, "Failed to patch function at 0x%x (0x%x)", _entry, target);
+						ppu_loader.fatal("Failed to patch function at 0x%x (0x%x)", _entry, target);
 					}
 				}
 				else
@@ -578,7 +578,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 					for (const u32 addr : flink.imports)
 					{
 						vm::write32(addr, faddr);
-						//LOG_WARNING(LOADER, "Exported function '%s' in module '%s'", ppu_get_function_name(module_name, fnid), module_name);
+						//ppu_loader.warning("Exported function '%s' in module '%s'", ppu_get_function_name(module_name, fnid), module_name);
 					}
 
 					for (const u32 fref : flink.frefss)
@@ -597,7 +597,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 		{
 			const u32 vnid = vnids[i];
 			const u32 vaddr = vaddrs[i];
-			LOG_NOTICE(LOADER, "**** %s export: &[%s] at 0x%x", module_name, ppu_get_variable_name(module_name, vnid), vaddr);
+			ppu_loader.notice("**** %s export: &[%s] at 0x%x", module_name, ppu_get_variable_name(module_name, vnid), vaddr);
 
 			// Variable linkage info
 			auto& vlink = mlink.variables[vnid];
@@ -609,7 +609,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 
 			if (vlink.export_addr)
 			{
-				LOG_ERROR(LOADER, "Already linked variable '%s' in module '%s'", ppu_get_variable_name(module_name, vnid), module_name);
+				ppu_loader.error("Already linked variable '%s' in module '%s'", ppu_get_variable_name(module_name, vnid), module_name);
 			}
 			//else
 			{
@@ -620,7 +620,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 				for (const auto vref : vlink.imports)
 				{
 					ppu_patch_refs(nullptr, vref, vaddr);
-					//LOG_WARNING(LOADER, "Exported variable '%s' in module '%s'", ppu_get_variable_name(module_name, vnid), module_name);
+					//ppu_loader.warning("Exported variable '%s' in module '%s'", ppu_get_variable_name(module_name, vnid), module_name);
 				}
 			}
 		}
@@ -641,11 +641,11 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* l
 
 		const std::string module_name(lib.name.get_ptr());
 
-		LOG_NOTICE(LOADER, "** Imported module '%s' (ver=0x%x, attr=0x%x, 0x%x, 0x%x) [0x%x]", module_name, lib.version, lib.attributes, lib.unk4, lib.unk5, addr);
+		ppu_loader.notice("** Imported module '%s' (ver=0x%x, attr=0x%x, 0x%x, 0x%x) [0x%x]", module_name, lib.version, lib.attributes, lib.unk4, lib.unk5, addr);
 
 		if (lib.num_tlsvar)
 		{
-			LOG_FATAL(LOADER, "Unexpected num_tlsvar (%u)!", lib.num_tlsvar);
+			ppu_loader.fatal("Unexpected num_tlsvar (%u)!", lib.num_tlsvar);
 		}
 
 		// Static module
@@ -662,7 +662,7 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* l
 			const u32 fnid = fnids[i];
 			const u32 fstub = faddrs[i];
 			const u32 faddr = (faddrs + i).addr();
-			LOG_NOTICE(LOADER, "**** %s import: [%s] -> 0x%x", module_name, ppu_get_function_name(module_name, fnid), fstub);
+			ppu_loader.notice("**** %s import: [%s] -> 0x%x", module_name, ppu_get_function_name(module_name, fnid), fstub);
 
 			// Function linkage info
 			auto& flink = link->modules[module_name].functions[fnid];
@@ -686,7 +686,7 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* l
 				ppu_patch_refs(&relocs, frefs, link_addr);
 			}
 
-			//LOG_WARNING(LOADER, "Imported function '%s' in module '%s' (0x%x)", ppu_get_function_name(module_name, fnid), module_name, faddr);
+			//ppu_loader.warning("Imported function '%s' in module '%s' (0x%x)", ppu_get_function_name(module_name, fnid), module_name, faddr);
 		}
 
 		const auto vnids = +lib.vnids;
@@ -696,7 +696,7 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* l
 		{
 			const u32 vnid = vnids[i];
 			const u32 vref = vstubs[i];
-			LOG_NOTICE(LOADER, "**** %s import: &[%s] (ref=*0x%x)", module_name, ppu_get_variable_name(module_name, vnid), vref);
+			ppu_loader.notice("**** %s import: &[%s] (ref=*0x%x)", module_name, ppu_get_variable_name(module_name, vnid), vref);
 
 			// Variable linkage info
 			auto& vlink = link->modules[module_name].variables[vnid];
@@ -709,7 +709,7 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* l
 			// Link if available
 			ppu_patch_refs(&relocs, vref, vlink.export_addr);
 
-			//LOG_WARNING(LOADER, "Imported variable '%s' in module '%s' (0x%x)", ppu_get_variable_name(module_name, vnid), module_name, vlink.first);
+			//ppu_loader.warning("Imported variable '%s' in module '%s' (0x%x)", ppu_get_variable_name(module_name, vnid), module_name, vlink.first);
 		}
 
 		addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
@@ -735,7 +735,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 	for (const auto& prog : elf.progs)
 	{
-		LOG_NOTICE(LOADER, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
+		ppu_loader.notice("** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
 		// Hash big-endian values
 		sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_type), sizeof(prog.p_type));
@@ -761,7 +761,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 				// Copy segment data
 				std::memcpy(vm::base(addr), prog.bin.data(), file_size);
-				LOG_WARNING(LOADER, "**** Loaded to 0x%x (size=0x%x)", addr, mem_size);
+				ppu_loader.warning("**** Loaded to 0x%x (size=0x%x)", addr, mem_size);
 
 				// Hash segment
 				sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_vaddr), sizeof(prog.p_vaddr));
@@ -788,13 +788,13 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 		case 0x700000a4: break; // Relocations
 
-		default: LOG_ERROR(LOADER, "Unknown segment type! 0x%08x", p_type);
+		default: ppu_loader.error("Unknown segment type! 0x%08x", p_type);
 		}
 	}
 
 	for (const auto& s : elf.shdrs)
 	{
-		LOG_NOTICE(LOADER, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
+		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
 
 		const u32 addr = vm::cast(s.sh_addr);
 		const u32 size = vm::cast(s.sh_size);
@@ -853,72 +853,72 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 				case 1: // R_PPC64_ADDR32
 				{
 					const u32 value = vm::_ref<u32>(raddr) = static_cast<u32>(rdata);
-					LOG_TRACE(LOADER, "**** RELOCATION(1): 0x%x <- 0x%08x (0x%llx)", raddr, value, rdata);
+					ppu_loader.trace("**** RELOCATION(1): 0x%x <- 0x%08x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
 				case 4: //R_PPC64_ADDR16_LO
 				{
 					const u16 value = vm::_ref<u16>(raddr) = static_cast<u16>(rdata);
-					LOG_TRACE(LOADER, "**** RELOCATION(4): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
+					ppu_loader.trace("**** RELOCATION(4): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
 				case 5: //R_PPC64_ADDR16_HI
 				{
 					const u16 value = vm::_ref<u16>(raddr) = static_cast<u16>(rdata >> 16);
-					LOG_TRACE(LOADER, "**** RELOCATION(5): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
+					ppu_loader.trace("**** RELOCATION(5): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
 				case 6: //R_PPC64_ADDR16_HA
 				{
 					const u16 value = vm::_ref<u16>(raddr) = static_cast<u16>(rdata >> 16) + (rdata & 0x8000 ? 1 : 0);
-					LOG_TRACE(LOADER, "**** RELOCATION(6): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
+					ppu_loader.trace("**** RELOCATION(6): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
 				case 10: //R_PPC64_REL24
 				{
 					const u32 value = vm::_ref<ppu_bf_t<be_t<u32>, 6, 24>>(raddr) = static_cast<u32>(rdata - raddr) >> 2;
-					LOG_WARNING(LOADER, "**** RELOCATION(10): 0x%x <- 0x%06x (0x%llx)", raddr, value, rdata);
+					ppu_loader.warning("**** RELOCATION(10): 0x%x <- 0x%06x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
 				case 11: //R_PPC64_REL14
 				{
 					const u32 value = vm::_ref<ppu_bf_t<be_t<u32>, 16, 14>>(raddr) = static_cast<u32>(rdata - raddr) >> 2;
-					LOG_WARNING(LOADER, "**** RELOCATION(11): 0x%x <- 0x%06x (0x%llx)", raddr, value, rdata);
+					ppu_loader.warning("**** RELOCATION(11): 0x%x <- 0x%06x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
 				case 38: //R_PPC64_ADDR64
 				{
 					const u64 value = vm::_ref<u64>(raddr) = rdata;
-					LOG_TRACE(LOADER, "**** RELOCATION(38): 0x%x <- 0x%016llx (0x%llx)", raddr, value, rdata);
+					ppu_loader.trace("**** RELOCATION(38): 0x%x <- 0x%016llx (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
 				case 44: //R_PPC64_REL64
 				{
 					const u64 value = vm::_ref<u64>(raddr) = rdata - raddr;
-					LOG_TRACE(LOADER, "**** RELOCATION(44): 0x%x <- 0x%016llx (0x%llx)", raddr, value, rdata);
+					ppu_loader.trace("**** RELOCATION(44): 0x%x <- 0x%016llx (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
 				case 57: //R_PPC64_ADDR16_LO_DS
 				{
 					const u16 value = vm::_ref<ppu_bf_t<be_t<u16>, 0, 14>>(raddr) = static_cast<u16>(rdata) >> 2;
-					LOG_TRACE(LOADER, "**** RELOCATION(57): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
+					ppu_loader.trace("**** RELOCATION(57): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
-				default: LOG_ERROR(LOADER, "**** RELOCATION(%u): Illegal/Unknown type! (addr=0x%x; 0x%llx)", rtype, raddr, rdata);
+				default: ppu_loader.error("**** RELOCATION(%u): Illegal/Unknown type! (addr=0x%x; 0x%llx)", rtype, raddr, rdata);
 				}
 
 				if (rdata == 0)
 				{
-					LOG_TODO(LOADER, "**** RELOCATION(%u): 0x%x <- (zero-based value)", rtype, raddr);
+					ppu_loader.todo("**** RELOCATION(%u): 0x%x <- (zero-based value)", rtype, raddr);
 				}
 			}
 
@@ -950,7 +950,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		prx->module_info_version[1] = lib_info->version[1];
 		prx->module_info_attributes = lib_info->attributes;
 
-		LOG_WARNING(LOADER, "Library %s (rtoc=0x%x):", lib_name, lib_info->toc);
+		ppu_loader.warning("Library %s (rtoc=0x%x):", lib_name, lib_info->toc);
 
 		prx->specials = ppu_load_exports(link, lib_info->exports_start, lib_info->exports_end);
 		prx->imports = ppu_load_imports(prx->relocs, link, lib_info->imports_start, lib_info->imports_end);
@@ -959,7 +959,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	}
 	else
 	{
-		LOG_FATAL(LOADER, "Library %s: PRX library info not found");
+		ppu_loader.fatal("Library %s: PRX library info not found");
 	}
 
 	prx->start.set(prx->specials[0xbc9a0086]);
@@ -990,7 +990,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
-	LOG_NOTICE(LOADER, "PRX library hash: %s (<- %u)", hash, applied);
+	ppu_loader.notice("PRX library hash: %s (<- %u)", hash, applied);
 
 	if (Emu.IsReady() && g_fxo->get<ppu_module>()->segs.empty())
 	{
@@ -1067,7 +1067,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Allocate memory at fixed positions
 	for (const auto& prog : elf.progs)
 	{
-		LOG_NOTICE(LOADER, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
+		ppu_loader.notice("** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
 		ppu_segment _seg;
 		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr, HERE);
@@ -1108,7 +1108,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Load section list, used by the analyser
 	for (const auto& s : elf.shdrs)
 	{
-		LOG_NOTICE(LOADER, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
+		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
 
 		ppu_segment _sec;
 		const u32 addr = _sec.addr = vm::cast(s.sh_addr);
@@ -1143,7 +1143,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
-	LOG_NOTICE(LOADER, "PPU executable hash: %s (<- %u)", hash, applied);
+	ppu_loader.notice("PPU executable hash: %s (<- %u)", hash, applied);
 
 	// Initialize HLE modules
 	ppu_initialize_modules(link);
@@ -1218,7 +1218,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			}
 		}
 
-		LOG_NOTICE(LOADER, "SPU executable hash: %s (<- %u)%s", hash, applied, dump);
+		ppu_loader.notice("SPU executable hash: %s (<- %u)%s", hash, applied, dump);
 
 	}
 
@@ -1245,7 +1245,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{
 				if (!std::exchange(not_found, false))
 				{
-					LOG_ERROR(LOADER, "More than one control flags header found! (flags1=0x%x)",
+					ppu_loader.error("More than one control flags header found! (flags1=0x%x)",
 						ctrl.control_flags.ctrl_flag1);
 					break;
 				}
@@ -1254,7 +1254,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			}
 		}
 
-		LOG_NOTICE(LOADER, "SELF header information found: ctrl_flags1=0x%x, authid=0x%llx",
+		ppu_loader.notice("SELF header information found: ctrl_flags1=0x%x, authid=0x%llx",
 			g_ps3_process_info.ctrl_flags1, g_ps3_process_info.self_info.app_info.authid);
 	}
 
@@ -1294,12 +1294,12 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 				if (info.size < sizeof(process_param_t))
 				{
-					LOG_WARNING(LOADER, "Bad process_param size! [0x%x : 0x%x]", info.size, sizeof(process_param_t));
+					ppu_loader.warning("Bad process_param size! [0x%x : 0x%x]", info.size, sizeof(process_param_t));
 				}
 
 				if (info.magic != 0x13bcc5f6)
 				{
-					LOG_ERROR(LOADER, "Bad process_param magic! [0x%x]", info.magic);
+					ppu_loader.error("Bad process_param magic! [0x%x]", info.magic);
 				}
 				else
 				{
@@ -1315,12 +1315,12 @@ void ppu_load_exec(const ppu_exec_object& elf)
 					malloc_pagesize = info.malloc_pagesize;
 					ppc_seg = info.ppc_seg;
 
-					LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version);
-					LOG_NOTICE(LOADER, "*** primary prio: %d", info.primary_prio);
-					LOG_NOTICE(LOADER, "*** primary stacksize: 0x%x", info.primary_stacksize);
-					LOG_NOTICE(LOADER, "*** malloc pagesize: 0x%x", info.malloc_pagesize);
-					LOG_NOTICE(LOADER, "*** ppc seg: 0x%x", info.ppc_seg);
-					//LOG_NOTICE(LOADER, "*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
+					ppu_loader.notice("*** sdk version: 0x%x", info.sdk_version);
+					ppu_loader.notice("*** primary prio: %d", info.primary_prio);
+					ppu_loader.notice("*** primary stacksize: 0x%x", info.primary_stacksize);
+					ppu_loader.notice("*** malloc pagesize: 0x%x", info.malloc_pagesize);
+					ppu_loader.notice("*** ppc seg: 0x%x", info.ppc_seg);
+					//ppu_loader.notice("*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
 				}
 			}
 			break;
@@ -1347,10 +1347,10 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 				const auto& proc_prx_param = vm::_ref<const ppu_proc_prx_param_t>(vm::cast(prog.p_vaddr, HERE));
 
-				LOG_NOTICE(LOADER, "* libent_start = *0x%x", proc_prx_param.libent_start);
-				LOG_NOTICE(LOADER, "* libstub_start = *0x%x", proc_prx_param.libstub_start);
-				LOG_NOTICE(LOADER, "* unk0 = 0x%x", proc_prx_param.unk0);
-				LOG_NOTICE(LOADER, "* unk2 = 0x%x", proc_prx_param.unk2);
+				ppu_loader.notice("* libent_start = *0x%x", proc_prx_param.libent_start);
+				ppu_loader.notice("* libstub_start = *0x%x", proc_prx_param.libstub_start);
+				ppu_loader.notice("* unk0 = 0x%x", proc_prx_param.unk0);
+				ppu_loader.notice("* unk2 = 0x%x", proc_prx_param.unk2);
 
 				if (proc_prx_param.magic != 0x1b434cec)
 				{
@@ -1365,7 +1365,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		}
 		default:
 		{
-			LOG_ERROR(LOADER, "Unknown phdr type (0x%08x)", p_type);
+			ppu_loader.error("Unknown phdr type (0x%08x)", p_type);
 		}
 		}
 	}
@@ -1404,7 +1404,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 		if (!fs::is_dir(lle_dir) || !fs::is_file(lle_dir + "libsysmodule.sprx"))
 		{
-			LOG_ERROR(LOADER, "PS3 firmware is not installed or the installed firmware is invalid."
+			ppu_loader.error("PS3 firmware is not installed or the installed firmware is invalid."
 				"\nYou should install the PS3 Firmware (Menu: File -> Install Firmware)."
 				"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
 		}
@@ -1415,13 +1415,13 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 			if (obj == elf_error::ok)
 			{
-				LOG_WARNING(LOADER, "Loading library: %s", name);
+				ppu_loader.warning("Loading library: %s", name);
 
 				auto prx = ppu_load_prx(obj, lle_dir + name);
 
 				if (prx->funcs.empty())
 				{
-					LOG_FATAL(LOADER, "Module %s has no functions!", name);
+					ppu_loader.fatal("Module %s has no functions!", name);
 				}
 				else
 				{
@@ -1466,7 +1466,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	{
 		if (ppc_seg != 0x1)
 		{
-			LOG_TODO(LOADER, "Unknown ppc_seg flag value = 0x%x", ppc_seg);
+			ppu_loader.todo("Unknown ppc_seg flag value = 0x%x", ppc_seg);
 		}
 
 		// Additional segment for fixed allocations
@@ -1637,7 +1637,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 	// Allocate memory at fixed positions
 	for (const auto& prog : elf.progs)
 	{
-		LOG_NOTICE(LOADER, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
+		ppu_loader.notice("** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
 		ppu_segment _seg;
 		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr, HERE);
@@ -1678,7 +1678,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 	// Load section list, used by the analyser
 	for (const auto& s : elf.shdrs)
 	{
-		LOG_NOTICE(LOADER, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
+		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
 
 		ppu_segment _sec;
 		const u32 addr = _sec.addr = vm::cast(s.sh_addr);
@@ -1713,7 +1713,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
-	LOG_NOTICE(LOADER, "OVL executable hash: %s (<- %u)", hash, applied);
+	ppu_loader.notice("OVL executable hash: %s (<- %u)", hash, applied);
 
 	// Load other programs
 	for (auto& prog : elf.progs)
@@ -1740,16 +1740,16 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 
 				if (info.size < sizeof(process_param_t))
 				{
-					LOG_WARNING(LOADER, "Bad process_param size! [0x%x : 0x%x]", info.size, u32{sizeof(process_param_t)});
+					ppu_loader.warning("Bad process_param size! [0x%x : 0x%x]", info.size, u32{sizeof(process_param_t)});
 				}
 
 				if (info.magic != 0x4f564c4d)	//string "OVLM"
 				{
-					LOG_ERROR(LOADER, "Bad process_param magic! [0x%x]", info.magic);
+					ppu_loader.error("Bad process_param magic! [0x%x]", info.magic);
 				}
 				else
 				{
-					LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version);
+					ppu_loader.notice("*** sdk version: 0x%x", info.sdk_version);
 				}
 			}
 			break;
@@ -1776,10 +1776,10 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 
 				const auto& proc_prx_param = vm::_ref<const ppu_proc_prx_param_t>(vm::cast(prog.p_vaddr, HERE));
 
-				LOG_NOTICE(LOADER, "* libent_start = *0x%x", proc_prx_param.libent_start);
-				LOG_NOTICE(LOADER, "* libstub_start = *0x%x", proc_prx_param.libstub_start);
-				LOG_NOTICE(LOADER, "* unk0 = 0x%x", proc_prx_param.unk0);
-				LOG_NOTICE(LOADER, "* unk2 = 0x%x", proc_prx_param.unk2);
+				ppu_loader.notice("* libent_start = *0x%x", proc_prx_param.libent_start);
+				ppu_loader.notice("* libstub_start = *0x%x", proc_prx_param.libstub_start);
+				ppu_loader.notice("* unk0 = 0x%x", proc_prx_param.unk0);
+				ppu_loader.notice("* unk2 = 0x%x", proc_prx_param.unk2);
 
 				if (proc_prx_param.magic != 0x1b434cec)
 				{
@@ -1793,7 +1793,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 		}
 		default:
 		{
-			LOG_ERROR(LOADER, "Unknown phdr type (0x%08x)", p_type);
+			ppu_loader.error("Unknown phdr type (0x%08x)", p_type);
 		}
 		}
 	}

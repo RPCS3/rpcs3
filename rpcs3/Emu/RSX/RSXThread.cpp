@@ -114,7 +114,7 @@ namespace rsx
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
 		case CELL_GCM_CONTEXT_DMA_DEVICE_R:
-		{ 
+		{
 			if (offset < 0x100000 /*&& (offset % 0x10) == 0*/)
 			{
 				return render->device_addr + offset;
@@ -455,7 +455,7 @@ namespace rsx
 		}
 		catch (const std::exception& e)
 		{
-			LOG_FATAL(RSX, "%s thrown: %s", typeid(e).name(), e.what());
+			rsx_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
 			Emu.Pause();
 		}
 
@@ -704,7 +704,7 @@ namespace rsx
 			switch (clip_plane_control[index])
 			{
 			default:
-				LOG_ERROR(RSX, "bad clip plane control (0x%x)", static_cast<u8>(clip_plane_control[index]));
+				rsx_log.error("bad clip plane control (0x%x)", static_cast<u8>(clip_plane_control[index]));
 
 			case rsx::user_clip_plane_op::disable:
 				clip_enabled_flags[index] = 0;
@@ -957,7 +957,7 @@ namespace rsx
 
 		if (layout.width == 0 || layout.height == 0)
 		{
-			LOG_TRACE(RSX, "Invalid framebuffer setup, w=%d, h=%d", layout.width, layout.height);
+			rsx_log.trace("Invalid framebuffer setup, w=%d, h=%d", layout.width, layout.height);
 			return;
 		}
 
@@ -1077,7 +1077,7 @@ namespace rsx
 		switch (const auto mode = rsx::method_registers.surface_type())
 		{
 		default:
-			LOG_ERROR(RSX, "Unknown raster mode 0x%x", static_cast<u32>(mode));
+			rsx_log.error("Unknown raster mode 0x%x", static_cast<u32>(mode));
 			[[fallthrough]];
 		case rsx::surface_raster_type::linear:
 			break;
@@ -1130,7 +1130,7 @@ namespace rsx
 			if (layout.color_pitch[index] < minimum_color_pitch)
 			{
 				// Unlike the depth buffer, when given a color target we know it is intended to be rendered to
-				LOG_ERROR(RSX, "Framebuffer setup error: Color target failed pitch check, Pitch=[%d, %d, %d, %d] + %d, target=%d, context=%d",
+				rsx_log.error("Framebuffer setup error: Color target failed pitch check, Pitch=[%d, %d, %d, %d] + %d, target=%d, context=%d",
 					layout.color_pitch[0], layout.color_pitch[1], layout.color_pitch[2], layout.color_pitch[3],
 					layout.zeta_pitch, static_cast<u32>(layout.target), static_cast<u32>(context));
 
@@ -1140,7 +1140,7 @@ namespace rsx
 
 			if (layout.color_addresses[index] == layout.zeta_address)
 			{
-				LOG_WARNING(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, color_index=%d, zeta_pitch = %d, color_pitch=%d, context=%d",
+				rsx_log.warning("Framebuffer at 0x%X has aliasing color/depth targets, color_index=%d, zeta_pitch = %d, color_pitch=%d, context=%d",
 					layout.zeta_address, index, layout.zeta_pitch, layout.color_pitch[index], static_cast<u32>(context));
 
 				m_framebuffer_state_contested = true;
@@ -1182,7 +1182,7 @@ namespace rsx
 
 		if (!framebuffer_status_valid && !layout.zeta_address)
 		{
-			LOG_WARNING(RSX, "Framebuffer setup failed. Draw calls may have been lost");
+			rsx_log.warning("Framebuffer setup failed. Draw calls may have been lost");
 			return;
 		}
 
@@ -1201,7 +1201,7 @@ namespace rsx
 			// Tested with Turbo: Super stunt squad that only changes the window offset to declare new framebuffers
 			// Sampling behavior clearly indicates the addresses are expected to have changed
 			if (auto clip_type = rsx::method_registers.window_clip_type())
-				LOG_ERROR(RSX, "Unknown window clip type 0x%X" HERE, clip_type);
+				rsx_log.error("Unknown window clip type 0x%X" HERE, clip_type);
 
 			for (const auto &index : rsx::utility::get_rtt_indexes(layout.target))
 			{
@@ -1221,7 +1221,7 @@ namespace rsx
 		if ((window_clip_width && window_clip_width < layout.width) ||
 			(window_clip_height && window_clip_height < layout.height))
 		{
-			LOG_ERROR(RSX, "Unexpected window clip dimensions: window_clip=%dx%d, surface_clip=%dx%d",
+			rsx_log.error("Unexpected window clip dimensions: window_clip=%dx%d, surface_clip=%dx%d",
 				window_clip_width, window_clip_height, layout.width, layout.height);
 		}
 
@@ -1676,7 +1676,7 @@ namespace rsx
 						break;
 					}
 					default:
-						LOG_ERROR(RSX, "Depth texture bound to pipeline with unexpected format 0x%X", format);
+						rsx_log.error("Depth texture bound to pipeline with unexpected format 0x%X", format);
 					}
 				}
 				else if (!backend_config.supports_hw_renormalization)
@@ -1734,7 +1734,7 @@ namespace rsx
 			//Check that the depth stage is not disabled
 			if (!rsx::method_registers.depth_test_enabled())
 			{
-				LOG_ERROR(RSX, "FS exports depth component but depth test is disabled (INVALID_OPERATION)");
+				rsx_log.error("FS exports depth component but depth test is disabled (INVALID_OPERATION)");
 			}
 		}
 	}
@@ -2168,7 +2168,7 @@ namespace rsx
 				return;
 			}
 			default:
-				LOG_ERROR(RSX, "Unknown zcull stat type %d", type);
+				rsx_log.error("Unknown zcull stat type %d", type);
 				break;
 			}
 		}
@@ -2520,7 +2520,7 @@ namespace rsx
 				f.write(os.str());
 			}
 
-			LOG_SUCCESS(RSX, "capture successful: %s", filePath.c_str());
+			rsx_log.success("capture successful: %s", filePath.c_str());
 
 			frame_capture.reset();
 			Emu.Pause();
@@ -2566,7 +2566,7 @@ namespace rsx
 
 			if (g_cfg.video.frame_skip_enabled)
 			{
-				LOG_ERROR(RSX, "Frame skip is not compatible with this application");
+				rsx_log.error("Frame skip is not compatible with this application");
 			}
 		}
 
@@ -2836,7 +2836,7 @@ namespace rsx
 				if (!m_pending_writes.front().query)
 				{
 					// If this happens, the assert above will fire. There should never be a queue header with no work to be done
-					LOG_ERROR(RSX, "Close to our death.");
+					rsx_log.error("Close to our death.");
 				}
 
 				m_next_tsc = 0;
@@ -2939,7 +2939,7 @@ namespace rsx
 					{
 						if (It->query->sync_tag > m_sync_tag)
 						{
-							// LOG_TRACE(RSX, "[Performance warning] Query hint emit during sync command.");
+							// rsx_log.trace("[Performance warning] Query hint emit during sync command.");
 							ptimer->sync_hint(FIFO_hint::hint_zcull_sync, It->query);
 						}
 

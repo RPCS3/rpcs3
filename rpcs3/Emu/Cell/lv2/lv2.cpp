@@ -47,7 +47,7 @@ void fmt_class_string<ppu_syscall_code>::format(std::string& out, u64 arg)
 
 static bool null_func(ppu_thread& ppu)
 {
-	LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_syscall_code(ppu.gpr[11]));
+	ppu_log.todo("Unimplemented syscall %s -> CELL_OK", ppu_syscall_code(ppu.gpr[11]));
 	ppu.gpr[3] = 0;
 	ppu.cia += 4;
 	return false;
@@ -55,7 +55,7 @@ static bool null_func(ppu_thread& ppu)
 
 static bool uns_func(ppu_thread& ppu)
 {
-	LOG_TRACE(HLE, "Unused syscall %d -> ENOSYS", ppu.gpr[11]);
+	ppu_log.trace("Unused syscall %d -> ENOSYS", ppu.gpr[11]);
 	ppu.gpr[3] = CELL_ENOSYS;
 	ppu.cia += 4;
 	return false;
@@ -981,7 +981,7 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 		if (auto func = g_ppu_syscall_table[code])
 		{
 			func(ppu);
-			LOG_TRACE(PPU, "Syscall '%s' (%llu) finished, r3=0x%llx", ppu_syscall_code(code), code, ppu.gpr[3]);
+			ppu_log.trace("Syscall '%s' (%llu) finished, r3=0x%llx", ppu_syscall_code(code), code, ppu.gpr[3]);
 			return;
 		}
 	}
@@ -1014,7 +1014,7 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 
 	if (auto ppu = static_cast<ppu_thread*>(thread.id_type() == 1 ? &thread : nullptr))
 	{
-		LOG_TRACE(PPU, "sleep() - waiting (%zu)", g_pending.size());
+		ppu_log.trace("sleep() - waiting (%zu)", g_pending.size());
 
 		const auto [_, ok] = ppu->state.fetch_op([&](bs_t<cpu_flag>& val)
 		{
@@ -1029,7 +1029,7 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 
 		if (!ok)
 		{
-			LOG_FATAL(PPU, "sleep() failed (signaled) (%s)", ppu->current_function);
+			ppu_log.fatal("sleep() failed (signaled) (%s)", ppu->current_function);
 			return;
 		}
 
@@ -1118,7 +1118,7 @@ void lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 		{
 			if (it != end && *it == cpu)
 			{
-				LOG_TRACE(PPU, "sleep() - suspended (p=%zu)", g_pending.size());
+				ppu_log.trace("sleep() - suspended (p=%zu)", g_pending.size());
 				return;
 			}
 
@@ -1140,7 +1140,7 @@ void lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 			}
 		}
 
-		LOG_TRACE(PPU, "awake(): %s", cpu->id);
+		ppu_log.trace("awake(): %s", cpu->id);
 	};
 
 	if (cpu)
@@ -1167,7 +1167,7 @@ void lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 
 		if (!target->state.test_and_set(cpu_flag::suspend))
 		{
-			LOG_TRACE(PPU, "suspend(): %s", target->id);
+			ppu_log.trace("suspend(): %s", target->id);
 			g_pending.emplace_back(target);
 		}
 	}
@@ -1193,7 +1193,7 @@ void lv2_obj::schedule_all()
 
 			if (target->state & cpu_flag::suspend)
 			{
-				LOG_TRACE(PPU, "schedule(): %s", target->id);
+				ppu_log.trace("schedule(): %s", target->id);
 				target->state ^= (cpu_flag::signal + cpu_flag::suspend);
 				target->start_time = 0;
 

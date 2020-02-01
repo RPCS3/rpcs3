@@ -4,6 +4,8 @@
 
 cfg_input g_cfg_input;
 
+LOG_CHANNEL(input_log, "Input");
+
 PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
 {
 }
@@ -26,7 +28,7 @@ int PadHandlerBase::FindKeyCode(const std::unordered_map<u32, std::string>& map,
 
 	if (fallback)
 	{
-		LOG_ERROR(HLE, "int FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
+		input_log.error("int FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
 		if (def_code < 0)
 			def_code = 0;
 	}
@@ -51,7 +53,7 @@ long PadHandlerBase::FindKeyCode(const std::unordered_map<u64, std::string>& map
 
 	if (fallback)
 	{
-		LOG_ERROR(HLE, "long FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
+		input_log.error("long FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
 		if (def_code < 0)
 			def_code = 0;
 	}
@@ -70,7 +72,7 @@ int PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u32, std::strin
 
 	if (fallback)
 	{
-		LOG_ERROR(HLE, "long FindKeyCodeByString for [name = %s] returned with 0", name);
+		input_log.error("long FindKeyCodeByString for [name = %s] returned with 0", name);
 		return 0;
 	}
 
@@ -88,7 +90,7 @@ long PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u64, std::stri
 
 	if (fallback)
 	{
-		LOG_ERROR(HLE, "long FindKeyCodeByString for [name = %s] returned with 0", name);
+		input_log.error("long FindKeyCodeByString for [name = %s] returned with 0", name);
 		return 0;
 	}
 
@@ -344,7 +346,7 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const std:
 			if (get_blacklist)
 			{
 				blacklist.emplace_back(keycode);
-				LOG_ERROR(HLE, "%s Calibration: Added key [ %d = %s ] to blacklist. Value = %d", m_type, keycode, button.second, value);
+				input_log.error("%s Calibration: Added key [ %d = %s ] to blacklist. Value = %d", m_type, keycode, button.second, value);
 			}
 			else if (value > pressed_button.first)
 				pressed_button = { value, button.second };
@@ -354,7 +356,7 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const std:
 	if (get_blacklist)
 	{
 		if (blacklist.empty())
-			LOG_SUCCESS(HLE, "%s Calibration: Blacklist is clear. No input spam detected", m_type);
+			input_log.success("%s Calibration: Blacklist is clear. No input spam detected", m_type);
 		return;
 	}
 
@@ -586,7 +588,7 @@ void PadHandlerBase::ThreadProc()
 		{
 			if (!last_connection_status[i])
 			{
-				LOG_SUCCESS(HLE, "%s device %d connected", m_type, i);
+				input_log.success("%s device %d connected", m_type, i);
 				pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 				last_connection_status[i] = true;
@@ -602,7 +604,7 @@ void PadHandlerBase::ThreadProc()
 		{
 			if (last_connection_status[i])
 			{
-				LOG_ERROR(HLE, "%s device %d disconnected", m_type, i);
+				input_log.error("%s device %d disconnected", m_type, i);
 				pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 				last_connection_status[i] = false;

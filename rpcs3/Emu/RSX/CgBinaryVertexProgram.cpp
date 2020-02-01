@@ -61,7 +61,7 @@ std::string CgBinaryDisasm::GetDSTDisasm(bool is_sca)
 
 	default:
 		if (d3.dst > 15)
-			LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
+			rsx_log.error("dst index out of range: %u", d3.dst);
 
 		ret += fmt::format("o[%d]", d3.dst) + mask;
 		// Vertex Program supports double destinations, notably in MOV
@@ -89,7 +89,7 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 		}
 		else
 		{
-			LOG_ERROR(RSX, "Bad input src num: %d", u32{ d1.input_src });
+			rsx_log.error("Bad input src num: %d", u32{ d1.input_src });
 			ret += fmt::format("v[%d] # bad src", d1.input_src);
 		}
 		break;
@@ -98,7 +98,7 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 		break;
 
 	default:
-		LOG_ERROR(RSX, "Bad src%u reg type: %d", n, u32{ src[n].reg_type });
+		rsx_log.error("Bad src%u reg type: %d", n, u32{ src[n].reg_type });
 		Emu.Pause();
 		break;
 	}
@@ -367,7 +367,7 @@ void CgBinaryDisasm::TaskVP()
 
 			if (i < m_data.size())
 			{
-				LOG_ERROR(RSX, "Program end before buffer end.");
+				rsx_log.error("Program end before buffer end.");
 			}
 
 			break;
@@ -413,7 +413,7 @@ void CgBinaryDisasm::TaskVP()
 		case RSX_SCA_OPCODE_POP: SetDSTScaDisasm(""); break;
 
 		default:
-			LOG_ERROR(RSX, "Unknown vp sca_opcode 0x%x", u32{ d1.sca_opcode });
+			rsx_log.error("Unknown vp sca_opcode 0x%x", u32{ d1.sca_opcode });
 			break;
 		}
 
@@ -446,7 +446,7 @@ void CgBinaryDisasm::TaskVP()
 		case RSX_VEC_OPCODE_TXL: SetDSTVecDisasm("$t, $0"); break;
 
 		default:
-			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", u32{ d1.vec_opcode });
+			rsx_log.error("Unknown vp opcode 0x%x", u32{ d1.vec_opcode });
 			break;
 		}
 	}

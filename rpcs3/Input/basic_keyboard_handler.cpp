@@ -9,6 +9,8 @@
 #include "windows.h"
 #endif
 
+LOG_CHANNEL(input_log, "Input");
+
 void basic_keyboard_handler::Init(const u32 max_connect)
 {
 	for (u32 i = 0; i < max_connect; i++)
@@ -45,7 +47,7 @@ void basic_keyboard_handler::SetTargetWindow(QWindow* target)
 		// If this is hit, it probably means that some refactoring occurs because currently a gsframe is created in Load.
 		// We still want events so filter from application instead since target is null.
 		QApplication::instance()->installEventFilter(this);
-		LOG_ERROR(GENERAL, "Trying to set keyboard handler to a null target window.");
+		input_log.error("Trying to set keyboard handler to a null target window.");
 	}
 }
 

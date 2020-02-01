@@ -866,7 +866,7 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 
 	if (!ctxt->spurs.aligned())
 	{
-		LOG_ERROR(SPU, "spursSysServiceMain(): invalid spurs alignment");
+		spu_log.error("spursSysServiceMain(): invalid spurs alignment");
 		spursHalt(spu);
 	}
 
@@ -884,7 +884,7 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 			// Halt if already initialised
 			if (spurs->sysSrvOnSpu & (1 << ctxt->spuNum))
 			{
-				LOG_ERROR(SPU, "spursSysServiceMain(): already initialized");
+				spu_log.error("spursSysServiceMain(): already initialized");
 				spursHalt(spu);
 			}
 
@@ -1424,7 +1424,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 		if ((taskset->waiting & taskset->running) != _0 || (taskset->ready & taskset->pending_ready) != _0 ||
 			((taskset->running | taskset->ready | taskset->pending_ready | taskset->signalled | taskset->waiting) & ~taskset->enabled) != _0)
 		{
-			LOG_ERROR(SPU, "Invalid taskset state");
+			spu_log.error("Invalid taskset state");
 			spursHalt(spu);
 		}
 
@@ -1562,7 +1562,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 			}
 			break;
 		default:
-			LOG_ERROR(SPU, "Unknown taskset request");
+			spu_log.error("Unknown taskset request");
 			spursHalt(spu);
 		}
 
@@ -1637,7 +1637,7 @@ void spursTasksetExit(spu_thread& spu)
 	// Not sure why this check exists. Perhaps to check for memory corruption.
 	if (memcmp(ctxt->moduleId, "SPURSTASK MODULE", 16) != 0)
 	{
-		LOG_ERROR(SPU, "spursTasksetExit(): memory corruption");
+		spu_log.error("spursTasksetExit(): memory corruption");
 		spursHalt(spu);
 	}
 
@@ -1761,7 +1761,7 @@ void spursTasksetDispatch(spu_thread& spu)
 		u32 lowestLoadAddr;
 		if (spursTasksetLoadElf(spu, &entryPoint, &lowestLoadAddr, taskInfo->elf.addr(), false) != CELL_OK)
 		{
-			LOG_ERROR(SPU, "spursTaskLoadElf() failed");
+			spu_log.error("spursTaskLoadElf() failed");
 			spursHalt(spu);
 		}
 
@@ -1809,7 +1809,7 @@ void spursTasksetDispatch(spu_thread& spu)
 			u32 entryPoint;
 			if (spursTasksetLoadElf(spu, &entryPoint, nullptr, taskInfo->elf.addr(), true) != CELL_OK)
 			{
-				LOG_ERROR(SPU, "spursTasksetLoadElf() failed");
+				spu_log.error("spursTasksetLoadElf() failed");
 				spursHalt(spu);
 			}
 		}
@@ -1917,7 +1917,7 @@ s32 spursTasksetProcessSyscall(spu_thread& spu, u32 syscallNum, u32 args)
 	case CELL_SPURS_TASK_SYSCALL_RECV_WKL_FLAG:
 		if (args == 0)
 		{ // TODO: Figure this out
-			LOG_ERROR(SPU, "args == 0");
+			spu_log.error("args == 0");
 			//spursHalt(spu);
 		}
 

@@ -6,6 +6,8 @@
 #include <QCoreApplication>
 #include <QMessageBox>
 
+LOG_CHANNEL(cfg_log, "CFG");
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 gui_settings::gui_settings(QObject* parent) : settings(parent)
@@ -34,7 +36,7 @@ QString gui_settings::GetCurrentUser()
 		return user;
 	}
 
-	LOG_FATAL(GENERAL, "Could not parse user setting: '%s' = '%d'.", user.toStdString(), user_id);
+	cfg_log.fatal("Could not parse user setting: '%s' = '%d'.", user.toStdString(), user_id);
 	return QString();
 }
 
@@ -137,7 +139,7 @@ bool gui_settings::GetCategoryVisibility(int cat)
 	case Category::Others:
 		value = gui::cat_other; break;
 	default:
-		LOG_WARNING(GENERAL, "GetCategoryVisibility: wrong cat <%d>", cat);
+		cfg_log.warning("GetCategoryVisibility: wrong cat <%d>", cat);
 		break;
 	}
 
@@ -171,7 +173,7 @@ void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 	case Category::Others:
 		value = gui::cat_other; break;
 	default:
-		LOG_WARNING(GENERAL, "SetCategoryVisibility: wrong cat <%d>", cat);
+		cfg_log.warning("SetCategoryVisibility: wrong cat <%d>", cat);
 		break;
 	}
 
@@ -204,13 +206,13 @@ void gui_settings::ShowBox(bool confirm, const QString& title, const QString& te
 			if (!entry.name.isEmpty() && mb->checkBox()->isChecked())
 			{
 				SetValue(entry, false);
-				LOG_NOTICE(GENERAL, "%s Dialog for Entry %s is now disabled", dialog_type, sstr(entry.name));
+				cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, sstr(entry.name));
 			}
 		});
 
 		mb->exec();
 	}
-	else LOG_NOTICE(GENERAL, "%s Dialog for Entry %s was ignored", dialog_type, sstr(entry.name));
+	else cfg_log.notice("%s Dialog for Entry %s was ignored", dialog_type, sstr(entry.name));
 }
 
 void gui_settings::ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr)

@@ -46,7 +46,7 @@
 #include "Log.h"
 
 LOG_CHANNEL(sig_log);
-LOG_CHANNEL(vm_log);
+LOG_CHANNEL(vm_log, "VM");
 
 thread_local u64 g_tls_fault_all = 0;
 thread_local u64 g_tls_fault_rsx = 0;
@@ -1117,7 +1117,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		}
 		catch (const std::exception& e)
 		{
-			LOG_FATAL(RSX, "g_access_violation_handler(0x%x, %d): %s", addr, is_writing, e.what());
+			rsx_log.fatal("g_access_violation_handler(0x%x, %d): %s", addr, is_writing, e.what());
 
 			if (cpu)
 			{
@@ -1447,7 +1447,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		{
 			if (auto last_func = static_cast<ppu_thread*>(cpu)->current_function)
 			{
-				LOG_FATAL(PPU, "Function aborted: %s", last_func);
+				ppu_log.fatal("Function aborted: %s", last_func);
 			}
 
 			lv2_obj::sleep(*cpu);

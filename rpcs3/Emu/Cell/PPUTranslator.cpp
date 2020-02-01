@@ -90,7 +90,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 			// case 26:
 			// case 28:
 			{
-				LOG_NOTICE(PPU, "Ignoring relative relocation at 0x%x (%u)", rel.addr, rel.type);
+				ppu_log.notice("Ignoring relative relocation at 0x%x (%u)", rel.addr, rel.type);
 				continue;
 			}
 
@@ -107,7 +107,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 			case 73:
 			case 78:
 			{
-				LOG_ERROR(PPU, "Ignoring 64-bit relocation at 0x%x (%u)", rel.addr, rel.type);
+				ppu_log.error("Ignoring 64-bit relocation at 0x%x (%u)", rel.addr, rel.type);
 				continue;
 			}
 			}
@@ -115,7 +115,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 			// Align relocation address (TODO)
 			if (!m_relocs.emplace(rel.addr & ~3, &rel).second)
 			{
-				LOG_ERROR(PPU, "Relocation repeated at 0x%x (%u)", rel.addr, rel.type);
+				ppu_log.error("Relocation repeated at 0x%x (%u)", rel.addr, rel.type);
 			}
 		}
 	}
@@ -200,7 +200,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 			if (m_rel)
 			{
 				// This is very bad. m_rel is normally set to nullptr after a relocation is handled (so it wasn't)
-				LOG_ERROR(PPU, "LLVM: [0x%x] Unsupported relocation(%u) in '%s'. Please report.", rel_found->first, m_rel->type, m_info.name);
+				ppu_log.error("LLVM: [0x%x] Unsupported relocation(%u) in '%s'. Please report.", rel_found->first, m_rel->type, m_info.name);
 				return nullptr;
 			}
 		}
@@ -563,7 +563,7 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 
 void PPUTranslator::CompilationError(const std::string& error)
 {
-	LOG_ERROR(PPU, "LLVM: [0x%08x] Error: %s", m_addr + (m_reloc ? m_reloc->addr : 0), error);
+	ppu_log.error("LLVM: [0x%08x] Error: %s", m_addr + (m_reloc ? m_reloc->addr : 0), error);
 }
 
 
@@ -3943,7 +3943,7 @@ void PPUTranslator::MTFSFI(ppu_opcode_t op)
 
 void PPUTranslator::MFFS(ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "LLVM: [0x%08x] Warning: MFFS", m_addr + (m_reloc ? m_reloc->addr : 0));
+	ppu_log.warning("LLVM: [0x%08x] Warning: MFFS", m_addr + (m_reloc ? m_reloc->addr : 0));
 
 	Value* result = m_ir->getInt64(0);
 
@@ -3959,7 +3959,7 @@ void PPUTranslator::MFFS(ppu_opcode_t op)
 
 void PPUTranslator::MTFSF(ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "LLVM: [0x%08x] Warning: MTFSF", m_addr + (m_reloc ? m_reloc->addr : 0));
+	ppu_log.warning("LLVM: [0x%08x] Warning: MTFSF", m_addr + (m_reloc ? m_reloc->addr : 0));
 
 	const auto value = GetFpr(op.frb, 32, true);
 

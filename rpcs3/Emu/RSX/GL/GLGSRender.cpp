@@ -85,17 +85,17 @@ namespace
 		{
 			// Note : maybe add is signed on gl
 		case rsx::blend_equation::add_signed:
-			LOG_TRACE(RSX, "blend equation add_signed used. Emulating using FUNC_ADD");
+			rsx_log.trace("blend equation add_signed used. Emulating using FUNC_ADD");
 		case rsx::blend_equation::add: return GL_FUNC_ADD;
 		case rsx::blend_equation::min: return GL_MIN;
 		case rsx::blend_equation::max: return GL_MAX;
 		case rsx::blend_equation::substract: return GL_FUNC_SUBTRACT;
 		case rsx::blend_equation::reverse_substract_signed:
-			LOG_TRACE(RSX, "blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
+			rsx_log.trace("blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
 		case rsx::blend_equation::reverse_substract: return GL_FUNC_REVERSE_SUBTRACT;
 		case rsx::blend_equation::reverse_add_signed:
 		default:
-			LOG_ERROR(RSX, "Blend equation 0x%X is unimplemented!", static_cast<u32>(op));
+			rsx_log.error("Blend equation 0x%X is unimplemented!", static_cast<u32>(op));
 			return GL_FUNC_ADD;
 		}
 	}
@@ -690,9 +690,9 @@ void GLGSRender::on_init_thread()
 	if (g_cfg.video.debug_output)
 		gl::enable_debugging();
 
-	LOG_NOTICE(RSX, "GL RENDERER: %s (%s)", reinterpret_cast<const char*>(glGetString(GL_RENDERER)), reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
-	LOG_NOTICE(RSX, "GL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
-	LOG_NOTICE(RSX, "GLSL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)));
+	rsx_log.notice("GL RENDERER: %s (%s)", reinterpret_cast<const char*>(glGetString(GL_RENDERER)), reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
+	rsx_log.notice("GL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+	rsx_log.notice("GLSL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)));
 
 	auto& gl_caps = gl::get_driver_caps();
 
@@ -708,12 +708,12 @@ void GLGSRender::on_init_thread()
 
 	if (!gl_caps.ARB_depth_buffer_float_supported && g_cfg.video.force_high_precision_z_buffer)
 	{
-		LOG_WARNING(RSX, "High precision Z buffer requested but your GPU does not support GL_ARB_depth_buffer_float. Option ignored.");
+		rsx_log.warning("High precision Z buffer requested but your GPU does not support GL_ARB_depth_buffer_float. Option ignored.");
 	}
 
 	if (!gl_caps.ARB_texture_barrier_supported && !gl_caps.NV_texture_barrier_supported && !g_cfg.video.strict_rendering_mode)
 	{
-		LOG_WARNING(RSX, "Texture barriers are not supported by your GPU. Feedback loops will have undefined results.");
+		rsx_log.warning("Texture barriers are not supported by your GPU. Feedback loops will have undefined results.");
 	}
 
 	//Use industry standard resource alignment values as defaults
@@ -731,10 +731,10 @@ void GLGSRender::on_init_thread()
 	m_min_texbuffer_alignment = std::max(m_min_texbuffer_alignment, 16);
 	m_uniform_buffer_offset_align = std::max(m_uniform_buffer_offset_align, 16);
 
-	LOG_NOTICE(RSX, "Supported texel buffer size reported: %d bytes", m_max_texbuffer_size);
+	rsx_log.notice("Supported texel buffer size reported: %d bytes", m_max_texbuffer_size);
 	if (m_max_texbuffer_size < (16 * 0x100000))
 	{
-		LOG_ERROR(RSX, "Max texture buffer size supported is less than 16M which is useless. Expect undefined behaviour.");
+		rsx_log.error("Max texture buffer size supported is less than 16M which is useless. Expect undefined behaviour.");
 		m_max_texbuffer_size = (16 * 0x100000);
 	}
 
@@ -780,14 +780,14 @@ void GLGSRender::on_init_thread()
 
 	if (!gl_caps.ARB_buffer_storage_supported)
 	{
-		LOG_WARNING(RSX, "Forcing use of legacy OpenGL buffers because ARB_buffer_storage is not supported");
+		rsx_log.warning("Forcing use of legacy OpenGL buffers because ARB_buffer_storage is not supported");
 		// TODO: do not modify config options
 		g_cfg.video.gl_legacy_buffers.from_string("true");
 	}
 
 	if (g_cfg.video.gl_legacy_buffers)
 	{
-		LOG_WARNING(RSX, "Using legacy openGL buffers.");
+		rsx_log.warning("Using legacy openGL buffers.");
 		manually_flush_ring_buffers = true;
 
 		m_attrib_ring_buffer = std::make_unique<gl::legacy_ring_buffer>();

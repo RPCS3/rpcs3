@@ -16,6 +16,8 @@
 
 #include "Emu/RSX/CgBinaryProgram.h"
 
+LOG_CHANNEL(gui_log, "GUI");
+
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -29,7 +31,7 @@ cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgu
 	resize(QSize(620, 395));
 
 	m_path_last = xgui_settings->GetValue(gui::fd_cg_disasm).toString();
-	
+
 	m_disasm_text = new QTextEdit(this);
 	m_disasm_text->setReadOnly(true);
 	m_disasm_text->setWordWrapMode(QTextOption::NoWrap);
@@ -119,7 +121,7 @@ void cg_disasm_window::ShowDisasm()
 	}
 	else if (!m_path_last.isEmpty())
 	{
-		LOG_ERROR(LOADER, "CgDisasm: Failed to open %s", sstr(m_path_last));
+		gui_log.error("CgDisasm: Failed to open %s", sstr(m_path_last));
 	}
 }
 

@@ -394,7 +394,7 @@ namespace vk
 			//Most depth/stencil formats cannot be scaled using hw blit
 			if (src_format == VK_FORMAT_UNDEFINED)
 			{
-				LOG_ERROR(RSX, "Could not blit depth/stencil image. src_fmt=0x%x", static_cast<u32>(src_format));
+				rsx_log.error("Could not blit depth/stencil image. src_fmt=0x%x", static_cast<u32>(src_format));
 			}
 			else
 			{
@@ -864,7 +864,7 @@ namespace vk
 				final_mapping[channel] = base_remap[remap_vector.first[channel]];
 				break;
 			default:
-				LOG_ERROR(RSX, "Unknown remap lookup value %d", remap_vector.second[channel]);
+				rsx_log.error("Unknown remap lookup value %d", remap_vector.second[channel]);
 			}
 		}
 
@@ -951,19 +951,19 @@ namespace vk
 		// Checks
 		if (src_area.x2 <= src_area.x1 || src_area.y2 <= src_area.y1 || dst_area.x2 <= dst_area.x1 || dst_area.y2 <= dst_area.y1)
 		{
-			LOG_ERROR(RSX, "Blit request consists of an empty region descriptor!");
+			rsx_log.error("Blit request consists of an empty region descriptor!");
 			return;
 		}
 
 		if (src_area.x1 < 0 || src_area.x2 > static_cast<s32>(real_src->width()) || src_area.y1 < 0 || src_area.y2 > static_cast<s32>(real_src->height()))
 		{
-			LOG_ERROR(RSX, "Blit request denied because the source region does not fit!");
+			rsx_log.error("Blit request denied because the source region does not fit!");
 			return;
 		}
 
 		if (dst_area.x1 < 0 || dst_area.x2 > static_cast<s32>(real_dst->width()) || dst_area.y1 < 0 || dst_area.y2 > static_cast<s32>(real_dst->height()))
 		{
-			LOG_ERROR(RSX, "Blit request denied because the destination region does not fit!");
+			rsx_log.error("Blit request denied because the destination region does not fit!");
 			return;
 		}
 

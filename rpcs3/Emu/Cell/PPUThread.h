@@ -4,6 +4,8 @@
 #include "../Memory/vm_ptr.h"
 #include "Utilities/lockless.h"
 
+LOG_CHANNEL(ppu_log, "PPU");
+
 enum class ppu_cmd : u32
 {
 	null,

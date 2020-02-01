@@ -35,6 +35,8 @@
 #include <QGuiApplication>
 #include <QScreen>
 
+LOG_CHANNEL(gui_log, "GUI");
+
 namespace
 {
 	constexpr auto qstr = QString::fromStdString;
@@ -363,7 +365,7 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 
 	if (!success || !config)
 	{
-		LOG_ERROR(GENERAL, "Failed to load trophy database for %s", trop_name);
+		gui_log.error("Failed to load trophy database for %s", trop_name);
 		return false;
 	}
 
@@ -371,7 +373,7 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 
 	if (trophy_count == 0)
 	{
-		LOG_ERROR(GENERAL, "Warning game %s in trophy folder %s usr file reports zero trophies.  Cannot load in trophy manager.", game_trophy_data->game_name, game_trophy_data->path);
+		gui_log.error("Warning game %s in trophy folder %s usr file reports zero trophies.  Cannot load in trophy manager.", game_trophy_data->game_name, game_trophy_data->path);
 		return false;
 	}
 
@@ -392,7 +394,7 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 		const QString path = qstr(game_trophy_data->path) + "TROP" + padding + QString::number(trophy_id) + ".PNG";
 		if (!trophy_icon.load(path))
 		{
-			LOG_ERROR(GENERAL, "Failed to load trophy icon for trophy %d %s", trophy_id, game_trophy_data->path);
+			gui_log.error("Failed to load trophy icon for trophy %d %s", trophy_id, game_trophy_data->path);
 		}
 		game_trophy_data->trophy_images.emplace_back(std::move(trophy_icon));
 	}
@@ -708,7 +710,7 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 	futureWatcher.setFuture(QtConcurrent::map(indices, [this, folder_list, &progressDialog](const int& i)
 	{
 		const std::string dir_name = sstr(folder_list.value(i));
-		LOG_TRACE(GENERAL, "Loading trophy dir: %s", dir_name);
+		gui_log.trace("Loading trophy dir: %s", dir_name);
 		try
 		{
 			LoadTrophyFolderToDB(dir_name);
@@ -717,7 +719,7 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 		{
 			// TODO: Add error checks & throws to LoadTrophyFolderToDB so that they can be caught here.
 			// Also add a way of showing the number of corrupted/invalid folders in UI somewhere.
-			LOG_ERROR(GENERAL, "Exception occurred while parsing folder %s for trophies: %s", dir_name, e.what());
+			gui_log.error("Exception occurred while parsing folder %s for trophies: %s", dir_name, e.what());
 		}
 	}));
 
@@ -746,7 +748,7 @@ void trophy_manager_dialog::PopulateGameTable()
 		const std::string icon_path = m_trophies_db[i]->path + "ICON0.PNG";
 		if (!icon.load(qstr(icon_path)))
 		{
-			LOG_WARNING(GENERAL, "Could not load trophy game icon from path %s", icon_path);
+			gui_log.warning("Could not load trophy game icon from path %s", icon_path);
 		}
 		return icon;
 	};
@@ -785,7 +787,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 		return;
 
 	auto& data = m_trophies_db[m_game_combo->currentData().toInt()];
-	LOG_TRACE(GENERAL, "Populating Trophy Manager UI with %s %s", data->game_name, data->path);
+	gui_log.trace("Populating Trophy Manager UI with %s %s", data->game_name, data->path);
 
 	const int all_trophies = data->trop_usr->GetTrophiesCount();
 	const int unlocked_trophies = data->trop_usr->GetUnlockedTrophiesCount();
@@ -804,7 +806,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "Root name does not match trophyconf in trophy. Name received: %s", trophy_base->GetChildren()->GetName());
+		gui_log.error("Root name does not match trophyconf in trophy. Name received: %s", trophy_base->GetChildren()->GetName());
 		return;
 	}
 

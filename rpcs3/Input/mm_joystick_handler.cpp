@@ -1,6 +1,8 @@
 ﻿#ifdef _WIN32
 #include "mm_joystick_handler.h"
 
+LOG_CHANNEL(input_log, "Input");
+
 mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
 {
 	init_configs();
@@ -81,11 +83,11 @@ bool mm_joystick_handler::Init()
 
 	if (supported_joysticks <= 0)
 	{
-		LOG_ERROR(GENERAL, "mmjoy: Driver doesn't support Joysticks");
+		input_log.error("mmjoy: Driver doesn't support Joysticks");
 		return false;
 	}
 
-	LOG_NOTICE(GENERAL, "mmjoy: Driver supports %u joysticks", supported_joysticks);
+	input_log.notice("mmjoy: Driver supports %u joysticks", supported_joysticks);
 
 	for (u32 i = 0; i < supported_joysticks; i++)
 	{
@@ -191,7 +193,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 		id = GetIDByName(padId);
 		if (id < 0)
 		{
-			LOG_ERROR(GENERAL, "MMJOY get_next_button_press for device [%s] failed with id = %d", padId, id);
+			input_log.error("MMJOY get_next_button_press for device [%s] failed with id = %d", padId, id);
 			return fail_callback(padId);
 		}
 	}
@@ -232,7 +234,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 				if (get_blacklist)
 				{
 					blacklist.emplace_back(keycode);
-					LOG_ERROR(HLE, "MMJOY Calibration: Added axis [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
+					input_log.error("MMJOY Calibration: Added axis [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
 				}
 				else if (value > pressed_button.first)
 					pressed_button = { value, button.second };
@@ -252,7 +254,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 				if (get_blacklist)
 				{
 					blacklist.emplace_back(keycode);
-					LOG_ERROR(HLE, "MMJOY Calibration: Added pov [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
+					input_log.error("MMJOY Calibration: Added pov [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
 				}
 				else if (value > pressed_button.first)
 					pressed_button = { value, button.second };
@@ -272,7 +274,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 				if (get_blacklist)
 				{
 					blacklist.emplace_back(keycode);
-					LOG_ERROR(HLE, "MMJOY Calibration: Added button [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
+					input_log.error("MMJOY Calibration: Added button [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
 				}
 				else if (value > pressed_button.first)
 					pressed_button = { value, button.second };
@@ -282,7 +284,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 		if (get_blacklist)
 		{
 			if (blacklist.empty())
-				LOG_SUCCESS(HLE, "MMJOY Calibration: Blacklist is clear. No input spam detected");
+				input_log.success("MMJOY Calibration: Blacklist is clear. No input spam detected");
 			return;
 		}
 
@@ -447,7 +449,7 @@ bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev)
 	char drv[32];
 	wcstombs(drv, js_caps.szPname, 31);
 
-	LOG_NOTICE(GENERAL, "Joystick nr.%d found. Driver: %s", index, drv);
+	input_log.notice("Joystick nr.%d found. Driver: %s", index, drv);
 
 	dev->device_id = index;
 	dev->device_name = m_name_string + std::to_string(index + 1); // Controllers 1-n in GUI

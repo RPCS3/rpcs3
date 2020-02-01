@@ -8,6 +8,8 @@
 #include "yaml-cpp/yaml.h"
 #include "Utilities/asm.h"
 
+LOG_CHANNEL(ppu_validator);
+
 const ppu_decoder<ppu_itype> s_ppu_itype;
 
 template<>
@@ -68,14 +70,14 @@ void ppu_module::validate(u32 reloc)
 
 				while (addr > found && index + 1 < funcs.size())
 				{
-					LOG_WARNING(LOADER, "%s.yml : unexpected function at 0x%x (0x%x, 0x%x)", path, found, addr, size);
+					ppu_validator.warning("%s.yml : unexpected function at 0x%x (0x%x, 0x%x)", path, found, addr, size);
 					index++;
 					found = funcs[index].addr - reloc;
 				}
 
 				if (addr < found)
 				{
-					LOG_ERROR(LOADER, "%s.yml : function not found (0x%x, 0x%x)", path, addr, size);
+					ppu_validator.error("%s.yml : function not found (0x%x, 0x%x)", path, addr, size);
 					continue;
 				}
 
@@ -83,7 +85,7 @@ void ppu_module::validate(u32 reloc)
 				{
 					if (size + 4 != funcs[index].size || vm::read32(addr + size) != ppu_instructions::NOP())
 					{
-						LOG_ERROR(LOADER, "%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", path, found, funcs[index].size, addr, size);
+						ppu_validator.error("%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", path, found, funcs[index].size, addr, size);
 					}
 				}
 
@@ -91,7 +93,7 @@ void ppu_module::validate(u32 reloc)
 			}
 			else
 			{
-				LOG_ERROR(LOADER, "%s.yml : function not found at the end (0x%x, 0x%x)", path, addr, size);
+				ppu_validator.error("%s.yml : function not found at the end (0x%x, 0x%x)", path, addr, size);
 				break;
 			}
 		}
@@ -105,13 +107,13 @@ void ppu_module::validate(u32 reloc)
 		{
 			if (funcs[index].size)
 			{
-				LOG_ERROR(LOADER, "%s.yml : function not covered at 0x%x (size=0x%x)", path, funcs[index].addr, funcs[index].size);
+				ppu_validator.error("%s.yml : function not covered at 0x%x (size=0x%x)", path, funcs[index].addr, funcs[index].size);
 			}
 
 			index++;
 		}
 
-		LOG_SUCCESS(LOADER, "%s.yml : validation completed", path);
+		ppu_validator.success("%s.yml : validation completed", path);
 	}
 }
 
@@ -583,7 +585,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		func.addr = addr;
 		func.toc = toc;
 		func.name = fmt::format("__0x%x", func.addr);
-		LOG_TRACE(PPU, "Function 0x%x added (toc=0x%x)", addr, toc);
+		ppu_log.trace("Function 0x%x added (toc=0x%x)", addr, toc);
 		return func;
 	};
 
@@ -603,7 +605,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 				if (ptr[0] >= start && ptr[0] < end && ptr[0] % 4 == 0 && ptr[1] == toc)
 				{
 					// New function
-					LOG_TRACE(PPU, "OPD*: [0x%x] 0x%x (TOC=0x%x)", ptr, ptr[0], ptr[1]);
+					ppu_log.trace("OPD*: [0x%x] 0x%x (TOC=0x%x)", ptr, ptr[0], ptr[1]);
 					add_func(*ptr, addr_heap.count(ptr.addr()) ? toc : 0, 0);
 					ptr++;
 				}
@@ -682,7 +684,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			}
 		}
 
-		if (sec_end) LOG_NOTICE(PPU, "Reading OPD section at 0x%x...", sec.addr);
+		if (sec_end) ppu_log.notice("Reading OPD section at 0x%x...", sec.addr);
 
 		// Mine
 		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end; ptr += 2)
@@ -693,7 +695,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			// Add function and TOC
 			const u32 addr = ptr[0];
 			const u32 toc = ptr[1];
-			LOG_TRACE(PPU, "OPD: [0x%x] 0x%x (TOC=0x%x)", ptr, addr, toc);
+			ppu_log.trace("OPD: [0x%x] 0x%x (TOC=0x%x)", ptr, addr, toc);
 
 			TOCs.emplace(toc);
 			auto& func = add_func(addr, addr_heap.count(ptr.addr()) ? toc : 0, 0);
@@ -765,7 +767,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			ptr = vm::cast(ptr.addr() + size);
 		}
 
-		if (sec_end && sec.size > 4) LOG_NOTICE(PPU, "Reading .eh_frame section at 0x%x...", sec.addr);
+		if (sec_end && sec.size > 4) ppu_log.notice("Reading .eh_frame section at 0x%x...", sec.addr);
 
 		// Mine
 		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end; ptr = vm::cast(ptr.addr() + ptr[0] + 4))
@@ -779,7 +781,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			if (ptr[1] == 0)
 			{
 				// CIE
-				LOG_TRACE(PPU, ".eh_frame: [0x%x] CIE 0x%x", ptr, ptr[0]);
+				ppu_log.trace(".eh_frame: [0x%x] CIE 0x%x", ptr, ptr[0]);
 			}
 			else
 			{
@@ -806,7 +808,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 				}
 				else
 				{
-					LOG_ERROR(PPU, ".eh_frame: [0x%x] 0x%x, 0x%x, 0x%x, 0x%x, 0x%x", ptr, ptr[0], ptr[1], ptr[2], ptr[3], ptr[4]);
+					ppu_log.error(".eh_frame: [0x%x] 0x%x, 0x%x, 0x%x, 0x%x, 0x%x", ptr, ptr[0], ptr[1], ptr[2], ptr[3], ptr[4]);
 					continue;
 				}
 
@@ -816,12 +818,12 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 					addr += ptr.addr() + 8;
 				}
 
-				LOG_TRACE(PPU, ".eh_frame: [0x%x] FDE 0x%x (cie=*0x%x, addr=0x%x, size=0x%x)", ptr, ptr[0], cie, addr, size);
+				ppu_log.trace(".eh_frame: [0x%x] FDE 0x%x (cie=*0x%x, addr=0x%x, size=0x%x)", ptr, ptr[0], cie, addr, size);
 
 				// TODO: invalid offsets, zero offsets (removed functions?)
 				if (addr % 4 || size % 4 || size > (end - start) || addr < start || addr + size > end)
 				{
-					if (addr) LOG_ERROR(PPU, ".eh_frame: Invalid function 0x%x", addr);
+					if (addr) ppu_log.error(".eh_frame: Invalid function 0x%x", addr);
 					continue;
 				}
 
@@ -1125,7 +1127,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			if (const u32 len = ppu_test(ptr, fend, ppu_patterns::abort))
 			{
 				// Function "abort"
-				LOG_NOTICE(PPU, "Function [0x%x]: 'abort'", func.addr);
+				ppu_log.notice("Function [0x%x]: 'abort'", func.addr);
 				func.attr += ppu_attr::no_return;
 				func.attr += ppu_attr::known_size;
 				func.size = len;
@@ -1207,7 +1209,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 
 					if (target < start || target >= end)
 					{
-						LOG_WARNING(PPU, "[0x%x] Invalid branch at 0x%x -> 0x%x", func.addr, iaddr, target);
+						ppu_log.warning("[0x%x] Invalid branch at 0x%x -> 0x%x", func.addr, iaddr, target);
 						continue;
 					}
 
@@ -1290,7 +1292,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 							// Acknowledge jumptable detection failure
 							if (!(func.attr & ppu_attr::no_size))
 							{
-								LOG_WARNING(PPU, "[0x%x] Jump table not found! 0x%x-0x%x", func.addr, jt_addr, jt_end);
+								ppu_log.warning("[0x%x] Jump table not found! 0x%x-0x%x", func.addr, jt_addr, jt_end);
 							}
 
 							func.attr += ppu_attr::no_size;
@@ -1299,7 +1301,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 						}
 						else
 						{
-							LOG_TRACE(PPU, "[0x%x] Jump table found: 0x%x-0x%x", func.addr, jt_addr, _ptr);
+							ppu_log.trace("[0x%x] Jump table found: 0x%x-0x%x", func.addr, jt_addr, _ptr);
 						}
 					}
 
@@ -1325,7 +1327,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 				else if (type == ppu_itype::STDU && func.attr & ppu_attr::no_size && (op.opcode == *_ptr || *_ptr == ppu_instructions::BLR()))
 				{
 					// Hack
-					LOG_SUCCESS(PPU, "[0x%x] Instruction repetition: 0x%08x", iaddr, op.opcode);
+					ppu_log.success("[0x%x] Instruction repetition: 0x%08x", iaddr, op.opcode);
 					add_block(_ptr.addr());
 					block.second = _ptr.addr() - block.first;
 					break;
@@ -1431,7 +1433,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		// Just ensure that functions don't overlap
 		if (func.addr + func.size > next)
 		{
-			LOG_WARNING(PPU, "Function overlap: [0x%x] 0x%x -> 0x%x", func.addr, func.size, next - func.addr);
+			ppu_log.warning("Function overlap: [0x%x] 0x%x -> 0x%x", func.addr, func.size, next - func.addr);
 			continue; //func.size = next - func.addr;
 
 			// Also invalidate blocks
@@ -1501,7 +1503,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 
 			if (_ptr.addr() >= next)
 			{
-				LOG_WARNING(PPU, "Function gap: [0x%x] 0x%x bytes at 0x%x", func.addr, next - start, start);
+				ppu_log.warning("Function gap: [0x%x] 0x%x bytes at 0x%x", func.addr, next - start, start);
 				break;
 			}
 		}
@@ -1525,17 +1527,17 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 	for (auto&& pair : fmap)
 	{
 		auto& func = pair.second;
-		LOG_TRACE(PPU, "Function %s (size=0x%x, toc=0x%x, attr %#x)", func.name, func.size, func.toc, func.attr);
+		ppu_log.trace("Function %s (size=0x%x, toc=0x%x, attr %#x)", func.name, func.size, func.toc, func.attr);
 		funcs.emplace_back(std::move(func));
 	}
 
-	LOG_NOTICE(PPU, "Function analysis: %zu functions (%zu enqueued)", funcs.size(), func_queue.size());
+	ppu_log.notice("Function analysis: %zu functions (%zu enqueued)", funcs.size(), func_queue.size());
 }
 
 void ppu_acontext::UNK(ppu_opcode_t op)
 {
 	std::fill_n(gpr, 32, spec_gpr{});
-	LOG_ERROR(PPU, "Unknown/Illegal opcode: 0x%08x at 0x%x" HERE, op.opcode, cia);
+	ppu_log.error("Unknown/Illegal opcode: 0x%08x at 0x%x" HERE, op.opcode, cia);
 }
 
 void ppu_acontext::MFVSCR(ppu_opcode_t op)
@@ -3465,7 +3467,7 @@ const bool s_tes = []()
 				{
 					auto exp = ppu_acontext::spec_gpr::approx(r1.ones() & r2.ones(), r1.mask() & r2.mask());
 
-					LOG_ERROR(PPU, "ppu_acontext failure:"
+					ppu_log.error("ppu_acontext failure:"
 						"\n\tr1 = 0x%016x..0x%016x, 0x%016x:0x%016x"
 						"\n\tr2 = 0x%016x..0x%016x, 0x%016x:0x%016x"
 						"\n\tr3 = 0x%016x..0x%016x, 0x%016x:0x%016x"
@@ -3481,7 +3483,7 @@ const bool s_tes = []()
 	ppu_acontext::spec_gpr r1;
 	r1 = ppu_acontext::spec_gpr::range(0x13311, 0x1fe22);
 	r1 = r1 ^ ppu_acontext::spec_gpr::approx(0x000, 0xf00);
-	LOG_SUCCESS(PPU, "0x%x..0x%x", r1.imin, r1.imax);
+	ppu_log.success("0x%x..0x%x", r1.imin, r1.imax);
 
 	return true;
 }();

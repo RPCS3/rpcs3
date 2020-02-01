@@ -112,31 +112,31 @@ error_code console_write(vm::ptr<char> data, u32 len)
 
 s32 cellGamePs1Emu_61CE2BCD()
 {
-	UNIMPLEMENTED_FUNC(logs::HLE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
 s32 cellSysconfPs1emu_639ABBDE()
 {
-	UNIMPLEMENTED_FUNC(logs::HLE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
 s32 cellSysconfPs1emu_6A12D11F()
 {
-	UNIMPLEMENTED_FUNC(logs::HLE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
 s32 cellSysconfPs1emu_83E79A23()
 {
-	UNIMPLEMENTED_FUNC(logs::HLE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
 s32 cellSysconfPs1emu_EFDDAF6C()
 {
-	UNIMPLEMENTED_FUNC(logs::HLE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
@@ -171,25 +171,25 @@ error_code sys_crash_dump_set_user_log_area(u8 index, vm::ptr<sys_crash_dump_log
 
 s32 sys_get_bd_media_id()
 {
-	UNIMPLEMENTED_FUNC(logs::HLE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
 s32 sys_get_console_id()
 {
-	UNIMPLEMENTED_FUNC(logs::HLE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
 s32 sysPs2Disc_A84FD3C3()
 {
-	UNIMPLEMENTED_FUNC(logs::HLE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
 s32 sysPs2Disc_BB7CD1AE()
 {
-	UNIMPLEMENTED_FUNC(logs::HLE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 

@@ -131,7 +131,7 @@ namespace rsx
 			{
 				if (!fs::is_file(filename))
 				{
-					LOG_ERROR(RSX, "Image resource file `%s' not found", filename);
+					rsx_log.error("Image resource file `%s' not found", filename);
 					return;
 				}
 

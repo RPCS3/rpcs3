@@ -136,7 +136,7 @@ namespace gl
 		{
 			if (!compiled)
 			{
-				LOG_ERROR(RSX, "You must initialize overlay passes with create() before calling run()");
+				rsx_log.error("You must initialize overlay passes with create() before calling run()");
 				return;
 			}
 
@@ -267,7 +267,7 @@ namespace gl
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Overlay pass failed because framebuffer was not complete. Run with debug output enabled to diagnose the problem");
+				rsx_log.error("Overlay pass failed because framebuffer was not complete. Run with debug output enabled to diagnose the problem");
 			}
 		}
 	};

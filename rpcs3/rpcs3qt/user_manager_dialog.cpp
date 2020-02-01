@@ -8,11 +8,14 @@
 #include "main_application.h"
 
 #include "Utilities/StrUtil.h"
+#include "Utilities/Log.h"
 
 #include <QRegExpValidator>
 #include <QInputDialog>
 #include <QScreen>
 #include <QKeyEvent>
+
+LOG_CHANNEL(gui_log, "GUI");
 
 namespace
 {
@@ -237,7 +240,7 @@ void user_manager_dialog::OnUserRemove()
 	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete the following user?\n\nUser ID: %0\nUsername: %1\n\n"
 		"This will remove all files in:\n%2").arg(user_id).arg(username).arg(qstr(user_dir)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
-		LOG_WARNING(GENERAL, "Deleting user: %s", user_dir);
+		gui_log.warning("Deleting user: %s", user_dir);
 		fs::remove_all(user_dir);
 		UpdateTable();
 	}
@@ -301,11 +304,11 @@ void user_manager_dialog::OnUserRename()
 
 		if (fs::write_file(username_file, fs::rewrite, new_username))
 		{
-			LOG_SUCCESS(GENERAL, "Renamed user %s with id %s to %s", username, user_id, new_username);
+			gui_log.success("Renamed user %s with id %s to %s", username, user_id, new_username);
 		}
 		else
 		{
-			LOG_FATAL(GENERAL, "Could not rename user %s with id %s to %s", username, user_id, new_username);
+			gui_log.fatal("Could not rename user %s with id %s to %s", username, user_id, new_username);
 		}
 
 		UpdateTable();
@@ -370,7 +373,7 @@ void user_manager_dialog::OnUserLogin()
 
 	if (!main_application::InitializeEmulator(new_user, false, Emu.HasGui()))
 	{
-		LOG_FATAL(GENERAL, "Failed to login user! username=%s key=%d", new_user, key);
+		gui_log.fatal("Failed to login user! username=%s key=%d", new_user, key);
 		return;
 	}
 
@@ -389,7 +392,7 @@ void user_manager_dialog::OnSort(int logicalIndex)
 	else if (logicalIndex == m_sort_column)
 	{
 		m_sort_ascending ^= true;
-	} 
+	}
 	else
 	{
 		m_sort_ascending = true;

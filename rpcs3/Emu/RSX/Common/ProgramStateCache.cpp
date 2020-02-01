@@ -59,7 +59,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 				if (!fast_exit)
 				{
 					// This can be harmless if a dangling RET was encountered before
-					LOG_ERROR(RSX, "vp_analyser: Possible infinite loop detected");
+					rsx_log.error("vp_analyser: Possible infinite loop detected");
 					current_instrution++;
 					continue;
 				}
@@ -142,7 +142,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			{
 				if (call_stack.empty())
 				{
-					LOG_ERROR(RSX, "vp_analyser: RET found outside subroutine call");
+					rsx_log.error("vp_analyser: RET found outside subroutine call");
 				}
 				else
 				{
@@ -236,7 +236,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 		{
 			if (!dst_prog.instruction_mask[target])
 			{
-				LOG_ERROR(RSX, "vp_analyser: Failed, branch target 0x%x was not resolved", target);
+				rsx_log.error("vp_analyser: Failed, branch target 0x%x was not resolved", target);
 			}
 		}
 	}

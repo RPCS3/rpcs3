@@ -119,7 +119,7 @@ namespace vk
 			return std::make_pair(VK_FORMAT_R32_SFLOAT, vk::default_component_map());
 
 		default:
-			LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", static_cast<u32>(color_format));
+			rsx_log.error("Surface color buffer: Unsupported surface color format (0x%x)", static_cast<u32>(color_format));
 			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map());
 		}
 	}
@@ -178,12 +178,12 @@ namespace vk
 		switch (op)
 		{
 		case rsx::blend_equation::add_signed:
-			LOG_TRACE(RSX, "blend equation add_signed used. Emulating using FUNC_ADD");
+			rsx_log.trace("blend equation add_signed used. Emulating using FUNC_ADD");
 		case rsx::blend_equation::add:
 			return VK_BLEND_OP_ADD;
 		case rsx::blend_equation::substract: return VK_BLEND_OP_SUBTRACT;
 		case rsx::blend_equation::reverse_substract_signed:
-			LOG_TRACE(RSX, "blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
+			rsx_log.trace("blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
 		case rsx::blend_equation::reverse_substract: return VK_BLEND_OP_REVERSE_SUBTRACT;
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
 		case rsx::blend_equation::max: return VK_BLEND_OP_MAX;
@@ -362,7 +362,7 @@ VKGSRender::VKGSRender() : GSRender()
 	}
 	else
 	{
-		LOG_FATAL(RSX, "Could not find a vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the vulkan runtime and drivers");
+		rsx_log.fatal("Could not find a vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the vulkan runtime and drivers");
 		m_device = VK_NULL_HANDLE;
 		return;
 	}
@@ -374,7 +374,7 @@ VKGSRender::VKGSRender() : GSRender()
 	if (gpus.empty())
 	{
 		//We can't throw in Emulator::Load, so we show error and return
-		LOG_FATAL(RSX, "No compatible GPU devices found");
+		rsx_log.fatal("No compatible GPU devices found");
 		m_device = VK_NULL_HANDLE;
 		return;
 	}
@@ -412,7 +412,7 @@ VKGSRender::VKGSRender() : GSRender()
 	if (!m_swapchain)
 	{
 		m_device = VK_NULL_HANDLE;
-		LOG_FATAL(RSX, "Could not successfully initialize a swapchain");
+		rsx_log.fatal("Could not successfully initialize a swapchain");
 		return;
 	}
 
@@ -487,7 +487,7 @@ VKGSRender::VKGSRender() : GSRender()
 	if (m_texbuffer_view_size < 0x800000)
 	{
 		// Warn, only possibly expected on macOS
-		LOG_WARNING(RSX, "Current driver may crash due to memory limitations (%uk)", m_texbuffer_view_size / 1024);
+		rsx_log.warning("Current driver may crash due to memory limitations (%uk)", m_texbuffer_view_size / 1024);
 	}
 
 	for (auto &ctx : frame_context_storage)
@@ -742,7 +742,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		{
 			if (vk::is_uninterruptible())
 			{
-				LOG_ERROR(RSX, "Fault in uninterruptible code!");
+				rsx_log.error("Fault in uninterruptible code!");
 			}
 
 			//Flush primary cb queue to sync pending changes (e.g image transitions!)
@@ -1710,7 +1710,7 @@ void VKGSRender::end()
 
 			if (!image_ptr)
 			{
-				LOG_ERROR(RSX, "Texture upload failed to vtexture index %d. Binding null sampler.", i);
+				rsx_log.error("Texture upload failed to vtexture index %d. Binding null sampler.", i);
 				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 					i,
 					::glsl::program_domain::glsl_vertex_program,
@@ -1785,13 +1785,13 @@ void VKGSRender::end()
 		if (occlusion_id == UINT32_MAX)
 		{
 			// Force flush
-			LOG_ERROR(RSX, "[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
+			rsx_log.error("[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
 			ZCULL_control::sync(this);
 
 			occlusion_id = m_occlusion_query_pool.find_free_slot();
 			if (occlusion_id == UINT32_MAX)
 			{
-				//LOG_ERROR(RSX, "Occlusion pool overflow");
+				//rsx_log.error("Occlusion pool overflow");
 				if (m_current_task) m_current_task->result = 1;
 			}
 		}
@@ -2167,7 +2167,7 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 
 	if (!m_current_command_buffer->poke())
 	{
-		LOG_ERROR(RSX, "CB chain has run out of free entries!");
+		rsx_log.error("CB chain has run out of free entries!");
 	}
 
 	m_current_command_buffer->reset();
@@ -3039,7 +3039,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 				m_flush_requests.clear_pending_flag();
 			}
 
-			LOG_ERROR(RSX, "[Performance warning] Unexpected ZCULL read caused a hard sync");
+			rsx_log.error("[Performance warning] Unexpected ZCULL read caused a hard sync");
 			busy_wait();
 		}
 
@@ -3216,7 +3216,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	}
 	else
 	{
-		LOG_ERROR(RSX, "Dubious query data pushed to cond render!, Please report to developers(q.pending=%d)", sources.front()->pending);
+		rsx_log.error("Dubious query data pushed to cond render!, Please report to developers(q.pending=%d)", sources.front()->pending);
 	}
 
 	rsx::thread::begin_conditional_rendering(sources);

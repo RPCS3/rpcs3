@@ -5,6 +5,8 @@
 #include <cmath>
 #include <cstdlib>
 
+LOG_CHANNEL(tar_log, "TAR");
+
 tar_object::tar_object(const fs::file& file, size_t offset)
 	: m_file(file)
 	, initial_offset(static_cast<int>(offset))
@@ -124,7 +126,7 @@ bool tar_object::extract(std::string path, std::string ignore)
 		}
 
 		default:
-			LOG_ERROR(GENERAL, "TAR Loader: unknown file type: 0x%x", header.filetype);
+			tar_log.error("TAR Loader: unknown file type: 0x%x", header.filetype);
 			return false;
 		}
 	}

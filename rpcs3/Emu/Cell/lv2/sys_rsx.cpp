@@ -378,7 +378,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			// sanity check, the head should have a 'queued' buffer on it, and it should have been previously 'queued'
 			const u32 sanity_check = 0x40000000 & (1 << flip_idx);
 			if ((driverInfo.head[a3].flipFlags & sanity_check) != sanity_check)
-				LOG_ERROR(RSX, "Display Flip Queued: Flipping non previously queued buffer 0x%llx", a4);
+				rsx_log.error("Display Flip Queued: Flipping non previously queued buffer 0x%llx", a4);
 		}
 		else
 		{
@@ -392,7 +392,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			}
 			if (flip_idx == ~0u)
 			{
-				LOG_ERROR(RSX, "Display Flip: Couldn't find display buffer offset, flipping 0. Offset: 0x%x", a4);
+				rsx_log.error("Display Flip: Couldn't find display buffer offset, flipping 0. Offset: 0x%x", a4);
 				flip_idx = 0;
 			}
 		}

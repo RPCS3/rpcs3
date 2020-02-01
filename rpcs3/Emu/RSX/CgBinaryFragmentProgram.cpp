@@ -184,7 +184,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Bad src reg num: %d", u32{ dst.src_attr_reg_num });
+				rsx_log.error("Bad src reg num: %d", u32{ dst.src_attr_reg_num });
 			}
 			break;
 		}
@@ -196,7 +196,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 		break;
 
 	default:
-		LOG_ERROR(RSX, "Bad src type %d", u32{ src.reg_type });
+		rsx_log.error("Bad src type %d", u32{ src.reg_type });
 		break;
 	}
 
@@ -461,7 +461,7 @@ void CgBinaryDisasm::TaskFP()
 				if (SCB()) break;
 			}
 
-			LOG_ERROR(RSX, "Unknown/illegal instruction: 0x%x (forced unit %d)", m_opcode, forced_unit);
+			rsx_log.error("Unknown/illegal instruction: 0x%x (forced unit %d)", m_opcode, forced_unit);
 			break;
 		}
 

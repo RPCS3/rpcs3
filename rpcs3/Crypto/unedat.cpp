@@ -4,6 +4,8 @@
 
 #include <cmath>
 
+LOG_CHANNEL(edat_log, "EDAT");
+
 void generate_key(int crypto_mode, int version, unsigned char *key_final, unsigned char *iv_final, unsigned char *key, unsigned char *iv)
 {
 	int mode = crypto_mode & 0xF0000000;
@@ -78,7 +80,7 @@ bool decrypt(int hash_mode, int crypto_mode, int version, unsigned char *in, uns
 	}
 	else
 	{
-		LOG_ERROR(LOADER, "EDAT: Unknown crypto algorithm!");
+		edat_log.error("EDAT: Unknown crypto algorithm!");
 		return false;
 	}
 
@@ -96,7 +98,7 @@ bool decrypt(int hash_mode, int crypto_mode, int version, unsigned char *in, uns
 	}
 	else
 	{
-		LOG_ERROR(LOADER, "EDAT: Unknown hashing algorithm!");
+		edat_log.error("EDAT: Unknown hashing algorithm!");
 		return false;
 	}
 }
@@ -280,7 +282,7 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 		// Call main crypto routine on this data block.
 		if (!decrypt(hash_mode, crypto_mode, (npd->version == 4), enc_data.get(), dec_data.get(), length, key_result, iv, hash, hash_result))
 		{
-			LOG_ERROR(LOADER, "EDAT: Block at offset 0x%llx has invalid hash!", offset);
+			edat_log.error("EDAT: Block at offset 0x%llx has invalid hash!", offset);
 			return -1;
 		}
 	}
@@ -296,7 +298,7 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 		{
 			if (res < 0)
 			{
-				LOG_ERROR(LOADER, "EDAT: Decompression failed!");
+				edat_log.error("EDAT: Decompression failed!");
 				return -1;
 			}
 		}
@@ -324,7 +326,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 		u64 res = decrypt_block(in, data.get(), edat, npd, crypt_key, i, total_blocks, size_left);
 		if (res == -1)
 		{
-			LOG_ERROR(LOADER, "EDAT: Decrypt Block failed!");
+			edat_log.error("EDAT: Decrypt Block failed!");
 			return 1;
 		}
 		size_left -= res;
@@ -349,7 +351,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	{
 		if (edat->flags & 0x7EFFFFFE)
 		{
-			LOG_ERROR(LOADER, "EDAT: Bad header flags!");
+			edat_log.error("EDAT: Bad header flags!");
 			return 1;
 		}
 	}
@@ -357,7 +359,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	{
 		if (edat->flags & 0x7EFFFFE0)
 		{
-			LOG_ERROR(LOADER, "EDAT: Bad header flags!");
+			edat_log.error("EDAT: Bad header flags!");
 			return 1;
 		}
 	}
@@ -365,13 +367,13 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	{
 		if (edat->flags & 0x7EFFFFC0)
 		{
-			LOG_ERROR(LOADER, "EDAT: Bad header flags!");
+			edat_log.error("EDAT: Bad header flags!");
 			return 1;
 		}
 	}
 	else
 	{
-		LOG_ERROR(LOADER, "EDAT: Unknown version!");
+		edat_log.error("EDAT: Unknown version!");
 		return 1;
 	}
 
@@ -391,7 +393,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 		hash_mode |= 0x01000000;
 
 		if (verbose)
-			LOG_WARNING(LOADER, "EDAT: DEBUG data detected!");
+			edat_log.warning("EDAT: DEBUG data detected!");
 	}
 
 	// Setup header key and iv buffers.
@@ -402,12 +404,12 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	if (!decrypt(hash_mode, crypto_mode, (npd->version == 4), header, empty_header, 0xA0, header_key, header_iv, key, header_hash))
 	{
 		if (verbose)
-			LOG_WARNING(LOADER, "EDAT: Header hash is invalid!");
+			edat_log.warning("EDAT: Header hash is invalid!");
 
 		// If the header hash test fails and the data is not DEBUG, then RAP/RIF/KLIC key is invalid.
 		if ((edat->flags & EDAT_DEBUG_DATA_FLAG) != EDAT_DEBUG_DATA_FLAG)
 		{
-			LOG_ERROR(LOADER, "EDAT: RAP/RIF/KLIC key is invalid!");
+			edat_log.error("EDAT: RAP/RIF/KLIC key is invalid!");
 			return 1;
 		}
 	}
@@ -417,7 +419,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	if (((edat->flags & EDAT_COMPRESSED_FLAG) != 0))
 	{
 		if (verbose)
-			LOG_WARNING(LOADER, "EDAT: COMPRESSED data detected!");
+			edat_log.warning("EDAT: COMPRESSED data detected!");
 	}
 
 	const int block_num = static_cast<int>((edat->file_size + edat->block_size - 1) / edat->block_size);
@@ -452,7 +454,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	if (!decrypt(hash_mode, crypto_mode, (npd->version == 4), metadata.get(), empty_metadata.get(), metadata_size, header_key, header_iv, key, metadata_hash))
 	{
 		if (verbose)
-			LOG_WARNING(LOADER, "EDAT: Metadata section hash is invalid!");
+			edat_log.warning("EDAT: Metadata section hash is invalid!");
 	}
 
 	// Checking ECDSA signatures.
@@ -480,7 +482,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 		memcpy(signature_r + 01, metadata_signature, 0x14);
 		memcpy(signature_s + 01, metadata_signature + 0x14, 0x14);
 		if ((!memcmp(signature_r, zero_buf, 0x15)) || (!memcmp(signature_s, zero_buf, 0x15)))
-			LOG_WARNING(LOADER, "EDAT: Metadata signature is invalid!");
+			edat_log.warning("EDAT: Metadata signature is invalid!");
 		else
 		{
 			// Setup signature hash.
@@ -497,9 +499,9 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 
 			if (!ecdsa_verify(signature_hash, signature_r, signature_s))
 			{
-				LOG_WARNING(LOADER, "EDAT: Metadata signature is invalid!");
+				edat_log.warning("EDAT: Metadata signature is invalid!");
 				if (((edat->block_size + 0ull) * block_num) > 0x100000000)
-					LOG_WARNING(LOADER, "EDAT: *Due to large file size, metadata signature status may be incorrect!");
+					edat_log.warning("EDAT: *Due to large file size, metadata signature status may be incorrect!");
 			}
 		}
 
@@ -511,7 +513,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 		memcpy(signature_s + 01, header_signature + 0x14, 0x14);
 
 		if ((!memcmp(signature_r, zero_buf, 0x15)) || (!memcmp(signature_s, zero_buf, 0x15)))
-			LOG_WARNING(LOADER, "EDAT: Header signature is invalid!");
+			edat_log.warning("EDAT: Header signature is invalid!");
 		else
 		{
 			// Setup header signature hash.
@@ -522,7 +524,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 			sha1(header_buf.get(), 0xD8, signature_hash );
 
 			if (!ecdsa_verify(signature_hash, signature_r, signature_s))
-				LOG_WARNING(LOADER, "EDAT: Header signature is invalid!");
+				edat_log.warning("EDAT: Header signature is invalid!");
 		}
 	}
 
@@ -589,9 +591,9 @@ int validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *
 	if (verbose)
 	{
 		if (title_hash_result)
-			LOG_NOTICE(LOADER, "EDAT: NPD title hash is valid!");
+			edat_log.notice("EDAT: NPD title hash is valid!");
 		else
-			LOG_WARNING(LOADER, "EDAT: NPD title hash is invalid!");
+			edat_log.warning("EDAT: NPD title hash is invalid!");
 	}
 
 
@@ -635,16 +637,16 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 	unsigned char npd_magic[4] = {0x4E, 0x50, 0x44, 0x00};  //NPD0
 	if (memcmp(&NPD.magic, npd_magic, 4))
 	{
-		LOG_ERROR(LOADER, "EDAT: %s has invalid NPD header or already decrypted.", input_file_name);
+		edat_log.error("EDAT: %s has invalid NPD header or already decrypted.", input_file_name);
 		return 1;
 	}
 
 	if (verbose)
 	{
-		LOG_NOTICE(LOADER, "NPD HEADER");
-		LOG_NOTICE(LOADER, "NPD version: %d", NPD.version);
-		LOG_NOTICE(LOADER, "NPD license: %d", NPD.license);
-		LOG_NOTICE(LOADER, "NPD type: %d", NPD.type);
+		edat_log.notice("NPD HEADER");
+		edat_log.notice("NPD version: %d", NPD.version);
+		edat_log.notice("NPD license: %d", NPD.license);
+		edat_log.notice("NPD type: %d", NPD.type);
 	}
 
 	// Set decryption key.
@@ -655,10 +657,10 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 	{
 		if (verbose)
 		{
-			LOG_NOTICE(LOADER, "SDAT HEADER");
-			LOG_NOTICE(LOADER, "SDAT flags: 0x%08X", EDAT.flags);
-			LOG_NOTICE(LOADER, "SDAT block size: 0x%08X", EDAT.block_size);
-			LOG_NOTICE(LOADER, "SDAT file size: 0x%08X", EDAT.file_size);
+			edat_log.notice("SDAT HEADER");
+			edat_log.notice("SDAT flags: 0x%08X", EDAT.flags);
+			edat_log.notice("SDAT block size: 0x%08X", EDAT.block_size);
+			edat_log.notice("SDAT file size: 0x%08X", EDAT.file_size);
 		}
 
 		// Generate SDAT key.
@@ -668,10 +670,10 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 	{
 		if (verbose)
 		{
-			LOG_NOTICE(LOADER, "EDAT HEADER");
-			LOG_NOTICE(LOADER, "EDAT flags: 0x%08X", EDAT.flags);
-			LOG_NOTICE(LOADER, "EDAT block size: 0x%08X", EDAT.block_size);
-			LOG_NOTICE(LOADER, "EDAT file size: 0x%08X", EDAT.file_size);
+			edat_log.notice("EDAT HEADER");
+			edat_log.notice("EDAT flags: 0x%08X", EDAT.flags);
+			edat_log.notice("EDAT block size: 0x%08X", EDAT.block_size);
+			edat_log.notice("EDAT file size: 0x%08X", EDAT.file_size);
 		}
 
 		// Perform header validation (EDAT only).
@@ -682,7 +684,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 			// Ignore header validation in DEBUG data.
 			if ((EDAT.flags & EDAT_DEBUG_DATA_FLAG) != EDAT_DEBUG_DATA_FLAG)
 			{
-				LOG_ERROR(LOADER, "EDAT: NPD hash validation failed!");
+				edat_log.error("EDAT: NPD hash validation failed!");
 				return 1;
 			}
 		}
@@ -707,48 +709,48 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 
 			if (!test)
 			{
-				LOG_ERROR(LOADER, "EDAT: A valid RAP file is needed for this EDAT file!");
+				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file!");
 				return 1;
 			}
 		}
 		else if ((NPD.license & 0x1) == 0x1)      // Type 1: Use network activation.
 		{
-			LOG_ERROR(LOADER, "EDAT: Network license not supported!");
+			edat_log.error("EDAT: Network license not supported!");
 			return 1;
 		}
 
 		if (verbose)
 		{
 			int i;
-			LOG_NOTICE(LOADER, "DEVKLIC: ");
+			edat_log.notice("DEVKLIC: ");
 			for (i = 0; i < 0x10; i++)
-				LOG_NOTICE(LOADER, "%02X", devklic[i]);
+				edat_log.notice("%02X", devklic[i]);
 
-			LOG_NOTICE(LOADER, "RIF KEY: ");
+			edat_log.notice("RIF KEY: ");
 			for (i = 0; i < 0x10; i++)
-				LOG_NOTICE(LOADER, "%02X", rifkey[i]);
+				edat_log.notice("%02X", rifkey[i]);
 		}
 	}
 
 	if (verbose)
 	{
 		int i;
-		LOG_NOTICE(LOADER, "DECRYPTION KEY: ");
+		edat_log.notice("DECRYPTION KEY: ");
 		for (i = 0; i < 0x10; i++)
-			LOG_NOTICE(LOADER, "%02X", key[i]);
+			edat_log.notice("%02X", key[i]);
 	}
 
 	input->seek(0);
 	if (check_data(key, &EDAT, &NPD, input, verbose))
 	{
-		LOG_ERROR(LOADER, "EDAT: Data parsing failed!");
+		edat_log.error("EDAT: Data parsing failed!");
 		return 1;
 	}
 
 	input->seek(0);
 	if (decrypt_data(input, output, &EDAT, &NPD, key, verbose))
 	{
-		LOG_ERROR(LOADER, "EDAT: Data decryption failed!");
+		edat_log.error("EDAT: Data decryption failed!");
 		return 1;
 	}
 
@@ -779,13 +781,13 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 	unsigned char npd_magic[4] = { 0x4E, 0x50, 0x44, 0x00 };  //NPD0
 	if (memcmp(&NPD.magic, npd_magic, 4))
 	{
-		LOG_ERROR(LOADER, "EDAT: %s has invalid NPD header or already decrypted.", input_file_name);
+		edat_log.error("EDAT: %s has invalid NPD header or already decrypted.", input_file_name);
 		return false;
 	}
 
 	if ((EDAT.flags & SDAT_FLAG) == SDAT_FLAG)
 	{
-		LOG_ERROR(LOADER, "EDAT: SDATA file given to edat function");
+		edat_log.error("EDAT: SDATA file given to edat function");
 		return false;
 	}
 
@@ -797,7 +799,7 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 		// Ignore header validation in DEBUG data.
 		if ((EDAT.flags & EDAT_DEBUG_DATA_FLAG) != EDAT_DEBUG_DATA_FLAG)
 		{
-			LOG_ERROR(LOADER, "EDAT: NPD hash validation failed!");
+			edat_log.error("EDAT: NPD hash validation failed!");
 			return false;
 		}
 	}
@@ -848,13 +850,13 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 				memcpy(devklic, custom_klic, 0x10);
 			else
 			{
-				LOG_ERROR(LOADER, "EDAT: Invalid custom klic!");
+				edat_log.error("EDAT: Invalid custom klic!");
 				return fs::file{};
 			}
 			break;
 		}
 	default:
-		LOG_ERROR(LOADER, "EDAT: Invalid mode!");
+		edat_log.error("EDAT: Invalid mode!");
 		return fs::file{};
 	}
 
@@ -901,7 +903,7 @@ bool EDATADecrypter::ReadHeader()
 		// verify key
 		if (validate_dev_klic(dev_key.data(), &npdHeader) == 0)
 		{
-			LOG_ERROR(LOADER, "EDAT: Failed validating klic");
+			edat_log.error("EDAT: Failed validating klic");
 			return false;
 		}
 
@@ -914,12 +916,12 @@ bool EDATADecrypter::ReadHeader()
 
 			if (dec_key == std::array<u8, 0x10>{0})
 			{
-				LOG_WARNING(LOADER, "EDAT: Empty Dec key!");
+				edat_log.warning("EDAT: Empty Dec key!");
 			}
 		}
 		else if ((npdHeader.license & 0x1) == 0x1)      // Type 1: Use network activation.
 		{
-			LOG_ERROR(LOADER, "EDAT: Network license not supported!");
+			edat_log.error("EDAT: Network license not supported!");
 			return false;
 		}
 	}
@@ -966,7 +968,7 @@ u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
 		u64 res = decrypt_block(&edata_file, &data_buf[writeOffset], &edatHeader, &npdHeader, dec_key.data(), i, total_blocks, edatHeader.file_size);
 		if (res == -1)
 		{
-			LOG_ERROR(LOADER, "Error Decrypting data");
+			edat_log.error("Error Decrypting data");
 			return 0;
 		}
 		writeOffset += res;

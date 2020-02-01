@@ -42,7 +42,7 @@ namespace rsx
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
 		const u32 cmd = rsx->get_fifo_cmd();
-		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg,
+		rsx_log.error("Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg,
 		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
 		rsx->invalid_command_interrupt_raised = true;
 	}
@@ -50,7 +50,7 @@ namespace rsx
 	void trace_method(thread* rsx, u32 _reg, u32 arg)
 	{
 		// For unknown yet valid methods
-		LOG_TRACE(RSX, "RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
+		rsx_log.trace("RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
 	}
 
 	template<typename Type> struct vertex_data_type_from_element_type;
@@ -117,7 +117,7 @@ namespace rsx
 						if ((get_system_time() - start) > tdr)
 						{
 							// If longer than driver timeout force exit
-							LOG_ERROR(RSX, "nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
+							rsx_log.error("nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
 							break;
 						}
 					}
@@ -204,7 +204,7 @@ namespace rsx
 
 			if ((location & ~7) != (CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 & ~7))
 			{
-				LOG_TRACE(RSX, "NV4097_NOTIFY: invalid context = 0x%x", method_registers.context_dma_notify());
+				rsx_log.trace("NV4097_NOTIFY: invalid context = 0x%x", method_registers.context_dma_notify());
 				return;
 			}
 
@@ -420,7 +420,7 @@ namespace rsx
 				if (address >= 468)
 				{
 					// Ignore addresses outside the usable [0, 467] range
-					LOG_WARNING(RSX, "Invalid transform register index (load=%d, index=%d)", load, index);
+					rsx_log.warning("Invalid transform register index (load=%d, index=%d)", load, index);
 					return;
 				}
 
@@ -444,7 +444,7 @@ namespace rsx
 					// PS3 seems to allow exceeding the program buffer by upto 32 instructions before crashing
 					// Discard the "excess" instructions to not overflow our transform program buffer
 					// TODO: Check if the instructions in the overflow area are executed by PS3
-					LOG_WARNING(RSX, "Program buffer overflow!");
+					rsx_log.warning("Program buffer overflow!");
 					return;
 				}
 
@@ -480,7 +480,7 @@ namespace rsx
 				{
 					rsxthr->in_begin_end = true;
 
-					LOG_WARNING(RSX, "Invalid NV4097_SET_BEGIN_END value: 0x%x", arg);
+					rsx_log.warning("Invalid NV4097_SET_BEGIN_END value: 0x%x", arg);
 					return;
 				}
 
@@ -518,7 +518,7 @@ namespace rsx
 					// Recover from invalid primitive only if draw clause is not empty
 					rsxthr->invalid_command_interrupt_raised = true;
 
-					LOG_ERROR(RSX, "NV4097_SET_BEGIN_END aborted due to invalid primitive!");
+					rsx_log.error("NV4097_SET_BEGIN_END aborted due to invalid primitive!");
 					return;
 				}
 
@@ -556,7 +556,7 @@ namespace rsx
 			auto address_ptr = get_report_data_impl(offset);
 			if (!address_ptr)
 			{
-				LOG_ERROR(RSX, "Bad argument passed to NV4097_GET_REPORT, arg=0x%X", arg);
+				rsx_log.error("Bad argument passed to NV4097_GET_REPORT, arg=0x%X", arg);
 				return;
 			}
 
@@ -570,7 +570,7 @@ namespace rsx
 				rsx->get_zcull_stats(type, address_ptr);
 				break;
 			default:
-				LOG_ERROR(RSX, "NV4097_GET_REPORT: Bad type %d", type);
+				rsx_log.error("NV4097_GET_REPORT: Bad type %d", type);
 
 				vm::_ref<atomic_t<CellGcmReportData>>(address_ptr).atomic_op([&](CellGcmReportData& data)
 				{
@@ -589,7 +589,7 @@ namespace rsx
 			case CELL_GCM_ZCULL_STATS:
 				break;
 			default:
-				LOG_ERROR(RSX, "NV4097_CLEAR_REPORT_VALUE: Bad type: %d", arg);
+				rsx_log.error("NV4097_CLEAR_REPORT_VALUE: Bad type: %d", arg);
 				break;
 			}
 
@@ -607,7 +607,7 @@ namespace rsx
 			case 2:
 				break;
 			default:
-				LOG_ERROR(RSX, "Unknown render mode %d", mode);
+				rsx_log.error("Unknown render mode %d", mode);
 				return;
 			}
 
@@ -616,7 +616,7 @@ namespace rsx
 
 			if (!address_ptr)
 			{
-				LOG_ERROR(RSX, "Bad argument passed to NV4097_SET_RENDER_ENABLE, arg=0x%X", arg);
+				rsx_log.error("Bad argument passed to NV4097_SET_RENDER_ENABLE, arg=0x%X", arg);
 				return;
 			}
 
@@ -755,7 +755,7 @@ namespace rsx
 				method_registers.registers[reg] = method_registers.register_previous_value;
 				rsx->invalid_command_interrupt_raised = true;
 
-				LOG_ERROR(RSX, "Invalid NV4097_SET_INDEX_ARRAY_DMA value: 0x%x", arg);
+				rsx_log.error("Invalid NV4097_SET_INDEX_ARRAY_DMA value: 0x%x", arg);
 			}
 		}
 
@@ -899,7 +899,7 @@ namespace rsx
 			// Check both clip dimensions and dst dimensions
 			if (clip_w == 0 || clip_h == 0)
 			{
-				LOG_WARNING(RSX, "NV3089_IMAGE_IN: Operation NOPed out due to empty regions");
+				rsx_log.warning("NV3089_IMAGE_IN: Operation NOPed out due to empty regions");
 				return;
 			}
 
@@ -924,7 +924,7 @@ namespace rsx
 			case blit_engine::transfer_origin::center:
 				break;
 			default:
-				LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", static_cast<u8>(in_origin));
+				rsx_log.warning("NV3089_IMAGE_IN_SIZE: unknown origin (%d)", static_cast<u8>(in_origin));
 			}
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
@@ -962,7 +962,7 @@ namespace rsx
 				break;
 			}
 			default:
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", static_cast<u8>(method_registers.blit_engine_context_surface()));
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", static_cast<u8>(method_registers.blit_engine_context_surface()));
 				return;
 			}
 
@@ -1051,7 +1051,7 @@ namespace rsx
 
 			if (convert_w == 0 || convert_h == 0)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%f, dt_dy=%f)",
+				rsx_log.error("NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%f, dt_dy=%f)",
 					method_registers.blit_engine_ds_dx(), method_registers.blit_engine_dt_dy());
 				return;
 			}
@@ -1333,17 +1333,17 @@ namespace rsx
 			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
 			if (in_format != 0x01 || out_format != 0x01)
 			{
-				LOG_ERROR(RSX, "NV0039_BUFFER_NOTIFY: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
+				rsx_log.error("NV0039_BUFFER_NOTIFY: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
 			}
 
 			if (!line_count || !line_length)
 			{
-				LOG_WARNING(RSX, "NV0039_BUFFER_NOTIFY NOPed out: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+				rsx_log.warning("NV0039_BUFFER_NOTIFY NOPed out: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 					in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
 				return;
 			}
 
-			LOG_TRACE(RSX, "NV0039_BUFFER_NOTIFY: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+			rsx_log.trace("NV0039_BUFFER_NOTIFY: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 				in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
 
 			u32 src_offset = method_registers.nv0039_input_offset();

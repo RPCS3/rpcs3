@@ -16,7 +16,7 @@ DECLARE(cpu_thread::g_threads_created){0};
 DECLARE(cpu_thread::g_threads_deleted){0};
 
 LOG_CHANNEL(profiler);
-LOG_CHANNEL(sys_log);
+LOG_CHANNEL(sys_log, "SYS");
 
 template <>
 void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)

@@ -337,7 +337,7 @@ namespace vk
 				{
 					// Technically legal but assuming a map->flush usage, this shouldnot happen
 					// Optimizations could in theory batch together multiple transfers though
-					LOG_ERROR(RSX, "Sink request spans multiple allocated blocks!");
+					rsx_log.error("Sink request spans multiple allocated blocks!");
 					const auto write_end = (sync_end + 1u);
 					const auto written = (write_end - local_address);
 					length -= written;
@@ -349,7 +349,7 @@ namespace vk
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Sync command on range not mapped!");
+				rsx_log.error("Sync command on range not mapped!");
 				return;
 			}
 		}

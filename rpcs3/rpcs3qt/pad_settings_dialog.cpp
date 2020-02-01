@@ -24,6 +24,8 @@
 #include "Input/evdev_joystick_handler.h"
 #endif
 
+LOG_CHANNEL(cfg_log, "CFG");
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
 
@@ -31,7 +33,7 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 {
 	if (!QDir().mkpath(dir))
 	{
-		LOG_ERROR(GENERAL, "Failed to create dir %s", sstr(dir));
+		cfg_log.error("Failed to create dir %s", sstr(dir));
 		return false;
 	}
 
@@ -40,7 +42,7 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 
 	if (!new_file.open(QIODevice::WriteOnly))
 	{
-		LOG_ERROR(GENERAL, "Failed to create file %s", sstr(filename));
+		cfg_log.error("Failed to create file %s", sstr(filename));
 		return false;
 	}
 
@@ -114,7 +116,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 		if (!g_cfg_input.player[m_tabs->currentIndex()]->device.from_string(m_device_name))
 		{
 			// Something went wrong
-			LOG_ERROR(GENERAL, "Failed to convert device string: %s", m_device_name);
+			cfg_log.error("Failed to convert device string: %s", m_device_name);
 			return;
 		}
 	});
@@ -130,7 +132,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 		if (!g_cfg_input.player[m_tabs->currentIndex()]->profile.from_string(m_profile))
 		{
 			// Something went wrong
-			LOG_ERROR(GENERAL, "Failed to convert profile string: %s", m_profile);
+			cfg_log.error("Failed to convert profile string: %s", m_profile);
 			return;
 		}
 		ChangeProfile();
@@ -385,7 +387,7 @@ void pad_settings_dialog::InitButtons()
 			return;
 		}
 
-		LOG_NOTICE(HLE, "get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
+		cfg_log.notice("get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
 		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end)
 		{
 			m_cfg_entries[m_button_id].key  = name;
@@ -424,7 +426,7 @@ void pad_settings_dialog::InitButtons()
 		{
 			if (!ui->chooseDevice->itemData(i).canConvert<pad_device_info>())
 			{
-				LOG_FATAL(GENERAL, "Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
+				cfg_log.fatal("Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
 				continue;
 			}
 			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
@@ -656,7 +658,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 	}
 	else
 	{
@@ -681,7 +683,7 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 	}
 	else
 	{
@@ -706,7 +708,7 @@ void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 		return;
 	}
 
@@ -762,7 +764,7 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* /*event*/)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 	}
 	else
 	{
@@ -981,7 +983,7 @@ void pad_settings_dialog::ChangeInputType()
 	if (!g_cfg_input.player[player]->handler.from_string(handler))
 	{
 		// Something went wrong
-		LOG_ERROR(GENERAL, "Failed to convert input string: %s", handler);
+		cfg_log.error("Failed to convert input string: %s", handler);
 		return;
 	}
 
@@ -1072,7 +1074,7 @@ void pad_settings_dialog::ChangeInputType()
 		{
 			if (!ui->chooseDevice->itemData(i).canConvert<pad_device_info>())
 			{
-				LOG_FATAL(GENERAL, "Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
+				cfg_log.fatal("Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
 				continue;
 			}
 			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();

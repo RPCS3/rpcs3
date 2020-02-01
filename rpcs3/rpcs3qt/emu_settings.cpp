@@ -19,6 +19,8 @@
 
 #include "3rdparty/OpenAL/include/alext.h"
 
+LOG_CHANNEL(cfg_log, "CFG");
+
 extern std::string g_cfg_defaults; //! Default settings grabbed from Utilities/Config.h
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -164,7 +166,7 @@ emu_settings::Render_Creator::Render_Creator()
 
 	if (thread_running)
 	{
-		LOG_ERROR(GENERAL, "Vulkan device enumeration timed out");
+		cfg_log.error("Vulkan device enumeration timed out");
 		auto button = QMessageBox::critical(nullptr, tr("Vulkan Check Timeout"),
 			tr("Querying for Vulkan-compatible devices is taking too long. This is usually caused by malfunctioning "
 			"graphics drivers, reinstalling them could fix the issue.\n\n"
@@ -322,7 +324,7 @@ void emu_settings::SaveSettings()
 
 		if (!Emu.IsStopped()) // Don't spam the log while emulation is stopped. The config will be logged on boot anyway.
 		{
-			LOG_NOTICE(LOADER, "Updated configuration:\n%s\n", g_cfg.to_string());
+			cfg_log.notice("Updated configuration:\n%s\n", g_cfg.to_string());
 		}
 	}
 
@@ -333,7 +335,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 {
 	if (!combobox)
 	{
-		LOG_FATAL(GENERAL, "EnhanceComboBox '%s' was used with an invalid object", GetSettingName(type));
+		cfg_log.fatal("EnhanceComboBox '%s' was used with an invalid object", GetSettingName(type));
 		return;
 	}
 
@@ -341,7 +343,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 	{
 		if (sorted)
 		{
-			LOG_WARNING(GENERAL, "EnhanceCombobox '%s': ignoring sorting request on ranged combo box", GetSettingName(type));
+			cfg_log.warning("EnhanceCombobox '%s': ignoring sorting request on ranged combo box", GetSettingName(type));
 		}
 
 		QStringList range = GetSettingOptions(type);
@@ -374,7 +376,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 	if (index == -1)
 	{
 		std::string def = GetSettingDefault(type);
-		LOG_ERROR(GENERAL, "EnhanceComboBox '%s' tried to set an invalid value: %s. Setting to default: %s", GetSettingName(type), selected, def);
+		cfg_log.fatal("EnhanceComboBox '%s' tried to set an invalid value: %s. Setting to default: %s", GetSettingName(type), selected, def);
 		combobox->setCurrentIndex(combobox->findData(qstr(def)));
 		m_broken_types.insert(type);
 	}
@@ -393,7 +395,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 {
 	if (!checkbox)
 	{
-		LOG_FATAL(GENERAL, "EnhanceCheckBox '%s' was used with an invalid object", GetSettingName(type));
+		cfg_log.fatal("EnhanceCheckBox '%s' was used with an invalid object", GetSettingName(type));
 		return;
 	}
 
@@ -402,7 +404,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 
 	if (def != "true" && def != "false")
 	{
-		LOG_FATAL(GENERAL, "EnhanceCheckBox '%s' was used with an invalid SettingsType", GetSettingName(type));
+		cfg_log.fatal("EnhanceCheckBox '%s' was used with an invalid SettingsType", GetSettingName(type));
 		return;
 	}
 
@@ -415,7 +417,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 	}
 	else if (selected != "false")
 	{
-		LOG_ERROR(GENERAL, "EnhanceCheckBox '%s' tried to set an invalid value: %s. Setting to default: %s", GetSettingName(type), selected, def);
+		cfg_log.fatal("EnhanceCheckBox '%s' tried to set an invalid value: %s. Setting to default: %s", GetSettingName(type), selected, def);
 		checkbox->setChecked(def == "true");
 		m_broken_types.insert(type);
 	}
@@ -431,7 +433,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type)
 {
 	if (!slider)
 	{
-		LOG_FATAL(GENERAL, "EnhanceSlider '%s' was used with an invalid object", GetSettingName(type));
+		cfg_log.fatal("EnhanceSlider '%s' was used with an invalid object", GetSettingName(type));
 		return;
 	}
 
@@ -444,7 +446,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type)
 
 	if (!ok_def || !ok_min || !ok_max)
 	{
-		LOG_FATAL(GENERAL, "EnhanceSlider '%s' was used with an invalid SettingsType", GetSettingName(type));
+		cfg_log.fatal("EnhanceSlider '%s' was used with an invalid SettingsType", GetSettingName(type));
 		return;
 	}
 
@@ -453,7 +455,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type)
 
 	if (!ok_sel || val < min || val > max)
 	{
-		LOG_ERROR(GENERAL, "EnhanceSlider '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", GetSettingName(type), val, def, min, max);
+		cfg_log.fatal("EnhanceSlider '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", GetSettingName(type), val, def, min, max);
 		val = def;
 		m_broken_types.insert(type);
 	}
@@ -471,7 +473,7 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, SettingsType type, const QS
 {
 	if (!spinbox)
 	{
-		LOG_FATAL(GENERAL, "EnhanceSpinBox '%s' was used with an invalid object", GetSettingName(type));
+		cfg_log.fatal("EnhanceSpinBox '%s' was used with an invalid object", GetSettingName(type));
 		return;
 	}
 
@@ -484,7 +486,7 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, SettingsType type, const QS
 
 	if (!ok_def || !ok_min || !ok_max)
 	{
-		LOG_FATAL(GENERAL, "EnhanceSpinBox '%s' was used with an invalid type", GetSettingName(type));
+		cfg_log.fatal("EnhanceSpinBox '%s' was used with an invalid type", GetSettingName(type));
 		return;
 	}
 
@@ -493,7 +495,7 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, SettingsType type, const QS
 
 	if (!ok_sel || val < min || val > max)
 	{
-		LOG_ERROR(GENERAL, "EnhanceSpinBox '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", GetSettingName(type), selected, def, min, max);
+		cfg_log.fatal("EnhanceSpinBox '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", GetSettingName(type), selected, def, min, max);
 		val = def;
 		m_broken_types.insert(type);
 	}
@@ -517,7 +519,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, SettingsType ty
 {
 	if (!spinbox)
 	{
-		LOG_FATAL(GENERAL, "EnhanceDoubleSpinBox '%s' was used with an invalid object", GetSettingName(type));
+		cfg_log.fatal("EnhanceDoubleSpinBox '%s' was used with an invalid object", GetSettingName(type));
 		return;
 	}
 
@@ -530,7 +532,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, SettingsType ty
 
 	if (!ok_def || !ok_min || !ok_max)
 	{
-		LOG_FATAL(GENERAL, "EnhanceDoubleSpinBox '%s' was used with an invalid type", GetSettingName(type));
+		cfg_log.fatal("EnhanceDoubleSpinBox '%s' was used with an invalid type", GetSettingName(type));
 		return;
 	}
 
@@ -539,7 +541,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, SettingsType ty
 
 	if (!ok_sel || val < min || val > max)
 	{
-		LOG_ERROR(GENERAL, "EnhanceDoubleSpinBox '%s' tried to set an invalid value: %f. Setting to default: %f. Allowed range: [%f, %f]", GetSettingName(type), val, def, min, max);
+		cfg_log.fatal("EnhanceDoubleSpinBox '%s' tried to set an invalid value: %f. Setting to default: %f. Allowed range: [%f, %f]", GetSettingName(type), val, def, min, max);
 		val = def;
 		m_broken_types.insert(type);
 	}
@@ -613,10 +615,10 @@ void emu_settings::OpenCorrectionDialog(QWidget* parent)
 			std::string def = GetSettingDefault(type);
 			std::string old = GetSetting(type);
 			SetSetting(type, def);
-			LOG_SUCCESS(GENERAL, "The config entry '%s' was corrected from '%s' to '%s'", GetSettingName(type), old, def);
+			cfg_log.success("The config entry '%s' was corrected from '%s' to '%s'", GetSettingName(type), old, def);
 		}
 
 		m_broken_types.clear();
-		LOG_SUCCESS(GENERAL, "You need to save the settings in order to make these changes permanent!");
+		cfg_log.success("You need to save the settings in order to make these changes permanent!");
 	}
 }
