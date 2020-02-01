@@ -1656,8 +1656,9 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 		{
 			// Full lock (heavyweight)
 			// TODO: vm::check_addr
+			auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
 			vm::writer_lock lock(addr);
-			mov_rdata(data, to_write);
+			mov_rdata(super_data, to_write);
 			res.release(res.load() + 127);
 		}
 		else
@@ -1866,13 +1867,14 @@ bool spu_thread::process_mfc_cmd()
 			if (g_cfg.core.spu_accurate_getllar)
 			{
 				*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
+				const auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
 
 				// Full lock (heavyweight)
 				// TODO: vm::check_addr
 				vm::writer_lock lock(addr);
 
 				ntime = old_time;
-				mov_rdata(dst, data);
+				mov_rdata(dst, super_data);
 				res.release(old_time);
 			}
 			else
@@ -1966,13 +1968,15 @@ bool spu_thread::process_mfc_cmd()
 					{
 						*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
+						auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
+
 						// Full lock (heavyweight)
 						// TODO: vm::check_addr
 						vm::writer_lock lock(addr);
 
-						if (cmp_rdata(rdata, data))
+						if (cmp_rdata(rdata, super_data))
 						{
-							mov_rdata(data, to_write);
+							mov_rdata(super_data, to_write);
 							res.release(old_time + 128);
 							result = 1;
 						}
