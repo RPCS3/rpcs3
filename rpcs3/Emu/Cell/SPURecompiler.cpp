@@ -384,7 +384,7 @@ void spu_cache::initialize()
 
 	if (!cache)
 	{
-		LOG_ERROR(SPU, "Failed to initialize SPU cache at: %s", loc);
+		spu_log.error("Failed to initialize SPU cache at: %s", loc);
 		return;
 	}
 
@@ -406,7 +406,7 @@ void spu_cache::initialize()
 
 			if (compiler->compile({}) && spu_runtime::g_interpreter)
 			{
-				LOG_SUCCESS(SPU, "SPU Runtime: Built the interpreter.");
+				spu_log.success("SPU Runtime: Built the interpreter.");
 
 				if (g_cfg.core.spu_decoder != spu_decoder_type::llvm)
 				{
@@ -415,7 +415,7 @@ void spu_cache::initialize()
 			}
 			else
 			{
-				LOG_FATAL(SPU, "SPU Runtime: Failed to build the interpreter.");
+				spu_log.fatal("SPU Runtime: Failed to build the interpreter.");
 			}
 		}
 	}
@@ -484,7 +484,7 @@ void spu_cache::initialize()
 
 			if (func2 != func)
 			{
-				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
+				spu_log.error("[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
 			}
 			else if (!compiler->compile(std::move(func2)))
 			{
@@ -507,19 +507,19 @@ void spu_cache::initialize()
 
 	if (Emu.IsStopped())
 	{
-		LOG_ERROR(SPU, "SPU Runtime: Cache building aborted.");
+		spu_log.error("SPU Runtime: Cache building aborted.");
 		return;
 	}
 
 	if (fail_flag)
 	{
-		LOG_FATAL(SPU, "SPU Runtime: Cache building failed (out of memory).");
+		spu_log.fatal("SPU Runtime: Cache building failed (out of memory).");
 		return;
 	}
 
 	if (compilers.size() && !func_list.empty())
 	{
-		LOG_SUCCESS(SPU, "SPU Runtime: Built %u functions.", func_list.size());
+		spu_log.success("SPU Runtime: Built %u functions.", func_list.size());
 	}
 
 	// Initialize global cache instance
@@ -797,7 +797,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			if (w.level >= w.beg->first.size() || w.level >= it->first.size())
 			{
 				// If functions cannot be compared, assume smallest function
-				LOG_ERROR(SPU, "Trampoline simplified at ??? (level=%u)", w.level);
+				spu_log.error("Trampoline simplified at ??? (level=%u)", w.level);
 				make_jump(0xe9, w.beg->second); // jmp rel32
 				continue;
 			}
@@ -829,7 +829,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 			if (it == m_flat_list.end())
 			{
-				LOG_ERROR(SPU, "Trampoline simplified (II) at ??? (level=%u)", w.level);
+				spu_log.error("Trampoline simplified (II) at ??? (level=%u)", w.level);
 				make_jump(0xe9, w.beg->second); // jmp rel32
 				continue;
 			}
@@ -1086,7 +1086,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 
 	if (!func)
 	{
-		LOG_FATAL(SPU, "[0x%05x] Compilation failed.", spu.pc);
+		spu_log.fatal("[0x%05x] Compilation failed.", spu.pc);
 		Emu.Pause();
 		return;
 	}
@@ -1098,7 +1098,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 
 		if (_info._u64[0] + 1)
 		{
-			LOG_TRACE(SPU, "Called from 0x%x", _info._u32[2] - 4);
+			spu_log.trace("Called from 0x%x", _info._u32[2] - 4);
 		}
 	}
 
@@ -1109,7 +1109,7 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 {
 	if (const u32 ls_off = ((rip[6] << 8) | rip[7]) * 4)
 	{
-		LOG_TODO(SPU, "Special branch patchpoint hit.\nPlease report to the developer (0x%05x).", ls_off);
+		spu_log.todo("Special branch patchpoint hit.\nPlease report to the developer (0x%05x).", ls_off);
 	}
 
 	// Find function
@@ -1186,8 +1186,8 @@ void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip) tr
 catch (const std::exception& e)
 {
 	Emu.Pause();
-	LOG_FATAL(SPU, "%s thrown: %s", typeid(e).name(), e.what());
-	LOG_NOTICE(SPU, "\n%s", spu.dump());
+	spu_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
+	spu_log.notice("\n%s", spu.dump());
 }
 
 spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
@@ -1361,7 +1361,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		{
 			if (op.d && op.e)
 			{
-				LOG_ERROR(SPU, "[0x%x] Invalid interrupt flags (DE)", pos);
+				spu_log.error("[0x%x] Invalid interrupt flags (DE)", pos);
 			}
 
 			m_targets[pos];
@@ -1379,7 +1379,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		{
 			if (op.d && op.e)
 			{
-				LOG_ERROR(SPU, "[0x%x] Invalid interrupt flags (DE)", pos);
+				spu_log.error("[0x%x] Invalid interrupt flags (DE)", pos);
 			}
 
 			const auto af = vflags[op.ra];
@@ -1397,7 +1397,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			{
 				const u32 target = spu_branch_target(av);
 
-				LOG_WARNING(SPU, "[0x%x] At 0x%x: indirect branch to 0x%x%s", entry_point, pos, target, op.d ? " (D)" : op.e ? " (E)" : "");
+				spu_log.warning("[0x%x] At 0x%x: indirect branch to 0x%x%s", entry_point, pos, target, op.d ? " (D)" : op.e ? " (E)" : "");
 
 				m_targets[pos].push_back(target);
 
@@ -1405,7 +1405,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				{
 					if (sync)
 					{
-						LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring %scall to 0x%x (SYNC)", entry_point, pos, sl ? "" : "tail ", target);
+						spu_log.notice("[0x%x] At 0x%x: ignoring %scall to 0x%x (SYNC)", entry_point, pos, sl ? "" : "tail ", target);
 
 						if (target > entry_point)
 						{
@@ -1550,7 +1550,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 					ls[start / 4 + 8] == 0x1c200807 &&
 					ls[start / 4 + 9] == 0x2401c809)
 				{
-					LOG_WARNING(SPU, "[0x%x] Pattern 1 detected (hbr=0x%x:0x%x)", pos, hbr_loc, hbr_tg);
+					spu_log.warning("[0x%x] Pattern 1 detected (hbr=0x%x:0x%x)", pos, hbr_loc, hbr_tg);
 
 					// Add 8 targets (TODO)
 					for (u32 addr = start + 4; addr < start + 36; addr += 4)
@@ -1561,12 +1561,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				}
 				else if (hbr_loc > start && hbr_loc < limit && hbr_tg == start)
 				{
-					LOG_WARNING(SPU, "[0x%x] No patterns detected (hbr=0x%x:0x%x)", pos, hbr_loc, hbr_tg);
+					spu_log.warning("[0x%x] No patterns detected (hbr=0x%x:0x%x)", pos, hbr_loc, hbr_tg);
 				}
 			}
 			else if (type == spu_itype::BI && sync)
 			{
-				LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring indirect branch (SYNC)", entry_point, pos);
+				spu_log.notice("[0x%x] At 0x%x: ignoring indirect branch (SYNC)", entry_point, pos);
 			}
 
 			if (type == spu_itype::BI || sl)
@@ -1627,7 +1627,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			{
 				if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
 				{
-					LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring fixed call to 0x%x (SYNC)", entry_point, pos, target);
+					spu_log.notice("[0x%x] At 0x%x: ignoring fixed call to 0x%x (SYNC)", entry_point, pos, target);
 				}
 
 				if (target > entry_point)
@@ -1653,7 +1653,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			{
 				if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
 				{
-					LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring fixed tail call to 0x%x (SYNC)", entry_point, pos, target);
+					spu_log.notice("[0x%x] At 0x%x: ignoring fixed tail call to 0x%x (SYNC)", entry_point, pos, target);
 				}
 
 				if (target > entry_point)
@@ -2309,7 +2309,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		if (auto emp = m_funcs.try_emplace(m_bbs.begin()->first); emp.second)
 		{
 			const u32 addr = emp.first->first;
-			LOG_ERROR(SPU, "[0x%05x] Fixed first function at 0x%05x", entry_point, addr);
+			spu_log.error("[0x%05x] Fixed first function at 0x%05x", entry_point, addr);
 			m_entry_info[addr / 4] = true;
 			m_ret_info[addr / 4] = false;
 		}
@@ -2977,18 +2977,18 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 					if (src.reg_load_mod[s_reg_lr] != func.reg_save_off[s_reg_lr])
 					{
-						LOG_ERROR(SPU, "Function 0x%05x: [0x%05x] $LR mismatch (src=0x%x; 0x%x vs 0x%x)", f.first, addr, lr_orig, src.reg_load_mod[0], func.reg_save_off[0]);
+						spu_log.error("Function 0x%05x: [0x%05x] $LR mismatch (src=0x%x; 0x%x vs 0x%x)", f.first, addr, lr_orig, src.reg_load_mod[0], func.reg_save_off[0]);
 						is_ok = false;
 					}
 					else if (src.reg_load_mod[s_reg_lr] == 0)
 					{
-						LOG_ERROR(SPU, "Function 0x%05x: [0x%05x] $LR modified (src=0x%x)", f.first, addr, lr_orig);
+						spu_log.error("Function 0x%05x: [0x%05x] $LR modified (src=0x%x)", f.first, addr, lr_orig);
 						is_ok = false;
 					}
 				}
 				else if (lr_orig > 0x40000)
 				{
-					LOG_TODO(SPU, "Function 0x%05x: [0x%05x] $LR unpredictable (src=0x%x)", f.first, addr, lr_orig);
+					spu_log.todo("Function 0x%05x: [0x%05x] $LR unpredictable (src=0x%x)", f.first, addr, lr_orig);
 					is_ok = false;
 				}
 
@@ -3001,19 +3001,19 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 						if (src.reg_load_mod[i] != func.reg_save_off[i])
 						{
-							LOG_ERROR(SPU, "Function 0x%05x: [0x%05x] $%u mismatch (src=0x%x; 0x%x vs 0x%x)", f.first, addr, i, orig, src.reg_load_mod[i], func.reg_save_off[i]);
+							spu_log.error("Function 0x%05x: [0x%05x] $%u mismatch (src=0x%x; 0x%x vs 0x%x)", f.first, addr, i, orig, src.reg_load_mod[i], func.reg_save_off[i]);
 							is_ok = false;
 						}
 					}
 					else if (orig > 0x40000)
 					{
-						LOG_TODO(SPU, "Function 0x%05x: [0x%05x] $%u unpredictable (src=0x%x)", f.first, addr, i, orig);
+						spu_log.todo("Function 0x%05x: [0x%05x] $%u unpredictable (src=0x%x)", f.first, addr, i, orig);
 						is_ok = false;
 					}
 
 					if (func.reg_save_off[i] + 1 == 0)
 					{
-						LOG_ERROR(SPU, "Function 0x%05x: [0x%05x] $%u used incorrectly", f.first, addr, i);
+						spu_log.error("Function 0x%05x: [0x%05x] $%u used incorrectly", f.first, addr, i);
 						is_ok = false;
 					}
 				}
@@ -3021,7 +3021,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				// Check $SP (should be restored or unmodified)
 				if (bb.stack_sub != 0 && bb.stack_sub != 0x80000000)
 				{
-					LOG_ERROR(SPU, "Function 0x%05x: [0x%05x] return with stack frame 0x%x", f.first, addr, bb.stack_sub);
+					spu_log.error("Function 0x%05x: [0x%05x] return with stack frame 0x%x", f.first, addr, bb.stack_sub);
 					is_ok = false;
 				}
 			}
@@ -3032,7 +3032,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				if (bb.stack_sub == 0)
 				{
 					// Call without a stack frame
-					LOG_ERROR(SPU, "Function 0x%05x: [0x%05x] frameless call", f.first, addr);
+					spu_log.error("Function 0x%05x: [0x%05x] frameless call", f.first, addr);
 					is_ok = false;
 				}
 			}
@@ -3042,14 +3042,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				// Can't just fall out of the function
 				if (bb.targets.size() != 1 || bb.targets[0] >= flim)
 				{
-					LOG_ERROR(SPU, "Function 0x%05x: [0x%05x] bad fallthrough to 0x%x", f.first, addr, bb.targets[0]);
+					spu_log.error("Function 0x%05x: [0x%05x] bad fallthrough to 0x%x", f.first, addr, bb.targets[0]);
 					is_ok = false;
 				}
 			}
 
 			if (is_ok && bb.stack_sub == 0x80000000)
 			{
-				LOG_ERROR(SPU, "Function 0x%05x: [0x%05x] bad stack frame", f.first, addr);
+				spu_log.error("Function 0x%05x: [0x%05x] bad stack frame", f.first, addr);
 				is_ok = false;
 			}
 
@@ -3068,13 +3068,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 		if (is_ok && used_stack && f.first == entry_point)
 		{
-			LOG_ERROR(SPU, "Function 0x%05x: considered possible chunk", f.first);
+			spu_log.error("Function 0x%05x: considered possible chunk", f.first);
 			is_ok = false;
 		}
 
 		// if (is_ok && f.first > 0x1d240 && f.first < 0x1e000)
 		// {
-		// 	LOG_ERROR(SPU, "Function 0x%05x: manually disabled", f.first);
+		// 	spu_log.error("Function 0x%05x: manually disabled", f.first);
 		// 	is_ok = false;
 		// }
 
@@ -3103,7 +3103,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 					if (f.second.good)
 					{
-						LOG_ERROR(SPU, "Function 0x%05x: calls bad function (0x%05x)", f.first, call);
+						spu_log.error("Function 0x%05x: calls bad function (0x%05x)", f.first, call);
 						f.second.good = false;
 					}
 				}
@@ -3604,7 +3604,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		{
 			if (m_block_info[target / 4])
 			{
-				LOG_ERROR(SPU, "[0x%x] Predecessor not found for target 0x%x (chunk=0x%x, entry=0x%x, size=%u)", m_pos, target, m_entry, m_function_queue[0], m_size / 4);
+				spu_log.error("[0x%x] Predecessor not found for target 0x%x (chunk=0x%x, entry=0x%x, size=%u)", m_pos, target, m_entry, m_function_queue[0], m_size / 4);
 			}
 
 			const auto cblock = m_ir->GetInsertBlock();
@@ -4221,7 +4221,7 @@ public:
 			m_hash_start = hash_start;
 		}
 
-		LOG_NOTICE(SPU, "Building function 0x%x... (size %u, %s)", func.entry_point, func.data.size(), m_hash);
+		spu_log.notice("Building function 0x%x... (size %u, %s)", func.entry_point, func.data.size(), m_hash);
 
 		m_pos = func.lower_bound;
 		m_base = func.entry_point;
@@ -4570,7 +4570,7 @@ public:
 							}
 							else
 							{
-								LOG_ERROR(SPU, "[0x%05x] Value not found ($%u from 0x%05x)", baddr, i, src);
+								spu_log.error("[0x%05x] Value not found ($%u from 0x%05x)", baddr, i, src);
 							}
 						}
 						else
@@ -4609,7 +4609,7 @@ public:
 
 					if (!op)
 					{
-						LOG_ERROR(SPU, "Unexpected fallthrough to 0x%x (chunk=0x%x, entry=0x%x)", m_pos, m_entry, m_function_queue[0]);
+						spu_log.error("Unexpected fallthrough to 0x%x (chunk=0x%x, entry=0x%x)", m_pos, m_entry, m_function_queue[0]);
 						break;
 					}
 
@@ -4624,7 +4624,7 @@ public:
 						raw_string_ostream out(dump);
 						out << *module; // print IR
 						out.flush();
-						LOG_ERROR(SPU, "[0x%x] LLVM dump:\n%s", m_pos, dump);
+						spu_log.error("[0x%x] LLVM dump:\n%s", m_pos, dump);
 						throw;
 					}
 				}
@@ -4644,7 +4644,7 @@ public:
 
 							if (tfound == m_targets.end() || tfound->second.find_first_of(target) + 1 == 0)
 							{
-								LOG_ERROR(SPU, "Unregistered fallthrough to 0x%x (chunk=0x%x, entry=0x%x)", target, m_entry, m_function_queue[0]);
+								spu_log.error("Unregistered fallthrough to 0x%x (chunk=0x%x, entry=0x%x)", target, m_entry, m_function_queue[0]);
 							}
 						}
 					}
@@ -4759,7 +4759,7 @@ public:
 		if (verifyModule(*module, &out))
 		{
 			out.flush();
-			LOG_ERROR(SPU, "LLVM: Verification failed at 0x%x:\n%s", func.entry_point, log);
+			spu_log.error("LLVM: Verification failed at 0x%x:\n%s", func.entry_point, log);
 
 			if (g_cfg.core.spu_debug)
 			{
@@ -4803,7 +4803,7 @@ public:
 
 		if (g_fxo->get<spu_cache>())
 		{
-			LOG_SUCCESS(SPU, "New block compiled successfully");
+			spu_log.success("New block compiled successfully");
 		}
 
 		return fn;
@@ -4821,7 +4821,7 @@ public:
 			// Execute interpreter instruction
 			const u32 op = *reinterpret_cast<const be_t<u32>*>(_spu->_ptr<u8>(0) + _spu->pc);
 			if (!g_spu_interpreter_fast.decode(op)(*_spu, {op}))
-				LOG_FATAL(SPU, "Bad instruction" HERE);
+				spu_log.fatal("Bad instruction" HERE);
 
 			// Swap state
 			for (u32 i = 0; i < s_gpr.size(); ++i)
@@ -4834,7 +4834,7 @@ public:
 			{
 				if (_spu->gpr[i] != s_gpr[i])
 				{
-					LOG_FATAL(SPU, "Register mismatch: $%u\n%s\n%s", i, _spu->gpr[i], s_gpr[i]);
+					spu_log.fatal("Register mismatch: $%u\n%s\n%s", i, _spu->gpr[i], s_gpr[i]);
 					_spu->state += cpu_flag::dbg_pause;
 				}
 			}
@@ -5154,7 +5154,7 @@ public:
 					raw_string_ostream out(dump);
 					out << *module; // print IR
 					out.flush();
-					LOG_ERROR(SPU, "[0x%x] LLVM dump:\n%s", m_pos, dump);
+					spu_log.error("[0x%x] LLVM dump:\n%s", m_pos, dump);
 					throw;
 				}
 			}
@@ -5199,7 +5199,7 @@ public:
 		if (verifyModule(*module, &out))
 		{
 			out.flush();
-			LOG_ERROR(SPU, "LLVM: Verification failed:\n%s", log);
+			spu_log.error("LLVM: Verification failed:\n%s", log);
 
 			if (g_cfg.core.spu_debug)
 			{
@@ -5723,7 +5723,7 @@ public:
 				}
 			}
 
-			LOG_WARNING(SPU, "[0x%x] MFC_WrTagUpdate: $%u is not a good constant", m_pos, +op.rt);
+			spu_log.warning("[0x%x] MFC_WrTagUpdate: $%u is not a good constant", m_pos, +op.rt);
 			break;
 		}
 		case MFC_LSA:
@@ -5741,7 +5741,7 @@ public:
 				}
 			}
 
-			LOG_WARNING(SPU, "[0x%x] MFC_EAH: $%u is not a zero constant", m_pos, +op.rt);
+			spu_log.warning("[0x%x] MFC_EAH: $%u is not a zero constant", m_pos, +op.rt);
 			//m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::eah));
 			return;
 		}
@@ -5904,7 +5904,7 @@ public:
 					{
 						if (csize % 16 || csize > 0x4000)
 						{
-							LOG_ERROR(SPU, "[0x%x] MFC_Cmd: invalid size %u", m_pos, csize);
+							spu_log.error("[0x%x] MFC_Cmd: invalid size %u", m_pos, csize);
 						}
 					}
 					}
@@ -5951,7 +5951,7 @@ public:
 				default:
 				{
 					// TODO
-					LOG_ERROR(SPU, "[0x%x] MFC_Cmd: unknown command (0x%x)", m_pos, cmd);
+					spu_log.error("[0x%x] MFC_Cmd: unknown command (0x%x)", m_pos, cmd);
 					m_ir->CreateBr(next);
 					m_ir->SetInsertPoint(exec);
 					m_ir->CreateUnreachable();
@@ -6034,7 +6034,7 @@ public:
 			}
 
 			// Fallback to unoptimized WRCH implementation (TODO)
-			LOG_WARNING(SPU, "[0x%x] MFC_Cmd: $%u is not a constant", m_pos, +op.rt);
+			spu_log.warning("[0x%x] MFC_Cmd: $%u is not a constant", m_pos, +op.rt);
 			break;
 		}
 		case MFC_WrListStallAck:
@@ -6296,7 +6296,7 @@ public:
 				if (auto [ok, a2, b2] = match_expr(b, mpyu(MP, MP)); ok && a2.eq(a0, a1) && b2.eq(b0, b1))
 				{
 					// 32-bit multiplication
-					LOG_NOTICE(SPU, "mpy32 in %s at 0x%05x", m_hash, m_pos);
+					spu_log.notice("mpy32 in %s at 0x%05x", m_hash, m_pos);
 					set_vr(op.rt, a0 * b0);
 					return;
 				}
@@ -7106,7 +7106,7 @@ public:
 				return;
 			}
 
-			LOG_TODO(SPU, "[0x%x] Const SHUFB mask: %s", m_pos, mask);
+			spu_log.todo("[0x%x] Const SHUFB mask: %s", m_pos, mask);
 		}
 
 		const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
@@ -8062,7 +8062,7 @@ public:
 			if (targets.empty())
 			{
 				// Emergency exit
-				LOG_ERROR(SPU, "[0x%05x] No jump table targets at 0x%05x (%u)", m_entry, m_pos, tfound->second.size());
+				spu_log.error("[0x%05x] No jump table targets at 0x%05x (%u)", m_entry, m_pos, tfound->second.size());
 				m_ir->CreateBr(add_block_indirect(op, addr));
 				return;
 			}
@@ -8278,7 +8278,7 @@ public:
 			}
 			else
 			{
-				LOG_FATAL(SPU, "[0x%x] Can't add function 0x%x", m_pos, target);
+				spu_log.fatal("[0x%x] Can't add function 0x%x", m_pos, target);
 				return;
 			}
 		}
@@ -8460,7 +8460,7 @@ struct spu_llvm
 
 			if (func2 != func)
 			{
-				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
+				spu_log.error("[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
 			}
 			else if (const auto target = compiler->compile(std::move(func2)))
 			{
@@ -8483,7 +8483,7 @@ struct spu_llvm
 			}
 			else
 			{
-				LOG_FATAL(SPU, "[0x%05x] Compilation failed.", func.entry_point);
+				spu_log.fatal("[0x%05x] Compilation failed.", func.entry_point);
 				Emu.Pause();
 				return;
 			}

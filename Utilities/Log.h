@@ -117,20 +117,4 @@ namespace logs
 
 #define LOG_CHANNEL(ch, ...) inline ::logs::channel ch(::logs::make_channel_name(#ch, ##__VA_ARGS__))
 
-// Legacy:
-
-namespace logs
-{
-	/* Small set of predefined channels */
-	LOG_CHANNEL(SPU);
-}
-
-#define LOG_SUCCESS(ch, fmt, ...) logs::ch.success("" fmt, ##__VA_ARGS__)
-#define LOG_NOTICE(ch, fmt, ...)  logs::ch.notice ("" fmt, ##__VA_ARGS__)
-#define LOG_WARNING(ch, fmt, ...) logs::ch.warning("" fmt, ##__VA_ARGS__)
-#define LOG_ERROR(ch, fmt, ...)   logs::ch.error  ("" fmt, ##__VA_ARGS__)
-#define LOG_TODO(ch, fmt, ...)    logs::ch.todo   ("" fmt, ##__VA_ARGS__)
-#define LOG_TRACE(ch, fmt, ...)   logs::ch.trace  ("" fmt, ##__VA_ARGS__)
-#define LOG_FATAL(ch, fmt, ...)   logs::ch.fatal  ("" fmt, ##__VA_ARGS__)
-
 LOG_CHANNEL(rsx_log, "RSX");

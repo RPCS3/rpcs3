@@ -781,7 +781,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 			// Ignore hole
 			if (m_pos + 1)
 			{
-				LOG_ERROR(SPU, "Unexpected fallthrough to 0x%x", pos);
+				spu_log.error("Unexpected fallthrough to 0x%x", pos);
 				branch_fixed(spu_branch_target(pos));
 				m_pos = -1;
 			}
@@ -901,7 +901,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 			return nullptr;
 		}
 
-		LOG_FATAL(SPU, "Failed to build a function");
+		spu_log.fatal("Failed to build a function");
 	}
 
 	// Install compiled function pointer
@@ -1082,7 +1082,7 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 		auto _throw = [](spu_thread* _spu)
 		{
 			_spu->state += cpu_flag::dbg_pause;
-			LOG_FATAL(SPU, "SPU Interrupts not implemented (mask=0x%x)", +_spu->ch_event_mask);
+			spu_log.fatal("SPU Interrupts not implemented (mask=0x%x)", +_spu->ch_event_mask);
 			spu_runtime::g_escape(_spu);
 		};
 
@@ -1231,7 +1231,7 @@ void spu_recompiler::fall(spu_opcode_t op)
 		if (!_func(*_spu, {opcode}))
 		{
 			_spu->state += cpu_flag::dbg_pause;
-			LOG_FATAL(SPU, "spu_recompiler::fall(): unexpected interpreter call (op=0x%08x)", opcode);
+			spu_log.fatal("spu_recompiler::fall(): unexpected interpreter call (op=0x%08x)", opcode);
 			spu_runtime::g_escape(_spu);
 		}
 	};
@@ -1362,7 +1362,7 @@ void spu_recompiler::get_events()
 		auto _throw = [](spu_thread* _spu)
 		{
 			_spu->state += cpu_flag::dbg_pause;
-			LOG_FATAL(SPU, "SPU Events not implemented (mask=0x%x).", +_spu->ch_event_mask);
+			spu_log.fatal("SPU Events not implemented (mask=0x%x).", +_spu->ch_event_mask);
 			spu_runtime::g_escape(_spu);
 		};
 
@@ -1386,7 +1386,7 @@ void spu_recompiler::UNK(spu_opcode_t op)
 	auto gate = [](spu_thread* _spu, u32 op)
 	{
 		_spu->state += cpu_flag::dbg_pause;
-		LOG_FATAL(SPU, "Unknown/Illegal instruction (0x%08x)" HERE, op);
+		spu_log.fatal("Unknown/Illegal instruction (0x%08x)" HERE, op);
 		spu_runtime::g_escape(_spu);
 	};
 
@@ -1584,7 +1584,7 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 	}
 	case SPU_RdDec:
 	{
-		LOG_WARNING(SPU, "[0x%x] RDCH: RdDec", m_pos);
+		spu_log.warning("[0x%x] RDCH: RdDec", m_pos);
 
 		auto sub1 = [](spu_thread* _spu, v128* _res)
 		{
@@ -1631,7 +1631,7 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 	}
 	case SPU_RdEventStat:
 	{
-		LOG_WARNING(SPU, "[0x%x] RDCH: RdEventStat", m_pos);
+		spu_log.warning("[0x%x] RDCH: RdEventStat", m_pos);
 		get_events();
 		Label wait = c->newLabel();
 		Label ret = c->newLabel();
@@ -1744,7 +1744,7 @@ void spu_recompiler::RCHCNT(spu_opcode_t op)
 	}
 	case SPU_RdEventStat:
 	{
-		LOG_WARNING(SPU, "[0x%x] RCHCNT: RdEventStat", m_pos);
+		spu_log.warning("[0x%x] RCHCNT: RdEventStat", m_pos);
 		get_events();
 		c->setnz(addr->r8());
 		c->movzx(*addr, addr->r8());
@@ -2745,7 +2745,7 @@ void spu_recompiler::BI(spu_opcode_t op)
 
 	if (found == m_targets.end())
 	{
-		LOG_ERROR(SPU, "[0x%x] BI: no targets", m_pos);
+		spu_log.error("[0x%x] BI: no targets", m_pos);
 	}
 
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));

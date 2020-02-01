@@ -9,6 +9,8 @@
 
 #include <map>
 
+LOG_CHANNEL(spu_log, "SPU");
+
 struct lv2_event_queue;
 struct lv2_spu_group;
 struct lv2_int_tag;
