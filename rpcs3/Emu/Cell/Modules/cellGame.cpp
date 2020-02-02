@@ -619,7 +619,15 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 				return {CELL_GAME_ERROR_INTERNAL, dir};
 			}
 
-			psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::rewrite), sfo);
+			auto file = fs::file(vdir + "/PARAM.SFO", fs::rewrite);
+			if (file)
+			{
+				psf::save_object(file, sfo);
+			}
+			else
+			{
+				return CELL_GAMEDATA_ERROR_ACCESS_ERROR;
+			}
 		}
 
 		return CELL_OK;
