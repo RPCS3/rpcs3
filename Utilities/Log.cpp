@@ -267,13 +267,11 @@ void logs::listener::add(logs::listener* _new)
 	}
 }
 
-logs::channel::channel(const char* name)
-	: name(name)
-	, enabled(level::notice)
+logs::registerer::registerer(channel& _ch)
 {
 	std::lock_guard lock(g_mutex);
 
-	get_logger()->channels.emplace(name, this);
+	get_logger()->channels.emplace(_ch.name, &_ch);
 }
 
 void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) const
