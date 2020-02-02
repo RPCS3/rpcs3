@@ -409,9 +409,12 @@ logs::file_writer::file_writer(const std::string& name)
 		verify(name.c_str()), m_fptr;
 
 		// Rotate backups (TODO)
-		fs::remove_file(fs::get_cache_dir() + name + "1.log.gz");
-		fs::create_dir(fs::get_cache_dir() + "old_logs");
-		fs::rename(fs::get_cache_dir() + m_name + ".log.gz", fs::get_cache_dir() + "old_logs/" + m_name + ".log.gz", true);
+		if (std::string gz_file_name = fs::get_cache_dir() + m_name + ".log.gz"; fs::is_file(gz_file_name))
+		{
+			fs::remove_file(fs::get_cache_dir() + name + "1.log.gz");
+			fs::create_dir(fs::get_cache_dir() + "old_logs");
+			fs::rename(gz_file_name, fs::get_cache_dir() + "old_logs/" + m_name + ".log.gz", true);
+		}
 
 		// Actual log file (allowed to fail)
 		m_fout.open(log_name, fs::rewrite);
