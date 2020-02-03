@@ -604,7 +604,10 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 		if (cbSet->setParam)
 		{
-			psf::assign(sfo, "CATEGORY", psf::string(3, "GD"));
+			if (sfo.find("CATEGORY") == sfo.end())
+			{
+				psf::assign(sfo, "CATEGORY", psf::string(3, "GD"));
+			}
 			psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, cbSet->setParam->titleId));
 			psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->title));
 			psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, cbSet->setParam->dataVersion));
