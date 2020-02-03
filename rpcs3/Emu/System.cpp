@@ -767,6 +767,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		m_title = psf::get_string(_psf, "TITLE", m_path.substr(m_path.find_last_of('/') + 1));
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 		m_cat = psf::get_string(_psf, "CATEGORY");
+		m_bootable = psf::get_integer(_psf, "BOOTABLE");
 
 		std::string version_app  = psf::get_string(_psf, "APP_VER", "Unknown");
 		std::string version_disc = psf::get_string(_psf, "VERSION", "Unknown");
@@ -1020,7 +1021,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		}
 
 		// Booting patch data
-		if (m_cat == "GD" && bdvd_dir.empty() && disc.empty())
+		if (m_cat == "GD" && !m_bootable && bdvd_dir.empty() && disc.empty())
 		{
 			// Load /dev_bdvd/ from game list if available
 			if (auto node = games[m_title_id])
@@ -1094,7 +1095,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			fs::file card_2_file(vfs::get("/dev_hdd0/savedata/vmc/" + argv[2]), fs::write + fs::create);
 			card_2_file.trunc(128 * 1024);
 		}
-		else if (m_cat != "DG" && m_cat != "GD")
+		else if (m_cat != "DG" && (m_cat != "GD" || m_bootable))
 		{
 			// Don't need /dev_bdvd
 		}

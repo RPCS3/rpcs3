@@ -49,6 +49,7 @@ class Emulator final
 	atomic_t<u64> m_pause_start_time; // set when paused
 	atomic_t<u64> m_pause_amend_time; // increased when resumed
 
+	bool m_bootable{ false };
 	std::string m_path;
 	std::string m_path_old;
 	std::string m_title_id;
