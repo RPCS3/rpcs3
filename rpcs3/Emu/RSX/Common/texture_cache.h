@@ -214,36 +214,37 @@ namespace rsx
 			}
 
 			// Returns true if at least threshold% is covered in pixels
-			bool atlas_covers_target_area(u32 threshold) const
+			bool atlas_covers_target_area(int threshold) const
 			{
 				if (external_subresource_desc.op != deferred_request_command::atlas_gather)
 					return true;
 
-				u16 min_x = external_subresource_desc.width, min_y = external_subresource_desc.height,
-					max_x = 0, max_y = 0;
+				const int target_area = (external_subresource_desc.width * external_subresource_desc.height * threshold) / 100;
+				int covered_area = 0;
+				areai bbox{ INT_MAX, INT_MAX, 0, 0 };
 
-				// Require at least 90% coverage
-				const u32 target_area = ((min_x * min_y) * threshold) / 100u;
-
-				for (const auto &section : external_subresource_desc.sections_to_copy)
+				for (const auto& section : external_subresource_desc.sections_to_copy)
 				{
-					if (section.dst_x < min_x) min_x = section.dst_x;
-					if (section.dst_y < min_y) min_y = section.dst_y;
+					covered_area += section.dst_w * section.dst_h;
 
-					const auto _u = section.dst_x + section.dst_w;
-					const auto _v = section.dst_y + section.dst_h;
-					if (_u > max_x) max_x = _u;
-					if (_v > max_y) max_y = _v;
-
-					if (const auto _w = max_x - min_x, _h = max_y - min_y;
-						u32(_w * _h) >= target_area)
-					{
-						// Target area mostly covered, return success
-						return true;
-					}
+					bbox.x1 = std::min<int>(section.dst_x, bbox.x1);
+					bbox.x2 = std::max<int>(section.dst_x + section.dst_w, bbox.x2);
+					bbox.y1 = std::min<int>(section.dst_y, bbox.y1);
+					bbox.y2 = std::max<int>(section.dst_y + section.dst_h, bbox.y2);
 				}
 
-				return false;
+				if (covered_area < target_area)
+				{
+					return false;
+				}
+
+				if (const auto bounds_area = bbox.width() * bbox.height();
+					bounds_area < target_area)
+				{
+					return false;
+				}
+
+				return true;
 			}
 
 			u32 encoded_component_map() const override
