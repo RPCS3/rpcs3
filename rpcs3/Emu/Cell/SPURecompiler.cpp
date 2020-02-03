@@ -4701,7 +4701,7 @@ public:
 		// Basic optimizations
 		pm.add(createEarlyCSEPass());
 		pm.add(createCFGSimplificationPass());
-		pm.add(createNewGVNPass());
+		//pm.add(createNewGVNPass());
 		pm.add(createDeadStoreEliminationPass());
 		pm.add(createLICMPass());
 		pm.add(createAggressiveDCEPass());
