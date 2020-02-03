@@ -1911,6 +1911,9 @@ int game_list_frame::PopulateGameList()
 	m_gameList->clearContents();
 	m_gameList->setRowCount(m_game_data.size());
 
+	// Default locale. Uses current Qt application language.
+	QLocale locale{};
+
 	int row = 0, index = -1;
 	for (const auto& game : m_game_data)
 	{
@@ -1982,8 +1985,21 @@ int game_list_frame::PopulateGameList()
 		}
 
 		// Playtimes
-		const qint64 elapsed_ms   = m_persistent_settings->GetPlaytime(serial);
-		const QString last_played = GetLastPlayedBySerial(serial);
+		const qint64 elapsed_ms = m_persistent_settings->GetPlaytime(serial);
+
+		// Last played (support outdated values)
+		QDate last_played;
+		const QString last_played_str = GetLastPlayedBySerial(serial);
+
+		if (!last_played_str.isEmpty())
+		{
+			last_played = QDate::fromString(last_played_str, gui::persistent::last_played_date_format);
+
+			if (!last_played.isValid())
+			{
+				last_played = QDate::fromString(last_played_str, gui::persistent::last_played_date_format_old);
+			}
+		}
 
 		m_gameList->setItem(row, gui::column_icon,       icon_item);
 		m_gameList->setItem(row, gui::column_name,       title_item);
@@ -1996,7 +2012,7 @@ int game_list_frame::PopulateGameList()
 		m_gameList->setItem(row, gui::column_resolution, new custom_table_widget_item(GetStringFromU32(game->info.resolution, resolution::mode, true)));
 		m_gameList->setItem(row, gui::column_sound,      new custom_table_widget_item(GetStringFromU32(game->info.sound_format, sound::format, true)));
 		m_gameList->setItem(row, gui::column_parental,   new custom_table_widget_item(GetStringFromU32(game->info.parental_lvl, parental::level), Qt::UserRole, game->info.parental_lvl));
-		m_gameList->setItem(row, gui::column_last_play,  new custom_table_widget_item(last_played, Qt::UserRole, QDate::fromString(last_played, gui::persistent::last_played_date_format)));
+		m_gameList->setItem(row, gui::column_last_play,  new custom_table_widget_item(locale.toString(last_played, gui::persistent::last_played_date_format_new), Qt::UserRole, last_played));
 		m_gameList->setItem(row, gui::column_playtime,   new custom_table_widget_item(GetPlayTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
 		m_gameList->setItem(row, gui::column_compat,     compat_item);
 

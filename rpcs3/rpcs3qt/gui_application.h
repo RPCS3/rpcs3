@@ -47,11 +47,18 @@ private:
 		return thread();
 	}
 
+	void SwitchTranslator(QTranslator& translator, const QString& filename);
+	void LoadLanguage(const QString& language);
+
 	void InitializeCallbacks();
 	void InitializeConnects();
 
 	void StartPlaytime();
 	void StopPlaytime();
+
+	QTranslator m_translator;
+	QTranslator m_translator_qt;
+	QString m_language;
 
 	QElapsedTimer m_timer_playtime;
 
