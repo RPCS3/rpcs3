@@ -133,16 +133,23 @@ struct content_permission final
 
 	~content_permission()
 	{
+		bool success = false;
+		fs::g_tls_error = fs::error::ok;
+
 		try
 		{
-			if (temp.size() > 1)
+			if (temp.size() <= 1 || fs::remove_all(temp))
 			{
-				fs::remove_all(temp);
+				success = true;
 			}
 		}
 		catch (...)
 		{
-			cellGame.fatal("Failed to clean directory '%s'", temp);
+		}
+
+		if (!success)
+		{
+			cellGame.fatal("Failed to clean directory '%s' (%s)", temp, fs::g_tls_error);
 		}
 	}
 };
