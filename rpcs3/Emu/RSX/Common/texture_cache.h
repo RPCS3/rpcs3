@@ -1666,13 +1666,18 @@ namespace rsx
 					if (const auto section_count = result.external_subresource_desc.sections_to_copy.size();
 						section_count > 0)
 					{
-						// TODO: Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).
-						// Seen in APF2k8 - this causes missing bits to be reuploaded from CPU which can cause WCB requirement.
-						// Properly fix this by introducing partial data upload into the surface cache in such cases and making RCB/RDB
-						// enabled by default. Blit engine already handles this correctly.
+						bool result_is_valid = result.atlas_covers_target_area(section_count == 1 ? 99 : 90);
+						if (!result_is_valid && _pool == 0 && !g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
+						{
+							// HACK: Avoid WCB requirement for some games with wrongly declared sampler dimensions.
+							// TODO: Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).
+							// Seen in APF2k8 - this causes missing bits to be reuploaded from CPU which can cause WCB requirement.
+							// Properly fix this by introducing partial data upload into the surface cache in such cases and making RCB/RDB
+							// enabled by default. Blit engine already handles this correctly.
+							result_is_valid = true;
+						}
 
-						if (_pool == 0 || /* Hack to avoid WCB requirement for some games with wrongly declared sampler dimensions */
-							result.atlas_covers_target_area(section_count == 1? 99 : 90))
+						if (result_is_valid)
 						{
 							// Optionally disallow caching if resource is being written to as it is being read from
 							for (const auto& section : overlapping_fbos)
