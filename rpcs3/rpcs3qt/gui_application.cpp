@@ -237,7 +237,7 @@ void gui_application::StopPlaytime()
 
 	const qint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
 	m_persistent_settings->SetPlaytime(serial, playtime);
-	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
+	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
 	m_timer_playtime.invalidate();
 }
 
