@@ -758,6 +758,12 @@ error_code cellGameGetParamInt(s32 id, vm::ptr<s32> value)
 	}
 	}
 
+	if (!prm->sfo.count(key))
+	{
+		// TODO: Check if special values need to be set here
+		cellGame.warning("cellGameGetParamInt(): id=%d was not found", id);
+	}
+
 	*value = psf::get_integer(prm->sfo, key, 0);
 	return CELL_OK;
 }
@@ -846,6 +852,12 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 
 	const std::string value = psf::get_string(prm->sfo, std::string(key.name));
 	const auto value_size = value.size() + 1;
+
+	if (value.empty() && !prm->sfo.count(std::string(key.name)))
+	{
+		// TODO: Check if special values need to be set here
+		cellGame.warning("cellGameGetParamString(): id=%d was not found", id);
+	}
 
 	const auto pbuf = buf.get_ptr();
 	const bool to_pad = bufsize > value_size;
