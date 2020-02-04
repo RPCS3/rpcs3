@@ -86,6 +86,7 @@ public Q_SLOTS:
 	void OnEmuReady();
 
 	void RepaintGui();
+	void RetranslateUI();
 
 private Q_SLOTS:
 	void OnPlayOrPause();

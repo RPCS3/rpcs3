@@ -35,11 +35,15 @@ void gui_application::Init()
 {
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 
-	LoadLanguage(QLocale(QLocale::English).name());
-
 	m_emu_settings.reset(new emu_settings());
 	m_gui_settings.reset(new gui_settings());
 	m_persistent_settings.reset(new persistent_settings());
+
+	const auto locales  = GetAvailableLocales();
+	const auto language = m_gui_settings->GetValue(gui::loc_language).toString();
+	const auto index    = locales.indexOf(language);
+
+	LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : locales.at(index));
 
 	// Force init the emulator
 	InitializeEmulator(m_gui_settings->GetCurrentUser().toStdString(), true, m_show_gui);
@@ -76,15 +80,25 @@ void gui_application::Init()
 #endif
 }
 
-void gui_application::SwitchTranslator(QTranslator& translator, const QString& filename)
+void gui_application::SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language)
 {
 	// remove the old translator
 	removeTranslator(&translator);
 
-	// load the new translator
-	if (translator.load(QLocale(QLocale::English), filename))
+	const QString lang_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath) + QStringLiteral("/");
+	const QString file_path = lang_path + filename;
+
+	if (QFileInfo(file_path).isFile())
 	{
-		installTranslator(&translator);
+		// load the new translator
+		if (translator.load(file_path))
+		{
+			installTranslator(&translator);
+		}
+	}
+	else if (language != QLocale(QLocale::English).bcp47Name()) // ignore default case "en", since it is handled in source code
+	{
+		gui_log.error("No translation file found in: %s", file_path.toStdString());
 	}
 }
 
@@ -97,23 +111,47 @@ void gui_application::LoadLanguage(const QString& language)
 
 	m_language = language;
 
-	const QLocale locale = QLocale(language);
+	const QLocale locale      = QLocale(language);
+	const QString locale_name = QLocale::languageToString(locale.language());
+
 	QLocale::setDefault(locale);
 
 	// Idk if this is overruled by the QLocale default, so I'll change it here just to be sure.
 	// As per QT recommendations to avoid conflicts for POSIX functions
 	std::setlocale(LC_NUMERIC, "C");
 
-	// TODO: implement once we decided to enable translations
-	//SwitchTranslator(m_translator, QString("TranslationExample''%1.qm").arg(language));
-	//SwitchTranslator(m_translator_qt, QString("qt_%1.qm").arg(language));
+	SwitchTranslator(m_translator, QStringLiteral("rpcs3_%1.qm").arg(language), language);
 
 	if (m_main_window)
 	{
-		m_main_window->RepaintGui();
+		m_main_window->RetranslateUI();
 	}
 
-	gui_log.notice("Current language changed to %s (%s)", QLocale::languageToString(locale.language()).toStdString(), language.toStdString());
+	gui_log.notice("Current language changed to %s (%s)", locale_name.toStdString(), language.toStdString());
+}
+
+QStringList gui_application::GetAvailableLocales()
+{
+	QStringList locales;
+
+	const QString language_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+
+	if (QFileInfo(language_path).isDir())
+	{
+		const QDir dir(language_path);
+		const QStringList filenames = dir.entryList(QStringList("*.qm"));
+
+		for (const auto& filename : filenames)
+		{
+			QString locale = filename;                 // "rpcs3_en.qm"
+			locale.truncate(locale.lastIndexOf('.'));  // "rpcs3_en"
+			locale.remove(0, locale.indexOf('_') + 1); // "en"
+
+			locales << locale;
+		}
+	}
+
+	return locales;
 }
 
 void gui_application::InitializeConnects()
