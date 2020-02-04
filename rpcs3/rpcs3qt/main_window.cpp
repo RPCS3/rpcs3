@@ -1168,6 +1168,18 @@ void main_window::RepaintGui()
 	Q_EMIT RequestTrophyManagerRepaint();
 }
 
+void main_window::RetranslateUI()
+{
+	ui->retranslateUi(this);
+
+	RepaintGui();
+
+	if (m_gameListFrame)
+	{
+		m_gameListFrame->Refresh(true);
+	}
+}
+
 void main_window::ShowTitleBars(bool show)
 {
 	m_gameListFrame->SetTitleBarVisible(show);
@@ -1457,15 +1469,15 @@ void main_window::CreateConnects()
 		int id = 0;
 		const bool& checked = act->isChecked();
 
-		if      (act == ui->showCatHDDGameAct)    categories += category::hdd_game, id = Category::HDD_Game;
-		else if (act == ui->showCatDiscGameAct)   categories += category::disc_game, id = Category::Disc_Game;
-		else if (act == ui->showCatPS1GamesAct)   categories += category::ps1_game, id = Category::PS1_Game;
+		if      (act == ui->showCatHDDGameAct)    categories += category::cat_hdd_game, id = Category::HDD_Game;
+		else if (act == ui->showCatDiscGameAct)   categories += category::cat_disc_game, id = Category::Disc_Game;
+		else if (act == ui->showCatPS1GamesAct)   categories += category::cat_ps1_game, id = Category::PS1_Game;
 		else if (act == ui->showCatPS2GamesAct)   categories += category::ps2_games, id = Category::PS2_Game;
 		else if (act == ui->showCatPSPGamesAct)   categories += category::psp_games, id = Category::PSP_Game;
-		else if (act == ui->showCatHomeAct)       categories += category::home, id = Category::Home;
+		else if (act == ui->showCatHomeAct)       categories += category::cat_home, id = Category::Home;
 		else if (act == ui->showCatAudioVideoAct) categories += category::media, id = Category::Media;
 		else if (act == ui->showCatGameDataAct)   categories += category::data, id = Category::Data;
-		else if (act == ui->showCatUnknownAct)    categories += category::unknown, id = Category::Unknown_Cat;
+		else if (act == ui->showCatUnknownAct)    categories += category::cat_unknown, id = Category::Unknown_Cat;
 		else if (act == ui->showCatOtherAct)      categories += category::others, id = Category::Others;
 		else gui_log.warning("categoryVisibleActGroup: category action not found");
 

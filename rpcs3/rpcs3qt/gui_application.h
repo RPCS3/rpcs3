@@ -47,8 +47,9 @@ private:
 		return thread();
 	}
 
-	void SwitchTranslator(QTranslator& translator, const QString& filename);
+	void SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language);
 	void LoadLanguage(const QString& language);
+	QStringList GetAvailableLocales();
 
 	void InitializeCallbacks();
 	void InitializeConnects();
