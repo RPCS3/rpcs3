@@ -447,6 +447,10 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 	{
 		cellVdec.warning("cellVdecQueryAttr: AVC (profile=%d)", profile);
 
+		const vm::ptr<CellVdecAvcSpecificInfo> sinfo = vm::cast(spec_addr);
+
+		// TODO: sinfo
+
 		switch (profile)
 		{
 		case CELL_VDEC_AVC_LEVEL_1P0: memSize = new_sdk ? 0x70167D  : 0xA014FD ; break;
@@ -472,12 +476,63 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 	{
 		cellVdec.warning("cellVdecQueryAttr: MPEG2 (profile=%d)", profile);
 
+		const vm::ptr<CellVdecMpeg2SpecificInfo> sinfo = vm::cast(spec_addr);
+
+		if (sinfo)
+		{
+			if (sinfo->thisSize != sizeof(CellVdecMpeg2SpecificInfo))
+			{
+				return CELL_VDEC_ERROR_ARG;
+			}
+		}
+
+		// TODO: sinfo
+
+		const u32 maxDecH = sinfo ? +sinfo->maxDecodedFrameHeight : 0;
+		const u32 maxDecW = sinfo ? +sinfo->maxDecodedFrameWidth : 0;
+
 		switch (profile)
 		{
-		case CELL_VDEC_MPEG2_MP_LL : memSize = new_sdk ? 0x11290B : 0x2A610B; break;
-		case CELL_VDEC_MPEG2_MP_ML : memSize = new_sdk ? 0x2DFB8B : 0x47110B; break;
-		case CELL_VDEC_MPEG2_MP_H14: memSize = new_sdk ? 0xA0270B : 0xB8F90B; break;
-		case CELL_VDEC_MPEG2_MP_HL : memSize = new_sdk ? 0xD2F40B : 0xEB990B; break;
+		case CELL_VDEC_MPEG2_MP_LL:
+		{
+			if (maxDecW > 352 || maxDecH > 288)
+			{
+				return CELL_VDEC_ERROR_ARG;
+			}
+
+			memSize = new_sdk ? 0x11290B : 0x2A610B;
+			break;
+		}
+		case CELL_VDEC_MPEG2_MP_ML:
+		{
+			if (maxDecW > 720 || maxDecH > 576)
+			{
+				return CELL_VDEC_ERROR_ARG;
+			}
+
+			memSize = new_sdk ? 0x2DFB8B : 0x47110B;
+			break;
+		}
+		case CELL_VDEC_MPEG2_MP_H14:
+		{
+			if (maxDecW > 1440 || maxDecH > 1152)
+			{
+				return CELL_VDEC_ERROR_ARG;
+			}
+
+			memSize = new_sdk ? 0xA0270B : 0xB8F90B;
+			break;
+		}
+		case CELL_VDEC_MPEG2_MP_HL:
+		{
+			if (maxDecW > 1920 || maxDecH > 1152)
+			{
+				return CELL_VDEC_ERROR_ARG;
+			}
+	
+			memSize = new_sdk ? 0xD2F40B : 0xEB990B;
+			break;
+		}
 		default: return CELL_VDEC_ERROR_ARG;
 		}
 
@@ -488,6 +543,10 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 	{
 		cellVdec.warning("cellVdecQueryAttr: DivX (profile=%d)", profile);
 
+		const vm::ptr<CellVdecDivxSpecificInfo2> sinfo = vm::cast(spec_addr);
+
+		// TODO: sinfo
+
 		switch (profile)
 		{
 		case CELL_VDEC_DIVX_QMOBILE     : memSize = new_sdk ? 0x11B720 : 0x1DEF30; break;
@@ -497,6 +556,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 		case CELL_VDEC_DIVX_HD_1080     : memSize = new_sdk ? 0xD78100 : 0xFC9870; break;
 		default: return CELL_VDEC_ERROR_ARG;
 		}
+
 		decoderVerLower = 0x30806;
 		break;
 	}
