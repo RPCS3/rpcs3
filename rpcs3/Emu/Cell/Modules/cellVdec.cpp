@@ -505,7 +505,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 
 	attr->decoderVerLower = decoderVerLower;
 	attr->decoderVerUpper = 0x4840010;
-	attr->memSize = verify(HERE, memSize);
+	attr->memSize = !spec_addr ? verify(HERE, memSize) : 4 * 1024 * 1024;
 	attr->cmdDepth = 4;
 	return CELL_OK;
 }
@@ -548,8 +548,15 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 		return CELL_VDEC_ERROR_ARG;
 	}
 
+	u32 spec_addr = 0;
+
+	if constexpr (std::is_same_v<std::decay_t<typename T::type>, CellVdecTypeEx>)
+	{
+		spec_addr = type->codecSpecificInfo_addr;
+	}
+
 	if (CellVdecAttr attr{};
-		vdecQueryAttr(type->codecType, type->profileLevel, 0, &attr) != CELL_OK ||
+		vdecQueryAttr(type->codecType, type->profileLevel, spec_addr, &attr) != CELL_OK ||
 		attr.memSize > res->memSize)
 	{
 		return CELL_VDEC_ERROR_ARG;
