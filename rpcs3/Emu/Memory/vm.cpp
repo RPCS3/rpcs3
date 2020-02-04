@@ -1159,22 +1159,22 @@ void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, 
 	// Special case (may be allowed for some arguments)
 	if (arg == 0)
 	{
-		out += u8"«NULL»";
+		out += reinterpret_cast<const char*>(u8"«NULL»");
 		return;
 	}
 
 	// Filter certainly invalid addresses (TODO)
 	if (arg < 0x10000 || arg >= 0xf0000000)
 	{
-		out += u8"«INVALID_ADDRESS:";
+		out += reinterpret_cast<const char*>(u8"«INVALID_ADDRESS:");
 		fmt_class_string<u32>::format(out, arg);
-		out += u8"»";
+		out += reinterpret_cast<const char*>(u8"»");
 		return;
 	}
 
 	const auto start = out.size();
 
-	out += u8"“";
+	out += reinterpret_cast<const char*>(u8"“");
 
 	for (vm::_ptr_base<const volatile char, u32> ptr = vm::cast(arg);; ptr++)
 	{
@@ -1182,9 +1182,9 @@ void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, 
 		{
 			// TODO: optimize checks
 			out.resize(start);
-			out += u8"«INVALID_ADDRESS:";
+			out += reinterpret_cast<const char*>(u8"«INVALID_ADDRESS:");
 			fmt_class_string<u32>::format(out, arg);
-			out += u8"»";
+			out += reinterpret_cast<const char*>(u8"»");
 			return;
 		}
 
@@ -1198,5 +1198,5 @@ void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, 
 		}
 	}
 
-	out += u8"”";
+	out += reinterpret_cast<const char*>(u8"”");
 }

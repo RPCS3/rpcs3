@@ -420,9 +420,13 @@ logs::file_writer::file_writer(const std::string& name)
 		m_fout.open(log_name, fs::rewrite);
 
 		// Compressed log, make it inaccessible (foolproof)
-		if (!m_fout2.open(log_name + ".gz", fs::rewrite + fs::unread) || deflateInit2(&m_zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) != Z_OK)
+		if (m_fout2.open(log_name + ".gz", fs::rewrite + fs::unread))
 		{
-			m_fout2.close();
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+			if (deflateInit2(&m_zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) != Z_OK)
+#pragma GCC diagnostic pop
+				m_fout2.close();
 		}
 
 #ifdef _WIN32
@@ -666,14 +670,14 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	// Used character: U+00B7 (Middle Dot)
 	switch (msg.sev)
 	{
-	case level::always:  text = u8"·A "; break;
-	case level::fatal:   text = u8"·F "; break;
-	case level::error:   text = u8"·E "; break;
-	case level::todo:    text = u8"·U "; break;
-	case level::success: text = u8"·S "; break;
-	case level::warning: text = u8"·W "; break;
-	case level::notice:  text = u8"·! "; break;
-	case level::trace:   text = u8"·T "; break;
+	case level::always:  text = reinterpret_cast<const char*>(u8"·A "); break;
+	case level::fatal:   text = reinterpret_cast<const char*>(u8"·F "); break;
+	case level::error:   text = reinterpret_cast<const char*>(u8"·E "); break;
+	case level::todo:    text = reinterpret_cast<const char*>(u8"·U "); break;
+	case level::success: text = reinterpret_cast<const char*>(u8"·S "); break;
+	case level::warning: text = reinterpret_cast<const char*>(u8"·W "); break;
+	case level::notice:  text = reinterpret_cast<const char*>(u8"·! "); break;
+	case level::trace:   text = reinterpret_cast<const char*>(u8"·T "); break;
 	}
 
 	// Print µs timestamp

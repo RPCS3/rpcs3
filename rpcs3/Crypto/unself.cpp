@@ -832,7 +832,10 @@ std::vector<fs::file> SCEDecrypter::MakeFile()
 			strm.avail_out = BUFSIZE;
 			strm.next_in = data_buf.get()+data_buf_offset;
 			strm.next_out = tempbuf;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 			int ret = inflateInit(&strm);
+#pragma GCC diagnostic pop
 
 			while (strm.avail_in)
 			{

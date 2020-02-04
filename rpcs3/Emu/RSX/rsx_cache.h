@@ -427,8 +427,7 @@ namespace rsx
 
 		std::string get_message(u32 index, u32 processed, u32 entry_count)
 		{
-			const char* text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
-			return fmt::format(text, processed, entry_count);
+			return fmt::format("%s pipeline object %u of %u", index == 0 ? "Loading" : "Compiling", processed, entry_count);
 		};
 
 		void load_shaders(uint nb_workers, unpacked_type& unpacked, std::string& directory_path, std::vector<fs::dir_entry>& entries, u32 entry_count,

@@ -346,8 +346,8 @@ namespace rsx
 			m_cache_update_tag = rsx::get_shared_tag();
 		}
 
-		template <typename... Args>
-		void emit_once(bool error, const char* fmt, const Args&... params)
+		template <typename CharT, std::size_t N, typename... Args>
+		void emit_once(bool error, const CharT(&fmt)[N], const Args&... params)
 		{
 			const auto result = m_once_only_messages_set.emplace(fmt::format(fmt, params...));
 			if (!result.second)
@@ -359,14 +359,14 @@ namespace rsx
 				rsx_log.warning("%s", *result.first);
 		}
 
-		template <typename... Args>
-		void err_once(const char* fmt, const Args&... params)
+		template <typename CharT, std::size_t N, typename... Args>
+		void err_once(const CharT(&fmt)[N], const Args&... params)
 		{
 			emit_once(true, fmt, params...);
 		}
 
-		template <typename... Args>
-		void warn_once(const char* fmt, const Args&... params)
+		template <typename CharT, std::size_t N, typename... Args>
+		void warn_once(const CharT(&fmt)[N], const Args&... params)
 		{
 			emit_once(false, fmt, params...);
 		}
