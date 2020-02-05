@@ -824,11 +824,13 @@ namespace gl
 			if (src_transform)
 			{
 				src_transform->run(&g_typeless_transfer_buffer, job_length);
+				glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_PIXEL_BUFFER_BARRIER_BIT);
 			}
 
 			if (dst_transform)
 			{
 				dst_transform->run(&g_typeless_transfer_buffer, job_length);
+				glMemoryBarrier(GL_PIXEL_BUFFER_BARRIER_BIT);
 			}
 
 			// NOTE: glBindBufferRange also binds the buffer to the old-school target.
@@ -841,7 +843,7 @@ namespace gl
 		}
 
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
-		dst->copy_from(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), dst_region, unpack_settings);
+		dst->copy_from(nullptr, static_cast<texture::format>(unpack_info.format), static_cast<texture::type>(unpack_info.type), dst_region, unpack_settings);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 	}
 
