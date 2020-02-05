@@ -427,9 +427,9 @@ struct cfg_root : cfg::node
 		cfg::_int<10, 3000> clocks_scale{this, "Clocks scale", 100, true}; // Changing this from 100 (percentage) may affect game speed in unexpected ways
 		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{this, "Sleep Timers Accuracy",
 #ifdef __linux__
-		sleep_timers_accuracy_level::_as_host};
+		sleep_timers_accuracy_level::_as_host, true};
 #else
-		sleep_timers_accuracy_level::_usleep};
+		sleep_timers_accuracy_level::_usleep, true};
 #endif
 	} core{this};
 
