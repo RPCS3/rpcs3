@@ -2537,7 +2537,7 @@ namespace rsx
 		m_queued_flip.push(buffer);
 		m_queued_flip.skip_frame = skip_current_frame;
 
-		if (LIKELY(!forced))
+		if (!forced) [[likely]]
 		{
 			if (!g_cfg.video.disable_FIFO_reordering)
 			{
@@ -3258,7 +3258,7 @@ namespace rsx
 			{
 				if (!(flags & sync_no_notify))
 				{
-					if (UNLIKELY(query->sync_tag > m_sync_tag))
+					if (query->sync_tag > m_sync_tag) [[unlikely]]
 					{
 						ptimer->sync_hint(FIFO_hint::hint_zcull_sync, query);
 						verify(HERE), m_sync_tag >= query->sync_tag;
@@ -3279,7 +3279,7 @@ namespace rsx
 
 			for (auto It = m_pending_writes.crbegin(); It != m_pending_writes.crend(); ++It)
 			{
-				if (UNLIKELY(stat_id))
+				if (stat_id) [[unlikely]]
 				{
 					if (It->counter_tag != stat_id)
 					{

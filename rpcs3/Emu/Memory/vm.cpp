@@ -96,17 +96,17 @@ namespace vm
 
 	void passive_lock(cpu_thread& cpu)
 	{
-		if (UNLIKELY(g_tls_locked && *g_tls_locked == &cpu))
+		if (g_tls_locked && *g_tls_locked == &cpu) [[unlikely]]
 		{
 			return;
 		}
 
-		if (LIKELY(g_mutex.is_lockable()))
+		if (g_mutex.is_lockable()) [[likely]]
 		{
 			// Optimistic path (hope that mutex is not exclusively locked)
 			_register_lock(&cpu);
 
-			if (LIKELY(g_mutex.is_lockable()))
+			if (g_mutex.is_lockable()) [[likely]]
 			{
 				return;
 			}
@@ -127,12 +127,12 @@ namespace vm
 
 		atomic_t<u64>* _ret;
 
-		if (LIKELY(test_addr(g_addr_lock.load(), addr, end)))
+		if (test_addr(g_addr_lock.load(), addr, end)) [[likely]]
 		{
 			// Optimistic path (hope that address range is not locked)
 			_ret = _register_range_lock(u64{end} << 32 | addr);
 
-			if (LIKELY(test_addr(g_addr_lock.load(), addr, end)))
+			if (test_addr(g_addr_lock.load(), addr, end)) [[likely]]
 			{
 				return _ret;
 			}
@@ -304,7 +304,7 @@ namespace vm
 	{
 		for (u64 i = 0;; i++)
 		{
-			if (LIKELY(!res.bts(0)))
+			if (!res.bts(0)) [[likely]]
 			{
 				break;
 			}
@@ -527,7 +527,7 @@ namespace vm
 
 		for (u32 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max; i++)
 		{
-			if (UNLIKELY((g_pages[i].flags & flags) != flags))
+			if ((g_pages[i].flags & flags) != flags) [[unlikely]]
 			{
 				return false;
 			}

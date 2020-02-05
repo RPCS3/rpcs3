@@ -1335,7 +1335,7 @@ namespace rsx
 
 		image_view_type create_temporary_subresource(commandbuffer_type &cmd, deferred_subresource& desc)
 		{
-			if (LIKELY(!desc.do_not_cache))
+			if (!desc.do_not_cache) [[likely]]
 			{
 				const auto found = m_temporary_subresource_cache.equal_range(desc.address);
 				for (auto It = found.first; It != found.second; ++It)
@@ -1431,9 +1431,9 @@ namespace rsx
 			}
 			}
 
-			if (LIKELY(result))
+			if (result) [[likely]]
 			{
-				if (LIKELY(!desc.do_not_cache))
+				if (!desc.do_not_cache) [[likely]]
 				{
 					m_temporary_subresource_cache.insert({ desc.address,{ desc, result } });
 				}
@@ -1485,7 +1485,7 @@ namespace rsx
 			rsx::texture_dimension_extended extended_dimension,
 			surface_store_type& m_rtts, Args&& ... extras)
 		{
-			if (LIKELY(options.is_compressed_format))
+			if (options.is_compressed_format) [[likely]]
 			{
 				// Most mesh textures are stored as compressed to make the most of the limited memory
 				if (auto cached_texture = find_texture_from_dimensions(attr.address, attr.gcm_format, attr.width, attr.height, attr.depth))
@@ -1496,7 +1496,7 @@ namespace rsx
 			else
 			{
 				// Fast lookup for cyclic reference
-				if (UNLIKELY(m_rtts.address_is_bound(attr.address)))
+				if (m_rtts.address_is_bound(attr.address)) [[unlikely]]
 				{
 					if (auto texptr = m_rtts.get_surface_at(attr.address);
 						helpers::check_framebuffer_resource(texptr, attr, extended_dimension))
@@ -1598,7 +1598,7 @@ namespace rsx
 				if (!overlapping_fbos.empty() || !overlapping_locals.empty())
 				{
 					int _pool = -1;
-					if (LIKELY(overlapping_locals.empty()))
+					if (overlapping_locals.empty()) [[likely]]
 					{
 						_pool = 0;
 					}
@@ -1728,7 +1728,7 @@ namespace rsx
 			u8 subsurface_count;
 			size2f scale{ 1.f, 1.f };
 
-			if (LIKELY(!is_swizzled))
+			if (!is_swizzled) [[likely]]
 			{
 				if (attributes.pitch = tex.pitch(); !attributes.pitch)
 				{
@@ -1799,7 +1799,7 @@ namespace rsx
 
 			if (result.validate())
 			{
-				if (UNLIKELY(!result.image_handle))
+				if (!result.image_handle) [[unlikely]]
 				{
 					// Deferred reconstruct
 					result.external_subresource_desc.cache_range = lookup_range;
@@ -1831,7 +1831,7 @@ namespace rsx
 				std::vector<copy_region_descriptor> sections;
 				const bool use_upscaling = (result.upload_context == rsx::texture_upload_context::framebuffer_storage && g_cfg.video.resolution_scale_percent != 100);
 
-				if (UNLIKELY(!helpers::append_mipmap_level(sections, result, attributes, 0, use_upscaling, attributes)))
+				if (!helpers::append_mipmap_level(sections, result, attributes, 0, use_upscaling, attributes)) [[unlikely]]
 				{
 					// Abort if mip0 is not compatible
 					return result;
@@ -1868,7 +1868,7 @@ namespace rsx
 					}
 				}
 
-				if (UNLIKELY(sections.size() == 1))
+				if (sections.size() == 1) [[unlikely]]
 				{
 					return result;
 				}
@@ -1973,7 +1973,7 @@ namespace rsx
 					}
 				}
 
-				if (UNLIKELY((src_h + src.offset_y) > src.height))
+				if ((src_h + src.offset_y) > src.height) [[unlikely]]
 				{
 					// TODO: Special case that needs wrapping around (custom blit)
 					rsx_log.error("Transfer cropped in Y, src_h=%d, offset_y=%d, block_h=%d", src_h, src.offset_y, src.height);
@@ -1982,7 +1982,7 @@ namespace rsx
 					dst_h = u16(src_h * scale_y + 0.000001f);
 				}
 
-				if (UNLIKELY((src_w + src.offset_x) > src.width))
+				if ((src_w + src.offset_x) > src.width) [[unlikely]]
 				{
 					// TODO: Special case that needs wrapping around (custom blit)
 					rsx_log.error("Transfer cropped in X, src_w=%d, offset_x=%d, block_w=%d", src_w, src.offset_x, src.width);
@@ -2086,7 +2086,7 @@ namespace rsx
 				const auto bpp = surf->get_bpp();
 				const bool typeless = (bpp != src_bpp || is_format_convert);
 
-				if (LIKELY(!typeless))
+				if (!typeless) [[likely]]
 				{
 					// Use format as-is
 					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, src_subres.is_depth);
@@ -2162,7 +2162,7 @@ namespace rsx
 				const auto bpp = dst_subres.surface->get_bpp();
 				const bool typeless = (bpp != dst_bpp || is_format_convert);
 
-				if (LIKELY(!typeless))
+				if (!typeless) [[likely]]
 				{
 					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, dst_subres.is_depth);
 				}
@@ -2194,7 +2194,7 @@ namespace rsx
 				{
 					dst_dimensions.height = std::max(src_subres.surface->get_surface_height(rsx::surface_metrics::samples), dst.height);
 				}
-				else if (LIKELY(dst_dimensions.width == 1280 || dst_dimensions.width == 2560))
+				else if (dst_dimensions.width == 1280 || dst_dimensions.width == 2560) [[likely]]
 				{
 					// Optimizations table based on common width/height pairings. If we guess wrong, the upload resolver will fix it anyway
 					// TODO: Add more entries based on empirical data
@@ -2258,7 +2258,7 @@ namespace rsx
 						continue;
 					}
 
-					if (UNLIKELY(skip_if_collision_exists))
+					if (skip_if_collision_exists) [[unlikely]]
 					{
 						if (surface->get_context() != texture_upload_context::blit_engine_dst)
 						{
@@ -2338,7 +2338,7 @@ namespace rsx
 						}
 					}
 
-					if (LIKELY(cached_dest))
+					if (cached_dest) [[likely]]
 					{
 						typeless_info.dst_gcm_format = cached_dest->get_gcm_format();
 						dst_is_depth_surface = cached_dest->is_depth_texture();
@@ -2445,7 +2445,7 @@ namespace rsx
 					u16 image_width = full_width;
 					u16 image_height = src.height;
 
-					if (LIKELY(dst.scale_x > 0.f && dst.scale_y > 0.f))
+					if (dst.scale_x > 0.f && dst.scale_y > 0.f) [[likely]]
 					{
 						// Loading full image from the corner address
 						// Translate src_area into the declared block
@@ -2566,7 +2566,7 @@ namespace rsx
 				// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
 				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
 
-				if (LIKELY(use_null_region))
+				if (use_null_region) [[likely]]
 				{
 					bool force_dma_load = false;
 					if ((dst_w * dst_bpp) != dst.pitch)

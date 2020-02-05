@@ -32,7 +32,7 @@ namespace vm
 	{
 		auto& res = vm::reservation_acquire(addr, size);
 
-		if (UNLIKELY(res.bts(0)))
+		if (res.bts(0)) [[unlikely]]
 		{
 			reservation_lock_internal(res);
 		}

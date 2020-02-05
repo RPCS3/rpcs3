@@ -1148,7 +1148,7 @@ void spu_thread::cpu_task()
 	{
 		while (true)
 		{
-			if (UNLIKELY(state))
+			if (state) [[unlikely]]
 			{
 				if (check_state())
 					break;
@@ -1173,7 +1173,7 @@ void spu_thread::cpu_task()
 
 		while (true)
 		{
-			if (UNLIKELY(state))
+			if (state) [[unlikely]]
 			{
 				if (check_state())
 					break;
@@ -1335,7 +1335,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		std::swap(dst, src);
 	}
 
-	if (UNLIKELY(!g_use_rtm && (!is_get || g_cfg.core.spu_accurate_putlluc)))
+	if (!g_use_rtm && (!is_get || g_cfg.core.spu_accurate_putlluc)) [[unlikely]]
 	{
 		switch (u32 size = args.size)
 		{
@@ -1466,7 +1466,7 @@ bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 {
 	const u32 mask = utils::rol32(1, args.tag);
 
-	if (UNLIKELY(mfc_barrier & mask || (args.cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK) && mfc_fence & mask)))
+	if (mfc_barrier & mask || (args.cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK) && mfc_fence & mask)) [[unlikely]]
 	{
 		// Check for special value combination (normally impossible)
 		if (false)
@@ -1585,7 +1585,7 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 
 		args.eal += 8;
 
-		if (UNLIKELY(items[index].sb & 0x8000))
+		if (items[index].sb & 0x8000) [[unlikely]]
 		{
 			ch_stall_mask |= utils::rol32(1, args.tag);
 
@@ -1624,7 +1624,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	const auto& to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
 
 	// Store unconditionally
-	if (LIKELY(g_use_rtm))
+	if (g_use_rtm) [[likely]]
 	{
 		const u32 result = spu_putlluc_tx(addr, to_write.data(), this);
 
@@ -1781,7 +1781,7 @@ u32 spu_thread::get_mfc_completed()
 bool spu_thread::process_mfc_cmd()
 {
 	// Stall infinitely if MFC queue is full
-	while (UNLIKELY(mfc_size >= 16))
+	while (mfc_size >= 16) [[unlikely]]
 	{
 		state += cpu_flag::wait;
 
@@ -1829,7 +1829,7 @@ bool spu_thread::process_mfc_cmd()
 			}
 		}
 
-		if (LIKELY(g_use_rtm && !g_cfg.core.spu_accurate_getllar && raddr != addr))
+		if (g_use_rtm && !g_cfg.core.spu_accurate_getllar && raddr != addr) [[likely]]
 		{
 			// TODO: maybe always start from a transaction
 			ntime = spu_getll_inexact(addr, dst.data());
@@ -1918,7 +1918,7 @@ bool spu_thread::process_mfc_cmd()
 		{
 			const auto& to_write = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 
-			if (LIKELY(g_use_rtm))
+			if (g_use_rtm) [[likely]]
 			{
 				result = spu_putllc_tx(addr, rtime, rdata.data(), to_write.data());
 
@@ -2021,7 +2021,7 @@ bool spu_thread::process_mfc_cmd()
 	{
 		const u32 mask = utils::rol32(1, ch_mfc_cmd.tag);
 
-		if (UNLIKELY((mfc_barrier | mfc_fence) & mask))
+		if ((mfc_barrier | mfc_fence) & mask) [[unlikely]]
 		{
 			mfc_queue[mfc_size++] = ch_mfc_cmd;
 			mfc_fence |= mask;
@@ -2054,9 +2054,9 @@ bool spu_thread::process_mfc_cmd()
 	case MFC_GETB_CMD:
 	case MFC_GETF_CMD:
 	{
-		if (LIKELY(ch_mfc_cmd.size <= 0x4000))
+		if (ch_mfc_cmd.size <= 0x4000) [[likely]]
 		{
-			if (LIKELY(do_dma_check(ch_mfc_cmd)))
+			if (do_dma_check(ch_mfc_cmd)) [[likely]]
 			{
 				if (ch_mfc_cmd.size)
 				{
@@ -2089,14 +2089,14 @@ bool spu_thread::process_mfc_cmd()
 	case MFC_GETLB_CMD:
 	case MFC_GETLF_CMD:
 	{
-		if (LIKELY(ch_mfc_cmd.size <= 0x4000))
+		if (ch_mfc_cmd.size <= 0x4000) [[likely]]
 		{
 			auto& cmd = mfc_queue[mfc_size];
 			cmd = ch_mfc_cmd;
 
-			if (LIKELY(do_dma_check(cmd)))
+			if (do_dma_check(cmd)) [[likely]]
 			{
-				if (LIKELY(!cmd.size || do_list_transfer(cmd)))
+				if (!cmd.size || do_list_transfer(cmd)) [[likely]]
 				{
 					return true;
 				}
