@@ -113,9 +113,8 @@ namespace spu
 		std::array<std::atomic<u8>, 65536> atomic_instruction_table = {};
 		constexpr u32 native_jiffy_duration_us = 1500; //About 1ms resolution with a half offset
 
-		void acquire_pc_address(spu_thread& spu, u32 pc, u32 timeout_ms = 3)
+		void acquire_pc_address(spu_thread& spu, u32 pc, u32 timeout_ms, u32 max_concurrent_instructions)
 		{
-			const u32 max_concurrent_instructions = g_cfg.core.preferred_spu_threads;
 			const u32 pc_offset = pc >> 2;
 
 			if (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
@@ -173,9 +172,9 @@ namespace spu
 			concurrent_execution_watchdog(spu_thread& spu)
 				:pc(spu.pc)
 			{
-				if (g_cfg.core.preferred_spu_threads > 0)
+				if (const u32 max_concurrent_instructions = g_cfg.core.preferred_spu_threads)
 				{
-					acquire_pc_address(spu, pc, g_cfg.core.spu_delay_penalty);
+					acquire_pc_address(spu, pc, g_cfg.core.spu_delay_penalty, max_concurrent_instructions);
 					active = true;
 				}
 			}
