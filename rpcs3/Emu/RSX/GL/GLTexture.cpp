@@ -458,7 +458,6 @@ namespace gl
 	void fill_texture(rsx::texture_dimension_extended dim, u16 mipmap_count, int format, u16 width, u16 height, u16 depth,
 			const std::vector<rsx_subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
 	{
-		int mip_level = 0;
 		texture_uploader_capabilities caps{ true, false, false, 4 };
 
 		pixel_unpack_settings unpack_settings;
@@ -471,38 +470,37 @@ namespace gl
 			unpack_settings.row_length(align(width, 4));
 			unpack_settings.apply();
 
+			const GLsizei format_block_size = (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16;
+
 			for (const rsx_subresource_layout& layout : input_layouts)
 			{
 				upload_texture_subresource(staging_buffer, layout, format, is_swizzled, caps);
+				const sizei image_size{ align(layout.width_in_texel, 4), align(layout.height_in_texel, 4) };
 
 				switch (dim)
 				{
 				case rsx::texture_dimension_extended::texture_dimension_1d:
 				{
-					u32 size = layout.width_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					glCompressedTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block * 4, gl_format, size, staging_buffer.data());
+					const GLsizei size = layout.width_in_block * format_block_size;
+					glCompressedTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, image_size.width, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case rsx::texture_dimension_extended::texture_dimension_2d:
 				{
-					u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					glCompressedTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, gl_format, size, staging_buffer.data());
+					const GLsizei size = layout.width_in_block * layout.height_in_block * format_block_size;
+					glCompressedTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, image_size.width, image_size.height, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case rsx::texture_dimension_extended::texture_dimension_cubemap:
 				{
-					// Note : input_layouts size is get_exact_mipmap_count() for non cubemap texture, and 6 * get_exact_mipmap_count() for cubemap
-					// Thus for non cubemap texture, mip_level / mipmap_per_layer will always be rounded to 0.
-					// mip_level % mipmap_per_layer will always be equal to mip_level
-					u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, gl_format, size, staging_buffer.data());
-					mip_level++;
+					const GLsizei size = layout.width_in_block * layout.height_in_block * format_block_size;
+					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, image_size.width, image_size.height, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case rsx::texture_dimension_extended::texture_dimension_3d:
 				{
-					u32 size = layout.width_in_block * layout.height_in_block * layout.depth * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					glCompressedTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, layout.depth, gl_format, size, staging_buffer.data());
+					const GLsizei size = layout.width_in_block * layout.height_in_block * layout.depth * format_block_size;
+					glCompressedTexSubImage3D(GL_TEXTURE_3D, layout.level, 0, 0, 0, image_size.width, image_size.height, layout.depth, gl_format, size, staging_buffer.data());
 					break;
 				}
 				default:
@@ -552,20 +550,16 @@ namespace gl
 				switch (dim)
 				{
 				case rsx::texture_dimension_extended::texture_dimension_1d:
-					glTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block, gl_format, gl_type, staging_buffer.data());
+					glTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, layout.width_in_texel, gl_format, gl_type, staging_buffer.data());
 					break;
 				case rsx::texture_dimension_extended::texture_dimension_2d:
-					glTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block, layout.height_in_block, gl_format, gl_type, staging_buffer.data());
+					glTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, gl_type, staging_buffer.data());
 					break;
 				case rsx::texture_dimension_extended::texture_dimension_cubemap:
-					// Note : input_layouts size is get_exact_mipmap_count() for non cubemap texture, and 6 * get_exact_mipmap_count() for cubemap
-					// Thus for non cubemap texture, mip_level / mipmap_per_layer will always be rounded to 0.
-					// mip_level % mipmap_per_layer will always be equal to mip_level
-					glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block, layout.height_in_block, gl_format, gl_type, staging_buffer.data());
-					mip_level++;
+					glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, gl_type, staging_buffer.data());
 					break;
 				case rsx::texture_dimension_extended::texture_dimension_3d:
-					glTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block, layout.height_in_block, depth, gl_format, gl_type, staging_buffer.data());
+					glTexSubImage3D(GL_TEXTURE_3D, layout.layer, 0, 0, 0, layout.width_in_texel, layout.height_in_texel, depth, gl_format, gl_type, staging_buffer.data());
 					break;
 				default:
 					ASSUME(0);
