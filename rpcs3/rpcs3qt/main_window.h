@@ -74,6 +74,7 @@ public:
 	QIcon GetAppIcon();
 
 Q_SIGNALS:
+	void RequestLanguageChange(const QString& language);
 	void RequestGlobalStylesheetChange(const QString& sheetFilePath);
 	void RequestTrophyManagerRepaint();
 	void NotifyEmuSettingsChange();
@@ -86,7 +87,7 @@ public Q_SLOTS:
 	void OnEmuReady();
 
 	void RepaintGui();
-	void RetranslateUI();
+	void RetranslateUI(const QStringList& language_codes, const QString& language);
 
 private Q_SLOTS:
 	void OnPlayOrPause();
@@ -131,6 +132,9 @@ private:
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
 	void BootRecentAction(const QAction* act);
 	void AddRecentAction(const q_string_pair& entry);
+
+	void UpdateLanguageActions(const QStringList& language_codes, const QString& language);
+
 	void RemoveDiskCache();
 
 	q_pair_list m_rg_entries;
