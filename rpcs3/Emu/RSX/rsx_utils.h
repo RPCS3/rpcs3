@@ -1112,7 +1112,7 @@ namespace rsx
 
 		void start()
 		{
-			if (UNLIKELY(enabled))
+			if (enabled) [[unlikely]]
 			{
 				last = steady_clock::now();
 			}
@@ -1120,7 +1120,7 @@ namespace rsx
 
 		s64 duration()
 		{
-			if (LIKELY(!enabled))
+			if (!enabled) [[likely]]
 			{
 				return 0ll;
 			}

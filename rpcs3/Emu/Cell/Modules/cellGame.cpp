@@ -133,16 +133,23 @@ struct content_permission final
 
 	~content_permission()
 	{
+		bool success = false;
+		fs::g_tls_error = fs::error::ok;
+
 		try
 		{
-			if (temp.size() > 1)
+			if (temp.size() <= 1 || fs::remove_all(temp))
 			{
-				fs::remove_all(temp);
+				success = true;
 			}
 		}
 		catch (...)
 		{
-			cellGame.fatal("Failed to clean directory '%s'", temp);
+		}
+
+		if (!success)
+		{
+			cellGame.fatal("Failed to clean directory '%s' (%s)", temp, fs::g_tls_error);
 		}
 	}
 };
@@ -751,6 +758,12 @@ error_code cellGameGetParamInt(s32 id, vm::ptr<s32> value)
 	}
 	}
 
+	if (!prm->sfo.count(key))
+	{
+		// TODO: Check if special values need to be set here
+		cellGame.warning("cellGameGetParamInt(): id=%d was not found", id);
+	}
+
 	*value = psf::get_integer(prm->sfo, key, 0);
 	return CELL_OK;
 }
@@ -837,10 +850,23 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
 
-	std::string value = psf::get_string(prm->sfo, std::string(key.name));
-	value.resize(bufsize - 1);
+	const std::string value = psf::get_string(prm->sfo, std::string(key.name));
+	const auto value_size = value.size() + 1;
 
-	std::memcpy(buf.get_ptr(), value.c_str(), bufsize);
+	if (value.empty() && !prm->sfo.count(std::string(key.name)))
+	{
+		// TODO: Check if special values need to be set here
+		cellGame.warning("cellGameGetParamString(): id=%d was not found", id);
+	}
+
+	const auto pbuf = buf.get_ptr();
+	const bool to_pad = bufsize > value_size;
+	std::memcpy(pbuf, value.c_str(), to_pad ? value_size : bufsize);
+
+	if (to_pad)
+	{
+		std::memset(pbuf + value_size, 0, bufsize - value_size);
+	}
 
 	return CELL_OK;
 }

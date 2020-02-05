@@ -330,7 +330,7 @@ namespace stx
 				{
 					// Return data if reference count became zero
 					pdata->m_ref_count = cb::c_ref_init;
-					return unique_data(pdata);
+					return unique_data<T>(pdata);
 				}
 			}
 

@@ -455,11 +455,14 @@ public:
 			backend_traits::validate_pipeline_properties(vertex_program, fragment_program, pipelineProperties);
 			pipeline_key key = { vertex_program.id, fragment_program.id, pipelineProperties };
 
-			const auto I = m_storage.find(key);
-			if (I != m_storage.end())
 			{
-				m_cache_miss_flag = false;
-				return I->second;
+				reader_lock lock(m_pipeline_mutex);
+				const auto I = m_storage.find(key);
+				if (I != m_storage.end())
+				{
+					m_cache_miss_flag = false;
+					return I->second;
+				}
 			}
 
 			if (allow_async)

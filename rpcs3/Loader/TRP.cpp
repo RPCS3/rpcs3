@@ -4,7 +4,7 @@
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
 
-LOG_CHANNEL(trp_log);
+LOG_CHANNEL(trp_log, "Trophy");
 
 TRPLoader::TRPLoader(const fs::file& f)
 	: trp_f(f)

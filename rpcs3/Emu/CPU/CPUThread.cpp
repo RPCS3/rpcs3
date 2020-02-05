@@ -322,27 +322,23 @@ void cpu_thread::operator()()
 
 	for (u32 i = 0;; i = (i + 1) % ::size32(g_cpu_array_bits))
 	{
-		if (LIKELY(~g_cpu_array_bits[i]))
+		const auto [bits, ok] = g_cpu_array_bits[i].fetch_op([](u64& bits) -> u64
 		{
-			const u64 found = g_cpu_array_bits[i].atomic_op([](u64& bits) -> u64
+			if (~bits) [[likely]]
 			{
-				// Find empty array slot and set its bit
-				if (LIKELY(~bits))
-				{
-					const u64 bit = utils::cnttz64(~bits, true);
-					bits |= 1ull << bit;
-					return bit;
-				}
-
-				return 64;
-			});
-
-			if (LIKELY(found < 64))
-			{
-				// Fixup
-				array_slot = i * 64 + found;
-				break;
+				// Set lowest clear bit
+				bits |= bits + 1;
+				return true;
 			}
+
+			return false;
+		});
+
+		if (ok) [[likely]]
+		{
+			// Get actual slot number
+			array_slot = i * 64 + utils::cnttz64(~bits, false);
+			break;
 		}
 	}
 
@@ -575,7 +571,7 @@ cpu_thread::suspend_all::suspend_all(cpu_thread* _this) noexcept
 			}
 		});
 
-		if (LIKELY(ok))
+		if (ok) [[likely]]
 		{
 			break;
 		}

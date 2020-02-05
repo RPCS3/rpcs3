@@ -39,7 +39,7 @@ namespace rsx
 			}
 			else
 			{
-				if (u32 put = m_ctrl->put; LIKELY((put & 3) == 0))
+				if (u32 put = m_ctrl->put; (put & 3) == 0) [[likely]]
 				{
 					return put;
 				}
@@ -145,7 +145,7 @@ namespace rsx
 				return;
 			}
 
-			if (UNLIKELY(m_cmd & RSX_METHOD_NON_METHOD_CMD_MASK))
+			if (m_cmd & RSX_METHOD_NON_METHOD_CMD_MASK) [[unlikely]]
 			{
 				if ((m_cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD ||
 					(m_cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD ||
@@ -164,7 +164,7 @@ namespace rsx
 
 			// Validate the args ptr if the command attempts to read from it
 			m_args_ptr = RSXIOMem.RealAddr(m_internal_get + 4);
-			if (UNLIKELY(!m_args_ptr))
+			if (!m_args_ptr) [[unlikely]]
 			{
 				// Optional recovery
 				data.reg = FIFO_ERROR;
@@ -283,7 +283,7 @@ namespace rsx
 				if (command.value)
 				{
 					// This is a BEGIN call
-					if (LIKELY(!deferred_primitive))
+					if (!deferred_primitive) [[likely]]
 					{
 						// New primitive block
 						deferred_primitive = command.value;
@@ -322,9 +322,9 @@ namespace rsx
 			}
 			default:
 			{
-				if (UNLIKELY(draw_count))
+				if (draw_count) [[unlikely]]
 				{
-					if (UNLIKELY(m_register_properties[reg] & register_props::always_ignore))
+					if (m_register_properties[reg] & register_props::always_ignore) [[unlikely]]
 					{
 						// Always ignore
 						command.reg = FIFO_DISABLED_COMMAND;
@@ -364,7 +364,7 @@ namespace rsx
 		fifo_ctrl->read(command);
 		const auto cmd = command.reg;
 
-		if (UNLIKELY(cmd & (0xffff0000 | RSX_METHOD_NON_METHOD_CMD_MASK)))
+		if (cmd & (0xffff0000 | RSX_METHOD_NON_METHOD_CMD_MASK)) [[unlikely]]
 		{
 			// Check for special FIFO commands
 			switch (cmd)
@@ -496,7 +496,7 @@ namespace rsx
 
 		do
 		{
-			if (UNLIKELY(capture_current_frame))
+			if (capture_current_frame) [[unlikely]]
 			{
 				const u32 reg = (command.reg & 0xfffc) >> 2;
 				const u32 value = command.value;
@@ -526,7 +526,7 @@ namespace rsx
 				}
 			}
 
-			if (UNLIKELY(m_flattener.is_enabled()))
+			if (m_flattener.is_enabled()) [[unlikely]]
 			{
 				switch(m_flattener.test(command))
 				{

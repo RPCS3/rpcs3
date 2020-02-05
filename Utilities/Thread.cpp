@@ -2203,7 +2203,10 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 
 		if (shifted & 1)
 		{
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 			CPU_SET(core, &cs);
+#pragma GCC diagnostic pop
 		}
 
 		if (shifted <= 1)

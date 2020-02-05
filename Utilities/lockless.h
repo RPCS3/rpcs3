@@ -22,7 +22,7 @@ public:
 
 	~lf_array()
 	{
-		for (auto ptr = m_next.raw(); UNLIKELY(ptr);)
+		for (auto ptr = m_next.raw(); ptr;)
 		{
 			delete std::exchange(ptr, std::exchange(ptr->m_next.raw(), nullptr));
 		}
@@ -30,14 +30,14 @@ public:
 
 	T& operator [](std::size_t index)
 	{
-		if (LIKELY(index < N))
+		if (index < N) [[likely]]
 		{
 			return m_data[index];
 		}
-		else if (UNLIKELY(!m_next))
+		else if (!m_next) [[unlikely]]
 		{
 			// Create new array block. It's not a full-fledged once-synchronization, unlikely needed.
-			for (auto _new = new lf_array, ptr = this; UNLIKELY(ptr);)
+			for (auto _new = new lf_array, ptr = this; ptr;)
 			{
 				// Install the pointer. If failed, go deeper.
 				ptr = ptr->m_next.compare_and_swap(nullptr, _new);
@@ -121,7 +121,7 @@ public:
 	// Access element (added implicitly)
 	T& operator [](const K& key)
 	{
-		if (UNLIKELY(key == K{}))
+		if (key == K{}) [[unlikely]]
 		{
 			return m_default_key_data;
 		}
@@ -133,7 +133,7 @@ public:
 			auto& pair = m_data[pos];
 
 			// Check the key value (optimistic)
-			if (LIKELY(pair.key == key) || pair.key.compare_and_swap_test(K{}, key))
+			if (pair.key == key || pair.key.compare_and_swap_test(K{}, key)) [[likely]]
 			{
 				return pair.value;
 			}

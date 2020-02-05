@@ -569,7 +569,7 @@ namespace rsx
 		template <typename T>
 		void transform_samples_to_pixels(area_base<T>& area)
 		{
-			if (LIKELY(spp == 1)) return;
+			if (spp == 1) [[likely]] return;
 
 			area.x1 /= samples_x;
 			area.x2 /= samples_x;
@@ -580,7 +580,7 @@ namespace rsx
 		template <typename T>
 		void transform_pixels_to_samples(area_base<T>& area)
 		{
-			if (LIKELY(spp == 1)) return;
+			if (spp == 1) [[likely]] return;
 
 			area.x1 *= samples_x;
 			area.x2 *= samples_x;
@@ -591,7 +591,7 @@ namespace rsx
 		template <typename T>
 		void transform_samples_to_pixels(T& x1, T& x2, T& y1, T& y2)
 		{
-			if (LIKELY(spp == 1)) return;
+			if (spp == 1) [[likely]] return;
 
 			x1 /= samples_x;
 			x2 /= samples_x;
@@ -602,7 +602,7 @@ namespace rsx
 		template <typename T>
 		void transform_pixels_to_samples(T& x1, T& x2, T& y1, T& y2)
 		{
-			if (LIKELY(spp == 1)) return;
+			if (spp == 1) [[likely]] return;
 
 			x1 *= samples_x;
 			x2 *= samples_x;

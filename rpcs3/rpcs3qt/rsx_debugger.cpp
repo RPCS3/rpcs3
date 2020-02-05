@@ -868,7 +868,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 		break;
 
 		case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
-			DISASM(args[0] ? "Depth bounds test: Enable" : "Depth bounds test: Disable");
+			DISASM("Depth bounds test: %s", args[0] ? "Enable" : "Disable");
 		break;
 		default:
 		{

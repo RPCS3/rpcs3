@@ -743,7 +743,7 @@ public:
 			{
 				std::invoke(func, _new);
 
-				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				if (atomic_storage<type>::compare_exchange(m_data, old, _new)) [[likely]]
 				{
 					return old;
 				}
@@ -752,7 +752,7 @@ public:
 			{
 				RT ret = std::invoke(func, _new);
 
-				if (LIKELY(!ret || atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				if (!ret || atomic_storage<type>::compare_exchange(m_data, old, _new)) [[likely]]
 				{
 					return {old, std::move(ret)};
 				}
@@ -774,7 +774,7 @@ public:
 			{
 				std::invoke(func, _new);
 
-				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				if (atomic_storage<type>::compare_exchange(m_data, old, _new)) [[likely]]
 				{
 					return;
 				}
@@ -783,7 +783,7 @@ public:
 			{
 				RT result = std::invoke(func, _new);
 
-				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				if (atomic_storage<type>::compare_exchange(m_data, old, _new)) [[likely]]
 				{
 					return result;
 				}
@@ -1095,7 +1095,7 @@ public:
 
 			_new -= 1;
 
-			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+			if (atomic_storage<type>::compare_exchange(m_data, old, _new)) [[likely]]
 			{
 				return true;
 			}
@@ -1118,7 +1118,7 @@ public:
 
 			_new += 1;
 
-			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+			if (atomic_storage<type>::compare_exchange(m_data, old, _new)) [[likely]]
 			{
 				return true;
 			}
@@ -1231,7 +1231,7 @@ public:
 
 	void lock()
 	{
-		while (UNLIKELY(m_data.bts(BitWidth)))
+		while (m_data.bts(BitWidth)) [[unlikely]]
 		{
 			type old_val = m_data.load();
 
@@ -1258,7 +1258,7 @@ public:
 	{
 		type old_val = m_data.load();
 
-		while (UNLIKELY(is_locked(old_val)))
+		while (is_locked(old_val)) [[unlikely]]
 		{
 			m_data.wait(old_val);
 			old_val = m_data.load();
@@ -1271,7 +1271,7 @@ public:
 	{
 		type old_val = m_data.load();
 
-		while (UNLIKELY(is_locked(old_val) || !m_data.compare_and_swap_test(old_val, clamp_value(reinterpret_cast<type>(value)))))
+		while (is_locked(old_val) || !m_data.compare_and_swap_test(old_val, clamp_value(reinterpret_cast<type>(value)))) [[unlikely]]
 		{
 			m_data.wait(old_val);
 			old_val = m_data.load();
@@ -1286,7 +1286,7 @@ public:
 
 		while (true)
 		{
-			if (UNLIKELY(is_locked(old.m_data)))
+			if (is_locked(old.m_data)) [[unlikely]]
 			{
 				m_data.wait(old.m_data);
 				old.m_data = m_data.load();
@@ -1299,7 +1299,7 @@ public:
 			{
 				std::invoke(func, reinterpret_cast<T&>(_new));
 
-				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old.m_data, clamp_value(_new.m_data))))
+				if (atomic_storage<type>::compare_exchange(m_data, old.m_data, clamp_value(_new.m_data))) [[likely]]
 				{
 					return;
 				}
@@ -1308,7 +1308,7 @@ public:
 			{
 				RT result = std::invoke(func, reinterpret_cast<T&>(_new));
 
-				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old.m_data, clamp_value(_new.m_data))))
+				if (atomic_storage<type>::compare_exchange(m_data, old.m_data, clamp_value(_new.m_data))) [[likely]]
 				{
 					return result;
 				}

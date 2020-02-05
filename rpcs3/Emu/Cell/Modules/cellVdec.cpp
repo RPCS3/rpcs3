@@ -4,6 +4,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "sysPrxForUser.h"
 
 #ifdef _MSC_VER
@@ -430,25 +431,141 @@ static void vdecEntry(ppu_thread& ppu, u32 vid)
 	ppu.state += cpu_flag::exit;
 }
 
-static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0 */, vm::ptr<CellVdecAttr> attr)
+static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0 */, CellVdecAttr* attr)
 {
-	if (!attr)
-	{
-		return CELL_VDEC_ERROR_ARG;
-	}
+	// Write 0 at start
+	attr->memSize = 0;
 
-	switch (type) // TODO: check profile levels
+	u32 decoderVerLower;
+	u32 memSize = 0;
+
+	const bool new_sdk = g_ps3_process_info.sdk_ver > 0x20FFFF;
+
+	switch (type)
 	{
-	case CELL_VDEC_CODEC_TYPE_AVC: cellVdec.warning("cellVdecQueryAttr: AVC (profile=%d)", profile); break;
-	case CELL_VDEC_CODEC_TYPE_MPEG2: cellVdec.warning("cellVdecQueryAttr: MPEG2 (profile=%d)", profile); break;
-	case CELL_VDEC_CODEC_TYPE_DIVX: cellVdec.warning("cellVdecQueryAttr: DivX (profile=%d)", profile); break;
+	case CELL_VDEC_CODEC_TYPE_AVC:
+	{
+		cellVdec.warning("cellVdecQueryAttr: AVC (profile=%d)", profile);
+
+		const vm::ptr<CellVdecAvcSpecificInfo> sinfo = vm::cast(spec_addr);
+
+		// TODO: sinfo
+
+		switch (profile)
+		{
+		case CELL_VDEC_AVC_LEVEL_1P0: memSize = new_sdk ? 0x70167D  : 0xA014FD ; break;
+		case CELL_VDEC_AVC_LEVEL_1P1: memSize = new_sdk ? 0x86CB7D  : 0xB6C9FD ; break;
+		case CELL_VDEC_AVC_LEVEL_1P2: memSize = new_sdk ? 0x9E307D  : 0xCE2D7D ; break;
+		case CELL_VDEC_AVC_LEVEL_1P3: memSize = new_sdk ? 0xA057FD  : 0xD054FD ; break;
+		case CELL_VDEC_AVC_LEVEL_2P0: memSize = new_sdk ? 0xA057FD  : 0xD054FD ; break;
+		case CELL_VDEC_AVC_LEVEL_2P1: memSize = new_sdk ? 0xE90DFD  : 0x1190AFD; break;
+		case CELL_VDEC_AVC_LEVEL_2P2: memSize = new_sdk ? 0x14E49FD : 0x17E46FD; break;
+		case CELL_VDEC_AVC_LEVEL_3P0: memSize = new_sdk ? 0x155B5FD : 0x185B17D; break;
+		case CELL_VDEC_AVC_LEVEL_3P1: memSize = new_sdk ? 0x1CD327D : 0x1FD2AFD; break;
+		case CELL_VDEC_AVC_LEVEL_3P2: memSize = new_sdk ? 0x2397B7D : 0x2696F7D; break;
+		case CELL_VDEC_AVC_LEVEL_4P0: memSize = new_sdk ? 0x33A5FFD : 0x36A527D; break;
+		case CELL_VDEC_AVC_LEVEL_4P1: memSize = new_sdk ? 0x33A5FFD : 0x36A527D; break;
+		case CELL_VDEC_AVC_LEVEL_4P2: memSize = new_sdk ? 0x33A5FFD : 0x36A527D; break;
+		default: return CELL_VDEC_ERROR_ARG;
+		}
+
+		decoderVerLower = 0x11300;
+		break;
+	}
+	case CELL_VDEC_CODEC_TYPE_MPEG2:
+	{
+		cellVdec.warning("cellVdecQueryAttr: MPEG2 (profile=%d)", profile);
+
+		const vm::ptr<CellVdecMpeg2SpecificInfo> sinfo = vm::cast(spec_addr);
+
+		if (sinfo)
+		{
+			if (sinfo->thisSize != sizeof(CellVdecMpeg2SpecificInfo))
+			{
+				return CELL_VDEC_ERROR_ARG;
+			}
+		}
+
+		// TODO: sinfo
+
+		const u32 maxDecH = sinfo ? +sinfo->maxDecodedFrameHeight : 0;
+		const u32 maxDecW = sinfo ? +sinfo->maxDecodedFrameWidth : 0;
+
+		switch (profile)
+		{
+		case CELL_VDEC_MPEG2_MP_LL:
+		{
+			if (maxDecW > 352 || maxDecH > 288)
+			{
+				return CELL_VDEC_ERROR_ARG;
+			}
+
+			memSize = new_sdk ? 0x11290B : 0x2A610B;
+			break;
+		}
+		case CELL_VDEC_MPEG2_MP_ML:
+		{
+			if (maxDecW > 720 || maxDecH > 576)
+			{
+				return CELL_VDEC_ERROR_ARG;
+			}
+
+			memSize = new_sdk ? 0x2DFB8B : 0x47110B;
+			break;
+		}
+		case CELL_VDEC_MPEG2_MP_H14:
+		{
+			if (maxDecW > 1440 || maxDecH > 1152)
+			{
+				return CELL_VDEC_ERROR_ARG;
+			}
+
+			memSize = new_sdk ? 0xA0270B : 0xB8F90B;
+			break;
+		}
+		case CELL_VDEC_MPEG2_MP_HL:
+		{
+			if (maxDecW > 1920 || maxDecH > 1152)
+			{
+				return CELL_VDEC_ERROR_ARG;
+			}
+	
+			memSize = new_sdk ? 0xD2F40B : 0xEB990B;
+			break;
+		}
+		default: return CELL_VDEC_ERROR_ARG;
+		}
+
+		decoderVerLower = 0x1030000;
+		break;
+	}
+	case CELL_VDEC_CODEC_TYPE_DIVX:
+	{
+		cellVdec.warning("cellVdecQueryAttr: DivX (profile=%d)", profile);
+
+		const vm::ptr<CellVdecDivxSpecificInfo2> sinfo = vm::cast(spec_addr);
+
+		// TODO: sinfo
+
+		switch (profile)
+		{
+		case CELL_VDEC_DIVX_QMOBILE     : memSize = new_sdk ? 0x11B720 : 0x1DEF30; break;
+		case CELL_VDEC_DIVX_MOBILE      : memSize = new_sdk ? 0x19A740 : 0x26DED0; break;
+		case CELL_VDEC_DIVX_HOME_THEATER: memSize = new_sdk ? 0x386A60 : 0x498060; break;
+		case CELL_VDEC_DIVX_HD_720      : memSize = new_sdk ? 0x692070 : 0x805690; break;
+		case CELL_VDEC_DIVX_HD_1080     : memSize = new_sdk ? 0xD78100 : 0xFC9870; break;
+		default: return CELL_VDEC_ERROR_ARG;
+		}
+
+		decoderVerLower = 0x30806;
+		break;
+	}
 	default: return CELL_VDEC_ERROR_ARG;
 	}
 
-	// TODO: check values
-	attr->decoderVerLower = 0x280000; // from dmux
-	attr->decoderVerUpper = 0x260000;
-	attr->memSize = 4 * 1024 * 1024; // 4 MB
+	attr->decoderVerLower = decoderVerLower;
+	attr->decoderVerUpper = 0x4840010;
+	attr->memSize = !spec_addr ? verify(HERE, memSize) : 4 * 1024 * 1024;
 	attr->cmdDepth = 4;
 	return CELL_OK;
 }
@@ -462,7 +579,7 @@ error_code cellVdecQueryAttr(vm::cptr<CellVdecType> type, vm::ptr<CellVdecAttr> 
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	return vdecQueryAttr(type->codecType, type->profileLevel, 0, attr);
+	return vdecQueryAttr(type->codecType, type->profileLevel, 0, attr.get_ptr());
 }
 
 error_code cellVdecQueryAttrEx(vm::cptr<CellVdecTypeEx> type, vm::ptr<CellVdecAttr> attr)
@@ -474,7 +591,7 @@ error_code cellVdecQueryAttrEx(vm::cptr<CellVdecTypeEx> type, vm::ptr<CellVdecAt
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	return vdecQueryAttr(type->codecType, type->profileLevel, type->codecSpecificInfo_addr, attr);
+	return vdecQueryAttr(type->codecType, type->profileLevel, type->codecSpecificInfo_addr, attr.get_ptr());
 }
 
 template <typename T, typename U>
@@ -485,8 +602,22 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	if (u32(res->ppuThreadPriority) > 3071 || u32(res->spuThreadPriority) > 255 || res->ppuThreadStackSize < 4096
-		|| u32(type->codecType) > 0xd)
+	if (res->ppuThreadPriority + 0u > 3071 || res->spuThreadPriority + 0u > 255 || res->ppuThreadStackSize < 4096
+		|| type->codecType + 0u > 0xd)
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
+	u32 spec_addr = 0;
+
+	if constexpr (std::is_same_v<std::decay_t<typename T::type>, CellVdecTypeEx>)
+	{
+		spec_addr = type->codecSpecificInfo_addr;
+	}
+
+	if (CellVdecAttr attr{};
+		vdecQueryAttr(type->codecType, type->profileLevel, spec_addr, &attr) != CELL_OK ||
+		attr.memSize > res->memSize)
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
@@ -769,11 +900,18 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 
 	// TODO: return CELL_VDEC_ERROR_SEQ
 
+	struct all_info_t
+	{
+		CellVdecPicItem picItem;
+		std::aligned_union_t<0, CellVdecAvcInfo, CellVdecDivxInfo, CellVdecMpeg2Info> picInfo;
+	};
+
 	AVFrame* frame{};
 	u64 pts;
 	u64 dts;
 	u64 usrd;
 	u32 frc;
+	vm::ptr<CellVdecPicItem> info;
 	{
 		std::lock_guard lock(vdec->mutex);
 
@@ -787,6 +925,17 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 				dts = picture.dts;
 				usrd = picture.userdata;
 				frc = picture.frc;
+				info.set(vdec->mem_addr + vdec->mem_bias);
+
+				constexpr u64 size_needed = sizeof(all_info_t);
+
+				if (vdec->mem_bias + size_needed >= vdec->mem_size / size_needed * size_needed)
+				{
+					vdec->mem_bias = 0;
+					break;
+				}
+
+				vdec->mem_bias += size_needed;
 				break;
 			}
 		}
@@ -796,14 +945,6 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	{
 		// If frame is empty info was not found
 		return CELL_VDEC_ERROR_EMPTY;
-	}
-
-	const vm::ptr<CellVdecPicItem> info = vm::cast(vdec->mem_addr + vdec->mem_bias);
-
-	vdec->mem_bias += 512;
-	if (vdec->mem_bias + 512 > vdec->mem_size)
-	{
-		vdec->mem_bias = 0;
 	}
 
 	info->codecType = vdec->type;
@@ -824,11 +965,13 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	info->auUserData[1] = 0;
 	info->status = CELL_OK;
 	info->attr = CELL_VDEC_PICITEM_ATTR_NORMAL;
-	info->picInfo_addr = info.addr() + u32{sizeof(CellVdecPicItem)};
+
+	const vm::addr_t picinfo_addr{info.addr() + ::offset32(&all_info_t::picInfo)};
+	info->picInfo_addr = picinfo_addr;
 
 	if (vdec->type == CELL_VDEC_CODEC_TYPE_AVC)
 	{
-		const vm::ptr<CellVdecAvcInfo> avc = vm::cast(info.addr() + u32{sizeof(CellVdecPicItem)});
+		const vm::ptr<CellVdecAvcInfo> avc = picinfo_addr;
 
 		avc->horizontalSize = frame->width;
 		avc->verticalSize = frame->height;
@@ -884,7 +1027,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	}
 	else if (vdec->type == CELL_VDEC_CODEC_TYPE_DIVX)
 	{
-		const vm::ptr<CellVdecDivxInfo> dvx = vm::cast(info.addr() + u32{sizeof(CellVdecPicItem)});
+		const vm::ptr<CellVdecDivxInfo> dvx = picinfo_addr;
 
 		switch (s32 pct = frame->pict_type)
 		{
@@ -920,7 +1063,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	}
 	else if (vdec->type == CELL_VDEC_CODEC_TYPE_MPEG2)
 	{
-		const vm::ptr<CellVdecMpeg2Info> mp2 = vm::cast(info.addr() + u32{sizeof(CellVdecPicItem)});
+		const vm::ptr<CellVdecMpeg2Info> mp2 = picinfo_addr;
 
 		std::memset(mp2.get_ptr(), 0, sizeof(CellVdecMpeg2Info));
 		mp2->horizontal_size = frame->width;

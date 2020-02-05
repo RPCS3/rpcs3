@@ -61,21 +61,42 @@ namespace logs
 		// The lowest logging level enabled for this channel (used for early filtering)
 		std::atomic<level> enabled;
 
-		// Initialize and register channel
-		channel(const char* name);
+		// Initialize channel
+		constexpr channel(const char* name) noexcept
+			: name(name)
+			, enabled(level::notice)
+		{
+		}
+
+	private:
+#if __cpp_char8_t >= 201811
+		using char2 = char8_t;
+#else
+		using char2 = uchar;
+#endif
 
 #define GEN_LOG_METHOD(_sev)\
 		const message msg_##_sev{this, level::_sev};\
 		template <std::size_t N, typename... Args>\
 		void _sev(const char(&fmt)[N], const Args&... args)\
 		{\
-			if (UNLIKELY(level::_sev <= enabled.load(std::memory_order_relaxed)))\
+			if (level::_sev <= enabled.load(std::memory_order_relaxed)) [[unlikely]]\
 			{\
 				static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
 				msg_##_sev.broadcast(fmt, type_list, u64{fmt_unveil<Args>::get(args)}...);\
 			}\
-		}
+		}\
+		template <std::size_t N, typename... Args>\
+		void _sev(const char2(&fmt)[N], const Args&... args)\
+		{\
+			if (level::_sev <= enabled.load(std::memory_order_relaxed)) [[unlikely]]\
+			{\
+				static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
+				msg_##_sev.broadcast(reinterpret_cast<const char*>(+fmt), type_list, u64{fmt_unveil<Args>::get(args)}...);\
+			}\
+		}\
 
+	public:
 		GEN_LOG_METHOD(fatal)
 		GEN_LOG_METHOD(error)
 		GEN_LOG_METHOD(todo)
@@ -85,6 +106,11 @@ namespace logs
 		GEN_LOG_METHOD(trace)
 
 #undef GEN_LOG_METHOD
+	};
+
+	struct registerer
+	{
+		registerer(channel& _ch);
 	};
 
 	// Log level control: set all channels to level::notice
@@ -115,6 +141,13 @@ namespace logs
 	}
 }
 
-#define LOG_CHANNEL(ch, ...) inline ::logs::channel ch(::logs::make_channel_name(#ch, ##__VA_ARGS__))
+#if __cpp_constinit >= 201907
+#define LOG_CONSTINIT constinit
+#else
+#define LOG_CONSTINIT
+#endif
+
+#define LOG_CHANNEL(ch, ...) LOG_CONSTINIT inline ::logs::channel ch(::logs::make_channel_name(#ch, ##__VA_ARGS__)); \
+	namespace logs { inline ::logs::registerer reg_##ch{ch}; }
 
 LOG_CHANNEL(rsx_log, "RSX");

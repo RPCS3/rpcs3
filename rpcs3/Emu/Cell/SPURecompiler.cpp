@@ -1172,7 +1172,7 @@ void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip) tr
 
 	while (true)
 	{
-		if (UNLIKELY(spu.state))
+		if (spu.state) [[unlikely]]
 		{
 			if (spu.check_state())
 				break;
@@ -4701,7 +4701,7 @@ public:
 		// Basic optimizations
 		pm.add(createEarlyCSEPass());
 		pm.add(createCFGSimplificationPass());
-		pm.add(createNewGVNPass());
+		//pm.add(createNewGVNPass());
 		pm.add(createDeadStoreEliminationPass());
 		pm.add(createLICMPass());
 		pm.add(createAggressiveDCEPass());

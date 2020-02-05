@@ -256,7 +256,7 @@ private:
 	bool CreatePPUCache(const game_info& game);
 
 	QString GetLastPlayedBySerial(const QString& serial);
-	QString GetPlayTimeBySerial(const QString& serial);
+	QString GetPlayTimeByMs(int elapsed_ms);
 	std::string GetCacheDirBySerial(const std::string& serial);
 	std::string GetDataDirBySerial(const std::string& serial);
 	std::string CurrentSelectionIconPath();
