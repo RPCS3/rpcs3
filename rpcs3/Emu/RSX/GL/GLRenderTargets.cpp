@@ -377,7 +377,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			const bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
 				!!g_cfg.video.write_color_buffers;
 
-			if (LIKELY(!lock))
+			if (!lock) [[likely]]
 			{
 				m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface->get_memory_range());
 				continue;

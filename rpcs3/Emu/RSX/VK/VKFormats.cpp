@@ -443,7 +443,7 @@ namespace vk
 
 	bool formats_are_bitcast_compatible(VkFormat format1, VkFormat format2)
 	{
-		if (LIKELY(format1 == format2))
+		if (format1 == format2) [[likely]]
 		{
 			return true;
 		}

@@ -408,7 +408,7 @@ public:
 	{
 		const auto found = find_id<T, Get>(id);
 
-		if (UNLIKELY(found == nullptr))
+		if (found == nullptr) [[unlikely]]
 		{
 			return nullptr;
 		}
@@ -424,7 +424,7 @@ public:
 
 		const auto found = find_id<T, Get>(id);
 
-		if (UNLIKELY(found == nullptr))
+		if (found == nullptr) [[unlikely]]
 		{
 			return nullptr;
 		}
@@ -440,7 +440,7 @@ public:
 
 		const auto found = find_id<T, Get>(id);
 
-		if (UNLIKELY(found == nullptr))
+		if (found == nullptr) [[unlikely]]
 		{
 			return {nullptr};
 		}

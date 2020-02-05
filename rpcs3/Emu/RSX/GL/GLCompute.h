@@ -85,7 +85,7 @@ namespace gl
         void run(u32 num_invocations)
         {
 			u32 invocations_x, invocations_y;
-			if (LIKELY(num_invocations <= max_invocations_x))
+			if (num_invocations <= max_invocations_x) [[likely]]
 			{
 				invocations_x = num_invocations;
 				invocations_y = 1;

@@ -533,13 +533,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (image_to_flip)
 	{
-		if (UNLIKELY(!g_cfg.video.full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f)))
+		if (!g_cfg.video.full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f)) [[unlikely]]
 		{
 			calibration_src = dynamic_cast<vk::viewable_image*>(image_to_flip);
 			verify("Image handle not viewable!" HERE), calibration_src;
 		}
 
-		if (LIKELY(!calibration_src))
+		if (!calibration_src) [[likely]]
 		{
 			vk::copy_scaled_image(*m_current_command_buffer, image_to_flip->value, target_image, image_to_flip->current_layout, target_layout,
 				{ 0, 0, static_cast<s32>(buffer_width), static_cast<s32>(buffer_height) }, aspect_ratio, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);

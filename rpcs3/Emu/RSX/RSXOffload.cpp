@@ -139,7 +139,7 @@ namespace rsx
 
 	bool dma_manager::sync()
 	{
-		if (LIKELY(m_enqueued_count.load() == m_processed_count))
+		if (m_enqueued_count.load() == m_processed_count) [[likely]]
 		{
 			// Nothing to do
 			return true;

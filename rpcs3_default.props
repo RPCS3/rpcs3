@@ -19,7 +19,7 @@
       <SDLCheck>false</SDLCheck>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <AdditionalOptions>/Zc:throwingNew -d2FH4- %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/std:c++latest /Zc:throwingNew -d2FH4- %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>xxhash.lib;ws2_32.lib;Bcrypt.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib</AdditionalDependencies>

@@ -464,7 +464,7 @@ namespace gl
 		pixel_unpack_settings unpack_settings;
 		unpack_settings.row_length(0).alignment(4);
 
-		if (LIKELY(is_compressed_format(format)))
+		if (is_compressed_format(format)) [[likely]]
 		{
 			caps.supports_vtc_decoding = gl::get_driver_caps().vendor_NVIDIA;
 
@@ -709,7 +709,7 @@ namespace gl
 
 	bool formats_are_bitcast_compatible(GLenum format1, GLenum format2)
 	{
-		if (LIKELY(format1 == format2))
+		if (format1 == format2) [[likely]]
 		{
 			return true;
 		}
@@ -738,7 +738,7 @@ namespace gl
 	cs_shuffle_base* get_pixel_transform_job(const pixel_buffer_layout& pack_info)
 	{
 		const bool is_depth_stencil = (pack_info.type == GL_UNSIGNED_INT_24_8);
-		if (LIKELY(!is_depth_stencil))
+		if (!is_depth_stencil) [[likely]]
 		{
 			if (!pack_info.swap_bytes)
 			{
@@ -791,7 +791,7 @@ namespace gl
 		// Start pack operation
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
 
-		if (LIKELY(caps.ARB_compute_shader_supported))
+		if (caps.ARB_compute_shader_supported) [[likely]]
 		{
 			// Raw copy
 			src->copy_to(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_region, {});
@@ -808,7 +808,7 @@ namespace gl
 		// Start unpack operation
 		pixel_unpack_settings unpack_settings{};
 
-		if (LIKELY(caps.ARB_compute_shader_supported))
+		if (caps.ARB_compute_shader_supported) [[likely]]
 		{
 			auto src_transform = get_pixel_transform_job(pack_info);
 			auto dst_transform = get_pixel_transform_job(unpack_info);
