@@ -7,10 +7,12 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Utilities/File.h"
 
+struct lv2_memory_container;
+
 enum : s32
 {
 	SYS_SPU_THREAD_GROUP_TYPE_NORMAL                = 0x00,
-	SYS_SPU_THREAD_GROUP_TYPE_SEQUENTIAL            = 0x01,
+	//SYS_SPU_THREAD_GROUP_TYPE_SEQUENTIAL            = 0x01, doesn't exist
 	SYS_SPU_THREAD_GROUP_TYPE_SYSTEM                = 0x02,
 	SYS_SPU_THREAD_GROUP_TYPE_MEMORY_FROM_CONTAINER = 0x04,
 	SYS_SPU_THREAD_GROUP_TYPE_NON_CONTEXT           = 0x08,
@@ -239,8 +241,10 @@ struct lv2_spu_group
 	const std::string name;
 	const u32 id;
 	const u32 max_num;
+	const u32 mem_size;
 	const s32 type; // SPU Thread Group Type
-	const u32 ct; // Memory Container Id
+	lv2_memory_container* const ct; // Memory Container
+	const bool has_scheduler_context;
 	u32 max_run;
 
 	shared_mutex mutex;
@@ -264,15 +268,17 @@ struct lv2_spu_group
 	std::weak_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
 	std::weak_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
 
-	lv2_spu_group(std::string name, u32 num, s32 prio, s32 type, u32 ct)
+	lv2_spu_group(std::string name, u32 num, s32 prio, s32 type, lv2_memory_container* ct, bool uses_scheduler, u32 mem_size)
 		: id(idm::last_id())
 		, name(name)
 		, max_num(num)
 		, max_run(num)
+		, mem_size(mem_size)
 		, init(0)
 		, prio(prio)
 		, type(type)
 		, ct(ct)
+		, has_scheduler_context(uses_scheduler)
 		, run_state(SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
 		, exit_status(0)
 		, join_state(0)
