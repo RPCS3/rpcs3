@@ -248,13 +248,13 @@ bool gdb_thread::try_read_cmd(gdb_cmd& out_cmd)
 {
 	char c = read_char();
 	//interrupt
-	if (UNLIKELY(c == 0x03)) {
+	if (c == 0x03) [[unlikely]] {
 		out_cmd.cmd = '\x03';
 		out_cmd.data = "";
 		out_cmd.checksum = 0;
 		return true;
 	}
-	if (UNLIKELY(c != '$')) {
+	if (c != '$') [[unlikely]] {
 		//gdb starts conversation with + for some reason
 		if (c == '+') {
 			c = read_char();
@@ -370,10 +370,9 @@ bool gdb_thread::send_cmd_ack(const std::string& cmd)
 	while (true) {
 		send_cmd(cmd);
 		char c = read_char();
-		if (LIKELY(c == '+')) {
+		if (c == '+') [[likely]]
 			return true;
-		}
-		if (UNLIKELY(c != '-')) {
+		if (c != '-') [[unlikely]] {
 			GDB.error("Wrong acknowledge character received: '%c'.", c);
 			return false;
 		}
@@ -384,7 +383,7 @@ bool gdb_thread::send_cmd_ack(const std::string& cmd)
 u8 gdb_thread::append_encoded_char(char c, std::string& str)
 {
 	u8 checksum = 0;
-	if (UNLIKELY((c == '#') || (c == '$') || (c == '}'))) {
+	if ((c == '#') || (c == '$') || (c == '}')) [[unlikely]] {
 		str += '}';
 		c ^= 0x20;
 		checksum = '}';

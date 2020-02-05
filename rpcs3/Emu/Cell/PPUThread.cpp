@@ -214,7 +214,7 @@ void ppu_recompiler_fallback(ppu_thread& ppu)
 	{
 		// Run instructions in interpreter
 		if (const u32 op = *reinterpret_cast<u32*>(cache + u64{ppu.cia} * 2 + 4);
-			LIKELY(table[ppu_decode(op)](ppu, { op })))
+			table[ppu_decode(op)](ppu, { op })) [[likely]]
 		{
 			ppu.cia += 4;
 			continue;
@@ -645,7 +645,7 @@ void ppu_thread::exec_task()
 			return reinterpret_cast<func_t>(op & 0xffffffff)(*this, {static_cast<u32>(op >> 32)});
 		};
 
-		if (cia % 8 || UNLIKELY(state))
+		if (cia % 8 || state) [[unlikely]]
 		{
 			if (test_stopped()) return;
 
@@ -667,23 +667,23 @@ void ppu_thread::exec_task()
 			op3 = _op1._u64[1];
 		}
 
-		while (LIKELY(exec_op(op0)))
+		while (exec_op(op0)) [[likely]]
 		{
 			cia += 4;
 
-			if (LIKELY(exec_op(op1)))
+			if (exec_op(op1)) [[likely]]
 			{
 				cia += 4;
 
-				if (LIKELY(exec_op(op2)))
+				if (exec_op(op2)) [[likely]]
 				{
 					cia += 4;
 
-					if (LIKELY(exec_op(op3)))
+					if (exec_op(op3)) [[likely]]
 					{
 						cia += 4;
 
-						if (UNLIKELY(state))
+						if (state) [[unlikely]]
 						{
 							break;
 						}
@@ -792,7 +792,7 @@ cmd64 ppu_thread::cmd_wait()
 {
 	while (true)
 	{
-		if (UNLIKELY(state))
+		if (state) [[unlikely]]
 		{
 			if (is_stopped())
 			{
@@ -978,14 +978,14 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	u64 count = 0;
 
-	while (LIKELY(g_use_rtm))
+	while (g_use_rtm) [[likely]]
 	{
 		ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & -128;
 		ppu.rdata = data;
 
-		if (LIKELY((vm::reservation_acquire(addr, sizeof(T)) & -128) == ppu.rtime))
+		if ((vm::reservation_acquire(addr, sizeof(T)) & -128) == ppu.rtime) [[likely]]
 		{
-			if (UNLIKELY(count >= 10))
+			if (count >= 10) [[unlikely]]
 			{
 				ppu_log.error("%s took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
 			}
@@ -1001,11 +1001,11 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
 
-	if (LIKELY((ppu.rtime & 127) == 0))
+	if ((ppu.rtime & 127) == 0) [[likely]]
 	{
 		ppu.rdata = data;
 
-		if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+		if (vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime) [[likely]]
 		{
 			return static_cast<T>(ppu.rdata << data_off >> size_off);
 		}
@@ -1017,11 +1017,11 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 	{
 		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
 
-		if (LIKELY((ppu.rtime & 127) == 0))
+		if ((ppu.rtime & 127) == 0) [[likely]]
 		{
 			ppu.rdata = data;
 
-			if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+			if (vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime) [[likely]]
 			{
 				break;
 			}
@@ -1108,7 +1108,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		return false;
 	}
 
-	if (LIKELY(g_use_rtm))
+	if (g_use_rtm) [[likely]]
 	{
 		switch (ppu_stwcx_tx(addr, ppu.rtime, old_data, reg_value))
 		{
@@ -1224,7 +1224,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}
 
-	if (LIKELY(g_use_rtm))
+	if (g_use_rtm) [[likely]]
 	{
 		switch (ppu_stdcx_tx(addr, ppu.rtime, old_data, reg_value))
 		{

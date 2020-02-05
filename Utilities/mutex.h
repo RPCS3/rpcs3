@@ -45,7 +45,7 @@ public:
 	{
 		const u32 value = m_value.load();
 
-		if (UNLIKELY(value >= c_one - 1 || !m_value.compare_and_swap_test(value, value + 1)))
+		if (value >= c_one - 1 || !m_value.compare_and_swap_test(value, value + 1)) [[unlikely]]
 		{
 			imp_lock_shared(value);
 		}
@@ -55,10 +55,10 @@ public:
 	{
 		const u32 value = m_value.load();
 
-		if (LIKELY(value < c_one - 1))
+		if (value < c_one - 1) [[likely]]
 		{
 			u32 old = value;
-			if (LIKELY(atomic_storage<u32>::compare_exchange_hle_acq(m_value.raw(), old, value + 1)))
+			if (atomic_storage<u32>::compare_exchange_hle_acq(m_value.raw(), old, value + 1)) [[likely]]
 			{
 				return;
 			}
@@ -72,7 +72,7 @@ public:
 		// Unconditional decrement (can result in broken state)
 		const u32 value = m_value.fetch_sub(1);
 
-		if (UNLIKELY(value >= c_one))
+		if (value >= c_one) [[unlikely]]
 		{
 			imp_unlock_shared(value);
 		}
@@ -82,7 +82,7 @@ public:
 	{
 		const u32 value = atomic_storage<u32>::fetch_add_hle_rel(m_value.raw(), -1);
 
-		if (UNLIKELY(value >= c_one))
+		if (value >= c_one) [[unlikely]]
 		{
 			imp_unlock_shared(value);
 		}
@@ -100,7 +100,7 @@ public:
 	{
 		const u32 value = m_value.load();
 
-		if (UNLIKELY(value >= c_vip - 1 || !m_value.compare_and_swap_test(value, value + 1)))
+		if (value >= c_vip - 1 || !m_value.compare_and_swap_test(value, value + 1)) [[unlikely]]
 		{
 			imp_lock_low(value);
 		}
@@ -111,7 +111,7 @@ public:
 		// Unconditional decrement (can result in broken state)
 		const u32 value = m_value.fetch_sub(1);
 
-		if (UNLIKELY(value >= c_one))
+		if (value >= c_one) [[unlikely]]
 		{
 			imp_unlock_low(value);
 		}
@@ -129,7 +129,7 @@ public:
 	{
 		const u32 value = m_value.load();
 
-		if (UNLIKELY((value >= c_one - 1 && !(value & (c_one - c_vip))) || (value % c_vip) || !m_value.compare_and_swap_test(value, value + c_vip)))
+		if ((value >= c_one - 1 && !(value & (c_one - c_vip))) || (value % c_vip) || !m_value.compare_and_swap_test(value, value + c_vip)) [[unlikely]]
 		{
 			imp_lock_vip(value);
 		}
@@ -140,7 +140,7 @@ public:
 		// Unconditional decrement (can result in broken state)
 		const u32 value = m_value.fetch_sub(c_vip);
 
-		if (UNLIKELY(value >= c_one))
+		if (value >= c_one) [[unlikely]]
 		{
 			imp_unlock_vip(value);
 		}
@@ -155,7 +155,7 @@ public:
 	{
 		const u32 value = m_value.compare_and_swap(0, c_one);
 
-		if (UNLIKELY(value))
+		if (value) [[unlikely]]
 		{
 			imp_lock(value);
 		}
@@ -165,7 +165,7 @@ public:
 	{
 		u32 value = 0;
 
-		if (UNLIKELY(!atomic_storage<u32>::compare_exchange_hle_acq(m_value.raw(), value, c_one)))
+		if (!atomic_storage<u32>::compare_exchange_hle_acq(m_value.raw(), value, c_one)) [[unlikely]]
 		{
 			imp_lock(value);
 		}
@@ -176,7 +176,7 @@ public:
 		// Unconditional decrement (can result in broken state)
 		const u32 value = m_value.fetch_sub(c_one);
 
-		if (UNLIKELY(value != c_one))
+		if (value != c_one) [[unlikely]]
 		{
 			imp_unlock(value);
 		}
@@ -186,7 +186,7 @@ public:
 	{
 		const u32 value = atomic_storage<u32>::fetch_add_hle_rel(m_value.raw(), 0u - c_one);
 
-		if (UNLIKELY(value != c_one))
+		if (value != c_one) [[unlikely]]
 		{
 			imp_unlock(value);
 		}
@@ -202,7 +202,7 @@ public:
 
 	void lock_upgrade()
 	{
-		if (UNLIKELY(!try_lock_upgrade()))
+		if (!try_lock_upgrade()) [[unlikely]]
 		{
 			imp_lock_upgrade();
 		}
@@ -223,7 +223,7 @@ public:
 	// Optimized wait for lockability without locking, relaxed
 	void lock_unlock()
 	{
-		if (UNLIKELY(m_value != 0))
+		if (m_value != 0) [[unlikely]]
 		{
 			imp_lock_unlock();
 		}

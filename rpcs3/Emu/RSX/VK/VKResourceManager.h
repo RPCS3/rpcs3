@@ -72,7 +72,7 @@ namespace vk
 			}
 			else
 			{
-				if (LIKELY(value >= 0.f))
+				if (value >= 0.f) [[likely]]
 				{
 					return raw;
 				}

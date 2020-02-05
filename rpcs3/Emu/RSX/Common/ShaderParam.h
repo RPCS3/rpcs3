@@ -282,12 +282,12 @@ public:
 		const auto this_size = get_vector_size();
 		const auto other_size = other.get_vector_size();
 
-		if (LIKELY(this_size == other_size))
+		if (this_size == other_size) [[likely]]
 		{
 			return other_var;
 		}
 
-		if (LIKELY(this_size < other_size))
+		if (this_size < other_size) [[likely]]
 		{
 			switch (this_size)
 			{

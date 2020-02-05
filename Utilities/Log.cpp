@@ -589,7 +589,7 @@ void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
 			const u64 v1 = v >> 24;
 			const u64 v2 = v & 0xffffff;
 
-			if (UNLIKELY(v2 + size > 0xffffff || v1 + v2 + size >= m_out + s_log_size))
+			if (v2 + size > 0xffffff || v1 + v2 + size >= m_out + s_log_size) [[unlikely]]
 			{
 				bufv = v;
 				return nullptr;
@@ -599,7 +599,7 @@ void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
 			return m_fptr + (v1 + v2) % s_log_size;
 		});
 
-		if (UNLIKELY(!pos))
+		if (!pos) [[unlikely]]
 		{
 			if ((bufv & 0xffffff) + size > 0xffffff || bufv & 0xffffff)
 			{

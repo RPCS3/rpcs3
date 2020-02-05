@@ -45,7 +45,7 @@ static u8* add_jit_memory(std::size_t size, uint align)
 	// Select subrange
 	u8* pointer = get_jit_memory() + Off;
 
-	if (UNLIKELY(!size && !align))
+	if (!size && !align) [[unlikely]]
 	{
 		// Return subrange info
 		return pointer;
@@ -59,7 +59,7 @@ static u8* add_jit_memory(std::size_t size, uint align)
 		const u64 _pos = ::align(ctr & 0xffff'ffff, align);
 		const u64 _new = ::align(_pos + size, align);
 
-		if (UNLIKELY(_new > 0x40000000))
+		if (_new > 0x40000000) [[unlikely]]
 		{
 			// Sorry, we failed, and further attempts should fail too.
 			ctr |= 0x40000000;
@@ -71,7 +71,7 @@ static u8* add_jit_memory(std::size_t size, uint align)
 		newa = olda;
 
 		// Check the necessity to commit more memory
-		if (UNLIKELY(_new > olda))
+		if (_new > olda) [[unlikely]]
 		{
 			newa = ::align(_new, 0x100000);
 		}
@@ -80,13 +80,13 @@ static u8* add_jit_memory(std::size_t size, uint align)
 		return _pos;
 	});
 
-	if (UNLIKELY(pos == -1))
+	if (pos == -1) [[unlikely]]
 	{
 		jit_log.warning("JIT: Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
 		return nullptr;
 	}
 
-	if (UNLIKELY(olda != newa))
+	if (olda != newa) [[unlikely]]
 	{
 #ifdef CAN_OVERCOMMIT
 		madvise(pointer + olda, newa - olda, MADV_WILLNEED);
@@ -119,21 +119,21 @@ jit_runtime::~jit_runtime()
 asmjit::Error jit_runtime::_add(void** dst, asmjit::CodeHolder* code) noexcept
 {
 	std::size_t codeSize = code->getCodeSize();
-	if (UNLIKELY(!codeSize))
+	if (!codeSize) [[unlikely]]
 	{
 		*dst = nullptr;
 		return asmjit::kErrorNoCodeGenerated;
 	}
 
 	void* p = jit_runtime::alloc(codeSize, 16);
-	if (UNLIKELY(!p))
+	if (!p) [[unlikely]]
 	{
 		*dst = nullptr;
 		return asmjit::kErrorNoVirtualMemory;
 	}
 
 	std::size_t relocSize = code->relocate(p);
-	if (UNLIKELY(!relocSize))
+	if (!relocSize) [[unlikely]]
 	{
 		*dst = nullptr;
 		return asmjit::kErrorInvalidState;

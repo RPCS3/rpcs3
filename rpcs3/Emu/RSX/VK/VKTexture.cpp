@@ -99,7 +99,7 @@ namespace vk
 
 			// 2. Interleave the separated data blocks with a compute job
 			vk::cs_interleave_task *job;
-			if (LIKELY(!swap_bytes))
+			if (!swap_bytes) [[likely]]
 			{
 				if (src->format() == VK_FORMAT_D24_UNORM_S8_UINT)
 				{
@@ -211,7 +211,7 @@ namespace vk
 			return;
 		}
 
-		if (LIKELY(src != dst))
+		if (src != dst) [[likely]]
 		{
 			src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 			dst->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -712,9 +712,9 @@ namespace vk
 
 		for (const rsx_subresource_layout &layout : subresource_layout)
 		{
-			if (LIKELY(!heap_align))
+			if (!heap_align) [[likely]]
 			{
-				if (LIKELY(!layout.border))
+				if (!layout.border) [[likely]]
 				{
 					row_pitch = (layout.pitch_in_block * block_size_in_bytes);
 				}
