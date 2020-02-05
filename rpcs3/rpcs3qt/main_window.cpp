@@ -67,6 +67,10 @@ main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_
 	, m_sys_menu_opened(false)
 	, ui(new Ui::main_window)
 {
+	Q_INIT_RESOURCE(resources);
+
+	// We have to setup the ui before using a translation
+	ui->setupUi(this);
 }
 
 main_window::~main_window()
@@ -79,10 +83,6 @@ main_window::~main_window()
  */
 void main_window::Init()
 {
-	Q_INIT_RESOURCE(resources);
-
-	ui->setupUi(this);
-
 	setAcceptDrops(true);
 
 	// add toolbar widgets (crappy Qt designer is not able to)
@@ -1145,6 +1145,32 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	guiSettings->SetValue(gui::rg_entries, guiSettings->List2Var(m_rg_entries));
 }
 
+void main_window::UpdateLanguageActions(const QStringList& language_codes, const QString& language_code)
+{
+	ui->languageMenu->clear();
+
+	for (const auto& code : language_codes)
+	{
+		const QLocale locale      = QLocale(code);
+		const QString locale_name = QLocale::languageToString(locale.language());
+
+		// create new action
+		QAction* act = new QAction(locale_name, this);
+		act->setData(code);
+		act->setToolTip(locale_name);
+		act->setCheckable(true);
+		act->setChecked(code == language_code);
+
+		// connect to language changer
+		connect(act, &QAction::triggered, [this, code]()
+		{
+			RequestLanguageChange(code);
+		});
+
+		ui->languageMenu->addAction(act);
+	}
+}
+
 void main_window::RepaintGui()
 {
 	if (m_gameListFrame)
@@ -1168,11 +1194,11 @@ void main_window::RepaintGui()
 	Q_EMIT RequestTrophyManagerRepaint();
 }
 
-void main_window::RetranslateUI()
+void main_window::RetranslateUI(const QStringList& language_codes, const QString& language)
 {
-	ui->retranslateUi(this);
+	UpdateLanguageActions(language_codes, language);
 
-	RepaintGui();
+	ui->retranslateUi(this);
 
 	if (m_gameListFrame)
 	{

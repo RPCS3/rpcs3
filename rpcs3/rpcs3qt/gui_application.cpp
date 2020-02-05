@@ -39,12 +39,6 @@ void gui_application::Init()
 	m_gui_settings.reset(new gui_settings());
 	m_persistent_settings.reset(new persistent_settings());
 
-	const auto locales  = GetAvailableLocales();
-	const auto language = m_gui_settings->GetValue(gui::loc_language).toString();
-	const auto index    = locales.indexOf(language);
-
-	LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : locales.at(index));
-
 	// Force init the emulator
 	InitializeEmulator(m_gui_settings->GetCurrentUser().toStdString(), true, m_show_gui);
 
@@ -52,6 +46,12 @@ void gui_application::Init()
 	if (m_show_gui)
 	{
 		m_main_window = new main_window(m_gui_settings, m_emu_settings, m_persistent_settings, nullptr);
+
+		const auto codes    = GetAvailableLanguageCodes();
+		const auto language = m_gui_settings->GetValue(gui::loc_language).toString();
+		const auto index    = codes.indexOf(language);
+
+		LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : codes.at(index));
 	}
 
 	// Create callbacks from the emulator, which reference the handlers.
@@ -80,7 +80,7 @@ void gui_application::Init()
 #endif
 }
 
-void gui_application::SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language)
+void gui_application::SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language_code)
 {
 	// remove the old translator
 	removeTranslator(&translator);
@@ -96,22 +96,26 @@ void gui_application::SwitchTranslator(QTranslator& translator, const QString& f
 			installTranslator(&translator);
 		}
 	}
-	else if (language != QLocale(QLocale::English).bcp47Name()) // ignore default case "en", since it is handled in source code
+	else if (const QString default_code = QLocale(QLocale::English).bcp47Name(); language_code != default_code)
 	{
+		// show error, but ignore default case "en", since it is handled in source code
 		gui_log.error("No translation file found in: %s", file_path.toStdString());
+
+		// reset current language to default "en"
+		m_language_code = default_code;
 	}
 }
 
-void gui_application::LoadLanguage(const QString& language)
+void gui_application::LoadLanguage(const QString& language_code)
 {
-	if (m_language == language)
+	if (m_language_code == language_code)
 	{
 		return;
 	}
 
-	m_language = language;
+	m_language_code = language_code;
 
-	const QLocale locale      = QLocale(language);
+	const QLocale locale      = QLocale(language_code);
 	const QString locale_name = QLocale::languageToString(locale.language());
 
 	QLocale::setDefault(locale);
@@ -120,19 +124,29 @@ void gui_application::LoadLanguage(const QString& language)
 	// As per QT recommendations to avoid conflicts for POSIX functions
 	std::setlocale(LC_NUMERIC, "C");
 
-	SwitchTranslator(m_translator, QStringLiteral("rpcs3_%1.qm").arg(language), language);
+	SwitchTranslator(m_translator, QStringLiteral("rpcs3_%1.qm").arg(language_code), language_code);
 
 	if (m_main_window)
 	{
-		m_main_window->RetranslateUI();
+		const QString default_code = QLocale(QLocale::English).bcp47Name();
+		QStringList language_codes = GetAvailableLanguageCodes();
+
+		if (!language_codes.contains(default_code))
+		{
+			language_codes.prepend(default_code);
+		}
+
+		m_main_window->RetranslateUI(language_codes, m_language_code);
 	}
 
-	gui_log.notice("Current language changed to %s (%s)", locale_name.toStdString(), language.toStdString());
+	m_gui_settings->SetValue(gui::loc_language, m_language_code);
+
+	gui_log.notice("Current language changed to %s (%s)", locale_name.toStdString(), language_code.toStdString());
 }
 
-QStringList gui_application::GetAvailableLocales()
+QStringList gui_application::GetAvailableLanguageCodes()
 {
-	QStringList locales;
+	QStringList language_codes;
 
 	const QString language_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
 
@@ -143,15 +157,15 @@ QStringList gui_application::GetAvailableLocales()
 
 		for (const auto& filename : filenames)
 		{
-			QString locale = filename;                 // "rpcs3_en.qm"
-			locale.truncate(locale.lastIndexOf('.'));  // "rpcs3_en"
-			locale.remove(0, locale.indexOf('_') + 1); // "en"
+			QString language_code = filename;                        // "rpcs3_en.qm"
+			language_code.truncate(language_code.lastIndexOf('.'));  // "rpcs3_en"
+			language_code.remove(0, language_code.indexOf('_') + 1); // "en"
 
-			locales << locale;
+			language_codes << language_code;
 		}
 	}
 
-	return locales;
+	return language_codes;
 }
 
 void gui_application::InitializeConnects()
@@ -163,6 +177,7 @@ void gui_application::InitializeConnects()
 
 	if (m_main_window)
 	{
+		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
 		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
 		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, &gui_application::OnEmuSettingsChange);
 

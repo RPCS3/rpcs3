@@ -47,9 +47,9 @@ private:
 		return thread();
 	}
 
-	void SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language);
-	void LoadLanguage(const QString& language);
-	QStringList GetAvailableLocales();
+	void SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language_code);
+	void LoadLanguage(const QString& language_code);
+	QStringList GetAvailableLanguageCodes();
 
 	void InitializeCallbacks();
 	void InitializeConnects();
@@ -59,7 +59,7 @@ private:
 
 	QTranslator m_translator;
 	QTranslator m_translator_qt;
-	QString m_language;
+	QString m_language_code;
 
 	QElapsedTimer m_timer_playtime;
 
