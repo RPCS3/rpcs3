@@ -457,7 +457,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 		}
 
 		min_threads = 2; // That's what appears from reversing
-		[[fallthrough]];
+		break;
 	}
 
 	case 0x2:
