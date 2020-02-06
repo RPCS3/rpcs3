@@ -247,7 +247,7 @@ namespace vk
 			subres.depth = 1;
 			subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<gsl::span<const std::byte>::index_type>(rsx_pitch * surface_height * samples_y) };
 
-			if (g_cfg.video.resolution_scale_percent == 100 && samples() == 1) [[likely]]
+			if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 			{
 				push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 				vk::copy_mipmaped_image_using_buffer(cmd, this, { subres }, gcm_format, false, 1, aspect(), upload_heap, rsx_pitch);
@@ -258,10 +258,12 @@ namespace vk
 				vk::image* content = nullptr;
 				vk::image* final_dst = (samples() > 1) ? get_resolve_target_safe(cmd) : this;
 
-				if (g_cfg.video.resolution_scale_percent == 100) [[likely]]
+				if (final_dst->width() == subres.width_in_block && final_dst->height() == subres.height_in_block)
 				{
-					verify(HERE), samples() > 1;
-					content = get_resolve_target_safe(cmd);
+					// Only possible if MSAA is enabled with 100% resolution scale.
+					// Writethrough.
+					verify(HERE), g_cfg.video.resolution_scale_percent == 100 && samples() > 1;
+					content = final_dst;
 				}
 				else
 				{
