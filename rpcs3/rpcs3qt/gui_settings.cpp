@@ -2,6 +2,7 @@
 
 #include "game_list_frame.h"
 #include "qt_utils.h"
+#include "localized.h"
 
 #include <QCoreApplication>
 #include <QMessageBox>

@@ -5,6 +5,7 @@
 #include "table_item_delegate.h"
 #include "custom_table_widget_item.h"
 #include "input_dialog.h"
+#include "localized.h"
 
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
@@ -293,7 +294,9 @@ bool game_list_frame::IsEntryVisible(const game_info& game)
 		{
 			return m_categoryFilters.contains(qstr(game->info.category));
 		}
-		return category::CategoryInMap(game->info.category, Localized().category.cat_boot);
+
+		const auto cat_boot = Localized().category.cat_boot;
+		return cat_boot.find(qstr(game->info.category)) != cat_boot.end();
 	};
 
 	const QString serial = qstr(game->info.serial);
