@@ -20,7 +20,7 @@
 
 #include "Utilities/StrUtil.h"
 
-LOG_CHANNEL(log_cheat);
+LOG_CHANNEL(log_cheat, "Cheat");
 
 cheat_manager_dialog* cheat_manager_dialog::inst = nullptr;
 

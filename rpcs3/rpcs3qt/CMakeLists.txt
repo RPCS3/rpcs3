@@ -22,6 +22,7 @@
 	input_dialog.cpp
 	instruction_editor_dialog.cpp
 	kernel_explorer.cpp
+	localized.cpp
 	log_frame.cpp
 	main_window.cpp
 	memory_string_searcher.cpp
@@ -43,6 +44,7 @@
 	settings_dialog.cpp
 	skylander_dialog.cpp
 	syntax_highlighter.cpp
+	tooltips.cpp
 	trophy_manager_dialog.cpp
 	trophy_notification_frame.cpp
 	trophy_notification_helper.cpp

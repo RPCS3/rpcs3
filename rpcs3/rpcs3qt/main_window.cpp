@@ -67,6 +67,10 @@ main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_
 	, m_sys_menu_opened(false)
 	, ui(new Ui::main_window)
 {
+	Q_INIT_RESOURCE(resources);
+
+	// We have to setup the ui before using a translation
+	ui->setupUi(this);
 }
 
 main_window::~main_window()
@@ -79,10 +83,6 @@ main_window::~main_window()
  */
 void main_window::Init()
 {
-	Q_INIT_RESOURCE(resources);
-
-	ui->setupUi(this);
-
 	setAcceptDrops(true);
 
 	// add toolbar widgets (crappy Qt designer is not able to)
@@ -1145,6 +1145,32 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	guiSettings->SetValue(gui::rg_entries, guiSettings->List2Var(m_rg_entries));
 }
 
+void main_window::UpdateLanguageActions(const QStringList& language_codes, const QString& language_code)
+{
+	ui->languageMenu->clear();
+
+	for (const auto& code : language_codes)
+	{
+		const QLocale locale      = QLocale(code);
+		const QString locale_name = QLocale::languageToString(locale.language());
+
+		// create new action
+		QAction* act = new QAction(locale_name, this);
+		act->setData(code);
+		act->setToolTip(locale_name);
+		act->setCheckable(true);
+		act->setChecked(code == language_code);
+
+		// connect to language changer
+		connect(act, &QAction::triggered, [this, code]()
+		{
+			RequestLanguageChange(code);
+		});
+
+		ui->languageMenu->addAction(act);
+	}
+}
+
 void main_window::RepaintGui()
 {
 	if (m_gameListFrame)
@@ -1166,6 +1192,18 @@ void main_window::RepaintGui()
 	RepaintThumbnailIcons();
 
 	Q_EMIT RequestTrophyManagerRepaint();
+}
+
+void main_window::RetranslateUI(const QStringList& language_codes, const QString& language)
+{
+	UpdateLanguageActions(language_codes, language);
+
+	ui->retranslateUi(this);
+
+	if (m_gameListFrame)
+	{
+		m_gameListFrame->Refresh(true);
+	}
 }
 
 void main_window::ShowTitleBars(bool show)
@@ -1457,15 +1495,15 @@ void main_window::CreateConnects()
 		int id = 0;
 		const bool& checked = act->isChecked();
 
-		if      (act == ui->showCatHDDGameAct)    categories += category::hdd_game, id = Category::HDD_Game;
-		else if (act == ui->showCatDiscGameAct)   categories += category::disc_game, id = Category::Disc_Game;
-		else if (act == ui->showCatPS1GamesAct)   categories += category::ps1_game, id = Category::PS1_Game;
+		if      (act == ui->showCatHDDGameAct)    categories += category::cat_hdd_game, id = Category::HDD_Game;
+		else if (act == ui->showCatDiscGameAct)   categories += category::cat_disc_game, id = Category::Disc_Game;
+		else if (act == ui->showCatPS1GamesAct)   categories += category::cat_ps1_game, id = Category::PS1_Game;
 		else if (act == ui->showCatPS2GamesAct)   categories += category::ps2_games, id = Category::PS2_Game;
 		else if (act == ui->showCatPSPGamesAct)   categories += category::psp_games, id = Category::PSP_Game;
-		else if (act == ui->showCatHomeAct)       categories += category::home, id = Category::Home;
+		else if (act == ui->showCatHomeAct)       categories += category::cat_home, id = Category::Home;
 		else if (act == ui->showCatAudioVideoAct) categories += category::media, id = Category::Media;
 		else if (act == ui->showCatGameDataAct)   categories += category::data, id = Category::Data;
-		else if (act == ui->showCatUnknownAct)    categories += category::unknown, id = Category::Unknown_Cat;
+		else if (act == ui->showCatUnknownAct)    categories += category::cat_unknown, id = Category::Unknown_Cat;
 		else if (act == ui->showCatOtherAct)      categories += category::others, id = Category::Others;
 		else gui_log.warning("categoryVisibleActGroup: category action not found");
 

@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>20</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -299,7 +299,15 @@
     <property name="title">
      <string>Help</string>
     </property>
+    <widget class="QMenu" name="languageMenu">
+     <property name="title">
+      <string>Language</string>
+     </property>
+     <addaction name="languageAct0"/>
+    </widget>
     <addaction name="updateAct"/>
+    <addaction name="separator"/>
+    <addaction name="languageMenu"/>
     <addaction name="separator"/>
     <addaction name="aboutAct"/>
     <addaction name="aboutQtAct"/>
@@ -1015,6 +1023,14 @@
   <action name="actionManage_Cheats">
    <property name="text">
     <string>Cheats</string>
+   </property>
+  </action>
+  <action name="languageAct0">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>English</string>
    </property>
   </action>
  </widget>

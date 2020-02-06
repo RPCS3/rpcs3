@@ -94,22 +94,24 @@ namespace gui
 		return q_string_pair(path, title.simplified()); // simplified() forces single line text
 	}
 
-	const QString Settings    = QObject::tr("CurrentSettings");
-	const QString Default     = QObject::tr("default");
-	const QString None        = QObject::tr("none");
-	const QString main_window = "main_window";
-	const QString game_list   = "GameList";
-	const QString logger      = "Logger";
-	const QString debugger    = "Debugger";
-	const QString rsx         = "RSX_Debugger";
-	const QString meta        = "Meta";
-	const QString fs          = "FileSystem";
-	const QString gs_frame    = "GSFrame";
-	const QString trophy      = "Trophy";
-	const QString savedata    = "SaveData";
-	const QString users       = "Users";
-	const QString notes       = "Notes";
-	const QString titles      = "Titles";
+	const QString Settings = "CurrentSettings";
+	const QString Default  = "default";
+	const QString None     = "none";
+
+	const QString main_window  = "main_window";
+	const QString game_list    = "GameList";
+	const QString logger       = "Logger";
+	const QString debugger     = "Debugger";
+	const QString rsx          = "RSX_Debugger";
+	const QString meta         = "Meta";
+	const QString fs           = "FileSystem";
+	const QString gs_frame     = "GSFrame";
+	const QString trophy       = "Trophy";
+	const QString savedata     = "SaveData";
+	const QString users        = "Users";
+	const QString notes        = "Notes";
+	const QString titles       = "Titles";
+	const QString localization = "Localization";
 
 	const QColor gl_icon_color = QColor(240, 240, 240, 255);
 
@@ -216,6 +218,8 @@ namespace gui
 
 	const gui_save um_geometry    = gui_save(users, "geometry",    QByteArray());
 	const gui_save um_active_user = gui_save(users, "active_user", "00000001");
+
+	const gui_save loc_language = gui_save(localization, "language", "en");
 }
 
 /** Class for GUI settings..

@@ -11,9 +11,9 @@ LOG_CHANNEL(cfg_log, "CFG");
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 gui_settings::gui_settings(QObject* parent) : settings(parent)
-	, m_current_name(gui::Settings)
 {
-	m_settings = new QSettings(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent);
+	m_current_name = gui::Settings;
+	m_settings     = new QSettings(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent);
 
 	const QString settings_name = GetValue(gui::m_currentConfig).toString();
 
@@ -99,16 +99,18 @@ void gui_settings::Reset(bool removeMeta)
 QStringList gui_settings::GetGameListCategoryFilters()
 {
 	QStringList filterList;
-	if (GetCategoryVisibility(Category::HDD_Game)) filterList.append(category::hdd_game);
-	if (GetCategoryVisibility(Category::Disc_Game)) filterList.append(category::disc_game);
-	if (GetCategoryVisibility(Category::PS1_Game)) filterList.append(category::ps1_game);
+
+	if (GetCategoryVisibility(Category::HDD_Game)) filterList.append(category::cat_hdd_game);
+	if (GetCategoryVisibility(Category::Disc_Game)) filterList.append(category::cat_disc_game);
+	if (GetCategoryVisibility(Category::PS1_Game)) filterList.append(category::cat_ps1_game);
 	if (GetCategoryVisibility(Category::PS2_Game)) filterList.append(category::ps2_games);
 	if (GetCategoryVisibility(Category::PSP_Game)) filterList.append(category::psp_games);
-	if (GetCategoryVisibility(Category::Home)) filterList.append(category::home);
+	if (GetCategoryVisibility(Category::Home)) filterList.append(category::cat_home);
 	if (GetCategoryVisibility(Category::Media)) filterList.append(category::media);
 	if (GetCategoryVisibility(Category::Data)) filterList.append(category::data);
-	if (GetCategoryVisibility(Category::Unknown_Cat)) filterList.append(category::unknown);
+	if (GetCategoryVisibility(Category::Unknown_Cat)) filterList.append(category::cat_unknown);
 	if (GetCategoryVisibility(Category::Others)) filterList.append(category::others);
+
 	return filterList;
 }
 
@@ -321,6 +323,8 @@ QStringList gui_settings::GetStylesheetEntries()
 
 QString gui_settings::GetCurrentStylesheetPath()
 {
+	const Localized localized;
+
 	QString stylesheet = GetValue(gui::m_currentStylesheet).toString();
 
 	if (stylesheet == gui::Default)

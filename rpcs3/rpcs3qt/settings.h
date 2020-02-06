@@ -26,7 +26,6 @@ struct gui_save
 	}
 };
 
-typedef std::map<std::string, const QString> q_from_char;
 typedef QPair<QString, QString> q_string_pair;
 typedef QPair<QString, QSize> q_size_pair;
 typedef QList<q_string_pair> q_pair_list;

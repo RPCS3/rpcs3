@@ -10,6 +10,7 @@
 #include "qt_utils.h"
 #include "pad_settings_dialog.h"
 #include "ui_pad_settings_dialog.h"
+#include "tooltips.h"
 
 #include "Emu/Io/Null/NullPadHandler.h"
 
@@ -69,14 +70,6 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 		g_cfg_input.load();
 		setWindowTitle(tr("Gamepad Settings"));
 	}
-
-	// Load tooltips
-	QFile json_file(":/Json/pad_settings.json");
-	json_file.open(QIODevice::ReadOnly | QIODevice::Text);
-	QJsonObject json_obj = QJsonDocument::fromJson(json_file.readAll()).object();
-	json_file.close();
-
-	m_json_handlers = json_obj.value("handlers").toObject();
 
 	// Create tab widget for 7 players
 	m_tabs = new QTabWidget;
@@ -994,37 +987,40 @@ void pad_settings_dialog::ChangeInputType()
 	m_handler = GetHandler(g_cfg_input.player[player]->handler);
 	const auto device_list = m_handler->ListDevices();
 
+	// Localized tooltips
+	Tooltips tooltips;
+
 	// Change the description
 	QString description;
 	switch (m_handler->m_type)
 	{
 	case pad_handler::null:
-		description = m_json_handlers["null"].toString(); break;
+		description = tooltips.gamepad_settings.null; break;
 	case pad_handler::keyboard:
-		description = m_json_handlers["keyboard"].toString(); break;
+		description = tooltips.gamepad_settings.keyboard; break;
 #ifdef _WIN32
 	case pad_handler::xinput:
-		description = m_json_handlers["xinput"].toString(); break;
+		description = tooltips.gamepad_settings.xinput; break;
 	case pad_handler::mm:
-		description = m_json_handlers["mmjoy"].toString(); break;
+		description = tooltips.gamepad_settings.mmjoy; break;
 	case pad_handler::ds3:
-		description = m_json_handlers["ds3_windows"].toString(); break;
+		description = tooltips.gamepad_settings.ds3_windows; break;
 	case pad_handler::ds4:
-		description = m_json_handlers["ds4_windows"].toString(); break;
+		description = tooltips.gamepad_settings.ds4_windows; break;
 #elif __linux__
 	case pad_handler::ds3:
-		description = m_json_handlers["ds3_linux"].toString(); break;
+		description = tooltips.gamepad_settings.ds3_linux; break;
 	case pad_handler::ds4:
-		description = m_json_handlers["ds4_linux"].toString(); break;
+		description = tooltips.gamepad_settings.ds4_linux; break;
 #else
 	case pad_handler::ds3:
-		description = m_json_handlers["ds3_other"].toString(); break;
+		description = tooltips.gamepad_settings.ds3_other; break;
 	case pad_handler::ds4:
-		description = m_json_handlers["ds4_other"].toString(); break;
+		description = tooltips.gamepad_settings.ds4_other; break;
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
-		description = (m_json_handlers["evdev"].toString()); break;
+		description = tooltips.gamepad_settings.evdev; break;
 #endif
 	default:
 		description = "";

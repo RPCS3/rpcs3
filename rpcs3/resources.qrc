@@ -13,8 +13,6 @@
         <file>Icons/grid.png</file>
         <file>Icons/list.png</file>
         <file>Icons/refresh.png</file>
-        <file>Json/tooltips.json</file>
-        <file>Json/pad_settings.json</file>
         <file>Icons/exit_fullscreen.png</file>
         <file>Icons/open.png</file>
         <file>Icons/custom_config.png</file>
