@@ -1064,10 +1064,13 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 	const u32 unlocked = ctxt->tropusr->GetUnlockedTrophiesCount();
 	const u32 trp_count = ctxt->tropusr->GetTrophiesCount();
 
-	verify(HERE), trp_count > 0 && trp_count <= 128;
+	// Round result to nearest (TODO: Check 0 trophies)
+	*percentage = trp_count ? ::rounded_div(unlocked * 100, trp_count) : 0;
 
-	// Round result to nearest
-	*percentage = rounded_div(unlocked * 100, trp_count);
+	if (trp_count == 0 || trp_count > 128)
+	{
+		sceNpTrophy.warning("sceNpTrophyGetGameProgress(): Trophies count may be invalid or untested (%d)", trp_count);
+	}
 
 	return CELL_OK;
 }
