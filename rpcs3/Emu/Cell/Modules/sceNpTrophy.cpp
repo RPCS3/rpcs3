@@ -712,6 +712,12 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 		return error;
 	}
 
+	if (!ctxt->tropusr)
+	{
+		// TODO: May return SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE for older sdk version
+		return SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED;
+	}
+
 	if (!details && !data)
 	{
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
@@ -818,6 +824,12 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 		return error;
 	}
 
+	if (!ctxt->tropusr)
+	{
+		// TODO: May return SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE for older sdk version
+		return SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED;
+	}
+
 	if (trophyId < 0 || trophyId >= static_cast<s32>(ctxt->tropusr->GetTrophiesCount()))
 	{
 		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
@@ -898,6 +910,12 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 		return error;
 	}
 
+	if (!ctxt->tropusr)
+	{
+		// TODO: May return SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE for older sdk version
+		return SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED;
+	}
+
 	const u32 count_ = ctxt->tropusr->GetTrophiesCount();
 	*count = count_;
 	if (count_ > 128)
@@ -947,6 +965,12 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 	if (error)
 	{
 		return error;
+	}
+
+	if (!ctxt->tropusr)
+	{
+		// TODO: May return SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE for older sdk version
+		return SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED;
 	}
 
 	if (!details && !data)
@@ -1061,6 +1085,12 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 		return error;
 	}
 
+	if (!ctxt->tropusr)
+	{
+		// TODO: May return SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE for older sdk version
+		return SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED;
+	}
+
 	const u32 unlocked = ctxt->tropusr->GetUnlockedTrophiesCount();
 	const u32 trp_count = ctxt->tropusr->GetTrophiesCount();
 
@@ -1148,6 +1178,12 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 	if (!size)
 	{
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (!ctxt->tropusr)
+	{
+		// TODO: May return SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE for older sdk version
+		return SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED;
 	}
 
 	if (ctxt->tropusr->GetTrophiesCount() <= static_cast<u32>(trophyId))
