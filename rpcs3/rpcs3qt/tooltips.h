@@ -9,8 +9,7 @@ class Tooltips : public QObject
 
 public:
 
-	Tooltips() {};
-	~Tooltips() {};
+	Tooltips();
 
 	const struct settings
 	{

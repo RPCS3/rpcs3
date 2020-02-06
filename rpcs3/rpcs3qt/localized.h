@@ -15,15 +15,7 @@ class Localized : public QObject
 
 public:
 
-	Localized() {};
-	~Localized() {};
-
-	const struct constants
-	{
-		const QString Settings = tr("CurrentSettings");
-		const QString Default  = tr("default");
-		const QString None     = tr("none");
-	} constants;
+	Localized();
 
 	const struct category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 	{
