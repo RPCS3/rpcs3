@@ -1,8 +1,12 @@
-﻿#pragma once
+#pragma once
 
 #include <QString>
 #include <QObject>
 
+/**
+ * Localized tooltips collection class
+ * Due to special characters this file should stay in UTF-8 format
+ */
 class Tooltips : public QObject
 {
 	Q_OBJECT
