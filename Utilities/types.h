@@ -28,8 +28,6 @@
 #ifdef _MSC_VER
 
 #define ASSUME(...) __assume(__VA_ARGS__) // MSVC __assume ignores side-effects
-#define LIKELY
-#define UNLIKELY
 #define SAFE_BUFFERS __declspec(safebuffers)
 #define NEVER_INLINE __declspec(noinline)
 #define FORCE_INLINE __forceinline
@@ -48,8 +46,6 @@
 #define ASSUME(...) do { if (!(__VA_ARGS__)) __builtin_unreachable(); } while (0)  // note: the compiler will generate code to evaluate "cond" if the expression is opaque
 #endif
 
-#define LIKELY(...) __builtin_expect(!!(__VA_ARGS__), 1)
-#define UNLIKELY(...) __builtin_expect(!!(__VA_ARGS__), 0)
 #define SAFE_BUFFERS
 #define NEVER_INLINE __attribute__((noinline))
 #define FORCE_INLINE __attribute__((always_inline)) inline

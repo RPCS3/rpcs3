@@ -328,13 +328,13 @@ void GLGSRender::end()
 			if (rsx::method_registers.fragment_textures[i].enabled() &&
 				sampler_state->validate())
 			{
-				if (view = sampler_state->image_handle; UNLIKELY(!view))
+				if (view = sampler_state->image_handle; !view) [[unlikely]]
 				{
 					view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
 				}
 			}
 
-			if (LIKELY(view))
+			if (view) [[likely]]
 			{
 				view->bind();
 
@@ -371,7 +371,7 @@ void GLGSRender::end()
 			if (rsx::method_registers.vertex_textures[i].enabled() &&
 				sampler_state->validate())
 			{
-				if (LIKELY(sampler_state->image_handle))
+				if (sampler_state->image_handle) [[likely]]
 				{
 					sampler_state->image_handle->bind();
 				}

@@ -49,6 +49,10 @@ namespace gl
 	{
 		u16 surface_pixel_size = 0;
 
+		void clear_memory(gl::command_context& cmd);
+		void load_memory(gl::command_context& cmd);
+		void initialize_memory(gl::command_context& cmd, bool read_access);
+
 	public:
 		render_target(GLuint width, GLuint height, GLenum sized_format)
 			: viewable_image(GL_TEXTURE_2D, width, height, 1, 1, sized_format)
@@ -107,9 +111,9 @@ namespace gl
 			return (rsx::apply_resolution_scale(_width, true) == width()) && (rsx::apply_resolution_scale(_height, true) == height());
 		}
 
-		void memory_barrier(gl::command_context& cmd, bool force_init = false);
-		void read_barrier(gl::command_context& cmd) { memory_barrier(cmd, true); }
-		void write_barrier(gl::command_context& cmd) { memory_barrier(cmd, false); }
+		void memory_barrier(gl::command_context& cmd, rsx::surface_access access);
+		void read_barrier(gl::command_context& cmd) { memory_barrier(cmd, rsx::surface_access::read); }
+		void write_barrier(gl::command_context& cmd) { memory_barrier(cmd, rsx::surface_access::write); }
 	};
 
 	struct framebuffer_holder : public gl::fbo, public rsx::ref_counted

@@ -237,7 +237,7 @@ namespace vk
 						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 				}
 
-				if (LIKELY(rsx_pitch == real_pitch))
+				if (rsx_pitch == real_pitch) [[likely]]
 				{
 					VkBufferCopy copy = {};
 					copy.dstOffset = final_mapping.first;
@@ -285,7 +285,7 @@ namespace vk
 
 			src->pop_layout(cmd);
 
-			if (UNLIKELY(synchronized))
+			if (synchronized) [[unlikely]]
 			{
 				// Replace the wait event with a new one to avoid premature signaling!
 				vk::get_resource_manager()->dispose(dma_fence);
@@ -311,7 +311,7 @@ namespace vk
 		{
 			ASSERT(exists());
 
-			if (LIKELY(!miss))
+			if (!miss) [[likely]]
 			{
 				verify(HERE), !synchronized;
 				baseclass::on_speculative_flush();
@@ -609,7 +609,7 @@ namespace vk
 					surface->transform_samples_to_pixels(src_x, src_w, src_y, src_h);
 				}
 
-				if (UNLIKELY(typeless))
+				if (typeless) [[unlikely]]
 				{
 					const auto src_bpp = vk::get_format_texel_width(section.src->format());
 					const u16 convert_w = u16(src_w * src_bpp) / dst_bpp;
@@ -646,7 +646,7 @@ namespace vk
 				// Final aspect mask of the 'final' transfer source
 				const auto new_src_aspect = src_image->aspect();
 
-				if (LIKELY(src_w == section.dst_w && src_h == section.dst_h && transform == rsx::surface_transform::identity))
+				if (src_w == section.dst_w && src_h == section.dst_h && transform == rsx::surface_transform::identity) [[likely]]
 				{
 					VkImageCopy copy_rgn;
 					copy_rgn.srcOffset = { src_x, src_y, 0 };
@@ -674,7 +674,7 @@ namespace vk
 					u16 dst_x = section.dst_x, dst_y = section.dst_y;
 					vk::image* _dst;
 
-					if (LIKELY(src_image->info.format == dst->info.format && section.level == 0))
+					if (src_image->info.format == dst->info.format && section.level == 0) [[likely]]
 					{
 						_dst = dst;
 					}
@@ -725,7 +725,7 @@ namespace vk
 						if (src_w != section.dst_w || src_h != section.dst_h)
 						{
 							// Optionally scale if needed
-							if (UNLIKELY(tmp == _dst))
+							if (tmp == _dst) [[unlikely]]
 							{
 								dst_y = src_h;
 							}
@@ -746,7 +746,7 @@ namespace vk
 						fmt::throw_exception("Unreachable" HERE);
 					}
 
-					if (UNLIKELY(_dst != dst))
+					if (_dst != dst) [[unlikely]]
 					{
 						// Casting comes after the scaling!
 						VkImageCopy copy_rgn;
@@ -767,7 +767,7 @@ namespace vk
 
 		vk::image* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const
 		{
-			if (LIKELY(sections_to_transfer.size() == 1))
+			if (sections_to_transfer.size() == 1) [[likely]]
 			{
 				return sections_to_transfer.front().src;
 			}
@@ -840,7 +840,7 @@ namespace vk
 			VkImageCreateFlags image_flags = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 			VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
 
-			if (LIKELY(!image_flags))
+			if (!image_flags) [[likely]]
 			{
 				image = find_temporary_image(dst_format, w, h, 1, 1);
 			}

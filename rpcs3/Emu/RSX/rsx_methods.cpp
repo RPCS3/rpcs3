@@ -148,7 +148,7 @@ namespace rsx
 
 			const u32 addr = get_address(offset, ctxt);
 
-			if (LIKELY(g_use_rtm))
+			if (g_use_rtm) [[likely]]
 			{
 				vm::_ref<atomic_be_t<u32>>(addr) = arg;
 			}
@@ -974,7 +974,7 @@ namespace rsx
 				out_pitch = out_bpp * out_w;
 			}
 
-			if (UNLIKELY(in_x == 1 || in_y == 1))
+			if (in_x == 1 || in_y == 1) [[unlikely]]
 			{
 				if (is_block_transfer && in_bpp == out_bpp)
 				{

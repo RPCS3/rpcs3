@@ -26,7 +26,7 @@ protected:
 		const s32 value = m_value.load();
 
 		// Conditional decrement
-		if (UNLIKELY(value <= 0 || !m_value.compare_and_swap_test(value, value - 1)))
+		if (value <= 0 || !m_value.compare_and_swap_test(value, value - 1)) [[unlikely]]
 		{
 			imp_wait();
 		}
@@ -42,7 +42,7 @@ protected:
 		// Unconditional increment
 		const s32 value = m_value.fetch_add(1);
 
-		if (UNLIKELY(value < 0 || value >= _max))
+		if (value < 0 || value >= _max) [[unlikely]]
 		{
 			imp_post(value);
 		}

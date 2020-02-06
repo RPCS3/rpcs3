@@ -92,12 +92,12 @@ namespace vk
 				set_page_bit(page - base_address, page_bits::dirty);
 			}
 
-			if (UNLIKELY(start > range.start))
+			if (start > range.start) [[unlikely]]
 			{
 				set_page_bit(start - s_page_size, page_bits::nocache);
 			}
 
-			if (UNLIKELY(end < range.end))
+			if (end < range.end) [[unlikely]]
 			{
 				set_page_bit(end + s_page_size, page_bits::nocache);
 			}
@@ -244,7 +244,7 @@ namespace vk
 		const auto limit = local_address + length - 1;
 		auto last_block = (limit & s_dma_block_mask);
 
-		if (LIKELY(first_block == last_block))
+		if (first_block == last_block) [[likely]]
 		{
 			if (auto found = g_dma_pool.find(first_block); found != g_dma_pool.end())
 			{
@@ -333,7 +333,7 @@ namespace vk
 					found->second.flush(range);
 				}
 
-				if (UNLIKELY(sync_end < limit))
+				if (sync_end < limit) [[unlikely]]
 				{
 					// Technically legal but assuming a map->flush usage, this shouldnot happen
 					// Optimizations could in theory batch together multiple transfers though

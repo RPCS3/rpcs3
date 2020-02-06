@@ -1250,11 +1250,11 @@ void VKGSRender::end()
 	}
 
 	// Check for frame resource status here because it is possible for an async flip to happen between begin/end
-	if (UNLIKELY(m_current_frame->flags & frame_context_state::dirty))
+	if (m_current_frame->flags & frame_context_state::dirty) [[unlikely]]
 	{
 		check_present_status();
 
-		if (UNLIKELY(m_current_frame->swap_command_buffer))
+		if (m_current_frame->swap_command_buffer) [[unlikely]]
 		{
 			// Borrow time by using the auxilliary context
 			m_aux_frame_context.grab_resources(*m_current_frame);
@@ -1325,7 +1325,7 @@ void VKGSRender::end()
 		bool update_framebuffer_sourced = false;
 		bool check_for_cyclic_refs = false;
 
-		if (UNLIKELY(surface_store_tag != m_rtts.cache_tag))
+		if (surface_store_tag != m_rtts.cache_tag) [[unlikely]]
 		{
 			update_framebuffer_sourced = true;
 			surface_store_tag = m_rtts.cache_tag;
@@ -1388,7 +1388,7 @@ void VKGSRender::end()
 
 					// Check if non-point filtering can even be used on this format
 					bool can_sample_linear;
-					if (LIKELY(sampler_state->format_class == rsx::format_type::color))
+					if (sampler_state->format_class == rsx::format_type::color) [[likely]]
 					{
 						// Most PS3-like formats can be linearly filtered without problem
 						can_sample_linear = true;
@@ -1635,7 +1635,7 @@ void VKGSRender::end()
 				}
 			}
 
-			if (LIKELY(view))
+			if (view) [[likely]]
 			{
 				m_program->bind_uniform({ fs_sampler_handles[i]->value, view->value, view->image()->current_layout },
 					i,
@@ -2884,7 +2884,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			const bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
 				!!g_cfg.video.write_color_buffers;
 
-			if (LIKELY(!lock))
+			if (!lock) [[likely]]
 			{
 				m_texture_cache.commit_framebuffer_memory_region(*m_current_command_buffer, surface->get_memory_range());
 				continue;
@@ -3170,7 +3170,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	size_t first = 0;
 	size_t last;
 
-	if (LIKELY(!partial_eval))
+	if (!partial_eval) [[likely]]
 	{
 		last = sources.size();
 	}

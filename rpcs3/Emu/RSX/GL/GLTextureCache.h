@@ -203,7 +203,7 @@ namespace gl
 		{
 			ASSERT(exists());
 
-			if (LIKELY(!miss))
+			if (!miss) [[likely]]
 			{
 				baseclass::on_speculative_flush();
 			}
@@ -313,7 +313,7 @@ namespace gl
 				{
 					verify(HERE), pack_unpack_swap_bytes == false;
 					verify(HERE), real_pitch == (width * 4);
-					if (LIKELY(rsx_pitch == real_pitch))
+					if (rsx_pitch == real_pitch) [[likely]]
 					{
 						rsx::convert_le_d24x8_to_be_d24x8(dst, dst, valid_length / 4, 1);
 					}
@@ -597,7 +597,7 @@ namespace gl
 					surface->transform_samples_to_pixels(src_x, src_w, src_y, src_h);
 				}
 
-				if (UNLIKELY(typeless))
+				if (typeless) [[unlikely]]
 				{
 					const auto src_bpp = slice.src->pitch() / slice.src->width();
 					const u16 convert_w = u16(slice.src->width() * src_bpp) / dst_bpp;
@@ -667,7 +667,7 @@ namespace gl
 
 		gl::texture* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const
 		{
-			if (LIKELY(sections_to_transfer.size() == 1))
+			if (sections_to_transfer.size() == 1) [[likely]]
 			{
 				return sections_to_transfer.front().src;
 			}

@@ -377,7 +377,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			const bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
 				!!g_cfg.video.write_color_buffers;
 
-			if (LIKELY(!lock))
+			if (!lock) [[likely]]
 			{
 				m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface->get_memory_range());
 				continue;
@@ -424,35 +424,81 @@ std::array<std::vector<std::byte>, 2> GLGSRender::copy_depth_stencil_buffer_to_m
 	return {};
 }
 
-void GLGSRender::read_buffers()
+// Render target helpers
+void gl::render_target::clear_memory(gl::command_context& cmd)
 {
-	// TODO
+	if (aspect() & gl::image_aspect::depth)
+	{
+		gl::g_hw_blitter->fast_clear_image(cmd, this, 1.f, 255);
+	}
+	else
+	{
+		gl::g_hw_blitter->fast_clear_image(cmd, this, {});
+	}
+
+	state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
 }
 
-void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init)
+void gl::render_target::load_memory(gl::command_context& cmd)
 {
-	auto clear_surface_impl = [&]()
-	{
-		if (aspect() & gl::image_aspect::depth)
-		{
-			gl::g_hw_blitter->fast_clear_image(cmd, this, 1.f, 255);
-		}
-		else
-		{
-			gl::g_hw_blitter->fast_clear_image(cmd, this, {});
-		}
+	const u32 gcm_format = is_depth_surface() ?
+		get_compatible_gcm_format(format_info.gcm_depth_format).first :
+		get_compatible_gcm_format(format_info.gcm_color_format).first;
 
-		state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
-	};
+	rsx_subresource_layout subres{};
+	subres.width_in_block = subres.width_in_texel = surface_width * samples_x;
+	subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
+	subres.pitch_in_block = rsx_pitch / get_bpp();
+	subres.depth = 1;
+	subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<gsl::span<const std::byte>::index_type>(rsx_pitch * surface_height * samples_y) };
+
+	// TODO: MSAA support
+	if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
+	{
+		gl::upload_texture(id(), gcm_format, surface_width, surface_height, 1, 1,
+			false, rsx::texture_dimension_extended::texture_dimension_2d, { subres });
+	}
+	else
+	{
+		auto tmp = std::make_unique<gl::texture>(GL_TEXTURE_2D, subres.width_in_block, subres.height_in_block, 1, 1, static_cast<GLenum>(get_internal_format()));
+		gl::upload_texture(tmp->id(), gcm_format, surface_width, surface_height, 1, 1,
+			false, rsx::texture_dimension_extended::texture_dimension_2d, { subres });
+
+		gl::g_hw_blitter->scale_image(cmd, tmp.get(), this,
+			{ 0, 0, subres.width_in_block, subres.height_in_block },
+			{ 0, 0, static_cast<int>(width()), static_cast<int>(height()) },
+			!is_depth_surface(),
+			{});
+	}
+}
+
+void gl::render_target::initialize_memory(gl::command_context& cmd, bool /*read_access*/)
+{
+	const bool memory_load = is_depth_surface() ?
+		!!g_cfg.video.read_depth_buffer :
+		!!g_cfg.video.read_color_buffers;
+
+	if (!memory_load)
+	{
+		clear_memory(cmd);
+	}
+	else
+	{
+		load_memory(cmd);
+	}
+}
+
+void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_access access)
+{
+	const bool read_access = (access != rsx::surface_access::write);
 
 	if (old_contents.empty())
 	{
 		// No memory to inherit
-		if (dirty() && (force_init || state_flags & rsx::surface_state_flags::erase_bkgnd))
+		if (dirty() && (read_access || state_flags & rsx::surface_state_flags::erase_bkgnd))
 		{
 			// Initialize memory contents if we did not find anything usable
-			// TODO: Properly sync with Cell
-			clear_surface_impl();
+			initialize_memory(cmd, true);
 			on_write();
 		}
 
@@ -496,7 +542,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 			const auto area = section.dst_rect();
 			if (area.x1 > 0 || area.y1 > 0 || unsigned(area.x2) < width() || unsigned(area.y2) < height())
 			{
-				clear_surface_impl();
+				initialize_memory(cmd, false);
 			}
 			else
 			{

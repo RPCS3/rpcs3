@@ -196,7 +196,7 @@ namespace rsx
 
 			for (const auto &attrib : locations)
 			{
-				if (LIKELY(attrib.frequency <= 1))
+				if (attrib.frequency <= 1) [[likely]]
 				{
 					_max_index = max_index;
 				}

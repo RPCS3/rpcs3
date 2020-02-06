@@ -113,7 +113,7 @@ namespace rsx
 
 						if (Traits::surface_is_pitch_compatible(old, prev_surface->get_rsx_pitch()))
 						{
-							if (UNLIKELY(old->last_use_tag >= prev_surface->last_use_tag))
+							if (old->last_use_tag >= prev_surface->last_use_tag) [[unlikely]]
 							{
 								invalidated = Traits::get(old);
 							}
@@ -123,10 +123,10 @@ namespace rsx
 
 				Traits::clone_surface(cmd, sink, region.source, new_address, region);
 
-				if (UNLIKELY(invalidated))
+				if (invalidated) [[unlikely]]
 				{
 					// Halfplement the merge by crude inheritance. Should recursively split the memory blocks instead.
-					if (LIKELY(sink->old_contents.empty()))
+					if (sink->old_contents.empty()) [[likely]]
 					{
 						sink->set_old_contents(invalidated);
 					}
@@ -331,7 +331,7 @@ namespace rsx
 				auto this_address = e.first;
 				auto surface = e.second;
 
-				if (UNLIKELY(surface->old_contents.size() == 1))
+				if (surface->old_contents.size() == 1) [[unlikely]]
 				{
 					// Dirty zombies are possible with unused pixel storage subslices and are valid
 					// Avoid double transfer if possible
@@ -404,7 +404,7 @@ namespace rsx
 					auto &object = storage[e.first];
 
 					verify(HERE), !src_offset.x, !src_offset.y, object;
-					if (UNLIKELY(!surface->old_contents.empty()))
+					if (!surface->old_contents.empty()) [[unlikely]]
 					{
 						surface->read_barrier(cmd);
 					}
@@ -660,7 +660,7 @@ namespace rsx
 			}
 
 			const auto rtt_indices = utility::get_rtt_indexes(set_surface_target);
-			if (LIKELY(!rtt_indices.empty()))
+			if (!rtt_indices.empty()) [[likely]]
 			{
 				m_bound_render_targets_config = { rtt_indices.front(), 0 };
 
@@ -689,7 +689,7 @@ namespace rsx
 				Traits::prepare_surface_for_sampling(command_list, std::get<1>(m_bound_depth_stencil));
 			}
 
-			if (LIKELY(address_z))
+			if (address_z) [[likely]]
 			{
 				m_bound_depth_stencil = std::make_pair(address_z,
 					bind_address_as_depth_stencil(command_list, address_z, depth_format, antialias,
@@ -800,7 +800,7 @@ namespace rsx
 			const auto surface_internal_pitch = (required_width * required_bpp);
 
 			// Sanity check
-			if (UNLIKELY(surface_internal_pitch > required_pitch))
+			if (surface_internal_pitch > required_pitch) [[unlikely]]
 			{
 				rsx_log.warning("Invalid 2D region descriptor. w=%d, h=%d, bpp=%d, pitch=%d",
 							required_width, required_height, required_bpp, required_pitch);
@@ -833,13 +833,13 @@ namespace rsx
 					const u32 normalized_surface_width = surface->get_surface_width(rsx::surface_metrics::bytes) / required_bpp;
 					const u32 normalized_surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
 
-					if (LIKELY(range.start >= texaddr))
+					if (range.start >= texaddr) [[likely]]
 					{
 						const auto offset = range.start - texaddr;
 						info.dst_area.y = (offset / required_pitch);
 						info.dst_area.x = (offset % required_pitch) / required_bpp;
 
-						if (UNLIKELY(info.dst_area.x >= required_width || info.dst_area.y >= required_height))
+						if (info.dst_area.x >= required_width || info.dst_area.y >= required_height) [[unlikely]]
 						{
 							// Out of bounds
 							continue;
@@ -857,7 +857,7 @@ namespace rsx
 						info.src_area.y = (offset / pitch);
 						info.src_area.x = (offset % pitch) / required_bpp;
 
-						if (UNLIKELY(info.src_area.x >= normalized_surface_width || info.src_area.y >= normalized_surface_height))
+						if (info.src_area.x >= normalized_surface_width || info.src_area.y >= normalized_surface_height) [[unlikely]]
 						{
 							// Region lies outside the actual texture area, but inside the 'tile'
 							// In this case, a small region lies to the top-left corner, partially occupying the  target
@@ -881,7 +881,7 @@ namespace rsx
 					info.src_area.height = info.dst_area.height = height;
 					info.dst_area.width = width;
 
-					if (auto surface_bpp = surface->get_bpp(); UNLIKELY(surface_bpp != required_bpp))
+					if (auto surface_bpp = surface->get_bpp(); surface_bpp != required_bpp) [[unlikely]]
 					{
 						// Width is calculated in the coordinate-space of the requester; normalize
 						info.src_area.x = (info.src_area.x * required_bpp) / surface_bpp;

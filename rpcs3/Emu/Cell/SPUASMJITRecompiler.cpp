@@ -299,7 +299,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		{
 			const u32 cmask = get_code_mask(j, j + 64);
 
-			if (UNLIKELY(cmask == 0))
+			if (cmask == 0) [[unlikely]]
 			{
 				continue;
 			}
@@ -424,7 +424,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 			{
 				const u32 cmask = get_code_mask(j, j + 32);
 
-				if (UNLIKELY(cmask == 0))
+				if (cmask == 0) [[unlikely]]
 				{
 					continue;
 				}
@@ -549,7 +549,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 			{
 				const u32 cmask = get_code_mask(j, j + 32);
 
-				if (UNLIKELY(cmask == 0))
+				if (cmask == 0) [[unlikely]]
 				{
 					continue;
 				}
@@ -646,7 +646,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		{
 			const u32 cmask = get_code_mask(j, j + 16);
 
-			if (UNLIKELY(cmask == 0))
+			if (cmask == 0) [[unlikely]]
 			{
 				continue;
 			}

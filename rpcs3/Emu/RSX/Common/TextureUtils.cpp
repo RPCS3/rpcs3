@@ -125,7 +125,7 @@ struct copy_unmodified_block_swizzled
 			const u32 size_in_block = padded_width * padded_height * depth * 2;
 			std::vector<U> tmp(size_in_block * words_per_block);
 
-			if (LIKELY(words_per_block == 1))
+			if (words_per_block == 1) [[likely]]
 			{
 				rsx::convert_linear_swizzle_3d<T>(src.data(), tmp.data(), padded_width, padded_height, depth);
 			}

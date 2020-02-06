@@ -1418,7 +1418,7 @@ namespace rsx
 			u32 mapped_offset, mapped_length;
 			if (real_pitch != rsx_pitch)
 			{
-				if (LIKELY(!valid_offset))
+				if (!valid_offset) [[likely]]
 				{
 					mapped_offset = 0;
 				}

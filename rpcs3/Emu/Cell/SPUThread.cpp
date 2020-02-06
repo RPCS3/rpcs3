@@ -113,9 +113,8 @@ namespace spu
 		std::array<std::atomic<u8>, 65536> atomic_instruction_table = {};
 		constexpr u32 native_jiffy_duration_us = 1500; //About 1ms resolution with a half offset
 
-		void acquire_pc_address(spu_thread& spu, u32 pc, u32 timeout_ms = 3)
+		void acquire_pc_address(spu_thread& spu, u32 pc, u32 timeout_ms, u32 max_concurrent_instructions)
 		{
-			const u32 max_concurrent_instructions = g_cfg.core.preferred_spu_threads;
 			const u32 pc_offset = pc >> 2;
 
 			if (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
@@ -173,9 +172,9 @@ namespace spu
 			concurrent_execution_watchdog(spu_thread& spu)
 				:pc(spu.pc)
 			{
-				if (g_cfg.core.preferred_spu_threads > 0)
+				if (const u32 max_concurrent_instructions = g_cfg.core.preferred_spu_threads)
 				{
-					acquire_pc_address(spu, pc, g_cfg.core.spu_delay_penalty);
+					acquire_pc_address(spu, pc, g_cfg.core.spu_delay_penalty, max_concurrent_instructions);
 					active = true;
 				}
 			}
@@ -1150,7 +1149,7 @@ void spu_thread::cpu_task()
 	{
 		while (true)
 		{
-			if (UNLIKELY(state))
+			if (state) [[unlikely]]
 			{
 				if (check_state())
 					break;
@@ -1175,7 +1174,7 @@ void spu_thread::cpu_task()
 
 		while (true)
 		{
-			if (UNLIKELY(state))
+			if (state) [[unlikely]]
 			{
 				if (check_state())
 					break;
@@ -1337,7 +1336,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		std::swap(dst, src);
 	}
 
-	if (UNLIKELY(!g_use_rtm && (!is_get || g_cfg.core.spu_accurate_putlluc)))
+	if (!g_use_rtm && (!is_get || g_cfg.core.spu_accurate_putlluc)) [[unlikely]]
 	{
 		switch (u32 size = args.size)
 		{
@@ -1468,7 +1467,7 @@ bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 {
 	const u32 mask = utils::rol32(1, args.tag);
 
-	if (UNLIKELY(mfc_barrier & mask || (args.cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK) && mfc_fence & mask)))
+	if (mfc_barrier & mask || (args.cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK) && mfc_fence & mask)) [[unlikely]]
 	{
 		// Check for special value combination (normally impossible)
 		if (false)
@@ -1587,7 +1586,7 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 
 		args.eal += 8;
 
-		if (UNLIKELY(items[index].sb & 0x8000))
+		if (items[index].sb & 0x8000) [[unlikely]]
 		{
 			ch_stall_mask |= utils::rol32(1, args.tag);
 
@@ -1626,7 +1625,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	const auto& to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
 
 	// Store unconditionally
-	if (LIKELY(g_use_rtm))
+	if (g_use_rtm) [[likely]]
 	{
 		const u32 result = spu_putlluc_tx(addr, to_write.data(), this);
 
@@ -1658,8 +1657,9 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 		{
 			// Full lock (heavyweight)
 			// TODO: vm::check_addr
+			auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
 			vm::writer_lock lock(addr);
-			mov_rdata(data, to_write);
+			mov_rdata(super_data, to_write);
 			res.release(res.load() + 127);
 		}
 		else
@@ -1783,7 +1783,7 @@ u32 spu_thread::get_mfc_completed()
 bool spu_thread::process_mfc_cmd()
 {
 	// Stall infinitely if MFC queue is full
-	while (UNLIKELY(mfc_size >= 16))
+	while (mfc_size >= 16) [[unlikely]]
 	{
 		state += cpu_flag::wait;
 
@@ -1831,7 +1831,7 @@ bool spu_thread::process_mfc_cmd()
 			}
 		}
 
-		if (LIKELY(g_use_rtm && !g_cfg.core.spu_accurate_getllar && raddr != addr))
+		if (g_use_rtm && !g_cfg.core.spu_accurate_getllar && raddr != addr) [[likely]]
 		{
 			// TODO: maybe always start from a transaction
 			ntime = spu_getll_inexact(addr, dst.data());
@@ -1868,13 +1868,14 @@ bool spu_thread::process_mfc_cmd()
 			if (g_cfg.core.spu_accurate_getllar)
 			{
 				*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
+				const auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
 
 				// Full lock (heavyweight)
 				// TODO: vm::check_addr
 				vm::writer_lock lock(addr);
 
 				ntime = old_time;
-				mov_rdata(dst, data);
+				mov_rdata(dst, super_data);
 				res.release(old_time);
 			}
 			else
@@ -1920,7 +1921,7 @@ bool spu_thread::process_mfc_cmd()
 		{
 			const auto& to_write = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 
-			if (LIKELY(g_use_rtm))
+			if (g_use_rtm) [[likely]]
 			{
 				result = spu_putllc_tx(addr, rtime, rdata.data(), to_write.data());
 
@@ -1968,13 +1969,15 @@ bool spu_thread::process_mfc_cmd()
 					{
 						*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
+						auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
+
 						// Full lock (heavyweight)
 						// TODO: vm::check_addr
 						vm::writer_lock lock(addr);
 
-						if (cmp_rdata(rdata, data))
+						if (cmp_rdata(rdata, super_data))
 						{
-							mov_rdata(data, to_write);
+							mov_rdata(super_data, to_write);
 							res.release(old_time + 128);
 							result = 1;
 						}
@@ -2023,7 +2026,7 @@ bool spu_thread::process_mfc_cmd()
 	{
 		const u32 mask = utils::rol32(1, ch_mfc_cmd.tag);
 
-		if (UNLIKELY((mfc_barrier | mfc_fence) & mask))
+		if ((mfc_barrier | mfc_fence) & mask) [[unlikely]]
 		{
 			mfc_queue[mfc_size++] = ch_mfc_cmd;
 			mfc_fence |= mask;
@@ -2056,9 +2059,9 @@ bool spu_thread::process_mfc_cmd()
 	case MFC_GETB_CMD:
 	case MFC_GETF_CMD:
 	{
-		if (LIKELY(ch_mfc_cmd.size <= 0x4000))
+		if (ch_mfc_cmd.size <= 0x4000) [[likely]]
 		{
-			if (LIKELY(do_dma_check(ch_mfc_cmd)))
+			if (do_dma_check(ch_mfc_cmd)) [[likely]]
 			{
 				if (ch_mfc_cmd.size)
 				{
@@ -2091,14 +2094,14 @@ bool spu_thread::process_mfc_cmd()
 	case MFC_GETLB_CMD:
 	case MFC_GETLF_CMD:
 	{
-		if (LIKELY(ch_mfc_cmd.size <= 0x4000))
+		if (ch_mfc_cmd.size <= 0x4000) [[likely]]
 		{
 			auto& cmd = mfc_queue[mfc_size];
 			cmd = ch_mfc_cmd;
 
-			if (LIKELY(do_dma_check(cmd)))
+			if (do_dma_check(cmd)) [[likely]]
 			{
-				if (LIKELY(!cmd.size || do_list_transfer(cmd)))
+				if (!cmd.size || do_list_transfer(cmd)) [[likely]]
 				{
 					return true;
 				}
@@ -2871,8 +2874,9 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		spu_log.trace("sys_spu_thread_receive_event(spuq=0x%x)", spuq);
 
-		if (group->type & SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT) // this check may be inaccurate
+		if (!group->has_scheduler_context /*|| group->type & 0xf00*/)
 		{
+			spu_log.error("sys_spu_thread_receive_event(): Incompatible group type = 0x%x", group->type);
 			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
 		}
 

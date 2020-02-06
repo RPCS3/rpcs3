@@ -171,7 +171,7 @@ public:
 	{
 		const u64 old = data.fetch_op([=](u64& data)
 		{
-			if (UNLIKELY(data & bit_count))
+			if (data & bit_count) [[unlikely]]
 			{
 				data |= bit_wait;
 			}
@@ -218,7 +218,7 @@ public:
 	{
 		const u64 old = data.fetch_op([&](u64& data)
 		{
-			if (LIKELY(data & bit_count))
+			if (data & bit_count) [[likely]]
 			{
 				out = static_cast<u32>(data);
 				data = 0;
@@ -652,7 +652,7 @@ public:
 
 	static u32 find_raw_spu(u32 id)
 	{
-		if (LIKELY(id < std::size(g_raw_spu_id)))
+		if (id < std::size(g_raw_spu_id)) [[likely]]
 		{
 			return g_raw_spu_id[id];
 		}
