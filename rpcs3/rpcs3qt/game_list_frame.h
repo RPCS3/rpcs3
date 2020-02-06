@@ -10,6 +10,7 @@
 #include "persistent_settings.h"
 #include "game_compatibility.h"
 #include "category.h"
+#include "localized.h"
 
 #include <QMainWindow>
 #include <QToolBar>

@@ -862,6 +862,12 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_localized.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\localized.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\tooltips.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -956,6 +962,9 @@
     </ClInclude>
     <ClInclude Include="Input/mm_joystick_handler.h">
       <Filter>Io\MMJoystick</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\category.h">
+      <Filter>Gui\game list</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

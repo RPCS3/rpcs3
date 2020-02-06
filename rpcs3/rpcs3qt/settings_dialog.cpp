@@ -55,7 +55,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->buttonBox->button(QDialogButtonBox::StandardButton::Save)->setText(tr("Save custom configuration"));
 	}
 
-	// Localized strings
+	// Localized tooltips
 	Tooltips tooltips;
 
 	// Add description labels
@@ -1407,9 +1407,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		{
 			if (reset)
 			{
-				const Localized localized;
-				m_currentConfig = localized.constants.Default;
-				m_currentStylesheet = localized.constants.Default;
+				m_currentConfig = gui::Default;
+				m_currentStylesheet = gui::Default;
 				ui->combo_configs->setCurrentIndex(0);
 				ui->combo_stylesheets->setCurrentIndex(0);
 			}
@@ -1436,7 +1435,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			{
 				ApplyGuiOptions(true);
 				xgui_settings->Reset(true);
-				xgui_settings->ChangeToConfig(Localized().constants.Default);
+				xgui_settings->ChangeToConfig(gui::Default);
 				Q_EMIT GuiSettingsSyncRequest(true);
 				AddConfigs();
 				AddStylesheets();
@@ -1634,15 +1633,13 @@ void settings_dialog::SnapSlider(QSlider *slider, int interval)
 
 void settings_dialog::AddConfigs()
 {
-	const Localized localized;
-
 	ui->combo_configs->clear();
 
-	ui->combo_configs->addItem(localized.constants.Default);
+	ui->combo_configs->addItem(gui::Default);
 
 	for (const QString& entry : xgui_settings->GetConfigEntries())
 	{
-		if (entry != localized.constants.Default)
+		if (entry != gui::Default)
 		{
 			ui->combo_configs->addItem(entry);
 		}
@@ -1663,16 +1660,14 @@ void settings_dialog::AddConfigs()
 
 void settings_dialog::AddStylesheets()
 {
-	const Localized localized;
-
 	ui->combo_stylesheets->clear();
 
-	ui->combo_stylesheets->addItem("None", localized.constants.None);
-	ui->combo_stylesheets->addItem("Default (Bright)", localized.constants.Default);
+	ui->combo_stylesheets->addItem(tr("None"), gui::None);
+	ui->combo_stylesheets->addItem(tr("Default (Bright)"), gui::Default);
 
 	for (const QString& entry : xgui_settings->GetStylesheetEntries())
 	{
-		if (entry != localized.constants.Default)
+		if (entry != gui::Default)
 		{
 			ui->combo_stylesheets->addItem(entry, entry);
 		}

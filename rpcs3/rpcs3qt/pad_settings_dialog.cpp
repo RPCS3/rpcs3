@@ -987,7 +987,7 @@ void pad_settings_dialog::ChangeInputType()
 	m_handler = GetHandler(g_cfg_input.player[player]->handler);
 	const auto device_list = m_handler->ListDevices();
 
-	// Tooltips
+	// Localized tooltips
 	Tooltips tooltips;
 
 	// Change the description

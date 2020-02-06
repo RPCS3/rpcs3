@@ -2,7 +2,6 @@
 
 #include "settings.h"
 #include "Utilities/Log.h"
-#include "localized.h"
 
 #include <QDir>
 #include <QVariant>
@@ -95,6 +94,10 @@ namespace gui
 		return q_string_pair(path, title.simplified()); // simplified() forces single line text
 	}
 
+	const QString Settings = "CurrentSettings";
+	const QString Default  = "default";
+	const QString None     = "none";
+
 	const QString main_window  = "main_window";
 	const QString game_list    = "GameList";
 	const QString logger       = "Logger";
@@ -180,8 +183,8 @@ namespace gui
 	const gui_save rsx_geometry = gui_save(rsx, "geometry", QByteArray());
 	const gui_save rsx_states   = gui_save(rsx, "states",   QVariantMap());
 
-	const gui_save m_currentConfig     = gui_save(meta, "currentConfig",     Localized().constants.Settings);
-	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", Localized().constants.Default);
+	const gui_save m_currentConfig     = gui_save(meta, "currentConfig",     Settings);
+	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", Default);
 	const gui_save m_saveNotes         = gui_save(meta, "saveNotes",         QVariantMap());
 	const gui_save m_showDebugTab      = gui_save(meta, "showDebugTab",      false);
 	const gui_save m_enableUIColors    = gui_save(meta, "enableUIColors",    false);
