@@ -25,7 +25,11 @@ option(USE_VULKAN "Vulkan render backend" ON)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/rpcs3/cmake_modules")
 
-set(CMAKE_CXX_STANDARD 17)
+if (MSVC)
+	set(CMAKE_CXX_STANDARD 20)
+else()
+	set(CMAKE_CXX_STANDARD 17)
+endif()
 include(CheckCXXCompilerFlag)
 
 if (NOT CMAKE_BUILD_TYPE)
