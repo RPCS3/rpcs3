@@ -10,7 +10,6 @@
 #include "persistent_settings.h"
 #include "game_compatibility.h"
 #include "category.h"
-#include "localized.h"
 
 #include <QMainWindow>
 #include <QToolBar>
@@ -19,19 +18,6 @@
 #include <QSet>
 
 #include <memory>
-
-namespace category
-{
-	inline bool CategoryInMap(const std::string& cat, const localized_cat& map)
-	{
-		auto map_contains_category = [s = qstr(cat)](const auto& p)
-		{
-			return p.second == s;
-		};
-
-		return std::find_if(map.begin(), map.end(), map_contains_category) != map.end();
-	}
-}
 
 /* Having the icons associated with the game info simplifies logic internally */
 struct gui_game_info
