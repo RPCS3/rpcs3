@@ -238,7 +238,8 @@ namespace gui
 		{
 			// get Icon for the gs_frame from path. this handles presumably all possible use cases
 			const QString qpath = qstr(path);
-			const std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)), sstr(qpath.section("/", 0, -3)) };
+			const std::string path_list[] = { path, sstr(qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep)),
+											  sstr(qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep)) };
 
 			for (const std::string& pth : path_list)
 			{

@@ -1655,8 +1655,9 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 		{
 			// Full lock (heavyweight)
 			// TODO: vm::check_addr
+			auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
 			vm::writer_lock lock(addr);
-			mov_rdata(data, to_write);
+			mov_rdata(super_data, to_write);
 			res.release(res.load() + 127);
 		}
 		else
@@ -1865,13 +1866,14 @@ bool spu_thread::process_mfc_cmd()
 			if (g_cfg.core.spu_accurate_getllar)
 			{
 				*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
+				const auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
 
 				// Full lock (heavyweight)
 				// TODO: vm::check_addr
 				vm::writer_lock lock(addr);
 
 				ntime = old_time;
-				mov_rdata(dst, data);
+				mov_rdata(dst, super_data);
 				res.release(old_time);
 			}
 			else
@@ -1965,13 +1967,15 @@ bool spu_thread::process_mfc_cmd()
 					{
 						*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
+						auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
+
 						// Full lock (heavyweight)
 						// TODO: vm::check_addr
 						vm::writer_lock lock(addr);
 
-						if (cmp_rdata(rdata, data))
+						if (cmp_rdata(rdata, super_data))
 						{
-							mov_rdata(data, to_write);
+							mov_rdata(super_data, to_write);
 							res.release(old_time + 128);
 							result = 1;
 						}
@@ -2868,8 +2872,9 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		spu_log.trace("sys_spu_thread_receive_event(spuq=0x%x)", spuq);
 
-		if (group->type & SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT) // this check may be inaccurate
+		if (!group->has_scheduler_context /*|| group->type & 0xf00*/)
 		{
+			spu_log.error("sys_spu_thread_receive_event(): Incompatible group type = 0x%x", group->type);
 			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
 		}
 
