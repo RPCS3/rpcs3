@@ -232,14 +232,18 @@ namespace rsx
 				std::scoped_lock lock(m_threadpool_mutex);
 				if (!exit)
 				{
-					m_workers.emplace_back([&]
+					m_workers.emplace_back([&]()
 					{
 						if (interactive)
 						{
+							auto ref = g_fxo->get<display_manager>()->get(uid);
+
 							if (auto error = run_input_loop())
 							{
 								rsx_log.error("Dialog input loop exited with error code=%d", error);
 							}
+
+							verify(HERE), ref.get() == static_cast<overlay*>(this);
 						}
 						else
 						{
