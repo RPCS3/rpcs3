@@ -189,7 +189,7 @@ void gui_application::InitializeConnects()
 	}
 
 #ifdef WITH_DISCORD_RPC
-	connect(this, &gui_application::OnEmulatorRun, [this]()
+	connect(this, &gui_application::OnEmulatorRun, [this](bool /*start_playtime*/)
 	{
 		// Discord Rich Presence Integration
 		if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
@@ -280,9 +280,9 @@ void gui_application::InitializeCallbacks()
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
 	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
-	callbacks.on_run    = [=]() { OnEmulatorRun(); };
+	callbacks.on_run    = [=](bool start_playtime) { OnEmulatorRun(start_playtime); };
 	callbacks.on_pause  = [=]() { OnEmulatorPause(); };
-	callbacks.on_resume = [=]() { OnEmulatorResume(); };
+	callbacks.on_resume = [=]() { OnEmulatorResume(true); };
 	callbacks.on_stop   = [=]() { OnEmulatorStop(); };
 	callbacks.on_ready  = [=]() { OnEmulatorReady(); };
 
@@ -303,8 +303,13 @@ void gui_application::InitializeCallbacks()
 	Emu.SetCallbacks(std::move(callbacks));
 }
 
-void gui_application::StartPlaytime()
+void gui_application::StartPlaytime(bool start_playtime = true)
 {
+	if (!start_playtime)
+	{
+		return;
+	}
+
 	const QString serial = qstr(Emu.GetTitleID());
 	if (serial.isEmpty())
 	{

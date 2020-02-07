@@ -220,7 +220,7 @@ void main_window::OnPlayOrPause()
 {
 	if (Emu.IsReady())
 	{
-		Emu.Run();
+		Emu.Run(true);
 	}
 	else if (Emu.IsPaused())
 	{
@@ -852,7 +852,7 @@ void main_window::RepaintToolBarIcons()
 	ui->mw_searchbar->setFixedWidth(toolBarHeight * 5);
 }
 
-void main_window::OnEmuRun()
+void main_window::OnEmuRun(bool /*start_playtime*/)
 {
 	m_debuggerFrame->EnableButtons(true);
 #ifdef _WIN32
@@ -1815,7 +1815,7 @@ void main_window::keyPressEvent(QKeyEvent *keyEvent)
 	{
 		switch (keyEvent->key())
 		{
-		case Qt::Key_E: if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
+		case Qt::Key_E: if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(true); return;
 		case Qt::Key_P: if (Emu.IsRunning()) Emu.Pause(); return;
 		case Qt::Key_S: if (!Emu.IsStopped()) Emu.Stop(); return;
 		case Qt::Key_R: if (!Emu.GetBoot().empty()) Emu.Restart(); return;
