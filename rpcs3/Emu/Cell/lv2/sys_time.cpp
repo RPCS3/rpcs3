@@ -174,7 +174,7 @@ u64 get_guest_system_time()
 }
 
 // Functions
-s32 sys_time_get_timezone(vm::ptr<s32> timezone, vm::ptr<s32> summertime)
+error_code sys_time_get_timezone(vm::ptr<s32> timezone, vm::ptr<s32> summertime)
 {
 	sys_time.warning("sys_time_get_timezone(timezone=*0x%x, summertime=*0x%x)", timezone, summertime);
 
@@ -184,7 +184,7 @@ s32 sys_time_get_timezone(vm::ptr<s32> timezone, vm::ptr<s32> summertime)
 	return CELL_OK;
 }
 
-s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
+error_code sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 {
 	sys_time.trace("sys_time_get_current_time(sec=*0x%x, nsec=*0x%x)", sec, nsec);
 
@@ -272,4 +272,11 @@ u64 sys_time_get_timebase_frequency()
 	sys_time.trace("sys_time_get_timebase_frequency()");
 
 	return g_timebase_freq;
+}
+
+error_code sys_time_get_rtc(vm::ptr<u64> rtc)
+{
+	sys_time.todo("sys_time_get_rtc(rtc=*0x%x)", rtc);
+
+	return CELL_OK;
 }

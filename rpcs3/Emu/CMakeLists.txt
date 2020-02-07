@@ -143,7 +143,11 @@ target_sources(rpcs3_emu PRIVATE
 	Cell/SPURecompiler.cpp
 	Cell/SPUThread.cpp
 	Cell/lv2/lv2.cpp
+	Cell/lv2/sys_bdemu.cpp
+	Cell/lv2/sys_btsetting.cpp
 	Cell/lv2/sys_cond.cpp
+	Cell/lv2/sys_console.cpp
+	Cell/lv2/sys_crypto_engine.cpp
 	Cell/lv2/sys_config.cpp
 	Cell/lv2/sys_dbg.cpp
 	Cell/lv2/sys_event.cpp
@@ -151,7 +155,9 @@ target_sources(rpcs3_emu PRIVATE
 	Cell/lv2/sys_fs.cpp
 	Cell/lv2/sys_gamepad.cpp
 	Cell/lv2/sys_gpio.cpp
+	Cell/lv2/sys_hid.cpp
 	Cell/lv2/sys_interrupt.cpp
+	Cell/lv2/sys_io.cpp
 	Cell/lv2/sys_lwcond.cpp
 	Cell/lv2/sys_lwmutex.cpp
 	Cell/lv2/sys_memory.cpp
@@ -163,14 +169,18 @@ target_sources(rpcs3_emu PRIVATE
 	Cell/lv2/sys_process.cpp
 	Cell/lv2/sys_prx.cpp
 	Cell/lv2/sys_rsx.cpp
+	Cell/lv2/sys_rsxaudio.cpp
 	Cell/lv2/sys_rwlock.cpp
 	Cell/lv2/sys_semaphore.cpp
 	Cell/lv2/sys_spu.cpp
+	Cell/lv2/sys_sm.cpp
 	Cell/lv2/sys_ss.cpp
+	Cell/lv2/sys_storage.cpp
 	Cell/lv2/sys_time.cpp
 	Cell/lv2/sys_timer.cpp
 	Cell/lv2/sys_trace.cpp
 	Cell/lv2/sys_tty.cpp
+	Cell/lv2/sys_uart.cpp
 	Cell/lv2/sys_usbd.cpp
 	Cell/lv2/sys_vm.cpp
 	Cell/Modules/cellAdec.cpp
@@ -285,7 +295,7 @@ target_sources(rpcs3_emu PRIVATE
 	Cell/Modules/StaticHLE.cpp
 	Cell/Modules/sys_game.cpp
 	Cell/Modules/sys_heap.cpp
-	Cell/Modules/sys_io.cpp
+	Cell/Modules/sys_io_.cpp
 	Cell/Modules/sys_libc_.cpp
 	Cell/Modules/sys_libc.cpp
 	Cell/Modules/sys_lv2dbg.cpp
