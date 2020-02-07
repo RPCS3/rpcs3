@@ -229,26 +229,34 @@ namespace rsx
 			}
 			else
 			{
-				thread_ctrl::spawn("dialog input thread", [&]
+				std::scoped_lock lock(m_threadpool_mutex);
+				if (!exit)
 				{
-					if (interactive)
+					m_workers.emplace_back([&]()
 					{
-						if (auto error = run_input_loop())
+						if (interactive)
 						{
-							rsx_log.error("Dialog input loop exited with error code=%d", error);
-						}
-					}
-					else
-					{
-						while (!exit)
-						{
-							refresh();
+							auto ref = g_fxo->get<display_manager>()->get(uid);
 
-							// Only update the screen at about 60fps since updating it everytime slows down the process
-							std::this_thread::sleep_for(16ms);
+							if (auto error = run_input_loop())
+							{
+								rsx_log.error("Dialog input loop exited with error code=%d", error);
+							}
+
+							verify(HERE), ref.get() == static_cast<overlay*>(this);
 						}
-					}
-				});
+						else
+						{
+							while (!exit)
+							{
+								refresh();
+
+								// Only update the screen at about 60fps since updating it everytime slows down the process
+								std::this_thread::sleep_for(16ms);
+							}
+						}
+					});
+				}
 			}
 
 			return CELL_OK;

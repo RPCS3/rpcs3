@@ -312,7 +312,31 @@ namespace rsx
 		void user_interface::close(bool use_callback)
 		{
 			// Force unload
-			exit = true;
+			exit.release(true);
+			{
+				reader_lock lock(m_threadpool_mutex);
+				for (auto& worker : m_workers)
+				{
+					if (std::this_thread::get_id() != worker.get_id() && worker.joinable())
+					{
+						worker.join();
+					}
+					else
+					{
+						worker.detach();
+					}
+				}
+			}
+
+			pad::SetIntercepted(false);
+
+			if (on_close && use_callback)
+			{
+				g_last_user_response = return_code;
+				on_close(return_code);
+			}
+
+			// NOTE: Object removal should be the last step
 			if (auto manager = g_fxo->get<display_manager>())
 			{
 				if (auto dlg = manager->get<rsx::overlays::message_dialog>())
@@ -322,14 +346,6 @@ namespace rsx
 				}
 
 				manager->remove(uid);
-			}
-
-			pad::SetIntercepted(false);
-
-			if (on_close && use_callback)
-			{
-				g_last_user_response = return_code;
-				on_close(return_code);
 			}
 		}
 

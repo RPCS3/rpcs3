@@ -260,9 +260,9 @@ namespace vk
 
 				if (final_dst->width() == subres.width_in_block && final_dst->height() == subres.height_in_block)
 				{
-					// Only possible if MSAA is enabled with 100% resolution scale.
+					// Possible if MSAA is enabled with 100% resolution scale or
+					// surface dimensions are less than resolution scale threshold and no MSAA.
 					// Writethrough.
-					verify(HERE), g_cfg.video.resolution_scale_percent == 100 && samples() > 1;
 					content = final_dst;
 				}
 				else
