@@ -17,6 +17,8 @@
 #include "Utilities/CPUStats.h"
 #include "Utilities/Timer.h"
 
+#include <list>
+
 // Utils
 std::string utf8_to_ascii8(const std::string& utf8_string);
 std::string utf16_to_ascii8(const std::u16string& utf16_string);
@@ -48,8 +50,9 @@ namespace rsx
 		};
 
 		// Interactable UI element
-		struct user_interface : overlay
+		class user_interface : public overlay
 		{
+		public:
 			// Move this somewhere to avoid duplication
 			enum selection_code
 			{
@@ -76,19 +79,24 @@ namespace rsx
 				pad_button_max_enum
 			};
 
+		protected:
 			Timer input_timer;
-			bool  exit = false;
+			atomic_t<bool> exit{ false };
 
-			s32 return_code = CELL_OK;
 			std::function<void(s32 status)> on_close;
 
+			shared_mutex m_threadpool_mutex;
+			std::list<std::thread> m_workers;
+
+		public:
+			s32 return_code = CELL_OK;
+
+		public:
 			void update() override {}
+
 			compiled_resource get_compiled() override = 0;
 
-			virtual void on_button_pressed(pad_button /*button_press*/)
-			{
-				close();
-			}
+			virtual void on_button_pressed(pad_button /*button_press*/) {}
 
 			void close(bool use_callback = true);
 

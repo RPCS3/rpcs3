@@ -312,7 +312,15 @@ namespace rsx
 		void user_interface::close(bool use_callback)
 		{
 			// Force unload
-			exit = true;
+			exit.release(true);
+			{
+				reader_lock lock(m_threadpool_mutex);
+				for (auto& worker : m_workers)
+				{
+					worker.join();
+				}
+			}
+
 			if (auto manager = g_fxo->get<display_manager>())
 			{
 				if (auto dlg = manager->get<rsx::overlays::message_dialog>())
