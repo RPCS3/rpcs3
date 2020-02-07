@@ -1999,3 +1999,24 @@ error_code sys_fs_truncate2(ppu_thread& ppu, u32 fd, u64 size)
 
 	return CELL_OK;
 }
+
+error_code sys_fs_get_mount_info_size(ppu_thread& ppu, vm::ptr<u64> len)
+{
+	sys_fs.todo("sys_fs_get_mount_info_size(len=*0x%x)", len);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_get_mount_info(ppu_thread& ppu, vm::ptr<CellFsMountInfo> info, u32 len, vm::ptr<u64> out_len)
+{
+	sys_fs.todo("sys_fs_get_mount_info(info=*0x%x, len=0x%x, out_len=*0x%x)", info, len, out_len);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char> file_system, vm::cptr<char> path, s32 unk1, s32 prot, s32 unk3, vm::cptr<char> str1, u32 str_len)
+{
+	sys_fs.todo("sys_fs_mount(dev_name=%s, file_system=%s, path=%s, unk1=0x%x, prot=0x%x, unk3=0x%x, str1=%s, str_len=%d)", dev_name, file_system, path, unk1, prot, unk3, str1, str_len);
+
+	return CELL_OK;
+}
