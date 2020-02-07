@@ -208,7 +208,7 @@ enum CellKbMappingType : s32;
 struct EmuCallbacks
 {
 	std::function<void(std::function<void()>)> call_after;
-	std::function<void()> on_run;
+	std::function<void(bool)> on_run; // (start_playtime) continuing or going ingame, so start the clock
 	std::function<void()> on_pause;
 	std::function<void()> on_resume;
 	std::function<void()> on_stop;
@@ -362,7 +362,7 @@ public:
 	void SetForceBoot(bool force_boot);
 
 	void Load(const std::string& title_id = "", bool add_only = false, bool force_global_config = false);
-	void Run();
+	void Run(bool start_playtime);
 	bool Pause();
 	void Resume();
 	void Stop(bool restart = false);

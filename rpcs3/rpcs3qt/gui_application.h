@@ -54,7 +54,7 @@ private:
 	void InitializeCallbacks();
 	void InitializeConnects();
 
-	void StartPlaytime();
+	void StartPlaytime(bool start_playtime);
 	void StopPlaytime();
 
 	QTranslator m_translator;
@@ -75,9 +75,9 @@ private Q_SLOTS:
 	void OnEmuSettingsChange();
 
 Q_SIGNALS:
-	void OnEmulatorRun();
+	void OnEmulatorRun(bool start_playtime);
 	void OnEmulatorPause();
-	void OnEmulatorResume();
+	void OnEmulatorResume(bool start_playtime);
 	void OnEmulatorStop();
 	void OnEmulatorReady();
 

@@ -81,7 +81,7 @@ Q_SIGNALS:
 
 public Q_SLOTS:
 	void OnEmuStop();
-	void OnEmuRun();
+	void OnEmuRun(bool start_playtime);
 	void OnEmuResume();
 	void OnEmuPause();
 	void OnEmuReady();
