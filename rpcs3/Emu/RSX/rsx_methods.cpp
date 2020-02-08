@@ -686,11 +686,12 @@ namespace rsx
 				rsx->m_rtts_dirty = true;
 		}
 
-		void set_ROP_state_dirty_bit(thread* rsx, u32, u32 arg)
+		template <u32 RsxFlags>
+		void notify_state_changed(thread* rsx, u32, u32 arg)
 		{
 			if (arg != method_registers.register_previous_value)
 			{
-				rsx->m_graphics_state |= rsx::fragment_state_dirty;
+				rsx->m_graphics_state |= RsxFlags;
 			}
 		}
 
@@ -719,30 +720,6 @@ namespace rsx
 
 				// Insert base mofifier barrier
 				method_registers.current_draw_clause.insert_command_barrier(index_base_modifier_barrier, arg);
-			}
-		}
-
-		void set_vertex_env_dirty_bit(thread* rsx, u32, u32 arg)
-		{
-			if (arg != method_registers.register_previous_value)
-			{
-				rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
-			}
-		}
-
-		void set_fragment_env_dirty_bit(thread* rsx, u32, u32 arg)
-		{
-			if (arg != method_registers.register_previous_value)
-			{
-				rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
-			}
-		}
-
-		void set_scissor_dirty_bit(thread* rsx, u32 reg, u32 arg)
-		{
-			if (arg != method_registers.register_previous_value)
-			{
-				rsx->m_graphics_state |= rsx::pipeline_state::scissor_config_state_dirty;
 			}
 		}
 
@@ -2974,22 +2951,23 @@ namespace rsx
 		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
 		bind<NV4097_SET_VERTEX_DATA_BASE_OFFSET, nv4097::set_vertex_base_offset>();
 		bind<NV4097_SET_VERTEX_DATA_BASE_INDEX, nv4097::set_index_base_offset>();
-		bind<NV4097_SET_USER_CLIP_PLANE_CONTROL, nv4097::set_vertex_env_dirty_bit>();
-		bind<NV4097_SET_TRANSFORM_BRANCH_BITS, nv4097::set_vertex_env_dirty_bit>();
-		bind<NV4097_SET_CLIP_MIN, nv4097::set_vertex_env_dirty_bit>();
-		bind<NV4097_SET_CLIP_MAX, nv4097::set_vertex_env_dirty_bit>();
-		bind<NV4097_SET_ALPHA_FUNC, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_ALPHA_REF, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_ALPHA_TEST_ENABLE, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_ANTI_ALIASING_CONTROL, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_SHADER_PACKER, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_SHADER_WINDOW, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_FOG_MODE, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_SCISSOR_HORIZONTAL, nv4097::set_scissor_dirty_bit>();
-		bind<NV4097_SET_SCISSOR_VERTICAL, nv4097::set_scissor_dirty_bit>();
-		bind<NV4097_SET_VIEWPORT_HORIZONTAL, nv4097::set_scissor_dirty_bit>();
-		bind<NV4097_SET_VIEWPORT_VERTICAL, nv4097::set_scissor_dirty_bit>();
-		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_USER_CLIP_PLANE_CONTROL, nv4097::notify_state_changed<vertex_state_dirty>>();
+		bind<NV4097_SET_TRANSFORM_BRANCH_BITS, nv4097::notify_state_changed<vertex_state_dirty>>();
+		bind<NV4097_SET_CLIP_MIN, nv4097::notify_state_changed<vertex_state_dirty>>();
+		bind<NV4097_SET_CLIP_MAX, nv4097::notify_state_changed<vertex_state_dirty>>();
+		bind<NV4097_SET_POINT_SIZE, nv4097::notify_state_changed<vertex_state_dirty>>();
+		bind<NV4097_SET_ALPHA_FUNC, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_ALPHA_REF, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_ALPHA_TEST_ENABLE, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_ANTI_ALIASING_CONTROL, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_SHADER_PACKER, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_SHADER_WINDOW, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_FOG_MODE, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_SCISSOR_HORIZONTAL, nv4097::notify_state_changed<scissor_config_state_dirty>>();
+		bind<NV4097_SET_SCISSOR_VERTICAL, nv4097::notify_state_changed<scissor_config_state_dirty>>();
+		bind<NV4097_SET_VIEWPORT_HORIZONTAL, nv4097::notify_state_changed<scissor_config_state_dirty>>();
+		bind<NV4097_SET_VIEWPORT_VERTICAL, nv4097::notify_state_changed<scissor_config_state_dirty>>();
+		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::notify_state_changed<fragment_state_dirty>>();
 		bind_range<NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind<NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma>();
