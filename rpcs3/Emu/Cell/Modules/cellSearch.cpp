@@ -45,10 +45,22 @@ void fmt_class_string<CellSearchError>::format(std::string& out, u64 arg)
 }
 
 namespace {
+enum class search_state
+{
+	not_initialized = 0,
+	idle,
+	in_progress,
+	initializing,
+	canceling,
+	finalizing,
+};
+
 struct search_info
 {
 	vm::ptr<CellSearchSystemCallback> func;
 	vm::ptr<void> userData;
+
+	atomic_t<search_state> state = search_state::not_initialized; 
 };
 
 struct search_content_t
@@ -81,20 +93,7 @@ struct search_object_t
 
 	std::vector<ContentIdType> content_ids;
 };
-
-enum class search_state
-{
-	not_initialized = 0,
-	idle,
-	in_progress,
-	initializing,
-	canceling,
-	finalizing,
-};
 }
-
-static search_state s_search_state = search_state::not_initialized; 
-
 error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<void> userData)
 {
 	cellSearch.warning("cellSearchInitialize(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x)", +mode, container, func, userData);
@@ -104,7 +103,14 @@ error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<Cell
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (s_search_state)
+	if (mode != CELL_SEARCH_MODE_NORMAL)
+	{
+		return CELL_SEARCH_ERROR_UNKNOWN_MODE;
+	}
+
+	const auto search = g_fxo->get<search_info>();
+
+	switch (search->state.compare_and_swap(search_state::not_initialized, search_state::initializing))
 	{
 	case search_state::not_initialized:
 		break;
@@ -116,20 +122,13 @@ error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<Cell
 		return CELL_SEARCH_ERROR_ALREADY_INITIALIZED;
 	}
 
-	if (mode != CELL_SEARCH_MODE_NORMAL)
-	{
-		return CELL_SEARCH_ERROR_UNKNOWN_MODE;
-	}
-
-	const auto search = g_fxo->get<search_info>();
 	search->func = func;
 	search->userData = userData;
 
-	s_search_state = search_state::initializing;
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		s_search_state = search_state::idle;
 		func(ppu, CELL_SEARCH_EVENT_INITIALIZE_RESULT, CELL_OK, vm::null, userData);
+		search->state.release(search_state::idle);
 		return CELL_OK;
 	});
 
@@ -140,7 +139,9 @@ error_code cellSearchFinalize()
 {
 	cellSearch.todo("cellSearchFinalize()");
 
-	switch (s_search_state)
+	const auto search = g_fxo->get<search_info>();
+
+	switch (search->state.compare_and_swap(search_state::idle, search_state::finalizing))
 	{
 	case search_state::idle:
 		break;
@@ -156,12 +157,10 @@ error_code cellSearchFinalize()
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	s_search_state = search_state::finalizing;
-
-	sysutil_register_cb([=, search = g_fxo->get<search_info>()](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		s_search_state = search_state::not_initialized;
 		search->func(ppu, CELL_SEARCH_EVENT_FINALIZE_RESULT, CELL_OK, vm::null, search->userData);
+		search->state.release(search_state::not_initialized);
 		return CELL_OK;
 	});
 
@@ -198,7 +197,9 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (s_search_state)
+	const auto search = g_fxo->get<search_info>();
+
+	switch (search->state.compare_and_swap(search_state::idle, search_state::in_progress))
 	{
 	case search_state::idle:
 		break;
@@ -216,15 +217,14 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 
 	*outSearchId = idm::make<search_object_t>();
 
-	s_search_state = search_state::in_progress;
-	sysutil_register_cb([=, search = g_fxo->get<search_info>()](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
 
-		s_search_state = search_state::idle;
 		search->func(ppu, CELL_SEARCH_EVENT_LISTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
+		search->state.release(search_state::idle);
 		return CELL_OK;
 	});
 
@@ -262,7 +262,9 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (s_search_state)
+	const auto search = g_fxo->get<search_info>();
+
+	switch (search->state.compare_and_swap(search_state::idle, search_state::in_progress))
 	{
 	case search_state::idle:
 		break;
@@ -280,15 +282,14 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 
 	*outSearchId = idm::make<search_object_t>();
 
-	s_search_state = search_state::in_progress;
-	sysutil_register_cb([=, search = g_fxo->get<search_info>()](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
 
-		s_search_state = search_state::idle;
 		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_INLIST_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
+		search->state.release(search_state::idle);
 		return CELL_OK;
 	});
 
@@ -336,7 +337,9 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (s_search_state)
+	const auto search = g_fxo->get<search_info>();
+
+	switch (search->state.compare_and_swap(search_state::idle, search_state::in_progress))
 	{
 	case search_state::idle:
 		break;
@@ -354,8 +357,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 
 	*outSearchId = idm::make<search_object_t>();
 
-	s_search_state = search_state::in_progress;
-	sysutil_register_cb([=, content_map = g_fxo->get<ContentIdMap>(), search = g_fxo->get<search_info>()](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, content_map = g_fxo->get<ContentIdMap>()](ppu_thread& ppu) -> s32
 	{
 		auto curr_search = idm::get<search_object_t>(*outSearchId);
 		vm::var<CellSearchResultParam> resultParam;
@@ -475,8 +477,8 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 		searchInFolder(fmt::format("/dev_hdd0/%s", media_dir), "");
 		resultParam->resultNum = ::narrow<s32>(curr_search->content_ids.size());
 
-		s_search_state = search_state::idle;
 		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
+		search->state.release(search_state::idle);
 		return CELL_OK;
 	});
 
@@ -510,7 +512,9 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (s_search_state)
+	const auto search = g_fxo->get<search_info>();
+
+	switch (search->state.compare_and_swap(search_state::idle, search_state::in_progress))
 	{
 	case search_state::idle:
 		break;
@@ -528,15 +532,14 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 
 	*outSearchId = idm::make<search_object_t>();
 
-	s_search_state = search_state::in_progress;
-	sysutil_register_cb([=, search = g_fxo->get<search_info>()](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
 
-		s_search_state = search_state::idle;
 		search->func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_INVIDEO_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
+		search->state.release(search_state::idle);
 		return CELL_OK;
 	});
 
@@ -565,7 +568,9 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (s_search_state)
+	const auto search = g_fxo->get<search_info>();
+
+	switch (search->state.compare_and_swap(search_state::idle, search_state::in_progress))
 	{
 	case search_state::idle:
 		break;
@@ -583,15 +588,14 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 
 	*outSearchId = idm::make<search_object_t>();
 
-	s_search_state = search_state::in_progress;
-	sysutil_register_cb([=, search = g_fxo->get<search_info>()](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
 
-		s_search_state = search_state::idle;
 		search->func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
+		search->state.release(search_state::idle);
 		return CELL_OK;
 	});
 
@@ -614,7 +618,7 @@ error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, v
 		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
 	}
 
-	switch (s_search_state)
+	switch (g_fxo->get<search_info>()->state.load())
 	{
 	case search_state::idle:
 		break;
@@ -682,7 +686,7 @@ error_code cellSearchGetContentInfoByContentId(vm::cptr<CellSearchContentId> con
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (s_search_state)
+	switch (g_fxo->get<search_info>()->state.load())
 	{
 	case search_state::idle:
 		break;
@@ -749,7 +753,7 @@ error_code cellSearchGetOffsetByContentId(CellSearchId searchId, vm::cptr<CellSe
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (s_search_state)
+	switch (g_fxo->get<search_info>()->state.load())
 	{
 	case search_state::idle:
 		break;
@@ -803,7 +807,7 @@ error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm:
 		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
 	}
 
-	switch (s_search_state)
+	switch (g_fxo->get<search_info>()->state.load())
 	{
 	case search_state::idle:
 		break;
@@ -892,7 +896,7 @@ error_code cellSearchGetContentInfoPath(vm::cptr<CellSearchContentId> contentId,
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (s_search_state)
+	switch (g_fxo->get<search_info>()->state.load())
 	{
 	case search_state::idle:
 		break;
@@ -947,7 +951,7 @@ error_code cellSearchPrepareFile(vm::cptr<char> path)
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (s_search_state)
+	switch (g_fxo->get<search_info>()->state.load())
 	{
 	case search_state::idle:
 		break;
@@ -1004,7 +1008,7 @@ error_code cellSearchCancel(CellSearchId searchId)
 		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
 	}
 
-	switch (s_search_state)
+	switch (g_fxo->get<search_info>()->state.load())
 	{
 	case search_state::in_progress:
 		break;
@@ -1030,7 +1034,7 @@ error_code cellSearchEnd(CellSearchId searchId)
 {
 	cellSearch.todo("cellSearchEnd(searchId=0x%x)", searchId);
 
-	switch (s_search_state)
+	switch (g_fxo->get<search_info>()->state.load())
 	{
 	case search_state::idle:
 		break;
