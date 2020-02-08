@@ -638,7 +638,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	Emu.GetCallbacks().init_gs_render();
 	Emu.GetCallbacks().init_pad_handler("");
 
-	GetCallbacks().on_run();
+	GetCallbacks().on_run(false);
 	m_state = system_state::running;
 
 	g_fxo->init<named_thread<rsx::rsx_replay_thread>>("RSX Replay"sv, std::move(frame));
@@ -925,6 +925,8 @@ void Emulator::SetForceBoot(bool force_boot)
 
 void Emulator::Load(const std::string& title_id, bool add_only, bool force_global_config)
 {
+	m_force_global_config = force_global_config;
+
 	if (!IsStopped())
 	{
 		Stop();
@@ -1080,7 +1082,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			GetCallbacks().on_ready();
 			vm::init();
 			g_fxo->init();
-			Run();
+			Run(false);
 			m_force_boot = false;
 
 			// Force LLVM recompiler
@@ -1223,7 +1225,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../", false))
 			{
 				sys_log.success("Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
-				return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load();
+				return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load(m_title_id, add_only, force_global_config);
 			}
 			else
 			{
@@ -1422,7 +1424,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		{
 			// Booting game update
 			sys_log.success("Updates found at /dev_hdd0/game/%s/!", m_title_id);
-			return m_path = hdd0_boot, Load();
+			return m_path = hdd0_boot, Load(m_title_id, false, force_global_config);
 		}
 
 		// Set title to actual disc title if necessary
@@ -1619,7 +1621,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 
 		if ((m_force_boot || g_cfg.misc.autostart) && IsReady())
 		{
-			Run();
+			Run(true);
 			m_force_boot = false;
 		}
 		else if (IsPaused())
@@ -1635,15 +1637,23 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 	}
 }
 
-void Emulator::Run()
+void Emulator::Run(bool start_playtime)
 {
 	if (!IsReady())
 	{
-		Load();
-		if(!IsReady()) return;
+		// Reload with prior configuration.
+		Load(m_title_id, false, m_force_global_config);
+
+		if (!IsReady())
+		{
+			return;
+		}
 	}
 
-	if (IsRunning()) Stop();
+	if (IsRunning())
+	{
+		Stop();
+	}
 
 	if (IsPaused())
 	{
@@ -1651,7 +1661,7 @@ void Emulator::Run()
 		return;
 	}
 
-	GetCallbacks().on_run();
+	GetCallbacks().on_run(start_playtime);
 
 	m_pause_start_time = 0;
 	m_pause_amend_time = 0;
@@ -1790,7 +1800,8 @@ void Emulator::Stop(bool restart)
 	{
 		if (restart)
 		{
-			return Load();
+			// Reload with prior configs.
+			return Load(m_title_id, false, m_force_global_config);
 		}
 
 		m_force_boot = false;
@@ -1834,7 +1845,8 @@ void Emulator::Stop(bool restart)
 
 	if (restart)
 	{
-		return Load();
+		// Reload with prior configs.
+		return Load(m_title_id, false, m_force_global_config);
 	}
 
 	// Boot arg cleanup (preserved in the case restarting)

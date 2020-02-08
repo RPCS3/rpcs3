@@ -208,7 +208,7 @@ enum CellKbMappingType : s32;
 struct EmuCallbacks
 {
 	std::function<void(std::function<void()>)> call_after;
-	std::function<void()> on_run;
+	std::function<void(bool)> on_run; // (start_playtime) continuing or going ingame, so start the clock
 	std::function<void()> on_pause;
 	std::function<void()> on_resume;
 	std::function<void()> on_stop;
@@ -249,6 +249,7 @@ class Emulator final
 	std::string m_usr{"00000001"};
 	u32 m_usrid{1};
 
+	bool m_force_global_config = false;
 	bool m_force_boot = false;
 	bool m_has_gui = true;
 
@@ -362,7 +363,7 @@ public:
 	void SetForceBoot(bool force_boot);
 
 	void Load(const std::string& title_id = "", bool add_only = false, bool force_global_config = false);
-	void Run();
+	void Run(bool start_playtime);
 	bool Pause();
 	void Resume();
 	void Stop(bool restart = false);

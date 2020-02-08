@@ -153,7 +153,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	case Qt::Key_E:
 		if (keyEvent->modifiers() == Qt::ControlModifier)
 		{
-			if (Emu.IsReady()) { Emu.Run(); return; }
+			if (Emu.IsReady()) { Emu.Run(true); return; }
 			else if (Emu.IsPaused()) { Emu.Resume(); return; }
 		}
 		break;

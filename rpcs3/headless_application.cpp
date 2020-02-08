@@ -55,7 +55,7 @@ void headless_application::InitializeCallbacks()
 	callbacks.get_save_dialog                = []() -> std::unique_ptr<SaveDialogBase> { return std::unique_ptr<SaveDialogBase>(); };
 	callbacks.get_trophy_notification_dialog = []() -> std::unique_ptr<TrophyNotificationBase> { return std::unique_ptr<TrophyNotificationBase>(); };
 
-	callbacks.on_run    = []() {};
+	callbacks.on_run    = [](bool /*start_playtime*/) {};
 	callbacks.on_pause  = []() {};
 	callbacks.on_resume = []() {};
 	callbacks.on_stop   = []() {};
