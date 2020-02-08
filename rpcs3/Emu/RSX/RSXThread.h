@@ -112,7 +112,8 @@ namespace rsx
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
-	u32 get_address(u32 offset, u32 location);
+	// TODO: Replace with std::source_location in c++20
+	u32 get_address(u32 offset, u32 location, const char* from);
 
 	struct tiled_region
 	{
