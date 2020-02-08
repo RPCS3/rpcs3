@@ -516,7 +516,7 @@
     <ClInclude Include="Emu\Cell\lv2\sys_uart.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_bdemu.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_console.h" />
-    <ClCompile Include="Emu\Cell\lv2\sys_btsetting.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_btsetting.h" />
     <ClInclude Include="Emu\Cell\MFC.h" />
     <ClInclude Include="Emu\Cell\PPUModule.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAdec.h" />

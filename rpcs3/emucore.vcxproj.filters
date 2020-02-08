@@ -878,9 +878,6 @@
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\lv2\sys_btsetting.h">
-      <Filter>Header Files</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_crypto_engine.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -1219,6 +1216,9 @@
     <ClInclude Include="Emu\Cell\lv2\sys_crypto_engine.h">
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_btsetting.h">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClCompile>
     <ClInclude Include="Emu\Cell\Modules\cellAdec.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
