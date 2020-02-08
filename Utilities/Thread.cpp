@@ -1290,6 +1290,32 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		return true;
 	}
 
+	thread_local bool access_violation_recovered = false;
+
+	// Hack: allocate memory in case the emulator is stopping
+	const auto hack_alloc = [&]()
+	{
+		// If failed the value remains true and std::terminate should be called
+		access_violation_recovered = true;
+
+		const auto area = vm::reserve_map(vm::any, addr & -0x10000, 0x10000);
+
+		if (!area)
+		{
+			return false;
+		}
+
+		if (area->flags & 0x100 || (is_writing && vm::check_addr(addr, std::max(1u, ::narrow<u32>(d_size)))))
+		{
+			// For 4kb pages or read only memory
+			utils::memory_protect(vm::base(addr & -0x1000), 0x1000, utils::protection::rw);
+			return true;
+		}
+
+		area->falloc(addr & -0x10000, 0x10000);
+		return vm::check_addr(addr, std::max(1u, ::narrow<u32>(d_size)), is_writing ? vm::page_writable : vm::page_readable);
+	};
+
 	if (cpu)
 	{
 		u32 pf_port_id = 0;
@@ -1377,22 +1403,23 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 				sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
 			}
 
-			if (sending_error)
-			{
-				fmt::throw_exception("Unknown error %x while trying to pass page fault.", sending_error.value);
-			}
-
 			if (cpu->id_type() == 1)
 			{
 				// Deschedule
 				lv2_obj::sleep(*cpu);
 			}
 
+			if (sending_error)
+			{
+				vm_log.fatal("Unknown error %x while trying to pass page fault.", +sending_error);
+				cpu->state += cpu_flag::dbg_pause;
+			}
+	
 			// Wait until the thread is recovered
 			for (std::shared_lock pf_lock(pf_events->pf_mutex);
-				pf_events->events.find(static_cast<u32>(data2)) != pf_events->events.end();)
+				pf_events->events.count(static_cast<u32>(data2)) && !sending_error;)
 			{
-				if (Emu.IsStopped())
+				if (cpu->is_stopped())
 				{
 					break;
 				}
@@ -1401,16 +1428,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 				pf_events->cond.wait(pf_lock, 10000);
 			}
 
-			// Reschedule
-			if (cpu->test_stopped())
+			// Reschedule, test cpu state and try recovery if stopped
+			if (cpu->test_stopped() && !hack_alloc())
 			{
-				//
-			}
-
-			if (Emu.IsStopped())
-			{
-				// Hack: allocate memory in case the emulator is stopping
-				vm::falloc(addr & -0x10000, 0x10000);
+				std::terminate();
 			}
 
 			return true;
@@ -1418,30 +1439,23 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 		if (cpu->id_type() != 1)
 		{
-			vm_log.notice("\n%s", cpu->dump());
-			vm_log.fatal("Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
+			if (!access_violation_recovered)
+			{
+				vm_log.notice("\n%s", cpu->dump());
+				vm_log.fatal("Access violation %s location 0x%x (%s)", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
+			}
 
 			// TODO:
 			// RawSPU: Send appropriate interrupt
 			// SPUThread: Send sys_spu exception event
 			cpu->state += cpu_flag::dbg_pause;
-			if (cpu->check_state())
+
+			if (cpu->check_state() && !hack_alloc())
 			{
-				// Hack: allocate memory in case the emulator is stopping
-				auto area = vm::reserve_map(vm::any, addr & -0x10000, 0x10000);
-
-				if (area->flags & 0x100)
-				{
-					// For 4kb pages
-					utils::memory_protect(vm::base(addr & -0x1000), 0x1000, utils::protection::rw);
-				}
-				else
-				{
-					area->falloc(addr & -0x10000, 0x10000);
-				}
-
-				return true;
+				std::terminate();
 			}
+
+			return true;
 		}
 		else
 		{
@@ -1456,19 +1470,24 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 	Emu.Pause();
 
-	if (cpu)
+	if (cpu && !access_violation_recovered)
 	{
 		vm_log.notice("\n%s", cpu->dump());
 	}
 
-	vm_log.fatal("Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
+	// Note: a thread may access violate more than once after hack_alloc recovery
+	// Do not log any further access violations in this case.
+	if (!access_violation_recovered)
+	{
+		vm_log.fatal("Access violation %s location 0x%x (%s)", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
+	}
 
 	while (Emu.IsPaused())
 	{
 		thread_ctrl::wait();
 	}
 
-	if (Emu.IsStopped())
+	if (Emu.IsStopped() && !hack_alloc())
 	{
 		std::terminate();
 	}
