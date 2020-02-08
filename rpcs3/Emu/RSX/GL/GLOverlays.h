@@ -368,24 +368,32 @@ namespace gl
 				"layout(location=0) out vec2 tc0;\n"
 				"layout(location=1) flat out vec4 clip_rect;\n"
 				"uniform vec4 ui_scale;\n"
-				"uniform vec2 viewport;\n"
+				"uniform vec4 viewport;\n"
 				"uniform vec4 clip_bounds;\n"
 				"\n"
 				"vec2 snap_to_grid(vec2 normalized)\n"
 				"{\n"
-				"	return (floor(normalized * viewport) + 0.5) / viewport;\n"
+				"	return (floor(normalized * viewport.xy) + 0.5) / viewport.xy;\n"
+				"}\n"
+				"\n"
+				"vec4 clip_to_ndc(const in vec4 coord)\n"
+				"{\n"
+				"	vec4 ret = (coord * ui_scale.zwzw) / ui_scale.xyxy;\n"
+				"	ret.yw = 1. - ret.yw;\n"
+				"	return ret;\n"
+				"}\n"
+				"\n"
+				"vec4 ndc_to_window(const in vec4 coord)\n"
+				"{\n"
+				"	return fma(coord, viewport.xyxy, viewport.zwzw);\n"
 				"}\n"
 				"\n"
 				"void main()\n"
 				"{\n"
 				"	tc0.xy = in_pos.zw;\n"
-				"	clip_rect = clip_bounds;\n"
-				"	clip_rect.yw = ui_scale.yy - clip_rect.wy; // Invert y axis\n"
-				"	clip_rect *= (ui_scale.zwzw * viewport.xyxy) / ui_scale.xyxy; // Normalize and convert to window coords\n"
-				"	vec2 window_coord = (in_pos.xy * ui_scale.zw) / ui_scale.xy;\n"
-				"	window_coord = snap_to_grid(window_coord); // Half-integer offset\n"
-				"	window_coord.y = (1. - window_coord.y); // Invert y axis\n"
-				"	vec4 pos = vec4(window_coord, 0., 1.);\n"
+				"	clip_rect = ndc_to_window(clip_to_ndc(clip_bounds)).xwzy; // Swap y1 and y2 due to flipped origin!\n"
+				"	vec4 pos = vec4(clip_to_ndc(in_pos).xy, 0.5, 1.);\n"
+				"	pos.xy = snap_to_grid(pos.xy);\n"
 				"	gl_Position = (pos + pos) - 1.;\n"
 				"}\n";
 
@@ -632,7 +640,7 @@ namespace gl
 
 		void run(const areau& viewport, GLuint target, rsx::overlays::overlay& ui)
 		{
-			program_handle.uniforms["viewport"] = color2f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()));
+			program_handle.uniforms["viewport"] = color4f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()), static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1));
 			program_handle.uniforms["ui_scale"] = color4f(static_cast<f32>(ui.virtual_width), static_cast<f32>(ui.virtual_height), 1.f, 1.f);
 			program_handle.uniforms["time"] = static_cast<f32>(get_system_time() / 1000) * 0.005f;
 
