@@ -935,6 +935,8 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		m_title_id = title_id;
 	}
 
+	m_force_global_config = force_global_config;
+
 	try
 	{
 		Init();
@@ -1223,7 +1225,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../", false))
 			{
 				sys_log.success("Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
-				return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load();
+				return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load(title_id, add_only, force_global_config);
 			}
 			else
 			{
@@ -1422,7 +1424,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		{
 			// Booting game update
 			sys_log.success("Updates found at /dev_hdd0/game/%s/!", m_title_id);
-			return m_path = hdd0_boot, Load();
+			return m_path = hdd0_boot, Load(title_id, add_only, force_global_config);
 		}
 
 		// Set title to actual disc title if necessary
@@ -1639,7 +1641,7 @@ void Emulator::Run(bool start_playtime)
 {
 	if (!IsReady())
 	{
-		Load();
+		Load("", false, m_force_global_config);
 
 		if (!IsReady())
 		{
@@ -1797,7 +1799,7 @@ void Emulator::Stop(bool restart)
 	{
 		if (restart)
 		{
-			return Load();
+			return Load("", false, m_force_global_config);
 		}
 
 		m_force_boot = false;
@@ -1841,7 +1843,7 @@ void Emulator::Stop(bool restart)
 
 	if (restart)
 	{
-		return Load();
+		return Load("", false, m_force_global_config);
 	}
 
 	// Boot arg cleanup (preserved in the case restarting)

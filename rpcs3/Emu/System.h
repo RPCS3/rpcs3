@@ -251,6 +251,7 @@ class Emulator final
 
 	bool m_force_boot = false;
 	bool m_has_gui = true;
+	bool m_force_global_config = false;
 
 public:
 	Emulator() = default;
