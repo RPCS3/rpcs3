@@ -249,6 +249,7 @@ class Emulator final
 	std::string m_usr{"00000001"};
 	u32 m_usrid{1};
 
+	bool m_force_global_config = false;
 	bool m_force_boot = false;
 	bool m_has_gui = true;
 

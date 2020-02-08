@@ -925,6 +925,8 @@ void Emulator::SetForceBoot(bool force_boot)
 
 void Emulator::Load(const std::string& title_id, bool add_only, bool force_global_config)
 {
+	m_force_global_config = force_global_config;
+
 	if (!IsStopped())
 	{
 		Stop();
@@ -1639,9 +1641,8 @@ void Emulator::Run(bool start_playtime)
 {
 	if (!IsReady())
 	{
-		// Reload with global configuration.
-		// TODO: Discuss if this should use the prior configuration instead.
-		Load();
+		// Reload with prior configuration.
+		Load(m_title_id, false, m_force_global_config);
 
 		if (!IsReady())
 		{
@@ -1799,9 +1800,8 @@ void Emulator::Stop(bool restart)
 	{
 		if (restart)
 		{
-			// Reload with global configuration.
-			// TODO: Discuss if this should use the prior configuration instead.
-			return Load();
+			// Reload with prior configs.
+			return Load(m_title_id, false, m_force_global_config);
 		}
 
 		m_force_boot = false;
@@ -1845,9 +1845,8 @@ void Emulator::Stop(bool restart)
 
 	if (restart)
 	{
-		// Reload with global configuration.
-		// TODO: Discuss if this should use the prior configuration instead.
-		return Load();
+		// Reload with prior configs.
+		return Load(m_title_id, false, m_force_global_config);
 	}
 
 	// Boot arg cleanup (preserved in the case restarting)
