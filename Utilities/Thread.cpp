@@ -1096,7 +1096,7 @@ namespace rsx
 	extern std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 }
 
-bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
+bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) noexcept
 {
 	g_tls_fault_all++;
 
@@ -1478,7 +1478,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 #ifdef _WIN32
 
-static LONG exception_handler(PEXCEPTION_POINTERS pExp)
+static LONG exception_handler(PEXCEPTION_POINTERS pExp) noexcept
 {
 	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - reinterpret_cast<u64>(vm::g_base_addr);
 	const u64 exec64 = (pExp->ExceptionRecord->ExceptionInformation[1] - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
@@ -1502,7 +1502,7 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-static LONG exception_filter(PEXCEPTION_POINTERS pExp)
+static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 {
 	std::string msg = fmt::format("Unhandled Win32 exception 0x%08X.\n", pExp->ExceptionRecord->ExceptionCode);
 
@@ -1599,7 +1599,7 @@ const bool s_exception_handler_set = []() -> bool
 
 #else
 
-static void signal_handler(int sig, siginfo_t* info, void* uct)
+static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 {
 	x64_context* context = static_cast<ucontext_t*>(uct);
 
