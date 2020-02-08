@@ -61,6 +61,9 @@ struct search_info
 	vm::ptr<void> userData;
 
 	atomic_t<search_state> state = search_state::not_initialized; 
+
+	shared_mutex links_mutex;
+	std::unordered_map<std::string, std::string> content_links;
 };
 
 struct search_content_t
@@ -159,6 +162,10 @@ error_code cellSearchFinalize()
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
+		{
+			std::lock_guard lock(search->links_mutex);
+			search->content_links.clear();
+		}
 		search->func(ppu, CELL_SEARCH_EVENT_FINALIZE_RESULT, CELL_OK, vm::null, search->userData);
 		search->state.release(search_state::not_initialized);
 		return CELL_OK;
@@ -398,7 +405,19 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 					auto ext_offset = item.name.find_last_of("."); // used later if no "Title" found
 
 					std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
-					strcpy_trunc(curr_find->infoPath.contentPath, item_path); // TODO: This is the case where linking is required
+					if( item_path.length() > CELL_SEARCH_PATH_LEN_MAX )
+					{
+						// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
+						std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
+						strcpy_trunc(curr_find->infoPath.contentPath, link);
+
+						std::lock_guard lock(search->links_mutex);
+						search->content_links.emplace(std::move(link), item_path);
+					}
+					else
+					{
+						strcpy_trunc(curr_find->infoPath.contentPath, item_path);
+					}
 					// TODO - curr_find.infoPath.thumbnailPath
 					if (type == CELL_SEARCH_CONTENTSEARCHTYPE_MUSIC_ALL)
 					{
@@ -951,7 +970,8 @@ error_code cellSearchPrepareFile(vm::cptr<char> path)
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (g_fxo->get<search_info>()->state.load())
+	const auto search = g_fxo->get<search_info>();
+	switch (search->state.load())
 	{
 	case search_state::idle:
 		break;
@@ -967,8 +987,12 @@ error_code cellSearchPrepareFile(vm::cptr<char> path)
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	// TODO: Create a hard link if file path is too long
-	// Store mappings in cellSearch internally and resolve them here if needed
+	std::shared_lock lock(search->links_mutex);
+	auto found = search->content_links.find(path.get_ptr());
+	if (found != search->content_links.end())
+	{
+		vfs::mount(found->first, vfs::get(found->second));
+	}
 
 	return CELL_OK;
 }
