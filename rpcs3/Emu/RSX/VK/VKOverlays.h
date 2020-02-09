@@ -476,7 +476,7 @@ namespace vk
 		bool m_clip_enabled = false;
 		int  m_texture_type;
 		areaf m_clip_region;
-		size2f m_viewport_size;
+		coordf m_viewport;
 
 		std::vector<std::unique_ptr<vk::image>> resources;
 		std::unordered_map<u64, std::unique_ptr<vk::image>> font_cache;
@@ -498,9 +498,19 @@ namespace vk
 				"layout(location=3) out vec4 clip_rect;\n"
 				"layout(location=4) out vec4 parameters2;\n"
 				"\n"
-				"vec2 snap_to_grid(vec2 normalized)\n"
+				"vec2 snap_to_grid(const in vec2 normalized)\n"
 				"{\n"
 				"	return (floor(normalized * regs[5].xy) + 0.5) / regs[5].xy;\n"
+				"}\n"
+				"\n"
+				"vec4 clip_to_ndc(const in vec4 coord)\n"
+				"{\n"
+				"	return (coord * regs[0].zwzw) / regs[0].xyxy;\n"
+				"}\n"
+				"\n"
+				"vec4 ndc_to_window(const in vec4 coord)\n"
+				"{\n"
+				"	return fma(coord, regs[5].xyxy, regs[5].zwzw);\n"
 				"}\n"
 				"\n"
 				"void main()\n"
@@ -509,9 +519,8 @@ namespace vk
 				"	color = regs[1];\n"
 				"	parameters = regs[2];\n"
 				"	parameters2 = regs[4];\n"
-				"	clip_rect = (regs[3] * regs[0].zwzw) / regs[0].xyxy;  // Normalized coords\n"
-				"	clip_rect *= regs[5].xyxy;  // Window coords\n"
-				"	vec4 pos = vec4((in_pos.xy * regs[0].zw) / regs[0].xy, 0.5, 1.);\n"
+				"	clip_rect = ndc_to_window(clip_to_ndc(regs[3]));\n"
+				"	vec4 pos = vec4(clip_to_ndc(in_pos).xy, 0.5, 1.);\n"
 				"	pos.xy = snap_to_grid(pos.xy);\n"
 				"	gl_Position = (pos + pos) - 1.;\n"
 				"}\n";
@@ -768,9 +777,11 @@ namespace vk
 			// regs[4] = fs config parameters 2
 			dst[16] = m_blur_strength;
 
-			// regs[5] = viewport size
-			dst[20] = m_viewport_size.width;
-			dst[21] = m_viewport_size.height;
+			// regs[5] = viewport
+			dst[20] = m_viewport.width;
+			dst[21] = m_viewport.height;
+			dst[22] = m_viewport.x;
+			dst[23] = m_viewport.y;
 
 			m_ubo.unmap();
 		}
@@ -821,7 +832,7 @@ namespace vk
 		{
 			m_scale_offset = color4f(ui.virtual_width, ui.virtual_height, 1.f, 1.f);
 			m_time = static_cast<f32>(get_system_time() / 1000) * 0.005f;
-			m_viewport_size = { static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()) };
+			m_viewport = { { static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1) }, { static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()) } };
 
 			for (auto &command : ui.get_compiled().draw_commands)
 			{
