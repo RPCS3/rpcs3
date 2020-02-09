@@ -260,6 +260,15 @@ error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 	return CELL_OK;
 }
 
+error_code sys_memory_get_user_memory_stat(vm::ptr<sys_memory_user_memory_stat_t> mem_stat)
+{
+	vm::temporary_unlock();
+
+	sys_memory.todo("sys_memory_get_user_memory_stat(mem_stat=*0x%x)", mem_stat);
+
+	return CELL_OK;
+}
+
 error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 {
 	vm::temporary_unlock();

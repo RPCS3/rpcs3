@@ -21,6 +21,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 23: return "sys_process_wait_for_child2";
 	case 25: return "sys_process_get_sdk_version";
 	case 26: return "_sys_process_exit2";
+	case 27: return "sys_process_spawns_a_self2";
 	case 28: return "_sys_process_get_number_of_object";
 	case 29: return "sys_process_get_id2";
 	case 30: return "_sys_process_get_paramsfo";
@@ -171,6 +172,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 197: return "sys_raw_spu_get_spu_cfg";
 	case 198: return "sys_spu_thread_recover_page_fault";
 	case 199: return "sys_raw_spu_recover_page_fault";
+	case 213: return "sys_console_write2";
 	case 215: return "sys_dbg_mat_set_condition";
 	case 216: return "sys_dbg_mat_get_condition";
 	case 230: return "sys_isolated_spu_create";
@@ -323,6 +325,8 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 509: return "sys_hid_manager_release_focus";
 	case 510: return "sys_hid_manager_check_focus";
 	case 511: return "sys_hid_manager_set_master_process";
+	case 512: return "sys_hid_manager_is_process_permission_root";
+	case 514: return "sys_hid_manager_514";
 	case 516: return "sys_config_open";
 	case 517: return "sys_config_close";
 	case 518: return "sys_config_get_service_event";
