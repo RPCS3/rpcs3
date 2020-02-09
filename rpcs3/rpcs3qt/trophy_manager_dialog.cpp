@@ -505,6 +505,7 @@ QPixmap trophy_manager_dialog::GetResizedGameIcon(int index)
 	if (!icon.isNull())
 	{
 		QPainter painter(&new_icon);
+		painter.setRenderHint(QPainter::SmoothPixmapTransform);
 		painter.drawPixmap(QPoint(0, 0), icon);
 		painter.end();
 	}
@@ -569,6 +570,7 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 		if (!icon.isNull())
 		{
 			QPainter painter(&new_icon);
+			painter.setRenderHint(QPainter::SmoothPixmapTransform);
 			painter.drawPixmap(QPoint(0, 0), icon);
 			painter.end();
 		}

@@ -743,8 +743,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 	if (m_isListLayout)
 	{
-		int scroll_position = m_gameList->verticalScrollBar()->value();
-		int row = PopulateGameList();
+		const int scroll_position = m_gameList->verticalScrollBar()->value();
+		const int row = PopulateGameList();
 		m_gameList->selectRow(row);
 		SortGameList();
 
@@ -1677,6 +1677,7 @@ QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_ic
 	canvas.fill(m_Icon_Color);
 
 	QPainter painter(&canvas);
+	painter.setRenderHint(QPainter::SmoothPixmapTransform);
 
 	if (!icon.isNull())
 	{
@@ -1713,6 +1714,7 @@ QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_ic
 		const int spacing = original_size.height() * 0.05;
 		QColor copyColor = QColor(compatibility_color);
 		copyColor.setAlpha(215); // ~85% opacity
+		painter.setRenderHint(QPainter::Antialiasing);
 		painter.setBrush(QBrush(copyColor));
 		painter.drawEllipse(spacing, spacing, size, size);
 	}
