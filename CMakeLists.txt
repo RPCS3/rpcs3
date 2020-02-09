@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8.2)
+cmake_minimum_required(VERSION 3.12.4)
 
 project(rpcs3)
 
@@ -25,11 +25,7 @@ option(USE_VULKAN "Vulkan render backend" ON)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/rpcs3/cmake_modules")
 
-if (MSVC)
-	set(CMAKE_CXX_STANDARD 20)
-else()
-	set(CMAKE_CXX_STANDARD 17)
-endif()
+set(CMAKE_CXX_STANDARD 20)
 include(CheckCXXCompilerFlag)
 
 if (NOT CMAKE_BUILD_TYPE)
