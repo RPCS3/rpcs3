@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "VKGSRender.h"
 
 
@@ -479,6 +479,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			continue;
 		default:
 			vk::die_with_error(HERE, status);
+		}
+
+		if (should_reinitialize_swapchain)
+		{
+			// Image is valid, new swapchain will be generated later
+			break;
 		}
 	}
 
