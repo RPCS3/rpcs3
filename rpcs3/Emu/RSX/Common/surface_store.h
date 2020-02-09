@@ -898,12 +898,14 @@ namespace rsx
 
 			// Range test helper to quickly discard blocks
 			// Fortunately, render targets tend to be clustered anyway
-			if (test_range.overlaps(m_render_targets_memory_range))
+			if (m_render_targets_memory_range.valid() &&
+				test_range.overlaps(m_render_targets_memory_range))
 			{
 				process_list_function(m_render_targets_storage, false);
 			}
 
-			if (test_range.overlaps(m_depth_stencil_memory_range))
+			if (m_depth_stencil_memory_range.valid() &&
+				test_range.overlaps(m_depth_stencil_memory_range))
 			{
 				process_list_function(m_depth_stencil_storage, true);
 			}
