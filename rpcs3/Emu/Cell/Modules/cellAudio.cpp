@@ -458,11 +458,37 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 	std::array<u64, MAX_AUDIO_EVENT_QUEUES> event_sources;
 	u32 queue_count = 0;
 
-	for (const auto& key_pair : keys)
+	event_period++;
+
+	for (const auto& key_inf : keys)
 	{
-		if (auto queue = lv2_event_queue::find(key_pair.first))
+		if (const auto queue = lv2_event_queue::find(key_inf.key))
 		{
-			event_sources[queue_count] = key_pair.second;
+			if (key_inf.flags & CELL_AUDIO_EVENTFLAG_NOMIX)
+			{
+				continue;
+			}
+
+			u32 periods = 1;
+
+			if (key_inf.flags & CELL_AUDIO_EVENTFLAG_DECIMATE_2)
+			{
+				periods *= 2;
+			}
+
+			if (key_inf.flags & CELL_AUDIO_EVENTFLAG_DECIMATE_4)
+			{
+				// If both flags are set periods is set to x8
+				periods *= 4;
+			}
+
+			if ((event_period ^ key_inf.start_period) & (periods - 1))
+			{
+				// The time has not come for this key to receive event
+				continue;
+			}
+
+			event_sources[queue_count] = key_inf.source;
 			queues[queue_count++] = queue;
 		}
 	}
@@ -982,6 +1008,7 @@ error_code cellAudioQuit(ppu_thread& ppu)
 	// TODO
 	g_audio->keys.clear();
 	g_audio->key_count = 0;
+	g_audio->event_period = 0;
 	g_audio->init = 0;
 
 	return CELL_OK;
@@ -1375,10 +1402,8 @@ error_code cellAudioCreateNotifyEventQueueEx(vm::ptr<u32> id, vm::ptr<u64> key, 
 	return AudioCreateNotifyEventQueue(id, key, queue_type);
 }
 
-error_code cellAudioSetNotifyEventQueue(u64 key)
+error_code AudioSetNotifyEventQueue(u64 key, u32 iFlags)
 {
-	cellAudio.warning("cellAudioSetNotifyEventQueue(key=0x%llx)", key);
-
 	const auto g_audio = g_fxo->get<cell_audio>();
 
 	std::lock_guard lock(g_audio->mutex);
@@ -1395,32 +1420,40 @@ error_code cellAudioSetNotifyEventQueue(u64 key)
 
 	for (const auto& k : g_audio->keys) // check for duplicates
 	{
-		if (k.first == key)
+		if (k.key == key)
 		{
 			return CELL_AUDIO_ERROR_TRANS_EVENT;
 		}
 	}
 
 	// Set unique source associated with the key
-	g_audio->keys.emplace_back(key, ((process_getpid() + 1ull) << 32) + (lv2_event_port::id_base + g_audio->key_count * lv2_event_port::id_step));
-	g_audio->key_count = (g_audio->key_count + 1) % lv2_event_port::id_count;
+	g_audio->keys.push_back({g_audio->event_period, iFlags, ((process_getpid() + u64{}) << 32) + lv2_event_port::id_base + (g_audio->key_count++ * lv2_event_port::id_step), key});
+	g_audio->key_count %= lv2_event_port::id_count;
 
 	return CELL_OK;
+}
+
+error_code cellAudioSetNotifyEventQueue(u64 key)
+{
+	cellAudio.warning("cellAudioSetNotifyEventQueue(key=0x%llx)", key);
+
+	return AudioSetNotifyEventQueue(key, 0);
 }
 
 error_code cellAudioSetNotifyEventQueueEx(u64 key, u32 iFlags)
 {
 	cellAudio.todo("cellAudioSetNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
 
-	// TODO
+	if (iFlags & (~0u >> 5))
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
 
-	return CELL_OK;
+	return AudioSetNotifyEventQueue(key, iFlags);
 }
 
-error_code cellAudioRemoveNotifyEventQueue(u64 key)
+error_code AudioRemoveNotifyEventQueue(u64 key, u32 iFlags)
 {
-	cellAudio.warning("cellAudioRemoveNotifyEventQueue(key=0x%llx)", key);
-
 	const auto g_audio = g_fxo->get<cell_audio>();
 
 	std::lock_guard lock(g_audio->mutex);
@@ -1432,8 +1465,13 @@ error_code cellAudioRemoveNotifyEventQueue(u64 key)
 
 	for (auto i = g_audio->keys.cbegin(); i != g_audio->keys.cend(); i++)
 	{
-		if (i->first == key)
+		if (i->key == key)
 		{
+			if (i->flags != iFlags)
+			{
+				break;
+			}
+
 			g_audio->keys.erase(i);
 
 			return CELL_OK;
@@ -1443,13 +1481,23 @@ error_code cellAudioRemoveNotifyEventQueue(u64 key)
 	return CELL_AUDIO_ERROR_TRANS_EVENT;
 }
 
+error_code cellAudioRemoveNotifyEventQueue(u64 key)
+{
+	cellAudio.warning("cellAudioRemoveNotifyEventQueue(key=0x%llx)", key);
+
+	return AudioRemoveNotifyEventQueue(key, 0);
+}
+
 error_code cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
 {
 	cellAudio.todo("cellAudioRemoveNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
 
-	// TODO
+	if (iFlags & (~0u >> 5))
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
 
-	return CELL_OK;
+	return AudioRemoveNotifyEventQueue(key, iFlags);
 }
 
 error_code cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
