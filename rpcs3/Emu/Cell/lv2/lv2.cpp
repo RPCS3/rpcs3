@@ -36,6 +36,16 @@
 #include "sys_ss.h"
 #include "sys_gpio.h"
 #include "sys_config.h"
+#include "sys_bdemu.h"
+#include "sys_btsetting.h"
+#include "sys_console.h"
+#include "sys_hid.h"
+#include "sys_io.h"
+#include "sys_rsxaudio.h"
+#include "sys_sm.h"
+#include "sys_storage.h"
+#include "sys_uart.h"
+#include "sys_crypto_engine.h"
 
 extern std::string ppu_get_syscall_name(u64 code);
 
@@ -95,7 +105,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(),                                //24  (0x018)  DBG
 	BIND_FUNC(sys_process_get_sdk_version),                 //25  (0x019)
 	BIND_FUNC(_sys_process_exit2),                          //26  (0x01A)
-	null_func,//BIND_FUNC(),                                //27  (0x01B)  DBG
+	BIND_FUNC(sys_process_spawns_a_self2),                  //27  (0x01B)  DBG
 	null_func,//BIND_FUNC(_sys_process_get_number_of_object)//28  (0x01C)  ROOT
 	BIND_FUNC(sys_process_get_id2),                          //29  (0x01D)  ROOT
 	BIND_FUNC(_sys_process_get_paramsfo),                   //30  (0x01E)
@@ -265,7 +275,9 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 
 	null_func, null_func, null_func, null_func, null_func,  //204  UNS?
 	null_func, null_func, null_func, null_func, null_func,  //209  UNS?
-	null_func, null_func, null_func, null_func, null_func,  //214  UNS?
+	null_func, null_func, null_func,                        //212  UNS?
+	BIND_FUNC(sys_console_write2),                          //213 (0x0D5)
+	null_func,                                              //214  UNS?
 
 	null_func,//BIND_FUNC(sys_dbg_mat_set_condition)        //215 (0x0D7)
 	null_func,//BIND_FUNC(sys_dbg_mat_get_condition)        //216 (0x0D8)
@@ -357,7 +369,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_memory_allocate_from_container),          //350 (0x15E)
 	BIND_FUNC(sys_memory_get_page_attribute),               //351 (0x15F)
 	BIND_FUNC(sys_memory_get_user_memory_size),             //352 (0x160)
-	null_func,//BIND_FUNC(sys_memory_get_user_memory_stat)  //353 (0x161)
+	BIND_FUNC(sys_memory_get_user_memory_stat),             //353 (0x161)
 	null_func,//BIND_FUNC(sys_memory_...)                   //354 (0x162)
 	null_func,//BIND_FUNC(sys_memory_...)                   //355 (0x163)
 	null_func,//BIND_FUNC(sys_memory_allocate_colored)      //356 (0x164)
@@ -370,10 +382,10 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_mmapper_...)                  //363 (0x16B)
 	null_func,//BIND_FUNC(sys_mmapper_...)                  //364 (0x16C)
 	uns_func, uns_func,                                     //366 (0x16E)  UNS
-	null_func,//BIND_FUNC(sys_uart_initialize)              //367 (0x16F)  ROOT
-	null_func,//BIND_FUNC(sys_uart_receive)                 //368 (0x170)  ROOT
-	null_func,//BIND_FUNC(sys_uart_send)                    //369 (0x171)  ROOT
-	null_func,//BIND_FUNC(sys_uart_get_params)              //370 (0x172)  ROOT
+	BIND_FUNC(sys_uart_initialize),                         //367 (0x16F)  ROOT
+	BIND_FUNC(sys_uart_receive),                            //368 (0x170)  ROOT
+	BIND_FUNC(sys_uart_send),                               //369 (0x171)  ROOT
+	BIND_FUNC(sys_uart_get_params),                         //370 (0x172)  ROOT
 	uns_func,                                               //371 (0x173)  UNS
 	null_func,//BIND_FUNC(sys_game_watchdog_start)          //372 (0x174)
 	null_func,//BIND_FUNC(sys_game_watchdog_stop)           //373 (0x175)
@@ -381,9 +393,9 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_game_set_system_sw_version)   //375 (0x177)  ROOT
 	null_func,//BIND_FUNC(sys_game_get_system_sw_version)   //376 (0x178)  ROOT
 	null_func,//BIND_FUNC(sys_sm_set_shop_mode)             //377 (0x179)  ROOT
-	null_func,//BIND_FUNC(sys_sm_get_ext_event2)            //378 (0x17A)  ROOT
-	null_func,//BIND_FUNC(sys_sm_shutdown)                  //379 (0x17B)  ROOT
-	null_func,//BIND_FUNC(sys_sm_get_params)                //380 (0x17C)  DBG
+	BIND_FUNC(sys_sm_get_ext_event2),                       //378 (0x17A)  ROOT
+	BIND_FUNC(sys_sm_shutdown),                             //379 (0x17B)  ROOT
+	BIND_FUNC(sys_sm_get_params),                           //380 (0x17C)  DBG
 	null_func,//BIND_FUNC(sys_sm_get_inter_lpar_parameter)  //381 (0x17D)  ROOT
 	null_func,//BIND_FUNC(sys_sm_initialize)                //382 (0x17E)  ROOT
 	null_func,//BIND_FUNC(sys_game_get_temperature)         //383 (0x17F)  ROOT
@@ -395,13 +407,13 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_sm_set_fan_policy)            //389 (0x185)  PM
 	null_func,//BIND_FUNC(sys_sm_request_error_log)         //390 (0x186)  ROOT
 	null_func,//BIND_FUNC(sys_sm_request_be_count)          //391 (0x187)  ROOT
-	null_func,//BIND_FUNC(sys_sm_ring_buzzer)               //392 (0x188)  ROOT
+	BIND_FUNC(sys_sm_ring_buzzer),                          //392 (0x188)  ROOT
 	null_func,//BIND_FUNC(sys_sm_get_hw_config)             //393 (0x189)  ROOT
 	null_func,//BIND_FUNC(sys_sm_request_scversion)         //394 (0x18A)  ROOT
 	null_func,//BIND_FUNC(sys_sm_request_system_event_log)  //395 (0x18B)  PM
 	null_func,//BIND_FUNC(sys_sm_set_rtc_alarm)             //396 (0x18C)  ROOT
 	null_func,//BIND_FUNC(sys_sm_get_rtc_alarm)             //397 (0x18D)  ROOT
-	null_func,//BIND_FUNC(sys_console_write)                //398 (0x18E)  ROOT
+	BIND_FUNC(sys_console_write),                           //398 (0x18E)  ROOT
 	uns_func,                                               //399 (0x18F)  UNS
 	null_func,//BIND_FUNC(sys_sm_...)                       //400 (0x190)  PM
 	null_func,//BIND_FUNC(sys_sm_...)                       //401 (0x191)  ROOT
@@ -475,21 +487,21 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(_sys_prx_load_module_on_memcontainer),        //497 (0x1F1)
 	BIND_FUNC(_sys_prx_start),                              //498 (0x1F2)
 	BIND_FUNC(_sys_prx_stop),                               //499 (0x1F3)
-	null_func,//BIND_FUNC(sys_hid_manager_open)             //500 (0x1F4)
+	BIND_FUNC(sys_hid_manager_open),                        //500 (0x1F4)
 	null_func,//BIND_FUNC(sys_hid_manager_close)            //501 (0x1F5)
-	null_func,//BIND_FUNC(sys_hid_manager_read)             //502 (0x1F6)  ROOT
-	null_func,//BIND_FUNC(sys_hid_manager_ioctl)            //503 (0x1F7)
+	BIND_FUNC(sys_hid_manager_read),                        //502 (0x1F6)  ROOT
+	BIND_FUNC(sys_hid_manager_ioctl),                       //503 (0x1F7)
 	null_func,//BIND_FUNC(sys_hid_manager_map_logical_id_to_port_id) //504 (0x1F8)  ROOT
 	null_func,//BIND_FUNC(sys_hid_manager_unmap_logical_id_to_port_id) //505 (0x1F9)  ROOT
-	null_func,//BIND_FUNC(sys_hid_manager_add_hot_key_observer) //506 (0x1FA)  ROOT
+	BIND_FUNC(sys_hid_manager_add_hot_key_observer),        //506 (0x1FA)  ROOT
 	null_func,//BIND_FUNC(sys_hid_manager_remove_hot_key_observer) //507 (0x1FB)  ROOT
 	null_func,//BIND_FUNC(sys_hid_manager_grab_focus)       //508 (0x1FC)  ROOT
 	null_func,//BIND_FUNC(sys_hid_manager_release_focus)    //509 (0x1FD)  ROOT
-	null_func,//BIND_FUNC(sys_hid_manager_check_focus)      //510 (0x1FE)
+	BIND_FUNC(sys_hid_manager_check_focus),                 //510 (0x1FE)
 	null_func,//BIND_FUNC(sys_hid_manager_set_master_process) //511 (0x1FF)  ROOT
-	null_func,//BIND_FUNC(sys_hid_manager_...)              //512 (0x200)  ROOT
+	BIND_FUNC(sys_hid_manager_is_process_permission_root),  //512 (0x200)  ROOT
 	null_func,//BIND_FUNC(sys_hid_manager_...)              //513 (0x201)
-	null_func,//BIND_FUNC(sys_hid_manager_...)              //514 (0x202)
+	BIND_FUNC(sys_hid_manager_514),                         //514 (0x202)
 	uns_func,                                               //515 (0x203)  UNS
 	BIND_FUNC(sys_config_open),                             //516 (0x204)
 	BIND_FUNC(sys_config_close),                            //517 (0x205)
@@ -572,41 +584,41 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_bt_cancel_connect_accept_controller) //597 (0x255)
 	null_func,//BIND_FUNC(sys_bluetooth_...)                //598 (0x256)  ROOT
 	null_func,//BIND_FUNC(sys_bluetooth_...)                //599 (0x257)  ROOT
-	null_func,//BIND_FUNC(sys_storage_open)                 //600 (0x258)  ROOT
-	null_func,//BIND_FUNC(sys_storage_close)                //601 (0x259)
-	null_func,//BIND_FUNC(sys_storage_read)                 //602 (0x25A)
-	null_func,//BIND_FUNC(sys_storage_write)                //603 (0x25B)
-	null_func,//BIND_FUNC(sys_storage_send_device_command)  //604 (0x25C)
-	null_func,//BIND_FUNC(sys_storage_async_configure)      //605 (0x25D)
-	null_func,//BIND_FUNC(sys_storage_async_read)           //606 (0x25E)
-	null_func,//BIND_FUNC(sys_storage_async_write)          //607 (0x25F)
-	null_func,//BIND_FUNC(sys_storage_async_cancel)         //608 (0x260)
-	null_func,//BIND_FUNC(sys_storage_get_device_info)      //609 (0x261)  ROOT
-	null_func,//BIND_FUNC(sys_storage_get_device_config)    //610 (0x262)  ROOT
-	null_func,//BIND_FUNC(sys_storage_report_devices)       //611 (0x263)  ROOT
-	null_func,//BIND_FUNC(sys_storage_configure_medium_event) //612 (0x264)  ROOT
-	null_func,//BIND_FUNC(sys_storage_set_medium_polling_interval) //613 (0x265)
-	null_func,//BIND_FUNC(sys_storage_create_region)        //614 (0x266)
-	null_func,//BIND_FUNC(sys_storage_delete_region)        //615 (0x267)
-	null_func,//BIND_FUNC(sys_storage_execute_device_command) //616 (0x268)
-	null_func,//BIND_FUNC(sys_storage_check_region_acl)     //617 (0x269)
-	null_func,//BIND_FUNC(sys_storage_set_region_acl)       //618 (0x26A)
-	null_func,//BIND_FUNC(sys_storage_async_send_device_command) //619 (0x26B)
+	BIND_FUNC(sys_storage_open),                            //600 (0x258)  ROOT
+	BIND_FUNC(sys_storage_close),                           //601 (0x259)
+	BIND_FUNC(sys_storage_read),                            //602 (0x25A)
+	BIND_FUNC(sys_storage_write),                           //603 (0x25B)
+	BIND_FUNC(sys_storage_send_device_command),             //604 (0x25C)
+	BIND_FUNC(sys_storage_async_configure),                 //605 (0x25D)
+	BIND_FUNC(sys_storage_async_read),                      //606 (0x25E)
+	BIND_FUNC(sys_storage_async_write),                     //607 (0x25F)
+	BIND_FUNC(sys_storage_async_cancel),                    //608 (0x260)
+	BIND_FUNC(sys_storage_get_device_info),                 //609 (0x261)  ROOT
+	BIND_FUNC(sys_storage_get_device_config),               //610 (0x262)  ROOT
+	BIND_FUNC(sys_storage_report_devices),                  //611 (0x263)  ROOT
+	BIND_FUNC(sys_storage_configure_medium_event),          //612 (0x264)  ROOT
+	BIND_FUNC(sys_storage_set_medium_polling_interval),     //613 (0x265)
+	BIND_FUNC(sys_storage_create_region),                   //614 (0x266)
+	BIND_FUNC(sys_storage_delete_region),                   //615 (0x267)
+	BIND_FUNC(sys_storage_execute_device_command),          //616 (0x268)
+	BIND_FUNC(sys_storage_check_region_acl),                //617 (0x269)
+	BIND_FUNC(sys_storage_set_region_acl),                  //618 (0x26A)
+	BIND_FUNC(sys_storage_async_send_device_command),       //619 (0x26B)
 	null_func,//BIND_FUNC(sys_...)                          //620 (0x26C)  ROOT
 	BIND_FUNC(sys_gamepad_ycon_if),                         //621 (0x26D)
-	null_func,//BIND_FUNC(sys_storage_get_region_offset)    //622 (0x26E)
-	null_func,//BIND_FUNC(sys_storage_set_emulated_speed)   //623 (0x26F)
-	null_func,//BIND_FUNC(sys_io_buffer_create)             //624 (0x270)
-	null_func,//BIND_FUNC(sys_io_buffer_destroy)            //625 (0x271)
-	null_func,//BIND_FUNC(sys_io_buffer_allocate)           //626 (0x272)
-	null_func,//BIND_FUNC(sys_io_buffer_free)               //627 (0x273)
+	BIND_FUNC(sys_storage_get_region_offset),               //622 (0x26E)
+	BIND_FUNC(sys_storage_set_emulated_speed),              //623 (0x26F)
+	BIND_FUNC(sys_io_buffer_create),                        //624 (0x270)
+	BIND_FUNC(sys_io_buffer_destroy),                       //625 (0x271)
+	BIND_FUNC(sys_io_buffer_allocate),                      //626 (0x272)
+	BIND_FUNC(sys_io_buffer_free),                          //627 (0x273)
 	uns_func, uns_func,                                     //629 (0x275)  UNS
 	BIND_FUNC(sys_gpio_set),                                //630 (0x276)
 	BIND_FUNC(sys_gpio_get),                                //631 (0x277)
 	uns_func,                                               //632 (0x278)  UNS
 	null_func,//BIND_FUNC(sys_fsw_connect_event)            //633 (0x279)
 	null_func,//BIND_FUNC(sys_fsw_disconnect_event)         //634 (0x27A)
-	null_func,//BIND_FUNC(sys_btsetting_if)                 //635 (0x27B)
+	BIND_FUNC(sys_btsetting_if),                            //635 (0x27B)
 	null_func,//BIND_FUNC(sys_...)                          //636 (0x27C)
 	null_func,//BIND_FUNC(sys_...)                          //637 (0x27D)
 	null_func,//BIND_FUNC(sys_...)                          //638 (0x27E)
@@ -623,10 +635,10 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_...)                          //648  DEPRECATED
 	null_func,//BIND_FUNC(sys_...)                          //649  DEPRECATED
 
-	null_func,//BIND_FUNC(sys_rsxaudio_initialize)          //650 (0x28A)
-	null_func,//BIND_FUNC(sys_rsxaudio_finalize)            //651 (0x28B)
-	null_func,//BIND_FUNC(sys_rsxaudio_import_shared_memory) //652 (0x28C)
-	null_func,//BIND_FUNC(sys_rsxaudio_unimport_shared_memory) //653 (0x28D)
+	BIND_FUNC(sys_rsxaudio_initialize),                     //650 (0x28A)
+	BIND_FUNC(sys_rsxaudio_finalize),                       //651 (0x28B)
+	BIND_FUNC(sys_rsxaudio_import_shared_memory),           //652 (0x28C)
+	BIND_FUNC(sys_rsxaudio_unimport_shared_memory),         //653 (0x28D)
 	null_func,//BIND_FUNC(sys_rsxaudio_create_connection)   //654 (0x28E)
 	null_func,//BIND_FUNC(sys_rsxaudio_close_connection)    //655 (0x28F)
 	null_func,//BIND_FUNC(sys_rsxaudio_prepare_process)     //656 (0x290)
@@ -669,7 +681,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_...)                          //696 (0x2B8)  ROOT
 	uns_func,//BIND_FUNC(sys_...)                           //697 (0x2B9)  UNS
 	uns_func,//BIND_FUNC(sys_...)                           //698 (0x2BA)  UNS
-	null_func,//BIND_FUNC(sys_bdemu_send_command)           //699 (0x2BB)
+	BIND_FUNC(sys_bdemu_send_command),                      //699 (0x2BB)
 	BIND_FUNC(sys_net_bnet_accept),                         //700 (0x2BC)
 	BIND_FUNC(sys_net_bnet_bind),                           //701 (0x2BD)
 	BIND_FUNC(sys_net_bnet_connect),                        //702 (0x2BE)
@@ -873,15 +885,15 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	uns_func,//BIND_FUNC(sys_dbg_...)                       //973 (0x3CD)
 	null_func,//BIND_FUNC(sys_dbg_...)                      //974 (0x3CE)
 	null_func,//BIND_FUNC(sys_dbg_read_spu_thread_context2) //975 (0x3CF)
-	null_func,//BIND_FUNC(sys_crypto_engine_create)         //976 (0x3D0)
-	null_func,//BIND_FUNC(sys_crypto_engine_destroy)        //977 (0x3D1)
+	BIND_FUNC(sys_crypto_engine_create),                    //976 (0x3D0)
+	BIND_FUNC(sys_crypto_engine_destroy),                   //977 (0x3D1)
 	null_func,//BIND_FUNC(sys_crypto_engine_hasher_prepare) //978 (0x3D2)  ROOT
 	null_func,//BIND_FUNC(sys_crypto_engine_hasher_run)     //979 (0x3D3)
 	null_func,//BIND_FUNC(sys_crypto_engine_hasher_get_hash) //980 (0x3D4)
 	null_func,//BIND_FUNC(sys_crypto_engine_cipher_prepare) //981 (0x3D5)  ROOT
 	null_func,//BIND_FUNC(sys_crypto_engine_cipher_run)     //982 (0x3D6)
 	null_func,//BIND_FUNC(sys_crypto_engine_cipher_get_hash) //983 (0x3D7)
-	null_func,//BIND_FUNC(sys_crypto_engine_random_generate) //984 (0x3D8)
+	BIND_FUNC(sys_crypto_engine_random_generate),           //984 (0x3D8)
 	null_func,//BIND_FUNC(sys_dbg_get_console_type)         //985 (0x3D9)  ROOT
 	null_func,//BIND_FUNC(sys_dbg_...)                      //986 (0x3DA)  ROOT  DBG
 	null_func,//BIND_FUNC(sys_dbg_...)                      //987 (0x3DB)  ROOT
