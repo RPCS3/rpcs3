@@ -1162,7 +1162,7 @@ namespace rsx
 		template <typename ...Args>
 		void commit_framebuffer_memory_region(commandbuffer_type& cmd, const address_range &rsx_range, Args&&... extras)
 		{
-			AUDIT(!g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer);
+			AUDIT(!g_cfg.video.write_color_buffers || !g_cfg.video.write_depth_buffer);
 
 			if (!region_intersects_cache(rsx_range, true))
 				return;
