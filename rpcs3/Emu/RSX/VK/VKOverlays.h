@@ -461,7 +461,7 @@ namespace vk
 			src_scale_x = static_cast<f32>(src_area.x2) / real_src->width();
 			src_scale_y = static_cast<f32>(src_area.y2) / real_src->height();
 
-			overlay_pass::run(cmd, dst_area, dst, src, render_pass);
+			overlay_pass::run(cmd, static_cast<areau>(dst_area), dst, src, render_pass);
 		}
 	};
 

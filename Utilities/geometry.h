@@ -115,7 +115,7 @@ struct size2_base
 #endif
 
 	template<typename NT>
-	constexpr operator size2_base<NT>() const
+	explicit constexpr operator size2_base<NT>() const
 	{
 		return{ static_cast<NT>(width), static_cast<NT>(height) };
 	}
@@ -226,7 +226,7 @@ struct position1_base
 	}
 
 	template<typename NT>
-	operator position1_base<NT>() const
+	explicit operator position1_base<NT>() const
 	{
 		return{ static_cast<NT>(x) };
 	}
@@ -399,7 +399,7 @@ struct position2_base
 	}
 
 	template<typename NT>
-	constexpr operator position2_base<NT>() const
+	explicit constexpr operator position2_base<NT>() const
 	{
 		return{ static_cast<NT>(x), static_cast<NT>(y) };
 	}
@@ -491,7 +491,7 @@ struct position3_base
 	}
 
 	template<typename NT>
-	operator position3_base<NT>() const
+	explicit operator position3_base<NT>() const
 	{
 		return{ static_cast<NT>(x), static_cast<NT>(y), static_cast<NT>(z) };
 	}
@@ -581,7 +581,7 @@ struct position4_base
 	}
 
 	template<typename NT>
-	constexpr operator position4_base<NT>() const
+	explicit constexpr operator position4_base<NT>() const
 	{
 		return{ static_cast<NT>(x), static_cast<NT>(y), static_cast<NT>(z), static_cast<NT>(w) };
 	}
@@ -656,7 +656,7 @@ struct coord_base
 #endif
 
 	template<typename NT>
-	constexpr operator coord_base<NT>() const
+	explicit constexpr operator coord_base<NT>() const
 	{
 		return{ static_cast<NT>(x), static_cast<NT>(y), static_cast<NT>(width), static_cast<NT>(height) };
 	}
@@ -765,7 +765,7 @@ struct area_base
 	}
 
 	template<typename NT>
-	constexpr operator area_base<NT>() const
+	explicit constexpr operator area_base<NT>() const
 	{
 		return{ static_cast<NT>(x1), static_cast<NT>(y1), static_cast<NT>(x2), static_cast<NT>(y2) };
 	}
@@ -828,7 +828,7 @@ struct coord3_base
 	}
 
 	template<typename NT>
-	constexpr operator coord3_base<NT>() const
+	explicit constexpr operator coord3_base<NT>() const
 	{
 		return{ static_cast<NT>(x), static_cast<NT>(y), static_cast<NT>(z), static_cast<NT>(width), static_cast<NT>(height), static_cast<NT>(depth) };
 	}
@@ -922,7 +922,7 @@ struct color4_base
 	}
 
 	template<typename NT>
-	constexpr operator color4_base<NT>() const
+	explicit constexpr operator color4_base<NT>() const
 	{
 		return{ static_cast<NT>(x), static_cast<NT>(y), static_cast<NT>(z), static_cast<NT>(w) };
 	}
@@ -967,7 +967,7 @@ struct color3_base
 #endif
 
 	template<typename NT>
-	constexpr operator color3_base<NT>() const
+	explicit constexpr operator color3_base<NT>() const
 	{
 		return{ static_cast<NT>(x), static_cast<NT>(y), static_cast<NT>(z) };
 	}
@@ -1012,7 +1012,7 @@ struct color2_base
 #endif
 
 	template<typename NT>
-	constexpr operator color2_base<NT>() const
+	explicit constexpr operator color2_base<NT>() const
 	{
 		return{ static_cast<NT>(x), static_cast<NT>(y) };
 	}
@@ -1046,7 +1046,7 @@ struct color1_base
 #endif
 
 	template<typename NT>
-	constexpr operator color1_base<NT>() const
+	explicit constexpr operator color1_base<NT>() const
 	{
 		return{ static_cast<NT>(x) };
 	}

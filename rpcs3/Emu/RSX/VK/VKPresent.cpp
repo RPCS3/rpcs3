@@ -493,7 +493,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	// Calculate output dimensions. Done after swapchain acquisition in case it was recreated.
 	coordi aspect_ratio;
-	sizei csize = m_swapchain_dims;
+	sizei csize = static_cast<sizei>(m_swapchain_dims);
 	sizei new_size = csize;
 
 	if (!g_cfg.video.stretch_to_display_area)

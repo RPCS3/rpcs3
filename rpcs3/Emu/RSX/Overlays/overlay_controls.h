@@ -811,7 +811,7 @@ namespace rsx
 						else if (item_y_limit > h || item_y_base < 0)
 						{
 							// Partial render
-							areaf clip_rect = areai{ x, y, (x + w), (y + h) };
+							areaf clip_rect = static_cast<areaf>(areai{x, y, (x + w), (y + h)});
 							result.add(item->get_compiled(), 0.f, global_y_offset, clip_rect);
 						}
 						else
@@ -885,7 +885,7 @@ namespace rsx
 						else if (item_x_limit > h || item_x_base < 0)
 						{
 							// Partial render
-							areaf clip_rect = areai{ x, y, (x + w), (y + h) };
+							areaf clip_rect = static_cast<areaf>(areai{x, y, (x + w), (y + h)});
 							result.add(item->get_compiled(), global_x_offset, 0.f, clip_rect);
 						}
 						else
