@@ -110,11 +110,13 @@ else()
 	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS})
 endif()
 
-set_target_properties(rpcs3 PROPERTIES
-	COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h"
-	COTIRE_ADD_UNITY_BUILD OFF)
+if(USE_COTIRE)
+	set_target_properties(rpcs3 PROPERTIES
+		COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h"
+		COTIRE_ADD_UNITY_BUILD OFF)
 
-cotire(rpcs3)
+	cotire(rpcs3)
+endif()
 
 # Copy icons to executable directory
 if(APPLE)
