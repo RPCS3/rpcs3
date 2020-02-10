@@ -454,7 +454,7 @@ void Emulator::Init()
 						});
 					};
 
-					Emu.CallAfter([=]()
+					Emu.CallAfter([dlg]()
 					{
 						dlg->Create(+g_progr, +g_progr);
 					});
@@ -522,7 +522,7 @@ void Emulator::Init()
 
 				if (dlg)
 				{
-					Emu.CallAfter([=]
+					Emu.CallAfter([=]()
 					{
 						dlg->Close(true);
 					});

@@ -73,7 +73,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 	setModal(true);
 
 	// Events
-	connect(button_ok, &QAbstractButton::clicked, this, [=](){OnOkay(_cpu); accept();});
+	connect(button_ok, &QAbstractButton::clicked, this, [=, this](){OnOkay(_cpu); accept();});
 	connect(button_cancel, &QAbstractButton::clicked, this, &register_editor_dialog::reject);
 	connect(m_register_combo, &QComboBox::currentTextChanged, this, &register_editor_dialog::updateRegister);
 

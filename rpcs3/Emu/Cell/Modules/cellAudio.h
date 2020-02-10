@@ -342,7 +342,17 @@ public:
 	atomic_t<u32> init = 0;
 
 	u32 key_count = 0;
-	std::vector<std::pair<u64, u64>> keys;
+	u8 event_period = 0;
+
+	struct key_info
+	{
+		u8 start_period; // Starting event_period 
+		u32 flags; // iFlags
+		u64 source; // Event source
+		u64 key; // Key
+	};
+
+	std::vector<key_info> keys;
 	std::array<audio_port, AUDIO_PORT_COUNT> ports;
 
 	u64 m_last_period_end = 0;

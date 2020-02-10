@@ -98,15 +98,15 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	connect(m_go_to_addr, &QAbstractButton::clicked, this, &debugger_frame::ShowGotoAddressDialog);
 	connect(m_go_to_pc, &QAbstractButton::clicked, this, &debugger_frame::ShowPC);
 
-	connect(m_btn_capture, &QAbstractButton::clicked, [=]()
+	connect(m_btn_capture, &QAbstractButton::clicked, [this]()
 	{
 		user_asked_for_frame_capture = true;
 	});
 
 	connect(m_btn_step, &QAbstractButton::clicked, this, &debugger_frame::DoStep);
-	connect(m_btn_step_over, &QAbstractButton::clicked, [=]() { DoStep(true); });
+	connect(m_btn_step_over, &QAbstractButton::clicked, [this]() { DoStep(true); });
 
-	connect(m_btn_run, &QAbstractButton::clicked, [=]()
+	connect(m_btn_run, &QAbstractButton::clicked, [this]()
 	{
 		if (const auto cpu = this->cpu.lock())
 		{
