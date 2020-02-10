@@ -89,7 +89,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	m_discord_state = xgui_settings->GetValue(gui::m_discordState).toString();
 
 	// Various connects
-	connect(ui->buttonBox, &QDialogButtonBox::accepted, [=, use_discord_old = m_use_discord, discord_state_old = m_discord_state]
+	connect(ui->buttonBox, &QDialogButtonBox::accepted, [this, use_discord_old = m_use_discord, discord_state_old = m_discord_state]
 	{
 		std::set<std::string> selectedlle;
 		for (int i = 0; i<ui->lleList->count(); ++i)
@@ -131,7 +131,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 
-	connect(ui->tab_widget_settings, &QTabWidget::currentChanged, [=]()
+	connect(ui->tab_widget_settings, &QTabWidget::currentChanged, [this]()
 	{
 		ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
 	});
@@ -225,7 +225,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				ppuBG->button(i)->setChecked(true);
 			}
 
-			connect(ppuBG->button(i), &QAbstractButton::clicked, [=]()
+			connect(ppuBG->button(i), &QAbstractButton::clicked, [=, this]()
 			{
 				xemu_settings->SetSetting(emu_settings::PPUDecoder, sstr(ppu_list[i]));
 			});
@@ -255,7 +255,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				spuBG->button(i)->setChecked(true);
 			}
 
-			connect(spuBG->button(i), &QAbstractButton::clicked, [=]()
+			connect(spuBG->button(i), &QAbstractButton::clicked, [=, this]()
 			{
 				xemu_settings->SetSetting(emu_settings::SPUDecoder, sstr(spu_list[i]));
 			});
@@ -399,7 +399,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
 	SubscribeTooltip(ui->scrictModeRendering, tooltips.settings.strict_rendering_mode);
-	connect(ui->scrictModeRendering, &QCheckBox::clicked, [=](bool checked)
+	connect(ui->scrictModeRendering, &QCheckBox::clicked, [this](bool checked)
 	{
 		ui->gb_resolutionScale->setEnabled(!checked);
 		ui->gb_minimumScalableDimension->setEnabled(!checked);
@@ -430,11 +430,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	ui->resolutionScaleMax->setText(QString::number(ui->resolutionScale->maximum()));
 	ui->resolutionScaleMax->setFixedWidth(minmaxLabelWidth("0000"));
 	ui->resolutionScaleVal->setText(ScaledResolution(ui->resolutionScale->value()));
-	connect(ui->resolutionScale, &QSlider::valueChanged, [=](int value)
+	connect(ui->resolutionScale, &QSlider::valueChanged, [=, this](int value)
 	{
 		ui->resolutionScaleVal->setText(ScaledResolution(value));
 	});
-	connect(ui->resolutionScaleReset, &QAbstractButton::clicked, [=]()
+	connect(ui->resolutionScaleReset, &QAbstractButton::clicked, [=, this]()
 	{
 		ui->resolutionScale->setValue(resolutionScaleDef);
 	});
@@ -459,11 +459,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	ui->minimumScalableDimensionMax->setText(QString::number(ui->minimumScalableDimension->maximum()));
 	ui->minimumScalableDimensionMax->setFixedWidth(minmaxLabelWidth("0000"));
 	ui->minimumScalableDimensionVal->setText(MinScalableDimension(ui->minimumScalableDimension->value()));
-	connect(ui->minimumScalableDimension, &QSlider::valueChanged, [=](int value)
+	connect(ui->minimumScalableDimension, &QSlider::valueChanged, [=, this](int value)
 	{
 		ui->minimumScalableDimensionVal->setText(MinScalableDimension(value));
 	});
-	connect(ui->minimumScalableDimensionReset, &QAbstractButton::clicked, [=]()
+	connect(ui->minimumScalableDimensionReset, &QAbstractButton::clicked, [=, this]()
 	{
 		ui->minimumScalableDimension->setValue(minimumScalableDimensionDef);
 	});
@@ -492,14 +492,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	m_oldRender = ui->renderBox->currentText();
 
-	auto setRenderer = [=](QString text)
+	auto setRenderer = [=, this](QString text)
 	{
 		if (text.isEmpty())
 		{
 			return;
 		}
 
-		auto switchTo = [=](emu_settings::Render_Info renderer)
+		auto switchTo = [=, this](emu_settings::Render_Info renderer)
 		{
 			// Reset other adapters to old config
 			for (const auto& render : render_creator.renderers)
@@ -557,7 +557,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		}
 	};
 
-	auto setAdapter = [=](QString text)
+	auto setAdapter = [=, this](QString text)
 	{
 		if (text.isEmpty())
 		{
@@ -589,7 +589,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	connect(ui->graphicsAdapterBox, &QComboBox::currentTextChanged, setAdapter);
 	connect(ui->renderBox, &QComboBox::currentTextChanged, setRenderer);
 
-	auto fixGLLegacy = [=](const QString& text)
+	auto fixGLLegacy = [=, this](const QString& text)
 	{
 		ui->glLegacyBuffers->setEnabled(text == render_creator.name_OpenGL);
 	};
@@ -626,11 +626,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		EnableBufferingOptions(enabled && ui->enableBuffering->isChecked());
 	};
 
-	auto ChangeMicrophoneType = [=](QString text)
+	auto ChangeMicrophoneType = [=, this](QString text)
 	{
 		std::string s_standard, s_singstar, s_realsingstar, s_rocksmith;
 
-		auto enableMicsCombo = [=](u32 max)
+		auto enableMicsCombo = [=, this](u32 max)
 		{
 			ui->microphone1Box->setEnabled(true);
 
@@ -676,7 +676,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		}
 	};
 
-	auto PropagateUsedDevices = [=]()
+	auto PropagateUsedDevices = [=, this]()
 	{
 		for (u32 index = 0; index < 4; index++)
 		{
@@ -696,7 +696,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ChangeMicrophoneType(ui->microphoneBox->currentText());
 	};
 
-	auto ChangeMicrophoneDevice = [=](u32 next_index, QString text)
+	auto ChangeMicrophoneDevice = [=, this](u32 next_index, QString text)
 	{
 		xemu_settings->SetSetting(emu_settings::MicrophoneDevices, xemu_settings->m_microphone_creator.SetDevice(next_index, text));
 		if (next_index < 4 && text == xemu_settings->m_microphone_creator.mic_none)
@@ -721,10 +721,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	mics_combo[1] = ui->microphone2Box;
 	mics_combo[2] = ui->microphone3Box;
 	mics_combo[3] = ui->microphone4Box;
-	connect(mics_combo[0], &QComboBox::currentTextChanged, [=](const QString& text) { ChangeMicrophoneDevice(1, text); });
-	connect(mics_combo[1], &QComboBox::currentTextChanged, [=](const QString& text) { ChangeMicrophoneDevice(2, text); });
-	connect(mics_combo[2], &QComboBox::currentTextChanged, [=](const QString& text) { ChangeMicrophoneDevice(3, text); });
-	connect(mics_combo[3], &QComboBox::currentTextChanged, [=](const QString& text) { ChangeMicrophoneDevice(4, text); });
+	connect(mics_combo[0], &QComboBox::currentTextChanged, [=, this](const QString& text) { ChangeMicrophoneDevice(1, text); });
+	connect(mics_combo[1], &QComboBox::currentTextChanged, [=, this](const QString& text) { ChangeMicrophoneDevice(2, text); });
+	connect(mics_combo[2], &QComboBox::currentTextChanged, [=, this](const QString& text) { ChangeMicrophoneDevice(3, text); });
+	connect(mics_combo[3], &QComboBox::currentTextChanged, [=, this](const QString& text) { ChangeMicrophoneDevice(4, text); });
 	xemu_settings->m_microphone_creator.RefreshList();
 	PropagateUsedDevices(); // Fills comboboxes list
 
@@ -856,7 +856,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				enterButtonAssignmentBG->button(i)->setChecked(true);
 			}
 
-			connect(enterButtonAssignmentBG->button(i), &QAbstractButton::clicked, [=]()
+			connect(enterButtonAssignmentBG->button(i), &QAbstractButton::clicked, [=, this]()
 			{
 				xemu_settings->SetSetting(emu_settings::EnterButtonAssignment, sstr(assignable_buttons[i]));
 			});
@@ -923,7 +923,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	ui->wakeupDelay->setMaximum(7000); // Very large values must be entered with config.yml changes
 	ui->wakeupDelay->setPageStep(200);
 	int wakeupDef = stoi(xemu_settings->GetSettingDefault(emu_settings::DriverWakeUpDelay));
-	connect(ui->wakeupReset, &QAbstractButton::clicked, [=]()
+	connect(ui->wakeupReset, &QAbstractButton::clicked, [=, this]()
 	{
 		ui->wakeupDelay->setValue(wakeupDef);
 	});
@@ -932,7 +932,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SnapSlider(ui->vblank, 30);
 	ui->vblank->setPageStep(60);
 	int vblankDef = stoi(xemu_settings->GetSettingDefault(emu_settings::VBlankRate));
-	connect(ui->vblankReset, &QAbstractButton::clicked, [=]()
+	connect(ui->vblankReset, &QAbstractButton::clicked, [=, this]()
 	{
 		ui->vblank->setValue(vblankDef);
 	});
@@ -941,7 +941,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SnapSlider(ui->clockScale, 10);
 	ui->clockScale->setPageStep(50);
 	int clocksScaleDef = stoi(xemu_settings->GetSettingDefault(emu_settings::ResolutionScale));
-	connect(ui->clockScaleReset, &QAbstractButton::clicked, [=]()
+	connect(ui->clockScaleReset, &QAbstractButton::clicked, [=, this]()
 	{
 		ui->clockScale->setValue(clocksScaleDef);
 	});
@@ -993,7 +993,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				libModeBG->button(i)->setChecked(true);
 			}
 
-			connect(libModeBG->button(i), &QAbstractButton::clicked, [=]()
+			connect(libModeBG->button(i), &QAbstractButton::clicked, [=, this]()
 			{
 				xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(libmode_list[i]));
 			});
@@ -1048,7 +1048,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	ui->searchBox->setPlaceholderText(tr("Search libraries"));
 
-	auto l_OnLibButtonClicked = [=](int ind)
+	auto l_OnLibButtonClicked = [=, this](int ind)
 	{
 		if (ind != static_cast<int>(lib_loading_type::liblv2only))
 		{
@@ -1062,7 +1062,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		}
 	};
 
-	auto l_OnSearchBoxTextChanged = [=](QString text)
+	auto l_OnSearchBoxTextChanged = [=, this](QString text)
 	{
 		QString searchTerm = text.toLower();
 		std::vector<QListWidgetItem*> items;
@@ -1249,7 +1249,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		SubscribeTooltip(ui->gs_disableMouse, tooltips.settings.disable_mouse);
 
 		ui->gs_disableMouse->setChecked(xgui_settings->GetValue(gui::gs_disableMouse).toBool());
-		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=](bool val)
+		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=, this](bool val)
 		{
 			xgui_settings->SetValue(gui::gs_disableMouse, val);
 		});
@@ -1265,18 +1265,18 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->gs_width->setValue(std::min(width, screen.width()));
 		ui->gs_height->setValue(std::min(height, screen.height()));
 
-		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=](bool val)
+		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=, this](bool val)
 		{
 			xgui_settings->SetValue(gui::gs_resize, val);
 			ui->gs_width->setEnabled(val);
 			ui->gs_height->setEnabled(val);
 		});
-		connect(ui->gs_width, &QSpinBox::editingFinished, [=]()
+		connect(ui->gs_width, &QSpinBox::editingFinished, [=, this]()
 		{
 			ui->gs_width->setValue(std::min(ui->gs_width->value(), QGuiApplication::primaryScreen()->size().width()));
 			xgui_settings->SetValue(gui::gs_width, ui->gs_width->value());
 		});
-		connect(ui->gs_height, &QSpinBox::editingFinished, [=]()
+		connect(ui->gs_height, &QSpinBox::editingFinished, [=, this]()
 		{
 			ui->gs_height->setValue(std::min(ui->gs_height->value(), QGuiApplication::primaryScreen()->size().height()));
 			xgui_settings->SetValue(gui::gs_height, ui->gs_height->value());
@@ -1345,13 +1345,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		SubscribeTooltip(ui->tty_limit, tooltips.settings.tty_limit);
 
 		ui->spinbox_log_limit->setValue(xgui_settings->GetValue(gui::l_limit).toInt());
-		connect(ui->spinbox_log_limit, &QSpinBox::editingFinished, [=]()
+		connect(ui->spinbox_log_limit, &QSpinBox::editingFinished, [=, this]()
 		{
 			xgui_settings->SetValue(gui::l_limit, ui->spinbox_log_limit->value());
 		});
 
 		ui->spinbox_tty_limit->setValue(xgui_settings->GetValue(gui::l_limit_tty).toInt());
-		connect(ui->spinbox_tty_limit, &QSpinBox::editingFinished, [=]()
+		connect(ui->spinbox_tty_limit, &QSpinBox::editingFinished, [=, this]()
 		{
 			xgui_settings->SetValue(gui::l_limit_tty, ui->spinbox_tty_limit->value());
 		});
@@ -1381,7 +1381,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			button->layout()->addWidget(text);
 		};
 
-		auto AddColoredIcons = [=]()
+		auto AddColoredIcons = [=, this]()
 		{
 			addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(gui::gl_iconColor).value<QColor>());
 			addColoredIcon(ui->pb_sd_icon_color, xgui_settings->GetValue(gui::sd_icon_color).value<QColor>());
@@ -1423,12 +1423,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			}
 		};
 
-		connect(ui->buttonBox, &QDialogButtonBox::accepted, [=]()
+		connect(ui->buttonBox, &QDialogButtonBox::accepted, [=, this]()
 		{
 			ApplyGuiOptions();
 		});
 
-		connect(ui->pb_reset_default, &QAbstractButton::clicked, [=]
+		connect(ui->pb_reset_default, &QAbstractButton::clicked, [=, this]
 		{
 			if (QMessageBox::question(this, tr("Reset GUI to default?"), tr("This will include your stylesheet as well. Do you wish to proceed?"),
 				QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
@@ -1447,37 +1447,37 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		connect(ui->pb_apply_config, &QAbstractButton::clicked, this, &settings_dialog::OnApplyConfig);
 		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
 
-		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=]()
+		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=, this]()
 		{
 			QDesktopServices::openUrl(xgui_settings->GetSettingsDir());
 		});
 
-		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val)
+		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=, this](bool val)
 		{
 			xgui_settings->SetValue(gui::ib_show_welcome, val);
 		});
-		connect(ui->cb_show_exit_game, &QCheckBox::clicked, [=](bool val)
+		connect(ui->cb_show_exit_game, &QCheckBox::clicked, [=, this](bool val)
 		{
 			xgui_settings->SetValue(gui::ib_confirm_exit, val);
 		});
-		connect(ui->cb_show_boot_game, &QCheckBox::clicked, [=](bool val)
+		connect(ui->cb_show_boot_game, &QCheckBox::clicked, [=, this](bool val)
 		{
 			xgui_settings->SetValue(gui::ib_confirm_boot, val);
 		});
-		connect(ui->cb_show_pkg_install, &QCheckBox::clicked, [=](bool val)
+		connect(ui->cb_show_pkg_install, &QCheckBox::clicked, [=, this](bool val)
 		{
 			xgui_settings->SetValue(gui::ib_pkg_success, val);
 		});
-		connect(ui->cb_show_pup_install, &QCheckBox::clicked, [=](bool val)
+		connect(ui->cb_show_pup_install, &QCheckBox::clicked, [=, this](bool val)
 		{
 			xgui_settings->SetValue(gui::ib_pup_success, val);
 		});
-		connect(ui->cb_check_update_start, &QCheckBox::clicked, [=](bool val)
+		connect(ui->cb_check_update_start, &QCheckBox::clicked, [=, this](bool val)
 		{
 			xgui_settings->SetValue(gui::m_check_upd_start, val);
 		});
 
-		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val)
+		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=, this](bool val)
 		{
 			xgui_settings->SetValue(gui::m_enableUIColors, val);
 			ui->pb_gl_icon_color->setEnabled(val);
@@ -1507,15 +1507,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			}
 		};
 
-		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]()
+		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=, this]()
 		{
 			colorDialog(gui::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color);
 		});
-		connect(ui->pb_sd_icon_color, &QAbstractButton::clicked, [=]()
+		connect(ui->pb_sd_icon_color, &QAbstractButton::clicked, [=, this]()
 		{
 			colorDialog(gui::sd_icon_color, tr("Choose save manager icon color"), ui->pb_sd_icon_color);
 		});
-		connect(ui->pb_tr_icon_color, &QAbstractButton::clicked, [=]()
+		connect(ui->pb_tr_icon_color, &QAbstractButton::clicked, [=, this]()
 		{
 			colorDialog(gui::tr_icon_color, tr("Choose trophy manager icon color"), ui->pb_tr_icon_color);
 		});
@@ -1756,7 +1756,7 @@ int settings_dialog::exec()
 	// switch to the cpu tab after conjuring the settings_dialog with another tab opened first.
 	// Weirdly enough this won't happen if we change the tab order so that anything else is at index 0.
 	ui->tab_widget_settings->setCurrentIndex(0);
-	QTimer::singleShot(0, [=]{ ui->tab_widget_settings->setCurrentIndex(m_tab_Index); });
+	QTimer::singleShot(0, [=, this]{ ui->tab_widget_settings->setCurrentIndex(m_tab_Index); });
 
 	// Open a dialog if your config file contained invalid entries
 	QTimer::singleShot(10, [this] { xemu_settings->OpenCorrectionDialog(this); });

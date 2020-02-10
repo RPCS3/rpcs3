@@ -27,7 +27,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	layout->setFormAlignment(Qt::AlignHCenter);
 	layout->addRow(m_text);
 
-	auto l_AddGauge = [=] (QProgressBar* &bar, QLabel* &text)
+	auto l_AddGauge = [=, this](QProgressBar* &bar, QLabel* &text)
 	{
 		text = new QLabel("", m_dialog);
 		bar = new QProgressBar(m_dialog);
@@ -91,14 +91,14 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 			m_button_yes->setFocus();
 		}
 
-		connect(m_button_yes, &QAbstractButton::clicked, [=]
+		connect(m_button_yes, &QAbstractButton::clicked, [this]()
 		{
 			g_last_user_response = CELL_MSGDIALOG_BUTTON_YES;
 			on_close(CELL_MSGDIALOG_BUTTON_YES);
 			m_dialog->accept();
 		});
 
-		connect(m_button_no, &QAbstractButton::clicked, [=]
+		connect(m_button_no, &QAbstractButton::clicked, [this]()
 		{
 			g_last_user_response = CELL_MSGDIALOG_BUTTON_NO;
 			on_close(CELL_MSGDIALOG_BUTTON_NO);
@@ -123,7 +123,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 			m_button_ok->setFocus();
 		}
 
-		connect(m_button_ok, &QAbstractButton::clicked, [=]
+		connect(m_button_ok, &QAbstractButton::clicked, [this]()
 		{
 			g_last_user_response = CELL_MSGDIALOG_BUTTON_OK;
 			on_close(CELL_MSGDIALOG_BUTTON_OK);
@@ -133,7 +133,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 
 	m_dialog->setLayout(layout);
 
-	connect(m_dialog, &QDialog::rejected, [=]
+	connect(m_dialog, &QDialog::rejected, [this]()
 	{
 		if (!type.disable_cancel)
 		{

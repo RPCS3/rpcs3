@@ -101,7 +101,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	m_tw_rsx = new QTabWidget();
 
 	// adds a tab containing a list to the tabwidget
-	auto l_addRSXTab = [=](QTableWidget* table, const QString& tabname, int columns)
+	auto l_addRSXTab = [=, this](QTableWidget* table, const QString& tabname, int columns)
 	{
 		table = new QTableWidget();
 		table->setItemDelegate(new table_item_delegate);
@@ -208,7 +208,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	setLayout(main_layout);
 
 	//Events
-	connect(b_goto_get, &QAbstractButton::clicked, [=]
+	connect(b_goto_get, &QAbstractButton::clicked, [this]()
 	{
 		if (const auto render = rsx::get_current_renderer())
 		{
@@ -219,7 +219,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 			}
 		}
 	});
-	connect(b_goto_put, &QAbstractButton::clicked, [=]
+	connect(b_goto_put, &QAbstractButton::clicked, [this]()
 	{
 		if (const auto render = rsx::get_current_renderer())
 		{
@@ -230,7 +230,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 			}
 		}
 	});
-	connect(m_addr_line, &QLineEdit::returnPressed, [=]
+	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
 	{
 		bool ok;
 		m_addr = m_addr_line->text().toULong(&ok, 16);
