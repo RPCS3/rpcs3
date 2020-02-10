@@ -689,7 +689,7 @@ extern void sysutil_send_system_cmd(u64 status, u64 param);
 void main_window::DecryptSPRXLibraries()
 {
 	QString path_last_SPRX = guiSettings->GetValue(gui::fd_decrypt_sprx).toString();
-	QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select binary files"), path_last_SPRX, tr("BIN files (*.BIN);;SELF files (*.self);;SPRX files (*.sprx);;All Binaries (*.BIN *.self *.sprx);;All files (*.*)"));
+	QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select binary files"), path_last_SPRX, tr("All Binaries (*.BIN *.self *.sprx);;BIN files (*.BIN);;SELF files (*.self);;SPRX files (*.sprx);;All files (*.*)"));
 
 	if (modules.isEmpty())
 	{
