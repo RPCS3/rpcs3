@@ -344,6 +344,7 @@ QPixmap save_manager_dialog::GetResizedIcon(int i)
 	icon.fill(m_icon_color);
 
 	QPainter painter(&icon);
+	painter.setRenderHint(QPainter::SmoothPixmapTransform);
 	painter.drawPixmap(0, 0, data);
 	return icon.scaled(width, height, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }

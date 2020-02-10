@@ -610,33 +610,43 @@ void pad_settings_dialog::ReactivateButtons()
 	ui->chooseClass->setFocusPolicy(Qt::WheelFocus);
 }
 
-void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y)
+void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y)
 {
-	int max = m_handler->thumb_max;
-	int origin = w * 0.1;
-	int width = w * 0.8;
-	int dz_width = width * dz / max;
-	int dz_origin = (w - dz_width) / 2;
+	const int deadzone_max = m_handler->thumb_max;
+	const qreal device_pixel_ratio = devicePixelRatioF();
+	const qreal scaled_width = desired_width * device_pixel_ratio;
+	const qreal origin = desired_width / 2.0;
+	const qreal relative_size = 0.8;
+	const qreal outer_circle_diameter = relative_size * desired_width;
+	const qreal inner_circle_diameter = outer_circle_diameter * deadzone / deadzone_max;
+	const qreal outer_circle_radius = outer_circle_diameter / 2.0;
+	const qreal stick_x = outer_circle_radius * x / deadzone_max;
+	const qreal stick_y = outer_circle_radius * -y / deadzone_max;
 
-	x = (w + (x * width / max)) / 2;
-	y = (w + (y * -1 * width / max)) / 2;
+	// Set up the canvas for our work of art
+	QPixmap pixmap(scaled_width, scaled_width);
+	pixmap.setDevicePixelRatio(device_pixel_ratio);
+	pixmap.fill(Qt::transparent);
 
-	QPixmap pm(w, w);
-	pm.fill(Qt::transparent);
-	QPainter p(&pm);
-	p.setRenderHint(QPainter::Antialiasing, true);
-	QPen pen(Qt::black, 2);
-	p.setPen(pen);
-	QBrush brush(Qt::white);
-	p.setBrush(brush);
-	p.drawEllipse(origin, origin, width, width);
-	pen = QPen(Qt::red, 2);
-	p.setPen(pen);
-	p.drawEllipse(dz_origin, dz_origin, dz_width, dz_width);
-	pen = QPen(Qt::blue, 2);
-	p.setPen(pen);
-	p.drawEllipse(x, y, 1, 1);
-	l->setPixmap(pm);
+	// Configure the painter and set its origin
+	QPainter painter(&pixmap);
+	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.translate(origin, origin);
+	painter.setBrush(QBrush(Qt::white));
+
+	// Draw a black outer circle that represents the maximum for the deadzone
+	painter.setPen(QPen(Qt::black, 2));
+	painter.drawEllipse(QRectF(-outer_circle_diameter / 2.0, -outer_circle_diameter / 2.0, outer_circle_diameter, outer_circle_diameter));
+
+	// Draw a red inner circle that represents the current deadzone
+	painter.setPen(QPen(Qt::red, 2));
+	painter.drawEllipse(QRectF(-inner_circle_diameter / 2.0, -inner_circle_diameter / 2.0, inner_circle_diameter, inner_circle_diameter));
+
+	// Draw a blue dot that represents the current stick orientation
+	painter.setPen(QPen(Qt::blue, 2));
+	painter.drawEllipse(QRectF(stick_x, stick_y, 1, 1));
+
+	l->setPixmap(pixmap);
 }
 
 void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)

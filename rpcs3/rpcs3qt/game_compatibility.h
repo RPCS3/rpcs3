@@ -82,6 +82,7 @@ public:
 
 		QPainter painter(this);
 		setDevicePixelRatio(pixel_ratio);
+		painter.setRenderHint(QPainter::Antialiasing);
 		painter.setPen(Qt::NoPen);
 		painter.setBrush(color);
 		painter.drawEllipse(0, 0, width(), height());
