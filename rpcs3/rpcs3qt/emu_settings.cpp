@@ -505,11 +505,7 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, SettingsType type, const QS
 	spinbox->setRange(min, max);
 	spinbox->setValue(val);
 
-#if QT_VERSION >= QT_VERSION_CHECK(5,14,0)
 	connect(spinbox, &QSpinBox::textChanged, [=](const QString&/* text*/)
-#else
-	connect(spinbox, QOverload<const QString &>::of(&QSpinBox::valueChanged), [=](const QString&/* value*/)
-#endif
 	{
 		SetSetting(type, sstr(spinbox->cleanText()));
 	});
@@ -551,11 +547,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, SettingsType ty
 	spinbox->setRange(min, max);
 	spinbox->setValue(val);
 
-#if QT_VERSION >= QT_VERSION_CHECK(5,14,0)
 	connect(spinbox, &QDoubleSpinBox::textChanged, [=](const QString&/* text*/)
-#else
-	connect(spinbox, QOverload<const QString &>::of(&QDoubleSpinBox::valueChanged), [=](const QString&/* value*/)
-#endif
 	{
 		SetSetting(type, sstr(spinbox->cleanText()));
 	});
