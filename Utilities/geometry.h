@@ -101,15 +101,18 @@ struct size2_base
 		return *this;
 	}
 
-	constexpr bool operator == (const size2_base& rhs) const
+	constexpr bool operator ==(const size2_base& rhs) const
 	{
 		return width == rhs.width && height == rhs.height;
 	}
 
-	constexpr bool operator != (const size2_base& rhs) const
+#if __cpp_impl_three_way_comparison >= 201711
+#else
+	constexpr bool operator !=(const size2_base& rhs) const
 	{
 		return width != rhs.width || height != rhs.height;
 	}
+#endif
 
 	template<typename NT>
 	constexpr operator size2_base<NT>() const
@@ -644,10 +647,13 @@ struct coord_base
 		return position == rhs.position && size == rhs.size;
 	}
 
+#if __cpp_impl_three_way_comparison >= 201711
+#else
 	constexpr bool operator != (const coord_base& rhs) const
 	{
 		return position != rhs.position || size != rhs.size;
 	}
+#endif
 
 	template<typename NT>
 	constexpr operator coord_base<NT>() const
@@ -876,11 +882,13 @@ struct color4_base
 	{
 		return r == rhs.r && g == rhs.g && b == rhs.b && a == rhs.a;
 	}
-
+#if __cpp_impl_three_way_comparison >= 201711
+#else
 	constexpr bool operator != (const color4_base& rhs) const
 	{
 		return !(*this == rhs);
 	}
+#endif
 
 	void operator *= (const color4_base<T>& rhs)
 	{
@@ -950,11 +958,13 @@ struct color3_base
 	{
 		return r == rhs.r && g == rhs.g && b == rhs.b;
 	}
-
+#if __cpp_impl_three_way_comparison >= 201711
+#else
 	constexpr bool operator != (const color3_base& rhs) const
 	{
 		return !(*this == rhs);
 	}
+#endif
 
 	template<typename NT>
 	constexpr operator color3_base<NT>() const
@@ -993,10 +1003,13 @@ struct color2_base
 		return r == rhs.r && g == rhs.g;
 	}
 
+#if __cpp_impl_three_way_comparison >= 201711
+#else
 	constexpr bool operator != (const color2_base& rhs) const
 	{
 		return !(*this == rhs);
 	}
+#endif
 
 	template<typename NT>
 	constexpr operator color2_base<NT>() const
@@ -1024,10 +1037,13 @@ struct color1_base
 		return r == rhs.r;
 	}
 
+#if __cpp_impl_three_way_comparison >= 201711
+#else
 	constexpr bool operator != (const color1_base& rhs) const
 	{
 		return !(*this == rhs);
 	}
+#endif
 
 	template<typename NT>
 	constexpr operator color1_base<NT>() const

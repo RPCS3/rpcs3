@@ -66,7 +66,7 @@ GLuint GLGSRender::get_present_source(gl::present_surface_info* info, const rsx:
 		gl::pixel_unpack_settings unpack_settings;
 		unpack_settings.alignment(1).row_length(info->pitch / 4);
 
-		if (!m_flip_tex_color || m_flip_tex_color->size2D() != sizei{ static_cast<int>(info->width), static_cast<int>(info->height) })
+		if (!m_flip_tex_color || m_flip_tex_color->size2D() != sizeu{info->width, info->height})
 		{
 			m_flip_tex_color = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, GL_RGBA8);
 		}
