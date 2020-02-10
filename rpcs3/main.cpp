@@ -120,6 +120,14 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 	if (find_arg(arg_headless, argc, argv))
 		return new headless_application(argc, argv);
 
+#ifdef __linux__
+	// set the DISPLAY variable in order to open web browsers
+	if (qEnvironmentVariable("DISPLAY", "").isEmpty())
+	{
+		qputenv("DISPLAY", ":0");
+	}
+#endif
+
 	bool use_high_dpi = true;
 
 	const auto i_hdpi = find_arg(arg_high_dpi, argc, argv);

@@ -1109,7 +1109,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(checkCompat, &QAction::triggered, [=]
 	{
-		QString link = "https://rpcs3.net/compatibility?g=" + serial;
+		const QString link = "https://rpcs3.net/compatibility?g=" + serial;
 		QDesktopServices::openUrl(QUrl(link));
 	});
 	connect(downloadCompat, &QAction::triggered, [=]
