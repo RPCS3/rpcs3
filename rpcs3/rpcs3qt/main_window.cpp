@@ -174,8 +174,8 @@ void main_window::Init()
 
 	RepaintThumbnailIcons();
 
-	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop(); });
-	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.Restart(); });
+	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, [this]() { Emu.Stop(); });
+	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [this]() { Emu.Restart(); });
 	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, this, &main_window::OnPlayOrPause);
 #endif
 
@@ -689,7 +689,7 @@ extern void sysutil_send_system_cmd(u64 status, u64 param);
 void main_window::DecryptSPRXLibraries()
 {
 	QString path_last_SPRX = guiSettings->GetValue(gui::fd_decrypt_sprx).toString();
-	QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select binary files"), path_last_SPRX, tr("BIN files (*.BIN);;SELF files (*.self);;SPRX files (*.sprx);;All Binaries (*.BIN *.self *.sprx);;All files (*.*)"));
+	QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select binary files"), path_last_SPRX, tr("All Binaries (*.BIN *.self *.sprx);;BIN files (*.BIN);;SELF files (*.self);;SPRX files (*.sprx);;All files (*.*)"));
 
 	if (modules.isEmpty())
 	{
@@ -1082,7 +1082,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	}
 
 	// connect boot
-	connect(act, &QAction::triggered, [=]() {BootRecentAction(act); });
+	connect(act, &QAction::triggered, [=, this]() {BootRecentAction(act); });
 
 	return act;
 }
@@ -1266,7 +1266,7 @@ void main_window::CreateConnects()
 		}
 	});
 
-	connect(ui->bootRecentMenu, &QMenu::aboutToShow, [=]
+	connect(ui->bootRecentMenu, &QMenu::aboutToShow, [this]()
 	{
 		// Enable/Disable Recent Games List
 		const bool stopped = Emu.IsStopped();
@@ -1279,7 +1279,7 @@ void main_window::CreateConnects()
 		}
 	});
 
-	connect(ui->clearRecentAct, &QAction::triggered, [this]
+	connect(ui->clearRecentAct, &QAction::triggered, [this]()
 	{
 		if (ui->freezeRecentAct->isChecked()) { return; }
 		m_rg_entries.clear();
@@ -1291,7 +1291,7 @@ void main_window::CreateConnects()
 		guiSettings->SetValue(gui::rg_entries, guiSettings->List2Var(q_pair_list()));
 	});
 
-	connect(ui->freezeRecentAct, &QAction::triggered, [=](bool checked)
+	connect(ui->freezeRecentAct, &QAction::triggered, [this](bool checked)
 	{
 		guiSettings->SetValue(gui::rg_freeze, checked);
 	});
@@ -1310,22 +1310,22 @@ void main_window::CreateConnects()
 	connect(ui->removeDiskCacheAct, &QAction::triggered, this, &main_window::RemoveDiskCache);
 
 	connect(ui->sysPauseAct, &QAction::triggered, this, &main_window::OnPlayOrPause);
-	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
-	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.Restart(); });
+	connect(ui->sysStopAct, &QAction::triggered, [this]() { Emu.Stop(); });
+	connect(ui->sysRebootAct, &QAction::triggered, [this]() { Emu.Restart(); });
 
-	connect(ui->sysSendOpenMenuAct, &QAction::triggered, [=]
+	connect(ui->sysSendOpenMenuAct, &QAction::triggered, [this]()
 	{
 		sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
 		m_sys_menu_opened = !m_sys_menu_opened;
 		ui->sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
 	});
 
-	connect(ui->sysSendExitAct, &QAction::triggered, [=]
+	connect(ui->sysSendExitAct, &QAction::triggered, [this]()
 	{
 		sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
 	});
 
-	auto openSettings = [=](int tabIndex)
+	auto openSettings = [this](int tabIndex)
 	{
 		settings_dialog dlg(guiSettings, emuSettings, tabIndex, this);
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
@@ -1337,11 +1337,11 @@ void main_window::CreateConnects()
 		dlg.exec();
 	};
 
-	connect(ui->confCPUAct,    &QAction::triggered, [=]() { openSettings(0); });
-	connect(ui->confGPUAct,    &QAction::triggered, [=]() { openSettings(1); });
-	connect(ui->confAudioAct,  &QAction::triggered, [=]() { openSettings(2); });
-	connect(ui->confIOAct,     &QAction::triggered, [=]() { openSettings(3); });
-	connect(ui->confSystemAct, &QAction::triggered, [=]() { openSettings(4); });
+	connect(ui->confCPUAct,    &QAction::triggered, [=, this]() { openSettings(0); });
+	connect(ui->confGPUAct,    &QAction::triggered, [=, this]() { openSettings(1); });
+	connect(ui->confAudioAct,  &QAction::triggered, [=, this]() { openSettings(2); });
+	connect(ui->confIOAct,     &QAction::triggered, [=, this]() { openSettings(3); });
+	connect(ui->confSystemAct, &QAction::triggered, [=, this]() { openSettings(4); });
 
 	auto openPadSettings = [this]
 	{
@@ -1367,77 +1367,77 @@ void main_window::CreateConnects()
 
 	connect(ui->confPadsAct, &QAction::triggered, openPadSettings);
 
-	connect(ui->confAutopauseManagerAct, &QAction::triggered, [=]
+	connect(ui->confAutopauseManagerAct, &QAction::triggered, [this]()
 	{
 		auto_pause_settings_dialog dlg(this);
 		dlg.exec();
 	});
 
-	connect(ui->confVFSDialogAct, &QAction::triggered, [=]
+	connect(ui->confVFSDialogAct, &QAction::triggered, [this]()
 	{
 		vfs_dialog dlg(guiSettings, emuSettings, this);
 		dlg.exec();
 		m_gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
 	});
 
-	connect(ui->confSavedataManagerAct, &QAction::triggered, [=]
+	connect(ui->confSavedataManagerAct, &QAction::triggered, [this]
 	{
 		save_manager_dialog* save_manager = new save_manager_dialog(guiSettings);
 		connect(this, &main_window::RequestTrophyManagerRepaint, save_manager, &save_manager_dialog::HandleRepaintUiRequest);
 		save_manager->show();
 	});
 
-	connect(ui->actionManage_Trophy_Data, &QAction::triggered, [=]
+	connect(ui->actionManage_Trophy_Data, &QAction::triggered, [this]
 	{
 		trophy_manager_dialog* trop_manager = new trophy_manager_dialog(guiSettings);
 		connect(this, &main_window::RequestTrophyManagerRepaint, trop_manager, &trophy_manager_dialog::HandleRepaintUiRequest);
 		trop_manager->show();
 	});
 
-	connect(ui->actionManage_Skylanders_Portal, &QAction::triggered, [=]
+	connect(ui->actionManage_Skylanders_Portal, &QAction::triggered, [this]
 	{
 		skylander_dialog* sky_diag = skylander_dialog::get_dlg(this);
 		sky_diag->show();
 	});
 
-	connect(ui->actionManage_Cheats, &QAction::triggered, [=]
+	connect(ui->actionManage_Cheats, &QAction::triggered, [this]
 	{
 		cheat_manager_dialog* cheat_manager = cheat_manager_dialog::get_dlg(this);
 		cheat_manager->show();
  	});
 
-	connect(ui->actionManage_Users, &QAction::triggered, [=]
+	connect(ui->actionManage_Users, &QAction::triggered, [this]
 	{
 		user_manager_dialog user_manager(guiSettings, this);
 		user_manager.exec();
 		m_gameListFrame->Refresh(true); // New user may have different games unlocked.
 	});
 
-	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=]
+	connect(ui->toolsCgDisasmAct, &QAction::triggered, [this]
 	{
 		cg_disasm_window* cgdw = new cg_disasm_window(guiSettings);
 		cgdw->show();
 	});
 
-	connect(ui->toolskernel_explorerAct, &QAction::triggered, [=]
+	connect(ui->toolskernel_explorerAct, &QAction::triggered, [this]
 	{
 		kernel_explorer* kernelExplorer = new kernel_explorer(this);
 		kernelExplorer->show();
 	});
 
-	connect(ui->toolsmemory_viewerAct, &QAction::triggered, [=]
+	connect(ui->toolsmemory_viewerAct, &QAction::triggered, [this]
 	{
 		memory_viewer_panel* mvp = new memory_viewer_panel(this);
 		mvp->show();
 	});
 
-	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, [=]
+	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, [this]
 	{
 		rsx_debugger* rsx = new rsx_debugger(guiSettings);
 		rsx->show();
 	});
 
-	connect(ui->toolsStringSearchAct, &QAction::triggered, [=]
+	connect(ui->toolsStringSearchAct, &QAction::triggered, [this]
 	{
 		memory_string_searcher* mss = new memory_string_searcher(this);
 		mss->show();
@@ -1445,37 +1445,37 @@ void main_window::CreateConnects()
 
 	connect(ui->toolsDecryptSprxLibsAct, &QAction::triggered, this, &main_window::DecryptSPRXLibraries);
 
-	connect(ui->showDebuggerAct, &QAction::triggered, [=](bool checked)
+	connect(ui->showDebuggerAct, &QAction::triggered, [this](bool checked)
 	{
 		checked ? m_debuggerFrame->show() : m_debuggerFrame->hide();
 		guiSettings->SetValue(gui::mw_debugger, checked);
 	});
 
-	connect(ui->showLogAct, &QAction::triggered, [=](bool checked)
+	connect(ui->showLogAct, &QAction::triggered, [this](bool checked)
 	{
 		checked ? m_logFrame->show() : m_logFrame->hide();
 		guiSettings->SetValue(gui::mw_logger, checked);
 	});
 
-	connect(ui->showGameListAct, &QAction::triggered, [=](bool checked)
+	connect(ui->showGameListAct, &QAction::triggered, [this](bool checked)
 	{
 		checked ? m_gameListFrame->show() : m_gameListFrame->hide();
 		guiSettings->SetValue(gui::mw_gamelist, checked);
 	});
 
-	connect(ui->showTitleBarsAct, &QAction::triggered, [=](bool checked)
+	connect(ui->showTitleBarsAct, &QAction::triggered, [this](bool checked)
 	{
 		ShowTitleBars(checked);
 		guiSettings->SetValue(gui::mw_titleBarsVisible, checked);
 	});
 
-	connect(ui->showToolBarAct, &QAction::triggered, [=](bool checked)
+	connect(ui->showToolBarAct, &QAction::triggered, [this](bool checked)
 	{
 		ui->toolBar->setVisible(checked);
 		guiSettings->SetValue(gui::mw_toolBarVisible, checked);
 	});
 
-	connect(ui->showHiddenEntriesAct, &QAction::triggered, [=](bool checked)
+	connect(ui->showHiddenEntriesAct, &QAction::triggered, [this](bool checked)
 	{
 		guiSettings->SetValue(gui::gl_show_hidden, checked);
 		m_gameListFrame->SetShowHidden(checked);
@@ -1484,12 +1484,12 @@ void main_window::CreateConnects()
 
 	connect(ui->showCompatibilityInGridAct, &QAction::triggered, m_gameListFrame, &game_list_frame::SetShowCompatibilityInGrid);
 
-	connect(ui->refreshGameListAct, &QAction::triggered, [=]
+	connect(ui->refreshGameListAct, &QAction::triggered, [this]
 	{
 		m_gameListFrame->Refresh(true);
 	});
 
-	connect(m_categoryVisibleActGroup, &QActionGroup::triggered, [=](QAction* act)
+	connect(m_categoryVisibleActGroup, &QActionGroup::triggered, [this](QAction* act)
 	{
 		QStringList categories;
 		int id = 0;
@@ -1514,7 +1514,7 @@ void main_window::CreateConnects()
 		}
 	});
 
-	connect(ui->updateAct, &QAction::triggered, [=]()
+	connect(ui->updateAct, &QAction::triggered, [this]()
 	{
 #if !defined(_WIN32) && !defined(__linux__)
 		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater currently isn't available for your os."));
@@ -1536,7 +1536,7 @@ void main_window::CreateConnects()
 
 	connect(ui->aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
 
-	connect(m_iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
+	connect(m_iconSizeActGroup, &QActionGroup::triggered, [this](QAction* act)
 	{
 		static const int index_small  = gui::get_Index(gui::gl_icon_size_small);
 		static const int index_medium = gui::get_Index(gui::gl_icon_size_medium);
@@ -1556,14 +1556,14 @@ void main_window::CreateConnects()
 		ResizeIcons(index);
 	});
 
-	connect (m_gameListFrame, &game_list_frame::RequestIconSizeChange, [=](const int& val)
+	connect (m_gameListFrame, &game_list_frame::RequestIconSizeChange, [this](const int& val)
 	{
 		const int idx = ui->sizeSlider->value() + val;
 		m_save_slider_pos = true;
 		ResizeIcons(idx);
 	});
 
-	connect(m_listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
+	connect(m_listModeActGroup, &QActionGroup::triggered, [this](QAction* act)
 	{
 		bool is_list_act = act == ui->setlistModeListAct;
 		if (is_list_act == m_is_list_mode)
@@ -1579,11 +1579,11 @@ void main_window::CreateConnects()
 	});
 
 	connect(ui->toolbar_open, &QAction::triggered, this, &main_window::BootGame);
-	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { m_gameListFrame->Refresh(true); });
-	connect(ui->toolbar_stop, &QAction::triggered, [=]() { Emu.Stop(); });
+	connect(ui->toolbar_refresh, &QAction::triggered, [this]() { m_gameListFrame->Refresh(true); });
+	connect(ui->toolbar_stop, &QAction::triggered, [this]() { Emu.Stop(); });
 	connect(ui->toolbar_start, &QAction::triggered, this, &main_window::OnPlayOrPause);
 
-	connect(ui->toolbar_fullscreen, &QAction::triggered, [=]
+	connect(ui->toolbar_fullscreen, &QAction::triggered, [this]
 	{
 		if (isFullScreen())
 		{
@@ -1598,9 +1598,9 @@ void main_window::CreateConnects()
 	});
 
 	connect(ui->toolbar_controls, &QAction::triggered, openPadSettings);
-	connect(ui->toolbar_config, &QAction::triggered, [=]() { openSettings(0); });
-	connect(ui->toolbar_list, &QAction::triggered, [=]() { ui->setlistModeListAct->trigger(); });
-	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });
+	connect(ui->toolbar_config, &QAction::triggered, [=, this]() { openSettings(0); });
+	connect(ui->toolbar_list, &QAction::triggered, [this]() { ui->setlistModeListAct->trigger(); });
+	connect(ui->toolbar_grid, &QAction::triggered, [this]() { ui->setlistModeGridAct->trigger(); });
 
 	connect(ui->sizeSlider, &QSlider::valueChanged, this, &main_window::ResizeIcons);
 	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [&]
@@ -1640,7 +1640,7 @@ void main_window::CreateDockWindows()
 	m_mw->resizeDocks({ m_logFrame }, { m_mw->sizeHint().height() / 10 }, Qt::Orientation::Vertical);
 	setCentralWidget(m_mw);
 
-	connect(m_logFrame, &log_frame::LogFrameClosed, [=]()
+	connect(m_logFrame, &log_frame::LogFrameClosed, [this]()
 	{
 		if (ui->showLogAct->isChecked())
 		{
@@ -1649,7 +1649,7 @@ void main_window::CreateDockWindows()
 		}
 	});
 
-	connect(m_debuggerFrame, &debugger_frame::DebugFrameClosed, [=]()
+	connect(m_debuggerFrame, &debugger_frame::DebugFrameClosed, [this]()
 	{
 		if (ui->showDebuggerAct->isChecked())
 		{
@@ -1658,7 +1658,7 @@ void main_window::CreateDockWindows()
 		}
 	});
 
-	connect(m_gameListFrame, &game_list_frame::GameListFrameClosed, [=]()
+	connect(m_gameListFrame, &game_list_frame::GameListFrameClosed, [this]()
 	{
 		if (ui->showGameListAct->isChecked())
 		{

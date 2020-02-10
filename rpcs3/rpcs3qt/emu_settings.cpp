@@ -385,7 +385,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 		combobox->setCurrentIndex(index);
 	}
 
-	connect(combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=](int index)
+	connect(combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=, this](int index)
 	{
 		SetSetting(type, sstr(combobox->itemData(index)));
 	});
@@ -422,7 +422,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 		m_broken_types.insert(type);
 	}
 
-	connect(checkbox, &QCheckBox::stateChanged, [=](int val)
+	connect(checkbox, &QCheckBox::stateChanged, [=, this](int val)
 	{
 		std::string str = val != 0 ? "true" : "false";
 		SetSetting(type, str);
@@ -463,7 +463,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type)
 	slider->setRange(min, max);
 	slider->setValue(val);
 
-	connect(slider, &QSlider::valueChanged, [=](int value)
+	connect(slider, &QSlider::valueChanged, [=, this](int value)
 	{
 		SetSetting(type, sstr(value));
 	});
@@ -505,11 +505,7 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, SettingsType type, const QS
 	spinbox->setRange(min, max);
 	spinbox->setValue(val);
 
-#if QT_VERSION >= QT_VERSION_CHECK(5,14,0)
-	connect(spinbox, &QSpinBox::textChanged, [=](const QString&/* text*/)
-#else
-	connect(spinbox, QOverload<const QString &>::of(&QSpinBox::valueChanged), [=](const QString&/* value*/)
-#endif
+	connect(spinbox, &QSpinBox::textChanged, [=, this](const QString&/* text*/)
 	{
 		SetSetting(type, sstr(spinbox->cleanText()));
 	});
@@ -551,11 +547,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, SettingsType ty
 	spinbox->setRange(min, max);
 	spinbox->setValue(val);
 
-#if QT_VERSION >= QT_VERSION_CHECK(5,14,0)
-	connect(spinbox, &QDoubleSpinBox::textChanged, [=](const QString&/* text*/)
-#else
-	connect(spinbox, QOverload<const QString &>::of(&QDoubleSpinBox::valueChanged), [=](const QString&/* value*/)
-#endif
+	connect(spinbox, &QDoubleSpinBox::textChanged, [=, this](const QString&/* text*/)
 	{
 		SetSetting(type, sstr(spinbox->cleanText()));
 	});

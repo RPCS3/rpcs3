@@ -118,7 +118,7 @@ void user_manager_dialog::Init()
 	restoreGeometry(m_gui_settings->GetValue(gui::um_geometry).toByteArray());
 
 	// Use this in multiple connects to protect the current user from deletion/rename.
-	auto enableButtons = [=]()
+	auto enableButtons = [=, this]()
 	{
 		const u32 key = GetUserKey();
 		if (key == 0)
@@ -432,14 +432,14 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 	connect(remove_act, &QAction::triggered, this, &user_manager_dialog::OnUserRemove);
 	connect(rename_act, &QAction::triggered, this, &user_manager_dialog::OnUserRename);
 	connect(login_act, &QAction::triggered, this, &user_manager_dialog::OnUserLogin);
-	connect(show_dir_act, &QAction::triggered, [=]()
+	connect(show_dir_act, &QAction::triggered, [=, this]()
 	{
 		QString path = qstr(m_user_list[key].GetUserDir());
 		QDesktopServices::openUrl(QUrl("file:///" + path));
 	});
 
-	connect(user_id_act, &QAction::triggered, this, [=] {OnSort(0); });
-	connect(username_act, &QAction::triggered, this, [=] {OnSort(1); });
+	connect(user_id_act, &QAction::triggered, this, [=, this] {OnSort(0); });
+	connect(username_act, &QAction::triggered, this, [=, this] {OnSort(1); });
 
 	menu->exec(m_table->viewport()->mapToGlobal(pos));
 }

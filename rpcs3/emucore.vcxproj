@@ -168,6 +168,16 @@
     <ClCompile Include="Emu\Cell\lv2\sys_usbd.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_vm.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_ss.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_hid.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_io.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_rsxaudio.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_sm.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_storage.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_uart.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_bdemu.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_console.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_btsetting.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_crypto_engine.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_libc_.cpp" />
     <ClCompile Include="Emu\Cell\PPUModule.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAdec.cpp" />
@@ -282,7 +292,7 @@
     <ClCompile Include="Emu\Cell\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_game.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_heap.cpp" />
-    <ClCompile Include="Emu\Cell\Modules\sys_io.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_io_.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_libc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_lv2dbg.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_lwcond_.cpp" />
@@ -394,6 +404,7 @@
   <ItemGroup>
     <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_crypto_engine.h" />
     <ClInclude Include="Emu\Cell\Modules\cellCrossController.h" />
     <ClInclude Include="Emu\Cell\Modules\cellRemotePlay.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h" />
@@ -497,6 +508,15 @@
     <ClInclude Include="Emu\Cell\lv2\sys_usbd.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_vm.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_ss.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_hid.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_io.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_rsxaudio.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_sm.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_storage.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_uart.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_bdemu.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_console.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_btsetting.h" />
     <ClInclude Include="Emu\Cell\MFC.h" />
     <ClInclude Include="Emu\Cell\PPUModule.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAdec.h" />

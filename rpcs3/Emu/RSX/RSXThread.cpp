@@ -46,9 +46,10 @@ namespace rsx
 
 	dma_manager g_dma_manager;
 
-	u32 get_address(u32 offset, u32 location)
+	u32 get_address(u32 offset, u32 location, const char* from)
 	{
 		const auto render = get_current_renderer();
+		std::string_view msg;
 
 		switch (location)
 		{
@@ -60,7 +61,8 @@ namespace rsx
 				return rsx::constants::local_mem_base + offset;
 			}
 
-			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): Local RSX offset out of range" HERE, offset, location);
+			msg = "Local RSX offset out of range!"sv;
+			break;
 		}
 
 		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
@@ -71,35 +73,38 @@ namespace rsx
 				return result;
 			}
 
-			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
+			msg = "RSXIO memory not mapped!"sv;
+			break;
 		}
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL:
 		{
 			if (offset < sizeof(RsxReports::report) /*&& (offset % 0x10) == 0*/)
 			{
-				return render->label_addr + 0x1400 + offset;
+				return render->label_addr + ::offset32(&RsxReports::report) + offset;
 			}
 
-			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): Local RSX REPORT offset out of range" HERE, offset, location);
+			msg = "Local RSX REPORT offset out of range!"sv;
+			break;
 		}
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
 		{
-			if (u32 result = RSXIOMem.RealAddr(0x0e000000 + offset))
+			if (u32 result = offset < 0x1000000 ? RSXIOMem.RealAddr(0x0e000000 + offset) : 0)
 			{
 				return result;
 			}
 
-			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
+			msg = "RSXIO REPORT memory not mapped!"sv;
+			break;
 		}
 
 		// They are handled elsewhere for targeted methods, so it's unexpected for them to be passed here
 		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0:
-			fmt::throw_exception("Unexpected CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0 (offset=0x%x, location=0x%x)" HERE, offset, location);
+			msg = "CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0"sv; break;
 
 		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0:
-			fmt::throw_exception("Unexpected CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 (offset=0x%x, location=0x%x)" HERE, offset, location);
+			msg = "CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0"sv; break;
 
 		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
 		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
@@ -109,7 +114,8 @@ namespace rsx
 				return render->label_addr + offset;
 			}
 
-			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): DMA SEMAPHORE offset out of range" HERE, offset, location);
+			msg = "DMA SEMAPHORE offset out of range!"sv;
+			break;
 		}
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
@@ -122,14 +128,19 @@ namespace rsx
 
 			// TODO: What happens here? It could wrap around or access other segments of rsx internal memory etc
 			// Or can simply throw access violation error
-			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): DMA DEVICE offset out of range" HERE, offset, location);
+			msg = "DMA DEVICE offset out of range!"sv;
+			break;
 		}
 
 		default:
 		{
-			fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
+			msg = "Invalid location!"sv;
+			break;
 		}
 		}
+
+		// Assume 'from' contains new line at start
+		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, from);
 	}
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
@@ -836,8 +847,8 @@ namespace rsx
 		const rsx::index_array_type type = rsx::method_registers.index_type();
 		const u32 type_size = get_index_type_size(type);
 
-		u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
-		address &= ~(type_size - 1); // Force aligned indices as realhw
+		// Force aligned indices as realhw
+		const u32 address = (0 - type_size) & get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location(), HERE);
 
 		const bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
 		const u32 primitive_restart_index = rsx::method_registers.restart_index();
@@ -929,10 +940,10 @@ namespace rsx
 		};
 		return
 		{
-			rsx::get_address(offset_color[0], context_dma_color[0]),
-			rsx::get_address(offset_color[1], context_dma_color[1]),
-			rsx::get_address(offset_color[2], context_dma_color[2]),
-			rsx::get_address(offset_color[3], context_dma_color[3]),
+			rsx::get_address(offset_color[0], context_dma_color[0], HERE),
+			rsx::get_address(offset_color[1], context_dma_color[1], HERE),
+			rsx::get_address(offset_color[2], context_dma_color[2], HERE),
+			rsx::get_address(offset_color[3], context_dma_color[3], HERE),
 		};
 	}
 
@@ -940,7 +951,7 @@ namespace rsx
 	{
 		u32 m_context_dma_z = rsx::method_registers.surface_z_dma();
 		u32 offset_zeta = rsx::method_registers.surface_z_offset();
-		return rsx::get_address(offset_zeta, m_context_dma_z);
+		return rsx::get_address(offset_zeta, m_context_dma_z, HERE);
 	}
 
 	void thread::get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout)
@@ -1575,7 +1586,7 @@ namespace rsx
 		for (auto &info : result.interleaved_blocks)
 		{
 			//Calculate real data address to be used during upload
-			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info.base_offset), info.memory_location);
+			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info.base_offset), info.memory_location, HERE);
 		}
 	}
 
@@ -1592,7 +1603,7 @@ namespace rsx
 		const u32 program_location = (shader_program & 0x3) - 1;
 		const u32 program_offset = (shader_program & ~0x3);
 
-		result.addr = vm::base(rsx::get_address(program_offset, program_location));
+		result.addr = vm::base(rsx::get_address(program_offset, program_location, HERE));
 		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(result.addr);
 
 		result.addr = (static_cast<u8*>(result.addr) + current_fp_metadata.program_start_offset);
@@ -1633,7 +1644,7 @@ namespace rsx
 					texture_control |= (1 << 4);
 				}
 
-				const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
+				const u32 texaddr = rsx::get_address(tex.offset(), tex.location(), HERE);
 				const u32 raw_format = tex.format();
 				const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
@@ -1775,7 +1786,7 @@ namespace rsx
 
 	tiled_region thread::get_tiled_address(u32 offset, u32 location)
 	{
-		u32 address = get_address(offset, location);
+		u32 address = get_address(offset, location, HERE);
 
 		GcmTileInfo *tile = find_tile(offset, location);
 		u32 base = 0;
@@ -1783,7 +1794,7 @@ namespace rsx
 		if (tile)
 		{
 			base = offset - tile->offset;
-			address = get_address(tile->offset, location);
+			address = get_address(tile->offset, location, HERE);
 		}
 
 		return{ address, base, tile, vm::_ptr<u8>(address) };
@@ -2128,7 +2139,7 @@ namespace rsx
 				{
 					if (zcull.binded)
 					{
-						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL);
+						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL, HERE);
 						if (rsx_address == zeta_address)
 						{
 							zcull_surface_active = true;

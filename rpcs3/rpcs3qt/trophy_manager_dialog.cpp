@@ -211,7 +211,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	setLayout(all_layout);
 
 	// Make connects
-	connect(m_icon_slider, &QSlider::valueChanged, this, [=](int val)
+	connect(m_icon_slider, &QSlider::valueChanged, this, [=, this](int val)
 	{
 		m_icon_height = val;
 		if (trophy_slider_label)
@@ -239,7 +239,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		}
 	});
 
-	connect(m_game_icon_slider, &QSlider::valueChanged, this, [=](int val)
+	connect(m_game_icon_slider, &QSlider::valueChanged, this, [=, this](int val)
 	{
 		m_game_icon_size_index = val;
 		m_game_icon_size = gui_settings::SizeFromSlider(val);
@@ -505,6 +505,7 @@ QPixmap trophy_manager_dialog::GetResizedGameIcon(int index)
 	if (!icon.isNull())
 	{
 		QPainter painter(&new_icon);
+		painter.setRenderHint(QPainter::SmoothPixmapTransform);
 		painter.drawPixmap(QPoint(0, 0), icon);
 		painter.end();
 	}
@@ -569,6 +570,7 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 		if (!icon.isNull())
 		{
 			QPainter painter(&new_icon);
+			painter.setRenderHint(QPainter::SmoothPixmapTransform);
 			painter.drawPixmap(QPoint(0, 0), icon);
 			painter.end();
 		}
@@ -665,7 +667,7 @@ void trophy_manager_dialog::ShowContextMenu(const QPoint& pos)
 
 	const int db_ind = m_game_combo->currentData().toInt();
 
-	connect(show_trophy_dir, &QAction::triggered, [=]()
+	connect(show_trophy_dir, &QAction::triggered, [=, this]()
 	{
 		QString path = qstr(m_trophies_db[db_ind]->path);
 		QDesktopServices::openUrl(QUrl("file:///" + path));

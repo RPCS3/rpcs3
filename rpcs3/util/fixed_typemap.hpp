@@ -21,11 +21,11 @@ namespace stx
 			template <typename T>
 			static void call_ctor(void*& ptr) noexcept
 			{
-				// Call default constructor only if available
-				if constexpr (std::is_default_constructible_v<T>)
+				// Don't overwrite if already exists
+				if (!ptr)
 				{
-					// Don't overwrite if already exists
-					if (!ptr)
+					// Call default constructor only if available
+					if constexpr (std::is_default_constructible_v<T>)
 					{
 						ptr = new T();
 					}

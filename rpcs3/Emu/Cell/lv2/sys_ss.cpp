@@ -87,12 +87,12 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 		}
 
 		verify(HERE), a2 == process_getpid();
-		vm::_ref<u64>(vm::cast(a3)) = authid;
+		vm::write64(vm::cast(a3), authid);
 		break;
 	}
 	case 0x2:
 	{
-		vm::_ref<u64>(vm::cast(a2)) = authid;
+		vm::write64(vm::cast(a2), authid);
 		break;
 	}
 	case 0x3:
@@ -127,6 +127,55 @@ s32 sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
 
 	psid->high = 0;
 	psid->low = 0;
+
+	return CELL_OK;
+}
+
+error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
+{
+	sys_ss.todo("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
+
+	return CELL_OK;
+}
+
+error_code sys_ss_get_cache_of_product_mode(vm::ptr<u8> ptr)
+{
+	sys_ss.todo("sys_ss_get_cache_of_product_mode(ptr=*0x%x)", ptr);
+
+	return CELL_OK;
+}
+
+error_code sys_ss_secure_rtc(u64 cmd, u64 a2, u64 a3, u64 a4)
+{
+	sys_ss.todo("sys_ss_secure_rtc(cmd=0x%llx, a2=0x%x, a3=0x%x, a4=0x%x)", cmd, a2, a3, a4);
+
+	return CELL_OK;
+}
+
+error_code sys_ss_get_cache_of_flash_ext_flag(vm::ptr<u64> flag)
+{
+	sys_ss.todo("sys_ss_get_cache_of_flash_ext_flag(flag=*0x%x)", flag);
+
+	return CELL_OK;
+}
+
+error_code sys_ss_get_boot_device(vm::ptr<u64> dev)
+{
+	sys_ss.todo("sys_ss_get_boot_device(dev=*0x%x)", dev);
+
+	return CELL_OK;
+}
+
+error_code sys_ss_update_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 a6)
+{
+	sys_ss.todo("sys_ss_update_manager(pkg=0x%llx, a1=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x, a6=0x%x)", pkg_id, a1, a2, a3, a4, a5, a6);
+
+	return CELL_OK;
+}
+
+error_code sys_ss_virtual_trm_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4)
+{
+	sys_ss.todo("sys_ss_virtual_trm_manager(pkg=0x%llx, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx)", pkg_id, a1, a2, a3, a4);
 
 	return CELL_OK;
 }

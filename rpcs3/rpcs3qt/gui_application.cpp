@@ -269,7 +269,7 @@ void gui_application::InitializeCallbacks()
 			quit();
 		}
 	};
-	callbacks.call_after = [=](std::function<void()> func)
+	callbacks.call_after = [this](std::function<void()> func)
 	{
 		RequestCallAfter(std::move(func));
 	};
@@ -280,13 +280,13 @@ void gui_application::InitializeCallbacks()
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
 	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
-	callbacks.on_run    = [=](bool start_playtime) { OnEmulatorRun(start_playtime); };
-	callbacks.on_pause  = [=]() { OnEmulatorPause(); };
-	callbacks.on_resume = [=]() { OnEmulatorResume(true); };
-	callbacks.on_stop   = [=]() { OnEmulatorStop(); };
-	callbacks.on_ready  = [=]() { OnEmulatorReady(); };
+	callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
+	callbacks.on_pause  = [this]() { OnEmulatorPause(); };
+	callbacks.on_resume = [this]() { OnEmulatorResume(true); };
+	callbacks.on_stop   = [this]() { OnEmulatorStop(); };
+	callbacks.on_ready  = [this]() { OnEmulatorReady(); };
 
-	callbacks.handle_taskbar_progress = [=](s32 type, s32 value)
+	callbacks.handle_taskbar_progress = [this](s32 type, s32 value)
 	{
 		if (m_game_window)
 		{
