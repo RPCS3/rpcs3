@@ -169,7 +169,7 @@ public:
 	// Returns true on success
 	bool try_push(u32 value)
 	{
-		const u64 old = data.fetch_op([=](u64& data)
+		const u64 old = data.fetch_op([value](u64& data)
 		{
 			if (data & bit_count) [[unlikely]]
 			{
@@ -187,7 +187,7 @@ public:
 	// Push performing bitwise OR with previous value, may require notification
 	void push_or(cpu_thread& spu, u32 value)
 	{
-		const u64 old = data.fetch_op([=](u64& data)
+		const u64 old = data.fetch_op([value](u64& data)
 		{
 			data &= ~bit_wait;
 			data |= bit_count | value;
@@ -287,7 +287,7 @@ public:
 	{
 		value3.release(value);
 
-		if (values.atomic_op([=](sync_var_t& data) -> bool
+		if (values.atomic_op([value](sync_var_t& data) -> bool
 		{
 			switch (data.count++)
 			{

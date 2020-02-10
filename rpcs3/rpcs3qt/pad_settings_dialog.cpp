@@ -132,7 +132,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	});
 
 	// Pushbutton: Add Profile
-	connect(ui->b_addProfile, &QAbstractButton::clicked, [=]
+	connect(ui->b_addProfile, &QAbstractButton::clicked, [this]()
 	{
 		const int i = m_tabs->currentIndex();
 
@@ -331,7 +331,7 @@ void pad_settings_dialog::InitButtons()
 		RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->size().width(), rx, ry);
 	});
 
-	connect(ui->b_led, &QPushButton::clicked, [=]()
+	connect(ui->b_led, &QPushButton::clicked, [this]()
 	{
 		QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
 		if (ui->b_led->property("led").canConvert<QColor>())
@@ -350,7 +350,7 @@ void pad_settings_dialog::InitButtons()
 	});
 
 	// Enable Button Remapping
-	const auto& callback = [=](u16 val, std::string name, std::string pad_name, std::array<int, 6> preview_values)
+	const auto& callback = [this](u16 val, std::string name, std::string pad_name, std::array<int, 6> preview_values)
 	{
 		SwitchPadInfo(pad_name, true);
 
@@ -423,7 +423,9 @@ void pad_settings_dialog::InitButtons()
 				continue;
 			}
 			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
-			m_handler->get_next_button_press(info.name, [=](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+			m_handler->get_next_button_press(info.name,
+				[this](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); },
+				[this](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 		}
 	});
 }
@@ -1074,7 +1076,9 @@ void pad_settings_dialog::ChangeInputType()
 				continue;
 			}
 			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
-			m_handler->get_next_button_press(info.name, [=](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+			m_handler->get_next_button_press(info.name,
+				[this](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); },
+				[this](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 			if (info.name == device)
 			{
 				ui->chooseDevice->setCurrentIndex(i);

@@ -44,7 +44,7 @@ void headless_application::InitializeCallbacks()
 			quit();
 		}
 	};
-	callbacks.call_after = [=](std::function<void()> func)
+	callbacks.call_after = [=, this](std::function<void()> func)
 	{
 		RequestCallAfter(std::move(func));
 	};

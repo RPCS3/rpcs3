@@ -167,7 +167,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	});
 
 	// Handle network error
-	connect(network_reply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), [=](QNetworkReply::NetworkError error)
+	connect(network_reply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), [=, this](QNetworkReply::NetworkError error)
 	{
 		if (error == QNetworkReply::NoError)
 		{
@@ -196,7 +196,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	});
 
 	// Handle response according to its contents
-	connect(network_reply, &QNetworkReply::finished, [=]()
+	connect(network_reply, &QNetworkReply::finished, [=, this]()
 	{
 		if (network_reply->error() != QNetworkReply::NoError)
 		{

@@ -43,9 +43,9 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 
 	//Events
 	connect(pauseList, &QTableWidget::customContextMenuRequested, this, &auto_pause_settings_dialog::ShowContextMenu);
-	connect(clearButton, &QAbstractButton::clicked, [=](){ m_entries.clear(); UpdateList(); });
-	connect(reloadButton, &QAbstractButton::clicked, [=](){ LoadEntries(); UpdateList(); });
-	connect(saveButton, &QAbstractButton::clicked, [=]
+	connect(clearButton, &QAbstractButton::clicked, [this](){ m_entries.clear(); UpdateList(); });
+	connect(reloadButton, &QAbstractButton::clicked, [this](){ LoadEntries(); UpdateList(); });
+	connect(saveButton, &QAbstractButton::clicked, [this]()
 	{
 		SaveEntries();
 		autopause_log.success("File pause.bin was updated.");
@@ -157,7 +157,7 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 		config->setEnabled(false);
 	}
 
-	auto OnEntryConfig = [=](int row, bool newEntry)
+	auto OnEntryConfig = [this](int row, bool newEntry)
 	{
 		AutoPauseConfigDialog *config = new AutoPauseConfigDialog(this, this, newEntry, &m_entries[row]);
 		config->setModal(true);
@@ -165,7 +165,7 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 		UpdateList();
 	};
 
-	connect(add, &QAction::triggered, [=]() {
+	connect(add, &QAction::triggered, [=, this]() {
 		m_entries.emplace_back(0xFFFFFFFF);
 		UpdateList();
 		int idx = static_cast<int>(m_entries.size()) - 1;
@@ -173,7 +173,7 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 		OnEntryConfig(idx, true);
 	});
 	connect(remove, &QAction::triggered, this, &auto_pause_settings_dialog::OnRemove);
-	connect(config, &QAction::triggered, [=]() {OnEntryConfig(row, false); });
+	connect(config, &QAction::triggered, [=, this]() {OnEntryConfig(row, false); });
 
 	myMenu.exec(pauseList->viewport()->mapToGlobal(pos));
 }

@@ -108,7 +108,7 @@ void kernel_explorer::Update()
 		}
 	};
 
-	auto l_addTreeChild = [=](QTreeWidgetItem *parent, QString text)
+	auto l_addTreeChild = [this](QTreeWidgetItem *parent, QString text)
 	{
 		QTreeWidgetItem *treeItem = new QTreeWidgetItem();
 		treeItem->setText(0, text);

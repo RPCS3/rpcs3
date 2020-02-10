@@ -190,7 +190,7 @@ void save_manager_dialog::Init(std::string dir)
 	// Connects and events
 	connect(push_close, &QAbstractButton::clicked, this, &save_manager_dialog::close);
 	connect(m_button_delete, &QAbstractButton::clicked, this, &save_manager_dialog::OnEntriesRemove);
-	connect(m_button_folder, &QAbstractButton::clicked, [=]()
+	connect(m_button_folder, &QAbstractButton::clicked, [this]()
 	{
 		const int idx = m_list->currentRow();
 		QTableWidgetItem* item = m_list->item(idx, 1);
@@ -467,7 +467,7 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 
 	// Events
 	connect(removeAct, &QAction::triggered, this, &save_manager_dialog::OnEntriesRemove); // entriesremove handles case of one as well
-	connect(showDirAct, &QAction::triggered, [=]()
+	connect(showDirAct, &QAction::triggered, [=, this]()
 	{
 		QTableWidgetItem* item = m_list->item(idx, 1);
 		if (!item)

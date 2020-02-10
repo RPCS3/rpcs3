@@ -19,7 +19,7 @@ s32 trophy_notification_helper::ShowTrophyNotification(const SceNpTrophyDetails&
 		return 0;
 	}
 
-	Emu.CallAfter([=]
+	Emu.CallAfter([=, this]
 	{
 		trophy_notification_frame* trophy_notification = new trophy_notification_frame(trophy_icon_buffer, trophy, m_game_window->frameGeometry().height() / 10);
 

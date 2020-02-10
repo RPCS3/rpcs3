@@ -431,11 +431,13 @@ target_link_libraries(rpcs3_emu
 )
 
 
-# Setup cotire
-option(UNITY_BUILD_EMU "Use unity build for rpcs3_emu target" OFF)
+if (USE_COTIRE)
+	# Setup cotire
+	option(UNITY_BUILD_EMU "Use unity build for rpcs3_emu target" OFF)
 
-set_target_properties(rpcs3_emu PROPERTIES
-	COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h"
-	COTIRE_ADD_UNITY_BUILD ${UNITY_BUILD_EMU})
+	set_target_properties(rpcs3_emu PROPERTIES
+		COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h"
+		COTIRE_ADD_UNITY_BUILD ${UNITY_BUILD_EMU})
 
-cotire(rpcs3_emu)
+	cotire(rpcs3_emu)
+endif()

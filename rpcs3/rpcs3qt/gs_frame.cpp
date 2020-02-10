@@ -167,7 +167,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 
 void gs_frame::toggle_fullscreen()
 {
-	auto l_setFullScreenVis = [&]()
+	Emu.CallAfter([this]()
 	{
 		if (visibility() == FullScreen)
 		{
@@ -177,15 +177,13 @@ void gs_frame::toggle_fullscreen()
 		{
 			setVisibility(FullScreen);
 		}
-	};
-
-	Emu.CallAfter(l_setFullScreenVis);
+	});
 }
 
 void gs_frame::close()
 {
 	Emu.Stop();
-	Emu.CallAfter([=]() { deleteLater(); });
+	Emu.CallAfter([this]() { deleteLater(); });
 }
 
 bool gs_frame::shown()
@@ -195,12 +193,12 @@ bool gs_frame::shown()
 
 void gs_frame::hide()
 {
-	Emu.CallAfter([=]() {QWindow::hide(); });
+	Emu.CallAfter([this]() {QWindow::hide(); });
 }
 
 void gs_frame::show()
 {
-	Emu.CallAfter([=]()
+	Emu.CallAfter([this]()
 	{
 		QWindow::show();
 		if (g_cfg.misc.start_fullscreen)

@@ -77,7 +77,7 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 	});
 
 	connect(reply_json, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), this, &update_manager::handle_error);
-	connect(reply_json, &QNetworkReply::finished, [=]()
+	connect(reply_json, &QNetworkReply::finished, [=, this]()
 	{
 		handle_reply(reply_json, &update_manager::handle_json, automatic, "Retrieved JSON Info");
 	});
@@ -263,7 +263,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 	});
 
 	connect(reply_rpcs3, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), this, &update_manager::handle_error);
-	connect(reply_rpcs3, &QNetworkReply::finished, [=]()
+	connect(reply_rpcs3, &QNetworkReply::finished, [=, this]()
 	{
 		handle_reply(reply_rpcs3, &update_manager::handle_rpcs3, automatic, "Retrieved RPCS3");
 	});
