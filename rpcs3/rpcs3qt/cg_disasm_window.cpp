@@ -75,13 +75,13 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 	myMenu.addSeparator();
 	myMenu.addAction(clear);
 
-	connect(clear, &QAction::triggered, [=]
+	connect(clear, &QAction::triggered, [this]()
 	{
 		m_disasm_text->clear();
 		m_glsl_text->clear();
 	});
 
-	connect(open, &QAction::triggered, [=]
+	connect(open, &QAction::triggered, [this]()
 	{
 		QString filePath = QFileDialog::getOpenFileName(this, tr("Select Cg program object"), m_path_last, tr("Cg program objects (*.fpo;*.vpo);;"));
 		if (filePath == NULL) return;

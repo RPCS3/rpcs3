@@ -74,7 +74,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		pad::get_current_handler()->SetEnabled(enable);
 	};
 
-	callbacks.init_kb_handler = [=]()
+	callbacks.init_kb_handler = [=, this]()
 	{
 		switch (keyboard_handler type = g_cfg.io.keyboard)
 		{
@@ -94,7 +94,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		}
 	};
 
-	callbacks.init_mouse_handler = [=]()
+	callbacks.init_mouse_handler = [=, this]()
 	{
 		switch (mouse_handler type = g_cfg.io.mouse)
 		{

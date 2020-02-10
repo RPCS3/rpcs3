@@ -77,7 +77,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 			input->setValidator(new QRegExpValidator(QRegExp("^\\S*$"), this));
 		}
 
-		connect(input, &QLineEdit::textChanged, [=](const QString& text)
+		connect(input, &QLineEdit::textChanged, [=, this](const QString& text)
 		{
 			inputCount->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
@@ -96,7 +96,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 		input->moveCursor(QTextCursor::End);
 		m_text_old = text;
 
-		connect(input, &QTextEdit::textChanged, [=]()
+		connect(input, &QTextEdit::textChanged, [=, this]()
 		{
 			QString text = input->toPlainText();
 
@@ -163,12 +163,12 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	// Events
 	connect(button_ok, &QAbstractButton::clicked, m_dialog, &QDialog::accept);
 
-	connect(m_dialog, &QDialog::accepted, [=]
+	connect(m_dialog, &QDialog::accepted, [this]()
 	{
 		on_osk_close(CELL_MSGDIALOG_BUTTON_OK);
 	});
 
-	connect(m_dialog, &QDialog::rejected, [=]
+	connect(m_dialog, &QDialog::rejected, [this]()
 	{
 		on_osk_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
 	});
