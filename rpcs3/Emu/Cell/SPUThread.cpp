@@ -5,6 +5,7 @@
 #include "Emu/Memory/vm_reservation.h"
 
 #include "Emu/IdManager.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/lv2/sys_spu.h"
@@ -65,6 +66,26 @@ static FORCE_INLINE void mov_rdata(decltype(spu_thread::rdata)& dst, const declt
 		dst[6] = data0;
 		dst[7] = data1;
 	}
+}
+
+// Returns nullptr if rsx does not need pausing on reservations op, rsx ptr otherwise
+static FORCE_INLINE rsx::thread* get_rsx_if_needs_res_pause(u32 addr)
+{
+	if (!g_cfg.core.rsx_accurate_res_access) [[likely]]
+	{
+		return {};
+	}
+
+	const auto render = rsx::get_current_renderer();
+
+	ASSUME(render);
+
+	if (render->iomap_table.io[addr >> 20] == -1) [[likely]]
+	{
+		return {};
+	}
+
+	return render;
 }
 
 extern u64 get_timebased_time();
@@ -1655,12 +1676,20 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 
 		if (g_cfg.core.spu_accurate_putlluc)
 		{
-			// Full lock (heavyweight)
-			// TODO: vm::check_addr
+			const auto render = get_rsx_if_needs_res_pause(addr);
+
+			if (render) render->pause();
+
 			auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
-			vm::writer_lock lock(addr);
-			mov_rdata(super_data, to_write);
-			res.release(res.load() + 127);
+			{
+				// Full lock (heavyweight)
+				// TODO: vm::check_addr
+				vm::writer_lock lock(addr);
+				mov_rdata(super_data, to_write);
+				res.release(res.load() + 127);
+			}
+
+			if (render) render->unpause();
 		}
 		else
 		{
@@ -1868,15 +1897,23 @@ bool spu_thread::process_mfc_cmd()
 			if (g_cfg.core.spu_accurate_getllar)
 			{
 				*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
+
+				const auto render = get_rsx_if_needs_res_pause(addr);
+
+				if (render) render->pause();
+
 				const auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
+				{
+					// Full lock (heavyweight)
+					// TODO: vm::check_addr
+					vm::writer_lock lock(addr);
 
-				// Full lock (heavyweight)
-				// TODO: vm::check_addr
-				vm::writer_lock lock(addr);
+					ntime = old_time;
+					mov_rdata(dst, super_data);
+					res.release(old_time);
+				}
 
-				ntime = old_time;
-				mov_rdata(dst, super_data);
-				res.release(old_time);
+				if (render) render->unpause();
 			}
 			else
 			{
@@ -1969,22 +2006,29 @@ bool spu_thread::process_mfc_cmd()
 					{
 						*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
+						const auto render = get_rsx_if_needs_res_pause(addr);
+
+						if (render) render->pause();
+
 						auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
-
-						// Full lock (heavyweight)
-						// TODO: vm::check_addr
-						vm::writer_lock lock(addr);
-
-						if (cmp_rdata(rdata, super_data))
 						{
-							mov_rdata(super_data, to_write);
-							res.release(old_time + 128);
-							result = 1;
+							// Full lock (heavyweight)
+							// TODO: vm::check_addr
+							vm::writer_lock lock(addr);
+
+							if (cmp_rdata(rdata, super_data))
+							{
+								mov_rdata(super_data, to_write);
+								res.release(old_time + 128);
+								result = 1;
+							}
+							else
+							{
+								res.release(old_time);
+							}
 						}
-						else
-						{
-							res.release(old_time);
-						}
+
+						if (render) render->unpause();
 					}
 					else
 					{

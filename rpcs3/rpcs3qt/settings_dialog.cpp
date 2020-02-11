@@ -1668,6 +1668,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->accuratePUTLLUC, emu_settings::AccuratePUTLLUC);
 	SubscribeTooltip(ui->accuratePUTLLUC, tooltips.settings.accurate_putlluc);
 
+	xemu_settings->EnhanceCheckBox(ui->accurateRSXAccess, emu_settings::AccurateRSXAccess);
+	SubscribeTooltip(ui->accurateRSXAccess, tooltips.settings.accurate_rsx_access);
+
 	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
 	SubscribeTooltip(ui->hookStFunc, tooltips.settings.hook_static_functions);
 
