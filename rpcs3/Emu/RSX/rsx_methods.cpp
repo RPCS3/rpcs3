@@ -1000,7 +1000,7 @@ namespace rsx
 			else
 			{
 				const u32 data_length = in_pitch * (in_h - 1) + src_line_length;
-				rsx->read_barrier(src_address, dst_address, true);
+				rsx->read_barrier(src_address, data_length, true);
 			}
 
 			u8* pixels_src = vm::_ptr<u8>(src_address + in_offset);
