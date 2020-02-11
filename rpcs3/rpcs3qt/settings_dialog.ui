@@ -3138,6 +3138,13 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="accurateRSXAccess">
+              <property name="text">
+               <string>Accurate RSX reservation access</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QCheckBox" name="hookStFunc">
               <property name="text">
                <string>Hook static functions</string>
