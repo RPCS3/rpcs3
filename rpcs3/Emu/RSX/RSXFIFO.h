@@ -113,7 +113,7 @@ namespace rsx
 		{
 		private:
 			RsxDmaControl* m_ctrl = nullptr;
-			rsx::rsx_iomap_table* m_iotable;
+			const rsx::rsx_iomap_table* m_iotable;
 			u32 m_internal_get = 0;
 
 			u32 m_memwatch_addr = 0;
@@ -129,12 +129,11 @@ namespace rsx
 			FIFO_control(rsx::thread* pctrl);
 			~FIFO_control() = default;
 
-			u32 get_pos() { return m_internal_get; }
-			u32 last_cmd() { return m_cmd; }
+			u32 get_pos() const { return m_internal_get; }
+			u32 last_cmd() const { return m_cmd; }
 			void sync_get() { m_ctrl->get.release(m_internal_get); }
 			void inc_get(bool wait);
 			void set_get(u32 get);
-			void set_put(u32 put);
 			void abort();
 			template <bool = true> u32 read_put();
 

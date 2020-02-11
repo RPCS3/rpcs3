@@ -2342,7 +2342,7 @@ namespace rsx
 		}
 	}
 
-	u32 thread::get_fifo_cmd()
+	u32 thread::get_fifo_cmd() const
 	{
 		// Last fifo cmd for logging and utility
 		return fifo_ctrl->last_cmd();
