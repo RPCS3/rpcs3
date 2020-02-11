@@ -3248,6 +3248,9 @@ namespace rsx
 				return result_none;
 
 			const auto memory_end = memory_address + memory_range;
+
+			AUDIT(memory_end >= memory_address);
+
 			u32 sync_address = 0;
 			occlusion_query_info* query = nullptr;
 
