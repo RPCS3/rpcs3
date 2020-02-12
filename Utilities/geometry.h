@@ -610,18 +610,11 @@ struct coord_base
 	};
 
 	constexpr coord_base() : position{}, size{}
-#ifdef _MSC_VER
-		//compiler error
-		, x{}, y{}, width{}, height{}
-#endif
 	{
 	}
 
 	constexpr coord_base(const position_base<T>& position, const size2_base<T>& size)
 		: position{ position }, size{ size }
-#ifdef _MSC_VER
-		, x{ position.x }, y{ position.y }, width{ size.width }, height{ size.height }
-#endif
 	{
 	}
 
@@ -777,15 +770,6 @@ template<typename T>
 struct size3_base
 {
 	T width, height, depth;
-	/*
-	size3_base() : width{}, height{}, depth{}
-	{
-	}
-
-	size3_base(T width, T height, T depth) : width{ width }, height{ height }, depth{ depth }
-	{
-	}
-	*/
 };
 
 template<typename T>
