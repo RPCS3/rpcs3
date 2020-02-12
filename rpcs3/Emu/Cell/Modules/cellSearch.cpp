@@ -91,7 +91,7 @@ struct search_object_t
 	// TODO: Figured out the correct values to set here
 	static const u32 id_base  = 1;
 	static const u32 id_step  = 1;
-	static const u32 id_count = 64;
+	static const u32 id_count = 1024; // TODO
 	static const u32 invalid  = 0xFFFFFFFF;
 
 	std::vector<ContentIdType> content_ids;
@@ -222,12 +222,12 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	*outSearchId = idm::make<search_object_t>();
+	const u32 id = *outSearchId = idm::make<search_object_t>();
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId = *outSearchId;
+		resultParam->searchId = id;
 		resultParam->resultNum = 0; // TODO
 
 		search->func(ppu, CELL_SEARCH_EVENT_LISTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -287,12 +287,12 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	*outSearchId = idm::make<search_object_t>();
+	const u32 id = *outSearchId = idm::make<search_object_t>();
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId = *outSearchId;
+		resultParam->searchId = id;
 		resultParam->resultNum = 0; // TODO
 
 		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_INLIST_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -362,13 +362,13 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	*outSearchId = idm::make<search_object_t>();
+	const u32 id = *outSearchId = idm::make<search_object_t>();
 
 	sysutil_register_cb([=, content_map = g_fxo->get<ContentIdMap>()](ppu_thread& ppu) -> s32
 	{
 		auto curr_search = idm::get<search_object_t>(*outSearchId);
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId = *outSearchId;
+		resultParam->searchId = id;
 		resultParam->resultNum = 0; // Set again later
 
 		std::function<void(const std::string&, const std::string&)> searchInFolder = [&, type](const std::string& vpath, const std::string& prev)
@@ -549,12 +549,12 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	*outSearchId = idm::make<search_object_t>();
+	const u32 id = *outSearchId = idm::make<search_object_t>();
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId = *outSearchId;
+		resultParam->searchId = id;
 		resultParam->resultNum = 0; // TODO
 
 		search->func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_INVIDEO_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -605,12 +605,12 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	*outSearchId = idm::make<search_object_t>();
+	const u32 id = *outSearchId = idm::make<search_object_t>();
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId = *outSearchId;
+		resultParam->searchId = id;
 		resultParam->resultNum = 0; // TODO
 
 		search->func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
