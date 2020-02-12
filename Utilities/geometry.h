@@ -15,10 +15,6 @@ struct size2_base
 	{
 	}
 
-	constexpr size2_base(const size2_base& rhs) : width{ rhs.width }, height{ rhs.height }
-	{
-	}
-
 	constexpr size2_base operator -(const size2_base& rhs) const
 	{
 		return{ width - rhs.width, height - rhs.height };
@@ -215,6 +211,8 @@ struct position1_base
 		return x == rhs;
 	}
 
+#if __cpp_impl_three_way_comparison >= 201711
+#else
 	bool operator !=(const position1_base& rhs) const
 	{
 		return !(*this == rhs);
@@ -224,6 +222,7 @@ struct position1_base
 	{
 		return !(*this == rhs);
 	}
+#endif
 
 	template<typename NT>
 	explicit operator position1_base<NT>() const
@@ -247,10 +246,6 @@ struct position2_base
 	}
 
 	constexpr position2_base(T x, T y) : x{ x }, y{ y }
-	{
-	}
-
-	constexpr position2_base(const position2_base& rhs) : x{ rhs.x }, y{ rhs.y }
 	{
 	}
 
@@ -388,6 +383,8 @@ struct position2_base
 		return x == rhs && y == rhs;
 	}
 
+#if __cpp_impl_three_way_comparison >= 201711
+#else
 	constexpr bool operator !=(const position2_base& rhs) const
 	{
 		return !(*this == rhs);
@@ -397,6 +394,7 @@ struct position2_base
 	{
 		return !(*this == rhs);
 	}
+#endif
 
 	template<typename NT>
 	explicit constexpr operator position2_base<NT>() const
@@ -480,6 +478,8 @@ struct position3_base
 		return x == rhs && y == rhs && z == rhs;
 	}
 
+#if __cpp_impl_three_way_comparison >= 201711
+#else
 	bool operator !=(const position3_base& rhs) const
 	{
 		return !(*this == rhs);
@@ -489,6 +489,7 @@ struct position3_base
 	{
 		return !(*this == rhs);
 	}
+#endif
 
 	template<typename NT>
 	explicit operator position3_base<NT>() const
@@ -570,6 +571,8 @@ struct position4_base
 		return x == rhs && y == rhs && z == rhs && w == rhs;
 	}
 
+#if __cpp_impl_three_way_comparison >= 201711
+#else
 	constexpr bool operator !=(const position4_base& rhs) const
 	{
 		return !(*this == rhs);
@@ -579,6 +582,7 @@ struct position4_base
 	{
 		return !(*this == rhs);
 	}
+#endif
 
 	template<typename NT>
 	explicit constexpr operator position4_base<NT>() const
@@ -618,11 +622,6 @@ struct coord_base
 #ifdef _MSC_VER
 		, x{ position.x }, y{ position.y }, width{ size.width }, height{ size.height }
 #endif
-	{
-	}
-
-	constexpr coord_base(const coord_base<T>& other)
-		: position{ other.position }, size{ other.size }
 	{
 	}
 
@@ -726,10 +725,13 @@ struct area_base
 		return x1 == rhs.x1 && x2 == rhs.x2 && y1 == rhs.y1 && y2 == rhs.y2;
 	}
 
+#if __cpp_impl_three_way_comparison >= 201711
+#else
 	constexpr bool operator != (const area_base& rhs) const
 	{
 		return !(*this == rhs);
 	}
+#endif
 
 	constexpr area_base operator - (const size2_base<T>& size) const
 	{
