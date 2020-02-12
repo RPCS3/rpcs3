@@ -26,7 +26,8 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 	# This may need updating if you update the compiler or rpcs3 uses newer c++ features
 	# See https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/config/abi/pre/gnu.ver
 	# for which definitions correlate to which CXXABI version.
-	printf "#include <memory>\nint main(){std::make_exception_ptr(0);}" | $CXX -x c++ -o ./appdir/usr/optional/checker -
+	# Currently we target a minimum of GLIBCXX_3.4.26 and CXXABI_1.3.11
+	printf "#include <bits/stdc++.h>\nint main(){std::make_exception_ptr(0);std::pmr::get_default_resource();}" | $CXX -x c++ -std=c++2a -o ./appdir/usr/optional/checker -
 	
 	# Package it up and send it off
 	./squashfs-root/usr/bin/appimagetool /rpcs3/build/appdir
