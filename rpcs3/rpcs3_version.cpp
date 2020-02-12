@@ -5,7 +5,7 @@
 
 namespace rpcs3
 {
-	std::string get_branch()
+	std::string_view get_branch()
 	{
 		return RPCS3_GIT_BRANCH;
 	}

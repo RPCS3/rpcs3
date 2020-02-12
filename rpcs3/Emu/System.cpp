@@ -44,6 +44,8 @@
 
 #include "display_sleep_control.h"
 
+#include "rpcs3_version.h"
+
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
@@ -1863,6 +1865,126 @@ void Emulator::Stop(bool restart)
 	{
 		enable_display_sleep();
 	}
+}
+
+std::string Emulator::FormatTitle(double fps) const
+{
+	// Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
+	std::string version = rpcs3::get_version().to_string();
+	const auto last_minus = version.find_last_of('-');
+
+	// Add branch and commit hash to version on frame unless it's master.
+	if (rpcs3::get_branch() != "master"sv && rpcs3::get_branch() != "HEAD"sv)
+	{
+		version = version.substr(0, ~last_minus ? last_minus + 9 : last_minus);
+		version += '-';
+		version += rpcs3::get_branch();
+	}
+	else
+	{
+		version = version.substr(0, last_minus);
+	}
+
+	auto [title_format, life1] = g_cfg.misc.title_format.get();
+
+	// Parse title format string
+	std::string title_string;
+
+	// Backward compatibility hack
+	std::size_t fmt_start = 0;
+
+	if (g_cfg.misc.show_fps_in_title.get() == false)
+	{
+		if (title_format.starts_with("FPS: %F | "))
+		{
+			// Remove "FPS" from the title if detected
+			fmt_start = 10;
+		}
+	}
+
+	for (std::size_t i = fmt_start; i < title_format.size();)
+	{
+		const char c1 = title_format[i];
+
+		if (c1 == '\0')
+		{
+			break;
+		}
+
+		switch (c1)
+		{
+		case '%':
+		{
+			const char c2 = title_format[i + 1];
+
+			if (c2 == '\0')
+			{
+				title_string += '%';
+				i++;
+				continue;
+			}
+
+			switch (c2)
+			{
+			case '%':
+			{
+				title_string += '%';
+				break;
+			}
+			case 'T':
+			{
+				title_string += this->GetTitle();
+				break;
+			}
+			case 't':
+			{
+				title_string += this->GetTitleID();
+				break;
+			}
+			case 'R':
+			{
+				fmt::append(title_string, "%s", g_cfg.video.renderer.get());
+				break;
+			}
+			case 'V':
+			{
+				title_string += version;
+				break;
+			}
+			case 'F':
+			{
+				if (g_cfg.misc.show_fps_in_title)
+				{
+					fmt::append(title_string, "%.2f", fps);
+				}
+				else
+				{
+					title_string += "Disabled";
+				}
+
+				break;
+			}
+			default:
+			{
+				title_string += '%';
+				title_string += c2;
+				break;
+			}
+			}
+
+			i += 2;
+			break;
+		}
+		default:
+		{
+			title_string += c1;
+			i += 1;
+			break;
+		}
+		}
+	}
+
+	return title_string;
 }
 
 std::string cfg_root::node_vfs::get(const cfg::string& _cfg, const char* _def) const

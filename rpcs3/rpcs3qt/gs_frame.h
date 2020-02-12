@@ -36,13 +36,11 @@ private:
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	u64 m_frames = 0;
-	// display status of last title update, needed for dynamic changes of the fps setting
-	bool m_show_fps_in_title = false;
-	QString m_windowTitle;
+	QString m_window_title;
 	bool m_disable_mouse;
 
 public:
-	gs_frame(const QString& title, const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
+	gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
 	~gs_frame();
 
 	draw_context_t make_context() override;

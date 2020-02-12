@@ -377,6 +377,8 @@ public:
 
 	bool HasGui() const { return m_has_gui; }
 	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
+
+	std::string FormatTitle(double fps) const;
 };
 
 extern Emulator Emu;
@@ -626,6 +628,7 @@ struct cfg_root : cfg::node
 		cfg::_bool use_native_interface{ this, "Use native user interface", true };
 		cfg::string gdb_server{this, "GDB Server", "127.0.0.1:2345"};
 		cfg::_bool silence_all_logs{this, "Silence All Logs", false, false};
+		cfg::string title_format{this, "Window Title Format", "FPS: %F | %R | %V | %T [%t]", true};
 
 	} misc{this};
 

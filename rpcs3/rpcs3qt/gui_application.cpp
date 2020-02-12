@@ -233,19 +233,15 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 
 	switch (video_renderer type = g_cfg.video.renderer)
 	{
-	case video_renderer::null:
-	{
-		frame = new gs_frame("Null", frame_geometry, app_icon, m_gui_settings);
-		break;
-	}
 	case video_renderer::opengl:
 	{
 		frame = new gl_gs_frame(frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
+	case video_renderer::null:
 	case video_renderer::vulkan:
 	{
-		frame = new gs_frame("Vulkan", frame_geometry, app_icon, m_gui_settings);
+		frame = new gs_frame(frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
 	default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
