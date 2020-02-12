@@ -366,7 +366,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 
 	sysutil_register_cb([=, content_map = g_fxo->get<ContentIdMap>()](ppu_thread& ppu) -> s32
 	{
-		auto curr_search = idm::get<search_object_t>(*outSearchId);
+		auto curr_search = idm::get<search_object_t>(id);
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = id;
 		resultParam->resultNum = 0; // Set again later
