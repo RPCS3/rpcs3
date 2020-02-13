@@ -11,6 +11,7 @@ namespace rsx
 		FIFO_control::FIFO_control(::rsx::thread* pctrl)
 		{
 			m_ctrl = pctrl->ctrl;
+			m_iotable = &pctrl->iomap_table;
 		}
 
 		void FIFO_control::inc_get(bool wait)
@@ -57,7 +58,7 @@ namespace rsx
 		{
 			if (m_ctrl->get == get)
 			{
-				if (const auto addr = RSXIOMem.RealAddr(m_memwatch_addr))
+				if (const u32 addr = m_iotable->get_addr(m_memwatch_addr); addr + 1)
 				{
 					m_memwatch_addr = get;
 					m_memwatch_cmp = vm::read32(addr);
@@ -119,7 +120,7 @@ namespace rsx
 			{
 				if (m_internal_get == m_memwatch_addr)
 				{
-					if (const auto addr = RSXIOMem.RealAddr(m_memwatch_addr))
+					if (const u32 addr = m_iotable->get_addr(m_memwatch_addr); addr + 1)
 					{
 						if (vm::read32(addr) == m_memwatch_cmp)
 						{
@@ -134,7 +135,7 @@ namespace rsx
 				m_memwatch_cmp = 0;
 			}
 
-			if (u32 addr = RSXIOMem.RealAddr(m_internal_get))
+			if (const u32 addr = m_iotable->get_addr(m_internal_get); addr + 1)
 			{
 				m_cmd = vm::read32(addr);
 			}
@@ -163,8 +164,8 @@ namespace rsx
 			}
 
 			// Validate the args ptr if the command attempts to read from it
-			m_args_ptr = RSXIOMem.RealAddr(m_internal_get + 4);
-			if (!m_args_ptr) [[unlikely]]
+			m_args_ptr = m_iotable->get_addr(m_internal_get + 4);
+			if (m_args_ptr == -1) [[unlikely]]
 			{
 				// Optional recovery
 				data.reg = FIFO_ERROR;

@@ -35,7 +35,6 @@ bool user_asked_for_frame_capture = false;
 bool capture_current_frame = false;
 rsx::frame_trace_data frame_debug;
 rsx::frame_capture_data frame_capture;
-RSXIOTable RSXIOMem;
 
 extern CellGcmOffsetTable offsetTable;
 extern thread_local std::string(*g_tls_log_prefix)();
@@ -68,9 +67,9 @@ namespace rsx
 		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
 		case CELL_GCM_LOCATION_MAIN:
 		{
-			if (u32 result = RSXIOMem.RealAddr(offset))
+			if (const u32 ea = render->iomap_table.get_addr(offset); ea + 1)
 			{
-				return result;
+				return ea;
 			}
 
 			msg = "RSXIO memory not mapped!"sv;
@@ -90,9 +89,9 @@ namespace rsx
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
 		{
-			if (u32 result = offset < 0x1000000 ? RSXIOMem.RealAddr(0x0e000000 + offset) : 0)
+			if (const u32 ea = offset < 0x1000000 ? render->iomap_table.get_addr(0x0e000000 + offset) : -1; ea + 1)
 			{
-				return result;
+				return ea;
 			}
 
 			msg = "RSXIO REPORT memory not mapped!"sv;
@@ -617,10 +616,11 @@ namespace rsx
 		while (true)
 		{
 			// Wait for external pause events
-			if (external_interrupt_lock.load())
+			if (external_interrupt_lock)
 			{
 				external_interrupt_ack.store(true);
-				while (external_interrupt_lock.load()) _mm_pause();
+
+				while (external_interrupt_lock) _mm_pause();
 			}
 
 			// Note a possible rollback address
@@ -664,6 +664,9 @@ namespace rsx
 		// Clear any pending flush requests to release threads
 		std::this_thread::sleep_for(10ms);
 		do_local_task(rsx::FIFO_state::lock_wait);
+
+		user_asked_for_frame_capture = false;
+		capture_current_frame = false;
 
 		m_rsx_thread_exiting = true;
 		g_dma_manager.join();
@@ -2390,13 +2393,13 @@ namespace rsx
 
 				for (u32 ea = address >> 20, end = ea + (size >> 20); ea < end; ea++)
 				{
-					u32 io = RSXIOMem.io[ea];
+					const u32 io = utils::ror32(iomap_table.io[ea], 20);
 
-					if (io < 512)
+					if (io + 1)
 					{
 						unmap_status[io / 64] |= 1ull << (io & 63);
-						RSXIOMem.ea[io].raw() = 0xFFFF;
-						RSXIOMem.io[ea].raw() = 0xFFFF;
+						iomap_table.ea[io].release(-1);
+						iomap_table.io[ea].release(-1);
 					}
 				}
 
@@ -2414,12 +2417,20 @@ namespace rsx
 			else
 			{
 				// TODO: Fix this
-				u32 ea = address >> 20, io = RSXIOMem.io[ea];
+				u32 ea = address >> 20, io = iomap_table.io[ea];
 
-				for (const u32 end = ea + (size >> 20); ea < end;)
+				if (io + 1)
 				{
-					offsetTable.ioAddress[ea++] = 0xFFFF;
-					offsetTable.eaAddress[io++] = 0xFFFF;
+					io >>= 20;
+
+					const auto cfg = g_fxo->get<gcm_config>();
+					std::lock_guard lock(cfg->gcmio_mutex);
+
+					for (const u32 end = ea + (size >> 20); ea < end;)
+					{
+						cfg->offsetTable.ioAddress[ea++] = 0xFFFF;
+						cfg->offsetTable.eaAddress[io++] = 0xFFFF;
+					}
 				}
 			}
 
@@ -2460,14 +2471,19 @@ namespace rsx
 	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!
 	void thread::pause()
 	{
-		external_interrupt_lock.store(true);
-		while (!external_interrupt_ack.load())
+		while (external_interrupt_lock.exchange(true)) [[unlikely]]
+		{
+			_mm_pause();
+		}
+
+		while (!external_interrupt_ack)
 		{
 			if (Emu.IsStopped())
 				break;
 
 			_mm_pause();
 		}
+
 		external_interrupt_ack.store(false);
 	}
 

@@ -311,7 +311,7 @@ namespace gl
 			saved_sampler_state saved(31, m_sampler);
 			glBindTexture(GL_TEXTURE_2D, source->id());
 
-			overlay_pass::run(dst_area, target->id(), true);
+			overlay_pass::run(static_cast<areau>(dst_area), target->id(), true);
 		}
 	};
 

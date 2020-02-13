@@ -1218,7 +1218,7 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\sys_btsetting.h">
       <Filter>Emu\Cell\lv2</Filter>
-    </ClCompile>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellAdec.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>

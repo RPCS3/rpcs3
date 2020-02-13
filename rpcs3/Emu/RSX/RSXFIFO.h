@@ -9,6 +9,7 @@
 namespace rsx
 {
 	class thread;
+	struct rsx_iomap_table;
 
 	namespace FIFO
 	{
@@ -112,6 +113,7 @@ namespace rsx
 		{
 		private:
 			RsxDmaControl* m_ctrl = nullptr;
+			rsx::rsx_iomap_table* m_iotable;
 			u32 m_internal_get = 0;
 
 			u32 m_memwatch_addr = 0;
