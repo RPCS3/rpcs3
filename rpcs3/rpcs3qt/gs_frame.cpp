@@ -38,7 +38,7 @@ gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::share
 {
 	m_disable_mouse = gui_settings->GetValue(gui::gs_disableMouse).toBool();
 
-	m_window_title = qstr(Emu.FormatTitle(0));
+	m_window_title = qstr(Emu.GetFormattedTitle(0));
 
 	if (!appIcon.isNull())
 	{
@@ -273,7 +273,7 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{
-		QString new_title = qstr(Emu.FormatTitle(m_frames / fps_t.GetElapsedTimeInSec()));
+		const QString new_title = qstr(Emu.GetFormattedTitle(m_frames / fps_t.GetElapsedTimeInSec()));
 
 		if (new_title != m_window_title)
 		{
