@@ -881,6 +881,9 @@
     <ClCompile Include="Emu\Cell\lv2\sys_crypto_engine.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\title.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1671,6 +1674,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\title.h">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

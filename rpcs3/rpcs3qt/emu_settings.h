@@ -132,11 +132,11 @@ public:
 		StartOnBoot,
 		StartGameFullscreen,
 		PreventDisplaySleep,
-		ShowFPSInTitle,
 		ShowTrophyPopups,
 		ShowWelcomeScreen,
 		UseNativeInterface,
 		ShowShaderCompilationHint,
+		WindowTitleFormat,
 
 		// Network
 		ConnectionStatus,
@@ -364,12 +364,12 @@ private:
 		{ StartOnBoot,               { "Miscellaneous", "Automatically start games after boot" }},
 		{ StartGameFullscreen,       { "Miscellaneous", "Start games in fullscreen mode"}},
 		{ PreventDisplaySleep,       { "Miscellaneous", "Prevent display sleep while running games"}},
-		{ ShowFPSInTitle,            { "Miscellaneous", "Show FPS counter in window title"}},
 		{ ShowTrophyPopups,          { "Miscellaneous", "Show trophy popups"}},
 		{ ShowWelcomeScreen,         { "Miscellaneous", "Show Welcome Screen"}},
 		{ UseNativeInterface,        { "Miscellaneous", "Use native user interface"}},
 		{ ShowShaderCompilationHint, { "Miscellaneous", "Show shader compilation hint"}},
 		{ SilenceAllLogs,            { "Miscellaneous", "Silence All Logs" }},
+		{ WindowTitleFormat,         { "Miscellaneous", "Window Title Format" }},
 
 		// Networking
 		{ ConnectionStatus, { "Net", "Connection status"}},
