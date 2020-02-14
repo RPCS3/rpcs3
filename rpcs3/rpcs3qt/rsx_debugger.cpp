@@ -120,7 +120,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 		return table;
 	};
 
-	if (const auto render = rsx::get_current_renderer(); render &&
+	if (const auto render = rsx::get_current_renderer(); render && render->ctrl &&
 		render->iomap_table.get_addr(render->ctrl->get) + 1)
 	{
 		m_addr = render->ctrl->get;
@@ -208,7 +208,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	//Events
 	connect(b_goto_get, &QAbstractButton::clicked, [this]()
 	{
-		if (const auto render = rsx::get_current_renderer(); render &&
+		if (const auto render = rsx::get_current_renderer(); render && render->ctrl &&
 			render->iomap_table.get_addr(render->ctrl->get) + 1)
 		{
 			m_addr = render->ctrl->get;
@@ -217,7 +217,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	});
 	connect(b_goto_put, &QAbstractButton::clicked, [this]()
 	{
-		if (const auto render = rsx::get_current_renderer(); render &&
+		if (const auto render = rsx::get_current_renderer(); render && render->ctrl &&
 			render->iomap_table.get_addr(render->ctrl->put) + 1)
 		{
 			m_addr = render->ctrl->put;
