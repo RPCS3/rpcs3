@@ -533,9 +533,6 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			}
 		}
 
-		// Used to remove duplications from the list (serial -> set of cat names)
-		std::map<std::string, std::set<std::string>> serial_cat_name;
-
 		QSet<QString> serials;
 
 		QMutex mutex_cat;
@@ -579,13 +576,6 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
 
 				mutex_cat.lock();
-
-				// Detect duplication
-				if (!serial_cat_name[game.serial].emplace(game.category + game.name).second)
-				{
-					mutex_cat.unlock();
-					return;
-				}
 
 				const QString serial = qstr(game.serial);
 				const QString note = m_gui_settings->GetValue(gui::notes, serial, "").toString();
@@ -710,13 +700,6 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 						catch (const std::exception& e)
 						{
 							game_list_log.error("Failed to update the displayed version numbers for title ID %s\n%s thrown: %s", entry->info.serial, typeid(e).name(), e.what());
-						}
-
-						const std::string key = "GD" + other->info.name;
-						serial_cat_name[other->info.serial].erase(key);
-						if (!serial_cat_name[other->info.serial].count(key))
-						{
-							break;
 						}
 					}
 				}
