@@ -1,7 +1,7 @@
 ﻿#include "sysinfo.h"
 #include "StrFmt.h"
 #include "File.h"
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #ifdef _WIN32
 #include "windows.h"

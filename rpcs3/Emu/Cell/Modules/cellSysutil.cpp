@@ -1,6 +1,8 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
+#include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_process.h"
@@ -221,7 +223,7 @@ error_code cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> valu
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN:
-		*value = g_cfg.sys.enter_button_assignment;
+		*value = static_cast<s32>(g_cfg.sys.enter_button_assignment.get());
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT:

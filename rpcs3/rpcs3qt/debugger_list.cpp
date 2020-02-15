@@ -1,4 +1,4 @@
-#include "debugger_list.h"
+﻿#include "debugger_list.h"
 
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/System.h"

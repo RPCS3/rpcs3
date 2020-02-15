@@ -1,5 +1,5 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/PPUModule.h"

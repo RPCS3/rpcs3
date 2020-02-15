@@ -2,12 +2,10 @@
 #include "rsx_methods.h"
 #include "RSXThread.h"
 #include "Emu/Memory/vm_reservation.h"
-#include "Emu/System.h"
 #include "rsx_utils.h"
 #include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
-#include "Capture/rsx_capture.h"
 
 #include <thread>
 #include <atomic>

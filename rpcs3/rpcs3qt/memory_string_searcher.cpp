@@ -1,6 +1,9 @@
+﻿#include "stdafx.h"
 #include "memory_string_searcher.h"
+#include "Emu/Memory/vm.h"
 
 #include <QLabel>
+#include <QPushButton>
 
 LOG_CHANNEL(gui_log, "GUI");
 

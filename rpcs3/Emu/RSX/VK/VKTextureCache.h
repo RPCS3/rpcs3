@@ -5,7 +5,6 @@
 #include "VKCompute.h"
 #include "VKResourceManager.h"
 #include "VKDMA.h"
-#include "Emu/System.h"
 #include "../Common/TextureUtils.h"
 #include "Utilities/mutex.h"
 #include "../Common/texture_cache.h"

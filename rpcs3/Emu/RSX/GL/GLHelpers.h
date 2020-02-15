@@ -12,7 +12,7 @@
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
 
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Utilities/geometry.h"
 #include "Utilities/Log.h"
 

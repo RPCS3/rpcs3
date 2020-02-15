@@ -1,6 +1,7 @@
 ﻿add_library(rpcs3_emu
 	IdManager.cpp
 	System.cpp
+	system_config.cpp
 	VFS.cpp
 	GDB.cpp
 	title.cpp
@@ -90,6 +91,7 @@ target_sources(rpcs3_emu PRIVATE
 # Audio
 target_sources(rpcs3_emu PRIVATE
 	Audio/AudioDumper.cpp
+	Audio/AudioBackend.cpp
 	Audio/AL/OpenALBackend.cpp
 )
 
@@ -338,6 +340,7 @@ target_link_libraries(rpcs3_emu
 
 # Io
 target_sources(rpcs3_emu PRIVATE
+	Io/pad_config.cpp
 	Io/KeyboardHandler.cpp
 	Io/PadHandler.cpp
 	Io/usb_device.cpp

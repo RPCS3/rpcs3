@@ -2,6 +2,8 @@
 #include "rsx_debugger.h"
 #include "qt_utils.h"
 
+#include "Emu/RSX/GSRender.h"
+
 enum GCMEnumTypes
 {
 	CELL_GCM_ENUM,

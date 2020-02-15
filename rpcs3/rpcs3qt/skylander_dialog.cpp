@@ -1,5 +1,4 @@
 ﻿#include <mutex>
-#include "Emu/System.h"
 #include "Utilities/File.h"
 #include "Crypto/md5.h"
 #include "Crypto/aes.h"

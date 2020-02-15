@@ -2,6 +2,7 @@
 #include "SPURecompiler.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"

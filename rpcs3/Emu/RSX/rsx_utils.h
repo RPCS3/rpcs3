@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../System.h"
+#include "../system_config.h"
 #include "Utilities/address_range.h"
 #include "Utilities/geometry.h"
 #include "Utilities/asm.h"

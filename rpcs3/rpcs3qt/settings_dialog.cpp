@@ -21,6 +21,7 @@
 
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/title.h"
 #include "Crypto/unself.h"
 #include "Utilities/sysinfo.h"

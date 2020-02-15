@@ -1,7 +1,7 @@
 ﻿#include "stdafx.h"
 #include "sys_time.h"
 
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Utilities/asm.h"
 

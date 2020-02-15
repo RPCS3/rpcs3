@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include "VFS.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
@@ -52,8 +53,6 @@
 LOG_CHANNEL(sys_log, "SYS");
 
 stx::manual_fixed_typemap<void> g_fixed_typemap;
-
-cfg_root g_cfg;
 
 bool g_use_rtm;
 
@@ -226,7 +225,7 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 }
 
 template <>
-inline void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
+void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](detail_level value)
 	{
@@ -243,7 +242,7 @@ inline void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
 }
 
 template <>
-inline void fmt_class_string<screen_quadrant>::format(std::string& out, u64 arg)
+void fmt_class_string<screen_quadrant>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](screen_quadrant value)
 	{
@@ -1876,20 +1875,6 @@ std::string Emulator::GetFormattedTitle(double fps) const
 	title_data.fps = fps;
 
 	return rpcs3::get_formatted_title(title_data);
-}
-
-std::string cfg_root::node_vfs::get(const cfg::string& _cfg, const char* _def) const
-{
-	auto [spath, sshared] = _cfg.get();
-
-	if (spath.empty())
-	{
-		return fs::get_config_dir() + _def;
-	}
-
-	auto [semudir, sshared2] = emulator_dir.get();
-
-	return fmt::replace_all(spath, "$(EmulatorDir)", semudir.empty() ? fs::get_config_dir() : semudir);
 }
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)

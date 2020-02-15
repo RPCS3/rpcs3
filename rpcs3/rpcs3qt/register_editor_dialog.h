@@ -1,7 +1,6 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"

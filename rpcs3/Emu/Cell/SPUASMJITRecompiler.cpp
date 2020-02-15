@@ -1,7 +1,7 @@
 ﻿#include "stdafx.h"
 #include "SPUASMJITRecompiler.h"
 
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 
 #include "SPUDisAsm.h"

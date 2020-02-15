@@ -2,7 +2,7 @@
 #include "restore_new.h"
 #include "Utilities/rXml.h"
 #include "define_new_memleakdetect.h"
-#include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "TROPUSR.h"
 
 LOG_CHANNEL(trp_log, "Trophy");

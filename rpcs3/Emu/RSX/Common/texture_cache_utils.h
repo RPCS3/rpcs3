@@ -41,7 +41,8 @@ namespace rsx
 		flush_once = 1
 	};
 
-	struct invalidation_cause {
+	struct invalidation_cause
+	{
 		enum enum_type
 		{
 			invalid = 0,

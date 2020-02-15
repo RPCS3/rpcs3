@@ -6,7 +6,6 @@
 #include <mutex>
 
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Utilities/Config.h"
 #include "Utilities/Thread.h"
 #include "Utilities/StrUtil.h"

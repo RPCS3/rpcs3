@@ -6,8 +6,7 @@
 #include "Crypto/sha1.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
-#include "Emu/System.h"
-#include "Emu/IdManager.h"
+#include "Emu/VFS.h"
 
 #include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Cell/PPUAnalyser.h"

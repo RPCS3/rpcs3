@@ -7,6 +7,8 @@
 #include "table_item_delegate.h"
 #include "main_application.h"
 
+#include "Emu/System.h"
+
 #include "Utilities/StrUtil.h"
 #include "Utilities/Log.h"
 
