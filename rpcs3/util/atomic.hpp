@@ -637,7 +637,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
 		struct alignas(16) llong2 { llong ll[2]; };
-		const llong2 _exch = std::bit_cast<llong2>(comp);
+		const llong2 _exch = std::bit_cast<llong2>(exch);
 		return _InterlockedCompareExchange128(reinterpret_cast<volatile llong*>(&dest), _exch.ll[1], _exch.ll[0], reinterpret_cast<llong*>(&comp)) != 0;
 	}
 
