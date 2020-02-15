@@ -997,7 +997,7 @@ static void check_state(spu_thread* _spu)
 {
 	if (_spu->state && _spu->check_state())
 	{
-		spu_runtime::g_escape(_spu);
+		_spu->escape();
 	}
 }
 
@@ -1083,7 +1083,7 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 		{
 			_spu->state += cpu_flag::dbg_pause;
 			spu_log.fatal("SPU Interrupts not implemented (mask=0x%x)", +_spu->ch_event_mask);
-			spu_runtime::g_escape(_spu);
+			_spu->escape();
 		};
 
 		Label no_intr = c->newLabel();
@@ -1232,7 +1232,7 @@ void spu_recompiler::fall(spu_opcode_t op)
 		{
 			_spu->state += cpu_flag::dbg_pause;
 			spu_log.fatal("spu_recompiler::fall(): unexpected interpreter call (op=0x%08x)", opcode);
-			spu_runtime::g_escape(_spu);
+			_spu->escape();
 		}
 	};
 
@@ -1363,7 +1363,7 @@ void spu_recompiler::get_events()
 		{
 			_spu->state += cpu_flag::dbg_pause;
 			spu_log.fatal("SPU Events not implemented (mask=0x%x).", +_spu->ch_event_mask);
-			spu_runtime::g_escape(_spu);
+			_spu->escape();
 		};
 
 		c->bind(fail);
@@ -1387,7 +1387,7 @@ void spu_recompiler::UNK(spu_opcode_t op)
 	{
 		_spu->state += cpu_flag::dbg_pause;
 		spu_log.fatal("Unknown/Illegal instruction (0x%08x)" HERE, op);
-		spu_runtime::g_escape(_spu);
+		_spu->escape();
 	};
 
 	c->lea(addr->r64(), get_pc(m_pos));
@@ -1404,13 +1404,13 @@ void spu_stop(spu_thread* _spu, u32 code)
 {
 	if (!_spu->stop_and_signal(code))
 	{
-		spu_runtime::g_escape(_spu);
+		_spu->escape();
 	}
 
 	if (_spu->test_stopped())
 	{
 		_spu->pc += 4;
-		spu_runtime::g_escape(_spu);
+		_spu->escape();
 	}
 }
 
@@ -1476,13 +1476,13 @@ static u32 spu_rdch(spu_thread* _spu, u32 ch)
 
 	if (result < 0)
 	{
-		spu_runtime::g_escape(_spu);
+		_spu->escape();
 	}
 
 	if (_spu->test_stopped())
 	{
 		_spu->pc += 4;
-		spu_runtime::g_escape(_spu);
+		_spu->escape();
 	}
 
 	return static_cast<u32>(result & 0xffffffff);
@@ -1598,7 +1598,7 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 				if (_spu->test_stopped())
 				{
 					_spu->pc += 4;
-					spu_runtime::g_escape(_spu);
+					_spu->escape();
 				}
 			}
 
@@ -2395,13 +2395,13 @@ static void spu_wrch(spu_thread* _spu, u32 ch, u32 value)
 {
 	if (!_spu->set_ch_value(ch, value))
 	{
-		spu_runtime::g_escape(_spu);
+		_spu->escape();
 	}
 
 	if (_spu->test_stopped())
 	{
 		_spu->pc += 4;
-		spu_runtime::g_escape(_spu);
+		_spu->escape();
 	}
 }
 
@@ -2409,13 +2409,13 @@ static void spu_wrch_mfc(spu_thread* _spu)
 {
 	if (!_spu->process_mfc_cmd())
 	{
-		spu_runtime::g_escape(_spu);
+		_spu->escape();
 	}
 
 	if (_spu->test_stopped())
 	{
 		_spu->pc += 4;
-		spu_runtime::g_escape(_spu);
+		_spu->escape();
 	}
 }
 

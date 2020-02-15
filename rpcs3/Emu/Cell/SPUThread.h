@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Emu/System.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Memory/vm.h"
@@ -615,7 +616,7 @@ public:
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
 	void push_snr(u32 number, u32 value);
-	void do_dma_transfer(const spu_mfc_cmd& args);
+	bool do_dma_transfer(const spu_mfc_cmd& args);
 	bool do_dma_check(const spu_mfc_cmd& args);
 	bool do_list_transfer(spu_mfc_cmd& args);
 	void do_putlluc(const spu_mfc_cmd& args);
@@ -630,7 +631,8 @@ public:
 	s64 get_ch_value(u32 ch);
 	bool set_ch_value(u32 ch, u32 value);
 	bool stop_and_signal(u32 code);
-	void halt();
+	[[noreturn]] void halt();
+	[[noreturn]] void escape();
 
 	void fast_call(u32 ls_addr);
 
@@ -663,4 +665,24 @@ public:
 
 		return -1;
 	}
+
+	template <std::size_t N, typename... Args>
+	[[noreturn]] inline void escape_fatal(const char(&fmt)[N], Args&&... args)
+	{
+		Emu.Pause();
+		spu_log.fatal(fmt, std::forward<Args>(args)...);
+		spu_log.notice("\n%s", dump());
+		escape();
+	}
+
+#if __cpp_char8_t >= 201811
+	template <std::size_t N, typename... Args>
+	[[noreturn]] inline void escape_fatal(const char8_t(&fmt)[N], Args&&... args)
+	{
+		Emu.Pause();
+		spu_log.fatal(fmt, std::forward<Args>(args)...);
+		spu_log.notice("\n%s", dump());
+		escape();
+	}
+#endif
 };

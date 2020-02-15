@@ -612,7 +612,7 @@ spu_item* spu_runtime::add_empty(spu_program&& data)
 	return prev;
 }
 
-spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
+spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst) try
 {
 	// Prepare sorted list
 	static thread_local std::vector<std::pair<std::basic_string_view<u32>, spu_function_t>> m_flat_list;
@@ -980,6 +980,11 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 	return result;
 }
+catch (const std::exception& e)
+{
+	const auto spu = static_cast<spu_thread*>(get_current_cpu_thread());
+	spu->escape_fatal("%s thrown: %s", typeid(e).name(), e.what());
+}
 
 spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 {
@@ -1079,7 +1084,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	// Compile
 	if (spu._ref<u32>(spu.pc) == 0)
 	{
-		spu_runtime::g_escape(&spu);
+		spu.escape();
 		return;
 	}
 
@@ -1152,7 +1157,7 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	}
 	else
 	{
-		fmt::throw_exception("Impossible far jump: %p -> %p", rip, func);
+		spu.escape_fatal("Impossible far jump: %p -> %p", rip, func);
 	}
 
 	atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), result);
@@ -1191,7 +1196,7 @@ catch (const std::exception& e)
 	spu_log.notice("\n%s", spu.dump());
 }
 
-spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
+spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point) try
 {
 	// Result: addr + raw instruction data
 	spu_program result;
@@ -3124,6 +3129,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 	return result;
 }
+catch (const std::exception& e)
+{
+	const auto spu = static_cast<spu_thread*>(get_current_cpu_thread());
+	spu->escape_fatal("%s thrown: %s", typeid(e).name(), e.what());
+}
 
 void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 {
@@ -4175,7 +4185,7 @@ public:
 		}
 	}
 
-	virtual spu_function_t compile(spu_program&& _func) override
+	virtual spu_function_t compile(spu_program&& _func) override try
 	{
 		if (_func.data.empty() && m_interp_magn)
 		{
@@ -4814,6 +4824,13 @@ public:
 
 		return fn;
 	}
+	catch (const std::exception& e)
+	{
+		if (const auto cpu = get_current_cpu_thread(); cpu && cpu->id_type() == 2)
+			static_cast<spu_thread*>(cpu)->escape_fatal("%s thrown: %s", typeid(e).name(), e.what());
+		else
+			fmt::throw_exception("%s thrown: %s" HERE, typeid(e).name(), e.what()));
+	}
 
 	static void interp_check(spu_thread* _spu, bool after)
 	{
@@ -5281,7 +5298,7 @@ public:
 
 	static void exec_unk(spu_thread* _spu, u32 op)
 	{
-		fmt::throw_exception("Unknown/Illegal instruction (0x%08x)" HERE, op);
+		_spu->escape_fatal("Unknown/Illegal instruction (0x%08x)" HERE, op);
 	}
 
 	void UNK(spu_opcode_t op_unk)
@@ -5302,13 +5319,13 @@ public:
 	{
 		if (!_spu->stop_and_signal(code))
 		{
-			spu_runtime::g_escape(_spu);
+			_spu->escape();
 		}
 
 		if (_spu->test_stopped())
 		{
 			_spu->pc += 4;
-			spu_runtime::g_escape(_spu);
+			_spu->escape();
 		}
 	}
 
@@ -5349,13 +5366,13 @@ public:
 
 		if (result < 0)
 		{
-			spu_runtime::g_escape(_spu);
+			_spu->escape();
 		}
 
 		if (_spu->test_stopped())
 		{
 			_spu->pc += 4;
-			spu_runtime::g_escape(_spu);
+			_spu->escape();
 		}
 
 		return static_cast<u32>(result & 0xffffffff);
@@ -5379,7 +5396,7 @@ public:
 			if (_spu->test_stopped())
 			{
 				_spu->pc += 4;
-				spu_runtime::g_escape(_spu);
+				_spu->escape();
 			}
 		}
 
@@ -5624,13 +5641,13 @@ public:
 	{
 		if (!_spu->set_ch_value(ch, value))
 		{
-			spu_runtime::g_escape(_spu);
+			_spu->escape();
 		}
 
 		if (_spu->test_stopped())
 		{
 			_spu->pc += 4;
-			spu_runtime::g_escape(_spu);
+			_spu->escape();
 		}
 	}
 
@@ -5651,13 +5668,13 @@ public:
 	{
 		if (!_spu->process_mfc_cmd())
 		{
-			spu_runtime::g_escape(_spu);
+			_spu->escape();
 		}
 
 		if (_spu->test_stopped())
 		{
 			_spu->pc += 4;
-			spu_runtime::g_escape(_spu);
+			_spu->escape();
 		}
 	}
 

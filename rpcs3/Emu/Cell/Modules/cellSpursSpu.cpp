@@ -1787,7 +1787,7 @@ void spursTasksetDispatch(spu_thread& spu)
 		if (elfAddr & 2)
 		{
 			// TODO: Figure this out
-			spu_runtime::g_escape(&spu);
+			spu.escape();
 		}
 
 		spursTasksetStartTask(spu, taskInfo->args);
@@ -1840,7 +1840,7 @@ void spursTasksetDispatch(spu_thread& spu)
 		if (elfAddr & 2)
 		{
 			// TODO: Figure this out
-			spu_runtime::g_escape(&spu);
+			spu.escape();
 		}
 
 		spu.gpr[3].clear();

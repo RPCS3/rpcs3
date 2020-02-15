@@ -1197,6 +1197,8 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			return false;
 		}
 
+		bool handled = false;
+
 		switch (op)
 		{
 		case X64OP_LOAD:
@@ -1204,10 +1206,15 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		case X64OP_LOAD_CMP:
 		case X64OP_LOAD_TEST:
 		{
-			u32 value;
-			if (is_writing || !thread->read_reg(addr, value))
+			if (is_writing)
 			{
 				return false;
+			}
+
+			u32 value;
+			if (!thread->read_reg(addr, value))
+			{
+				break;
 			}
 
 			if (op != X64OP_LOAD_BE)
@@ -1223,6 +1230,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 					return false;
 				}
 
+				handled = true;
 				break;
 			}
 
@@ -1234,6 +1242,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 					return false;
 				}
 
+				handled = true;
 				break;
 			}
 
@@ -1242,6 +1251,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 				return false;
 			}
 
+			handled = true;
 			break;
 		}
 		case X64OP_STORE:
@@ -1256,9 +1266,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			u32 val32 = static_cast<u32>(reg_value);
 			if (!thread->write_reg(addr, op == X64OP_STORE ? se_storage<u32>::swap(val32) : val32))
 			{
-				return false;
+				break;
 			}
 
+			handled = true;
 			break;
 		}
 		case X64OP_MOVS: // possibly, TODO
@@ -1271,10 +1282,13 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		}
 		}
 
-		// skip processed instruction
-		RIP(context) += i_size;
-		g_tls_fault_spu++;
-		return true;
+		if (handled)
+		{
+			// skip processed instruction
+			RIP(context) += i_size;
+			g_tls_fault_spu++;
+			return true;
+		}
 	}
 
 	if (vm::check_addr(addr, std::max(1u, ::narrow<u32>(d_size)), is_writing ? vm::page_writable : vm::page_readable))

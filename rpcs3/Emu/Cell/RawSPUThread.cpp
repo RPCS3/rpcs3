@@ -76,10 +76,10 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 		case MFC_GETBS_CMD:
 		case MFC_GETFS_CMD:
 		{
-			if (cmd.size)
+			// Perform transfer immediately
+			if (cmd.size && !do_dma_transfer(cmd))
 			{
-				// Perform transfer immediately
-				do_dma_transfer(cmd);
+				break;
 			}
 
 			if (cmd.cmd & MFC_START_MASK)
