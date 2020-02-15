@@ -554,7 +554,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	// We will go with the easy path of Installed, and that's it.
 
 	// The callback is called once and then if it returns >= 0 the cb is called through events(coming from vsh) that are passed to the CB through cellSysutilCheckCallback
-	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg) < 0)
+	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 0, 0, arg) < 0)
 	{
 		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
 	}
@@ -601,7 +601,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		for (u32 old_value; current < until && (old_value = *queued);
 			current = get_system_time())
 		{
-			queued->wait(old_value, atomic_wait_timeout{std::min<u64>((until - current) * 1000, 300'000'000)});
+			queued->wait(old_value, atomic_wait_timeout{(until - current) * 1000});
 
 			if (ppu.is_stopped())
 			{
