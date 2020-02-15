@@ -339,6 +339,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		case 0x13:
 		case 0x15:
 		case 0x16:
+		case 0x19:
 		{
 			const std::string path = dir + vfs::escape(name);
 
