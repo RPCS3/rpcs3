@@ -560,10 +560,10 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	}
 
 	// This emulates vsh sending the events and ensures that not 2 events are processed at once
-	const std::pair<u32, u32> statuses[] =
+	const std::pair<u32, s32> statuses[] =
 	{
 		{ SCE_NP_TROPHY_STATUS_PROCESSING_SETUP, 3 },
-		{ SCE_NP_TROPHY_STATUS_PROCESSING_PROGRESS, tropusr->GetTrophiesCount() },
+		{ SCE_NP_TROPHY_STATUS_PROCESSING_PROGRESS, ::narrow<s32>(tropusr->GetTrophiesCount()) - 1 },
 		{ SCE_NP_TROPHY_STATUS_PROCESSING_FINALIZE, 4 },
 		{ SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 0 }
 	};
@@ -578,7 +578,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	{
 		// One status max per cellSysutilCheckCallback call
 		*queued += status.second;
-		for (u32 completed = 0; completed <= status.second; completed++)
+		for (s32 completed = 0; completed <= status.second; completed++)
 		{
 			sysutil_register_cb([statusCb, status, context, completed, arg, wkptr](ppu_thread& cb_ppu) -> s32
 			{
