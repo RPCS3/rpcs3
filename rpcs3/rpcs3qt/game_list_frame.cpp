@@ -565,6 +565,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 				GameInfo game;
 				game.path         = dir;
+				game.icon_path    = sfo_dir + "/ICON0.PNG";
 				game.serial       = psf::get_string(psf, "TITLE_ID", "");
 				game.name         = psf::get_string(psf, "TITLE", cat_unknown_localized);
 				game.app_ver      = psf::get_string(psf, "APP_VER", cat_unknown_localized);
@@ -628,25 +629,21 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				}
 
 				auto qt_cat = qstr(game.category);
-				auto cat = thread_localized.category.cat_boot.find(qt_cat);
-				if (cat != thread_localized.category.cat_boot.end())
+
+				if (const auto boot_cat = thread_localized.category.cat_boot.find(qt_cat); boot_cat != thread_localized.category.cat_boot.end())
 				{
-					game.icon_path = sfo_dir + "/ICON0.PNG";
-					qt_cat = cat->second;
+					qt_cat = boot_cat->second;
 				}
-				else if ((cat = thread_localized.category.cat_data.find(qt_cat)) != thread_localized.category.cat_data.end())
+				else if (const auto data_cat = thread_localized.category.cat_data.find(qt_cat); data_cat != thread_localized.category.cat_data.end())
 				{
-					game.icon_path = sfo_dir + "/ICON0.PNG";
-					qt_cat = cat->second;
+					qt_cat = data_cat->second;
 				}
 				else if (game.category == cat_unknown)
 				{
-					game.icon_path = sfo_dir + "/ICON0.PNG";
 					qt_cat = localized.category.unknown;
 				}
 				else
 				{
-					game.icon_path = sfo_dir + "/ICON0.PNG";
 					qt_cat = localized.category.other;
 				}
 
