@@ -22,7 +22,7 @@ struct compat_status
 	QString color;
 	QString text;
 	QString tooltip;
-	QString version;
+	QString latest_version;
 };
 
 class game_compatibility : public QObject
