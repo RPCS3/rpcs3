@@ -17,9 +17,11 @@
 #include "settings_dialog.h"
 #include "ui_settings_dialog.h"
 #include "tooltips.h"
+#include "input_dialog.h"
 
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/title.h"
 #include "Crypto/unself.h"
 #include "Utilities/sysinfo.h"
 
@@ -1149,9 +1151,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeTooltip(ui->preventDisplaySleep, tooltips.settings.prevent_display_sleep);
 	ui->preventDisplaySleep->setEnabled(display_sleep_control_supported());
 
-	xemu_settings->EnhanceCheckBox(ui->showFPSInTitle, emu_settings::ShowFPSInTitle);
-	SubscribeTooltip(ui->showFPSInTitle, tooltips.settings.show_fps_in_title);
-
 	xemu_settings->EnhanceCheckBox(ui->showTrophyPopups, emu_settings::ShowTrophyPopups);
 	SubscribeTooltip(ui->showTrophyPopups, tooltips.settings.show_trophy_popups);
 
@@ -1292,6 +1291,79 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->gb_viewport->setEnabled(false);
 		ui->gb_viewport->setVisible(false);
 	}
+
+	// Game window title builder
+
+	connect(ui->edit_button_game_window_title_format, &QAbstractButton::clicked, [this, game]()
+	{
+		const std::string game_title_format = xemu_settings->GetSetting(emu_settings::WindowTitleFormat);
+
+		auto get_game_window_title_label = [=](const QString& new_format)
+		{
+			rpcs3::title_format_data title_data;
+			title_data.format = sstr(new_format);
+			title_data.renderer = xemu_settings->GetSetting(emu_settings::Renderer);
+			title_data.fps = 60.;
+
+			if (game)
+			{
+				title_data.title = game->name;
+				title_data.title_id = game->serial;
+			}
+			else
+			{
+				title_data.title = sstr(tr("My Game"));
+				title_data.title_id = "ABCD12345";
+			}
+
+			QString game_window_title = qstr(rpcs3::get_formatted_title(title_data));
+
+			if (game_window_title.isEmpty())
+			{
+				game_window_title = "RPCS3";
+			}
+
+			const std::vector<std::pair<const QString, const QString>> window_title_glossary =
+			{
+				{ "%F", tr("Framerate") },
+				{ "%R", tr("Renderer") },
+				{ "%T", tr("Title") },
+				{ "%t", tr("Title ID") },
+				{ "%V", tr("RPCS3 Version") }
+			};
+
+			QString glossary;
+
+			for (const auto& [format, description] : window_title_glossary)
+			{
+				glossary += format + "\t = " + description + "\n";
+			}
+
+			return tr("Glossary:\n\n%0\nPreview:\n\n%1\n").arg(glossary).arg(game_window_title);
+		};
+
+		QString edited_format = qstr(game_title_format);
+
+		input_dialog dlg(30, edited_format, tr("Game Window Title Format"), get_game_window_title_label(edited_format), "", this);
+		dlg.resize(width() * .75, dlg.height());
+
+		connect(&dlg, &input_dialog::text_changed, [&](const QString& text)
+		{
+			edited_format = text.simplified();
+			dlg.set_label_text(get_game_window_title_label(edited_format));
+		});
+
+		if (dlg.exec() == QDialog::Accepted)
+		{
+			xemu_settings->SetSetting(emu_settings::WindowTitleFormat, sstr(edited_format));
+			ui->label_game_window_title_format->setText(qstr(xemu_settings->GetSetting(emu_settings::WindowTitleFormat)));
+		}
+	});
+
+	// Load and apply the configured game window title format
+	ui->label_game_window_title_format->setText(qstr(xemu_settings->GetSetting(emu_settings::WindowTitleFormat)));
+
+	SubscribeTooltip(ui->gb_game_window_title, tooltips.settings.game_window_title_format);
 
 	//     _____  _    _  _   _______    _
 	//    / ____|| |  | || | |__   __|  | |

@@ -378,7 +378,7 @@ public:
 	bool HasGui() const { return m_has_gui; }
 	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
 
-	std::string FormatTitle(double fps) const;
+	std::string GetFormattedTitle(double fps) const;
 };
 
 extern Emulator Emu;
@@ -622,7 +622,6 @@ struct cfg_root : cfg::node
 		cfg::_bool autoexit{ this, "Exit RPCS3 when process finishes", false, true };
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode", false, true };
 		cfg::_bool prevent_display_sleep{ this, "Prevent display sleep while running games", true};
-		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true, true };
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true, true };
 		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true, true };
 		cfg::_bool use_native_interface{ this, "Use native user interface", true };

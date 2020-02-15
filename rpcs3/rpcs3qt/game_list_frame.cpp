@@ -532,7 +532,33 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		add_dir(_hdd + "game/", false);
 		add_dir(_hdd + "disc/", true);
 
-		for (auto pair : YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string()))
+		auto get_games = []() -> YAML::Node
+		{
+			try
+			{
+				fs::file games(fs::get_config_dir() + "/games.yml", fs::read + fs::create);
+
+				if (games)
+				{
+					return YAML::Load(games.to_string());
+				}
+				else
+				{
+					game_list_log.error("Failed to load games.yml, check permissions.");
+					return {};
+				}
+			}
+			catch (...)
+			{
+				// YAML exception aren't very useful so just ignore them
+				game_list_log.fatal("Failed to parse games.yml");
+				return {};
+			}
+
+			return {};
+		};
+
+		for (auto&& pair : get_games())
 		{
 			std::string game_dir = pair.second.Scalar();
 
@@ -1138,7 +1164,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		input_dialog dlg(128, old_title, tr("Rename Title"), tr("%0\n%1\n\nYou can clear the line in order to use the original title.").arg(name).arg(serial), name, this);
 		dlg.move(globalPos);
-		connect(&dlg, &input_dialog::text_changed, this, [&new_title](const QString& text)
+		connect(&dlg, &input_dialog::text_changed, [&new_title](const QString& text)
 		{
 			new_title = text.simplified();
 		});
