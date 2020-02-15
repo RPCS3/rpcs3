@@ -2,6 +2,7 @@
 #include "sys_process.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 
 #include "Crypto/unedat.h"

@@ -3,7 +3,7 @@
 #include <QApplication>
 #include <QKeyEvent>
 
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #ifdef _WIN32
 #include "windows.h"

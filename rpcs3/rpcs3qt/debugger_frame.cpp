@@ -1,5 +1,7 @@
-#include "debugger_frame.h"
+﻿#include "debugger_frame.h"
 #include "qt_utils.h"
+#include "Emu/System.h"
+#include "Emu/IdManager.h"
 
 #include <QKeyEvent>
 #include <QScrollBar>

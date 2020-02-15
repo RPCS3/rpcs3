@@ -3,7 +3,6 @@
 #include "Utilities/geometry.h"
 #include "Utilities/File.h"
 #include "overlay_utils.h"
-#include "Emu/System.h"
 
 #include <string>
 #include <vector>

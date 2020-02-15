@@ -1,7 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
-#include "Emu/System.h"
-#include "Emu/IdManager.h"
 #include "RSXThread.h"
 
 #include "Emu/Cell/PPUCallback.h"

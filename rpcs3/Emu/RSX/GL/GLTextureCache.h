@@ -12,7 +12,6 @@
 #include <chrono>
 
 #include "Utilities/mutex.h"
-#include "Emu/System.h"
 #include "GLRenderTargets.h"
 #include "GLOverlays.h"
 #include "GLTexture.h"

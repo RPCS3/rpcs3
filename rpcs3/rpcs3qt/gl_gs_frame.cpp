@@ -1,9 +1,8 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "gl_gs_frame.h"
-#include "Emu/System.h"
 
 #include <QOpenGLContext>
-#include <qoffscreensurface.h>
+#include <QOffscreenSurface>
 #include <QWindow>
 
 gl_gs_frame::gl_gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)

@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "shader_loading_dialog.h"
+#include "Emu/System.h"
 
 namespace rsx
 {

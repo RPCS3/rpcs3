@@ -2,6 +2,7 @@
 #include "CPUThread.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/IdManager.h"
 #include "Emu/GDB.h"

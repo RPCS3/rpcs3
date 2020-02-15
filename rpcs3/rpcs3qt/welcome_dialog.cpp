@@ -1,9 +1,7 @@
-#include "welcome_dialog.h"
+﻿#include "welcome_dialog.h"
 #include "ui_welcome_dialog.h"
 
 #include "gui_settings.h"
-
-#include "Emu/System.h"
 
 #include <QPushButton>
 #include <QCheckBox>

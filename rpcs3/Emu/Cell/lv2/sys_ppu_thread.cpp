@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "sys_ppu_thread.h"
 
-#include "Emu/System.h"
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"

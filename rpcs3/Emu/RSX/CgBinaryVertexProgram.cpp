@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "CgBinaryProgram.h"
 
 #include "Emu/System.h"

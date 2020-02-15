@@ -1,9 +1,6 @@
 ﻿#pragma once
 
 #include "Emu/Io/PadHandler.h"
-#include "Utilities/Thread.h"
-#include <limits>
-#include <unordered_map>
 
 #include "hidapi.h"
 

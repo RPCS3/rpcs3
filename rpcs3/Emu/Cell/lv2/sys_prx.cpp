@@ -1,7 +1,7 @@
 ﻿#include "stdafx.h"
 #include "sys_prx.h"
 
-#include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"

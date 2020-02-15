@@ -1,5 +1,6 @@
 ﻿
 #ifdef _WIN32
+#include "stdafx.h"
 #include "xinput_pad_handler.h"
 
 namespace XINPUT_INFO

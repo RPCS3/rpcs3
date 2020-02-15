@@ -1,11 +1,8 @@
 ﻿#pragma once
 
 #include "Emu/Io/PadHandler.h"
-#include "Utilities/Thread.h"
 #include "Utilities/CRC.h"
 #include "hidapi.h"
-#include <limits>
-#include <unordered_map>
 
 class ds4_pad_handler final : public PadHandlerBase
 {

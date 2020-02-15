@@ -1,6 +1,5 @@
-﻿#include "ds3_pad_handler.h"
-
-#include <thread>
+﻿#include "stdafx.h"
+#include "ds3_pad_handler.h"
 
 LOG_CHANNEL(ds3_log, "DS3");
 

@@ -1,6 +1,6 @@
 ﻿#include "stdafx.h"
 #include "ProgramStateCache.h"
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include <stack>
 

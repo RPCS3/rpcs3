@@ -5,6 +5,7 @@
 #include "Utilities/Log.h"
 #include "Utilities/StrFmt.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include "XAudio2Backend.h"
 #include "3rdparty/minidx12/Include/xaudio2.h"
