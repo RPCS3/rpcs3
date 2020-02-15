@@ -972,10 +972,8 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 	}
 
-	if (details)
-		*details = {};
-	if (data)
-		*data = {};
+	SceNpTrophyDetails tmp_details{};
+	SceNpTrophyData tmp_data{};
 
 	rXmlDocument doc;
 	doc.Read(config.to_string());
@@ -1003,15 +1001,15 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 
 			if (details)
 			{
-				details->trophyId = trophyId;
-				details->hidden = hidden;
+				tmp_details.trophyId = trophyId;
+				tmp_details.hidden = hidden;
 
 				switch (n->GetAttribute("ttype")[0])
 				{
-				case 'B': details->trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE;   break;
-				case 'S': details->trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   break;
-				case 'G': details->trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     break;
-				case 'P': details->trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; break;
+				case 'B': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE;   break;
+				case 'S': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   break;
+				case 'G': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     break;
+				case 'P': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; break;
 				}
 
 				for (std::shared_ptr<rXmlNode> n2 = n->GetChildren(); n2; n2 = n2->GetNext())
@@ -1020,20 +1018,20 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 
 					if (n2_name == "name")
 					{
-						strcpy_trunc(details->name, n2->GetNodeContent());
+						strcpy_trunc(tmp_details.name, n2->GetNodeContent());
 					}
 					else if (n2_name == "detail")
 					{
-						strcpy_trunc(details->description, n2->GetNodeContent());
+						strcpy_trunc(tmp_details.description, n2->GetNodeContent());
 					}
 				}
 			}
 
 			if (data)
 			{
-				data->trophyId = trophyId;
-				data->unlocked = unlocked;
-				data->timestamp = ctxt->tropusr->GetTrophyTimestamp(trophyId);
+				tmp_data.trophyId = trophyId;
+				tmp_data.unlocked = unlocked;
+				tmp_data.timestamp = ctxt->tropusr->GetTrophyTimestamp(trophyId);
 			}
 
 			break;
@@ -1042,7 +1040,17 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 
 	if (!found)
 	{
-		return not_an_error(SCE_NP_TROPHY_INVALID_TROPHY_ID);
+		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
+	}
+
+	if (details)
+	{
+		*details = tmp_details;
+	}
+
+	if (data)
+	{
+		*data = tmp_data;
 	}
 
 	return CELL_OK;
