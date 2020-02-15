@@ -1138,7 +1138,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		input_dialog dlg(128, old_title, tr("Rename Title"), tr("%0\n%1\n\nYou can clear the line in order to use the original title.").arg(name).arg(serial), name, this);
 		dlg.move(globalPos);
-		connect(&dlg, &input_dialog::text_changed, this, [&new_title](const QString& text)
+		connect(&dlg, &input_dialog::text_changed, [&new_title](const QString& text)
 		{
 			new_title = text.simplified();
 		});

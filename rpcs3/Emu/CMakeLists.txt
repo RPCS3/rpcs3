@@ -3,6 +3,7 @@
 	System.cpp
 	VFS.cpp
 	GDB.cpp
+	title.cpp
 )
 
 target_link_libraries(rpcs3_emu
