@@ -891,26 +891,22 @@ error_code cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset)
 {
 	cellGcmSys.trace("cellGcmAddressToOffset(address=0x%x, offset=*0x%x)", address, offset);
 
-	// Address not on main memory or local memory
-	if (address >= 0xD0000000)
-	{
-		return CELL_GCM_ERROR_FAILURE;
-	}
+	const auto cfg = g_fxo->get<gcm_config>();
 
 	u32 result;
 
-	// Address in local memory
-	if ((address >> 28) == 0xC)
+	// Test if address is within local memory
+	if (const u32 offs = address - cfg->local_addr; offs < cfg->local_size)
 	{
-		result = address - rsx::constants::local_mem_base;
+		result = offs;
 	}
 	// Address in main memory else check
 	else
 	{
-		const u32 upper12Bits = g_fxo->get<gcm_config>()->offsetTable.ioAddress[address >> 20];
+		const u32 upper12Bits = cfg->offsetTable.ioAddress[address >> 20];
 
 		// If the address is mapped in IO
-		if (upper12Bits != 0xFFFF)
+		if (upper12Bits << 20 < rsx::get_current_renderer()->main_mem_size)
 		{
 			result = (upper12Bits << 20) | (address & 0xFFFFF);
 		}
