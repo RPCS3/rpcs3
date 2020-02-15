@@ -307,7 +307,7 @@ void main_window::BootElf()
 	// game folder in case of having e.g. a Game Folder with collected links to elf files.
 	// Don't set last path earlier in case of cancelled dialog
 	guiSettings->SetValue(gui::fd_boot_elf, filePath);
-	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
+	const std::string path = sstr(QFileInfo(filePath).absoluteFilePath());
 
 	gui_log.notice("Booting from BootElf...");
 	Boot(path, "", true);
@@ -324,7 +324,7 @@ void main_window::BootGame()
 	}
 
 	QString path_last_Game = guiSettings->GetValue(gui::fd_boot_game).toString();
-	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Select Game Folder"), path_last_Game, QFileDialog::ShowDirsOnly);
+	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Select Game Folder"), path_last_Game, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
 	if (dirPath == NULL)
 	{
@@ -1254,7 +1254,7 @@ void main_window::CreateConnects()
 		QStringList paths;
 
 		// Only select one folder for now
-		paths << QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), qstr(fs::get_config_dir()), QFileDialog::ShowDirsOnly);
+		paths << QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), qstr(fs::get_config_dir()), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
 		if (!paths.isEmpty())
 		{
