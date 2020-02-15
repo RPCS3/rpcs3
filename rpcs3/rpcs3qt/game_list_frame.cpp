@@ -1980,16 +1980,22 @@ int game_list_frame::PopulateGameList()
 
 		// Version
 		QString app_version = qstr(game->info.app_ver);
+		const QString unknown = localized.category.unknown;
 
-		if (app_version == localized.category.unknown)
+		if (app_version == unknown)
 		{
 			// Fall back to Disc/Pkg Revision
 			app_version = qstr(game->info.version);
 		}
 
-		if (!game->compat.version.isEmpty() && (app_version == localized.category.unknown || game->compat.version.toDouble() > app_version.toDouble()))
+		if (game->info.bootable && !game->compat.latest_version.isEmpty())
 		{
-			app_version = tr("%0 (Update available: %1)").arg(app_version, game->compat.version);
+			// If the app is bootable and the compat database contains info about the latest patch version:
+			// add a hint for available software updates if the app version is unknown or lower than the latest version.
+			if (app_version == unknown || game->compat.latest_version.toDouble() > app_version.toDouble())
+			{
+				app_version = tr("%0 (Update available: %1)").arg(app_version, game->compat.latest_version);
+			}
 		}
 
 		// Playtimes
