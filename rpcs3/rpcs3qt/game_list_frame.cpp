@@ -493,7 +493,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			}
 		};
 
-		const auto add_dir = [&](const std::string& path)
+		const auto add_dir = [&](const std::string& path, bool is_disc)
 		{
 			for (const auto& entry : fs::dir(path))
 			{
@@ -506,30 +506,64 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 				if (fs::is_file(entry_path + "/PS3_DISC.SFB"))
 				{
-					add_disc_dir(entry_path);
+					if (!is_disc)
+					{
+						game_list_log.error("Invalid game path found in %s", entry_path);
+					}
+					else
+					{
+						add_disc_dir(entry_path);
+					}
 				}
 				else
 				{
-					path_list.emplace_back(entry_path);
+					if (is_disc)
+					{
+						game_list_log.error("Invalid disc path found in %s", entry_path);
+					}
+					else
+					{
+						path_list.emplace_back(entry_path);
+					}
 				}
 			}
 		};
 
-		add_dir(_hdd + "game/");
-		add_dir(_hdd + "disc/");
+		add_dir(_hdd + "game/", false);
+		add_dir(_hdd + "disc/", true);
 
 		for (auto pair : YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string()))
 		{
 			std::string game_dir = pair.second.Scalar();
+
 			game_dir.resize(game_dir.find_last_not_of('/') + 1);
 
 			if (fs::is_file(game_dir + "/PS3_DISC.SFB"))
 			{
+				// Check if a path loaded from games.yml is already registered in add_dir(_hdd + "disc/");
+				if (game_dir.starts_with(_hdd))
+				{
+					std::string_view frag = std::string_view(game_dir).substr(_hdd.size());
+
+					if (frag.starts_with("disc/"))
+					{
+						// Our path starts from _hdd + 'disc/'
+						frag.remove_prefix(5);
+
+						// Check if the remaining part is the only path component
+						if (frag.find_first_of('/') + 1 == 0)
+						{
+							game_list_log.trace("Removed duplicate for %s: %s", pair.first.Scalar(), pair.second.Scalar());
+							continue;
+						}
+					}
+				}
+
 				add_disc_dir(game_dir);
 			}
 			else
 			{
-				path_list.push_back(game_dir);
+				game_list_log.warning("Invalid disc path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
 			}
 		}
 
