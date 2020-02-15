@@ -93,13 +93,12 @@ void InitOffsetTable()
 {
 	const auto cfg = g_fxo->get<gcm_config>();
 
-	cfg->offsetTable.ioAddress.set(vm::alloc(3072 * sizeof(u16), vm::main));
-	cfg->offsetTable.eaAddress.set(vm::alloc(512 * sizeof(u16), vm::main));
+	const u32 addr = vm::alloc((3072 + 512) * sizeof(u16), vm::main);
 
-	std::memset(cfg->offsetTable.ioAddress.get_ptr(), 0xFF, 3072 * sizeof(u16));
-	std::memset(cfg->offsetTable.eaAddress.get_ptr(), 0xFF, 512 * sizeof(u16));
+	cfg->offsetTable.ioAddress.set(addr);
+	cfg->offsetTable.eaAddress.set(addr + (3072 * sizeof(u16)));
 
-	cfg->reserved_size = 0;
+	std::memset(vm::base(addr), 0xFF, (3072 + 512) * sizeof(u16));
 }
 
 //----------------------------------------------------------------------------
