@@ -690,17 +690,17 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				for (const auto& other : m_game_data)
 				{
 					// The patch is game data and must have the same serial and an app version
-					if (entry->info.serial == other->info.serial && other->info.category == "GD" && other->info.app_ver != cat_unknown)
+					if (entry->info.serial == other->info.serial && other->info.category == "GD" && other->info.app_ver != cat_unknown_localized)
 					{
 						try
 						{
 							// Update the app version if it's higher than the disc's version (old games may not have an app version)
-							if (entry->info.app_ver == cat_unknown || std::stod(other->info.app_ver) > std::stod(entry->info.app_ver))
+							if (entry->info.app_ver == cat_unknown_localized || std::stod(other->info.app_ver) > std::stod(entry->info.app_ver))
 							{
 								entry->info.app_ver = other->info.app_ver;
 							}
 							// Update the firmware version if possible and if it's higher than the disc's version
-							if (other->info.fw != cat_unknown && std::stod(other->info.fw) > std::stod(entry->info.fw))
+							if (other->info.fw != cat_unknown_localized && std::stod(other->info.fw) > std::stod(entry->info.fw))
 							{
 								entry->info.fw = other->info.fw;
 							}
