@@ -396,6 +396,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->multithreadedRSX, emu_settings::MultithreadedRSX);
 	SubscribeTooltip(ui->multithreadedRSX, tooltips.settings.multithreaded_rsx);
+	connect(ui->multithreadedRSX, &QCheckBox::clicked, [this](bool checked)
+	{
+		ui->disableVertexCache->setEnabled(!checked);
+	});
+	ui->disableVertexCache->setEnabled(!ui->multithreadedRSX->isChecked());
 
 	xemu_settings->EnhanceCheckBox(ui->disableAsyncShaders, emu_settings::DisableAsyncShaderCompiler);
 	SubscribeTooltip(ui->disableAsyncShaders, tooltips.settings.disable_async_shaders);
