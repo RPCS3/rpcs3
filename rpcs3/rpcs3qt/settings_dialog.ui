@@ -2271,17 +2271,34 @@
                 <property name="text">
                  <string>FPS: 60 | Renderer | Version | Game [ID]</string>
                 </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="edit_button_game_window_title_format">
-                <property name="toolTip">
-                 <string>Reset the title to default</string>
-                </property>
-                <property name="text">
-                 <string>Edit</string>
-                </property>
-               </widget>
+               <layout class="QHBoxLayout" name="layout_buttons_game_window_title">
+                <item>
+                 <widget class="QPushButton" name="reset_button_game_window_title_format">
+                  <property name="toolTip">
+                   <string>Reset the game window title to default</string>
+                  </property>
+                  <property name="text">
+                   <string>Reset</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="edit_button_game_window_title_format">
+                  <property name="toolTip">
+                   <string>Edit the game window title</string>
+                  </property>
+                  <property name="text">
+                   <string>Edit</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </widget>
