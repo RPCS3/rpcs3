@@ -2,6 +2,7 @@
 	IdManager.cpp
 	System.cpp
 	system_config.cpp
+	system_config_types.cpp
 	VFS.cpp
 	GDB.cpp
 	title.cpp
