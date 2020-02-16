@@ -218,8 +218,19 @@ namespace vk
 		rp_info.pAttachments = attachments.data();
 		rp_info.subpassCount = 1;
 		rp_info.pSubpasses = &subpass;
-		rp_info.dependencyCount = 2;
-		rp_info.pDependencies = null_subpass_dependencies;
+
+		if (vk::get_driver_vendor() == vk::driver_vendor::RADV)
+		{
+			// So, according to spec, if you do not explicitly define the relationship between a subpass and its neighbours,
+			// a full pipeline barrier will be inserted for you, which is awful for performance.
+			// However, only RADV seems to do this and it does not work for other vendors.
+			// NVIDIA specifically slows to a crawl even with a TOP_OF_PIPE->TOP_OF_PIPE dependency with no dependent access.
+			// RPCS3 does not actually want to declare any dependency here, we have explicit pipeline barriers for our tasks.
+			// Workaround: Only provide this null dep chain for RADV
+
+			rp_info.dependencyCount = 2;
+			rp_info.pDependencies = null_subpass_dependencies;
+		}
 
 		VkRenderPass result;
 		CHECK_RESULT(vkCreateRenderPass(dev, &rp_info, NULL, &result));
