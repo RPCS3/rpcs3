@@ -37,6 +37,11 @@
 #include <array>
 #include <vector>
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winit-list-lifetime"
+#endif
+
 enum class i2 : char
 {
 };
@@ -2840,5 +2845,9 @@ struct fmt_unveil<llvm::TypeSize, void>
 		return arg;
 	}
 };
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 
 #endif
