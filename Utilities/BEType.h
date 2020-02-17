@@ -4,6 +4,12 @@
 #include "util/endian.hpp"
 #include <cstring>
 
+#if __has_include(<bit>)
+#include <bit>
+#else
+#include <type_traits>
+#endif
+
 // 128-bit vector type and also se_storage<> storage type
 union alignas(16) v128
 {
@@ -26,12 +32,10 @@ union alignas(16) v128
 		}
 	};
 
-#if IS_LE_MACHINE == 1
 	template <typename T, std::size_t N = 16 / sizeof(T)>
-	using normal_array_t = masked_array_t<T, N, 0>;
+	using normal_array_t = masked_array_t<T, N, std::endian::little == std::endian::native ? 0 : N - 1>;
 	template <typename T, std::size_t N = 16 / sizeof(T)>
-	using reversed_array_t = masked_array_t<T, N, N - 1>;
-#endif
+	using reversed_array_t = masked_array_t<T, N, std::endian::little == std::endian::native ? N - 1 : 0>;
 
 	normal_array_t<u64> _u64;
 	normal_array_t<s64> _s64;
@@ -114,17 +118,27 @@ union alignas(16) v128
 		// Index 0 returns the MSB and index 127 returns the LSB
 		bit_element operator[](u32 index)
 		{
-#if IS_LE_MACHINE == 1
-			return bit_element(m_data[1 - (index >> 6)], 0x8000000000000000ull >> (index & 0x3F));
-#endif
+			if constexpr (std::endian::little == std::endian::native)
+			{
+				return bit_element(m_data[1 - (index >> 6)], 0x8000000000000000ull >> (index & 0x3F));
+			}
+			else
+			{
+				return bit_element(m_data[index >> 6], 0x8000000000000000ull >> (index & 0x3F));
+			}
 		}
 
 		// Index 0 returns the MSB and index 127 returns the LSB
 		bool operator[](u32 index) const
 		{
-#if IS_LE_MACHINE == 1
-			return (m_data[1 - (index >> 6)] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
-#endif
+			if constexpr (std::endian::little == std::endian::native)
+			{
+				return (m_data[1 - (index >> 6)] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
+			}
+			else
+			{
+				return (m_data[index >> 6] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
+			}
 		}
 	} _bit;
 
@@ -340,12 +354,10 @@ using stx::se_storage;
 template <typename T, std::size_t Align = alignof(T)>
 using nse_t = se_t<T, false, Align>;
 
-#if IS_LE_MACHINE == 1
 template <typename T, std::size_t Align = alignof(T)>
-using be_t = se_t<T, true, Align>;
+using be_t = se_t<T, std::endian::little == std::endian::native, Align>;
 template <typename T, std::size_t Align = alignof(T)>
-using le_t = se_t<T, false, Align>;
-#endif
+using le_t = se_t<T, std::endian::big == std::endian::native, Align>;
 
 // Type converter: converts native endianness arithmetic/enum types to appropriate se_t<> type
 template <typename T, bool Se, typename = void>
@@ -414,20 +426,16 @@ struct to_se<T[N], Se>
 };
 
 // BE/LE aliases for to_se<>
-#if IS_LE_MACHINE == 1
 template <typename T>
-using to_be_t = typename to_se<T, true>::type;
+using to_be_t = typename to_se<T, std::endian::little == std::endian::native>::type;
 template <typename T>
-using to_le_t = typename to_se<T, false>::type;
-#endif
+using to_le_t = typename to_se<T, std::endian::big == std::endian::native>::type;
 
 // BE/LE aliases for atomic_t
-#if IS_LE_MACHINE == 1
 template <typename T>
 using atomic_be_t = atomic_t<be_t<T>>;
 template <typename T>
 using atomic_le_t = atomic_t<le_t<T>>;
-#endif
 
 template <typename T, bool Se, std::size_t Align>
 struct fmt_unveil<se_t<T, Se, Align>, void>

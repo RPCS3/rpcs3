@@ -17,9 +17,9 @@
 #include <limits>
 #include <array>
 
-// Assume little-endian
-#define IS_LE_MACHINE 1
-#define IS_BE_MACHINE 0
+#if __has_include(<bit>)
+#include <bit>
+#endif
 
 #ifndef __has_builtin
 	#define __has_builtin(x) 0
@@ -82,7 +82,7 @@
 #define AUDIT(...) ((void)0)
 #endif
 
-#if defined(__cpp_lib_bit_cast) && (__cpp_lib_bit_cast >= 201806L)
+#if __cpp_lib_bit_cast >= 201806L
 #include <bit>
 #else
 namespace std
@@ -530,31 +530,56 @@ constexpr u32 to_u8(char c)
 	return static_cast<u8>(c);
 }
 
-// Convert 2-byte string to u16 value like reinterpret_cast does
+// Convert 1-2-byte string to u16 value like reinterpret_cast does
 constexpr u16 operator""_u16(const char* s, std::size_t /*length*/)
 {
-	return
-#if IS_LE_MACHINE == 1
-		static_cast<u16>(to_u8(s[1]) << 8 | to_u8(s[0]));
-#endif
+	if constexpr (std::endian::little == std::endian::native)
+	{
+		return static_cast<u16>(to_u8(s[1]) << 8 | to_u8(s[0]));
+	}
+	else
+	{
+		return static_cast<u16>(to_u8(s[0]) << 8 | to_u8(s[1]));
+	}
 }
 
-// Convert 4-byte string to u32 value like reinterpret_cast does
+// Convert 3-4-byte string to u32 value like reinterpret_cast does
 constexpr u32 operator""_u32(const char* s, std::size_t /*length*/)
 {
-	return
-#if IS_LE_MACHINE == 1
-		to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
-#endif
+	if constexpr (std::endian::little == std::endian::native)
+	{
+		return to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
+	}
+	else
+	{
+		return to_u8(s[0]) << 24 | to_u8(s[1]) << 16 | to_u8(s[2]) << 8 | to_u8(s[3]);
+	}
 }
 
-// Convert 8-byte string to u64 value like reinterpret_cast does
+// Convert 5-6-byte string to u64 value like reinterpret_cast does
+constexpr u64 operator""_u48(const char* s, std::size_t /*length*/)
+{
+	if constexpr (std::endian::little == std::endian::native)
+	{
+		return static_cast<u64>(to_u8(s[5]) << 8 | to_u8(s[4])) << 32 | to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
+	}
+	else
+	{
+		return static_cast<u64>(to_u8(s[0]) << 8 | to_u8(s[1])) << 32 | to_u8(s[2]) << 24 | to_u8(s[3]) << 16 | to_u8(s[4]) << 8 | to_u8(s[5]);
+	}
+}
+
+// Convert 7-8-byte string to u64 value like reinterpret_cast does
 constexpr u64 operator""_u64(const char* s, std::size_t /*length*/)
 {
-	return
-#if IS_LE_MACHINE == 1
-		static_cast<u64>(to_u8(s[7]) << 24 | to_u8(s[6]) << 16 | to_u8(s[5]) << 8 | to_u8(s[4])) << 32 | to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
-#endif
+	if constexpr (std::endian::little == std::endian::native)
+	{
+		return static_cast<u64>(to_u8(s[7]) << 24 | to_u8(s[6]) << 16 | to_u8(s[5]) << 8 | to_u8(s[4])) << 32 | to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
+	}
+	else
+	{
+		return static_cast<u64>(to_u8(s[0]) << 24 | to_u8(s[1]) << 16 | to_u8(s[2]) << 8 | to_u8(s[3])) << 32 | to_u8(s[4]) << 24 | to_u8(s[5]) << 16 | to_u8(s[6]) << 8 | to_u8(s[7]);
+	}
 }
 
 namespace fmt

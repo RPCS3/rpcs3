@@ -3,8 +3,16 @@
 #include <cstdint>
 #include "Utilities/types.h"
 
+#if __has_include(<bit>)
+#include <bit>
+#else
+#include <type_traits>
+#endif
+
 namespace stx
 {
+	static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big);
+
 	template <typename T, std::size_t Align = alignof(T), std::size_t Size = sizeof(T)>
 	struct se_storage
 	{
