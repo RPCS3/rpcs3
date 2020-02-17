@@ -9,7 +9,6 @@
 [submodule "llvm"]
 	path = llvm
 	url = https://github.com/RPCS3/llvm
-	branch = release_60
 	ignore = dirty
 [submodule "Vulkan/glslang"]
 	path = Vulkan/glslang
