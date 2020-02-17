@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
+#include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellSail.h"

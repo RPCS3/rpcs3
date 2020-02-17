@@ -1,5 +1,5 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -554,16 +554,16 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	// We will go with the easy path of Installed, and that's it.
 
 	// The callback is called once and then if it returns >= 0 the cb is called through events(coming from vsh) that are passed to the CB through cellSysutilCheckCallback
-	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg) < 0)
+	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 0, 0, arg) < 0)
 	{
 		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
 	}
 
 	// This emulates vsh sending the events and ensures that not 2 events are processed at once
-	const std::pair<u32, u32> statuses[] =
+	const std::pair<u32, s32> statuses[] =
 	{
 		{ SCE_NP_TROPHY_STATUS_PROCESSING_SETUP, 3 },
-		{ SCE_NP_TROPHY_STATUS_PROCESSING_PROGRESS, tropusr->GetTrophiesCount() },
+		{ SCE_NP_TROPHY_STATUS_PROCESSING_PROGRESS, ::narrow<s32>(tropusr->GetTrophiesCount()) - 1 },
 		{ SCE_NP_TROPHY_STATUS_PROCESSING_FINALIZE, 4 },
 		{ SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 0 }
 	};
@@ -578,7 +578,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	{
 		// One status max per cellSysutilCheckCallback call
 		*queued += status.second;
-		for (u32 completed = 0; completed <= status.second; completed++)
+		for (s32 completed = 0; completed <= status.second; completed++)
 		{
 			sysutil_register_cb([statusCb, status, context, completed, arg, wkptr](ppu_thread& cb_ppu) -> s32
 			{
@@ -601,7 +601,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		for (u32 old_value; current < until && (old_value = *queued);
 			current = get_system_time())
 		{
-			queued->wait(old_value, atomic_wait_timeout{std::min<u64>((until - current) * 1000, 300'000'000)});
+			queued->wait(old_value, atomic_wait_timeout{(until - current) * 1000});
 
 			if (ppu.is_stopped())
 			{
@@ -972,10 +972,8 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 	}
 
-	if (details)
-		*details = {};
-	if (data)
-		*data = {};
+	SceNpTrophyDetails tmp_details{};
+	SceNpTrophyData tmp_data{};
 
 	rXmlDocument doc;
 	doc.Read(config.to_string());
@@ -1003,15 +1001,15 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 
 			if (details)
 			{
-				details->trophyId = trophyId;
-				details->hidden = hidden;
+				tmp_details.trophyId = trophyId;
+				tmp_details.hidden = hidden;
 
 				switch (n->GetAttribute("ttype")[0])
 				{
-				case 'B': details->trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE;   break;
-				case 'S': details->trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   break;
-				case 'G': details->trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     break;
-				case 'P': details->trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; break;
+				case 'B': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE;   break;
+				case 'S': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   break;
+				case 'G': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     break;
+				case 'P': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; break;
 				}
 
 				for (std::shared_ptr<rXmlNode> n2 = n->GetChildren(); n2; n2 = n2->GetNext())
@@ -1020,20 +1018,20 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 
 					if (n2_name == "name")
 					{
-						strcpy_trunc(details->name, n2->GetNodeContent());
+						strcpy_trunc(tmp_details.name, n2->GetNodeContent());
 					}
 					else if (n2_name == "detail")
 					{
-						strcpy_trunc(details->description, n2->GetNodeContent());
+						strcpy_trunc(tmp_details.description, n2->GetNodeContent());
 					}
 				}
 			}
 
 			if (data)
 			{
-				data->trophyId = trophyId;
-				data->unlocked = unlocked;
-				data->timestamp = ctxt->tropusr->GetTrophyTimestamp(trophyId);
+				tmp_data.trophyId = trophyId;
+				tmp_data.unlocked = unlocked;
+				tmp_data.timestamp = ctxt->tropusr->GetTrophyTimestamp(trophyId);
 			}
 
 			break;
@@ -1042,7 +1040,17 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 
 	if (!found)
 	{
-		return not_an_error(SCE_NP_TROPHY_INVALID_TROPHY_ID);
+		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
+	}
+
+	if (details)
+	{
+		*details = tmp_details;
+	}
+
+	if (data)
+	{
+		*data = tmp_data;
 	}
 
 	return CELL_OK;

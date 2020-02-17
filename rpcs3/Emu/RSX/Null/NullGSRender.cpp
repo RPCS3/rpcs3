@@ -1,6 +1,5 @@
 ﻿#include "stdafx.h"
 #include "NullGSRender.h"
-#include "Emu/System.h"
 
 u64 NullGSRender::get_cycles()
 {

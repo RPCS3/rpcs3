@@ -1,7 +1,5 @@
 ﻿#include "headless_application.h"
 
-#include "Emu/System.h"
-
 #include "Emu/RSX/GSRender.h"
 
 #include <clocale>

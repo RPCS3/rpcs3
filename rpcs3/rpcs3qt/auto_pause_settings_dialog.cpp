@@ -1,5 +1,6 @@
-﻿
-#include "auto_pause_settings_dialog.h"
+﻿#include "auto_pause_settings_dialog.h"
+#include "table_item_delegate.h"
+#include "Emu/System.h"
 
 LOG_CHANNEL(autopause_log, "AutoPause");
 

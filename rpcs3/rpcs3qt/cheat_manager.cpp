@@ -11,6 +11,7 @@
 #include "cheat_manager.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/CPU/CPUThread.h"
 

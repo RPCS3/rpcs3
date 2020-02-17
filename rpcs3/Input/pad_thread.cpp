@@ -1,4 +1,5 @@
-﻿#include "pad_thread.h"
+﻿#include "stdafx.h"
+#include "pad_thread.h"
 #include "ds3_pad_handler.h"
 #include "ds4_pad_handler.h"
 #ifdef _WIN32

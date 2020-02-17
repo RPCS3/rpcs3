@@ -16,7 +16,6 @@
 #endif
 
 #include "Emu/RSX/GSRender.h"
-#include "Emu/System.h"
 #include "VulkanAPI.h"
 #include "VKCommonDecompiler.h"
 #include "../GCM.h"

@@ -69,10 +69,14 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Emu\Audio\AudioBackend.cpp" />
     <ClCompile Include="Emu\Io\KeyboardHandler.cpp" />
+    <ClCompile Include="Emu\Io\pad_config.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp" />
+    <ClCompile Include="Emu\system_config_types.cpp" />
     <ClCompile Include="Emu\title.cpp" />
+    <ClCompile Include="Emu\system_config.cpp" />
     <ClCompile Include="util\atomic.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -411,12 +415,15 @@
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h" />
     <ClInclude Include="Emu\Cell\Modules\cellStorage.h" />
     <ClInclude Include="Emu\Io\Keyboard.h" />
+    <ClInclude Include="Emu\Io\pad_config.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_perf_metrics.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.h" />
     <ClInclude Include="Emu\title.h" />
+    <ClInclude Include="Emu\system_config.h" />
+    <ClInclude Include="Emu\system_config_types.h" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\bin_patch.h" />

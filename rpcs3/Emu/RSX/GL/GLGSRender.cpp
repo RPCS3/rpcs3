@@ -1,6 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
-#include "Emu/System.h"
 #include "GLGSRender.h"
 #include "GLCompute.h"
 #include "GLVertexProgram.h"

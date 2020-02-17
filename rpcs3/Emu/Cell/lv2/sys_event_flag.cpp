@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "sys_event_flag.h"
 
-#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
 

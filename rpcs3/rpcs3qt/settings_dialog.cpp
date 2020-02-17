@@ -21,6 +21,7 @@
 
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/title.h"
 #include "Crypto/unself.h"
 #include "Utilities/sysinfo.h"
@@ -1358,6 +1359,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			xemu_settings->SetSetting(emu_settings::WindowTitleFormat, sstr(edited_format));
 			ui->label_game_window_title_format->setText(qstr(xemu_settings->GetSetting(emu_settings::WindowTitleFormat)));
 		}
+	});
+
+	connect(ui->reset_button_game_window_title_format, &QAbstractButton::clicked, [this, game]()
+	{
+		const std::string default_game_title_format = xemu_settings->GetSettingDefault(emu_settings::WindowTitleFormat);
+		xemu_settings->SetSetting(emu_settings::WindowTitleFormat, default_game_title_format);
+		ui->label_game_window_title_format->setText(qstr(default_game_title_format));
 	});
 
 	// Load and apply the configured game window title format

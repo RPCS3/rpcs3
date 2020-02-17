@@ -1,6 +1,5 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/RSX/Overlays/overlays.h"
 #include "Input/pad_thread.h"

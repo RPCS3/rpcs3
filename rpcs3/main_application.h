@@ -2,7 +2,8 @@
 
 #include "stdafx.h"
 #include <QWindow>
-#include "Emu/System.h"
+
+struct EmuCallbacks;
 
 class main_application
 {

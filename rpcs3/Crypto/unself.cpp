@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "aes.h"
 #include "sha1.h"
 #include "utils.h"

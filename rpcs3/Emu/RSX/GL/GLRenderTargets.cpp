@@ -1,6 +1,5 @@
 ﻿#include "stdafx.h"
 #include "GLGSRender.h"
-#include "Emu/System.h"
 
 color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_format color_format)
 {

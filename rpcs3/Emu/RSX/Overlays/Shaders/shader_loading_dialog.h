@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include "Emu/System.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
 namespace rsx

@@ -1,6 +1,5 @@
 ﻿#include "display_sleep_control.h"
 
-#include "Emu/System.h"
 #include "Utilities/Log.h"
 
 #ifdef _WIN32

@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "SPUInterpreter.h"
 
-#include "Emu/System.h"
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
 #include "Utilities/asm.h"

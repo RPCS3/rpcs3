@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_mutex.h"

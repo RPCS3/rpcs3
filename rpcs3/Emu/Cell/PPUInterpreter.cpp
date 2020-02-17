@@ -2,7 +2,7 @@
 #include "PPUInterpreter.h"
 
 #include "Emu/Memory/vm_reservation.h"
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "PPUThread.h"
 #include "Utilities/asm.h"
 #include "Emu/Cell/Common.h"

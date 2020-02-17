@@ -884,6 +884,18 @@
     <ClCompile Include="Emu\title.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\system_config.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Audio\AudioBackend.cpp">
+      <Filter>Emu\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\pad_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\system_config_types.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1676,6 +1688,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Emu\title.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\system_config.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\pad_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\system_config_types.h">
       <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>

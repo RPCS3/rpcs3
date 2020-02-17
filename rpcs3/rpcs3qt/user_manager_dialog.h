@@ -1,9 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "gui_settings.h"
 #include "emu_settings.h"
-#include "Emu/System.h"
 
 #include "Utilities/File.h"
 #include "user_account.h"
