@@ -1572,6 +1572,7 @@ void main_window::CreateConnects()
 
 		int slider_pos = ui->sizeSlider->sliderPosition();
 		ui->sizeSlider->setSliderPosition(m_other_slider_pos);
+		SetIconSizeActions(m_other_slider_pos);
 		m_other_slider_pos = slider_pos;
 
 		m_is_list_mode = is_list_act;
