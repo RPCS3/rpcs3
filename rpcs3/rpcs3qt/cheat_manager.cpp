@@ -323,7 +323,7 @@ std::vector<u32> cheat_engine::search(const T value, const std::vector<u32>& to_
 {
 	std::vector<u32> results;
 
-	be_t<T> value_swapped = value;
+	to_be_t<T> value_swapped = value;
 
 	if (Emu.IsStopped())
 		return {};
