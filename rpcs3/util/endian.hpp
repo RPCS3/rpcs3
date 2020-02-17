@@ -23,7 +23,7 @@ namespace stx
 
 		struct type64
 		{
-			alignas(8) std::uint64_t data[sizeof(T) / 8];
+			alignas(8) std::uint64_t data[sizeof(T) < 8 ? 1 : sizeof(T) / 8];
 		};
 
 		using type = std::conditional_t<(Align >= 8 && sizeof(T) % 8 == 0), type64, type8>;
