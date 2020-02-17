@@ -63,7 +63,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\3rdparty\XAudio2_7;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\XAudio2Redist\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -76,8 +76,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Emu\Audio\XAudio2\XAudio2Backend.cpp" />
-    <ClCompile Include="Emu\Audio\XAudio2\XAudio27Backend.cpp" />
-    <ClCompile Include="Emu\Audio\XAudio2\XAudio28Backend.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
