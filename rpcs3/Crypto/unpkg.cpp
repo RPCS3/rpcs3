@@ -113,7 +113,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	if (header.pkg_size > filelist[0].size())
 	{
 		// Check if multi-files pkg
-		if (path.size() < 7 || path.compare(path.size() - 7, 7, "_00.pkg", 7) != 0)
+		if (!path.ends_with("_00.pkg"))
 		{
 			pkg_log.error("PKG file size mismatch (pkg_size=0x%llx)", header.pkg_size);
 			return false;

@@ -204,7 +204,7 @@ void user_manager_dialog::UpdateTable(bool mark_only)
 		m_table->setItem(row, 1, username_item);
 
 		// Compare current config value with the one in this user (only 8 digits in userId)
-		if (m_active_user.compare(0, 8, user.second.GetUserId()) == 0)
+		if (m_active_user.starts_with(user.second.GetUserId()))
 		{
 			user_id_item->setFont(bold_font);
 			username_item->setFont(bold_font);

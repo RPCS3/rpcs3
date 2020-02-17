@@ -395,7 +395,7 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 			if (cur == '\0' || cur == '|')
 			{
 				// Check prefix if not empty
-				if (posprefix) 
+				if (posprefix)
 				{
 					switch (sysutil_check_name_string(buf, 1, CELL_SAVEDATA_DIRNAME_SIZE))
 					{
@@ -592,7 +592,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			for (const auto& prefix : prefix_list)
 			{
-				if (entry.name.substr(0, prefix.size()) == prefix)
+				if (entry.name.starts_with(prefix))
 				{
 					// Count the amount of matches and the amount of listed directories
 					listGet->dirNum++; // total number of directories

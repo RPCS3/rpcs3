@@ -101,9 +101,9 @@ void register_editor_dialog::updateRegister(const QString& text)
 		if (first_brk != -1)
 		{
 			long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
-			if (reg.compare(0, 3, "GPR") == 0) str = fmt::format("%016llx", ppu.gpr[reg_index]);
-			if (reg.compare(0, 3, "FPR") == 0) str = fmt::format("%016llx", ppu.fpr[reg_index]);
-			if (reg.compare(0, 2, "VR") == 0)  str = fmt::format("%016llx%016llx", ppu.vr[reg_index]._u64[1], ppu.vr[reg_index]._u64[0]);
+			if (reg.starts_with("GPR")) str = fmt::format("%016llx", ppu.gpr[reg_index]);
+			if (reg.starts_with("FPR")) str = fmt::format("%016llx", ppu.fpr[reg_index]);
+			if (reg.starts_with("VR"))  str = fmt::format("%016llx%016llx", ppu.vr[reg_index]._u64[1], ppu.vr[reg_index]._u64[0]);
 		}
 		if (reg == "CR")  str = fmt::format("%08x", ppu.cr.pack());
 		if (reg == "LR")  str = fmt::format("%016llx", ppu.lr);
@@ -118,7 +118,7 @@ void register_editor_dialog::updateRegister(const QString& text)
 		{
 			long reg_index;
 			reg_index = atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());
-			if (reg.compare(0, 3, "GPR") == 0) str = fmt::format("%016llx%016llx", spu.gpr[reg_index]._u64[1], spu.gpr[reg_index]._u64[0]);
+			if (reg.starts_with("GPR")) str = fmt::format("%016llx%016llx", spu.gpr[reg_index]._u64[1], spu.gpr[reg_index]._u64[0]);
 		}
 	}
 
@@ -143,14 +143,14 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 			if (first_brk != -1)
 			{
 				const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
-				if (reg.compare(0, 3, "GPR") == 0 || reg.compare(0, 3, "FPR") == 0)
+				if (reg.starts_with("GPR") || reg.starts_with("FPR"))
 				{
 					const ullong reg_value = std::stoull(value.substr(16, 31), 0, 16);
-					if (reg.compare(0, 3, "GPR") == 0) ppu.gpr[reg_index] = static_cast<u64>(reg_value);
-					if (reg.compare(0, 3, "FPR") == 0) ppu.fpr[reg_index] = std::bit_cast<f64>(reg_value);
+					if (reg.starts_with("GPR")) ppu.gpr[reg_index] = static_cast<u64>(reg_value);
+					if (reg.starts_with("FPR")) ppu.fpr[reg_index] = std::bit_cast<f64>(reg_value);
 					return;
 				}
-				if (reg.compare(0, 2, "VR") == 0)
+				if (reg.starts_with("VR"))
 				{
 					const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
 					const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
@@ -188,7 +188,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 			if (first_brk != -1)
 			{
 				const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());
-				if (reg.compare(0, 3, "GPR") == 0)
+				if (reg.starts_with("GPR"))
 				{
 					const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
 					const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);

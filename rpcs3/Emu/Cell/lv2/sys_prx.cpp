@@ -121,7 +121,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	if (g_cfg.core.lib_loading == lib_loading_type::liblv2list)
 	{
-		if (vpath.compare(0, 24, "/dev_flash/sys/external/") == 0 && vpath != "/dev_flash/sys/external/libsysmodule.sprx"sv)
+		if (vpath.starts_with("/dev_flash/sys/external/") && vpath != "/dev_flash/sys/external/libsysmodule.sprx"sv)
 		{
 			ignore = g_cfg.core.load_libraries.get_set().count(name) == 0;
 		}

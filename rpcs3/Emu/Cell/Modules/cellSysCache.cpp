@@ -58,7 +58,7 @@ struct syscache_info
 
 		for (auto&& entry : fs::dir(cache_root))
 		{
-			if (entry.is_directory && entry.name.size() >= prefix.size() && entry.name.compare(0, prefix.size(), prefix) == 0)
+			if (entry.is_directory && entry.name.starts_with(prefix))
 			{
 				cache_id = std::move(entry.name);
 				break;

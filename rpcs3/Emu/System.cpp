@@ -159,7 +159,7 @@ void Emulator::Init()
 	// Fixup savedata
 	for (const auto& entry : fs::dir(save_path))
 	{
-		if (entry.is_directory && entry.name.compare(0, 8, ".backup_", 8) == 0)
+		if (entry.is_directory && entry.name.starts_with(".backup_"))
 		{
 			const std::string desired = entry.name.substr(8);
 			const std::string pending = save_path + ".working_" + desired;
@@ -904,7 +904,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 						}
 
 						// Check .sprx filename
-						if (entry.name.size() >= 5 && fmt::to_upper(entry.name).compare(entry.name.size() - 5, 5, ".SPRX", 5) == 0)
+						if (fmt::to_upper(entry.name).ends_with(".SPRX"))
 						{
 							if (entry.name == "libfs_155.sprx")
 							{
@@ -1141,7 +1141,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 				for (auto&& entry : fs::dir{ins_dir})
 				{
 					const std::string pkg = ins_dir + entry.name;
-					if (!entry.is_directory && ends_with(entry.name, ".PKG") && !InstallPkg(pkg))
+					if (!entry.is_directory && entry.name.ends_with(".PKG") && !InstallPkg(pkg))
 					{
 						sys_log.error("Failed to install %s", pkg);
 						return;
@@ -1155,7 +1155,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 
 				for (auto&& entry : fs::dir{pkg_dir})
 				{
-					if (entry.is_directory && entry.name.compare(0, 3, "PKG", 3) == 0)
+					if (entry.is_directory && entry.name.starts_with("PKG"))
 					{
 						const std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
 

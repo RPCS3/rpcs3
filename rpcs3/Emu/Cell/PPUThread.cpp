@@ -1404,7 +1404,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 		const std::string dev_flash = vfs::get("/dev_flash/");
 
-		if (info.path.compare(0, dev_flash.size(), dev_flash) != 0 && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
+		if (!info.path.starts_with(dev_flash) && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
 		{
 			// Add prefix for anything except dev_flash files, standalone elfs or PS1 classics
 			cache_path += Emu.GetTitleID();
