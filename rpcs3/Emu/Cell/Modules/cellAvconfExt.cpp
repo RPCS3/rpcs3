@@ -64,7 +64,7 @@ avconf_manager::avconf_manager()
 				devices[curindex].availableModes[0].channel = CELL_AUDIO_IN_CHNUM_2;
 				devices[curindex].availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
 				devices[curindex].deviceNumber              = curindex;
-				strcpy(devices[curindex].name, mic_list[index].c_str());
+				strcpy_trunc(devices[curindex].name, mic_list[index]);
 
 				curindex++;
 			}
@@ -83,7 +83,7 @@ avconf_manager::avconf_manager()
 			devices[curindex].availableModes[0].channel = CELL_AUDIO_IN_CHNUM_2;
 			devices[curindex].availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
 			devices[curindex].deviceNumber              = curindex;
-			strcpy(devices[curindex].name, mic_list[0].c_str());
+			strcpy_trunc(devices[curindex].name, mic_list[0]);
 
 			curindex++;
 			break;
@@ -99,7 +99,7 @@ avconf_manager::avconf_manager()
 			devices[curindex].availableModes[0].channel = CELL_AUDIO_IN_CHNUM_1;
 			devices[curindex].availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
 			devices[curindex].deviceNumber              = curindex;
-			strcpy(devices[curindex].name, mic_list[0].c_str());
+			strcpy_trunc(devices[curindex].name, mic_list[0]);
 
 			curindex++;
 			break;
@@ -120,7 +120,7 @@ avconf_manager::avconf_manager()
 		devices[curindex].availableModes[0].channel = CELL_AUDIO_IN_CHNUM_NONE;
 		devices[curindex].availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
 		devices[curindex].deviceNumber              = curindex;
-		strcpy(devices[curindex].name, "USB Camera");
+		strcpy_trunc(devices[curindex].name, "USB Camera");
 
 		curindex++;
 	}
@@ -139,7 +139,7 @@ void avconf_manager::copy_device_info(u32 num, vm::ptr<CellAudioInDeviceInfo> in
 	info->availableModes[0].channel = devices[num].availableModes[0].channel;
 	info->availableModes[0].fs      = devices[num].availableModes[0].fs;
 	info->deviceNumber              = devices[num].deviceNumber;
-	strcpy(info->name, devices[num].name);
+	strcpy_trunc(info->name, devices[num].name);
 }
 
 error_code cellAudioOutUnregisterDevice(u32 deviceNumber)
