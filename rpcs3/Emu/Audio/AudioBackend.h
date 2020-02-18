@@ -35,6 +35,12 @@ public:
 
 
 	/*
+	 * This virtual method should be reimplemented if backend can fail to be initialized under non-error conditions
+	 * eg. when there is no audio devices attached
+	 */
+	virtual bool Initialized() const { return true; }
+
+	/*
 	 * Virtual methods - should be implemented depending on backend capabilities
 	 */
 
