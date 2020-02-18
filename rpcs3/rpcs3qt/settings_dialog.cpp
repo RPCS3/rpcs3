@@ -1299,7 +1299,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	{
 		const std::string game_title_format = xemu_settings->GetSetting(emu_settings::WindowTitleFormat);
 
-		auto get_game_window_title_label = [=](const QString& new_format)
+		auto get_game_window_title_label = [=, this](const QString& new_format)
 		{
 			rpcs3::title_format_data title_data;
 			title_data.format = sstr(new_format);
