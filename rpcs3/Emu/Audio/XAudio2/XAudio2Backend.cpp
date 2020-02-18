@@ -22,7 +22,6 @@ XAudio2Backend::XAudio2Backend()
 	if (FAILED(hr))
 	{
 		XAudio.error("XAudio2Create() failed(0x%08x)", (u32)hr);
-		Emu.Pause();
 		return;
 	}
 
@@ -30,7 +29,7 @@ XAudio2Backend::XAudio2Backend()
 	if (FAILED(hr))
 	{
 		XAudio.error("CreateMasteringVoice() failed(0x%08x)", (u32)hr);
-		Emu.Pause();
+		return;
 	}
 
 	// All succeeded, "commit"
