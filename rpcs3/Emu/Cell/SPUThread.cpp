@@ -1067,9 +1067,7 @@ void spu_thread::cpu_init()
 	}
 
 	run_ctrl.raw() = 0;
-	status.raw() = 0;
-	npc.raw() = 0;
-	skip_npc_set = false;
+	status_npc.raw() = {};
 
 	int_ctrl[0].clear();
 	int_ctrl[1].clear();
@@ -1082,15 +1080,19 @@ void spu_thread::cpu_stop()
 {
 	if (!group && offset >= RAW_SPU_BASE_ADDR)
 	{
-		// Save next PC and current SPU Interrupt Status
-		if (skip_npc_set)
+		status_npc.fetch_op([this](status_npc_sync_var& state)
 		{
-			skip_npc_set = false;
-		}
-		else
-		{
-			npc = pc | interrupts_enabled;
-		}
+			if (state.status & SPU_STATUS_RUNNING)
+			{
+				// Save next PC and current SPU Interrupt Status
+				// Used only by RunCtrl stop requests
+				state.status &= ~SPU_STATUS_RUNNING;
+				state.npc =	pc | +interrupts_enabled;
+				return true;
+			}
+
+			return false;
+		});
 	}
 	else if (group && is_stopped())
 	{
@@ -1128,10 +1130,9 @@ extern thread_local std::string(*g_tls_log_prefix)();
 void spu_thread::cpu_task()
 {
 	// Get next PC and SPU Interrupt status
-	pc = npc.exchange(0);
+	pc = status_npc.load().npc;
 
-	skip_npc_set = false;
-
+	// Note: works both on RawSPU and threaded SPU!
 	set_interrupt_status((pc & 1) != 0);
 
 	pc &= 0x3fffc;
@@ -2785,14 +2786,13 @@ bool spu_thread::stop_and_signal(u32 code)
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{
 		// Save next PC and current SPU Interrupt Status
-		npc = (pc + 4) | (interrupts_enabled);
-		skip_npc_set = true;
 		state += cpu_flag::stop + cpu_flag::wait;
-		status.atomic_op([code](u32& status)
+		status_npc.atomic_op([&](status_npc_sync_var& state)
 		{
-			status = (status & 0xffff) | (code << 16);
-			status |= SPU_STATUS_STOPPED_BY_STOP;
-			status &= ~SPU_STATUS_RUNNING;
+			state.status = (state.status & 0xffff) | (code << 16);
+			state.status |= SPU_STATUS_STOPPED_BY_STOP;
+			state.status &= ~SPU_STATUS_RUNNING;
+			state.npc = (pc + 4) | +interrupts_enabled;
 		});
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
@@ -3117,7 +3117,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		}
 
 		spu_log.trace("sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
-		status |= SPU_STATUS_STOPPED_BY_STOP;
+		status_npc = {SPU_STATUS_STOPPED_BY_STOP, 0};
 		state += cpu_flag::stop;
 		check_state();
 		return true;
@@ -3142,10 +3142,11 @@ void spu_thread::halt()
 	{
 		state += cpu_flag::stop + cpu_flag::wait;
 
-		status.atomic_op([](u32& status)
+		status_npc.atomic_op([this](status_npc_sync_var& state)
 		{
-			status |= SPU_STATUS_STOPPED_BY_HALT;
-			status &= ~SPU_STATUS_RUNNING;
+			state.status |= SPU_STATUS_STOPPED_BY_HALT;
+			state.status &= ~SPU_STATUS_RUNNING;
+			state.npc = pc | +interrupts_enabled;
 		});
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_HALT_OR_STEP_INT);
@@ -3153,7 +3154,6 @@ void spu_thread::halt()
 		spu_runtime::g_escape(this);
 	}
 
-	status |= SPU_STATUS_STOPPED_BY_HALT;
 	fmt::throw_exception("Halt" HERE);
 }
 
