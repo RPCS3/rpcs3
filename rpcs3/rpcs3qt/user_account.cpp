@@ -1,4 +1,9 @@
-#include "user_account.h"
+﻿#include "user_account.h"
+
+#include "Emu/System.h"
+#include "Utilities/File.h"
+#include "Utilities/StrFmt.h"
+#include "Utilities/Log.h"
 
 LOG_CHANNEL(gui_log, "GUI");
 

@@ -5,6 +5,7 @@
 #include <QMessageBox>
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 

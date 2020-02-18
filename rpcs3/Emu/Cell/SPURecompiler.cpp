@@ -2,6 +2,7 @@
 #include "SPURecompiler.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
@@ -1306,11 +1307,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		// Fill register access info
 		if (auto iflags = s_spu_iflag.decode(data))
 		{
-			if (iflags & spu_iflag::use_ra)
+			if (+iflags & +spu_iflag::use_ra)
 				m_use_ra[pos / 4] = op.ra;
-			if (iflags & spu_iflag::use_rb)
+			if (+iflags & +spu_iflag::use_rb)
 				m_use_rb[pos / 4] = op.rb;
-			if (iflags & spu_iflag::use_rc)
+			if (+iflags & +spu_iflag::use_rc)
 				m_use_rc[pos / 4] = op.rc;
 		}
 
@@ -3215,6 +3216,11 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 #pragma warning(pop)
 #else
 #pragma GCC diagnostic pop
+#endif
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winit-list-lifetime"
 #endif
 
 class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator

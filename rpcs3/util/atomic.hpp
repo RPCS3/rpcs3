@@ -235,58 +235,58 @@ struct atomic_storage<T, 1> : atomic_storage<T, 0>
 #ifdef _MSC_VER
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
-		char v = *(char*)&comp;
-		char r = _InterlockedCompareExchange8((volatile char*)&dest, (char&)exch, v);
-		comp = (T&)r;
+		const char v = std::bit_cast<char>(comp);
+		const char r = _InterlockedCompareExchange8(reinterpret_cast<volatile char*>(&dest), std::bit_cast<char>(exch), v);
+		comp = std::bit_cast<T>(r);
 		return r == v;
 	}
 
 	static inline T load(const T& dest)
 	{
-		char value = *(const volatile char*)&dest;
+		const char value = *reinterpret_cast<const volatile char*>(&dest);
 		std::atomic_thread_fence(std::memory_order_acquire);
-		return (T&)value;
-	}
-
-	static inline void store(T& dest, T value)
-	{
-		_InterlockedExchange8((volatile char*)&dest, (char&)value);
+		return std::bit_cast<T>(value);
 	}
 
 	static inline void release(T& dest, T value)
 	{
 		std::atomic_thread_fence(std::memory_order_release);
-		*(volatile char*)&dest = (char&)value;
+		*reinterpret_cast<volatile char*>(&dest) = std::bit_cast<char>(value);
 	}
 
 	static inline T exchange(T& dest, T value)
 	{
-		char r = _InterlockedExchange8((volatile char*)&dest, (char&)value);
-		return (T&)r;
+		const char r = _InterlockedExchange8(reinterpret_cast<volatile char*>(&dest), std::bit_cast<char>(value));
+		return std::bit_cast<T>(r);
+	}
+
+	static inline void store(T& dest, T value)
+	{
+		exchange(dest, value);
 	}
 
 	static inline T fetch_add(T& dest, T value)
 	{
-		char r = _InterlockedExchangeAdd8((volatile char*)&dest, (char&)value);
-		return (T&)r;
+		const char r = _InterlockedExchangeAdd8(reinterpret_cast<volatile char*>(&dest), std::bit_cast<char>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_and(T& dest, T value)
 	{
-		char r = _InterlockedAnd8((volatile char*)&dest, (char&)value);
-		return (T&)r;
+		const char r = _InterlockedAnd8(reinterpret_cast<volatile char*>(&dest), std::bit_cast<char>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_or(T& dest, T value)
 	{
-		char r = _InterlockedOr8((volatile char*)&dest, (char&)value);
-		return (T&)r;
+		const char r = _InterlockedOr8(reinterpret_cast<volatile char*>(&dest), std::bit_cast<char>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_xor(T& dest, T value)
 	{
-		char r = _InterlockedXor8((volatile char*)&dest, (char&)value);
-		return (T&)r;
+		const char r = _InterlockedXor8(reinterpret_cast<volatile char*>(&dest), std::bit_cast<char>(value));
+		return std::bit_cast<T>(r);
 	}
 #endif
 };
@@ -297,70 +297,70 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 #ifdef _MSC_VER
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
-		short v = *(short*)&comp;
-		short r = _InterlockedCompareExchange16((volatile short*)&dest, (short&)exch, v);
-		comp = (T&)r;
+		const short v = std::bit_cast<short>(comp);
+		const short r = _InterlockedCompareExchange16(reinterpret_cast<volatile short*>(&dest), std::bit_cast<short>(exch), v);
+		comp = std::bit_cast<T>(r);
 		return r == v;
 	}
 
 	static inline T load(const T& dest)
 	{
-		short value = *(const volatile short*)&dest;
+		const short value = *reinterpret_cast<const volatile short*>(&dest);
 		std::atomic_thread_fence(std::memory_order_acquire);
-		return (T&)value;
-	}
-
-	static inline void store(T& dest, T value)
-	{
-		_InterlockedExchange16((volatile short*)&dest, (short&)value);
+		return std::bit_cast<T>(value);
 	}
 
 	static inline void release(T& dest, T value)
 	{
 		std::atomic_thread_fence(std::memory_order_release);
-		*(volatile short*)&dest = (short&)value;
+		*reinterpret_cast<volatile short*>(&dest) = std::bit_cast<short>(value);
 	}
 
 	static inline T exchange(T& dest, T value)
 	{
-		short r = _InterlockedExchange16((volatile short*)&dest, (short&)value);
-		return (T&)r;
+		const short r = _InterlockedExchange16(reinterpret_cast<volatile short*>(&dest), std::bit_cast<short>(value));
+		return std::bit_cast<T>(r);
+	}
+
+	static inline void store(T& dest, T value)
+	{
+		exchange(dest, value);
 	}
 
 	static inline T fetch_add(T& dest, T value)
 	{
-		short r = _InterlockedExchangeAdd16((volatile short*)&dest, (short&)value);
-		return (T&)r;
+		const short r = _InterlockedExchangeAdd16(reinterpret_cast<volatile short*>(&dest), std::bit_cast<short>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_and(T& dest, T value)
 	{
-		short r = _InterlockedAnd16((volatile short*)&dest, (short&)value);
-		return (T&)r;
+		const short r = _InterlockedAnd16(reinterpret_cast<volatile short*>(&dest), std::bit_cast<short>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_or(T& dest, T value)
 	{
-		short r = _InterlockedOr16((volatile short*)&dest, (short&)value);
-		return (T&)r;
+		const short r = _InterlockedOr16(reinterpret_cast<volatile short*>(&dest), std::bit_cast<short>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_xor(T& dest, T value)
 	{
-		short r = _InterlockedXor16((volatile short*)&dest, (short&)value);
-		return (T&)r;
+		const short r = _InterlockedXor16(reinterpret_cast<volatile short*>(&dest), std::bit_cast<short>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T inc_fetch(T& dest)
 	{
-		short r = _InterlockedIncrement16((volatile short*)&dest);
-		return (T&)r;
+		const short r = _InterlockedIncrement16(reinterpret_cast<volatile short*>(&dest));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T dec_fetch(T& dest)
 	{
-		short r = _InterlockedDecrement16((volatile short*)&dest);
-		return (T&)r;
+		const short r = _InterlockedDecrement16(reinterpret_cast<volatile short*>(&dest));
+		return std::bit_cast<T>(r);
 	}
 #else
 	static inline bool bts(T& dest, uint bit)
@@ -395,94 +395,94 @@ struct atomic_storage<T, 4> : atomic_storage<T, 0>
 #ifdef _MSC_VER
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
-		long v = *(long*)&comp;
-		long r = _InterlockedCompareExchange((volatile long*)&dest, (long&)exch, v);
-		comp = (T&)r;
+		const long v = std::bit_cast<long>(comp);
+		const long r = _InterlockedCompareExchange(reinterpret_cast<volatile long*>(&dest), std::bit_cast<long>(exch), v);
+		comp = std::bit_cast<T>(r);
 		return r == v;
 	}
 
 	static inline bool compare_exchange_hle_acq(T& dest, T& comp, T exch)
 	{
-		long v = *(long*)&comp;
-		long r = _InterlockedCompareExchange_HLEAcquire((volatile long*)&dest, (long&)exch, v);
-		comp = (T&)r;
+		const long v = std::bit_cast<long>(comp);
+		const long r = _InterlockedCompareExchange_HLEAcquire(reinterpret_cast<volatile long*>(&dest), std::bit_cast<long>(exch), v);
+		comp = std::bit_cast<T>(r);
 		return r == v;
 	}
 
 	static inline T load(const T& dest)
 	{
-		long value = *(const volatile long*)&dest;
+		const long value = *reinterpret_cast<const volatile long*>(&dest);
 		std::atomic_thread_fence(std::memory_order_acquire);
-		return (T&)value;
-	}
-
-	static inline void store(T& dest, T value)
-	{
-		_InterlockedExchange((volatile long*)&dest, (long&)value);
+		return std::bit_cast<T>(value);
 	}
 
 	static inline void release(T& dest, T value)
 	{
 		std::atomic_thread_fence(std::memory_order_release);
-		*(volatile long*)&dest = (long&)value;
+		*reinterpret_cast<volatile long*>(&dest) = std::bit_cast<long>(value);
 	}
 
 	static inline T exchange(T& dest, T value)
 	{
-		long r = _InterlockedExchange((volatile long*)&dest, (long&)value);
-		return (T&)r;
+		const long r = _InterlockedExchange(reinterpret_cast<volatile long*>(&dest), std::bit_cast<long>(value));
+		return std::bit_cast<T>(r);
+	}
+
+	static inline void store(T& dest, T value)
+	{
+		exchange(dest, value);
 	}
 
 	static inline T fetch_add(T& dest, T value)
 	{
-		long r = _InterlockedExchangeAdd((volatile long*)&dest, (long&)value);
-		return (T&)r;
+		const long r = _InterlockedExchangeAdd(reinterpret_cast<volatile long*>(&dest), std::bit_cast<long>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_add_hle_rel(T& dest, T value)
 	{
-		long r = _InterlockedExchangeAdd_HLERelease((volatile long*)&dest, (long&)value);
-		return (T&)r;
+		const long r = _InterlockedExchangeAdd_HLERelease(reinterpret_cast<volatile long*>(&dest), std::bit_cast<long>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_and(T& dest, T value)
 	{
-		long r = _InterlockedAnd((volatile long*)&dest, (long&)value);
-		return (T&)r;
+		long r = _InterlockedAnd(reinterpret_cast<volatile long*>(&dest), std::bit_cast<long>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_or(T& dest, T value)
 	{
-		long r = _InterlockedOr((volatile long*)&dest, (long&)value);
-		return (T&)r;
+		const long r = _InterlockedOr(reinterpret_cast<volatile long*>(&dest), std::bit_cast<long>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_xor(T& dest, T value)
 	{
-		long r = _InterlockedXor((volatile long*)&dest, (long&)value);
-		return (T&)r;
+		const long r = _InterlockedXor(reinterpret_cast<volatile long*>(&dest), std::bit_cast<long>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T inc_fetch(T& dest)
 	{
-		long r = _InterlockedIncrement((volatile long*)&dest);
-		return (T&)r;
+		const long r = _InterlockedIncrement(reinterpret_cast<volatile long*>(&dest));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T dec_fetch(T& dest)
 	{
-		long r = _InterlockedDecrement((volatile long*)&dest);
-		return (T&)r;
+		const long r = _InterlockedDecrement(reinterpret_cast<volatile long*>(&dest));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline bool bts(T& dest, uint bit)
 	{
-		return _interlockedbittestandset((volatile long*)&dest, bit) != 0;
+		return _interlockedbittestandset(reinterpret_cast<volatile long*>(&dest), bit) != 0;
 	}
 
 	static inline bool btr(T& dest, uint bit)
 	{
-		return _interlockedbittestandreset((volatile long*)&dest, bit) != 0;
+		return _interlockedbittestandreset(reinterpret_cast<volatile long*>(&dest), bit) != 0;
 	}
 #else
 	static inline bool bts(T& dest, uint bit)
@@ -514,94 +514,94 @@ struct atomic_storage<T, 8> : atomic_storage<T, 0>
 #ifdef _MSC_VER
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
-		llong v = *(llong*)&comp;
-		llong r = _InterlockedCompareExchange64((volatile llong*)&dest, (llong&)exch, v);
-		comp = (T&)r;
+		const llong v = std::bit_cast<llong>(comp);
+		const llong r = _InterlockedCompareExchange64(reinterpret_cast<volatile llong*>(&dest), std::bit_cast<llong>(exch), v);
+		comp = std::bit_cast<T>(r);
 		return r == v;
 	}
 
 	static inline bool compare_exchange_hle_acq(T& dest, T& comp, T exch)
 	{
-		llong v = *(llong*)&comp;
-		llong r = _InterlockedCompareExchange64_HLEAcquire((volatile llong*)&dest, (llong&)exch, v);
-		comp = (T&)r;
+		const llong v = std::bit_cast<llong>(comp);
+		const llong r = _InterlockedCompareExchange64_HLEAcquire(reinterpret_cast<volatile llong*>(&dest), std::bit_cast<llong>(exch), v);
+		comp = std::bit_cast<T>(r);
 		return r == v;
 	}
 
 	static inline T load(const T& dest)
 	{
-		llong value = *(const volatile llong*)&dest;
+		const llong value = *reinterpret_cast<const volatile llong*>(&dest);
 		std::atomic_thread_fence(std::memory_order_acquire);
-		return (T&)value;
-	}
-
-	static inline void store(T& dest, T value)
-	{
-		_InterlockedExchange64((volatile llong*)&dest, (llong&)value);
+		return std::bit_cast<T>(value);
 	}
 
 	static inline void release(T& dest, T value)
 	{
 		std::atomic_thread_fence(std::memory_order_release);
-		*(volatile llong*)&dest = (llong&)value;
+		*reinterpret_cast<volatile llong*>(&dest) = std::bit_cast<llong>(value);
 	}
 
 	static inline T exchange(T& dest, T value)
 	{
-		llong r = _InterlockedExchange64((volatile llong*)&dest, (llong&)value);
-		return (T&)r;
+		const llong r = _InterlockedExchange64(reinterpret_cast<volatile llong*>(&dest), std::bit_cast<llong>(value));
+		return std::bit_cast<T>(r);
+	}
+
+	static inline void store(T& dest, T value)
+	{
+		exchange(dest, value);
 	}
 
 	static inline T fetch_add(T& dest, T value)
 	{
-		llong r = _InterlockedExchangeAdd64((volatile llong*)&dest, (llong&)value);
-		return (T&)r;
+		const llong r = _InterlockedExchangeAdd64(reinterpret_cast<volatile llong*>(&dest), std::bit_cast<llong>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_add_hle_rel(T& dest, T value)
 	{
-		llong r = _InterlockedExchangeAdd64_HLERelease((volatile llong*)&dest, (llong&)value);
-		return (T&)r;
+		const llong r = _InterlockedExchangeAdd64_HLERelease(reinterpret_cast<volatile llong*>(&dest), std::bit_cast<llong>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_and(T& dest, T value)
 	{
-		llong r = _InterlockedAnd64((volatile llong*)&dest, (llong&)value);
-		return (T&)r;
+		const llong r = _InterlockedAnd64(reinterpret_cast<volatile llong*>(&dest), std::bit_cast<llong>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_or(T& dest, T value)
 	{
-		llong r = _InterlockedOr64((volatile llong*)&dest, (llong&)value);
-		return (T&)r;
+		const llong r = _InterlockedOr64(reinterpret_cast<volatile llong*>(&dest), std::bit_cast<llong>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T fetch_xor(T& dest, T value)
 	{
-		llong r = _InterlockedXor64((volatile llong*)&dest, (llong&)value);
-		return (T&)r;
+		const llong r = _InterlockedXor64(reinterpret_cast<volatile llong*>(&dest), std::bit_cast<llong>(value));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T inc_fetch(T& dest)
 	{
-		llong r = _InterlockedIncrement64((volatile llong*)&dest);
-		return (T&)r;
+		const llong r = _InterlockedIncrement64(reinterpret_cast<volatile llong*>(&dest));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T dec_fetch(T& dest)
 	{
-		llong r = _InterlockedDecrement64((volatile llong*)&dest);
-		return (T&)r;
+		const llong r = _InterlockedDecrement64(reinterpret_cast<volatile llong*>(&dest));
+		return std::bit_cast<T>(r);
 	}
 
 	static inline bool bts(T& dest, uint bit)
 	{
-		return _interlockedbittestandset64((volatile llong*)&dest, bit) != 0;
+		return _interlockedbittestandset64(reinterpret_cast<volatile llong*>(&dest), bit) != 0;
 	}
 
 	static inline bool btr(T& dest, uint bit)
 	{
-		return _interlockedbittestandreset64((volatile llong*)&dest, bit) != 0;
+		return _interlockedbittestandreset64(reinterpret_cast<volatile llong*>(&dest), bit) != 0;
 	}
 #else
 	static inline bool bts(T& dest, uint bit)
@@ -636,40 +636,37 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 #ifdef _MSC_VER
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
-		llong* _exch = (llong*)&exch;
-		return _InterlockedCompareExchange128((volatile llong*)&dest, _exch[1], _exch[0], (llong*)&comp) != 0;
+		struct alignas(16) llong2 { llong ll[2]; };
+		const llong2 _exch = std::bit_cast<llong2>(exch);
+		return _InterlockedCompareExchange128(reinterpret_cast<volatile llong*>(&dest), _exch.ll[1], _exch.ll[0], reinterpret_cast<llong*>(&comp)) != 0;
 	}
 
 	static inline T load(const T& dest)
 	{
-		llong result[2]{0, 0};
-		_InterlockedCompareExchange128((volatile llong*)&dest, 0, 0, result);
-		return *(T*)+result;
-	}
-
-	static inline void store(T& dest, T value)
-	{
-		llong lo = *(llong*)&value;
-		llong hi = *((llong*)&value + 1);
-		llong cmp[2]{ *(volatile llong*)&dest, *((volatile llong*)&dest + 1) };
-		while (!_InterlockedCompareExchange128((volatile llong*)&dest, hi, lo, cmp));
-	}
-
-	static inline void release(T& dest, T value)
-	{
-		llong lo = *(llong*)&value;
-		llong hi = *((llong*)&value + 1);
-		llong cmp[2]{ *(volatile llong*)&dest, *((volatile llong*)&dest + 1) };
-		while (!_InterlockedCompareExchange128((volatile llong*)&dest, hi, lo, cmp));
+		struct alignas(16) llong2 { llong ll[2]; } result{};
+		_InterlockedCompareExchange128(reinterpret_cast<volatile llong*>(&const_cast<T&>(dest)), result.ll[1], result.ll[0], result.ll);
+		return std::bit_cast<T>(result);
 	}
 
 	static inline T exchange(T& dest, T value)
 	{
-		llong lo = *(llong*)&value;
-		llong hi = *((llong*)&value + 1);
-		llong cmp[2]{ *(volatile llong*)&dest, *((volatile llong*)&dest + 1) };
-		while (!_InterlockedCompareExchange128((volatile llong*)&dest, hi, lo, cmp));
-		return *(T*)+cmp;
+		struct alignas(16) llong2 { llong ll[2]; };
+		const llong2 _value = std::bit_cast<llong2>(value);
+
+		const auto llptr = reinterpret_cast<volatile llong*>(&dest);
+		llong2 cmp{ llptr[0], llptr[1] };
+		while (!_InterlockedCompareExchange128(llptr, _value.ll[1], _value.ll[0], cmp.ll));
+		return std::bit_cast<T>(cmp);
+	}
+
+	static inline void store(T& dest, T value)
+	{
+		exchange(dest, value);
+	}
+
+	static inline void release(T& dest, T value)
+	{
+		exchange(dest, value);
 	}
 #endif
 

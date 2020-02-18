@@ -1,7 +1,6 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "CgBinaryProgram.h"
 
-#include "Emu/System.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
 
 #include <algorithm>

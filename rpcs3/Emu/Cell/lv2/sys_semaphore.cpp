@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "sys_semaphore.h"
 
-#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
 

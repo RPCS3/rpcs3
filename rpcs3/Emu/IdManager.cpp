@@ -19,13 +19,9 @@ id_manager::id_map::pointer idm::allocate_id(const id_manager::id_key& info, u32
 	{
 		// Try to emplace back
 		const u32 _next = base + step * ::size32(vec);
-
-		if (_next >= base && _next < base + step * count)
-		{
-			g_id = _next;
-			vec.emplace_back(id_manager::id_key(_next, info.type()), nullptr);
-			return &vec.back();
-		}
+		g_id = _next;
+		vec.emplace_back(id_manager::id_key(_next, info.type()), nullptr);
+		return &vec.back();
 	}
 
 	// Check all IDs starting from "next id" (TODO)

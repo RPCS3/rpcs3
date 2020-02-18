@@ -2053,13 +2053,6 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="showFPSInTitle">
-                <property name="text">
-                 <string>Show framerate in the window title</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QCheckBox" name="showTrophyPopups">
                 <property name="text">
                  <string>Show trophy popups</string>
@@ -2263,6 +2256,49 @@
                  </size>
                 </property>
                </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_game_window_title">
+             <property name="title">
+              <string>Game Window Title</string>
+             </property>
+             <layout class="QVBoxLayout" name="layout_gb_game_window_title">
+              <item>
+               <widget class="QLabel" name="label_game_window_title_format">
+                <property name="text">
+                 <string>FPS: 60 | Renderer | Version | Game [ID]</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="layout_buttons_game_window_title">
+                <item>
+                 <widget class="QPushButton" name="reset_button_game_window_title_format">
+                  <property name="toolTip">
+                   <string>Reset the game window title to default</string>
+                  </property>
+                  <property name="text">
+                   <string>Reset</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="edit_button_game_window_title_format">
+                  <property name="toolTip">
+                   <string>Edit the game window title</string>
+                  </property>
+                  <property name="text">
+                   <string>Edit</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </widget>

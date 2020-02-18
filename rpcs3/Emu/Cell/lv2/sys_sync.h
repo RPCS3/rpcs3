@@ -9,6 +9,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
+#include "Emu/system_config.h"
 #include "Emu/System.h"
 
 #include <deque>
@@ -110,7 +111,7 @@ public:
 
 		for (auto found = it, end = queue.cend(); found != end; found++)
 		{
-			const u32 _prio = static_cast<E*>(*found)->prio;
+			const s32 _prio = static_cast<E*>(*found)->prio;
 
 			if (_prio < prio)
 			{

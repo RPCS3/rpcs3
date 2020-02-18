@@ -1,6 +1,5 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Loader/ELF.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/SPUThread.h"

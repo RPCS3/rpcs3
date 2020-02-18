@@ -1,9 +1,6 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
-#include "Emu/System.h"
-#include "Emu/Memory/vm.h"
-#include "table_item_delegate.h"
 
 #include <QDialog>
 #include <QVBoxLayout>

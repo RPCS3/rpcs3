@@ -2,6 +2,7 @@
 #include "sys_spu.h"
 
 #include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
 #include "Crypto/unedat.h"
@@ -383,7 +384,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	{
 		if (g_cfg.core.max_spurs_threads < 6 && group->max_num > 0u + g_cfg.core.max_spurs_threads)
 		{
-			if (group->name.size() >= 20 && group->name.compare(group->name.size() - 20, 20, "CellSpursKernelGroup", 20) == 0)
+			if (group->name.starts_with("CellSpursKernelGroup"))
 			{
 				// Hack: don't run more SPURS threads than specified.
 				group->max_run = g_cfg.core.max_spurs_threads;
@@ -542,7 +543,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 		mem_size = 0x40000 * num;
 	}
 
-	if (num < min_threads || num > max_threads || 
+	if (num < min_threads || num > max_threads ||
 		(needs_root && min_prio == 0x10) || (use_scheduler && (prio > 255 || prio < min_prio)))
 	{
 		return CELL_EINVAL;

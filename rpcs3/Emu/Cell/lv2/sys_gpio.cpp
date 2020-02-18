@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "sys_gpio.h"
 
-#include "Emu/System.h"
 #include "Emu/Cell/ErrorCodes.h"
 
 LOG_CHANNEL(sys_gpio);

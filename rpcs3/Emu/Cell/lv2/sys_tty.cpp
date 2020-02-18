@@ -1,5 +1,5 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include "sys_tty.h"
 

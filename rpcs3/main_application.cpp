@@ -1,23 +1,13 @@
 ﻿#include "main_application.h"
 
 #include "Input/pad_thread.h"
-#include "Emu/Io/Null/NullPadHandler.h"
+#include "Emu/System.h"
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "Emu/Io/Null/NullMouseHandler.h"
 #include "Emu/Io/KeyboardHandler.h"
-#include "Emu/Io/PadHandler.h"
 #include "Emu/Io/MouseHandler.h"
 #include "Input/basic_keyboard_handler.h"
 #include "Input/basic_mouse_handler.h"
-#include "Input/keyboard_pad_handler.h"
-#include "Input/ds4_pad_handler.h"
-#ifdef _WIN32
-#include "Input/xinput_pad_handler.h"
-#include "Input/mm_joystick_handler.h"
-#endif
-#ifdef HAVE_LIBEVDEV
-#include "Input/evdev_joystick_handler.h"
-#endif
 
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/Null/NullAudioBackend.h"

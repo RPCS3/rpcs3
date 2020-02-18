@@ -37,7 +37,6 @@ else()
 	add_compile_options(-Wno-invalid-offsetof)
 	add_compile_options(-Wno-unused-function)
 	add_compile_options(-Wno-attributes)
-	add_compile_options(-Wno-enum-compare)
 	add_compile_options(-Wno-comment)
 	add_compile_options(-Wno-sign-compare)
 

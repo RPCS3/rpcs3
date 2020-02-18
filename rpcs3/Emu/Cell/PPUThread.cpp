@@ -4,8 +4,7 @@
 #include "Utilities/JIT.h"
 #include "Crypto/sha1.h"
 #include "Emu/Memory/vm_reservation.h"
-#include "Emu/System.h"
-#include "Emu/IdManager.h"
+#include "Emu/VFS.h"
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
 #include "PPUAnalyser.h"
@@ -1320,6 +1319,11 @@ extern void ppu_initialize()
 	spu_cache::initialize();
 }
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winit-list-lifetime"
+#endif
+
 extern void ppu_initialize(const ppu_module& info)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
@@ -1400,7 +1404,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 		const std::string dev_flash = vfs::get("/dev_flash/");
 
-		if (info.path.compare(0, dev_flash.size(), dev_flash) != 0 && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
+		if (!info.path.starts_with(dev_flash) && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
 		{
 			// Add prefix for anything except dev_flash files, standalone elfs or PS1 classics
 			cache_path += Emu.GetTitleID();

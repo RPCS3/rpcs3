@@ -2,12 +2,10 @@
 #include "rsx_methods.h"
 #include "RSXThread.h"
 #include "Emu/Memory/vm_reservation.h"
-#include "Emu/System.h"
 #include "rsx_utils.h"
 #include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
-#include "Capture/rsx_capture.h"
 
 #include <thread>
 #include <atomic>
@@ -1000,7 +998,7 @@ namespace rsx
 			else
 			{
 				const u32 data_length = in_pitch * (in_h - 1) + src_line_length;
-				rsx->read_barrier(src_address, dst_address, true);
+				rsx->read_barrier(src_address, data_length, true);
 			}
 
 			u8* pixels_src = vm::_ptr<u8>(src_address + in_offset);

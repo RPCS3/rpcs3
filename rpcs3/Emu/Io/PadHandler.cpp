@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "PadHandler.h"
+#include "Emu/System.h"
 #include "Input/pad_thread.h"
 
 cfg_input g_cfg_input;

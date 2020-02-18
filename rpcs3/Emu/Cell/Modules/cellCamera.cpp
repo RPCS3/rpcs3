@@ -1,11 +1,9 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "cellCamera.h"
 
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/IdManager.h"
-#include "Emu/Io/PadHandler.h"
-#include "Emu/System.h"
 
 LOG_CHANNEL(cellCamera);
 

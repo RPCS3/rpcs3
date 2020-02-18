@@ -5,6 +5,8 @@
 class NullPadHandler final : public PadHandlerBase
 {
 public:
+	NullPadHandler() : PadHandlerBase(pad_handler::null) {}
+	
 	bool Init() override
 	{
 		return true;

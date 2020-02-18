@@ -235,7 +235,7 @@ private:
 	std::unique_ptr<AudioDumper> m_dump;
 
 	std::unique_ptr<float[]> buffer[MAX_AUDIO_BUFFERS];
-	const float silence_buffer[AUDIO_MAX_CHANNELS_COUNT * AUDIO_BUFFER_SAMPLES] = { 0 };
+	const float silence_buffer[u32{AUDIO_MAX_CHANNELS_COUNT} * u32{AUDIO_BUFFER_SAMPLES}] = { 0 };
 
 	bool backend_open = false;
 	bool playing = false;
@@ -346,7 +346,7 @@ public:
 
 	struct key_info
 	{
-		u8 start_period; // Starting event_period 
+		u8 start_period; // Starting event_period
 		u32 flags; // iFlags
 		u64 source; // Event source
 		u64 key; // Key

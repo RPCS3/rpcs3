@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
+#include "Emu/VFS.h"
 #include "TRP.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"

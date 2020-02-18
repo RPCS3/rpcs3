@@ -1,6 +1,5 @@
-﻿#include "ds4_pad_handler.h"
-
-#include <thread>
+﻿#include "stdafx.h"
+#include "ds4_pad_handler.h"
 
 LOG_CHANNEL(ds4_log, "DS4");
 

@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include "VFS.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
@@ -16,6 +17,7 @@
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 
+#include "Emu/title.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Capture/rsx_replay.h"
@@ -44,8 +46,6 @@
 
 #include "display_sleep_control.h"
 
-#include "rpcs3_version.h"
-
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
@@ -53,8 +53,6 @@
 LOG_CHANNEL(sys_log, "SYS");
 
 stx::manual_fixed_typemap<void> g_fixed_typemap;
-
-cfg_root g_cfg;
 
 bool g_use_rtm;
 
@@ -77,235 +75,6 @@ atomic_t<u32> g_progr_ftotal{0};
 atomic_t<u32> g_progr_fdone{0};
 atomic_t<u32> g_progr_ptotal{0};
 atomic_t<u32> g_progr_pdone{0};
-
-template <>
-void fmt_class_string<mouse_handler>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](mouse_handler value)
-	{
-		switch (value)
-		{
-		case mouse_handler::null: return "Null";
-		case mouse_handler::basic: return "Basic";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](pad_handler value)
-	{
-		switch (value)
-		{
-		case pad_handler::null: return "Null";
-		case pad_handler::keyboard: return "Keyboard";
-		case pad_handler::ds3: return "DualShock 3";
-		case pad_handler::ds4: return "DualShock 4";
-#ifdef _WIN32
-		case pad_handler::xinput: return "XInput";
-		case pad_handler::mm: return "MMJoystick";
-#endif
-#ifdef HAVE_LIBEVDEV
-		case pad_handler::evdev: return "Evdev";
-#endif
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<video_renderer>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](video_renderer value)
-	{
-		switch (value)
-		{
-		case video_renderer::null: return "Null";
-		case video_renderer::opengl: return "OpenGL";
-		case video_renderer::vulkan: return "Vulkan";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<video_resolution>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](video_resolution value)
-	{
-		switch (value)
-		{
-		case video_resolution::_1080: return "1920x1080";
-		case video_resolution::_720: return "1280x720";
-		case video_resolution::_480: return "720x480";
-		case video_resolution::_576: return "720x576";
-		case video_resolution::_1600x1080: return "1600x1080";
-		case video_resolution::_1440x1080: return "1440x1080";
-		case video_resolution::_1280x1080: return "1280x1080";
-		case video_resolution::_960x1080: return "960x1080";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<video_aspect>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](video_aspect value)
-	{
-		switch (value)
-		{
-		case video_aspect::_4_3: return "4:3";
-		case video_aspect::_16_9: return "16:9";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<msaa_level>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](msaa_level value)
-	{
-		switch (value)
-		{
-		case msaa_level::none: return "Disabled";
-		case msaa_level::_auto: return "Auto";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<keyboard_handler>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](keyboard_handler value)
-	{
-		switch (value)
-		{
-		case keyboard_handler::null: return "Null";
-		case keyboard_handler::basic: return "Basic";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](audio_renderer value)
-	{
-		switch (value)
-		{
-		case audio_renderer::null: return "Null";
-#ifdef _WIN32
-		case audio_renderer::xaudio: return "XAudio2";
-#endif
-#ifdef HAVE_ALSA
-		case audio_renderer::alsa: return "ALSA";
-#endif
-#ifdef HAVE_PULSE
-		case audio_renderer::pulse: return "PulseAudio";
-#endif
-		case audio_renderer::openal: return "OpenAL";
-#ifdef HAVE_FAUDIO
-		case audio_renderer::faudio: return "FAudio";
-#endif
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-inline void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](detail_level value)
-	{
-		switch (value)
-		{
-		case detail_level::minimal: return "Minimal";
-		case detail_level::low: return "Low";
-		case detail_level::medium: return "Medium";
-		case detail_level::high: return "High";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-inline void fmt_class_string<screen_quadrant>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](screen_quadrant value)
-	{
-		switch (value)
-		{
-		case screen_quadrant::top_left: return "Top Left";
-		case screen_quadrant::top_right: return "Top Right";
-		case screen_quadrant::bottom_left: return "Bottom Left";
-		case screen_quadrant::bottom_right: return "Bottom Right";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<tsx_usage>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](tsx_usage value)
-	{
-		switch (value)
-		{
-		case tsx_usage::disabled: return "Disabled";
-		case tsx_usage::enabled: return "Enabled";
-		case tsx_usage::forced: return "Forced";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<sleep_timers_accuracy_level>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](sleep_timers_accuracy_level value)
-	{
-		switch (value)
-		{
-		case sleep_timers_accuracy_level::_as_host: return "As Host";
-		case sleep_timers_accuracy_level::_usleep: return "Usleep Only";
-		case sleep_timers_accuracy_level::_all_timers: return "All Timers";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<enter_button_assign>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](enter_button_assign value)
-	{
-		switch (value)
-		{
-		case enter_button_assign::circle: return "Enter with circle";
-		case enter_button_assign::cross: return "Enter with cross";
-		}
-
-		return unknown;
-	});
-}
 
 void Emulator::Init()
 {
@@ -390,7 +159,7 @@ void Emulator::Init()
 	// Fixup savedata
 	for (const auto& entry : fs::dir(save_path))
 	{
-		if (entry.is_directory && entry.name.compare(0, 8, ".backup_", 8) == 0)
+		if (entry.is_directory && entry.name.starts_with(".backup_"))
 		{
 			const std::string desired = entry.name.substr(8);
 			const std::string pending = save_path + ".working_" + desired;
@@ -1135,7 +904,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 						}
 
 						// Check .sprx filename
-						if (entry.name.size() >= 5 && fmt::to_upper(entry.name).compare(entry.name.size() - 5, 5, ".SPRX", 5) == 0)
+						if (fmt::to_upper(entry.name).ends_with(".SPRX"))
 						{
 							if (entry.name == "libfs_155.sprx")
 							{
@@ -1372,7 +1141,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 				for (auto&& entry : fs::dir{ins_dir})
 				{
 					const std::string pkg = ins_dir + entry.name;
-					if (!entry.is_directory && ends_with(entry.name, ".PKG") && !InstallPkg(pkg))
+					if (!entry.is_directory && entry.name.ends_with(".PKG") && !InstallPkg(pkg))
 					{
 						sys_log.error("Failed to install %s", pkg);
 						return;
@@ -1386,7 +1155,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 
 				for (auto&& entry : fs::dir{pkg_dir})
 				{
-					if (entry.is_directory && entry.name.compare(0, 3, "PKG", 3) == 0)
+					if (entry.is_directory && entry.name.starts_with("PKG"))
 					{
 						const std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
 
@@ -1867,138 +1636,16 @@ void Emulator::Stop(bool restart)
 	}
 }
 
-std::string Emulator::FormatTitle(double fps) const
+std::string Emulator::GetFormattedTitle(double fps) const
 {
-	// Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
-	std::string version = rpcs3::get_version().to_string();
-	const auto last_minus = version.find_last_of('-');
+	rpcs3::title_format_data title_data;
+	title_data.format = g_cfg.misc.title_format.to_string();
+	title_data.title = GetTitle();
+	title_data.title_id = GetTitleID();
+	title_data.renderer = g_cfg.video.renderer.to_string();
+	title_data.fps = fps;
 
-	// Add branch and commit hash to version on frame unless it's master.
-	if (rpcs3::get_branch() != "master"sv && rpcs3::get_branch() != "HEAD"sv)
-	{
-		version = version.substr(0, ~last_minus ? last_minus + 9 : last_minus);
-		version += '-';
-		version += rpcs3::get_branch();
-	}
-	else
-	{
-		version = version.substr(0, last_minus);
-	}
-
-	auto [title_format, life1] = g_cfg.misc.title_format.get();
-
-	// Parse title format string
-	std::string title_string;
-
-	// Backward compatibility hack
-	std::size_t fmt_start = 0;
-
-	if (g_cfg.misc.show_fps_in_title.get() == false)
-	{
-		if (title_format.starts_with("FPS: %F | "))
-		{
-			// Remove "FPS" from the title if detected
-			fmt_start = 10;
-		}
-	}
-
-	for (std::size_t i = fmt_start; i < title_format.size();)
-	{
-		const char c1 = title_format[i];
-
-		if (c1 == '\0')
-		{
-			break;
-		}
-
-		switch (c1)
-		{
-		case '%':
-		{
-			const char c2 = title_format[i + 1];
-
-			if (c2 == '\0')
-			{
-				title_string += '%';
-				i++;
-				continue;
-			}
-
-			switch (c2)
-			{
-			case '%':
-			{
-				title_string += '%';
-				break;
-			}
-			case 'T':
-			{
-				title_string += this->GetTitle();
-				break;
-			}
-			case 't':
-			{
-				title_string += this->GetTitleID();
-				break;
-			}
-			case 'R':
-			{
-				fmt::append(title_string, "%s", g_cfg.video.renderer.get());
-				break;
-			}
-			case 'V':
-			{
-				title_string += version;
-				break;
-			}
-			case 'F':
-			{
-				if (g_cfg.misc.show_fps_in_title)
-				{
-					fmt::append(title_string, "%.2f", fps);
-				}
-				else
-				{
-					title_string += "Disabled";
-				}
-
-				break;
-			}
-			default:
-			{
-				title_string += '%';
-				title_string += c2;
-				break;
-			}
-			}
-
-			i += 2;
-			break;
-		}
-		default:
-		{
-			title_string += c1;
-			i += 1;
-			break;
-		}
-		}
-	}
-
-	return title_string;
-}
-
-std::string cfg_root::node_vfs::get(const cfg::string& _cfg, const char* _def) const
-{
-	auto [spath, sshared] = _cfg.get();
-
-	if (spath.empty())
-	{
-		return fs::get_config_dir() + _def;
-	}
-
-	auto [semudir, sshared2] = emulator_dir.get();
-
-	return fmt::replace_all(spath, "$(EmulatorDir)", semudir.empty() ? fs::get_config_dir() : semudir);
+	return rpcs3::get_formatted_title(title_data);
 }
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)

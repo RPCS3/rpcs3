@@ -4,7 +4,6 @@
 #include <queue>
 #include <thread>
 #include "Emu/Memory/vm.h"
-#include "Emu/System.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"

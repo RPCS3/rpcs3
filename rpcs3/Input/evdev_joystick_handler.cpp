@@ -292,7 +292,7 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 
 	auto data = GetButtonValues(device);
 
-	auto find_value = [=](const std::string& name)
+	auto find_value = [=, this](const std::string& name)
 	{
 		int key = FindKeyCodeByString(rev_axis_list, name, false);
 		bool dir = key >= 0;

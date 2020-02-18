@@ -493,7 +493,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			}
 		};
 
-		const auto add_dir = [&](const std::string& path)
+		const auto add_dir = [&](const std::string& path, bool is_disc)
 		{
 			for (const auto& entry : fs::dir(path))
 			{
@@ -506,35 +506,92 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 				if (fs::is_file(entry_path + "/PS3_DISC.SFB"))
 				{
-					add_disc_dir(entry_path);
+					if (!is_disc)
+					{
+						game_list_log.error("Invalid game path found in %s", entry_path);
+					}
+					else
+					{
+						add_disc_dir(entry_path);
+					}
 				}
 				else
 				{
-					path_list.emplace_back(entry_path);
+					if (is_disc)
+					{
+						game_list_log.error("Invalid disc path found in %s", entry_path);
+					}
+					else
+					{
+						path_list.emplace_back(entry_path);
+					}
 				}
 			}
 		};
 
-		add_dir(_hdd + "game/");
-		add_dir(_hdd + "disc/");
+		add_dir(_hdd + "game/", false);
+		add_dir(_hdd + "disc/", true);
 
-		for (auto pair : YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string()))
+		auto get_games = []() -> YAML::Node
+		{
+			try
+			{
+				fs::file games(fs::get_config_dir() + "/games.yml", fs::read + fs::create);
+
+				if (games)
+				{
+					return YAML::Load(games.to_string());
+				}
+				else
+				{
+					game_list_log.error("Failed to load games.yml, check permissions.");
+					return {};
+				}
+			}
+			catch (...)
+			{
+				// YAML exception aren't very useful so just ignore them
+				game_list_log.fatal("Failed to parse games.yml");
+				return {};
+			}
+
+			return {};
+		};
+
+		for (auto&& pair : get_games())
 		{
 			std::string game_dir = pair.second.Scalar();
+
 			game_dir.resize(game_dir.find_last_not_of('/') + 1);
 
 			if (fs::is_file(game_dir + "/PS3_DISC.SFB"))
 			{
+				// Check if a path loaded from games.yml is already registered in add_dir(_hdd + "disc/");
+				if (game_dir.starts_with(_hdd))
+				{
+					std::string_view frag = std::string_view(game_dir).substr(_hdd.size());
+
+					if (frag.starts_with("disc/"))
+					{
+						// Our path starts from _hdd + 'disc/'
+						frag.remove_prefix(5);
+
+						// Check if the remaining part is the only path component
+						if (frag.find_first_of('/') + 1 == 0)
+						{
+							game_list_log.trace("Removed duplicate for %s: %s", pair.first.Scalar(), pair.second.Scalar());
+							continue;
+						}
+					}
+				}
+
 				add_disc_dir(game_dir);
 			}
 			else
 			{
-				path_list.push_back(game_dir);
+				game_list_log.warning("Invalid disc path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
 			}
 		}
-
-		// Used to remove duplications from the list (serial -> set of cat names)
-		std::map<std::string, std::set<std::string>> serial_cat_name;
 
 		QSet<QString> serials;
 
@@ -565,6 +622,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 				GameInfo game;
 				game.path         = dir;
+				game.icon_path    = sfo_dir + "/ICON0.PNG";
 				game.serial       = psf::get_string(psf, "TITLE_ID", "");
 				game.name         = psf::get_string(psf, "TITLE", cat_unknown_localized);
 				game.app_ver      = psf::get_string(psf, "APP_VER", cat_unknown_localized);
@@ -578,13 +636,6 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
 
 				mutex_cat.lock();
-
-				// Detect duplication
-				if (!serial_cat_name[game.serial].emplace(game.category + game.name).second)
-				{
-					mutex_cat.unlock();
-					return;
-				}
 
 				const QString serial = qstr(game.serial);
 				const QString note = m_gui_settings->GetValue(gui::notes, serial, "").toString();
@@ -628,25 +679,21 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				}
 
 				auto qt_cat = qstr(game.category);
-				auto cat = thread_localized.category.cat_boot.find(qt_cat);
-				if (cat != thread_localized.category.cat_boot.end())
+
+				if (const auto boot_cat = thread_localized.category.cat_boot.find(qt_cat); boot_cat != thread_localized.category.cat_boot.end())
 				{
-					game.icon_path = sfo_dir + "/ICON0.PNG";
-					qt_cat = cat->second;
+					qt_cat = boot_cat->second;
 				}
-				else if ((cat = thread_localized.category.cat_data.find(qt_cat)) != thread_localized.category.cat_data.end())
+				else if (const auto data_cat = thread_localized.category.cat_data.find(qt_cat); data_cat != thread_localized.category.cat_data.end())
 				{
-					game.icon_path = sfo_dir + "/ICON0.PNG";
-					qt_cat = cat->second;
+					qt_cat = data_cat->second;
 				}
 				else if (game.category == cat_unknown)
 				{
-					game.icon_path = sfo_dir + "/ICON0.PNG";
 					qt_cat = localized.category.unknown;
 				}
 				else
 				{
-					game.icon_path = sfo_dir + "/ICON0.PNG";
 					qt_cat = localized.category.other;
 				}
 
@@ -690,17 +737,17 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				for (const auto& other : m_game_data)
 				{
 					// The patch is game data and must have the same serial and an app version
-					if (entry->info.serial == other->info.serial && other->info.category == "GD" && other->info.app_ver != cat_unknown)
+					if (entry->info.serial == other->info.serial && other->info.category == "GD" && other->info.app_ver != cat_unknown_localized)
 					{
 						try
 						{
 							// Update the app version if it's higher than the disc's version (old games may not have an app version)
-							if (entry->info.app_ver == cat_unknown || std::stod(other->info.app_ver) > std::stod(entry->info.app_ver))
+							if (entry->info.app_ver == cat_unknown_localized || std::stod(other->info.app_ver) > std::stod(entry->info.app_ver))
 							{
 								entry->info.app_ver = other->info.app_ver;
 							}
 							// Update the firmware version if possible and if it's higher than the disc's version
-							if (other->info.fw != cat_unknown && std::stod(other->info.fw) > std::stod(entry->info.fw))
+							if (other->info.fw != cat_unknown_localized && std::stod(other->info.fw) > std::stod(entry->info.fw))
 							{
 								entry->info.fw = other->info.fw;
 							}
@@ -713,13 +760,6 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 						catch (const std::exception& e)
 						{
 							game_list_log.error("Failed to update the displayed version numbers for title ID %s\n%s thrown: %s", entry->info.serial, typeid(e).name(), e.what());
-						}
-
-						const std::string key = "GD" + other->info.name;
-						serial_cat_name[other->info.serial].erase(key);
-						if (!serial_cat_name[other->info.serial].count(key))
-						{
-							break;
 						}
 					}
 				}
@@ -1124,7 +1164,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		input_dialog dlg(128, old_title, tr("Rename Title"), tr("%0\n%1\n\nYou can clear the line in order to use the original title.").arg(name).arg(serial), name, this);
 		dlg.move(globalPos);
-		connect(&dlg, &input_dialog::text_changed, this, [&new_title](const QString& text)
+		connect(&dlg, &input_dialog::text_changed, [&new_title](const QString& text)
 		{
 			new_title = text.simplified();
 		});
@@ -1983,16 +2023,22 @@ int game_list_frame::PopulateGameList()
 
 		// Version
 		QString app_version = qstr(game->info.app_ver);
+		const QString unknown = localized.category.unknown;
 
-		if (app_version == localized.category.unknown)
+		if (app_version == unknown)
 		{
 			// Fall back to Disc/Pkg Revision
 			app_version = qstr(game->info.version);
 		}
 
-		if (!game->compat.version.isEmpty() && (app_version == localized.category.unknown || game->compat.version.toDouble() > app_version.toDouble()))
+		if (game->info.bootable && !game->compat.latest_version.isEmpty())
 		{
-			app_version = tr("%0 (Update available: %1)").arg(app_version, game->compat.version);
+			// If the app is bootable and the compat database contains info about the latest patch version:
+			// add a hint for available software updates if the app version is unknown or lower than the latest version.
+			if (app_version == unknown || game->compat.latest_version.toDouble() > app_version.toDouble())
+			{
+				app_version = tr("%0 (Update available: %1)").arg(app_version, game->compat.latest_version);
+			}
 		}
 
 		// Playtimes

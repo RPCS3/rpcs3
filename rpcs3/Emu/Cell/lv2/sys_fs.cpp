@@ -70,7 +70,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 
 		if (mp_name == "dev_hdd1"sv)
 			return &g_mp_sys_dev_hdd1;
-		if (mp_name.substr(0, 7) == "dev_usb"sv)
+		if (mp_name.starts_with("dev_usb"sv))
 			return &g_mp_sys_dev_usb;
 		if (mp_name == "dev_bdvd"sv)
 			return &g_mp_sys_dev_bdvd;
@@ -658,7 +658,7 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 			data.back().name = vfs::unescape(data.back().name);
 
 			// Add additional entries for split file candidates (while ends with .66600)
-			while (data.back().name.size() >= 6 && data.back().name.compare(data.back().name.size() - 6, 6, ".66600", 6) == 0)
+			while (data.back().name.ends_with(".66600"))
 			{
 				data.emplace_back(data.back()).name.resize(data.back().name.size() - 6);
 			}

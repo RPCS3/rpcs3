@@ -11,6 +11,7 @@
 #include "cheat_manager.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/CPU/CPUThread.h"
 
@@ -322,7 +323,7 @@ std::vector<u32> cheat_engine::search(const T value, const std::vector<u32>& to_
 {
 	std::vector<u32> results;
 
-	be_t<T> value_swapped = value;
+	to_be_t<T> value_swapped = value;
 
 	if (Emu.IsStopped())
 		return {};

@@ -75,8 +75,8 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 		// Add date if possible
 		status.date = json_result.value("date").toString();
 
-		// Add version if possible
-		status.version = json_result.value("update").toString();
+		// Add latest version if possible
+		status.latest_version = json_result.value("update").toString();
 
 		// Add status to map
 		m_compat_database.emplace(std::pair<std::string, compat_status>(sstr(key), status));

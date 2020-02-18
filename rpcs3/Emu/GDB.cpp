@@ -1,10 +1,11 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 
 #include "GDB.h"
 #include "Utilities/Log.h"
 #include "Utilities/StrUtil.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/PPUThread.h"
