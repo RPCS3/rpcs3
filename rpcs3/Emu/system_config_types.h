@@ -167,3 +167,15 @@ enum class enter_button_assign
 	circle, // CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CIRCLE
 	cross   // CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CROSS
 };
+
+enum class np_internet_status
+{
+	disabled,
+	enabled,
+};
+
+enum np_psn_status
+{
+	disabled,
+	fake,
+};

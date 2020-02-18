@@ -2,12 +2,18 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 
 #include "cellGame.h"
 #include "cellSysutil.h"
 #include "cellNetCtl.h"
 
 #include "Utilities/StrUtil.h"
+#include "Emu/IdManager.h"
+
+#include "Emu/NP/np_handler.h"
+
+#include <thread>
 
 LOG_CHANNEL(cellNetCtl);
 
@@ -90,14 +96,14 @@ error_code cellNetCtlInit()
 {
 	cellNetCtl.warning("cellNetCtlInit()");
 
-	auto net_ctl_manager = g_fxo->get<cell_net_ctl_manager>();
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (net_ctl_manager->is_initialized)
+	if (nph->is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_TERMINATED;
 	}
 
-	net_ctl_manager->is_initialized = true;
+	nph->is_netctl_init = true;
 
 	return CELL_OK;
 }
@@ -106,15 +112,17 @@ void cellNetCtlTerm()
 {
 	cellNetCtl.warning("cellNetCtlTerm()");
 
-	auto net_ctl_manager = g_fxo->get<cell_net_ctl_manager>();
-	net_ctl_manager->is_initialized = false;
+	const auto nph      = g_fxo->get<named_thread<np_handler>>();
+	nph->is_netctl_init = false;
 }
 
 error_code cellNetCtlGetState(vm::ptr<s32> state)
 {
 	cellNetCtl.trace("cellNetCtlGetState(state=*0x%x)", state);
 
-	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph->is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -124,7 +132,8 @@ error_code cellNetCtlGetState(vm::ptr<s32> state)
 		return CELL_NET_CTL_ERROR_INVALID_ADDR;
 	}
 
-	*state = g_cfg.net.net_status;
+	*state = nph->get_net_status();
+
 	return CELL_OK;
 }
 
@@ -132,7 +141,9 @@ error_code cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<void
 {
 	cellNetCtl.todo("cellNetCtlAddHandler(handler=*0x%x, arg=*0x%x, hid=*0x%x)", handler, arg, hid);
 
-	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph->is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -149,7 +160,9 @@ error_code cellNetCtlDelHandler(s32 hid)
 {
 	cellNetCtl.todo("cellNetCtlDelHandler(hid=0x%x)", hid);
 
-	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph->is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -166,7 +179,9 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
 	cellNetCtl.todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 
-	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph->is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -183,7 +198,7 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		return CELL_OK;
 	}
 
-	if (g_cfg.net.net_status == CELL_NET_CTL_STATE_Disconnected)
+	if (nph->get_net_status() == CELL_NET_CTL_STATE_Disconnected)
 	{
 		return CELL_NET_CTL_ERROR_NOT_CONNECTED;
 	}
@@ -198,15 +213,7 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	}
 	else if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
 	{
-		if (g_cfg.net.net_status != CELL_NET_CTL_STATE_IPObtained)
-		{
-			// 0.0.0.0 seems to be the default address when no ethernet cables are connected to the PS3
-			strcpy_trunc(info->ip_address, "0.0.0.0");
-		}
-		else
-		{
-			strcpy_trunc(info->ip_address, g_cfg.net.ip_address);
-		}
+		strcpy_trunc(info->ip_address, nph->get_ip());
 	}
 	else if (code == CELL_NET_CTL_INFO_NETMASK)
 	{
@@ -224,7 +231,9 @@ error_code cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogPa
 {
 	cellNetCtl.error("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
 
-	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph->is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -244,10 +253,17 @@ error_code cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogPa
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
 
-	// TODO: Actually sign into PSN or an emulated network similar to PSN (ESN)
-	// TODO: Properly open the dialog prompt for sign in
-	sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_LOADED, 0);
-	sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
+	// This is a hack for Diva F 2nd that registers the sysutil callback after calling this function.
+	g_fxo->init<named_thread>("Delayed cellNetCtlNetStartDialogLoadAsync messages", []()
+	{
+		lv2_obj::wait_timeout(500000, nullptr);
+
+		if (thread_ctrl::state() != thread_state::aborting)
+		{
+			sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_LOADED, 0);
+			sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
+		}
+	});
 
 	return CELL_OK;
 }
@@ -256,7 +272,9 @@ error_code cellNetCtlNetStartDialogAbortAsync()
 {
 	cellNetCtl.error("cellNetCtlNetStartDialogAbortAsync()");
 
-	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph->is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -268,7 +286,9 @@ error_code cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogR
 {
 	cellNetCtl.warning("cellNetCtlNetStartDialogUnloadAsync(result=*0x%x)", result);
 
-	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph->is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -283,15 +303,7 @@ error_code cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogR
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
 
-	if (g_cfg.net.net_status == CELL_NET_CTL_STATE_Disconnected)
-	{
-		result->result = CELL_NET_CTL_ERROR_NET_NOT_CONNECTED;
-	}
-	else
-	{
-		// Hack
-		result->result = CELL_NET_CTL_ERROR_DIALOG_CANCELED;
-	}
+	result->result = nph->get_net_status() == CELL_NET_CTL_STATE_IPObtained ? 0 : CELL_NET_CTL_ERROR_DIALOG_CANCELED;
 
 	sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
 
@@ -302,7 +314,9 @@ error_code cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 {
 	cellNetCtl.warning("cellNetCtlGetNatInfo(natInfo=*0x%x)", natInfo);
 
-	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph->is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}

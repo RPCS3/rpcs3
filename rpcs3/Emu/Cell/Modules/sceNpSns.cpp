@@ -4,6 +4,7 @@
 
 #include "sceNpSns.h"
 #include "sceNp.h"
+#include "Emu/NP/np_handler.h"
 
 LOG_CHANNEL(sceNpSns);
 
@@ -182,7 +183,9 @@ error_code sceNpSnsFbGetAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTokenPa
 		return SCE_NP_SNS_FB_ERROR_UNKNOWN_HANDLE;
 	}
 
-	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (nph->get_psn_status() == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
 		return not_an_error(SCE_NP_SNS_ERROR_NOT_SIGN_IN);
 	}
@@ -307,7 +310,9 @@ error_code sceNpSnsFbGetLongAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTok
 		return SCE_NP_SNS_FB_ERROR_UNKNOWN_HANDLE;
 	}
 
-	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (nph->get_psn_status() == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
 		return not_an_error(SCE_NP_SNS_ERROR_NOT_SIGN_IN);
 	}

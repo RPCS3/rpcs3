@@ -138,7 +138,11 @@ public:
 		WindowTitleFormat,
 
 		// Network
-		ConnectionStatus,
+		InternetStatus,
+		DNSAddress,
+		IpSwapList,
+		PSNStatus,
+		PSNNPID,
 
 		// System
 		Language,
@@ -227,6 +231,9 @@ public:
 
 	/** Connects a double spin box with the target settings type*/
 	void EnhanceDoubleSpinBox(QDoubleSpinBox* slider, SettingsType type, const QString& prefix = "", const QString& suffix = "");
+
+	/** Connects a line edit with the target settings type*/
+	void EnhanceEdit(QLineEdit* edit, SettingsType type);
 
 	std::vector<std::string> GetLoadedLibraries();
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
@@ -379,7 +386,11 @@ private:
 		{ WindowTitleFormat,         { "Miscellaneous", "Window Title Format" }},
 
 		// Networking
-		{ ConnectionStatus, { "Net", "Connection status"}},
+		{ InternetStatus, { "Net", "Internet enabled"}},
+		{ DNSAddress,     { "Net", "DNS address"}},
+		{ IpSwapList,     { "Net", "IP swap list"}},
+		{ PSNStatus,      { "Net", "PSN status"}},
+		{ PSNNPID,        { "Net", "NPID"}},
 
 		// System
 		{ Language,              { "System", "Language"}},

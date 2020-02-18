@@ -351,6 +351,10 @@ target_sources(rpcs3_emu PRIVATE
 	Io/GHLtar.cpp
 )
 
+# Np
+target_sources(rpcs3_emu PRIVATE
+	NP/np_handler.cpp
+)
 
 # Memory
 target_sources(rpcs3_emu PRIVATE

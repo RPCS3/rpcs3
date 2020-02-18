@@ -328,7 +328,7 @@ struct lv2_socket final
 		__bitset_enum_max
 	};
 
-	lv2_socket(socket_type s);
+	lv2_socket(socket_type s, s32 s_type);
 	~lv2_socket();
 
 	shared_mutex mutex;
@@ -352,6 +352,8 @@ struct lv2_socket final
 
 	// Unsupported option
 	s32 so_tcp_maxseg = 1500;
+
+	s32 type = 0;
 
 	// Value keepers
 #ifdef _WIN32

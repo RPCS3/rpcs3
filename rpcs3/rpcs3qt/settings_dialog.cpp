@@ -902,11 +902,52 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	//   | |\  |  __/ |_ \ V  V / (_) | |  |   <     | | (_| | |_) |
 	//   |_| \_|\___|\__| \_/\_/ \___/|_|  |_|\_\    |_|\__,_|_.__/
 
+	// Edits
+
+	xemu_settings->EnhanceEdit(ui->edit_dns, emu_settings::DNSAddress);
+	SubscribeTooltip(ui->edit_dns, tooltips.settings.dns);
+
+	xemu_settings->EnhanceEdit(ui->edit_npid, emu_settings::PSNNPID);
+	SubscribeTooltip(ui->edit_npid, tooltips.settings.psn_npid);
+
+	xemu_settings->EnhanceEdit(ui->edit_swaps, emu_settings::IpSwapList);
+	SubscribeTooltip(ui->edit_swaps, tooltips.settings.dns_swap);
+
 	// Comboboxes
 
-	xemu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings::ConnectionStatus);
-	SubscribeTooltip(ui->gb_network_status, tooltips.settings.net_status);
+	xemu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings::InternetStatus);
+	SubscribeTooltip(ui->netStatusBox, tooltips.settings.net_status);
 
+	connect(ui->netStatusBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+	{
+		ui->edit_dns->setEnabled(index > 0);
+	});
+	ui->edit_dns->setEnabled(ui->netStatusBox->currentIndex() > 0);
+
+	connect(ui->psnStatusBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+	{
+		ui->edit_npid->setEnabled(index > 0);
+
+		if (index > 0 && ui->edit_npid->text() == "")
+		{
+			QString gen_npid = "RPCS3_";
+
+			constexpr char list_chars[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',
+			    'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
+
+			std::srand(time(0));
+
+			for (int i = 0; i < 10; i++)
+			{
+				gen_npid += list_chars[std::rand() % (sizeof(list_chars) - 1)];
+			}
+
+			ui->edit_npid->setText(gen_npid);
+		}
+	});
+
+	xemu_settings->EnhanceComboBox(ui->psnStatusBox, emu_settings::PSNStatus);
+	SubscribeTooltip(ui->psnStatusBox, tooltips.settings.psn_status);
 
 	//                _                               _   _______    _
 	//       /\      | |                             | | |__   __|  | |

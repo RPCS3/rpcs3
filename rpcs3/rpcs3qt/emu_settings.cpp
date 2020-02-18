@@ -10,6 +10,7 @@
 #include "Utilities/StrUtil.h"
 
 #include <QMessageBox>
+#include <QLineEdit>
 
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKHelpers.h"
@@ -548,6 +549,23 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, SettingsType ty
 	connect(spinbox, &QDoubleSpinBox::textChanged, [=, this](const QString&/* text*/)
 	{
 		SetSetting(type, sstr(spinbox->cleanText()));
+	});
+}
+
+void emu_settings::EnhanceEdit(QLineEdit* edit, SettingsType type)
+{
+	if (!edit)
+	{
+		cfg_log.fatal("EnhanceEdit '%s' was used with an invalid object", GetSettingName(type));
+		return;
+	}
+
+	const std::string set_text = GetSetting(type);
+	edit->setText(qstr(set_text));
+
+	connect(edit, &QLineEdit::textChanged, [=, this](const QString &text)
+	{
+		SetSetting(type, sstr(text));
 	});
 }
 
