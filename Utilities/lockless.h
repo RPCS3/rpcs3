@@ -70,7 +70,7 @@ public:
 	// Acquire the place for one or more elements.
 	u32 push_begin(u32 count = 1)
 	{
-		return m_ctrl.fetch_add(count);
+		return static_cast<u32>(m_ctrl.fetch_add(count));
 	}
 
 	// Get current "pop" position
