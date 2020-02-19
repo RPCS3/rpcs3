@@ -409,6 +409,48 @@ struct alignas(16) s128
 CHECK_SIZE_ALIGN(u128, 16, 16);
 CHECK_SIZE_ALIGN(s128, 16, 16);
 
+// Return magic value for any unsigned type
+constexpr inline struct umax_helper
+{
+	constexpr umax_helper() noexcept = default;
+
+	template <typename T, typename S = simple_t<std::decay_t<T>>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
+	explicit constexpr operator T() const
+	{
+		return std::numeric_limits<S>::max();
+	}
+
+	template <typename T, typename S = simple_t<std::decay_t<T>>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
+	constexpr bool operator==(const T& rhs) const
+	{
+		return rhs == std::numeric_limits<simple_t<std::decay_t<T>>>::max();
+	}
+
+#if __cpp_impl_three_way_comparison >= 201711 && !__INTELLISENSE__
+#else
+	template <typename T>
+	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<std::decay_t<T>>>, bool> operator==(const T& lhs, const umax_helper& rhs)
+	{
+		return rhs == lhs;
+	}
+#endif
+
+#if __cpp_impl_three_way_comparison >= 201711
+#else
+	template <typename T, typename S = simple_t<std::decay_t<T>>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
+	constexpr bool operator!=(const T& rhs) const
+	{
+		return rhs != std::numeric_limits<simple_t<std::decay_t<T>>>::max();
+	}
+
+	template <typename T>
+	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<std::decay_t<T>>>, bool> operator!=(const T& lhs, const umax_helper& rhs)
+	{
+		return rhs != lhs;
+	}
+#endif
+} umax;
+
 using f32 = float;
 using f64 = double;
 
