@@ -1,6 +1,7 @@
 #ifndef AL_EFX_H
 #define AL_EFX_H
 
+#include <float.h>
 
 #include "alc.h"
 #include "al.h"
