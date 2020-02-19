@@ -51,48 +51,92 @@ namespace rsx
 			initialized = true;
 		}
 
-		codepage* font::initialize_codepage(u16 codepage_id)
+		language_class font::classify(u16 codepage_id)
 		{
-			// Init glyph
-			std::vector<u8> bytes;
-			std::vector<std::string> font_dirs;
-			std::vector<std::string> fallback_fonts;
+			if (codepage_id >= 0x2E && codepage_id <= 0x9F)
+			{
+				return language_class::cjk;
+			}
+
+			return language_class::default_;
+		}
+
+		glyph_load_setup font::get_glyph_files(language_class class_)
+		{
+			glyph_load_setup result;
+
 #ifdef _WIN32
-			font_dirs.push_back("C:/Windows/Fonts/");
-			fallback_fonts.push_back("C:/Windows/Fonts/Arial.ttf");
+			result.lookup_font_dirs.push_back("C:/Windows/Fonts/");
 #else
 			char* home = getenv("HOME");
 			if (home == nullptr)
 				home = getpwuid(getuid())->pw_dir;
 
-			font_dirs.emplace_back(home);
-			if (home[font_dirs[0].length() - 1] == '/')
-				font_dirs[0] += ".fonts/";
+			result.lookup_font_dirs.emplace_back(home);
+			if (home[result.lookup_font_dirs[0].length() - 1] == '/')
+				result.lookup_font_dirs[0] += ".fonts/";
 			else
-				font_dirs[0] += "/.fonts/";
-
-			fallback_fonts.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //	ubuntu
-			fallback_fonts.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             //	arch
+				result.lookup_font_dirs[0] += "/.fonts/";
 #endif
 			// Search dev_flash for the font too
-			font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/");
-			font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SONY-CC/");
+			result.lookup_font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/");
+			result.lookup_font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SONY-CC/");
 
-			// Attempt to load a font from dev_flash as a last resort
-			fallback_fonts.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SCE-PS3-VR-R-LATIN.TTF");
+			switch (class_)
+			{
+			case language_class::default_:
+			{
+				// Standard name
+				result.font_name = font_name;
+#ifdef _WIN32
+				result.fallback_fonts.push_back("C:/Windows/Fonts/Arial.ttf");
+#else
+				fallback_fonts.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //	ubuntu
+				fallback_fonts.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             //	arch
+#endif
+				// Attempt to load a font from dev_flash as a last resort
+				result.fallback_fonts.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SCE-PS3-VR-R-LATIN.TTF");
+				break;
+			}
+			case language_class::cjk:
+			{
+				// Skip loading font files directly
+				result.lookup_font_dirs.clear();
+
+				// Attempt to load a font from dev_flash before any other source
+				result.fallback_fonts.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SCE-PS3-SR-R-JPN.TTF");
+#ifdef _WIN32
+				result.fallback_fonts.push_back("C:/Windows/Fonts/Yu Gothic.ttf"); // Japanese only
+#else
+				// No standard CJK set on linux
+#endif
+				break;
+			}
+			}
+
+			return result;
+		}
+
+		codepage* font::initialize_codepage(u16 codepage_id)
+		{
+			// Init glyph
+			const auto class_ = classify(codepage_id);
+			const auto fs_settings = get_glyph_files(class_);
 
 			// Attemt to load requested font
+			std::vector<u8> bytes;
 			std::string file_path;
 			bool font_found = false;
-			for (auto& font_dir : font_dirs)
+
+			for (auto& font_dir : fs_settings.lookup_font_dirs)
 			{
-				std::string requested_file = font_dir + font_name;
+				std::string requested_file = font_dir + fs_settings.font_name;
 
 				// Append ".ttf" if not present
 				std::string font_lower(requested_file);
 
 				std::transform(requested_file.begin(), requested_file.end(), font_lower.begin(), ::tolower);
-				if (font_lower.substr(font_lower.size() - 4) != ".ttf")
+				if (!font_lower.ends_with(".ttf"))
 					requested_file += ".ttf";
 
 				file_path = requested_file;
@@ -107,7 +151,7 @@ namespace rsx
 			// Attemt to load a fallback if request font wasn't found
 			if (!font_found)
 			{
-				for (auto& fallback_font : fallback_fonts)
+				for (auto& fallback_font : fs_settings.fallback_fonts)
 				{
 					if (fs::is_file(fallback_font))
 					{
@@ -128,7 +172,7 @@ namespace rsx
 			}
 			else
 			{
-				rsx_log.error("Failed to initialize font '%s.ttf'", font_name);
+				rsx_log.error("Failed to initialize font '%s.ttf' on codepage %d", font_name, codepage_id);
 				return nullptr;
 			}
 
