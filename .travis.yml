@@ -6,6 +6,7 @@ jobs:
           env:
             - NAME="Linux build"
             - COMPILER="gcc"
+            - DEPLOY_APPIMAGE="true"
           services: docker
           cache: ccache
           compiler: gcc
@@ -16,7 +17,6 @@ jobs:
           env:
             - NAME="Linux build"
             - COMPILER="clang"
-            - DEPLOY_APPIMAGE="true"
           services: docker
           cache: ccache
           compiler: clang
