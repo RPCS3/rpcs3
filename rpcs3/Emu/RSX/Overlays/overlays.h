@@ -20,9 +20,6 @@
 #include <list>
 
 // Utils
-std::string utf8_to_ascii8(const std::string& utf8_string);
-std::string utf16_to_ascii8(const std::u16string& utf16_string);
-std::u16string ascii8_to_utf16(const std::string& ascii_string);
 extern u64 get_system_time();
 
 // Definition of user interface implementations

@@ -340,7 +340,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlays.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_animation.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_edit_text.cpp" />
-    <ClCompile Include="Emu\RSX\Overlays\overlay_font.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_fonts.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_list_view.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_message_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk.cpp" />
@@ -417,6 +417,7 @@
     <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="Emu\Io\pad_config.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_fonts.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_perf_metrics.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h" />

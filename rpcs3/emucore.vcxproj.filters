@@ -836,9 +836,6 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_trophy_notification.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Overlays\overlay_font.cpp">
-      <Filter>Emu\GPU\RSX\Overlays</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_list_view.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
@@ -895,6 +892,9 @@
     </ClCompile>
     <ClCompile Include="Emu\system_config_types.cpp">
       <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_fonts.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1698,6 +1698,9 @@
     </ClInclude>
     <ClInclude Include="Emu\system_config_types.h">
       <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_fonts.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
