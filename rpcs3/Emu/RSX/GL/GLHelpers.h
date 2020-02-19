@@ -1593,6 +1593,9 @@ namespace gl
 				case GL_TEXTURE_CUBE_MAP:
 					glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, reinterpret_cast<GLint*>(&old_binding));
 					break;
+				case GL_TEXTURE_2D_ARRAY:
+					glGetIntegerv(GL_TEXTURE_BINDING_2D_ARRAY, reinterpret_cast<GLint*>(&old_binding));
+					break;
 				case GL_TEXTURE_BUFFER:
 					glGetIntegerv(GL_TEXTURE_BINDING_BUFFER, reinterpret_cast<GLint*>(&old_binding));
 					break;
@@ -1628,6 +1631,7 @@ namespace gl
 				depth = 1;
 				break;
 			case GL_TEXTURE_3D:
+			case GL_TEXTURE_2D_ARRAY:
 				glTexStorage3D(target, mipmaps, sized_format, width, height, depth);
 				break;
 			case GL_TEXTURE_BUFFER:
@@ -1807,7 +1811,7 @@ namespace gl
 		{
 			pixel_settings.apply();
 
-			switch (static_cast<GLenum>(m_target))
+			switch (const auto target_ =static_cast<GLenum>(m_target))
 			{
 			case GL_TEXTURE_1D:
 			{
@@ -1820,8 +1824,9 @@ namespace gl
 				break;
 			}
 			case GL_TEXTURE_3D:
+			case GL_TEXTURE_2D_ARRAY:
 			{
-				DSA_CALL(TextureSubImage3D, m_id, GL_TEXTURE_3D, 0, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+				DSA_CALL(TextureSubImage3D, m_id, target_, 0, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
 				break;
 			}
 			case GL_TEXTURE_CUBE_MAP:
@@ -1920,11 +1925,19 @@ namespace gl
 			m_image_data = data;
 			m_aspect_flags = aspect_flags;
 
-			const auto num_levels = data->levels();
-			const auto num_layers = (target != GL_TEXTURE_CUBE_MAP) ? 1 : 6;
+			u32 num_layers;
+			switch (target)
+			{
+			default:
+				num_layers = 1; break;
+			case GL_TEXTURE_CUBE_MAP:
+				num_layers = 6; break;
+			case GL_TEXTURE_2D_ARRAY:
+				num_layers = data->depth(); break;
+			}
 
 			glGenTextures(1, &m_id);
-			glTextureView(m_id, target, data->id(), sized_format, 0, num_levels, 0, num_layers);
+			glTextureView(m_id, target, data->id(), sized_format, 0, data->levels(), 0, num_layers);
 
 			if (argb_swizzle)
 			{
