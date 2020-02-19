@@ -47,6 +47,9 @@ else()
 		add_compile_options(-Wno-pessimizing-move)
 		add_compile_options(-Wno-delete-non-virtual-dtor)
 		add_compile_options(-Wno-unused-command-line-argument)
+
+		# For spam warning: '_GNU_SOURCE' macro redefined
+		add_compile_options(-Wno-macro-redefined)
 	elseif(CMAKE_COMPILER_IS_GNUCXX)
 		add_compile_options(-Wno-maybe-uninitialized)
 		add_compile_options(-Wno-strict-aliasing)
