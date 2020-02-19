@@ -30,7 +30,7 @@ struct gcm_config
 	CellGcmContextData current_context;
 	gcmInfo gcm_info;
 
-	CellGcmOffsetTable offsetTable;
+	CellGcmOffsetTable offsetTable{};
 	u16 IoMapTable[0xC00]{};
 	shared_mutex gcmio_mutex;
 

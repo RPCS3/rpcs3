@@ -37,6 +37,7 @@
 /rpcs3/Debug
 /rpcs3/Release
 /llvm_build
+/3rdparty/llvm_build
 /Vulkan/Vulkan-build
 /Vulkan/glslang-build
 
@@ -71,10 +72,15 @@ Makefile
 *CMakeFiles*
 CMakeCache.txt
 *cmake_install.cmake*
+CPackConfig.cmake
+CPackSourceConfig.cmake
+compile_commands.json
 
 # cotire
 rpcs3/cotire/*
 rpcs3/rpcs3_*_cotire.cmake
+rpcs3/Emu/rpcs3_emu_CXX_Release_cotire.cmake
+rpcs3/Emu/rpcs3_emu_CXX_cotire.cmake
 
 # kdevelop
 *.kdev4
@@ -99,3 +105,6 @@ CMakeLists.txt.user
 
 # 7zlib
 /3rdparty/7z/**/*.lib
+
+# yaml-cpp
+yaml-cpp.pc

@@ -615,9 +615,7 @@ namespace rsx
 			// Wait for external pause events
 			if (external_interrupt_lock)
 			{
-				external_interrupt_ack.store(true);
-
-				while (external_interrupt_lock) _mm_pause();
+				wait_pause();
 			}
 
 			// Note a possible rollback address
@@ -2468,10 +2466,7 @@ namespace rsx
 	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!
 	void thread::pause()
 	{
-		while (external_interrupt_lock.exchange(true)) [[unlikely]]
-		{
-			_mm_pause();
-		}
+		external_interrupt_lock++;
 
 		while (!external_interrupt_ack)
 		{
@@ -2480,14 +2475,34 @@ namespace rsx
 
 			_mm_pause();
 		}
-
-		external_interrupt_ack.store(false);
 	}
 
 	void thread::unpause()
 	{
 		// TODO: Clean this shit up
-		external_interrupt_lock.store(false);
+		external_interrupt_lock--;
+	}
+
+	void thread::wait_pause()
+	{
+		do
+		{
+			if (g_cfg.video.multithreaded_rsx)
+			{
+				g_dma_manager.sync();
+			}
+
+			external_interrupt_ack.store(true);
+
+			while (external_interrupt_lock)
+			{
+				// TODO: Investigate non busy-spinning method
+				_mm_pause();
+			}
+
+			external_interrupt_ack.store(false);
+		}
+		while (external_interrupt_lock);
 	}
 
 	u32 thread::get_load()

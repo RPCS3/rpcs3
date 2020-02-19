@@ -93,13 +93,12 @@ void InitOffsetTable()
 {
 	const auto cfg = g_fxo->get<gcm_config>();
 
-	cfg->offsetTable.ioAddress.set(vm::alloc(3072 * sizeof(u16), vm::main));
-	cfg->offsetTable.eaAddress.set(vm::alloc(512 * sizeof(u16), vm::main));
+	const u32 addr = vm::alloc((3072 + 512) * sizeof(u16), vm::main);
 
-	std::memset(cfg->offsetTable.ioAddress.get_ptr(), 0xFF, 3072 * sizeof(u16));
-	std::memset(cfg->offsetTable.eaAddress.get_ptr(), 0xFF, 512 * sizeof(u16));
+	cfg->offsetTable.ioAddress.set(addr);
+	cfg->offsetTable.eaAddress.set(addr + (3072 * sizeof(u16)));
 
-	cfg->reserved_size = 0;
+	std::memset(vm::base(addr), 0xFF, (3072 + 512) * sizeof(u16));
 }
 
 //----------------------------------------------------------------------------
@@ -1076,16 +1075,11 @@ error_code cellGcmReserveIoMapSize(u32 size)
 	return CELL_OK;
 }
 
-error_code cellGcmUnmapEaIoAddress(u32 ea)
+error_code GcmUnmapIoAddress(gcm_config* cfg, u32 io)
 {
-	cellGcmSys.warning("cellGcmUnmapEaIoAddress(ea=0x%x)", ea);
-
-	const auto cfg = g_fxo->get<gcm_config>();
-	std::lock_guard lock(cfg->gcmio_mutex);
-
-	if (u32 size = cfg->IoMapTable[ea >>= 20], io = cfg->offsetTable.ioAddress[ea]; size && io <= 0xBFF)
+	if (u32 ea = cfg->offsetTable.eaAddress[io >>= 20], size = cfg->IoMapTable[ea]; size)
 	{
-		if (auto error = sys_rsx_context_iounmap(0x55555555, io << 20, size << 20))
+		if (auto error = sys_rsx_context_iounmap(0x55555555, io, size << 20))
 		{
 			return error;
 		}
@@ -1105,6 +1099,30 @@ error_code cellGcmUnmapEaIoAddress(u32 ea)
 	return CELL_GCM_ERROR_FAILURE;
 }
 
+error_code cellGcmUnmapEaIoAddress(u32 ea)
+{
+	cellGcmSys.warning("cellGcmUnmapEaIoAddress(ea=0x%x)", ea);
+
+	// Ignores lower bits
+	ea >>= 20;
+
+	if (ea > 0xBFF)
+	{
+		return CELL_GCM_ERROR_FAILURE;
+	}
+
+	const auto cfg = g_fxo->get<gcm_config>();
+	std::lock_guard lock(cfg->gcmio_mutex);
+
+	if (const u32 io = cfg->offsetTable.ioAddress[ea] << 20;
+		io < rsx::get_current_renderer()->main_mem_size)
+	{
+		return GcmUnmapIoAddress(cfg, io);
+	}
+
+	return CELL_GCM_ERROR_FAILURE;
+}
+
 error_code cellGcmUnmapIoAddress(u32 io)
 {
 	cellGcmSys.warning("cellGcmUnmapIoAddress(io=0x%x)", io);
@@ -1112,25 +1130,7 @@ error_code cellGcmUnmapIoAddress(u32 io)
 	const auto cfg = g_fxo->get<gcm_config>();
 	std::lock_guard lock(cfg->gcmio_mutex);
 
-	if (u32 ea = cfg->offsetTable.eaAddress[io >>= 20], size = cfg->IoMapTable[ea]; size)
-	{
-		if (auto error = sys_rsx_context_iounmap(0x55555555, io, size << 20))
-		{
-			return error;
-		}
-
-		const auto render = rsx::get_current_renderer();
-		for (u32 i = 0; i < size; i++)
-		{
-			cfg->offsetTable.ioAddress[ea + i] = 0xFFFF;
-			cfg->offsetTable.eaAddress[io + i] = 0xFFFF;
-		}
-
-		cfg->IoMapTable[ea] = 0;
-		return CELL_OK;
-	}
-
-	return CELL_GCM_ERROR_FAILURE;
+	return GcmUnmapIoAddress(cfg, io);
 }
 
 error_code cellGcmUnreserveIoMapSize(u32 size)

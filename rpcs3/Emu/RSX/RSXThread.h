@@ -599,7 +599,7 @@ namespace rsx
 		RsxDmaControl* ctrl = nullptr;
 		rsx_iomap_table iomap_table;
 		u32 restore_point = 0;
-		atomic_t<bool> external_interrupt_lock{ false };
+		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
 		void flush_fifo();
 		void recover_fifo();
@@ -899,6 +899,7 @@ namespace rsx
 
 		void pause();
 		void unpause();
+		void wait_pause();
 
 		// Get RSX approximate load in %
 		u32 get_load();

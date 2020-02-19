@@ -78,6 +78,7 @@ public:
 		const QString set_daz_and_ftz              = tr("Never use this.");
 		const QString accurate_getllar             = tr("Never use this.");
 		const QString accurate_putlluc             = tr("Never use this.");
+		const QString accurate_rsx_access          = tr("Never use this.");
 		const QString hook_static_functions        = tr("Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.");
 		const QString gl_legacy_buffers            = tr("Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nIf unsure, don't use this option.");
 		const QString force_high_pz                = tr("Only useful when debugging differences in GPU hardware.\nNot necessary for average users.\nIf unsure, don't use this option.");
