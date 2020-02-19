@@ -8,6 +8,8 @@
 
 inline void try_start(spu_thread& spu)
 {
+	std::shared_lock lock(spu.run_ctrl_mtx);
+
 	if (spu.status_npc.fetch_op([](typename spu_thread::status_npc_sync_var& value)
 	{
 		if (value.status & SPU_STATUS_RUNNING)
@@ -246,8 +248,24 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 		}
 		else if (value == SPU_RUNCNTL_STOP_REQUEST)
 		{
-			// TODO: Wait for the SPU to stop?
-			state += cpu_flag::stop;
+			if (get_current_cpu_thread() == this)
+			{
+				// TODO
+				state += cpu_flag::stop;
+				return true;
+			}
+
+			std::scoped_lock lock(run_ctrl_mtx);
+
+			if (status_npc.load().status & SPU_STATUS_RUNNING)
+			{
+				state += cpu_flag::stop;
+
+				for (status_npc_sync_var old; (old = status_npc).status & SPU_STATUS_RUNNING;)
+				{
+					status_npc.wait(old);
+				}
+			}
 		}
 		else
 		{

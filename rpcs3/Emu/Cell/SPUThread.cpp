@@ -1096,19 +1096,22 @@ void spu_thread::cpu_stop()
 {
 	if (!group && offset >= RAW_SPU_BASE_ADDR)
 	{
-		status_npc.fetch_op([this](status_npc_sync_var& state)
+		if (status_npc.fetch_op([this](status_npc_sync_var& state)
 		{
 			if (state.status & SPU_STATUS_RUNNING)
 			{
 				// Save next PC and current SPU Interrupt Status
 				// Used only by RunCtrl stop requests
 				state.status &= ~SPU_STATUS_RUNNING;
-				state.npc =	pc | +interrupts_enabled;
+				state.npc = pc | +interrupts_enabled;
 				return true;
 			}
 
 			return false;
-		});
+		}).second)
+		{
+			status_npc.notify_one();
+		}
 	}
 	else if (group && is_stopped())
 	{
@@ -2842,6 +2845,8 @@ bool spu_thread::stop_and_signal(u32 code)
 			state.npc = (pc + 4) | +interrupts_enabled;
 		});
 
+		status_npc.notify_one();
+
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
 		check_state();
 		return true;
@@ -3195,6 +3200,8 @@ void spu_thread::halt()
 			state.status &= ~SPU_STATUS_RUNNING;
 			state.npc = pc | +interrupts_enabled;
 		});
+
+		status_npc.notify_one();
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_HALT_OR_STEP_INT);
 

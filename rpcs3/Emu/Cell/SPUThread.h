@@ -580,6 +580,7 @@ public:
 	u32 ch_dec_value; // written decrementer value
 
 	atomic_t<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
+	shared_mutex run_ctrl_mtx;
 
 	struct alignas(8) status_npc_sync_var
 	{
