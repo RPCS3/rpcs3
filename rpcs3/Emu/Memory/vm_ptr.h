@@ -60,7 +60,7 @@ namespace vm
 
 		explicit operator bool() const
 		{
-			return m_addr != 0;
+			return m_addr != 0u;
 		}
 
 		// Get vm pointer to a struct member
@@ -120,7 +120,7 @@ namespace vm
 		// Test address for arbitrary alignment: (addr & (align - 1)) == 0
 		bool aligned(u32 align = alignof(T)) const
 		{
-			return (m_addr & (align - 1)) == 0;
+			return (m_addr & (align - 1)) == 0u;
 		}
 
 		// Get type size
@@ -252,7 +252,7 @@ namespace vm
 
 		explicit operator bool() const
 		{
-			return m_addr != 0;
+			return m_addr != 0u;
 		}
 
 		_ptr_base<RT(T...), u32> operator +() const

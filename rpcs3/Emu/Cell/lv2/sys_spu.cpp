@@ -39,7 +39,7 @@ void sys_spu_image::load(const fs::file& stream)
 	{
 		spu_log.notice("** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
-		if (prog.p_type != SYS_SPU_SEGMENT_TYPE_COPY && prog.p_type != SYS_SPU_SEGMENT_TYPE_INFO)
+		if (prog.p_type != u32{SYS_SPU_SEGMENT_TYPE_COPY} && prog.p_type != u32{SYS_SPU_SEGMENT_TYPE_INFO})
 		{
 			spu_log.error("Unknown program type (0x%x)", prog.p_type);
 		}

@@ -133,16 +133,16 @@ struct sys_spu_image
 
 		for (const auto& phdr : phdrs)
 		{
-			if (phdr.p_type != 1 && phdr.p_type != 4)
+			if (phdr.p_type != 1u && phdr.p_type != 4u)
 			{
 				return -1;
 			}
 
-			if (phdr.p_type == 1 && phdr.p_filesz != phdr.p_memsz && phdr.p_filesz)
+			if (phdr.p_type == 1u && phdr.p_filesz != phdr.p_memsz && phdr.p_filesz)
 			{
 				num_segs += 2;
 			}
-			else if (phdr.p_type == 1 || CountInfo)
+			else if (phdr.p_type == 1u || CountInfo)
 			{
 				num_segs += 1;
 			}
@@ -158,7 +158,7 @@ struct sys_spu_image
 
 		for (const auto& phdr : phdrs)
 		{
-			if (phdr.p_type == 1)
+			if (phdr.p_type == 1u)
 			{
 				if (phdr.p_filesz)
 				{
@@ -188,7 +188,7 @@ struct sys_spu_image
 					seg->addr = 0;
 				}
 			}
-			else if (WriteInfo && phdr.p_type == 4)
+			else if (WriteInfo && phdr.p_type == 4u)
 			{
 				if (num_segs >= nsegs)
 				{
@@ -200,7 +200,7 @@ struct sys_spu_image
 				seg->size = 0x20;
 				seg->addr = static_cast<u32>(phdr.p_offset + 0x14 + src);
 			}
-			else if (phdr.p_type != 4)
+			else if (phdr.p_type != 4u)
 			{
 				return -1;
 			}

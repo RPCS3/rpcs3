@@ -117,7 +117,7 @@ namespace psf
 		// Check magic and version
 		verify(HERE),
 			header.magic == "\0PSF"_u32,
-			header.version == 0x101,
+			header.version == 0x101u,
 			sizeof(header_t) + header.entries_num * sizeof(def_table_t) <= header.off_key_table,
 			header.off_key_table <= header.off_data_table,
 			header.off_data_table <= stream.size();

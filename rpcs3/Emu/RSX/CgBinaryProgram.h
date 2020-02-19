@@ -284,7 +284,7 @@ public:
 
 		auto& prog = GetCgRef<CgBinaryProgram>(0);
 
-		if (prog.profile == 7004)
+		if (prog.profile == 7004u)
 		{
 			auto& fprog = GetCgRef<CgBinaryFragmentProgram>(prog.program);
 			m_arb_shader += "\n";

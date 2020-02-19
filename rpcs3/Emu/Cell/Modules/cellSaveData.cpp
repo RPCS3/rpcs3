@@ -467,7 +467,7 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 
 	if (operation == SAVEDATA_OP_FIXED_DELETE)
 	{
-		if (setBuf->fileListMax != 0)
+		if (setBuf->fileListMax != 0u)
 		{
 			// ****** sysutil savedata parameter error : 9 ******
 			return 9;

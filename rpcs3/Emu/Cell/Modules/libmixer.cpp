@@ -177,7 +177,7 @@ s32 cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
 {
 	libmixer.warning("cellSSPlayerCreate(handle=*0x%x, config=*0x%x)", handle, config);
 
-	if (config->outputMode != 0 || config->channels - 1 >= 2)
+	if (config->outputMode != 0u || config->channels - 1u >= 2u)
 	{
 		libmixer.error("cellSSPlayerCreate(config.outputMode=%d, config.channels=%d): invalid parameters", config->outputMode, config->channels);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;

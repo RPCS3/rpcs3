@@ -1077,7 +1077,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	spu.jit->init();
 
 	// Compile
-	if (spu._ref<u32>(spu.pc) == 0)
+	if (spu._ref<u32>(spu.pc) == 0u)
 	{
 		spu_runtime::g_escape(&spu);
 		return;
@@ -1540,16 +1540,16 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 					}
 				}
 				else if (start + 12 * 4 < limit &&
-					ls[start / 4 + 0] == 0x1ce00408 &&
-					ls[start / 4 + 1] == 0x24000389 &&
-					ls[start / 4 + 2] == 0x24004809 &&
-					ls[start / 4 + 3] == 0x24008809 &&
-					ls[start / 4 + 4] == 0x2400c809 &&
-					ls[start / 4 + 5] == 0x24010809 &&
-					ls[start / 4 + 6] == 0x24014809 &&
-					ls[start / 4 + 7] == 0x24018809 &&
-					ls[start / 4 + 8] == 0x1c200807 &&
-					ls[start / 4 + 9] == 0x2401c809)
+					ls[start / 4 + 0] == 0x1ce00408u &&
+					ls[start / 4 + 1] == 0x24000389u &&
+					ls[start / 4 + 2] == 0x24004809u &&
+					ls[start / 4 + 3] == 0x24008809u &&
+					ls[start / 4 + 4] == 0x2400c809u &&
+					ls[start / 4 + 5] == 0x24010809u &&
+					ls[start / 4 + 6] == 0x24014809u &&
+					ls[start / 4 + 7] == 0x24018809u &&
+					ls[start / 4 + 8] == 0x1c200807u &&
+					ls[start / 4 + 9] == 0x2401c809u)
 				{
 					spu_log.warning("[0x%x] Pattern 1 detected (hbr=0x%x:0x%x)", pos, hbr_loc, hbr_tg);
 

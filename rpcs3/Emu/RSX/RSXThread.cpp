@@ -3453,7 +3453,7 @@ namespace rsx
 		void conditional_render_eval::eval_result(::rsx::thread* pthr)
 		{
 			vm::ptr<CellGcmReportData> result = vm::cast(eval_address);
-			const bool failed = (result->value == 0);
+			const bool failed = (result->value == 0u);
 			set_eval_result(pthr, failed);
 		}
 	}

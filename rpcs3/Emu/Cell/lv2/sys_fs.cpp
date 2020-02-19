@@ -36,13 +36,13 @@ bool verify_mself(u32 fd, fs::file const& mself_file)
 		return false;
 	}
 
-	if (mself_header.m_magic != 0x4D534600)
+	if (mself_header.m_magic != 0x4D534600u)
 	{
 		sys_fs.error("verify_mself: Header magic is incorrect.");
 		return false;
 	}
 
-	if (mself_header.m_format_version != 1)
+	if (mself_header.m_format_version != 1u)
 	{
 		sys_fs.error("verify_mself: Unexpected header format version.");
 		return false;
@@ -424,7 +424,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 	if (size == 8)
 	{
 		// check for sdata
-		if (*casted_arg == 0x18000000010)
+		if (*casted_arg == 0x18000000010ull)
 		{
 			// check if the file has the NPD header, or else assume its not encrypted
 			u32 magic;
@@ -442,7 +442,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 			}
 		}
 		// edata
-		else if (*casted_arg == 0x2)
+		else if (*casted_arg == 0x2u)
 		{
 			// check if the file has the NPD header, or else assume its not encrypted
 			u32 magic;
@@ -1248,13 +1248,13 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000006>(_arg);
 
-		if (arg->size != 0x20)
+		if (arg->size != 0x20u)
 		{
 			sys_fs.error("sys_fs_fcntl(0xc0000006): invalid size (0x%x)", arg->size);
 			break;
 		}
 
-		if (arg->_x4 != 0x10 || arg->_x8 != 0x18)
+		if (arg->_x4 != 0x10u || arg->_x8 != 0x18u)
 		{
 			sys_fs.error("sys_fs_fcntl(0xc0000006): invalid args (0x%x, 0x%x)", arg->_x4, arg->_x8);
 			break;
@@ -1464,7 +1464,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_e0000017>(_arg);
 
-		if (_size < arg->size || arg->_x4 != 0x10 || arg->_x8 != 0x20)
+		if (_size < arg->size || arg->_x4 != 0x10u || arg->_x8 != 0x20u)
 		{
 			return CELL_EINVAL;
 		}

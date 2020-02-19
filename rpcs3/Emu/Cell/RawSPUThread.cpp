@@ -300,7 +300,7 @@ void spu_load_exec(const spu_exec_object& elf)
 
 	for (const auto& prog : elf.progs)
 	{
-		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz)
+		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
 		{
 			std::memcpy(vm::base(spu->offset + prog.p_vaddr), prog.bin.data(), prog.p_filesz);
 		}

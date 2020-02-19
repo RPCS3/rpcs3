@@ -76,7 +76,7 @@ bool TROPUSRLoader::LoadTables()
 	{
 		m_file.seek(tableHeader.offset);
 
-		if (tableHeader.type == 4)
+		if (tableHeader.type == 4u)
 		{
 			m_table4.clear();
 			m_table4.resize(tableHeader.entries_count);
@@ -88,7 +88,7 @@ bool TROPUSRLoader::LoadTables()
 			}
 		}
 
-		if (tableHeader.type == 6)
+		if (tableHeader.type == 6u)
 		{
 			m_table6.clear();
 			m_table6.resize(tableHeader.entries_count);

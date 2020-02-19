@@ -1176,7 +1176,7 @@ void spu_thread::cpu_task()
 					break;
 			}
 
-			if (_ref<u32>(pc) == 0x0)
+			if (_ref<u32>(pc) == 0x0u)
 			{
 				if (spu_thread::stop_and_signal(0x0))
 					pc += 4;

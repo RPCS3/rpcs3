@@ -220,7 +220,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 	funcStat(ppu, result, get, set);
 
-	if (result->result != CELL_HDDGAME_CBRESULT_OK && result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL)
+	if (result->result != u32{CELL_HDDGAME_CBRESULT_OK} && result->result != u32{CELL_HDDGAME_CBRESULT_OK_CANCEL})
 	{
 		return CELL_HDDGAME_ERROR_CBRESULT;
 	}
@@ -364,7 +364,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		size->sysSizeKB = 4;
 	}
 
-	if (*type == CELL_GAME_GAMETYPE_HDD && dirName)
+	if (*type == u32{CELL_GAME_GAMETYPE_HDD} && dirName)
 	{
 		strcpy_trunc(*dirName, Emu.GetTitleID());
 	}

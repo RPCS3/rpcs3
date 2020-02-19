@@ -798,7 +798,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		const u32 addr = vm::cast(s.sh_addr);
 		const u32 size = vm::cast(s.sh_size);
 
-		if (s.sh_type == 1 && addr && size) // TODO: some sections with addr=0 are valid
+		if (s.sh_type == 1u && addr && size) // TODO: some sections with addr=0 are valid
 		{
 			for (auto i = 0; i < prx->segs.size(); i++)
 			{
@@ -1116,7 +1116,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		const u32 flag = _sec.flags = s.sh_flags & 7;
 		_sec.filesz = 0;
 
-		if (s.sh_type == 1 && addr && size)
+		if (s.sh_type == 1u && addr && size)
 		{
 			_main->secs.emplace_back(_sec);
 		}
@@ -1178,12 +1178,12 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 			fmt::append(dump, "\n\tSegment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, p_offset=0x%llx", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_offset);
 
-			if (prog.p_type == 0x1 /* LOAD */ && prog.p_filesz > 0)
+			if (prog.p_type == 0x1u /* LOAD */ && prog.p_filesz > 0u)
 			{
 				sha1_update(&sha2, (elf_header + prog.p_offset), prog.p_filesz);
 			}
 
-			else if (prog.p_type == 0x4 /* NOTE */ && prog.p_filesz > 0)
+			else if (prog.p_type == 0x4u /* NOTE */ && prog.p_filesz > 0u)
 			{
 				sha1_update(&sha2, (elf_header + prog.p_offset), prog.p_filesz);
 
@@ -1296,7 +1296,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 					ppu_loader.warning("Bad process_param size! [0x%x : 0x%x]", info.size, sizeof(process_param_t));
 				}
 
-				if (info.magic != 0x13bcc5f6)
+				if (info.magic != 0x13bcc5f6u)
 				{
 					ppu_loader.error("Bad process_param magic! [0x%x]", info.magic);
 				}
@@ -1351,7 +1351,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 				ppu_loader.notice("* unk0 = 0x%x", proc_prx_param.unk0);
 				ppu_loader.notice("* unk2 = 0x%x", proc_prx_param.unk2);
 
-				if (proc_prx_param.magic != 0x1b434cec)
+				if (proc_prx_param.magic != 0x1b434cecu)
 				{
 					fmt::throw_exception("Bad magic! (0x%x)", proc_prx_param.magic);
 				}
@@ -1614,7 +1614,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		const u32 addr = static_cast<u32>(prog.p_vaddr);
 		const u32 size = static_cast<u32>(prog.p_memsz);
 
-		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz && (prog.p_flags & 0x2) == 0 /* W */)
+		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz && (prog.p_flags & 0x2) == 0u /* W */)
 		{
 			// Set memory protection to read-only when necessary
 			verify(HERE), vm::page_protect(addr, ::align(size, 0x1000), 0, 0, vm::page_writable);
@@ -1686,7 +1686,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 		const u32 flag = _sec.flags = s.sh_flags & 7;
 		_sec.filesz = 0;
 
-		if (s.sh_type == 1 && addr && size)
+		if (s.sh_type == 1u && addr && size)
 		{
 			ovlm->secs.emplace_back(_sec);
 		}
@@ -1742,7 +1742,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 					ppu_loader.warning("Bad process_param size! [0x%x : 0x%x]", info.size, u32{sizeof(process_param_t)});
 				}
 
-				if (info.magic != 0x4f564c4d)	//string "OVLM"
+				if (info.magic != "OVLM"_u32) //string "OVLM"
 				{
 					ppu_loader.error("Bad process_param magic! [0x%x]", info.magic);
 				}
@@ -1780,7 +1780,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 				ppu_loader.notice("* unk0 = 0x%x", proc_prx_param.unk0);
 				ppu_loader.notice("* unk2 = 0x%x", proc_prx_param.unk2);
 
-				if (proc_prx_param.magic != 0x1b434cec)
+				if (proc_prx_param.magic != 0x1b434cecu)
 				{
 					fmt::throw_exception("Bad magic! (0x%x)", proc_prx_param.magic);
 				}

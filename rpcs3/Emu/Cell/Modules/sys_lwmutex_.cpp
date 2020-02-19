@@ -113,13 +113,13 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 	{
 		// recursive locking
 
-		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0)
+		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0u)
 		{
 			// if not recursive
 			return CELL_EDEADLK;
 		}
 
-		if (lwmutex->recursive_count == -1)
+		if (lwmutex->recursive_count == umax)
 		{
 			// if recursion limit reached
 			return CELL_EKRESOURCE;
@@ -273,13 +273,13 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	{
 		// recursive locking
 
-		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0)
+		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0u)
 		{
 			// if not recursive
 			return CELL_EDEADLK;
 		}
 
-		if (lwmutex->recursive_count == -1)
+		if (lwmutex->recursive_count == umax)
 		{
 			// if recursion limit reached
 			return CELL_EKRESOURCE;

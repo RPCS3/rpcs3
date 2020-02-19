@@ -293,7 +293,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		const uchar psp2t3[] = {0xAF, 0x07, 0xFD, 0x59, 0x65, 0x25, 0x27, 0xBA, 0xF1, 0x33, 0x89, 0x66, 0x8B, 0x17, 0xD9, 0xEA};
 
 		aes_context ctx;
-		aes_setkey_enc(&ctx, content_type == 0x15 ? psp2t1 : content_type == 0x16 ? psp2t2 : psp2t3, 128);
+		aes_setkey_enc(&ctx, content_type == 0x15u ? psp2t1 : content_type == 0x16u ? psp2t2 : psp2t3, 128);
 		aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const uchar*>(&header.klicensee), dec_key.data());
 		decrypt(0, header.file_count * sizeof(PKGEntry), dec_key.data());
 	}
@@ -311,7 +311,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 	for (const auto& entry : entries)
 	{
-		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0;
+		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
 
 		if (entry.name_size > 256)
 		{
@@ -345,7 +345,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 			const bool did_overwrite = fs::is_file(path);
 
-			if (did_overwrite && (entry.type & PKG_FILE_ENTRY_OVERWRITE) == 0)
+			if (did_overwrite && !(entry.type & PKG_FILE_ENTRY_OVERWRITE))
 			{
 				pkg_log.notice("Didn't overwrite %s", name);
 				break;

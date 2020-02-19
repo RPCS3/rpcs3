@@ -11,7 +11,7 @@ struct bf_base
 
 	// Datatype bitsize
 	static constexpr uint bitmax = sizeof(T) * 8; static_assert(N - 1 < bitmax, "bf_base<> error: N out of bounds");
-	
+
 	// Field bitsize
 	static constexpr uint bitsize = N;
 
@@ -96,7 +96,7 @@ struct bf_t : bf_base<T, N>
 	// Optimized bool conversion (must be removed if inappropriate)
 	explicit constexpr operator bool() const
 	{
-		return unshifted() != 0;
+		return unshifted() != 0u;
 	}
 
 	// Store bitfield value

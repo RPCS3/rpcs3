@@ -772,13 +772,13 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		// Mine
 		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end; ptr = vm::cast(ptr.addr() + ptr[0] + 4))
 		{
-			if (ptr[0] == 0)
+			if (ptr[0] == 0u)
 			{
 				// Null terminator
 				break;
 			}
 
-			if (ptr[1] == 0)
+			if (ptr[1] == 0u)
 			{
 				// CIE
 				ppu_log.trace(".eh_frame: [0x%x] CIE 0x%x", ptr, ptr[0]);
@@ -792,16 +792,16 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 				u32 size = 0;
 
 				// TODO: 64 bit or 32 bit values (approximation)
-				if (ptr[2] == 0 && ptr[3] == 0)
+				if (ptr[2] == 0u && ptr[3] == 0u)
 				{
 					size = ptr[5];
 				}
-				else if ((ptr[2] == -1 || ptr[2] == 0) && ptr[4] == 0 && ptr[5])
+				else if ((ptr[2] + 1 == 0u || ptr[2] == 0u) && ptr[4] == 0u && ptr[5])
 				{
 					addr = ptr[3];
 					size = ptr[5];
 				}
-				else if (ptr[2] != -1 && ptr[3])
+				else if (ptr[2] + 1 && ptr[3])
 				{
 					addr = ptr[2];
 					size = ptr[3];
@@ -1113,8 +1113,8 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			}
 
 			if (ptr + 3 <= fend &&
-				ptr[0] == 0x7c0004ac &&
-				ptr[1] == 0x00000000 &&
+				ptr[0] == 0x7c0004acu &&
+				ptr[1] == 0x00000000u &&
 				ptr[2] == BLR())
 			{
 				// Weird function (illegal instruction)
