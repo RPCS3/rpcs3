@@ -12,6 +12,19 @@ namespace rsx
 {
 	namespace overlays
 	{
+		enum language_class
+		{
+			default_ = 0, // Typically latin-1, extended latin, hebrew, arabic and cyrillic
+			cjk = 1       // The thousands of CJK glyphs occupying pages 2E-9F
+		};
+
+		struct glyph_load_setup
+		{
+			std::string font_name;
+			std::vector<std::string> lookup_font_dirs;
+			std::vector<std::string> fallback_fonts;
+		};
+
 		// Each 'page' holds an indexed block of 256 code points
 		// The BMP (Basic Multilingual Plane) has 256 allocated pages but not all are necessary
 		// While there are supplementary planes, the BMP is the most important thing to support
@@ -49,6 +62,8 @@ namespace rsx
 			}
 			codepage_cache;
 
+			language_class classify(u16 page);
+			glyph_load_setup get_glyph_files(language_class class_);
 			codepage* initialize_codepage(u16 page);
 		public:
 
