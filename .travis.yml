@@ -1,14 +1,16 @@
 language: cpp
 jobs:
     include:
-#        - os: linux
-#          env:
-#            - NAME="Linux build"
-#            - COMPILER="gcc"
-#          services: docker
-#          cache: ccache
-#          install: "docker pull rpcs3/rpcs3-travis-xenial:1.0"
-#          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .travis/travis.env rpcs3/rpcs3-travis-xenial:1.0 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
+        - os: linux
+          dist: xenial
+          env:
+            - NAME="Linux build"
+            - COMPILER="gcc"
+          services: docker
+          cache: ccache
+          compiler: gcc
+          install: "docker pull rpcs3/rpcs3-travis-xenial:1.2"
+          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .travis/travis.env rpcs3/rpcs3-travis-xenial:1.2 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
         - os: linux
           dist: xenial
           env:
@@ -17,7 +19,8 @@ jobs:
             - DEPLOY_APPIMAGE="true"
           services: docker
           cache: ccache
-          install: "docker pull rpcs3/rpcs3-travis-xenial:1.2"    
+          compiler: clang
+          install: "docker pull rpcs3/rpcs3-travis-xenial:1.2"
           script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .travis/travis.env rpcs3/rpcs3-travis-xenial:1.2 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
         - os: osx
           osx_image: xcode11.3
