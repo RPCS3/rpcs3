@@ -173,7 +173,7 @@ public:
 
 	void SetForceBoot(bool force_boot);
 
-	void Load(const std::string& title_id = "", bool add_only = false, bool force_global_config = false);
+	void Load(const std::string& title_id = "", bool add_only = false, bool force_global_config = false, bool is_disc_patch = false);
 	void Run(bool start_playtime);
 	bool Pause();
 	void Resume();

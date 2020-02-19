@@ -696,7 +696,7 @@ void Emulator::SetForceBoot(bool force_boot)
 	m_force_boot = force_boot;
 }
 
-void Emulator::Load(const std::string& title_id, bool add_only, bool force_global_config)
+void Emulator::Load(const std::string& title_id, bool add_only, bool force_global_config, bool is_disc_patch)
 {
 	m_force_global_config = force_global_config;
 
@@ -987,7 +987,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
 		const std::size_t game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
 		const std::size_t bdvd_pos = m_cat == "DG" && bdvd_dir.empty() && disc.empty() ? elf_dir.rfind("/USRDIR") - game_dir_size : 0;
-		const bool from_hdd0_game = m_path.find(hdd0_game) != umax;
+		const bool from_hdd0_game = m_path.find(hdd0_game) != std::string::npos;
 
 		if (bdvd_pos && from_hdd0_game)
 		{
@@ -1014,9 +1014,10 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			bdvd_dir = elf_dir.substr(0, bdvd_pos);
 			m_game_dir = elf_dir.substr(bdvd_pos, game_dir_size);
 		}
-		else
+		else if (!is_disc_patch)
 		{
-			m_game_dir = "PS3_GAME"; // reset
+			// Reset original disc game dir if this is neither disc nor disc patch
+			m_game_dir = "PS3_GAME";
 		}
 
 		// Booting patch data
@@ -1066,7 +1067,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		}
 		else if (m_cat == "1P" && from_hdd0_game)
 		{
-			//PS1 Classics
+			// PS1 Classic located in dev_hdd0/game
 			sys_log.notice("PS1 Game: %s, %s", m_title_id, m_title);
 
 			std::string gamePath = m_path.substr(m_path.find("/dev_hdd0/game/"), 24);
@@ -1100,6 +1101,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		}
 		else if (m_cat == "DG" && from_hdd0_game)
 		{
+			// Disc game located in dev_hdd0/game
 			vfs::mount("/dev_bdvd/PS3_GAME", hdd0_game + m_path.substr(hdd0_game.size(), 10));
 			sys_log.notice("Game: %s", vfs::get("/dev_bdvd/PS3_GAME"));
 		}
@@ -1110,6 +1112,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		}
 		else
 		{
+			// Disc game
 			bdvd_dir = disc;
 			vfs::mount("/dev_bdvd", bdvd_dir);
 			sys_log.notice("Disk: %s", vfs::get("/dev_bdvd"));
@@ -1197,7 +1200,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		{
 			// Booting game update
 			sys_log.success("Updates found at /dev_hdd0/game/%s/!", m_title_id);
-			return m_path = hdd0_boot, Load(m_title_id, false, force_global_config);
+			return m_path = hdd0_boot, Load(m_title_id, false, force_global_config, true);
 		}
 
 		// Set title to actual disc title if necessary
