@@ -176,7 +176,7 @@ namespace rsx
 				btn_cancel.translate(0, offset);
 			}
 
-			text_display.set_text(utf8_to_ascii8(text));
+			text_display.set_text(text);
 
 			u16 text_w, text_h;
 			text_display.measure_text(text_w, text_h);

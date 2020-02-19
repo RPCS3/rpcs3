@@ -6,7 +6,52 @@ namespace rsx
 {
 	namespace overlays
 	{
+		void codepage::initialize_glyphs(u16 codepage_id, f32 font_size, const std::vector<u8>& ttf_data)
+		{
+			glyph_base = (codepage_id * 256);
+			glyph_data.resize(bitmap_width * bitmap_height);
+			pack_info.resize(256);
+
+			stbtt_pack_context context;
+			if (!stbtt_PackBegin(&context, glyph_data.data(), bitmap_width, bitmap_height, 0, 1, nullptr))
+			{
+				rsx_log.error("Font packing failed");
+				return;
+			}
+
+			stbtt_PackSetOversampling(&context, oversample, oversample);
+
+			if (!stbtt_PackFontRange(&context, ttf_data.data(), 0, font_size, (codepage_id * 256), 256, pack_info.data()))
+			{
+				rsx_log.error("Font packing failed");
+				stbtt_PackEnd(&context);
+				return;
+			}
+
+			stbtt_PackEnd(&context);
+		}
+
+		stbtt_aligned_quad codepage::get_char(wchar_t c, f32& x_advance, f32& y_advance)
+		{
+			stbtt_aligned_quad quad;
+			stbtt_GetPackedQuad(pack_info.data(), bitmap_width, bitmap_height, (c - glyph_base), &x_advance, &y_advance, &quad, false);
+
+			quad.t0 += sampler_z;
+			quad.t1 += sampler_z;
+			return quad;
+		}
+
 		font::font(const char* ttf_name, f32 size)
+		{
+			// Convert pt to px
+			size_px = ceilf(size * 96.f / 72.f);
+			size_pt = size;
+
+			font_name = ttf_name;
+			initialized = true;
+		}
+
+		codepage* font::initialize_codepage(u16 codepage_id)
 		{
 			// Init glyph
 			std::vector<u8> bytes;
@@ -41,7 +86,7 @@ namespace rsx
 			bool font_found = false;
 			for (auto& font_dir : font_dirs)
 			{
-				std::string requested_file = font_dir + ttf_name;
+				std::string requested_file = font_dir + font_name;
 
 				// Append ".ttf" if not present
 				std::string font_lower(requested_file);
@@ -66,10 +111,10 @@ namespace rsx
 				{
 					if (fs::is_file(fallback_font))
 					{
-						file_path  = fallback_font;
+						file_path = fallback_font;
 						font_found = true;
 
-						rsx_log.notice("Found font file '%s' as a replacement for '%s'", fallback_font.c_str(), ttf_name);
+						rsx_log.notice("Found font file '%s' as a replacement for '%s'", fallback_font, font_name);
 						break;
 					}
 				}
@@ -83,53 +128,62 @@ namespace rsx
 			}
 			else
 			{
-				rsx_log.error("Failed to initialize font '%s.ttf'", ttf_name);
-				return;
+				rsx_log.error("Failed to initialize font '%s.ttf'", font_name);
+				return nullptr;
 			}
 
-			glyph_data.resize(width * height);
-			pack_info.resize(256);
+			codepage_cache.page = nullptr;
+			auto page = std::make_unique<codepage>();
+			page->initialize_glyphs(codepage_id, size_px, bytes);
+			page->sampler_z = static_cast<f32>(m_glyph_map.size());
 
-			stbtt_pack_context context;
-			if (!stbtt_PackBegin(&context, glyph_data.data(), width, height, 0, 1, nullptr))
+			auto ret = page.get();
+			m_glyph_map.emplace_back(codepage_id, std::move(page));
+
+			if (codepage_id == 0)
 			{
-				rsx_log.error("Font packing failed");
-				return;
+				// Latin-1
+				f32 unused;
+				get_char('m', em_size, unused);
 			}
 
-			stbtt_PackSetOversampling(&context, oversample, oversample);
-
-			// Convert pt to px
-			size_px = ceilf(size * 96.f / 72.f);
-			size_pt = size;
-
-			if (!stbtt_PackFontRange(&context, bytes.data(), 0, size_px, 0, 256, pack_info.data()))
-			{
-				rsx_log.error("Font packing failed");
-				stbtt_PackEnd(&context);
-				return;
-			}
-
-			stbtt_PackEnd(&context);
-
-			font_name   = ttf_name;
-			initialized = true;
-
-			f32 unused;
-			get_char('m', em_size, unused);
+			return ret;
 		}
 
-		stbtt_aligned_quad font::get_char(char c, f32& x_advance, f32& y_advance)
+		stbtt_aligned_quad font::get_char(wchar_t c, f32& x_advance, f32& y_advance)
 		{
 			if (!initialized)
 				return {};
 
-			stbtt_aligned_quad quad;
-			stbtt_GetPackedQuad(pack_info.data(), width, height, u8(c), &x_advance, &y_advance, &quad, false);
-			return quad;
+			const auto page_id = (c >> 8);
+			if (codepage_cache.codepage_id == page_id && codepage_cache.page) [[likely]]
+			{
+				return codepage_cache.page->get_char(c, x_advance, y_advance);
+			}
+			else
+			{
+				codepage_cache.codepage_id = page_id;
+				codepage_cache.page = nullptr;
+
+				for (const auto& e : m_glyph_map)
+				{
+					if (e.first == unsigned(page_id))
+					{
+						codepage_cache.page = e.second.get();
+						break;
+					}
+				}
+
+				if (!codepage_cache.page) [[unlikely]]
+				{
+					codepage_cache.page = initialize_codepage(page_id);
+				}
+
+				return codepage_cache.page->get_char(c, x_advance, y_advance);
+			}
 		}
 
-		void font::render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char* text, u32 char_limit, u16 max_width, bool wrap)
+		void font::render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const wchar_t* text, u32 char_limit, u16 max_width, bool wrap)
 		{
 			x_advance = 0.f;
 			y_advance = 0.f;
@@ -145,14 +199,8 @@ namespace rsx
 
 			while (true)
 			{
-				if (char c = text[i++]; c && (i <= char_limit))
+				if (auto c = text[i++]; c && (i <= char_limit))
 				{
-					if (u8(c) >= char_count)
-					{
-						// Unsupported glyph, render null for now
-						c = ' ';
-					}
-
 					switch (c)
 					{
 					case '\n':
@@ -271,7 +319,7 @@ namespace rsx
 			}
 		}
 
-		std::vector<vertex> font::render_text(const char* text, u16 max_width, bool wrap)
+		std::vector<vertex> font::render_text(const wchar_t* text, u16 max_width, bool wrap)
 		{
 			std::vector<vertex> result;
 			f32 unused_x, unused_y;
@@ -280,13 +328,28 @@ namespace rsx
 			return result;
 		}
 
-		std::pair<f32, f32> font::get_char_offset(const char* text, u16 max_length, u16 max_width, bool wrap)
+		std::pair<f32, f32> font::get_char_offset(const wchar_t* text, u16 max_length, u16 max_width, bool wrap)
 		{
 			std::vector<vertex> unused;
 			f32 loc_x, loc_y;
 
 			render_text_ex(unused, loc_x, loc_y, text, max_length, max_width, wrap);
 			return {loc_x, loc_y};
+		}
+
+		void font::get_glyph_data(std::vector<u8>& bytes) const
+		{
+			const u32 page_size = codepage::bitmap_width * codepage::bitmap_height;
+			const auto size = page_size * m_glyph_map.size();
+
+			bytes.resize(size);
+			u8* data = bytes.data();
+
+			for (const auto& e : m_glyph_map)
+			{
+				std::memcpy(data, e.second->glyph_data.data(), page_size);
+				data += page_size;
+			}
 		}
 	} // namespace overlays
 } // namespace rsx

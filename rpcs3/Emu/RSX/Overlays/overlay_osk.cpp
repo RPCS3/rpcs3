@@ -405,7 +405,7 @@ namespace rsx
 
 		void osk_dialog::on_text_changed()
 		{
-			const auto ws = ascii8_to_utf16(m_preview.text);
+			const auto ws = wstring_to_utf16(m_preview.text);
 			const auto length = (ws.length() + 1) * sizeof(char16_t);
 			memcpy(osk_text, ws.c_str(), length);
 
@@ -420,7 +420,7 @@ namespace rsx
 		void osk_dialog::on_default_callback(const std::string& str)
 		{
 			// Append to output text
-			if (m_preview.text == "[Enter Text]")
+			if (m_preview.text == L"[Enter Text]")
 			{
 				m_preview.caret_position = ::narrow<u16>(str.length());
 				m_preview.set_text(str);
@@ -433,7 +433,7 @@ namespace rsx
 					return;
 				}
 
-				auto new_str = m_preview.text + str;
+				auto new_str = m_preview.text + utf8_to_wstring(str);
 				if (new_str.length() <= char_limit)
 				{
 					m_preview.insert_text(str);
