@@ -274,7 +274,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 
 bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic*/)
 {
-	if (m_expected_size != rpcs3_data.size())
+	if (m_expected_size != rpcs3_data.size() + 0u)
 	{
 		update_log.error("[Auto-updater] Download size mismatch: %d expected: %d", rpcs3_data.size(), m_expected_size);
 		return false;
@@ -340,7 +340,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 		update_log.error("[Auto-updater] Failed to create new AppImage file: %s", replace_path);
 		return false;
 	}
-	if (new_appimage.write(rpcs3_data.data(), rpcs3_data.size()) != rpcs3_data.size())
+	if (new_appimage.write(rpcs3_data.data(), rpcs3_data.size()) != rpcs3_data.size() + 0u)
 	{
 		update_log.error("[Auto-updater] Failed to write new AppImage file: %s", replace_path);
 		return false;

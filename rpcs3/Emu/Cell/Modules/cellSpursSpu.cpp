@@ -262,7 +262,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 		// Calculate the contention (number of SPUs used) for each workload
 		u8 contention[CELL_SPURS_MAX_WORKLOAD];
 		u8 pendingContention[CELL_SPURS_MAX_WORKLOAD];
-		for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+		for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 		{
 			contention[i] = spurs->wklCurrentContention[i] - ctxt->wklLocContention[i];
 
@@ -296,7 +296,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 		{
 			// Caclulate the scheduling weight for each workload
 			u16 maxWeight = 0;
-			for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 			{
 				u16 runnable = ctxt->wklRunnable1 & (0x8000 >> i);
 				u16 wklSignal = spurs->wklSignal1.load() & (0x8000 >> i);
@@ -371,7 +371,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 				contention[wklSelectedId]++;
 			}
 
-			for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 			{
 				spurs->wklCurrentContention[i] = contention[i];
 				spurs->wklPendingContention[i] = spurs->wklPendingContention[i] - ctxt->wklLocPendingContention[i];
@@ -395,7 +395,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 				pendingContention[wklSelectedId]++;
 			}
 
-			for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 			{
 				spurs->wklPendingContention[i] = pendingContention[i];
 				ctxt->wklLocPendingContention[i] = 0;
@@ -409,7 +409,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 		else
 		{
 			// Not called by kernel and no context switch is required
-			for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 			{
 				spurs->wklPendingContention[i] = spurs->wklPendingContention[i] - ctxt->wklLocPendingContention[i];
 				ctxt->wklLocPendingContention[i] = 0;
@@ -446,17 +446,17 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 		// Calculate the contention (number of SPUs used) for each workload
 		u8 contention[CELL_SPURS_MAX_WORKLOAD2];
 		u8 pendingContention[CELL_SPURS_MAX_WORKLOAD2];
-		for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD2; i++)
+		for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD2; i++)
 		{
 			contention[i] = spurs->wklCurrentContention[i & 0x0F] - ctxt->wklLocContention[i & 0x0F];
-			contention[i] = i < CELL_SPURS_MAX_WORKLOAD ? contention[i] & 0x0F : contention[i] >> 4;
+			contention[i] = i + 0u < CELL_SPURS_MAX_WORKLOAD ? contention[i] & 0x0F : contention[i] >> 4;
 
 			// If this is a poll request then the number of SPUs pending to context switch is also added to the contention presumably
 			// to prevent unnecessary jumps to the kernel
 			if (isPoll)
 			{
 				pendingContention[i] = spurs->wklPendingContention[i & 0x0F] - ctxt->wklLocPendingContention[i & 0x0F];
-				pendingContention[i] = i < CELL_SPURS_MAX_WORKLOAD ? pendingContention[i] & 0x0F : pendingContention[i] >> 4;
+				pendingContention[i] = i + 0u < CELL_SPURS_MAX_WORKLOAD ? pendingContention[i] & 0x0F : pendingContention[i] >> 4;
 				if (i != ctxt->wklCurrentId)
 				{
 					contention[i] += pendingContention[i];
@@ -483,9 +483,9 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 		{
 			// Caclulate the scheduling weight for each workload
 			u8 maxWeight = 0;
-			for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD2; i++)
+			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD2; i++)
 			{
-				auto j = i & 0x0F;
+				u32 j = i & 0x0f;
 				u16 runnable = i < CELL_SPURS_MAX_WORKLOAD ? ctxt->wklRunnable1 & (0x8000 >> j) : ctxt->wklRunnable2 & (0x8000 >> j);
 				u8  priority = i < CELL_SPURS_MAX_WORKLOAD ? ctxt->priority[j] & 0x0F : ctxt->priority[j] >> 4;
 				u8  maxContention = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklMaxContention[j] & 0x0F : spurs->wklMaxContention[j] >> 4;
@@ -551,7 +551,7 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 				contention[wklSelectedId]++;
 			}
 
-			for (auto i = 0; i < (CELL_SPURS_MAX_WORKLOAD2 >> 1); i++)
+			for (u32 i = 0; i < (CELL_SPURS_MAX_WORKLOAD2 >> 1); i++)
 			{
 				spurs->wklCurrentContention[i] = contention[i] | (contention[i + 0x10] << 4);
 				spurs->wklPendingContention[i] = spurs->wklPendingContention[i] - ctxt->wklLocPendingContention[i];
@@ -571,7 +571,7 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 				pendingContention[wklSelectedId]++;
 			}
 
-			for (auto i = 0; i < (CELL_SPURS_MAX_WORKLOAD2 >> 1); i++)
+			for (u32 i = 0; i < (CELL_SPURS_MAX_WORKLOAD2 >> 1); i++)
 			{
 				spurs->wklPendingContention[i] = pendingContention[i] | (pendingContention[i + 0x10] << 4);
 				ctxt->wklLocPendingContention[i] = 0;
@@ -582,7 +582,7 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 		else
 		{
 			// Not called by kernel and no context switch is required
-			for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 			{
 				spurs->wklPendingContention[i] = spurs->wklPendingContention[i] - ctxt->wklLocPendingContention[i];
 				ctxt->wklLocPendingContention[i] = 0;

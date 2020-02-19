@@ -258,7 +258,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
 
-	if (vpath.find_first_not_of('/') == -1)
+	if (vpath.find_first_not_of('/') == umax)
 	{
 		return {CELL_EISDIR, path};
 	}
@@ -764,7 +764,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
 
-	if (vpath.find_first_not_of('/') == -1)
+	if (vpath.find_first_not_of('/') == umax)
 	{
 		*sb = {CELL_FS_S_IFDIR | 0444};
 		return CELL_OK;
@@ -898,7 +898,7 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == -1)
+	if (vpath.find_first_not_of('/') == umax)
 	{
 		return {CELL_EEXIST, path};
 	}
@@ -945,7 +945,7 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 	const std::string_view vto = to.get_ptr();
 	const std::string local_to = vfs::get(vto);
 
-	if (vfrom.find_first_not_of('/') == -1 || vto.find_first_not_of('/') == -1)
+	if (vfrom.find_first_not_of('/') == umax || vto.find_first_not_of('/') == umax)
 	{
 		return CELL_EPERM;
 	}
@@ -1000,7 +1000,7 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == -1)
+	if (vpath.find_first_not_of('/') == umax)
 	{
 		return {CELL_EPERM, path};
 	}
@@ -1052,7 +1052,7 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 
 	const std::size_t dev_start = vpath.find_first_not_of('/');
 
-	if (dev_start == -1)
+	if (dev_start == umax)
 	{
 		return {CELL_EISDIR, path};
 	}
@@ -1540,7 +1540,7 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 
 	const u64 result = file->file.seek(offset, static_cast<fs::seek_mode>(whence));
 
-	if (result == -1)
+	if (result == umax)
 	{
 		switch (auto error = fs::g_tls_error)
 		{
@@ -1624,7 +1624,7 @@ error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == -1)
+	if (vpath.find_first_not_of('/') == umax)
 	{
 		return {CELL_EISDIR, path};
 	}
@@ -1672,7 +1672,7 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == -1)
+	if (vpath.find_first_not_of('/') == umax)
 	{
 		return {CELL_EISDIR, path};
 	}
@@ -1858,7 +1858,7 @@ error_code sys_fs_utime(ppu_thread& ppu, vm::cptr<char> path, vm::cptr<CellFsUti
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == -1)
+	if (vpath.find_first_not_of('/') == umax)
 	{
 		return {CELL_EISDIR, path};
 	}

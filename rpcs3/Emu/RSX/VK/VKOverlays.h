@@ -288,7 +288,7 @@ namespace vk
 
 			program->bind_uniform({ m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u) }, 0, m_descriptor_set);
 
-			for (int n = 0; n < src.size(); ++n)
+			for (uint n = 0; n < src.size(); ++n)
 			{
 				VkDescriptorImageInfo info = { m_sampler->value, src[n]->value, src[n]->image()->current_layout };
 				program->bind_uniform(info, "fs" + std::to_string(n), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_descriptor_set);

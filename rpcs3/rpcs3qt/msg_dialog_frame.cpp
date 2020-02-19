@@ -218,7 +218,7 @@ void msg_dialog_frame::ProgressBarReset(u32 index)
 		m_gauge2->setValue(0);
 	}
 
-	if (index == taskbar_index)
+	if (index == taskbar_index + 0u)
 	{
 #ifdef _WIN32
 		if (m_tb_progress)
@@ -248,7 +248,7 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 		m_gauge2->setValue(std::min(m_gauge2->value() + static_cast<int>(delta), m_gauge2->maximum()));
 	}
 
-	if (index == taskbar_index || taskbar_index == -1)
+	if (index == taskbar_index + 0u || taskbar_index == -1)
 	{
 #ifdef _WIN32
 		if (m_tb_progress)
@@ -281,7 +281,7 @@ void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
 
 	bool set_taskbar_limit = false;
 
-	if (index == taskbar_index)
+	if (index == taskbar_index + 0u)
 	{
 		m_gauge_max = limit;
 		set_taskbar_limit = true;

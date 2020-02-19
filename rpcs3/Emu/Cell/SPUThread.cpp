@@ -80,7 +80,7 @@ static FORCE_INLINE rsx::thread* get_rsx_if_needs_res_pause(u32 addr)
 
 	ASSUME(render);
 
-	if (render->iomap_table.io[addr >> 20] == -1) [[likely]]
+	if (render->iomap_table.io[addr >> 20].load() == umax) [[likely]]
 	{
 		return {};
 	}

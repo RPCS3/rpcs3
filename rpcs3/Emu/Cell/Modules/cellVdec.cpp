@@ -227,15 +227,15 @@ struct vdec_context final
 
 					packet.data = vm::_ptr<u8>(au_addr);
 					packet.size = au_size;
-					packet.pts = au_pts != -1 ? au_pts : INT64_MIN;
-					packet.dts = au_dts != -1 ? au_dts : INT64_MIN;
+					packet.pts = au_pts != umax ? au_pts : INT64_MIN;
+					packet.dts = au_dts != umax ? au_dts : INT64_MIN;
 
-					if (next_pts == 0 && au_pts != -1)
+					if (next_pts == 0 && au_pts != umax)
 					{
 						next_pts = au_pts;
 					}
 
-					if (next_dts == 0 && au_dts != -1)
+					if (next_dts == 0 && au_dts != umax)
 					{
 						next_dts = au_dts;
 					}
@@ -528,7 +528,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 			{
 				return CELL_VDEC_ERROR_ARG;
 			}
-	
+
 			memSize = new_sdk ? 0xD2F40B : 0xEB990B;
 			break;
 		}

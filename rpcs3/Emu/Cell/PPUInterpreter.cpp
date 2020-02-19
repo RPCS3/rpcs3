@@ -4251,7 +4251,7 @@ bool ppu_interpreter::SRAW(ppu_thread& ppu, ppu_opcode_t op)
 	else
 	{
 		ppu.gpr[op.ra] = RS >> shift;
-		ppu.xer.ca = (RS < 0) && ((ppu.gpr[op.ra] << shift) != RS);
+		ppu.xer.ca = (RS < 0) && ((ppu.gpr[op.ra] << shift) != static_cast<u64>(RS));
 	}
 
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
@@ -4270,7 +4270,7 @@ bool ppu_interpreter::SRAD(ppu_thread& ppu, ppu_opcode_t op)
 	else
 	{
 		ppu.gpr[op.ra] = RS >> shift;
-		ppu.xer.ca = (RS < 0) && ((ppu.gpr[op.ra] << shift) != RS);
+		ppu.xer.ca = (RS < 0) && ((ppu.gpr[op.ra] << shift) != static_cast<u64>(RS));
 	}
 
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
@@ -4296,7 +4296,7 @@ bool ppu_interpreter::SRAWI(ppu_thread& ppu, ppu_opcode_t op)
 {
 	s32 RS = static_cast<u32>(ppu.gpr[op.rs]);
 	ppu.gpr[op.ra] = RS >> op.sh32;
-	ppu.xer.ca = (RS < 0) && (static_cast<u32>(ppu.gpr[op.ra] << op.sh32) != RS);
+	ppu.xer.ca = (RS < 0) && (static_cast<u32>(ppu.gpr[op.ra] << op.sh32) != static_cast<u32>(RS));
 
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
@@ -4307,7 +4307,7 @@ bool ppu_interpreter::SRADI(ppu_thread& ppu, ppu_opcode_t op)
 	auto sh = op.sh64;
 	s64 RS = ppu.gpr[op.rs];
 	ppu.gpr[op.ra] = RS >> sh;
-	ppu.xer.ca = (RS < 0) && ((ppu.gpr[op.ra] << sh) != RS);
+	ppu.xer.ca = (RS < 0) && ((ppu.gpr[op.ra] << sh) != static_cast<u64>(RS));
 
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;

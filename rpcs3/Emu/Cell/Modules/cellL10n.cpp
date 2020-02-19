@@ -237,7 +237,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 		size_t dstLen = *dst_len;
 		size_t ictd = iconv(ict, const_cast<char**>(reinterpret_cast<const char**>(&src)), &srcLen, reinterpret_cast<char**>(&dst), &dstLen);
 		*dst_len -= dstLen;
-		if (ictd == -1)
+		if (ictd == umax)
 		{
 			if (errno == EILSEQ)
 				retValue = SRCIllegal;  //Invalid multi-byte sequence
@@ -262,7 +262,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 			size_t bufLeft = sizeof(buf);
 			size_t ictd = iconv(ict, const_cast<char**>(reinterpret_cast<const char**>(&src)), &srcLen, reinterpret_cast<char**>(&dst), &bufLeft);
 			*dst_len += sizeof(buf) - bufLeft;
-			if (ictd == -1 && errno != E2BIG)
+			if (ictd == umax && errno != E2BIG)
 			{
 				if (errno == EILSEQ)
 					retValue = SRCIllegal;

@@ -251,7 +251,7 @@ namespace rsx
 			if (auto err = run_input_loop())
 				return err;
 
-			if (return_code == entries.size() && !newpos_head)
+			if (return_code + 0u == entries.size() && !newpos_head)
 				return selection_code::new_save;
 			if (return_code >= 0 && newpos_head)
 				return return_code - 1;

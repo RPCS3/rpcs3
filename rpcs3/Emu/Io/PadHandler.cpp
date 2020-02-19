@@ -300,7 +300,7 @@ void PadHandlerBase::init_configs()
 {
 	int index = 0;
 
-	for (int i = 0; i < MAX_GAMEPADS; i++)
+	for (u32 i = 0; i < MAX_GAMEPADS; i++)
 	{
 		if (g_cfg_input.player[i]->handler == m_type)
 		{

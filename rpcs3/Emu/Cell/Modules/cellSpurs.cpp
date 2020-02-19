@@ -20,18 +20,7 @@ LOG_CHANNEL(cellSpurs);
 
 error_code sys_spu_image_close(ppu_thread&, vm::ptr<sys_spu_image> img);
 
-// TODO
-struct cell_error_t
-{
-	s32 value;
-
-	explicit operator bool() const
-	{
-		return (value < 0);
-	}
-};
-
-#define CHECK_SUCCESS(expr) if (cell_error_t error{expr}) fmt::throw_exception("Failure: %s -> 0x%x" HERE, #expr, error.value)
+#define CHECK_SUCCESS(expr) if (error_code error = (expr); error < 0) fmt::throw_exception("Failure: %s -> 0x%x" HERE, #expr, error.value)
 
 //----------------------------------------------------------------------------
 // Function prototypes
@@ -428,7 +417,7 @@ s32 _spurs::attach_lv2_eq(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 queue, 
 
 	if (s32 res = sys_spu_thread_group_connect_event_all_threads(ppu, spurs->spuTG, queue, portMask, port))
 	{
-		if (res == CELL_EISCONN)
+		if (res + 0u == CELL_EISCONN)
 		{
 			return CELL_SPURS_CORE_ERROR_BUSY;
 		}
@@ -577,7 +566,7 @@ void _spurs::handler_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 		if (s32 rc = sys_spu_thread_group_join(ppu, spurs->spuTG, vm::var<u32>{}, vm::var<u32>{}))
 		{
-			if (rc == CELL_ESTAT)
+			if (rc + 0u == CELL_ESTAT)
 			{
 				return sys_ppu_thread_exit(ppu, 0);
 			}
@@ -850,7 +839,7 @@ s32 _spurs::finalize_spu(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 			if (s32 rc = sys_spu_thread_group_destroy(ppu, spurs->spuTG))
 			{
-				if (rc == CELL_EBUSY)
+				if (rc + 0u == CELL_EBUSY)
 				{
 					continue;
 				}
@@ -2817,7 +2806,7 @@ s32 cellSpursEventFlagSet(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFlag
 				}
 
 				auto rc = _cellSpursSendSignal(ppu, *taskset, eventFlag->waitingTaskId[i]);
-				if (rc == CELL_SPURS_TASK_ERROR_INVAL || rc == CELL_SPURS_TASK_ERROR_STAT)
+				if (rc + 0u == CELL_SPURS_TASK_ERROR_INVAL || rc + 0u == CELL_SPURS_TASK_ERROR_STAT)
 				{
 					return CELL_SPURS_TASK_ERROR_FATAL;
 				}
@@ -3533,7 +3522,7 @@ s32 _spurs::task_start(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, u32 t
 
 	if (s32 rc = cellSpursWakeUp(ppu, taskset->spurs))
 	{
-		if (rc == CELL_SPURS_POLICY_MODULE_ERROR_STAT)
+		if (rc + 0u == CELL_SPURS_POLICY_MODULE_ERROR_STAT)
 		{
 			rc = CELL_SPURS_TASK_ERROR_STAT;
 		}
@@ -3610,7 +3599,7 @@ s32 _cellSpursSendSignal(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, u32
 	{
 		cellSpursSendWorkloadSignal(taskset->spurs, taskset->wid);
 		auto rc = cellSpursWakeUp(ppu, taskset->spurs);
-		if (rc == CELL_SPURS_POLICY_MODULE_ERROR_STAT)
+		if (rc + 0u == CELL_SPURS_POLICY_MODULE_ERROR_STAT)
 		{
 			return CELL_SPURS_TASK_ERROR_STAT;
 		}

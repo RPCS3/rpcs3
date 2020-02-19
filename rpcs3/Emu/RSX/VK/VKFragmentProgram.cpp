@@ -102,7 +102,7 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 	u8 output_index = 0;
 	const bool float_type = (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) || !device_props.has_native_half_support;
 	const auto reg_type = float_type ? "vec4" : getHalfTypeName(4);
-	for (int i = 0; i < std::size(table); ++i)
+	for (uint i = 0; i < std::size(table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))
 		{

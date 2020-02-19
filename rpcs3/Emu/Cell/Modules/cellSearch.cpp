@@ -60,7 +60,7 @@ struct search_info
 	vm::ptr<CellSearchSystemCallback> func;
 	vm::ptr<void> userData;
 
-	atomic_t<search_state> state = search_state::not_initialized; 
+	atomic_t<search_state> state = search_state::not_initialized;
 
 	shared_mutex links_mutex;
 	std::unordered_map<std::string, std::string> content_links;
@@ -653,7 +653,7 @@ error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, v
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	if (offset >= 0 && offset < searchObject->content_ids.size())
+	if (offset >= 0 && offset + 0u < searchObject->content_ids.size())
 	{
 		const auto& content_id = searchObject->content_ids[offset];
 		const auto& content_info = content_id.second;
@@ -842,7 +842,7 @@ error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm:
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	if (offset > -1 && offset < searchObject->content_ids.size())
+	if (offset >= 0 && offset + 0u < searchObject->content_ids.size())
 	{
 		auto& content_id = searchObject->content_ids.at(offset);
 		const u128 content_id_128 = content_id.first;

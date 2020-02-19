@@ -1023,7 +1023,7 @@ namespace rsx
 
 		// NOTE: surface_target_a is index 1 but is not MRT since only one surface is active
 		bool color_write_enabled = false;
-		for (int i = 0; i < mrt_buffers.size(); ++i)
+		for (uint i = 0; i < mrt_buffers.size(); ++i)
 		{
 			if (rsx::method_registers.color_write_enabled(i))
 			{
@@ -3089,7 +3089,7 @@ namespace rsx
 
 			if (!sync_address)
 			{
-				if (hint || ptimer->async_tasks_pending >= max_safe_queue_depth)
+				if (hint || ptimer->async_tasks_pending + 0u >= max_safe_queue_depth)
 				{
 					// Prepare the whole queue for reading. This happens when zcull activity is disabled or queue is too long
 					for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); ++It)

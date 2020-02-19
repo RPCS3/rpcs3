@@ -1389,7 +1389,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			error_code sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
 
 			// If we fail due to being busy, wait a bit and try again.
-			while (sending_error == CELL_EBUSY)
+			while (static_cast<u32>(sending_error) == CELL_EBUSY)
 			{
 				if (cpu->id_type() == 1)
 				{
@@ -1411,7 +1411,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 				vm_log.fatal("Unknown error %x while trying to pass page fault.", +sending_error);
 				cpu->state += cpu_flag::dbg_pause;
 			}
-	
+
 			// Wait until the thread is recovered
 			for (std::shared_lock pf_lock(pf_events->pf_mutex);
 				pf_events->events.count(static_cast<u32>(data2)) && !sending_error;)

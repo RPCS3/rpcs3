@@ -2206,7 +2206,7 @@ public:
 			{
 				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &m_last_binding);
 
-				if (m_last_binding != new_binding.id())
+				if (m_last_binding + 0u != new_binding.id())
 					new_binding.bind();
 				else
 					reset = false;

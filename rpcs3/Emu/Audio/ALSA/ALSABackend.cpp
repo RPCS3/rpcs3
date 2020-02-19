@@ -155,7 +155,7 @@ bool ALSABackend::AddData(const void* src, u32 num_samples)
 		return false;
 	}
 
-	if (res != num_frames)
+	if (res + 0u != num_frames)
 	{
 		ALSA.warning("Error (%d)", res);
 		return false;

@@ -280,8 +280,8 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 	switch (videoOut)
 	{
 	case CELL_VIDEO_OUT_PRIMARY: return not_an_error(
-		resolutionId == g_video_out_resolution_id.at(g_cfg.video.resolution)
-		&& (aspect == CELL_VIDEO_OUT_ASPECT_AUTO || aspect == g_video_out_aspect_id.at(g_cfg.video.aspect_ratio))
+		resolutionId == g_video_out_resolution_id.at(g_cfg.video.resolution) + 0u
+		&& (aspect == CELL_VIDEO_OUT_ASPECT_AUTO || aspect == g_video_out_aspect_id.at(g_cfg.video.aspect_ratio) + 0u)
 	);
 	case CELL_VIDEO_OUT_SECONDARY: return not_an_error(0);
 	}

@@ -349,8 +349,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	// Check swapchain condition/status
 	if (!m_swapchain->supports_automatic_wm_reports())
 	{
-		if (m_swapchain_dims.width != m_frame->client_width() ||
-			m_swapchain_dims.height != m_frame->client_height())
+		if (m_swapchain_dims.width != m_frame->client_width() + 0u ||
+			m_swapchain_dims.height != m_frame->client_height() + 0u)
 		{
 			swapchain_unavailable = true;
 		}

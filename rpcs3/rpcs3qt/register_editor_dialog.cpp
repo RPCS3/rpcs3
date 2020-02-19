@@ -98,7 +98,7 @@ void register_editor_dialog::updateRegister(const QString& text)
 		auto& ppu = *static_cast<ppu_thread*>(cpu.get());
 
 		std::size_t first_brk = reg.find('[');
-		if (first_brk != -1)
+		if (first_brk != umax)
 		{
 			long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
 			if (reg.starts_with("GPR")) str = fmt::format("%016llx", ppu.gpr[reg_index]);
@@ -140,7 +140,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		const auto first_brk = reg.find('[');
 		try
 		{
-			if (first_brk != -1)
+			if (first_brk != umax)
 			{
 				const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
 				if (reg.starts_with("GPR") || reg.starts_with("FPR"))
@@ -185,7 +185,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		const auto first_brk = reg.find('[');
 		try
 		{
-			if (first_brk != -1)
+			if (first_brk != umax)
 			{
 				const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());
 				if (reg.starts_with("GPR"))

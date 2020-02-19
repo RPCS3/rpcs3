@@ -297,7 +297,7 @@ namespace rsx
 			else
 				progress_2.inc(value);
 
-			if (index == taskbar_index || taskbar_index == -1)
+			if (index == static_cast<u32>(taskbar_index) || taskbar_index == -1)
 				Emu.GetCallbacks().handle_taskbar_progress(1, static_cast<s32>(value));
 
 			return CELL_OK;
@@ -328,7 +328,7 @@ namespace rsx
 			else
 				progress_2.set_limit(static_cast<f32>(limit));
 
-			if (index == taskbar_index)
+			if (index == static_cast<u32>(taskbar_index))
 			{
 				taskbar_limit = limit;
 				Emu.GetCallbacks().handle_taskbar_progress(2, taskbar_limit);

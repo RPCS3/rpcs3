@@ -304,7 +304,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 				continue;
 			}
 
-			const bool first = ls_off == -8192;
+			const bool first = ls_off == u32{} - 8192;
 
 			// Ensure small distance for disp8*N
 			if (j - ls_off >= 8192)
@@ -429,7 +429,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 					continue;
 				}
 
-				const bool first = ls_off == -4096;
+				const bool first = ls_off == u32{0} - 4096;
 
 				// Ensure small distance for disp8*N
 				if (j - ls_off >= 4096)

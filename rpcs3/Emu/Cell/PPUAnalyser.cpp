@@ -64,7 +64,7 @@ void ppu_module::validate(u32 reloc)
 			const u32 addr = func["addr"].as<u32>(-1);
 			const u32 size = func["size"].as<u32>(0);
 
-			if (addr != -1 && index < funcs.size())
+			if (addr != umax && index < funcs.size())
 			{
 				u32 found = funcs[index].addr - reloc;
 
@@ -567,7 +567,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 
 		if (func.addr)
 		{
-			if (toc && func.toc && func.toc != -1 && func.toc != toc)
+			if (toc && func.toc && func.toc != umax && func.toc != toc)
 			{
 				func.toc = -1;
 			}
@@ -592,7 +592,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 	// Register new TOC and find basic set of functions
 	auto add_toc = [&](u32 toc)
 	{
-		if (!toc || toc == -1 || !TOCs.emplace(toc).second)
+		if (!toc || toc == umax || !TOCs.emplace(toc).second)
 		{
 			return;
 		}
@@ -719,7 +719,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 	// Clean TOCs
 	for (auto&& pair : fmap)
 	{
-		if (pair.second.toc == -1)
+		if (pair.second.toc == umax)
 		{
 			pair.second.toc = 0;
 		}
@@ -842,7 +842,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		ppu_function& func = func_queue[i];
 
 		// Fixup TOCs
-		if (func.toc && func.toc != -1)
+		if (func.toc && func.toc != umax)
 		{
 			for (u32 addr : func.callers)
 			{
@@ -989,13 +989,13 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 				{
 					auto& new_func = add_func(target, 0, func.addr);
 
-					if (func.toc && func.toc != -1 && new_func.toc == 0)
+					if (func.toc && func.toc != umax && new_func.toc == 0)
 					{
 						const u32 toc = func.toc + toc_add;
 						add_toc(toc);
 						add_func(new_func.addr, toc, 0);
 					}
-					else if (new_func.toc && new_func.toc != -1 && func.toc == 0)
+					else if (new_func.toc && new_func.toc != umax && func.toc == 0)
 					{
 						const u32 toc = new_func.toc - toc_add;
 						add_toc(toc);
@@ -1036,13 +1036,13 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 				{
 					auto& new_func = add_func(target, 0, func.addr);
 
-					if (func.toc && func.toc != -1 && new_func.toc == 0)
+					if (func.toc && func.toc != umax && new_func.toc == 0)
 					{
 						const u32 toc = func.toc + toc_add;
 						add_toc(toc);
 						add_func(new_func.addr, toc, 0);
 					}
-					else if (new_func.toc && new_func.toc != -1 && func.toc == 0)
+					else if (new_func.toc && new_func.toc != umax && func.toc == 0)
 					{
 						const u32 toc = new_func.toc - toc_add;
 						add_toc(toc);
@@ -2262,7 +2262,7 @@ void ppu_acontext::RLWIMI(ppu_opcode_t op)
 		max = utils::rol64(static_cast<u32>(max) | max << 32, op.sh32) & mask;
 	}
 
-	if (mask != -1)
+	if (mask != umax)
 	{
 		// Insertion
 		min |= gpr[op.ra].bmin & ~mask;
@@ -2484,7 +2484,7 @@ void ppu_acontext::RLDIMI(ppu_opcode_t op)
 	min = utils::rol64(min, sh) & mask;
 	max = utils::rol64(max, sh) & mask;
 
-	if (mask != -1)
+	if (mask != umax)
 	{
 		// Insertion
 		min |= gpr[op.ra].bmin & ~mask;

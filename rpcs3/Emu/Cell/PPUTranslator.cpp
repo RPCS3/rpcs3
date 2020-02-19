@@ -260,7 +260,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 	if (!indirect)
 	{
-		if ((!m_reloc && target < 0x10000) || target >= -0x10000)
+		if ((!m_reloc && target < 0x10000) || target >= u64{} - 0x10000)
 		{
 			Trap();
 			return;
@@ -1943,7 +1943,7 @@ void PPUTranslator::RLWIMI(ppu_opcode_t op)
 		result = m_ir->CreateAnd(RotateLeft(DuplicateExt(GetGpr(op.rs, 32)), op.sh32), mask);
 	}
 
-	if (mask != -1)
+	if (mask != umax)
 	{
 		// Insertion
 		result = m_ir->CreateOr(result, m_ir->CreateAnd(GetGpr(op.ra), ~mask));
@@ -2193,7 +2193,7 @@ void PPUTranslator::RLDIMI(ppu_opcode_t op)
 		result = m_ir->CreateAnd(RotateLeft(GetGpr(op.rs), sh), mask);
 	}
 
-	if (mask != -1)
+	if (mask != umax)
 	{
 		// Insertion
 		result = m_ir->CreateOr(result, m_ir->CreateAnd(GetGpr(op.ra), ~mask));
@@ -2303,7 +2303,7 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 
 		const u64 pos = countLeadingZeros<u32>(op.crm, ZB_Width) - 24;
 
-		if (pos >= 8 || 0x80 >> pos != op.crm)
+		if (pos >= 8 || 0x80u >> pos != op.crm)
 		{
 			CompilationError("MFOCRF: Undefined behaviour");
 			SetGpr(op.rd, UndefValue::get(GetType<u64>()));
@@ -2565,7 +2565,7 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 		// MTOCRF
 		const u64 pos = countLeadingZeros<u32>(op.crm, ZB_Width) - 24;
 
-		if (pos >= 8 || 128 >> pos != op.crm)
+		if (pos >= 8 || 0x80u >> pos != op.crm)
 		{
 			CompilationError("MTOCRF: Undefined behaviour");
 			return;

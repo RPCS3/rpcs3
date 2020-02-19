@@ -2342,7 +2342,7 @@ bool VKGSRender::load_program()
 	if (rsx::method_registers.cull_face_enabled())
 		properties.state.enable_cull_face(vk::get_cull_face(rsx::method_registers.cull_face_mode()));
 
-	for (int index = 0; index < m_draw_buffers.size(); ++index)
+	for (uint index = 0; index < m_draw_buffers.size(); ++index)
 	{
 		bool color_mask_b = rsx::method_registers.color_mask_b(index);
 		bool color_mask_g = rsx::method_registers.color_mask_g(index);

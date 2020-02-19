@@ -1338,7 +1338,7 @@ extern void ppu_initialize(const ppu_module& info)
 				ppu_register_function_at(block.first, block.second, nullptr);
 			}
 
-			if (g_cfg.core.ppu_debug && func.size && func.toc != -1)
+			if (g_cfg.core.ppu_debug && func.size && func.toc != umax)
 			{
 				s_ppu_toc->emplace(func.addr, func.toc);
 				ppu_ref<u32>(func.addr) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_check_toc));

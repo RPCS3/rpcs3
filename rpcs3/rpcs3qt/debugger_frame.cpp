@@ -272,7 +272,7 @@ void debugger_frame::UpdateUI()
 
 	if (!cpu)
 	{
-		if (m_last_pc != -1 || m_last_stat)
+		if (m_last_pc != umax || m_last_stat)
 		{
 			m_last_pc = -1;
 			m_last_stat = 0;
@@ -392,7 +392,7 @@ void debugger_frame::OnSelectUnit()
 void debugger_frame::DoUpdate()
 {
 	// Check if we need to disable a step over bp
-	if (m_last_step_over_breakpoint != -1 && GetPc() == m_last_step_over_breakpoint)
+	if (m_last_step_over_breakpoint != umax && GetPc() == m_last_step_over_breakpoint)
 	{
 		m_breakpoint_handler->RemoveBreakpoint(m_last_step_over_breakpoint);
 		m_last_step_over_breakpoint = -1;
@@ -589,7 +589,7 @@ void debugger_frame::DoStep(bool stepOver)
 
 				// Undefine previous step over breakpoint if it hasnt been already
 				// This can happen when the user steps over a branch that doesn't return to itself
-				if (m_last_step_over_breakpoint != -1)
+				if (m_last_step_over_breakpoint != umax)
 				{
 					m_breakpoint_handler->RemoveBreakpoint(next_instruction_pc);
 				}

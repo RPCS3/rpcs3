@@ -438,7 +438,7 @@ void log_frame::UpdateUI()
 		buf.resize(size);
 		buf.resize(m_tty_file.read(&buf.front(), buf.size()));
 
-		if (buf.find_first_of('\0') != -1)
+		if (buf.find_first_of('\0') != umax)
 		{
 			m_tty_file.seek(s64{0} - buf.size(), fs::seek_mode::seek_cur);
 			break;

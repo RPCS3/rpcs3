@@ -633,7 +633,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 
 void keyboard_pad_handler::ThreadProc()
 {
-	for (int i = 0; i < bindings.size(); i++)
+	for (uint i = 0; i < bindings.size(); i++)
 	{
 		if (last_connection_status[i] == false)
 		{

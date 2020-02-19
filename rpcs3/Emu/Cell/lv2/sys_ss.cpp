@@ -69,7 +69,7 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 {
 	sys_ss.todo("sys_ss_access_control_engine(pkg_id=0x%llx, a2=0x%llx, a3=0x%llx)", pkg_id, a2, a3);
 
-	const u64 authid = g_ps3_process_info.self_info.valid ? 
+	const u64 authid = g_ps3_process_info.self_info.valid ?
 		g_ps3_process_info.self_info.app_info.authid : 0;
 
 	switch (pkg_id)
@@ -86,7 +86,7 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 			return CELL_ESRCH;
 		}
 
-		verify(HERE), a2 == process_getpid();
+		verify(HERE), a2 == static_cast<u64>(process_getpid());
 		vm::write64(vm::cast(a3), authid);
 		break;
 	}

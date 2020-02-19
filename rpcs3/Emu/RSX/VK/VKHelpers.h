@@ -1827,7 +1827,7 @@ private:
 			if (fbo_images.size() != attachments.size())
 				return false;
 
-			for (int n = 0; n < fbo_images.size(); ++n)
+			for (uint n = 0; n < fbo_images.size(); ++n)
 			{
 				if (attachments[n]->info.image != fbo_images[n]->value ||
 					attachments[n]->info.format != fbo_images[n]->info.format)

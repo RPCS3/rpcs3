@@ -30,7 +30,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 			// Joinable, not joined
 			value = -3;
 		}
-		else if (value != -1)
+		else if (value != umax)
 		{
 			// Joinable, joined
 			value = -2;
@@ -39,7 +39,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 		// Detached otherwise
 	});
 
-	if (jid == -1)
+	if (jid == umax)
 	{
 		// Detach detached thread, id will be removed on cleanup
 		static_cast<named_thread<ppu_thread>&>(ppu) = thread_state::detached;
@@ -76,13 +76,13 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	{
 		CellError result = thread.joiner.atomic_op([&](u32& value) -> CellError
 		{
-			if (value == -3)
+			if (value == 0u - 3)
 			{
 				value = -2;
 				return CELL_EBUSY;
 			}
 
-			if (value == -2)
+			if (value == 0u - 2)
 			{
 				return CELL_ESRCH;
 			}
@@ -149,18 +149,18 @@ error_code sys_ppu_thread_detach(u32 thread_id)
 	{
 		return thread.joiner.atomic_op([&](u32& value) -> CellError
 		{
-			if (value == -3)
+			if (value == 0u - 3)
 			{
 				value = -2;
 				return CELL_EAGAIN;
 			}
 
-			if (value == -2)
+			if (value == 0u - 2)
 			{
 				return CELL_ESRCH;
 			}
 
-			if (value == -1)
+			if (value == umax)
 			{
 				return CELL_EINVAL;
 			}
@@ -202,7 +202,7 @@ error_code sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinabl
 		return CELL_EFAULT;
 	}
 
-	*isjoinable = ppu.joiner != -1;
+	*isjoinable = ppu.joiner != umax;
 	return CELL_OK;
 }
 

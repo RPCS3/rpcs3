@@ -332,7 +332,7 @@ bool stx::multi_cas_record::commit() const noexcept
 			cmp.m_data[0] = item.m_old;
 			cmp.m_data[1] = id;
 
-			if (item.m_addr->load() == item.m_old && atomic_storage<s64>::load(item.m_addr->m_data[1]) == id)
+			if (item.m_addr->load() == item.m_old && atomic_storage<s64>::load(item.m_addr->m_data[1]) == static_cast<s64>(id))
 			{
 				if (cmpxchg16(item.m_addr->m_data, cmp.m_data, 0, item.m_new))
 				{
@@ -403,7 +403,7 @@ bool stx::multi_cas_record::commit() const noexcept
 			{
 				return true;
 			}
-			else if (cmp.m_data[0] != m_list[0].m_old)
+			else if (cmp.m_data[0] != static_cast<s64>(m_list[0].m_old))
 			{
 				return false;
 			}
@@ -472,7 +472,7 @@ bool stx::multi_cas_record::commit() const noexcept
 			{
 				break;
 			}
-			else if (cmp.m_data[0] != m_list[i].m_old)
+			else if (cmp.m_data[0] != static_cast<s64>(m_list[i].m_old))
 			{
 				s_records[id].m_state |= s_state_failure;
 				break;
@@ -514,7 +514,7 @@ bool stx::multi_cas_record::commit() const noexcept
 		cmp.m_data[0] = item.m_old;
 		cmp.m_data[1] = id;
 
-		if (item.m_addr->load() == item.m_old && atomic_storage<s64>::load(item.m_addr->m_data[1]) == id)
+		if (item.m_addr->load() == item.m_old && atomic_storage<s64>::load(item.m_addr->m_data[1]) == static_cast<s64>(id))
 		{
 			// Restore old or set new
 			if (cmpxchg16(item.m_addr->m_data, cmp.m_data, 0, ok ? item.m_new : item.m_old))

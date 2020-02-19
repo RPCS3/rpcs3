@@ -596,7 +596,7 @@ void trophy_manager_dialog::ApplyFilter()
 		return;
 
 	const int db_pos = m_game_combo->currentData().toInt();
-	if (db_pos >= m_trophies_db.size() || !m_trophies_db[db_pos])
+	if (db_pos + 0u >= m_trophies_db.size() || !m_trophies_db[db_pos])
 		return;
 
 	const auto trop_usr = m_trophies_db[db_pos]->trop_usr.get();

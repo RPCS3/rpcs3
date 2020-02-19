@@ -217,7 +217,7 @@ namespace rsx
 
 			const u32 addr = rsx->iomap_table.get_addr(0xf100000 + (index * 0x40));
 
-			verify(HERE), addr != -1;
+			verify(HERE), addr != umax;
 
 			vm::_ref<atomic_t<RsxNotify>>(addr).store(
 			{
@@ -1346,7 +1346,7 @@ namespace rsx
 			u32 dst_offset = method_registers.nv0039_output_offset();
 			u32 dst_dma = method_registers.nv0039_output_location();
 
-			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch == line_length);
+			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch + 0u == line_length);
 			const auto read_address = get_address(src_offset, src_dma, HERE);
 			const auto write_address = get_address(dst_offset, dst_dma, HERE);
 			const auto data_length = in_pitch * (line_count - 1) + line_length;

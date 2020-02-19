@@ -163,7 +163,7 @@ void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 	device->small_motor = smallMotor;
 
 	int index = 0;
-	for (int i = 0; i < MAX_GAMEPADS; i++)
+	for (uint i = 0; i < MAX_GAMEPADS; i++)
 	{
 		if (g_cfg_input.player[i]->handler == pad_handler::ds3)
 		{
@@ -222,7 +222,7 @@ std::shared_ptr<ds3_pad_handler::ds3_device> ds3_pad_handler::get_ds3_device(con
 		return nullptr;
 
 	int pad_number = std::stoi(padId.substr(pos + 9));
-	if (pad_number > 0 && pad_number <= controllers.size())
+	if (pad_number > 0 && pad_number + 0u <= controllers.size())
 		return controllers[static_cast<size_t>(pad_number) - 1];
 
 	return nullptr;

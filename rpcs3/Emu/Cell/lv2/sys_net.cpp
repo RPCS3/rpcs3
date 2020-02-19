@@ -443,7 +443,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 			return -sys_net_error{result};
 		}
 
-		if (ppu.gpr[3] == -SYS_NET_EINTR)
+		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
 		{
 			return -SYS_NET_EINTR;
 		}
@@ -679,7 +679,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 			return -sys_net_error{result};
 		}
 
-		if (ppu.gpr[3] == -SYS_NET_EINTR)
+		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
 		{
 			return -SYS_NET_EINTR;
 		}
@@ -1113,7 +1113,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 			return -result;
 		}
 
-		if (ppu.gpr[3] == -SYS_NET_EINTR)
+		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
 		{
 			return -SYS_NET_EINTR;
 		}
@@ -1283,7 +1283,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 			return -result;
 		}
 
-		if (ppu.gpr[3] == -SYS_NET_EINTR)
+		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
 		{
 			return -SYS_NET_EINTR;
 		}

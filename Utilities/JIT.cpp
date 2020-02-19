@@ -80,7 +80,7 @@ static u8* add_jit_memory(std::size_t size, uint align)
 		return _pos;
 	});
 
-	if (pos == -1) [[unlikely]]
+	if (pos == umax) [[unlikely]]
 	{
 		jit_log.warning("JIT: Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
 		return nullptr;

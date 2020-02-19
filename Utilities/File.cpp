@@ -304,7 +304,7 @@ std::shared_ptr<fs::device_base> fs::device_manager::set_device(const std::strin
 std::shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
 {
 	// Every virtual device path must have "//" at the beginning
-	if (path.size() > 2 && reinterpret_cast<const u16&>(path.front()) == "//"_u16)
+	if (path.starts_with("//"))
 	{
 		return get_device_manager().get_device(path);
 	}
@@ -314,7 +314,7 @@ std::shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
 
 std::shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, const std::shared_ptr<device_base>& device)
 {
-	verify(HERE), name.size() > 2, name[0] == '/', name[1] == '/', name.find('/', 2) == -1;
+	verify(HERE), name.starts_with("//"), name[2] != '/';
 
 	return get_device_manager().set_device(name, device);
 }
@@ -338,7 +338,7 @@ std::string fs::get_parent_dir(const std::string& path)
 		if (std::exchange(last, pos - 1) != pos)
 		{
 			// Return empty string if the path doesn't contain at least 2 elements
-			return path.substr(0, pos != -1 && path.find_last_not_of(delim, pos, sizeof(delim) - 1) != -1 ? pos : 0);
+			return path.substr(0, pos != umax && path.find_last_not_of(delim, pos, sizeof(delim) - 1) != umax ? pos : 0);
 		}
 	}
 }

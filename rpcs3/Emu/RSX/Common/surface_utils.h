@@ -367,7 +367,7 @@ namespace rsx
 				{0, size_y},
 			};
 
-			for (int n = 0; n < memory_tag_samples.size(); ++n)
+			for (uint n = 0; n < memory_tag_samples.size(); ++n)
 			{
 				const auto sample_offset = (samples[n].y * rsx_pitch) + samples[n].x;
 				memory_tag_samples[n].first = (sample_offset + base_addr);

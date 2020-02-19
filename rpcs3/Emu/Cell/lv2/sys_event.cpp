@@ -30,7 +30,7 @@ bool lv2_event_queue::send(lv2_event event)
 
 	if (sq.empty())
 	{
-		if (events.size() < this->size)
+		if (events.size() < this->size + 0u)
 		{
 			// Save event
 			events.emplace_back(event);

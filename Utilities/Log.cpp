@@ -464,7 +464,7 @@ logs::file_writer::file_writer(const std::string& name)
 
 			if (!flush(bufv))
 			{
-				if (m_out == -1)
+				if (m_out == umax)
 				{
 					break;
 				}

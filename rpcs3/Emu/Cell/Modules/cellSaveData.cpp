@@ -716,7 +716,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 			case CELL_SAVEDATA_FOCUSPOS_DIRNAME:
 			{
-				for (s32 i = 0; i < save_entries.size(); i++)
+				for (u32 i = 0; i < save_entries.size(); i++)
 				{
 					if (save_entries[i].dirName == listSet->focusDirName.get_ptr())
 					{
@@ -741,7 +741,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				s64 max = INT64_MIN;
 
-				for (s32 i = 0; i < save_entries.size(); i++)
+				for (u32 i = 0; i < save_entries.size(); i++)
 				{
 					if (save_entries[i].mtime > max)
 					{
@@ -756,7 +756,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				s64 min = INT64_MAX;
 
-				for (s32 i = 0; i < save_entries.size(); i++)
+				for (u32 i = 0; i < save_entries.size(); i++)
 				{
 					if (save_entries[i].mtime < min)
 					{
@@ -949,7 +949,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return {CELL_SAVEDATA_ERROR_PARAM, "26"};
 			}
 
-			for (s32 i = 0; i < save_entries.size(); i++)
+			for (u32 i = 0; i < save_entries.size(); i++)
 			{
 				if (save_entries[i].dirName == fixedSet->dirName.get_ptr())
 				{
@@ -1020,7 +1020,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		if (selected >= 0)
 		{
-			if (selected < save_entries.size())
+			if (selected + 0u < save_entries.size())
 			{
 				save_entry.dirName = std::move(save_entries[selected].dirName);
 				save_entry.escaped = vfs::escape(save_entry.dirName);
@@ -1589,7 +1589,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		fs::remove_all(old_path);
 	}
 
-	if (savedata_result == CELL_SAVEDATA_ERROR_CBRESULT)
+	if (savedata_result + 0u == CELL_SAVEDATA_ERROR_CBRESULT)
 	{
 		return display_callback_result_error_message(ppu, result, errDialog);
 	}

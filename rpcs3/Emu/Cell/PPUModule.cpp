@@ -800,7 +800,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 		if (s.sh_type == 1u && addr && size) // TODO: some sections with addr=0 are valid
 		{
-			for (auto i = 0; i < prx->segs.size(); i++)
+			for (std::size_t i = 0; i < prx->segs.size(); i++)
 			{
 				const u32 saddr = static_cast<u32>(elf.progs[i].p_vaddr);
 				if (addr >= saddr && addr < saddr + elf.progs[i].p_memsz)
@@ -1742,7 +1742,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 					ppu_loader.warning("Bad process_param size! [0x%x : 0x%x]", info.size, u32{sizeof(process_param_t)});
 				}
 
-				if (info.magic != "OVLM"_u32) //string "OVLM"
+				if (info.magic != 0x4f564c4du) //string "OVLM"
 				{
 					ppu_loader.error("Bad process_param magic! [0x%x]", info.magic);
 				}

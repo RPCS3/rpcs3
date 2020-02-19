@@ -358,7 +358,8 @@ void gdb_thread::send_cmd(const std::string& cmd)
 	std::string buf;
 	buf.reserve(cmd.length() + 4);
 	buf += "$";
-	for (int i = 0; i < cmd.length(); ++i) {
+	for (std::size_t i = 0; i < cmd.length(); ++i)
+	{
 		checksum = (checksum + append_encoded_char(cmd[i], buf)) % 256;
 	}
 	buf += "#";

@@ -324,7 +324,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 		in->seek(0);
 		memset(data.get(), 0, edat->block_size);
 		u64 res = decrypt_block(in, data.get(), edat, npd, crypt_key, i, total_blocks, size_left);
-		if (res == -1)
+		if (res == umax)
 		{
 			edat_log.error("EDAT: Decrypt Block failed!");
 			return 1;
@@ -966,7 +966,7 @@ u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
 	{
 		edata_file.seek(0);
 		u64 res = decrypt_block(&edata_file, &data_buf[writeOffset], &edatHeader, &npdHeader, dec_key.data(), i, total_blocks, edatHeader.file_size);
-		if (res == -1)
+		if (res == umax)
 		{
 			edat_log.error("Error Decrypting data");
 			return 0;

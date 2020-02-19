@@ -91,7 +91,7 @@ struct sce_np_trophy_manager
 		{
 			error = SCE_NP_TROPHY_ERROR_ABORT;
 			return res;
-		}	
+		}
 
 		return res;
 	}
@@ -231,7 +231,7 @@ error_code sceNpTrophyTerm()
 		ids[it++] = id;
 	};
 
-	// This functionality could be implemented in idm instead 
+	// This functionality could be implemented in idm instead
 	idm::select<trophy_handle_t>(get_handles);
 
 	while (it)
@@ -662,7 +662,7 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 	{
 		sceNpTrophy.warning("sceNpTrophyGetRequiredDiskSpace(): Trophy config is already installed (trp_name=%s)", ctxt->trp_name);
 	}
-	
+
 	sceNpTrophy.warning("sceNpTrophyGetRequiredDiskSpace(): reqspace is 0x%llx", space);
 
 	*reqspace = space;
@@ -861,7 +861,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 	const std::string& config_path = vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPCONF.SFM");
 	const u32 unlocked_platinum_id = ctxt->tropusr->GetUnlockedPlatinumID(trophyId, config_path);
 
-	if (unlocked_platinum_id != SCE_NP_TROPHY_INVALID_TROPHY_ID)
+	if (unlocked_platinum_id != 0u + SCE_NP_TROPHY_INVALID_TROPHY_ID)
 	{
 		sceNpTrophy.warning("sceNpTrophyUnlockTrophy: All requirements for unlocking the platinum trophy (ID = %d) were met.)", unlocked_platinum_id);
 
@@ -885,7 +885,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 		// Enqueue popup for the regular trophy
 		show_trophy_notification(ctxt, trophyId);
 
-		if (unlocked_platinum_id != SCE_NP_TROPHY_INVALID_TROPHY_ID)
+		if (unlocked_platinum_id != 0u + SCE_NP_TROPHY_INVALID_TROPHY_ID)
 		{
 			// Enqueue popup for the holy platinum trophy
 			show_trophy_notification(ctxt, unlocked_platinum_id);

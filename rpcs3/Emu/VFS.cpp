@@ -58,7 +58,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 			return false;
 		}
 
-		if (pos == -1)
+		if (pos == umax)
 		{
 			// Mounting completed
 			list.back()->path = path;
@@ -146,7 +146,7 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 			return fs::get_config_dir() + "delete_this_dir.../delete_this...";
 		}
 
-		if (pos == -1)
+		if (pos == umax)
 		{
 			// Absolute path: finalize
 			for (auto it = list.rbegin(), rend = list.rend(); it != rend; it++)
