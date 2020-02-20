@@ -34,22 +34,22 @@ namespace rsx
 			}
 		}
 
-		void edit_text::insert_text(const std::string& str)
+		void edit_text::insert_text(const std::wstring& str)
 		{
 			if (caret_position == 0)
 			{
 				// Start
-				text = utf8_to_wstring(str) + text;
+				text = str + text;
 			}
 			else if (caret_position == text.length())
 			{
 				// End
-				text += utf8_to_wstring(str);
+				text += str;
 			}
 			else
 			{
 				// Middle
-				text.insert(caret_position, utf8_to_wstring(str));
+				text.insert(caret_position, str);
 			}
 
 			caret_position += ::narrow<u16>(str.length());
