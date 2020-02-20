@@ -29,6 +29,7 @@ Q_SIGNALS:
 	void GuiStylesheetRequest(const QString& path);
 	void GuiSettingsSaveRequest();
 	void GuiRepaintRequest();
+	void EmuSettingsApplied();
 private Q_SLOTS:
 	void OnBackupCurrentConfig();
 	void OnApplyConfig();
