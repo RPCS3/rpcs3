@@ -414,39 +414,39 @@ constexpr inline struct umax_helper
 {
 	constexpr umax_helper() noexcept = default;
 
-	template <typename T, typename S = simple_t<std::decay_t<T>>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
+	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	explicit constexpr operator T() const
 	{
 		return std::numeric_limits<S>::max();
 	}
 
-	template <typename T, typename S = simple_t<std::decay_t<T>>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
+	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator==(const T& rhs) const
 	{
-		return rhs == std::numeric_limits<simple_t<std::decay_t<T>>>::max();
+		return std::numeric_limits<S>::max() == rhs;
 	}
 
 #if __cpp_impl_three_way_comparison >= 201711 && !__INTELLISENSE__
 #else
 	template <typename T>
-	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<std::decay_t<T>>>, bool> operator==(const T& lhs, const umax_helper& rhs)
+	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator==(const T& lhs, const umax_helper& rhs)
 	{
-		return rhs == lhs;
+		return std::numeric_limits<simple_t<T>>::max() == lhs;
 	}
 #endif
 
 #if __cpp_impl_three_way_comparison >= 201711
 #else
-	template <typename T, typename S = simple_t<std::decay_t<T>>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
+	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator!=(const T& rhs) const
 	{
-		return rhs != std::numeric_limits<simple_t<std::decay_t<T>>>::max();
+		return std::numeric_limits<S>::max() != rhs;
 	}
 
 	template <typename T>
-	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<std::decay_t<T>>>, bool> operator!=(const T& lhs, const umax_helper& rhs)
+	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator!=(const T& lhs, const umax_helper& rhs)
 	{
-		return rhs != lhs;
+		return std::numeric_limits<simple_t<T>>::max() != lhs;
 	}
 #endif
 } umax;
