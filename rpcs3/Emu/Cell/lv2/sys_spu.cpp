@@ -53,7 +53,7 @@ void sys_spu_image::load(const fs::file& stream)
 
 	const u32 entry = obj.header.e_entry;
 
-	const u32 src = segs.addr() + nsegs * sizeof(sys_spu_segment);
+	const u32 src = (segs + nsegs).addr();
 
 	stream.seek(0);
 	stream.read(vm::base(src), stream.size());
@@ -378,7 +378,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	group->args[inited] = {arg->arg1, arg->arg2, arg->arg3, arg->arg4};
 	group->imgs[inited].first = image;
-	group->imgs[inited].second.assign(img->segs.get_ptr(), img->segs.get_ptr() + img->nsegs);
+	group->imgs[inited].second.assign(image.segs.get_ptr(), image.segs.get_ptr() + image.nsegs);
 
 	if (++group->init == group->max_num)
 	{
