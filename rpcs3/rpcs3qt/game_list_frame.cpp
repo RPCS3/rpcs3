@@ -593,6 +593,10 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			}
 		}
 
+		// Remove duplicates
+		sort(path_list.begin(), path_list.end());
+		path_list.erase(unique(path_list.begin(), path_list.end()), path_list.end());
+
 		QSet<QString> serials;
 
 		QMutex mutex_cat;
