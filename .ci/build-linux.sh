@@ -40,9 +40,10 @@ export CFLAGS="$CFLAGS -fuse-ld=${LINKER}"
 
 cmake ..                                               \
     -DCMAKE_INSTALL_PREFIX=/usr                        \
-    -DBUILD_LLVM_SUBMODULE=OFF -DUSE_COTIRE=OFF        \
+    -DBUILD_LLVM_SUBMODULE=OFF                         \
     -DLLVM_DIR=llvmlibs/lib/cmake/llvm/                \
     -DUSE_NATIVE_INSTRUCTIONS=OFF                      \
+    -DUSE_PRECOMPILED_HEADERS=OFF                      \
     -DCMAKE_C_FLAGS="$CFLAGS"                          \
     -DCMAKE_CXX_FLAGS="$CFLAGS"                        \
     -DCMAKE_AR="$AR"                                   \
