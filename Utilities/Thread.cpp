@@ -8,6 +8,7 @@
 #include "sysinfo.h"
 #include <typeinfo>
 #include <thread>
+#include <sstream>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -43,12 +44,21 @@
 #include "Log.h"
 
 LOG_CHANNEL(sig_log);
+LOG_CHANNEL(sys_log, "SYS");
 LOG_CHANNEL(vm_log, "VM");
 
 thread_local u64 g_tls_fault_all = 0;
 thread_local u64 g_tls_fault_rsx = 0;
 thread_local u64 g_tls_fault_spu = 0;
 extern thread_local std::string(*g_tls_log_prefix)();
+
+template <>
+void fmt_class_string<std::thread::id>::format(std::string& out, u64 arg)
+{
+	std::ostringstream ss;
+	ss << get_object(arg);
+	out += ss.str();
+}
 
 [[noreturn]] void catch_all_exceptions()
 {
@@ -1526,17 +1536,31 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 	{
 		const auto cause = pExp->ExceptionRecord->ExceptionInformation[0] != 0 ? "writing" : "reading";
 
-		msg += fmt::format("Segfault %s location %p at %p.\n", cause, pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
+		fmt::append(msg, "Segfault %s location %p at %p.\n", cause, pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
 	}
 	else
 	{
-		msg += fmt::format("Exception address: %p.\n", pExp->ExceptionRecord->ExceptionAddress);
+		fmt::append(msg, "Exception address: %p.\n", pExp->ExceptionRecord->ExceptionAddress);
 
 		for (DWORD i = 0; i < pExp->ExceptionRecord->NumberParameters; i++)
 		{
-			msg += fmt::format("ExceptionInformation[0x%x]: %p.\n", i, pExp->ExceptionRecord->ExceptionInformation[i]);
+			fmt::append(msg, "ExceptionInformation[0x%x]: %p.\n", i, pExp->ExceptionRecord->ExceptionInformation[i]);
 		}
 	}
+
+	if (thread_ctrl::get_current())
+	{
+		fmt::append(msg, "Emu Thread Name: '%s'.\n", thread_ctrl::get_name());
+
+		if (const auto cpu = get_current_cpu_thread())
+		{
+			sys_log.notice("\n%s", cpu->dump());
+		}
+	}
+
+	// TODO: Report full thread name if not an emu thread
+
+	fmt::append(msg, "Thread id = %s.\n", std::this_thread::get_id());
 
 	std::vector<HMODULE> modules;
 	for (DWORD size = 256; modules.size() != size; size /= sizeof(HMODULE))
@@ -1549,14 +1573,14 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 		}
 	}
 
-	msg += fmt::format("Instruction address: %p.\n", pExp->ContextRecord->Rip);
+	fmt::append(msg, "Instruction address: %p.\n", pExp->ContextRecord->Rip);
 
 	DWORD64 unwind_base;
 	if (const auto rtf = RtlLookupFunctionEntry(pExp->ContextRecord->Rip, &unwind_base, nullptr))
 	{
 		// Get function address
 		const DWORD64 func_addr = rtf->BeginAddress + unwind_base;
-		msg += fmt::format("Function address: %p (base+0x%x).\n", func_addr, rtf->BeginAddress);
+		fmt::append(msg, "Function address: %p (base+0x%x).\n", func_addr, rtf->BeginAddress);
 
 		// Access UNWIND_INFO structure
 		//const auto uw = (u8*)(unwind_base + rtf->UnwindData);
@@ -1583,17 +1607,18 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 					}
 				}
 
-				msg += fmt::format("Module name: '%s'.\n", module_name);
-				msg += fmt::format("Module base: %p.\n", info.lpBaseOfDll);
+				fmt::append(msg, "Module name: '%s'.\n", module_name);
+				fmt::append(msg, "Module base: %p.\n", info.lpBaseOfDll);
 			}
 		}
 	}
 
-	msg += fmt::format("RPCS3 image base: %p.\n", GetModuleHandle(NULL));
+	fmt::append(msg, "RPCS3 image base: %p.\n", GetModuleHandle(NULL));
 
 	// TODO: print registers and the callstack
 
 	// Report fatal error
+	sys_log.fatal("\n%s", msg);
 	report_fatal_error(msg);
 	return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -1652,8 +1677,25 @@ static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 		}
 	}
 
+	if (const auto cpu = get_current_cpu_thread())
+	{
+		sys_log.notice("\n%s", cpu->dump());
+	}
+
+	std::string msg = fmt::format("Segfault %s location %p at %p.", cause, info->si_addr, RIP(context));
+
+	if (thread_ctrl::get_current())
+	{
+		fmt::append(msg, "Emu Thread Name: '%s'.\n", thread_ctrl::get_name());
+	}
+
+	// TODO: Report full thread name if not an emu thread
+
+	fmt::append(msg, "Thread id = %s.\n", std::this_thread::get_id());
+
 	// TODO (debugger interaction)
-	report_fatal_error(fmt::format("Segfault %s location %p at %p.", cause, info->si_addr, RIP(context)));
+	sys_log.fatal("\n%s", msg);
+	report_fatal_error(msg);
 }
 
 const bool s_exception_handler_set = []() -> bool
