@@ -341,6 +341,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellAudioOut.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellAuthDialog.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellAvconfExt.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
