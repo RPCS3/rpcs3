@@ -2,6 +2,7 @@
 #include "sys_ss.h"
 
 #include "sys_process.h"
+#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
 
 
@@ -31,37 +32,66 @@ const HCRYPTPROV s_crypto_provider = []() -> HCRYPTPROV
 #endif
 
 
+template<>
+void fmt_class_string<sys_ss_rng_error>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+		STR_CASE(SYS_SS_RNG_ERROR_INVALID_PKG);
+		STR_CASE(SYS_SS_RNG_ERROR_ENOMEM);
+		STR_CASE(SYS_SS_RNG_ERROR_EAGAIN);
+		STR_CASE(SYS_SS_RNG_ERROR_EFAULT);
+		}
+
+		return unknown;
+	});
+}
 
 LOG_CHANNEL(sys_ss);
 
-error_code sys_ss_random_number_generator(u32 arg1, vm::ptr<void> buf, u64 size)
+error_code sys_ss_random_number_generator(u64 pkg_id, vm::ptr<void> buf, u64 size)
 {
-	sys_ss.warning("sys_ss_random_number_generator(arg1=%u, buf=*0x%x, size=0x%x)", arg1, buf, size);
+	sys_ss.warning("sys_ss_random_number_generator(pkg_id=%u, buf=*0x%x, size=0x%x)", pkg_id, buf, size);
 
-	if (arg1 != 2)
+	if (pkg_id != 2)
 	{
-		return 0x80010509;
+		if (pkg_id == 1)
+		{
+			if (!g_ps3_process_info.has_root_perm())
+			{
+				return CELL_ENOSYS;
+			}
+
+			sys_ss.todo("sys_ss_random_number_generator(): pkg_id=1");
+			std::memset(buf.get_ptr(), 0, 0x18);
+			return CELL_OK;
+		}
+
+		return SYS_SS_RNG_ERROR_INVALID_PKG;
 	}
 
+	// TODO
 	if (size > 0x10000000)
 	{
-		return 0x80010501;
+		return SYS_SS_RNG_ERROR_ENOMEM;
 	}
 
+	std::unique_ptr<u8[]> temp(new u8[size]);
+
 #ifdef _WIN32
-	if (!s_crypto_provider || !CryptGenRandom(s_crypto_provider, size, (BYTE*)buf.get_ptr()))
-	{
-		return CELL_EABORT;
-	}
+	if (!s_crypto_provider || !CryptGenRandom(s_crypto_provider, size, temp.get()))
 #else
 	fs::file rnd{"/dev/urandom"};
 
-	if (!rnd || rnd.read(buf.get_ptr(), size) != size)
-	{
-		return CELL_EABORT;
-	}
+	if (!rnd || rnd.read(temp.get(), size) != size)
 #endif
+	{
+		fmt::throw_exception("sys_ss_random_number_generator(): Failed to generate pseudo-random numbers" HERE);
+	}
 
+	std::memcpy(buf.get_ptr(), temp.get(), size);
 	return CELL_OK;
 }
 
