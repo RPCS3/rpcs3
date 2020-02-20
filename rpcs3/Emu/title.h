@@ -10,6 +10,7 @@ namespace rpcs3
 		std::string title;
 		std::string title_id;
 		std::string renderer;
+		std::string vulkan_adapter;
 		double fps = .0;
 	};
 	
