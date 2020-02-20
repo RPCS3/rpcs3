@@ -1304,6 +1304,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			rpcs3::title_format_data title_data;
 			title_data.format = sstr(new_format);
 			title_data.renderer = xemu_settings->GetSetting(emu_settings::Renderer);
+			title_data.vulkan_adapter = xemu_settings->GetSetting(emu_settings::VulkanAdapter);
 			title_data.fps = 60.;
 
 			if (game)
@@ -1326,6 +1327,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 			const std::vector<std::pair<const QString, const QString>> window_title_glossary =
 			{
+				{ "%G", tr("GPU Model") },
+				{ "%C", tr("CPU Model") },
+				{ "%c", tr("Thread Count") },
+				{ "%M", tr("System Memory") },
 				{ "%F", tr("Framerate") },
 				{ "%R", tr("Renderer") },
 				{ "%T", tr("Title") },

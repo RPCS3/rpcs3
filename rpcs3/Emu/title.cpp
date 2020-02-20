@@ -1,27 +1,12 @@
 ﻿#include "stdafx.h"
 #include "title.h"
 #include "rpcs3_version.h"
+#include "Utilities/sysinfo.h"
 
 namespace rpcs3
 {
 	std::string get_formatted_title(const title_format_data& title_data)
 	{
-		// Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
-		std::string version = rpcs3::get_version().to_string();
-		const auto last_minus = version.find_last_of('-');
-
-		// Add branch and commit hash to version on frame unless it's master.
-		if (rpcs3::get_branch() != "master"sv && rpcs3::get_branch() != "HEAD"sv)
-		{
-			version = version.substr(0, ~last_minus ? last_minus + 9 : last_minus);
-			version += '-';
-			version += rpcs3::get_branch();
-		}
-		else
-		{
-			version = version.substr(0, last_minus);
-		}
-
 		// Parse title format string
 		std::string title_string;
 
@@ -71,12 +56,34 @@ namespace rpcs3
 				}
 				case 'V':
 				{
+					static const std::string version = rpcs3::get_version_and_branch();
 					title_string += version;
 					break;
 				}
 				case 'F':
 				{
 					fmt::append(title_string, "%.2f", title_data.fps);
+					break;
+				}
+				case 'G':
+				{
+					title_string += title_data.vulkan_adapter;
+					break;
+				}
+				case 'C':
+				{
+					static const std::string brand = utils::get_cpu_brand();
+					title_string += brand;
+					break;
+				}
+				case 'c':
+				{
+					fmt::append(title_string, "%d", utils::get_thread_count());
+					break;
+				}
+				case 'M':
+				{
+					fmt::append(title_string, "%.2f", utils::get_total_memory() / (1024.0f * 1024 * 1024));
 					break;
 				}
 				default:
