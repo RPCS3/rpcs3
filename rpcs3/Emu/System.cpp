@@ -116,6 +116,7 @@ void Emulator::Init()
 	const std::string dev_hdd0 = GetHddDir();
 	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
+	const std::string dev_flsh = fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir);
 
 	auto make_path_verbose = [](const std::string& path)
 	{
@@ -131,6 +132,7 @@ void Emulator::Init()
 	{
 		make_path_verbose(dev_hdd0);
 		make_path_verbose(dev_hdd1);
+		make_path_verbose(dev_flsh);
 		make_path_verbose(dev_usb);
 		make_path_verbose(dev_hdd0 + "game/");
 		make_path_verbose(dev_hdd0 + "game/TEST12345/");
@@ -835,7 +837,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 
 		// Mount default relative path to non-existent directory
 		vfs::mount("/dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
-		vfs::mount("/dev_flash", g_cfg.vfs.get_dev_flash());
+		vfs::mount("/dev_flash", fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir));
 		vfs::mount("/dev_usb", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("/dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("/app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
