@@ -164,6 +164,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 		&ppu_module_manager::cellAtracMulti,
 		&ppu_module_manager::cellAudio,
 		&ppu_module_manager::cellAvconfExt,
+		&ppu_module_manager::cellAuthDialogUtility,
 		&ppu_module_manager::cellBGDL,
 		&ppu_module_manager::cellCamera,
 		&ppu_module_manager::cellCelp8Enc,

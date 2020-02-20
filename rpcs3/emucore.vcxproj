@@ -190,6 +190,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellAtracMulti.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAudio.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAudioOut.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellAuthDialog.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAvconfExt.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellBgdl.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellCamera.cpp" />
