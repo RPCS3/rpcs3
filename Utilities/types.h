@@ -423,7 +423,7 @@ constexpr inline struct umax_helper
 	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator==(const T& rhs) const
 	{
-		return std::numeric_limits<S>::max() == rhs;
+		return rhs == std::numeric_limits<S>::max();
 	}
 
 #if __cpp_impl_three_way_comparison >= 201711 && !__INTELLISENSE__
@@ -431,7 +431,7 @@ constexpr inline struct umax_helper
 	template <typename T>
 	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator==(const T& lhs, const umax_helper& rhs)
 	{
-		return std::numeric_limits<simple_t<T>>::max() == lhs;
+		return lhs == std::numeric_limits<simple_t<T>>::max();
 	}
 #endif
 
@@ -440,13 +440,13 @@ constexpr inline struct umax_helper
 	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator!=(const T& rhs) const
 	{
-		return std::numeric_limits<S>::max() != rhs;
+		return rhs != std::numeric_limits<S>::max();
 	}
 
 	template <typename T>
 	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator!=(const T& lhs, const umax_helper& rhs)
 	{
-		return std::numeric_limits<simple_t<T>>::max() != lhs;
+		return lhs != std::numeric_limits<simple_t<T>>::max();
 	}
 #endif
 } umax;
