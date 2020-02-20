@@ -1,4 +1,8 @@
 ﻿#pragma once
+#include "Utilities/types.h"
+#include "Utilities/geometry.h"
+
+#include <string>
 
 struct vertex
 {
@@ -152,3 +156,4 @@ std::string utf16_to_ascii8(const std::u16string& utf16_string);
 std::u16string ascii8_to_utf16(const std::string& ascii_string);
 std::wstring utf8_to_wstring(const std::string& utf8_string);
 std::u16string wstring_to_utf16(const std::wstring& w_string);
+std::wstring utf16_to_wstring(const std::u16string& utf16_string);

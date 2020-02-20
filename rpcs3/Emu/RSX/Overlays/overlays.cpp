@@ -200,6 +200,26 @@ std::u16string wstring_to_utf16(const std::wstring& w_string)
 	}
 }
 
+std::wstring utf16_to_wstring(const std::u16string& utf16_string)
+{
+	if constexpr (sizeof(wchar_t) == sizeof(char16_t))
+	{
+		return reinterpret_cast<const wchar_t*>(utf16_string.data());
+	}
+	else
+	{
+		std::wstring result;
+		result.reserve(utf16_string.size());
+
+		for (const auto& code : utf16_string)
+		{
+			result.push_back(code);
+		}
+
+		return result;
+	}
+}
+
 namespace rsx
 {
 	namespace overlays
