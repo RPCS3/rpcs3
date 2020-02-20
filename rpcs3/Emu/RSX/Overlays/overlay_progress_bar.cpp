@@ -58,19 +58,6 @@ namespace rsx
 			set_pos(x + dx, y + dy);
 		}
 
-		void progress_bar::set_text(const char* str)
-		{
-			text_view.set_text(str);
-			text_view.align_text(text_align::center);
-
-			u16 text_w, text_h;
-			text_view.measure_text(text_w, text_h);
-			text_view.set_size(w, text_h);
-
-			set_pos(text_view.x, text_view.y);
-			is_compiled = false;
-		}
-
 		void progress_bar::set_text(const std::string& str)
 		{
 			text_view.set_text(str);

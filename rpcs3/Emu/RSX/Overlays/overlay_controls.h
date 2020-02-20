@@ -437,9 +437,9 @@ namespace rsx
 				is_compiled = false;
 			}
 
-			virtual void set_text(const char* text)
+			virtual void set_text(const std::wstring& text)
 			{
-				this->text = utf8_to_wstring(text);
+				this->text = text;
 				is_compiled = false;
 			}
 
@@ -1003,7 +1003,6 @@ namespace rsx
 			void set_pos(u16 _x, u16 _y) override;
 			void set_size(u16 _w, u16 _h) override;
 			void translate(s16 dx, s16 dy) override;
-			void set_text(const char* str) override;
 			void set_text(const std::string& str) override;
 
 			compiled_resource& get_compiled() override;
@@ -1061,7 +1060,7 @@ namespace rsx
 			using label::label;
 
 			void move_caret(direction dir);
-			void insert_text(const std::string& str);
+			void insert_text(const std::wstring& str);
 			void erase();
 
 			compiled_resource& get_compiled() override;
