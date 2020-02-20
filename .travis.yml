@@ -33,6 +33,8 @@ jobs:
                     - qt
           script: "/bin/bash -ex .travis/build-mac.bash"
           cache: ccache
+    allow_failures:
+        - os: osx
 
 git:
   depth: false # Unshallow clone to obtain proper GIT_VERSION

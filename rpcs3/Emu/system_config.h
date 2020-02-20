@@ -64,13 +64,13 @@ struct cfg_root : cfg::node
 	struct node_vfs : cfg::node
 	{
 		node_vfs(cfg::node* _this) : cfg::node(_this, "VFS") {}
-	
+
 		std::string get(const cfg::string&, const char*) const;
-	
+
 		cfg::string emulator_dir{ this, "$(EmulatorDir)" }; // Default (empty): taken from fs::get_config_dir()
 		cfg::string dev_hdd0{ this, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/" };
 		cfg::string dev_hdd1{ this, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/" };
-		cfg::string dev_flash{ this, "/dev_flash/" };
+		cfg::string dev_flash{ this, "/dev_flash/", "$(EmulatorDir)dev_flash/" };
 		cfg::string dev_usb000{ this, "/dev_usb000/", "$(EmulatorDir)dev_usb000/" };
 		cfg::string dev_bdvd{ this, "/dev_bdvd/" }; // Not mounted
 		cfg::string app_home{ this, "/app_home/" }; // Not mounted
@@ -82,23 +82,23 @@ struct cfg_root : cfg::node
 	
 		cfg::_bool host_root{ this, "Enable /host_root/" };
 		cfg::_bool init_dirs{ this, "Initialize Directories", true };
-	
+
 		cfg::_bool limit_cache_size{ this, "Limit disk cache size", false };
 		cfg::_int<0, 10240> cache_max_size{ this, "Disk cache maximum size (MB)", 5120 };
-	
+
 	} vfs{ this };
-	
+
 	struct node_video : cfg::node
 	{
 		node_video(cfg::node* _this) : cfg::node(_this, "Video") {}
-	
+
 		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::opengl };
-	
+
 		cfg::_enum<video_resolution> resolution{ this, "Resolution", video_resolution::_720 };
 		cfg::_enum<video_aspect> aspect_ratio{ this, "Aspect ratio", video_aspect::_16_9 };
 		cfg::_enum<frame_limit_type> frame_limit{ this, "Frame limit", frame_limit_type::none };
 		cfg::_enum<msaa_level> antialiasing_level{ this, "MSAA", msaa_level::_auto };
-	
+
 		cfg::_bool write_color_buffers{ this, "Write Color Buffers" };
 		cfg::_bool write_depth_buffer{ this, "Write Depth Buffer" };
 		cfg::_bool read_color_buffers{ this, "Read Color Buffers" };
@@ -133,21 +133,21 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
 		cfg::_int<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 1, true };
 		cfg::_int<1, 1800> vblank_rate{ this, "Vblank Rate", 60, true }; // Changing this from 60 may affect game speed in unexpected ways
-	
+
 		struct node_vk : cfg::node
 		{
 			node_vk(cfg::node* _this) : cfg::node(_this, "Vulkan") {}
-	
+
 			cfg::string adapter{ this, "Adapter" };
 			cfg::_bool force_fifo{ this, "Force FIFO present mode" };
 			cfg::_bool force_primitive_restart{ this, "Force primitive restart flag" };
-	
+
 		} vk{ this };
-	
+
 		struct node_perf_overlay : cfg::node
 		{
 			node_perf_overlay(cfg::node* _this) : cfg::node(_this, "Performance Overlay") {}
-	
+
 			cfg::_bool perf_overlay_enabled{ this, "Enabled", false, true };
 			cfg::_bool framerate_graph_enabled{ this, "Enable Framerate Graph", false, true };
 			cfg::_bool frametime_graph_enabled{ this, "Enable Frametime Graph", false, true };
@@ -165,36 +165,36 @@ struct cfg_root : cfg::node
 			cfg::string background_body{ this, "Body Background (hex)", "#002339FF", true };
 			cfg::string color_title{ this, "Title Color (hex)", "#F26C24FF", true };
 			cfg::string background_title{ this, "Title Background (hex)", "#00000000", true };
-	
+
 		} perf_overlay{ this };
-	
+
 		struct node_shader_compilation_hint : cfg::node
 		{
 			node_shader_compilation_hint(cfg::node* _this) : cfg::node(_this, "Shader Compilation Hint") {}
-	
+
 			cfg::_int<0, 1280> pos_x{ this, "Position X (px)", 20, true }; // horizontal position starting from the upper border in px
 			cfg::_int<0, 720> pos_y{ this, "Position Y (px)", 690, true }; // vertical position starting from the left border in px
-	
+
 		} shader_compilation_hint{ this };
-	
+
 		struct node_shader_preloading_dialog : cfg::node
 		{
 			node_shader_preloading_dialog(cfg::node* _this) : cfg::node(_this, "Shader Loading Dialog") {}
-	
+
 			cfg::_bool use_custom_background{ this, "Allow custom background", true, true };
 			cfg::_int<0, 100> darkening_strength{ this, "Darkening effect strength", 30, true };
 			cfg::_int<0, 100> blur_strength{ this, "Blur effect strength", 0, true };
-	
+
 		} shader_preloading_dialog{ this };
-	
+
 	} video{ this };
-	
+
 	struct node_audio : cfg::node
 	{
 		node_audio(cfg::node* _this) : cfg::node(_this, "Audio") {}
-	
+
 		cfg::_enum<audio_renderer> renderer{ this, "Renderer", static_cast<audio_renderer>(1) };
-	
+
 		cfg::_bool dump_to_file{ this, "Dump to file" };
 		cfg::_bool convert_to_u16{ this, "Convert to 16 bit" };
 		cfg::_bool downmix_to_2ch{ this, "Downmix to Stereo", true };
@@ -208,41 +208,41 @@ struct cfg_root : cfg::node
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
 		cfg::string microphone_devices{ this, "Microphone Devices", ";;;;" };
 	} audio{ this };
-	
+
 	struct node_io : cfg::node
 	{
 		node_io(cfg::node* _this) : cfg::node(_this, "Input/Output") {}
-	
+
 		cfg::_enum<keyboard_handler> keyboard{ this, "Keyboard", keyboard_handler::null };
 		cfg::_enum<mouse_handler> mouse{ this, "Mouse", mouse_handler::basic };
 		cfg::_enum<camera_handler> camera{ this, "Camera", camera_handler::null };
 		cfg::_enum<fake_camera_type> camera_type{ this, "Camera type", fake_camera_type::unknown };
 		cfg::_enum<move_handler> move{ this, "Move", move_handler::null };
 	} io{ this };
-	
+
 	struct node_sys : cfg::node
 	{
 		node_sys(cfg::node* _this) : cfg::node(_this, "System") {}
-	
+
 		cfg::_enum<CellSysutilLang> language{ this, "Language", CellSysutilLang{1} }; // CELL_SYSUTIL_LANG_ENGLISH_US
 		cfg::_enum<CellKbMappingType> keyboard_type{ this, "Keyboard Type", CellKbMappingType{0} }; // CELL_KB_MAPPING_101 = US
 		cfg::_enum<enter_button_assign> enter_button_assignment{ this, "Enter button assignment", enter_button_assign::cross };
-	
+
 	} sys{ this };
-	
+
 	struct node_net : cfg::node
 	{
 		node_net(cfg::node* _this) : cfg::node(_this, "Net") {}
-	
+
 		cfg::_enum<CellNetCtlState> net_status{ this, "Connection status" };
 		cfg::string ip_address{ this, "IP address", "192.168.1.1" };
-	
+
 	} net{ this };
-	
+
 	struct node_misc : cfg::node
 	{
 		node_misc(cfg::node* _this) : cfg::node(_this, "Miscellaneous") {}
-	
+
 		cfg::_bool autostart{ this, "Automatically start games after boot", true, true };
 		cfg::_bool autoexit{ this, "Exit RPCS3 when process finishes", false, true };
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode", false, true };

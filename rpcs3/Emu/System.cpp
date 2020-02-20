@@ -116,6 +116,7 @@ void Emulator::Init()
 	const std::string dev_hdd0 = GetHddDir();
 	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
+	const std::string dev_flsh = g_cfg.vfs.get_dev_flash();
 
 	auto make_path_verbose = [](const std::string& path)
 	{
@@ -131,6 +132,7 @@ void Emulator::Init()
 	{
 		make_path_verbose(dev_hdd0);
 		make_path_verbose(dev_hdd1);
+		make_path_verbose(dev_flsh);
 		make_path_verbose(dev_usb);
 		make_path_verbose(dev_hdd0 + "game/");
 		make_path_verbose(dev_hdd0 + "game/TEST12345/");

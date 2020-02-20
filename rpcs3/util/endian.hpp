@@ -252,7 +252,7 @@ private:
 		}
 
 public:
-		template <typename T2>
+		template <typename T2, typename = decltype(+std::declval<const T2&>())>
 		bool operator==(const T2& rhs) const noexcept
 		{
 			using R = simple_t<T2>;
@@ -277,11 +277,14 @@ public:
 			return value() == rhs;
 		}
 
-		template <typename T2>
+#if __cpp_impl_three_way_comparison >= 201711
+#else
+		template <typename T2, typename = decltype(+std::declval<const T2&>())>
 		bool operator!=(const T2& rhs) const noexcept
 		{
 			return !operator==<T2>(rhs);
 		}
+#endif
 
 private:
 		template <typename T2>
