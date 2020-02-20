@@ -810,21 +810,25 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			}
 		}
 
-#if defined(_WIN32) || defined(HAVE_VULKAN)
-		if (g_cfg.video.renderer == video_renderer::vulkan)
-		{
-			sys_log.notice("Vulkan SDK Revision: %d", VK_HEADER_VERSION);
-		}
-#endif
-
-		sys_log.notice("Used configuration:\n%s\n", g_cfg.to_string());
-
 		// Set RTM usage
 		g_use_rtm = utils::has_rtm() && ((utils::has_mpx() && g_cfg.core.enable_TSX == tsx_usage::enabled) || g_cfg.core.enable_TSX == tsx_usage::forced);
 
-		if (g_use_rtm && !utils::has_mpx())
+		// Log some extra info in case of boot
+		if (!add_only)
 		{
-			sys_log.warning("TSX forced by User");
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+			if (g_cfg.video.renderer == video_renderer::vulkan)
+			{
+				sys_log.notice("Vulkan SDK Revision: %d", VK_HEADER_VERSION);
+			}
+#endif
+
+			sys_log.notice("Used configuration:\n%s\n", g_cfg.to_string());
+
+			if (g_use_rtm && !utils::has_mpx())
+			{
+				sys_log.warning("TSX forced by User");
+			}
 		}
 
 		// Load patches from different locations
@@ -849,7 +853,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		}
 
 		// Special boot mode (directory scan)
-		if (fs::is_dir(m_path))
+		if (!add_only && fs::is_dir(m_path))
 		{
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
