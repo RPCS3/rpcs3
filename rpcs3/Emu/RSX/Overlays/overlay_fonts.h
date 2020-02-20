@@ -12,17 +12,17 @@ namespace rsx
 {
 	namespace overlays
 	{
-		enum language_class
+		enum class language_class
 		{
-			default_ = 0, // Typically latin-1, extended latin, hebrew, arabic and cyrillic
-			cjk = 1       // The thousands of CJK glyphs occupying pages 2E-9F
+			default_ = 0,   // Typically latin-1, extended latin, hebrew, arabic and cyrillic
+			cjk_base = 1,   // The thousands of CJK glyphs occupying pages 2E-9F
+			hangul = 2      // Korean jamo
 		};
 
 		struct glyph_load_setup
 		{
-			std::string font_name;
+			std::vector<std::string> font_names;
 			std::vector<std::string> lookup_font_dirs;
-			std::vector<std::string> fallback_fonts;
 		};
 
 		// Each 'page' holds an indexed block of 256 code points

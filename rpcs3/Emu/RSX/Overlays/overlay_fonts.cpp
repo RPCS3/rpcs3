@@ -53,17 +53,44 @@ namespace rsx
 
 		language_class font::classify(u16 codepage_id)
 		{
-			if (codepage_id >= 0x2E && codepage_id <= 0x9F)
+			switch (codepage_id)
 			{
-				return language_class::cjk;
+			case 00: // Extended ASCII
+			case 04: // Cyrillic
+			{
+				return language_class::default_;
 			}
+			case 0x11:    // Hangul jamo
+			// case 0x31: // Compatibility jamo 3130-318F
+			// case 0xA9: // Hangul jamo extended block A A960-A97F
+			{
+				return language_class::hangul;
+			}
+			default:
+			{
+				if (codepage_id >= 0xAC && codepage_id <= 0xD7)
+				{
+					// Hangul syllables + jamo extended block B
+					return language_class::hangul;
+				}
 
-			return language_class::default_;
+				if (codepage_id >= 0x2E && codepage_id <= 0x9F)
+				{
+					// Generic CJK blocks, mostly chinese and japanese kana
+					// Should typically be compatible with JPN ttf fonts
+					return language_class::cjk_base;
+				}
+
+				// TODO
+				return language_class::default_;
+			}
+			}
 		}
 
 		glyph_load_setup font::get_glyph_files(language_class class_)
 		{
 			glyph_load_setup result;
+			result.font_names.push_back(font_name);
 
 #ifdef _WIN32
 			result.lookup_font_dirs.push_back("C:/Windows/Fonts/");
@@ -86,30 +113,37 @@ namespace rsx
 			{
 			case language_class::default_:
 			{
-				// Standard name
-				result.font_name = font_name;
-#ifdef _WIN32
-				result.fallback_fonts.push_back("C:/Windows/Fonts/Arial.ttf");
-#else
-				fallback_fonts.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //	ubuntu
-				fallback_fonts.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             //	arch
+				result.font_names.push_back("Arial.ttf");
+#ifndef _WIN32
+				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //	ubuntu
+				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             //	arch
 #endif
 				// Attempt to load a font from dev_flash as a last resort
-				result.fallback_fonts.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SCE-PS3-VR-R-LATIN.TTF");
+				result.font_names.push_back("SCE-PS3-VR-R-LATIN.TTF");
 				break;
 			}
-			case language_class::cjk:
+			case language_class::cjk_base:
 			{
 				// Skip loading font files directly
-				result.lookup_font_dirs.clear();
+				result.font_names.clear();
 
 				// Attempt to load a font from dev_flash before any other source
-				result.fallback_fonts.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SCE-PS3-SR-R-JPN.TTF");
-#ifdef _WIN32
-				result.fallback_fonts.push_back("C:/Windows/Fonts/Yu Gothic.ttf"); // Japanese only
-#else
-				// No standard CJK set on linux
-#endif
+				result.font_names.push_back("SCE-PS3-SR-R-JPN.TTF");
+
+				// Known system font as last fallback
+				result.font_names.push_back("Yu Gothic.ttf");
+				break;
+			}
+			case language_class::hangul:
+			{
+				// Skip loading font files directly
+				result.font_names.clear();
+
+				// Attempt to load a font from dev_flash before any other source
+				result.font_names.push_back("SCE-PS3-YG-R-KOR.TTF");
+
+				// Known system font as last fallback
+				result.font_names.push_back("Malgun Gothic.ttf");
 				break;
 			}
 			}
@@ -128,39 +162,43 @@ namespace rsx
 			std::string file_path;
 			bool font_found = false;
 
-			for (auto& font_dir : fs_settings.lookup_font_dirs)
+			for (const auto& font_file : fs_settings.font_names)
 			{
-				std::string requested_file = font_dir + fs_settings.font_name;
-
-				// Append ".ttf" if not present
-				std::string font_lower(requested_file);
-
-				std::transform(requested_file.begin(), requested_file.end(), font_lower.begin(), ::tolower);
-				if (!font_lower.ends_with(".ttf"))
-					requested_file += ".ttf";
-
-				file_path = requested_file;
-
-				if (fs::is_file(requested_file))
+				if (fs::is_file(font_file))
 				{
+					// Check for absolute paths or fonts 'installed' to executable folder
+					file_path = font_file;
 					font_found = true;
 					break;
 				}
-			}
 
-			// Attemt to load a fallback if request font wasn't found
-			if (!font_found)
-			{
-				for (auto& fallback_font : fs_settings.fallback_fonts)
+				std::string extension = "";
+				if (const auto extension_start = font_file.find_last_of('.');
+					extension_start != std::string::npos)
 				{
-					if (fs::is_file(fallback_font))
-					{
-						file_path = fallback_font;
-						font_found = true;
+					extension = font_file.substr(extension_start + 1);
+				}
 
-						rsx_log.notice("Found font file '%s' as a replacement for '%s'", fallback_font, font_name);
+				std::string file_name = font_file;
+				if (extension.length() != 3)
+				{
+					// Allow other extensions to support other truetype formats
+					file_name += ".ttf";
+				}
+
+				for (const auto& font_dir : fs_settings.lookup_font_dirs)
+				{
+					file_path = font_dir + file_name;
+					if (fs::is_file(file_path))
+					{
+						font_found = true;
 						break;
 					}
+				}
+
+				if (font_found)
+				{
+					break;
 				}
 			}
 
