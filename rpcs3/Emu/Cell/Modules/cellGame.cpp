@@ -533,7 +533,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	//older sdk. it might not care about game type.
 
-	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1)
+	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1 || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
