@@ -127,7 +127,7 @@ namespace rsx
 			default: break;
 			}
 
-			trophy_message = "You have earned the " + trophy_message + " trophy\n" + utf8_to_ascii8(trophy.name);
+			trophy_message = "You have earned the " + trophy_message + " trophy\n" + trophy.name;
 			text_view.set_text(trophy_message);
 			text_view.auto_resize();
 
