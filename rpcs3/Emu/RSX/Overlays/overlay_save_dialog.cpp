@@ -29,8 +29,8 @@ namespace rsx
 
 			std::unique_ptr<overlay_element> text_stack  = std::make_unique<vertical_layout>();
 			std::unique_ptr<overlay_element> padding     = std::make_unique<spacer>();
-			std::unique_ptr<overlay_element> header_text = std::make_unique<label>(utf8_to_ascii8(text1));
-			std::unique_ptr<overlay_element> subtext     = std::make_unique<label>(utf8_to_ascii8(text2));
+			std::unique_ptr<overlay_element> header_text = std::make_unique<label>(text1);
+			std::unique_ptr<overlay_element> subtext     = std::make_unique<label>(text2);
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
@@ -54,7 +54,7 @@ namespace rsx
 			if (!text3.empty())
 			{
 				// Detail info actually exists
-				std::unique_ptr<overlay_element> detail = std::make_unique<label>(utf8_to_ascii8(text3));
+				std::unique_ptr<overlay_element> detail = std::make_unique<label>(text3);
 				detail->set_size(800, 0);
 				detail->set_font("Arial", 12);
 				detail->set_wrap_text(true);
