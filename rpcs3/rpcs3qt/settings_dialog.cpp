@@ -92,10 +92,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	m_discord_state = xgui_settings->GetValue(gui::m_discordState).toString();
 
 	// Various connects
-	connect(ui->buttonBox, &QDialogButtonBox::accepted, [this, use_discord_old = m_use_discord, discord_state_old = m_discord_state]
+
+	const auto apply_configs = [this, use_discord_old = m_use_discord, discord_state_old = m_discord_state](bool do_exit)
 	{
 		std::set<std::string> selectedlle;
-		for (int i = 0; i<ui->lleList->count(); ++i)
+		for (int i = 0; i < ui->lleList->count(); ++i)
 		{
 			const auto& item = ui->lleList->item(i);
 			if (item->checkState() != Qt::CheckState::Unchecked)
@@ -106,7 +107,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		std::vector<std::string> selected_ls = std::vector<std::string>(selectedlle.begin(), selectedlle.end());
 		xemu_settings->SaveSelectedLibraries(selected_ls);
 		xemu_settings->SaveSettings();
-		accept();
+
+		if (do_exit)
+		{
+			accept();
+		}
+
+		Q_EMIT EmuSettingsApplied();
 
 		// Discord Settings can be saved regardless of WITH_DISCORD_RPC
 		xgui_settings->SetValue(gui::m_richPresence, m_use_discord);
@@ -130,6 +137,18 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			discord::update_presence(sstr(m_discord_state), "Idle", false);
 		}
 #endif
+	};
+
+	connect(ui->buttonBox, &QDialogButtonBox::clicked, [=, this](QAbstractButton* button)
+	{
+		if (button == ui->buttonBox->button(QDialogButtonBox::Save))
+		{
+			apply_configs(true);
+		}
+		else if (button == ui->buttonBox->button(QDialogButtonBox::Apply))
+		{
+			apply_configs(false);
+		}
 	});
 
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);

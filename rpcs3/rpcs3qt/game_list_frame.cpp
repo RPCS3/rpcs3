@@ -1059,7 +1059,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(configure, &QAction::triggered, [=, this]()
 	{
 		settings_dialog dlg(m_gui_settings, m_emu_settings, 0, this, &currGame);
-		if (dlg.exec() == QDialog::Accepted)
+		connect(&dlg, &settings_dialog::EmuSettingsApplied, [this, gameinfo]()
 		{
 			if (!gameinfo->hasCustomConfig)
 			{
@@ -1067,7 +1067,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 				ShowCustomConfigIcon(gameinfo);
 			}
 			Q_EMIT NotifyEmuSettingsChange();
-		}
+		});
+		dlg.exec();
 	});
 	connect(pad_configure, &QAction::triggered, [=, this]()
 	{
