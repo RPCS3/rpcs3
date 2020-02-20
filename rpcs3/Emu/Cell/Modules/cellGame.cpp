@@ -1045,16 +1045,18 @@ error_code cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getP
 	cellGame.warning("cellDiscGameGetBootDiscInfo(getParam=*0x%x)", getParam);
 
 	if (!getParam)
+	{
 		return CELL_DISCGAME_ERROR_PARAM;
+	}
+
+	// Always sets 0 at first dword
+	reinterpret_cast<nse_t<u32, 1>*>(getParam->titleId)[0] = 0;
 
 	// This is also called by non-disc games, see NPUB90029
-	const std::string dir = "/dev_bdvd/PS3_GAME"s;
+	static const std::string dir = "/dev_bdvd/PS3_GAME"s;
 
 	if (!fs::is_dir(vfs::get(dir)))
 	{
-		getParam->parentalLevel = 0;
-		strcpy_trunc(getParam->titleId, "0");
-
 		return CELL_DISCGAME_ERROR_NOT_DISCBOOT;
 	}
 
