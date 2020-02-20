@@ -143,7 +143,7 @@ public:
 	template <auto* Var>
 	static auto& register_static_variable(const char* module, const char* name, u32 vnid)
 	{
-		using gvar = std::decay_t<decltype(*Var)>;
+		using gvar = std::remove_cvref_t<decltype(*Var)>;
 
 		static_assert(std::is_same<u32, typename gvar::addr_type>::value, "Static variable registration: vm::gvar<T> expected");
 
