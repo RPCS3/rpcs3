@@ -38,8 +38,8 @@ struct lv2_rwlock final : lv2_obj
 		: protocol(protocol)
 		, shared(shared)
 		, key(key)
-		, flags(flags)
 		, name(name)
+		, flags(flags)
 	{
 	}
 };

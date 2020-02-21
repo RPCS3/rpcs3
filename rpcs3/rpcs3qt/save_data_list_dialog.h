@@ -33,7 +33,7 @@ private:
 	void UpdateSelectionLabel(void);
 	void UpdateList(void);
 
-	s32 m_entry;
+	s32 m_entry = selection_code::new_save;
 	QLabel* m_entry_label = nullptr;
 
 	QTableWidget* m_list = nullptr;
@@ -41,6 +41,6 @@ private:
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
-	int m_sort_column;
-	bool m_sort_ascending;
+	int m_sort_column = 0;
+	bool m_sort_ascending = true;
 };

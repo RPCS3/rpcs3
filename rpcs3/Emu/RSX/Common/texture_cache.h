@@ -151,7 +151,11 @@ namespace rsx
 			deferred_subresource(image_resource_type _res, deferred_request_command _op,
 				const image_section_attributes_t& attr, position2u offset,
 				texture_channel_remap_t _remap)
-				: external_handle(_res), op(_op), x(offset.x), y(offset.y), remap(std::move(_remap))
+				: external_handle(_res)
+				, remap(std::move(_remap))
+				, op(_op)
+				, x(offset.x)
+				, y(offset.y)
 			{
 				static_cast<image_section_attributes_t&>(*this) = attr;
 			}

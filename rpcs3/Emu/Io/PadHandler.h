@@ -109,15 +109,13 @@ struct Button
 	u32 m_offset;
 	u32 m_keyCode;
 	u32 m_outKeyCode;
-	u16 m_value;
-	bool m_pressed;
+	u16 m_value = 0;
+	bool m_pressed = false;
 
 	Button(u32 offset, u32 keyCode, u32 outKeyCode)
-		: m_pressed(false)
-		, m_offset(offset)
+		: m_offset(offset)
 		, m_keyCode(keyCode)
 		, m_outKeyCode(outKeyCode)
-		, m_value(0)
 	{
 	}
 };
@@ -127,13 +125,12 @@ struct AnalogStick
 	u32 m_offset;
 	u32 m_keyCodeMin;
 	u32 m_keyCodeMax;
-	u16 m_value;
+	u16 m_value = 128;
 
 	AnalogStick(u32 offset, u32 keyCodeMin, u32 keyCodeMax)
 		: m_offset(offset)
 		, m_keyCodeMin(keyCodeMin)
 		, m_keyCodeMax(keyCodeMax)
-		, m_value(128)
 	{
 	}
 };

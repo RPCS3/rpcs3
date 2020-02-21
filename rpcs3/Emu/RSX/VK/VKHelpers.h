@@ -1322,7 +1322,8 @@ private:
 			VkImageTiling tiling,
 			VkImageUsageFlags usage,
 			VkImageCreateFlags image_flags)
-			: m_device(dev), current_layout(initial_layout)
+			: current_layout(initial_layout)
+			, m_device(dev)
 		{
 			info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 			info.imageType = image_type;
@@ -1448,7 +1449,8 @@ private:
 		}
 
 		image_view(VkDevice dev, VkImageViewCreateInfo create_info)
-			: m_device(dev), info(create_info)
+			: info(create_info)
+			, m_device(dev)
 		{
 			create_impl();
 		}
@@ -1781,7 +1783,8 @@ private:
 
 	public:
 		framebuffer(VkDevice dev, VkRenderPass pass, u32 width, u32 height, std::vector<std::unique_ptr<vk::image_view>> &&atts)
-			: m_device(dev), attachments(std::move(atts))
+			: attachments(std::move(atts))
+			, m_device(dev)
 		{
 			std::vector<VkImageView> image_view_array(attachments.size());
 			size_t i = 0;

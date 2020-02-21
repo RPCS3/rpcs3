@@ -57,7 +57,8 @@ namespace
 }
 
 user_manager_dialog::user_manager_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
-	: QDialog(parent), m_user_list(), m_sort_column(1), m_sort_ascending(true), m_gui_settings(gui_settings)
+	: QDialog(parent)
+	, m_gui_settings(gui_settings)
 {
 	setWindowTitle(tr("User Manager"));
 	setMinimumSize(QSize(500, 400));

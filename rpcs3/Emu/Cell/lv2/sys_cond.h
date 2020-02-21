@@ -33,8 +33,8 @@ struct lv2_cond final : lv2_obj
 
 	lv2_cond(u32 shared, s32 flags, u64 key, u64 name, std::shared_ptr<lv2_mutex> mutex)
 		: shared(shared)
-		, key(key)
 		, flags(flags)
+		, key(key)
 		, name(name)
 		, mutex(std::move(mutex))
 	{

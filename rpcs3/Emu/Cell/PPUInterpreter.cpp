@@ -10,6 +10,11 @@
 #include <cmath>
 #include <atomic>
 
+#if !defined(_MSC_VER) && defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+
 #if defined(_MSC_VER)
 #define SSSE3_FUNC
 #else

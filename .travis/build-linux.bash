@@ -26,7 +26,7 @@ else
 	export CXX=${CLANGXX_BINARY}
 fi
 
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_LLVM_SUBMODULE=OFF -DLLVM_DIR=llvmlibs/lib/cmake/llvm/ -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_LLVM_SUBMODULE=OFF -DUSE_COTIRE=OFF -DLLVM_DIR=llvmlibs/lib/cmake/llvm/ -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja
 
 ninja; build_status=$?;
 

@@ -94,7 +94,9 @@ namespace
 }
 
 save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::string dir, QWidget* parent)
-	: QDialog(parent), m_save_entries(), m_dir(dir), m_sort_column(1), m_sort_ascending(true), m_gui_settings(gui_settings)
+	: QDialog(parent)
+	, m_dir(dir)
+	, m_gui_settings(gui_settings)
 {
 	setWindowTitle(tr("Save Manager"));
 	setMinimumSize(QSize(400, 400));

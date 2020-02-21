@@ -24,9 +24,6 @@ namespace
 rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
 	: QDialog(parent)
 	, m_gui_settings(gui_settings)
-	, m_addr(0x0)
-	, m_cur_texture(0)
-	, exit(false)
 {
 	setWindowTitle(tr("RSX Debugger"));
 	setObjectName("rsx_debugger");
@@ -327,7 +324,9 @@ bool rsx_debugger::eventFilter(QObject* object, QEvent* event)
 }
 
 Buffer::Buffer(bool isTex, u32 id, const QString& name, QWidget* parent)
-	: QGroupBox(name, parent), m_isTex(isTex), m_id(id)
+	: QGroupBox(name, parent)
+	, m_id(id)
+	, m_isTex(isTex)
 {
 	m_image_size = isTex ? Texture_Size : Panel_Size;
 

@@ -8,6 +8,11 @@
 
 #define DEBUG_VERTEX_STREAMING 0
 
+#if !defined(_MSC_VER) && defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+
 #if defined(_MSC_VER)
 #define SSSE3_FUNC
 #define SSE4_1_FUNC

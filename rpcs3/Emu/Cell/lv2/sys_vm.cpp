@@ -9,9 +9,9 @@ extern u64 get_timebased_time();
 
 sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, lv2_memory_container* ct, u32 psize)
 	: ct(ct)
-	, psize(psize)
 	, addr(_addr)
 	, size(vsize)
+	, psize(psize)
 {
 	// Write ID
 	g_ids[addr >> 28].release(idm::last_id());

@@ -51,6 +51,6 @@ private:
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
-	int m_sort_column;
-	bool m_sort_ascending;
+	int m_sort_column = 1;
+	bool m_sort_ascending = true;
 };
