@@ -169,9 +169,16 @@ public:
 		bool has_msaa = false;
 
 		Render_Info() = default;
-		explicit Render_Info(QString name) : name(std::move(name)), has_adapters(false) {}
+		explicit Render_Info(QString name)
+			: name(std::move(name))
+			, has_adapters(false) {}
+
 		Render_Info(QString name, QStringList adapters, bool supported, SettingsType type, bool has_msaa)
-			: name(std::move(name)), adapters(std::move(adapters)), supported(supported), type(type), has_msaa(has_msaa) {}
+			: name(std::move(name))
+			, adapters(std::move(adapters))
+			, type(type)
+			, supported(supported)
+			, has_msaa(has_msaa) {}
 	};
 
 	struct Render_Creator

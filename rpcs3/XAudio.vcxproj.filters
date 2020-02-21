@@ -10,12 +10,6 @@
     <ClCompile Include="Emu\Audio\XAudio2\XAudio2Backend.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Audio\XAudio2\XAudio27Backend.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Audio\XAudio2\XAudio28Backend.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\Audio\XAudio2\XAudio2Backend.h">

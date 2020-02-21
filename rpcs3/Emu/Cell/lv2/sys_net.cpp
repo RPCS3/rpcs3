@@ -476,8 +476,8 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 
 		paddr->sin_len    = sizeof(sys_net_sockaddr_in);
 		paddr->sin_family = SYS_NET_AF_INET;
-		paddr->sin_port   = ntohs(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
-		paddr->sin_addr   = ntohl(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
+		paddr->sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+		paddr->sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
 		paddr->sin_zero   = 0;
 	}
 
@@ -501,8 +501,8 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 
 	::sockaddr_in name{};
 	name.sin_family      = AF_INET;
-	name.sin_port        = htons(psa_in->sin_port);
-	name.sin_addr.s_addr = htonl(psa_in->sin_addr);
+	name.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
+	name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
 	::socklen_t namelen  = sizeof(name);
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
@@ -541,8 +541,8 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 	s32 result = 0;
 	::sockaddr_in name{};
 	name.sin_family      = AF_INET;
-	name.sin_port        = htons(psa_in->sin_port);
-	name.sin_addr.s_addr = htonl(psa_in->sin_addr);
+	name.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
+	name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
 	::socklen_t namelen  = sizeof(name);
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
@@ -552,7 +552,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 		if (addr->sa_family == 0 && !psa_in->sin_port && !psa_in->sin_addr)
 		{
 			// Hack for DNS (8.8.8.8:53)
-			name.sin_port        = htons(53);
+			name.sin_port        = std::bit_cast<u16, be_t<u16>>(53);
 			name.sin_addr.s_addr = 0x08080808;
 
 			// Overwrite arg (probably used to validate recvfrom addr)
@@ -714,8 +714,8 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 
 			paddr->sin_len    = sizeof(sys_net_sockaddr_in);
 			paddr->sin_family = SYS_NET_AF_INET;
-			paddr->sin_port   = ntohs(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
-			paddr->sin_addr   = ntohl(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
+			paddr->sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+			paddr->sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
 			paddr->sin_zero   = 0;
 			return {};
 		}
@@ -762,8 +762,8 @@ error_code sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 
 			paddr->sin_len    = sizeof(sys_net_sockaddr_in);
 			paddr->sin_family = SYS_NET_AF_INET;
-			paddr->sin_port   = ntohs(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
-			paddr->sin_addr   = ntohl(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
+			paddr->sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+			paddr->sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
 			paddr->sin_zero   = 0;
 			return {};
 		}
@@ -1138,8 +1138,8 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 		paddr->sin_len    = sizeof(sys_net_sockaddr_in);
 		paddr->sin_family = SYS_NET_AF_INET;
-		paddr->sin_port   = ntohs(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
-		paddr->sin_addr   = ntohl(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
+		paddr->sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+		paddr->sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
 		paddr->sin_zero   = 0;
 	}
 
@@ -1195,8 +1195,8 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 	if (addr)
 	{
 		name.sin_family      = AF_INET;
-		name.sin_port        = htons(psa_in->sin_port);
-		name.sin_addr.s_addr = htonl(psa_in->sin_addr);
+		name.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
+		name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
 	}
 
 	::socklen_t namelen = sizeof(name);

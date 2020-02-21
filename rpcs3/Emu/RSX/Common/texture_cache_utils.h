@@ -742,14 +742,15 @@ namespace rsx
 
 			// Constructors
 			range_iterator_tmpl() = default; // end iterator
-			explicit range_iterator_tmpl(parent_type &storage, const address_range &_range, section_bounds _bounds, bool _locked_only) :
-				range(_range),
-				bounds(_bounds),
-				block(&storage.block_for(range.start)),
-				unowned_it(block->unowned_begin()),
-				unowned_remaining(true),
-				cur_block_it(block->begin()),
-				locked_only(_locked_only)
+
+			explicit range_iterator_tmpl(parent_type &storage, const address_range &_range, section_bounds _bounds, bool _locked_only)
+				: range(_range)
+				, bounds(_bounds)
+				, block(&storage.block_for(range.start))
+				, unowned_remaining(true)
+				, unowned_it(block->unowned_begin())
+				, cur_block_it(block->begin())
+				, locked_only(_locked_only)
 			{
 				// do a "fake" iteration to ensure the internal state is consistent
 				next(false);

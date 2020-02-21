@@ -33,6 +33,8 @@
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
 
+LOG_CHANNEL(sys_log, "SYS");
+
 /** Emu.Init() wrapper for user manager */
 bool main_application::InitializeEmulator(const std::string& user, bool force_init, bool show_gui)
 {
@@ -144,25 +146,34 @@ EmuCallbacks main_application::CreateCallbacks()
 
 	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
 	{
+		std::shared_ptr<AudioBackend> result;
 		switch (audio_renderer type = g_cfg.audio.renderer)
 		{
-		case audio_renderer::null: return std::make_shared<NullAudioBackend>();
+		case audio_renderer::null: result = std::make_shared<NullAudioBackend>(); break;
 #ifdef _WIN32
-		case audio_renderer::xaudio: return std::make_shared<XAudio2Backend>();
+		case audio_renderer::xaudio: result = std::make_shared<XAudio2Backend>(); break;
 #endif
 #ifdef HAVE_ALSA
-		case audio_renderer::alsa: return std::make_shared<ALSABackend>();
+		case audio_renderer::alsa: result = std::make_shared<ALSABackend>(); break;
 #endif
 #ifdef HAVE_PULSE
-		case audio_renderer::pulse: return std::make_shared<PulseBackend>();
+		case audio_renderer::pulse: result = std::make_shared<PulseBackend>(); break;
 #endif
 
-		case audio_renderer::openal: return std::make_shared<OpenALBackend>();
+		case audio_renderer::openal: result = std::make_shared<OpenALBackend>(); break;
 #ifdef HAVE_FAUDIO
-		case audio_renderer::faudio: return std::make_shared<FAudioBackend>();
+		case audio_renderer::faudio: result = std::make_shared<FAudioBackend>(); break;
 #endif
 		default: fmt::throw_exception("Invalid audio renderer: %s" HERE, type);
 		}
+
+		if (!result->Initialized())
+		{
+			// Fall back to a null backend if something went wrong
+			sys_log.error("Audio renderer %s could not be initialized, using a Null renderer instead", result->GetName());
+			result = std::make_shared<NullAudioBackend>();
+		}
+		return result;
 	};
 
 	return callbacks;

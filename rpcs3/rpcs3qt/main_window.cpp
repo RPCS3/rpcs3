@@ -62,11 +62,10 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
 	: QMainWindow(parent)
+	, ui(new Ui::main_window)
 	, guiSettings(guiSettings)
 	, emuSettings(emuSettings)
 	, m_persistent_settings(persistent_settings)
-	, m_sys_menu_opened(false)
-	, ui(new Ui::main_window)
 {
 	Q_INIT_RESOURCE(resources);
 
@@ -1333,8 +1332,8 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, this, &main_window::ConfigureGuiFromSettings);
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
 		connect(&dlg, &settings_dialog::GuiRepaintRequest, this, &main_window::RepaintGui);
-		connect(&dlg, &settings_dialog::accepted, this, &main_window::NotifyEmuSettingsChange);
-		connect(&dlg, &settings_dialog::accepted, m_logFrame, &log_frame::LoadSettings);
+		connect(&dlg, &settings_dialog::EmuSettingsApplied, this, &main_window::NotifyEmuSettingsChange);
+		connect(&dlg, &settings_dialog::EmuSettingsApplied, m_logFrame, &log_frame::LoadSettings);
 		dlg.exec();
 	};
 

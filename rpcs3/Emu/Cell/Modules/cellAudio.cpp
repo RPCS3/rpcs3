@@ -57,8 +57,8 @@ cell_audio_config::cell_audio_config()
 
 
 audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
-	: cfg(_cfg)
-	, backend(_cfg.backend)
+	: backend(_cfg.backend)
+	, cfg(_cfg)
 	, buf_sz(AUDIO_BUFFER_SAMPLES * _cfg.audio_channels)
 	, emu_paused(Emu.IsPaused())
 {

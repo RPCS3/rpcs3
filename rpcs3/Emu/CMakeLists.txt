@@ -115,13 +115,12 @@ if(USE_FAUDIO AND SDL2_FOUND AND NOT SDL2_VERSION VERSION_LESS 2.0.9)
 endif()
 
 if(WIN32)
+	target_include_directories(rpcs3_emu PUBLIC "${RPCS3_SRC_DIR}/../3rdparty/XAudio2Redist/include")
+	target_link_libraries(rpcs3_emu PRIVATE "${RPCS3_SRC_DIR}/../3rdparty/XAudio2Redist/libs/xaudio2_9redist.lib")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DELAYLOAD:xaudio2_9redist.dll")
 	target_sources(rpcs3_emu PRIVATE
-		Audio/XAudio2/XAudio27Backend.cpp
-		Audio/XAudio2/XAudio28Backend.cpp
 		Audio/XAudio2/XAudio2Backend.cpp
 	)
-	# Slimmed down version of minidx9 for XAudio2_7 only
-	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/XAudio2_7")
 endif()
 
 target_link_libraries(rpcs3_emu

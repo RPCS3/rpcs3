@@ -264,15 +264,15 @@ class AudioDecoder : public ppu_thread
 {
 public:
 	squeue_t<AdecTask> job;
-	volatile bool is_closed;
-	volatile bool is_finished;
-	bool just_started;
-	bool just_finished;
+	volatile bool is_closed = false;
+	volatile bool is_finished = false;
+	bool just_started = false;
+	bool just_finished = false;
 
-	AVCodec* codec;
-	AVInputFormat* input_format;
-	AVCodecContext* ctx;
-	AVFormatContext* fmt;
+	AVCodec* codec = nullptr;
+	AVInputFormat* input_format = nullptr;
+	AVCodecContext* ctx = nullptr;
+	AVFormatContext* fmt = nullptr;
 	u8* io_buf;
 
 	struct AudioReader
@@ -296,7 +296,7 @@ public:
 	const u32 memSize;
 	const vm::ptr<CellAdecCbMsg> cbFunc;
 	const u32 cbArg;
-	u32 memBias;
+	u32 memBias = 0;
 
 	AdecTask task;
 	u64 last_pts, first_pts;
@@ -312,17 +312,8 @@ public:
 		, type(type)
 		, memAddr(addr)
 		, memSize(size)
-		, memBias(0)
 		, cbFunc(func)
 		, cbArg(arg)
-		, is_closed(false)
-		, is_finished(false)
-		, just_started(false)
-		, just_finished(false)
-		, codec(nullptr)
-		, input_format(nullptr)
-		, ctx(nullptr)
-		, fmt(nullptr)
 	{
 		av_register_all();
 		avcodec_register_all();

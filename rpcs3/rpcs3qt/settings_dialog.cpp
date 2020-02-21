@@ -39,7 +39,11 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
 settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, const int& tabIndex, QWidget *parent, const GameInfo* game)
-	: QDialog(parent), xgui_settings(guiSettings), xemu_settings(emuSettings), ui(new Ui::settings_dialog), m_tab_Index(tabIndex)
+	: QDialog(parent)
+	, m_tab_Index(tabIndex)
+	, ui(new Ui::settings_dialog)
+	, xgui_settings(guiSettings)
+	, xemu_settings(emuSettings)
 {
 	ui->setupUi(this);
 	ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
@@ -92,10 +96,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	m_discord_state = xgui_settings->GetValue(gui::m_discordState).toString();
 
 	// Various connects
-	connect(ui->buttonBox, &QDialogButtonBox::accepted, [this, use_discord_old = m_use_discord, discord_state_old = m_discord_state]
+
+	const auto apply_configs = [this, use_discord_old = m_use_discord, discord_state_old = m_discord_state](bool do_exit)
 	{
 		std::set<std::string> selectedlle;
-		for (int i = 0; i<ui->lleList->count(); ++i)
+		for (int i = 0; i < ui->lleList->count(); ++i)
 		{
 			const auto& item = ui->lleList->item(i);
 			if (item->checkState() != Qt::CheckState::Unchecked)
@@ -106,7 +111,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		std::vector<std::string> selected_ls = std::vector<std::string>(selectedlle.begin(), selectedlle.end());
 		xemu_settings->SaveSelectedLibraries(selected_ls);
 		xemu_settings->SaveSettings();
-		accept();
+
+		if (do_exit)
+		{
+			accept();
+		}
+
+		Q_EMIT EmuSettingsApplied();
 
 		// Discord Settings can be saved regardless of WITH_DISCORD_RPC
 		xgui_settings->SetValue(gui::m_richPresence, m_use_discord);
@@ -130,6 +141,18 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			discord::update_presence(sstr(m_discord_state), "Idle", false);
 		}
 #endif
+	};
+
+	connect(ui->buttonBox, &QDialogButtonBox::clicked, [=, this](QAbstractButton* button)
+	{
+		if (button == ui->buttonBox->button(QDialogButtonBox::Save))
+		{
+			apply_configs(true);
+		}
+		else if (button == ui->buttonBox->button(QDialogButtonBox::Apply))
+		{
+			apply_configs(false);
+		}
 	});
 
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
@@ -1304,6 +1327,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			rpcs3::title_format_data title_data;
 			title_data.format = sstr(new_format);
 			title_data.renderer = xemu_settings->GetSetting(emu_settings::Renderer);
+			title_data.vulkan_adapter = xemu_settings->GetSetting(emu_settings::VulkanAdapter);
 			title_data.fps = 60.;
 
 			if (game)
@@ -1326,6 +1350,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 			const std::vector<std::pair<const QString, const QString>> window_title_glossary =
 			{
+				{ "%G", tr("GPU Model") },
+				{ "%C", tr("CPU Model") },
+				{ "%c", tr("Thread Count") },
+				{ "%M", tr("System Memory") },
 				{ "%F", tr("Framerate") },
 				{ "%R", tr("Renderer") },
 				{ "%T", tr("Title") },
