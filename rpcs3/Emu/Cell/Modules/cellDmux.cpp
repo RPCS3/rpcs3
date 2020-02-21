@@ -134,9 +134,9 @@ class ElementaryStream
 	std::mutex m_mutex;
 
 	squeue_t<u32> entries; // AU starting addresses
-	u32 put_count; // number of AU written
-	u32 got_count; // number of AU obtained by GetAu(Ex)
-	u32 released; // number of AU released
+	u32 put_count = 0; // number of AU written
+	u32 got_count = 0; // number of AU obtained by GetAu(Ex)
+	u32 released = 0; // number of AU released
 
 	u32 put; // AU that is being written now
 
@@ -162,9 +162,9 @@ public:
 	const u32 spec; //addr
 
 	std::vector<u8> raw_data; // demultiplexed data stream (managed by demuxer thread)
-	size_t raw_pos; // should be <= raw_data.size()
-	u64 last_dts;
-	u64 last_pts;
+	std::size_t raw_pos = 0; // should be <= raw_data.size()
+	u64 last_dts = CODEC_TS_INVALID;
+	u64 last_pts = CODEC_TS_INVALID;
 
 	void push(DemuxerStream& stream, u32 size); // called by demuxer thread (not multithread-safe)
 
@@ -187,17 +187,13 @@ public:
 	const u32 memSize;
 	const vm::ptr<CellDmuxCbMsg> cbFunc;
 	const u32 cbArg;
-	volatile bool is_finished;
-	volatile bool is_closed;
-	atomic_t<bool> is_running;
-	atomic_t<bool> is_working;
+	volatile bool is_finished = false;
+	volatile bool is_closed = false;
+	atomic_t<bool> is_running = false;
+	atomic_t<bool> is_working = false;
 
 	Demuxer(u32 addr, u32 size, vm::ptr<CellDmuxCbMsg> func, u32 arg)
 		: ppu_thread({}, "", 0)
-		, is_finished(false)
-		, is_closed(false)
-		, is_running(false)
-		, is_working(false)
 		, memAddr(addr)
 		, memSize(size)
 		, cbFunc(func)
@@ -738,7 +734,8 @@ PesHeader::PesHeader(DemuxerStream& stream)
 }
 
 ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
-	: dmux(dmux)
+	: put(align(addr, 128))
+	, dmux(dmux)
 	, memAddr(align(addr, 128))
 	, memSize(size - (addr - memAddr))
 	, fidMajor(fidMajor)
@@ -748,13 +745,6 @@ ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMaj
 	, cbFunc(cbFunc)
 	, cbArg(cbArg)
 	, spec(spec)
-	, put(align(addr, 128))
-	, put_count(0)
-	, got_count(0)
-	, released(0)
-	, raw_pos(0)
-	, last_dts(CODEC_TS_INVALID)
-	, last_pts(CODEC_TS_INVALID)
 {
 }
 

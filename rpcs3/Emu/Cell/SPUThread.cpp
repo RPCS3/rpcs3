@@ -1233,11 +1233,11 @@ spu_thread::~spu_thread()
 
 spu_thread::spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id)
 	: cpu_thread(idm::last_id())
-	, spu_name(name)
 	, index(index)
 	, offset(ls)
 	, group(group)
 	, lv2_id(lv2_id)
+	, spu_name(name)
 {
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
 	{

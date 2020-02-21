@@ -32,19 +32,19 @@ namespace rsx
 			u32 aux_param1;
 
 			transport_packet(void *_dst, void *_src, u32 len)
-				: src(_src), dst(_dst), length(len), type(op::raw_copy)
+				: type(op::raw_copy), src(_src), dst(_dst), length(len)
 			{}
 
 			transport_packet(void *_dst, std::vector<u8>& _src, u32 len)
-				: dst(_dst), opt_storage(std::move(_src)), length(len), type(op::vector_copy)
+				: type(op::vector_copy), opt_storage(std::move(_src)), dst(_dst), length(len)
 			{}
 
 			transport_packet(void *_dst, rsx::primitive_type prim, u32 len)
-				: dst(_dst), aux_param0(static_cast<u8>(prim)), length(len), type(op::index_emulate)
+				: type(op::index_emulate), dst(_dst), length(len), aux_param0(static_cast<u8>(prim))
 			{}
 
 			transport_packet(u32 command, void* args)
-				: aux_param0(command), src(args), type(op::callback)
+				: type(op::callback), src(args), aux_param0(command)
 			{}
 		};
 

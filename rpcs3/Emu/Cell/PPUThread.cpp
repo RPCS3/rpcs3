@@ -716,8 +716,8 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	, prio(prio)
 	, stack_size(param.stack_size)
 	, stack_addr(param.stack_addr)
-	, start_time(get_guest_system_time())
 	, joiner(-!!detached)
+	, start_time(get_guest_system_time())
 	, ppu_name(name)
 {
 	gpr[1] = stack_addr + stack_size - 0x70;

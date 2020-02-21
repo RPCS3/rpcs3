@@ -414,7 +414,7 @@ class SELFDecrypter
 	std::unique_ptr<u8[]> data_keys;
 	u32 data_keys_length;
 	std::unique_ptr<u8[]> data_buf;
-	u32 data_buf_length;
+	u32 data_buf_length = 0;
 
 	// Main key vault instance.
 	KeyVault key_v;

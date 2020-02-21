@@ -6,12 +6,10 @@
 
 #include <algorithm>
 
-FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size) :
-	m_prog(prog),
-	m_size(size),
-	m_const_index(0),
-	m_location(0),
-	m_ctrl(prog.ctrl)
+FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size)
+	: m_size(size)
+	, m_prog(prog)
+	, m_ctrl(prog.ctrl)
 {
 	m_size = 0;
 }

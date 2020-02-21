@@ -38,8 +38,8 @@ struct lv2_sema final : lv2_obj
 		: protocol(protocol)
 		, shared(shared)
 		, key(key)
-		, flags(flags)
 		, name(name)
+		, flags(flags)
 		, max(max)
 		, val(value)
 	{

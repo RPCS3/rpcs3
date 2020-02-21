@@ -15,8 +15,8 @@ struct WAVHeader
 
 		RIFFHeader(u32 size)
 			: ID("RIFF"_u32)
-			, WAVE("WAVE"_u32)
 			, Size(size)
+			, WAVE("WAVE"_u32)
 		{
 		}
 	} RIFF;
@@ -53,10 +53,10 @@ struct WAVHeader
 	WAVHeader() = default;
 
 	WAVHeader(u16 ch)
-		: ID("data"_u32)
-		, Size(0)
+		: RIFF(sizeof(RIFFHeader) + sizeof(FMTHeader))
 		, FMT(ch)
-		, RIFF(sizeof(RIFFHeader) + sizeof(FMTHeader))
+		, ID("data"_u32)
+		, Size(0)
 	{
 	}
 };

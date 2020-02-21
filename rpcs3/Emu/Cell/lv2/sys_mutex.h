@@ -45,8 +45,8 @@ struct lv2_mutex final : lv2_obj
 		, shared(shared)
 		, adaptive(adaptive)
 		, key(key)
-		, flags(flags)
 		, name(name)
+		, flags(flags)
 	{
 	}
 

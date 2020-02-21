@@ -9,8 +9,8 @@ extern bool ppu_patch(u32 addr, u32 value);
 instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
 	: QDialog(parent)
 	, m_pc(_pc)
-	, cpu(_cpu)
 	, m_disasm(_disasm)
+	, cpu(_cpu)
 {
 	setWindowTitle(tr("Edit instruction"));
 	setAttribute(Qt::WA_DeleteOnClose);

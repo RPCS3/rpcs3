@@ -120,17 +120,17 @@ class CgBinaryDisasm
 
 	std::string m_path; // used for FP decompiler thread, delete this later
 
-	u8* m_buffer;
-	size_t m_buffer_size;
+	u8* m_buffer = nullptr;
+	std::size_t m_buffer_size = 0;
 	std::string m_arb_shader;
 	std::string m_glsl_shader;
 	std::string m_dst_reg_name;
 
 	// FP members
-	u32 m_offset;
-	u32 m_opcode;
-	u32 m_step;
-	u32 m_size;
+	u32 m_offset = 0;
+	u32 m_opcode = 0;
+	u32 m_step = 0;
+	u32 m_size = 0;
 	std::vector<u32> m_end_offsets;
 	std::vector<u32> m_else_offsets;
 	std::vector<u32> m_loop_end_offsets;
@@ -179,14 +179,6 @@ public:
 
 	CgBinaryDisasm(const std::string& path)
 		: m_path(path)
-		, m_buffer(nullptr)
-		, m_buffer_size(0)
-		, m_offset(0)
-		, m_opcode(0)
-		, m_step(0)
-		, m_size(0)
-		, m_arb_shader("")
-		, m_dst_reg_name("")
 	{
 		fs::file f(path);
 		if (!f) return;

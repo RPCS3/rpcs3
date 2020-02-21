@@ -8,8 +8,8 @@ inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
 	: QDialog(parent)
 	, m_pc(_pc)
-	, cpu(_cpu)
 	, m_disasm(_disasm)
+	, cpu(_cpu)
 {
 	setWindowTitle(tr("Edit registers"));
 	setAttribute(Qt::WA_DeleteOnClose);

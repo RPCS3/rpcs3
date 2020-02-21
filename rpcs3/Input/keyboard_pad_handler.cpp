@@ -18,7 +18,9 @@ bool keyboard_pad_handler::Init()
 	return true;
 }
 
-keyboard_pad_handler::keyboard_pad_handler() : PadHandlerBase(pad_handler::keyboard), QObject()
+keyboard_pad_handler::keyboard_pad_handler()
+	: QObject()
+	, PadHandlerBase(pad_handler::keyboard)
 {
 	init_configs();
 

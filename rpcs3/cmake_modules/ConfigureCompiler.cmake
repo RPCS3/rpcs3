@@ -30,10 +30,10 @@ else()
 
 	add_compile_options(-Werror=old-style-cast)
 	add_compile_options(-Werror=sign-compare)
+	add_compile_options(-Werror=reorder)
 
 	#TODO Clean the code so these are removed
 	add_compile_options(-Wno-unused-variable)
-	add_compile_options(-Wno-reorder)
 	add_compile_options(-Wno-unknown-pragmas)
 	add_compile_options(-Wno-invalid-offsetof)
 	add_compile_options(-Wno-unused-function)

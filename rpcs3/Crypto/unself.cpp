@@ -884,7 +884,6 @@ std::vector<fs::file> SCEDecrypter::MakeFile()
 SELFDecrypter::SELFDecrypter(const fs::file& s)
 	: self_f(s)
 	, key_v()
-	, data_buf_length(0)
 {
 }
 
