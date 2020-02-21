@@ -545,8 +545,9 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	vm::var<CellGameDataCBResult> cbResult;
 	vm::var<CellGameDataStatGet>  cbGet;
 	vm::var<CellGameDataStatSet>  cbSet;
-	cbGet->isNewData = fs::is_dir(vfs::get(dir)) ? CELL_GAMEDATA_ISNEWDATA_NO : CELL_GAMEDATA_ISNEWDATA_YES;
 
+	const u32 new_data = fs::is_dir(vfs::get(dir)) ? CELL_GAMEDATA_ISNEWDATA_NO : CELL_GAMEDATA_ISNEWDATA_YES;
+	cbGet->isNewData = new_data;
 
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	cbGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
@@ -576,10 +577,6 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		strcpy_trunc(cbGet->getParam.titleLang[i], psf::get_string(sfo, fmt::format("TITLE_%02d", i)));
 	}
 
-	vm::var<CellGameDataSystemFileParam> setParam;
-	*setParam = cbGet->getParam;
-	cbSet->setParam = setParam;
-
 	funcStat(ppu, cbResult, cbGet, cbSet);
 
 	switch (cbResult->result)
@@ -597,7 +594,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		const std::string usrdir = dir + "/USRDIR";
 		const std::string vusrdir = vfs::get(usrdir);
 
-		if (!fs::is_dir(vusrdir) && !fs::create_path(vusrdir))
+		if (new_data && !fs::create_path(vusrdir))
 		{
 			return {CELL_GAME_ERROR_ACCESS_ERROR, usrdir};
 		}
@@ -628,6 +625,10 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 			}
 
 			psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::rewrite), sfo);
+		}
+		else if (new_data)
+		{
+			return CELL_GAMEDATA_ERROR_PARAM;
 		}
 
 		return CELL_OK;
