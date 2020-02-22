@@ -1,7 +1,20 @@
 ﻿#include "debugger_frame.h"
+#include "register_editor_dialog.h"
+#include "instruction_editor_dialog.h"
+#include "gui_settings.h"
+#include "debugger_list.h"
+#include "breakpoint_list.h"
+#include "breakpoint_handler.h"
 #include "qt_utils.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/PPUDisAsm.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUDisAsm.h"
+#include "Emu/Cell/SPUThread.h"
+#include "Emu/CPU/CPUThread.h"
+#include "Emu/CPU/CPUDisAsm.h"
 
 #include <QKeyEvent>
 #include <QScrollBar>
@@ -10,6 +23,8 @@
 #include <QCompleter>
 #include <QMenu>
 #include <QJSEngine>
+#include <QVBoxLayout>
+#include <QTimer>
 
 constexpr auto qstr = QString::fromStdString;
 extern bool user_asked_for_frame_capture;

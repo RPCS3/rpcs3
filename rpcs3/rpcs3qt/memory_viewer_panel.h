@@ -1,19 +1,10 @@
-#pragma once
+﻿#pragma once
 
 #include <QDialog>
 #include <QLineEdit>
-#include <QTextEdit>
-#include <QComboBox>
-#include <QVBoxLayout>
-#include <QPushButton>
-#include <QSpinBox>
-#include <QGroupBox>
-#include <QFontDatabase>
 #include <QLabel>
 #include <QFont>
-#include <QScrollBar>
-#include <QPainter>
-#include <QMouseEvent>
+#include <QFontDatabase>
 
 class memory_viewer_panel : public QDialog
 {

@@ -1,4 +1,4 @@
-#include "find_dialog.h"
+﻿#include "find_dialog.h"
 
 #include <QVBoxLayout>
 
@@ -39,10 +39,6 @@ find_dialog::find_dialog(QTextEdit* edit, QWidget *parent, Qt::WindowFlags f) : 
 	connect(m_find_previous, &QPushButton::clicked, this, &find_dialog::find_previous);
 
 	show();
-}
-
-find_dialog::~find_dialog()
-{
 }
 
 int find_dialog::count_all()

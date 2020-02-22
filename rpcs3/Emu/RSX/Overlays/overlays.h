@@ -2,22 +2,19 @@
 #include "overlay_animation.h"
 #include "overlay_controls.h"
 
-#include "../../../Utilities/date_time.h"
 #include "../../../Utilities/Thread.h"
-#include "../../Io/PadHandler.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
-#include "Input/pad_thread.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/Cell/Modules/cellOskDialog.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
-#include "Utilities/CPUStats.h"
 #include "Utilities/Timer.h"
 
 #include <list>
+#include <thread>
 
 // Utils
 extern u64 get_system_time();

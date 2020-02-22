@@ -4,6 +4,7 @@
 
 #include <QLabel>
 #include <QPushButton>
+#include <QHBoxLayout>
 
 LOG_CHANNEL(gui_log, "GUI");
 

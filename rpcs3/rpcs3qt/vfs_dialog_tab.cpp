@@ -2,6 +2,7 @@
 
 #include <QFileDialog>
 #include <QCoreApplication>
+#include <QHBoxLayout>
 #include <QPushButton>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }

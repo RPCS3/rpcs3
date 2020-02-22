@@ -1,5 +1,4 @@
-﻿
-#include "qt_utils.h"
+﻿#include "qt_utils.h"
 #include <QApplication>
 #include <QBitmap>
 #include <QFontMetrics>

@@ -1,7 +1,7 @@
 ﻿#include "keyboard_pad_handler.h"
+#include "Emu/Io/pad_config.h"
 
 #include <QApplication>
-#include <QThread>
 
 LOG_CHANNEL(input_log, "Input");
 

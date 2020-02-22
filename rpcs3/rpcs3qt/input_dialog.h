@@ -2,8 +2,6 @@
 
 #include <QDialog>
 #include <QLabel>
-#include <QLineEdit>
-#include <QPushButton>
 
 class input_dialog : public QDialog
 {

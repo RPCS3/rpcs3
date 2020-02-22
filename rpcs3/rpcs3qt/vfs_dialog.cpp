@@ -1,8 +1,12 @@
 ﻿#include "vfs_dialog.h"
+#include "vfs_dialog_tab.h"
+#include "gui_settings.h"
 
+#include <QTabWidget>
 #include <QDialogButtonBox>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QVBoxLayout>
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"

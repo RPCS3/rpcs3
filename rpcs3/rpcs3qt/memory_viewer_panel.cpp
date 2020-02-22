@@ -1,7 +1,15 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 
 #include "memory_viewer_panel.h"
+
+#include <QVBoxLayout>
+#include <QPushButton>
+#include <QSpinBox>
+#include <QGroupBox>
+#include <QTextEdit>
+#include <QComboBox>
+#include <QWheelEvent>
 
 constexpr auto qstr = QString::fromStdString;
 

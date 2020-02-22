@@ -6,16 +6,28 @@
 #include "user_manager_dialog.h"
 #include "table_item_delegate.h"
 #include "main_application.h"
+#include "gui_settings.h"
 
 #include "Emu/System.h"
 
 #include "Utilities/StrUtil.h"
+#include "Utilities/File.h"
 #include "Utilities/Log.h"
 
 #include <QRegExpValidator>
 #include <QInputDialog>
 #include <QScreen>
 #include <QKeyEvent>
+#include <QHeaderView>
+#include <QHBoxLayout>
+#include <QPushButton>
+#include <QMenu>
+#include <QDesktopServices>
+#include <QMessageBox>
+#include <QGuiApplication>
+#include <QUrl>
+
+constexpr auto qstr = QString::fromStdString;
 
 LOG_CHANNEL(gui_log, "GUI");
 

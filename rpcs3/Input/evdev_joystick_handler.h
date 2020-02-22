@@ -1,8 +1,7 @@
 ﻿#pragma once
 #ifdef HAVE_LIBEVDEV
 
-#include "Utilities/types.h"
-#include "Utilities/Config.h"
+#include "stdafx.h"
 #include "Utilities/File.h"
 #include "Emu/Io/PadHandler.h"
 #include <libevdev/libevdev.h>

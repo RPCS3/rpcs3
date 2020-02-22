@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "stdafx.h"
+#include <string>
 
 namespace discord
 {

@@ -1,8 +1,9 @@
 ﻿#pragma once
 
-#include <QtCore>
+#include "stdafx.h"
 #include <QtNetwork>
-#include "progress_dialog.h"
+
+class progress_dialog;
 
 class update_manager : public QObject
 {
