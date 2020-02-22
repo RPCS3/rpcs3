@@ -283,18 +283,6 @@ error_code cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 	return CELL_OK;
 }
 
-error_code cellAudioOutConfigure2()
-{
-	cellSysutil.todo("cellAudioOutConfigure2()");
-	return CELL_OK;
-}
-
-error_code cellAudioOutGetConfiguration2()
-{
-	cellSysutil.todo("cellAudioOutGetConfiguration2()");
-	return CELL_OK;
-}
-
 error_code cellAudioOutRegisterCallback()
 {
 	cellSysutil.todo("cellAudioOutRegisterCallback()");
@@ -312,13 +300,11 @@ void cellSysutil_AudioOut_init()
 {
 	REG_FUNC(cellSysutil, cellAudioOutGetState);
 	REG_FUNC(cellSysutil, cellAudioOutConfigure);
-	REG_FUNC(cellSysutil, cellAudioOutConfigure2);
 	REG_FUNC(cellSysutil, cellAudioOutGetSoundAvailability);
 	REG_FUNC(cellSysutil, cellAudioOutGetSoundAvailability2);
 	REG_FUNC(cellSysutil, cellAudioOutGetDeviceInfo);
 	REG_FUNC(cellSysutil, cellAudioOutGetNumberOfDevice);
 	REG_FUNC(cellSysutil, cellAudioOutGetConfiguration);
-	REG_FUNC(cellSysutil, cellAudioOutGetConfiguration2);
 	REG_FUNC(cellSysutil, cellAudioOutSetCopyControl);
 	REG_FUNC(cellSysutil, cellAudioOutRegisterCallback);
 	REG_FUNC(cellSysutil, cellAudioOutUnregisterCallback);

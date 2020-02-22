@@ -289,18 +289,6 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
 
-error_code cellVideoOutConfigure2()
-{
-	cellSysutil.todo("cellVideoOutConfigure2()");
-	return CELL_OK;
-}
-
-error_code cellVideoOutGetResolutionAvailability2()
-{
-	cellSysutil.todo("cellVideoOutGetResolutionAvailability2()");
-	return CELL_OK;
-}
-
 error_code cellVideoOutGetConvertCursorColorInfo(vm::ptr<u8> rgbOutputRange)
 {
 	cellSysutil.todo("cellVideoOutGetConvertCursorColorInfo()");
@@ -331,12 +319,10 @@ void cellSysutil_VideoOut_init()
 	REG_FUNC(cellSysutil, cellVideoOutGetState);
 	REG_FUNC(cellSysutil, cellVideoOutGetResolution).flag(MFF_PERFECT);
 	REG_FUNC(cellSysutil, cellVideoOutConfigure);
-	REG_FUNC(cellSysutil, cellVideoOutConfigure2);
 	REG_FUNC(cellSysutil, cellVideoOutGetConfiguration);
 	REG_FUNC(cellSysutil, cellVideoOutGetDeviceInfo);
 	REG_FUNC(cellSysutil, cellVideoOutGetNumberOfDevice);
 	REG_FUNC(cellSysutil, cellVideoOutGetResolutionAvailability);
-	REG_FUNC(cellSysutil, cellVideoOutGetResolutionAvailability2);
 	REG_FUNC(cellSysutil, cellVideoOutGetConvertCursorColorInfo);
 	REG_FUNC(cellSysutil, cellVideoOutDebugSetMonitorType);
 	REG_FUNC(cellSysutil, cellVideoOutRegisterCallback);
