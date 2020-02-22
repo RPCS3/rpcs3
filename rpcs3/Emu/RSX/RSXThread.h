@@ -335,6 +335,7 @@ namespace rsx
 			u32 driver_handle;
 			u32 result;
 			u32 num_draws;
+			u32 data_type;
 			u64 sync_tag;
 			u64 timestamp;
 			bool pending;
@@ -367,8 +368,9 @@ namespace rsx
 			sync_no_notify = 2   // If set, backend hint notifications will not be made
 		};
 
-		struct ZCULL_control
+		class ZCULL_control
 		{
+		protected:
 			// Delay before a report update operation is forced to retire
 			const u32 max_zcull_delay_us = 300;
 			const u32 min_zcull_tick_us = 100;
@@ -377,8 +379,11 @@ namespace rsx
 			const u32 occlusion_query_count = 1024;
 			const u32 max_safe_queue_depth = 892;
 
-			bool active = false;
-			bool enabled = false;
+			bool unit_enabled = false;           // The ZCULL unit is on
+			bool write_enabled = false;          // A surface in the ZCULL-monitored tile region has been loaded for rasterization
+			bool stats_enabled = false;          // Collecting of ZCULL statistics is enabled (not same as pixels passing Z test!)
+			bool zpass_count_enabled = false;    // Collecting of ZPASS statistics is enabled. If this is off, the counter does not increment
+			bool host_queries_active = false;    // The backend/host is gathering Z data for the ZCULL unit
 
 			std::array<occlusion_query_info, 1024> m_occlusion_query_data = {};
 			std::stack<occlusion_query_info*> m_free_occlusion_pool;
@@ -397,23 +402,32 @@ namespace rsx
 			std::vector<queued_report_write> m_pending_writes;
 			std::unordered_map<u32, u32> m_statistics_map;
 
-			ZCULL_control();
-			~ZCULL_control();
+			// Enables/disables the ZCULL unit
+			void set_active(class ::rsx::thread* ptimer, bool active, bool flush_queue);
 
-			void set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
-			void set_active(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
-
-			void write(vm::addr_t sink, u64 timestamp, u32 type, u32 value);
-			void write(queued_report_write* writer, u64 timestamp, u32 value);
-
-			// Read current zcull statistics into the address provided
-			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
+			// Checks current state of the unit and applies changes
+			void check_state(class ::rsx::thread* ptimer, bool flush_queue);
 
 			// Sets up a new query slot and sets it to the current task
 			void allocate_new_query(class ::rsx::thread* ptimer);
 
 			// Free a query slot in use
 			void free_query(occlusion_query_info* query);
+
+			// Write report to memory
+			void write(vm::addr_t sink, u64 timestamp, u32 type, u32 value);
+			void write(queued_report_write* writer, u64 timestamp, u32 value);
+
+		public:
+
+			ZCULL_control();
+			~ZCULL_control();
+
+			void set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
+			void set_status(class ::rsx::thread* ptimer, bool surface_active, bool zpass_active, bool zcull_stats_active, bool flush_queue = false);
+
+			// Read current zcull statistics into the address provided
+			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
 
 			// Clears current stat block and increments stat_tag_id
 			void clear(class ::rsx::thread* ptimer);
@@ -459,7 +473,7 @@ namespace rsx
 			bool reserved = false;
 
 			std::vector<occlusion_query_info*> eval_sources;
-			u32 eval_sync_tag = 0;
+			u64 eval_sync_tag = 0;
 			u32 eval_address = 0;
 
 			// Resets common data
