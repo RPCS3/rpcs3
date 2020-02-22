@@ -868,7 +868,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			// Workaround for analyser glitches
 			vm::falloc(0x10000, 0xf0000, vm::main);
 
-			return thread_ctrl::spawn("SPRX Loader", [this]
+			auto sprx_loader_body = [this]
 			{
 				std::vector<std::string> dir_queue;
 				dir_queue.emplace_back(m_path + '/');
@@ -983,7 +983,10 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 				{
 					Emu.Stop();
 				});
-			});
+			};
+
+			g_fxo->init<named_thread<decltype(sprx_loader_body)>>("SPRX Loader"sv, std::move(sprx_loader_body));
+			return;
 		}
 
 		// Detect boot location
