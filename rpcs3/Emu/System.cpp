@@ -442,6 +442,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 void Emulator::LimitCacheSize()
 {
 	const std::string cache_location = Emulator::GetHdd1Dir() + "/caches";
+
 	if (!fs::is_dir(cache_location))
 	{
 		sys_log.warning("Cache does not exist (%s)", cache_location);
@@ -449,6 +450,13 @@ void Emulator::LimitCacheSize()
 	}
 
 	const u64 size = fs::get_dir_size(cache_location);
+
+	if (size == umax)
+	{
+		sys_log.error("Could not calculate cache directory '%s' size (%s)", cache_location, fs::g_tls_error);
+		return;
+	}
+
 	const u64 max_size = static_cast<u64>(g_cfg.vfs.cache_max_size) * 1024 * 1024;
 
 	if (max_size == 0) // Everything must go, so no need to do checks
@@ -466,10 +474,10 @@ void Emulator::LimitCacheSize()
 
 	sys_log.success("Cleaning disk cache...");
 	std::vector<fs::dir_entry> file_list{};
-	fs::dir cache_dir{};
-	if (!cache_dir.open(cache_location))
+	fs::dir cache_dir(cache_location);
+	if (!cache_dir)
 	{
-		sys_log.error("Could not open cache directory");
+		sys_log.error("Could not open cache directory '%s' (%s)", cache_location, fs::g_tls_error);
 		return;
 	}
 
@@ -479,6 +487,7 @@ void Emulator::LimitCacheSize()
 		if (item.name != "." && item.name != "..")
 			file_list.push_back(item);
 	}
+
 	cache_dir.close();
 
 	// sort oldest first
@@ -494,15 +503,19 @@ void Emulator::LimitCacheSize()
 	for (const auto &item : file_list)
 	{
 		const std::string &name = cache_location + "/" + item.name;
-		const u64 item_size = fs::is_dir(name) ? fs::get_dir_size(name) : item.size;
+		const bool is_dir = fs::is_dir(name);
+		const u64 item_size = is_dir ? fs::get_dir_size(name) : item.size;
 
-		if (fs::is_dir(name))
+		if (is_dir && item_size == umax)
 		{
-			fs::remove_all(name, true);
+			sys_log.error("Failed to calculate '%s' item '%s' size (%s)", cache_location, item.name, fs::g_tls_error);
+			break;
 		}
-		else
+
+		if (is_dir ? !fs::remove_all(name, true) : !fs::remove_file(name))
 		{
-			fs::remove_file(name);
+			sys_log.error("Could not remove cache directory '%s' item '%s' (%s)", cache_location, item.name, fs::g_tls_error);
+			break;
 		}
 
 		removed += item_size;
