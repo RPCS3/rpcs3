@@ -21,6 +21,8 @@
 
 LOG_CHANNEL(sys_spu);
 
+extern u64 get_timebased_time();
+
 void sys_spu_image::load(const fs::file& stream)
 {
 	const spu_exec_object obj{stream, 0, elf_opt::no_sections + elf_opt::no_data};
@@ -1012,6 +1014,60 @@ error_code sys_spu_thread_group_get_priority(ppu_thread& ppu, u32 id, vm::ptr<s3
 		*priority = group->prio;
 	}
 
+	return CELL_OK;
+}
+
+error_code sys_spu_thread_group_set_cooperative_victims(ppu_thread& ppu, u32 id, u32 threads_mask)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.warning("sys_spu_thread_group_set_cooperative_victims(id=0x%x, threads_mask=0x%x)", id, threads_mask);
+
+	const auto group = idm::get<lv2_spu_group>(id);
+
+	if (!group)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (!(group->type & SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM))
+	{
+		return CELL_EINVAL;
+	}
+
+	if (threads_mask >= 1u << group->max_num)
+	{
+		return CELL_EINVAL;
+	}
+
+	// TODO
+
+	return CELL_OK;
+}
+
+error_code sys_spu_thread_group_syscall_253(ppu_thread& ppu, u32 id, vm::ptr<sys_spu_thread_group_syscall_253_info> info)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.warning("sys_spu_thread_group_syscall_253(id=0x%x, info=*0x%x)", id, info);
+
+	const auto group = idm::get<lv2_spu_group>(id);
+
+	if (!group)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (!(group->type & SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM))
+	{
+		return CELL_EINVAL;
+	}
+
+	// TODO
+
+	info->deadlineMissCounter = 0;
+	info->deadlineMeetCounter = 0;
+	info->timestamp = get_timebased_time();
 	return CELL_OK;
 }
 
