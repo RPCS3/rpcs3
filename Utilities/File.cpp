@@ -1639,7 +1639,14 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 {
 	u64 result = 0;
 
-	for (const auto& entry : dir(path))
+	const auto root_dir = dir(path);
+
+	if (!root_dir)
+	{
+		return static_cast<u64>(umax);
+	}
+
+	for (const auto& entry : root_dir)
 	{
 		if (entry.name == "." || entry.name == "..")
 		{
@@ -1653,7 +1660,14 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 
 		if (entry.is_directory == true)
 		{
-			result += get_dir_size(path_append(path, entry.name), rounding_alignment);
+			const u64 size = get_dir_size(path_append(path, entry.name), rounding_alignment);
+
+			if (size == umax)
+			{
+				return size;
+			}
+
+			result += size;
 		}
 	}
 

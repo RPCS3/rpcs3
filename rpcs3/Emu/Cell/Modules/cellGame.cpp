@@ -242,12 +242,21 @@ error_code cellHddGameGetSizeKB(vm::ptr<u32> size)
 
 	const std::string local_dir = vfs::get(Emu.GetDir());
 
-	if (!fs::is_dir(local_dir))
+	const auto dirsz = fs::get_dir_size(local_dir, 1024);
+
+	if (dirsz == umax)
 	{
+		const auto error = fs::g_tls_error;
+
+		if (fs::exists(local_dir))
+		{
+			cellGame.error("cellHddGameGetSizeKB(): Unknown failure on calculating directory '%s' size (%s)", local_dir, error);
+		}
+
 		return CELL_HDDGAME_ERROR_FAILURE;
 	}
 
-	*size = ::narrow<u32>(fs::get_dir_size(local_dir, 1024) / 1024);
+	*size = ::narrow<u32>(dirsz / 1024);
 
 	return CELL_OK;
 }
@@ -281,12 +290,21 @@ error_code cellGameDataGetSizeKB(vm::ptr<u32> size)
 
 	const std::string local_dir = vfs::get(Emu.GetDir());
 
-	if (!fs::is_dir(local_dir))
+	const auto dirsz = fs::get_dir_size(local_dir, 1024);
+
+	if (dirsz == umax)
 	{
+		const auto error = fs::g_tls_error;
+
+		if (fs::exists(local_dir))
+		{
+			cellGame.error("cellGameDataGetSizeKB: Unknown failure on calculating directory '%s' size (%s)", local_dir, error);
+		}
+
 		return CELL_GAMEDATA_ERROR_FAILURE;
 	}
 
-	*size = ::narrow<u32>(fs::get_dir_size(local_dir, 1024) / 1024);
+	*size = ::narrow<u32>(dirsz / 1024);
 
 	return CELL_OK;
 }
@@ -937,21 +955,25 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 
 	const std::string local_dir = !prm->temp.empty() ? prm->temp : vfs::get("/dev_hdd0/game/" + prm->dir);
 
-	if (!fs::is_dir(local_dir))
+	const auto dirsz = fs::get_dir_size(local_dir, 1024);
+
+	if (dirsz == umax)
 	{
-		if (fs::g_tls_error == fs::error::noent)
+		const auto error = fs::g_tls_error;
+
+		if (!fs::exists(local_dir))
 		{
 			*size = 0;
 			return CELL_OK;
 		}
 		else
 		{
-			cellGame.error("cellGameGetSizeKb(): unexpexcted error on path '%s' (%s)", local_dir, fs::g_tls_error);
+			cellGame.error("cellGameGetSizeKb(): Unknown failure on calculating directory size '%s' (%s)", local_dir, error);
 			return CELL_GAME_ERROR_ACCESS_ERROR;
 		}
 	}
 
-	*size = ::narrow<u32>(fs::get_dir_size(local_dir, 1024) / 1024);
+	*size = ::narrow<u32>(dirsz / 1024);
 
 	return CELL_OK;
 }
