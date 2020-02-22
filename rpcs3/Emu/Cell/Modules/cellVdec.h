@@ -19,6 +19,7 @@ enum CellVdecCodecType : s32
 	CELL_VDEC_CODEC_TYPE_MPEG2 = 0,
 	CELL_VDEC_CODEC_TYPE_AVC   = 1,
 	CELL_VDEC_CODEC_TYPE_DIVX  = 5,
+	//CELL_VDEC_CODEC_TYPE_MAX
 };
 
 // Callback Messages
@@ -71,6 +72,12 @@ enum CellVdecFrameRate : s32
 	CELL_VDEC_FRC_50           = 0x85,
 	CELL_VDEC_FRC_60000DIV1001 = 0x86,
 	CELL_VDEC_FRC_60           = 0x87,
+};
+
+enum
+{
+	CELL_VDEC_PTS_INVALID = 0xffffffff,
+	CELL_VDEC_DTS_INVALID = 0xffffffff,
 };
 
 // Codec Type Information

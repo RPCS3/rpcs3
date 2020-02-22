@@ -132,8 +132,6 @@ struct vdec_context final
 		, cb_func(func)
 		, cb_arg(arg)
 	{
-		avcodec_register_all();
-
 		switch (type)
 		{
 		case CELL_VDEC_CODEC_TYPE_MPEG2:
@@ -216,7 +214,9 @@ struct vdec_context final
 
 				u64 au_usrd{};
 
-				if (cmd->mode != -1)
+				const bool is_end_seq = cmd->mode == -1;
+
+				if (!is_end_seq)
 				{
 					const u32 au_mode = cmd->mode;
 					const u32 au_addr = cmd->au.startAddr;
@@ -225,10 +225,15 @@ struct vdec_context final
 					const u64 au_dts = u64{cmd->au.dts.upper} << 32 | cmd->au.dts.lower;
 					au_usrd = cmd->au.userData;
 
+					// TODO to investigate ? :
+					// The input buffer, avpkt->data must be AV_INPUT_BUFFER_PADDING_SIZE
+					// larger than the actual read bytes because some optimized bitstream
+					// readers read 32 or 64 bits at once and could read over the end.
+
 					packet.data = vm::_ptr<u8>(au_addr);
 					packet.size = au_size;
-					packet.pts = au_pts != umax ? au_pts : INT64_MIN;
-					packet.dts = au_dts != umax ? au_dts : INT64_MIN;
+					packet.pts = au_pts != umax ? au_pts : CELL_VDEC_PTS_INVALID;
+					packet.dts = au_dts != umax ? au_dts : CELL_VDEC_DTS_INVALID;
 
 					if (next_pts == 0 && au_pts != umax)
 					{
@@ -248,18 +253,13 @@ struct vdec_context final
 				}
 				else
 				{
-					packet.pts = INT64_MIN;
-					packet.dts = INT64_MIN;
+					packet.pts = CELL_VDEC_PTS_INVALID;
+					packet.dts = CELL_VDEC_DTS_INVALID;
 					cellVdec.trace("End sequence...");
 				}
 
-				while (out_max)
+				if (out_max && !is_end_seq)
 				{
-					if (cmd->mode == -1)
-					{
-						break;
-					}
-
 					vdec_frame frame;
 					frame.avf.reset(av_frame_alloc());
 
@@ -268,28 +268,45 @@ struct vdec_context final
 						fmt::throw_exception("av_frame_alloc() failed" HERE);
 					}
 
-					int got_picture = 0;
+					int err = avcodec_send_packet(ctx, &packet);
 
-					int decode = avcodec_decode_video2(ctx, frame.avf.get(), &got_picture, &packet);
-
-					if (decode < 0)
+					if (err < 0)
 					{
 						char av_error[AV_ERROR_MAX_STRING_SIZE];
-						av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, decode);
-						fmt::throw_exception("AU decoding error(0x%x): %s" HERE, decode, av_error);
+						av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, err);
+						cellVdec.error("avcodec_send_packet error(0x%x): %s" HERE, err, av_error);
+						cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_VDEC_ERROR_AU, cb_arg);
+						lv2_obj::sleep(ppu);
+						au_count--;
+						continue;
 					}
 
-					if (got_picture == 0)
+					cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
+					lv2_obj::sleep(ppu);
+
+					err = avcodec_receive_frame(ctx, frame.avf.get());
+
+					if (err < 0)
 					{
-						break;
-					}
+						char av_error[AV_ERROR_MAX_STRING_SIZE];
+						av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, err);
+						cellVdec.error("avcodec_receive_frame error(0x%x): %s" HERE, err, av_error);
 
-					if (decode != packet.size)
-					{
-						cellVdec.error("Incorrect AU size (0x%x, decoded 0x%x)", packet.size, decode);
-					}
+						if (err == AVERROR(EAGAIN))
+						{
+							cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_VDEC_ERROR_AU, cb_arg);
+						}
+						else
+						{
+							std::lock_guard{ mutex }, out.push_back(std::move(frame));
+							cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_PICOUT, CELL_VDEC_ERROR_PIC, cb_arg);
+						}
 
-					if (got_picture)
+						lv2_obj::sleep(ppu);
+						au_count--;
+						continue;
+					}
+					else
 					{
 						if (frame->interlaced_frame)
 						{
@@ -302,12 +319,12 @@ struct vdec_context final
 							fmt::throw_exception("Repeated frames not supported (0x%x)", frame->repeat_pict);
 						}
 
-						if (frame->pkt_pts != INT64_MIN)
+						if (packet.pts != CELL_VDEC_PTS_INVALID)
 						{
-							next_pts = frame->pkt_pts;
+							next_pts = packet.pts;
 						}
 
-						if (frame->pkt_dts != INT64_MIN)
+						if (frame->pkt_dts != CELL_VDEC_DTS_INVALID)
 						{
 							next_dts = frame->pkt_dts;
 						}
@@ -388,20 +405,14 @@ struct vdec_context final
 						cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, cb_arg);
 						lv2_obj::sleep(ppu);
 					}
-
-					if (cmd->mode != -1)
-					{
-						break;
-					}
 				}
 
-				if (out_max)
+				if (is_end_seq)
 				{
-					cb_func(ppu, vid, cmd->mode != -1 ? CELL_VDEC_MSG_TYPE_AUDONE : CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, cb_arg);
+					cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, cb_arg);
 					lv2_obj::sleep(ppu);
 				}
-
-				if (cmd->mode != -1)
+				else
 				{
 					au_count--;
 				}
