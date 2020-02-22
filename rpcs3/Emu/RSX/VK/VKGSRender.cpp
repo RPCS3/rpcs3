@@ -230,6 +230,22 @@ namespace vk
 			fmt::throw_exception("Unknown cull face value: 0x%x" HERE, static_cast<u32>(cfv));
 		}
 	}
+
+	VkImageViewType get_view_type(rsx::texture_dimension_extended type)
+	{
+		switch (type)
+		{
+		case rsx::texture_dimension_extended::texture_dimension_1d:
+			return VK_IMAGE_VIEW_TYPE_1D;
+		case rsx::texture_dimension_extended::texture_dimension_2d:
+			return VK_IMAGE_VIEW_TYPE_2D;
+		case rsx::texture_dimension_extended::texture_dimension_cubemap:
+			return VK_IMAGE_VIEW_TYPE_CUBE;
+		case rsx::texture_dimension_extended::texture_dimension_3d:
+			return VK_IMAGE_VIEW_TYPE_3D;
+		default: ASSUME(0);
+		};
+	}
 }
 
 namespace
@@ -1669,14 +1685,15 @@ void VKGSRender::end()
 			}
 			else
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				const VkImageViewType view_type = vk::get_view_type(current_fragment_program.get_texture_dimension(i));
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 					i,
 					::glsl::program_domain::glsl_fragment_program,
 					m_current_frame->descriptor_set);
 
 				if (current_fragment_program.redirected_textures & (1 << i))
 				{
-					m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+					m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 						i,
 						::glsl::program_domain::glsl_fragment_program,
 						m_current_frame->descriptor_set,
@@ -1692,7 +1709,8 @@ void VKGSRender::end()
 		{
 			if (!rsx::method_registers.vertex_textures[i].enabled())
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 					i,
 					::glsl::program_domain::glsl_vertex_program,
 					m_current_frame->descriptor_set);
@@ -1712,7 +1730,9 @@ void VKGSRender::end()
 			if (!image_ptr)
 			{
 				rsx_log.error("Texture upload failed to vtexture index %d. Binding null sampler.", i);
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
+
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 					i,
 					::glsl::program_domain::glsl_vertex_program,
 					m_current_frame->descriptor_set);

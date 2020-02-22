@@ -4,6 +4,7 @@
 #include "VKFragmentProgram.h"
 #include "VKRenderTargets.h"
 #include "VKFramebuffer.h"
+#include "VKResourceManager.h"
 
 #include "../Overlays/overlays.h"
 
@@ -529,6 +530,7 @@ namespace vk
 				"#version 420\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
 				"layout(set=0, binding=1) uniform sampler2D fs0;\n"
+				"layout(set=0, binding=2) uniform sampler2DArray fs1;\n"
 				"layout(location=0) in vec2 tc0;\n"
 				"layout(location=1) in vec4 color;\n"
 				"layout(location=2) in vec4 parameters;\n"
@@ -602,15 +604,28 @@ namespace vk
 				"		diff_color.a *= (sin(parameters.x) + 1.f) * 0.5f;\n"
 				"\n"
 				"	if (parameters.z < 1.)\n"
+				"	{\n"
 				"		ocol = diff_color;\n"
+				"	}\n"
+				"	else if (parameters.z > 2.)\n"
+				"	{\n"
+				"		ocol = texture(fs1, vec3(tc0.x, fract(tc0.y), trunc(tc0.y))).rrrr * diff_color;\n"
+				"	}\n"
 				"	else if (parameters.z > 1.)\n"
+				"	{\n"
 				"		ocol = texture(fs0, tc0).rrrr * diff_color;\n"
+				"	}\n"
 				"	else\n"
+				"	{\n"
 				"		ocol = sample_image(fs0, tc0, parameters2.x).bgra * diff_color;\n"
+				"	}\n"
 				"}\n";
 
 			// Allow mixed primitive rendering
 			multi_primitive = true;
+
+			// 2 input textures
+			m_num_usable_samplers = 2;
 
 			renderpass_config.set_attachment_count(1);
 			renderpass_config.set_color_mask(0, true, true, true, true);
@@ -622,18 +637,18 @@ namespace vk
 		}
 
 		vk::image_view* upload_simple_texture(vk::render_device &dev, vk::command_buffer &cmd,
-			vk::data_heap& upload_heap, u64 key, int w, int h, bool font, bool temp, void *pixel_src, u32 owner_uid)
+			vk::data_heap& upload_heap, u64 key, u32 w, u32 h, u32 layers, bool font, bool temp, void *pixel_src, u32 owner_uid)
 		{
 			const VkFormat format = (font) ? VK_FORMAT_R8_UNORM : VK_FORMAT_B8G8R8A8_UNORM;
 			const u32 pitch = (font) ? w : w * 4;
-			const u32 data_size = pitch * h;
+			const u32 data_size = pitch * h * layers;
 			const auto offset = upload_heap.alloc<512>(data_size);
 			const auto addr = upload_heap.map(offset, data_size);
 
-			const VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			const VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, layers };
 
 			auto tex = std::make_unique<vk::image>(dev, dev.get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				VK_IMAGE_TYPE_2D, format, std::max(w, 1), std::max(h, 1), 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TYPE_2D, format, std::max(w, 1u), std::max(h, 1u), 1, 1, layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				0);
 
@@ -645,12 +660,12 @@ namespace vk
 			upload_heap.unmap();
 
 			VkBufferImageCopy region;
-			region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+			region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, layers };
 			region.bufferOffset = offset;
 			region.bufferRowLength = w;
 			region.bufferImageHeight = h;
 			region.imageOffset = {};
-			region.imageExtent = { static_cast<u32>(w), static_cast<u32>(h), 1u};
+			region.imageExtent = { static_cast<u32>(w), static_cast<u32>(h), 1u };
 
 			change_image_layout(cmd, tex.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
 			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
@@ -686,7 +701,7 @@ namespace vk
 			u64 storage_key = 1;
 			for (const auto &res : configuration.texture_raw_data)
 			{
-				upload_simple_texture(dev, cmd, upload_heap, storage_key++, res->w, res->h, false, false, res->data, UINT32_MAX);
+				upload_simple_texture(dev, cmd, upload_heap, storage_key++, res->w, res->h, 1, false, false, res->data, UINT32_MAX);
 			}
 
 			configuration.free_resources();
@@ -724,14 +739,33 @@ namespace vk
 
 		vk::image_view* find_font(rsx::overlays::font *font, vk::command_buffer &cmd, vk::data_heap &upload_heap)
 		{
+			const auto image_size = font->get_glyph_data_dimensions();
+
 			u64 key = reinterpret_cast<u64>(font);
 			auto found = view_cache.find(key);
 			if (found != view_cache.end())
-				return found->second.get();
+			{
+				if (const auto raw = found->second->image();
+					image_size.width == raw->width() &&
+					image_size.height == raw->height() &&
+					image_size.depth == raw->layers())
+				{
+					return found->second.get();
+				}
+				else
+				{
+					auto gc = vk::get_resource_manager();
+					gc->dispose(font_cache[key]);
+					gc->dispose(view_cache[key]);
+				}
+			}
 
-			//Create font file
-			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, font->width, font->height,
-					true, false, font->glyph_data.data(), UINT32_MAX);
+			// Create font resource
+			std::vector<u8> bytes;
+			font->get_glyph_data(bytes);
+
+			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, image_size.width, image_size.height, image_size.depth,
+					true, false, bytes.data(), UINT32_MAX);
 		}
 
 		vk::image_view* find_temp_image(rsx::overlays::image_info *desc, vk::command_buffer &cmd, vk::data_heap &upload_heap, u32 owner_uid)
@@ -741,7 +775,7 @@ namespace vk
 			if (found != temp_view_cache.end())
 				return found->second.get();
 
-			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, desc->w, desc->h,
+			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, desc->w, desc->h, 1,
 					false, true, desc->data, owner_uid);
 		}
 
@@ -834,6 +868,12 @@ namespace vk
 			m_time = static_cast<f32>(get_system_time() / 1000) * 0.005f;
 			m_viewport = { { static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1) }, { static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()) } };
 
+			std::vector<vk::image_view*> image_views
+			{
+				vk::null_image_view(cmd, VK_IMAGE_VIEW_TYPE_2D),
+				vk::null_image_view(cmd, VK_IMAGE_VIEW_TYPE_2D_ARRAY)
+			};
+
 			for (auto &command : ui.get_compiled().draw_commands)
 			{
 				num_drawable_elements = static_cast<u32>(command.verts.size());
@@ -850,7 +890,7 @@ namespace vk
 				m_clip_region = command.config.clip_rect;
 				m_texture_type = 1;
 
-				auto src = vk::null_image_view(cmd);
+				vk::image_view* src = nullptr;
 				switch (command.config.texture_ref)
 				{
 				case rsx::overlays::image_resource_id::game_icon:
@@ -860,8 +900,8 @@ namespace vk
 					m_skip_texture_read = true;
 					break;
 				case rsx::overlays::image_resource_id::font_file:
-					m_texture_type = 2;
 					src = find_font(command.config.font_ref, cmd, upload_heap);
+					m_texture_type = src->image()->layers() == 1 ? 2 : 3;
 					break;
 				case rsx::overlays::image_resource_id::raw_image:
 					src = find_temp_image(static_cast<rsx::overlays::image_info*>(command.config.external_data_ref), cmd, upload_heap, ui.uid);
@@ -871,7 +911,13 @@ namespace vk
 					break;
 				}
 
-				overlay_pass::run(cmd, viewport, target, { src }, render_pass);
+				if (src)
+				{
+					const int res_id = src->image()->layers() > 1 ? 1 : 0;
+					image_views[res_id] = src;
+				}
+
+				overlay_pass::run(cmd, viewport, target, image_views, render_pass);
 			}
 
 			ui.update();

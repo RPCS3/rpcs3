@@ -1,4 +1,8 @@
-#pragma once
+﻿#pragma once
+#include "Utilities/types.h"
+#include "Utilities/geometry.h"
+
+#include <string>
 
 struct vertex
 {
@@ -146,3 +150,10 @@ void operator < (const vector3_base<T>& lhs, T rhs)
 
 using vector3i = vector3_base<int>;
 using vector3f = vector3_base<float>;
+
+std::string utf8_to_ascii8(const std::string& utf8_string);
+std::string utf16_to_ascii8(const std::u16string& utf16_string);
+std::u16string ascii8_to_utf16(const std::string& ascii_string);
+std::wstring utf8_to_wstring(const std::string& utf8_string);
+std::u16string wstring_to_utf16(const std::wstring& w_string);
+std::wstring utf16_to_wstring(const std::u16string& utf16_string);

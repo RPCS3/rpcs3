@@ -20,9 +20,6 @@
 #include <list>
 
 // Utils
-std::string utf8_to_ascii8(const std::string& utf8_string);
-std::string utf16_to_ascii8(const std::u16string& utf16_string);
-std::u16string ascii8_to_utf16(const std::string& ascii_string);
 extern u64 get_system_time();
 
 // Definition of user interface implementations
@@ -336,7 +333,7 @@ namespace rsx
 
 		struct osk_dialog : public user_interface, public OskDialogBase
 		{
-			using callback_t = std::function<void(const std::string&)>;
+			using callback_t = std::function<void(const std::wstring&)>;
 
 			enum border_flags
 			{
@@ -366,13 +363,13 @@ namespace rsx
 				bool selected = false;
 				bool enabled = false;
 
-				std::vector<std::string> outputs;
+				std::vector<std::wstring> outputs;
 				callback_t callback;
 			};
 
 			struct grid_entry_ctor
 			{
-				std::vector<std::string> outputs;
+				std::vector<std::wstring> outputs;
 				color4f color;
 				u32 num_cell_hz;
 				button_flags type_flags;
@@ -418,17 +415,17 @@ namespace rsx
 			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override = 0;
 			void Close(bool ok) override;
 
-			void initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::string& title, const std::string& initial_text);
+			void initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::wstring& title, const std::wstring& initial_text);
 			void update() override;
 
 			void on_button_pressed(pad_button button_press) override;
 			void on_text_changed();
 
-			void on_default_callback(const std::string&);
-			void on_shift(const std::string&);
-			void on_space(const std::string&);
-			void on_backspace(const std::string&);
-			void on_enter(const std::string&);
+			void on_default_callback(const std::wstring&);
+			void on_shift(const std::wstring&);
+			void on_space(const std::wstring&);
+			void on_backspace(const std::wstring&);
+			void on_enter(const std::wstring&);
 
 			compiled_resource get_compiled() override;
 		};

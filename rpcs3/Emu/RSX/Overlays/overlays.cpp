@@ -58,15 +58,13 @@ static auto s_ascii_lowering_map = []()
 	return _map;
 }();
 
-std::string utf8_to_ascii8(const std::string& utf8_string)
+template<typename F>
+void process_multibyte(const std::string s, F&& func)
 {
-	std::string out;
-	out.reserve(utf8_string.length());
-
-	const auto end = utf8_string.length();
+	const auto end = s.length();
 	for (u32 index = 0; index < end; ++index)
 	{
-		const u8 code = static_cast<u8>(utf8_string[index]);
+		const u8 code = static_cast<u8>(s[index]);
 
 		if (!code)
 		{
@@ -75,7 +73,7 @@ std::string utf8_to_ascii8(const std::string& utf8_string)
 
 		if (code <= 0x7F)
 		{
-			out.push_back(code);
+			std::invoke(func, code);
 			continue;
 		}
 
@@ -83,7 +81,7 @@ std::string utf8_to_ascii8(const std::string& utf8_string)
 		if ((index + extra_bytes) > end)
 		{
 			// Malformed string, abort
-			overlays.error("Failed to decode supossedly malformed utf8 string '%s'", utf8_string);
+			overlays.error("Failed to decode supossedly malformed utf8 string '%s'", s);
 			break;
 		}
 
@@ -92,38 +90,46 @@ std::string utf8_to_ascii8(const std::string& utf8_string)
 		{
 		case 1:
 			// 11 bits, 6 + 5
-			u_code = (u32(code & 0x1F) << 6) | u32(utf8_string[index + 1] & 0x3F);
+			u_code = (u32(code & 0x1F) << 6) | u32(s[index + 1] & 0x3F);
 			break;
 		case 2:
 			// 16 bits, 6 + 6 + 4
-			u_code = (u32(code & 0xF) << 12) | (u32(utf8_string[index + 1] & 0x3F) << 6) | u32(utf8_string[index + 2] & 0x3F);
+			u_code = (u32(code & 0xF) << 12) | (u32(s[index + 1] & 0x3F) << 6) | u32(s[index + 2] & 0x3F);
 			break;
 		case 3:
 			// 21 bits, 6 + 6 + 6 + 3
-			u_code = (u32(code & 0x7) << 18) | (u32(utf8_string[index + 1] & 0x3F) << 12) | (u32(utf8_string[index + 2] & 0x3F) << 6) | u32(utf8_string[index + 3] & 0x3F);
+			u_code = (u32(code & 0x7) << 18) | (u32(s[index + 1] & 0x3F) << 12) | (u32(s[index + 2] & 0x3F) << 6) | u32(s[index + 3] & 0x3F);
 			break;
 		default:
 			fmt::throw_exception("Unreachable" HERE);
 		}
 
 		index += extra_bytes;
+		std::invoke(func, u_code);
+	}
+}
 
-		if (u_code <= 0xFF)
+std::string utf8_to_ascii8(const std::string& utf8_string)
+{
+	std::string out;
+	out.reserve(utf8_string.length());
+
+	process_multibyte(utf8_string, [&out](u32 code)
+	{
+		if (code <= 0x7F)
 		{
-			// Latin-1 supplement block
-			out.push_back(static_cast<u8>(u_code));
-			continue;
+			out.push_back(static_cast<u8>(code));
 		}
-
-		auto replace = s_ascii_lowering_map.find(u_code);
-		if (replace == s_ascii_lowering_map.end())
+		else if (auto replace = s_ascii_lowering_map.find(code);
+			replace == s_ascii_lowering_map.end())
 		{
 			out.push_back('#');
-			continue;
 		}
-
-		out.push_back(replace->second);
-	}
+		else
+		{
+			out.push_back(replace->second);
+		}
+	});
 
 	return out;
 }
@@ -159,6 +165,59 @@ std::u16string ascii8_to_utf16(const std::string& ascii_string)
 	}
 
 	return out;
+}
+
+std::wstring utf8_to_wstring(const std::string& utf8_string)
+{
+	std::wstring result;
+	result.reserve(utf8_string.size());
+
+	process_multibyte(utf8_string, [&result](u32 code)
+	{
+		result.push_back(static_cast<wchar_t>(code));
+	});
+
+	return result;
+}
+
+std::u16string wstring_to_utf16(const std::wstring& w_string)
+{
+	if constexpr (sizeof(wchar_t) == sizeof(char16_t))
+	{
+		return reinterpret_cast<const char16_t*>(w_string.data());
+	}
+	else
+	{
+		std::u16string result;
+		result.reserve(w_string.size());
+
+		for (const auto& code : w_string)
+		{
+			result.push_back(code);
+		}
+
+		return result;
+	}
+}
+
+std::wstring utf16_to_wstring(const std::u16string& utf16_string)
+{
+	if constexpr (sizeof(wchar_t) == sizeof(char16_t))
+	{
+		return reinterpret_cast<const wchar_t*>(utf16_string.data());
+	}
+	else
+	{
+		std::wstring result;
+		result.reserve(utf16_string.size());
+
+		for (const auto& code : utf16_string)
+		{
+			result.push_back(code);
+		}
+
+		return result;
+	}
 }
 
 namespace rsx
