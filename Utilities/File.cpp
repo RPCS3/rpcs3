@@ -1639,7 +1639,7 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 {
 	u64 result = 0;
 
-	for (const auto entry : dir(path))
+	for (const auto& entry : dir(path))
 	{
 		if (entry.name == "." || entry.name == "..")
 		{
