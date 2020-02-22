@@ -1,22 +1,9 @@
 ﻿#pragma once
 
+#include "pad_config_types.h"
+
 #include "Utilities/Config.h"
 #include "Utilities/File.h"
-
-enum class pad_handler
-{
-	null,
-	keyboard,
-	ds3,
-	ds4,
-#ifdef _WIN32
-	xinput,
-	mm,
-#endif
-#ifdef HAVE_LIBEVDEV
-	evdev,
-#endif
-};
 
 struct cfg_player final : cfg::node
 {

@@ -1,12 +1,5 @@
-﻿
-#include <QApplication>
-#include <QMenuBar>
-#include <QMessageBox>
+﻿#include <QMessageBox>
 #include <QFileDialog>
-#include <QVBoxLayout>
-#include <QDockWidget>
-#include <QDesktopWidget>
-#include <QMimeData>
 
 #include "qt_utils.h"
 #include "vfs_dialog.h"
@@ -24,35 +17,31 @@
 #include "memory_viewer_panel.h"
 #include "rsx_debugger.h"
 #include "main_window.h"
-#include "emu_settings.h"
 #include "about_dialog.h"
 #include "pad_settings_dialog.h"
 #include "progress_dialog.h"
 #include "skylander_dialog.h"
 #include "cheat_manager.h"
 #include "pkg_install_dialog.h"
+#include "category.h"
+#include "gui_settings.h"
 
 #include <thread>
 
 #include <QScreen>
 
 #include "stdafx.h"
+#include "rpcs3_version.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
-#include "Emu/Memory/vm.h"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
 
 #include "Loader/PUP.h"
 #include "Loader/TAR.h"
-#include "Loader/PSF.h"
 
 #include "Utilities/Thread.h"
-#include "Utilities/StrUtil.h"
-
-#include "rpcs3_version.h"
-#include "Utilities/sysinfo.h"
 
 #include "ui_main_window.h"
 

@@ -3,16 +3,16 @@
 #include "stdafx.h"
 
 #include <QApplication>
-#include <QFontDatabase>
-#include <QIcon>
+#include <QElapsedTimer>
+#include <QTranslator>
 
-#include "main_window.h"
 #include "main_application.h"
-#include "emu_settings.h"
-#include "gui_settings.h"
-#include "persistent_settings.h"
-#include "gs_frame.h"
-#include "gl_gs_frame.h"
+
+class gs_frame;
+class main_window;
+class gui_settings;
+class emu_settings;
+class persistent_settings;
 
 /** RPCS3 GUI Application Class
  * The main point of this class is to do application initialization, to hold the main and game windows and to initialize callbacks.

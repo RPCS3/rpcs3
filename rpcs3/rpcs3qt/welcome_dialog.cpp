@@ -5,9 +5,6 @@
 
 #include <QPushButton>
 #include <QCheckBox>
-#include <QLabel>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
 
 welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::welcome_dialog)
 {

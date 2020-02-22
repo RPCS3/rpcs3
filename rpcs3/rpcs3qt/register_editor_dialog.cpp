@@ -1,5 +1,14 @@
-﻿
-#include "register_editor_dialog.h"
+﻿#include "register_editor_dialog.h"
+
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUThread.h"
+#include "Emu/CPU/CPUThread.h"
+#include "Emu/CPU/CPUDisAsm.h"
+
+#include <QLabel>
+#include <QHBoxLayout>
+#include <QPushButton>
+#include <QMessageBox>
 
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }

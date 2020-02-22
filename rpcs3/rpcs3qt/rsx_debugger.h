@@ -2,21 +2,17 @@
 
 #include "stdafx.h"
 
-#include "memory_viewer_panel.h"
-#include "table_item_delegate.h"
-#include "gui_settings.h"
-
+#include <QDialog>
+#include <QGroupBox>
+#include <QImage>
 #include <QLabel>
 #include <QLineEdit>
-#include <QHBoxLayout>
 #include <QEvent>
-#include <QTabWidget>
 #include <QListWidget>
 #include <QTableWidget>
-#include <QHeaderView>
-#include <QFont>
-#include <QSignalMapper>
-#include <QPixmap>
+#include <QTabWidget>
+
+class gui_settings;
 
 class Buffer : public QGroupBox
 {

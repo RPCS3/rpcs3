@@ -2,6 +2,12 @@
 #include "table_item_delegate.h"
 #include "Emu/System.h"
 
+#include <QFontDatabase>
+#include <QMenu>
+#include <QMouseEvent>
+#include <QVBoxLayout>
+#include <QPushButton>
+
 LOG_CHANNEL(autopause_log, "AutoPause");
 
 constexpr auto qstr = QString::fromStdString;

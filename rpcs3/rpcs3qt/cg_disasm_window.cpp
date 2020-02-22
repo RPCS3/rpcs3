@@ -1,16 +1,13 @@
 ﻿#include "stdafx.h"
 
 #include "cg_disasm_window.h"
+#include "gui_settings.h"
+#include "syntax_highlighter.h"
 
 #include <QSplitter>
 #include <QMenu>
-#include <QMenuBar>
-#include <QMessageBox>
 #include <QFileDialog>
-#include <QDialog>
-#include <QVBoxLayout>
-#include <QDockWidget>
-#include <QCoreApplication>
+#include <QHBoxLayout>
 #include <QFontDatabase>
 #include <QMimeData>
 

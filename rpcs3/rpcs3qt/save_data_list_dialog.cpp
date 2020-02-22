@@ -1,13 +1,12 @@
 ﻿#include "stdafx.h"
 #include "save_data_list_dialog.h"
 #include "save_data_info_dialog.h"
+#include "gui_settings.h"
 
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QHeaderView>
-#include <QMenu>
-#include <QDesktopWidget>
-#include <QApplication>
+#include <QGuiApplication>
 #include <QScreen>
 
 constexpr auto qstr = QString::fromStdString;

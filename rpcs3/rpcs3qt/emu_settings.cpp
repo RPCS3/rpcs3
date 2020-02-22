@@ -5,7 +5,6 @@
 #include <condition_variable>
 #include <mutex>
 
-#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Utilities/Thread.h"
 #include "Utilities/StrUtil.h"

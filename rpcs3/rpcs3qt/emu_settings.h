@@ -1,14 +1,12 @@
 ﻿#pragma once
 
-#include "Utilities/File.h"
-#include "Utilities/Log.h"
-
 #include "yaml-cpp/yaml.h"
+
+#include "stdafx.h"
 
 #include <QCheckBox>
 #include <QStringList>
 #include <QMap>
-#include <QObject>
 #include <QComboBox>
 #include <QSpinBox>
 

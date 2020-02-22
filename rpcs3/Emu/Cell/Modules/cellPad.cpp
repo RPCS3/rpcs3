@@ -3,6 +3,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_process.h"
 
+#include "Emu/Io/pad_types.h"
 #include "Input/pad_thread.h"
 #include "cellPad.h"
 

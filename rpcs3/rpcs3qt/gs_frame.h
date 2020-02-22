@@ -3,20 +3,15 @@
 #include "stdafx.h"
 #include "Emu/RSX/GSRender.h"
 
-#include "gui_settings.h"
-
-#include <QWidget>
 #include <QWindow>
+#include <QPaintEvent>
 
 #ifdef _WIN32
 #include <QWinTaskbarProgress>
 #include <QWinTaskbarButton>
-#include <QWinTHumbnailToolbar>
-#include <QWinTHumbnailToolbutton>
-#elif HAVE_QTDBUS
-#include <QtDBus/QDBusMessage>
-#include <QtDBus/QDBusConnection>
 #endif
+
+class gui_settings;
 
 class gs_frame : public QWindow, public GSFrameBase
 {

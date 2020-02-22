@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-#include "vfs_dialog_tab.h"
-
-#include <QTabWidget>
 #include <QDialog>
+
+class gui_settings;
+class emu_settings;
 
 class vfs_dialog : public QDialog
 {

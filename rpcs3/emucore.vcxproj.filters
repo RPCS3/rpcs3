@@ -899,6 +899,9 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_fonts.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\pad_config_types.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1704,6 +1707,12 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_fonts.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\pad_config_types.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\pad_types.h">
+      <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

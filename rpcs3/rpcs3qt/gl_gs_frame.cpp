@@ -3,7 +3,6 @@
 
 #include <QOpenGLContext>
 #include <QOffscreenSurface>
-#include <QWindow>
 
 gl_gs_frame::gl_gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
 	: gs_frame(geometry, appIcon, gui_settings)

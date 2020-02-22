@@ -3,7 +3,6 @@
 #include "qt_utils.h"
 
 #include <QHeaderView>
-#include <QLabel>
 #include <QScrollBar>
 
 game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText)

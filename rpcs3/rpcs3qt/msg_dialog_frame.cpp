@@ -1,9 +1,16 @@
-﻿
-#include "msg_dialog_frame.h"
+﻿#include "msg_dialog_frame.h"
+#include "custom_dialog.h"
 
-#include <QApplication>
-#include <QScreen>
-#include <QThread>
+#include <QPushButton>
+#include <QFormLayout>
+
+#ifdef _WIN32
+#include <QWinTHumbnailToolbar>
+#include <QWinTHumbnailToolbutton>
+#elif HAVE_QTDBUS
+#include <QtDBus/QDBusMessage>
+#include <QtDBus/QDBusConnection>
+#endif
 
 constexpr auto qstr = QString::fromStdString;
 

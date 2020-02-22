@@ -1,9 +1,13 @@
 ﻿#include "debugger_list.h"
+#include "gui_settings.h"
+#include "breakpoint_handler.h"
 
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/CPU/CPUDisAsm.h"
+#include "Emu/CPU/CPUThread.h"
 #include "Emu/System.h"
 
-#include <QApplication>
 #include <QMouseEvent>
 #include <QWheelEvent>
 

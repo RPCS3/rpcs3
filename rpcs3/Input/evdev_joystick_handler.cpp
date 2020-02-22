@@ -3,9 +3,8 @@
 
 #ifdef HAVE_LIBEVDEV
 
-#include "rpcs3qt/pad_settings_dialog.h"
+#include "Emu/Io/pad_config.h"
 #include "evdev_joystick_handler.h"
-#include "Utilities/Thread.h"
 #include "Utilities/Log.h"
 
 #include <functional>

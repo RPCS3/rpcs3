@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "overlays.h"
 #include "../GSRender.h"
+#include "Input/pad_thread.h"
 
 LOG_CHANNEL(overlays);
 

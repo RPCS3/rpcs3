@@ -1,11 +1,12 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
-#include "Emu/CPU/CPUDisAsm.h"
-
-#include "breakpoint_handler.h"
 
 #include <QListWidget>
+
+class CPUDisAsm;
+class cpu_thread;
+class breakpoint_handler;
 
 class breakpoint_list : public QListWidget
 {

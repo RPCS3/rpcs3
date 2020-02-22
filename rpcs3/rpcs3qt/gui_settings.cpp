@@ -1,9 +1,9 @@
 ﻿#include "gui_settings.h"
 
-#include "game_list_frame.h"
 #include "qt_utils.h"
 #include "localized.h"
 
+#include <QCheckBox>
 #include <QCoreApplication>
 #include <QMessageBox>
 

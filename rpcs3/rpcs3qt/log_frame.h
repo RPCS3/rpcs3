@@ -4,7 +4,6 @@
 #include "Utilities/Log.h"
 
 #include "custom_dock_widget.h"
-#include "gui_settings.h"
 #include "find_dialog.h"
 
 #include <memory>
@@ -12,8 +11,8 @@
 #include <QTabWidget>
 #include <QPlainTextEdit>
 #include <QActionGroup>
-#include <QTimer>
-#include <QKeyEvent>
+
+class gui_settings;
 
 class log_frame : public custom_dock_widget
 {

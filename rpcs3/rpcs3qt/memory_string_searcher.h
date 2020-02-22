@@ -2,7 +2,6 @@
 
 #include <QDialog>
 #include <QLineEdit>
-#include <QHBoxLayout>
 
 class memory_string_searcher : public QDialog
 {

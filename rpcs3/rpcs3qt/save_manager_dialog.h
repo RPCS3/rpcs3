@@ -1,14 +1,13 @@
 ﻿#pragma once
 
-#include "stdafx.h"
-#include "Emu/Memory/vm.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
-#include "gui_settings.h"
 
 #include <QDialog>
 #include <QLabel>
 #include <QPushButton>
 #include <QTableWidget>
+
+class gui_settings;
 
 class save_manager_dialog : public QDialog
 {

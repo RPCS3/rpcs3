@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include "Utilities/Config.h"
 #include "Emu/Io/PadHandler.h"
 #define NOMINMAX
 #include <Windows.h>
