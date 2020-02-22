@@ -541,20 +541,28 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	// TODO: output errors (errDialog)
 
 	const std::string dir = "/dev_hdd0/game/"s + dirName.get_ptr();
+	const std::string usrdir = dir + "/USRDIR";
 
 	vm::var<CellGameDataCBResult> cbResult;
 	vm::var<CellGameDataStatGet>  cbGet;
 	vm::var<CellGameDataStatSet>  cbSet;
 
-	const u32 new_data = fs::is_dir(vfs::get(dir)) ? CELL_GAMEDATA_ISNEWDATA_NO : CELL_GAMEDATA_ISNEWDATA_YES;
+	psf::registry sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+
+	const u32 new_data = sfo.empty() && !fs::is_file(vfs::get(dir + "/PARAM.SFO")) ? CELL_GAMEDATA_ISNEWDATA_YES : CELL_GAMEDATA_ISNEWDATA_NO;
+
+	if (!new_data && psf::get_string(sfo, "CATEGORY", "") != "GD")
+	{
+		return CELL_GAMEDATA_ERROR_BROKEN;
+	}
+
 	cbGet->isNewData = new_data;
 
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	cbGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
 
-
 	strcpy_trunc(cbGet->contentInfoPath, dir);
-	strcpy_trunc(cbGet->gameDataPath, dir + "/USRDIR");
+	strcpy_trunc(cbGet->gameDataPath, usrdir);
 
 	// TODO: set correct time
 	cbGet->st_atime_ = 0;
@@ -564,8 +572,6 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	// TODO: calculate data size, if necessary
 	cbGet->sizeKB = CELL_GAMEDATA_SIZEKB_NOTCALC;
 	cbGet->sysSizeKB = 0; // TODO
-
-	psf::registry sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 
 	cbGet->getParam.attribute = CELL_GAMEDATA_ATTR_NORMAL;
 	cbGet->getParam.parentalLevel = psf::get_integer(sfo, "PARENTAL_LEVEL", 0);
@@ -591,21 +597,28 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	case CELL_GAMEDATA_CBRESULT_OK:
 	{
 		// Game confirmed that it wants to create directory
-		const std::string usrdir = dir + "/USRDIR";
-		const std::string vusrdir = vfs::get(usrdir);
+		const auto setParam = cbSet->setParam;
 
-		if (new_data && !fs::create_path(vusrdir))
+		if (new_data)
 		{
-			return {CELL_GAME_ERROR_ACCESS_ERROR, usrdir};
+			if (!setParam)
+			{
+				return CELL_GAMEDATA_ERROR_PARAM;
+			}
+
+			if (!fs::create_path(vfs::get(usrdir)))
+			{
+				return {CELL_GAME_ERROR_ACCESS_ERROR, usrdir};
+			}
 		}
 
-		if (cbSet->setParam)
+		if (setParam)
 		{
 			psf::assign(sfo, "CATEGORY", psf::string(3, "GD"));
-			psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, cbSet->setParam->titleId));
-			psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->title));
-			psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, cbSet->setParam->dataVersion));
-			psf::assign(sfo, "PARENTAL_LEVEL", cbSet->setParam->parentalLevel.value());
+			psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, setParam->titleId));
+			psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->title));
+			psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, setParam->dataVersion));
+			psf::assign(sfo, "PARENTAL_LEVEL", +setParam->parentalLevel);
 
 			for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 			{
@@ -614,21 +627,10 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 					continue;
 				}
 
-				psf::assign(sfo, fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->titleLang[i]));
+				psf::assign(sfo, fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->titleLang[i]));
 			}
 
-			const auto vdir = vfs::get(dir);
-
-			if (!fs::is_dir(vdir))
-			{
-				return {CELL_GAME_ERROR_INTERNAL, dir};
-			}
-
-			psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::rewrite), sfo);
-		}
-		else if (new_data)
-		{
-			return CELL_GAMEDATA_ERROR_PARAM;
+			psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite), sfo);
 		}
 
 		return CELL_OK;

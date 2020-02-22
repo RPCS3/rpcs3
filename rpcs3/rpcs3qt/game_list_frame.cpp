@@ -593,20 +593,18 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			}
 		}
 
+		// Remove duplicates
+		sort(path_list.begin(), path_list.end());
+		path_list.erase(unique(path_list.begin(), path_list.end()), path_list.end());
+
 		QSet<QString> serials;
 
 		QMutex mutex_cat;
 
-		QList<size_t> indices;
-		for (size_t i = 0; i < path_list.size(); ++i)
-			indices.append(i);
-
 		lf_queue<game_info> games;
 
-		QtConcurrent::blockingMap(indices, [&](size_t& i)
+		QtConcurrent::blockingMap(path_list, [&](const std::string& dir)
 		{
-			const std::string dir = path_list[i];
-
 			const Localized thread_localized;
 
 			try
@@ -1810,13 +1808,8 @@ void game_list_frame::RepaintIcons(const bool& fromSettings)
 		}
 	}
 
-	QList<int> indices;
-	for (int i = 0; i < m_game_data.size(); ++i)
-		indices.append(i);
-
-	QtConcurrent::blockingMap(indices, [this](int& i)
+	QtConcurrent::blockingMap(m_game_data, [this](const game_info& game)
 	{
-		auto game = m_game_data[i];
 		const QColor color = getGridCompatibilityColor(game->compat.color);
 		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
 	});
