@@ -40,8 +40,6 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
-	dma_manager g_dma_manager;
-
 	u32 get_address(u32 offset, u32 location, const char* from)
 	{
 		const auto render = get_current_renderer();
@@ -481,7 +479,7 @@ namespace rsx
 
 		rsx::overlays::reset_performance_overlay();
 
-		g_dma_manager.init();
+		g_fxo->get<rsx::dma_manager>()->init();
 		on_init_thread();
 
 		method_registers.init();
@@ -664,7 +662,7 @@ namespace rsx
 		capture_current_frame = false;
 
 		m_rsx_thread_exiting = true;
-		g_dma_manager.join();
+		g_fxo->get<rsx::dma_manager>()->join();
 	}
 
 	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
@@ -2091,7 +2089,7 @@ namespace rsx
 				const u32 data_size = range.second * block.attribute_stride;
 				const u32 vertex_base = range.first * block.attribute_stride;
 
-				g_dma_manager.copy(persistent, vm::_ptr<char>(block.real_offset_address) + vertex_base, data_size);
+				g_fxo->get<rsx::dma_manager>()->copy(persistent, vm::_ptr<char>(block.real_offset_address) + vertex_base, data_size);
 				persistent += data_size;
 			}
 		}
@@ -2249,7 +2247,7 @@ namespace rsx
 		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
 
 		// DMA sync; if you need this, don't use MTRSX
-		// g_dma_manager.sync();
+		// g_fxo->get<rsx::dma_manager>()->sync();
 
 		//TODO: On sync every sub-unit should finish any pending tasks
 		//Might cause zcull lockup due to zombie 'unclaimed reports' which are not forcefully removed currently
@@ -2489,7 +2487,7 @@ namespace rsx
 		{
 			if (g_cfg.video.multithreaded_rsx)
 			{
-				g_dma_manager.sync();
+				g_fxo->get<rsx::dma_manager>()->sync();
 			}
 
 			external_interrupt_ack.store(true);

@@ -85,6 +85,4 @@ namespace rsx
 		// Fault recovery
 		utils::address_range get_fault_range(bool writing) const;
 	};
-
-	extern dma_manager g_dma_manager;
 }
