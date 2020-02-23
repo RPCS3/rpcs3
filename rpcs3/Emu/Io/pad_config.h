@@ -99,6 +99,8 @@ struct pad_config final : cfg::node
 
 	cfg::_int<0, 100> l_stick_lerp_factor{ this, "Left Stick Lerp Factor", 100 };
 	cfg::_int<0, 100> r_stick_lerp_factor{ this, "Right Stick Lerp Factor", 100 };
+	cfg::_int<0, 100> analog_lerp_factor{ this, "Analog Button Lerp Factor", 100 };
+	cfg::_int<0, 100> trigger_lerp_factor{ this, "Trigger Lerp Factor", 100 };
 
 	cfg::_int<0, 5> device_class_type{ this, "Device Class Type", 0 };
 
