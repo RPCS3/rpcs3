@@ -327,22 +327,22 @@ protected:
 	}
 
 	// Search an unordered map for a string value and return found keycode
-	int FindKeyCode(const std::unordered_map<u32, std::string>& map, const cfg::string& name, bool fallback = true);
+	static int FindKeyCode(const std::unordered_map<u32, std::string>& map, const cfg::string& name, bool fallback = true);
 
 	// Search an unordered map for a string value and return found keycode
-	long FindKeyCode(const std::unordered_map<u64, std::string>& map, const cfg::string& name, bool fallback = true);
+	static long FindKeyCode(const std::unordered_map<u64, std::string>& map, const cfg::string& name, bool fallback = true);
 
 	// Search an unordered map for a string value and return found keycode
-	int FindKeyCodeByString(const std::unordered_map<u32, std::string>& map, const std::string& name, bool fallback = true);
+	static int FindKeyCodeByString(const std::unordered_map<u32, std::string>& map, const std::string& name, bool fallback = true);
 
 	// Search an unordered map for a string value and return found keycode
-	long FindKeyCodeByString(const std::unordered_map<u64, std::string>& map, const std::string& name, bool fallback = true);
+	static long FindKeyCodeByString(const std::unordered_map<u64, std::string>& map, const std::string& name, bool fallback = true);
 
 	// Get new scaled value between 0 and 255 based on its minimum and maximum
-	float ScaleStickInput(s32 raw_value, int minimum, int maximum);
+	static float ScaleStickInput(s32 raw_value, int minimum, int maximum);
 
 	// Get new scaled value between -255 and 255 based on its minimum and maximum
-	float ScaleStickInput2(s32 raw_value, int minimum, int maximum);
+	static float ScaleStickInput2(s32 raw_value, int minimum, int maximum);
 
 	// Get normalized trigger value based on the range defined by a threshold
 	u16 NormalizeTriggerInput(u16 value, int threshold);
@@ -359,18 +359,18 @@ protected:
 	std::tuple<u16, u16> NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone);
 
 	// get clamped value between 0 and 255
-	u16 Clamp0To255(f32 input);
+	static u16 Clamp0To255(f32 input);
 	// get clamped value between 0 and 1023
-	u16 Clamp0To1023(f32 input);
+	static u16 Clamp0To1023(f32 input);
 
 	// input has to be [-1,1]. result will be [0,255]
-	u16 ConvertAxis(float value);
+	static u16 ConvertAxis(float value);
 
 	// The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
 	// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
 	// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of 8000
 	// This function assumes inX and inY is already in 0-255
-	std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY, int squircle_factor);
+	static std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY, int squircle_factor);
 
 public:
 	s32 thumb_min = 0;
@@ -383,12 +383,12 @@ public:
 
 	pad_handler m_type;
 
-	std::string name_string();
-	size_t max_devices();
-	bool has_config();
-	bool has_rumble();
-	bool has_deadzones();
-	bool has_led();
+	std::string name_string() const;
+	size_t max_devices() const;
+	bool has_config() const;
+	bool has_rumble() const;
+	bool has_deadzones() const;
+	bool has_led() const;
 
 	static std::string get_config_dir(pad_handler type, const std::string& title_id = "");
 	static std::string get_config_filename(int i, const std::string& title_id = "");
