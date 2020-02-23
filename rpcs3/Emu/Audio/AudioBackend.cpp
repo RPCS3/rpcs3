@@ -14,7 +14,7 @@ u32 AudioBackend::get_sampling_rate()
 
 	const f32 sampling_period_multiplier = sampling_period_multiplier_u32 / 100.0f;
 	const f32 sampling_rate_multiplier = 1.0f / sampling_period_multiplier;
-	return static_cast<u32>(DEFAULT_AUDIO_SAMPLING_RATE * sampling_rate_multiplier);
+	return static_cast<u32>(f32{DEFAULT_AUDIO_SAMPLING_RATE} * sampling_rate_multiplier);
 }
 
 u32 AudioBackend::get_sample_size()
