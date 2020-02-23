@@ -286,13 +286,6 @@ public:
 
 	// Sets the preferred affinity mask for this thread
 	static void set_thread_affinity_mask(u64 mask);
-
-	// Spawn a detached named thread
-	template <typename F>
-	[[deprecated]] static void spawn(std::string_view name, F&& func)
-	{
-		new named_thread<F>(thread_state::detached, name, std::forward<F>(func));
-	}
 };
 
 // Derived from the callable object Context, possibly a lambda

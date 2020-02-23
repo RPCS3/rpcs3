@@ -497,7 +497,7 @@ namespace rsx
 
 		vblank_count = 0;
 
-		thread_ctrl::spawn("VBlank Thread", [this]()
+		auto vblank_body = [this]()
 		{
 			// See sys_timer_usleep for details
 #ifdef __linux__
@@ -561,9 +561,11 @@ namespace rsx
 
 				thread_ctrl::wait_for(100);
 			}
-		});
+		};
 
-		thread_ctrl::spawn("RSX Decompiler Thread", [this]
+		g_fxo->init<named_thread<decltype(vblank_body)>>("VBlank Thread", std::move(vblank_body));
+
+		auto decomp_body = [this]
 		{
 			if (g_cfg.video.disable_asynchronous_shader_compiler)
 			{
@@ -594,7 +596,9 @@ namespace rsx
 			}
 
 			on_decompiler_exit();
-		});
+		};
+
+		g_fxo->init<named_thread<decltype(decomp_body)>>("RSX Decompiler Thread", std::move(decomp_body));
 
 		// Raise priority above other threads
 		thread_ctrl::set_native_priority(1);
