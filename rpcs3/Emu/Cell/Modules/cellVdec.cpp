@@ -302,9 +302,9 @@ struct vdec_context final
 							fmt::throw_exception("Repeated frames not supported (0x%x)", frame->repeat_pict);
 						}
 
-						if (frame->pkt_pts != INT64_MIN)
+						if (frame->pts != INT64_MIN)
 						{
-							next_pts = frame->pkt_pts;
+							next_pts = frame->pts;
 						}
 
 						if (frame->pkt_dts != INT64_MIN)
@@ -381,7 +381,7 @@ struct vdec_context final
 							next_dts += amend;
 						}
 
-						cellVdec.trace("Got picture (pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", frame.pts, frame->pkt_pts, frame.dts, frame->pkt_dts);
+						cellVdec.trace("Got picture (pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", frame.pts, frame->pts, frame.dts, frame->pkt_dts);
 
 						std::lock_guard{mutex}, out.push_back(std::move(frame));
 
