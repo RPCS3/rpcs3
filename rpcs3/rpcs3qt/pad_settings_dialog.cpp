@@ -98,7 +98,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	connect(ui->chooseHandler, &QComboBox::currentTextChanged, this, &pad_settings_dialog::ChangeInputType);
 
 	// Combobox: Devices
-	connect(ui->chooseDevice, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+	connect(ui->chooseDevice, QOverload<int, const QString&>::of(&QComboBox::currentIndexChanged), [this](int index)
 	{
 		if (index < 0)
 		{

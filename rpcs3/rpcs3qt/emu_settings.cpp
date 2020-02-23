@@ -384,7 +384,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 		combobox->setCurrentIndex(index);
 	}
 
-	connect(combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=, this](int index)
+	connect(combobox, static_cast<void(QComboBox::*)(int, const QString&)>(&QComboBox::currentIndexChanged), [=, this](int index)
 	{
 		SetSetting(type, sstr(combobox->itemData(index)));
 	});
