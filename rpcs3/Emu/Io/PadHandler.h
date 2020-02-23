@@ -112,11 +112,36 @@ struct Button
 	u16 m_value = 0;
 	bool m_pressed = false;
 
+	u16 m_actual_value = 0; // only used in keyboard_pad_handler
+	bool m_analog  = false; // only used in keyboard_pad_handler
+	bool m_trigger = false; // only used in keyboard_pad_handler
+
 	Button(u32 offset, u32 keyCode, u32 outKeyCode)
 		: m_offset(offset)
 		, m_keyCode(keyCode)
 		, m_outKeyCode(outKeyCode)
 	{
+		if (offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
+		{
+			if (outKeyCode == CELL_PAD_CTRL_LEFT || outKeyCode == CELL_PAD_CTRL_RIGHT ||
+				outKeyCode == CELL_PAD_CTRL_UP   || outKeyCode == CELL_PAD_CTRL_DOWN)
+			{
+				m_analog = true;
+			}
+		}
+		else if (offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+		{
+			if (outKeyCode == CELL_PAD_CTRL_CROSS  || outKeyCode == CELL_PAD_CTRL_CIRCLE ||
+				outKeyCode == CELL_PAD_CTRL_SQUARE || outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
+				outKeyCode == CELL_PAD_CTRL_L1     || outKeyCode == CELL_PAD_CTRL_R1)
+			{
+				m_analog = true;
+			}
+			else if (outKeyCode == CELL_PAD_CTRL_L2 || outKeyCode == CELL_PAD_CTRL_R2)
+			{
+				m_trigger = true;
+			}
+		}
 	}
 };
 
