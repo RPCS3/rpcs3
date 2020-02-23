@@ -1123,7 +1123,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	};
 
 	// Events
-	connect(libModeBG, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), l_OnLibButtonClicked);
+	connect(libModeBG, static_cast<void(QButtonGroup::*)(QAbstractButton *)>(&QButtonGroup::buttonClicked), [&l_OnLibButtonClicked, &libModeBG](QAbstractButton *button)
+	{
+		l_OnLibButtonClicked(libModeBG->id(button));
+	});
 	connect(ui->searchBox, &QLineEdit::textChanged, l_OnSearchBoxTextChanged);
 
 	// enable multiselection (there must be a better way)
