@@ -1319,11 +1319,6 @@ extern void ppu_initialize()
 	spu_cache::initialize();
 }
 
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winit-list-lifetime"
-#endif
-
 extern void ppu_initialize(const ppu_module& info)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
