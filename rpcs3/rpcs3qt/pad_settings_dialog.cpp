@@ -259,7 +259,7 @@ void pad_settings_dialog::InitButtons()
 	m_padButtons->addButton(ui->b_ok, button_ids::id_ok);
 	m_padButtons->addButton(ui->b_cancel, button_ids::id_cancel);
 
-	connect(m_padButtons, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &pad_settings_dialog::OnPadButtonClicked);
+	connect(m_padButtons, static_cast<void(QButtonGroup::*)(QAbstractButton *)>(&QButtonGroup::buttonClicked), this, &pad_settings_dialog::OnPadButtonClicked);
 
 	connect(&m_timer, &QTimer::timeout, [this]()
 	{
