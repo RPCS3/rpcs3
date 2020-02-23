@@ -132,7 +132,18 @@ struct vdec_context final
 		, cb_func(func)
 		, cb_arg(arg)
 	{
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 		avcodec_register_all();
+#ifdef _MSC_VER
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
+#endif
 
 		switch (type)
 		{
