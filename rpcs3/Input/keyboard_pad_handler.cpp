@@ -693,7 +693,7 @@ void keyboard_pad_handler::ThreadProc()
 						const f32 v1 = static_cast<f32>(m_stick_val[j]);
 
 						// linear interpolation from the current stick value v0 to the desired stick value v1
-						f32 res = lerp(v0, v1, stick_lerp_factor);
+						f32 res = std::lerp(v0, v1, stick_lerp_factor);
 
 						// round to the correct direction to prevent sticky sticks on small factors
 						res = (v0 <= v1) ? std::ceil(res) : std::floor(res);

@@ -321,11 +321,6 @@ protected:
 	std::unordered_map<u32, std::string> button_list;
 	std::vector<u32> blacklist;
 
-	template <typename T>
-	T lerp(T v0, T v1, T t) {
-		return std::fma(t, v1, std::fma(-t, v0, v0));
-	}
-
 	// Search an unordered map for a string value and return found keycode
 	static int FindKeyCode(const std::unordered_map<u32, std::string>& map, const cfg::string& name, bool fallback = true);
 
