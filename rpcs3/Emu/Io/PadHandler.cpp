@@ -179,22 +179,24 @@ std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u3
 
 	if (dzRange > 0.f)
 	{
-		const float mag = std::min(sqrtf(X*X + Y*Y), 1.f);
+		const float mag = std::min(sqrtf(X * X + Y * Y), 1.f);
 
 		if (mag <= 0)
 		{
 			return std::tuple<u16, u16>(ConvertAxis(X), ConvertAxis(Y));
 		}
 
-		if (mag > dzRange) {
-			float pos = lerp(0.13f, 1.f, (mag - dzRange) / (1 - dzRange));
-			float scale = pos / mag;
+		if (mag > dzRange)
+		{
+			const float pos = std::lerp(0.13f, 1.f, (mag - dzRange) / (1 - dzRange));
+			const float scale = pos / mag;
 			X = X * scale;
 			Y = Y * scale;
 		}
-		else {
-			float pos = lerp(0.f, 0.13f, mag / dzRange);
-			float scale = pos / mag;
+		else
+		{
+			const float pos = std::lerp(0.f, 0.13f, mag / dzRange);
+			const float scale = pos / mag;
 			X = X * scale;
 			Y = Y * scale;
 		}
@@ -244,32 +246,32 @@ std::tuple<u16, u16> PadHandlerBase::ConvertToSquirclePoint(u16 inX, u16 inY, in
 	return std::tuple<u16, u16>(newX, newY);
 }
 
-std::string PadHandlerBase::name_string()
+std::string PadHandlerBase::name_string() const
 {
 	return m_name_string;
 }
 
-size_t PadHandlerBase::max_devices()
+size_t PadHandlerBase::max_devices() const
 {
 	return m_max_devices;
 }
 
-bool PadHandlerBase::has_config()
+bool PadHandlerBase::has_config() const
 {
 	return b_has_config;
 }
 
-bool PadHandlerBase::has_rumble()
+bool PadHandlerBase::has_rumble() const
 {
 	return b_has_rumble;
 }
 
-bool PadHandlerBase::has_deadzones()
+bool PadHandlerBase::has_deadzones() const
 {
 	return b_has_deadzones;
 }
 
-bool PadHandlerBase::has_led()
+bool PadHandlerBase::has_led() const
 {
 	return b_has_led;
 }
@@ -332,8 +334,8 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const std:
 	std::pair<u16, std::string> pressed_button = { 0, "" };
 	for (const auto& button : button_list)
 	{
-		u32 keycode = button.first;
-		u16 value = data[keycode];
+		const u32 keycode = button.first;
+		const u16 value = data[keycode];
 
 		if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), keycode) != blacklist.end())
 			continue;
