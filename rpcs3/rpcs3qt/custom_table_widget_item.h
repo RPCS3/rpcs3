@@ -28,7 +28,7 @@ public:
 
 	bool operator <(const QTableWidgetItem &other) const
 	{
-		return data(m_sort_role) < other.data(m_sort_role);
+		return data(m_sort_role).Int < other.data(m_sort_role).Int;
 	}
 
 	void setData(int role, const QVariant &value, bool assign_sort_role = false)
