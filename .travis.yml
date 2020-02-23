@@ -33,6 +33,11 @@ jobs:
                     - qt
           script: "/bin/bash -ex .travis/build-mac.bash"
           cache: ccache
+        - os: windows
+          cache: ccache
+          compiler: clang
+          language: cpp
+          script: 'C:\Program Files\git\usr\bin\bash.exe -ex .travis/build-mingw.bash"
     allow_failures:
         - os: osx
 
