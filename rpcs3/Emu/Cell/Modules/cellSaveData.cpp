@@ -127,7 +127,7 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 		save_entry.subtitle  = psf.at("SUB_TITLE").as_string();
 		save_entry.details   = psf.at("DETAIL").as_string();
 
-		for (const auto entry2 : fs::dir(base_dir + entry.name))
+		for (const auto& entry2 : fs::dir(base_dir + entry.name))
 		{
 			save_entry.size += entry2.size;
 		}
@@ -615,7 +615,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 						save_entry2.subtitle = psf.at("SUB_TITLE").as_string();
 						save_entry2.details = psf.at("DETAIL").as_string();
 
-						for (const auto entry2 : fs::dir(base_dir + entry.name))
+						for (const auto& entry2 : fs::dir(base_dir + entry.name))
 						{
 							save_entry2.size += entry2.size;
 						}
