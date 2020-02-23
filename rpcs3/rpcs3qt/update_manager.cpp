@@ -105,7 +105,7 @@ void update_manager::handle_error(QNetworkReply::NetworkError error)
 
 bool update_manager::handle_reply(QNetworkReply* reply, std::function<bool(update_manager& man, const QByteArray&, bool)> func, bool automatic, const std::string& message)
 {
-	if (auto error = reply->error(); error != QNetworkReply::NoError)
+	if (auto error = reply->networkError(); error != QNetworkReply::NoError)
 		return false;
 
 	// Read data from network reply

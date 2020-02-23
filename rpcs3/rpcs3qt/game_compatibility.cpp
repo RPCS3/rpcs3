@@ -198,7 +198,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	// Handle response according to its contents
 	connect(network_reply, &QNetworkReply::finished, [=, this]()
 	{
-		if (network_reply->error() != QNetworkReply::NoError)
+		if (network_reply->networkError() != QNetworkReply::NoError)
 		{
 			return;
 		}
