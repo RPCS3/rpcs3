@@ -385,6 +385,7 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/Overlays/overlay_perf_metrics.cpp
 	RSX/Overlays/overlay_progress_bar.cpp
 	RSX/Overlays/overlay_save_dialog.cpp
+	RSX/Overlays/overlay_utils.cpp
 	RSX/Overlays/overlays.cpp
 	RSX/Overlays/overlay_shader_compile_notification.cpp
 	RSX/Overlays/overlay_trophy_notification.cpp
