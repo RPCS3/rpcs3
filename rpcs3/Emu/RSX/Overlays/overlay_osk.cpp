@@ -22,7 +22,7 @@ namespace rsx
 					});
 				}
 
-				m_visible = false;
+				visible = false;
 				close();
 			};
 
@@ -178,8 +178,8 @@ namespace rsx
 				m_btn_cancel.set_image_resource(resource_config::standard_image_resource::circle);
 			}
 
-			m_visible = true;
 			m_update = true;
+			visible = true;
 			exit = false;
 
 			fade_animation.current = color4f(0.f);
@@ -495,7 +495,7 @@ namespace rsx
 
 		compiled_resource osk_dialog::get_compiled()
 		{
-			if (!m_visible)
+			if (!visible)
 			{
 				return {};
 			}

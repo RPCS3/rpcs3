@@ -30,6 +30,7 @@ namespace rsx
 
 			// Disable forced refresh unless fps dips below 4
 			min_refresh_duration_us = 250000;
+			visible = true;
 		}
 
 		void shader_compile_notification::update_animation(u64 t)
@@ -81,6 +82,11 @@ namespace rsx
 
 		compiled_resource shader_compile_notification::get_compiled()
 		{
+			if (!visible)
+			{
+				return {};
+			}
+
 			auto compiled = m_text.get_compiled();
 			compiled.add(dots[0].get_compiled());
 			compiled.add(dots[1].get_compiled());
