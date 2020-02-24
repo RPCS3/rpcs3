@@ -1714,5 +1714,8 @@
     <ClInclude Include="Emu\Io\pad_types.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_osk.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
