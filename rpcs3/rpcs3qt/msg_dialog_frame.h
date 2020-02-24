@@ -3,26 +3,15 @@
 #include "stdafx.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
-#include "custom_dialog.h"
-
-#include <QPushButton>
-#include <QStaticText>
-#include <QInputDialog>
-#include <QFormLayout>
 #include <QProgressBar>
 #include <QLabel>
-#include <QButtonGroup>
-#include <QKeyEvent>
 
 #ifdef _WIN32
 #include <QWinTaskbarProgress>
 #include <QWinTaskbarButton>
-#include <QWinTHumbnailToolbar>
-#include <QWinTHumbnailToolbutton>
-#elif HAVE_QTDBUS
-#include <QtDBus/QDBusMessage>
-#include <QtDBus/QDBusConnection>
 #endif
+
+class custom_dialog;
 
 class msg_dialog_frame : public QObject, public MsgDialogBase
 {

@@ -4,6 +4,7 @@
 
 #include <QLabel>
 #include <QPushButton>
+#include <QHBoxLayout>
 
 LOG_CHANNEL(gui_log, "GUI");
 
@@ -33,8 +34,8 @@ memory_string_searcher::memory_string_searcher(QWidget* parent)
 
 void memory_string_searcher::OnSearch()
 {
-	const QString wstr = m_addr_line->text();
-	const char *str = wstr.toStdString().c_str();
+	const std::string wstr = m_addr_line->text().toStdString();
+	const char *str = wstr.c_str();
 	const u32 len = wstr.length();
 
 	gui_log.notice("Searching for string %s", str);

@@ -1,10 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include "game_list.h"
-#include "game_list_grid_delegate.h"
 
-#include <QHBoxLayout>
-#include <QScrollArea>
+class game_list_grid_delegate;
 
 class game_list_grid : public game_list
 {

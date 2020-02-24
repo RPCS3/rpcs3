@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "ds3_pad_handler.h"
+#include "Emu/Io/pad_config.h"
 
 LOG_CHANNEL(ds3_log, "DS3");
 

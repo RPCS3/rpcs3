@@ -1,6 +1,9 @@
 ﻿#include "breakpoint_list.h"
+#include "breakpoint_handler.h"
 
+#include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/PPUThread.h"
 
 #include <QMenu>
 

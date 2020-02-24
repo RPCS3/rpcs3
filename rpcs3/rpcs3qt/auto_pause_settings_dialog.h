@@ -3,18 +3,9 @@
 #include "stdafx.h"
 
 #include <QDialog>
-#include <QVBoxLayout>
-#include <QFormLayout>
-#include <QPushButton>
-#include <QAbstractButton>
 #include <QLabel>
-#include <QString>
 #include <QTableWidget>
-#include <QHeaderView>
-#include <QMouseEvent>
-#include <QMenu>
 #include <QLineEdit>
-#include <QFontDatabase>
 
 class auto_pause_settings_dialog : public QDialog
 {

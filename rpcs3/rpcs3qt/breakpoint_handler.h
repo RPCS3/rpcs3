@@ -1,6 +1,5 @@
-#pragma once
+﻿#pragma once
 #include "stdafx.h"
-#include "Emu/Cell/PPUThread.h"
 #include <set>
 
 enum class breakpoint_types

@@ -37,11 +37,6 @@
 #include <array>
 #include <vector>
 
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winit-list-lifetime"
-#endif
-
 enum class i2 : char
 {
 };

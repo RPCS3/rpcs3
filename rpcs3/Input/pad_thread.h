@@ -4,15 +4,11 @@
 #include <thread>
 #include <mutex>
 
-#include "../Utilities/types.h"
-#include "Emu/Io/PadHandler.h"
+#include "stdafx.h"
+#include "Emu/Io/pad_types.h"
+#include "Emu/Io/pad_config_types.h"
 
-struct PadInfo
-{
-	u32 now_connect;
-	u32 system_info;
-	bool ignore_input;
-};
+class PadHandlerBase;
 
 class pad_thread
 {

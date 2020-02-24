@@ -1,4 +1,5 @@
 ﻿#include "gs_frame.h"
+#include "gui_settings.h"
 
 #include "Utilities/Config.h"
 #include "Utilities/Timer.h"
@@ -7,9 +8,6 @@
 #include "Emu/Cell/Modules/cellScreenshot.h"
 
 #include <QKeyEvent>
-#include <QTimer>
-#include <QThread>
-#include <QLibraryInfo>
 #include <QMessageBox>
 #include <string>
 
@@ -27,6 +25,14 @@
 #ifdef HAVE_X11
 #include <X11/Xlib.h>
 #endif
+#endif
+
+#ifdef _WIN32
+#include <QWinTHumbnailToolbar>
+#include <QWinTHumbnailToolbutton>
+#elif HAVE_QTDBUS
+#include <QtDBus/QDBusMessage>
+#include <QtDBus/QDBusConnection>
 #endif
 
 LOG_CHANNEL(screenshot);

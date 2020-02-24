@@ -1,14 +1,9 @@
 ﻿#pragma once
 
 #include <QDialog>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
 #include <QPushButton>
-#include <QGroupBox>
 #include <QComboBox>
 #include <QLineEdit>
-#include <QLabel>
-#include <QFileDialog>
 
 class skylander_dialog : public QDialog
 {

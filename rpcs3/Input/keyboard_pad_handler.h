@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Utilities/Config.h"
+#include "stdafx.h"
 #include "Emu/Io/PadHandler.h"
 
 #include <QWindow>
@@ -100,6 +100,11 @@ protected:
 private:
 	QWindow* m_target = nullptr;
 	std::vector<std::shared_ptr<Pad>> bindings;
+
+	// Button Movements
+	std::chrono::steady_clock::time_point m_button_time;
+	f32 m_analog_lerp_factor  = 1.0f;
+	f32 m_trigger_lerp_factor = 1.0f;
 
 	// Stick Movements
 	std::chrono::steady_clock::time_point m_stick_time;

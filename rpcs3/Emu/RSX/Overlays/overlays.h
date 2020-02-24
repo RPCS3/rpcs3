@@ -2,22 +2,19 @@
 #include "overlay_animation.h"
 #include "overlay_controls.h"
 
-#include "../../../Utilities/date_time.h"
 #include "../../../Utilities/Thread.h"
-#include "../../Io/PadHandler.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
-#include "Input/pad_thread.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/Cell/Modules/cellOskDialog.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
-#include "Utilities/CPUStats.h"
 #include "Utilities/Timer.h"
 
 #include <list>
+#include <thread>
 
 // Utils
 extern u64 get_system_time();
@@ -37,6 +34,7 @@ namespace rsx
 			u16 virtual_height = 720;
 
 			u32 min_refresh_duration_us = 16600;
+			atomic_t<bool> visible = false;
 
 			virtual ~overlay() = default;
 
@@ -333,7 +331,7 @@ namespace rsx
 
 		struct osk_dialog : public user_interface, public OskDialogBase
 		{
-			using callback_t = std::function<void(const std::wstring&)>;
+			using callback_t = std::function<void(const std::u32string&)>;
 
 			enum border_flags
 			{
@@ -363,13 +361,13 @@ namespace rsx
 				bool selected = false;
 				bool enabled = false;
 
-				std::vector<std::wstring> outputs;
+				std::vector<std::u32string> outputs;
 				callback_t callback;
 			};
 
 			struct grid_entry_ctor
 			{
-				std::vector<std::wstring> outputs;
+				std::vector<std::u32string> outputs;
 				color4f color;
 				u32 num_cell_hz;
 				button_flags type_flags;
@@ -402,7 +400,6 @@ namespace rsx
 			// Fade in/out
 			animation_color_interpolate fade_animation;
 
-			bool m_visible = false;
 			bool m_update = true;
 			compiled_resource m_cached_resource;
 
@@ -415,17 +412,17 @@ namespace rsx
 			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override = 0;
 			void Close(bool ok) override;
 
-			void initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::wstring& title, const std::wstring& initial_text);
+			void initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::u32string& title, const std::u32string& initial_text);
 			void update() override;
 
 			void on_button_pressed(pad_button button_press) override;
 			void on_text_changed();
 
-			void on_default_callback(const std::wstring&);
-			void on_shift(const std::wstring&);
-			void on_space(const std::wstring&);
-			void on_backspace(const std::wstring&);
-			void on_enter(const std::wstring&);
+			void on_default_callback(const std::u32string&);
+			void on_shift(const std::u32string&);
+			void on_space(const std::u32string&);
+			void on_backspace(const std::u32string&);
+			void on_enter(const std::u32string&);
 
 			compiled_resource get_compiled() override;
 		};

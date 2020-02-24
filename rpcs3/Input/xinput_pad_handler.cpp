@@ -2,6 +2,7 @@
 #ifdef _WIN32
 #include "stdafx.h"
 #include "xinput_pad_handler.h"
+#include "Emu/Io/pad_config.h"
 
 namespace XINPUT_INFO
 {

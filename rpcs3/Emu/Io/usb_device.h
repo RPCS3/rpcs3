@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -15,7 +15,6 @@
 #pragma GCC diagnostic pop
 #endif
 
-#include "Emu/Memory/vm.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 
 struct UsbTransfer;

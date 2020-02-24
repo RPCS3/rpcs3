@@ -1,4 +1,4 @@
-#include "trophy_notification_frame.h"
+﻿#include "trophy_notification_frame.h"
 
 #include <QHBoxLayout>
 #include <QLabel>

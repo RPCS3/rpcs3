@@ -6,6 +6,12 @@
 #include "custom_table_widget_item.h"
 #include "input_dialog.h"
 #include "localized.h"
+#include "progress_dialog.h"
+#include "persistent_settings.h"
+#include "emu_settings.h"
+#include "gui_settings.h"
+#include "game_list.h"
+#include "game_list_grid.h"
 
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
@@ -35,12 +41,13 @@ LOG_CHANNEL(sys_log, "SYS");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
+game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
 	: custom_dock_widget(tr("Game List"), parent)
 	, m_gui_settings(guiSettings)
 	, m_emu_settings(emuSettings)
 	, m_persistent_settings(persistent_settings)
 {
+	m_Icon_Size       = gui::gl_icon_size_min; // ensure a valid size
 	m_isListLayout    = m_gui_settings->GetValue(gui::gl_listMode).toBool();
 	m_Margin_Factor   = m_gui_settings->GetValue(gui::gl_marginFactor).toReal();
 	m_Text_Factor     = m_gui_settings->GetValue(gui::gl_textFactor).toReal();
@@ -589,7 +596,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			}
 			else
 			{
-				game_list_log.warning("Invalid disc path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
+				game_list_log.trace("Invalid disc path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
 			}
 		}
 
@@ -1549,7 +1556,7 @@ void game_list_frame::BatchRemoveSPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("SPU Cache Batch Removal"), tr("Removing all SPU caches"), tr("Cancel"), 0, total, this);
+	progress_dialog* pdlg = new progress_dialog(tr("SPU Cache Batch Removal"), tr("Removing all SPU caches"), tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();

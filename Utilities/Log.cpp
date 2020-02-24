@@ -422,10 +422,14 @@ logs::file_writer::file_writer(const std::string& name)
 		// Compressed log, make it inaccessible (foolproof)
 		if (m_fout2.open(log_name + ".gz", fs::rewrite + fs::unread))
 		{
+#ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 			if (deflateInit2(&m_zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) != Z_OK)
+#ifndef _MSC_VER
 #pragma GCC diagnostic pop
+#endif
 				m_fout2.close();
 		}
 

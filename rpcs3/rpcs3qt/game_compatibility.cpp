@@ -1,7 +1,10 @@
 ﻿#include "game_compatibility.h"
+#include "gui_settings.h"
+#include "progress_dialog.h"
 
-#include <QLabel>
 #include <QMessageBox>
+#include <QJsonDocument>
+#include <QNetworkReply>
 
 LOG_CHANNEL(compat_log, "Compat");
 

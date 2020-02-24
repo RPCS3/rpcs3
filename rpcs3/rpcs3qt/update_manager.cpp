@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "update_manager.h"
+#include "progress_dialog.h"
 #include "rpcs3_version.h"
 #include "Utilities/StrUtil.h"
 #include "Crypto/sha256.h"
@@ -26,7 +27,7 @@
 #include <sys/stat.h>
 #endif
 
-LOG_CHANNEL(update_log);
+LOG_CHANNEL(update_log, "UPDATER");
 
 update_manager::update_manager()
 {

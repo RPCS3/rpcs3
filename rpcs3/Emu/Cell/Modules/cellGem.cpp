@@ -6,6 +6,7 @@
 #include "Emu/Io/MouseHandler.h"
 #include "Emu/RSX/GSRender.h"
 #include "Utilities/Timer.h"
+#include "Input/pad_thread.h"
 
 LOG_CHANNEL(cellGem);
 

@@ -1,7 +1,6 @@
 ﻿#include "basic_keyboard_handler.h"
 
 #include <QApplication>
-#include <QKeyEvent>
 
 #include "Emu/system_config.h"
 

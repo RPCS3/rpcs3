@@ -6,7 +6,6 @@
 #include "gui_settings.h"
 #include "emu_settings.h"
 
-#include <QHBoxLayout>
 #include <QListWidget>
 #include <QLabel>
 

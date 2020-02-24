@@ -205,6 +205,7 @@ namespace rsx
 			update();
 
 			m_is_initialised = true;
+			visible = true;
 		}
 
 		void perf_metrics_overlay::set_framerate_graph_enabled(bool enabled)
@@ -699,6 +700,8 @@ namespace rsx
 					{
 						perf_overlay = manager->create<rsx::overlays::perf_metrics_overlay>();
 					}
+
+					std::scoped_lock lock(*manager);
 
 					perf_overlay->set_detail_level(perf_settings.level);
 					perf_overlay->set_position(perf_settings.position);

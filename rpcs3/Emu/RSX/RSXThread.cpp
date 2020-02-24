@@ -12,6 +12,7 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
 #include "Overlays/overlay_perf_metrics.h"
+#include "Utilities/date_time.h"
 
 #include "Utilities/span.h"
 #include "Utilities/StrUtil.h"
@@ -39,8 +40,6 @@ extern thread_local std::string(*g_tls_log_prefix)();
 namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
-
-	dma_manager g_dma_manager;
 
 	u32 get_address(u32 offset, u32 location, const char* from)
 	{
@@ -481,7 +480,7 @@ namespace rsx
 
 		rsx::overlays::reset_performance_overlay();
 
-		g_dma_manager.init();
+		g_fxo->get<rsx::dma_manager>()->init();
 		on_init_thread();
 
 		method_registers.init();
@@ -499,7 +498,7 @@ namespace rsx
 
 		vblank_count = 0;
 
-		thread_ctrl::spawn("VBlank Thread", [this]()
+		auto vblank_body = [this]()
 		{
 			// See sys_timer_usleep for details
 #ifdef __linux__
@@ -563,9 +562,11 @@ namespace rsx
 
 				thread_ctrl::wait_for(100);
 			}
-		});
+		};
 
-		thread_ctrl::spawn("RSX Decompiler Thread", [this]
+		g_fxo->init<named_thread<decltype(vblank_body)>>("VBlank Thread", std::move(vblank_body));
+
+		auto decomp_body = [this]
 		{
 			if (g_cfg.video.disable_asynchronous_shader_compiler)
 			{
@@ -596,7 +597,9 @@ namespace rsx
 			}
 
 			on_decompiler_exit();
-		});
+		};
+
+		g_fxo->init<named_thread<decltype(decomp_body)>>("RSX Decompiler Thread", std::move(decomp_body));
 
 		// Raise priority above other threads
 		thread_ctrl::set_native_priority(1);
@@ -664,7 +667,7 @@ namespace rsx
 		capture_current_frame = false;
 
 		m_rsx_thread_exiting = true;
-		g_dma_manager.join();
+		g_fxo->get<rsx::dma_manager>()->join();
 	}
 
 	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
@@ -2091,7 +2094,7 @@ namespace rsx
 				const u32 data_size = range.second * block.attribute_stride;
 				const u32 vertex_base = range.first * block.attribute_stride;
 
-				g_dma_manager.copy(persistent, vm::_ptr<char>(block.real_offset_address) + vertex_base, data_size);
+				g_fxo->get<rsx::dma_manager>()->copy(persistent, vm::_ptr<char>(block.real_offset_address) + vertex_base, data_size);
 				persistent += data_size;
 			}
 		}
@@ -2249,7 +2252,7 @@ namespace rsx
 		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
 
 		// DMA sync; if you need this, don't use MTRSX
-		// g_dma_manager.sync();
+		// g_fxo->get<rsx::dma_manager>()->sync();
 
 		//TODO: On sync every sub-unit should finish any pending tasks
 		//Might cause zcull lockup due to zombie 'unclaimed reports' which are not forcefully removed currently
@@ -2489,7 +2492,7 @@ namespace rsx
 		{
 			if (g_cfg.video.multithreaded_rsx)
 			{
-				g_dma_manager.sync();
+				g_fxo->get<rsx::dma_manager>()->sync();
 			}
 
 			external_interrupt_ack.store(true);

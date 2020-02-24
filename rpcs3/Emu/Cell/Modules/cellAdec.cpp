@@ -315,8 +315,8 @@ public:
 		, cbFunc(func)
 		, cbArg(arg)
 	{
-		av_register_all();
-		avcodec_register_all();
+		//av_register_all();
+		//avcodec_register_all();
 
 		switch (type)
 		{
@@ -503,7 +503,7 @@ public:
 					{
 						fmt::throw_exception("avformat_new_stream() failed" HERE);
 					}
-					ctx = fmt->streams[0]->codec; // TODO: check data
+					//ctx = fmt->streams[0]->codec; // TODO: check data
 
 					opts = nullptr;
 					av_dict_set(&opts, "refcounted_frames", "1", 0);
@@ -563,7 +563,7 @@ public:
 
 					int got_frame = 0;
 
-					int decode = avcodec_decode_audio4(ctx, frame.data, &got_frame, &au);
+					int decode = 0; //avcodec_decode_audio4(ctx, frame.data, &got_frame, &au);
 
 					if (decode <= 0)
 					{

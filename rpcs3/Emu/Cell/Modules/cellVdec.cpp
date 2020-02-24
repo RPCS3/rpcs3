@@ -132,7 +132,18 @@ struct vdec_context final
 		, cb_func(func)
 		, cb_arg(arg)
 	{
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 		avcodec_register_all();
+#ifdef _MSC_VER
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
+#endif
 
 		switch (type)
 		{
@@ -260,37 +271,38 @@ struct vdec_context final
 						break;
 					}
 
-					vdec_frame frame;
-					frame.avf.reset(av_frame_alloc());
-
-					if (!frame.avf)
-					{
-						fmt::throw_exception("av_frame_alloc() failed" HERE);
-					}
-
-					int got_picture = 0;
-
-					int decode = avcodec_decode_video2(ctx, frame.avf.get(), &got_picture, &packet);
-
-					if (decode < 0)
+					if (int ret = avcodec_send_packet(ctx, &packet); ret < 0)
 					{
 						char av_error[AV_ERROR_MAX_STRING_SIZE];
-						av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, decode);
-						fmt::throw_exception("AU decoding error(0x%x): %s" HERE, decode, av_error);
+						av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
+						fmt::throw_exception("AU queuing error(0x%x): %s" HERE, ret, av_error);
 					}
 
-					if (got_picture == 0)
+					while (true)
 					{
-						break;
-					}
+						// Keep receiving frames
+						vdec_frame frame;
+						frame.avf.reset(av_frame_alloc());
 
-					if (decode != packet.size)
-					{
-						cellVdec.error("Incorrect AU size (0x%x, decoded 0x%x)", packet.size, decode);
-					}
+						if (!frame.avf)
+						{
+							fmt::throw_exception("av_frame_alloc() failed" HERE);
+						}
 
-					if (got_picture)
-					{
+						if (int ret = avcodec_receive_frame(ctx, frame.avf.get()); ret < 0)
+						{
+							if (ret == AVERROR(EAGAIN))
+							{
+								break;
+							}
+							else
+							{
+								char av_error[AV_ERROR_MAX_STRING_SIZE];
+								av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
+								fmt::throw_exception("AU decoding error(0x%x): %s" HERE, ret, av_error);
+							}
+						}
+
 						if (frame->interlaced_frame)
 						{
 							// NPEB01838, NPUB31260
@@ -302,9 +314,9 @@ struct vdec_context final
 							fmt::throw_exception("Repeated frames not supported (0x%x)", frame->repeat_pict);
 						}
 
-						if (frame->pkt_pts != INT64_MIN)
+						if (frame->pts != INT64_MIN)
 						{
-							next_pts = frame->pkt_pts;
+							next_pts = frame->pts;
 						}
 
 						if (frame->pkt_dts != INT64_MIN)
@@ -381,7 +393,7 @@ struct vdec_context final
 							next_dts += amend;
 						}
 
-						cellVdec.trace("Got picture (pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", frame.pts, frame->pkt_pts, frame.dts, frame->pkt_dts);
+						cellVdec.trace("Got picture (pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", frame.pts, frame->pts, frame.dts, frame->pkt_dts);
 
 						std::lock_guard{mutex}, out.push_back(std::move(frame));
 

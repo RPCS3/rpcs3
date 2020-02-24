@@ -1,15 +1,15 @@
 ﻿#pragma once
 
-#include "gui_settings.h"
 #include "emu_settings.h"
-
-#include "Emu/GameInfo.h"
 
 #include <QDialog>
 #include <QLabel>
-#include <QTabWidget>
+#include <QSlider>
 
 #include <memory>
+
+class gui_settings;
+struct GameInfo;
 
 namespace Ui
 {

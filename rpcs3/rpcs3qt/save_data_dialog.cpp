@@ -5,6 +5,8 @@
 #include <Emu/IdManager.h>
 #include <Emu/RSX/Overlays/overlays.h>
 
+#include "Input/pad_thread.h"
+
 s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet)
 {
 	// TODO: Install native shell as an Emu callback
