@@ -48,13 +48,7 @@ namespace rsx
 			{}
 		};
 
-		lf_queue<transport_packet> m_work_queue;
-		lf_queue_slice<transport_packet> m_current_job;
-		atomic_t<u64> m_enqueued_count{ 0 };
-		volatile u64 m_processed_count = 0;
-		thread_state m_worker_state = thread_state::detached;
-		std::thread::id m_thread_id;
-		atomic_t<bool> m_mem_fault_flag{ false };
+		atomic_t<bool> m_mem_fault_flag = false;
 
 		// TODO: Improved benchmarks here; value determined by profiling on a Ryzen CPU, rounded to the nearest 512 bytes
 		const u32 max_immediate_transfer_size = 3584;
@@ -84,7 +78,7 @@ namespace rsx
 
 		// Fault recovery
 		utils::address_range get_fault_range(bool writing) const;
-	};
 
-	extern dma_manager g_dma_manager;
+		struct offload_thread;
+	};
 }

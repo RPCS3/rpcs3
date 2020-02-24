@@ -21,7 +21,7 @@ namespace vk
 		if (!flush && g_cfg.video.multithreaded_rsx)
 		{
 			auto packet = new submit_packet(queue, pfence, info);
-			rsx::g_dma_manager.backend_ctrl(rctrl_queue_submit, packet);
+			g_fxo->get<rsx::dma_manager>()->backend_ctrl(rctrl_queue_submit, packet);
 		}
 		else
 		{

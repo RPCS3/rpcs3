@@ -1816,14 +1816,26 @@ bool thread_base::finalize(int) noexcept
 	FILETIME ctime, etime, ktime, utime;
 	GetThreadTimes(GetCurrentThread(), &ctime, &etime, &ktime, &utime);
 	const u64 time = ((ktime.dwLowDateTime | (u64)ktime.dwHighDateTime << 32) + (utime.dwLowDateTime | (u64)utime.dwHighDateTime << 32)) * 100ull;
+	const u64 fsoft = 0;
+	const u64 fhard = 0;
+	const u64 ctxvol = 0;
+	const u64 ctxinv = 0;
 #elif defined(RUSAGE_THREAD)
 	const u64 cycles = 0; // Not supported
 	struct ::rusage stats{};
 	::getrusage(RUSAGE_THREAD, &stats);
 	const u64 time = (stats.ru_utime.tv_sec + stats.ru_stime.tv_sec) * 1000000000ull + (stats.ru_utime.tv_usec + stats.ru_stime.tv_usec) * 1000ull;
+	const u64 fsoft = stats.ru_minflt;
+	const u64 fhard = stats.ru_majflt;
+	const u64 ctxvol = stats.ru_nvcsw;
+	const u64 ctxinv = stats.ru_nivcsw;
 #else
 	const u64 cycles = 0;
 	const u64 time = 0;
+	const u64 fsoft = 0;
+	const u64 fhard = 0;
+	const u64 ctxvol = 0;
+	const u64 ctxinv = 0;
 #endif
 
 	g_tls_log_prefix = []
@@ -1831,12 +1843,13 @@ bool thread_base::finalize(int) noexcept
 		return thread_ctrl::g_tls_this_thread->m_name.get();
 	};
 
-	sig_log.notice("Thread time: %fs (%fGc); Faults: %u [rsx:%u, spu:%u];",
+	sig_log.notice("Thread time: %fs (%fGc); Faults: %u [rsx:%u, spu:%u]; [soft:%u hard:%u]; Switches:[vol:%u unvol:%u]",
 		time / 1000000000.,
 		cycles / 1000000000.,
 		g_tls_fault_all,
 		g_tls_fault_rsx,
-		g_tls_fault_spu);
+		g_tls_fault_spu,
+		fsoft, fhard, ctxvol, ctxinv);
 
 	// Return true if need to delete thread object
 	const bool result = m_state.exchange(thread_state::finished) == thread_state::detached;

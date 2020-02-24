@@ -925,10 +925,14 @@ public:
 		z_stream zs{};
 		uLong zsz = compressBound(obj.getBufferSize()) + 256;
 		auto zbuf = std::make_unique<uchar[]>(zsz);
+#ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 		deflateInit2(&zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY);
+#ifndef _MSC_VER
 #pragma GCC diagnostic pop
+#endif
 		zs.avail_in  = static_cast<uInt>(obj.getBufferSize());
 		zs.next_in   = reinterpret_cast<uchar*>(const_cast<char*>(obj.getBufferStart()));
 		zs.avail_out = static_cast<uInt>(zsz);
@@ -961,10 +965,14 @@ public:
 			std::vector<uchar> gz = cached.to_vector<uchar>();
 			std::vector<uchar> out;
 			z_stream zs{};
+#ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 			inflateInit2(&zs, 16 + 15);
+#ifndef _MSC_VER
 #pragma GCC diagnostic pop
+#endif
 			zs.avail_in = static_cast<uInt>(gz.size());
 			zs.next_in  = gz.data();
 			out.resize(gz.size() * 6);
