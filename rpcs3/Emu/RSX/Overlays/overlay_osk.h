@@ -28,7 +28,18 @@ namespace rsx
 			{
 				_default = 0,
 				_return = 1,
-				_space = 2
+				_space = 2,
+				_shift = 3,
+				_mode = 4
+			};
+
+			enum layer_mode : u32
+			{
+				alphanumeric = 0,
+				extended = 1,
+				special = 2,
+
+				mode_count
 			};
 
 			struct cell
@@ -39,13 +50,15 @@ namespace rsx
 				bool selected = false;
 				bool enabled = false;
 
-				std::vector<std::u32string> outputs;
+				// TODO: change to array with layer_mode::layer_count
+				std::vector<std::vector<std::u32string>> outputs;
 				callback_t callback;
 			};
 
 			struct grid_entry_ctor
 			{
-				std::vector<std::u32string> outputs;
+				// TODO: change to array with layer_mode::layer_count
+				std::vector<std::vector<std::u32string>> outputs;
 				color4f color;
 				u32 num_cell_hz;
 				button_flags type_flags;
@@ -68,10 +81,11 @@ namespace rsx
 			u32 cell_size_y = 0;
 			u32 num_columns = 0;
 			u32 num_rows = 0;
-			u32 num_layers = 0;
+			std::vector<u32> num_layers;
 			u32 selected_x = 0;
 			u32 selected_y = 0;
 			u32 selected_z = 0;
+			layer_mode m_selected_mode = layer_mode::alphanumeric;
 
 			std::vector<cell> m_grid;
 
@@ -98,6 +112,7 @@ namespace rsx
 
 			void on_default_callback(const std::u32string&);
 			void on_shift(const std::u32string&);
+			void on_mode(const std::u32string&);
 			void on_space(const std::u32string&);
 			void on_backspace(const std::u32string&);
 			void on_enter(const std::u32string&);
