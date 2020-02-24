@@ -1,7 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/RSX/Overlays/overlays.h"
+#include "Emu/RSX/Overlays/overlay_osk.h"
 #include "Input/pad_thread.h"
 
 #include "cellSysutil.h"
