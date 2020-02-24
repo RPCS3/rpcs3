@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "stdafx.h"
-#include <QtCore>
+#include <QDir>
 #include <QComboBox>
 #include <QFont>
 #include <QIcon>

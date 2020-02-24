@@ -341,8 +341,9 @@ target_link_libraries(rpcs3_emu
 
 # Io
 target_sources(rpcs3_emu PRIVATE
-	Io/pad_config.cpp
 	Io/KeyboardHandler.cpp
+	Io/pad_config.cpp
+	Io/pad_config_types.cpp
 	Io/PadHandler.cpp
 	Io/usb_device.cpp
 	Io/Skylander.cpp

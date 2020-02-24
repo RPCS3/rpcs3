@@ -2,6 +2,12 @@
 
 #include "qt_utils.h"
 #include "welcome_dialog.h"
+#include "main_window.h"
+#include "emu_settings.h"
+#include "gui_settings.h"
+#include "persistent_settings.h"
+#include "gs_frame.h"
+#include "gl_gs_frame.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
@@ -15,6 +21,7 @@
 #include "stylesheets.h"
 
 #include <QScreen>
+#include <QFontDatabase>
 
 #include <clocale>
 

@@ -3,7 +3,9 @@
 #include "stdafx.h"
 #include "Emu/Cell/Modules/cellOskDialog.h"
 
-#include "custom_dialog.h"
+#include <QObject>
+
+class custom_dialog;
 
 class osk_dialog_frame : public QObject, public OskDialogBase
 {

@@ -1,24 +1,25 @@
 ﻿#pragma once
 
 #ifdef _WIN32
-#include <QWinTaskbarProgress>
-#include <QWinTaskbarButton>
 #include <QWinTHumbnailToolbar>
 #include <QWinTHumbnailToolbutton>
 #endif
 
+#include <QActionGroup>
 #include <QMainWindow>
-#include <QPushButton>
 #include <QIcon>
 
-#include "log_frame.h"
-#include "debugger_frame.h"
-#include "game_list_frame.h"
-#include "gui_settings.h"
-#include "persistent_settings.h"
 #include "update_manager.h"
+#include "settings.h"
 
 #include <memory>
+
+class log_frame;
+class debugger_frame;
+class game_list_frame;
+class gui_settings;
+class emu_settings;
+class persistent_settings;
 
 namespace Ui
 {

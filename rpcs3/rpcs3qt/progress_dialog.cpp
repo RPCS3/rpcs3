@@ -2,6 +2,14 @@
 
 #include <QLabel>
 
+#ifdef _WIN32
+#include <QWinTHumbnailToolbar>
+#include <QWinTHumbnailToolbutton>
+#elif HAVE_QTDBUS
+#include <QtDBus/QDBusMessage>
+#include <QtDBus/QDBusConnection>
+#endif
+
 progress_dialog::progress_dialog(const QString &windowTitle, const QString &labelText, const QString &cancelButtonText, int minimum, int maximum, bool delete_on_close, QWidget *parent, Qt::WindowFlags flags)
 	: QProgressDialog(labelText, cancelButtonText, minimum, maximum, parent, flags)
 {

@@ -1,7 +1,9 @@
 ﻿#include "input_dialog.h"
 
-#include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QDialogButtonBox>
+#include <QLineEdit>
+#include <QPushButton>
 
 input_dialog::input_dialog(int max_length, const QString& text, const QString& title, const QString& label, const QString& placeholder, QWidget *parent, Qt::WindowFlags f)
 	: QDialog(parent, f)

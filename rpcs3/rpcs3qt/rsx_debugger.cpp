@@ -1,8 +1,17 @@
-﻿
-#include "rsx_debugger.h"
+﻿#include "rsx_debugger.h"
+#include "gui_settings.h"
 #include "qt_utils.h"
+#include "memory_viewer_panel.h"
+#include "table_item_delegate.h"
 
 #include "Emu/RSX/GSRender.h"
+
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QFont>
+#include <QPixmap>
+#include <QPushButton>
+#include <QKeyEvent>
 
 enum GCMEnumTypes
 {

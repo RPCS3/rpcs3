@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Utilities/Config.h"
+#include "stdafx.h"
 #include "Emu/Io/PadHandler.h"
 
 #include <QWindow>

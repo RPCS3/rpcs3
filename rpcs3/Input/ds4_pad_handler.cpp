@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "ds4_pad_handler.h"
+#include "Emu/Io/pad_config.h"
 
 LOG_CHANNEL(ds4_log, "DS4");
 

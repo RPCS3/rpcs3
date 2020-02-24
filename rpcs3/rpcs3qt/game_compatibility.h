@@ -3,17 +3,13 @@
 #include <memory>
 
 #include <QPainter>
-#include <QJsonDocument>
 #include <QJsonObject>
-#include <QJsonArray>
 #include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QTableWidget>
 #include <QTimer>
 
-#include "gui_settings.h"
-#include "progress_dialog.h"
+class gui_settings;
+class progress_dialog;
 
 struct compat_status
 {

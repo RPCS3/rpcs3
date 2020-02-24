@@ -1,23 +1,23 @@
 ﻿#pragma once
 
-#include "stdafx.h"
 #include "Emu/GameInfo.h"
 
 #include "custom_dock_widget.h"
-#include "game_list.h"
-#include "game_list_grid.h"
-#include "emu_settings.h"
-#include "persistent_settings.h"
 #include "game_compatibility.h"
-#include "category.h"
 
 #include <QMainWindow>
 #include <QToolBar>
-#include <QLineEdit>
 #include <QStackedWidget>
 #include <QSet>
+#include <QTableWidgetItem>
 
 #include <memory>
+
+class game_list;
+class game_list_grid;
+class gui_settings;
+class emu_settings;
+class persistent_settings;
 
 /* Having the icons associated with the game info simplifies logic internally */
 struct gui_game_info
@@ -159,7 +159,7 @@ private:
 
 	// Icons
 	QColor m_Icon_Color;
-	QSize m_Icon_Size = gui::gl_icon_size_min; // ensure a valid size
+	QSize m_Icon_Size;
 	qreal m_Margin_Factor;
 	qreal m_Text_Factor;
 	bool m_drawCompatStatusToGrid = false;

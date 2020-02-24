@@ -1,5 +1,4 @@
 ﻿#include "trophy_notification_helper.h"
-
 #include "trophy_notification_frame.h"
 
 #include "../Emu/System.h"

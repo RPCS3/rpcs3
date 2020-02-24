@@ -1,22 +1,20 @@
 ﻿#include "save_manager_dialog.h"
 
-#include "save_data_info_dialog.h"
 #include "custom_table_widget_item.h"
 #include "qt_utils.h"
+#include "gui_settings.h"
 
 #include "Emu/System.h"
-#include "Emu/VFS.h"
+#include "Emu/Memory/vm.h"
 #include "Loader/PSF.h"
 
 #include <QtConcurrent>
 #include <QDateTime>
-#include <QIcon>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QMenu>
 #include <QMessageBox>
-#include <QDesktopWidget>
-#include <QApplication>
+#include <QGuiApplication>
 #include <QUrl>
 #include <QDesktopServices>
 #include <QPainter>

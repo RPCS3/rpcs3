@@ -6,6 +6,11 @@
 #include "Utilities/BEType.h"
 #include "Emu/Io/Skylander.h"
 
+#include <QLabel>
+#include <QGroupBox>
+#include <QFileDialog>
+#include <QVBoxLayout>
+
 skylander_dialog* skylander_dialog::inst = nullptr;
 
 const std::map<const u16, const std::string> list_skylanders = {

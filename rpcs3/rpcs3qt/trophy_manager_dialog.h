@@ -1,9 +1,5 @@
 ﻿#pragma once
 
-#include "stdafx.h"
-#include "rpcs3/Loader/TROPUSR.h"
-#include "gui_settings.h"
-
 #include "Utilities/rXml.h"
 
 #include <QWidget>
@@ -13,7 +9,9 @@
 #include <QTableWidget>
 #include <QSlider>
 #include <QSplitter>
-#include <QThread>
+
+class gui_settings;
+class TROPUSRLoader;
 
 struct GameTrophiesData
 {

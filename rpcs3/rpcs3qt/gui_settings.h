@@ -3,7 +3,6 @@
 #include "settings.h"
 #include "Utilities/Log.h"
 
-#include <QDir>
 #include <QVariant>
 #include <QSize>
 #include <QColor>

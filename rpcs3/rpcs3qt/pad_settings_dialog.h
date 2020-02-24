@@ -2,13 +2,14 @@
 
 #include <QButtonGroup>
 #include <QDialog>
-#include <QEvent>
 #include <QLabel>
 #include <QTabWidget>
 #include <QTimer>
 
-#include "Emu/Io/PadHandler.h"
+#include "Emu/Io/pad_config.h"
 #include "Emu/GameInfo.h"
+
+class PadHandlerBase;
 
 namespace Ui
 {

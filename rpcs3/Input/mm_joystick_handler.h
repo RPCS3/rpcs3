@@ -1,9 +1,9 @@
 ﻿#pragma once
 
+#include "stdafx.h"
 #include "Emu/Io/PadHandler.h"
 #include <Windows.h>
 #include <mmsystem.h>
-#include "Utilities/Config.h"
 
 class mm_joystick_handler final : public PadHandlerBase
 {

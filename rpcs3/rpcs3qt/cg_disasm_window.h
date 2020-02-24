@@ -1,11 +1,13 @@
-#pragma once
+﻿#pragma once
 
 #include <QTextEdit>
 #include <QDropEvent>
 
 #include "stdafx.h"
-#include "gui_settings.h"
-#include "syntax_highlighter.h"
+
+class AsmHighlighter;
+class GlslHighlighter;
+class gui_settings;
 
 class cg_disasm_window : public QWidget
 {

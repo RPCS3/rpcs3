@@ -1,9 +1,12 @@
 ﻿// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
+#include <iostream>
+
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QFileInfo>
+#include <QLayout>
 #include <QTimer>
 #include <QObject>
 #include <QMessageBox>
@@ -31,6 +34,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #endif
 
 #include "rpcs3_version.h"
+#include "Emu/System.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -222,7 +226,7 @@ int main(int argc, char** argv)
 	const bool use_cli_style = find_arg(arg_style, argc, argv) || find_arg(arg_stylesheet, argc, argv);
 
 	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
-	app->setApplicationVersion(qstr(rpcs3::get_version().to_string()));
+	app->setApplicationVersion(QString::fromStdString(rpcs3::get_version().to_string()));
 	app->setApplicationName("RPCS3");
 
 	// Command line args

@@ -1,5 +1,4 @@
-﻿#include <QVBoxLayout>
-#include <QButtonGroup>
+﻿#include <QButtonGroup>
 #include <QDialogButtonBox>
 #include <QPushButton>
 #include <QMessageBox>
@@ -7,11 +6,11 @@
 #include <QDesktopServices>
 #include <QColorDialog>
 #include <QSpinBox>
-#include <QApplication>
-#include <QDesktopWidget>
 #include <QTimer>
 #include <QScreen>
+#include <QUrl>
 
+#include "gui_settings.h"
 #include "display_sleep_control.h"
 #include "qt_utils.h"
 #include "settings_dialog.h"
@@ -20,6 +19,7 @@
 #include "input_dialog.h"
 
 #include "stdafx.h"
+#include "Emu/GameInfo.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/title.h"
