@@ -12,7 +12,7 @@ if(WITH_LLVM)
 		option(LLVM_INCLUDE_TOOLS OFF)
 		option(LLVM_INCLUDE_UTILS OFF)
 		option(WITH_POLLY OFF)
-		option(LLVM_ENABLE_CXX1Z TRUE)
+		option(LLVM_CCACHE_BUILD ON)
 
 		set(CXX_FLAGS_OLD ${CMAKE_CXX_FLAGS})
 
@@ -27,7 +27,7 @@ if(WITH_LLVM)
 		set(CMAKE_CXX_FLAGS ${CXX_FLAGS_OLD})
 
 		# now tries to find LLVM again
-		find_package(LLVM 10.0 CONFIG)
+		find_package(LLVM 11.0 CONFIG)
 		if(NOT LLVM_FOUND)
 			message(FATAL_ERROR "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
@@ -40,11 +40,11 @@ if(WITH_LLVM)
 			set(LLVM_DIR ${CMAKE_SOURCE_DIR}/${LLVM_DIR})
 		endif()
 
-		find_package(LLVM 10.0 CONFIG)
+		find_package(LLVM 11.0 CONFIG)
 
 		if (NOT LLVM_FOUND)
-			if (LLVM_VERSION AND LLVM_VERSION_MAJOR LESS 9)
-				message(FATAL_ERROR "Found LLVM version ${LLVM_VERSION}. Required version 9.0. \
+			if (LLVM_VERSION AND LLVM_VERSION_MAJOR LESS 11)
+				message(FATAL_ERROR "Found LLVM version ${LLVM_VERSION}. Required version 11.0. \
 														 Enable BUILD_LLVM_SUBMODULE option to build LLVM from included as a git submodule.")
 			endif()
 

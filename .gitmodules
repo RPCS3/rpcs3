@@ -8,7 +8,7 @@
 	ignore = dirty
 [submodule "llvm"]
 	path = llvm
-	url = https://github.com/RPCS3/llvm
+	url = https://github.com/RPCS3/llvm-mirror
 	ignore = dirty
 [submodule "Vulkan/glslang"]
 	path = Vulkan/glslang

@@ -4346,7 +4346,7 @@ public:
 				}
 
 				// Load unaligned code block from LS
-				llvm::Value* vls = m_ir->CreateAlignedLoad(_ptr<u32[8]>(data_addr, j - starta), 4);
+				llvm::Value* vls = m_ir->CreateAlignedLoad(_ptr<u32[8]>(data_addr, j - starta), llvm::MaybeAlign{4});
 
 				// Mask if necessary
 				if (holes)
