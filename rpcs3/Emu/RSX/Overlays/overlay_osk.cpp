@@ -51,6 +51,18 @@ namespace rsx
 					_cell.outputs = props.outputs;
 					_cell.selected = false;
 
+					for (u32 mode = 0; mode < layer_mode::mode_count && mode < _cell.outputs.size(); ++mode)
+					{
+						if (mode >= num_layers.size())
+						{
+							num_layers.push_back(u32(_cell.outputs[mode].size()));
+						}
+						else
+						{
+							num_layers[mode] = std::max(num_layers[mode], u32(_cell.outputs[mode].size()));
+						}
+					}
+
 					switch (props.type_flags)
 					{
 					default:
@@ -63,9 +75,13 @@ namespace rsx
 					case button_flags::_return:
 						_cell.enabled = !(flags & CELL_OSKDIALOG_NO_RETURN);
 						break;
+					case button_flags::_shift:
+						_cell.enabled |= _cell.outputs.size() > 0;
+						break;
+					case button_flags::_mode:
+						_cell.enabled |= num_layers.size() > 0;
+						break;
 					}
-
-					num_layers = std::max(num_layers, u32(_cell.outputs.size()));
 
 					if (props.num_cell_hz == 1) [[likely]]
 					{
@@ -89,7 +105,12 @@ namespace rsx
 				}
 			}
 
-			verify(HERE), num_layers;
+			verify(HERE), num_layers.size();
+
+			for (u32 mode = 0; mode < layer_mode::mode_count && mode < num_layers.size(); ++mode)
+			{
+				verify(HERE), num_layers[mode];
+			}
 
 			// TODO: Should just scan for the first enabled cell
 			selected_x = selected_y = selected_z = 0;
@@ -254,16 +275,23 @@ namespace rsx
 			auto on_accept = [&]()
 			{
 				const u32 current_index = (selected_y * num_columns) + selected_x;
-				const u32 output_count = ::size32(m_grid[current_index].outputs);
+				const auto& current_cell = m_grid[current_index];
+
+				u32 output_count = 0;
+
+				if (m_selected_mode < layer_mode::mode_count && m_selected_mode < current_cell.outputs.size())
+				{
+					output_count = ::size32(current_cell.outputs[m_selected_mode]);
+				}
 
 				if (output_count)
 				{
 					const auto _z = std::clamp<u32>(selected_z, 0u, output_count - 1u);
-					const auto& str = m_grid[current_index].outputs[_z];
+					const auto& str = current_cell.outputs[m_selected_mode][_z];
 
-					if (m_grid[current_index].callback)
+					if (current_cell.callback)
 					{
-						m_grid[current_index].callback(str);
+						current_cell.callback(str);
 					}
 					else
 					{
@@ -445,7 +473,24 @@ namespace rsx
 
 		void osk_dialog::on_shift(const std::u32string&)
 		{
-			selected_z = (selected_z + 1) % num_layers;
+			switch (m_selected_mode)
+			{
+			case layer_mode::alphanumeric:
+			case layer_mode::extended:
+			case layer_mode::special:
+				selected_z = (selected_z + 1) % num_layers[m_selected_mode];
+				break;
+			default:
+				selected_z = 0;
+				break;
+			}
+			m_update = true;
+		}
+
+		void osk_dialog::on_mode(const std::u32string&)
+		{
+			const u32 num_modes = std::clamp<u32>(num_layers.size(), 1, layer_mode::mode_count);
+			m_selected_mode = static_cast<layer_mode>((m_selected_mode + 1u) % num_modes);
 			m_update = true;
 		}
 
@@ -543,7 +588,14 @@ namespace rsx
 					{
 						w--;
 
-						if (!c.outputs.empty())
+						u32 output_count = 0;
+
+						if (m_selected_mode < layer_mode::mode_count && m_selected_mode < c.outputs.size())
+						{
+							output_count = ::size32(c.outputs[m_selected_mode]);
+						}
+
+						if (output_count)
 						{
 							u16 offset_x = u16(buffered_cell_count * cell_size_x);
 							u16 full_width = u16(offset_x + cell_size_x);
@@ -552,8 +604,8 @@ namespace rsx
 							m_label.set_size(full_width, cell_size_y);
 							m_label.fore_color = c.enabled ? normal_fore_color : disabled_fore_color;
 
-							auto _z = (selected_z < c.outputs.size()) ? selected_z : u32(c.outputs.size()) - 1u;
-							m_label.set_text(c.outputs[_z]);
+							auto _z = (selected_z < output_count) ? selected_z : output_count - 1u;
+							m_label.set_text(c.outputs[m_selected_mode][_z]);
 							m_label.align_text(rsx::overlays::overlay_element::text_align::center);
 							render_label = true;
 						}
@@ -610,61 +662,67 @@ namespace rsx
 			cell_size_y = 40;
 
 			callback_t shift_callback = std::bind(&osk_dialog::on_shift, this, std::placeholders::_1);
+			callback_t mode_callback = std::bind(&osk_dialog::on_mode, this, std::placeholders::_1);
 			callback_t space_callback = std::bind(&osk_dialog::on_space, this, std::placeholders::_1);
 			callback_t delete_callback = std::bind(&osk_dialog::on_backspace, this, std::placeholders::_1);
 			callback_t enter_callback = std::bind(&osk_dialog::on_enter, this, std::placeholders::_1);
 
 			std::vector<osk_dialog::grid_entry_ctor> layout =
 			{
-				// Alphanumeric
-				{{U"1", U"!"}, default_bg, 1},
-				{{U"2", U"@"}, default_bg, 1},
-				{{U"3", U"#"}, default_bg, 1},
-				{{U"4", U"$"}, default_bg, 1},
-				{{U"5", U"%"}, default_bg, 1},
-				{{U"6", U"^"}, default_bg, 1},
-				{{U"7", U"&"}, default_bg, 1},
-				{{U"8", U"*"}, default_bg, 1},
-				{{U"9", U"("}, default_bg, 1},
-				{{U"0", U")"}, default_bg, 1},
+				// Row 1
+				{{{U"1", U"!"}, {U"à", U"À"}, {U"!", U"¡"}}, default_bg, 1},
+				{{{U"2", U"@"}, {U"á", U"Á"}, {U"?", U"¿"}}, default_bg, 1},
+				{{{U"3", U"#"}, {U"â", U"Â"}, {U"#", U"~"}}, default_bg, 1},
+				{{{U"4", U"$"}, {U"ã", U"Ã"}, {U"$", U"„"}}, default_bg, 1},
+				{{{U"5", U"%"}, {U"ä", U"Ä"}, {U"%", U"´"}}, default_bg, 1},
+				{{{U"6", U"^"}, {U"å", U"Å"}, {U"&", U"‘"}}, default_bg, 1},
+				{{{U"7", U"&"}, {U"æ", U"Æ"}, {U"'", U"’"}}, default_bg, 1},
+				{{{U"8", U"*"}, {U"ç", U"Ç"}, {U"(", U"‚"}}, default_bg, 1},
+				{{{U"9", U"("}, {U"[", U"<"}, {U")", U"“"}}, default_bg, 1},
+				{{{U"0", U")"}, {U"]", U">"}, {U"*", U"”"}}, default_bg, 1},
 
-				// Alpha
-				{{U"q", U"Q"}, default_bg, 1},
-				{{U"w", U"W"}, default_bg, 1},
-				{{U"e", U"E"}, default_bg, 1},
-				{{U"r", U"R"}, default_bg, 1},
-				{{U"t", U"T"}, default_bg, 1},
-				{{U"y", U"Y"}, default_bg, 1},
-				{{U"u", U"U"}, default_bg, 1},
-				{{U"i", U"I"}, default_bg, 1},
-				{{U"o", U"O"}, default_bg, 1},
-				{{U"p", U"P"}, default_bg, 1},
-				{{U"a", U"A"}, default_bg, 1},
-				{{U"s", U"S"}, default_bg, 1},
-				{{U"d", U"D"}, default_bg, 1},
-				{{U"f", U"F"}, default_bg, 1},
-				{{U"g", U"G"}, default_bg, 1},
-				{{U"h", U"H"}, default_bg, 1},
-				{{U"j", U"J"}, default_bg, 1},
-				{{U"k", U"K"}, default_bg, 1},
-				{{U"l", U"L"}, default_bg, 1},
-				{{U"'", U"\""}, default_bg, 1},
-				{{U"z", U"Z"}, default_bg, 1},
-				{{U"x", U"X"}, default_bg, 1},
-				{{U"c", U"C"}, default_bg, 1},
-				{{U"v", U"V"}, default_bg, 1},
-				{{U"b", U"B"}, default_bg, 1},
-				{{U"n", U"N"}, default_bg, 1},
-				{{U"m", U"M"}, default_bg, 1},
-				{{U"-", U"_"}, default_bg, 1},
-				{{U"+", U"="}, default_bg, 1},
-				{{U",", U"?"}, default_bg, 1},
+				// Row 2
+				{{{U"q", U"Q"}, {U"è", U"È"}, {U"/", U"¤"}}, default_bg, 1},
+				{{{U"w", U"W"}, {U"é", U"É"}, {U"\\", U"¢"}}, default_bg, 1},
+				{{{U"e", U"E"}, {U"ê", U"Ê"}, {U"[", U"€"}}, default_bg, 1},
+				{{{U"r", U"R"}, {U"ë", U"Ë"}, {U"]", U"£"}}, default_bg, 1},
+				{{{U"t", U"T"}, {U"ì", U"Ì"}, {U"^", U"¥"}}, default_bg, 1},
+				{{{U"y", U"Y"}, {U"í", U"Í"}, {U"_", U"§"}}, default_bg, 1},
+				{{{U"u", U"U"}, {U"î", U"Î"}, {U"`", U"¦"}}, default_bg, 1},
+				{{{U"i", U"I"}, {U"ï", U"Ï"}, {U"{", U"µ"}}, default_bg, 1},
+				{{{U"o", U"O"}, {U";", U"="}, {U"}", U""}}, default_bg, 1},
+				{{{U"p", U"P"}, {U":", U"+"}, {U"|", U""}}, default_bg, 1},
+
+				// Row 3
+				{{{U"a", U"A"}, {U"ñ", U"Ñ"}, {U"@", U""}}, default_bg, 1},
+				{{{U"s", U"S"}, {U"ò", U"Ò"}, {U"°", U""}}, default_bg, 1},
+				{{{U"d", U"D"}, {U"ó", U"Ó"}, {U"‹", U""}}, default_bg, 1},
+				{{{U"f", U"F"}, {U"ô", U"Ô"}, {U"›", U""}}, default_bg, 1},
+				{{{U"g", U"G"}, {U"õ", U"Õ"}, {U"«", U""}}, default_bg, 1},
+				{{{U"h", U"H"}, {U"ö", U"Ö"}, {U"»", U""}}, default_bg, 1},
+				{{{U"j", U"J"}, {U"ø", U"Ø"}, {U"ª", U""}}, default_bg, 1},
+				{{{U"k", U"K"}, {U"œ", U"Œ"}, {U"º", U""}}, default_bg, 1},
+				{{{U"l", U"L"}, {U"`", U"~"}, {U"×", U""}}, default_bg, 1},
+				{{{U"'", U"\""}, {U"¡", U"\""}, {U"÷", U""}}, default_bg, 1},
+
+				// Row 4
+				{{{U"z", U"Z"}, {U"ß", U"ß"}, {U"+", U""}}, default_bg, 1},
+				{{{U"x", U"X"}, {U"ù", U"Ù"}, {U",", U""}}, default_bg, 1},
+				{{{U"c", U"C"}, {U"ú", U"Ú"}, {U"-", U""}}, default_bg, 1},
+				{{{U"v", U"V"}, {U"û", U"Û"}, {U".", U""}}, default_bg, 1},
+				{{{U"b", U"B"}, {U"ü", U"Ü"}, {U"\"", U""}}, default_bg, 1},
+				{{{U"n", U"N"}, {U"ý", U"Ý"}, {U":", U""}}, default_bg, 1},
+				{{{U"m", U"M"}, {U"ÿ", U"Ÿ"}, {U";", U""}}, default_bg, 1},
+				{{{U",", U"-"}, {U",", U"-"}, {U"<", U""}}, default_bg, 1},
+				{{{U".", U"_"}, {U".", U"_"}, {U"=", U""}}, default_bg, 1},
+				{{{U"?", U"/"}, {U"¿", U"/"}, {U">", U""}}, default_bg, 1},
 
 				// Special
-				{{U"Shift"}, special2_bg, 2, button_flags::_default, shift_callback },
-				{{U"Space"}, special_bg, 4, button_flags::_space, space_callback },
-				{{U"Backspace"}, special_bg, 2, button_flags::_default, delete_callback },
-				{{U"Enter"}, special2_bg, 2, button_flags::_return, enter_callback },
+				{{{U"Shift"}, {U"Shift"}, {U"Shift"}}, special2_bg, 2, button_flags::_default, shift_callback },
+				{{{U"ÖÑß"}, {U"@#:"}, {U"ABC"}}, special2_bg, 2, button_flags::_default, mode_callback },
+				{{{U"Space"}, {U"Space"}, {U"Space"}}, special_bg, 2, button_flags::_space, space_callback },
+				{{{U"Backspace"}, {U"Backspace"}, {U"Backspace"}}, special_bg, 2, button_flags::_default, delete_callback },
+				{{{U"Enter"}, {U"Enter"}, {U"Enter"}}, special2_bg, 2, button_flags::_return, enter_callback },
 			};
 
 			initialize_layout(layout, utf16_to_u32string(message), utf16_to_u32string(init_text));
