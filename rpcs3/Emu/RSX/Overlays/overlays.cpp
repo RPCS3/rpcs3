@@ -168,57 +168,43 @@ std::u16string ascii8_to_utf16(const std::string& ascii_string)
 	return out;
 }
 
-std::wstring utf8_to_wstring(const std::string& utf8_string)
+std::u32string utf8_to_u32string(const std::string& utf8_string)
 {
-	std::wstring result;
+	std::u32string result;
 	result.reserve(utf8_string.size());
 
 	process_multibyte(utf8_string, [&result](u32 code)
 	{
-		result.push_back(static_cast<wchar_t>(code));
+		result.push_back(static_cast<char32_t>(code));
 	});
 
 	return result;
 }
 
-std::u16string wstring_to_utf16(const std::wstring& w_string)
+std::u16string u32string_to_utf16(const std::u32string& utf32_string)
 {
-	if constexpr (sizeof(wchar_t) == sizeof(char16_t))
-	{
-		return reinterpret_cast<const char16_t*>(w_string.data());
-	}
-	else
-	{
-		std::u16string result;
-		result.reserve(w_string.size());
+	std::u16string result;
+	result.reserve(utf32_string.size());
 
-		for (const auto& code : w_string)
-		{
-			result.push_back(code);
-		}
-
-		return result;
+	for (const auto& code : utf32_string)
+	{
+		result.push_back(static_cast<char16_t>(code));
 	}
+
+	return result;
 }
 
-std::wstring utf16_to_wstring(const std::u16string& utf16_string)
+std::u32string utf16_to_u32string(const std::u16string& utf16_string)
 {
-	if constexpr (sizeof(wchar_t) == sizeof(char16_t))
-	{
-		return reinterpret_cast<const wchar_t*>(utf16_string.data());
-	}
-	else
-	{
-		std::wstring result;
-		result.reserve(utf16_string.size());
+	std::u32string result;
+	result.reserve(utf16_string.size());
 
-		for (const auto& code : utf16_string)
-		{
-			result.push_back(code);
-		}
-
-		return result;
+	for (const auto& code : utf16_string)
+	{
+		result.push_back(code);
 	}
+
+	return result;
 }
 
 namespace rsx

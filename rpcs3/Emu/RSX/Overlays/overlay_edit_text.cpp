@@ -34,7 +34,7 @@ namespace rsx
 			}
 		}
 
-		void edit_text::insert_text(const std::wstring& str)
+		void edit_text::insert_text(const std::u32string& str)
 		{
 			if (caret_position == 0)
 			{
@@ -65,7 +65,7 @@ namespace rsx
 
 			if (caret_position == 1)
 			{
-				text = text.length() > 1 ? text.substr(1) : L"";
+				text = text.length() > 1 ? text.substr(1) : U"";
 			}
 			else if (caret_position == text.length())
 			{

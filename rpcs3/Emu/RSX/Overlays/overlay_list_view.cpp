@@ -150,7 +150,7 @@ namespace rsx
 			return m_selected_entry;
 		}
 
-		std::wstring list_view::get_selected_item()
+		std::u32string list_view::get_selected_item()
 		{
 			if (m_selected_entry < 0)
 				return {};

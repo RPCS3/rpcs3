@@ -37,11 +37,11 @@ namespace rsx
 
 			std::vector<stbtt_packedchar> pack_info;
 			std::vector<u8> glyph_data;
-			u16 glyph_base = 0;
+			char32_t glyph_base = 0;
 			f32 sampler_z = 0.f;
 
-			void initialize_glyphs(u16 codepage_id, f32 font_size, const std::vector<u8>& ttf_data);
-			stbtt_aligned_quad get_char(wchar_t c, f32& x_advance, f32& y_advance);
+			void initialize_glyphs(char32_t codepage_id, f32 font_size, const std::vector<u8>& ttf_data);
+			stbtt_aligned_quad get_char(char32_t c, f32& x_advance, f32& y_advance);
 		};
 
 		class font
@@ -52,30 +52,30 @@ namespace rsx
 			f32 em_size = 0.f;
 			std::string font_name;
 
-			std::vector<std::pair<u32, std::unique_ptr<codepage>>> m_glyph_map;
+			std::vector<std::pair<char32_t, std::unique_ptr<codepage>>> m_glyph_map;
 			bool initialized = false;
 
 			struct
 			{
-				u16 codepage_id = 0;
+				char32_t codepage_id = 0;
 				codepage* page = nullptr;
 			}
 			codepage_cache;
 
-			language_class classify(u16 page);
+			language_class classify(char32_t page);
 			glyph_load_setup get_glyph_files(language_class class_);
-			codepage* initialize_codepage(u16 page);
+			codepage* initialize_codepage(char32_t page);
 		public:
 
 			font(const char* ttf_name, f32 size);
 
-			stbtt_aligned_quad get_char(wchar_t c, f32& x_advance, f32& y_advance);
+			stbtt_aligned_quad get_char(char32_t c, f32& x_advance, f32& y_advance);
 
-			void render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const wchar_t* text, u32 char_limit, u16 max_width, bool wrap);
+			void render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, u32 char_limit, u16 max_width, bool wrap);
 
-			std::vector<vertex> render_text(const wchar_t* text, u16 max_width = UINT16_MAX, bool wrap = false);
+			std::vector<vertex> render_text(const char32_t* text, u16 max_width = UINT16_MAX, bool wrap = false);
 
-			std::pair<f32, f32> get_char_offset(const wchar_t* text, u16 max_length, u16 max_width = UINT16_MAX, bool wrap = false);
+			std::pair<f32, f32> get_char_offset(const char32_t* text, u16 max_length, u16 max_width = UINT16_MAX, bool wrap = false);
 
 			bool matches(const char* name, int size) const { return font_name == name && static_cast<int>(size_pt) == size; }
 			std::string_view get_name() const { return font_name; };

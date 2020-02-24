@@ -331,7 +331,7 @@ namespace rsx
 			u16 w = 0;
 			u16 h = 0;
 
-			std::wstring text;
+			std::u32string text;
 			font* font_ref = nullptr;
 			text_align alignment = left;
 			bool wrap_text = false;
@@ -433,11 +433,11 @@ namespace rsx
 
 			virtual void set_text(const std::string& text)
 			{
-				this->text = utf8_to_wstring(text);
+				this->text = utf8_to_u32string(text);
 				is_compiled = false;
 			}
 
-			virtual void set_text(const std::wstring& text)
+			virtual void set_text(const std::u32string& text)
 			{
 				this->text = text;
 				is_compiled = false;
@@ -466,7 +466,7 @@ namespace rsx
 				return font_ref ? font_ref : fontmgr::get("Arial", 12);
 			}
 
-			virtual std::vector<vertex> render_text(const wchar_t *string, f32 x, f32 y)
+			virtual std::vector<vertex> render_text(const char32_t *string, f32 x, f32 y)
 			{
 				auto renderer = get_font();
 
@@ -1036,7 +1036,7 @@ namespace rsx
 
 			int get_selected_index();
 
-			std::wstring get_selected_item();
+			std::u32string get_selected_item();
 
 			void set_cancel_only(bool cancel_only);
 			void translate(s16 _x, s16 _y) override;
@@ -1060,7 +1060,7 @@ namespace rsx
 			using label::label;
 
 			void move_caret(direction dir);
-			void insert_text(const std::wstring& str);
+			void insert_text(const std::u32string& str);
 			void erase();
 
 			compiled_resource& get_compiled() override;
