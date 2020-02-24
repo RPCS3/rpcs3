@@ -93,7 +93,7 @@ namespace rsx
 
 		compiled_resource trophy_notification::get_compiled()
 		{
-			if (!creation_time)
+			if (!creation_time || !visible)
 			{
 				return {};
 			}
@@ -110,6 +110,7 @@ namespace rsx
 		{
 			// Schedule to display this trophy
 			display_sched_id = s_trophy_semaphore.enqueue();
+			visible = false;
 
 			if (!trophy_icon_buffer.empty())
 			{
@@ -135,6 +136,7 @@ namespace rsx
 			u16 margin_sz = text_view.x - image.w - image.x;
 			frame.w       = text_view.x + text_view.w + margin_sz;
 
+			visible = true;
 			return CELL_OK;
 		}
 	} // namespace overlays

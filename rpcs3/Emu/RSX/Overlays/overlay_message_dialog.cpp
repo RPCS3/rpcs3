@@ -75,6 +75,11 @@ namespace rsx
 
 		compiled_resource message_dialog::get_compiled()
 		{
+			if (!visible)
+			{
+				return {};
+			}
+
 			compiled_resource result;
 
 			if (background_image && background_image->data)
@@ -158,6 +163,8 @@ namespace rsx
 
 		error_code message_dialog::show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close)
 		{
+			visible = false;
+
 			num_progress_bars = type.progress_bar_count;
 			if (num_progress_bars)
 			{
@@ -207,6 +214,7 @@ namespace rsx
 			}
 
 			this->on_close = std::move(on_close);
+			visible = true;
 
 			if (is_blocking)
 			{

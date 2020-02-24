@@ -34,6 +34,7 @@ namespace rsx
 			u16 virtual_height = 720;
 
 			u32 min_refresh_duration_us = 16600;
+			atomic_t<bool> visible = false;
 
 			virtual ~overlay() = default;
 
@@ -399,7 +400,6 @@ namespace rsx
 			// Fade in/out
 			animation_color_interpolate fade_animation;
 
-			bool m_visible = false;
 			bool m_update = true;
 			compiled_resource m_cached_resource;
 

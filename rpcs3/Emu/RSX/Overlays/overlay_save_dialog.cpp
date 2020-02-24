@@ -143,6 +143,11 @@ namespace rsx
 
 		compiled_resource save_dialog::get_compiled()
 		{
+			if (!visible)
+			{
+				return {};
+			}
+
 			compiled_resource result;
 			result.add(m_dim_background->get_compiled());
 			result.add(m_list->get_compiled());
@@ -157,6 +162,8 @@ namespace rsx
 
 		s32 save_dialog::show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet)
 		{
+			visible = false;
+
 			std::vector<u8> icon;
 			std::vector<std::unique_ptr<overlay_element>> entries;
 
@@ -248,6 +255,7 @@ namespace rsx
 			}
 
 			static_cast<label*>(m_description.get())->auto_resize();
+			visible = true;
 
 			if (auto err = run_input_loop())
 				return err;
