@@ -6,7 +6,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		void codepage::initialize_glyphs(u16 codepage_id, f32 font_size, const std::vector<u8>& ttf_data)
+		void codepage::initialize_glyphs(char32_t codepage_id, f32 font_size, const std::vector<u8>& ttf_data)
 		{
 			glyph_base = (codepage_id * 256);
 			glyph_data.resize(bitmap_width * bitmap_height);
@@ -31,7 +31,7 @@ namespace rsx
 			stbtt_PackEnd(&context);
 		}
 
-		stbtt_aligned_quad codepage::get_char(wchar_t c, f32& x_advance, f32& y_advance)
+		stbtt_aligned_quad codepage::get_char(char32_t c, f32& x_advance, f32& y_advance)
 		{
 			stbtt_aligned_quad quad;
 			stbtt_GetPackedQuad(pack_info.data(), bitmap_width, bitmap_height, (c - glyph_base), &x_advance, &y_advance, &quad, false);
@@ -51,7 +51,7 @@ namespace rsx
 			initialized = true;
 		}
 
-		language_class font::classify(u16 codepage_id)
+		language_class font::classify(char32_t codepage_id)
 		{
 			switch (codepage_id)
 			{
@@ -151,7 +151,7 @@ namespace rsx
 			return result;
 		}
 
-		codepage* font::initialize_codepage(u16 codepage_id)
+		codepage* font::initialize_codepage(char32_t codepage_id)
 		{
 			// Init glyph
 			const auto class_ = classify(codepage_id);
@@ -210,7 +210,7 @@ namespace rsx
 			}
 			else
 			{
-				rsx_log.error("Failed to initialize font '%s.ttf' on codepage %d", font_name, codepage_id);
+				rsx_log.error("Failed to initialize font '%s.ttf' on codepage %d", font_name, static_cast<u32>(codepage_id));
 				return nullptr;
 			}
 
@@ -232,7 +232,7 @@ namespace rsx
 			return ret;
 		}
 
-		stbtt_aligned_quad font::get_char(wchar_t c, f32& x_advance, f32& y_advance)
+		stbtt_aligned_quad font::get_char(char32_t c, f32& x_advance, f32& y_advance)
 		{
 			if (!initialized)
 				return {};
@@ -265,7 +265,7 @@ namespace rsx
 			}
 		}
 
-		void font::render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const wchar_t* text, u32 char_limit, u16 max_width, bool wrap)
+		void font::render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, u32 char_limit, u16 max_width, bool wrap)
 		{
 			x_advance = 0.f;
 			y_advance = 0.f;
@@ -401,7 +401,7 @@ namespace rsx
 			}
 		}
 
-		std::vector<vertex> font::render_text(const wchar_t* text, u16 max_width, bool wrap)
+		std::vector<vertex> font::render_text(const char32_t* text, u16 max_width, bool wrap)
 		{
 			std::vector<vertex> result;
 			f32 unused_x, unused_y;
@@ -410,7 +410,7 @@ namespace rsx
 			return result;
 		}
 
-		std::pair<f32, f32> font::get_char_offset(const wchar_t* text, u16 max_length, u16 max_width, bool wrap)
+		std::pair<f32, f32> font::get_char_offset(const char32_t* text, u16 max_length, u16 max_width, bool wrap)
 		{
 			std::vector<vertex> unused;
 			f32 loc_x, loc_y;
