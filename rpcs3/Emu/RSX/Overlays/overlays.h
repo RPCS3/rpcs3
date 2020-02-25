@@ -79,9 +79,6 @@ namespace rsx
 
 			std::function<void(s32 status)> on_close;
 
-			shared_mutex m_threadpool_mutex;
-			std::list<std::thread> m_workers;
-
 		public:
 			s32 return_code = CELL_OK;
 

@@ -157,20 +157,6 @@ namespace rsx
 		{
 			// Force unload
 			exit.release(true);
-			{
-				reader_lock lock(m_threadpool_mutex);
-				for (auto& worker : m_workers)
-				{
-					if (std::this_thread::get_id() != worker.get_id() && worker.joinable())
-					{
-						worker.join();
-					}
-					else
-					{
-						worker.detach();
-					}
-				}
-			}
 
 			pad::SetIntercepted(false);
 
