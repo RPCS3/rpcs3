@@ -166,7 +166,7 @@ namespace stx
 		}
 
 		// CTAD adaptor for init (see init description), accepts template not type
-		template <template <class X, class...> typename Template, typename... Args>
+		template <template <class...> typename Template, typename... Args>
 		auto init(Args&&... args) noexcept
 		{
 			// Deduce the type from given template and its arguments
