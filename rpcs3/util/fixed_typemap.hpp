@@ -165,15 +165,16 @@ namespace stx
 			return obj;
 		}
 
-		// Special stuff
-		template <template <class...> typename CTAD, typename... Args>
+		// CTAD adaptor for init (see init description), accepts template not type
+		template <template <class X, class...> typename Template, typename... Args>
 		auto init(Args&&... args) noexcept
 		{
-			using T = decltype(CTAD{std::forward<Args>(args)...});
+			// Deduce the type from given template and its arguments
+			using T = decltype(Template(std::forward<Args>(args)...));
 			return init<T>(std::forward<Args>(args)...);
 		}
 
-		// Obtain object pointer (the only thread safe function)
+		// Obtain object pointer (thread safe just against other get calls)
 		template <typename T>
 		T* get() const noexcept
 		{
