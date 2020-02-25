@@ -76,6 +76,26 @@ atomic_t<u32> g_progr_fdone{0};
 atomic_t<u32> g_progr_ptotal{0};
 atomic_t<u32> g_progr_pdone{0};
 
+template<>
+void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](game_boot_result value)
+	{
+		switch (value)
+		{
+		case game_boot_result::no_errors: return "No errors";
+		case game_boot_result::generic_error: return "Generic error";
+		case game_boot_result::nothing_to_boot: return "Nothing to boot";
+		case game_boot_result::wrong_disc_location: return "Wrong disc location";
+		case game_boot_result::invalid_file_or_folder: return "Invalid file or folder";
+		case game_boot_result::install_failed: return "Game install failed";
+		case game_boot_result::decryption_error: return "Failed to decrypt content";
+		case game_boot_result::file_creation_error: return "Could not create important files";
+		}
+		return unknown;
+	});
+}
+
 void Emulator::Init()
 {
 	jit_runtime::initialize();
@@ -493,7 +513,7 @@ void Emulator::LimitCacheSize()
 	sys_log.success("Cleaned disk cache, removed %.2f MB", size / 1024.0 / 1024.0);
 }
 
-bool Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
+game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
 {
 	if (g_cfg.vfs.limit_cache_size)
 		LimitCacheSize();
@@ -512,11 +532,10 @@ bool Emulator::BootGame(const std::string& path, const std::string& title_id, bo
 	if (direct && fs::exists(path))
 	{
 		m_path = path;
-		Load(title_id, add_only, force_global_config);
-		return true;
+		return Load(title_id, add_only, force_global_config);
 	}
 
-	bool success = false;
+	game_boot_result result = game_boot_result::nothing_to_boot;
 	for (std::string elf : boot_list)
 	{
 		elf = path + elf;
@@ -524,8 +543,7 @@ bool Emulator::BootGame(const std::string& path, const std::string& title_id, bo
 		if (fs::is_file(elf))
 		{
 			m_path = elf;
-			Load(title_id, add_only, force_global_config);
-			success = true;
+			result = Load(title_id, add_only, force_global_config);
 			break;
 		}
 	}
@@ -546,14 +564,15 @@ bool Emulator::BootGame(const std::string& path, const std::string& title_id, bo
 				if (fs::is_file(elf))
 				{
 					m_path = elf;
-					Load(title_id, add_only, force_global_config);
-					success = true;
+					if (const auto err = Load(title_id, add_only, force_global_config); err != game_boot_result::no_errors)
+					{
+						result = err;
+					}
 				}
 			}
 		}
 	}
-
-	return success;
+	return result;
 }
 
 bool Emulator::InstallPkg(const std::string& path)
@@ -696,7 +715,7 @@ void Emulator::SetForceBoot(bool force_boot)
 	m_force_boot = force_boot;
 }
 
-void Emulator::Load(const std::string& title_id, bool add_only, bool force_global_config, bool is_disc_patch)
+game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool force_global_config, bool is_disc_patch)
 {
 	m_force_global_config = force_global_config;
 
@@ -773,8 +792,8 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 
 		if (!_psf.empty() && m_cat.empty())
 		{
-			sys_log.fatal("Corrupted PARAM.SFO found! Assuming category GD. Try reinstalling the game.");
-			m_cat = "GD";
+			sys_log.fatal("Corrupted PARAM.SFO found! Try reinstalling the game.");
+			return game_boot_result::invalid_file_or_folder;
 		}
 
 		sys_log.notice("Title: %s", GetTitle());
@@ -985,7 +1004,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 				});
 			});
 
-			return;
+			return game_boot_result::no_errors;
 		}
 
 		// Detect boot location
@@ -1009,7 +1028,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			else
 			{
 				sys_log.error("Failed to move disc game %s to /dev_hdd0/disc/ (%s)", m_title_id, fs::g_tls_error);
-				return;
+				return game_boot_result::wrong_disc_location;
 			}
 		}
 
@@ -1037,6 +1056,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			else
 			{
 				sys_log.fatal("Disc directory not found. Try to run the game from the actual game disc directory.");
+				return game_boot_result::invalid_file_or_folder;
 			}
 		}
 
@@ -1054,7 +1074,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			if (!sfb_file.open(vfs::get("/dev_bdvd/PS3_DISC.SFB")) || sfb_file.size() < 4 || sfb_file.read<u32>() != ".SFB"_u32)
 			{
 				sys_log.error("Invalid disc directory for the disc game %s", m_title_id);
-				return;
+				return game_boot_result::invalid_file_or_folder;
 			}
 
 			const std::string bdvd_title_id = psf::get_string(psf::load_object(fs::file{vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")}), "TITLE_ID");
@@ -1062,7 +1082,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			if (bdvd_title_id != m_title_id)
 			{
 				sys_log.error("Unexpected disc directory for the disc game %s (found %s)", m_title_id, bdvd_title_id);
-				return;
+				return game_boot_result::invalid_file_or_folder;
 			}
 
 			// Store /dev_bdvd/ location
@@ -1114,7 +1134,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		else if (disc.empty())
 		{
 			sys_log.error("Failed to mount disc directory for the disc game %s", m_title_id);
-			return;
+			return game_boot_result::invalid_file_or_folder;
 		}
 		else
 		{
@@ -1128,7 +1148,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		{
 			sys_log.notice("Finished to add data to games.yml by boot for: %s", m_path);
 			m_path = m_path_old; // Reset m_path to fix boot from gui
-			return;
+			return game_boot_result::no_errors;
 		}
 
 		// Install PKGDIR, INSDIR, PS3_EXTRA
@@ -1155,7 +1175,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 					if (!entry.is_directory && entry.name.ends_with(".PKG") && !InstallPkg(pkg))
 					{
 						sys_log.error("Failed to install %s", pkg);
-						return;
+						return game_boot_result::install_failed;
 					}
 				}
 			}
@@ -1173,7 +1193,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 						if (fs::is_file(pkg_file) && !InstallPkg(pkg_file))
 						{
 							sys_log.error("Failed to install %s", pkg_file);
-							return;
+							return game_boot_result::install_failed;
 						}
 					}
 				}
@@ -1192,7 +1212,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 						if (fs::is_file(pkg_file) && !InstallPkg(pkg_file))
 						{
 							sys_log.error("Failed to install %s", pkg_file);
-							return;
+							return game_boot_result::install_failed;
 						}
 					}
 				}
@@ -1250,7 +1270,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		if (!elf_file)
 		{
 			sys_log.error("Failed to open executable: %s", elf_path);
-			return;
+			return game_boot_result::invalid_file_or_folder;
 		}
 
 		// Check SELF header
@@ -1292,7 +1312,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		if (!elf_file)
 		{
 			sys_log.error("Failed to decrypt SELF: %s", elf_path);
-			return;
+			return game_boot_result::decryption_error;
 		}
 
 		ppu_exec_object ppu_exec;
@@ -1360,7 +1380,8 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 
 			if (!fs::create_path(_main->cache))
 			{
-				fmt::throw_exception("Failed to create cache directory: %s (%s)", _main->cache, fs::g_tls_error);
+				sys_log.error("Failed to create cache directory: %s (%s)", _main->cache, fs::g_tls_error);
+				return game_boot_result::file_creation_error;
 			}
 			else
 			{
@@ -1398,7 +1419,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			sys_log.warning("** ppu_exec -> %s", ppu_exec.get_error());
 			sys_log.warning("** ppu_prx  -> %s", ppu_prx.get_error());
 			sys_log.warning("** spu_exec -> %s", spu_exec.get_error());
-			return;
+			return game_boot_result::invalid_file_or_folder;
 		}
 
 		if ((m_force_boot || g_cfg.misc.autostart) && IsReady())
@@ -1411,11 +1432,13 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 		}
+		return game_boot_result::no_errors;
 	}
 	catch (const std::exception& e)
 	{
 		sys_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
 		Stop();
+		return game_boot_result::generic_error;
 	}
 }
 
@@ -1583,7 +1606,9 @@ void Emulator::Stop(bool restart)
 		if (restart)
 		{
 			// Reload with prior configs.
-			return Load(m_title_id, false, m_force_global_config);
+			if (const auto error = Load(m_title_id, false, m_force_global_config); error != game_boot_result::no_errors)
+				sys_log.error("Restart failed: %s", error);
+			return;
 		}
 
 		m_force_boot = false;
@@ -1636,7 +1661,9 @@ void Emulator::Stop(bool restart)
 	if (restart)
 	{
 		// Reload with prior configs.
-		return Load(m_title_id, false, m_force_global_config);
+		if (const auto error = Load(m_title_id, false, m_force_global_config); error != game_boot_result::no_errors)
+			sys_log.error("Restart failed: %s", error);
+		return;
 	}
 
 	// Boot arg cleanup (preserved in the case restarting)
