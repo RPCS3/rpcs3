@@ -5,6 +5,11 @@
 
 namespace rsx
 {
+	namespace overlays
+	{
+		class message_dialog;
+	}
+
 	struct shader_loading_dialog_native : rsx::shader_loading_dialog
 	{
 		rsx::thread* owner = nullptr;

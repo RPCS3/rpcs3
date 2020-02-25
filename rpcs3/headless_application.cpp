@@ -1,6 +1,10 @@
 ﻿#include "headless_application.h"
 
 #include "Emu/RSX/GSRender.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
+#include "Emu/Cell/Modules/cellOskDialog.h"
+#include "Emu/Cell/Modules/cellSaveData.h"
+#include "Emu/Cell/Modules/sceNpTrophy.h"
 
 #include <clocale>
 

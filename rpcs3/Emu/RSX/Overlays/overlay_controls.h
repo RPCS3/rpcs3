@@ -4,7 +4,6 @@
 #include "Utilities/File.h"
 #include "overlay_utils.h"
 #include "overlay_fonts.h"
-#include "Emu/System.h"
 
 #include <string>
 #include <vector>

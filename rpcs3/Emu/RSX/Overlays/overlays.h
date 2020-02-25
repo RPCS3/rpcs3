@@ -6,10 +6,6 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
 
-#include "Emu/Cell/ErrorCodes.h"
-#include "Emu/Cell/Modules/cellSaveData.h"
-#include "Emu/Cell/Modules/cellMsgDialog.h"
-#include "Emu/Cell/Modules/sceNpTrophy.h"
 #include "Utilities/Timer.h"
 
 #include <list>
@@ -81,7 +77,7 @@ namespace rsx
 			std::function<void(s32 status)> on_close;
 
 		public:
-			s32 return_code = CELL_OK;
+			s32 return_code = 0; // CELL_OK
 
 		public:
 			void update() override {}
@@ -324,117 +320,6 @@ namespace rsx
 					cleanup_internal();
 				}
 			}
-		};
-
-		struct save_dialog : public user_interface
-		{
-		private:
-			struct save_dialog_entry : horizontal_layout
-			{
-			private:
-				std::unique_ptr<image_info> icon_data;
-
-			public:
-				save_dialog_entry(const std::string& text1, const std::string& text2, const std::string& text3, u8 resource_id, const std::vector<u8>& icon_buf);
-			};
-
-			std::unique_ptr<overlay_element> m_dim_background;
-			std::unique_ptr<list_view> m_list;
-			std::unique_ptr<label> m_description;
-			std::unique_ptr<label> m_time_thingy;
-			std::unique_ptr<label> m_no_saves_text;
-
-			bool m_no_saves = false;
-
-		public:
-			save_dialog();
-
-			void update() override;
-			void on_button_pressed(pad_button button_press) override;
-
-			compiled_resource get_compiled() override;
-
-			s32 show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet);
-		};
-
-		struct message_dialog : public user_interface
-		{
-		private:
-			label text_display;
-			image_button btn_ok;
-			image_button btn_cancel;
-
-			overlay_element bottom_bar, background;
-			image_view background_poster;
-			progress_bar progress_1, progress_2;
-			u8 num_progress_bars = 0;
-			s32 taskbar_index = 0;
-			s32 taskbar_limit = 0;
-
-			bool interactive = false;
-			bool ok_only = false;
-			bool cancel_only = false;
-
-			std::unique_ptr<image_info> background_image;
-
-		public:
-			message_dialog(bool use_custom_background = false);
-
-			compiled_resource get_compiled() override;
-
-			void on_button_pressed(pad_button button_press) override;
-
-			error_code show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close);
-
-			u32 progress_bar_count();
-			void progress_bar_set_taskbar_index(s32 index);
-			error_code progress_bar_set_message(u32 index, const std::string& msg);
-			error_code progress_bar_increment(u32 index, f32 value);
-			error_code progress_bar_reset(u32 index);
-			error_code progress_bar_set_limit(u32 index, u32 limit);
-		};
-
-		struct trophy_notification : public user_interface
-		{
-		private:
-			overlay_element frame;
-			image_view image;
-			label text_view;
-
-			u64 display_sched_id = 0;
-			u64 creation_time = 0;
-			std::unique_ptr<image_info> icon_info;
-
-			animation_translate sliding_animation;
-
-		public:
-			trophy_notification();
-
-			void update() override;
-
-			compiled_resource get_compiled() override;
-
-			s32 show(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophy_icon_buffer);
-		};
-
-		struct shader_compile_notification : user_interface
-		{
-			label m_text;
-
-			overlay_element dots[3];
-			u8 current_dot = 255;
-
-			u64 creation_time = 0;
-			u64 expire_time = 0; // Time to end the prompt
-			u64 urgency_ctr = 0; // How critical it is to show to the user
-
-			shader_compile_notification();
-
-			void update_animation(u64 t);
-			void touch();
-			void update() override;
-
-			compiled_resource get_compiled() override;
 		};
 	}
 }
