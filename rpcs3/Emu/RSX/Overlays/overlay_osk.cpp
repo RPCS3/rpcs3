@@ -647,7 +647,7 @@ namespace rsx
 				{{U"h", U"H"}, default_bg, 1},
 				{{U"j", U"J"}, default_bg, 1},
 				{{U"k", U"K"}, default_bg, 1},
-				{{U"U", U"U"}, default_bg, 1},
+				{{U"l", U"L"}, default_bg, 1},
 				{{U"'", U"\""}, default_bg, 1},
 				{{U"z", U"Z"}, default_bg, 1},
 				{{U"x", U"X"}, default_bg, 1},
