@@ -161,6 +161,11 @@ namespace rsx
 			while (u32 i = thread_count)
 			{
 				thread_count.wait(i);
+
+				if (thread_ctrl::state() == thread_state::aborting)
+				{
+					break;
+				}
 			}
 
 			pad::SetIntercepted(false);
