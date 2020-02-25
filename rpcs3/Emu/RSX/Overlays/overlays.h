@@ -75,7 +75,8 @@ namespace rsx
 
 		protected:
 			Timer input_timer;
-			atomic_t<bool> exit{ false };
+			atomic_t<bool> exit = false;
+			atomic_t<u32> thread_count = 0;
 
 			std::function<void(s32 status)> on_close;
 

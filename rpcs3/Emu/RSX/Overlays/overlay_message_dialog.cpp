@@ -241,6 +241,8 @@ namespace rsx
 			{
 				if (!exit)
 				{
+					thread_count++;
+
 					g_fxo->init<named_thread>("MsgDialog Thread", [&]()
 					{
 						if (interactive)
@@ -251,8 +253,6 @@ namespace rsx
 							{
 								rsx_log.error("Dialog input loop exited with error code=%d", error);
 							}
-
-							verify(HERE), ref.get() == static_cast<overlay*>(this);
 						}
 						else
 						{
@@ -263,6 +263,11 @@ namespace rsx
 								// Only update the screen at about 60fps since updating it everytime slows down the process
 								std::this_thread::sleep_for(16ms);
 							}
+						}
+
+						if (!--thread_count)
+						{
+							thread_count.notify_all();
 						}
 					});
 				}

@@ -158,6 +158,11 @@ namespace rsx
 			// Force unload
 			exit.release(true);
 
+			while (u32 i = thread_count)
+			{
+				thread_count.wait(i);
+			}
+
 			pad::SetIntercepted(false);
 
 			if (on_close && use_callback)
