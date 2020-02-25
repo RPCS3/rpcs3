@@ -1,5 +1,5 @@
 ﻿#include "stdafx.h"
-#include "overlays.h"
+#include "overlay_shader_compile_notification.h"
 #include "Emu/system_config.h"
 
 namespace rsx

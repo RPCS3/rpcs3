@@ -3,7 +3,7 @@
 
 #include <Emu/System.h>
 #include <Emu/IdManager.h>
-#include <Emu/RSX/Overlays/overlays.h>
+#include <Emu/RSX/Overlays/overlay_save_dialog.h>
 
 #include "Input/pad_thread.h"
 

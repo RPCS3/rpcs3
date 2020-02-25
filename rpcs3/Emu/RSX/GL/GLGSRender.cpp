@@ -2,6 +2,7 @@
 #include "GLGSRender.h"
 #include "GLCompute.h"
 #include "GLVertexProgram.h"
+#include "../Overlays/overlay_shader_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"

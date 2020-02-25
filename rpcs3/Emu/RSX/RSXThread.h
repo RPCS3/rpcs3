@@ -13,7 +13,6 @@
 #include "RSXFragmentProgram.h"
 #include "rsx_methods.h"
 #include "rsx_utils.h"
-#include "Overlays/overlays.h"
 #include "Common/texture_cache_utils.h"
 
 #include "Utilities/Thread.h"
@@ -34,6 +33,11 @@ extern rsx::frame_capture_data frame_capture;
 
 namespace rsx
 {
+	namespace overlays
+	{
+		class display_manager;
+	}
+
 	struct rsx_iomap_table
 	{
 		std::array<atomic_t<u32>, 4096> ea;

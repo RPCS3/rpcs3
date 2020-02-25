@@ -1,7 +1,8 @@
 ﻿#include "stdafx.h"
-#include "overlays.h"
+#include "overlay_message_dialog.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 namespace rsx
 {

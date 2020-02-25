@@ -13,7 +13,6 @@
 #include "Emu/Cell/Modules/cellGcmSys.h"
 #include "Overlays/overlay_perf_metrics.h"
 #include "Utilities/date_time.h"
-
 #include "Utilities/span.h"
 #include "Utilities/StrUtil.h"
 

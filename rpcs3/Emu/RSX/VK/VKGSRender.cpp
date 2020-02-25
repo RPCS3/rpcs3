@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "VKGSRender.h"
+#include "../Overlays/overlay_shader_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "../rsx_methods.h"
 #include "../rsx_utils.h"

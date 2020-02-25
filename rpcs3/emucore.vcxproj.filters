@@ -1720,5 +1720,17 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_save_dialog.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_message_dialog.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_trophy_notification.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_shader_compile_notification.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
