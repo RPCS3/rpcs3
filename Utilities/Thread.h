@@ -373,15 +373,6 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 		}
 	}
 
-	// Detached thread constructor
-	named_thread(thread_state s, std::string_view name, Context&& f)
-		: Context(std::forward<Context>(f))
-		, thread(name)
-	{
-		thread::m_state.raw() = s;
-		thread::start(&named_thread::entry_point);
-	}
-
 	friend class thread_ctrl;
 
 public:
