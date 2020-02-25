@@ -387,11 +387,6 @@ void cpu_thread::operator()()
 	g_cpu_suspend_lock.lock_unlock();
 }
 
-void cpu_thread::on_abort()
-{
-	state += cpu_flag::exit;
-}
-
 cpu_thread::~cpu_thread()
 {
 	vm::cleanup_unlock(*this);

@@ -60,12 +60,6 @@ void lv2_timer_context::operator()()
 	}
 }
 
-void lv2_timer_context::on_abort()
-{
-	// Signal thread using invalid state
-	state = -1;
-}
-
 error_code sys_timer_create(ppu_thread& ppu, vm::ptr<u32> timer_id)
 {
 	vm::temporary_unlock(ppu);

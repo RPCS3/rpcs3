@@ -81,13 +81,6 @@ struct result_storage<void>
 template <class Context, typename... Args>
 using result_storage_t = result_storage<std::invoke_result_t<Context, Args...>>;
 
-// Detect on_abort() method (should return void)
-template <typename T, typename = void>
-struct thread_on_abort : std::bool_constant<false> {};
-
-template <typename T>
-struct thread_on_abort<T, decltype(std::declval<named_thread<T>&>().on_abort())> : std::bool_constant<true> {};
-
 // Detect on_cleanup() static member function (should return void) (in C++20 can use destroying delete instead)
 template <typename T, typename = void>
 struct thread_on_cleanup : std::bool_constant<false> {};
@@ -457,12 +450,6 @@ public:
 		{
 			if (s == thread_state::aborting)
 			{
-				// Call on_abort() method if it's available
-				if constexpr (thread_on_abort<Context>())
-				{
-					Context::on_abort();
-				}
-
 				thread::notify_abort();
 			}
 		}
