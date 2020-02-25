@@ -1623,6 +1623,12 @@ void Emulator::Stop(bool restart)
 	GetCallbacks().on_stop();
 
 	cpu_thread::stop_all();
+
+	for (u32 i = 0; thread_ctrl::get_count() && i < 30; i++)
+	{
+		std::this_thread::sleep_for(10ms);
+	}
+
 	g_fxo->reset();
 
 	while (thread_ctrl::get_count())
