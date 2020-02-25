@@ -630,9 +630,6 @@ void cpu_thread::stop_all() noexcept
 		std::this_thread::sleep_for(10ms);
 	}
 
-	// Workaround for remaining threads (TODO)
-	std::this_thread::sleep_for(1300ms);
-
 	sys_log.notice("All CPU threads have been stopped.");
 }
 
