@@ -868,7 +868,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			// Workaround for analyser glitches
 			vm::falloc(0x10000, 0xf0000, vm::main);
 
-			g_fxo->init_crtp<named_thread>("SPRX Loader"sv, [this]
+			g_fxo->init<named_thread>("SPRX Loader"sv, [this]
 			{
 				std::vector<std::string> dir_queue;
 				dir_queue.emplace_back(m_path + '/');

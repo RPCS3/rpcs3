@@ -187,7 +187,7 @@ namespace rsx
 			fade_animation.duration = 0.5f;
 			fade_animation.active = true;
 
-			g_fxo->init_crtp<named_thread>("OSK Thread", [this]
+			g_fxo->init<named_thread>("OSK Thread", [this]
 			{
 				if (auto error = run_input_loop())
 				{

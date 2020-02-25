@@ -167,7 +167,7 @@ namespace stx
 
 		// Special stuff
 		template <template <class...> typename CTAD, typename... Args>
-		auto init_crtp(Args&&... args) noexcept
+		auto init(Args&&... args) noexcept
 		{
 			using T = decltype(CTAD{std::forward<Args>(args)...});
 			return init<T>(std::forward<Args>(args)...);
