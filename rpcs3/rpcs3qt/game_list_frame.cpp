@@ -1244,17 +1244,14 @@ bool game_list_frame::CreatePPUCache(const game_info& game)
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 	Emu.SetForceBoot(true);
-	const bool success = Emu.BootGame(game->info.path, game->info.serial, true);
 
-	if (success)
+	if (const auto error = Emu.BootGame(game->info.path, game->info.serial, true); error != game_boot_result::no_errors)
 	{
-		game_list_log.warning("Creating PPU Cache for %s", game->info.path);
+		game_list_log.error("Could not create PPU Cache for %s, error: %s", game->info.path, error);
+		return false;
 	}
-	else
-	{
-		game_list_log.error("Could not create PPU Cache for %s", game->info.path);
-	}
-	return success;
+	game_list_log.warning("Creating PPU Cache for %s", game->info.path);
+	return true;
 }
 
 bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, game_info game, bool is_interactive)

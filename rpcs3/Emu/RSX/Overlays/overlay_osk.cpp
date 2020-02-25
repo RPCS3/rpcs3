@@ -208,7 +208,7 @@ namespace rsx
 			fade_animation.duration = 0.5f;
 			fade_animation.active = true;
 
-			std::lock_guard{m_threadpool_mutex}, m_workers.emplace_back([this]
+			g_fxo->init<named_thread>("OSK Thread", [this]
 			{
 				if (auto error = run_input_loop())
 				{

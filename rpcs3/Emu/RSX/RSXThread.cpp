@@ -498,7 +498,7 @@ namespace rsx
 
 		vblank_count = 0;
 
-		g_fxo->init_crtp<named_thread>("VBlank Thread", [this]()
+		g_fxo->init<named_thread>("VBlank Thread", [this]()
 		{
 			// See sys_timer_usleep for details
 #ifdef __linux__
@@ -564,7 +564,7 @@ namespace rsx
 			}
 		});
 
-		g_fxo->init_crtp<named_thread>("RSX Decompiler Thread", [this]
+		g_fxo->init<named_thread>("RSX Decompiler Thread", [this]
 		{
 			if (g_cfg.video.disable_asynchronous_shader_compiler)
 			{

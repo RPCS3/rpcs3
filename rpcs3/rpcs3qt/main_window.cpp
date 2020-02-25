@@ -229,6 +229,49 @@ void main_window::OnPlayOrPause()
 	}
 }
 
+void main_window::show_boot_error(game_boot_result status)
+{
+	if (status == game_boot_result::no_errors)
+	{
+		return;
+	}
+	QString message;
+	switch (status)
+	{
+	case game_boot_result::nothing_to_boot:
+		message = tr("No bootable content was found.");
+		break;
+	case game_boot_result::wrong_disc_location:
+		message = tr("Disc could not be mounted properly. Make sure the disc is not in the dev_hdd0/game folder.");
+		break;
+	case game_boot_result::invalid_file_or_folder:
+		message = tr("The selected file or folder is invalid or corrupted.");
+		break;
+	case game_boot_result::install_failed:
+		message = tr("Additional content could not be installed.");
+		break;
+	case game_boot_result::decryption_error:
+		message = tr("Digital content could not be decrypted. This is usually caused by a missing or invalid license (RAP) file.");
+		break;
+	case game_boot_result::file_creation_error:
+		message = tr("The emulator could not create files required for booting.");
+		break;
+	case game_boot_result::generic_error:
+	default:
+		message = tr("Unknown error.");
+		break;
+	}
+	const QString link = tr("<br /><br />For information on how to dump your PS3 games, read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.");
+
+	QMessageBox msg;
+	msg.setWindowTitle(tr("Boot Failed"));
+	msg.setIcon(QMessageBox::Critical);
+	msg.setTextFormat(Qt::RichText);
+	msg.setStandardButtons(QMessageBox::Ok);
+	msg.setText(tr("Booting failed: %1 %2").arg(message).arg(link));
+	msg.exec();
+}
+
 void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
 {
 	if (!Emu.IsStopped())
@@ -249,7 +292,12 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	if (Emu.BootGame(path, title_id, direct, add_only, force_global_config))
+	if (const auto error = Emu.BootGame(path, title_id, direct, add_only, force_global_config); error != game_boot_result::no_errors)
+	{
+		gui_log.error("Boot failed: %s", path);
+		show_boot_error(error);
+	}
+	else
 	{
 		gui_log.success("Boot successful.");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
@@ -257,10 +305,6 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 		{
 			AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
 		}
-	}
-	else
-	{
-		gui_log.error("Boot failed: %s", path);
 	}
 
 	m_gameListFrame->Refresh(true);
@@ -1869,7 +1913,7 @@ void main_window::AddGamesFromDir(const QString& path)
 	const std::string s_path = sstr(path);
 
 	// search dropped path first or else the direct parent to an elf is wrongly skipped
-	if (Emu.BootGame(s_path, "", false, true))
+	if (const auto error = Emu.BootGame(s_path, "", false, true); error == game_boot_result::no_errors)
 	{
 		gui_log.notice("Returned from game addition by drag and drop: %s", s_path);
 	}
@@ -1880,7 +1924,7 @@ void main_window::AddGamesFromDir(const QString& path)
 	{
 		std::string pth = sstr(dir_iter.next());
 
-		if (Emu.BootGame(pth, "", false, true))
+		if (const auto error = Emu.BootGame(pth, "", false, true); error == game_boot_result::no_errors)
 		{
 			gui_log.notice("Returned from game addition by drag and drop: %s", pth);
 		}
@@ -2023,14 +2067,20 @@ void main_window::dropEvent(QDropEvent* event)
 		m_gameListFrame->Refresh(true);
 		break;
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)
-		if (Emu.BootGame(sstr(dropPaths.first()), "", true))
+		if (const auto error = Emu.BootGame(sstr(dropPaths.first()), "", true); error != game_boot_result::no_errors)
+		{
+			gui_log.error("Boot failed: reason: %s, path: %s", error, sstr(dropPaths.first()));
+			show_boot_error(error);
+		}
+		else
 		{
 			gui_log.success("Elf Boot from drag and drop done: %s", sstr(dropPaths.first()));
+			m_gameListFrame->Refresh(true);
 		}
-		m_gameListFrame->Refresh(true);
 		break;
 	case drop_type::drop_rrc: // replay a rsx capture file
 		BootRsxCapture(sstr(dropPaths.first()));
+		break;
 	default:
 		gui_log.warning("Invalid dropType in gamelist dropEvent");
 		break;

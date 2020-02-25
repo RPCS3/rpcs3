@@ -37,7 +37,6 @@ protected:
 public:
 	virtual ~cpu_thread();
 	void operator()();
-	void on_abort();
 
 	// Self identifier
 	const u32 id;
