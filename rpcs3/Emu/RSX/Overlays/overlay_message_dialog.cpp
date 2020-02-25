@@ -239,10 +239,9 @@ namespace rsx
 			}
 			else
 			{
-				std::scoped_lock lock(m_threadpool_mutex);
 				if (!exit)
 				{
-					m_workers.emplace_back([&]()
+					g_fxo->init<named_thread>("MsgDialog Thread", [&]()
 					{
 						if (interactive)
 						{
