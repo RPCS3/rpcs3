@@ -330,7 +330,7 @@ std::vector<u32> cheat_engine::search(const T value, const std::vector<u32>& to_
 
 	cpu_thread::suspend_all cpu_lock(nullptr);
 
-	if (to_filter.size())
+	if (!to_filter.empty())
 	{
 		for (const auto& off : to_filter)
 		{
@@ -460,11 +460,11 @@ bool cheat_engine::is_addr_safe(const u32 offset)
 	{
 		if ((seg.flags & 3))
 		{
-			segs.push_back({seg.addr, seg.size});
+			segs.emplace_back(seg.addr, seg.size);
 		}
 	}
 
-	if (!segs.size())
+	if (segs.empty())
 	{
 		log_cheat.fatal("Couldn't find a +rw-x section");
 		return false;
@@ -496,7 +496,7 @@ u32 cheat_engine::reverse_lookup(const u32 addr, const u32 max_offset, const u32
 		}
 
 		// If depth has not been reached dig deeper
-		if (ptrs.size() && cur_depth < max_depth)
+		if (!ptrs.empty() && cur_depth < max_depth)
 		{
 			for (const auto& ptr : ptrs)
 			{
@@ -586,7 +586,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			bool success;
 
 			u32 final_offset;
-			if (cheat->red_script.size())
+			if (!cheat->red_script.empty())
 			{
 				final_offset = 0;
 				if (!cheat_engine::resolve_script(final_offset, cheat->offset, cheat->red_script))
@@ -758,7 +758,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		std::pair<bool, bool> results;
 
 		u32 final_offset;
-		if (cheat->red_script.size())
+		if (!cheat->red_script.empty())
 		{
 			final_offset = 0;
 			if (!g_cheat.resolve_script(final_offset, cheat->offset, cheat->red_script))
@@ -964,7 +964,7 @@ void cheat_manager_dialog::do_the_search()
 	{
 		lst_search->insertItem(row, tr("0x%1").arg(offsets_found[row], 1, 16).toUpper());
 	}
-	btn_filter_results->setEnabled(offsets_found.size());
+	btn_filter_results->setEnabled(!offsets_found.empty());
 }
 
 void cheat_manager_dialog::update_cheat_list()

@@ -86,7 +86,7 @@ void mic_context::load_config_and_init()
 {
 	auto device_list = fmt::split(g_cfg.audio.microphone_devices, {"@@@"});
 
-	if (device_list.size() && mic_list.empty())
+	if (!device_list.empty() && mic_list.empty())
 	{
 		switch (g_cfg.audio.microphone_type)
 		{

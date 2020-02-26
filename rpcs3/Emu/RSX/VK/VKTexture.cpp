@@ -654,7 +654,7 @@ namespace vk
 				continue;
 			}
 
-			packets.push_back({base, lods });
+			packets.emplace_back(base, lods);
 			next_layer = layer;
 			next_level = 1;
 			base = i;
@@ -664,7 +664,7 @@ namespace vk
 		if (packets.empty() ||
 			(packets.back().first + packets.back().second) < sections.size())
 		{
-			packets.push_back({base, lods});
+			packets.emplace_back(base, lods);
 		}
 
 		for (const auto &packet : packets)

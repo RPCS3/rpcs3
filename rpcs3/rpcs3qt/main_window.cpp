@@ -749,7 +749,7 @@ void main_window::DecryptSPRXLibraries()
 			if (elf_file)
 			{
 				const std::string bin_ext  = module.toLower().endsWith(".sprx") ? ".prx" : ".elf";
-				const std::string new_path = old_path.substr(0, old_path.find_last_of(".")) + bin_ext;
+				const std::string new_path = old_path.substr(0, old_path.find_last_of('.')) + bin_ext;
 
 				if (fs::file new_file{new_path, fs::rewrite})
 				{

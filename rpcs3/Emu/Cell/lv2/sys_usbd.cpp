@@ -261,7 +261,7 @@ void usb_handler_thread::operator()()
 		}
 
 		// If there is no handled devices usb thread is not actively needed
-		if (!handled_devices.size())
+		if (handled_devices.empty())
 			std::this_thread::sleep_for(500ms);
 		else
 			std::this_thread::sleep_for(200us);
@@ -389,7 +389,7 @@ void usb_handler_thread::check_devices_vs_ldds()
 
 bool usb_handler_thread::get_event(vm::ptr<u64>& arg1, vm::ptr<u64>& arg2, vm::ptr<u64>& arg3)
 {
-	if (usbd_events.size())
+	if (!usbd_events.empty())
 	{
 		const auto& usb_event = usbd_events.front();
 		*arg1                 = std::get<0>(usb_event);

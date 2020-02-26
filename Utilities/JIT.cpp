@@ -433,7 +433,7 @@ public:
 
 	void reset()
 	{
-		if (!m_segs.size())
+		if (m_segs.empty())
 		{
 			if (m_curr.addr != nullptr)
 			{

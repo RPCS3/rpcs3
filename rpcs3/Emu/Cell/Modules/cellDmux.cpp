@@ -627,7 +627,7 @@ public:
 					lv2_obj::sleep(*this);
 				}
 
-				if (es.raw_data.size())
+				if (!es.raw_data.empty())
 				{
 					cellDmux.error("dmuxFlushEs: 0x%x bytes lost (es_id=%d)", ::size32(es.raw_data), es.id);
 				}

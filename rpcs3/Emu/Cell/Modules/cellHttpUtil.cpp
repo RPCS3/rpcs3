@@ -52,7 +52,7 @@ s32 cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<v
 			uri->username.set(pool.addr() + usernameOffset);
 			uri->password.set(pool.addr() + passwordOffset);
 
-			if (URL.m_Port != "")
+			if (!URL.m_Port.empty())
 			{
 				int port = stoi(URL.m_Port);
 				uri->port = port;

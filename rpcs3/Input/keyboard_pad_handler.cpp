@@ -445,7 +445,7 @@ void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
 std::vector<std::string> keyboard_pad_handler::ListDevices()
 {
 	std::vector<std::string> list_devices;
-	list_devices.push_back("Keyboard");
+	list_devices.emplace_back("Keyboard");
 	return list_devices;
 }
 

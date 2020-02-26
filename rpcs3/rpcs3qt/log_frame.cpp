@@ -448,7 +448,7 @@ void log_frame::UpdateUI()
 			break;
 		}
 
-		if (buf.size() && m_TTYAct->isChecked())
+		if (!buf.empty() && m_TTYAct->isChecked())
 		{
 			std::stringstream buf_stream;
 			buf_stream.str(buf);

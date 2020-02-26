@@ -589,7 +589,7 @@ void emu_settings::SetSetting(SettingsType type, const std::string& val)
 
 void emu_settings::OpenCorrectionDialog(QWidget* parent)
 {
-	if (m_broken_types.size() && QMessageBox::question(parent, tr("Fix invalid settings?"),
+	if (!m_broken_types.empty() && QMessageBox::question(parent, tr("Fix invalid settings?"),
 		tr(
 			"Your config file contained one or more unrecognized values for settings.\n"
 			"Their default value will be used until they are corrected.\n"

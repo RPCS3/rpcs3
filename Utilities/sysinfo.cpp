@@ -186,7 +186,7 @@ std::string utils::get_firmware_version()
 
 std::string utils::get_OS_version()
 {
-	std::string output = "";
+	std::string output;
 #ifdef _WIN32
 	// GetVersionEx is deprecated, RtlGetVersion is kernel-mode only and AnalyticsInfo is UWP only.
 	// So we're forced to read PEB instead to get Windows version info. It's ugly but works.

@@ -150,7 +150,7 @@ void usb_device_skylander::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoin
 	// Interrupt transfers are slow(6ms, TODO accurate measurement)
 	transfer->expected_time = get_timestamp() + 6000;
 
-	if (q_queries.size())
+	if (!q_queries.empty())
 	{
 		memcpy(buf, q_queries.front().data(), 0x20);
 		q_queries.pop();

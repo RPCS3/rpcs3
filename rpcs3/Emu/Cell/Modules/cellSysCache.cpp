@@ -39,7 +39,7 @@ struct syscache_info
 	syscache_info() noexcept
 	{
 		// Check if dev_hdd1 is mounted by parent process
-		if (Emu.hdd1.size())
+		if (!Emu.hdd1.empty())
 		{
 			const auto lock = init.init();
 
