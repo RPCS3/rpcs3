@@ -1638,9 +1638,10 @@ void Emulator::Stop(bool restart)
 	cpu_thread::stop_all();
 	g_fxo->reset();
 
-	while (thread_ctrl::get_count())
+	while (u32 x = thread_ctrl::get_count())
 	{
-		std::this_thread::sleep_for(10ms);
+		sys_log.fatal("Waiting for %u threads...", x);
+		std::this_thread::sleep_for(300ms);
 	}
 
 	sys_log.notice("All threads have been stopped.");
