@@ -9,7 +9,7 @@
 namespace stx
 {
 	// Typemap with exactly one object of each used type, created on init() and destroyed on clear()
-	template <typename /*Tag*/>
+	template <typename /*Tag*/, bool Report = true>
 	class manual_fixed_typemap
 	{
 		// Save default constructor and destructor
@@ -17,6 +17,7 @@ namespace stx
 		{
 			void(*create)(void*& ptr) noexcept;
 			void(*destroy)(void*& ptr) noexcept;
+			const char* type_name = "__";
 
 			template <typename T>
 			static void call_ctor(void*& ptr) noexcept
@@ -45,6 +46,7 @@ namespace stx
 				typeinfo r;
 				r.create = &call_ctor<T>;
 				r.destroy = &call_dtor<T>;
+				r.type_name = typeid(T).name();
 				return r;
 			}
 		};
@@ -94,6 +96,7 @@ namespace stx
 				void** object_pointer;
 				unsigned long long created;
 				void(*destroy)(void*& ptr) noexcept;
+				const char* name;
 			};
 
 			auto all_data = std::make_unique<destroy_info[]>(stx::typelist<typeinfo>().count());
@@ -113,6 +116,7 @@ namespace stx
 				all_data[_max].object_pointer = &m_list[type.index()];
 				all_data[_max].created = m_order[type.index()];
 				all_data[_max].destroy = type.destroy;
+				all_data[_max].name = type.type_name;
 
 				// Clear creation order
 				m_order[type.index()] = 0;
@@ -129,6 +133,8 @@ namespace stx
 			// Destroy objects in correct order
 			for (unsigned i = 0; i < _max; i++)
 			{
+				if constexpr (Report)
+					destroy_reporter(all_data[i].name, all_data[i].created);
 				all_data[i].destroy(*all_data[i].object_pointer);
 			}
 		}
@@ -144,6 +150,8 @@ namespace stx
 				if (m_list[type.index()])
 				{
 					m_order[type.index()] = ++m_init_count;
+					if constexpr (Report)
+						init_reporter(type.type_name, m_init_count);
 				}
 			}
 		}
@@ -190,5 +198,11 @@ namespace stx
 		{
 			return static_cast<T*>(m_list[stx::typeindex<typeinfo, std::decay_t<T>>()]);
 		}
+
+		// Body is somewhere else if enabled
+		void init_reporter(const char* name, unsigned long long created);
+
+		// Body is somewhere else if enabled
+		void destroy_reporter(const char* name, unsigned long long created);
 	};
 }

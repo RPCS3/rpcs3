@@ -1762,4 +1762,16 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 	return static_cast<s32>(arg);
 }
 
+template <>
+void stx::manual_fixed_typemap<void>::init_reporter(const char* name, unsigned long long created)
+{
+	sys_log.notice("Object '%s' was created [%u]", name, created);
+}
+
+template <>
+void stx::manual_fixed_typemap<void>::destroy_reporter(const char* name, unsigned long long created)
+{
+	sys_log.notice("Object '%s' was destroyed [%u]", name, created);
+}
+
 Emulator Emu;
