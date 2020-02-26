@@ -1722,6 +1722,8 @@ DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined 
 
 void thread_base::start(native_entry entry)
 {
+	thread_ctrl::g_thread_count++;
+
 #ifdef _WIN32
 	m_thread = ::_beginthreadex(nullptr, 0, entry, this, CREATE_SUSPENDED, nullptr);
 	verify("thread_ctrl::start" HERE), m_thread, ::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1;
@@ -1863,6 +1865,7 @@ void thread_base::finalize() noexcept
 {
 	g_tls_log_prefix = []() -> std::string { return {}; };
 	thread_ctrl::g_tls_this_thread = nullptr;
+	thread_ctrl::g_thread_count--;
 }
 
 void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)

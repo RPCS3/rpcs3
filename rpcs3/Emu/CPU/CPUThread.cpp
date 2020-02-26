@@ -387,11 +387,6 @@ void cpu_thread::operator()()
 	g_cpu_suspend_lock.lock_unlock();
 }
 
-void cpu_thread::on_abort()
-{
-	state += cpu_flag::exit;
-}
-
 cpu_thread::~cpu_thread()
 {
 	vm::cleanup_unlock(*this);
@@ -629,9 +624,6 @@ void cpu_thread::stop_all() noexcept
 	{
 		std::this_thread::sleep_for(10ms);
 	}
-
-	// Workaround for remaining threads (TODO)
-	std::this_thread::sleep_for(1300ms);
 
 	sys_log.notice("All CPU threads have been stopped.");
 }

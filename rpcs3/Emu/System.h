@@ -16,6 +16,18 @@ enum class system_state
 	ready,
 };
 
+enum class game_boot_result : u32
+{
+	no_errors,
+	generic_error,
+	nothing_to_boot,
+	wrong_disc_location,
+	invalid_file_or_folder,
+	install_failed,
+	decryption_error,
+	file_creation_error,
+};
+
 struct EmuCallbacks
 {
 	std::function<void(std::function<void()>)> call_after;
@@ -153,7 +165,7 @@ public:
 
 	std::string PPUCache() const;
 
-	bool BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
+	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
 	bool BootRsxCapture(const std::string& path);
 	bool InstallPkg(const std::string& path);
 
@@ -173,7 +185,7 @@ public:
 
 	void SetForceBoot(bool force_boot);
 
-	void Load(const std::string& title_id = "", bool add_only = false, bool force_global_config = false, bool is_disc_patch = false);
+	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool force_global_config = false, bool is_disc_patch = false);
 	void Run(bool start_playtime);
 	bool Pause();
 	void Resume();

@@ -21,6 +21,8 @@ class gui_settings;
 class emu_settings;
 class persistent_settings;
 
+enum class game_boot_result : u32;
+
 namespace Ui
 {
 	class main_window;
@@ -97,6 +99,7 @@ private Q_SLOTS:
 	void BootGame();
 	void BootRsxCapture(std::string path = "");
 	void DecryptSPRXLibraries();
+	void show_boot_error(game_boot_result result);
 
 	void SaveWindowState();
 	void ConfigureGuiFromSettings(bool configure_all = false);

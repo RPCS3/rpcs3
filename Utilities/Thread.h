@@ -81,26 +81,12 @@ struct result_storage<void>
 template <class Context, typename... Args>
 using result_storage_t = result_storage<std::invoke_result_t<Context, Args...>>;
 
-// Detect on_abort() method (should return void)
-template <typename T, typename = void>
-struct thread_on_abort : std::bool_constant<false> {};
-
-template <typename T>
-struct thread_on_abort<T, decltype(std::declval<named_thread<T>&>().on_abort())> : std::bool_constant<true> {};
-
 // Detect on_cleanup() static member function (should return void) (in C++20 can use destroying delete instead)
 template <typename T, typename = void>
 struct thread_on_cleanup : std::bool_constant<false> {};
 
 template <typename T>
 struct thread_on_cleanup<T, decltype(named_thread<T>::on_cleanup(std::declval<named_thread<T>*>()))> : std::bool_constant<true> {};
-
-// Detect on_wait() method (should return bool)
-template <typename T, typename = bool>
-struct thread_on_wait : std::bool_constant<false> {};
-
-template <typename T>
-struct thread_on_wait<T, decltype(std::declval<named_thread<T>&>().on_wait())> : std::bool_constant<true> {};
 
 template <typename T, typename = void>
 struct thread_thread_name : std::bool_constant<false> {};
@@ -192,6 +178,9 @@ class thread_ctrl final
 	// Target cpu core layout
 	static atomic_t<native_core_arrangement> g_native_core_layout;
 
+	// Global thread counter
+	static inline atomic_t<u64> g_thread_count = 0;
+
 	// Internal waiting function, may throw. Infinite value is -1.
 	static void _wait_for(u64 usec, bool alert);
 
@@ -275,6 +264,11 @@ public:
 		return g_tls_this_thread;
 	}
 
+	static u64 get_count()
+	{
+		return g_thread_count.load();
+	}
+
 	// Detect layout
 	static void detect_cpu_layout();
 
@@ -337,14 +331,6 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 				return false;
 			}
 
-			if constexpr (thread_on_wait<Context>())
-			{
-				if (!static_cast<named_thread*>(_this)->on_wait())
-				{
-					return false;
-				}
-			}
-
 			_this->m_state_notifier.release(data);
 
 			if (!data)
@@ -356,15 +342,6 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 			{
 				_this->m_state_notifier.release(nullptr);
 				return false;
-			}
-
-			if constexpr (thread_on_wait<Context>())
-			{
-				if (!static_cast<named_thread*>(_this)->on_wait())
-				{
-					_this->m_state_notifier.release(nullptr);
-					return false;
-				}
 			}
 
 			return true;
@@ -394,15 +371,6 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 		{
 			return "Unnamed Thread";
 		}
-	}
-
-	// Detached thread constructor
-	named_thread(thread_state s, std::string_view name, Context&& f)
-		: Context(std::forward<Context>(f))
-		, thread(name)
-	{
-		thread::m_state.raw() = s;
-		thread::start(&named_thread::entry_point);
 	}
 
 	friend class thread_ctrl;
@@ -473,12 +441,6 @@ public:
 		{
 			if (s == thread_state::aborting)
 			{
-				// Call on_abort() method if it's available
-				if constexpr (thread_on_abort<Context>())
-				{
-					Context::on_abort();
-				}
-
 				thread::notify_abort();
 			}
 		}

@@ -902,6 +902,9 @@
     <ClCompile Include="Emu\Io\pad_config_types.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1690,9 +1693,6 @@
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\title.h">
       <Filter>Emu</Filter>
     </ClInclude>
@@ -1713,6 +1713,12 @@
     </ClInclude>
     <ClInclude Include="Emu\Io\pad_types.h">
       <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_osk.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
