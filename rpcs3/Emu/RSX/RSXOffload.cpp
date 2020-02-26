@@ -81,11 +81,13 @@ namespace rsx
 			m_processed_count.notify_all();
 		}
 
-		static constexpr auto name = "RSX Offloader"sv;
+		static constexpr auto thread_name = "RSX Offloader"sv;
 	};
 
 
 	using dma_thread = named_thread<dma_manager::offload_thread>;
+
+	static_assert(std::is_default_constructible_v<dma_thread>);
 
 	// initialization
 	void dma_manager::init()
