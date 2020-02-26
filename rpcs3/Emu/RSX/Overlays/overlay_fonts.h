@@ -1,4 +1,6 @@
-﻿#include "Utilities/types.h"
+﻿#pragma once
+
+#include "Utilities/types.h"
 #include "overlay_utils.h"
 
 #include <vector>
