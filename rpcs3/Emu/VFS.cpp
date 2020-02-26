@@ -29,11 +29,8 @@ struct vfs_manager
 
 bool vfs::mount(std::string_view vpath, std::string_view path)
 {
-	if (!g_fxo->get<vfs_manager>())
-	{
-		// Init (TODO)
-		g_fxo->init<vfs_manager>();
-	}
+	// Workaround
+	g_fxo->need<vfs_manager>();
 
 	const auto table = g_fxo->get<vfs_manager>();
 
