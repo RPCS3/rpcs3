@@ -239,7 +239,7 @@ char gdb_thread::read_char()
 
 u8 gdb_thread::read_hexbyte()
 {
-	std::string s = "";
+	std::string s;
 	s += read_char();
 	s += read_char();
 	return hex_to_u8(s);
@@ -548,7 +548,7 @@ bool gdb_thread::cmd_supported(gdb_cmd& cmd)
 
 bool gdb_thread::cmd_thread_info(gdb_cmd& cmd)
 {
-	std::string result = "";
+	std::string result;
 	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		if (result.length()) {

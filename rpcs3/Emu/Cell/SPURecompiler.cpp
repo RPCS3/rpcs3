@@ -440,7 +440,7 @@ void spu_cache::initialize()
 		compiler->init();
 	}
 
-	if (compilers.size() && !func_list.empty())
+	if (!compilers.empty() && !func_list.empty())
 	{
 		// Initialize progress dialog (wait for previous progress done)
 		while (g_progr_ptotal)
@@ -518,7 +518,7 @@ void spu_cache::initialize()
 		return;
 	}
 
-	if (compilers.size() && !func_list.empty())
+	if (!compilers.empty() && !func_list.empty())
 	{
 		spu_log.success("SPU Runtime: Built %u functions.", func_list.size());
 	}
@@ -4491,7 +4491,7 @@ public:
 				bool need_check = false;
 				m_block->bb = &bb;
 
-				if (bb.preds.size())
+				if (!bb.preds.empty())
 				{
 					// Initialize registers and build PHI nodes if necessary
 					for (u32 i = 0; i < s_reg_max; i++)

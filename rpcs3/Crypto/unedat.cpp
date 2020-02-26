@@ -861,7 +861,7 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 	}
 
 	// Read the RAP file, if provided.
-	if (rap_file_name.size())
+	if (!rap_file_name.empty())
 	{
 		fs::file rap(rap_file_name);
 

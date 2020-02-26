@@ -2191,7 +2191,7 @@ bool game_list_frame::SearchMatchesApp(const QString& name, const QString& seria
 
 std::string game_list_frame::CurrentSelectionIconPath()
 {
-	std::string selection = "";
+	std::string selection;
 
 	if (m_gameList->selectedItems().count())
 	{

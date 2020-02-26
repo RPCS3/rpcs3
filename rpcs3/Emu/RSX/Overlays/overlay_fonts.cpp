@@ -93,7 +93,7 @@ namespace rsx
 			result.font_names.push_back(font_name);
 
 #ifdef _WIN32
-			result.lookup_font_dirs.push_back("C:/Windows/Fonts/");
+			result.lookup_font_dirs.emplace_back("C:/Windows/Fonts/");
 #else
 			char* home = getenv("HOME");
 			if (home == nullptr)
@@ -113,13 +113,13 @@ namespace rsx
 			{
 			case language_class::default_:
 			{
-				result.font_names.push_back("Arial.ttf");
+				result.font_names.emplace_back("Arial.ttf");
 #ifndef _WIN32
 				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //	ubuntu
 				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             //	arch
 #endif
 				// Attempt to load a font from dev_flash as a last resort
-				result.font_names.push_back("SCE-PS3-VR-R-LATIN.TTF");
+				result.font_names.emplace_back("SCE-PS3-VR-R-LATIN.TTF");
 				break;
 			}
 			case language_class::cjk_base:
@@ -128,10 +128,10 @@ namespace rsx
 				result.font_names.clear();
 
 				// Attempt to load a font from dev_flash before any other source
-				result.font_names.push_back("SCE-PS3-SR-R-JPN.TTF");
+				result.font_names.emplace_back("SCE-PS3-SR-R-JPN.TTF");
 
 				// Known system font as last fallback
-				result.font_names.push_back("Yu Gothic.ttf");
+				result.font_names.emplace_back("Yu Gothic.ttf");
 				break;
 			}
 			case language_class::hangul:
@@ -140,10 +140,10 @@ namespace rsx
 				result.font_names.clear();
 
 				// Attempt to load a font from dev_flash before any other source
-				result.font_names.push_back("SCE-PS3-YG-R-KOR.TTF");
+				result.font_names.emplace_back("SCE-PS3-YG-R-KOR.TTF");
 
 				// Known system font as last fallback
-				result.font_names.push_back("Malgun Gothic.ttf");
+				result.font_names.emplace_back("Malgun Gothic.ttf");
 				break;
 			}
 			}
@@ -172,7 +172,7 @@ namespace rsx
 					break;
 				}
 
-				std::string extension = "";
+				std::string extension;
 				if (const auto extension_start = font_file.find_last_of('.');
 					extension_start != std::string::npos)
 				{

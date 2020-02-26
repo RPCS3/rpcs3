@@ -642,7 +642,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 // Get function name by FNID
 extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 {
-	if (module == "") switch (fnid)
+	if (module.empty()) switch (fnid)
 	{
 	case 0x0d10fd3f: return "module_prologue";
 	case 0x330f7005: return "module_epilogue";
@@ -2438,7 +2438,7 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 // Get variable name by VNID
 extern std::string ppu_get_variable_name(const std::string& module, u32 vnid)
 {
-	if (module == "") switch (vnid)
+	if (module.empty()) switch (vnid)
 	{
 	// these arent the actual hash, but its close enough
 	case 0xd7f43016: return "module_info";

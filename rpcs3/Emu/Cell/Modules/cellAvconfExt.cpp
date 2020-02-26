@@ -46,7 +46,7 @@ avconf_manager::avconf_manager()
 	u32 curindex = 0;
 
 	auto mic_list = fmt::split(g_cfg.audio.microphone_devices, {"@@@"});
-	if (mic_list.size())
+	if (!mic_list.empty())
 	{
 		switch (g_cfg.audio.microphone_type)
 		{

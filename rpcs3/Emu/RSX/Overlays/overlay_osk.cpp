@@ -76,10 +76,10 @@ namespace rsx
 						_cell.enabled = !(flags & CELL_OSKDIALOG_NO_RETURN);
 						break;
 					case button_flags::_shift:
-						_cell.enabled |= _cell.outputs.size() > 0;
+						_cell.enabled |= !_cell.outputs.empty();
 						break;
 					case button_flags::_mode:
-						_cell.enabled |= num_layers.size() > 0;
+						_cell.enabled |= !num_layers.empty();
 						break;
 					}
 

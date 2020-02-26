@@ -19,7 +19,7 @@ public:
 	std::vector<std::string> ListDevices() override
 	{
 		std::vector<std::string> nulllist;
-		nulllist.push_back("Default Null Device");
+		nulllist.emplace_back("Default Null Device");
 		return nulllist;
 	}
 

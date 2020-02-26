@@ -72,7 +72,7 @@ fs::file tar_object::get_file(std::string path)
 				m_map[header.name] = largest_offset;
 
 			int size = octalToDecimal(atoi(header.size));
-			if (path.compare(header.name) == 0) { //path is equal, read file and advance offset to start of next block
+			if (path == header.name) { //path is equal, read file and advance offset to start of next block
 				std::vector<u8> buf(size);
 				m_file.read(buf, size);
 				int offset = ((m_file.pos() - initial_offset + 512 - 1) & ~(512 - 1)) + initial_offset;
