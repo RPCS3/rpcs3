@@ -148,6 +148,16 @@ namespace stx
 			}
 		}
 
+		// Check if object is not initialized but shall be initialized first (to use in initializing other objects)
+		template <typename T>
+		void need() noexcept
+		{
+			if (!get<T>())
+			{
+				init<T>();
+			}
+		}
+
 		// Explicitly (re)initialize object of type T possibly with dynamic type As and arguments
 		template <typename T, typename As = T, typename... Args>
 		As* init(Args&&... args) noexcept

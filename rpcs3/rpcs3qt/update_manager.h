@@ -18,7 +18,6 @@ private:
 	QWidget* m_parent                  = nullptr;
 
 	QNetworkAccessManager m_manager;
-	QNetworkReply* reply_rpcs3 = nullptr;
 
 	std::string m_expected_hash;
 	u64 m_expected_size = 0;

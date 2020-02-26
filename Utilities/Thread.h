@@ -361,26 +361,14 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 		return thread::finalize(0);
 	}
 
-	static decltype(auto) get_default_thread_name()
-	{
-		if constexpr (thread_thread_name<Context>())
-		{
-			return Context::thread_name;
-		}
-		else
-		{
-			return "Unnamed Thread";
-		}
-	}
-
 	friend class thread_ctrl;
 
 public:
 	// Default constructor
-	template <bool Valid = std::is_default_constructible_v<Context>, typename = std::enable_if_t<Valid>>
+	template <bool Valid = std::is_default_constructible_v<Context> && thread_thread_name<Context>(), typename = std::enable_if_t<Valid>>
 	named_thread()
 		: Context()
-		, thread(get_default_thread_name())
+		, thread(Context::thread_name)
 	{
 		thread::start(&named_thread::entry_point);
 	}

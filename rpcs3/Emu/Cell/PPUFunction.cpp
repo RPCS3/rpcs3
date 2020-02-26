@@ -193,6 +193,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 250: return "sys_spu_thread_group_set_cooperative_victims";
 	case 251: return "sys_spu_thread_group_connect_event_all_threads";
 	case 252: return "sys_spu_thread_group_disconnect_event_all_threads";
+	case 253: return "sys_spu_thread_group_syscall_253";
 	case 254: return "sys_spu_thread_group_log";
 	case 260: return "sys_spu_image_open_by_fd";
 	case 300: return "sys_vm_memory_map";

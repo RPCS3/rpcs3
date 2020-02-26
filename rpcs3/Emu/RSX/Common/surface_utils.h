@@ -384,7 +384,7 @@ namespace rsx
 
 		void shuffle_tag()
 		{
-			memory_tag_samples[0].second = memory_tag_samples[0].second;
+			memory_tag_samples[0].second = ~memory_tag_samples[0].second;
 		}
 
 		bool test()

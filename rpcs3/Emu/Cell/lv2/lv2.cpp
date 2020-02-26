@@ -305,10 +305,10 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_spu_thread_group_system_unset_switch_group) //247 (0x0F7)  ROOT
 	null_func,//BIND_FUNC(sys_spu_thread_group...)          //248 (0x0F8)  ROOT
 	null_func,//BIND_FUNC(sys_spu_thread_group...)          //249 (0x0F9)  ROOT
-	null_func,//BIND_FUNC(sys_spu_thread_group_set_cooperative_victims) //250 (0x0FA)
+	BIND_FUNC(sys_spu_thread_group_set_cooperative_victims),//250 (0x0FA)
 	BIND_FUNC(sys_spu_thread_group_connect_event_all_threads), //251 (0x0FB)
 	BIND_FUNC(sys_spu_thread_group_disconnect_event_all_threads), //252 (0x0FC)
-	null_func,//BIND_FUNC(sys_spu_thread_group...)          //253 (0x0FD)
+	BIND_FUNC(sys_spu_thread_group_syscall_253),            //253 (0x0FD)
 	BIND_FUNC(sys_spu_thread_group_log),                    //254 (0x0FE)
 
 	uns_func, uns_func, uns_func, uns_func, uns_func,       //255-259  UNS
