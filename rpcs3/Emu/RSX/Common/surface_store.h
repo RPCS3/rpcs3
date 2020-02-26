@@ -7,15 +7,6 @@
 #include "Utilities/span.h"
 #include <list>
 
-namespace
-{
-	template <typename T>
-	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
-	{
-		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
-	}
-}
-
 namespace rsx
 {
 	namespace utility

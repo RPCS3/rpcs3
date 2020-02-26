@@ -474,15 +474,6 @@ namespace rsx
 		}
 	};
 
-	namespace
-	{
-		template<typename T, size_t... N, typename Args>
-		std::array<T, sizeof...(N)> fill_array(Args&& arg, std::index_sequence<N...>)
-		{
-			return{ T(N, std::forward<Args>(arg))... };
-		}
-	}
-
 	struct rsx_state
 	{
 	public:
@@ -537,6 +528,14 @@ namespace rsx
 		std::array<register_vertex_data_info, 16> register_vertex_info;
 		std::array<data_array_format_info, 16> vertex_arrays_info;
 
+	private:
+		template<typename T, size_t... N, typename Args>
+		static std::array<T, sizeof...(N)> fill_array(Args&& arg, std::index_sequence<N...>)
+		{
+			return{ T(N, std::forward<Args>(arg))... };
+		}
+
+	public:
 		rsx_state() :
 			fragment_textures(fill_array<fragment_texture>(registers, std::make_index_sequence<16>())),
 			vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
