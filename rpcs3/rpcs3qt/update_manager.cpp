@@ -217,7 +217,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 		auto time_from_str = [](const std::string& str, const std::string& format, tm* tm) -> bool
 		{
 			std::istringstream input(str);
-			input.imbue(std::locale(setlocale(LC_ALL, nullptr)));
+			input.imbue(std::locale(setlocale(LC_ALL, "C")));
 			input >> std::get_time(tm, format.c_str());
 			if (input.fail())
 				return false;
