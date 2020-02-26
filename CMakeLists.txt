@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12.4)
+cmake_minimum_required(VERSION 3.14.1)
 
 project(rpcs3)
 
