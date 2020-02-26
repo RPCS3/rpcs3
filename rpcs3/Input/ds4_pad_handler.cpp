@@ -487,7 +487,7 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 
 void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo)
 {
-	std::string serial = "";
+	std::string serial;
 	std::shared_ptr<DS4Device> ds4Dev = std::make_shared<DS4Device>();
 	ds4Dev->hidDevice = hidDevice;
 	// There isnt a nice 'portable' way with hidapi to detect bt vs wired as the pid/vid's are the same

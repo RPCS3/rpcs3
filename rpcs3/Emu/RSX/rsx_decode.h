@@ -8,32 +8,6 @@
 #include "rsx_utils.h"
 #pragma warning(disable:4503)
 
-namespace
-{
-	std::string get_subreg_name(u8 subreg)
-	{
-		return subreg == 0 ? "x" :
-			subreg == 1 ? "y" :
-			subreg == 2 ? "z" :
-			"w";
-	}
-
-	std::string print_vertex_attribute_format(rsx::vertex_base_type type)
-	{
-		switch (type)
-		{
-		case rsx::vertex_base_type::s1: return "Signed short normalized";
-		case rsx::vertex_base_type::f: return "Float";
-		case rsx::vertex_base_type::sf: return "Half float";
-		case rsx::vertex_base_type::ub: return "Unsigned byte normalized";
-		case rsx::vertex_base_type::s32k: return "Signed short unormalized";
-		case rsx::vertex_base_type::cmp: return "CMP";
-		case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
-		}
-		fmt::throw_exception("Unexpected enum found" HERE);
-	}
-}
-
 namespace rsx
 {
 	std::string print_boolean(bool b);
@@ -4150,6 +4124,14 @@ struct transform_constant_helper
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
+		auto get_subreg_name = [](u8 subreg) -> std::string
+		{
+			return subreg == 0 ? "x" :
+				subreg == 1 ? "y" :
+				subreg == 2 ? "z" :
+				"w";
+		};
+		
 		return "TransformConstant[base + " + std::to_string(reg) + "]." + get_subreg_name(subreg) + " = " + std::to_string(decoded_values.constant_value());
 	}
 };
@@ -4329,6 +4311,21 @@ struct vertex_array_helper
 		if (decoded_values.size() == 0)
 			return "(disabled)";
 
+		auto print_vertex_attribute_format = [](rsx::vertex_base_type type) -> std::string
+		{
+			switch (type)
+			{
+			case rsx::vertex_base_type::s1: return "Signed short normalized";
+			case rsx::vertex_base_type::f: return "Float";
+			case rsx::vertex_base_type::sf: return "Half float";
+			case rsx::vertex_base_type::ub: return "Unsigned byte normalized";
+			case rsx::vertex_base_type::s32k: return "Signed short unormalized";
+			case rsx::vertex_base_type::cmp: return "CMP";
+			case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
+			}
+			fmt::throw_exception("Unexpected enum found" HERE);
+		};
+		
 		return "Vertex array " + std::to_string(index) + ": Type = " + print_vertex_attribute_format(decoded_values.type()) +
 			" size = " + std::to_string(decoded_values.size()) +
 			" stride = " + std::to_string(decoded_values.stride()) +

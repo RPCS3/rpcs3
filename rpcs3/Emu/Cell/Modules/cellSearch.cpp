@@ -402,7 +402,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 				auto found = content_map->find(hash);
 				if (found == content_map->end()) // content isn't yet being tracked
 				{
-					auto ext_offset = item.name.find_last_of("."); // used later if no "Title" found
+					auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
 
 					std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
 					if( item_path.length() > CELL_SEARCH_PATH_LEN_MAX )
@@ -455,7 +455,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						info.orientation = 0;  // CellSearchOrientation
 						info.codec = 0;        // CellSearchCodec
 						info.status = 0;       // CellSearchContentStatus
-						strcpy_trunc(info.title, item.name.substr(0, ext_offset).c_str());
+						strcpy_trunc(info.title, item.name.substr(0, ext_offset));
 						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
 					}
 					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL)
@@ -474,7 +474,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						info.videoCodec = 0; // CellSearchCodec
 						info.audioCodec = 0; // CellSearchCodec
 						info.status = 0;     // CellSearchContentStatus
-						strcpy_trunc(info.title, item.name.substr(0, ext_offset).c_str()); // it'll do for the moment...
+						strcpy_trunc(info.title, item.name.substr(0, ext_offset)); // it'll do for the moment...
 						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
 					}
 

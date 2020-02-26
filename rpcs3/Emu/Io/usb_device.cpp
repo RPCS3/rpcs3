@@ -205,5 +205,5 @@ void usb_device_emulated::isochronous_transfer(UsbTransfer* transfer)
 
 void usb_device_emulated::add_string(char* str)
 {
-	strings.push_back(str);
+	strings.emplace_back(str);
 }

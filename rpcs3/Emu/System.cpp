@@ -772,7 +772,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				// Special case (directory scan)
 				m_sfo_dir = GetSfoDirFromGamePath(m_path, GetUsr(), m_title_id);
 			}
-			else if (disc.size())
+			else if (!disc.empty())
 			{
 				// Check previously used category before it's overwritten
 				if (m_cat == "DG")
