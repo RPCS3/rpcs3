@@ -552,7 +552,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	lv2_sleep(ppu, 500);
 
-	*g_savedata_context = {};
+	std::memset(g_savedata_context.get_ptr(), 0, g_savedata_context.size());
 
 	vm::ptr<CellSaveDataCBResult> result   = g_savedata_context.ptr(&savedata_context::result);
 	vm::ptr<CellSaveDataListGet>  listGet  = g_savedata_context.ptr(&savedata_context::listGet);
