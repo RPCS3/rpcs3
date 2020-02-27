@@ -193,10 +193,20 @@ struct lv2_file final : lv2_fs_object
 	}
 
 	// File reading with intermediate buffer
-	u64 op_read(vm::ptr<void> buf, u64 size);
+	static u64 op_read(const fs::file& file, vm::ptr<void> buf, u64 size);
+
+	u64 op_read(vm::ptr<void> buf, u64 size)
+	{
+		return op_read(file, buf, size);
+	}
 
 	// File writing with intermediate buffer
-	u64 op_write(vm::cptr<void> buf, u64 size);
+	static u64 op_write(const fs::file& file, vm::cptr<void> buf, u64 size);
+
+	u64 op_write(vm::cptr<void> buf, u64 size)
+	{
+		return op_write(file, buf, size);
+	}
 
 	// For MSELF support
 	struct file_view;

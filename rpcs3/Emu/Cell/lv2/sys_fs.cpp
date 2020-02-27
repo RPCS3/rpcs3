@@ -86,7 +86,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 	return &g_mp_sys_dev_hdd0;
 }
 
-u64 lv2_file::op_read(vm::ptr<void> buf, u64 size)
+u64 lv2_file::op_read(const fs::file& file, vm::ptr<void> buf, u64 size)
 {
 	// Copy data from intermediate buffer (avoid passing vm pointer to a native API)
 	uchar local_buf[65536];
@@ -110,7 +110,7 @@ u64 lv2_file::op_read(vm::ptr<void> buf, u64 size)
 	return result;
 }
 
-u64 lv2_file::op_write(vm::cptr<void> buf, u64 size)
+u64 lv2_file::op_write(const fs::file& file, vm::cptr<void> buf, u64 size)
 {
 	// Copy data to intermediate buffer (avoid passing vm pointer to a native API)
 	uchar local_buf[65536];
