@@ -1328,12 +1328,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	}
 
 	fileGet->excSize = 0;
-	memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
 
 	error_code savedata_result = CELL_OK;
 
 	while (funcFile)
 	{
+		std::memset(fileSet.get_ptr(), 0, fileSet.size());
+		std::memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
+
 		funcFile(ppu, result, fileGet, fileSet);
 
 		if (result->result < 0)
