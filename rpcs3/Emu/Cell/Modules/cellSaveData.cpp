@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Emu/VFS.h"
+#include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/PPUModule.h"
@@ -1458,7 +1459,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			// Read from memory file to vm
 			const u64 sr = file.seek(fileSet->fileOffset);
-			const u64 rr = file.read(fileSet->fileBuf.get_ptr(), access_size);
+			const u64 rr = lv2_file::op_read(file, fileSet->fileBuf, access_size);
 			fileGet->excSize = ::narrow<u32>(rr);
 			break;
 		}
@@ -1474,7 +1475,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			// Write to memory file and truncate
 			const u64 sr = file.seek(fileSet->fileOffset);
-			const u64 wr = file.write(fileSet->fileBuf.get_ptr(), access_size);
+			const u64 wr = lv2_file::op_write(file, fileSet->fileBuf, access_size);
 			file.trunc(sr + wr);
 			fileGet->excSize = ::narrow<u32>(wr);
 			all_times.erase(file_path);
@@ -1506,7 +1507,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			// Write to memory file normally
 			const u64 sr = file.seek(fileSet->fileOffset);
-			const u64 wr = file.write(fileSet->fileBuf.get_ptr(), access_size);
+			const u64 wr = lv2_file::op_write(file, fileSet->fileBuf, access_size);
 			fileGet->excSize = ::narrow<u32>(wr);
 			all_times.erase(file_path);
 			add_to_blist(file_path);
