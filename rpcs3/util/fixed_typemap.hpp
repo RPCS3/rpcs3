@@ -62,10 +62,11 @@ namespace stx
 		manual_fixed_typemap(const manual_fixed_typemap&) = delete;
 
 		manual_fixed_typemap(manual_fixed_typemap&& r) noexcept
+			: m_list(std::move(r.m_list))
+			, m_order(std::move(r.m_order))
+			, m_init_count(r.m_init_count)
 		{
-			std::swap(m_list, r.m_list);
-			std::swap(m_order, r.m_order);
-			std::swap(m_init_count, r.m_init_count);
+			r.m_init_count = 0;
 		}
 
 		manual_fixed_typemap& operator=(const manual_fixed_typemap&) = delete;
@@ -80,7 +81,7 @@ namespace stx
 
 		~manual_fixed_typemap()
 		{
-			if (!m_list)
+			if (!m_list && !m_order)
 			{
 				return;
 			}
