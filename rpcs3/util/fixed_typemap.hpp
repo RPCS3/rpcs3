@@ -161,6 +161,9 @@ namespace stx
 					destroy_reporter(all_data[i].name, all_data[i].created);
 				all_data[i].destroy(*all_data[i].object_pointer);
 			}
+
+			// Reset creation order since it now may be printed
+			m_init_count = 0;
 		}
 
 		// Default initialize all objects if possible and not already initialized
