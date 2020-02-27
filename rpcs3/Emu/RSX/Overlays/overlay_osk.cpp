@@ -208,19 +208,17 @@ namespace rsx
 			fade_animation.duration = 0.5f;
 			fade_animation.active = true;
 
-			thread_count++;
-
-			g_fxo->init<named_thread>("OSK Thread", [this]
+			g_fxo->init<named_thread>("OSK Thread", [this, tbit = alloc_thread_bit()]
 			{
+				g_thread_bit = tbit;
+
 				if (auto error = run_input_loop())
 				{
 					rsx_log.error("Osk input loop exited with error code=%d", error);
 				}
 
-				if (!--thread_count)
-				{
-					thread_count.notify_all();
-				}
+				thread_bits &= ~tbit;
+				thread_bits.notify_all();
 			});
 		}
 

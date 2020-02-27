@@ -242,10 +242,10 @@ namespace rsx
 			{
 				if (!exit)
 				{
-					thread_count++;
-
-					g_fxo->init<named_thread>("MsgDialog Thread", [&]()
+					g_fxo->init<named_thread>("MsgDialog Thread", [&, tbit = alloc_thread_bit()]()
 					{
+						g_thread_bit = tbit;
+
 						if (interactive)
 						{
 							auto ref = g_fxo->get<display_manager>()->get(uid);
@@ -267,15 +267,13 @@ namespace rsx
 								if (!g_fxo->get<display_manager>())
 								{
 									rsx_log.fatal("display_manager was improperly destroyed");
-									return;
+									break;
 								}
 							}
 						}
 
-						if (!--thread_count)
-						{
-							thread_count.notify_all();
-						}
+						thread_bits &= ~tbit;
+						thread_bits.notify_all();
 					});
 				}
 			}

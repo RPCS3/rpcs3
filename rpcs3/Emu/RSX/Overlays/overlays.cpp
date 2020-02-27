@@ -10,6 +10,33 @@ namespace rsx
 {
 	namespace overlays
 	{
+		thread_local DECLARE(user_interface::g_thread_bit) = 0;
+
+		u64 user_interface::alloc_thread_bit()
+		{
+			auto [_old, ok] = this->thread_bits.fetch_op([](u64& bits)
+			{
+				if (~bits)
+				{
+					// Set lowest clear bit
+					bits |= bits + 1;
+					return true;
+				}
+
+				return false;
+			});
+
+			if (!ok)
+			{
+				::overlays.fatal("Out of thread bits in user interface");
+				return 0;
+			}
+
+			const u64 r = u64{1} << utils::cnttz64(~_old, false);
+			::overlays.trace("Bit allocated (%u)", r);
+			return r;
+		}
+
 		// Singleton instance declaration
 		fontmgr* fontmgr::m_instance = nullptr;
 
@@ -159,14 +186,15 @@ namespace rsx
 			// Force unload
 			exit.release(true);
 
-			while (u32 i = thread_count)
+			while (u64 b = thread_bits)
 			{
-				thread_count.wait(i);
-
-				if (thread_ctrl::state() == thread_state::aborting)
+				if (b == g_thread_bit)
 				{
+					// Don't wait for its own bit
 					break;
 				}
+
+				thread_bits.wait(b);
 			}
 
 			pad::SetIntercepted(false);
