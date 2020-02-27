@@ -869,6 +869,9 @@
     <ClCompile Include="util\shared_cptr.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="util\fixed_typemap.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
     <ClCompile Include="Crypto\aesni.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>

@@ -1,13 +1,27 @@
 ﻿#pragma once
 
 #include <memory>
+#include <typeinfo>
 #include <utility>
 #include <type_traits>
-#include <algorithm>
 #include <util/typeindices.hpp>
 
 namespace stx
 {
+	namespace detail
+	{
+		// Destroy list element
+		struct destroy_info
+		{
+			void** object_pointer;
+			unsigned long long created;
+			void(*destroy)(void*& ptr) noexcept;
+			const char* name;
+
+			static void sort_by_reverse_creation_order(destroy_info* begin, destroy_info* end);
+		};
+	}
+
 	// Typemap with exactly one object of each used type, created on init() and destroyed on clear()
 	template <typename /*Tag*/, bool Report = true>
 	class manual_fixed_typemap
@@ -111,14 +125,7 @@ namespace stx
 				return;
 			}
 
-			// Destroy list element
-			struct destroy_info
-			{
-				void** object_pointer;
-				unsigned long long created;
-				void(*destroy)(void*& ptr) noexcept;
-				const char* name;
-			};
+			using detail::destroy_info;
 
 			auto all_data = std::make_unique<destroy_info[]>(stx::typelist<typeinfo>().count());
 
@@ -145,11 +152,7 @@ namespace stx
 			}
 
 			// Sort destroy list according to absolute creation order
-			std::sort(all_data.get(), all_data.get() + _max, [](const destroy_info& a, const destroy_info& b)
-			{
-				// Destroy order is the inverse of creation order
-				return a.created > b.created;
-			});
+			destroy_info::sort_by_reverse_creation_order(all_data.get(), all_data.get() + _max);
 
 			// Destroy objects in correct order
 			for (unsigned i = 0; i < _max; i++)
