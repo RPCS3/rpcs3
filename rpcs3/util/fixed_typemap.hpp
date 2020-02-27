@@ -78,6 +78,16 @@ namespace stx
 			std::swap(m_init_count, x.m_init_count);
 		}
 
+		~manual_fixed_typemap()
+		{
+			if (!m_list)
+			{
+				return;
+			}
+
+			reset();
+		}
+
 		// Destroy all objects and keep them in uninitialized state, must be called first
 		void reset() noexcept
 		{
