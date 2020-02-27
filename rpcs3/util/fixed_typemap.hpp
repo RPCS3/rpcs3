@@ -51,10 +51,20 @@ namespace stx
 			}
 		};
 
+		// Raw pointers to existing objects (may be nullptr)
 		std::unique_ptr<void*[]> m_list;
 
+		// Creation order for each object (used to reverse destruction order)
 		std::unique_ptr<unsigned long long[]> m_order;
+
+		// Used to generate creation order (increased on every construction)
 		unsigned long long m_init_count = 0;
+
+		// Body is somewhere else if enabled
+		void init_reporter(const char* name, unsigned long long created) const noexcept;
+
+		// Body is somewhere else if enabled
+		void destroy_reporter(const char* name, unsigned long long created) const noexcept;
 
 	public:
 		constexpr manual_fixed_typemap() noexcept = default;
@@ -209,11 +219,5 @@ namespace stx
 		{
 			return static_cast<T*>(m_list[stx::typeindex<typeinfo, std::decay_t<T>>()]);
 		}
-
-		// Body is somewhere else if enabled
-		void init_reporter(const char* name, unsigned long long created);
-
-		// Body is somewhere else if enabled
-		void destroy_reporter(const char* name, unsigned long long created);
 	};
 }

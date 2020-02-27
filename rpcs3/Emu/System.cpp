@@ -1763,15 +1763,15 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 }
 
 template <>
-void stx::manual_fixed_typemap<void>::init_reporter(const char* name, unsigned long long created)
+void stx::manual_fixed_typemap<void>::init_reporter(const char* name, unsigned long long created) const noexcept
 {
-	sys_log.notice("Object '%s' was created [%u]", name, created);
+	sys_log.notice("[ord:%u] Object '%s' was created", created, name);
 }
 
 template <>
-void stx::manual_fixed_typemap<void>::destroy_reporter(const char* name, unsigned long long created)
+void stx::manual_fixed_typemap<void>::destroy_reporter(const char* name, unsigned long long created) const noexcept
 {
-	sys_log.notice("Object '%s' was destroyed [%u]", name, created);
+	sys_log.notice("[ord:%u] Object '%s' is destroying", created, name);
 }
 
 Emulator Emu;
