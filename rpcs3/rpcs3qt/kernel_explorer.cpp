@@ -271,7 +271,7 @@ void kernel_explorer::Update()
 	idm::select<named_thread<ppu_thread>>([&](u32 id, ppu_thread& ppu)
 	{
 		lv2_types.back().count++;
-		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("PPU Thread: ID = 0x%08x '%s'", id, ppu.ppu_name.get())));
+		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("PPU Thread: ID = 0x%08x '%s'", id, *ppu.ppu_tname.load())));
 	});
 
 	lv2_types.emplace_back(l_addTreeChild(root, "SPU Threads"));
@@ -279,7 +279,7 @@ void kernel_explorer::Update()
 	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
 	{
 		lv2_types.back().count++;
-		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("SPU Thread: ID = 0x%08x '%s'", spu.lv2_id, spu.spu_name.get())));
+		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("SPU Thread: ID = 0x%08x '%s'", spu.lv2_id, *spu.spu_tname.load())));
 	});
 
 	lv2_types.emplace_back(l_addTreeChild(root, "SPU Thread Groups"));

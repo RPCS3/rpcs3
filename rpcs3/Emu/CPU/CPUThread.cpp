@@ -512,7 +512,7 @@ void cpu_thread::notify()
 	}
 	else
 	{
-		fmt::throw_exception("Invalid cpu_thread type");
+		fmt::throw_exception("Invalid cpu_thread type" HERE);
 	}
 }
 
@@ -529,7 +529,24 @@ void cpu_thread::abort()
 	}
 	else
 	{
-		fmt::throw_exception("Invalid cpu_thread type");
+		fmt::throw_exception("Invalid cpu_thread type" HERE);
+	}
+}
+
+std::string cpu_thread::get_name() const
+{
+	// Downcast to correct type
+	if (id_type() == 1)
+	{
+		return thread_ctrl::get_name(*static_cast<const named_thread<ppu_thread>*>(this));
+	}
+	else if (id_type() == 2)
+	{
+		return thread_ctrl::get_name(*static_cast<const named_thread<spu_thread>*>(this));
+	}
+	else
+	{
+		fmt::throw_exception("Invalid cpu_thread type" HERE);
 	}
 }
 

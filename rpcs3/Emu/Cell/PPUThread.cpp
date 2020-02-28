@@ -430,11 +430,6 @@ void ppu_thread::on_cleanup(named_thread<ppu_thread>* _this)
 	idm::remove<named_thread<ppu_thread>>(_this->id);
 }
 
-std::string ppu_thread::get_name() const
-{
-	return fmt::format("PPU[0x%x] Thread (%s)", id, ppu_name.get());
-}
-
 std::string ppu_thread::dump() const
 {
 	std::string ret = cpu_thread::dump();
@@ -718,7 +713,7 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	, stack_addr(param.stack_addr)
 	, joiner(-!!detached)
 	, start_time(get_guest_system_time())
-	, ppu_name(name)
+	, ppu_tname(stx::shared_cptr<std::string>::make(name))
 {
 	gpr[1] = stack_addr + stack_size - 0x70;
 
@@ -830,7 +825,15 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	g_tls_log_prefix = []
 	{
 		const auto _this = static_cast<ppu_thread*>(get_current_cpu_thread());
-		return fmt::format("%s [0x%08x]", thread_ctrl::get_name(), _this->cia);
+
+		static thread_local stx::shared_cptr<std::string> name_cache;
+
+		if (!_this->ppu_tname.is_equal(name_cache)) [[unlikely]]
+		{
+			name_cache = _this->ppu_tname.load();
+		}
+
+		return fmt::format("PPU[0x%x] Thread (%s) [0x%08x]", _this->id, *name_cache.get(), _this->cia);
 	};
 
 	auto at_ret = [&]()
