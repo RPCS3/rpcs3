@@ -34,7 +34,7 @@ namespace rsx
 				thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
 			}
 
-			while (thread_ctrl::state() != thread_state::finished)
+			while (thread_ctrl::state() != thread_state::aborting)
 			{
 				for (auto&& job : m_work_queue.pop_all())
 				{
