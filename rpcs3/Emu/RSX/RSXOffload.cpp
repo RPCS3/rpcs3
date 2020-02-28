@@ -155,7 +155,7 @@ namespace rsx
 	{
 		const auto _thr = g_fxo->get<dma_thread>();
 
-		if (_thr->m_enqueued_count.load() < _thr->m_processed_count.load()) [[likely]]
+		if (_thr->m_enqueued_count.load() <= _thr->m_processed_count.load()) [[likely]]
 		{
 			// Nothing to do
 			return true;
@@ -169,7 +169,7 @@ namespace rsx
 				return false;
 			}
 
-			while (_thr->m_enqueued_count.load() < _thr->m_processed_count.load())
+			while (_thr->m_enqueued_count.load() > _thr->m_processed_count.load())
 			{
 				rsxthr->on_semaphore_acquire_wait();
 				_mm_pause();
@@ -177,7 +177,7 @@ namespace rsx
 		}
 		else
 		{
-			while (_thr->m_enqueued_count.load() < _thr->m_processed_count.load())
+			while (_thr->m_enqueued_count.load() > _thr->m_processed_count.load())
 				_mm_pause();
 		}
 
