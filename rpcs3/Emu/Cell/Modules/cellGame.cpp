@@ -298,7 +298,7 @@ error_code cellGameDataGetSizeKB(vm::ptr<u32> size)
 
 		if (fs::exists(local_dir))
 		{
-			cellGame.error("cellGameDataGetSizeKB: Unknown failure on calculating directory '%s' size (%s)", local_dir, error);
+			cellGame.error("cellGameDataGetSizeKB(): Unknown failure on calculating directory '%s' size (%s)", local_dir, error);
 		}
 
 		return CELL_GAMEDATA_ERROR_FAILURE;

@@ -434,11 +434,13 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		sceNp.notice("npDrmIsAvailable(): KLicense key %s", *reinterpret_cast<be_t<v128, 1>*>(k_licensee.data()));
 	}
 
-	const std::string enc_drm_path = drm_path.get_ptr();
+	const std::string enc_drm_path(drm_path.get_ptr(), std::find(drm_path.get_ptr(), drm_path.get_ptr() + 0x100, '\0'));
+
+	sceNp.warning(u8"npDrmIsAvailable(): drm_path=“%s”", enc_drm_path);
 
 	if (!fs::is_file(vfs::get(enc_drm_path)))
 	{
-		sceNp.warning("npDrmIsAvailable(): '%s' not found", enc_drm_path);
+		sceNp.warning(u8"npDrmIsAvailable(): “%s” not found", enc_drm_path);
 		return CELL_ENOENT;
 	}
 
@@ -468,7 +470,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		}
 		else
 		{
-			sceNp.error("npDrmIsAvailable(): Failed to verify sce file %s", enc_drm_path);
+			sceNp.error(u8"npDrmIsAvailable(): Failed to verify sce file “%s”", enc_drm_path);
 			return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
 		}
 
@@ -487,46 +489,50 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 			if (fs::is_file(vfs::get(rap_file)))
 				npdrmkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{ vfs::get(rap_file) });
 			else
-				sceNp.warning("npDrmIsAvailable(): Rap file not found: %s", rap_file.c_str());
+				sceNp.warning(u8"npDrmIsAvailable(): Rap file not found: “%s”", rap_file.c_str());
 		}
 		else
 		{
-			sceNp.error("npDrmIsAvailable(): Failed to verify npd file %s", enc_drm_path);
+			sceNp.error(u8"npDrmIsAvailable(): Failed to verify npd file “%s”", enc_drm_path);
 			return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
 		}
 	}
 	else
 	{
 		// for now assume its just unencrypted
-		sceNp.notice("npDrmIsAvailable(): Assuming npdrm file is unencrypted at %s", enc_drm_path);
+		sceNp.notice(u8"npDrmIsAvailable(): Assuming npdrm file is unencrypted at “%s”", enc_drm_path);
 	}
 	return CELL_OK;
 }
 
 error_code sceNpDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
-	sceNp.warning("sceNpDrmIsAvailable(k_licensee=*0x%x, drm_path=%s)", k_licensee_addr, drm_path);
+	sceNp.warning("sceNpDrmIsAvailable(k_licensee=*0x%x, drm_path=*0x%x)", k_licensee_addr, drm_path);
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
 error_code sceNpDrmIsAvailable2(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
-	sceNp.warning("sceNpDrmIsAvailable2(k_licensee=*0x%x, drm_path=%s)", k_licensee_addr, drm_path);
+	sceNp.warning("sceNpDrmIsAvailable2(k_licensee=*0x%x, drm_path=*0x%x)", k_licensee_addr, drm_path);
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
 error_code sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 {
-	sceNp.warning("sceNpDrmVerifyUpgradeLicense(content_id=%s)", content_id);
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense(content_id=*0x%x)", content_id);
 
 	if (!content_id)
 	{
 		return SCE_NP_DRM_ERROR_INVALID_PARAM;
 	}
 
-	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_id.get_ptr() + ".rap")))
+	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
+
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense(): content_id=“%s”", content_id);
+
+	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_str + ".rap")))
 	{
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
@@ -538,14 +544,18 @@ error_code sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 
 error_code sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 {
-	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(content_id=%s)", content_id);
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(content_id=*0x%x)", content_id);
 
 	if (!content_id)
 	{
 		return SCE_NP_DRM_ERROR_INVALID_PARAM;
 	}
 
-	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_id.get_ptr() + ".rap")))
+	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
+
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(): content_id=“%s”", content_id);
+
+	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_str + ".rap")))
 	{
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
@@ -577,7 +587,7 @@ error_code sceNpDrmGetTimelimit(vm::cptr<char> path, vm::ptr<u64> time_remain)
 
 error_code sceNpDrmProcessExitSpawn(ppu_thread& ppu, vm::cptr<u8> klicensee, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags)
 {
-	sceNp.warning("sceNpDrmProcessExitSpawn(klicensee=*0x%x, path=%s, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", klicensee, path, argv, envp, data, data_size, prio, flags);
+	sceNp.warning("sceNpDrmProcessExitSpawn(klicensee=*0x%x, path=*0x%x, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", klicensee, path, argv, envp, data, data_size, prio, flags);
 
 	if (s32 error = npDrmIsAvailable(klicensee, path))
 	{
@@ -590,7 +600,7 @@ error_code sceNpDrmProcessExitSpawn(ppu_thread& ppu, vm::cptr<u8> klicensee, vm:
 
 error_code sceNpDrmProcessExitSpawn2(ppu_thread& ppu, vm::cptr<u8> klicensee, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags)
 {
-	sceNp.warning("sceNpDrmProcessExitSpawn2(klicensee=*0x%x, path=%s, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", klicensee, path, argv, envp, data, data_size, prio, flags);
+	sceNp.warning("sceNpDrmProcessExitSpawn2(klicensee=*0x%x, path=*0x%x, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", klicensee, path, argv, envp, data, data_size, prio, flags);
 
 	if (s32 error = npDrmIsAvailable(klicensee, path))
 	{
