@@ -217,18 +217,30 @@ void Emulator::Init()
 
 	// Initialize patch engine
 	g_fxo->init<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
+}
 
-	// Initialize progress dialog server (TODO)
-	if (g_progr.exchange("") == nullptr)
+namespace
+{
+	struct progress_dialog_server
 	{
-		std::thread server([]()
+		void operator()()
 		{
-			while (true)
+			while (thread_ctrl::state() != thread_state::aborting)
 			{
 				// Wait for the start condition
 				while (!g_progr_ftotal && !g_progr_ptotal)
 				{
+					if (thread_ctrl::state() == thread_state::aborting)
+					{
+						break;
+					}
+
 					std::this_thread::sleep_for(5ms);
+				}
+
+				if (thread_ctrl::state() == thread_state::aborting)
+				{
+					break;
 				}
 
 				// Initialize message dialog
@@ -260,7 +272,7 @@ void Emulator::Init()
 				u32 value = 0;
 
 				// Update progress
-				while (true)
+				while (thread_ctrl::state() != thread_state::aborting)
 				{
 					if (ftotal != g_progr_ftotal || fdone != g_progr_fdone || ptotal != g_progr_ptotal || pdone != g_progr_pdone)
 					{
@@ -307,6 +319,11 @@ void Emulator::Init()
 					std::this_thread::sleep_for(10ms);
 				}
 
+				if (thread_ctrl::state() == thread_state::aborting)
+				{
+					break;
+				}
+
 				// Cleanup
 				g_progr_ftotal -= fdone;
 				g_progr_fdone  -= fdone;
@@ -321,10 +338,10 @@ void Emulator::Init()
 					});
 				}
 			}
-		});
+		}
 
-		server.detach();
-	}
+		static auto constexpr thread_name = "Progress Dialog Server"sv;
+	};
 }
 
 const bool Emulator::SetUsr(const std::string& user)
@@ -1769,3 +1786,5 @@ void stx::manual_fixed_typemap<void>::destroy_reporter(const char* name, unsigne
 }
 
 Emulator Emu;
+
+named_thread<progress_dialog_server> g_progress_dlg_server;
