@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include "util/atomic.hpp"
+#include "util/shared_cptr.hpp"
 
 #include <string>
 #include <memory>
@@ -128,7 +129,7 @@ class thread_base
 	atomic_t<const void*> m_state_notifier{nullptr};
 
 	// Thread name
-	lf_value<std::string> m_name;
+	stx::atomic_cptr<std::string> m_tname;
 
 	//
 	atomic_t<u64> m_cycles = 0;
@@ -186,31 +187,34 @@ class thread_ctrl final
 
 	friend class thread_base;
 
+	// Optimized get_name() for logging
+	static std::string get_name_cached();
+
 public:
 	// Get current thread name
-	static std::string_view get_name()
+	static std::string get_name()
 	{
-		return g_tls_this_thread->m_name.get();
+		return *g_tls_this_thread->m_tname.load();
 	}
 
 	// Get thread name
 	template <typename T>
-	static std::string_view get_name(const named_thread<T>& thread)
+	static std::string get_name(const named_thread<T>& thread)
 	{
-		return static_cast<const thread_base&>(thread).m_name.get();
+		return *static_cast<const thread_base&>(thread).m_tname.load();
 	}
 
 	// Set current thread name (not recommended)
 	static void set_name(std::string_view name)
 	{
-		g_tls_this_thread->m_name.assign(name);
+		g_tls_this_thread->m_tname.store(stx::shared_cptr<std::string>::make(name));
 	}
 
 	// Set thread name (not recommended)
 	template <typename T>
 	static void set_name(named_thread<T>& thread, std::string_view name)
 	{
-		static_cast<thread_base&>(thread).m_name.assign(name);
+		static_cast<thread_base&>(thread).m_tname.store(stx::shared_cptr<std::string>::make(name));
 	}
 
 	template <typename T>

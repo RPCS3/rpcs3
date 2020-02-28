@@ -46,7 +46,6 @@ public:
 
 	static void on_cleanup(named_thread<ppu_thread>*);
 
-	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_sleep() override;
@@ -186,7 +185,8 @@ public:
 	const char* current_function{}; // Current function name for diagnosis, optimized for speed.
 	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
 
-	lf_value<std::string> ppu_name; // Thread name
+	// Thread name
+	stx::atomic_cptr<std::string> ppu_tname;
 
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();

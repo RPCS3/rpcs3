@@ -385,7 +385,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 		thread_ctrl::notify(*thread);
 
 		// Dirty hack for sound: confirm the creation of _mxr000 event queue
-		if (thread->ppu_name.get() == "_cellsurMixerMain"sv)
+		if (*thread->ppu_tname.load() == "_cellsurMixerMain"sv)
 		{
 			lv2_obj::sleep(ppu);
 
@@ -432,9 +432,12 @@ error_code sys_ppu_thread_rename(u32 thread_id, vm::cptr<char> name)
 	constexpr u32 max_size = 27; // max size including null terminator
 	const auto pname = name.get_ptr();
 
+	// Make valid name
+	auto _name = stx::shared_cptr<std::string>::make(pname, std::find(pname, pname + max_size, '\0'));
+
 	// thread_ctrl name is not changed (TODO)
-	const std::string res = thread->ppu_name.assign(pname, std::find(pname, pname + max_size, '\0'));
-	sys_ppu_thread.warning(u8"sys_ppu_thread_rename(): Thread renamed to “%s”", res);
+	sys_ppu_thread.warning(u8"sys_ppu_thread_rename(): Thread renamed to “%s”", *_name);
+	thread->ppu_tname.store(std::move(_name));
 	return CELL_OK;
 }
 
