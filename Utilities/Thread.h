@@ -38,8 +38,7 @@ enum class thread_class : u32
 enum class thread_state : u32
 {
 	created,  // Initial state
-	detached, // The thread has been detached to destroy its own named_thread object (can be dangerously misused)
-	aborting, // The thread has been joined in the destructor or explicitly aborted (mutually exclusive with detached)
+	aborting, // The thread has been joined in the destructor or explicitly aborted
 	finished  // Final state, always set at the end of thread execution
 };
 
@@ -81,13 +80,6 @@ struct result_storage<void>
 
 template <class Context, typename... Args>
 using result_storage_t = result_storage<std::invoke_result_t<Context, Args...>>;
-
-// Detect on_cleanup() static member function (should return void) (in C++20 can use destroying delete instead)
-template <typename T, typename = void>
-struct thread_on_cleanup : std::bool_constant<false> {};
-
-template <typename T>
-struct thread_on_cleanup<T, decltype(named_thread<T>::on_cleanup(std::declval<named_thread<T>*>()))> : std::bool_constant<true> {};
 
 template <typename T, typename = void>
 struct thread_thread_name : std::bool_constant<false> {};
@@ -305,15 +297,7 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 		// Perform self-cleanup if necessary
 		if (_this->entry_point())
 		{
-			// Call on_cleanup() static member function if it's available
-			if constexpr (thread_on_cleanup<Context>())
-			{
-				Context::on_cleanup(_this);
-			}
-			else
-			{
-				delete _this;
-			}
+			delete _this;
 		}
 
 		thread::finalize();
@@ -426,10 +410,12 @@ public:
 		return thread::m_state.load();
 	}
 
-	// Try to abort/detach
+	// Try to abort by assigning thread_state::aborting (UB if assigning different state)
 	named_thread& operator=(thread_state s)
 	{
-		if (s < thread_state::finished && thread::m_state.compare_and_swap_test(thread_state::created, s))
+		ASSUME(s == thread_state::aborting);
+
+		if (s == thread_state::aborting && thread::m_state.compare_and_swap_test(thread_state::created, s))
 		{
 			if (s == thread_state::aborting)
 			{
@@ -443,6 +429,7 @@ public:
 	// Context type doesn't need virtual destructor
 	~named_thread()
 	{
+		// Assign aborting state forcefully
 		operator=(thread_state::aborting);
 		thread::join();
 

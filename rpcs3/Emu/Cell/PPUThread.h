@@ -44,8 +44,6 @@ public:
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
 
-	static void on_cleanup(named_thread<ppu_thread>*);
-
 	virtual std::string dump() const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_sleep() override;

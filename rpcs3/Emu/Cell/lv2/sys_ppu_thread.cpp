@@ -42,7 +42,26 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 	if (jid == umax)
 	{
 		// Detach detached thread, id will be removed on cleanup
-		static_cast<named_thread<ppu_thread>&>(ppu) = thread_state::detached;
+		static thread_local struct cleanup_t
+		{
+			const u32 id;
+
+			cleanup_t(u32 id)
+				: id(id)
+			{
+			}
+
+			cleanup_t(const cleanup_t&) = delete;
+
+			~cleanup_t()
+			{
+				if (!idm::remove<named_thread<ppu_thread>>(id))
+				{
+					sys_ppu_thread.fatal("Failed to remove detached thread! (id=0x%x)", id);
+				}
+			}
+		}
+		to_cleanup(ppu.id);
 	}
 	else if (jid != 0)
 	{

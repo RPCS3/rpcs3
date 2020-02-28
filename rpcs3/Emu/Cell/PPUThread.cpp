@@ -424,12 +424,6 @@ extern bool ppu_patch(u32 addr, u32 value)
 	return true;
 }
 
-void ppu_thread::on_cleanup(named_thread<ppu_thread>* _this)
-{
-	// Remove thread id
-	idm::remove<named_thread<ppu_thread>>(_this->id);
-}
-
 std::string ppu_thread::dump() const
 {
 	std::string ret = cpu_thread::dump();

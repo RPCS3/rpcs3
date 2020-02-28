@@ -1858,11 +1858,13 @@ bool thread_base::finalize(int) noexcept
 		fsoft, fhard, ctxvol, ctxinv);
 
 	// Return true if need to delete thread object
-	const bool result = m_state.exchange(thread_state::finished) == thread_state::detached;
+	const bool ok = m_state.exchange(thread_state::finished) <= thread_state::aborting;
 
 	// Signal waiting threads
 	m_state.notify_all();
-	return result;
+
+	// No detached thread supported atm
+	return !ok;
 }
 
 void thread_base::finalize() noexcept
