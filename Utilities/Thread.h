@@ -171,9 +171,6 @@ class thread_ctrl final
 	// Target cpu core layout
 	static atomic_t<native_core_arrangement> g_native_core_layout;
 
-	// Global thread counter
-	static inline atomic_t<u64> g_thread_count = 0;
-
 	// Internal waiting function, may throw. Infinite value is -1.
 	static void _wait_for(u64 usec, bool alert);
 
@@ -258,11 +255,6 @@ public:
 	static thread_base* get_current()
 	{
 		return g_tls_this_thread;
-	}
-
-	static u64 get_count()
-	{
-		return g_thread_count.load();
 	}
 
 	// Detect layout
