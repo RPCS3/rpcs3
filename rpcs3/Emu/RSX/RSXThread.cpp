@@ -2792,7 +2792,8 @@ namespace rsx
 
 			check_state(ptimer, flush_queue);
 
-			if (m_current_task && m_current_task->active)
+			// Disabled since only ZPASS is implemented right now
+			if (false) //(m_current_task && m_current_task->active)
 			{
 				// Data check
 				u32 expected_type = 0;
