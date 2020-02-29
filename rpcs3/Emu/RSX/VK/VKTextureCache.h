@@ -69,13 +69,7 @@ namespace vk
 			{
 				// Even if we are managing the same vram section, we cannot guarantee contents are static
 				// The create method is only invoked when a new managed session is required
-				if (!flushed)
-				{
-					// Reset fence
-					verify(HERE), m_device, dma_fence;
-					vk::get_resource_manager()->dispose(dma_fence);
-				}
-
+				release_dma_resources();
 				synchronized = false;
 				flushed = false;
 				sync_timestamp = 0ull;
@@ -176,7 +170,9 @@ namespace vk
 
 			if (dma_fence)
 			{
-				verify(HERE), synchronized;
+				// NOTE: This can be reached if previously synchronized, or a special path happens.
+				// If a hard flush occurred while this surface was flush_always the cache would have reset its protection afterwards.
+				// DMA resource would still be present but already used to flush previously.
 				vk::get_resource_manager()->dispose(dma_fence);
 			}
 
