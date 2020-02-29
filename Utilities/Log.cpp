@@ -245,6 +245,19 @@ namespace logs
 
 logs::listener::~listener()
 {
+	// Shut up all channels on exit
+	if (auto logger = get_logger())
+	{
+		if (logger == this)
+		{
+			return;
+		}
+
+		for (auto&& pair : logger->channels)
+		{
+			pair.second->enabled.store(level::always, std::memory_order_relaxed);
+		}
+	}
 }
 
 void logs::listener::add(logs::listener* _new)
