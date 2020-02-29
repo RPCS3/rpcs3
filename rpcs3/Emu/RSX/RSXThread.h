@@ -434,7 +434,7 @@ namespace rsx
 			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
 
 			// Clears current stat block and increments stat_tag_id
-			void clear(class ::rsx::thread* ptimer);
+			void clear(class ::rsx::thread* ptimer, u32 type);
 
 			// Forcefully flushes all
 			void sync(class ::rsx::thread* ptimer);
