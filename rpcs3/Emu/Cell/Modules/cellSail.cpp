@@ -802,7 +802,7 @@ s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 		case CELL_SAIL_STREAM_PAMF:
 		{
 			std::string uri = pUri.get_ptr();
-			if (uri.substr(0, 12) == "x-cell-fs://")
+			if (uri.starts_with("x-cell-fs://"))
 			{
 				if (fs::file f{ vfs::get(uri.substr(12)) })
 				{
