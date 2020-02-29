@@ -81,14 +81,17 @@ error_code cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideo
 	switch (videoOut)
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
+	{
+		const auto conf = g_fxo->get<rsx::avconf>();
 		state->state = CELL_VIDEO_OUT_OUTPUT_STATE_ENABLED;
 		state->colorSpace = CELL_VIDEO_OUT_COLOR_SPACE_RGB;
-		state->displayMode.resolutionId = g_video_out_resolution_id.at(g_cfg.video.resolution); // TODO
+		state->displayMode.resolutionId = conf->state? conf->resolution_id : g_video_out_resolution_id.at(g_cfg.video.resolution);
 		state->displayMode.scanMode = CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE;
 		state->displayMode.conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
-		state->displayMode.aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio); // TODO
+		state->displayMode.aspect = conf->state? conf->aspect : g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
 		state->displayMode.refreshRates = CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ;
 		return CELL_OK;
+	}
 
 	case CELL_VIDEO_OUT_SECONDARY:
 		*state = { CELL_VIDEO_OUT_OUTPUT_STATE_DISABLED }; // ???
@@ -141,7 +144,7 @@ error_code cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResol
 
 error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option, u32 waitForEvent)
 {
-	cellSysutil.todo("cellVideoOutConfigure(videoOut=%d, config=*0x%x, option=*0x%x, waitForEvent=%d)", videoOut, config, option, waitForEvent);
+	cellSysutil.warning("cellVideoOutConfigure(videoOut=%d, config=*0x%x, option=*0x%x, waitForEvent=%d)", videoOut, config, option, waitForEvent);
 
 	if (!config)
 	{
@@ -180,6 +183,7 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 	auto& res_info = g_video_out_resolution_map.at(res);
 
 	auto conf = g_fxo->get<rsx::avconf>();
+	conf->resolution_id = config->resolutionId;
 	conf->aspect = config->aspect;
 	conf->format = config->format;
 	conf->scanline_pitch = config->pitch;
@@ -205,10 +209,20 @@ error_code cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfig
 	switch (videoOut)
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
-		config->resolutionId = g_video_out_resolution_id.at(g_cfg.video.resolution);
-		config->format = CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8;
-		config->aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
-		config->pitch = 4 * g_video_out_resolution_map.at(g_cfg.video.resolution).first;
+		if (const auto conf = g_fxo->get<rsx::avconf>(); conf->state)
+		{
+			config->resolutionId = conf->resolution_id;
+			config->format = conf->format;
+			config->aspect = conf->aspect;
+			config->pitch = conf->scanline_pitch;
+		}
+		else
+		{
+			config->resolutionId = g_video_out_resolution_id.at(g_cfg.video.resolution);
+			config->format = CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8;
+			config->aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
+			config->pitch = 4 * g_video_out_resolution_map.at(g_cfg.video.resolution).first;
+		}
 
 		return CELL_OK;
 
