@@ -144,6 +144,7 @@ namespace rsx
 	{
 		u8 format = 0;             // XRGB
 		u8 aspect = 0;             // AUTO
+		u8 resolution_id = 2;      // 720p
 		u32 scanline_pitch = 0;    // PACKED
 		atomic_t<f32> gamma = 1.f; // NO GAMMA CORRECTION
 		u32 resolution_x = 1280;   // X RES
