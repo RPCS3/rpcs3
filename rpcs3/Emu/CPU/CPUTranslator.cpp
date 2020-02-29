@@ -40,7 +40,7 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "bdver2" ||
 		cpu == "bdver3" ||
 		cpu == "bdver4" ||
-		cpu.substr(0, 5) == "znver")
+		cpu.startswith("znver"))
 	{
 		m_use_fma = true;
 	}
