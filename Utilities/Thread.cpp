@@ -1531,6 +1531,11 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp) noexcept
 		}
 	}
 
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+
+static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
+{
 	std::string msg = fmt::format("Unhandled Win32 exception 0x%08X.\n", pExp->ExceptionRecord->ExceptionCode);
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
@@ -1636,6 +1641,11 @@ const bool s_exception_handler_set = []() -> bool
 	if (!AddVectoredExceptionHandler(1, (PVECTORED_EXCEPTION_HANDLER)exception_handler))
 	{
 		report_fatal_error("AddVectoredExceptionHandler() failed.");
+	}
+
+	if (!SetUnhandledExceptionFilter((LPTOP_LEVEL_EXCEPTION_FILTER)exception_filter))
+	{
+		report_fatal_error("SetUnhandledExceptionFilter() failed.");
 	}
 
 	return true;
