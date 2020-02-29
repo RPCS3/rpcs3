@@ -258,6 +258,9 @@ namespace vk
 				vk::image* content = nullptr;
 				vk::image* final_dst = (samples() > 1) ? get_resolve_target_safe(cmd) : this;
 
+				// Prepare dst image
+				final_dst->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
 				if (final_dst->width() == subres.width_in_block && final_dst->height() == subres.height_in_block)
 				{
 					// Possible if MSAA is enabled with 100% resolution scale or
@@ -277,11 +280,16 @@ namespace vk
 				// Write into final image
 				if (content != final_dst)
 				{
+					// Avoid layout push/pop on scratch memory by setting explicit layout here
+					content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
 					vk::copy_scaled_image(cmd, content->value, final_dst->value, content->current_layout, final_dst->current_layout,
 						{ 0, 0, subres.width_in_block, subres.height_in_block }, { 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
 						1, aspect(), true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST,
 						format(), format());
 				}
+
+				final_dst->pop_layout(cmd);
 
 				if (samples() > 1)
 				{
