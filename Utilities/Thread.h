@@ -431,3 +431,87 @@ public:
 		}
 	}
 };
+
+// Group of named threads, similar to named_thread
+template <class Context>
+class named_thread_group final
+{
+	using Thread = named_thread<Context>;
+
+	const u32 m_count;
+
+	Thread* m_threads;
+
+public:
+	// Lambda constructor, also the implicit deduction guide candidate
+	named_thread_group(std::string_view name, u32 count, const Context& f)
+		: m_count(count)
+		, m_threads(nullptr)
+	{
+		if (count == 0)
+		{
+			return;
+		}
+
+		m_threads = static_cast<Thread*>(::operator new(sizeof(Thread) * m_count, std::align_val_t{alignof(Thread)}));
+
+		// Create all threads
+		for (u32 i = 0; i < m_count; i++)
+		{
+			new (static_cast<void*>(m_threads + i)) Thread(std::string(name) + std::to_string(i + 1), f);
+		}
+	}
+
+	named_thread_group(const named_thread_group&) = delete;
+
+	named_thread_group& operator=(const named_thread_group&) = delete;
+
+	// Wait for completion
+	void join() const
+	{
+		for (u32 i = 0; i < m_count; i++)
+		{
+			std::as_const(*std::launder(m_threads + i))();
+		}
+	}
+
+	// Join and access specific thread
+	auto operator[](u32 index) const
+	{
+		return std::as_const(*std::launder(m_threads + index))();
+	}
+
+	// Join and access specific thread
+	auto operator[](u32 index)
+	{
+		return (*std::launder(m_threads + index))();
+	}
+
+	// Dumb iterator
+	auto begin()
+	{
+		return std::launder(m_threads);
+	}
+
+	// Dumb iterator
+	auto end()
+	{
+		return m_threads + m_count;
+	}
+
+	u32 size() const
+	{
+		return m_count;
+	}
+
+	~named_thread_group()
+	{
+		// Destroy all threads (it should join them)
+		for (u32 i = 0; i < m_count; i++)
+		{
+			std::launder(m_threads + i)->~Thread();
+		}
+
+		::operator delete(static_cast<void*>(m_threads), std::align_val_t{alignof(Thread)});
+	}
+};

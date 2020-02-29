@@ -202,6 +202,8 @@ public:
 	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
 
 	std::string GetFormattedTitle(double fps) const;
+
+	u32 GetMaxThreads() const;
 };
 
 extern Emulator Emu;

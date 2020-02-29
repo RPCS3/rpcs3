@@ -925,9 +925,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				std::vector<std::pair<std::string, u64>> file_queue;
 				file_queue.reserve(2000);
 
-				std::queue<named_thread<std::function<void()>>> thread_queue;
-				const uint max_threads = std::thread::hardware_concurrency();
-
 				// Initialize progress dialog
 				g_progr = "Scanning directories for SPRX libraries...";
 
@@ -975,57 +972,46 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 				g_progr = "Compiling PPU modules";
 
-				atomic_t<u32> worker_count = 0;
+				atomic_t<std::size_t> fnext = 0;
 
-				for (std::size_t i = 0; i < file_queue.size(); i++)
+				named_thread_group workers("SPRX Worker ", GetMaxThreads(), [&]
 				{
-					const auto& path = file_queue[i].first;
-
-					sys_log.notice("Trying to load SPRX: %s", path);
-
-					// Load MSELF or SPRX
-					fs::file src{path};
-
-					if (file_queue[i].second == 0)
+					for (std::size_t func_i = fnext++; func_i < file_queue.size(); func_i = fnext++)
 					{
-						// Some files may fail to decrypt due to the lack of klic
-						src = decrypt_self(std::move(src));
-					}
+						const auto& path = std::as_const(file_queue)[func_i].first;
 
-					const ppu_prx_object obj = src;
+						sys_log.notice("Trying to load SPRX: %s", path);
 
-					if (obj == elf_error::ok)
-					{
-						if (auto prx = ppu_load_prx(obj, path))
+						// Load MSELF or SPRX
+						fs::file src{path};
+
+						if (file_queue[func_i].second == 0)
 						{
-							worker_count++;
-
-							while (worker_count > max_threads)
-							{
-								std::this_thread::sleep_for(10ms);
-							}
-
-							thread_queue.emplace("Worker " + std::to_string(thread_queue.size()), [_prx = std::move(prx), &worker_count]
-							{
-								ppu_initialize(*_prx);
-								ppu_unload_prx(*_prx);
-								g_progr_fdone++;
-								worker_count--;
-							});
-
-							continue;
+							// Some files may fail to decrypt due to the lack of klic
+							src = decrypt_self(std::move(src));
 						}
-					}
 
-					sys_log.error("Failed to load SPRX '%s' (%s)", path, obj.get_error());
-					g_progr_fdone++;
-				}
+						const ppu_prx_object obj = src;
+
+						if (obj == elf_error::ok)
+						{
+							if (auto prx = ppu_load_prx(obj, path))
+							{
+								ppu_initialize(*prx);
+								ppu_unload_prx(*prx);
+								g_progr_fdone++;
+								continue;
+							}
+						}
+
+						sys_log.error("Failed to load SPRX '%s' (%s)", path, obj.get_error());
+						g_progr_fdone++;
+						continue;
+					}
+				});
 
 				// Join every thread
-				while (!thread_queue.empty())
-				{
-					thread_queue.pop();
-				}
+				workers.join();
 
 				// Exit "process"
 				Emu.CallAfter([]
@@ -1717,6 +1703,13 @@ std::string Emulator::GetFormattedTitle(double fps) const
 	title_data.fps = fps;
 
 	return rpcs3::get_formatted_title(title_data);
+}
+
+u32 Emulator::GetMaxThreads() const
+{
+	u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
+	u32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
+	return thread_count;
 }
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)

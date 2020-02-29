@@ -394,11 +394,6 @@ void spu_cache::initialize()
 	atomic_t<std::size_t> fnext{};
 	atomic_t<u8> fail_flag{0};
 
-	// Initialize compiler instances for parallel compilation
-	u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
-	u32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
-	std::vector<std::unique_ptr<spu_recompiler_base>> compilers{thread_count};
-
 	if (g_cfg.core.spu_decoder == spu_decoder_type::fast || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		if (auto compiler = spu_recompiler_base::make_llvm_recompiler(11))
@@ -421,26 +416,7 @@ void spu_cache::initialize()
 		}
 	}
 
-	for (auto& compiler : compilers)
-	{
-		if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
-		{
-			compiler = spu_recompiler_base::make_asmjit_recompiler();
-		}
-		else if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
-		{
-			compiler = spu_recompiler_base::make_llvm_recompiler();
-		}
-		else
-		{
-			compilers.clear();
-			break;
-		}
-
-		compiler->init();
-	}
-
-	if (!compilers.empty() && !func_list.empty())
+	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		// Initialize progress dialog (wait for previous progress done)
 		while (g_progr_ptotal)
@@ -452,10 +428,25 @@ void spu_cache::initialize()
 		g_progr_ptotal += func_list.size();
 	}
 
-	std::deque<named_thread<std::function<void()>>> thread_queue;
-
-	for (std::size_t i = 0; i < compilers.size(); i++) thread_queue.emplace_back("Worker " + std::to_string(i), [&, compiler = compilers[i].get()]()
+	named_thread_group workers("SPU Worker ", Emu.GetMaxThreads(), [&]() -> uint
 	{
+		// Initialize compiler instances for parallel compilation
+		std::unique_ptr<spu_recompiler_base> compiler;
+
+		if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
+		{
+			compiler = spu_recompiler_base::make_asmjit_recompiler();
+		}
+		else if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+		{
+			compiler = spu_recompiler_base::make_llvm_recompiler();
+		}
+
+		compiler->init();
+
+		// How much every thread compiled
+		uint result = 0;
+
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
@@ -497,13 +488,17 @@ void spu_cache::initialize()
 			std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
 
 			g_progr_pdone++;
+
+			result++;
 		}
+
+		return result;
 	});
 
-	// Join all threads
-	while (!thread_queue.empty())
+	// Join (implicitly) and print individual results
+	for (u32 i = 0; i < workers.size(); i++)
 	{
-		thread_queue.pop_front();
+		spu_log.notice("SPU Runtime: Worker %u built %u programs.", i + 1, workers[i]);
 	}
 
 	if (Emu.IsStopped())
@@ -518,7 +513,7 @@ void spu_cache::initialize()
 		return;
 	}
 
-	if (!compilers.empty() && !func_list.empty())
+	if ((g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm) && !func_list.empty())
 	{
 		spu_log.success("SPU Runtime: Built %u functions.", func_list.size());
 	}
