@@ -11,6 +11,7 @@
 
 #include "Emu/Io/usb_device.h"
 #include "Emu/Io/Skylander.h"
+#include "Emu/Io/GHLtar.h"
 
 #include <libusb.h>
 
@@ -139,6 +140,7 @@ usb_handler_thread::usb_handler_thread()
 	ssize_t ndev = libusb_get_device_list(ctx, &list);
 
 	bool found_skylander = false;
+	bool found_ghltar    = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
 	{
@@ -167,7 +169,8 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x1415, 0x0000, 0x0000, "Singstar Microphone");
 		check_device(0x12BA, 0x0100, 0x0100, "Guitar Hero Guitar");
 		check_device(0x12BA, 0x0120, 0x0120, "Guitar Hero Drums");
-		check_device(0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar");
+		found_ghltar = check_device(0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar");
+
 		check_device(0x12BA, 0x0140, 0x0140, "DJ Hero Turntable");
 		check_device(0x12BA, 0x0200, 0x020F, "Harmonix Guitar");
 		check_device(0x12BA, 0x0210, 0x021F, "Harmonix Drums");
@@ -196,6 +199,12 @@ usb_handler_thread::usb_handler_thread()
 	{
 		sys_usbd.notice("Adding emulated skylander");
 		usb_devices.push_back(std::make_shared<usb_device_skylander>());
+	}
+
+	if (!found_ghltar)
+	{
+		sys_usbd.notice("Adding emulated GHLtar");
+		usb_devices.push_back(std::make_shared<usb_device_ghltar>());
 	}
 
 	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
@@ -448,7 +457,7 @@ error_code sys_usbd_initialize(vm::ptr<u32> handle)
 	// Must not occur (lv2 allows multiple handles, cellUsbd does not)
 	verify("sys_usbd Initialized twice" HERE), !usbh->is_init.exchange(true);
 
-	*handle       = 0x115B;
+	*handle = 0x115B;
 
 	// TODO
 	return CELL_OK;
@@ -500,8 +509,8 @@ error_code sys_usbd_get_device_list(u32 handle, vm::ptr<UsbInternalDevice> devic
 
 error_code sys_usbd_register_extra_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max)
 {
-	sys_usbd.warning("sys_usbd_register_extra_ldd(handle=0x%x, s_product=%s, slen_product=0x%x, id_vendor=0x%x, id_product_min=0x%x, id_product_max=0x%x)",
-		handle, s_product, slen_product, id_vendor, id_product_min, id_product_max);
+	sys_usbd.warning("sys_usbd_register_extra_ldd(handle=0x%x, s_product=%s, slen_product=0x%x, id_vendor=0x%x, id_product_min=0x%x, id_product_max=0x%x)", handle, s_product, slen_product, id_vendor,
+	    id_product_min, id_product_max);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
@@ -566,8 +575,7 @@ error_code sys_usbd_unregister_ldd()
 // TODO: determine what the unknown params are
 error_code sys_usbd_open_pipe(u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 unk3, u32 endpoint, u64 unk4)
 {
-	sys_usbd.warning("sys_usbd_open_pipe(handle=0x%x, device_handle=0x%x, unk1=0x%x, unk2=0x%x, unk3=0x%x, endpoint=0x%x, unk4=0x%x)",
-		handle, device_handle, unk1, unk2, unk3, endpoint, unk4);
+	sys_usbd.warning("sys_usbd_open_pipe(handle=0x%x, device_handle=0x%x, unk1=0x%x, unk2=0x%x, unk3=0x%x, endpoint=0x%x, unk4=0x%x)", handle, device_handle, unk1, unk2, unk3, endpoint, unk4);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
