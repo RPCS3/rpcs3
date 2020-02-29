@@ -1052,6 +1052,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	// Get save stats
 	{
+		if (!funcStat)
+		{
+			// ****** sysutil savedata parameter error : 20 ******
+			return {CELL_SAVEDATA_ERROR_PARAM, "20"};
+		}
+
 		fs::stat_t dir_info{};
 		if (!fs::stat(dir_path, dir_info))
 		{
