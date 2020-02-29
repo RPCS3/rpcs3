@@ -338,7 +338,7 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 		}
 
 		m_texture_cache.invalidate_range(*m_current_command_buffer, range, rsx::invalidation_cause::read);
-		image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, info->address, info->width, info->height);
+		image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, info->address, info->width, info->height, info->pitch);
 	}
 
 	return image_to_flip;
