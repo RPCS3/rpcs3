@@ -2152,7 +2152,7 @@ namespace rsx
 		if (g_cfg.video.disable_zcull_queries)
 			return;
 
-		zcull_ctrl->clear(this);
+		zcull_ctrl->clear(this, type);
 	}
 
 	void thread::get_zcull_stats(u32 type, vm::addr_t sink)
@@ -2928,8 +2928,14 @@ namespace rsx
 			m_free_occlusion_pool.push(query);
 		}
 
-		void ZCULL_control::clear(class ::rsx::thread* ptimer)
+		void ZCULL_control::clear(class ::rsx::thread* ptimer, u32 type)
 		{
+			if (type != CELL_GCM_ZPASS_PIXEL_CNT)
+			{
+				// Other types do not generate queries at the moment
+				return;
+			}
+
 			if (!m_pending_writes.empty())
 			{
 				//Remove any dangling/unclaimed queries as the information is lost anyway
