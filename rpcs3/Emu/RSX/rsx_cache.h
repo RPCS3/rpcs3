@@ -3,6 +3,7 @@
 #include "Utilities/hash.h"
 #include "Utilities/File.h"
 #include "Utilities/lockless.h"
+#include "Utilities/Thread.h"
 #include "Emu/Memory/vm.h"
 #include "gcm_enums.h"
 #include "Common/ProgramStateCache.h"
@@ -512,13 +513,10 @@ namespace rsx
 			}
 			else
 			{
-				std::vector<std::thread> worker_threads(nb_workers);
-
-				// Start workers
-				for (u32 i = 0; i < nb_workers; i++)
+				named_thread_group workers("RSX Worker ", nb_workers, [&]()
 				{
-					worker_threads[i] = std::thread(worker, entry_count);
-				}
+					worker(entry_count);
+				});
 
 				u32 current_progress = 0;
 				u32 last_update_progress = 0;
@@ -535,11 +533,6 @@ namespace rsx
 						dlg->update_msg(step, get_message(step, current_progress, entry_count));
 						dlg->inc_value(step, processed_since_last_update);
 					}
-				}
-
-				for (std::thread& worker_thread : worker_threads)
-				{
-					worker_thread.join();
 				}
 			}
 		}
