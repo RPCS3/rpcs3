@@ -1,5 +1,5 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include <stb_truetype.h>
@@ -18,7 +18,7 @@ s32 cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> co
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	}
 
-	if (config->flags != 0)
+	if (config->flags != 0u)
 	{
 		cellFont.error("cellFontInitializeWithRevision: Unknown flags (0x%x)", config->flags);
 	}
@@ -545,7 +545,7 @@ s32 cellFontExtend(u32 a1, u32 a2, u32 a3)
 		{
 			//Something happens
 		}
-		if (vm::read32(a3) == 0)
+		if (vm::read32(a3) == 0u)
 		{
 			//Something happens
 		}

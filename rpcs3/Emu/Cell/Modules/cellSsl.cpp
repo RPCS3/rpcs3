@@ -112,7 +112,7 @@ error_code cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm
 	if (required)
 	{
 		*required = 0;
-		for (int i = 1; i <= flagBits.size(); i++)
+		for (uint i = 1; i <= flagBits.size(); i++)
 		{
 			if (!flagBits[i-1])
 				continue;
@@ -123,7 +123,7 @@ error_code cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm
 	else
 	{
 		std::string final;
-		for (int i = 1; i <= flagBits.size(); i++)
+		for (uint i = 1; i <= flagBits.size(); i++)
 		{
 			if (!flagBits[i-1])
 				continue;

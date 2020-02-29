@@ -19,4 +19,26 @@ struct CellGcmOffsetTable
 	vm::bptr<u16> eaAddress;
 };
 
+struct gcm_config
+{
+	u32 zculls_addr;
+	vm::ptr<CellGcmDisplayInfo> gcm_buffers = vm::null;
+	u32 tiles_addr;
+	u32 ctxt_addr;
+
+	CellGcmConfig current_config;
+	CellGcmContextData current_context;
+	gcmInfo gcm_info;
+
+	CellGcmOffsetTable offsetTable{};
+	u16 IoMapTable[0xC00]{};
+	shared_mutex gcmio_mutex;
+
+	u64 system_mode = 0;
+	u32 local_size = 0;
+	u32 local_addr = 0;
+
+	atomic_t<u32> reserved_size = 0;
+};
+
 void InitOffsetTable();

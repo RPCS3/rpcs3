@@ -1,9 +1,13 @@
-#include "debugger_list.h"
+﻿#include "debugger_list.h"
+#include "gui_settings.h"
+#include "breakpoint_handler.h"
 
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/CPU/CPUDisAsm.h"
+#include "Emu/CPU/CPUThread.h"
 #include "Emu/System.h"
 
-#include <QApplication>
 #include <QMouseEvent>
 #include <QWheelEvent>
 
@@ -11,8 +15,10 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> settings, breakpoint_handler* handler) : QListWidget(parent), m_breakpoint_handler(handler),
-	xgui_settings(settings), m_pc(0), m_item_count(30)
+debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> settings, breakpoint_handler* handler)
+	: QListWidget(parent)
+	, xgui_settings(settings)
+	, m_breakpoint_handler(handler)
 {
 	setWindowTitle(tr("ASM"));
 	for (uint i = 0; i < m_item_count; ++i)

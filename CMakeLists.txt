@@ -1,14 +1,14 @@
-cmake_minimum_required(VERSION 3.8.2)
+cmake_minimum_required(VERSION 3.14.1)
 
 project(rpcs3)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8)
-		message(FATAL_ERROR "RPCS3 requires at least gcc-8.")
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
+		message(FATAL_ERROR "RPCS3 requires at least gcc-9.")
 	endif()
 elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
-		message(FATAL_ERROR "RPCS3 requires at least clang-5.0.")
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+		message(FATAL_ERROR "RPCS3 requires at least clang-9.0.")
 	endif()
 endif()
 
@@ -22,10 +22,11 @@ option(USE_LIBEVDEV "libevdev-based joystick support" ON)
 option(USE_DISCORD_RPC "Discord rich presence integration" ON)
 option(USE_SYSTEM_ZLIB "Prefer system ZLIB instead of the builtin one" ON)
 option(USE_VULKAN "Vulkan render backend" ON)
+option(USE_COTIRE "Use precompiled headers" ON)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/rpcs3/cmake_modules")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 include(CheckCXXCompilerFlag)
 
 if (NOT CMAKE_BUILD_TYPE)

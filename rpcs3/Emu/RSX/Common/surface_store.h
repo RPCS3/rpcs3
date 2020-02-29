@@ -7,15 +7,6 @@
 #include "Utilities/span.h"
 #include <list>
 
-namespace
-{
-	template <typename T>
-	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
-	{
-		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
-	}
-}
-
 namespace rsx
 {
 	namespace utility
@@ -87,33 +78,62 @@ namespace rsx
 				deferred_clipped_region<surface_type>& region,
 				std::unordered_map<u32, surface_storage_type>& data)
 			{
-				verify(HERE), prev_surface;
-				if (prev_surface->read_barrier(cmd); !prev_surface->test())
-				{
-					return;
-				}
-
 				surface_storage_type sink;
+				surface_type invalidated = 0;
 				if (const auto found = data.find(new_address);
 					found != data.end())
 				{
 					if (Traits::is_compatible_surface(Traits::get(found->second), region.source, region.width, region.height, 1))
 					{
+						if (found->second->last_use_tag >= prev_surface->last_use_tag)
+						{
+							// If memory in this block is newer, do not overwrite with stale data
+							return;
+						}
+
 						// There is no need to erase due to the reinsertion below
 						sink = std::move(found->second);
 					}
 					else
 					{
-						// TODO: Merge the 2 regions
 						invalidated_resources.push_back(std::move(found->second));
 						data.erase(new_address);
 
 						auto &old = invalidated_resources.back();
 						Traits::notify_surface_invalidated(old);
+
+						if (Traits::surface_is_pitch_compatible(old, prev_surface->get_rsx_pitch()))
+						{
+							if (old->last_use_tag >= prev_surface->last_use_tag) [[unlikely]]
+							{
+								invalidated = Traits::get(old);
+							}
+						}
 					}
 				}
 
 				Traits::clone_surface(cmd, sink, region.source, new_address, region);
+
+				if (invalidated) [[unlikely]]
+				{
+					// Halfplement the merge by crude inheritance. Should recursively split the memory blocks instead.
+					if (sink->old_contents.empty()) [[likely]]
+					{
+						sink->set_old_contents(invalidated);
+					}
+					else
+					{
+						const auto existing = sink->get_normalized_memory_area();
+						const auto incoming = invalidated->get_normalized_memory_area();
+
+						deferred_clipped_region<surface_type> region{};
+						region.source = invalidated;
+						region.target = Traits::get(sink);
+						region.width = std::min(existing.x2, incoming.x2);
+						region.height = std::min(existing.y2, incoming.y2);
+						sink->set_old_contents_region(region, true);
+					}
+				}
 
 				verify(HERE), region.target == Traits::get(sink);
 				orphaned_surfaces.push_back(region.target);
@@ -130,6 +150,19 @@ namespace rsx
 
 			_new.width = width * bpp * get_aa_factor_u(aa);
 			_new.height = height * get_aa_factor_v(aa);
+
+			if (old.width <= _new.width && old.height <= _new.height)
+			{
+				// No extra memory to be preserved
+				return;
+			}
+
+			// One-time data validity test
+			verify(HERE), prev_surface;
+			if (prev_surface->read_barrier(cmd); !prev_surface->test())
+			{
+				return;
+			}
 
 			if (old.width > _new.width)
 			{
@@ -289,7 +322,7 @@ namespace rsx
 				auto this_address = e.first;
 				auto surface = e.second;
 
-				if (UNLIKELY(surface->old_contents.size() == 1))
+				if (surface->old_contents.size() == 1) [[unlikely]]
 				{
 					// Dirty zombies are possible with unused pixel storage subslices and are valid
 					// Avoid double transfer if possible
@@ -362,7 +395,7 @@ namespace rsx
 					auto &object = storage[e.first];
 
 					verify(HERE), !src_offset.x, !src_offset.y, object;
-					if (UNLIKELY(!surface->old_contents.empty()))
+					if (!surface->old_contents.empty()) [[unlikely]]
 					{
 						surface->read_barrier(cmd);
 					}
@@ -618,7 +651,7 @@ namespace rsx
 			}
 
 			const auto rtt_indices = utility::get_rtt_indexes(set_surface_target);
-			if (LIKELY(!rtt_indices.empty()))
+			if (!rtt_indices.empty()) [[likely]]
 			{
 				m_bound_render_targets_config = { rtt_indices.front(), 0 };
 
@@ -647,7 +680,7 @@ namespace rsx
 				Traits::prepare_surface_for_sampling(command_list, std::get<1>(m_bound_depth_stencil));
 			}
 
-			if (LIKELY(address_z))
+			if (address_z) [[likely]]
 			{
 				m_bound_depth_stencil = std::make_pair(address_z,
 					bind_address_as_depth_stencil(command_list, address_z, depth_format, antialias,
@@ -704,7 +737,7 @@ namespace rsx
 		{
 			if (address_is_bound(addr))
 			{
-				LOG_ERROR(RSX, "Cannot invalidate a currently bound render target!");
+				rsx_log.error("Cannot invalidate a currently bound render target!");
 				return;
 			}
 
@@ -758,9 +791,9 @@ namespace rsx
 			const auto surface_internal_pitch = (required_width * required_bpp);
 
 			// Sanity check
-			if (UNLIKELY(surface_internal_pitch > required_pitch))
+			if (surface_internal_pitch > required_pitch) [[unlikely]]
 			{
-				LOG_WARNING(RSX, "Invalid 2D region descriptor. w=%d, h=%d, bpp=%d, pitch=%d",
+				rsx_log.warning("Invalid 2D region descriptor. w=%d, h=%d, bpp=%d, pitch=%d",
 							required_width, required_height, required_bpp, required_pitch);
 				return {};
 			}
@@ -791,13 +824,13 @@ namespace rsx
 					const u32 normalized_surface_width = surface->get_surface_width(rsx::surface_metrics::bytes) / required_bpp;
 					const u32 normalized_surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
 
-					if (LIKELY(range.start >= texaddr))
+					if (range.start >= texaddr) [[likely]]
 					{
 						const auto offset = range.start - texaddr;
 						info.dst_area.y = (offset / required_pitch);
 						info.dst_area.x = (offset % required_pitch) / required_bpp;
 
-						if (UNLIKELY(info.dst_area.x >= required_width || info.dst_area.y >= required_height))
+						if (info.dst_area.x >= required_width || info.dst_area.y >= required_height) [[unlikely]]
 						{
 							// Out of bounds
 							continue;
@@ -815,7 +848,7 @@ namespace rsx
 						info.src_area.y = (offset / pitch);
 						info.src_area.x = (offset % pitch) / required_bpp;
 
-						if (UNLIKELY(info.src_area.x >= normalized_surface_width || info.src_area.y >= normalized_surface_height))
+						if (info.src_area.x >= normalized_surface_width || info.src_area.y >= normalized_surface_height) [[unlikely]]
 						{
 							// Region lies outside the actual texture area, but inside the 'tile'
 							// In this case, a small region lies to the top-left corner, partially occupying the  target
@@ -839,7 +872,7 @@ namespace rsx
 					info.src_area.height = info.dst_area.height = height;
 					info.dst_area.width = width;
 
-					if (auto surface_bpp = surface->get_bpp(); UNLIKELY(surface_bpp != required_bpp))
+					if (auto surface_bpp = surface->get_bpp(); surface_bpp != required_bpp) [[unlikely]]
 					{
 						// Width is calculated in the coordinate-space of the requester; normalize
 						info.src_area.x = (info.src_area.x * required_bpp) / surface_bpp;
@@ -856,12 +889,14 @@ namespace rsx
 
 			// Range test helper to quickly discard blocks
 			// Fortunately, render targets tend to be clustered anyway
-			if (test_range.overlaps(m_render_targets_memory_range))
+			if (m_render_targets_memory_range.valid() &&
+				test_range.overlaps(m_render_targets_memory_range))
 			{
 				process_list_function(m_render_targets_storage, false);
 			}
 
-			if (test_range.overlaps(m_depth_stencil_memory_range))
+			if (m_depth_stencil_memory_range.valid() &&
+				test_range.overlaps(m_depth_stencil_memory_range))
 			{
 				process_list_function(m_depth_stencil_storage, true);
 			}

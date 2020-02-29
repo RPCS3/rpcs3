@@ -2841,4 +2841,8 @@ struct fmt_unveil<llvm::TypeSize, void>
 	}
 };
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+
 #endif

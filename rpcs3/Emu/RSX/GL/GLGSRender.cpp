@@ -1,9 +1,8 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
-#include "Emu/System.h"
 #include "GLGSRender.h"
 #include "GLCompute.h"
 #include "GLVertexProgram.h"
+#include "../Overlays/overlay_shader_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
@@ -85,17 +84,17 @@ namespace
 		{
 			// Note : maybe add is signed on gl
 		case rsx::blend_equation::add_signed:
-			LOG_TRACE(RSX, "blend equation add_signed used. Emulating using FUNC_ADD");
+			rsx_log.trace("blend equation add_signed used. Emulating using FUNC_ADD");
 		case rsx::blend_equation::add: return GL_FUNC_ADD;
 		case rsx::blend_equation::min: return GL_MIN;
 		case rsx::blend_equation::max: return GL_MAX;
 		case rsx::blend_equation::substract: return GL_FUNC_SUBTRACT;
 		case rsx::blend_equation::reverse_substract_signed:
-			LOG_TRACE(RSX, "blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
+			rsx_log.trace("blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
 		case rsx::blend_equation::reverse_substract: return GL_FUNC_REVERSE_SUBTRACT;
 		case rsx::blend_equation::reverse_add_signed:
 		default:
-			LOG_ERROR(RSX, "Blend equation 0x%X is unimplemented!", static_cast<u32>(op));
+			rsx_log.error("Blend equation 0x%X is unimplemented!", static_cast<u32>(op));
 			return GL_FUNC_ADD;
 		}
 	}
@@ -328,13 +327,13 @@ void GLGSRender::end()
 			if (rsx::method_registers.fragment_textures[i].enabled() &&
 				sampler_state->validate())
 			{
-				if (view = sampler_state->image_handle; UNLIKELY(!view))
+				if (view = sampler_state->image_handle; !view) [[unlikely]]
 				{
 					view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
 				}
 			}
 
-			if (LIKELY(view))
+			if (view) [[likely]]
 			{
 				view->bind();
 
@@ -371,7 +370,7 @@ void GLGSRender::end()
 			if (rsx::method_registers.vertex_textures[i].enabled() &&
 				sampler_state->validate())
 			{
-				if (LIKELY(sampler_state->image_handle))
+				if (sampler_state->image_handle) [[likely]]
 				{
 					sampler_state->image_handle->bind();
 				}
@@ -498,7 +497,7 @@ void GLGSRender::end()
 				for (auto &info : m_vertex_layout.interleaved_blocks)
 				{
 					const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
-					info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location);
+					info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location, HERE);
 				}
 			}
 		}
@@ -690,9 +689,9 @@ void GLGSRender::on_init_thread()
 	if (g_cfg.video.debug_output)
 		gl::enable_debugging();
 
-	LOG_NOTICE(RSX, "GL RENDERER: %s (%s)", reinterpret_cast<const char*>(glGetString(GL_RENDERER)), reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
-	LOG_NOTICE(RSX, "GL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
-	LOG_NOTICE(RSX, "GLSL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)));
+	rsx_log.notice("GL RENDERER: %s (%s)", reinterpret_cast<const char*>(glGetString(GL_RENDERER)), reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
+	rsx_log.notice("GL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+	rsx_log.notice("GLSL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)));
 
 	auto& gl_caps = gl::get_driver_caps();
 
@@ -708,12 +707,12 @@ void GLGSRender::on_init_thread()
 
 	if (!gl_caps.ARB_depth_buffer_float_supported && g_cfg.video.force_high_precision_z_buffer)
 	{
-		LOG_WARNING(RSX, "High precision Z buffer requested but your GPU does not support GL_ARB_depth_buffer_float. Option ignored.");
+		rsx_log.warning("High precision Z buffer requested but your GPU does not support GL_ARB_depth_buffer_float. Option ignored.");
 	}
 
 	if (!gl_caps.ARB_texture_barrier_supported && !gl_caps.NV_texture_barrier_supported && !g_cfg.video.strict_rendering_mode)
 	{
-		LOG_WARNING(RSX, "Texture barriers are not supported by your GPU. Feedback loops will have undefined results.");
+		rsx_log.warning("Texture barriers are not supported by your GPU. Feedback loops will have undefined results.");
 	}
 
 	//Use industry standard resource alignment values as defaults
@@ -731,10 +730,10 @@ void GLGSRender::on_init_thread()
 	m_min_texbuffer_alignment = std::max(m_min_texbuffer_alignment, 16);
 	m_uniform_buffer_offset_align = std::max(m_uniform_buffer_offset_align, 16);
 
-	LOG_NOTICE(RSX, "Supported texel buffer size reported: %d bytes", m_max_texbuffer_size);
+	rsx_log.notice("Supported texel buffer size reported: %d bytes", m_max_texbuffer_size);
 	if (m_max_texbuffer_size < (16 * 0x100000))
 	{
-		LOG_ERROR(RSX, "Max texture buffer size supported is less than 16M which is useless. Expect undefined behaviour.");
+		rsx_log.error("Max texture buffer size supported is less than 16M which is useless. Expect undefined behaviour.");
 		m_max_texbuffer_size = (16 * 0x100000);
 	}
 
@@ -780,14 +779,14 @@ void GLGSRender::on_init_thread()
 
 	if (!gl_caps.ARB_buffer_storage_supported)
 	{
-		LOG_WARNING(RSX, "Forcing use of legacy OpenGL buffers because ARB_buffer_storage is not supported");
+		rsx_log.warning("Forcing use of legacy OpenGL buffers because ARB_buffer_storage is not supported");
 		// TODO: do not modify config options
 		g_cfg.video.gl_legacy_buffers.from_string("true");
 	}
 
 	if (g_cfg.video.gl_legacy_buffers)
 	{
-		LOG_WARNING(RSX, "Using legacy openGL buffers.");
+		rsx_log.warning("Using legacy openGL buffers.");
 		manually_flush_ring_buffers = true;
 
 		m_attrib_ring_buffer = std::make_unique<gl::legacy_ring_buffer>();
@@ -1607,10 +1606,13 @@ bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 
 void GLGSRender::notify_tile_unbound(u32 tile)
 {
-	//TODO: Handle texture writeback
-	//u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
-	//on_notify_memory_unmapped(addr, tiles[tile].size);
-	//m_rtts.invalidate_surface_address(addr, false);
+	// TODO: Handle texture writeback
+	if (false)
+	{
+		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location, HERE);
+		on_notify_memory_unmapped(addr, tiles[tile].size);
+		m_rtts.invalidate_surface_address(addr, false);
+	}
 
 	{
 		std::lock_guard lock(m_sampler_mutex);

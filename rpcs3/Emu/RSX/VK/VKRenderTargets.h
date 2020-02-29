@@ -56,7 +56,7 @@ namespace vk
 			// NOTE: This surface can only be in the ATTACHMENT_OPTIMAL layout
 			// The resolve surface can be in any type of access, but we have to assume it is likely in read-only mode like shader read-only
 
-			if (LIKELY(!is_depth_surface()))
+			if (!is_depth_surface()) [[likely]]
 			{
 				verify(HERE), current_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
@@ -91,7 +91,7 @@ namespace vk
 
 			vk::resolve_image(cmd, resolve_surface.get(), this);
 
-			if (LIKELY(!is_depth_surface()))
+			if (!is_depth_surface()) [[likely]]
 			{
 				vk::insert_image_memory_barrier(
 					cmd, this->value,
@@ -129,7 +129,7 @@ namespace vk
 			verify(HERE), !(msaa_flags & rsx::surface_state_flags::require_resolve);
 			VkImageSubresourceRange range = { aspect(), 0, 1, 0, 1 };
 
-			if (LIKELY(!is_depth_surface()))
+			if (!is_depth_surface()) [[likely]]
 			{
 				verify(HERE), current_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
@@ -164,7 +164,7 @@ namespace vk
 
 			vk::unresolve_image(cmd, this, resolve_surface.get());
 
-			if (LIKELY(!is_depth_surface()))
+			if (!is_depth_surface()) [[likely]]
 			{
 				vk::insert_image_memory_barrier(
 					cmd, this->value,
@@ -247,7 +247,7 @@ namespace vk
 			subres.depth = 1;
 			subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<gsl::span<const std::byte>::index_type>(rsx_pitch * surface_height * samples_y) };
 
-			if (LIKELY(g_cfg.video.resolution_scale_percent == 100 && samples() == 1))
+			if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 			{
 				push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 				vk::copy_mipmaped_image_using_buffer(cmd, this, { subres }, gcm_format, false, 1, aspect(), upload_heap, rsx_pitch);
@@ -258,10 +258,15 @@ namespace vk
 				vk::image* content = nullptr;
 				vk::image* final_dst = (samples() > 1) ? get_resolve_target_safe(cmd) : this;
 
-				if (LIKELY(g_cfg.video.resolution_scale_percent == 100))
+				// Prepare dst image
+				final_dst->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+				if (final_dst->width() == subres.width_in_block && final_dst->height() == subres.height_in_block)
 				{
-					verify(HERE), samples() > 1;
-					content = get_resolve_target_safe(cmd);
+					// Possible if MSAA is enabled with 100% resolution scale or
+					// surface dimensions are less than resolution scale threshold and no MSAA.
+					// Writethrough.
+					content = final_dst;
 				}
 				else
 				{
@@ -275,11 +280,16 @@ namespace vk
 				// Write into final image
 				if (content != final_dst)
 				{
+					// Avoid layout push/pop on scratch memory by setting explicit layout here
+					content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
 					vk::copy_scaled_image(cmd, content->value, final_dst->value, content->current_layout, final_dst->current_layout,
 						{ 0, 0, subres.width_in_block, subres.height_in_block }, { 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
 						1, aspect(), true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST,
 						format(), format());
 				}
+
+				final_dst->pop_layout(cmd);
 
 				if (samples() > 1)
 				{
@@ -356,7 +366,7 @@ namespace vk
 				return vk::viewable_image::get_view(VK_REMAP_IDENTITY, remap, mask);
 			}
 
-			if (LIKELY(!resolve_surface))
+			if (!resolve_surface) [[likely]]
 			{
 				return vk::viewable_image::get_view(remap_encoding, remap, mask);
 			}
@@ -384,7 +394,7 @@ namespace vk
 				}
 			}
 
-			if (LIKELY(old_contents.empty()))
+			if (old_contents.empty()) [[likely]]
 			{
 				if (state_flags & rsx::surface_state_flags::erase_bkgnd)
 				{
@@ -433,7 +443,7 @@ namespace vk
 				auto src_texture = static_cast<vk::render_target*>(section.source);
 				src_texture->read_barrier(cmd);
 
-				if (LIKELY(src_texture->test()))
+				if (src_texture->test()) [[likely]]
 				{
 					any_valid_writes = true;
 				}
@@ -445,7 +455,7 @@ namespace vk
 				const auto src_bpp = src_texture->get_bpp();
 				rsx::typeless_xfer typeless_info{};
 
-				if (LIKELY(src_texture->info.format == info.format))
+				if (src_texture->info.format == info.format) [[likely]]
 				{
 					verify(HERE), src_bpp == dst_bpp;
 				}
@@ -507,9 +517,9 @@ namespace vk
 				newest_tag = src_texture->last_use_tag;
 			}
 
-			if (UNLIKELY(!any_valid_writes))
+			if (!any_valid_writes) [[unlikely]]
 			{
-				LOG_WARNING(RSX, "Surface at 0x%x inherited stale references", base_addr);
+				rsx_log.warning("Surface at 0x%x inherited stale references", base_addr);
 
 				clear_rw_barrier();
 				shuffle_tag();
@@ -578,7 +588,7 @@ namespace rsx
 			}
 
 			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-			if (LIKELY(samples == 1))
+			if (samples == 1) [[likely]]
 			{
 				usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			}
@@ -640,7 +650,7 @@ namespace rsx
 				sample_layout = surface_sample_layout::null;
 			}
 
-			if (LIKELY(samples == 1))
+			if (samples == 1) [[likely]]
 			{
 				usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			}

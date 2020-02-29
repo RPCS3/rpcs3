@@ -1,5 +1,4 @@
-#include "stdafx.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -83,7 +82,7 @@ s32 cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostCtrlPara
 		return CELL_VPOST_ERROR_E_ARG_HDL_INVALID;
 	}
 
-	s32 w = ctrlParam->inWidth;
+	u32 w = ctrlParam->inWidth;
 	u32 h = ctrlParam->inHeight;
 	u32 ow = ctrlParam->outWidth;
 	u32 oh = ctrlParam->outHeight;
@@ -138,9 +137,10 @@ s32 cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostCtrlPara
 	//u64 stamp2 = get_guest_system_time();
 
 	const u8* in_data[4] = { &inPicBuff[0], &inPicBuff[w * h], &inPicBuff[w * h * 5 / 4], pA.get() };
-	int in_line[4] = { w, w/2, w/2, w };
+	int ws = w;
+	int in_line[4] = { ws, ws/2, ws/2, ws };
 	u8* out_data[4] = { outPicBuff.get_ptr(), NULL, NULL, NULL };
-	int out_line[4] = { static_cast<int>(ow*4), 0, 0, 0 };
+	int out_line[4] = { static_cast<int>(ow * 4), 0, 0, 0 };
 
 	sws_scale(vpost->sws, in_data, in_line, 0, h, out_data, out_line);
 

@@ -2,25 +2,17 @@
 
 #include "stdafx.h"
 
-#include "Emu/Memory/vm.h"
-#include "Emu/System.h"
-#include "Emu/RSX/GSRender.h"
-
-#include "memory_viewer_panel.h"
-#include "table_item_delegate.h"
-#include "gui_settings.h"
-
+#include <QDialog>
+#include <QGroupBox>
+#include <QImage>
 #include <QLabel>
 #include <QLineEdit>
-#include <QHBoxLayout>
 #include <QEvent>
-#include <QTabWidget>
 #include <QListWidget>
 #include <QTableWidget>
-#include <QHeaderView>
-#include <QFont>
-#include <QSignalMapper>
-#include <QPixmap>
+#include <QTabWidget>
+
+class gui_settings;
 
 class Buffer : public QGroupBox
 {
@@ -45,7 +37,7 @@ class rsx_debugger : public QDialog
 {
 	Q_OBJECT
 
-	u32 m_addr;
+	u32 m_addr = 0;
 
 	QLineEdit* m_addr_line;
 
@@ -66,12 +58,12 @@ class rsx_debugger : public QDialog
 	QLabel* m_text_transform_program;
 	QLabel* m_text_shader_program;
 
-	uint m_cur_texture;
+	uint m_cur_texture = 0;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 public:
-	bool exit;
+	bool exit = false;
 	rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = 0);
 	~rsx_debugger();
 

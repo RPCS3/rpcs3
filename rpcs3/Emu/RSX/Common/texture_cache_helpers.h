@@ -118,13 +118,13 @@ namespace rsx
 				return CELL_GCM_TEXTURE_DEPTH16;
 			}
 
-			LOG_ERROR(RSX, "Unsupported depth conversion (0x%X)", gcm_format);
+			rsx_log.error("Unsupported depth conversion (0x%X)", gcm_format);
 			return gcm_format;
 		}
 
 		static inline u32 get_sized_blit_format(bool _32_bit, bool depth_format)
 		{
-			if (LIKELY(_32_bit))
+			if (_32_bit) [[likely]]
 			{
 				return (!depth_format) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_DEPTH24_D8;
 			}
@@ -304,7 +304,7 @@ namespace rsx
 
 				const u16 dst_w = static_cast<u16>(std::get<2>(clipped).width);
 				const u16 src_w = static_cast<u16>(dst_w * attr.bpp) / section_bpp;
-				const u16 height = static_cast<u16>(std::get<2>(clipped).height);
+				const u16 height = static_cast<u16>(dst_h);
 
 				if (scaling)
 				{
@@ -314,10 +314,10 @@ namespace rsx
 						section->get_raw_texture(),
 						surface_transform::identity,
 						0,
-						static_cast<u16>(std::get<0>(clipped).x),
-						static_cast<u16>(std::get<0>(clipped).y),
-						rsx::apply_resolution_scale(static_cast<u16>(std::get<1>(clipped).x), true),
-						rsx::apply_resolution_scale(static_cast<u16>(std::get<1>(clipped).y), true),
+						static_cast<u16>(std::get<0>(clipped).x),                                     // src.x
+						static_cast<u16>(std::get<0>(clipped).y),                                     // src.y
+						rsx::apply_resolution_scale(static_cast<u16>(std::get<1>(clipped).x), true),  // dst.x
+						rsx::apply_resolution_scale(static_cast<u16>(dst_y - slice_begin), true),     // dst.y
 						slice,
 						src_w,
 						height,
@@ -332,10 +332,10 @@ namespace rsx
 						section->get_raw_texture(),
 						surface_transform::identity,
 						0,
-						static_cast<u16>(std::get<0>(clipped).x),
-						static_cast<u16>(std::get<0>(clipped).y),
-						static_cast<u16>(std::get<1>(clipped).x),
-						static_cast<u16>(std::get<1>(clipped).y),
+						static_cast<u16>(std::get<0>(clipped).x),   // src.x
+						static_cast<u16>(std::get<0>(clipped).y),   // src.y
+						static_cast<u16>(std::get<1>(clipped).x),   // dst.x
+						static_cast<u16>(dst_y - slice_begin),      // dst.y
 						0,
 						src_w,
 						height,
@@ -357,7 +357,7 @@ namespace rsx
 			{
 				auto num_surface = out.size();
 
-				if (LIKELY(local.empty()))
+				if (local.empty()) [[likely]]
 				{
 					for (auto& section : fbos)
 					{
@@ -398,11 +398,11 @@ namespace rsx
 				if (found_slices > 0)
 				{
 					//TODO: Gather remaining sides from the texture cache or upload from cpu (too slow?)
-					LOG_ERROR(RSX, "Could not gather all required slices for cubemap/3d generation");
+					rsx_log.error("Could not gather all required slices for cubemap/3d generation");
 				}
 				else
 				{
-					LOG_WARNING(RSX, "Could not gather textures into an atlas; using CPU fallback...");
+					rsx_log.warning("Could not gather textures into an atlas; using CPU fallback...");
 				}
 			}
 		}
@@ -470,8 +470,8 @@ namespace rsx
 				verify(HERE), is_gcm_depth_format(attr2.gcm_format) == is_depth;
 			}
 
-			if (LIKELY(extended_dimension == rsx::texture_dimension_extended::texture_dimension_2d ||
-				extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d))
+			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_2d ||
+				extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d) [[likely]]
 			{
 				if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
 				{

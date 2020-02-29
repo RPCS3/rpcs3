@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "sys_lwcond.h"
 
-#include "Emu/System.h"
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
@@ -88,7 +87,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> int
 	{
-		if (ppu_thread_id != -1 && !idm::check_unlocked<named_thread<ppu_thread>>(ppu_thread_id))
+		if (ppu_thread_id != umax && !idm::check_unlocked<named_thread<ppu_thread>>(ppu_thread_id))
 		{
 			return -1;
 		}
@@ -111,7 +110,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 			cpu_thread* result = nullptr;
 
-			if (ppu_thread_id != -1)
+			if (ppu_thread_id != umax)
 			{
 				for (auto cpu : cond.sq)
 				{
@@ -162,7 +161,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 	if (!cond.ret)
 	{
-		if (ppu_thread_id == -1)
+		if (ppu_thread_id == umax)
 		{
 			if (mode == 3)
 			{

@@ -1,26 +1,26 @@
 ﻿#include "save_manager_dialog.h"
 
-#include "save_data_info_dialog.h"
 #include "custom_table_widget_item.h"
 #include "qt_utils.h"
+#include "gui_settings.h"
 
 #include "Emu/System.h"
-#include "Emu/VFS.h"
+#include "Emu/Memory/vm.h"
 #include "Loader/PSF.h"
 
 #include <QtConcurrent>
 #include <QDateTime>
-#include <QIcon>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QMenu>
 #include <QMessageBox>
-#include <QDesktopWidget>
-#include <QApplication>
+#include <QGuiApplication>
 #include <QUrl>
 #include <QDesktopServices>
 #include <QPainter>
 #include <QScreen>
+
+LOG_CHANNEL(gui_log, "GUI");
 
 namespace
 {
@@ -55,7 +55,7 @@ namespace
 
 			if (psf.empty())
 			{
-				LOG_ERROR(LOADER, "Failed to load savedata: %s", base_dir + "/" + entry.name);
+				gui_log.error("Failed to load savedata: %s", base_dir + "/" + entry.name);
 				continue;
 			}
 
@@ -92,7 +92,9 @@ namespace
 }
 
 save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::string dir, QWidget* parent)
-	: QDialog(parent), m_save_entries(), m_dir(dir), m_sort_column(1), m_sort_ascending(true), m_gui_settings(gui_settings)
+	: QDialog(parent)
+	, m_dir(dir)
+	, m_gui_settings(gui_settings)
 {
 	setWindowTitle(tr("Save Manager"));
 	setMinimumSize(QSize(400, 400));
@@ -188,7 +190,7 @@ void save_manager_dialog::Init(std::string dir)
 	// Connects and events
 	connect(push_close, &QAbstractButton::clicked, this, &save_manager_dialog::close);
 	connect(m_button_delete, &QAbstractButton::clicked, this, &save_manager_dialog::OnEntriesRemove);
-	connect(m_button_folder, &QAbstractButton::clicked, [=]()
+	connect(m_button_folder, &QAbstractButton::clicked, [this]()
 	{
 		const int idx = m_list->currentRow();
 		QTableWidgetItem* item = m_list->item(idx, 1);
@@ -254,7 +256,7 @@ void save_manager_dialog::UpdateList()
 		QPixmap icon = QPixmap(320, 176);
 		if (!icon.loadFromData(entry.iconBuf.data(), static_cast<uint>(entry.iconBuf.size())))
 		{
-			LOG_WARNING(GENERAL, "Loading icon for save %s failed", entry.dirName);
+			gui_log.warning("Loading icon for save %s failed", entry.dirName);
 			icon = QPixmap(320, 176);
 			icon.fill(m_icon_color);
 		}
@@ -342,6 +344,7 @@ QPixmap save_manager_dialog::GetResizedIcon(int i)
 	icon.fill(m_icon_color);
 
 	QPainter painter(&icon);
+	painter.setRenderHint(QPainter::SmoothPixmapTransform);
 	painter.drawPixmap(0, 0, data);
 	return icon.scaled(width, height, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }
@@ -465,7 +468,7 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 
 	// Events
 	connect(removeAct, &QAction::triggered, this, &save_manager_dialog::OnEntriesRemove); // entriesremove handles case of one as well
-	connect(showDirAct, &QAction::triggered, [=]()
+	connect(showDirAct, &QAction::triggered, [=, this]()
 	{
 		QTableWidgetItem* item = m_list->item(idx, 1);
 		if (!item)

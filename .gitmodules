@@ -9,7 +9,6 @@
 [submodule "llvm"]
 	path = llvm
 	url = https://github.com/RPCS3/llvm
-	branch = release_60
 	ignore = dirty
 [submodule "Vulkan/glslang"]
 	path = Vulkan/glslang
@@ -46,7 +45,7 @@
 	ignore = dirty
 [submodule "3rdparty/libusb"]
 	path = 3rdparty/libusb
-	url = https://github.com/RPCS3/libusb.git
+	url = https://github.com/libusb/libusb.git
 	ignore = dirty
 [submodule "3rdparty/FAudio"]
 	path = 3rdparty/FAudio
@@ -55,3 +54,4 @@
 [submodule "3rdparty/span"]
 	path = 3rdparty/span
 	url = https://github.com/tcbrindle/span
+	ignore = dirty

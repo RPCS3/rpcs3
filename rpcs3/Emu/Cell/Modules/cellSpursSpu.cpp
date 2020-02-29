@@ -1,6 +1,5 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Loader/ELF.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/SPUThread.h"
@@ -13,11 +12,7 @@
 #include <thread>
 #include <mutex>
 
-//----------------------------------------------------------------------------
-// Externs
-//----------------------------------------------------------------------------
-
-extern logs::channel cellSpurs;
+LOG_CHANNEL(cellSpurs);
 
 //----------------------------------------------------------------------------
 // Function prototypes
@@ -267,7 +262,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 		// Calculate the contention (number of SPUs used) for each workload
 		u8 contention[CELL_SPURS_MAX_WORKLOAD];
 		u8 pendingContention[CELL_SPURS_MAX_WORKLOAD];
-		for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+		for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 		{
 			contention[i] = spurs->wklCurrentContention[i] - ctxt->wklLocContention[i];
 
@@ -301,11 +296,11 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 		{
 			// Caclulate the scheduling weight for each workload
 			u16 maxWeight = 0;
-			for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 			{
 				u16 runnable = ctxt->wklRunnable1 & (0x8000 >> i);
 				u16 wklSignal = spurs->wklSignal1.load() & (0x8000 >> i);
-				u8  wklFlag = spurs->wklFlag.flag.load() == 0 ? spurs->wklFlagReceiver == i ? 1 : 0 : 0;
+				u8  wklFlag = spurs->wklFlag.flag.load() == 0u ? spurs->wklFlagReceiver == i ? 1 : 0 : 0;
 				u8  readyCount = spurs->wklReadyCount1[i] > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : spurs->wklReadyCount1[i].load();
 				u8  idleSpuCount = spurs->wklIdleSpuCountOrReadyCount2[i] > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : spurs->wklIdleSpuCountOrReadyCount2[i].load();
 				u8  requestCount = readyCount + idleSpuCount;
@@ -376,7 +371,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 				contention[wklSelectedId]++;
 			}
 
-			for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 			{
 				spurs->wklCurrentContention[i] = contention[i];
 				spurs->wklPendingContention[i] = spurs->wklPendingContention[i] - ctxt->wklLocPendingContention[i];
@@ -400,7 +395,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 				pendingContention[wklSelectedId]++;
 			}
 
-			for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 			{
 				spurs->wklPendingContention[i] = pendingContention[i];
 				ctxt->wklLocPendingContention[i] = 0;
@@ -414,7 +409,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 		else
 		{
 			// Not called by kernel and no context switch is required
-			for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 			{
 				spurs->wklPendingContention[i] = spurs->wklPendingContention[i] - ctxt->wklLocPendingContention[i];
 				ctxt->wklLocPendingContention[i] = 0;
@@ -451,17 +446,17 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 		// Calculate the contention (number of SPUs used) for each workload
 		u8 contention[CELL_SPURS_MAX_WORKLOAD2];
 		u8 pendingContention[CELL_SPURS_MAX_WORKLOAD2];
-		for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD2; i++)
+		for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD2; i++)
 		{
 			contention[i] = spurs->wklCurrentContention[i & 0x0F] - ctxt->wklLocContention[i & 0x0F];
-			contention[i] = i < CELL_SPURS_MAX_WORKLOAD ? contention[i] & 0x0F : contention[i] >> 4;
+			contention[i] = i + 0u < CELL_SPURS_MAX_WORKLOAD ? contention[i] & 0x0F : contention[i] >> 4;
 
 			// If this is a poll request then the number of SPUs pending to context switch is also added to the contention presumably
 			// to prevent unnecessary jumps to the kernel
 			if (isPoll)
 			{
 				pendingContention[i] = spurs->wklPendingContention[i & 0x0F] - ctxt->wklLocPendingContention[i & 0x0F];
-				pendingContention[i] = i < CELL_SPURS_MAX_WORKLOAD ? pendingContention[i] & 0x0F : pendingContention[i] >> 4;
+				pendingContention[i] = i + 0u < CELL_SPURS_MAX_WORKLOAD ? pendingContention[i] & 0x0F : pendingContention[i] >> 4;
 				if (i != ctxt->wklCurrentId)
 				{
 					contention[i] += pendingContention[i];
@@ -488,14 +483,14 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 		{
 			// Caclulate the scheduling weight for each workload
 			u8 maxWeight = 0;
-			for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD2; i++)
+			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD2; i++)
 			{
-				auto j = i & 0x0F;
+				u32 j = i & 0x0f;
 				u16 runnable = i < CELL_SPURS_MAX_WORKLOAD ? ctxt->wklRunnable1 & (0x8000 >> j) : ctxt->wklRunnable2 & (0x8000 >> j);
 				u8  priority = i < CELL_SPURS_MAX_WORKLOAD ? ctxt->priority[j] & 0x0F : ctxt->priority[j] >> 4;
 				u8  maxContention = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklMaxContention[j] & 0x0F : spurs->wklMaxContention[j] >> 4;
 				u16 wklSignal = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklSignal1.load() & (0x8000 >> j) : spurs->wklSignal2.load() & (0x8000 >> j);
-				u8  wklFlag = spurs->wklFlag.flag.load() == 0 ? spurs->wklFlagReceiver == i ? 1 : 0 : 0;
+				u8  wklFlag = spurs->wklFlag.flag.load() == 0u ? spurs->wklFlagReceiver == i ? 1 : 0 : 0;
 				u8  readyCount = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklReadyCount1[j] : spurs->wklIdleSpuCountOrReadyCount2[j];
 
 				// For a workload to be considered for scheduling:
@@ -556,7 +551,7 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 				contention[wklSelectedId]++;
 			}
 
-			for (auto i = 0; i < (CELL_SPURS_MAX_WORKLOAD2 >> 1); i++)
+			for (u32 i = 0; i < (CELL_SPURS_MAX_WORKLOAD2 >> 1); i++)
 			{
 				spurs->wklCurrentContention[i] = contention[i] | (contention[i + 0x10] << 4);
 				spurs->wklPendingContention[i] = spurs->wklPendingContention[i] - ctxt->wklLocPendingContention[i];
@@ -576,7 +571,7 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 				pendingContention[wklSelectedId]++;
 			}
 
-			for (auto i = 0; i < (CELL_SPURS_MAX_WORKLOAD2 >> 1); i++)
+			for (u32 i = 0; i < (CELL_SPURS_MAX_WORKLOAD2 >> 1); i++)
 			{
 				spurs->wklPendingContention[i] = pendingContention[i] | (pendingContention[i + 0x10] << 4);
 				ctxt->wklLocPendingContention[i] = 0;
@@ -587,7 +582,7 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 		else
 		{
 			// Not called by kernel and no context switch is required
-			for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 			{
 				spurs->wklPendingContention[i] = spurs->wklPendingContention[i] - ctxt->wklLocPendingContention[i];
 				ctxt->wklLocPendingContention[i] = 0;
@@ -797,7 +792,7 @@ void spursSysServiceIdleHandler(spu_thread& spu, SpursKernelContext* ctxt)
 					u8 maxContention = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklMaxContention[j] & 0x0F : spurs->wklMaxContention[j] >> 4;
 					u8 contention = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklCurrentContention[j] & 0x0F : spurs->wklCurrentContention[j] >> 4;
 					u16 wklSignal = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklSignal1.load() & (0x8000 >> j) : spurs->wklSignal2.load() & (0x8000 >> j);
-					u8 wklFlag = spurs->wklFlag.flag.load() == 0 ? spurs->wklFlagReceiver == i ? 1 : 0 : 0;
+					u8 wklFlag = spurs->wklFlag.flag.load() == 0u ? spurs->wklFlagReceiver == i ? 1 : 0 : 0;
 					u8 readyCount = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklReadyCount1[j] : spurs->wklIdleSpuCountOrReadyCount2[j];
 
 					if (runnable && priority > 0 && maxContention > contention)
@@ -816,7 +811,7 @@ void spursSysServiceIdleHandler(spu_thread& spu, SpursKernelContext* ctxt)
 				{
 					u16 runnable = ctxt->wklRunnable1 & (0x8000 >> i);
 					u16 wklSignal = spurs->wklSignal1.load() & (0x8000 >> i);
-					u8 wklFlag = spurs->wklFlag.flag.load() == 0 ? spurs->wklFlagReceiver == i ? 1 : 0 : 0;
+					u8 wklFlag = spurs->wklFlag.flag.load() == 0u ? spurs->wklFlagReceiver == i ? 1 : 0 : 0;
 					u8 readyCount = spurs->wklReadyCount1[i] > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : spurs->wklReadyCount1[i].load();
 					u8 idleSpuCount = spurs->wklIdleSpuCountOrReadyCount2[i] > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : spurs->wklIdleSpuCountOrReadyCount2[i].load();
 					u8 requestCount = readyCount + idleSpuCount;
@@ -870,7 +865,7 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 
 	if (!ctxt->spurs.aligned())
 	{
-		LOG_ERROR(SPU, "spursSysServiceMain(): invalid spurs alignment");
+		spu_log.error("spursSysServiceMain(): invalid spurs alignment");
 		spursHalt(spu);
 	}
 
@@ -888,7 +883,7 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 			// Halt if already initialised
 			if (spurs->sysSrvOnSpu & (1 << ctxt->spuNum))
 			{
-				LOG_ERROR(SPU, "spursSysServiceMain(): already initialized");
+				spu_log.error("spursSysServiceMain(): already initialized");
 				spursHalt(spu);
 			}
 
@@ -1206,7 +1201,7 @@ void spursSysServiceTraceUpdate(spu_thread& spu, SpursKernelContext* ctxt, u32 a
 		//vm::reservation_acquire(vm::base(spu.offset + 0x80), ctxt->spurs.ptr(&CellSpurs::traceBuffer).addr(), 128);
 		auto spurs = vm::_ptr<CellSpurs>(spu.offset + 0x80 - offset32(&CellSpurs::traceBuffer));
 
-		if (ctxt->traceMsgCount != 0xFF || spurs->traceBuffer.addr() == 0)
+		if (ctxt->traceMsgCount != 0xffu || spurs->traceBuffer.addr() == 0u)
 		{
 			spursSysServiceTraceSaveCount(spu, ctxt);
 		}
@@ -1219,9 +1214,9 @@ void spursSysServiceTraceUpdate(spu_thread& spu, SpursKernelContext* ctxt, u32 a
 
 		ctxt->traceBuffer = spurs->traceBuffer.addr() + (spurs->traceStartIndex[ctxt->spuNum] << 4);
 		ctxt->traceMaxCount = spurs->traceStartIndex[1] - spurs->traceStartIndex[0];
-		if (ctxt->traceBuffer == 0)
+		if (ctxt->traceBuffer == 0u)
 		{
-			ctxt->traceMsgCount = 0;
+			ctxt->traceMsgCount = 0u;
 		}
 	}
 
@@ -1428,7 +1423,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 		if ((taskset->waiting & taskset->running) != _0 || (taskset->ready & taskset->pending_ready) != _0 ||
 			((taskset->running | taskset->ready | taskset->pending_ready | taskset->signalled | taskset->waiting) & ~taskset->enabled) != _0)
 		{
-			LOG_ERROR(SPU, "Invalid taskset state");
+			spu_log.error("Invalid taskset state");
 			spursHalt(spu);
 		}
 
@@ -1566,7 +1561,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 			}
 			break;
 		default:
-			LOG_ERROR(SPU, "Unknown taskset request");
+			spu_log.error("Unknown taskset request");
 			spursHalt(spu);
 		}
 
@@ -1641,7 +1636,7 @@ void spursTasksetExit(spu_thread& spu)
 	// Not sure why this check exists. Perhaps to check for memory corruption.
 	if (memcmp(ctxt->moduleId, "SPURSTASK MODULE", 16) != 0)
 	{
-		LOG_ERROR(SPU, "spursTasksetExit(): memory corruption");
+		spu_log.error("spursTasksetExit(): memory corruption");
 		spursHalt(spu);
 	}
 
@@ -1670,7 +1665,7 @@ s32 spursTasketSaveTaskContext(spu_thread& spu)
 
 	//spursDmaWaitForCompletion(spu, 0xFFFFFFFF);
 
-	if (taskInfo->context_save_storage_and_alloc_ls_blocks == 0)
+	if (taskInfo->context_save_storage_and_alloc_ls_blocks == 0u)
 	{
 		return CELL_SPURS_TASK_ERROR_STAT;
 	}
@@ -1765,7 +1760,7 @@ void spursTasksetDispatch(spu_thread& spu)
 		u32 lowestLoadAddr;
 		if (spursTasksetLoadElf(spu, &entryPoint, &lowestLoadAddr, taskInfo->elf.addr(), false) != CELL_OK)
 		{
-			LOG_ERROR(SPU, "spursTaskLoadElf() failed");
+			spu_log.error("spursTaskLoadElf() failed");
 			spursHalt(spu);
 		}
 
@@ -1792,7 +1787,6 @@ void spursTasksetDispatch(spu_thread& spu)
 		if (elfAddr & 2)
 		{
 			// TODO: Figure this out
-			spu.status |= SPU_STATUS_STOPPED_BY_STOP;
 			spu_runtime::g_escape(&spu);
 		}
 
@@ -1813,7 +1807,7 @@ void spursTasksetDispatch(spu_thread& spu)
 			u32 entryPoint;
 			if (spursTasksetLoadElf(spu, &entryPoint, nullptr, taskInfo->elf.addr(), true) != CELL_OK)
 			{
-				LOG_ERROR(SPU, "spursTasksetLoadElf() failed");
+				spu_log.error("spursTasksetLoadElf() failed");
 				spursHalt(spu);
 			}
 		}
@@ -1846,7 +1840,6 @@ void spursTasksetDispatch(spu_thread& spu)
 		if (elfAddr & 2)
 		{
 			// TODO: Figure this out
-			spu.status |= SPU_STATUS_STOPPED_BY_STOP;
 			spu_runtime::g_escape(&spu);
 		}
 
@@ -1874,15 +1867,15 @@ s32 spursTasksetProcessSyscall(spu_thread& spu, u32 syscallNum, u32 args)
 	switch (syscallNum & 0x0F)
 	{
 	case CELL_SPURS_TASK_SYSCALL_EXIT:
-		if (ctxt->x2FD4 == 4 || (ctxt->x2FC0 & 0xFFFFFFFF) != 0)
+		if (ctxt->x2FD4 == 4u || (ctxt->x2FC0 & 0xffffffffu) != 0u)
 		{ // TODO: Figure this out
-			if (ctxt->x2FD4 != 4)
+			if (ctxt->x2FD4 != 4u)
 			{
 				spursTasksetProcessRequest(spu, SPURS_TASKSET_REQUEST_DESTROY_TASK, nullptr, nullptr);
 			}
 
-			const u64 addr = ctxt->x2FD4 == 4 ? taskset->x78 : ctxt->x2FC0;
-			const u64 args = ctxt->x2FD4 == 4 ? 0 : ctxt->x2FC8.value();
+			const u64 addr = ctxt->x2FD4 == 4u ? +taskset->x78 : +ctxt->x2FC0;
+			const u64 args = ctxt->x2FD4 == 4u ? 0 : +ctxt->x2FC8;
 			spursTasksetOnTaskExit(spu, addr, ctxt->taskId, ctxt->taskExitCode, args);
 		}
 
@@ -1921,7 +1914,7 @@ s32 spursTasksetProcessSyscall(spu_thread& spu, u32 syscallNum, u32 args)
 	case CELL_SPURS_TASK_SYSCALL_RECV_WKL_FLAG:
 		if (args == 0)
 		{ // TODO: Figure this out
-			LOG_ERROR(SPU, "args == 0");
+			spu_log.error("args == 0");
 			//spursHalt(spu);
 		}
 
@@ -2007,9 +2000,9 @@ s32 spursTasksetLoadElf(spu_thread& spu, u32* entryPoint, u32* lowestLoadAddr, u
 			break;
 		}
 
-		if (prog.p_type == 1 /* PT_LOAD */)
+		if (prog.p_type == 1u /* PT_LOAD */)
 		{
-			if (skipWriteableSegments == false || (prog.p_flags & 2 /*PF_W*/ ) == 0)
+			if (skipWriteableSegments == false || (prog.p_flags & 2u /*PF_W*/ ) == 0u)
 			{
 				if (prog.p_vaddr < CELL_SPURS_TASK_TOP || prog.p_vaddr + prog.p_memsz > CELL_SPURS_TASK_BOTTOM)
 				{
@@ -2028,9 +2021,9 @@ s32 spursTasksetLoadElf(spu_thread& spu, u32* entryPoint, u32* lowestLoadAddr, u
 			break;
 		}
 
-		if (prog.p_type == 1)
+		if (prog.p_type == 1u)
 		{
-			if (skipWriteableSegments == false || (prog.p_flags & 2) == 0)
+			if (skipWriteableSegments == false || (prog.p_flags & 2u) == 0u)
 			{
 				std::memcpy(vm::base(spu.offset + prog.p_vaddr), prog.bin.data(), prog.p_filesz);
 			}

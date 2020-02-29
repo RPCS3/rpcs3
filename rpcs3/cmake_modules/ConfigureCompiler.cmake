@@ -29,17 +29,16 @@ else()
 	add_compile_options(-fno-strict-aliasing)
 
 	add_compile_options(-Werror=old-style-cast)
+	add_compile_options(-Werror=sign-compare)
+	add_compile_options(-Werror=reorder)
 
 	#TODO Clean the code so these are removed
 	add_compile_options(-Wno-unused-variable)
-	add_compile_options(-Wno-reorder)
 	add_compile_options(-Wno-unknown-pragmas)
 	add_compile_options(-Wno-invalid-offsetof)
 	add_compile_options(-Wno-unused-function)
 	add_compile_options(-Wno-attributes)
-	add_compile_options(-Wno-enum-compare)
 	add_compile_options(-Wno-comment)
-	add_compile_options(-Wno-sign-compare)
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-Wno-sometimes-uninitialized)

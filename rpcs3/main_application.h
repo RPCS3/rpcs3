@@ -1,8 +1,9 @@
 ﻿#pragma once
 
-#include "stdafx.h"
+#include <string>
 #include <QWindow>
-#include "Emu/System.h"
+
+struct EmuCallbacks;
 
 class main_application
 {

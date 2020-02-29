@@ -2,14 +2,14 @@
 
 #include <QButtonGroup>
 #include <QDialog>
-#include <QEvent>
-#include <QJsonObject>
 #include <QLabel>
 #include <QTabWidget>
 #include <QTimer>
 
-#include "Emu/Io/PadHandler.h"
+#include "Emu/Io/pad_config.h"
 #include "Emu/GameInfo.h"
+
+class PadHandlerBase;
 
 namespace Ui
 {
@@ -104,9 +104,6 @@ private:
 	Ui::pad_settings_dialog *ui;
 	std::string m_title_id;
 
-	// Tooltip things
-	QJsonObject m_json_handlers;
-
 	// TabWidget
 	QTabWidget* m_tabs = nullptr;
 
@@ -171,7 +168,7 @@ private:
 	void ChangeProfile();
 
 	/** Repaints a stick deadzone preview label */
-	void RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y);
+	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y);
 
 	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
 

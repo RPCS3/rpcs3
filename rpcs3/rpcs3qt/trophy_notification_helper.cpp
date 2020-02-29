@@ -1,9 +1,8 @@
 ﻿#include "trophy_notification_helper.h"
-
 #include "trophy_notification_frame.h"
 
 #include "../Emu/System.h"
-#include "../Emu/RSX/Overlays/overlays.h"
+#include "../Emu/RSX/Overlays/overlay_trophy_notification.h"
 
 s32 trophy_notification_helper::ShowTrophyNotification(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophy_icon_buffer)
 {
@@ -19,7 +18,7 @@ s32 trophy_notification_helper::ShowTrophyNotification(const SceNpTrophyDetails&
 		return 0;
 	}
 
-	Emu.CallAfter([=]
+	Emu.CallAfter([=, this]
 	{
 		trophy_notification_frame* trophy_notification = new trophy_notification_frame(trophy_icon_buffer, trophy, m_game_window->frameGeometry().height() / 10);
 

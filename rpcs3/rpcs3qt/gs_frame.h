@@ -3,20 +3,15 @@
 #include "stdafx.h"
 #include "Emu/RSX/GSRender.h"
 
-#include "gui_settings.h"
-
-#include <QWidget>
 #include <QWindow>
+#include <QPaintEvent>
 
 #ifdef _WIN32
 #include <QWinTaskbarProgress>
 #include <QWinTaskbarButton>
-#include <QWinTHumbnailToolbar>
-#include <QWinTHumbnailToolbutton>
-#elif HAVE_QTDBUS
-#include <QtDBus/QDBusMessage>
-#include <QtDBus/QDBusConnection>
 #endif
+
+class gui_settings;
 
 class gs_frame : public QWindow, public GSFrameBase
 {
@@ -36,13 +31,11 @@ private:
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	u64 m_frames = 0;
-	// display status of last title update, needed for dynamic changes of the fps setting
-	bool m_show_fps_in_title = false;
-	QString m_windowTitle;
+	QString m_window_title;
 	bool m_disable_mouse;
 
 public:
-	gs_frame(const QString& title, const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
+	gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
 	~gs_frame();
 
 	draw_context_t make_context() override;

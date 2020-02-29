@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Utilities/types.h"
+#include <string>
 
 struct GameInfo
 {

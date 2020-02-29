@@ -3,6 +3,8 @@
 #include <QApplication>
 #include <QCursor>
 
+LOG_CHANNEL(input_log, "Input");
+
 void basic_mouse_handler::Init(const u32 max_connect)
 {
 	m_mice.emplace_back(Mouse());
@@ -37,7 +39,7 @@ void basic_mouse_handler::SetTargetWindow(QWindow* target)
 		// If this is hit, it probably means that some refactoring occurs because currently a gsframe is created in Load.
 		// We still want events so filter from application instead since target is null.
 		QApplication::instance()->installEventFilter(this);
-		LOG_ERROR(GENERAL, "Trying to set mouse handler to a null target window.");
+		input_log.error("Trying to set mouse handler to a null target window.");
 	}
 }
 

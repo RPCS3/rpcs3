@@ -159,7 +159,7 @@ namespace rsx
 			if (!old_contents.empty())
 			{
 				// Cascade resource derefs
-				LOG_ERROR(RSX, "Resource was destroyed whilst holding a resource reference!");
+				rsx_log.error("Resource was destroyed whilst holding a resource reference!");
 			}
 		}
 
@@ -367,7 +367,7 @@ namespace rsx
 				{0, size_y},
 			};
 
-			for (int n = 0; n < memory_tag_samples.size(); ++n)
+			for (uint n = 0; n < memory_tag_samples.size(); ++n)
 			{
 				const auto sample_offset = (samples[n].y * rsx_pitch) + samples[n].x;
 				memory_tag_samples[n].first = (sample_offset + base_addr);
@@ -384,7 +384,7 @@ namespace rsx
 
 		void shuffle_tag()
 		{
-			memory_tag_samples[0].second = memory_tag_samples[0].second;
+			memory_tag_samples[0].second = ~memory_tag_samples[0].second;
 		}
 
 		bool test()
@@ -569,7 +569,7 @@ namespace rsx
 		template <typename T>
 		void transform_samples_to_pixels(area_base<T>& area)
 		{
-			if (LIKELY(spp == 1)) return;
+			if (spp == 1) [[likely]] return;
 
 			area.x1 /= samples_x;
 			area.x2 /= samples_x;
@@ -580,7 +580,7 @@ namespace rsx
 		template <typename T>
 		void transform_pixels_to_samples(area_base<T>& area)
 		{
-			if (LIKELY(spp == 1)) return;
+			if (spp == 1) [[likely]] return;
 
 			area.x1 *= samples_x;
 			area.x2 *= samples_x;
@@ -591,7 +591,7 @@ namespace rsx
 		template <typename T>
 		void transform_samples_to_pixels(T& x1, T& x2, T& y1, T& y2)
 		{
-			if (LIKELY(spp == 1)) return;
+			if (spp == 1) [[likely]] return;
 
 			x1 /= samples_x;
 			x2 /= samples_x;
@@ -602,7 +602,7 @@ namespace rsx
 		template <typename T>
 		void transform_pixels_to_samples(T& x1, T& x2, T& y1, T& y2)
 		{
-			if (LIKELY(spp == 1)) return;
+			if (spp == 1) [[likely]] return;
 
 			x1 *= samples_x;
 			x2 *= samples_x;

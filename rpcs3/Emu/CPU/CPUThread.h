@@ -37,7 +37,6 @@ protected:
 public:
 	virtual ~cpu_thread();
 	void operator()();
-	void on_abort();
 
 	// Self identifier
 	const u32 id;
@@ -75,7 +74,7 @@ public:
 	}
 
 	// Check thread type
-	u32 id_type()
+	u32 id_type() const
 	{
 		return id >> 24;
 	}
@@ -89,8 +88,8 @@ public:
 	// Thread stats for external observation
 	static atomic_t<u64> g_threads_created, g_threads_deleted;
 
-	// Get thread name
-	virtual std::string get_name() const = 0;
+	// Get thread name (as assigned to named_thread)
+	std::string get_name() const;
 
 	// Get CPU state dump
 	virtual std::string dump() const;

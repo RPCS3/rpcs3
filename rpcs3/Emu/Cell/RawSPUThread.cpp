@@ -1,6 +1,4 @@
-#include "stdafx.h"
-#include "Emu/Memory/vm.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
 #include "Emu/IdManager.h"
 #include "Loader/ELF.h"
 
@@ -8,8 +6,23 @@
 
 #include <atomic>
 
-// Originally, SPU MFC registers are accessed externally in a concurrent manner (don't mix with channels, SPU MFC channels are isolated)
-thread_local spu_mfc_cmd g_tls_mfc[8] = {};
+inline void try_start(spu_thread& spu)
+{
+	if (spu.status_npc.fetch_op([](typename spu_thread::status_npc_sync_var& value)
+	{
+		if (value.status & SPU_STATUS_RUNNING)
+		{
+			return false;
+		}
+
+		value.status = SPU_STATUS_RUNNING;
+		return true;
+	}).second)
+	{
+		spu.state -= cpu_flag::stop;
+		thread_ctrl::notify(static_cast<named_thread<spu_thread>&>(spu));
+	}
+};
 
 bool spu_thread::read_reg(const u32 addr, u32& value)
 {
@@ -19,8 +32,76 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 	{
 	case MFC_CMDStatus_offs:
 	{
-		value = g_tls_mfc[index].cmd;
-		return true;
+		spu_mfc_cmd cmd;
+
+		// All arguments must be written for all command types, even for sync barriers
+		if (std::scoped_lock lock(mfc_prxy_mtx); mfc_prxy_write_state.all == 0x1f)
+		{
+			cmd = mfc_prxy_cmd;
+			mfc_prxy_write_state.all = 0;
+		}
+		else
+		{
+			value = MFC_PPU_DMA_CMD_SEQUENCE_ERROR;
+			return true;
+		}
+
+		switch (cmd.cmd)
+		{
+		case MFC_SNDSIG_CMD:
+		case MFC_SNDSIGB_CMD:
+		case MFC_SNDSIGF_CMD:
+		{
+			if (cmd.size != 4)
+			{
+				// Invalid for MFC but may be different for MFC proxy (TODO)
+				break;
+			}
+
+			[[fallthrough]];
+		}
+		case MFC_PUT_CMD:
+		case MFC_PUTB_CMD:
+		case MFC_PUTF_CMD:
+		case MFC_PUTS_CMD:
+		case MFC_PUTBS_CMD:
+		case MFC_PUTFS_CMD:
+		case MFC_PUTR_CMD:
+		case MFC_PUTRF_CMD:
+		case MFC_PUTRB_CMD:
+		case MFC_GET_CMD:
+		case MFC_GETB_CMD:
+		case MFC_GETF_CMD:
+		case MFC_GETS_CMD:
+		case MFC_GETBS_CMD:
+		case MFC_GETFS_CMD:
+		{
+			if (cmd.size)
+			{
+				// Perform transfer immediately
+				do_dma_transfer(cmd);
+			}
+
+			if (cmd.cmd & MFC_START_MASK)
+			{
+				try_start(*this);
+			}
+
+			value = MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
+			return true;
+		}
+		case MFC_BARRIER_CMD:
+		case MFC_EIEIO_CMD:
+		case MFC_SYNC_CMD:
+		{
+			std::atomic_thread_fence(std::memory_order_seq_cst);
+			value = MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
+			return true;
+		}
+		default: break;
+		}
+
+		break;
 	}
 
 	case MFC_QStatus_offs:
@@ -43,7 +124,7 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 
 	case SPU_Status_offs:
 	{
-		value = status;
+		value = status_npc.load().status;
 		return true;
 	}
 
@@ -55,8 +136,8 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 
 	case SPU_NPC_offs:
 	{
-		//npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
-		value = npc;
+		const auto current = status_npc.load();
+		value = !(current.status & SPU_STATUS_RUNNING) ? current.npc : 0;
 		return true;
 	}
 
@@ -67,30 +148,12 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 	}
 	}
 
-	LOG_ERROR(SPU, "RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
+	spu_log.error("RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
 	return false;
 }
 
 bool spu_thread::write_reg(const u32 addr, const u32 value)
 {
-	auto try_start = [this]()
-	{
-		if (status.atomic_op([](u32& status)
-		{
-			if (status & SPU_STATUS_RUNNING)
-			{
-				return false;
-			}
-
-			status = SPU_STATUS_RUNNING;
-			return true;
-		}))
-		{
-			state -= cpu_flag::stop;
-			thread_ctrl::notify(static_cast<named_thread<spu_thread>&>(*this));
-		}
-	};
-
 	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
 
 	switch (offset)
@@ -102,85 +165,43 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 			break;
 		}
 
-		g_tls_mfc[index].lsa = value;
+		std::lock_guard lock(mfc_prxy_mtx);
+		mfc_prxy_cmd.lsa = value;
+		mfc_prxy_write_state.lsa = true;
 		return true;
 	}
 
 	case MFC_EAH_offs:
 	{
-		g_tls_mfc[index].eah = value;
+		std::lock_guard lock(mfc_prxy_mtx);
+		mfc_prxy_cmd.eah = value;
+		mfc_prxy_write_state.eah = true;
 		return true;
 	}
 
 	case MFC_EAL_offs:
 	{
-		g_tls_mfc[index].eal = value;
+		std::lock_guard lock(mfc_prxy_mtx);
+		mfc_prxy_cmd.eal = value;
+		mfc_prxy_write_state.eal = true;
 		return true;
 	}
 
 	case MFC_Size_Tag_offs:
 	{
-		g_tls_mfc[index].tag = value & 0x1f;
-		g_tls_mfc[index].size = (value >> 16) & 0x7fff;
+		std::lock_guard lock(mfc_prxy_mtx);
+		mfc_prxy_cmd.tag = value & 0x1f;
+		mfc_prxy_cmd.size = (value >> 16) & 0x7fff;
+		mfc_prxy_write_state.tag_size = true;
 		return true;
 	}
 
 	case MFC_Class_CMD_offs:
 	{
-		g_tls_mfc[index].cmd = MFC(value & 0xff);
-
-		switch (value & 0xff)
-		{
-		case MFC_SNDSIG_CMD:
-		case MFC_SNDSIGB_CMD:
-		case MFC_SNDSIGF_CMD:
-		{
-			g_tls_mfc[index].size = 4;
-			// Fallthrough
-		}
-		case MFC_PUT_CMD:
-		case MFC_PUTB_CMD:
-		case MFC_PUTF_CMD:
-		case MFC_PUTS_CMD:
-		case MFC_PUTBS_CMD:
-		case MFC_PUTFS_CMD:
-		case MFC_PUTR_CMD:
-		case MFC_PUTRB_CMD:
-		case MFC_PUTRF_CMD:
-		case MFC_GET_CMD:
-		case MFC_GETB_CMD:
-		case MFC_GETF_CMD:
-		case MFC_GETS_CMD:
-		case MFC_GETBS_CMD:
-		case MFC_GETFS_CMD:
-		{
-			if (g_tls_mfc[index].size)
-			{
-				// Perform transfer immediately
-				do_dma_transfer(g_tls_mfc[index]);
-			}
-
-			// .cmd should be zero, which is equal to MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL
-			g_tls_mfc[index] = {};
-
-			if (value & MFC_START_MASK)
-			{
-				try_start();
-			}
-
-			return true;
-		}
-		case MFC_BARRIER_CMD:
-		case MFC_EIEIO_CMD:
-		case MFC_SYNC_CMD:
-		{
-			g_tls_mfc[index] = {};
-			std::atomic_thread_fence(std::memory_order_seq_cst);
-			return true;
-		}
-		}
-
-		break;
+		std::lock_guard lock(mfc_prxy_mtx);
+		mfc_prxy_cmd.cmd = MFC(value & 0xff);
+		mfc_prxy_write_state.cmd = true;
+		return true;
 	}
 
 	case Prxy_QueryType_offs:
@@ -217,13 +238,15 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 
 	case SPU_RunCntl_offs:
 	{
+		run_ctrl = value;
+
 		if (value == SPU_RUNCNTL_RUN_REQUEST)
 		{
-			try_start();
+			try_start(*this);
 		}
 		else if (value == SPU_RUNCNTL_STOP_REQUEST)
 		{
-			status &= ~SPU_STATUS_RUNNING;
+			// TODO: Wait for the SPU to stop?
 			state += cpu_flag::stop;
 		}
 		else
@@ -231,18 +254,22 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 			break;
 		}
 
-		run_ctrl = value;
 		return true;
 	}
 
 	case SPU_NPC_offs:
 	{
-		if ((value & 2) || value >= 0x40000)
+		status_npc.fetch_op([value = value & 0x3fffd](status_npc_sync_var& state)
 		{
-			break;
-		}
+			if (!(state.status & SPU_STATUS_RUNNING))
+			{
+				state.npc = value;
+				return true;
+			}
 
-		npc = value;
+			return false;
+		});
+
 		return true;
 	}
 
@@ -259,7 +286,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 	}
 	}
 
-	LOG_ERROR(SPU, "RawSPUThread[%d]: Write32(0x%x, value=0x%x): unknown/illegal offset (0x%x)", index, addr, value, offset);
+	spu_log.error("RawSPUThread[%d]: Write32(0x%x, value=0x%x): unknown/illegal offset (0x%x)", index, addr, value, offset);
 	return false;
 }
 
@@ -273,11 +300,11 @@ void spu_load_exec(const spu_exec_object& elf)
 
 	for (const auto& prog : elf.progs)
 	{
-		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz)
+		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
 		{
 			std::memcpy(vm::base(spu->offset + prog.p_vaddr), prog.bin.data(), prog.p_filesz);
 		}
 	}
 
-	spu->npc = elf.header.e_entry;
+	spu->status_npc = {SPU_STATUS_RUNNING, elf.header.e_entry};
 }

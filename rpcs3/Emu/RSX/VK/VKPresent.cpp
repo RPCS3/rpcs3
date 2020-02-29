@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "VKGSRender.h"
 
 
@@ -36,7 +36,7 @@ void VKGSRender::reinitialize_swapchain()
 	// Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
 	if (!m_swapchain->init(m_swapchain_dims.width, m_swapchain_dims.height))
 	{
-		LOG_WARNING(RSX, "Swapchain initialization failed. Request ignored [%dx%d]", m_swapchain_dims.width, m_swapchain_dims.height);
+		rsx_log.warning("Swapchain initialization failed. Request ignored [%dx%d]", m_swapchain_dims.width, m_swapchain_dims.height);
 		swapchain_unavailable = true;
 		open_command_buffer();
 		return;
@@ -349,8 +349,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	// Check swapchain condition/status
 	if (!m_swapchain->supports_automatic_wm_reports())
 	{
-		if (m_swapchain_dims.width != m_frame->client_width() ||
-			m_swapchain_dims.height != m_frame->client_height())
+		if (m_swapchain_dims.width != m_frame->client_width() + 0u ||
+			m_swapchain_dims.height != m_frame->client_height() + 0u)
 		{
 			swapchain_unavailable = true;
 		}
@@ -381,7 +381,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		if (info.stats.draw_calls > 0)
 		{
 			// This can be 'legal' if the window was being resized and no polling happened because of swapchain_unavailable flag
-			LOG_ERROR(RSX, "Possible data corruption on frame context storage detected");
+			rsx_log.error("Possible data corruption on frame context storage detected");
 		}
 
 		// There were no draws and back-to-back flips happened
@@ -438,7 +438,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		present_info.height = buffer_height;
 		present_info.pitch = buffer_pitch;
 		present_info.format = av_format;
-		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
+		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL, HERE);
 
 		image_to_flip = get_present_source(&present_info, avconfig);
 		buffer_width = present_info.width;
@@ -473,12 +473,18 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			should_reinitialize_swapchain = true;
 			break;
 		case VK_ERROR_OUT_OF_DATE_KHR:
-			LOG_WARNING(RSX, "vkAcquireNextImageKHR failed with VK_ERROR_OUT_OF_DATE_KHR. Flip request ignored until surface is recreated.");
+			rsx_log.warning("vkAcquireNextImageKHR failed with VK_ERROR_OUT_OF_DATE_KHR. Flip request ignored until surface is recreated.");
 			swapchain_unavailable = true;
 			reinitialize_swapchain();
 			continue;
 		default:
 			vk::die_with_error(HERE, status);
+		}
+
+		if (should_reinitialize_swapchain)
+		{
+			// Image is valid, new swapchain will be generated later
+			break;
 		}
 	}
 
@@ -487,7 +493,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	// Calculate output dimensions. Done after swapchain acquisition in case it was recreated.
 	coordi aspect_ratio;
-	sizei csize = m_swapchain_dims;
+	sizei csize = static_cast<sizei>(m_swapchain_dims);
 	sizei new_size = csize;
 
 	if (!g_cfg.video.stretch_to_display_area)
@@ -533,13 +539,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (image_to_flip)
 	{
-		if (UNLIKELY(!g_cfg.video.full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f)))
+		if (!g_cfg.video.full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f)) [[unlikely]]
 		{
 			calibration_src = dynamic_cast<vk::viewable_image*>(image_to_flip);
 			verify("Image handle not viewable!" HERE), calibration_src;
 		}
 
-		if (LIKELY(!calibration_src))
+		if (!calibration_src) [[likely]]
 		{
 			vk::copy_scaled_image(*m_current_command_buffer, image_to_flip->value, target_image, image_to_flip->current_layout, target_layout,
 				{ 0, 0, static_cast<s32>(buffer_width), static_cast<s32>(buffer_height) }, aspect_ratio, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);

@@ -140,7 +140,7 @@ error_code cellImeJpOpen(sys_memory_container_t container_id, vm::ptr<CellImeJpH
 	{
 		cellImeJp.warning("cellImeJpOpen dictionary path = %s", addDicPath->path);
 
-		manager->dictionary_paths.push_back(std::string(addDicPath->path));
+		manager->dictionary_paths.emplace_back(addDicPath->path);
 	}
 	*hImeJpHandle = vm::cast(ime_jp_address);
 
@@ -170,7 +170,7 @@ error_code cellImeJpOpen2(sys_memory_container_t container_id, vm::ptr<CellImeJp
 	{
 		cellImeJp.warning("cellImeJpOpen2 dictionary path = %s", addDicPath->path);
 
-		manager->dictionary_paths.push_back(std::string(addDicPath->path));
+		manager->dictionary_paths.emplace_back(addDicPath->path);
 	}
 
 	*hImeJpHandle = vm::cast(ime_jp_address);
@@ -205,7 +205,7 @@ error_code cellImeJpOpen3(sys_memory_container_t container_id, vm::ptr<CellImeJp
 			{
 				cellImeJp.warning("cellImeJpOpen3 dictionary %d path = %s", i, addDicPath[i]->path);
 
-				manager->dictionary_paths.push_back(std::string(addDicPath[i]->path));
+				manager->dictionary_paths.emplace_back(addDicPath[i]->path);
 			}
 		}
 	}

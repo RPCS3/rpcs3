@@ -1,9 +1,9 @@
 #pragma once
 
 #include "types.h"
-#include "util/atomic.hpp"
 #include "StrFmt.h"
-#include <climits>
+#include "util/atomic.hpp"
+#include <atomic>
 
 namespace logs
 {
@@ -17,8 +17,6 @@ namespace logs
 		warning,
 		notice,
 		trace, // Lowest severity (usually disabled)
-
-		_uninit = UINT_MAX, // Special value for delayed initialization
 	};
 
 	struct channel;
@@ -61,27 +59,44 @@ namespace logs
 		const char* const name;
 
 		// The lowest logging level enabled for this channel (used for early filtering)
-		atomic_t<level> enabled;
+		std::atomic<level> enabled;
 
-		// Constant initialization: channel name
-		constexpr channel(const char* name)
+		// Initialize channel
+		constexpr channel(const char* name) noexcept
 			: name(name)
-			, enabled(level::_uninit)
+			, enabled(level::notice)
 		{
 		}
+
+	private:
+#if __cpp_char8_t >= 201811
+		using char2 = char8_t;
+#else
+		using char2 = uchar;
+#endif
 
 #define GEN_LOG_METHOD(_sev)\
 		const message msg_##_sev{this, level::_sev};\
 		template <std::size_t N, typename... Args>\
 		void _sev(const char(&fmt)[N], const Args&... args)\
 		{\
-			if (UNLIKELY(level::_sev <= enabled))\
+			if (level::_sev <= enabled.load(std::memory_order_relaxed)) [[unlikely]]\
 			{\
 				static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
 				msg_##_sev.broadcast(fmt, type_list, u64{fmt_unveil<Args>::get(args)}...);\
 			}\
-		}
+		}\
+		template <std::size_t N, typename... Args>\
+		void _sev(const char2(&fmt)[N], const Args&... args)\
+		{\
+			if (level::_sev <= enabled.load(std::memory_order_relaxed)) [[unlikely]]\
+			{\
+				static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
+				msg_##_sev.broadcast(reinterpret_cast<const char*>(+fmt), type_list, u64{fmt_unveil<Args>::get(args)}...);\
+			}\
+		}\
 
+	public:
 		GEN_LOG_METHOD(fatal)
 		GEN_LOG_METHOD(error)
 		GEN_LOG_METHOD(todo)
@@ -93,31 +108,46 @@ namespace logs
 #undef GEN_LOG_METHOD
 	};
 
-	/* Small set of predefined channels */
-
-	extern channel GENERAL;
-	extern channel LOADER;
-	extern channel MEMORY;
-	extern channel RSX;
-	extern channel HLE;
-	extern channel PPU;
-	extern channel SPU;
+	struct registerer
+	{
+		registerer(channel& _ch);
+	};
 
 	// Log level control: set all channels to level::notice
 	void reset();
 
+	// Log level control: set all channels to level::always
+	void silence();
+
 	// Log level control: register channel if necessary, set channel level
 	void set_level(const std::string&, level);
+
+	// Log level control: get channel level
+	level get_level(const std::string&);
+
+	// Get all registered log channels
+	std::vector<std::string> get_channels();
+
+	// Helper: no additional name specified
+	constexpr const char* make_channel_name(const char* name)
+	{
+		return name;
+	}
+
+	// Helper: special channel name specified
+	constexpr const char* make_channel_name(const char*, const char* name, ...)
+	{
+		return name;
+	}
 }
 
-#define LOG_CHANNEL(ch, ...) ::logs::channel ch(#ch, ##__VA_ARGS__)
+#if __cpp_constinit >= 201907
+#define LOG_CONSTINIT constinit
+#else
+#define LOG_CONSTINIT
+#endif
 
-// Legacy:
+#define LOG_CHANNEL(ch, ...) LOG_CONSTINIT inline ::logs::channel ch(::logs::make_channel_name(#ch, ##__VA_ARGS__)); \
+	namespace logs { inline ::logs::registerer reg_##ch{ch}; }
 
-#define LOG_SUCCESS(ch, fmt, ...) logs::ch.success("" fmt, ##__VA_ARGS__)
-#define LOG_NOTICE(ch, fmt, ...)  logs::ch.notice ("" fmt, ##__VA_ARGS__)
-#define LOG_WARNING(ch, fmt, ...) logs::ch.warning("" fmt, ##__VA_ARGS__)
-#define LOG_ERROR(ch, fmt, ...)   logs::ch.error  ("" fmt, ##__VA_ARGS__)
-#define LOG_TODO(ch, fmt, ...)    logs::ch.todo   ("" fmt, ##__VA_ARGS__)
-#define LOG_TRACE(ch, fmt, ...)   logs::ch.trace  ("" fmt, ##__VA_ARGS__)
-#define LOG_FATAL(ch, fmt, ...)   logs::ch.fatal  ("" fmt, ##__VA_ARGS__)
+LOG_CHANNEL(rsx_log, "RSX");

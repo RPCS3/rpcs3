@@ -1,10 +1,11 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 
 #include "GDB.h"
 #include "Utilities/Log.h"
 #include "Utilities/StrUtil.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/PPUThread.h"
@@ -238,7 +239,7 @@ char gdb_thread::read_char()
 
 u8 gdb_thread::read_hexbyte()
 {
-	std::string s = "";
+	std::string s;
 	s += read_char();
 	s += read_char();
 	return hex_to_u8(s);
@@ -248,13 +249,13 @@ bool gdb_thread::try_read_cmd(gdb_cmd& out_cmd)
 {
 	char c = read_char();
 	//interrupt
-	if (UNLIKELY(c == 0x03)) {
+	if (c == 0x03) [[unlikely]] {
 		out_cmd.cmd = '\x03';
 		out_cmd.data = "";
 		out_cmd.checksum = 0;
 		return true;
 	}
-	if (UNLIKELY(c != '$')) {
+	if (c != '$') [[unlikely]] {
 		//gdb starts conversation with + for some reason
 		if (c == '+') {
 			c = read_char();
@@ -357,7 +358,8 @@ void gdb_thread::send_cmd(const std::string& cmd)
 	std::string buf;
 	buf.reserve(cmd.length() + 4);
 	buf += "$";
-	for (int i = 0; i < cmd.length(); ++i) {
+	for (std::size_t i = 0; i < cmd.length(); ++i)
+	{
 		checksum = (checksum + append_encoded_char(cmd[i], buf)) % 256;
 	}
 	buf += "#";
@@ -370,10 +372,9 @@ bool gdb_thread::send_cmd_ack(const std::string& cmd)
 	while (true) {
 		send_cmd(cmd);
 		char c = read_char();
-		if (LIKELY(c == '+')) {
+		if (c == '+') [[likely]]
 			return true;
-		}
-		if (UNLIKELY(c != '-')) {
+		if (c != '-') [[unlikely]] {
 			GDB.error("Wrong acknowledge character received: '%c'.", c);
 			return false;
 		}
@@ -384,7 +385,7 @@ bool gdb_thread::send_cmd_ack(const std::string& cmd)
 u8 gdb_thread::append_encoded_char(char c, std::string& str)
 {
 	u8 checksum = 0;
-	if (UNLIKELY((c == '#') || (c == '$') || (c == '}'))) {
+	if ((c == '#') || (c == '$') || (c == '}')) [[unlikely]] {
 		str += '}';
 		c ^= 0x20;
 		checksum = '}';
@@ -547,7 +548,7 @@ bool gdb_thread::cmd_supported(gdb_cmd& cmd)
 
 bool gdb_thread::cmd_thread_info(gdb_cmd& cmd)
 {
-	std::string result = "";
+	std::string result;
 	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		if (result.length()) {
@@ -749,7 +750,7 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 		ppu->state -= cpu_flag::dbg_pause;
 		//special case if app didn't start yet (only loaded)
 		if (!Emu.IsPaused() && !Emu.IsRunning()) {
-			Emu.Run();
+			Emu.Run(true);
 		}
 		if (Emu.IsPaused()) {
 			Emu.Resume();

@@ -1,6 +1,8 @@
-﻿#include "ds4_pad_handler.h"
+﻿#include "stdafx.h"
+#include "ds4_pad_handler.h"
+#include "Emu/Io/pad_config.h"
 
-#include <thread>
+LOG_CHANNEL(ds4_log, "DS4");
 
 namespace
 {
@@ -191,7 +193,7 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 	device->smallVibrate = smallMotor;
 
 	int index = 0;
-	for (int i = 0; i < MAX_GAMEPADS; i++)
+	for (uint i = 0; i < MAX_GAMEPADS; i++)
 	{
 		if (g_cfg_input.player[i]->handler == pad_handler::ds4)
 		{
@@ -242,7 +244,7 @@ std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDS4Device(const 
 				if (device->hidDevice)
 				{
 					hid_set_nonblocking(device->hidDevice, 1);
-					LOG_NOTICE(HLE, "DS4 device %d reconnected", i);
+					ds4_log.notice("DS4 device %d reconnected", i);
 				}
 			}
 			break;
@@ -387,7 +389,7 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 			const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), (DS4_FEATURE_REPORT_0x05_SIZE - 4), crcTable, crcHdr);
 			const u32 crcReported = read_u32(&buf[DS4_FEATURE_REPORT_0x05_SIZE - 4]);
 			if (crcCalc != crcReported)
-				LOG_WARNING(HLE, "[DS4] Calibration CRC check failed! Will retry up to 3 times. Received 0x%x, Expected 0x%x", crcReported, crcCalc);
+				ds4_log.warning("Calibration CRC check failed! Will retry up to 3 times. Received 0x%x, Expected 0x%x", crcReported, crcCalc);
 			else break;
 			if (tries == 2)
 				return false;
@@ -398,7 +400,7 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 		buf[0] = 0x02;
 		if (hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x02_SIZE) <= 0)
 		{
-			LOG_ERROR(HLE, "[DS4] Failed getting calibration data report!");
+			ds4_log.error("Failed getting calibration data report!");
 			return false;
 		}
 	}
@@ -485,7 +487,7 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 
 void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo)
 {
-	std::string serial = "";
+	std::string serial;
 	std::shared_ptr<DS4Device> ds4Dev = std::make_shared<DS4Device>();
 	ds4Dev->hidDevice = hidDevice;
 	// There isnt a nice 'portable' way with hidapi to detect bt vs wired as the pid/vid's are the same
@@ -497,7 +499,7 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hid
 		if (length != DS4_FEATURE_REPORT_0x81_SIZE)
 		{
 			// Controller may not be genuine. These controllers do not have feature 0x81 implemented and calibration data is in bluetooth format even in USB mode!
-			LOG_WARNING(HLE, "DS4 controller may not be genuine. Workaround enabled.");
+			ds4_log.warning("DS4 controller may not be genuine. Workaround enabled.");
 
 			// Read feature report 0x12 instead which is what the console uses.
 			buf[0] = 0x12;
@@ -628,7 +630,7 @@ bool ds4_pad_handler::Init()
 			}
 			else
 			{
-				LOG_ERROR(HLE, "[DS4] hid_open_path failed! Reason: %s", hid_error(dev));
+				ds4_log.error("hid_open_path failed! Reason: %s", hid_error(dev));
 				warn_about_drivers = true;
 			}
 			devInfo = devInfo->next;
@@ -638,18 +640,18 @@ bool ds4_pad_handler::Init()
 
 	if (warn_about_drivers)
 	{
-		LOG_ERROR(HLE, "[DS4] One or more DS4 pads were detected but couldn't be interacted with directly");
+		ds4_log.error("One or more DS4 pads were detected but couldn't be interacted with directly");
 #if defined(_WIN32) || defined(__linux__)
-		LOG_ERROR(HLE, "[DS4] Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
+		ds4_log.error("Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
 #endif
 	}
 	else if (controllers.empty())
 	{
-		LOG_WARNING(HLE, "[DS4] No controllers found!");
+		ds4_log.warning("No controllers found!");
 	}
 	else
 	{
-		LOG_SUCCESS(HLE, "[DS4] Controllers found: %d", controllers.size());
+		ds4_log.success("Controllers found: %d", controllers.size());
 	}
 
 	is_init = true;
@@ -711,7 +713,7 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 		const u32 crcReported = read_u32(&buf[DS4_INPUT_REPORT_0x11_SIZE - 4]);
 		if (crcCalc != crcReported)
 		{
-			LOG_WARNING(HLE, "[DS4] Data packet CRC check failed, ignoring! Received 0x%x, Expected 0x%x", crcReported, crcCalc);
+			ds4_log.warning("Data packet CRC check failed, ignoring! Received 0x%x, Expected 0x%x", crcReported, crcCalc);
 			return DS4DataStatus::NoNewData;
 		}
 	}

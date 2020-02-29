@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
+#include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/RawSPUThread.h"
@@ -8,7 +8,7 @@
 #include "Loader/ELF.h"
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 spu_printf_cb_t g_spu_printf_agcb;
 spu_printf_cb_t g_spu_printf_dgcb;
@@ -139,9 +139,9 @@ struct spu_elf_info
 		// Check SCE header if found
 		std::memcpy(&sce0, src.get_ptr(), sizeof(sce0));
 
-		if (sce0.se_magic == 0x53434500 /* SCE\0 */)
+		if (sce0.se_magic == 0x53434500u /* SCE\0 */)
 		{
-			if (sce0.se_hver != 2 || sce0.se_type != 1 || sce0.se_meta == 0)
+			if (sce0.se_hver != 2u || sce0.se_type != 1u || sce0.se_meta == 0u)
 			{
 				return CELL_ENOEXEC;
 			}
@@ -150,7 +150,7 @@ struct spu_elf_info
 			ehdr_off = static_cast<u32>(+self.se_elfoff);
 			phdr_off = static_cast<u32>(+self.se_phdroff);
 
-			if (self.se_htype != 3 || !ehdr_off || !phdr_off)
+			if (self.se_htype != 3u || !ehdr_off || !phdr_off)
 			{
 				return CELL_ENOEXEC;
 			}
@@ -159,12 +159,12 @@ struct spu_elf_info
 		// Check ELF header
 		vm::ptr<elf_ehdr<elf_be, u32>> ehdr = vm::cast(src.addr() + ehdr_off);
 
-		if (ehdr->e_magic != "\177ELF"_u32 || ehdr->e_data != 2 /* BE */)
+		if (ehdr->e_magic != "\177ELF"_u32 || ehdr->e_data != 2u /* BE */)
 		{
 			return CELL_ENOEXEC;
 		}
 
-		if (ehdr->e_class != 1 && ehdr->e_class != 2)
+		if (ehdr->e_class != 1u && ehdr->e_class != 2u)
 		{
 			return CELL_ENOEXEC;
 		}
@@ -194,7 +194,7 @@ error_code sys_spu_elf_get_information(u32 elf_img, vm::ptr<u32> entry, vm::ptr<
 	}
 
 	// Reject SCE header
-	if (info->sce0.se_magic == 0x53434500)
+	if (info->sce0.se_magic == 0x53434500u)
 	{
 		return CELL_ENOEXEC;
 	}
@@ -287,7 +287,7 @@ error_code sys_spu_image_import(ppu_thread& ppu, vm::ptr<sys_spu_image> img, u32
 	}
 
 	// Reject SCE header
-	if (info->sce0.se_magic == 0x53434500)
+	if (info->sce0.se_magic == 0x53434500u)
 	{
 		return CELL_ENOEXEC;
 	}
@@ -314,7 +314,7 @@ error_code sys_spu_image_import(ppu_thread& ppu, vm::ptr<sys_spu_image> img, u32
 
 		for (const auto& p : phdr)
 		{
-			if (p.p_type != 1 && p.p_type != 4)
+			if (p.p_type != 1u && p.p_type != 4u)
 			{
 				return CELL_ENOEXEC;
 			}

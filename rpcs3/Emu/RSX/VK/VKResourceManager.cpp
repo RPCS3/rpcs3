@@ -45,7 +45,7 @@ namespace vk
 		if (const auto ins = g_vmm_allocations.insert_or_assign(key, info);
 			!ins.second)
 		{
-			LOG_ERROR(RSX, "Duplicate vmm entry with memory handle 0x%llx", key);
+			rsx_log.error("Duplicate vmm entry with memory handle 0x%llx", key);
 		}
 
 		auto& vmm_size = g_vmm_memory_usage[memory_type];
@@ -53,7 +53,7 @@ namespace vk
 
 		if (vmm_size > s_vmm_warn_threshold_size && (vmm_size - memory_size) <= s_vmm_warn_threshold_size)
 		{
-			LOG_WARNING(RSX, "Memory type 0x%x has allocated more than %.2fG. Currently allocated %.2fG",
+			rsx_log.warning("Memory type 0x%x has allocated more than %.2fG. Currently allocated %.2fG",
 				memory_type, size_in_GiB(s_vmm_warn_threshold_size), size_in_GiB(vmm_size));
 		}
 	}

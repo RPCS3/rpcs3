@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
 
 #include "VKVertexProgram.h"
 #include "VKCommonDecompiler.h"
@@ -227,7 +226,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	{
 		for (const ParamItem &PI : PT.items)
 		{
-			if (PI.name.substr(0, 7) == "dst_reg")
+			if (PI.name.starts_with("dst_reg"))
 				continue;
 
 			OS << "	" << PT.type << " " << PI.name;

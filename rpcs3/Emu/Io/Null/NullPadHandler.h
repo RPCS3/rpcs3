@@ -5,6 +5,8 @@
 class NullPadHandler final : public PadHandlerBase
 {
 public:
+	NullPadHandler() : PadHandlerBase(pad_handler::null) {}
+	
 	bool Init() override
 	{
 		return true;
@@ -17,7 +19,7 @@ public:
 	std::vector<std::string> ListDevices() override
 	{
 		std::vector<std::string> nulllist;
-		nulllist.push_back("Default Null Device");
+		nulllist.emplace_back("Default Null Device");
 		return nulllist;
 	}
 

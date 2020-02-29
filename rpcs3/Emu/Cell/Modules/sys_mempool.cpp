@@ -2,8 +2,6 @@
 
 #include "Utilities/StrUtil.h"
 
-#include "Emu/System.h"
-#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_mutex.h"
@@ -11,8 +9,7 @@
 
 #include "sysPrxForUser.h"
 
-
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 using sys_mempool_t = u32;
 
@@ -72,7 +69,7 @@ s32 sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<
 	// TODO: check blocks alignment wrt ralignment
 	u64 num_blocks = chunk_size / block_size;
 	memory_pool->free_blocks.resize(num_blocks);
-	for (int i = 0; i < num_blocks; ++i)
+	for (u32 i = 0; i < num_blocks; ++i)
 	{
 		memory_pool->free_blocks[i] = vm::ptr<void>::make(chunk.addr() + i * block_size);
 	}

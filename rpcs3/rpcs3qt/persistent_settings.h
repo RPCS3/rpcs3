@@ -12,6 +12,11 @@ namespace gui
 		// Entry names
 		const QString playtime    = "Playtime";
 		const QString last_played = "LastPlayed";
+
+		// Date format
+		const QString last_played_date_format_old    = "MMMM d yyyy";
+		const QString last_played_date_format_new    = "MMMM d, yyyy";
+		const Qt::DateFormat last_played_date_format = Qt::DateFormat::ISODate;
 	}
 }
 

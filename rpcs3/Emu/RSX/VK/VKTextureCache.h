@@ -5,7 +5,6 @@
 #include "VKCompute.h"
 #include "VKResourceManager.h"
 #include "VKDMA.h"
-#include "Emu/System.h"
 #include "../Common/TextureUtils.h"
 #include "Utilities/mutex.h"
 #include "../Common/texture_cache.h"
@@ -237,7 +236,7 @@ namespace vk
 						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 				}
 
-				if (LIKELY(rsx_pitch == real_pitch))
+				if (rsx_pitch == real_pitch) [[likely]]
 				{
 					VkBufferCopy copy = {};
 					copy.dstOffset = final_mapping.first;
@@ -246,6 +245,14 @@ namespace vk
 				}
 				else
 				{
+					if (context != rsx::texture_upload_context::dma)
+					{
+						// Partial load for the bits outside the existing image
+						// NOTE: A true DMA section would have been prepped beforehand
+						// TODO: Parial range load/flush
+						vk::load_dma(valid_range.start, section_length);
+					}
+
 					std::vector<VkBufferCopy> copy;
 					copy.reserve(transfer_height);
 
@@ -277,7 +284,7 @@ namespace vk
 
 			src->pop_layout(cmd);
 
-			if (UNLIKELY(synchronized))
+			if (synchronized) [[unlikely]]
 			{
 				// Replace the wait event with a new one to avoid premature signaling!
 				vk::get_resource_manager()->dispose(dma_fence);
@@ -303,7 +310,7 @@ namespace vk
 		{
 			ASSERT(exists());
 
-			if (LIKELY(!miss))
+			if (!miss) [[likely]]
 			{
 				verify(HERE), !synchronized;
 				baseclass::on_speculative_flush();
@@ -601,7 +608,7 @@ namespace vk
 					surface->transform_samples_to_pixels(src_x, src_w, src_y, src_h);
 				}
 
-				if (UNLIKELY(typeless))
+				if (typeless) [[unlikely]]
 				{
 					const auto src_bpp = vk::get_format_texel_width(section.src->format());
 					const u16 convert_w = u16(src_w * src_bpp) / dst_bpp;
@@ -638,7 +645,7 @@ namespace vk
 				// Final aspect mask of the 'final' transfer source
 				const auto new_src_aspect = src_image->aspect();
 
-				if (LIKELY(src_w == section.dst_w && src_h == section.dst_h && transform == rsx::surface_transform::identity))
+				if (src_w == section.dst_w && src_h == section.dst_h && transform == rsx::surface_transform::identity) [[likely]]
 				{
 					VkImageCopy copy_rgn;
 					copy_rgn.srcOffset = { src_x, src_y, 0 };
@@ -666,7 +673,7 @@ namespace vk
 					u16 dst_x = section.dst_x, dst_y = section.dst_y;
 					vk::image* _dst;
 
-					if (LIKELY(src_image->info.format == dst->info.format && section.level == 0))
+					if (src_image->info.format == dst->info.format && section.level == 0) [[likely]]
 					{
 						_dst = dst;
 					}
@@ -717,7 +724,7 @@ namespace vk
 						if (src_w != section.dst_w || src_h != section.dst_h)
 						{
 							// Optionally scale if needed
-							if (UNLIKELY(tmp == _dst))
+							if (tmp == _dst) [[unlikely]]
 							{
 								dst_y = src_h;
 							}
@@ -738,7 +745,7 @@ namespace vk
 						fmt::throw_exception("Unreachable" HERE);
 					}
 
-					if (UNLIKELY(_dst != dst))
+					if (_dst != dst) [[unlikely]]
 					{
 						// Casting comes after the scaling!
 						VkImageCopy copy_rgn;
@@ -759,7 +766,7 @@ namespace vk
 
 		vk::image* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const
 		{
-			if (LIKELY(sections_to_transfer.size() == 1))
+			if (sections_to_transfer.size() == 1) [[likely]]
 			{
 				return sections_to_transfer.front().src;
 			}
@@ -832,7 +839,7 @@ namespace vk
 			VkImageCreateFlags image_flags = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 			VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
 
-			if (LIKELY(!image_flags))
+			if (!image_flags) [[likely]]
 			{
 				image = find_temporary_image(dst_format, w, h, 1, 1);
 			}
@@ -1269,7 +1276,34 @@ namespace vk
 
 			vk::leave_uninterruptible();
 
-			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subres_range);
+			// Insert appropriate barrier depending on use
+			VkImageLayout preferred_layout;
+			switch (context)
+			{
+			default:
+				preferred_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				break;
+			case rsx::texture_upload_context::blit_engine_dst:
+				preferred_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				break;
+			case rsx::texture_upload_context::blit_engine_src:
+				preferred_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				break;
+			}
+
+			if (preferred_layout != image->current_layout)
+			{
+				change_image_layout(cmd, image, preferred_layout, subres_range);
+			}
+			else
+			{
+				// Insert ordering barrier
+				verify(HERE), preferred_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				insert_image_memory_barrier(cmd, image->value, image->current_layout, preferred_layout,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+					subres_range);
+			}
 
 			section->last_write_tag = rsx::get_shared_tag();
 			return section;

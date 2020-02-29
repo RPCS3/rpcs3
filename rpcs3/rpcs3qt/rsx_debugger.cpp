@@ -1,6 +1,17 @@
-﻿
-#include "rsx_debugger.h"
+﻿#include "rsx_debugger.h"
+#include "gui_settings.h"
 #include "qt_utils.h"
+#include "memory_viewer_panel.h"
+#include "table_item_delegate.h"
+
+#include "Emu/RSX/GSRender.h"
+
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QFont>
+#include <QPixmap>
+#include <QPushButton>
+#include <QKeyEvent>
 
 enum GCMEnumTypes
 {
@@ -22,9 +33,6 @@ namespace
 rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
 	: QDialog(parent)
 	, m_gui_settings(gui_settings)
-	, m_addr(0x0)
-	, m_cur_texture(0)
-	, exit(false)
 {
 	setWindowTitle(tr("RSX Debugger"));
 	setObjectName("rsx_debugger");
@@ -101,7 +109,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	m_tw_rsx = new QTabWidget();
 
 	// adds a tab containing a list to the tabwidget
-	auto l_addRSXTab = [=](QTableWidget* table, const QString& tabname, int columns)
+	auto l_addRSXTab = [=, this](QTableWidget* table, const QString& tabname, int columns)
 	{
 		table = new QTableWidget();
 		table->setItemDelegate(new table_item_delegate);
@@ -120,12 +128,10 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 		return table;
 	};
 
-	if (const auto render = rsx::get_current_renderer())
+	if (const auto render = rsx::get_current_renderer(); render && render->ctrl &&
+		render->iomap_table.get_addr(render->ctrl->get) + 1)
 	{
-		if (RSXIOMem.RealAddr(render->ctrl->get.load()))
-		{
-			m_addr = render->ctrl->get.load();
-		}
+		m_addr = render->ctrl->get;
 	}
 
 	m_list_commands = l_addRSXTab(m_list_commands, tr("RSX Commands"), 4);
@@ -208,29 +214,25 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	setLayout(main_layout);
 
 	//Events
-	connect(b_goto_get, &QAbstractButton::clicked, [=]
+	connect(b_goto_get, &QAbstractButton::clicked, [this]()
 	{
-		if (const auto render = rsx::get_current_renderer())
+		if (const auto render = rsx::get_current_renderer(); render && render->ctrl &&
+			render->iomap_table.get_addr(render->ctrl->get) + 1)
 		{
-			if (RSXIOMem.RealAddr(render->ctrl->get.load()))
-			{
-				m_addr = render->ctrl->get.load();
-				UpdateInformation();
-			}
+			m_addr = render->ctrl->get;
+			UpdateInformation();
 		}
 	});
-	connect(b_goto_put, &QAbstractButton::clicked, [=]
+	connect(b_goto_put, &QAbstractButton::clicked, [this]()
 	{
-		if (const auto render = rsx::get_current_renderer())
+		if (const auto render = rsx::get_current_renderer(); render && render->ctrl &&
+			render->iomap_table.get_addr(render->ctrl->put) + 1)
 		{
-			if (RSXIOMem.RealAddr(render->ctrl->put.load()))
-			{
-				m_addr = render->ctrl->put.load();
-				UpdateInformation();
-			}
+			m_addr = render->ctrl->put;
+			UpdateInformation();
 		}
 	});
-	connect(m_addr_line, &QLineEdit::returnPressed, [=]
+	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
 	{
 		bool ok;
 		m_addr = m_addr_line->text().toULong(&ok, 16);
@@ -331,7 +333,9 @@ bool rsx_debugger::eventFilter(QObject* object, QEvent* event)
 }
 
 Buffer::Buffer(bool isTex, u32 id, const QString& name, QWidget* parent)
-	: QGroupBox(name, parent), m_isTex(isTex), m_id(id)
+	: QGroupBox(name, parent)
+	, m_id(id)
+	, m_isTex(isTex)
 {
 	m_image_size = isTex ? Texture_Size : Panel_Size;
 
@@ -384,10 +388,10 @@ void Buffer::ShowWindowed()
 	if (m_isTex)
 	{
 		/*	u8 location = render->textures[m_cur_texture].location();
-			if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location))
+			if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location, HERE))
 				&& render->textures[m_cur_texture].width() && render->textures[m_cur_texture].height())
 				memory_viewer_panel::ShowImage(this,
-					rsx::get_address(render->textures[m_cur_texture].offset(), location), 1,
+					rsx::get_address(render->textures[m_cur_texture].offset(), location, HERE), 1,
 					render->textures[m_cur_texture].width(),
 					render->textures[m_cur_texture].height(), false);*/
 	}
@@ -604,9 +608,10 @@ void rsx_debugger::GetMemory()
 		address_item->setData(Qt::UserRole, addr);
 		m_list_commands->setItem(i, 0, address_item);
 
-		if (vm::check_addr(RSXIOMem.RealAddr(addr)))
+		if (const u32 ea = rsx::get_current_renderer()->iomap_table.get_addr(addr);
+			ea + 1)
 		{
-			u32 cmd = *vm::get_super_ptr<u32>(RSXIOMem.RealAddr(addr));
+			u32 cmd = *vm::get_super_ptr<u32>(ea);
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
 			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr)));
@@ -704,7 +709,7 @@ void rsx_debugger::GetBuffers()
 	if(location > 1)
 		return;
 
-	u32 TexBuffer_addr = rsx::get_address(offset, location);
+	u32 TexBuffer_addr = rsx::get_address(offset, location, HERE);
 
 	if(!vm::check_addr(TexBuffer_addr))
 		return;
@@ -843,7 +848,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 	}
 	else
 	{
-		auto args = vm::get_super_ptr<u32>(RSXIOMem.RealAddr(ioAddr + 4));
+		const auto args = vm::get_super_ptr<u32>(rsx::get_current_renderer()->iomap_table.get_addr(ioAddr + 4));
 
 		u32 index = 0;
 		switch((cmd & 0x3ffff) >> 2)
@@ -868,7 +873,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 		break;
 
 		case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
-			DISASM(args[0] ? "Depth bounds test: Enable" : "Depth bounds test: Disable");
+			DISASM("Depth bounds test: %s", args[0] ? "Enable" : "Disable");
 		break;
 		default:
 		{

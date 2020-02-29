@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "aes.h"
 #include "sha1.h"
 #include "utils.h"
@@ -203,10 +203,10 @@ void AppInfo::Load(const fs::file& f)
 
 void AppInfo::Show()
 {
-	LOG_NOTICE(LOADER, "AuthID: 0x%llx", authid);
-	LOG_NOTICE(LOADER, "VendorID: 0x%08x", vendor_id);
-	LOG_NOTICE(LOADER, "SELF type: 0x%08x", self_type);
-	LOG_NOTICE(LOADER, "Version: 0x%llx", version);
+	self_log.notice("AuthID: 0x%llx", authid);
+	self_log.notice("VendorID: 0x%08x", vendor_id);
+	self_log.notice("SELF type: 0x%08x", self_type);
+	self_log.notice("Version: 0x%llx", version);
 }
 
 void SectionInfo::Load(const fs::file& f)
@@ -221,12 +221,12 @@ void SectionInfo::Load(const fs::file& f)
 
 void SectionInfo::Show()
 {
-	LOG_NOTICE(LOADER, "Offset: 0x%llx", offset);
-	LOG_NOTICE(LOADER, "Size: 0x%llx", size);
-	LOG_NOTICE(LOADER, "Compressed: 0x%08x", compressed);
-	LOG_NOTICE(LOADER, "Unknown1: 0x%08x", unknown1);
-	LOG_NOTICE(LOADER, "Unknown2: 0x%08x", unknown2);
-	LOG_NOTICE(LOADER, "Encrypted: 0x%08x", encrypted);
+	self_log.notice("Offset: 0x%llx", offset);
+	self_log.notice("Size: 0x%llx", size);
+	self_log.notice("Compressed: 0x%08x", compressed);
+	self_log.notice("Unknown1: 0x%08x", unknown1);
+	self_log.notice("Unknown2: 0x%08x", unknown2);
+	self_log.notice("Encrypted: 0x%08x", encrypted);
 }
 
 void SCEVersionInfo::Load(const fs::file& f)
@@ -239,10 +239,10 @@ void SCEVersionInfo::Load(const fs::file& f)
 
 void SCEVersionInfo::Show()
 {
-	LOG_NOTICE(LOADER, "Sub-header type: 0x%08x", subheader_type);
-	LOG_NOTICE(LOADER, "Present: 0x%08x", present);
-	LOG_NOTICE(LOADER, "Size: 0x%08x", size);
-	LOG_NOTICE(LOADER, "Unknown: 0x%08x", unknown);
+	self_log.notice("Sub-header type: 0x%08x", subheader_type);
+	self_log.notice("Present: 0x%08x", present);
+	self_log.notice("Size: 0x%08x", size);
+	self_log.notice("Unknown: 0x%08x", unknown);
 }
 
 void ControlInfo::Load(const fs::file& f)
@@ -293,20 +293,20 @@ void ControlInfo::Load(const fs::file& f)
 
 void ControlInfo::Show()
 {
-	LOG_NOTICE(LOADER, "Type: 0x%08x", type);
-	LOG_NOTICE(LOADER, "Size: 0x%08x", size);
-	LOG_NOTICE(LOADER, "Next: 0x%llx", next);
+	self_log.notice("Type: 0x%08x", type);
+	self_log.notice("Size: 0x%08x", size);
+	self_log.notice("Next: 0x%llx", next);
 
 	if (type == 1)
 	{
-		LOG_NOTICE(LOADER, "Control flag 1: 0x%08x", control_flags.ctrl_flag1);
-		LOG_NOTICE(LOADER, "Unknown1: 0x%08x", control_flags.unknown1);
-		LOG_NOTICE(LOADER, "Unknown2: 0x%08x", control_flags.unknown2);
-		LOG_NOTICE(LOADER, "Unknown3: 0x%08x", control_flags.unknown3);
-		LOG_NOTICE(LOADER, "Unknown4: 0x%08x", control_flags.unknown4);
-		LOG_NOTICE(LOADER, "Unknown5: 0x%08x", control_flags.unknown5);
-		LOG_NOTICE(LOADER, "Unknown6: 0x%08x", control_flags.unknown6);
-		LOG_NOTICE(LOADER, "Unknown7: 0x%08x", control_flags.unknown7);
+		self_log.notice("Control flag 1: 0x%08x", control_flags.ctrl_flag1);
+		self_log.notice("Unknown1: 0x%08x", control_flags.unknown1);
+		self_log.notice("Unknown2: 0x%08x", control_flags.unknown2);
+		self_log.notice("Unknown3: 0x%08x", control_flags.unknown3);
+		self_log.notice("Unknown4: 0x%08x", control_flags.unknown4);
+		self_log.notice("Unknown5: 0x%08x", control_flags.unknown5);
+		self_log.notice("Unknown6: 0x%08x", control_flags.unknown6);
+		self_log.notice("Unknown7: 0x%08x", control_flags.unknown7);
 	}
 	else if (type == 2)
 	{
@@ -316,8 +316,8 @@ void ControlInfo::Show()
 			for (int i = 0; i < 20; i++)
 				digest_str += fmt::format("%02x", file_digest_30.digest[i]);
 
-			LOG_NOTICE(LOADER, "Digest: %s", digest_str.c_str());
-			LOG_NOTICE(LOADER, "Unknown: 0x%llx", file_digest_30.unknown);
+			self_log.notice("Digest: %s", digest_str.c_str());
+			self_log.notice("Unknown: 0x%llx", file_digest_30.unknown);
 		}
 		else if (size == 0x40)
 		{
@@ -329,9 +329,9 @@ void ControlInfo::Show()
 				digest_str2 += fmt::format("%02x", file_digest_40.digest2[i]);
 			}
 
-			LOG_NOTICE(LOADER, "Digest1: %s", digest_str1.c_str());
-			LOG_NOTICE(LOADER, "Digest2: %s", digest_str2.c_str());
-			LOG_NOTICE(LOADER, "Unknown: 0x%llx", file_digest_40.unknown);
+			self_log.notice("Digest1: %s", digest_str1.c_str());
+			self_log.notice("Digest2: %s", digest_str2.c_str());
+			self_log.notice("Unknown: 0x%llx", file_digest_40.unknown);
 		}
 	}
 	else if (type == 3)
@@ -349,16 +349,16 @@ void ControlInfo::Show()
 			xordigest_str += fmt::format("%02x", npdrm.xordigest[i]);
 		}
 
-		LOG_NOTICE(LOADER, "Magic: 0x%08x", npdrm.magic);
-		LOG_NOTICE(LOADER, "Unknown1: 0x%08x", npdrm.unknown1);
-		LOG_NOTICE(LOADER, "License: 0x%08x", npdrm.license);
-		LOG_NOTICE(LOADER, "Type: 0x%08x", npdrm.type);
-		LOG_NOTICE(LOADER, "ContentID: %s", contentid_str.c_str());
-		LOG_NOTICE(LOADER, "Digest: %s", digest_str.c_str());
-		LOG_NOTICE(LOADER, "Inverse digest: %s", invdigest_str.c_str());
-		LOG_NOTICE(LOADER, "XOR digest: %s", xordigest_str.c_str());
-		LOG_NOTICE(LOADER, "Unknown2: 0x%llx", npdrm.unknown2);
-		LOG_NOTICE(LOADER, "Unknown3: 0x%llx", npdrm.unknown3);
+		self_log.notice("Magic: 0x%08x", npdrm.magic);
+		self_log.notice("Unknown1: 0x%08x", npdrm.unknown1);
+		self_log.notice("License: 0x%08x", npdrm.license);
+		self_log.notice("Type: 0x%08x", npdrm.type);
+		self_log.notice("ContentID: %s", contentid_str.c_str());
+		self_log.notice("Digest: %s", digest_str.c_str());
+		self_log.notice("Inverse digest: %s", invdigest_str.c_str());
+		self_log.notice("XOR digest: %s", xordigest_str.c_str());
+		self_log.notice("Unknown2: 0x%llx", npdrm.unknown2);
+		self_log.notice("Unknown3: 0x%llx", npdrm.unknown3);
 	}
 }
 
@@ -384,10 +384,10 @@ void MetadataInfo::Show()
 		iv_pad_str += fmt::format("%02x", iv_pad[i]);
 	}
 
-	LOG_NOTICE(LOADER, "Key: %s", key_str.c_str());
-	LOG_NOTICE(LOADER, "Key pad: %s", key_pad_str.c_str());
-	LOG_NOTICE(LOADER, "IV: %s", iv_str.c_str());
-	LOG_NOTICE(LOADER, "IV pad: %s", iv_pad_str.c_str());
+	self_log.notice("Key: %s", key_str.c_str());
+	self_log.notice("Key pad: %s", key_pad_str.c_str());
+	self_log.notice("IV: %s", iv_str.c_str());
+	self_log.notice("IV pad: %s", iv_pad_str.c_str());
 }
 
 void MetadataHeader::Load(u8* in)
@@ -412,13 +412,13 @@ void MetadataHeader::Load(u8* in)
 
 void MetadataHeader::Show()
 {
-	LOG_NOTICE(LOADER, "Signature input length: 0x%llx", signature_input_length);
-	LOG_NOTICE(LOADER, "Unknown1: 0x%08x", unknown1);
-	LOG_NOTICE(LOADER, "Section count: 0x%08x", section_count);
-	LOG_NOTICE(LOADER, "Key count: 0x%08x", key_count);
-	LOG_NOTICE(LOADER, "Optional header size: 0x%08x", opt_header_size);
-	LOG_NOTICE(LOADER, "Unknown2: 0x%08x", unknown2);
-	LOG_NOTICE(LOADER, "Unknown3: 0x%08x", unknown3);
+	self_log.notice("Signature input length: 0x%llx", signature_input_length);
+	self_log.notice("Unknown1: 0x%08x", unknown1);
+	self_log.notice("Section count: 0x%08x", section_count);
+	self_log.notice("Key count: 0x%08x", key_count);
+	self_log.notice("Optional header size: 0x%08x", opt_header_size);
+	self_log.notice("Unknown2: 0x%08x", unknown2);
+	self_log.notice("Unknown3: 0x%08x", unknown3);
 }
 
 void MetadataSectionHeader::Load(u8* in)
@@ -449,16 +449,16 @@ void MetadataSectionHeader::Load(u8* in)
 
 void MetadataSectionHeader::Show()
 {
-	LOG_NOTICE(LOADER, "Data offset: 0x%llx", data_offset);
-	LOG_NOTICE(LOADER, "Data size: 0x%llx", data_size);
-	LOG_NOTICE(LOADER, "Type: 0x%08x", type);
-	LOG_NOTICE(LOADER, "Program index: 0x%08x", program_idx);
-	LOG_NOTICE(LOADER, "Hashed: 0x%08x", hashed);
-	LOG_NOTICE(LOADER, "SHA1 index: 0x%08x", sha1_idx);
-	LOG_NOTICE(LOADER, "Encrypted: 0x%08x", encrypted);
-	LOG_NOTICE(LOADER, "Key index: 0x%08x", key_idx);
-	LOG_NOTICE(LOADER, "IV index: 0x%08x", iv_idx);
-	LOG_NOTICE(LOADER, "Compressed: 0x%08x", compressed);
+	self_log.notice("Data offset: 0x%llx", data_offset);
+	self_log.notice("Data size: 0x%llx", data_size);
+	self_log.notice("Type: 0x%08x", type);
+	self_log.notice("Program index: 0x%08x", program_idx);
+	self_log.notice("Hashed: 0x%08x", hashed);
+	self_log.notice("SHA1 index: 0x%08x", sha1_idx);
+	self_log.notice("Encrypted: 0x%08x", encrypted);
+	self_log.notice("Key index: 0x%08x", key_idx);
+	self_log.notice("IV index: 0x%08x", iv_idx);
+	self_log.notice("Compressed: 0x%08x", compressed);
 }
 
 void SectionHash::Load(const fs::file& f)
@@ -664,7 +664,7 @@ bool SCEDecrypter::LoadHeaders()
 	// Check SCE magic.
 	if (!sce_hdr.CheckMagic())
 	{
-		LOG_ERROR(LOADER, "SELF: Not a SELF file!");
+		self_log.error("SELF: Not a SELF file!");
 		return false;
 	}
 
@@ -708,7 +708,7 @@ bool SCEDecrypter::LoadMetadata(const u8 erk[32], const u8 riv[16])
 	if ((meta_info.key_pad[0] != 0x00) ||
 		(meta_info.iv_pad[0] != 0x00))
 	{
-		LOG_ERROR(LOADER, "SELF: Failed to decrypt metadata info!");
+		self_log.error("SELF: Failed to decrypt metadata info!");
 		return false;
 	}
 
@@ -832,8 +832,14 @@ std::vector<fs::file> SCEDecrypter::MakeFile()
 			strm.avail_out = BUFSIZE;
 			strm.next_in = data_buf.get()+data_buf_offset;
 			strm.next_out = tempbuf;
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 			int ret = inflateInit(&strm);
-
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 			while (strm.avail_in)
 			{
 				ret = inflate(&strm, Z_NO_FLUSH);
@@ -881,7 +887,6 @@ std::vector<fs::file> SCEDecrypter::MakeFile()
 SELFDecrypter::SELFDecrypter(const fs::file& s)
 	: self_f(s)
 	, key_v()
-	, data_buf_length(0)
 {
 }
 
@@ -899,7 +904,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 	// Check SCE magic.
 	if (!sce_hdr.CheckMagic())
 	{
-		LOG_ERROR(LOADER, "SELF: Not a SELF file!");
+		self_log.error("SELF: Not a SELF file!");
 		return false;
 	}
 
@@ -929,7 +934,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 		phdr32_arr.clear();
 		if(elf32_hdr.e_phoff == 0 && elf32_hdr.e_phnum)
 		{
-			LOG_ERROR(LOADER, "SELF: ELF program header offset is null!");
+			self_log.error("SELF: ELF program header offset is null!");
 			return false;
 		}
 		self_f.seek(self_hdr.se_phdroff);
@@ -945,7 +950,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 		if (elf64_hdr.e_phoff == 0 && elf64_hdr.e_phnum)
 		{
-			LOG_ERROR(LOADER, "SELF: ELF program header offset is null!");
+			self_log.error("SELF: ELF program header offset is null!");
 			return false;
 		}
 
@@ -997,7 +1002,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 		if (elf32_hdr.e_shoff == 0 && elf32_hdr.e_shnum)
 		{
-			LOG_WARNING(LOADER, "SELF: ELF section header offset is null!");
+			self_log.warning("SELF: ELF section header offset is null!");
 			return true;
 		}
 
@@ -1014,7 +1019,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 		shdr64_arr.clear();
 		if (elf64_hdr.e_shoff == 0 && elf64_hdr.e_shnum)
 		{
-			LOG_WARNING(LOADER, "SELF: ELF section header offset is null!");
+			self_log.warning("SELF: ELF section header offset is null!");
 			return true;
 		}
 
@@ -1037,46 +1042,46 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 void SELFDecrypter::ShowHeaders(bool isElf32)
 {
-	LOG_NOTICE(LOADER, "SCE header");
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	self_log.notice("SCE header");
+	self_log.notice("----------------------------------------------------");
 	sce_hdr.Show();
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
-	LOG_NOTICE(LOADER, "SELF header");
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	self_log.notice("----------------------------------------------------");
+	self_log.notice("SELF header");
+	self_log.notice("----------------------------------------------------");
 	self_hdr.Show();
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
-	LOG_NOTICE(LOADER, "APP INFO");
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	self_log.notice("----------------------------------------------------");
+	self_log.notice("APP INFO");
+	self_log.notice("----------------------------------------------------");
 	app_info.Show();
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
-	LOG_NOTICE(LOADER, "ELF header");
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	self_log.notice("----------------------------------------------------");
+	self_log.notice("ELF header");
+	self_log.notice("----------------------------------------------------");
 	isElf32 ? elf32_hdr.Show() : elf64_hdr.Show();
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
-	LOG_NOTICE(LOADER, "ELF program headers");
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	self_log.notice("----------------------------------------------------");
+	self_log.notice("ELF program headers");
+	self_log.notice("----------------------------------------------------");
 	for(unsigned int i = 0; i < ((isElf32) ? phdr32_arr.size() : phdr64_arr.size()); i++)
 		isElf32 ? phdr32_arr[i].Show() : phdr64_arr[i].Show();
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
-	LOG_NOTICE(LOADER, "Section info");
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	self_log.notice("----------------------------------------------------");
+	self_log.notice("Section info");
+	self_log.notice("----------------------------------------------------");
 	for(unsigned int i = 0; i < secinfo_arr.size(); i++)
 		secinfo_arr[i].Show();
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
-	LOG_NOTICE(LOADER, "SCE version info");
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	self_log.notice("----------------------------------------------------");
+	self_log.notice("SCE version info");
+	self_log.notice("----------------------------------------------------");
 	scev_info.Show();
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
-	LOG_NOTICE(LOADER, "Control info");
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	self_log.notice("----------------------------------------------------");
+	self_log.notice("Control info");
+	self_log.notice("----------------------------------------------------");
 	for(unsigned int i = 0; i < ctrlinfo_arr.size(); i++)
 		ctrlinfo_arr[i].Show();
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
-	LOG_NOTICE(LOADER, "ELF section headers");
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	self_log.notice("----------------------------------------------------");
+	self_log.notice("ELF section headers");
+	self_log.notice("----------------------------------------------------");
 	for(unsigned int i = 0; i < ((isElf32) ? shdr32_arr.size() : shdr64_arr.size()); i++)
 		isElf32 ? shdr32_arr[i].Show() : shdr64_arr[i].Show();
-	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	self_log.notice("----------------------------------------------------");
 }
 
 bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
@@ -1100,13 +1105,13 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	// If not, the data has no NPDRM layer.
 	if (!ctrl)
 	{
-		LOG_TRACE(LOADER, "SELF: No NPDRM control info found!");
+		self_log.trace("SELF: No NPDRM control info found!");
 		return true;
 	}
 
 	if (ctrl->npdrm.license == 1)  // Network license.
 	{
-		LOG_ERROR(LOADER, "SELF: Can't decrypt network NPDRM!");
+		self_log.error("SELF: Can't decrypt network NPDRM!");
 		return false;
 	}
 	else if (ctrl->npdrm.license == 2)  // Local license.
@@ -1114,7 +1119,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 		// Try to find a RAP file to get the key.
 		if (!GetKeyFromRap(ctrl->npdrm.content_id, npdrm_key))
 		{
-			LOG_ERROR(LOADER, "SELF: Can't find RAP file for NPDRM decryption!");
+			self_log.error("SELF: Can't find RAP file for NPDRM decryption!");
 			return false;
 		}
 	}
@@ -1128,7 +1133,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	}
 	else
 	{
-		LOG_ERROR(LOADER, "SELF: Invalid NPDRM license type!");
+		self_log.error("SELF: Invalid NPDRM license type!");
 		return false;
 	}
 
@@ -1194,7 +1199,7 @@ bool SELFDecrypter::LoadMetadata(u8* klic_key)
 	if ((meta_info.key_pad[0] != 0x00) ||
 		(meta_info.iv_pad[0] != 0x00))
 	{
-		LOG_ERROR(LOADER, "SELF: Failed to decrypt metadata info!");
+		self_log.error("SELF: Failed to decrypt metadata info!");
 		return false;
 	}
 
@@ -1319,11 +1324,13 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 
 	if (!rap_file)
 	{
-		LOG_FATAL(LOADER, "Failed to load RAP file: %s. Make sure the file extension is lowercase.", rap_path);
+		self_log.fatal("Failed to locate the game license file: %s."
+				  "\nEnsure the .rap license file is placed in the dev_hdd0/home/00000001/exdata folder with a lowercase file extension."
+				  "\nIf you need assistance on dumping the license file from your PS3, read our quickstart guide: https://rpcs3.net/quickstart", rap_path);
 		return false;
 	}
 
-	LOG_NOTICE(LOADER, "Loading RAP file %s.rap", ci_str);
+	self_log.notice("Loading RAP file %s.rap", ci_str);
 	rap_file.read(rap_key, 0x10);
 
 	// Convert the RAP key.
@@ -1367,7 +1374,7 @@ static bool CheckDebugSelf(fs::file& s)
 	// Check for DEBUG version.
 	if (key_version == 0x80 || key_version == 0xc0)
 	{
-		LOG_WARNING(LOADER, "Debug SELF detected! Removing fake header...");
+		self_log.warning("Debug SELF detected! Removing fake header...");
 
 		// Get the real elf offset.
 		s.seek(0x10);
@@ -1419,21 +1426,21 @@ fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* ou
 		// Load the SELF file headers.
 		if (!self_dec.LoadHeaders(isElf32, out_info))
 		{
-			LOG_ERROR(LOADER, "SELF: Failed to load SELF file headers!");
+			self_log.error("SELF: Failed to load SELF file headers!");
 			return fs::file{};
 		}
 
 		// Load and decrypt the SELF file metadata.
 		if (!self_dec.LoadMetadata(klic_key))
 		{
-			LOG_ERROR(LOADER, "SELF: Failed to load SELF file metadata!");
+			self_log.error("SELF: Failed to load SELF file metadata!");
 			return fs::file{};
 		}
 
 		// Decrypt the SELF file data.
 		if (!self_dec.DecryptData())
 		{
-			LOG_ERROR(LOADER, "SELF: Failed to decrypt SELF file data!");
+			self_log.error("SELF: Failed to decrypt SELF file data!");
 			return fs::file{};
 		}
 
@@ -1462,14 +1469,14 @@ bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 		// Load the SELF file headers.
 		if (!self_dec.LoadHeaders(isElf32))
 		{
-			LOG_ERROR(LOADER, "SELF: Failed to load SELF file headers!");
+			self_log.error("SELF: Failed to load SELF file headers!");
 			return false;
 		}
 
 		// Load and decrypt the SELF file metadata.
 		if (!self_dec.LoadMetadata(klic_key))
 		{
-			LOG_ERROR(LOADER, "SELF: Failed to load SELF file metadata!");
+			self_log.error("SELF: Failed to load SELF file metadata!");
 			return false;
 		}
 	}

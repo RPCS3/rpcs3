@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
-#include "Emu/System.h"
 #include "VKGSRender.h"
+#include "../Overlays/overlay_shader_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "../rsx_methods.h"
 #include "../rsx_utils.h"
@@ -119,7 +118,7 @@ namespace vk
 			return std::make_pair(VK_FORMAT_R32_SFLOAT, vk::default_component_map());
 
 		default:
-			LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", static_cast<u32>(color_format));
+			rsx_log.error("Surface color buffer: Unsupported surface color format (0x%x)", static_cast<u32>(color_format));
 			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map());
 		}
 	}
@@ -178,12 +177,12 @@ namespace vk
 		switch (op)
 		{
 		case rsx::blend_equation::add_signed:
-			LOG_TRACE(RSX, "blend equation add_signed used. Emulating using FUNC_ADD");
+			rsx_log.trace("blend equation add_signed used. Emulating using FUNC_ADD");
 		case rsx::blend_equation::add:
 			return VK_BLEND_OP_ADD;
 		case rsx::blend_equation::substract: return VK_BLEND_OP_SUBTRACT;
 		case rsx::blend_equation::reverse_substract_signed:
-			LOG_TRACE(RSX, "blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
+			rsx_log.trace("blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
 		case rsx::blend_equation::reverse_substract: return VK_BLEND_OP_REVERSE_SUBTRACT;
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
 		case rsx::blend_equation::max: return VK_BLEND_OP_MAX;
@@ -231,6 +230,22 @@ namespace vk
 		default:
 			fmt::throw_exception("Unknown cull face value: 0x%x" HERE, static_cast<u32>(cfv));
 		}
+	}
+
+	VkImageViewType get_view_type(rsx::texture_dimension_extended type)
+	{
+		switch (type)
+		{
+		case rsx::texture_dimension_extended::texture_dimension_1d:
+			return VK_IMAGE_VIEW_TYPE_1D;
+		case rsx::texture_dimension_extended::texture_dimension_2d:
+			return VK_IMAGE_VIEW_TYPE_2D;
+		case rsx::texture_dimension_extended::texture_dimension_cubemap:
+			return VK_IMAGE_VIEW_TYPE_CUBE;
+		case rsx::texture_dimension_extended::texture_dimension_3d:
+			return VK_IMAGE_VIEW_TYPE_3D;
+		default: ASSUME(0);
+		};
 	}
 }
 
@@ -362,7 +377,7 @@ VKGSRender::VKGSRender() : GSRender()
 	}
 	else
 	{
-		LOG_FATAL(RSX, "Could not find a vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the vulkan runtime and drivers");
+		rsx_log.fatal("Could not find a vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the vulkan runtime and drivers");
 		m_device = VK_NULL_HANDLE;
 		return;
 	}
@@ -374,7 +389,7 @@ VKGSRender::VKGSRender() : GSRender()
 	if (gpus.empty())
 	{
 		//We can't throw in Emulator::Load, so we show error and return
-		LOG_FATAL(RSX, "No compatible GPU devices found");
+		rsx_log.fatal("No compatible GPU devices found");
 		m_device = VK_NULL_HANDLE;
 		return;
 	}
@@ -412,7 +427,7 @@ VKGSRender::VKGSRender() : GSRender()
 	if (!m_swapchain)
 	{
 		m_device = VK_NULL_HANDLE;
-		LOG_FATAL(RSX, "Could not successfully initialize a swapchain");
+		rsx_log.fatal("Could not successfully initialize a swapchain");
 		return;
 	}
 
@@ -487,7 +502,7 @@ VKGSRender::VKGSRender() : GSRender()
 	if (m_texbuffer_view_size < 0x800000)
 	{
 		// Warn, only possibly expected on macOS
-		LOG_WARNING(RSX, "Current driver may crash due to memory limitations (%uk)", m_texbuffer_view_size / 1024);
+		rsx_log.warning("Current driver may crash due to memory limitations (%uk)", m_texbuffer_view_size / 1024);
 	}
 
 	for (auto &ctx : frame_context_storage)
@@ -706,15 +721,15 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (result.num_flushable > 0)
 	{
-		if (rsx::g_dma_manager.is_current_thread())
+		if (g_fxo->get<rsx::dma_manager>()->is_current_thread())
 		{
 			// The offloader thread cannot handle flush requests
 			verify(HERE), m_queue_status.load() == flush_queue_state::ok;
 
-			m_offloader_fault_range = rsx::g_dma_manager.get_fault_range(is_writing);
+			m_offloader_fault_range = g_fxo->get<rsx::dma_manager>()->get_fault_range(is_writing);
 			m_offloader_fault_cause = (is_writing) ? rsx::invalidation_cause::write : rsx::invalidation_cause::read;
 
-			rsx::g_dma_manager.set_mem_fault_flag();
+			g_fxo->get<rsx::dma_manager>()->set_mem_fault_flag();
 			m_queue_status |= flush_queue_state::deadlock;
 
 			// Wait for deadlock to clear
@@ -723,7 +738,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 				_mm_pause();
 			}
 
-			rsx::g_dma_manager.clear_mem_fault_flag();
+			g_fxo->get<rsx::dma_manager>()->clear_mem_fault_flag();
 			return true;
 		}
 
@@ -742,7 +757,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		{
 			if (vk::is_uninterruptible())
 			{
-				LOG_ERROR(RSX, "Fault in uninterruptible code!");
+				rsx_log.error("Fault in uninterruptible code!");
 			}
 
 			//Flush primary cb queue to sync pending changes (e.g image transitions!)
@@ -797,9 +812,12 @@ void VKGSRender::on_semaphore_acquire_wait()
 void VKGSRender::notify_tile_unbound(u32 tile)
 {
 	//TODO: Handle texture writeback
-	//u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
-	//on_notify_memory_unmapped(addr, tiles[tile].size);
-	//m_rtts.invalidate_surface_address(addr, false);
+	if (false)
+	{
+		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location, HERE);
+		on_notify_memory_unmapped(addr, tiles[tile].size);
+		m_rtts.invalidate_surface_address(addr, false);
+	}
 
 	{
 		std::lock_guard lock(m_sampler_mutex);
@@ -1090,7 +1108,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		for (auto &info : m_vertex_layout.interleaved_blocks)
 		{
 			const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
-			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location);
+			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location, HERE);
 		}
 	}
 
@@ -1250,11 +1268,11 @@ void VKGSRender::end()
 	}
 
 	// Check for frame resource status here because it is possible for an async flip to happen between begin/end
-	if (UNLIKELY(m_current_frame->flags & frame_context_state::dirty))
+	if (m_current_frame->flags & frame_context_state::dirty) [[unlikely]]
 	{
 		check_present_status();
 
-		if (UNLIKELY(m_current_frame->swap_command_buffer))
+		if (m_current_frame->swap_command_buffer) [[unlikely]]
 		{
 			// Borrow time by using the auxilliary context
 			m_aux_frame_context.grab_resources(*m_current_frame);
@@ -1325,7 +1343,7 @@ void VKGSRender::end()
 		bool update_framebuffer_sourced = false;
 		bool check_for_cyclic_refs = false;
 
-		if (UNLIKELY(surface_store_tag != m_rtts.cache_tag))
+		if (surface_store_tag != m_rtts.cache_tag) [[unlikely]]
 		{
 			update_framebuffer_sourced = true;
 			surface_store_tag = m_rtts.cache_tag;
@@ -1388,7 +1406,7 @@ void VKGSRender::end()
 
 					// Check if non-point filtering can even be used on this format
 					bool can_sample_linear;
-					if (LIKELY(sampler_state->format_class == rsx::format_type::color))
+					if (sampler_state->format_class == rsx::format_type::color) [[likely]]
 					{
 						// Most PS3-like formats can be linearly filtered without problem
 						can_sample_linear = true;
@@ -1592,6 +1610,10 @@ void VKGSRender::end()
 						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
 						raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 						break;
+					case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src;
+						raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+						break;
 					case VK_IMAGE_LAYOUT_GENERAL:
 						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
 						if (!sampler_state->is_cyclic_reference)
@@ -1631,7 +1653,7 @@ void VKGSRender::end()
 				}
 			}
 
-			if (LIKELY(view))
+			if (view) [[likely]]
 			{
 				m_program->bind_uniform({ fs_sampler_handles[i]->value, view->value, view->image()->current_layout },
 					i,
@@ -1664,14 +1686,15 @@ void VKGSRender::end()
 			}
 			else
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				const VkImageViewType view_type = vk::get_view_type(current_fragment_program.get_texture_dimension(i));
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 					i,
 					::glsl::program_domain::glsl_fragment_program,
 					m_current_frame->descriptor_set);
 
 				if (current_fragment_program.redirected_textures & (1 << i))
 				{
-					m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+					m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 						i,
 						::glsl::program_domain::glsl_fragment_program,
 						m_current_frame->descriptor_set,
@@ -1687,7 +1710,8 @@ void VKGSRender::end()
 		{
 			if (!rsx::method_registers.vertex_textures[i].enabled())
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 					i,
 					::glsl::program_domain::glsl_vertex_program,
 					m_current_frame->descriptor_set);
@@ -1706,8 +1730,10 @@ void VKGSRender::end()
 
 			if (!image_ptr)
 			{
-				LOG_ERROR(RSX, "Texture upload failed to vtexture index %d. Binding null sampler.", i);
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				rsx_log.error("Texture upload failed to vtexture index %d. Binding null sampler.", i);
+				const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
+
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 					i,
 					::glsl::program_domain::glsl_vertex_program,
 					m_current_frame->descriptor_set);
@@ -1722,6 +1748,10 @@ void VKGSRender::end()
 				break;
 			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 				verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
+				raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				break;
+			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+				verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src;
 				raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 				break;
 			case VK_IMAGE_LAYOUT_GENERAL:
@@ -1777,13 +1807,13 @@ void VKGSRender::end()
 		if (occlusion_id == UINT32_MAX)
 		{
 			// Force flush
-			LOG_ERROR(RSX, "[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
+			rsx_log.error("[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
 			ZCULL_control::sync(this);
 
 			occlusion_id = m_occlusion_query_pool.find_free_slot();
 			if (occlusion_id == UINT32_MAX)
 			{
-				//LOG_ERROR(RSX, "Occlusion pool overflow");
+				//rsx_log.error("Occlusion pool overflow");
 				if (m_current_task) m_current_task->result = 1;
 			}
 		}
@@ -2159,7 +2189,7 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 
 	if (!m_current_command_buffer->poke())
 	{
-		LOG_ERROR(RSX, "CB chain has run out of free entries!");
+		rsx_log.error("CB chain has run out of free entries!");
 	}
 
 	m_current_command_buffer->reset();
@@ -2333,7 +2363,7 @@ bool VKGSRender::load_program()
 	if (rsx::method_registers.cull_face_enabled())
 		properties.state.enable_cull_face(vk::get_cull_face(rsx::method_registers.cull_face_mode()));
 
-	for (int index = 0; index < m_draw_buffers.size(); ++index)
+	for (uint index = 0; index < m_draw_buffers.size(); ++index)
 	{
 		bool color_mask_b = rsx::method_registers.color_mask_b(index);
 		bool color_mask_g = rsx::method_registers.color_mask_g(index);
@@ -2639,7 +2669,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 {
 	// Workaround for deadlock occuring during RSX offloader fault
 	// TODO: Restructure command submission infrastructure to avoid this condition
-	const bool sync_success = rsx::g_dma_manager.sync();
+	const bool sync_success = g_fxo->get<rsx::dma_manager>()->sync();
 	const VkBool32 force_flush = !sync_success;
 
 	if (vk::test_status_interrupt(vk::heap_dirty))
@@ -2876,7 +2906,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			const bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
 				!!g_cfg.video.write_color_buffers;
 
-			if (LIKELY(!lock))
+			if (!lock) [[likely]]
 			{
 				m_texture_cache.commit_framebuffer_memory_region(*m_current_command_buffer, surface->get_memory_range());
 				continue;
@@ -3031,7 +3061,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 				m_flush_requests.clear_pending_flag();
 			}
 
-			LOG_ERROR(RSX, "[Performance warning] Unexpected ZCULL read caused a hard sync");
+			rsx_log.error("[Performance warning] Unexpected ZCULL read caused a hard sync");
 			busy_wait();
 		}
 
@@ -3162,7 +3192,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	size_t first = 0;
 	size_t last;
 
-	if (LIKELY(!partial_eval))
+	if (!partial_eval) [[likely]]
 	{
 		last = sources.size();
 	}
@@ -3208,7 +3238,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	}
 	else
 	{
-		LOG_ERROR(RSX, "Dubious query data pushed to cond render!, Please report to developers(q.pending=%d)", sources.front()->pending);
+		rsx_log.error("Dubious query data pushed to cond render!, Please report to developers(q.pending=%d)", sources.front()->pending);
 	}
 
 	rsx::thread::begin_conditional_rendering(sources);

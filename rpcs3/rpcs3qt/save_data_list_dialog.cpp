@@ -1,13 +1,12 @@
 ﻿#include "stdafx.h"
 #include "save_data_list_dialog.h"
 #include "save_data_info_dialog.h"
+#include "gui_settings.h"
 
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QHeaderView>
-#include <QMenu>
-#include <QDesktopWidget>
-#include <QApplication>
+#include <QGuiApplication>
 #include <QScreen>
 
 constexpr auto qstr = QString::fromStdString;
@@ -15,7 +14,8 @@ constexpr auto qstr = QString::fromStdString;
 //Show up the savedata list, either to choose one to save/load or to manage saves.
 //I suggest to use function callbacks to give save data list or get save data entry. (Not implemented or stubbed)
 save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, u32 op, vm::ptr<CellSaveDataListSet> listSet, QWidget* parent)
-	: QDialog(parent), m_save_entries(entries), m_entry(selection_code::new_save), m_entry_label(nullptr), m_sort_column(0), m_sort_ascending(true)
+	: QDialog(parent)
+	, m_save_entries(entries)
 {
 	if (op >= 8)
 	{

@@ -17,6 +17,8 @@
 #include <thread>
 #include <deque>
 
+LOG_CHANNEL(vm_log, "VM");
+
 namespace vm
 {
 	static u8* memory_reserve_4GiB(void* _addr, u64 size = 0x100000000)
@@ -94,17 +96,17 @@ namespace vm
 
 	void passive_lock(cpu_thread& cpu)
 	{
-		if (UNLIKELY(g_tls_locked && *g_tls_locked == &cpu))
+		if (g_tls_locked && *g_tls_locked == &cpu) [[unlikely]]
 		{
 			return;
 		}
 
-		if (LIKELY(g_mutex.is_lockable()))
+		if (g_mutex.is_lockable()) [[likely]]
 		{
 			// Optimistic path (hope that mutex is not exclusively locked)
 			_register_lock(&cpu);
 
-			if (LIKELY(g_mutex.is_lockable()))
+			if (g_mutex.is_lockable()) [[likely]]
 			{
 				return;
 			}
@@ -125,12 +127,12 @@ namespace vm
 
 		atomic_t<u64>* _ret;
 
-		if (LIKELY(test_addr(g_addr_lock.load(), addr, end)))
+		if (test_addr(g_addr_lock.load(), addr, end)) [[likely]]
 		{
 			// Optimistic path (hope that address range is not locked)
 			_ret = _register_range_lock(u64{end} << 32 | addr);
 
-			if (LIKELY(test_addr(g_addr_lock.load(), addr, end)))
+			if (test_addr(g_addr_lock.load(), addr, end)) [[likely]]
 			{
 				return _ret;
 			}
@@ -302,7 +304,7 @@ namespace vm
 	{
 		for (u64 i = 0;; i++)
 		{
-			if (LIKELY(!res.bts(0)))
+			if (!res.bts(0)) [[likely]]
 			{
 				break;
 			}
@@ -525,7 +527,7 @@ namespace vm
 
 		for (u32 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max; i++)
 		{
-			if (UNLIKELY((g_pages[i].flags & flags) != flags))
+			if ((g_pages[i].flags & flags) != flags) [[unlikely]]
 			{
 				return false;
 			}
@@ -576,13 +578,13 @@ namespace vm
 
 		if (!block)
 		{
-			LOG_ERROR(MEMORY, "vm::dealloc(): invalid memory location (%u, addr=0x%x)\n", +location, addr);
+			vm_log.error("vm::dealloc(): invalid memory location (%u, addr=0x%x)\n", +location, addr);
 			return;
 		}
 
 		if (!block->dealloc(addr))
 		{
-			LOG_ERROR(MEMORY, "vm::dealloc(): deallocation failed (addr=0x%x)\n", addr);
+			vm_log.error("vm::dealloc(): deallocation failed (addr=0x%x)\n", addr);
 			return;
 		}
 	}
@@ -1157,22 +1159,22 @@ void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, 
 	// Special case (may be allowed for some arguments)
 	if (arg == 0)
 	{
-		out += u8"«NULL»";
+		out += reinterpret_cast<const char*>(u8"«NULL»");
 		return;
 	}
 
 	// Filter certainly invalid addresses (TODO)
 	if (arg < 0x10000 || arg >= 0xf0000000)
 	{
-		out += u8"«INVALID_ADDRESS:";
+		out += reinterpret_cast<const char*>(u8"«INVALID_ADDRESS:");
 		fmt_class_string<u32>::format(out, arg);
-		out += u8"»";
+		out += reinterpret_cast<const char*>(u8"»");
 		return;
 	}
 
 	const auto start = out.size();
 
-	out += u8"“";
+	out += reinterpret_cast<const char*>(u8"“");
 
 	for (vm::_ptr_base<const volatile char, u32> ptr = vm::cast(arg);; ptr++)
 	{
@@ -1180,9 +1182,9 @@ void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, 
 		{
 			// TODO: optimize checks
 			out.resize(start);
-			out += u8"«INVALID_ADDRESS:";
+			out += reinterpret_cast<const char*>(u8"«INVALID_ADDRESS:");
 			fmt_class_string<u32>::format(out, arg);
-			out += u8"»";
+			out += reinterpret_cast<const char*>(u8"»");
 			return;
 		}
 
@@ -1196,5 +1198,5 @@ void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, 
 		}
 	}
 
-	out += u8"”";
+	out += reinterpret_cast<const char*>(u8"”");
 }

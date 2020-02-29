@@ -1,10 +1,10 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
-#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
-#include "Emu/RSX/Overlays/overlays.h"
+#include "Emu/RSX/Overlays/overlay_message_dialog.h"
+
+#include "Input/pad_thread.h"
 
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
@@ -13,7 +13,9 @@
 
 #include "util/init_mutex.hpp"
 
-extern logs::channel cellSysutil;
+LOG_CHANNEL(cellSysutil);
+
+extern u64 get_guest_system_time();
 
 template<>
 void fmt_class_string<CellMsgDialogError>::format(std::string& out, u64 arg)
@@ -81,6 +83,59 @@ struct msg_info
 	}
 };
 
+struct msg_dlg_thread_info
+{
+	atomic_t<u64> wait_until = 0;
+
+	void operator()()
+	{
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			const u64 new_value = wait_until.load();
+
+			if (new_value == 0)
+			{
+				wait_until.wait(0);
+				continue;
+			}
+
+			while (get_guest_system_time() < new_value)
+			{
+				if (wait_until.load() != new_value)
+					break;
+
+				std::this_thread::sleep_for(10ms);
+			}
+
+			if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
+			{
+				if (auto dlg = manager->get<rsx::overlays::message_dialog>())
+				{
+					if (!wait_until.compare_and_swap_test(new_value, 0))
+					{
+						continue;
+					}
+
+					dlg->close();
+				}
+			}
+			else if (const auto dlg = g_fxo->get<msg_info>()->get())
+			{
+				if (!wait_until.compare_and_swap_test(new_value, 0))
+				{
+					continue;
+				}
+
+				dlg->on_close(CELL_MSGDIALOG_BUTTON_NONE);
+			}
+		}
+	}
+
+	static constexpr auto thread_name = "MsgDialog Close Thread"sv;
+};
+
+using msg_dlg_thread = named_thread<msg_dlg_thread_info>;
+
 // variable used to immediately get the response from auxiliary message dialogs (callbacks would be async)
 atomic_t<s32> g_last_user_response = CELL_MSGDIALOG_BUTTON_NONE;
 
@@ -142,6 +197,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 				});
 			}
 
+			g_fxo->get<msg_dlg_thread>()->wait_until = 0;
 			g_fxo->get<msg_info>()->remove();
 		}
 
@@ -370,31 +426,19 @@ error_code cellMsgDialogClose(f32 delay)
 {
 	cellSysutil.warning("cellMsgDialogClose(delay=%f)", delay);
 
-	extern u64 get_guest_system_time();
 	const u64 wait_until = get_guest_system_time() + static_cast<s64>(std::max<float>(delay, 0.0f) * 1000);
 
 	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
-			thread_ctrl::spawn("cellMsgDialogClose() Thread", [=]
-			{
-				while (get_guest_system_time() < wait_until)
-				{
-					if (Emu.IsStopped())
-						return;
-
-					if (manager->get<rsx::overlays::message_dialog>() != dlg)
-						return;
-
-					std::this_thread::sleep_for(1ms);
-				}
-
-				dlg->close();
-			});
-
+			const auto thr = g_fxo->get<msg_dlg_thread>();
+			thr->wait_until = wait_until;
+			thr->wait_until.notify_one();
 			return CELL_OK;
 		}
+
+		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
 	const auto dlg = g_fxo->get<msg_info>()->get();
@@ -404,18 +448,9 @@ error_code cellMsgDialogClose(f32 delay)
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	thread_ctrl::spawn("cellMsgDialogClose() Thread", [=]()
-	{
-		while (dlg->state == MsgDialogState::Open && get_guest_system_time() < wait_until)
-		{
-			if (Emu.IsStopped()) return;
-
-			std::this_thread::sleep_for(1ms);
-		}
-
-		dlg->on_close(CELL_MSGDIALOG_BUTTON_NONE);
-	});
-
+	const auto thr = g_fxo->get<msg_dlg_thread>();
+	thr->wait_until = wait_until;
+	thr->wait_until.notify_one();
 	return CELL_OK;
 }
 
@@ -427,6 +462,7 @@ error_code cellMsgDialogAbort()
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
+			g_fxo->get<msg_dlg_thread>()->wait_until = 0;
 			dlg->close(false);
 			return CELL_OK;
 		}
@@ -444,6 +480,7 @@ error_code cellMsgDialogAbort()
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
+	g_fxo->get<msg_dlg_thread>()->wait_until = 0;
 	g_fxo->get<msg_info>()->remove(); // this shouldn't call on_close
 	pad::SetIntercepted(false);       // so we need to reenable the pads here
 

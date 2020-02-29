@@ -21,6 +21,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 23: return "sys_process_wait_for_child2";
 	case 25: return "sys_process_get_sdk_version";
 	case 26: return "_sys_process_exit2";
+	case 27: return "sys_process_spawns_a_self2";
 	case 28: return "_sys_process_get_number_of_object";
 	case 29: return "sys_process_get_id2";
 	case 30: return "_sys_process_get_paramsfo";
@@ -171,6 +172,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 197: return "sys_raw_spu_get_spu_cfg";
 	case 198: return "sys_spu_thread_recover_page_fault";
 	case 199: return "sys_raw_spu_recover_page_fault";
+	case 213: return "sys_console_write2";
 	case 215: return "sys_dbg_mat_set_condition";
 	case 216: return "sys_dbg_mat_get_condition";
 	case 230: return "sys_isolated_spu_create";
@@ -191,6 +193,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 250: return "sys_spu_thread_group_set_cooperative_victims";
 	case 251: return "sys_spu_thread_group_connect_event_all_threads";
 	case 252: return "sys_spu_thread_group_disconnect_event_all_threads";
+	case 253: return "sys_spu_thread_group_syscall_253";
 	case 254: return "sys_spu_thread_group_log";
 	case 260: return "sys_spu_image_open_by_fd";
 	case 300: return "sys_vm_memory_map";
@@ -323,6 +326,8 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 509: return "sys_hid_manager_release_focus";
 	case 510: return "sys_hid_manager_check_focus";
 	case 511: return "sys_hid_manager_set_master_process";
+	case 512: return "sys_hid_manager_is_process_permission_root";
+	case 514: return "sys_hid_manager_514";
 	case 516: return "sys_config_open";
 	case 517: return "sys_config_close";
 	case 518: return "sys_config_get_service_event";
@@ -637,7 +642,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 // Get function name by FNID
 extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 {
-	if (module == "") switch (fnid)
+	if (module.empty()) switch (fnid)
 	{
 	case 0x0d10fd3f: return "module_prologue";
 	case 0x330f7005: return "module_epilogue";
@@ -2433,7 +2438,7 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 // Get variable name by VNID
 extern std::string ppu_get_variable_name(const std::string& module, u32 vnid)
 {
-	if (module == "") switch (vnid)
+	if (module.empty()) switch (vnid)
 	{
 	// these arent the actual hash, but its close enough
 	case 0xd7f43016: return "module_info";
@@ -2525,7 +2530,7 @@ std::vector<ppu_function_t>& ppu_function_manager::access()
 	{
 		[](ppu_thread& ppu) -> bool
 		{
-			LOG_ERROR(PPU, "Unregistered function called (LR=0x%x)", ppu.lr);
+			ppu_log.error("Unregistered function called (LR=0x%x)", ppu.lr);
 			ppu.gpr[3] = 0;
 			ppu.cia = static_cast<u32>(ppu.lr) & ~3;
 			return false;

@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../System.h"
+#include "../system_config.h"
 #include "Utilities/address_range.h"
 #include "Utilities/geometry.h"
 #include "Utilities/asm.h"
@@ -155,7 +155,7 @@ namespace rsx
 			switch (format)
 			{
 			default:
-				LOG_ERROR(RSX, "Invalid AV format 0x%x", format);
+				rsx_log.error("Invalid AV format 0x%x", format);
 			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
 			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
 				return CELL_GCM_TEXTURE_A8R8G8B8;
@@ -169,7 +169,7 @@ namespace rsx
 			switch (format)
 			{
 			default:
-				LOG_ERROR(RSX, "Invalid AV format 0x%x", format);
+				rsx_log.error("Invalid AV format 0x%x", format);
 			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
 			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
 				return 4;
@@ -1112,7 +1112,7 @@ namespace rsx
 
 		void start()
 		{
-			if (UNLIKELY(enabled))
+			if (enabled) [[unlikely]]
 			{
 				last = steady_clock::now();
 			}
@@ -1120,7 +1120,7 @@ namespace rsx
 
 		s64 duration()
 		{
-			if (LIKELY(!enabled))
+			if (!enabled) [[likely]]
 			{
 				return 0ll;
 			}

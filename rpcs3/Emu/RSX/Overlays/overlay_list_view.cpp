@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "overlay_controls.h"
+#include "Emu/system_config.h"
 
 namespace rsx
 {
@@ -149,7 +150,7 @@ namespace rsx
 			return m_selected_entry;
 		}
 
-		std::string list_view::get_selected_item()
+		std::u32string list_view::get_selected_item()
 		{
 			if (m_selected_entry < 0)
 				return {};

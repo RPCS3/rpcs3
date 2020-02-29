@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
+#include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -477,7 +477,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	// Set the custom read function for decoding
 	if (control_stream)
 	{
-		if (open_param && open_param->selectChunk != 0)
+		if (open_param && open_param->selectChunk != 0u)
 			fmt::throw_exception("Partial Decoding with selectChunk not supported yet.");
 
 		stream->cbCtrlStream.cbCtrlStrmArg = control_stream->cbCtrlStrmArg;
@@ -559,14 +559,14 @@ s32 pngDecSetParameter(PStream stream, PInParam in_param, POutParam out_param, P
 	png_set_keep_unknown_chunks(stream->png_ptr, PNG_HANDLE_CHUNK_IF_SAFE, 0, 0);
 
 	// Scale 16 bit depth down to 8 bit depth.
-	if (stream->info.bitDepth == 16 && in_param->outputBitDepth == 8)
+	if (stream->info.bitDepth == 16u && in_param->outputBitDepth == 8u)
 	{
 		// PS3 uses png_set_strip_16, since png_set_scale_16 wasn't available back then.
 		png_set_strip_16(stream->png_ptr);
 	}
 
 	// This shouldnt ever happen, but not sure what to do if it does, just want it logged for now
-	if (stream->info.bitDepth != 16 && in_param->outputBitDepth == 16)
+	if (stream->info.bitDepth != 16u && in_param->outputBitDepth == 16u)
 		cellPngDec.error("Output depth of 16 with non input depth of 16 specified!");
 	if (in_param->commandPtr)
 		cellPngDec.warning("Ignoring CommandPtr.");
@@ -876,7 +876,7 @@ s32 cellPngDecExtReadHeader(PHandle handle, PStream stream, PInfo info, PExtInfo
 
 	// png doesnt allow empty image, so quick check for 0 verifys if we got the header
 	// not sure exactly what should happen if we dont have header, ask for more data with callback?
-	if (stream->info.imageWidth == 0)
+	if (stream->info.imageWidth == 0u)
 	{
 		fmt::throw_exception("Invalid or not enough data sent to get header");
 		return CELL_PNGDEC_ERROR_HEADER;

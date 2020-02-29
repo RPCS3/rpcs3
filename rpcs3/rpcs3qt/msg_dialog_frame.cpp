@@ -1,9 +1,16 @@
-﻿
-#include "msg_dialog_frame.h"
+﻿#include "msg_dialog_frame.h"
+#include "custom_dialog.h"
 
-#include <QApplication>
-#include <QScreen>
-#include <QThread>
+#include <QPushButton>
+#include <QFormLayout>
+
+#ifdef _WIN32
+#include <QWinTHumbnailToolbar>
+#include <QWinTHumbnailToolbutton>
+#elif HAVE_QTDBUS
+#include <QtDBus/QDBusMessage>
+#include <QtDBus/QDBusConnection>
+#endif
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -27,7 +34,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	layout->setFormAlignment(Qt::AlignHCenter);
 	layout->addRow(m_text);
 
-	auto l_AddGauge = [=] (QProgressBar* &bar, QLabel* &text)
+	auto l_AddGauge = [=, this](QProgressBar* &bar, QLabel* &text)
 	{
 		text = new QLabel("", m_dialog);
 		bar = new QProgressBar(m_dialog);
@@ -91,14 +98,14 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 			m_button_yes->setFocus();
 		}
 
-		connect(m_button_yes, &QAbstractButton::clicked, [=]
+		connect(m_button_yes, &QAbstractButton::clicked, [this]()
 		{
 			g_last_user_response = CELL_MSGDIALOG_BUTTON_YES;
 			on_close(CELL_MSGDIALOG_BUTTON_YES);
 			m_dialog->accept();
 		});
 
-		connect(m_button_no, &QAbstractButton::clicked, [=]
+		connect(m_button_no, &QAbstractButton::clicked, [this]()
 		{
 			g_last_user_response = CELL_MSGDIALOG_BUTTON_NO;
 			on_close(CELL_MSGDIALOG_BUTTON_NO);
@@ -123,7 +130,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 			m_button_ok->setFocus();
 		}
 
-		connect(m_button_ok, &QAbstractButton::clicked, [=]
+		connect(m_button_ok, &QAbstractButton::clicked, [this]()
 		{
 			g_last_user_response = CELL_MSGDIALOG_BUTTON_OK;
 			on_close(CELL_MSGDIALOG_BUTTON_OK);
@@ -133,7 +140,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 
 	m_dialog->setLayout(layout);
 
-	connect(m_dialog, &QDialog::rejected, [=]
+	connect(m_dialog, &QDialog::rejected, [this]()
 	{
 		if (!type.disable_cancel)
 		{
@@ -218,7 +225,7 @@ void msg_dialog_frame::ProgressBarReset(u32 index)
 		m_gauge2->setValue(0);
 	}
 
-	if (index == taskbar_index)
+	if (index == taskbar_index + 0u)
 	{
 #ifdef _WIN32
 		if (m_tb_progress)
@@ -248,7 +255,7 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 		m_gauge2->setValue(std::min(m_gauge2->value() + static_cast<int>(delta), m_gauge2->maximum()));
 	}
 
-	if (index == taskbar_index || taskbar_index == -1)
+	if (index == taskbar_index + 0u || taskbar_index == -1)
 	{
 #ifdef _WIN32
 		if (m_tb_progress)
@@ -281,7 +288,7 @@ void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
 
 	bool set_taskbar_limit = false;
 
-	if (index == taskbar_index)
+	if (index == taskbar_index + 0u)
 	{
 		m_gauge_max = limit;
 		set_taskbar_limit = true;

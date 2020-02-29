@@ -232,13 +232,13 @@ public:
 			return set_error(elf_error::header_type);
 
 		// Check version and other params
-		if (header.e_curver != 1 || header.e_version != 1 || header.e_ehsize != sizeof(ehdr_t))
+		if (header.e_curver != 1 || header.e_version != 1u || header.e_ehsize != u16{sizeof(ehdr_t)})
 			return set_error(elf_error::header_version);
 
-		if (header.e_phnum && header.e_phentsize != sizeof(phdr_t))
+		if (header.e_phnum && header.e_phentsize != u16{sizeof(phdr_t)})
 			return set_error(elf_error::header_version);
 
-		if (header.e_shnum && header.e_shentsize != sizeof(shdr_t))
+		if (header.e_shnum && header.e_shentsize != u16{sizeof(shdr_t)})
 			return set_error(elf_error::header_version);
 
 		// Load program headers

@@ -1,23 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
-#include "Emu/System.h"
-#include "Emu/Memory/vm.h"
-#include "table_item_delegate.h"
 
 #include <QDialog>
-#include <QVBoxLayout>
-#include <QFormLayout>
-#include <QPushButton>
-#include <QAbstractButton>
 #include <QLabel>
-#include <QString>
 #include <QTableWidget>
-#include <QHeaderView>
-#include <QMouseEvent>
-#include <QMenu>
 #include <QLineEdit>
-#include <QFontDatabase>
 
 class auto_pause_settings_dialog : public QDialog
 {

@@ -194,7 +194,7 @@ public:
 	const u64 minimum_block_period = audio_block_period / 2; // the block period will not be dynamically lowered below this value (usecs)
 	const u64 maximum_block_period = (6 * audio_block_period) / 5; // the block period will not be dynamically increased above this value (usecs)
 
-	const u32 desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 1 : 2;
+	const u32 desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 3 : 2;
 	const u32 num_allocated_buffers = desired_full_buffers + EXTRA_AUDIO_BUFFERS; // number of ringbuffer buffers
 
 	const f32 period_average_alpha = 0.02f; // alpha factor for the m_average_period rolling average
@@ -235,7 +235,7 @@ private:
 	std::unique_ptr<AudioDumper> m_dump;
 
 	std::unique_ptr<float[]> buffer[MAX_AUDIO_BUFFERS];
-	const float silence_buffer[AUDIO_MAX_CHANNELS_COUNT * AUDIO_BUFFER_SAMPLES] = { 0 };
+	const float silence_buffer[u32{AUDIO_MAX_CHANNELS_COUNT} * u32{AUDIO_BUFFER_SAMPLES}] = { 0 };
 
 	bool backend_open = false;
 	bool playing = false;
@@ -342,7 +342,17 @@ public:
 	atomic_t<u32> init = 0;
 
 	u32 key_count = 0;
-	std::vector<std::pair<u64, u64>> keys;
+	u8 event_period = 0;
+
+	struct key_info
+	{
+		u8 start_period; // Starting event_period
+		u32 flags; // iFlags
+		u64 source; // Event source
+		u64 key; // Key
+	};
+
+	std::vector<key_info> keys;
 	std::array<audio_port, AUDIO_PORT_COUNT> ports;
 
 	u64 m_last_period_end = 0;

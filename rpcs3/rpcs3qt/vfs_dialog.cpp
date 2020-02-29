@@ -1,10 +1,15 @@
 ﻿#include "vfs_dialog.h"
+#include "vfs_dialog_tab.h"
+#include "gui_settings.h"
 
+#include <QTabWidget>
 #include <QDialogButtonBox>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QVBoxLayout>
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -43,7 +48,7 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 	buttons->button(QDialogButtonBox::RestoreDefaults)->setText(tr("Reset Directories"));
 	buttons->button(QDialogButtonBox::Save)->setDefault(true);
 
-	connect(buttons, &QDialogButtonBox::clicked, [=](QAbstractButton* button)
+	connect(buttons, &QDialogButtonBox::clicked, [=, this](QAbstractButton* button)
 	{
 		if (button == buttons->button(QDialogButtonBox::RestoreDefaults))
 		{

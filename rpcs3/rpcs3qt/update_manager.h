@@ -1,8 +1,9 @@
 ﻿#pragma once
 
-#include <QtCore>
+#include "stdafx.h"
 #include <QtNetwork>
-#include "progress_dialog.h"
+
+class progress_dialog;
 
 class update_manager : public QObject
 {
@@ -17,7 +18,6 @@ private:
 	QWidget* m_parent                  = nullptr;
 
 	QNetworkAccessManager m_manager;
-	QNetworkReply* reply_rpcs3 = nullptr;
 
 	std::string m_expected_hash;
 	u64 m_expected_size = 0;

@@ -2,6 +2,12 @@
 
 #include "qt_utils.h"
 #include "welcome_dialog.h"
+#include "main_window.h"
+#include "emu_settings.h"
+#include "gui_settings.h"
+#include "persistent_settings.h"
+#include "gs_frame.h"
+#include "gl_gs_frame.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
@@ -15,8 +21,11 @@
 #include "stylesheets.h"
 
 #include <QScreen>
+#include <QFontDatabase>
 
 #include <clocale>
+
+LOG_CHANNEL(gui_log, "GUI");
 
 gui_application::gui_application(int& argc, char** argv) : QApplication(argc, argv)
 {
@@ -44,6 +53,12 @@ void gui_application::Init()
 	if (m_show_gui)
 	{
 		m_main_window = new main_window(m_gui_settings, m_emu_settings, m_persistent_settings, nullptr);
+
+		const auto codes    = GetAvailableLanguageCodes();
+		const auto language = m_gui_settings->GetValue(gui::loc_language).toString();
+		const auto index    = codes.indexOf(language);
+
+		LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : codes.at(index));
 	}
 
 	// Create callbacks from the emulator, which reference the handlers.
@@ -51,9 +66,6 @@ void gui_application::Init()
 
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
-
-	// As per QT recommendations to avoid conflicts for POSIX functions
-	std::setlocale(LC_NUMERIC, "C");
 
 	if (m_main_window)
 	{
@@ -75,6 +87,94 @@ void gui_application::Init()
 #endif
 }
 
+void gui_application::SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language_code)
+{
+	// remove the old translator
+	removeTranslator(&translator);
+
+	const QString lang_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath) + QStringLiteral("/");
+	const QString file_path = lang_path + filename;
+
+	if (QFileInfo(file_path).isFile())
+	{
+		// load the new translator
+		if (translator.load(file_path))
+		{
+			installTranslator(&translator);
+		}
+	}
+	else if (const QString default_code = QLocale(QLocale::English).bcp47Name(); language_code != default_code)
+	{
+		// show error, but ignore default case "en", since it is handled in source code
+		gui_log.error("No translation file found in: %s", file_path.toStdString());
+
+		// reset current language to default "en"
+		m_language_code = default_code;
+	}
+}
+
+void gui_application::LoadLanguage(const QString& language_code)
+{
+	if (m_language_code == language_code)
+	{
+		return;
+	}
+
+	m_language_code = language_code;
+
+	const QLocale locale      = QLocale(language_code);
+	const QString locale_name = QLocale::languageToString(locale.language());
+
+	QLocale::setDefault(locale);
+
+	// Idk if this is overruled by the QLocale default, so I'll change it here just to be sure.
+	// As per QT recommendations to avoid conflicts for POSIX functions
+	std::setlocale(LC_NUMERIC, "C");
+
+	SwitchTranslator(m_translator, QStringLiteral("rpcs3_%1.qm").arg(language_code), language_code);
+
+	if (m_main_window)
+	{
+		const QString default_code = QLocale(QLocale::English).bcp47Name();
+		QStringList language_codes = GetAvailableLanguageCodes();
+
+		if (!language_codes.contains(default_code))
+		{
+			language_codes.prepend(default_code);
+		}
+
+		m_main_window->RetranslateUI(language_codes, m_language_code);
+	}
+
+	m_gui_settings->SetValue(gui::loc_language, m_language_code);
+
+	gui_log.notice("Current language changed to %s (%s)", locale_name.toStdString(), language_code.toStdString());
+}
+
+QStringList gui_application::GetAvailableLanguageCodes()
+{
+	QStringList language_codes;
+
+	const QString language_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+
+	if (QFileInfo(language_path).isDir())
+	{
+		const QDir dir(language_path);
+		const QStringList filenames = dir.entryList(QStringList("*.qm"));
+
+		for (const auto& filename : filenames)
+		{
+			QString language_code = filename;                        // "rpcs3_en.qm"
+			language_code.truncate(language_code.lastIndexOf('.'));  // "rpcs3_en"
+			language_code.remove(0, language_code.indexOf('_') + 1); // "en"
+
+			language_codes << language_code;
+		}
+	}
+
+	return language_codes;
+}
+
 void gui_application::InitializeConnects()
 {
 	connect(this, &gui_application::OnEmulatorRun, this, &gui_application::StartPlaytime);
@@ -84,6 +184,7 @@ void gui_application::InitializeConnects()
 
 	if (m_main_window)
 	{
+		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
 		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
 		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, &gui_application::OnEmuSettingsChange);
 
@@ -95,7 +196,7 @@ void gui_application::InitializeConnects()
 	}
 
 #ifdef WITH_DISCORD_RPC
-	connect(this, &gui_application::OnEmulatorRun, [this]()
+	connect(this, &gui_application::OnEmulatorRun, [this](bool /*start_playtime*/)
 	{
 		// Discord Rich Presence Integration
 		if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
@@ -139,19 +240,15 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 
 	switch (video_renderer type = g_cfg.video.renderer)
 	{
-	case video_renderer::null:
-	{
-		frame = new gs_frame("Null", frame_geometry, app_icon, m_gui_settings);
-		break;
-	}
 	case video_renderer::opengl:
 	{
 		frame = new gl_gs_frame(frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
+	case video_renderer::null:
 	case video_renderer::vulkan:
 	{
-		frame = new gs_frame("Vulkan", frame_geometry, app_icon, m_gui_settings);
+		frame = new gs_frame(frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
 	default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
@@ -175,7 +272,7 @@ void gui_application::InitializeCallbacks()
 			quit();
 		}
 	};
-	callbacks.call_after = [=](std::function<void()> func)
+	callbacks.call_after = [this](std::function<void()> func)
 	{
 		RequestCallAfter(std::move(func));
 	};
@@ -186,13 +283,13 @@ void gui_application::InitializeCallbacks()
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
 	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
-	callbacks.on_run    = [=]() { OnEmulatorRun(); };
-	callbacks.on_pause  = [=]() { OnEmulatorPause(); };
-	callbacks.on_resume = [=]() { OnEmulatorResume(); };
-	callbacks.on_stop   = [=]() { OnEmulatorStop(); };
-	callbacks.on_ready  = [=]() { OnEmulatorReady(); };
+	callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
+	callbacks.on_pause  = [this]() { OnEmulatorPause(); };
+	callbacks.on_resume = [this]() { OnEmulatorResume(true); };
+	callbacks.on_stop   = [this]() { OnEmulatorStop(); };
+	callbacks.on_ready  = [this]() { OnEmulatorReady(); };
 
-	callbacks.handle_taskbar_progress = [=](s32 type, s32 value)
+	callbacks.handle_taskbar_progress = [this](s32 type, s32 value)
 	{
 		if (m_game_window)
 		{
@@ -201,7 +298,7 @@ void gui_application::InitializeCallbacks()
 			case 0: static_cast<gs_frame*>(m_game_window)->progress_reset(value); break;
 			case 1: static_cast<gs_frame*>(m_game_window)->progress_increment(value); break;
 			case 2: static_cast<gs_frame*>(m_game_window)->progress_set_limit(value); break;
-			default: LOG_FATAL(GENERAL, "Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value); break;
+			default: gui_log.fatal("Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value); break;
 			}
 		}
 	};
@@ -209,8 +306,13 @@ void gui_application::InitializeCallbacks()
 	Emu.SetCallbacks(std::move(callbacks));
 }
 
-void gui_application::StartPlaytime()
+void gui_application::StartPlaytime(bool start_playtime = true)
 {
+	if (!start_playtime)
+	{
+		return;
+	}
+
 	const QString serial = qstr(Emu.GetTitleID());
 	if (serial.isEmpty())
 	{
@@ -235,7 +337,7 @@ void gui_application::StopPlaytime()
 
 	const qint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
 	m_persistent_settings->SetPlaytime(serial, playtime);
-	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
+	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
 	m_timer_playtime.invalidate();
 }
 

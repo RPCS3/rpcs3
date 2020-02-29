@@ -146,7 +146,7 @@ namespace gl
 		case GL_RGBA8:
 			return GL_SRGB8_ALPHA8;
 		default:
-			//LOG_ERROR(RSX, "No gamma conversion for format 0x%X", in_format);
+			//rsx_log.error("No gamma conversion for format 0x%X", in_format);
 			return in_format;
 		}
 	}
@@ -165,7 +165,7 @@ namespace gl
 		case rsx::texture_wrap_mode::mirror_once_clamp: return GL_MIRROR_CLAMP_EXT;
 		}
 
-		LOG_ERROR(RSX, "Texture wrap error: bad wrap (%d)", static_cast<u32>(wrap));
+		rsx_log.error("Texture wrap error: bad wrap (%d)", static_cast<u32>(wrap));
 		return GL_REPEAT;
 	}
 
@@ -183,7 +183,7 @@ namespace gl
 		case rsx::texture_max_anisotropy::x16: return 16.0f;
 		}
 
-		LOG_ERROR(RSX, "Texture anisotropy error: bad max aniso (%d)", static_cast<u32>(aniso));
+		rsx_log.error("Texture anisotropy error: bad max aniso (%d)", static_cast<u32>(aniso));
 		return 1.0f;
 	}
 
@@ -245,7 +245,7 @@ namespace gl
 				case GL_LINEAR_MIPMAP_LINEAR:
 					min_filter = GL_LINEAR; break;
 				default:
-					LOG_ERROR(RSX, "No mipmap fallback defined for rsx_min_filter = 0x%X", static_cast<u32>(tex.min_filter()));
+					rsx_log.error("No mipmap fallback defined for rsx_min_filter = 0x%X", static_cast<u32>(tex.min_filter()));
 					min_filter = GL_NEAREST;
 				}
 			}
@@ -458,51 +458,49 @@ namespace gl
 	void fill_texture(rsx::texture_dimension_extended dim, u16 mipmap_count, int format, u16 width, u16 height, u16 depth,
 			const std::vector<rsx_subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
 	{
-		int mip_level = 0;
 		texture_uploader_capabilities caps{ true, false, false, 4 };
 
 		pixel_unpack_settings unpack_settings;
 		unpack_settings.row_length(0).alignment(4);
 
-		if (LIKELY(is_compressed_format(format)))
+		if (is_compressed_format(format)) [[likely]]
 		{
 			caps.supports_vtc_decoding = gl::get_driver_caps().vendor_NVIDIA;
 
 			unpack_settings.row_length(align(width, 4));
 			unpack_settings.apply();
 
+			const GLsizei format_block_size = (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16;
+
 			for (const rsx_subresource_layout& layout : input_layouts)
 			{
 				upload_texture_subresource(staging_buffer, layout, format, is_swizzled, caps);
+				const sizei image_size{ align(layout.width_in_texel, 4), align(layout.height_in_texel, 4) };
 
 				switch (dim)
 				{
 				case rsx::texture_dimension_extended::texture_dimension_1d:
 				{
-					u32 size = layout.width_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					glCompressedTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block * 4, gl_format, size, staging_buffer.data());
+					const GLsizei size = layout.width_in_block * format_block_size;
+					glCompressedTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, image_size.width, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case rsx::texture_dimension_extended::texture_dimension_2d:
 				{
-					u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					glCompressedTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, gl_format, size, staging_buffer.data());
+					const GLsizei size = layout.width_in_block * layout.height_in_block * format_block_size;
+					glCompressedTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, image_size.width, image_size.height, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case rsx::texture_dimension_extended::texture_dimension_cubemap:
 				{
-					// Note : input_layouts size is get_exact_mipmap_count() for non cubemap texture, and 6 * get_exact_mipmap_count() for cubemap
-					// Thus for non cubemap texture, mip_level / mipmap_per_layer will always be rounded to 0.
-					// mip_level % mipmap_per_layer will always be equal to mip_level
-					u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, gl_format, size, staging_buffer.data());
-					mip_level++;
+					const GLsizei size = layout.width_in_block * layout.height_in_block * format_block_size;
+					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, image_size.width, image_size.height, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case rsx::texture_dimension_extended::texture_dimension_3d:
 				{
-					u32 size = layout.width_in_block * layout.height_in_block * layout.depth * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					glCompressedTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, layout.depth, gl_format, size, staging_buffer.data());
+					const GLsizei size = layout.width_in_block * layout.height_in_block * layout.depth * format_block_size;
+					glCompressedTexSubImage3D(GL_TEXTURE_3D, layout.level, 0, 0, 0, image_size.width, image_size.height, layout.depth, gl_format, size, staging_buffer.data());
 					break;
 				}
 				default:
@@ -552,20 +550,16 @@ namespace gl
 				switch (dim)
 				{
 				case rsx::texture_dimension_extended::texture_dimension_1d:
-					glTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block, gl_format, gl_type, staging_buffer.data());
+					glTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, layout.width_in_texel, gl_format, gl_type, staging_buffer.data());
 					break;
 				case rsx::texture_dimension_extended::texture_dimension_2d:
-					glTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block, layout.height_in_block, gl_format, gl_type, staging_buffer.data());
+					glTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, gl_type, staging_buffer.data());
 					break;
 				case rsx::texture_dimension_extended::texture_dimension_cubemap:
-					// Note : input_layouts size is get_exact_mipmap_count() for non cubemap texture, and 6 * get_exact_mipmap_count() for cubemap
-					// Thus for non cubemap texture, mip_level / mipmap_per_layer will always be rounded to 0.
-					// mip_level % mipmap_per_layer will always be equal to mip_level
-					glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block, layout.height_in_block, gl_format, gl_type, staging_buffer.data());
-					mip_level++;
+					glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, gl_type, staging_buffer.data());
 					break;
 				case rsx::texture_dimension_extended::texture_dimension_3d:
-					glTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block, layout.height_in_block, depth, gl_format, gl_type, staging_buffer.data());
+					glTexSubImage3D(GL_TEXTURE_3D, layout.layer, 0, 0, 0, layout.width_in_texel, layout.height_in_texel, depth, gl_format, gl_type, staging_buffer.data());
 					break;
 				default:
 					ASSUME(0);
@@ -591,7 +585,7 @@ namespace gl
 			switch (remap_lookup[channel])
 			{
 			default:
-				LOG_ERROR(RSX, "Unknown remap function 0x%X", remap_lookup[channel]);
+				rsx_log.error("Unknown remap function 0x%X", remap_lookup[channel]);
 			case CELL_GCM_TEXTURE_REMAP_REMAP:
 				remap_values[channel] = swizzle_remap[remap_inputs[channel]];
 				break;
@@ -709,7 +703,7 @@ namespace gl
 
 	bool formats_are_bitcast_compatible(GLenum format1, GLenum format2)
 	{
-		if (LIKELY(format1 == format2))
+		if (format1 == format2) [[likely]]
 		{
 			return true;
 		}
@@ -738,7 +732,7 @@ namespace gl
 	cs_shuffle_base* get_pixel_transform_job(const pixel_buffer_layout& pack_info)
 	{
 		const bool is_depth_stencil = (pack_info.type == GL_UNSIGNED_INT_24_8);
-		if (LIKELY(!is_depth_stencil))
+		if (!is_depth_stencil) [[likely]]
 		{
 			if (!pack_info.swap_bytes)
 			{
@@ -791,7 +785,7 @@ namespace gl
 		// Start pack operation
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
 
-		if (LIKELY(caps.ARB_compute_shader_supported))
+		if (caps.ARB_compute_shader_supported) [[likely]]
 		{
 			// Raw copy
 			src->copy_to(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_region, {});
@@ -808,7 +802,7 @@ namespace gl
 		// Start unpack operation
 		pixel_unpack_settings unpack_settings{};
 
-		if (LIKELY(caps.ARB_compute_shader_supported))
+		if (caps.ARB_compute_shader_supported) [[likely]]
 		{
 			auto src_transform = get_pixel_transform_job(pack_info);
 			auto dst_transform = get_pixel_transform_job(unpack_info);
@@ -830,11 +824,13 @@ namespace gl
 			if (src_transform)
 			{
 				src_transform->run(&g_typeless_transfer_buffer, job_length);
+				glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_PIXEL_BUFFER_BARRIER_BIT);
 			}
 
 			if (dst_transform)
 			{
 				dst_transform->run(&g_typeless_transfer_buffer, job_length);
+				glMemoryBarrier(GL_PIXEL_BUFFER_BARRIER_BIT);
 			}
 
 			// NOTE: glBindBufferRange also binds the buffer to the old-school target.
@@ -847,7 +843,7 @@ namespace gl
 		}
 
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
-		dst->copy_from(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), dst_region, unpack_settings);
+		dst->copy_from(nullptr, static_cast<texture::format>(unpack_info.format), static_cast<texture::type>(unpack_info.type), dst_region, unpack_settings);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 	}
 

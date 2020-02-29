@@ -708,8 +708,9 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 	error_code res = sys_event_port_create(port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
 	sys_event_port_connect_local(*port_id, event_queue_id);
 
-	if (res == CELL_EAGAIN)
-	{ // Not enough system resources.
+	if (res + 0u == CELL_EAGAIN)
+	{
+		// Not enough system resources.
 		return CELL_EAGAIN;
 	}
 

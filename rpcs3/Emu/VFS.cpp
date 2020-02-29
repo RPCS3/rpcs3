@@ -29,11 +29,8 @@ struct vfs_manager
 
 bool vfs::mount(std::string_view vpath, std::string_view path)
 {
-	if (!g_fxo->get<vfs_manager>())
-	{
-		// Init (TODO)
-		g_fxo->init<vfs_manager>();
-	}
+	// Workaround
+	g_fxo->need<vfs_manager>();
 
 	const auto table = g_fxo->get<vfs_manager>();
 
@@ -58,7 +55,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 			return false;
 		}
 
-		if (pos == -1)
+		if (pos == umax)
 		{
 			// Mounting completed
 			list.back()->path = path;
@@ -146,7 +143,7 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 			return fs::get_config_dir() + "delete_this_dir.../delete_this...";
 		}
 
-		if (pos == -1)
+		if (pos == umax)
 		{
 			// Absolute path: finalize
 			for (auto it = list.rbegin(), rend = list.rend(); it != rend; it++)
@@ -274,6 +271,12 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 	return std::string{result_base} + vfs::escape(fmt::merge(result, "/"));
 }
 
+#if __cpp_char8_t >= 201811
+using char2 = char8_t;
+#else
+using char2 = char;
+#endif
+
 std::string vfs::escape(std::string_view path, bool escape_slash)
 {
 	std::string result;
@@ -281,7 +284,7 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 
 	for (std::size_t i = 0, s = path.size(); i < s; i++)
 	{
-		switch (char c = path[i])
+		switch (char2 c = path[i])
 		{
 		case 0:
 		case 1:
@@ -294,7 +297,7 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 		case 8:
 		case 9:
 		{
-			result += u8"０";
+			result += reinterpret_cast<const char*>(u8"０");
 			result.back() += c;
 			break;
 		}
@@ -321,85 +324,85 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 		case 30:
 		case 31:
 		{
-			result += u8"Ａ";
+			result += reinterpret_cast<const char*>(u8"Ａ");
 			result.back() += c;
 			result.back() -= 10;
 			break;
 		}
 		case '<':
 		{
-			result += u8"＜";
+			result += reinterpret_cast<const char*>(u8"＜");
 			break;
 		}
 		case '>':
 		{
-			result += u8"＞";
+			result += reinterpret_cast<const char*>(u8"＞");
 			break;
 		}
 		case ':':
 		{
-			result += u8"：";
+			result += reinterpret_cast<const char*>(u8"：");
 			break;
 		}
 		case '"':
 		{
-			result += u8"＂";
+			result += reinterpret_cast<const char*>(u8"＂");
 			break;
 		}
 		case '\\':
 		{
-			result += u8"＼";
+			result += reinterpret_cast<const char*>(u8"＼");
 			break;
 		}
 		case '|':
 		{
-			result += u8"｜";
+			result += reinterpret_cast<const char*>(u8"｜");
 			break;
 		}
 		case '?':
 		{
-			result += u8"？";
+			result += reinterpret_cast<const char*>(u8"？");
 			break;
 		}
 		case '*':
 		{
-			result += u8"＊";
+			result += reinterpret_cast<const char*>(u8"＊");
 			break;
 		}
 		case '/':
 		{
 			if (escape_slash)
 			{
-				result += u8"／";
+				result += reinterpret_cast<const char*>(u8"／");
 				break;
 			}
 
 			result += c;
 			break;
 		}
-		case char{u8"！"[0]}:
+		case char2{u8"！"[0]}:
 		{
 			// Escape full-width characters 0xFF01..0xFF5e with ！ (0xFF01)
-			switch (path[i + 1])
+			switch (char2 c2 = path[i + 1])
 			{
-			case char{u8"！"[1]}:
+			case char2{u8"！"[1]}:
 			{
-				const uchar c3 = reinterpret_cast<const uchar&>(path[i + 2]);
+				const uchar c3 = path[i + 2];
 
 				if (c3 >= 0x81 && c3 <= 0xbf)
 				{
-					result += u8"！";
+					result += reinterpret_cast<const char*>(u8"！");
 				}
 
 				break;
 			}
-			case char{u8"｀"[1]}:
+			case char2{u8"｀"[1]}:
 			{
-				const uchar c3 = reinterpret_cast<const uchar&>(path[i + 2]);
+				const uchar c3 = path[i + 2];
 
 				if (c3 >= 0x80 && c3 <= 0x9e)
 				{
-					result += u8"！";
+					result += reinterpret_cast<const char*>(u8"！");
 				}
 
 				break;
@@ -427,105 +430,105 @@ std::string vfs::unescape(std::string_view path)
 
 	for (std::size_t i = 0, s = path.size(); i < s; i++)
 	{
-		switch (char c = path[i])
+		switch (char2 c = path[i])
 		{
-		case char{u8"！"[0]}:
+		case char2{u8"！"[0]}:
 		{
-			switch (path[i + 1])
+			switch (char2 c2 = path[i + 1])
 			{
-			case char{u8"！"[1]}:
+			case char2{u8"！"[1]}:
 			{
-				const uchar c3 = reinterpret_cast<const uchar&>(path[i + 2]);
+				const uchar c3 = path[i + 2];
 
 				if (c3 >= 0x81 && c3 <= 0xbf)
 				{
-					switch (path[i + 2])
+					switch (static_cast<char2>(c3))
 					{
-					case char{u8"０"[2]}:
-					case char{u8"１"[2]}:
-					case char{u8"２"[2]}:
-					case char{u8"３"[2]}:
-					case char{u8"４"[2]}:
-					case char{u8"５"[2]}:
-					case char{u8"６"[2]}:
-					case char{u8"７"[2]}:
-					case char{u8"８"[2]}:
-					case char{u8"９"[2]}:
+					case char2{u8"０"[2]}:
+					case char2{u8"１"[2]}:
+					case char2{u8"２"[2]}:
+					case char2{u8"３"[2]}:
+					case char2{u8"４"[2]}:
+					case char2{u8"５"[2]}:
+					case char2{u8"６"[2]}:
+					case char2{u8"７"[2]}:
+					case char2{u8"８"[2]}:
+					case char2{u8"９"[2]}:
 					{
 						result += path[i + 2];
 						result.back() -= u8"０"[2];
 						continue;
 					}
-					case char{u8"Ａ"[2]}:
-					case char{u8"Ｂ"[2]}:
-					case char{u8"Ｃ"[2]}:
-					case char{u8"Ｄ"[2]}:
-					case char{u8"Ｅ"[2]}:
-					case char{u8"Ｆ"[2]}:
-					case char{u8"Ｇ"[2]}:
-					case char{u8"Ｈ"[2]}:
-					case char{u8"Ｉ"[2]}:
-					case char{u8"Ｊ"[2]}:
-					case char{u8"Ｋ"[2]}:
-					case char{u8"Ｌ"[2]}:
-					case char{u8"Ｍ"[2]}:
-					case char{u8"Ｎ"[2]}:
-					case char{u8"Ｏ"[2]}:
-					case char{u8"Ｐ"[2]}:
-					case char{u8"Ｑ"[2]}:
-					case char{u8"Ｒ"[2]}:
-					case char{u8"Ｓ"[2]}:
-					case char{u8"Ｔ"[2]}:
-					case char{u8"Ｕ"[2]}:
-					case char{u8"Ｖ"[2]}:
+					case char2{u8"Ａ"[2]}:
+					case char2{u8"Ｂ"[2]}:
+					case char2{u8"Ｃ"[2]}:
+					case char2{u8"Ｄ"[2]}:
+					case char2{u8"Ｅ"[2]}:
+					case char2{u8"Ｆ"[2]}:
+					case char2{u8"Ｇ"[2]}:
+					case char2{u8"Ｈ"[2]}:
+					case char2{u8"Ｉ"[2]}:
+					case char2{u8"Ｊ"[2]}:
+					case char2{u8"Ｋ"[2]}:
+					case char2{u8"Ｌ"[2]}:
+					case char2{u8"Ｍ"[2]}:
+					case char2{u8"Ｎ"[2]}:
+					case char2{u8"Ｏ"[2]}:
+					case char2{u8"Ｐ"[2]}:
+					case char2{u8"Ｑ"[2]}:
+					case char2{u8"Ｒ"[2]}:
+					case char2{u8"Ｓ"[2]}:
+					case char2{u8"Ｔ"[2]}:
+					case char2{u8"Ｕ"[2]}:
+					case char2{u8"Ｖ"[2]}:
 					{
 						result += path[i + 2];
 						result.back() -= u8"Ａ"[2];
 						result.back() += 10;
 						continue;
 					}
-					case char{u8"！"[2]}:
+					case char2{u8"！"[2]}:
 					{
 						i += 3;
 						result += c;
 						continue;
 					}
-					case char{u8"＜"[2]}:
+					case char2{u8"＜"[2]}:
 					{
 						result += '<';
 						break;
 					}
-					case char{u8"＞"[2]}:
+					case char2{u8"＞"[2]}:
 					{
 						result += '>';
 						break;
 					}
-					case char{u8"："[2]}:
+					case char2{u8"："[2]}:
 					{
 						result += ':';
 						break;
 					}
-					case char{u8"＂"[2]}:
+					case char2{u8"＂"[2]}:
 					{
 						result += '"';
 						break;
 					}
-					case char{u8"＼"[2]}:
+					case char2{u8"＼"[2]}:
 					{
 						result += '\\';
 						break;
 					}
-					case char{u8"？"[2]}:
+					case char2{u8"？"[2]}:
 					{
 						result += '?';
 						break;
 					}
-					case char{u8"＊"[2]}:
+					case char2{u8"＊"[2]}:
 					{
 						result += '*';
 						break;
 					}
-					case char{u8"＄"[2]}:
+					case char2{u8"＄"[2]}:
 					{
 						if (i == 0)
 						{
@@ -552,15 +555,15 @@ std::string vfs::unescape(std::string_view path)
 
 				break;
 			}
-			case char{u8"｀"[1]}:
+			case char2{u8"｀"[1]}:
 			{
-				const uchar c3 = reinterpret_cast<const uchar&>(path[i + 2]);
+				const uchar c3 = path[i + 2];
 
 				if (c3 >= 0x80 && c3 <= 0x9e)
 				{
-					switch (path[i + 2])
+					switch (static_cast<char2>(c3))
 					{
-					case char{u8"｜"[2]}:
+					case char2{u8"｜"[2]}:
 					{
 						result += '|';
 						break;

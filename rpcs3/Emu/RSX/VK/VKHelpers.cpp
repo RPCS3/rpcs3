@@ -67,8 +67,8 @@ namespace vk
 	const render_device* g_current_renderer;
 
 	std::unique_ptr<image> g_null_texture;
-	std::unique_ptr<image_view> g_null_image_view;
 	std::unique_ptr<buffer> g_scratch_buffer;
+	std::unordered_map<VkImageViewType, std::unique_ptr<image_view>> g_null_image_views;
 	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
 	std::unordered_map<u32, std::unique_ptr<vk::compute_task>> g_compute_tasks;
 
@@ -147,7 +147,7 @@ namespace vk
 		}
 
 		// Wait for DMA activity to end
-		rsx::g_dma_manager.sync();
+		g_fxo->get<rsx::dma_manager>()->sync();
 
 		if (mapped)
 		{
@@ -289,26 +289,32 @@ namespace vk
 		return g_null_sampler;
 	}
 
-	vk::image_view* null_image_view(vk::command_buffer &cmd)
+	vk::image_view* null_image_view(vk::command_buffer &cmd, VkImageViewType type)
 	{
-		if (g_null_image_view)
-			return g_null_image_view.get();
+		if (auto found = g_null_image_views.find(type);
+			found != g_null_image_views.end())
+		{
+			return found->second.get();
+		}
 
-		g_null_texture = std::make_unique<image>(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
+		if (!g_null_texture)
+		{
+			g_null_texture = std::make_unique<image>(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
 
-		g_null_image_view = std::make_unique<image_view>(*g_current_renderer, g_null_texture.get());
+			// Initialize memory to transparent black
+			VkClearColorValue clear_color = {};
+			VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
+			vkCmdClearColorImage(cmd, g_null_texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 
-		// Initialize memory to transparent black
-		VkClearColorValue clear_color = {};
-		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-		change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-		vkCmdClearColorImage(cmd, g_null_texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+			// Prep for shader access
+			change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
+		}
 
-		// Prep for shader access
-		change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
-		return g_null_image_view.get();
+		auto& ret = g_null_image_views[type] = std::make_unique<image_view>(*g_current_renderer, g_null_texture.get(), type);
+		return ret.get();
 	}
 
 	vk::image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height)
@@ -396,7 +402,7 @@ namespace vk
 		vk::get_resource_manager()->destroy();
 
 		g_null_texture.reset();
-		g_null_image_view.reset();
+		g_null_image_views.clear();
 		g_scratch_buffer.reset();
 		g_upload_heap.destroy();
 
@@ -468,10 +474,10 @@ namespace vk
 			break;
 		case driver_vendor::INTEL:
 		default:
-			LOG_WARNING(RSX, "Unsupported device: %s", gpu_name);
+			rsx_log.warning("Unsupported device: %s", gpu_name);
 		}
 
-		LOG_NOTICE(RSX, "Vulkan: Renderer initialized on device '%s'", gpu_name);
+		rsx_log.notice("Vulkan: Renderer initialized on device '%s'", gpu_name);
 
 		{
 			// Buffer memory tests, only useful for portability on macOS
@@ -917,7 +923,7 @@ namespace vk
 
 				if ((get_system_time() - t) > timeout)
 				{
-					LOG_ERROR(RSX, "[vulkan] vk::wait_for_event has timed out!");
+					rsx_log.error("[vulkan] vk::wait_for_event has timed out!");
 					return VK_TIMEOUT;
 				}
 			}
@@ -1029,7 +1035,7 @@ namespace vk
 		case 0:
 			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s%s", error_message.c_str(), faulting_addr);
 		case 1:
-			LOG_ERROR(RSX, "Vulkan API call has failed with an error but will continue: %s%s", error_message.c_str(), faulting_addr);
+			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message.c_str(), faulting_addr);
 			break;
 		case 2:
 			break;
@@ -1044,11 +1050,11 @@ namespace vk
 		{
 			if (strstr(pMsg, "IMAGE_VIEW_TYPE_1D")) return false;
 
-			LOG_ERROR(RSX, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+			rsx_log.error("ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
 		}
 		else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
 		{
-			LOG_WARNING(RSX, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+			rsx_log.warning("WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
 		}
 		else
 		{

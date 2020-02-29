@@ -1,7 +1,7 @@
 ﻿#include "sysinfo.h"
 #include "StrFmt.h"
 #include "File.h"
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #ifdef _WIN32
 #include "windows.h"
@@ -75,9 +75,8 @@ bool utils::has_clwb()
 	return g_value;
 }
 
-std::string utils::get_system_info()
+std::string utils::get_cpu_brand()
 {
-	std::string result;
 	std::string brand;
 
 	if (get_cpuid(0x80000000, 0)[0] >= 0x80000004)
@@ -101,18 +100,16 @@ std::string utils::get_system_info()
 		brand.erase(brand.begin() + found);
 	}
 
-#ifdef _WIN32
-	::SYSTEM_INFO sysInfo;
-	::GetNativeSystemInfo(&sysInfo);
-	::MEMORYSTATUSEX memInfo;
-	memInfo.dwLength = sizeof(memInfo);
-	::GlobalMemoryStatusEx(&memInfo);
-	const u32 num_proc = sysInfo.dwNumberOfProcessors;
-	const u64 mem_total = memInfo.ullTotalPhys;
-#else
-	const u32 num_proc = ::sysconf(_SC_NPROCESSORS_ONLN);
-	const u64 mem_total = ::sysconf(_SC_PHYS_PAGES) * ::sysconf(_SC_PAGE_SIZE);
-#endif
+	return brand;
+}
+
+std::string utils::get_system_info()
+{
+	std::string result;
+
+	const std::string brand = get_cpu_brand();
+	const u64 mem_total = get_total_memory();
+	const u32 num_proc = get_thread_count();
 
 	fmt::append(result, "%s | %d Threads | %.2f GiB RAM", brand, num_proc, mem_total / (1024.0f * 1024 * 1024));
 
@@ -189,7 +186,7 @@ std::string utils::get_firmware_version()
 
 std::string utils::get_OS_version()
 {
-	std::string output = "";
+	std::string output;
 #ifdef _WIN32
 	// GetVersionEx is deprecated, RtlGetVersion is kernel-mode only and AnalyticsInfo is UWP only.
 	// So we're forced to read PEB instead to get Windows version info. It's ugly but works.
@@ -240,5 +237,28 @@ ullong utils::get_tsc_freq()
 #else
 	// TODO
 	return 0;
+#endif
+}
+
+u64 utils::get_total_memory()
+{
+#ifdef _WIN32
+	::MEMORYSTATUSEX memInfo;
+	memInfo.dwLength = sizeof(memInfo);
+	::GlobalMemoryStatusEx(&memInfo);
+	return memInfo.ullTotalPhys;
+#else
+	return ::sysconf(_SC_PHYS_PAGES) * ::sysconf(_SC_PAGE_SIZE);
+#endif
+}
+
+u32 utils::get_thread_count()
+{
+#ifdef _WIN32
+	::SYSTEM_INFO sysInfo;
+	::GetNativeSystemInfo(&sysInfo);
+	return sysInfo.dwNumberOfProcessors;
+#else
+	return ::sysconf(_SC_NPROCESSORS_ONLN);
 #endif
 }

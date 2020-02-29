@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
+#include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -105,8 +105,8 @@ s32 cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo inf
 	}
 	}
 
-	if (*reinterpret_cast<be_t<u32>*>(buffer) != 0x47494638 ||
-		(*reinterpret_cast<le_t<u16>*>(buffer + 4) != 0x6139 && *reinterpret_cast<le_t<u16>*>(buffer + 4) != 0x6137)) // Error: The first 6 bytes are not a valid GIF signature
+	if (*reinterpret_cast<be_t<u32>*>(buffer) != 0x47494638u ||
+		(*reinterpret_cast<le_t<u16>*>(buffer + 4) != 0x6139u && *reinterpret_cast<le_t<u16>*>(buffer + 4) != 0x6137u)) // Error: The first 6 bytes are not a valid GIF signature
 	{
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT; // Surprisingly there is no error code related with headerss
 	}

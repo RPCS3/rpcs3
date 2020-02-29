@@ -12,6 +12,8 @@ namespace vk
 		u64 eid;
 		const vk::render_device* m_device;
 		std::vector<std::unique_ptr<vk::buffer>> m_disposed_buffers;
+		std::vector<std::unique_ptr<vk::image_view>> m_disposed_image_views;
+		std::vector<std::unique_ptr<vk::image>> m_disposed_images;
 		rsx::simple_array<VkEvent> m_disposed_events;
 
 		eid_scope_t(u64 _eid):
@@ -36,6 +38,8 @@ namespace vk
 			}
 
 			m_disposed_buffers.clear();
+			m_disposed_image_views.clear();
+			m_disposed_images.clear();
 		}
 	};
 
@@ -72,7 +76,7 @@ namespace vk
 			}
 			else
 			{
-				if (LIKELY(value >= 0.f))
+				if (value >= 0.f) [[likely]]
 				{
 					return raw;
 				}
@@ -130,6 +134,16 @@ namespace vk
 		void dispose(std::unique_ptr<vk::buffer>& buf)
 		{
 			get_current_eid_scope().m_disposed_buffers.emplace_back(std::move(buf));
+		}
+
+		void dispose(std::unique_ptr<vk::image_view>& view)
+		{
+			get_current_eid_scope().m_disposed_image_views.emplace_back(std::move(view));
+		}
+
+		void dispose(std::unique_ptr<vk::image>& img)
+		{
+			get_current_eid_scope().m_disposed_images.emplace_back(std::move(img));
 		}
 
 		void dispose(VkEvent& event)

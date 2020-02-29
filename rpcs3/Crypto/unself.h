@@ -7,7 +7,9 @@
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
 
-struct AppInfo 
+LOG_CHANNEL(self_log, "SELF");
+
+struct AppInfo
 {
 	u64 authid;
 	u32 vendor_id;
@@ -338,7 +340,7 @@ struct SelfHeader
 	u64 se_controloff;
 	u64 se_controlsize;
 	u64 pad;
-	
+
 	void Load(const fs::file& f);
 	void Show(){}
 };
@@ -387,7 +389,7 @@ class SELFDecrypter
 	SceHeader sce_hdr;
 	SelfHeader self_hdr;
 	AppInfo app_info;
-	
+
 	// ELF64 header and program header/section header arrays.
 	Elf64_Ehdr elf64_hdr;
 	std::vector<Elf64_Shdr> shdr64_arr;
@@ -412,7 +414,7 @@ class SELFDecrypter
 	std::unique_ptr<u8[]> data_keys;
 	u32 data_keys_length;
 	std::unique_ptr<u8[]> data_buf;
-	u32 data_buf_length;
+	u32 data_buf_length = 0;
 
 	// Main key vault instance.
 	KeyVault key_v;
@@ -469,9 +471,9 @@ private:
 					// Check for errors (TODO: Probably safe to remove this once these changes have passed testing.)
 					switch (rv)
 					{
-					case Z_MEM_ERROR: LOG_ERROR(LOADER, "MakeELF encountered a Z_MEM_ERROR!"); break;
-					case Z_BUF_ERROR: LOG_ERROR(LOADER, "MakeELF encountered a Z_BUF_ERROR!"); break;
-					case Z_DATA_ERROR: LOG_ERROR(LOADER, "MakeELF encountered a Z_DATA_ERROR!"); break;
+					case Z_MEM_ERROR: self_log.error("MakeELF encountered a Z_MEM_ERROR!"); break;
+					case Z_BUF_ERROR: self_log.error("MakeELF encountered a Z_BUF_ERROR!"); break;
+					case Z_DATA_ERROR: self_log.error("MakeELF encountered a Z_DATA_ERROR!"); break;
 					default: break;
 					}
 

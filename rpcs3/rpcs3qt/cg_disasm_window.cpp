@@ -1,20 +1,19 @@
 ﻿#include "stdafx.h"
 
 #include "cg_disasm_window.h"
+#include "gui_settings.h"
+#include "syntax_highlighter.h"
 
 #include <QSplitter>
 #include <QMenu>
-#include <QMenuBar>
-#include <QMessageBox>
 #include <QFileDialog>
-#include <QDialog>
-#include <QVBoxLayout>
-#include <QDockWidget>
-#include <QCoreApplication>
+#include <QHBoxLayout>
 #include <QFontDatabase>
 #include <QMimeData>
 
 #include "Emu/RSX/CgBinaryProgram.h"
+
+LOG_CHANNEL(gui_log, "GUI");
 
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -29,7 +28,7 @@ cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgu
 	resize(QSize(620, 395));
 
 	m_path_last = xgui_settings->GetValue(gui::fd_cg_disasm).toString();
-	
+
 	m_disasm_text = new QTextEdit(this);
 	m_disasm_text->setReadOnly(true);
 	m_disasm_text->setWordWrapMode(QTextOption::NoWrap);
@@ -73,13 +72,13 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 	myMenu.addSeparator();
 	myMenu.addAction(clear);
 
-	connect(clear, &QAction::triggered, [=]
+	connect(clear, &QAction::triggered, [this]()
 	{
 		m_disasm_text->clear();
 		m_glsl_text->clear();
 	});
 
-	connect(open, &QAction::triggered, [=]
+	connect(open, &QAction::triggered, [this]()
 	{
 		QString filePath = QFileDialog::getOpenFileName(this, tr("Select Cg program object"), m_path_last, tr("Cg program objects (*.fpo;*.vpo);;"));
 		if (filePath == NULL) return;
@@ -119,7 +118,7 @@ void cg_disasm_window::ShowDisasm()
 	}
 	else if (!m_path_last.isEmpty())
 	{
-		LOG_ERROR(LOADER, "CgDisasm: Failed to open %s", sstr(m_path_last));
+		gui_log.error("CgDisasm: Failed to open %s", sstr(m_path_last));
 	}
 }
 

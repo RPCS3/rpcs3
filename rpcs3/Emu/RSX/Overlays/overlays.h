@@ -2,25 +2,16 @@
 #include "overlay_animation.h"
 #include "overlay_controls.h"
 
-#include "../../../Utilities/date_time.h"
 #include "../../../Utilities/Thread.h"
-#include "../../Io/PadHandler.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
-#include "Input/pad_thread.h"
 
-#include "Emu/Cell/ErrorCodes.h"
-#include "Emu/Cell/Modules/cellSaveData.h"
-#include "Emu/Cell/Modules/cellMsgDialog.h"
-#include "Emu/Cell/Modules/cellOskDialog.h"
-#include "Emu/Cell/Modules/sceNpTrophy.h"
-#include "Utilities/CPUStats.h"
 #include "Utilities/Timer.h"
 
+#include <list>
+#include <thread>
+
 // Utils
-std::string utf8_to_ascii8(const std::string& utf8_string);
-std::string utf16_to_ascii8(const std::u16string& utf16_string);
-std::u16string ascii8_to_utf16(const std::string& ascii_string);
 extern u64 get_system_time();
 
 // Definition of user interface implementations
@@ -38,6 +29,7 @@ namespace rsx
 			u16 virtual_height = 720;
 
 			u32 min_refresh_duration_us = 16600;
+			atomic_t<bool> visible = false;
 
 			virtual ~overlay() = default;
 
@@ -48,8 +40,9 @@ namespace rsx
 		};
 
 		// Interactable UI element
-		struct user_interface : overlay
+		class user_interface : public overlay
 		{
+		public:
 			// Move this somewhere to avoid duplication
 			enum selection_code
 			{
@@ -76,19 +69,26 @@ namespace rsx
 				pad_button_max_enum
 			};
 
+		protected:
 			Timer input_timer;
-			bool  exit = false;
+			atomic_t<bool> exit = false;
+			atomic_t<u64> thread_bits = 0;
 
-			s32 return_code = CELL_OK;
+			static thread_local u64 g_thread_bit;
+
+			u64 alloc_thread_bit();
+
 			std::function<void(s32 status)> on_close;
 
+		public:
+			s32 return_code = 0; // CELL_OK
+
+		public:
 			void update() override {}
+
 			compiled_resource get_compiled() override = 0;
 
-			virtual void on_button_pressed(pad_button /*button_press*/)
-			{
-				close();
-			}
+			virtual void on_button_pressed(pad_button /*button_press*/) {}
 
 			void close(bool use_callback = true);
 
@@ -324,223 +324,6 @@ namespace rsx
 					cleanup_internal();
 				}
 			}
-		};
-
-		struct osk_dialog : public user_interface, public OskDialogBase
-		{
-			using callback_t = std::function<void(const std::string&)>;
-
-			enum border_flags
-			{
-				top = 1,
-				bottom = 2,
-				left = 4,
-				right = 8,
-
-				start_cell = top | bottom | left,
-				end_cell = top | bottom | right,
-				middle_cell = top | bottom,
-				default_cell = top | bottom | left | right
-			};
-
-			enum button_flags
-			{
-				_default = 0,
-				_return = 1,
-				_space = 2
-			};
-
-			struct cell
-			{
-				position2u pos;
-				color4f backcolor{};
-				border_flags flags = default_cell;
-				bool selected = false;
-				bool enabled = false;
-
-				std::vector<std::string> outputs;
-				callback_t callback;
-			};
-
-			struct grid_entry_ctor
-			{
-				std::vector<std::string> outputs;
-				color4f color;
-				u32 num_cell_hz;
-				button_flags type_flags;
-				callback_t callback;
-			};
-
-			// Base UI
-			overlay_element m_frame;
-			overlay_element m_background;
-			label m_title;
-			edit_text m_preview;
-			image_button m_btn_accept;
-			image_button m_btn_cancel;
-			image_button m_btn_shift;
-			image_button m_btn_space;
-			image_button m_btn_delete;
-
-			// Grid
-			u32 cell_size_x = 0;
-			u32 cell_size_y = 0;
-			u32 num_columns = 0;
-			u32 num_rows = 0;
-			u32 num_layers = 0;
-			u32 selected_x = 0;
-			u32 selected_y = 0;
-			u32 selected_z = 0;
-
-			std::vector<cell> m_grid;
-
-			// Fade in/out
-			animation_color_interpolate fade_animation;
-
-			bool m_visible = false;
-			bool m_update = true;
-			compiled_resource m_cached_resource;
-
-			u32 flags = 0;
-			u32 char_limit = UINT32_MAX;
-
-			osk_dialog() = default;
-			~osk_dialog() override = default;
-
-			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override = 0;
-			void Close(bool ok) override;
-
-			void initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::string& title, const std::string& initial_text);
-			void update() override;
-
-			void on_button_pressed(pad_button button_press) override;
-			void on_text_changed();
-
-			void on_default_callback(const std::string&);
-			void on_shift(const std::string&);
-			void on_space(const std::string&);
-			void on_backspace(const std::string&);
-			void on_enter(const std::string&);
-
-			compiled_resource get_compiled() override;
-		};
-
-		struct osk_latin : osk_dialog
-		{
-			using osk_dialog::osk_dialog;
-
-			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override;
-		};
-
-		struct save_dialog : public user_interface
-		{
-		private:
-			struct save_dialog_entry : horizontal_layout
-			{
-			private:
-				std::unique_ptr<image_info> icon_data;
-
-			public:
-				save_dialog_entry(const std::string& text1, const std::string& text2, const std::string& text3, u8 resource_id, const std::vector<u8>& icon_buf);
-			};
-
-			std::unique_ptr<overlay_element> m_dim_background;
-			std::unique_ptr<list_view> m_list;
-			std::unique_ptr<label> m_description;
-			std::unique_ptr<label> m_time_thingy;
-			std::unique_ptr<label> m_no_saves_text;
-
-			bool m_no_saves = false;
-
-		public:
-			save_dialog();
-
-			void update() override;
-			void on_button_pressed(pad_button button_press) override;
-
-			compiled_resource get_compiled() override;
-
-			s32 show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet);
-		};
-
-		struct message_dialog : public user_interface
-		{
-		private:
-			label text_display;
-			image_button btn_ok;
-			image_button btn_cancel;
-
-			overlay_element bottom_bar, background;
-			image_view background_poster;
-			progress_bar progress_1, progress_2;
-			u8 num_progress_bars = 0;
-			s32 taskbar_index = 0;
-			s32 taskbar_limit = 0;
-
-			bool interactive = false;
-			bool ok_only = false;
-			bool cancel_only = false;
-
-			std::unique_ptr<image_info> background_image;
-
-		public:
-			message_dialog(bool use_custom_background = false);
-
-			compiled_resource get_compiled() override;
-
-			void on_button_pressed(pad_button button_press) override;
-
-			error_code show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close);
-
-			u32 progress_bar_count();
-			void progress_bar_set_taskbar_index(s32 index);
-			error_code progress_bar_set_message(u32 index, const std::string& msg);
-			error_code progress_bar_increment(u32 index, f32 value);
-			error_code progress_bar_reset(u32 index);
-			error_code progress_bar_set_limit(u32 index, u32 limit);
-		};
-
-		struct trophy_notification : public user_interface
-		{
-		private:
-			overlay_element frame;
-			image_view image;
-			label text_view;
-
-			u64 display_sched_id = 0;
-			u64 creation_time = 0;
-			std::unique_ptr<image_info> icon_info;
-
-			animation_translate sliding_animation;
-
-		public:
-			trophy_notification();
-
-			void update() override;
-
-			compiled_resource get_compiled() override;
-
-			s32 show(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophy_icon_buffer);
-		};
-
-		struct shader_compile_notification : user_interface
-		{
-			label m_text;
-
-			overlay_element dots[3];
-			u8 current_dot = 255;
-
-			u64 creation_time = 0;
-			u64 expire_time = 0; // Time to end the prompt
-			u64 urgency_ctr = 0; // How critical it is to show to the user
-
-			shader_compile_notification();
-
-			void update_animation(u64 t);
-			void touch();
-			void update() override;
-
-			compiled_resource get_compiled() override;
 		};
 	}
 }

@@ -10,6 +10,7 @@
 #include "qt_utils.h"
 #include "pad_settings_dialog.h"
 #include "ui_pad_settings_dialog.h"
+#include "tooltips.h"
 
 #include "Emu/Io/Null/NullPadHandler.h"
 
@@ -24,6 +25,8 @@
 #include "Input/evdev_joystick_handler.h"
 #endif
 
+LOG_CHANNEL(cfg_log, "CFG");
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
 
@@ -31,7 +34,7 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 {
 	if (!QDir().mkpath(dir))
 	{
-		LOG_ERROR(GENERAL, "Failed to create dir %s", sstr(dir));
+		cfg_log.error("Failed to create dir %s", sstr(dir));
 		return false;
 	}
 
@@ -40,7 +43,7 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 
 	if (!new_file.open(QIODevice::WriteOnly))
 	{
-		LOG_ERROR(GENERAL, "Failed to create file %s", sstr(filename));
+		cfg_log.error("Failed to create file %s", sstr(filename));
 		return false;
 	}
 
@@ -60,21 +63,13 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	{
 		m_title_id = game->serial;
 		g_cfg_input.load(game->serial);
-		setWindowTitle(tr("Gamepads Settings: [%0] %1").arg(qstr(game->serial)).arg(qstr(game->name).simplified()));
+		setWindowTitle(tr("Gamepad Settings: [%0] %1").arg(qstr(game->serial)).arg(qstr(game->name).simplified()));
 	}
 	else
 	{
 		g_cfg_input.load();
-		setWindowTitle(tr("Gamepads Settings"));
+		setWindowTitle(tr("Gamepad Settings"));
 	}
-
-	// Load tooltips
-	QFile json_file(":/Json/pad_settings.json");
-	json_file.open(QIODevice::ReadOnly | QIODevice::Text);
-	QJsonObject json_obj = QJsonDocument::fromJson(json_file.readAll()).object();
-	json_file.close();
-
-	m_json_handlers = json_obj.value("handlers").toObject();
 
 	// Create tab widget for 7 players
 	m_tabs = new QTabWidget;
@@ -114,7 +109,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 		if (!g_cfg_input.player[m_tabs->currentIndex()]->device.from_string(m_device_name))
 		{
 			// Something went wrong
-			LOG_ERROR(GENERAL, "Failed to convert device string: %s", m_device_name);
+			cfg_log.error("Failed to convert device string: %s", m_device_name);
 			return;
 		}
 	});
@@ -130,14 +125,14 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 		if (!g_cfg_input.player[m_tabs->currentIndex()]->profile.from_string(m_profile))
 		{
 			// Something went wrong
-			LOG_ERROR(GENERAL, "Failed to convert profile string: %s", m_profile);
+			cfg_log.error("Failed to convert profile string: %s", m_profile);
 			return;
 		}
 		ChangeProfile();
 	});
 
 	// Pushbutton: Add Profile
-	connect(ui->b_addProfile, &QAbstractButton::clicked, [=]
+	connect(ui->b_addProfile, &QAbstractButton::clicked, [this]()
 	{
 		const int i = m_tabs->currentIndex();
 
@@ -336,7 +331,7 @@ void pad_settings_dialog::InitButtons()
 		RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->size().width(), rx, ry);
 	});
 
-	connect(ui->b_led, &QPushButton::clicked, [=]()
+	connect(ui->b_led, &QPushButton::clicked, [this]()
 	{
 		QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
 		if (ui->b_led->property("led").canConvert<QColor>())
@@ -355,7 +350,7 @@ void pad_settings_dialog::InitButtons()
 	});
 
 	// Enable Button Remapping
-	const auto& callback = [=](u16 val, std::string name, std::string pad_name, std::array<int, 6> preview_values)
+	const auto& callback = [this](u16 val, std::string name, std::string pad_name, std::array<int, 6> preview_values)
 	{
 		SwitchPadInfo(pad_name, true);
 
@@ -385,7 +380,7 @@ void pad_settings_dialog::InitButtons()
 			return;
 		}
 
-		LOG_NOTICE(HLE, "get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
+		cfg_log.notice("get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
 		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end)
 		{
 			m_cfg_entries[m_button_id].key  = name;
@@ -424,11 +419,13 @@ void pad_settings_dialog::InitButtons()
 		{
 			if (!ui->chooseDevice->itemData(i).canConvert<pad_device_info>())
 			{
-				LOG_FATAL(GENERAL, "Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
+				cfg_log.fatal("Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
 				continue;
 			}
 			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
-			m_handler->get_next_button_press(info.name, [=](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+			m_handler->get_next_button_press(info.name,
+				[this](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); },
+				[this](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 		}
 	});
 }
@@ -613,33 +610,43 @@ void pad_settings_dialog::ReactivateButtons()
 	ui->chooseClass->setFocusPolicy(Qt::WheelFocus);
 }
 
-void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y)
+void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y)
 {
-	int max = m_handler->thumb_max;
-	int origin = w * 0.1;
-	int width = w * 0.8;
-	int dz_width = width * dz / max;
-	int dz_origin = (w - dz_width) / 2;
+	const int deadzone_max = m_handler->thumb_max;
+	const qreal device_pixel_ratio = devicePixelRatioF();
+	const qreal scaled_width = desired_width * device_pixel_ratio;
+	const qreal origin = desired_width / 2.0;
+	const qreal relative_size = 0.8;
+	const qreal outer_circle_diameter = relative_size * desired_width;
+	const qreal inner_circle_diameter = outer_circle_diameter * deadzone / deadzone_max;
+	const qreal outer_circle_radius = outer_circle_diameter / 2.0;
+	const qreal stick_x = outer_circle_radius * x / deadzone_max;
+	const qreal stick_y = outer_circle_radius * -y / deadzone_max;
 
-	x = (w + (x * width / max)) / 2;
-	y = (w + (y * -1 * width / max)) / 2;
+	// Set up the canvas for our work of art
+	QPixmap pixmap(scaled_width, scaled_width);
+	pixmap.setDevicePixelRatio(device_pixel_ratio);
+	pixmap.fill(Qt::transparent);
 
-	QPixmap pm(w, w);
-	pm.fill(Qt::transparent);
-	QPainter p(&pm);
-	p.setRenderHint(QPainter::Antialiasing, true);
-	QPen pen(Qt::black, 2);
-	p.setPen(pen);
-	QBrush brush(Qt::white);
-	p.setBrush(brush);
-	p.drawEllipse(origin, origin, width, width);
-	pen = QPen(Qt::red, 2);
-	p.setPen(pen);
-	p.drawEllipse(dz_origin, dz_origin, dz_width, dz_width);
-	pen = QPen(Qt::blue, 2);
-	p.setPen(pen);
-	p.drawEllipse(x, y, 1, 1);
-	l->setPixmap(pm);
+	// Configure the painter and set its origin
+	QPainter painter(&pixmap);
+	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.translate(origin, origin);
+	painter.setBrush(QBrush(Qt::white));
+
+	// Draw a black outer circle that represents the maximum for the deadzone
+	painter.setPen(QPen(Qt::black, 2));
+	painter.drawEllipse(QRectF(-outer_circle_diameter / 2.0, -outer_circle_diameter / 2.0, outer_circle_diameter, outer_circle_diameter));
+
+	// Draw a red inner circle that represents the current deadzone
+	painter.setPen(QPen(Qt::red, 2));
+	painter.drawEllipse(QRectF(-inner_circle_diameter / 2.0, -inner_circle_diameter / 2.0, inner_circle_diameter, inner_circle_diameter));
+
+	// Draw a blue dot that represents the current stick orientation
+	painter.setPen(QPen(Qt::blue, 2));
+	painter.drawEllipse(QRectF(stick_x, stick_y, 1, 1));
+
+	l->setPixmap(pixmap);
 }
 
 void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
@@ -656,7 +663,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 	}
 	else
 	{
@@ -681,7 +688,7 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 	}
 	else
 	{
@@ -706,7 +713,7 @@ void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 		return;
 	}
 
@@ -762,7 +769,7 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* /*event*/)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 	}
 	else
 	{
@@ -981,7 +988,7 @@ void pad_settings_dialog::ChangeInputType()
 	if (!g_cfg_input.player[player]->handler.from_string(handler))
 	{
 		// Something went wrong
-		LOG_ERROR(GENERAL, "Failed to convert input string: %s", handler);
+		cfg_log.error("Failed to convert input string: %s", handler);
 		return;
 	}
 
@@ -992,37 +999,40 @@ void pad_settings_dialog::ChangeInputType()
 	m_handler = GetHandler(g_cfg_input.player[player]->handler);
 	const auto device_list = m_handler->ListDevices();
 
+	// Localized tooltips
+	Tooltips tooltips;
+
 	// Change the description
 	QString description;
 	switch (m_handler->m_type)
 	{
 	case pad_handler::null:
-		description = m_json_handlers["null"].toString(); break;
+		description = tooltips.gamepad_settings.null; break;
 	case pad_handler::keyboard:
-		description = m_json_handlers["keyboard"].toString(); break;
+		description = tooltips.gamepad_settings.keyboard; break;
 #ifdef _WIN32
 	case pad_handler::xinput:
-		description = m_json_handlers["xinput"].toString(); break;
+		description = tooltips.gamepad_settings.xinput; break;
 	case pad_handler::mm:
-		description = m_json_handlers["mmjoy"].toString(); break;
+		description = tooltips.gamepad_settings.mmjoy; break;
 	case pad_handler::ds3:
-		description = m_json_handlers["ds3_windows"].toString(); break;
+		description = tooltips.gamepad_settings.ds3_windows; break;
 	case pad_handler::ds4:
-		description = m_json_handlers["ds4_windows"].toString(); break;
+		description = tooltips.gamepad_settings.ds4_windows; break;
 #elif __linux__
 	case pad_handler::ds3:
-		description = m_json_handlers["ds3_linux"].toString(); break;
+		description = tooltips.gamepad_settings.ds3_linux; break;
 	case pad_handler::ds4:
-		description = m_json_handlers["ds4_linux"].toString(); break;
+		description = tooltips.gamepad_settings.ds4_linux; break;
 #else
 	case pad_handler::ds3:
-		description = m_json_handlers["ds3_other"].toString(); break;
+		description = tooltips.gamepad_settings.ds3_other; break;
 	case pad_handler::ds4:
-		description = m_json_handlers["ds4_other"].toString(); break;
+		description = tooltips.gamepad_settings.ds4_other; break;
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
-		description = (m_json_handlers["evdev"].toString()); break;
+		description = tooltips.gamepad_settings.evdev; break;
 #endif
 	default:
 		description = "";
@@ -1072,11 +1082,13 @@ void pad_settings_dialog::ChangeInputType()
 		{
 			if (!ui->chooseDevice->itemData(i).canConvert<pad_device_info>())
 			{
-				LOG_FATAL(GENERAL, "Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
+				cfg_log.fatal("Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
 				continue;
 			}
 			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
-			m_handler->get_next_button_press(info.name, [=](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+			m_handler->get_next_button_press(info.name,
+				[this](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); },
+				[this](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 			if (info.name == device)
 			{
 				ui->chooseDevice->setCurrentIndex(i);

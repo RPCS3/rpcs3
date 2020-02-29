@@ -34,7 +34,7 @@ namespace rsx
 			}
 			catch (const std::exception& e)
 			{
-				LOG_ERROR(RSX, "Overlays: tried to convert incompatible color code: '%s' exception: '%s'", hex_color, e.what());
+				rsx_log.error("Overlays: tried to convert incompatible color code: '%s' exception: '%s'", hex_color, e.what());
 				return color4f(0.0f, 0.0f, 0.0f, 0.0f);
 			}
 
@@ -146,20 +146,23 @@ namespace rsx
 
 				if (m_framerate_graph_enabled)
 				{
+					m_fps_graph.update();
 					m_fps_graph.set_pos(body_left, body_bottom);
 					m_fps_graph.set_size(graphs_width, fps_graph_h);
 				}
 
 				if (m_frametime_graph_enabled)
 				{
-					u16 padding = 0;
+					m_frametime_graph.update();
+
+					u16 y_offset{};
 
 					if (m_framerate_graph_enabled)
 					{
-						padding = m_fps_graph.h + graphs_padding;
+						y_offset = m_fps_graph.get_height();
 					}
 
-					m_frametime_graph.set_pos(body_left, body_bottom + padding);
+					m_frametime_graph.set_pos(body_left, body_bottom + y_offset);
 					m_frametime_graph.set_size(graphs_width, frametime_graph_h);
 				}
 			}
@@ -183,9 +186,9 @@ namespace rsx
 			switch (m_detail)
 			{
 			case detail_level::minimal:
-			case detail_level::low: m_titles.text = ""; break;
-			case detail_level::medium: m_titles.text = fmt::format("\n\n%s", title1_medium); break;
-			case detail_level::high: m_titles.text = fmt::format("\n\n%s\n\n\n\n\n\n%s", title1_high, title2); break;
+			case detail_level::low: m_titles.set_text(""); break;
+			case detail_level::medium: m_titles.set_text(fmt::format("\n\n%s", title1_medium)); break;
+			case detail_level::high: m_titles.set_text(fmt::format("\n\n%s\n\n\n\n\n\n%s", title1_high, title2)); break;
 			}
 			m_titles.auto_resize();
 			m_titles.refresh();
@@ -202,6 +205,7 @@ namespace rsx
 			update();
 
 			m_is_initialised = true;
+			visible = true;
 		}
 
 		void perf_metrics_overlay::set_framerate_graph_enabled(bool enabled)
@@ -213,7 +217,7 @@ namespace rsx
 
 			if (enabled)
 			{
-				m_fps_graph.set_title("Framerate");
+				m_fps_graph.set_title("   Framerate");
 				m_fps_graph.set_font_size(m_font_size * 0.8);
 				m_fps_graph.set_count(50);
 				m_fps_graph.set_color(convert_color_code(m_color_body, m_opacity));
@@ -232,7 +236,7 @@ namespace rsx
 
 			if (enabled)
 			{
-				m_frametime_graph.set_title("Frametime");
+				m_frametime_graph.set_title("   Frametime");
 				m_frametime_graph.set_font_size(m_font_size * 0.8);
 				m_frametime_graph.set_count(170);
 				m_frametime_graph.set_color(convert_color_code(m_color_body, m_opacity));
@@ -483,7 +487,7 @@ namespace rsx
 				}
 				}
 
-				m_body.text = perf_text;
+				m_body.set_text(perf_text);
 
 				if (m_body.auto_resize())
 				{
@@ -545,19 +549,17 @@ namespace rsx
 
 		void graph::set_pos(u16 _x, u16 _y)
 		{
-			overlay_element::set_pos(_x, _y);
-
-			m_label.set_pos(x, y + h);
+			m_label.set_pos(_x, _y);
+			overlay_element::set_pos(_x, _y + m_label.h);
 		}
 
 		void graph::set_size(u16 _w, u16 _h)
 		{
 			overlay_element::set_size(_w, _h);
 
-			set_padding(0, 0, h, 0);
-			m_label.set_size(w, m_label.h);
-
-			m_label.set_pos(x, y + h);
+			// Place label horizontally in the middle of the graph rect
+			const u16 label_x = std::max(x, u16(x + (w / 2) - (m_label.w / 2)));
+			m_label.set_pos(label_x, m_label.y);
 		}
 
 		void graph::set_title(const char* title)
@@ -572,7 +574,7 @@ namespace rsx
 
 		void graph::set_font_size(u16 font_size)
 		{
-			const auto font_name = m_label.get_font()->font_name.c_str();
+			const auto font_name = m_label.get_font()->get_name().data();
 			m_label.set_font(font_name, font_size);
 		}
 
@@ -590,6 +592,11 @@ namespace rsx
 		void graph::set_guide_interval(f32 guide_interval)
 		{
 			m_guide_interval = guide_interval;
+		}
+
+		u16 graph::get_height() const
+		{
+			return h + m_label.h + m_label.padding_top + m_label.padding_bottom;
 		}
 
 		void graph::record_datapoint(f32 datapoint)
@@ -614,11 +621,14 @@ namespace rsx
 
 		void graph::update()
 		{
-			m_label.set_text(fmt::format("%s  min:%5.2f max:%6.2f", m_title.c_str(), m_min, m_max));
+			m_label.set_text(fmt::format("%s\nmn:%4.1f mx:%4.1f", m_title.c_str(), m_min, m_max));
 			m_label.set_padding(4, 4, 0, 4);
 
 			m_label.auto_resize();
 			m_label.refresh();
+
+			// If label horizontal end is larger, widen graph width to match it
+			set_size(std::max(m_label.w, w), h);
 		}
 
 		compiled_resource& graph::get_compiled()
@@ -690,6 +700,8 @@ namespace rsx
 					{
 						perf_overlay = manager->create<rsx::overlays::perf_metrics_overlay>();
 					}
+
+					std::scoped_lock lock(*manager);
 
 					perf_overlay->set_detail_level(perf_settings.level);
 					perf_overlay->set_position(perf_settings.position);

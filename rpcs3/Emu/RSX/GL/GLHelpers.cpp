@@ -49,12 +49,12 @@ namespace gl
 		{
 		case GL_DEBUG_TYPE_ERROR:
 		{
-			LOG_ERROR(RSX, "%s", message);
+			rsx_log.error("%s", message);
 			return;
 		}
 		default:
 		{
-			LOG_WARNING(RSX, "%s", message);
+			rsx_log.warning("%s", message);
 			return;
 		}
 		}
@@ -120,7 +120,7 @@ namespace gl
 
 		if (status != GL_FRAMEBUFFER_COMPLETE)
 		{
-			LOG_ERROR(RSX, "FBO check failed: 0x%04x", status);
+			rsx_log.error("FBO check failed: 0x%04x", status);
 			return false;
 		}
 
@@ -396,15 +396,15 @@ namespace gl
 				// Final dimensions are a match
 				if (xfer_info.src_is_typeless || xfer_info.dst_is_typeless)
 				{
-					const coord3i src_region = { { src_rect.x1, src_rect.y1, 0 }, { src_w, src_rect.height(), 1 } };
-					const coord3i dst_region = { { dst_rect.x1, dst_rect.y1, 0 }, { src_w, src_rect.height(), 1 } };
-					gl::copy_typeless(dst, src, dst_region, src_region);
+					const coord3i src_region = { { src_rect.x1, src_rect.y1, 0 }, { src_rect.width(), src_rect.height(), 1 } };
+					const coord3i dst_region = { { dst_rect.x1, dst_rect.y1, 0 }, { dst_rect.width(), dst_rect.height(), 1 } };
+					gl::copy_typeless(dst, src, static_cast<coord3u>(dst_region), static_cast<coord3u>(src_region));
 				}
 				else
 				{
-					glCopyImageSubData(src->id(), dst->id(), 0, src_rect.x1, src_rect.y1, 0,
+					glCopyImageSubData(src->id(), GL_TEXTURE_2D, 0, src_rect.x1, src_rect.y1, 0,
 						dst->id(), GL_TEXTURE_2D, 0, dst_rect.x1, dst_rect.y1, 0,
-						src_w, src_rect.height(), 1);
+						src_rect.width(), src_rect.height(), 1);
 				}
 
 				return;

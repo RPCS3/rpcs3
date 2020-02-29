@@ -658,7 +658,7 @@ namespace utils
 					static_assert(!std::is_volatile_v<std::remove_reference_t<Type>>);
 
 					// Try to acquire the semaphore
-					if (UNLIKELY(!head->m_sema.try_inc(last + 1)))
+					if (!head->m_sema.try_inc(last + 1)) [[unlikely]]
 					{
 						block = nullptr;
 					}
@@ -671,7 +671,7 @@ namespace utils
 
 							if (block->m_type == 0 && block->m_mutex.try_lock())
 							{
-								if (LIKELY(block->m_type == 0))
+								if (block->m_type == 0) [[likely]]
 								{
 									break;
 								}
@@ -695,7 +695,7 @@ namespace utils
 						{
 							block = nullptr;
 						}
-						else if (UNLIKELY(block->m_type != 0))
+						else if (block->m_type != 0) [[unlikely]]
 						{
 							block->m_mutex.unlock();
 							block = nullptr;
@@ -737,13 +737,13 @@ namespace utils
 				block = reinterpret_cast<typemap_block*>(head->m_ptr + std::size_t{head->m_ssize} * unscaled);
 
 				// Check id range and type
-				if (UNLIKELY(unscaled >= typeinfo_count<Type>::max_count || unbiased % step))
+				if (unscaled >= typeinfo_count<Type>::max_count || unbiased % step) [[unlikely]]
 				{
 					block = nullptr;
 				}
 				else
 				{
-					if (UNLIKELY(block->m_type == 0))
+					if (block->m_type == 0) [[unlikely]]
 					{
 						block = nullptr;
 					}
@@ -785,12 +785,12 @@ namespace utils
 			}
 			else if constexpr (std::is_invocable_r_v<bool, const Arg&, const Type&>)
 			{
-				if (UNLIKELY(!block))
+				if (!block) [[unlikely]]
 				{
 					return;
 				}
 
-				if (LIKELY(block->m_type))
+				if (block->m_type) [[likely]]
 				{
 					if (std::invoke(std::forward<Arg>(id), std::as_const(*block->get_ptr<Type>())))
 					{
@@ -800,7 +800,7 @@ namespace utils
 			}
 			else if (block)
 			{
-				if (LIKELY(block->m_type))
+				if (block->m_type) [[likely]]
 				{
 					return;
 				}
@@ -848,7 +848,7 @@ namespace utils
 				}
 				else if constexpr (is_const || is_volatile)
 				{
-					if (LIKELY(block->m_mutex.is_lockable()))
+					if (block->m_mutex.is_lockable()) [[likely]]
 					{
 						return true;
 					}
@@ -858,7 +858,7 @@ namespace utils
 				}
 				else
 				{
-					if (LIKELY(block->m_mutex.is_free()))
+					if (block->m_mutex.is_free()) [[likely]]
 					{
 						return true;
 					}
@@ -878,7 +878,7 @@ namespace utils
 				if constexpr (I + 1 < N)
 				{
 					// Proceed recursively
-					if (LIKELY(try_lock<I + 1, Types...>(array, locked, std::integer_sequence<bool, Locks...>{})))
+					if (try_lock<I + 1, Types...>(array, locked, std::integer_sequence<bool, Locks...>{})) [[likely]]
 					{
 						return true;
 					}
@@ -973,7 +973,7 @@ namespace utils
 			while (true)
 			{
 				const uint locked = lock_array<decode_t<Types>...>(result, seq_t{}, locks_t{});
-				if (LIKELY(try_lock<0, decode_t<Types>...>(result, locked, locks_t{})))
+				if (try_lock<0, decode_t<Types>...>(result, locked, locks_t{})) [[likely]]
 					break;
 			}
 

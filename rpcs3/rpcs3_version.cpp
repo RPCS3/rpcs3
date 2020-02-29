@@ -1,11 +1,11 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "rpcs3_version.h"
 #include "git-version.h"
 #include "Utilities/StrUtil.h"
 
 namespace rpcs3
 {
-	std::string get_branch()
+	std::string_view get_branch()
 	{
 		return RPCS3_GIT_BRANCH;
 	}
@@ -21,5 +21,30 @@ namespace rpcs3
 
 	// TODO: Make this accessible from cmake and keep in sync with MACOSX_BUNDLE_BUNDLE_VERSION.
 	// Currently accessible by Windows and Linux build scripts, see implementations when doing MACOSX
-	const extern utils::version version{ 0, 0, 8, utils::version_type::alpha, 1, RPCS3_GIT_VERSION };
+	const utils::version& get_version()
+	{
+		static constexpr utils::version version{ 0, 0, 8, utils::version_type::alpha, 1, RPCS3_GIT_VERSION };
+		return version;
+	}
+
+	std::string get_version_and_branch()
+	{
+		// Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
+		std::string version = rpcs3::get_version().to_string();
+		const auto last_minus = version.find_last_of('-');
+
+		// Add branch and commit hash to version on frame unless it's master.
+		if (rpcs3::get_branch() != "master"sv && rpcs3::get_branch() != "HEAD"sv)
+		{
+			version = version.substr(0, ~last_minus ? last_minus + 9 : last_minus);
+			version += '-';
+			version += rpcs3::get_branch();
+		}
+		else
+		{
+			version = version.substr(0, last_minus);
+		}
+
+		return version;
+	}
 }

@@ -1,7 +1,9 @@
 ﻿#include "keyboard_pad_handler.h"
+#include "Emu/Io/pad_config.h"
 
 #include <QApplication>
-#include <QThread>
+
+LOG_CHANNEL(input_log, "Input");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
@@ -16,7 +18,9 @@ bool keyboard_pad_handler::Init()
 	return true;
 }
 
-keyboard_pad_handler::keyboard_pad_handler() : PadHandlerBase(pad_handler::keyboard), QObject()
+keyboard_pad_handler::keyboard_pad_handler()
+	: QObject()
+	, PadHandlerBase(pad_handler::keyboard)
 {
 	init_configs();
 
@@ -71,8 +75,25 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			if (button.m_keyCode != code)
 				continue;
 
-			button.m_pressed = pressed;
-			button.m_value = pressed ? value : 0;
+			button.m_actual_value = pressed ? value : 0;
+
+			bool update_button = true;
+
+			// to get the fastest response time possible we don't wanna use any lerp with factor 1
+			if (button.m_analog)
+			{
+				update_button = m_analog_lerp_factor >= 1.0f;
+			}
+			else if (button.m_trigger)
+			{
+				update_button = m_trigger_lerp_factor >= 1.0f;
+			}
+
+			if (update_button)
+			{
+				button.m_value = pressed ? value : 0;
+				button.m_pressed = pressed;
+			}
 		}
 
 		for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
@@ -179,7 +200,7 @@ void keyboard_pad_handler::SetTargetWindow(QWindow* target)
 		QApplication::instance()->installEventFilter(this);
 		// If this is hit, it probably means that some refactoring occurs because currently a gsframe is created in Load.
 		// We still want events so filter from application instead since target is null.
-		LOG_ERROR(GENERAL, "Trying to set pad handler to a null target window.");
+		input_log.error("Trying to set pad handler to a null target window.");
 	}
 }
 
@@ -250,42 +271,42 @@ void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 		{
 		case Qt::Key_I:
 			m_deadzone_y = std::min(m_deadzone_y + 1, 255);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone y = %d", m_deadzone_y);
+			input_log.success("mouse move adjustment: deadzone y = %d", m_deadzone_y);
 			event->ignore();
 			return;
 		case Qt::Key_U:
 			m_deadzone_y = std::max(0, m_deadzone_y - 1);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone y = %d", m_deadzone_y);
+			input_log.success("mouse move adjustment: deadzone y = %d", m_deadzone_y);
 			event->ignore();
 			return;
 		case Qt::Key_Y:
 			m_deadzone_x = std::min(m_deadzone_x + 1, 255);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone x = %d", m_deadzone_x);
+			input_log.success("mouse move adjustment: deadzone x = %d", m_deadzone_x);
 			event->ignore();
 			return;
 		case Qt::Key_T:
 			m_deadzone_x = std::max(0, m_deadzone_x - 1);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone x = %d", m_deadzone_x);
+			input_log.success("mouse move adjustment: deadzone x = %d", m_deadzone_x);
 			event->ignore();
 			return;
 		case Qt::Key_K:
 			m_multi_y = std::min(m_multi_y + 0.1, 5.0);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %d", static_cast<int>(m_multi_y * 100));
+			input_log.success("mouse move adjustment: multiplier y = %d", static_cast<int>(m_multi_y * 100));
 			event->ignore();
 			return;
 		case Qt::Key_J:
 			m_multi_y = std::max(0.0, m_multi_y - 0.1);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %d", static_cast<int>(m_multi_y * 100));
+			input_log.success("mouse move adjustment: multiplier y = %d", static_cast<int>(m_multi_y * 100));
 			event->ignore();
 			return;
 		case Qt::Key_H:
 			m_multi_x = std::min(m_multi_x + 0.1, 5.0);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %d", static_cast<int>(m_multi_x * 100));
+			input_log.success("mouse move adjustment: multiplier x = %d", static_cast<int>(m_multi_x * 100));
 			event->ignore();
 			return;
 		case Qt::Key_G:
 			m_multi_x = std::max(0.0, m_multi_x - 0.1);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %d", static_cast<int>(m_multi_x * 100));
+			input_log.success("mouse move adjustment: multiplier x = %d", static_cast<int>(m_multi_x * 100));
 			event->ignore();
 			return;
 		default:
@@ -424,7 +445,7 @@ void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
 std::vector<std::string> keyboard_pad_handler::ListDevices()
 {
 	std::vector<std::string> list_devices;
-	list_devices.push_back("Keyboard");
+	list_devices.emplace_back("Keyboard");
 	return list_devices;
 }
 
@@ -550,7 +571,7 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 	if (seq.count() == 1)
 		keyCode = seq[0];
 	else
-		LOG_NOTICE(GENERAL, "GetKeyCode(%s): seq.count() = %d", sstr(keyName), seq.count());
+		input_log.notice("GetKeyCode(%s): seq.count() = %d", sstr(keyName), seq.count());
 
 	return keyCode;
 }
@@ -572,6 +593,8 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	m_multi_y = p_profile->mouse_acceleration_y / 100.0;
 	m_l_stick_lerp_factor = p_profile->l_stick_lerp_factor / 100.0f;
 	m_r_stick_lerp_factor = p_profile->r_stick_lerp_factor / 100.0f;
+	m_analog_lerp_factor  = p_profile->analog_lerp_factor / 100.0f;
+	m_trigger_lerp_factor = p_profile->trigger_lerp_factor / 100.0f;
 
 	auto find_key = [&](const cfg::string& name)
 	{
@@ -631,7 +654,64 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 
 void keyboard_pad_handler::ThreadProc()
 {
-	for (int i = 0; i < bindings.size(); i++)
+	static const double mouse_interval = 30.0;
+	static const double stick_interval = 10.0;
+	static const double button_interval = 10.0;
+
+	const auto now = std::chrono::steady_clock::now();
+
+	const double elapsed_left = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_left).count() / 1000.0;
+	const double elapsed_right = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_right).count() / 1000.0;
+	const double elapsed_up = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_up).count() / 1000.0;
+	const double elapsed_down = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_down).count() / 1000.0;
+	const double elapsed_stick = std::chrono::duration_cast<std::chrono::microseconds>(now - m_stick_time).count() / 1000.0;
+	const double elapsed_button = std::chrono::duration_cast<std::chrono::microseconds>(now - m_button_time).count() / 1000.0;
+
+	const bool update_sticks = elapsed_stick > stick_interval;
+	const bool update_buttons = elapsed_button > button_interval;
+
+	if (update_sticks)
+	{
+		m_stick_time = now;
+	}
+
+	if (update_buttons)
+	{
+		m_button_time = now;
+	}
+
+	// roughly 1-2 frames to process the next mouse move
+	if (elapsed_left > mouse_interval)
+	{
+		Key(mouse::move_left, false);
+		m_last_mouse_move_left = now;
+	}
+	if (elapsed_right > mouse_interval)
+	{
+		Key(mouse::move_right, false);
+		m_last_mouse_move_right = now;
+	}
+	if (elapsed_up > mouse_interval)
+	{
+		Key(mouse::move_up, false);
+		m_last_mouse_move_up = now;
+	}
+	if (elapsed_down > mouse_interval)
+	{
+		Key(mouse::move_down, false);
+		m_last_mouse_move_down = now;
+	}
+
+	const auto get_lerped = [](f32 v0, f32 v1, f32 lerp_factor)
+	{
+		// linear interpolation from the current value v0 to the desired value v1
+		const f32 res = std::lerp(v0, v1, lerp_factor);
+
+		// round to the correct direction to prevent sticky values on small factors
+		return (v0 <= v1) ? std::ceil(res) : std::floor(res);
+	};
+
+	for (uint i = 0; i < bindings.size(); i++)
 	{
 		if (last_connection_status[i] == false)
 		{
@@ -642,41 +722,7 @@ void keyboard_pad_handler::ThreadProc()
 		}
 		else
 		{
-			static std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-			now = std::chrono::steady_clock::now();
-
-			const double elapsed_left = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_left).count() / 1000.0;
-			const double elapsed_right = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_right).count() / 1000.0;
-			const double elapsed_up = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_up).count() / 1000.0;
-			const double elapsed_down = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_down).count() / 1000.0;
-			const double elapsed_stick = std::chrono::duration_cast<std::chrono::microseconds>(now - m_stick_time).count() / 1000.0;
-
-			const double mouse_interval = 30.0;
-			const double stick_interval = 10.0;
-
-			// roughly 1-2 frames to process the next mouse move
-			if (elapsed_left > mouse_interval)
-			{
-				Key(mouse::move_left, false);
-				m_last_mouse_move_left = now;
-			}
-			if (elapsed_right > mouse_interval)
-			{
-				Key(mouse::move_right, false);
-				m_last_mouse_move_right = now;
-			}
-			if (elapsed_up > mouse_interval)
-			{
-				Key(mouse::move_up, false);
-				m_last_mouse_move_up = now;
-			}
-			if (elapsed_down > mouse_interval)
-			{
-				Key(mouse::move_down, false);
-				m_last_mouse_move_down = now;
-			}
-
-			if (elapsed_stick > stick_interval)
+			if (update_sticks)
 			{
 				for (int j = 0; j < static_cast<int>(bindings[i]->m_sticks.size()); j++)
 				{
@@ -687,25 +733,50 @@ void keyboard_pad_handler::ThreadProc()
 					{
 						const f32 v0 = static_cast<f32>(bindings[i]->m_sticks[j].m_value);
 						const f32 v1 = static_cast<f32>(m_stick_val[j]);
-
-						// linear interpolation from the current stick value v0 to the desired stick value v1
-						f32 res = lerp(v0, v1, stick_lerp_factor);
-
-						// round to the correct direction to prevent sticky sticks on small factors
-						res = (v0 <= v1) ? std::ceil(res) : std::floor(res);
+						const f32 res = get_lerped(v0, v1, stick_lerp_factor);
 
 						bindings[i]->m_sticks[j].m_value = static_cast<u16>(res);
 					}
 				}
+			}
 
-				m_stick_time = now;
+			if (update_buttons)
+			{
+				for (auto& button : bindings[i]->m_buttons)
+				{
+					if (button.m_analog)
+					{
+						// we already applied the following values on keypress if we used factor 1
+						if (m_analog_lerp_factor < 1.0f)
+						{
+							const f32 v0 = static_cast<f32>(button.m_value);
+							const f32 v1 = static_cast<f32>(button.m_actual_value);
+							const f32 res = get_lerped(v0, v1, m_analog_lerp_factor);
+
+							button.m_value = static_cast<u16>(res);
+							button.m_pressed = button.m_value > 0;
+						}
+					}
+					else if (button.m_trigger)
+					{
+						// we already applied the following values on keypress if we used factor 1
+						if (m_trigger_lerp_factor < 1.0f)
+						{
+							const f32 v0 = static_cast<f32>(button.m_value);
+							const f32 v1 = static_cast<f32>(button.m_actual_value);
+							const f32 res = get_lerped(v0, v1, m_trigger_lerp_factor);
+
+							button.m_value = static_cast<u16>(res);
+							button.m_pressed = button.m_value > 0;
+						}
+					}
+				}
 			}
 		}
 	}
 
 	// Releases the wheel buttons 0,1 sec after they've been triggered
 	// Next activation is set to distant future to avoid activating this on every proc
-	const auto now = std::chrono::steady_clock::now();
 	const auto update_threshold = now - std::chrono::milliseconds(100);
 	const auto distant_future = now + std::chrono::hours(24);
 	if (update_threshold >= m_last_wheel_move_up)

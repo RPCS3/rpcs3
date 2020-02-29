@@ -13,7 +13,6 @@
 #include "RSXFragmentProgram.h"
 #include "rsx_methods.h"
 #include "rsx_utils.h"
-#include "Overlays/overlays.h"
 #include "Common/texture_cache_utils.h"
 
 #include "Utilities/Thread.h"
@@ -27,38 +26,37 @@
 extern u64 get_guest_system_time();
 extern u64 get_system_time();
 
-struct RSXIOTable
-{
-	atomic_t<u16> ea[4096];
-	atomic_t<u16> io[3072];
-
-	// try to get the real address given a mapped address
-	// return non zero on success
-	inline u32 RealAddr(u32 offs)
-	{
-		u32 result = this->ea[offs >> 20].load();
-
-		if (static_cast<s16>(result) < 0)
-		{
-			return 0;
-		}
-
-		result <<= 20; result |= (offs & 0xFFFFF);
-
-		ASSUME(result != 0);
-
-		return result;
-	}
-};
-
 extern bool user_asked_for_frame_capture;
 extern bool capture_current_frame;
 extern rsx::frame_trace_data frame_debug;
 extern rsx::frame_capture_data frame_capture;
-extern RSXIOTable RSXIOMem;
 
 namespace rsx
 {
+	namespace overlays
+	{
+		class display_manager;
+	}
+
+	struct rsx_iomap_table
+	{
+		std::array<atomic_t<u32>, 4096> ea;
+		std::array<atomic_t<u32>, 4096> io;
+
+		rsx_iomap_table() noexcept
+		{
+			std::fill(ea.begin(), ea.end(), -1);
+			std::fill(io.begin(), io.end(), -1);
+		}
+
+		// Try to get the real address given a mapped address
+		// Returns -1 on failure
+		u32 get_addr(u32 offs) const noexcept
+		{
+			return this->ea[offs >> 20] | (offs & 0xFFFFF);
+		}
+	};
+
 	enum framebuffer_creation_context : u8
 	{
 		context_draw = 0,
@@ -112,7 +110,8 @@ namespace rsx
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
-	u32 get_address(u32 offset, u32 location);
+	// TODO: Replace with std::source_location in c++20
+	u32 get_address(u32 offset, u32 location, const char* from);
 
 	struct tiled_region
 	{
@@ -196,7 +195,7 @@ namespace rsx
 
 			for (const auto &attrib : locations)
 			{
-				if (LIKELY(attrib.frequency <= 1))
+				if (attrib.frequency <= 1) [[likely]]
 				{
 					_max_index = max_index;
 				}
@@ -340,6 +339,7 @@ namespace rsx
 			u32 driver_handle;
 			u32 result;
 			u32 num_draws;
+			u32 data_type;
 			u64 sync_tag;
 			u64 timestamp;
 			bool pending;
@@ -372,8 +372,9 @@ namespace rsx
 			sync_no_notify = 2   // If set, backend hint notifications will not be made
 		};
 
-		struct ZCULL_control
+		class ZCULL_control
 		{
+		protected:
 			// Delay before a report update operation is forced to retire
 			const u32 max_zcull_delay_us = 300;
 			const u32 min_zcull_tick_us = 100;
@@ -382,8 +383,11 @@ namespace rsx
 			const u32 occlusion_query_count = 1024;
 			const u32 max_safe_queue_depth = 892;
 
-			bool active = false;
-			bool enabled = false;
+			bool unit_enabled = false;           // The ZCULL unit is on
+			bool write_enabled = false;          // A surface in the ZCULL-monitored tile region has been loaded for rasterization
+			bool stats_enabled = false;          // Collecting of ZCULL statistics is enabled (not same as pixels passing Z test!)
+			bool zpass_count_enabled = false;    // Collecting of ZPASS statistics is enabled. If this is off, the counter does not increment
+			bool host_queries_active = false;    // The backend/host is gathering Z data for the ZCULL unit
 
 			std::array<occlusion_query_info, 1024> m_occlusion_query_data = {};
 			std::stack<occlusion_query_info*> m_free_occlusion_pool;
@@ -402,17 +406,11 @@ namespace rsx
 			std::vector<queued_report_write> m_pending_writes;
 			std::unordered_map<u32, u32> m_statistics_map;
 
-			ZCULL_control();
-			~ZCULL_control();
+			// Enables/disables the ZCULL unit
+			void set_active(class ::rsx::thread* ptimer, bool active, bool flush_queue);
 
-			void set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
-			void set_active(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
-
-			void write(vm::addr_t sink, u64 timestamp, u32 type, u32 value);
-			void write(queued_report_write* writer, u64 timestamp, u32 value);
-
-			// Read current zcull statistics into the address provided
-			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
+			// Checks current state of the unit and applies changes
+			void check_state(class ::rsx::thread* ptimer, bool flush_queue);
 
 			// Sets up a new query slot and sets it to the current task
 			void allocate_new_query(class ::rsx::thread* ptimer);
@@ -420,8 +418,23 @@ namespace rsx
 			// Free a query slot in use
 			void free_query(occlusion_query_info* query);
 
+			// Write report to memory
+			void write(vm::addr_t sink, u64 timestamp, u32 type, u32 value);
+			void write(queued_report_write* writer, u64 timestamp, u32 value);
+
+		public:
+
+			ZCULL_control();
+			~ZCULL_control();
+
+			void set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
+			void set_status(class ::rsx::thread* ptimer, bool surface_active, bool zpass_active, bool zcull_stats_active, bool flush_queue = false);
+
+			// Read current zcull statistics into the address provided
+			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
+
 			// Clears current stat block and increments stat_tag_id
-			void clear(class ::rsx::thread* ptimer);
+			void clear(class ::rsx::thread* ptimer, u32 type);
 
 			// Forcefully flushes all
 			void sync(class ::rsx::thread* ptimer);
@@ -464,7 +477,7 @@ namespace rsx
 			bool reserved = false;
 
 			std::vector<occlusion_query_info*> eval_sources;
-			u32 eval_sync_tag = 0;
+			u64 eval_sync_tag = 0;
 			u32 eval_address = 0;
 
 			// Resets common data
@@ -538,7 +551,7 @@ namespace rsx
 			while (!buffer_queue.empty());
 
 			// Need to observe this happening in the wild
-			LOG_ERROR(RSX, "Display queue was discarded while not empty!");
+			rsx_log.error("Display queue was discarded while not empty!");
 			return false;
 		}
 	};
@@ -602,13 +615,14 @@ namespace rsx
 
 	public:
 		RsxDmaControl* ctrl = nullptr;
+		rsx_iomap_table iomap_table;
 		u32 restore_point = 0;
-		atomic_t<bool> external_interrupt_lock{ false };
+		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
 		void flush_fifo();
 		void recover_fifo();
-		void fifo_wake_delay(u64 div = 1);
-		u32 get_fifo_cmd();
+		static void fifo_wake_delay(u64 div = 1);
+		u32 get_fifo_cmd() const;
 
 		// Performance approximation counters
 		struct
@@ -903,6 +917,7 @@ namespace rsx
 
 		void pause();
 		void unpause();
+		void wait_pause();
 
 		// Get RSX approximate load in %
 		u32 get_load();

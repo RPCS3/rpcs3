@@ -14,6 +14,8 @@
 #define CAN_OVERCOMMIT
 #endif
 
+LOG_CHANNEL(jit_log, "JIT");
+
 static u8* get_jit_memory()
 {
 	// Reserve 2G memory (magic static)
@@ -43,7 +45,7 @@ static u8* add_jit_memory(std::size_t size, uint align)
 	// Select subrange
 	u8* pointer = get_jit_memory() + Off;
 
-	if (UNLIKELY(!size && !align))
+	if (!size && !align) [[unlikely]]
 	{
 		// Return subrange info
 		return pointer;
@@ -57,7 +59,7 @@ static u8* add_jit_memory(std::size_t size, uint align)
 		const u64 _pos = ::align(ctr & 0xffff'ffff, align);
 		const u64 _new = ::align(_pos + size, align);
 
-		if (UNLIKELY(_new > 0x40000000))
+		if (_new > 0x40000000) [[unlikely]]
 		{
 			// Sorry, we failed, and further attempts should fail too.
 			ctr |= 0x40000000;
@@ -69,7 +71,7 @@ static u8* add_jit_memory(std::size_t size, uint align)
 		newa = olda;
 
 		// Check the necessity to commit more memory
-		if (UNLIKELY(_new > olda))
+		if (_new > olda) [[unlikely]]
 		{
 			newa = ::align(_new, 0x100000);
 		}
@@ -78,13 +80,13 @@ static u8* add_jit_memory(std::size_t size, uint align)
 		return _pos;
 	});
 
-	if (UNLIKELY(pos == -1))
+	if (pos == umax) [[unlikely]]
 	{
-		LOG_WARNING(GENERAL, "JIT: Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
+		jit_log.warning("JIT: Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
 		return nullptr;
 	}
 
-	if (UNLIKELY(olda != newa))
+	if (olda != newa) [[unlikely]]
 	{
 #ifdef CAN_OVERCOMMIT
 		madvise(pointer + olda, newa - olda, MADV_WILLNEED);
@@ -117,21 +119,21 @@ jit_runtime::~jit_runtime()
 asmjit::Error jit_runtime::_add(void** dst, asmjit::CodeHolder* code) noexcept
 {
 	std::size_t codeSize = code->getCodeSize();
-	if (UNLIKELY(!codeSize))
+	if (!codeSize) [[unlikely]]
 	{
 		*dst = nullptr;
 		return asmjit::kErrorNoCodeGenerated;
 	}
 
 	void* p = jit_runtime::alloc(codeSize, 16);
-	if (UNLIKELY(!p))
+	if (!p) [[unlikely]]
 	{
 		*dst = nullptr;
 		return asmjit::kErrorNoVirtualMemory;
 	}
 
 	std::size_t relocSize = code->relocate(p);
-	if (UNLIKELY(!relocSize))
+	if (!relocSize) [[unlikely]]
 	{
 		*dst = nullptr;
 		return asmjit::kErrorInvalidState;
@@ -431,7 +433,7 @@ public:
 
 	void reset()
 	{
-		if (!m_segs.size())
+		if (m_segs.empty())
 		{
 			if (m_curr.addr != nullptr)
 			{
@@ -532,7 +534,7 @@ extern void jit_finalize()
 	{
 		if (!RtlDeleteFunctionTable(unwind.data()))
 		{
-			LOG_FATAL(GENERAL, "RtlDeleteFunctionTable() failed! Error %u", GetLastError());
+			jit_log.fatal("RtlDeleteFunctionTable() failed! Error %u", GetLastError());
 		}
 	}
 
@@ -579,11 +581,11 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 			if (addr)
 			{
-				LOG_WARNING(GENERAL, "LLVM: Symbol requested: %s -> 0x%016llx", name, addr);
+				jit_log.warning("LLVM: Symbol requested: %s -> 0x%016llx", name, addr);
 			}
 			else
 			{
-				LOG_ERROR(GENERAL, "LLVM: Linkage failed: %s", name);
+				jit_log.error("LLVM: Linkage failed: %s", name);
 				addr = reinterpret_cast<u64>(null);
 			}
 		}
@@ -661,13 +663,13 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 		if (ptr == nullptr)
 		{
-			LOG_FATAL(GENERAL, "LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
+			jit_log.fatal("LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
 			return nullptr;
 		}
 		utils::memory_commit(ptr, size, utils::protection::wx);
 		m_code_addr = static_cast<u8*>(ptr);
 
-		LOG_NOTICE(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), ptr, size, align);
+		jit_log.notice("LLVM: Code section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), ptr, size, align);
 		return static_cast<u8*>(ptr);
 	}
 
@@ -685,7 +687,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 		if (ptr == nullptr)
 		{
-			LOG_FATAL(GENERAL, "LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
+			jit_log.fatal("LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
 			return nullptr;
 		}
 
@@ -695,7 +697,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 		utils::memory_commit(ptr, size);
 
-		LOG_NOTICE(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), ptr, size, align, is_ro ? "ro" : "rw");
+		jit_log.notice("LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), ptr, size, align, is_ro ? "ro" : "rw");
 		return static_cast<u8*>(ptr);
 	}
 
@@ -718,9 +720,9 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 	void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
 	{
-#ifdef _WIN32
 		// Lock memory manager
 		std::lock_guard lock(s_mutex);
+#ifdef _WIN32
 		// Fix RUNTIME_FUNCTION records (.pdata section)
 		decltype(s_unwater)::value_type pdata_entry = std::move(s_unwater.front());
 		s_unwater.pop_front();
@@ -738,7 +740,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		// Register .xdata UNWIND_INFO structs
 		if (!RtlAddFunctionTable(pdata.data(), (DWORD)pdata.size(), segment_start))
 		{
-			LOG_ERROR(GENERAL, "RtlAddFunctionTable() failed! Error %u", GetLastError());
+			jit_log.error("RtlAddFunctionTable() failed! Error %u", GetLastError());
 		}
 		else
 		{
@@ -784,7 +786,11 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 	{
 #ifndef _WIN32
 		RTDyldMemoryManager::registerEHFramesInProcess(addr, size);
-		s_unfire.push_front(std::make_pair(addr, size));
+		{
+			// Lock memory manager
+			std::lock_guard lock(s_mutex);
+			s_unfire.push_front(std::make_pair(addr, size));
+		}
 #endif
 	}
 
@@ -919,10 +925,14 @@ public:
 		z_stream zs{};
 		uLong zsz = compressBound(obj.getBufferSize()) + 256;
 		auto zbuf = std::make_unique<uchar[]>(zsz);
+#ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 		deflateInit2(&zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY);
+#ifndef _MSC_VER
 #pragma GCC diagnostic pop
+#endif
 		zs.avail_in  = static_cast<uInt>(obj.getBufferSize());
 		zs.next_in   = reinterpret_cast<uchar*>(const_cast<char*>(obj.getBufferStart()));
 		zs.avail_out = static_cast<uInt>(zsz);
@@ -938,14 +948,14 @@ public:
 		}
 		default:
 		{
-			LOG_ERROR(GENERAL, "LLVM: Failed to compress module: %s", module->getName().data());
+			jit_log.error("LLVM: Failed to compress module: %s", module->getName().data());
 			deflateEnd(&zs);
 			return;
 		}
 		}
 
 		fs::file(name, fs::rewrite).write(zbuf.get(), zsz - zs.avail_out);
-		LOG_NOTICE(GENERAL, "LLVM: Created module: %s", module->getName().data());
+		jit_log.notice("LLVM: Created module: %s", module->getName().data());
 	}
 
 	static std::unique_ptr<llvm::MemoryBuffer> load(const std::string& path)
@@ -955,10 +965,14 @@ public:
 			std::vector<uchar> gz = cached.to_vector<uchar>();
 			std::vector<uchar> out;
 			z_stream zs{};
+#ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 			inflateInit2(&zs, 16 + 15);
+#ifndef _MSC_VER
 #pragma GCC diagnostic pop
+#endif
 			zs.avail_in = static_cast<uInt>(gz.size());
 			zs.next_in  = gz.data();
 			out.resize(gz.size() * 6);
@@ -1016,7 +1030,7 @@ public:
 
 		if (auto buf = load(path))
 		{
-			LOG_NOTICE(GENERAL, "LLVM: Loaded module: %s", module->getName().data());
+			jit_log.notice("LLVM: Loaded module: %s", module->getName().data());
 			return buf;
 		}
 
@@ -1182,7 +1196,7 @@ void jit_compiler::add(const std::string& path)
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "ObjectCache: Adding failed: %s", path);
+		jit_log.error("ObjectCache: Adding failed: %s", path);
 	}
 }
 

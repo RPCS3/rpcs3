@@ -24,8 +24,8 @@ private:
 
 public:
 	data_array_format_info(int id, std::array<u32, 0x10000 / 4>& r)
-		   : registers(r)
-		   , index(id)
+		   : index(id)
+		   , registers(r)
 	{
 	}
 

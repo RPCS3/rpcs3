@@ -12,7 +12,7 @@
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
 
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Utilities/geometry.h"
 #include "Utilities/Log.h"
 
@@ -125,7 +125,7 @@ namespace gl
 		{
 			if (ext_name == test)
 			{
-				LOG_NOTICE(RSX, "Extension %s is supported", ext_name);
+				rsx_log.notice("Extension %s is supported", ext_name);
 				return true;
 			}
 
@@ -230,7 +230,7 @@ namespace gl
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Failed to get vendor string from driver. Are we missing a context?");
+				rsx_log.error("Failed to get vendor string from driver. Are we missing a context?");
 				vendor_string = "intel"; //lowest acceptable value
 			}
 
@@ -362,7 +362,7 @@ namespace gl
 						switch (err)
 						{
 						default:
-							LOG_ERROR(RSX, "gl::fence sync returned unknown error 0x%X", err);
+							rsx_log.error("gl::fence sync returned unknown error 0x%X", err);
 						case GL_ALREADY_SIGNALED:
 						case GL_CONDITION_SATISFIED:
 							done = true;
@@ -997,7 +997,7 @@ namespace gl
 				}
 				else
 				{
-					LOG_ERROR(RSX, "OOM Error: Ring buffer was likely being used without notify() being called");
+					rsx_log.error("OOM Error: Ring buffer was likely being used without notify() being called");
 					glFinish();
 				}
 
@@ -1593,6 +1593,9 @@ namespace gl
 				case GL_TEXTURE_CUBE_MAP:
 					glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, reinterpret_cast<GLint*>(&old_binding));
 					break;
+				case GL_TEXTURE_2D_ARRAY:
+					glGetIntegerv(GL_TEXTURE_BINDING_2D_ARRAY, reinterpret_cast<GLint*>(&old_binding));
+					break;
 				case GL_TEXTURE_BUFFER:
 					glGetIntegerv(GL_TEXTURE_BINDING_BUFFER, reinterpret_cast<GLint*>(&old_binding));
 					break;
@@ -1628,6 +1631,7 @@ namespace gl
 				depth = 1;
 				break;
 			case GL_TEXTURE_3D:
+			case GL_TEXTURE_2D_ARRAY:
 				glTexStorage3D(target, mipmaps, sized_format, width, height, depth);
 				break;
 			case GL_TEXTURE_BUFFER:
@@ -1807,7 +1811,7 @@ namespace gl
 		{
 			pixel_settings.apply();
 
-			switch (static_cast<GLenum>(m_target))
+			switch (const auto target_ =static_cast<GLenum>(m_target))
 			{
 			case GL_TEXTURE_1D:
 			{
@@ -1820,8 +1824,9 @@ namespace gl
 				break;
 			}
 			case GL_TEXTURE_3D:
+			case GL_TEXTURE_2D_ARRAY:
 			{
-				DSA_CALL(TextureSubImage3D, m_id, GL_TEXTURE_3D, 0, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+				DSA_CALL(TextureSubImage3D, m_id, target_, 0, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
 				break;
 			}
 			case GL_TEXTURE_CUBE_MAP:
@@ -1832,7 +1837,7 @@ namespace gl
 				}
 				else
 				{
-					LOG_WARNING(RSX, "Cubemap upload via texture::copy_from is halfplemented!");
+					rsx_log.warning("Cubemap upload via texture::copy_from is halfplemented!");
 					auto ptr = static_cast<const u8*>(src);
 					const auto end = std::min(6u, region.z + region.depth);
 					for (unsigned face = region.z; face < end; ++face)
@@ -1920,11 +1925,19 @@ namespace gl
 			m_image_data = data;
 			m_aspect_flags = aspect_flags;
 
-			const auto num_levels = data->levels();
-			const auto num_layers = (target != GL_TEXTURE_CUBE_MAP) ? 1 : 6;
+			u32 num_layers;
+			switch (target)
+			{
+			default:
+				num_layers = 1; break;
+			case GL_TEXTURE_CUBE_MAP:
+				num_layers = 6; break;
+			case GL_TEXTURE_2D_ARRAY:
+				num_layers = data->depth(); break;
+			}
 
 			glGenTextures(1, &m_id);
-			glTextureView(m_id, target, data->id(), sized_format, 0, num_levels, 0, num_layers);
+			glTextureView(m_id, target, data->id(), sized_format, 0, data->levels(), 0, num_layers);
 
 			if (argb_swizzle)
 			{
@@ -2206,7 +2219,7 @@ public:
 			{
 				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &m_last_binding);
 
-				if (m_last_binding != new_binding.id())
+				if (m_last_binding + 0u != new_binding.id())
 					new_binding.bind();
 				else
 					reset = false;
@@ -2760,7 +2773,7 @@ public:
 						error_msg = buf.get();
 					}
 
-					LOG_ERROR(RSX, "Validation failed: %s", error_msg.c_str());
+					rsx_log.error("Validation failed: %s", error_msg.c_str());
 				}
 			}
 

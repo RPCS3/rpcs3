@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -7,7 +6,7 @@
 
 #include "cellMouse.h"
 
-extern logs::channel sys_io;
+LOG_CHANNEL(sys_io);
 
 template<>
 void fmt_class_string<CellMouseError>::format(std::string& out, u64 arg)

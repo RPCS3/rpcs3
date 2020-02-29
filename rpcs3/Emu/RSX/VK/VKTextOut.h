@@ -357,7 +357,7 @@ namespace vk
 
 			vkCmdBeginRenderPass(cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-			for (int i = 0; i < counts.size(); ++i)
+			for (uint i = 0; i < counts.size(); ++i)
 			{
 				vkCmdDraw(cmd, counts[i], 1, offsets[i], i);
 			}

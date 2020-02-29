@@ -8,6 +8,11 @@
 
 #define DEBUG_VERTEX_STREAMING 0
 
+#if !defined(_MSC_VER) && defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+
 #if defined(_MSC_VER)
 #define SSSE3_FUNC
 #define SSE4_1_FUNC
@@ -88,7 +93,7 @@ namespace
 		const u32 iterations = dword_count >> 2;
 		const u32 remaining = dword_count % 4;
 
-		if (LIKELY(s_use_ssse3))
+		if (s_use_ssse3) [[likely]]
 		{
 			for (u32 i = 0; i < iterations; ++i)
 			{
@@ -139,7 +144,7 @@ namespace
 		const u32 iterations = word_count >> 3;
 		const u32 remaining = word_count % 8;
 
-		if (LIKELY(s_use_ssse3))
+		if (s_use_ssse3) [[likely]]
 		{
 			for (u32 i = 0; i < iterations; ++i)
 			{
@@ -199,7 +204,7 @@ namespace
 		else
 			remainder = vertex_count;
 
-		if (LIKELY(s_use_ssse3))
+		if (s_use_ssse3) [[likely]]
 		{
 			for (u32 i = 0; i < iterations; ++i)
 			{
@@ -266,7 +271,7 @@ namespace
 		else
 			remainder = vertex_count;
 
-		if (LIKELY(s_use_ssse3))
+		if (s_use_ssse3) [[likely]]
 		{
 			for (u32 i = 0; i < iterations; ++i)
 			{
@@ -1148,7 +1153,7 @@ namespace
 		rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index,
 		const std::function<bool(rsx::primitive_type)>& expands)
 	{
-		if (LIKELY(!expands(draw_mode)))
+		if (!expands(draw_mode)) [[likely]]
 		{
 			return upload_untouched<T>(src, dst, draw_mode, restart_index_enabled, restart_index);
 		}

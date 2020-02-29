@@ -2,12 +2,10 @@
 #include "rsx_methods.h"
 #include "RSXThread.h"
 #include "Emu/Memory/vm_reservation.h"
-#include "Emu/System.h"
 #include "rsx_utils.h"
 #include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
-#include "Capture/rsx_capture.h"
 
 #include <thread>
 #include <atomic>
@@ -42,7 +40,7 @@ namespace rsx
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
 		const u32 cmd = rsx->get_fifo_cmd();
-		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg,
+		rsx_log.error("Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg,
 		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
 		rsx->invalid_command_interrupt_raised = true;
 	}
@@ -50,7 +48,7 @@ namespace rsx
 	void trace_method(thread* rsx, u32 _reg, u32 arg)
 	{
 		// For unknown yet valid methods
-		LOG_TRACE(RSX, "RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
+		rsx_log.trace("RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
 	}
 
 	template<typename Type> struct vertex_data_type_from_element_type;
@@ -71,7 +69,7 @@ namespace rsx
 		void semaphore_acquire(thread* rsx, u32 /*_reg*/, u32 arg)
 		{
 			rsx->sync_point_request = true;
-			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
+			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e(), HERE);
 
 			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
 
@@ -100,24 +98,33 @@ namespace rsx
 				if (Emu.IsStopped())
 					return;
 
+				// Wait for external pause events
+				if (rsx->external_interrupt_lock)
+				{
+					rsx->wait_pause();
+					continue;
+				}
+
 				if (const auto tdr = static_cast<u64>(g_cfg.video.driver_recovery_timeout))
 				{
 					if (Emu.IsPaused())
 					{
+						const u64 start0 = get_system_time();
+
 						while (Emu.IsPaused())
 						{
 							std::this_thread::sleep_for(1ms);
 						}
 
 						// Reset
-						start = get_system_time();
+						start += get_system_time() - start0;
 					}
 					else
 					{
 						if ((get_system_time() - start) > tdr)
 						{
 							// If longer than driver timeout force exit
-							LOG_ERROR(RSX, "nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
+							rsx_log.error("nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
 							break;
 						}
 					}
@@ -146,9 +153,9 @@ namespace rsx
 				rsx->sync_point_request = true;
 			}
 
-			const u32 addr = get_address(offset, ctxt);
+			const u32 addr = get_address(offset, ctxt, HERE);
 
-			if (LIKELY(g_use_rtm))
+			if (g_use_rtm) [[likely]]
 			{
 				vm::_ref<atomic_be_t<u32>>(addr) = arg;
 			}
@@ -204,11 +211,15 @@ namespace rsx
 
 			if ((location & ~7) != (CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 & ~7))
 			{
-				LOG_TRACE(RSX, "NV4097_NOTIFY: invalid context = 0x%x", method_registers.context_dma_notify());
+				rsx_log.trace("NV4097_NOTIFY: invalid context = 0x%x", method_registers.context_dma_notify());
 				return;
 			}
 
-			vm::_ref<atomic_t<RsxNotify>>(verify(HERE, RSXIOMem.RealAddr(0xf100000 + (index * 0x40)))).store(
+			const u32 addr = rsx->iomap_table.get_addr(0xf100000 + (index * 0x40));
+
+			verify(HERE), addr != umax;
+
+			vm::_ref<atomic_t<RsxNotify>>(addr).store(
 			{
 				rsx->timestamp(),
 				0
@@ -218,7 +229,7 @@ namespace rsx
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
-			rsx::g_dma_manager.sync();
+			g_fxo->get<rsx::dma_manager>()->sync();
 			if (g_cfg.video.strict_rendering_mode)
 			{
 				rsx->sync();
@@ -227,7 +238,7 @@ namespace rsx
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
 			const u32 offset = method_registers.semaphore_offset_4097() & -16;
-			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097())).store(
+			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097(), HERE)).store(
 			{
 				arg,
 				0,
@@ -238,12 +249,12 @@ namespace rsx
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Full pipeline barrier
-			rsx::g_dma_manager.sync();
+			g_fxo->get<rsx::dma_manager>()->sync();
 			rsx->sync();
 
 			const u32 offset = method_registers.semaphore_offset_4097() & -16;
 			const u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097())).store(
+			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097(), HERE)).store(
 			{
 				val,
 				0,
@@ -420,7 +431,7 @@ namespace rsx
 				if (address >= 468)
 				{
 					// Ignore addresses outside the usable [0, 467] range
-					LOG_WARNING(RSX, "Invalid transform register index (load=%d, index=%d)", load, index);
+					rsx_log.warning("Invalid transform register index (load=%d, index=%d)", load, index);
 					return;
 				}
 
@@ -444,7 +455,7 @@ namespace rsx
 					// PS3 seems to allow exceeding the program buffer by upto 32 instructions before crashing
 					// Discard the "excess" instructions to not overflow our transform program buffer
 					// TODO: Check if the instructions in the overflow area are executed by PS3
-					LOG_WARNING(RSX, "Program buffer overflow!");
+					rsx_log.warning("Program buffer overflow!");
 					return;
 				}
 
@@ -480,7 +491,7 @@ namespace rsx
 				{
 					rsxthr->in_begin_end = true;
 
-					LOG_WARNING(RSX, "Invalid NV4097_SET_BEGIN_END value: 0x%x", arg);
+					rsx_log.warning("Invalid NV4097_SET_BEGIN_END value: 0x%x", arg);
 					return;
 				}
 
@@ -518,7 +529,7 @@ namespace rsx
 					// Recover from invalid primitive only if draw clause is not empty
 					rsxthr->invalid_command_interrupt_raised = true;
 
-					LOG_ERROR(RSX, "NV4097_SET_BEGIN_END aborted due to invalid primitive!");
+					rsx_log.error("NV4097_SET_BEGIN_END aborted due to invalid primitive!");
 					return;
 				}
 
@@ -545,7 +556,7 @@ namespace rsx
 				return vm::addr_t(0);
 			}
 
-			return vm::cast(get_address(offset, location));
+			return vm::cast(get_address(offset, location, HERE));
 		}
 
 		void get_report(thread* rsx, u32 _reg, u32 arg)
@@ -556,7 +567,7 @@ namespace rsx
 			auto address_ptr = get_report_data_impl(offset);
 			if (!address_ptr)
 			{
-				LOG_ERROR(RSX, "Bad argument passed to NV4097_GET_REPORT, arg=0x%X", arg);
+				rsx_log.error("Bad argument passed to NV4097_GET_REPORT, arg=0x%X", arg);
 				return;
 			}
 
@@ -570,7 +581,7 @@ namespace rsx
 				rsx->get_zcull_stats(type, address_ptr);
 				break;
 			default:
-				LOG_ERROR(RSX, "NV4097_GET_REPORT: Bad type %d", type);
+				rsx_log.error("NV4097_GET_REPORT: Bad type %d", type);
 
 				vm::_ref<atomic_t<CellGcmReportData>>(address_ptr).atomic_op([&](CellGcmReportData& data)
 				{
@@ -589,7 +600,7 @@ namespace rsx
 			case CELL_GCM_ZCULL_STATS:
 				break;
 			default:
-				LOG_ERROR(RSX, "NV4097_CLEAR_REPORT_VALUE: Bad type: %d", arg);
+				rsx_log.error("NV4097_CLEAR_REPORT_VALUE: Bad type: %d", arg);
 				break;
 			}
 
@@ -607,7 +618,7 @@ namespace rsx
 			case 2:
 				break;
 			default:
-				LOG_ERROR(RSX, "Unknown render mode %d", mode);
+				rsx_log.error("Unknown render mode %d", mode);
 				return;
 			}
 
@@ -616,7 +627,7 @@ namespace rsx
 
 			if (!address_ptr)
 			{
-				LOG_ERROR(RSX, "Bad argument passed to NV4097_SET_RENDER_ENABLE, arg=0x%X", arg);
+				rsx_log.error("Bad argument passed to NV4097_SET_RENDER_ENABLE, arg=0x%X", arg);
 				return;
 			}
 
@@ -686,11 +697,12 @@ namespace rsx
 				rsx->m_rtts_dirty = true;
 		}
 
-		void set_ROP_state_dirty_bit(thread* rsx, u32, u32 arg)
+		template <u32 RsxFlags>
+		void notify_state_changed(thread* rsx, u32, u32 arg)
 		{
 			if (arg != method_registers.register_previous_value)
 			{
-				rsx->m_graphics_state |= rsx::fragment_state_dirty;
+				rsx->m_graphics_state |= RsxFlags;
 			}
 		}
 
@@ -722,30 +734,6 @@ namespace rsx
 			}
 		}
 
-		void set_vertex_env_dirty_bit(thread* rsx, u32, u32 arg)
-		{
-			if (arg != method_registers.register_previous_value)
-			{
-				rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
-			}
-		}
-
-		void set_fragment_env_dirty_bit(thread* rsx, u32, u32 arg)
-		{
-			if (arg != method_registers.register_previous_value)
-			{
-				rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
-			}
-		}
-
-		void set_scissor_dirty_bit(thread* rsx, u32 reg, u32 arg)
-		{
-			if (arg != method_registers.register_previous_value)
-			{
-				rsx->m_graphics_state |= rsx::pipeline_state::scissor_config_state_dirty;
-			}
-		}
-
 		void check_index_array_dma(thread* rsx, u32 reg, u32 arg)
 		{
 			// Check if either location or index type are invalid
@@ -755,7 +743,7 @@ namespace rsx
 				method_registers.registers[reg] = method_registers.register_previous_value;
 				rsx->invalid_command_interrupt_raised = true;
 
-				LOG_ERROR(RSX, "Invalid NV4097_SET_INDEX_ARRAY_DMA value: 0x%x", arg);
+				rsx_log.error("Invalid NV4097_SET_INDEX_ARRAY_DMA value: 0x%x", arg);
 			}
 		}
 
@@ -846,7 +834,9 @@ namespace rsx
 				const u16 x = method_registers.nv308a_x();
 				const u16 y = method_registers.nv308a_y();
 				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x * write_len);
-				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + (index * write_len), method_registers.blit_engine_output_location_nv3062());
+				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + (index * write_len), method_registers.blit_engine_output_location_nv3062(), HERE);
+
+				//auto res = vm::passive_lock(address, address + write_len);
 
 				switch (write_len)
 				{
@@ -860,6 +850,7 @@ namespace rsx
 					fmt::throw_exception("Unreachable" HERE);
 				}
 
+				//res->release(0);
 				rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
 			}
 		};
@@ -899,7 +890,7 @@ namespace rsx
 			// Check both clip dimensions and dst dimensions
 			if (clip_w == 0 || clip_h == 0)
 			{
-				LOG_WARNING(RSX, "NV3089_IMAGE_IN: Operation NOPed out due to empty regions");
+				rsx_log.warning("NV3089_IMAGE_IN: Operation NOPed out due to empty regions");
 				return;
 			}
 
@@ -924,7 +915,7 @@ namespace rsx
 			case blit_engine::transfer_origin::center:
 				break;
 			default:
-				LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", static_cast<u8>(in_origin));
+				rsx_log.warning("NV3089_IMAGE_IN_SIZE: unknown origin (%d)", static_cast<u8>(in_origin));
 			}
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
@@ -962,7 +953,7 @@ namespace rsx
 				break;
 			}
 			default:
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", static_cast<u8>(method_registers.blit_engine_context_surface()));
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", static_cast<u8>(method_registers.blit_engine_context_surface()));
 				return;
 			}
 
@@ -974,7 +965,7 @@ namespace rsx
 				out_pitch = out_bpp * out_w;
 			}
 
-			if (UNLIKELY(in_x == 1 || in_y == 1))
+			if (in_x == 1 || in_y == 1) [[unlikely]]
 			{
 				if (is_block_transfer && in_bpp == out_bpp)
 				{
@@ -997,10 +988,13 @@ namespace rsx
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
 			const u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			const u32 src_address = get_address(src_offset, src_dma);
-			const u32 dst_address = get_address(dst_offset, dst_dma);
+			const u32 src_address = get_address(src_offset, src_dma, HERE);
+			const u32 dst_address = get_address(dst_offset, dst_dma, HERE);
 
 			const u32 src_line_length = (in_w * in_bpp);
+
+			//auto res = vm::passive_lock(dst_address, dst_address + (in_pitch * (in_h - 1) + src_line_length));
+
 			if (is_block_transfer && (clip_h == 1 || (in_pitch == out_pitch && src_line_length == in_pitch)))
 			{
 				const u32 nb_lines = std::min(clip_h, in_h);
@@ -1019,7 +1013,7 @@ namespace rsx
 			else
 			{
 				const u32 data_length = in_pitch * (in_h - 1) + src_line_length;
-				rsx->read_barrier(src_address, dst_address, true);
+				rsx->read_barrier(src_address, data_length, true);
 			}
 
 			u8* pixels_src = vm::_ptr<u8>(src_address + in_offset);
@@ -1051,7 +1045,7 @@ namespace rsx
 
 			if (convert_w == 0 || convert_h == 0)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%f, dt_dy=%f)",
+				rsx_log.error("NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%f, dt_dy=%f)",
 					method_registers.blit_engine_ds_dx(), method_registers.blit_engine_dt_dy());
 				return;
 			}
@@ -1333,17 +1327,17 @@ namespace rsx
 			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
 			if (in_format != 0x01 || out_format != 0x01)
 			{
-				LOG_ERROR(RSX, "NV0039_BUFFER_NOTIFY: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
+				rsx_log.error("NV0039_BUFFER_NOTIFY: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
 			}
 
 			if (!line_count || !line_length)
 			{
-				LOG_WARNING(RSX, "NV0039_BUFFER_NOTIFY NOPed out: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+				rsx_log.warning("NV0039_BUFFER_NOTIFY NOPed out: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 					in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
 				return;
 			}
 
-			LOG_TRACE(RSX, "NV0039_BUFFER_NOTIFY: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+			rsx_log.trace("NV0039_BUFFER_NOTIFY: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 				in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
 
 			u32 src_offset = method_registers.nv0039_input_offset();
@@ -1352,9 +1346,9 @@ namespace rsx
 			u32 dst_offset = method_registers.nv0039_output_offset();
 			u32 dst_dma = method_registers.nv0039_output_location();
 
-			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch == line_length);
-			const auto read_address = get_address(src_offset, src_dma);
-			const auto write_address = get_address(dst_offset, dst_dma);
+			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch + 0u == line_length);
+			const auto read_address = get_address(src_offset, src_dma, HERE);
+			const auto write_address = get_address(dst_offset, dst_dma, HERE);
 			const auto data_length = in_pitch * (line_count - 1) + line_length;
 
 			if (const auto result = rsx->read_barrier(read_address, data_length, !is_block_transfer);
@@ -1367,6 +1361,8 @@ namespace rsx
 					return;
 				}
 			}
+
+			//auto res = vm::passive_lock(write_address, data_length + write_address);
 
 			u8 *dst = vm::_ptr<u8>(write_address);
 			const u8 *src = vm::_ptr<u8>(read_address);
@@ -1423,6 +1419,8 @@ namespace rsx
 					}
 				}
 			}
+
+			//res->release(0);
 		}
 	}
 
@@ -2974,22 +2972,23 @@ namespace rsx
 		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
 		bind<NV4097_SET_VERTEX_DATA_BASE_OFFSET, nv4097::set_vertex_base_offset>();
 		bind<NV4097_SET_VERTEX_DATA_BASE_INDEX, nv4097::set_index_base_offset>();
-		bind<NV4097_SET_USER_CLIP_PLANE_CONTROL, nv4097::set_vertex_env_dirty_bit>();
-		bind<NV4097_SET_TRANSFORM_BRANCH_BITS, nv4097::set_vertex_env_dirty_bit>();
-		bind<NV4097_SET_CLIP_MIN, nv4097::set_vertex_env_dirty_bit>();
-		bind<NV4097_SET_CLIP_MAX, nv4097::set_vertex_env_dirty_bit>();
-		bind<NV4097_SET_ALPHA_FUNC, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_ALPHA_REF, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_ALPHA_TEST_ENABLE, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_ANTI_ALIASING_CONTROL, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_SHADER_PACKER, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_SHADER_WINDOW, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_FOG_MODE, nv4097::set_ROP_state_dirty_bit>();
-		bind<NV4097_SET_SCISSOR_HORIZONTAL, nv4097::set_scissor_dirty_bit>();
-		bind<NV4097_SET_SCISSOR_VERTICAL, nv4097::set_scissor_dirty_bit>();
-		bind<NV4097_SET_VIEWPORT_HORIZONTAL, nv4097::set_scissor_dirty_bit>();
-		bind<NV4097_SET_VIEWPORT_VERTICAL, nv4097::set_scissor_dirty_bit>();
-		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_USER_CLIP_PLANE_CONTROL, nv4097::notify_state_changed<vertex_state_dirty>>();
+		bind<NV4097_SET_TRANSFORM_BRANCH_BITS, nv4097::notify_state_changed<vertex_state_dirty>>();
+		bind<NV4097_SET_CLIP_MIN, nv4097::notify_state_changed<vertex_state_dirty>>();
+		bind<NV4097_SET_CLIP_MAX, nv4097::notify_state_changed<vertex_state_dirty>>();
+		bind<NV4097_SET_POINT_SIZE, nv4097::notify_state_changed<vertex_state_dirty>>();
+		bind<NV4097_SET_ALPHA_FUNC, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_ALPHA_REF, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_ALPHA_TEST_ENABLE, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_ANTI_ALIASING_CONTROL, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_SHADER_PACKER, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_SHADER_WINDOW, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_FOG_MODE, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind<NV4097_SET_SCISSOR_HORIZONTAL, nv4097::notify_state_changed<scissor_config_state_dirty>>();
+		bind<NV4097_SET_SCISSOR_VERTICAL, nv4097::notify_state_changed<scissor_config_state_dirty>>();
+		bind<NV4097_SET_VIEWPORT_HORIZONTAL, nv4097::notify_state_changed<scissor_config_state_dirty>>();
+		bind<NV4097_SET_VIEWPORT_VERTICAL, nv4097::notify_state_changed<scissor_config_state_dirty>>();
+		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::notify_state_changed<fragment_state_dirty>>();
 		bind_range<NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind<NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma>();

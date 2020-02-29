@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -265,15 +264,15 @@ class AudioDecoder : public ppu_thread
 {
 public:
 	squeue_t<AdecTask> job;
-	volatile bool is_closed;
-	volatile bool is_finished;
-	bool just_started;
-	bool just_finished;
+	volatile bool is_closed = false;
+	volatile bool is_finished = false;
+	bool just_started = false;
+	bool just_finished = false;
 
-	AVCodec* codec;
-	AVInputFormat* input_format;
-	AVCodecContext* ctx;
-	AVFormatContext* fmt;
+	AVCodec* codec = nullptr;
+	AVInputFormat* input_format = nullptr;
+	AVCodecContext* ctx = nullptr;
+	AVFormatContext* fmt = nullptr;
 	u8* io_buf;
 
 	struct AudioReader
@@ -297,7 +296,7 @@ public:
 	const u32 memSize;
 	const vm::ptr<CellAdecCbMsg> cbFunc;
 	const u32 cbArg;
-	u32 memBias;
+	u32 memBias = 0;
 
 	AdecTask task;
 	u64 last_pts, first_pts;
@@ -313,20 +312,11 @@ public:
 		, type(type)
 		, memAddr(addr)
 		, memSize(size)
-		, memBias(0)
 		, cbFunc(func)
 		, cbArg(arg)
-		, is_closed(false)
-		, is_finished(false)
-		, just_started(false)
-		, just_finished(false)
-		, codec(nullptr)
-		, input_format(nullptr)
-		, ctx(nullptr)
-		, fmt(nullptr)
 	{
-		av_register_all();
-		avcodec_register_all();
+		//av_register_all();
+		//avcodec_register_all();
 
 		switch (type)
 		{
@@ -453,7 +443,7 @@ public:
 				reader.addr = task.au.addr;
 				reader.size = task.au.size;
 				reader.has_ats = use_ats_headers;
-				//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
+				//cellAdec.notice("Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
 
 				if (just_started)
 				{
@@ -513,7 +503,7 @@ public:
 					{
 						fmt::throw_exception("avformat_new_stream() failed" HERE);
 					}
-					ctx = fmt->streams[0]->codec; // TODO: check data
+					//ctx = fmt->streams[0]->codec; // TODO: check data
 
 					opts = nullptr;
 					av_dict_set(&opts, "refcounted_frames", "1", 0);
@@ -573,7 +563,7 @@ public:
 
 					int got_frame = 0;
 
-					int decode = avcodec_decode_audio4(ctx, frame.data, &got_frame, &au);
+					int decode = 0; //avcodec_decode_audio4(ctx, frame.data, &got_frame, &au);
 
 					if (decode <= 0)
 					{
@@ -610,7 +600,7 @@ public:
 						frame.userdata = task.au.userdata;
 						frame.size = frame.data->nb_samples * frame.data->channels * nbps;
 
-						//LOG_NOTICE(HLE, "got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
+						//cellAdec.notice("got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
 							//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate, nbps);
 
 						if (frames.push(frame, &is_closed))
@@ -714,7 +704,7 @@ next:
 			adec.reader.addr = adec.task.au.addr;
 			adec.reader.size = adec.task.au.size;
 			adec.reader.has_ats = adec.use_ats_headers;
-			//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
+			//cellAdec.notice("Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
 		}
 		break;
 

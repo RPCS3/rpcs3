@@ -1,10 +1,8 @@
 ﻿#include "stdafx.h"
 #include "sys_rsx.h"
 
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/RSX/GSRender.h"
-#include "Emu/IdManager.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_event.h"
 
@@ -188,8 +186,6 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	dmaControl.put = 0;
 	dmaControl.ref = 0; // Set later to -1 by cellGcmSys
 
-	memset(&RSXIOMem, 0xFF, sizeof(RSXIOMem));
-
 	if (false/*system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB*/)
 		rsx::get_current_renderer()->main_mem_size = 0x20000000; //512MB
 	else
@@ -251,8 +247,10 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 {
 	sys_rsx.warning("sys_rsx_context_iomap(context_id=0x%x, io=0x%x, ea=0x%x, size=0x%x, flags=0x%llx)", context_id, io, ea, size, flags);
 
+	const auto render = rsx::get_current_renderer();
+
 	if (!size || io & 0xFFFFF || ea + u64{size} > rsx::constants::local_mem_base || ea & 0xFFFFF || size & 0xFFFFF ||
-		context_id != 0x55555555 || rsx::get_current_renderer()->main_mem_size < io + u64{size})
+		context_id != 0x55555555 || render->main_mem_size < io + u64{size})
 	{
 		return CELL_EINVAL;
 	}
@@ -273,9 +271,13 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 
 	for (u32 i = 0; i < size; i++)
 	{
-		const u32 prev_ea = std::exchange(RSXIOMem.ea[io + i].raw(), ea + i);
-		if (prev_ea < 0xC00) RSXIOMem.io[prev_ea].raw() = 0xFFFF; // Clear previous mapping if exists
-		RSXIOMem.io[ea + i].raw() = io + i;
+		auto& table = render->iomap_table;
+
+		// TODO: Investigate relaxed memory ordering
+		const u32 prev_ea = table.ea[io + i];
+		table.ea[io + i].release((ea + i) << 20);
+		if (prev_ea + 1) table.io[prev_ea >> 20].release(-1); // Clear previous mapping if exists
+		table.io[ea + i].release((io + i) << 20);
 	}
 
 	return CELL_OK;
@@ -291,8 +293,10 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 {
 	sys_rsx.warning("sys_rsx_context_iounmap(context_id=0x%x, io=0x%x, size=0x%x)", context_id, io, size);
 
+	const auto render = rsx::get_current_renderer();
+
 	if (!size || size & 0xFFFFF || io & 0xFFFFF || context_id != 0x55555555 ||
-			rsx::get_current_renderer()->main_mem_size < io + u64{size})
+			render->main_mem_size < io + u64{size})
 	{
 		return CELL_EINVAL;
 	}
@@ -301,12 +305,13 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 
 	std::scoped_lock lock(s_rsxmem_mtx);
 
-	const u32 end = (io >>= 20) + (size >>= 20);
-
-	while (io < end)
+	for (const u32 end = (io >>= 20) + (size >>= 20); io < end;)
 	{
-		const u32 ea_entry = std::exchange(RSXIOMem.ea[io++].raw(), 0xFFFF);
-		if (ea_entry < 0xC00) RSXIOMem.io[ea_entry].raw() = 0xFFFF;
+		auto& table = render->iomap_table;
+
+		const u32 ea_entry = table.ea[io];
+		table.ea[io++].release(-1);
+		if (ea_entry + 1) table.io[ea_entry >> 20].release(-1);
 	}
 
 	return CELL_OK;
@@ -378,7 +383,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			// sanity check, the head should have a 'queued' buffer on it, and it should have been previously 'queued'
 			const u32 sanity_check = 0x40000000 & (1 << flip_idx);
 			if ((driverInfo.head[a3].flipFlags & sanity_check) != sanity_check)
-				LOG_ERROR(RSX, "Display Flip Queued: Flipping non previously queued buffer 0x%llx", a4);
+				rsx_log.error("Display Flip Queued: Flipping non previously queued buffer 0x%llx", a4);
 		}
 		else
 		{
@@ -392,7 +397,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			}
 			if (flip_idx == ~0u)
 			{
-				LOG_ERROR(RSX, "Display Flip: Couldn't find display buffer offset, flipping 0. Offset: 0x%x", a4);
+				rsx_log.error("Display Flip: Couldn't find display buffer offset, flipping 0. Offset: 0x%x", a4);
 				flip_idx = 0;
 			}
 		}

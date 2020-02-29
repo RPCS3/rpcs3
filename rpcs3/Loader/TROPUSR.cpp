@@ -2,8 +2,10 @@
 #include "restore_new.h"
 #include "Utilities/rXml.h"
 #include "define_new_memleakdetect.h"
-#include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "TROPUSR.h"
+
+LOG_CHANNEL(trp_log, "Trophy");
 
 bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configpath)
 {
@@ -74,7 +76,7 @@ bool TROPUSRLoader::LoadTables()
 	{
 		m_file.seek(tableHeader.offset);
 
-		if (tableHeader.type == 4)
+		if (tableHeader.type == 4u)
 		{
 			m_table4.clear();
 			m_table4.resize(tableHeader.entries_count);
@@ -86,7 +88,7 @@ bool TROPUSRLoader::LoadTables()
 			}
 		}
 
-		if (tableHeader.type == 6)
+		if (tableHeader.type == 6u)
 		{
 			m_table6.clear();
 			m_table6.resize(tableHeader.entries_count);
@@ -223,13 +225,13 @@ u32 TROPUSRLoader::GetUnlockedPlatinumID(u32 trophy_id, const std::string& confi
 
 	if (trophy_id >= m_table6.size() || trophy_id >= m_table4.size())
 	{
-		LOG_WARNING(LOADER, "TROPUSRLoader::GetUnlockedPlatinumID: Invalid id=%d", trophy_id);
+		trp_log.warning("TROPUSRLoader::GetUnlockedPlatinumID: Invalid id=%d", trophy_id);
 		return invalid_trophy_id;
 	}
 
 	if (m_table6.size() != m_table4.size())
 	{
-		LOG_WARNING(LOADER, "TROPUSRLoader::GetUnlockedPlatinumID: Table size mismatch: %d vs. %d", m_table6.size(), m_table4.size());
+		trp_log.warning("TROPUSRLoader::GetUnlockedPlatinumID: Table size mismatch: %d vs. %d", m_table6.size(), m_table4.size());
 		return invalid_trophy_id;
 	}
 
@@ -295,7 +297,7 @@ u32 TROPUSRLoader::GetTrophyGrade(u32 id)
 {
 	if (id >= m_table4.size())
 	{
-		LOG_WARNING(LOADER, "TROPUSRLoader::GetTrophyGrade: Invalid id=%d", id);
+		trp_log.warning("TROPUSRLoader::GetTrophyGrade: Invalid id=%d", id);
 		return trophy_grade::unknown;
 	}
 
@@ -306,7 +308,7 @@ u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 {
 	if (id >= m_table6.size())
 	{
-		LOG_WARNING(LOADER, "TROPUSRLoader::GetTrophyUnlockState: Invalid id=%d", id);
+		trp_log.warning("TROPUSRLoader::GetTrophyUnlockState: Invalid id=%d", id);
 		return 0;
 	}
 
@@ -317,7 +319,7 @@ u64 TROPUSRLoader::GetTrophyTimestamp(u32 id)
 {
 	if (id >= m_table6.size())
 	{
-		LOG_WARNING(LOADER, "TROPUSRLoader::GetTrophyTimestamp: Invalid id=%d", id);
+		trp_log.warning("TROPUSRLoader::GetTrophyTimestamp: Invalid id=%d", id);
 		return 0;
 	}
 
@@ -329,7 +331,7 @@ bool TROPUSRLoader::UnlockTrophy(u32 id, u64 timestamp1, u64 timestamp2)
 {
 	if (id >= m_table6.size())
 	{
-		LOG_WARNING(LOADER, "TROPUSRLoader::UnlockTrophy: Invalid id=%d", id);
+		trp_log.warning("TROPUSRLoader::UnlockTrophy: Invalid id=%d", id);
 		return false;
 	}
 

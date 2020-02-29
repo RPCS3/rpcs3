@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -8,7 +9,7 @@
 #include "util/init_mutex.hpp"
 #include "Utilities/StrUtil.h"
 
-extern logs::channel cellSysutil;
+LOG_CHANNEL(cellSysutil);
 
 template<>
 void fmt_class_string<CellSysCacheError>::format(std::string& out, u64 arg)
@@ -38,7 +39,7 @@ struct syscache_info
 	syscache_info() noexcept
 	{
 		// Check if dev_hdd1 is mounted by parent process
-		if (Emu.hdd1.size())
+		if (!Emu.hdd1.empty())
 		{
 			const auto lock = init.init();
 
@@ -48,7 +49,7 @@ struct syscache_info
 				cache_id.resize(cache_id.size() - 1);
 			cache_id = cache_id.substr(cache_id.find_last_of('/') + 1);
 
-			LOG_SUCCESS(PPU, "Retained cache from parent process: %s", Emu.hdd1);
+			cellSysutil.success("Retained cache from parent process: %s", Emu.hdd1);
 			return;
 		}
 
@@ -57,7 +58,7 @@ struct syscache_info
 
 		for (auto&& entry : fs::dir(cache_root))
 		{
-			if (entry.is_directory && entry.name.size() >= prefix.size() && entry.name.compare(0, prefix.size(), prefix) == 0)
+			if (entry.is_directory && entry.name.starts_with(prefix))
 			{
 				cache_id = std::move(entry.name);
 				break;

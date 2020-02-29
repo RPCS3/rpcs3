@@ -1,12 +1,12 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
+#include "Emu/system_config_types.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/rsx_utils.h"
 
 #include "cellVideoOut.h"
 
-extern logs::channel cellSysutil;
+LOG_CHANNEL(cellSysutil);
 
 const extern std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map
 {
@@ -280,25 +280,13 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 	switch (videoOut)
 	{
 	case CELL_VIDEO_OUT_PRIMARY: return not_an_error(
-		resolutionId == g_video_out_resolution_id.at(g_cfg.video.resolution)
-		&& (aspect == CELL_VIDEO_OUT_ASPECT_AUTO || aspect == g_video_out_aspect_id.at(g_cfg.video.aspect_ratio))
+		resolutionId == g_video_out_resolution_id.at(g_cfg.video.resolution) + 0u
+		&& (aspect == CELL_VIDEO_OUT_ASPECT_AUTO || aspect == g_video_out_aspect_id.at(g_cfg.video.aspect_ratio) + 0u)
 	);
 	case CELL_VIDEO_OUT_SECONDARY: return not_an_error(0);
 	}
 
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
-}
-
-error_code cellVideoOutConfigure2()
-{
-	cellSysutil.todo("cellVideoOutConfigure2()");
-	return CELL_OK;
-}
-
-error_code cellVideoOutGetResolutionAvailability2()
-{
-	cellSysutil.todo("cellVideoOutGetResolutionAvailability2()");
-	return CELL_OK;
 }
 
 error_code cellVideoOutGetConvertCursorColorInfo(vm::ptr<u8> rgbOutputRange)
@@ -331,12 +319,10 @@ void cellSysutil_VideoOut_init()
 	REG_FUNC(cellSysutil, cellVideoOutGetState);
 	REG_FUNC(cellSysutil, cellVideoOutGetResolution).flag(MFF_PERFECT);
 	REG_FUNC(cellSysutil, cellVideoOutConfigure);
-	REG_FUNC(cellSysutil, cellVideoOutConfigure2);
 	REG_FUNC(cellSysutil, cellVideoOutGetConfiguration);
 	REG_FUNC(cellSysutil, cellVideoOutGetDeviceInfo);
 	REG_FUNC(cellSysutil, cellVideoOutGetNumberOfDevice);
 	REG_FUNC(cellSysutil, cellVideoOutGetResolutionAvailability);
-	REG_FUNC(cellSysutil, cellVideoOutGetResolutionAvailability2);
 	REG_FUNC(cellSysutil, cellVideoOutGetConvertCursorColorInfo);
 	REG_FUNC(cellSysutil, cellVideoOutDebugSetMonitorType);
 	REG_FUNC(cellSysutil, cellVideoOutRegisterCallback);

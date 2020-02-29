@@ -1,31 +1,29 @@
 language: cpp
-matrix:
+jobs:
     include:
-#        - os: linux
-#          env:
-#            - NAME="Linux build"
-#            - COMPILER="gcc"
-#          services: docker
-#          cache: ccache
-#          install: "docker pull rpcs3/rpcs3-travis-xenial:1.0"
-#          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .travis/travis.env rpcs3/rpcs3-travis-xenial:1.0 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
+        - os: linux
+          dist: xenial
+          env:
+            - NAME="Linux build"
+            - COMPILER="gcc"
+            - DEPLOY_APPIMAGE="true"
+          services: docker
+          cache: ccache
+          compiler: gcc
+          install: "docker pull rpcs3/rpcs3-travis-xenial:1.2"
+          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .travis/travis.env rpcs3/rpcs3-travis-xenial:1.2 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
         - os: linux
           dist: xenial
           env:
             - NAME="Linux build"
             - COMPILER="clang"
-            - DEPLOY_APPIMAGE="true"
           services: docker
           cache: ccache
-          install: "docker pull rpcs3/rpcs3-travis-xenial:1.0"
-          addons:
-            apt:
-              packages:
-                - libsdl2-2.0
-                - libsdl2-dev          
-          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .travis/travis.env rpcs3/rpcs3-travis-xenial:1.0 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
+          compiler: clang
+          install: "docker pull rpcs3/rpcs3-travis-xenial:1.2"
+          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .travis/travis.env rpcs3/rpcs3-travis-xenial:1.2 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
         - os: osx
-          osx_image: xcode10.2
+          osx_image: xcode11.3
           addons:
             homebrew:
                 packages:
@@ -35,6 +33,8 @@ matrix:
                     - qt
           script: "/bin/bash -ex .travis/build-mac.bash"
           cache: ccache
+    allow_failures:
+        - os: osx
 
 git:
   depth: false # Unshallow clone to obtain proper GIT_VERSION

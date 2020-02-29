@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include "overlays.h"
+#include "Utilities/CPUStats.h"
+#include "Emu/system_config_types.h"
 
 namespace rsx
 {

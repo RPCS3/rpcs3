@@ -1,23 +1,13 @@
 ﻿#include "main_application.h"
 
 #include "Input/pad_thread.h"
-#include "Emu/Io/Null/NullPadHandler.h"
+#include "Emu/System.h"
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "Emu/Io/Null/NullMouseHandler.h"
 #include "Emu/Io/KeyboardHandler.h"
-#include "Emu/Io/PadHandler.h"
 #include "Emu/Io/MouseHandler.h"
 #include "Input/basic_keyboard_handler.h"
 #include "Input/basic_mouse_handler.h"
-#include "Input/keyboard_pad_handler.h"
-#include "Input/ds4_pad_handler.h"
-#ifdef _WIN32
-#include "Input/xinput_pad_handler.h"
-#include "Input/mm_joystick_handler.h"
-#endif
-#ifdef HAVE_LIBEVDEV
-#include "Input/evdev_joystick_handler.h"
-#endif
 
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/Null/NullAudioBackend.h"
@@ -42,6 +32,8 @@
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
+
+LOG_CHANNEL(sys_log, "SYS");
 
 /** Emu.Init() wrapper for user manager */
 bool main_application::InitializeEmulator(const std::string& user, bool force_init, bool show_gui)
@@ -74,7 +66,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		pad::get_current_handler()->SetEnabled(enable);
 	};
 
-	callbacks.init_kb_handler = [=]()
+	callbacks.init_kb_handler = [=, this]()
 	{
 		switch (keyboard_handler type = g_cfg.io.keyboard)
 		{
@@ -94,7 +86,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		}
 	};
 
-	callbacks.init_mouse_handler = [=]()
+	callbacks.init_mouse_handler = [=, this]()
 	{
 		switch (mouse_handler type = g_cfg.io.mouse)
 		{
@@ -154,25 +146,34 @@ EmuCallbacks main_application::CreateCallbacks()
 
 	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
 	{
+		std::shared_ptr<AudioBackend> result;
 		switch (audio_renderer type = g_cfg.audio.renderer)
 		{
-		case audio_renderer::null: return std::make_shared<NullAudioBackend>();
+		case audio_renderer::null: result = std::make_shared<NullAudioBackend>(); break;
 #ifdef _WIN32
-		case audio_renderer::xaudio: return std::make_shared<XAudio2Backend>();
+		case audio_renderer::xaudio: result = std::make_shared<XAudio2Backend>(); break;
 #endif
 #ifdef HAVE_ALSA
-		case audio_renderer::alsa: return std::make_shared<ALSABackend>();
+		case audio_renderer::alsa: result = std::make_shared<ALSABackend>(); break;
 #endif
 #ifdef HAVE_PULSE
-		case audio_renderer::pulse: return std::make_shared<PulseBackend>();
+		case audio_renderer::pulse: result = std::make_shared<PulseBackend>(); break;
 #endif
 
-		case audio_renderer::openal: return std::make_shared<OpenALBackend>();
+		case audio_renderer::openal: result = std::make_shared<OpenALBackend>(); break;
 #ifdef HAVE_FAUDIO
-		case audio_renderer::faudio: return std::make_shared<FAudioBackend>();
+		case audio_renderer::faudio: result = std::make_shared<FAudioBackend>(); break;
 #endif
 		default: fmt::throw_exception("Invalid audio renderer: %s" HERE, type);
 		}
+
+		if (!result->Initialized())
+		{
+			// Fall back to a null backend if something went wrong
+			sys_log.error("Audio renderer %s could not be initialized, using a Null renderer instead", result->GetName());
+			result = std::make_shared<NullAudioBackend>();
+		}
+		return result;
 	};
 
 	return callbacks;

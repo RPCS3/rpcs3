@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
 
+LOG_CHANNEL(screenshot);
+
 GLuint GLGSRender::get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig)
 {
 	GLuint image = GL_NONE;
@@ -59,12 +61,12 @@ GLuint GLGSRender::get_present_source(gl::present_surface_info* info, const rsx:
 
 	if (!image)
 	{
-		LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
+		rsx_log.warning("Flip texture was not found in cache. Uploading surface from CPU");
 
 		gl::pixel_unpack_settings unpack_settings;
 		unpack_settings.alignment(1).row_length(info->pitch / 4);
 
-		if (!m_flip_tex_color || m_flip_tex_color->size2D() != sizei{ static_cast<int>(info->width), static_cast<int>(info->height) })
+		if (!m_flip_tex_color || m_flip_tex_color->size2D() != sizeu{info->width, info->height})
 		{
 			m_flip_tex_color = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, GL_RGBA8);
 		}
@@ -128,7 +130,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		present_info.height = buffer_height;
 		present_info.pitch = buffer_pitch;
 		present_info.format = av_format;
-		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
+		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL, HERE);
 
 		image_to_flip = get_present_source(&present_info, avconfig);
 		buffer_width = present_info.width;
@@ -184,7 +186,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				glGetTextureImageEXT(image_to_flip, GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, sshot_frame.data());
 
 			if (GLenum err; (err = glGetError()) != GL_NO_ERROR)
-				LOG_ERROR(GENERAL, "[Screenshot] Failed to capture image: 0x%x", err);
+				screenshot.error("Failed to capture image: 0x%x", err);
 			else
 				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
 		}

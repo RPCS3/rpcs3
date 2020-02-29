@@ -11,6 +11,7 @@
 #include "cheat_manager.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/CPU/CPUThread.h"
 
@@ -20,7 +21,7 @@
 
 #include "Utilities/StrUtil.h"
 
-LOG_CHANNEL(log_cheat);
+LOG_CHANNEL(log_cheat, "Cheat");
 
 cheat_manager_dialog* cheat_manager_dialog::inst = nullptr;
 
@@ -322,14 +323,14 @@ std::vector<u32> cheat_engine::search(const T value, const std::vector<u32>& to_
 {
 	std::vector<u32> results;
 
-	be_t<T> value_swapped = value;
+	to_be_t<T> value_swapped = value;
 
 	if (Emu.IsStopped())
 		return {};
 
 	cpu_thread::suspend_all cpu_lock(nullptr);
 
-	if (to_filter.size())
+	if (!to_filter.empty())
 	{
 		for (const auto& off : to_filter)
 		{
@@ -459,11 +460,11 @@ bool cheat_engine::is_addr_safe(const u32 offset)
 	{
 		if ((seg.flags & 3))
 		{
-			segs.push_back({seg.addr, seg.size});
+			segs.emplace_back(seg.addr, seg.size);
 		}
 	}
 
-	if (!segs.size())
+	if (segs.empty())
 	{
 		log_cheat.fatal("Couldn't find a +rw-x section");
 		return false;
@@ -495,7 +496,7 @@ u32 cheat_engine::reverse_lookup(const u32 addr, const u32 max_offset, const u32
 		}
 
 		// If depth has not been reached dig deeper
-		if (ptrs.size() && cur_depth < max_depth)
+		if (!ptrs.empty() && cur_depth < max_depth)
 		{
 			for (const auto& ptr : ptrs)
 			{
@@ -568,7 +569,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 	setLayout(main_layout);
 
 	// Edit/Manage UI
-	connect(tbl_cheats, &QTableWidget::itemClicked, [=](QTableWidgetItem* item)
+	connect(tbl_cheats, &QTableWidget::itemClicked, [this](QTableWidgetItem* item)
 	{
 		if (!item)
 			return;
@@ -585,7 +586,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			bool success;
 
 			u32 final_offset;
-			if (cheat->red_script.size())
+			if (!cheat->red_script.empty())
 			{
 				final_offset = 0;
 				if (!cheat_engine::resolve_script(final_offset, cheat->offset, cheat->red_script))
@@ -636,7 +637,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		}
 	});
 
-	connect(tbl_cheats, &QTableWidget::cellChanged, [=](int row, int column)
+	connect(tbl_cheats, &QTableWidget::cellChanged, [this](int row, int column)
 	{
 		if (column != 1 && column != 4)
 		{
@@ -661,7 +662,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		g_cheat.save();
 	});
 
-	connect(tbl_cheats, &QTableWidget::customContextMenuRequested, [=](const QPoint& loc)
+	connect(tbl_cheats, &QTableWidget::customContextMenuRequested, [this](const QPoint& loc)
 	{
 		QPoint globalPos       = tbl_cheats->mapToGlobal(loc);
 		QMenu* menu            = new QMenu();
@@ -670,7 +671,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		QAction* export_cheats = new QAction(tr("Export Cheats"));
 		QAction* reverse_cheat = new QAction(tr("Reverse-Lookup Cheat"));
 
-		connect(delete_cheats, &QAction::triggered, [=]()
+		connect(delete_cheats, &QAction::triggered, [this]()
 		{
 			const auto selected = tbl_cheats->selectedItems();
 
@@ -690,14 +691,14 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			update_cheat_list();
 		});
 
-		connect(import_cheats, &QAction::triggered, [=]()
+		connect(import_cheats, &QAction::triggered, [this]()
 		{
 			QClipboard* clipboard = QGuiApplication::clipboard();
 			g_cheat.import_cheats_from_str(clipboard->text().toStdString());
 			update_cheat_list();
 		});
 
-		connect(export_cheats, &QAction::triggered, [=]()
+		connect(export_cheats, &QAction::triggered, [this]()
 		{
 			const auto selected = tbl_cheats->selectedItems();
 
@@ -722,7 +723,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			clipboard->setText(QString::fromStdString(export_string));
 		});
 
-		connect(reverse_cheat, &QAction::triggered, [=]()
+		connect(reverse_cheat, &QAction::triggered, [this]()
 		{
 			QTableWidgetItem* item = tbl_cheats->item(tbl_cheats->currentRow(), 3);
 			if (item)
@@ -743,7 +744,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		menu->exec(globalPos);
 	});
 
-	connect(btn_apply, &QPushButton::clicked, [=](bool /*checked*/)
+	connect(btn_apply, &QPushButton::clicked, [this](bool /*checked*/)
 	{
 		const int row     = tbl_cheats->currentRow();
 		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, 0)->text().toStdString(), tbl_cheats->item(row, 3)->data(Qt::UserRole).toUInt());
@@ -757,7 +758,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		std::pair<bool, bool> results;
 
 		u32 final_offset;
-		if (cheat->red_script.size())
+		if (!cheat->red_script.empty())
 		{
 			final_offset = 0;
 			if (!g_cheat.resolve_script(final_offset, cheat->offset, cheat->red_script))
@@ -799,15 +800,15 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 	});
 
 	// Search UI
-	connect(btn_new_search, &QPushButton::clicked, [=](bool /*checked*/)
+	connect(btn_new_search, &QPushButton::clicked, [this](bool /*checked*/)
 	{
 		offsets_found.clear();
 		do_the_search();
 	});
 
-	connect(btn_filter_results, &QPushButton::clicked, [=](bool /*checked*/) { do_the_search(); });
+	connect(btn_filter_results, &QPushButton::clicked, [=, this](bool /*checked*/) { do_the_search(); });
 
-	connect(lst_search, &QListWidget::customContextMenuRequested, [=](const QPoint& loc)
+	connect(lst_search, &QListWidget::customContextMenuRequested, [=, this](const QPoint& loc)
 	{
 		QPoint globalPos      = lst_search->mapToGlobal(loc);
 		QListWidgetItem* item = lst_search->item(lst_search->currentRow());
@@ -822,7 +823,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		const cheat_type type  = static_cast<cheat_type>(cbx_cheat_search_type->currentIndex());
 		const std::string name = Emu.GetTitle();
 
-		connect(add_to_cheat_list, &QAction::triggered, [=]()
+		connect(add_to_cheat_list, &QAction::triggered, [=, this]()
 		{
 			if (g_cheat.exist(name, offset))
 			{
@@ -963,7 +964,7 @@ void cheat_manager_dialog::do_the_search()
 	{
 		lst_search->insertItem(row, tr("0x%1").arg(offsets_found[row], 1, 16).toUpper());
 	}
-	btn_filter_results->setEnabled(offsets_found.size());
+	btn_filter_results->setEnabled(!offsets_found.empty());
 }
 
 void cheat_manager_dialog::update_cheat_list()

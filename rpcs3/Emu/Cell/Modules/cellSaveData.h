@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "stdafx.h"
 #include <Emu/Memory/vm_ptr.h>
 
 // Return codes

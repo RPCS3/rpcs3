@@ -85,7 +85,7 @@ namespace gl
         void run(u32 num_invocations)
         {
 			u32 invocations_x, invocations_y;
-			if (LIKELY(num_invocations <= max_invocations_x))
+			if (num_invocations <= max_invocations_x) [[likely]]
 			{
 				invocations_x = num_invocations;
 				invocations_y = 1;
@@ -231,7 +231,7 @@ namespace gl
 			if ((num_bytes_to_process + data_offset) > data->size())
 			{
 				// Technically robust buffer access should keep the driver from crashing in OOB situations
-				LOG_ERROR(RSX, "Inadequate buffer length submitted for a compute operation."
+				rsx_log.error("Inadequate buffer length submitted for a compute operation."
 					"Required=%d bytes, Available=%d bytes", num_bytes_to_process, data->size());
 			}
 

@@ -1,9 +1,8 @@
-#include "game_list_grid.h"
+﻿#include "game_list_grid.h"
 #include "game_list_grid_delegate.h"
 #include "qt_utils.h"
 
 #include <QHeaderView>
-#include <QLabel>
 #include <QScrollBar>
 
 game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText)
@@ -87,6 +86,7 @@ void game_list_grid::addItem(const QPixmap& img, const QString& name, const int&
 
 	// place raw image inside expanded image
 	QPainter painter(&exp_img);
+	painter.setRenderHint(QPainter::SmoothPixmapTransform);
 	painter.drawImage(offset, bg_img);
 	painter.drawPixmap(offset, img);
 	painter.end();

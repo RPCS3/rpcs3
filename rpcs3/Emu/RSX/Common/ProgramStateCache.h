@@ -213,7 +213,7 @@ protected:
 				return std::forward_as_tuple(__null_vertex_program, false);
 			}
 
-			LOG_NOTICE(RSX, "VP not found in buffer!");
+			rsx_log.notice("VP not found in buffer!");
 
 			lock.upgrade();
 			auto [it, inserted] = m_vertex_shader_cache.try_emplace(rsx_vp);
@@ -249,7 +249,7 @@ protected:
 				return std::forward_as_tuple(__null_fragment_program, false);
 			}
 
-			LOG_NOTICE(RSX, "FP not found in buffer!");
+			rsx_log.notice("FP not found in buffer!");
 			fragment_program_ucode_copy = malloc(rsx_fp.ucode_length);
 
 			verify("malloc() failed!" HERE), fragment_program_ucode_copy;
@@ -419,7 +419,7 @@ public:
 		}
 
 		pipeline_storage_type pipeline = backend_traits::build_pipeline(link_entry->vp, link_entry->fp, link_entry->props, std::forward<Args>(args)...);
-		LOG_SUCCESS(RSX, "New program compiled successfully");
+		rsx_log.success("New program compiled successfully");
 
 		std::lock_guard lock(m_pipeline_mutex);
 		m_storage[key] = std::move(pipeline);
@@ -455,11 +455,14 @@ public:
 			backend_traits::validate_pipeline_properties(vertex_program, fragment_program, pipelineProperties);
 			pipeline_key key = { vertex_program.id, fragment_program.id, pipelineProperties };
 
-			const auto I = m_storage.find(key);
-			if (I != m_storage.end())
 			{
-				m_cache_miss_flag = false;
-				return I->second;
+				reader_lock lock(m_pipeline_mutex);
+				const auto I = m_storage.find(key);
+				if (I != m_storage.end())
+				{
+					m_cache_miss_flag = false;
+					return I->second;
+				}
 			}
 
 			if (allow_async)
@@ -469,13 +472,13 @@ public:
 			}
 			else
 			{
-				LOG_NOTICE(RSX, "Add program (vp id = %d, fp id = %d)", vertex_program.id, fragment_program.id);
+				rsx_log.notice("Add program (vp id = %d, fp id = %d)", vertex_program.id, fragment_program.id);
 				m_program_compiled_flag = true;
 
 				pipeline_storage_type pipeline = backend_traits::build_pipeline(vertex_program, fragment_program, pipelineProperties, std::forward<Args>(args)...);
 				std::lock_guard lock(m_pipeline_mutex);
 				auto &rtn = m_storage[key] = std::move(pipeline);
-				LOG_SUCCESS(RSX, "New program compiled successfully");
+				rsx_log.success("New program compiled successfully");
 				return rtn;
 			}
 		}
@@ -496,7 +499,7 @@ public:
 				return __null_pipeline_handle;
 			}
 
-			LOG_NOTICE(RSX, "Add program (vp id = %d, fp id = %d)", vertex_program.id, fragment_program.id);
+			rsx_log.notice("Add program (vp id = %d, fp id = %d)", vertex_program.id, fragment_program.id);
 			m_program_compiled_flag = true;
 
 			lock.upgrade();
@@ -543,7 +546,7 @@ public:
 		if (I == m_fragment_shader_cache.end())
 			return;
 
-		verify(HERE), (dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16);
+		verify(HERE), (dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16u);
 
 		f32* dst = dst_buffer.data();
 		alignas(16) f32 tmp[4];

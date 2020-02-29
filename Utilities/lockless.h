@@ -22,7 +22,7 @@ public:
 
 	~lf_array()
 	{
-		for (auto ptr = m_next.raw(); UNLIKELY(ptr);)
+		for (auto ptr = m_next.raw(); ptr;)
 		{
 			delete std::exchange(ptr, std::exchange(ptr->m_next.raw(), nullptr));
 		}
@@ -30,14 +30,14 @@ public:
 
 	T& operator [](std::size_t index)
 	{
-		if (LIKELY(index < N))
+		if (index < N) [[likely]]
 		{
 			return m_data[index];
 		}
-		else if (UNLIKELY(!m_next))
+		else if (!m_next) [[unlikely]]
 		{
 			// Create new array block. It's not a full-fledged once-synchronization, unlikely needed.
-			for (auto _new = new lf_array, ptr = this; UNLIKELY(ptr);)
+			for (auto _new = new lf_array, ptr = this; ptr;)
 			{
 				// Install the pointer. If failed, go deeper.
 				ptr = ptr->m_next.compare_and_swap(nullptr, _new);
@@ -70,7 +70,7 @@ public:
 	// Acquire the place for one or more elements.
 	u32 push_begin(u32 count = 1)
 	{
-		return m_ctrl.fetch_add(count);
+		return static_cast<u32>(m_ctrl.fetch_add(count));
 	}
 
 	// Get current "pop" position
@@ -95,49 +95,6 @@ public:
 
 			return static_cast<u32>(ctrl >> 32);
 		});
-	}
-};
-
-//! Simple lock-free map. Based on lf_array<>. All elements are accessible, implicitly initialized.
-template<typename K, typename T, typename Hash = value_hash<K>, std::size_t Size = 256>
-class lf_hashmap
-{
-	struct pair_t
-	{
-		// Default-constructed key means "no key"
-		atomic_t<K> key{};
-		T value{};
-	};
-
-	//
-	lf_array<pair_t, Size> m_data{};
-
-	// Value for default-constructed key
-	T m_default_key_data{};
-
-public:
-	constexpr lf_hashmap() = default;
-
-	// Access element (added implicitly)
-	T& operator [](const K& key)
-	{
-		if (UNLIKELY(key == K{}))
-		{
-			return m_default_key_data;
-		}
-
-		// Calculate hash and array position
-		for (std::size_t pos = Hash{}(key) % Size;; pos += Size)
-		{
-			// Access the array
-			auto& pair = m_data[pos];
-
-			// Check the key value (optimistic)
-			if (LIKELY(pair.key == key) || pair.key.compare_and_swap_test(K{}, key))
-			{
-				return pair.value;
-			}
-		}
 	}
 };
 
@@ -529,81 +486,5 @@ public:
 	lf_queue_iterator<T> end() const
 	{
 		return {};
-	}
-};
-
-// Assignable lock-free thread-safe value of any type (memory-inefficient)
-template <typename T>
-class lf_value final
-{
-	atomic_t<lf_value*> m_head;
-
-	T m_data;
-
-public:
-	template <typename... Args>
-	explicit constexpr lf_value(Args&&... args)
-	    : m_head(this)
-	    , m_data(std::forward<Args>(args)...)
-	{
-	}
-
-	~lf_value()
-	{
-		// All values are kept in the queue until the end
-		for (lf_value* ptr = m_head.load(); ptr != this;)
-		{
-			delete std::exchange(ptr, std::exchange(ptr->m_head.raw(), ptr));
-		}
-	}
-
-	// Get current head, allows to inspect old values
-	[[nodiscard]] const lf_value* head() const
-	{
-		return m_head.load();
-	}
-
-	// Inspect the initial (oldest) value
-	[[nodiscard]] const T& first() const
-	{
-		return m_data;
-	}
-
-	[[nodiscard]] const T& get() const
-	{
-		return m_head.load()->m_data;
-	}
-
-	[[nodiscard]] operator const T&() const
-	{
-		return m_head.load()->m_data;
-	}
-
-	// Construct new value in-place
-	template <typename... Args>
-	const T& assign(Args&&... args)
-	{
-		lf_value* val = new lf_value(std::forward<Args>(args)...);
-		lf_value* old = m_head.load();
-
-		do
-		{
-			val->m_head = old;
-		}
-		while (!m_head.compare_exchange(old, val));
-
-		return val->m_data;
-	}
-
-	// Copy-assign new value
-	const T& operator =(const T& value)
-	{
-		return assign(value);
-	}
-
-	// Move-assign new value
-	const T& operator =(T&& value)
-	{
-		return assign(std::move(value));
 	}
 };

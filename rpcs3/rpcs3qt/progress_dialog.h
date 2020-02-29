@@ -1,17 +1,10 @@
 ﻿#pragma once
 
-#include "stdafx.h"
-
 #include <QProgressDialog>
 
 #ifdef _WIN32
 #include <QWinTaskbarProgress>
 #include <QWinTaskbarButton>
-#include <QWinTHumbnailToolbar>
-#include <QWinTHumbnailToolbutton>
-#elif HAVE_QTDBUS
-#include <QtDBus/QDBusMessage>
-#include <QtDBus/QDBusConnection>
 #endif
 
 class progress_dialog : public QProgressDialog

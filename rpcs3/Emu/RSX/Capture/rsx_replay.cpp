@@ -1,10 +1,8 @@
 ﻿#include "stdafx.h"
 #include "rsx_replay.h"
 
-#include "Emu/System.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/Cell/lv2/sys_memory.h"
-#include "Emu/Memory/vm.h"
 #include "Emu/RSX/GSRender.h"
 
 #include <map>
@@ -116,7 +114,7 @@ namespace rsx
 				fmt::throw_exception("requested memory data state for command not found in memory_data_map");
 
 			const auto& data_block = it_data->second;
-			std::memcpy(vm::base(get_address(memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
+			std::memcpy(vm::base(get_address(memblock.offset, memblock.location, HERE)), data_block.data.data(), data_block.data.size());
 		}
 
 		if (replay_cmd.display_buffer_state != 0 && replay_cmd.display_buffer_state != cs.display_buffer_hash)
@@ -250,7 +248,7 @@ namespace rsx
 		}
 		catch (const std::exception& e)
 		{
-			LOG_FATAL(RSX, "%s thrown: %s", typeid(e).name(), e.what());
+			rsx_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
 			Emu.Pause();
 		}
 	}

@@ -1,5 +1,5 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 
@@ -239,7 +239,7 @@ error_code cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogPa
 		return CELL_NET_CTL_ERROR_INVALID_TYPE;
 	}
 
-	if (param->size != 12)
+	if (param->size != 12u)
 	{
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
@@ -278,7 +278,7 @@ error_code cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogR
 		return CELL_NET_CTL_ERROR_INVALID_ADDR;
 	}
 
-	if (result->size != 8)
+	if (result->size != 8u)
 	{
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
@@ -312,7 +312,7 @@ error_code cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 		return CELL_NET_CTL_ERROR_INVALID_ADDR;
 	}
 
-	if (natInfo->size != 16 && natInfo->size != 20)
+	if (natInfo->size != 16u && natInfo->size != 20u)
 	{
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}

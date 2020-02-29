@@ -2,6 +2,7 @@
 
 #include <QFileDialog>
 #include <QCoreApplication>
+#include <QHBoxLayout>
 #include <QPushButton>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -93,7 +94,7 @@ void vfs_dialog_tab::Reset()
 
 void vfs_dialog_tab::AddNewDirectory()
 {
-	QString dir = QFileDialog::getExistingDirectory(nullptr, tr("Choose a directory"), QCoreApplication::applicationDirPath());
+	QString dir = QFileDialog::getExistingDirectory(nullptr, tr("Choose a directory"), QCoreApplication::applicationDirPath(), QFileDialog::DontResolveSymlinks);
 
 	if (dir.isEmpty())
 		return;

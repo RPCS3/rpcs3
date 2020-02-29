@@ -1,12 +1,11 @@
 ﻿#pragma once
 
 #include "stdafx.h"
-#include "Emu/System.h"
+#include "Utilities/Config.h"
 
 #include "gui_settings.h"
 #include "emu_settings.h"
 
-#include <QHBoxLayout>
 #include <QListWidget>
 #include <QLabel>
 

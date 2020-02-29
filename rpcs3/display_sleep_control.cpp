@@ -1,8 +1,5 @@
 ﻿#include "display_sleep_control.h"
 
-#include "Emu/System.h"
-#include "Utilities/Log.h"
-
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -17,7 +14,7 @@ static IOPMAssertionID s_pm_assertion = kIOPMNullAssertionID;
 #include <QtDBus/QDBusInterface>
 #include <QtDBus/QDBusMessage>
 #include <QDBusReply>
-
+#include "Utilities/types.h"
 static u32 s_dbus_cookie = 0;
 #endif
 

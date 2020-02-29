@@ -5,7 +5,6 @@ image: Visual Studio 2019
 
 environment:
   QTDIR: C:\Qt\5.14\msvc2017_64
-  QT_URL: https://cdn.discordapp.com/attachments/442667232489897997/614126952953020416/msvc2017_64.7z
   LLVMLIBS: https://github.com/RPCS3/llvm/releases/download/continuous-master/llvmlibs.7z
   GLSLANG: https://www.dropbox.com/s/6e8w6t5dxh3ad4l/glslang.7z?dl=1
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
@@ -17,7 +16,6 @@ cache:
 - glslang.7z -> appveyor.yml
 - compat_database.dat
 - vulkan-sdk.exe -> appveyor.yml
-- msvc2017_64.7z -> appveyor.yml
 
 install:
 - ps: | # set env vars for versioning
@@ -76,10 +74,8 @@ before_build:
     )
     if (!(test-path llvmlibs.7z)) { irm $env:LLVMLIBS -outfile llvmlibs.7z }
     if (!(test-path glslang.7z)) { irm $env:GLSLANG -outfile glslang.7z }
-    if (!(test-path msvc2017_64.7z)) { irm $env:QT_URL -outfile msvc2017_64.7z }
     7z x llvmlibs.7z -aos -o"." | out-null
     7z x glslang.7z -aos -o".\lib\$env:CONFIGURATION-$env:PLATFORM" | out-null
-    7z x msvc2017_64.7z -aos -o"C:\Qt\5.13" | out-null
     if (!(test-path vulkan-sdk.exe))
     {
         foreach ($url in $VULKAN_SDK_URLS) {

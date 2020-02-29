@@ -3,14 +3,15 @@
 #endif
 
 #include "stdafx.h"
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include "ALSABackend.h"
 
+LOG_CHANNEL(ALSA);
 
 static void error(int err, const char* reason)
 {
-	LOG_ERROR(GENERAL, "ALSA: %s failed: %s\n", reason, snd_strerror(err));
+	ALSA.error("ALSA: %s failed: %s\n", reason, snd_strerror(err));
 }
 
 static bool check(int err, const char* reason)
@@ -105,7 +106,7 @@ void ALSABackend::Open(u32 num_buffers)
 	if (!check(snd_pcm_prepare(tls_handle), "snd_pcm_prepare"))
 		return;
 
-	LOG_NOTICE(GENERAL, "ALSA: bufsize_frames=%u, period_frames=%u", bufsize_frames, period_frames);
+	ALSA.notice("bufsize_frames=%u, period_frames=%u", bufsize_frames, period_frames);
 }
 
 void ALSABackend::Close()
@@ -137,7 +138,7 @@ bool ALSABackend::AddData(const void* src, u32 num_samples)
 
 	if (res == -EAGAIN)
 	{
-		LOG_WARNING(GENERAL, "ALSA: EAGAIN");
+		ALSA.warning("EAGAIN");
 		return false;
 	}
 
@@ -147,16 +148,16 @@ bool ALSABackend::AddData(const void* src, u32 num_samples)
 
 		if (res < 0)
 		{
-			LOG_WARNING(GENERAL, "ALSA: failed to recover (%d)", res);
+			ALSA.warning("Failed to recover (%d)", res);
 			return false;
 		}
 
 		return false;
 	}
 
-	if (res != num_frames)
+	if (res + 0u != num_frames)
 	{
-		LOG_WARNING(GENERAL, "ALSA: error (%d)", res);
+		ALSA.warning("Error (%d)", res);
 		return false;
 	}
 

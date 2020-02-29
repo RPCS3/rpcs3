@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Emu/Memory/vm_ptr.h"
+#include "Emu/VFS.h"
 
 // Return Codes
 enum CellScreenShotError : u32
@@ -40,31 +40,8 @@ struct screenshot_manager
 	std::string overlay_dir_name;
 	std::string overlay_file_name;
 
-	std::string get_overlay_path() const
-	{
-		return vfs::get(overlay_dir_name + overlay_file_name);
-	}
-
-	std::string get_photo_title() const
-	{
-		std::string photo = photo_title;
-		if (photo.empty())
-			photo = Emu.GetTitle();
-		return photo;
-	}
-
-	std::string get_game_title() const
-	{
-		std::string game = game_title;
-		if (game.empty())
-			game = Emu.GetTitle();
-		return game;
-	}
-
-	std::string get_screenshot_path() const
-	{
-		// TODO: make sure the file can be saved, add suffix and increase counter if file exists
-		// TODO: maybe find a proper home for these
-		return fs::get_config_dir() + "/screenshots/cell/" + get_photo_title() + ".png";
-	}
+	std::string get_overlay_path() const;
+	std::string get_photo_title() const;
+	std::string get_game_title() const;
+	std::string get_screenshot_path() const;
 };

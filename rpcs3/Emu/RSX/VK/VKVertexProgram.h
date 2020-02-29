@@ -36,8 +36,8 @@ public:
 	VKVertexDecompilerThread(const RSXVertexProgram &prog, std::string& shader, ParamArray&, class VKVertexProgram &dst)
 		: VertexProgramDecompiler(prog)
 		, m_shader(shader)
-		, rsx_vertex_program(prog)
 		, vk_prog(&dst)
+		, rsx_vertex_program(prog)
 	{
 	}
 
@@ -46,7 +46,7 @@ public:
 };
 
 class VKVertexProgram
-{ 
+{
 public:
 	VKVertexProgram();
 	~VKVertexProgram();

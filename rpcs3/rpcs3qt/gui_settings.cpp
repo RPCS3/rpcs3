@@ -1,17 +1,20 @@
 ﻿#include "gui_settings.h"
 
-#include "game_list_frame.h"
 #include "qt_utils.h"
+#include "localized.h"
 
+#include <QCheckBox>
 #include <QCoreApplication>
 #include <QMessageBox>
+
+LOG_CHANNEL(cfg_log, "CFG");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 gui_settings::gui_settings(QObject* parent) : settings(parent)
-	, m_current_name(gui::Settings)
 {
-	m_settings = new QSettings(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent);
+	m_current_name = gui::Settings;
+	m_settings     = new QSettings(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent);
 
 	const QString settings_name = GetValue(gui::m_currentConfig).toString();
 
@@ -34,7 +37,7 @@ QString gui_settings::GetCurrentUser()
 		return user;
 	}
 
-	LOG_FATAL(GENERAL, "Could not parse user setting: '%s' = '%d'.", user.toStdString(), user_id);
+	cfg_log.fatal("Could not parse user setting: '%s' = '%d'.", user.toStdString(), user_id);
 	return QString();
 }
 
@@ -97,16 +100,18 @@ void gui_settings::Reset(bool removeMeta)
 QStringList gui_settings::GetGameListCategoryFilters()
 {
 	QStringList filterList;
-	if (GetCategoryVisibility(Category::HDD_Game)) filterList.append(category::hdd_game);
-	if (GetCategoryVisibility(Category::Disc_Game)) filterList.append(category::disc_game);
-	if (GetCategoryVisibility(Category::PS1_Game)) filterList.append(category::ps1_game);
+
+	if (GetCategoryVisibility(Category::HDD_Game)) filterList.append(category::cat_hdd_game);
+	if (GetCategoryVisibility(Category::Disc_Game)) filterList.append(category::cat_disc_game);
+	if (GetCategoryVisibility(Category::PS1_Game)) filterList.append(category::cat_ps1_game);
 	if (GetCategoryVisibility(Category::PS2_Game)) filterList.append(category::ps2_games);
 	if (GetCategoryVisibility(Category::PSP_Game)) filterList.append(category::psp_games);
-	if (GetCategoryVisibility(Category::Home)) filterList.append(category::home);
+	if (GetCategoryVisibility(Category::Home)) filterList.append(category::cat_home);
 	if (GetCategoryVisibility(Category::Media)) filterList.append(category::media);
 	if (GetCategoryVisibility(Category::Data)) filterList.append(category::data);
-	if (GetCategoryVisibility(Category::Unknown_Cat)) filterList.append(category::unknown);
+	if (GetCategoryVisibility(Category::Unknown_Cat)) filterList.append(category::cat_unknown);
 	if (GetCategoryVisibility(Category::Others)) filterList.append(category::others);
+
 	return filterList;
 }
 
@@ -137,7 +142,7 @@ bool gui_settings::GetCategoryVisibility(int cat)
 	case Category::Others:
 		value = gui::cat_other; break;
 	default:
-		LOG_WARNING(GENERAL, "GetCategoryVisibility: wrong cat <%d>", cat);
+		cfg_log.warning("GetCategoryVisibility: wrong cat <%d>", cat);
 		break;
 	}
 
@@ -171,7 +176,7 @@ void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 	case Category::Others:
 		value = gui::cat_other; break;
 	default:
-		LOG_WARNING(GENERAL, "SetCategoryVisibility: wrong cat <%d>", cat);
+		cfg_log.warning("SetCategoryVisibility: wrong cat <%d>", cat);
 		break;
 	}
 
@@ -204,13 +209,13 @@ void gui_settings::ShowBox(bool confirm, const QString& title, const QString& te
 			if (!entry.name.isEmpty() && mb->checkBox()->isChecked())
 			{
 				SetValue(entry, false);
-				LOG_NOTICE(GENERAL, "%s Dialog for Entry %s is now disabled", dialog_type, sstr(entry.name));
+				cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, sstr(entry.name));
 			}
 		});
 
 		mb->exec();
 	}
-	else LOG_NOTICE(GENERAL, "%s Dialog for Entry %s was ignored", dialog_type, sstr(entry.name));
+	else cfg_log.notice("%s Dialog for Entry %s was ignored", dialog_type, sstr(entry.name));
 }
 
 void gui_settings::ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr)
@@ -319,6 +324,8 @@ QStringList gui_settings::GetStylesheetEntries()
 
 QString gui_settings::GetCurrentStylesheetPath()
 {
+	const Localized localized;
+
 	QString stylesheet = GetValue(gui::m_currentStylesheet).toString();
 
 	if (stylesheet == gui::Default)

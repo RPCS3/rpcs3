@@ -1,11 +1,15 @@
 ﻿#include <mutex>
-#include "Emu/System.h"
 #include "Utilities/File.h"
 #include "Crypto/md5.h"
 #include "Crypto/aes.h"
 #include "skylander_dialog.h"
 #include "Utilities/BEType.h"
 #include "Emu/Io/Skylander.h"
+
+#include <QLabel>
+#include <QGroupBox>
+#include <QFileDialog>
+#include <QVBoxLayout>
 
 skylander_dialog* skylander_dialog::inst = nullptr;
 

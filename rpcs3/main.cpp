@@ -1,9 +1,12 @@
 ﻿// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
+#include <iostream>
+
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QFileInfo>
+#include <QLayout>
 #include <QTimer>
 #include <QObject>
 #include <QMessageBox>
@@ -31,6 +34,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #endif
 
 #include "rpcs3_version.h"
+#include "Emu/System.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -120,6 +124,14 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 	if (find_arg(arg_headless, argc, argv))
 		return new headless_application(argc, argv);
 
+#ifdef __linux__
+	// set the DISPLAY variable in order to open web browsers
+	if (qEnvironmentVariable("DISPLAY", "").isEmpty())
+	{
+		qputenv("DISPLAY", ":0");
+	}
+#endif
+
 	bool use_high_dpi = true;
 
 	const auto i_hdpi = find_arg(arg_high_dpi, argc, argv);
@@ -129,19 +141,13 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 		const auto i_hdpi_2 = (argc > (i_hdpi + 1)) ? (i_hdpi + 1) : 0;
 		const auto high_dpi_setting = (i_hdpi_2 && !strcmp(cmp_str.c_str(), argv[i_hdpi_2])) ? "0" : "1";
 
-#if (QT_VERSION < QT_VERSION_CHECK(5,14,0))
-		// Set QT_AUTO_SCREEN_SCALE_FACTOR from environment. Defaults to cli argument, which defaults to 1.
-		use_high_dpi = "1" == qEnvironmentVariable("QT_AUTO_SCREEN_SCALE_FACTOR", high_dpi_setting);
-#else
 		// Set QT_ENABLE_HIGHDPI_SCALING from environment. Defaults to cli argument, which defaults to 1.
 		use_high_dpi = "1" == qEnvironmentVariable("QT_ENABLE_HIGHDPI_SCALING", high_dpi_setting);
-#endif
 	}
 
 	// AA_EnableHighDpiScaling has to be set before creating a QApplication
 	QApplication::setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5,14,0))
 	if (use_high_dpi)
 	{
 		// Set QT_SCALE_FACTOR_ROUNDING_POLICY from environment. Defaults to cli argument, which defaults to RoundPreferFloor.
@@ -193,7 +199,6 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 		}
 		QApplication::setHighDpiScaleFactorRoundingPolicy(rounding_val);
 	}
-#endif
 
 	return new gui_application(argc, argv);
 }
@@ -221,7 +226,7 @@ int main(int argc, char** argv)
 	const bool use_cli_style = find_arg(arg_style, argc, argv) || find_arg(arg_stylesheet, argc, argv);
 
 	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
-	app->setApplicationVersion(qstr(rpcs3::version.to_string()));
+	app->setApplicationVersion(QString::fromStdString(rpcs3::get_version().to_string()));
 	app->setApplicationName("RPCS3");
 
 	// Command line args
@@ -235,9 +240,7 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
-#if (QT_VERSION >= QT_VERSION_CHECK(5,14,0))
 	parser.addOption(QCommandLineOption(arg_rounding, "Sets the Qt::HighDpiScaleFactorRoundingPolicy for values like 150% zoom.", "rounding", "4"));
-#endif
 	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
 	parser.addOption(QCommandLineOption(arg_style, "Loads a custom style.", "style", ""));
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
@@ -303,7 +306,7 @@ int main(int argc, char** argv)
 		}
 
 		// Ugly workaround
-		QTimer::singleShot(2, [path = sstr(QFileInfo(args.at(0)).canonicalFilePath()), argv = std::move(argv)]() mutable
+		QTimer::singleShot(2, [path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
 		{
 			Emu.argv = std::move(argv);
 			Emu.SetForceBoot(true);

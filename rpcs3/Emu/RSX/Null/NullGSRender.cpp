@@ -1,6 +1,5 @@
 ﻿#include "stdafx.h"
 #include "NullGSRender.h"
-#include "Emu/System.h"
 
 u64 NullGSRender::get_cycles()
 {
@@ -13,5 +12,6 @@ NullGSRender::NullGSRender() : GSRender()
 
 void NullGSRender::end()
 {
-	rsx::method_registers.current_draw_clause.end();
+	execute_nop_draw();
+	rsx::thread::end();
 }

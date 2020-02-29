@@ -1,11 +1,5 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "MFC.h"
-
-#include "Utilities/sysinfo.h"
-#include "Emu/Memory/vm.h"
-#include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/lv2/sys_sync.h"
-#include "Emu/System.h"
 
 template <>
 void fmt_class_string<MFC>::format(std::string& out, u64 arg)

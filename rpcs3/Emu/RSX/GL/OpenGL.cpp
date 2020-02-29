@@ -25,7 +25,7 @@ void gl::init()
 #ifdef _WIN32
 #define OPENGL_PROC(p, n) OPENGL_PROC2(p, gl##n, gl##n)
 #define WGL_PROC(p, n) OPENGL_PROC2(p, wgl##n, wgl##n)
-#define OPENGL_PROC2(p, n, tn) /*if(!gl##n)*/ if(!(n = (p)wglGetProcAddress(#tn))) LOG_ERROR(RSX, "OpenGL: initialization of " #tn " failed.")
+#define OPENGL_PROC2(p, n, tn) /*if(!gl##n)*/ if(!(n = (p)wglGetProcAddress(#tn))) rsx_log.error("OpenGL: initialization of " #tn " failed.")
 #include "GLProcTable.h"
 #undef OPENGL_PROC
 #undef WGL_PROC
@@ -55,8 +55,8 @@ void gl::set_swapinterval(int interval)
 	}
 
 	//No existing drawable or missing swap extension, EGL?
-	LOG_ERROR(RSX, "Failed to set swap interval");
+	rsx_log.error("Failed to set swap interval");
 #else
-	LOG_ERROR(RSX, "Swap control not implemented for this platform. Vsync options not available.");
+	rsx_log.error("Swap control not implemented for this platform. Vsync options not available.");
 #endif
 }

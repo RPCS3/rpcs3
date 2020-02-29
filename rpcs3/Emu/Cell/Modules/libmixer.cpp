@@ -1,6 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
-#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 
@@ -179,7 +177,7 @@ s32 cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
 {
 	libmixer.warning("cellSSPlayerCreate(handle=*0x%x, config=*0x%x)", handle, config);
 
-	if (config->outputMode != 0 || config->channels - 1 >= 2)
+	if (config->outputMode != 0u || config->channels - 1u >= 2u)
 	{
 		libmixer.error("cellSSPlayerCreate(config.outputMode=%d, config.channels=%d): invalid parameters", config->outputMode, config->channels);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
@@ -414,7 +412,7 @@ struct surmixer_thread : ppu_thread
 								g_surmx.mixdata[i * 8 + 1] += right;
 							}
 							if ((p.m_position == p.m_samples && p.m_speed > 0.0f) ||
-								(p.m_position == ~0 && p.m_speed < 0.0f)) // loop or stop
+								(p.m_position = umax && p.m_speed < 0.0f)) // loop or stop
 							{
 								if (p.m_loop_mode == CELL_SSPLAYER_LOOP_ON)
 								{

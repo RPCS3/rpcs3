@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "SPUInterpreter.h"
 
-#include "Emu/System.h"
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
 #include "Utilities/asm.h"
@@ -10,6 +9,11 @@
 
 #include <cmath>
 #include <cfenv>
+
+#if !defined(_MSC_VER) && defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 
 // Compare 16 packed unsigned bytes (greater than)
 inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
@@ -550,6 +554,11 @@ bool spu_interpreter::GBB(spu_thread& spu, spu_opcode_t op)
 	spu.gpr[op.rt] = v128::from32r(_mm_movemask_epi8(_mm_slli_epi64(spu.gpr[op.ra].vi, 7)));
 	return true;
 }
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 
 bool spu_interpreter::FSM(spu_thread& spu, spu_opcode_t op)
 {

@@ -3,6 +3,7 @@
 #include "Utilities/hash.h"
 #include "Utilities/File.h"
 #include "Utilities/lockless.h"
+#include "Utilities/Thread.h"
 #include "Emu/Memory/vm.h"
 #include "gcm_enums.h"
 #include "Common/ProgramStateCache.h"
@@ -34,7 +35,7 @@ namespace rsx
 	{
 		verify(HERE), range.is_page_range();
 
-		//LOG_ERROR(RSX, "memory_protect(0x%x, 0x%x, %x)", static_cast<u32>(range.start), static_cast<u32>(range.length()), static_cast<u32>(prot));
+		//rsx_log.error("memory_protect(0x%x, 0x%x, %x)", static_cast<u32>(range.start), static_cast<u32>(range.length()), static_cast<u32>(prot));
 		utils::memory_protect(vm::base(range.start), range.length(), prot);
 
 #ifdef TEXTURE_CACHE_DEBUG
@@ -427,8 +428,7 @@ namespace rsx
 
 		std::string get_message(u32 index, u32 processed, u32 entry_count)
 		{
-			const char* text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
-			return fmt::format(text, processed, entry_count);
+			return fmt::format("%s pipeline object %u of %u", index == 0 ? "Loading" : "Compiling", processed, entry_count);
 		};
 
 		void load_shaders(uint nb_workers, unpacked_type& unpacked, std::string& directory_path, std::vector<fs::dir_entry>& entries, u32 entry_count,
@@ -448,7 +448,7 @@ namespace rsx
 					fs::file f(filename);
 					if (f.size() != sizeof(pipeline_data))
 					{
-						LOG_ERROR(RSX, "Removing cached pipeline object %s since it's not binary compatible with the current shader cache", tmp.name.c_str());
+						rsx_log.error("Removing cached pipeline object %s since it's not binary compatible with the current shader cache", tmp.name.c_str());
 						fs::remove_file(filename);
 						continue;
 					}
@@ -513,13 +513,10 @@ namespace rsx
 			}
 			else
 			{
-				std::vector<std::thread> worker_threads(nb_workers);
-
-				// Start workers
-				for (u32 i = 0; i < nb_workers; i++)
+				named_thread_group workers("RSX Worker ", nb_workers, [&]()
 				{
-					worker_threads[i] = std::thread(worker, entry_count);
-				}
+					worker(entry_count);
+				});
 
 				u32 current_progress = 0;
 				u32 last_update_progress = 0;
@@ -536,11 +533,6 @@ namespace rsx
 						dlg->update_msg(step, get_message(step, current_progress, entry_count));
 						dlg->inc_value(step, processed_since_last_update);
 					}
-				}
-
-				for (std::thread& worker_thread : worker_threads)
-				{
-					worker_thread.join();
 				}
 			}
 		}
@@ -594,7 +586,7 @@ namespace rsx
 				return;
 
 			root.rewind();
-			
+
 			// Progress dialog
 			std::unique_ptr<shader_loading_dialog> fallback_dlg;
 			if (!dlg)
@@ -633,7 +625,7 @@ namespace rsx
 
 			if (vp.jump_table.size() > 32)
 			{
-				LOG_ERROR(RSX, "shaders_cache: vertex program has more than 32 jump addresses. Entry not saved to cache");
+				rsx_log.error("shaders_cache: vertex program has more than 32 jump addresses. Entry not saved to cache");
 				return;
 			}
 

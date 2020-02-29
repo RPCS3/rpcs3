@@ -3,18 +3,17 @@
 #include "table_item_delegate.h"
 #include "qt_utils.h"
 #include "game_list.h"
+#include "gui_settings.h"
 
 #include "stdafx.h"
 
 #include "Utilities/Log.h"
 #include "Utilities/StrUtil.h"
-#include "rpcs3/Emu/VFS.h"
+#include "Emu/VFS.h"
 #include "Emu/System.h"
-
-#include "Emu/Memory/vm.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 
-#include "yaml-cpp/yaml.h"
+#include "Loader/TROPUSR.h"
 
 #include <QtConcurrent>
 #include <QFutureWatcher>
@@ -23,10 +22,8 @@
 #include <QCheckBox>
 #include <QGroupBox>
 #include <QPixmap>
-#include <QDesktopWidget>
 #include <QDir>
 #include <QMenu>
-#include <QDirIterator>
 #include <QDesktopServices>
 #include <QUrl>
 #include <QScrollBar>
@@ -34,6 +31,8 @@
 #include <QProgressDialog>
 #include <QGuiApplication>
 #include <QScreen>
+
+LOG_CHANNEL(gui_log, "GUI");
 
 namespace
 {
@@ -209,7 +208,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	setLayout(all_layout);
 
 	// Make connects
-	connect(m_icon_slider, &QSlider::valueChanged, this, [=](int val)
+	connect(m_icon_slider, &QSlider::valueChanged, this, [=, this](int val)
 	{
 		m_icon_height = val;
 		if (trophy_slider_label)
@@ -237,7 +236,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		}
 	});
 
-	connect(m_game_icon_slider, &QSlider::valueChanged, this, [=](int val)
+	connect(m_game_icon_slider, &QSlider::valueChanged, this, [=, this](int val)
 	{
 		m_game_icon_size_index = val;
 		m_game_icon_size = gui_settings::SizeFromSlider(val);
@@ -363,7 +362,7 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 
 	if (!success || !config)
 	{
-		LOG_ERROR(GENERAL, "Failed to load trophy database for %s", trop_name);
+		gui_log.error("Failed to load trophy database for %s", trop_name);
 		return false;
 	}
 
@@ -371,7 +370,7 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 
 	if (trophy_count == 0)
 	{
-		LOG_ERROR(GENERAL, "Warning game %s in trophy folder %s usr file reports zero trophies.  Cannot load in trophy manager.", game_trophy_data->game_name, game_trophy_data->path);
+		gui_log.error("Warning game %s in trophy folder %s usr file reports zero trophies.  Cannot load in trophy manager.", game_trophy_data->game_name, game_trophy_data->path);
 		return false;
 	}
 
@@ -392,7 +391,7 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 		const QString path = qstr(game_trophy_data->path) + "TROP" + padding + QString::number(trophy_id) + ".PNG";
 		if (!trophy_icon.load(path))
 		{
-			LOG_ERROR(GENERAL, "Failed to load trophy icon for trophy %d %s", trophy_id, game_trophy_data->path);
+			gui_log.error("Failed to load trophy icon for trophy %d %s", trophy_id, game_trophy_data->path);
 		}
 		game_trophy_data->trophy_images.emplace_back(std::move(trophy_icon));
 	}
@@ -503,6 +502,7 @@ QPixmap trophy_manager_dialog::GetResizedGameIcon(int index)
 	if (!icon.isNull())
 	{
 		QPainter painter(&new_icon);
+		painter.setRenderHint(QPainter::SmoothPixmapTransform);
 		painter.drawPixmap(QPoint(0, 0), icon);
 		painter.end();
 	}
@@ -567,6 +567,7 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 		if (!icon.isNull())
 		{
 			QPainter painter(&new_icon);
+			painter.setRenderHint(QPainter::SmoothPixmapTransform);
 			painter.drawPixmap(QPoint(0, 0), icon);
 			painter.end();
 		}
@@ -592,7 +593,7 @@ void trophy_manager_dialog::ApplyFilter()
 		return;
 
 	const int db_pos = m_game_combo->currentData().toInt();
-	if (db_pos >= m_trophies_db.size() || !m_trophies_db[db_pos])
+	if (db_pos + 0u >= m_trophies_db.size() || !m_trophies_db[db_pos])
 		return;
 
 	const auto trop_usr = m_trophies_db[db_pos]->trop_usr.get();
@@ -663,7 +664,7 @@ void trophy_manager_dialog::ShowContextMenu(const QPoint& pos)
 
 	const int db_ind = m_game_combo->currentData().toInt();
 
-	connect(show_trophy_dir, &QAction::triggered, [=]()
+	connect(show_trophy_dir, &QAction::triggered, [=, this]()
 	{
 		QString path = qstr(m_trophies_db[db_ind]->path);
 		QDesktopServices::openUrl(QUrl("file:///" + path));
@@ -708,7 +709,7 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 	futureWatcher.setFuture(QtConcurrent::map(indices, [this, folder_list, &progressDialog](const int& i)
 	{
 		const std::string dir_name = sstr(folder_list.value(i));
-		LOG_TRACE(GENERAL, "Loading trophy dir: %s", dir_name);
+		gui_log.trace("Loading trophy dir: %s", dir_name);
 		try
 		{
 			LoadTrophyFolderToDB(dir_name);
@@ -717,7 +718,7 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 		{
 			// TODO: Add error checks & throws to LoadTrophyFolderToDB so that they can be caught here.
 			// Also add a way of showing the number of corrupted/invalid folders in UI somewhere.
-			LOG_ERROR(GENERAL, "Exception occurred while parsing folder %s for trophies: %s", dir_name, e.what());
+			gui_log.error("Exception occurred while parsing folder %s for trophies: %s", dir_name, e.what());
 		}
 	}));
 
@@ -746,7 +747,7 @@ void trophy_manager_dialog::PopulateGameTable()
 		const std::string icon_path = m_trophies_db[i]->path + "ICON0.PNG";
 		if (!icon.load(qstr(icon_path)))
 		{
-			LOG_WARNING(GENERAL, "Could not load trophy game icon from path %s", icon_path);
+			gui_log.warning("Could not load trophy game icon from path %s", icon_path);
 		}
 		return icon;
 	};
@@ -785,7 +786,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 		return;
 
 	auto& data = m_trophies_db[m_game_combo->currentData().toInt()];
-	LOG_TRACE(GENERAL, "Populating Trophy Manager UI with %s %s", data->game_name, data->path);
+	gui_log.trace("Populating Trophy Manager UI with %s %s", data->game_name, data->path);
 
 	const int all_trophies = data->trop_usr->GetTrophiesCount();
 	const int unlocked_trophies = data->trop_usr->GetUnlockedTrophiesCount();
@@ -804,7 +805,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "Root name does not match trophyconf in trophy. Name received: %s", trophy_base->GetChildren()->GetName());
+		gui_log.error("Root name does not match trophyconf in trophy. Name received: %s", trophy_base->GetChildren()->GetName());
 		return;
 	}
 

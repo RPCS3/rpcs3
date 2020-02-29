@@ -1,7 +1,4 @@
-#include "stdafx.h"
-#include "Emu/Memory/vm.h"
-#include "Emu/IdManager.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_lwmutex.h"
@@ -10,7 +7,7 @@
 
 #include <atomic>
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 error_code sys_lwmutex_create(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)
 {
@@ -116,13 +113,13 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 	{
 		// recursive locking
 
-		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0)
+		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0u)
 		{
 			// if not recursive
 			return CELL_EDEADLK;
 		}
 
-		if (lwmutex->recursive_count == -1)
+		if (lwmutex->recursive_count == umax)
 		{
 			// if recursion limit reached
 			return CELL_EKRESOURCE;
@@ -189,7 +186,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 		return CELL_OK;
 	}
 
-	if (res == CELL_EBUSY && lwmutex->attribute & SYS_SYNC_RETRY)
+	if (res + 0u == CELL_EBUSY && lwmutex->attribute & SYS_SYNC_RETRY)
 	{
 		while (true)
 		{
@@ -227,7 +224,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 			{
 				lwmutex->vars.owner.release(tid);
 			}
-			else if (timeout && res_ != CELL_ETIMEDOUT)
+			else if (timeout && res_ + 0u != CELL_ETIMEDOUT)
 			{
 				const u64 time_diff = get_guest_system_time() - time0;
 
@@ -242,7 +239,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 
 			lwmutex->all_info--;
 
-			if (res_ != CELL_EBUSY)
+			if (res_ + 0u != CELL_EBUSY)
 			{
 				return res_;
 			}
@@ -276,13 +273,13 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	{
 		// recursive locking
 
-		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0)
+		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0u)
 		{
 			// if not recursive
 			return CELL_EDEADLK;
 		}
 
-		if (lwmutex->recursive_count == -1)
+		if (lwmutex->recursive_count == umax)
 		{
 			// if recursion limit reached
 			return CELL_EKRESOURCE;
@@ -361,7 +358,7 @@ error_code sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 		lwmutex->vars.owner.release(lwmutex_free);
 
 		// Call the alternative syscall
-		if (_sys_lwmutex_unlock2(ppu, lwmutex->sleep_queue) == CELL_ESRCH)
+		if (_sys_lwmutex_unlock2(ppu, lwmutex->sleep_queue) + 0u == CELL_ESRCH)
 		{
 			return CELL_ESRCH;
 		}
@@ -373,7 +370,7 @@ error_code sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	lwmutex->vars.owner.release(lwmutex_reserved);
 
 	// call the syscall
-	if (_sys_lwmutex_unlock(ppu, lwmutex->sleep_queue) == CELL_ESRCH)
+	if (_sys_lwmutex_unlock(ppu, lwmutex->sleep_queue) + 0u == CELL_ESRCH)
 	{
 		return CELL_ESRCH;
 	}

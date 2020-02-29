@@ -332,7 +332,7 @@ namespace rsx
 		const __m128 scale_vector = _mm_set1_ps(16777214.f);
 
 #if defined (_MSC_VER) || defined (__SSSE3__)
-		if (LIKELY(utils::has_ssse3()))
+		if (utils::has_ssse3()) [[likely]]
 		{
 			const __m128i swap_mask = _mm_set_epi8
 			(
@@ -387,7 +387,7 @@ namespace rsx
 		__m128i* src_ptr = static_cast<__m128i*>(src);
 
 #if defined (_MSC_VER) || defined (__SSSE3__)
-		if (LIKELY(utils::has_ssse3()))
+		if (utils::has_ssse3()) [[likely]]
 		{
 			const __m128i swap_mask = _mm_set_epi8
 			(

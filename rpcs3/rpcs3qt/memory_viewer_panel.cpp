@@ -1,7 +1,15 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 
 #include "memory_viewer_panel.h"
+
+#include <QVBoxLayout>
+#include <QPushButton>
+#include <QSpinBox>
+#include <QGroupBox>
+#include <QTextEdit>
+#include <QComboBox>
+#include <QWheelEvent>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -194,14 +202,14 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	setLayout(vbox_panel);
 
 	//Events
-	connect(m_addr_line, &QLineEdit::returnPressed, [=]
+	connect(m_addr_line, &QLineEdit::returnPressed, [=, this]()
 	{
 		bool ok;
 		m_addr = m_addr_line->text().toULong(&ok, 16);
 		m_addr_line->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));	// get 8 digits in input line
 		ShowMemory();
 	});
-	connect(sb_bytes, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=]
+	connect(sb_bytes, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=, this]()
 	{
 		m_colcount = sb_bytes->value();
 		m_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
@@ -209,11 +217,11 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 		ShowMemory();
 	});
 
-	connect(b_prev, &QAbstractButton::clicked, [=]() { m_addr -= m_colcount; ShowMemory(); });
-	connect(b_next, &QAbstractButton::clicked, [=]() { m_addr += m_colcount; ShowMemory(); });
-	connect(b_fprev, &QAbstractButton::clicked, [=]() { m_addr -= m_rowcount * m_colcount; ShowMemory(); });
-	connect(b_fnext, &QAbstractButton::clicked, [=]() { m_addr += m_rowcount * m_colcount; ShowMemory(); });
-	connect(b_img, &QAbstractButton::clicked, [=]
+	connect(b_prev, &QAbstractButton::clicked, [=, this]() { m_addr -= m_colcount; ShowMemory(); });
+	connect(b_next, &QAbstractButton::clicked, [=, this]() { m_addr += m_colcount; ShowMemory(); });
+	connect(b_fprev, &QAbstractButton::clicked, [=, this]() { m_addr -= m_rowcount * m_colcount; ShowMemory(); });
+	connect(b_fnext, &QAbstractButton::clicked, [=, this]() { m_addr += m_rowcount * m_colcount; ShowMemory(); });
+	connect(b_img, &QAbstractButton::clicked, [=, this]()
 	{
 		int mode = cbox_img_mode->currentIndex();
 		int sizex = sb_img_size_x->value();

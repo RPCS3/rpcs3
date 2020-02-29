@@ -3,8 +3,16 @@
 #include <cstdint>
 #include "Utilities/types.h"
 
+#if __has_include(<bit>)
+#include <bit>
+#else
+#include <type_traits>
+#endif
+
 namespace stx
 {
+	static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big);
+
 	template <typename T, std::size_t Align = alignof(T), std::size_t Size = sizeof(T)>
 	struct se_storage
 	{
@@ -15,7 +23,7 @@ namespace stx
 
 		struct type64
 		{
-			alignas(8) std::uint64_t data[sizeof(T) / 8];
+			alignas(8) std::uint64_t data[sizeof(T) < 8 ? 1 : sizeof(T) / 8];
 		};
 
 		using type = std::conditional_t<(Align >= 8 && sizeof(T) % 8 == 0), type64, type8>;
@@ -244,7 +252,7 @@ private:
 		}
 
 public:
-		template <typename T2>
+		template <typename T2, typename = decltype(+std::declval<const T2&>())>
 		bool operator==(const T2& rhs) const noexcept
 		{
 			using R = simple_t<T2>;
@@ -269,11 +277,14 @@ public:
 			return value() == rhs;
 		}
 
-		template <typename T2>
+#if __cpp_impl_three_way_comparison >= 201711
+#else
+		template <typename T2, typename = decltype(+std::declval<const T2&>())>
 		bool operator!=(const T2& rhs) const noexcept
 		{
 			return !operator==<T2>(rhs);
 		}
+#endif
 
 private:
 		template <typename T2>
