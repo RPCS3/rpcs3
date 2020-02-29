@@ -21,11 +21,17 @@ void lv2_timer_context::operator()()
 		if (state == SYS_TIMER_STATE_RUN)
 		{
 			const u64 _now = get_guest_system_time();
-			const u64 next = expire;
+			u64 next = expire;
 
 			if (_now >= next)
 			{
 				std::lock_guard lock(mutex);
+
+				if (next = expire; _now < next)
+				{
+					// expire was updated in the middle, don't send an event
+					continue;
+				}
 
 				if (const auto queue = port.lock())
 				{
@@ -34,7 +40,7 @@ void lv2_timer_context::operator()()
 
 				if (period)
 				{
-					// Set next expiration time and check again (HACK)
+					// Set next expiration time and check again
 					expire += period;
 					continue;
 				}
