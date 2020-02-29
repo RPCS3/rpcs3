@@ -1468,6 +1468,20 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				file = fs::make_stream<std::vector<uchar>>();
 			}
 
+			if (fileSet->fileBufSize < fileSet->fileSize)
+			{
+				// ****** sysutil savedata parameter error : 72 ******
+				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "72"};
+				break;
+			}
+
+			if (!fileSet->fileBuf)
+			{
+				// ****** sysutil savedata parameter error : 73 ******
+				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "73"};
+				break;
+			}
+
 			// Write to memory file and truncate
 			const u64 sr = file.seek(fileSet->fileOffset);
 			const u64 wr = lv2_file::op_write(file, fileSet->fileBuf, access_size);
@@ -1498,6 +1512,20 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (!file)
 			{
 				file = fs::make_stream<std::vector<uchar>>();
+			}
+
+			if (fileSet->fileBufSize < fileSet->fileSize)
+			{
+				// ****** sysutil savedata parameter error : 72 ******
+				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "72"};
+				break;
+			}
+
+			if (!fileSet->fileBuf)
+			{
+				// ****** sysutil savedata parameter error : 73 ******
+				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "73"};
+				break;
 			}
 
 			// Write to memory file normally
