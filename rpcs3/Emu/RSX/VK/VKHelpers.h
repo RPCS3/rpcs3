@@ -208,6 +208,10 @@ namespace vk
 		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask,
 		const VkImageSubresourceRange& range);
 
+	void insert_execution_barrier(VkCommandBuffer cmd,
+		VkPipelineStageFlags src_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		VkPipelineStageFlags dst_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
 	void raise_status_interrupt(runtime_state status);
 	void clear_status_interrupt(runtime_state status);
 	bool test_status_interrupt(runtime_state status);
