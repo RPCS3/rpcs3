@@ -5,32 +5,10 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
 
-
 #ifdef _WIN32
 #include <Windows.h>
-#include <wincrypt.h>
-
-const HCRYPTPROV s_crypto_provider = []() -> HCRYPTPROV
-{
-	HCRYPTPROV result;
-
-	if (!CryptAcquireContextW(&result, nullptr, nullptr, PROV_RSA_FULL, 0) && !CryptAcquireContextW(&result, nullptr, nullptr, PROV_RSA_FULL, CRYPT_NEWKEYSET))
-	{
-		return 0;
-	}
-
-	::atexit([]()
-	{
-		if (s_crypto_provider)
-		{
-			CryptReleaseContext(s_crypto_provider, 0);
-		}
-	});
-
-	return result;
-}();
+#include <bcrypt.h>
 #endif
-
 
 template<>
 void fmt_class_string<sys_ss_rng_error>::format(std::string& out, u64 arg)
@@ -81,15 +59,18 @@ error_code sys_ss_random_number_generator(u64 pkg_id, vm::ptr<void> buf, u64 siz
 	std::unique_ptr<u8[]> temp(new u8[size]);
 
 #ifdef _WIN32
-	if (!s_crypto_provider || !CryptGenRandom(s_crypto_provider, size, temp.get()))
+	if (auto ret = BCryptGenRandom(nullptr, temp.get(), size, BCRYPT_USE_SYSTEM_PREFERRED_RNG))
+	{
+		fmt::throw_exception("sys_ss_random_number_generator(): BCryptGenRandom failed (0x%08x)" HERE, ret);
+	}
 #else
 	fs::file rnd{"/dev/urandom"};
 
 	if (!rnd || rnd.read(temp.get(), size) != size)
-#endif
 	{
 		fmt::throw_exception("sys_ss_random_number_generator(): Failed to generate pseudo-random numbers" HERE);
 	}
+#endif
 
 	std::memcpy(buf.get_ptr(), temp.get(), size);
 	return CELL_OK;
