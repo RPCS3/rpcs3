@@ -49,7 +49,7 @@ void lv2_timer_context::operator()()
 			continue;
 		}
 
-		thread_ctrl::wait_for(10000);
+		thread_ctrl::wait();
 	}
 }
 
@@ -106,11 +106,20 @@ error_code sys_timer_get_information(ppu_thread& ppu, u32 timer_id, vm::ptr<sys_
 
 	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer)
 	{
-		std::lock_guard lock(timer.mutex);
+		std::shared_lock lock(timer.mutex);
 
-		info->next_expire = timer.expire;
-		info->period      = timer.period;
-		info->timer_state = timer.state;
+		if (timer.state == SYS_TIMER_STATE_RUN)
+		{
+			info->timer_state = SYS_TIMER_STATE_RUN;
+			info->next_expire = timer.expire;
+			info->period      = timer.period;
+		}
+		else
+		{
+			info->timer_state = SYS_TIMER_STATE_STOP;
+			info->next_expire = 0;
+			info->period      = 0;
+		}
 	});
 
 	if (!timer)
@@ -252,12 +261,13 @@ error_code sys_timer_disconnect_event_queue(ppu_thread& ppu, u32 timer_id)
 	{
 		std::lock_guard lock(timer.mutex);
 
+		timer.state = SYS_TIMER_STATE_STOP;
+
 		if (timer.port.expired())
 		{
 			return CELL_ENOTCONN;
 		}
 
-		timer.state = SYS_TIMER_STATE_STOP;
 		timer.port.reset();
 		return {};
 	});
