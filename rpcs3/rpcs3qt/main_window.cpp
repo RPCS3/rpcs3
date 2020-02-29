@@ -256,12 +256,15 @@ void main_window::show_boot_error(game_boot_result status)
 	case game_boot_result::file_creation_error:
 		message = tr("The emulator could not create files required for booting.");
 		break;
+	case game_boot_result::firmware_missing:
+		message = tr("Firmware has not been installed. Install firmware with the \"File > Install Firmware\" menu option.");
+		break;
 	case game_boot_result::generic_error:
 	default:
 		message = tr("Unknown error.");
 		break;
 	}
-	const QString link = tr("<br /><br />For information on how to dump your PS3 games, read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.");
+	const QString link = tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.");
 
 	QMessageBox msg;
 	msg.setWindowTitle(tr("Boot Failed"));

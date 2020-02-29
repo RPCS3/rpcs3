@@ -26,6 +26,7 @@ enum class game_boot_result : u32
 	install_failed,
 	decryption_error,
 	file_creation_error,
+	firmware_missing,
 };
 
 struct EmuCallbacks

@@ -91,6 +91,7 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 		case game_boot_result::install_failed: return "Game install failed";
 		case game_boot_result::decryption_error: return "Failed to decrypt content";
 		case game_boot_result::file_creation_error: return "Could not create important files";
+		case game_boot_result::firmware_missing: return "Firmware is missing";
 		}
 		return unknown;
 	});
@@ -899,6 +900,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		{
 			vfs::mount("/dev_hdd1", hdd1);
 			sys_log.notice("Hdd1: %s", vfs::get("/dev_hdd1"));
+		}
+
+		if (!fs::is_file(g_cfg.vfs.get_dev_flash() + "sys/external/liblv2.sprx"))
+		{
+			return game_boot_result::firmware_missing;
 		}
 
 		// Special boot mode (directory scan)
