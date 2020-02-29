@@ -36,7 +36,7 @@ namespace vk
 		std::unique_ptr<vk::viewable_image> managed_texture = nullptr;
 
 		//DMA relevant data
-		VkEvent dma_fence = VK_NULL_HANDLE;
+		std::unique_ptr<vk::event> dma_fence;
 		vk::render_device* m_device = nullptr;
 		vk::viewable_image *vram_texture = nullptr;
 
@@ -169,16 +169,15 @@ namespace vk
 		{
 			verify(HERE), src->samples() == 1;
 
-			if (m_device == nullptr)
+			if (!m_device)
 			{
 				m_device = &cmd.get_command_pool().get_owner();
 			}
 
-			if (dma_fence == VK_NULL_HANDLE)
+			if (dma_fence)
 			{
-				VkEventCreateInfo createInfo = {};
-				createInfo.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
-				vkCreateEvent(*m_device, &createInfo, nullptr, &dma_fence);
+				verify(HERE), synchronized;
+				vk::get_resource_manager()->dispose(dma_fence);
 			}
 
 			src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -284,23 +283,12 @@ namespace vk
 
 			src->pop_layout(cmd);
 
-			if (synchronized) [[unlikely]]
-			{
-				// Replace the wait event with a new one to avoid premature signaling!
-				vk::get_resource_manager()->dispose(dma_fence);
+			// Create event object for this transfer and queue signal op
+			dma_fence = std::make_unique<vk::event>(*m_device);
+			dma_fence->signal(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-				VkEventCreateInfo createInfo = {};
-				createInfo.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
-				vkCreateEvent(*m_device, &createInfo, nullptr, &dma_fence);
-			}
-			else
-			{
-				// If this is speculated, it should only occur once
-				verify(HERE), vkGetEventStatus(*m_device, dma_fence) == VK_EVENT_RESET;
-			}
-
+			// Set cb flag for queued dma operations
 			cmd.set_flag(vk::command_buffer::cb_has_dma_transfer);
-			vkCmdSetEvent(cmd, dma_fence, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 			synchronized = true;
 			sync_timestamp = get_system_time();
@@ -396,8 +384,7 @@ namespace vk
 			AUDIT(synchronized);
 
 			// Synchronize, reset dma_fence after waiting
-			vk::wait_for_event(dma_fence, GENERAL_WAIT_TIMEOUT);
-			vkResetEvent(*m_device, dma_fence);
+			vk::wait_for_event(dma_fence.get(), GENERAL_WAIT_TIMEOUT);
 
 			const auto range = get_confirmed_range();
 			vk::flush_dma(range.start, range.length());
