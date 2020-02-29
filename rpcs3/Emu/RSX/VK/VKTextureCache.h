@@ -1467,7 +1467,7 @@ namespace vk
 			baseclass::on_frame_end();
 		}
 
-		vk::image *upload_image_simple(vk::command_buffer& cmd, u32 address, u32 width, u32 height)
+		vk::image *upload_image_simple(vk::command_buffer& cmd, u32 address, u32 width, u32 height, u32 pitch)
 		{
 			if (!m_formats_support.bgra8_linear)
 			{
@@ -1490,7 +1490,6 @@ namespace vk
 
 			void* mem = image->memory->map(0, layout.rowPitch * height);
 
-			u32 row_pitch = width * 4;
 			auto src = vm::_ptr<const char>(address);
 			auto dst = static_cast<char*>(mem);
 
@@ -1503,7 +1502,7 @@ namespace vk
 				for (u32 col = 0; col < width; ++col)
 					casted_dst[col] = casted_src[col];
 
-				src += row_pitch;
+				src += pitch;
 				dst += layout.rowPitch;
 			}
 
