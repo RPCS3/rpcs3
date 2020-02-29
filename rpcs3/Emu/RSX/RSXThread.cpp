@@ -2560,6 +2560,15 @@ namespace rsx
 			Emu.Pause();
 		}
 
+		if (zcull_ctrl->has_pending())
+		{
+			// NOTE: This is a workaround for buggy games.
+			// Some applications leave the zpass/stats gathering active but don't use the information.
+			// This can lead to the zcull unit using up all the memory queueing up operations that never get consumed.
+			// Seen in Diablo III and Yakuza 5
+			zcull_ctrl->clear(this, CELL_GCM_ZPASS_PIXEL_CNT | CELL_GCM_ZCULL_STATS);
+		}
+
 		// Save current state
 		m_queued_flip.stats = m_frame_stats;
 		m_queued_flip.push(buffer);
@@ -2930,7 +2939,7 @@ namespace rsx
 
 		void ZCULL_control::clear(class ::rsx::thread* ptimer, u32 type)
 		{
-			if (type != CELL_GCM_ZPASS_PIXEL_CNT)
+			if (!(type & CELL_GCM_ZPASS_PIXEL_CNT))
 			{
 				// Other types do not generate queries at the moment
 				return;
