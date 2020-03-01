@@ -1414,7 +1414,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			const auto dotpos = std::find_end(fileName, termpos, name, name + 1);
 
-			if (dotpos != termpos && (dotpos > fileName + 8 || termpos - dotpos > 4))
+			if (dotpos > fileName + 8 || termpos - dotpos > 4)
 			{
 				// ****** sysutil savedata parameter error : 70 ******
 				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "70"};
@@ -1439,7 +1439,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				}
 			}
 
-			if (dotpos != termpos)
+			if (dotpos < termpos - 1)
 			{
 				// Reset for file extension
 				std::memset(name, 0, 5);
