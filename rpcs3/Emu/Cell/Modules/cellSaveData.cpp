@@ -944,18 +944,42 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return {CELL_SAVEDATA_ERROR_PARAM, "26"};
 			}
 
+			switch (sysutil_check_name_string(fixedSet->dirName.get_ptr(), 1, CELL_SAVEDATA_DIRNAME_SIZE))
+			{
+			case -1:
+			{
+				// ****** sysutil savedata parameter error : 27 ******
+				return {CELL_SAVEDATA_ERROR_PARAM, "27"};
+			}
+			case -2:
+			{
+				// ****** sysutil savedata parameter error : 28 ******
+				return {CELL_SAVEDATA_ERROR_PARAM, "28"};
+			}
+			case 0: break;
+			default: ASSUME(0);
+			}
+
+			const std::string dirStr = fixedSet->dirName.get_ptr();
+
 			for (u32 i = 0; i < save_entries.size(); i++)
 			{
-				if (save_entries[i].dirName == fixedSet->dirName.get_ptr())
+				if (save_entries[i].dirName == dirStr)
 				{
 					selected = i;
 					break;
 				}
 			}
 
-			if (fixedSet->option != CELL_SAVEDATA_OPTION_NOCONFIRM &&
-				(operation == SAVEDATA_OP_FIXED_SAVE || operation == SAVEDATA_OP_FIXED_LOAD || operation == SAVEDATA_OP_FIXED_DELETE))
+			switch (fixedSet->option)
 			{
+			case CELL_SAVEDATA_OPTION_NONE:
+			{
+				if (operation != SAVEDATA_OP_FIXED_SAVE && operation != SAVEDATA_OP_FIXED_LOAD && operation != SAVEDATA_OP_FIXED_DELETE)
+				{
+					break;
+				}
+
 				std::string message;
 
 				if (selected == -1)
@@ -990,11 +1014,20 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				{
 					return CELL_CANCEL;
 				}
+
+				break;
+			}
+			case CELL_SAVEDATA_OPTION_NOCONFIRM:
+				break;
+
+			default :
+				// ****** sysutil savedata parameter error : 81 ******
+				return {CELL_SAVEDATA_ERROR_PARAM, "81"};
 			}
 
 			if (selected == -1)
 			{
-				save_entry.dirName = fixedSet->dirName.get_ptr();
+				save_entry.dirName = dirStr;
 				save_entry.escaped = vfs::escape(save_entry.dirName);
 			}
 
@@ -1361,10 +1394,67 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (!fileSet->fileName)
 			{
 				// ****** sysutil savedata parameter error : 69 ******
-				return {CELL_SAVEDATA_ERROR_PARAM, "69"};
+				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "69"};
+				break;
 			}
 
-			file_path = fileSet->fileName.get_ptr();
+			const auto fileName = fileSet->fileName.get_ptr();
+
+			const auto termpos = std::find(fileName, fileName + CELL_SAVEDATA_FILENAME_SIZE, '\0');
+
+			if (termpos == fileName + CELL_SAVEDATA_FILENAME_SIZE)
+			{
+				// ****** sysutil savedata parameter error : 71 ******
+				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "71"};
+				break;
+			}
+
+			char name[10];
+			name[0] = '.';
+
+			const auto dotpos = std::find_end(fileName, termpos, name, name + 1);
+
+			if (dotpos != termpos && (dotpos > fileName + 8 || termpos - dotpos > 4))
+			{
+				// ****** sysutil savedata parameter error : 70 ******
+				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "70"};
+				break;
+			}
+
+			if (dotpos != fileName)
+			{
+				// Reset for filename
+				std::memset(name, 0, 10);
+				std::copy(fileName, dotpos, name);
+
+				// Allow multiple '.' even though sysutil_check_name_string does not
+				std::replace(name, name + 9, '.', '-');
+
+				// Check filename
+				if (sysutil_check_name_string(name, 1, 9) == -1)
+				{
+					// ****** sysutil savedata parameter error : 70 ******
+					savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "70"};
+					break;
+				}
+			}
+
+			if (dotpos != termpos)
+			{
+				// Reset for file extension
+				std::memset(name, 0, 5);
+				std::copy(dotpos + 1, termpos, name);
+
+				// Check file extension
+				if (sysutil_check_name_string(name, 1, 4) == -1)
+				{
+					// ****** sysutil savedata parameter error : 70 ******
+					savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "70"};
+					break;
+				}
+			}
+
+			file_path = fileName;
 
 			if (type == CELL_SAVEDATA_FILETYPE_SECUREFILE)
 			{
@@ -1436,6 +1526,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			fs::file& file = all_files[file_path];
 
+			// TODO: Check this
+			//if (!fileSet->fileSize)
+			//{
+			//	break;
+			//}
+
 			if (!file)
 			{
 				// ****** sysutil savedata parameter error : 22 ******
@@ -1451,7 +1547,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				break;
 			}
 
-			if (!fileSet->fileBuf)
+			if (!fileSet->fileBuf && fileSet->fileBufSize)
 			{
 				// ****** sysutil savedata parameter error : 73 ******
 				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "73"};
@@ -1469,6 +1565,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			fs::file& file = all_files[file_path];
 
+			//if (!fileSet->fileSize)
+			//{
+			//	break;
+			//}
+
 			if (!file)
 			{
 				file = fs::make_stream<std::vector<uchar>>();
@@ -1481,7 +1582,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				break;
 			}
 
-			if (!fileSet->fileBuf)
+			if (!fileSet->fileBuf && fileSet->fileBufSize)
 			{
 				// ****** sysutil savedata parameter error : 73 ******
 				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "73"};
@@ -1515,6 +1616,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			fs::file& file = all_files[file_path];
 
+			//if (!fileSet->fileSize)
+			//{
+			//	break;
+			//}
+
 			if (!file)
 			{
 				file = fs::make_stream<std::vector<uchar>>();
@@ -1527,7 +1633,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				break;
 			}
 
-			if (!fileSet->fileBuf)
+			if (!fileSet->fileBuf && fileSet->fileBufSize)
 			{
 				// ****** sysutil savedata parameter error : 73 ******
 				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "73"};
