@@ -191,6 +191,12 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 	conf->resolution_y = u32(res_info.second);
 	conf->state = 1;
 
+	if (conf->aspect == CELL_VIDEO_OUT_ASPECT_AUTO)
+	{
+		// Resolve 'auto' option to actual aspect ratio
+		conf->aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
+	}
+
 	return CELL_OK;
 }
 

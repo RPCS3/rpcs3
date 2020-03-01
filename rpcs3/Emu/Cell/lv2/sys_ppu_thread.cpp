@@ -11,6 +11,26 @@
 
 LOG_CHANNEL(sys_ppu_thread);
 
+// Simple structure to cleanup previous thread, because can't remove its own thread
+struct ppu_thread_cleaner
+{
+	atomic_t<u32> old_id = 0;
+
+	void clean(u32 new_id)
+	{
+		if (old_id) [[likely]]
+		{
+			if (u32 id = old_id.exchange(new_id)) [[likely]]
+			{
+				if (!idm::remove<named_thread<ppu_thread>>(id)) [[unlikely]]
+				{
+					sys_ppu_thread.fatal("Failed to remove detached thread 0x%x", id);
+				}
+			}
+		}
+	}
+};
+
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {
 	vm::temporary_unlock(ppu);
@@ -41,27 +61,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 
 	if (jid == umax)
 	{
-		// Detach detached thread, id will be removed on cleanup
-		static thread_local struct cleanup_t
-		{
-			const u32 id;
-
-			cleanup_t(u32 id)
-				: id(id)
-			{
-			}
-
-			cleanup_t(const cleanup_t&) = delete;
-
-			~cleanup_t()
-			{
-				if (!idm::remove<named_thread<ppu_thread>>(id))
-				{
-					sys_ppu_thread.fatal("Failed to remove detached thread! (id=0x%x)", id);
-				}
-			}
-		}
-		to_cleanup(ppu.id);
+		g_fxo->get<ppu_thread_cleaner>()->clean(ppu.id);
 	}
 	else if (jid != 0)
 	{
@@ -90,6 +90,9 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	vm::temporary_unlock(ppu);
 
 	sys_ppu_thread.trace("sys_ppu_thread_join(thread_id=0x%x, vptr=*0x%x)", thread_id, vptr);
+
+	// Clean some detached thread (hack)
+	g_fxo->get<ppu_thread_cleaner>()->clean(0);
 
 	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread) -> CellError
 	{
@@ -164,6 +167,9 @@ error_code sys_ppu_thread_detach(u32 thread_id)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_detach(thread_id=0x%x)", thread_id);
 
+	// Clean some detached thread (hack)
+	g_fxo->get<ppu_thread_cleaner>()->clean(0);
+
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread) -> CellError
 	{
 		return thread.joiner.atomic_op([&](u32& value) -> CellError
@@ -234,6 +240,9 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 		return CELL_EINVAL;
 	}
 
+	// Clean some detached thread (hack)
+	g_fxo->get<ppu_thread_cleaner>()->clean(0);
+
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
 		if (thread.prio != prio)
@@ -253,6 +262,9 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 error_code sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_get_priority(thread_id=0x%x, priop=*0x%x)", thread_id, priop);
+
+	// Clean some detached thread (hack)
+	g_fxo->get<ppu_thread_cleaner>()->clean(0);
 
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
@@ -327,6 +339,9 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 	{
 		return CELL_EPERM;
 	}
+
+	// Clean some detached thread (hack)
+	g_fxo->get<ppu_thread_cleaner>()->clean(0);
 
 	// Compute actual stack size and allocate
 	const u32 stack_size = ::align<u32>(std::max<u32>(_stacksz, 4096), 4096);
