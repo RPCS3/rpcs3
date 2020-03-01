@@ -41,27 +41,24 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 
 	if (jid == umax)
 	{
-		// Detach detached thread, id will be removed on cleanup
-		static thread_local struct cleanup_t
+		// Simple structure to cleanup previous thread, because can't remove its own thread
+		struct ppu_thread_cleaner
 		{
-			const u32 id;
+			atomic_t<u32> id = 0;
+		};
 
-			cleanup_t(u32 id)
-				: id(id)
+		auto cleaner = g_fxo->get<ppu_thread_cleaner>();
+
+		if (cleaner->id || !cleaner->id.compare_and_swap_test(0, ppu.id)) [[likely]]
+		{
+			if (u32 old_id = cleaner->id.exchange(ppu.id))
 			{
-			}
-
-			cleanup_t(const cleanup_t&) = delete;
-
-			~cleanup_t()
-			{
-				if (!idm::remove<named_thread<ppu_thread>>(id))
+				if (!idm::remove<named_thread<ppu_thread>>(old_id))
 				{
-					sys_ppu_thread.fatal("Failed to remove detached thread! (id=0x%x)", id);
+					sys_ppu_thread.fatal("Failed to remove detached thread 0x%x", old_id);
 				}
 			}
 		}
-		to_cleanup(ppu.id);
 	}
 	else if (jid != 0)
 	{
