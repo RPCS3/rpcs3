@@ -1,5 +1,6 @@
 ﻿#include <QButtonGroup>
 #include <QDialogButtonBox>
+#include <QFontMetrics>
 #include <QPushButton>
 #include <QMessageBox>
 #include <QInputDialog>
@@ -1318,35 +1319,53 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Game window title builder
 
-	connect(ui->edit_button_game_window_title_format, &QAbstractButton::clicked, [this, game]()
+	const auto get_game_window_title = [this, game](const QString& format)
 	{
-		const std::string game_title_format = xemu_settings->GetSetting(emu_settings::WindowTitleFormat);
+		rpcs3::title_format_data title_data;
+		title_data.format = sstr(format);
+		title_data.renderer = xemu_settings->GetSetting(emu_settings::Renderer);
+		title_data.vulkan_adapter = xemu_settings->GetSetting(emu_settings::VulkanAdapter);
+		title_data.fps = 60.;
 
-		auto get_game_window_title_label = [=, this](const QString& new_format)
+		if (game)
 		{
-			rpcs3::title_format_data title_data;
-			title_data.format = sstr(new_format);
-			title_data.renderer = xemu_settings->GetSetting(emu_settings::Renderer);
-			title_data.vulkan_adapter = xemu_settings->GetSetting(emu_settings::VulkanAdapter);
-			title_data.fps = 60.;
+			title_data.title = game->name;
+			title_data.title_id = game->serial;
+		}
+		else
+		{
+			title_data.title = sstr(tr("My Game"));
+			title_data.title_id = "ABCD12345";
+		}
 
-			if (game)
-			{
-				title_data.title = game->name;
-				title_data.title_id = game->serial;
-			}
-			else
-			{
-				title_data.title = sstr(tr("My Game"));
-				title_data.title_id = "ABCD12345";
-			}
+		const std::string game_window_title = rpcs3::get_formatted_title(title_data);
 
-			QString game_window_title = qstr(rpcs3::get_formatted_title(title_data));
+		if (game_window_title.empty())
+		{
+			return QStringLiteral("RPCS3");
+		}
 
-			if (game_window_title.isEmpty())
-			{
-				game_window_title = "RPCS3";
-			}
+		return qstr(game_window_title);
+	};
+
+	const auto set_game_window_title = [=, this](const std::string& format)
+	{
+		const auto game_window_title_format = qstr(format);
+		const auto game_window_title = get_game_window_title(game_window_title_format);
+		const auto width = ui->label_game_window_title_format->sizeHint().width();
+		const auto metrics = ui->label_game_window_title_format->fontMetrics();
+		const auto elided_text = metrics.elidedText(game_window_title_format, Qt::ElideRight, width);
+		const auto tooltip = game_window_title_format + QStringLiteral("\n\n") + game_window_title;
+
+		ui->label_game_window_title_format->setText(elided_text);
+		ui->label_game_window_title_format->setToolTip(tooltip);
+	};
+
+	connect(ui->edit_button_game_window_title_format, &QAbstractButton::clicked, [=, this]()
+	{
+		auto get_game_window_title_label = [=](const QString& format)
+		{
+			const QString game_window_title = get_game_window_title(format);
 
 			const std::vector<std::pair<const QString, const QString>> window_title_glossary =
 			{
@@ -1371,9 +1390,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			return tr("Glossary:\n\n%0\nPreview:\n\n%1\n").arg(glossary).arg(game_window_title);
 		};
 
+		const std::string game_title_format = xemu_settings->GetSetting(emu_settings::WindowTitleFormat);
+
 		QString edited_format = qstr(game_title_format);
 
-		input_dialog dlg(30, edited_format, tr("Game Window Title Format"), get_game_window_title_label(edited_format), "", this);
+		input_dialog dlg(-1, edited_format, tr("Game Window Title Format"), get_game_window_title_label(edited_format), "", this);
 		dlg.resize(width() * .75, dlg.height());
 
 		connect(&dlg, &input_dialog::text_changed, [&](const QString& text)
@@ -1385,19 +1406,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		if (dlg.exec() == QDialog::Accepted)
 		{
 			xemu_settings->SetSetting(emu_settings::WindowTitleFormat, sstr(edited_format));
-			ui->label_game_window_title_format->setText(qstr(xemu_settings->GetSetting(emu_settings::WindowTitleFormat)));
+			set_game_window_title(xemu_settings->GetSetting(emu_settings::WindowTitleFormat));
 		}
 	});
 
-	connect(ui->reset_button_game_window_title_format, &QAbstractButton::clicked, [this, game]()
+	connect(ui->reset_button_game_window_title_format, &QAbstractButton::clicked, [=, this]()
 	{
 		const std::string default_game_title_format = xemu_settings->GetSettingDefault(emu_settings::WindowTitleFormat);
 		xemu_settings->SetSetting(emu_settings::WindowTitleFormat, default_game_title_format);
-		ui->label_game_window_title_format->setText(qstr(default_game_title_format));
+		set_game_window_title(default_game_title_format);
 	});
 
 	// Load and apply the configured game window title format
-	ui->label_game_window_title_format->setText(qstr(xemu_settings->GetSetting(emu_settings::WindowTitleFormat)));
+	set_game_window_title(xemu_settings->GetSetting(emu_settings::WindowTitleFormat));
 
 	SubscribeTooltip(ui->gb_game_window_title, tooltips.settings.game_window_title_format);
 
