@@ -22,7 +22,7 @@ struct ppu_thread_cleaner
 		{
 			if (u32 id = old_id.exchange(new_id)) [[likely]]
 			{
-				if (!idm::remove<named_thread<ppu_thread>>(old_id)) [[unlikely]]
+				if (!idm::remove<named_thread<ppu_thread>>(id)) [[unlikely]]
 				{
 					sys_ppu_thread.fatal("Failed to remove detached thread 0x%x", id);
 				}
