@@ -18,7 +18,7 @@ struct ppu_thread_cleaner
 
 	void clean(u32 new_id)
 	{
-		if (old_id) [[likely]]
+		if (old_id || new_id) [[likely]]
 		{
 			if (u32 id = old_id.exchange(new_id)) [[likely]]
 			{
