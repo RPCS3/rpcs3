@@ -216,6 +216,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 
 		auto time_from_str = [](const std::string& str, const std::string& format, tm* tm) -> bool
 		{
+			update_log.notice("Converting string: %s", str);
 			std::istringstream input(str);
 			input.imbue(std::locale(setlocale(LC_ALL, "C")));
 			input >> std::get_time(tm, format.c_str());
@@ -231,6 +232,8 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 			time_t lts_time = mktime(&lts_tm);
 
 			s64 u_timediff = static_cast<s64>(std::difftime(lts_time, cur_time));
+			update_log.notice("Current: %lld, latest: %lld, difference: %lld", static_cast<s64>(cur_time), static_cast<s64>(lts_time), u_timediff);
+
 			timediff       = tr("Your version is %1 day(s), %2 hour(s) and %3 minute(s) old.").arg(u_timediff / (60 * 60 * 24)).arg((u_timediff / (60 * 60)) % 24).arg((u_timediff / 60) % 60);
 		}
 
