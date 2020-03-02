@@ -1,10 +1,8 @@
 ﻿#include "stdafx.h"
 #include "rsx_replay.h"
 
-#include "Emu/System.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/Cell/lv2/sys_memory.h"
-#include "Emu/Memory/vm.h"
 #include "Emu/RSX/GSRender.h"
 
 #include <map>
@@ -28,7 +26,7 @@ namespace rsx
 		// User memory + fifo size
 		buffer_size = ::align<u32>(buffer_size, 0x100000) + 0x10000000;
 		// We are not allowed to drain all memory so add a little
-		fxm::make<lv2_memory_container>(buffer_size + 0x1000000);
+		g_fxo->init<lv2_memory_container>(buffer_size + 0x1000000);
 
 		const u32 contextAddr = vm::alloc(sizeof(rsx_context), vm::main);
 		if (contextAddr == 0)
@@ -50,7 +48,7 @@ namespace rsx
 
 		get_current_renderer()->main_mem_size = buffer_size;
 
-		if (sys_rsx_context_iomap(contextInfo->context_id, 0, user_mem_addr, buffer_size, 0) != CELL_OK)
+		if (sys_rsx_context_iomap(contextInfo->context_id, 0, user_mem_addr, buffer_size, 0xf000000000000800ull) != CELL_OK)
 			fmt::throw_exception("Capture Replay: rsx io mapping failed!");
 
 		return contextInfo->context_id;
@@ -116,7 +114,7 @@ namespace rsx
 				fmt::throw_exception("requested memory data state for command not found in memory_data_map");
 
 			const auto& data_block = it_data->second;
-			std::memcpy(vm::base(get_address(memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
+			std::memcpy(vm::base(get_address(memblock.offset, memblock.location, HERE)), data_block.data.data(), data_block.data.size());
 		}
 
 		if (replay_cmd.display_buffer_state != 0 && replay_cmd.display_buffer_state != cs.display_buffer_hash)
@@ -134,7 +132,7 @@ namespace rsx
 
 				cs.buffer_state.buffers[i] = buf;
 				sys_rsx_context_attribute(context_id, 0x104, i,
-					(u64)dbstate.buffers[i].width << 32 | dbstate.buffers[i].height, (u64)dbstate.buffers[i].pitch << 32 | dbstate.buffers[i].offset, 0);
+					u64{dbstate.buffers[i].width} << 32 | dbstate.buffers[i].height, u64{dbstate.buffers[i].pitch} << 32 | dbstate.buffers[i].offset, 0);
 			}
 			cs.display_buffer_hash = replay_cmd.display_buffer_state;
 		}
@@ -153,7 +151,7 @@ namespace rsx
 					continue;
 
 				cs.tile_state.tiles[i] = ti;
-				sys_rsx_context_attribute(context_id, 0x300, i, (u64)ti.tile << 32 | ti.limit, (u64)ti.pitch << 32 | ti.format, 0);
+				sys_rsx_context_attribute(context_id, 0x300, i, u64{ti.tile} << 32 | ti.limit, u64{ti.pitch} << 32 | ti.format, 0);
 			}
 
 			for (u32 i = 0; i < limits::zculls_count; ++i)
@@ -163,7 +161,7 @@ namespace rsx
 					continue;
 
 				cs.tile_state.zculls[i] = zci;
-				sys_rsx_context_attribute(context_id, 0x301, i, (u64)zci.region << 32 | zci.size, (u64)zci.start << 32 | zci.offset, (u64)zci.status0 << 32 | zci.status1);
+				sys_rsx_context_attribute(context_id, 0x301, i, u64{zci.region} << 32 | zci.size, u64{zci.start} << 32 | zci.offset, u64{zci.status0} << 32 | zci.status1);
 			}
 
 			cs.tile_hash = replay_cmd.tile_state;
@@ -250,7 +248,7 @@ namespace rsx
 		}
 		catch (const std::exception& e)
 		{
-			LOG_FATAL(RSX, "%s thrown: %s", typeid(e).name(), e.what());
+			rsx_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
 			Emu.Pause();
 		}
 	}

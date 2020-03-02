@@ -4,6 +4,7 @@
 	breakpoint_handler.cpp
 	breakpoint_list.cpp
 	cg_disasm_window.cpp
+	cheat_manager.cpp
 	custom_dialog.cpp
 	debugger_frame.cpp
 	debugger_list.cpp
@@ -21,6 +22,7 @@
 	input_dialog.cpp
 	instruction_editor_dialog.cpp
 	kernel_explorer.cpp
+	localized.cpp
 	log_frame.cpp
 	main_window.cpp
 	memory_string_searcher.cpp
@@ -28,6 +30,8 @@
 	msg_dialog_frame.cpp
 	osk_dialog_frame.cpp
 	pad_settings_dialog.cpp
+	persistent_settings.cpp
+	pkg_install_dialog.cpp
 	progress_dialog.cpp
 	qt_utils.cpp
 	register_editor_dialog.cpp
@@ -36,11 +40,15 @@
 	save_data_info_dialog.cpp
 	save_data_list_dialog.cpp
 	save_manager_dialog.cpp
+	settings.cpp
 	settings_dialog.cpp
+	skylander_dialog.cpp
 	syntax_highlighter.cpp
+	tooltips.cpp
 	trophy_manager_dialog.cpp
 	trophy_notification_frame.cpp
 	trophy_notification_helper.cpp
+	update_manager.cpp
 	user_account.cpp
 	user_manager_dialog.cpp
 	vfs_dialog.cpp
@@ -80,4 +88,5 @@ target_link_libraries(rpcs3_ui
 		3rdparty::discord-rpc
 		3rdparty::hidapi
 		3rdparty::libusb
-		3rdparty::libpng)
+		3rdparty::libpng
+		3rdparty::7z)

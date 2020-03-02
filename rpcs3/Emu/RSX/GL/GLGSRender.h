@@ -10,7 +10,9 @@
 
 #include <optional>
 
+#ifdef _WIN32
 #pragma comment(lib, "opengl32.lib")
+#endif
 
 namespace gl
 {
@@ -31,27 +33,36 @@ namespace gl
 		u32 volatile_mapping_offset;
 		std::optional<std::tuple<GLenum, u32> > index_info;
 	};
-}
 
-struct work_item
-{
-	u32  address_to_flush = 0;
-	gl::texture_cache::thrashed_set section_data;
-
-	volatile bool processed = false;
-	volatile bool result = false;
-	volatile bool received = false;
-
-	void producer_wait()
+	struct work_item
 	{
-		while (!processed)
-		{
-			std::this_thread::yield();
-		}
+		u32  address_to_flush = 0;
+		gl::texture_cache::thrashed_set section_data;
 
-		received = true;
-	}
-};
+		volatile bool processed = false;
+		volatile bool result = false;
+		volatile bool received = false;
+
+		void producer_wait()
+		{
+			while (!processed)
+			{
+				std::this_thread::yield();
+			}
+
+			received = true;
+		}
+	};
+
+	struct present_surface_info
+	{
+		u32 address;
+		u32 format;
+		u32 width;
+		u32 height;
+		u32 pitch;
+	};
+}
 
 class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
@@ -86,11 +97,6 @@ private:
 	// Identity buffer used to fix broken gl_VertexID on ATI stack
 	std::unique_ptr<gl::buffer> m_identity_index_buffer;
 
-	s64 m_begin_time = 0;
-	s64 m_draw_time = 0;
-	s64 m_vertex_upload_time = 0;
-	s64 m_textures_upload_time = 0;
-
 	std::unique_ptr<gl::vertex_cache> m_vertex_cache;
 	std::unique_ptr<gl::shader_cache> m_shaders_cache;
 
@@ -106,7 +112,7 @@ private:
 	gl::video_out_calibration_pass m_video_output_pass;
 
 	shared_mutex queue_guard;
-	std::list<work_item> work_queue;
+	std::list<gl::work_item> work_queue;
 
 	GLProgramBuffer m_prog_buffer;
 	draw_context_t m_decompiler_context;
@@ -140,7 +146,6 @@ private:
 	gl::vertex_upload_info set_vertex_buffer();
 	rsx::vertex_input_layout m_vertex_layout = {};
 
-	void clear_surface(u32 arg);
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
 	bool load_program();
@@ -149,12 +154,13 @@ private:
 
 	void update_draw_state();
 
+	GLuint get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig);
+
 public:
-	void read_buffers();
 	void set_viewport();
 	void set_scissor(bool clip_viewport);
 
-	work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
+	gl::work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 
 	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;
 
@@ -165,13 +171,13 @@ public:
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 
 protected:
+	void clear_surface(u32 arg) override;
 	void begin() override;
 	void end() override;
 
 	void on_init_thread() override;
 	void on_exit() override;
-	bool do_method(u32 cmd, u32 arg) override;
-	void flip(int buffer, bool emu_flip = false) override;
+	void flip(const rsx::display_flip_info_t& info) override;
 
 	void do_local_task(rsx::FIFO_state state) override;
 
@@ -180,8 +186,8 @@ protected:
 	void notify_tile_unbound(u32 tile) override;
 	void on_semaphore_acquire_wait() override;
 
-	std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
-	std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
+	std::array<std::vector<std::byte>, 4> copy_render_targets_to_memory() override;
+	std::array<std::vector<std::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
 
 	void on_decompiler_init() override;
 	void on_decompiler_exit() override;

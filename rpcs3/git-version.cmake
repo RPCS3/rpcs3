@@ -1,6 +1,5 @@
 set(RPCS3_GIT_VERSION "unknown")
 set(RPCS3_GIT_BRANCH "unknown")
-set(RPCS3_GIT_TAG "unknown")
 
 find_package(Git)
 if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git/")
@@ -25,20 +24,11 @@ if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git/")
 	if(NOT ${exit_code} EQUAL 0)
 		message(WARNING "git rev-parse failed, unable to include git branch.")
 	endif()
-	execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0
-		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-		RESULT_VARIABLE exit_code
-		OUTPUT_VARIABLE RPCS3_GIT_TAG)
-	if(NOT ${exit_code} EQUAL 0)
-		message(WARNING "git describe failed, unable to include git tag.")
-	endif()
 
 	string(STRIP ${RPCS3_GIT_VERSION} RPCS3_GIT_VERSION)
 	string(STRIP ${GIT_VERSION_} GIT_VERSION_)
 	string(STRIP ${RPCS3_GIT_VERSION}-${GIT_VERSION_} RPCS3_GIT_VERSION)
 	string(STRIP ${RPCS3_GIT_BRANCH} RPCS3_GIT_BRANCH)
-	string(STRIP ${RPCS3_GIT_TAG} RPCS3_GIT_TAG)
-	string(REPLACE "v" "" RPCS3_GIT_TAG ${RPCS3_GIT_TAG})
 else()
 	message(WARNING "git not found, unable to include version.")
 endif()
@@ -49,7 +39,6 @@ function(gen_git_version rpcs3_src_dir)
 
 	message(STATUS "RPCS3_GIT_VERSION: " ${RPCS3_GIT_VERSION})
 	message(STATUS "RPCS3_GIT_BRANCH: " ${RPCS3_GIT_BRANCH})
-	message(STATUS "RPCS3_GIT_TAG: " ${RPCS3_GIT_TAG})
 
 	if(EXISTS ${GIT_VERSION_FILE})
 		# Don't update if marked not to update.

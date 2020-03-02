@@ -1,4 +1,11 @@
-#include "user_account.h"
+﻿#include "user_account.h"
+
+#include "Emu/System.h"
+#include "Utilities/File.h"
+#include "Utilities/StrFmt.h"
+#include "Utilities/Log.h"
+
+LOG_CHANNEL(gui_log, "GUI");
 
 UserAccount::UserAccount(const std::string& user_id)
 {
@@ -18,12 +25,12 @@ UserAccount::UserAccount(const std::string& user_id)
 		if (m_username.length() > 16) // max of 16 chars on real PS3
 		{
 			m_username = m_username.substr(0, 16);
-			LOG_WARNING(GENERAL, "UserAccount: localusername of userId=%s was too long, cropped to: %s", m_user_id, m_username);
+			gui_log.warning("UserAccount: localusername of userId=%s was too long, cropped to: %s", m_user_id, m_username);
 		}
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "UserAccount: localusername file read error (userId=%s, userDir=%s).", m_user_id, m_user_dir);
+		gui_log.error("UserAccount: localusername file read error (userId=%s, userDir=%s).", m_user_id, m_user_dir);
 	}
 }
 

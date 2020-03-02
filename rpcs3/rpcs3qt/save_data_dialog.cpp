@@ -1,8 +1,11 @@
 ﻿#include "save_data_dialog.h"
 #include "save_data_list_dialog.h"
 
+#include <Emu/System.h>
 #include <Emu/IdManager.h>
-#include <Emu/RSX/Overlays/overlays.h>
+#include <Emu/RSX/Overlays/overlay_save_dialog.h>
+
+#include "Input/pad_thread.h"
 
 s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet)
 {
@@ -12,6 +15,11 @@ s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries,
 		auto result = manager->create<rsx::overlays::save_dialog>()->show(save_entries, focused, op, listSet);
 		if (result != rsx::overlays::user_interface::selection_code::error)
 			return result;
+	}
+
+	if (!Emu.HasGui())
+	{
+		return -2;
 	}
 
 	// Fall back to front-end GUI

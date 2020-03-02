@@ -38,9 +38,9 @@ enum CellError : u32
 	CELL_ENOTMSELF     = 0x80010018, // The file is not a MSELF
 	CELL_ESYSVER       = 0x80010019, // System version error
 	CELL_EAUTHFATAL    = 0x8001001A, // Fatal system error
-	CELL_EDOM          = 0x8001001B, // Math domain violation 
-	CELL_ERANGE        = 0x8001001C, // Math range violation 
-	CELL_EILSEQ        = 0x8001001D, // Illegal multi-byte sequence in input 
+	CELL_EDOM          = 0x8001001B, // Math domain violation
+	CELL_ERANGE        = 0x8001001C, // Math range violation
+	CELL_EILSEQ        = 0x8001001D, // Illegal multi-byte sequence in input
 	CELL_EFPOS         = 0x8001001E, // File position error
 	CELL_EINTR         = 0x8001001F, // Syscall was interrupted
 	CELL_EFBIG         = 0x80010020, // File too large
@@ -71,7 +71,7 @@ enum CellError : u32
 	CELL_EOVERFLOW     = 0x80010039, // Overflow occured
 	CELL_ENOTMOUNTED   = 0x8001003A, // Filesystem not mounted
 	CELL_ENOTSDATA     = 0x8001003B, // Not SData
-	CELL_ESDKVER       = 0x8001003C, // Incorrect version in sys_load_param 
+	CELL_ESDKVER       = 0x8001003C, // Incorrect version in sys_load_param
 	CELL_ENOLICDISC    = 0x8001003D, // Pointer is null. Similar than 0x8001003E but with some PARAM.SFO parameter (TITLE_ID?) embedded.
 	CELL_ENOLICENT     = 0x8001003E, // Pointer is null
 };

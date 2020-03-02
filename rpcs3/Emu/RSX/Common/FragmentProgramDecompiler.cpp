@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "../rsx_methods.h"
 
@@ -7,12 +6,10 @@
 
 #include <algorithm>
 
-FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size) :
-	m_prog(prog),
-	m_size(size),
-	m_const_index(0),
-	m_location(0),
-	m_ctrl(prog.ctrl)
+FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size)
+	: m_size(size)
+	, m_prog(prog)
+	, m_ctrl(prog.ctrl)
 {
 	m_size = 0;
 }
@@ -35,7 +32,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 		case 7: code = "(" + code + " / "; modifier = "8."; break;
 
 		default:
-			LOG_ERROR(RSX, "Bad scale: %d", u32{ src1.scale });
+			rsx_log.error("Bad scale: %d", u32{ src1.scale });
 			break;
 		}
 
@@ -79,11 +76,9 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 			case RSX_FP_OPCODE_COS:
 			case RSX_FP_OPCODE_SIN:
 			case RSX_FP_OPCODE_REFL:
-			case RSX_FP_OPCODE_EX2:
 			case RSX_FP_OPCODE_FRC:
 			case RSX_FP_OPCODE_LIT:
 			case RSX_FP_OPCODE_LIF:
-			case RSX_FP_OPCODE_LRP:
 			case RSX_FP_OPCODE_LG2:
 				break;
 			case RSX_FP_OPCODE_MOV:
@@ -215,7 +210,7 @@ std::string FragmentProgramDecompiler::AddConst()
 		return name;
 	}
 
-	auto data = (be_t<u32>*) ((char*)m_prog.addr + m_size + 4 * u32{sizeof(u32)});
+	auto data = reinterpret_cast<be_t<u32>*>(static_cast<char*>(m_prog.addr) + m_size + 4 * sizeof(u32));
 	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);
 	u32 y = GetData(data[1]);
@@ -290,7 +285,7 @@ std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 p
 		// Doesn't seem to do anything to the input from hw tests, same as 0
 		break;
 	default:
-		LOG_ERROR(RSX, "Unexpected precision modifier (%d)\n", precision);
+		rsx_log.error("Unexpected precision modifier (%d)\n", precision);
 		break;
 	}
 
@@ -579,10 +574,24 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		case 0xD:
 		{
 			// TEX0 - TEX9
-			// Texcoord mask seems to reset the last 2 arguments to 0 and 1 if set
-			if (m_prog.texcoord_is_2d(dst.src_attr_reg_num - 4))
+			// Texcoord 2d mask seems to reset the last 2 arguments to 0 and w if set
+			const u8 texcoord = u8(dst.src_attr_reg_num) - 4;
+			if (m_prog.texcoord_is_point_coord(texcoord))
 			{
-				ret += getFloatTypeName(4) + "(" + reg_var + ".x, " + reg_var + ".y, 0., in_w)";
+				// Point sprite coord generation. Stacks with the 2D override mask.
+				if (m_prog.texcoord_is_2d(texcoord))
+				{
+					ret += getFloatTypeName(4) + "(gl_PointCoord, 0., in_w)";
+					properties.has_w_access = true;
+				}
+				else
+				{
+					ret += getFloatTypeName(4) + "(gl_PointCoord, 1., 0.)";
+				}
+			}
+			else if (m_prog.texcoord_is_2d(texcoord))
+			{
+				ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., in_w)";
 				properties.has_w_access = true;
 			}
 			else
@@ -597,7 +606,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			// UNK
 			if (reg_var == "unk")
 			{
-				LOG_ERROR(RSX, "Bad src reg num: %d", u32{ dst.src_attr_reg_num });
+				rsx_log.error("Bad src reg num: %d", u32{ dst.src_attr_reg_num });
 			}
 
 			ret += reg_var;
@@ -621,7 +630,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		break;
 
 	case RSX_FP_REGISTER_TYPE_UNKNOWN: // ??? Used by a few games, what is it?
-		LOG_ERROR(RSX, "Src type 3 used, opcode=0x%X, dst=0x%X s0=0x%X s1=0x%X s2=0x%X",
+		rsx_log.error("Src type 3 used, opcode=0x%X, dst=0x%X s0=0x%X s1=0x%X s2=0x%X",
 				dst.opcode, dst.HEX, src0.HEX, src1.HEX, src2.HEX);
 
 		ret += AddType3();
@@ -629,7 +638,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		break;
 
 	default:
-		LOG_ERROR(RSX, "Bad src type %d", u32{ src.reg_type });
+		rsx_log.error("Bad src type %d", u32{ src.reg_type });
 		Emu.Pause();
 		break;
 	}
@@ -668,7 +677,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
 		// Hw tests show that the depth export register is default-initialized to 0 and not wpos.z!!
-		m_parr.AddParam(PF_PARAM_NONE, float4_type, "r1", init_value);
+		m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "r1", init_value);
 		shader_is_valid = (!!temp_registers[1].h1_writes);
 	}
 
@@ -702,7 +711,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 		if (!properties.has_discard_op)
 		{
 			// NOTE: Discard operation overrides output
-			LOG_WARNING(RSX, "Shader does not write to any output register and will be NOPed");
+			rsx_log.warning("Shader does not write to any output register and will be NOPed");
 			main = "/*" + main + "*/";
 		}
 	}
@@ -1060,7 +1069,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 
 std::string FragmentProgramDecompiler::Decompile()
 {
-	auto data = (be_t<u32>*) m_prog.addr;
+	auto data = static_cast<be_t<u32>*>(m_prog.addr);
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;
@@ -1115,10 +1124,10 @@ std::string FragmentProgramDecompiler::Decompile()
 			{
 			case RSX_FP_OPCODE_BRK:
 				if (m_loop_count) AddFlowOp("break");
-				else LOG_ERROR(RSX, "BRK opcode found outside of a loop");
+				else rsx_log.error("BRK opcode found outside of a loop");
 				break;
 			case RSX_FP_OPCODE_CAL:
-				LOG_ERROR(RSX, "Unimplemented SIP instruction: CAL");
+				rsx_log.error("Unimplemented SIP instruction: CAL");
 				break;
 			case RSX_FP_OPCODE_FENCT:
 				AddCode("//FENCT");
@@ -1184,7 +1193,7 @@ std::string FragmentProgramDecompiler::Decompile()
 		case RSX_FP_OPCODE_NOP: break;
 		case RSX_FP_OPCODE_KIL:
 			properties.has_discard_op = true;
-			AddFlowOp("discard");
+			AddFlowOp("_kill()");
 			break;
 
 		default:
@@ -1200,7 +1209,7 @@ std::string FragmentProgramDecompiler::Decompile()
 			if (handle_sct_scb(opcode)) break;
 			forced_unit = FORCE_NONE;
 
-			LOG_ERROR(RSX, "Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, prev_force_unit);
+			rsx_log.error("Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, prev_force_unit);
 			break;
 		}
 
@@ -1214,7 +1223,7 @@ std::string FragmentProgramDecompiler::Decompile()
 
 	while (m_code_level > 1)
 	{
-		LOG_ERROR(RSX, "Hanging block found at end of shader. Malformed shader?");
+		rsx_log.error("Hanging block found at end of shader. Malformed shader?");
 
 		m_code_level--;
 		AddCode("}");

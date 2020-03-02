@@ -1,10 +1,15 @@
-#pragma once
+﻿#pragma once
 
 #ifdef LLVM_AVAILABLE
 
 #include "restore_new.h"
 #ifdef _MSC_VER
 #pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
@@ -13,6 +18,8 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
 #endif
 #include "define_new_memleakdetect.h"
 
@@ -2397,7 +2404,10 @@ protected:
 	bool m_is_be;
 
 	// Allow PSHUFB intrinsic
-	bool m_use_ssse3;
+	bool m_use_ssse3 = true;
+
+	// Allow FMA
+	bool m_use_fma = false;
 
 	// IR builder
 	llvm::IRBuilder<>* m_ir;
@@ -2455,8 +2465,16 @@ public:
 		static_assert(sizeof...(FArgs) == sizeof...(Args), "spu_llvm_recompiler::call(): unexpected arg number");
 		const auto type = llvm::FunctionType::get(get_type<RT>(), {args->getType()...}, false);
 		const auto func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction({lame.data(), lame.size()}, type).getCallee());
-		m_engine->addGlobalMapping({lame.data(), lame.size()}, reinterpret_cast<std::uintptr_t>(_func));
-		return m_ir->CreateCall(func, {args...});
+#ifdef _WIN32
+		func->setCallingConv(llvm::CallingConv::Win64);
+#endif
+		m_engine->updateGlobalMapping({lame.data(), lame.size()}, reinterpret_cast<std::uintptr_t>(_func));
+
+		const auto inst = m_ir->CreateCall(func, {args...});
+#ifdef _WIN32
+		inst->setCallingConv(llvm::CallingConv::Win64);
+#endif
+		return inst;
 	}
 
 	// Bitcast with immediate constant folding
@@ -2711,6 +2729,23 @@ public:
 		return result;
 	}
 
+	// TODO: Support doubles
+	auto fre(value_t<f32[4]> a)
+	{
+		decltype(a) result;
+		const auto av = a.eval(m_ir);
+		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rcp.ps", av->getType(), av->getType()).getCallee(), {av});
+		return result;
+	}
+
+	auto frsqe(value_t<f32[4]> a)
+	{
+		decltype(a) result;
+		const auto av = a.eval(m_ir);
+		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rsqrt.ps", av->getType(), av->getType()).getCallee(), {av});
+		return result;
+	}
+
 	template <typename T1, typename T2>
 	value_t<u8[16]> pshufb(T1 a, T2 b)
 	{
@@ -2738,7 +2773,7 @@ public:
 
 			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
 			{
-				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef((const u8*)mask._bytes, 16));
+				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
 				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
 				result.value = m_ir->CreateShuffleVector(data0, zeros, result.value);
 				return result;
@@ -2793,5 +2828,21 @@ public:
 	template <typename T = v128>
 	llvm::Constant* make_const_vector(T, llvm::Type*);
 };
+
+// Format llvm::SizeType
+template <>
+struct fmt_unveil<llvm::TypeSize, void>
+{
+	using type = std::size_t;
+
+	static inline std::size_t get(const llvm::TypeSize& arg)
+	{
+		return arg;
+	}
+};
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 
 #endif

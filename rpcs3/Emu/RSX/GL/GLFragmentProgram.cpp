@@ -44,12 +44,12 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 			OS << "#extension GL_AMD_gpu_shader_half_float: require\n";
 		}
 	}
+
+	glsl::insert_subheader_block(OS);
 }
 
 void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 {
-	std::vector<std::string> inputs_to_declare;
-
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem& PI : PT.items)
@@ -79,6 +79,19 @@ void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 			OS << "layout(location=" << reg_location << ") in vec4 " << var_name << ";\n";
 		}
 	}
+
+	if (m_prog.two_sided_lighting)
+	{
+		if (properties.in_register_mask & in_diff_color)
+		{
+			OS << "layout(location=" << gl::get_varying_register_location("diff_color1") << ") in vec4 diff_color1;\n";
+		}
+
+		if (properties.in_register_mask & in_spec_color)
+		{
+			OS << "layout(location=" << gl::get_varying_register_location("spec_color1") << ") in vec4 spec_color1;\n";
+		}
+	}
 }
 
 void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
@@ -93,7 +106,7 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 
 	const bool float_type = (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) || !device_props.has_native_half_support;
 	const auto reg_type = float_type ? "vec4" : getHalfTypeName(4);
-	for (int i = 0; i < std::size(table); ++i)
+	for (uint i = 0; i < std::size(table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))
 			OS << "layout(location=" << i << ") out vec4 " << table[i].first << ";\n";
@@ -127,7 +140,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 				if (m_shadow_sampled_textures & mask)
 				{
 					if (m_2d_sampled_textures & mask)
-						LOG_ERROR(RSX, "Texture unit %d is sampled as both a shadow texture and a depth texture", index);
+						rsx_log.error("Texture unit %d is sampled as both a shadow texture and a depth texture", index);
 					else
 						samplerType = "sampler2DShadow";
 				}
@@ -176,25 +189,26 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	OS << "layout(std140, binding = 5) uniform TextureParametersBuffer\n";
 	OS << "{\n";
-	OS << "	vec4 texture_parameters[16];\n";	//sampling: x,y scaling and (unused) offsets data
+	OS << "	sampler_info texture_parameters[16];\n";
 	OS << "};\n\n";
 }
 
 void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 {
-	glsl::shader_properties properties2;
-	properties2.domain = glsl::glsl_fragment_program;
-	properties2.require_lit_emulation = properties.has_lit_op;
-	properties2.fp32_outputs = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
-	properties2.require_depth_conversion = m_prog.redirected_textures != 0;
-	properties2.require_wpos = !!(properties.in_register_mask & in_wpos);
-	properties2.require_texture_ops = properties.has_tex_op;
-	properties2.require_shadow_ops = m_prog.shadow_textures != 0;
-	properties2.emulate_coverage_tests = g_cfg.video.antialiasing_level == msaa_level::none;
-	properties2.emulate_shadow_compare = device_props.emulate_depth_compare;
-	properties2.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA;
+	m_shader_props.domain = glsl::glsl_fragment_program;
+	m_shader_props.require_lit_emulation = properties.has_lit_op;
+	m_shader_props.fp32_outputs = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
+	m_shader_props.require_depth_conversion = m_prog.redirected_textures != 0;
+	m_shader_props.require_wpos = !!(properties.in_register_mask & in_wpos);
+	m_shader_props.require_texture_ops = properties.has_tex_op;
+	m_shader_props.require_shadow_ops = m_prog.shadow_textures != 0;
+	m_shader_props.emulate_coverage_tests = true; // g_cfg.video.antialiasing_level == msaa_level::none;
+	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
+	m_shader_props.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA;
+	m_shader_props.disable_early_discard = !::gl::get_driver_caps().vendor_NVIDIA;
+	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
 
-	glsl::insert_glsl_legacy_function(OS, properties2);
+	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
@@ -223,7 +237,7 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	for (auto &reg_name : output_registers)
 	{
 		const auto type = (reg_name[0] == 'r' || !device_props.has_native_half_support)? "vec4" : half4;
-		if (LIKELY(reg_type == type))
+		if (reg_type == type) [[likely]]
 		{
 			registers += ", " + reg_name + " = " + type + "(0.)";
 		}
@@ -292,11 +306,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "\n" << "	fs_main();\n\n";
 
-	glsl::insert_rop(
-		OS,
-		!!(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS),
-		device_props.has_native_half_support,
-		g_cfg.video.antialiasing_level == msaa_level::none);
+	glsl::insert_rop(OS, m_shader_props);
 
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
@@ -387,12 +397,12 @@ void GLFragmentProgram::Compile()
 			char* buf = new char[infoLength]; // Buffer to store infoLog
 
 			glGetShaderInfoLog(id, infoLength, &len, buf); // Retrieve the shader info log into our buffer
-			LOG_ERROR(RSX, "Failed to compile shader: %s", buf); // Write log to the console
+			rsx_log.error("Failed to compile shader: %s", buf); // Write log to the console
 
 			delete[] buf;
 		}
 
-		LOG_NOTICE(RSX, "%s", shader); // Log the text of the shader that failed to compile
+		rsx_log.notice("%s", shader); // Log the text of the shader that failed to compile
 		Emu.Pause(); // Pause the emulator, we can't really continue from here
 	}
 }
@@ -405,7 +415,7 @@ void GLFragmentProgram::Delete()
 	{
 		if (Emu.IsStopped())
 		{
-			LOG_WARNING(RSX, "GLFragmentProgram::Delete(): glDeleteShader(%d) avoided", id);
+			rsx_log.warning("GLFragmentProgram::Delete(): glDeleteShader(%d) avoided", id);
 		}
 		else
 		{

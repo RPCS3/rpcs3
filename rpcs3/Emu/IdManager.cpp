@@ -6,7 +6,6 @@ shared_mutex id_manager::g_mutex;
 
 thread_local DECLARE(idm::g_id);
 DECLARE(idm::g_map);
-DECLARE(fxm::g_vec);
 
 id_manager::id_map::pointer idm::allocate_id(const id_manager::id_key& info, u32 base, u32 step, u32 count)
 {
@@ -20,13 +19,9 @@ id_manager::id_map::pointer idm::allocate_id(const id_manager::id_key& info, u32
 	{
 		// Try to emplace back
 		const u32 _next = base + step * ::size32(vec);
-
-		if (_next >= base && _next < base + step * count)
-		{
-			g_id = _next;
-			vec.emplace_back(id_manager::id_key(_next, info.type()), nullptr);
-			return &vec.back();
-		}
+		g_id = _next;
+		vec.emplace_back(id_manager::id_key(_next, info.type()), nullptr);
+		return &vec.back();
 	}
 
 	// Check all IDs starting from "next id" (TODO)
@@ -66,21 +61,5 @@ void idm::clear()
 		}
 
 		map.clear();
-	}
-}
-
-void fxm::init()
-{
-	// Allocate
-	g_vec.resize(id_manager::typeinfo::get_count());
-	fxm::clear();
-}
-
-void fxm::clear()
-{
-	// Call recorded finalization functions for all IDs
-	for (auto& val : g_vec)
-	{
-		val.reset();
 	}
 }

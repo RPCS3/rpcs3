@@ -13,10 +13,18 @@ namespace rsx
 
 namespace gl
 {
+	struct pixel_buffer_layout
+	{
+		GLenum format;
+		GLenum type;
+		u8     size;
+		bool   swap_bytes;
+	};
+
 	GLenum get_target(rsx::texture_dimension_extended type);
 	GLenum get_sized_internal_format(u32 texture_format);
 	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format);
-	std::tuple<GLenum, GLenum, bool> get_format_type(texture::internal_format format);
+	pixel_buffer_layout get_format_type(texture::internal_format format);
 	GLenum wrap_mode(rsx::texture_wrap_mode wrap);
 	float max_aniso(rsx::texture_max_anisotropy aniso);
 	std::array<GLenum, 4> get_swizzle_remap(u32 texture_format);
@@ -24,7 +32,9 @@ namespace gl
 	viewable_image* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, rsx::texture_dimension_extended type);
 
 	bool formats_are_bitcast_compatible(GLenum format1, GLenum format2);
+	void copy_typeless(texture* dst, const texture* src, const coord3u& dst_region, const coord3u& src_region);
 	void copy_typeless(texture* dst, const texture* src);
+
 	/**
 	 * is_swizzled - determines whether input bytes are in morton order
 	 * subresources_layout - descriptor of the mipmap levels in memory
@@ -102,4 +112,6 @@ namespace gl
 
 		void apply_defaults(GLenum default_filter = GL_NEAREST);
 	};
+
+	extern buffer g_typeless_transfer_buffer;
 }

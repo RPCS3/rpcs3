@@ -128,7 +128,7 @@ namespace vk
 				}
 			}
 
-			LOG_NOTICE(RSX, "texture not found in program: %s", uniform_name.c_str());
+			rsx_log.notice("texture not found in program: %s", uniform_name.c_str());
 		}
 
 		void program::bind_uniform(const VkDescriptorImageInfo & image_descriptor, int texture_unit, ::glsl::program_domain domain, VkDescriptorSet &descriptor_set, bool is_stencil_mirror)
@@ -166,7 +166,7 @@ namespace vk
 				return;
 			}
 
-			LOG_NOTICE(RSX, "texture not found in program: %stex%u", (domain == ::glsl::program_domain::glsl_vertex_program)? "v" : "", texture_unit);
+			rsx_log.notice("texture not found in program: %stex%u", (domain == ::glsl::program_domain::glsl_vertex_program)? "v" : "", texture_unit);
 		}
 
 		void program::bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set)
@@ -204,8 +204,8 @@ namespace vk
 					return;
 				}
 			}
-			
-			LOG_NOTICE(RSX, "vertex buffer not found in program: %s", binding_name.c_str());
+
+			rsx_log.notice("vertex buffer not found in program: %s", binding_name.c_str());
 		}
 
 		void program::bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set)
@@ -226,22 +226,6 @@ namespace vk
 
 			vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
 			attribute_location_mask |= (1ull << binding_point);
-		}
-
-		u64 program::get_vertex_input_attributes_mask()
-		{
-			if (vertex_attributes_mask)
-				return vertex_attributes_mask;
-
-			for (const auto &uniform : uniforms[program_input_type::input_type_texel_buffer])
-			{
-				if (uniform.domain == program_domain::glsl_vertex_program)
-				{
-					vertex_attributes_mask |= (1ull << (uniform.location - VERTEX_BUFFERS_FIRST_BIND_SLOT));
-				}
-			}
-
-			return vertex_attributes_mask;
 		}
 	}
 }

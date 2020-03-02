@@ -6,7 +6,8 @@
 #include "Utilities/StrUtil.h"
 #include "Utilities/types.h"
 
-enum class FUNCTION {
+enum class FUNCTION
+{
 	FUNCTION_DP2,
 	FUNCTION_DP2A,
 	FUNCTION_DP3,
@@ -47,7 +48,8 @@ enum class FUNCTION {
 	FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA
 };
 
-enum class COMPARE {
+enum class COMPARE
+{
 	FUNCTION_SEQ,
 	FUNCTION_SGE,
 	FUNCTION_SGT,
@@ -224,7 +226,7 @@ public:
 	{
 		std::unordered_map<char, char> swizzle;
 
-		static std::unordered_map<int, char> pos_to_swizzle =
+		static std::unordered_map<uint, char> pos_to_swizzle =
 		{
 			{ 0, 'x' },
 			{ 1, 'y' },
@@ -232,18 +234,18 @@ public:
 			{ 3, 'w' }
 		};
 
-		for (auto &i : pos_to_swizzle)
+		for (auto& p : pos_to_swizzle)
 		{
-			swizzle[i.second] = swizzles[0].length() > i.first ? swizzles[0][i.first] : 0;
+			swizzle[p.second] = swizzles[0].length() > p.first ? swizzles[0][p.first] : 0;
 		}
 
-		for (int i = 1; i < swizzles.size(); ++i)
+		for (uint i = 1; i < swizzles.size(); ++i)
 		{
 			std::unordered_map<char, char> new_swizzle;
 
-			for (auto &sw : pos_to_swizzle)
+			for (auto& p : pos_to_swizzle)
 			{
-				new_swizzle[sw.second] = swizzle[swizzles[i].length() <= sw.first ? '\0' : swizzles[i][sw.first]];
+				new_swizzle[p.second] = swizzle[swizzles[i].length() <= p.first ? '\0' : swizzles[i][p.first]];
 			}
 
 			swizzle = new_swizzle;
@@ -252,10 +254,10 @@ public:
 		swizzles.clear();
 		std::string new_swizzle;
 
-		for (auto &i : pos_to_swizzle)
+		for (auto& p : pos_to_swizzle)
 		{
-			if (swizzle[i.second] != '\0')
-				new_swizzle += swizzle[i.second];
+			if (swizzle[p.second] != '\0')
+				new_swizzle += swizzle[p.second];
 		}
 
 		swizzles.push_back(new_swizzle);
@@ -280,12 +282,12 @@ public:
 		const auto this_size = get_vector_size();
 		const auto other_size = other.get_vector_size();
 
-		if (LIKELY(this_size == other_size))
+		if (this_size == other_size) [[likely]]
 		{
 			return other_var;
 		}
 
-		if (LIKELY(this_size < other_size))
+		if (this_size < other_size) [[likely]]
 		{
 			switch (this_size)
 			{

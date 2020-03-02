@@ -1,5 +1,8 @@
 ﻿#include "stdafx.h"
 
+#include "Crypto/sha1.h"
+#include "Crypto/key_vault.h"
+
 #include "PUP.h"
 
 pup_object::pup_object(const fs::file& file): m_file(file)
@@ -10,6 +13,7 @@ pup_object::pup_object(const fs::file& file): m_file(file)
 		return;
 	}
 
+	m_file.seek(0);
 	PUPHeader m_header;
 	m_file.read(m_header);
 	if (m_header.magic != "SCEUF\0\0\0"_u64)
@@ -39,4 +43,25 @@ fs::file pup_object::get_file(u64 entry_id)
 		}
 	}
 	return fs::file();
+}
+
+bool pup_object::validate_hashes()
+{
+	for (size_t i = 0; i < m_file_tbl.size(); i++)
+	{
+		u8 *hash = m_hash_tbl[i].hash;
+		PUPFileEntry file = m_file_tbl[i];
+
+		std::vector<u8> buffer(file.data_length);
+		m_file.seek(file.data_offset);
+		m_file.read(buffer.data(), file.data_length);
+
+		u8 output[20] = {};
+		sha1_hmac(PUP_KEY, sizeof(PUP_KEY), buffer.data(), buffer.size(), output);
+		if (memcmp(output, hash, 20) != 0)
+		{
+			return false;
+		}
+	}
+	return true;
 }

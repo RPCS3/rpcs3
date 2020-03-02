@@ -68,7 +68,7 @@ struct ppu_segment
 // PPU Module Information
 struct ppu_module
 {
-	uchar sha1[20];
+	uchar sha1[20]{};
 	std::string name;
 	std::string path;
 	std::string cache;
@@ -1029,7 +1029,7 @@ struct ppu_acontext
 			const u64 bdiv = rhs.div();
 
 			// Check overflow, generate normalized range
-			if (adiv != -1 && bdiv != -1 && adiv <= adiv + bdiv)
+			if (adiv != umax && bdiv != umax && adiv <= adiv + bdiv)
 			{
 				r = range(imin + rhs.imin, imax + rhs.imax);
 			}

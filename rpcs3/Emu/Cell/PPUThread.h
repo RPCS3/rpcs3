@@ -4,6 +4,8 @@
 #include "../Memory/vm_ptr.h"
 #include "Utilities/lockless.h"
 
+LOG_CHANNEL(ppu_log, "PPU");
+
 enum class ppu_cmd : u32
 {
 	null,
@@ -42,9 +44,6 @@ public:
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
 
-	static void on_cleanup(named_thread<ppu_thread>*);
-
-	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_sleep() override;
@@ -166,7 +165,7 @@ public:
 	u64 rtime{0};
 	u64 rdata{0}; // Reservation data
 
-	atomic_t<u32> prio{0}; // Thread priority (0..3071)
+	atomic_t<s32> prio{0}; // Thread priority (0..3071)
 	const u32 stack_size; // Stack size
 	const u32 stack_addr; // Stack address
 
@@ -184,7 +183,8 @@ public:
 	const char* current_function{}; // Current function name for diagnosis, optimized for speed.
 	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
 
-	lf_value<std::string> ppu_name; // Thread name
+	// Thread name
+	stx::atomic_cptr<std::string> ppu_tname;
 
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();
@@ -276,12 +276,12 @@ struct ppu_gpr_cast_impl<vm::_ref_base<T, AT>, void>
 template <>
 struct ppu_gpr_cast_impl<vm::null_t, void>
 {
-	static inline u64 to(const vm::null_t& value)
+	static inline u64 to(const vm::null_t& /*value*/)
 	{
 		return 0;
 	}
 
-	static inline vm::null_t from(const u64 reg)
+	static inline vm::null_t from(const u64 /*reg*/)
 	{
 		return vm::null;
 	}

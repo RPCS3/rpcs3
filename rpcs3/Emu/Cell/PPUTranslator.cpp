@@ -90,7 +90,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 			// case 26:
 			// case 28:
 			{
-				LOG_NOTICE(PPU, "Ignoring relative relocation at 0x%x (%u)", rel.addr, rel.type);
+				ppu_log.notice("Ignoring relative relocation at 0x%x (%u)", rel.addr, rel.type);
 				continue;
 			}
 
@@ -107,7 +107,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 			case 73:
 			case 78:
 			{
-				LOG_ERROR(PPU, "Ignoring 64-bit relocation at 0x%x (%u)", rel.addr, rel.type);
+				ppu_log.error("Ignoring 64-bit relocation at 0x%x (%u)", rel.addr, rel.type);
 				continue;
 			}
 			}
@@ -115,7 +115,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 			// Align relocation address (TODO)
 			if (!m_relocs.emplace(rel.addr & ~3, &rel).second)
 			{
-				LOG_ERROR(PPU, "Relocation repeated at 0x%x (%u)", rel.addr, rel.type);
+				ppu_log.error("Relocation repeated at 0x%x (%u)", rel.addr, rel.type);
 			}
 		}
 	}
@@ -200,7 +200,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 			if (m_rel)
 			{
 				// This is very bad. m_rel is normally set to nullptr after a relocation is handled (so it wasn't)
-				LOG_ERROR(PPU, "LLVM: [0x%x] Unsupported relocation(%u) in '%s'. Please report.", rel_found->first, m_rel->type, m_info.name);
+				ppu_log.error("LLVM: [0x%x] Unsupported relocation(%u) in '%s'. Please report.", rel_found->first, m_rel->type, m_info.name);
 				return nullptr;
 			}
 		}
@@ -260,7 +260,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 	if (!indirect)
 	{
-		if ((!m_reloc && target < 0x10000) || target >= -0x10000)
+		if ((!m_reloc && target < 0x10000) || target >= u64{} - 0x10000)
 		{
 			Trap();
 			return;
@@ -563,7 +563,7 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 
 void PPUTranslator::CompilationError(const std::string& error)
 {
-	LOG_ERROR(PPU, "LLVM: [0x%08x] Error: %s", m_addr + (m_reloc ? m_reloc->addr : 0), error);
+	ppu_log.error("LLVM: [0x%08x] Error: %s", m_addr + (m_reloc ? m_reloc->addr : 0), error);
 }
 
 
@@ -1943,7 +1943,7 @@ void PPUTranslator::RLWIMI(ppu_opcode_t op)
 		result = m_ir->CreateAnd(RotateLeft(DuplicateExt(GetGpr(op.rs, 32)), op.sh32), mask);
 	}
 
-	if (mask != -1)
+	if (mask != umax)
 	{
 		// Insertion
 		result = m_ir->CreateOr(result, m_ir->CreateAnd(GetGpr(op.ra), ~mask));
@@ -2193,7 +2193,7 @@ void PPUTranslator::RLDIMI(ppu_opcode_t op)
 		result = m_ir->CreateAnd(RotateLeft(GetGpr(op.rs), sh), mask);
 	}
 
-	if (mask != -1)
+	if (mask != umax)
 	{
 		// Insertion
 		result = m_ir->CreateOr(result, m_ir->CreateAnd(GetGpr(op.ra), ~mask));
@@ -2303,7 +2303,7 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 
 		const u64 pos = countLeadingZeros<u32>(op.crm, ZB_Width) - 24;
 
-		if (pos >= 8 || 0x80 >> pos != op.crm)
+		if (pos >= 8 || 0x80u >> pos != op.crm)
 		{
 			CompilationError("MFOCRF: Undefined behaviour");
 			SetGpr(op.rd, UndefValue::get(GetType<u64>()));
@@ -2565,7 +2565,7 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 		// MTOCRF
 		const u64 pos = countLeadingZeros<u32>(op.crm, ZB_Width) - 24;
 
-		if (pos >= 8 || 128 >> pos != op.crm)
+		if (pos >= 8 || 0x80u >> pos != op.crm)
 		{
 			CompilationError("MTOCRF: Undefined behaviour");
 			return;
@@ -2794,7 +2794,7 @@ void PPUTranslator::LHZUX(ppu_opcode_t op)
 
 void PPUTranslator::XOR(ppu_opcode_t op)
 {
-	const auto result = op.rs == op.rb ? (Value*)m_ir->getInt64(0) : m_ir->CreateXor(GetGpr(op.rs), GetGpr(op.rb));
+	const auto result = op.rs == op.rb ? static_cast<Value*>(m_ir->getInt64(0)) : m_ir->CreateXor(GetGpr(op.rs), GetGpr(op.rb));
 	SetGpr(op.ra, result);
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
@@ -2896,7 +2896,7 @@ void PPUTranslator::STHX(ppu_opcode_t op)
 
 void PPUTranslator::ORC(ppu_opcode_t op)
 {
-	const auto result = op.rs == op.rb ? (Value*)m_ir->getInt64(-1) : m_ir->CreateOr(GetGpr(op.rs), m_ir->CreateNot(GetGpr(op.rb)));
+	const auto result = op.rs == op.rb ? static_cast<Value*>(m_ir->getInt64(-1)) : m_ir->CreateOr(GetGpr(op.rs), m_ir->CreateNot(GetGpr(op.rb)));
 	SetGpr(op.ra, result);
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
@@ -3943,7 +3943,7 @@ void PPUTranslator::MTFSFI(ppu_opcode_t op)
 
 void PPUTranslator::MFFS(ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "LLVM: [0x%08x] Warning: MFFS", m_addr + (m_reloc ? m_reloc->addr : 0));
+	ppu_log.warning("LLVM: [0x%08x] Warning: MFFS", m_addr + (m_reloc ? m_reloc->addr : 0));
 
 	Value* result = m_ir->getInt64(0);
 
@@ -3959,7 +3959,7 @@ void PPUTranslator::MFFS(ppu_opcode_t op)
 
 void PPUTranslator::MTFSF(ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "LLVM: [0x%08x] Warning: MTFSF", m_addr + (m_reloc ? m_reloc->addr : 0));
+	ppu_log.warning("LLVM: [0x%08x] Warning: MTFSF", m_addr + (m_reloc ? m_reloc->addr : 0));
 
 	const auto value = GetFpr(op.frb, 32, true);
 
@@ -4004,8 +4004,10 @@ void PPUTranslator::FRSP(ppu_opcode_t op)
 void PPUTranslator::FCTIW(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	SetFpr(op.frd, m_ir->CreateSelect(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), f64(INT32_MAX))), m_ir->getInt32(INT32_MAX), 
-	Call(GetType<s32>(), "llvm.x86.sse2.cvtsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
+	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(31.))), GetType<s32>());
+
+	// fix result saturation (0x80000000 -> 0x7fffffff)
+	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s32>(), "llvm.x86.sse2.cvtsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fr", b));
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fi", b));
@@ -4353,12 +4355,12 @@ void PPUTranslator::SetVr(u32 vr, Value* value)
 		if (type->getScalarType()->isIntegerTy(1))
 		{
 			// Sign-extend bool values
-			value = SExt(value, ScaleType(type, 7 - s32(std::log2(size))));
+			value = SExt(value, ScaleType(type, 7 - s32(std::log2(+size))));
 		}
 		else if (size == 256 || size == 512)
 		{
 			// Truncate big vectors
-			value = Trunc(value, ScaleType(type, 7 - s32(std::log2(size))));
+			value = Trunc(value, ScaleType(type, 7 - s32(std::log2(+size))));
 		}
 	}
 

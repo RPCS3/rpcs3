@@ -1,26 +1,31 @@
 ﻿#include "headless_application.h"
 
-#include "Emu/System.h"
-
 #include "Emu/RSX/GSRender.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
+#include "Emu/Cell/Modules/cellOskDialog.h"
+#include "Emu/Cell/Modules/cellSaveData.h"
+#include "Emu/Cell/Modules/sceNpTrophy.h"
+
+#include <clocale>
 
 // For now, a trivial constructor/destructor. May add command line usage later.
 headless_application::headless_application(int& argc, char** argv) : QCoreApplication(argc, argv)
 {
 }
 
-void headless_application::Init(const bool show_gui)
+void headless_application::Init()
 {
-	Q_UNUSED(show_gui);
-
 	// Force init the emulator
-	InitializeEmulator("1", true); // TODO: get user from cli args if possible
+	InitializeEmulator("1", true, false); // TODO: get user from cli args if possible
 
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
 
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
+
+	// As per QT recommendations to avoid conflicts for POSIX functions
+	std::setlocale(LC_NUMERIC, "C");
 }
 
 void headless_application::InitializeConnects()
@@ -41,7 +46,7 @@ void headless_application::InitializeCallbacks()
 			quit();
 		}
 	};
-	callbacks.call_after = [=](std::function<void()> func)
+	callbacks.call_after = [=, this](std::function<void()> func)
 	{
 		RequestCallAfter(std::move(func));
 	};
@@ -52,7 +57,7 @@ void headless_application::InitializeCallbacks()
 	callbacks.get_save_dialog                = []() -> std::unique_ptr<SaveDialogBase> { return std::unique_ptr<SaveDialogBase>(); };
 	callbacks.get_trophy_notification_dialog = []() -> std::unique_ptr<TrophyNotificationBase> { return std::unique_ptr<TrophyNotificationBase>(); };
 
-	callbacks.on_run    = []() {};
+	callbacks.on_run    = [](bool /*start_playtime*/) {};
 	callbacks.on_pause  = []() {};
 	callbacks.on_resume = []() {};
 	callbacks.on_stop   = []() {};

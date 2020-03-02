@@ -1,5 +1,4 @@
-#include "stdafx.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -39,7 +38,7 @@ struct DemuxerStream
 	{
 		if (sizeof(T) > size) return false;
 
-		out = vm::_ref<T>(addr);
+		std::memcpy(&out, vm::base(addr), sizeof(T));
 		addr += sizeof(T);
 		size -= sizeof(T);
 
@@ -51,7 +50,7 @@ struct DemuxerStream
 	{
 		if (sizeof(T) + shift > size) return false;
 
-		out = vm::_ref<T>(addr + shift);
+		std::memcpy(&out, vm::base(addr + shift), sizeof(T));
 		return true;
 	}
 
@@ -68,12 +67,12 @@ struct DemuxerStream
 
 	u64 get_ts(u8 c)
 	{
-		u8 v[4]; get((u32&)v);
+		u8 v[4]; get(v);
 		return
-			(((u64)c & 0x0e) << 29) |
-			(((u64)v[0]) << 21) |
-			(((u64)v[1] & 0x7e) << 15) |
-			(((u64)v[2]) << 7) | ((u64)v[3] >> 1);
+			((u64{c} & 0x0e) << 29) |
+			((u64{v[0]}) << 21) |
+			((u64{v[1]} & 0x7e) << 15) |
+			((u64{v[2]}) << 7) | (u64{v[3]} >> 1);
 	}
 };
 
@@ -135,9 +134,9 @@ class ElementaryStream
 	std::mutex m_mutex;
 
 	squeue_t<u32> entries; // AU starting addresses
-	u32 put_count; // number of AU written
-	u32 got_count; // number of AU obtained by GetAu(Ex)
-	u32 released; // number of AU released
+	u32 put_count = 0; // number of AU written
+	u32 got_count = 0; // number of AU obtained by GetAu(Ex)
+	u32 released = 0; // number of AU released
 
 	u32 put; // AU that is being written now
 
@@ -163,9 +162,9 @@ public:
 	const u32 spec; //addr
 
 	std::vector<u8> raw_data; // demultiplexed data stream (managed by demuxer thread)
-	size_t raw_pos; // should be <= raw_data.size()
-	u64 last_dts;
-	u64 last_pts;
+	std::size_t raw_pos = 0; // should be <= raw_data.size()
+	u64 last_dts = CODEC_TS_INVALID;
+	u64 last_pts = CODEC_TS_INVALID;
 
 	void push(DemuxerStream& stream, u32 size); // called by demuxer thread (not multithread-safe)
 
@@ -188,17 +187,13 @@ public:
 	const u32 memSize;
 	const vm::ptr<CellDmuxCbMsg> cbFunc;
 	const u32 cbArg;
-	volatile bool is_finished;
-	volatile bool is_closed;
-	atomic_t<bool> is_running;
-	atomic_t<bool> is_working;
+	volatile bool is_finished = false;
+	volatile bool is_closed = false;
+	atomic_t<bool> is_running = false;
+	atomic_t<bool> is_working = false;
 
 	Demuxer(u32 addr, u32 size, vm::ptr<CellDmuxCbMsg> func, u32 arg)
 		: ppu_thread({}, "", 0)
-		, is_finished(false)
-		, is_closed(false)
-		, is_running(false)
-		, is_working(false)
 		, memAddr(addr)
 		, memSize(size)
 		, cbFunc(func)
@@ -210,7 +205,7 @@ public:
 	{
 		DemuxerTask task;
 		DemuxerStream stream = {};
-		ElementaryStream* esALL[96]; memset(esALL, 0, sizeof(esALL));
+		ElementaryStream* esALL[96]{};
 		ElementaryStream** esAVC = &esALL[0]; // AVC (max 16 minus M2V count)
 		ElementaryStream** esM2V = &esALL[16]; // M2V (max 16 minus AVC count)
 		ElementaryStream** esDATA = &esALL[32]; // user data (max 16)
@@ -380,10 +375,10 @@ public:
 
 							if (data[0] != 0x0f || data[1] != 0xd0)
 							{
-								fmt::throw_exception("ATX: 0x0fd0 header not found (ats=0x%llx)" HERE, *(be_t<u64>*)data);
+								fmt::throw_exception("ATX: 0x0fd0 header not found (ats=0x%llx)" HERE, *reinterpret_cast<be_t<u64>*>(data));
 							}
 
-							u32 frame_size = ((((u32)data[2] & 0x3) << 8) | (u32)data[3]) * 8 + 8;
+							u32 frame_size = (((u32{data[2]} & 0x3) << 8) | u32{data[3]}) * 8 + 8;
 
 							if (size < frame_size + 8) break; // skip non-complete AU
 
@@ -445,7 +440,7 @@ public:
 					{
 						ElementaryStream& es = *esAVC[ch];
 
-						const u32 old_size = (u32)es.raw_data.size();
+						const u32 old_size = ::size32(es.raw_data);
 						if (es.isfull(old_size))
 						{
 							stream = backup;
@@ -524,7 +519,7 @@ public:
 				}
 
 				stream = task.stream;
-				//LOG_NOTICE(HLE, "*** stream updated(addr=0x%x, size=0x%x, discont=%d, userdata=0x%llx)",
+				//cellDmux.notice("*** stream updated(addr=0x%x, size=0x%x, discont=%d, userdata=0x%llx)",
 					//stream.addr, stream.size, stream.discontinuity, stream.userdata);
 				break;
 			}
@@ -611,7 +606,7 @@ public:
 			{
 				ElementaryStream& es = *task.es.es_ptr;
 
-				const u32 old_size = (u32)es.raw_data.size();
+				const u32 old_size = ::size32(es.raw_data);
 				if (old_size && (es.fidMajor & -0x10) == 0xe0)
 				{
 					// TODO (it's only for AVC, some ATX data may be lost)
@@ -632,9 +627,9 @@ public:
 					lv2_obj::sleep(*this);
 				}
 
-				if (es.raw_data.size())
+				if (!es.raw_data.empty())
 				{
-					cellDmux.error("dmuxFlushEs: 0x%x bytes lost (es_id=%d)", (u32)es.raw_data.size(), es.id);
+					cellDmux.error("dmuxFlushEs: 0x%x bytes lost (es_id=%d)", ::size32(es.raw_data), es.id);
 				}
 
 				// callback
@@ -659,7 +654,7 @@ public:
 
 			default:
 			{
-				fmt::throw_exception("Demuxer thread error: unknown task (0x%x)" HERE, (u32)task.type);
+				fmt::throw_exception("Demuxer thread error: unknown task (0x%x)" HERE, +task.type);
 			}
 			}
 		}
@@ -739,7 +734,8 @@ PesHeader::PesHeader(DemuxerStream& stream)
 }
 
 ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
-	: dmux(dmux)
+	: put(align(addr, 128))
+	, dmux(dmux)
 	, memAddr(align(addr, 128))
 	, memSize(size - (addr - memAddr))
 	, fidMajor(fidMajor)
@@ -749,13 +745,6 @@ ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMaj
 	, cbFunc(cbFunc)
 	, cbArg(cbArg)
 	, spec(spec)
-	, put(align(addr, 128))
-	, put_count(0)
-	, got_count(0)
-	, released(0)
-	, raw_pos(0)
-	, last_dts(CODEC_TS_INVALID)
-	, last_pts(CODEC_TS_INVALID)
 {
 }
 
@@ -816,10 +805,10 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 		auto info = vm::ptr<CellDmuxAuInfoEx>::make(put);
 		info->auAddr = put + 128;
 		info->auSize = size;
-		info->dts.lower = (u32)(dts);
-		info->dts.upper = (u32)(dts >> 32);
-		info->pts.lower = (u32)(pts);
-		info->pts.upper = (u32)(pts >> 32);
+		info->dts.lower = static_cast<u32>(dts);
+		info->dts.upper = static_cast<u32>(dts >> 32);
+		info->pts.lower = static_cast<u32>(pts);
+		info->pts.upper = static_cast<u32>(pts >> 32);
 		info->isRap = rap;
 		info->reserved = 0;
 		info->userData = userdata;
@@ -830,10 +819,10 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 		auto inf = vm::ptr<CellDmuxAuInfo>::make(put + 64);
 		inf->auAddr = put + 128;
 		inf->auSize = size;
-		inf->dtsLower = (u32)(dts);
-		inf->dtsUpper = (u32)(dts >> 32);
-		inf->ptsLower = (u32)(pts);
-		inf->ptsUpper = (u32)(pts >> 32);
+		inf->dtsLower = static_cast<u32>(dts);
+		inf->dtsUpper = static_cast<u32>(dts >> 32);
+		inf->ptsLower = static_cast<u32>(pts);
+		inf->ptsUpper = static_cast<u32>(pts >> 32);
 		inf->auMaxSize = 0; // ?????
 		inf->userData = userdata;
 

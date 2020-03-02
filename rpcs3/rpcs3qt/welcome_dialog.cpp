@@ -1,15 +1,10 @@
-#include "welcome_dialog.h"
+﻿#include "welcome_dialog.h"
 #include "ui_welcome_dialog.h"
 
 #include "gui_settings.h"
 
-#include "Emu/System.h"
-
 #include <QPushButton>
 #include <QCheckBox>
-#include <QLabel>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
 
 welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::welcome_dialog)
 {
@@ -21,12 +16,12 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::we
 
 	ui->okay->setEnabled(false);
 
-	connect(ui->i_have_read, &QCheckBox::clicked, [=](bool checked)
+	connect(ui->i_have_read, &QCheckBox::clicked, [=, this](bool checked)
 	{
 		ui->okay->setEnabled(checked);
 	});
 
-	connect(ui->do_not_show, &QCheckBox::clicked, [=](bool checked)
+	connect(ui->do_not_show, &QCheckBox::clicked, [=, this](bool checked)
 	{
 		settings->SetValue(gui::ib_show_welcome, QVariant(!checked));
 	});

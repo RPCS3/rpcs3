@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "PPCDisAsm.h"
 #include "SPUOpcodes.h"
@@ -83,10 +83,21 @@ private:
 		return spu_branch_target(dump_pc, imm);
 	}
 
+	static const char* BrIndirectSuffix(u32 de)
+	{
+		switch (de)
+		{
+		case 0b01: return "e";
+		case 0b10: return "d";
+		//case 0b11: return "(undef)";
+		default: return "";
+		}
+	}
+
 private:
 	std::string& FixOp(std::string& op)
 	{
-		op.append(std::max<int>(10 - (int)op.length(), 0),' ');
+		op.append(std::max<int>(10 - ::narrow<int>(op.size()), 0),' ');
 		return op;
 	}
 	void DisAsm(const char* op)
@@ -134,6 +145,16 @@ private:
 		Write(fmt::format("%s %s,%s,%s,%s", FixOp(op).c_str(), a1, a2, a3, a4));
 	}
 
+	using field_de_t = decltype(spu_opcode_t{}.de);
+	void DisAsm(std::string op, field_de_t de, const char* a1)
+	{
+		Write(fmt::format("%s %s", FixOp(op.append(BrIndirectSuffix(de))).c_str(), a1));
+	}
+	void DisAsm(std::string op, field_de_t de, const char* a1, const char* a2)
+	{
+		Write(fmt::format("%s %s", FixOp(op.append(BrIndirectSuffix(de))).c_str(), a1, a2));
+	}
+
 public:
 	u32 disasm(u32 pc) override;
 
@@ -142,7 +163,7 @@ public:
 	{
 		op.rb ? UNK(op) : DisAsm("stop", op.opcode & 0x3fff);
 	}
-	void LNOP(spu_opcode_t op)
+	void LNOP(spu_opcode_t /*op*/)
 	{
 		DisAsm("lnop");
 	}
@@ -150,7 +171,7 @@ public:
 	{
 		DisAsm(op.c ? "syncc" : "sync");
 	}
-	void DSYNC(spu_opcode_t op)
+	void DSYNC(spu_opcode_t /*op*/)
 	{
 		DisAsm("dsync");
 	}
@@ -288,19 +309,19 @@ public:
 	}
 	void BIZ(spu_opcode_t op)
 	{
-		DisAsm("biz", spu_reg_name[op.rt], spu_reg_name[op.ra]);
+		DisAsm("biz", op.de, spu_reg_name[op.rt], spu_reg_name[op.ra]);
 	}
 	void BINZ(spu_opcode_t op)
 	{
-		DisAsm("binz", spu_reg_name[op.rt], spu_reg_name[op.ra]);
+		DisAsm("binz", op.de, spu_reg_name[op.rt], spu_reg_name[op.ra]);
 	}
 	void BIHZ(spu_opcode_t op)
 	{
-		DisAsm("bihz", spu_reg_name[op.rt], spu_reg_name[op.ra]);
+		DisAsm("bihz", op.de, spu_reg_name[op.rt], spu_reg_name[op.ra]);
 	}
 	void BIHNZ(spu_opcode_t op)
 	{
-		DisAsm("bihnz", spu_reg_name[op.rt], spu_reg_name[op.ra]);
+		DisAsm("bihnz", op.de, spu_reg_name[op.rt], spu_reg_name[op.ra]);
 	}
 	void STOPD(spu_opcode_t op)
 	{
@@ -312,19 +333,19 @@ public:
 	}
 	void BI(spu_opcode_t op)
 	{
-		DisAsm("bi", spu_reg_name[op.ra]);
+		DisAsm("bi", op.de, spu_reg_name[op.ra]);
 	}
 	void BISL(spu_opcode_t op)
 	{
-		DisAsm("bisl", spu_reg_name[op.rt], spu_reg_name[op.ra]);
+		DisAsm("bisl", op.de, spu_reg_name[op.rt], spu_reg_name[op.ra]);
 	}
 	void IRET(spu_opcode_t op)
 	{
-		DisAsm("iret", spu_reg_name[op.ra]);
+		DisAsm("iret", op.de, spu_reg_name[op.ra]);
 	}
 	void BISLED(spu_opcode_t op)
 	{
-		DisAsm("bisled", spu_reg_name[op.rt], spu_reg_name[op.ra]);
+		DisAsm("bisled", op.de, spu_reg_name[op.rt], spu_reg_name[op.ra]);
 	}
 	void HBR(spu_opcode_t op)
 	{

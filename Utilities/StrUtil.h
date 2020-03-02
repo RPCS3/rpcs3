@@ -13,7 +13,7 @@ inline void strcpy_trunc(char (&dst)[N], const std::string& src)
 {
 	const std::size_t count = src.size() >= N ? N - 1 : src.size();
 	std::memcpy(dst, src.c_str(), count);
-	dst[count] = '\0';
+	std::memset(dst + count, 0, N - count);
 }
 
 // Copy null-terminated string from char array to another char array with truncation
@@ -22,13 +22,7 @@ inline void strcpy_trunc(char (&dst)[N], const char (&src)[N2])
 {
 	const std::size_t count = N2 >= N ? N - 1 : N2;
 	std::memcpy(dst, src, count);
-	dst[count] = '\0';
-}
-
-template <std::size_t N>
-inline bool ends_with(const std::string& src, const char (&end)[N])
-{
-	return src.size() >= N - 1 && src.compare(src.size() - (N - 1), N - 1, end, N - 1) == 0;
+	std::memset(dst + count, 0, N - count);
 }
 
 namespace fmt

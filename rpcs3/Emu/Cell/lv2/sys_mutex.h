@@ -16,7 +16,7 @@ struct sys_mutex_attribute_t
 
 	union
 	{
-		u64 name_u64;
+		nse_t<u64, 1> name_u64;
 		char name[sizeof(u64)];
 	};
 };
@@ -45,8 +45,8 @@ struct lv2_mutex final : lv2_obj
 		, shared(shared)
 		, adaptive(adaptive)
 		, key(key)
-		, flags(flags)
 		, name(name)
+		, flags(flags)
 	{
 	}
 

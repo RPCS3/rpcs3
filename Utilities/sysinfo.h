@@ -45,6 +45,10 @@ namespace utils
 
 	bool has_xop();
 
+	bool has_clwb();
+
+	std::string get_cpu_brand();
+
 	std::string get_system_info();
 
 	std::string get_firmware_version();
@@ -52,4 +56,8 @@ namespace utils
 	std::string get_OS_version();
 
 	ullong get_tsc_freq();
+
+	u64 get_total_memory();
+
+	u32 get_thread_count();
 }

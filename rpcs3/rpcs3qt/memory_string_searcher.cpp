@@ -1,7 +1,12 @@
-
+﻿#include "stdafx.h"
 #include "memory_string_searcher.h"
+#include "Emu/Memory/vm.h"
 
 #include <QLabel>
+#include <QPushButton>
+#include <QHBoxLayout>
+
+LOG_CHANNEL(gui_log, "GUI");
 
 memory_string_searcher::memory_string_searcher(QWidget* parent)
 	: QDialog(parent)
@@ -29,11 +34,11 @@ memory_string_searcher::memory_string_searcher(QWidget* parent)
 
 void memory_string_searcher::OnSearch()
 {
-	const QString wstr = m_addr_line->text();
-	const char *str = wstr.toStdString().c_str();
+	const std::string wstr = m_addr_line->text().toStdString();
+	const char *str = wstr.c_str();
 	const u32 len = wstr.length();
 
-	LOG_NOTICE(GENERAL, "Searching for string %s", str);
+	gui_log.notice("Searching for string %s", str);
 
 	// Search the address space for the string
 	u32 strIndex = 0;
@@ -53,7 +58,7 @@ void memory_string_searcher::OnSearch()
 			if (strIndex == len)
 			{
 				// Found it
-				LOG_NOTICE(GENERAL, "Found @ %04x", addr - len);
+				gui_log.notice("Found @ %04x", addr - len);
 				numFound++;
 				strIndex = 0;
 				continue;
@@ -68,9 +73,9 @@ void memory_string_searcher::OnSearch()
 
 		if (addr % (1024 * 1024 * 64) == 0) // Log every 64mb
 		{
-			LOG_NOTICE(GENERAL, "Searching %04x ...", addr);
+			gui_log.notice("Searching %04x ...", addr);
 		}
 	}
 
-	LOG_NOTICE(GENERAL, "Search completed (found %d matches)", numFound);
+	gui_log.notice("Search completed (found %d matches)", numFound);
 }

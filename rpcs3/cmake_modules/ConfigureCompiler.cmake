@@ -9,6 +9,8 @@ if(MSVC)
 	#TODO: Some of these could be cleaned up
 	add_compile_options(/wd4805) # Comparing boolean and int
 	add_compile_options(/wd4804) # Using integer operators with booleans
+	add_compile_options(/wd4200) # Zero-sized array in struct/union
+	add_link_options(/ignore:4281) # Undesirable base address 0x10000
 
 	# MSVC 2017 uses iterator as base class internally, causing a lot of warning spam
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING=1")
@@ -26,18 +28,17 @@ else()
 	add_compile_options(-msse -msse2 -mcx16)
 	add_compile_options(-fno-strict-aliasing)
 
+	add_compile_options(-Werror=old-style-cast)
+	add_compile_options(-Werror=sign-compare)
+	add_compile_options(-Werror=reorder)
+
 	#TODO Clean the code so these are removed
 	add_compile_options(-Wno-unused-variable)
-	add_compile_options(-Wno-reorder)
 	add_compile_options(-Wno-unknown-pragmas)
 	add_compile_options(-Wno-invalid-offsetof)
 	add_compile_options(-Wno-unused-function)
 	add_compile_options(-Wno-attributes)
-	add_compile_options(-Wno-enum-compare)
 	add_compile_options(-Wno-comment)
-	add_compile_options(-Wno-overloaded-virtual)
-	add_compile_options(-Wno-missing-braces)
-	add_compile_options(-Wno-sign-compare)
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-Wno-sometimes-uninitialized)

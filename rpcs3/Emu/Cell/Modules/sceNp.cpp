@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "sysPrxForUser.h"
@@ -392,7 +393,7 @@ error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 	{
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
-	else if (poolsize < 128 * 1024)
+	else if (poolsize < SCE_NP_MIN_POOLSIZE)
 	{
 		return SCE_NP_ERROR_INSUFFICIENT_BUFFER;
 	}
@@ -433,11 +434,13 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		sceNp.notice("npDrmIsAvailable(): KLicense key %s", *reinterpret_cast<be_t<v128, 1>*>(k_licensee.data()));
 	}
 
-	const std::string enc_drm_path = drm_path.get_ptr();
+	const std::string enc_drm_path(drm_path.get_ptr(), std::find(drm_path.get_ptr(), drm_path.get_ptr() + 0x100, '\0'));
+
+	sceNp.warning(u8"npDrmIsAvailable(): drm_path=“%s”", enc_drm_path);
 
 	if (!fs::is_file(vfs::get(enc_drm_path)))
 	{
-		sceNp.warning("npDrmIsAvailable(): '%s' not found", enc_drm_path);
+		sceNp.warning(u8"npDrmIsAvailable(): “%s” not found", enc_drm_path);
 		return CELL_ENOENT;
 	}
 
@@ -458,7 +461,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 	if (magic == "SCE\0"_u32)
 	{
-		if (k_licensee_addr == vm::null)
+		if (!k_licensee_addr)
 			k_licensee = get_default_self_klic();
 
 		if (verify_npdrm_self_headers(enc_file, k_licensee.data()))
@@ -467,7 +470,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		}
 		else
 		{
-			sceNp.error("npDrmIsAvailable(): Failed to verify sce file %s", enc_drm_path);
+			sceNp.error(u8"npDrmIsAvailable(): Failed to verify sce file “%s”", enc_drm_path);
 			return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
 		}
 
@@ -486,46 +489,50 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 			if (fs::is_file(vfs::get(rap_file)))
 				npdrmkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{ vfs::get(rap_file) });
 			else
-				sceNp.warning("npDrmIsAvailable(): Rap file not found: %s", rap_file.c_str());
+				sceNp.warning(u8"npDrmIsAvailable(): Rap file not found: “%s”", rap_file.c_str());
 		}
 		else
 		{
-			sceNp.error("npDrmIsAvailable(): Failed to verify npd file %s", enc_drm_path);
+			sceNp.error(u8"npDrmIsAvailable(): Failed to verify npd file “%s”", enc_drm_path);
 			return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
 		}
 	}
 	else
 	{
 		// for now assume its just unencrypted
-		sceNp.notice("npDrmIsAvailable(): Assuming npdrm file is unencrypted at %s", enc_drm_path);
+		sceNp.notice(u8"npDrmIsAvailable(): Assuming npdrm file is unencrypted at “%s”", enc_drm_path);
 	}
 	return CELL_OK;
 }
 
 error_code sceNpDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
-	sceNp.warning("sceNpDrmIsAvailable(k_licensee=*0x%x, drm_path=%s)", k_licensee_addr, drm_path);
+	sceNp.warning("sceNpDrmIsAvailable(k_licensee=*0x%x, drm_path=*0x%x)", k_licensee_addr, drm_path);
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
 error_code sceNpDrmIsAvailable2(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
-	sceNp.warning("sceNpDrmIsAvailable2(k_licensee=*0x%x, drm_path=%s)", k_licensee_addr, drm_path);
+	sceNp.warning("sceNpDrmIsAvailable2(k_licensee=*0x%x, drm_path=*0x%x)", k_licensee_addr, drm_path);
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
 error_code sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 {
-	sceNp.warning("sceNpDrmVerifyUpgradeLicense(content_id=%s)", content_id);
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense(content_id=*0x%x)", content_id);
 
 	if (!content_id)
 	{
 		return SCE_NP_DRM_ERROR_INVALID_PARAM;
 	}
 
-	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_id.get_ptr() + ".rap")))
+	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
+
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense(): content_id=“%s”", content_id);
+
+	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_str + ".rap")))
 	{
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
@@ -537,14 +544,18 @@ error_code sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 
 error_code sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 {
-	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(content_id=%s)", content_id);
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(content_id=*0x%x)", content_id);
 
 	if (!content_id)
 	{
 		return SCE_NP_DRM_ERROR_INVALID_PARAM;
 	}
 
-	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_id.get_ptr() + ".rap")))
+	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
+
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(): content_id=“%s”", content_id);
+
+	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_str + ".rap")))
 	{
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
@@ -576,7 +587,7 @@ error_code sceNpDrmGetTimelimit(vm::cptr<char> path, vm::ptr<u64> time_remain)
 
 error_code sceNpDrmProcessExitSpawn(ppu_thread& ppu, vm::cptr<u8> klicensee, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags)
 {
-	sceNp.warning("sceNpDrmProcessExitSpawn(klicensee=*0x%x, path=%s, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", klicensee, path, argv, envp, data, data_size, prio, flags);
+	sceNp.warning("sceNpDrmProcessExitSpawn(klicensee=*0x%x, path=*0x%x, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", klicensee, path, argv, envp, data, data_size, prio, flags);
 
 	if (s32 error = npDrmIsAvailable(klicensee, path))
 	{
@@ -589,7 +600,7 @@ error_code sceNpDrmProcessExitSpawn(ppu_thread& ppu, vm::cptr<u8> klicensee, vm:
 
 error_code sceNpDrmProcessExitSpawn2(ppu_thread& ppu, vm::cptr<u8> klicensee, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags)
 {
-	sceNp.warning("sceNpDrmProcessExitSpawn2(klicensee=*0x%x, path=%s, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", klicensee, path, argv, envp, data, data_size, prio, flags);
+	sceNp.warning("sceNpDrmProcessExitSpawn2(klicensee=*0x%x, path=*0x%x, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", klicensee, path, argv, envp, data, data_size, prio, flags);
 
 	if (s32 error = npDrmIsAvailable(klicensee, path))
 	{
@@ -716,7 +727,7 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u64 
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!to || !to->handle.data || !data || !size)
+	if (!to || to->handle.data[0] == '\0' || !data || !size)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
@@ -738,7 +749,7 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!msg || msg->count > SCE_NP_BASIC_SEND_MESSAGE_MAX_RECIPIENTS || !msg->npids.handle.data || !(msg->msgFeatures & SCE_NP_BASIC_MESSAGE_FEATURES_ALL_FEATURES))
+	if (!msg || msg->count > SCE_NP_BASIC_SEND_MESSAGE_MAX_RECIPIENTS || msg->npids.handle.data[0] == '\0' || !(msg->msgFeatures & SCE_NP_BASIC_MESSAGE_FEATURES_ALL_FEATURES))
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
@@ -750,7 +761,7 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
+		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
 	}
 
 	return CELL_OK;
@@ -765,7 +776,7 @@ error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> 
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!to || !to->handle.data || !data || !size)
+	if (!to || to->handle.data[0] == '\0' || !data || !size)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
@@ -777,7 +788,7 @@ error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> 
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
+		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
 	}
 
 	return CELL_OK;
@@ -872,7 +883,7 @@ error_code sceNpBasicAddFriend(vm::cptr<SceNpId> contact, vm::cptr<char> body, s
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!contact || !contact->handle.data)
+	if (!contact || contact->handle.data[0] == '\0')
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
@@ -884,7 +895,7 @@ error_code sceNpBasicAddFriend(vm::cptr<SceNpId> contact, vm::cptr<char> body, s
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
+		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
 	}
 
 	return CELL_OK;
@@ -1021,12 +1032,12 @@ error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::ptr<char> des
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!npid || !npid->handle.data)
+	if (!npid || npid->handle.data[0] == '\0')
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (strlen(description.get_ptr()) > SCE_NP_BASIC_DESCRIPTION_CHARACTER_MAX)
+	if (description && strlen(description.get_ptr()) > SCE_NP_BASIC_DESCRIPTION_CHARACTER_MAX)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
@@ -1034,7 +1045,7 @@ error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::ptr<char> des
 	return CELL_OK;
 }
 
-error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u64 count, vm::ptr<char> description, vm::ptr<u32> reqId)
+error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u32 count, vm::ptr<char> description, vm::ptr<u32> reqId)
 {
 	sceNp.todo("sceNpBasicAddPlayersHistoryAsync(npids=*0x%x, count=%d, description=*0x%x, reqId=*0x%x)", npids, count, description, reqId);
 
@@ -1043,12 +1054,30 @@ error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u64 count, 
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!npids || !npids->handle.data)
+	if (!count)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (count > SCE_NP_BASIC_PLAYER_HISTORY_MAX_PLAYERS || strlen(description.get_ptr()) > SCE_NP_BASIC_DESCRIPTION_CHARACTER_MAX)
+	if (count > SCE_NP_BASIC_PLAYER_HISTORY_MAX_PLAYERS)
+	{
+		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
+	}
+
+	if (!npids)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	for (u32 i = 0; i < count; i++)
+	{
+		if (npids[i].handle.data[0] == '\0')
+		{
+			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+		}
+	}
+
+	if (description && strlen(description.get_ptr()) > SCE_NP_BASIC_DESCRIPTION_CHARACTER_MAX)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
@@ -1084,7 +1113,7 @@ error_code sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count
 
 error_code sceNpBasicGetPlayersHistoryEntry(u32 options, u32 index, vm::ptr<SceNpId> npid)
 {
-	sceNp.todo("sceNpBasicGetPlayersHistoryEntry(options=%d, index=%d, npid=*0x%x)", options, index, npid);
+	sceNp.warning("sceNpBasicGetPlayersHistoryEntry(options=%d, index=%d, npid=*0x%x)", options, index, npid);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -1108,16 +1137,21 @@ error_code sceNpBasicGetPlayersHistoryEntry(u32 options, u32 index, vm::ptr<SceN
 
 error_code sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
 {
-	sceNp.todo("sceNpBasicAddBlockListEntry(npid=*0x%x)", npid);
+	sceNp.warning("sceNpBasicAddBlockListEntry(npid=*0x%x)", npid);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!npid || !npid->handle.data)
+	if (!npid || npid->handle.data[0] == '\0')
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
 	}
 
 	return CELL_OK;
@@ -1125,7 +1159,7 @@ error_code sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
 
 error_code sceNpBasicGetBlockListEntryCount(vm::ptr<u32> count)
 {
-	sceNp.todo("sceNpBasicGetBlockListEntryCount(count=*0x%x)", count);
+	sceNp.warning("sceNpBasicGetBlockListEntryCount(count=*0x%x)", count);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -1415,12 +1449,22 @@ error_code sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo>
 
 error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<s32> data, vm::ptr<u32> size)
 {
-	sceNp.todo("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
+	sceNp.warning("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
+
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!event || !from || !data || !size)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
 
 	// TODO: Check for other error and pass other events
 	//*event = SCE_NP_BASIC_EVENT_OFFLINE; // This event only indicates a contact is offline, not the current status of the connection
 
-	return SCE_NP_BASIC_ERROR_NO_EVENT;
+	return not_an_error(SCE_NP_BASIC_ERROR_NO_EVENT);
 }
 
 error_code sceNpCommerceCreateCtx(u32 version, vm::ptr<SceNpId> npId, vm::ptr<SceNpCommerceHandler> handler, vm::ptr<void> arg, vm::ptr<u32> ctx_id)
@@ -1696,7 +1740,7 @@ error_code sceNpCustomMenuRegisterExceptionList(vm::cptr<SceNpCustomMenuActionEx
 
 error_code sceNpFriendlist(vm::ptr<SceNpFriendlistResultHandler> resultHandler, vm::ptr<void> userArg, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpFriendlist(resultHandler=*0x%x, userArg=*0x%x, containerId=%d)", resultHandler, userArg, containerId);
+	sceNp.warning("sceNpFriendlist(resultHandler=*0x%x, userArg=*0x%x, containerId=%d)", resultHandler, userArg, containerId);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -1713,7 +1757,7 @@ error_code sceNpFriendlist(vm::ptr<SceNpFriendlistResultHandler> resultHandler, 
 
 error_code sceNpFriendlistCustom(SceNpFriendlistCustomOptions options, vm::ptr<SceNpFriendlistResultHandler> resultHandler, vm::ptr<void> userArg, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpFriendlistCustom(options=0x%x, resultHandler=*0x%x, userArg=*0x%x, containerId=%d)", options, resultHandler, userArg, containerId);
+	sceNp.warning("sceNpFriendlistCustom(options=0x%x, resultHandler=*0x%x, userArg=*0x%x, containerId=%d)", options, resultHandler, userArg, containerId);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -1746,7 +1790,16 @@ error_code sceNpLookupInit()
 
 	const auto lookup_manager = g_fxo->get<sce_np_lookup_manager>();
 
-	// TODO: check if this might throw SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED
+	if (lookup_manager->is_initialized)
+	{
+		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
+	}
+
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
 	lookup_manager->is_initialized = true;
 
 	return CELL_OK;
@@ -1758,7 +1811,16 @@ error_code sceNpLookupTerm()
 
 	const auto lookup_manager = g_fxo->get<sce_np_lookup_manager>();
 
-	// TODO: check if this might throw SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED
+	if (!lookup_manager->is_initialized)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
 	lookup_manager->is_initialized = false;
 
 	return CELL_OK;
@@ -2221,7 +2283,7 @@ error_code sceNpManagerUnregisterCallback()
 
 error_code sceNpManagerGetStatus(vm::ptr<s32> status)
 {
-	sceNp.todo("sceNpManagerGetStatus(status=*0x%x)", status);
+	sceNp.warning("sceNpManagerGetStatus(status=*0x%x)", status);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2254,7 +2316,7 @@ error_code sceNpManagerGetNetworkTime(vm::ptr<CellRtcTick> pTick)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2285,7 +2347,7 @@ error_code sceNpManagerGetOnlineId(vm::ptr<SceNpOnlineId> onlineId)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2312,7 +2374,7 @@ error_code sceNpManagerGetNpId(ppu_thread& ppu, vm::ptr<SceNpId> npId)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2325,7 +2387,7 @@ error_code sceNpManagerGetNpId(ppu_thread& ppu, vm::ptr<SceNpId> npId)
 
 error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
 {
-	sceNp.todo("sceNpManagerGetOnlineName(onlineName=*0x%x)", onlineName);
+	sceNp.warning("sceNpManagerGetOnlineName(onlineName=*0x%x)", onlineName);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2339,7 +2401,7 @@ error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2352,7 +2414,7 @@ error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
 
 error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 {
-	sceNp.todo("sceNpManagerGetAvatarUrl(avatarUrl=*0x%x)", avatarUrl);
+	sceNp.warning("sceNpManagerGetAvatarUrl(avatarUrl=*0x%x)", avatarUrl);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2366,7 +2428,7 @@ error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2379,7 +2441,7 @@ error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 
 error_code sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 {
-	sceNp.todo("sceNpManagerGetMyLanguages(myLanguages=*0x%x)", myLanguages);
+	sceNp.warning("sceNpManagerGetMyLanguages(myLanguages=*0x%x)", myLanguages);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2393,7 +2455,7 @@ error_code sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2406,7 +2468,7 @@ error_code sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 
 error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, vm::ptr<s32> language)
 {
-	sceNp.todo("sceNpManagerGetAccountRegion(countryCode=*0x%x, language=*0x%x)", countryCode, language);
+	sceNp.warning("sceNpManagerGetAccountRegion(countryCode=*0x%x, language=*0x%x)", countryCode, language);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2420,7 +2482,7 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2433,7 +2495,7 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 
 error_code sceNpManagerGetAccountAge(vm::ptr<s32> age)
 {
-	sceNp.todo("sceNpManagerGetAccountAge(age=*0x%x)", age);
+	sceNp.warning("sceNpManagerGetAccountAge(age=*0x%x)", age);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2447,7 +2509,7 @@ error_code sceNpManagerGetAccountAge(vm::ptr<s32> age)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2460,7 +2522,7 @@ error_code sceNpManagerGetAccountAge(vm::ptr<s32> age)
 
 error_code sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s32> age)
 {
-	sceNp.todo("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
+	sceNp.warning("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2474,7 +2536,7 @@ error_code sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2491,7 +2553,7 @@ error_code sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s
 
 error_code sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 {
-	sceNp.todo("sceNpManagerGetChatRestrictionFlag(isRestricted=*0x%x)", isRestricted);
+	sceNp.warning("sceNpManagerGetChatRestrictionFlag(isRestricted=*0x%x)", isRestricted);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2505,7 +2567,7 @@ error_code sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2542,7 +2604,7 @@ error_code sceNpManagerGetPsHandle()
 	return CELL_OK;
 }
 
-error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serviceId, vm::cptr<void> cookie, u64 cookieSize, vm::cptr<char> entitlementId, u32 consumedCount)
+error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serviceId, vm::cptr<void> cookie, u32 cookieSize, vm::cptr<char> entitlementId, u32 consumedCount)
 {
 	sceNp.todo("sceNpManagerRequestTicket(npId=*0x%x, serviceId=%s, cookie=*0x%x, cookieSize=%d, entitlementId=%s, consumedCount=%d)",
 		npId, serviceId, cookie, cookieSize, entitlementId, consumedCount);
@@ -2559,7 +2621,7 @@ error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serv
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2571,7 +2633,7 @@ error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serv
 }
 
 error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTicketVersion> version, vm::cptr<char> serviceId,
-	vm::cptr<void> cookie, u64 cookieSize, vm::cptr<char> entitlementId, u32 consumedCount)
+	vm::cptr<void> cookie, u32 cookieSize, vm::cptr<char> entitlementId, u32 consumedCount)
 {
 	sceNp.todo("sceNpManagerRequestTicket2(npId=*0x%x, version=*0x%x, serviceId=%s, cookie=*0x%x, cookieSize=%d, entitlementId=%s, consumedCount=%d)",
 		npId, version, serviceId, cookie, cookieSize, entitlementId, consumedCount);
@@ -2588,7 +2650,7 @@ error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTick
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2599,7 +2661,7 @@ error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTick
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u64> bufferSize)
+error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u32> bufferSize)
 {
 	sceNp.todo("sceNpManagerGetTicket(buffer=*0x%x, bufferSize=*0x%x)", buffer, bufferSize);
 
@@ -2634,7 +2696,7 @@ error_code sceNpManagerGetTicketParam(s32 paramId, vm::ptr<SceNpTicketParam> par
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetEntitlementIdList(vm::ptr<SceNpEntitlementId> entIdList, u64 entIdListNum)
+error_code sceNpManagerGetEntitlementIdList(vm::ptr<SceNpEntitlementId> entIdList, u32 entIdListNum)
 {
 	sceNp.todo("sceNpManagerGetEntitlementIdList(entIdList=*0x%x, entIdListNum=%d)", entIdList, entIdListNum);
 
@@ -2900,6 +2962,11 @@ error_code sceNpScoreInit()
 		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
 	}
 
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
 	score_manager->is_initialized = true;
 
 	return CELL_OK;
@@ -2914,6 +2981,11 @@ error_code sceNpScoreTerm()
 	if (!score_manager->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
 	score_manager->is_initialized = false;
@@ -4192,17 +4264,31 @@ error_code sceNpUtilCanonicalizeNpIdForPsp()
 
 error_code sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 {
-	sceNp.todo("sceNpUtilCmpNpId(id1=*0x%x, id2=*0x%x)", id1, id2);
+	sceNp.warning("sceNpUtilCmpNpId(id1=*0x%x, id2=*0x%x)", id1, id2);
 
 	if (!id1 || !id2)
 	{
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	// TODO: Improve the comparison.
-	if (strcmp(id1->handle.data, id2->handle.data) != 0)
+	// Unknown what this constant means
+	if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
+	{
+		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+	}
+
+	if (strncmp(id1->handle.data, id2->handle.data, 16) || id1->unk1[0] != id2->unk1[0])
 	{
 		return SCE_NP_UTIL_ERROR_NOT_MATCH;
+	}
+
+	if (id1->unk1[1] != id2->unk1[1])
+	{
+		// If either is zero they match
+		if (id1->opt[4] && id2->opt[4])
+		{
+			return SCE_NP_UTIL_ERROR_NOT_MATCH;
+		}
 	}
 
 	return CELL_OK;
@@ -4210,31 +4296,66 @@ error_code sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 
 error_code sceNpUtilCmpNpIdInOrder(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2, vm::ptr<s32> order)
 {
-	sceNp.todo("sceNpUtilCmpNpIdInOrder(id1=*0x%x, id2=*0x%x, order=*0x%x)", id1, id2, order);
+	sceNp.warning("sceNpUtilCmpNpIdInOrder(id1=*0x%x, id2=*0x%x, order=*0x%x)", id1, id2, order);
 
 	if (!id1 || !id2)
 	{
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	// TODO: Improve the comparison.
-	// TODO: check for nullptr
-	order.set(strcmp(id1->handle.data, id2->handle.data));
+	if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
+	{
+		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+	}
 
+	if (s32 res = strncmp(id1->handle.data, id2->handle.data, 16))
+	{
+		*order = std::clamp<s32>(res, -1, 1);
+		return CELL_OK;
+	}
+
+	if (s32 res = memcmp(id1->unk1, id2->unk1, 4))
+	{
+		*order = std::clamp<s32>(res, -1, 1);
+		return CELL_OK;
+	}
+
+	const u8 opt14 = id1->opt[4];
+	const u8 opt24 = id2->opt[4];
+
+	if (opt14 == 0 && opt24 == 0)
+	{
+		*order = 0;
+		return CELL_OK;	
+	}
+
+	if (opt14 != 0 && opt24 != 0)
+	{
+		s32 res = memcmp(id1->unk1 + 1, id2->unk1 + 1, 4);
+		*order = std::clamp<s32>(res, -1, 1);
+		return CELL_OK;
+	}
+
+	s32 res = memcmp((opt14 != 0 ? id1 : id2)->unk1 + 1, "ps3", 4);
+	*order = std::clamp<s32>(res, -1, 1);
 	return CELL_OK;
 }
 
 error_code sceNpUtilCmpOnlineId(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2)
 {
-	sceNp.todo("sceNpUtilCmpOnlineId(id1=*0x%x, id2=*0x%x)", id1, id2);
+	sceNp.warning("sceNpUtilCmpOnlineId(id1=*0x%x, id2=*0x%x)", id1, id2);
 
 	if (!id1 || !id2)
 	{
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	// TODO: Improve the comparison.
-	if (strcmp(id1->handle.data, id2->handle.data) != 0)
+	if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
+	{
+		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+	}
+
+	if (strncmp(id1->handle.data, id2->handle.data, 16) != 0)
 	{
 		return SCE_NP_UTIL_ERROR_NOT_MATCH;
 	}
@@ -4244,32 +4365,50 @@ error_code sceNpUtilCmpOnlineId(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2)
 
 error_code sceNpUtilGetPlatformType(vm::cptr<SceNpId> npId)
 {
-	sceNp.todo("sceNpUtilGetPlatformType(npId=*0x%x)", npId);
+	sceNp.warning("sceNpUtilGetPlatformType(npId=*0x%x)", npId);
 
 	if (!npId)
 	{
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	//if (unknown_platform)
-	//{
-	//	return SCE_NP_UTIL_ERROR_UNKNOWN_PLATFORM_TYPE;
-	//}
+	switch (npId->unk1[1])
+	{
+	case "ps4\0"_u32:
+		return not_an_error(SCE_NP_PLATFORM_TYPE_PS4);
+	case "psp2"_u32:
+		return not_an_error(SCE_NP_PLATFORM_TYPE_VITA);
+	case "ps3\0"_u32:
+		return not_an_error(SCE_NP_PLATFORM_TYPE_PS3); 
+	case 0u:
+		return not_an_error(SCE_NP_PLATFORM_TYPE_NONE);
+	default:
+		break;
+	}
 
-	return CELL_OK; // SCE_NP_PLATFORM_TYPE_NONE
+	return SCE_NP_UTIL_ERROR_UNKNOWN_PLATFORM_TYPE;
 }
 
 error_code sceNpUtilSetPlatformType(vm::ptr<SceNpId> npId, SceNpPlatformType platformType)
 {
-	sceNp.todo("sceNpUtilSetPlatformType(npId=*0x%x, platformType=%d)", npId, platformType);
+	sceNp.warning("sceNpUtilSetPlatformType(npId=*0x%x, platformType=%d)", npId, platformType);
 
 	if (!npId)
 	{
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (platformType < SCE_NP_PLATFORM_TYPE_NONE || platformType > SCE_NP_PLATFORM_TYPE_VITA)
+	switch (platformType)
 	{
+	case SCE_NP_PLATFORM_TYPE_PS4:
+		npId->unk1[1] = "ps4\0"_u32; break;
+	case SCE_NP_PLATFORM_TYPE_VITA:
+		npId->unk1[1] = "psp2"_u32; break;
+	case SCE_NP_PLATFORM_TYPE_PS3:
+		npId->unk1[1] = "ps3\0"_u32; break;
+	case SCE_NP_PLATFORM_TYPE_NONE:
+		npId->unk1[1] = 0; break;
+	default:
 		return SCE_NP_UTIL_ERROR_UNKNOWN_PLATFORM_TYPE;
 	}
 

@@ -26,7 +26,6 @@ struct lv2_timer_context : lv2_obj
 	static const u32 id_base = 0x11000000;
 
 	void operator()();
-	void on_abort();
 
 	shared_mutex mutex;
 	atomic_t<u32> state{SYS_TIMER_STATE_STOP};

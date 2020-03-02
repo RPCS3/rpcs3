@@ -148,9 +148,11 @@ namespace vm
 		}
 
 		// Global HLE variable
-		template <typename T>
-		struct gvar : ptr<T>
+		template <typename T, uint Count = 1>
+		struct gvar final : ptr<T>
 		{
+			static constexpr u32 alloc_size{sizeof(T) * Count};
+			static constexpr u32 alloc_align{alignof(T)};
 		};
 	} // namespace ps3_
 } // namespace vm

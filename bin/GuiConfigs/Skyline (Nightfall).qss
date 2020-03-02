@@ -104,7 +104,7 @@ QToolButton:hover {
 	border-bottom: 2px solid #FFFFFF;
 }
 
-/* Searchbar in Main Toolbar */
+/* Search bar in Main Toolbar */
 QLineEdit#mw_searchbar { 
 	color: #455971;
 	background-color: #FFFFFF;

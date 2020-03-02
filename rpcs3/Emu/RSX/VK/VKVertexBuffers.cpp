@@ -1,6 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
-#include "Emu/System.h"
 #include "VKGSRender.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
@@ -34,7 +32,7 @@ namespace vk
 			requires_modification = true;
 			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		default:
-			fmt::throw_exception("Unsupported primitive topology 0x%x", (u8)mode);
+			fmt::throw_exception("Unsupported primitive topology 0x%x", static_cast<u8>(mode));
 		}
 	}
 
@@ -70,7 +68,7 @@ namespace
 		VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
 		void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
-		rsx::g_dma_manager.emulate_as_indexed(buf, clause.primitive, vertex_count);
+		g_fxo->get<rsx::dma_manager>()->emulate_as_indexed(buf, clause.primitive, vertex_count);
 
 		m_index_buffer_ring_info.unmap();
 		return std::make_tuple(
@@ -132,7 +130,7 @@ namespace
 				rsx::index_array_type::u32 :
 				rsx::method_registers.index_type();
 
-			u32 type_size = gsl::narrow<u32>(get_index_type_size(index_type));
+			u32 type_size = get_index_type_size(index_type);
 
 			u32 index_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			if (primitives_emulated)
@@ -144,8 +142,8 @@ namespace
 			VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<4>(upload_size);
 			void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
-			gsl::span<gsl::byte> dst;
-			std::vector<gsl::byte> tmp;
+			gsl::span<std::byte> dst;
+			std::vector<std::byte> tmp;
 			if (emulate_restart)
 			{
 				tmp.resize(upload_size);
@@ -153,7 +151,7 @@ namespace
 			}
 			else
 			{
-				dst = gsl::span<gsl::byte>(static_cast<gsl::byte*>(buf), upload_size);
+				dst = gsl::span<std::byte>(static_cast<std::byte*>(buf), upload_size);
 			}
 
 			/**
@@ -179,11 +177,11 @@ namespace
 			{
 				if (index_type == rsx::index_array_type::u16)
 				{
-					index_count = rsx::remove_restart_index((u16*)buf, (u16*)tmp.data(), index_count, (u16)UINT16_MAX);
+					index_count = rsx::remove_restart_index(static_cast<u16*>(buf), reinterpret_cast<u16*>(tmp.data()), index_count, u16{UINT16_MAX});
 				}
 				else
 				{
-					index_count = rsx::remove_restart_index((u32*)buf, (u32*)tmp.data(), index_count, (u32)UINT32_MAX);
+					index_count = rsx::remove_restart_index(static_cast<u32*>(buf), reinterpret_cast<u32*>(tmp.data()), index_count, u32{UINT32_MAX});
 				}
 			}
 
@@ -272,21 +270,21 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 
 		if (!in_cache)
 		{
-			persistent_offset = (u32)m_attrib_ring_info.alloc<256>(required.first);
-			persistent_range_base = (u32)persistent_offset;
+			persistent_offset = static_cast<u32>(m_attrib_ring_info.alloc<256>(required.first));
+			persistent_range_base = static_cast<u32>(persistent_offset);
 
 			if (to_store)
 			{
 				//store ref in vertex cache
-				m_vertex_cache->store_range(storage_address, VK_FORMAT_R8_UINT, required.first, (u32)persistent_offset);
+				m_vertex_cache->store_range(storage_address, VK_FORMAT_R8_UINT, required.first, static_cast<u32>(persistent_offset));
 			}
 		}
 	}
 
 	if (required.second > 0)
 	{
-		volatile_offset = (u32)m_attrib_ring_info.alloc<256>(required.second);
-		volatile_range_base = (u32)volatile_offset;
+		volatile_offset = static_cast<u32>(m_attrib_ring_info.alloc<256>(required.second));
+		volatile_range_base = static_cast<u32>(volatile_offset);
 	}
 
 	//Write all the data once if possible
@@ -298,7 +296,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		const size_t volatile_offset_in_block = volatile_offset - persistent_offset;
 
 		void *block_mapping = m_attrib_ring_info.map(persistent_offset, block_size);
-		write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, block_mapping, (char*)block_mapping + volatile_offset_in_block);
+		write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, block_mapping, static_cast<char*>(block_mapping) + volatile_offset_in_block);
 		m_attrib_ring_info.unmap();
 	}
 	else
@@ -316,6 +314,24 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 			write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, nullptr, volatile_mapping);
 			m_attrib_ring_info.unmap();
 		}
+	}
+
+	if (vk::test_status_interrupt(vk::heap_changed))
+	{
+		// Check for validity
+		if (m_persistent_attribute_storage &&
+			m_persistent_attribute_storage->info.buffer != m_attrib_ring_info.heap->value)
+		{
+			m_current_frame->buffer_views_to_clean.push_back(std::move(m_persistent_attribute_storage));
+		}
+
+		if (m_volatile_attribute_storage &&
+			m_volatile_attribute_storage->info.buffer != m_attrib_ring_info.heap->value)
+		{
+			m_current_frame->buffer_views_to_clean.push_back(std::move(m_volatile_attribute_storage));
+		}
+
+		vk::clear_status_interrupt(vk::heap_changed);
 	}
 
 	if (persistent_range_base != UINT32_MAX)

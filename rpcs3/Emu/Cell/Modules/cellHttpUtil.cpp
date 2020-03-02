@@ -40,11 +40,11 @@ s32 cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<v
 		}
 		else
 		{
-			std::strncpy((char*)vm::base(pool.addr() + schemeOffset), (char*)scheme.c_str(), scheme.length() + 1);
-			std::strncpy((char*)vm::base(pool.addr() + hostOffset), (char*)host.c_str(), host.length() + 1);
-			std::strncpy((char*)vm::base(pool.addr() + pathOffset), (char*)path.c_str(), path.length() + 1);
-			std::strncpy((char*)vm::base(pool.addr() + usernameOffset), (char*)username.c_str(), username.length() + 1);
-			std::strncpy((char*)vm::base(pool.addr() + passwordOffset), (char*)password.c_str(), password.length() + 1);
+			std::memcpy(vm::base(pool.addr() + schemeOffset), scheme.c_str(), scheme.length() + 1);
+			std::memcpy(vm::base(pool.addr() + hostOffset), host.c_str(), host.length() + 1);
+			std::memcpy(vm::base(pool.addr() + pathOffset), path.c_str(), path.length() + 1);
+			std::memcpy(vm::base(pool.addr() + usernameOffset), username.c_str(), username.length() + 1);
+			std::memcpy(vm::base(pool.addr() + passwordOffset), password.c_str(), password.length() + 1);
 
 			uri->scheme.set(pool.addr() + schemeOffset);
 			uri->hostname.set(pool.addr() + hostOffset);
@@ -52,14 +52,14 @@ s32 cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<v
 			uri->username.set(pool.addr() + usernameOffset);
 			uri->password.set(pool.addr() + passwordOffset);
 
-			if (URL.m_Port != "")
+			if (!URL.m_Port.empty())
 			{
 				int port = stoi(URL.m_Port);
 				uri->port = port;
 			}
 			else
 			{
-				uri->port = (u32)80;
+				uri->port = 80;
 			}
 			return CELL_OK;
 		}

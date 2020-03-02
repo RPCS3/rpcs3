@@ -1,7 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include <list>
 #include "Utilities/mutex.h"
+#include "util/init_mutex.hpp"
 
 // TODO: HLE info (constants, structs, etc.) should not be available here
 
@@ -154,7 +155,7 @@ public:
 	{
 		std::lock_guard lock(mutex);
 
-		for (u32 p = 0; p < (u32)m_mice.size(); ++p)
+		for (u32 p = 0; p < m_mice.size(); ++p)
 		{
 			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
 			{
@@ -185,7 +186,7 @@ public:
 	{
 		std::lock_guard lock(mutex);
 
-		for (u32 p = 0; p < (u32)m_mice.size(); ++p)
+		for (u32 p = 0; p < m_mice.size(); ++p)
 		{
 			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
 			{
@@ -212,7 +213,7 @@ public:
 	{
 		std::lock_guard lock(mutex);
 
-		for (u32 p = 0; p < (u32)m_mice.size(); ++p)
+		for (u32 p = 0; p < m_mice.size(); ++p)
 		{
 			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
 			{
@@ -255,4 +256,6 @@ public:
 	MouseDataList& GetDataList(const u32 mouse) { return m_mice[mouse].m_datalist; }
 	MouseTabletDataList& GetTabletDataList(const u32 mouse) { return m_mice[mouse].m_tablet_datalist; }
 	MouseRawData& GetRawData(const u32 mouse) { return m_mice[mouse].m_rawdata; }
+
+	stx::init_mutex init;
 };

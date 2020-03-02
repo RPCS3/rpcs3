@@ -1,7 +1,12 @@
 ﻿#include "game_compatibility.h"
+#include "gui_settings.h"
+#include "progress_dialog.h"
 
-#include <QLabel>
 #include <QMessageBox>
+#include <QJsonDocument>
+#include <QNetworkReply>
+
+LOG_CHANNEL(compat_log, "Compat");
 
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -36,19 +41,19 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 				error_message = "Server Error - Unknown Error";
 				break;
 			}
-			LOG_ERROR(GENERAL, "Compatibility error: { %s: return code %d }", error_message, return_code);
+			compat_log.error("%s: return code %d", error_message, return_code);
 			Q_EMIT DownloadError(qstr(error_message) + " " + QString::number(return_code));
 		}
 		else
 		{
-			LOG_ERROR(GENERAL, "Compatibility error: { Database Error - Invalid: return code %d }", return_code);
+			compat_log.error("Database Error - Invalid: return code %d", return_code);
 		}
 		return false;
 	}
 
 	if (!json_data["results"].isObject())
 	{
-		LOG_ERROR(GENERAL, "Compatibility error: { Database Error - No Results found }");
+		compat_log.error("Database Error - No Results found");
 		return false;
 	}
 
@@ -61,7 +66,7 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 	{
 		if (!json_results[key].isObject())
 		{
-			LOG_ERROR(GENERAL, "Compatibility error: { Database Error - Unusable object %s }", sstr(key));
+			compat_log.error("Database Error - Unusable object %s", sstr(key));
 			continue;
 		}
 
@@ -73,8 +78,8 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 		// Add date if possible
 		status.date = json_result.value("date").toString();
 
-		// Add version if possible
-		status.version = json_result.value("update").toString();
+		// Add latest version if possible
+		status.latest_version = json_result.value("update").toString();
 
 		// Add status to map
 		m_compat_database.emplace(std::pair<std::string, compat_status>(sstr(key), status));
@@ -92,20 +97,20 @@ void game_compatibility::RequestCompatibility(bool online)
 
 		if (!file.exists())
 		{
-			LOG_NOTICE(GENERAL, "Compatibility notice: { Database file not found: %s }", sstr(m_filepath));
+			compat_log.notice("Database file not found: %s", sstr(m_filepath));
 			return;
 		}
 
 		if (!file.open(QIODevice::ReadOnly))
 		{
-			LOG_ERROR(GENERAL, "Compatibility error: { Database Error - Could not read database from file: %s }", sstr(m_filepath));
+			compat_log.error("Database Error - Could not read database from file: %s", sstr(m_filepath));
 			return;
 		}
 
 		QByteArray data = file.readAll();
 		file.close();
 
-		LOG_NOTICE(GENERAL, "Compatibility notice: { Finished reading database from file: %s }", sstr(m_filepath));
+		compat_log.notice("Finished reading database from file: %s", sstr(m_filepath));
 
 		// Create new map from database
 		ReadJSON(QJsonDocument::fromJson(data).object(), online);
@@ -115,22 +120,22 @@ void game_compatibility::RequestCompatibility(bool online)
 
 	if (QSslSocket::supportsSsl() == false)
 	{
-		LOG_ERROR(GENERAL, "Can not retrieve the online database! Please make sure your system supports SSL.");
-		QMessageBox::warning(nullptr, tr("Warning!"), tr("Can not retrieve the online database! Please make sure your system supports SSL."));
+		compat_log.error("Can not retrieve the online database! Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
+		const QString message = tr("Can not retrieve the online database!<br>Please make sure your system supports SSL.<br>Visit our <a href='https://rpcs3.net/quickstart'>quickstart guide</a> for more information.");
+		QMessageBox box(QMessageBox::Icon::Warning, tr("Warning!"), message, QMessageBox::StandardButton::Ok, nullptr);
+		box.setTextFormat(Qt::RichText);
+		box.exec();
 		return;
 	}
 
-	LOG_NOTICE(GENERAL, "SSL supported! Beginning compatibility database download from: %s", sstr(m_url));
+	compat_log.notice("SSL supported! Beginning compatibility database download from: %s", sstr(m_url));
 
 	// Send request and wait for response
 	m_network_access_manager.reset(new QNetworkAccessManager());
 	QNetworkReply* network_reply = m_network_access_manager->get(m_network_request);
 
 	// Show Progress
-	m_progress_dialog = new progress_dialog(tr(".Please wait."), tr("Abort"), 0, 100);
-	m_progress_dialog->setWindowTitle(tr("Downloading Database"));
-	m_progress_dialog->setFixedWidth(QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width());
-	m_progress_dialog->setValue(0);
+	m_progress_dialog = new progress_dialog(tr("Downloading Database"), tr(".Please wait."), tr("Abort"), 0, 100, true);
 	m_progress_dialog->show();
 
 	// Animate progress dialog a bit more
@@ -164,9 +169,22 @@ void game_compatibility::RequestCompatibility(bool online)
 		m_progress_dialog->setValue(bytesReceived);
 	});
 
-	// Handle response according to its contents
-	connect(network_reply, &QNetworkReply::finished, [=]()
+	// Handle network error
+	connect(network_reply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), [=, this](QNetworkReply::NetworkError error)
 	{
+		if (error == QNetworkReply::NoError)
+		{
+			return;
+		}
+
+		if (error != QNetworkReply::OperationCanceledError)
+		{
+			// We failed to retrieve a new database, therefore refresh gamelist to old state
+			const QString error = network_reply->errorString();
+			Q_EMIT DownloadError(error);
+			compat_log.error("Network Error - %s", sstr(error));
+		}
+
 		// Clean up Progress Dialog
 		if (m_progress_dialog)
 		{
@@ -177,23 +195,28 @@ void game_compatibility::RequestCompatibility(bool online)
 			m_progress_timer->stop();
 		}
 
-		// Handle Errors
-		if (network_reply->error() == QNetworkReply::OperationCanceledError)
+		network_reply->deleteLater();
+	});
+
+	// Handle response according to its contents
+	connect(network_reply, &QNetworkReply::finished, [=, this]()
+	{
+		if (network_reply->error() != QNetworkReply::NoError)
 		{
-			network_reply->deleteLater();
-			return;
-		}
-		else if (network_reply->error() != QNetworkReply::NoError)
-		{
-			// We failed to retrieve a new database, therefore refresh gamelist to old state
-			QString error = network_reply->errorString();
-			network_reply->deleteLater();
-			Q_EMIT DownloadError(error);
-			LOG_ERROR(GENERAL, "Compatibility error: { Network Error - %s }", sstr(error));
 			return;
 		}
 
-		LOG_NOTICE(GENERAL, "Compatibility notice: { Database download finished }");
+		// Clean up Progress Dialog
+		if (m_progress_dialog)
+		{
+			m_progress_dialog->close();
+		}
+		if (m_progress_timer)
+		{
+			m_progress_timer->stop();
+		}
+
+		compat_log.notice("Database download finished");
 
 		// Read data from network reply
 		QByteArray data = network_reply->readAll();
@@ -210,19 +233,19 @@ void game_compatibility::RequestCompatibility(bool online)
 
 			if (file.exists())
 			{
-				LOG_NOTICE(GENERAL, "Compatibility notice: { Database file found: %s }", sstr(m_filepath));
+				compat_log.notice("Database file found: %s", sstr(m_filepath));
 			}
 
 			if (!file.open(QIODevice::WriteOnly))
 			{
-				LOG_ERROR(GENERAL, "Compatibility error: { Database Error - Could not write database to file: %s }", sstr(m_filepath));
+				compat_log.error("Database Error - Could not write database to file: %s", sstr(m_filepath));
 				return;
 			}
 
 			file.write(data);
 			file.close();
 
-			LOG_SUCCESS(GENERAL, "Compatibility success: { Write database to file: %s }", sstr(m_filepath));
+			compat_log.success("Write database to file: %s", sstr(m_filepath));
 		}
 	});
 

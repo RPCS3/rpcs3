@@ -30,10 +30,10 @@ namespace id_manager
 		static const u32 base    = T::id_base;
 		static const u32 step    = T::id_step;
 		static const u32 count   = T::id_count;
-		static const u32 invalid = base > 0 ? 0 : -1;
+		static const u32 invalid = -+!base;
 
 		// Note: full 32 bits range cannot be used at current implementation
-		static_assert(count > 0 && step > 0 && u64{step} * count + base < u64{UINT32_MAX} + (base != 0 ? 1 : 0), "ID traits: invalid object range");
+		static_assert(count && step && u64{step} * (count - 1) + base < u64{UINT32_MAX} + (base != 0 ? 1 : 0), "ID traits: invalid object range");
 	};
 
 	// Correct usage testing
@@ -408,7 +408,7 @@ public:
 	{
 		const auto found = find_id<T, Get>(id);
 
-		if (UNLIKELY(found == nullptr))
+		if (found == nullptr) [[unlikely]]
 		{
 			return nullptr;
 		}
@@ -424,7 +424,7 @@ public:
 
 		const auto found = find_id<T, Get>(id);
 
-		if (UNLIKELY(found == nullptr))
+		if (found == nullptr) [[unlikely]]
 		{
 			return nullptr;
 		}
@@ -440,7 +440,7 @@ public:
 
 		const auto found = find_id<T, Get>(id);
 
-		if (UNLIKELY(found == nullptr))
+		if (found == nullptr) [[unlikely]]
 		{
 			return {nullptr};
 		}
@@ -588,142 +588,7 @@ public:
 	}
 };
 
-// Object manager for emulated process. One unique object per type, or zero.
-class fxm
-{
-	// Type Index -> Object. Use global since only one process is supported atm.
-	static std::vector<std::shared_ptr<void>> g_vec;
-
-	template <typename T>
-	static inline u32 get_type()
-	{
-		return id_manager::typeinfo::get_index<T>();
-	}
-
-public:
-	// Initialize object manager
-	static void init();
-
-	// Remove all objects
-	static void clear();
-
-	// Create the object (returns nullptr if it already exists)
-	template <typename T, typename Make = T, typename... Args>
-	static std::enable_if_t<std::is_constructible<Make, Args...>::value, std::shared_ptr<T>> make(Args&&... args)
-	{
-		std::shared_ptr<T> ptr;
-		{
-			std::lock_guard lock(id_manager::g_mutex);
-
-			auto& cur = g_vec[get_type<T>()];
-
-			if (!cur)
-			{
-				ptr = std::make_shared<Make>(std::forward<Args>(args)...);
-				cur = ptr;
-			}
-			else
-			{
-				return nullptr;
-			}
-		}
-
-		return ptr;
-	}
-
-	// Emplace the object returned by provider() and return it if no object exists
-	template <typename T, typename F, typename... Args>
-	static auto import(F&& provider, Args&&... args) -> decltype(static_cast<std::shared_ptr<T>>(provider(std::forward<Args>(args)...)))
-	{
-		std::shared_ptr<T> ptr;
-		{
-			std::lock_guard lock(id_manager::g_mutex);
-
-			auto& cur = g_vec[get_type<T>()];
-
-			if (!cur)
-			{
-				ptr = provider(std::forward<Args>(args)...);
-
-				if (ptr)
-				{
-					cur = ptr;
-				}
-			}
-
-			if (!ptr)
-			{
-				return nullptr;
-			}
-		}
-
-		return ptr;
-	}
-
-	// Unsafe version of check(), can be used in some cases
-	template <typename T>
-	static inline T* check_unlocked()
-	{
-		return static_cast<T*>(g_vec[get_type<T>()].get());
-	}
-
-	// Check whether the object exists
-	template <typename T>
-	static inline T* check()
-	{
-		reader_lock lock(id_manager::g_mutex);
-
-		return check_unlocked<T>();
-	}
-
-	// Get the object (returns nullptr if it doesn't exist)
-	template <typename T>
-	static inline std::shared_ptr<T> get()
-	{
-		reader_lock lock(id_manager::g_mutex);
-
-		auto& ptr = g_vec[get_type<T>()];
-
-		return {ptr, static_cast<T*>(ptr.get())};
-	}
-
-	// Delete the object
-	template <typename T>
-	static inline bool remove()
-	{
-		std::shared_ptr<void> ptr;
-		{
-			std::lock_guard lock(id_manager::g_mutex);
-			ptr = std::move(g_vec[get_type<T>()]);
-		}
-
-		return ptr.operator bool();
-	}
-
-	// Delete the object and return it
-	template <typename T>
-	static inline std::shared_ptr<T> withdraw()
-	{
-		std::shared_ptr<void> ptr;
-		{
-			std::lock_guard lock(id_manager::g_mutex);
-			ptr = std::move(g_vec[get_type<T>()]);
-		}
-
-		return {ptr, static_cast<T*>(ptr.get())};
-	}
-};
-
-#include "Utilities/typemap.h"
 #include "util/fixed_typemap.hpp"
-
-extern utils::typemap g_typemap;
-
-constexpr utils::typemap* g_idm = &g_typemap;
-
-using utils::id_new;
-using utils::id_any;
-using utils::id_always;
 
 extern stx::manual_fixed_typemap<void> g_fixed_typemap;
 

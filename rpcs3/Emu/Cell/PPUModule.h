@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "PPUFunction.h"
 #include "PPUCallback.h"
@@ -7,13 +7,13 @@
 #include "Emu/Memory/vm_var.h"
 
 // Helper function
-constexpr const char* ppu_select_name(const char* name, u32 id)
+constexpr const char* ppu_select_name(const char* name, u32 /*id*/)
 {
 	return name;
 }
 
 // Helper function
-constexpr const char* ppu_select_name(const char* name, const char* orig_name)
+constexpr const char* ppu_select_name(const char* /*name*/, const char* orig_name)
 {
 	return orig_name;
 }
@@ -56,7 +56,7 @@ struct ppu_static_function
 struct ppu_static_variable
 {
 	const char* name;
-	vm::gvar<void>* var; // Pointer to variable address storage
+	vm::gvar<char>* var; // Pointer to variable address storage
 	void(*init)(); // Variable initialization function
 	u32 size;
 	u32 align;
@@ -150,10 +150,10 @@ public:
 		auto& info = access_static_variable(module, vnid);
 
 		info.name  = name;
-		info.var   = reinterpret_cast<vm::gvar<void>*>(Var);
+		info.var   = reinterpret_cast<vm::gvar<char>*>(Var);
 		info.init  = [] {};
-		info.size  = sizeof(typename gvar::type);
-		info.align = alignof(typename gvar::type);
+		info.size  = gvar::alloc_size;
+		info.align = gvar::alloc_align;
 		info.type  = typeid(*Var).name();
 		info.flags = 0;
 		info.addr  = 0;
@@ -171,6 +171,7 @@ public:
 	static const ppu_static_module cellAtracMulti;
 	static const ppu_static_module cellAudio;
 	static const ppu_static_module cellAvconfExt;
+	static const ppu_static_module cellAuthDialogUtility;
 	static const ppu_static_module cellBGDL;
 	static const ppu_static_module cellCamera;
 	static const ppu_static_module cellCelp8Enc;
@@ -285,7 +286,7 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 	return func(ppu, args...);
 }
 
-#define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<&func>(#module, ppu_select_name(#func, nid), BIND_FUNC(func, ppu.cia = (u32)ppu.lr & ~3), ppu_generate_id(nid))
+#define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<&func>(#module, ppu_select_name(#func, nid), BIND_FUNC(func, ppu.cia = static_cast<u32>(ppu.lr) & ~3), ppu_generate_id(nid))
 
 #define REG_FUNC(module, func) REG_FNID(module, #func, func)
 
@@ -293,4 +294,4 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 
 #define REG_VAR(module, var) REG_VNID(module, #var, var)
 
-#define UNIMPLEMENTED_FUNC(module) module.todo("%s", __func__)
+#define UNIMPLEMENTED_FUNC(module) module.todo("%s()", __func__)

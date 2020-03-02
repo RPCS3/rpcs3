@@ -29,7 +29,8 @@ protected:
 				return 0;
 			}
 
-			value += c_waiter_mask & -c_waiter_mask;
+			// Add waiter (c_waiter_mask)
+			value += 1;
 			return value;
 		});
 	}

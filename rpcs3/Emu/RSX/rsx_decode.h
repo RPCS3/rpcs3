@@ -5,33 +5,8 @@
 #include <tuple>
 #include <climits>
 #include "gcm_enums.h"
+#include "rsx_utils.h"
 #pragma warning(disable:4503)
-
-namespace
-{
-	std::string get_subreg_name(u8 subreg)
-	{
-		return subreg == 0 ? "x" :
-			subreg == 1 ? "y" :
-			subreg == 2 ? "z" :
-			"w";
-	}
-
-	std::string print_vertex_attribute_format(rsx::vertex_base_type type)
-	{
-		switch (type)
-		{
-		case rsx::vertex_base_type::s1: return "Signed short normalized";
-		case rsx::vertex_base_type::f: return "Float";
-		case rsx::vertex_base_type::sf: return "Half float";
-		case rsx::vertex_base_type::ub: return "Unsigned byte normalized";
-		case rsx::vertex_base_type::s32k: return "Signed short unormalized";
-		case rsx::vertex_base_type::cmp: return "CMP";
-		case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
-		}
-		fmt::throw_exception("Unexpected enum found" HERE);
-	}
-}
 
 namespace rsx
 {
@@ -2027,17 +2002,13 @@ struct registers_decoder<NV3089_DS_DX>
 		{
 			const u32 val = value;
 
-			if ((val & ~(1<<31)) == 0)
+			if (val == 0)
 			{
+				// Will get reported in image_in
 				return 0;
 			}
 
-			if ((s32)val < 0)
-			{
-				return 1.f / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
-			}
-
-			return 1048576.f / val;
+			return 1.f / rsx::decode_fxp<11, 20>(val);
 		}
 	};
 
@@ -2063,17 +2034,13 @@ struct registers_decoder<NV3089_DT_DY>
 		{
 		    const u32 val = value;
 
-			if ((val & ~(1<<31)) == 0)
+			if (val == 0)
 			{
-				return 0;
+				// Will get reported in image_in
+				return 0.f;
 			}
 
-			if ((s32)val < 0)
-			{
-				return 1.f / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
-			}
-
-			return 1048576.f / val;
+			return 1.f / rsx::decode_fxp<11, 20>(val);
 		}
 	};
 
@@ -3264,6 +3231,35 @@ struct registers_decoder<NV4097_SET_POINT_SIZE>
 };
 
 template<>
+struct registers_decoder<NV4097_SET_POINT_SPRITE_CONTROL>
+{
+	struct decoded_type
+	{
+	private:
+		u32 value;
+
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		bool enabled() const
+		{
+			return bf_decoder<0, 1, bool>(value);
+		}
+
+		u16 texcoord_mask() const
+		{
+			return bf_decoder<8, 10>(value);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Point sprite: enabled = " + print_boolean(decoded_values.enabled()) +
+			"override mask = " + fmt::format("0x%x", decoded_values.texcoord_mask());
+	}
+};
+
+template<>
 struct registers_decoder<NV4097_SET_SURFACE_FORMAT>
 {
 	struct decoded_type
@@ -3364,7 +3360,7 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_DMA>
 	private:
 		u32 value;
 
-		u32 type_raw() const { return bf_decoder<4, 28>(value); }
+		u8 type_raw() const { return bf_decoder<4, 8>(value); }
 
 	public:
 		decoded_type(u32 value) : value(value) {}
@@ -3376,8 +3372,8 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_DMA>
 
 		index_array_type type() const
 		{
-			// Why truncate??
-			return to_index_array_type(static_cast<u8>(type_raw()));
+			// Must be a valid value
+			return static_cast<index_array_type>(type_raw());
 		}
 	};
 
@@ -4128,6 +4124,14 @@ struct transform_constant_helper
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
+		auto get_subreg_name = [](u8 subreg) -> std::string
+		{
+			return subreg == 0 ? "x" :
+				subreg == 1 ? "y" :
+				subreg == 2 ? "z" :
+				"w";
+		};
+		
 		return "TransformConstant[base + " + std::to_string(reg) + "]." + get_subreg_name(subreg) + " = " + std::to_string(decoded_values.constant_value());
 	}
 };
@@ -4307,6 +4311,21 @@ struct vertex_array_helper
 		if (decoded_values.size() == 0)
 			return "(disabled)";
 
+		auto print_vertex_attribute_format = [](rsx::vertex_base_type type) -> std::string
+		{
+			switch (type)
+			{
+			case rsx::vertex_base_type::s1: return "Signed short normalized";
+			case rsx::vertex_base_type::f: return "Float";
+			case rsx::vertex_base_type::sf: return "Half float";
+			case rsx::vertex_base_type::ub: return "Unsigned byte normalized";
+			case rsx::vertex_base_type::s32k: return "Signed short unormalized";
+			case rsx::vertex_base_type::cmp: return "CMP";
+			case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
+			}
+			fmt::throw_exception("Unexpected enum found" HERE);
+		};
+		
 		return "Vertex array " + std::to_string(index) + ": Type = " + print_vertex_attribute_format(decoded_values.type()) +
 			" size = " + std::to_string(decoded_values.size()) +
 			" stride = " + std::to_string(decoded_values.stride()) +

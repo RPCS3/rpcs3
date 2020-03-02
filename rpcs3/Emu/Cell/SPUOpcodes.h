@@ -13,6 +13,7 @@ union spu_opcode_t
 	bf_t<u32, 21, 7> rt4; // 4..10, for 4-op instructions
 	bf_t<u32, 18, 1> e; // 13, "enable interrupts" bit
 	bf_t<u32, 19, 1> d; // 12, "disable interrupts" bit
+	bf_t<u32, 18, 2> de; // 12..13 combined 'e' and 'd' bits
 	bf_t<u32, 20, 1> c; // 11, "C" bit for SYNC instruction
 	bf_t<s32, 23, 2> r0h; // 7..8, signed
 	bf_t<s32, 14, 2> roh; // 16..17, signed

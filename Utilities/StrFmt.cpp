@@ -259,24 +259,12 @@ namespace fmt
 		throw std::range_error{out};
 	}
 
-	// Hidden template
-	template <typename T>
 	void raw_throw_exception(const char* fmt, const fmt_type_info* sup, const u64* args)
 	{
 		std::string out;
 		raw_append(out, fmt, sup, args);
-		throw T{out};
+		throw std::runtime_error{out};
 	}
-
-	// Explicit instantiations (not exhaustive)
-	template void raw_throw_exception<std::runtime_error>(const char*, const fmt_type_info*, const u64*);
-	template void raw_throw_exception<std::logic_error>(const char*, const fmt_type_info*, const u64*);
-	template void raw_throw_exception<std::domain_error>(const char*, const fmt_type_info*, const u64*);
-	template void raw_throw_exception<std::invalid_argument>(const char*, const fmt_type_info*, const u64*);
-	template void raw_throw_exception<std::out_of_range>(const char*, const fmt_type_info*, const u64*);
-	template void raw_throw_exception<std::range_error>(const char*, const fmt_type_info*, const u64*);
-	template void raw_throw_exception<std::overflow_error>(const char*, const fmt_type_info*, const u64*);
-	template void raw_throw_exception<std::underflow_error>(const char*, const fmt_type_info*, const u64*);
 
 	struct cfmt_src;
 }
@@ -402,7 +390,7 @@ std::vector<std::string> fmt::split(const std::string& source, std::initializer_
 		result.push_back(source.substr(cursor_begin));
 	}
 
-	return std::move(result);
+	return result;
 }
 
 std::string fmt::trim(const std::string& source, const std::string& values)

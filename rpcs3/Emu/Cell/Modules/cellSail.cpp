@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
+#include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellSail.h"
@@ -99,7 +99,7 @@ s32 cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<
 {
 	cellSail.warning("cellSailDescriptorCreateDatabase(pSelf=*0x%x, pDatabase=*0x%x, size=0x%x, arg=0x%llx)", pSelf, pDatabase, size, arg);
 
-	switch ((s32)pSelf->streamType)
+	switch (pSelf->streamType)
 	{
 		case CELL_SAIL_STREAM_PAMF:
 		{
@@ -802,7 +802,7 @@ s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 		case CELL_SAIL_STREAM_PAMF:
 		{
 			std::string uri = pUri.get_ptr();
-			if (uri.substr(0, 12) == "x-cell-fs://")
+			if (uri.starts_with("x-cell-fs://"))
 			{
 				if (fs::file f{ vfs::get(uri.substr(12)) })
 				{

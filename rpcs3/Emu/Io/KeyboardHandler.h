@@ -4,6 +4,8 @@
 
 #include <mutex>
 
+#include "util/init_mutex.hpp"
+
 extern u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode); // (TODO: Can it be problematic to place SysCalls in middle of nowhere?)
 
 enum QtKeys
@@ -60,11 +62,10 @@ struct KbButton
 {
 	u32 m_keyCode;
 	u32 m_outKeyCode;
-	bool m_pressed;
+	bool m_pressed = false;
 
 	KbButton(u32 keyCode, u32 outKeyCode)
-		: m_pressed(false)
-		, m_keyCode(keyCode)
+		: m_keyCode(keyCode)
 		, m_outKeyCode(outKeyCode)
 	{
 	}
@@ -72,7 +73,7 @@ struct KbButton
 
 struct Keyboard
 {
-	bool m_key_repeat; // for future use
+	bool m_key_repeat = false; // for future use
 	KbData m_data;
 	KbConfig m_config;
 	std::vector<KbButton> m_buttons;
@@ -80,7 +81,6 @@ struct Keyboard
 	Keyboard()
 		: m_data()
 		, m_config()
-		, m_key_repeat(false)
 	{
 	}
 };
@@ -107,4 +107,6 @@ public:
 	std::vector<KbButton>& GetButtons(const u32 keyboard) { return m_keyboards[keyboard].m_buttons; }
 	KbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
 	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
+
+	stx::init_mutex init;
 };

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <sstream>
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GL/GLVertexProgram.h"
@@ -120,17 +120,17 @@ class CgBinaryDisasm
 
 	std::string m_path; // used for FP decompiler thread, delete this later
 
-	u8* m_buffer;
-	size_t m_buffer_size;
+	u8* m_buffer = nullptr;
+	std::size_t m_buffer_size = 0;
 	std::string m_arb_shader;
 	std::string m_glsl_shader;
 	std::string m_dst_reg_name;
 
 	// FP members
-	u32 m_offset;
-	u32 m_opcode;
-	u32 m_step;
-	u32 m_size;
+	u32 m_offset = 0;
+	u32 m_opcode = 0;
+	u32 m_step = 0;
+	u32 m_size = 0;
 	std::vector<u32> m_end_offsets;
 	std::vector<u32> m_else_offsets;
 	std::vector<u32> m_loop_end_offsets;
@@ -179,14 +179,6 @@ public:
 
 	CgBinaryDisasm(const std::string& path)
 		: m_path(path)
-		, m_buffer(nullptr)
-		, m_buffer_size(0)
-		, m_offset(0)
-		, m_opcode(0)
-		, m_step(0)
-		, m_size(0)
-		, m_arb_shader("")
-		, m_dst_reg_name("")
 	{
 		fs::file f(path);
 		if (!f) return;
@@ -232,9 +224,9 @@ public:
 		return name;
 	}
 
-	std::string GetCgParamRes(u32 offset) const
+	std::string GetCgParamRes(u32 /*offset*/) const
 	{
-		// LOG_WARNING(GENERAL, "GetCgParamRes offset 0x%x", offset);
+		// rsx_log.warning("GetCgParamRes offset 0x%x", offset);
 		// TODO
 		return "";
 	}
@@ -284,19 +276,19 @@ public:
 
 		auto& prog = GetCgRef<CgBinaryProgram>(0);
 
-		if (prog.profile == 7004)
+		if (prog.profile == 7004u)
 		{
 			auto& fprog = GetCgRef<CgBinaryFragmentProgram>(prog.program);
 			m_arb_shader += "\n";
-			m_arb_shader += fmt::format("# binaryFormatRevision 0x%x\n", (u32)prog.binaryFormatRevision);
+			m_arb_shader += fmt::format("# binaryFormatRevision 0x%x\n", prog.binaryFormatRevision);
 			m_arb_shader += fmt::format("# profile sce_fp_rsx\n");
-			m_arb_shader += fmt::format("# parameterCount %d\n", (u32)prog.parameterCount);
-			m_arb_shader += fmt::format("# instructionCount %d\n", (u32)fprog.instructionCount);
-			m_arb_shader += fmt::format("# attributeInputMask 0x%x\n", (u32)fprog.attributeInputMask);
-			m_arb_shader += fmt::format("# registerCount %d\n\n", (u32)fprog.registerCount);
+			m_arb_shader += fmt::format("# parameterCount %d\n", prog.parameterCount);
+			m_arb_shader += fmt::format("# instructionCount %d\n", fprog.instructionCount);
+			m_arb_shader += fmt::format("# attributeInputMask 0x%x\n", fprog.attributeInputMask);
+			m_arb_shader += fmt::format("# registerCount %d\n\n", fprog.registerCount);
 
 			CgBinaryParameterOffset offset = prog.parameterArray;
-			for (u32 i = 0; i < (u32)prog.parameterCount; i++)
+			for (u32 i = 0; i < prog.parameterCount; i++)
 			{
 				auto& fparam = GetCgRef<CgBinaryParameter>(offset);
 
@@ -344,16 +336,16 @@ public:
 		{
 			auto& vprog = GetCgRef<CgBinaryVertexProgram>(prog.program);
 			m_arb_shader += "\n";
-			m_arb_shader += fmt::format("# binaryFormatRevision 0x%x\n", (u32)prog.binaryFormatRevision);
+			m_arb_shader += fmt::format("# binaryFormatRevision 0x%x\n", prog.binaryFormatRevision);
 			m_arb_shader += fmt::format("# profile sce_vp_rsx\n");
-			m_arb_shader += fmt::format("# parameterCount %d\n", (u32)prog.parameterCount);
-			m_arb_shader += fmt::format("# instructionCount %d\n", (u32)vprog.instructionCount);
-			m_arb_shader += fmt::format("# registerCount %d\n", (u32)vprog.registerCount);
-			m_arb_shader += fmt::format("# attributeInputMask 0x%x\n", (u32)vprog.attributeInputMask);
-			m_arb_shader += fmt::format("# attributeOutputMask 0x%x\n\n", (u32)vprog.attributeOutputMask);
+			m_arb_shader += fmt::format("# parameterCount %d\n", prog.parameterCount);
+			m_arb_shader += fmt::format("# instructionCount %d\n", vprog.instructionCount);
+			m_arb_shader += fmt::format("# registerCount %d\n", vprog.registerCount);
+			m_arb_shader += fmt::format("# attributeInputMask 0x%x\n", vprog.attributeInputMask);
+			m_arb_shader += fmt::format("# attributeOutputMask 0x%x\n\n", vprog.attributeOutputMask);
 
 			CgBinaryParameterOffset offset = prog.parameterArray;
-			for (u32 i = 0; i < (u32)prog.parameterCount; i++)
+			for (u32 i = 0; i < prog.parameterCount; i++)
 			{
 				auto& vparam = GetCgRef<CgBinaryParameter>(offset);
 
@@ -371,11 +363,11 @@ public:
 			m_arb_shader += "\n";
 			m_offset = prog.ucode;
 
-			u32* vdata = (u32*)&m_buffer[m_offset];
+			u32* vdata = reinterpret_cast<u32*>(&m_buffer[m_offset]);
 			verify(HERE), (m_buffer_size - m_offset) % sizeof(u32) == 0;
 			for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 			{
-				vdata[i] = be_t<u32>{vdata[i]}.raw();
+				vdata[i] = std::bit_cast<u32, be_t<u32>>(vdata[i]);
 			}
 
 			for (u32 i = 0; i < prog.ucodeSize / sizeof(u32); i++)

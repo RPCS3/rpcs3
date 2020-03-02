@@ -429,26 +429,39 @@ namespace glsl
 		"}\n\n";
 	}
 
-	static void insert_rop(std::ostream& OS, bool _32_bit_exports, bool native_half_support, bool emulate_coverage_tests)
+	static void insert_rop(std::ostream& OS, const shader_properties& props)
 	{
-		const std::string reg0 = _32_bit_exports ? "r0" : "h0";
-		const std::string reg1 = _32_bit_exports ? "r2" : "h4";
-		const std::string reg2 = _32_bit_exports ? "r3" : "h6";
-		const std::string reg3 = _32_bit_exports ? "r4" : "h8";
+		const std::string reg0 = props.fp32_outputs ? "r0" : "h0";
+		const std::string reg1 = props.fp32_outputs ? "r2" : "h4";
+		const std::string reg2 = props.fp32_outputs ? "r3" : "h6";
+		const std::string reg3 = props.fp32_outputs ? "r4" : "h8";
 
 		//TODO: Implement all ROP options like CSAA and ALPHA_TO_ONE here
+		if (props.disable_early_discard)
+		{
+			OS <<
+			"	if (_fragment_discard)\n"
+			"	{\n"
+			"		discard;\n"
+			"	}\n"
+			"	else if ((rop_control & 0xFF) != 0)\n";
+		}
+		else
+		{
+			OS << "	if ((rop_control & 0xFF) != 0)\n";
+		}
+
 		OS <<
-		"	if ((rop_control & 0xFF) != 0)\n"
 		"	{\n"
 		"		bool alpha_test = (rop_control & 0x1) > 0;\n"
 		"		uint alpha_func = ((rop_control >> 16) & 0x7);\n";
 
-		if (!_32_bit_exports)
+		if (!props.fp32_outputs)
 		{
 			OS << "		bool srgb_convert = (rop_control & 0x2) > 0;\n\n";
 		}
 
-		if (emulate_coverage_tests)
+		if (props.emulate_coverage_tests)
 		{
 			OS << "		bool a2c_enabled = (rop_control & 0x10) > 0;\n";
 		}
@@ -459,7 +472,7 @@ namespace glsl
 		"			discard;\n"
 		"		}\n";
 
-		if (emulate_coverage_tests)
+		if (props.emulate_coverage_tests)
 		{
 			OS <<
 			"		else if (a2c_enabled && !coverage_test_passes(" << reg0 << ", rop_control >> 5))\n"
@@ -468,10 +481,10 @@ namespace glsl
 			"		}\n";
 		}
 
-		if (!_32_bit_exports)
+		if (!props.fp32_outputs)
 		{
 			// Tested using NPUB90375; some shaders (32-bit output only?) do not obey srgb flags
-			if (native_half_support)
+			if (props.supports_native_fp16)
 			{
 				OS <<
 				"		else if (srgb_convert)\n"
@@ -509,6 +522,21 @@ namespace glsl
 		OS << "#define _select mix\n";
 		OS << "#define _saturate(x) clamp(x, 0., 1.)\n";
 		OS << "#define _rand(seed) fract(sin(dot(seed.xy, vec2(12.9898f, 78.233f))) * 43758.5453f)\n\n";
+
+		if (props.domain == glsl::program_domain::glsl_fragment_program)
+		{
+			OS << "// Workaround for broken early discard in some drivers\n";
+
+			if (props.disable_early_discard)
+			{
+				OS << "bool _fragment_discard = false;\n";
+				OS << "#define _kill() _fragment_discard = true\n\n";
+			}
+			else
+			{
+				OS << "#define _kill() discard\n\n";
+			}
+		}
 
 		if (props.require_lit_emulation)
 		{
@@ -555,22 +583,14 @@ namespace glsl
 
 		if (props.emulate_coverage_tests)
 		{
-			// NOTES:
-			// Lowers alpha accuracy down to 2 bits, to mimic A2C banding
-			// Alpha lower than the real threshold (e.g 0.25 for 4 samples) gets a randomized chance to make it to the lowest transparency state
-			// Helps to avoid A2C tested foliage disappearing in the distance
-			// TODO: Fix dithering when mipmap gather is finished to remove muddy appearance. Alpha boost is only present to hide far LOD issues in titles like RDR
+			// Purely stochastic
 			OS <<
-			"bool coverage_test_passes(/*inout*/const in vec4 _sample, const in uint control)\n"
+			"bool coverage_test_passes(const in vec4 _sample, const in uint control)\n"
 			"{\n"
 			"	if ((control & 0x1) == 0) return false;\n"
 			"\n"
-			"	float samples = float(control & 0x6) * 0.5f + 1.f;\n"
-			"	float hash    = _saturate(_rand(gl_FragCoord) + 0.5f) * 0.9f;\n"
-			"	float epsilon = hash / samples;\n"
-			"	float alpha   = trunc((_sample.a + epsilon) * samples) / samples;\n"
-			"	//_sample.a     = min(_sample.a, alpha);\n" // Cannot blend A2C samples naively as they are order independent! Causes background bleeding
-			"	return (alpha > 0.f);\n"
+			"	float random  = _rand(gl_FragCoord);\n"
+			"	return (_sample.a > random);\n"
 			"}\n\n";
 		}
 
@@ -605,34 +625,44 @@ namespace glsl
 			"	return vec4(float(g)/255., float(b)/255., 1., float(r)/255.);\n"
 			"}\n\n"
 
-			"float read_value(const in vec4 src, const in uint remap_index)\n"
+			"vec4 remap_vector(const in vec4 color, const in uint remap)\n"
 			"{\n"
-			"	switch (remap_index)\n"
+			"	vec4 result;\n"
+			"	if ((remap & 0xFF) == 0xE4)\n"
 			"	{\n"
-			"		case 0: return src.a;\n"
-			"		case 1: return src.r;\n"
-			"		case 2: return src.g;\n"
-			"		case 3: return src.b;\n"
+			"		result = color;\n"
 			"	}\n"
+			"	else\n"
+			"	{\n"
+			"		uvec4 remap_channel = uvec4(remap) >> uvec4(2, 4, 6, 0);\n"
+			"		remap_channel &= 3;\n"
+			"		remap_channel = (remap_channel + 3) % 4; // Map A-R-G-B to R-G-B-A\n\n"
+
+			"		// Generate remapped result\n"
+			"		result.a = color[remap_channel.a];\n"
+			"		result.r = color[remap_channel.r];\n"
+			"		result.g = color[remap_channel.g];\n"
+			"		result.b = color[remap_channel.b];\n"
+			"	}\n\n"
+
+			"	if ((remap >> 8) == 0xAA)\n"
+			"		return result;\n\n"
+
+			"	uvec4 remap_select = uvec4(remap) >> uvec4(10, 12, 14, 8);\n"
+			"	remap_select &= 3;\n"
+			"	bvec4 choice = lessThan(remap_select, uvec4(2));\n"
+			"	return _select(result, vec4(remap_select), choice);\n"
 			"}\n\n"
 
-			"vec4 texture2DReconstruct(sampler2D tex, usampler2D stencil_tex, const in vec2 coord, const in float remap)\n"
+			"vec4 texture2DReconstruct(sampler2D tex, usampler2D stencil_tex, const in vec2 coord, const in uint remap)\n"
 			"{\n"
-			"	uint control_bits = floatBitsToUint(remap);\n"
-			"	vec4 result = decode_depth24(texture(tex, coord.xy).r, control_bits >> 16);\n"
-			"	result.z = float(texture(stencil_tex, coord.xy).x) / 255.f;\n"
-			"	uint remap_vector = control_bits & 0xFF;\n"
-			"	if (remap_vector == 0xE4) return result;\n\n"
-			"	vec4 tmp;\n"
-			"	uint remap_a = remap_vector & 0x3;\n"
-			"	uint remap_r = (remap_vector >> 2) & 0x3;\n"
-			"	uint remap_g = (remap_vector >> 4) & 0x3;\n"
-			"	uint remap_b = (remap_vector >> 6) & 0x3;\n"
-			"	tmp.a = read_value(result, remap_a);\n"
-			"	tmp.r = read_value(result, remap_r);\n"
-			"	tmp.g = read_value(result, remap_g);\n"
-			"	tmp.b = read_value(result, remap_b);\n"
-			"	return tmp;\n"
+			"	vec4 result = decode_depth24(texture(tex, coord.xy).r, remap >> 16);\n"
+			"	result.z = float(texture(stencil_tex, coord.xy).x) / 255.f;\n\n"
+
+			"	if (remap == 0xAAE4)\n"
+			" 		return result;\n\n"
+
+			"	return remap_vector(result, remap);\n"
 			"}\n\n";
 		}
 
@@ -677,7 +707,7 @@ namespace glsl
 			"}\n\n"
 
 			//TODO: Move all the texture read control operations here
-			"vec4 process_texel(const in vec4 rgba, const in uint control_bits)\n"
+			"vec4 process_texel(in vec4 rgba, const in uint control_bits)\n"
 			"{\n"
 #ifdef __APPLE__
 			"	uint remap_bits = (control_bits >> 16) & 0xFFFF;\n"
@@ -693,9 +723,16 @@ namespace glsl
 			"		// Alphakill\n"
 			"		if (rgba.a < 0.000001)\n"
 			"		{\n"
-			"			discard;\n"
+			"			_kill();\n"
 			"			return rgba;\n"
 			"		}\n"
+			"	}\n"
+			"\n"
+			"	if ((control_bits & 0x20) != 0)\n"
+			"	{\n"
+			"		// Renormalize to 8-bit (PS3) accuracy\n"
+			"		rgba = floor(rgba * 255.);\n"
+			"		rgba /= 255.;"
 			"	}\n"
 			"\n"
 			"	//TODO: Verify gamma control bit ordering, looks to be 0x7 for rgb, 0xF for rgba\n"
@@ -707,39 +744,39 @@ namespace glsl
 			"#define TEX_NAME(index) tex##index\n"
 			"#define TEX_NAME_STENCIL(index) tex##index##_stencil\n\n"
 
-			"#define TEX1D(index, coord1) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].x), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX1D_BIAS(index, coord1, bias) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].x, bias), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX1D_LOD(index, coord1, lod) process_texel(textureLod(TEX_NAME(index), coord1 * texture_parameters[index].x, lod), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX1D_GRAD(index, coord1, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord1 * texture_parameters[index].x, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX1D_PROJ(index, coord2) process_texel(textureProj(TEX_NAME(index), coord2 * vec2(texture_parameters[index].x, 1.)), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX1D(index, coord1) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].scale.x), texture_parameters[index].flags)\n"
+			"#define TEX1D_BIAS(index, coord1, bias) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, bias), texture_parameters[index].flags)\n"
+			"#define TEX1D_LOD(index, coord1, lod) process_texel(textureLod(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, lod), texture_parameters[index].flags)\n"
+			"#define TEX1D_GRAD(index, coord1, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, dpdx, dpdy), texture_parameters[index].flags)\n"
+			"#define TEX1D_PROJ(index, coord2) process_texel(textureProj(TEX_NAME(index), coord2 * vec2(texture_parameters[index].scale.x, 1.)), texture_parameters[index].flags)\n"
 
-			"#define TEX2D(index, coord2) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].xy), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_BIAS(index, coord2, bias) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].xy, bias), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_LOD(index, coord2, lod) process_texel(textureLod(TEX_NAME(index), coord2 * texture_parameters[index].xy, lod), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord2 * texture_parameters[index].xy, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.)), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX2D(index, coord2) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].scale), texture_parameters[index].flags)\n"
+			"#define TEX2D_BIAS(index, coord2, bias) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].scale, bias), texture_parameters[index].flags)\n"
+			"#define TEX2D_LOD(index, coord2, lod) process_texel(textureLod(TEX_NAME(index), coord2 * texture_parameters[index].scale, lod), texture_parameters[index].flags)\n"
+			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord2 * texture_parameters[index].scale, dpdx, dpdy), texture_parameters[index].flags)\n"
+			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.)), texture_parameters[index].flags)\n"
 
-			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].xy, texture_parameters[index].z), floatBitsToUint(texture_parameters[index].w))\n";
+			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].scale, texture_parameters[index].remap), texture_parameters[index].flags)\n";
 
 			if (props.emulate_shadow_compare)
 			{
 				OS <<
-				"#define TEX2D_SHADOW(index, coord3) shadowCompare(TEX_NAME(index), coord3 * vec3(texture_parameters[index].xy, 1.), floatBitsToUint(texture_parameters[index].w) >> 8)\n"
-				"#define TEX2D_SHADOWPROJ(index, coord4) shadowCompareProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.), floatBitsToUint(texture_parameters[index].w) >> 8)\n";
+				"#define TEX2D_SHADOW(index, coord3) shadowCompare(TEX_NAME(index), coord3 * vec3(texture_parameters[index].scale, 1.), texture_parameters[index].flags >> 8)\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) shadowCompareProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.), texture_parameters[index].flags >> 8)\n";
 			}
 			else
 			{
 				OS <<
-				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), coord3 * vec3(texture_parameters[index].xy, 1.))\n"
-				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.))\n";
+				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), coord3 * vec3(texture_parameters[index].scale, 1.))\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.))\n";
 			}
 
 			OS <<
-			"#define TEX3D(index, coord3) process_texel(texture(TEX_NAME(index), coord3), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), coord3, bias), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), coord3, lod), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX3D_GRAD(index, coord3, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord3, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4), floatBitsToUint(texture_parameters[index].w))\n\n";
+			"#define TEX3D(index, coord3) process_texel(texture(TEX_NAME(index), coord3), texture_parameters[index].flags)\n"
+			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), coord3, bias), texture_parameters[index].flags)\n"
+			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), coord3, lod), texture_parameters[index].flags)\n"
+			"#define TEX3D_GRAD(index, coord3, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord3, dpdx, dpdy), texture_parameters[index].flags)\n"
+			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4), texture_parameters[index].flags)\n\n";
 		}
 
 		if (props.require_wpos)
@@ -840,5 +877,19 @@ namespace glsl
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
 			return "TEX2D_DEPTH_RGBA8($_i, $0.xy)";
 		}
+	}
+
+	static void insert_subheader_block(std::ostream& OS)
+	{
+		// Global types and stuff
+		// Must be compatible with std140 packing rules
+		OS <<
+		"struct sampler_info\n"
+		"{\n"
+		"	vec2 scale;\n"
+		"	uint remap;\n"
+		"	uint flags;\n"
+		"};\n"
+		"\n";
 	}
 }

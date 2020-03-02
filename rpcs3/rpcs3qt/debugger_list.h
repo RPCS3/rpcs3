@@ -1,20 +1,21 @@
-#pragma once
+﻿#pragma once
 
-#include "breakpoint_handler.h"
-#include "gui_settings.h"
-
-#include "Emu/CPU/CPUThread.h"
-#include "Emu/CPU/CPUDisAsm.h"
+#include "stdafx.h"
 
 #include <QListWidget>
+
+class breakpoint_handler;
+class CPUDisAsm;
+class cpu_thread;
+class gui_settings;
 
 class debugger_list : public QListWidget
 {
 	Q_OBJECT
 
 public:
-	u32 m_pc;
-	u32 m_item_count;
+	u32 m_pc = 0;
+	u32 m_item_count = 30;
 	bool m_no_thread_selected;
 	QColor m_color_bp;
 	QColor m_color_pc;

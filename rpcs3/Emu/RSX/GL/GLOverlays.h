@@ -37,7 +37,7 @@ namespace gl
 			saved_sampler_state(GLuint _unit, const gl::sampler_state& sampler)
 			{
 				glActiveTexture(GL_TEXTURE0 + _unit);
-				glGetIntegerv(GL_SAMPLER_BINDING, (GLint*)&saved);
+				glGetIntegerv(GL_SAMPLER_BINDING, reinterpret_cast<GLint*>(&saved));
 
 				unit = _unit;
 				sampler.bind(_unit);
@@ -132,11 +132,11 @@ namespace gl
 			glBindVertexArray(old_vao);
 		}
 
-		virtual void run(u16 w, u16 h, GLuint target_texture, bool depth_target, bool use_blending = false)
+		void run(const areau& region, GLuint target_texture, bool depth_target, bool use_blending = false)
 		{
 			if (!compiled)
 			{
-				LOG_ERROR(RSX, "You must initialize overlay passes with create() before calling run()");
+				rsx_log.error("You must initialize overlay passes with create() before calling run()");
 				return;
 			}
 
@@ -198,7 +198,7 @@ namespace gl
 				}
 
 				// Set initial state
-				glViewport(0, 0, w, h);
+				glViewport(region.x1, region.y1, region.width(), region.height());
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 				glDepthMask(depth_target ? GL_TRUE : GL_FALSE);
 
@@ -240,7 +240,7 @@ namespace gl
 					glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
 				}
 
-				glUseProgram((GLuint)program);
+				glUseProgram(program);
 
 				glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 				glColorMask(color_writes[0], color_writes[1], color_writes[2], color_writes[3]);
@@ -267,7 +267,7 @@ namespace gl
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Overlay pass failed because framebuffer was not complete. Run with debug output enabled to diagnose the problem");
+				rsx_log.error("Overlay pass failed because framebuffer was not complete. Run with debug output enabled to diagnose the problem");
 			}
 		}
 	};
@@ -311,7 +311,7 @@ namespace gl
 			saved_sampler_state saved(31, m_sampler);
 			glBindTexture(GL_TEXTURE_2D, source->id());
 
-			overlay_pass::run(dst_area.x2, dst_area.y2, target->id(), true);
+			overlay_pass::run(static_cast<areau>(dst_area), target->id(), true);
 		}
 	};
 
@@ -341,12 +341,12 @@ namespace gl
 				"}\n";
 		}
 
-		void run(u16 w, u16 h, GLuint target, GLuint source)
+		void run(const areau& viewport, GLuint target, GLuint source)
 		{
 			saved_sampler_state saved(31, m_sampler);
 			glBindTexture(GL_TEXTURE_2D, source);
 
-			overlay_pass::run(w, h, target, false);
+			overlay_pass::run(viewport, target, false);
 		}
 	};
 
@@ -358,7 +358,7 @@ namespace gl
 		std::unordered_map<u64, std::unique_ptr<gl::texture_view>> temp_view_cache;
 		std::unordered_map<u64, std::unique_ptr<gl::texture>> font_cache;
 		std::unordered_map<u64, std::unique_ptr<gl::texture_view>> view_cache;
-		bool is_font_draw = false;
+		rsx::overlays::primitive_type m_current_primitive_type = rsx::overlays::primitive_type::quad_list;
 
 		ui_overlay_renderer()
 		{
@@ -368,36 +368,45 @@ namespace gl
 				"layout(location=0) out vec2 tc0;\n"
 				"layout(location=1) flat out vec4 clip_rect;\n"
 				"uniform vec4 ui_scale;\n"
-				"uniform vec2 viewport;\n"
+				"uniform vec4 viewport;\n"
 				"uniform vec4 clip_bounds;\n"
 				"\n"
 				"vec2 snap_to_grid(vec2 normalized)\n"
 				"{\n"
-				"	return (floor(normalized * viewport) + 0.5) / viewport;\n"
+				"	return (floor(normalized * viewport.xy) + 0.5) / viewport.xy;\n"
+				"}\n"
+				"\n"
+				"vec4 clip_to_ndc(const in vec4 coord)\n"
+				"{\n"
+				"	vec4 ret = (coord * ui_scale.zwzw) / ui_scale.xyxy;\n"
+				"	ret.yw = 1. - ret.yw;\n"
+				"	return ret;\n"
+				"}\n"
+				"\n"
+				"vec4 ndc_to_window(const in vec4 coord)\n"
+				"{\n"
+				"	return fma(coord, viewport.xyxy, viewport.zwzw);\n"
 				"}\n"
 				"\n"
 				"void main()\n"
 				"{\n"
 				"	tc0.xy = in_pos.zw;\n"
-				"	clip_rect = clip_bounds;\n"
-				"	clip_rect.yw = ui_scale.yy - clip_rect.wy; // Invert y axis\n"
-				"	clip_rect *= (ui_scale.zwzw * viewport.xyxy) / ui_scale.xyxy; // Normalize and convert to window coords\n"
-				"	vec2 window_coord = (in_pos.xy * ui_scale.zw) / ui_scale.xy;\n"
-				"	window_coord = snap_to_grid(window_coord); // Half-integer offset\n"
-				"	window_coord.y = (1. - window_coord.y); // Invert y axis\n"
-				"	vec4 pos = vec4(window_coord, 0., 1.);\n"
+				"	clip_rect = ndc_to_window(clip_to_ndc(clip_bounds)).xwzy; // Swap y1 and y2 due to flipped origin!\n"
+				"	vec4 pos = vec4(clip_to_ndc(in_pos).xy, 0.5, 1.);\n"
+				"	pos.xy = snap_to_grid(pos.xy);\n"
 				"	gl_Position = (pos + pos) - 1.;\n"
 				"}\n";
 
 			fs_src =
 				"#version 420\n\n"
 				"layout(binding=31) uniform sampler2D fs0;\n"
+				"layout(binding=30) uniform sampler2DArray fs1;\n"
 				"layout(location=0) in vec2 tc0;\n"
 				"layout(location=1) flat in vec4 clip_rect;\n"
 				"layout(location=0) out vec4 ocol;\n"
 				"uniform vec4 color;\n"
 				"uniform float time;\n"
-				"uniform int read_texture;\n"
+				"uniform int sampler_mode;\n"
 				"uniform int pulse_glow;\n"
 				"uniform int clip_region;\n"
 				"uniform int blur_strength;\n"
@@ -467,10 +476,18 @@ namespace gl
 				"	if (pulse_glow != 0)\n"
 				"		diff_color.a *= (sin(time) + 1.f) * 0.5f;\n"
 				"\n"
-				"	if (read_texture != 0)\n"
+				"	switch (sampler_mode)\n"
+				"	{\n"
+				"	case 1:\n"
 				"		ocol = sample_image(fs0, tc0) * diff_color;\n"
-				"	else\n"
+				"		break;\n"
+				"	case 2:\n"
+				"		ocol = texture(fs1, vec3(tc0.x, fract(tc0.y), trunc(tc0.y))) * diff_color;\n"
+				"		break;\n"
+				"	default:\n"
 				"		ocol = diff_color;\n"
+				"		break;\n"
+				"	}\n"
 				"}\n";
 
 			// Smooth filtering required for inputs
@@ -480,7 +497,7 @@ namespace gl
 		gl::texture_view* load_simple_image(rsx::overlays::image_info* desc, bool temp_resource, u32 owner_uid)
 		{
 			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, desc->w, desc->h, 1, 1, GL_RGBA8);
-			tex->copy_from(desc->data, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+			tex->copy_from(desc->data, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 			GLenum remap[] = { GL_RED, GL_ALPHA, GL_BLUE, GL_GREEN };
 			auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
@@ -493,8 +510,8 @@ namespace gl
 			}
 			else
 			{
-				u64 key = (u64)desc;
-				temp_image_cache[key] = std::move(std::make_pair(owner_uid, std::move(tex)));
+				u64 key = reinterpret_cast<u64>(desc);
+				temp_image_cache[key] = std::make_pair(owner_uid, std::move(tex));
 				temp_view_cache[key] = std::move(view);
 			}
 
@@ -544,14 +561,27 @@ namespace gl
 
 		gl::texture_view* find_font(rsx::overlays::font *font)
 		{
-			u64 key = (u64)font;
+			const auto font_size = font->get_glyph_data_dimensions();
+
+			u64 key = reinterpret_cast<u64>(font);
 			auto found = view_cache.find(key);
 			if (found != view_cache.end())
-				return found->second.get();
+			{
+				if (const auto this_size = found->second->image()->size3D();
+					font_size.width == this_size.width &&
+					font_size.height == this_size.height &&
+					font_size.depth == this_size.depth)
+				{
+					return found->second.get();
+				}
+			}
 
-			//Create font file
-			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, (int)font->width, (int)font->height, 1, 1, GL_R8);
-			tex->copy_from(font->glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte);
+			// Create font file
+			std::vector<u8> glyph_data;
+			font->get_glyph_data(glyph_data);
+
+			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D_ARRAY, font_size.width, font_size.height, font_size.depth, 1, GL_R8);
+			tex->copy_from(glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte, {});
 
 			GLenum remap[] = { GL_RED, GL_RED, GL_RED, GL_RED };
 			auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
@@ -565,7 +595,7 @@ namespace gl
 
 		gl::texture_view* find_temp_image(rsx::overlays::image_info *desc, u32 owner_uid)
 		{
-			auto key = (u64)desc;
+			auto key = reinterpret_cast<u64>(desc);
 			auto cached = temp_view_cache.find(key);
 			if (cached != temp_view_cache.end())
 			{
@@ -577,14 +607,32 @@ namespace gl
 			}
 		}
 
+		void set_primitive_type(rsx::overlays::primitive_type type)
+		{
+			m_current_primitive_type = type;
+
+			switch (type)
+			{
+				case rsx::overlays::primitive_type::quad_list:
+				case rsx::overlays::primitive_type::triangle_strip:
+					primitives = GL_TRIANGLE_STRIP;
+					break;
+				case rsx::overlays::primitive_type::line_list:
+					primitives = GL_LINES;
+					break;
+				case rsx::overlays::primitive_type::line_strip:
+					primitives = GL_LINE_STRIP;
+					break;
+				default:
+					fmt::throw_exception("Unexpected primitive type %d" HERE, static_cast<s32>(type));
+			}
+		}
+
 		void emit_geometry() override
 		{
-			if (!is_font_draw)
+			if (m_current_primitive_type == rsx::overlays::primitive_type::quad_list)
 			{
-				overlay_pass::emit_geometry();
-			}
-			else
-			{
+				// Emulate quads with disjointed triangle strips
 				int num_quads = num_drawable_elements / 4;
 				std::vector<GLint> firsts;
 				std::vector<GLsizei> counts;
@@ -606,22 +654,27 @@ namespace gl
 
 				glBindVertexArray(old_vao);
 			}
+			else
+			{
+				overlay_pass::emit_geometry();
+			}
 		}
 
-		void run(u16 w, u16 h, GLuint target, rsx::overlays::overlay& ui)
+		void run(const areau& viewport, GLuint target, rsx::overlays::overlay& ui)
 		{
-			program_handle.uniforms["viewport"] = color2f(f32(w), f32(h));
-			program_handle.uniforms["ui_scale"] = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
-			program_handle.uniforms["time"] = (f32)(get_system_time() / 1000) * 0.005f;
+			program_handle.uniforms["viewport"] = color4f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()), static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1));
+			program_handle.uniforms["ui_scale"] = color4f(static_cast<f32>(ui.virtual_width), static_cast<f32>(ui.virtual_height), 1.f, 1.f);
+			program_handle.uniforms["time"] = static_cast<f32>(get_system_time() / 1000) * 0.005f;
 
-			saved_sampler_state saved(31, m_sampler);
+			saved_sampler_state save_30(30, m_sampler);
+			saved_sampler_state save_31(31, m_sampler);
 
 			for (auto &cmd : ui.get_compiled().draw_commands)
 			{
-				upload_vertex_data((f32*)cmd.verts.data(), (u32)cmd.verts.size() * 4u);
-				num_drawable_elements = (u32)cmd.verts.size();
-				is_font_draw = false;
-				GLint texture_exists = GL_TRUE;
+				set_primitive_type(cmd.config.primitives);
+				upload_vertex_data(reinterpret_cast<f32*>(cmd.verts.data()), ::size32(cmd.verts) * 4u);
+				num_drawable_elements = ::size32(cmd.verts);
+				GLint texture_read = GL_TRUE;
 
 				switch (cmd.config.texture_ref)
 				{
@@ -630,19 +683,21 @@ namespace gl
 					//TODO
 				case rsx::overlays::image_resource_id::none:
 				{
-					texture_exists = GL_FALSE;
+					texture_read = GL_FALSE;
 					glBindTexture(GL_TEXTURE_2D, GL_NONE);
 					break;
 				}
 				case rsx::overlays::image_resource_id::raw_image:
 				{
-					glBindTexture(GL_TEXTURE_2D, find_temp_image((rsx::overlays::image_info*)cmd.config.external_data_ref, ui.uid)->id());
+					glBindTexture(GL_TEXTURE_2D, find_temp_image(static_cast<rsx::overlays::image_info*>(cmd.config.external_data_ref), ui.uid)->id());
 					break;
 				}
 				case rsx::overlays::image_resource_id::font_file:
 				{
-					is_font_draw = true;
-					glBindTexture(GL_TEXTURE_2D, find_font(cmd.config.font_ref)->id());
+					texture_read = (GL_TRUE + 1);
+					glActiveTexture(GL_TEXTURE0 + 30);
+					glBindTexture(GL_TEXTURE_2D_ARRAY, find_font(cmd.config.font_ref)->id());
+					glActiveTexture(GL_TEXTURE0 + 31);
 					break;
 				}
 				default:
@@ -653,12 +708,12 @@ namespace gl
 				}
 
 				program_handle.uniforms["color"] = cmd.config.color;
-				program_handle.uniforms["read_texture"] = texture_exists;
-				program_handle.uniforms["pulse_glow"] = (s32)cmd.config.pulse_glow;
-				program_handle.uniforms["blur_strength"] = (s32)cmd.config.blur_strength;
-				program_handle.uniforms["clip_region"] = (s32)cmd.config.clip_region;
+				program_handle.uniforms["sampler_mode"] = texture_read;
+				program_handle.uniforms["pulse_glow"] = static_cast<s32>(cmd.config.pulse_glow);
+				program_handle.uniforms["blur_strength"] = static_cast<s32>(cmd.config.blur_strength);
+				program_handle.uniforms["clip_region"] = static_cast<s32>(cmd.config.clip_region);
 				program_handle.uniforms["clip_bounds"] = cmd.config.clip_rect;
-				overlay_pass::run(w, h, target, false, true);
+				overlay_pass::run(viewport, target, false, true);
 			}
 
 			ui.update();
@@ -672,17 +727,13 @@ namespace gl
 			vs_src =
 				"#version 420\n\n"
 				"layout(location=0) out vec2 tc0;\n"
-				"uniform float x_scale;\n"
-				"uniform float y_scale;\n"
-				"uniform float x_offset;\n"
-				"uniform float y_offset;\n"
 				"\n"
 				"void main()\n"
 				"{\n"
 				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
 				"	vec2 coords[] = {vec2(0., 1.), vec2(1., 1.), vec2(0., 0.), vec2(1., 0.)};\n"
 				"	tc0 = coords[gl_VertexID % 4];\n"
-				"	vec2 pos = positions[gl_VertexID % 4] * vec2(x_scale, y_scale) + (2. * vec2(x_offset, y_offset));\n"
+				"	vec2 pos = positions[gl_VertexID % 4];\n"
 				"	gl_Position = vec4(pos, 0., 1.);\n"
 				"}\n";
 
@@ -708,23 +759,14 @@ namespace gl
 			input_filter = GL_LINEAR;
 		}
 
-		void run(u16 w, u16 h, GLuint source, const areai& region, f32 gamma, bool limited_rgb)
+		void run(const areau& viewport, GLuint source, f32 gamma, bool limited_rgb)
 		{
-			const f32 x_scale = (f32)(region.x2 - region.x1) / w;
-			const f32 y_scale = (f32)(region.y2 - region.y1) / h;
-			const f32 x_offset = (f32)(region.x1) / w;
-			const f32 y_offset = (f32)(region.y1) / h;
-
-			program_handle.uniforms["x_scale"] = x_scale;
-			program_handle.uniforms["y_scale"] = y_scale;
-			program_handle.uniforms["x_offset"] = x_offset;
-			program_handle.uniforms["y_offset"] = y_offset;
 			program_handle.uniforms["gamma"] = gamma;
-			program_handle.uniforms["limit_range"] = (int)limited_rgb;
+			program_handle.uniforms["limit_range"] = limited_rgb + 0;
 
 			saved_sampler_state saved(31, m_sampler);
 			glBindTexture(GL_TEXTURE_2D, source);
-			overlay_pass::run(w, h, GL_NONE, false, false);
+			overlay_pass::run(viewport, GL_NONE, false, false);
 		}
 	};
 }

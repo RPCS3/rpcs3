@@ -1,10 +1,7 @@
-#pragma once
+﻿#pragma once
 
 #include <QDialog>
-#include <QVBoxLayout>
-#include <QPushButton>
 #include <QTreeWidget>
-#include <QHeaderView>
 
 class kernel_explorer : public QDialog
 {

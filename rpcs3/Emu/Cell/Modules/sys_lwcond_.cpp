@@ -1,6 +1,4 @@
-#include "stdafx.h"
-#include "Emu/IdManager.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_lwmutex.h"
@@ -9,7 +7,7 @@
 #include "Emu/Cell/lv2/sys_cond.h"
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 error_code sys_lwcond_create(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwcond_attribute_t> attr)
 {
@@ -79,7 +77,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 
 			lwmutex->all_info--;
 
-			if (res != CELL_EPERM)
+			if (res + 0u != CELL_EPERM)
 			{
 				return res;
 			}
@@ -92,7 +90,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	{
 		// if locking failed
 
-		if (res != CELL_EBUSY)
+		if (res + 0u != CELL_EBUSY)
 		{
 			return CELL_ESRCH;
 		}
@@ -117,7 +115,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		// unlock the lightweight mutex
 		sys_lwmutex_unlock(ppu, lwmutex);
 
-		if (res != CELL_ENOENT)
+		if (res + 0u != CELL_ENOENT)
 		{
 			return res;
 		}
@@ -166,7 +164,7 @@ error_code sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	{
 		// if locking failed
 
-		if (res != CELL_EBUSY)
+		if (res + 0u != CELL_EBUSY)
 		{
 			return CELL_ESRCH;
 		}
@@ -237,7 +235,7 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 	{
 		// if locking failed
 
-		if (res != CELL_EBUSY)
+		if (res + 0u != CELL_EBUSY)
 		{
 			return CELL_ESRCH;
 		}
@@ -302,7 +300,7 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 		return 0;
 	}
 
-	if (res == CELL_OK || res == CELL_ESRCH)
+	if (res == CELL_OK || res + 0u == CELL_ESRCH)
 	{
 		if (res == CELL_OK)
 		{
@@ -321,7 +319,7 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 		return res;
 	}
 
-	if (res == CELL_EBUSY || res == CELL_ETIMEDOUT)
+	if (res + 0u == CELL_EBUSY || res + 0u == CELL_ETIMEDOUT)
 	{
 		if (error_code res2 = sys_lwmutex_lock(ppu, lwmutex, 0))
 		{
@@ -331,7 +329,7 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 		// if successfully locked, restore recursive value
 		lwmutex->recursive_count = recursive_value;
 
-		if (res == CELL_EBUSY)
+		if (res + 0u == CELL_EBUSY)
 		{
 			return CELL_OK;
 		}
@@ -339,7 +337,7 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 		return res;
 	}
 
-	if (res == CELL_EDEADLK)
+	if (res + 0u == CELL_EDEADLK)
 	{
 		// restore owner and recursive value
 		const auto old = lwmutex->vars.owner.exchange(tid);

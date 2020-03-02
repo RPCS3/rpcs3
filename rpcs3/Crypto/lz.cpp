@@ -146,8 +146,8 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 		result = -1;
 		if (code <= size)
 		{
-			memcpy(out, (const void *)(in + 5), code);
-			result = (start - out);
+			memcpy(out, in + 5, code);
+			result = static_cast<int>(start - out);
 		}
 	}
 	else
@@ -162,10 +162,10 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 			{
 				// Adjust offset and check for stream end.
 				if (offset > 0) offset--;
-				if (start == end) return (start - out);
+				if (start == end) return static_cast<int>(start - out);
 
 				// Locate first section.
-				int sect = (((((((int)(start - out)) & 7) << 8) + prev) >> head) & 7) * 0xFF - 1;
+				int sect = ((((((static_cast<int>(start - out)) & 7) << 8) + prev) >> head) & 7) * 0xFF - 1;
 				tmp_sect1 = tmp + sect;
 				int index = 1;
 
@@ -198,12 +198,12 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 				if ((index >= 0) || (bit_flag != 0))
 				{
 					// Locate next section.
-					int sect = (index << 5) | (((((int)(start - out)) << index) & 3) << 3) | (offset & 7);
+					int sect = (index << 5) | ((((static_cast<int>(start - out)) << index) & 3) << 3) | (offset & 7);
 					tmp_sect1 = tmp + 0xBA8 + sect;
 
 					// Decode the data length (8 bit fields).
 					data_length = decode_number(tmp_sect1, index, &bit_flag, &range, &code, &in);
-					if (data_length == 0xFF) return (start - out);  // End of stream.
+					if (data_length == 0xFF) return static_cast<int>(start - out);  // End of stream.
 				}
 				else
 				{
@@ -265,7 +265,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 				}
 
 				// Update offset.
-				offset = ((((int)(buf_end - out)) + 1) & 1) + 6;
+				offset = (((static_cast<int>(buf_end - out)) + 1) & 1) + 6;
 
 				// Copy data.
 				do
@@ -276,7 +276,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 			}
 			prev = *(start - 1);
 		}
-		result = (start - out);
+		result = static_cast<int>(start - out);
 	}
 	delete[] tmp;
 	return result;

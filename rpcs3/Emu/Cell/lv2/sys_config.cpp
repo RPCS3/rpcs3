@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
 
@@ -54,7 +53,7 @@ void fmt_class_string<sys_config_service_listener_type>::format(std::string& out
 // Utilities
 void dump_buffer(std::string& out, const std::vector<u8>& buffer)
 {
-	if (buffer.size() > 0)
+	if (!buffer.empty())
 	{
 		out.reserve(out.size() + buffer.size() * 2 + 1);
 		fmt::append(out, "0x");
@@ -131,7 +130,7 @@ bool lv2_config_service_listener::check_service(const lv2_config_service& servic
 
 	// realhw only seems to send the pad connected events to the listeners that provided 0x01 as the first byte of their data buffer
 	// TODO: Figure out how this filter works more properly
-	if (service_id == SYS_CONFIG_SERVICE_PADMANAGER && (data.size() == 0 || data[0] != 0x01))
+	if (service_id == SYS_CONFIG_SERVICE_PADMANAGER && (data.empty() || data[0] != 0x01))
 	{
 		return false;
 	}

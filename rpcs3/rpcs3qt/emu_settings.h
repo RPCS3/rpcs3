@@ -1,14 +1,12 @@
 ﻿#pragma once
 
-#include "Utilities/File.h"
-#include "Utilities/Log.h"
-
 #include "yaml-cpp/yaml.h"
+
+#include "stdafx.h"
 
 #include <QCheckBox>
 #include <QStringList>
 #include <QMap>
-#include <QObject>
 #include <QComboBox>
 #include <QSpinBox>
 
@@ -41,11 +39,13 @@ public:
 		EnableTSX,
 		AccurateGETLLAR,
 		AccuratePUTLLUC,
+		AccurateRSXAccess,
 		AccurateXFloat,
 		SetDAZandFTZ,
 		SPUBlockSize,
 		SPUCache,
 		DebugConsoleMode,
+		SilenceAllLogs,
 		MaxSPURSThreads,
 		SleepTimersAccuracy,
 		ClocksScale,
@@ -67,7 +67,6 @@ public:
 		LegacyBuffers,
 		GPUTextureScaling,
 		StretchToDisplayArea,
-		D3D12Adapter,
 		VulkanAdapter,
 		ForceHighpZ,
 		StrictRenderingMode,
@@ -84,9 +83,13 @@ public:
 		DisableAsyncShaderCompiler,
 		MultithreadedRSX,
 		VBlankRate,
+		RelaxedZCULL,
+		DriverWakeUpDelay,
 
 		// Performance Overlay
 		PerfOverlayEnabled,
+		PerfOverlayFramerateGraphEnabled,
+		PerfOverlayFrametimeGraphEnabled,
 		PerfOverlayDetailLevel,
 		PerfOverlayPosition,
 		PerfOverlayUpdateInterval,
@@ -127,11 +130,12 @@ public:
 		ExitRPCS3OnFinish,
 		StartOnBoot,
 		StartGameFullscreen,
-		ShowFPSInTitle,
+		PreventDisplaySleep,
 		ShowTrophyPopups,
 		ShowWelcomeScreen,
 		UseNativeInterface,
 		ShowShaderCompilationHint,
+		WindowTitleFormat,
 
 		// Network
 		ConnectionStatus,
@@ -160,24 +164,28 @@ public:
 		SettingsType type = VulkanAdapter;
 		bool supported = true;
 		bool has_adapters = true;
+		bool has_msaa = false;
 
-		Render_Info() {}
-		Render_Info(const QString& name) : name(name), has_adapters(false) {}
-		Render_Info(const QString& name, const QStringList& adapters, bool supported, SettingsType type)
-			: name(name), adapters(adapters), supported(supported), type(type) {}
+		Render_Info() = default;
+		explicit Render_Info(QString name)
+			: name(std::move(name))
+			, has_adapters(false) {}
+
+		Render_Info(QString name, QStringList adapters, bool supported, SettingsType type, bool has_msaa)
+			: name(std::move(name))
+			, adapters(std::move(adapters))
+			, type(type)
+			, supported(supported)
+			, has_msaa(has_msaa) {}
 	};
 
 	struct Render_Creator
 	{
-		bool supportsD3D12 = false;
 		bool supportsVulkan = false;
-		QStringList D3D12Adapters;
 		QStringList vulkanAdapters;
 		QString name_Null = tr("Disable Video Output");
 		QString name_Vulkan = tr("Vulkan");
-		QString name_D3D12 = tr("D3D12[DO NOT USE]");
 		QString name_OpenGL = tr("OpenGL");
-		Render_Info D3D12;
 		Render_Info Vulkan;
 		Render_Info OpenGL;
 		Render_Info NullRender;
@@ -272,6 +280,7 @@ private:
 		{ EnableTSX,                { "Core", "Enable TSX"}},
 		{ AccurateGETLLAR,          { "Core", "Accurate GETLLAR"}},
 		{ AccuratePUTLLUC,          { "Core", "Accurate PUTLLUC"}},
+		{ AccurateRSXAccess,        { "Core", "Accurate RSX reservation access"}},
 		{ AccurateXFloat,           { "Core", "Accurate xfloat"}},
 		{ SetDAZandFTZ,             { "Core", "Set DAZ and FTZ"}},
 		{ SPUBlockSize,             { "Core", "SPU Block Size"}},
@@ -309,24 +318,27 @@ private:
 		{ DisableVulkanMemAllocator,  { "Video", "Disable Vulkan Memory Allocator"}},
 		{ DisableAsyncShaderCompiler, { "Video", "Disable Asynchronous Shader Compiler"}},
 		{ MultithreadedRSX,           { "Video", "Multithreaded RSX"}},
+		{ RelaxedZCULL,               { "Video", "Relaxed ZCULL Sync"}},
 		{ AnisotropicFilterOverride,  { "Video", "Anisotropic Filter Override"}},
 		{ ResolutionScale,            { "Video", "Resolution Scale"}},
 		{ MinimumScalableDimension,   { "Video", "Minimum Scalable Dimension"}},
-		{ D3D12Adapter,               { "Video", "D3D12", "Adapter"}},
 		{ VulkanAdapter,              { "Video", "Vulkan", "Adapter"}},
 		{ VBlankRate,                 { "Video", "Vblank Rate"}},
+		{ DriverWakeUpDelay,          { "Video", "Driver Wake-Up Delay"}},
 
 		// Performance Overlay
-		{ PerfOverlayEnabled,       { "Video", "Performance Overlay", "Enabled" } },
-		{ PerfOverlayDetailLevel,   { "Video", "Performance Overlay", "Detail level" } },
-		{ PerfOverlayPosition,      { "Video", "Performance Overlay", "Position" } },
-		{ PerfOverlayUpdateInterval,{ "Video", "Performance Overlay", "Metrics update interval (ms)" } },
-		{ PerfOverlayFontSize,      { "Video", "Performance Overlay", "Font size (px)" } },
-		{ PerfOverlayOpacity,       { "Video", "Performance Overlay", "Opacity (%)" } },
-		{ PerfOverlayMarginX,       { "Video", "Performance Overlay", "Horizontal Margin (px)" } },
-		{ PerfOverlayMarginY,       { "Video", "Performance Overlay", "Vertical Margin (px)" } },
-		{ PerfOverlayCenterX,       { "Video", "Performance Overlay", "Center Horizontally" } },
-		{ PerfOverlayCenterY,       { "Video", "Performance Overlay", "Center Vertically" } },
+		{ PerfOverlayEnabled,               { "Video", "Performance Overlay", "Enabled" } },
+		{ PerfOverlayFramerateGraphEnabled, { "Video", "Performance Overlay", "Enable Framerate Graph" } },
+		{ PerfOverlayFrametimeGraphEnabled, { "Video", "Performance Overlay", "Enable Frametime Graph" } },
+		{ PerfOverlayDetailLevel,           { "Video", "Performance Overlay", "Detail level" } },
+		{ PerfOverlayPosition,              { "Video", "Performance Overlay", "Position" } },
+		{ PerfOverlayUpdateInterval,        { "Video", "Performance Overlay", "Metrics update interval (ms)" } },
+		{ PerfOverlayFontSize,              { "Video", "Performance Overlay", "Font size (px)" } },
+		{ PerfOverlayOpacity,               { "Video", "Performance Overlay", "Opacity (%)" } },
+		{ PerfOverlayMarginX,               { "Video", "Performance Overlay", "Horizontal Margin (px)" } },
+		{ PerfOverlayMarginY,               { "Video", "Performance Overlay", "Vertical Margin (px)" } },
+		{ PerfOverlayCenterX,               { "Video", "Performance Overlay", "Center Horizontally" } },
+		{ PerfOverlayCenterY,               { "Video", "Performance Overlay", "Center Vertically" } },
 
 		// Shader Loading Dialog
 		{ ShaderLoadBgEnabled,      { "Video", "Shader Loading Dialog", "Allow custom background" } },
@@ -358,11 +370,13 @@ private:
 		{ ExitRPCS3OnFinish,         { "Miscellaneous", "Exit RPCS3 when process finishes" }},
 		{ StartOnBoot,               { "Miscellaneous", "Automatically start games after boot" }},
 		{ StartGameFullscreen,       { "Miscellaneous", "Start games in fullscreen mode"}},
-		{ ShowFPSInTitle,            { "Miscellaneous", "Show FPS counter in window title"}},
+		{ PreventDisplaySleep,       { "Miscellaneous", "Prevent display sleep while running games"}},
 		{ ShowTrophyPopups,          { "Miscellaneous", "Show trophy popups"}},
 		{ ShowWelcomeScreen,         { "Miscellaneous", "Show Welcome Screen"}},
 		{ UseNativeInterface,        { "Miscellaneous", "Use native user interface"}},
 		{ ShowShaderCompilationHint, { "Miscellaneous", "Show shader compilation hint"}},
+		{ SilenceAllLogs,            { "Miscellaneous", "Silence All Logs" }},
+		{ WindowTitleFormat,         { "Miscellaneous", "Window Title Format" }},
 
 		// Networking
 		{ ConnectionStatus, { "Net", "Connection status"}},

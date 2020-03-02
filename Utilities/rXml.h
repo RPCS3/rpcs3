@@ -1,6 +1,7 @@
-#pragma once
+﻿#pragma once
 
 #include <pugixml.hpp>
+#include <memory>
 
 struct rXmlNode
 {

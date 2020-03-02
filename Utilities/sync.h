@@ -15,7 +15,6 @@
 #include <linux/futex.h>
 #include <sys/time.h>
 #include <unistd.h>
-#else
 #endif
 #include <algorithm>
 #include <ctime>
@@ -25,12 +24,10 @@
 #include <unordered_map>
 
 #ifdef _WIN32
-DYNAMIC_IMPORT("ntdll.dll", NtWaitForKeyedEvent, NTSTATUS(HANDLE Handle, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
-DYNAMIC_IMPORT("ntdll.dll", NtReleaseKeyedEvent, NTSTATUS(HANDLE Handle, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
+DYNAMIC_IMPORT("ntdll.dll", NtWaitForKeyedEvent, NTSTATUS(HANDLE, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
+DYNAMIC_IMPORT("ntdll.dll", NtReleaseKeyedEvent, NTSTATUS(HANDLE, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
+DYNAMIC_IMPORT("ntdll.dll", NtWaitForSingleObject, NTSTATUS(HANDLE Handle, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtDelayExecution, NTSTATUS(BOOLEAN Alertable, PLARGE_INTEGER DelayInterval));
-inline utils::dynamic_import<BOOL(volatile VOID* Address, PVOID CompareAddress, SIZE_T AddressSize, DWORD dwMilliseconds)> OptWaitOnAddress("kernel32.dll", "WaitOnAddress");
-inline utils::dynamic_import<VOID(PVOID Address)> OptWakeByAddressSingle("kernel32.dll", "WakeByAddressSingle");
-inline utils::dynamic_import<VOID(PVOID Address)> OptWakeByAddressAll("kernel32.dll", "WakeByAddressAll");
 #endif
 
 #ifndef __linux__

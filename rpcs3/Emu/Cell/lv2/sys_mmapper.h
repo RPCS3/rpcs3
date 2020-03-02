@@ -15,17 +15,22 @@ struct lv2_memory : lv2_obj
 	const u32 size; // Memory size
 	const u32 align; // Alignment required
 	const u64 flags;
-	const std::shared_ptr<lv2_memory_container> ct; // Associated memory container
+	lv2_memory_container* const ct; // Associated memory container
 	const std::shared_ptr<utils::shm> shm;
 
 	atomic_t<u32> counter{0};
 
-	lv2_memory(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct);
+	lv2_memory(u32 size, u32 align, u64 flags, lv2_memory_container* ct);
 };
 
 enum : u64
 {
 	SYS_MEMORY_PAGE_FAULT_EVENT_KEY	       = 0xfffe000000000000ULL,
+};
+
+enum : u64
+{
+	SYS_MMAPPER_NO_SHM_KEY = 0xffff000000000000ull, // Unofficial name
 };
 
 enum : u64
@@ -59,6 +64,15 @@ struct page_fault_event_entries
 	cond_variable cond;
 };
 
+struct mmapper_unk_entry_struct0
+{
+	be_t<u32> a;    // 0x0
+	be_t<u32> b;    // 0x4
+	be_t<u32> c;    // 0x8
+	be_t<u32> d;    // 0xc
+	be_t<u64> type; // 0x10
+};
+
 // Aux
 class ppu_thread;
 
@@ -67,8 +81,10 @@ error_code mmapper_thread_recover_page_fault(u32 id);
 // SysCalls
 error_code sys_mmapper_allocate_address(ppu_thread&, u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr);
 error_code sys_mmapper_allocate_fixed_address(ppu_thread&);
-error_code sys_mmapper_allocate_shared_memory(ppu_thread&, u64 unk, u32 size, u64 flags, vm::ptr<u32> mem_id);
-error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread&, u64 unk, u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id);
+error_code sys_mmapper_allocate_shared_memory(ppu_thread&, u64 ipc_key, u32 size, u64 flags, vm::ptr<u32> mem_id);
+error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread&, u64 ipc_key, u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id);
+error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread&, u64 ipc_key, u32 size, u32 flags, vm::ptr<mmapper_unk_entry_struct0> src, s32 count, vm::ptr<u32> mem_id);
+error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread&, u64 ipc_key, u32 size, u64 flags, u32 mc_id, vm::ptr<mmapper_unk_entry_struct0> entries, s32 entry_count, vm::ptr<u32> mem_id);
 error_code sys_mmapper_change_address_access_right(ppu_thread&, u32 addr, u64 flags);
 error_code sys_mmapper_free_address(ppu_thread&, u32 addr);
 error_code sys_mmapper_free_shared_memory(ppu_thread&, u32 mem_id);

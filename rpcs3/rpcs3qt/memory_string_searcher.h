@@ -1,13 +1,7 @@
-#pragma once
-
-#include "stdafx.h"
-#include "Emu/Memory/vm.h"
-#include "Emu/System.h"
+﻿#pragma once
 
 #include <QDialog>
 #include <QLineEdit>
-#include <QPushButton>
-#include <QHBoxLayout>
 
 class memory_string_searcher : public QDialog
 {

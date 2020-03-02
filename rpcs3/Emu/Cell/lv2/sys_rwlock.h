@@ -14,7 +14,7 @@ struct sys_rwlock_attribute_t
 
 	union
 	{
-		u64 name_u64;
+		nse_t<u64, 1> name_u64;
 		char name[sizeof(u64)];
 	};
 };
@@ -38,8 +38,8 @@ struct lv2_rwlock final : lv2_obj
 		: protocol(protocol)
 		, shared(shared)
 		, key(key)
-		, flags(flags)
 		, name(name)
+		, flags(flags)
 	{
 	}
 };

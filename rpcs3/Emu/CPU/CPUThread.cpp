@@ -2,16 +2,22 @@
 #include "CPUThread.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/IdManager.h"
-#include "Utilities/GDBDebugServer.h"
+#include "Emu/GDB.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 
 #include <thread>
+#include <unordered_map>
+#include <map>
 
 DECLARE(cpu_thread::g_threads_created){0};
 DECLARE(cpu_thread::g_threads_deleted){0};
+
+LOG_CHANNEL(profiler);
+LOG_CHANNEL(sys_log, "SYS");
 
 template <>
 void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
@@ -28,7 +34,6 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::ret: return "ret";
 		case cpu_flag::signal: return "sig";
 		case cpu_flag::memory: return "mem";
-		case cpu_flag::jit_return: return "JIT";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_global_stop: return "G-EXIT";
 		case cpu_flag::dbg_pause: return "PAUSE";
@@ -45,6 +50,196 @@ void fmt_class_string<bs_t<cpu_flag>>::format(std::string& out, u64 arg)
 {
 	format_bitset(out, arg, "[", "|", "]", &fmt_class_string<cpu_flag>::format);
 }
+
+// CPU profiler thread
+struct cpu_prof
+{
+	// PPU/SPU id enqueued for registration
+	lf_queue<u32> registered;
+
+	struct sample_info
+	{
+		// Weak pointer to the thread
+		std::weak_ptr<cpu_thread> wptr;
+
+		// Block occurences: name -> sample_count
+		std::unordered_map<u64, u64, value_hash<u64>> freq;
+
+		// Total number of samples
+		u64 samples = 0, idle = 0;
+
+		sample_info(const std::shared_ptr<cpu_thread>& ptr)
+			: wptr(ptr)
+		{
+		}
+
+		void reset()
+		{
+			freq.clear();
+			samples = 0;
+			idle = 0;
+		}
+
+		// Print info
+		void print(u32 id) const
+		{
+			// Make reversed map: sample_count -> name
+			std::multimap<u64, u64> chart;
+
+			for (auto& [name, count] : freq)
+			{
+				// Inverse bits to sort in descending order
+				chart.emplace(~count, name);
+			}
+
+			// Print results
+			std::string results;
+			results.reserve(5100);
+
+			// Fraction of non-idle samples
+			const f64 busy = 1. * (samples - idle) / samples;
+
+			for (auto& [rcount, name] : chart)
+			{
+				// Get correct count value
+				const u64 count = ~rcount;
+				const f64 _frac = count / busy / samples;
+
+				// Print only 7 hash characters out of 11 (which covers roughly 48 bits)
+				fmt::append(results, "\n\t[%s", fmt::base57(be_t<u64>{name}));
+				results.resize(results.size() - 4);
+
+				// Print chunk address from lowest 16 bits
+				fmt::append(results, "...chunk-0x%05x]: %.4f%% (%u)", (name & 0xffff) * 4, _frac * 100., count);
+
+				if (results.size() >= 5000)
+				{
+					// Stop printing after reaching some arbitrary limit in characters
+					break;
+				}
+			}
+
+			profiler.notice("Thread [0x%08x]: %u samples (%.4f%% idle):%s", id, samples, 100. * idle / samples, results);
+		}
+	};
+
+	void operator()()
+	{
+		std::unordered_map<u32, sample_info, value_hash<u64>> threads;
+
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			bool flush = false;
+
+			// Handle registration channel
+			for (u32 id : registered.pop_all())
+			{
+				if (id == 0)
+				{
+					// Handle id zero as a command to flush results
+					flush = true;
+					continue;
+				}
+
+				std::shared_ptr<cpu_thread> ptr;
+
+				if (id >> 24 == 1)
+				{
+					ptr = idm::get<named_thread<ppu_thread>>(id);
+				}
+				else if (id >> 24 == 2)
+				{
+					ptr = idm::get<named_thread<spu_thread>>(id);
+				}
+				else
+				{
+					profiler.error("Invalid Thread ID: 0x%08x", id);
+					continue;
+				}
+
+				if (ptr)
+				{
+					auto [found, add] = threads.try_emplace(id, ptr);
+
+					if (!add)
+					{
+						// Overwritten: print previous data
+						found->second.print(id);
+						found->second.reset();
+						found->second.wptr = ptr;
+					}
+				}
+			}
+
+			if (threads.empty())
+			{
+				// Wait for messages if no work (don't waste CPU)
+				registered.wait();
+				continue;
+			}
+
+			// Sample active threads
+			for (auto& [id, info] : threads)
+			{
+				if (auto ptr = info.wptr.lock())
+				{
+					// Get short function hash
+					const u64 name = atomic_storage<u64>::load(ptr->block_hash);
+
+					// Append occurrence
+					info.samples++;
+
+					if (!(ptr->state.load() & (cpu_flag::wait + cpu_flag::stop + cpu_flag::dbg_global_pause)))
+					{
+						info.freq[name]++;
+
+						// Append verification time to fixed common name 0000000...chunk-0x3fffc
+						if ((name & 0xffff) == 0)
+							info.freq[0xffff]++;
+					}
+					else
+					{
+						info.idle++;
+					}
+				}
+			}
+
+			// Cleanup and print results for deleted threads
+			for (auto it = threads.begin(), end = threads.end(); it != end;)
+			{
+				if (it->second.wptr.expired())
+					it->second.print(it->first), it = threads.erase(it);
+				else
+					it++;
+			}
+
+			if (flush)
+			{
+				profiler.success("Flushing profiling results...");
+
+				// Print all results and cleanup
+				for (auto& [id, info] : threads)
+				{
+					info.print(id);
+					info.reset();
+				}
+			}
+
+			// Wait, roughly for 20µs
+			thread_ctrl::wait_for(20, false);
+		}
+
+		// Print all remaining results
+		for (auto& [id, info] : threads)
+		{
+			info.print(id);
+		}
+	}
+
+	static constexpr auto thread_name = "CPU Profiler"sv;
+};
+
+using cpu_profiler = named_thread<cpu_prof>;
 
 thread_local cpu_thread* g_tls_current_cpu_thread = nullptr;
 
@@ -91,10 +286,35 @@ void cpu_thread::operator()()
 		thread_ctrl::set_native_priority(-1);
 	}
 
+	if (id_type() == 2)
+	{
+		// force input/output denormals to zero for SPU threads (FTZ/DAZ)
+		_mm_setcsr( _mm_getcsr() | 0x8040 );
+
+		const volatile int a = 0x1fc00000;
+		__m128 b = _mm_castsi128_ps(_mm_set1_epi32(a));
+		int c = _mm_cvtsi128_si32(_mm_castps_si128(_mm_mul_ps(b,b)));
+
+		if (c != 0)
+		{
+			sys_log.fatal("Could not disable denormals.");
+		}
+	}
+
+	if (id_type() == 1 && false)
+	{
+		g_fxo->get<cpu_profiler>()->registered.push(id);
+	}
+
+	if (id_type() == 2 && g_cfg.core.spu_prof)
+	{
+		g_fxo->get<cpu_profiler>()->registered.push(id);
+	}
+
 	// Register thread in g_cpu_array
 	if (!g_cpu_array_sema.try_inc(sizeof(g_cpu_array_bits) * 8))
 	{
-		LOG_FATAL(GENERAL, "Too many threads");
+		sys_log.fatal("Too many threads.");
 		Emu.Pause();
 		return;
 	}
@@ -103,27 +323,23 @@ void cpu_thread::operator()()
 
 	for (u32 i = 0;; i = (i + 1) % ::size32(g_cpu_array_bits))
 	{
-		if (LIKELY(~g_cpu_array_bits[i]))
+		const auto [bits, ok] = g_cpu_array_bits[i].fetch_op([](u64& bits) -> u64
 		{
-			const u64 found = g_cpu_array_bits[i].atomic_op([](u64& bits) -> u64
+			if (~bits) [[likely]]
 			{
-				// Find empty array slot and set its bit
-				if (LIKELY(~bits))
-				{
-					const u64 bit = utils::cnttz64(~bits, true);
-					bits |= 1ull << bit;
-					return bit;
-				}
-
-				return 64;
-			});
-
-			if (LIKELY(found < 64))
-			{
-				// Fixup
-				array_slot = i * 64 + found;
-				break;
+				// Set lowest clear bit
+				bits |= bits + 1;
+				return true;
 			}
+
+			return false;
+		});
+
+		if (ok) [[likely]]
+		{
+			// Get actual slot number
+			array_slot = i * 64 + utils::cnttz64(~bits, false);
+			break;
 		}
 	}
 
@@ -134,7 +350,7 @@ void cpu_thread::operator()()
 	g_cpu_suspend_lock.lock_unlock();
 
 	// Check thread status
-	while (!(state & (cpu_flag::exit + cpu_flag::dbg_global_stop)) && !Emu.IsStopped())
+	while (!(state & (cpu_flag::exit + cpu_flag::dbg_global_stop)) && thread_ctrl::state() != thread_state::aborting)
 	{
 		// Check stop status
 		if (!(state & cpu_flag::stop))
@@ -143,15 +359,11 @@ void cpu_thread::operator()()
 			{
 				cpu_task();
 			}
-			catch (cpu_flag _s)
-			{
-				state += _s;
-			}
 			catch (const std::exception& e)
 			{
 				Emu.Pause();
-				LOG_FATAL(GENERAL, "%s thrown: %s", typeid(e).name(), e.what());
-				LOG_NOTICE(GENERAL, "\n%s", dump());
+				sys_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
+				sys_log.notice("\n%s", dump());
 				break;
 			}
 
@@ -175,11 +387,6 @@ void cpu_thread::operator()()
 	g_cpu_suspend_lock.lock_unlock();
 }
 
-void cpu_thread::on_abort()
-{
-	state += cpu_flag::exit;
-}
-
 cpu_thread::~cpu_thread()
 {
 	vm::cleanup_unlock(*this);
@@ -194,12 +401,10 @@ cpu_thread::cpu_thread(u32 id)
 
 bool cpu_thread::check_state() noexcept
 {
-#ifdef WITH_GDB_DEBUGGER
 	if (state & cpu_flag::dbg_pause)
 	{
-		fxm::get<GDBDebugServer>()->pause_from(this);
+		g_fxo->get<gdb_server>()->pause_from(this);
 	}
-#endif
 
 	bool cpu_sleep_called = false;
 	bool cpu_flag_memory = false;
@@ -223,21 +428,16 @@ bool cpu_thread::check_state() noexcept
 			state -= cpu_flag::memory;
 		}
 
-		if (state & (cpu_flag::exit + cpu_flag::jit_return + cpu_flag::dbg_global_stop))
+		if (state & (cpu_flag::exit + cpu_flag::dbg_global_stop))
 		{
 			state += cpu_flag::wait;
 			return true;
 		}
 
-		if (state & cpu_flag::signal && state.test_and_reset(cpu_flag::signal))
-		{
-			cpu_sleep_called = false;
-		}
-
 		const auto [state0, escape] = state.fetch_op([&](bs_t<cpu_flag>& flags)
 		{
 			// Atomically clean wait flag and escape
-			if (!(flags & (cpu_flag::exit + cpu_flag::jit_return + cpu_flag::dbg_global_stop + cpu_flag::ret + cpu_flag::stop)))
+			if (!(flags & (cpu_flag::exit + cpu_flag::dbg_global_stop + cpu_flag::ret + cpu_flag::stop)))
 			{
 				// Check pause flags which hold thread inside check_state
 				if (flags & (cpu_flag::pause + cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause))
@@ -250,6 +450,11 @@ bool cpu_thread::check_state() noexcept
 
 			return true;
 		});
+
+		if (state & cpu_flag::signal && state.test_and_reset(cpu_flag::signal))
+		{
+			cpu_sleep_called = false;
+		}
 
 		if (escape)
 		{
@@ -296,6 +501,7 @@ bool cpu_thread::check_state() noexcept
 
 void cpu_thread::notify()
 {
+	// Downcast to correct type
 	if (id_type() == 1)
 	{
 		thread_ctrl::notify(*static_cast<named_thread<ppu_thread>*>(this));
@@ -306,7 +512,41 @@ void cpu_thread::notify()
 	}
 	else
 	{
-		fmt::throw_exception("Invalid cpu_thread type");
+		fmt::throw_exception("Invalid cpu_thread type" HERE);
+	}
+}
+
+void cpu_thread::abort()
+{
+	// Downcast to correct type
+	if (id_type() == 1)
+	{
+		*static_cast<named_thread<ppu_thread>*>(this) = thread_state::aborting;
+	}
+	else if (id_type() == 2)
+	{
+		*static_cast<named_thread<spu_thread>*>(this) = thread_state::aborting;
+	}
+	else
+	{
+		fmt::throw_exception("Invalid cpu_thread type" HERE);
+	}
+}
+
+std::string cpu_thread::get_name() const
+{
+	// Downcast to correct type
+	if (id_type() == 1)
+	{
+		return thread_ctrl::get_name(*static_cast<const named_thread<ppu_thread>*>(this));
+	}
+	else if (id_type() == 2)
+	{
+		return thread_ctrl::get_name(*static_cast<const named_thread<spu_thread>*>(this));
+	}
+	else
+	{
+		fmt::throw_exception("Invalid cpu_thread type" HERE);
 	}
 }
 
@@ -344,7 +584,7 @@ cpu_thread::suspend_all::suspend_all(cpu_thread* _this) noexcept
 			}
 		});
 
-		if (LIKELY(ok))
+		if (ok) [[likely]]
 		{
 			break;
 		}
@@ -381,7 +621,7 @@ void cpu_thread::stop_all() noexcept
 	if (g_tls_current_cpu_thread)
 	{
 		// Report unsupported but unnecessary case
-		LOG_FATAL(GENERAL, "cpu_thread::stop_all() has been called from a CPU thread.");
+		sys_log.fatal("cpu_thread::stop_all() has been called from a CPU thread.");
 		return;
 	}
 	else
@@ -391,16 +631,30 @@ void cpu_thread::stop_all() noexcept
 		for_all_cpu([](cpu_thread* cpu)
 		{
 			cpu->state += cpu_flag::dbg_global_stop;
-			cpu->notify();
+			cpu->abort();
 		});
 	}
 
-	LOG_NOTICE(GENERAL, "All CPU threads have been signaled.");
+	sys_log.notice("All CPU threads have been signaled.");
 
 	while (g_cpu_array_sema)
 	{
 		std::this_thread::sleep_for(10ms);
 	}
 
-	LOG_NOTICE(GENERAL, "All CPU threads have been stopped.");
+	sys_log.notice("All CPU threads have been stopped.");
+}
+
+void cpu_thread::flush_profilers() noexcept
+{
+	if (!g_fxo->get<cpu_profiler>())
+	{
+		profiler.fatal("cpu_thread::flush_profilers() has been called incorrectly." HERE);
+		return;
+	}
+
+	if (g_cfg.core.spu_prof || false)
+	{
+		g_fxo->get<cpu_profiler>()->registered.push(0);
+	}
 }

@@ -91,12 +91,13 @@ error_code sceNpSnsFbCreateHandle(vm::ptr<u32> handle)
 		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
 	}
 
-	//if (count > SCE_NP_SNS_FB_HANDLE_SLOT_MAX)
-	//{
-	//	return SCE_NP_SNS_FB_ERROR_EXCEEDS_MAX;
-	//}
-
+	// TODO: is handle set here or after the next check ?
 	*handle = idm::make<sns_fb_handle_t>();
+
+	if (*handle == SCE_NP_SNS_FB_INVALID_HANDLE) // id_count > SCE_NP_SNS_FB_HANDLE_SLOT_MAX
+	{
+		return SCE_NP_SNS_FB_ERROR_EXCEEDS_MAX;
+	}
 
 	return CELL_OK;
 }
@@ -157,12 +158,19 @@ error_code sceNpSnsFbGetAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTokenPa
 {
 	sceNpSns.todo("sceNpSnsFbGetAccessToken(handle=%d, param=*0x%x, result=*0x%x)", handle, param, result);
 
+	if (!param || !result || !param->fb_app_id)
+	{
+		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
+	}
+
 	if (!g_fxo->get<sce_np_sns_manager>()->is_initialized)
 	{
 		return SCE_NP_SNS_FB_ERROR_NOT_INITIALIZED;
 	}
 
-	if (handle == SCE_NP_SNS_FB_INVALID_HANDLE || handle > SCE_NP_SNS_FB_HANDLE_SLOT_MAX || !param || !result || !param->fb_app_id)
+	// TODO: test the following checks
+
+	if (handle == SCE_NP_SNS_FB_INVALID_HANDLE || handle > SCE_NP_SNS_FB_HANDLE_SLOT_MAX)
 	{
 		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
 	}
@@ -176,7 +184,7 @@ error_code sceNpSnsFbGetAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTokenPa
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_SNS_ERROR_NOT_SIGN_IN;
+		return not_an_error(SCE_NP_SNS_ERROR_NOT_SIGN_IN);
 	}
 
 	// TODO
@@ -184,27 +192,90 @@ error_code sceNpSnsFbGetAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTokenPa
 	return CELL_OK;
 }
 
-s32 sceNpSnsFbStreamPublish()
+s32 sceNpSnsFbStreamPublish(u32 handle) // add more arguments
 {
-	UNIMPLEMENTED_FUNC(sceNpSns);
+	sceNpSns.todo("sceNpSnsFbStreamPublish(handle=%d, ...)", handle);
+
+	if (handle == SCE_NP_SNS_FB_INVALID_HANDLE || handle > SCE_NP_SNS_FB_HANDLE_SLOT_MAX)
+	{
+		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
+	}
+
+	const auto sfh = idm::get<sns_fb_handle_t>(handle);
+
+	if (!sfh)
+	{
+		return SCE_NP_SNS_FB_ERROR_UNKNOWN_HANDLE;
+	}
+
+	//if (canceled)
+	//{
+	//	return CELL_ECANCELED;
+	//}
+
+	//if (aborted)
+	//{
+	//	return SCE_NP_SNS_FB_ERROR_ABORTED;
+	//}
+
 	return CELL_OK;
 }
 
-s32 sceNpSnsFbCheckThrottle()
+s32 sceNpSnsFbCheckThrottle(vm::ptr<void> arg0)
 {
-	UNIMPLEMENTED_FUNC(sceNpSns);
+	sceNpSns.todo("sceNpSnsFbCheckThrottle(arg0=*0x%x)", arg0);
+
+	if (!arg0)
+	{
+		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (!g_fxo->get<sce_np_sns_manager>()->is_initialized)
+	{
+		return SCE_NP_SNS_FB_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpSnsFbCheckConfig()
+s32 sceNpSnsFbCheckConfig(vm::ptr<void> arg0)
 {
-	UNIMPLEMENTED_FUNC(sceNpSns);
+	sceNpSns.todo("sceNpSnsFbCheckConfig(arg0=*0x%x)", arg0);
+
+	if (!g_fxo->get<sce_np_sns_manager>()->is_initialized)
+	{
+		return SCE_NP_SNS_FB_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpSnsFbLoadThrottle()
+s32 sceNpSnsFbLoadThrottle(u32 handle)
 {
-	UNIMPLEMENTED_FUNC(sceNpSns);
+	sceNpSns.todo("sceNpSnsFbLoadThrottle(handle=%d)", handle);
+
+	if (handle == SCE_NP_SNS_FB_INVALID_HANDLE || handle > SCE_NP_SNS_FB_HANDLE_SLOT_MAX)
+	{
+		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
+	}
+
+	const auto sfh = idm::get<sns_fb_handle_t>(handle);
+
+	if (!sfh)
+	{
+		return SCE_NP_SNS_FB_ERROR_UNKNOWN_HANDLE;
+	}
+
+	//if (canceled)
+	//{
+	//	return CELL_ECANCELED;
+	//}
+
+	//if (aborted)
+	//{
+	//	return SCE_NP_SNS_FB_ERROR_ABORTED;
+	//}
+
 	return CELL_OK;
 }
 
@@ -212,12 +283,19 @@ error_code sceNpSnsFbGetLongAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTok
 {
 	sceNpSns.todo("sceNpSnsFbGetLongAccessToken(handle=%d, param=*0x%x, result=*0x%x)", handle, param, result);
 
+	if (!param || !result || !param->fb_app_id)
+	{
+		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
+	}
+
 	if (!g_fxo->get<sce_np_sns_manager>()->is_initialized)
 	{
 		return SCE_NP_SNS_FB_ERROR_NOT_INITIALIZED;
 	}
 
-	if (handle == SCE_NP_SNS_FB_INVALID_HANDLE || handle > SCE_NP_SNS_FB_HANDLE_SLOT_MAX || !param || !result || !param->fb_app_id)
+	// TODO: test the following checks
+
+	if (handle == SCE_NP_SNS_FB_INVALID_HANDLE || handle > SCE_NP_SNS_FB_HANDLE_SLOT_MAX)
 	{
 		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
 	}
@@ -231,7 +309,7 @@ error_code sceNpSnsFbGetLongAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTok
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_SNS_ERROR_NOT_SIGN_IN;
+		return not_an_error(SCE_NP_SNS_ERROR_NOT_SIGN_IN);
 	}
 
 	return CELL_OK;

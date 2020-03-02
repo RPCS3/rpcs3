@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include "util/atomic.hpp"
+#include "util/shared_cptr.hpp"
 
 #include <string>
 #include <memory>
@@ -37,8 +38,7 @@ enum class thread_class : u32
 enum class thread_state : u32
 {
 	created,  // Initial state
-	detached, // The thread has been detached to destroy its own named_thread object (can be dangerously misused)
-	aborting, // The thread has been joined in the destructor or explicitly aborted (mutually exclusive with detached)
+	aborting, // The thread has been joined in the destructor or explicitly aborted
 	finished  // Final state, always set at the end of thread execution
 };
 
@@ -81,26 +81,11 @@ struct result_storage<void>
 template <class Context, typename... Args>
 using result_storage_t = result_storage<std::invoke_result_t<Context, Args...>>;
 
-// Detect on_abort() method (should return void)
 template <typename T, typename = void>
-struct thread_on_abort : std::bool_constant<false> {};
+struct thread_thread_name : std::bool_constant<false> {};
 
 template <typename T>
-struct thread_on_abort<T, decltype(std::declval<named_thread<T>&>().on_abort())> : std::bool_constant<true> {};
-
-// Detect on_cleanup() static member function (should return void) (in C++20 can use destroying delete instead)
-template <typename T, typename = void>
-struct thread_on_cleanup : std::bool_constant<false> {};
-
-template <typename T>
-struct thread_on_cleanup<T, decltype(named_thread<T>::on_cleanup(std::declval<named_thread<T>*>()))> : std::bool_constant<true> {};
-
-// Detect on_wait() method (should return bool)
-template <typename T, typename = bool>
-struct thread_on_wait : std::bool_constant<false> {};
-
-template <typename T>
-struct thread_on_wait<T, decltype(std::declval<named_thread<T>&>().on_wait())> : std::bool_constant<true> {};
+struct thread_thread_name<T, std::void_t<decltype(named_thread<T>::thread_name)>> : std::bool_constant<true> {};
 
 // Thread base class
 class thread_base
@@ -110,6 +95,11 @@ class thread_base
 	using native_entry = uint(__stdcall*)(void* arg);
 #else
 	using native_entry = void*(*)(void* arg);
+#endif
+
+#ifdef __linux__
+	// Linux thread timer
+	int m_timer = -1;
 #endif
 
 	// Thread handle (platform-specific)
@@ -131,7 +121,7 @@ class thread_base
 	atomic_t<const void*> m_state_notifier{nullptr};
 
 	// Thread name
-	lf_value<std::string> m_name;
+	stx::atomic_cptr<std::string> m_tname;
 
 	//
 	atomic_t<u64> m_cycles = 0;
@@ -182,35 +172,38 @@ class thread_ctrl final
 	static atomic_t<native_core_arrangement> g_native_core_layout;
 
 	// Internal waiting function, may throw. Infinite value is -1.
-	static void _wait_for(u64 usec);
+	static void _wait_for(u64 usec, bool alert);
 
 	friend class thread_base;
 
+	// Optimized get_name() for logging
+	static std::string get_name_cached();
+
 public:
 	// Get current thread name
-	static std::string_view get_name()
+	static std::string get_name()
 	{
-		return g_tls_this_thread->m_name.get();
+		return *g_tls_this_thread->m_tname.load();
 	}
 
 	// Get thread name
 	template <typename T>
-	static std::string_view get_name(const named_thread<T>& thread)
+	static std::string get_name(const named_thread<T>& thread)
 	{
-		return static_cast<const thread_base&>(thread).m_name.get();
+		return *static_cast<const thread_base&>(thread).m_tname.load();
 	}
 
 	// Set current thread name (not recommended)
 	static void set_name(std::string_view name)
 	{
-		g_tls_this_thread->m_name.assign(name);
+		g_tls_this_thread->m_tname.store(stx::shared_cptr<std::string>::make(name));
 	}
 
 	// Set thread name (not recommended)
 	template <typename T>
 	static void set_name(named_thread<T>& thread, std::string_view name)
 	{
-		static_cast<thread_base&>(thread).m_name.assign(name);
+		static_cast<thread_base&>(thread).m_tname.store(stx::shared_cptr<std::string>::make(name));
 	}
 
 	template <typename T>
@@ -232,15 +225,15 @@ public:
 	}
 
 	// Wait once with timeout. May spuriously return false.
-	static inline void wait_for(u64 usec)
+	static inline void wait_for(u64 usec, bool alert = true)
 	{
-		_wait_for(usec);
+		_wait_for(usec, alert);
 	}
 
 	// Wait.
 	static inline void wait()
 	{
-		_wait_for(-1);
+		_wait_for(-1, true);
 	}
 
 	// Wait until pred().
@@ -254,7 +247,7 @@ public:
 				return result;
 			}
 
-			_wait_for(-1);
+			_wait_for(-1, true);
 		}
 	}
 
@@ -275,13 +268,6 @@ public:
 
 	// Sets the preferred affinity mask for this thread
 	static void set_thread_affinity_mask(u64 mask);
-
-	// Spawn a detached named thread
-	template <typename F>
-	static void spawn(std::string_view name, F&& func)
-	{
-		new named_thread<F>(thread_state::detached, name, std::forward<F>(func));
-	}
 };
 
 // Derived from the callable object Context, possibly a lambda
@@ -303,15 +289,7 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 		// Perform self-cleanup if necessary
 		if (_this->entry_point())
 		{
-			// Call on_cleanup() static member function if it's available
-			if constexpr (thread_on_cleanup<Context>())
-			{
-				Context::on_cleanup(_this);
-			}
-			else
-			{
-				delete _this;
-			}
+			delete _this;
 		}
 
 		thread::finalize();
@@ -333,14 +311,6 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 				return false;
 			}
 
-			if constexpr (thread_on_wait<Context>())
-			{
-				if (!static_cast<named_thread*>(_this)->on_wait())
-				{
-					return false;
-				}
-			}
-
 			_this->m_state_notifier.release(data);
 
 			if (!data)
@@ -352,15 +322,6 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 			{
 				_this->m_state_notifier.release(nullptr);
 				return false;
-			}
-
-			if constexpr (thread_on_wait<Context>())
-			{
-				if (!static_cast<named_thread*>(_this)->on_wait())
-				{
-					_this->m_state_notifier.release(nullptr);
-					return false;
-				}
 			}
 
 			return true;
@@ -380,18 +341,18 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 		return thread::finalize(0);
 	}
 
-	// Detached thread constructor
-	named_thread(thread_state s, std::string_view name, Context&& f)
-		: Context(std::forward<Context>(f))
-		, thread(name)
-	{
-		thread::m_state.raw() = s;
-		thread::start(&named_thread::entry_point);
-	}
-
 	friend class thread_ctrl;
 
 public:
+	// Default constructor
+	template <bool Valid = std::is_default_constructible_v<Context> && thread_thread_name<Context>(), typename = std::enable_if_t<Valid>>
+	named_thread()
+		: Context()
+		, thread(Context::thread_name)
+	{
+		thread::start(&named_thread::entry_point);
+	}
+
 	// Normal forwarding constructor
 	template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<Context, Args&&...>>>
 	named_thread(std::string_view name, Args&&... args)
@@ -441,19 +402,15 @@ public:
 		return thread::m_state.load();
 	}
 
-	// Try to abort/detach
+	// Try to abort by assigning thread_state::aborting (UB if assigning different state)
 	named_thread& operator=(thread_state s)
 	{
-		if (s < thread_state::finished && thread::m_state.compare_and_swap_test(thread_state::created, s))
+		ASSUME(s == thread_state::aborting);
+
+		if (s == thread_state::aborting && thread::m_state.compare_and_swap_test(thread_state::created, s))
 		{
 			if (s == thread_state::aborting)
 			{
-				// Call on_abort() method if it's available
-				if constexpr (thread_on_abort<Context>())
-				{
-					Context::on_abort();
-				}
-
 				thread::notify_abort();
 			}
 		}
@@ -464,6 +421,7 @@ public:
 	// Context type doesn't need virtual destructor
 	~named_thread()
 	{
+		// Assign aborting state forcefully
 		operator=(thread_state::aborting);
 		thread::join();
 
@@ -471,5 +429,89 @@ public:
 		{
 			result::destroy();
 		}
+	}
+};
+
+// Group of named threads, similar to named_thread
+template <class Context>
+class named_thread_group final
+{
+	using Thread = named_thread<Context>;
+
+	const u32 m_count;
+
+	Thread* m_threads;
+
+public:
+	// Lambda constructor, also the implicit deduction guide candidate
+	named_thread_group(std::string_view name, u32 count, const Context& f)
+		: m_count(count)
+		, m_threads(nullptr)
+	{
+		if (count == 0)
+		{
+			return;
+		}
+
+		m_threads = static_cast<Thread*>(::operator new(sizeof(Thread) * m_count, std::align_val_t{alignof(Thread)}));
+
+		// Create all threads
+		for (u32 i = 0; i < m_count; i++)
+		{
+			new (static_cast<void*>(m_threads + i)) Thread(std::string(name) + std::to_string(i + 1), f);
+		}
+	}
+
+	named_thread_group(const named_thread_group&) = delete;
+
+	named_thread_group& operator=(const named_thread_group&) = delete;
+
+	// Wait for completion
+	void join() const
+	{
+		for (u32 i = 0; i < m_count; i++)
+		{
+			std::as_const(*std::launder(m_threads + i))();
+		}
+	}
+
+	// Join and access specific thread
+	auto operator[](u32 index) const
+	{
+		return std::as_const(*std::launder(m_threads + index))();
+	}
+
+	// Join and access specific thread
+	auto operator[](u32 index)
+	{
+		return (*std::launder(m_threads + index))();
+	}
+
+	// Dumb iterator
+	auto begin()
+	{
+		return std::launder(m_threads);
+	}
+
+	// Dumb iterator
+	auto end()
+	{
+		return m_threads + m_count;
+	}
+
+	u32 size() const
+	{
+		return m_count;
+	}
+
+	~named_thread_group()
+	{
+		// Destroy all threads (it should join them)
+		for (u32 i = 0; i < m_count; i++)
+		{
+			std::launder(m_threads + i)->~Thread();
+		}
+
+		::operator delete(static_cast<void*>(m_threads), std::align_val_t{alignof(Thread)});
 	}
 };

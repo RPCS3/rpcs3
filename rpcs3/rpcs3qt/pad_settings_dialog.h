@@ -2,26 +2,27 @@
 
 #include <QButtonGroup>
 #include <QDialog>
-#include <QEvent>
 #include <QLabel>
 #include <QTabWidget>
 #include <QTimer>
 
-#include "Emu/Io/PadHandler.h"
+#include "Emu/Io/pad_config.h"
 #include "Emu/GameInfo.h"
+
+class PadHandlerBase;
 
 namespace Ui
 {
 	class pad_settings_dialog;
 }
 
-struct pad_info
+struct pad_device_info
 {
 	std::string name;
 	bool is_connected{false};
 };
 
-Q_DECLARE_METATYPE(pad_info)
+Q_DECLARE_METATYPE(pad_device_info)
 
 class pad_settings_dialog : public QDialog
 {
@@ -78,7 +79,7 @@ class pad_settings_dialog : public QDialog
 
 	struct pad_button
 	{
-		cfg::string* cfg_name;
+		cfg::string* cfg_name = nullptr;
 		std::string key;
 		QString text;
 	};
@@ -167,7 +168,7 @@ private:
 	void ChangeProfile();
 
 	/** Repaints a stick deadzone preview label */
-	void RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y);
+	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y);
 
 	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
 
@@ -176,5 +177,6 @@ protected:
 	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void mouseReleaseEvent(QMouseEvent *event) override;
 	void mouseMoveEvent(QMouseEvent *event) override;
+	void wheelEvent(QWheelEvent *event) override;
 	bool eventFilter(QObject* object, QEvent* event) override;
 };

@@ -6,6 +6,9 @@
 
 #include <atomic>
 
+error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr);
+error_code sceNpTerm();
+
 using in_addr_t = u32;
 using in_port_t = u16;
 using sa_family_t = u8;
@@ -477,7 +480,7 @@ enum SceNpCustomMenuActionMask : u32
 enum
 {
 	SCE_NP_CUSTOM_MENU_INDEX_BITS       = (sizeof(SceNpCustomMenuIndexMask) * 8),
-	SCE_NP_CUSTOM_MENU_INDEX_BITS_ALL   = ((SceNpCustomMenuIndexMask) - 1),
+	SCE_NP_CUSTOM_MENU_INDEX_BITS_ALL   = (static_cast<SceNpCustomMenuIndexMask>(-1)),
 	SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT = 5,
 	SCE_NP_CUSTOM_MENU_INDEX_BITS_MASK  = (SCE_NP_CUSTOM_MENU_INDEX_BITS - 1),
 	SCE_NP_CUSTOM_MENU_INDEX_BITS_MAX   = 127,
@@ -489,6 +492,11 @@ enum
 #define SCE_NP_CUSTOM_MENU_INDEX_ISSET(n, p) ((p)->index_bits[(n) >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT] & (1 << ((n) & SCE_NP_CUSTOM_MENU_INDEX_BITS_MASK)))
 #define SCE_NP_CUSTOM_MENU_INDEX_ZERO(p) ( for (u32 i = 0; i < (SCE_NP_CUSTOM_MENU_INDEX_SETSIZE >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT); i++) p->index_bits[i] = 0; )
 #define SCE_NP_CUSTOM_MENU_INDEX_SET_ALL(p) ( for (u32 i = 0; i < (SCE_NP_CUSTOM_MENU_INDEX_SETSIZE >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT); i++) p->index_bits[i] = SCE_NP_CUSTOM_MENU_INDEX_BITS_ALL; )
+
+enum
+{
+	SCE_NP_MIN_POOLSIZE = 128 * 1024
+};
 
 enum
 {
@@ -579,7 +587,7 @@ enum SceNpBasicMessageSubType : u16
 };
 
 // Applicable features of messages
-#define SCE_NP_BASIC_MESSAGE_FEATURES_EXP_MIN(min) ((((u32)min << 16) | (0 << 15)) & 0xFFFF8000)
+#define SCE_NP_BASIC_MESSAGE_FEATURES_EXP_MIN(min) (((static_cast<u32>(min) << 16) | (0 << 15)) & 0xFFFF8000)
 enum SceNpBasicMessageFeatures : u32
 {
 	SCE_NP_BASIC_MESSAGE_FEATURES_MULTI_RECEIPIENTS = 0x00000001,
@@ -787,7 +795,8 @@ enum : SceNpPlatformType
 {
 	SCE_NP_PLATFORM_TYPE_NONE = 0,
 	SCE_NP_PLATFORM_TYPE_PS3  = 1,
-	SCE_NP_PLATFORM_TYPE_VITA = 2
+	SCE_NP_PLATFORM_TYPE_VITA = 2,
+	SCE_NP_PLATFORM_TYPE_PS4 = 3, // Note: unknown on which fw versions it appears, but sdk version is unchecked
 };
 
 enum
@@ -836,9 +845,19 @@ struct SceNpOnlineId
 struct SceNpId
 {
 	SceNpOnlineId handle;
-	u8 opt[8];
+
+	union
+	{
+		// This field (system reserved) seems to be combined of two parts
+		// The second is used by sceNpUtilSetPlatformType and sceNpUtilGetPlatformType
+		u8 opt[8];
+		nse_t<u32, 1> unk1[2];
+	};
+
 	u8 reserved[8];
 };
+
+CHECK_SIZE_ALIGN(SceNpId, 0x24, 1);
 
 // Online Name structure
 struct SceNpOnlineName

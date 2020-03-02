@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
-#include "overlays.h"
+#include "overlay_save_dialog.h"
+#include "Utilities/date_time.h"
 
 namespace rsx
 {
@@ -29,8 +30,8 @@ namespace rsx
 
 			std::unique_ptr<overlay_element> text_stack  = std::make_unique<vertical_layout>();
 			std::unique_ptr<overlay_element> padding     = std::make_unique<spacer>();
-			std::unique_ptr<overlay_element> header_text = std::make_unique<label>(utf8_to_ascii8(text1));
-			std::unique_ptr<overlay_element> subtext     = std::make_unique<label>(utf8_to_ascii8(text2));
+			std::unique_ptr<overlay_element> header_text = std::make_unique<label>(text1);
+			std::unique_ptr<overlay_element> subtext     = std::make_unique<label>(text2);
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
@@ -54,7 +55,7 @@ namespace rsx
 			if (!text3.empty())
 			{
 				// Detail info actually exists
-				std::unique_ptr<overlay_element> detail = std::make_unique<label>(utf8_to_ascii8(text3));
+				std::unique_ptr<overlay_element> detail = std::make_unique<label>(text3);
 				detail->set_size(800, 0);
 				detail->set_font("Arial", 12);
 				detail->set_wrap_text(true);
@@ -136,12 +137,17 @@ namespace rsx
 				m_list->select_next(10);
 				break;
 			default:
-				LOG_TRACE(RSX, "[ui] Button %d pressed", (u8)button_press);
+				rsx_log.trace("[ui] Button %d pressed", static_cast<u8>(button_press));
 			}
 		}
 
 		compiled_resource save_dialog::get_compiled()
 		{
+			if (!visible)
+			{
+				return {};
+			}
+
 			compiled_resource result;
 			result.add(m_dim_background->get_compiled());
 			result.add(m_list->get_compiled());
@@ -156,6 +162,8 @@ namespace rsx
 
 		s32 save_dialog::show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet)
 		{
+			visible = false;
+
 			std::vector<u8> icon;
 			std::vector<std::unique_ptr<overlay_element>> entries;
 
@@ -247,11 +255,12 @@ namespace rsx
 			}
 
 			static_cast<label*>(m_description.get())->auto_resize();
+			visible = true;
 
 			if (auto err = run_input_loop())
 				return err;
 
-			if (return_code == entries.size() && !newpos_head)
+			if (return_code + 0u == entries.size() && !newpos_head)
 				return selection_code::new_save;
 			if (return_code >= 0 && newpos_head)
 				return return_code - 1;

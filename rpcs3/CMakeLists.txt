@@ -18,6 +18,14 @@ elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
 	set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "iconv")
 endif()
 
+if(UNIX AND NOT APPLE)
+	# Optionally enable X11 for window management
+	find_package(X11)
+	if(X11_FOUND)
+		add_definitions(-DHAVE_X11)
+	endif()
+endif()
+
 if(NOT RPCS3_SRC_DIR)
 	set(RPCS3_SRC_DIR ${CMAKE_CURRENT_LIST_DIR})
 	message("-- Initializing RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
@@ -36,21 +44,23 @@ add_subdirectory(Emu)
 add_subdirectory(rpcs3qt)
 
 set(RPCS3_SRC
-	basic_keyboard_handler.cpp
-	basic_mouse_handler.cpp
-	ds3_pad_handler.cpp
-	ds4_pad_handler.cpp
-	evdev_joystick_handler.cpp
+	display_sleep_control.cpp
 	headless_application.cpp
-	keyboard_pad_handler.cpp
 	main.cpp
 	main_application.cpp
-	mm_joystick_handler.cpp
-	pad_thread.cpp
 	rpcs3_version.cpp
 	stb_image.cpp
 	stdafx.cpp
-	xinput_pad_handler.cpp
+
+	Input/basic_keyboard_handler.cpp
+	Input/basic_mouse_handler.cpp
+	Input/ds3_pad_handler.cpp
+	Input/ds4_pad_handler.cpp
+	Input/evdev_joystick_handler.cpp
+	Input/keyboard_pad_handler.cpp
+	Input/mm_joystick_handler.cpp
+	Input/pad_thread.cpp
+	Input/xinput_pad_handler.cpp
 )
 
 if(WIN32)
@@ -79,10 +89,13 @@ if (WIN32)
 	target_sources(rpcs3 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.rc")
 endif()
 
-if(UNIX AND NOT APPLE)
-	find_package(X11 REQUIRED)
+# Unix display manager
+if(X11_FOUND)
 	target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
 	target_link_libraries(rpcs3 ${X11_LIBRARIES})
+elseif(USE_VULKAN AND UNIX AND NOT WAYLAND_FOUND AND NOT APPLE)
+	# Wayland has been checked in 3rdparty/CMakeLists.txt already.
+	message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
 endif()
 
 if(UNIX)
@@ -97,11 +110,13 @@ else()
 	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS})
 endif()
 
-set_target_properties(rpcs3 PROPERTIES
-	COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h"
-	COTIRE_ADD_UNITY_BUILD OFF)
+if(USE_COTIRE)
+	set_target_properties(rpcs3 PROPERTIES
+		COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h"
+		COTIRE_ADD_UNITY_BUILD OFF)
 
-cotire(rpcs3)
+	cotire(rpcs3)
+endif()
 
 # Copy icons to executable directory
 if(APPLE)
@@ -117,6 +132,10 @@ elseif(UNIX)
 	add_custom_command(TARGET rpcs3 POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy_directory
 			${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons)
+elseif(WIN32)
+	add_custom_command(TARGET rpcs3 POST_BUILD
+			COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/bin" "$<TARGET_FILE_DIR:rpcs3>"
+			COMMAND "${Qt5_DIR}/../../../bin/windeployqt" --no-angle --no-compiler-runtime --no-opengl-sw --no-patchqt --no-svg --no-translations --no-quick --plugindir "$<TARGET_FILE_DIR:rpcs3>/qt/plugins" "$<TARGET_FILE:rpcs3>")
 endif()
 
 # Unix installation

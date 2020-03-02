@@ -1,11 +1,19 @@
-#pragma once
+﻿#pragma once
 #include "../Common/FragmentProgramDecompiler.h"
+#include "../Common/GLSLTypes.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
+
+namespace glsl
+{
+	struct shader_properties;
+}
 
 struct GLFragmentDecompilerThread : public FragmentProgramDecompiler
 {
 	std::string& m_shader;
 	ParamArray& m_parrDummy;
+	glsl::shader_properties m_shader_props{};
+
 public:
 	GLFragmentDecompilerThread(std::string& shader, ParamArray& parr, const RSXFragmentProgram &prog, u32& size)
 		: FragmentProgramDecompiler(prog, size)

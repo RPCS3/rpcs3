@@ -1,13 +1,17 @@
 ﻿// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
+#include <iostream>
+
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QFileInfo>
+#include <QLayout>
 #include <QTimer>
 #include <QObject>
 #include <QMessageBox>
 #include <QTextDocument>
+#include <QStyleFactory>
 
 #include "rpcs3qt/gui_application.h"
 
@@ -30,6 +34,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #endif
 
 #include "rpcs3_version.h"
+#include "Emu/System.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -97,16 +102,104 @@ static semaphore<> s_qt_mutex{};
 	std::abort();
 }
 
-const char* arg_headless = "headless";
-const char* arg_no_gui   = "no-gui";
-const char* arg_high_dpi = "hidpi";
+const char* arg_headless   = "headless";
+const char* arg_no_gui     = "no-gui";
+const char* arg_high_dpi   = "hidpi";
+const char* arg_rounding   = "dpi-rounding";
+const char* arg_styles     = "styles";
+const char* arg_style      = "style";
+const char* arg_stylesheet = "stylesheet";
+
+int find_arg(std::string arg, int& argc, char* argv[])
+{
+	arg = "--" + arg;
+	for (int i = 1; i < argc; ++i)
+		if (!strcmp(arg.c_str(), argv[i]))
+			return i;
+	return 0;
+}
 
 QCoreApplication* createApplication(int& argc, char* argv[])
 {
-	const std::string headless("--" + std::string(arg_headless));
-	for (int i = 1; i < argc; ++i)
-		if (!strcmp(headless.c_str(), argv[i]))
-			return new headless_application(argc, argv);
+	if (find_arg(arg_headless, argc, argv))
+		return new headless_application(argc, argv);
+
+#ifdef __linux__
+	// set the DISPLAY variable in order to open web browsers
+	if (qEnvironmentVariable("DISPLAY", "").isEmpty())
+	{
+		qputenv("DISPLAY", ":0");
+	}
+#endif
+
+	bool use_high_dpi = true;
+
+	const auto i_hdpi = find_arg(arg_high_dpi, argc, argv);
+	if (i_hdpi)
+	{
+		const std::string cmp_str = "0";
+		const auto i_hdpi_2 = (argc > (i_hdpi + 1)) ? (i_hdpi + 1) : 0;
+		const auto high_dpi_setting = (i_hdpi_2 && !strcmp(cmp_str.c_str(), argv[i_hdpi_2])) ? "0" : "1";
+
+		// Set QT_ENABLE_HIGHDPI_SCALING from environment. Defaults to cli argument, which defaults to 1.
+		use_high_dpi = "1" == qEnvironmentVariable("QT_ENABLE_HIGHDPI_SCALING", high_dpi_setting);
+	}
+
+	// AA_EnableHighDpiScaling has to be set before creating a QApplication
+	QApplication::setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
+
+	if (use_high_dpi)
+	{
+		// Set QT_SCALE_FACTOR_ROUNDING_POLICY from environment. Defaults to cli argument, which defaults to RoundPreferFloor.
+		auto rounding_val = Qt::HighDpiScaleFactorRoundingPolicy::PassThrough;
+		auto rounding_str = std::to_string(static_cast<int>(rounding_val));
+		const auto i_rounding = find_arg(arg_rounding, argc, argv);
+		if (i_rounding)
+		{
+			const auto i_rounding_2 = (argc > (i_rounding + 1)) ? (i_rounding + 1) : 0;
+			if (i_rounding_2)
+			{
+				const auto arg_val = argv[i_rounding_2];
+				try
+				{
+					const auto rounding_val_cli = std::stoi(arg_val);
+					if (rounding_val_cli >= static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::Unset) && rounding_val_cli <= static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough))
+					{
+						rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(rounding_val_cli);
+						rounding_str = std::to_string(static_cast<int>(rounding_val));
+					}
+					else
+					{
+						throw std::exception();
+					}
+				}
+				catch (const std::exception&)
+				{
+					std::cout << "The value " << arg_val << " for " << arg_rounding << " is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.\n";
+				}
+			}
+		}
+		try
+		{
+			rounding_str = qEnvironmentVariable("QT_SCALE_FACTOR_ROUNDING_POLICY", rounding_str.c_str()).toStdString();
+			const auto rounding_val_final = std::stoi(rounding_str);
+			if (rounding_val_final >= static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::Unset) && rounding_val_final <= static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough))
+			{
+				rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(rounding_val_final);
+				rounding_str = std::to_string(static_cast<int>(rounding_val));
+			}
+			else
+			{
+				throw std::exception();
+			}
+		}
+		catch (const std::exception&)
+		{
+			std::cout << "The value " << rounding_str << " for " << arg_rounding << " is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.\n";
+		}
+		QApplication::setHighDpiScaleFactorRoundingPolicy(rounding_val);
+	}
+
 	return new gui_application(argc, argv);
 }
 
@@ -127,8 +220,13 @@ int main(int argc, char** argv)
 	s_init.unlock();
 	s_qt_mutex.lock();
 
+	// The constructor of QApplication eats the --style and --stylesheet arguments.
+	// By checking for stylesheet().isEmpty() we could implicitly know if a stylesheet was passed,
+	// but I haven't found an implicit way to check for style yet, so we naively check them both here for now.
+	const bool use_cli_style = find_arg(arg_style, argc, argv) || find_arg(arg_stylesheet, argc, argv);
+
 	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
-	app->setApplicationVersion(qstr(rpcs3::version.to_string()));
+	app->setApplicationVersion(QString::fromStdString(rpcs3::get_version().to_string()));
 	app->setApplicationName("RPCS3");
 
 	// Command line args
@@ -142,24 +240,37 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
+	parser.addOption(QCommandLineOption(arg_rounding, "Sets the Qt::HighDpiScaleFactorRoundingPolicy for values like 150% zoom.", "rounding", "4"));
+	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
+	parser.addOption(QCommandLineOption(arg_style, "Loads a custom style.", "style", ""));
+	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(versionOption) || parser.isSet(helpOption))
 		return 0;
 
+	if (parser.isSet(arg_styles))
+	{
+#ifdef _WIN32
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
+#endif
+		for (const auto& style : QStyleFactory::keys())
+			std::cout << "\n" << style.toStdString();
+
+		return 0;
+	}
+
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 	{
-		// Set QT_AUTO_SCREEN_SCALE_FACTOR from environment. Defaults to cli argument, which defaults to 1.
-		const bool use_high_dpi = "1" == qEnvironmentVariable("QT_AUTO_SCREEN_SCALE_FACTOR", parser.value(arg_high_dpi));
-		const bool show_gui     = !parser.isSet(arg_no_gui);
+		gui_app->setAttribute(Qt::AA_UseHighDpiPixmaps);
+		gui_app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
+		gui_app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
 
-		app->setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
-		app->setAttribute(Qt::AA_UseHighDpiPixmaps);
-		app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
-		app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
-
-		gui_app->Init(show_gui);
+		gui_app->SetShowGui(!parser.isSet(arg_no_gui));
+		gui_app->SetUseCliStyle(use_cli_style);
+		gui_app->Init();
 	}
 	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
 	{
@@ -195,7 +306,7 @@ int main(int argc, char** argv)
 		}
 
 		// Ugly workaround
-		QTimer::singleShot(2, [path = sstr(QFileInfo(args.at(0)).canonicalFilePath()), argv = std::move(argv)]() mutable
+		QTimer::singleShot(2, [path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
 		{
 			Emu.argv = std::move(argv);
 			Emu.SetForceBoot(true);

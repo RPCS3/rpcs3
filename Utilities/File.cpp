@@ -27,9 +27,24 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 	const int size = narrow<int>(buf_size, "to_wchar" HERE);
 
 	// Buffer for max possible output length
-	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size]);
+	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size + 8 + 32768]);
 
-	verify("to_wchar" HERE), MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get(), size);
+	// Prepend wide path prefix (4 characters)
+	std::memcpy(buffer.get() + 32768, L"\\\\\?\\", 4 * sizeof(wchar_t));
+
+	// Test whether additional UNC prefix is required
+	const bool unc = source.size() > 2 && (source[0] == '\\' || source[0] == '/') && source[1] == source[0];
+
+	if (unc)
+	{
+		// Use \\?\UNC\ prefix
+		std::memcpy(buffer.get() + 32768 + 4, L"UNC\\", 4 * sizeof(wchar_t));
+	}
+
+	verify("to_wchar" HERE), MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get() + 32768 + (unc ? 8 : 4), size);
+
+	// Canonicalize wide path (replace '/', ".", "..", \\ repetitions, etc)
+	verify("to_wchar" HERE), GetFullPathNameW(buffer.get() + 32768, 32768, buffer.get(), nullptr) - 1 < 32768 - 1;
 
 	return buffer;
 }
@@ -113,6 +128,7 @@ static fs::error to_error(DWORD e)
 	case ERROR_SHARING_VIOLATION: return fs::error::acces;
 	case ERROR_DIR_NOT_EMPTY: return fs::error::notempty;
 	case ERROR_NOT_READY: return fs::error::noent;
+	case ERROR_FILENAME_EXCED_RANGE: return fs::error::toolong;
 	//case ERROR_INVALID_PARAMETER: return fs::error::inval;
 	default: fmt::throw_exception("Unknown Win32 error: %u.", e);
 	}
@@ -154,11 +170,33 @@ static fs::error to_error(int e)
 	case EACCES: return fs::error::acces;
 	case ENOTEMPTY: return fs::error::notempty;
 	case EROFS: return fs::error::readonly;
+	case EISDIR: return fs::error::isdir;
 	default: fmt::throw_exception("Unknown system error: %d.", e);
 	}
 }
 
 #endif
+
+static std::string path_append(std::string_view path, std::string_view more)
+{
+	std::string result;
+
+	if (const size_t src_slash_pos = path.find_last_not_of('/'); src_slash_pos != path.npos)
+	{
+		path.remove_suffix(path.length() - src_slash_pos - 1);
+		result = path;
+	}
+
+	result.push_back('/');
+
+	if (const size_t dst_slash_pos = more.find_first_not_of('/'); dst_slash_pos != more.npos)
+	{
+		more.remove_prefix(dst_slash_pos);
+		result.append(more);
+	}
+
+	return result;
+}
 
 namespace fs
 {
@@ -266,7 +304,7 @@ std::shared_ptr<fs::device_base> fs::device_manager::set_device(const std::strin
 std::shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
 {
 	// Every virtual device path must have "//" at the beginning
-	if (path.size() > 2 && reinterpret_cast<const u16&>(path.front()) == "//"_u16)
+	if (path.starts_with("//"))
 	{
 		return get_device_manager().get_device(path);
 	}
@@ -276,7 +314,7 @@ std::shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
 
 std::shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, const std::shared_ptr<device_base>& device)
 {
-	verify(HERE), name.size() > 2, name[0] == '/', name[1] == '/', name.find('/', 2) == -1;
+	verify(HERE), name.starts_with("//"), name[2] != '/';
 
 	return get_device_manager().set_device(name, device);
 }
@@ -300,7 +338,7 @@ std::string fs::get_parent_dir(const std::string& path)
 		if (std::exchange(last, pos - 1) != pos)
 		{
 			// Return empty string if the path doesn't contain at least 2 elements
-			return path.substr(0, pos != -1 && path.find_last_not_of(delim, pos, sizeof(delim) - 1) != -1 ? pos : 0);
+			return path.substr(0, pos != umax && path.find_last_not_of(delim, pos, sizeof(delim) - 1) != umax ? pos : 0);
 		}
 	}
 }
@@ -485,7 +523,27 @@ bool fs::statfs(const std::string& path, fs::device_stat& info)
 	ULARGE_INTEGER total_size;
 	ULARGE_INTEGER total_free;
 
-	if (!GetDiskFreeSpaceExW(to_wchar(path).get(), &avail_free, &total_size, &total_free))
+	// Convert path and return it back to the "short" format
+	const bool unc = path.size() > 2 && (path[0] == '\\' || path[0] == '/') && path[1] == path[0];
+
+	std::wstring str = to_wchar(path).get() + (unc ? 6 : 4);
+
+	if (unc)
+	{
+		str[0] = '\\';
+		str[1] = '\\';
+	}
+
+	// Keep cutting path from right until it's short enough
+	while (str.size() > 256)
+	{
+		if (std::size_t x = str.find_last_of('\\') + 1)
+			str.resize(x - 1);
+		else
+			break;
+	}
+
+	if (!GetDiskFreeSpaceExW(str.c_str(), &avail_free, &total_size, &total_free))
 	{
 		g_tls_error = to_error(GetLastError());
 		return false;
@@ -542,7 +600,12 @@ bool fs::create_path(const std::string& path)
 {
 	const std::string parent = get_parent_dir(path);
 
-	if (!parent.empty() && !create_path(parent))
+#ifdef _WIN32
+	// Workaround: don't call is_dir with naked drive letter
+	if (!parent.empty() && parent.back() != ':' && !is_dir(parent) && !create_path(parent))
+#else
+	if (!parent.empty() && !is_dir(parent) && !create_path(parent))
+#endif
 	{
 		return false;
 	}
@@ -870,7 +933,7 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 
 void fs::file::xnull() const
 {
-	fmt::throw_exception<std::logic_error>("fs::file is null");
+	fmt::throw_exception("fs::file is null");
 }
 
 void fs::file::xfail() const
@@ -965,7 +1028,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			info.is_writable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 			info.size = this->size();
 			info.atime = to_time(basic_info.LastAccessTime);
-			info.mtime = to_time(basic_info.ChangeTime);
+			info.mtime = to_time(basic_info.LastWriteTime);
 			info.ctime = info.mtime;
 
 			if (info.atime < info.mtime)
@@ -1051,7 +1114,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 	m_file = std::make_unique<windows_file>(handle);
 #else
-	int flags = 0;
+	int flags = O_CLOEXEC; // Ensures all files are closed on execl for auto updater
 
 	if (mode & fs::read && mode & fs::write) flags |= O_RDWR;
 	else if (mode & fs::read) flags |= O_RDONLY;
@@ -1087,7 +1150,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	if (mode & fs::trunc && mode & (fs::lock + fs::unread))
 	{
 		// Postpone truncation in order to avoid using O_TRUNC on a locked file
-		::ftruncate(fd, 0);
+		verify(HERE), ::ftruncate(fd, 0) == 0;
 	}
 
 	class unix_file final : public file_base
@@ -1193,7 +1256,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			static_assert(sizeof(iovec) == sizeof(iovec_clone), "Weird iovec size");
 			static_assert(offsetof(iovec, iov_len) == offsetof(iovec_clone, iov_len), "Weird iovec::iov_len offset");
 
-			const auto result = ::writev(m_fd, (const iovec*)buffers, buf_count);
+			const auto result = ::writev(m_fd, reinterpret_cast<const iovec*>(buffers), buf_count);
 			verify("file::write_gather" HERE), result != -1;
 
 			return result;
@@ -1287,18 +1350,9 @@ fs::native_handle fs::file::get_handle() const
 #endif
 }
 
-#ifdef _WIN32
-bool fs::file::set_delete(bool autodelete) const
-{
-	FILE_DISPOSITION_INFO disp;
-	disp.DeleteFileW = autodelete;
-	return SetFileInformationByHandle(get_handle(), FileDispositionInfo, &disp, sizeof(disp)) != 0;
-}
-#endif
-
 void fs::dir::xnull() const
 {
-	fmt::throw_exception<std::logic_error>("fs::dir is null");
+	fmt::throw_exception("fs::dir is null");
 }
 
 bool fs::dir::open(const std::string& path)
@@ -1553,7 +1607,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 
 			if (entry.is_directory == false)
 			{
-				if (!remove_file(path + '/' + entry.name))
+				if (!remove_file(path_append(path, entry.name)))
 				{
 					return false;
 				}
@@ -1561,7 +1615,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 
 			if (entry.is_directory == true)
 			{
-				if (!remove_all(path + '/' + entry.name))
+				if (!remove_all(path_append(path, entry.name)))
 				{
 					return false;
 				}
@@ -1572,7 +1626,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 	{
 		return false;
 	}
-	
+
 	if (remove_root)
 	{
 		return remove_dir(path);
@@ -1585,7 +1639,14 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 {
 	u64 result = 0;
 
-	for (const auto entry : dir(path))
+	const auto root_dir = dir(path);
+
+	if (!root_dir)
+	{
+		return static_cast<u64>(umax);
+	}
+
+	for (const auto& entry : root_dir)
 	{
 		if (entry.name == "." || entry.name == "..")
 		{
@@ -1599,7 +1660,14 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 
 		if (entry.is_directory == true)
 		{
-			result += get_dir_size(path + '/' + entry.name, rounding_alignment);
+			const u64 size = get_dir_size(path_append(path, entry.name), rounding_alignment);
+
+			if (size == umax)
+			{
+				return size;
+			}
+
+			result += size;
 		}
 	}
 
@@ -1753,6 +1821,8 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 		case fs::error::acces: return "Access violation";
 		case fs::error::notempty: return "Not empty";
 		case fs::error::readonly: return "Read only";
+		case fs::error::isdir: return "Is a directory";
+		case fs::error::toolong: return "Path too long";
 		}
 
 		return unknown;

@@ -1,4 +1,4 @@
-#include "trophy_notification_frame.h"
+﻿#include "trophy_notification_frame.h"
 
 #include <QHBoxLayout>
 #include <QLabel>
@@ -25,7 +25,7 @@ trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& i
 	trophyImgLabel->setPalette(black_background);
 
 	QImage trophyImg;
-	if (!imgBuffer.empty() && trophyImg.loadFromData((uchar*)&imgBuffer[0], static_cast<int>(imgBuffer.size()), "PNG"))
+	if (!imgBuffer.empty() && trophyImg.loadFromData(imgBuffer.data(), static_cast<int>(imgBuffer.size()), "PNG"))
 	{
 		trophyImg = trophyImg.scaledToHeight(height); // I might consider adding ability to change size since on hidpi this will be rather small.
 		trophyImgLabel->setPixmap(QPixmap::fromImage(trophyImg));

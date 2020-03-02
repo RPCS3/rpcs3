@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "stdafx.h"
-#include <QtCore>
+#include <QDir>
 #include <QComboBox>
 #include <QFont>
 #include <QIcon>
@@ -13,6 +13,12 @@ namespace gui
 {
 	namespace utils
 	{
+		template<typename T>
+		static QSet<T> list_to_set(const QList<T>& list)
+		{
+			return QSet<T>(list.begin(), list.end());
+		}
+
 		// Creates a frame geometry rectangle with given width height that's centered inside the origin,
 		// while still considering screen boundaries.
 		QRect create_centered_window_geometry(const QRect& origin, s32 width, s32 height);

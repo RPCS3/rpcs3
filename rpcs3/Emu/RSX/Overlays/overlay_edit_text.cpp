@@ -34,7 +34,7 @@ namespace rsx
 			}
 		}
 
-		void edit_text::insert_text(const std::string& str)
+		void edit_text::insert_text(const std::u32string& str)
 		{
 			if (caret_position == 0)
 			{
@@ -65,7 +65,7 @@ namespace rsx
 
 			if (caret_position == 1)
 			{
-				text = text.length() > 1 ? text.substr(1) : "";
+				text = text.length() > 1 ? text.substr(1) : U"";
 			}
 			else if (caret_position == text.length())
 			{
@@ -91,7 +91,7 @@ namespace rsx
 				const auto caret_loc = renderer->get_char_offset(text.c_str(), caret_position, clip_text ? w : UINT16_MAX, wrap_text);
 
 				caret.set_pos(u16(caret_loc.first + padding_left + x), u16(caret_loc.second + padding_top + y));
-				caret.set_size(1, u16(renderer->size_px + 2));
+				caret.set_size(1, u16(renderer->get_size_px() + 2));
 				caret.fore_color           = fore_color;
 				caret.back_color           = fore_color;
 				caret.pulse_effect_enabled = true;

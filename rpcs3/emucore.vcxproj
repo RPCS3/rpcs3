@@ -61,7 +61,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\3rdparty\zlib;..\llvm\include;..\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\libusb\libusb;..\3rdparty\zlib;..\llvm\include;..\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
     </ClCompile>
     <PreBuildEvent>
       <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
@@ -69,8 +69,27 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Emu\Io\GHLtar.cpp" />
+    <ClCompile Include="Emu\Audio\AudioBackend.cpp" />
     <ClCompile Include="Emu\Io\KeyboardHandler.cpp" />
+    <ClCompile Include="Emu\Io\pad_config.cpp" />
+    <ClCompile Include="Emu\Io\pad_config_types.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp" />
+    <ClCompile Include="Emu\system_config_types.cpp" />
+    <ClCompile Include="Emu\title.cpp" />
+    <ClCompile Include="Emu\system_config.cpp" />
     <ClCompile Include="util\atomic.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="util\atomic2.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="util\shared_cptr.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="util\fixed_typemap.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\bin_patch.cpp">
@@ -80,9 +99,6 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\dynamic_library.cpp" />
-    <ClCompile Include="..\Utilities\GDBDebugServer.cpp">
-      <PrecompiledHeader>Use</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="..\Utilities\JIT.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -117,6 +133,13 @@
     <ClCompile Include="..\Utilities\version.cpp" />
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_config.cpp" />
+    <ClCompile Include="Crypto\md5.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_gpio.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_net.cpp" />
     <ClCompile Include="Emu\Cell\Modules\StaticHLE.cpp" />
@@ -156,6 +179,16 @@
     <ClCompile Include="Emu\Cell\lv2\sys_usbd.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_vm.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_ss.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_hid.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_io.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_rsxaudio.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_sm.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_storage.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_uart.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_bdemu.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_console.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_btsetting.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_crypto_engine.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_libc_.cpp" />
     <ClCompile Include="Emu\Cell\PPUModule.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAdec.cpp" />
@@ -163,6 +196,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellAtracMulti.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAudio.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAudioOut.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellAuthDialog.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAvconfExt.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellBgdl.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellCamera.cpp" />
@@ -232,6 +266,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellSync.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSync2.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysconf.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysCache.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutil.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAp.cpp" />
@@ -269,7 +304,7 @@
     <ClCompile Include="Emu\Cell\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_game.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_heap.cpp" />
-    <ClCompile Include="Emu\Cell\Modules\sys_io.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_io_.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_libc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_lv2dbg.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_lwcond_.cpp" />
@@ -290,6 +325,8 @@
     <ClCompile Include="Emu\Cell\SPUDisAsm.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
     <ClCompile Include="Emu\IdManager.cpp" />
+    <ClCompile Include="Emu\Io\Skylander.cpp" />
+    <ClCompile Include="Emu\Io\usb_device.cpp" />
     <ClCompile Include="Emu\RSX\Capture\rsx_capture.cpp" />
     <ClCompile Include="Emu\RSX\Capture\rsx_replay.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
@@ -297,7 +334,6 @@
     <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp" />
     <ClCompile Include="Emu\RSX\Common\FragmentProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\Common\ProgramStateCache.cpp" />
-    <ClCompile Include="Emu\RSX\Common\ShaderParam.cpp" />
     <ClCompile Include="Emu\RSX\Common\surface_store.cpp" />
     <ClCompile Include="Emu\RSX\Common\TextureUtils.cpp" />
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp" />
@@ -309,8 +345,9 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlays.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_animation.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_edit_text.cpp" />
-    <ClCompile Include="Emu\RSX\Overlays\overlay_font.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_fonts.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_list_view.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_message_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk.cpp" />
@@ -341,6 +378,9 @@
     <ClCompile Include="Crypto\sha1.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Crypto\sha256.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Crypto\unedat.cpp" />
     <ClCompile Include="Crypto\unpkg.cpp" />
     <ClCompile Include="Crypto\unself.cpp" />
@@ -360,6 +400,7 @@
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
     <ClCompile Include="Emu\Memory\vm.cpp" />
     <ClCompile Include="Emu\System.cpp" />
+    <ClCompile Include="Emu\GDB.cpp" />
     <ClCompile Include="Loader\ELF.cpp" />
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\PUP.cpp" />
@@ -375,9 +416,31 @@
   <ItemGroup>
     <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_crypto_engine.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellCrossController.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellRemotePlay.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSsl.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellStorage.h" />
+    <ClInclude Include="Emu\Io\GHLtar.h" />
+    <ClInclude Include="Emu\Io\pad_types.h" />
     <ClInclude Include="Emu\Io\Keyboard.h" />
+    <ClInclude Include="Emu\Io\pad_config.h" />
+    <ClInclude Include="Emu\Io\pad_config_types.h" />
+    <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_fonts.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_message_dialog.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_osk.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_perf_metrics.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_save_dialog.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_shader_compile_notification.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_trophy_notification.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h" />
+    <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h" />
+    <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.h" />
+    <ClInclude Include="Emu\title.h" />
+    <ClInclude Include="Emu\system_config.h" />
+    <ClInclude Include="Emu\system_config_types.h" />
     <ClInclude Include="util\atomic.hpp" />
-    <ClInclude Include="..\Utilities\AtomicPtr.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\bin_patch.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
@@ -387,10 +450,7 @@
     <ClInclude Include="..\Utilities\CRC.h" />
     <ClInclude Include="..\Utilities\date_time.h" />
     <ClInclude Include="..\Utilities\dynamic_library.h" />
-    <ClInclude Include="..\Utilities\event.h" />
-    <ClInclude Include="..\Utilities\GDBDebugServer.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
-    <ClInclude Include="..\Utilities\GSL.h" />
     <ClInclude Include="..\Utilities\hash.h" />
     <ClInclude Include="..\Utilities\JIT.h" />
     <ClInclude Include="..\Utilities\lockless.h" />
@@ -414,7 +474,9 @@
     <ClInclude Include="Crypto\ec.h" />
     <ClInclude Include="Crypto\key_vault.h" />
     <ClInclude Include="Crypto\lz.h" />
+    <ClInclude Include="Crypto\md5.h" />
     <ClInclude Include="Crypto\sha1.h" />
+    <ClInclude Include="Crypto\sha256.h" />
     <ClInclude Include="Crypto\unedat.h" />
     <ClInclude Include="Crypto\unpkg.h" />
     <ClInclude Include="Crypto\unself.h" />
@@ -436,6 +498,8 @@
     <ClInclude Include="Emu\Cell\PPUAnalyser.h" />
     <ClInclude Include="Emu\Cell\PPUTranslator.h" />
     <ClInclude Include="Emu\CPU\CPUTranslator.h" />
+    <ClInclude Include="Emu\Io\Skylander.h" />
+    <ClInclude Include="Emu\Io\usb_device.h" />
     <ClInclude Include="Emu\IPC.h" />
     <ClInclude Include="Emu\Audio\AudioDumper.h" />
     <ClInclude Include="Emu\Audio\AudioBackend.h" />
@@ -469,6 +533,15 @@
     <ClInclude Include="Emu\Cell\lv2\sys_usbd.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_vm.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_ss.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_hid.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_io.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_rsxaudio.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_sm.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_storage.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_uart.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_bdemu.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_console.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_btsetting.h" />
     <ClInclude Include="Emu\Cell\MFC.h" />
     <ClInclude Include="Emu\Cell\PPUModule.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAdec.h" />
@@ -568,6 +641,7 @@
     <ClInclude Include="Emu\RSX\gcm_enums.h" />
     <ClInclude Include="Emu\RSX\gcm_printing.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlays.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_animation.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_controls.h" />
     <ClInclude Include="Emu\RSX\RSXFIFO.h" />
     <ClInclude Include="Emu\RSX\RSXOffload.h" />
@@ -606,6 +680,7 @@
     <ClInclude Include="Emu\RSX\rsx_methods.h" />
     <ClInclude Include="Emu\RSX\rsx_utils.h" />
     <ClInclude Include="Emu\System.h" />
+    <ClInclude Include="Emu\GDB.h" />
     <ClInclude Include="Loader\ELF.h" />
     <ClInclude Include="Loader\PSF.h" />
     <ClInclude Include="Loader\PUP.h" />

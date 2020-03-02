@@ -246,11 +246,17 @@ struct RSXFragmentProgram
 
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const
 	{
-		return (rsx::texture_dimension_extended)((texture_dimensions >> (id * 2)) & 0x3);
+		return rsx::texture_dimension_extended{static_cast<u8>((texture_dimensions >> (id * 2)) & 0x3)};
 	}
 
 	bool texcoord_is_2d(u8 index) const
 	{
+		return !!(texcoord_control_mask & (1u << index));
+	}
+
+	bool texcoord_is_point_coord(u8 index) const
+	{
+		index += 16;
 		return !!(texcoord_control_mask & (1u << index));
 	}
 

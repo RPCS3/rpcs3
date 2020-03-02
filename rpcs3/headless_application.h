@@ -17,7 +17,7 @@ public:
 	headless_application(int& argc, char** argv);
 
 	/** Call this method before calling app.exec */
-	void Init(const bool show_gui = false) override;
+	void Init() override;
 
 private:
 	void InitializeCallbacks();

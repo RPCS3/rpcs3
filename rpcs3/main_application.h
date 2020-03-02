@@ -1,15 +1,16 @@
 ﻿#pragma once
 
-#include "stdafx.h"
+#include <string>
 #include <QWindow>
-#include "Emu/System.h"
+
+struct EmuCallbacks;
 
 class main_application
 {
 public:
-	virtual void Init(const bool show_gui = false) = 0;
+	virtual void Init() = 0;
 
-	static bool InitializeEmulator(const std::string& user, bool force_init);
+	static bool InitializeEmulator(const std::string& user, bool force_init, bool show_gui);
 
 protected:
 	virtual QThread* get_thread() = 0;

@@ -1,4 +1,4 @@
-#include "about_dialog.h"
+﻿#include "about_dialog.h"
 #include "ui_about_dialog.h"
 
 #include "rpcs3_version.h"
@@ -14,7 +14,7 @@ about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_
 
 	ui->close->setDefault(true);
 
-	ui->version->setText(tr("RPCS3 Version: %1").arg(qstr(rpcs3::version.to_string())));
+	ui->version->setText(tr("RPCS3 Version: %1").arg(qstr(rpcs3::get_version().to_string())));
 
 	// Events
 	connect(ui->gitHub, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.github.com/RPCS3")); });

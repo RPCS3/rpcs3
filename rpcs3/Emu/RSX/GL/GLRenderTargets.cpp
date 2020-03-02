@@ -1,6 +1,5 @@
 ﻿#include "stdafx.h"
 #include "GLGSRender.h"
-#include "Emu/System.h"
 
 color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_format color_format)
 {
@@ -62,7 +61,7 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		{ ::gl::texture::channel::a, ::gl::texture::channel::b, ::gl::texture::channel::g, ::gl::texture::channel::r } };
 
 	default:
-		fmt::throw_exception("Unsupported surface color format 0x%x" HERE, (u32)color_format);
+		fmt::throw_exception("Unsupported surface color format 0x%x" HERE, static_cast<u32>(color_format));
 	}
 }
 
@@ -78,9 +77,9 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
 		else
 			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth24_stencil8 };
-			
+
 	default:
-		fmt::throw_exception("Unsupported depth format 0x%x" HERE, (u32)depth_format);
+		fmt::throw_exception("Unsupported depth format 0x%x" HERE, static_cast<u32>(depth_format));
 	}
 }
 
@@ -252,7 +251,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 			m_draw_fbo = &fbo;
 			m_draw_fbo->bind();
-			m_draw_fbo->set_extents({ (int)m_framebuffer_layout.width, (int)m_framebuffer_layout.height });
+			m_draw_fbo->set_extents({ m_framebuffer_layout.width, m_framebuffer_layout.height });
 
 			framebuffer_status_valid = true;
 			break;
@@ -267,7 +266,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		m_draw_fbo = &m_framebuffer_cache.back();
 		m_draw_fbo->create();
 		m_draw_fbo->bind();
-		m_draw_fbo->set_extents({ (int)m_framebuffer_layout.width, (int)m_framebuffer_layout.height });
+		m_draw_fbo->set_extents({ m_framebuffer_layout.width, m_framebuffer_layout.height });
 
 		for (int i = 0; i < 4; ++i)
 		{
@@ -377,7 +376,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			const bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
 				!!g_cfg.video.write_color_buffers;
 
-			if (LIKELY(!lock))
+			if (!lock) [[likely]]
 			{
 				m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface->get_memory_range());
 				continue;
@@ -414,45 +413,91 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	}
 }
 
-std::array<std::vector<gsl::byte>, 4> GLGSRender::copy_render_targets_to_memory()
+std::array<std::vector<std::byte>, 4> GLGSRender::copy_render_targets_to_memory()
 {
 	return {};
 }
 
-std::array<std::vector<gsl::byte>, 2> GLGSRender::copy_depth_stencil_buffer_to_memory()
+std::array<std::vector<std::byte>, 2> GLGSRender::copy_depth_stencil_buffer_to_memory()
 {
 	return {};
 }
 
-void GLGSRender::read_buffers()
+// Render target helpers
+void gl::render_target::clear_memory(gl::command_context& cmd)
 {
-	// TODO
-}
-
-void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init)
-{
-	auto clear_surface_impl = [&]()
+	if (aspect() & gl::image_aspect::depth)
 	{
-		if (aspect() & gl::image_aspect::depth)
-		{
-			gl::g_hw_blitter->fast_clear_image(cmd, this, 1.f, 255);
-		}
-		else
-		{
-			gl::g_hw_blitter->fast_clear_image(cmd, this, {});
-		}
+		gl::g_hw_blitter->fast_clear_image(cmd, this, 1.f, 255);
+	}
+	else
+	{
+		gl::g_hw_blitter->fast_clear_image(cmd, this, {});
+	}
 
-		state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
-	};
+	state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+}
+
+void gl::render_target::load_memory(gl::command_context& cmd)
+{
+	const u32 gcm_format = is_depth_surface() ?
+		get_compatible_gcm_format(format_info.gcm_depth_format).first :
+		get_compatible_gcm_format(format_info.gcm_color_format).first;
+
+	rsx_subresource_layout subres{};
+	subres.width_in_block = subres.width_in_texel = surface_width * samples_x;
+	subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
+	subres.pitch_in_block = rsx_pitch / get_bpp();
+	subres.depth = 1;
+	subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<gsl::span<const std::byte>::index_type>(rsx_pitch * surface_height * samples_y) };
+
+	// TODO: MSAA support
+	if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
+	{
+		gl::upload_texture(id(), gcm_format, surface_width, surface_height, 1, 1,
+			false, rsx::texture_dimension_extended::texture_dimension_2d, { subres });
+	}
+	else
+	{
+		auto tmp = std::make_unique<gl::texture>(GL_TEXTURE_2D, subres.width_in_block, subres.height_in_block, 1, 1, static_cast<GLenum>(get_internal_format()));
+		gl::upload_texture(tmp->id(), gcm_format, surface_width, surface_height, 1, 1,
+			false, rsx::texture_dimension_extended::texture_dimension_2d, { subres });
+
+		gl::g_hw_blitter->scale_image(cmd, tmp.get(), this,
+			{ 0, 0, subres.width_in_block, subres.height_in_block },
+			{ 0, 0, static_cast<int>(width()), static_cast<int>(height()) },
+			!is_depth_surface(),
+			{});
+	}
+}
+
+void gl::render_target::initialize_memory(gl::command_context& cmd, bool /*read_access*/)
+{
+	const bool memory_load = is_depth_surface() ?
+		!!g_cfg.video.read_depth_buffer :
+		!!g_cfg.video.read_color_buffers;
+
+	if (!memory_load)
+	{
+		clear_memory(cmd);
+	}
+	else
+	{
+		load_memory(cmd);
+	}
+}
+
+void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_access access)
+{
+	const bool read_access = (access != rsx::surface_access::write);
 
 	if (old_contents.empty())
 	{
 		// No memory to inherit
-		if (dirty() && (force_init || state_flags & rsx::surface_state_flags::erase_bkgnd))
+		if (dirty() && (read_access || state_flags & rsx::surface_state_flags::erase_bkgnd))
 		{
 			// Initialize memory contents if we did not find anything usable
-			// TODO: Properly sync with Cell
-			clear_surface_impl();
+			initialize_memory(cmd, true);
 			on_write();
 		}
 
@@ -479,14 +524,13 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 		else
 		{
 			// Mem cast, generate typeless xfer info
-			if (!formats_are_bitcast_compatible((GLenum)get_internal_format(), (GLenum)src_texture->get_internal_format()) ||
+			if (!formats_are_bitcast_compatible(static_cast<GLenum>(get_internal_format()), static_cast<GLenum>(src_texture->get_internal_format())) ||
 				aspect() != src_texture->aspect())
 			{
 				typeless_info.src_is_typeless = true;
 				typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
-				typeless_info.src_native_format_override = (u32)get_internal_format();
-				typeless_info.src_is_depth = !!(src_texture->aspect() & gl::image_aspect::depth);
-				typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
+				typeless_info.src_native_format_override = static_cast<u32>(get_internal_format());
+				typeless_info.src_scaling_hint = static_cast<f32>(src_bpp) / dst_bpp;
 			}
 		}
 
@@ -497,7 +541,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 			const auto area = section.dst_rect();
 			if (area.x1 > 0 || area.y1 > 0 || unsigned(area.x2) < width() || unsigned(area.y2) < height())
 			{
-				clear_surface_impl();
+				initialize_memory(cmd, false);
 			}
 			else
 			{
@@ -508,7 +552,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 		gl::g_hw_blitter->scale_image(cmd, section.source, this,
 			section.src_rect(),
 			section.dst_rect(),
-			!dst_is_depth, dst_is_depth, typeless_info);
+			!dst_is_depth, typeless_info);
 
 		newest_tag = src_texture->last_use_tag;
 	}

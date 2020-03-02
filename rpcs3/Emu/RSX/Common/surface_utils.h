@@ -32,22 +32,8 @@ namespace rsx
 		bool is_depth = false;
 		bool is_clipped = false;
 
-		u16 src_x = 0;
-		u16 src_y = 0;
-		u16 dst_x = 0;
-		u16 dst_y = 0;
-		u16 width = 0;
-		u16 height = 0;
-
-		areai get_src_area() const
-		{
-			return coordi{ {src_x, src_y}, {width, height} };
-		}
-
-		areai get_dst_area() const
-		{
-			return coordi{ {dst_x, dst_y}, {width, height} };
-		}
+		coordu src_area;
+		coordu dst_area;
 	};
 
 	template <typename surface_type>
@@ -70,8 +56,8 @@ namespace rsx
 			ret.height = height;
 			ret.transfer_scale_x = transfer_scale_x;
 			ret.transfer_scale_y = transfer_scale_y;
-			ret.target = (T)(target);
-			ret.source = (T)(source);
+			ret.target = static_cast<T>(target);
+			ret.source = static_cast<T>(source);
 
 			return ret;
 		}
@@ -173,7 +159,7 @@ namespace rsx
 			if (!old_contents.empty())
 			{
 				// Cascade resource derefs
-				LOG_ERROR(RSX, "Resource was destroyed whilst holding a resource reference!");
+				rsx_log.error("Resource was destroyed whilst holding a resource reference!");
 			}
 		}
 
@@ -247,7 +233,7 @@ namespace rsx
 					spp = 4;
 					break;
 				default:
-					fmt::throw_exception("Unknown AA mode 0x%x", (u32)aa);
+					fmt::throw_exception("Unknown AA mode 0x%x", static_cast<u8>(aa));
 			}
 		}
 
@@ -307,6 +293,11 @@ namespace rsx
 		bool dirty() const
 		{
 			return (state_flags != rsx::surface_state_flags::ready) || !old_contents.empty();
+		}
+
+		bool write_through() const
+		{
+			return (state_flags & rsx::surface_state_flags::erase_bkgnd) && old_contents.empty();
 		}
 
 #if (ENABLE_SURFACE_CACHE_DEBUG)
@@ -376,7 +367,7 @@ namespace rsx
 				{0, size_y},
 			};
 
-			for (int n = 0; n < memory_tag_samples.size(); ++n)
+			for (uint n = 0; n < memory_tag_samples.size(); ++n)
 			{
 				const auto sample_offset = (samples[n].y * rsx_pitch) + samples[n].x;
 				memory_tag_samples[n].first = (sample_offset + base_addr);
@@ -393,7 +384,7 @@ namespace rsx
 
 		void shuffle_tag()
 		{
-			memory_tag_samples[0].second = memory_tag_samples[0].second;
+			memory_tag_samples[0].second = ~memory_tag_samples[0].second;
 		}
 
 		bool test()
@@ -578,7 +569,7 @@ namespace rsx
 		template <typename T>
 		void transform_samples_to_pixels(area_base<T>& area)
 		{
-			if (LIKELY(spp == 1)) return;
+			if (spp == 1) [[likely]] return;
 
 			area.x1 /= samples_x;
 			area.x2 /= samples_x;
@@ -589,7 +580,7 @@ namespace rsx
 		template <typename T>
 		void transform_pixels_to_samples(area_base<T>& area)
 		{
-			if (LIKELY(spp == 1)) return;
+			if (spp == 1) [[likely]] return;
 
 			area.x1 *= samples_x;
 			area.x2 *= samples_x;
@@ -600,7 +591,7 @@ namespace rsx
 		template <typename T>
 		void transform_samples_to_pixels(T& x1, T& x2, T& y1, T& y2)
 		{
-			if (LIKELY(spp == 1)) return;
+			if (spp == 1) [[likely]] return;
 
 			x1 /= samples_x;
 			x2 /= samples_x;
@@ -611,7 +602,7 @@ namespace rsx
 		template <typename T>
 		void transform_pixels_to_samples(T& x1, T& x2, T& y1, T& y2)
 		{
-			if (LIKELY(spp == 1)) return;
+			if (spp == 1) [[likely]] return;
 
 			x1 *= samples_x;
 			x2 *= samples_x;

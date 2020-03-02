@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../System.h"
+#include "../system_config.h"
 #include "Utilities/address_range.h"
 #include "Utilities/geometry.h"
 #include "Utilities/asm.h"
@@ -30,9 +30,6 @@ namespace rsx
 	using flags16_t = uint16_t;
 	using flags8_t = uint8_t;
 
-	// Definitions
-	class thread;
-	extern thread* g_current_renderer;
 	extern atomic_t<u64> g_rsx_shared_tag;
 
 	//Base for resources with reference counting
@@ -147,6 +144,7 @@ namespace rsx
 	{
 		u8 format = 0;             // XRGB
 		u8 aspect = 0;             // AUTO
+		u8 resolution_id = 2;      // 720p
 		u32 scanline_pitch = 0;    // PACKED
 		atomic_t<f32> gamma = 1.f; // NO GAMMA CORRECTION
 		u32 resolution_x = 1280;   // X RES
@@ -158,7 +156,7 @@ namespace rsx
 			switch (format)
 			{
 			default:
-				LOG_ERROR(RSX, "Invalid AV format 0x%x", format);
+				rsx_log.error("Invalid AV format 0x%x", format);
 			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
 			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
 				return CELL_GCM_TEXTURE_A8R8G8B8;
@@ -172,7 +170,7 @@ namespace rsx
 			switch (format)
 			{
 			default:
-				LOG_ERROR(RSX, "Invalid AV format 0x%x", format);
+				rsx_log.error("Invalid AV format 0x%x", format);
 			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
 			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
 				return 4;
@@ -266,6 +264,20 @@ namespace rsx
 		return g_rsx_shared_tag++;
 	}
 
+	static inline u32 get_location(u32 addr)
+	{
+		return (addr >= rsx::constants::local_mem_base) ?
+			CELL_GCM_LOCATION_LOCAL :
+			CELL_GCM_LOCATION_MAIN;
+	}
+
+	// General purpose alignment without power-of-2 constraint
+	template <typename T, typename U>
+	static inline T align2(T value, U alignment)
+	{
+		return ((value + alignment - 1) / alignment) * alignment;
+	}
+
 	// Copy memory in inverse direction from source
 	// Used to scale negatively x axis while transfering image data
 	template <typename Ts = u8, typename Td = Ts>
@@ -273,7 +285,7 @@ namespace rsx
 	{
 		for (u32 i = 0; i < size; i++)
 		{
-			*((Td*)dst + i) = *((Ts*)src - i);
+			*(static_cast<Td*>(dst) + i) = *(static_cast<Ts*>(src) - i);
 		}
 	}
 
@@ -319,8 +331,8 @@ namespace rsx
 	*    Restriction: It has mixed results if the height or width is not a power of 2
 	*    Restriction: Only works with 2D surfaces
 	*/
-	template<typename T>
-	void convert_linear_swizzle(void* input_pixels, void* output_pixels, u16 width, u16 height, u32 pitch, bool input_is_swizzled)
+	template <typename T, bool input_is_swizzled>
+	void convert_linear_swizzle(const void* input_pixels, void* output_pixels, u16 width, u16 height, u32 pitch)
 	{
 		u32 log2width = ceil_log2(width);
 		u32 log2height = ceil_log2(height);
@@ -346,12 +358,12 @@ namespace rsx
 
 		u32 adv = pitch / sizeof(T);
 
-		if (!input_is_swizzled)
+		if constexpr (!input_is_swizzled)
 		{
 			for (int y = 0; y < height; ++y)
 			{
-				T* src = static_cast<T*>(input_pixels) + y * adv;
-				T *dst = static_cast<T*>(output_pixels) + offs_y;
+				auto src = static_cast<const T*>(input_pixels) + y * adv;
+				auto dst = static_cast<T*>(output_pixels) + offs_y;
 				offs_x = offs_x0;
 
 				for (int x = 0; x < width; ++x)
@@ -372,8 +384,8 @@ namespace rsx
 		{
 			for (int y = 0; y < height; ++y)
 			{
-				T *src = static_cast<T*>(input_pixels) + offs_y;
-				T* dst = static_cast<T*>(output_pixels) + y * adv;
+				auto src = static_cast<const T*>(input_pixels) + offs_y;
+				auto dst = static_cast<T*>(output_pixels) + y * adv;
 				offs_x = offs_x0;
 
 				for (int x = 0; x < width; ++x)
@@ -399,16 +411,16 @@ namespace rsx
 	 * i.e 32 texels per "unit"
 	 */
 	template <typename T>
-	void convert_linear_swizzle_3d(void *input_pixels, void *output_pixels, u16 width, u16 height, u16 depth)
+	void convert_linear_swizzle_3d(const void* input_pixels, void* output_pixels, u16 width, u16 height, u16 depth)
 	{
 		if (depth == 1)
 		{
-			convert_linear_swizzle<T>(input_pixels, output_pixels, width, height, width * sizeof(T), true);
+			convert_linear_swizzle<T, true>(input_pixels, output_pixels, width, height, width * sizeof(T));
 			return;
 		}
 
-		T *src = static_cast<T*>(input_pixels);
-		T *dst = static_cast<T*>(output_pixels);
+		auto src = static_cast<const T*>(input_pixels);
+		auto dst = static_cast<T*>(output_pixels);
 
 		const u32 log2_w = ceil_log2(width);
 		const u32 log2_h = ceil_log2(height);
@@ -445,14 +457,14 @@ namespace rsx
 	 * TODO: Variable src/dst and optional se conversion
 	 */
 	template <typename T>
-	void shuffle_texel_data_wzyx(void *data, u16 row_pitch_in_bytes, u16 row_length_in_texels, u16 num_rows)
+	void shuffle_texel_data_wzyx(void* data, u16 row_pitch_in_bytes, u16 row_length_in_texels, u16 num_rows)
 	{
-		char *raw_src = (char*)data;
+		char* raw_src = static_cast<char*>(data);
 		T tmp[4];
 
 		for (u16 n = 0; n < num_rows; ++n)
 		{
-			T* src = (T*)raw_src;
+			T* src = reinterpret_cast<T*>(raw_src);
 			raw_src += row_pitch_in_bytes;
 
 			for (u16 m = 0; m < row_length_in_texels; ++m)
@@ -493,7 +505,7 @@ namespace rsx
 				else
 					width = parent_width;
 
-				x = (T)0;
+				x = static_cast<T>(0);
 			}
 			else
 			{
@@ -513,7 +525,7 @@ namespace rsx
 				else
 					height = parent_height;
 
-				y = (T)0;
+				y = static_cast<T>(0);
 			}
 			else
 			{
@@ -563,7 +575,7 @@ namespace rsx
 
 	static inline const f32 get_resolution_scale()
 	{
-		return g_cfg.video.strict_rendering_mode? 1.f : ((f32)g_cfg.video.resolution_scale_percent / 100.f);
+		return g_cfg.video.strict_rendering_mode? 1.f : (g_cfg.video.resolution_scale_percent / 100.f);
 	}
 
 	static inline const int get_resolution_scale_percent()
@@ -580,9 +592,9 @@ namespace rsx
 			return value;
 
 		else if (clamp)
-			return (u16)std::max((get_resolution_scale_percent() * value) / 100, 1);
+			return static_cast<u16>(std::max((get_resolution_scale_percent() * value) / 100, 1));
 		else
-			return (get_resolution_scale_percent() * value) / 100;
+			return static_cast<u16>((get_resolution_scale_percent() * value) / 100);
 	}
 
 	static inline const u16 apply_inverse_resolution_scale(u16 value, bool clamp)
@@ -590,9 +602,9 @@ namespace rsx
 		u16 result = value;
 
 		if (clamp)
-			result = (u16)std::max((value * 100) / get_resolution_scale_percent(), 1);
+			result = static_cast<u16>(std::max((value * 100) / get_resolution_scale_percent(), 1));
 		else
-			result = (value * 100) / get_resolution_scale_percent();
+			result = static_cast<u16>((value * 100) / get_resolution_scale_percent());
 
 		if (result <= g_cfg.video.min_scalable_dimension)
 			return value;
@@ -703,14 +715,14 @@ namespace rsx
 	// before actually attempting to translate to the internal address. Seen happening heavily in R&C games
 	static inline u32 get_vertex_offset_from_base(u32 vert_data_base_offset, u32 vert_base_offset)
 	{
-		return ((u64)vert_data_base_offset + vert_base_offset) & 0xFFFFFFF;
+		return (vert_data_base_offset + vert_base_offset) & 0xFFFFFFF;
 	}
 
 	// Similar to vertex_offset_base calculation, the rsx internally adds and masks index
 	// before using
 	static inline u32 get_index_from_base(u32 index, u32 index_base)
 	{
-		return ((u64)index + index_base) & 0x000FFFFF;
+		return (index + index_base) & 0x000FFFFF;
 	}
 
 	// Convert color write mask for G8B8 to R8G8
@@ -741,9 +753,21 @@ namespace rsx
 		return result;
 	}
 
-	static inline thread* get_current_renderer()
+	template <uint integer, uint frac, bool sign = true, typename To = f32>
+	static inline To decode_fxp(u32 bits)
 	{
-		return g_current_renderer;
+		static_assert(u64{sign} + integer + frac <= 32, "Invalid decode_fxp range");
+
+		// Classic fixed point, see PGRAPH section of nouveau docs for TEX_FILTER (lod_bias) and TEX_CONTROL (min_lod, max_lod)
+		// Technically min/max lod are fixed 4.8 but a 5.8 decoder should work just as well since sign bit is 0
+
+		if constexpr (sign) if (bits & (1 << (integer + frac)))
+		{
+			bits = (0 - bits) & (~0u >> (31 - (integer + frac)));
+			return bits / (-To(1u << frac));
+		}
+
+		return bits / To(1u << frac);
 	}
 
 	template <int N>
@@ -882,7 +906,7 @@ namespace rsx
 			_size = other._size;
 
 			const auto size_bytes = sizeof(Ty) * _capacity;
-			_data = (Ty*)malloc(size_bytes);
+			_data = static_cast<Ty*>(malloc(size_bytes));
 			std::memcpy(_data, other._data, size_bytes);
 		}
 
@@ -913,15 +937,7 @@ namespace rsx
 			if (_capacity >= size)
 				return;
 
-			if (_data)
-			{
-				verify("realloc() failed!" HERE), _data = (Ty*)realloc(_data, sizeof(Ty) * size);
-			}
-			else
-			{
-				verify("malloc() failed!" HERE), _data = (Ty*)malloc(sizeof(Ty) * size);
-			}
-
+			verify("realloc() failed!" HERE), _data = static_cast<Ty*>(std::realloc(_data, sizeof(Ty) * size));
 			_capacity = size;
 		}
 
@@ -1097,7 +1113,7 @@ namespace rsx
 
 		void start()
 		{
-			if (UNLIKELY(enabled))
+			if (enabled) [[unlikely]]
 			{
 				last = steady_clock::now();
 			}
@@ -1105,7 +1121,7 @@ namespace rsx
 
 		s64 duration()
 		{
-			if (LIKELY(!enabled))
+			if (!enabled) [[likely]]
 			{
 				return 0ll;
 			}

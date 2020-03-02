@@ -1,6 +1,8 @@
 ﻿#include "stdafx.h"
 #include "PSF.h"
 
+LOG_CHANNEL(psf_log, "PSF");
+
 template<>
 void fmt_class_string<psf::format>::format(std::string& out, u64 arg)
 {
@@ -115,7 +117,7 @@ namespace psf
 		// Check magic and version
 		verify(HERE),
 			header.magic == "\0PSF"_u32,
-			header.version == 0x101,
+			header.version == 0x101u,
 			sizeof(header_t) + header.entries_num * sizeof(def_table_t) <= header.off_key_table,
 			header.off_key_table <= header.off_data_table,
 			header.off_data_table <= stream.size();
@@ -176,7 +178,7 @@ namespace psf
 			else
 			{
 				// Possibly unsupported format, entry ignored
-				LOG_ERROR(LOADER, "Unknown entry format (key='%s', fmt=0x%x, len=0x%x, max=0x%x)", key, indices[i].param_fmt, indices[i].param_len, indices[i].param_max);
+				psf_log.error("Unknown entry format (key='%s', fmt=0x%x, len=0x%x, max=0x%x)", key, indices[i].param_fmt, indices[i].param_len, indices[i].param_max);
 			}
 		}
 
@@ -250,7 +252,7 @@ namespace psf
 				if (value.size() + (fmt == format::string) > max)
 				{
 					// TODO: check real limitations of PSF format
-					LOG_ERROR(LOADER, "Entry value shrinkage (key='%s', value='%s', size=0x%zx, max=0x%x)", entry.first, value, size, max);
+					psf_log.error("Entry value shrinkage (key='%s', value='%s', size=0x%zx, max=0x%x)", entry.first, value, size, max);
 				}
 
 				stream.write(value);

@@ -1,13 +1,17 @@
 ﻿#include "stdafx.h"
 #include "sys_vm.h"
+
+#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Memory/vm_locking.h"
 
-sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, const std::shared_ptr<lv2_memory_container>& ct, u32 psize)
+extern u64 get_timebased_time();
+
+sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, lv2_memory_container* ct, u32 psize)
 	: ct(ct)
-	, psize(psize)
 	, addr(_addr)
 	, size(vsize)
+	, psize(psize)
 {
 	// Write ID
 	g_ids[addr >> 28].release(idm::last_id());
@@ -15,14 +19,11 @@ sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, const std::shared_ptr<lv2_memory_contai
 
 sys_vm_t::~sys_vm_t()
 {
+	// Debug build : gcc and clang can not find the static var if retrieved directly in "release" function
+	constexpr auto invalid = id_manager::id_traits<sys_vm_t>::invalid;
+
 	// Free ID
-	g_ids[addr >> 28].release(id_manager::id_traits<sys_vm_t>::invalid);
-
-	// Free block
-	verify(HERE), vm::unmap(addr);
-
-	// Return memory
-	ct->used -= psize;
+	g_ids[addr >> 28].release(invalid);
 }
 
 LOG_CHANNEL(sys_vm);
@@ -38,7 +39,9 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 		return CELL_EINVAL;
 	}
 
-	auto ct = cid == SYS_MEMORY_CONTAINER_ID_INVALID ? fxm::get<lv2_memory_container>() : idm::get<lv2_memory_container>(cid);
+	const auto idm_ct = idm::get<lv2_memory_container>(cid);
+
+	const auto ct = cid == SYS_MEMORY_CONTAINER_ID_INVALID ? g_fxo->get<lv2_memory_container>() : idm_ct.get();
 
 	if (!ct)
 	{
@@ -90,7 +93,16 @@ error_code sys_vm_unmap(ppu_thread& ppu, u32 addr)
 	}
 
 	// Free block and info
-	if (!idm::remove<sys_vm_t>(sys_vm_t::find_id(addr)))
+	const auto vmo = idm::withdraw<sys_vm_t>(sys_vm_t::find_id(addr), [&](sys_vm_t& vmo)
+	{
+		// Free block
+		verify(HERE), vm::unmap(addr);
+
+		// Return memory
+		vmo.ct->used -= vmo.psize;
+	});
+
+	if (!vmo)
 	{
 		return CELL_EINVAL;
 	}
@@ -109,21 +121,32 @@ error_code sys_vm_append_memory(ppu_thread& ppu, u32 addr, u32 size)
 		return CELL_EINVAL;
 	}
 
-	const auto block = idm::get<sys_vm_t>(sys_vm_t::find_id(addr));
+	const auto block = idm::check<sys_vm_t>(sys_vm_t::find_id(addr), [&](sys_vm_t& vmo) -> CellError
+	{
+		if (vmo.addr != addr)
+		{
+			return CELL_EINVAL;
+		}
 
-	if (!block || block->addr != addr)
+		if (!vmo.ct->take(size))
+		{
+			return CELL_ENOMEM;
+		}
+
+		vmo.psize += size;
+		return {};
+	});
+
+	if (!block)
 	{
 		return CELL_EINVAL;
 	}
 
-	std::lock_guard lock(block->mutex);
-
-	if (!block->ct->take(size))
+	if (block.ret)
 	{
-		return CELL_ENOMEM;
+		return block.ret;
 	}
 
-	block->psize += size;
 	return CELL_OK;
 }
 
@@ -138,22 +161,43 @@ error_code sys_vm_return_memory(ppu_thread& ppu, u32 addr, u32 size)
 		return CELL_EINVAL;
 	}
 
-	const auto block = idm::get<sys_vm_t>(sys_vm_t::find_id(addr));
+	const auto block = idm::check<sys_vm_t>(sys_vm_t::find_id(addr), [&](sys_vm_t& vmo) -> CellError
+	{
+		if (vmo.addr != addr)
+		{
+			return CELL_EINVAL;
+		}
 
-	if (!block || block->addr != addr)
+		auto [_, ok] = vmo.psize.fetch_op([&](u32& value)
+		{
+			if (value < 0x100000ull + size)
+			{
+				return false;
+			}
+
+			value -= size;
+			return true;
+		});
+
+		if (!ok)
+		{
+			return CELL_EBUSY;
+		}
+
+		vmo.ct->used -= size;
+		return {};
+	});
+
+	if (!block)
 	{
 		return CELL_EINVAL;
 	}
 
-	std::lock_guard lock(block->mutex);
-
-	if (u64{block->psize} < u64{0x100000} + size)
+	if (block.ret)
 	{
-		return CELL_EBUSY;
+		return block.ret;
 	}
 
-	block->psize -= size;
-	block->ct->used -= size;
 	return CELL_OK;
 }
 
@@ -341,7 +385,7 @@ error_code sys_vm_get_statistics(ppu_thread& ppu, u32 addr, vm::ptr<sys_vm_stati
 	stat->page_out = 0;
 	stat->pmem_total = block->psize;
 	stat->pmem_used = 0;
-	stat->timestamp = 0;
+	stat->timestamp = get_timebased_time();
 
 	return CELL_OK;
 }

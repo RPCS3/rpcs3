@@ -1,13 +1,11 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "gl_gs_frame.h"
-#include "Emu/System.h"
 
 #include <QOpenGLContext>
-#include <qoffscreensurface.h>
-#include <QWindow>
+#include <QOffscreenSurface>
 
 gl_gs_frame::gl_gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
-	: gs_frame("OpenGL", geometry, appIcon, gui_settings)
+	: gs_frame(geometry, appIcon, gui_settings)
 {
 	setSurfaceType(QSurface::OpenGLSurface);
 
@@ -60,7 +58,8 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 		fmt::throw_exception("Null context handle passed to set_current" HERE);
 	}
 
-	auto context = (GLContext*)(ctx);
+	const auto context = static_cast<GLContext*>(ctx);
+
 	if (!context->handle->makeCurrent(context->surface))
 	{
 		if (!context->owner)
@@ -81,8 +80,8 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 
 void gl_gs_frame::delete_context(draw_context_t ctx)
 {
+	const auto gl_ctx = static_cast<GLContext*>(ctx);
 
-	auto gl_ctx = (GLContext*)ctx;
 	gl_ctx->handle->doneCurrent();
 
 #ifdef _MSC_VER
@@ -94,7 +93,7 @@ void gl_gs_frame::delete_context(draw_context_t ctx)
 	}
 	__except(GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 	{
-		LOG_FATAL(RSX, "Your graphics driver just crashed whilst cleaning up. All consumed VRAM should have been released, but you may want to restart the emulator just in case");
+		rsx_log.fatal("Your graphics driver just crashed whilst cleaning up. All consumed VRAM should have been released, but you may want to restart the emulator just in case");
 	}
 #else
 	delete gl_ctx->handle;
@@ -115,6 +114,7 @@ void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
 	//Do not swap buffers if frame skip is active
 	if (skip_frame) return;
 
-	auto gl_ctx = (GLContext*)context;
+	const auto gl_ctx = static_cast<GLContext*>(context);
+
 	gl_ctx->handle->swapBuffers(gl_ctx->surface);
 }

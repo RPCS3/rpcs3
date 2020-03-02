@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "sys_event.h"
 
-#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
 
@@ -31,7 +30,7 @@ bool lv2_event_queue::send(lv2_event event)
 
 	if (sq.empty())
 	{
-		if (events.size() < this->size)
+		if (events.size() < this->size + 0u)
 		{
 			// Save event
 			events.emplace_back(event);
@@ -420,6 +419,11 @@ error_code sys_event_port_connect_ipc(ppu_thread& ppu, u32 eport_id, u64 ipc_key
 
 	sys_event.warning("sys_event_port_connect_ipc(eport_id=0x%x, ipc_key=0x%x)", eport_id, ipc_key);
 
+	if (ipc_key == 0)
+	{
+		return CELL_EINVAL;
+	}
+
 	auto queue = lv2_event_queue::find(ipc_key);
 
 	std::lock_guard lock(id_manager::g_mutex);
@@ -483,7 +487,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 	{
 		if (const auto queue = port.queue.lock())
 		{
-			const u64 source = port.name ? port.name : ((u64)process_getpid() << 32) | (u64)eport_id;
+			const u64 source = port.name ? port.name : (s64{process_getpid()} << 32) | u64{eport_id};
 
 			if (queue->send(source, data1, data2, data3))
 			{

@@ -1,15 +1,35 @@
 ﻿#include "stdafx.h"
 #include "sys_ppu_thread.h"
 
-#include "Emu/System.h"
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sys_event.h"
+#include "sys_process.h"
 #include "sys_mmapper.h"
 
 LOG_CHANNEL(sys_ppu_thread);
+
+// Simple structure to cleanup previous thread, because can't remove its own thread
+struct ppu_thread_cleaner
+{
+	atomic_t<u32> old_id = 0;
+
+	void clean(u32 new_id)
+	{
+		if (old_id || new_id) [[likely]]
+		{
+			if (u32 id = old_id.exchange(new_id)) [[likely]]
+			{
+				if (!idm::remove<named_thread<ppu_thread>>(id)) [[unlikely]]
+				{
+					sys_ppu_thread.fatal("Failed to remove detached thread 0x%x", id);
+				}
+			}
+		}
+	}
+};
 
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {
@@ -30,7 +50,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 			// Joinable, not joined
 			value = -3;
 		}
-		else if (value != -1)
+		else if (value != umax)
 		{
 			// Joinable, joined
 			value = -2;
@@ -39,17 +59,16 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 		// Detached otherwise
 	});
 
-	if (jid == -1)
+	if (jid == umax)
 	{
-		// Detach detached thread, id will be removed on cleanup
-		static_cast<named_thread<ppu_thread>&>(ppu) = thread_state::detached;
+		g_fxo->get<ppu_thread_cleaner>()->clean(ppu.id);
 	}
 	else if (jid != 0)
 	{
 		std::lock_guard lock(id_manager::g_mutex);
 
 		// Schedule joiner and unqueue
-		lv2_obj::awake(idm::check_unlocked<named_thread<ppu_thread>>(jid), -2);
+		lv2_obj::awake(idm::check_unlocked<named_thread<ppu_thread>>(jid));
 	}
 
 	// Unqueue
@@ -72,17 +91,20 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 
 	sys_ppu_thread.trace("sys_ppu_thread_join(thread_id=0x%x, vptr=*0x%x)", thread_id, vptr);
 
+	// Clean some detached thread (hack)
+	g_fxo->get<ppu_thread_cleaner>()->clean(0);
+
 	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread) -> CellError
 	{
 		CellError result = thread.joiner.atomic_op([&](u32& value) -> CellError
 		{
-			if (value == -3)
+			if (value == 0u - 3)
 			{
 				value = -2;
 				return CELL_EBUSY;
 			}
 
-			if (value == -2)
+			if (value == 0u - 2)
 			{
 				return CELL_ESRCH;
 			}
@@ -133,7 +155,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 
 	if (!vptr)
 	{
-		return CELL_EFAULT;
+		return not_an_error(CELL_EFAULT);
 	}
 
 	// Get the exit status from the register
@@ -145,22 +167,25 @@ error_code sys_ppu_thread_detach(u32 thread_id)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_detach(thread_id=0x%x)", thread_id);
 
+	// Clean some detached thread (hack)
+	g_fxo->get<ppu_thread_cleaner>()->clean(0);
+
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread) -> CellError
 	{
 		return thread.joiner.atomic_op([&](u32& value) -> CellError
 		{
-			if (value == -3)
+			if (value == 0u - 3)
 			{
 				value = -2;
 				return CELL_EAGAIN;
 			}
 
-			if (value == -2)
+			if (value == 0u - 2)
 			{
 				return CELL_ESRCH;
 			}
 
-			if (value == -1)
+			if (value == umax)
 			{
 				return CELL_EINVAL;
 			}
@@ -202,7 +227,7 @@ error_code sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinabl
 		return CELL_EFAULT;
 	}
 
-	*isjoinable = ppu.joiner != -1;
+	*isjoinable = ppu.joiner != umax;
 	return CELL_OK;
 }
 
@@ -210,16 +235,19 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_set_priority(thread_id=0x%x, prio=%d)", thread_id, prio);
 
-	if (prio < 0 || prio > 3071)
+	if (prio < (g_ps3_process_info.debug_or_root() ? -512 : 0) || prio > 3071)
 	{
 		return CELL_EINVAL;
 	}
+
+	// Clean some detached thread (hack)
+	g_fxo->get<ppu_thread_cleaner>()->clean(0);
 
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
 		if (thread.prio != prio)
 		{
-			lv2_obj::awake(&thread, prio);
+			lv2_obj::set_priority(thread, prio);
 		}
 	});
 
@@ -234,6 +262,9 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 error_code sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_get_priority(thread_id=0x%x, priop=*0x%x)", thread_id, priop);
+
+	// Clean some detached thread (hack)
+	g_fxo->get<ppu_thread_cleaner>()->clean(0);
 
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
@@ -288,7 +319,7 @@ error_code sys_ppu_thread_restart(u32 thread_id)
 
 error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 unk, s32 prio, u32 _stacksz, u64 flags, vm::cptr<char> threadname)
 {
-	sys_ppu_thread.warning("_sys_ppu_thread_create(thread_id=*0x%x, param=*0x%x, arg=0x%llx, unk=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=%s)",
+	sys_ppu_thread.warning("_sys_ppu_thread_create(thread_id=*0x%x, param=*0x%x, arg=0x%llx, unk=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=*0x%x)",
 		thread_id, param, arg, unk, prio, _stacksz, flags, threadname);
 
 	// thread_id is checked for null in stub -> CELL_ENOMEM
@@ -299,7 +330,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 		return CELL_EFAULT;
 	}
 
-	if (prio < 0 || prio > 3071)
+	if (prio < (g_ps3_process_info.debug_or_root() ? -512 : 0) || prio > 3071)
 	{
 		return CELL_EINVAL;
 	}
@@ -308,6 +339,9 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 	{
 		return CELL_EPERM;
 	}
+
+	// Clean some detached thread (hack)
+	g_fxo->get<ppu_thread_cleaner>()->clean(0);
 
 	// Compute actual stack size and allocate
 	const u32 stack_size = ::align<u32>(std::max<u32>(_stacksz, 4096), 4096);
@@ -319,17 +353,24 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 		return CELL_ENOMEM;
 	}
 
+	std::string ppu_name;
+
 	const u32 tid = idm::import<named_thread<ppu_thread>>([&]()
 	{
 		const u32 tid = idm::last_id();
 
-		std::string ppu_name;
 		std::string full_name = fmt::format("PPU[0x%x] Thread", tid);
 
 		if (threadname)
 		{
-			ppu_name = threadname.get_ptr();
-			fmt::append(full_name, " (%s)", ppu_name);
+			constexpr u32 max_size = 27; // max size including null terminator
+			const auto pname = threadname.get_ptr();
+			ppu_name.assign(pname, std::find(pname, pname + max_size, '\0'));
+
+			if (!ppu_name.empty())
+			{
+				fmt::append(full_name, " (%s)", ppu_name);
+			}
 		}
 
 		ppu_thread_params p;
@@ -350,6 +391,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 	}
 
 	*thread_id = tid;
+	sys_ppu_thread.warning(u8"_sys_ppu_thread_create(): Thread “%s” created (id=0x%x)", ppu_name, tid);
 	return CELL_OK;
 }
 
@@ -359,7 +401,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
-		lv2_obj::awake(&thread, -2);
+		lv2_obj::awake(&thread);
 	});
 
 	if (!thread)
@@ -377,7 +419,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 		thread_ctrl::notify(*thread);
 
 		// Dirty hack for sound: confirm the creation of _mxr000 event queue
-		if (thread->ppu_name.get() == "_cellsurMixerMain"sv)
+		if (*thread->ppu_tname.load() == "_cellsurMixerMain"sv)
 		{
 			lv2_obj::sleep(ppu);
 
@@ -407,7 +449,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 error_code sys_ppu_thread_rename(u32 thread_id, vm::cptr<char> name)
 {
-	sys_ppu_thread.warning("sys_ppu_thread_rename(thread_id=0x%x, name=%s)", thread_id, name);
+	sys_ppu_thread.warning("sys_ppu_thread_rename(thread_id=0x%x, name=*0x%x)", thread_id, name);
 
 	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id);
 
@@ -421,8 +463,15 @@ error_code sys_ppu_thread_rename(u32 thread_id, vm::cptr<char> name)
 		return CELL_EFAULT;
 	}
 
+	constexpr u32 max_size = 27; // max size including null terminator
+	const auto pname = name.get_ptr();
+
+	// Make valid name
+	auto _name = stx::shared_cptr<std::string>::make(pname, std::find(pname, pname + max_size, '\0'));
+
 	// thread_ctrl name is not changed (TODO)
-	thread->ppu_name.assign(name.get_ptr());
+	sys_ppu_thread.warning(u8"sys_ppu_thread_rename(): Thread renamed to “%s”", *_name);
+	thread->ppu_tname.store(std::move(_name));
 	return CELL_OK;
 }
 

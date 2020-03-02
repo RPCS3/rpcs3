@@ -56,7 +56,7 @@ namespace rsx
 			const u32 program_location = (shader_program & 0x3) - 1;
 			const u32 program_offset   = (shader_program & ~0x3);
 
-			const u32 addr          = get_address(program_offset, program_location);
+			const u32 addr          = get_address(program_offset, program_location, HERE);
 			const auto program_info = program_hash_util::fragment_program_utils::analyse_fragment_program(vm::base(addr));
 			const u32 program_start = program_info.program_start_offset;
 			const u32 ucode_size    = program_info.program_ucode_length;
@@ -77,7 +77,7 @@ namespace rsx
 				if (!tex.enabled())
 					continue;
 
-				const u32 texaddr = get_address(tex.offset(), tex.location());
+				const u32 texaddr = get_address(tex.offset(), tex.location(), HERE);
 				auto layout       = get_subresources_layout(tex);
 
 				// todo: dont use this function and just get size somehow
@@ -103,7 +103,7 @@ namespace rsx
 				if (!tex.enabled())
 					continue;
 
-				const u32 texaddr = get_address(tex.offset(), tex.location());
+				const u32 texaddr = get_address(tex.offset(), tex.location(), HERE);
 				auto layout       = get_subresources_layout(tex);
 
 				// todo: dont use this function and just get size somehow
@@ -141,7 +141,7 @@ namespace rsx
 					const u32 base_address    = get_vertex_offset_from_base(method_registers.vertex_data_base_offset(), info.offset() & 0x7fffffff);
 					const u32 memory_location = info.offset() >> 31;
 
-					const u32 addr       = get_address(base_address, memory_location);
+					const u32 addr       = get_address(base_address, memory_location, HERE);
 					const u32 vertSize   = get_vertex_type_size_on_host(info.type(), info.size());
 					const u32 vertStride = info.stride();
 
@@ -171,9 +171,9 @@ namespace rsx
 				const u32 base_address    = method_registers.index_array_address();
 				const u32 memory_location = method_registers.index_array_location();
 
-				const u32 base_addr   = get_address(base_address, memory_location);
-				const u32 type_size   = get_index_type_size(method_registers.index_type());
 				const auto index_type = method_registers.index_type();
+				const u32 type_size   = get_index_type_size(index_type);
+				const u32 base_addr   = get_address(base_address, memory_location, HERE) & (0 - type_size);
 
 				// manually parse index buffer and copy vertex buffer
 				u32 min_index = 0xFFFFFFFF, max_index = 0;
@@ -207,11 +207,11 @@ namespace rsx
 						for (u32 i = 0; i < idxCount; ++i)
 						{
 							u16 index = fifo[i];
-							if (is_primitive_restart_enabled && (u32)index == primitive_restart_index)
+							if (is_primitive_restart_enabled && u32{index} == primitive_restart_index)
 								continue;
-							index     = (u16)get_index_from_base(index, method_registers.vertex_data_base_index());
-							min_index = (u16)std::min(index, (u16)min_index);
-							max_index = (u16)std::max(index, (u16)max_index);
+							index     = static_cast<u16>(get_index_from_base(index, method_registers.vertex_data_base_index()));
+							min_index = std::min<u16>(index, static_cast<u16>(min_index));
+							max_index = std::max<u16>(index, static_cast<u16>(max_index));
 						}
 						break;
 					}
@@ -250,7 +250,7 @@ namespace rsx
 						const u32 base_address    = get_vertex_offset_from_base(method_registers.vertex_data_base_offset(), (info.offset() & 0x7fffffff));
 						const u32 memory_location = info.offset() >> 31;
 
-						const u32 addr     = get_address(base_address, memory_location);
+						const u32 addr     = get_address(base_address, memory_location, HERE);
 						const u32 vertSize = get_vertex_type_size_on_host(info.type(), info.size());
 						const u32 bufferSize = vertStride * (max_index - min_index + 1) + vertSize;
 
@@ -283,8 +283,8 @@ namespace rsx
 			const blit_engine::transfer_interpolator in_inter               = method_registers.blit_engine_input_inter();
 			const rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
 
-			const f32 in_x = std::ceil(method_registers.blit_engine_in_x());
-			const f32 in_y = std::ceil(method_registers.blit_engine_in_y());
+			const f32 in_x = std::floor(method_registers.blit_engine_in_x());
+			const f32 in_y = std::floor(method_registers.blit_engine_in_y());
 
 			u16 in_pitch = method_registers.blit_engine_input_pitch();
 
@@ -298,16 +298,16 @@ namespace rsx
 
 			const u32 in_bpp              = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
 			const u32 in_offset           = u32(in_x * in_bpp + in_pitch * in_y);
-			const tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);
 
 			frame_capture_data::memory_block block;
-			block.offset = src_region.tile ? src_region.base : src_offset + in_offset;
+			block.offset = src_offset + in_offset;
 			block.location = src_dma & 0xf;
 
-			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
+			const auto src_address = rsx::get_address(block.offset, block.location, HERE);
+			u8* pixels_src = vm::_ptr<u8>(src_address);
 
 			const u32 src_size = in_pitch * (in_h - 1) + (in_w * in_bpp);
-			rsx->read_barrier(src_region.address, src_size);
+			rsx->read_barrier(src_address, src_size, true);
 
 			frame_capture_data::memory_block_data block_data;
 			block_data.data.resize(src_size);
@@ -326,9 +326,9 @@ namespace rsx
 
 			u32 src_offset = method_registers.nv0039_input_offset();
 			u32 src_dma    = method_registers.nv0039_input_location();
-			u32 src_addr   = get_address(src_offset, src_dma);
+			u32 src_addr   = get_address(src_offset, src_dma, HERE);
 
-			rsx->read_barrier(src_addr, in_pitch * (line_count - 1) + line_length);
+			rsx->read_barrier(src_addr, in_pitch * (line_count - 1) + line_length, true);
 
 			const u8* src = vm::_ptr<u8>(src_addr);
 

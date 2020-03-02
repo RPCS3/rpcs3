@@ -1,7 +1,6 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_rwlock.h"
 
-#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
 
@@ -350,7 +349,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				{
 					rwlock->owner.atomic_op([&](s64& owner)
 					{
-						owner -= -2 * static_cast<s64>(rwlock->rq.size()); // Add readers to value
+						owner -= 2 * static_cast<s64>(rwlock->rq.size()); // Add readers to value
 						owner &= -2; // Clear wait bit
 					});
 

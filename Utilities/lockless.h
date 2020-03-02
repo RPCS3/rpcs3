@@ -22,7 +22,7 @@ public:
 
 	~lf_array()
 	{
-		for (auto ptr = m_next.raw(); UNLIKELY(ptr);)
+		for (auto ptr = m_next.raw(); ptr;)
 		{
 			delete std::exchange(ptr, std::exchange(ptr->m_next.raw(), nullptr));
 		}
@@ -30,14 +30,14 @@ public:
 
 	T& operator [](std::size_t index)
 	{
-		if (LIKELY(index < N))
+		if (index < N) [[likely]]
 		{
 			return m_data[index];
 		}
-		else if (UNLIKELY(!m_next))
+		else if (!m_next) [[unlikely]]
 		{
 			// Create new array block. It's not a full-fledged once-synchronization, unlikely needed.
-			for (auto _new = new lf_array, ptr = this; UNLIKELY(ptr);)
+			for (auto _new = new lf_array, ptr = this; ptr;)
 			{
 				// Install the pointer. If failed, go deeper.
 				ptr = ptr->m_next.compare_and_swap(nullptr, _new);
@@ -54,95 +54,47 @@ public:
 template<typename T, std::size_t N>
 class lf_fifo : public lf_array<T, N>
 {
-	struct alignas(8) ctrl_t
-	{
-		u32 push;
-		u32 pop;
-	};
-
-	atomic_t<ctrl_t> m_ctrl{};
+	// LSB 32-bit: push, MSB 32-bit: pop
+	atomic_t<u64> m_ctrl{};
 
 public:
 	constexpr lf_fifo() = default;
 
-	// Get current "push" position
+	// Get number of elements in the queue
 	u32 size() const
 	{
-		return m_ctrl.load().push;
+		const u64 ctrl = m_ctrl.load();
+		return static_cast<u32>(ctrl - (ctrl >> 32));
 	}
 
 	// Acquire the place for one or more elements.
 	u32 push_begin(u32 count = 1)
 	{
-		return std::bit_cast<atomic_t<u64>*>(&m_ctrl)->fetch_add(count); // Hack
+		return static_cast<u32>(m_ctrl.fetch_add(count));
 	}
 
 	// Get current "pop" position
 	u32 peek() const
 	{
-		return m_ctrl.load().pop;
+		return static_cast<u32>(m_ctrl >> 32);
 	}
 
 	// Acknowledge processed element, return number of the next one.
 	// Perform clear if possible, zero is returned in this case.
 	u32 pop_end(u32 count = 1)
 	{
-		return m_ctrl.atomic_op([&](ctrl_t& ctrl)
+		return m_ctrl.atomic_op([&](u64& ctrl)
 		{
-			ctrl.pop += count;
+			ctrl += u64{count} << 32;
 
-			if (ctrl.pop == ctrl.push)
+			if (ctrl >> 32 == static_cast<u32>(ctrl))
 			{
 				// Clean if possible
-				ctrl.push = 0;
-				ctrl.pop = 0;
+				ctrl = 0;
 			}
 
-			return ctrl.pop;
+			return static_cast<u32>(ctrl >> 32);
 		});
-	}
-};
-
-//! Simple lock-free map. Based on lf_array<>. All elements are accessible, implicitly initialized.
-template<typename K, typename T, typename Hash = value_hash<K>, std::size_t Size = 256>
-class lf_hashmap
-{
-	struct pair_t
-	{
-		// Default-constructed key means "no key"
-		atomic_t<K> key{};
-		T value{};
-	};
-
-	//
-	lf_array<pair_t, Size> m_data{};
-
-	// Value for default-constructed key
-	T m_default_key_data{};
-
-public:
-	constexpr lf_hashmap() = default;
-
-	// Access element (added implicitly)
-	T& operator [](const K& key)
-	{
-		if (UNLIKELY(key == K{}))
-		{
-			return m_default_key_data;
-		}
-
-		// Calculate hash and array position
-		for (std::size_t pos = Hash{}(key) % Size;; pos += Size)
-		{
-			// Access the array
-			auto& pair = m_data[pos];
-
-			// Check the key value (optimistic)
-			if (LIKELY(pair.key == key) || pair.key.compare_and_swap_test(K{}, key))
-			{
-				return pair.value;
-			}
-		}
 	}
 };
 
@@ -162,6 +114,9 @@ class lf_queue_item final
 
 	template <typename U>
 	friend class lf_queue;
+
+	template <typename U>
+	friend class lf_bunch;
 
 	constexpr lf_queue_item() = default;
 
@@ -194,6 +149,9 @@ class lf_queue_iterator
 
 	template <typename U>
 	friend class lf_queue_slice;
+
+	template <typename U>
+	friend class lf_bunch;
 
 public:
 	constexpr lf_queue_iterator() = default;
@@ -311,22 +269,16 @@ public:
 	}
 };
 
-class lf_queue_base
-{
-protected:
-	atomic_t<std::uintptr_t> m_head = 0;
-};
-
 // Linked list-based multi-producer queue (the consumer drains the whole queue at once)
 template <typename T>
-class lf_queue : public lf_queue_base
+class lf_queue final
 {
-	using lf_queue_base::m_head;
+	atomic_t<lf_queue_item<T>*> m_head{nullptr};
 
 	// Extract all elements and reverse element order (FILO to FIFO)
 	lf_queue_item<T>* reverse() noexcept
 	{
-		if (auto* head = m_head.load() ? reinterpret_cast<lf_queue_item<T>*>(m_head.exchange(0)) : nullptr)
+		if (auto* head = m_head.load() ? m_head.exchange(nullptr) : nullptr)
 		{
 			if (auto* prev = head->m_link)
 			{
@@ -352,31 +304,32 @@ public:
 
 	~lf_queue()
 	{
-		delete reinterpret_cast<lf_queue_item<T>*>(m_head.load());
+		delete m_head.load();
 	}
 
 	void wait() noexcept
 	{
-		while (m_head == 0)
+		if (m_head == nullptr)
 		{
-			m_head.wait(0);
+			m_head.wait(nullptr);
 		}
-	}
-
-	void notify() noexcept
-	{
-		m_head.notify_one();
 	}
 
 	template <typename... Args>
 	void push(Args&&... args)
 	{
-		auto  _old = m_head.load();
-		auto* item = new lf_queue_item<T>(reinterpret_cast<lf_queue_item<T>*>(_old), std::forward<Args>(args)...);
+		auto _old = m_head.load();
+		auto item = new lf_queue_item<T>(_old, std::forward<Args>(args)...);
 
-		while (!m_head.compare_exchange(_old, reinterpret_cast<std::uint64_t>(item)))
+		while (!m_head.compare_exchange(_old, item))
 		{
-			item->m_link = reinterpret_cast<lf_queue_item<T>*>(_old);
+			item->m_link = _old;
+		}
+
+		if (!_old)
+		{
+			// Notify only if queue was empty
+			m_head.notify_one();
 		}
 	}
 
@@ -401,80 +354,137 @@ public:
 
 		return count;
 	}
+
+	// Iterator that enables direct endless range-for loop: for (auto* ptr : queue) ...
+	class iterator
+	{
+		lf_queue* _this = nullptr;
+
+		lf_queue_slice<T> m_data;
+
+	public:
+		constexpr iterator() = default;
+
+		explicit iterator(lf_queue* _this)
+			: _this(_this)
+		{
+			m_data = _this->pop_all();
+		}
+
+		bool operator !=(const iterator& rhs) const
+		{
+			return _this != rhs._this;
+		}
+
+		T* operator *() const
+		{
+			return m_data ? m_data.get() : nullptr;
+		}
+
+		iterator& operator ++()
+		{
+			if (m_data)
+			{
+				m_data.pop_front();
+			}
+
+			if (!m_data)
+			{
+				m_data = _this->pop_all();
+
+				if (!m_data)
+				{
+					_this->wait();
+					m_data = _this->pop_all();
+				}
+			}
+
+			return *this;
+		}
+	};
+
+	iterator begin()
+	{
+		return iterator{this};
+	}
+
+	iterator end()
+	{
+		return iterator{};
+	}
 };
 
-// Assignable lock-free thread-safe value of any type (memory-inefficient)
+// Concurrent linked list, elements remain until destroyed.
 template <typename T>
-class lf_value final
+class lf_bunch final
 {
-	atomic_t<lf_value*> m_head;
-
-	T m_data;
+	atomic_t<lf_queue_item<T>*> m_head{nullptr};
 
 public:
-	template <typename... Args>
-	explicit constexpr lf_value(Args&&... args)
-	    : m_head(this)
-	    , m_data(std::forward<Args>(args)...)
+	constexpr lf_bunch() noexcept = default;
+
+	~lf_bunch()
 	{
+		delete m_head.load();
 	}
 
-	~lf_value()
+	// Add unconditionally
+	template <typename... Args>
+	T* push(Args&&... args) noexcept
 	{
-		// All values are kept in the queue until the end
-		for (lf_value* ptr = m_head.load(); ptr != this;)
+		auto _old = m_head.load();
+		auto item = new lf_queue_item<T>(_old, std::forward<Args>(args)...);
+
+		while (!m_head.compare_exchange(_old, item))
 		{
-			delete std::exchange(ptr, std::exchange(ptr->m_head.raw(), ptr));
+			item->m_link = _old;
 		}
+
+		return &item->m_data;
 	}
 
-	// Get current head, allows to inspect old values
-	[[nodiscard]] const lf_value* head() const
+	// Add if pred(item, all_items) is true for all existing items
+	template <typename F, typename... Args>
+	T* push_if(F pred, Args&&... args) noexcept
 	{
-		return m_head.load();
-	}
+		auto _old = m_head.load();
+		auto _chk = _old;
+		auto item = new lf_queue_item<T>(_old, std::forward<Args>(args)...);
 
-	// Inspect the initial (oldest) value
-	[[nodiscard]] const T& first() const
-	{
-		return m_data;
-	}
-
-	[[nodiscard]] const T& get() const
-	{
-		return m_head.load()->m_data;
-	}
-
-	[[nodiscard]] operator const T&() const
-	{
-		return m_head.load()->m_data;
-	}
-
-	// Construct new value in-place
-	template <typename... Args>
-	const T& assign(Args&&... args)
-	{
-		lf_value* val = new lf_value(std::forward<Args>(args)...);
-		lf_value* old = m_head.load();
+		_chk = nullptr;
 
 		do
 		{
-			val->m_head = old;
+			item->m_link = _old;
+
+			// Check all items in the queue
+			for (auto ptr = _old; ptr != _chk; ptr = ptr->m_link)
+			{
+				if (!pred(item->m_data, ptr->m_data))
+				{
+					item->m_link = nullptr;
+					delete item;
+					return nullptr;
+				}
+			}
+
+			// Set to not check already checked items
+			_chk = _old;
 		}
-		while (!m_head.compare_exchange(old, val));
+		while (!m_head.compare_exchange(_old, item));
 
-		return val->m_data;
+		return &item->m_data;
 	}
 
-	// Copy-assign new value
-	const T& operator =(const T& value)
+	lf_queue_iterator<T> begin() const
 	{
-		return assign(value);
+		lf_queue_iterator<T> result;
+		result.m_ptr = m_head.load();
+		return result;
 	}
 
-	// Move-assign new value
-	const T& operator =(T&& value)
+	lf_queue_iterator<T> end() const
 	{
-		return assign(std::move(value));
+		return {};
 	}
 };

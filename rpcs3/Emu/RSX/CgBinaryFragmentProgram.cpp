@@ -1,7 +1,6 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "CgBinaryProgram.h"
 
-#include "Emu/System.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
 
 #include <algorithm>
@@ -69,7 +68,7 @@ std::string CgBinaryDisasm::AddRegDisAsm(u32 index, int fp16)
 
 std::string CgBinaryDisasm::AddConstDisAsm()
 {
-	u32* data = (u32*)&m_buffer[m_offset + m_size + 4 * sizeof(u32)];
+	u32* data = reinterpret_cast<u32*>(&m_buffer[m_offset + m_size + 4 * sizeof(u32)]);
 
 	m_step = 2 * 4 * sizeof(u32);
 	const u32 x = GetData(data[0]);
@@ -184,7 +183,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Bad src reg num: %d", u32{ dst.src_attr_reg_num });
+				rsx_log.error("Bad src reg num: %d", u32{ dst.src_attr_reg_num });
 			}
 			break;
 		}
@@ -196,7 +195,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 		break;
 
 	default:
-		LOG_ERROR(RSX, "Bad src type %d", u32{ src.reg_type });
+		rsx_log.error("Bad src type %d", u32{ src.reg_type });
 		break;
 	}
 
@@ -224,12 +223,12 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 void CgBinaryDisasm::TaskFP()
 {
 	m_size = 0;
-	u32* data = (u32*)&m_buffer[m_offset];
+	u32* data = reinterpret_cast<u32*>(&m_buffer[m_offset]);
 	verify(HERE), ((m_buffer_size - m_offset) % sizeof(u32) == 0);
 	for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 	{
 		// Get BE data
-		data[i] = be_t<u32>{data[i]}.raw();
+		data[i] = std::bit_cast<u32, be_t<u32>>(data[i]);
 	}
 
 	enum
@@ -461,7 +460,7 @@ void CgBinaryDisasm::TaskFP()
 				if (SCB()) break;
 			}
 
-			LOG_ERROR(RSX, "Unknown/illegal instruction: 0x%x (forced unit %d)", m_opcode, forced_unit);
+			rsx_log.error("Unknown/illegal instruction: 0x%x (forced unit %d)", m_opcode, forced_unit);
 			break;
 		}
 

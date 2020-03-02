@@ -14,9 +14,9 @@ struct frame_trace_data
 		std::string name;
 		std::pair<std::string, std::string> programs;
 		rsx::rsx_state state;
-		std::array<std::vector<gsl::byte>, 4> color_buffer;
-		std::array<std::vector<gsl::byte>, 2> depth_stencil;
-		std::vector<gsl::byte> index;
+		std::array<std::vector<std::byte>, 4> color_buffer;
+		std::array<std::vector<std::byte>, 2> depth_stencil;
+		std::vector<std::byte> index;
 		u32 vertex_count;
 
 	};

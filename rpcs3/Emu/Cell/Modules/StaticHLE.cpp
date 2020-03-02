@@ -21,7 +21,7 @@ std::vector<std::array<std::string, 6>> shle_patterns_list
 	{ "2B850007409D00B07C6923785520077E2F800000409E00ACE8030000E9440000", "68", "EF18", "0158", "sys_libc", "memcmp" },
 };
 
-statichle_handler::statichle_handler()
+statichle_handler::statichle_handler(int)
 {
 	load_patterns();
 }
@@ -121,7 +121,7 @@ uint16_t statichle_handler::gen_CRC16(const uint8_t* data_p, size_t length)
 	crc  = ~crc;
 	data = crc;
 	crc  = (crc << 8) | ((data >> 8) & 0xff);
-	return (unsigned short)(crc);
+	return static_cast<u16>(crc);
 }
 
 bool statichle_handler::check_against_patterns(vm::cptr<u8>& data, u32 size, u32 addr)

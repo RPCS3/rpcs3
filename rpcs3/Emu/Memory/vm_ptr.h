@@ -60,7 +60,7 @@ namespace vm
 
 		explicit operator bool() const
 		{
-			return m_addr != 0;
+			return m_addr != 0u;
 		}
 
 		// Get vm pointer to a struct member
@@ -120,7 +120,7 @@ namespace vm
 		// Test address for arbitrary alignment: (addr & (align - 1)) == 0
 		bool aligned(u32 align = alignof(T)) const
 		{
-			return (m_addr & (align - 1)) == 0;
+			return (m_addr & (align - 1)) == 0u;
 		}
 
 		// Get type size
@@ -199,6 +199,16 @@ namespace vm
 			m_addr = vm::cast(m_addr, HERE) - count * size();
 			return *this;
 		}
+
+		bool try_read(std::conditional_t<std::is_void_v<T>, char&, std::add_lvalue_reference_t<std::remove_const_t<T>>> out) const
+		{
+			return vm::try_access(vm::cast(m_addr, HERE), &out, sizeof(T), false);
+		}
+
+		bool try_write(std::conditional_t<std::is_void_v<T>, const char&, std::add_lvalue_reference_t<const T>> _in) const
+		{
+			return vm::try_access(vm::cast(m_addr, HERE), const_cast<T*>(&_in), sizeof(T), true);
+		}
 	};
 
 	template<typename AT, typename RT, typename... T>
@@ -242,7 +252,7 @@ namespace vm
 
 		explicit operator bool() const
 		{
-			return m_addr != 0;
+			return m_addr != 0u;
 		}
 
 		_ptr_base<RT(T...), u32> operator +() const

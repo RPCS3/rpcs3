@@ -1,5 +1,4 @@
-#include "stdafx.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 
@@ -9,7 +8,7 @@
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 vm::gvar<sys_lwmutex_t> g_ppu_atexit_lwm;
 vm::gvar<vm::ptr<void()>[8]> g_ppu_atexit;
@@ -204,11 +203,11 @@ error_code sys_ppu_thread_register_atexit(ppu_thread& ppu, vm::ptr<void()> func)
 		}
 	}
 
-	for (auto& pp : *g_ppu_atexit)
+	for (auto& pf : *g_ppu_atexit)
 	{
-		if (pp == vm::null)
+		if (!pf)
 		{
-			pp = func;
+			pf = func;
 			return CELL_OK;
 		}
 	}

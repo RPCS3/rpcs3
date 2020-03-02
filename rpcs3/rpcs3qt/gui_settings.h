@@ -1,39 +1,11 @@
 ﻿#pragma once
 
+#include "settings.h"
 #include "Utilities/Log.h"
 
-#include <QSettings>
-#include <QDir>
 #include <QVariant>
 #include <QSize>
 #include <QColor>
-
-struct gui_save
-{
-	QString key;
-	QString name;
-	QVariant def;
-
-	gui_save()
-	{
-		key = "";
-		name = "";
-		def = QVariant();
-	}
-
-	gui_save(const QString& k, const QString& n, const QVariant& d)
-	{
-		key = k;
-		name = n;
-		def = d;
-	}
-};
-
-typedef std::map<std::string, const QString> q_from_char;
-typedef QPair<QString, QString> q_string_pair;
-typedef QPair<QString, QSize> q_size_pair;
-typedef QList<q_string_pair> q_pair_list;
-typedef QList<q_size_pair> q_size_list;
 
 namespace gui
 {
@@ -57,6 +29,8 @@ namespace gui
 		column_resolution,
 		column_sound,
 		column_parental,
+		column_last_play,
+		column_playtime,
 		column_compat,
 
 		column_count
@@ -88,6 +62,10 @@ namespace gui
 			return "column_sound";
 		case column_parental:
 			return "column_parental";
+		case column_last_play:
+			return "column_last_play";
+		case column_playtime:
+			return "column_playtime";
 		case column_compat:
 			return "column_compat";
 		case column_count:
@@ -115,21 +93,24 @@ namespace gui
 		return q_string_pair(path, title.simplified()); // simplified() forces single line text
 	}
 
-	const QString Settings    = QObject::tr("CurrentSettings");
-	const QString Default     = QObject::tr("default");
-	const QString main_window = "main_window";
-	const QString game_list   = "GameList";
-	const QString logger      = "Logger";
-	const QString debugger    = "Debugger";
-	const QString rsx         = "RSX_Debugger";
-	const QString meta        = "Meta";
-	const QString fs          = "FileSystem";
-	const QString gs_frame    = "GSFrame";
-	const QString trophy      = "Trophy";
-	const QString savedata    = "SaveData";
-	const QString users       = "Users";
-	const QString notes       = "Notes";
-	const QString titles      = "Titles";
+	const QString Settings = "CurrentSettings";
+	const QString Default  = "default";
+	const QString None     = "none";
+
+	const QString main_window  = "main_window";
+	const QString game_list    = "GameList";
+	const QString logger       = "Logger";
+	const QString debugger     = "Debugger";
+	const QString rsx          = "RSX_Debugger";
+	const QString meta         = "Meta";
+	const QString fs           = "FileSystem";
+	const QString gs_frame     = "GSFrame";
+	const QString trophy       = "Trophy";
+	const QString savedata     = "SaveData";
+	const QString users        = "Users";
+	const QString notes        = "Notes";
+	const QString titles       = "Titles";
+	const QString localization = "Localization";
 
 	const QColor gl_icon_color = QColor(240, 240, 240, 255);
 
@@ -156,7 +137,7 @@ namespace gui
 	const gui_save mw_titleBarsVisible = gui_save(main_window, "titleBarsVisible", true);
 	const gui_save mw_geometry         = gui_save(main_window, "geometry",         QByteArray());
 	const gui_save mw_windowState      = gui_save(main_window, "windowState",      QByteArray());
-	const gui_save mw_mwState          = gui_save(main_window, "wwState",          QByteArray());
+	const gui_save mw_mwState          = gui_save(main_window, "mwState",          QByteArray());
 
 	const gui_save cat_hdd_game    = gui_save(game_list, "categoryVisibleHDDGame",    true);
 	const gui_save cat_disc_game   = gui_save(game_list, "categoryVisibleDiscGame",   true);
@@ -176,8 +157,8 @@ namespace gui
 	const gui_save gl_iconSizeGrid = gui_save(game_list, "iconSizeGrid", get_Index(gl_icon_size_small));
 	const gui_save gl_iconColor    = gui_save(game_list, "iconColor",    gl_icon_color);
 	const gui_save gl_listMode     = gui_save(game_list, "listMode",     true);
-	const gui_save gl_textFactor   = gui_save(game_list, "textFactor",   (qreal) 2.0);
-	const gui_save gl_marginFactor = gui_save(game_list, "marginFactor", (qreal) 0.09);
+	const gui_save gl_textFactor   = gui_save(game_list, "textFactor",   qreal{2.0});
+	const gui_save gl_marginFactor = gui_save(game_list, "marginFactor", qreal{0.09});
 	const gui_save gl_show_hidden  = gui_save(game_list, "show_hidden",  false);
 	const gui_save gl_hidden_list  = gui_save(game_list, "hidden_list",  QStringList());
 	const gui_save gl_draw_compat  = gui_save(game_list, "draw_compat",  false);
@@ -188,9 +169,12 @@ namespace gui
 	const gui_save fs_dev_flash_list    = gui_save(fs, "dev_flash_list",    QStringList());
 	const gui_save fs_dev_usb000_list   = gui_save(fs, "dev_usb000_list",   QStringList());
 
-	const gui_save l_tty   = gui_save(logger, "TTY",   true);
-	const gui_save l_level = gui_save(logger, "level", (uint)(logs::level::success));
-	const gui_save l_stack = gui_save(logger, "stack", true);
+	const gui_save l_tty       = gui_save(logger, "TTY",       true);
+	const gui_save l_level     = gui_save(logger, "level",     static_cast<uint>(logs::level::success));
+	const gui_save l_stack     = gui_save(logger, "stack",     true);
+	const gui_save l_stack_tty = gui_save(logger, "TTY_stack", false);
+	const gui_save l_limit     = gui_save(logger, "limit",     1000);
+	const gui_save l_limit_tty = gui_save(logger, "TTY_limit", 1000);
 
 	const gui_save d_splitterState = gui_save(debugger, "splitterState", QByteArray());
 	const gui_save d_centerPC      = gui_save(debugger, "centerPC",      false);
@@ -205,6 +189,7 @@ namespace gui
 	const gui_save m_enableUIColors    = gui_save(meta, "enableUIColors",    false);
 	const gui_save m_richPresence      = gui_save(meta, "useRichPresence",   true);
 	const gui_save m_discordState      = gui_save(meta, "discordState",      "");
+	const gui_save m_check_upd_start   = gui_save(meta, "checkUpdateStart",  true);
 
 	const gui_save gs_disableMouse = gui_save(gs_frame, "disableMouse", false);
 	const gui_save gs_resize       = gui_save(gs_frame, "resize",       false);
@@ -232,29 +217,25 @@ namespace gui
 
 	const gui_save um_geometry    = gui_save(users, "geometry",    QByteArray());
 	const gui_save um_active_user = gui_save(users, "active_user", "00000001");
+
+	const gui_save loc_language = gui_save(localization, "language", "en");
 }
 
 /** Class for GUI settings..
 */
-class gui_settings : public QObject
+class gui_settings : public settings
 {
 	Q_OBJECT
 
 public:
 	explicit gui_settings(QObject* parent = nullptr);
-	~gui_settings();
 
 	QString GetCurrentUser();
-	QString GetSettingsDir();
 
 	/** Changes the settings file to the destination preset*/
 	bool ChangeToConfig(const QString& friendly_name);
 
 	bool GetCategoryVisibility(int cat);
-	QVariant GetValue(const gui_save& entry);
-	QVariant GetValue(const QString& key, const QString& name, const QString& def);
-	QVariant List2Var(const q_pair_list& list);
-	q_pair_list Var2List(const QVariant &var);
 
 	void ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent);
 	void ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent);
@@ -270,13 +251,6 @@ public:
 public Q_SLOTS:
 	void Reset(bool removeMeta = false);
 
-	/** Remove entry */
-	void RemoveValue(const QString& key, const QString& name);
-
-	/** Write value to entry */
-	void SetValue(const gui_save& entry, const QVariant& value);
-	void SetValue(const QString& key, const QString& name, const QVariant& value);
-
 	/** Sets the visibility of the chosen category. */
 	void SetCategoryVisibility(int cat, const bool& val);
 
@@ -290,11 +264,8 @@ public Q_SLOTS:
 	static gui_save GetGuiSaveForColumn(int col);
 
 private:
-	QString ComputeSettingsDir();
 	void BackupSettingsToTarget(const QString& friendly_name);
 	void ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, bool always_on_top);
 
-	QSettings m_settings;
-	QDir m_settingsDir;
 	QString m_current_name;
 };

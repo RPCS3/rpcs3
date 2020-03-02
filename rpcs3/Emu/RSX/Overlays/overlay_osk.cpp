@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
-#include "overlays.h"
+#include "overlay_osk.h"
+#include "Emu/RSX/RSXThread.h"
 
 namespace rsx
 {
@@ -7,19 +8,28 @@ namespace rsx
 	{
 		void osk_dialog::Close(bool ok)
 		{
-			if (on_osk_close)
-			{
-				Emu.CallAfter([this, ok]()
-				{
-					on_osk_close(ok ? CELL_MSGDIALOG_BUTTON_OK : CELL_MSGDIALOG_BUTTON_ESCAPE);
-				});
-			}
+			fade_animation.current = color4f(1.f);
+			fade_animation.end = color4f(0.f);
+			fade_animation.duration = 0.5f;
 
-			m_visible = false;
-			close();
+			fade_animation.on_finish = [this, ok]
+			{
+				if (on_osk_close)
+				{
+					Emu.CallAfter([this, ok]()
+					{
+						on_osk_close(ok ? CELL_MSGDIALOG_BUTTON_OK : CELL_MSGDIALOG_BUTTON_ESCAPE);
+					});
+				}
+
+				visible = false;
+				close();
+			};
+
+			fade_animation.active = true;
 		}
 
-		void osk_dialog::initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::string& title, const std::string& initial_text)
+		void osk_dialog::initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::u32string& title, const std::u32string& initial_text)
 		{
 			const u32 cell_count = num_rows * num_columns;
 
@@ -41,6 +51,18 @@ namespace rsx
 					_cell.outputs = props.outputs;
 					_cell.selected = false;
 
+					for (u32 mode = 0; mode < layer_mode::mode_count && mode < _cell.outputs.size(); ++mode)
+					{
+						if (mode >= num_layers.size())
+						{
+							num_layers.push_back(u32(_cell.outputs[mode].size()));
+						}
+						else
+						{
+							num_layers[mode] = std::max(num_layers[mode], u32(_cell.outputs[mode].size()));
+						}
+					}
+
 					switch (props.type_flags)
 					{
 					default:
@@ -53,11 +75,15 @@ namespace rsx
 					case button_flags::_return:
 						_cell.enabled = !(flags & CELL_OSKDIALOG_NO_RETURN);
 						break;
+					case button_flags::_shift:
+						_cell.enabled |= !_cell.outputs.empty();
+						break;
+					case button_flags::_mode:
+						_cell.enabled |= !num_layers.empty();
+						break;
 					}
 
-					num_layers = std::max(num_layers, u32(_cell.outputs.size()));
-
-					if (LIKELY(props.num_cell_hz == 1))
+					if (props.num_cell_hz == 1) [[likely]]
 					{
 						_cell.flags = border_flags::default_cell;
 					}
@@ -79,7 +105,12 @@ namespace rsx
 				}
 			}
 
-			verify(HERE), num_layers;
+			verify(HERE), num_layers.size();
+
+			for (u32 mode = 0; mode < layer_mode::mode_count && mode < num_layers.size(); ++mode)
+			{
+				verify(HERE), num_layers[mode];
+			}
 
 			// TODO: Should just scan for the first enabled cell
 			selected_x = selected_y = selected_z = 0;
@@ -168,16 +199,26 @@ namespace rsx
 				m_btn_cancel.set_image_resource(resource_config::standard_image_resource::circle);
 			}
 
-			m_visible = true;
 			m_update = true;
+			visible = true;
 			exit = false;
 
-			thread_ctrl::spawn("osk input thread", [this]
+			fade_animation.current = color4f(0.f);
+			fade_animation.end = color4f(1.f);
+			fade_animation.duration = 0.5f;
+			fade_animation.active = true;
+
+			g_fxo->init<named_thread>("OSK Thread", [this, tbit = alloc_thread_bit()]
 			{
+				g_thread_bit = tbit;
+
 				if (auto error = run_input_loop())
 				{
-					LOG_ERROR(RSX, "Osk input loop exited with error code=%d", error);
+					rsx_log.error("Osk input loop exited with error code=%d", error);
 				}
+
+				thread_bits &= ~tbit;
+				thread_bits.notify_all();
 			});
 		}
 
@@ -239,16 +280,23 @@ namespace rsx
 			auto on_accept = [&]()
 			{
 				const u32 current_index = (selected_y * num_columns) + selected_x;
-				const u32 output_count = (u32)m_grid[current_index].outputs.size();
+				const auto& current_cell = m_grid[current_index];
+
+				u32 output_count = 0;
+
+				if (m_selected_mode < layer_mode::mode_count && m_selected_mode < current_cell.outputs.size())
+				{
+					output_count = ::size32(current_cell.outputs[m_selected_mode]);
+				}
 
 				if (output_count)
 				{
 					const auto _z = std::clamp<u32>(selected_z, 0u, output_count - 1u);
-					const auto& str = m_grid[current_index].outputs[_z];
+					const auto& str = current_cell.outputs[m_selected_mode][_z];
 
-					if (m_grid[current_index].callback)
+					if (current_cell.callback)
 					{
-						m_grid[current_index].callback(str);
+						current_cell.callback(str);
 					}
 					else
 					{
@@ -355,7 +403,7 @@ namespace rsx
 			}
 			case pad_button::select:
 			{
-				on_shift("");
+				on_shift(U"");
 				break;
 			}
 			case pad_button::start:
@@ -365,36 +413,22 @@ namespace rsx
 			}
 			case pad_button::triangle:
 			{
-				on_space("");
+				on_space(U"");
 				break;
 			}
 			case pad_button::square:
 			{
-				on_backspace("");
+				on_backspace(U"");
 				break;
 			}
 			case pad_button::cross:
 			{
-				if (g_cfg.sys.enter_button_assignment != enter_button_assign::circle)
-				{
-					on_accept();
-				}
-				else
-				{
-					Close(false);
-				}
+				on_accept();
 				break;
 			}
 			case pad_button::circle:
 			{
-				if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
-				{
-					on_accept();
-				}
-				else
-				{
-					Close(false);
-				}
+				Close(false);
 				break;
 			}
 			default:
@@ -404,7 +438,7 @@ namespace rsx
 
 		void osk_dialog::on_text_changed()
 		{
-			const auto ws = ascii8_to_utf16(m_preview.text);
+			const auto ws = u32string_to_utf16(m_preview.text);
 			const auto length = (ws.length() + 1) * sizeof(char16_t);
 			memcpy(osk_text, ws.c_str(), length);
 
@@ -416,10 +450,10 @@ namespace rsx
 			m_update = true;
 		}
 
-		void osk_dialog::on_default_callback(const std::string& str)
+		void osk_dialog::on_default_callback(const std::u32string& str)
 		{
 			// Append to output text
-			if (m_preview.text == "[Enter Text]")
+			if (m_preview.text == U"[Enter Text]")
 			{
 				m_preview.caret_position = ::narrow<u16>(str.length());
 				m_preview.set_text(str);
@@ -442,17 +476,34 @@ namespace rsx
 			on_text_changed();
 		}
 
-		void osk_dialog::on_shift(const std::string&)
+		void osk_dialog::on_shift(const std::u32string&)
 		{
-			selected_z = (selected_z + 1) % num_layers;
+			switch (m_selected_mode)
+			{
+			case layer_mode::alphanumeric:
+			case layer_mode::extended:
+			case layer_mode::special:
+				selected_z = (selected_z + 1) % num_layers[m_selected_mode];
+				break;
+			default:
+				selected_z = 0;
+				break;
+			}
 			m_update = true;
 		}
 
-		void osk_dialog::on_space(const std::string&)
+		void osk_dialog::on_mode(const std::u32string&)
+		{
+			const u32 num_modes = std::clamp<u32>(num_layers.size(), 1, layer_mode::mode_count);
+			m_selected_mode = static_cast<layer_mode>((m_selected_mode + 1u) % num_modes);
+			m_update = true;
+		}
+
+		void osk_dialog::on_space(const std::u32string&)
 		{
 			if (!(flags & CELL_OSKDIALOG_NO_SPACE))
 			{
-				on_default_callback(" ");
+				on_default_callback(U" ");
 			}
 			else
 			{
@@ -460,7 +511,7 @@ namespace rsx
 			}
 		}
 
-		void osk_dialog::on_backspace(const std::string&)
+		void osk_dialog::on_backspace(const std::u32string&)
 		{
 			if (m_preview.text.empty())
 			{
@@ -471,11 +522,11 @@ namespace rsx
 			on_text_changed();
 		}
 
-		void osk_dialog::on_enter(const std::string&)
+		void osk_dialog::on_enter(const std::u32string&)
 		{
 			if (!(flags & CELL_OSKDIALOG_NO_RETURN))
 			{
-				on_default_callback("\n");
+				on_default_callback(U"\n");
 			}
 			else
 			{
@@ -483,9 +534,18 @@ namespace rsx
 			}
 		}
 
+		void osk_dialog::update()
+		{
+			if (fade_animation.active)
+			{
+				fade_animation.update(rsx::get_current_renderer()->vblank_count);
+				m_update = true;
+			}
+		}
+
 		compiled_resource osk_dialog::get_compiled()
 		{
-			if (!m_visible)
+			if (!visible)
 			{
 				return {};
 			}
@@ -533,7 +593,14 @@ namespace rsx
 					{
 						w--;
 
-						if (!c.outputs.empty())
+						u32 output_count = 0;
+
+						if (m_selected_mode < layer_mode::mode_count && m_selected_mode < c.outputs.size())
+						{
+							output_count = ::size32(c.outputs[m_selected_mode]);
+						}
+
+						if (output_count)
 						{
 							u16 offset_x = u16(buffered_cell_count * cell_size_x);
 							u16 full_width = u16(offset_x + cell_size_x);
@@ -542,8 +609,8 @@ namespace rsx
 							m_label.set_size(full_width, cell_size_y);
 							m_label.fore_color = c.enabled ? normal_fore_color : disabled_fore_color;
 
-							auto _z = (selected_z < c.outputs.size()) ? selected_z : u32(c.outputs.size()) - 1u;
-							m_label.set_text(c.outputs[_z]);
+							auto _z = (selected_z < output_count) ? selected_z : output_count - 1u;
+							m_label.set_text(c.outputs[m_selected_mode][_z]);
 							m_label.align_text(rsx::overlays::overlay_element::text_align::center);
 							render_label = true;
 						}
@@ -579,11 +646,12 @@ namespace rsx
 				m_update = false;
 			}
 
+			fade_animation.apply(m_cached_resource);
 			return m_cached_resource;
 		}
 
 		// Language specific implementations
-		void osk_enUS::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options)
+		void osk_latin::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options)
 		{
 			state = OskDialogState::Open;
 			flags = options;
@@ -599,66 +667,70 @@ namespace rsx
 			cell_size_y = 40;
 
 			callback_t shift_callback = std::bind(&osk_dialog::on_shift, this, std::placeholders::_1);
+			callback_t mode_callback = std::bind(&osk_dialog::on_mode, this, std::placeholders::_1);
 			callback_t space_callback = std::bind(&osk_dialog::on_space, this, std::placeholders::_1);
 			callback_t delete_callback = std::bind(&osk_dialog::on_backspace, this, std::placeholders::_1);
 			callback_t enter_callback = std::bind(&osk_dialog::on_enter, this, std::placeholders::_1);
 
 			std::vector<osk_dialog::grid_entry_ctor> layout =
 			{
-				// Alphanumeric
-				{{"1", "!"}, default_bg, 1},
-				{{"2", "@"}, default_bg, 1},
-				{{"3", "#"}, default_bg, 1},
-				{{"4", "$"}, default_bg, 1},
-				{{"5", "%"}, default_bg, 1},
-				{{"6", "^"}, default_bg, 1},
-				{{"7", "&"}, default_bg, 1},
-				{{"8", "*"}, default_bg, 1},
-				{{"9", "("}, default_bg, 1},
-				{{"0", ")"}, default_bg, 1},
+				// Row 1
+				{{{U"1", U"!"}, {U"à", U"À"}, {U"!", U"¡"}}, default_bg, 1},
+				{{{U"2", U"@"}, {U"á", U"Á"}, {U"?", U"¿"}}, default_bg, 1},
+				{{{U"3", U"#"}, {U"â", U"Â"}, {U"#", U"~"}}, default_bg, 1},
+				{{{U"4", U"$"}, {U"ã", U"Ã"}, {U"$", U"„"}}, default_bg, 1},
+				{{{U"5", U"%"}, {U"ä", U"Ä"}, {U"%", U"´"}}, default_bg, 1},
+				{{{U"6", U"^"}, {U"å", U"Å"}, {U"&", U"‘"}}, default_bg, 1},
+				{{{U"7", U"&"}, {U"æ", U"Æ"}, {U"'", U"’"}}, default_bg, 1},
+				{{{U"8", U"*"}, {U"ç", U"Ç"}, {U"(", U"‚"}}, default_bg, 1},
+				{{{U"9", U"("}, {U"[", U"<"}, {U")", U"“"}}, default_bg, 1},
+				{{{U"0", U")"}, {U"]", U">"}, {U"*", U"”"}}, default_bg, 1},
 
-				// Alpha
-				{{"q", "Q"}, default_bg, 1},
-				{{"w", "W"}, default_bg, 1},
-				{{"e", "E"}, default_bg, 1},
-				{{"r", "R"}, default_bg, 1},
-				{{"t", "T"}, default_bg, 1},
-				{{"y", "Y"}, default_bg, 1},
-				{{"u", "U"}, default_bg, 1},
-				{{"i", "I"}, default_bg, 1},
-				{{"o", "O"}, default_bg, 1},
-				{{"p", "P"}, default_bg, 1},
-				{{"a", "A"}, default_bg, 1},
-				{{"s", "S"}, default_bg, 1},
-				{{"d", "D"}, default_bg, 1},
-				{{"f", "F"}, default_bg, 1},
-				{{"g", "G"}, default_bg, 1},
-				{{"h", "H"}, default_bg, 1},
-				{{"j", "J"}, default_bg, 1},
-				{{"k", "K"}, default_bg, 1},
-				{{"l", "L"}, default_bg, 1},
-				{{"'", "\""}, default_bg, 1},
-				{{"z", "Z"}, default_bg, 1},
-				{{"x", "X"}, default_bg, 1},
-				{{"c", "C"}, default_bg, 1},
-				{{"v", "V"}, default_bg, 1},
-				{{"b", "B"}, default_bg, 1},
-				{{"n", "N"}, default_bg, 1},
-				{{"m", "M"}, default_bg, 1},
-				{{"-", "_"}, default_bg, 1},
-				{{"+", "="}, default_bg, 1},
-				{{",", "?"}, default_bg, 1},
+				// Row 2
+				{{{U"q", U"Q"}, {U"è", U"È"}, {U"/", U"¤"}}, default_bg, 1},
+				{{{U"w", U"W"}, {U"é", U"É"}, {U"\\", U"¢"}}, default_bg, 1},
+				{{{U"e", U"E"}, {U"ê", U"Ê"}, {U"[", U"€"}}, default_bg, 1},
+				{{{U"r", U"R"}, {U"ë", U"Ë"}, {U"]", U"£"}}, default_bg, 1},
+				{{{U"t", U"T"}, {U"ì", U"Ì"}, {U"^", U"¥"}}, default_bg, 1},
+				{{{U"y", U"Y"}, {U"í", U"Í"}, {U"_", U"§"}}, default_bg, 1},
+				{{{U"u", U"U"}, {U"î", U"Î"}, {U"`", U"¦"}}, default_bg, 1},
+				{{{U"i", U"I"}, {U"ï", U"Ï"}, {U"{", U"µ"}}, default_bg, 1},
+				{{{U"o", U"O"}, {U";", U"="}, {U"}", U""}}, default_bg, 1},
+				{{{U"p", U"P"}, {U":", U"+"}, {U"|", U""}}, default_bg, 1},
+
+				// Row 3
+				{{{U"a", U"A"}, {U"ñ", U"Ñ"}, {U"@", U""}}, default_bg, 1},
+				{{{U"s", U"S"}, {U"ò", U"Ò"}, {U"°", U""}}, default_bg, 1},
+				{{{U"d", U"D"}, {U"ó", U"Ó"}, {U"‹", U""}}, default_bg, 1},
+				{{{U"f", U"F"}, {U"ô", U"Ô"}, {U"›", U""}}, default_bg, 1},
+				{{{U"g", U"G"}, {U"õ", U"Õ"}, {U"«", U""}}, default_bg, 1},
+				{{{U"h", U"H"}, {U"ö", U"Ö"}, {U"»", U""}}, default_bg, 1},
+				{{{U"j", U"J"}, {U"ø", U"Ø"}, {U"ª", U""}}, default_bg, 1},
+				{{{U"k", U"K"}, {U"œ", U"Œ"}, {U"º", U""}}, default_bg, 1},
+				{{{U"l", U"L"}, {U"`", U"~"}, {U"×", U""}}, default_bg, 1},
+				{{{U"'", U"\""}, {U"¡", U"\""}, {U"÷", U""}}, default_bg, 1},
+
+				// Row 4
+				{{{U"z", U"Z"}, {U"ß", U"ß"}, {U"+", U""}}, default_bg, 1},
+				{{{U"x", U"X"}, {U"ù", U"Ù"}, {U",", U""}}, default_bg, 1},
+				{{{U"c", U"C"}, {U"ú", U"Ú"}, {U"-", U""}}, default_bg, 1},
+				{{{U"v", U"V"}, {U"û", U"Û"}, {U".", U""}}, default_bg, 1},
+				{{{U"b", U"B"}, {U"ü", U"Ü"}, {U"\"", U""}}, default_bg, 1},
+				{{{U"n", U"N"}, {U"ý", U"Ý"}, {U":", U""}}, default_bg, 1},
+				{{{U"m", U"M"}, {U"ÿ", U"Ÿ"}, {U";", U""}}, default_bg, 1},
+				{{{U",", U"-"}, {U",", U"-"}, {U"<", U""}}, default_bg, 1},
+				{{{U".", U"_"}, {U".", U"_"}, {U"=", U""}}, default_bg, 1},
+				{{{U"?", U"/"}, {U"¿", U"/"}, {U">", U""}}, default_bg, 1},
 
 				// Special
-				{{"Shift"}, special2_bg, 2, button_flags::_default, shift_callback },
-				{{"Space"}, special_bg, 4, button_flags::_space, space_callback },
-				{{"Backspace"}, special_bg, 2, button_flags::_default, delete_callback },
-				{{"Enter"}, special2_bg, 2, button_flags::_return, enter_callback },
+				{{{U"Shift"}, {U"Shift"}, {U"Shift"}}, special2_bg, 2, button_flags::_default, shift_callback },
+				{{{U"ÖÑß"}, {U"@#:"}, {U"ABC"}}, special2_bg, 2, button_flags::_default, mode_callback },
+				{{{U"Space"}, {U"Space"}, {U"Space"}}, special_bg, 2, button_flags::_space, space_callback },
+				{{{U"Backspace"}, {U"Backspace"}, {U"Backspace"}}, special_bg, 2, button_flags::_default, delete_callback },
+				{{{U"Enter"}, {U"Enter"}, {U"Enter"}}, special2_bg, 2, button_flags::_return, enter_callback },
 			};
 
-			// Narrow to utf-8 as native does not have support for non-ascii glyphs
-			// TODO: Full multibyte string support in all of rsx::overlays (kd-11)
-			initialize_layout(layout, utf16_to_ascii8(message), utf16_to_ascii8(init_text));
+			initialize_layout(layout, utf16_to_u32string(message), utf16_to_u32string(init_text));
 		}
 	}
 }

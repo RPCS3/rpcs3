@@ -1,5 +1,5 @@
-﻿
-#include "osk_dialog_frame.h"
+﻿#include "osk_dialog_frame.h"
+#include "custom_dialog.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include <QLabel>
@@ -77,7 +77,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 			input->setValidator(new QRegExpValidator(QRegExp("^\\S*$"), this));
 		}
 
-		connect(input, &QLineEdit::textChanged, [=](const QString& text)
+		connect(input, &QLineEdit::textChanged, [=, this](const QString& text)
 		{
 			inputCount->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
@@ -96,7 +96,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 		input->moveCursor(QTextCursor::End);
 		m_text_old = text;
 
-		connect(input, &QTextEdit::textChanged, [=]()
+		connect(input, &QTextEdit::textChanged, [=, this]()
 		{
 			QString text = input->toPlainText();
 
@@ -110,7 +110,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 			const int cursor_pos_old = cursor_pos_new + m_text_old.length() - text.length();
 
 			// Reset to old state if character limit was reached
-			if ((u32)m_text_old.length() >= charlimit && (u32)text.length() > charlimit)
+			if (m_text_old.length() >= static_cast<int>(charlimit) && text.length() > static_cast<int>(charlimit))
 			{
 				input->blockSignals(true);
 				input->setPlainText(m_text_old);
@@ -163,12 +163,12 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	// Events
 	connect(button_ok, &QAbstractButton::clicked, m_dialog, &QDialog::accept);
 
-	connect(m_dialog, &QDialog::accepted, [=]
+	connect(m_dialog, &QDialog::accepted, [this]()
 	{
 		on_osk_close(CELL_MSGDIALOG_BUTTON_OK);
 	});
 
-	connect(m_dialog, &QDialog::rejected, [=]
+	connect(m_dialog, &QDialog::rejected, [this]()
 	{
 		on_osk_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
 	});
@@ -180,7 +180,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 void osk_dialog_frame::SetOskText(const QString& text)
 {
-	std::memcpy(osk_text, reinterpret_cast<const char16_t*>(text.constData()), ((size_t)text.size() + 1) * sizeof(char16_t));
+	std::memcpy(osk_text, reinterpret_cast<const char16_t*>(text.constData()), (text.size() + 1u) * sizeof(char16_t));
 }
 
 void osk_dialog_frame::Close(bool accepted)

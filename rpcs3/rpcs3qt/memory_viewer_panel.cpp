@@ -1,11 +1,19 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 
 #include "memory_viewer_panel.h"
 
+#include <QVBoxLayout>
+#include <QPushButton>
+#include <QSpinBox>
+#include <QGroupBox>
+#include <QTextEdit>
+#include <QComboBox>
+#include <QWheelEvent>
+
 constexpr auto qstr = QString::fromStdString;
 
-memory_viewer_panel::memory_viewer_panel(QWidget* parent) 
+memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	: QDialog(parent)
 {
 	setWindowTitle(tr("Memory Viewer"));
@@ -194,14 +202,14 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	setLayout(vbox_panel);
 
 	//Events
-	connect(m_addr_line, &QLineEdit::returnPressed, [=]
+	connect(m_addr_line, &QLineEdit::returnPressed, [=, this]()
 	{
 		bool ok;
 		m_addr = m_addr_line->text().toULong(&ok, 16);
 		m_addr_line->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));	// get 8 digits in input line
 		ShowMemory();
 	});
-	connect(sb_bytes, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=]
+	connect(sb_bytes, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=, this]()
 	{
 		m_colcount = sb_bytes->value();
 		m_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
@@ -209,18 +217,18 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 		ShowMemory();
 	});
 
-	connect(b_prev, &QAbstractButton::clicked, [=]() { m_addr -= m_colcount; ShowMemory(); });
-	connect(b_next, &QAbstractButton::clicked, [=]() { m_addr += m_colcount; ShowMemory(); });
-	connect(b_fprev, &QAbstractButton::clicked, [=]() { m_addr -= m_rowcount * m_colcount; ShowMemory(); });
-	connect(b_fnext, &QAbstractButton::clicked, [=]() { m_addr += m_rowcount * m_colcount; ShowMemory(); });
-	connect(b_img, &QAbstractButton::clicked, [=]
+	connect(b_prev, &QAbstractButton::clicked, [=, this]() { m_addr -= m_colcount; ShowMemory(); });
+	connect(b_next, &QAbstractButton::clicked, [=, this]() { m_addr += m_colcount; ShowMemory(); });
+	connect(b_fprev, &QAbstractButton::clicked, [=, this]() { m_addr -= m_rowcount * m_colcount; ShowMemory(); });
+	connect(b_fnext, &QAbstractButton::clicked, [=, this]() { m_addr += m_rowcount * m_colcount; ShowMemory(); });
+	connect(b_img, &QAbstractButton::clicked, [=, this]()
 	{
 		int mode = cbox_img_mode->currentIndex();
 		int sizex = sb_img_size_x->value();
 		int sizey = sb_img_size_y->value();
 		ShowImage(this, m_addr, mode, sizex, sizey, false);
 	});
-	
+
 	//Fill the QTextEdits
 	ShowMemory();
 	setFixedSize(sizeHint());
@@ -240,7 +248,7 @@ void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 
 	QPoint numSteps = event->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
 	m_addr -= stepSize * m_colcount * numSteps.y();
-	
+
 	m_addr_line->setText(qstr(fmt::format("%08x", m_addr)));
 	ShowMemory();
 }
@@ -261,7 +269,7 @@ void memory_viewer_panel::ShowMemory()
 	{
 		for (u32 col = 0; col < m_colcount; col++)
 		{
-			u32 addr = m_addr + row * m_colcount + col;	
+			u32 addr = m_addr + row * m_colcount + col;
 
 			if (vm::check_addr(addr))
 			{
@@ -306,8 +314,9 @@ void memory_viewer_panel::SetPC(const uint pc)
 
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
 {
-	unsigned char* originalBuffer  = (unsigned char*)vm::base(addr);
-	unsigned char* convertedBuffer = (unsigned char*)malloc(width * height * 4);
+	uchar* originalBuffer  = static_cast<uchar*>(vm::base(addr));
+	uchar* convertedBuffer = static_cast<uchar*>(std::malloc(width * height * 4));
+
 	switch(mode)
 	{
 	case(0): // RGB
@@ -322,7 +331,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 			}
 		}
 	break;
-	
+
 	case(1): // ARGB
 		for (u32 y = 0; y < height; y++)
 		{
@@ -335,7 +344,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 			}
 		}
 	break;
-	
+
 	case(2): // RGBA
 		for (u32 y = 0; y < height; y++)
 		{
@@ -348,7 +357,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 			}
 		}
 	break;
-	
+
 	case(3): // ABGR
 		for (u32 y = 0; y < height; y++)
 		{
@@ -362,7 +371,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 		}
 	break;
 	}
-	
+
 	// Flip vertically
 	if (flipv)
 	{

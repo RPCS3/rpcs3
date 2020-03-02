@@ -1,7 +1,7 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_prx.h"
 
-#include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
@@ -121,7 +121,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	if (g_cfg.core.lib_loading == lib_loading_type::liblv2list)
 	{
-		if (vpath.compare(0, 24, "/dev_flash/sys/external/") == 0 && vpath != "/dev_flash/sys/external/libsysmodule.sprx"sv)
+		if (vpath.starts_with("/dev_flash/sys/external/") && vpath != "/dev_flash/sys/external/libsysmodule.sprx"sv)
 		{
 			ignore = g_cfg.core.load_libraries.get_set().count(name) == 0;
 		}
@@ -257,6 +257,11 @@ error_code _sys_prx_start_module(u32 id, u64 flags, vm::ptr<sys_prx_start_stop_m
 {
 	sys_prx.warning("_sys_prx_start_module(id=0x%x, flags=0x%x, pOpt=*0x%x)", id, flags, pOpt);
 
+	if (id == 0 || !pOpt)
+	{
+		return CELL_EINVAL;
+	}
+
 	const auto prx = idm::get<lv2_obj, lv2_prx>(id);
 
 	if (!prx)
@@ -301,7 +306,7 @@ error_code _sys_prx_unload_module(u32 id, u64 flags, vm::ptr<sys_prx_unload_modu
 
 	if (!prx)
 	{
-		return CELL_ESRCH;
+		return CELL_PRX_ERROR_UNKNOWN_MODULE;
 	}
 
 	ppu_unload_prx(*prx);
@@ -365,9 +370,19 @@ error_code _sys_prx_get_module_info(u32 id, u64 flags, vm::ptr<sys_prx_module_in
 
 	const auto prx = idm::get<lv2_obj, lv2_prx>(id);
 
-	if (!pOpt || !pOpt->info || !prx)
+	if (!pOpt)
+	{
+		return CELL_EFAULT;
+	}
+
+	if (pOpt->size != pOpt.size() || !pOpt->info)
 	{
 		return CELL_EINVAL;
+	}
+
+	if (!prx)
+	{
+		return CELL_PRX_ERROR_UNKNOWN_MODULE;
 	}
 
 	std::memset(pOpt->info->name, 0, 30);

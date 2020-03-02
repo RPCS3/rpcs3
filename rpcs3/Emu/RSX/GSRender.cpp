@@ -1,6 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
-#include "Emu/System.h"
 
 #include "GSRender.h"
 
@@ -55,7 +53,7 @@ void GSRender::on_exit()
 	rsx::thread::on_exit();
 }
 
-void GSRender::flip(int buffer, bool emu_flip)
+void GSRender::flip(const rsx::display_flip_info_t& info)
 {
 	if (m_frame)
 	{

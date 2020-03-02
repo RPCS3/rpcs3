@@ -286,7 +286,7 @@ namespace rsx
 				return 1u;
 			}
 
-			u32 count = (u32)draw_command_ranges.size();
+			u32 count = ::size32(draw_command_ranges);
 			if (draw_command_ranges.back().count == 0)
 			{
 				// Dangling barrier
@@ -400,7 +400,7 @@ namespace rsx
 
 				const u32 count = barrier.address - previous_barrier;
 				ret.push_back({ 0, vertex_counter, count });
-				previous_barrier = (u32)barrier.address;
+				previous_barrier = barrier.address;
 				vertex_counter += count;
 			}
 
@@ -474,15 +474,6 @@ namespace rsx
 		}
 	};
 
-	namespace
-	{
-		template<typename T, size_t... N, typename Args>
-		std::array<T, sizeof...(N)> fill_array(Args&& arg, std::index_sequence<N...>)
-		{
-			return{ T(N, std::forward<Args>(arg))... };
-		}
-	}
-
 	struct rsx_state
 	{
 	public:
@@ -537,13 +528,21 @@ namespace rsx
 		std::array<register_vertex_data_info, 16> register_vertex_info;
 		std::array<data_array_format_info, 16> vertex_arrays_info;
 
+	private:
+		template<typename T, size_t... N, typename Args>
+		static std::array<T, sizeof...(N)> fill_array(Args&& arg, std::index_sequence<N...>)
+		{
+			return{ T(N, std::forward<Args>(arg))... };
+		}
+
+	public:
 		rsx_state() :
 			fragment_textures(fill_array<fragment_texture>(registers, std::make_index_sequence<16>())),
 			vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
 			vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
 		{
 			//NOTE: Transform constants persist through a context reset (NPEB00913)
-			memset(transform_constants.data(), 0, 512 * 4 * sizeof(u32));
+			transform_constants = {};
 		}
 
 		~rsx_state() = default;
@@ -665,14 +664,41 @@ namespace rsx
 			return decode<NV4097_SET_STENCIL_TEST_ENABLE>().stencil_test_enabled();
 		}
 
-		bool restart_index_enabled() const
+		u8 index_array_location() const
 		{
-			return decode<NV4097_SET_RESTART_INDEX_ENABLE>().restart_index_enabled();
+			return decode<NV4097_SET_INDEX_ARRAY_DMA>().index_dma();
+		}
+
+		rsx::index_array_type index_type() const
+		{
+			return decode<NV4097_SET_INDEX_ARRAY_DMA>().type();
 		}
 
 		u32 restart_index() const
 		{
 			return decode<NV4097_SET_RESTART_INDEX>().restart_index();
+		}
+
+		bool restart_index_enabled_raw() const
+		{
+			return decode<NV4097_SET_RESTART_INDEX_ENABLE>().restart_index_enabled();
+		}
+
+		bool restart_index_enabled() const
+		{
+			if (!restart_index_enabled_raw())
+			{
+				return false;
+
+			}
+
+			if (index_type() == rsx::index_array_type::u16 &&
+				restart_index() > 0xffff)
+			{
+				return false;
+			}
+
+			return true;
 		}
 
 		u32 z_clear_value(bool is_depth_stencil) const
@@ -693,16 +719,6 @@ namespace rsx
 		f32 fog_params_1() const
 		{
 			return decode<NV4097_SET_FOG_PARAMS + 1>().fog_param_1();
-		}
-
-		u8 index_array_location() const
-		{
-			return decode<NV4097_SET_INDEX_ARRAY_DMA>().index_dma();
-		}
-
-		rsx::index_array_type index_type() const
-		{
-			return decode<NV4097_SET_INDEX_ARRAY_DMA>().type();
 		}
 
 		bool color_mask_b(int index) const
@@ -1083,6 +1099,11 @@ namespace rsx
 		f32 point_size() const
 		{
 			return decode<NV4097_SET_POINT_SIZE>().point_size();
+		}
+
+		bool point_sprite_enabled() const
+		{
+			return decode<NV4097_SET_POINT_SPRITE_CONTROL>().enabled();
 		}
 
 		u8 alpha_ref() const
@@ -1660,16 +1681,21 @@ namespace rsx
 			return decode<NV4097_SET_CONTROL0>().depth_float();
 		}
 
-		u32 texcoord_control_mask()
+		u16 texcoord_control_mask() const
 		{
 			// Only 10 texture coords exist [0-9]
-			u32 control_mask = 0;
+			u16 control_mask = 0;
 			for (u8 index = 0; index < 10; ++index)
 			{
 				control_mask |= ((registers[NV4097_SET_TEX_COORD_CONTROL + index] & 1) << index);
 			}
 
 			return control_mask;
+		}
+
+		u16 point_sprite_control_mask() const
+		{
+			return decode<NV4097_SET_POINT_SPRITE_CONTROL>().texcoord_mask();
 		}
 	};
 

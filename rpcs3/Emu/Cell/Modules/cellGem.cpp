@@ -1,12 +1,12 @@
 ﻿#include "stdafx.h"
 #include "cellGem.h"
-
 #include "cellCamera.h"
-#include "Emu/IdManager.h"
-#include "Emu/System.h"
+
 #include "Emu/Cell/PPUModule.h"
-#include "pad_thread.h"
+#include "Emu/Io/MouseHandler.h"
+#include "Emu/RSX/GSRender.h"
 #include "Utilities/Timer.h"
+#include "Input/pad_thread.h"
 
 LOG_CHANNEL(cellGem);
 
@@ -79,31 +79,32 @@ struct gem_config
 
 	struct gem_controller
 	{
-		u32 status;                     // connection status (CELL_GEM_STATUS_DISCONNECTED or CELL_GEM_STATUS_READY)
-		u32 ext_status;                 // external port connection status
-		u32 port;                       // assigned port
-		bool enabled_magnetometer;      // whether the magnetometer is enabled (probably used for additional rotational precision)
-		bool calibrated_magnetometer;   // whether the magnetometer is calibrated
-		bool enabled_filtering;         // whether filtering is enabled
-		bool enabled_tracking;          // whether tracking is enabled
-		bool enabled_LED;               // whether the LED is enabled
-		u8 rumble;                      // rumble intensity
-		gem_color sphere_rgb;           // RGB color of the sphere LED
-		u32 hue;                        // tracking hue of the motion controller
-
-		gem_controller() :
-			status(CELL_GEM_STATUS_DISCONNECTED),
-			enabled_filtering(false), rumble(0), sphere_rgb() {}
+		u32 status = CELL_GEM_STATUS_DISCONNECTED;         // Connection status (CELL_GEM_STATUS_DISCONNECTED or CELL_GEM_STATUS_READY)
+		u32 ext_status = CELL_GEM_NO_EXTERNAL_PORT_DEVICE; // External port connection status
+		u32 port = 0;                                      // Assigned port
+		bool enabled_magnetometer = false;                 // Whether the magnetometer is enabled (probably used for additional rotational precision)
+		bool calibrated_magnetometer = false;              // Whether the magnetometer is calibrated
+		bool enabled_filtering = false;                    // Whether filtering is enabled
+		bool enabled_tracking = false;                     // Whether tracking is enabled
+		bool enabled_LED = false;                          // Whether the LED is enabled
+		u8 rumble = 0;                                     // Rumble intensity
+		gem_color sphere_rgb = {};                         // RGB color of the sphere LED
+		u32 hue = 0;                                       // Tracking hue of the motion controller
 	};
 
-	CellGemAttribute attribute;
-	CellGemVideoConvertAttribute vc_attribute;
-	u64 status_flags;
-	bool enable_pitch_correction;
-	u32 inertial_counter;
+	CellGemAttribute attribute = {};
+	CellGemVideoConvertAttribute vc_attribute = {};
+	u64 status_flags = CELL_GEM_NOT_CALIBRATED;
+	bool enable_pitch_correction = false;
+	u32 inertial_counter = 0;
 
 	std::array<gem_controller, CELL_GEM_MAX_NUM> controllers;
-	u32 connected_controllers;
+	u32 connected_controllers = 0;
+	bool update_started{};
+	u32 camera_frame{};
+	u32 memory_ptr{};
+
+	shared_mutex mtx;
 
 	Timer timer;
 
@@ -117,33 +118,20 @@ struct gem_config
 	{
 		switch (g_cfg.io.move)
 		{
-		default:
-		case move_handler::null:
-		{
-			connected_controllers = 0;
-
-			controllers[gem_num].status = CELL_GEM_STATUS_DISCONNECTED;
-			controllers[gem_num].port = 0;
-			break;
-		}
-
 		case move_handler::fake:
+		case move_handler::mouse:
 		{
-			// fake one connected controller
 			connected_controllers = 1;
-
-			if (gem_num < connected_controllers)
-			{
-				controllers[gem_num].status = CELL_GEM_STATUS_READY;
-				controllers[gem_num].port = 7u - gem_num;
-			}
-			else
-			{
-				controllers[gem_num].status = CELL_GEM_STATUS_DISCONNECTED;
-				controllers[gem_num].port = 0;
-			}
 			break;
 		}
+		default: break;
+		}
+
+		// Assign status and port number
+		if (gem_num < connected_controllers)
+		{
+			controllers[gem_num].status = CELL_GEM_STATUS_READY;
+			controllers[gem_num].port = 7u - gem_num;
 		}
 	}
 };
@@ -161,6 +149,7 @@ void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
 		{
 		case move_handler::null: return "Null";
 		case move_handler::fake: return "Fake";
+		case move_handler::mouse: return "Mouse";
 		}
 
 		return unknown;
@@ -185,9 +174,9 @@ static bool check_gem_num(const u32 gem_num)
  * \param analog_t Analog value of Move's Trigger. Currently mapped to R2.
  * \return true on success, false if port_no controller is invalid
  */
-static bool map_to_ds3_input(const u32 port_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
+static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
 {
-	std::lock_guard lock(pad::g_pad_mutex);
+	std::scoped_lock lock(pad::g_pad_mutex);
 
 	const auto handler = pad::get_current_handler();
 
@@ -201,7 +190,7 @@ static bool map_to_ds3_input(const u32 port_no, be_t<u16>& digital_buttons, be_t
 
 	for (Button& button : pad->m_buttons)
 	{
-		//here we check btns, and set pad accordingly,
+		// here we check btns, and set pad accordingly
 		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
 		{
 			if (button.m_pressed) pad->m_digital_2 |= button.m_outKeyCode;
@@ -236,16 +225,9 @@ static bool map_to_ds3_input(const u32 port_no, be_t<u16>& digital_buttons, be_t
 			default: break;
 			}
 		}
-
-		if (button.m_flush)
-		{
-			button.m_pressed = false;
-			button.m_flush = false;
-			button.m_value = 0;
-		}
 	}
 
-	memset(&digital_buttons, 0, sizeof(digital_buttons));
+	digital_buttons = 0;
 
 	// map the Move key to R1 and the Trigger to R2
 
@@ -274,15 +256,15 @@ static bool map_to_ds3_input(const u32 port_no, be_t<u16>& digital_buttons, be_t
 
 /**
  * \brief Maps external Move controller data to DS3 input
- *	      Implementation detail: CellGemExtPortData's digital/analog fields map the same way as
- *	      libPad, so no translation is needed.
+ *        Implementation detail: CellGemExtPortData's digital/analog fields map the same way as
+ *        libPad, so no translation is needed.
  * \param port_no DS3 port number to use
  * \param ext External data to modify
  * \return true on success, false if port_no controller is invalid
  */
-static bool map_ext_to_ds3_input(const u32 port_no, CellGemExtPortData& ext)
+static bool ds3_input_to_ext(const u32 port_no, CellGemExtPortData& ext)
 {
-	std::lock_guard lock(pad::g_pad_mutex);
+	std::scoped_lock lock(pad::g_pad_mutex);
 
 	const auto handler = pad::get_current_handler();
 
@@ -306,6 +288,117 @@ static bool map_ext_to_ds3_input(const u32 port_no, CellGemExtPortData& ext)
 	return true;
 }
 
+/**
+ * \brief Maps Move controller data (digital buttons, and analog Trigger data) to mouse input.
+ *        Move Button: Mouse1
+ *        Trigger:     Mouse2
+ * \param mouse_no Mouse index number to use
+ * \param digital_buttons Bitmask filled with CELL_GEM_CTRL_* values
+ * \param analog_t Analog value of Move's Trigger.
+ * \return true on success, false if mouse mouse_no is invalid
+ */
+static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
+{
+	const auto handler = g_fxo->get<MouseHandlerBase>();
+
+	std::scoped_lock lock(handler->mutex);
+
+	if (!handler || mouse_no >= handler->GetMice().size())
+	{
+		return false;
+	}
+
+	const auto& mouse_data = handler->GetMice().at(0);
+
+	digital_buttons = 0;
+
+	if ((mouse_data.buttons & CELL_MOUSE_BUTTON_1) && (mouse_data.buttons & CELL_MOUSE_BUTTON_2))
+		digital_buttons |= CELL_GEM_CTRL_CIRCLE;
+	if (mouse_data.buttons & CELL_MOUSE_BUTTON_3)
+		digital_buttons |= CELL_GEM_CTRL_CROSS;
+	if (mouse_data.buttons & CELL_MOUSE_BUTTON_2)
+		digital_buttons |= CELL_GEM_CTRL_MOVE;
+	if ((mouse_data.buttons & CELL_MOUSE_BUTTON_1) && (mouse_data.buttons & CELL_MOUSE_BUTTON_3))
+		digital_buttons |= CELL_GEM_CTRL_START;
+	if (mouse_data.buttons & CELL_MOUSE_BUTTON_1)
+		digital_buttons |= CELL_GEM_CTRL_T;
+	if ((mouse_data.buttons & CELL_MOUSE_BUTTON_2) && (mouse_data.buttons & CELL_MOUSE_BUTTON_3))
+		digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
+
+	analog_t = mouse_data.buttons & (CELL_MOUSE_BUTTON_1 ? 0xFFFF : 0);
+
+	return true;
+}
+
+static bool mouse_pos_to_gem_image_state(const u32 mouse_no, vm::ptr<CellGemImageState>& gem_image_state)
+{
+	const auto handler = g_fxo->get<MouseHandlerBase>();
+
+	std::scoped_lock lock(handler->mutex);
+
+	if (!gem_image_state || !handler || mouse_no >= handler->GetMice().size())
+	{
+		return false;
+	}
+
+	const auto& mouse = handler->GetMice().at(0);
+
+	const auto renderer = static_cast<GSRender*>(rsx::get_current_renderer());
+	const auto width = renderer->get_frame()->client_width();
+	const auto hight = renderer->get_frame()->client_height();
+	const f32 scaling_width = width / 640.f;
+	const f32 scaling_hight = hight / 480.f;
+
+	const f32 x = static_cast<f32>(mouse.x_pos) / scaling_width;
+	const f32 y = static_cast<f32>(mouse.y_pos) / scaling_hight;
+
+	gem_image_state->u = 133.f + (x / 1.50f);
+	gem_image_state->v = 160.f + (y / 1.67f);
+	gem_image_state->projectionx = x - 320.f;
+	gem_image_state->projectiony = 240.f - y;
+
+	return true;
+}
+
+static bool mouse_pos_to_gem_state(const u32 mouse_no, vm::ptr<CellGemState>& gem_state)
+{
+	const auto handler = g_fxo->get<MouseHandlerBase>();
+
+	std::scoped_lock lock(handler->mutex);
+
+	if (!gem_state || !handler || mouse_no >= handler->GetMice().size())
+	{
+		return false;
+	}
+
+	const auto& mouse = handler->GetMice().at(0);
+
+	const auto renderer = static_cast<GSRender*>(rsx::get_current_renderer());
+	const auto width = renderer->get_frame()->client_width();
+	const auto hight = renderer->get_frame()->client_height();
+
+	const f32 scaling_width = width / 640.f;
+	const f32 scaling_hight = hight / 480.f;
+	const f32 x = static_cast<f32>(mouse.x_pos) / scaling_width;
+	const f32 y = static_cast<f32>(mouse.y_pos) / scaling_hight;
+
+	gem_state->pos[0] = x;
+	gem_state->pos[1] = -y;
+	gem_state->pos[2] = 1500.f;
+	gem_state->pos[3] = 0.f;
+
+	gem_state->quat[0] = 320.f - x;
+	gem_state->quat[1] = (mouse.y_pos / scaling_width) - 180.f;
+	gem_state->quat[2] = 1200.f;
+
+	gem_state->handle_pos[0] = x;
+	gem_state->handle_pos[1] = y;
+	gem_state->handle_pos[2] = 1500.f;
+	gem_state->handle_pos[3] = 0.f;
+
+	return true;
+}
+
 // *********************
 // * cellGem functions *
 // *********************
@@ -315,6 +408,8 @@ error_code cellGemCalibrate(u32 gem_num)
 	cellGem.todo("cellGemCalibrate(gem_num=%d)", gem_num);
 
 	const auto gem = g_fxo->get<gem_config>();
+
+	std::scoped_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -326,9 +421,11 @@ error_code cellGemCalibrate(u32 gem_num)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (g_cfg.io.move == move_handler::fake)
+	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
 		gem->controllers[gem_num].calibrated_magnetometer = true;
+		gem->controllers[gem_num].enabled_tracking = true;
+		gem->controllers[gem_num].hue = 1;
 		gem->status_flags = CELL_GEM_FLAG_CALIBRATION_OCCURRED | CELL_GEM_FLAG_CALIBRATION_SUCCEEDED;
 	}
 
@@ -340,6 +437,8 @@ error_code cellGemClearStatusFlags(u32 gem_num, u64 mask)
 	cellGem.todo("cellGemClearStatusFlags(gem_num=%d, mask=0x%x)", gem_num, mask);
 
 	const auto gem = g_fxo->get<gem_config>();
+
+	std::scoped_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -390,6 +489,8 @@ error_code cellGemEnableCameraPitchAngleCorrection(u32 enable_flag)
 
 	const auto gem = g_fxo->get<gem_config>();
 
+	std::scoped_lock lock(gem->mtx);
+
 	if (!gem->state)
 	{
 		return CELL_GEM_ERROR_UNINITIALIZED;
@@ -405,6 +506,8 @@ error_code cellGemEnableMagnetometer(u32 gem_num, u32 enable)
 	cellGem.todo("cellGemEnableMagnetometer(gem_num=%d, enable=0x%x)", gem_num, enable);
 
 	const auto gem = g_fxo->get<gem_config>();
+
+	std::scoped_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -433,12 +536,19 @@ error_code cellGemEnd()
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	if (!gem->state.compare_and_swap_test(1, 0))
+	std::scoped_lock lock(gem->mtx);
+
+	if (gem->state.compare_and_swap_test(1, 0))
 	{
-		return CELL_GEM_ERROR_UNINITIALIZED;
+		if (u32 addr = gem->memory_ptr)
+		{
+			sys_memory_free(addr);
+		}
+
+		return CELL_OK;
 	}
 
-	return CELL_OK;
+	return CELL_GEM_ERROR_UNINITIALIZED;
 }
 
 error_code cellGemFilterState(u32 gem_num, u32 enable)
@@ -446,6 +556,8 @@ error_code cellGemFilterState(u32 gem_num, u32 enable)
 	cellGem.warning("cellGemFilterState(gem_num=%d, enable=%d)", gem_num, enable);
 
 	const auto gem = g_fxo->get<gem_config>();
+
+	std::scoped_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -467,6 +579,8 @@ error_code cellGemForceRGB(u32 gem_num, float r, float g, float b)
 	cellGem.todo("cellGemForceRGB(gem_num=%d, r=%f, g=%f, b=%f)", gem_num, r, g, b);
 
 	const auto gem = g_fxo->get<gem_config>();
+
+	std::scoped_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -524,7 +638,7 @@ error_code cellGemGetCameraState(vm::ptr<CellGemCameraState> camera_state)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	camera_state->exposure_time = 1.0f / 60.0f;	// TODO: use correct framerate
+	camera_state->exposure_time = 1.0f / 60.0f; // TODO: use correct framerate
 	camera_state->gain = 1.0;
 
 	return CELL_OK;
@@ -573,9 +687,9 @@ error_code cellGemGetHuePixels(vm::cptr<void> camera_frame, u32 hue, vm::ptr<u8>
 	return CELL_OK;
 }
 
-error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_state)
+error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_image_state)
 {
-	cellGem.todo("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, image_state);
+	cellGem.todo("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, gem_image_state);
 
 	const auto gem = g_fxo->get<gem_config>();
 
@@ -584,26 +698,31 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_st
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!check_gem_num(gem_num) || !image_state)
+	if (!check_gem_num(gem_num) || !gem_image_state)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
+	auto shared_data = g_fxo->get<gem_camera_shared>();
+
 	if (g_cfg.io.move == move_handler::fake)
 	{
-		auto shared_data = g_fxo->get<gem_camera_shared>();
+		gem_image_state->u = 0;
+		gem_image_state->v = 0;
+		gem_image_state->projectionx = 1;
+		gem_image_state->projectiony = 1;
+	}
+	else if (g_cfg.io.move == move_handler::mouse)
+		mouse_pos_to_gem_image_state(gem_num, gem_image_state);
 
-		image_state->frame_timestamp = shared_data->frame_timestamp.load();
-		image_state->timestamp = image_state->frame_timestamp + 10;   // arbitrarily define 10 usecs of frame processing
-		image_state->visible = true;
-		image_state->u = 0;
-		image_state->v = 0;
-		image_state->r = 20;
-		image_state->r_valid = true;
-		image_state->distance = 2 * 1000;   // 2 meters away from camera
-		// TODO
-		image_state->projectionx = 1;
-		image_state->projectiony = 1;
+	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
+	{
+		gem_image_state->frame_timestamp = shared_data->frame_timestamp.load();
+		gem_image_state->timestamp = gem_image_state->frame_timestamp + 10;
+		gem_image_state->r = 10;
+		gem_image_state->distance = 2 * 1000; // 2 meters away from camera
+		gem_image_state->visible = true;
+		gem_image_state->r_valid = true;
 	}
 
 	return CELL_OK;
@@ -611,9 +730,11 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_st
 
 error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, vm::ptr<CellGemInertialState> inertial_state)
 {
-	cellGem.todo("cellGemGetInertialState(gem_num=%d, state_flag=%d, timestamp=0x%x, inertial_state=0x%x)", gem_num, state_flag, timestamp, inertial_state);
+	cellGem.warning("cellGemGetInertialState(gem_num=%d, state_flag=%d, timestamp=0x%x, inertial_state=0x%x)", gem_num, state_flag, timestamp, inertial_state);
 
 	const auto gem = g_fxo->get<gem_config>();
+
+	std::scoped_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -626,14 +747,16 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 	}
 
 	if (g_cfg.io.move == move_handler::fake)
+		ds3_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+	else if (g_cfg.io.move == move_handler::mouse)
+		mouse_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+
+	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
-		map_to_ds3_input(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
-		map_ext_to_ds3_input(gem_num, inertial_state->ext);
+		ds3_input_to_ext(gem_num, inertial_state->ext);
 
 		inertial_state->timestamp = gem->timer.GetElapsedTimeInMicroSec();
-
 		inertial_state->counter = gem->inertial_counter++;
-
 		inertial_state->accelerometer[0] = 10;
 	}
 
@@ -642,9 +765,11 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 
 error_code cellGemGetInfo(vm::ptr<CellGemInfo> info)
 {
-	cellGem.todo("cellGemGetInfo(info=*0x%x)", info);
+	cellGem.warning("cellGemGetInfo(info=*0x%x)", info);
 
 	const auto gem = g_fxo->get<gem_config>();
+
+	std::shared_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -669,6 +794,11 @@ error_code cellGemGetInfo(vm::ptr<CellGemInfo> info)
 	return CELL_OK;
 }
 
+u32 GemGetMemorySize(s32 max_connect)
+{
+	return max_connect <= 2 ? 0x120000 : 0x140000;
+}
+
 error_code cellGemGetMemorySize(s32 max_connect)
 {
 	cellGem.warning("cellGemGetMemorySize(max_connect=%d)", max_connect);
@@ -678,7 +808,7 @@ error_code cellGemGetMemorySize(s32 max_connect)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	return not_an_error(max_connect <= 2 ? 0x120000 : 0x140000);
+	return not_an_error(GemGetMemorySize(max_connect));
 }
 
 error_code cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::ptr<float> b)
@@ -687,12 +817,14 @@ error_code cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::pt
 
 	const auto gem = g_fxo->get<gem_config>();
 
+	std::shared_lock lock(gem->mtx);
+
 	if (!gem->state)
 	{
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!check_gem_num(gem_num) | !r || !g || !b )
+	if (!check_gem_num(gem_num) || !r || !g || !b)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -711,6 +843,8 @@ error_code cellGemGetRumble(u32 gem_num, vm::ptr<u8> rumble)
 
 	const auto gem = g_fxo->get<gem_config>();
 
+	std::shared_lock lock(gem->mtx);
+
 	if (!gem->state)
 	{
 		return CELL_GEM_ERROR_UNINITIALIZED;
@@ -728,9 +862,11 @@ error_code cellGemGetRumble(u32 gem_num, vm::ptr<u8> rumble)
 
 error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<CellGemState> gem_state)
 {
-	cellGem.todo("cellGemGetState(gem_num=%d, flag=0x%x, time=0x%llx, gem_state=*0x%x)", gem_num, flag, time_parameter, gem_state);
+	cellGem.warning("cellGemGetState(gem_num=%d, flag=0x%x, time=0x%llx, gem_state=*0x%x)", gem_num, flag, time_parameter, gem_state);
 
 	const auto gem = g_fxo->get<gem_config>();
+
+	std::shared_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -743,14 +879,21 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 	}
 
 	if (g_cfg.io.move == move_handler::fake)
+		ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+	else if (g_cfg.io.move == move_handler::mouse)
 	{
-		map_to_ds3_input(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
-		map_ext_to_ds3_input(gem_num, gem_state->ext);
+		mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+		mouse_pos_to_gem_state(gem_num, gem_state);
+	}
+
+	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
+	{
+		ds3_input_to_ext(gem_num, gem_state->ext);
 
 		gem_state->tracking_flags = CELL_GEM_TRACKING_FLAG_POSITION_TRACKED | CELL_GEM_TRACKING_FLAG_VISIBLE;
 		gem_state->timestamp = gem->timer.GetElapsedTimeInMicroSec();
+		gem_state->quat[3] = 1.f;
 
-		gem_state->quat[3] = 1.0;
 		return CELL_OK;
 	}
 
@@ -762,6 +905,8 @@ error_code cellGemGetStatusFlags(u32 gem_num, vm::ptr<u64> flags)
 	cellGem.todo("cellGemGetStatusFlags(gem_num=%d, flags=*0x%x)", gem_num, flags);
 
 	const auto gem = g_fxo->get<gem_config>();
+
+	std::shared_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -783,6 +928,8 @@ error_code cellGemGetTrackerHue(u32 gem_num, vm::ptr<u32> hue)
 	cellGem.warning("cellGemGetTrackerHue(gem_num=%d, hue=*0x%x)", gem_num, hue);
 
 	const auto gem = g_fxo->get<gem_config>();
+
+	std::shared_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -826,19 +973,49 @@ error_code cellGemInit(vm::cptr<CellGemAttribute> attribute)
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	if (!attribute || !attribute->spurs_addr || attribute->max_connect > CELL_GEM_MAX_NUM)
+	if (!attribute || !attribute->spurs_addr || !attribute->max_connect || attribute->max_connect > CELL_GEM_MAX_NUM)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
+
+	std::scoped_lock lock(gem->mtx);
 
 	if (!gem->state.compare_and_swap_test(0, 1))
 	{
 		return CELL_GEM_ERROR_ALREADY_INITIALIZED;
 	}
 
+	if (!attribute->memory_ptr)
+	{
+		vm::var<u32> addr(0);
+
+		// Decrease memory stats
+		if (sys_memory_allocate(GemGetMemorySize(attribute->max_connect), SYS_MEMORY_PAGE_SIZE_64K, +addr) != CELL_OK)
+		{
+			return CELL_GEM_ERROR_RESOURCE_ALLOCATION_FAILED;
+		}
+
+		gem->memory_ptr = *addr;
+	}
+	else
+	{
+		gem->memory_ptr = 0;
+	}
+
+	gem->update_started = false;
+	gem->camera_frame = 0;
+	gem->status_flags = 0;
 	gem->attribute = *attribute;
 
-	for (auto gem_num = 0; gem_num < CELL_GEM_MAX_NUM; gem_num++)
+	if (g_cfg.io.move == move_handler::mouse)
+	{
+		// init mouse handler
+		const auto handler = g_fxo->get<MouseHandlerBase>();
+
+		handler->Init(std::min<u32>(attribute->max_connect, CELL_GEM_MAX_NUM));
+	}
+
+	for (int gem_num = 0; gem_num < CELL_GEM_MAX_NUM; gem_num++)
 	{
 		gem->reset_controller(gem_num);
 	}
@@ -855,6 +1032,8 @@ error_code cellGemInvalidateCalibration(s32 gem_num)
 
 	const auto gem = g_fxo->get<gem_config>();
 
+	std::scoped_lock lock(gem->mtx);
+
 	if (!gem->state)
 	{
 		return CELL_GEM_ERROR_UNINITIALIZED;
@@ -865,7 +1044,7 @@ error_code cellGemInvalidateCalibration(s32 gem_num)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (g_cfg.io.move == move_handler::fake)
+	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
 		gem->controllers[gem_num].calibrated_magnetometer = false;
 		// TODO: gem->status_flags
@@ -1000,6 +1179,8 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 
 	const auto gem = g_fxo->get<gem_config>();
 
+	std::scoped_lock lock(gem->mtx);
+
 	if (!gem->state)
 	{
 		return CELL_GEM_ERROR_UNINITIALIZED;
@@ -1027,6 +1208,8 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 
 	const auto gem = g_fxo->get<gem_config>();
 
+	std::scoped_lock lock(gem->mtx);
+
 	if (!gem->state)
 	{
 		return CELL_GEM_ERROR_UNINITIALIZED;
@@ -1039,11 +1222,11 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 
 	for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
 	{
-		if (req_hues[i] == CELL_GEM_DONT_CARE_HUE)
+		if (req_hues[i] == u32{CELL_GEM_DONT_CARE_HUE})
 		{
 
 		}
-		else if (req_hues[i] == CELL_GEM_DONT_TRACK_HUE)
+		else if (req_hues[i] == u32{CELL_GEM_DONT_TRACK_HUE})
 		{
 			gem->controllers[i].enabled_tracking = false;
 			gem->controllers[i].enabled_LED = false;
@@ -1062,13 +1245,25 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 
 error_code cellGemUpdateFinish()
 {
-	cellGem.todo("cellGemUpdateFinish()");
+	cellGem.warning("cellGemUpdateFinish()");
 
 	const auto gem = g_fxo->get<gem_config>();
 
 	if (!gem->state)
 	{
 		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	std::scoped_lock lock(gem->mtx);
+
+	if (!std::exchange(gem->update_started, false))
+	{
+		return CELL_GEM_ERROR_UPDATE_NOT_STARTED;
+	}
+
+	if (!gem->camera_frame)
+	{
+		return not_an_error(CELL_GEM_NO_VIDEO);
 	}
 
 	return CELL_OK;
@@ -1076,7 +1271,7 @@ error_code cellGemUpdateFinish()
 
 error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 {
-	cellGem.todo("cellGemUpdateStart(camera_frame=*0x%x, timestamp=%d)", camera_frame, timestamp);
+	cellGem.warning("cellGemUpdateStart(camera_frame=*0x%x, timestamp=%d)", camera_frame, timestamp);
 
 	const auto gem = g_fxo->get<gem_config>();
 
@@ -1085,9 +1280,18 @@ error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
+	std::scoped_lock lock(gem->mtx);
+
+	// Update is starting even when camera_frame is null
+	if (std::exchange(gem->update_started, true))
+	{
+		return CELL_GEM_ERROR_UPDATE_NOT_FINISHED;
+	}
+
+	gem->camera_frame = camera_frame.addr();
 	if (!camera_frame)
 	{
-		return CELL_GEM_ERROR_INVALID_PARAMETER;
+		return not_an_error(CELL_GEM_NO_VIDEO);
 	}
 
 	return CELL_OK;

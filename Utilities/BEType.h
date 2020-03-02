@@ -1,7 +1,14 @@
 #pragma once
 
 #include "types.h"
+#include "util/endian.hpp"
 #include <cstring>
+
+#if __has_include(<bit>)
+#include <bit>
+#else
+#include <type_traits>
+#endif
 
 // 128-bit vector type and also se_storage<> storage type
 union alignas(16) v128
@@ -25,12 +32,10 @@ union alignas(16) v128
 		}
 	};
 
-#if IS_LE_MACHINE == 1
 	template <typename T, std::size_t N = 16 / sizeof(T)>
-	using normal_array_t = masked_array_t<T, N, 0>;
+	using normal_array_t = masked_array_t<T, N, std::endian::little == std::endian::native ? 0 : N - 1>;
 	template <typename T, std::size_t N = 16 / sizeof(T)>
-	using reversed_array_t = masked_array_t<T, N, N - 1>;
-#endif
+	using reversed_array_t = masked_array_t<T, N, std::endian::little == std::endian::native ? N - 1 : 0>;
 
 	normal_array_t<u64> _u64;
 	normal_array_t<s64> _s64;
@@ -113,17 +118,27 @@ union alignas(16) v128
 		// Index 0 returns the MSB and index 127 returns the LSB
 		bit_element operator[](u32 index)
 		{
-#if IS_LE_MACHINE == 1
-			return bit_element(m_data[1 - (index >> 6)], 0x8000000000000000ull >> (index & 0x3F));
-#endif
+			if constexpr (std::endian::little == std::endian::native)
+			{
+				return bit_element(m_data[1 - (index >> 6)], 0x8000000000000000ull >> (index & 0x3F));
+			}
+			else
+			{
+				return bit_element(m_data[index >> 6], 0x8000000000000000ull >> (index & 0x3F));
+			}
 		}
 
 		// Index 0 returns the MSB and index 127 returns the LSB
 		bool operator[](u32 index) const
 		{
-#if IS_LE_MACHINE == 1
-			return (m_data[1 - (index >> 6)] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
-#endif
+			if constexpr (std::endian::little == std::endian::native)
+			{
+				return (m_data[1 - (index >> 6)] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
+			}
+			else
+			{
+				return (m_data[index >> 6] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
+			}
 		}
 	} _bit;
 
@@ -332,345 +347,17 @@ inline v128 operator~(const v128& other)
 	return v128::from64(~other._u64[0], ~other._u64[1]);
 }
 
-template <typename T, std::size_t Align, std::size_t Size>
-struct se_storage
-{
-	struct type
-	{
-		alignas(Align) std::byte data[Size];
-	};
-
-	// Unoptimized generic byteswap for unaligned data
-	static void reverse(u8* dst, const u8* src)
-	{
-		for (std::size_t i = 0; i < Size; i++)
-		{
-			dst[i] = src[Size - 1 - i];
-		}
-	}
-
-	static type to(const T& src)
-	{
-		type result;
-		reverse(reinterpret_cast<u8*>(&result), reinterpret_cast<const u8*>(&src));
-		return result;
-	}
-
-	static T from(const type& src)
-	{
-		T result;
-		reverse(reinterpret_cast<u8*>(&result), reinterpret_cast<const u8*>(&src));
-		return result;
-	}
-};
-
-template <typename T>
-struct se_storage<T, 2, 2>
-{
-	using type = u16;
-
-	static constexpr u16 swap(u16 src)
-	{
-#if defined(__GNUG__)
-		return __builtin_bswap16(src);
-#else
-		return _byteswap_ushort(src);
-#endif
-	}
-
-	static inline u16 to(const T& src)
-	{
-		return swap(std::bit_cast<u16>(src));
-	}
-
-	static inline T from(u16 src)
-	{
-		return std::bit_cast<T, u16>(swap(src));
-	}
-};
-
-template <typename T>
-struct se_storage<T, 4, 4>
-{
-	using type = u32;
-
-	static constexpr u32 swap(u32 src)
-	{
-#if defined(__GNUG__)
-		return __builtin_bswap32(src);
-#else
-		return _byteswap_ulong(src);
-#endif
-	}
-
-	static inline u32 to(const T& src)
-	{
-		return swap(std::bit_cast<u32>(src));
-	}
-
-	static inline T from(u32 src)
-	{
-		return std::bit_cast<T, u32>(swap(src));
-	}
-};
-
-template <typename T>
-struct se_storage<T, 8, 8>
-{
-	using type = u64;
-
-	static constexpr u64 swap(u64 src)
-	{
-#if defined(__GNUG__)
-		return __builtin_bswap64(src);
-#else
-		return _byteswap_uint64(src);
-#endif
-	}
-
-	static inline u64 to(const T& src)
-	{
-		return swap(std::bit_cast<u64>(src));
-	}
-
-	static inline T from(u64 src)
-	{
-		return std::bit_cast<T, u64>(swap(src));
-	}
-};
-
-template <typename T>
-struct se_storage<T, 16, 16>
-{
-	using type = v128;
-
-	static inline v128 swap(const v128& src)
-	{
-		return v128::from64(se_storage<u64>::swap(src._u64[1]), se_storage<u64>::swap(src._u64[0]));
-	}
-
-	static inline v128 to(const T& src)
-	{
-		return swap(std::bit_cast<v128>(src));
-	}
-
-	static inline T from(const v128& src)
-	{
-		return std::bit_cast<T, v128>(swap(src));
-	}
-};
-
-// Switched endianness
-template <typename T, std::size_t Align>
-class se_t<T, true, Align>
-{
-	using type = typename std::remove_cv<T>::type;
-	using stype = typename se_storage<type, Align>::type;
-	using storage = se_storage<type, Align>;
-
-	stype m_data;
-
-	static_assert(!std::is_pointer<type>::value, "se_t<> error: invalid type (pointer)");
-	static_assert(!std::is_reference<type>::value, "se_t<> error: invalid type (reference)");
-	static_assert(!std::is_array<type>::value, "se_t<> error: invalid type (array)");
-	static_assert(sizeof(type) == alignof(type), "se_t<> error: unexpected alignment");
-
-public:
-	se_t() = default;
-
-	se_t(const se_t& right) = default;
-
-	se_t(type value)
-		: m_data(storage::to(value))
-	{
-	}
-
-	type value() const
-	{
-		return storage::from(m_data);
-	}
-
-	stype& raw()
-	{
-		return m_data;
-	}
-
-	se_t& operator=(const se_t&) = default;
-
-	se_t& operator=(type value)
-	{
-		return m_data = storage::to(value), *this;
-	}
-
-	using simple_type = simple_t<T>;
-
-	operator type() const
-	{
-		return storage::from(m_data);
-	}
-};
-
-// Native endianness
-template <typename T, std::size_t Align>
-class se_t<T, false, Align>
-{
-	using type = typename std::remove_cv<T>::type;
-	using stype = typename se_storage<type, Align>::type;
-	using storage = se_storage<type, Align>;
-
-	static_assert(!std::is_pointer<type>::value, "se_t<> error: invalid type (pointer)");
-	static_assert(!std::is_reference<type>::value, "se_t<> error: invalid type (reference)");
-	static_assert(!std::is_array<type>::value, "se_t<> error: invalid type (array)");
-	static_assert(sizeof(type) == alignof(type), "se_t<> error: unexpected alignment");
-
-	stype m_data;
-
-public:
-	se_t() = default;
-
-	se_t(type value)
-		: m_data(std::bit_cast<stype>(value))
-	{
-	}
-
-	type value() const
-	{
-		return std::bit_cast<type>(m_data);
-	}
-
-	stype& raw()
-	{
-		return m_data;
-	}
-
-	se_t& operator=(const se_t& value) = default;
-
-	se_t& operator=(type value)
-	{
-		m_data = std::bit_cast<stype>(value);
-		return *this;
-	}
-
-	using simple_type = simple_t<T>;
-
-	operator type() const
-	{
-		return value();
-	}
-};
+using stx::se_t;
+using stx::se_storage;
 
 // se_t<> with native endianness
 template <typename T, std::size_t Align = alignof(T)>
 using nse_t = se_t<T, false, Align>;
 
-template <typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator+=(se_t<T, Se, Align>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value += right);
-}
-
-template <typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator-=(se_t<T, Se, Align>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value -= right);
-}
-
-template <typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator*=(se_t<T, Se, Align>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value *= right);
-}
-
-template <typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator/=(se_t<T, Se, Align>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value /= right);
-}
-
-template <typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator%=(se_t<T, Se, Align>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value %= right);
-}
-
-template <typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator&=(se_t<T, Se, Align>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value &= right);
-}
-
-template <typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator|=(se_t<T, Se, Align>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value |= right);
-}
-
-template <typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator^=(se_t<T, Se, Align>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value ^= right);
-}
-
-template <typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator<<=(se_t<T, Se, Align>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value <<= right);
-}
-
-template <typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator>>=(se_t<T, Se, Align>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value >>= right);
-}
-
-template <typename T, bool Se, std::size_t Align>
-inline se_t<T, Se, Align> operator++(se_t<T, Se, Align>& left, int)
-{
-	auto value = left.value();
-	auto result = value++;
-	left = value;
-	return result;
-}
-
-template <typename T, bool Se, std::size_t Align>
-inline se_t<T, Se, Align> operator--(se_t<T, Se, Align>& left, int)
-{
-	auto value = left.value();
-	auto result = value--;
-	left = value;
-	return result;
-}
-
-template <typename T, bool Se, std::size_t Align>
-inline se_t<T, Se, Align>& operator++(se_t<T, Se, Align>& right)
-{
-	auto value = right.value();
-	return right = ++value;
-}
-
-template <typename T, bool Se, std::size_t Align>
-inline se_t<T, Se, Align>& operator--(se_t<T, Se, Align>& right)
-{
-	auto value = right.value();
-	return right = --value;
-}
-
-#if IS_LE_MACHINE == 1
 template <typename T, std::size_t Align = alignof(T)>
-using be_t = se_t<T, true, Align>;
+using be_t = se_t<T, std::endian::little == std::endian::native, Align>;
 template <typename T, std::size_t Align = alignof(T)>
-using le_t = se_t<T, false, Align>;
-#endif
+using le_t = se_t<T, std::endian::big == std::endian::native, Align>;
 
 // Type converter: converts native endianness arithmetic/enum types to appropriate se_t<> type
 template <typename T, bool Se, typename = void>
@@ -685,7 +372,7 @@ struct to_se
 	template <typename T2>
 	struct to_se_<T2, std::enable_if_t<std::is_arithmetic<T2>::value || std::is_enum<T2>::value>>
 	{
-		using type = se_t<T2, Se>;
+		using type = std::conditional_t<(sizeof(T2) > 1), se_t<T2, Se>, T2>;
 	};
 
 	// Convert arithmetic and enum types
@@ -708,30 +395,6 @@ template <bool Se>
 struct to_se<s128, Se>
 {
 	using type = se_t<s128, Se>;
-};
-
-template <bool Se>
-struct to_se<bool, Se>
-{
-	using type = bool;
-};
-
-template <bool Se>
-struct to_se<char, Se>
-{
-	using type = char;
-};
-
-template <bool Se>
-struct to_se<u8, Se>
-{
-	using type = u8;
-};
-
-template <bool Se>
-struct to_se<s8, Se>
-{
-	using type = s8;
 };
 
 template <typename T, bool Se>
@@ -763,20 +426,16 @@ struct to_se<T[N], Se>
 };
 
 // BE/LE aliases for to_se<>
-#if IS_LE_MACHINE == 1
 template <typename T>
-using to_be_t = typename to_se<T, true>::type;
+using to_be_t = typename to_se<T, std::endian::little == std::endian::native>::type;
 template <typename T>
-using to_le_t = typename to_se<T, false>::type;
-#endif
+using to_le_t = typename to_se<T, std::endian::big == std::endian::native>::type;
 
 // BE/LE aliases for atomic_t
-#if IS_LE_MACHINE == 1
 template <typename T>
 using atomic_be_t = atomic_t<be_t<T>>;
 template <typename T>
 using atomic_le_t = atomic_t<le_t<T>>;
-#endif
 
 template <typename T, bool Se, std::size_t Align>
 struct fmt_unveil<se_t<T, Se, Align>, void>

@@ -6,16 +6,69 @@
 #include "VKFramebuffer.h"
 #include "VKResolveHelper.h"
 #include "VKResourceManager.h"
+#include "VKDMA.h"
+#include "VKCommandStream.h"
+
 #include "Utilities/mutex.h"
+#include "Utilities/lockless.h"
 
 namespace vk
 {
+	static chip_family_table s_AMD_family_tree = []()
+	{
+		chip_family_table table;
+		table.default_ = chip_class::AMD_gcn_generic;
+
+		// AMD cards. See https://github.com/torvalds/linux/blob/master/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c
+		table.add(0x67C0, 0x67FF, chip_class::AMD_polaris);
+		table.add(0x6FDF, chip_class::AMD_polaris); // RX580 2048SP
+		table.add(0x6980, 0x699F, chip_class::AMD_polaris); // Polaris12
+		table.add(0x694C, 0x694F, chip_class::AMD_vega); // VegaM
+		table.add(0x6860, 0x686F, chip_class::AMD_vega); // VegaPro
+		table.add(0x687F, chip_class::AMD_vega); // Vega56/64
+		table.add(0x69A0, 0x69AF, chip_class::AMD_vega); // Vega12
+		table.add(0x66A0, 0x66AF, chip_class::AMD_vega); // Vega20
+		table.add(0x15DD, chip_class::AMD_vega); // Raven Ridge
+		table.add(0x15D8, chip_class::AMD_vega); // Raven Ridge
+		table.add(0x7310, 0x731F, chip_class::AMD_navi); // Navi10
+		table.add(0x7340, 0x7340, chip_class::AMD_navi); // Navi14
+
+		return table;
+	}();
+
+	static chip_family_table s_NV_family_tree = []()
+	{
+		chip_family_table table;
+		table.default_ = chip_class::NV_generic;
+
+		// NV cards. See https://envytools.readthedocs.io/en/latest/hw/pciid.html
+		// NOTE: Since NV device IDs are linearly incremented per generation, there is no need to carefully check all the ranges
+		table.add(0x1180, 0x11fa, chip_class::NV_kepler); // GK104, 106
+		table.add(0x0FC0, 0x0FFF, chip_class::NV_kepler); // GK107
+		table.add(0x1003, 0x1028, chip_class::NV_kepler); // GK110
+		table.add(0x1280, 0x12BA, chip_class::NV_kepler); // GK208
+		table.add(0x1381, 0x13B0, chip_class::NV_maxwell); // GM107
+		table.add(0x1340, 0x134D, chip_class::NV_maxwell); // GM108
+		table.add(0x13C0, 0x13D9, chip_class::NV_maxwell); // GM204
+		table.add(0x1401, 0x1427, chip_class::NV_maxwell); // GM206
+		table.add(0x15F7, 0x15F9, chip_class::NV_pascal); // GP100 (Tesla P100)
+		table.add(0x1B00, 0x1D80, chip_class::NV_pascal);
+		table.add(0x1D81, 0x1DBA, chip_class::NV_volta);
+		table.add(0x1E02, 0x1F51, chip_class::NV_turing); // RTX 20 series
+		table.add(0x2182, chip_class::NV_turing); // TU116
+		table.add(0x2184, chip_class::NV_turing); // TU116
+		table.add(0x1F82, chip_class::NV_turing); // TU117
+		table.add(0x1F91, chip_class::NV_turing); // TU117
+
+		return table;
+	}();
+
 	const context* g_current_vulkan_ctx = nullptr;
 	const render_device* g_current_renderer;
 
 	std::unique_ptr<image> g_null_texture;
-	std::unique_ptr<image_view> g_null_image_view;
 	std::unique_ptr<buffer> g_scratch_buffer;
+	std::unordered_map<VkImageViewType, std::unique_ptr<image_view>> g_null_image_views;
 	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
 	std::unordered_map<u32, std::unique_ptr<vk::compute_task>> g_compute_tasks;
 
@@ -28,20 +81,19 @@ namespace vk
 
 	VkSampler g_null_sampler = nullptr;
 
-	atomic_t<bool> g_cb_no_interrupt_flag { false };
+	rsx::atomic_bitmask_t<runtime_state, u64> g_runtime_state;
 
 	// Driver compatibility workarounds
 	VkFlags g_heap_compatible_buffer_types = 0;
 	driver_vendor g_driver_vendor = driver_vendor::unknown;
+	chip_class g_chip_class = chip_class::unknown;
 	bool g_drv_no_primitive_restart_flag = false;
 	bool g_drv_sanitize_fp_values = false;
 	bool g_drv_disable_fence_reset = false;
+	bool g_drv_emulate_cond_render = false;
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
-
-	// global submit guard to prevent race condition on queue submit
-	shared_mutex g_submit_mutex;
 
 	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
@@ -74,6 +126,56 @@ namespace vk
 #else
 		std::abort();
 #endif
+	}
+
+	bool data_heap::grow(size_t size)
+	{
+		// Create new heap. All sizes are aligned up by 64M, upto 1GiB
+		const size_t size_limit = 1024 * 0x100000;
+		const size_t aligned_new_size = align(m_size + size, 64 * 0x100000);
+
+		if (aligned_new_size >= size_limit)
+		{
+			// Too large
+			return false;
+		}
+
+		if (shadow)
+		{
+			// Shadowed. Growing this can be messy as it requires double allocation (macOS only)
+			return false;
+		}
+
+		// Wait for DMA activity to end
+		g_fxo->get<rsx::dma_manager>()->sync();
+
+		if (mapped)
+		{
+			// Force reset mapping
+			unmap(true);
+		}
+
+		VkBufferUsageFlags usage = heap->info.usage;
+
+		const auto device = get_current_renderer();
+		const auto& memory_map = device->get_memory_mapping();
+
+		VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		auto memory_index = memory_map.host_visible_coherent;
+
+		// Update heap information and reset the allocator
+		::data_heap::init(aligned_new_size, m_name, m_min_guard_size);
+
+		// Discard old heap and create a new one. Old heap will be garbage collected when no longer needed
+		get_resource_manager()->dispose(heap);
+		heap = std::make_unique<buffer>(*device, aligned_new_size, memory_index, memory_flags, usage, 0);
+
+		if (notify_on_grow)
+		{
+			raise_status_interrupt(vk::heap_changed);
+		}
+
+		return true;
 	}
 
 	memory_type_mapping get_memory_mapping(const vk::physical_device& dev)
@@ -125,6 +227,32 @@ namespace vk
 		return result;
 	}
 
+	pipeline_binding_table get_pipeline_binding_table(const vk::physical_device& dev)
+	{
+		pipeline_binding_table result{};
+
+		// Need to check how many samplers are supported by the driver
+		const auto usable_samplers = std::min(dev.get_limits().maxPerStageDescriptorSampledImages, 32u);
+		result.vertex_textures_first_bind_slot = result.textures_first_bind_slot + usable_samplers;
+		result.total_descriptor_bindings = result.vertex_textures_first_bind_slot + 4;
+		return result;
+	}
+
+	chip_class get_chip_family(uint32_t vendor_id, uint32_t device_id)
+	{
+		if (vendor_id == 0x10DE)
+		{
+			return s_NV_family_tree.find(device_id);
+		}
+
+		if (vendor_id == 0x1002)
+		{
+			return s_AMD_family_tree.find(device_id);
+		}
+
+		return chip_class::unknown;
+	}
+
 	VkAllocationCallbacks default_callbacks()
 	{
 		VkAllocationCallbacks callbacks;
@@ -161,26 +289,32 @@ namespace vk
 		return g_null_sampler;
 	}
 
-	vk::image_view* null_image_view(vk::command_buffer &cmd)
+	vk::image_view* null_image_view(vk::command_buffer &cmd, VkImageViewType type)
 	{
-		if (g_null_image_view)
-			return g_null_image_view.get();
+		if (auto found = g_null_image_views.find(type);
+			found != g_null_image_views.end())
+		{
+			return found->second.get();
+		}
 
-		g_null_texture = std::make_unique<image>(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
+		if (!g_null_texture)
+		{
+			g_null_texture = std::make_unique<image>(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
 
-		g_null_image_view = std::make_unique<image_view>(*g_current_renderer, g_null_texture.get());
+			// Initialize memory to transparent black
+			VkClearColorValue clear_color = {};
+			VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
+			vkCmdClearColorImage(cmd, g_null_texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 
-		// Initialize memory to transparent black
-		VkClearColorValue clear_color = {};
-		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-		change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-		vkCmdClearColorImage(cmd, g_null_texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+			// Prep for shader access
+			change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
+		}
 
-		// Prep for shader access
-		change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
-		return g_null_image_view.get();
+		auto& ret = g_null_image_views[type] = std::make_unique<image_view>(*g_current_renderer, g_null_texture.get(), type);
+		return ret.get();
 	}
 
 	vk::image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height)
@@ -195,7 +329,7 @@ namespace vk
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
 		};
 
-		auto &ptr = g_typeless_textures[(u32)format];
+		auto& ptr = g_typeless_textures[+format];
 		if (!ptr || ptr->width() < requested_width || ptr->height() < requested_height)
 		{
 			if (ptr)
@@ -210,12 +344,20 @@ namespace vk
 		return ptr.get();
 	}
 
-	vk::buffer* get_scratch_buffer()
+	vk::buffer* get_scratch_buffer(u32 min_required_size)
 	{
+		if (g_scratch_buffer && g_scratch_buffer->size() < min_required_size)
+		{
+			// Scratch heap cannot fit requirements. Discard it and allocate a new one.
+			vk::get_resource_manager()->dispose(g_scratch_buffer);
+		}
+
 		if (!g_scratch_buffer)
 		{
-			// 128M disposable scratch memory
-			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, 128 * 0x100000,
+			// Choose optimal size
+			const u64 alloc_size = std::max<u64>(64 * 0x100000, align(min_required_size, 0x100000));
+
+			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, alloc_size,
 				g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0);
 		}
@@ -227,20 +369,10 @@ namespace vk
 	{
 		if (!g_upload_heap.heap)
 		{
-			g_upload_heap.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 64 * 0x100000, "auxilliary upload heap");
+			g_upload_heap.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 64 * 0x100000, "auxilliary upload heap", 0x100000);
 		}
 
 		return &g_upload_heap;
-	}
-
-	void acquire_global_submit_lock()
-	{
-		g_submit_mutex.lock();
-	}
-
-	void release_global_submit_lock()
-	{
-		g_submit_mutex.unlock();
 	}
 
 	void reset_compute_tasks()
@@ -265,10 +397,12 @@ namespace vk
 		vk::clear_renderpass_cache(dev);
 		vk::clear_framebuffer_cache();
 		vk::clear_resolve_helpers();
+		vk::clear_dma_resources();
+		vk::vmm_reset();
 		vk::get_resource_manager()->destroy();
 
 		g_null_texture.reset();
-		g_null_image_view.reset();
+		g_null_image_views.clear();
 		g_scratch_buffer.reset();
 		g_upload_heap.destroy();
 
@@ -313,17 +447,22 @@ namespace vk
 	void set_current_renderer(const vk::render_device &device)
 	{
 		g_current_renderer = &device;
-		g_cb_no_interrupt_flag.store(false);
+		g_runtime_state.clear();
 		g_drv_no_primitive_restart_flag = false;
 		g_drv_sanitize_fp_values = false;
 		g_drv_disable_fence_reset = false;
+		g_drv_emulate_cond_render = (g_cfg.video.relaxed_zcull_sync && !g_current_renderer->get_conditional_render_support());
 		g_num_processed_frames = 0;
 		g_num_total_frames = 0;
-		g_driver_vendor = driver_vendor::unknown;
 		g_heap_compatible_buffer_types = 0;
 
-		const auto gpu_name = g_current_renderer->gpu().get_name();
-		switch (g_driver_vendor = g_current_renderer->gpu().get_driver_vendor())
+		const auto& gpu = g_current_renderer->gpu();
+		const auto gpu_name = gpu.get_name();
+
+		g_driver_vendor = gpu.get_driver_vendor();
+		g_chip_class = gpu.get_chip_class();
+
+		switch (g_driver_vendor)
 		{
 		case driver_vendor::AMD:
 		case driver_vendor::RADV:
@@ -335,10 +474,10 @@ namespace vk
 			break;
 		case driver_vendor::INTEL:
 		default:
-			LOG_WARNING(RSX, "Unsupported device: %s", gpu_name);
+			rsx_log.warning("Unsupported device: %s", gpu_name);
 		}
 
-		LOG_NOTICE(RSX, "Vulkan: Renderer initialized on device '%s'", gpu_name);
+		rsx_log.notice("Vulkan: Renderer initialized on device '%s'", gpu_name);
 
 		{
 			// Buffer memory tests, only useful for portability on macOS
@@ -389,6 +528,11 @@ namespace vk
 		return g_driver_vendor;
 	}
 
+	chip_class get_chip_family()
+	{
+		return g_chip_class;
+	}
+
 	bool emulate_primitive_restart(rsx::primitive_type type)
 	{
 		if (g_drv_no_primitive_restart_flag)
@@ -414,6 +558,11 @@ namespace vk
 	bool fence_reset_disabled()
 	{
 		return g_drv_disable_fence_reset;
+	}
+
+	bool emulate_conditional_rendering()
+	{
+		return g_drv_emulate_cond_render;
 	}
 
 	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask)
@@ -450,6 +599,11 @@ namespace vk
 		barrier.subresourceRange = range;
 
 		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+	}
+
+	void insert_execution_barrier(VkCommandBuffer cmd, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage)
+	{
+		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 0, nullptr);
 	}
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range)
@@ -658,19 +812,34 @@ namespace vk
 		image->current_layout = new_layout;
 	}
 
+	void raise_status_interrupt(runtime_state status)
+	{
+		g_runtime_state |= status;
+	}
+
+	void clear_status_interrupt(runtime_state status)
+	{
+		g_runtime_state.clear(status);
+	}
+
+	bool test_status_interrupt(runtime_state status)
+	{
+		return g_runtime_state & status;
+	}
+
 	void enter_uninterruptible()
 	{
-		g_cb_no_interrupt_flag = true;
+		raise_status_interrupt(runtime_state::uninterruptible);
 	}
 
 	void leave_uninterruptible()
 	{
-		g_cb_no_interrupt_flag = false;
+		clear_status_interrupt(runtime_state::uninterruptible);
 	}
 
 	bool is_uninterruptible()
 	{
-		return g_cb_no_interrupt_flag;
+		return test_status_interrupt(runtime_state::uninterruptible);
 	}
 
 	void advance_completed_frame_counter()
@@ -694,31 +863,30 @@ namespace vk
 		return (g_num_processed_frames > 0)? g_num_processed_frames - 1: 0;
 	}
 
-	void reset_fence(VkFence *pFence)
+	void reset_fence(fence *pFence)
 	{
 		if (g_drv_disable_fence_reset)
 		{
-			vkDestroyFence(*g_current_renderer, *pFence, nullptr);
-
-			VkFenceCreateInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-			CHECK_RESULT(vkCreateFence(*g_current_renderer, &info, nullptr, pFence));
+			delete pFence;
+			pFence = new fence(*g_current_renderer);
 		}
 		else
 		{
-			CHECK_RESULT(vkResetFences(*g_current_renderer, 1, pFence));
+			pFence->reset();
 		}
 	}
 
-	VkResult wait_for_fence(VkFence fence, u64 timeout)
+	VkResult wait_for_fence(fence* pFence, u64 timeout)
 	{
+		pFence->wait_flush();
+
 		if (timeout)
 		{
-			return vkWaitForFences(*g_current_renderer, 1, &fence, VK_FALSE, timeout * 1000ull);
+			return vkWaitForFences(*g_current_renderer, 1, &pFence->handle, VK_FALSE, timeout * 1000ull);
 		}
 		else
 		{
-			while (auto status = vkGetFenceStatus(*g_current_renderer, fence))
+			while (auto status = vkGetFenceStatus(*g_current_renderer, pFence->handle))
 			{
 				switch (status)
 				{
@@ -734,12 +902,12 @@ namespace vk
 		}
 	}
 
-	VkResult wait_for_event(VkEvent event, u64 timeout)
+	VkResult wait_for_event(event* pEvent, u64 timeout)
 	{
 		u64 t = 0;
 		while (true)
 		{
-			switch (const auto status = vkGetEventStatus(*g_current_renderer, event))
+			switch (const auto status = pEvent->status())
 			{
 			case VK_EVENT_SET:
 				return VK_SUCCESS;
@@ -760,7 +928,7 @@ namespace vk
 
 				if ((get_system_time() - t) > timeout)
 				{
-					LOG_ERROR(RSX, "[vulkan] vk::wait_for_event has timed out!");
+					rsx_log.error("[vulkan] vk::wait_for_event has timed out!");
 					return VK_TIMEOUT;
 				}
 			}
@@ -872,7 +1040,7 @@ namespace vk
 		case 0:
 			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s%s", error_message.c_str(), faulting_addr);
 		case 1:
-			LOG_ERROR(RSX, "Vulkan API call has failed with an error but will continue: %s%s", error_message.c_str(), faulting_addr);
+			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message.c_str(), faulting_addr);
 			break;
 		case 2:
 			break;
@@ -887,11 +1055,11 @@ namespace vk
 		{
 			if (strstr(pMsg, "IMAGE_VIEW_TYPE_1D")) return false;
 
-			LOG_ERROR(RSX, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+			rsx_log.error("ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
 		}
 		else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
 		{
-			LOG_WARNING(RSX, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+			rsx_log.warning("WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
 		}
 		else
 		{
