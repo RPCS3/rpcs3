@@ -23,7 +23,7 @@ private:
 	u64 m_expected_size = 0;
 
 private:
-	bool handle_reply(QNetworkReply* reply, std::function<bool(update_manager& man, const QByteArray&, bool)> func, bool automatic, const std::string& message);
+	bool handle_reply(QNetworkReply* reply, const std::function<bool(update_manager& man, const QByteArray&, bool)>& func, bool automatic, const std::string& message);
 	bool handle_json(const QByteArray& json_data, bool automatic);
 	bool handle_rpcs3(const QByteArray& rpcs3_data, bool automatic);
 
