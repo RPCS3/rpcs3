@@ -2745,9 +2745,28 @@ namespace rsx
 				dst_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer, dst_area);
 			}
 
-			if (!use_null_region)
+			if (!use_null_region) [[likely]]
 			{
+				// Do preliminary analysis
 				typeless_info.analyse();
+
+				if (dst_is_render_target && src_is_render_target &&
+					dst_subres.is_depth != src_subres.is_depth) [[unlikely]]
+				{
+					// Rare corner case. Typeless transfer from whatever channel is Z
+					if (!typeless_info.src_is_typeless && !typeless_info.dst_is_typeless)
+					{
+						if (dst_subres.is_depth)
+						{
+							typeless_info.dst_is_typeless = true;
+						}
+						else
+						{
+							typeless_info.src_is_typeless = true;
+						}
+					}
+				}
+
 				blitter.scale_image(cmd, vram_texture, dest_texture, src_area, dst_area, interpolate, typeless_info);
 			}
 			else
