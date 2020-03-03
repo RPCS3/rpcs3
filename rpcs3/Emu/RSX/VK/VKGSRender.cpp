@@ -167,8 +167,8 @@ namespace vk
 		case rsx::blend_factor::one_minus_constant_alpha: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
 		case rsx::blend_factor::one_minus_constant_color: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
 		case rsx::blend_factor::src_alpha_saturate: return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
-		// Disabled because of issue #3357 - default:
-			// Disabled because of issue #3357 - fmt::throw_exception("Unknown blend factor 0x%x" HERE, static_cast<u32>(factor));
+		default:
+			fmt::throw_exception("Unknown blend factor 0x%x" HERE, static_cast<u32>(factor));
 		}
 	}
 
@@ -186,8 +186,8 @@ namespace vk
 		case rsx::blend_equation::reverse_substract: return VK_BLEND_OP_REVERSE_SUBTRACT;
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
 		case rsx::blend_equation::max: return VK_BLEND_OP_MAX;
-		default:
-			fmt::throw_exception("Unknown blend op: 0x%x" HERE, static_cast<u32>(op));
+		// Disabled because of issue #3357 - default:
+			// Disabled because of issue #3357 - fmt::throw_exception("Unknown blend op: 0x%x" HERE, static_cast<u32>(op));
 		}
 	}
 
