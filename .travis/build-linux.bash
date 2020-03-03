@@ -31,5 +31,9 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_LLVM_SUBMODULE=OFF -DUSE_COTIRE=OFF
 ninja; build_status=$?;
 
 cd ..
-# If it compiled succesfully let's deploy
-if [ $build_status -eq 0 ] && [ -n "$GITHUB_TOKEN" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then /bin/bash -ex .travis/deploy-linux.bash ; fi
+
+# If it compiled succesfully let's deploy depending on the build pipeline (Travis, Azure Pipelines)
+# BUILD_REASON is an Azure Pipeline variable, and we want to deploy when using Azure Pipelines
+if [[ $build_status -eq 0 && ( -n "$BUILD_REASON" || ( "$TRAVIS_BRANCH" = "master" && "$TRAVIS_PULL_REQUEST" = false ) ) ]]; then
+	/bin/bash -ex .travis/deploy-linux.bash
+fi

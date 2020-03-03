@@ -36,18 +36,30 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 	COMM_COUNT="$(git rev-list --count HEAD)"
 	curl -sLO https://github.com/hcorion/uploadtool/raw/master/upload.sh
 	
-	mv ./RPCS3*.AppImage rpcs3-v${COMM_TAG}-${COMM_COUNT}-${TRAVIS_COMMIT:0:8}_linux64.AppImage
+	if [[ -n "$BUILD_SOURCEVERSION" ]]; then
+		COMMIT_HASH=$BUILD_SOURCEVERSION
+	elif [[ -n "$TRAVIS_COMMIT" ]]; then
+		COMMIT_HASH=$TRAVIS_COMMIT
+	fi
+	
+	mv ./RPCS3*.AppImage rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMMIT_HASH:0:8}_linux64.AppImage
+	
+	# If we're building using Azure Pipelines, let's copy over the AppImage artifact
+	if [[ -n "$BUILD_ARTIFACTSTAGINGDIRECTORY" ]]; then
+		cp ./rpcs3*.AppImage ~/artifacts
+	fi
 	
 	FILESIZE=($(stat -c %s ./rpcs3*.AppImage))
 	SHA256SUM=($(sha256sum ./rpcs3*.AppImage))
-	
-	unset TRAVIS_REPO_SLUG
-	REPO_SLUG=RPCS3/rpcs3-binaries-linux \
-		UPLOADTOOL_BODY="$SHA256SUM;${FILESIZE}B"\
-		RELEASE_NAME=build-${TRAVIS_COMMIT}\
-		RELEASE_TITLE=${COMM_TAG}-${COMM_COUNT}\
-		REPO_COMMIT=d812f1254a1157c80fd402f94446310560f54e5f\
-		bash upload.sh rpcs3*.AppImage
+	if [ -n "$GITHUB_TOKEN" ]; then
+		unset TRAVIS_REPO_SLUG
+		REPO_SLUG=RPCS3/rpcs3-binaries-linux \
+			UPLOADTOOL_BODY="$SHA256SUM;${FILESIZE}B"\
+			RELEASE_NAME=build-${TRAVIS_COMMIT}\
+			RELEASE_TITLE=${COMM_TAG}-${COMM_COUNT}\
+			REPO_COMMIT=d812f1254a1157c80fd402f94446310560f54e5f\
+			bash upload.sh rpcs3*.AppImage
+	fi
 fi
 if [ "$DEPLOY_PPA" = "true" ]; then
 	export DEBFULLNAME="RPCS3 Build Bot"
