@@ -459,7 +459,7 @@ error_code cellSysutilDisableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraPa
 
 error_code cellSysutilGetBgmPlaybackStatus(vm::ptr<CellSysutilBgmPlaybackStatus> status)
 {
-	cellSysutil.warning("cellSysutilGetBgmPlaybackStatus(status=*0x%x)", status);
+	cellSysutil.trace("cellSysutilGetBgmPlaybackStatus(status=*0x%x)", status);
 
 	// TODO
 	status->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
@@ -473,7 +473,7 @@ error_code cellSysutilGetBgmPlaybackStatus(vm::ptr<CellSysutilBgmPlaybackStatus>
 
 error_code cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus2> status2)
 {
-	cellSysutil.warning("cellSysutilGetBgmPlaybackStatus2(status2=*0x%x)", status2);
+	cellSysutil.trace("cellSysutilGetBgmPlaybackStatus2(status2=*0x%x)", status2);
 
 	// TODO
 	status2->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
