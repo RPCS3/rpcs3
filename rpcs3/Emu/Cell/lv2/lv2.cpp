@@ -1021,7 +1021,7 @@ public:
 	{
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
-			std::this_thread::sleep_for(10s);
+			thread_ctrl::wait_for(10000'000);
 			print_stats();
 		}
 	}
