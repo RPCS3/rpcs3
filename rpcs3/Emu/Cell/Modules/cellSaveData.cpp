@@ -805,7 +805,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				}
 			}
 
-			doneGet->sizeKb = ::narrow<s32>(size_bytes / 1024);
+			doneGet->sizeKB = ::narrow<s32>(size_bytes / 1024);
 
 			if (_dir)
 			{
@@ -1165,7 +1165,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				statGet->fileNum++;
 
-				size_bytes += ::align(entry.size + 1024); // firmware rounds this value up
+				size_bytes += ::align(entry.size, 1024); // firmware rounds this value up
 
 				if (statGet->fileListNum >= setBuf->fileListMax)
 					continue;
