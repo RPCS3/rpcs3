@@ -918,7 +918,7 @@ public:
 	void notifyObjectCompiled(const llvm::Module* module, llvm::MemoryBufferRef obj) override
 	{
 		std::string name = m_path;
-		name.append(module->getName());
+		name.append(module->getName().data());
 		//fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
 		name.append(".gz");
 
@@ -1026,7 +1026,7 @@ public:
 	std::unique_ptr<llvm::MemoryBuffer> getObject(const llvm::Module* module) override
 	{
 		std::string path = m_path;
-		path.append(module->getName());
+		path.append(module->getName().data());
 
 		if (auto buf = load(path))
 		{
@@ -1044,7 +1044,7 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 
 	if (m_cpu.empty())
 	{
-		m_cpu = llvm::sys::getHostCPUName();
+		m_cpu = llvm::sys::getHostCPUName().operator std::string();
 
 		if (m_cpu == "sandybridge" ||
 			m_cpu == "ivybridge" ||

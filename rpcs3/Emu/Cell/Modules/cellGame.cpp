@@ -483,13 +483,14 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		perm->can_create = true;
 	}
 
+	perm->restrict_sfo_params = false;
+
 	if (!fs::is_dir(vfs::get(dir)))
 	{
 		cellGame.warning("cellGameDataCheck(): directory '%s' not found", dir);
 		return not_an_error(CELL_GAME_RET_NONE);
 	}
 
-	perm->restrict_sfo_params = false;
 	perm->sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 	return CELL_OK;
 }

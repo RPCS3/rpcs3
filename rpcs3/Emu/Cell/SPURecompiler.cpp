@@ -4346,7 +4346,7 @@ public:
 				}
 
 				// Load unaligned code block from LS
-				llvm::Value* vls = m_ir->CreateAlignedLoad(_ptr<u32[8]>(data_addr, j - starta), 4);
+				llvm::Value* vls = m_ir->CreateAlignedLoad(_ptr<u32[8]>(data_addr, j - starta), llvm::MaybeAlign{4});
 
 				// Mask if necessary
 				if (holes)
@@ -7381,27 +7381,25 @@ public:
 
 	value_t<f32[4]> fma32x4(value_t<f32[4]> a, value_t<f32[4]> b, value_t<f32[4]> c)
 	{
-		// Compare absolute values with max positive float in normal range.
-		const auto aa = bitcast<s32[4]>(fabs(a));
-		const auto ab = bitcast<s32[4]>(fabs(b));
-		const auto sc = eval(max(aa, ab) > 0x7f7fffff);
+		const auto ma = eval(sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.))));
+		const auto mb = eval(sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.))));
+		const auto ca = eval(bitcast<f32[4]>(bitcast<s32[4]>(a) & mb));
+		const auto cb = eval(bitcast<f32[4]>(bitcast<s32[4]>(b) & ma));
 
 		if (m_use_fma)
 		{
 			value_t<f32[4]> r;
-			r.value = m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), {a.value, b.value, c.value});
-			r.value = m_ir->CreateSelect(sc.value, c.value, r.value);
+			r.value = m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), {ca.value, cb.value, c.value});
 			return r;
 		}
 
 		// Convert to doubles
-		const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
-		const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
+		const auto xa = m_ir->CreateFPExt(ca.value, get_type<f64[4]>());
+		const auto xb = m_ir->CreateFPExt(cb.value, get_type<f64[4]>());
 		const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
 		const auto xr = m_ir->CreateCall(get_intrinsic<f64[4]>(llvm::Intrinsic::fmuladd), {xa, xb, xc});
 		value_t<f32[4]> r;
 		r.value = m_ir->CreateFPTrunc(xr, get_type<f32[4]>());
-		r.value = m_ir->CreateSelect(sc.value, c.value, r.value);
 		return r;
 	}
 
