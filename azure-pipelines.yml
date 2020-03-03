@@ -1,41 +1,40 @@
-variables:
-  COMPILER: clang
-  CCACHE_DIR: $(Pipeline.Workspace)/ccache
-
 trigger:
-- master
-
-pool:
-  vmImage: 'ubuntu-latest'
-
-steps:
-- bash: |
-    sudo apt-get install ccache -y
-    echo "##vso[task.prependpath]/usr/lib/ccache"
-  displayName: Install ccache and update PATH to use linked versions of gcc, cc, etc
-
-- task: CacheBeta@0
-  inputs:
-    key: ccache | $(Agent.OS)
-    path: $(CCACHE_DIR)
-  displayName: ccache
-
-- bash: |
-    docker pull rpcs3/rpcs3-travis-trusty:1.1
-    docker run                      \
-      -v $(pwd):/rpcs3              \
-      -v $CCACHE_DIR:/root/.ccache  \
-      rpcs3/rpcs3-travis-trusty:1.1 \
-      /bin/bash -ex /rpcs3/.travis/build-linux.bash
-  displayName: Fetch and build with Docker
-
-- task: CopyFiles@2
-  inputs:
-    sourceFolder: '$(Build.SourcesDirectory)'
-    contents: 'build/bin/rpcs3'
-    TargetFolder: '$(Pipeline.Workspace)/artifacts'
-
-- task: PublishBuildArtifacts@1
-  inputs:
-    pathtoPublish: '$(Pipeline.Workspace)/artifacts'
-    artifactName: drop
+  branches:
+    include:
+      - master
+  tags:
+    exclude:
+      - '*'
+jobs:
+- job: Linux_Build
+  strategy:
+    matrix:
+      Clang:
+        COMPILER: clang
+      GCC:
+        COMPILER: gcc
+        DEPLOY_APPIMAGE: true
+  variables:
+    COMPILER: clang
+    CCACHE_DIR: $(Pipeline.Workspace)/ccache
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - task: Cache@0
+    inputs:
+      key: ccache | $(Agent.OS) | $(COMPILER)
+      path: $(CCACHE_DIR)
+    displayName: Ccache
+  
+  - bash: |
+      docker pull --quiet rpcs3/rpcs3-travis-xenial:1.2
+      docker run                      \
+        -v $(pwd):/rpcs3              \
+        --env-file .travis/travis.env \
+        -v $CCACHE_DIR:/root/.ccache  \
+        -v $BUILD_ARTIFACTSTAGINGDIRECTORY:/root/artifacts \
+        rpcs3/rpcs3-travis-xenial:1.2 \
+        /bin/bash -ex /rpcs3/.travis/build-linux.bash
+    displayName: Docker setup and build
+    
+  - publish: $(Build.ArtifactStagingDirectory)
