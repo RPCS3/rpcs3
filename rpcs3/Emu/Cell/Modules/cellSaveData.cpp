@@ -788,7 +788,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			strcpy_trunc(doneGet->dirName, save_entries[selected].dirName);
 			doneGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
-			doneGet->sizeKB        = 0;
 			doneGet->excResult     = CELL_OK;
 			std::memset(doneGet->reserved, 0, sizeof(doneGet->reserved));
 
@@ -796,14 +795,17 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			const std::string del_path = base_dir + save_entries[selected].escaped + "/";
 
 			const fs::dir _dir(del_path);
+			u64 size_bytes = 0;
 
 			for (auto&& file : _dir)
 			{
 				if (!file.is_directory)
 				{
-					doneGet->sizeKB += static_cast<s32>(::align(file.size, 4096));
+					size_bytes += ::align(file.size, 1024);
 				}
 			}
+
+			doneGet->sizeKB = ::narrow<s32>(size_bytes / 1024);
 
 			if (_dir)
 			{
@@ -1123,7 +1125,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		auto file_list = statGet->fileList.get_ptr();
 
-		u32 size_kbytes = 0;
+		u64 size_bytes = 0;
 
 		std::vector<fs::dir_entry> files_sorted;
 
@@ -1163,7 +1165,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				statGet->fileNum++;
 
-				size_kbytes += ::narrow<u32>((entry.size + 1023) / 1024); // firmware rounds this value up
+				size_bytes += ::align(entry.size, 1024); // firmware rounds this value up
 
 				if (statGet->fileListNum >= setBuf->fileListMax)
 					continue;
@@ -1206,7 +1208,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 
 		statGet->sysSizeKB = 35; // always reported as 35 regardless of actual file sizes
-		statGet->sizeKB = !save_entry.isNew ? size_kbytes + statGet->sysSizeKB : 0;
+		statGet->sizeKB = !save_entry.isNew ? ::narrow<s32>((size_bytes / 1024) + statGet->sysSizeKB) : 0;
 
 		// Stat Callback
 		funcStat(ppu, result, statGet, statSet);
