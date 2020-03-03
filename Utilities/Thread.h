@@ -231,21 +231,6 @@ public:
 		_wait_for(-1, true);
 	}
 
-	// Wait until pred().
-	template <typename F, typename RT = std::invoke_result_t<F>>
-	static inline RT wait(F&& pred)
-	{
-		while (true)
-		{
-			if (RT result = pred())
-			{
-				return result;
-			}
-
-			_wait_for(-1, true);
-		}
-	}
-
 	// Get current thread (may be nullptr)
 	static thread_base* get_current()
 	{
