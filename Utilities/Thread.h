@@ -100,13 +100,7 @@ class thread_base
 	// Thread handle (platform-specific)
 	atomic_t<std::uintptr_t> m_thread{0};
 
-	// Thread mutex
-	mutable shared_mutex m_mutex;
-
-	// Thread condition variable
-	cond_variable m_cond;
-
-	// Thread flags
+	// Thread playtoy, that shouldn't be used
 	atomic_t<u32> m_signal{0};
 
 	// Thread state

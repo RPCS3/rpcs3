@@ -1921,48 +1921,12 @@ void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 	}
 #endif
 
-	std::unique_lock lock(_this->m_mutex, std::defer_lock);
-
-	while (true)
+	if (_this->m_signal && _this->m_signal.exchange(0))
 	{
-		// Mutex is unlocked at the start and after the waiting
-		if (u32 sig = _this->m_signal.load())
-		{
-			if (sig & 1)
-			{
-				_this->m_signal &= ~1;
-				return;
-			}
-		}
-
-		if (usec == 0)
-		{
-			// No timeout: return immediately
-			return;
-		}
-
-		if (!lock)
-		{
-			lock.lock();
-		}
-
-		// Double-check the value
-		if (u32 sig = _this->m_signal.load())
-		{
-			if (sig & 1)
-			{
-				_this->m_signal &= ~1;
-				return;
-			}
-		}
-
-		_this->m_cond.wait_unlock(usec, lock);
-
-		if (usec < cond_variable::max_timeout)
-		{
-			usec = 0;
-		}
+		return;
 	}
+
+	_this->m_signal.wait(0, atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
 }
 
 std::string thread_ctrl::get_name_cached()
@@ -2012,11 +1976,11 @@ void thread_base::join() const
 
 void thread_base::notify()
 {
-	if (!(m_signal & 1))
+	// Increment with saturation
+	if (m_signal.try_inc())
 	{
-		m_signal |= 1;
-		m_mutex.lock_unlock();
-		m_cond.notify_one();
+		// Considered impossible to have a situation when not notified
+		m_signal.notify_all();
 	}
 }
 
