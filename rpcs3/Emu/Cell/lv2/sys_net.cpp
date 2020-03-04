@@ -1094,7 +1094,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 				ASSERT(packet.size() < len);
 
 				memcpy(buf.get_ptr(), packet.data(), packet.size());
-				native_result = packet.size();
+				native_result = ::narrow<int>(packet.size());
 
 				native_addr.ss_family = AF_INET;
 				(reinterpret_cast<::sockaddr_in*>(&native_addr))->sin_port = std::bit_cast<u16, be_t<u16>>(53); // htons(53)
