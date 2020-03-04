@@ -425,7 +425,7 @@ void spu_cache::initialize()
 		}
 
 		g_progr = "Building SPU cache...";
-		g_progr_ptotal += func_list.size();
+		g_progr_ptotal += ::size32(func_list);
 	}
 
 	named_thread_group workers("SPU Worker ", Emu.GetMaxThreads(), [&]() -> uint
@@ -1498,7 +1498,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 					if (jt_abs.size() >= jt_rel.size())
 					{
-						const u32 new_size = (start - lsa) / 4 + jt_abs.size();
+						const u32 new_size = (start - lsa) / 4 + ::size32(jt_abs);
 
 						if (result.data.size() < new_size)
 						{
@@ -1517,7 +1517,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 					if (jt_rel.size() >= jt_abs.size())
 					{
-						const u32 new_size = (start - lsa) / 4 + jt_rel.size();
+						const u32 new_size = (start - lsa) / 4 + ::size32(jt_rel);
 
 						if (result.data.size() < new_size)
 						{
@@ -1869,7 +1869,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		{
 			m_regmod[pos / 4] = op.rt;
 
-			if (-op.i7 & 0x20)
+			if ((0 - op.i7) & 0x20)
 			{
 				vflags[op.rt] = +vf::is_const;
 				values[op.rt] = 0;
@@ -1877,7 +1877,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			}
 
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
-			values[op.rt] = values[op.ra] >> (-op.i7 & 0x1f);
+			values[op.rt] = values[op.ra] >> ((0 - op.i7) & 0x1f);
 			break;
 		}
 		case spu_itype::SHLI:
@@ -1930,7 +1930,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 	while (lsa > 0 || limit < 0x40000)
 	{
-		const u32 initial_size = result.data.size();
+		const u32 initial_size = ::size32(result.data);
 
 		// Check unreachable blocks
 		limit = std::min<u32>(limit, lsa + initial_size * 4);

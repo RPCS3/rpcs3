@@ -10,6 +10,7 @@
 
 #include "Utilities/StrUtil.h"
 #include "Utilities/lockless.h"
+#include "Utilities/span.h"
 
 LOG_CHANNEL(cellSysutil);
 
@@ -348,8 +349,8 @@ error_code cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> 
 		cellSysutil.error("cellSysutilGetSystemParamString: Unknown ParamId 0x%x", id);
 	}
 
-	std::strncpy(buf.get_ptr(), param_str.c_str(), copy_size - 1);
-	buf[copy_size - 1] = '\0';
+	gsl::span dst(buf.get_ptr(), copy_size);
+	strcpy_trunc(dst, param_str);
 	return CELL_OK;
 }
 

@@ -1207,7 +1207,7 @@ void spursSysServiceTraceUpdate(spu_thread& spu, SpursKernelContext* ctxt, u32 a
 		}
 		else
 		{
-			std::memcpy(vm::base(spu.offset + 0x2C00), vm::base(spurs->traceBuffer.addr() & -0x4), 0x80);
+			std::memcpy(vm::base(spu.offset + 0x2C00), vm::base(vm::cast(spurs->traceBuffer.addr(), HERE) & -0x4), 0x80);
 			auto traceBuffer = vm::_ptr<CellSpursTraceInfo>(spu.offset + 0x2C00);
 			ctxt->traceMsgCount = traceBuffer->count[ctxt->spuNum];
 		}
@@ -1670,7 +1670,7 @@ s32 spursTasketSaveTaskContext(spu_thread& spu)
 		return CELL_SPURS_TASK_ERROR_STAT;
 	}
 
-	u32 allocLsBlocks = taskInfo->context_save_storage_and_alloc_ls_blocks & 0x7F;
+	u32 allocLsBlocks = static_cast<u32>(taskInfo->context_save_storage_and_alloc_ls_blocks & 0x7F);
 	u32 lsBlocks = 0;
 	v128 ls_pattern = v128::from64r(taskInfo->ls_pattern._u64[0], taskInfo->ls_pattern._u64[1]);
 	for (auto i = 0; i < 128; i++)

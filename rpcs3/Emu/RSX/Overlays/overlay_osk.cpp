@@ -494,7 +494,7 @@ namespace rsx
 
 		void osk_dialog::on_mode(const std::u32string&)
 		{
-			const u32 num_modes = std::clamp<u32>(num_layers.size(), 1, layer_mode::mode_count);
+			const u32 num_modes = std::clamp<u32>(::size32(num_layers), 1, layer_mode::mode_count);
 			m_selected_mode = static_cast<layer_mode>((m_selected_mode + 1u) % num_modes);
 			m_update = true;
 		}

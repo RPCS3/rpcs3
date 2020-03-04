@@ -1705,8 +1705,8 @@ static bool SHUFB_(spu_thread& spu, spu_opcode_t op)
 	}
 
 	// Select special values
-	const auto xc0 = _mm_set1_epi8(0xc0);
-	const auto xe0 = _mm_set1_epi8(0xe0);
+	const auto xc0 = _mm_set1_epi8(static_cast<s8>(0xc0));
+	const auto xe0 = _mm_set1_epi8(static_cast<s8>(0xe0));
 	const auto cmp0 = _mm_cmpgt_epi8(_mm_setzero_si128(), c.vi);
 	const auto cmp1 = _mm_cmpeq_epi8(_mm_and_si128(c.vi, xc0), xc0);
 	const auto cmp2 = _mm_cmpeq_epi8(_mm_and_si128(c.vi, xe0), xc0);

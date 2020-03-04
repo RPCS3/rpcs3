@@ -71,7 +71,7 @@ s32 sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<
 	memory_pool->free_blocks.resize(num_blocks);
 	for (u32 i = 0; i < num_blocks; ++i)
 	{
-		memory_pool->free_blocks[i] = vm::ptr<void>::make(chunk.addr() + i * block_size);
+		memory_pool->free_blocks[i] = vm::ptr<void>::make(chunk.addr() + i * static_cast<u32>(block_size));
 	}
 
 	// Create synchronization variables

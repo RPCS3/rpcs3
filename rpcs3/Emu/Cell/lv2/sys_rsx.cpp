@@ -144,7 +144,7 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	*lpar_driver_info = context_base + 0x100000;
 	*lpar_reports = context_base + 0x200000;
 
-	auto &reports = vm::_ref<RsxReports>(*lpar_reports);
+	auto &reports = vm::_ref<RsxReports>(vm::cast(*lpar_reports, HERE));
 	std::memset(&reports, 0, sizeof(RsxReports));
 
 	for (int i = 0; i < 64; ++i)
@@ -164,7 +164,7 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 		reports.report[i].pad = -1;
 	}
 
-	auto &driverInfo = vm::_ref<RsxDriverInfo>(*lpar_driver_info);
+	auto &driverInfo = vm::_ref<RsxDriverInfo>(vm::cast(*lpar_driver_info, HERE));
 
 	std::memset(&driverInfo, 0, sizeof(RsxDriverInfo));
 
@@ -176,12 +176,12 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	driverInfo.reportsNotifyOffset = 0x1000;
 	driverInfo.reportsOffset = 0;
 	driverInfo.reportsReportOffset = 0x1400;
-	driverInfo.systemModeFlags = system_mode;
+	driverInfo.systemModeFlags = static_cast<u32>(system_mode);
 	driverInfo.hardware_channel = 1; // * i think* this 1 for games, 0 for vsh
 
-	rsx_cfg->driver_info = *lpar_driver_info;
+	rsx_cfg->driver_info = vm::cast(*lpar_driver_info, HERE);
 
-	auto &dmaControl = vm::_ref<RsxDmaControl>(*lpar_dma_control);
+	auto &dmaControl = vm::_ref<RsxDmaControl>(vm::cast(*lpar_dma_control, HERE));
 	dmaControl.get = 0;
 	dmaControl.put = 0;
 	dmaControl.ref = 0; // Set later to -1 by cellGcmSys
@@ -204,10 +204,10 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	const auto render = rsx::get_current_renderer();
 	render->display_buffers_count = 0;
 	render->current_display_buffer = 0;
-	render->label_addr = *lpar_reports;
+	render->label_addr = vm::cast(*lpar_reports, HERE);
 	render->device_addr = rsx_cfg->device_addr;
 	render->local_mem_size = rsx_cfg->memory_size;
-	render->init(*lpar_dma_control);
+	render->init(vm::cast(*lpar_dma_control, HERE));
 
 	rsx_cfg->context_base = context_base;
 	*context_id = 0x55555555;
@@ -350,9 +350,9 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	{
 	case 0x001: // FIFO
 		render->pause();
-		render->ctrl->get = a3;
-		render->ctrl->put = a4;
-		render->restore_point = a3;
+		render->ctrl->get = static_cast<u32>(a3);
+		render->ctrl->put = static_cast<u32>(a4);
+		render->restore_point = static_cast<u32>(a3);
 		render->unpause();
 		break;
 
@@ -408,7 +408,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	case 0x103: // Display Queue
 	{
-		driverInfo.head[a3].lastQueuedBufferId = a4;
+		driverInfo.head[a3].lastQueuedBufferId = static_cast<u32>(a4);
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
 
 		// NOTE: There currently seem to only be 2 active heads on PS3
@@ -417,7 +417,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u64 shift_offset = (a3 + 5);
 		sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1ull << shift_offset), 0);
 
-		render->on_frame_end(a4);
+		render->on_frame_end(static_cast<u32>(a4));
 	}
 	break;
 
@@ -465,7 +465,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		}
 
 		u32 flipStatus = driverInfo.head[a3].flipFlags;
-		flipStatus = (flipStatus & a4) | a5;
+		flipStatus = (flipStatus & static_cast<u32>(a4)) | static_cast<u32>(a5);
 		driverInfo.head[a3].flipFlags = flipStatus;
 	}
 	break;
@@ -485,7 +485,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		// When tile is going to be unbinded, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated
 		// Todo: There may be more checks such as format/size/width can could be done
 		if (tile.binded && a5 == 0)
-			render->notify_tile_unbound(a3);
+			render->notify_tile_unbound(static_cast<u32>(a3));
 
 		tile.location = ((a4 >> 32) & 0xF) - 1;
 		tile.offset = ((((a4 >> 32) & 0x7FFFFFFF) >> 16) * 0x10000);
@@ -569,7 +569,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		// 'custom' invalid package id for now
 		// as i think we need custom lv1 interrupts to handle this accurately
 		// this also should probly be set by rsxthread
-		driverInfo.userCmdParam = a4;
+		driverInfo.userCmdParam = static_cast<u32>(a4);
 		sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 7), 0);
 		break;
 
@@ -610,7 +610,8 @@ error_code sys_rsx_device_map(vm::ptr<u64> dev_addr, vm::ptr<u64> a2, u32 dev_id
 			return CELL_ENOMEM;
 		}
 
-		rsx_cfg->device_addr = *dev_addr = addr;
+		*dev_addr = addr;
+		rsx_cfg->device_addr = addr;
 		return CELL_OK;
 	}
 

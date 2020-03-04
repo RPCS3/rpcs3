@@ -148,7 +148,7 @@ void TRPLoader::RenameEntry(const char *oldname, const char *newname)
 	{
 		if (!strcmp(entry.name, oldname))
 		{
-			strcpy_trunc(entry.name, newname);
+			strcpy_trunc(entry.name, std::string_view(newname));
 		}
 	}
 }

@@ -424,7 +424,7 @@ size_t fragment_program_storage_hash::operator()(const RSXFragmentProgram& progr
 	hash ^= program.ctrl;
 	hash ^= program.texture_dimensions;
 	hash ^= program.unnormalized_coords;
-	hash ^= program.two_sided_lighting;
+	hash ^= +program.two_sided_lighting;
 	hash ^= program.shadow_textures;
 	hash ^= program.redirected_textures;
 

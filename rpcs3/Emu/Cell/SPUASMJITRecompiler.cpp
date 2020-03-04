@@ -3844,7 +3844,7 @@ void spu_recompiler::CGX(spu_opcode_t op) //nf
 		c->paddd(res, vb);
 	}
 
-	c->movdqa(sign, XmmConst(_mm_set1_epi32(-0x80000000)));
+	c->movdqa(sign, XmmConst(_mm_set1_epi32(INT32_MIN)));
 	c->pxor(va, sign);
 	c->pxor(res, sign);
 	c->pcmpgtd(va, res);
@@ -3877,7 +3877,7 @@ void spu_recompiler::BGX(spu_opcode_t op) //nf
 	}
 
 	c->pand(vt, temp);
-	c->movdqa(sign, XmmConst(_mm_set1_epi32(-0x80000000)));
+	c->movdqa(sign, XmmConst(_mm_set1_epi32(INT32_MIN)));
 	c->pxor(va, sign);
 	c->pxor(vb, sign);
 	c->pcmpgtd(vb, va);
@@ -4779,11 +4779,11 @@ void spu_recompiler::SHUFB(spu_opcode_t op)
 	const XmmLink& vt = XmmAlloc();
 	const XmmLink& vm = XmmAlloc();
 	const XmmLink& v5 = XmmAlloc();
-	c->movdqa(vm, XmmConst(_mm_set1_epi8(0xc0)));
+	c->movdqa(vm, XmmConst(_mm_set1_epi8(static_cast<s8>(0xc0))));
 
 	if (utils::has_avx())
 	{
-		c->vpand(v5, vc, XmmConst(_mm_set1_epi8(0xe0)));
+		c->vpand(v5, vc, XmmConst(_mm_set1_epi8(static_cast<s8>(0xe0))));
 		c->vpxor(vc, vc, XmmConst(_mm_set1_epi8(0xf)));
 		c->vpshufb(va, va, vc);
 		c->vpslld(vt, vc, 3);
@@ -4798,7 +4798,7 @@ void spu_recompiler::SHUFB(spu_opcode_t op)
 	else
 	{
 		c->movdqa(v5, vc);
-		c->pand(v5, XmmConst(_mm_set1_epi8(0xe0)));
+		c->pand(v5, XmmConst(_mm_set1_epi8(static_cast<s8>(0xe0))));
 		c->movdqa(vt, vc);
 		c->pand(vt, vm);
 		c->pxor(vc, XmmConst(_mm_set1_epi8(0xf)));

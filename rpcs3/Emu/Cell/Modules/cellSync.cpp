@@ -1091,7 +1091,7 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 			{
 				verify(HERE), (queue->push3.compare_and_swap_test(old2, push3));
 				verify(HERE), (fpSendSignal);
-				return not_an_error(fpSendSignal(ppu, queue->m_eaSignal.addr(), var6));
+				return not_an_error(fpSendSignal(ppu, vm::cast(queue->m_eaSignal.addr(), HERE), var6));
 			}
 			else
 			{
@@ -1390,7 +1390,7 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 			{
 				verify(HERE), (queue->pop3.compare_and_swap_test(old2, pop3));
 				verify(HERE), (fpSendSignal);
-				return not_an_error(fpSendSignal(ppu, queue->m_eaSignal.addr(), var6));
+				return not_an_error(fpSendSignal(ppu, vm::cast(queue->m_eaSignal.addr(), HERE), var6));
 			}
 			else
 			{

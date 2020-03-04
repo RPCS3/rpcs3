@@ -141,7 +141,7 @@ void gdb_thread::start_server()
 
 		if (getaddrinfo(bind_addr.c_str(), bind_port.c_str(), &hints, &info) == 0)
 		{
-			server_socket = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
+			server_socket = static_cast<int>(socket(info->ai_family, info->ai_socktype, info->ai_protocol));
 
 			if (server_socket == -1)
 			{
@@ -173,7 +173,7 @@ void gdb_thread::start_server()
 	}
 
 	// Fallback to UNIX socket
-	server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+	server_socket = static_cast<int>(socket(AF_UNIX, SOCK_STREAM, 0));
 
 	if (server_socket == -1)
 	{
@@ -848,7 +848,7 @@ void gdb_thread::operator()()
 	{
 		sockaddr_in client;
 		socklen_t client_len = sizeof(client);
-		client_socket = accept(server_socket, reinterpret_cast<struct sockaddr*>(&client), &client_len);
+		client_socket = static_cast<int>(accept(server_socket, reinterpret_cast<struct sockaddr*>(&client), &client_len));
 
 		if (client_socket == -1)
 		{

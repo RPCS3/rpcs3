@@ -36,7 +36,7 @@ void memory_string_searcher::OnSearch()
 {
 	const std::string wstr = m_addr_line->text().toStdString();
 	const char *str = wstr.c_str();
-	const u32 len = wstr.length();
+	const u32 len = ::size32(wstr);
 
 	gui_log.notice("Searching for string %s", str);
 

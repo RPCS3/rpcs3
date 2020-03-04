@@ -199,7 +199,7 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, 
 				pad->m_analog_right_x = stick.m_value;
 				break;
 			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-				buf[19] = stick.m_value; // Tilt
+				buf[19] = static_cast<u8>(stick.m_value); // Tilt
 				if (buf[19] >= 0xF0)
 					buf[5] = 0xFF;
 				if (buf[19] <= 0x10)

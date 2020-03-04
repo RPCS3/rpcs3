@@ -1,4 +1,4 @@
-#include "cond.h"
+﻿#include "cond.h"
 #include "sync.h"
 #include "lockless.h"
 
@@ -38,7 +38,7 @@ void cond_variable::imp_wake(u32 _count) noexcept
 		}
 
 		// Add signal
-		value += c_signal_mask & -c_signal_mask;
+		value += c_signal_mask & (0 - c_signal_mask);
 		return true;
 	});
 
@@ -47,7 +47,7 @@ void cond_variable::imp_wake(u32 _count) noexcept
 		return;
 	}
 
-	if (_count > 1 || ((_old + (c_signal_mask & -c_signal_mask)) & c_signal_mask) == c_signal_mask)
+	if (_count > 1 || ((_old + (c_signal_mask & (0 - c_signal_mask))) & c_signal_mask) == c_signal_mask)
 	{
 		// Resort to notify_all if signal count reached max
 		m_value.notify_all();

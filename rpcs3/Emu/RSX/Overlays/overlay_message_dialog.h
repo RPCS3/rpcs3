@@ -7,9 +7,8 @@ namespace rsx
 {
 	namespace overlays
 	{
-		struct message_dialog : public user_interface
+		class message_dialog : public user_interface
 		{
-		private:
 			label text_display;
 			image_button btn_ok;
 			image_button btn_cancel;

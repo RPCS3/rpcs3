@@ -56,7 +56,7 @@ bool ime_jp_manager::addString(vm::cptr<u16> str)
 	if (!str)
 		return false;
 
-	for (size_t i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
+	for (u32 i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
 	{
 		if (!addChar(str[i]))
 			return false;
@@ -111,7 +111,7 @@ void ime_jp_manager::moveCursorEnd(s8 amount)
 {
 	if (amount > 0)
 	{
-		cursor_end = std::max(static_cast<s32>(cursor), std::min<s32>(cursor_end + amount, input_string.length() - 1));
+		cursor_end = std::max(static_cast<s32>(cursor), std::min<s32>(static_cast<s32>(cursor_end) + amount, ::narrow<s32>(input_string.length()) - 1));
 	}
 	else if (amount < 0)
 	{
@@ -199,7 +199,7 @@ error_code cellImeJpOpen3(sys_memory_container_t container_id, vm::ptr<CellImeJp
 
 	if (addDicPath)
 	{
-		for (size_t i = 0; i < 4; i++)
+		for (u32 i = 0; i < 4; i++)
 		{
 			if (addDicPath[i] && addDicPath[i]->path[0])
 			{
@@ -798,10 +798,10 @@ error_code cellImeJpMoveFocusClause(CellImeJpHandle hImeJpHandle, s16 moveType)
 		manager->moveCursor(-1);
 		break;
 	case CELL_IMEJP_FOCUS_TOP:
-		manager->moveCursor((-1) * manager->input_string.length());
+		manager->moveCursor(-1 * ::narrow<s8>(manager->input_string.length(), HERE));
 		break;
 	case CELL_IMEJP_FOCUS_END:
-		manager->moveCursor(manager->input_string.length());
+		manager->moveCursor(::narrow<s8>(manager->input_string.length(), HERE));
 		manager->moveCursor(-1);
 		break;
 	default:
@@ -830,7 +830,7 @@ error_code cellImeJpGetFocusTop(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pFocu
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	*pFocusTop = manager->cursor * 2; // offset in bytes
+	*pFocusTop = static_cast<u16>(manager->cursor * 2); // offset in bytes
 
 	return CELL_OK;
 }
@@ -858,7 +858,7 @@ error_code cellImeJpGetFocusLength(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pF
 	}
 	else
 	{
-		*pFocusLength = (manager->cursor_end - manager->cursor + 1) * 2; // offset in bytes
+		*pFocusLength = static_cast<u16>((manager->cursor_end - manager->cursor + 1) * 2); // offset in bytes
 	}
 
 	return CELL_OK;
@@ -881,14 +881,14 @@ error_code cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	for (size_t i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
+	for (u32 i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
 	{
 		pYomiString[i] = 0;
 	}
 
 	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
 
-	for (size_t i = 0; i < max_len; i++)
+	for (u32 i = 0; i < max_len; i++)
 	{
 		pYomiString[i] = manager->confirmed_string[i];
 	}
@@ -913,14 +913,14 @@ error_code cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	for (size_t i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
+	for (u32 i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
 	{
 		pConfirmString[i] = 0;
 	}
 
 	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
 
-	for (size_t i = 0; i < max_len; i++)
+	for (u32 i = 0; i < max_len; i++)
 	{
 		pConfirmString[i] = manager->confirmed_string[i];
 	}
@@ -945,14 +945,14 @@ error_code cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	for (size_t i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
+	for (u32 i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
 	{
 		pYomiString[i] = 0;
 	}
 
 	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
 
-	for (size_t i = 0; i < max_len; i++)
+	for (u32 i = 0; i < max_len; i++)
 	{
 		pYomiString[i] = manager->input_string[i];
 	}
@@ -977,14 +977,14 @@ error_code cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	for (size_t i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
+	for (u32 i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
 	{
 		pConvertString[i] = 0;
 	}
 
 	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
 
-	for (size_t i = 0; i < max_len; i++)
+	for (u32 i = 0; i < max_len; i++)
 	{
 		pConvertString[i] = manager->input_string[i];
 	}

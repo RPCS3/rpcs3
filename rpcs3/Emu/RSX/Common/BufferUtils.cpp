@@ -604,7 +604,7 @@ namespace
 			auto src_stream = static_cast<const __m128i*>(src);
 			auto dst_stream = static_cast<__m128i*>(dst);
 
-			__m128i min = _mm_set1_epi16(0xFFFF);
+			__m128i min = _mm_set1_epi16(-1);
 			__m128i max = _mm_set1_epi16(0);
 
 			const auto iterations = count / 8;
@@ -671,7 +671,7 @@ namespace
 		{
 			T min_index, max_index;
 			u32 written;
-			u32 remaining = src.size();
+			u32 remaining = ::size32(src, HERE);
 
 			if (s_use_sse4_1 && remaining >= 32)
 			{
@@ -729,7 +729,7 @@ namespace
 			auto dst_stream = static_cast<__m256i*>(dst);
 
 			__m256i restart = _mm256_set1_epi16(restart_index);
-			__m256i min = _mm256_set1_epi16(0xffff);
+			__m256i min = _mm256_set1_epi16(-1);
 			__m256i max = _mm256_set1_epi16(0);
 
 			for (unsigned n = 0; n < iterations; ++n)
@@ -772,7 +772,7 @@ namespace
 			auto dst_stream = static_cast<__m128i*>(dst);
 
 			__m128i restart = _mm_set1_epi16(restart_index);
-			__m128i min = _mm_set1_epi16(0xffff);
+			__m128i min = _mm_set1_epi16(-1);
 			__m128i max = _mm_set1_epi16(0);
 
 			for (unsigned n = 0; n < iterations; ++n)
@@ -845,7 +845,7 @@ namespace
 			T min_index = index_limit<T>();
 			T max_index = 0;
 			u32 written = 0;
-			u32 length = src.size();
+			u32 length = ::size32(src, HERE);
 
 			if (length >= 32 && !skip_restart)
 			{

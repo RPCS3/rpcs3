@@ -218,7 +218,7 @@ namespace rsx
 			if (enabled)
 			{
 				m_fps_graph.set_title("   Framerate");
-				m_fps_graph.set_font_size(m_font_size * 0.8);
+				m_fps_graph.set_font_size(static_cast<u16>(m_font_size * 0.8));
 				m_fps_graph.set_count(50);
 				m_fps_graph.set_color(convert_color_code(m_color_body, m_opacity));
 				m_fps_graph.set_guide_interval(10);
@@ -237,7 +237,7 @@ namespace rsx
 			if (enabled)
 			{
 				m_frametime_graph.set_title("   Frametime");
-				m_frametime_graph.set_font_size(m_font_size * 0.8);
+				m_frametime_graph.set_font_size(static_cast<u16>(m_font_size * 0.8));
 				m_frametime_graph.set_count(170);
 				m_frametime_graph.set_color(convert_color_code(m_color_body, m_opacity));
 				m_frametime_graph.set_guide_interval(8);
@@ -351,7 +351,7 @@ namespace rsx
 				if (m_frametime_graph_enabled)
 				{
 					const auto elapsed_frame = m_frametime_timer.GetElapsedTimeInMilliSec();
-					m_frametime_graph.record_datapoint(elapsed_frame);
+					m_frametime_graph.record_datapoint(static_cast<float>(elapsed_frame));
 				}
 
 				if (m_force_repaint)
@@ -400,7 +400,7 @@ namespace rsx
 				{
 				case detail_level::high:
 				{
-					frametime = m_force_update ? 0 : std::max(0.0, elapsed_update / m_frames);
+					frametime = m_force_update ? 0.f : std::max(0.f, static_cast<float>(elapsed_update / m_frames));
 
 					rsx_load = rsx_thread->get_load();
 
@@ -423,7 +423,7 @@ namespace rsx
 					rsx_cycles += rsx_thread->get_cycles();
 
 					total_cycles = std::max<u64>(1, ppu_cycles + spu_cycles + rsx_cycles);
-					cpu_usage = m_cpu_stats.get_usage();
+					cpu_usage = static_cast<f32>(m_cpu_stats.get_usage());
 
 					ppu_usage = std::clamp(cpu_usage * ppu_cycles / total_cycles, 0.f, 100.f);
 					spu_usage = std::clamp(cpu_usage * spu_cycles / total_cycles, 0.f, 100.f);
@@ -434,13 +434,13 @@ namespace rsx
 				case detail_level::low:
 				{
 					if (cpu_usage < 0.)
-						cpu_usage = m_cpu_stats.get_usage();
+						cpu_usage = static_cast<f32>(m_cpu_stats.get_usage());
 
 					// fallthrough
 				}
 				case detail_level::minimal:
 				{
-					fps = m_force_update ? 0 : std::max(0.0, static_cast<f32>(m_frames) / (elapsed_update / 1000));
+					fps = m_force_update ? 0.f : std::max(0.f, static_cast<f32>(m_frames / (elapsed_update / 1000)));
 					if (m_is_initialised && m_framerate_graph_enabled)
 						m_fps_graph.record_datapoint(fps);
 				}
@@ -655,7 +655,7 @@ namespace rsx
 				{
 					const f32 guide_y = y + y_off * normalize_factor;
 					verts_guides.emplace_back(x, guide_y);
-					verts_guides.emplace_back(x + w, guide_y);
+					verts_guides.emplace_back(static_cast<float>(x + w), guide_y);
 				}
 			}
 
@@ -667,10 +667,10 @@ namespace rsx
 
 			auto& verts_graph = compiled_resources.draw_commands.back().verts;
 
-			const f32 x_stride = f32(w) / m_datapoint_count;
-			const u32 tail_index_offset = m_datapoints.size() - m_datapoint_count;
+			const f32 x_stride = w * 1.f / m_datapoint_count;
+			const u32 tail_index_offset = ::size32(m_datapoints, HERE) - m_datapoint_count;
 
-			for (size_t i = 0; i < m_datapoint_count; ++i)
+			for (u32 i = 0; i < m_datapoint_count; ++i)
 			{
 				const f32 x_line = x + i * x_stride;
 				const f32 y_line = y + h - (m_datapoints[tail_index_offset + i] * normalize_factor);

@@ -1767,7 +1767,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 		}
 
 		// get file stats, namely directory
-		strcpy_trunc(dir->dirName, dirName.get_ptr());
+		strcpy_trunc(dir->dirName, std::string_view(dirName.get_ptr()));
 		dir->atime = dir_info.atime;
 		dir->ctime = dir_info.ctime;
 		dir->mtime = dir_info.mtime;

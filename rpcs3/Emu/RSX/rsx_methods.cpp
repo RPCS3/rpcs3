@@ -1130,7 +1130,7 @@ namespace rsx
 				convert_w != out_w || convert_h != out_h;
 
 			const bool need_convert = out_format != in_format || !rsx::fcmp(fabsf(scale_x), 1.f) || !rsx::fcmp(fabsf(scale_y), 1.f);
-			const u32  slice_h = std::ceil(f32(clip_h + clip_y) / scale_y);
+			const u32 slice_h = static_cast<u32>(std::ceil(static_cast<f32>(clip_h + clip_y) / scale_y));
 
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{

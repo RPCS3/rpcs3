@@ -1,4 +1,4 @@
-#ifdef LLVM_AVAILABLE
+﻿#ifdef LLVM_AVAILABLE
 
 #include "CPUTranslator.h"
 
@@ -117,21 +117,21 @@ v128 cpu_translator::get_const_vector<v128>(llvm::Constant* c, u32 a, u32 b)
 	{
 		for (u32 i = 0; i < 16; i++)
 		{
-			result._u8[i] = cv->getElementAsInteger(i);
+			result._u8[i] = static_cast<u8>(cv->getElementAsInteger(i));
 		}
 	}
 	else if (sct->isIntegerTy(16))
 	{
 		for (u32 i = 0; i < 8; i++)
 		{
-			result._u16[i] = cv->getElementAsInteger(i);
+			result._u16[i] = static_cast<u16>(cv->getElementAsInteger(i));
 		}
 	}
 	else if (sct->isIntegerTy(32))
 	{
 		for (u32 i = 0; i < 4; i++)
 		{
-			result._u32[i] = cv->getElementAsInteger(i);
+			result._u32[i] = static_cast<u32>(cv->getElementAsInteger(i));
 		}
 	}
 	else if (sct->isIntegerTy(64))

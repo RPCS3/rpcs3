@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 
 #include "TAR.h"
 
@@ -30,7 +30,7 @@ int octalToDecimal(int octalNumber)
 	{
 		rem = octalNumber % 10;
 		octalNumber /= 10;
-		decimalNumber += rem * pow(8, i);
+		decimalNumber += rem * (1 << (i * 3));
 		++i;
 	}
 	return decimalNumber;

@@ -80,7 +80,7 @@ bool statichle_handler::load_patterns()
 		for (u32 j = 0; j < 32; j++)
 			dapat.start_pattern[j] = char_to_u8(pattern[0][j * 2], pattern[0][(j * 2) + 1]);
 
-		dapat.crc16_length = char_to_u8(pattern[1][0], pattern[1][1]);
+		dapat.crc16_length = ::narrow<u8>(char_to_u8(pattern[1][0], pattern[1][1]), HERE);
 		dapat.crc16        = (char_to_u8(pattern[2][0], pattern[2][1]) << 8) | char_to_u8(pattern[2][2], pattern[2][3]);
 		dapat.total_length = (char_to_u8(pattern[3][0], pattern[3][1]) << 8) | char_to_u8(pattern[3][2], pattern[3][3]);
 		dapat.module       = pattern[4];

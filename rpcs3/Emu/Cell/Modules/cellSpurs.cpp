@@ -1047,8 +1047,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 
 	// Create a thread group for this SPURS context
 	std::memcpy(spuTgName.get_ptr(), spurs->prefix, spurs->prefixSize);
-	spuTgName[spurs->prefixSize] = '\0';
-	std::strcat(spuTgName.get_ptr(), "CellSpursKernelGroup");
+	std::memcpy(spuTgName.get_ptr() + spurs->prefixSize, "CellSpursKernelGroup", 21);
 
 	spuTgAttr->name  = spuTgName;
 	spuTgAttr->nsize = static_cast<u32>(std::strlen(spuTgAttr->name.get_ptr())) + 1;
@@ -1086,8 +1085,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 
 	// Initialise all SPUs in the SPU thread group
 	std::memcpy(spuThName.get_ptr(), spurs->prefix, spurs->prefixSize);
-	spuThName[spurs->prefixSize] = '\0';
-	std::strcat(spuThName.get_ptr(), "CellSpursKernel");
+	std::memcpy(spuThName.get_ptr() + spurs->prefixSize, "CellSpursKernel", 16);
 
 	spuThAttr->name                    = spuThName;
 	spuThAttr->name_len                = static_cast<u32>(std::strlen(spuThName.get_ptr())) + 2;

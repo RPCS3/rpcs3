@@ -1210,7 +1210,7 @@ bool ppu_interpreter_fast::VMSUMSHS(ppu_thread& ppu, ppu_opcode_t op)
 		{
 			saturated = 0x7fffffff;
 		}
-		else if (result < -0x80000000)
+		else if (result < INT32_MIN)
 		{
 			saturated = 0x80000000;
 		}
@@ -1246,7 +1246,7 @@ bool ppu_interpreter_precise::VMSUMSHS(ppu_thread& ppu, ppu_opcode_t op)
 			saturated = 0x7fffffff;
 			ppu.sat = true;
 		}
-		else if (result < -0x80000000)
+		else if (result < INT32_MIN)
 		{
 			saturated = 0x80000000;
 			ppu.sat = true;
@@ -2929,7 +2929,7 @@ bool ppu_interpreter::BC(ppu_thread& ppu, ppu_opcode_t op)
 	if (op.lk) ppu.lr = ppu.cia + 4;
 
 	const bool ctr_ok = bo2 | ((ppu.ctr != 0) ^ bo3);
-	const bool cond_ok = bo0 | (ppu.cr[op.bi] ^ (bo1 ^ true));
+	const bool cond_ok = bo0 | (!!(ppu.cr[op.bi]) ^ (bo1 ^ true));
 
 	if (ctr_ok && cond_ok)
 	{
@@ -2978,7 +2978,7 @@ bool ppu_interpreter::BCLR(ppu_thread& ppu, ppu_opcode_t op)
 	ppu.ctr -= (bo2 ^ true);
 
 	const bool ctr_ok = bo2 | ((ppu.ctr != 0) ^ bo3);
-	const bool cond_ok = bo0 | (ppu.cr[op.bi] ^ (bo1 ^ true));
+	const bool cond_ok = bo0 | (!!(ppu.cr[op.bi]) ^ (bo1 ^ true));
 
 	const u32 target = static_cast<u32>(ppu.lr) & ~3;
 	if (op.lk) ppu.lr = ppu.cia + 4;
@@ -4368,7 +4368,7 @@ bool ppu_interpreter::EXTSB(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::STFIWX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	vm::write32(vm::cast(addr, HERE), std::bit_cast<u64>(ppu.fpr[op.frs]));
+	vm::write32(vm::cast(addr, HERE), static_cast<u32>(std::bit_cast<u64>(ppu.fpr[op.frs])));
 	return true;
 }
 
@@ -4431,7 +4431,7 @@ bool ppu_interpreter::STW(ppu_thread& ppu, ppu_opcode_t op)
 	//Insomniac engine v3 & v4 (newer R&C, Fuse, Resitance 3)
 	if (value == 0xAAAAAAAA) [[unlikely]]
 	{
-		vm::reservation_update(addr, 128);
+		vm::reservation_update(vm::cast(addr, HERE), 128);
 	}
 
 	return true;

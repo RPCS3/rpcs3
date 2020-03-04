@@ -244,7 +244,7 @@ static constexpr u64 s_ref_one = s_state_mask + 1;
 
 static u64 rec_alloc()
 {
-	const u32 start = __rdtsc();
+	const u32 start = static_cast<u32>(__rdtsc());
 
 	for (u32 i = 0;; i++)
 	{

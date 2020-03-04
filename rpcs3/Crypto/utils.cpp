@@ -6,8 +6,12 @@
 #include <cstring>
 #include <stdio.h>
 #include <time.h>
+#include "Utilities/StrUtil.h"
+#include "Utilities/span.h"
 
 #include <memory>
+#include <string>
+#include <string_view>
 
 // Auxiliary functions (endian swap, xor).
 
@@ -142,11 +146,9 @@ void cmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_
 
 char* extract_file_name(const char* file_path, char real_file_name[MAX_PATH])
 {
-	size_t file_path_len = strlen(file_path);
-	const char* p = strrchr(file_path, '/');
-	if (!p) p = strrchr(file_path, '\\');
-	if (p) file_path_len = file_path + file_path_len - p - 1;
-	strncpy(real_file_name, p ? (p + 1) : file_path, file_path_len + 1);
-
+	std::string_view v(file_path);
+	v = v.substr(0, v.find_last_of("/\\"));
+	gsl::span r(real_file_name, MAX_PATH);
+	strcpy_trunc(r, v);
 	return real_file_name;
 }

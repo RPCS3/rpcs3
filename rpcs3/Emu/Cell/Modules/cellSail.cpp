@@ -703,9 +703,9 @@ s32 cellSailPlayerSetParameter(vm::ptr<CellSailPlayer> pSelf, s32 parameterType,
 
 	switch (parameterType)
 	{
-	case CELL_SAIL_PARAMETER_GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY: pSelf->graphics_adapter_buffer_release_delay = param1; break; // TODO: Stream index
-	case CELL_SAIL_PARAMETER_CONTROL_PPU_THREAD_STACK_SIZE:         pSelf->control_ppu_thread_stack_size = param0; break;
-	case CELL_SAIL_PARAMETER_ENABLE_APOST_SRC:                      pSelf->enable_apost_src = param1; break; // TODO: Stream index
+	case CELL_SAIL_PARAMETER_GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY: pSelf->graphics_adapter_buffer_release_delay = static_cast<u32>(param1); break; // TODO: Stream index
+	case CELL_SAIL_PARAMETER_CONTROL_PPU_THREAD_STACK_SIZE:         pSelf->control_ppu_thread_stack_size = static_cast<u32>(param0); break;
+	case CELL_SAIL_PARAMETER_ENABLE_APOST_SRC:                      pSelf->enable_apost_src = static_cast<u32>(param1); break; // TODO: Stream index
 	default: cellSail.todo("cellSailPlayerSetParameter(): unimplemented parameter %s", ParameterCodeToName(parameterType));
 	}
 
@@ -718,6 +718,7 @@ s32 cellSailPlayerGetParameter(vm::ptr<CellSailPlayer> pSelf, s32 parameterType,
 
 	switch (parameterType)
 	{
+	case 0:
 	default: cellSail.error("cellSailPlayerGetParameter(): unimplemented parameter %s", ParameterCodeToName(parameterType));
 	}
 
@@ -806,7 +807,7 @@ s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 			{
 				if (fs::file f{ vfs::get(uri.substr(12)) })
 				{
-					u64 size = f.size();
+					u32 size = ::size32(f);
 					u32 buffer = vm::alloc(size, vm::main);
 					auto bufPtr = vm::cptr<PamfHeader>::make(buffer);
 					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());

@@ -10,6 +10,7 @@
 
 #include "Loader/PSF.h"
 #include "Utilities/StrUtil.h"
+#include "Utilities/span.h"
 #include "util/init_mutex.hpp"
 
 #include <thread>
@@ -874,7 +875,6 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 	}
 
 	const std::string value = psf::get_string(prm->sfo, std::string(key.name));
-	const auto value_size = value.size() + 1;
 
 	if (value.empty() && !prm->sfo.count(std::string(key.name)))
 	{
@@ -882,15 +882,8 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 		cellGame.warning("cellGameGetParamString(): id=%d was not found", id);
 	}
 
-	const auto pbuf = buf.get_ptr();
-	const bool to_pad = bufsize > value_size;
-	std::memcpy(pbuf, value.c_str(), to_pad ? value_size : bufsize);
-
-	if (to_pad)
-	{
-		std::memset(pbuf + value_size, 0, bufsize - value_size);
-	}
-
+	gsl::span dst(buf.get_ptr(), bufsize);
+	strcpy_trunc(dst, value);
 	return CELL_OK;
 }
 

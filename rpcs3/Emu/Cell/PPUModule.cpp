@@ -811,7 +811,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 					_sec.addr = addr - saddr + prx->segs[i].addr;
 					_sec.size = size;
 					_sec.type = s.sh_type;
-					_sec.flags = s.sh_flags & 7;
+					_sec.flags = static_cast<u32>(s.sh_flags & 7);
 					_sec.filesz = 0;
 					prx->secs.emplace_back(_sec);
 					break;
@@ -1121,7 +1121,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		const u32 addr = _sec.addr = vm::cast(s.sh_addr);
 		const u32 size = _sec.size = vm::cast(s.sh_size);
 		const u32 type = _sec.type = s.sh_type;
-		const u32 flag = _sec.flags = s.sh_flags & 7;
+		const u32 flag = _sec.flags = static_cast<u32>(s.sh_flags & 7);
 		_sec.filesz = 0;
 
 		if (s.sh_type == 1u && addr && size)
@@ -1691,7 +1691,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 		const u32 addr = _sec.addr = vm::cast(s.sh_addr);
 		const u32 size = _sec.size = vm::cast(s.sh_size);
 		const u32 type = _sec.type = s.sh_type;
-		const u32 flag = _sec.flags = s.sh_flags & 7;
+		const u32 flag = _sec.flags = static_cast<u32>(s.sh_flags & 7);
 		_sec.filesz = 0;
 
 		if (s.sh_type == 1u && addr && size)

@@ -12,8 +12,8 @@ LOG_CHANNEL(sys_fs);
 
 struct lv2_fs_mount_point
 {
-	const u64 sector_size = 512;
-	const u64 block_size = 4096;
+	const u32 sector_size = 512;
+	const u32 block_size = 4096;
 	const bs_t<lv2_mp_flag> flags{};
 
 	shared_mutex mutex;

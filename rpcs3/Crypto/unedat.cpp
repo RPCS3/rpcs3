@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "key_vault.h"
 #include "unedat.h"
 
@@ -578,7 +578,7 @@ int validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *
 	int title_hash_result = 0;
 	int dev_hash_result = 0;
 
-	const auto file_name_length = std::strlen(file_name);
+	const s32 file_name_length = ::narrow<s32>(std::strlen(file_name), HERE);
 	std::unique_ptr<u8[]> buf(new u8[0x30 + file_name_length]);
 
 	// Build the title buffer (content_id + file_name).

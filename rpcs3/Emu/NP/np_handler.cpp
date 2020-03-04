@@ -20,9 +20,9 @@
 #include <unistd.h>
 #endif
 
-extern logs::channel sys_net;
-extern logs::channel sceNp2;
-extern logs::channel sceNp;
+LOG_CHANNEL(sys_net);
+LOG_CHANNEL(sceNp2);
+LOG_CHANNEL(sceNp);
 
 np_handler::np_handler()
 {
@@ -35,17 +35,16 @@ np_handler::np_handler()
 		// cur_ip = g_cfg.net.ip_address;
 
 		// Attempt to get actual IP address
-		const char* google_dns_server = "8.8.8.8";
 		const int dns_port            = 53;
 
 		struct sockaddr_in serv;
-		const int sock = socket(AF_INET, SOCK_DGRAM, 0);
+		const int sock = static_cast<int>(socket(AF_INET, SOCK_DGRAM, 0));
 
 		ASSERT(sock >= 0);
 
 		memset(&serv, 0, sizeof(serv));
 		serv.sin_family      = AF_INET;
-		serv.sin_addr.s_addr = inet_addr(google_dns_server);
+		serv.sin_addr.s_addr = 0x08'08'08'08; // 8.8.8.8 google_dns_server
 		serv.sin_port        = std::bit_cast<u16, be_t<u16>>(dns_port); // htons(dns_port)
 
 		int err = connect(sock, reinterpret_cast<const struct sockaddr*>(&serv), sizeof(serv));
@@ -137,7 +136,7 @@ void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 		std::string s_npid = g_cfg.net.psn_npid;
 		ASSERT(s_npid != ""); // It should be generated in settings window if empty
 
-		strncpy(npid.handle.data, s_npid.c_str(), sizeof(npid.handle.data));
+		strcpy_trunc(npid.handle.data, s_npid);
 	}
 
 	switch (g_cfg.net.psn_status)
@@ -146,8 +145,8 @@ void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 		break;
 	case np_psn_status::fake:
 	{
-		strncpy(online_name.data, "RPCS3's user", sizeof(online_name.data));
-		strncpy(avatar_url.data, "https://i.imgur.com/AfWIyQP.jpg", sizeof(avatar_url.data));
+		strcpy_trunc(online_name.data, "RPCS3's user");
+		strcpy_trunc(avatar_url.data, "https://i.imgur.com/AfWIyQP.jpg");
 		break;
 	}
 	default:

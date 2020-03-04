@@ -80,6 +80,14 @@ void fmt_class_string<sys_net_error>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<struct in_addr>::format(std::string& out, u64 arg)
+{
+	const uchar* data = reinterpret_cast<const uchar*>(&get_object(arg));
+
+	fmt::append(out, "%u.%u.%u.%u", data[0], data[1], data[2], data[3]);
+}
+
 #ifdef _WIN32
 // Workaround function for WSAPoll not reporting failed connections
 void windows_poll(pollfd* fds, unsigned long nfds, int timeout, bool* connecting)
@@ -244,7 +252,7 @@ struct network_thread
 		{
 			// Wait with 1ms timeout
 #ifdef _WIN32
-			windows_poll(fds, socklist.size(), 1, connecting);
+			windows_poll(fds, ::size32(socklist), 1, connecting);
 #else
 			::poll(fds, socklist.size(), 1);
 #endif
@@ -515,12 +523,12 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 		{
 			const u16 daport = reinterpret_cast<const sys_net_sockaddr_in*>(addr.get_ptr())->sin_port;
 			const u16 davport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
-			sys_net.warning("Trying to bind %s:%d:%d", inet_ntoa(name.sin_addr), daport, davport);
+			sys_net.warning("Trying to bind %s:%d:%d", name.sin_addr, daport, davport);
 			name.sin_port = std::bit_cast<u16, be_t<u16>>(daport + davport); // htons(daport + davport)
 		}
 		else
 		{
-			sys_net.warning("Trying to bind %s:%d", inet_ntoa(name.sin_addr), std::bit_cast<be_t<u16>, u16>(name.sin_port)); // ntohs(name.sin_port)
+			sys_net.warning("Trying to bind %s:%d", name.sin_addr, std::bit_cast<be_t<u16>, u16>(name.sin_port)); // ntohs(name.sin_port)
 		}
 
 		std::lock_guard lock(sock.mutex);
@@ -561,7 +569,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 	name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
 	::socklen_t namelen  = sizeof(name);
 
-	sys_net.warning("Attempting to connect on %s:%d", inet_ntoa(name.sin_addr), std::bit_cast<be_t<u16>, u16>(name.sin_port)); // ntohs(name.sin_port)
+	sys_net.warning("Attempting to connect on %s:%d", name.sin_addr, std::bit_cast<be_t<u16>, u16>(name.sin_port)); // ntohs(name.sin_port)
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
 	{
@@ -745,9 +753,9 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 				vm::ptr<sys_net_sockaddr_in_p2p> paddr_p2p = vm::cast(addr.addr());
 				paddr_p2p->sin_vport                       = paddr_p2p->sin_port - 3658;
 				paddr_p2p->sin_port                        = 3658;
-				in_addr rep;
+				struct in_addr rep;
 				rep.s_addr = htonl(paddr->sin_addr);
-				sys_net.error("Reporting P2P socket address as %s:%d:%d", inet_ntoa(rep), paddr_p2p->sin_port, paddr_p2p->sin_vport);
+				sys_net.error("Reporting P2P socket address as %s:%d:%d", rep, paddr_p2p->sin_port, paddr_p2p->sin_vport);
 			}
 
 			return {};
@@ -1230,14 +1238,14 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 			const u16 daport  = reinterpret_cast<sys_net_sockaddr_in*>(addr.get_ptr())->sin_port;
 			const u16 davport = reinterpret_cast<sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
-			sys_net.error("Received a P2P packet from %s:%d:%d", inet_ntoa(reinterpret_cast<::sockaddr_in*>(&native_addr)->sin_addr), daport, davport);
+			sys_net.error("Received a P2P packet from %s:%d:%d", reinterpret_cast<::sockaddr_in*>(&native_addr)->sin_addr, daport, davport);
 		}
 	}
 
 	// Length
 	if (type == SYS_NET_SOCK_DGRAM_P2P)
 		sys_net.error("Ok recvfrom: %d", native_result);
-	
+
 	return not_an_error(native_result);
 }
 
@@ -1309,7 +1317,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		{
 			const u16 daport  = reinterpret_cast<const sys_net_sockaddr_in*>(addr.get_ptr())->sin_port;
 			const u16 davport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
-			sys_net.error("Sending a P2P packet to %s:%d:%d", inet_ntoa(name.sin_addr), daport, davport);
+			sys_net.error("Sending a P2P packet to %s:%d:%d", name.sin_addr, daport, davport);
 			name.sin_port = std::bit_cast<u16, be_t<u16>>(daport + davport); // htons(daport + davport)
 		}
 
@@ -1416,7 +1424,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 	// Length
 	if (type == SYS_NET_SOCK_DGRAM_P2P)
 		sys_net.error("Ok sendto: %d", native_result);
-	
+
 	return not_an_error(native_result);
 }
 
