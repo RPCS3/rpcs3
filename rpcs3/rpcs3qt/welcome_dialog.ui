@@ -23,7 +23,7 @@
    <iconset resource="../resources.qrc">
     <normaloff>:/rpcs3.ico</normaloff>:/rpcs3.ico</iconset>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_3">
+  <layout class="QVBoxLayout" name="welcome_dialog_layout">
    <property name="leftMargin">
     <number>0</number>
    </property>
@@ -38,12 +38,12 @@
    </property>
    <item>
     <widget class="QWidget" name="header_section" native="true">
-     <layout class="QVBoxLayout" name="verticalLayout_5">
+     <layout class="QVBoxLayout" name="header_section_layout">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <layout class="QHBoxLayout" name="header_section_content_layout">
         <item>
-         <widget class="QWidget" name="widget_2" native="true">
-          <layout class="QVBoxLayout" name="verticalLayout_4">
+         <widget class="QWidget" name="icon_widget" native="true">
+          <layout class="QVBoxLayout" name="icon_widget_layout">
            <property name="leftMargin">
             <number>0</number>
            </property>
@@ -57,7 +57,7 @@
             <number>0</number>
            </property>
            <item>
-            <widget class="QLabel" name="label_2">
+            <widget class="QLabel" name="icon_label">
              <property name="maximumSize">
               <size>
                <width>50</width>
@@ -87,7 +87,7 @@
             </widget>
            </item>
            <item>
-            <spacer name="verticalSpacer">
+            <spacer name="icon_spacer">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
              </property>
@@ -103,7 +103,7 @@
          </widget>
         </item>
         <item>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
+         <layout class="QVBoxLayout" name="header_section_text_layout">
           <item>
            <widget class="QLabel" name="label">
             <property name="font">
@@ -155,7 +155,7 @@
     </widget>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout">
+    <layout class="QVBoxLayout" name="layout_bottom">
      <property name="leftMargin">
       <number>11</number>
      </property>
@@ -169,7 +169,7 @@
       <number>11</number>
      </property>
      <item>
-      <widget class="QLabel" name="label_5">
+      <widget class="QLabel" name="label_info">
        <property name="font">
         <font>
          <kerning>true</kerning>
@@ -193,7 +193,7 @@
       </widget>
      </item>
      <item alignment="Qt::AlignHCenter">
-      <widget class="QLabel" name="label_6">
+      <widget class="QLabel" name="label_piracy">
        <property name="font">
         <font>
          <pointsize>8</pointsize>
@@ -211,7 +211,7 @@
       </widget>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout">
+      <layout class="QHBoxLayout" name="button_layout">
        <property name="leftMargin">
         <number>0</number>
        </property>
@@ -235,7 +235,7 @@
         </widget>
        </item>
        <item>
-        <spacer name="horizontalSpacer">
+        <spacer name="button_layout_left">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
@@ -255,7 +255,7 @@
         </widget>
        </item>
        <item>
-        <spacer name="horizontalSpacer_2">
+        <spacer name="button_layout_right">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>

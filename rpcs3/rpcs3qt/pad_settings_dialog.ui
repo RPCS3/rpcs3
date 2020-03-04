@@ -49,7 +49,7 @@
         <property name="title">
          <string>Handlers</string>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_25">
+        <layout class="QHBoxLayout" name="gb_handlers_layout">
          <property name="leftMargin">
           <number>5</number>
          </property>
@@ -83,7 +83,7 @@
         <property name="title">
          <string>Devices</string>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_24">
+        <layout class="QHBoxLayout" name="gb_devices_layout">
          <property name="leftMargin">
           <number>5</number>
          </property>
@@ -107,7 +107,7 @@
         <property name="title">
          <string>Profiles</string>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_23">
+        <layout class="QHBoxLayout" name="gb_profiles_layout">
          <property name="leftMargin">
           <number>5</number>
          </property>
@@ -146,11 +146,11 @@
          <number>5</number>
         </property>
         <item>
-         <widget class="QGroupBox" name="groupBox_15">
+         <widget class="QGroupBox" name="gb_dpad">
           <property name="title">
            <string>D-Pad</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_25">
+          <layout class="QVBoxLayout" name="gb_dpad_layout">
            <property name="spacing">
             <number>6</number>
            </property>
@@ -167,8 +167,8 @@
             <number>5</number>
            </property>
            <item>
-            <widget class="QWidget" name="widget_7" native="true">
-             <layout class="QHBoxLayout" name="horizontalLayout_13">
+            <widget class="QWidget" name="dpad_up" native="true">
+             <layout class="QHBoxLayout" name="dpad_up_layout">
               <property name="spacing">
                <number>0</number>
               </property>
@@ -185,7 +185,7 @@
                <number>0</number>
               </property>
               <item>
-               <spacer name="horizontalSpacer_13">
+               <spacer name="dpad_up_spacer_left">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -198,11 +198,11 @@
                </spacer>
               </item>
               <item>
-               <widget class="QGroupBox" name="groupBox_16">
+               <widget class="QGroupBox" name="gb_dpad_up">
                 <property name="title">
                  <string>Up</string>
                 </property>
-                <layout class="QVBoxLayout" name="verticalLayout_21">
+                <layout class="QVBoxLayout" name="gb_dpad_up_layout">
                  <property name="leftMargin">
                   <number>5</number>
                  </property>
@@ -229,7 +229,7 @@
                </widget>
               </item>
               <item>
-               <spacer name="horizontalSpacer_15">
+               <spacer name="dpad_up_spacer_right">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -245,13 +245,13 @@
             </widget>
            </item>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_12">
+            <layout class="QHBoxLayout" name="layout_dpad_left_right">
              <item>
-              <widget class="QGroupBox" name="groupBox_18">
+              <widget class="QGroupBox" name="gb_dpad_left">
                <property name="title">
                 <string>Left</string>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_23">
+               <layout class="QVBoxLayout" name="gb_dpad_left_layout">
                 <property name="leftMargin">
                  <number>5</number>
                 </property>
@@ -278,11 +278,11 @@
               </widget>
              </item>
              <item>
-              <widget class="QGroupBox" name="groupBox_17">
+              <widget class="QGroupBox" name="gb_dpad_right">
                <property name="title">
                 <string>Right</string>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_24">
+               <layout class="QVBoxLayout" name="gb_dpad_right_layout">
                 <property name="leftMargin">
                  <number>5</number>
                 </property>
@@ -311,8 +311,8 @@
             </layout>
            </item>
            <item>
-            <widget class="QWidget" name="widget_8" native="true">
-             <layout class="QHBoxLayout" name="horizontalLayout_14">
+            <widget class="QWidget" name="dpad_down" native="true">
+             <layout class="QHBoxLayout" name="dpad_down_layout">
               <property name="leftMargin">
                <number>0</number>
               </property>
@@ -326,7 +326,7 @@
                <number>0</number>
               </property>
               <item>
-               <spacer name="horizontalSpacer_14">
+               <spacer name="dpad_down_spacer_left">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -339,11 +339,11 @@
                </spacer>
               </item>
               <item>
-               <widget class="QGroupBox" name="groupBox_19">
+               <widget class="QGroupBox" name="gb_dpad_down">
                 <property name="title">
                  <string>Down</string>
                 </property>
-                <layout class="QVBoxLayout" name="verticalLayout_22">
+                <layout class="QVBoxLayout" name="gb_dpad_down_layout">
                  <property name="leftMargin">
                   <number>5</number>
                  </property>
@@ -370,7 +370,7 @@
                </widget>
               </item>
               <item>
-               <spacer name="horizontalSpacer_16">
+               <spacer name="dpad_down_spacer_right">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -389,11 +389,11 @@
          </widget>
         </item>
         <item>
-         <widget class="QGroupBox" name="groupBox_25">
+         <widget class="QGroupBox" name="gb_left_stick">
           <property name="title">
            <string>Left Analog</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_20">
+          <layout class="QVBoxLayout" name="gb_left_stick_layout">
            <property name="leftMargin">
             <number>5</number>
            </property>
@@ -407,8 +407,8 @@
             <number>5</number>
            </property>
            <item>
-            <widget class="QWidget" name="widget_5" native="true">
-             <layout class="QHBoxLayout" name="horizontalLayout_10">
+            <widget class="QWidget" name="left_stick_up" native="true">
+             <layout class="QHBoxLayout" name="left_stick_up_layout">
               <property name="leftMargin">
                <number>0</number>
               </property>
@@ -422,7 +422,7 @@
                <number>0</number>
               </property>
               <item>
-               <spacer name="horizontalSpacer_9">
+               <spacer name="left_stick_up_spacer_left">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -435,11 +435,11 @@
                </spacer>
               </item>
               <item>
-               <widget class="QGroupBox" name="groupBox_26">
+               <widget class="QGroupBox" name="gb_left_stick_up">
                 <property name="title">
                  <string>Up</string>
                 </property>
-                <layout class="QVBoxLayout" name="verticalLayout_16">
+                <layout class="QVBoxLayout" name="gb_left_stick_up_layout">
                  <property name="leftMargin">
                   <number>5</number>
                  </property>
@@ -466,7 +466,7 @@
                </widget>
               </item>
               <item>
-               <spacer name="horizontalSpacer_12">
+               <spacer name="left_stick_up_spacer_right">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -482,13 +482,13 @@
             </widget>
            </item>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_9">
+            <layout class="QHBoxLayout" name="layout_left_stick_left_right">
              <item>
-              <widget class="QGroupBox" name="groupBox_28">
+              <widget class="QGroupBox" name="gb_left_stick_left">
                <property name="title">
                 <string>Left</string>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_18">
+               <layout class="QVBoxLayout" name="gb_left_stick_left_layout">
                 <property name="leftMargin">
                  <number>5</number>
                 </property>
@@ -515,11 +515,11 @@
               </widget>
              </item>
              <item>
-              <widget class="QGroupBox" name="groupBox_27">
+              <widget class="QGroupBox" name="gb_left_stick_right">
                <property name="title">
                 <string>Right</string>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_19">
+               <layout class="QVBoxLayout" name="gb_left_stick_right_layout">
                 <property name="leftMargin">
                  <number>5</number>
                 </property>
@@ -548,8 +548,8 @@
             </layout>
            </item>
            <item>
-            <widget class="QWidget" name="widget_6" native="true">
-             <layout class="QHBoxLayout" name="horizontalLayout_11">
+            <widget class="QWidget" name="left_stick_down" native="true">
+             <layout class="QHBoxLayout" name="left_stick_down_layout">
               <property name="leftMargin">
                <number>0</number>
               </property>
@@ -563,7 +563,7 @@
                <number>0</number>
               </property>
               <item>
-               <spacer name="horizontalSpacer_11">
+               <spacer name="left_stick_down_spacer_left">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -576,11 +576,11 @@
                </spacer>
               </item>
               <item>
-               <widget class="QGroupBox" name="groupBox_29">
+               <widget class="QGroupBox" name="gb_left_stick_down">
                 <property name="title">
                  <string>Down</string>
                 </property>
-                <layout class="QVBoxLayout" name="verticalLayout_17">
+                <layout class="QVBoxLayout" name="gb_left_stick_down_layout">
                  <property name="leftMargin">
                   <number>5</number>
                  </property>
@@ -607,7 +607,7 @@
                </widget>
               </item>
               <item>
-               <spacer name="horizontalSpacer_10">
+               <spacer name="left_stick_down_spacer_right">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -631,10 +631,10 @@
            <number>0</number>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="pad_page">
-           <layout class="QVBoxLayout" name="verticalLayout">
+           <layout class="QVBoxLayout" name="pad_page_layout">
             <property name="spacing">
              <number>0</number>
             </property>
@@ -661,7 +661,7 @@
               <property name="title">
                <string>Trigger Thresholds</string>
               </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_21">
+              <layout class="QHBoxLayout" name="gb_triggers_layout">
                <property name="leftMargin">
                 <number>5</number>
                </property>
@@ -718,7 +718,7 @@
               <property name="title">
                <string>Enable Vibration</string>
               </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_2">
+              <layout class="QHBoxLayout" name="gb_vibration_layout">
                <property name="leftMargin">
                 <number>5</number>
                </property>
@@ -764,7 +764,7 @@
            </layout>
           </widget>
           <widget class="QWidget" name="mouse_page">
-           <layout class="QVBoxLayout" name="verticalLayout_2">
+           <layout class="QVBoxLayout" name="mouse_page_layout">
             <property name="spacing">
              <number>0</number>
             </property>
@@ -785,7 +785,7 @@
               <property name="title">
                <string>Mouse Acceleration</string>
               </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_27">
+              <layout class="QHBoxLayout" name="gb_mouse_accel_layout">
                <property name="leftMargin">
                 <number>5</number>
                </property>
@@ -813,7 +813,7 @@
                 </widget>
                </item>
                <item>
-                <spacer name="horizontalSpacer_25">
+                <spacer name="mouse_accel_x_spacer">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
                  </property>
@@ -843,7 +843,7 @@
                 </widget>
                </item>
                <item>
-                <spacer name="horizontalSpacer_26">
+                <spacer name="mouse_accel_y_spacer">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
                  </property>
@@ -866,7 +866,7 @@
               <property name="title">
                <string>Mouse Deadzone</string>
               </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_26">
+              <layout class="QHBoxLayout" name="gb_mouse_dz_layout">
                <property name="leftMargin">
                 <number>5</number>
                </property>
@@ -890,7 +890,7 @@
                 <widget class="QSpinBox" name="mouse_dz_x"/>
                </item>
                <item>
-                <spacer name="horizontalSpacer_23">
+                <spacer name="mouse_dz_x_spacer">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
                  </property>
@@ -916,7 +916,7 @@
                 <widget class="QSpinBox" name="mouse_dz_y"/>
                </item>
                <item>
-                <spacer name="horizontalSpacer_24">
+                <spacer name="mouse_dz_y_spacer">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
                  </property>
@@ -935,7 +935,7 @@
              </widget>
             </item>
             <item>
-             <spacer name="verticalSpacer_445">
+             <spacer name="mouse_page_spacer">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
               </property>
@@ -955,7 +955,7 @@
          </widget>
         </item>
         <item>
-         <spacer name="verticalSpacer_2">
+         <spacer name="verticalSpacer_left">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
           </property>
@@ -971,7 +971,7 @@
          </spacer>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout">
+         <layout class="QHBoxLayout" name="button_layout_left">
           <item>
            <widget class="QPushButton" name="b_ok">
             <property name="text">
@@ -1002,18 +1002,18 @@
          <number>0</number>
         </property>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_17">
+         <layout class="QHBoxLayout" name="layout_middle_top">
           <property name="spacing">
            <number>0</number>
           </property>
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout_35">
+           <layout class="QVBoxLayout" name="layout_l1_l2">
             <item>
-             <widget class="QGroupBox" name="groupBox_6">
+             <widget class="QGroupBox" name="gb_l1">
               <property name="title">
                <string>L1</string>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_27">
+              <layout class="QVBoxLayout" name="gb_l1_layout">
                <property name="leftMargin">
                 <number>5</number>
                </property>
@@ -1040,11 +1040,11 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="groupBox_7">
+             <widget class="QGroupBox" name="gb_l2">
               <property name="title">
                <string>L2</string>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_28">
+              <layout class="QVBoxLayout" name="gb_l2_layout">
                <property name="leftMargin">
                 <number>5</number>
                </property>
@@ -1073,14 +1073,14 @@
            </layout>
           </item>
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout_36">
+           <layout class="QVBoxLayout" name="layout_system_buttons">
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_15">
+             <layout class="QHBoxLayout" name="layout_select_start">
               <property name="spacing">
                <number>10</number>
               </property>
               <item>
-               <spacer name="horizontalSpacer_21">
+               <spacer name="spacer_select_start_left">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -1093,11 +1093,11 @@
                </spacer>
               </item>
               <item>
-               <widget class="QGroupBox" name="groupBox_10">
+               <widget class="QGroupBox" name="gb_select">
                 <property name="title">
                  <string>Select</string>
                 </property>
-                <layout class="QVBoxLayout" name="verticalLayout_32">
+                <layout class="QVBoxLayout" name="gb_select_layout">
                  <property name="leftMargin">
                   <number>5</number>
                  </property>
@@ -1124,11 +1124,11 @@
                </widget>
               </item>
               <item>
-               <widget class="QGroupBox" name="groupBox_11">
+               <widget class="QGroupBox" name="gb_start">
                 <property name="title">
                  <string>Start</string>
                 </property>
-                <layout class="QVBoxLayout" name="verticalLayout_33">
+                <layout class="QVBoxLayout" name="gb_start_layout">
                  <property name="leftMargin">
                   <number>5</number>
                  </property>
@@ -1155,7 +1155,7 @@
                </widget>
               </item>
               <item>
-               <spacer name="horizontalSpacer_22">
+               <spacer name="spacer_select_start_right">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -1170,8 +1170,8 @@
              </layout>
             </item>
             <item>
-             <widget class="QWidget" name="widget_9" native="true">
-              <layout class="QHBoxLayout" name="horizontalLayout_16">
+             <widget class="QWidget" name="widget_ps_button" native="true">
+              <layout class="QHBoxLayout" name="widget_ps_button_layout">
                <property name="spacing">
                 <number>10</number>
                </property>
@@ -1188,7 +1188,7 @@
                 <number>0</number>
                </property>
                <item>
-                <spacer name="horizontalSpacer_17">
+                <spacer name="spacer_ps_button_left">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
                  </property>
@@ -1201,11 +1201,11 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QGroupBox" name="groupBox_12">
+                <widget class="QGroupBox" name="gb_ps_button">
                  <property name="title">
                   <string>PS Button</string>
                  </property>
-                 <layout class="QVBoxLayout" name="verticalLayout_31">
+                 <layout class="QVBoxLayout" name="gb_ps_button_layout">
                   <property name="leftMargin">
                    <number>5</number>
                   </property>
@@ -1232,7 +1232,7 @@
                 </widget>
                </item>
                <item>
-                <spacer name="horizontalSpacer_18">
+                <spacer name="spacer_ps_button_right">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
                  </property>
@@ -1250,13 +1250,13 @@
            </layout>
           </item>
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout_34">
+           <layout class="QVBoxLayout" name="layout_r1_r2">
             <item>
-             <widget class="QGroupBox" name="groupBox_8">
+             <widget class="QGroupBox" name="gb_r1">
               <property name="title">
                <string>R1</string>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_29">
+              <layout class="QVBoxLayout" name="gb_r1_layout">
                <property name="leftMargin">
                 <number>5</number>
                </property>
@@ -1283,11 +1283,11 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="groupBox_9">
+             <widget class="QGroupBox" name="gb_r2">
               <property name="title">
                <string>R2</string>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_30">
+              <layout class="QVBoxLayout" name="gb_r2_layout">
                <property name="leftMargin">
                 <number>5</number>
                </property>
@@ -1318,14 +1318,14 @@
          </layout>
         </item>
         <item>
-         <widget class="QWidget" name="widget_10" native="true">
+         <widget class="QWidget" name="widget_controller" native="true">
           <property name="minimumSize">
            <size>
             <width>0</width>
             <height>200</height>
            </size>
           </property>
-          <layout class="QHBoxLayout" name="horizontalLayout_19">
+          <layout class="QHBoxLayout" name="widget_controller_layout">
            <property name="leftMargin">
             <number>0</number>
            </property>
@@ -1367,12 +1367,12 @@
          </widget>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_18">
+         <layout class="QHBoxLayout" name="layout_middle_bottom">
           <property name="spacing">
            <number>10</number>
           </property>
           <item>
-           <spacer name="horizontalSpacer_19">
+           <spacer name="spacer_middle_bottom_left">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -1385,11 +1385,11 @@
            </spacer>
           </item>
           <item>
-           <widget class="QGroupBox" name="groupBox_13">
+           <widget class="QGroupBox" name="gb_l3">
             <property name="title">
              <string>L3</string>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_37">
+            <layout class="QVBoxLayout" name="gb_l3_layout">
              <property name="leftMargin">
               <number>5</number>
              </property>
@@ -1420,7 +1420,7 @@
             <property name="title">
              <string>LED</string>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_39">
+            <layout class="QVBoxLayout" name="gb_led_layout">
              <property name="leftMargin">
               <number>5</number>
              </property>
@@ -1451,11 +1451,11 @@
            </widget>
           </item>
           <item>
-           <widget class="QGroupBox" name="groupBox_14">
+           <widget class="QGroupBox" name="gb_r3">
             <property name="title">
              <string>R3</string>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_38">
+            <layout class="QVBoxLayout" name="gb_r3_layout">
              <property name="leftMargin">
               <number>5</number>
              </property>
@@ -1482,7 +1482,7 @@
            </widget>
           </item>
           <item>
-           <spacer name="horizontalSpacer_20">
+           <spacer name="spacer_middle_bottom_right">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -1497,16 +1497,16 @@
          </layout>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_29">
+         <layout class="QHBoxLayout" name="layout_choose_class">
           <property name="spacing">
            <number>10</number>
           </property>
           <item>
-           <widget class="QGroupBox" name="groupBox">
+           <widget class="QGroupBox" name="gb_choose_class">
             <property name="title">
              <string>Device Class:</string>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_26">
+            <layout class="QVBoxLayout" name="gb_choose_class_layout">
              <item>
               <widget class="QComboBox" name="chooseClass"/>
              </item>
@@ -1516,7 +1516,7 @@
          </layout>
         </item>
         <item>
-         <spacer name="verticalSpacer">
+         <spacer name="verticalSpacer_middle">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
           </property>
@@ -1536,7 +1536,7 @@
           <property name="title">
            <string>Description</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_15">
+          <layout class="QVBoxLayout" name="gb_description_layout">
            <item>
             <widget class="QLabel" name="l_description">
              <property name="text">
@@ -1567,11 +1567,11 @@
          <number>5</number>
         </property>
         <item>
-         <widget class="QGroupBox" name="groupBox_20">
+         <widget class="QGroupBox" name="gb_face_buttons">
           <property name="title">
            <string>Face Buttons</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_8">
+          <layout class="QVBoxLayout" name="gb_face_buttons_layout">
            <property name="leftMargin">
             <number>5</number>
            </property>
@@ -1585,8 +1585,8 @@
             <number>5</number>
            </property>
            <item>
-            <widget class="QWidget" name="widget" native="true">
-             <layout class="QHBoxLayout" name="horizontalLayout_3">
+            <widget class="QWidget" name="widget_triangle" native="true">
+             <layout class="QHBoxLayout" name="widget_triangle_layout">
               <property name="leftMargin">
                <number>0</number>
               </property>
@@ -1600,7 +1600,7 @@
                <number>0</number>
               </property>
               <item>
-               <spacer name="horizontalSpacer_7">
+               <spacer name="spacer_triangle_left">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -1613,11 +1613,11 @@
                </spacer>
               </item>
               <item>
-               <widget class="QGroupBox" name="groupBox_21">
+               <widget class="QGroupBox" name="gb_triangle">
                 <property name="title">
                  <string>Triangle</string>
                 </property>
-                <layout class="QVBoxLayout" name="verticalLayout_7">
+                <layout class="QVBoxLayout" name="gb_triangle_layout">
                  <property name="leftMargin">
                   <number>5</number>
                  </property>
@@ -1644,7 +1644,7 @@
                </widget>
               </item>
               <item>
-               <spacer name="horizontalSpacer_8">
+               <spacer name="spacer_triangle_right">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -1660,13 +1660,13 @@
             </widget>
            </item>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <layout class="QHBoxLayout" name="layout_square_circle">
              <item>
-              <widget class="QGroupBox" name="groupBox_23">
+              <widget class="QGroupBox" name="gb_square">
                <property name="title">
                 <string>Square</string>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_4">
+               <layout class="QVBoxLayout" name="gb_square_layout">
                 <property name="leftMargin">
                  <number>5</number>
                 </property>
@@ -1693,11 +1693,11 @@
               </widget>
              </item>
              <item>
-              <widget class="QGroupBox" name="groupBox_22">
+              <widget class="QGroupBox" name="gb_circle">
                <property name="title">
                 <string>Circle</string>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_5">
+               <layout class="QVBoxLayout" name="gb_circle_layout">
                 <property name="leftMargin">
                  <number>5</number>
                 </property>
@@ -1726,8 +1726,8 @@
             </layout>
            </item>
            <item>
-            <widget class="QWidget" name="widget_2" native="true">
-             <layout class="QHBoxLayout" name="horizontalLayout_4">
+            <widget class="QWidget" name="widget_cross" native="true">
+             <layout class="QHBoxLayout" name="widget_cross_layout">
               <property name="leftMargin">
                <number>0</number>
               </property>
@@ -1741,7 +1741,7 @@
                <number>0</number>
               </property>
               <item>
-               <spacer name="horizontalSpacer_5">
+               <spacer name="spacer_cross_left">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -1754,11 +1754,11 @@
                </spacer>
               </item>
               <item>
-               <widget class="QGroupBox" name="groupBox_24">
+               <widget class="QGroupBox" name="gb_cross">
                 <property name="title">
                  <string>Cross</string>
                 </property>
-                <layout class="QVBoxLayout" name="verticalLayout_6">
+                <layout class="QVBoxLayout" name="gb_cross_layout">
                  <property name="leftMargin">
                   <number>5</number>
                  </property>
@@ -1785,7 +1785,7 @@
                </widget>
               </item>
               <item>
-               <spacer name="horizontalSpacer_6">
+               <spacer name="spacer_cross_right">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -1804,11 +1804,11 @@
          </widget>
         </item>
         <item>
-         <widget class="QGroupBox" name="groupBox_30">
+         <widget class="QGroupBox" name="gb_right_stick">
           <property name="title">
            <string>Right Analog</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_13">
+          <layout class="QVBoxLayout" name="gb_right_stick_layout">
            <property name="leftMargin">
             <number>5</number>
            </property>
@@ -1822,8 +1822,8 @@
             <number>5</number>
            </property>
            <item>
-            <widget class="QWidget" name="widget_3" native="true">
-             <layout class="QHBoxLayout" name="horizontalLayout_7">
+            <widget class="QWidget" name="widget_right_stick_up" native="true">
+             <layout class="QHBoxLayout" name="widget_right_stick_up_layout">
               <property name="leftMargin">
                <number>0</number>
               </property>
@@ -1837,7 +1837,7 @@
                <number>0</number>
               </property>
               <item>
-               <spacer name="horizontalSpacer">
+               <spacer name="spacer_right_stick_up_left">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -1850,11 +1850,11 @@
                </spacer>
               </item>
               <item>
-               <widget class="QGroupBox" name="groupBox_31">
+               <widget class="QGroupBox" name="gb_right_stick_up">
                 <property name="title">
                  <string>Up</string>
                 </property>
-                <layout class="QVBoxLayout" name="verticalLayout_9">
+                <layout class="QVBoxLayout" name="gb_right_stick_up_layout">
                  <property name="leftMargin">
                   <number>5</number>
                  </property>
@@ -1881,7 +1881,7 @@
                </widget>
               </item>
               <item>
-               <spacer name="horizontalSpacer_2">
+               <spacer name="spacer_right_stick_up_right">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -1897,13 +1897,13 @@
             </widget>
            </item>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_6">
+            <layout class="QHBoxLayout" name="layout_right_stick_left_right">
              <item>
-              <widget class="QGroupBox" name="groupBox_33">
+              <widget class="QGroupBox" name="gb_right_stick_left">
                <property name="title">
                 <string>Left</string>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_10">
+               <layout class="QVBoxLayout" name="gb_right_stick_left_layout">
                 <property name="leftMargin">
                  <number>5</number>
                 </property>
@@ -1930,11 +1930,11 @@
               </widget>
              </item>
              <item>
-              <widget class="QGroupBox" name="groupBox_32">
+              <widget class="QGroupBox" name="gb_right_stick_right">
                <property name="title">
                 <string>Right</string>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_11">
+               <layout class="QVBoxLayout" name="gb_right_stick_right_layout">
                 <property name="leftMargin">
                  <number>5</number>
                 </property>
@@ -1963,8 +1963,8 @@
             </layout>
            </item>
            <item>
-            <widget class="QWidget" name="widget_4" native="true">
-             <layout class="QHBoxLayout" name="horizontalLayout_8">
+            <widget class="QWidget" name="widget_right_stick_down" native="true">
+             <layout class="QHBoxLayout" name="widget_right_stick_down_layout">
               <property name="leftMargin">
                <number>0</number>
               </property>
@@ -1978,7 +1978,7 @@
                <number>0</number>
               </property>
               <item>
-               <spacer name="horizontalSpacer_3">
+               <spacer name="spacer_right_stick_down_left">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -1991,11 +1991,11 @@
                </spacer>
               </item>
               <item>
-               <widget class="QGroupBox" name="groupBox_34">
+               <widget class="QGroupBox" name="gb_right_stick_down">
                 <property name="title">
                  <string>Down</string>
                 </property>
-                <layout class="QVBoxLayout" name="verticalLayout_12">
+                <layout class="QVBoxLayout" name="gb_right_stick_down_layout">
                  <property name="leftMargin">
                   <number>5</number>
                  </property>
@@ -2022,7 +2022,7 @@
                </widget>
               </item>
               <item>
-               <spacer name="horizontalSpacer_4">
+               <spacer name="spacer_right_stick_down_right">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -2043,10 +2043,10 @@
         <item>
          <widget class="QStackedWidget" name="right_stack">
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="stick_page">
-           <layout class="QVBoxLayout" name="verticalLayout_3">
+           <layout class="QVBoxLayout" name="stick_page_layout">
             <property name="spacing">
              <number>0</number>
             </property>
@@ -2067,7 +2067,7 @@
               <property name="title">
                <string>Analog Deadzones</string>
               </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_22">
+              <layout class="QHBoxLayout" name="gb_sticks_layout">
                <property name="leftMargin">
                 <number>5</number>
                </property>
@@ -2122,7 +2122,7 @@
            </layout>
           </widget>
           <widget class="QWidget" name="smooth_page">
-           <layout class="QVBoxLayout" name="verticalLayout_14">
+           <layout class="QVBoxLayout" name="smooth_page_layout">
             <property name="spacing">
              <number>0</number>
             </property>
@@ -2143,7 +2143,7 @@
               <property name="title">
                <string>Stick Interpolation</string>
               </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_28">
+              <layout class="QHBoxLayout" name="gb_stick_lerp_layout">
                <property name="leftMargin">
                 <number>5</number>
                </property>
@@ -2220,7 +2220,7 @@
              </widget>
             </item>
             <item>
-             <spacer name="verticalSpacer_444">
+             <spacer name="smooth_page_spacer">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
               </property>
@@ -2240,7 +2240,7 @@
          </widget>
         </item>
         <item>
-         <spacer name="verticalSpacer_3">
+         <spacer name="verticalSpacer_right">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
           </property>
@@ -2256,7 +2256,7 @@
          </spacer>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_20" stretch="1,1">
+         <layout class="QHBoxLayout" name="button_layout_right" stretch="1,1">
           <item>
            <widget class="QPushButton" name="b_blacklist">
             <property name="text">
