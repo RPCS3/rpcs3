@@ -388,8 +388,8 @@ namespace gl
 			auto src_w = src_rect.width();
 			auto dst_w = dst_rect.width();
 
-			if (xfer_info.src_is_typeless) src_w *= xfer_info.src_scaling_hint;
-			if (xfer_info.dst_is_typeless) dst_w *= xfer_info.dst_scaling_hint;
+			if (xfer_info.src_is_typeless) src_w = static_cast<int>(src_w * xfer_info.src_scaling_hint);
+			if (xfer_info.dst_is_typeless) dst_w = static_cast<int>(dst_w * xfer_info.dst_scaling_hint);
 
 			if (src_w == dst_w)
 			{
