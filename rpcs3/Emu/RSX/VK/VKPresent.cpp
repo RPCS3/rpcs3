@@ -309,7 +309,8 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 			}
 		}
 	}
-	else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(info->address, info->format, info->width, info->height))
+	else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(info->address, info->format);
+			 surface && surface->get_width() >= info->width && surface->get_height() >= info->height)
 	{
 		// Hack - this should be the first location to check for output
 		// The render might have been done offscreen or in software and a blit used to display
