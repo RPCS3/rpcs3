@@ -1487,24 +1487,145 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_40">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="1,1,1">
+        <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="0,0">
          <item>
           <widget class="QGroupBox" name="gb_network_status">
            <property name="title">
-            <string>Network Status</string>
+            <string>Network Configuration</string>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_38">
+           <layout class="QVBoxLayout" name="verticalLayout_38" stretch="0,0,0,0">
             <item>
-             <widget class="QComboBox" name="netStatusBox"/>
+             <widget class="QGroupBox" name="groupBox_10">
+              <property name="title">
+               <string>Network Status</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_90">
+               <item>
+                <widget class="QComboBox" name="netStatusBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_12">
+              <property name="title">
+               <string>DNS</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_92">
+               <item>
+                <widget class="QLineEdit" name="edit_dns">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_13">
+              <property name="title">
+               <string>IP/Hosts switches</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_93">
+               <item>
+                <widget class="QLineEdit" name="edit_swaps">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_24">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
             </item>
            </layout>
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="widget_10" native="true"/>
-         </item>
-         <item>
-          <widget class="QWidget" name="widget_5" native="true"/>
+          <widget class="QGroupBox" name="groupBox">
+           <property name="title">
+            <string>PSN Configuration</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_88">
+            <item>
+             <widget class="QGroupBox" name="groupBox_11">
+              <property name="title">
+               <string>PSN Status</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_91">
+               <item>
+                <widget class="QComboBox" name="psnStatusBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_15">
+              <property name="title">
+               <string>PSN settings</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_95">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_31">
+                 <item>
+                  <widget class="QLabel" name="label_10">
+                   <property name="text">
+                    <string>NPID:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLineEdit" name="edit_npid">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="maxLength">
+                    <number>16</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_25">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
          </item>
         </layout>
        </item>

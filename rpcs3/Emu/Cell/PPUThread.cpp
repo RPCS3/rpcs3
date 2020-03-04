@@ -1445,12 +1445,6 @@ extern void ppu_initialize(const ppu_module& info)
 	// Compiler mutex (global)
 	static shared_mutex jmutex;
 
-	// Get jit core allocator instance
-	const auto jcores = g_fxo->get<jit_core_allocator>();
-
-	// Worker threads
-	std::vector<std::thread> jthreads;
-
 	// Global variables to initialize
 	std::vector<std::pair<std::string, u64>> globals;
 
@@ -1459,6 +1453,15 @@ extern void ppu_initialize(const ppu_module& info)
 
 	// Difference between function name and current location
 	const u32 reloc = info.name.empty() ? 0 : info.segs.at(0).addr;
+
+	// Info sent to threads
+	std::vector<std::pair<std::string, ppu_module>> workload;
+
+	// Info to load to main JIT instance (true - compiled)
+	std::vector<std::pair<std::string, bool>> link_workload;
+
+	// Sync variable to acquire workloads
+	atomic_t<u32> work_cv = 0;
 
 	while (jit_mod.vars.empty() && fpos < info.funcs.size())
 	{
@@ -1609,34 +1612,56 @@ extern void ppu_initialize(const ppu_module& info)
 			globals.emplace_back(fmt::format("__seg%u_%x", i, suffix), info.segs[i].addr);
 		}
 
+		link_workload.emplace_back(obj_name, false);
+
 		// Check object file
 		if (fs::is_file(cache_path + obj_name + ".gz") || fs::is_file(cache_path + obj_name))
 		{
 			if (!jit)
 			{
-				ppu_log.success("LLVM: Already exists: %s", obj_name);
+				ppu_log.success("LLVM: Module exists: %s", obj_name);
 				continue;
 			}
 
-			std::lock_guard lock(jmutex);
-			jit->add(cache_path + obj_name);
-
-			ppu_log.success("LLVM: Loaded module %s", obj_name);
 			continue;
 		}
 
+		// Adjust information (is_compiled)
+		link_workload.back().second = true;
+
+		// Fill workload list for compilation
+		workload.emplace_back(std::move(obj_name), std::move(part));
+
 		// Update progress dialog
 		g_progr_ptotal++;
+	}
 
-		// Create worker thread for compilation
-		jthreads.emplace_back([&jit, obj_name = obj_name, part = std::move(part), &cache_path, jcores]()
+	// Create worker threads for compilation (TODO: how many threads)
+	{
+		u32 thread_count = Emu.GetMaxThreads();
+
+		if (workload.size() < thread_count)
+		{
+			thread_count = ::size32(workload);
+		}
+
+		struct thread_index_allocator
+		{
+			atomic_t<u64> index = 0;
+		};
+
+		named_thread_group threads(fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>()->index), thread_count, [&]()
 		{
 			// Set low priority
 			thread_ctrl::set_native_priority(-1);
 
-			// Allocate "core"
+			for (u32 i = work_cv++; i < workload.size(); i = work_cv++)
 			{
-				std::lock_guard jlock(jcores->sem);
+				// Keep allocating workload
+				const auto [obj_name, part] = std::as_const(workload)[i];
+
+				// Allocate "core"
+				std::lock_guard jlock(g_fxo->get<jit_core_allocator>()->sem);
 
 				if (!Emu.IsStopped())
 				{
@@ -1645,28 +1670,37 @@ extern void ppu_initialize(const ppu_module& info)
 					// Use another JIT instance
 					jit_compiler jit2({}, g_cfg.core.llvm_cpu, 0x1);
 					ppu_initialize2(jit2, part, cache_path, obj_name);
+
+					ppu_log.success("LLVM: Compiled module %s", obj_name);
 				}
 
 				g_progr_pdone++;
 			}
+		});
 
-			if (Emu.IsStopped() || !jit || !fs::is_file(cache_path + obj_name + ".gz"))
+		threads.join();
+
+		if (Emu.IsStopped() || !get_current_cpu_thread())
+		{
+			return;
+		}
+
+		std::lock_guard lock(jmutex);
+
+		for (auto [obj_name, is_compiled] : link_workload)
+		{
+			if (Emu.IsStopped())
 			{
-				return;
+				break;
 			}
 
-			// Proceed with original JIT instance
-			std::lock_guard lock(jmutex);
 			jit->add(cache_path + obj_name);
 
-			ppu_log.success("LLVM: Compiled module %s", obj_name);
-		});
-	}
-
-	// Join worker threads
-	for (auto& thread : jthreads)
-	{
-		thread.join();
+			if (!is_compiled)
+			{
+				ppu_log.success("LLVM: Loaded module %s", obj_name);
+			}
+		}
 	}
 
 	if (Emu.IsStopped() || !get_current_cpu_thread())

@@ -9,14 +9,14 @@
 error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr);
 error_code sceNpTerm();
 
-using in_addr_t = u32;
-using in_port_t = u16;
-using sa_family_t = u8;
-using socklen_t = u32;
+using np_in_addr_t   = u32;
+using np_in_port_t   = u16;
+using np_sa_family_t = u8;
+using np_socklen_t   = u32;
 
-struct in_addr
+struct np_in_addr
 {
-	in_addr_t s_addr; // TODO: alignment?
+	np_in_addr_t np_s_addr; // TODO: alignment?
 };
 
 using sys_memory_container_t = u32;
@@ -1121,8 +1121,8 @@ union SceNpSignalingConnectionInfo
 	SceNpId npId;
 	struct
 	{
-		be_t<u32> addr; // in_addr
-		be_t<u16> port; // in_port_t
+		np_in_addr addr; // in_addr
+		np_in_port_t port; // in_port_t
 	} address;
 	be_t<u32> packet_loss;
 };
@@ -1298,22 +1298,3 @@ using SceNpMatchingGUIHandler = void(u32 ctx_id, s32 event, s32 error_code, vm::
 using SceNpProfileResultHandler = s32(s32 result, vm::ptr<void> arg);
 
 using SceNpManagerSubSigninCallback = void(s32 result, vm::ptr<SceNpId> npId, vm::ptr<void> cb_arg);
-
-// fxm objects
-
-struct sce_np_manager
-{
-	std::atomic<bool> is_initialized = false;
-};
-
-struct sce_np_lookup_manager
-{
-	std::atomic<bool> is_initialized = false;
-};
-
-struct sce_np_score_manager
-{
-	std::atomic<bool> is_initialized = false;
-};
-
-extern s32 g_psn_connection_status;

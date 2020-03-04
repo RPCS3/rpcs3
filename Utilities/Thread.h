@@ -97,21 +97,10 @@ class thread_base
 	using native_entry = void*(*)(void* arg);
 #endif
 
-#ifdef __linux__
-	// Linux thread timer
-	int m_timer = -1;
-#endif
-
 	// Thread handle (platform-specific)
 	atomic_t<std::uintptr_t> m_thread{0};
 
-	// Thread mutex
-	mutable shared_mutex m_mutex;
-
-	// Thread condition variable
-	cond_variable m_cond;
-
-	// Thread flags
+	// Thread playtoy, that shouldn't be used
 	atomic_t<u32> m_signal{0};
 
 	// Thread state
@@ -234,21 +223,6 @@ public:
 	static inline void wait()
 	{
 		_wait_for(-1, true);
-	}
-
-	// Wait until pred().
-	template <typename F, typename RT = std::invoke_result_t<F>>
-	static inline RT wait(F&& pred)
-	{
-		while (true)
-		{
-			if (RT result = pred())
-			{
-				return result;
-			}
-
-			_wait_for(-1, true);
-		}
 	}
 
 	// Get current thread (may be nullptr)

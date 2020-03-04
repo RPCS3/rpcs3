@@ -352,8 +352,3 @@ struct CellGameUpdateParam
 
 using CellGameUpdateCallback = void(s32 status, s32 error_code, vm::ptr<void> userdata);
 using CellGameUpdateCallbackEx = void(vm::ptr<CellGameUpdateResult> result, vm::ptr<void> userdata);
-
-struct cell_net_ctl_manager
-{
-	atomic_t<bool> is_initialized = false;
-};
