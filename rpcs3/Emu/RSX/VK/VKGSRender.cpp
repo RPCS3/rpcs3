@@ -2620,9 +2620,10 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 {
 	// Actual allocation must have been done previously
 	u32 base_offset;
+	const u32 offset32 = static_cast<u32>(m_vertex_layout_stream_info.offset);
+	const u32 range32 = static_cast<u32>(m_vertex_layout_stream_info.range);
 
-	if (!m_vertex_layout_storage ||
-		!m_vertex_layout_storage->in_range(m_vertex_layout_stream_info.offset, m_vertex_layout_stream_info.range, base_offset))
+	if (!m_vertex_layout_storage || !m_vertex_layout_storage->in_range(offset32, range32, base_offset))
 	{
 		verify("Incompatible driver (MacOS?)" HERE), m_texbuffer_view_size >= m_vertex_layout_stream_info.range;
 
