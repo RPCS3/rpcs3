@@ -147,7 +147,12 @@ void cmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_
 char* extract_file_name(const char* file_path, char real_file_name[MAX_PATH])
 {
 	std::string_view v(file_path);
-	v = v.substr(0, v.find_last_of("/\\"));
+
+	if (auto pos = v.find_last_of("/\\"); pos != umax)
+	{
+		v.remove_prefix(pos + 1);
+	}
+
 	gsl::span r(real_file_name, MAX_PATH);
 	strcpy_trunc(r, v);
 	return real_file_name;
