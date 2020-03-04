@@ -1800,21 +1800,10 @@ void thread_base::initialize(bool(*wait_cb)(const void*))
 	name.resize(std::min<std::size_t>(15, name.size()));
 	pthread_setname_np(pthread_self(), name.c_str());
 #endif
-
-#ifdef __linux__
-	m_timer = timerfd_create(CLOCK_MONOTONIC, 0);
-	if (m_timer == -1)
-	{
-		sig_log.error("Linux timer allocation failed, use wait_unlock() only");
-	}
-#endif
 }
 
 void thread_base::notify_abort() noexcept
 {
-	// For now
-	notify();
-
 	atomic_storage_futex::raw_notify(+m_state_notifier);
 }
 
@@ -1822,13 +1811,6 @@ bool thread_base::finalize(int) noexcept
 {
 	// Report pending errors
 	error_code::error_report(0, 0, 0, 0);
-
-#ifdef __linux__
-	if (m_timer != -1)
-	{
-		close(m_timer);
-	}
-#endif
 
 #ifdef _WIN32
 	ULONG64 cycles{};
@@ -1892,7 +1874,34 @@ void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 	auto _this = g_tls_this_thread;
 
 #ifdef __linux__
-	if (!alert && _this->m_timer != -1 && usec > 0 && usec <= 1000)
+	static thread_local struct linux_timer_handle_t
+	{
+		// Allocate timer only if needed (i.e. someone calls _wait_for with alert and short period)
+		const int m_timer = timerfd_create(CLOCK_MONOTONIC, 0);
+
+		linux_timer_handle_t() noexcept
+		{
+			if (m_timer == -1)
+			{
+				sig_log.error("Linux timer allocation failed, using the fallback instead.");
+			}
+		}
+
+		operator int() const
+		{
+			return m_timer;
+		}
+
+		~linux_timer_handle_t()
+		{
+			if (m_timer != -1)
+			{
+				close(m_timer);
+			}
+		}
+	} fd_timer;
+
+	if (!alert && usec > 0 && usec <= 1000 && fd_timer != -1)
 	{
 		struct itimerspec timeout;
 		u64 missed;
@@ -1902,55 +1911,19 @@ void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 		timeout.it_value.tv_sec = nsec / 1000000000ull;
 		timeout.it_interval.tv_sec = 0;
 		timeout.it_interval.tv_nsec = 0;
-		timerfd_settime(_this->m_timer, 0, &timeout, NULL);
-		if (read(_this->m_timer, &missed, sizeof(missed)) != sizeof(missed))
+		timerfd_settime(fd_timer, 0, &timeout, NULL);
+		if (read(fd_timer, &missed, sizeof(missed)) != sizeof(missed))
 			sig_log.error("timerfd: read() failed");
 		return;
 	}
 #endif
 
-	std::unique_lock lock(_this->m_mutex, std::defer_lock);
-
-	while (true)
+	if (_this->m_signal && _this->m_signal.exchange(0))
 	{
-		// Mutex is unlocked at the start and after the waiting
-		if (u32 sig = _this->m_signal.load())
-		{
-			if (sig & 1)
-			{
-				_this->m_signal &= ~1;
-				return;
-			}
-		}
-
-		if (usec == 0)
-		{
-			// No timeout: return immediately
-			return;
-		}
-
-		if (!lock)
-		{
-			lock.lock();
-		}
-
-		// Double-check the value
-		if (u32 sig = _this->m_signal.load())
-		{
-			if (sig & 1)
-			{
-				_this->m_signal &= ~1;
-				return;
-			}
-		}
-
-		_this->m_cond.wait_unlock(usec, lock);
-
-		if (usec < cond_variable::max_timeout)
-		{
-			usec = 0;
-		}
+		return;
 	}
+
+	_this->m_signal.wait(0, atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
 }
 
 std::string thread_ctrl::get_name_cached()
@@ -2000,11 +1973,11 @@ void thread_base::join() const
 
 void thread_base::notify()
 {
-	if (!(m_signal & 1))
+	// Increment with saturation
+	if (m_signal.try_inc())
 	{
-		m_signal |= 1;
-		m_mutex.lock_unlock();
-		m_cond.notify_one();
+		// Considered impossible to have a situation when not notified
+		m_signal.notify_all();
 	}
 }
 
