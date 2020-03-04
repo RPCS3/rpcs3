@@ -1804,9 +1804,6 @@ void thread_base::initialize(bool(*wait_cb)(const void*))
 
 void thread_base::notify_abort() noexcept
 {
-	// For now
-	notify();
-
 	atomic_storage_futex::raw_notify(+m_state_notifier);
 }
 
