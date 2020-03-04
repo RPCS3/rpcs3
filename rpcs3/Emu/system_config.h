@@ -234,11 +234,15 @@ struct cfg_root : cfg::node
 	{
 		node_net(cfg::node* _this) : cfg::node(_this, "Net") {}
 
-		cfg::_enum<CellNetCtlState> net_status{ this, "Connection status" };
-		cfg::string ip_address{ this, "IP address", "192.168.1.1" };
+		cfg::_enum<np_internet_status> net_active{this, "Internet enabled", np_internet_status::disabled};
+		cfg::string ip_address{this, "IP address", "0.0.0.0"};
+		cfg::string dns{this, "DNS address", "8.8.8.8"};
+		cfg::string swap_list{this, "IP swap list", ""};
 
-	} net{ this };
-
+		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
+		cfg::string psn_npid{this, "NPID", ""};
+	} net{this};
+	
 	struct node_misc : cfg::node
 	{
 		node_misc(cfg::node* _this) : cfg::node(_this, "Miscellaneous") {}

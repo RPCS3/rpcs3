@@ -205,3 +205,34 @@ void fmt_class_string<enter_button_assign>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+template <>
+void fmt_class_string<np_internet_status>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](np_internet_status value)
+	{
+		switch (value)
+		{
+		case np_internet_status::disabled: return "Disconnected";
+		case np_internet_status::enabled: return "Connected";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<np_psn_status>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](np_psn_status value)
+	{
+		switch (value)
+		{
+		case np_psn_status::disabled: return "Disconnected";
+		case np_psn_status::fake: return "Simulated";
+		}
+
+		return unknown;
+	});
+}
+
