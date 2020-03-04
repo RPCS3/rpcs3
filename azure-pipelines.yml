@@ -19,7 +19,6 @@ jobs:
         COMPILER: gcc
         DEPLOY_APPIMAGE: true
   variables:
-    COMPILER: clang
     CCACHE_DIR: $(Pipeline.Workspace)/ccache
   pool:
     vmImage: 'ubuntu-latest'
@@ -28,7 +27,7 @@ jobs:
     inputs:
       key: ccache | $(Agent.OS) | $(COMPILER)
       path: $(CCACHE_DIR)
-    displayName: Ccache
+    displayName: ccache
 
   - bash: |
       docker pull --quiet rpcs3/rpcs3-travis-xenial:1.2
@@ -42,3 +41,156 @@ jobs:
     displayName: Docker setup and build
 
   - publish: $(Build.ArtifactStagingDirectory)
+
+- job: Windows_Build
+  variables:
+    COMPILER: msvc
+    QTDIR: "C:\\Qt\\5.14.1\\msvc2017_64"
+    QT_BASE_URL: "http://qt.mirror.constant.com/online/qtsdkrepository/windows_x86/desktop/qt5_5141/qt.qt5.5141.win64_msvc2017_64/5.14.1-0-202001240957qtbase-Windows-Windows_10-MSVC2017-Windows-Windows_10-X86_64.7z"
+    QT_WIN_URL: "http://qt.mirror.constant.com/online/qtsdkrepository/windows_x86/desktop/qt5_5141/qt.qt5.5141.win64_msvc2017_64/5.14.1-0-202001240957qtwinextras-Windows-Windows_10-MSVC2017-Windows-Windows_10-X86_64.7z"
+    QT_DECL_URL: "http://qt.mirror.constant.com/online/qtsdkrepository/windows_x86/desktop/qt5_5141/qt.qt5.5141.win64_msvc2017_64/5.14.1-0-202001240957qtdeclarative-Windows-Windows_10-MSVC2017-Windows-Windows_10-X86_64.7z"
+    QT_TOOLS_URL: "http://qt.mirror.constant.com/online/qtsdkrepository/windows_x86/desktop/qt5_5141/qt.qt5.5141.win64_msvc2017_64/5.14.1-0-202001240957qttools-Windows-Windows_10-MSVC2017-Windows-Windows_10-X86_64.7z"
+    LLVMLIBS: https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs.7z
+    GLSLANG: https://www.dropbox.com/s/6e8w6t5dxh3ad4l/glslang.7z?dl=1
+    COMPATDB: https://rpcs3.net/compatibility?api=v1&export
+    VULKAN_SDK: "C:\\VulkanSDK\\1.1.126.0"
+    VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.126.0/windows/VulkanSDK-1.1.126.0-Installer.exe
+    VULKAN_SDK_SHA: ee86f25580b550390ce46508415e744d62e87e9c0de6cd299998058253a2a4ba
+    CCACHE_DIR: $(Pipeline.Workspace)/ccache
+  pool:
+    vmImage: "windows-latest"
+  steps:
+    - task: Cache@0
+      inputs:
+        key: ccache | $(Agent.OS) | $(COMPILER)
+        path: $(CCACHE_DIR)
+      displayName: ccache
+
+    - powershell: | # set env vars for versioning
+        Set-PSDebug -Trace 1
+        $env:COMM_TAG = $(Get-Content ./rpcs3/rpcs3_version.cpp | findstr 'version{.*}' | %{ $ver = $_ -split "[{,]"; "{0}.{1}.{2}" -f [int]$ver[1],[int]$ver[2],[int]$ver[3]; })
+        $env:COMM_COUNT = $(git rev-list --count HEAD)
+        $env:COMM_HASH = $(git rev-parse --short=8 HEAD)
+
+        if ($env:APPVEYOR_PULL_REQUEST_NUMBER) {
+            $env:BUILD = "rpcs3-v{0}-{1}_win64.7z" -f $env:COMM_TAG, $env:COMM_HASH
+            $env:AVVER = "{0}-{1}" -f $env:COMM_TAG.TrimStart("v"), $env:COMM_HASH
+        }
+        else {
+            $env:BUILD = "rpcs3-v{0}-{1}-{2}_win64.7z" -f $env:COMM_TAG, $env:COMM_COUNT, $env:COMM_HASH
+            $env:AVVER = "{0}-{1}" -f $env:COMM_TAG.TrimStart("v"), $env:COMM_COUNT
+        }
+
+        # used for experimental build warnings for pr builds
+        $env:BRANCH = "{0}/{1}/#{2}" -f $env:APPVEYOR_REPO_NAME, `
+          $env:APPVEYOR_REPO_BRANCH, $env:APPVEYOR_PULL_REQUEST_NUMBER
+        $env:BRANCH = $env:BRANCH -replace "/#$"
+
+        # misc global settings
+        $env:PATH += $env:QTDIR
+        [net.servicepointmanager]::securityprotocol = "tls12, tls11, tls"
+
+        # update and init submodules
+        git submodule -q update --init `
+          3rdparty/cereal `
+          3rdparty/ffmpeg `
+          3rdparty/span `
+          3rdparty/hidapi `
+          3rdparty/libpng `
+          3rdparty/libusb `
+          3rdparty/pugixml `
+          3rdparty/xxHash `
+          3rdparty/yaml-cpp `
+          3rdparty/zlib `
+          3rdparty/FAudio `
+          asmjit `
+          Vulkan/glslang
+      displayName: Install environment
+
+    - powershell: | # initialize mirror arrays and fetch precompiled build dependencies
+        $VULKAN_SDK_URLS = @(
+            $env:VULKAN_SDK_URL;
+            "$($env:VULKAN_SDK_URL)?Human=true";
+        )
+        if (!(test-path llvmlibs.7z)) { irm $env:LLVMLIBS -outfile llvmlibs.7z }
+        if (!(test-path glslang.7z)) { irm $env:GLSLANG -outfile glslang.7z }
+        7z x llvmlibs.7z -aos -o"." | out-null
+        7z x glslang.7z -aos -o".\lib\Release - LLVM-x64" | out-null
+        if (!(test-path vulkan-sdk.exe))
+        {
+            foreach ($url in $VULKAN_SDK_URLS) {
+                irm $url -outfile vulkan-sdk.exe
+                if ($env:VULKAN_SDK_SHA -eq $(Get-FileHash .\vulkan-sdk.exe).Hash)
+                {
+                    echo "Successfully downloaded and verified vulkan-sdk.exe!"
+                    break
+                }
+                else
+                {
+                    echo "Invalid file hash, Vulkan SDK Setup was possibly tampered with, retrying with a different mirror..."
+                }
+            }
+        }
+        .\vulkan-sdk.exe /S
+      displayName: Setup dependencies
+
+    - bash: |
+        if [ ! -e QtBase.7z ]; then
+            curl -L -o QtBase.7z $QT_BASE_URL
+        fi
+
+        if [ ! -e QtWin.7z ]; then
+            curl -L -o QtWin.7z $QT_WIN_URL
+        fi
+
+        if [ ! -e QtDecl.7z ]; then
+            curl -L -o QtDecl.7z $QT_DECL_URL
+        fi
+
+        if [ ! -e QtTools.7z ]; then
+            curl -L -o QtTools.7z $QT_TOOLS_URL
+        fi
+
+        7z x QtBase.7z -o'C:\Qt\'
+        7z x QtWin.7z -o'C:\Qt\'
+        7z x QtDecl.7z -o'C:\Qt\'
+        7z x QtTools.7z -o'C:\Qt\'
+      displayName: Setup Qt
+
+    # Visual Studio build
+    # Build with MSBuild and set the Visual Studio version property
+    - task: VSBuild@1
+      inputs:
+        solution: 'rpcs3.sln'
+        #vsVersion: 'latest' # Optional. Options: latest, 16.0, 15.0, 14.0, 12.0, 11.0
+        msbuildArgs: '/m'
+        platform: x64
+        configuration: 'Release - LLVM'
+
+    - bash : |
+        echo "Remove unecessary files..."
+        rm ./bin/rpcs3.exp ./bin/rpcs3.lib ./bin/rpcs3.pdb
+
+        echo "Prepare compatibility database for packaging..."
+        curl -sL $COMPATDB | iconv -t UTF-8 -o ./bin/GuiConfigs/compat_database.dat
+
+        echo "Package artifacts..."
+        if [ -z "$BUILD" ]; then
+            echo "deebly goncerned DDDD:"
+            export BUILD=rpcs3.7z
+        fi
+
+        libCrypto='C:\Program Files\OpenSSL\bin\libcrypto-1_1-x64.dll'
+        libSSL='C:\Program Files\OpenSSL\bin\libssl-1_1-x64.dll'
+
+        7z a -m0=LZMA2 -mx9 "$BUILD" ./bin/*
+        7z a -m0=LZMA2 -mx9 openssl_win64.7z "$libCrypto" "$libSSL"
+        export FILESIZE="$(stat -c %s "$BUILD")"
+
+        echo "Generate sha256 hashes..."
+        sha256sum "$BUILD" | awk ' { print($1) } ' > "$BUILD".sha256
+        sha256sum openssl_win64.7z | awk '{ print($1) }' > openssl_win64.7z.sha256
+      displayName: Package build
+
+    - publish: rpcs3.7z
+      artifact: Main App
