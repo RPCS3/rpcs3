@@ -1153,6 +1153,8 @@ namespace vk
 
 			for (auto& img : src)
 			{
+				// Only raw uploads can possibly have mismatched layout here
+				img->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 				views.push_back(img->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector));
 			}
 
