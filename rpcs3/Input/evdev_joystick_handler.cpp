@@ -270,7 +270,7 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::get
 	return std::static_pointer_cast<EvdevDevice>(dev.first);
 }
 
-void evdev_joystick_handler::get_next_button_press(const std::string& padId, const std::function<void(u16, std::string, std::string, std::array<int, 6>)>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
+void evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
@@ -303,7 +303,7 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 		return it != data.end() && dir == it->second.second ? it->second.first : 0;
 	};
 
-	std::array<int, 6> preview_values = {0, 0, 0, 0, 0, 0};
+	pad_preview_values preview_values = { 0, 0, 0, 0, 0, 0 };
 
 	if (buttons.size() == 10)
 	{
@@ -317,7 +317,7 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 
 	// return if nothing new has happened. ignore this to get the current state for blacklist
 	if (!get_blacklist && ret < 0)
-		return callback(0, "", padId, preview_values);
+		return callback(0, "", padId, 0, preview_values);
 
 	std::pair<u16, std::string> pressed_button = { 0, "" };
 
@@ -408,9 +408,9 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 	}
 
 	if (pressed_button.first > 0)
-		return callback(pressed_button.first, pressed_button.second, padId, preview_values);
+		return callback(pressed_button.first, pressed_button.second, padId, 0, preview_values);
 	else
-		return callback(0, "", padId, preview_values);
+		return callback(0, "", padId, 0, preview_values);
 }
 
 // https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/InputCommon/ControllerInterface/evdev/evdev.cpp

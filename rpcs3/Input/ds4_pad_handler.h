@@ -109,7 +109,6 @@ public:
 	std::vector<std::string> ListDevices() override;
 	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
 	u32 get_battery_level(const std::string& padId) override;
-	bool get_device_init(const std::string& padId) override;
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
@@ -149,5 +148,5 @@ private:
 	void get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
 	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
-	std::array<int, 6> get_preview_values(std::unordered_map<u64, u16> data) override;
+	pad_preview_values get_preview_values(std::unordered_map<u64, u16> data) override;
 };

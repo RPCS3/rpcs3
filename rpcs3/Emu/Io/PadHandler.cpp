@@ -317,7 +317,7 @@ void PadHandlerBase::init_configs()
 	}
 }
 
-void PadHandlerBase::get_next_button_press(const std::string& pad_id, const std::function<void(u16, std::string, std::string, std::array<int, 6>)>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
+void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
 {
 	if (get_blacklist)
 		blacklist.clear();
@@ -369,11 +369,12 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const std:
 	}
 
 	const auto preview_values = get_preview_values(data);
+	const auto battery_level = get_battery_level(pad_id);
 
 	if (pressed_button.first > 0)
-		return callback(pressed_button.first, pressed_button.second, pad_id, preview_values);
+		return callback(pressed_button.first, pressed_button.second, pad_id, battery_level, preview_values);
 	else
-		return callback(0, "", pad_id, preview_values);
+		return callback(0, "", pad_id, battery_level, preview_values);
 
 	return;
 }
