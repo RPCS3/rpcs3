@@ -10,14 +10,15 @@ pad_led_settings_dialog::pad_led_settings_dialog(const int& colorR, const int& c
     , m_initial{colorR, colorG, colorB, led_low_battery_blink, led_battery_indicator, led_battery_indicator_brightness}
 {
 	ui->setupUi(this);
-	setFixedSize(size());
 	m_new = m_initial;
-	redraw_color_sample();
+
 	ui->hs_indicator_brightness->setValue(m_new.battery_indicator_brightness);
 	ui->cb_led_blink->setChecked(m_new.low_battery_blink);
 	ui->cb_led_indicate->setChecked(m_new.battery_indicator);
+
 	switch_groupboxes(m_new.battery_indicator);
 	update_slider_label(m_new.battery_indicator_brightness);
+
 	connect(ui->bb_dialog_buttons, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
 	{
 		if (button == ui->bb_dialog_buttons->button(QDialogButtonBox::Ok))
@@ -35,7 +36,7 @@ pad_led_settings_dialog::pad_led_settings_dialog(const int& colorR, const int& c
 			read_form_values();
 		}
 		Q_EMIT pass_led_settings(m_new.cR, m_new.cG, m_new.cB, m_new.low_battery_blink, m_new.battery_indicator, m_new.battery_indicator_brightness);
-	}); 
+	});
 	connect(ui->b_colorpicker, &QPushButton::clicked, [this]()
 	{
 		const QColor led_color(m_new.cR, m_new.cG, m_new.cB);
@@ -52,6 +53,11 @@ pad_led_settings_dialog::pad_led_settings_dialog(const int& colorR, const int& c
 	});
 	connect(ui->hs_indicator_brightness, &QAbstractSlider::valueChanged, this, &pad_led_settings_dialog::update_slider_label);
 	connect(ui->cb_led_indicate, &QCheckBox::toggled, this, &pad_led_settings_dialog::switch_groupboxes);
+
+	// Draw color sample after showing the dialog, in order to have proper dimensions
+	show();
+	redraw_color_sample();
+	setFixedSize(size());
 }
 
 pad_led_settings_dialog::~pad_led_settings_dialog()
@@ -61,23 +67,33 @@ pad_led_settings_dialog::~pad_led_settings_dialog()
 
 void pad_led_settings_dialog::redraw_color_sample()
 {
+	const qreal dpr = devicePixelRatioF();
 	const qreal w = ui->w_color_sample->width();
 	const qreal h = ui->w_color_sample->height();
 	const qreal padding = 5;
 	const qreal radius = 5;
-	QColor led_color;
-	QPixmap color_sample(w, h);
-	color_sample.fill(QColor("transparent"));	
-	QPainter painter(&color_sample);
+
+	// Create the canvas for our color sample widget
+	QPixmap color_sample(w * dpr, h * dpr);
+	color_sample.setDevicePixelRatio(dpr);
+	color_sample.fill(Qt::transparent);
+
+	// Create the shape for our color sample widget
 	QPainterPath path;
-	QPen border(Qt::black, 1);
-	painter.setRenderHint(QPainter::Antialiasing);
-	painter.setPen(border);
-	led_color.setRgb(m_new.cR, m_new.cG, m_new.cB);
 	path.addRoundedRect(QRectF(padding, padding, w - padding * 2, h - padding * 2), radius, radius);
+
+	// Get new LED color
+	const QColor led_color(m_new.cR, m_new.cG, m_new.cB);
+
+	// Paint the shape with a black border and fill it with the LED color
+	QPainter painter(&color_sample);
+	painter.setRenderHint(QPainter::Antialiasing);
+	painter.setPen(QPen(Qt::black, 1));
 	painter.fillPath(path, led_color);
 	painter.drawPath(path);
-	ui->w_color_sample->setPixmap(color_sample);
+
+	// Update the color sample widget
+	ui->w_color_sample->setPixmap(color_sample.scaled(w * dpr, h * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 }
 
 void pad_led_settings_dialog::update_slider_label(int val)

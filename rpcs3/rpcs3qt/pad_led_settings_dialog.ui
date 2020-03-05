@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>292</width>
+    <width>287</width>
     <height>287</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>LED Settings</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,1,1,0">
+  <layout class="QVBoxLayout" name="pad_led_settings_dialog_layout">
    <item>
     <widget class="QGroupBox" name="gb_led_color">
      <property name="minimumSize">
@@ -25,15 +25,9 @@
      <property name="title">
       <string>LED Color</string>
      </property>
-     <layout class="QVBoxLayout" name="gb_led_color_layout" stretch="0,2">
+     <layout class="QVBoxLayout" name="gb_led_color_layout">
       <item>
        <widget class="QLabel" name="w_color_sample">
-        <property name="minimumSize">
-         <size>
-          <width>249</width>
-          <height>39</height>
-         </size>
-        </property>
         <property name="text">
          <string/>
         </property>
@@ -42,7 +36,7 @@
       <item>
        <widget class="QPushButton" name="b_colorpicker">
         <property name="text">
-         <string>Select color...</string>
+         <string>Select color</string>
         </property>
        </widget>
       </item>
@@ -51,12 +45,6 @@
    </item>
    <item>
     <widget class="QGroupBox" name="gb_battery_status">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>75</height>
-      </size>
-     </property>
      <property name="title">
       <string>In-game battery status</string>
      </property>
