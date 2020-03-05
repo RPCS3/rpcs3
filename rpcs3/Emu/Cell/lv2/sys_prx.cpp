@@ -385,8 +385,7 @@ error_code _sys_prx_get_module_info(u32 id, u64 flags, vm::ptr<sys_prx_module_in
 		return CELL_PRX_ERROR_UNKNOWN_MODULE;
 	}
 
-	std::memset(pOpt->info->name, 0, 30);
-	std::memcpy(pOpt->info->name, prx->module_info_name, 28);
+	strcpy_trunc(pOpt->info->name, prx->module_info_name);
 	pOpt->info->version[0] = prx->module_info_version[0];
 	pOpt->info->version[1] = prx->module_info_version[1];
 	pOpt->info->modattribute = prx->module_info_attributes;
@@ -397,7 +396,6 @@ error_code _sys_prx_get_module_info(u32 id, u64 flags, vm::ptr<sys_prx_module_in
 	{
 		gsl::span dst(pOpt->info->filename.get_ptr(), pOpt->info->filename_size);
 		strcpy_trunc(dst, prx->name);
-		pOpt->info->filename[pOpt->info->filename_size - 1] = 0;
 	}
 
 	if (pOpt->info->segments)
