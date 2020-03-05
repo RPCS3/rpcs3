@@ -230,8 +230,23 @@ Value* PPUTranslator::GetAddr(u64 _add)
 Type* PPUTranslator::ScaleType(Type* type, s32 pow2)
 {
 	verify(HERE), (type->getScalarType()->isIntegerTy());
+	verify(HERE), pow2 > -32, pow2 < 32;
 
-	const auto new_type = m_ir->getIntNTy(type->getScalarSizeInBits() * (1 << pow2));
+	uint scaled = type->getScalarSizeInBits();
+
+	verify(HERE), utils::popcnt32(scaled) == 1;
+
+	if (pow2 > 0)
+	{
+		scaled <<= pow2;
+	}
+	else if (pow2 < 0)
+	{
+		scaled >>= -pow2;
+	}
+
+	verify(HERE), (scaled != 0);
+	const auto new_type = m_ir->getIntNTy(scaled);
 	return type->isVectorTy() ? VectorType::get(new_type, type->getVectorNumElements()) : cast<Type>(new_type);
 }
 
