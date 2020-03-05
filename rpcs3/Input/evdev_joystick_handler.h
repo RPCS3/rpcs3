@@ -336,7 +336,7 @@ public:
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void Close();
 	void get_next_button_press(const std::string& padId, const std::function<void(u16, std::string, std::string, std::array<int, 6>)>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
-	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b) override;
+	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
 
 private:
 	std::shared_ptr<EvdevDevice> get_evdev_device(const std::string& device);

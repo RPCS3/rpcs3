@@ -63,6 +63,7 @@ protected:
 	int m_thumb_threshold = 0;
 
 	bool b_has_led = false;
+	bool b_has_battery = false;
 	bool b_has_deadzones = false;
 	bool b_has_rumble = false;
 	bool b_has_config = false;
@@ -134,6 +135,7 @@ public:
 	bool has_rumble() const;
 	bool has_deadzones() const;
 	bool has_led() const;
+	bool has_battery() const;
 
 	static std::string get_config_dir(pad_handler type, const std::string& title_id = "");
 	static std::string get_config_filename(int i, const std::string& title_id = "");
@@ -142,7 +144,9 @@ public:
 	PadHandlerBase(pad_handler type = pad_handler::null);
 	virtual ~PadHandlerBase() = default;
 	// Sets window to config the controller(optional)
-	virtual void SetPadData(const std::string& /*padId*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/) {}
+	virtual void SetPadData(const std::string& /*padId*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
+	virtual u32 get_battery_level(const std::string& /*padId*/) { return 0; }
+	virtual bool get_device_init(const std::string& /*padId*/) { return false; };
 	// Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;
 	// Callback called during pad_thread::ThreadFunc

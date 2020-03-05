@@ -29,6 +29,7 @@
 	memory_viewer_panel.cpp
 	msg_dialog_frame.cpp
 	osk_dialog_frame.cpp
+	pad_led_settings_dialog.cpp
 	pad_settings_dialog.cpp
 	persistent_settings.cpp
 	pkg_install_dialog.cpp
@@ -59,6 +60,7 @@
 set(UI_FILES
 	about_dialog.ui
 	main_window.ui
+	pad_led_settings_dialog.ui
 	pad_settings_dialog.ui
 	settings_dialog.ui
 	welcome_dialog.ui

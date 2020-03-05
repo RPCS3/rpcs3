@@ -126,7 +126,7 @@ namespace cfg
 		atomic_t<bool> m_value;
 
 	public:
-		const bool def;
+		bool def;
 
 		_bool(node* owner, const std::string& name, bool def = false, bool dynamic = false)
 			: _base(type::_bool, owner, name, dynamic)

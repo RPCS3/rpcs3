@@ -276,6 +276,11 @@ bool PadHandlerBase::has_led() const
 	return b_has_led;
 }
 
+bool PadHandlerBase::has_battery() const
+{
+	return b_has_battery;
+}
+
 std::string PadHandlerBase::get_config_dir(pad_handler type, const std::string& title_id)
 {
 	if (!title_id.empty())

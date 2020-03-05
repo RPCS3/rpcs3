@@ -84,9 +84,11 @@ class ds4_pad_handler final : public PadHandlerBase
 		u8 smallVibrate{ 0 };
 		std::array<u8, 64> padData{};
 		u8 batteryLevel{ 0 };
+		u8 last_battery_level { 0 };
 		u8 cableState{ 0 };
 		u8 led_delay_on{ 0 };
 		u8 led_delay_off{ 0 };
+		bool is_initialized{ false };
 	};
 
 	const u16 DS4_VID = 0x054C;
@@ -105,12 +107,15 @@ public:
 	bool Init() override;
 
 	std::vector<std::string> ListDevices() override;
-	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b) override;
+	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
+	u32 get_battery_level(const std::string& padId) override;
+	bool get_device_init(const std::string& padId) override;
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
 	bool is_init = false;
 	DS4DataStatus status;
+	u32 get_battery_color(u8 battery_level, int brightness);
 
 private:
 	std::shared_ptr<DS4Device> GetDS4Device(const std::string& padId, bool try_reconnect = false);

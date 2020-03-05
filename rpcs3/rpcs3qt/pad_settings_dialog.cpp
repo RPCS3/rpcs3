@@ -9,6 +9,7 @@
 
 #include "qt_utils.h"
 #include "pad_settings_dialog.h"
+#include "pad_led_settings_dialog.h"
 #include "ui_pad_settings_dialog.h"
 #include "tooltips.h"
 
@@ -111,6 +112,11 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 			// Something went wrong
 			cfg_log.error("Failed to convert device string: %s", m_device_name);
 			return;
+		}
+		// Update battery indicator (if one is present) if device selection is changed
+		if (m_enable_battery)
+		{
+			ui->pb_battery->setValue(m_handler->get_battery_level(m_device_name));
 		}
 	});
 
@@ -252,7 +258,6 @@ void pad_settings_dialog::InitButtons()
 	insertButton(button_ids::id_pad_rstick_right, ui->b_rstick_right);
 	insertButton(button_ids::id_pad_rstick_up, ui->b_rstick_up);
 
-	m_padButtons->addButton(ui->b_led, button_ids::id_led);
 	m_padButtons->addButton(ui->b_reset, button_ids::id_reset_parameters);
 	m_padButtons->addButton(ui->b_blacklist, button_ids::id_blacklist);
 	m_padButtons->addButton(ui->b_refresh, button_ids::id_refresh);
@@ -331,22 +336,15 @@ void pad_settings_dialog::InitButtons()
 		RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->size().width(), rx, ry);
 	});
 
-	connect(ui->b_led, &QPushButton::clicked, [this]()
+	// Open LED settings
+	connect(ui->b_led_settings, &QPushButton::clicked, [this]()
 	{
-		QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
-		if (ui->b_led->property("led").canConvert<QColor>())
-		{
-			led_color = ui->b_led->property("led").value<QColor>();
-		}
-		QColorDialog dlg(led_color, this);
-		dlg.setWindowTitle(tr("LED Color"));
-		if (dlg.exec() == QColorDialog::Accepted)
-		{
-			const QColor newColor = dlg.selectedColor();
-			m_handler->SetPadData(m_device_name, 0, 0, newColor.red(), newColor.green(), newColor.blue());
-			ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, newColor));
-			ui->b_led->setProperty("led", newColor);
-		}
+		// Allow LED battery indication while the dialog is open
+		m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, static_cast<bool>(m_handler_cfg.led_battery_indicator), m_handler_cfg.led_battery_indicator_brightness);
+		pad_led_settings_dialog dialog(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, static_cast<bool>(m_handler_cfg.led_low_battery_blink), static_cast<bool>(m_handler_cfg.led_battery_indicator), m_handler_cfg.led_battery_indicator_brightness, this);
+		connect(&dialog, &pad_led_settings_dialog::pass_led_settings, this, &pad_settings_dialog::apply_led_settings);
+		dialog.exec();
+		m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, false, m_handler_cfg.led_battery_indicator_brightness);
 	});
 
 	// Enable Button Remapping
@@ -397,6 +395,10 @@ void pad_settings_dialog::InitButtons()
 		{
 			SwitchButtons(false);
 		}
+		if (m_enable_battery)
+		{
+			ui->pb_battery->setValue(0);
+		}
 	};
 
 	// Use timer to get button input
@@ -428,16 +430,33 @@ void pad_settings_dialog::InitButtons()
 				[this](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 		}
 	});
+
+	connect(&m_timer_ds4_battery, &QTimer::timeout, [this]()
+	{
+		if (m_handler->get_device_init(m_device_name))
+		{
+			ui->pb_battery->setValue(m_handler->get_battery_level(m_device_name));
+			pad_settings_dialog::m_timer_ds4_battery.stop();
+		}
+	});
 }
 
 void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor)
 {
 	QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
-	if (ui->b_led->property("led").canConvert<QColor>())
-	{
-		led_color = ui->b_led->property("led").value<QColor>();
-	}
-	m_handler->SetPadData(m_device_name, large_motor, small_motor, led_color.red(), led_color.green(), led_color.blue());
+	m_handler->SetPadData(m_device_name, large_motor, small_motor, led_color.red(), led_color.green(), led_color.blue(), static_cast<bool>(m_handler_cfg.led_battery_indicator), m_handler_cfg.led_battery_indicator_brightness);
+}
+
+// Slot to handle the data from a signal in the led settings dialog
+void pad_settings_dialog::apply_led_settings(int colorR, int colorG, int colorB, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness)
+{
+	m_handler_cfg.colorR.set(colorR);
+	m_handler_cfg.colorG.set(colorG);
+	m_handler_cfg.colorB.set(colorB);
+	m_handler_cfg.led_battery_indicator.set(led_battery_indicator);
+	m_handler_cfg.led_battery_indicator_brightness.set(led_battery_indicator_brightness);
+	m_handler_cfg.led_low_battery_blink.set(led_low_battery_blink);
+	m_handler->SetPadData(m_device_name, 0, 0, colorR, colorG, colorB, led_battery_indicator, led_battery_indicator_brightness);
 }
 
 void pad_settings_dialog::SwitchPadInfo(const std::string& pad_name, bool is_connected)
@@ -567,14 +586,28 @@ void pad_settings_dialog::ReloadButtons()
 	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), lx, ly);
 	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry);
 
-	// Enable and repaint the LED Button
+	// Apply stored/default LED settings to the device
 	m_enable_led = m_handler->has_led();
-	m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+	m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, false, m_handler_cfg.led_battery_indicator_brightness);
 
-	const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
-	ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, led_color));
-	ui->b_led->setProperty("led", led_color);
-	ui->gb_led->setVisible(m_enable_led);
+	// Enable battery and LED group box
+	m_enable_battery = m_handler->has_battery();
+	ui->gb_battery->setVisible(m_enable_battery || m_enable_led);
+
+	// Poll the battery level if one is available and fill the progress bar
+	if (m_enable_battery)
+	{
+		if (m_handler->m_type == pad_handler::ds4)
+		{
+			// If DS4 is connected via BT, the battery level isn't available for a while.
+			// This ensures that the battery level isn't indicated prematurely.
+			m_timer_ds4_battery.start(4);
+		}
+		else
+		{
+			ui->pb_battery->setValue(m_handler->get_battery_level(m_device_name));
+		}
+	}
 }
 
 void pad_settings_dialog::ReactivateButtons()
@@ -840,10 +873,7 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 
 		if (m_handler->has_led())
 		{
-			const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
-			ui->b_led->setProperty("led", led_color);
-			ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, led_color));
-			m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+			m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, false, m_handler_cfg.led_battery_indicator_brightness);
 		}
 	}
 
@@ -868,7 +898,9 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_sticks->setEnabled(is_enabled && m_enable_deadzones);
 	ui->gb_triggers->setEnabled(is_enabled && m_enable_deadzones);
-	ui->gb_led->setEnabled(is_enabled && m_enable_led);
+	ui->gb_battery->setEnabled(is_enabled && (m_enable_battery || m_enable_led));
+	ui->pb_battery->setEnabled(is_enabled && m_enable_battery);
+	ui->b_led_settings->setEnabled(is_enabled && m_enable_led);
 	ui->gb_mouse_accel->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_mouse_dz->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_stick_lerp->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
@@ -1237,14 +1269,6 @@ void pad_settings_dialog::SaveProfile()
 		m_handler_cfg.rtriggerthreshold.set(ui->slider_trigger_right->value());
 		m_handler_cfg.lstickdeadzone.set(ui->slider_stick_left->value());
 		m_handler_cfg.rstickdeadzone.set(ui->slider_stick_right->value());
-	}
-
-	if (m_handler->has_led() && ui->b_led->property("led").canConvert<QColor>())
-	{
-		const QColor led_color = ui->b_led->property("led").value<QColor>();
-		m_handler_cfg.colorR.set(led_color.red());
-		m_handler_cfg.colorG.set(led_color.green());
-		m_handler_cfg.colorB.set(led_color.blue());
 	}
 
 	if (m_handler->m_type == pad_handler::keyboard)

@@ -153,7 +153,7 @@ std::vector<std::string> ds3_pad_handler::ListDevices()
 	return ds3_pads_list;
 }
 
-void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32 /* b*/)
+void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
 	std::shared_ptr<ds3_device> device = get_ds3_device(padId);
 	if (device == nullptr || device->handle == nullptr)
