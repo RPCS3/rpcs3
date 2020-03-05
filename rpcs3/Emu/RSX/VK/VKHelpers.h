@@ -627,7 +627,7 @@ private:
 			rsx_log.notice("Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
 
 			if (get_driver_vendor() == driver_vendor::RADV &&
-				get_name().find("LLVM 8.0.0") != std::string::npos)
+				get_name().find("LLVM 8.0.0") != umax)
 			{
 				// Serious driver bug causing black screens
 				// See https://bugs.freedesktop.org/show_bug.cgi?id=110970
@@ -651,22 +651,22 @@ private:
 			if (!driver_properties.driverID)
 			{
 				const auto gpu_name = get_name();
-				if (gpu_name.find("Radeon") != std::string::npos)
+				if (gpu_name.find("Radeon") != umax)
 				{
 					return driver_vendor::AMD;
 				}
 
-				if (gpu_name.find("NVIDIA") != std::string::npos || gpu_name.find("GeForce") != std::string::npos)
+				if (gpu_name.find("NVIDIA") != umax || gpu_name.find("GeForce") != umax)
 				{
 					return driver_vendor::NVIDIA;
 				}
 
-				if (gpu_name.find("RADV") != std::string::npos)
+				if (gpu_name.find("RADV") != umax)
 				{
 					return driver_vendor::RADV;
 				}
 
-				if (gpu_name.find("Intel") != std::string::npos)
+				if (gpu_name.find("Intel") != umax)
 				{
 					return driver_vendor::INTEL;
 				}

@@ -219,7 +219,7 @@ std::shared_ptr<ds3_pad_handler::ds3_device> ds3_pad_handler::get_ds3_device(con
 		return nullptr;
 
 	size_t pos = padId.find(m_name_string);
-	if (pos == std::string::npos)
+	if (pos == umax)
 		return nullptr;
 
 	int pad_number = std::stoi(padId.substr(pos + 9));

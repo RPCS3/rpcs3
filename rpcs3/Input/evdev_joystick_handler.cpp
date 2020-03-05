@@ -327,9 +327,9 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 		std::string name = button.second;
 
 		// Handle annoying useless buttons
-		if (padId.find("Xbox 360") != std::string::npos && code >= BTN_TRIGGER_HAPPY)
+		if (padId.find("Xbox 360") != umax && code >= BTN_TRIGGER_HAPPY)
 			continue;
-		if (padId.find("Sony") != std::string::npos && (code == BTN_TL2 || code == BTN_TR2))
+		if (padId.find("Sony") != umax && (code == BTN_TL2 || code == BTN_TR2))
 			continue;
 
 		if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), name) != blacklist.end())

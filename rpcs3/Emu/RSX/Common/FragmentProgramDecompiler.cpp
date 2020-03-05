@@ -421,17 +421,17 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& lhs, const std::s
 
 		bool src_is_fp16 = false;
 		if ((opflags & (OPFLAGS::texture_ref | OPFLAGS::src_cast_f32)) == 0 &&
-			rhs.find("$0") != std::string::npos)
+			rhs.find("$0") != umax)
 		{
 			// Texture sample operations are full-width and are exempt
 			src_is_fp16 = (src0.fp16 && src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP);
 
-			if (src_is_fp16 && rhs.find("$1") != std::string::npos)
+			if (src_is_fp16 && rhs.find("$1") != umax)
 			{
 				// References operand 1
 				src_is_fp16 = (src1.fp16 && src1.reg_type == RSX_FP_REGISTER_TYPE_TEMP);
 
-				if (src_is_fp16 && rhs.find("$2") != std::string::npos)
+				if (src_is_fp16 && rhs.find("$2") != umax)
 				{
 					// References operand 2
 					src_is_fp16 = (src2.fp16 && src2.reg_type == RSX_FP_REGISTER_TYPE_TEMP);

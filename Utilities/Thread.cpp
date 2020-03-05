@@ -2024,11 +2024,11 @@ void thread_ctrl::detect_cpu_layout()
 		return;
 
 	const auto system_id = utils::get_system_info();
-	if (system_id.find("Ryzen") != std::string::npos)
+	if (system_id.find("Ryzen") != umax)
 	{
 		g_native_core_layout.store(native_core_arrangement::amd_ccx);
 	}
-	else if (system_id.find("Intel") != std::string::npos)
+	else if (system_id.find("Intel") != umax)
 	{
 #ifdef _WIN32
 		const LOGICAL_PROCESSOR_RELATIONSHIP relationship = LOGICAL_PROCESSOR_RELATIONSHIP::RelationProcessorCore;
@@ -2098,7 +2098,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 			const auto system_id = utils::get_system_info();
 			if (thread_count >= 32)
 			{
-				if (system_id.find("3950X") != std::string::npos)
+				if (system_id.find("3950X") != umax)
 				{
 					// zen2
 					// Ryzen 9 3950X
@@ -2107,7 +2107,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 					spu_mask = 0b00000000111111110000000000000000;
 					rsx_mask = 0b00000000000000001111111100000000;
 				}
-				else if (system_id.find("2970WX") != std::string::npos)
+				else if (system_id.find("2970WX") != umax)
 				{
 					// zen+
 					// Threadripper 2970WX
@@ -2129,7 +2129,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 			}
 			else if (thread_count == 24)
 			{
-				if (system_id.find("3900X") != std::string::npos)
+				if (system_id.find("3900X") != umax)
 				{
 					// zen2
 					// Ryzen 9 3900X
@@ -2150,7 +2150,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 			}
 			else if (thread_count == 16)
 			{
-				if (system_id.find("3700X") != std::string::npos || system_id.find("3800X") != std::string::npos)
+				if (system_id.find("3700X") != umax || system_id.find("3800X") != umax)
 				{
 					// Ryzen 7 3700/3800 (x)
 					// Assign threads 1-16
@@ -2170,7 +2170,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 			}
 			else if (thread_count == 12)
 			{
-				if (system_id.find("3600") != std::string::npos)
+				if (system_id.find("3600") != umax)
 				{
 					// zen2
 					// R5 3600 (x)

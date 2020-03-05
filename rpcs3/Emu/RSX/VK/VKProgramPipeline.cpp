@@ -57,18 +57,18 @@ namespace vk
 			// Link step is only useful for rasterizer programs, compute programs do not need this
 			for (const auto &uniform : uniforms[program_input_type::input_type_texture])
 			{
-				if (const auto name_start = uniform.name.find("tex"); name_start != std::string::npos)
+				if (const auto name_start = uniform.name.find("tex"); name_start != umax)
 				{
 					const auto name_end = uniform.name.find("_stencil");
 					const auto index_start = name_start + 3;  // Skip 'tex' part
-					const auto index_length = (name_end != std::string::npos) ? name_end - index_start : name_end;
+					const auto index_length = (name_end != umax) ? name_end - index_start : name_end;
 					const auto index_part = uniform.name.substr(index_start, index_length);
 					const auto index = std::stoi(index_part);
 
 					if (name_start == 0)
 					{
 						// Fragment texture (tex...)
-						if (name_end == std::string::npos)
+						if (name_end == umax)
 						{
 							// Normal texture
 							fs_texture_bindings[index] = uniform.location;

@@ -68,7 +68,7 @@ fs::file tar_object::get_file(std::string path)
 		{
 			TARHeader header = read_header(largest_offset);
 
-			if (std::string(header.magic).find("ustar") != std::string::npos)
+			if (std::string(header.magic).find("ustar") != umax)
 				m_map[header.name] = largest_offset;
 
 			int size = octalToDecimal(atoi(header.size));

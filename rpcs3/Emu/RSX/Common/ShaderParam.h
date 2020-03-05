@@ -184,7 +184,7 @@ public:
 		std::string simple_var;
 		const auto eq_pos = var.find('=');
 
-		if (eq_pos != std::string::npos)
+		if (eq_pos != umax)
 		{
 			simple_var = var.substr(0, eq_pos - 1);
 		}
@@ -195,7 +195,7 @@ public:
 
 		const auto brace_pos = var.find_last_of(')');
 		std::string prefix;
-		if (brace_pos != std::string::npos)
+		if (brace_pos != umax)
 		{
 			prefix = simple_var.substr(0, brace_pos);
 			simple_var = simple_var.substr(brace_pos);

@@ -225,7 +225,7 @@ std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDS4Device(const 
 		return nullptr;
 
 	size_t pos = padId.find(m_name_string);
-	if (pos == std::string::npos)
+	if (pos == umax)
 		return nullptr;
 
 	std::string pad_serial = padId.substr(pos + 9);

@@ -174,7 +174,7 @@ namespace rsx
 
 				std::string extension;
 				if (const auto extension_start = font_file.find_last_of('.');
-					extension_start != std::string::npos)
+					extension_start != umax)
 				{
 					extension = font_file.substr(extension_start + 1);
 				}

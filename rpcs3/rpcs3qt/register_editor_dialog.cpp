@@ -123,7 +123,7 @@ void register_editor_dialog::updateRegister(const QString& text)
 		auto& spu = *static_cast<spu_thread*>(cpu.get());
 
 		std::string::size_type first_brk = reg.find('[');
-		if (first_brk != std::string::npos)
+		if (first_brk != umax)
 		{
 			long reg_index;
 			reg_index = atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());

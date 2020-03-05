@@ -502,7 +502,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 				break;
 		}
 
-		if (size_t pos = name.find_last_of('/'); pos != std::string::npos)
+		if (size_t pos = name.find_last_of('/'); pos != umax)
 		{
 			update_log.trace("Creating path: %s", name.substr(0, pos));
 			fs::create_path(name.substr(0, pos));
@@ -521,7 +521,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 			// File failed to open, probably because in use, rename existing file and try again
 			const auto pos = name.find_last_of('/');
 			std::string filename;
-			if (pos == std::string::npos)
+			if (pos == umax)
 				filename = name;
 			else
 				filename = name.substr(pos + 1);

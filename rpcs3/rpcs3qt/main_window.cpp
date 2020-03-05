@@ -626,12 +626,12 @@ void main_window::HandlePupInstallation(QString file_path)
 	auto updatefilenames = update_files.get_filenames();
 
 	updatefilenames.erase(std::remove_if(
-		updatefilenames.begin(), updatefilenames.end(), [](std::string s) { return s.find("dev_flash_") == std::string::npos; }),
+		updatefilenames.begin(), updatefilenames.end(), [](std::string s) { return s.find("dev_flash_") == umax; }),
 		updatefilenames.end());
 
 	std::string version_string = pup.get_file(0x100).to_string();
 	size_t version_pos = version_string.find('\n');
-	if (version_pos != std::string::npos)
+	if (version_pos != umax)
 	{
 		version_string.erase(version_pos);
 	}

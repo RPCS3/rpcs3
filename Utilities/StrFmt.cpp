@@ -342,7 +342,7 @@ std::string fmt::replace_first(const std::string& src, const std::string& from, 
 {
 	auto pos = src.find(from);
 
-	if (pos == std::string::npos)
+	if (pos == umax)
 	{
 		return src;
 	}
@@ -353,7 +353,7 @@ std::string fmt::replace_first(const std::string& src, const std::string& from, 
 std::string fmt::replace_all(const std::string& src, const std::string& from, const std::string& to)
 {
 	std::string target = src;
-	for (auto pos = target.find(from); pos != std::string::npos; pos = target.find(from, pos + 1))
+	for (auto pos = target.find(from); pos != umax; pos = target.find(from, pos + 1))
 	{
 		target = (pos ? target.substr(0, pos) + to : to) + std::string(target.c_str() + pos + from.length());
 		pos += to.length();

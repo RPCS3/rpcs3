@@ -146,7 +146,7 @@ int xinput_pad_handler::GetDeviceNumber(const std::string& padId)
 		return -1;
 
 	size_t pos = padId.find(m_name_string);
-	if (pos == std::string::npos)
+	if (pos == umax)
 		return -1;
 
 	int device_number = std::stoul(padId.substr(pos + 12)) - 1; // Controllers 1-n in GUI
