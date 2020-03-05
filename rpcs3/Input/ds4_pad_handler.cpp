@@ -126,6 +126,7 @@ ds4_pad_handler::ds4_pad_handler() : PadHandlerBase(pad_handler::ds4)
 	b_has_rumble = true;
 	b_has_deadzones = true;
 	b_has_led = true;
+	b_has_battery = true;
 
 	m_name_string = "DS4 Pad #";
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;
@@ -173,16 +174,31 @@ void ds4_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
 	cfg->padsquircling.def     = 8000;
 
-	// Set color value
+	// Set default color value
 	cfg->colorR.def = 0;
 	cfg->colorG.def = 0;
 	cfg->colorB.def = 20;
+
+	// Set default LED options
+	cfg->led_battery_indicator.def = false;
+	cfg->led_battery_indicator_brightness.def = 10;
+	cfg->led_low_battery_blink.def = true;
 
 	// apply defaults
 	cfg->from_default();
 }
 
-void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b)
+u32 ds4_pad_handler::get_battery_level(const std::string& padId)
+{
+	std::shared_ptr<DS4Device> device = GetDS4Device(padId);
+	if (device == nullptr || device->hidDevice == nullptr)
+	{
+		return 0;
+	}
+	return std::min<u32>(device->batteryLevel * 10, 100);
+}
+
+void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<DS4Device> device = GetDS4Device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
@@ -208,7 +224,14 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 	}
 
 	// Set new LED color
-	if (r >= 0 && g >= 0 && b >= 0 && r <= 255 && g <= 255 && b <= 255)
+	if (battery_led)
+	{
+		const u32 combined_color = get_battery_color(device->batteryLevel, battery_led_brightness);
+		device->config->colorR.set(combined_color >> 8);
+		device->config->colorG.set(combined_color & 0xff);
+		device->config->colorB.set(0);
+	}
+	else if (r >= 0 && g >= 0 && b >= 0 && r <= 255 && g <= 255 && b <= 255)
 	{
 		device->config->colorR.set(r);
 		device->config->colorG.set(g);
@@ -720,7 +743,7 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 	else if (!device->btCon && buf[0] == 0x01 && res == 64)
 	{
 		// Ds4 Dongle uses this bit to actually report whether a controller is connected
-		bool connected = (buf[31] & 0x04) ? false : true;
+		const bool connected = (buf[31] & 0x04) ? false : true;
 		if (connected && !device->hasCalibData)
 			device->hasCalibData = GetCalibrationData(device);
 
@@ -729,7 +752,8 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 	else
 		return DS4DataStatus::NoNewData;
 
-	int battery_offset = offset + DS4_INPUT_REPORT_BATTERY_OFFSET;
+	const int battery_offset = offset + DS4_INPUT_REPORT_BATTERY_OFFSET;
+	device->is_initialized = true;
 	device->cableState = (buf[battery_offset] >> 4) & 0x01;
 	device->batteryLevel = buf[battery_offset] & 0x0F;
 
@@ -756,6 +780,16 @@ std::shared_ptr<PadDevice> ds4_pad_handler::get_device(const std::string& device
 		return nullptr;
 
 	return ds4device;
+}
+
+bool ds4_pad_handler::get_device_init(const std::string& padId)
+{
+	std::shared_ptr<DS4Device> device = GetDS4Device(padId);
+	if (device == nullptr || device->hidDevice == nullptr)
+	{
+		return false;
+	}
+	return device->is_initialized;
 }
 
 bool ds4_pad_handler::get_is_left_trigger(u64 keyCode)
@@ -794,6 +828,20 @@ bool ds4_pad_handler::get_is_right_stick(u64 keyCode)
 	default:
 		return false;
 	}
+}
+
+u32 ds4_pad_handler::get_battery_color(u8 battery_level, int brightness)
+{
+	static const std::array<u32, 12> battery_level_clr = {0xff00, 0xff33, 0xff66, 0xff99, 0xffcc, 0xffff, 0xccff, 0x99ff, 0x66ff, 0x33ff, 0x00ff, 0x00ff};
+	u32 combined_color = battery_level_clr[0];
+	// Check if we got a weird value
+	if (battery_level < battery_level_clr.size())
+	{
+		combined_color = battery_level_clr[battery_level];
+	}
+	const u32 red = (combined_color >> 8) * brightness / 100;
+	const u32 green = (combined_color & 0xff) * brightness / 100;
+	return ((red << 8) | green);
 }
 
 PadHandlerBase::connection ds4_pad_handler::update_connection(const std::shared_ptr<PadDevice>& device)
@@ -893,19 +941,36 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 	bool isBlinking = ds4_dev->led_delay_on > 0 || ds4_dev->led_delay_off > 0;
 	bool newBlinkData = false;
 
-	// we are now wired or have okay battery level -> stop blinking
-	if (isBlinking && !(wireless && lowBattery))
+	// Blink LED when battery is low
+	if (ds4_dev->config->led_low_battery_blink)
 	{
-		ds4_dev->led_delay_on = 0;
-		ds4_dev->led_delay_off = 0;
-		newBlinkData = true;
+		// we are now wired or have okay battery level -> stop blinking
+		if (isBlinking && !(wireless && lowBattery))
+		{
+			ds4_dev->led_delay_on = 0;
+			ds4_dev->led_delay_off = 0;
+			newBlinkData = true;
+		}
+		// we are now wireless and low on battery -> blink
+		if (!isBlinking && wireless && lowBattery)
+		{
+			ds4_dev->led_delay_on = 100;
+			ds4_dev->led_delay_off = 100;
+			newBlinkData = true;
+		}
 	}
-	// we are now wireless and low on battery -> blink
-	if (!isBlinking && wireless && lowBattery)
+
+	// Use LEDs to indicate battery level
+	if (ds4_dev->config->led_battery_indicator) 
 	{
-		ds4_dev->led_delay_on = 100;
-		ds4_dev->led_delay_off = 100;
-		newBlinkData = true;
+		// This makes sure that the LED color doesn't update every 1ms. DS4 only reports battery level in 10% increments
+		if (ds4_dev->last_battery_level != ds4_dev->batteryLevel) 
+		{
+			const u32 combined_color = get_battery_color(ds4_dev->batteryLevel, ds4_dev->config->led_battery_indicator_brightness);
+			ds4_dev->config->colorR.set(combined_color >> 8);
+			ds4_dev->config->colorG.set(combined_color & 0xff);
+			ds4_dev->config->colorB.set(0);
+		}
 	}
 
 	ds4_dev->newVibrateData |= ds4_dev->largeVibrate != speed_large || ds4_dev->smallVibrate != speed_small || newBlinkData;

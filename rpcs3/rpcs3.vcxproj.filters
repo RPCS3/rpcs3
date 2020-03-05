@@ -868,6 +868,21 @@
     <ClCompile Include="rpcs3qt\tooltips.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\pad_led_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_pad_led_settings_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_pad_led_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_pad_led_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_pad_led_settings_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -886,6 +901,9 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_pad_settings_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_pad_led_settings_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_settings_dialog.h">
@@ -995,6 +1013,9 @@
     <CustomBuild Include="rpcs3qt\pad_settings_dialog.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\pad_led_settings_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
     <CustomBuild Include="rpcs3qt\settings_dialog.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
@@ -1035,6 +1056,9 @@
       <Filter>Gui\game window</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\pad_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\pad_led_settings_dialog.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\log_frame.h">

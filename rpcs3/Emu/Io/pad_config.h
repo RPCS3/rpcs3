@@ -75,6 +75,10 @@ struct pad_config final : cfg::node
 	cfg::_int<0, 255> colorG{ this, "Color Value G", 0 };
 	cfg::_int<0, 255> colorB{ this, "Color Value B", 0 };
 
+	cfg::_bool led_low_battery_blink{ this, "Blink LED when battery is below 20%", true };
+	cfg::_bool led_battery_indicator{ this, "Use LED as a battery indicator", false };
+	cfg::_int<0, 100> led_battery_indicator_brightness{ this, "LED battery indicator brightness", 50 };
+
 	cfg::_bool enable_vibration_motor_large{ this, "Enable Large Vibration Motor", true };
 	cfg::_bool enable_vibration_motor_small{ this, "Enable Small Vibration Motor", true };
 	cfg::_bool switch_vibration_motors{ this, "Switch Vibration Motors", false };
