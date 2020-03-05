@@ -113,11 +113,6 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 			cfg_log.error("Failed to convert device string: %s", m_device_name);
 			return;
 		}
-		// Update battery indicator (if one is present) if device selection is changed
-		if (m_enable_battery)
-		{
-			ui->pb_battery->setValue(m_handler->get_battery_level(m_device_name));
-		}
 	});
 
 	// Combobox: Profiles
@@ -348,7 +343,7 @@ void pad_settings_dialog::InitButtons()
 	});
 
 	// Enable Button Remapping
-	const auto& callback = [this](u16 val, std::string name, std::string pad_name, std::array<int, 6> preview_values)
+	const auto& callback = [this](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
 	{
 		SwitchPadInfo(pad_name, true);
 
@@ -356,6 +351,7 @@ void pad_settings_dialog::InitButtons()
 		{
 			SwitchButtons(true);
 		}
+
 		if (m_handler->has_deadzones())
 		{
 			ui->preview_trigger_left->setValue(preview_values[0]);
@@ -371,6 +367,11 @@ void pad_settings_dialog::InitButtons()
 				rx = preview_values[4], ry = preview_values[5];
 				RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry);
 			}
+		}
+
+		if (m_enable_battery)
+		{
+			ui->pb_battery->setValue(battery_level);
 		}
 
 		if (val <= 0)
@@ -426,17 +427,8 @@ void pad_settings_dialog::InitButtons()
 			}
 			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
 			m_handler->get_next_button_press(info.name,
-				[this](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); },
+				[this](u16, std::string, std::string pad_name, u32, pad_preview_values) { SwitchPadInfo(pad_name, true); },
 				[this](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
-		}
-	});
-
-	connect(&m_timer_ds4_battery, &QTimer::timeout, [this]()
-	{
-		if (m_handler->get_device_init(m_device_name))
-		{
-			ui->pb_battery->setValue(m_handler->get_battery_level(m_device_name));
-			pad_settings_dialog::m_timer_ds4_battery.stop();
 		}
 	});
 }
@@ -593,21 +585,6 @@ void pad_settings_dialog::ReloadButtons()
 	// Enable battery and LED group box
 	m_enable_battery = m_handler->has_battery();
 	ui->gb_battery->setVisible(m_enable_battery || m_enable_led);
-
-	// Poll the battery level if one is available and fill the progress bar
-	if (m_enable_battery)
-	{
-		if (m_handler->m_type == pad_handler::ds4)
-		{
-			// If DS4 is connected via BT, the battery level isn't available for a while.
-			// This ensures that the battery level isn't indicated prematurely.
-			m_timer_ds4_battery.start(4);
-		}
-		else
-		{
-			ui->pb_battery->setValue(m_handler->get_battery_level(m_device_name));
-		}
-	}
 }
 
 void pad_settings_dialog::ReactivateButtons()
@@ -1119,7 +1096,7 @@ void pad_settings_dialog::ChangeInputType()
 			}
 			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
 			m_handler->get_next_button_press(info.name,
-				[this](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); },
+				[this](u16, std::string, std::string pad_name, u32, pad_preview_values) { SwitchPadInfo(pad_name, true); },
 				[this](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 			if (info.name == device)
 			{

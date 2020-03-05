@@ -153,9 +153,6 @@ private:
 	// Input timer. Its Callback handles the input
 	QTimer m_timer_input;
 
-	// DS4 workaround timer
-	QTimer m_timer_ds4_battery;
-
 	// Set vibrate data while keeping the current color
 	void SetPadData(u32 large_motor, u32 small_motor);
 

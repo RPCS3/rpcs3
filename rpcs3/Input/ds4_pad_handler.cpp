@@ -391,7 +391,7 @@ std::unordered_map<u64, u16> ds4_pad_handler::get_button_values(const std::share
 	return keyBuffer;
 }
 
-std::array<int, 6> ds4_pad_handler::get_preview_values(std::unordered_map<u64, u16> data)
+pad_preview_values ds4_pad_handler::get_preview_values(std::unordered_map<u64, u16> data)
 {
 	return { data[L2], data[R2], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg] };
 }
@@ -780,16 +780,6 @@ std::shared_ptr<PadDevice> ds4_pad_handler::get_device(const std::string& device
 		return nullptr;
 
 	return ds4device;
-}
-
-bool ds4_pad_handler::get_device_init(const std::string& padId)
-{
-	std::shared_ptr<DS4Device> device = GetDS4Device(padId);
-	if (device == nullptr || device->hidDevice == nullptr)
-	{
-		return false;
-	}
-	return device->is_initialized;
 }
 
 bool ds4_pad_handler::get_is_left_trigger(u64 keyCode)

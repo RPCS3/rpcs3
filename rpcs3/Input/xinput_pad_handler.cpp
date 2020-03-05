@@ -287,7 +287,7 @@ xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_scp(co
 	return values;
 }
 
-std::array<int, 6> xinput_pad_handler::get_preview_values(std::unordered_map<u64, u16> data)
+pad_preview_values xinput_pad_handler::get_preview_values(std::unordered_map<u64, u16> data)
 {
 	return { data[LT], data[RT], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg] };
 }

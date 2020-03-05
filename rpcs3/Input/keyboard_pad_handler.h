@@ -81,7 +81,7 @@ public:
 
 	void init_config(pad_config* cfg, const std::string& name) override;
 	std::vector<std::string> ListDevices() override;
-	void get_next_button_press(const std::string& /*padId*/, const std::function<void(u16, std::string, std::string, std::array<int, 6>)>& /*callback*/, const std::function<void(std::string)>& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) override {};
+	void get_next_button_press(const std::string& /*padId*/, const pad_callback& /*callback*/, const pad_fail_callback& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) override {};
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
 

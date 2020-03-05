@@ -11,6 +11,10 @@ struct PadDevice
 	pad_config* config{ nullptr };
 };
 
+using pad_preview_values = std::array<int, 6>;
+using pad_callback = std::function<void(u16 /*button_value*/, std::string /*button_name*/, std::string /*pad_name*/, u32 /*battery_level*/, pad_preview_values /*preview_values*/)>;
+using pad_fail_callback = std::function<void(std::string /*pad_name*/)>;
+
 class PadHandlerBase
 {
 protected:
@@ -146,7 +150,6 @@ public:
 	// Sets window to config the controller(optional)
 	virtual void SetPadData(const std::string& /*padId*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
 	virtual u32 get_battery_level(const std::string& /*padId*/) { return 0; }
-	virtual bool get_device_init(const std::string& /*padId*/) { return false; };
 	// Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;
 	// Callback called during pad_thread::ThreadFunc
@@ -154,7 +157,7 @@ public:
 	// Binds a Pad to a device
 	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device);
 	virtual void init_config(pad_config* /*cfg*/, const std::string& /*name*/) = 0;
-	virtual void get_next_button_press(const std::string& padId, const std::function<void(u16, std::string, std::string, std::array<int, 6>)>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
+	virtual void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
 
 private:
 	virtual std::shared_ptr<PadDevice> get_device(const std::string& /*device*/) { return nullptr; };
@@ -166,7 +169,7 @@ private:
 	virtual void get_extended_info(const std::shared_ptr<PadDevice>& /*device*/, const std::shared_ptr<Pad>& /*pad*/) {};
 	virtual void apply_pad_data(const std::shared_ptr<PadDevice>& /*device*/, const std::shared_ptr<Pad>& /*pad*/) {};
 	virtual std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& /*device*/) { return {}; };
-	virtual std::array<int, 6> get_preview_values(std::unordered_map<u64, u16> /*data*/) { return {}; };
+	virtual pad_preview_values get_preview_values(std::unordered_map<u64, u16> /*data*/) { return {}; };
 
 protected:
 	virtual std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& /*device*/, const pad_config* profile);
