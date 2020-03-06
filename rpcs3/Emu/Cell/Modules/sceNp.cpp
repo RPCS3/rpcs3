@@ -4596,24 +4596,24 @@ error_code sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 	}
 
 	// Unknown what this constant means
-	// if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
-	// {
-	// 	return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
-	// }
+	if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
+	{
+		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+	}
 
-	if (strcmp(id1->handle.data, id2->handle.data))// || id1->unk1[0] != id2->unk1[0])
+	if (strncmp(id1->handle.data, id2->handle.data, 16) || id1->unk1[0] != id2->unk1[0])
 	{
 		return SCE_NP_UTIL_ERROR_NOT_MATCH;
 	}
 
-	// if (id1->unk1[1] != id2->unk1[1])
-	// {
-	// 	// If either is zero they match
-	// 	if (id1->opt[4] && id2->opt[4])
-	// 	{
-	// 		return SCE_NP_UTIL_ERROR_NOT_MATCH;
-	// 	}
-	// }
+	if (id1->unk1[1] != id2->unk1[1])
+	{
+		// If either is zero they match
+		if (id1->opt[4] && id2->opt[4])
+		{
+			return SCE_NP_UTIL_ERROR_NOT_MATCH;
+		}
+	}
 
 	return CELL_OK;
 }
