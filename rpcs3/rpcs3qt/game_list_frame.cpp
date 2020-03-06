@@ -1213,7 +1213,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(copy_info, &QAction::triggered, [=, this]
 	{
-		QApplication::clipboard()->setText(name + " [" + serial + "]");
+		QApplication::clipboard()->setText(name % QStringLiteral(" [") % serial % QStringLiteral("]"));
 	});
 	connect(copy_name, &QAction::triggered, [=, this]
 	{

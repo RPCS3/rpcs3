@@ -126,14 +126,16 @@ void main_window::Init()
 	show(); // needs to be done before creating the thumbnail toolbar
 
 	// enable play options if a recent game exists
-	const bool enable_play_last = !m_recentGameActs.isEmpty();
+	const bool enable_play_last = !m_recentGameActs.isEmpty() && m_recentGameActs.first();
+
+	const QString start_toolip = enable_play_last ? tr("Start %0").arg(m_recentGameActs.first()->text()) : tr("Start emulation");
 
 	if (enable_play_last)
 	{
 		ui->sysPauseAct->setEnabled(true);
 		ui->sysPauseAct->setText(tr("&Start last played game\tCtrl+E"));
 		ui->sysPauseAct->setIcon(m_icon_play);
-		ui->toolbar_start->setToolTip(tr("Start last played game"));
+		ui->toolbar_start->setToolTip(start_toolip);
 		ui->toolbar_start->setEnabled(true);
 	}
 
@@ -143,7 +145,7 @@ void main_window::Init()
 	m_thumb_bar->setWindow(windowHandle());
 
 	m_thumb_playPause = new QWinThumbnailToolButton(m_thumb_bar);
-	m_thumb_playPause->setToolTip(enable_play_last ? tr("Start last played game") : tr("Start emulation"));
+	m_thumb_playPause->setToolTip(start_toolip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 	m_thumb_playPause->setEnabled(enable_play_last);
 
@@ -177,6 +179,16 @@ void main_window::Init()
 		m_updater.check_for_updates(true, this);
 	}
 #endif
+}
+
+QString main_window::GetCurrentTitle()
+{
+	QString title = qstr(Emu.GetTitleAndTitleID());
+	if (title.isEmpty())
+	{
+		title = qstr(Emu.GetBoot());
+	}
+	return title;
 }
 
 // returns appIcon
@@ -307,10 +319,9 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	else
 	{
 		gui_log.success("Boot successful.");
-		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		if (!add_only)
 		{
-			AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+			AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(Emu.GetTitleAndTitleID())));
 		}
 	}
 
@@ -894,43 +905,64 @@ void main_window::RepaintToolBarIcons()
 
 void main_window::OnEmuRun(bool /*start_playtime*/)
 {
+	const QString title = GetCurrentTitle();
+	const QString restart_tooltip = tr("Restart %0").arg(title);
+	const QString pause_tooltip = tr("Pause %0").arg(title);
+	const QString stop_tooltip = tr("Stop %0").arg(title);
+
 	m_debuggerFrame->EnableButtons(true);
+
 #ifdef _WIN32
-	m_thumb_playPause->setToolTip(tr("Pause emulation"));
+	m_thumb_stop->setToolTip(stop_tooltip);
+	m_thumb_restart->setToolTip(restart_tooltip);
+	m_thumb_playPause->setToolTip(pause_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 #endif
 	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
 	ui->toolbar_start->setText(tr("Pause"));
-	ui->toolbar_start->setToolTip(tr("Pause emulation"));
+	ui->toolbar_start->setToolTip(pause_tooltip);
+	ui->toolbar_stop->setToolTip(stop_tooltip);
+
 	EnableMenus(true);
 }
 
 void main_window::OnEmuResume()
 {
+	const QString title = GetCurrentTitle();
+	const QString restart_tooltip = tr("Restart %0").arg(title);
+	const QString pause_tooltip = tr("Pause %0").arg(title);
+	const QString stop_tooltip = tr("Stop %0").arg(title);
+
 #ifdef _WIN32
-	m_thumb_playPause->setToolTip(tr("Pause emulation"));
+	m_thumb_stop->setToolTip(stop_tooltip);
+	m_thumb_restart->setToolTip(restart_tooltip);
+	m_thumb_playPause->setToolTip(pause_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 #endif
 	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
 	ui->toolbar_start->setText(tr("Pause"));
-	ui->toolbar_start->setToolTip(tr("Pause emulation"));
+	ui->toolbar_start->setToolTip(pause_tooltip);
+	ui->toolbar_stop->setToolTip(stop_tooltip);
 }
 
 void main_window::OnEmuPause()
 {
+	const QString title = GetCurrentTitle();
+	const QString resume_tooltip = tr("Resume %0").arg(title);
+
 #ifdef _WIN32
-	m_thumb_playPause->setToolTip(tr("Resume emulation"));
+	m_thumb_playPause->setToolTip(resume_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
 	ui->sysPauseAct->setText(tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
-	ui->toolbar_start->setToolTip(tr("Resume emulation"));
+	ui->toolbar_start->setToolTip(resume_tooltip);
 
 	// Refresh game list in order to update time played
 	if (m_gameListFrame)
@@ -941,32 +973,39 @@ void main_window::OnEmuPause()
 
 void main_window::OnEmuStop()
 {
+	const QString title = GetCurrentTitle();
+	const QString play_tooltip = Emu.IsReady() ? tr("Start %0").arg(title) : tr("Resume %0").arg(title);
+	const QString restart_tooltip = tr("Restart %0").arg(title);
+
 	m_debuggerFrame->EnableButtons(false);
 	m_debuggerFrame->ClearBreakpoints();
 
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 #ifdef _WIN32
-	m_thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
+	m_thumb_playPause->setToolTip(play_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
+
 	EnableMenus(false);
-	if (!Emu.GetBoot().empty())
+
+	if (Emu.GetBoot().empty())
+	{
+		ui->toolbar_start->setIcon(m_icon_play);
+		ui->toolbar_start->setText(tr("Play"));
+		ui->toolbar_start->setToolTip(play_tooltip);
+	}
+	else
 	{
 		ui->toolbar_start->setEnabled(true);
 		ui->toolbar_start->setIcon(m_icon_restart);
 		ui->toolbar_start->setText(tr("Restart"));
-		ui->toolbar_start->setToolTip(tr("Restart emulation"));
+		ui->toolbar_start->setToolTip(restart_tooltip);
 		ui->sysRebootAct->setEnabled(true);
 #ifdef _WIN32
+		m_thumb_restart->setToolTip(restart_tooltip);
 		m_thumb_restart->setEnabled(true);
 #endif
-	}
-	else
-	{
-		ui->toolbar_start->setIcon(m_icon_play);
-		ui->toolbar_start->setText(tr("Play"));
-		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
 	ui->actionManage_Users->setEnabled(true);
 
@@ -979,16 +1018,20 @@ void main_window::OnEmuStop()
 
 void main_window::OnEmuReady()
 {
+	const QString title = GetCurrentTitle();
+	const QString play_tooltip = Emu.IsReady() ? tr("Start %0").arg(title) : tr("Resume %0").arg(title);
+
 	m_debuggerFrame->EnableButtons(true);
 #ifdef _WIN32
-	m_thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
+	m_thumb_playPause->setToolTip(play_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
-	ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
+	ui->toolbar_start->setToolTip(play_tooltip);
+
 	EnableMenus(true);
 
 	ui->actionManage_Users->setEnabled(false);
@@ -1032,7 +1075,7 @@ void main_window::BootRecentAction(const QAction* act)
 
 	const QString pth = act->data().toString();
 	const std::string path = sstr(pth);
-	QString nam;
+	QString name;
 	bool containsPath = false;
 
 	int idx = -1;
@@ -1042,12 +1085,13 @@ void main_window::BootRecentAction(const QAction* act)
 		{
 			idx = i;
 			containsPath = true;
-			nam = m_rg_entries.at(idx).second;
+			name = m_rg_entries.at(idx).second;
+			break;
 		}
 	}
 
 	// path is invalid: remove action from list return
-	if ((containsPath && nam.isEmpty()) || (!QFileInfo(pth).isDir() && !QFileInfo(pth).isFile()))
+	if ((containsPath && name.isEmpty()) || (!QFileInfo(pth).isDir() && !QFileInfo(pth).isFile()))
 	{
 		if (containsPath)
 		{
@@ -1148,12 +1192,14 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 		ui->bootRecentMenu->removeAction(act);
 	}
 
-	// if path already exists, remove it in order to get it to beginning
-	if (m_rg_entries.contains(entry))
+	// If path already exists, remove it in order to get it to beginning. Also remove duplicates.
+	for (int i = m_rg_entries.count() - 1; i >= 0; --i)
 	{
-		int idx = m_rg_entries.indexOf(entry);
-		m_rg_entries.removeAt(idx);
-		m_recentGameActs.removeAt(idx);
+		if (m_rg_entries[i].first == entry.first)
+		{
+			m_rg_entries.removeAt(i);
+			m_recentGameActs.removeAt(i);
+		}
 	}
 
 	// remove oldest action at the end if needed
