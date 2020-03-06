@@ -6,6 +6,7 @@
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
 
+#include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Crypto/unedat.h"
 #include "Utilities/StrUtil.h"
@@ -154,7 +155,14 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	if (!src)
 	{
-		src.open(path);
+		auto [fs_error, ppath, lv2_file] = lv2_file::open(vpath, 0, 0);
+
+		if (fs_error)
+		{
+			return {fs_error, vpath};
+		}
+
+		src = std::move(lv2_file);
 	}
 
 	const ppu_prx_object obj = decrypt_self(std::move(src), g_fxo->get<loaded_npdrm_keys>()->devKlic.data());

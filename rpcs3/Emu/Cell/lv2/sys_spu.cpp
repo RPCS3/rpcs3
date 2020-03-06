@@ -18,6 +18,7 @@
 #include "sys_memory.h"
 #include "sys_mmapper.h"
 #include "sys_event.h"
+#include "sys_fs.h"
 
 LOG_CHANNEL(sys_spu);
 
@@ -217,12 +218,19 @@ error_code sys_spu_image_open(ppu_thread& ppu, vm::ptr<sys_spu_image> img, vm::c
 
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
-	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())), g_fxo->get<loaded_npdrm_keys>()->devKlic.data());
+	auto [fs_error, ppath, file] = lv2_file::open(path.get_ptr(), 0, 0);
+
+	if (fs_error)
+	{
+		return {fs_error, path};
+	}
+
+	const fs::file elf_file = decrypt_self(std::move(file), g_fxo->get<loaded_npdrm_keys>()->devKlic.data());
 
 	if (!elf_file)
 	{
-		sys_spu.error("sys_spu_image_open() error: failed to open %s!", path);
-		return CELL_ENOENT;
+		sys_spu.error("sys_spu_image_open(): file %s is illegal for SPU image!", path);
+		return {CELL_ENOEXEC, path};
 	}
 
 	img->load(elf_file);
