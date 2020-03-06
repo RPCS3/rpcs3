@@ -4,6 +4,7 @@
 #include "StrFmt.h"
 #include "util/atomic.hpp"
 #include <atomic>
+#include <memory>
 
 namespace logs
 {
@@ -34,6 +35,14 @@ namespace logs
 		friend struct channel;
 	};
 
+	struct stored_message
+	{
+		message m;
+		u64 stamp;
+		std::string prefix;
+		std::string text;
+	};
+
 	class listener
 	{
 		// Next listener (linked list)
@@ -51,6 +60,9 @@ namespace logs
 
 		// Add new listener
 		static void add(listener*);
+
+		// Special purpose
+		void broadcast(const stored_message&) const;
 	};
 
 	struct channel
@@ -139,6 +151,12 @@ namespace logs
 	{
 		return name;
 	}
+
+	// Called in main()
+	std::unique_ptr<logs::listener> make_file_listener(const std::string& path, u64 max_size);
+
+	// Called in main()
+	void set_init(std::initializer_list<stored_message>);
 }
 
 #if __cpp_constinit >= 201907

@@ -33,6 +33,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <dispatch/dispatch.h>
 #endif
 
+#include "Utilities/sysinfo.h"
 #include "rpcs3_version.h"
 #include "Emu/System.h"
 #include <thread>
@@ -43,11 +44,6 @@ template <typename... Args>
 inline auto tr(Args&&... args)
 {
 	return QObject::tr(std::forward<Args>(args)...);
-}
-
-namespace logs
-{
-	void set_init();
 }
 
 static semaphore<> s_init{0};
@@ -220,7 +216,6 @@ int main(int argc, char** argv)
 	if (!instance_lock)
 	{
 		QApplication app0{argc, argv};
-
 		s_qt_init.unlock();
 
 		if (fs::g_tls_error == fs::error::acces)
@@ -248,8 +243,43 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+	std::unique_ptr<logs::listener> log_file;
+	{
+		// Check free space
+		fs::device_stat stats{};
+		if (!fs::statfs(fs::get_cache_dir(), stats) || stats.avail_free < 128 * 1024 * 1024)
+		{
+			QApplication app0{argc, argv};
+			s_qt_init.unlock();
 
-	logs::set_init();
+			report_fatal_error(fmt::format("Not enough free space (%f KB)", stats.avail_free / 1000000.));
+			return 1;
+		}
+
+		// Limit log size to ~25% of free space
+		log_file = logs::make_file_listener(fs::get_cache_dir() + "RPCS3.log", stats.avail_free / 4);
+	}
+
+	{
+		const std::string firmware_version = utils::get_firmware_version();
+		const std::string firmware_string  = firmware_version.empty() ? "" : (" | Firmware version: " + firmware_version);
+
+		// Write initial message
+		logs::stored_message ver;
+		ver.m.ch  = nullptr;
+		ver.m.sev = logs::level::always;
+		ver.stamp = 0;
+		ver.text  = fmt::format("RPCS3 v%s | %s%s\n%s", rpcs3::get_version().to_string(), rpcs3::get_branch(), firmware_string, utils::get_system_info());
+
+		// Write OS version
+		logs::stored_message os;
+		os.m.ch  = nullptr;
+		os.m.sev = logs::level::notice;
+		os.stamp = 0;
+		os.text = utils::get_OS_version();
+
+		logs::set_init({std::move(ver), std::move(os)});
+	}
 
 #ifdef __linux__
 	struct ::rlimit rlim;

@@ -3,7 +3,6 @@
 #include "StrFmt.h"
 #include "sema.h"
 
-#include "Utilities/sysinfo.h"
 #include "Utilities/Thread.h"
 #include "rpcs3_version.h"
 #include <cstring>
@@ -62,7 +61,6 @@ namespace logs
 
 	class file_writer
 	{
-		std::string m_name;
 		std::thread m_writer;
 		fs::file m_fout;
 		fs::file m_fout2;
@@ -81,30 +79,34 @@ namespace logs
 		bool flush(u64 bufv);
 
 	public:
-		file_writer(const std::string& name);
+		file_writer(const std::string& name, u64 max_size);
 
 		virtual ~file_writer();
 
 		// Append raw data
-		void log(logs::level sev, const char* text, std::size_t size);
+		void log(const char* text, std::size_t size);
 	};
 
-	struct stored_message
+	struct file_listener final : file_writer, public listener
 	{
-		message m;
-		u64 stamp;
-		std::string prefix;
-		std::string text;
+		file_listener(const std::string& path, u64 max_size);
+
+		~file_listener() override = default;
+
+		void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override;
 	};
 
-	struct file_listener : public file_writer, public listener
+	struct root_listener final : public listener
 	{
-		file_listener(const std::string& name);
+		root_listener() = default;
 
-		virtual ~file_listener() = default;
+		~root_listener() override = default;
 
 		// Encode level, current thread name, channel name and write log message
-		virtual void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override;
+		void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override
+		{
+			// Do nothing
+		}
 
 		// Channel registry
 		std::unordered_multimap<std::string, channel*> channels;
@@ -113,10 +115,10 @@ namespace logs
 		std::vector<stored_message> messages;
 	};
 
-	static file_listener* get_logger()
+	static root_listener* get_logger()
 	{
 		// Use magic static
-		static file_listener logger("RPCS3");
+		static root_listener logger{};
 		return &logger;
 	}
 
@@ -227,12 +229,25 @@ namespace logs
 	}
 
 	// Must be called in main() to stop accumulating messages in g_messages
-	void set_init()
+	void set_init(std::initializer_list<stored_message> init_msg)
 	{
 		if (!g_init)
 		{
 			std::lock_guard lock(g_mutex);
-			printf("DEBUG: %zu log messages accumulated. %zu channels registered.\n", get_logger()->messages.size(), get_logger()->channels.size());
+
+			// Prepend main messages
+			for (const auto& msg : init_msg)
+			{
+				get_logger()->broadcast(msg);
+			}
+
+			// Send initial messages
+			for (const auto& msg : get_logger()->messages)
+			{
+				get_logger()->broadcast(msg);
+			}
+
+			// Clear it
 			get_logger()->messages.clear();
 			g_init = true;
 		}
@@ -268,11 +283,13 @@ void logs::listener::add(logs::listener* _new)
 	{
 		lis = lis->m_next;
 	}
+}
 
-	// Send initial messages
-	for (const auto& msg : get_logger()->messages)
+void logs::listener::broadcast(const logs::stored_message& msg) const
+{
+	for (auto lis = m_next.load(); lis; lis = lis->m_next)
 	{
-		_new->log(msg.stamp, msg.m, msg.prefix, msg.text);
+		lis->log(msg.stamp, msg.m, msg.prefix, msg.text);
 	}
 }
 
@@ -335,41 +352,19 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	}
 }
 
-[[noreturn]] extern void catch_all_exceptions();
-
-logs::file_writer::file_writer(const std::string& name)
-	: m_name(name)
+logs::file_writer::file_writer(const std::string& name, u64 max_size)
+	: m_max_size(max_size)
 {
-	const std::string log_name = fs::get_cache_dir() + name + ".log";
-
-	try
+	if (!name.empty() && max_size)
 	{
-		// Check free space
-		fs::device_stat stats{};
-		if (!fs::statfs(fs::get_cache_dir(), stats) || stats.avail_free < s_log_size * 8)
-		{
-			fmt::throw_exception("Not enough free space (%f KB)", stats.avail_free / 1000000.);
-		}
-
-		// Limit log size to ~25% of free space
-		m_max_size = stats.avail_free / 4;
-
 		// Initialize ringbuffer
 		m_fptr = std::make_unique<uchar[]>(s_log_size);
 
-		// Rotate backups (TODO)
-		if (std::string gz_file_name = fs::get_cache_dir() + m_name + ".log.gz"; fs::is_file(gz_file_name))
-		{
-			fs::remove_file(fs::get_cache_dir() + name + "1.log.gz");
-			fs::create_dir(fs::get_cache_dir() + "old_logs");
-			fs::rename(gz_file_name, fs::get_cache_dir() + "old_logs/" + m_name + ".log.gz", true);
-		}
-
 		// Actual log file (allowed to fail)
-		m_fout.open(log_name, fs::rewrite);
+		m_fout.open(name, fs::rewrite);
 
 		// Compressed log, make it inaccessible (foolproof)
-		if (m_fout2.open(log_name + ".gz", fs::rewrite + fs::unread))
+		if (m_fout2.open(name + ".gz", fs::rewrite + fs::unread))
 		{
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
@@ -389,14 +384,8 @@ logs::file_writer::file_writer(const std::string& name)
 		SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 #endif
 	}
-	catch (const std::exception& e)
+	else
 	{
-		std::thread([text = std::string{e.what()}]{ report_fatal_error(text); }).detach();
-		return;
-	}
-	catch (...)
-	{
-		std::thread([]{ report_fatal_error("Unknown error" HERE); }).detach();
 		return;
 	}
 
@@ -521,7 +510,7 @@ bool logs::file_writer::flush(u64 bufv)
 	return false;
 }
 
-void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
+void logs::file_writer::log(const char* text, std::size_t size)
 {
 	if (!m_fptr)
 	{
@@ -579,37 +568,12 @@ void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
 	}
 }
 
-logs::file_listener::file_listener(const std::string& name)
-	: file_writer(name)
+logs::file_listener::file_listener(const std::string& path, u64 max_size)
+	: file_writer(path, max_size)
 	, listener()
 {
 	// Write UTF-8 BOM
-	file_writer::log(logs::level::always, "\xEF\xBB\xBF", 3);
-
-	const std::string firmware_version = utils::get_firmware_version();
-	const std::string firmware_string  = firmware_version.empty() ? "" : (" | Firmware version: " + firmware_version);
-
-	// Write initial message
-	stored_message ver;
-	ver.m.ch  = nullptr;
-	ver.m.sev = level::always;
-	ver.stamp = 0;
-	ver.text  = fmt::format("RPCS3 v%s | %s%s\n%s", rpcs3::get_version().to_string(), rpcs3::get_branch(), firmware_string, utils::get_system_info());
-
-	file_writer::log(logs::level::always, ver.text.data(), ver.text.size());
-	file_writer::log(logs::level::always, "\n", 1);
-	messages.emplace_back(std::move(ver));
-
-	// Write OS version
-	stored_message os;
-	os.m.ch  = nullptr;
-	os.m.sev = level::notice;
-	os.stamp = 0;
-	os.text = utils::get_OS_version();
-
-	file_writer::log(logs::level::notice, os.text.data(), os.text.size());
-	file_writer::log(logs::level::notice, "\n", 1);
-	messages.emplace_back(std::move(os));
+	file_writer::log("\xEF\xBB\xBF", 3);
 }
 
 void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& _text)
@@ -656,5 +620,14 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	text += _text;
 	text += '\n';
 
-	file_writer::log(msg.sev, text.data(), text.size());
+	file_writer::log(text.data(), text.size());
+}
+
+std::unique_ptr<logs::listener> logs::make_file_listener(const std::string& path, u64 max_size)
+{
+	std::unique_ptr<logs::listener> result = std::make_unique<logs::file_listener>(path, max_size);
+
+	// Register file listener
+	result->add(result.get());
+	return result;
 }
