@@ -137,6 +137,7 @@ void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 		ASSERT(s_npid != ""); // It should be generated in settings window if empty
 
 		strcpy_trunc(npid.handle.data, s_npid);
+		npid.reserved[0] = 1;
 	}
 
 	switch (g_cfg.net.psn_status)
