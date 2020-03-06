@@ -980,6 +980,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 				atomic_t<std::size_t> fnext = 0;
 
+				shared_mutex sprx_mtx;
+
 				named_thread_group workers("SPRX Worker ", GetMaxThreads(), [&]
 				{
 					for (std::size_t func_i = fnext++; func_i < file_queue.size(); func_i = fnext++)
@@ -1001,9 +1003,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 						if (obj == elf_error::ok)
 						{
+							std::unique_lock lock(sprx_mtx);
+
 							if (auto prx = ppu_load_prx(obj, path))
 							{
+								lock.unlock();
 								ppu_initialize(*prx);
+								lock.lock();
 								ppu_unload_prx(*prx);
 								g_progr_fdone++;
 								continue;
