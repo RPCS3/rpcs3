@@ -128,6 +128,11 @@ public:
 		return m_title;
 	}
 
+	const std::string GetTitleAndTitleID() const
+	{
+		return m_title + (m_title_id.empty() ? "" : " [" + m_title_id + "]");
+	}
+
 	const std::string& GetCat() const
 	{
 		return m_cat;

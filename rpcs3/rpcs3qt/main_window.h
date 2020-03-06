@@ -141,6 +141,8 @@ private:
 
 	void RemoveDiskCache();
 
+	QString GetCurrentTitle();
+
 	q_pair_list m_rg_entries;
 	QList<QAction*> m_recentGameActs;
 
