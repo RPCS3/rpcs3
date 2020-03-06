@@ -35,6 +35,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 
 #include "rpcs3_version.h"
 #include "Emu/System.h"
+#include <thread>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -203,8 +204,51 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 	return new gui_application(argc, argv);
 }
 
+
+
 int main(int argc, char** argv)
 {
+	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
+
+	fs::file instance_lock;
+
+	for (u32 num = 0; num < 100 && !instance_lock.open(lock_name, fs::rewrite + fs::lock); num++)
+	{
+		std::this_thread::sleep_for(30ms);
+	}
+
+	if (!instance_lock)
+	{
+		QApplication app0{argc, argv};
+
+		s_qt_init.unlock();
+
+		if (fs::g_tls_error == fs::error::acces)
+		{
+			if (fs::exists(lock_name))
+			{
+				report_fatal_error("Another instance of RPCS3 is running. Close it or kill its process, if necessary.");
+			}
+			else
+			{
+				report_fatal_error("Cannot create RPCS3.log (access denied)."
+#ifdef _WIN32
+				"\nNote that RPCS3 cannot be installed in Program Files or similar directory with limited permissions."
+#else
+				"\nPlease, check RPCS3 permissions in '~/.config/rpcs3'."
+#endif
+				);
+			}
+		}
+		else
+		{
+			report_fatal_error(fmt::format("Cannot create RPCS3.log (error %s)", fs::g_tls_error));
+		}
+
+		return 1;
+	}
+
+
 	logs::set_init();
 
 #ifdef __linux__

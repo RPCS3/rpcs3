@@ -1147,7 +1147,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
-	if (mode & fs::trunc && mode & (fs::lock + fs::unread))
+	if (mode & fs::trunc && mode & (fs::lock + fs::unread) && mode & fs::write)
 	{
 		// Postpone truncation in order to avoid using O_TRUNC on a locked file
 		verify(HERE), ::ftruncate(fd, 0) == 0;

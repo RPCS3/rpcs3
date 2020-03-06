@@ -62,17 +62,13 @@ namespace logs
 
 	class file_writer
 	{
-		fs::file m_file;
 		std::string m_name;
 		std::thread m_writer;
 		fs::file m_fout;
 		fs::file m_fout2;
 		u64 m_max_size;
 
-#ifdef _WIN32
-		::HANDLE m_fmap;
-#endif
-		uchar* m_fptr{};
+		std::unique_ptr<uchar[]> m_fptr;
 		z_stream m_zs{};
 		shared_mutex m_m;
 
@@ -345,61 +341,9 @@ logs::file_writer::file_writer(const std::string& name)
 	: m_name(name)
 {
 	const std::string log_name = fs::get_cache_dir() + name + ".log";
-	const std::string buf_name = fs::get_cache_dir() + name + ".buf";
-
-	const std::string s_filelock = fs::get_cache_dir() + ".restart_lock";
 
 	try
 	{
-		if (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock))
-		{
-#ifdef _WIN32
-			auto prev_error = fs::g_tls_error;
-
-			if (fs::exists(s_filelock))
-			{
-				// A restart is happening, wait for the file to be accessible
-				u32 tries = 0;
-				while (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock) && tries < 100)
-				{
-					std::this_thread::sleep_for(100ms);
-					tries++;
-				}
-			}
-			else
-			{
-				fs::g_tls_error = prev_error;
-			}
-
-			if (!m_file)
-#endif
-			{
-				if (fs::g_tls_error == fs::error::acces)
-				{
-					if (fs::exists(buf_name))
-					{
-						fmt::throw_exception("Another instance of %s is running. Close it or kill its process, if necessary.", name);
-					}
-					else
-					{
-						fmt::throw_exception("Cannot create %s.log (access denied)."
-#ifdef _WIN32
-						                     "\nNote that %s cannot be installed in Program Files or similar directory with limited permissions."
-#else
-						                     "\nPlease, check %s permissions in '~/.config/'."
-#endif
-						                     , name, name);
-					}
-				}
-
-				fmt::throw_exception("Cannot create %s.log (error %s)", name, fs::g_tls_error);
-			}
-		}
-
-#ifdef _WIN32
-		fs::remove_file(s_filelock); // remove restart token if it exists
-#endif
-
 		// Check free space
 		fs::device_stat stats{};
 		if (!fs::statfs(fs::get_cache_dir(), stats) || stats.avail_free < s_log_size * 8)
@@ -410,16 +354,8 @@ logs::file_writer::file_writer(const std::string& name)
 		// Limit log size to ~25% of free space
 		m_max_size = stats.avail_free / 4;
 
-		// Initialize memory mapped file
-#ifdef _WIN32
-		m_fmap = CreateFileMappingW(m_file.get_handle(), 0, PAGE_READWRITE, s_log_size >> 32, s_log_size & 0xffffffff, 0);
-		m_fptr = m_fmap ? static_cast<uchar*>(MapViewOfFile(m_fmap, FILE_MAP_WRITE, 0, 0, 0)) : nullptr;
-#else
-		m_file.trunc(s_log_size);
-		m_fptr = static_cast<uchar*>(::mmap(0, s_log_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_file.get_handle(), 0));
-#endif
-
-		verify(name.c_str()), m_fptr;
+		// Initialize ringbuffer
+		m_fptr = std::make_unique<uchar[]>(s_log_size);
 
 		// Rotate backups (TODO)
 		if (std::string gz_file_name = fs::get_cache_dir() + m_name + ".log.gz"; fs::is_file(gz_file_name))
@@ -533,13 +469,9 @@ logs::file_writer::~file_writer()
 	FILE_DISPOSITION_INFO disp;
 	disp.DeleteFileW = false;
 	SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
-
-	UnmapViewOfFile(m_fptr);
-	CloseHandle(m_fmap);
 #else
 	// Restore compressed log file permissions
 	::fchmod(m_fout2.get_handle(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-	::munmap(m_fptr, s_log_size);
 #endif
 }
 
@@ -556,7 +488,7 @@ bool logs::file_writer::flush(u64 bufv)
 		const u64 size = std::min<u64>(end - st, sizeof(m_zout) / 2);
 
 		// Write uncompressed
-		if (m_fout && st < m_max_size && m_fout.write(m_fptr + st % s_log_size, size) != size)
+		if (m_fout && st < m_max_size && m_fout.write(m_fptr.get() + st % s_log_size, size) != size)
 		{
 			m_fout.close();
 		}
@@ -565,7 +497,7 @@ bool logs::file_writer::flush(u64 bufv)
 		if (m_fout2 && st < m_max_size)
 		{
 			m_zs.avail_in = static_cast<uInt>(size);
-			m_zs.next_in  = m_fptr + st % s_log_size;
+			m_zs.next_in  = m_fptr.get() + st % s_log_size;
 
 			do
 			{
@@ -613,7 +545,7 @@ void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
 			}
 
 			v += size;
-			return m_fptr + (v1 + v2) % s_log_size;
+			return m_fptr.get() + (v1 + v2) % s_log_size;
 		});
 
 		if (!pos) [[unlikely]]
@@ -631,11 +563,11 @@ void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
 			continue;
 		}
 
-		if (pos + size > m_fptr + s_log_size)
+		if (pos + size > m_fptr.get() + s_log_size)
 		{
-			const auto frag = m_fptr + s_log_size - pos;
+			const auto frag = m_fptr.get() + s_log_size - pos;
 			std::memcpy(pos, text, frag);
-			std::memcpy(m_fptr, text + frag, size - frag);
+			std::memcpy(m_fptr.get(), text + frag, size - frag);
 		}
 		else
 		{
