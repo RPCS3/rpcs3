@@ -219,9 +219,13 @@ void main_window::OnPlayOrPause()
 	{
 		Emu.Pause();
 	}
-	else if (!Emu.GetBoot().empty())
+	else if (const auto path = Emu.GetBoot(); !path.empty())
 	{
-		Emu.Load();
+		if (const auto error = Emu.Load(); error != game_boot_result::no_errors)
+		{
+			gui_log.error("Boot failed: reason: %s, path: %s", error, path);
+			show_boot_error(error);
+		}
 	}
 	else if (Emu.IsStopped() && !m_recentGameActs.isEmpty())
 	{
@@ -297,7 +301,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 	if (const auto error = Emu.BootGame(path, title_id, direct, add_only, force_global_config); error != game_boot_result::no_errors)
 	{
-		gui_log.error("Boot failed: %s", path);
+		gui_log.error("Boot failed: reason: %s, path: %s", error, path);
 		show_boot_error(error);
 	}
 	else
