@@ -27,7 +27,7 @@ lv2_fs_mount_point g_mp_sys_app_home{512, 512, lv2_mp_flag::strict_get_block_siz
 lv2_fs_mount_point g_mp_sys_host_root{512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_flash{512, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
 
-bool verify_mself(u32 fd, fs::file const& mself_file)
+bool verify_mself(const fs::file& mself_file)
 {
 	FsMselfHeader mself_header;
 	if (!mself_file.read<FsMselfHeader>(mself_header))
@@ -240,23 +240,17 @@ error_code sys_fs_test(ppu_thread& ppu, u32 arg1, u32 arg2, vm::ptr<u32> arg3, u
 	return CELL_OK;
 }
 
-error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::cptr<void> arg, u64 size)
+lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mode, const void* arg, u64 size)
 {
-	lv2_obj::sleep(ppu);
+	if (vpath.empty())
+	{
+		return {CELL_ENOENT};
+	}
 
-	sys_fs.warning("sys_fs_open(path=%s, flags=%#o, fd=*0x%x, mode=%#o, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
+	std::string path;
+	const std::string local_path = vfs::get(vpath, nullptr, &path);
 
-	if (!path)
-		return CELL_EFAULT;
-
-	if (!path[0])
-		return CELL_ENOENT;
-
-	std::string processed_path;
-	const std::string_view vpath = path.get_ptr();
-	const std::string local_path = vfs::get(vpath, nullptr, &processed_path);
-
-	const auto mp = lv2_fs_object::get_mp(vpath);
+	const auto mp = lv2_fs_object::get_mp(path);
 
 	if (vpath.find_first_not_of('/') == umax)
 	{
@@ -319,7 +313,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 
 	if (flags & CELL_FS_O_UNK)
 	{
-		sys_fs.warning("sys_fs_open called with CELL_FS_O_UNK flag enabled. FLAGS: %#o", flags);
+		sys_fs.warning("lv2_file::open() called with CELL_FS_O_UNK flag enabled. FLAGS: %#o", flags);
 	}
 
 	if (mp->flags & lv2_mp_flag::read_only)
@@ -342,7 +336,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 
 	if (!open_mode)
 	{
-		fmt::throw_exception("sys_fs_open(%s): Invalid or unimplemented flags: %#o" HERE, path, flags);
+		fmt::throw_exception("lv2_file::open(%s): Invalid or unimplemented flags: %#o" HERE, path, flags);
 	}
 
 	fs::file file;
@@ -387,13 +381,13 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 
 		if (open_mode & fs::excl && fs::g_tls_error == fs::error::exist)
 		{
-			return not_an_error(CELL_EEXIST);
+			return {CELL_EEXIST};
 		}
 
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_open(): unknown error %s", error);
+		default: sys_fs.error("lv2_file::open(): unknown error %s", error);
 		}
 
 		return {CELL_EIO, path};
@@ -414,17 +408,17 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 		}
 	}
 
-	if ((flags & CELL_FS_O_MSELF) && (!verify_mself(*fd, file)))
+	if (flags & CELL_FS_O_MSELF && !verify_mself(file))
 	{
 		return {CELL_ENOTMSELF, path};
 	}
 
-	const auto casted_arg = vm::static_ptr_cast<const u64>(arg);
-
 	if (size == 8)
 	{
 		// check for sdata
-		if (*casted_arg == 0x18000000010ull)
+		switch (*static_cast<const be_t<u64>*>(arg))
+		{
+		case 0x18000000010:
 		{
 			// check if the file has the NPD header, or else assume its not encrypted
 			u32 magic;
@@ -440,9 +434,11 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 
 				file.reset(std::move(sdata_file));
 			}
+
+			break;
 		}
 		// edata
-		else if (*casted_arg == 0x2u)
+		case 0x2:
 		{
 			// check if the file has the NPD header, or else assume its not encrypted
 			u32 magic;
@@ -459,10 +455,38 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 
 				file.reset(std::move(sdata_file));
 			}
+
+			break;
+		}
+		default: break;
 		}
 	}
 
-	if (const u32 id = idm::make<lv2_fs_object, lv2_file>(processed_path, std::move(file), mode, flags))
+	return {.error = {}, .ppath = path, .file = std::move(file)};
+}
+
+error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::cptr<void> arg, u64 size)
+{
+	lv2_obj::sleep(ppu);
+
+	sys_fs.warning("sys_fs_open(path=%s, flags=%#o, fd=*0x%x, mode=%#o, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
+
+	if (!path)
+		return CELL_EFAULT;
+
+	auto [error, ppath, file] = lv2_file::open(path.get_ptr(), flags, mode, arg.get_ptr(), size);
+
+	if (error)
+	{
+		if (error == CELL_EEXIST)
+		{
+			return not_an_error(CELL_EEXIST);
+		}
+
+		return {error, path};
+	}
+
+	if (const u32 id = idm::make<lv2_fs_object, lv2_file>(ppath, std::move(file), mode, flags))
 	{
 		*fd = id;
 		return CELL_OK;

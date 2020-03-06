@@ -4,6 +4,8 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Utilities/File.h"
 
+#include <string>
+
 // Open Flags
 enum : s32
 {
@@ -191,6 +193,16 @@ struct lv2_file final : lv2_fs_object
 		, flags(flags)
 	{
 	}
+
+	struct open_result_t
+	{
+		CellError error;
+		std::string ppath;
+		fs::file file;
+	};
+
+	// Open a file with wrapped logic of sys_fs_open
+	static open_result_t open(std::string_view path, s32 flags, s32 mode, const void* arg = {}, u64 size = 0);
 
 	// File reading with intermediate buffer
 	static u64 op_read(const fs::file& file, vm::ptr<void> buf, u64 size);
