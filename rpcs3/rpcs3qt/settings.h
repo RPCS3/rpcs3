@@ -5,6 +5,8 @@
 #include <QVariant>
 #include <QSize>
 
+#include <memory>
+
 struct gui_save
 {
 	QString key;

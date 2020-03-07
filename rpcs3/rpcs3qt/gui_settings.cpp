@@ -304,7 +304,7 @@ QStringList gui_settings::GetStylesheetEntries()
 #else
 	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
 #endif
-	res.append(gui::utils::get_dir_entries(platformStylesheetDir, nameFilter));
+	res.append(gui::utils::get_dir_entries(platformStylesheetDir, name_filter));
 	res.removeDuplicates();
 #endif
 	res.sort(Qt::CaseInsensitive);
