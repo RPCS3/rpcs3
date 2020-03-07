@@ -97,11 +97,10 @@ private:
 	QPixmap PaintedPixmap(const QPixmap& icon, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor());
 	QColor getGridCompatibilityColor(const QString& string);
 	void ShowCustomConfigIcon(game_info game);
+	void PopulateGameList();
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game);
 	void SortGameList();
-
-	int PopulateGameList();
 	bool SearchMatchesApp(const QString& name, const QString& serial) const;
 
 	bool RemoveCustomConfiguration(const std::string& title_id, game_info game = nullptr, bool is_interactive = false);
