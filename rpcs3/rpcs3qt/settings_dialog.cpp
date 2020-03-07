@@ -51,9 +51,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->tab_widget_settings->setUsesScrollButtons(false);
 	ui->tab_widget_settings->tabBar()->setObjectName("tab_bar_settings");
 
-	bool showDebugTab = m_gui_settings->GetValue(gui::m_showDebugTab).toBool();
-	m_gui_settings->SetValue(gui::m_showDebugTab, showDebugTab);
-	if (!showDebugTab)
+	const bool show_debug_tab = m_gui_settings->GetValue(gui::m_showDebugTab).toBool();
+	m_gui_settings->SetValue(gui::m_showDebugTab, show_debug_tab);
+	if (!show_debug_tab)
 	{
 		ui->tab_widget_settings->removeTab(9);
 	}
@@ -1902,6 +1902,9 @@ void settings_dialog::OnApplyConfig()
 	{
 		return;
 	}
+
+	// Backup current window states
+	Q_EMIT GuiSettingsSaveRequest();
 
 	if (!m_gui_settings->ChangeToConfig(new_config))
 	{

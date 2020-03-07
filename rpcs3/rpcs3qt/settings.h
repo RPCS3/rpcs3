@@ -40,12 +40,12 @@ public:
 	explicit settings(QObject* parent = nullptr);
 	~settings();
 
-	QString GetSettingsDir();
+	QString GetSettingsDir() const;
 
 	QVariant GetValue(const gui_save& entry);
 	QVariant GetValue(const QString& key, const QString& name, const QString& def);
-	QVariant List2Var(const q_pair_list& list);
-	q_pair_list Var2List(const QVariant& var);
+	static QVariant List2Var(const q_pair_list& list);
+	static q_pair_list Var2List(const QVariant& var);
 
 public Q_SLOTS:
 	/** Remove entry */
@@ -56,9 +56,9 @@ public Q_SLOTS:
 	void SetValue(const QString& key, const QString& name, const QVariant& value);
 
 protected:
-	QString ComputeSettingsDir();
+	QString ComputeSettingsDir() const;
 
-	QSettings* m_settings = nullptr;
+	std::unique_ptr<QSettings> m_settings;
 	QDir m_settings_dir;
 	QString m_current_name;
 };

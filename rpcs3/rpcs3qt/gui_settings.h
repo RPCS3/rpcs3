@@ -258,13 +258,14 @@ public Q_SLOTS:
 
 	void SetCustomColor(int col, const QColor& val);
 
-	void SaveCurrentConfig(const QString& friendly_name);
+	void SaveCurrentConfig(const QString& config_name);
 
 	static QSize SizeFromSlider(int pos);
 	static gui_save GetGuiSaveForColumn(int col);
 
 private:
-	void BackupSettingsToTarget(const QString& friendly_name);
+	void SaveConfigNameToDefault(const QString& config_name);
+	void BackupSettingsToTarget(const QString& config_name);
 	void ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, bool always_on_top);
 
 	QString m_current_name;

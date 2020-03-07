@@ -3,7 +3,7 @@
 persistent_settings::persistent_settings(QObject* parent) : settings(parent)
 {
 	// Don't use the .ini file ending for now, as it will be confused for a regular gui_settings file.
-	m_settings = new QSettings(ComputeSettingsDir() + gui::persistent::persistent_file_name + ".dat", QSettings::Format::IniFormat, parent);
+	m_settings.reset(new QSettings(ComputeSettingsDir() + gui::persistent::persistent_file_name + ".dat", QSettings::Format::IniFormat, parent));
 }
 
 void persistent_settings::SetPlaytime(const QString& serial, const qint64& elapsed)
