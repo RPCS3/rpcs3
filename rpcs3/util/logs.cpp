@@ -309,8 +309,10 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	thread_local std::string text;
 	thread_local std::vector<u64> args;
 
+	static constexpr fmt_type_info empty_sup{};
+
 	std::size_t args_count = 0;
-	for (auto v = sup; v->fmt_string; v++)
+	for (auto v = sup; v && v->fmt_string; v++)
 		args_count++;
 
 	text.clear();
@@ -321,7 +323,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	for (u64& arg : args)
 		arg = va_arg(c_args, u64);
 	va_end(c_args);
-	fmt::raw_append(text, fmt, sup, args.data());
+	fmt::raw_append(text, fmt, sup ? sup : &empty_sup, args.data());
 	std::string prefix = g_tls_log_prefix();
 
 	// Get first (main) listener

@@ -84,35 +84,25 @@ namespace logs
 		{
 		}
 
-	private:
-#if __cpp_char8_t >= 201811
-		using char2 = char8_t;
-#else
-		using char2 = unsigned char;
-#endif
-
 #define GEN_LOG_METHOD(_sev)\
 		const message msg_##_sev{this, level::_sev};\
-		template <std::size_t N, typename... Args>\
-		void _sev(const char(&fmt)[N], const Args&... args)\
+		template <typename CharT, std::size_t N, typename... Args>\
+		void _sev(const CharT(&fmt)[N], const Args&... args)\
 		{\
 			if (level::_sev <= enabled.load(std::memory_order_relaxed)) [[unlikely]]\
 			{\
-				static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
-				msg_##_sev.broadcast(fmt, type_list, u64{fmt_unveil<Args>::get(args)}...);\
-			}\
-		}\
-		template <std::size_t N, typename... Args>\
-		void _sev(const char2(&fmt)[N], const Args&... args)\
-		{\
-			if (level::_sev <= enabled.load(std::memory_order_relaxed)) [[unlikely]]\
-			{\
-				static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
-				msg_##_sev.broadcast(reinterpret_cast<const char*>(+fmt), type_list, u64{fmt_unveil<Args>::get(args)}...);\
+				if constexpr (sizeof...(Args) > 0)\
+				{\
+					static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
+					msg_##_sev.broadcast(reinterpret_cast<const char*>(fmt), type_list, u64{fmt_unveil<Args>::get(args)}...);\
+				}\
+				else\
+				{\
+					msg_##_sev.broadcast(reinterpret_cast<const char*>(fmt), nullptr);\
+				}\
 			}\
 		}\
 
-	public:
 		GEN_LOG_METHOD(fatal)
 		GEN_LOG_METHOD(error)
 		GEN_LOG_METHOD(todo)
