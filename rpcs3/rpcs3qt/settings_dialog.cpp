@@ -1811,14 +1811,9 @@ void settings_dialog::AddConfigs()
 {
 	ui->combo_configs->clear();
 
-	ui->combo_configs->addItem(gui::Default);
-
-	for (const QString& entry : xgui_settings->GetConfigEntries())
+	for (const QString& entry : m_gui_settings->GetConfigEntries())
 	{
-		if (entry != gui::Default)
-		{
-			ui->combo_configs->addItem(entry);
-		}
+		ui->combo_configs->addItem(entry);
 	}
 
 	m_current_gui_config = m_gui_settings->GetValue(gui::m_currentConfig).toString();
