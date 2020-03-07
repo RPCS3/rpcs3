@@ -31,13 +31,13 @@ target_sources(rpcs3_emu PRIVATE
 	../util/atomic2.cpp
 	../util/shared_cptr.cpp
 	../util/fixed_typemap.cpp
+	../util/logs.cpp
 	../../Utilities/bin_patch.cpp
 	../../Utilities/cond.cpp
 	../../Utilities/Config.cpp
 	../../Utilities/dynamic_library.cpp
 	../../Utilities/File.cpp
 	../../Utilities/JIT.cpp
-	../../Utilities/Log.cpp
 	../../Utilities/LUrlParser.cpp
 	../../Utilities/mutex.cpp
 	../../Utilities/rXml.cpp
