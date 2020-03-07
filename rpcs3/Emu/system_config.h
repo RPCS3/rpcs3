@@ -116,7 +116,7 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_vertex_cache{ this, "Disable Vertex Cache", false };
 		cfg::_bool disable_FIFO_reordering{ this, "Disable FIFO Reordering", false };
 		cfg::_bool frame_skip_enabled{ this, "Enable Frame Skip", false };
-		cfg::_bool force_cpu_blit_processing{ this, "Force CPU Blit", false }; // Debugging option
+		cfg::_bool force_cpu_blit_processing{ this, "Force CPU Blit", false, true }; // Debugging option
 		cfg::_bool disable_on_disk_shader_cache{ this, "Disable On-Disk Shader Cache", false };
 		cfg::_bool disable_vulkan_mem_allocator{ this, "Disable Vulkan Memory Allocator", false };
 		cfg::_bool full_rgb_range_output{ this, "Use full RGB output range", true }; // Video out dynamic range
