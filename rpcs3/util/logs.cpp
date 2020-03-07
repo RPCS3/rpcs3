@@ -9,6 +9,7 @@
 #include <thread>
 #include <chrono>
 #include <cstring>
+#include <cerrno>
 
 using namespace std::literals::chrono_literals;
 
@@ -363,7 +364,10 @@ logs::file_writer::file_writer(const std::string& name, u64 max_size)
 		m_fptr = std::make_unique<uchar[]>(s_log_size);
 
 		// Actual log file (allowed to fail)
-		m_fout.open(name, fs::rewrite);
+		if (!m_fout.open(name, fs::rewrite))
+		{
+			fprintf(stderr, "Log file open failed: %s (error %d)\n", name.c_str(), errno);
+		}
 
 		// Compressed log, make it inaccessible (foolproof)
 		if (m_fout2.open(name + ".gz", fs::rewrite + fs::unread))
@@ -377,6 +381,11 @@ logs::file_writer::file_writer(const std::string& name, u64 max_size)
 #pragma GCC diagnostic pop
 #endif
 				m_fout2.close();
+		}
+
+		if (!m_fout2)
+		{
+			fprintf(stderr, "Log file open failed: %s.gz (error %d)\n", name.c_str(), errno);
 		}
 
 #ifdef _WIN32
