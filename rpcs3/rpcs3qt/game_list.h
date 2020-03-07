@@ -15,6 +15,7 @@ private:
 		if (!indexAt(event->pos()).isValid() || itemAt(event->pos())->data(Qt::UserRole) < 0)
 		{
 			clearSelection();
+			setCurrentItem(nullptr); // Needed for currentItemChanged
 		}
 		QTableWidget::mousePressEvent(event);
 	}

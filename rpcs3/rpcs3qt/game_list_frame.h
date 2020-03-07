@@ -83,8 +83,10 @@ private Q_SLOTS:
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(QTableWidgetItem *item);
+	void itemSelectedSlot(QTableWidgetItem* current, QTableWidgetItem* previous);
 Q_SIGNALS:
 	void GameListFrameClosed();
+	void NotifyGameSelection(const game_info& game);
 	void RequestBoot(const game_info& game, bool force_global_config = false);
 	void RequestIconSizeChange(const int& val);
 	void NotifyEmuSettingsChange();
@@ -117,7 +119,8 @@ private:
 	std::string CurrentSelectionIconPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
 
-	game_info GetGameInfoFromItem(QTableWidgetItem* item);
+	game_info GetGameInfoByMode(const QTableWidgetItem* item);
+	game_info GetGameInfoFromItem(const QTableWidgetItem* item);
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_Game_Dock;
