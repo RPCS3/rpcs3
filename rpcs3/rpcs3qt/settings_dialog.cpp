@@ -905,18 +905,18 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Edits
 
 	m_emu_settings->EnhanceEdit(ui->edit_dns, emu_settings::DNSAddress);
-	SubscribeTooltip(ui->edit_dns, tooltips.settings.dns);
+	SubscribeTooltip(ui->gb_edit_dns, tooltips.settings.dns);
 
 	m_emu_settings->EnhanceEdit(ui->edit_npid, emu_settings::PSNNPID);
-	SubscribeTooltip(ui->edit_npid, tooltips.settings.psn_npid);
+	SubscribeTooltip(ui->gb_edit_npid, tooltips.settings.psn_npid);
 
 	m_emu_settings->EnhanceEdit(ui->edit_swaps, emu_settings::IpSwapList);
-	SubscribeTooltip(ui->edit_swaps, tooltips.settings.dns_swap);
+	SubscribeTooltip(ui->gb_edit_swaps, tooltips.settings.dns_swap);
 
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings::InternetStatus);
-	SubscribeTooltip(ui->netStatusBox, tooltips.settings.net_status);
+	SubscribeTooltip(ui->gb_netStatusBox, tooltips.settings.net_status);
 
 	connect(ui->netStatusBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
 	{
@@ -947,7 +947,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	});
 
 	m_emu_settings->EnhanceComboBox(ui->psnStatusBox, emu_settings::PSNStatus);
-	SubscribeTooltip(ui->psnStatusBox, tooltips.settings.psn_status);
+	SubscribeTooltip(ui->gb_psnStatusBox, tooltips.settings.psn_status);
 
 	//                _                               _   _______    _
 	//       /\      | |                             | | |__   __|  | |
