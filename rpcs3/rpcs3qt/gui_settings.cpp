@@ -14,7 +14,7 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 gui_settings::gui_settings(QObject* parent) : settings(parent)
 {
 	m_current_name = gui::Settings;
-	m_settings     = new QSettings(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent);
+	m_settings.reset(new QSettings(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent));
 
 	const QString settings_name = GetValue(gui::m_currentConfig).toString();
 
@@ -48,34 +48,20 @@ bool gui_settings::ChangeToConfig(const QString& config_name)
 		return false;
 	}
 
-	if (config_name != gui::Settings)
-	{
-		if (m_current_name == gui::Settings)
-		{
-			SetValue(gui::m_currentConfig, config_name);
-		}
-		else
-		{
-			QSettings tmp(m_settings_dir.absoluteFilePath(gui::Settings + ".ini"), QSettings::Format::IniFormat, parent());
-			tmp.beginGroup(gui::m_currentConfig.key);
-			tmp.setValue(gui::m_currentConfig.name, config_name);
-			tmp.endGroup();
-		}
-	}
+	// Backup current config
+	SaveCurrentConfig(m_current_name);
 
+	// Save new config name to the default config
+	SaveConfigNameToDefault(config_name);
+
+	// Sync file just in case
 	m_settings->sync();
 
-	Reset(true);
+	// Load new config
+	m_settings.reset(new QSettings(m_settings_dir.absoluteFilePath(config_name + ".ini"), QSettings::IniFormat));
 
-	const QSettings other(m_settings_dir.absoluteFilePath(config_name + ".ini"), QSettings::IniFormat);
-
-	for (const QString& key : other.allKeys())
-	{
-		m_settings->setValue(key, other.value(key));
-	}
-
+	// Save own name to new config
 	SetValue(gui::m_currentConfig, config_name);
-
 	m_settings->sync();
 
 	m_current_name = config_name;
@@ -238,26 +224,11 @@ void gui_settings::SetCustomColor(int col, const QColor& val)
 	SetValue(gui_save(gui::meta, "CustomColor" + QString::number(col), gui::gl_icon_color), val);
 }
 
-void gui_settings::SaveCurrentConfig(const QString& friendly_name)
+void gui_settings::SaveCurrentConfig(const QString& config_name)
 {
-	if (friendly_name != gui::Settings)
-	{
-		if (m_current_name == gui::Settings)
-		{
-			SetValue(gui::m_currentConfig, friendly_name);
-			m_settings->sync();
-		}
-		else
-		{
-			QSettings tmp(m_settings_dir.absoluteFilePath(gui::Settings + ".ini"), QSettings::Format::IniFormat, parent());
-			tmp.beginGroup(gui::m_currentConfig.key);
-			tmp.setValue(gui::m_currentConfig.name, friendly_name);
-			tmp.endGroup();
-		}
-	}
-
-	BackupSettingsToTarget(friendly_name);
-	ChangeToConfig(friendly_name);
+	SaveConfigNameToDefault(config_name);
+	BackupSettingsToTarget(config_name);
+	ChangeToConfig(config_name);
 }
 
 logs::level gui_settings::GetLogLevel()
@@ -290,9 +261,26 @@ QStringList gui_settings::GetConfigEntries()
 	return res;
 }
 
-void gui_settings::BackupSettingsToTarget(const QString& friendly_name)
+// Save the name of the used config to the default settings file
+void gui_settings::SaveConfigNameToDefault(const QString& config_name)
 {
-	QSettings target(ComputeSettingsDir() + friendly_name + ".ini", QSettings::Format::IniFormat);
+	if (m_current_name == gui::Settings)
+	{
+		SetValue(gui::m_currentConfig, config_name);
+		m_settings->sync();
+	}
+	else
+	{
+		QSettings tmp(m_settings_dir.absoluteFilePath(gui::Settings + ".ini"), QSettings::Format::IniFormat, parent());
+		tmp.beginGroup(gui::m_currentConfig.key);
+		tmp.setValue(gui::m_currentConfig.name, config_name);
+		tmp.endGroup();
+	}
+}
+
+void gui_settings::BackupSettingsToTarget(const QString& config_name)
+{
+	QSettings target(ComputeSettingsDir() + config_name + ".ini", QSettings::Format::IniFormat);
 
 	for (const QString& key : m_settings->allKeys())
 	{
