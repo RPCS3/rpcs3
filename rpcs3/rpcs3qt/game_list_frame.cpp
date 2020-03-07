@@ -126,7 +126,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 
 	// Events
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
-	connect(m_game_list, &QTableWidget::currentItemChanged, this, &game_list_frame::itemSelectedSlot);
+	connect(m_game_list, &QTableWidget::itemSelectionChanged, this, &game_list_frame::itemSelectionChangedSlot);
 	connect(m_game_list, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 
 	connect(m_game_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
@@ -138,7 +138,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	});
 
 	connect(m_game_grid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
-	connect(m_game_grid, &QTableWidget::currentItemChanged, this, &game_list_frame::itemSelectedSlot);
+	connect(m_game_grid, &QTableWidget::itemSelectionChanged, this, &game_list_frame::itemSelectionChangedSlot);
 	connect(m_game_grid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 
 	connect(m_game_compat.get(), &game_compatibility::DownloadStarted, [this]()
@@ -815,7 +815,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		const int scroll_position = m_game_grid->verticalScrollBar()->value();
 		PopulateGameGrid(games_per_row, m_icon_size, m_icon_color);
 		connect(m_game_grid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
-		connect(m_game_grid, &QTableWidget::currentItemChanged, this, &game_list_frame::itemSelectedSlot);
+		connect(m_game_grid, &QTableWidget::itemSelectionChanged, this, &game_list_frame::itemSelectionChangedSlot);
 		connect(m_game_grid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 		m_central_widget->addWidget(m_game_grid);
 		m_central_widget->setCurrentWidget(m_game_grid);
@@ -894,16 +894,23 @@ void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
 	Q_EMIT RequestBoot(game);
 }
 
-void game_list_frame::itemSelectedSlot(QTableWidgetItem* current, QTableWidgetItem* /*previous*/)
+void game_list_frame::itemSelectionChangedSlot()
 {
-	if (current)
+	game_info game = nullptr;
+
+	if (m_is_list_layout)
 	{
-		Q_EMIT NotifyGameSelection(GetGameInfoByMode(current));
+		if (const auto item = m_game_list->item(m_game_list->currentRow(), gui::column_icon); item->isSelected())
+		{
+			game = GetGameInfoByMode(item);
+		}
 	}
-	else
+	else if (const auto item = m_game_grid->currentItem(); item->isSelected())
 	{
-		Q_EMIT NotifyGameSelection(nullptr);
+		game = GetGameInfoByMode(item);
 	}
+
+	Q_EMIT NotifyGameSelection(game);
 }
 
 void game_list_frame::ShowContextMenu(const QPoint &pos)
@@ -1961,6 +1968,7 @@ void game_list_frame::PopulateGameList()
 
 	std::string selected_item = CurrentSelectionIconPath();
 
+	m_game_list->clearSelection();
 	m_game_list->clearContents();
 	m_game_list->setRowCount(m_game_data.size());
 

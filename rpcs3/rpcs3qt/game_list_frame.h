@@ -83,7 +83,7 @@ private Q_SLOTS:
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(QTableWidgetItem *item);
-	void itemSelectedSlot(QTableWidgetItem* current, QTableWidgetItem* previous);
+	void itemSelectionChangedSlot();
 Q_SIGNALS:
 	void GameListFrameClosed();
 	void NotifyGameSelection(const game_info& game);
