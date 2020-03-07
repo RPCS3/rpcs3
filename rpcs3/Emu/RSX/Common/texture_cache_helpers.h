@@ -73,6 +73,14 @@ namespace rsx
 		}
 	};
 
+	struct blit_target_properties
+	{
+		bool use_dma_region;
+		u32 offset;
+		u32 width;
+		u32 height;
+	};
+
 	struct texture_cache_search_options
 	{
 		u8 lookup_mask = 0xff;
@@ -164,6 +172,64 @@ namespace rsx
 			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 				return format_type::depth_float;
 			}
+		}
+
+		static blit_target_properties get_optimal_blit_target_properties(
+			bool src_is_render_target,
+			address_range dst_range,
+			u32 dst_pitch,
+			const sizeu src_dimensions,
+			const sizeu dst_dimensions)
+		{
+			if (get_location(dst_range.start) == CELL_GCM_LOCATION_LOCAL)
+			{
+				// Check if this is a blit to the output buffer
+				// TODO: This can be used to implement reference tracking to possibly avoid downscaling
+				const auto renderer = rsx::get_current_renderer();
+				for (u32 i = 0; i < renderer->display_buffers_count; ++i)
+				{
+					const auto& buffer = renderer->display_buffers[i];
+					const u32 pitch = buffer.pitch? static_cast<u32>(buffer.pitch) : g_fxo->get<rsx::avconf>()->get_bpp() * buffer.width;
+					if (pitch != dst_pitch)
+					{
+						continue;
+					}
+
+					const auto buffer_range = address_range::start_length(rsx::constants::local_mem_base + buffer.offset, pitch * buffer.height);
+					if (dst_range.inside(buffer_range))
+					{
+						// Match found
+						return { false, buffer_range.start, buffer.width, buffer.height };
+					}
+
+					if (dst_range.overlaps(buffer_range)) [[unlikely]]
+					{
+						// The range clips the destination but does not fit inside it
+						// Use DMA stream to optimize the flush that is likely to happen when flipping
+						return { true };
+					}
+				}
+			}
+
+			if (src_is_render_target)
+			{
+				// Attempt to optimize...
+				if (dst_dimensions.width == 1280 || dst_dimensions.width == 2560) [[likely]]
+				{
+					// Optimizations table based on common width/height pairings. If we guess wrong, the upload resolver will fix it anyway
+					// TODO: Add more entries based on empirical data
+					const auto optimal_height = std::max(dst_dimensions.height, 720u);
+					return { false, 0, dst_dimensions.width, optimal_height };
+				}
+
+				if (dst_dimensions.width == src_dimensions.width)
+				{
+					const auto optimal_height = std::max(dst_dimensions.width, src_dimensions.width);
+					return { false, 0, dst_dimensions.width, optimal_height };
+				}
+			}
+
+			return { false, 0, dst_dimensions.width, dst_dimensions.height };
 		}
 
 		template<typename section_storage_type, typename copy_region_type, typename surface_store_list_type>
