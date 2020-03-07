@@ -233,7 +233,7 @@ public:
 	QString GetCurrentUser();
 
 	/** Changes the settings file to the destination preset*/
-	bool ChangeToConfig(const QString& friendly_name);
+	bool ChangeToConfig(const QString& config_name);
 
 	bool GetCategoryVisibility(int cat);
 
@@ -249,7 +249,7 @@ public:
 	QStringList GetGameListCategoryFilters();
 
 public Q_SLOTS:
-	void Reset(bool removeMeta = false);
+	void Reset(bool remove_meta = false);
 
 	/** Sets the visibility of the chosen category. */
 	void SetCategoryVisibility(int cat, const bool& val);
