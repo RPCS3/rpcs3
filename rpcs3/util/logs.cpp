@@ -611,6 +611,12 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	const u64 frac = (stamp % 1'000'000);
 	fmt::append(text, "%u:%02u:%02u.%06u ", hours, mins, secs, frac);
 
+	if (msg.ch == nullptr && stamp == 0)
+	{
+		// Workaround for first special messages to keep backward compatibility
+		text.clear();
+	}
+
 	if (!prefix.empty())
 	{
 		text += "{";
