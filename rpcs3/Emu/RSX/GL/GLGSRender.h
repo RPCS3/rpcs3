@@ -154,7 +154,7 @@ private:
 
 	void update_draw_state();
 
-	GLuint get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig);
+	gl::texture* get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig);
 
 public:
 	void set_viewport();
