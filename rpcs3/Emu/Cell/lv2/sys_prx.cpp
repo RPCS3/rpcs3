@@ -13,6 +13,7 @@
 #include "Utilities/span.h"
 #include "sys_fs.h"
 #include "sys_process.h"
+#include "sys_memory.h"
 
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 extern void ppu_unload_prx(const lv2_prx& prx);
@@ -213,16 +214,39 @@ error_code _sys_prx_load_module_on_memcontainer_by_fd(s32 fd, u64 offset, u32 me
 	return _sys_prx_load_module_by_fd(fd, offset, flags, pOpt);
 }
 
-error_code _sys_prx_load_module_list(s32 count, vm::cpptr<char, u32, u64> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
+static error_code prx_load_module_list(s32 count, vm::cpptr<char, u32, u64> path_list, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
 {
-	sys_prx.warning("_sys_prx_load_module_list(count=%d, path_list=**0x%x, flags=0x%x, pOpt=*0x%x, id_list=*0x%x)", count, path_list, flags, pOpt, id_list);
+	if (flags != 0)
+	{
+		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_INVALIDMASK)
+		{
+			return CELL_EINVAL;
+		}
+
+		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR && !g_ps3_process_info.ppc_seg)
+		{
+			return CELL_ENOSYS;
+		}
+
+		fmt::throw_exception("sys_prx: Unimplemented fixed address allocations" HERE);
+	}
 
 	for (s32 i = 0; i < count; ++i)
 	{
-		error_code result = prx_load_module(path_list[i].get_ptr(), flags, pOpt);
+		const auto result = prx_load_module(path_list[i].get_ptr(), flags, pOpt);
 
 		if (result < 0)
+		{
+			while (--i >= 0)
+			{
+				// Unload already loaded modules
+				_sys_prx_unload_module(id_list[i], 0, vm::null);
+			}
+
+			// Fill with -1
+			std::memset(id_list.get_ptr(), -1, count * sizeof(id_list[0]));
 			return result;
+		}
 
 		id_list[i] = result;
 	}
@@ -230,21 +254,17 @@ error_code _sys_prx_load_module_list(s32 count, vm::cpptr<char, u32, u64> path_l
 	return CELL_OK;
 }
 
+error_code _sys_prx_load_module_list(s32 count, vm::cpptr<char, u32, u64> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
+{
+	sys_prx.warning("_sys_prx_load_module_list(count=%d, path_list=**0x%x, flags=0x%x, pOpt=*0x%x, id_list=*0x%x)", count, path_list, flags, pOpt, id_list);
+
+	return prx_load_module_list(count, path_list, SYS_MEMORY_CONTAINER_ID_INVALID, flags, pOpt, id_list);
+}
 error_code _sys_prx_load_module_list_on_memcontainer(s32 count, vm::cpptr<char, u32, u64> path_list, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
 {
 	sys_prx.warning("_sys_prx_load_module_list_on_memcontainer(count=%d, path_list=**0x%x, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x, id_list=*0x%x)", count, path_list, mem_ct, flags, pOpt, id_list);
 
-	for (s32 i = 0; i < count; ++i)
-	{
-		error_code result = prx_load_module(path_list[i].get_ptr(), flags, pOpt);
-
-		if (result < 0)
-			return result;
-
-		id_list[i] = result;
-	}
-
-	return CELL_OK;
+	return prx_load_module_list(count, path_list, mem_ct, flags, pOpt, id_list);
 }
 
 error_code _sys_prx_load_module_on_memcontainer(vm::cptr<char> path, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
