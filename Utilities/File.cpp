@@ -1313,8 +1313,7 @@ fs::file::file(const void* ptr, std::size_t size)
 			const s64 new_pos =
 				whence == fs::seek_set ? offset :
 				whence == fs::seek_cur ? offset + m_pos :
-				whence == fs::seek_end ? offset + size() :
-				(fmt::raw_error("fs::file::memory_stream::seek(): invalid whence"), 0);
+				whence == fs::seek_end ? offset + size() : -1;
 
 			if (new_pos < 0)
 			{
@@ -1765,8 +1764,7 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 			const s64 new_pos =
 				whence == fs::seek_set ? offset :
 				whence == fs::seek_cur ? offset + pos :
-				whence == fs::seek_end ? offset + end :
-				(fmt::raw_error("fs::gather_stream::seek(): invalid whence"), 0);
+				whence == fs::seek_end ? offset + end : -1;
 
 			if (new_pos < 0)
 			{
