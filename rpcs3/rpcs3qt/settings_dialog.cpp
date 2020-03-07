@@ -1608,7 +1608,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			{
 				apply_gui_options(true);
 				m_gui_settings->Reset(true);
-				m_gui_settings->ChangeToConfig(gui::Default);
 				Q_EMIT GuiSettingsSyncRequest(true);
 				AddConfigs();
 				AddStylesheets();
