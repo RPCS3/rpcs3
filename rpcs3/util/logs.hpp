@@ -1,13 +1,18 @@
 #pragma once
 
-#include "types.h"
-#include "StrFmt.h"
-#include "util/atomic.hpp"
+#include <cstdint>
 #include <atomic>
+#include <memory>
+#include <string>
+#include <vector>
+#include <initializer_list>
+#include "Utilities/StrFmt.h"
 
 namespace logs
 {
-	enum class level : uint
+	using u64 = std::uint64_t;
+
+	enum class level : unsigned
 	{
 		always, // Highest log severity (unused, cannot be disabled)
 		fatal,
@@ -34,10 +39,18 @@ namespace logs
 		friend struct channel;
 	};
 
+	struct stored_message
+	{
+		message m;
+		u64 stamp;
+		std::string prefix;
+		std::string text;
+	};
+
 	class listener
 	{
 		// Next listener (linked list)
-		atomic_t<listener*> m_next{};
+		std::atomic<listener*> m_next{};
 
 		friend struct message;
 
@@ -51,6 +64,9 @@ namespace logs
 
 		// Add new listener
 		static void add(listener*);
+
+		// Special purpose
+		void broadcast(const stored_message&) const;
 	};
 
 	struct channel
@@ -68,35 +84,25 @@ namespace logs
 		{
 		}
 
-	private:
-#if __cpp_char8_t >= 201811
-		using char2 = char8_t;
-#else
-		using char2 = uchar;
-#endif
-
 #define GEN_LOG_METHOD(_sev)\
 		const message msg_##_sev{this, level::_sev};\
-		template <std::size_t N, typename... Args>\
-		void _sev(const char(&fmt)[N], const Args&... args)\
+		template <typename CharT, std::size_t N, typename... Args>\
+		void _sev(const CharT(&fmt)[N], const Args&... args)\
 		{\
 			if (level::_sev <= enabled.load(std::memory_order_relaxed)) [[unlikely]]\
 			{\
-				static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
-				msg_##_sev.broadcast(fmt, type_list, u64{fmt_unveil<Args>::get(args)}...);\
-			}\
-		}\
-		template <std::size_t N, typename... Args>\
-		void _sev(const char2(&fmt)[N], const Args&... args)\
-		{\
-			if (level::_sev <= enabled.load(std::memory_order_relaxed)) [[unlikely]]\
-			{\
-				static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
-				msg_##_sev.broadcast(reinterpret_cast<const char*>(+fmt), type_list, u64{fmt_unveil<Args>::get(args)}...);\
+				if constexpr (sizeof...(Args) > 0)\
+				{\
+					static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
+					msg_##_sev.broadcast(reinterpret_cast<const char*>(fmt), type_list, u64{fmt_unveil<Args>::get(args)}...);\
+				}\
+				else\
+				{\
+					msg_##_sev.broadcast(reinterpret_cast<const char*>(fmt), nullptr);\
+				}\
 			}\
 		}\
 
-	public:
 		GEN_LOG_METHOD(fatal)
 		GEN_LOG_METHOD(error)
 		GEN_LOG_METHOD(todo)
@@ -139,6 +145,12 @@ namespace logs
 	{
 		return name;
 	}
+
+	// Called in main()
+	std::unique_ptr<logs::listener> make_file_listener(const std::string& path, u64 max_size);
+
+	// Called in main()
+	void set_init(std::initializer_list<stored_message>);
 }
 
 #if __cpp_constinit >= 201907

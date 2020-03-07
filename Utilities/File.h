@@ -516,6 +516,7 @@ namespace fs
 		readonly,
 		isdir,
 		toolong,
+		unknown
 	};
 
 	// Error code returned
@@ -597,8 +598,7 @@ namespace fs
 			const s64 new_pos =
 				whence == fs::seek_set ? offset :
 				whence == fs::seek_cur ? offset + pos :
-				whence == fs::seek_end ? offset + size() :
-				(fmt::raw_error("fs::container_stream<>::seek(): invalid whence"), 0);
+				whence == fs::seek_end ? offset + size() : -1;
 
 			if (new_pos < 0)
 			{

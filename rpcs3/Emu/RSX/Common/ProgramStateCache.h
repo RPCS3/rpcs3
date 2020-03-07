@@ -5,7 +5,7 @@
 
 #include "Utilities/hash.h"
 #include "Utilities/mutex.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 #include "Utilities/span.h"
 
 #include <deque>

@@ -2,7 +2,7 @@
 #include "GLHelpers.h"
 #include "GLTexture.h"
 #include "GLCompute.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 
 namespace gl
 {

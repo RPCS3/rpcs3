@@ -561,10 +561,6 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 
 	replace_path = Emulator::GetEmuDir() + "rpcs3.exe";
 
-	// Creating a file to indicate we're restarting
-	const std::string s_filelock = fs::get_cache_dir() + ".restart_lock";
-	verify("Restart lock" HERE), !!fs::file(s_filelock, fs::create);
-
 #endif
 
 	m_progress_dialog->close();

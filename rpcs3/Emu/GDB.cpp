@@ -1,7 +1,7 @@
 ﻿#include "stdafx.h"
 
 #include "GDB.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"

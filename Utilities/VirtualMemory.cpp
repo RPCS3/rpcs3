@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 #include "VirtualMemory.h"
 #ifdef _WIN32
 #include <Windows.h>

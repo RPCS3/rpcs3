@@ -1,11 +1,7 @@
-﻿#include "Log.h"
-#include "File.h"
-#include "StrFmt.h"
-#include "sema.h"
-
-#include "Utilities/sysinfo.h"
+﻿#include "util/logs.hpp"
+#include "Utilities/File.h"
+#include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
-#include "rpcs3_version.h"
 #include <cstring>
 #include <cstdarg>
 #include <string>
@@ -13,6 +9,7 @@
 #include <thread>
 #include <chrono>
 #include <cstring>
+#include <cerrno>
 
 using namespace std::literals::chrono_literals;
 
@@ -62,17 +59,12 @@ namespace logs
 
 	class file_writer
 	{
-		fs::file m_file;
-		std::string m_name;
 		std::thread m_writer;
 		fs::file m_fout;
 		fs::file m_fout2;
 		u64 m_max_size;
 
-#ifdef _WIN32
-		::HANDLE m_fmap;
-#endif
-		uchar* m_fptr{};
+		std::unique_ptr<uchar[]> m_fptr;
 		z_stream m_zs{};
 		shared_mutex m_m;
 
@@ -85,30 +77,34 @@ namespace logs
 		bool flush(u64 bufv);
 
 	public:
-		file_writer(const std::string& name);
+		file_writer(const std::string& name, u64 max_size);
 
 		virtual ~file_writer();
 
 		// Append raw data
-		void log(logs::level sev, const char* text, std::size_t size);
+		void log(const char* text, std::size_t size);
 	};
 
-	struct stored_message
+	struct file_listener final : file_writer, public listener
 	{
-		message m;
-		u64 stamp;
-		std::string prefix;
-		std::string text;
+		file_listener(const std::string& path, u64 max_size);
+
+		~file_listener() override = default;
+
+		void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override;
 	};
 
-	struct file_listener : public file_writer, public listener
+	struct root_listener final : public listener
 	{
-		file_listener(const std::string& name);
+		root_listener() = default;
 
-		virtual ~file_listener() = default;
+		~root_listener() override = default;
 
 		// Encode level, current thread name, channel name and write log message
-		virtual void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override;
+		void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override
+		{
+			// Do nothing
+		}
 
 		// Channel registry
 		std::unordered_multimap<std::string, channel*> channels;
@@ -117,10 +113,10 @@ namespace logs
 		std::vector<stored_message> messages;
 	};
 
-	static file_listener* get_logger()
+	static root_listener* get_logger()
 	{
 		// Use magic static
-		static file_listener logger("RPCS3");
+		static root_listener logger{};
 		return &logger;
 	}
 
@@ -231,12 +227,25 @@ namespace logs
 	}
 
 	// Must be called in main() to stop accumulating messages in g_messages
-	void set_init()
+	void set_init(std::initializer_list<stored_message> init_msg)
 	{
 		if (!g_init)
 		{
 			std::lock_guard lock(g_mutex);
-			printf("DEBUG: %zu log messages accumulated. %zu channels registered.\n", get_logger()->messages.size(), get_logger()->channels.size());
+
+			// Prepend main messages
+			for (const auto& msg : init_msg)
+			{
+				get_logger()->broadcast(msg);
+			}
+
+			// Send initial messages
+			for (const auto& msg : get_logger()->messages)
+			{
+				get_logger()->broadcast(msg);
+			}
+
+			// Clear it
 			get_logger()->messages.clear();
 			g_init = true;
 		}
@@ -268,15 +277,20 @@ void logs::listener::add(logs::listener* _new)
 	std::lock_guard lock(g_mutex);
 
 	// Install new listener at the end of linked list
-	while (lis->m_next || !lis->m_next.compare_and_swap_test(nullptr, _new))
+	listener* null = nullptr;
+
+	while (lis->m_next || !lis->m_next.compare_exchange_strong(null, _new))
 	{
 		lis = lis->m_next;
+		null = nullptr;
 	}
+}
 
-	// Send initial messages
-	for (const auto& msg : get_logger()->messages)
+void logs::listener::broadcast(const logs::stored_message& msg) const
+{
+	for (auto lis = m_next.load(); lis; lis = lis->m_next)
 	{
-		_new->log(msg.stamp, msg.m, msg.prefix, msg.text);
+		lis->log(msg.stamp, msg.m, msg.prefix, msg.text);
 	}
 }
 
@@ -296,8 +310,10 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	thread_local std::string text;
 	thread_local std::vector<u64> args;
 
+	static constexpr fmt_type_info empty_sup{};
+
 	std::size_t args_count = 0;
-	for (auto v = sup; v->fmt_string; v++)
+	for (auto v = sup; v && v->fmt_string; v++)
 		args_count++;
 
 	text.clear();
@@ -308,7 +324,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	for (u64& arg : args)
 		arg = va_arg(c_args, u64);
 	va_end(c_args);
-	fmt::raw_append(text, fmt, sup, args.data());
+	fmt::raw_append(text, fmt, sup ? sup : &empty_sup, args.data());
 	std::string prefix = g_tls_log_prefix();
 
 	// Get first (main) listener
@@ -339,101 +355,22 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	}
 }
 
-[[noreturn]] extern void catch_all_exceptions();
-
-logs::file_writer::file_writer(const std::string& name)
-	: m_name(name)
+logs::file_writer::file_writer(const std::string& name, u64 max_size)
+	: m_max_size(max_size)
 {
-	const std::string log_name = fs::get_cache_dir() + name + ".log";
-	const std::string buf_name = fs::get_cache_dir() + name + ".buf";
-
-	const std::string s_filelock = fs::get_cache_dir() + ".restart_lock";
-
-	try
+	if (!name.empty() && max_size)
 	{
-		if (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock))
-		{
-#ifdef _WIN32
-			auto prev_error = fs::g_tls_error;
-
-			if (fs::exists(s_filelock))
-			{
-				// A restart is happening, wait for the file to be accessible
-				u32 tries = 0;
-				while (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock) && tries < 100)
-				{
-					std::this_thread::sleep_for(100ms);
-					tries++;
-				}
-			}
-			else
-			{
-				fs::g_tls_error = prev_error;
-			}
-
-			if (!m_file)
-#endif
-			{
-				if (fs::g_tls_error == fs::error::acces)
-				{
-					if (fs::exists(buf_name))
-					{
-						fmt::throw_exception("Another instance of %s is running. Close it or kill its process, if necessary.", name);
-					}
-					else
-					{
-						fmt::throw_exception("Cannot create %s.log (access denied)."
-#ifdef _WIN32
-						                     "\nNote that %s cannot be installed in Program Files or similar directory with limited permissions."
-#else
-						                     "\nPlease, check %s permissions in '~/.config/'."
-#endif
-						                     , name, name);
-					}
-				}
-
-				fmt::throw_exception("Cannot create %s.log (error %s)", name, fs::g_tls_error);
-			}
-		}
-
-#ifdef _WIN32
-		fs::remove_file(s_filelock); // remove restart token if it exists
-#endif
-
-		// Check free space
-		fs::device_stat stats{};
-		if (!fs::statfs(fs::get_cache_dir(), stats) || stats.avail_free < s_log_size * 8)
-		{
-			fmt::throw_exception("Not enough free space (%f KB)", stats.avail_free / 1000000.);
-		}
-
-		// Limit log size to ~25% of free space
-		m_max_size = stats.avail_free / 4;
-
-		// Initialize memory mapped file
-#ifdef _WIN32
-		m_fmap = CreateFileMappingW(m_file.get_handle(), 0, PAGE_READWRITE, s_log_size >> 32, s_log_size & 0xffffffff, 0);
-		m_fptr = m_fmap ? static_cast<uchar*>(MapViewOfFile(m_fmap, FILE_MAP_WRITE, 0, 0, 0)) : nullptr;
-#else
-		m_file.trunc(s_log_size);
-		m_fptr = static_cast<uchar*>(::mmap(0, s_log_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_file.get_handle(), 0));
-#endif
-
-		verify(name.c_str()), m_fptr;
-
-		// Rotate backups (TODO)
-		if (std::string gz_file_name = fs::get_cache_dir() + m_name + ".log.gz"; fs::is_file(gz_file_name))
-		{
-			fs::remove_file(fs::get_cache_dir() + name + "1.log.gz");
-			fs::create_dir(fs::get_cache_dir() + "old_logs");
-			fs::rename(gz_file_name, fs::get_cache_dir() + "old_logs/" + m_name + ".log.gz", true);
-		}
+		// Initialize ringbuffer
+		m_fptr = std::make_unique<uchar[]>(s_log_size);
 
 		// Actual log file (allowed to fail)
-		m_fout.open(log_name, fs::rewrite);
+		if (!m_fout.open(name, fs::rewrite))
+		{
+			fprintf(stderr, "Log file open failed: %s (error %d)\n", name.c_str(), errno);
+		}
 
 		// Compressed log, make it inaccessible (foolproof)
-		if (m_fout2.open(log_name + ".gz", fs::rewrite + fs::unread))
+		if (m_fout2.open(name + ".gz", fs::rewrite + fs::unread))
 		{
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
@@ -446,6 +383,11 @@ logs::file_writer::file_writer(const std::string& name)
 				m_fout2.close();
 		}
 
+		if (!m_fout2)
+		{
+			fprintf(stderr, "Log file open failed: %s.gz (error %d)\n", name.c_str(), errno);
+		}
+
 #ifdef _WIN32
 		// Autodelete compressed log file
 		FILE_DISPOSITION_INFO disp;
@@ -453,14 +395,8 @@ logs::file_writer::file_writer(const std::string& name)
 		SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 #endif
 	}
-	catch (const std::exception& e)
+	else
 	{
-		std::thread([text = std::string{e.what()}]{ report_fatal_error(text); }).detach();
-		return;
-	}
-	catch (...)
-	{
-		std::thread([]{ report_fatal_error("Unknown error" HERE); }).detach();
 		return;
 	}
 
@@ -533,13 +469,9 @@ logs::file_writer::~file_writer()
 	FILE_DISPOSITION_INFO disp;
 	disp.DeleteFileW = false;
 	SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
-
-	UnmapViewOfFile(m_fptr);
-	CloseHandle(m_fmap);
 #else
 	// Restore compressed log file permissions
 	::fchmod(m_fout2.get_handle(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-	::munmap(m_fptr, s_log_size);
 #endif
 }
 
@@ -556,7 +488,7 @@ bool logs::file_writer::flush(u64 bufv)
 		const u64 size = std::min<u64>(end - st, sizeof(m_zout) / 2);
 
 		// Write uncompressed
-		if (m_fout && st < m_max_size && m_fout.write(m_fptr + st % s_log_size, size) != size)
+		if (m_fout && st < m_max_size && m_fout.write(m_fptr.get() + st % s_log_size, size) != size)
 		{
 			m_fout.close();
 		}
@@ -565,7 +497,7 @@ bool logs::file_writer::flush(u64 bufv)
 		if (m_fout2 && st < m_max_size)
 		{
 			m_zs.avail_in = static_cast<uInt>(size);
-			m_zs.next_in  = m_fptr + st % s_log_size;
+			m_zs.next_in  = m_fptr.get() + st % s_log_size;
 
 			do
 			{
@@ -589,7 +521,7 @@ bool logs::file_writer::flush(u64 bufv)
 	return false;
 }
 
-void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
+void logs::file_writer::log(const char* text, std::size_t size)
 {
 	if (!m_fptr)
 	{
@@ -613,7 +545,7 @@ void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
 			}
 
 			v += size;
-			return m_fptr + (v1 + v2) % s_log_size;
+			return m_fptr.get() + (v1 + v2) % s_log_size;
 		});
 
 		if (!pos) [[unlikely]]
@@ -631,11 +563,11 @@ void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
 			continue;
 		}
 
-		if (pos + size > m_fptr + s_log_size)
+		if (pos + size > m_fptr.get() + s_log_size)
 		{
-			const auto frag = m_fptr + s_log_size - pos;
+			const auto frag = m_fptr.get() + s_log_size - pos;
 			std::memcpy(pos, text, frag);
-			std::memcpy(m_fptr, text + frag, size - frag);
+			std::memcpy(m_fptr.get(), text + frag, size - frag);
 		}
 		else
 		{
@@ -647,37 +579,12 @@ void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
 	}
 }
 
-logs::file_listener::file_listener(const std::string& name)
-	: file_writer(name)
+logs::file_listener::file_listener(const std::string& path, u64 max_size)
+	: file_writer(path, max_size)
 	, listener()
 {
 	// Write UTF-8 BOM
-	file_writer::log(logs::level::always, "\xEF\xBB\xBF", 3);
-
-	const std::string firmware_version = utils::get_firmware_version();
-	const std::string firmware_string  = firmware_version.empty() ? "" : (" | Firmware version: " + firmware_version);
-
-	// Write initial message
-	stored_message ver;
-	ver.m.ch  = nullptr;
-	ver.m.sev = level::always;
-	ver.stamp = 0;
-	ver.text  = fmt::format("RPCS3 v%s | %s%s\n%s", rpcs3::get_version().to_string(), rpcs3::get_branch(), firmware_string, utils::get_system_info());
-
-	file_writer::log(logs::level::always, ver.text.data(), ver.text.size());
-	file_writer::log(logs::level::always, "\n", 1);
-	messages.emplace_back(std::move(ver));
-
-	// Write OS version
-	stored_message os;
-	os.m.ch  = nullptr;
-	os.m.sev = level::notice;
-	os.stamp = 0;
-	os.text = utils::get_OS_version();
-
-	file_writer::log(logs::level::notice, os.text.data(), os.text.size());
-	file_writer::log(logs::level::notice, "\n", 1);
-	messages.emplace_back(std::move(os));
+	file_writer::log("\xEF\xBB\xBF", 3);
 }
 
 void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& _text)
@@ -704,6 +611,12 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	const u64 frac = (stamp % 1'000'000);
 	fmt::append(text, "%u:%02u:%02u.%06u ", hours, mins, secs, frac);
 
+	if (msg.ch == nullptr && stamp == 0)
+	{
+		// Workaround for first special messages to keep backward compatibility
+		text.clear();
+	}
+
 	if (!prefix.empty())
 	{
 		text += "{";
@@ -724,5 +637,14 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	text += _text;
 	text += '\n';
 
-	file_writer::log(msg.sev, text.data(), text.size());
+	file_writer::log(text.data(), text.size());
+}
+
+std::unique_ptr<logs::listener> logs::make_file_listener(const std::string& path, u64 max_size)
+{
+	std::unique_ptr<logs::listener> result = std::make_unique<logs::file_listener>(path, max_size);
+
+	// Register file listener
+	result->add(result.get());
+	return result;
 }

@@ -2,7 +2,7 @@
 #include "JIT.h"
 #include "StrFmt.h"
 #include "File.h"
-#include "Log.h"
+#include "util/logs.hpp"
 #include "mutex.h"
 #include "sysinfo.h"
 #include "VirtualMemory.h"

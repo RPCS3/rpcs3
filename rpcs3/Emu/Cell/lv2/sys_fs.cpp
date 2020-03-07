@@ -181,8 +181,7 @@ struct lv2_file::file_view : fs::file_base
 		const s64 new_pos =
 			whence == fs::seek_set ? offset :
 			whence == fs::seek_cur ? offset + m_pos :
-			whence == fs::seek_end ? offset + size() :
-			(fmt::raw_error("lv2_file::file_view::seek(): invalid whence"), 0);
+			whence == fs::seek_end ? offset + size() : -1;
 
 		if (new_pos < 0)
 		{

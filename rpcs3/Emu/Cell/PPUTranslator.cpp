@@ -4,7 +4,7 @@
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
 
-#include "../Utilities/Log.h"
+#include "util/logs.hpp"
 #include <algorithm>
 
 using namespace llvm;

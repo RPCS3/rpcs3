@@ -140,7 +140,7 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\Log.cpp">
+    <ClCompile Include="util\logs.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GSRender.cpp">
@@ -1024,7 +1024,7 @@
     <ClInclude Include="..\Utilities\Timer.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\Log.h">
+    <ClInclude Include="util\logs.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h">

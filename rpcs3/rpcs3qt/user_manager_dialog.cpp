@@ -12,7 +12,7 @@
 
 #include "Utilities/StrUtil.h"
 #include "Utilities/File.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 
 #include <QRegExpValidator>
 #include <QInputDialog>

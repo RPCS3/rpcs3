@@ -3,7 +3,7 @@
 #include "Emu/System.h"
 #include "Utilities/File.h"
 #include "Utilities/StrFmt.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 
 LOG_CHANNEL(gui_log, "GUI");
 

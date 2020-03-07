@@ -2,7 +2,7 @@
 
 #include "Utilities/types.h"
 #include "Utilities/StrFmt.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 #include "util/atomic.hpp"
 #include "util/shared_cptr.hpp"
 

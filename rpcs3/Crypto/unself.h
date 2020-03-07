@@ -5,7 +5,7 @@
 
 #include "Utilities/types.h"
 #include "Utilities/File.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 
 LOG_CHANNEL(self_log, "SELF");
 
