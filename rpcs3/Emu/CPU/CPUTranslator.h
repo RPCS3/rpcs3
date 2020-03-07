@@ -28,7 +28,7 @@
 #include "Utilities/StrFmt.h"
 #include "Utilities/BEType.h"
 #include "Utilities/BitField.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 #include "Utilities/JIT.h"
 
 #include <unordered_map>

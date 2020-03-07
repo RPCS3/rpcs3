@@ -7,7 +7,7 @@
 
 #include "stdafx.h"
 
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
 #include "Emu/VFS.h"
 #include "Emu/System.h"

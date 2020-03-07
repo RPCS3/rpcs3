@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 
 /**
  * Ring buffer memory helper :
@@ -115,7 +115,7 @@ public:
 	{
 		return (m_put_pos > 0) ? m_put_pos - 1 : m_size - 1;
 	}
-	
+
 	virtual bool is_critical() const
 	{
 		const size_t guard_length = std::max(m_min_guard_size, m_largest_allocated_pool);

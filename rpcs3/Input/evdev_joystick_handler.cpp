@@ -5,7 +5,7 @@
 
 #include "Emu/Io/pad_config.h"
 #include "evdev_joystick_handler.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 
 #include <functional>
 #include <algorithm>

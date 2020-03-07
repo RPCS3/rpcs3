@@ -2,7 +2,7 @@
 #error "XAudio2 can only be built on Windows."
 #endif
 
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 #include "Utilities/StrFmt.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"

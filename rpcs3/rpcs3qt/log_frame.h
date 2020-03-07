@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Utilities/File.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 
 #include "custom_dock_widget.h"
 #include "find_dialog.h"

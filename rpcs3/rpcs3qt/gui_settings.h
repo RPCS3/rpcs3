@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "settings.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 
 #include <QVariant>
 #include <QSize>

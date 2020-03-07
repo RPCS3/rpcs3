@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Utilities/types.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 
 #include <string>
 #include <vector>

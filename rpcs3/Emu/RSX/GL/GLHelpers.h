@@ -14,7 +14,7 @@
 
 #include "Emu/system_config.h"
 #include "Utilities/geometry.h"
-#include "Utilities/Log.h"
+#include "util/logs.hpp"
 
 #define GL_FRAGMENT_TEXTURES_START 0
 #define GL_VERTEX_TEXTURES_START   (GL_FRAGMENT_TEXTURES_START + 16)

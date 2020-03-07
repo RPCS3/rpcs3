@@ -1,14 +1,18 @@
 #pragma once
 
-#include "types.h"
-#include "StrFmt.h"
-#include "util/atomic.hpp"
+#include <cstdint>
 #include <atomic>
 #include <memory>
+#include <string>
+#include <vector>
+#include <initializer_list>
+#include "Utilities/StrFmt.h"
 
 namespace logs
 {
-	enum class level : uint
+	using u64 = std::uint64_t;
+
+	enum class level : unsigned
 	{
 		always, // Highest log severity (unused, cannot be disabled)
 		fatal,
@@ -46,7 +50,7 @@ namespace logs
 	class listener
 	{
 		// Next listener (linked list)
-		atomic_t<listener*> m_next{};
+		std::atomic<listener*> m_next{};
 
 		friend struct message;
 
@@ -84,7 +88,7 @@ namespace logs
 #if __cpp_char8_t >= 201811
 		using char2 = char8_t;
 #else
-		using char2 = uchar;
+		using char2 = unsigned char;
 #endif
 
 #define GEN_LOG_METHOD(_sev)\

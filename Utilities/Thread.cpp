@@ -41,7 +41,7 @@
 #endif
 
 #include "sync.h"
-#include "Log.h"
+#include "util/logs.hpp"
 
 LOG_CHANNEL(sig_log);
 LOG_CHANNEL(sys_log, "SYS");

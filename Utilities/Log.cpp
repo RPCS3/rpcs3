@@ -1,4 +1,4 @@
-﻿#include "Log.h"
+﻿#include "util/logs.hpp"
 #include "File.h"
 #include "StrFmt.h"
 #include "sema.h"
@@ -279,9 +279,12 @@ void logs::listener::add(logs::listener* _new)
 	std::lock_guard lock(g_mutex);
 
 	// Install new listener at the end of linked list
-	while (lis->m_next || !lis->m_next.compare_and_swap_test(nullptr, _new))
+	listener* null = nullptr;
+
+	while (lis->m_next || !lis->m_next.compare_exchange_strong(null, _new))
 	{
 		lis = lis->m_next;
+		null = nullptr;
 	}
 }
 
