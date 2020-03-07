@@ -96,7 +96,7 @@ struct cfg_root : cfg::node
 
 		cfg::_enum<video_resolution> resolution{ this, "Resolution", video_resolution::_720 };
 		cfg::_enum<video_aspect> aspect_ratio{ this, "Aspect ratio", video_aspect::_16_9 };
-		cfg::_enum<frame_limit_type> frame_limit{ this, "Frame limit", frame_limit_type::none };
+		cfg::_enum<frame_limit_type> frame_limit{ this, "Frame limit", frame_limit_type::none, true };
 		cfg::_enum<msaa_level> antialiasing_level{ this, "MSAA", msaa_level::_auto };
 
 		cfg::_bool write_color_buffers{ this, "Write Color Buffers" };
@@ -109,7 +109,7 @@ struct cfg_root : cfg::node
 		cfg::_bool overlay{ this, "Debug overlay" };
 		cfg::_bool gl_legacy_buffers{ this, "Use Legacy OpenGL Buffers" };
 		cfg::_bool use_gpu_texture_scaling{ this, "Use GPU texture scaling", false };
-		cfg::_bool stretch_to_display_area{ this, "Stretch To Display Area" };
+		cfg::_bool stretch_to_display_area{ this, "Stretch To Display Area", false, true };
 		cfg::_bool force_high_precision_z_buffer{ this, "Force High Precision Z buffer" };
 		cfg::_bool strict_rendering_mode{ this, "Strict Rendering Mode" };
 		cfg::_bool disable_zcull_queries{ this, "Disable ZCull Occlusion Queries", false };

@@ -710,10 +710,7 @@ namespace rsx
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
 
 	public:
-		double fps_limit = 59.94;
-
-	public:
-		u64 start_rsx_time = 0;
+		u64 target_rsx_flip_time = 0;
 		u64 int_flip_index = 0;
 		u64 last_flip_time = 0;
 		vm::ptr<void(u32)> flip_handler = vm::null;

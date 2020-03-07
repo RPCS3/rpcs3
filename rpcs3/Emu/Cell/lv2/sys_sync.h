@@ -251,13 +251,19 @@ public:
 		}
 	}
 
-	template<bool is_usleep = false>
+	template<bool is_usleep = false, bool scale = true>
 	static bool wait_timeout(u64 usec, cpu_thread* const cpu = {})
 	{
 		static_assert(UINT64_MAX / cond_variable::max_timeout >= 100, "max timeout is not valid for scaling");
 
-		// Clamp and scale the result
-		usec = std::min<u64>(std::min<u64>(usec, UINT64_MAX / 100) * 100 / g_cfg.core.clocks_scale, cond_variable::max_timeout);
+		if constexpr (scale)
+		{
+			// Scale time
+			usec = std::min<u64>(usec, UINT64_MAX / 100) * 100 / g_cfg.core.clocks_scale;
+		}
+
+		// Clamp
+		usec = std::min<u64>(usec, cond_variable::max_timeout);
 
 		extern u64 get_system_time();
 
@@ -301,7 +307,7 @@ public:
 				}
 			}
 
-			if (Emu.IsStopped())
+			if (thread_ctrl::state() == thread_state::aborting)
 			{
 				return false;
 			}
