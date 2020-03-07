@@ -789,8 +789,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 	if (m_isListLayout)
 	{
 		const int scroll_position = m_gameList->verticalScrollBar()->value();
-		const int row = PopulateGameList();
-		m_gameList->selectRow(row);
+		PopulateGameList();
 		SortGameList();
 
 		if (scrollAfter)
@@ -1950,9 +1949,9 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 /**
  Cleans and readds entries to table widget in UI.
 */
-int game_list_frame::PopulateGameList()
+void game_list_frame::PopulateGameList()
 {
-	int result = -1;
+	int selected_row = -1;
 
 	std::string selected_item = CurrentSelectionIconPath();
 
@@ -2073,15 +2072,14 @@ int game_list_frame::PopulateGameList()
 
 		if (selected_item == game->info.icon_path)
 		{
-			result = row;
+			selected_row = row;
 		}
 
 		row++;
 	}
 
 	m_gameList->setRowCount(row);
-
-	return result;
+	m_gameList->selectRow(selected_row);
 }
 
 void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color)
@@ -2150,7 +2148,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 		if (selected_item == app->info.icon_path)
 		{
-			m_xgrid->setCurrentItem(m_xgrid->item(r, c));
+			m_xgrid->setCurrentCell(r, c);
 		}
 
 		if (++c >= maxCols)
@@ -2193,9 +2191,25 @@ std::string game_list_frame::CurrentSelectionIconPath()
 {
 	std::string selection;
 
-	if (m_gameList->selectedItems().count())
+	QTableWidgetItem* item = nullptr;
+
+	if (m_oldLayoutIsList)
 	{
-		QTableWidgetItem* item = m_oldLayoutIsList ? m_gameList->item(m_gameList->currentRow(), 0) : m_xgrid->currentItem();
+		if (!m_gameList->selectedItems().isEmpty())
+		{
+			item = m_gameList->item(m_gameList->currentRow(), 0);
+		}
+	}
+	else
+	{
+		if (!m_xgrid->selectedItems().isEmpty())
+		{
+			item = m_xgrid->currentItem();
+		}
+	}
+
+	if (item)
+	{
 		QVariant var = item->data(gui::game_role);
 
 		if (var.canConvert<game_info>())
