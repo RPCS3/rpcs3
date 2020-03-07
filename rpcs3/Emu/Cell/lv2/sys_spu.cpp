@@ -1262,6 +1262,11 @@ error_code sys_spu_thread_group_connect_event(ppu_thread& ppu, u32 id, u32 eq, u
 		return CELL_EINVAL;
 	}
 
+	if (et == SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE && !(group->type & SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM))
+	{
+		return CELL_EINVAL;
+	}
+
 	const auto queue = idm::get<lv2_obj, lv2_event_queue>(eq);
 
 	std::lock_guard lock(group->mutex);
