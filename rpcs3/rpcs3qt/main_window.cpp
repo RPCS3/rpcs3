@@ -346,8 +346,8 @@ void main_window::BootElf()
 		stopped = true;
 	}
 
-	QString path_last_ELF = m_gui_settings->GetValue(gui::fd_boot_elf).toString();
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select (S)ELF To Boot"), path_last_ELF, tr(
+	const QString path_last_elf = m_gui_settings->GetValue(gui::fd_boot_elf).toString();
+	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select (S)ELF To Boot"), path_last_elf, tr(
 		"(S)ELF files (*BOOT.BIN *.elf *.self);;"
 		"ELF files (BOOT.BIN *.elf);;"
 		"SELF files (EBOOT.BIN *.self);;"
@@ -356,17 +356,20 @@ void main_window::BootElf()
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
-	if (filePath == NULL)
+	if (file_path.isEmpty())
 	{
-		if (stopped) Emu.Resume();
+		if (stopped)
+		{
+			Emu.Resume();
+		}
 		return;
 	}
 
 	// If we resolved the filepath earlier we would end up setting the last opened dir to the unwanted
 	// game folder in case of having e.g. a Game Folder with collected links to elf files.
 	// Don't set last path earlier in case of cancelled dialog
-	m_gui_settings->SetValue(gui::fd_boot_elf, filePath);
-	const std::string path = sstr(QFileInfo(filePath).absoluteFilePath());
+	m_gui_settings->SetValue(gui::fd_boot_elf, file_path);
+	const std::string path = sstr(QFileInfo(file_path).absoluteFilePath());
 
 	gui_log.notice("Booting from BootElf...");
 	Boot(path, "", true);
@@ -382,12 +385,15 @@ void main_window::BootGame()
 		stopped = true;
 	}
 
-	const QString path_last_Game = m_gui_settings->GetValue(gui::fd_boot_game).toString();
-	const QString dir_path = QFileDialog::getExistingDirectory(this, tr("Select Game Folder"), path_last_Game, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+	const QString path_last_game = m_gui_settings->GetValue(gui::fd_boot_game).toString();
+	const QString dir_path = QFileDialog::getExistingDirectory(this, tr("Select Game Folder"), path_last_game, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
 	if (dir_path.isEmpty())
 	{
-		if (stopped) Emu.Resume();
+		if (stopped)
+		{
+			Emu.Resume();
+		}
 		return;
 	}
 
@@ -409,9 +415,9 @@ void main_window::BootRsxCapture(std::string path)
 			is_stopped = true;
 		}
 
-		QString filePath = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), qstr(fs::get_config_dir() + "captures/"), tr("RRC files (*.rrc);;All files (*.*)"));
+		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), qstr(fs::get_config_dir() + "captures/"), tr("RRC files (*.rrc);;All files (*.*)"));
 
-		if (filePath.isEmpty())
+		if (file_path.isEmpty())
 		{
 			if (is_stopped)
 			{
@@ -419,7 +425,7 @@ void main_window::BootRsxCapture(std::string path)
 			}
 			return;
 		}
-		path = sstr(filePath);
+		path = sstr(file_path);
 	}
 
 	Emu.SetForceBoot(true);
@@ -814,11 +820,11 @@ void main_window::SaveWindowState()
 
 void main_window::RepaintThumbnailIcons()
 {
-	QColor newColor = gui::utils::get_label_color("thumbnail_icon_color");
+	const QColor new_color = gui::utils::get_label_color("thumbnail_icon_color");
 
-	auto icon = [&newColor](const QString& path)
+	auto icon = [&new_color](const QString& path)
 	{
-		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, newColor);
+		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, new_color);
 	};
 
 #ifdef _WIN32
@@ -837,11 +843,11 @@ void main_window::RepaintThumbnailIcons()
 
 void main_window::RepaintToolBarIcons()
 {
-	QColor newColor = gui::utils::get_label_color("toolbar_icon_color");
+	const QColor new_color = gui::utils::get_label_color("toolbar_icon_color");
 
-	auto icon = [&newColor](const QString& path)
+	auto icon = [&new_color](const QString& path)
 	{
-		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, newColor);
+		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, new_color);
 	};
 
 	m_icon_play           = icon(":/Icons/play.png");
@@ -882,7 +888,7 @@ void main_window::RepaintToolBarIcons()
 	}
 
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
-		.arg(newColor.red()).arg(newColor.green()).arg(newColor.blue()).arg(newColor.alpha()));
+		.arg(new_color.red()).arg(new_color.green()).arg(new_color.blue()).arg(new_color.alpha()));
 
 	// resize toolbar elements
 
@@ -890,11 +896,11 @@ void main_window::RepaintToolBarIcons()
 	// choose factors to mimic Gui-Design in main_window.ui
 	// TODO: delete this in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp
 #ifdef _WIN32
-	const int toolIconHeight = menuBar()->sizeHint().height() * 1.5;
-	ui->toolBar->setIconSize(QSize(toolIconHeight, toolIconHeight));
+	const int tool_icon_height = menuBar()->sizeHint().height() * 1.5;
+	ui->toolBar->setIconSize(QSize(tool_icon_height, tool_icon_height));
 #endif
 
-	const int toolBarHeight = ui->toolBar->sizeHint().height();
+	const int tool_bar_height = ui->toolBar->sizeHint().height();
 
 	for (const auto& act : ui->toolBar->actions())
 	{
@@ -903,11 +909,11 @@ void main_window::RepaintToolBarIcons()
 			continue;
 		}
 
-		ui->toolBar->widgetForAction(act)->setMinimumWidth(toolBarHeight);
+		ui->toolBar->widgetForAction(act)->setMinimumWidth(tool_bar_height);
 	}
 
-	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 4);
-	ui->mw_searchbar->setFixedWidth(toolBarHeight * 5);
+	ui->sizeSliderContainer->setFixedWidth(tool_bar_height * 4);
+	ui->mw_searchbar->setFixedWidth(tool_bar_height * 5);
 }
 
 void main_window::OnEmuRun(bool /*start_playtime*/)
@@ -1083,7 +1089,7 @@ void main_window::BootRecentAction(const QAction* act)
 	const QString pth = act->data().toString();
 	const std::string path = sstr(pth);
 	QString name;
-	bool containsPath = false;
+	bool contains_path = false;
 
 	int idx = -1;
 	for (int i = 0; i < m_rg_entries.count(); i++)
@@ -1091,16 +1097,16 @@ void main_window::BootRecentAction(const QAction* act)
 		if (m_rg_entries.at(i).first == pth)
 		{
 			idx = i;
-			containsPath = true;
+			contains_path = true;
 			name = m_rg_entries.at(idx).second;
 			break;
 		}
 	}
 
 	// path is invalid: remove action from list return
-	if ((containsPath && name.isEmpty()) || (!QFileInfo(pth).isDir() && !QFileInfo(pth).isFile()))
+	if ((contains_path && name.isEmpty()) || (!QFileInfo(pth).isDir() && !QFileInfo(pth).isFile()))
 	{
-		if (containsPath)
+		if (contains_path)
 		{
 			// clear menu of actions
 			for (auto act : m_recent_game_acts)
@@ -1145,7 +1151,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 		{
 			gui_log.warning("Recent Game not valid, removing from Boot Recent list: %s", sstr(entry.first));
 
-			int idx = m_rg_entries.indexOf(entry);
+			const int idx = m_rg_entries.indexOf(entry);
 			m_rg_entries.removeAt(idx);
 
 			m_gui_settings->SetValue(gui::rg_entries, m_gui_settings->List2Var(m_rg_entries));
@@ -1343,7 +1349,8 @@ void main_window::CreateConnects()
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->actionopen_rsx_capture, &QAction::triggered, [this](){ BootRsxCapture(); });
 
-	connect(ui->addGamesAct, &QAction::triggered, [this]() {
+	connect(ui->addGamesAct, &QAction::triggered, [this]()
+	{
 		QStringList paths;
 
 		// Only select one folder for now
@@ -1374,7 +1381,10 @@ void main_window::CreateConnects()
 
 	connect(ui->clearRecentAct, &QAction::triggered, [this]()
 	{
-		if (ui->freezeRecentAct->isChecked()) { return; }
+		if (ui->freezeRecentAct->isChecked())
+		{
+			return;
+		}
 		m_rg_entries.clear();
 		for (auto act : m_recent_game_acts)
 		{
@@ -1418,7 +1428,7 @@ void main_window::CreateConnects()
 		sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
 	});
 
-	auto openSettings = [this](int tabIndex)
+	auto open_settings = [this](int tabIndex)
 	{
 		settings_dialog dlg(m_gui_settings, m_emu_settings, tabIndex, this);
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
@@ -1430,13 +1440,13 @@ void main_window::CreateConnects()
 		dlg.exec();
 	};
 
-	connect(ui->confCPUAct,    &QAction::triggered, [=, this]() { openSettings(0); });
-	connect(ui->confGPUAct,    &QAction::triggered, [=, this]() { openSettings(1); });
-	connect(ui->confAudioAct,  &QAction::triggered, [=, this]() { openSettings(2); });
-	connect(ui->confIOAct,     &QAction::triggered, [=, this]() { openSettings(3); });
-	connect(ui->confSystemAct, &QAction::triggered, [=, this]() { openSettings(4); });
+	connect(ui->confCPUAct,    &QAction::triggered, [=, this]() { open_settings(0); });
+	connect(ui->confGPUAct,    &QAction::triggered, [=, this]() { open_settings(1); });
+	connect(ui->confAudioAct,  &QAction::triggered, [=, this]() { open_settings(2); });
+	connect(ui->confIOAct,     &QAction::triggered, [=, this]() { open_settings(3); });
+	connect(ui->confSystemAct, &QAction::triggered, [=, this]() { open_settings(4); });
 
-	auto openPadSettings = [this]
+	auto open_pad_settings = [this]
 	{
 		if (!Emu.IsStopped())
 		{
@@ -1458,7 +1468,7 @@ void main_window::CreateConnects()
 		}
 	};
 
-	connect(ui->confPadsAct, &QAction::triggered, openPadSettings);
+	connect(ui->confPadsAct, &QAction::triggered, open_pad_settings);
 
 	connect(ui->confAutopauseManagerAct, &QAction::triggered, [this]()
 	{
@@ -1586,7 +1596,7 @@ void main_window::CreateConnects()
 	{
 		QStringList categories;
 		int id = 0;
-		const bool& checked = act->isChecked();
+		const bool checked = act->isChecked();
 
 		if      (act == ui->showCatHDDGameAct)    categories += category::cat_hdd_game, id = Category::HDD_Game;
 		else if (act == ui->showCatDiscGameAct)   categories += category::cat_disc_game, id = Category::Disc_Game;
@@ -1658,11 +1668,11 @@ void main_window::CreateConnects()
 
 	connect(m_list_mode_act_group, &QActionGroup::triggered, [this](QAction* act)
 	{
-		bool is_list_act = act == ui->setlistModeListAct;
+		const bool is_list_act = act == ui->setlistModeListAct;
 		if (is_list_act == m_is_list_mode)
 			return;
 
-		int slider_pos = ui->sizeSlider->sliderPosition();
+		const int slider_pos = ui->sizeSlider->sliderPosition();
 		ui->sizeSlider->setSliderPosition(m_other_slider_pos);
 		SetIconSizeActions(m_other_slider_pos);
 		m_other_slider_pos = slider_pos;
@@ -1691,8 +1701,8 @@ void main_window::CreateConnects()
 		}
 	});
 
-	connect(ui->toolbar_controls, &QAction::triggered, openPadSettings);
-	connect(ui->toolbar_config, &QAction::triggered, [=, this]() { openSettings(0); });
+	connect(ui->toolbar_controls, &QAction::triggered, open_pad_settings);
+	connect(ui->toolbar_config, &QAction::triggered, [=, this]() { open_settings(0); });
 	connect(ui->toolbar_list, &QAction::triggered, [this]() { ui->setlistModeListAct->trigger(); });
 	connect(ui->toolbar_grid, &QAction::triggered, [this]() { ui->setlistModeGridAct->trigger(); });
 
@@ -1928,7 +1938,7 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 		ui->setlistModeGridAct->setChecked(true);
 	m_category_visible_act_group->setEnabled(m_is_list_mode);
 
-	int icon_size_index = m_gui_settings->GetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();
+	const int icon_size_index = m_gui_settings->GetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();
 	m_other_slider_pos = m_gui_settings->GetValue(!m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();
 	ui->sizeSlider->setSliderPosition(icon_size_index);
 	SetIconSizeActions(icon_size_index);
@@ -1961,9 +1971,9 @@ void main_window::SetIconSizeActions(int idx)
 
 void main_window::RemoveDiskCache()
 {
-	std::string cacheDir = Emulator::GetHdd1Dir() + "/caches";
+	const std::string cache_dir = Emulator::GetHdd1Dir() + "/caches";
 
-	if (fs::is_dir(cacheDir) && fs::remove_all(cacheDir, false))
+	if (fs::is_dir(cache_dir) && fs::remove_all(cache_dir, false))
 	{
 		QMessageBox::information(this, tr("Cache Cleared"), tr("Disk cache was cleared successfully"));
 	}
@@ -2057,11 +2067,11 @@ void main_window::AddGamesFromDir(const QString& path)
 	QDirIterator dir_iter(path, QDir::Dirs | QDir::NoDotAndDotDot);
 	while (dir_iter.hasNext())
 	{
-		std::string pth = sstr(dir_iter.next());
+		const std::string path = sstr(dir_iter.next());
 
-		if (const auto error = Emu.BootGame(pth, "", false, true); error == game_boot_result::no_errors)
+		if (const auto error = Emu.BootGame(path, "", false, true); error == game_boot_result::no_errors)
 		{
-			gui_log.notice("Returned from game addition by drag and drop: %s", pth);
+			gui_log.notice("Returned from game addition by drag and drop: %s", path);
 		}
 	}
 }
@@ -2072,9 +2082,9 @@ Check data for valid file types and cache their paths if necessary
 @param savePaths = flag for path caching
 @returns validity of file type
 */
-int main_window::IsValidFile(const QMimeData& md, QStringList* dropPaths)
+int main_window::IsValidFile(const QMimeData& md, QStringList* drop_paths)
 {
-	int dropType = drop_type::drop_error;
+	int drop_type = drop_type::drop_error;
 
 	const QList<QUrl> list = md.urls(); // get list of all the dropped file urls
 
@@ -2087,12 +2097,12 @@ int main_window::IsValidFile(const QMimeData& md, QStringList* dropPaths)
 		// check for directories first, only valid if all other paths led to directories until now.
 		if (info.isDir())
 		{
-			if (dropType != drop_type::drop_dir && dropType != drop_type::drop_error)
+			if (drop_type != drop_type::drop_dir && drop_type != drop_type::drop_error)
 			{
 				return drop_type::drop_error;
 			}
 
-			dropType = drop_type::drop_dir;
+			drop_type = drop_type::drop_dir;
 		}
 		else if (info.fileName() == "PS3UPDAT.PUP")
 		{
@@ -2101,35 +2111,35 @@ int main_window::IsValidFile(const QMimeData& md, QStringList* dropPaths)
 				return drop_type::drop_error;
 			}
 
-			dropType = drop_type::drop_pup;
+			drop_type = drop_type::drop_pup;
 		}
 		else if (info.suffix().toLower() == "pkg")
 		{
-			if (dropType != drop_type::drop_pkg && dropType != drop_type::drop_error)
+			if (drop_type != drop_type::drop_pkg && drop_type != drop_type::drop_error)
 			{
 				return drop_type::drop_error;
 			}
 
-			dropType = drop_type::drop_pkg;
+			drop_type = drop_type::drop_pkg;
 		}
 		else if (info.suffix() == "rap")
 		{
-			if (dropType != drop_type::drop_rap && dropType != drop_type::drop_error)
+			if (drop_type != drop_type::drop_rap && drop_type != drop_type::drop_error)
 			{
 				return drop_type::drop_error;
 			}
 
-			dropType = drop_type::drop_rap;
+			drop_type = drop_type::drop_rap;
 		}
 		else if (list.size() == 1)
 		{
 			if (info.suffix() == "rrc")
 			{
-				dropType = drop_type::drop_rrc;
+				drop_type = drop_type::drop_rrc;
 			}
 			else
 			{
-				dropType = drop_type::drop_game;
+				drop_type = drop_type::drop_game;
 			}
 		}
 		else
@@ -2137,27 +2147,27 @@ int main_window::IsValidFile(const QMimeData& md, QStringList* dropPaths)
 			return drop_type::drop_error;
 		}
 
-		if (dropPaths) // we only need to know the paths on drop
+		if (drop_paths) // we only need to know the paths on drop
 		{
-			dropPaths->append(path);
+			drop_paths->append(path);
 		}
 	}
 
-	return dropType;
+	return drop_type;
 }
 
 void main_window::dropEvent(QDropEvent* event)
 {
-	QStringList dropPaths;
+	QStringList drop_paths;
 
-	switch (IsValidFile(*event->mimeData(), &dropPaths)) // get valid file paths and drop type
+	switch (IsValidFile(*event->mimeData(), &drop_paths)) // get valid file paths and drop type
 	{
 	case drop_type::drop_error:
 		break;
 	case drop_type::drop_pkg: // install the packages
-		if (dropPaths.count() > 1)
+		if (drop_paths.count() > 1)
 		{
-			pkg_install_dialog dlg(dropPaths, this);
+			pkg_install_dialog dlg(drop_paths, this);
 			connect(&dlg, &QDialog::accepted, [this, &dlg]()
 			{
 				const QStringList paths = dlg.GetPathsToInstall();
@@ -2170,14 +2180,14 @@ void main_window::dropEvent(QDropEvent* event)
 		}
 		else
 		{
-			InstallPackages(dropPaths, true);
+			InstallPackages(drop_paths, true);
 		}
 		break;
 	case drop_type::drop_pup: // install the firmware
-		InstallPup(dropPaths.first());
+		InstallPup(drop_paths.first());
 		break;
 	case drop_type::drop_rap: // import rap files to exdata dir
-		for (const auto& rap : dropPaths)
+		for (const auto& rap : drop_paths)
 		{
 			const std::string rapname = sstr(QFileInfo(rap).fileName());
 
@@ -2195,26 +2205,26 @@ void main_window::dropEvent(QDropEvent* event)
 		m_game_list_frame->Refresh(true);
 		break;
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
-		for (const auto& path : dropPaths)
+		for (const auto& path : drop_paths)
 		{
 			AddGamesFromDir(path);
 		}
 		m_game_list_frame->Refresh(true);
 		break;
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)
-		if (const auto error = Emu.BootGame(sstr(dropPaths.first()), "", true); error != game_boot_result::no_errors)
+		if (const auto error = Emu.BootGame(sstr(drop_paths.first()), "", true); error != game_boot_result::no_errors)
 		{
-			gui_log.error("Boot failed: reason: %s, path: %s", error, sstr(dropPaths.first()));
+			gui_log.error("Boot failed: reason: %s, path: %s", error, sstr(drop_paths.first()));
 			show_boot_error(error);
 		}
 		else
 		{
-			gui_log.success("Elf Boot from drag and drop done: %s", sstr(dropPaths.first()));
+			gui_log.success("Elf Boot from drag and drop done: %s", sstr(drop_paths.first()));
 			m_game_list_frame->Refresh(true);
 		}
 		break;
 	case drop_type::drop_rrc: // replay a rsx capture file
-		BootRsxCapture(sstr(dropPaths.first()));
+		BootRsxCapture(sstr(drop_paths.first()));
 		break;
 	default:
 		gui_log.warning("Invalid dropType in gamelist dropEvent");

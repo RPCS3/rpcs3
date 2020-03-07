@@ -132,7 +132,7 @@ private:
 	void InstallPup(QString filePath = "");
 	void HandlePupInstallation(QString file_path = "");
 
-	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
+	int IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
 	void AddGamesFromDir(const QString& path);
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
