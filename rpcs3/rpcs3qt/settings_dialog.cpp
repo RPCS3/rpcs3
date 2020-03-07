@@ -39,12 +39,12 @@ LOG_CHANNEL(cfg_log, "CFG");
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
-settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, const int& tabIndex, QWidget *parent, const GameInfo* game)
+settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, const int& tab_index, QWidget *parent, const GameInfo* game)
 	: QDialog(parent)
-	, m_tab_Index(tabIndex)
+	, m_tab_index(tab_index)
 	, ui(new Ui::settings_dialog)
-	, xgui_settings(guiSettings)
-	, xemu_settings(emuSettings)
+	, xgui_settings(gui_settings)
+	, xemu_settings(emu_settings)
 {
 	ui->setupUi(this);
 	ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
@@ -522,7 +522,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		}
 	}
 
-	m_oldRender = ui->renderBox->currentText();
+	m_old_renderer = ui->renderBox->currentText();
 
 	auto setRenderer = [=, this](QString text)
 	{
@@ -563,7 +563,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			}
 			// Reset Adapter to old config
 			int idx = ui->graphicsAdapterBox->findText(renderer.old_adapter);
-			if (idx == -1)
+			if (idx < 0)
 			{
 				idx = 0;
 				if (renderer.old_adapter.isEmpty())
@@ -597,15 +597,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		}
 
 		// don't set adapter if signal was created by switching render
-		QString newRender = ui->renderBox->currentText();
-		if (m_oldRender != newRender)
+		const QString new_renderer = ui->renderBox->currentText();
+		if (m_old_renderer != new_renderer)
 		{
-			m_oldRender = newRender;
+			m_old_renderer = new_renderer;
 			return;
 		}
 		for (const auto& render : render_creator.renderers)
 		{
-			if (render->name == newRender && render->has_adapters && render->adapters.contains(text))
+			if (render->name == new_renderer && render->has_adapters && render->adapters.contains(text))
 			{
 				xemu_settings->SetSetting(render->type, sstr(text));
 				break;
@@ -1582,17 +1582,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		{
 			if (reset)
 			{
-				m_currentConfig = gui::Default;
-				m_currentStylesheet = gui::Default;
+				m_current_gui_config = gui::Default;
+				m_current_stylesheet = gui::Default;
 				ui->combo_configs->setCurrentIndex(0);
 				ui->combo_stylesheets->setCurrentIndex(0);
 			}
 			// Only attempt to load a config if changes occurred.
-			if (m_currentConfig != ui->combo_configs->currentText())
+			if (m_current_gui_config != ui->combo_configs->currentText())
 			{
 				OnApplyConfig();
 			}
-			if (m_currentStylesheet != xgui_settings->GetValue(gui::m_currentStylesheet).toString())
+			if (m_current_stylesheet != xgui_settings->GetValue(gui::m_currentStylesheet).toString())
 			{
 				OnApplyStylesheet();
 			}
@@ -1791,17 +1791,17 @@ void settings_dialog::SnapSlider(QSlider *slider, int interval)
 {
 	connect(slider, &QSlider::sliderPressed, [this, slider]()
 	{
-		m_currentSlider = slider;
+		m_current_slider = slider;
 	});
 
 	connect(slider, &QSlider::sliderReleased, [this]()
 	{
-		m_currentSlider = nullptr;
+		m_current_slider = nullptr;
 	});
 
 	connect(slider, &QSlider::valueChanged, [this, slider, interval](int value)
 	{
-		if (slider != m_currentSlider)
+		if (slider != m_current_slider)
 		{
 			return;
 		}
@@ -1823,10 +1823,10 @@ void settings_dialog::AddConfigs()
 		}
 	}
 
-	m_currentConfig = xgui_settings->GetValue(gui::m_currentConfig).toString();
+	m_current_gui_config = xgui_settings->GetValue(gui::m_currentConfig).toString();
 
-	int index = ui->combo_configs->findText(m_currentConfig);
-	if (index != -1)
+	const int index = ui->combo_configs->findText(m_current_gui_config);
+	if (index >= 0)
 	{
 		ui->combo_configs->setCurrentIndex(index);
 	}
@@ -1851,16 +1851,16 @@ void settings_dialog::AddStylesheets()
 		}
 	}
 
-	m_currentStylesheet = xgui_settings->GetValue(gui::m_currentStylesheet).toString();
+	m_current_stylesheet = xgui_settings->GetValue(gui::m_currentStylesheet).toString();
 
-	int index = ui->combo_stylesheets->findData(m_currentStylesheet);
-	if (index != -1)
+	const int index = ui->combo_stylesheets->findData(m_current_stylesheet);
+	if (index >= 0)
 	{
 		ui->combo_stylesheets->setCurrentIndex(index);
 	}
 	else
 	{
-		cfg_log.warning("Trying to set an invalid stylesheets index: %d (%s)", index, sstr(m_currentStylesheet));
+		cfg_log.warning("Trying to set an invalid stylesheets index: %d (%s)", index, sstr(m_current_stylesheet));
 	}
 }
 
@@ -1874,27 +1874,29 @@ void settings_dialog::OnBackupCurrentConfig()
 	while (dialog->exec() != QDialog::Rejected)
 	{
 		dialog->resize(500, 100);
-		QString friendly_name = dialog->textValue();
-		if (friendly_name == "")
+
+		const QString gui_config_name = dialog->textValue();
+
+		if (gui_config_name.isEmpty())
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Name cannot be empty"));
 			continue;
 		}
-		if (friendly_name.contains("."))
+		if (gui_config_name.contains("."))
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Must choose a name with no '.'"));
 			continue;
 		}
-		if (ui->combo_configs->findText(friendly_name) != -1)
+		if (ui->combo_configs->findText(gui_config_name) != -1)
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Please choose a non-existing name"));
 			continue;
 		}
 		Q_EMIT GuiSettingsSaveRequest();
-		xgui_settings->SaveCurrentConfig(friendly_name);
-		ui->combo_configs->addItem(friendly_name);
-		ui->combo_configs->setCurrentText(friendly_name);
-		m_currentConfig = friendly_name;
+		xgui_settings->SaveCurrentConfig(gui_config_name);
+		ui->combo_configs->addItem(gui_config_name);
+		ui->combo_configs->setCurrentText(gui_config_name);
+		m_current_gui_config = gui_config_name;
 		break;
 	}
 }
@@ -1903,7 +1905,7 @@ void settings_dialog::OnApplyConfig()
 {
 	const QString new_config = ui->combo_configs->currentText();
 
-	if (new_config == m_currentConfig)
+	if (new_config == m_current_gui_config)
 	{
 		return;
 	}
@@ -1911,19 +1913,19 @@ void settings_dialog::OnApplyConfig()
 	if (!xgui_settings->ChangeToConfig(new_config))
 	{
 		const int new_config_idx = ui->combo_configs->currentIndex();
-		ui->combo_configs->setCurrentText(m_currentConfig);
+		ui->combo_configs->setCurrentText(m_current_gui_config);
 		ui->combo_configs->removeItem(new_config_idx);
 		return;
 	}
 
-	m_currentConfig = new_config;
+	m_current_gui_config = new_config;
 	Q_EMIT GuiSettingsSyncRequest(true);
 }
 
 void settings_dialog::OnApplyStylesheet()
 {
-	m_currentStylesheet = ui->combo_stylesheets->currentData().toString();
-	xgui_settings->SetValue(gui::m_currentStylesheet, m_currentStylesheet);
+	m_current_stylesheet = ui->combo_stylesheets->currentData().toString();
+	xgui_settings->SetValue(gui::m_currentStylesheet, m_current_stylesheet);
 	Q_EMIT GuiStylesheetRequest(xgui_settings->GetCurrentStylesheetPath());
 }
 
@@ -1934,7 +1936,7 @@ int settings_dialog::exec()
 	// switch to the cpu tab after conjuring the settings_dialog with another tab opened first.
 	// Weirdly enough this won't happen if we change the tab order so that anything else is at index 0.
 	ui->tab_widget_settings->setCurrentIndex(0);
-	QTimer::singleShot(0, [=, this]{ ui->tab_widget_settings->setCurrentIndex(m_tab_Index); });
+	QTimer::singleShot(0, [=, this]{ ui->tab_widget_settings->setCurrentIndex(m_tab_index); });
 
 	// Open a dialog if your config file contained invalid entries
 	QTimer::singleShot(10, [this] { xemu_settings->OpenCorrectionDialog(this); });
@@ -1962,20 +1964,20 @@ bool settings_dialog::eventFilter(QObject* object, QEvent* event)
 		return QDialog::eventFilter(object, event);
 	}
 
-	const int i = ui->tab_widget_settings->currentIndex();
-	QLabel* label = m_description_labels[i].first;
-
-	if (event->type() == QEvent::Enter)
+	if (event->type() == QEvent::Enter || event->type() == QEvent::Leave)
 	{
-		label->setText(m_descriptions[object]);
-		return QDialog::eventFilter(object, event);
-	}
+		const int i = ui->tab_widget_settings->currentIndex();
+		QLabel* label = m_description_labels[i].first;
 
-	QString description = m_description_labels[i].second;
-
-	if (event->type() == QEvent::Leave)
-	{
-		label->setText(description);
+		if (event->type() == QEvent::Enter)
+		{
+			label->setText(m_descriptions[object]);
+		}
+		else if (event->type() == QEvent::Leave)
+		{
+			const QString description = m_description_labels[i].second;
+			label->setText(description);
+		}
 	}
 
 	return QDialog::eventFilter(object, event);

@@ -41,24 +41,24 @@ QString gui_settings::GetCurrentUser()
 	return QString();
 }
 
-bool gui_settings::ChangeToConfig(const QString& friendly_name)
+bool gui_settings::ChangeToConfig(const QString& config_name)
 {
-	if (m_current_name == friendly_name)
+	if (m_current_name == config_name)
 	{
 		return false;
 	}
 
-	if (friendly_name != gui::Settings)
+	if (config_name != gui::Settings)
 	{
 		if (m_current_name == gui::Settings)
 		{
-			SetValue(gui::m_currentConfig, friendly_name);
+			SetValue(gui::m_currentConfig, config_name);
 		}
 		else
 		{
 			QSettings tmp(m_settings_dir.absoluteFilePath(gui::Settings + ".ini"), QSettings::Format::IniFormat, parent());
 			tmp.beginGroup(gui::m_currentConfig.key);
-			tmp.setValue(gui::m_currentConfig.name, friendly_name);
+			tmp.setValue(gui::m_currentConfig.name, config_name);
 			tmp.endGroup();
 		}
 	}
@@ -67,25 +67,25 @@ bool gui_settings::ChangeToConfig(const QString& friendly_name)
 
 	Reset(true);
 
-	QSettings other(m_settings_dir.absoluteFilePath(friendly_name + ".ini"), QSettings::IniFormat);
+	const QSettings other(m_settings_dir.absoluteFilePath(config_name + ".ini"), QSettings::IniFormat);
 
 	for (const QString& key : other.allKeys())
 	{
 		m_settings->setValue(key, other.value(key));
 	}
 
-	SetValue(gui::m_currentConfig, friendly_name);
+	SetValue(gui::m_currentConfig, config_name);
 
 	m_settings->sync();
 
-	m_current_name = friendly_name;
+	m_current_name = config_name;
 
 	return true;
 }
 
-void gui_settings::Reset(bool removeMeta)
+void gui_settings::Reset(bool remove_meta)
 {
-	if (removeMeta)
+	if (remove_meta)
 	{
 		m_settings->clear();
 	}
@@ -277,10 +277,11 @@ QColor gui_settings::GetCustomColor(int col)
 
 QStringList gui_settings::GetConfigEntries()
 {
-	QStringList nameFilter;
-	nameFilter << "*.ini";
-	QFileInfoList entries = m_settings_dir.entryInfoList(nameFilter, QDir::Files);
+	const QStringList name_filter = QStringList("*.ini");
+	const QFileInfoList entries = m_settings_dir.entryInfoList(name_filter, QDir::Files);
+
 	QStringList res;
+
 	for (const QFileInfo &entry : entries)
 	{
 		res.append(entry.baseName());
@@ -306,8 +307,8 @@ void gui_settings::BackupSettingsToTarget(const QString& friendly_name)
 
 QStringList gui_settings::GetStylesheetEntries()
 {
-	QStringList nameFilter = QStringList("*.qss");
-	QStringList res = gui::utils::get_dir_entries(m_settings_dir, nameFilter);
+	const QStringList name_filter = QStringList("*.qss");
+	QStringList res = gui::utils::get_dir_entries(m_settings_dir, name_filter);
 #if !defined(_WIN32)
 	// Makes stylesheets load if using AppImage (App Bundle) or installed to /usr/bin
 #ifdef __APPLE__
@@ -326,7 +327,7 @@ QString gui_settings::GetCurrentStylesheetPath()
 {
 	const Localized localized;
 
-	QString stylesheet = GetValue(gui::m_currentStylesheet).toString();
+	const QString stylesheet = GetValue(gui::m_currentStylesheet).toString();
 
 	if (stylesheet == gui::Default)
 	{
@@ -348,6 +349,6 @@ QSize gui_settings::SizeFromSlider(int pos)
 gui_save gui_settings::GetGuiSaveForColumn(int col)
 {
 	// hide sound format, parental level, firmware version and path by default
-	bool show = col != gui::column_sound && col != gui::column_parental && col != gui::column_firmware && col != gui::column_path;
+	const bool show = col != gui::column_sound && col != gui::column_parental && col != gui::column_firmware && col != gui::column_path;
 	return gui_save{ gui::game_list, "visibility_" + gui::get_game_list_column_name(static_cast<gui::game_list_columns>(col)), show };
 }
