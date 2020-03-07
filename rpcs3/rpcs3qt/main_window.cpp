@@ -128,12 +128,12 @@ void main_window::Init()
 	// enable play options if a recent game exists
 	const bool enable_play_last = !m_recentGameActs.isEmpty() && m_recentGameActs.first();
 
-	const QString start_toolip = enable_play_last ? tr("Start %0").arg(m_recentGameActs.first()->text()) : tr("Start emulation");
+	const QString start_toolip = enable_play_last ? tr("Play %0").arg(m_recentGameActs.first()->text()) : tr("Play");
 
 	if (enable_play_last)
 	{
 		ui->sysPauseAct->setEnabled(true);
-		ui->sysPauseAct->setText(tr("&Start last played game\tCtrl+E"));
+		ui->sysPauseAct->setText(tr("&Play last played game\tCtrl+E"));
 		ui->sysPauseAct->setIcon(m_icon_play);
 		ui->toolbar_start->setToolTip(start_toolip);
 		ui->toolbar_start->setEnabled(true);
@@ -231,17 +231,24 @@ void main_window::OnPlayOrPause()
 	{
 		Emu.Pause();
 	}
-	else if (const auto path = Emu.GetBoot(); !path.empty())
+	else if (Emu.IsStopped())
 	{
-		if (const auto error = Emu.Load(); error != game_boot_result::no_errors)
+		if (m_selected_game)
 		{
-			gui_log.error("Boot failed: reason: %s, path: %s", error, path);
-			show_boot_error(error);
+			Boot(m_selected_game->info.path, m_selected_game->info.serial, false, false, false);
 		}
-	}
-	else if (Emu.IsStopped() && !m_recentGameActs.isEmpty())
-	{
-		BootRecentAction(m_recentGameActs.first());
+		else if (const auto path = Emu.GetBoot(); !path.empty())
+		{
+			if (const auto error = Emu.Load(); error != game_boot_result::no_errors)
+			{
+				gui_log.error("Boot failed: reason: %s, path: %s", error, path);
+				show_boot_error(error);
+			}
+		}
+		else if (!m_recentGameActs.isEmpty())
+		{
+			BootRecentAction(m_recentGameActs.first());
+		}
 	}
 }
 
@@ -974,13 +981,13 @@ void main_window::OnEmuPause()
 void main_window::OnEmuStop()
 {
 	const QString title = GetCurrentTitle();
-	const QString play_tooltip = Emu.IsReady() ? tr("Start %0").arg(title) : tr("Resume %0").arg(title);
+	const QString play_tooltip = Emu.IsReady() ? tr("Play %0").arg(title) : tr("Resume %0").arg(title);
 	const QString restart_tooltip = tr("Restart %0").arg(title);
 
 	m_debuggerFrame->EnableButtons(false);
 	m_debuggerFrame->ClearBreakpoints();
 
-	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
+	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play\tCtrl+E") : tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 #ifdef _WIN32
 	m_thumb_playPause->setToolTip(play_tooltip);
@@ -1019,14 +1026,14 @@ void main_window::OnEmuStop()
 void main_window::OnEmuReady()
 {
 	const QString title = GetCurrentTitle();
-	const QString play_tooltip = Emu.IsReady() ? tr("Start %0").arg(title) : tr("Resume %0").arg(title);
+	const QString play_tooltip = Emu.IsReady() ? tr("Play %0").arg(title) : tr("Resume %0").arg(title);
 
 	m_debuggerFrame->EnableButtons(true);
 #ifdef _WIN32
 	m_thumb_playPause->setToolTip(play_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
-	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
+	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play\tCtrl+E") : tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
@@ -1752,6 +1759,69 @@ void main_window::CreateDockWindows()
 			ui->showGameListAct->setChecked(false);
 			guiSettings->SetValue(gui::mw_gamelist, false);
 		}
+	});
+
+	connect(m_gameListFrame, &game_list_frame::NotifyGameSelection, [this](const game_info& game)
+	{
+		// Only change the button logic while the emulator is stopped.
+		if (Emu.IsStopped())
+		{
+			QString tooltip;
+
+			if (game) // A game was selected
+			{
+				const std::string title_and_title_id = game->info.name + " [" + game->info.serial + "]";
+
+				if (title_and_title_id == Emu.GetTitleAndTitleID()) // This should usually not cause trouble, but feel free to improve.
+				{
+					tooltip = tr("Restart %0").arg(qstr(title_and_title_id));
+
+					ui->toolbar_start->setIcon(m_icon_restart);
+					ui->toolbar_start->setText(tr("Restart"));
+				}
+				else
+				{
+					tooltip = tr("Play %0").arg(qstr(title_and_title_id));
+
+					ui->toolbar_start->setIcon(m_icon_play);
+					ui->toolbar_start->setText(tr("Play"));
+				}
+			}
+			else if (m_selected_game) // No game was selected. Check if a game was selected before.
+			{
+				if (Emu.IsReady()) // Prefer games that are about to be booted ("Automatically start games" was set to off)
+				{
+					tooltip = tr("Play %0").arg(GetCurrentTitle());
+
+					ui->toolbar_start->setIcon(m_icon_play);
+				}
+				else if (const auto path = Emu.GetBoot(); !path.empty()) // Restartable games
+				{
+					tooltip = tr("Restart %0").arg(GetCurrentTitle());
+
+					ui->toolbar_start->setIcon(m_icon_restart);
+					ui->toolbar_start->setText(tr("Restart"));
+				}
+				else if (!m_recentGameActs.isEmpty()) // Get last played game
+				{
+					tooltip = tr("Play %0").arg(m_recentGameActs.first()->text());
+				}
+				else
+				{
+					ui->toolbar_start->setEnabled(false);
+				}
+			}
+
+			if (!tooltip.isEmpty())
+			{
+				ui->toolbar_start->setToolTip(tooltip);
+#ifdef _WIN32
+				m_thumb_playPause->setToolTip(tooltip);
+#endif
+			}
+		}
+
+		m_selected_game = game;
 	});
 
 	connect(m_gameListFrame, &game_list_frame::RequestBoot, [this](const game_info& game, bool force_global_config)

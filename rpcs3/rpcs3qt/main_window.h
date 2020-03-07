@@ -21,6 +21,8 @@ class gui_settings;
 class emu_settings;
 class persistent_settings;
 
+struct gui_game_info;
+
 enum class game_boot_result : u32;
 
 namespace Ui
@@ -145,6 +147,8 @@ private:
 
 	q_pair_list m_rg_entries;
 	QList<QAction*> m_recentGameActs;
+
+	std::shared_ptr<gui_game_info> m_selected_game;
 
 	QActionGroup* m_iconSizeActGroup = nullptr;
 	QActionGroup* m_listModeActGroup = nullptr;

@@ -126,6 +126,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Events
 	connect(m_gameList, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
+	connect(m_gameList, &QTableWidget::currentItemChanged, this, &game_list_frame::itemSelectedSlot);
 	connect(m_gameList, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 
 	connect(m_gameList->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
@@ -136,8 +137,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 		configure->exec(m_gameList->horizontalHeader()->viewport()->mapToGlobal(pos));
 	});
 
-	connect(m_xgrid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 	connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
+	connect(m_xgrid, &QTableWidget::currentItemChanged, this, &game_list_frame::itemSelectedSlot);
+	connect(m_xgrid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 
 	connect(m_game_compat.get(), &game_compatibility::DownloadStarted, [this]()
 	{
@@ -812,8 +814,9 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		const int scroll_position = m_xgrid->verticalScrollBar()->value();
 		PopulateGameGrid(games_per_row, m_Icon_Size, m_Icon_Color);
-		connect(m_xgrid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 		connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
+		connect(m_xgrid, &QTableWidget::currentItemChanged, this, &game_list_frame::itemSelectedSlot);
+		connect(m_xgrid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 		m_Central_Widget->addWidget(m_xgrid);
 		m_Central_Widget->setCurrentWidget(m_xgrid);
 		m_xgrid->verticalScrollBar()->setValue(scroll_position);
@@ -875,21 +878,12 @@ static void open_dir(const std::string& spath)
 
 void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
 {
-	if (item == nullptr)
+	if (!item)
 	{
 		return;
 	}
 
-	game_info game;
-
-	if (m_isListLayout)
-	{
-		game = GetGameInfoFromItem(m_gameList->item(item->row(), gui::column_icon));
-	}
-	else
-	{
-		game = GetGameInfoFromItem(item);
-	}
+	const game_info game = GetGameInfoByMode(item);
 
 	if (!game)
 	{
@@ -898,6 +892,18 @@ void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
 
 	sys_log.notice("Booting from gamelist per doubleclick...");
 	Q_EMIT RequestBoot(game);
+}
+
+void game_list_frame::itemSelectedSlot(QTableWidgetItem* current, QTableWidgetItem* /*previous*/)
+{
+	if (current)
+	{
+		Q_EMIT NotifyGameSelection(GetGameInfoByMode(current));
+	}
+	else
+	{
+		Q_EMIT NotifyGameSelection(nullptr);
+	}
 }
 
 void game_list_frame::ShowContextMenu(const QPoint &pos)
@@ -2257,9 +2263,24 @@ std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32
 	return sstr(string.join(", "));
 }
 
-game_info game_list_frame::GetGameInfoFromItem(QTableWidgetItem* item)
+game_info game_list_frame::GetGameInfoByMode(const QTableWidgetItem* item)
 {
-	if (item == nullptr)
+	if (!item)
+	{
+		return nullptr;
+	}
+
+	if (m_isListLayout)
+	{
+		return GetGameInfoFromItem(m_gameList->item(item->row(), gui::column_icon));
+	}
+
+	return GetGameInfoFromItem(item);
+}
+
+game_info game_list_frame::GetGameInfoFromItem(const QTableWidgetItem* item)
+{
+	if (!item)
 	{
 		return nullptr;
 	}
