@@ -2186,26 +2186,50 @@ namespace rsx
 			areai dst_area = { 0, 0, dst_w, dst_h };
 
 			size2i dst_dimensions = { dst.pitch / dst_bpp, dst.height };
+			position2i dst_offset = { dst.offset_x, dst.offset_y };
+			u32 dst_base_address = dst.rsx_address;
 
 			const auto src_payload_length = (src.pitch * (src_h - 1) + (src_w * src_bpp));
 			const auto dst_payload_length = (dst.pitch * (dst_h - 1) + (dst_w * dst_bpp));
+			const auto dst_range = address_range::start_length(dst_address, dst_payload_length);
 
-			if (src_is_render_target)
+			if (!use_null_region && !dst_is_render_target)
 			{
-				// Attempt to optimize...
-				if (dst_dimensions.width == src_subres.surface->get_surface_width(rsx::surface_metrics::samples))
+				size2u src_dimensions = { 0, 0 };
+				if (src_is_render_target)
 				{
-					dst_dimensions.height = std::max(src_subres.surface->get_surface_height(rsx::surface_metrics::samples), dst.height);
+					src_dimensions.width = src_subres.surface->get_surface_width(rsx::surface_metrics::samples);
+					src_dimensions.height = src_subres.surface->get_surface_height(rsx::surface_metrics::samples);
 				}
-				else if (dst_dimensions.width == 1280 || dst_dimensions.width == 2560) [[likely]]
+
+				const auto props = texture_cache_helpers::get_optimal_blit_target_properties(
+					src_is_render_target,
+					dst_range,
+					dst.pitch,
+					src_dimensions,
+					static_cast<size2u>(dst_dimensions)
+				);
+
+				if (props.use_dma_region)
 				{
-					// Optimizations table based on common width/height pairings. If we guess wrong, the upload resolver will fix it anyway
-					// TODO: Add more entries based on empirical data
-					dst_dimensions.height = std::max<s32>(dst.height, 720);
+					// Try to use a dma flush
+					use_null_region = (is_copy_op && !is_format_convert);
 				}
 				else
 				{
-					//rsx_log.trace("Blit transfer to surface with dims %dx%d", dst_dimensions.width, dst.height);
+					if (props.offset)
+					{
+						// Calculate new offsets
+						dst_base_address = props.offset;
+						const auto new_offset = (dst_address - dst_base_address);
+
+						// Generate new offsets
+						dst_offset.y = new_offset / dst.pitch;
+						dst_offset.x = (new_offset % dst.pitch) / dst_bpp;
+					}
+
+					dst_dimensions.width = static_cast<s32>(props.width);
+					dst_dimensions.height = static_cast<s32>(props.height);
 				}
 			}
 
@@ -2226,9 +2250,7 @@ namespace rsx
 					if (skip_if_collision_exists) required_type_mask |= texture_upload_context::shader_read;
 				}
 
-				const auto dst_range = address_range::start_length(dst_address, dst_payload_length);
 				auto overlapping_surfaces = find_texture_from_range(dst_range, dst.pitch, required_type_mask);
-
 				for (const auto &surface : overlapping_surfaces)
 				{
 					if (!surface->is_locked())
@@ -2533,7 +2555,6 @@ namespace rsx
 				src_area.y2 += scaled_clip_offset_y;
 			}
 
-			const auto dst_range = utils::address_range::start_length(dst_address, dst_payload_length);
 			if (!cached_dest && !dst_is_render_target)
 			{
 				verify(HERE), !dest_texture;
@@ -2541,12 +2562,12 @@ namespace rsx
 				// Need to calculate the minium required size that will fit the data, anchored on the rsx_address
 				// If the application starts off with an 'inseted' section, the guessed dimensions may not fit!
 				const u32 write_end = dst_address + dst_payload_length;
-				u32 block_end = dst.rsx_address + (dst.pitch * dst_dimensions.height);
+				u32 block_end = dst_base_address + (dst.pitch * dst_dimensions.height);
 
 				// Confirm if the pages actually exist in vm
 				// Only need to test the extra padding memory and only when its on main memory
 				// NOTE: When src is not a render target, padding is not added speculatively
-				if (src_is_render_target && get_location(dst.rsx_address) != CELL_GCM_LOCATION_LOCAL)
+				if (src_is_render_target && get_location(dst_base_address) != CELL_GCM_LOCATION_LOCAL)
 				{
 					if (block_end > write_end)
 					{
@@ -2558,11 +2579,11 @@ namespace rsx
 					}
 				}
 
-				const u32 usable_section_length = std::max(write_end, block_end) - dst.rsx_address;
+				const u32 usable_section_length = std::max(write_end, block_end) - dst_base_address;
 				dst_dimensions.height = align2(usable_section_length, dst.pitch) / dst.pitch;
 
 				const u32 full_section_length = ((dst_dimensions.height - 1) * dst.pitch) + (dst_dimensions.width * dst_bpp);
-				const auto rsx_range = address_range::start_length(dst.rsx_address, full_section_length);
+				const auto rsx_range = address_range::start_length(dst_base_address, full_section_length);
 
 				lock.upgrade();
 
@@ -2591,10 +2612,10 @@ namespace rsx
 						rsx::texture_create_flags::swapped_native_component_order;
 
 					// Translate dst_area into the 'full' dst block based on dst.rsx_address as (0, 0)
-					dst_area.x1 += dst.offset_x;
-					dst_area.x2 += dst.offset_x;
-					dst_area.y1 += dst.offset_y;
-					dst_area.y2 += dst.offset_y;
+					dst_area.x1 += dst_offset.x;
+					dst_area.x2 += dst_offset.x;
+					dst_area.y1 += dst_offset.y;
+					dst_area.y2 += dst_offset.y;
 
 					if (!dst_area.x1 && !dst_area.y1 && dst_area.x2 == dst_dimensions.width && dst_area.y2 == dst_dimensions.height)
 					{
@@ -2616,7 +2637,7 @@ namespace rsx
 						subres.height_in_block = subres.height_in_texel = dst_dimensions.height;
 						subres.pitch_in_block = pitch_in_block;
 						subres.depth = 1;
-						subres.data = { vm::get_super_ptr<const std::byte>(dst.rsx_address), static_cast<gsl::span<const std::byte>::index_type>(dst.pitch * dst_dimensions.height) };
+						subres.data = { vm::get_super_ptr<const std::byte>(dst_base_address), static_cast<gsl::span<const std::byte>::index_type>(dst.pitch * dst_dimensions.height) };
 						subresource_layout.push_back(subres);
 
 						cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
@@ -2783,7 +2804,7 @@ namespace rsx
 			}
 			else
 			{
-				result.real_dst_address = dst.rsx_address;
+				result.real_dst_address = dst_base_address;
 				result.real_dst_size = dst.pitch * dst_dimensions.height;
 			}
 
