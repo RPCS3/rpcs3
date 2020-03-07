@@ -307,7 +307,7 @@ public:
 				}
 			}
 
-			if (Emu.IsStopped())
+			if (thread_ctrl::state() == thread_state::aborting)
 			{
 				return false;
 			}
