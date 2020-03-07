@@ -132,12 +132,13 @@ void main_window::Init()
 
 	if (enable_play_last)
 	{
-		ui->sysPauseAct->setEnabled(true);
 		ui->sysPauseAct->setText(tr("&Play last played game\tCtrl+E"));
 		ui->sysPauseAct->setIcon(m_icon_play);
 		ui->toolbar_start->setToolTip(start_toolip);
-		ui->toolbar_start->setEnabled(true);
 	}
+
+	ui->sysPauseAct->setEnabled(enable_play_last);
+	ui->toolbar_start->setEnabled(enable_play_last);
 
 	// create tool buttons for the taskbar thumbnail
 #ifdef _WIN32
@@ -1767,6 +1768,8 @@ void main_window::CreateDockWindows()
 		{
 			QString tooltip;
 
+			bool enable_play_buttons = true;
+
 			if (game) // A game was selected
 			{
 				const std::string title_and_title_id = game->info.name + " [" + game->info.serial + "]";
@@ -1807,9 +1810,19 @@ void main_window::CreateDockWindows()
 				}
 				else
 				{
-					ui->toolbar_start->setEnabled(false);
+					enable_play_buttons = false;
 				}
 			}
+			else
+			{
+				enable_play_buttons = false;
+			}
+
+			ui->toolbar_start->setEnabled(enable_play_buttons);
+			ui->sysPauseAct->setEnabled(enable_play_buttons);
+#ifdef _WIN32
+			m_thumb_playPause->setEnabled(enable_play_buttons);
+#endif
 
 			if (!tooltip.isEmpty())
 			{
