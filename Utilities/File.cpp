@@ -129,8 +129,7 @@ static fs::error to_error(DWORD e)
 	case ERROR_DIR_NOT_EMPTY: return fs::error::notempty;
 	case ERROR_NOT_READY: return fs::error::noent;
 	case ERROR_FILENAME_EXCED_RANGE: return fs::error::toolong;
-	//case ERROR_INVALID_PARAMETER: return fs::error::inval;
-	default: fmt::throw_exception("Unknown Win32 error: %u.", e);
+	default: return fs::error::unknown;
 	}
 }
 
@@ -171,7 +170,7 @@ static fs::error to_error(int e)
 	case ENOTEMPTY: return fs::error::notempty;
 	case EROFS: return fs::error::readonly;
 	case EISDIR: return fs::error::isdir;
-	default: fmt::throw_exception("Unknown system error: %d.", e);
+	default: return fs::error::unknown;
 	}
 }
 
@@ -1823,6 +1822,7 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 		case fs::error::readonly: return "Read only";
 		case fs::error::isdir: return "Is a directory";
 		case fs::error::toolong: return "Path too long";
+		case fs::error::unknown: return "Unknown system error";
 		}
 
 		return unknown;

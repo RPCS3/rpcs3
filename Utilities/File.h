@@ -516,6 +516,7 @@ namespace fs
 		readonly,
 		isdir,
 		toolong,
+		unknown
 	};
 
 	// Error code returned
