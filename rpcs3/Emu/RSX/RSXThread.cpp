@@ -2680,7 +2680,13 @@ namespace rsx
 				if (expected > time + 1000)
 				{
 					const auto delay_us = static_cast<s64>(expected - time);
-					std::this_thread::sleep_for(std::chrono::milliseconds{ delay_us / 1000 });
+					lv2_obj::wait_timeout<false, false>(delay_us);
+
+					if (thread_ctrl::state() == thread_state::aborting)
+					{
+						return;
+					}
+
 					performance_counters.idle_time += delay_us;
 				}
 			}
