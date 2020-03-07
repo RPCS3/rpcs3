@@ -2654,7 +2654,7 @@ namespace rsx
 		case frame_limit_type::_50: limit = 50.; break;
 		case frame_limit_type::_60: limit = 60.; break;
 		case frame_limit_type::_30: limit = 30.; break;
-		case frame_limit_type::_auto: limit = fps_limit; break; // TODO
+		case frame_limit_type::_auto: limit = g_cfg.video.vblank_rate; break; // TODO
 		default:
 			break;
 		}
