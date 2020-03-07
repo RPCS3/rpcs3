@@ -170,7 +170,7 @@ namespace gl
 
 			pixel_pack_settings pack_settings;
 			pack_settings.alignment(1);
-			//pack_settings.swap_bytes(pack_unpack_swap_bytes);
+			pack_settings.swap_bytes(pack_unpack_swap_bytes);
 
 			src->copy_to(nullptr, format, type, pack_settings);
 			real_pitch = src->pitch();
