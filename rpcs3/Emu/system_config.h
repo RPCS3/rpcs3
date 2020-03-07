@@ -109,7 +109,7 @@ struct cfg_root : cfg::node
 		cfg::_bool overlay{ this, "Debug overlay" };
 		cfg::_bool gl_legacy_buffers{ this, "Use Legacy OpenGL Buffers" };
 		cfg::_bool use_gpu_texture_scaling{ this, "Use GPU texture scaling", false };
-		cfg::_bool stretch_to_display_area{ this, "Stretch To Display Area" };
+		cfg::_bool stretch_to_display_area{ this, "Stretch To Display Area", false, true };
 		cfg::_bool force_high_precision_z_buffer{ this, "Force High Precision Z buffer" };
 		cfg::_bool strict_rendering_mode{ this, "Strict Rendering Mode" };
 		cfg::_bool disable_zcull_queries{ this, "Disable ZCull Occlusion Queries", false };
