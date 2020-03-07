@@ -1,11 +1,11 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "GLGSRender.h"
 
 LOG_CHANNEL(screenshot);
 
-GLuint GLGSRender::get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig)
+gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig)
 {
-	GLuint image = GL_NONE;
+	gl::texture* image = nullptr;
 
 	// Check the surface store first
 	gl::command_context cmd = { gl_state };
@@ -45,18 +45,19 @@ GLuint GLGSRender::get_present_source(gl::present_surface_info* info, const rsx:
 			if (viable)
 			{
 				surface->read_barrier(cmd);
-				image = section.surface->get_surface(rsx::surface_access::read)->id();
+				image = section.surface->get_surface(rsx::surface_access::read);
 
 				info->width = rsx::apply_resolution_scale(std::min(surface_width, static_cast<u16>(info->width)), true);
 				info->height = rsx::apply_resolution_scale(std::min(surface_height, static_cast<u16>(info->height)), true);
 			}
 		}
 	}
-	else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions<true>(info->address, info->format, info->width, info->height))
+	else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions<true>(info->address, info->format);
+			 surface && surface->get_width() >= info->width && surface->get_height() >= info->height)
 	{
 		// Hack - this should be the first location to check for output
 		// The render might have been done offscreen or in software and a blit used to display
-		if (const auto tex = surface->get_raw_texture(); tex) image = tex->id();
+		if (const auto tex = surface->get_raw_texture(); tex) image = tex;
 	}
 
 	if (!image)
@@ -76,7 +77,7 @@ GLuint GLGSRender::get_present_source(gl::present_surface_info* info, const rsx:
 		m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
 		m_flip_tex_color->copy_from(vm::base(info->address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
-		image = m_flip_tex_color->id();
+		image = m_flip_tex_color.get();
 	}
 
 	return image;
@@ -104,8 +105,9 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!buffer_pitch)
 			buffer_pitch = buffer_width * avconfig->get_bpp();
 
+		const u32 video_frame_height = (!avconfig->_3d? avconfig->resolution_y : (avconfig->resolution_y - 30) / 2);
 		buffer_width = std::min(buffer_width, avconfig->resolution_x);
-		buffer_height = std::min(buffer_height, avconfig->resolution_y);
+		buffer_height = std::min(buffer_height, video_frame_height);
 	}
 	else
 	{
@@ -120,7 +122,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	// Enable drawing to window backbuffer
 	gl::screen.bind();
 
-	GLuint image_to_flip = GL_NONE;
+	GLuint image_to_flip = GL_NONE, image_to_flip2 = GL_NONE;
 
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
@@ -132,7 +134,29 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		present_info.format = av_format;
 		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL, HERE);
 
-		image_to_flip = get_present_source(&present_info, avconfig);
+		const auto image_to_flip_ = get_present_source(&present_info, avconfig);
+		image_to_flip = image_to_flip_->id();
+
+		if (avconfig->_3d) [[unlikely]]
+		{
+			const auto min_expected_height = rsx::apply_resolution_scale(buffer_height + 30, true);
+			if (image_to_flip_->height() < min_expected_height)
+			{
+				// Get image for second eye
+				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffers[info.buffer].offset;
+				present_info.width = buffer_width;
+				present_info.height = buffer_height;
+				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL, HERE);
+
+				image_to_flip2 = get_present_source(&present_info, avconfig)->id();
+			}
+			else
+			{
+				// Account for possible insets
+				buffer_height = std::min<u32>(image_to_flip_->height() - min_expected_height, rsx::apply_resolution_scale(buffer_height, true));
+			}
+		}
+
 		buffer_width = present_info.width;
 		buffer_height = present_info.height;
 	}
@@ -193,7 +217,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 		areai screen_area = coordi({}, { static_cast<int>(buffer_width), static_cast<int>(buffer_height) });
 
-		if (g_cfg.video.full_rgb_range_output && rsx::fcmp(avconfig->gamma, 1.f))
+		if (g_cfg.video.full_rgb_range_output && rsx::fcmp(avconfig->gamma, 1.f) && !avconfig->_3d)
 		{
 			// Blit source image to the screen
 			m_flip_fbo.recreate();
@@ -207,9 +231,10 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		{
 			const f32 gamma = avconfig->gamma;
 			const bool limited_range = !g_cfg.video.full_rgb_range_output;
+			const rsx::simple_array<GLuint> images{ image_to_flip, image_to_flip2 };
 
 			gl::screen.bind();
-			m_video_output_pass.run(areau(aspect_ratio), image_to_flip, gamma, limited_range);
+			m_video_output_pass.run(areau(aspect_ratio), images, gamma, limited_range, avconfig->_3d);
 		}
 	}
 

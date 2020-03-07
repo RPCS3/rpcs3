@@ -1048,9 +1048,11 @@ namespace vk
 			{
 				float gamma;
 				int   limit_range;
+				int   stereo;
+				int   stereo_image_count;
 			};
 
-			float data[2];
+			float data[4];
 		}
 		config;
 
@@ -1072,6 +1074,7 @@ namespace vk
 			fs_src =
 				"#version 420\n\n"
 				"layout(set=0, binding=1) uniform sampler2D fs0;\n"
+				"layout(set=0, binding=2) uniform sampler2D fs1;\n"
 				"layout(location=0) in vec2 tc0;\n"
 				"layout(location=0) out vec4 ocol;\n"
 				"\n"
@@ -1079,11 +1082,34 @@ namespace vk
 				"{\n"
 				"	float gamma;\n"
 				"	int limit_range;\n"
+				"	int stereo;\n"
+				"	int stereo_image_count;\n"
 				"};\n"
+				"\n"
+				"vec4 read_source()\n"
+				"{\n"
+				"	if (stereo == 0) return texture(fs0, tc0);\n"
+				"\n"
+				"	vec4 left, right;\n"
+				"	if (stereo_image_count == 2)\n"
+				"	{\n"
+				"		left = texture(fs0, tc0);\n"
+				"		right = texture(fs1, tc0);\n"
+				"	}\n"
+				"	else\n"
+				"	{\n"
+				"		vec2 coord_left = tc0 * vec2(1.f, 0.4898f);\n"
+				"		vec2 coord_right = coord_left + vec2(0.f, 0.510204f);\n"
+				"		left = texture(fs0, coord_left);\n"
+				"		right = texture(fs0, coord_right);\n"
+				"	}\n"
+				"\n"
+				"	return vec4(left.r, right.g, right.b, 1.);\n"
+				"}\n"
 				"\n"
 				"void main()\n"
 				"{\n"
-				"	vec4 color = texture(fs0, tc0);\n"
+				"	vec4 color = read_source();\n"
 				"	color.rgb = pow(color.rgb, vec3(gamma));\n"
 				"	if (limit_range > 0)\n"
 				"		ocol = ((color * 220.) + 16.) / 255.;\n"
@@ -1094,6 +1120,8 @@ namespace vk
 			renderpass_config.set_depth_mask(false);
 			renderpass_config.set_color_mask(0, true, true, true, true);
 			renderpass_config.set_attachment_count(1);
+
+			m_num_usable_samplers = 2;
 		}
 
 		std::vector<VkPushConstantRange> get_push_constants() override
@@ -1101,23 +1129,41 @@ namespace vk
 			VkPushConstantRange constant;
 			constant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 			constant.offset = 0;
-			constant.size = 8;
+			constant.size = 16;
 
 			return { constant };
 		}
 
 		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/) override
 		{
-			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 8, config.data);
+			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, config.data);
 		}
 
-		void run(vk::command_buffer &cmd, const areau& viewport, vk::framebuffer* target, vk::viewable_image* src,
-			f32 gamma, bool limited_rgb, VkRenderPass render_pass)
+		void run(vk::command_buffer &cmd, const areau& viewport, vk::framebuffer* target,
+			const rsx::simple_array<vk::viewable_image*>& src,
+			f32 gamma, bool limited_rgb, bool _3d, VkRenderPass render_pass)
 		{
 			config.gamma = gamma;
 			config.limit_range = limited_rgb? 1 : 0;
+			config.stereo = _3d? 1 : 0;
+			config.stereo_image_count = std::min(::size32(src), 2u);
 
-			overlay_pass::run(cmd, viewport, target, { src->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector) }, render_pass);
+			std::vector<vk::image_view*> views;
+			views.reserve(2);
+
+			for (auto& img : src)
+			{
+				// Only raw uploads can possibly have mismatched layout here
+				img->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				views.push_back(img->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector));
+			}
+
+			if (views.size() < 2)
+			{
+				views.push_back(vk::null_image_view(cmd, VK_IMAGE_VIEW_TYPE_2D));
+			}
+
+			overlay_pass::run(cmd, viewport, target, views, render_pass);
 		}
 	};
 }
