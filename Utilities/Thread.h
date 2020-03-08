@@ -225,6 +225,9 @@ public:
 		_wait_for(-1, true);
 	}
 
+	// Exit.
+	[[noreturn]] static void emergency_exit(std::string_view reason);
+
 	// Get current thread (may be nullptr)
 	static thread_base* get_current()
 	{

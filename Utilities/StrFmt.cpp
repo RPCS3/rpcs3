@@ -2,9 +2,11 @@
 #include "BEType.h"
 #include "StrUtil.h"
 #include "cfmt.h"
+#include "util/logs.hpp"
 
 #include <algorithm>
 #include <string_view>
+#include "Thread.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -203,7 +205,7 @@ namespace fmt
 {
 	void raw_error(const char* msg)
 	{
-		throw std::runtime_error{msg};
+		thread_ctrl::emergency_exit(msg);
 	}
 
 	void raw_verify_error(const char* msg, const fmt_type_info* sup, u64 arg)
@@ -236,7 +238,7 @@ namespace fmt
 			out += msg;
 		}
 
-		throw std::runtime_error{out};
+		thread_ctrl::emergency_exit(out);
 	}
 
 	void raw_narrow_error(const char* msg, const fmt_type_info* sup, u64 arg)
@@ -256,14 +258,14 @@ namespace fmt
 			out += msg;
 		}
 
-		throw std::range_error{out};
+		thread_ctrl::emergency_exit(out);
 	}
 
 	void raw_throw_exception(const char* fmt, const fmt_type_info* sup, const u64* args)
 	{
 		std::string out;
 		raw_append(out, fmt, sup, args);
-		throw std::runtime_error{out};
+		thread_ctrl::emergency_exit(out);
 	}
 
 	struct cfmt_src;

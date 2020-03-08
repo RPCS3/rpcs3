@@ -2018,6 +2018,31 @@ u64 thread_base::get_cycles()
 	}
 }
 
+void thread_ctrl::emergency_exit(std::string_view reason)
+{
+	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
+
+	if (const auto _this = g_tls_this_thread)
+	{
+		if (_this->finalize(0))
+		{
+			delete _this;
+		}
+
+		// Do some not very useful cleanup
+		thread_base::finalize();
+
+#ifdef _WIN32
+		_endthreadex(0);
+#else
+		pthread_exit(0);
+#endif
+	}
+
+	// Assume main thread
+	report_fatal_error(std::string(reason));
+}
+
 void thread_ctrl::detect_cpu_layout()
 {
 	if (!g_native_core_layout.compare_and_swap_test(native_core_arrangement::undefined, native_core_arrangement::generic))
