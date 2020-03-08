@@ -315,7 +315,6 @@ void cpu_thread::operator()()
 	if (!g_cpu_array_sema.try_inc(sizeof(g_cpu_array_bits) * 8))
 	{
 		sys_log.fatal("Too many threads.");
-		Emu.Pause();
 		return;
 	}
 
@@ -349,6 +348,34 @@ void cpu_thread::operator()()
 	state += cpu_flag::wait;
 	g_cpu_suspend_lock.lock_unlock();
 
+	static thread_local struct thread_cleanup_t
+	{
+		cpu_thread* _this;
+		u64 slot;
+
+		thread_cleanup_t(cpu_thread* _this, u64 slot)
+			: _this(_this)
+			, slot(slot)
+		{
+		}
+
+		~thread_cleanup_t()
+		{
+			if (auto ptr = vm::g_tls_locked)
+			{
+				ptr->compare_and_swap(_this, nullptr);
+			}
+
+			// Unregister and wait if necessary
+			_this->state += cpu_flag::wait;
+			if (g_cpu_array[slot].exchange(nullptr) != _this)
+				sys_log.fatal("Inconsistency for array slot %u", slot);
+			g_cpu_array_bits[slot / 64] &= ~(1ull << (slot % 64));
+			g_cpu_array_sema--;
+			g_cpu_suspend_lock.lock_unlock();
+		}
+	} cleanup{this, array_slot};
+
 	// Check thread status
 	while (!(state & (cpu_flag::exit + cpu_flag::dbg_global_stop)) && thread_ctrl::state() != thread_state::aborting)
 	{
@@ -361,7 +388,6 @@ void cpu_thread::operator()()
 			}
 			catch (const std::exception& e)
 			{
-				Emu.Pause();
 				sys_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
 				sys_log.notice("\n%s", dump());
 				break;
@@ -373,18 +399,6 @@ void cpu_thread::operator()()
 
 		thread_ctrl::wait();
 	}
-
-	if (auto ptr = vm::g_tls_locked)
-	{
-		ptr->compare_and_swap(this, nullptr);
-	}
-
-	// Unregister and wait if necessary
-	state += cpu_flag::wait;
-	verify("g_cpu_array[...] -> null" HERE), g_cpu_array[array_slot].exchange(nullptr) == this;
-	g_cpu_array_bits[array_slot / 64] &= ~(1ull << (array_slot % 64));
-	g_cpu_array_sema--;
-	g_cpu_suspend_lock.lock_unlock();
 }
 
 cpu_thread::~cpu_thread()

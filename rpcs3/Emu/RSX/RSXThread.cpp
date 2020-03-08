@@ -460,7 +460,6 @@ namespace rsx
 		catch (const std::exception& e)
 		{
 			rsx_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
-			Emu.Pause();
 		}
 
 		on_exit();
