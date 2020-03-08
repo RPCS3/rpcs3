@@ -99,6 +99,20 @@ static semaphore<> s_qt_mutex{};
 	std::abort();
 }
 
+struct pause_on_fatal final : logs::listener
+{
+	~pause_on_fatal() override = default;
+
+	void log(u64 /*stamp*/, const logs::message& msg, const std::string& /*prefix*/, const std::string& /*text*/) override
+	{
+		if (msg.sev <= logs::level::fatal)
+		{
+			// Pause emulation if fatal error encountered
+			Emu.Pause();
+		}
+	}
+};
+
 const char* arg_headless   = "headless";
 const char* arg_no_gui     = "no-gui";
 const char* arg_high_dpi   = "hidpi";
@@ -259,6 +273,9 @@ int main(int argc, char** argv)
 		// Limit log size to ~25% of free space
 		log_file = logs::make_file_listener(fs::get_cache_dir() + "RPCS3.log", stats.avail_free / 4);
 	}
+
+	std::unique_ptr<logs::listener> log_pauser = std::make_unique<pause_on_fatal>();
+	logs::listener::add(log_pauser.get());
 
 	{
 		const std::string firmware_version = utils::get_firmware_version();
