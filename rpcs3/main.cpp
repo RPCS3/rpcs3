@@ -62,12 +62,14 @@ extern char **environ;
 {
 	const bool local = s_qt_init.try_lock();
 
+	// Possibly created and assigned here
+	QScopedPointer<QCoreApplication> app;
+
 	if (local)
 	{
 		static int argc = 1;
-		static char arg1[] = {"ERROR"};
-		static char* argv[] = {arg1};
-		static QApplication app0{argc, argv};
+		static char* argv[] = {+s_argv0};
+		app.reset(new QApplication{argc, argv});
 	}
 
 	if (!local)
@@ -94,7 +96,6 @@ extern char **environ;
 			.arg(tr("Please, don't send incorrect reports. Thanks for understanding.")));
 		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 		msg.exec();
-		std::exit(0);
 	};
 
 #ifdef __APPLE__
@@ -109,7 +110,10 @@ extern char **environ;
 		// If Qt is already initialized, spawn a new RPCS3 process with an --error argument
 		if (local)
 		{
+			// Since we only show an error, we can hope for a graceful exit
 			show_report(text);
+			app.reset();
+			std::exit(0);
 		}
 		else
 		{
@@ -139,10 +143,7 @@ extern char **environ;
 		}
 	}
 
-	while (true)
-	{
-		std::this_thread::sleep_for(1s);
-	}
+	std::abort();
 }
 
 struct pause_on_fatal final : logs::listener
