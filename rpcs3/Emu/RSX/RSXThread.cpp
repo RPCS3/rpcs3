@@ -2702,6 +2702,12 @@ namespace rsx
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		m_queued_flip.in_progress = false;
 
+		if (!isHLE)
+		{
+			sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
+			return;
+		}
+
 		if (flip_handler)
 		{
 			intr_thread->cmd_list
@@ -2713,8 +2719,6 @@ namespace rsx
 
 			thread_ctrl::notify(*intr_thread);
 		}
-
-		sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
 	}
 
 
