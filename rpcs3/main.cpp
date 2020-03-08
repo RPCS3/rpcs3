@@ -22,6 +22,10 @@
 #include "Utilities/dynamic_library.h"
 DYNAMIC_IMPORT("ntdll.dll", NtQueryTimerResolution, NTSTATUS(PULONG MinimumResolution, PULONG MaximumResolution, PULONG CurrentResolution));
 DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution));
+#else
+#include <unistd.h>
+#include <spawn.h>
+#include <sys/wait.h>
 #endif
 
 #ifdef __linux__
@@ -46,21 +50,29 @@ inline auto tr(Args&&... args)
 	return QObject::tr(std::forward<Args>(args)...);
 }
 
-static semaphore<> s_init{0};
-static semaphore<> s_qt_init{0};
-static semaphore<> s_qt_mutex{};
+static semaphore<> s_qt_init;
+
+static atomic_t<char*> s_argv0;
+
+#ifndef _WIN32
+extern char **environ;
+#endif
 
 [[noreturn]] extern void report_fatal_error(const std::string& text)
 {
-	s_qt_mutex.lock();
+	const bool local = s_qt_init.try_lock();
 
-	if (!s_qt_init.try_lock())
+	if (local)
 	{
-		s_init.lock();
 		static int argc = 1;
 		static char arg1[] = {"ERROR"};
 		static char* argv[] = {arg1};
 		static QApplication app0{argc, argv};
+	}
+
+	if (!local)
+	{
+		fprintf(stderr, "RPCS3: %s\n", text.c_str());
 	}
 
 	auto show_report = [](const std::string& text)
@@ -82,6 +94,7 @@ static semaphore<> s_qt_mutex{};
 			.arg(tr("Please, don't send incorrect reports. Thanks for understanding.")));
 		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 		msg.exec();
+		std::exit(0);
 	};
 
 #ifdef __APPLE__
@@ -93,10 +106,43 @@ static semaphore<> s_qt_mutex{};
 	else
 #endif
 	{
-		show_report(text);
+		// If Qt is already initialized, spawn a new RPCS3 process with an --error argument
+		if (local)
+		{
+			show_report(text);
+		}
+		else
+		{
+#ifdef _WIN32
+			wchar_t buffer[32767];
+			GetModuleFileNameW(nullptr, buffer, sizeof(buffer) / 2);
+			std::wstring arg(text.cbegin(), text.cend()); // ignore unicode for now
+			_wspawnl(_P_WAIT, buffer, buffer, L"--error", arg.c_str(), nullptr);
+#else
+			pid_t pid;
+			std::vector<char> data(text.data(), text.data() + text.size() + 1);
+			std::string err_arg = "--error";
+			char* argv[] = {+s_argv0, err_arg.data(), data.data(), nullptr};
+			int ret = posix_spawn(&pid, +s_argv0, nullptr, nullptr, argv, environ);
+
+			if (ret == 0)
+			{
+				int status;
+				waitpid(pid, &status, 0);
+			}
+			else
+			{
+				fprintf(stderr, "posix_spawn() failed: %d\n", ret);
+			}
+#endif
+			std::abort();
+		}
 	}
 
-	std::abort();
+	while (true)
+	{
+		std::this_thread::sleep_for(1s);
+	}
 }
 
 struct pause_on_fatal final : logs::listener
@@ -120,6 +166,7 @@ const char* arg_rounding   = "dpi-rounding";
 const char* arg_styles     = "styles";
 const char* arg_style      = "style";
 const char* arg_stylesheet = "stylesheet";
+const char* arg_error      = "error";
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {
@@ -218,6 +265,14 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 
 int main(int argc, char** argv)
 {
+	s_argv0 = argv[0]; // Save for report_fatal_error
+
+	// Only run RPCS3 to display an error
+	if (int err_pos = find_arg(arg_error, argc, argv))
+	{
+		report_fatal_error(argv[err_pos + 1]);
+	}
+
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
 
 	fs::file instance_lock;
@@ -229,9 +284,6 @@ int main(int argc, char** argv)
 
 	if (!instance_lock)
 	{
-		QApplication app0{argc, argv};
-		s_qt_init.unlock();
-
 		if (fs::g_tls_error == fs::error::acces)
 		{
 			if (fs::exists(lock_name))
@@ -263,9 +315,6 @@ int main(int argc, char** argv)
 		fs::device_stat stats{};
 		if (!fs::statfs(fs::get_cache_dir(), stats) || stats.avail_free < 128 * 1024 * 1024)
 		{
-			QApplication app0{argc, argv};
-			s_qt_init.unlock();
-
 			report_fatal_error(fmt::format("Not enough free space (%f KB)", stats.avail_free / 1000000.));
 			return 1;
 		}
@@ -308,8 +357,7 @@ int main(int argc, char** argv)
 	setenv( "KDE_DEBUG", "1", 0 );
 #endif
 
-	s_init.unlock();
-	s_qt_mutex.lock();
+	std::lock_guard qt_init(s_qt_init);
 
 	// The constructor of QApplication eats the --style and --stylesheet arguments.
 	// By checking for stylesheet().isEmpty() we could implicitly know if a stylesheet was passed,
@@ -404,9 +452,6 @@ int main(int argc, char** argv)
 			Emu.BootGame(path, "", true);
 		});
 	}
-
-	s_qt_init.unlock();
-	s_qt_mutex.unlock();
 
 	// run event loop (maybe only needed for the gui application)
 	return app->exec();
