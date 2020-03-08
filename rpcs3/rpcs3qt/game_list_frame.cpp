@@ -948,7 +948,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	const bool is_current_running_game = (Emu.IsRunning() || Emu.IsPaused()) && current_game.serial == Emu.GetTitleID();
 
-	QAction* boot = new QAction(gameinfo->hasCustomConfig ? tr(is_current_running_game ? "&Reboot with global configuration" : "&Boot with global configuration") : tr("&Boot"));
+	QAction* boot = new QAction(gameinfo->hasCustomConfig ? tr(is_current_running_game ? "&Reboot with global configuration" : "&Boot with global configuration") : tr(is_current_running_game ? "&Reboot" : "&Boot"));
 	QFont font = boot->font();
 	font.setBold(true);
 
