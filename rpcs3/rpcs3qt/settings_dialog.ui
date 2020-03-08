@@ -354,6 +354,18 @@
            <item>
             <widget class="QWidget" name="widget_gpu_top" native="true">
              <layout class="QHBoxLayout" name="widget_gpu_top_layout" stretch="1,1">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
               <item>
                <widget class="QGroupBox" name="gb_aspectRatio">
                 <property name="title">
