@@ -1433,7 +1433,12 @@ namespace rsx
 
 	void user_command(thread* rsx, u32, u32 arg)
 	{
-		sys_rsx_context_attribute(0x55555555, 0xFEF, 0, arg, 0, 0);
+		if (!rsx->isHLE)
+		{
+			sys_rsx_context_attribute(0x55555555, 0xFEF, 0, arg, 0, 0);
+			return;
+		}
+
 		if (rsx->user_handler)
 		{
 			rsx->intr_thread->cmd_list
