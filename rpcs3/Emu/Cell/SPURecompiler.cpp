@@ -1083,7 +1083,6 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	if (!func)
 	{
 		spu_log.fatal("[0x%05x] Compilation failed.", spu.pc);
-		Emu.Pause();
 		return;
 	}
 
@@ -1181,7 +1180,6 @@ void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip) tr
 }
 catch (const std::exception& e)
 {
-	Emu.Pause();
 	spu_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
 	spu_log.notice("\n%s", spu.dump());
 }

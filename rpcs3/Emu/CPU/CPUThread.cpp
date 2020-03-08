@@ -315,7 +315,6 @@ void cpu_thread::operator()()
 	if (!g_cpu_array_sema.try_inc(sizeof(g_cpu_array_bits) * 8))
 	{
 		sys_log.fatal("Too many threads.");
-		Emu.Pause();
 		return;
 	}
 
@@ -389,7 +388,6 @@ void cpu_thread::operator()()
 			}
 			catch (const std::exception& e)
 			{
-				Emu.Pause();
 				sys_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
 				sys_log.notice("\n%s", dump());
 				break;
