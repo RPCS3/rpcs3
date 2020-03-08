@@ -586,7 +586,6 @@ void cellGcmSetSecondVFrequency(u32 freq)
 	switch (freq)
 	{
 	case CELL_GCM_DISPLAY_FREQUENCY_59_94HZ:
-		render->fps_limit = 59.94;
 		break;
 	case CELL_GCM_DISPLAY_FREQUENCY_SCANOUT:
 		cellGcmSys.todo("Unimplemented display frequency: Scanout");

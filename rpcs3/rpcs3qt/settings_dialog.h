@@ -21,7 +21,7 @@ class settings_dialog : public QDialog
 	Q_OBJECT
 
 public:
-	explicit settings_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, const int& tabIndex = 0, QWidget *parent = 0, const GameInfo *game = nullptr);
+	explicit settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, const int& tab_index = 0, QWidget *parent = 0, const GameInfo *game = nullptr);
 	~settings_dialog();
 	int exec() override;
 Q_SIGNALS:
@@ -39,22 +39,22 @@ private:
 
 	// Snapping of sliders when moved with mouse
 	void SnapSlider(QSlider* slider, int interval);
-	QSlider* m_currentSlider = nullptr;
+	QSlider* m_current_slider = nullptr;
 
 	// Emulator tab
 	void AddConfigs();
 	void AddStylesheets();
-	QString m_currentStylesheet;
-	QString m_currentConfig;
+	QString m_current_stylesheet;
+	QString m_current_gui_config;
 	// Gpu tab
-	QString m_oldRender = "";
+	QString m_old_renderer = "";
 	// Audio tab
 	QComboBox *mics_combo[4];
 
-	int m_tab_Index;
+	int m_tab_index;
 	Ui::settings_dialog *ui;
-	std::shared_ptr<gui_settings> xgui_settings;
-	std::shared_ptr<emu_settings> xemu_settings;
+	std::shared_ptr<gui_settings> m_gui_settings;
+	std::shared_ptr<emu_settings> m_emu_settings;
 
 	// Discord
 	bool m_use_discord;

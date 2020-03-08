@@ -2654,33 +2654,38 @@ namespace rsx
 		case frame_limit_type::_50: limit = 50.; break;
 		case frame_limit_type::_60: limit = 60.; break;
 		case frame_limit_type::_30: limit = 30.; break;
-		case frame_limit_type::_auto: limit = fps_limit; break; // TODO
+		case frame_limit_type::_auto: limit = g_cfg.video.vblank_rate; break; // TODO
 		default:
 			break;
 		}
 
 		if (limit)
 		{
-			const u64 time = get_system_time() - Emu.GetPauseTime() - start_rsx_time;
+			const u64 time = get_system_time() - Emu.GetPauseTime();
+			const u64 needed_us = static_cast<u64>(1000000 / limit);
 
 			if (int_flip_index == 0)
 			{
-				start_rsx_time = time;
+				target_rsx_flip_time = time;
 			}
 			else
 			{
-				// Convert limit to expected time value
-				double expected = int_flip_index * 1000000. / limit;
-
-				while (time >= expected + 1000000. / limit)
+				do
 				{
-					expected = int_flip_index++ * 1000000. / limit;
+					target_rsx_flip_time += needed_us;
 				}
+				while (time >= target_rsx_flip_time + needed_us);
 
-				if (expected > time + 1000)
+				if (target_rsx_flip_time > time + 1000)
 				{
-					const auto delay_us = static_cast<s64>(expected - time);
-					std::this_thread::sleep_for(std::chrono::milliseconds{ delay_us / 1000 });
+					const auto delay_us = target_rsx_flip_time - time;
+					lv2_obj::wait_timeout<false, false>(delay_us);
+
+					if (thread_ctrl::state() == thread_state::aborting)
+					{
+						return;
+					}
+
 					performance_counters.idle_time += delay_us;
 				}
 			}

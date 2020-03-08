@@ -233,7 +233,7 @@ public:
 	QString GetCurrentUser();
 
 	/** Changes the settings file to the destination preset*/
-	bool ChangeToConfig(const QString& friendly_name);
+	bool ChangeToConfig(const QString& config_name);
 
 	bool GetCategoryVisibility(int cat);
 
@@ -249,7 +249,7 @@ public:
 	QStringList GetGameListCategoryFilters();
 
 public Q_SLOTS:
-	void Reset(bool removeMeta = false);
+	void Reset(bool remove_meta = false);
 
 	/** Sets the visibility of the chosen category. */
 	void SetCategoryVisibility(int cat, const bool& val);
@@ -258,13 +258,14 @@ public Q_SLOTS:
 
 	void SetCustomColor(int col, const QColor& val);
 
-	void SaveCurrentConfig(const QString& friendly_name);
+	void SaveCurrentConfig(const QString& config_name);
 
 	static QSize SizeFromSlider(int pos);
 	static gui_save GetGuiSaveForColumn(int col);
 
 private:
-	void BackupSettingsToTarget(const QString& friendly_name);
+	void SaveConfigNameToDefault(const QString& config_name);
+	void BackupSettingsToTarget(const QString& config_name);
 	void ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, bool always_on_top);
 
 	QString m_current_name;

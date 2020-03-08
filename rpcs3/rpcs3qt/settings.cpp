@@ -17,12 +17,12 @@ settings::~settings()
 	}
 }
 
-QString settings::GetSettingsDir()
+QString settings::GetSettingsDir() const
 {
 	return m_settings_dir.absolutePath();
 }
 
-QString settings::ComputeSettingsDir()
+QString settings::ComputeSettingsDir() const
 {
 	return QString::fromStdString(fs::get_config_dir()) + "/GuiConfigs/";
 }
