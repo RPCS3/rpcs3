@@ -50,6 +50,6 @@ namespace rsx
 	void shader_loading_dialog_native::close()
 	{
 		dlg->return_code = CELL_OK;
-		dlg->close();
+		dlg->close(false, false);
 	}
 }

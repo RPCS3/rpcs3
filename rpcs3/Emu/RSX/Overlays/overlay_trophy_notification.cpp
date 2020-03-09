@@ -78,7 +78,7 @@ namespace rsx
 					sliding_animation.on_finish = [this]
 					{
 						s_trophy_semaphore.release();
-						close();
+						close(false, false);
 					};
 
 					sliding_animation.active = true;

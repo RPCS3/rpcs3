@@ -159,7 +159,7 @@ namespace rsx
 			default: return;
 			}
 
-			close();
+			close(true, true);
 		}
 
 		error_code message_dialog::show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close)

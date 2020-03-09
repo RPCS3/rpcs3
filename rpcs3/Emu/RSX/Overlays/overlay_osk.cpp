@@ -23,7 +23,7 @@ namespace rsx
 				}
 
 				visible = false;
-				close();
+				close(true, true);
 			};
 
 			fade_animation.active = true;
