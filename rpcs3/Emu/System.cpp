@@ -1643,6 +1643,22 @@ void Emulator::Stop(bool restart)
 		return;
 	}
 
+	named_thread stop_watchdog("Stop Watchdog", [&]()
+	{
+		const auto start = std::chrono::steady_clock::now();
+
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			if (std::chrono::steady_clock::now() - start >= 5s)
+			{
+				report_fatal_error("Stopping emulator took too long."
+					"\nSome thread has probably deadlocked. Aborting.");
+			}
+
+			thread_ctrl::wait_for(100'000);
+		}
+	});
+
 	const bool full_stop = !restart && !m_force_boot;
 	const bool do_exit   = full_stop && g_cfg.misc.autoexit;
 
