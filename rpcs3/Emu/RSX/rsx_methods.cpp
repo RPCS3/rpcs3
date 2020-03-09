@@ -176,7 +176,7 @@ namespace rsx
 		{
 			rsx->clear_surface(arg);
 
-			if (capture_current_frame)
+			if (rsx->capture_current_frame)
 			{
 				rsx->capture_frame("clear");
 			}
@@ -184,7 +184,7 @@ namespace rsx
 
 		void clear_zcull(thread* rsx, u32 _reg, u32 arg)
 		{
-			if (capture_current_frame)
+			if (rsx->capture_current_frame)
 			{
 				rsx->capture_frame("clear zcull memory");
 			}
