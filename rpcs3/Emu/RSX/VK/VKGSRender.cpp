@@ -537,7 +537,14 @@ VKGSRender::VKGSRender() : GSRender()
 	m_video_output_pass = std::make_unique<vk::video_out_calibration_pass>();
 	m_video_output_pass->create(*m_device);
 
-	m_prog_buffer = std::make_unique<VKProgramBuffer>();
+	m_prog_buffer = std::make_unique<VKProgramBuffer>
+	(
+		[this](const vk::pipeline_props& props, const RSXVertexProgram& vp, const RSXFragmentProgram& fp)
+		{
+			// Program was linked or queued for linking
+			m_shaders_cache->store(props, vp, fp);
+		}
+	);
 
 	if (g_cfg.video.disable_vertex_cache || g_cfg.video.multithreaded_rsx)
 		m_vertex_cache = std::make_unique<vk::null_vertex_cache>();
@@ -2473,18 +2480,12 @@ bool VKGSRender::load_program()
 	vertex_program.skip_vertex_input_check = true;
 	fragment_program.unnormalized_coords = 0;
 	m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
-			!g_cfg.video.disable_asynchronous_shader_compiler, *m_device, pipeline_layout).get();
+			!g_cfg.video.disable_asynchronous_shader_compiler, true, *m_device, pipeline_layout).get();
 
 	vk::leave_uninterruptible();
 
 	if (m_prog_buffer->check_cache_missed())
 	{
-		if (m_prog_buffer->check_program_linked_flag())
-		{
-			// Program was linked or queued for linking
-			m_shaders_cache->store(properties, vertex_program, fragment_program);
-		}
-
 		// Notify the user with HUD notification
 		if (g_cfg.misc.show_shader_compilation_hint)
 		{

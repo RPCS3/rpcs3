@@ -186,26 +186,22 @@ struct VKTraits
 
 struct VKProgramBuffer : public program_state_cache<VKTraits>
 {
-	VKProgramBuffer() = default;
-
-	void clear()
+	VKProgramBuffer(decompiler_callback_t callback)
 	{
-		program_state_cache<VKTraits>::clear();
-		m_vertex_shader_cache.clear();
-		m_fragment_shader_cache.clear();
+		notify_pipeline_compiled = callback;
 	}
 
-	u64 get_hash(vk::pipeline_props &props)
+	u64 get_hash(const vk::pipeline_props &props)
 	{
 		return rpcs3::hash_struct<vk::pipeline_props>(props);
 	}
 
-	u64 get_hash(RSXVertexProgram &prog)
+	u64 get_hash(const RSXVertexProgram &prog)
 	{
 		return program_hash_util::vertex_program_utils::get_vertex_program_ucode_hash(prog);
 	}
 
-	u64 get_hash(RSXFragmentProgram &prog)
+	u64 get_hash(const RSXFragmentProgram &prog)
 	{
 		return program_hash_util::fragment_program_utils::get_fragment_program_ucode_hash(prog);
 	}
@@ -214,7 +210,7 @@ struct VKProgramBuffer : public program_state_cache<VKTraits>
 	void add_pipeline_entry(RSXVertexProgram &vp, RSXFragmentProgram &fp, vk::pipeline_props &props, Args&& ...args)
 	{
 		vp.skip_vertex_input_check = true;
-		get_graphics_pipeline(vp, fp, props, false, std::forward<Args>(args)...);
+		get_graphics_pipeline(vp, fp, props, false, false, std::forward<Args>(args)...);
 	}
 
     void preload_programs(RSXVertexProgram &vp, RSXFragmentProgram &fp)
@@ -227,10 +223,5 @@ struct VKProgramBuffer : public program_state_cache<VKTraits>
 	bool check_cache_missed() const
 	{
 		return m_cache_miss_flag;
-	}
-
-	bool check_program_linked_flag() const
-	{
-		return m_program_compiled_flag;
 	}
 };

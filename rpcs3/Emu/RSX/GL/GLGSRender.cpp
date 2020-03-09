@@ -903,6 +903,15 @@ void GLGSRender::on_init_thread()
 
 	m_gl_texture_cache.initialize();
 
+	m_prog_buffer.initialize
+	(
+		[this](void* const& props, const RSXVertexProgram& vp, const RSXFragmentProgram& fp)
+		{
+			// Program was linked or queued for linking
+			m_shaders_cache->store(props, vp, fp);
+		}
+	);
+
 	if (!m_overlay_manager)
 	{
 		m_frame->hide();
@@ -1196,16 +1205,10 @@ bool GLGSRender::load_program()
 
 	void* pipeline_properties = nullptr;
 	m_program = m_prog_buffer.get_graphics_pipeline(current_vertex_program, current_fragment_program, pipeline_properties,
-			!g_cfg.video.disable_asynchronous_shader_compiler).get();
+			!g_cfg.video.disable_asynchronous_shader_compiler, true).get();
 
 	if (m_prog_buffer.check_cache_missed())
 	{
-		if (m_prog_buffer.check_program_linked_flag())
-		{
-			// Program was linked or queued for linking
-			m_shaders_cache->store(pipeline_properties, current_vertex_program, current_fragment_program);
-		}
-
 		// Notify the user with HUD notification
 		if (g_cfg.misc.show_shader_compilation_hint)
 		{
