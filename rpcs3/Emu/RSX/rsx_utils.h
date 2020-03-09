@@ -772,7 +772,7 @@ namespace rsx
 	}
 
 	template <int N>
-	void unpack_bitset(std::bitset<N>& block, u64* values)
+	void unpack_bitset(const std::bitset<N>& block, u64* values)
 	{
 		constexpr int count = N / 64;
 		for (int n = 0; n < count; ++n)
@@ -893,7 +893,7 @@ namespace rsx
 
 		simple_array(const std::initializer_list<Ty>& args)
 		{
-			reserve(args.size());
+			reserve(::size32(args));
 
 			for (const auto& arg : args)
 			{

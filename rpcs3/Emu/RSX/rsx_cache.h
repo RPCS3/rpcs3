@@ -616,7 +616,7 @@ namespace rsx
 			dlg->close();
 		}
 
-		void store(pipeline_storage_type &pipeline, RSXVertexProgram &vp, RSXFragmentProgram &fp)
+		void store(const pipeline_storage_type &pipeline, const RSXVertexProgram &vp, const RSXFragmentProgram &fp)
 		{
 			if (g_cfg.video.disable_on_disk_shader_cache)
 			{
@@ -739,7 +739,7 @@ namespace rsx
 			return std::make_tuple(pipeline, vp, fp);
 		}
 
-		pipeline_data pack(pipeline_storage_type &pipeline, RSXVertexProgram &vp, RSXFragmentProgram &fp)
+		pipeline_data pack(const pipeline_storage_type &pipeline, const RSXVertexProgram &vp, const RSXFragmentProgram &fp)
 		{
 			pipeline_data data_block = {};
 			data_block.pipeline_properties = pipeline;

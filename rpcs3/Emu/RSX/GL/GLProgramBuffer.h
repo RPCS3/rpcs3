@@ -86,21 +86,26 @@ struct GLTraits
 	}
 };
 
-class GLProgramBuffer : public program_state_cache<GLTraits>
+struct GLProgramBuffer : public program_state_cache<GLTraits>
 {
-public:
+	GLProgramBuffer() = default;
 
-	u64 get_hash(void*&)
+	void initialize(decompiler_callback_t callback)
+	{
+		notify_pipeline_compiled = callback;
+	}
+
+	u64 get_hash(void* const&)
 	{
 		return 0;
 	}
 
-	u64 get_hash(RSXVertexProgram &prog)
+	u64 get_hash(const RSXVertexProgram &prog)
 	{
 		return program_hash_util::vertex_program_utils::get_vertex_program_ucode_hash(prog);
 	}
 
-	u64 get_hash(RSXFragmentProgram &prog)
+	u64 get_hash(const RSXFragmentProgram &prog)
 	{
 		return program_hash_util::fragment_program_utils::get_fragment_program_ucode_hash(prog);
 	}
@@ -109,7 +114,7 @@ public:
 	void add_pipeline_entry(RSXVertexProgram &vp, RSXFragmentProgram &fp, void* &props, Args&& ...args)
 	{
 		vp.skip_vertex_input_check = true;
-		get_graphics_pipeline(vp, fp, props, false, std::forward<Args>(args)...);
+		get_graphics_pipeline(vp, fp, props, false, false, std::forward<Args>(args)...);
 	}
 
     void preload_programs(RSXVertexProgram &vp, RSXFragmentProgram &fp)
@@ -121,10 +126,5 @@ public:
 	bool check_cache_missed() const
 	{
 		return m_cache_miss_flag;
-	}
-
-	bool check_program_linked_flag() const
-	{
-		return m_program_compiled_flag;
 	}
 };
