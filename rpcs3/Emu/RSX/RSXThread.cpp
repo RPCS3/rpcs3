@@ -28,8 +28,7 @@ class GSRender;
 
 #define CMD_DEBUG 0
 
-bool user_asked_for_frame_capture = false;
-bool capture_current_frame = false;
+std::atomic<bool> user_asked_for_frame_capture = false;
 rsx::frame_trace_data frame_debug;
 rsx::frame_capture_data frame_capture;
 
@@ -309,6 +308,8 @@ namespace rsx
 		memset(m_vertex_textures_dirty, -1, sizeof(m_vertex_textures_dirty));
 
 		m_graphics_state = pipeline_state::all_dirty;
+
+		user_asked_for_frame_capture = false;
 
 		if (g_cfg.misc.use_native_interface && (g_cfg.video.renderer == video_renderer::opengl || g_cfg.video.renderer == video_renderer::vulkan))
 		{
@@ -650,9 +651,6 @@ namespace rsx
 		// Clear any pending flush requests to release threads
 		std::this_thread::sleep_for(10ms);
 		do_local_task(rsx::FIFO_state::lock_wait);
-
-		user_asked_for_frame_capture = false;
-		capture_current_frame = false;
 
 		m_rsx_thread_exiting = true;
 		g_fxo->get<rsx::dma_manager>()->join();
@@ -2519,10 +2517,9 @@ namespace rsx
 	void thread::on_frame_end(u32 buffer, bool forced)
 	{
 		// Marks the end of a frame scope GPU-side
-		if (user_asked_for_frame_capture && !capture_current_frame)
+		if (user_asked_for_frame_capture.exchange(false) && !capture_current_frame)
 		{
 			capture_current_frame = true;
-			user_asked_for_frame_capture = false;
 			frame_debug.reset();
 			frame_capture.reset();
 
