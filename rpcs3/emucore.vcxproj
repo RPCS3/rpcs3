@@ -87,6 +87,13 @@
     <ClCompile Include="util\atomic2.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="util\yaml.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ExceptionHandling>Sync</ExceptionHandling>
+    </ClCompile>
+    <ClCompile Include="util\cereal.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="util\shared_cptr.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>

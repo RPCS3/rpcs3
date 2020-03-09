@@ -243,28 +243,83 @@ using cpu_profiler = named_thread<cpu_prof>;
 
 thread_local cpu_thread* g_tls_current_cpu_thread = nullptr;
 
-// For synchronizing suspend_all operation
-alignas(64) shared_mutex g_cpu_suspend_lock;
+struct cpu_counter
+{
+	// For synchronizing suspend_all operation
+	alignas(64) shared_mutex cpu_suspend_lock;
 
-// Semaphore for global thread array (global counter)
-alignas(64) atomic_t<u32> g_cpu_array_sema{0};
+	// Semaphore for global thread array (global counter)
+	alignas(64) atomic_t<u32> cpu_array_sema{0};
 
-// Semaphore subdivision for each array slot (64 x N in total)
-atomic_t<u64> g_cpu_array_bits[6]{};
+	// Semaphore subdivision for each array slot (64 x N in total)
+	atomic_t<u64> cpu_array_bits[6]{};
 
-// All registered threads
-atomic_t<cpu_thread*> g_cpu_array[sizeof(g_cpu_array_bits) * 8]{};
+	// All registered threads
+	atomic_t<cpu_thread*> cpu_array[sizeof(cpu_array_bits) * 8]{};
+
+	u64 add(cpu_thread* _this)
+	{
+		if (!cpu_array_sema.try_inc(sizeof(cpu_counter::cpu_array_bits) * 8))
+		{
+			return -1;
+		}
+
+		u64 array_slot = -1;
+
+		for (u32 i = 0;; i = (i + 1) % ::size32(cpu_array_bits))
+		{
+			const auto [bits, ok] = cpu_array_bits[i].fetch_op([](u64& bits) -> u64
+			{
+				if (~bits) [[likely]]
+				{
+					// Set lowest clear bit
+					bits |= bits + 1;
+					return true;
+				}
+
+				return false;
+			});
+
+			if (ok) [[likely]]
+			{
+				// Get actual slot number
+				array_slot = i * 64 + utils::cnttz64(~bits, false);
+				break;
+			}
+		}
+
+		// Register and wait if necessary
+		verify("cpu_counter::add()" HERE), cpu_array[array_slot].exchange(_this) == nullptr;
+
+		_this->state += cpu_flag::wait;
+		cpu_suspend_lock.lock_unlock();
+		return array_slot;
+	}
+
+	void remove(cpu_thread* _this, u64 slot)
+	{
+		// Unregister and wait if necessary
+		_this->state += cpu_flag::wait;
+		if (cpu_array[slot].exchange(nullptr) != _this)
+			sys_log.fatal("Inconsistency for array slot %u", slot);
+		cpu_array_bits[slot / 64] &= ~(1ull << (slot % 64));
+		cpu_array_sema--;
+		cpu_suspend_lock.lock_unlock();
+	}
+};
 
 template <typename F>
 void for_all_cpu(F&& func) noexcept
 {
-	for (u32 i = 0; i < ::size32(g_cpu_array_bits); i++)
+	auto ctr = g_fxo->get<cpu_counter>();
+
+	for (u32 i = 0; i < ::size32(ctr->cpu_array_bits); i++)
 	{
-		for (u64 bits = g_cpu_array_bits[i]; bits; bits &= bits - 1)
+		for (u64 bits = ctr->cpu_array_bits[i]; bits; bits &= bits - 1)
 		{
 			const u64 index = i * 64 + utils::cnttz64(bits, true);
 
-			if (cpu_thread* cpu = g_cpu_array[index].load())
+			if (cpu_thread* cpu = ctr->cpu_array[index].load())
 			{
 				func(cpu);
 			}
@@ -301,6 +356,12 @@ void cpu_thread::operator()()
 		}
 	}
 
+	while (!g_fxo->get<cpu_counter>() && !g_fxo->get<cpu_profiler>())
+	{
+		// Can we have a little race, right? First thread is started concurrently with g_fxo->init()
+		std::this_thread::sleep_for(1ms);
+	}
+
 	if (id_type() == 1 && false)
 	{
 		g_fxo->get<cpu_profiler>()->registered.push(id);
@@ -312,67 +373,51 @@ void cpu_thread::operator()()
 	}
 
 	// Register thread in g_cpu_array
-	if (!g_cpu_array_sema.try_inc(sizeof(g_cpu_array_bits) * 8))
+	const u64 array_slot = g_fxo->get<cpu_counter>()->add(this);
+
+	if (array_slot == umax)
 	{
 		sys_log.fatal("Too many threads.");
 		return;
 	}
 
-	u64 array_slot = -1;
-
-	for (u32 i = 0;; i = (i + 1) % ::size32(g_cpu_array_bits))
-	{
-		const auto [bits, ok] = g_cpu_array_bits[i].fetch_op([](u64& bits) -> u64
-		{
-			if (~bits) [[likely]]
-			{
-				// Set lowest clear bit
-				bits |= bits + 1;
-				return true;
-			}
-
-			return false;
-		});
-
-		if (ok) [[likely]]
-		{
-			// Get actual slot number
-			array_slot = i * 64 + utils::cnttz64(~bits, false);
-			break;
-		}
-	}
-
-	// Register and wait if necessary
-	verify("g_cpu_array[...] -> this" HERE), g_cpu_array[array_slot].exchange(this) == nullptr;
-
-	state += cpu_flag::wait;
-	g_cpu_suspend_lock.lock_unlock();
-
 	static thread_local struct thread_cleanup_t
 	{
 		cpu_thread* _this;
 		u64 slot;
+		std::string name;
 
 		thread_cleanup_t(cpu_thread* _this, u64 slot)
 			: _this(_this)
 			, slot(slot)
+			, name(thread_ctrl::get_name())
 		{
 		}
 
-		~thread_cleanup_t()
+		void cleanup()
 		{
+			if (_this == nullptr)
+			{
+				return;
+			}
+
 			if (auto ptr = vm::g_tls_locked)
 			{
 				ptr->compare_and_swap(_this, nullptr);
 			}
 
-			// Unregister and wait if necessary
-			_this->state += cpu_flag::wait;
-			if (g_cpu_array[slot].exchange(nullptr) != _this)
-				sys_log.fatal("Inconsistency for array slot %u", slot);
-			g_cpu_array_bits[slot / 64] &= ~(1ull << (slot % 64));
-			g_cpu_array_sema--;
-			g_cpu_suspend_lock.lock_unlock();
+			g_fxo->get<cpu_counter>()->remove(_this, slot);
+
+			_this = nullptr;
+		}
+
+		~thread_cleanup_t()
+		{
+			if (_this)
+			{
+				sys_log.warning("CPU Thread '%s' terminated abnormally:\n%s", name, _this->dump());
+				cleanup();
+			}
 		}
 	} cleanup{this, array_slot};
 
@@ -382,23 +427,16 @@ void cpu_thread::operator()()
 		// Check stop status
 		if (!(state & cpu_flag::stop))
 		{
-			try
-			{
-				cpu_task();
-			}
-			catch (const std::exception& e)
-			{
-				sys_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
-				sys_log.notice("\n%s", dump());
-				break;
-			}
-
+			cpu_task();
 			state -= cpu_flag::ret;
 			continue;
 		}
 
 		thread_ctrl::wait();
 	}
+
+	// Complete cleanup gracefully
+	cleanup.cleanup();
 }
 
 cpu_thread::~cpu_thread()
@@ -493,7 +531,7 @@ bool cpu_thread::check_state() noexcept
 		else
 		{
 			// If only cpu_flag::pause was set, notification won't arrive
-			g_cpu_suspend_lock.lock_unlock();
+			g_fxo->get<cpu_counter>()->cpu_suspend_lock.lock_unlock();
 		}
 	}
 
@@ -577,7 +615,7 @@ cpu_thread::suspend_all::suspend_all(cpu_thread* _this) noexcept
 		m_this->state += cpu_flag::wait;
 	}
 
-	g_cpu_suspend_lock.lock_vip();
+	g_fxo->get<cpu_counter>()->cpu_suspend_lock.lock_vip();
 
 	for_all_cpu([](cpu_thread* cpu)
 	{
@@ -610,18 +648,18 @@ cpu_thread::suspend_all::suspend_all(cpu_thread* _this) noexcept
 cpu_thread::suspend_all::~suspend_all()
 {
 	// Make sure the latest thread does the cleanup and notifies others
-	if (g_cpu_suspend_lock.downgrade_unique_vip_lock_to_low_or_unlock())
+	if (g_fxo->get<cpu_counter>()->cpu_suspend_lock.downgrade_unique_vip_lock_to_low_or_unlock())
 	{
 		for_all_cpu([&](cpu_thread* cpu)
 		{
 			cpu->state -= cpu_flag::pause;
 		});
 
-		g_cpu_suspend_lock.unlock_low();
+		g_fxo->get<cpu_counter>()->cpu_suspend_lock.unlock_low();
 	}
 	else
 	{
-		g_cpu_suspend_lock.lock_unlock();
+		g_fxo->get<cpu_counter>()->cpu_suspend_lock.lock_unlock();
 	}
 
 	if (m_this)
@@ -640,7 +678,7 @@ void cpu_thread::stop_all() noexcept
 	}
 	else
 	{
-		::vip_lock lock(g_cpu_suspend_lock);
+		::vip_lock lock(g_fxo->get<cpu_counter>()->cpu_suspend_lock);
 
 		for_all_cpu([](cpu_thread* cpu)
 		{
@@ -651,7 +689,7 @@ void cpu_thread::stop_all() noexcept
 
 	sys_log.notice("All CPU threads have been signaled.");
 
-	while (g_cpu_array_sema)
+	while (g_fxo->get<cpu_counter>()->cpu_array_sema)
 	{
 		std::this_thread::sleep_for(10ms);
 	}

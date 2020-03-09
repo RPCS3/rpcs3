@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <utility>
+#include <charconv>
 
 namespace rsx
 {
@@ -21,21 +22,64 @@ namespace rsx
 				hex_color.erase(0, 1);
 			}
 
-			unsigned long hexval;
-			const size_t len = hex_color.length();
+			unsigned hexval = 0;
+			const auto len = hex_color.length();
 
-			try
+			if (len != 6 && len != 8)
 			{
-				if (len != 6 && len != 8)
-				{
-					fmt::throw_exception("wrong length: %d", len);
-				}
-				hexval = std::stoul(hex_color, nullptr, 16);
-			}
-			catch (const std::exception& e)
-			{
-				rsx_log.error("Overlays: tried to convert incompatible color code: '%s' exception: '%s'", hex_color, e.what());
+				rsx_log.error("Incompatible color code: '%s' has wrong length: %d", hex_color, len);
 				return color4f(0.0f, 0.0f, 0.0f, 0.0f);
+			}
+			else
+			{
+				// auto&& [ptr, ec] = std::from_chars(hex_color.c_str(), hex_color.c_str() + len, &hexval, 16);
+
+				// if (ptr != hex_color.c_str() + len || ec)
+				// {
+				// 	rsx_log.error("Overlays: tried to convert incompatible color code: '%s'", hex_color);
+				// 	return color4f(0.0f, 0.0f, 0.0f, 0.0f);
+				// }
+				for (u32 i = 0; i < len; i++)
+				{
+					hexval <<= 4;
+
+					switch (char c = hex_color[i])
+					{
+					case '0':
+					case '1':
+					case '2':
+					case '3':
+					case '4':
+					case '5':
+					case '6':
+					case '7':
+					case '8':
+					case '9':
+						hexval |= (c - '0');
+						break;
+					case 'a':
+					case 'b':
+					case 'c':
+					case 'd':
+					case 'e':
+					case 'f':
+						hexval |= (c - 'a' + 10);
+						break;
+					case 'A':
+					case 'B':
+					case 'C':
+					case 'D':
+					case 'E':
+					case 'F':
+						hexval |= (c - 'A' + 10);
+						break;
+					default:
+					{
+						rsx_log.error("Overlays: invalid characters in color code: '%s'", hex_color);
+						return color4f(0.0f, 0.0f, 0.0f, 0.0f);
+					}
+					}
+				}
 			}
 
 			const int r = (len == 8 ? (hexval >> 24) : (hexval >> 16)) & 0xff;

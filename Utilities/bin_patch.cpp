@@ -1,5 +1,5 @@
 #include "bin_patch.h"
-#include <yaml-cpp/yaml.h>
+#include "util/yaml.hpp"
 #include "File.h"
 #include "Config.h"
 
@@ -34,15 +34,11 @@ void patch_engine::append(const std::string& patch)
 {
 	if (fs::file f{patch})
 	{
-		YAML::Node root;
+		auto [root, error] = yaml_load(f.to_string());
 
-		try
+		if (!error.empty())
 		{
-			root = YAML::Load(f.to_string());
-		}
-		catch (const std::exception& e)
-		{
-			patch_log.fatal("Failed to load patch file %s\n%s thrown: %s", patch, typeid(e).name(), e.what());
+			patch_log.fatal("Failed to load patch file %s:\n%s", patch, error);
 			return;
 		}
 

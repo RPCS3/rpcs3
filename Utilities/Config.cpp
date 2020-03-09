@@ -1,10 +1,13 @@
 ﻿#include "stdafx.h"
 #include "Config.h"
+#include "Utilities/types.h"
 
-#include "yaml-cpp/yaml.h"
+#include "util/yaml.hpp"
 
 #include <typeinfo>
 #include <charconv>
+
+[[noreturn]] void report_fatal_error(const std::string&);
 
 LOG_CHANNEL(cfg_log, "CFG");
 
@@ -15,7 +18,7 @@ namespace cfg
 	{
 		if (_type != type::node)
 		{
-			fmt::throw_exception("Invalid root node" HERE);
+			cfg_log.fatal("Invalid root node" HERE);
 		}
 	}
 
@@ -26,7 +29,7 @@ namespace cfg
 		{
 			if (pair.first == name)
 			{
-				fmt::throw_exception("Node already exists: %s" HERE, name);
+				cfg_log.fatal("Node already exists: %s" HERE, name);
 			}
 		}
 
@@ -35,12 +38,12 @@ namespace cfg
 
 	bool _base::from_string(const std::string&, bool)
 	{
-		fmt::throw_exception("from_string() purecall" HERE);
+		report_fatal_error("from_string() purecall" HERE);
 	}
 
 	bool _base::from_list(std::vector<std::string>&&)
 	{
-		fmt::throw_exception("from_list() purecall" HERE);
+		report_fatal_error("from_list() purecall" HERE);
 	}
 
 	// Emit YAML
@@ -302,14 +305,17 @@ std::string cfg::node::to_string() const
 	return {out.c_str(), out.size()};
 }
 
-bool cfg::node::from_string(const std::string& value, bool dynamic) try
+bool cfg::node::from_string(const std::string& value, bool dynamic)
 {
-	cfg::decode(YAML::Load(value), *this, dynamic);
-	return true;
-}
-catch (const std::exception& e)
-{
-	cfg_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
+	auto [result, error] = yaml_load(value);
+
+	if (error.empty())
+	{
+		cfg::decode(result, *this, dynamic);
+		return true;
+	}
+
+	cfg_log.fatal("Failed to load node: %s", error);
 	return false;
 }
 

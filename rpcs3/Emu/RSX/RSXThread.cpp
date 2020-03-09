@@ -442,7 +442,6 @@ namespace rsx
 
 	void thread::operator()()
 	{
-		try
 		{
 			// Wait for startup (TODO)
 			while (m_rsx_thread_exiting)
@@ -456,10 +455,6 @@ namespace rsx
 			}
 
 			on_task();
-		}
-		catch (const std::exception& e)
-		{
-			rsx_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
 		}
 
 		on_exit();

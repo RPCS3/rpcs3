@@ -138,15 +138,9 @@ struct content_permission final
 		bool success = false;
 		fs::g_tls_error = fs::error::ok;
 
-		try
+		if (temp.size() <= 1 || fs::remove_all(temp))
 		{
-			if (temp.size() <= 1 || fs::remove_all(temp))
-			{
-				success = true;
-			}
-		}
-		catch (...)
-		{
+			success = true;
 		}
 
 		if (!success)

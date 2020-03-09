@@ -151,7 +151,7 @@ void pngDecError(png_structp png_ptr, png_const_charp error_message)
 {
 	cellPngDec.error("%s", error_message);
 	// we can't return here or libpng blows up
-	throw LibPngCustomException("Fatal Error in libpng");
+	report_fatal_error("Fatal Error in libpng");
 }
 
 // Custom warning handler for libpng
@@ -486,14 +486,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 		png_set_progressive_read_fn(stream->png_ptr, stream.get_ptr(), pngDecInfoCallback, pngDecRowCallback, pngDecEndCallback);
 
 		// push header tag to libpng to keep us in sync
-		try
-		{
-			png_process_data(stream->png_ptr, stream->info_ptr, header, 8);
-		}
-		catch (LibPngCustomException&)
-		{
-			return CELL_PNGDEC_ERROR_HEADER;
-		}
+		png_process_data(stream->png_ptr, stream->info_ptr, header, 8);
 	}
 	else
 	{
@@ -729,15 +722,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 		if (stream->buffer->length > stream->buffer->cursor)
 		{
 			u8* data = static_cast<u8*>(stream->buffer->data.get_ptr()) + stream->buffer->cursor;
-			try
-			{
-				png_process_data(stream->png_ptr, stream->info_ptr, data, stream->buffer->length - stream->buffer->cursor);
-			}
-			catch (LibPngCustomException&)
-			{
-				freeMem();
-				return CELL_PNGDEC_ERROR_FATAL;
-			}
+			png_process_data(stream->png_ptr, stream->info_ptr, data, stream->buffer->length - stream->buffer->cursor);
 			streamInfo->decodedStrmSize = ::narrow<u32>(stream->buffer->length);
 		}
 
@@ -747,15 +732,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 		{
 			stream->cbCtrlStream.cbCtrlStrmFunc(ppu, streamInfo, streamParam, stream->cbCtrlStream.cbCtrlStrmArg);
 			streamInfo->decodedStrmSize += streamParam->strmSize;
-			try
-			{
-				png_process_data(stream->png_ptr, stream->info_ptr, static_cast<u8*>(streamParam->strmPtr.get_ptr()), streamParam->strmSize);
-			}
-			catch (LibPngCustomException&)
-			{
-				freeMem();
-				return CELL_PNGDEC_ERROR_FATAL;
-			}
+			png_process_data(stream->png_ptr, stream->info_ptr, static_cast<u8*>(streamParam->strmPtr.get_ptr()), streamParam->strmSize);
 		}
 
 		freeMem();
@@ -767,7 +744,6 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 
 		// Decode the image
 		// todo: commandptr
-		try
 		{
 			for (u32 j = 0; j < stream->passes; j++)
 			{
@@ -778,10 +754,6 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 				}
 			}
 			png_read_end(stream->png_ptr, stream->info_ptr);
-		}
-		catch (LibPngCustomException&)
-		{
-			return CELL_PNGDEC_ERROR_FATAL;
 		}
 	}
 
@@ -862,14 +834,7 @@ s32 cellPngDecExtReadHeader(PHandle handle, PStream stream, PInfo info, PExtInfo
 
 	// lets push what we have so far
 	u8* data = static_cast<u8*>(stream->buffer->data.get_ptr()) + stream->buffer->cursor;
-	try
-	{
-		png_process_data(stream->png_ptr, stream->info_ptr, data, stream->buffer->length);
-	}
-	catch (LibPngCustomException&)
-	{
-		return CELL_PNGDEC_ERROR_HEADER;
-	}
+	png_process_data(stream->png_ptr, stream->info_ptr, data, stream->buffer->length);
 
 	// lets hope we pushed enough for callback
 	pngSetHeader(stream.get_ptr());

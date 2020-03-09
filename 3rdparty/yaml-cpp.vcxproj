@@ -37,6 +37,11 @@
     <Import Project="..\rpcs3_release.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <ExceptionHandling>Sync</ExceptionHandling>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="yaml-cpp\src\binary.cpp">
     </ClCompile>

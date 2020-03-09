@@ -859,16 +859,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 		}
 	};
 
-	try
-	{
-		exec_task();
-	}
-	catch (...)
-	{
-		at_ret();
-		throw;
-	}
-
+	exec_task();
 	at_ret();
 }
 

@@ -15,9 +15,6 @@
 // Report error and call std::abort(), defined in main.cpp
 [[noreturn]] void report_fatal_error(const std::string&);
 
-// Will report exception and call std::abort() if put in catch(...)
-[[noreturn]] void catch_all_exceptions();
-
 // Hardware core layout
 enum class native_core_arrangement : u32
 {
@@ -256,9 +253,9 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 
 	// Type-erased thread entry point
 #ifdef _WIN32
-	static inline uint __stdcall entry_point(void* arg) try
+	static inline uint __stdcall entry_point(void* arg)
 #else
-	static inline void* entry_point(void* arg) try
+	static inline void* entry_point(void* arg)
 #endif
 	{
 		const auto _this = static_cast<named_thread*>(static_cast<thread*>(arg));
@@ -271,10 +268,6 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 
 		thread::finalize();
 		return 0;
-	}
-	catch (...)
-	{
-		catch_all_exceptions();
 	}
 
 	bool entry_point()

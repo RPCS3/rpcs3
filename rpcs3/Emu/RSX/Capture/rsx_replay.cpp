@@ -242,13 +242,6 @@ namespace rsx
 
 	void rsx_replay_thread::operator()()
 	{
-		try
-		{
-			on_task();
-		}
-		catch (const std::exception& e)
-		{
-			rsx_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
-		}
+		on_task();
 	}
 }
