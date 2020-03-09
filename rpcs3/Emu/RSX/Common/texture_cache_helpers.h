@@ -224,7 +224,7 @@ namespace rsx
 
 				if (dst_dimensions.width == src_dimensions.width)
 				{
-					const auto optimal_height = std::max(dst_dimensions.width, src_dimensions.width);
+					const auto optimal_height = std::max(dst_dimensions.height, src_dimensions.height);
 					return { false, 0, dst_dimensions.width, optimal_height };
 				}
 			}
