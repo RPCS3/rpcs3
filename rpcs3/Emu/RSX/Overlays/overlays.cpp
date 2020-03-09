@@ -181,7 +181,7 @@ namespace rsx
 			return 0;
 		}
 
-		void user_interface::close(bool use_callback)
+		void user_interface::close(bool use_callback, bool stop_pad_interception)
 		{
 			// Force unload
 			exit.release(true);
@@ -197,7 +197,10 @@ namespace rsx
 				thread_bits.wait(b);
 			}
 
-			pad::SetIntercepted(false);
+			if (stop_pad_interception)
+			{
+				pad::SetIntercepted(false);
+			}
 
 			if (on_close && use_callback)
 			{

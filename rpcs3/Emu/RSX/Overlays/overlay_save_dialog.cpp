@@ -122,7 +122,7 @@ namespace rsx
 				return_code = m_list->get_selected_index();
 				// Fall through
 			case pad_button::circle:
-				close();
+				close(true, true);
 				break;
 			case pad_button::dpad_up:
 				m_list->select_previous();

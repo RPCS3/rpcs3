@@ -72,7 +72,7 @@ namespace rsx
 		{
 			auto current_time = get_system_time();
 			if (current_time > expire_time)
-				close();
+				close(false, false);
 
 			update_animation(current_time);
 

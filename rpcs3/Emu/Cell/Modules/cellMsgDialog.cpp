@@ -116,7 +116,7 @@ struct msg_dlg_thread_info
 						continue;
 					}
 
-					dlg->close();
+					dlg->close(true, true);
 				}
 			}
 			else if (const auto dlg = g_fxo->get<msg_info>()->get())
@@ -463,7 +463,7 @@ error_code cellMsgDialogAbort()
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
 			g_fxo->get<msg_dlg_thread>()->wait_until = 0;
-			dlg->close(false);
+			dlg->close(false, true);
 			return CELL_OK;
 		}
 	}
