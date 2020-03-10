@@ -535,8 +535,9 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hid
 	else
 	{
 		ds4Dev->btCon = true;
-		std::wstring wSerial(hidDevInfo->serial_number);
-		serial = std::string(wSerial.begin(), wSerial.end());
+		std::wstring_view wideSerial(hidDevInfo->serial_number);
+		for (wchar_t ch : wideSerial)
+			serial += static_cast<uchar>(ch);
 	}
 
 	if (!GetCalibrationData(ds4Dev))
@@ -951,10 +952,10 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 	}
 
 	// Use LEDs to indicate battery level
-	if (ds4_dev->config->led_battery_indicator) 
+	if (ds4_dev->config->led_battery_indicator)
 	{
 		// This makes sure that the LED color doesn't update every 1ms. DS4 only reports battery level in 10% increments
-		if (ds4_dev->last_battery_level != ds4_dev->batteryLevel) 
+		if (ds4_dev->last_battery_level != ds4_dev->batteryLevel)
 		{
 			const u32 combined_color = get_battery_color(ds4_dev->batteryLevel, ds4_dev->config->led_battery_indicator_brightness);
 			ds4_dev->config->colorR.set(combined_color >> 8);

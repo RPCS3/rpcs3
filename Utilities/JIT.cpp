@@ -1077,7 +1077,7 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 			m_cpu == "tigerlake")
 		{
 			// Downgrade if AVX-512 is disabled or not supported
-			if (!utils::has_512())
+			if (!utils::has_avx512())
 			{
 				m_cpu = "skylake";
 			}
