@@ -98,7 +98,7 @@ namespace vk
 
 		void destroy()
 		{
-			if (!exists())
+			if (!exists() && context != rsx::texture_upload_context::dma)
 				return;
 
 			m_tex_cache->on_section_destroyed(*this);
