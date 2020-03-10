@@ -1062,31 +1062,26 @@ void VKGSRender::update_draw_state()
 
 void VKGSRender::begin_render_pass()
 {
-	if (m_render_pass_open)
-		return;
-
-	const auto renderpass = (m_cached_renderpass)? m_cached_renderpass : vk::get_renderpass(*m_device, m_current_renderpass_key);
-
-	VkRenderPassBeginInfo rp_begin = {};
-	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	rp_begin.renderPass = renderpass;
-	rp_begin.framebuffer = m_draw_fbo->value;
-	rp_begin.renderArea.offset.x = 0;
-	rp_begin.renderArea.offset.y = 0;
-	rp_begin.renderArea.extent.width = m_draw_fbo->width();
-	rp_begin.renderArea.extent.height = m_draw_fbo->height();
-
-	vkCmdBeginRenderPass(*m_current_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
-	m_render_pass_open = true;
+	vk::begin_renderpass(
+		*m_current_command_buffer,
+		get_render_pass(),
+		m_draw_fbo->value,
+		{ positionu{0u, 0u}, sizeu{m_draw_fbo->width(), m_draw_fbo->height()} });
 }
 
 void VKGSRender::close_render_pass()
 {
-	if (!m_render_pass_open)
-		return;
+	vk::end_renderpass(*m_current_command_buffer);
+}
 
-	vkCmdEndRenderPass(*m_current_command_buffer);
-	m_render_pass_open = false;
+VkRenderPass VKGSRender::get_render_pass()
+{
+	if (!m_cached_renderpass)
+	{
+		m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
+	}
+
+	return m_cached_renderpass;
 }
 
 void VKGSRender::emit_geometry(u32 sub_index)
@@ -1199,7 +1194,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		m_program->bind_uniform(m_vertex_layout_storage->value, binding_table.vertex_buffers_first_bind_slot + 2, m_current_frame->descriptor_set);
 	}
 
-	if (!m_render_pass_open)
+	if (!m_current_subdraw_id++)
 	{
 		vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 		update_draw_state();
@@ -1857,6 +1852,8 @@ void VKGSRender::end()
 	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
 
 	u32 sub_index = 0;
+	m_current_subdraw_id = 0;
+
 	rsx::method_registers.current_draw_clause.begin();
 	do
 	{
@@ -1869,9 +1866,6 @@ void VKGSRender::end()
 		m_device->cmdEndConditionalRenderingEXT(*m_current_command_buffer);
 		m_current_command_buffer->flags &= ~(vk::command_buffer::cb_has_conditional_render);
 	}
-
-	// Close any open passes unconditionally
-	close_render_pass();
 
 	m_rtts.on_write(m_framebuffer_layout.color_write_enabled.data(), m_framebuffer_layout.zeta_write_enabled);
 
@@ -2157,7 +2151,6 @@ void VKGSRender::clear_surface(u32 mask)
 	{
 		begin_render_pass();
 		vkCmdClearAttachments(*m_current_command_buffer, ::size32(clear_descriptors), clear_descriptors.data(), 1, &region);
-		close_render_pass();
 	}
 }
 
@@ -2728,7 +2721,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 #endif
 
 	// End any active renderpasses; the caller should handle reopening
-	if (m_render_pass_open)
+	if (vk::is_renderpass_open(*m_current_command_buffer))
 	{
 		close_render_pass();
 	}

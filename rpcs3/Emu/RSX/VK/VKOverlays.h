@@ -5,6 +5,7 @@
 #include "VKRenderTargets.h"
 #include "VKFramebuffer.h"
 #include "VKResourceManager.h"
+#include "VKRenderPass.h"
 
 #include "../Overlays/overlays.h"
 
@@ -374,18 +375,8 @@ namespace vk
 			load_program(cmd, render_pass, src);
 			set_up_viewport(cmd, viewport.x1, viewport.y1, viewport.width(), viewport.height());
 
-			VkRenderPassBeginInfo rp_begin = {};
-			rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			rp_begin.renderPass = render_pass;
-			rp_begin.framebuffer = fbo->value;
-			rp_begin.renderArea.offset.x = static_cast<s32>(viewport.x1);
-			rp_begin.renderArea.offset.y = static_cast<s32>(viewport.y1);
-			rp_begin.renderArea.extent.width = viewport.width();
-			rp_begin.renderArea.extent.height = viewport.height();
-
-			vkCmdBeginRenderPass(cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+			vk::begin_renderpass(cmd, render_pass, fbo->value, viewport);
 			emit_geometry(cmd);
-			vkCmdEndRenderPass(cmd);
 		}
 
 		void run(vk::command_buffer &cmd, const areau& viewport, vk::image* target, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)

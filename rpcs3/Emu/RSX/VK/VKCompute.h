@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "VKHelpers.h"
+#include "VKRenderPass.h"
 #include "Utilities/StrUtil.h"
 
 #define VK_MAX_COMPUTE_TASKS 4096   // Max number of jobs per frame
@@ -201,6 +202,12 @@ namespace vk
 
 		void run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
 		{
+			// CmdDispatch is outside renderpass scope only
+			if (vk::is_renderpass_open(cmd))
+			{
+				vk::end_renderpass(cmd);
+			}
+
 			load_program(cmd);
 			vkCmdDispatch(cmd, invocations_x, invocations_y, invocations_z);
 		}
