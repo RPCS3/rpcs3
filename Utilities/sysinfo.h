@@ -35,13 +35,13 @@ namespace utils
 
 	bool has_avx2();
 
-	bool has_avx512();
-
 	bool has_rtm();
 
 	bool has_tsx_force_abort();
 
 	bool has_mpx();
+
+	bool has_avx512();
 
 	bool has_xop();
 
