@@ -76,6 +76,46 @@ void fmt_class_string<std::thread::id>::format(std::string& out, u64 arg)
 	}
 }
 
+#ifndef _WIN32
+bool IsDebuggerPresent()
+{
+	char buf[4096];
+	fs::file status_fd("/proc/self/status");
+	if (!status_fd)
+	{
+		std::fprintf(stderr, "Failed to open /proc/self/status\n");
+		return false;
+	}
+
+	const auto num_read = status_fd.read(buf, sizeof(buf) - 1);
+	if (num_read == 0 || num_read == umax)
+	{
+		std::fprintf(stderr, "Failed to read /proc/self/status (%d)\n", errno);
+		return false;
+	}
+
+	buf[num_read] = '\0';
+	std::string_view status = buf;
+
+	const auto found = status.find("TracerPid:");
+	if (found == umax)
+	{
+		std::fprintf(stderr, "Failed to find 'TracerPid:' in /proc/self/status\n");
+		return false;
+	}
+
+	for (const char* cp = status.data() + found + 10; cp <= status.data() + num_read; ++cp)
+	{
+		if (!std::isspace(*cp))
+		{
+			return std::isdigit(*cp) != 0 && *cp != '0';
+		}
+	}
+
+	return false;
+}
+#endif
+
 enum x64_reg_t : u32
 {
 	X64R_RAX = 0,
@@ -1723,10 +1763,11 @@ const bool s_exception_handler_set = []() -> bool
 
 	if (::sigaction(SIGSEGV, &sa, NULL) == -1)
 	{
-		std::printf("sigaction(SIGSEGV) failed (0x%x).", errno);
+		std::fprintf(stderr, "sigaction(SIGSEGV) failed (0x%x).", errno);
 		std::abort();
 	}
 
+	std::printf("Debugger: %d\n", +IsDebuggerPresent());
 	return true;
 }();
 
@@ -2021,6 +2062,21 @@ u64 thread_base::get_cycles()
 void thread_ctrl::emergency_exit(std::string_view reason)
 {
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
+
+	std::fprintf(stderr, "Thread '%s' terminated due to fatal error: %s\n", g_tls_log_prefix().c_str(), std::string(reason).c_str());
+
+#ifdef _WIN32
+	if (IsDebuggerPresent())
+	{
+		OutputDebugStringA(fmt::format("Thread '%s' terminated due to fatal error: %s\n", g_tls_log_prefix(), reason).c_str());
+		__debugbreak();
+	}
+#else
+	if (IsDebuggerPresent())
+	{
+		__asm("int3;");
+	}
+#endif
 
 	if (const auto _this = g_tls_this_thread)
 	{
