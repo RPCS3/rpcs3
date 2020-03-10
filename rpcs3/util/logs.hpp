@@ -14,7 +14,7 @@ namespace logs
 
 	enum class level : unsigned
 	{
-		always, // Highest log severity (unused, cannot be disabled)
+		always, // Highest log severity (cannot be disabled)
 		fatal,
 		error,
 		todo,
@@ -103,6 +103,7 @@ namespace logs
 			}\
 		}\
 
+		GEN_LOG_METHOD(always)
 		GEN_LOG_METHOD(fatal)
 		GEN_LOG_METHOD(error)
 		GEN_LOG_METHOD(todo)
