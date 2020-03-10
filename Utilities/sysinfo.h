@@ -41,7 +41,7 @@ namespace utils
 
 	bool has_mpx();
 
-	bool has_512();
+	bool has_avx512();
 
 	bool has_xop();
 
