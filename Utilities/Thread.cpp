@@ -1749,8 +1749,14 @@ static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 
 	fmt::append(msg, "Thread id = %s.\n", std::this_thread::get_id());
 
-	// TODO (debugger interaction)
 	sys_log.fatal("\n%s", msg);
+	std::fprintf(stderr, "%s\n", msg.c_str());
+
+	if (IsDebuggerPresent())
+	{
+		__asm("int3;");
+	}
+
 	report_fatal_error(msg);
 }
 
