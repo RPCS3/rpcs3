@@ -280,7 +280,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 			c->vzeroupper();
 		}
 	}
-	else if (utils::has_512() && false)
+	else if (utils::has_avx512() && false)
 	{
 		// AVX-512 optimized check using 512-bit registers (disabled)
 		words_align = 64;
@@ -361,7 +361,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		c->jnz(label_diff);
 		c->vzeroupper();
 	}
-	else if (0 && utils::has_512())
+	else if (0 && utils::has_avx512())
 	{
 		// AVX-512 optimized check using 256-bit registers
 		words_align = 32;
@@ -1789,7 +1789,7 @@ void spu_recompiler::BG(spu_opcode_t op)
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 	const XmmLink& vi = XmmAlloc();
 
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		c->vpsubd(vi, vb, va);
@@ -1819,7 +1819,7 @@ void spu_recompiler::NOR(spu_opcode_t op)
 {
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		c->vpternlogd(va, va, SPU_OFF_128(gpr, op.rb), 0x11 /* norCB */);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), va);
@@ -1845,7 +1845,7 @@ void spu_recompiler::ABSDB(spu_opcode_t op)
 
 void spu_recompiler::ROT(spu_opcode_t op)
 {
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
@@ -2007,7 +2007,7 @@ void spu_recompiler::SHL(spu_opcode_t op)
 
 void spu_recompiler::ROTH(spu_opcode_t op) //nf
 {
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
@@ -2046,7 +2046,7 @@ void spu_recompiler::ROTH(spu_opcode_t op) //nf
 
 void spu_recompiler::ROTHM(spu_opcode_t op)
 {
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
@@ -2106,7 +2106,7 @@ void spu_recompiler::ROTHM(spu_opcode_t op)
 
 void spu_recompiler::ROTMAH(spu_opcode_t op)
 {
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
@@ -2167,7 +2167,7 @@ void spu_recompiler::ROTMAH(spu_opcode_t op)
 
 void spu_recompiler::SHLH(spu_opcode_t op)
 {
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
@@ -2224,7 +2224,7 @@ void spu_recompiler::ROTI(spu_opcode_t op)
 	// rotate left
 	const int s = op.i7 & 0x1f;
 
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		c->vprold(va, va, s);
@@ -2337,7 +2337,7 @@ void spu_recompiler::CG(spu_opcode_t op)
 	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 	const XmmLink& vi = XmmAlloc();
 
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		c->vpaddd(vi, vb, va);
 		c->vpternlogd(vi, va, vb, 0x8e /* A?andBC:orBC */);
@@ -2367,7 +2367,7 @@ void spu_recompiler::NAND(spu_opcode_t op)
 	// nand
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		c->vpternlogd(va, va, SPU_OFF_128(gpr, op.rb), 0x77 /* nandCB */);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), va);
@@ -3339,7 +3339,7 @@ void spu_recompiler::EQV(spu_opcode_t op)
 {
 	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		c->vpternlogd(vb, vb, SPU_OFF_128(gpr, op.ra), 0x99 /* xnorCB */);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vb);
@@ -3407,7 +3407,7 @@ void spu_recompiler::HGT(spu_opcode_t op)
 
 void spu_recompiler::CLZ(spu_opcode_t op)
 {
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
@@ -3633,7 +3633,7 @@ void spu_recompiler::ORC(spu_opcode_t op)
 {
 	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		c->vpternlogd(vb, vb, SPU_OFF_128(gpr, op.ra), 0xbb /* orC!B */);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vb);
@@ -4095,7 +4095,7 @@ void spu_recompiler::CFLTU(spu_opcode_t op)
 	const XmmLink& vs3 = XmmAlloc();
 	if (op.i8 != 173) c->mulps(va, XmmConst(_mm_set1_ps(std::exp2(static_cast<float>(static_cast<s16>(173 - op.i8)))))); // scale
 
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		c->vcvttps2udq(vs, va);
 		c->psrad(va, 31);
@@ -4134,7 +4134,7 @@ void spu_recompiler::CUFLT(spu_opcode_t op)
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 	const XmmLink& v1 = XmmAlloc();
 
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		c->vcvtudq2ps(va, va);
 	}
@@ -4722,7 +4722,7 @@ void spu_recompiler::SELB(spu_opcode_t op)
 	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 	const XmmLink& vc = XmmGet(op.rc, XmmType::Int);
 
-	if (utils::has_512())
+	if (utils::has_avx512())
 	{
 		c->vpternlogd(vc, vb, SPU_OFF_128(gpr, op.ra), 0xca /* A?B:C */);
 		c->movdqa(SPU_OFF_128(gpr, op.rt4), vc);
@@ -4744,7 +4744,7 @@ void spu_recompiler::SELB(spu_opcode_t op)
 
 void spu_recompiler::SHUFB(spu_opcode_t op)
 {
-	if (0 && utils::has_512())
+	if (0 && utils::has_avx512())
 	{
 		// Deactivated due to poor performance of mask merge ops.
 		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
