@@ -1912,6 +1912,7 @@ bool thread_base::finalize(int) noexcept
 
 void thread_base::finalize() noexcept
 {
+	atomic_storage_futex::set_wait_callback([](const void*){ return true; });
 	g_tls_log_prefix = []() -> std::string { return {}; };
 	thread_ctrl::g_tls_this_thread = nullptr;
 }
@@ -2091,7 +2092,6 @@ void thread_ctrl::emergency_exit(std::string_view reason)
 			delete _this;
 		}
 
-		// Do some not very useful cleanup
 		thread_base::finalize();
 
 #ifdef _WIN32
