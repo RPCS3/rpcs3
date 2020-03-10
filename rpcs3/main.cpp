@@ -271,7 +271,16 @@ int main(int argc, char** argv)
 	// Only run RPCS3 to display an error
 	if (int err_pos = find_arg(arg_error, argc, argv))
 	{
-		report_fatal_error(argv[err_pos + 1]);
+		// Reconstruction of the error from multiple args
+		std::string error;
+		for (int i = err_pos + 1; i < argc; i++)
+		{
+			if (i > err_pos + 1)
+				error += ' ';
+			error += argv[i];
+		}
+
+		report_fatal_error(error);
 	}
 
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
