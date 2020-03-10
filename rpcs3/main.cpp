@@ -152,7 +152,7 @@ struct pause_on_fatal final : logs::listener
 
 	void log(u64 /*stamp*/, const logs::message& msg, const std::string& /*prefix*/, const std::string& /*text*/) override
 	{
-		if (msg.sev <= logs::level::fatal)
+		if (msg.sev == logs::level::fatal)
 		{
 			// Pause emulation if fatal error encountered
 			Emu.Pause();

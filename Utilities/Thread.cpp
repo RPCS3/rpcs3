@@ -1449,7 +1449,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			if (!access_violation_recovered)
 			{
 				vm_log.notice("\n%s", cpu->dump());
-				vm_log.fatal("Access violation %s location 0x%x (%s)", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
+				vm_log.error("Access violation %s location 0x%x (%s)", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
 			}
 
 			// TODO:
