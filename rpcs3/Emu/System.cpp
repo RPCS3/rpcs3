@@ -1645,17 +1645,17 @@ void Emulator::Stop(bool restart)
 
 	named_thread stop_watchdog("Stop Watchdog", [&]()
 	{
-		const auto start = std::chrono::steady_clock::now();
-
-		while (thread_ctrl::state() != thread_state::aborting)
+		for (uint i = 0; thread_ctrl::state() != thread_state::aborting; i++)
 		{
-			if (std::chrono::steady_clock::now() - start >= 5s)
+			// We don't need accurate timekeeping, using clocks may interfere with debugging
+			if (i >= 1000)
 			{
+				// Total amount of waiting: about 5s
 				report_fatal_error("Stopping emulator took too long."
 					"\nSome thread has probably deadlocked. Aborting.");
 			}
 
-			thread_ctrl::wait_for(100'000);
+			thread_ctrl::wait_for(5'000);
 		}
 	});
 
