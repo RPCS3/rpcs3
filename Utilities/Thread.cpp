@@ -1337,7 +1337,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		return true;
 	}
 
-	thread_local bool access_violation_recovered = false;
+	static thread_local bool access_violation_recovered = false;
 
 	// Hack: allocate memory in case the emulator is stopping
 	const auto hack_alloc = [&]()
