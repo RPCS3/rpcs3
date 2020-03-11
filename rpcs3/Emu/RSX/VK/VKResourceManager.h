@@ -137,6 +137,11 @@ namespace vk
 			get_current_eid_scope().m_disposed_images.emplace_back(std::move(img));
 		}
 
+		void dispose(std::unique_ptr<vk::viewable_image>& img)
+		{
+			get_current_eid_scope().m_disposed_images.emplace_back(std::move(img));
+		}
+
 		void dispose(std::unique_ptr<vk::event>& event)
 		{
 			get_current_eid_scope().m_disposed_events.emplace_back(std::move(event));

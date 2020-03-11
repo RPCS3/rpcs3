@@ -485,8 +485,7 @@ namespace vk
 		{
 			if (tex.is_managed())
 			{
-				m_temporary_memory_size += tex.get_section_size();
-				m_temporary_storage.emplace_back(tex);
+				vk::get_resource_manager()->dispose(tex.get_texture());
 			}
 		}
 
