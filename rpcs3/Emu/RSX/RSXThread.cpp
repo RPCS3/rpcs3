@@ -304,8 +304,8 @@ namespace rsx
 		};
 
 		m_rtts_dirty = true;
-		memset(m_textures_dirty, -1, sizeof(m_textures_dirty));
-		memset(m_vertex_textures_dirty, -1, sizeof(m_vertex_textures_dirty));
+		m_textures_dirty.fill(true);
+		m_vertex_textures_dirty.fill(true);
 
 		m_graphics_state = pipeline_state::all_dirty;
 
