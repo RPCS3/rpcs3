@@ -674,8 +674,8 @@ namespace rsx
 		u32 local_mem_size{0};
 
 		bool m_rtts_dirty;
-		bool m_textures_dirty[16];
-		bool m_vertex_textures_dirty[4];
+		std::array<bool, 16> m_textures_dirty;
+		std::array<bool, 4> m_vertex_textures_dirty;
 		bool m_framebuffer_state_contested = false;
 		rsx::framebuffer_creation_context m_current_framebuffer_context = rsx::framebuffer_creation_context::context_draw;
 
