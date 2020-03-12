@@ -32,6 +32,8 @@ target_sources(rpcs3_emu PRIVATE
 	../util/shared_cptr.cpp
 	../util/fixed_typemap.cpp
 	../util/logs.cpp
+	../util/yaml.cpp
+	../util/cereal.cpp
 	../../Utilities/bin_patch.cpp
 	../../Utilities/cond.cpp
 	../../Utilities/Config.cpp
@@ -60,6 +62,12 @@ if (MSVC)
 	set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES COMPILE_FLAGS /GR-)
 else()
 	set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES COMPILE_FLAGS -fno-rtti)
+endif()
+
+if (MSVC)
+	set_source_files_properties("../util/yaml.cpp" PROPERTIES COMPILE_FLAGS /EHsc)
+else()
+	set_source_files_properties("../util/yaml.cpp" PROPERTIES COMPILE_FLAGS -fexceptions)
 endif()
 
 

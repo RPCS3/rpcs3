@@ -6,8 +6,6 @@
 #include <QClipboard>
 #include <QGuiApplication>
 
-#include <yaml-cpp/yaml.h>
-
 #include "cheat_manager.h"
 
 #include "Emu/System.h"
@@ -19,6 +17,7 @@
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUFunction.h"
 
+#include "util/yaml.hpp"
 #include "Utilities/StrUtil.h"
 
 LOG_CHANNEL(log_cheat, "Cheat");
@@ -110,9 +109,14 @@ std::string cheat_info::to_str() const
 
 cheat_engine::cheat_engine()
 {
-	try
+	if (fs::file cheat_file{fs::get_config_dir() + cheats_filename, fs::read + fs::create})
 	{
-		YAML::Node yml_cheats = YAML::Load(fs::file{fs::get_config_dir() + cheats_filename, fs::read + fs::create}.to_string());
+		auto [yml_cheats, error] = yaml_load(cheat_file.to_string());
+
+		if (!error.empty())
+		{
+			log_cheat.error("Error parsing %s: %s", cheats_filename, error);
+		}
 
 		for (const auto& yml_cheat : yml_cheats)
 		{
@@ -127,9 +131,9 @@ cheat_engine::cheat_engine()
 			}
 		}
 	}
-	catch (YAML::Exception& e)
+	else
 	{
-		log_cheat.error("Error parsing %s\n%s", cheats_filename, e.what());
+		log_cheat.error("Error loading %s", cheats_filename);
 	}
 }
 

@@ -307,8 +307,8 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	const u64 stamp = get_stamp();
 
 	// Get text, extract va_args
-	thread_local std::string text;
-	thread_local std::vector<u64> args;
+	/*constinit thread_local*/ std::string text;
+	/*constinit thread_local*/ std::basic_string<u64> args;
 
 	static constexpr fmt_type_info empty_sup{};
 
@@ -316,7 +316,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	for (auto v = sup; v && v->fmt_string; v++)
 		args_count++;
 
-	text.clear();
+	text.reserve(50000);
 	args.resize(args_count);
 
 	va_list c_args;
@@ -589,7 +589,8 @@ logs::file_listener::file_listener(const std::string& path, u64 max_size)
 
 void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& _text)
 {
-	thread_local std::string text;
+	/*constinit thread_local*/ std::string text;
+	text.reserve(50000);
 
 	// Used character: U+00B7 (Middle Dot)
 	switch (msg.sev)

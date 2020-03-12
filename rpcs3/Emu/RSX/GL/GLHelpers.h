@@ -2396,42 +2396,6 @@ public:
 
 	namespace glsl
 	{
-		class compilation_exception : public exception
-		{
-		public:
-			explicit compilation_exception(const std::string& what_arg)
-			{
-				m_what = "compilation failed: '" + what_arg + "'";
-			}
-		};
-
-		class link_exception : public exception
-		{
-		public:
-			explicit link_exception(const std::string& what_arg)
-			{
-				m_what = "linkage failed: '" + what_arg + "'";
-			}
-		};
-
-		class validation_exception : public exception
-		{
-		public:
-			explicit validation_exception(const std::string& what_arg)
-			{
-				m_what = "compilation failed: '" + what_arg + "'";
-			}
-		};
-
-		class not_found_exception : public exception
-		{
-		public:
-			explicit not_found_exception(const std::string& what_arg)
-			{
-				m_what = what_arg + " not found.";
-			}
-		};
-
 		class shader
 		{
 		public:
@@ -2533,7 +2497,7 @@ public:
 						error_msg = buf.get();
 					}
 
-					throw compilation_exception(error_msg);
+					rsx_log.fatal("Compilation failed: %s", error_msg);
 				}
 
 				return *this;
@@ -2655,7 +2619,8 @@ public:
 						}
 						else
 						{
-							throw not_found_exception(name);
+							rsx_log.fatal("%s not found.", name);
+							return -1;
 						}
 					}
 
@@ -2663,7 +2628,8 @@ public:
 
 					if (result < 0)
 					{
-						throw not_found_exception(name);
+						rsx_log.fatal("%s not found.", name);
+						return result;
 					}
 
 					locations[name] = result;
@@ -2749,7 +2715,7 @@ public:
 						error_msg = buf.get();
 					}
 
-					throw link_exception(error_msg);
+					rsx_log.fatal("Linkage failed: %s", error_msg);
 				}
 			}
 

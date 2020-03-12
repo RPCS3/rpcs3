@@ -147,7 +147,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 
 		while (value.length() < 32) value = "0" + value;
 		const auto first_brk = reg.find('[');
-		try
+		// TODO: handle invalid conversions
 		{
 			if (first_brk != umax)
 			{
@@ -182,9 +182,6 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 				return;
 			}
 		}
-		catch (std::invalid_argument&) //if any of the stoull conversion fail
-		{
-		}
 	}
 	else
 	{
@@ -192,7 +189,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 
 		while (value.length() < 32) value = "0" + value;
 		const auto first_brk = reg.find('[');
-		try
+		// TODO: handle invalid conversions
 		{
 			if (first_brk != umax)
 			{
@@ -206,9 +203,6 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 					return;
 				}
 			}
-		}
-		catch (std::invalid_argument&)
-		{
 		}
 	}
 	QMessageBox::critical(this, tr("Error"), tr("This value could not be converted.\nNo changes were made."));

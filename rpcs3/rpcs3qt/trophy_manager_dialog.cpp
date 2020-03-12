@@ -710,15 +710,12 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 	{
 		const std::string dir_name = sstr(folder_list.value(i));
 		gui_log.trace("Loading trophy dir: %s", dir_name);
-		try
-		{
-			LoadTrophyFolderToDB(dir_name);
-		}
-		catch (const std::exception& e)
+
+		if (!LoadTrophyFolderToDB(dir_name))
 		{
 			// TODO: Add error checks & throws to LoadTrophyFolderToDB so that they can be caught here.
 			// Also add a way of showing the number of corrupted/invalid folders in UI somewhere.
-			gui_log.error("Exception occurred while parsing folder %s for trophies: %s", dir_name, e.what());
+			gui_log.error("Error occurred while parsing folder %s for trophies.", dir_name);
 		}
 	}));
 

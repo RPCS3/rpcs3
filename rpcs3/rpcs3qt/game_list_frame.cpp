@@ -18,6 +18,7 @@
 #include "Loader/PSF.h"
 #include "Utilities/types.h"
 #include "Utilities/lockless.h"
+#include "util/yaml.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -543,24 +544,23 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 		auto get_games = []() -> YAML::Node
 		{
-			try
-			{
-				fs::file games(fs::get_config_dir() + "/games.yml", fs::read + fs::create);
+			fs::file games(fs::get_config_dir() + "/games.yml", fs::read + fs::create);
 
-				if (games)
+			if (games)
+			{
+				auto [result, error] = yaml_load(games.to_string());
+
+				if (!error.empty())
 				{
-					return YAML::Load(games.to_string());
-				}
-				else
-				{
-					game_list_log.error("Failed to load games.yml, check permissions.");
+					game_list_log.error("Failed to load games.yml: %s", error);
 					return {};
 				}
+
+				return result;
 			}
-			catch (...)
+			else
 			{
-				// YAML exception aren't very useful so just ignore them
-				game_list_log.fatal("Failed to parse games.yml");
+				game_list_log.error("Failed to load games.yml, check permissions.");
 				return {};
 			}
 
@@ -616,7 +616,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		{
 			const Localized thread_localized;
 
-			try
 			{
 				const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(dir, Emu.GetUsr());
 				const fs::file sfo_file(sfo_dir + "/PARAM.SFO");
@@ -724,11 +723,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 				games.push(std::make_shared<gui_game_info>(gui_game_info{game, qt_cat, compat, icon, pxmap, hasCustomConfig, hasCustomPadConfig}));
 			}
-			catch (const std::exception& e)
-			{
-				game_list_log.fatal("Failed to update game list at %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
-				return;
-			}
 		});
 
 		for (auto&& g : games.pop_all())
@@ -744,29 +738,37 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				for (const auto& other : m_game_data)
 				{
 					// The patch is game data and must have the same serial and an app version
+					static constexpr auto version_is_bigger = [](const std::string& v0, const std::string& v1, const std::string& serial, bool is_fw)
+					{
+						std::add_pointer_t<char> ev0, ev1;
+						const double ver0 = std::strtod(v0.c_str(), &ev0);
+						const double ver1 = std::strtod(v1.c_str(), &ev1);
+
+						if (v0.c_str() + v0.size() == ev0 && v1.c_str() + v1.size() == ev1)
+						{
+							return ver0 > ver1;
+						}
+
+						game_list_log.error("Failed to update the displayed %s numbers for title ID %s\n'%s'-'%s'", is_fw ? "firmware version" : "version", serial, v0, v1);
+						return false;
+					};
+
 					if (entry->info.serial == other->info.serial && other->info.category == "GD" && other->info.app_ver != cat_unknown_localized)
 					{
-						try
+						// Update the app version if it's higher than the disc's version (old games may not have an app version)
+						if (entry->info.app_ver == cat_unknown_localized || version_is_bigger(other->info.app_ver, entry->info.app_ver, entry->info.serial, true))
 						{
-							// Update the app version if it's higher than the disc's version (old games may not have an app version)
-							if (entry->info.app_ver == cat_unknown_localized || std::stod(other->info.app_ver) > std::stod(entry->info.app_ver))
-							{
-								entry->info.app_ver = other->info.app_ver;
-							}
-							// Update the firmware version if possible and if it's higher than the disc's version
-							if (other->info.fw != cat_unknown_localized && std::stod(other->info.fw) > std::stod(entry->info.fw))
-							{
-								entry->info.fw = other->info.fw;
-							}
-							// Update the parental level if possible and if it's higher than the disc's level
-							if (other->info.parental_lvl != 0 && other->info.parental_lvl > entry->info.parental_lvl)
-							{
-								entry->info.parental_lvl = other->info.parental_lvl;
-							}
+							entry->info.app_ver = other->info.app_ver;
 						}
-						catch (const std::exception& e)
+						// Update the firmware version if possible and if it's higher than the disc's version
+						if (other->info.fw != cat_unknown_localized && version_is_bigger(other->info.fw, entry->info.fw, entry->info.serial, false))
 						{
-							game_list_log.error("Failed to update the displayed version numbers for title ID %s\n%s thrown: %s", entry->info.serial, typeid(e).name(), e.what());
+							entry->info.fw = other->info.fw;
+						}
+						// Update the parental level if possible and if it's higher than the disc's level
+						if (other->info.parental_lvl != 0 && other->info.parental_lvl > entry->info.parental_lvl)
+						{
+							entry->info.parental_lvl = other->info.parental_lvl;
 						}
 					}
 				}

@@ -60,22 +60,6 @@ void fmt_class_string<std::thread::id>::format(std::string& out, u64 arg)
 	out += ss.str();
 }
 
-[[noreturn]] void catch_all_exceptions()
-{
-	try
-	{
-		throw;
-	}
-	catch (const std::exception& e)
-	{
-		report_fatal_error("{" + g_tls_log_prefix() + "} Unhandled exception of type '"s + typeid(e).name() + "': "s + e.what());
-	}
-	catch (...)
-	{
-		report_fatal_error("{" + g_tls_log_prefix() + "} Unhandled exception (unknown)");
-	}
-}
-
 #ifndef _WIN32
 bool IsDebuggerPresent()
 {
@@ -1151,33 +1135,12 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 	if (rsx::g_access_violation_handler)
 	{
-		bool handled = false;
-
-		try
+		if (cpu)
 		{
-			if (cpu)
-			{
-				vm::temporary_unlock(*cpu);
-			}
-
-			handled = rsx::g_access_violation_handler(addr, is_writing);
+			vm::temporary_unlock(*cpu);
 		}
-		catch (const std::exception& e)
-		{
-			rsx_log.fatal("g_access_violation_handler(0x%x, %d): %s", addr, is_writing, e.what());
 
-			if (cpu)
-			{
-				cpu->state += cpu_flag::dbg_pause;
-
-				if (cpu->test_stopped())
-				{
-					std::terminate();
-				}
-			}
-
-			return false;
-		}
+		bool handled = rsx::g_access_violation_handler(addr, is_writing);
 
 		if (handled)
 		{
@@ -1769,7 +1732,7 @@ const bool s_exception_handler_set = []() -> bool
 
 	if (::sigaction(SIGSEGV, &sa, NULL) == -1)
 	{
-		std::fprintf(stderr, "sigaction(SIGSEGV) failed (0x%x).", errno);
+		std::fprintf(stderr, "sigaction(SIGSEGV) failed (%d).\n", errno);
 		std::abort();
 	}
 
@@ -1778,6 +1741,23 @@ const bool s_exception_handler_set = []() -> bool
 }();
 
 #endif
+
+const bool s_terminate_handler_set = []() -> bool
+{
+	std::set_terminate([]()
+	{
+		if (IsDebuggerPresent())
+#ifdef _MSC_VER
+			__debugbreak();
+#else
+			__asm("int3;");
+#endif
+
+		report_fatal_error("RPCS3 has abnormally terminated.");
+	});
+
+	return true;
+}();
 
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 

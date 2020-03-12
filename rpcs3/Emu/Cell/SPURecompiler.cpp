@@ -1154,7 +1154,7 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	spu_runtime::g_tail_escape(&spu, func, rip);
 }
 
-void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip) try
+void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip)
 {
 	// Select opcode table
 	const auto& table = *(
@@ -1177,11 +1177,6 @@ void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip) tr
 		if (table[spu_decode(op)](spu, {op}))
 			spu.pc += 4;
 	}
-}
-catch (const std::exception& e)
-{
-	spu_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
-	spu_log.notice("\n%s", spu.dump());
 }
 
 spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
@@ -4608,19 +4603,7 @@ public:
 					}
 
 					// Execute recompiler function (TODO)
-					try
-					{
-						(this->*g_decoder.decode(op))({op});
-					}
-					catch (const std::exception&)
-					{
-						std::string dump;
-						raw_string_ostream out(dump);
-						out << *module; // print IR
-						out.flush();
-						spu_log.error("[0x%x] LLVM dump:\n%s", m_pos, dump);
-						throw;
-					}
+					(this->*g_decoder.decode(op))({op});
 				}
 
 				// Finalize block with fallthrough if necessary
@@ -4994,7 +4977,6 @@ public:
 				}
 				}
 
-				try
 				{
 					m_interp_bblock = nullptr;
 
@@ -5141,15 +5123,6 @@ public:
 							m_ir->CreateRetVoid();
 						}
 					}
-				}
-				catch (const std::exception&)
-				{
-					std::string dump;
-					raw_string_ostream out(dump);
-					out << *module; // print IR
-					out.flush();
-					spu_log.error("[0x%x] LLVM dump:\n%s", m_pos, dump);
-					throw;
 				}
 			}
 

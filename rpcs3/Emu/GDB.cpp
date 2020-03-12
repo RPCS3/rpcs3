@@ -303,21 +303,13 @@ bool gdb_thread::read_cmd(gdb_cmd& out_cmd)
 {
 	while (true)
 	{
-		try
+		if (try_read_cmd(out_cmd))
 		{
-			if (try_read_cmd(out_cmd))
-			{
-				ack(true);
-				return true;
-			}
+			ack(true);
+			return true;
+		}
 
-			ack(false);
-		}
-		catch (const std::runtime_error& e)
-		{
-			GDB.error("Error: %s", e.what());
-			return false;
-		}
+		ack(false);
 	}
 }
 
@@ -866,7 +858,7 @@ void gdb_thread::operator()()
 			Emu.Pause();
 		}
 
-		try {
+		{
 			char hostbuf[32];
 			inet_ntop(client.sin_family, reinterpret_cast<void*>(&client.sin_addr), hostbuf, 32);
 			GDB.success("Got connection to GDB debug server from %s:%d.", hostbuf, client.sin_port);
@@ -904,16 +896,6 @@ void gdb_thread::operator()()
 					break;
 				}
 			}
-		}
-		catch (const std::runtime_error& e)
-		{
-			if (client_socket != -1)
-			{
-				closesocket(client_socket);
-				client_socket = -1;
-			}
-
-			GDB.error("Error: %s", e.what());
 		}
 	}
 }

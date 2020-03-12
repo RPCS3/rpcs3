@@ -869,6 +869,15 @@
     <ClCompile Include="util\atomic2.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="util\yaml.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="util\cereal.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="util\yaml.hpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
     <ClCompile Include="util\shared_cptr.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>

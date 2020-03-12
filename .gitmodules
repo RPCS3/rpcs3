@@ -16,7 +16,7 @@
 	ignore = dirty
 [submodule "3rdparty/cereal"]
 	path = 3rdparty/cereal
-	url = https://github.com/USCiLab/cereal.git
+	url = https://github.com/RPCS3/cereal.git
 	ignore = dirty
 [submodule "3rdparty/zlib"]
 	path = 3rdparty/zlib
@@ -37,7 +37,7 @@
 	ignore = dirty
 [submodule "3rdparty/yaml-cpp"]
 	path = 3rdparty/yaml-cpp
-	url = https://github.com/jbeder/yaml-cpp.git
+	url = https://github.com/RPCS3/yaml-cpp.git
 	ignore = dirty
 [submodule "3rdparty/libpng"]
 	path = 3rdparty/libpng

@@ -42,7 +42,7 @@ namespace
 		case rsx::index_array_type::u16: return GL_UNSIGNED_SHORT;
 		case rsx::index_array_type::u32: return GL_UNSIGNED_INT;
 		}
-		throw;
+		fmt::throw_exception("Invalid index array type (%u)", static_cast<u8>(type));
 	}
 
 	struct vertex_input_state

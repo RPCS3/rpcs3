@@ -30,7 +30,7 @@
 
 #include "../Crypto/unself.h"
 #include "../Crypto/unpkg.h"
-#include <yaml-cpp/yaml.h>
+#include "util/yaml.hpp"
 
 #include "cereal/archives/binary.hpp"
 
@@ -760,12 +760,23 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		m_title_id = title_id;
 	}
 
-	try
 	{
 		Init();
 
 		// Load game list (maps ABCD12345 IDs to /dev_bdvd/ locations)
-		YAML::Node games = YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string());
+		YAML::Node games;
+
+		if (fs::file f{fs::get_config_dir() + "/games.yml", fs::read + fs::create})
+		{
+			auto [result, error] = yaml_load(f.to_string());
+
+			if (!error.empty())
+			{
+				sys_log.error("Failed to load games.yml: %s", error);
+			}
+
+			games = result;
+		}
 
 		if (!games.IsMap())
 		{
@@ -1461,12 +1472,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			GetCallbacks().on_ready();
 		}
 		return game_boot_result::no_errors;
-	}
-	catch (const std::exception& e)
-	{
-		sys_log.fatal("%s thrown: %s", typeid(e).name(), e.what());
-		Stop();
-		return game_boot_result::generic_error;
 	}
 }
 

@@ -5,7 +5,7 @@
 #include "PPUModule.h"
 
 #include <unordered_set>
-#include "yaml-cpp/yaml.h"
+#include "util/yaml.hpp"
 #include "Utilities/asm.h"
 
 LOG_CHANNEL(ppu_validator);
@@ -54,7 +54,13 @@ void ppu_module::validate(u32 reloc)
 	// Load custom PRX configuration if available
 	if (fs::file yml{path + ".yml"})
 	{
-		const auto cfg = YAML::Load(yml.to_string());
+		const auto [cfg, error] = yaml_load(yml.to_string());
+
+		if (!error.empty())
+		{
+			ppu_validator.error("Failed to load %s.yml: %s", path, error);
+			return;
+		}
 
 		u32 index = 0;
 

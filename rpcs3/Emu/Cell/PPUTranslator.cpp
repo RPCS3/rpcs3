@@ -4357,7 +4357,7 @@ Value* PPUTranslator::GetVr(u32 vr, VrType type)
 	case VrType::i128: return m_ir->CreateBitCast(value, GetType<u128>());
 	}
 
-	throw std::logic_error("GetVr(): invalid type");
+	report_fatal_error("GetVr(): invalid type");
 }
 
 void PPUTranslator::SetVr(u32 vr, Value* value)
@@ -4435,7 +4435,7 @@ void PPUTranslator::SetFPRF(Value* value, bool set_cr)
 	const bool is32 =
 		value->getType()->isFloatTy() ? true :
 		value->getType()->isDoubleTy() ? false :
-		throw std::logic_error("SetFPRF(): invalid value type");
+		(report_fatal_error("SetFPRF(): invalid value type"), false);
 
 	//const auto zero = ConstantFP::get(value->getType(), 0.0);
 	//const auto is_nan = m_ir->CreateFCmpUNO(value, zero);

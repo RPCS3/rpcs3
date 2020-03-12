@@ -38,9 +38,11 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #endif
 
 #include "Utilities/sysinfo.h"
+#include "Utilities/Config.h"
 #include "rpcs3_version.h"
 #include "Emu/System.h"
 #include <thread>
+#include <charconv>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -213,48 +215,43 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 		auto rounding_val = Qt::HighDpiScaleFactorRoundingPolicy::PassThrough;
 		auto rounding_str = std::to_string(static_cast<int>(rounding_val));
 		const auto i_rounding = find_arg(arg_rounding, argc, argv);
+
 		if (i_rounding)
 		{
 			const auto i_rounding_2 = (argc > (i_rounding + 1)) ? (i_rounding + 1) : 0;
+
 			if (i_rounding_2)
 			{
 				const auto arg_val = argv[i_rounding_2];
-				try
-				{
-					const auto rounding_val_cli = std::stoi(arg_val);
-					if (rounding_val_cli >= static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::Unset) && rounding_val_cli <= static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough))
-					{
-						rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(rounding_val_cli);
-						rounding_str = std::to_string(static_cast<int>(rounding_val));
-					}
-					else
-					{
-						throw std::exception();
-					}
-				}
-				catch (const std::exception&)
+				const auto arg_len = std::strlen(arg_val);
+				s64 rounding_val_cli = 0;
+
+				if (!cfg::try_to_int64(&rounding_val_cli, arg_val, static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::Unset), static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough)))
 				{
 					std::cout << "The value " << arg_val << " for " << arg_rounding << " is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.\n";
 				}
+				else
+				{
+					rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(static_cast<int>(rounding_val_cli));
+					rounding_str = std::to_string(static_cast<int>(rounding_val));
+				}
 			}
 		}
-		try
+
 		{
 			rounding_str = qEnvironmentVariable("QT_SCALE_FACTOR_ROUNDING_POLICY", rounding_str.c_str()).toStdString();
-			const auto rounding_val_final = std::stoi(rounding_str);
-			if (rounding_val_final >= static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::Unset) && rounding_val_final <= static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough))
+
+			s64 rounding_val_final = 0;
+
+			if (cfg::try_to_int64(&rounding_val_final, rounding_str, static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::Unset), static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough)))
 			{
-				rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(rounding_val_final);
+				rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(static_cast<int>(rounding_val_final));
 				rounding_str = std::to_string(static_cast<int>(rounding_val));
 			}
 			else
 			{
-				throw std::exception();
+				std::cout << "The value " << rounding_str << " for " << arg_rounding << " is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.\n";
 			}
-		}
-		catch (const std::exception&)
-		{
-			std::cout << "The value " << rounding_str << " for " << arg_rounding << " is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.\n";
 		}
 		QApplication::setHighDpiScaleFactorRoundingPolicy(rounding_val);
 	}

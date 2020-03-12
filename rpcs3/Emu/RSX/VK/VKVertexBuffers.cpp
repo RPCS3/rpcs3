@@ -52,7 +52,7 @@ namespace vk
 		case rsx::index_array_type::u16:
 			return VK_INDEX_TYPE_UINT16;
 		}
-		throw;
+		fmt::throw_exception("Invalid index array type (%u)", static_cast<u8>(type));
 	}
 }
 
