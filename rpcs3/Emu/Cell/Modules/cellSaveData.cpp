@@ -1442,6 +1442,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				// Allow multiple '.' even though sysutil_check_name_string does not
 				std::replace(name, name + dotpos, '.', '-');
 
+				// Allow '_' at start even though sysutil_check_name_string does not
+				if (name[0] == '_')
+				{
+					name[0] = '-';
+				}
+
 				// Check filename
 				if (sysutil_check_name_string(name, 1, 9) == -1)
 				{
@@ -1458,6 +1464,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				// Copy file extension
 				gsl::span dst(name, file_path.size() - dotpos);
 				strcpy_trunc(dst, file_path.operator std::string_view().substr(dotpos + 1));
+
+				// Allow '_' at start even though sysutil_check_name_string does not
+				if (name[0] == '_')
+				{
+					name[0] = '-';
+				}
 
 				// Check file extension
 				if (sysutil_check_name_string(name, 1, 4) == -1)
@@ -1532,26 +1544,16 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		};
 		// clang-format on
 
+		if ((file_path == "." || file_path == "..") && fileSet->fileOperation <= CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC)
+		{
+			savedata_result = CELL_SAVEDATA_ERROR_BROKEN;
+			break;
+		}
+
 		switch (const u32 op = fileSet->fileOperation)
 		{
 		case CELL_SAVEDATA_FILEOP_READ:
 		{
-			fs::file& file = all_files[file_path];
-
-			// TODO: Check this
-			//if (!fileSet->fileSize)
-			//{
-			//	break;
-			//}
-
-			if (!file)
-			{
-				// ****** sysutil savedata parameter error : 22 ******
-				cellSaveData.error("Failed to open file %s%s", dir_path, file_path);
-				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "22"};
-				break;
-			}
-
 			if (fileSet->fileBufSize < fileSet->fileSize)
 			{
 				// ****** sysutil savedata parameter error : 72 ******
@@ -1563,6 +1565,15 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				// ****** sysutil savedata parameter error : 73 ******
 				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "73"};
+				break;
+			}
+
+			const fs::file& file = all_files[file_path];
+
+			if (!file || file.size() <= fileSet->fileOffset)
+			{
+				cellSaveData.error("Failed to open file %s%s", dir_path, file_path);
+				savedata_result = CELL_SAVEDATA_ERROR_FAILURE;
 				break;
 			}
 
@@ -1575,18 +1586,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		case CELL_SAVEDATA_FILEOP_WRITE:
 		{
-			fs::file& file = all_files[file_path];
-
-			//if (!fileSet->fileSize)
-			//{
-			//	break;
-			//}
-
-			if (!file)
-			{
-				file = fs::make_stream<std::vector<uchar>>();
-			}
-
 			if (fileSet->fileBufSize < fileSet->fileSize)
 			{
 				// ****** sysutil savedata parameter error : 72 ******
@@ -1599,6 +1598,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				// ****** sysutil savedata parameter error : 73 ******
 				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "73"};
 				break;
+			}
+
+			fs::file& file = all_files[file_path];
+
+			if (!file)
+			{
+				file = fs::make_stream<std::vector<uchar>>();
 			}
 
 			// Write to memory file and truncate
@@ -1626,18 +1632,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		case CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC:
 		{
-			fs::file& file = all_files[file_path];
-
-			//if (!fileSet->fileSize)
-			//{
-			//	break;
-			//}
-
-			if (!file)
-			{
-				file = fs::make_stream<std::vector<uchar>>();
-			}
-
 			if (fileSet->fileBufSize < fileSet->fileSize)
 			{
 				// ****** sysutil savedata parameter error : 72 ******
@@ -1650,6 +1644,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				// ****** sysutil savedata parameter error : 73 ******
 				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "73"};
 				break;
+			}
+
+			fs::file& file = all_files[file_path];
+
+			if (!file)
+			{
+				file = fs::make_stream<std::vector<uchar>>();
 			}
 
 			// Write to memory file normally
