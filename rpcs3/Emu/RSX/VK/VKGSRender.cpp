@@ -2275,7 +2275,7 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 		m_queue_status.clear(flush_queue_state::deadlock);
 
 		// Abort all other operations, this is likely coming from offloader::sync() and we need to unwind the call stack.
-		// If flush_command_queue is executed at this point, recursion will cause a deadlock will occur.
+		// If flush_command_queue is executed at this point, recursion will cause a deadlock to occur.
 		return;
 	}
 
