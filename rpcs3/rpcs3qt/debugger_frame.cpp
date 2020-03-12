@@ -282,6 +282,8 @@ void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
 
+	m_btn_capture->setEnabled(Emu.IsRunning() || Emu.IsPaused());
+
 	if (m_no_thread_selected) return;
 
 	const auto cpu = this->cpu.lock();
