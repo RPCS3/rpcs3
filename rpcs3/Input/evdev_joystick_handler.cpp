@@ -678,7 +678,6 @@ int evdev_joystick_handler::add_device(const std::string& device, const std::sha
 
 PadHandlerBase::connection evdev_joystick_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
-	bool result = update_device(device);
 	if (!update_device(device))
 		return connection::disconnected;
 
