@@ -4,9 +4,10 @@
 
 #include <QPainter>
 #include <QJsonObject>
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QTimer>
+
+#define NOMINMAX
+#define CURL_STATICLIB
+#include <curl/curl.h>
 
 class gui_settings;
 class progress_dialog;
@@ -39,12 +40,13 @@ private:
 	};
 	int m_timer_count = 0;
 	QString m_filepath;
-	QString m_url;
-	QNetworkRequest m_network_request;
+	std::string m_url;
+	std::atomic<bool> m_curl_abort = false;
+	double m_actual_dwnld_size = -1.0;
+	CURL *m_curl = nullptr;
+	QByteArray m_curl_buf;
 	progress_dialog* m_progress_dialog = nullptr;
 	std::shared_ptr<gui_settings> m_xgui_settings;
-	std::unique_ptr<QTimer> m_progress_timer;
-	std::unique_ptr<QNetworkAccessManager> m_network_access_manager;
 	std::map<std::string, compat_status> m_compat_database;
 
 	/** Creates new map from the database */
@@ -62,6 +64,8 @@ public:
 
 	/** Returns the data for the requested status */
 	compat_status GetStatusData(const QString& status);
+
+	size_t update_buffer(char* data, size_t size);
 
 Q_SIGNALS:
 	void DownloadStarted();

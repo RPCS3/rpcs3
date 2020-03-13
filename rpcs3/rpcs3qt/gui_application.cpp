@@ -22,6 +22,8 @@
 
 #include <QScreen>
 #include <QFontDatabase>
+#include <QLibraryInfo>
+#include <QDirIterator>
 
 #include <clocale>
 

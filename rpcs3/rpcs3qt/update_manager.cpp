@@ -7,10 +7,15 @@
 #include "Emu/System.h"
 
 #include <QMessageBox>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QThread>
+
 #include <sstream>
 #include <iomanip>
 
 #if defined(_WIN32)
+#define NOMINMAX
 #include <windows.h>
 #include <CpuArch.h>
 #include <7z.h>
@@ -29,9 +34,40 @@
 
 LOG_CHANNEL(update_log, "UPDATER");
 
+size_t curl_write_cb(char* ptr, size_t /*size*/, size_t nmemb, void* userdata)
+{
+	update_manager* upd_mgr = reinterpret_cast<update_manager*>(userdata);
+	return upd_mgr->update_buffer(ptr, nmemb);
+}
+
 update_manager::update_manager()
 {
-	m_manager.setRedirectPolicy(QNetworkRequest::NoLessSafeRedirectPolicy);
+	m_curl = curl_easy_init();
+
+#ifdef _WIN32
+	// This shouldn't be needed on linux
+	curl_easy_setopt(m_curl, CURLOPT_CAINFO, "cacert.pem");
+#endif
+}
+
+size_t update_manager::update_buffer(char* data, size_t size)
+{
+	if (m_curl_abort)
+	{
+		return 0;
+	}
+
+	const auto old_size = m_curl_buf.size();
+	const auto new_size = old_size + size;
+	m_curl_buf.resize(static_cast<int>(new_size));
+	memcpy(m_curl_buf.data() + old_size, data, size);
+
+	if (m_progress_dialog && m_update_dialog)
+	{
+		m_progress_dialog->setValue(static_cast<int>(new_size));
+	}
+
+	return size;
 }
 
 void update_manager::check_for_updates(bool automatic, QWidget* parent)
@@ -44,91 +80,54 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 	}
 #endif
 
-	if (QSslSocket::supportsSsl() == false)
-	{
-		update_log.error("Unable to update RPCS3! Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
-		if (!automatic)
-		{
-			const QString message = tr("Unable to update RPCS3!<br>Please make sure your system supports SSL.<br>Visit our <a href='https://rpcs3.net/quickstart'>Quickstart</a> guide for more information.");
-			QMessageBox box(QMessageBox::Icon::Warning, tr("Auto-updater"), message, QMessageBox::StandardButton::Ok, parent);
-			box.setTextFormat(Qt::RichText);
-			box.exec();
-		}
-		return;
-	}
-
-	m_parent = parent;
-
-	const std::string request_url = m_update_url + rpcs3::get_commit_and_hash().second;
-	QNetworkReply* reply_json     = m_manager.get(QNetworkRequest(QUrl(QString::fromStdString(request_url))));
+	m_parent        = parent;
+	m_curl_abort    = false;
+	m_update_dialog = false;
+	m_curl_buf.clear();
 
 	m_progress_dialog = new progress_dialog(tr("Checking For Updates"), tr("Please wait..."), tr("Abort"), 0, 100, true, parent);
 	m_progress_dialog->setAutoClose(false);
 	m_progress_dialog->setAutoReset(false);
 	m_progress_dialog->show();
 
-	connect(m_progress_dialog, &QProgressDialog::canceled, reply_json, &QNetworkReply::abort);
+	connect(m_progress_dialog, &QProgressDialog::canceled, [&]() { m_curl_abort = true; });
 	connect(m_progress_dialog, &QProgressDialog::finished, m_progress_dialog, &QProgressDialog::deleteLater);
 
-	// clang-format off
-	connect(reply_json, &QNetworkReply::downloadProgress, [&](qint64 bytesReceived, qint64 bytesTotal)
+	const std::string request_url = m_update_url + rpcs3::get_commit_and_hash().second;
+	curl_easy_setopt(m_curl, CURLOPT_URL, request_url.c_str());
+	curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
+	curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, this);
+
+	bool result_json = false;
+
+	if (const auto curl_result = curl_easy_perform(m_curl); curl_result != CURLE_OK)
 	{
-		m_progress_dialog->setMaximum(bytesTotal);
-		m_progress_dialog->setValue(bytesReceived);
-	});
-
-	connect(reply_json, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), this, &update_manager::handle_error);
-	connect(reply_json, &QNetworkReply::finished, [=, this]()
+		update_log.error("Curl error(query): %s", curl_easy_strerror(curl_result));
+	}
+	else
 	{
-		handle_reply(reply_json, &update_manager::handle_json, automatic, "Retrieved JSON Info");
-	});
-	// clang-format on
-}
+		result_json = handle_json(automatic);
+	}
 
-void update_manager::handle_error(QNetworkReply::NetworkError error)
-{
-	if (error != QNetworkReply::NoError)
+	if (!result_json && !m_curl_abort)
 	{
-		QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
-		if (!reply)
-			return;
-
-		m_progress_dialog->close();
-
-		reply->deleteLater();
-		if (error != QNetworkReply::OperationCanceledError)
+		if (!automatic)
 		{
-			const QString err_str = reply->errorString();
-			update_log.error("Network Error: %s", err_str.toStdString());
+			QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
+		}
+
+		if (m_progress_dialog)
+		{
+			m_progress_dialog->close();
+			m_progress_dialog = nullptr;
 		}
 	}
 }
 
-bool update_manager::handle_reply(QNetworkReply* reply, const std::function<bool(update_manager& man, const QByteArray&, bool)>& func, bool automatic, const std::string& message)
+bool update_manager::handle_json(bool automatic)
 {
-	if (auto error = reply->error(); error != QNetworkReply::NoError)
-		return false;
-
-	// Read data from network reply
-	const QByteArray data = reply->readAll();
-	reply->deleteLater();
-
-	update_log.notice("%s", message);
-	if (!func(*this, data, automatic))
-	{
-		m_progress_dialog->close();
-
-		if (!automatic)
-			QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
-	}
-
-	return true;
-}
-
-bool update_manager::handle_json(const QByteArray& data, bool automatic)
-{
-	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
-	int return_code             = json_data["return_code"].toInt(-255);
+	const QJsonObject json_data = QJsonDocument::fromJson(m_curl_buf).object();
+	const int return_code             = json_data["return_code"].toInt(-255);
 
 	bool hash_found = true;
 
@@ -218,7 +217,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 		{
 			update_log.notice("Converting string: %s", str);
 			std::istringstream input(str);
-			input.imbue(std::locale(setlocale(LC_ALL, "C")));
+			input.imbue(std::locale(setlocale(LC_TIME, "C")));
 			input >> std::get_time(tm, format.c_str());
 
 			return !input.fail();
@@ -232,7 +231,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 			s64 u_timediff = static_cast<s64>(std::difftime(lts_time, cur_time));
 			update_log.notice("Current: %lld, latest: %lld, difference: %lld", static_cast<s64>(cur_time), static_cast<s64>(lts_time), u_timediff);
 
-			timediff       = tr("Your version is %1 day(s), %2 hour(s) and %3 minute(s) old.").arg(u_timediff / (60 * 60 * 24)).arg((u_timediff / (60 * 60)) % 24).arg((u_timediff / 60) % 60);
+			timediff = tr("Your version is %1 day(s), %2 hour(s) and %3 minute(s) old.").arg(u_timediff / (60 * 60 * 24)).arg((u_timediff / (60 * 60)) % 24).arg((u_timediff / 60) % 60);
 		}
 
 		const QString to_show = tr("A new version of RPCS3 is available!\n\nCurrent version: %1\nLatest version: %2\n%3\n\nDo you want to update?")
@@ -252,33 +251,52 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 	m_progress_dialog->setWindowTitle(tr("Downloading Update"));
 
 	// Download RPCS3
+	m_progress_dialog->setMaximum(m_expected_size);
 	m_progress_dialog->setValue(0);
-	QNetworkReply* reply_rpcs3 = m_manager.get(QNetworkRequest(QUrl(latest[os]["download"].toString())));
+	m_update_dialog = true;
 
-	connect(m_progress_dialog, &QProgressDialog::canceled, reply_rpcs3, &QNetworkReply::abort);
+	const std::string request_url = latest[os]["download"].toString().toStdString();
+	curl_easy_setopt(m_curl, CURLOPT_URL, request_url.c_str());
+	curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1);
 
-	// clang-format off
-	connect(reply_rpcs3, &QNetworkReply::downloadProgress, [&](qint64 bytesReceived, qint64 bytesTotal)
+	m_curl_buf.clear();
+
+	QThread::create([this, automatic]
 	{
-		m_progress_dialog->setMaximum(bytesTotal);
-		m_progress_dialog->setValue(bytesReceived);
-	});
+		bool result_rpcs3 = false;
 
-	connect(reply_rpcs3, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), this, &update_manager::handle_error);
-	connect(reply_rpcs3, &QNetworkReply::finished, [=, this]()
-	{
-		handle_reply(reply_rpcs3, &update_manager::handle_rpcs3, automatic, "Retrieved RPCS3");
-	});
-	// clang-format on
+		if (const auto curl_result = curl_easy_perform(m_curl); curl_result != CURLE_OK)
+		{
+			update_log.error("Curl error(download): %s", curl_easy_strerror(curl_result));
+		}
+		else
+		{
+			result_rpcs3 = handle_rpcs3();
+		}
+		
+		if (!result_rpcs3 && !m_curl_abort)
+		{
+			if (!automatic)
+			{
+				QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
+			}
+
+			if (m_progress_dialog)
+			{
+				m_progress_dialog->close();
+				m_progress_dialog = nullptr;
+			}
+		}
+	})->start();
 
 	return true;
 }
 
-bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic*/)
+bool update_manager::handle_rpcs3()
 {
-	if (m_expected_size != rpcs3_data.size() + 0u)
+	if (m_expected_size != m_curl_buf.size() + 0u)
 	{
-		update_log.error("Download size mismatch: %d expected: %d", rpcs3_data.size(), m_expected_size);
+		update_log.error("Download size mismatch: %d expected: %d", m_curl_buf.size(), m_expected_size);
 		return false;
 	}
 
@@ -286,7 +304,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 	mbedtls_sha256_context ctx;
 	mbedtls_sha256_init(&ctx);
 	mbedtls_sha256_starts_ret(&ctx, 0);
-	mbedtls_sha256_update_ret(&ctx, reinterpret_cast<const unsigned char*>(rpcs3_data.data()), rpcs3_data.size());
+	mbedtls_sha256_update_ret(&ctx, reinterpret_cast<const unsigned char*>(m_curl_buf.data()), m_curl_buf.size());
 	mbedtls_sha256_finish_ret(&ctx, res_hash);
 
 	std::string res_hash_string("0000000000000000000000000000000000000000000000000000000000000000");
@@ -348,7 +366,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 		update_log.error("Failed to create new AppImage file: %s", replace_path);
 		return false;
 	}
-	if (new_appimage.write(rpcs3_data.data(), rpcs3_data.size()) != rpcs3_data.size() + 0u)
+	if (new_appimage.write(m_curl_buf.data(), m_curl_buf.size()) != m_curl_buf.size() + 0u)
 	{
 		update_log.error("Failed to write new AppImage file: %s", replace_path);
 		return false;
@@ -378,7 +396,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 		update_log.error("Failed to create temporary file: %s", tmpfile_path);
 		return false;
 	}
-	if (tmpfile.write(rpcs3_data.data(), rpcs3_data.size()) != rpcs3_data.size())
+	if (tmpfile.write(m_curl_buf.data(), m_curl_buf.size()) != m_curl_buf.size())
 	{
 		update_log.error("Failed to write temporary file: %s", tmpfile_path);
 		return false;
