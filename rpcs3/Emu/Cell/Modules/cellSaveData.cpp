@@ -701,27 +701,134 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return display_callback_result_error_message(ppu, *result, errDialog);
 			}
 
-			// Clean save data list
-			save_entries.erase(std::remove_if(save_entries.begin(), save_entries.end(), [&listSet](const SaveDataEntry& entry) -> bool
+			if (listSet->fixedListNum > CELL_SAVEDATA_LISTITEM_MAX)
 			{
-				for (u32 i = 0; i < listSet->fixedListNum; i++)
+				// ****** sysutil savedata parameter error : 38 ******
+				return {CELL_SAVEDATA_ERROR_PARAM, "38"};
+			}
+
+			if (listSet->fixedListNum && !listSet->fixedList)
+			{
+				// ****** sysutil savedata parameter error : 39 ******
+				return {CELL_SAVEDATA_ERROR_PARAM, "39"};
+			}
+			else
+			{
+				// TODO: What happens if fixedListNum is zero?
+			}
+
+			std::set<std::string_view> selected_list;
+
+			for (u32 i = 0; i < listSet->fixedListNum; i++)
+			{
+				switch (sysutil_check_name_string(listSet->fixedList[i].dirName, 1, CELL_SAVEDATA_DIRNAME_SIZE))
 				{
-					if (entry.dirName == listSet->fixedList[i].dirName)
+				case -1:
+				{
+					// ****** sysutil savedata parameter error : 40 ******
+					return {CELL_SAVEDATA_ERROR_PARAM, "40"};
+				}
+				case -2:
+				{
+					if (listSet->fixedList[i].dirName[0]) // ???
 					{
-						return false;
+						// ****** sysutil savedata parameter error : 41 ******
+						return {CELL_SAVEDATA_ERROR_PARAM, "41"};
 					}
+
+					break;
+				}
+				case 0: break;
+				default: ASSUME(0);
 				}
 
-				return true;
+				selected_list.emplace(listSet->fixedList[i].dirName);
+			}
+
+			// Clean save data list
+			save_entries.erase(std::remove_if(save_entries.begin(), save_entries.end(), [&selected_list](const SaveDataEntry& entry) -> bool
+			{
+				return selected_list.count(entry.dirName) == 0;
 			}), save_entries.end());
+
+			if (listSet->newData)
+			{
+				switch (listSet->newData->iconPosition)
+				{
+				case CELL_SAVEDATA_ICONPOS_HEAD:
+				case CELL_SAVEDATA_ICONPOS_TAIL:
+					break;
+				default:
+				{
+					// ****** sysutil savedata parameter error : 43 ******
+					return {CELL_SAVEDATA_ERROR_PARAM, "43"};
+				}
+				}
+
+				if (!listSet->newData->dirName)
+				{
+					// ****** sysutil savedata parameter error : 44 ******
+					return {CELL_SAVEDATA_ERROR_PARAM, "44"};
+				}
+
+				switch (sysutil_check_name_string(listSet->newData->dirName.get_ptr(), 1, CELL_SAVEDATA_DIRNAME_SIZE))
+				{
+				case -1:
+				{
+					// ****** sysutil savedata parameter error : 45 ******
+					return {CELL_SAVEDATA_ERROR_PARAM, "45"};
+				}
+				case -2:
+				{
+					if (listSet->newData->dirName[0]) // ???
+					{
+						// ****** sysutil savedata parameter error : 4 ******
+						return {CELL_SAVEDATA_ERROR_PARAM, "46"};
+					}
+
+					break;
+				}
+				case 0: break;
+				default: ASSUME(0);
+				}
+			}
 
 			switch (const u32 pos_type = listSet->focusPosition)
 			{
 			case CELL_SAVEDATA_FOCUSPOS_DIRNAME:
 			{
+				if (!listSet->focusDirName)
+				{
+					// ****** sysutil savedata parameter error : 35 ******
+					return {CELL_SAVEDATA_ERROR_PARAM, "35"};
+				}
+
+				switch (sysutil_check_name_string(listSet->focusDirName.get_ptr(), 1, CELL_SAVEDATA_DIRNAME_SIZE))
+				{
+				case -1:
+				{
+					// ****** sysutil savedata parameter error : 36 ******
+					return {CELL_SAVEDATA_ERROR_PARAM, "36"};
+				}
+				case -2:
+				{
+					if (listSet->focusDirName[0]) // ???
+					{
+						// ****** sysutil savedata parameter error : 37 ******
+						return {CELL_SAVEDATA_ERROR_PARAM, "37"};
+					}
+
+					break;
+				}
+				case 0: break;
+				default: ASSUME(0);
+				}
+
+				const std::string dirStr = listSet->focusDirName.get_ptr();
+
 				for (u32 i = 0; i < save_entries.size(); i++)
 				{
-					if (save_entries[i].dirName == listSet->focusDirName.get_ptr())
+					if (save_entries[i].dirName == dirStr)
 					{
 						focused = i;
 						break;
@@ -772,6 +879,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 			case CELL_SAVEDATA_FOCUSPOS_NEWDATA:
 			{
+				if (!listSet->newData)
+				{
+					// ****** sysutil savedata parameter error : 34 ******
+					cellSaveData.error("savedata_op(): listSet->newData is null while listSet->focusPosition is NEWDATA");
+					return {CELL_SAVEDATA_ERROR_PARAM, "34"};
+				}
+
 				//TODO: If adding the new data to the save_entries vector
 				// to be displayed in the save mangaer UI, it should be focused here
 				break;
@@ -1239,6 +1353,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				// In firmware 3.70 or higher parental_level was changed to reserved2 and has to zeroes
 				if (statSet->setParam->parental_level)
+				{
+					// ****** sysutil savedata parameter error : 58 ******
+					return {CELL_SAVEDATA_ERROR_PARAM, "58"};
+				}
+			}
+			else
+			{
+				if (statSet->setParam->parental_level > 11)
 				{
 					// ****** sysutil savedata parameter error : 58 ******
 					return {CELL_SAVEDATA_ERROR_PARAM, "58"};
