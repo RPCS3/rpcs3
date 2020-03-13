@@ -76,7 +76,7 @@ void fmt_class_string<msaa_level>::format(std::string& out, u64 arg)
 		switch (value)
 		{
 		case msaa_level::none: return "Disabled";
-		case msaa_level::_auto: return "Auto";
+		case msaa_level::_auto: return "Automatic";
 		}
 
 		return unknown;

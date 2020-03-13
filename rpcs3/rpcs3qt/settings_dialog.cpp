@@ -435,6 +435,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		ui->gb_resolutionScale->setEnabled(!checked);
 		ui->gb_minimumScalableDimension->setEnabled(!checked);
+		ui->gb_anisotropicFilter->setEnabled(!checked);
+		ui->gb_antiAliasing->setEnabled(!checked);
 	});
 
 	// Sliders
