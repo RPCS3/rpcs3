@@ -576,7 +576,7 @@ namespace rsx
 
 			u8 samples;
 			surface_sample_layout sample_layout;
-			if (g_cfg.video.antialiasing_level == msaa_level::_auto || g_cfg.video.strict_rendering_mode)
+			if (g_cfg.video.antialiasing_level == msaa_level::_auto)
 			{
 				samples = get_format_sample_count(antialias);
 				sample_layout = surface_sample_layout::ps3;
@@ -639,7 +639,7 @@ namespace rsx
 
 			u8 samples;
 			surface_sample_layout sample_layout;
-			if (g_cfg.video.antialiasing_level == msaa_level::_auto || g_cfg.video.strict_rendering_mode)
+			if (g_cfg.video.antialiasing_level == msaa_level::_auto)
 			{
 				samples = get_format_sample_count(antialias);
 				sample_layout = surface_sample_layout::ps3;
