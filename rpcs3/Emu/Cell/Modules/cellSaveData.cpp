@@ -107,12 +107,12 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 	// get the saves matching the supplied prefix
 	for (auto&& entry : fs::dir(base_dir))
 	{
-		if (!entry.is_directory || entry.name == "." || entry.name == "..")
+		if (!entry.is_directory || sysutil_check_name_string(entry.name.c_str(), 1, CELL_SAVEDATA_DIRNAME_SIZE) != 0)
 		{
 			continue;
 		}
 
-		if (entry.name.substr(0, prefix.size()) != prefix)
+		if (!entry.name.starts_with(prefix))
 		{
 			continue;
 		}
@@ -591,7 +591,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		// get the saves matching the supplied prefix
 		for (auto&& entry : fs::dir(base_dir))
 		{
-			if (!entry.is_directory || entry.name == "." || entry.name == "..")
+			if (!entry.is_directory || sysutil_check_name_string(entry.name.c_str(), 1, CELL_SAVEDATA_DIRNAME_SIZE) != 0)
 			{
 				continue;
 			}
