@@ -848,6 +848,12 @@ namespace rsx
 			m_data.fetch_or(static_cast<bitmask_type>(mask));
 		}
 
+		bool test_and_set(T mask)
+		{
+			const auto old = m_data.fetch_or(static_cast<bitmask_type>(mask));
+			return (old & static_cast<bitmask_type>(mask)) != 0;
+		}
+
 		auto clear(T mask)
 		{
 			bitmask_type clear_mask = ~(static_cast<bitmask_type>(mask));
