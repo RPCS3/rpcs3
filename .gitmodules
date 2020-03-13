@@ -55,3 +55,12 @@
 	path = 3rdparty/span
 	url = https://github.com/tcbrindle/span
 	ignore = dirty
+[submodule "3rdparty/curl"]
+	path = 3rdparty/curl
+	url = https://github.com/RipleyTom/curl.git
+	ignore = dirty
+[submodule "3rdparty/wolfssl"]
+	path = 3rdparty/wolfssl
+	url = https://github.com/RipleyTom/wolfssl.git
+	ignore = dirty
+

@@ -29,6 +29,8 @@
 #include <thread>
 
 #include <QScreen>
+#include <QDirIterator>
+#include <QMimeData>
 
 #include "stdafx.h"
 #include "rpcs3_version.h"

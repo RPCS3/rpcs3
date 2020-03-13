@@ -413,6 +413,11 @@ endif()
 # LLVM
 include(llvm.cmake)
 
+# Wolfssl
+add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
+
+# Libcurl
+add_subdirectory(curl EXCLUDE_FROM_ALL)
 
 # add nice ALIAS targets for ease of use
 add_library(3rdparty::libusb ALIAS usb-1.0-static)
@@ -436,3 +441,5 @@ add_library(3rdparty::vulkan ALIAS ${VULKAN_TARGET})
 add_library(3rdparty::openal ALIAS 3rdparty_openal)
 add_library(3rdparty::ffmpeg ALIAS 3rdparty_ffmpeg)
 add_library(3rdparty::glew ALIAS 3rdparty_glew)
+add_library(3rdparty::wolfssl ALIAS wolfssl-3-static)
+add_library(3rdparty::libcurl ALIAS libcurl)

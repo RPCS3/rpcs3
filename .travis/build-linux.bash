@@ -8,7 +8,7 @@ export LD_LIBRARY_PATH=$QT_BASE_DIR/lib/x86_64-linux-gnu:$QT_BASE_DIR/lib
 
 cd rpcs3
 
-git submodule update --quiet --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/span 3rdparty/libpng 3rdparty/cereal 3rdparty/hidapi 3rdparty/xxHash 3rdparty/yaml-cpp 3rdparty/libusb 3rdparty/FAudio Vulkan/glslang
+git submodule update --quiet --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/span 3rdparty/libpng 3rdparty/cereal 3rdparty/hidapi 3rdparty/xxHash 3rdparty/yaml-cpp 3rdparty/libusb 3rdparty/FAudio Vulkan/glslang 3rdparty/curl 3rdparty/wolfssl
 
 # Download pre-compiled llvm libs
 curl -sLO https://github.com/RPCS3/llvm-mirror/releases/download/custom-build/llvmlibs-linux.tar.gz

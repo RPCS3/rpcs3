@@ -4,20 +4,54 @@
 
 #include <QMessageBox>
 #include <QJsonDocument>
-#include <QNetworkReply>
+#include <QThread>
 
 LOG_CHANNEL(compat_log, "Compat");
 
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
+size_t curl_write_cb_compat(char* ptr, size_t /*size*/, size_t nmemb, void* userdata)
+{
+	game_compatibility* gm_cmp = reinterpret_cast<game_compatibility*>(userdata);
+	return gm_cmp->update_buffer(ptr, nmemb);
+}
+
 game_compatibility::game_compatibility(std::shared_ptr<gui_settings> settings) : m_xgui_settings(settings)
 {
 	m_filepath = m_xgui_settings->GetSettingsDir() + "/compat_database.dat";
 	m_url = "https://rpcs3.net/compatibility?api=v1&export";
-	m_network_request = QNetworkRequest(QUrl(m_url));
+
+	m_curl = curl_easy_init();
 
 	RequestCompatibility();
+}
+
+size_t game_compatibility::update_buffer(char* data, size_t size)
+{
+	if (m_curl_abort)
+	{
+		return 0;
+	}
+
+	const auto old_size = m_curl_buf.size();
+	const auto new_size = old_size + size;
+	m_curl_buf.resize(static_cast<int>(new_size));
+	memcpy(m_curl_buf.data() + old_size, data, size);
+
+	if (m_actual_dwnld_size < 0)
+	{
+		if (curl_easy_getinfo(m_curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &m_actual_dwnld_size) == CURLE_OK && m_actual_dwnld_size > 0)
+		{
+			if (m_progress_dialog)
+				m_progress_dialog->setMaximum(static_cast<int>(m_actual_dwnld_size));
+		}
+	}
+
+	if (m_progress_dialog)
+		m_progress_dialog->setValue(static_cast<int>(new_size));
+	
+	return size;
 }
 
 bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_download)
@@ -118,112 +152,44 @@ void game_compatibility::RequestCompatibility(bool online)
 		return;
 	}
 
-	if (QSslSocket::supportsSsl() == false)
-	{
-		compat_log.error("Can not retrieve the online database! Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
-		const QString message = tr("Can not retrieve the online database!<br>Please make sure your system supports SSL.<br>Visit our <a href='https://rpcs3.net/quickstart'>quickstart guide</a> for more information.");
-		QMessageBox box(QMessageBox::Icon::Warning, tr("Warning!"), message, QMessageBox::StandardButton::Ok, nullptr);
-		box.setTextFormat(Qt::RichText);
-		box.exec();
-		return;
-	}
-
-	compat_log.notice("SSL supported! Beginning compatibility database download from: %s", sstr(m_url));
-
-	// Send request and wait for response
-	m_network_access_manager.reset(new QNetworkAccessManager());
-	QNetworkReply* network_reply = m_network_access_manager->get(m_network_request);
+	compat_log.notice("Beginning compatibility database download from: %s", m_url);
 
 	// Show Progress
-	m_progress_dialog = new progress_dialog(tr("Downloading Database"), tr(".Please wait."), tr("Abort"), 0, 100, true);
+	m_progress_dialog = new progress_dialog(tr("Downloading Database"), tr("Please wait ..."), tr("Abort"), 0, 100, true);
 	m_progress_dialog->show();
 
-	// Animate progress dialog a bit more
-	m_progress_timer.reset(new QTimer(this));
-	connect(m_progress_timer.get(), &QTimer::timeout, [&]()
-	{
-		switch (++m_timer_count % 3)
-		{
-		case 0:
-			m_timer_count = 0;
-			m_progress_dialog->setLabelText(tr(".Please wait."));
-			break;
-		case 1:
-			m_progress_dialog->setLabelText(tr("..Please wait.."));
-			break;
-		default:
-			m_progress_dialog->setLabelText(tr("...Please wait..."));
-			break;
-		}
-	});
-	m_progress_timer->start(500);
+	curl_easy_setopt(m_curl, CURLOPT_URL, m_url.c_str());
+	curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, curl_write_cb_compat);
+	curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, this);
+	curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1);
+
+	m_curl_buf.clear();
+	m_curl_abort = false;
 
 	// Handle abort
-	connect(m_progress_dialog, &QProgressDialog::canceled, network_reply, &QNetworkReply::abort);
+	connect(m_progress_dialog, &QProgressDialog::canceled, [this] { m_curl_abort = true; });
 	connect(m_progress_dialog, &QProgressDialog::finished, m_progress_dialog, &QProgressDialog::deleteLater);
 
-	// Handle progress
-	connect(network_reply, &QNetworkReply::downloadProgress, [&](qint64 bytesReceived, qint64 bytesTotal)
+	QThread::create([&]
 	{
-		m_progress_dialog->setMaximum(bytesTotal);
-		m_progress_dialog->setValue(bytesReceived);
-	});
+		const auto result = curl_easy_perform(m_curl);
 
-	// Handle network error
-	connect(network_reply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), [=, this](QNetworkReply::NetworkError error)
-	{
-		if (error == QNetworkReply::NoError)
-		{
-			return;
-		}
-
-		if (error != QNetworkReply::OperationCanceledError)
-		{
-			// We failed to retrieve a new database, therefore refresh gamelist to old state
-			const QString error = network_reply->errorString();
-			Q_EMIT DownloadError(error);
-			compat_log.error("Network Error - %s", sstr(error));
-		}
-
-		// Clean up Progress Dialog
 		if (m_progress_dialog)
 		{
 			m_progress_dialog->close();
-		}
-		if (m_progress_timer)
-		{
-			m_progress_timer->stop();
+			m_progress_dialog = nullptr;
 		}
 
-		network_reply->deleteLater();
-	});
-
-	// Handle response according to its contents
-	connect(network_reply, &QNetworkReply::finished, [=, this]()
-	{
-		if (network_reply->error() != QNetworkReply::NoError)
+		if (result != CURLE_OK)
 		{
+			Q_EMIT DownloadError(qstr("Curl error: ") + qstr(curl_easy_strerror(result)));
 			return;
-		}
-
-		// Clean up Progress Dialog
-		if (m_progress_dialog)
-		{
-			m_progress_dialog->close();
-		}
-		if (m_progress_timer)
-		{
-			m_progress_timer->stop();
 		}
 
 		compat_log.notice("Database download finished");
 
-		// Read data from network reply
-		QByteArray data = network_reply->readAll();
-		network_reply->deleteLater();
-
 		// Create new map from database and write database to file if database was valid
-		if (ReadJSON(QJsonDocument::fromJson(data).object(), online))
+		if (ReadJSON(QJsonDocument::fromJson(m_curl_buf).object(), online))
 		{
 			// We have a new database in map, therefore refresh gamelist to new state
 			Q_EMIT DownloadFinished();
@@ -242,12 +208,12 @@ void game_compatibility::RequestCompatibility(bool online)
 				return;
 			}
 
-			file.write(data);
+			file.write(m_curl_buf);
 			file.close();
 
-			compat_log.success("Write database to file: %s", sstr(m_filepath));
+			compat_log.success("Wrote database to file: %s", sstr(m_filepath));
 		}
-	});
+	})->start();
 
 	// We want to retrieve a new database, therefore refresh gamelist and indicate that
 	Q_EMIT DownloadStarted();
