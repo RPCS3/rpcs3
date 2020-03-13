@@ -734,7 +734,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		if (g_fxo->get<rsx::dma_manager>()->is_current_thread())
 		{
 			// The offloader thread cannot handle flush requests
-			verify(HERE), m_queue_status.load() == flush_queue_state::ok;
+			verify(HERE), !(m_queue_status & flush_queue_state::deadlock);
 
 			m_offloader_fault_range = g_fxo->get<rsx::dma_manager>()->get_fault_range(is_writing);
 			m_offloader_fault_cause = (is_writing) ? rsx::invalidation_cause::write : rsx::invalidation_cause::read;
@@ -2273,13 +2273,15 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 		// NOTE: This may cause graphics corruption due to unsynchronized modification
 		on_invalidate_memory_range(m_offloader_fault_range, m_offloader_fault_cause);
 		m_queue_status.clear(flush_queue_state::deadlock);
-
-		// Abort all other operations, this is likely coming from offloader::sync() and we need to unwind the call stack.
-		// If flush_command_queue is executed at this point, recursion will cause a deadlock to occur.
-		return;
 	}
 
-	if (m_flush_requests.pending())
+	if (m_queue_status & flush_queue_state::flushing)
+	{
+		// Abort recursive CB submit requests.
+		// When flushing flag is already set, only deadlock events may be processed.
+		return;
+	}
+	else if (m_flush_requests.pending())
 	{
 		if (m_flush_queue_mutex.try_lock())
 		{
@@ -2676,6 +2678,8 @@ void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
 
 void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkPipelineStageFlags pipeline_stage_flags)
 {
+	verify("Recursive calls to submit the current commandbuffer will cause a deadlock" HERE), !m_queue_status.test_and_set(flush_queue_state::flushing);
+
 	// Workaround for deadlock occuring during RSX offloader fault
 	// TODO: Restructure command submission infrastructure to avoid this condition
 	const bool sync_success = g_fxo->get<rsx::dma_manager>()->sync();
@@ -2747,6 +2751,8 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	{
 		verify(HERE), m_current_command_buffer->submit_fence->flushed;
 	}
+
+	m_queue_status.clear(flush_queue_state::flushing);
 }
 
 void VKGSRender::open_command_buffer()

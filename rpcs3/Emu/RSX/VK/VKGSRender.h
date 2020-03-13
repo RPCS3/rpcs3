@@ -342,7 +342,8 @@ private:
 	enum flush_queue_state : u32
 	{
 		ok = 0,
-		deadlock = 1
+		flushing = 1,
+		deadlock = 2
 	};
 
 private:
