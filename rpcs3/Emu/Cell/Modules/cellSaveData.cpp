@@ -90,7 +90,10 @@ namespace
 
 vm::gvar<savedata_context> g_savedata_context;
 
-std::mutex g_savedata_mutex;
+struct savedata_mutex
+{
+	semaphore<> mutex;
+};
 
 static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, const std::string& prefix)
 {
@@ -150,7 +153,7 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 
 static error_code select_and_delete(ppu_thread& ppu)
 {
-	std::unique_lock lock(g_savedata_mutex, std::try_to_lock);
+	std::unique_lock lock(g_fxo->get<savedata_mutex>()->mutex, std::try_to_lock);
 
 	if (!lock)
 	{
@@ -537,7 +540,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		return {CELL_SAVEDATA_ERROR_PARAM, std::to_string(ecode)};
 	}
 
-	std::unique_lock lock(g_savedata_mutex, std::try_to_lock);
+	std::unique_lock lock(g_fxo->get<savedata_mutex>()->mutex, std::try_to_lock);
 
 	if (!lock)
 	{
