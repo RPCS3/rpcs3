@@ -833,7 +833,12 @@ error_code cellAdecClose(u32 handle)
 		thread_ctrl::wait_for(1000); // hack
 	}
 
-	idm::remove<ppu_thread>(handle);
+	if (!idm::remove_verify<ppu_thread>(handle, std::move(adec)))
+	{
+		// Removed by other thread beforehead
+		return CELL_ADEC_ERROR_ARG;
+	}
+
 	return CELL_OK;
 }
 

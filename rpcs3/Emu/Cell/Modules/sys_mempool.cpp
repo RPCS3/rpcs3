@@ -120,7 +120,7 @@ void sys_mempool_destroy(ppu_thread& ppu, sys_mempool_t mempool)
 		u32 mutexid = memory_pool->mutexid;
 
 		sys_mutex_lock(ppu, memory_pool->mutexid, 0);
-		idm::remove<memory_pool_t>(mempool);
+		idm::remove_verify<memory_pool_t>(mempool, std::move(memory_pool));
 		sys_mutex_unlock(ppu, mutexid);
 		sys_mutex_destroy(ppu, mutexid);
 		sys_cond_destroy(ppu, condid);

@@ -693,7 +693,13 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	}
 
 	ppu_execute<&sys_interrupt_thread_disestablish>(ppu, vdec->ppu_tid);
-	idm::remove<vdec_context>(handle);
+
+	if (!idm::remove_verify<vdec_context>(handle, std::move(vdec)))
+	{
+		// Other thread removed it beforehead
+		return CELL_VDEC_ERROR_ARG;
+	}
+
 	return CELL_OK;
 }
 
