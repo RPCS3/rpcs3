@@ -1151,7 +1151,7 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 	}
 
 	std::string final = inst;
-	final += lk ? "ctrl"sv : "clr"sv;
+	final += lk ? "ctrl"sv : "ctr"sv;
 	if (sign) final += sign;
 
 	DisAsm_CR_BRANCH(final, bi / 4, bh);
