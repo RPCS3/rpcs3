@@ -1571,9 +1571,6 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 
 	fmt::append(msg, "Thread id = %s.\n", std::this_thread::get_id());
 
-	sys_log.notice("Memory bases:\nvm::g_base_addr = %p\nvm::g_sudo_addr = %p\nvm::g_exec_addr = %p\nvm::g_stat_addr = %p\nvm::g_reservations = %p\n",
-	vm::g_base_addr, vm::g_sudo_addr, vm::g_exec_addr, vm::g_stat_addr, vm::g_reservations);
-
 	std::vector<HMODULE> modules;
 	for (DWORD size = 256; modules.size() != size; size /= sizeof(HMODULE))
 	{
@@ -1697,9 +1694,6 @@ static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 	{
 		sys_log.notice("\n%s", cpu->dump());
 	}
-
-	sys_log.notice("Memory bases:\nvm::g_base_addr = %p\nvm::g_sudo_addr = %p\nvm::g_exec_addr = %p\nvm::g_stat_addr = %p\nvm::g_reservations = %p\n",
-	vm::g_base_addr, vm::g_sudo_addr, vm::g_exec_addr, vm::g_stat_addr, vm::g_reservations);
 
 	std::string msg = fmt::format("Segfault %s location %p at %p.\n", cause, info->si_addr, RIP(context));
 

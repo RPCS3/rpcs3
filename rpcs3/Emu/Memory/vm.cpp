@@ -1125,6 +1125,18 @@ namespace vm
 	{
 		void init()
 		{
+			vm_log.notice("Guest memory bases address ranges:\n"
+			"vm::g_base_addr = %p - %p\n"
+			"vm::g_sudo_addr = %p - %p\n"
+			"vm::g_exec_addr = %p - %p\n"
+			"vm::g_stat_addr = %p - %p\n"
+			"vm::g_reservations = %p - %p\n",
+			g_base_addr, g_base_addr + UINT32_MAX,
+			g_sudo_addr, g_sudo_addr + UINT32_MAX,
+			g_exec_addr, g_exec_addr + 0x200000000 - 1,
+			g_stat_addr, g_stat_addr + UINT32_MAX,
+			g_reservations, g_reservations + UINT32_MAX);
+
 			g_locations =
 			{
 				std::make_shared<block_t>(0x00010000, 0x1FFF0000, 0x200), // main
