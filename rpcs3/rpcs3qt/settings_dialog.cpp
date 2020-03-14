@@ -391,7 +391,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		switch (int val = ui->anisotropicFilterOverride->itemData(i).toInt())
 		{
 		case 0:
-			ui->anisotropicFilterOverride->setItemText(i, tr("Automatic"));
+			ui->anisotropicFilterOverride->setItemText(i, tr("Auto"));
 			break;
 		case 2:
 		case 4:
