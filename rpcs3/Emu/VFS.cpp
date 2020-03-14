@@ -292,6 +292,19 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 
 	result.reserve(path.size());
 
+	// Emulate NTS (limited)
+	auto get_char = [&](std::size_t pos) -> char2
+	{
+		if (pos < path.size())
+		{
+			return path[pos];
+		}
+		else
+		{
+			return '\0';
+		}
+	};
+
 	for (std::size_t i = 0, s = path.size(); i < s; i++)
 	{
 		switch (char2 c = path[i])
@@ -393,11 +406,11 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 		case char2{u8"！"[0]}:
 		{
 			// Escape full-width characters 0xFF01..0xFF5e with ！ (0xFF01)
-			switch (char2 c2 = path[i + 1])
+			switch (char2 c2 = get_char(i + 1))
 			{
 			case char2{u8"！"[1]}:
 			{
-				const uchar c3 = path[i + 2];
+				const uchar c3 = get_char(i + 2);
 
 				if (c3 >= 0x81 && c3 <= 0xbf)
 				{
@@ -408,7 +421,7 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 			}
 			case char2{u8"｀"[1]}:
 			{
-				const uchar c3 = path[i + 2];
+				const uchar c3 = get_char(i + 2);
 
 				if (c3 >= 0x80 && c3 <= 0x9e)
 				{
