@@ -1573,6 +1573,17 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					name[0] = '-';
 				}
 
+				if ((dotpos >= 5u && std::memcmp(name, "PARAM", 5) == 0) ||
+					(dotpos >= 4u && std::memcmp(name, "ICON", 4) == 0) ||
+					(dotpos >= 3u && std::memcmp(name, "PIC", 3) == 0) ||
+					(dotpos >= 3u && std::memcmp(name, "SND", 3) == 0))
+				{
+					// ****** sysutil savedata parameter error : 70 ******
+					cellSaveData.error("savedata_op(): fileSet->fileName is set to a system file name (%s)", file_path);
+					savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "70"};
+					break;
+				}
+
 				// Check filename
 				if (sysutil_check_name_string(name, 1, 9) == -1)
 				{
