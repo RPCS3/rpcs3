@@ -296,8 +296,6 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 		return result;
 	}
 
-	result.reserve(path.size());
-
 	// Emulate NTS (limited)
 	auto get_char = [&](std::size_t pos) -> char2
 	{
@@ -310,6 +308,45 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 			return '\0';
 		}
 	};
+
+	// Escape NUL, LPT ant other trash
+	if (path.size() > 2)
+	{
+		// Pack first 3 characters
+		const u32 triple = std::bit_cast<le_t<u32>, u32>(toupper(path[0]) | toupper(path[1]) << 8 | toupper(path[2]) << 16);
+
+		switch (triple)
+		{
+		case "COM"_u32:
+		case "LPT"_u32:
+		{
+			if (path.size() >= 4 && path[3] >= '1' && path[4] <= '9')
+			{
+				if (path.size() == 4 || path[4] == '.')
+				{
+					// Escape first character (C or L)
+					result = reinterpret_cast<const char*>(u8"！");
+				}
+			}
+
+			break;
+		}
+		case "NUL"_u32:
+		case "CON"_u32:
+		case "AUX"_u32:
+		case "PRN"_u32:
+		{
+			if (path.size() == 3 || path[3] == '.')
+			{
+				result = reinterpret_cast<const char*>(u8"！");
+			}
+
+			break;
+		}
+		}
+	}
+
+	result.reserve(result.size() + path.size());
 
 	for (std::size_t i = 0, s = path.size(); i < s; i++)
 	{
