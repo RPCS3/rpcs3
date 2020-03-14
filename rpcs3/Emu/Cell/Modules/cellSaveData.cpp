@@ -1693,9 +1693,9 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				break;
 			}
 
-			const fs::file& file = all_files[file_path];
+			const auto file = std::as_const(all_files).find(file_path);
 
-			if (!file || file.size() <= fileSet->fileOffset)
+			if (file == all_files.cend() || file->second.size() <= fileSet->fileOffset)
 			{
 				cellSaveData.error("Failed to open file %s%s", dir_path, file_path);
 				savedata_result = CELL_SAVEDATA_ERROR_FAILURE;
@@ -1703,8 +1703,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 
 			// Read from memory file to vm
-			const u64 sr = file.seek(fileSet->fileOffset);
-			const u64 rr = lv2_file::op_read(file, fileSet->fileBuf, fileSet->fileSize);
+			const u64 sr = file->second.seek(fileSet->fileOffset);
+			const u64 rr = lv2_file::op_read(file->second, fileSet->fileBuf, fileSet->fileSize);
 			fileGet->excSize = ::narrow<u32>(rr);
 			break;
 		}
@@ -1746,7 +1746,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		case CELL_SAVEDATA_FILEOP_DELETE:
 		{
 			// Delete memory file
-			all_files[file_path].close();
+			if (all_files.erase(file_path) == 0)
+			{
+				cellSaveData.error("Failed to delete file %s%s", dir_path, file_path);
+				savedata_result = CELL_SAVEDATA_ERROR_FAILURE;
+				break;
+			}
+
 			psf.erase("*" + file_path);
 			fileGet->excSize = 0;
 			all_times.erase(file_path);
