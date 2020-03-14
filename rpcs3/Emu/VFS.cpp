@@ -283,25 +283,25 @@ using char2 = char8_t;
 using char2 = char;
 #endif
 
-std::string vfs::escape(std::string_view path, bool escape_slash)
+std::string vfs::escape(std::string_view name, bool escape_slash)
 {
 	std::string result;
 
-	if (path.size() > 2 && path.find_first_not_of('.') == umax)
+	if (name.size() > 2 && name.find_first_not_of('.') == umax)
 	{
-		// Path contains only dots, not allowed on Windows.
-		result.reserve(path.size() + 2);
+		// Name contains only dots, not allowed on Windows.
+		result.reserve(name.size() + 2);
 		result += reinterpret_cast<const char*>(u8"．");
-		result += path.substr(1);
+		result += name.substr(1);
 		return result;
 	}
 
 	// Emulate NTS (limited)
 	auto get_char = [&](std::size_t pos) -> char2
 	{
-		if (pos < path.size())
+		if (pos < name.size())
 		{
-			return path[pos];
+			return name[pos];
 		}
 		else
 		{
@@ -310,19 +310,19 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 	};
 
 	// Escape NUL, LPT ant other trash
-	if (path.size() > 2)
+	if (name.size() > 2)
 	{
 		// Pack first 3 characters
-		const u32 triple = std::bit_cast<le_t<u32>, u32>(toupper(path[0]) | toupper(path[1]) << 8 | toupper(path[2]) << 16);
+		const u32 triple = std::bit_cast<le_t<u32>, u32>(toupper(name[0]) | toupper(name[1]) << 8 | toupper(name[2]) << 16);
 
 		switch (triple)
 		{
 		case "COM"_u32:
 		case "LPT"_u32:
 		{
-			if (path.size() >= 4 && path[3] >= '1' && path[4] <= '9')
+			if (name.size() >= 4 && name[3] >= '1' && name[4] <= '9')
 			{
-				if (path.size() == 4 || path[4] == '.')
+				if (name.size() == 4 || name[4] == '.')
 				{
 					// Escape first character (C or L)
 					result = reinterpret_cast<const char*>(u8"！");
@@ -336,7 +336,7 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 		case "AUX"_u32:
 		case "PRN"_u32:
 		{
-			if (path.size() == 3 || path[3] == '.')
+			if (name.size() == 3 || name[3] == '.')
 			{
 				result = reinterpret_cast<const char*>(u8"！");
 			}
@@ -346,11 +346,11 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 		}
 	}
 
-	result.reserve(result.size() + path.size());
+	result.reserve(result.size() + name.size());
 
-	for (std::size_t i = 0, s = path.size(); i < s; i++)
+	for (std::size_t i = 0, s = name.size(); i < s; i++)
 	{
-		switch (char2 c = path[i])
+		switch (char2 c = name[i])
 		{
 		case 0:
 		case 1:
@@ -489,17 +489,17 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 	return result;
 }
 
-std::string vfs::unescape(std::string_view path)
+std::string vfs::unescape(std::string_view name)
 {
 	std::string result;
-	result.reserve(path.size());
+	result.reserve(name.size());
 
 	// Emulate NTS
 	auto get_char = [&](std::size_t pos) -> char2
 	{
-		if (pos < path.size())
+		if (pos < name.size())
 		{
-			return path[pos];
+			return name[pos];
 		}
 		else
 		{
@@ -507,9 +507,9 @@ std::string vfs::unescape(std::string_view path)
 		}
 	};
 
-	for (std::size_t i = 0, s = path.size(); i < s; i++)
+	for (std::size_t i = 0, s = name.size(); i < s; i++)
 	{
-		switch (char2 c = path[i])
+		switch (char2 c = name[i])
 		{
 		case char2{u8"！"[0]}:
 		{
