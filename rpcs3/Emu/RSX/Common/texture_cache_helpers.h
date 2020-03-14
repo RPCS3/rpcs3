@@ -276,12 +276,6 @@ namespace rsx
 
 			auto add_rtt_resource = [&](auto& section, u16 slice)
 			{
-				if (section.is_depth != is_depth)
-				{
-					// TODO
-					return;
-				}
-
 				const u32 slice_begin = (slice * attr.slice_h);
 				const u32 slice_end = (slice_begin + attr.height);
 
@@ -332,12 +326,6 @@ namespace rsx
 
 			auto add_local_resource = [&](auto& section, u32 address, u16 slice, bool scaling = true)
 			{
-				if (section->is_depth_texture() != is_depth)
-				{
-					// TODO
-					return;
-				}
-
 				// Intersect this resource with the original one
 				const auto section_bpp = get_format_block_size_in_bytes(section->get_gcm_format());
 				const auto normalized_width = (section->get_width() * section_bpp) / attr.bpp;
@@ -600,20 +588,54 @@ namespace rsx
 		{
 			verify(HERE), (select_hint & 0x1) == select_hint;
 
-			bool is_depth;
+			bool is_depth = (select_hint == 0) ? fbos.back().is_depth : local.back()->is_depth_texture();
+			bool aspect_mismatch = false;
 			auto attr2 = attr;
 
-			if (is_depth = (select_hint == 0) ? fbos.back().is_depth : local.back()->is_depth_texture();
-				is_depth)
+			// Check for mixed sources with aspect mismatch
+			// NOTE: If the last texture is a perfect match, this method would not have been called which means at least one transfer has to occur
+			if ((fbos.size() + local.size()) > 1) [[unlikely]]
 			{
+				for (const auto& tex : local)
+				{
+					if (tex->is_depth_texture() != is_depth)
+					{
+						aspect_mismatch = true;
+						break;
+					}
+				}
+
+				if (!aspect_mismatch) [[likely]]
+				{
+					for (const auto& surface : fbos)
+					{
+						if (surface.is_depth != is_depth)
+						{
+							aspect_mismatch = true;
+							break;
+						}
+					}
+				}
+			}
+
+			if (aspect_mismatch)
+			{
+				// Override with the requested format
+				is_depth = is_gcm_depth_format(attr.gcm_format);
+			}
+			else if (is_depth)
+			{
+				// Depth format textures were found. Check if the data can be bitcast without conversion.
 				if (const auto suggested_format = get_compatible_depth_format(attr.gcm_format);
 					!is_gcm_depth_format(suggested_format))
 				{
-					// Failed!
+					// Requested format cannot be directly read from a depth texture.
+					// Typeless conversion will be performed to make data accessible.
 					is_depth = false;
 				}
 				else
 				{
+					// Replace request format with one that is compatible with existing data.
 					attr2.gcm_format = suggested_format;
 				}
 			}
