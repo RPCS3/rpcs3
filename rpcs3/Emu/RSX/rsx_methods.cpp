@@ -747,6 +747,32 @@ namespace rsx
 			}
 		}
 
+		void set_blend_equation(thread* rsx, u32 reg, u32 arg)
+		{
+			for (u32 i = 0; i < 32u; i += 16)
+			{
+				switch ((arg >> i) & 0xffff)
+				{
+				case CELL_GCM_FUNC_ADD:
+				case CELL_GCM_MIN:
+				case CELL_GCM_MAX:
+				case CELL_GCM_FUNC_SUBTRACT:
+				case CELL_GCM_FUNC_REVERSE_SUBTRACT:
+				case CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED:
+				case CELL_GCM_FUNC_ADD_SIGNED:
+				case CELL_GCM_FUNC_REVERSE_ADD_SIGNED:
+					break;
+			
+				default:
+				{
+					// Ignore invalid values as a whole
+					method_registers.decode(reg, method_registers.register_previous_value);
+					return;
+				}
+				}
+			}
+		}
+
 		template<u32 index>
 		struct set_texture_dirty_bit
 		{
@@ -2997,6 +3023,7 @@ namespace rsx
 		bind_range<NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind<NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma>();
+		bind<NV4097_SET_BLEND_EQUATION, nv4097::set_blend_equation>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();
