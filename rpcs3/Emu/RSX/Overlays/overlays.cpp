@@ -136,6 +136,12 @@ namespace rsx
 							case CELL_PAD_CTRL_R1:
 								button_id = pad_button::R1;
 								break;
+							case CELL_PAD_CTRL_L2:
+								button_id = pad_button::L2;
+								break;
+							case CELL_PAD_CTRL_R2:
+								button_id = pad_button::R2;
+								break;
 							}
 						}
 

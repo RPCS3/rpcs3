@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/RSX/Overlays/overlay_osk.h"
 #include "Input/pad_thread.h"
@@ -62,8 +63,7 @@ std::shared_ptr<OskDialogBase> _get_osk_dialog(bool create = false)
 
 		if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 		{
-			auto dlg = std::make_shared<rsx::overlays::osk_latin>();
-
+			std::shared_ptr<rsx::overlays::osk_dialog> dlg = std::make_shared<rsx::overlays::osk_dialog>();
 			osk->dlg = manager->add(dlg);
 		}
 		else
@@ -105,7 +105,9 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	// Get the OSK options
 	u32 maxLength = (inputFieldInfo->limit_length >= CELL_OSKDIALOG_STRING_SIZE) ? 511 : u32{inputFieldInfo->limit_length};
-	u32 options = dialogParam->prohibitFlgs;
+	const u32 prohibitFlgs = dialogParam->prohibitFlgs;
+	const u32 allowOskPanelFlg = dialogParam->allowOskPanelFlg;
+	const u32 firstViewPanel = dialogParam->firstViewPanel;
 
 	// Get init text and prepare return value
 	osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
@@ -242,7 +244,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	Emu.CallAfter([=, &result]()
 	{
-		osk->Create("On Screen Keyboard", message, osk->osk_text, maxLength, options);
+		osk->Create("On Screen Keyboard", message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel);
 		result = true;
 	});
 
