@@ -39,7 +39,7 @@ void lv2_int_serv::join()
 	thread_ctrl::notify(*thread);
 	(*thread)();
 
-	idm::remove<named_thread<ppu_thread>>(thread->id);
+	idm::remove_verify<named_thread<ppu_thread>>(thread->id, static_cast<std::weak_ptr<named_thread<ppu_thread>>>(thread));
 }
 
 error_code sys_interrupt_tag_destroy(ppu_thread& ppu, u32 intrtag)

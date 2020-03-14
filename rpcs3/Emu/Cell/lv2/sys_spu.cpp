@@ -1703,32 +1703,33 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 	thread->state += cpu_flag::stop;
 
 	// Kernel objects which must be removed
-	std::unordered_map<lv2_obj*, u32, pointer_hash<lv2_obj, alignof(void*)>> to_remove;
+	std::vector<std::pair<std::shared_ptr<lv2_obj>, u32>> to_remove;
 
 	// Clear interrupt handlers
 	for (auto& intr : thread->int_ctrl)
 	{
-		if (const auto tag = intr.tag.lock())
+		if (auto tag = intr.tag.lock())
 		{
 			if (auto handler = tag->handler.lock())
 			{
 				// SLEEP
 				handler->join();
-				to_remove.emplace(handler.get(), 0);
+				to_remove.emplace_back(std::move(handler), 0);
 			}
 
-			to_remove.emplace(tag.get(), 0);
+			to_remove.emplace_back(std::move(tag), 0);
 		}
 	}
 
 	// Scan all kernel objects to determine IDs
 	idm::select<lv2_obj>([&](u32 id, lv2_obj& obj)
 	{
-		const auto found = to_remove.find(&obj);
-
-		if (found != to_remove.end())
+		for (auto& pair : to_remove)
 		{
-			found->second = id;
+			if (pair.first.get() == std::addressof(obj))
+			{
+				pair.second = id;
+			}
 		}
 	});
 
@@ -1736,12 +1737,17 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 	for (auto&& pair : to_remove)
 	{
 		if (pair.second >> 24 == 0xa)
-			idm::remove<lv2_obj, lv2_int_tag>(pair.second);
+			idm::remove_verify<lv2_obj, lv2_int_tag>(pair.second, std::move(pair.first));
 		if (pair.second >> 24 == 0xb)
-			idm::remove<lv2_obj, lv2_int_serv>(pair.second);
+			idm::remove_verify<lv2_obj, lv2_int_serv>(pair.second, std::move(pair.first));
 	}
 
-	idm::remove<named_thread<spu_thread>>(thread->id);
+	if (!idm::remove_verify<named_thread<spu_thread>>(thread->id, std::move(thread)))
+	{
+		// Other thread destroyed beforehead
+		return CELL_ESRCH;
+	}
+
 	return CELL_OK;
 }
 

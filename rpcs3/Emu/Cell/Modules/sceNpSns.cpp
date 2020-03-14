@@ -117,14 +117,10 @@ error_code sceNpSnsFbDestroyHandle(u32 handle)
 		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
 	}
 
-	const auto sfh = idm::get<sns_fb_handle_t>(handle);
-
-	if (!sfh)
+	if (!idm::remove<sns_fb_handle_t>(handle))
 	{
 		return SCE_NP_SNS_FB_ERROR_UNKNOWN_HANDLE;
 	}
-
-	idm::remove<sns_fb_handle_t>(handle);
 
 	return CELL_OK;
 }

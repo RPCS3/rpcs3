@@ -67,25 +67,18 @@ extern atomic_t<const char*> g_progr;
 extern atomic_t<u32> g_progr_ptotal;
 extern atomic_t<u32> g_progr_pdone;
 
-enum class join_status : u32
-{
-	joinable = 0,
-	detached = 0u-1,
-	exited = 0u-2,
-	zombie = 0u-3,
-};
-
 template <>
-void fmt_class_string<join_status>::format(std::string& out, u64 arg)
+void fmt_class_string<ppu_join_status>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](join_status js)
+	format_enum(out, arg, [](ppu_join_status js)
 	{
 		switch (js)
 		{
-		case join_status::joinable: return "";
-		case join_status::detached: return "detached";
-		case join_status::zombie: return "zombie";
-		case join_status::exited: return "exited";
+		case ppu_join_status::joinable: return "";
+		case ppu_join_status::detached: return "detached";
+		case ppu_join_status::zombie: return "zombie";
+		case ppu_join_status::exited: return "exited";
+		case ppu_join_status::max: break;
 		}
 
 		return unknown;
@@ -429,7 +422,7 @@ std::string ppu_thread::dump() const
 	std::string ret = cpu_thread::dump();
 	fmt::append(ret, "Priority: %d\n", +prio);
 	fmt::append(ret, "Stack: 0x%x..0x%x\n", stack_addr, stack_addr + stack_size - 1);
-	fmt::append(ret, "Joiner: %s\n", join_status(joiner.load()));
+	fmt::append(ret, "Joiner: %s\n", joiner.load());
 	fmt::append(ret, "Commands: %u\n", cmd_queue.size());
 
 	const char* _func = current_function;
@@ -705,7 +698,7 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	, prio(prio)
 	, stack_size(param.stack_size)
 	, stack_addr(param.stack_addr)
-	, joiner(-!!detached)
+	, joiner(detached != 0 ? ppu_join_status::detached : ppu_join_status::joinable)
 	, start_time(get_guest_system_time())
 	, ppu_tname(stx::shared_cptr<std::string>::make(name))
 {

@@ -21,6 +21,15 @@ enum class ppu_cmd : u32
 	reset_stack, // resets stack address
 };
 
+enum class ppu_join_status : u32
+{
+	joinable = 0,
+	detached = 1,
+	zombie = 2,
+	exited = 3,
+	max = 4, // Values above it indicate PPU id of joining thread
+};
+
 // Formatting helper
 enum class ppu_syscall_code : u64
 {
@@ -169,7 +178,7 @@ public:
 	const u32 stack_size; // Stack size
 	const u32 stack_addr; // Stack address
 
-	atomic_t<u32> joiner{~0u}; // Joining thread (-1 if detached)
+	atomic_t<ppu_join_status> joiner; // Joining thread or status
 
 	lf_fifo<atomic_t<cmd64>, 127> cmd_queue; // Command queue for asynchronous operations.
 
@@ -193,6 +202,8 @@ public:
 	static u32 stack_push(u32 size, u32 align_v);
 	static void stack_pop_verbose(u32 addr, u32 size) noexcept;
 };
+
+static_assert(ppu_join_status::max <= ppu_join_status{ppu_thread::id_base});
 
 template<typename T, typename = void>
 struct ppu_gpr_cast_impl

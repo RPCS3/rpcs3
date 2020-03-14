@@ -948,7 +948,10 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 		return;
 	}
 
-	const auto final = std::string(inst) + (lk ? "l" : "") + (aa ? "a" : "") + sign;
+	std::string final = inst;
+	if (lk) final += 'l';
+	if (aa) final += 'a';
+	if (sign) final += sign;
 
 	// Check if need to display full BI value
 	if (sign == 't' || sign == 'f')
@@ -1043,7 +1046,8 @@ void PPUDisAsm::BCLR(ppu_opcode_t op)
 		return;
 	}
 
-	const auto final = std::string(inst) + (lk ? "lrl" : "lr") + sign;
+	std::string final = std::string(inst) + (lk ? "lrl" : "lr");
+	if (sign) final += sign;
 
 	// Check if need to display full BI value
 	if (sign == 't' || sign == 'f')
@@ -1146,7 +1150,11 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 		return;
 	}
 
-	DisAsm_CR_BRANCH(std::string(inst) + (lk ? "ctrl" : "clr") + sign, bi / 4, bh);
+	std::string final = inst;
+	final += lk ? "ctrl"sv : "ctr"sv;
+	if (sign) final += sign;
+
+	DisAsm_CR_BRANCH(final, bi / 4, bh);
 }
 
 void PPUDisAsm::RLWIMI(ppu_opcode_t op)

@@ -12,11 +12,11 @@ namespace vfs
 	// Convert VFS path to fs path, optionally listing directories mounted in it
 	std::string get(std::string_view vpath, std::vector<std::string>* out_dir = nullptr, std::string* out_path = nullptr);
 
-	// Escape VFS path by replacing non-portable characters with surrogates
-	std::string escape(std::string_view path, bool escape_slash = false);
+	// Escape VFS name by replacing non-portable characters with surrogates
+	std::string escape(std::string_view name, bool escape_slash = false);
 
 	// Invert escape operation
-	std::string unescape(std::string_view path);
+	std::string unescape(std::string_view name);
 
 	// Functions in this namespace operate on host filepaths, similar to fs::
 	namespace host
