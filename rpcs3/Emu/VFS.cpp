@@ -280,6 +280,16 @@ using char2 = char;
 std::string vfs::escape(std::string_view path, bool escape_slash)
 {
 	std::string result;
+
+	if (path.size() > 2 && path.find_first_not_of('.') == umax)
+	{
+		// Path contains only dots, not allowed on Windows.
+		result.reserve(path.size() + 2);
+		result += reinterpret_cast<const char*>(u8"．");
+		result += path.substr(1);
+		return result;
+	}
+
 	result.reserve(path.size());
 
 	for (std::size_t i = 0, s = path.size(); i < s; i++)
@@ -492,6 +502,11 @@ std::string vfs::unescape(std::string_view path)
 						i += 3;
 						result += c;
 						continue;
+					}
+					case char2{u8"．"[2]}:
+					{
+						result += '.';
+						break;
 					}
 					case char2{u8"＜"[2]}:
 					{
