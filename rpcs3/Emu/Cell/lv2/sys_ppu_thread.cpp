@@ -60,7 +60,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 			status = ppu_join_status::exited;
 		});
 
-		if (old_status > ppu_join_status::max)
+		if (old_status >= ppu_join_status::max)
 		{
 			lv2_obj::append(idm::check_unlocked<named_thread<ppu_thread>>(static_cast<u32>(old_status)));
 		}
@@ -114,7 +114,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 				return CELL_ESRCH;
 			}
 
-			if (value > ppu_join_status::max)
+			if (value >= ppu_join_status::max)
 			{
 				return CELL_EINVAL;
 			}
@@ -191,7 +191,7 @@ error_code sys_ppu_thread_detach(u32 thread_id)
 				return CELL_EINVAL;
 			}
 
-			if (value > ppu_join_status::max)
+			if (value >= ppu_join_status::max)
 			{
 				return CELL_EBUSY;
 			}

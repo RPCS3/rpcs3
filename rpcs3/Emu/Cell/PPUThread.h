@@ -203,7 +203,7 @@ public:
 	static void stack_pop_verbose(u32 addr, u32 size) noexcept;
 };
 
-static_assert(ppu_join_status::max < ppu_join_status{ppu_thread::id_base});
+static_assert(ppu_join_status::max <= ppu_join_status{ppu_thread::id_base});
 
 template<typename T, typename = void>
 struct ppu_gpr_cast_impl
