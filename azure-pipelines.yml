@@ -5,6 +5,10 @@ trigger:
   tags:
     exclude:
       - '*'
+pr:
+  branches:
+    include:
+      - master
 jobs:
 - job: Linux_Build
   strategy:
@@ -25,7 +29,7 @@ jobs:
       key: ccache | $(Agent.OS) | $(COMPILER)
       path: $(CCACHE_DIR)
     displayName: Ccache
-  
+
   - bash: |
       docker pull --quiet rpcs3/rpcs3-travis-xenial:1.2
       docker run                      \
@@ -36,5 +40,5 @@ jobs:
         rpcs3/rpcs3-travis-xenial:1.2 \
         /bin/bash -ex /rpcs3/.travis/build-linux.bash
     displayName: Docker setup and build
-    
+
   - publish: $(Build.ArtifactStagingDirectory)
