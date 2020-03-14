@@ -74,6 +74,7 @@
     <ClCompile Include="Emu\Io\KeyboardHandler.cpp" />
     <ClCompile Include="Emu\Io\pad_config.cpp" />
     <ClCompile Include="Emu\Io\pad_config_types.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp" />
@@ -439,6 +440,7 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_fonts.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_message_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_osk.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_osk_panel.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_perf_metrics.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_save_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_shader_compile_notification.h" />

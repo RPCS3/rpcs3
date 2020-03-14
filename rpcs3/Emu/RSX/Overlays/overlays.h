@@ -65,6 +65,8 @@ namespace rsx
 				cross,
 				L1,
 				R1,
+				L2,
+				R2,
 
 				pad_button_max_enum
 			};
