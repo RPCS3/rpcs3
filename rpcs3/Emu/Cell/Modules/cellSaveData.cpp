@@ -1648,8 +1648,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			break;
 		}
 
-		psf.emplace("*" + file_path, fileSet->fileType == CELL_SAVEDATA_FILETYPE_SECUREFILE);
-
 		// clang-format off
 		auto add_to_blist = [&](const std::string& to_add)
 		{
@@ -1806,6 +1804,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		if (savedata_result)
 		{
 			break;
+		}
+
+		if (fileSet->fileOperation != CELL_SAVEDATA_FILEOP_DELETE)
+		{
+			psf.emplace("*" + file_path, fileSet->fileType == CELL_SAVEDATA_FILETYPE_SECUREFILE);
 		}
 	}
 
