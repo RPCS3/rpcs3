@@ -261,14 +261,20 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 		return {};
 	}
 
-	// Escape and merge path fragments
+	// Merge path fragments
 	if (out_path)
 	{
 		*out_path =  "/";
 		*out_path += fmt::merge(name_list, "/");
 	}
 
-	return std::string{result_base} + vfs::escape(fmt::merge(result, "/"));
+	// Escape for host FS
+	std::vector<std::string> escaped;
+	escaped.reserve(result.size());
+	for (auto& sv : result)
+		escaped.emplace_back(vfs::escape(sv));
+
+	return std::string{result_base} + fmt::merge(escaped, "/");
 }
 
 #if __cpp_char8_t >= 201811
