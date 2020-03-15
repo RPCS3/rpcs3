@@ -76,7 +76,7 @@ namespace rsx
 		{
 			ASSERT(m_panel_index < m_panels.size());
 
-			const auto panel = m_panels[m_panel_index];
+			const auto& panel = m_panels[m_panel_index];
 
 			num_rows = panel.num_rows;
 			num_columns = panel.num_columns;
@@ -91,6 +91,8 @@ namespace rsx
 			num_shift_layers_by_charset.clear();
 
 			const position2u grid_origin = { m_frame.x, m_frame.y + 30u + m_preview.h };
+
+			const u32 old_index = (selected_y * num_columns) + selected_x;
 
 			u32 index = 0;
 
@@ -189,12 +191,15 @@ namespace rsx
 				verify(HERE), num_shift_layers_by_charset[layer];
 			}
 
-			// TODO: Should just scan for the first enabled cell
-			selected_x = selected_y = selected_z = 0;
-			m_grid[0].selected = true;
+			// Reset to first shift layer in the first charset, because the panel changed and we don't know if the layers are similar between panels.
 			m_selected_charset = 0;
+			selected_z = 0;
 
+			// Enable/Disable the control buttons based on the current layout.
 			update_controls();
+
+			// Roughly keep x and y selection in grid if possible. Jumping to (0,0) would be annoying. Needs to be done after updating the control buttons.
+			update_selection_by_index(old_index);
 
 			m_update = true;
 		}
@@ -318,38 +323,44 @@ namespace rsx
 			m_update = true;
 		}
 
-		void osk_dialog::on_button_pressed(pad_button button_press)
+		std::pair<u32, u32> osk_dialog::get_cell_geometry(u32 index)
 		{
 			const auto index_limit = (num_columns * num_rows) - 1;
+			u32 start_index = index;
+			u32 count = 0;
 
-			auto get_cell_geometry = [&](u32 index)
+			while (start_index > index_limit && start_index >= num_columns)
 			{
-				u32 start_index = index, count = 0;
+				// Try one row above
+				start_index -= num_columns;
+			}
 
-				// Find first cell
-				while (!(m_grid[start_index].flags & border_flags::left) && start_index)
+			// Find first cell
+			while (!(m_grid[start_index].flags & border_flags::left) && start_index)
+			{
+				--start_index;
+			}
+
+			// Find last cell
+			while (true)
+			{
+				const auto current_index = (start_index + count);
+				verify(HERE), current_index <= index_limit;
+
+				if (m_grid[current_index].flags & border_flags::right)
 				{
-					start_index--;
+					++count;
+					break;
 				}
 
-				// Find last cell
-				while (true)
-				{
-					const auto current_index = (start_index + count);
-					verify(HERE), current_index <= index_limit;
+				++count;
+			}
 
-					if (m_grid[current_index].flags & border_flags::right)
-					{
-						count++;
-						break;
-					}
+			return std::make_pair(start_index, count);
+		}
 
-					count++;
-				}
-
-				return std::make_pair(start_index, count);
-			};
-
+		void osk_dialog::update_selection_by_index(u32 index)
+		{
 			auto select_cell = [&](u32 index, bool state)
 			{
 				const auto info = get_cell_geometry(index);
@@ -361,17 +372,19 @@ namespace rsx
 				}
 			};
 
-			auto decode_index = [&](u32 index)
-			{
-				// 1. Deselect current
-				auto current_index = (selected_y * num_columns) + selected_x;
-				select_cell(current_index, false);
+			// 1. Deselect current
+			const auto current_index = (selected_y * num_columns) + selected_x;
+			select_cell(current_index, false);
 
-				// 2. Select new
-				selected_y = index / num_columns;
-				selected_x = index % num_columns;
-				select_cell(index, true);
-			};
+			// 2. Select new
+			selected_y = index / num_columns;
+			selected_x = index % num_columns;
+			select_cell(index, true);
+		}
+
+		void osk_dialog::on_button_pressed(pad_button button_press)
+		{
+			const auto index_limit = (num_columns * num_rows) - 1;
 
 			auto on_accept = [&]()
 			{
@@ -430,7 +443,7 @@ namespace rsx
 
 					if (m_grid[get_cell_geometry(current_index).first].enabled)
 					{
-						decode_index(current_index);
+						update_selection_by_index(current_index);
 						m_update = true;
 						break;
 					}
@@ -450,7 +463,7 @@ namespace rsx
 
 						if (m_grid[get_cell_geometry(current_index).first].enabled)
 						{
-							decode_index(current_index);
+							update_selection_by_index(current_index);
 							m_update = true;
 							break;
 						}
@@ -475,7 +488,7 @@ namespace rsx
 
 					if (m_grid[get_cell_geometry(current_index).first].enabled)
 					{
-						decode_index(current_index);
+						update_selection_by_index(current_index);
 						m_update = true;
 						break;
 					}
@@ -490,7 +503,7 @@ namespace rsx
 					current_index -= num_columns;
 					if (m_grid[get_cell_geometry(current_index).first].enabled)
 					{
-						decode_index(current_index);
+						update_selection_by_index(current_index);
 						m_update = true;
 						break;
 					}

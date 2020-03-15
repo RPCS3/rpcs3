@@ -89,6 +89,7 @@ namespace rsx
 			void update() override;
 
 			void update_controls();
+			void update_selection_by_index(u32 index);
 
 			void on_button_pressed(pad_button button_press) override;
 			void on_text_changed();
@@ -101,6 +102,8 @@ namespace rsx
 			void on_enter(const std::u32string&);
 
 			std::u32string get_placeholder();
+
+			std::pair<u32, u32> get_cell_geometry(u32 index);
 
 			compiled_resource get_compiled() override;
 		};
