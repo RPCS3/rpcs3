@@ -558,6 +558,11 @@ namespace rsx
 
 		void osk_dialog::on_default_callback(const std::u32string& str)
 		{
+			if (str.empty())
+			{
+				return;
+			}
+
 			// Append to output text
 			if (m_preview.text == get_placeholder())
 			{
