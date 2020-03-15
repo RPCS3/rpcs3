@@ -521,7 +521,11 @@ void log_frame::UpdateUI()
 	const auto font_start_tag = [](const QColor& color) -> const QString { return QStringLiteral("<font color = \"") % color.name() % QStringLiteral("\">"); };
 	const QString font_start_tag_stack = "<font color = \"" % m_color_stack.name() % "\">";
 	const QString font_end_tag = QStringLiteral("</font>");
-	const QString br_tag = QStringLiteral("<br/>");
+
+	static constexpr auto escaped = [](QString& text)
+	{
+		return text.toHtmlEscaped().replace(QStringLiteral("\n"), QStringLiteral("<br/>"));
+	};
 
 	// Check main logs
 	while (auto* packet = s_gui_listener.get())
@@ -570,7 +574,7 @@ void log_frame::UpdateUI()
 				{
 					text_cursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
 					text_cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
-					text_cursor.insertHtml(font_start_tag(m_color[static_cast<int>(packet->sev)]) % text.replace("\n", br_tag) % font_start_tag_stack % QStringLiteral(" x") % QString::number(++m_log_counter) % font_end_tag % font_end_tag);
+					text_cursor.insertHtml(font_start_tag(m_color[static_cast<int>(packet->sev)]) % escaped(text) % font_start_tag_stack % QStringLiteral(" x") % QString::number(++m_log_counter) % font_end_tag % font_end_tag);
 				}
 				else
 				{
@@ -578,13 +582,13 @@ void log_frame::UpdateUI()
 					m_old_log_text = text;
 
 					m_log->setTextCursor(text_cursor);
-					m_log->appendHtml(font_start_tag(m_color[static_cast<int>(packet->sev)]) % text.replace("\n", br_tag) % font_end_tag);
+					m_log->appendHtml(font_start_tag(m_color[static_cast<int>(packet->sev)]) % escaped(text) % font_end_tag);
 				}
 			}
 			else
 			{
 				m_log->setTextCursor(text_cursor);
-				m_log->appendHtml(font_start_tag(m_color[static_cast<int>(packet->sev)]) % text.replace("\n", br_tag) % font_end_tag);
+				m_log->appendHtml(font_start_tag(m_color[static_cast<int>(packet->sev)]) % escaped(text) % font_end_tag);
 			}
 
 			// if we mark text from right to left we need to swap sides (start is always smaller than end)
