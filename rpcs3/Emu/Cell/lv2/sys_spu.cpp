@@ -1690,7 +1690,12 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 
 	sys_spu.warning("sys_raw_spu_destroy(id=%d)", id);
 
-	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
+	auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id), [](named_thread<spu_thread>& thread)
+	{
+		// Stop thread
+		thread.state += cpu_flag::exit;
+		thread = thread_state::aborting;
+	});
 
 	if (!thread) [[unlikely]]
 	{
@@ -1698,9 +1703,6 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 	}
 
 	// TODO: CELL_EBUSY is not returned
-
-	// Stop thread
-	thread->state += cpu_flag::stop;
 
 	// Kernel objects which must be removed
 	std::vector<std::pair<std::shared_ptr<lv2_obj>, u32>> to_remove;
@@ -1742,7 +1744,7 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 			idm::remove_verify<lv2_obj, lv2_int_serv>(pair.second, std::move(pair.first));
 	}
 
-	if (!idm::remove_verify<named_thread<spu_thread>>(thread->id, std::move(thread)))
+	if (!idm::remove_verify<named_thread<spu_thread>>(id, std::move(thread)))
 	{
 		// Other thread destroyed beforehead
 		return CELL_ESRCH;
@@ -1770,7 +1772,7 @@ error_code sys_raw_spu_create_interrupt_tag(ppu_thread& ppu, u32 id, u32 class_i
 
 		auto thread = idm::check_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-		if (!thread)
+		if (!thread || *thread == thread_state::aborting)
 		{
 			error = CELL_ESRCH;
 			return result;

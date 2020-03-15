@@ -955,14 +955,15 @@ void spu_int_ctrl_t::set(u64 ints)
 	ints &= mask;
 
 	// notify if at least 1 bit was set
-	if (ints && ~stat.fetch_or(ints) & ints && !tag.expired())
+	if (ints && ~stat.fetch_or(ints) & ints)
 	{
-		reader_lock rlock(id_manager::g_mutex);
+		std::shared_lock rlock(id_manager::g_mutex);
 
 		if (const auto tag_ptr = tag.lock())
 		{
 			if (auto handler = tag_ptr->handler.lock())
 			{
+				rlock.unlock();
 				handler->exec();
 			}
 		}
