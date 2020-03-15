@@ -164,7 +164,7 @@ namespace rsx
 				{{{U"", U""}, {U"", U""}, {U"", U""}, {U""}}, default_bg, 1},
 
 				// Special
-				{{{U"あ/ア"}, {U"A/a"}, {U"全/半"}, {U""}}, special2_bg, 2, button_flags::_shift, shift_cb },
+				{{{U"あ/ア"}, {U"A/a"}, {U"Ａ/ａ"}, {U""}}, special2_bg, 2, button_flags::_shift, shift_cb },
 				{{{U"abc"}, {U"全半"}, {U"＠％"}, {U"あア"}}, special2_bg, 2, button_flags::_layer, layer_cb},
 				{{{U"Space"}, {U"Space"}, {U"Space"}, {U"Space"}}, special_bg, 2, button_flags::_space, space_cb},
 				{{{U"Backspace"}, {U"Backspace"}, {U"Backspace"}, {U"Backspace"}}, special_bg, 2, button_flags::_default, delete_cb },
