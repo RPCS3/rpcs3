@@ -150,6 +150,8 @@ error_code _sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih, vm::ptr<u
 		return CELL_ESRCH;
 	}
 
+	lv2_obj::sleep(ppu);
+
 	// Wait for sys_interrupt_thread_eoi() and destroy interrupt thread
 	handler->join();
 

@@ -1715,6 +1715,7 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 			if (auto handler = tag->handler.lock())
 			{
 				// SLEEP
+				lv2_obj::sleep(ppu);
 				handler->join();
 				to_remove.emplace_back(std::move(handler), 0);
 			}
