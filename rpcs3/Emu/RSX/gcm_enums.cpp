@@ -695,18 +695,6 @@ rsx::stencil_op rsx::to_stencil_op(u16 in)
 	fmt::throw_exception("Unknown stencil op 0x%x" HERE, in);
 }
 
-enum
-{
-	CELL_GCM_FUNC_ADD = 0x8006,
-	CELL_GCM_MIN = 0x8007,
-	CELL_GCM_MAX = 0x8008,
-	CELL_GCM_FUNC_SUBTRACT = 0x800A,
-	CELL_GCM_FUNC_REVERSE_SUBTRACT = 0x800B,
-	CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED = 0x0000F005,
-	CELL_GCM_FUNC_ADD_SIGNED = 0x0000F006,
-	CELL_GCM_FUNC_REVERSE_ADD_SIGNED = 0x0000F007,
-};
-
 rsx::blend_equation rsx::to_blend_equation(u16 in)
 {
 	switch (in)
