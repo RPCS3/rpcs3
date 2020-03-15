@@ -66,6 +66,11 @@ namespace rsx
 			{
 				return language_class::hangul;
 			}
+			case 0xFF: // Halfwidth and Fullwidth Forms
+			{
+				// Found in SCE-PS3-SR-R-JPN.TTF, so we'll use cjk_base for now
+				return language_class::cjk_base;
+			}
 			default:
 			{
 				if (codepage_id >= 0xAC && codepage_id <= 0xD7)
