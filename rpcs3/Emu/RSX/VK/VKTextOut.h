@@ -2,6 +2,7 @@
 #include "VKHelpers.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
+#include "VKRenderPass.h"
 #include "../Common/TextGlyphs.h"
 
 namespace vk
@@ -346,23 +347,13 @@ namespace vk
 			//TODO: Add drop shadow if deemed necessary for visibility
 			load_program(cmd, scale_x, scale_y, shader_offsets.data(), counts.size(), color);
 
-			VkRenderPassBeginInfo rp_begin = {};
-			rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			rp_begin.renderPass = m_render_pass;
-			rp_begin.framebuffer = target.value;
-			rp_begin.renderArea.offset.x = 0;
-			rp_begin.renderArea.offset.y = 0;
-			rp_begin.renderArea.extent.width = target.width();
-			rp_begin.renderArea.extent.height = target.height();
-
-			vkCmdBeginRenderPass(cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+			const coordu viewport = { positionu{0u, 0u}, sizeu{target.width(), target.height() } };
+			vk::begin_renderpass(cmd, m_render_pass, target.value, viewport);
 
 			for (uint i = 0; i < counts.size(); ++i)
 			{
 				vkCmdDraw(cmd, counts[i], 1, offsets[i], i);
 			}
-
-			vkCmdEndRenderPass(cmd);
 		}
 
 		void reset_descriptors()
