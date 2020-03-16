@@ -106,7 +106,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(_sys_process_exit2),                          //26  (0x01A)
 	BIND_FUNC(sys_process_spawns_a_self2),                  //27  (0x01B)  DBG
 	null_func,//BIND_FUNC(_sys_process_get_number_of_object)//28  (0x01C)  ROOT
-	BIND_FUNC(sys_process_get_id2),                          //29  (0x01D)  ROOT
+	BIND_FUNC(sys_process_get_id2),                         //29  (0x01D)  ROOT
 	BIND_FUNC(_sys_process_get_paramsfo),                   //30  (0x01E)
 	null_func,//BIND_FUNC(sys_process_get_ppu_guid),        //31  (0x01F)
 
@@ -121,8 +121,8 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_ppu_thread_set_priority),                 //47  (0x02F)  DBG
 	BIND_FUNC(sys_ppu_thread_get_priority),                 //48  (0x030)
 	BIND_FUNC(sys_ppu_thread_get_stack_information),        //49  (0x031)
-	null_func,//BIND_FUNC(sys_ppu_thread_stop),             //50  (0x032)  ROOT
-	null_func,//BIND_FUNC(sys_ppu_thread_restart),          //51  (0x033)  ROOT
+	BIND_FUNC(sys_ppu_thread_stop),                         //50  (0x032)  ROOT
+	BIND_FUNC(sys_ppu_thread_restart),                      //51  (0x033)  ROOT
 	BIND_FUNC(_sys_ppu_thread_create),                      //52  (0x034)  DBG
 	BIND_FUNC(sys_ppu_thread_start),                        //53  (0x035)
 	null_func,//BIND_FUNC(sys_ppu_...),                     //54  (0x036)  ROOT
