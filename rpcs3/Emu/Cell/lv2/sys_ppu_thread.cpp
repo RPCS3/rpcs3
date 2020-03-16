@@ -78,11 +78,12 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 	}
 }
 
-void sys_ppu_thread_yield(ppu_thread& ppu)
+s32 sys_ppu_thread_yield(ppu_thread& ppu)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_yield()");
 
-	lv2_obj::yield(ppu);
+	// Return 1 on no-op, 0 on successful context switch
+	return +!lv2_obj::yield(ppu);
 }
 
 error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
