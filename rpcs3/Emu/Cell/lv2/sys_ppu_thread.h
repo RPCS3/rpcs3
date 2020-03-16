@@ -56,7 +56,7 @@ enum : u32
 // Syscalls
 
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode);
-void sys_ppu_thread_yield(ppu_thread& ppu);
+s32 sys_ppu_thread_yield(ppu_thread& ppu); // Return value is ignored by the library
 error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr);
 error_code sys_ppu_thread_detach(u32 thread_id);
 error_code sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable); // Error code is ignored by the library

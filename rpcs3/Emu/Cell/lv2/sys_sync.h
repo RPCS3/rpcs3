@@ -130,7 +130,7 @@ private:
 	static void sleep_unlocked(cpu_thread&, u64 timeout);
 
 	// Schedule the thread
-	static void awake_unlocked(cpu_thread*, s32 prio = enqueue_cmd);
+	static bool awake_unlocked(cpu_thread*, s32 prio = enqueue_cmd);
 
 public:
 	static void sleep(cpu_thread& cpu, const u64 timeout = 0)
@@ -140,16 +140,17 @@ public:
 		g_to_awake.clear();
 	}
 
-	static inline void awake(cpu_thread* const thread, s32 prio = enqueue_cmd)
+	static inline bool awake(cpu_thread* const thread, s32 prio = enqueue_cmd)
 	{
 		std::lock_guard lock(g_mutex);
-		awake_unlocked(thread, prio);
+		return awake_unlocked(thread, prio);
 	}
 
-	static void yield(cpu_thread& thread)
+	// Returns true and success, false if did nothing
+	static bool yield(cpu_thread& thread)
 	{
 		vm::temporary_unlock(thread);
-		awake(&thread, yield_cmd);
+		return awake(&thread, yield_cmd);
 	}
 
 	static void set_priority(cpu_thread& thread, s32 prio)
