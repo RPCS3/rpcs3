@@ -1014,6 +1014,21 @@ std::string spu_thread::dump() const
 	std::string ret = cpu_thread::dump();
 
 	fmt::append(ret, "\nBlock Weight: %u (Retreats: %u)", block_counter, block_failure);
+
+	if (g_cfg.core.spu_prof)
+	{
+		// Get short function hash
+		const u64 name = atomic_storage<u64>::load(block_hash);
+
+		fmt::append(ret, "\nCurrent block: %s", fmt::base57(be_t<u64>{name}));
+
+		// Print only 7 hash characters out of 11 (which covers roughly 48 bits)
+		ret.resize(ret.size() - 4);
+
+		// Print chunk address from lowest 16 bits
+		fmt::append(ret, "...chunk-0x%05x", (name & 0xffff) * 4);
+	}
+
 	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
 	fmt::append(ret, "\nLocal Storage: 0x%08x..0x%08x", offset, offset + 0x3ffff);
 	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
