@@ -194,7 +194,14 @@ struct cfg_root : cfg::node
 	{
 		node_audio(cfg::node* _this) : cfg::node(_this, "Audio") {}
 
-		cfg::_enum<audio_renderer> renderer{ this, "Renderer", static_cast<audio_renderer>(1) };
+		cfg::_enum<audio_renderer> renderer{ this, "Renderer",
+#ifdef _WIN32
+			audio_renderer::xaudio };
+#elif HAVE_FAUDIO
+			audio_renderer::faudio };
+#else
+			audio_renderer::openal };
+#endif
 
 		cfg::_bool dump_to_file{ this, "Dump to file" };
 		cfg::_bool convert_to_u16{ this, "Convert to 16 bit" };
