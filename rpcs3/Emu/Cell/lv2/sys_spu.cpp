@@ -1690,7 +1690,9 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 
 	sys_spu.warning("sys_raw_spu_destroy(id=%d)", id);
 
-	auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id), [](named_thread<spu_thread>& thread)
+	const u32 idm_id = spu_thread::find_raw_spu(id);
+
+	auto thread = idm::get<named_thread<spu_thread>>(idm_id, [](named_thread<spu_thread>& thread)
 	{
 		// Stop thread
 		thread.state += cpu_flag::exit;
@@ -1745,7 +1747,9 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 			idm::remove_verify<lv2_obj, lv2_int_serv>(pair.second, std::move(pair.first));
 	}
 
-	if (!idm::remove_verify<named_thread<spu_thread>>(id, std::move(thread)))
+	(*thread)();
+
+	if (!idm::remove_verify<named_thread<spu_thread>>(idm_id, std::move(thread)))
 	{
 		// Other thread destroyed beforehead
 		return CELL_ESRCH;
