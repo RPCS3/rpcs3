@@ -14,6 +14,7 @@
 
 #include <deque>
 #include <thread>
+#include <string_view>
 
 // attr_protocol (waiting scheduling policy)
 enum
@@ -74,6 +75,18 @@ private:
 	};
 
 public:
+
+	static std::string_view name64(const u64& name_u64)
+	{
+		std::string_view str{reinterpret_cast<const char*>(&name_u64), 7};
+
+		if (const auto pos = str.find_first_of('\0'); pos != umax)
+		{
+			str.remove_suffix(str.size() - pos);
+		}
+
+		return str;
+	};
 
 	// Find and remove the object from the container (deque or vector)
 	template <typename T, typename E>
