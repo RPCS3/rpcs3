@@ -84,12 +84,11 @@ struct cpu_prof
 		void print(u32 id) const
 		{
 			// Make reversed map: sample_count -> name
-			std::multimap<u64, u64> chart;
+			std::multimap<u64, u64, std::greater<u64>> chart;
 
 			for (auto& [name, count] : freq)
 			{
-				// Inverse bits to sort in descending order
-				chart.emplace(~count, name);
+				chart.emplace(count, name);
 			}
 
 			// Print results
@@ -99,10 +98,8 @@ struct cpu_prof
 			// Fraction of non-idle samples
 			const f64 busy = 1. * (samples - idle) / samples;
 
-			for (auto& [rcount, name] : chart)
+			for (auto& [count, name] : chart)
 			{
-				// Get correct count value
-				const u64 count = ~rcount;
 				const f64 _frac = count / busy / samples;
 
 				// Print only 7 hash characters out of 11 (which covers roughly 48 bits)
