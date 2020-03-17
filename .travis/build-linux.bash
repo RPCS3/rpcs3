@@ -21,12 +21,24 @@ if [ $COMPILER = "gcc" ]; then
 	# These are set in the dockerfile
 	export CC=${GCC_BINARY}
 	export CXX=${GXX_BINARY}
+	export LINKER=gold
+	# We need to set the following variables for LTO to link properly
+	export AR=/usr/bin/gcc-ar-9
+	export RANLIB=/usr/bin/gcc-ranlib-9
 else
 	export CC=${CLANG_BINARY}
 	export CXX=${CLANGXX_BINARY}
+	export LINKER=lld
+	export AR=/usr/bin/llvm-ar-$LLVMVER
+	export RANLIB=/usr/bin/llvm-ranlib-$LLVMVER
 fi
 
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_LLVM_SUBMODULE=OFF -DUSE_COTIRE=OFF -DLLVM_DIR=llvmlibs/lib/cmake/llvm/ -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja
+# Use link time optimization to save some space
+export CFLAGS="-flto -fuse-linker-plugin -fuse-ld=${LINKER}"
+
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_LLVM_SUBMODULE=OFF -DUSE_COTIRE=OFF -DLLVM_DIR=llvmlibs/lib/cmake/llvm/ -DUSE_NATIVE_INSTRUCTIONS=OFF \
+  -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_CXX_FLAGS="$CFLAGS" -DCMAKE_AR=$AR -DCMAKE_RANLIB=$RANLIB \
+  -G Ninja
 
 ninja; build_status=$?;
 
