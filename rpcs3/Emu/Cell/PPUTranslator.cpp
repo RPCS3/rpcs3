@@ -902,8 +902,24 @@ void PPUTranslator::VLOGEFP(ppu_opcode_t op)
 
 void PPUTranslator::VMADDFP(ppu_opcode_t op)
 {
-	const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
-	SetVr(op.vd, m_ir->CreateFAdd(m_ir->CreateFMul(acb[0], acb[1]), acb[2]));
+	if (m_use_fma)
+	{
+		const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
+		SetVr(op.vd, m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { acb[0], acb[1], acb[2] }));
+		return;
+	}
+	
+	// Emulated FMA via double precision
+	auto a = get_vr<f32[4]>(op.va);
+	auto b = get_vr<f32[4]>(op.vb);
+	auto c = get_vr<f32[4]>(op.vc);
+
+	const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
+	const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
+	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
+
+	const auto xr = m_ir->CreateCall(get_intrinsic<f64[4]>(llvm::Intrinsic::fmuladd), {xa, xc, xb});
+	SetVr(op.vd, m_ir->CreateFPTrunc(xr, get_type<f32[4]>()));
 }
 
 void PPUTranslator::VMAXFP(ppu_opcode_t op)
@@ -1182,8 +1198,25 @@ void PPUTranslator::VMULOUH(ppu_opcode_t op)
 
 void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 {
-	const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
-	SetVr(op.vd, m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(acb[0], acb[1]), acb[2])));
+	// Differs from the emulated path with regards to negative zero
+	if (m_use_fma)
+	{
+		const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
+		SetVr(op.vd, m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { acb[0], acb[1], m_ir->CreateFNeg(acb[2]) })));
+		return;
+	}
+
+	// Emulated FMA via double precision
+	auto a = get_vr<f32[4]>(op.va);
+	auto b = get_vr<f32[4]>(op.vb);
+	auto c = get_vr<f32[4]>(op.vc);
+
+	const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
+	const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
+	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
+
+	const auto xr = m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(xa, xc), xb));
+	SetVr(op.vd, m_ir->CreateFPTrunc(xr, get_type<f32[4]>()));
 }
 
 void PPUTranslator::VNOR(ppu_opcode_t op)
