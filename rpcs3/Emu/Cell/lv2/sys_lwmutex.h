@@ -57,7 +57,7 @@ struct lv2_lwmutex final : lv2_obj
 
 	const u32 protocol;
 	const vm::ptr<sys_lwmutex_t> control;
-	const u64 name;
+	const be_t<u64> name;
 
 	shared_mutex mutex;
 	atomic_t<s32> signaled{0};
@@ -66,7 +66,7 @@ struct lv2_lwmutex final : lv2_obj
 	lv2_lwmutex(u32 protocol, vm::ptr<sys_lwmutex_t> control, u64 name)
 		: protocol(protocol)
 		, control(control)
-		, name(name)
+		, name(std::bit_cast<be_t<u64>>(name))
 	{
 	}
 };
