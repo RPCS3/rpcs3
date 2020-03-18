@@ -18,17 +18,17 @@ union alignas(16) v128
 	template <typename T, std::size_t N, std::size_t M>
 	struct masked_array_t // array type accessed as (index ^ M)
 	{
-		T m_data[N];
+		char m_data[16];
 
 	public:
 		T& operator[](std::size_t index)
 		{
-			return m_data[index ^ M];
+			return reinterpret_cast<T*>(m_data)[index ^ M];
 		}
 
 		const T& operator[](std::size_t index) const
 		{
-			return m_data[index ^ M];
+			return reinterpret_cast<const T*>(m_data)[index ^ M];
 		}
 	};
 
@@ -68,7 +68,7 @@ union alignas(16) v128
 
 	struct bit_array_128
 	{
-		u64 m_data[2];
+		char m_data[16];
 
 	public:
 		class bit_element
@@ -118,26 +118,30 @@ union alignas(16) v128
 		// Index 0 returns the MSB and index 127 returns the LSB
 		bit_element operator[](u32 index)
 		{
+			const auto data_ptr = reinterpret_cast<u64*>(m_data);
+
 			if constexpr (std::endian::little == std::endian::native)
 			{
-				return bit_element(m_data[1 - (index >> 6)], 0x8000000000000000ull >> (index & 0x3F));
+				return bit_element(data_ptr[1 - (index >> 6)], 0x8000000000000000ull >> (index & 0x3F));
 			}
 			else
 			{
-				return bit_element(m_data[index >> 6], 0x8000000000000000ull >> (index & 0x3F));
+				return bit_element(data_ptr[index >> 6], 0x8000000000000000ull >> (index & 0x3F));
 			}
 		}
 
 		// Index 0 returns the MSB and index 127 returns the LSB
 		bool operator[](u32 index) const
 		{
+			const auto data_ptr = reinterpret_cast<const u64*>(m_data);
+
 			if constexpr (std::endian::little == std::endian::native)
 			{
-				return (m_data[1 - (index >> 6)] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
+				return (data_ptr[1 - (index >> 6)] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
 			}
 			else
 			{
-				return (m_data[index >> 6] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
+				return (data_ptr[index >> 6] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
 			}
 		}
 	} _bit;

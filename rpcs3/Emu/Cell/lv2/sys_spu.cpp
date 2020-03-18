@@ -1690,7 +1690,14 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 
 	sys_spu.warning("sys_raw_spu_destroy(id=%d)", id);
 
-	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
+	const u32 idm_id = spu_thread::find_raw_spu(id);
+
+	auto thread = idm::get<named_thread<spu_thread>>(idm_id, [](named_thread<spu_thread>& thread)
+	{
+		// Stop thread
+		thread.state += cpu_flag::exit;
+		thread = thread_state::aborting;
+	});
 
 	if (!thread) [[unlikely]]
 	{
@@ -1699,36 +1706,35 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 
 	// TODO: CELL_EBUSY is not returned
 
-	// Stop thread
-	thread->state += cpu_flag::stop;
-
 	// Kernel objects which must be removed
-	std::unordered_map<lv2_obj*, u32, pointer_hash<lv2_obj, alignof(void*)>> to_remove;
+	std::vector<std::pair<std::shared_ptr<lv2_obj>, u32>> to_remove;
 
 	// Clear interrupt handlers
 	for (auto& intr : thread->int_ctrl)
 	{
-		if (const auto tag = intr.tag.lock())
+		if (auto tag = intr.tag.lock())
 		{
 			if (auto handler = tag->handler.lock())
 			{
 				// SLEEP
+				lv2_obj::sleep(ppu);
 				handler->join();
-				to_remove.emplace(handler.get(), 0);
+				to_remove.emplace_back(std::move(handler), 0);
 			}
 
-			to_remove.emplace(tag.get(), 0);
+			to_remove.emplace_back(std::move(tag), 0);
 		}
 	}
 
 	// Scan all kernel objects to determine IDs
 	idm::select<lv2_obj>([&](u32 id, lv2_obj& obj)
 	{
-		const auto found = to_remove.find(&obj);
-
-		if (found != to_remove.end())
+		for (auto& pair : to_remove)
 		{
-			found->second = id;
+			if (pair.first.get() == std::addressof(obj))
+			{
+				pair.second = id;
+			}
 		}
 	});
 
@@ -1736,12 +1742,19 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 	for (auto&& pair : to_remove)
 	{
 		if (pair.second >> 24 == 0xa)
-			idm::remove<lv2_obj, lv2_int_tag>(pair.second);
+			idm::remove_verify<lv2_obj, lv2_int_tag>(pair.second, std::move(pair.first));
 		if (pair.second >> 24 == 0xb)
-			idm::remove<lv2_obj, lv2_int_serv>(pair.second);
+			idm::remove_verify<lv2_obj, lv2_int_serv>(pair.second, std::move(pair.first));
 	}
 
-	idm::remove<named_thread<spu_thread>>(thread->id);
+	(*thread)();
+
+	if (!idm::remove_verify<named_thread<spu_thread>>(idm_id, std::move(thread)))
+	{
+		// Other thread destroyed beforehead
+		return CELL_ESRCH;
+	}
+
 	return CELL_OK;
 }
 
@@ -1764,7 +1777,7 @@ error_code sys_raw_spu_create_interrupt_tag(ppu_thread& ppu, u32 id, u32 class_i
 
 		auto thread = idm::check_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-		if (!thread)
+		if (!thread || *thread == thread_state::aborting)
 		{
 			error = CELL_ESRCH;
 			return result;

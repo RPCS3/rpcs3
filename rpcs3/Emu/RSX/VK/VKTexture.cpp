@@ -6,6 +6,7 @@
 #include "../rsx_utils.h"
 #include "VKFormats.h"
 #include "VKCompute.h"
+#include "VKRenderPass.h"
 
 namespace vk
 {
@@ -61,6 +62,11 @@ namespace vk
 		// Always validate
 		verify("Invalid image layout!" HERE),
 			src->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || src->current_layout == VK_IMAGE_LAYOUT_GENERAL;
+
+		if (vk::is_renderpass_open(cmd))
+		{
+			vk::end_renderpass(cmd);
+		}
 
 		switch (src->format())
 		{
@@ -142,6 +148,11 @@ namespace vk
 		verify("Invalid image layout!" HERE),
 			dst->current_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL || dst->current_layout == VK_IMAGE_LAYOUT_GENERAL;
 
+		if (vk::is_renderpass_open(cmd))
+		{
+			vk::end_renderpass(cmd);
+		}
+
 		switch (dst->format())
 		{
 		default:
@@ -209,6 +220,11 @@ namespace vk
 		{
 			copy_image(cmd, src->value, dst->value, src->current_layout, dst->current_layout, src_rect, dst_rect, mipmaps, src_aspect, dst_aspect, src_transfer_mask, dst_transfer_mask);
 			return;
+		}
+
+		if (vk::is_renderpass_open(cmd))
+		{
+			vk::end_renderpass(cmd);
 		}
 
 		if (src != dst) [[likely]]
@@ -331,6 +347,11 @@ namespace vk
 		auto preferred_src_format = (src == dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		auto preferred_dst_format = (src == dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
+		if (vk::is_renderpass_open(cmd))
+		{
+			vk::end_renderpass(cmd);
+		}
+
 		if (srcLayout != preferred_src_format)
 			change_image_layout(cmd, src, srcLayout, preferred_src_format, vk::get_image_subresource_range(0, 0, 1, 1, src_aspect));
 
@@ -369,6 +390,11 @@ namespace vk
 
 		auto preferred_src_format = (src == dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		auto preferred_dst_format = (src == dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+		if (vk::is_renderpass_open(cmd))
+		{
+			vk::end_renderpass(cmd);
+		}
 
 		//TODO: Use an array of offsets/dimensions for mipmapped blits (mipmap count > 1) since subimages will have different dimensions
 		if (srcLayout != preferred_src_format)
@@ -712,6 +738,11 @@ namespace vk
 		std::vector<VkBufferImageCopy> copy_regions;
 		std::vector<VkBufferCopy> buffer_copies;
 		copy_regions.reserve(subresource_layout.size());
+
+		if (vk::is_renderpass_open(cmd))
+		{
+			vk::end_renderpass(cmd);
+		}
 
 		for (const rsx_subresource_layout &layout : subresource_layout)
 		{

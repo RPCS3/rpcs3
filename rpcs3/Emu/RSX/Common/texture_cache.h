@@ -2681,13 +2681,27 @@ namespace rsx
 				// Reset this object's synchronization status if it is locked
 				lock.upgrade();
 
-				if (const auto found = find_cached_texture(dst_subres.surface->get_memory_range(), 0, false, false))
+				if (const auto found = find_cached_texture(dst_subres.surface->get_memory_range(), RSX_GCM_FORMAT_IGNORED, false, false))
 				{
 					if (found->is_locked())
 					{
-						verify(HERE), found->is_flushable();
-						found->touch(m_cache_update_tag);
-						update_cache_tag();
+						if (found->get_rsx_pitch() == dst.pitch)
+						{
+							// It is possible for other resource types to overlap this fbo if it only covers a small section of its max width.
+							// Blit engine read and write resources do not allow clipping and would have been recreated at the same address.
+							// TODO: In cases of clipped data, generate the blit resources in the surface cache instead.
+							if (found->get_context() == rsx::texture_upload_context::framebuffer_storage)
+							{
+								found->touch(m_cache_update_tag);
+								update_cache_tag();
+							}
+						}
+						else
+						{
+							// Unlikely situation, but the only one which would allow re-upload from CPU to overlap this section.
+							verify(HERE), !found->is_flushable();
+							found->discard(true);
+						}
 					}
 				}
 

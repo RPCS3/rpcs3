@@ -75,23 +75,6 @@ void kernel_explorer::Update()
 	root->setText(0, qstr(fmt::format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, 1.f * total_memory_usage / (1024 * 1024))));
 	m_tree->addTopLevelItem(root);
 
-	union name64
-	{
-		u64 u64_data;
-		char string[8];
-
-		name64(u64 data)
-			: u64_data(data)
-		{
-			string[7] = '\0';
-		}
-
-		const char* operator+() const
-		{
-			return string;
-		}
-	};
-
 	// TODO: FileSystem
 
 	struct lv2_obj_rec
@@ -149,21 +132,21 @@ void kernel_explorer::Update()
 		case SYS_MUTEX_OBJECT:
 		{
 			auto& mutex = static_cast<lv2_mutex&>(obj);
-			l_addTreeChild(node, qstr(fmt::format("Mutex: ID = 0x%08x \"%s\",%s Owner = 0x%x, Locks = %u, Conds = %u, Wq = %zu", id, +name64(mutex.name),
+			l_addTreeChild(node, qstr(fmt::format(u8"Mutex: ID = 0x%08x “%s”,%s Owner = 0x%x, Locks = %u, Conds = %u, Wq = %zu", id, lv2_obj::name64(mutex.name),
 				mutex.recursive == SYS_SYNC_RECURSIVE ? " Recursive," : "", mutex.owner >> 1, +mutex.lock_count, +mutex.cond_count, mutex.sq.size())));
 			break;
 		}
 		case SYS_COND_OBJECT:
 		{
 			auto& cond = static_cast<lv2_cond&>(obj);
-			l_addTreeChild(node, qstr(fmt::format("Cond: ID = 0x%08x \"%s\", Waiters = %u", id, +name64(cond.name), +cond.waiters)));
+			l_addTreeChild(node, qstr(fmt::format(u8"Cond: ID = 0x%08x “%s”, Waiters = %u", id, lv2_obj::name64(cond.name), +cond.waiters)));
 			break;
 		}
 		case SYS_RWLOCK_OBJECT:
 		{
 			auto& rw = static_cast<lv2_rwlock&>(obj);
 			const s64 val = rw.owner;
-			l_addTreeChild(node, qstr(fmt::format("RW Lock: ID = 0x%08x \"%s\", Owner = 0x%x(%d), Rq = %zu, Wq = %zu", id, +name64(rw.name),
+			l_addTreeChild(node, qstr(fmt::format(u8"RW Lock: ID = 0x%08x “%s”, Owner = 0x%x(%d), Rq = %zu, Wq = %zu", id, lv2_obj::name64(rw.name),
 				std::max<s64>(0, val >> 1), -std::min<s64>(0, val >> 1), rw.rq.size(), rw.wq.size())));
 			break;
 		}
@@ -182,7 +165,7 @@ void kernel_explorer::Update()
 		case SYS_EVENT_QUEUE_OBJECT:
 		{
 			auto& eq = static_cast<lv2_event_queue&>(obj);
-			l_addTreeChild(node, qstr(fmt::format("Event Queue: ID = 0x%08x \"%s\", %s, Key = %#llx, Events = %zu/%d, Waiters = %zu", id, +name64(eq.name),
+			l_addTreeChild(node, qstr(fmt::format(u8"Event Queue: ID = 0x%08x “%s”, %s, Key = %#llx, Events = %zu/%d, Waiters = %zu", id, lv2_obj::name64(eq.name),
 				eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.key, eq.events.size(), eq.size, eq.sq.size())));
 			break;
 		}
@@ -222,7 +205,7 @@ void kernel_explorer::Update()
 		case SYS_LWMUTEX_OBJECT:
 		{
 			auto& lwm = static_cast<lv2_lwmutex&>(obj);
-			l_addTreeChild(node, qstr(fmt::format("LWMutex: ID = 0x%08x \"%s\", Wq = %zu", id, +name64(lwm.name), lwm.sq.size())));
+			l_addTreeChild(node, qstr(fmt::format(u8"LWMutex: ID = 0x%08x “%s”, Wq = %zu", id, lv2_obj::name64(lwm.name), lwm.sq.size())));
 			break;
 		}
 		case SYS_TIMER_OBJECT:
@@ -234,20 +217,20 @@ void kernel_explorer::Update()
 		case SYS_SEMAPHORE_OBJECT:
 		{
 			auto& sema = static_cast<lv2_sema&>(obj);
-			l_addTreeChild(node, qstr(fmt::format("Semaphore: ID = 0x%08x \"%s\", Count = %d, Max Count = %d, Waiters = %#zu", id, +name64(sema.name),
+			l_addTreeChild(node, qstr(fmt::format(u8"Semaphore: ID = 0x%08x “%s”, Count = %d, Max Count = %d, Waiters = %#zu", id, lv2_obj::name64(sema.name),
 				sema.val.load(), sema.max, sema.sq.size())));
 			break;
 		}
 		case SYS_LWCOND_OBJECT:
 		{
 			auto& lwc = static_cast<lv2_lwcond&>(obj);
-			l_addTreeChild(node, qstr(fmt::format("LWCond: ID = 0x%08x \"%s\", Waiters = %zu", id, +name64(lwc.name), +lwc.waiters)));
+			l_addTreeChild(node, qstr(fmt::format(u8"LWCond: ID = 0x%08x “%s”, Waiters = %zu", id, lv2_obj::name64(lwc.name), +lwc.waiters)));
 			break;
 		}
 		case SYS_EVENT_FLAG_OBJECT:
 		{
 			auto& ef = static_cast<lv2_event_flag&>(obj);
-			l_addTreeChild(node, qstr(fmt::format("Event Flag: ID = 0x%08x \"%s\", Type = 0x%x, Pattern = 0x%llx, Wq = %zu", id, +name64(ef.name),
+			l_addTreeChild(node, qstr(fmt::format(u8"Event Flag: ID = 0x%08x “%s”, Type = 0x%x, Pattern = 0x%llx, Wq = %zu", id, lv2_obj::name64(ef.name),
 				ef.type, ef.pattern.load(), +ef.waiters)));
 			break;
 		}
@@ -271,7 +254,7 @@ void kernel_explorer::Update()
 	idm::select<named_thread<ppu_thread>>([&](u32 id, ppu_thread& ppu)
 	{
 		lv2_types.back().count++;
-		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("PPU Thread: ID = 0x%08x '%s'", id, *ppu.ppu_tname.load())));
+		l_addTreeChild(lv2_types.back().node, qstr(fmt::format(u8"PPU Thread: ID = 0x%08x “%s”", id, *ppu.ppu_tname.load())));
 	});
 
 	lv2_types.emplace_back(l_addTreeChild(root, "SPU Threads"));
@@ -279,7 +262,7 @@ void kernel_explorer::Update()
 	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
 	{
 		lv2_types.back().count++;
-		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("SPU Thread: ID = 0x%08x '%s'", spu.lv2_id, *spu.spu_tname.load())));
+		l_addTreeChild(lv2_types.back().node, qstr(fmt::format(u8"SPU Thread: ID = 0x%08x “%s”", spu.lv2_id, *spu.spu_tname.load())));
 	});
 
 	lv2_types.emplace_back(l_addTreeChild(root, "SPU Thread Groups"));
@@ -287,7 +270,7 @@ void kernel_explorer::Update()
 	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
 	{
 		lv2_types.back().count++;
-		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("SPU Thread Group: ID = 0x%08x '%s'", id, tg.name)));
+		l_addTreeChild(lv2_types.back().node, qstr(fmt::format(u8"SPU Thread Group: ID = 0x%08x “%s”", id, tg.name)));
 	});
 
 	lv2_types.emplace_back(l_addTreeChild(root, "File Descriptors"));
@@ -295,7 +278,7 @@ void kernel_explorer::Update()
 	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& fo)
 	{
 		lv2_types.back().count++;
-		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("FD: ID = 0x%08x '%s'", id, fo.name.data())));
+		l_addTreeChild(lv2_types.back().node, qstr(fmt::format(u8"FD: ID = 0x%08x “%s”", id, fo.name.data())));
 	});
 
 	for (auto&& entry : lv2_types)

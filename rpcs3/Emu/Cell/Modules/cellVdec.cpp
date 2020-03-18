@@ -116,7 +116,7 @@ struct vdec_context final
 	u32 frc_set{}; // Frame Rate Override
 	u64 next_pts{};
 	u64 next_dts{};
-	u32 ppu_tid{};
+	atomic_t<u32> ppu_tid{};
 
 	std::deque<vdec_frame> out;
 	atomic_t<u32> out_max = 60;
@@ -202,7 +202,7 @@ struct vdec_context final
 
 	void exec(ppu_thread& ppu, u32 vid)
 	{
-		ppu_tid = ppu.id;
+		ppu_tid.release(ppu.id);
 
 		// pcmd can be nullptr
 		for (auto* pcmd : in_cmd)
@@ -687,13 +687,24 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	vdec->out_max = 0;
 	vdec->in_cmd.push(vdec_close);
 
-	while (!atomic_storage<u32>::load(vdec->ppu_tid))
+	while (!vdec->ppu_tid)
 	{
 		thread_ctrl::wait_for(1000);
 	}
 
-	ppu_execute<&sys_interrupt_thread_disestablish>(ppu, vdec->ppu_tid);
-	idm::remove<vdec_context>(handle);
+	const u32 tid = vdec->ppu_tid.exchange(-1);
+
+	if (tid != umax)
+	{
+		ppu_execute<&sys_interrupt_thread_disestablish>(ppu, tid);
+	}
+
+	if (!idm::remove_verify<vdec_context>(handle, std::move(vdec)))
+	{
+		// Other thread removed it beforehead
+		return CELL_VDEC_ERROR_ARG;
+	}
+
 	return CELL_OK;
 }
 

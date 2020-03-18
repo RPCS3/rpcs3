@@ -8,6 +8,7 @@
 #include "VKResourceManager.h"
 #include "VKDMA.h"
 #include "VKCommandStream.h"
+#include "VKRenderPass.h"
 
 #include "Utilities/mutex.h"
 #include "Utilities/lockless.h"
@@ -567,6 +568,11 @@ namespace vk
 
 	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask)
 	{
+		if (vk::is_renderpass_open(cmd))
+		{
+			vk::end_renderpass(cmd);
+		}
+
 		VkBufferMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 		barrier.buffer = buffer;
@@ -587,6 +593,11 @@ namespace vk
 		VkAccessFlags src_mask, VkAccessFlags dst_mask,
 		const VkImageSubresourceRange& range)
 	{
+		if (vk::is_renderpass_open(cmd))
+		{
+			vk::end_renderpass(cmd);
+		}
+
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 		barrier.newLayout = new_layout;
@@ -603,11 +614,21 @@ namespace vk
 
 	void insert_execution_barrier(VkCommandBuffer cmd, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage)
 	{
+		if (vk::is_renderpass_open(cmd))
+		{
+			vk::end_renderpass(cmd);
+		}
+
 		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 0, nullptr);
 	}
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range)
 	{
+		if (vk::is_renderpass_open(cmd))
+		{
+			vk::end_renderpass(cmd);
+		}
+
 		//Prepare an image to match the new layout..
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -766,6 +787,10 @@ namespace vk
 		// Transition to GENERAL if this resource is both input and output
 		// TODO: This implicitly makes the target incompatible with the renderpass declaration; investigate a proper workaround
 		// TODO: This likely throws out hw optimizations on the rest of the renderpass, manage carefully
+		if (vk::is_renderpass_open(cmd))
+		{
+			vk::end_renderpass(cmd);
+		}
 
 		VkAccessFlags src_access;
 		VkPipelineStageFlags src_stage;

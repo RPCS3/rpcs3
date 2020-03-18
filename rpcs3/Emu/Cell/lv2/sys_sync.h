@@ -14,6 +14,7 @@
 
 #include <deque>
 #include <thread>
+#include <string_view>
 
 // attr_protocol (waiting scheduling policy)
 enum
@@ -75,6 +76,18 @@ private:
 
 public:
 
+	static std::string_view name64(const u64& name_u64)
+	{
+		std::string_view str{reinterpret_cast<const char*>(&name_u64), 7};
+
+		if (const auto pos = str.find_first_of('\0'); pos != umax)
+		{
+			str.remove_suffix(str.size() - pos);
+		}
+
+		return str;
+	};
+
 	// Find and remove the object from the container (deque or vector)
 	template <typename T, typename E>
 	static bool unqueue(std::deque<T*>& queue, const E& object)
@@ -130,7 +143,7 @@ private:
 	static void sleep_unlocked(cpu_thread&, u64 timeout);
 
 	// Schedule the thread
-	static void awake_unlocked(cpu_thread*, s32 prio = enqueue_cmd);
+	static bool awake_unlocked(cpu_thread*, s32 prio = enqueue_cmd);
 
 public:
 	static void sleep(cpu_thread& cpu, const u64 timeout = 0)
@@ -140,16 +153,17 @@ public:
 		g_to_awake.clear();
 	}
 
-	static inline void awake(cpu_thread* const thread, s32 prio = enqueue_cmd)
+	static inline bool awake(cpu_thread* const thread, s32 prio = enqueue_cmd)
 	{
 		std::lock_guard lock(g_mutex);
-		awake_unlocked(thread, prio);
+		return awake_unlocked(thread, prio);
 	}
 
-	static void yield(cpu_thread& thread)
+	// Returns true and success, false if did nothing
+	static bool yield(cpu_thread& thread)
 	{
 		vm::temporary_unlock(thread);
-		awake(&thread, yield_cmd);
+		return awake(&thread, yield_cmd);
 	}
 
 	static void set_priority(cpu_thread& thread, s32 prio)

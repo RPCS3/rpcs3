@@ -261,14 +261,20 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 		return {};
 	}
 
-	// Escape and merge path fragments
+	// Merge path fragments
 	if (out_path)
 	{
 		*out_path =  "/";
 		*out_path += fmt::merge(name_list, "/");
 	}
 
-	return std::string{result_base} + vfs::escape(fmt::merge(result, "/"));
+	// Escape for host FS
+	std::vector<std::string> escaped;
+	escaped.reserve(result.size());
+	for (auto& sv : result)
+		escaped.emplace_back(vfs::escape(sv));
+
+	return std::string{result_base} + fmt::merge(escaped, "/");
 }
 
 #if __cpp_char8_t >= 201811
@@ -277,14 +283,74 @@ using char2 = char8_t;
 using char2 = char;
 #endif
 
-std::string vfs::escape(std::string_view path, bool escape_slash)
+std::string vfs::escape(std::string_view name, bool escape_slash)
 {
 	std::string result;
-	result.reserve(path.size());
 
-	for (std::size_t i = 0, s = path.size(); i < s; i++)
+	if (name.size() > 2 && name.find_first_not_of('.') == umax)
 	{
-		switch (char2 c = path[i])
+		// Name contains only dots, not allowed on Windows.
+		result.reserve(name.size() + 2);
+		result += reinterpret_cast<const char*>(u8"．");
+		result += name.substr(1);
+		return result;
+	}
+
+	// Emulate NTS (limited)
+	auto get_char = [&](std::size_t pos) -> char2
+	{
+		if (pos < name.size())
+		{
+			return name[pos];
+		}
+		else
+		{
+			return '\0';
+		}
+	};
+
+	// Escape NUL, LPT ant other trash
+	if (name.size() > 2)
+	{
+		// Pack first 3 characters
+		const u32 triple = std::bit_cast<le_t<u32>, u32>(toupper(name[0]) | toupper(name[1]) << 8 | toupper(name[2]) << 16);
+
+		switch (triple)
+		{
+		case "COM"_u32:
+		case "LPT"_u32:
+		{
+			if (name.size() >= 4 && name[3] >= '1' && name[4] <= '9')
+			{
+				if (name.size() == 4 || name[4] == '.')
+				{
+					// Escape first character (C or L)
+					result = reinterpret_cast<const char*>(u8"！");
+				}
+			}
+
+			break;
+		}
+		case "NUL"_u32:
+		case "CON"_u32:
+		case "AUX"_u32:
+		case "PRN"_u32:
+		{
+			if (name.size() == 3 || name[3] == '.')
+			{
+				result = reinterpret_cast<const char*>(u8"！");
+			}
+
+			break;
+		}
+		}
+	}
+
+	result.reserve(result.size() + name.size());
+
+	for (std::size_t i = 0, s = name.size(); i < s; i++)
+	{
+		switch (char2 c = name[i])
 		{
 		case 0:
 		case 1:
@@ -383,11 +449,11 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 		case char2{u8"！"[0]}:
 		{
 			// Escape full-width characters 0xFF01..0xFF5e with ！ (0xFF01)
-			switch (char2 c2 = path[i + 1])
+			switch (char2 c2 = get_char(i + 1))
 			{
 			case char2{u8"！"[1]}:
 			{
-				const uchar c3 = path[i + 2];
+				const uchar c3 = get_char(i + 2);
 
 				if (c3 >= 0x81 && c3 <= 0xbf)
 				{
@@ -398,7 +464,7 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 			}
 			case char2{u8"｀"[1]}:
 			{
-				const uchar c3 = path[i + 2];
+				const uchar c3 = get_char(i + 2);
 
 				if (c3 >= 0x80 && c3 <= 0x9e)
 				{
@@ -423,22 +489,35 @@ std::string vfs::escape(std::string_view path, bool escape_slash)
 	return result;
 }
 
-std::string vfs::unescape(std::string_view path)
+std::string vfs::unescape(std::string_view name)
 {
 	std::string result;
-	result.reserve(path.size());
+	result.reserve(name.size());
 
-	for (std::size_t i = 0, s = path.size(); i < s; i++)
+	// Emulate NTS
+	auto get_char = [&](std::size_t pos) -> char2
 	{
-		switch (char2 c = path[i])
+		if (pos < name.size())
+		{
+			return name[pos];
+		}
+		else
+		{
+			return '\0';
+		}
+	};
+
+	for (std::size_t i = 0, s = name.size(); i < s; i++)
+	{
+		switch (char2 c = name[i])
 		{
 		case char2{u8"！"[0]}:
 		{
-			switch (char2 c2 = path[i + 1])
+			switch (char2 c2 = get_char(i + 1))
 			{
 			case char2{u8"！"[1]}:
 			{
-				const uchar c3 = path[i + 2];
+				const uchar c3 = get_char(i + 2);
 
 				if (c3 >= 0x81 && c3 <= 0xbf)
 				{
@@ -455,7 +534,7 @@ std::string vfs::unescape(std::string_view path)
 					case char2{u8"８"[2]}:
 					case char2{u8"９"[2]}:
 					{
-						result += path[i + 2];
+						result += static_cast<char>(c3);
 						result.back() -= u8"０"[2];
 						continue;
 					}
@@ -482,16 +561,30 @@ std::string vfs::unescape(std::string_view path)
 					case char2{u8"Ｕ"[2]}:
 					case char2{u8"Ｖ"[2]}:
 					{
-						result += path[i + 2];
+						result += static_cast<char>(c3);
 						result.back() -= u8"Ａ"[2];
 						result.back() += 10;
 						continue;
 					}
 					case char2{u8"！"[2]}:
 					{
+						if (const char2 c4 = get_char(i + 3))
+						{
+							// Escape anything but null character
+							result += c4;
+						}
+						else
+						{
+							return result;
+						}
+
 						i += 3;
-						result += c;
 						continue;
+					}
+					case char2{u8"．"[2]}:
+					{
+						result += '.';
+						break;
 					}
 					case char2{u8"＜"[2]}:
 					{
@@ -557,7 +650,7 @@ std::string vfs::unescape(std::string_view path)
 			}
 			case char2{u8"｀"[1]}:
 			{
-				const uchar c3 = path[i + 2];
+				const uchar c3 = get_char(i + 2);
 
 				if (c3 >= 0x80 && c3 <= 0x9e)
 				{
@@ -591,6 +684,11 @@ std::string vfs::unescape(std::string_view path)
 			}
 			}
 			break;
+		}
+		case 0:
+		{
+			// NTS detected
+			return result;
 		}
 		default:
 		{

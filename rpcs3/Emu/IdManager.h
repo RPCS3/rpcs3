@@ -195,6 +195,11 @@ class idm
 			return ptr.operator bool();
 		}
 
+		T& operator*() const
+		{
+			return *ptr;
+		}
+
 		T* operator->() const
 		{
 			return ptr.get();
@@ -211,6 +216,11 @@ class idm
 		explicit operator bool() const
 		{
 			return ptr != nullptr;
+		}
+
+		T& operator*() const
+		{
+			return *ptr;
 		}
 
 		T* operator->() const
@@ -520,6 +530,28 @@ public:
 			std::lock_guard lock(id_manager::g_mutex);
 
 			if (const auto found = find_id<T, Get>(id))
+			{
+				ptr = std::move(found->second);
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	// Remove the ID if matches the weak/shared ptr
+	template <typename T, typename Get = T, typename Ptr>
+	static inline bool remove_verify(u32 id, Ptr sptr)
+	{
+		std::shared_ptr<void> ptr;
+		{
+			std::lock_guard lock(id_manager::g_mutex);
+
+			if (const auto found = find_id<T, Get>(id); found && 
+				(!found->second.owner_before(sptr) && !sptr.owner_before(found->second)))
 			{
 				ptr = std::move(found->second);
 			}
