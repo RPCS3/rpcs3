@@ -1162,16 +1162,34 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 
 			if (const auto ppu = g_ppu[i]; ppu == cpu)
 			{
-				if (g_ppu[i + 1]->prio != ppu->prio)
+				std::size_t j = i + 1;
+
+				for (; j < g_ppu.size(); j++)
 				{
+					if (g_ppu[j]->prio != ppu->prio)
+					{
+						break;
+					}
+				}
+
+				if (j == i + 1)
+				{
+					// Empty 'same prio' threads list
 					return false;
 				}
-				else
+
+				// Rotate current thread to the last position of the 'same prio' threads list
+				std::rotate(g_ppu.begin() + i, g_ppu.begin() + i + 1, g_ppu.begin() + j);
+
+				if (j <= g_cfg.core.ppu_threads + 0u)
 				{
-					g_ppu.erase(g_ppu.cbegin() + i);
-					ppu->start_time = get_guest_system_time();
-					break;
+					// Threads were rotated, but no context switch was made
+					return false;
 				}
+
+				ppu->start_time = get_guest_system_time();
+				cpu = nullptr; // Disable current thread enqueing, also enable threads list enqueing
+				break;
 			}
 		}
 	}
@@ -1227,9 +1245,9 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	}
 
 	// Remove pending if necessary
-	if (!g_pending.empty() && cpu && cpu == get_current_cpu_thread())
+	if (!g_pending.empty() && ((cpu && cpu == get_current_cpu_thread()) || prio == yield_cmd))
 	{
-		unqueue(g_pending, cpu);
+		unqueue(g_pending, get_current_cpu_thread());
 	}
 
 	// Suspend threads if necessary

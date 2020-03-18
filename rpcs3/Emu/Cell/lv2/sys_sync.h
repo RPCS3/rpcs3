@@ -159,7 +159,7 @@ public:
 		return awake_unlocked(thread, prio);
 	}
 
-	// Returns true and success, false if did nothing
+	// Returns true on successful context switch, false otherwise
 	static bool yield(cpu_thread& thread)
 	{
 		vm::temporary_unlock(thread);
