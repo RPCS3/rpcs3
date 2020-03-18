@@ -290,16 +290,16 @@ namespace fs
 		}
 
 		// Write POD unconditionally
-		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, const file&> write(const T& data) const
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const T& data) const
 		{
 			if (write(std::addressof(data), sizeof(T)) != sizeof(T)) xfail();
 			return *this;
 		}
 
 		// Write POD std::vector unconditionally
-		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, const file&> write(const std::vector<T>& vec) const
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const std::vector<T>& vec) const
 		{
 			if (write(vec.data(), vec.size() * sizeof(T)) != vec.size() * sizeof(T)) xfail();
 			return *this;
@@ -319,30 +319,30 @@ namespace fs
 		}
 
 		// Read POD, sizeof(T) is used
-		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, bool> read(T& data) const
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(T& data) const
 		{
 			return read(&data, sizeof(T)) == sizeof(T);
 		}
 
 		// Read POD std::vector, size must be set by resize() method
-		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, bool> read(std::vector<T>& vec) const
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec) const
 		{
 			return read(vec.data(), sizeof(T) * vec.size()) == sizeof(T) * vec.size();
 		}
 
 		// Read POD std::vector
-		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, bool> read(std::vector<T>& vec, std::size_t size) const
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec, std::size_t size) const
 		{
 			vec.resize(size);
 			return read(vec.data(), sizeof(T) * size) == sizeof(T) * size;
 		}
 
 		// Read POD (experimental)
-		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, T> read() const
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, T> read() const
 		{
 			T result;
 			if (!read(result)) xfail();
@@ -360,7 +360,7 @@ namespace fs
 
 		// Read full file to std::vector
 		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, std::vector<T>> to_vector() const
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, std::vector<T>> to_vector() const
 		{
 			std::vector<T> result;
 			result.resize(size() / sizeof(T));
