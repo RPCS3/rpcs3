@@ -73,7 +73,7 @@ void debugger_list::ShowAddress(u32 addr)
 	{
 		for (uint i = 0; i < m_item_count; ++i, m_pc += 4)
 		{
-			item(i)->setText(qstr(fmt::format("[%08x] illegal address", m_pc)));
+			item(i)->setText(qstr(fmt::format("   [%08x] illegal address", m_pc)));
 		}
 	}
 	else
@@ -87,14 +87,14 @@ void debugger_list::ShowAddress(u32 addr)
 		{
 			if (!vm::check_addr(cpu_offset + m_pc, 4))
 			{
-				item(i)->setText((IsBreakpoint(m_pc) ? ">>> " : "    ") + qstr(fmt::format("[%08x] illegal address", m_pc)));
+				item(i)->setText((IsBreakpoint(m_pc) ? ">> " : "   ") + qstr(fmt::format("[%08x] illegal address", m_pc)));
 				count = 4;
 				continue;
 			}
 
 			count = m_disasm->disasm(m_disasm->dump_pc = m_pc);
 
-			item(i)->setText((IsBreakpoint(m_pc) ? ">>> " : "    ") + qstr(m_disasm->last_opcode));
+			item(i)->setText((IsBreakpoint(m_pc) ? ">> " : "   ") + qstr(m_disasm->last_opcode));
 
 			if (cpu->is_paused() && m_pc == GetPc())
 			{
