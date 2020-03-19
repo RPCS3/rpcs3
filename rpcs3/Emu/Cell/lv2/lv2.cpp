@@ -1231,7 +1231,8 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 		return true;
 	};
 
-	bool changed_queue = false;
+	// Yield changed the queue before
+	bool changed_queue = prio == yield_cmd;
 
 	if (cpu)
 	{
