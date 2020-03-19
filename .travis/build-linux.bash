@@ -33,8 +33,7 @@ else
 	export RANLIB=/usr/bin/llvm-ranlib-$LLVMVER
 fi
 
-# Use link time optimization to save some space
-export CFLAGS="-flto -fuse-linker-plugin -fuse-ld=${LINKER}"
+export CFLAGS="-fuse-linker-plugin -fuse-ld=${LINKER}"
 
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_LLVM_SUBMODULE=OFF -DUSE_COTIRE=OFF -DLLVM_DIR=llvmlibs/lib/cmake/llvm/ -DUSE_NATIVE_INSTRUCTIONS=OFF \
   -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_CXX_FLAGS="$CFLAGS" -DCMAKE_AR=$AR -DCMAKE_RANLIB=$RANLIB \
