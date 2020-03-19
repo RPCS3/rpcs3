@@ -472,8 +472,17 @@ std::string ppu_thread::dump() const
 	fmt::append(ret, "FPSCR = [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
 	fmt::append(ret, "\nCall stack:\n=========\n0x%08x (0x0) called\n", cia);
 
+	//std::shared_lock rlock(vm::g_mutex); // Needs optimizations
+
 	// Determine stack range
 	u32 stack_ptr = static_cast<u32>(gpr[1]);
+
+	if (!vm::check_addr(stack_ptr, 1, vm::page_writable))
+	{
+		// Normally impossible unless the code does not follow ABI rules
+		return ret;
+	}
+
 	u32 stack_min = stack_ptr & ~0xfff;
 	u32 stack_max = stack_min + 4096;
 
@@ -487,10 +496,10 @@ std::string ppu_thread::dump() const
 		stack_max += 4096;
 	}
 
-	for (u64 sp = vm::read64(stack_ptr); sp >= stack_min && std::max(sp, sp + 0x200) < stack_max; sp = vm::read64(static_cast<u32>(sp)))
+	for (u64 sp = *vm::get_super_ptr<u64>(stack_ptr); sp >= stack_min && std::max(sp, sp + 0x200) < stack_max; sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp)))
 	{
 		// TODO: print also function addresses
-		fmt::append(ret, "> from 0x%08llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
+		fmt::append(ret, "> from 0x%08llx (0x0)\n", *vm::get_super_ptr<u64>(static_cast<u32>(sp + 16)));
 	}
 
 	return ret;
