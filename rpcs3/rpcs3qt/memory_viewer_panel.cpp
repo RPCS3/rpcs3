@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "Utilities/mutex.h"
+#include "Emu/Memory/vm_locking.h"
 
 #include "memory_viewer_panel.h"
 
@@ -10,6 +11,7 @@
 #include <QTextEdit>
 #include <QComboBox>
 #include <QWheelEvent>
+#include <shared_mutex>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -273,10 +275,9 @@ void memory_viewer_panel::ShowMemory()
 
 			if (vm::check_addr(addr))
 			{
-				const u8 rmem = vm::read8(addr);
+				const u8 rmem = *vm::get_super_ptr<u8>(addr);
 				t_mem_hex_str += qstr(fmt::format("%02x ", rmem));
-				const bool isPrintable = rmem >= 32 && rmem <= 126;
-				t_mem_ascii_str += qstr(isPrintable ? std::string(1, rmem) : ".");
+				t_mem_ascii_str += qstr(std::string(1, std::isprint(rmem) ? static_cast<char>(rmem) : '.'));
 			}
 			else
 			{
@@ -314,8 +315,15 @@ void memory_viewer_panel::SetPC(const uint pc)
 
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
 {
-	uchar* originalBuffer  = static_cast<uchar*>(vm::base(addr));
-	uchar* convertedBuffer = static_cast<uchar*>(std::malloc(width * height * 4));
+	std::shared_lock rlock(vm::g_mutex);
+
+	if (!vm::check_addr(addr, width * height * 4))
+	{
+		return;
+	}
+
+	const auto originalBuffer  = vm::get_super_ptr<const uchar>(addr);
+	const auto convertedBuffer = static_cast<uchar*>(std::malloc(width * height * 4));
 
 	switch(mode)
 	{
@@ -372,6 +380,8 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	break;
 	}
 
+	rlock.unlock();
+
 	// Flip vertically
 	if (flipv)
 	{
@@ -386,7 +396,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 		}
 	}
 
-	QImage image = QImage(convertedBuffer, width, height, QImage::Format_ARGB32);
+	QImage image = QImage(convertedBuffer, width, height, QImage::Format_ARGB32, [](void* buffer){ std::free(buffer); }, convertedBuffer);
 	if (image.isNull()) return;
 
 	QLabel* canvas = new QLabel();
