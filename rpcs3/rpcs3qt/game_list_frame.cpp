@@ -950,13 +950,22 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	const bool is_current_running_game = (Emu.IsRunning() || Emu.IsPaused()) && current_game.serial == Emu.GetTitleID();
 
-	QAction* boot = new QAction(gameinfo->hasCustomConfig ? tr(is_current_running_game ? "&Reboot with global configuration" : "&Boot with global configuration") : tr(is_current_running_game ? "&Reboot" : "&Boot"));
+	QAction* boot = new QAction(gameinfo->hasCustomConfig
+		? (is_current_running_game
+			? tr("&Reboot with global configuration")
+			: tr("&Boot with global configuration"))
+		: (is_current_running_game
+			? tr("&Reboot")
+			: tr("&Boot")));
+
 	QFont font = boot->font();
 	font.setBold(true);
 
 	if (gameinfo->hasCustomConfig)
 	{
-		QAction* boot_custom = menu.addAction(tr(is_current_running_game ? "&Reboot with custom configuration" : "&Boot with custom configuration"));
+		QAction* boot_custom = menu.addAction(is_current_running_game
+			? tr("&Reboot with custom configuration")
+			: tr("&Boot with custom configuration"));
 		boot_custom->setFont(font);
 		connect(boot_custom, &QAction::triggered, [=, this]
 		{
@@ -972,8 +981,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	menu.addAction(boot);
 	menu.addSeparator();
 
-	QAction* configure = menu.addAction(gameinfo->hasCustomConfig ? tr("&Change Custom Configuration") : tr("&Create Custom Configuration"));
-	QAction* pad_configure = menu.addAction(gameinfo->hasCustomPadConfig ? tr("&Change Custom Gamepad Configuration") : tr("&Create Custom Gamepad Configuration"));
+	QAction* configure = menu.addAction(gameinfo->hasCustomConfig
+		? tr("&Change Custom Configuration")
+		: tr("&Create Custom Configuration"));
+	QAction* pad_configure = menu.addAction(gameinfo->hasCustomPadConfig
+		? tr("&Change Custom Gamepad Configuration")
+		: tr("&Create Custom Gamepad Configuration"));
 	QAction* create_ppu_cache = menu.addAction(tr("&Create PPU Cache"));
 	menu.addSeparator();
 	QAction* rename_title = menu.addAction(tr("&Rename In Game List"));
@@ -1159,7 +1172,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			else
 			{
 				game_list_log.error("Failed to remove %s %s in %s (%s)", sstr(gameinfo->localized_category), current_game.name, current_game.path, fs::g_tls_error);
-				QMessageBox::critical(this, tr("Failure!"), tr(remove_caches ? "Failed to remove %0 from drive!\nPath: %1\nCaches and custom configs have been left intact." : "Failed to remove %0 from drive!\nPath: %1").arg(name).arg(qstr(current_game.path)));
+				QMessageBox::critical(this, tr("Failure!"), remove_caches
+					? tr("Failed to remove %0 from drive!\nPath: %1\nCaches and custom configs have been left intact.").arg(name).arg(qstr(current_game.path))
+					: tr("Failed to remove %0 from drive!\nPath: %1").arg(name).arg(qstr(current_game.path)));
 			}
 		}
 	});
