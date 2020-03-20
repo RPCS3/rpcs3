@@ -621,7 +621,7 @@ bool Emulator::InstallPkg(const std::string& path)
 
 	{
 		// Wait for the completion
-		while (std::this_thread::sleep_for(5ms), worker != thread_state::finished)
+		while (std::this_thread::sleep_for(5ms), worker <= thread_state::aborting)
 		{
 			// TODO: update unified progress dialog
 			double pval = progress;

@@ -513,7 +513,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		});
 
 		// Wait for the completion
-		while (std::this_thread::sleep_for(5ms), worker != thread_state::finished)
+		while (std::this_thread::sleep_for(5ms), worker <= thread_state::aborting)
 		{
 			if (pdlg.wasCanceled())
 			{

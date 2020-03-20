@@ -1755,6 +1755,8 @@ const bool s_terminate_handler_set = []() -> bool
 
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
+thread_local DECLARE(thread_ctrl::g_tls_error_callback) = nullptr;
+
 DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
 
 void thread_base::start(native_entry entry)
@@ -1767,10 +1769,12 @@ void thread_base::start(native_entry entry)
 #endif
 }
 
-void thread_base::initialize(bool(*wait_cb)(const void*))
+void thread_base::initialize(void (*error_cb)(), bool(*wait_cb)(const void*))
 {
-	// Initialize TLS variable
+	// Initialize TLS variables
 	thread_ctrl::g_tls_this_thread = this;
+
+	thread_ctrl::g_tls_error_callback = error_cb;
 
 	// Initialize atomic wait callback
 	atomic_storage_futex::set_wait_callback(wait_cb);
@@ -1828,7 +1832,7 @@ void thread_base::notify_abort() noexcept
 	atomic_storage_futex::raw_notify(+m_state_notifier);
 }
 
-bool thread_base::finalize(int) noexcept
+bool thread_base::finalize(thread_state result_state) noexcept
 {
 	// Report pending errors
 	error_code::error_report(0, 0, 0, 0);
@@ -1875,7 +1879,7 @@ bool thread_base::finalize(int) noexcept
 		fsoft, fhard, ctxvol, ctxinv);
 
 	// Return true if need to delete thread object
-	const bool ok = m_state.exchange(thread_state::finished) <= thread_state::aborting;
+	const bool ok = m_state.exchange(result_state) <= thread_state::aborting;
 
 	// Signal waiting threads
 	m_state.notify_all();
@@ -1984,13 +1988,18 @@ thread_base::~thread_base()
 	}
 }
 
-void thread_base::join() const
+bool thread_base::join() const
 {
 	for (auto state = m_state.load(); state != thread_state::finished;)
 	{
 		m_state.wait(state);
 		state = m_state;
+
+		if (state == thread_state::errored)
+			return false;
 	}
+
+	return true;
 }
 
 void thread_base::notify()
@@ -2061,7 +2070,9 @@ void thread_ctrl::emergency_exit(std::string_view reason)
 
 	if (const auto _this = g_tls_this_thread)
 	{
-		if (_this->finalize(0))
+		g_tls_error_callback();
+
+		if (_this->finalize(thread_state::errored))
 		{
 			delete _this;
 		}
