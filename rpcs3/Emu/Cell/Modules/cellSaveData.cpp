@@ -5,6 +5,7 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
+#include "Emu/Cell/Modules/cellUserInfo.h"
 
 #include "cellSaveData.h"
 #include "cellMsgDialog.h"
@@ -527,6 +528,12 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 		}
 	}
 
+	if (userId > CELL_SYSUTIL_USERID_MAX)
+	{
+		// ****** sysutil savedata parameter error : 91 ******
+		return 91;
+	}
+
 	return CELL_OK;
 }
 
@@ -572,6 +579,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	// userId(0) = CELL_SYSUTIL_USERID_CURRENT;
 	// path of the specified user (00000001 by default)
 	const std::string base_dir = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/", userId ? userId : Emu.GetUsrId()));
+
+	if (userId && !fs::is_dir(base_dir))
+	{
+		return CELL_SAVEDATA_ERROR_NOUSER;
+	}
 
 	result->userdata = userdata; // probably should be assigned only once (allows the callback to change it)
 
@@ -1891,10 +1903,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat> dir, vm::ptr<CellSaveDataSystemFileParam> sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB, u32 userId)
 {
-	if (userId == 0)
+	if (userId == CELL_SYSUTIL_USERID_CURRENT)
 	{
 		userId = Emu.GetUsrId();
 	}
+
 	std::string save_path = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/%s/", userId, dirName.get_ptr()));
 	std::string sfo = save_path + "PARAM.SFO";
 
