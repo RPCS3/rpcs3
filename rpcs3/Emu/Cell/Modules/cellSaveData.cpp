@@ -77,15 +77,15 @@ namespace
 {
 	struct savedata_context
 	{
-		CellSaveDataCBResult result;
-		CellSaveDataListGet  listGet;
-		CellSaveDataListSet  listSet;
-		CellSaveDataFixedSet fixedSet;
-		CellSaveDataStatGet  statGet;
-		CellSaveDataStatSet  statSet;
-		CellSaveDataFileGet  fileGet;
-		CellSaveDataFileSet  fileSet;
-		CellSaveDataDoneGet  doneGet;
+		alignas(16) CellSaveDataCBResult result;
+		alignas(16) CellSaveDataListGet  listGet;
+		alignas(16) CellSaveDataListSet  listSet;
+		alignas(16) CellSaveDataFixedSet fixedSet;
+		alignas(16) CellSaveDataStatGet  statGet;
+		alignas(16) CellSaveDataStatSet  statSet;
+		alignas(16) CellSaveDataFileGet  fileGet;
+		alignas(16) CellSaveDataFileSet  fileSet;
+		alignas(16) CellSaveDataDoneGet  doneGet;
 	};
 }
 
@@ -704,6 +704,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			listSet->focusPosition = CELL_SAVEDATA_FOCUSPOS_LISTHEAD;
 
+			std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
+
 			// List Callback
 			funcList(ppu, result, listGet, listSet);
 
@@ -962,6 +964,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				doneGet->excResult = CELL_SAVEDATA_ERROR_NODATA;
 			}
 
+			std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
 			funcDone(ppu, result, doneGet);
 		};
 
@@ -1059,6 +1062,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		if (funcFixed)
 		{
 			lv2_sleep(ppu, 250);
+
+			std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
 
 			// Fixed Callback
 			funcFixed(ppu, result, listGet, fixedSet);
@@ -1358,6 +1363,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		statGet->sysSizeKB = 35; // always reported as 35 regardless of actual file sizes
 		statGet->sizeKB = !save_entry.isNew ? ::narrow<s32>((size_bytes / 1024) + statGet->sysSizeKB) : 0;
 
+		std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
+
 		// Stat Callback
 		funcStat(ppu, result, statGet, statSet);
 
@@ -1516,6 +1523,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	{
 		std::memset(fileSet.get_ptr(), 0, fileSet.size());
 		std::memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
+		std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
 
 		funcFile(ppu, result, fileGet, fileSet);
 
