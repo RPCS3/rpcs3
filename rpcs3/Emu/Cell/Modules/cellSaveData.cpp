@@ -613,7 +613,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				if (entry.name.starts_with(prefix))
 				{
 					// Count the amount of matches and the amount of listed directories
-					listGet->dirNum++; // total number of directories
+					if (!listGet->dirNum++) // total number of directories
+					{
+						// Clear buf exactly to bufSize only if dirNum becomes non-zero (regardless of dirListNum)
+						std::memset(setBuf->buf.get_ptr(), 0, setBuf->bufSize);
+					}
+
 					if (listGet->dirListNum < setBuf->dirListMax)
 					{
 						listGet->dirListNum++; // number of directories in list
@@ -690,7 +695,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			auto& dir = *dir_list++;
 			strcpy_trunc(dir.dirName, entry.dirName);
 			strcpy_trunc(dir.listParam, entry.listParam);
-			std::memset(dir.reserved, 0, sizeof(dir.reserved));
 		}
 
 		s32 selected = -1;
@@ -1180,6 +1184,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 		}
 
+		if (listGet->dirNum)
+		{
+			// Clear buf exactly to bufSize again after funcFixed/List (for funcStat)
+			std::memset(setBuf->buf.get_ptr(), 0, setBuf->bufSize);
+		}
+
 		if (selected >= 0)
 		{
 			if (selected + 0u < save_entries.size())
@@ -1253,7 +1263,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		statGet->fileNum = 0;
 		statGet->fileList.set(setBuf->buf.addr());
 		statGet->fileListNum = 0;
-		memset(statGet->reserved, 0, sizeof(statGet->reserved));
+		std::memset(statGet->reserved, 0, sizeof(statGet->reserved));
+
+		if (!save_entry.isNew)
+		{
+			// Clear to bufSize if !isNew regardless of fileNum
+			std::memset(setBuf->buf.get_ptr(), 0, setBuf->bufSize);
+		}
 
 		auto file_list = statGet->fileList.get_ptr();
 
