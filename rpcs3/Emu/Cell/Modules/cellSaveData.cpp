@@ -1909,8 +1909,42 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 	{
 		userId = Emu.GetUsrId();
 	}
+	else if (userId > CELL_USERINFO_USER_MAX)
+	{
+		// ****** sysutil savedata parameter error : 137 ******
+		return {CELL_SAVEDATA_ERROR_PARAM, "137"};
+	}
 
-	std::string save_path = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/%s/", userId, dirName.get_ptr()));
+	if (!dirName)
+	{
+		// ****** sysutil savedata parameter error : 107 ******
+		return {CELL_SAVEDATA_ERROR_PARAM, "107"};
+	}
+
+	switch (sysutil_check_name_string(dirName.get_ptr(), 1, CELL_SAVEDATA_DIRLIST_MAX))
+	{
+	case -1:
+	{
+		// ****** sysutil savedata parameter error : 108 ******
+		return {CELL_SAVEDATA_ERROR_PARAM, "108"};
+	}
+	case -2:
+	{
+		// ****** sysutil savedata parameter error : 109 ******
+		return {CELL_SAVEDATA_ERROR_PARAM, "109"};
+	}
+	case 0: break;
+	default: ASSUME(0);
+	}
+
+	const std::string base_dir = fmt::format("/dev_hdd0/home/%08u/savedata/", userId);
+
+	if (!fs::is_dir(vfs::get(base_dir)))
+	{
+		return CELL_SAVEDATA_ERROR_NOUSER;
+	}
+
+	const std::string save_path = vfs::get(base_dir + dirName.get_ptr() + '/');
 	std::string sfo = save_path + "PARAM.SFO";
 
 	if (!fs::is_dir(save_path) && !fs::is_file(sfo))
