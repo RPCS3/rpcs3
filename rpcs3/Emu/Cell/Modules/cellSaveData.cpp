@@ -698,6 +698,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		if (funcList)
 		{
+			listSet->focusPosition = CELL_SAVEDATA_FOCUSPOS_LISTHEAD;
+
 			// List Callback
 			funcList(ppu, result, listGet, listSet);
 
