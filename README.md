@@ -2,7 +2,7 @@ RPCS3
 =====
 
 [![Build Status](https://travis-ci.org/RPCS3/rpcs3.svg?branch=master)](https://travis-ci.org/RPCS3/rpcs3)
-[![Build status](https://ci.appveyor.com/api/projects/status/411c4clmiohtx7eo/branch/master?svg=true)](https://ci.appveyor.com/project/rpcs3/rpcs3/branch/master)
+[![Build Status](https://dev.azure.com/nekotekina/nekotekina/_apis/build/status/RPCS3.rpcs3?branchName=master)](https://dev.azure.com/nekotekina/nekotekina/_build/latest?definitionId=5&branchName=master)
 
 The world's first free and open-source PlayStation 3 emulator/debugger, written in C++ for Windows and Linux.
 
