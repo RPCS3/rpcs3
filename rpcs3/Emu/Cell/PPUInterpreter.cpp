@@ -4708,7 +4708,7 @@ bool ppu_interpreter_fast::FMADDS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_precise::FMADDS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const f64 res = ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb]);
+	const f64 res = ppu.fpr[op.frd] = f32(std::fma(ppu.fpr[op.fra], ppu.fpr[op.frc], ppu.fpr[op.frb]));
 	ppu_fpcc_set(ppu, res, 0., op.rc);
 	return true;
 }
@@ -4721,7 +4721,7 @@ bool ppu_interpreter_fast::FMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_precise::FMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const f64 res = ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]);
+	const f64 res = ppu.fpr[op.frd] = f32(std::fma(ppu.fpr[op.fra], ppu.fpr[op.frc], -ppu.fpr[op.frb]));
 	ppu_fpcc_set(ppu, res, 0., op.rc);
 	return true;
 }
@@ -4734,7 +4734,7 @@ bool ppu_interpreter_fast::FNMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_precise::FNMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const f64 res = ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]));
+	const f64 res = ppu.fpr[op.frd] = f32(-std::fma(ppu.fpr[op.fra], ppu.fpr[op.frc], -ppu.fpr[op.frb]));
 	ppu_fpcc_set(ppu, res, 0., op.rc);
 	return true;
 }
@@ -4747,7 +4747,7 @@ bool ppu_interpreter_fast::FNMADDS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_precise::FNMADDS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const f64 res = ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb]));
+	const f64 res = ppu.fpr[op.frd] = f32(-std::fma(ppu.fpr[op.fra], ppu.fpr[op.frc], ppu.fpr[op.frb]));
 	ppu_fpcc_set(ppu, res, 0., op.rc);
 	return true;
 }
