@@ -22,7 +22,6 @@
 #include <QFontDatabase>
 #include <QCompleter>
 #include <QMenu>
-#include <QJSEngine>
 #include <QVBoxLayout>
 #include <QTimer>
 #include <atomic>
@@ -536,41 +535,9 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 
 	if (!thread) return 0;
 
-	// Parse expression
-	QJSEngine scriptEngine;
-	scriptEngine.globalObject().setProperty("pc", GetPc());
-
-	if (thread->id_type() == 1)
-	{
-		auto ppu = static_cast<ppu_thread*>(thread.get());
-
-		for (int i = 0; i < 32; ++i)
-		{
-			scriptEngine.globalObject().setProperty(QString("r%1hi").arg(i), QJSValue(static_cast<u32>(ppu->gpr[i] >> 32)));
-			scriptEngine.globalObject().setProperty(QString("r%1").arg(i), QJSValue(static_cast<u32>(ppu->gpr[i])));
-		}
-
-		scriptEngine.globalObject().setProperty("lrhi", QJSValue(static_cast<u32>(ppu->lr >> 32)));
-		scriptEngine.globalObject().setProperty("lr", QJSValue(static_cast<u32>(ppu->lr)));
-		scriptEngine.globalObject().setProperty("ctrhi", QJSValue(static_cast<u32>(ppu->ctr >> 32)));
-		scriptEngine.globalObject().setProperty("ctr", QJSValue(static_cast<u32>(ppu->ctr)));
-		scriptEngine.globalObject().setProperty("cia", QJSValue(ppu->cia));
-	}
-	else
-	{
-		auto spu = static_cast<spu_thread*>(thread.get());
-
-		for (int i = 0; i < 128; ++i)
-		{
-			scriptEngine.globalObject().setProperty(QString("r%1hi").arg(i), QJSValue(spu->gpr[i]._u32[0]));
-			scriptEngine.globalObject().setProperty(QString("r%1lo").arg(i), QJSValue(spu->gpr[i]._u32[1]));
-			scriptEngine.globalObject().setProperty(QString("r%1hilo").arg(i), QJSValue(spu->gpr[i]._u32[2]));
-			scriptEngine.globalObject().setProperty(QString("r%1hihi").arg(i), QJSValue(spu->gpr[i]._u32[3]));
-		}
-	}
-
+	// Parse expression(or at least used to, was nuked to remove the need for QtJsEngine)
 	const QString fixed_expression = QRegExp("^[A-Fa-f0-9]+$").exactMatch(expression) ? "0x" + expression : expression;
-	return static_cast<ulong>(scriptEngine.evaluate(fixed_expression).toNumber());
+	return static_cast<ulong>(fixed_expression.toULong(nullptr, 0));
 }
 
 void debugger_frame::ClearBreakpoints()
