@@ -1,7 +1,7 @@
 
 version: '{build}'
 
-image: Visual Studio 2019
+image: Previous Visual Studio 2019
 
 environment:
   QTDIR: C:\Qt\5.14\msvc2017_64
