@@ -757,18 +757,6 @@
     <ClCompile Include="rpcs3qt\update_manager.cpp">
       <Filter>Gui\update manager</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_update_manager.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_update_manager.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_update_manager.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_update_manager.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="display_sleep_control.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
@@ -881,6 +869,18 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_pad_led_settings_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_update_manager.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_update_manager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_update_manager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_update_manager.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
   </ItemGroup>

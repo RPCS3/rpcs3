@@ -6,6 +6,7 @@
 #include "Crypto/sha256.h"
 #include "Emu/System.h"
 
+#include <QApplication>
 #include <QMessageBox>
 #include <QJsonObject>
 #include <QJsonDocument>
@@ -48,6 +49,18 @@ update_manager::update_manager()
 	// This shouldn't be needed on linux
 	curl_easy_setopt(m_curl, CURLOPT_CAINFO, "cacert.pem");
 #endif
+
+	// We need this signal in order to update the GUI from the main thread
+	connect(this, &update_manager::signal_buffer_update, this, &update_manager::handle_buffer_update);
+}
+
+void update_manager::handle_buffer_update(int size)
+{
+	if (m_progress_dialog && m_update_dialog)
+	{
+		m_progress_dialog->setValue(size);
+		QApplication::processEvents();
+	}
 }
 
 size_t update_manager::update_buffer(char* data, size_t size)
@@ -62,10 +75,7 @@ size_t update_manager::update_buffer(char* data, size_t size)
 	m_curl_buf.resize(static_cast<int>(new_size));
 	memcpy(m_curl_buf.data() + old_size, data, size);
 
-	if (m_progress_dialog && m_update_dialog)
-	{
-		m_progress_dialog->setValue(static_cast<int>(new_size));
-	}
+	Q_EMIT signal_buffer_update(static_cast<int>(new_size));
 
 	return size;
 }
@@ -90,7 +100,7 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 	m_progress_dialog->setAutoReset(false);
 	m_progress_dialog->show();
 
-	connect(m_progress_dialog, &QProgressDialog::canceled, [&]() { m_curl_abort = true; });
+	connect(m_progress_dialog, &QProgressDialog::canceled, [this]() { m_curl_abort = true; });
 	connect(m_progress_dialog, &QProgressDialog::finished, m_progress_dialog, &QProgressDialog::deleteLater);
 
 	const std::string request_url = m_update_url + rpcs3::get_commit_and_hash().second;
@@ -98,36 +108,42 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 	curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
 	curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, this);
 
-	bool result_json = false;
+	auto thread = QThread::create([this]
+	{
+		const auto curl_result = curl_easy_perform(m_curl);
+		m_curl_result = curl_result == CURLE_OK;
 
-	if (const auto curl_result = curl_easy_perform(m_curl); curl_result != CURLE_OK)
-	{
-		update_log.error("Curl error(query): %s", curl_easy_strerror(curl_result));
-	}
-	else
-	{
-		result_json = handle_json(automatic);
-	}
-
-	if (!result_json && !m_curl_abort)
-	{
-		if (!automatic)
+		if (!m_curl_result)
 		{
-			QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
+			update_log.error("Curl error(query): %s", curl_easy_strerror(curl_result));
 		}
+	});
+	connect(thread, &QThread::finished, this, [this, automatic]()
+	{
+		const bool result_json = m_curl_result && handle_json(automatic);
 
-		if (m_progress_dialog)
+		if (!result_json && !m_curl_abort)
 		{
-			m_progress_dialog->close();
-			m_progress_dialog = nullptr;
+			if (!automatic)
+			{
+				QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
+			}
+
+			if (m_progress_dialog)
+			{
+				m_progress_dialog->close();
+				m_progress_dialog = nullptr;
+			}
 		}
-	}
+	});
+	thread->setObjectName("RPCS3 Update Check");
+	thread->start();
 }
 
 bool update_manager::handle_json(bool automatic)
 {
 	const QJsonObject json_data = QJsonDocument::fromJson(m_curl_buf).object();
-	const int return_code             = json_data["return_code"].toInt(-255);
+	const int return_code       = json_data["return_code"].toInt(-255);
 
 	bool hash_found = true;
 
@@ -207,8 +223,8 @@ bool update_manager::handle_json(bool automatic)
 	if (hash_found)
 	{
 		// Calculates how old the build is
-		std::string cur_date = json_data["current_build"]["datetime"].toString().toStdString();
-		std::string lts_date = latest["datetime"].toString().toStdString();
+		const std::string cur_date = json_data["current_build"]["datetime"].toString().toStdString();
+		const std::string lts_date = latest["datetime"].toString().toStdString();
 
 		tm cur_tm, lts_tm;
 		QString timediff = "";
@@ -228,7 +244,7 @@ bool update_manager::handle_json(bool automatic)
 			time_t cur_time = mktime(&cur_tm);
 			time_t lts_time = mktime(&lts_tm);
 
-			s64 u_timediff = static_cast<s64>(std::difftime(lts_time, cur_time));
+			const s64 u_timediff = static_cast<s64>(std::difftime(lts_time, cur_time));
 			update_log.notice("Current: %lld, latest: %lld, difference: %lld", static_cast<s64>(cur_time), static_cast<s64>(lts_time), u_timediff);
 
 			timediff = tr("Your version is %1 day(s), %2 hour(s) and %3 minute(s) old.").arg(u_timediff / (60 * 60 * 24)).arg((u_timediff / (60 * 60)) % 24).arg((u_timediff / 60) % 60);
@@ -261,19 +277,20 @@ bool update_manager::handle_json(bool automatic)
 
 	m_curl_buf.clear();
 
-	QThread::create([this, automatic]
+	auto thread = QThread::create([this]
 	{
-		bool result_rpcs3 = false;
+		const auto curl_result = curl_easy_perform(m_curl);
+		m_curl_result = curl_result == CURLE_OK;
 
-		if (const auto curl_result = curl_easy_perform(m_curl); curl_result != CURLE_OK)
+		if (!m_curl_result)
 		{
 			update_log.error("Curl error(download): %s", curl_easy_strerror(curl_result));
 		}
-		else
-		{
-			result_rpcs3 = handle_rpcs3();
-		}
-		
+	});
+	connect(thread, &QThread::finished, this, [this, automatic]()
+	{
+		const bool result_rpcs3 = m_curl_result && handle_rpcs3();
+
 		if (!result_rpcs3 && !m_curl_abort)
 		{
 			if (!automatic)
@@ -287,7 +304,9 @@ bool update_manager::handle_json(bool automatic)
 				m_progress_dialog = nullptr;
 			}
 		}
-	})->start();
+	});
+	thread->setObjectName("RPCS3 Updater");
+	thread->start();
 
 	return true;
 }
@@ -358,7 +377,7 @@ bool update_manager::handle_rpcs3()
 	m_progress_dialog->setWindowTitle(tr("Updating RPCS3"));
 
 	// Move the appimage/exe and replace with new appimage
-	std::string move_dest = replace_path + "_old";
+	const std::string move_dest = replace_path + "_old";
 	fs::rename(replace_path, move_dest, true);
 	fs::file new_appimage(replace_path, fs::read + fs::write + fs::create + fs::trunc);
 	if (!new_appimage)
@@ -448,7 +467,8 @@ bool update_manager::handle_rpcs3()
 	CrcGenerateTable();
 	SzArEx_Init(&db);
 
-	auto error_free7z = [&]() {
+	auto error_free7z = [&]()
+	{
 		SzArEx_Free(&db, &allocImp);
 		ISzAlloc_Free(&allocImp, lookStream.buf);
 
@@ -482,7 +502,7 @@ bool update_manager::handle_rpcs3()
 	size_t outBufferSize = 0;
 
 	// Creates temp folder for moving active files
-	std::string tmp_folder = Emulator::GetEmuDir() + m_tmp_folder;
+	const std::string tmp_folder = Emulator::GetEmuDir() + m_tmp_folder;
 	fs::create_dir(tmp_folder);
 
 	for (UInt32 i = 0; i < db.NumFiles; i++)
@@ -526,7 +546,7 @@ bool update_manager::handle_rpcs3()
 				break;
 		}
 
-		if (size_t pos = name.find_last_of('/'); pos != umax)
+		if (const size_t pos = name.find_last_of('/'); pos != umax)
 		{
 			update_log.trace("Creating path: %s", name.substr(0, pos));
 			fs::create_path(name.substr(0, pos));
@@ -584,13 +604,12 @@ bool update_manager::handle_rpcs3()
 		return false;
 #endif
 
-	m_progress_dialog->close();
 	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!"));
 
 #ifdef _WIN32
-	int ret = _wexecl(orig_path, orig_path, nullptr);
+	const int ret = _wexecl(orig_path, orig_path, nullptr);
 #else
-	int ret = execl(replace_path.c_str(), replace_path.c_str(), nullptr);
+	const int ret = execl(replace_path.c_str(), replace_path.c_str(), nullptr);
 #endif
 	if (ret == -1)
 	{
