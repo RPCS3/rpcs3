@@ -2,6 +2,7 @@
 #include "gui_settings.h"
 #include "progress_dialog.h"
 
+#include <QApplication>
 #include <QMessageBox>
 #include <QJsonDocument>
 #include <QThread>
@@ -24,7 +25,25 @@ game_compatibility::game_compatibility(std::shared_ptr<gui_settings> settings) :
 
 	m_curl = curl_easy_init();
 
+#ifdef _WIN32
+	// This shouldn't be needed on linux
+	curl_easy_setopt(m_curl, CURLOPT_CAINFO, "cacert.pem");
+#endif
+
 	RequestCompatibility();
+
+	// We need this signal in order to update the GUI from the main thread
+	connect(this, &game_compatibility::signal_buffer_update, this, &game_compatibility::handle_buffer_update);
+}
+
+void game_compatibility::handle_buffer_update(int size, int max)
+{
+	if (m_progress_dialog)
+	{
+		m_progress_dialog->setMaximum(max);
+		m_progress_dialog->setValue(size);
+		QApplication::processEvents();
+	}
 }
 
 size_t game_compatibility::update_buffer(char* data, size_t size)
@@ -39,17 +58,17 @@ size_t game_compatibility::update_buffer(char* data, size_t size)
 	m_curl_buf.resize(static_cast<int>(new_size));
 	memcpy(m_curl_buf.data() + old_size, data, size);
 
+	int max = m_progress_dialog ? m_progress_dialog->maximum() : 0;
+
 	if (m_actual_dwnld_size < 0)
 	{
 		if (curl_easy_getinfo(m_curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &m_actual_dwnld_size) == CURLE_OK && m_actual_dwnld_size > 0)
 		{
-			if (m_progress_dialog)
-				m_progress_dialog->setMaximum(static_cast<int>(m_actual_dwnld_size));
+			max = static_cast<int>(m_actual_dwnld_size);
 		}
 	}
 
-	if (m_progress_dialog)
-		m_progress_dialog->setValue(static_cast<int>(new_size));
+	Q_EMIT signal_buffer_update(static_cast<int>(new_size), max);
 	
 	return size;
 }
@@ -170,19 +189,26 @@ void game_compatibility::RequestCompatibility(bool online)
 	connect(m_progress_dialog, &QProgressDialog::canceled, [this] { m_curl_abort = true; });
 	connect(m_progress_dialog, &QProgressDialog::finished, m_progress_dialog, &QProgressDialog::deleteLater);
 
-	QThread::create([&]
+	auto thread = QThread::create([&]
 	{
 		const auto result = curl_easy_perform(m_curl);
+		m_curl_result = result == CURLE_OK;
 
+		if (!m_curl_result)
+		{
+			Q_EMIT DownloadError(qstr("Curl error: ") + qstr(curl_easy_strerror(result)));
+		}
+	});
+	connect(thread, &QThread::finished, this, [this, online]()
+	{
 		if (m_progress_dialog)
 		{
 			m_progress_dialog->close();
 			m_progress_dialog = nullptr;
 		}
 
-		if (result != CURLE_OK)
+		if (!m_curl_result)
 		{
-			Q_EMIT DownloadError(qstr("Curl error: ") + qstr(curl_easy_strerror(result)));
 			return;
 		}
 
@@ -213,7 +239,9 @@ void game_compatibility::RequestCompatibility(bool online)
 
 			compat_log.success("Wrote database to file: %s", sstr(m_filepath));
 		}
-	})->start();
+	});
+	thread->setObjectName("Compat Update");
+	thread->start();
 
 	// We want to retrieve a new database, therefore refresh gamelist and indicate that
 	Q_EMIT DownloadStarted();

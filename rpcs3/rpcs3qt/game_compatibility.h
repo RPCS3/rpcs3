@@ -41,6 +41,7 @@ private:
 	int m_timer_count = 0;
 	QString m_filepath;
 	std::string m_url;
+	std::atomic<bool> m_curl_result = false;
 	std::atomic<bool> m_curl_abort = false;
 	double m_actual_dwnld_size = -1.0;
 	CURL *m_curl = nullptr;
@@ -71,6 +72,10 @@ Q_SIGNALS:
 	void DownloadStarted();
 	void DownloadFinished();
 	void DownloadError(const QString& error);
+	void signal_buffer_update(int size, int max);
+
+private Q_SLOTS:
+	void handle_buffer_update(int size, int max);
 };
 
 class compat_pixmap : public QPixmap
