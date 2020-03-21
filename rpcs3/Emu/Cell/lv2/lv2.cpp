@@ -1022,6 +1022,12 @@ public:
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			thread_ctrl::wait_for(10000'000);
+
+			if (Emu.IsPaused())
+			{
+				continue;
+			}
+
 			print_stats();
 		}
 	}
