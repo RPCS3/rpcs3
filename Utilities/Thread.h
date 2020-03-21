@@ -280,12 +280,10 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 	{
 		auto tls_error_cb = []()
 		{
-			const auto _this = thread_ctrl::get_current();
-
 			if constexpr (!result::empty)
 			{
 				// Construct using default constructor in the case of failure
-				new (static_cast<result*>(static_cast<named_thread*>(_this))->get()) typename result::type();
+				new (static_cast<result*>(static_cast<named_thread*>(thread_ctrl::get_current()))->get()) typename result::type();
 			}
 		};
 

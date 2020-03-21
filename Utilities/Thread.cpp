@@ -1990,16 +1990,13 @@ thread_base::~thread_base()
 
 bool thread_base::join() const
 {
-	for (auto state = m_state.load(); state != thread_state::finished;)
+	for (auto state = m_state.load(); state != thread_state::finished && state != thread_state::errored;)
 	{
 		m_state.wait(state);
 		state = m_state;
-
-		if (state == thread_state::errored)
-			return false;
 	}
 
-	return true;
+	return m_state.load() == thread_state::finished;
 }
 
 void thread_base::notify()
