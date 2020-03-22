@@ -189,7 +189,7 @@ public:
 	cmd64 cmd_get(u32 index) { return cmd_queue[cmd_queue.peek() + index].load(); }
 
 	u64 start_time{0}; // Sleep start timepoint
-	u64 syscall_r3{0}; // Save r3 before syscalls
+	alignas(64) u64 syscall_args[4]{0}; // Last syscall arguments stored
 	const char* current_function{}; // Current function name for diagnosis, optimized for speed.
 	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
 

@@ -432,7 +432,9 @@ std::string ppu_thread::dump() const
 		ret += "Current function: ";
 		ret += _func;
 		ret += '\n';
-		fmt::append(ret, "syscall r3: 0x%llx\n", syscall_r3);
+
+		for (u32 i = 3; i <= 6; i++)
+			fmt::append(ret, " ** GPR[%d] = 0x%llx\n", i, syscall_args[i - 3]);
 	}
 	else if (is_paused())
 	{
