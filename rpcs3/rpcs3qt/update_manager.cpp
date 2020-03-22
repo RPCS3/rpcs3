@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "update_manager.h"
 #include "progress_dialog.h"
+#include "localized.h"
 #include "rpcs3_version.h"
 #include "Utilities/StrUtil.h"
 #include "Crypto/sha256.h"
@@ -222,34 +223,29 @@ bool update_manager::handle_json(bool automatic)
 	const QDateTime cur_date = hash_found ? QDateTime::fromString(json_data["current_build"]["datetime"].toString(), date_fmt) : QDateTime::currentDateTimeUtc();
 	const QDateTime lts_date = QDateTime::fromString(latest["datetime"].toString(), date_fmt);
 
-	const qint64 diff_sec = cur_date.secsTo(lts_date);
-	const qint64 days     = diff_sec / (60 * 60 * 24);
-	const qint64 hours    = (diff_sec / (60 * 60)) % 24;
-	const qint64 minutes  = (diff_sec / 60) % 60;
+	const qint64 diff_msec = cur_date.msecsTo(lts_date);
 
-	update_log.notice("Current: %s, latest: %s, difference: %lld", cur_date.toString().toStdString(), lts_date.toString().toStdString(), diff_sec);
+	update_log.notice("Current: %s, latest: %s, difference: %lld ms", cur_date.toString().toStdString(), lts_date.toString().toStdString(), diff_msec);
+
+	Localized localized;
 
 	QString message;
 
 	if (hash_found)
 	{
-		message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 day(s), %5 hour(s) and %6 minute(s) old.\n\nDo you want to update?")
+		message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 old.\n\nDo you want to update?")
 			.arg(json_data["current_build"]["version"].toString())
 			.arg(cur_date.toString(date_fmt))
 			.arg(latest["version"].toString())
 			.arg(lts_date.toString(date_fmt))
-			.arg(days)
-			.arg(hours)
-			.arg(minutes);
+			.arg(localized.GetVerboseTimeByMs(diff_msec));
 	}
 	else
 	{
-		message = tr("You're currently using a custom or PR build.\n\nLatest version: %0 (%1)\nThe latest version is %2 day(s), %3 hour(s) and %4 minute(s) old.\n\nDo you want to update to the latest official RPCS3 version?")
+		message = tr("You're currently using a custom or PR build.\n\nLatest version: %0 (%1)\nThe latest version is %2 old.\n\nDo you want to update to the latest official RPCS3 version?")
 			.arg(latest["version"].toString())
 			.arg(lts_date.toString(date_fmt))
-			.arg(std::abs(days))
-			.arg(std::abs(hours))
-			.arg(std::abs(minutes));
+			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec)));
 	}
 
 	if (QMessageBox::question(m_progress_dialog, tr("Update Available"), message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
