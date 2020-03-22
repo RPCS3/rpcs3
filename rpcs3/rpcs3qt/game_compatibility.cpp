@@ -7,6 +7,12 @@
 #include <QJsonDocument>
 #include <QThread>
 
+#define NOMINMAX
+#ifndef CURL_STATICLIB
+#define CURL_STATICLIB
+#endif
+#include <curl/curl.h>
+
 LOG_CHANNEL(compat_log, "Compat");
 
 constexpr auto qstr = QString::fromStdString;
@@ -69,7 +75,7 @@ size_t game_compatibility::update_buffer(char* data, size_t size)
 	}
 
 	Q_EMIT signal_buffer_update(static_cast<int>(new_size), max);
-	
+
 	return size;
 }
 

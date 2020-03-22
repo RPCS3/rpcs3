@@ -31,6 +31,11 @@
 #include <sys/stat.h>
 #endif
 
+#ifndef CURL_STATICLIB
+#define CURL_STATICLIB
+#endif
+#include <curl/curl.h>
+
 LOG_CHANNEL(update_log, "UPDATER");
 
 size_t curl_write_cb(char* ptr, size_t /*size*/, size_t nmemb, void* userdata)

@@ -1,9 +1,6 @@
 ﻿#pragma once
 
 #include "stdafx.h"
-#define NOMINMAX
-#define CURL_STATICLIB
-#include <curl/curl.h>
 #include <QObject>
 #include <QByteArray>
 
@@ -21,7 +18,7 @@ private:
 	progress_dialog* m_progress_dialog = nullptr;
 	QWidget* m_parent                  = nullptr;
 
-	CURL *m_curl = nullptr;
+	void* m_curl = nullptr;
 	QByteArray m_curl_buf;
 	std::atomic<bool> m_curl_abort = false;
 	std::atomic<bool> m_curl_result = false;

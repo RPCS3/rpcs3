@@ -5,10 +5,6 @@
 #include <QPainter>
 #include <QJsonObject>
 
-#define NOMINMAX
-#define CURL_STATICLIB
-#include <curl/curl.h>
-
 class gui_settings;
 class progress_dialog;
 
@@ -44,7 +40,7 @@ private:
 	std::atomic<bool> m_curl_result = false;
 	std::atomic<bool> m_curl_abort = false;
 	double m_actual_dwnld_size = -1.0;
-	CURL *m_curl = nullptr;
+	void* m_curl = nullptr;
 	QByteArray m_curl_buf;
 	progress_dialog* m_progress_dialog = nullptr;
 	std::shared_ptr<gui_settings> m_xgui_settings;
