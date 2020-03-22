@@ -83,18 +83,21 @@
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h" />
     <ClInclude Include="Emu\RSX\GL\GLHelpers.h" />
     <ClInclude Include="Emu\RSX\GL\GLRenderTargets.h" />
+    <ClInclude Include="Emu\RSX\GL\GLShaderInterpreter.h" />
     <ClInclude Include="Emu\RSX\GL\GLTextureCache.h" />
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLDraw.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLHelpers.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLPresent.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLRenderTargets.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLShaderInterpreter.cpp" />
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLTexture.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexBuffers.cpp" />
