@@ -526,7 +526,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 
 			// Update progress window
 			double pval = progress;
-			pval < 0 ? pval += 1. : pval;
+			if (pval < 0) pval += 1.;
 			pdlg.SetValue(static_cast<int>(pval * pdlg.maximum()));
 			QCoreApplication::processEvents();
 		}
@@ -660,8 +660,8 @@ void main_window::HandlePupInstallation(QString file_path)
 		updatefilenames.end());
 
 	std::string version_string = pup.get_file(0x100).to_string();
-	size_t version_pos = version_string.find('\n');
-	if (version_pos != umax)
+
+	if (const size_t version_pos = version_string.find('\n'); version_pos != umax)
 	{
 		version_string.erase(version_pos);
 	}
@@ -824,7 +824,7 @@ void main_window::RepaintThumbnailIcons()
 {
 	const QColor new_color = gui::utils::get_label_color("thumbnail_icon_color");
 
-	auto icon = [&new_color](const QString& path)
+	const auto icon = [&new_color](const QString& path)
 	{
 		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, new_color);
 	};
@@ -847,7 +847,7 @@ void main_window::RepaintToolBarIcons()
 {
 	const QColor new_color = gui::utils::get_label_color("toolbar_icon_color");
 
-	auto icon = [&new_color](const QString& path)
+	const auto icon = [&new_color](const QString& path)
 	{
 		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, new_color);
 	};
