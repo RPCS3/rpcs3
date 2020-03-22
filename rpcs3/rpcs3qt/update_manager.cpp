@@ -107,7 +107,7 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 	connect(m_progress_dialog, &QProgressDialog::canceled, [this]() { m_curl_abort = true; });
 	connect(m_progress_dialog, &QProgressDialog::finished, m_progress_dialog, &QProgressDialog::deleteLater);
 
-	const std::string request_url = m_update_url + rpcs3::get_commit_and_hash().second;
+	const std::string request_url = "https://update.rpcs3.net/?api=v1&c=" + rpcs3::get_commit_and_hash().second;
 	curl_easy_setopt(m_curl, CURLOPT_URL, request_url.c_str());
 	curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
 	curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, this);
@@ -500,7 +500,7 @@ bool update_manager::handle_rpcs3()
 	size_t outBufferSize = 0;
 
 	// Creates temp folder for moving active files
-	const std::string tmp_folder = Emulator::GetEmuDir() + m_tmp_folder;
+	const std::string tmp_folder = Emulator::GetEmuDir() + "rpcs3_old/";
 	fs::create_dir(tmp_folder);
 
 	for (UInt32 i = 0; i < db.NumFiles; i++)
