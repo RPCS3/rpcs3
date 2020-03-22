@@ -140,7 +140,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 				{
 					verify(HERE), !mutex->signaled;
 					std::lock_guard lock(mutex->mutex);
-					mutex->sq.emplace_back(result);
+					verify(HERE), mutex->add_waiter(result);
 				}
 				else
 				{
@@ -228,7 +228,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				{
 					verify(HERE), !mutex->signaled;
 					std::lock_guard lock(mutex->mutex);
-					mutex->sq.emplace_back(cpu);
+					verify(HERE), mutex->add_waiter(cpu);
 				}
 				else
 				{
@@ -280,6 +280,23 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 		if (!mutex)
 		{
+			return;
+		}
+
+		// Try to increment lwmutex's lwcond's waiters count
+		if (!mutex->lwcond_waiters.fetch_op([](s32& val)
+		{
+			if (val == INT32_MIN)
+			{
+				return false;
+			}
+
+			val++;
+			return true;
+		}).second)
+		{
+			// Failed - lwmutex was detroyed and all waiters have quit
+			mutex.reset();
 			return;
 		}
 
@@ -341,6 +358,12 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		{
 			thread_ctrl::wait();
 		}
+	}
+
+	if (--mutex->lwcond_waiters == INT32_MIN)
+	{
+		// Notify the thread destroying lwmutex on last waiter
+		mutex->lwcond_waiters.notify_all();
 	}
 
 	// Return cause
