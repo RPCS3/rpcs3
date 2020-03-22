@@ -42,6 +42,8 @@
 	save_data_info_dialog.cpp
 	save_data_list_dialog.cpp
 	save_manager_dialog.cpp
+	screenshot_manager_dialog.cpp
+	screenshot_preview.cpp
 	settings.cpp
 	settings_dialog.cpp
 	skylander_dialog.cpp
