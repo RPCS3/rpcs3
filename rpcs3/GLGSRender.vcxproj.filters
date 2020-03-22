@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClCompile Include="Emu\RSX\GL\GLDraw.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLTexture.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLHelpers.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
@@ -10,6 +11,7 @@
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLPresent.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLRenderTargets.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLShaderInterpreter.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexBuffers.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -24,6 +26,7 @@
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
     <ClInclude Include="Emu\RSX\GL\GLTextureCache.h" />
     <ClInclude Include="Emu\RSX\GL\GLRenderTargets.h" />
+    <ClInclude Include="Emu\RSX\GL\GLShaderInterpreter.h" />
     <ClInclude Include="Emu\RSX\GL\GLTextOut.h" />
     <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
     <ClInclude Include="Emu\RSX\GL\GLExecutionState.h" />
