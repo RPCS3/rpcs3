@@ -205,9 +205,9 @@ namespace rsx
 					{
 						if (max_index >= attrib.frequency)
 						{
-							// Actually uses the modulo operator, cannot safely optimize
+							// Actually uses the modulo operator
 							_min_index = 0;
-							_max_index = std::max<u32>(_max_index, attrib.frequency - 1);
+							_max_index = attrib.frequency - 1;
 						}
 						else
 						{
@@ -219,7 +219,7 @@ namespace rsx
 					{
 						// Division operator
 						_min_index = std::min(_min_index, first / attrib.frequency);
-						_max_index = std::max<u32>(_max_index, max_index / attrib.frequency);
+						_max_index = std::max<u32>(_max_index, aligned_div(max_index, attrib.frequency));
 					}
 				}
 			}

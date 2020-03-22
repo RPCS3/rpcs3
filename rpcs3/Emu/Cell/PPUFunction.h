@@ -9,6 +9,7 @@ using ppu_function_t = bool(*)(ppu_thread&);
 	const auto old_f = ppu.current_function;\
 	if (!old_f) ppu.last_function = #func;\
 	ppu.current_function = #func;\
+	ppu.syscall_r3 = ppu.gpr[3];\
 	ppu_func_detail::do_call(ppu, func);\
 	ppu.current_function = old_f;\
 	ppu.cia += 4;\
