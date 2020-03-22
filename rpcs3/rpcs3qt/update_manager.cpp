@@ -7,13 +7,11 @@
 #include "Emu/System.h"
 
 #include <QApplication>
+#include <QDateTime>
 #include <QMessageBox>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QThread>
-
-#include <sstream>
-#include <iomanip>
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -167,13 +165,6 @@ bool update_manager::handle_json(bool automatic)
 		// If a user clicks "Check for Updates" with a custom build ask him if he's sure he wants to update to latest version
 		if (!automatic && return_code == -1)
 		{
-			if (QMessageBox::question(m_progress_dialog, tr("Auto-updater"), tr("You're currently using a custom or PR build.\n\nDo you want to update to the latest official RPCS3 version?"),
-			        QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
-			{
-				m_progress_dialog->close();
-				return true;
-			}
-
 			hash_found = false;
 		}
 		else
@@ -220,45 +211,46 @@ bool update_manager::handle_json(bool automatic)
 		return true;
 	}
 
+	// Calculate how old the build is
+	const QString date_fmt = QStringLiteral("yyyy-MM-dd hh:mm:ss");
+
+	const QDateTime cur_date = hash_found ? QDateTime::fromString(json_data["current_build"]["datetime"].toString(), date_fmt) : QDateTime::currentDateTimeUtc();
+	const QDateTime lts_date = QDateTime::fromString(latest["datetime"].toString(), date_fmt);
+
+	const qint64 diff_sec = cur_date.secsTo(lts_date);
+	const qint64 days     = diff_sec / (60 * 60 * 24);
+	const qint64 hours    = (diff_sec / (60 * 60)) % 24;
+	const qint64 minutes  = (diff_sec / 60) % 60;
+
+	update_log.notice("Current: %s, latest: %s, difference: %lld", cur_date.toString().toStdString(), lts_date.toString().toStdString(), diff_sec);
+
+	QString message;
+
 	if (hash_found)
 	{
-		// Calculates how old the build is
-		const std::string cur_date = json_data["current_build"]["datetime"].toString().toStdString();
-		const std::string lts_date = latest["datetime"].toString().toStdString();
+		message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 day(s), %5 hour(s) and %6 minute(s) old.\n\nDo you want to update?")
+			.arg(json_data["current_build"]["version"].toString())
+			.arg(cur_date.toString(date_fmt))
+			.arg(latest["version"].toString())
+			.arg(lts_date.toString(date_fmt))
+			.arg(days)
+			.arg(hours)
+			.arg(minutes);
+	}
+	else
+	{
+		message = tr("You're currently using a custom or PR build.\n\nLatest version: %0 (%1)\nThe latest version is %2 day(s), %3 hour(s) and %4 minute(s) old.\n\nDo you want to update to the latest official RPCS3 version?")
+			.arg(latest["version"].toString())
+			.arg(lts_date.toString(date_fmt))
+			.arg(std::abs(days))
+			.arg(std::abs(hours))
+			.arg(std::abs(minutes));
+	}
 
-		tm cur_tm, lts_tm;
-		QString timediff = "";
-
-		auto time_from_str = [](const std::string& str, const std::string& format, tm* tm) -> bool
-		{
-			update_log.notice("Converting string: %s", str);
-			std::istringstream input(str);
-			input.imbue(std::locale(setlocale(LC_TIME, "C")));
-			input >> std::get_time(tm, format.c_str());
-
-			return !input.fail();
-		};
-
-		if (time_from_str(cur_date, "%Y-%m-%d %H:%M:%S", &cur_tm) && time_from_str(lts_date, "%Y-%m-%d %H:%M:%S", &lts_tm))
-		{
-			time_t cur_time = mktime(&cur_tm);
-			time_t lts_time = mktime(&lts_tm);
-
-			const s64 u_timediff = static_cast<s64>(std::difftime(lts_time, cur_time));
-			update_log.notice("Current: %lld, latest: %lld, difference: %lld", static_cast<s64>(cur_time), static_cast<s64>(lts_time), u_timediff);
-
-			timediff = tr("Your version is %1 day(s), %2 hour(s) and %3 minute(s) old.").arg(u_timediff / (60 * 60 * 24)).arg((u_timediff / (60 * 60)) % 24).arg((u_timediff / 60) % 60);
-		}
-
-		const QString to_show = tr("A new version of RPCS3 is available!\n\nCurrent version: %1\nLatest version: %2\n%3\n\nDo you want to update?")
-		                            .arg(json_data["current_build"]["version"].toString())
-		                            .arg(latest["version"].toString())
-		                            .arg(timediff);
-		if (QMessageBox::question(m_progress_dialog, tr("Update Available"), to_show, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
-		{
-			m_progress_dialog->close();
-			return true;
-		}
+	if (QMessageBox::question(m_progress_dialog, tr("Update Available"), message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
+	{
+		m_progress_dialog->close();
+		return true;
 	}
 
 	m_expected_hash = latest[os]["checksum"].toString().toStdString();
