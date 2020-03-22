@@ -3,6 +3,7 @@
 #include "progress_dialog.h"
 #include "localized.h"
 #include "rpcs3_version.h"
+#include "curl_handle.h"
 #include "Utilities/StrUtil.h"
 #include "Crypto/sha256.h"
 #include "Emu/System.h"
@@ -32,11 +33,6 @@
 #include <sys/stat.h>
 #endif
 
-#ifndef CURL_STATICLIB
-#define CURL_STATICLIB
-#endif
-#include <curl/curl.h>
-
 LOG_CHANNEL(update_log, "UPDATER");
 
 size_t curl_write_cb(char* ptr, size_t /*size*/, size_t nmemb, void* userdata)
@@ -47,12 +43,7 @@ size_t curl_write_cb(char* ptr, size_t /*size*/, size_t nmemb, void* userdata)
 
 update_manager::update_manager()
 {
-	m_curl = curl_easy_init();
-
-#ifdef _WIN32
-	// This shouldn't be needed on linux
-	curl_easy_setopt(m_curl, CURLOPT_CAINFO, "cacert.pem");
-#endif
+	m_curl = new curl_handle(this);
 
 	// We need this signal in order to update the GUI from the main thread
 	connect(this, &update_manager::signal_buffer_update, this, &update_manager::handle_buffer_update);
@@ -108,13 +99,13 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 	connect(m_progress_dialog, &QProgressDialog::finished, m_progress_dialog, &QProgressDialog::deleteLater);
 
 	const std::string request_url = "https://update.rpcs3.net/?api=v1&c=" + rpcs3::get_commit_and_hash().second;
-	curl_easy_setopt(m_curl, CURLOPT_URL, request_url.c_str());
-	curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
-	curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, this);
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, request_url.c_str());
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEFUNCTION, curl_write_cb);
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEDATA, this);
 
 	auto thread = QThread::create([this]
 	{
-		const auto curl_result = curl_easy_perform(m_curl);
+		const auto curl_result = curl_easy_perform(m_curl->get_curl());
 		m_curl_result = curl_result == CURLE_OK;
 
 		if (!m_curl_result)
@@ -270,14 +261,14 @@ bool update_manager::handle_json(bool automatic)
 	m_update_dialog = true;
 
 	const std::string request_url = latest[os]["download"].toString().toStdString();
-	curl_easy_setopt(m_curl, CURLOPT_URL, request_url.c_str());
-	curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1);
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, request_url.c_str());
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_FOLLOWLOCATION, 1);
 
 	m_curl_buf.clear();
 
 	auto thread = QThread::create([this]
 	{
-		const auto curl_result = curl_easy_perform(m_curl);
+		const auto curl_result = curl_easy_perform(m_curl->get_curl());
 		m_curl_result = curl_result == CURLE_OK;
 
 		if (!m_curl_result)

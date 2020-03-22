@@ -1,17 +1,12 @@
 ﻿#include "game_compatibility.h"
 #include "gui_settings.h"
 #include "progress_dialog.h"
+#include "curl_handle.h"
 
 #include <QApplication>
 #include <QMessageBox>
 #include <QJsonDocument>
 #include <QThread>
-
-#define NOMINMAX
-#ifndef CURL_STATICLIB
-#define CURL_STATICLIB
-#endif
-#include <curl/curl.h>
 
 LOG_CHANNEL(compat_log, "Compat");
 
@@ -29,12 +24,7 @@ game_compatibility::game_compatibility(std::shared_ptr<gui_settings> settings) :
 	m_filepath = m_xgui_settings->GetSettingsDir() + "/compat_database.dat";
 	m_url = "https://rpcs3.net/compatibility?api=v1&export";
 
-	m_curl = curl_easy_init();
-
-#ifdef _WIN32
-	// This shouldn't be needed on linux
-	curl_easy_setopt(m_curl, CURLOPT_CAINFO, "cacert.pem");
-#endif
+	m_curl = new curl_handle(this);
 
 	RequestCompatibility();
 
@@ -68,7 +58,7 @@ size_t game_compatibility::update_buffer(char* data, size_t size)
 
 	if (m_actual_dwnld_size < 0)
 	{
-		if (curl_easy_getinfo(m_curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &m_actual_dwnld_size) == CURLE_OK && m_actual_dwnld_size > 0)
+		if (curl_easy_getinfo(m_curl->get_curl(), CURLINFO_CONTENT_LENGTH_DOWNLOAD, &m_actual_dwnld_size) == CURLE_OK && m_actual_dwnld_size > 0)
 		{
 			max = static_cast<int>(m_actual_dwnld_size);
 		}
@@ -183,10 +173,10 @@ void game_compatibility::RequestCompatibility(bool online)
 	m_progress_dialog = new progress_dialog(tr("Downloading Database"), tr("Please wait ..."), tr("Abort"), 0, 100, true);
 	m_progress_dialog->show();
 
-	curl_easy_setopt(m_curl, CURLOPT_URL, m_url.c_str());
-	curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, curl_write_cb_compat);
-	curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, this);
-	curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1);
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, m_url.c_str());
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEFUNCTION, curl_write_cb_compat);
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEDATA, this);
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_FOLLOWLOCATION, 1);
 
 	m_curl_buf.clear();
 	m_curl_abort = false;
@@ -197,7 +187,7 @@ void game_compatibility::RequestCompatibility(bool online)
 
 	auto thread = QThread::create([&]
 	{
-		const auto result = curl_easy_perform(m_curl);
+		const auto result = curl_easy_perform(m_curl->get_curl());
 		m_curl_result = result == CURLE_OK;
 
 		if (!m_curl_result)

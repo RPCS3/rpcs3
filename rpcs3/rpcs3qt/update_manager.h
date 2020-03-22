@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QByteArray>
 
+class curl_handle;
 class progress_dialog;
 
 class update_manager final :  public QObject
@@ -15,7 +16,7 @@ private:
 	progress_dialog* m_progress_dialog = nullptr;
 	QWidget* m_parent                  = nullptr;
 
-	void* m_curl = nullptr;
+	curl_handle* m_curl = nullptr;
 	QByteArray m_curl_buf;
 	std::atomic<bool> m_curl_abort = false;
 	std::atomic<bool> m_curl_result = false;
