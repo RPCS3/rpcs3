@@ -271,10 +271,10 @@ void kernel_explorer::Update()
 
 	lv2_types.emplace_back(l_addTreeChild(root, "Memory Containers"));
 
-	idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container&)
+	idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container& container)
 	{
 		lv2_types.back().count++;
-		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("Memory Container: ID = 0x%08x", id)));
+		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("Memory Container: ID = 0x%08x, total size = 0x%x, used = 0x%x", id, container.size, +container.used)));
 	});
 
 	lv2_types.emplace_back(l_addTreeChild(root, "PPU Threads"));
