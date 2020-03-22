@@ -179,7 +179,9 @@ bool update_manager::handle_json(bool automatic)
 		}
 	}
 
+	const auto& current = json_data["current_build"];
 	const auto& latest = json_data["latest_build"];
+
 	if (!latest.isObject())
 	{
 		update_log.error("JSON doesn't contain latest_build section");
@@ -200,7 +202,7 @@ bool update_manager::handle_json(bool automatic)
 	// Check that every bit of info we need is there
 	if (!latest[os].isObject() || !latest[os]["download"].isString() || !latest[os]["size"].isDouble() || !latest[os]["checksum"].isString() || !latest["version"].isString() ||
 	    !latest["datetime"].isString() ||
-	    (hash_found && (!json_data["current_build"].isObject() || !json_data["current_build"]["version"].isString() || !json_data["current_build"]["datetime"].isString())))
+	    (hash_found && (!current.isObject() || !current["version"].isString() || !current["datetime"].isString())))
 	{
 		update_log.error("Some information seems unavailable");
 		return false;
@@ -220,7 +222,7 @@ bool update_manager::handle_json(bool automatic)
 	// Calculate how old the build is
 	const QString date_fmt = QStringLiteral("yyyy-MM-dd hh:mm:ss");
 
-	const QDateTime cur_date = hash_found ? QDateTime::fromString(json_data["current_build"]["datetime"].toString(), date_fmt) : QDateTime::currentDateTimeUtc();
+	const QDateTime cur_date = hash_found ? QDateTime::fromString(current["datetime"].toString(), date_fmt) : QDateTime::currentDateTimeUtc();
 	const QDateTime lts_date = QDateTime::fromString(latest["datetime"].toString(), date_fmt);
 
 	const QString cur_str = cur_date.toString(date_fmt);
@@ -237,7 +239,7 @@ bool update_manager::handle_json(bool automatic)
 	if (hash_found)
 	{
 		message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 old.\n\nDo you want to update?")
-			.arg(json_data["current_build"]["version"].toString())
+			.arg(current["version"].toString())
 			.arg(cur_str)
 			.arg(latest["version"].toString())
 			.arg(lts_str)
