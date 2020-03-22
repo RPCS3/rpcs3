@@ -223,9 +223,12 @@ bool update_manager::handle_json(bool automatic)
 	const QDateTime cur_date = hash_found ? QDateTime::fromString(json_data["current_build"]["datetime"].toString(), date_fmt) : QDateTime::currentDateTimeUtc();
 	const QDateTime lts_date = QDateTime::fromString(latest["datetime"].toString(), date_fmt);
 
+	const QString cur_str = cur_date.toString(date_fmt);
+	const QString lts_str = lts_date.toString(date_fmt);
+
 	const qint64 diff_msec = cur_date.msecsTo(lts_date);
 
-	update_log.notice("Current: %s, latest: %s, difference: %lld ms", cur_date.toString().toStdString(), lts_date.toString().toStdString(), diff_msec);
+	update_log.notice("Current: %s, latest: %s, difference: %lld ms", cur_str.toStdString(), lts_str.toStdString(), diff_msec);
 
 	Localized localized;
 
@@ -235,16 +238,16 @@ bool update_manager::handle_json(bool automatic)
 	{
 		message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 old.\n\nDo you want to update?")
 			.arg(json_data["current_build"]["version"].toString())
-			.arg(cur_date.toString(date_fmt))
+			.arg(cur_str)
 			.arg(latest["version"].toString())
-			.arg(lts_date.toString(date_fmt))
+			.arg(lts_str)
 			.arg(localized.GetVerboseTimeByMs(diff_msec));
 	}
 	else
 	{
 		message = tr("You're currently using a custom or PR build.\n\nLatest version: %0 (%1)\nThe latest version is %2 old.\n\nDo you want to update to the latest official RPCS3 version?")
 			.arg(latest["version"].toString())
-			.arg(lts_date.toString(date_fmt))
+			.arg(lts_str)
 			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec)));
 	}
 
