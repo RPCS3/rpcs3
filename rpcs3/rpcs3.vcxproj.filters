@@ -883,6 +883,9 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_update_manager.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\curl_handle.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -983,6 +986,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\category.h">
       <Filter>Gui\game list</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\curl_handle.h">
+      <Filter>rpcs3</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

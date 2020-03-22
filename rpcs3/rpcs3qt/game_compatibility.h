@@ -5,6 +5,7 @@
 #include <QPainter>
 #include <QJsonObject>
 
+class curl_handle;
 class gui_settings;
 class progress_dialog;
 
@@ -40,7 +41,7 @@ private:
 	std::atomic<bool> m_curl_result = false;
 	std::atomic<bool> m_curl_abort = false;
 	double m_actual_dwnld_size = -1.0;
-	void* m_curl = nullptr;
+	curl_handle* m_curl = nullptr;
 	QByteArray m_curl_buf;
 	progress_dialog* m_progress_dialog = nullptr;
 	std::shared_ptr<gui_settings> m_xgui_settings;
