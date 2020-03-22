@@ -6,6 +6,7 @@
 #include "save_manager_dialog.h"
 #include "trophy_manager_dialog.h"
 #include "user_manager_dialog.h"
+#include "screenshot_manager_dialog.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
 #include "debugger_frame.h"
@@ -1516,6 +1517,12 @@ void main_window::CreateConnects()
 		user_manager_dialog user_manager(m_gui_settings, this);
 		user_manager.exec();
 		m_game_list_frame->Refresh(true); // New user may have different games unlocked.
+	});
+
+	connect(ui->actionManage_Screenshots, &QAction::triggered, [this]
+	{
+		screenshot_manager_dialog* screenshot_manager = new screenshot_manager_dialog();
+		screenshot_manager->show();
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, [this]

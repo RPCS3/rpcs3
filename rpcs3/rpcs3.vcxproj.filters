@@ -125,6 +125,9 @@
       <Extensions>ts</Extensions>
       <ParseFiles>false</ParseFiles>
     </Filter>
+    <Filter Include="Gui\screenshot manager">
+      <UniqueIdentifier>{b227bdd4-16f5-4f6e-a8b2-8b1f4bdc606a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\rpcs3qt\*.cpp">
@@ -886,6 +889,36 @@
     <ClCompile Include="rpcs3qt\curl_handle.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\screenshot_manager_dialog.cpp">
+      <Filter>Gui\screenshot manager</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_screenshot_manager_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_screenshot_manager_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_manager_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_screenshot_manager_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\screenshot_preview.cpp">
+      <Filter>Gui\screenshot manager</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_screenshot_preview.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_screenshot_preview.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_preview.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_screenshot_preview.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -1168,6 +1201,12 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\localized.h">
       <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\screenshot_manager_dialog.h">
+      <Filter>Gui\screenshot manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\screenshot_preview.h">
+      <Filter>Gui\screenshot manager</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
