@@ -1,6 +1,6 @@
-﻿#include <QMessageBox>
-#include <QFileDialog>
+﻿#include "stdafx.h"
 
+#include "main_window.h"
 #include "qt_utils.h"
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
@@ -16,7 +16,6 @@
 #include "memory_string_searcher.h"
 #include "memory_viewer_panel.h"
 #include "rsx_debugger.h"
-#include "main_window.h"
 #include "about_dialog.h"
 #include "pad_settings_dialog.h"
 #include "progress_dialog.h"
@@ -31,8 +30,9 @@
 #include <QScreen>
 #include <QDirIterator>
 #include <QMimeData>
+#include <QMessageBox>
+#include <QFileDialog>
 
-#include "stdafx.h"
 #include "rpcs3_version.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"

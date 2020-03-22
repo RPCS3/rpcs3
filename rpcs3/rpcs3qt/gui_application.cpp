@@ -69,15 +69,15 @@ void gui_application::Init()
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
 
-	if (m_main_window)
-	{
-		m_main_window->Init();
-	}
-
 	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
 	{
 		welcome_dialog* welcome = new welcome_dialog();
 		welcome->exec();
+	}
+
+	if (m_main_window)
+	{
+		m_main_window->Init();
 	}
 
 #ifdef WITH_DISCORD_RPC
