@@ -60,6 +60,8 @@ static atomic_t<char*> s_argv0;
 extern char **environ;
 #endif
 
+LOG_CHANNEL(sys_log, "SYS");
+
 [[noreturn]] extern void report_fatal_error(const std::string& text)
 {
 	const bool local = s_qt_init.try_lock();
@@ -263,6 +265,15 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 
 int main(int argc, char** argv)
 {
+#ifdef _WIN32
+	ULONG64 intro_cycles{};
+	QueryThreadCycleTime(GetCurrentThread(), &intro_cycles);
+#elif defined(RUSAGE_THREAD)
+	struct ::rusage intro_stats{};
+	::getrusage(RUSAGE_THREAD, &intro_stats);
+	const u64 intro_time = (intro_stats.ru_utime.tv_sec + intro_stats.ru_stime.tv_sec) * 1000000000ull + (intro_stats.ru_utime.tv_usec + intro_stats.ru_stime.tv_usec) * 1000ull;
+#endif
+
 	s_argv0 = argv[0]; // Save for report_fatal_error
 
 	// Only run RPCS3 to display an error
@@ -353,6 +364,12 @@ int main(int argc, char** argv)
 
 		logs::set_init({std::move(ver), std::move(os)});
 	}
+
+#ifdef _WIN32
+	sys_log.notice("Initialization times before main(): %fGc", intro_cycles / 1000000000.);
+#elif defined(RUSAGE_THREAD)
+	sys_log.notice("Initialization times before main(): %fs", intro_time / 1000000000.);
+#endif
 
 #ifdef __linux__
 	struct ::rlimit rlim;
