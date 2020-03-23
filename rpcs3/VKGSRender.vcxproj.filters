@@ -3,6 +3,7 @@
   <ItemGroup>
     <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKDMA.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKDraw.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFormats.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFramebuffer.cpp" />
@@ -13,6 +14,7 @@
     <ClCompile Include="Emu\RSX\VK\VKRenderPass.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKResolveHelper.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKResourceManager.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKShaderInterpreter.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKTexture.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp" />
@@ -34,6 +36,7 @@
     <ClInclude Include="Emu\RSX\VK\VKRenderTargets.h" />
     <ClInclude Include="Emu\RSX\VK\VKResolveHelper.h" />
     <ClInclude Include="Emu\RSX\VK\VKResourceManager.h" />
+    <ClInclude Include="Emu\RSX\VK\VKShaderInterpreter.h" />
     <ClInclude Include="Emu\RSX\VK\VKTextOut.h" />
     <ClInclude Include="Emu\RSX\VK\VKTextureCache.h" />
     <ClInclude Include="Emu\RSX\VK\VKVertexProgram.h" />

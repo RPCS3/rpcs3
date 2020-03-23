@@ -510,6 +510,9 @@ private:
 	void load_program_env();
 	void update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info);
 
+	void load_texture_env();
+	void bind_texture_env();
+
 public:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 	void set_viewport();

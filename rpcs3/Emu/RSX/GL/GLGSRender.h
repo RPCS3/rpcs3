@@ -75,6 +75,7 @@ private:
 	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];           // Vertex textures
 
 	gl::glsl::program *m_program;
+	gl::glsl::program m_shader_interpreter;
 
 	gl_render_targets m_rtts;
 
@@ -154,6 +155,9 @@ private:
 
 	void update_draw_state();
 
+	void load_texture_env();
+	void bind_texture_env();
+
 	gl::texture* get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig);
 
 public:
@@ -174,6 +178,7 @@ protected:
 	void clear_surface(u32 arg) override;
 	void begin() override;
 	void end() override;
+	void emit_geometry(u32 sub_index) override;
 
 	void on_init_thread() override;
 	void on_exit() override;
