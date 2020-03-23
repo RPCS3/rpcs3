@@ -80,8 +80,10 @@ error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id)
 				return 0;
 			}
 		}
-
-		break;
+		else
+		{
+			break;
+		}
 	}
 
 	if (!idm::remove_verify<lv2_obj, lv2_lwmutex>(lwmutex_id, std::move(mutex)))
