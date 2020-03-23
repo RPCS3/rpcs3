@@ -596,9 +596,9 @@ bool update_manager::handle_rpcs3()
 	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!"));
 
 #ifdef _WIN32
-	const int ret = _wexecl(orig_path, orig_path, nullptr);
+	const int ret = _wexecl(orig_path, orig_path, L"--updating", nullptr);
 #else
-	const int ret = execl(replace_path.c_str(), replace_path.c_str(), nullptr);
+	const int ret = execl(replace_path.c_str(), replace_path.c_str(), "--updating", nullptr);
 #endif
 	if (ret == -1)
 	{

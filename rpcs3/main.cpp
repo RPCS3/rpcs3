@@ -172,6 +172,7 @@ const char* arg_styles     = "styles";
 const char* arg_style      = "style";
 const char* arg_stylesheet = "stylesheet";
 const char* arg_error      = "error";
+const char* arg_updating   = "updating";
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {
@@ -295,9 +296,13 @@ int main(int argc, char** argv)
 
 	fs::file instance_lock;
 
-	for (u32 num = 0; num < 100 && !instance_lock.open(lock_name, fs::rewrite + fs::lock); num++)
+	// True if an argument --updating found
+	const bool is_updating = find_arg(arg_updating, argc, argv) != 0;
+
+	// Keep trying to lock the file for ~2s normally, and for ~10s in the case of --updating
+	for (u32 num = 0; num < (is_updating ? 500u : 100u) && !instance_lock.open(lock_name, fs::rewrite + fs::lock); num++)
 	{
-		std::this_thread::sleep_for(30ms);
+		std::this_thread::sleep_for(20ms);
 	}
 
 	if (!instance_lock)
