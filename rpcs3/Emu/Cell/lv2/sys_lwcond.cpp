@@ -87,9 +87,13 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> int
 	{
-		if (ppu_thread_id != umax && !idm::check_unlocked<named_thread<ppu_thread>>(ppu_thread_id))
+		if (ppu_thread_id != umax)
 		{
-			return -1;
+			if (const auto cpu = idm::check_unlocked<named_thread<ppu_thread>>(ppu_thread_id);
+				!cpu || cpu->joiner == ppu_join_status::exited)
+			{
+				return -1;
+			}
 		}
 
 		lv2_lwmutex* mutex;
@@ -136,13 +140,25 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 					static_cast<ppu_thread*>(result)->gpr[3] = CELL_EBUSY;
 				}
 
-				if (mode == 1)
+				if (mode != 2)
 				{
 					verify(HERE), !mutex->signaled;
 					std::lock_guard lock(mutex->mutex);
-					verify(HERE), mutex->add_waiter(result);
+
+					if (mode == 3 && !mutex->sq.empty()) [[unlikely]]
+					{
+						// Respect ordering of the sleep queue
+						mutex->sq.emplace_back(result);
+						result = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol);
+					}
+					else if (mode == 1)
+					{
+						verify(HERE), mutex->add_waiter(result);
+						result = nullptr;
+					}
 				}
-				else
+
+				if (result)
 				{
 					cond.awake(result);
 				}
