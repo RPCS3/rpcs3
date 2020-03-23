@@ -76,7 +76,7 @@ struct lv2_lwmutex final : lv2_obj
 	{
 		if (const auto old = lwcond_waiters.fetch_op([](s32& val)
 		{
-			if (val + 0u <= INT32_MIN + 0u)
+			if (val + 0u <= 1u << 31)
 			{
 				// Value was either positive or INT32_MIN
 				return false;
