@@ -908,7 +908,7 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 		SetVr(op.vd, m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { acb[0], acb[1], acb[2] }));
 		return;
 	}
-	
+
 	// Emulated FMA via double precision
 	auto a = get_vr<f32[4]>(op.va);
 	auto b = get_vr<f32[4]>(op.vb);
@@ -1797,7 +1797,8 @@ void PPUTranslator::ADDIS(ppu_opcode_t op)
 
 void PPUTranslator::BC(ppu_opcode_t op)
 {
-	const u64 target = (op.aa ? 0 : m_addr) + op.bt14;
+	const s32 bt14 = op.bt14; // Workaround for VS 16.5
+	const u64 target = (op.aa ? 0 : m_addr) + bt14;
 
 	if (op.aa && m_reloc)
 	{
@@ -1845,7 +1846,8 @@ void PPUTranslator::SC(ppu_opcode_t op)
 
 void PPUTranslator::B(ppu_opcode_t op)
 {
-	const u64 target = (op.aa ? 0 : m_addr) + op.bt24;
+	const s32 bt24 = op.bt24; // Workaround for VS 16.5
+	const u64 target = (op.aa ? 0 : m_addr) + bt24;
 
 	if (op.aa && m_reloc)
 	{
