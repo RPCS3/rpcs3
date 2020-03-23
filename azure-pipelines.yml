@@ -79,3 +79,17 @@ jobs:
 
     - publish: $(Build.ArtifactStagingDirectory)
       artifact: Windows App Bundle
+
+    - task: GitHubRelease@1
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      inputs:
+        gitHubConnection: 'RPCS3-Token'
+        repositoryName: '$(Build.Repository.Name)'
+        releaseNotesFilePath: 'GitHubReleaseMessage.txt'
+        action: 'create'
+        target: '$(Build.SourceVersion)'
+        tagSource: 'userSpecifiedTag'
+        tag: 'build-$(Build.SourceVersion)'
+        title: $(AVVER)
+        addChangeLog: false
+      displayName: Push build to GitHub

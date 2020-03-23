@@ -35,7 +35,9 @@ curl -sL 'https://curl.haxx.se/ca/cacert.pem' > ./bin/cacert.pem
 7z a -m0=LZMA2 -mx9 "$BUILD" ./bin/*
 
 # Generate sha256 hashes
-sha256sum "$BUILD" | awk '{ print $1 }' > "$BUILD.sha256"
+# Write to file for GitHub releases
+sha256sum "$BUILD" | awk '{ print $1 }' | tee "$BUILD.sha256"
+echo "$(cat "$BUILD.sha256");$(stat -c %s "$BUILD")B" > GitHubReleaseMessage.txt
 
 # Move files to publishing directory
 mv -- "$BUILD" "$ARTIFACT_DIR"

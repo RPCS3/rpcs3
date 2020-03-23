@@ -92,7 +92,8 @@ fi
 # in later stages, but are not added to environment variables
 # in *this* stage. Thank azure for that one.
 # BRANCH is used for experimental build warnings for pr builds
-# It is accessed in main_window.cpp
+# used in main_window.cpp. AVVER is used for GitHub releases.
 BRANCH="${REPO_NAME}/${REPO_BRANCH}"
 echo "##vso[task.setvariable variable=branch]$BRANCH"
 echo "##vso[task.setvariable variable=build]$BUILD"
+echo "##vso[task.setvariable variable=avver]$AVVER"
