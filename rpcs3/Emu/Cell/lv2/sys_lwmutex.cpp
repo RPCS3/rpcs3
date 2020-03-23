@@ -64,9 +64,9 @@ error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id)
 		}
 
 		// Wait for all lwcond waiters to quit
-		if (const s32 old = mutex->lwcond_waiters; old & 0x7fff'ffff)
+		if (const s32 old = mutex->lwcond_waiters; old != INT32_MIN)
 		{
-			if (old > 0)
+			if (old >= 0)
 			{
 				// Sleep queue is no longer empty
 				// Was set to positive value to announce it
