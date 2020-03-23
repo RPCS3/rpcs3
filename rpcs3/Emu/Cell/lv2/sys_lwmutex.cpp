@@ -143,7 +143,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		return false;
 	});
 
-	if (!mutex)
+	if (!mutex || ppu.gpr[3] == CELL_ESRCH)
 	{
 		return CELL_ESRCH;
 	}
