@@ -295,7 +295,7 @@ static bool ds3_input_to_ext(const u32 port_no, CellGemExtPortData& ext)
  * \param mouse_no Mouse index number to use
  * \param digital_buttons Bitmask filled with CELL_GEM_CTRL_* values
  * \param analog_t Analog value of Move's Trigger.
- * \return true on success, false if mouse mouse_no is invalid
+ * \return true on success, false if mouse_no is invalid
  */
 static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
 {
@@ -325,7 +325,7 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 	if ((mouse_data.buttons & CELL_MOUSE_BUTTON_2) && (mouse_data.buttons & CELL_MOUSE_BUTTON_3))
 		digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
 
-	analog_t = mouse_data.buttons & (CELL_MOUSE_BUTTON_1 ? 0xFFFF : 0);
+	analog_t = (mouse_data.buttons & CELL_MOUSE_BUTTON_1) ? 0xFFFF : 0;
 
 	return true;
 }
@@ -713,7 +713,9 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		gem_image_state->projectiony = 1;
 	}
 	else if (g_cfg.io.move == move_handler::mouse)
+	{
 		mouse_pos_to_gem_image_state(gem_num, gem_image_state);
+	}
 
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
@@ -747,9 +749,13 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 	}
 
 	if (g_cfg.io.move == move_handler::fake)
+	{
 		ds3_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+	}
 	else if (g_cfg.io.move == move_handler::mouse)
+	{
 		mouse_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+	}
 
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
@@ -879,7 +885,9 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 	}
 
 	if (g_cfg.io.move == move_handler::fake)
+	{
 		ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+	}
 	else if (g_cfg.io.move == move_handler::mouse)
 	{
 		mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
