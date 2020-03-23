@@ -95,7 +95,6 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 	sys_event_flag.trace("sys_event_flag_wait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x, timeout=0x%llx)", id, bitptn, mode, result, timeout);
 
 	// Fix function arguments for external access
-	// TODO: Avoid using registers
 	ppu.gpr[3] = -1;
 	ppu.gpr[4] = bitptn;
 	ppu.gpr[5] = mode;

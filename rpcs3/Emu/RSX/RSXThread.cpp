@@ -1883,7 +1883,7 @@ namespace rsx
 		const s32 default_frequency_mask = (1 << 8);
 		const s32 swap_storage_mask = (1 << 29);
 		const s32 volatile_storage_mask = (1 << 30);
-		const s32 modulo_op_frequency_mask = (1 << 31);
+		const s32 modulo_op_frequency_mask = (INT32_MIN);
 
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
 		const auto max_index = (first_vertex + vertex_count) - 1;

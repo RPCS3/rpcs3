@@ -40,26 +40,54 @@ error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id)
 
 	sys_lwmutex.warning("_sys_lwmutex_destroy(lwmutex_id=0x%x)", lwmutex_id);
 
-	const auto mutex = idm::withdraw<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex) -> CellError
-	{
-		std::lock_guard lock(mutex.mutex);
-
-		if (!mutex.sq.empty())
-		{
-			return CELL_EBUSY;
-		}
-
-		return {};
-	});
+	auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
 	if (!mutex)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (mutex.ret)
+	while (true)
 	{
-		return mutex.ret;
+		if (std::scoped_lock lock(mutex->mutex); mutex->sq.empty())
+		{
+			// Set "destroyed" bit
+			if (mutex->lwcond_waiters.fetch_or(INT32_MIN) & 0x7fff'ffff)
+			{
+				// Deschedule if waiters were found
+				lv2_obj::sleep(ppu);
+			}
+		}
+		else
+		{
+			return CELL_EBUSY;
+		}
+
+		// Wait for all lwcond waiters to quit
+		if (const s32 old = mutex->lwcond_waiters; old & 0x7fff'ffff)
+		{
+			if (old > 0)
+			{
+				// Sleep queue is no longer empty
+				// Was set to positive value to announce it
+				continue;
+			}
+
+			mutex->lwcond_waiters.wait(old);
+
+			if (ppu.is_stopped())
+			{
+				return 0;
+			}
+		}
+
+		break;
+	}
+
+	if (!idm::remove_verify<lv2_obj, lv2_lwmutex>(lwmutex_id, std::move(mutex)))
+	{
+		// Other thread has destroyed the lwmutex earlier
+		return CELL_ESRCH;
 	}
 
 	return CELL_OK;
@@ -95,7 +123,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 		if (old)
 		{
-			if (old == (1 << 31))
+			if (old == INT32_MIN)
 			{
 				ppu.gpr[3] = CELL_EBUSY;
 			}
@@ -103,7 +131,12 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 			return true;
 		}
 
-		mutex.sq.emplace_back(&ppu);
+		if (!mutex.add_waiter(&ppu))
+		{
+			ppu.gpr[3] = CELL_ESRCH;
+			return true;
+		}
+
 		mutex.sleep(ppu, timeout);
 		return false;
 	});
@@ -229,7 +262,7 @@ error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id)
 			return;
 		}
 
-		mutex.signaled |= 1 << 31;
+		mutex.signaled |= INT32_MIN;
 	});
 
 	if (!mutex)
