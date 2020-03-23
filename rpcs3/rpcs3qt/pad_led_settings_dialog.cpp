@@ -3,6 +3,7 @@
 #include <QColorDialog>
 #include <QPainter>
 #include <QPixmap>
+#include <QPainterPath>
 
 pad_led_settings_dialog::pad_led_settings_dialog(const int& colorR, const int& colorG, const int& colorB, const bool& led_low_battery_blink, const bool& led_battery_indicator, const int& led_battery_indicator_brightness, QDialog * parent)
     : QDialog(parent)
