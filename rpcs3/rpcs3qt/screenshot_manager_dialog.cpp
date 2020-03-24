@@ -21,7 +21,7 @@ screenshot_manager_dialog::screenshot_manager_dialog(QWidget* parent) : QDialog(
 	m_grid->setIconSize(QSize(160, 90));
 	m_grid->setGridSize(m_grid->iconSize() + QSize(10, 10));
 
-	const std::string screen_path = fs::get_config_dir() + "/screenshots/";
+	const std::string screen_path = fs::get_config_dir() + "screenshots/";
 	const QStringList filter{ QStringLiteral("*.png") };
 	QDirIterator dir_iter(QString::fromStdString(screen_path), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
