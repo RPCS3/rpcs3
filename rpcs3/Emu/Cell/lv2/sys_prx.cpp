@@ -446,11 +446,27 @@ error_code _sys_prx_unload_module(u32 id, u64 flags, vm::ptr<sys_prx_unload_modu
 	sys_prx.todo("_sys_prx_unload_module(id=0x%x, flags=0x%x, pOpt=*0x%x)", id, flags, pOpt);
 
 	// Get the PRX, free the used memory and delete the object and its ID
-	const auto prx = idm::withdraw<lv2_obj, lv2_prx>(id);
+	const auto prx = idm::withdraw<lv2_obj, lv2_prx>(id, [](lv2_prx& prx) -> CellPrxError
+	{
+		switch (prx.state)
+		{
+		case PRX_STATE_INITIALIZED:
+		case PRX_STATE_STOPPED:
+			return {};
+		default: break;
+		}
+
+		return CELL_PRX_ERROR_NOT_REMOVABLE;
+	});
 
 	if (!prx)
 	{
 		return CELL_PRX_ERROR_UNKNOWN_MODULE;
+	}
+
+	if (prx.ret)
+	{
+		return prx.ret;
 	}
 
 	ppu_unload_prx(*prx);
