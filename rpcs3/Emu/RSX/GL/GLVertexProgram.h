@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "../Common/VertexProgramDecompiler.h"
 #include "Emu/RSX/RSXVertexProgram.h"
 
@@ -11,8 +11,15 @@ enum
 	GL_VP_SINT_MASK = (GL_VP_ATTRIB_S16_INT|GL_VP_ATTRIB_S32_INT)
 };
 
+namespace gl
+{
+	class shader_interpreter;
+};
+
 struct GLVertexDecompilerThread : public VertexProgramDecompiler
 {
+	friend class gl::shader_interpreter;
+
 	std::string &m_shader;
 protected:
 	std::string getFloatTypeName(size_t elementCount) override;

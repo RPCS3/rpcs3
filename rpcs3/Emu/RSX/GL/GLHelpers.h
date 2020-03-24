@@ -27,7 +27,9 @@
 #define GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 3
 #define GL_FRAGMENT_STATE_BIND_SLOT 4
 #define GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT 5
-#define GL_COMPUTE_BUFFER_SLOT(index) (index + 6)
+#define GL_INTERPRETER_VERTEX_BLOCK 6
+#define GL_INTERPRETER_FRAGMENT_BLOCK 7
+#define GL_COMPUTE_BUFFER_SLOT(index) (index + 8)
 
 inline static void _SelectTexture(int unit) { glActiveTexture(GL_TEXTURE0 + unit); }
 
@@ -2576,6 +2578,7 @@ public:
 				void operator = (const color4f& rhs) const { glProgramUniform4f(m_program.id(), location(), rhs.r, rhs.g, rhs.b, rhs.a); }
 				void operator = (const areaf& rhs) const { glProgramUniform4f(m_program.id(), location(), rhs.x1, rhs.y1, rhs.x2, rhs.y2); }
 				void operator = (const areai& rhs) const { glProgramUniform4i(m_program.id(), location(), rhs.x1, rhs.y1, rhs.x2, rhs.y2); }
+				void operator = (const std::vector<int>& rhs) const { glProgramUniform1iv(m_program.id(), location(), ::size32(rhs), rhs.data()); }
 			};
 
 			class uniforms_t

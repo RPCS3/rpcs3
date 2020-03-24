@@ -7,6 +7,7 @@
 #include "GLProgramBuffer.h"
 #include "GLTextOut.h"
 #include "GLOverlays.h"
+#include "GLShaderInterpreter.h"
 
 #include <optional>
 
@@ -74,8 +75,10 @@ private:
 	gl::sampler_state m_fs_sampler_mirror_states[rsx::limits::fragment_textures_count];  // Alternate views of fragment textures with different format (e.g Depth vs Stencil for D24S8)
 	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];           // Vertex textures
 
-	gl::glsl::program *m_program;
-	gl::glsl::program m_shader_interpreter;
+	gl::glsl::program *m_program = nullptr;
+
+	u32 m_interpreter_state = 0;
+	gl::shader_interpreter m_shader_interpreter;
 
 	gl_render_targets m_rtts;
 
@@ -94,6 +97,8 @@ private:
 	std::unique_ptr<gl::ring_buffer> m_texture_parameters_buffer;
 	std::unique_ptr<gl::ring_buffer> m_vertex_layout_buffer;
 	std::unique_ptr<gl::ring_buffer> m_index_ring_buffer;
+	std::unique_ptr<gl::ring_buffer> m_vertex_instructions_buffer;
+	std::unique_ptr<gl::ring_buffer> m_fragment_instructions_buffer;
 
 	// Identity buffer used to fix broken gl_VertexID on ATI stack
 	std::unique_ptr<gl::buffer> m_identity_index_buffer;

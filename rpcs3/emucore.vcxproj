@@ -436,6 +436,7 @@
     <ClInclude Include="Emu\Io\pad_config.h" />
     <ClInclude Include="Emu\Io\pad_config_types.h" />
     <ClInclude Include="Emu\NP\np_handler.h" />
+    <ClInclude Include="Emu\RSX\Common\ShaderInterpreter.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_fonts.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_message_dialog.h" />
@@ -719,6 +720,10 @@
     <ProjectReference Include="..\3rdparty\yaml-cpp.vcxproj">
       <Project>{fdc361c5-7734-493b-8cfb-037308b35122}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl" />
+    <None Include="Emu\RSX\Common\Interpreter\VertexInterpreter.glsl" />
   </ItemGroup>
   <PropertyGroup Label="UserMacros" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
