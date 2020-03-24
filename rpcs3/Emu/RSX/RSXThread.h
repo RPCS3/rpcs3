@@ -588,7 +588,9 @@ namespace rsx
 		backend_configuration backend_config{};
 
 		// FIFO
+	public:
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
+	protected:
 		FIFO::flattening_helper m_flattener;
 		u32 fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
