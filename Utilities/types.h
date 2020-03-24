@@ -46,7 +46,7 @@
 #define ASSUME(...) do { if (!(__VA_ARGS__)) __builtin_unreachable(); } while (0)  // note: the compiler will generate code to evaluate "cond" if the expression is opaque
 #endif
 
-#define SAFE_BUFFERS
+#define SAFE_BUFFERS __attribute__((no_stack_protector))
 #define NEVER_INLINE __attribute__((noinline))
 #define FORCE_INLINE __attribute__((always_inline)) inline
 #define RESTRICT __restrict__
