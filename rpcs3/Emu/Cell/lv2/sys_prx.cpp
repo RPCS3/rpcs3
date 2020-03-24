@@ -297,8 +297,55 @@ error_code _sys_prx_start_module(u32 id, u64 flags, vm::ptr<sys_prx_start_stop_m
 		return CELL_ESRCH;
 	}
 
-	if (prx->is_started.exchange(true))
-		return not_an_error(CELL_PRX_ERROR_ALREADY_STARTED);
+	switch (pOpt->cmd & 0xf)
+	{
+	case 1:
+	{
+		if (!prx->state.compare_and_swap_test(PRX_STATE_INITIALIZED, PRX_STATE_STARTING))
+		{
+			// The only error code here
+			return CELL_PRX_ERROR_ERROR;
+		}
+
+		pOpt->entry.set(prx->start ? prx->start.addr() : ~0ull);
+		pOpt->entry2.set(prx->prologue ? prx->prologue.addr() : ~0ull);
+		return CELL_OK;
+	}
+	case 2:
+	{
+		switch (const u64 res = pOpt->res)
+		{
+		case SYS_PRX_RESIDENT:
+		{
+			// No error code on invalid state, so throw on unexpected state
+			verify(HERE), prx->state.compare_and_swap_test(PRX_STATE_STARTING, PRX_STATE_STARTED);
+			return CELL_OK;
+		}
+		default:
+		{
+			if (res & 0xffff'ffffu)
+			{
+				// Unload the module (SYS_PRX_NO_RESIDENT expected)
+				sys_prx.warning("_sys_prx_start_module(): Start entry function returned SYS_PRX_NO_RESIDENT (res=0x%llx)", res);
+
+				// Thread-safe if called from liblv2.sprx, due to internal lwmutex lock before it
+				prx->state = PRX_STATE_STOPPED;
+				_sys_prx_unload_module(id, 0, vm::null);
+
+				// Return the exact value returned by the start function (as an error)
+				return static_cast<s32>(res);
+			}
+
+			// Return type of start entry function is s32
+			// And according to RE this path results in weird behavior
+			sys_prx.error("_sys_prx_start_module(): Start entry function returned weird value (res=0x%llx)", res);
+			return CELL_OK;
+		}
+		}
+	}
+	default:
+		return CELL_PRX_ERROR_ERROR;
+	}
 
 	pOpt->entry.set(prx->start ? prx->start.addr() : ~0ull);
 	pOpt->entry2.set(prx->prologue ? prx->prologue.addr() : ~0ull);
@@ -316,11 +363,80 @@ error_code _sys_prx_stop_module(u32 id, u64 flags, vm::ptr<sys_prx_start_stop_mo
 		return CELL_ESRCH;
 	}
 
-	if (!prx->is_started.exchange(false))
-		return not_an_error(CELL_PRX_ERROR_ALREADY_STOPPED);
+	if (!pOpt)
+	{
+		return CELL_EINVAL;
+	}
 
-	pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
-	pOpt->entry2.set(prx->epilogue ? prx->epilogue.addr() : ~0ull);
+	switch (pOpt->cmd & 0xf)
+	{
+	case 1:
+	{
+		switch (const auto old = prx->state.compare_and_swap(PRX_STATE_STARTED, PRX_STATE_STOPPING))
+		{
+		case PRX_STATE_INITIALIZED: return CELL_PRX_ERROR_NOT_STARTED;
+		case PRX_STATE_STOPPED: return CELL_PRX_ERROR_ALREADY_STOPPED;
+		case PRX_STATE_STOPPING: return CELL_PRX_ERROR_ALREADY_STOPPING; // Internal error
+		case PRX_STATE_STARTING: return CELL_PRX_ERROR_ERROR; // Internal error
+		case PRX_STATE_STARTED: break;
+		default:
+			fmt::throw_exception("Invalid prx state (%d)" HERE, old);
+		}
+
+		pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
+		pOpt->entry2.set(prx->epilogue ? prx->epilogue.addr() : ~0ull);
+		return CELL_OK;
+	}
+	case 2:
+	{
+		switch (pOpt->res)
+		{
+		case 0:
+		{
+			// No error code on invalid state, so throw on unexpected state
+			verify(HERE), prx->state.compare_and_swap_test(PRX_STATE_STOPPING, PRX_STATE_STOPPED);
+			return CELL_OK;
+		}
+		case 1:
+			return CELL_PRX_ERROR_CAN_NOT_STOP; // Internal error
+		default:
+			// Nothing happens (probably unexpected value)
+			return CELL_OK;
+		}
+	}
+
+	// These commands are not used by liblv2.sprx
+	case 4: // Get start entry and stop functions
+	case 8: // Disable stop function execution
+	{
+		switch (const auto old = +prx->state)
+		{
+		case PRX_STATE_INITIALIZED: return CELL_PRX_ERROR_NOT_STARTED;
+		case PRX_STATE_STOPPED: return CELL_PRX_ERROR_ALREADY_STOPPED;
+		case PRX_STATE_STOPPING: return CELL_PRX_ERROR_ALREADY_STOPPING; // Internal error
+		case PRX_STATE_STARTING: return CELL_PRX_ERROR_ERROR; // Internal error
+		case PRX_STATE_STARTED: break;
+		default:
+			fmt::throw_exception("Invalid prx state (%d)" HERE, old);
+		}
+
+		if (pOpt->cmd == 4u)
+		{
+			pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
+			pOpt->entry2.set(prx->epilogue ? prx->epilogue.addr() : ~0ull);
+		}
+		else
+		{
+			// Disables stop function execution (but the real value can be read through _sys_prx_get_module_info)
+			sys_prx.todo("_sys_prx_stop_module(): cmd is 8 (stop function = *0x%x)", prx->stop);
+			//prx->stop = vm::null;
+		}
+		
+		return CELL_OK;
+	}
+	default:
+		return CELL_PRX_ERROR_ERROR;
+	}
 
 	return CELL_OK;
 }

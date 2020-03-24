@@ -117,11 +117,27 @@ struct sys_prx_get_module_list_option_t
 	be_t<u32> unk; // 0
 };
 
+enum : u32
+{
+	SYS_PRX_RESIDENT = 0,
+	SYS_PRX_NO_RESIDENT = 1,
+};
+
+// Unofficial names for PRX state
+enum : u32
+{
+	PRX_STATE_INITIALIZED,
+	PRX_STATE_STARTING, // In-between state between initialized and started (internal)
+	PRX_STATE_STARTED,
+	PRX_STATE_STOPPING, // In-between state between started and stopped (internal)
+	PRX_STATE_STOPPED, // Last state, the module cannot be restarted
+};
+
 struct lv2_prx final : lv2_obj, ppu_module
 {
 	static const u32 id_base = 0x23000000;
 
-	atomic_t<bool> is_started = false;
+	atomic_t<u32> state = PRX_STATE_INITIALIZED;
 
 	std::unordered_map<u32, u32> specials;
 	std::unordered_map<u32, void*> imports;
