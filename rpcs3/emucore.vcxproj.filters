@@ -75,6 +75,9 @@
     <Filter Include="Emu\NP">
       <UniqueIdentifier>{652ce43e-72db-42cd-831a-0e194f67e731}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Common\Interpreter">
+      <UniqueIdentifier>{bc97b324-1eea-445a-8fa9-6fc49e3df47c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -867,6 +870,9 @@
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="util\cereal.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="util\shared_cptr.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="util\fixed_typemap.cpp">
@@ -1783,5 +1789,16 @@
     <ClInclude Include="util\typeindices.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\ShaderInterpreter.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl">
+      <Filter>Emu\GPU\RSX\Common\Interpreter</Filter>
+    </None>
+    <None Include="Emu\RSX\Common\Interpreter\VertexInterpreter.glsl">
+      <Filter>Emu\GPU\RSX\Common\Interpreter</Filter>
+    </None>
   </ItemGroup>
 </Project>

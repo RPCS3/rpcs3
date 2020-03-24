@@ -8,8 +8,15 @@ namespace glsl
 	struct shader_properties;
 }
 
+namespace gl
+{
+	class shader_interpreter;
+}
+
 struct GLFragmentDecompilerThread : public FragmentProgramDecompiler
 {
+	friend class gl::shader_interpreter;
+
 	std::string& m_shader;
 	ParamArray& m_parrDummy;
 	glsl::shader_properties m_shader_props{};

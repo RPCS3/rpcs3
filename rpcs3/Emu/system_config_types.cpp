@@ -387,3 +387,18 @@ void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+void fmt_class_string<shader_interpreter_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](shader_interpreter_mode value)
+	{
+		switch (value)
+		{
+		case shader_interpreter_mode::disabled: return "Disabled";
+		case shader_interpreter_mode::enabled: return "Enabled";
+		case shader_interpreter_mode::forced: return "Forced";
+		}
+
+		return unknown;
+	});
+}
