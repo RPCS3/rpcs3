@@ -117,7 +117,7 @@ const std::pair<ppu_inter_func_t, ppu_inter_func_t> s_ppu_dispatch_table[]
 #undef FUNC
 };
 
-extern const ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise([](auto& table)
+static const ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise([](auto& table)
 {
 	if (s_use_ssse3)
 	{
@@ -135,7 +135,7 @@ extern const ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise([](a
 	}
 });
 
-extern const ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast([](auto& table)
+static const ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast([](auto& table)
 {
 	if (!s_use_ssse3)
 	{

@@ -2,7 +2,7 @@
 #include "PPUDisAsm.h"
 #include "PPUFunction.h"
 
-const ppu_decoder<PPUDisAsm> s_ppu_disasm;
+constexpr ppu_decoder<PPUDisAsm> s_ppu_disasm;
 
 u32 PPUDisAsm::disasm(u32 pc)
 {

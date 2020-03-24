@@ -9,7 +9,7 @@
 
 using namespace llvm;
 
-const ppu_decoder<PPUTranslator> s_ppu_decoder;
+constexpr ppu_decoder<PPUTranslator> s_ppu_decoder;
 
 PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info, ExecutionEngine& engine)
 	: cpu_translator(module, false)
