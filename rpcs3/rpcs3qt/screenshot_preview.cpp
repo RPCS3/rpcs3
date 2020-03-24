@@ -27,12 +27,13 @@ screenshot_preview::screenshot_preview(const QString& filepath, QWidget* parent)
 
 	connect(this, &screenshot_preview::customContextMenuRequested, this, &screenshot_preview::show_context_menu);
 }
-#include <QDebug>
 
 void screenshot_preview::show_context_menu(const QPoint & pos)
 {
 	QMenu* menu = new QMenu();
 	menu->addAction(tr("&Copy"), [this]() { QGuiApplication::clipboard()->setImage(m_image); });
+	menu->addSeparator();
+	menu->addAction(tr("&Open file location"), [this]() { gui::utils::open_dir(m_filepath); });
 	menu->addSeparator();
 
 	QAction* reset_act = menu->addAction(tr("To &Normal Size"), [this]() { scale(m_image.size()); });

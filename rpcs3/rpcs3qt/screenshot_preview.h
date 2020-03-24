@@ -11,7 +11,7 @@ public:
 	screenshot_preview(const QString& filepath, QWidget* parent = nullptr);
 
 protected:
-	void resizeEvent(QResizeEvent* event);
+	void resizeEvent(QResizeEvent* event) override;
 
 private Q_SLOTS:
 	void show_context_menu(const QPoint& pos);
