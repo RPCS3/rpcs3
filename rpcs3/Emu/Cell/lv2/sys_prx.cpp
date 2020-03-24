@@ -388,7 +388,59 @@ error_code _sys_prx_query_library()
 
 error_code _sys_prx_get_module_list(u64 flags, vm::ptr<sys_prx_get_module_list_option_t> pInfo)
 {
-	sys_prx.todo("_sys_prx_get_module_list(flags=%d, pInfo=*0x%x)", flags, pInfo);
+	if (flags & 0x1)
+	{
+		sys_prx.todo("_sys_prx_get_module_list(flags=%d, pInfo=*0x%x)", flags, pInfo);
+	}
+	else
+	{
+		sys_prx.warning("_sys_prx_get_module_list(flags=%d, pInfo=*0x%x)", flags, pInfo);
+	}
+
+	// TODO: Some action occurs if LSB of flags is set here
+
+	if (!(flags & 0x2))
+	{
+		// Do nothing
+		return CELL_OK;
+	}
+
+	if (pInfo->size == pInfo.size())
+	{
+		const u32 max_count = pInfo->max;
+		const auto idlist = +pInfo->idlist;
+		u32 count = 0;
+
+		if (max_count)
+		{
+			const std::string liblv2_path = vfs::get("/dev_flash/sys/external/liblv2.sprx");
+
+			idm::select<lv2_obj, lv2_prx>([&](u32 id, lv2_prx& prx)
+			{
+				if (count >= max_count)
+				{
+					return true;
+				}
+
+				if (prx.path == liblv2_path)
+				{
+					// Hide liblv2.sprx for now
+					return false;
+				}
+
+				idlist[count++] = id;
+				return false;
+			});
+		}
+
+		pInfo->count = count;
+	}
+	else
+	{
+		// TODO: A different structure should be served here with sizeof == 0x18
+		sys_prx.todo("_sys_prx_get_module_list(): Unknown structure specified (size=0x%llx)", pInfo->size);
+	}
+	
 	return CELL_OK;
 }
 
