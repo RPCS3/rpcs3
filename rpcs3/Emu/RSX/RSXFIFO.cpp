@@ -88,6 +88,25 @@ namespace rsx
 			return false;
 		}
 
+		// Optimization for methods which can be batched together
+		// Beware, can be easily misused
+		bool FIFO_control::skip_methods(u32 count)
+		{
+			if (m_remaining_commands > count)
+			{
+				m_command_reg += m_command_inc * count;
+				m_args_ptr += 4 * count;
+				m_remaining_commands -= count;
+				m_internal_get += 4 * count;
+
+				return true;
+			}
+
+			m_internal_get += 4 * m_remaining_commands;
+			m_remaining_commands = 0;
+			return false;
+		}
+
 		void FIFO_control::abort()
 		{
 			m_remaining_commands = 0;
@@ -517,7 +536,25 @@ namespace rsx
 						capture::capture_buffer_notify(this, it);
 						break;
 					default:
+					{
+						// Use legacy logic for NV308A_COLOR - enqueue leading command with count
+						// Then enqueue each command arg alone with a no-op command
+						if (reg >= NV308A_COLOR && reg < NV308A_COLOR + 0x700)
+						{
+							const u32 remaining = std::min<u32>(fifo_ctrl->get_remaining_args_count(), (NV308A_COLOR + 0x700) - reg);
+
+							it.rsx_command.first = (fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) | (reg << 2) | (remaining << 18);
+
+							for (u32 i = 0; i < remaining && fifo_ctrl->get_pos() + (i + 1) * 4 != (ctrl->put & ~3); i++)
+							{
+								replay_cmd.rsx_command = std::make_pair(0, vm::read32(fifo_ctrl->get_current_arg_ptr() + (i + 1) * 4));
+
+								frame_capture.replay_commands.push_back(replay_cmd);
+							}
+						}
+
 						break;
+					}
 					}
 				}
 			}

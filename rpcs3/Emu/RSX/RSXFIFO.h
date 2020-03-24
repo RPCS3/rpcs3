@@ -132,6 +132,8 @@ namespace rsx
 			u32 get_pos() const { return m_internal_get; }
 			u32 last_cmd() const { return m_cmd; }
 			void sync_get() { m_ctrl->get.release(m_internal_get); }
+			u32 get_current_arg_ptr() const { return m_args_ptr; };
+			u32 get_remaining_args_count() const { return m_remaining_commands; }
 			void inc_get(bool wait);
 			void set_get(u32 get);
 			void abort();
@@ -139,6 +141,7 @@ namespace rsx
 
 			void read(register_pair& data);
 			inline bool read_unsafe(register_pair& data);
+			bool skip_methods(u32 count);
 		};
 	}
 }
