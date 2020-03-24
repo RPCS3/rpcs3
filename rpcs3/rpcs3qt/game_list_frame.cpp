@@ -780,30 +780,6 @@ void game_list_frame::SaveSettings()
 	m_gui_settings->SetValue(gui::gl_state, m_game_list->horizontalHeader()->saveState());
 }
 
-static void open_dir(const std::string& spath)
-{
-	fs::create_dir(spath);
-	const QString path = qstr(spath);
-
-	if (fs::is_file(spath))
-	{
-		// open directory and select file
-		// https://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
-#ifdef _WIN32
-		QProcess::startDetached("explorer.exe", { "/select,", QDir::toNativeSeparators(path) });
-#elif defined(__APPLE__)
-		QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to reveal POSIX file \"" + path + "\"" });
-		QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to activate" });
-#else
-		// open parent directory
-		QDesktopServices::openUrl(QUrl("file:///" + qstr(fs::get_parent_dir(spath))));
-#endif
-		return;
-	}
-
-	QDesktopServices::openUrl(QUrl("file:///" + path));
-}
-
 void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
 {
 	if (!item)
@@ -983,12 +959,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			const std::string new_config_path = Emulator::GetCustomConfigPath(current_game.serial);
 
 			if (fs::is_file(new_config_path))
-				open_dir(new_config_path);
+				gui::utils::open_dir(new_config_path);
 
 			const std::string old_config_path = Emulator::GetCustomConfigPath(current_game.serial, true);
 
 			if (fs::is_file(old_config_path))
-				open_dir(old_config_path);
+				gui::utils::open_dir(old_config_path);
 		});
 	}
 	if (fs::is_dir(data_base_dir))
@@ -996,7 +972,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QAction* open_data_dir = menu.addAction(tr("&Open Data Folder"));
 		connect(open_data_dir, &QAction::triggered, [=, this]()
 		{
-			open_dir(data_base_dir);
+			gui::utils::open_dir(data_base_dir);
 		});
 	}
 	menu.addSeparator();
@@ -1106,7 +1082,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(open_game_folder, &QAction::triggered, [=, this]()
 	{
-		open_dir(current_game.path);
+		gui::utils::open_dir(current_game.path);
 	});
 	connect(check_compat, &QAction::triggered, [=, this]
 	{

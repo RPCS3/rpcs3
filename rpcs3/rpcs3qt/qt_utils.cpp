@@ -1,9 +1,12 @@
 ﻿#include "qt_utils.h"
 #include <QApplication>
 #include <QBitmap>
+#include <QDesktopServices>
 #include <QFontMetrics>
 #include <QPainter>
+#include <QProcess>
 #include <QScreen>
+#include <QUrl>
 
 #include "Emu/System.h"
 
@@ -275,6 +278,35 @@ namespace gui
 			}
 			// if nothing was found reset the icon to default
 			return QApplication::windowIcon();
+		}
+
+		void open_dir(const std::string& spath)
+		{
+			fs::create_dir(spath);
+			const QString path = qstr(spath);
+
+			if (fs::is_file(spath))
+			{
+				// open directory and select file
+				// https://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
+#ifdef _WIN32
+				QProcess::startDetached("explorer.exe", { "/select,", QDir::toNativeSeparators(path) });
+#elif defined(__APPLE__)
+				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to reveal POSIX file \"" + path + "\"" });
+				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to activate" });
+#else
+		// open parent directory
+				QDesktopServices::openUrl(QUrl("file:///" + qstr(fs::get_parent_dir(spath))));
+#endif
+				return;
+			}
+
+			QDesktopServices::openUrl(QUrl("file:///" + path));
+		}
+
+		void open_dir(const QString& path)
+		{
+			open_dir(sstr(path));
 		}
 	} // utils
 } // gui
