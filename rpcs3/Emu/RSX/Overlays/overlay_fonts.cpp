@@ -60,8 +60,8 @@ namespace rsx
 			{
 				return language_class::default_;
 			}
-			case 0x11:    // Hangul jamo
-			// case 0x31: // Compatibility jamo 3130-318F
+			case 0x11: // Hangul jamo
+			case 0x31: // Compatibility jamo 3130-318F
 			// case 0xA9: // Hangul jamo extended block A A960-A97F
 			{
 				return language_class::hangul;

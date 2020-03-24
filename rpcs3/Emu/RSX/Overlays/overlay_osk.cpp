@@ -822,25 +822,57 @@ namespace rsx
 					else
 						add_panel(osk_panel_japanese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 					break;
-				case CELL_SYSUTIL_LANG_RUSSIAN:
-				case CELL_SYSUTIL_LANG_KOREAN:
-				case CELL_SYSUTIL_LANG_CHINESE_T:
-				case CELL_SYSUTIL_LANG_CHINESE_S:
-				case CELL_SYSUTIL_LANG_POLISH:
-				case CELL_SYSUTIL_LANG_TURKISH:
-					// TODO: Use proper panels
 				case CELL_SYSUTIL_LANG_FRENCH:
+					add_panel(osk_panel_french(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
 				case CELL_SYSUTIL_LANG_SPANISH:
+					add_panel(osk_panel_spanish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
 				case CELL_SYSUTIL_LANG_GERMAN:
+					add_panel(osk_panel_german(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
 				case CELL_SYSUTIL_LANG_ITALIAN:
-				case CELL_SYSUTIL_LANG_DUTCH:
-				case CELL_SYSUTIL_LANG_PORTUGUESE_PT:
-				case CELL_SYSUTIL_LANG_FINNISH:
-				case CELL_SYSUTIL_LANG_SWEDISH:
+					add_panel(osk_panel_italian(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
 				case CELL_SYSUTIL_LANG_DANISH:
+					add_panel(osk_panel_danish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
 				case CELL_SYSUTIL_LANG_NORWEGIAN:
+					add_panel(osk_panel_norwegian(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
+				case CELL_SYSUTIL_LANG_DUTCH:
+					add_panel(osk_panel_dutch(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
+				case CELL_SYSUTIL_LANG_FINNISH:
+					add_panel(osk_panel_finnish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
+				case CELL_SYSUTIL_LANG_SWEDISH:
+					add_panel(osk_panel_swedish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
+				case CELL_SYSUTIL_LANG_PORTUGUESE_PT:
+					add_panel(osk_panel_portuguese_pt(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
 				case CELL_SYSUTIL_LANG_PORTUGUESE_BR:
-					// TODO: They use the same characters as the english panel, but they might have a different layout.
+					add_panel(osk_panel_portuguese_br(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
+				case CELL_SYSUTIL_LANG_TURKISH:
+					add_panel(osk_panel_turkey(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
+				case CELL_SYSUTIL_LANG_POLISH:
+					add_panel(osk_panel_polish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
+				case CELL_SYSUTIL_LANG_RUSSIAN:
+					add_panel(osk_panel_russian(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
+				case CELL_SYSUTIL_LANG_KOREAN:
+					add_panel(osk_panel_korean(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
+				case CELL_SYSUTIL_LANG_CHINESE_T:
+					add_panel(osk_panel_traditional_chinese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
+				case CELL_SYSUTIL_LANG_CHINESE_S:
+					add_panel(osk_panel_simplified_chinese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+					break;
 				case CELL_SYSUTIL_LANG_ENGLISH_US:
 				case CELL_SYSUTIL_LANG_ENGLISH_GB:
 				default:
@@ -854,9 +886,81 @@ namespace rsx
 
 				// TODO: find out the exact order
 
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_LATIN)
+				{
+					add_panel(osk_panel_latin(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
 				if (panel_flag & CELL_OSKDIALOG_PANELMODE_ENGLISH)
 				{
 					add_panel(osk_panel_english(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_FRENCH)
+				{
+					add_panel(osk_panel_french(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_SPANISH)
+				{
+					add_panel(osk_panel_spanish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_ITALIAN)
+				{
+					add_panel(osk_panel_italian(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_GERMAN)
+				{
+					add_panel(osk_panel_german(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_TURKEY)
+				{
+					add_panel(osk_panel_turkey(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_POLISH)
+				{
+					add_panel(osk_panel_polish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_RUSSIAN)
+				{
+					add_panel(osk_panel_russian(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_DANISH)
+				{
+					add_panel(osk_panel_danish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_NORWEGIAN)
+				{
+					add_panel(osk_panel_norwegian(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_DUTCH)
+				{
+					add_panel(osk_panel_dutch(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_SWEDISH)
+				{
+					add_panel(osk_panel_swedish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_FINNISH)
+				{
+					add_panel(osk_panel_finnish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_PORTUGUESE)
+				{
+					add_panel(osk_panel_portuguese_pt(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL)
+				{
+					add_panel(osk_panel_portuguese_br(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_KOREAN)
+				{
+					add_panel(osk_panel_korean(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE)
+				{
+					add_panel(osk_panel_traditional_chinese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
+				}
+				if (panel_flag & CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE)
+				{
+					add_panel(osk_panel_simplified_chinese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
 				if (panel_flag & CELL_OSKDIALOG_PANELMODE_JAPANESE)
 				{
@@ -889,29 +993,6 @@ namespace rsx
 				if (panel_flag & CELL_OSKDIALOG_PANELMODE_URL)
 				{
 					add_panel(osk_panel_url(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
-				}
-
-				// TODO: Use proper panels for the following panel modes
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_LATIN ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_GERMAN ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_SPANISH ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_FRENCH ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_ITALIAN ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_DUTCH ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_PORTUGUESE ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_RUSSIAN ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_POLISH ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_KOREAN ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_TURKEY ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_DANISH ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_SWEDISH ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_NORWEGIAN ||
-					panel_flag & CELL_OSKDIALOG_PANELMODE_FINNISH)
-				{
-					add_panel(osk_panel_latin(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
 
 				// Get initial panel based on first_view_panel
