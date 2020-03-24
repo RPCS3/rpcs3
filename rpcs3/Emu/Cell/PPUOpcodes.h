@@ -574,12 +574,6 @@ public:
 		});
 	}
 
-	template <typename F>
-	ppu_decoder(F&& init) : ppu_decoder()
-	{
-		init(m_table);
-	}
-
 	const std::array<T, 0x20000>& get_table() const
 	{
 		return m_table;

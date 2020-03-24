@@ -101,57 +101,8 @@ void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 	});
 }
 
-// Table of identical interpreter functions when precise contains SSE2 version, and fast contains SSSE3 functions
-const std::pair<ppu_inter_func_t, ppu_inter_func_t> s_ppu_dispatch_table[]
-{
-#define FUNC(x) {&ppu_interpreter_precise::x, &ppu_interpreter_fast::x}
-	FUNC(VPERM),
-	FUNC(LVLX),
-	FUNC(LVLXL),
-	FUNC(LVRX),
-	FUNC(LVRXL),
-	FUNC(STVLX),
-	FUNC(STVLXL),
-	FUNC(STVRX),
-	FUNC(STVRXL),
-#undef FUNC
-};
-
-static const ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise([](auto& table)
-{
-	if (s_use_ssse3)
-	{
-		for (auto& func : table)
-		{
-			for (const auto& pair : s_ppu_dispatch_table)
-			{
-				if (pair.first == func)
-				{
-					func = pair.second;
-					break;
-				}
-			}
-		}
-	}
-});
-
-static const ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast([](auto& table)
-{
-	if (!s_use_ssse3)
-	{
-		for (auto& func : table)
-		{
-			for (const auto& pair : s_ppu_dispatch_table)
-			{
-				if (pair.second == func)
-				{
-					func = pair.first;
-					break;
-				}
-			}
-		}
-	}
-});
+constexpr ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise;
+constexpr ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast;
 
 extern void ppu_initialize();
 extern void ppu_initialize(const ppu_module& info);
