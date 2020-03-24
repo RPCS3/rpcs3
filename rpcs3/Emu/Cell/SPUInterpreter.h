@@ -175,7 +175,7 @@ struct spu_interpreter
 	static bool HBRR(spu_thread&, spu_opcode_t);
 	static bool ILA(spu_thread&, spu_opcode_t);
 	static bool SELB(spu_thread&, spu_opcode_t);
-	static const spu_inter_func_t SHUFB;
+	static bool SHUFB(spu_thread&, spu_opcode_t);
 	static bool MPYA(spu_thread&, spu_opcode_t);
 	static bool DFCGT(spu_thread&, spu_opcode_t);
 	static bool DFCMGT(spu_thread&, spu_opcode_t);
