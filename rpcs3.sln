@@ -84,11 +84,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "7zlib", "3rdparty\7zlib.vcx
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wolfssl", "wolfssl", "{6DA34724-E5B2-4306-906D-1A2340637047}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wolfssl", "3rdparty\wolfssl\wolfssl.vcxproj", "{73973223-5EE8-41CA-8E88-1D60E89A237B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wolfssl", "3rdparty\wolfssl.vcxproj", "{73973223-5EE8-41CA-8E88-1D60E89A237B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "libcurl", "libcurl", "{BE02DA0B-BEE1-4214-AFA9-3617982F2FEA}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcurl", "3rdparty\curl\rpcs3_projects\libcurl.vcxproj", "{DA6F56B4-06A4-441D-AD70-AC5A7D51FADB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcurl", "3rdparty\libcurl.vcxproj", "{DA6F56B4-06A4-441D-AD70-AC5A7D51FADB}"
 	ProjectSection(ProjectDependencies) = postProject
 		{73973223-5EE8-41CA-8E88-1D60E89A237B} = {73973223-5EE8-41CA-8E88-1D60E89A237B}
 	EndProjectSection
