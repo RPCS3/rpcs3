@@ -98,6 +98,7 @@ save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_setti
 {
 	setWindowTitle(tr("Save Manager"));
 	setMinimumSize(QSize(400, 400));
+	setAttribute(Qt::WA_DeleteOnClose);
 
 	Init(dir);
 }

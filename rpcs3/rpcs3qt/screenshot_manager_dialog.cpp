@@ -15,6 +15,7 @@
 screenshot_manager_dialog::screenshot_manager_dialog(QWidget* parent) : QDialog(parent)
 {
 	setWindowTitle(tr("Screenshots"));
+	setAttribute(Qt::WA_DeleteOnClose);
 
 	m_icon_size = QSize(160, 90);
 
