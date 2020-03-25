@@ -26,8 +26,8 @@
   </ImportGroup>
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
-    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
-    <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='LIB Release - LIB wolfSSL|x64'">curl\build\Win64\VC15\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='LIB Release - LIB wolfSSL|x64'">$(OutDir)lib\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='LIB Release - LIB wolfSSL|x64'">
     <Midl>
