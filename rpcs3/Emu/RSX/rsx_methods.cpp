@@ -1562,6 +1562,9 @@ namespace rsx
 
 	void rsx_state::init()
 	{
+		// Reset all regsiters
+		registers.fill(0);
+
 		// Special values set at initialization, these are not set by a context reset
 		registers[NV4097_SET_SHADER_PROGRAM] = (0 << 2) | (CELL_GCM_LOCATION_LOCAL + 1);
 
