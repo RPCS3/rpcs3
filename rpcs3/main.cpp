@@ -412,6 +412,7 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
 	parser.addOption(QCommandLineOption(arg_style, "Loads a custom style.", "style", ""));
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
+	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
