@@ -93,13 +93,9 @@ void main_window::Init()
 	Q_EMIT RequestGlobalStylesheetChange(m_gui_settings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
 
-#ifdef BRANCH
-	if ("RPCS3/rpcs3/master"s != STRINGIZE(BRANCH) && ""s != STRINGIZE(BRANCH))
-#else
-	if (false)
-#endif
+	if (const std::string_view branch_name = rpcs3::get_full_branch(); branch_name != "RPCS3/rpcs3/master")
 	{
-		gui_log.warning("Experimental Build Warning! Build origin: " STRINGIZE(BRANCH));
+		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
 
 		QMessageBox msg;
 		msg.setWindowTitle(tr("Experimental Build Warning"));
@@ -117,7 +113,7 @@ void main_window::Init()
 					Do you wish to use this build anyway?
 				</p>
 			)"
-		)).arg(Qt::convertFromPlainText(STRINGIZE(BRANCH))));
+		)).arg(Qt::convertFromPlainText(branch_name.data())));
 		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 		if (msg.exec() == QMessageBox::No)
