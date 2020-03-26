@@ -10,6 +10,7 @@
 using namespace llvm;
 
 constexpr ppu_decoder<PPUTranslator> s_ppu_decoder;
+constexpr ppu_decoder<ppu_iname> s_ppu_iname;
 
 PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info, ExecutionEngine& engine)
 	: cpu_translator(module, false)
@@ -200,7 +201,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 			if (m_rel)
 			{
 				// This is very bad. m_rel is normally set to nullptr after a relocation is handled (so it wasn't)
-				ppu_log.error("LLVM: [0x%x] Unsupported relocation(%u) in '%s' (opcode=0x%x). Please report.", rel_found->first, m_rel->type, m_info.name, op);
+				ppu_log.error("LLVM: [0x%x] Unsupported relocation(%u) in '%s' (opcode=0x%x '%s'). Please report.", rel_found->first, m_rel->type, m_info.name, op, s_ppu_iname.decode(op));
 				return nullptr;
 			}
 		}
