@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <queue>
 #include <deque>
 #include <variant>
 #include <stack>
@@ -725,6 +726,14 @@ namespace rsx
 		bool invalid_command_interrupt_raised = false;
 		bool sync_point_request = false;
 		bool in_begin_end = false;
+
+		struct desync_fifo_cmd_info
+		{
+			u32 cmd;
+			u64 timestamp;
+		};
+
+		std::queue<desync_fifo_cmd_info> recovered_fifo_cmds_history;
 
 		atomic_t<s32> async_tasks_pending{ 0 };
 
