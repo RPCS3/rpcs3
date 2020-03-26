@@ -200,7 +200,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 			if (m_rel)
 			{
 				// This is very bad. m_rel is normally set to nullptr after a relocation is handled (so it wasn't)
-				ppu_log.error("LLVM: [0x%x] Unsupported relocation(%u) in '%s'. Please report.", rel_found->first, m_rel->type, m_info.name);
+				ppu_log.error("LLVM: [0x%x] Unsupported relocation(%u) in '%s' (opcode=0x%x). Please report.", rel_found->first, m_rel->type, m_info.name, op);
 				return nullptr;
 			}
 		}
