@@ -163,6 +163,7 @@ struct cfg_root : cfg::node
 		cfg::_bool overlay{ this, "Debug overlay", false, true };
 		cfg::_bool renderdoc_compatiblity{ this, "Renderdoc Compatibility Mode" };
 		cfg::_bool use_gpu_texture_scaling{ this, "Use GPU texture scaling", false };
+		cfg::_bool reprotect_hack{ this, "Reprotect Hack", false }; // Workaround for flickering shadows and missing water
 		cfg::_bool stretch_to_display_area{ this, "Stretch To Display Area", false, true };
 		cfg::_bool force_high_precision_z_buffer{ this, "Force High Precision Z buffer" };
 		cfg::_bool strict_rendering_mode{ this, "Strict Rendering Mode" };

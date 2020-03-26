@@ -2168,6 +2168,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->allowHostGPULabels, emu_settings_type::AllowHostGPULabels);
 	SubscribeTooltip(ui->allowHostGPULabels, tooltips.settings.allow_host_labels);
+	m_emu_settings->EnhanceCheckBox(ui->reprotect_hack, emu_settings_type::ReprotectHack);
+	SubscribeTooltip(ui->reprotect_hack, tooltips.settings.reprotect_hack);
 
 	// Checkboxes: core debug options
 	m_emu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings_type::PPUDebug);
