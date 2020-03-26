@@ -2256,6 +2256,23 @@ namespace rsx
 
 	void thread::recover_fifo()
 	{
+		const u64 current_time = get_system_time();
+
+		if (recovered_fifo_cmds_history.size() == 20u)
+		{
+			const auto cmd_info = recovered_fifo_cmds_history.front();
+
+			// Check timestamp of last tracked cmd
+			if (current_time - cmd_info.timestamp < 1'500'000u)
+			{
+				// Probably hopeless
+				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings." HERE);
+			}
+
+			// Erase the last command from history, keep the size of the queue the same
+			recovered_fifo_cmds_history.pop();
+		}
+
 		// Error. Should reset the queue
 		fifo_ctrl->set_get(restore_point);
 		fifo_ret_addr = saved_fifo_ret;
@@ -2267,6 +2284,8 @@ namespace rsx
 			execute_nop_draw();
 			rsx::thread::end();
 		}
+
+		recovered_fifo_cmds_history.push({fifo_ctrl->last_cmd(), current_time});
 	}
 
 	void thread::fifo_wake_delay(u64 div)
