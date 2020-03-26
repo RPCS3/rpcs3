@@ -655,6 +655,18 @@ std::string Emulator::GetHdd1Dir()
 	return fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", GetEmuDir());
 }
 
+#ifdef _WIN32
+std::string Emulator::GetExeDir()
+{
+	wchar_t buffer[32767];
+	GetModuleFileNameW(nullptr, buffer, sizeof(buffer)/2);
+
+	std::string path_to_exe = wchar_to_utf8(buffer);
+	size_t last = path_to_exe.find_last_of("\\");
+	return last == std::string::npos ? std::string("") : path_to_exe.substr(0, last+1);
+}
+#endif
+
 std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& user, const std::string& title_id)
 {
 	if (fs::is_file(game_path + "/PS3_DISC.SFB"))
