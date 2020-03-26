@@ -1135,7 +1135,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			// PS1 Classic located in dev_hdd0/game
 			sys_log.notice("PS1 Game: %s, %s", m_title_id, m_title);
 
-			const std::string game_path = m_path.substr(m_path.find("/dev_hdd0/game/"), 24);
+			const std::string game_path = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 9);
 
 			sys_log.notice("Forcing manual lib loading mode");
 			g_cfg.core.lib_loading.from_string(fmt::format("%s", lib_loading_type::manual));
@@ -1165,7 +1165,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			// PSP Remaster located in dev_hdd0/game
 			sys_log.notice("PSP Remaster Game: %s, %s", m_title_id, m_title);
 
-			const std::string game_path = m_path.substr(m_path.find("/dev_hdd0/game/"), 24);
+			const std::string game_path = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 9);
 
 			argv.resize(2);
 			argv[0] = "/dev_flash/pspemu/psp_emulator.self";
