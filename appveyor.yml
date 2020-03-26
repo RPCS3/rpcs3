@@ -1,7 +1,7 @@
 
 version: '{build}'
 
-image: Previous Visual Studio 2019
+image: Visual Studio 2019
 
 environment:
   QTDIR: C:\Qt\5.14\msvc2017_64
@@ -14,7 +14,6 @@ environment:
   CACERT_PEM: https://curl.haxx.se/ca/cacert.pem
 
 cache:
-- glslang.7z -> appveyor.yml
 - compat_database.dat
 - vulkan-sdk.exe -> appveyor.yml
 
