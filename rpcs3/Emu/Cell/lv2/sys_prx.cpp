@@ -144,12 +144,12 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	if (ignore)
 	{
-		sys_prx.warning("Ignored module: %s", vpath);
-
 		const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
 
 		prx->name = std::move(name);
 		prx->path = std::move(path);
+
+		sys_prx.warning(u8"Ignored module: “%s” (id=0x%x)", vpath, idm::last_id());
 
 		return not_an_error(idm::last_id());
 	}
@@ -182,7 +182,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	ppu_initialize(*prx);
 
-	sys_prx.success("Loaded module: %s", vpath);
+	sys_prx.success(u8"Loaded module: “%s” (id=0x%x)", vpath, idm::last_id());
 
 	return not_an_error(idm::last_id());
 }

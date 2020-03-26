@@ -6,10 +6,18 @@
   <PropertyGroup Label="Globals">
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <!-- Spectre mitigation is disabled by default unless WDK is installed -->
+    <SpectreMitigation>false</SpectreMitigation>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <LanguageStandard>stdcpplatest</LanguageStandard>
+      <PreprocessorDefinitions>_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING=1;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling>false</ExceptionHandling>
       <AdditionalOptions>-d2FH4- %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary Condition = "$(Configuration.Contains('Release'))">MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary Condition = "$(Configuration.Contains('Debug'))">MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <AdditionalOptions>-d2:-FH4- %(AdditionalOptions)</AdditionalOptions>
