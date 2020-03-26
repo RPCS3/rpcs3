@@ -2258,7 +2258,7 @@ namespace rsx
 	{
 		const u64 current_time = get_system_time();
 
-		if (recovered_fifo_cmds_history.size() == 20u)
+		if (recovered_fifo_cmds_history.size() == 9u)
 		{
 			const auto cmd_info = recovered_fifo_cmds_history.front();
 
