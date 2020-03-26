@@ -1160,6 +1160,17 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			fs::file card_2_file(vfs::get("/dev_hdd0/savedata/vmc/" + argv[2]), fs::write + fs::create);
 			card_2_file.trunc(128 * 1024);
 		}
+		else if (m_cat == "PE" && from_hdd0_game)
+		{
+			// PSP Remaster located in dev_hdd0/game
+			sys_log.notice("PSP Remaster Game: %s, %s", m_title_id, m_title);
+
+			const std::string game_path = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 9);
+
+			argv.resize(2);
+			argv[0] = "/dev_flash/pspemu/psp_emulator.self";
+			argv[1] = game_path;
+		}
 		else if (m_cat != "DG" && m_cat != "GD")
 		{
 			// Don't need /dev_bdvd
@@ -1298,7 +1309,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Open SELF or ELF
 		std::string elf_path = m_path;
 
-		if (m_cat == "1P")
+		if (m_cat == "1P" || m_cat == "PE")
 		{
 			// Use emulator path
 			elf_path = vfs::get(argv[0]);
