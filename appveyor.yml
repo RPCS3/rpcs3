@@ -5,8 +5,8 @@ image: Previous Visual Studio 2019
 
 environment:
   QTDIR: C:\Qt\5.14\msvc2017_64
-  LLVMLIBS: https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs.7z
-  GLSLANG: https://www.dropbox.com/s/6e8w6t5dxh3ad4l/glslang.7z?dl=1
+  LLVMLIBS: https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z
+  GLSLANG: https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
   VULKAN_SDK: "C:\\VulkanSDK\\1.1.126.0"
   VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.126.0/windows/VulkanSDK-1.1.126.0-Installer.exe
