@@ -164,12 +164,17 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
+				// Wait for rescheduling
+				if (ppu.check_state())
+				{
+					return 0;
+				}
+
 				std::lock_guard lock(mutex->mutex);
 
 				if (!mutex->unqueue(mutex->sq, &ppu))
 				{
-					timeout = 0;
-					continue;
+					break;
 				}
 
 				ppu.gpr[3] = CELL_ETIMEDOUT;

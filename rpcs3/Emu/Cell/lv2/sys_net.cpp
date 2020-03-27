@@ -1889,12 +1889,17 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
+				// Wait for rescheduling
+				if (ppu.check_state())
+				{
+					return 0;
+				}
+
 				std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
 
 				if (signaled)
 				{
-					timeout = 0;
-					continue;
+					break;
 				}
 
 				network_clear_queue(ppu);
@@ -2080,12 +2085,17 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
+				// Wait for rescheduling
+				if (ppu.check_state())
+				{
+					return 0;
+				}
+
 				std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
 
 				if (signaled)
 				{
-					timeout = 0;
-					continue;
+					break;
 				}
 
 				network_clear_queue(ppu);

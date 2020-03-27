@@ -356,18 +356,31 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
-				std::lock_guard lock(cond->mutex);
-
-				if (!cond->unqueue(cond->sq, &ppu))
+				// Wait for rescheduling
+				if (ppu.check_state())
 				{
-					timeout = 0;
-					continue;
+					return 0;
 				}
 
-				cond->waiters--;
+				std::lock_guard lock(cond->mutex);
 
-				ppu.gpr[3] = CELL_ETIMEDOUT;
-				break;
+				if (cond->unqueue(cond->sq, &ppu))
+				{
+					cond->waiters--;
+					ppu.gpr[3] = CELL_ETIMEDOUT;
+					break;
+				}
+
+				std::lock_guard lock2(mutex->mutex);
+				
+				if (std::find(mutex->sq.cbegin(), mutex->sq.cend(), &ppu) == mutex->sq.cend())
+				{
+					break;
+				}
+
+				mutex->sleep(ppu);
+				timeout = 0;
+				continue;
 			}
 		}
 		else
