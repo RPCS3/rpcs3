@@ -1,6 +1,6 @@
-set(RPCS3_GIT_VERSION "unknown")
-set(RPCS3_GIT_BRANCH "unknown")
-set(RPCS3_GIT_FULL_BRANCH "unknown")
+set(RPCS3_GIT_VERSION "local_build")
+set(RPCS3_GIT_BRANCH "local_build")
+set(RPCS3_GIT_FULL_BRANCH "local_build")
 
 find_package(Git)
 if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git/")
