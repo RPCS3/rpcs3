@@ -47,8 +47,9 @@ if errorlevel 1 (
 
 	echo // This is a generated file. > "%GIT_VERSION_FILE%"
 	echo. >> "%GIT_VERSION_FILE%"
-	echo #define RPCS3_GIT_VERSION "unknown" >> "%GIT_VERSION_FILE%"
-	echo #define RPCS3_GIT_BRANCH "unknown" >> "%GIT_VERSION_FILE%"
+	echo #define RPCS3_GIT_VERSION ^"local_build^" >> "%GIT_VERSION_FILE%"
+	echo #define RPCS3_GIT_BRANCH ^"local_build^" >> "%GIT_VERSION_FILE%"
+	echo #define RPCS3_GIT_FULL_BRANCH ^"local_build^" >> "%GIT_VERSION_FILE%"
 	echo. >> "%GIT_VERSION_FILE%"
 	echo // If you don't want this file to update/recompile, change to 1. >> "%GIT_VERSION_FILE%"
 	echo #define RPCS3_GIT_VERSION_NO_UPDATE 0 >> "%GIT_VERSION_FILE%"
