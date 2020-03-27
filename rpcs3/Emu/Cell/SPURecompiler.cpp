@@ -3593,7 +3593,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		{
 			if (m_block_info[target / 4])
 			{
-				spu_log.error("[0x%x] Predecessor not found for target 0x%x (chunk=0x%x, entry=0x%x, size=%u)", m_pos, target, m_entry, m_function_queue[0], m_size / 4);
+				spu_log.error("[%s] [0x%x] Predecessor not found for target 0x%x (chunk=0x%x, entry=0x%x, size=%u)", m_hash, m_pos, target, m_entry, m_function_queue[0], m_size / 4);
 			}
 
 			const auto cblock = m_ir->GetInsertBlock();
@@ -4598,7 +4598,7 @@ public:
 
 					if (!op)
 					{
-						spu_log.error("Unexpected fallthrough to 0x%x (chunk=0x%x, entry=0x%x)", m_pos, m_entry, m_function_queue[0]);
+						spu_log.error("[%s] Unexpected fallthrough to 0x%x (chunk=0x%x, entry=0x%x)", m_hash, m_pos, m_entry, m_function_queue[0]);
 						break;
 					}
 
@@ -4621,7 +4621,7 @@ public:
 
 							if (tfound == m_targets.end() || tfound->second.find_first_of(target) + 1 == 0)
 							{
-								spu_log.error("Unregistered fallthrough to 0x%x (chunk=0x%x, entry=0x%x)", target, m_entry, m_function_queue[0]);
+								spu_log.error("[%s] Unregistered fallthrough to 0x%x (chunk=0x%x, entry=0x%x)", m_hash, target, m_entry, m_function_queue[0]);
 							}
 						}
 					}
@@ -8024,7 +8024,7 @@ public:
 			if (targets.empty())
 			{
 				// Emergency exit
-				spu_log.error("[0x%05x] No jump table targets at 0x%05x (%u)", m_entry, m_pos, tfound->second.size());
+				spu_log.error("[%s] [0x%05x] No jump table targets at 0x%05x (%u)", m_hash, m_entry, m_pos, tfound->second.size());
 				m_ir->CreateBr(add_block_indirect(op, addr));
 				return;
 			}
