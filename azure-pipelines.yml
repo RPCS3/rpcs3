@@ -87,7 +87,7 @@ jobs:
         repositoryName: 'RPCS3/rpcs3-binaries-win'
         releaseNotesFilePath: 'GitHubReleaseMessage.txt'
         action: 'create'
-        target: '$(Build.SourceVersion)'
+        target: '7d09e3be30805911226241afbb14f8cdc2eb054e'
         tagSource: 'userSpecifiedTag'
         tag: 'build-$(Build.SourceVersion)'
         title: $(AVVER)
