@@ -84,7 +84,7 @@ jobs:
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
       inputs:
         gitHubConnection: 'RPCS3-Token'
-        repositoryName: '$(Build.Repository.Name)'
+        repositoryName: 'RPCS3/rpcs3-binaries-win'
         releaseNotesFilePath: 'GitHubReleaseMessage.txt'
         action: 'create'
         target: '$(Build.SourceVersion)'
