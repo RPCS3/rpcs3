@@ -10,6 +10,11 @@ namespace rpcs3
 		return RPCS3_GIT_BRANCH;
 	}
 
+	std::string_view get_full_branch()
+	{
+		return RPCS3_GIT_FULL_BRANCH;
+	}
+
 	std::pair<std::string, std::string> get_commit_and_hash()
 	{
 		const auto commit_and_hash = fmt::split(RPCS3_GIT_VERSION, {"-"});
