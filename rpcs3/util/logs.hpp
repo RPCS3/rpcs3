@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <atomic>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -131,6 +132,9 @@ namespace logs
 
 	// Log level control: get channel level
 	level get_level(const std::string&);
+
+	// Log level control: set specific channels to level::fatal
+	void set_channel_levels(const std::map<std::string, logs::level>& map);
 
 	// Get all registered log channels
 	std::vector<std::string> get_channels();

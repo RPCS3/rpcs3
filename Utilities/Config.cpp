@@ -344,12 +344,7 @@ void cfg::set_entry::from_default()
 
 void cfg::log_entry::set_map(std::map<std::string, logs::level>&& map)
 {
-	logs::reset();
-
-	for (auto&& pair : (m_map = std::move(map)))
-	{
-		logs::set_level(pair.first, pair.second);
-	}
+	m_map = std::move(map);
 }
 
 void cfg::log_entry::from_default()
