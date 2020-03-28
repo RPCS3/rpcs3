@@ -66,6 +66,9 @@ jobs:
     - bash: .travis/setup-windows.sh
       displayName: Download and unpack dependencies
 
+    - bash: .travis/export-azure-vars.sh
+      displayName: Export Variables
+
     - task: VSBuild@1
       inputs:
         solution: 'rpcs3.sln'
