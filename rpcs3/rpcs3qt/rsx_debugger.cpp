@@ -497,7 +497,7 @@ void rsx_debugger::OnClickDrawCalls()
 		if (width && height && !draw_call.color_buffer[i].empty())
 		{
 			unsigned char* buffer = convert_to_QImage_buffer(draw_call.state.surface_color(), draw_call.color_buffer[i], width, height);
-			buffers[i]->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32));
+			buffers[i]->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32, [](void* buffer){ std::free(buffer); }, buffer));
 		}
 	}
 
@@ -538,7 +538,7 @@ void rsx_debugger::OnClickDrawCalls()
 					}
 				}
 			}
-			m_buffer_depth->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32));
+			m_buffer_depth->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32, [](void* buffer){ std::free(buffer); }, buffer));
 		}
 	}
 
@@ -662,13 +662,14 @@ void rsx_debugger::GetBuffers()
 		auto buffers = render->display_buffers;
 		u32 RSXbuffer_addr = rsx::constants::local_mem_base + buffers[bufferId].offset;
 
-		if(!vm::check_addr(RSXbuffer_addr))
+		const u32 width  = buffers[bufferId].width;
+		const u32 height = buffers[bufferId].height;
+
+		if(!vm::check_addr(RSXbuffer_addr, width * height * 4))
 			continue;
 
-		auto RSXbuffer = vm::get_super_ptr<u8>(RSXbuffer_addr);
+		const auto RSXbuffer = vm::get_super_ptr<const u8>(RSXbuffer_addr);
 
-		u32 width  = buffers[bufferId].width;
-		u32 height = buffers[bufferId].height;
 		u8* buffer = static_cast<u8*>(std::malloc(width * height * 4));
 
 		// ABGR to ARGB and flip vertically
@@ -692,7 +693,7 @@ void rsx_debugger::GetBuffers()
 		case 2:  pnl = m_buffer_colorC; break;
 		default: pnl = m_buffer_colorD; break;
 		}
-		pnl->showImage(QImage(buffer, width, height, QImage::Format_RGB32));
+		pnl->showImage(QImage(buffer, width, height, QImage::Format_RGB32, [](void* buffer){ std::free(buffer); }, buffer));
 	}
 
 	// Draw Texture

@@ -33,7 +33,8 @@ error_code cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 
 	if (id > CELL_SYSUTIL_USERID_MAX)
 	{
-		return CELL_USERINFO_ERROR_NOUSER;
+		// ****** sysutil userinfo parameter error : 1 ******
+		return {CELL_USERINFO_ERROR_PARAM, "1"};
 	}
 
 	if (id == CELL_SYSUTIL_USERID_CURRENT)
@@ -41,9 +42,6 @@ error_code cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 		// We want the int value, not the string.
 		id = Emu.GetUsrId();
 	}
-
-	if (!stat)
-		return CELL_USERINFO_ERROR_PARAM;
 
 	const std::string& path = vfs::get(fmt::format("/dev_hdd0/home/%08d/", id));
 
@@ -61,8 +59,11 @@ error_code cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 		return CELL_USERINFO_ERROR_INTERNAL;
 	}
 
-	stat->id = id;
-	strcpy_trunc(stat->name, f.to_string());
+	if (stat)
+	{
+		stat->id = id;
+		strcpy_trunc(stat->name, f.to_string());
+	}
 
 	return CELL_OK;
 }

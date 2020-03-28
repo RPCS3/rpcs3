@@ -36,6 +36,7 @@ enum class thread_state : u32
 {
 	created,  // Initial state
 	aborting, // The thread has been joined in the destructor or explicitly aborted
+	errored, // Set after the emergency_exit call
 	finished  // Final state, always set at the end of thread execution
 };
 
@@ -45,6 +46,8 @@ class named_thread;
 template <typename T>
 struct result_storage
 {
+	static_assert(std::is_default_constructible_v<T> && noexcept(T()));
+
 	alignas(T) std::byte data[sizeof(T)];
 
 	static constexpr bool empty = false;
@@ -116,13 +119,13 @@ class thread_base
 	void start(native_entry);
 
 	// Called at the thread start
-	void initialize(bool(*wait_cb)(const void*));
+	void initialize(void (*error_cb)(), bool(*wait_cb)(const void*));
 
 	// May be called in destructor
 	void notify_abort() noexcept;
 
 	// Called at the thread end, returns true if needs destruction
-	bool finalize(int) noexcept;
+	bool finalize(thread_state result) noexcept;
 
 	// Cleanup after possibly deleting the thread instance
 	static void finalize() noexcept;
@@ -142,7 +145,7 @@ public:
 	u64 get_cycles();
 
 	// Wait for the thread (it does NOT change thread state, and can be called from multiple threads)
-	void join() const;
+	bool join() const;
 
 	// Notify the thread
 	void notify();
@@ -153,6 +156,9 @@ class thread_ctrl final
 {
 	// Current thread
 	static thread_local thread_base* g_tls_this_thread;
+
+	// Error handling details
+	static thread_local void(*g_tls_error_callback)();
 
 	// Target cpu core layout
 	static atomic_t<native_core_arrangement> g_native_core_layout;
@@ -272,7 +278,16 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 
 	bool entry_point()
 	{
-		thread::initialize([](const void* data)
+		auto tls_error_cb = []()
+		{
+			if constexpr (!result::empty)
+			{
+				// Construct using default constructor in the case of failure
+				new (static_cast<result*>(static_cast<named_thread*>(thread_ctrl::get_current()))->get()) typename result::type();
+			}
+		};
+
+		thread::initialize(tls_error_cb, [](const void* data)
 		{
 			const auto _this = thread_ctrl::get_current();
 
@@ -308,7 +323,7 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 			new (result::get()) typename result::type(Context::operator()());
 		}
 
-		return thread::finalize(0);
+		return thread::finalize(thread_state::finished);
 	}
 
 	friend class thread_ctrl;
@@ -437,12 +452,19 @@ public:
 	named_thread_group& operator=(const named_thread_group&) = delete;
 
 	// Wait for completion
-	void join() const
+	bool join() const
 	{
+		bool result = true;
+
 		for (u32 i = 0; i < m_count; i++)
 		{
 			std::as_const(*std::launder(m_threads + i))();
+
+			if (std::as_const(*std::launder(m_threads + i)) != thread_state::finished)
+				result = false;
 		}
+
+		return result;
 	}
 
 	// Join and access specific thread

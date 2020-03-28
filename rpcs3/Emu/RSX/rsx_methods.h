@@ -477,7 +477,7 @@ namespace rsx
 	struct rsx_state
 	{
 	public:
-		std::array<u32, 0x10000 / 4> registers{};
+		std::array<u32, 0x10000 / 4> registers;
 		u32 register_previous_value;
 
 		template<u32 opcode>

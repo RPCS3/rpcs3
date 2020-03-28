@@ -386,80 +386,6 @@ QString game_list_frame::GetLastPlayedBySerial(const QString& serial)
 	return m_persistent_settings->GetLastPlayed(serial);
 }
 
-QString game_list_frame::GetPlayTimeByMs(int elapsed_ms)
-{
-	if (elapsed_ms <= 0)
-	{
-		return "";
-	}
-
-	const qint64 elapsed_seconds = (elapsed_ms / 1000) + ((elapsed_ms % 1000) > 0 ? 1 : 0);
-	const qint64 hours_played    = elapsed_seconds / 3600;
-	const qint64 minutes_played  = (elapsed_seconds % 3600) / 60;
-	const qint64 seconds_played  = (elapsed_seconds % 3600) % 60;
-
-	// For anyone who was wondering why there need to be so many cases:
-	// 1. Using variables won't work for future localization due to varying sentence structure in different languages.
-	// 2. The provided Qt functionality only works if localization is already enabled
-	// 3. The provided Qt functionality only works for single variables
-
-	if (hours_played <= 0)
-	{
-		if (minutes_played <= 0)
-		{
-			if (seconds_played == 1)
-			{
-				return tr("%0 second").arg(seconds_played);
-			}
-			return tr("%0 seconds").arg(seconds_played);
-		}
-
-		if (seconds_played <= 0)
-		{
-			if (minutes_played == 1)
-			{
-				return tr("%0 minute").arg(minutes_played);
-			}
-			return tr("%0 minutes").arg(minutes_played);
-		}
-		if (minutes_played == 1 && seconds_played == 1)
-		{
-			return tr("%0 minute and %1 second").arg(minutes_played).arg(seconds_played);
-		}
-		if (minutes_played == 1)
-		{
-			return tr("%0 minute and %1 seconds").arg(minutes_played).arg(seconds_played);
-		}
-		if (seconds_played == 1)
-		{
-			return tr("%0 minutes and %1 second").arg(minutes_played).arg(seconds_played);
-		}
-		return tr("%0 minutes and %1 seconds").arg(minutes_played).arg(seconds_played);
-	}
-
-	if (minutes_played <= 0)
-	{
-		if (hours_played == 1)
-		{
-			return tr("%0 hour").arg(hours_played);
-		}
-		return tr("%0 hours").arg(hours_played);
-	}
-	if (hours_played == 1 && minutes_played == 1)
-	{
-		return tr("%0 hour and %1 minute").arg(hours_played).arg(minutes_played);
-	}
-	if (hours_played == 1)
-	{
-		return tr("%0 hour and %1 minutes").arg(hours_played).arg(minutes_played);
-	}
-	if (minutes_played == 1)
-	{
-		return tr("%0 hours and %1 minute").arg(hours_played).arg(minutes_played);
-	}
-	return tr("%0 hours and %1 minutes").arg(hours_played).arg(minutes_played);
-}
-
 std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
 {
 	return fs::get_cache_dir() + "cache/" + serial;
@@ -854,30 +780,6 @@ void game_list_frame::SaveSettings()
 	m_gui_settings->SetValue(gui::gl_state, m_game_list->horizontalHeader()->saveState());
 }
 
-static void open_dir(const std::string& spath)
-{
-	fs::create_dir(spath);
-	const QString path = qstr(spath);
-
-	if (fs::is_file(spath))
-	{
-		// open directory and select file
-		// https://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
-#ifdef _WIN32
-		QProcess::startDetached("explorer.exe", { "/select,", QDir::toNativeSeparators(path) });
-#elif defined(__APPLE__)
-		QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to reveal POSIX file \"" + path + "\"" });
-		QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to activate" });
-#else
-		// open parent directory
-		QDesktopServices::openUrl(QUrl("file:///" + qstr(fs::get_parent_dir(spath))));
-#endif
-		return;
-	}
-
-	QDesktopServices::openUrl(QUrl("file:///" + path));
-}
-
 void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
 {
 	if (!item)
@@ -950,13 +852,22 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	const bool is_current_running_game = (Emu.IsRunning() || Emu.IsPaused()) && current_game.serial == Emu.GetTitleID();
 
-	QAction* boot = new QAction(gameinfo->hasCustomConfig ? tr(is_current_running_game ? "&Reboot with global configuration" : "&Boot with global configuration") : tr(is_current_running_game ? "&Reboot" : "&Boot"));
+	QAction* boot = new QAction(gameinfo->hasCustomConfig
+		? (is_current_running_game
+			? tr("&Reboot with global configuration")
+			: tr("&Boot with global configuration"))
+		: (is_current_running_game
+			? tr("&Reboot")
+			: tr("&Boot")));
+
 	QFont font = boot->font();
 	font.setBold(true);
 
 	if (gameinfo->hasCustomConfig)
 	{
-		QAction* boot_custom = menu.addAction(tr(is_current_running_game ? "&Reboot with custom configuration" : "&Boot with custom configuration"));
+		QAction* boot_custom = menu.addAction(is_current_running_game
+			? tr("&Reboot with custom configuration")
+			: tr("&Boot with custom configuration"));
 		boot_custom->setFont(font);
 		connect(boot_custom, &QAction::triggered, [=, this]
 		{
@@ -972,8 +883,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	menu.addAction(boot);
 	menu.addSeparator();
 
-	QAction* configure = menu.addAction(gameinfo->hasCustomConfig ? tr("&Change Custom Configuration") : tr("&Create Custom Configuration"));
-	QAction* pad_configure = menu.addAction(gameinfo->hasCustomPadConfig ? tr("&Change Custom Gamepad Configuration") : tr("&Create Custom Gamepad Configuration"));
+	QAction* configure = menu.addAction(gameinfo->hasCustomConfig
+		? tr("&Change Custom Configuration")
+		: tr("&Create Custom Configuration"));
+	QAction* pad_configure = menu.addAction(gameinfo->hasCustomPadConfig
+		? tr("&Change Custom Gamepad Configuration")
+		: tr("&Create Custom Gamepad Configuration"));
 	QAction* create_ppu_cache = menu.addAction(tr("&Create PPU Cache"));
 	menu.addSeparator();
 	QAction* rename_title = menu.addAction(tr("&Rename In Game List"));
@@ -1044,12 +959,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			const std::string new_config_path = Emulator::GetCustomConfigPath(current_game.serial);
 
 			if (fs::is_file(new_config_path))
-				open_dir(new_config_path);
+				gui::utils::open_dir(new_config_path);
 
 			const std::string old_config_path = Emulator::GetCustomConfigPath(current_game.serial, true);
 
 			if (fs::is_file(old_config_path))
-				open_dir(old_config_path);
+				gui::utils::open_dir(old_config_path);
 		});
 	}
 	if (fs::is_dir(data_base_dir))
@@ -1057,7 +972,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QAction* open_data_dir = menu.addAction(tr("&Open Data Folder"));
 		connect(open_data_dir, &QAction::triggered, [=, this]()
 		{
-			open_dir(data_base_dir);
+			gui::utils::open_dir(data_base_dir);
 		});
 	}
 	menu.addSeparator();
@@ -1159,13 +1074,15 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			else
 			{
 				game_list_log.error("Failed to remove %s %s in %s (%s)", sstr(gameinfo->localized_category), current_game.name, current_game.path, fs::g_tls_error);
-				QMessageBox::critical(this, tr("Failure!"), tr(remove_caches ? "Failed to remove %0 from drive!\nPath: %1\nCaches and custom configs have been left intact." : "Failed to remove %0 from drive!\nPath: %1").arg(name).arg(qstr(current_game.path)));
+				QMessageBox::critical(this, tr("Failure!"), remove_caches
+					? tr("Failed to remove %0 from drive!\nPath: %1\nCaches and custom configs have been left intact.").arg(name).arg(qstr(current_game.path))
+					: tr("Failed to remove %0 from drive!\nPath: %1").arg(name).arg(qstr(current_game.path)));
 			}
 		}
 	});
 	connect(open_game_folder, &QAction::triggered, [=, this]()
 	{
-		open_dir(current_game.path);
+		gui::utils::open_dir(current_game.path);
 	});
 	connect(check_compat, &QAction::triggered, [=, this]
 	{
@@ -2083,7 +2000,7 @@ void game_list_frame::PopulateGameList()
 		m_game_list->setItem(row, gui::column_sound,      new custom_table_widget_item(GetStringFromU32(game->info.sound_format, localized.sound.format, true)));
 		m_game_list->setItem(row, gui::column_parental,   new custom_table_widget_item(GetStringFromU32(game->info.parental_lvl, localized.parental.level), Qt::UserRole, game->info.parental_lvl));
 		m_game_list->setItem(row, gui::column_last_play,  new custom_table_widget_item(locale.toString(last_played, gui::persistent::last_played_date_format_new), Qt::UserRole, last_played));
-		m_game_list->setItem(row, gui::column_playtime,   new custom_table_widget_item(GetPlayTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
+		m_game_list->setItem(row, gui::column_playtime,   new custom_table_widget_item(localized.GetVerboseTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
 		m_game_list->setItem(row, gui::column_compat,     compat_item);
 
 		if (selected_item == game->info.icon_path)

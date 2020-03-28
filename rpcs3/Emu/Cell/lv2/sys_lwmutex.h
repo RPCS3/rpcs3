@@ -57,17 +57,50 @@ struct lv2_lwmutex final : lv2_obj
 
 	const u32 protocol;
 	const vm::ptr<sys_lwmutex_t> control;
-	const u64 name;
+	const be_t<u64> name;
 
 	shared_mutex mutex;
 	atomic_t<s32> signaled{0};
 	std::deque<cpu_thread*> sq;
+	atomic_t<s32> lwcond_waiters{0};
 
 	lv2_lwmutex(u32 protocol, vm::ptr<sys_lwmutex_t> control, u64 name)
 		: protocol(protocol)
 		, control(control)
-		, name(name)
+		, name(std::bit_cast<be_t<u64>>(name))
 	{
+	}
+
+	// Try to add a waiter 
+	bool add_waiter(cpu_thread* cpu)
+	{
+		if (const auto old = lwcond_waiters.fetch_op([](s32& val)
+		{
+			if (val + 0u <= 1u << 31)
+			{
+				// Value was either positive or INT32_MIN
+				return false;
+			}
+
+			// lwmutex was set to be destroyed, but there are lwcond waiters
+			// Turn off the "destroying" bit as we are adding an lwmutex waiter
+			val &= 0x7fff'ffff;
+			return true;
+		}).first; old != INT32_MIN)
+		{
+			sq.emplace_back(cpu);
+
+			if (old < 0)
+			{
+				// Notify lwmutex destroyer (may cause EBUSY to be returned for it)
+				lwcond_waiters.notify_all();
+			}
+
+			return true;
+		}
+
+		// Failed - lwmutex was set to be destroyed and all lwcond waiters quit 
+		return false;
 	}
 };
 

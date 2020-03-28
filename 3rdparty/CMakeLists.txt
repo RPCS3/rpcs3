@@ -413,6 +413,18 @@ endif()
 # LLVM
 include(llvm.cmake)
 
+# CURL
+if(USE_SYSTEM_CURL)
+	message("-- RPCS3: using shared libcurl")
+	find_package(CURL REQUIRED)
+	add_library(wolfssl-3-static INTERFACE)
+	add_library(libcurl INTERFACE)
+	target_link_libraries(libcurl INTERFACE CURL::libcurl)
+else()
+	message("-- RPCS3: building libcurl + wolfssl submodules")
+	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
+	add_subdirectory(curl EXCLUDE_FROM_ALL)
+endif()
 
 # add nice ALIAS targets for ease of use
 add_library(3rdparty::libusb ALIAS usb-1.0-static)
@@ -436,3 +448,5 @@ add_library(3rdparty::vulkan ALIAS ${VULKAN_TARGET})
 add_library(3rdparty::openal ALIAS 3rdparty_openal)
 add_library(3rdparty::ffmpeg ALIAS 3rdparty_ffmpeg)
 add_library(3rdparty::glew ALIAS 3rdparty_glew)
+add_library(3rdparty::wolfssl ALIAS wolfssl-3-static)
+add_library(3rdparty::libcurl ALIAS libcurl)

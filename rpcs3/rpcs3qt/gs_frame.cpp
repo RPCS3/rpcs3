@@ -301,7 +301,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 	std::thread(
 		[sshot_width, sshot_height](const std::vector<u8> sshot_data)
 		{
-			std::string screen_path = fs::get_config_dir() + "/screenshots/";
+			std::string screen_path = fs::get_config_dir() + "screenshots/";
 
 			if (!fs::create_dir(screen_path) && fs::g_tls_error != fs::error::exist)
 			{

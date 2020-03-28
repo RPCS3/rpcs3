@@ -18,7 +18,7 @@ error_code sys_lwcond_create(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, vm::
 	attrs->pshared  = SYS_SYNC_NOT_PROCESS_SHARED;
 	attrs->name_u64 = attr->name_u64;
 
-	if (auto res = g_cfg.core.hle_lwmutex ? sys_cond_create(ppu, out_id, lwmutex->sleep_queue, attrs) : _sys_lwcond_create(ppu, out_id, lwmutex->sleep_queue, lwcond, attr->name_u64))
+	if (auto res = g_cfg.core.hle_lwmutex ? sys_cond_create(ppu, out_id, lwmutex->sleep_queue, attrs) : _sys_lwcond_create(ppu, out_id, lwmutex->sleep_queue, lwcond, std::bit_cast<be_t<u64>>(attr->name_u64)))
 	{
 		return res;
 	}

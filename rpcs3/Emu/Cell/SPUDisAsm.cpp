@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "SPUDisAsm.h"
 
-const spu_decoder<SPUDisAsm> s_spu_disasm;
+constexpr spu_decoder<SPUDisAsm> s_spu_disasm;
 
 u32 SPUDisAsm::disasm(u32 pc)
 {

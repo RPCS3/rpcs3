@@ -13,7 +13,7 @@ error_code _sys_lwcond_create(ppu_thread& ppu, vm::ptr<u32> lwcond_id, u32 lwmut
 {
 	vm::temporary_unlock(ppu);
 
-	sys_lwcond.warning(u8"_sys_lwcond_create(lwcond_id=*0x%x, lwmutex_id=0x%x, control=*0x%x, name=0x%llx (“%s”))", lwcond_id, lwmutex_id, control, name, lv2_obj::name64(name));
+	sys_lwcond.warning(u8"_sys_lwcond_create(lwcond_id=*0x%x, lwmutex_id=0x%x, control=*0x%x, name=0x%llx (“%s”))", lwcond_id, lwmutex_id, control, name, lv2_obj::name64(std::bit_cast<be_t<u64>>(name)));
 
 	u32 protocol;
 
@@ -87,9 +87,13 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> int
 	{
-		if (ppu_thread_id != umax && !idm::check_unlocked<named_thread<ppu_thread>>(ppu_thread_id))
+		if (ppu_thread_id != umax)
 		{
-			return -1;
+			if (const auto cpu = idm::check_unlocked<named_thread<ppu_thread>>(ppu_thread_id);
+				!cpu || cpu->joiner == ppu_join_status::exited)
+			{
+				return -1;
+			}
 		}
 
 		lv2_lwmutex* mutex;
@@ -136,13 +140,25 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 					static_cast<ppu_thread*>(result)->gpr[3] = CELL_EBUSY;
 				}
 
-				if (mode == 1)
+				if (mode != 2)
 				{
 					verify(HERE), !mutex->signaled;
 					std::lock_guard lock(mutex->mutex);
-					mutex->sq.emplace_back(result);
+
+					if (mode == 3 && !mutex->sq.empty()) [[unlikely]]
+					{
+						// Respect ordering of the sleep queue
+						mutex->sq.emplace_back(result);
+						result = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol);
+					}
+					else if (mode == 1)
+					{
+						verify(HERE), mutex->add_waiter(result);
+						result = nullptr;
+					}
 				}
-				else
+
+				if (result)
 				{
 					cond.awake(result);
 				}
@@ -228,7 +244,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				{
 					verify(HERE), !mutex->signaled;
 					std::lock_guard lock(mutex->mutex);
-					mutex->sq.emplace_back(cpu);
+					verify(HERE), mutex->add_waiter(cpu);
 				}
 				else
 				{
@@ -283,6 +299,23 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 			return;
 		}
 
+		// Try to increment lwmutex's lwcond's waiters count
+		if (!mutex->lwcond_waiters.fetch_op([](s32& val)
+		{
+			if (val == INT32_MIN)
+			{
+				return false;
+			}
+
+			val++;
+			return true;
+		}).second)
+		{
+			// Failed - lwmutex was detroyed and all waiters have quit
+			mutex.reset();
+			return;
+		}
+
 		std::lock_guard lock(cond.mutex);
 
 		// Add a waiter
@@ -323,24 +356,43 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
-				std::lock_guard lock(cond->mutex);
-
-				if (!cond->unqueue(cond->sq, &ppu))
+				// Wait for rescheduling
+				if (ppu.check_state())
 				{
-					timeout = 0;
-					continue;
+					return 0;
 				}
 
-				cond->waiters--;
+				std::lock_guard lock(cond->mutex);
 
-				ppu.gpr[3] = CELL_ETIMEDOUT;
-				break;
+				if (cond->unqueue(cond->sq, &ppu))
+				{
+					cond->waiters--;
+					ppu.gpr[3] = CELL_ETIMEDOUT;
+					break;
+				}
+
+				std::lock_guard lock2(mutex->mutex);
+				
+				if (std::find(mutex->sq.cbegin(), mutex->sq.cend(), &ppu) == mutex->sq.cend())
+				{
+					break;
+				}
+
+				mutex->sleep(ppu);
+				timeout = 0;
+				continue;
 			}
 		}
 		else
 		{
 			thread_ctrl::wait();
 		}
+	}
+
+	if (--mutex->lwcond_waiters == INT32_MIN)
+	{
+		// Notify the thread destroying lwmutex on last waiter
+		mutex->lwcond_waiters.notify_all();
 	}
 
 	// Return cause

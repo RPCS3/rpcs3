@@ -24,7 +24,7 @@ osk_dialog_frame::~osk_dialog_frame()
 	}
 }
 
-void osk_dialog_frame::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options)
+void osk_dialog_frame::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 /*panel_flag*/, u32 /*first_view_panel*/)
 {
 	state = OskDialogState::Open;
 
@@ -64,7 +64,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	inputLayout->setAlignment(Qt::AlignHCenter);
 
 	// Text Input
-	if (options & CELL_OSKDIALOG_NO_RETURN)
+	if (prohibit_flags & CELL_OSKDIALOG_NO_RETURN)
 	{
 		QLineEdit* input = new QLineEdit(m_dialog);
 		input->setFixedWidth(lineEditWidth());
@@ -72,7 +72,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 		input->setText(text);
 		input->setFocus();
 
-		if (options & CELL_OSKDIALOG_NO_SPACE)
+		if (prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
 		{
 			input->setValidator(new QRegExpValidator(QRegExp("^\\S*$"), this));
 		}
@@ -123,7 +123,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 			int cursor_pos = cursor.position();
 
 			// Clear text of spaces if necessary
-			if (options & CELL_OSKDIALOG_NO_SPACE)
+			if (prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
 			{
 				int trim_len = text.length();
 				text.remove(QRegExp("\\s+"));

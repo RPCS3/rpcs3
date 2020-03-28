@@ -1,5 +1,6 @@
-set(RPCS3_GIT_VERSION "unknown")
-set(RPCS3_GIT_BRANCH "unknown")
+set(RPCS3_GIT_VERSION "local_build")
+set(RPCS3_GIT_BRANCH "local_build")
+set(RPCS3_GIT_FULL_BRANCH "local_build")
 
 find_package(Git)
 if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git/")
@@ -37,8 +38,17 @@ function(gen_git_version rpcs3_src_dir)
 	set(GIT_VERSION_FILE "${rpcs3_src_dir}/git-version.h")
 	set(GIT_VERSION_UPDATE "1")
 
+	# These environment variables are defined by Azure pipelines
+	# BUILD_REPOSITORY_NAME will look like "RPCS3/rpcs3"
+	# BUILD_SOURCEBRANCHNAME will look like "master"
+	# See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables
+	if (DEFINED ENV{BUILD_REPOSITORY_NAME} AND NOT "$ENV{BUILD_REPOSITORY_NAME}" STREQUAL "")
+		set(RPCS3_GIT_FULL_BRANCH "$ENV{BUILD_REPOSITORY_NAME}/$ENV{BUILD_SOURCEBRANCHNAME}")
+	endif()
+
 	message(STATUS "RPCS3_GIT_VERSION: " ${RPCS3_GIT_VERSION})
 	message(STATUS "RPCS3_GIT_BRANCH: " ${RPCS3_GIT_BRANCH})
+	message(STATUS "RPCS3_GIT_FULL_BRANCH: " ${RPCS3_GIT_FULL_BRANCH})
 
 	if(EXISTS ${GIT_VERSION_FILE})
 		# Don't update if marked not to update.
@@ -58,7 +68,8 @@ function(gen_git_version rpcs3_src_dir)
 
 	set(code_string "// This is a generated file.\n\n"
 		"#define RPCS3_GIT_VERSION \"${RPCS3_GIT_VERSION}\"\n"
-		"#define RPCS3_GIT_BRANCH \"${RPCS3_GIT_BRANCH}\"\n\n"
+		"#define RPCS3_GIT_BRANCH \"${RPCS3_GIT_BRANCH}\"\n"
+		"#define RPCS3_GIT_FULL_BRANCH \"${RPCS3_GIT_FULL_BRANCH}\"\n\n"
 		"// If you don't want this file to update/recompile, change to 1.\n"
 		"#define RPCS3_GIT_VERSION_NO_UPDATE 0\n")
 

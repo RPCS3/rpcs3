@@ -82,7 +82,7 @@ s32 sys_ppu_thread_yield(ppu_thread& ppu)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_yield()");
 
-	// Return 1 on no-op, 0 on successful context switch
+	// Return 0 on successful context switch, 1 otherwise
 	return +!lv2_obj::yield(ppu);
 }
 

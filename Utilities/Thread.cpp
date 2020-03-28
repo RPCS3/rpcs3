@@ -40,6 +40,37 @@
 #include <sys/timerfd.h>
 #endif
 
+#if defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+# include <sys/sysctl.h>
+# include <unistd.h>
+# if defined(__DragonFly__) || defined(__FreeBSD__)
+#  include <sys/user.h>
+# endif
+# if defined(__OpenBSD__)
+#  include <sys/param.h>
+#  include <sys/proc.h>
+# endif
+
+# if defined(__NetBSD__)
+#  undef KERN_PROC
+#  define KERN_PROC KERN_PROC2
+#  define kinfo_proc kinfo_proc2
+# endif
+
+# if defined(__APPLE__)
+#  define KP_FLAGS kp_proc.p_flag
+# elif defined(__DragonFly__)
+#  define KP_FLAGS kp_flags
+# elif defined(__FreeBSD__)
+#  define KP_FLAGS ki_flag
+# elif defined(__NetBSD__)
+#  define KP_FLAGS p_flag
+# elif defined(__OpenBSD__)
+#  define KP_FLAGS p_psflags
+#  define P_TRACED PS_TRACED
+# endif
+#endif
+
 #include "sync.h"
 #include "util/logs.hpp"
 
@@ -63,6 +94,28 @@ void fmt_class_string<std::thread::id>::format(std::string& out, u64 arg)
 #ifndef _WIN32
 bool IsDebuggerPresent()
 {
+#if defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+	int mib[] = {
+		CTL_KERN,
+		KERN_PROC,
+		KERN_PROC_PID,
+		getpid(),
+# if defined(__NetBSD__) || defined(__OpenBSD__)
+		sizeof(struct kinfo_proc),
+		1,
+# endif
+	};
+	u_int miblen = std::size(mib);
+	struct kinfo_proc info;
+	size_t size = sizeof(info);
+
+	if (sysctl(mib, miblen, &info, &size, NULL, 0))
+	{
+		return false;
+	}
+
+	return info.KP_FLAGS & P_TRACED;
+#else
 	char buf[4096];
 	fs::file status_fd("/proc/self/status");
 	if (!status_fd)
@@ -97,6 +150,7 @@ bool IsDebuggerPresent()
 	}
 
 	return false;
+#endif
 }
 #endif
 
@@ -1755,6 +1809,8 @@ const bool s_terminate_handler_set = []() -> bool
 
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
+thread_local DECLARE(thread_ctrl::g_tls_error_callback) = nullptr;
+
 DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
 
 void thread_base::start(native_entry entry)
@@ -1767,10 +1823,12 @@ void thread_base::start(native_entry entry)
 #endif
 }
 
-void thread_base::initialize(bool(*wait_cb)(const void*))
+void thread_base::initialize(void (*error_cb)(), bool(*wait_cb)(const void*))
 {
-	// Initialize TLS variable
+	// Initialize TLS variables
 	thread_ctrl::g_tls_this_thread = this;
+
+	thread_ctrl::g_tls_error_callback = error_cb;
 
 	// Initialize atomic wait callback
 	atomic_storage_futex::set_wait_callback(wait_cb);
@@ -1828,7 +1886,7 @@ void thread_base::notify_abort() noexcept
 	atomic_storage_futex::raw_notify(+m_state_notifier);
 }
 
-bool thread_base::finalize(int) noexcept
+bool thread_base::finalize(thread_state result_state) noexcept
 {
 	// Report pending errors
 	error_code::error_report(0, 0, 0, 0);
@@ -1875,7 +1933,7 @@ bool thread_base::finalize(int) noexcept
 		fsoft, fhard, ctxvol, ctxinv);
 
 	// Return true if need to delete thread object
-	const bool ok = m_state.exchange(thread_state::finished) <= thread_state::aborting;
+	const bool ok = m_state.exchange(result_state) <= thread_state::aborting;
 
 	// Signal waiting threads
 	m_state.notify_all();
@@ -1984,13 +2042,15 @@ thread_base::~thread_base()
 	}
 }
 
-void thread_base::join() const
+bool thread_base::join() const
 {
-	for (auto state = m_state.load(); state != thread_state::finished;)
+	for (auto state = m_state.load(); state != thread_state::finished && state != thread_state::errored;)
 	{
 		m_state.wait(state);
 		state = m_state;
 	}
+
+	return m_state.load() == thread_state::finished;
 }
 
 void thread_base::notify()
@@ -2061,7 +2121,9 @@ void thread_ctrl::emergency_exit(std::string_view reason)
 
 	if (const auto _this = g_tls_this_thread)
 	{
-		if (_this->finalize(0))
+		g_tls_error_callback();
+
+		if (_this->finalize(thread_state::errored))
 		{
 			delete _this;
 		}

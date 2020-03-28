@@ -46,7 +46,7 @@ template <typename D, typename T = decltype(&D::UNK)>
 class spu_decoder
 {
 	// Fast lookup table
-	std::array<T, 2048> m_table;
+	std::array<T, 2048> m_table{};
 
 	struct instruction_info
 	{
@@ -54,14 +54,14 @@ class spu_decoder
 		u32 value;
 		T pointer;
 
-		instruction_info(u32 m, u32 v, T p)
+		constexpr instruction_info(u32 m, u32 v, T p)
 			: magn(m)
 			, value(v)
 			, pointer(p)
 		{
 		}
 
-		instruction_info(u32 m, u32 v, const T* p)
+		constexpr instruction_info(u32 m, u32 v, const T* p)
 			: magn(m)
 			, value(v)
 			, pointer(*p)
@@ -70,7 +70,7 @@ class spu_decoder
 	};
 
 public:
-	spu_decoder()
+	constexpr spu_decoder()
 	{
 		const std::initializer_list<instruction_info> instructions
 		{
@@ -275,7 +275,10 @@ public:
 			{ 7, 0xf, &D::FMS },
 		};
 
-		m_table.fill(&D::UNK);
+		for (auto& x : m_table)
+		{
+			x = &D::UNK;
+		}
 
 		for (auto& entry : instructions)
 		{
@@ -284,12 +287,6 @@ public:
 				m_table[entry.value << entry.magn | i] = entry.pointer;
 			}
 		}
-	}
-
-	template <typename F>
-	spu_decoder(F&& init) : spu_decoder()
-	{
-		init(m_table);
 	}
 
 	const std::array<T, 2048>& get_table() const

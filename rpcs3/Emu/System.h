@@ -179,6 +179,10 @@ private:
 	void LimitCacheSize();
 
 public:
+#ifdef _WIN32
+	static std::string GetExeDir();
+#endif
+
 	static std::string GetEmuDir();
 	static std::string GetHddDir();
 	static std::string GetHdd1Dir();

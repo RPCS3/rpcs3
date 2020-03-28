@@ -229,6 +229,7 @@
     <addaction name="actionManage_Trophy_Data"/>
     <addaction name="actionManage_Skylanders_Portal"/>
     <addaction name="actionManage_Cheats"/>
+    <addaction name="actionManage_Screenshots"/>
    </widget>
    <widget class="QMenu" name="menuUtilities">
     <property name="title">
@@ -1031,6 +1032,11 @@
    </property>
    <property name="text">
     <string>English</string>
+   </property>
+  </action>
+  <action name="actionManage_Screenshots">
+   <property name="text">
+    <string>Screenshots</string>
    </property>
   </action>
  </widget>

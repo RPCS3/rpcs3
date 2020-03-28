@@ -9,7 +9,8 @@
 
 using namespace llvm;
 
-const ppu_decoder<PPUTranslator> s_ppu_decoder;
+constexpr ppu_decoder<PPUTranslator> s_ppu_decoder;
+constexpr ppu_decoder<ppu_iname> s_ppu_iname;
 
 PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info, ExecutionEngine& engine)
 	: cpu_translator(module, false)
@@ -200,7 +201,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 			if (m_rel)
 			{
 				// This is very bad. m_rel is normally set to nullptr after a relocation is handled (so it wasn't)
-				ppu_log.error("LLVM: [0x%x] Unsupported relocation(%u) in '%s'. Please report.", rel_found->first, m_rel->type, m_info.name);
+				ppu_log.error("LLVM: [0x%x] Unsupported relocation(%u) in '%s' (opcode=0x%x '%s'). Please report.", rel_found->first, m_rel->type, m_info.name, op, s_ppu_iname.decode(op));
 				return nullptr;
 			}
 		}
@@ -902,8 +903,24 @@ void PPUTranslator::VLOGEFP(ppu_opcode_t op)
 
 void PPUTranslator::VMADDFP(ppu_opcode_t op)
 {
-	const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
-	SetVr(op.vd, m_ir->CreateFAdd(m_ir->CreateFMul(acb[0], acb[1]), acb[2]));
+	if (m_use_fma)
+	{
+		const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
+		SetVr(op.vd, m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { acb[0], acb[1], acb[2] }));
+		return;
+	}
+
+	// Emulated FMA via double precision
+	auto a = get_vr<f32[4]>(op.va);
+	auto b = get_vr<f32[4]>(op.vb);
+	auto c = get_vr<f32[4]>(op.vc);
+
+	const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
+	const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
+	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
+
+	const auto xr = m_ir->CreateCall(get_intrinsic<f64[4]>(llvm::Intrinsic::fmuladd), {xa, xc, xb});
+	SetVr(op.vd, m_ir->CreateFPTrunc(xr, get_type<f32[4]>()));
 }
 
 void PPUTranslator::VMAXFP(ppu_opcode_t op)
@@ -1182,8 +1199,25 @@ void PPUTranslator::VMULOUH(ppu_opcode_t op)
 
 void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 {
-	const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
-	SetVr(op.vd, m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(acb[0], acb[1]), acb[2])));
+	// Differs from the emulated path with regards to negative zero
+	if (m_use_fma)
+	{
+		const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
+		SetVr(op.vd, m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { acb[0], acb[1], m_ir->CreateFNeg(acb[2]) })));
+		return;
+	}
+
+	// Emulated FMA via double precision
+	auto a = get_vr<f32[4]>(op.va);
+	auto b = get_vr<f32[4]>(op.vb);
+	auto c = get_vr<f32[4]>(op.vc);
+
+	const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
+	const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
+	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
+
+	const auto xr = m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(xa, xc), xb));
+	SetVr(op.vd, m_ir->CreateFPTrunc(xr, get_type<f32[4]>()));
 }
 
 void PPUTranslator::VNOR(ppu_opcode_t op)
@@ -1723,7 +1757,7 @@ void PPUTranslator::ADDIC(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -1740,7 +1774,7 @@ void PPUTranslator::ADDI(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -1753,7 +1787,7 @@ void PPUTranslator::ADDIS(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16 << 16);
 
-	if (m_rel && m_rel->type == 6)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = m_ir->CreateShl(SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>()), 16);
 		m_rel = nullptr;
@@ -1764,7 +1798,8 @@ void PPUTranslator::ADDIS(ppu_opcode_t op)
 
 void PPUTranslator::BC(ppu_opcode_t op)
 {
-	const u64 target = (op.aa ? 0 : m_addr) + op.bt14;
+	const s32 bt14 = op.bt14; // Workaround for VS 16.5
+	const u64 target = (op.aa ? 0 : m_addr) + bt14;
 
 	if (op.aa && m_reloc)
 	{
@@ -1812,7 +1847,8 @@ void PPUTranslator::SC(ppu_opcode_t op)
 
 void PPUTranslator::B(ppu_opcode_t op)
 {
-	const u64 target = (op.aa ? 0 : m_addr) + op.bt24;
+	const s32 bt24 = op.bt24; // Workaround for VS 16.5
+	const u64 target = (op.aa ? 0 : m_addr) + bt24;
 
 	if (op.aa && m_reloc)
 	{
@@ -2054,7 +2090,7 @@ void PPUTranslator::ORI(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.uimm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = ZExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -2067,13 +2103,7 @@ void PPUTranslator::ORIS(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.uimm16 << 16);
 
-	if (m_rel && m_rel->type == 5)
-	{
-		imm = m_ir->CreateShl(ZExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>()), 16);
-		m_rel = nullptr;
-	}
-
-	if (m_rel && m_rel->type == 6)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = m_ir->CreateShl(ZExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>()), 16);
 		m_rel = nullptr;
@@ -3011,8 +3041,8 @@ void PPUTranslator::DIVW(ppu_opcode_t op)
 {
 	const auto a = GetGpr(op.ra, 32);
 	const auto b = GetGpr(op.rb, 32);
-	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt32(1 << 31)), IsOnes(b)));
-	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(1 << 31), b));
+	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt32(INT32_MIN)), IsOnes(b)));
+	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(INT32_MIN), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt32(0), result));
 	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
 	if (op.oe) SetOverflow(o);
@@ -3346,7 +3376,7 @@ void PPUTranslator::LWZ(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3359,7 +3389,7 @@ void PPUTranslator::LWZU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3374,7 +3404,7 @@ void PPUTranslator::LBZ(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3387,7 +3417,7 @@ void PPUTranslator::LBZU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3402,7 +3432,7 @@ void PPUTranslator::STW(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3426,7 +3456,7 @@ void PPUTranslator::STWU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3441,7 +3471,7 @@ void PPUTranslator::STB(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3454,7 +3484,7 @@ void PPUTranslator::STBU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3469,7 +3499,7 @@ void PPUTranslator::LHZ(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3482,7 +3512,7 @@ void PPUTranslator::LHZU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3497,7 +3527,7 @@ void PPUTranslator::LHA(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3510,7 +3540,7 @@ void PPUTranslator::LHAU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3525,7 +3555,7 @@ void PPUTranslator::STH(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3538,7 +3568,7 @@ void PPUTranslator::STHU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3569,7 +3599,7 @@ void PPUTranslator::LFS(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3582,7 +3612,7 @@ void PPUTranslator::LFSU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3597,7 +3627,7 @@ void PPUTranslator::LFD(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3610,7 +3640,7 @@ void PPUTranslator::LFDU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3625,7 +3655,7 @@ void PPUTranslator::STFS(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3638,7 +3668,7 @@ void PPUTranslator::STFSU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3653,7 +3683,7 @@ void PPUTranslator::STFD(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3666,7 +3696,7 @@ void PPUTranslator::STFDU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;

@@ -47,20 +47,25 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 	std::function<void(u32, bool)> walk_function = [&](u32 start, bool fast_exit)
 	{
-		u32 current_instrution = start;
+		u32 current_instruction = start;
 		std::set<u32> conditional_targets;
+		bool has_printed_error = false;
 
 		while (true)
 		{
-			verify(HERE), current_instrution < 512;
+			verify(HERE), current_instruction < 512;
 
-			if (result.instruction_mask[current_instrution])
+			if (result.instruction_mask[current_instruction])
 			{
 				if (!fast_exit)
 				{
-					// This can be harmless if a dangling RET was encountered before
-					rsx_log.error("vp_analyser: Possible infinite loop detected");
-					current_instrution++;
+					if (!has_printed_error) 
+					{
+						// This can be harmless if a dangling RET was encountered before
+						rsx_log.error("vp_analyser: Possible infinite loop detected");
+						has_printed_error = true;
+					}
+					current_instruction++;
 					continue;
 				}
 				else
@@ -70,14 +75,14 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 				}
 			}
 
-			const qword* instruction = reinterpret_cast<const qword*>(&data[current_instrution * 4]);
+			const qword* instruction = reinterpret_cast<const qword*>(&data[current_instruction * 4]);
 			d1.HEX = instruction->word[1];
 			d3.HEX = instruction->word[3];
 
 			// Touch current instruction
-			result.instruction_mask[current_instrution] = true;
-			instruction_range.first = std::min(current_instrution, instruction_range.first);
-			instruction_range.second = std::max(current_instrution, instruction_range.second);
+			result.instruction_mask[current_instruction] = true;
+			instruction_range.first = std::min(current_instruction, instruction_range.first);
+			instruction_range.second = std::max(current_instruction, instruction_range.second);
 
 			// Basic vec op analysis, must be done before flow analysis
 			switch (d1.vec_opcode)
@@ -111,7 +116,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			case RSX_SCA_OPCODE_CLB:
 			{
 				// Need to patch the jump address to be consistent wherever the program is located
-				instructions_to_patch[current_instrution] = true;
+				instructions_to_patch[current_instruction] = true;
 				has_branch_instruction = true;
 
 				d2.HEX = instruction->word[2];
@@ -119,14 +124,14 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 				if (function_call)
 				{
-					call_stack.push(current_instrution + 1);
-					current_instrution = jump_address;
+					call_stack.push(current_instruction + 1);
+					current_instruction = jump_address;
 					continue;
 				}
 				else if (static_jump)
 				{
 					// NOTE: This will skip potential jump target blocks between current->target
-					current_instrution = jump_address;
+					current_instruction = jump_address;
 					continue;
 				}
 				else
@@ -146,7 +151,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 				}
 				else
 				{
-					current_instrution = call_stack.top();
+					current_instruction = call_stack.top();
 					call_stack.pop();
 					continue;
 				}
@@ -155,13 +160,13 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			}
 			}
 
-			if ((d3.end && (fast_exit || current_instrution >= instruction_range.second)) ||
-				(current_instrution + 1) == 512)
+			if ((d3.end && (fast_exit || current_instruction >= instruction_range.second)) ||
+				(current_instruction + 1) == 512)
 			{
 				break;
 			}
 
-			current_instrution++;
+			current_instruction++;
 		}
 
 		for (const u32 target : conditional_targets)

@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <queue>
 #include <deque>
 #include <variant>
 #include <stack>
@@ -205,9 +206,9 @@ namespace rsx
 					{
 						if (max_index >= attrib.frequency)
 						{
-							// Actually uses the modulo operator, cannot safely optimize
+							// Actually uses the modulo operator
 							_min_index = 0;
-							_max_index = std::max<u32>(_max_index, attrib.frequency - 1);
+							_max_index = attrib.frequency - 1;
 						}
 						else
 						{
@@ -219,7 +220,7 @@ namespace rsx
 					{
 						// Division operator
 						_min_index = std::min(_min_index, first / attrib.frequency);
-						_max_index = std::max<u32>(_max_index, max_index / attrib.frequency);
+						_max_index = std::max<u32>(_max_index, aligned_div(max_index, attrib.frequency));
 					}
 				}
 			}
@@ -588,7 +589,9 @@ namespace rsx
 		backend_configuration backend_config{};
 
 		// FIFO
+	public:
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
+	protected:
 		FIFO::flattening_helper m_flattener;
 		u32 fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
@@ -723,6 +726,14 @@ namespace rsx
 		bool invalid_command_interrupt_raised = false;
 		bool sync_point_request = false;
 		bool in_begin_end = false;
+
+		struct desync_fifo_cmd_info
+		{
+			u32 cmd;
+			u64 timestamp;
+		};
+
+		std::queue<desync_fifo_cmd_info> recovered_fifo_cmds_history;
 
 		atomic_t<s32> async_tasks_pending{ 0 };
 

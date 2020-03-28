@@ -29,6 +29,8 @@ static void entryx(ppu_thread& ppu, vm::ptr<sys_prx_start_stop_module_option_t> 
 		*res = opt->entry(ppu, args, argp);
 		return;
 	}
+
+	*res = 0;
 }
 
 error_code sys_prx_load_module(ppu_thread& ppu, vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)

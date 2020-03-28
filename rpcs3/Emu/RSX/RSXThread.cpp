@@ -1883,7 +1883,7 @@ namespace rsx
 		const s32 default_frequency_mask = (1 << 8);
 		const s32 swap_storage_mask = (1 << 29);
 		const s32 volatile_storage_mask = (1 << 30);
-		const s32 modulo_op_frequency_mask = (1 << 31);
+		const s32 modulo_op_frequency_mask = (INT32_MIN);
 
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
 		const auto max_index = (first_vertex + vertex_count) - 1;
@@ -2256,6 +2256,23 @@ namespace rsx
 
 	void thread::recover_fifo()
 	{
+		const u64 current_time = get_system_time();
+
+		if (recovered_fifo_cmds_history.size() == 9u)
+		{
+			const auto cmd_info = recovered_fifo_cmds_history.front();
+
+			// Check timestamp of last tracked cmd
+			if (current_time - cmd_info.timestamp < 1'500'000u)
+			{
+				// Probably hopeless
+				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings." HERE);
+			}
+
+			// Erase the last command from history, keep the size of the queue the same
+			recovered_fifo_cmds_history.pop();
+		}
+
 		// Error. Should reset the queue
 		fifo_ctrl->set_get(restore_point);
 		fifo_ret_addr = saved_fifo_ret;
@@ -2267,6 +2284,8 @@ namespace rsx
 			execute_nop_draw();
 			rsx::thread::end();
 		}
+
+		recovered_fifo_cmds_history.push({fifo_ctrl->last_cmd(), current_time});
 	}
 
 	void thread::fifo_wake_delay(u64 div)
@@ -2645,7 +2664,7 @@ namespace rsx
 		case frame_limit_type::_50: limit = 50.; break;
 		case frame_limit_type::_60: limit = 60.; break;
 		case frame_limit_type::_30: limit = 30.; break;
-		case frame_limit_type::_auto: limit = g_cfg.video.vblank_rate; break; // TODO
+		case frame_limit_type::_auto: limit = static_cast<double>(g_cfg.video.vblank_rate); break;
 		default:
 			break;
 		}

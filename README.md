@@ -2,7 +2,7 @@ RPCS3
 =====
 
 [![Build Status](https://travis-ci.org/RPCS3/rpcs3.svg?branch=master)](https://travis-ci.org/RPCS3/rpcs3)
-[![Build status](https://ci.appveyor.com/api/projects/status/411c4clmiohtx7eo/branch/master?svg=true)](https://ci.appveyor.com/project/rpcs3/rpcs3/branch/master)
+[![Build Status](https://dev.azure.com/nekotekina/nekotekina/_apis/build/status/RPCS3.rpcs3?branchName=master)](https://dev.azure.com/nekotekina/nekotekina/_build/latest?definitionId=5&branchName=master)
 
 The world's first free and open-source PlayStation 3 emulator/debugger, written in C++ for Windows and Linux.
 
@@ -32,7 +32,7 @@ See [BUILDING.md](BUILDING.md) for more information about how to setup an enviro
 
 Check our friendly [quickstart](https://rpcs3.net/quickstart) guide to make sure your computer meets the minimum system requirements to run RPCS3.
 
-Don't forget to have your graphics driver up to date and to install the [Visual C++ Redistributable Packages for Visual Studio 2017](https://go.microsoft.com/fwlink/?LinkId=746572) if you are a Windows user.
+Don't forget to have your graphics driver up to date and to install the [Visual C++ Redistributable Packages for Visual Studio 2019](https://aka.ms/vs/16/release/VC_redist.x64.exe) if you are a Windows user.
 
 ## License
 

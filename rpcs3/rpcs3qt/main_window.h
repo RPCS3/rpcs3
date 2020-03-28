@@ -8,6 +8,7 @@
 #include <QActionGroup>
 #include <QMainWindow>
 #include <QIcon>
+#include <QMimeData>
 
 #include "update_manager.h"
 #include "settings.h"

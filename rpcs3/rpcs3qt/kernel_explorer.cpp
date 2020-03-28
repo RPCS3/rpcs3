@@ -205,7 +205,35 @@ void kernel_explorer::Update()
 		case SYS_LWMUTEX_OBJECT:
 		{
 			auto& lwm = static_cast<lv2_lwmutex&>(obj);
-			l_addTreeChild(node, qstr(fmt::format(u8"LWMutex: ID = 0x%08x “%s”, Wq = %zu", id, lv2_obj::name64(lwm.name), lwm.sq.size())));
+			std::string owner_str = "unknown"; // Either invalid state or the lwmutex control data was moved from
+			sys_lwmutex_t lwm_data{};
+
+			if (lwm.control.try_read(lwm_data))
+			{
+				switch (const u32 owner = lwm_data.vars.owner)
+				{
+				case lwmutex_free: owner_str = "free"; break;
+				//case lwmutex_dead: owner_str = "dead"; break;
+				case lwmutex_reserved: owner_str = "reserved"; break;
+				default:
+				{
+					if (owner >= ppu_thread::id_base && owner <= ppu_thread::id_base + ppu_thread::id_step - 1)
+					{
+						owner_str = fmt::format("0x%x", owner);
+					}
+
+					break;
+				}			
+				}
+			}
+			else
+			{
+				l_addTreeChild(node, qstr(fmt::format(u8"LWMutex: ID = 0x%08x “%s”, Wq = %zu (Couldn't extract control data)", id, lv2_obj::name64(lwm.name), lwm.sq.size())));
+				break;
+			}
+
+			l_addTreeChild(node, qstr(fmt::format(u8"LWMutex: ID = 0x%08x “%s”,%s Owner = %s, Locks = %u, Wq = %zu", id, lv2_obj::name64(lwm.name),
+					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, lwm.sq.size())));
 			break;
 		}
 		case SYS_TIMER_OBJECT:
@@ -243,10 +271,10 @@ void kernel_explorer::Update()
 
 	lv2_types.emplace_back(l_addTreeChild(root, "Memory Containers"));
 
-	idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container&)
+	idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container& container)
 	{
 		lv2_types.back().count++;
-		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("Memory Container: ID = 0x%08x", id)));
+		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("Memory Container: ID = 0x%08x, total size = 0x%x, used = 0x%x", id, container.size, +container.used)));
 	});
 
 	lv2_types.emplace_back(l_addTreeChild(root, "PPU Threads"));

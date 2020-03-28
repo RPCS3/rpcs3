@@ -926,6 +926,9 @@
     <ClCompile Include="Emu\NP\np_handler.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1758,6 +1761,9 @@
     </ClInclude>
     <ClInclude Include="Emu\NP\np_handler.h">
       <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_osk_panel.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,11 +1,12 @@
-﻿#include <QMessageBox>
-#include <QFileDialog>
+﻿#include "stdafx.h"
 
+#include "main_window.h"
 #include "qt_utils.h"
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
 #include "trophy_manager_dialog.h"
 #include "user_manager_dialog.h"
+#include "screenshot_manager_dialog.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
 #include "debugger_frame.h"
@@ -16,7 +17,6 @@
 #include "memory_string_searcher.h"
 #include "memory_viewer_panel.h"
 #include "rsx_debugger.h"
-#include "main_window.h"
 #include "about_dialog.h"
 #include "pad_settings_dialog.h"
 #include "progress_dialog.h"
@@ -29,8 +29,11 @@
 #include <thread>
 
 #include <QScreen>
+#include <QDirIterator>
+#include <QMimeData>
+#include <QMessageBox>
+#include <QFileDialog>
 
-#include "stdafx.h"
 #include "rpcs3_version.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -90,13 +93,9 @@ void main_window::Init()
 	Q_EMIT RequestGlobalStylesheetChange(m_gui_settings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
 
-#ifdef BRANCH
-	if ("RPCS3/rpcs3/master"s != STRINGIZE(BRANCH) && ""s != STRINGIZE(BRANCH))
-#else
-	if (false)
-#endif
+	if (const std::string_view branch_name = rpcs3::get_full_branch(); branch_name != "RPCS3/rpcs3/master" && branch_name != "local_build")
 	{
-		gui_log.warning("Experimental Build Warning! Build origin: " STRINGIZE(BRANCH));
+		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
 
 		QMessageBox msg;
 		msg.setWindowTitle(tr("Experimental Build Warning"));
@@ -114,7 +113,7 @@ void main_window::Init()
 					Do you wish to use this build anyway?
 				</p>
 			)"
-		)).arg(Qt::convertFromPlainText(STRINGIZE(BRANCH))));
+		)).arg(Qt::convertFromPlainText(branch_name.data())));
 		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 		if (msg.exec() == QMessageBox::No)
@@ -513,7 +512,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		});
 
 		// Wait for the completion
-		while (std::this_thread::sleep_for(5ms), worker != thread_state::finished)
+		while (std::this_thread::sleep_for(5ms), worker <= thread_state::aborting)
 		{
 			if (pdlg.wasCanceled())
 			{
@@ -524,7 +523,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 
 			// Update progress window
 			double pval = progress;
-			pval < 0 ? pval += 1. : pval;
+			if (pval < 0) pval += 1.;
 			pdlg.SetValue(static_cast<int>(pval * pdlg.maximum()));
 			QCoreApplication::processEvents();
 		}
@@ -658,8 +657,8 @@ void main_window::HandlePupInstallation(QString file_path)
 		updatefilenames.end());
 
 	std::string version_string = pup.get_file(0x100).to_string();
-	size_t version_pos = version_string.find('\n');
-	if (version_pos != umax)
+
+	if (const size_t version_pos = version_string.find('\n'); version_pos != umax)
 	{
 		version_string.erase(version_pos);
 	}
@@ -822,7 +821,7 @@ void main_window::RepaintThumbnailIcons()
 {
 	const QColor new_color = gui::utils::get_label_color("thumbnail_icon_color");
 
-	auto icon = [&new_color](const QString& path)
+	const auto icon = [&new_color](const QString& path)
 	{
 		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, new_color);
 	};
@@ -845,7 +844,7 @@ void main_window::RepaintToolBarIcons()
 {
 	const QColor new_color = gui::utils::get_label_color("toolbar_icon_color");
 
-	auto icon = [&new_color](const QString& path)
+	const auto icon = [&new_color](const QString& path)
 	{
 		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, new_color);
 	};
@@ -1514,6 +1513,12 @@ void main_window::CreateConnects()
 		user_manager_dialog user_manager(m_gui_settings, this);
 		user_manager.exec();
 		m_game_list_frame->Refresh(true); // New user may have different games unlocked.
+	});
+
+	connect(ui->actionManage_Screenshots, &QAction::triggered, [this]
+	{
+		screenshot_manager_dialog* screenshot_manager = new screenshot_manager_dialog();
+		screenshot_manager->show();
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, [this]
