@@ -140,9 +140,6 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="util\logs.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\GSRender.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
@@ -866,19 +863,10 @@
     <ClCompile Include="util\atomic.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="util\atomic2.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="util\yaml.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="util\cereal.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="util\yaml.hpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="util\shared_cptr.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="util\fixed_typemap.cpp">
@@ -928,6 +916,15 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
+    <ClCompile Include="util\atomic2.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="util\logs.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="util\shared_cptr.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1034,9 +1031,6 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\Timer.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="util\logs.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h">
@@ -1764,6 +1758,30 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_osk_panel.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="util\yaml.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\atomic2.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\endian.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\fixed_typemap.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\init_mutex.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\logs.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\shared_cptr.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\typeindices.hpp">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

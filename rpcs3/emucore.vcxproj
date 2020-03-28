@@ -468,6 +468,10 @@
     <ClInclude Include="..\Utilities\mutex.h" />
     <ClInclude Include="..\Utilities\sema.h" />
     <ClInclude Include="..\Utilities\sync.h" />
+    <ClInclude Include="util\atomic2.hpp" />
+    <ClInclude Include="util\endian.hpp" />
+    <ClInclude Include="util\fixed_typemap.hpp" />
+    <ClInclude Include="util\init_mutex.hpp" />
     <ClInclude Include="util\logs.hpp" />
     <ClInclude Include="..\Utilities\File.h" />
     <ClInclude Include="..\Utilities\Config.h" />
@@ -701,6 +705,9 @@
     <ClInclude Include="restore_new.h" />
     <ClInclude Include="rpcs3_version.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="util\shared_cptr.hpp" />
+    <ClInclude Include="util\typeindices.hpp" />
+    <ClInclude Include="util\yaml.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\3rdparty\libpng.vcxproj">
