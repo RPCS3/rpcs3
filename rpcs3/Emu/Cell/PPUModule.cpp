@@ -1158,7 +1158,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	ppu_initialize_modules(link);
 
 	// Embedded SPU elf patching
-	for (u32 i = _main->segs[0].addr; i < (_main->segs[0].addr + _main->segs[0].size); i += 4)
+	for (u32 i = _main->segs[0].addr; i < (_main->segs[0].addr + _main->segs[0].size); i += 128)
 	{
 		uchar* elf_header = vm::_ptr<u8>(i);
 		const spu_exec_object obj(fs::file(vm::base(vm::cast(i, HERE)), (_main->segs[0].addr + _main->segs[0].size) - i));
