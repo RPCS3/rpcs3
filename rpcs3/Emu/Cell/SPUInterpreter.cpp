@@ -1691,7 +1691,7 @@ bool spu_interpreter::SELB(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-static bool SHUFB_(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::SHUFB(spu_thread& spu, spu_opcode_t op)
 {
 	__m128i ab[2]{spu.gpr[op.rb].vi, spu.gpr[op.ra].vi};
 	v128 c = spu.gpr[op.rc];
@@ -1714,7 +1714,7 @@ static bool SHUFB_(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-const spu_inter_func_t spu_interpreter::SHUFB = !utils::has_ssse3() ? &SHUFB_ : build_function_asm<spu_inter_func_t>([](asmjit::X86Assembler& c, auto& args)
+const spu_inter_func_t optimized_shufb = build_function_asm<spu_inter_func_t>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -2645,7 +2645,3 @@ bool spu_interpreter_precise::FNMS(spu_thread& spu, spu_opcode_t op) { ::FMA(spu
 bool spu_interpreter_precise::FMA(spu_thread& spu, spu_opcode_t op) { ::FMA(spu, op, false, false); return true; }
 
 bool spu_interpreter_precise::FMS(spu_thread& spu, spu_opcode_t op) { ::FMA(spu, op, false, true); return true; }
-
-extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise{};
-
-extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast{};

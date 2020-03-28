@@ -621,7 +621,7 @@ bool Emulator::InstallPkg(const std::string& path)
 
 	{
 		// Wait for the completion
-		while (std::this_thread::sleep_for(5ms), worker != thread_state::finished)
+		while (std::this_thread::sleep_for(5ms), worker <= thread_state::aborting)
 		{
 			// TODO: update unified progress dialog
 			double pval = progress;
@@ -654,6 +654,18 @@ std::string Emulator::GetHdd1Dir()
 {
 	return fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", GetEmuDir());
 }
+
+#ifdef _WIN32
+std::string Emulator::GetExeDir()
+{
+	wchar_t buffer[32767];
+	GetModuleFileNameW(nullptr, buffer, sizeof(buffer)/2);
+
+	std::string path_to_exe = wchar_to_utf8(buffer);
+	size_t last = path_to_exe.find_last_of("\\");
+	return last == std::string::npos ? std::string("") : path_to_exe.substr(0, last+1);
+}
+#endif
 
 std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& user, const std::string& title_id)
 {
@@ -1135,7 +1147,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			// PS1 Classic located in dev_hdd0/game
 			sys_log.notice("PS1 Game: %s, %s", m_title_id, m_title);
 
-			std::string gamePath = m_path.substr(m_path.find("/dev_hdd0/game/"), 24);
+			const std::string game_path = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 9);
 
 			sys_log.notice("Forcing manual lib loading mode");
 			g_cfg.core.lib_loading.from_string(fmt::format("%s", lib_loading_type::manual));
@@ -1147,7 +1159,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			argv[2] = m_title_id + "_mc2.VM1";    // virtual mc 2 /dev_hdd0/savedata/vmc/%argv[2]%
 			argv[3] = "0082";                     // region target
 			argv[4] = "1600";                     // ??? arg4 600 / 1200 / 1600, resolution scale? (purely a guess, the numbers seem to match closely to resolutions tho)
-			argv[5] = gamePath;                   // ps1 game folder path (not the game serial)
+			argv[5] = game_path;                  // ps1 game folder path (not the game serial)
 			argv[6] = "1";                        // ??? arg6 1 ?
 			argv[7] = "2";                        // ??? arg7 2 -- full screen on/off 2/1 ?
 			argv[8] = "1";                        // ??? arg8 2 -- smoothing	on/off	= 1/0 ?
@@ -1159,6 +1171,17 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			card_1_file.trunc(128 * 1024);
 			fs::file card_2_file(vfs::get("/dev_hdd0/savedata/vmc/" + argv[2]), fs::write + fs::create);
 			card_2_file.trunc(128 * 1024);
+		}
+		else if (m_cat == "PE" && from_hdd0_game)
+		{
+			// PSP Remaster located in dev_hdd0/game
+			sys_log.notice("PSP Remaster Game: %s, %s", m_title_id, m_title);
+
+			const std::string game_path = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 9);
+
+			argv.resize(2);
+			argv[0] = "/dev_flash/pspemu/psp_emulator.self";
+			argv[1] = game_path;
 		}
 		else if (m_cat != "DG" && m_cat != "GD")
 		{
@@ -1298,7 +1321,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Open SELF or ELF
 		std::string elf_path = m_path;
 
-		if (m_cat == "1P")
+		if (m_cat == "1P" || m_cat == "PE")
 		{
 			// Use emulator path
 			elf_path = vfs::get(argv[0]);

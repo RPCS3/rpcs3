@@ -257,7 +257,7 @@ namespace rsx
 						}
 						else
 						{
-							while (!exit && thread_ctrl::state() == thread_state::created)
+							while (!exit && thread_ctrl::state() != thread_state::aborting)
 							{
 								refresh();
 

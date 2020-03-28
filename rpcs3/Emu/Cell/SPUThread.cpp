@@ -1433,6 +1433,9 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 			auto lock = vm::passive_lock(eal & -128, ::align(eal + size, 128));
 
+#ifdef __GNUG__
+			std::memcpy(dst, src, size);
+#else
 			while (size >= 128)
 			{
 				mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));
@@ -1450,6 +1453,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				src += 16;
 				size -= 16;
 			}
+#endif
 
 			lock->release(0);
 			break;
@@ -1483,6 +1487,9 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	}
 	default:
 	{
+#ifdef __GNUG__
+		std::memcpy(dst, src, size);
+#else
 		while (size >= 128)
 		{
 			mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));
@@ -1500,6 +1507,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			src += 16;
 			size -= 16;
 		}
+#endif
 
 		break;
 	}

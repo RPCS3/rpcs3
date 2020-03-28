@@ -101,7 +101,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 	ppu.gpr[6] = 0;
 
 	// Always set result
-	if (result) *result = ppu.gpr[6];
+	if (result) *result = 0;
 
 	if (!lv2_event_flag::check_mode(mode))
 	{

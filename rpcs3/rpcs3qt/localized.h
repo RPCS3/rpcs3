@@ -17,6 +17,8 @@ public:
 
 	Localized();
 
+	QString GetVerboseTimeByMs(qint64 elapsed_ms) const;
+
 	const struct category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 	{
 		// PS3 bootable

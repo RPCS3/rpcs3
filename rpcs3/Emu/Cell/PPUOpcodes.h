@@ -77,7 +77,7 @@ template <typename D, typename T = decltype(&D::UNK)>
 class ppu_decoder
 {
 	// Fast lookup table
-	std::array<T, 0x20000> m_table;
+	std::array<T, 0x20000> m_table{};
 
 	struct instruction_info
 	{
@@ -85,14 +85,14 @@ class ppu_decoder
 		T pointer;
 		u32 magn; // Non-zero for "columns" (effectively, number of most significant bits "eaten")
 
-		instruction_info(u32 v, T p, u32 m = 0)
+		constexpr instruction_info(u32 v, T p, u32 m = 0)
 			: value(v)
 			, pointer(p)
 			, magn(m)
 		{
 		}
 
-		instruction_info(u32 v, const T* p, u32 m = 0)
+		constexpr instruction_info(u32 v, const T* p, u32 m = 0)
 			: value(v)
 			, pointer(*p)
 			, magn(m)
@@ -101,7 +101,7 @@ class ppu_decoder
 	};
 
 	// Fill lookup table
-	void fill_table(u32 main_op, u32 count, u32 sh, std::initializer_list<instruction_info> entries)
+	constexpr void fill_table(u32 main_op, u32 count, u32 sh, std::initializer_list<instruction_info> entries)
 	{
 		if (sh < 11)
 		{
@@ -130,9 +130,12 @@ class ppu_decoder
 	}
 
 public:
-	ppu_decoder()
+	constexpr ppu_decoder()
 	{
-		m_table.fill(&D::UNK);
+		for (auto& x : m_table)
+		{
+			x = &D::UNK;
+		}
 
 		// Main opcodes (field 0..5)
 		fill_table(0x00, 6, -1,
@@ -569,12 +572,6 @@ public:
 			{ 0x32f, &D::FCTIDZ },
 			{ 0x34e, &D::FCFID },
 		});
-	}
-
-	template <typename F>
-	ppu_decoder(F&& init) : ppu_decoder()
-	{
-		init(m_table);
 	}
 
 	const std::array<T, 0x20000>& get_table() const

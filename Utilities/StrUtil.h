@@ -7,6 +7,12 @@
 #include <functional>
 #include <string_view>
 
+#ifdef _WIN32
+std::string wchar_to_utf8(wchar_t *src);
+std::string wchar_path_to_ansi_path(const std::wstring& src);
+std::string utf8_path_to_ansi_path(const std::string& src);
+#endif
+
 // Copy null-terminated string from a std::string or a char array to a char array with truncation
 template <typename D, typename T>
 inline void strcpy_trunc(D& dst, const T& src)

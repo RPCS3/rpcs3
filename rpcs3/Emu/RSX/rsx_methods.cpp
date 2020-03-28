@@ -819,65 +819,111 @@ namespace rsx
 		template<u32 index>
 		struct color
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*_reg*/, u32 /*arg*/)
 			{
-				if (index >= method_registers.nv308a_size_out_x())
+				const u32 out_x_max = method_registers.nv308a_size_out_x();
+
+				if (index >= out_x_max)
 				{
 					// Skip
 					return;
 				}
 
-				u32 color = arg;
-				u32 write_len = 4;
+				// Get position of the current command arg
+				const u32 src_offset = rsx->fifo_ctrl->get_pos() - 4;
+
+				// Get real args count (starting from NV3089_COLOR)
+				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
+					static_cast<u32>(((rsx->ctrl->put & ~3ull) - src_offset) / 4), 0x700 - index, out_x_max - index});
+
+				const u32 dst_dma = method_registers.blit_engine_output_location_nv3062();
+				const u32 dst_offset = method_registers.blit_engine_output_offset_nv3062();
+				const u32 out_pitch = method_registers.blit_engine_output_pitch_nv3062();
+
+				const u32 x = method_registers.nv308a_x() + index;
+				const u32 y = method_registers.nv308a_y();
+
+				// TODO
+				//auto res = vm::passive_lock(address, address + write_len);
+
 				switch (method_registers.blit_engine_nv3062_color_format())
 				{
 				case blit_engine::transfer_destination_format::a8r8g8b8:
 				case blit_engine::transfer_destination_format::y32:
 				{
-					// Bit cast
+					// Bit cast - optimize to mem copy
+
+					const auto dst = vm::_ptr<u8>(get_address(dst_offset + (x * 4) + (out_pitch * y), dst_dma, HERE));
+					const auto src = vm::_ptr<const u8>(get_address(src_offset, CELL_GCM_LOCATION_MAIN, HERE));
+
+					const u32 data_length = count * 4;
+
+					if (rsx->fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) [[unlikely]]
+					{
+						// Move last 32 bits
+						reinterpret_cast<u32*>(dst)[0] = reinterpret_cast<const u32*>(src)[count - 1];
+					}
+					else if (dst_dma & CELL_GCM_LOCATION_MAIN)
+					{
+						// May overlap
+						std::memmove(dst, src, data_length);
+					}
+					else
+					{
+						// Never overlaps
+						std::memcpy(dst, src, data_length);
+					}
+
 					break;
 				}
 				case blit_engine::transfer_destination_format::r5g6b5:
 				{
-					// Input is considered to be ARGB8
-					u32 r = (arg >> 16) & 0xFF;
-					u32 g = (arg >> 8) & 0xFF;
-					u32 b = arg & 0xFF;
+					const auto dst = vm::_ptr<u16>(get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, HERE));
+					const auto src = vm::_ptr<const u32>(get_address(src_offset, CELL_GCM_LOCATION_MAIN, HERE));
 
-					r = u32(r * 32 / 255.f);
-					g = u32(g * 64 / 255.f);
-					b = u32(b * 32 / 255.f);
-					color = (r << 11) | (g << 5) | b;
-					write_len = 2;
+					auto convert = [](u32 input) -> u16
+					{
+						// Input is considered to be ARGB8
+						u32 r = (input >> 16) & 0xFF;
+						u32 g = (input >> 8) & 0xFF;
+						u32 b = input & 0xFF;
+
+						r = (r * 32) / 255;
+						g = (g * 64) / 255;
+						b = (b * 32) / 255;
+						return static_cast<u16>((r << 11) | (g << 5) | b);
+					};
+
+					if (rsx->fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) [[unlikely]]
+					{
+						// Move last 16 bits
+						dst[0] = convert(src[count - 1]);
+						break;
+					}
+
+					for (u32 i = 0; i < count; i++)
+					{
+						dst[i] = convert(src[i]);
+					}
+
 					break;
 				}
 				default:
 				{
 					fmt::throw_exception("Unreachable" HERE);
 				}
-				}
-
-				const u16 x = method_registers.nv308a_x();
-				const u16 y = method_registers.nv308a_y();
-				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x * write_len);
-				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + (index * write_len), method_registers.blit_engine_output_location_nv3062(), HERE);
-
-				//auto res = vm::passive_lock(address, address + write_len);
-
-				switch (write_len)
-				{
-				case 4:
-					vm::write32(address, color);
-					break;
-				case 2:
-					vm::write16(address, static_cast<u16>(color));
-					break;
-				default:
-					fmt::throw_exception("Unreachable" HERE);
 				}
 
 				//res->release(0);
-				rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+
+				if (!(dst_dma & CELL_GCM_LOCATION_MAIN))
+				{
+					// Set this flag on LOCAL memory transfer
+					rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+				}
+
+				// Skip "handled methods"
+				rsx->fifo_ctrl->skip_methods(count - 1);
 			}
 		};
 	}
@@ -1516,6 +1562,9 @@ namespace rsx
 
 	void rsx_state::init()
 	{
+		// Reset all regsiters
+		registers.fill(0);
+
 		// Special values set at initialization, these are not set by a context reset
 		registers[NV4097_SET_SHADER_PROGRAM] = (0 << 2) | (CELL_GCM_LOCATION_LOCAL + 1);
 
@@ -2518,40 +2567,42 @@ namespace rsx
 
 	namespace method_detail
 	{
-		template<int Id, int Step, int Count, template<u32> class T, int Index = 0>
+		template <u32 Id, u32 Step, u32 Count, template<u32> class T, u32 Index = 0>
 		struct bind_range_impl_t
 		{
 			static inline void impl()
 			{
 				methods[Id] = &T<Index>::impl;
-				bind_range_impl_t<Id + Step, Step, Count, T, Index + 1>::impl();
+
+				if constexpr (Count > 1)
+				{
+					bind_range_impl_t<Id + Step, Step, Count - 1, T, Index + 1>::impl();
+				}
 			}
 		};
 
-		template<int Id, int Step, int Count, template<u32> class T>
-		struct bind_range_impl_t<Id, Step, Count, T, Count>
-		{
-			static inline void impl()
-			{
-			}
-		};
-
-		template<int Id, int Step, int Count, template<u32> class T, int Index = 0>
+		template <u32 Id, u32 Step, u32 Count, template<u32> class T, u32 Index = 0>
 		static inline void bind_range()
 		{
+			static_assert(Step && Count && Id + u64{Step} * (Count - 1) < 0x10000 / 4);
+
 			bind_range_impl_t<Id, Step, Count, T, Index>::impl();
 		}
 
-		template<int Id, rsx_method_t Func>
+		template<u32 Id, rsx_method_t Func>
 		static void bind()
 		{
+			static_assert(Id < 0x10000 / 4);
+
 			methods[Id] = Func;
 		}
 
-		template<int Id, int Step, int Count, rsx_method_t Func>
+		template <u32 Id, u32 Step, u32 Count, rsx_method_t Func>
 		static void bind_array()
 		{
-			for (int i = Id; i < Id + Count * Step; i += Step)
+			static_assert(Step && Count && Id + u64{Step} * (Count - 1) < 0x10000 / 4);
+
+			for (u32 i = Id; i < Id + Count * Step; i += Step)
 			{
 				methods[i] = Func;
 			}
@@ -2917,8 +2968,6 @@ namespace rsx
 
 		// Unknown (NV4097?)
 		bind<(0x171c >> 2), trace_method>();
-		bind_array<(0xac00 >> 2), 1, 16, trace_method>(); // Unknown texture control register
-		bind_array<(0xac40 >> 2), 1, 16, trace_method>();
 
 		// NV406E
 		bind<NV406E_SET_REFERENCE, nv406e::set_reference>();
@@ -3025,9 +3074,14 @@ namespace rsx
 		bind<NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma>();
 		bind<NV4097_SET_BLEND_EQUATION, nv4097::set_blend_equation>();
 
-		//NV308A
-		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();
-		bind_range<NV308A_COLOR + 256, 1, 512, nv308a::color, 256>();
+		//NV308A (0xa400..0xbffc!)
+		bind_range<NV308A_COLOR + (256 * 0), 1, 256, nv308a::color, 256 * 0>();
+		bind_range<NV308A_COLOR + (256 * 1), 1, 256, nv308a::color, 256 * 1>();
+		bind_range<NV308A_COLOR + (256 * 2), 1, 256, nv308a::color, 256 * 2>();
+		bind_range<NV308A_COLOR + (256 * 3), 1, 256, nv308a::color, 256 * 3>();
+		bind_range<NV308A_COLOR + (256 * 4), 1, 256, nv308a::color, 256 * 4>();
+		bind_range<NV308A_COLOR + (256 * 5), 1, 256, nv308a::color, 256 * 5>();
+		bind_range<NV308A_COLOR + (256 * 6), 1, 256, nv308a::color, 256 * 6>();
 
 		//NV3089
 		bind<NV3089_IMAGE_IN, nv3089::image_in>();

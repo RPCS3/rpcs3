@@ -101,57 +101,8 @@ void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 	});
 }
 
-// Table of identical interpreter functions when precise contains SSE2 version, and fast contains SSSE3 functions
-const std::pair<ppu_inter_func_t, ppu_inter_func_t> s_ppu_dispatch_table[]
-{
-#define FUNC(x) {&ppu_interpreter_precise::x, &ppu_interpreter_fast::x}
-	FUNC(VPERM),
-	FUNC(LVLX),
-	FUNC(LVLXL),
-	FUNC(LVRX),
-	FUNC(LVRXL),
-	FUNC(STVLX),
-	FUNC(STVLXL),
-	FUNC(STVRX),
-	FUNC(STVRXL),
-#undef FUNC
-};
-
-extern const ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise([](auto& table)
-{
-	if (s_use_ssse3)
-	{
-		for (auto& func : table)
-		{
-			for (const auto& pair : s_ppu_dispatch_table)
-			{
-				if (pair.first == func)
-				{
-					func = pair.second;
-					break;
-				}
-			}
-		}
-	}
-});
-
-extern const ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast([](auto& table)
-{
-	if (!s_use_ssse3)
-	{
-		for (auto& func : table)
-		{
-			for (const auto& pair : s_ppu_dispatch_table)
-			{
-				if (pair.second == func)
-				{
-					func = pair.first;
-					break;
-				}
-			}
-		}
-	}
-});
+constexpr ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise;
+constexpr ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast;
 
 extern void ppu_initialize();
 extern void ppu_initialize(const ppu_module& info);
@@ -432,6 +383,9 @@ std::string ppu_thread::dump() const
 		ret += "Current function: ";
 		ret += _func;
 		ret += '\n';
+
+		for (u32 i = 3; i <= 6; i++)
+			fmt::append(ret, " ** GPR[%d] = 0x%llx\n", i, syscall_args[i - 3]);
 	}
 	else if (is_paused())
 	{
@@ -472,8 +426,17 @@ std::string ppu_thread::dump() const
 	fmt::append(ret, "FPSCR = [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
 	fmt::append(ret, "\nCall stack:\n=========\n0x%08x (0x0) called\n", cia);
 
+	//std::shared_lock rlock(vm::g_mutex); // Needs optimizations
+
 	// Determine stack range
 	u32 stack_ptr = static_cast<u32>(gpr[1]);
+
+	if (!vm::check_addr(stack_ptr, 1, vm::page_writable))
+	{
+		// Normally impossible unless the code does not follow ABI rules
+		return ret;
+	}
+
 	u32 stack_min = stack_ptr & ~0xfff;
 	u32 stack_max = stack_min + 4096;
 
@@ -487,10 +450,10 @@ std::string ppu_thread::dump() const
 		stack_max += 4096;
 	}
 
-	for (u64 sp = vm::read64(stack_ptr); sp >= stack_min && std::max(sp, sp + 0x200) < stack_max; sp = vm::read64(static_cast<u32>(sp)))
+	for (u64 sp = *vm::get_super_ptr<u64>(stack_ptr); sp >= stack_min && std::max(sp, sp + 0x200) < stack_max; sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp)))
 	{
 		// TODO: print also function addresses
-		fmt::append(ret, "> from 0x%08llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
+		fmt::append(ret, "> from 0x%08llx (0x0)\n", *vm::get_super_ptr<u64>(static_cast<u32>(sp + 16)));
 	}
 
 	return ret;

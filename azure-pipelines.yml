@@ -19,7 +19,6 @@ jobs:
         COMPILER: gcc
         DEPLOY_APPIMAGE: true
   variables:
-    COMPILER: clang
     CCACHE_DIR: $(Pipeline.Workspace)/ccache
   pool:
     vmImage: 'ubuntu-latest'
@@ -28,7 +27,7 @@ jobs:
     inputs:
       key: ccache | $(Agent.OS) | $(COMPILER)
       path: $(CCACHE_DIR)
-    displayName: Ccache
+    displayName: ccache
 
   - bash: |
       docker pull --quiet rpcs3/rpcs3-travis-xenial:1.2
@@ -42,3 +41,55 @@ jobs:
     displayName: Docker setup and build
 
   - publish: $(Build.ArtifactStagingDirectory)
+
+- job: Windows_Build
+  variables:
+    COMPILER: msvc
+    QT_VER: '5.14.1'
+    QT_DATE: '202001240957'
+    QTDIR: C:\Qt\$(QT_VER)\msvc2017_64
+    VULKAN_VER: '1.1.126.0'
+    VULKAN_SDK_SHA: 'ee86f25580b550390ce46508415e744d62e87e9c0de6cd299998058253a2a4ba'
+    VULKAN_SDK: C:\VulkanSDK\$(VULKAN_VER)
+    CACHE_DIR: ./cache
+
+  pool:
+    vmImage: "windows-latest"
+
+  steps:
+    - task: Cache@0
+      inputs:
+        key: $(Agent.OS) | $(COMPILER)
+        path: $(CACHE_DIR)
+      displayName: Cache
+
+    - bash: .travis/setup-windows.sh
+      displayName: Download and unpack dependencies
+
+    - task: VSBuild@1
+      inputs:
+        solution: 'rpcs3.sln'
+        msbuildArgs: '/m'
+        platform: x64
+        configuration: 'Release - LLVM'
+      displayName: Compile RPCS3
+
+    - bash: .travis/deploy-windows.sh
+      displayName: Pack up build artifacts
+
+    - publish: $(Build.ArtifactStagingDirectory)
+      artifact: Windows App Bundle
+
+    - task: GitHubRelease@1
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      inputs:
+        gitHubConnection: 'RPCS3-Token'
+        repositoryName: 'RPCS3/rpcs3-binaries-win'
+        releaseNotesFilePath: 'GitHubReleaseMessage.txt'
+        action: 'create'
+        target: '7d09e3be30805911226241afbb14f8cdc2eb054e'
+        tagSource: 'userSpecifiedTag'
+        tag: 'build-$(Build.SourceVersion)'
+        title: $(AVVER)
+        addChangeLog: false
+      displayName: Push build to GitHub

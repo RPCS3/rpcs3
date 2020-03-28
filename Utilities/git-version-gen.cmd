@@ -47,8 +47,9 @@ if errorlevel 1 (
 
 	echo // This is a generated file. > "%GIT_VERSION_FILE%"
 	echo. >> "%GIT_VERSION_FILE%"
-	echo #define RPCS3_GIT_VERSION "unknown" >> "%GIT_VERSION_FILE%"
-	echo #define RPCS3_GIT_BRANCH "unknown" >> "%GIT_VERSION_FILE%"
+	echo #define RPCS3_GIT_VERSION ^"local_build^" >> "%GIT_VERSION_FILE%"
+	echo #define RPCS3_GIT_BRANCH ^"local_build^" >> "%GIT_VERSION_FILE%"
+	echo #define RPCS3_GIT_FULL_BRANCH ^"local_build^" >> "%GIT_VERSION_FILE%"
 	echo. >> "%GIT_VERSION_FILE%"
 	echo // If you don't want this file to update/recompile, change to 1. >> "%GIT_VERSION_FILE%"
 	echo #define RPCS3_GIT_VERSION_NO_UPDATE 0 >> "%GIT_VERSION_FILE%"
@@ -58,21 +59,29 @@ if errorlevel 1 (
 rem // Get commit count from (unshallowed) HEAD
 for /F %%I IN ('call %GIT% rev-list HEAD --count') do set COMMIT_COUNT=%%I
 
-rem // If we're in AppVeyor, building a non-master, pull request artifact
-if defined APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH (
+rem // These environment variables are defined by Azure pipelines
+rem // BUILD_REPOSITORY_NAME will look like "RPCS3/rpcs3"
+rem // SYSTEM_PULLREQUEST_SOURCEBRANCH will look like "master"
+rem // BUILD_SOURCEBRANCHNAME will look like "master"
+rem // See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables
+set GIT_FULL_BRANCH=%BUILD_REPOSITORY_NAME%/%BUILD_SOURCEBRANCHNAME%
 
-	if "%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%"=="master" (
+rem // Echo for debug purposes
+echo %GIT_FULL_BRANCH%
+
+if defined SYSTEM_PULLREQUEST_SOURCEBRANCH (
+
+	if "%SYSTEM_PULLREQUEST_SOURCEBRANCH%"=="master" (
 		rem // If pull request comes from a master branch, GIT_BRANCH = username/branch in order to distinguish from upstream/master
-		for /f "tokens=1* delims=/" %%a in ("%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%") do set user=%%a
-		set "GIT_BRANCH=!user!/%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%"
+		for /f "tokens=1* delims=/" %%a in ("%BUILD_REPOSITORY_NAME%") do set user=%%a
+		set "GIT_BRANCH=!user!/%SYSTEM_PULLREQUEST_SOURCEBRANCH%"
 	) else (
 		rem // Otherwise, GIT_BRANCH=branch
-		set GIT_BRANCH=%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%
+		set GIT_BRANCH=%SYSTEM_PULLREQUEST_SOURCEBRANCH%
 	)
 
 	rem // Make GIT_VERSION the last commit (shortened); Don't include commit count on non-master builds
 	for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%%I
-
 ) else (
 	rem // Get last commit (shortened) and concat after commit count in GIT_VERSION
 	for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%COMMIT_COUNT%-%%I
@@ -95,6 +104,7 @@ echo // This is a generated file. > "%GIT_VERSION_FILE%"
 echo. >> "%GIT_VERSION_FILE%"
 echo #define RPCS3_GIT_VERSION "%GIT_VERSION%" >> "%GIT_VERSION_FILE%"
 echo #define RPCS3_GIT_BRANCH ^"%GIT_BRANCH%^" >> "%GIT_VERSION_FILE%"
+echo #define RPCS3_GIT_FULL_BRANCH ^"%GIT_FULL_BRANCH%^" >> "%GIT_VERSION_FILE%"
 echo. >> "%GIT_VERSION_FILE%"
 echo // If you don't want this file to update/recompile, change to 1. >> "%GIT_VERSION_FILE%"
 echo #define RPCS3_GIT_VERSION_NO_UPDATE 0 >> "%GIT_VERSION_FILE%"

@@ -25,7 +25,7 @@ struct lv2_lwcond final : lv2_obj
 {
 	static const u32 id_base = 0x97000000;
 
-	const u64 name;
+	const be_t<u64> name;
 	const u32 lwid;
 	const u32 protocol;
 	vm::ptr<sys_lwcond_t> control;
@@ -35,7 +35,7 @@ struct lv2_lwcond final : lv2_obj
 	std::deque<cpu_thread*> sq;
 
 	lv2_lwcond(u64 name, u32 lwid, u32 protocol, vm::ptr<sys_lwcond_t> control)
-		: name(name)
+		: name(std::bit_cast<be_t<u64>>(name))
 		, lwid(lwid)
 		, protocol(protocol)
 		, control(control)

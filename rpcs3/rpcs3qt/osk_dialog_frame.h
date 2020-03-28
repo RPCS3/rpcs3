@@ -14,7 +14,7 @@ class osk_dialog_frame : public QObject, public OskDialogBase
 public:
 	osk_dialog_frame();
 	~osk_dialog_frame();
-	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override;
+	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel) override;
 	virtual void Close(bool accepted) override;
 
 private:

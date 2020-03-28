@@ -10,7 +10,7 @@
 
 LOG_CHANNEL(ppu_validator);
 
-const ppu_decoder<ppu_itype> s_ppu_itype;
+constexpr ppu_decoder<ppu_itype> s_ppu_itype;
 
 template<>
 void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
@@ -34,19 +34,6 @@ template<>
 void fmt_class_string<bs_t<ppu_attr>>::format(std::string& out, u64 arg)
 {
 	format_bitset(out, arg, "[", ",", "]", &fmt_class_string<ppu_attr>::format);
-}
-
-template <>
-void fmt_class_string<ppu_iname::type>::format(std::string& out, u64 arg)
-{
-	// Decode instruction name from the enum value
-	for (u32 i = 0; i < 10; i++)
-	{
-		if (u64 value = (arg >> (54 - i * 6)) & 0x3f)
-		{
-			out += static_cast<char>(value + 0x20);
-		}
-	}
 }
 
 void ppu_module::validate(u32 reloc)

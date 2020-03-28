@@ -22,12 +22,12 @@ extern atomic_t<const char*> g_progr;
 extern atomic_t<u32> g_progr_ptotal;
 extern atomic_t<u32> g_progr_pdone;
 
-const spu_decoder<spu_itype> s_spu_itype;
-const spu_decoder<spu_iname> s_spu_iname;
-const spu_decoder<spu_iflag> s_spu_iflag;
+constexpr spu_decoder<spu_itype> s_spu_itype;
+constexpr spu_decoder<spu_iname> s_spu_iname;
+constexpr spu_decoder<spu_iflag> s_spu_iflag;
 
-extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise;
-extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast;
+constexpr spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise;
+constexpr spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast;
 
 extern u64 get_timebased_time();
 
@@ -4603,7 +4603,7 @@ public:
 					}
 
 					// Execute recompiler function (TODO)
-					(this->*g_decoder.decode(op))({op});
+					(this->*decode(op))({op});
 				}
 
 				// Finalize block with fallthrough if necessary
@@ -4999,7 +4999,7 @@ public:
 					if (itype & spu_itype::branch)
 					{
 						// Instruction changes pc - change order.
-						(this->*g_decoder.decode(op))({op});
+						(this->*decode(op))({op});
 
 						if (m_interp_bblock)
 						{
@@ -5030,7 +5030,7 @@ public:
 							}
 
 							// Normal instruction.
-							(this->*g_decoder.decode(op))({op});
+							(this->*decode(op))({op});
 
 							if (check && !m_ir->GetInsertBlock()->getTerminator())
 							{
@@ -8277,7 +8277,7 @@ public:
 		}
 	}
 
-	static const spu_decoder<spu_llvm_recompiler> g_decoder;
+	static decltype(&spu_llvm_recompiler::UNK) decode(u32 op);
 };
 
 std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler(u8 magn)
@@ -8285,7 +8285,12 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler(u
 	return std::make_unique<spu_llvm_recompiler>(magn);
 }
 
-DECLARE(spu_llvm_recompiler::g_decoder);
+constexpr spu_decoder<spu_llvm_recompiler> g_spu_llvm_decoder;
+
+decltype(&spu_llvm_recompiler::UNK) spu_llvm_recompiler::decode(u32 op)
+{
+	return g_spu_llvm_decoder.decode(op);
+}
 
 #else
 

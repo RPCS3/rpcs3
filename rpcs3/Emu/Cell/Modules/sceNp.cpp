@@ -595,7 +595,7 @@ error_code sceNpDrmProcessExitSpawn(ppu_thread& ppu, vm::cptr<u8> klicensee, vm:
 		return error;
 	}
 
-	sys_game_process_exitspawn(ppu, path, argv, envp, data, data_size, prio, flags);
+	ppu_execute<&sys_game_process_exitspawn>(ppu, path, argv, envp, data, data_size, prio, flags);
 	return CELL_OK;
 }
 
@@ -608,7 +608,7 @@ error_code sceNpDrmProcessExitSpawn2(ppu_thread& ppu, vm::cptr<u8> klicensee, vm
 		return error;
 	}
 
-	sys_game_process_exitspawn2(ppu, path, argv, envp, data, data_size, prio, flags);
+	ppu_execute<&sys_game_process_exitspawn2>(ppu, path, argv, envp, data, data_size, prio, flags);
 	return CELL_OK;
 }
 

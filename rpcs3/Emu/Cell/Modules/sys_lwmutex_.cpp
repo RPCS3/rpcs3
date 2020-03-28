@@ -41,7 +41,7 @@ error_code sys_lwmutex_create(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, v
 	attrs->flags     = 0;
 	attrs->name_u64  = attr->name_u64;
 
-	if (error_code res = g_cfg.core.hle_lwmutex ? sys_mutex_create(ppu, out_id, attrs) : _sys_lwmutex_create(ppu, out_id, protocol, lwmutex, 0x80000001, attr->name_u64))
+	if (error_code res = g_cfg.core.hle_lwmutex ? sys_mutex_create(ppu, out_id, attrs) : _sys_lwmutex_create(ppu, out_id, protocol, lwmutex, 0x80000001, std::bit_cast<be_t<u64>>(attr->name_u64)))
 	{
 		return res;
 	}
@@ -178,7 +178,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 		// locking succeeded
 		auto old = lwmutex->vars.owner.exchange(tid);
 
-		if (old != lwmutex_reserved)
+		if (old != lwmutex_reserved && old >> 24 != 1)
 		{
 			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
 		}
@@ -308,7 +308,7 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 			// locking succeeded
 			auto old = lwmutex->vars.owner.exchange(tid);
 
-			if (old != lwmutex_reserved)
+			if (old != lwmutex_reserved && old >> 24 != 1)
 			{
 				fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
 			}
