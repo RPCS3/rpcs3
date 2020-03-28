@@ -614,13 +614,6 @@ namespace rsx
 			if (auto method = methods[reg])
 			{
 				method(this, reg, value);
-
-				if (invalid_command_interrupt_raised)
-				{
-					fifo_ctrl->abort();
-					recover_fifo();
-					return;
-				}
 			}
 		}
 		while (fifo_ctrl->read_unsafe(command));

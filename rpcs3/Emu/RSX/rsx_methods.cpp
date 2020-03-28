@@ -43,7 +43,7 @@ namespace rsx
 		const u32 cmd = rsx->get_fifo_cmd();
 		rsx_log.error("Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg,
 		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
-		rsx->invalid_command_interrupt_raised = true;
+		rsx->recover_fifo();
 	}
 
 	void trace_method(thread* rsx, u32 _reg, u32 arg)
@@ -541,7 +541,7 @@ namespace rsx
 				if (rsx::method_registers.current_draw_clause.primitive == rsx::primitive_type::invalid)
 				{
 					// Recover from invalid primitive only if draw clause is not empty
-					rsxthr->invalid_command_interrupt_raised = true;
+					rsxthr->recover_fifo();
 
 					rsx_log.error("NV4097_SET_BEGIN_END aborted due to invalid primitive!");
 					return;
@@ -755,7 +755,7 @@ namespace rsx
 			{
 				// Ignore invalid value, recover
 				method_registers.registers[reg] = method_registers.register_previous_value;
-				rsx->invalid_command_interrupt_raised = true;
+				rsx->recover_fifo();
 
 				rsx_log.error("Invalid NV4097_SET_INDEX_ARRAY_DMA value: 0x%x", arg);
 			}
