@@ -6,6 +6,7 @@
 #include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/RSX/Common/BufferUtils.h"
 
 #include <thread>
 #include <atomic>
@@ -450,17 +451,30 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
-				if (rsx::method_registers.transform_program_load() >= 512)
+				// Get real args count
+				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
+					static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos() - 4)) / 4), 32 - index});
+
+				const u32 load_pos = rsx::method_registers.transform_program_load();
+
+				u32 rcount = count;
+
+				if (const u32 max = load_pos * 4 + rcount + (index % 4);
+					max > 512 * 4)
 				{
 					// PS3 seems to allow exceeding the program buffer by upto 32 instructions before crashing
 					// Discard the "excess" instructions to not overflow our transform program buffer
 					// TODO: Check if the instructions in the overflow area are executed by PS3
 					rsx_log.warning("Program buffer overflow!");
-					return;
+					rcount -= max - (512 * 4);
 				}
 
-				method_registers.commit_4_transform_program_instructions(index);
+				stream_data_to_memory_swapped_u32<true>(&rsx::method_registers.transform_program[load_pos * 4 + index % 4]
+					, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount, 4);
+
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+				rsx::method_registers.transform_program_load_set(load_pos + ((rcount + index % 4) / 4));
+				rsx->fifo_ctrl->skip_methods(count - 1);
 			}
 		};
 
@@ -2994,7 +3008,7 @@ namespace rsx
 		bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4S_M, 1, 32, nv4097::set_vertex_data4s_m>();
 		bind_range<NV4097_SET_TRANSFORM_CONSTANT, 1, 32, nv4097::set_transform_constant>();
-		bind_range<NV4097_SET_TRANSFORM_PROGRAM + 3, 4, 32 / 4, nv4097::set_transform_program>();
+		bind_range<NV4097_SET_TRANSFORM_PROGRAM, 1, 32, nv4097::set_transform_program>();
 		bind<NV4097_GET_REPORT, nv4097::get_report>();
 		bind<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
 		bind<NV4097_SET_SURFACE_CLIP_HORIZONTAL, nv4097::set_surface_dirty_bit>();
