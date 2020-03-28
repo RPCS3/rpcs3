@@ -2277,7 +2277,7 @@ namespace rsx
 		fifo_ctrl->set_get(restore_point);
 		fifo_ret_addr = saved_fifo_ret;
 		std::this_thread::sleep_for(1ms);
-		invalid_command_interrupt_raised = false;
+		fifo_ctrl->abort();
 
 		if (std::exchange(in_begin_end, false) && !rsx::method_registers.current_draw_clause.empty())
 		{

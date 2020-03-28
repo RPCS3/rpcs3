@@ -723,7 +723,6 @@ namespace rsx
 		bool capture_current_frame = false;
 
 	public:
-		bool invalid_command_interrupt_raised = false;
 		bool sync_point_request = false;
 		bool in_begin_end = false;
 
