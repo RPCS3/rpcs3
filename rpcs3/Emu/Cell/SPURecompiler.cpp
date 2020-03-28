@@ -8306,11 +8306,9 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler(u
 
 #endif
 
-// SPU LLVM recompiler thread context
-struct spu_llvm
+struct spu_llvm_worker
 {
-	// Workload
-	lf_queue<std::pair<const u64, spu_item*>> registered;
+	lf_queue<std::pair<u64, const spu_program*>> registered;
 
 	void operator()()
 	{
@@ -8321,6 +8319,77 @@ struct spu_llvm
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
+		for (auto* prog : registered)
+		{
+			if (thread_ctrl::state() == thread_state::aborting)
+			{
+				break;
+			}
+
+			if (!prog)
+			{
+				continue;
+			}
+
+			const auto& func = *prog->second;
+
+			// Get data start
+			const u32 start = func.lower_bound;
+			const u32 size0 = ::size32(func.data);
+
+			// Initialize LS with function data only
+			for (u32 i = 0, pos = start; i < size0; i++, pos += 4)
+			{
+				ls[pos / 4] = std::bit_cast<be_t<u32>>(func.data[i]);
+			}
+
+			// Call analyser
+			spu_program func2 = compiler->analyse(ls.data(), func.entry_point);
+
+			if (func2 != func)
+			{
+				spu_log.error("[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
+			}
+			else if (const auto target = compiler->compile(std::move(func2)))
+			{
+				// Redirect old function (TODO: patch in multiple places)
+				const s64 rel = reinterpret_cast<u64>(target) - prog->first - 5;
+
+				union
+				{
+					u8 bytes[8];
+					u64 result;
+				};
+
+				bytes[0] = 0xe9; // jmp rel32
+				std::memcpy(bytes + 1, &rel, 4);
+				bytes[5] = 0x90;
+				bytes[6] = 0x90;
+				bytes[7] = 0x90;
+
+				atomic_storage<u64>::release(*reinterpret_cast<u64*>(prog->first), result);
+			}
+			else
+			{
+				spu_log.fatal("[0x%05x] Compilation failed.", func.entry_point);
+				Emu.Pause();
+				return;
+			}
+
+			// Clear fake LS
+			std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
+		}
+	}
+};
+
+// SPU LLVM recompiler thread context
+struct spu_llvm
+{
+	// Workload
+	lf_queue<std::pair<const u64, spu_item*>> registered;
+
+	void operator()()
+	{
 		// To compile (hash -> item)
 		std::unordered_multimap<u64, spu_item*, value_hash<u64>> enqueued;
 
@@ -8367,6 +8436,17 @@ struct spu_llvm
 			}
 		});
 
+		u32 worker_count = 1;
+
+		if (uint hc = std::thread::hardware_concurrency(); hc >= 12)
+		{
+			worker_count = hc - 10;
+		}
+
+		u32 worker_index = 0;
+
+		named_thread_group<spu_llvm_worker> workers("SPU LLVM Worker ", worker_count);
+
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			for (const auto& pair : registered.pop_all())
@@ -8412,51 +8492,8 @@ struct spu_llvm
 			// Remove item from the queue
 			enqueued.erase(found_it);
 
-			// Get data start
-			const u32 start = func.lower_bound;
-			const u32 size0 = ::size32(func.data);
-
-			// Initialize LS with function data only
-			for (u32 i = 0, pos = start; i < size0; i++, pos += 4)
-			{
-				ls[pos / 4] = std::bit_cast<be_t<u32>>(func.data[i]);
-			}
-
-			// Call analyser
-			spu_program func2 = compiler->analyse(ls.data(), func.entry_point);
-
-			if (func2 != func)
-			{
-				spu_log.error("[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
-			}
-			else if (const auto target = compiler->compile(std::move(func2)))
-			{
-				// Redirect old function (TODO: patch in multiple places)
-				const s64 rel = reinterpret_cast<u64>(target) - reinterpret_cast<u64>(_old) - 5;
-
-				union
-				{
-					u8 bytes[8];
-					u64 result;
-				};
-
-				bytes[0] = 0xe9; // jmp rel32
-				std::memcpy(bytes + 1, &rel, 4);
-				bytes[5] = 0x90;
-				bytes[6] = 0x90;
-				bytes[7] = 0x90;
-
-				atomic_storage<u64>::release(*reinterpret_cast<u64*>(_old), result);
-			}
-			else
-			{
-				spu_log.fatal("[0x%05x] Compilation failed.", func.entry_point);
-				Emu.Pause();
-				return;
-			}
-
-			// Clear fake LS
-			std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
+			// Push the workload
+			(workers.begin() + (worker_index++ % worker_count))->registered.push(reinterpret_cast<u64>(_old), &func);
 		}
 	}
 
