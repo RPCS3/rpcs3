@@ -1610,20 +1610,14 @@ namespace rsx
 			return u16(registers[NV308A_SIZE_OUT] & 0xFFFF);
 		}
 
-		u32 transform_program_load()
+		u32 transform_program_load() const
 		{
 			return registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
 		}
 
-		void commit_4_transform_program_instructions(u32 index)
+		void transform_program_load_set(u32 value)
 		{
-			u32& load = registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
-
-			transform_program[load * 4] = registers[NV4097_SET_TRANSFORM_PROGRAM + index * 4];
-			transform_program[load * 4 + 1] = registers[NV4097_SET_TRANSFORM_PROGRAM + index * 4 + 1];
-			transform_program[load * 4 + 2] = registers[NV4097_SET_TRANSFORM_PROGRAM + index * 4 + 2];
-			transform_program[load * 4 + 3] = registers[NV4097_SET_TRANSFORM_PROGRAM + index * 4 + 3];
-			load++;
+			registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD] = value;
 		}
 
 		u32 transform_constant_load()
