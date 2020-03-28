@@ -49,6 +49,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 	{
 		u32 current_instruction = start;
 		std::set<u32> conditional_targets;
+		bool has_printed_error = false;
 
 		while (true)
 		{
@@ -58,8 +59,12 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			{
 				if (!fast_exit)
 				{
-					// This can be harmless if a dangling RET was encountered before
-					rsx_log.error("vp_analyser: Possible infinite loop detected");
+					if (!has_printed_error) 
+					{
+						// This can be harmless if a dangling RET was encountered before
+						rsx_log.error("vp_analyser: Possible infinite loop detected");
+						has_printed_error = true;
+					}
 					current_instruction++;
 					continue;
 				}
