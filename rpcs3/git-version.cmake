@@ -1,6 +1,6 @@
-set(RPCS3_GIT_VERSION "unknown")
-set(RPCS3_GIT_BRANCH "unknown")
-set(RPCS3_GIT_FULL_BRANCH "unknown")
+set(RPCS3_GIT_VERSION "local_build")
+set(RPCS3_GIT_BRANCH "local_build")
+set(RPCS3_GIT_FULL_BRANCH "local_build")
 
 find_package(Git)
 if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git/")
@@ -42,7 +42,7 @@ function(gen_git_version rpcs3_src_dir)
 	# BUILD_REPOSITORY_NAME will look like "RPCS3/rpcs3"
 	# BUILD_SOURCEBRANCHNAME will look like "master"
 	# See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables
-	if (DEFINED ENV{BUILD_REPOSITORY_NAME})
+	if (DEFINED ENV{BUILD_REPOSITORY_NAME} AND NOT "$ENV{BUILD_REPOSITORY_NAME}" STREQUAL "")
 		set(RPCS3_GIT_FULL_BRANCH "$ENV{BUILD_REPOSITORY_NAME}/$ENV{BUILD_SOURCEBRANCHNAME}")
 	endif()
 
