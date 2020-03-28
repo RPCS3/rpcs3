@@ -107,13 +107,10 @@ else
     BUILD="rpcs3-v${AVVER}-${COMM_HASH}_win64.7z"
 fi
 
-# Export variables for later stages of the Azure pipeline
-# Values done in this manner will appear as environment variables
-# in later stages, but are not added to environment variables
-# in *this* stage. Thank azure for that one.
-# BRANCH is used for experimental build warnings for pr builds
-# used in main_window.cpp. AVVER is used for GitHub releases.
+# BRANCH is used for experimental build warnings for pr builds, used in main_window.cpp.
+# BUILD is the name of the release artifact
+# AVVER is used for GitHub releases, it is the version number.
 BRANCH="${REPO_NAME}/${REPO_BRANCH}"
-echo "##vso[task.setvariable variable=branch]$BRANCH"
-echo "##vso[task.setvariable variable=build]$BUILD"
-echo "##vso[task.setvariable variable=avver]$AVVER"
+echo "BRANCH=$BRANCH" > .travis/azure-vars.env
+echo "BUILD=$BUILD" >> .travis/azure-vars.env
+echo "AVVER=$AVVER" >> .travis/azure-vars.env
