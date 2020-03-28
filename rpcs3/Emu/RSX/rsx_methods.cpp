@@ -876,16 +876,22 @@ namespace rsx
 					{
 						// Move last 32 bits
 						reinterpret_cast<u32*>(dst)[0] = reinterpret_cast<const u32*>(src)[count - 1];
-					}
-					else if (dst_dma & CELL_GCM_LOCATION_MAIN)
-					{
-						// May overlap
-						std::memmove(dst, src, data_length);
+						rsx->invalidate_fragment_program(dst_dma, dst_offset, 4);
 					}
 					else
 					{
-						// Never overlaps
-						std::memcpy(dst, src, data_length);
+						if (dst_dma & CELL_GCM_LOCATION_MAIN)
+						{
+							// May overlap
+							std::memmove(dst, src, data_length);
+						}
+						else
+						{
+							// Never overlaps
+							std::memcpy(dst, src, data_length);
+						}
+
+						rsx->invalidate_fragment_program(dst_dma, dst_offset, count * 4);
 					}
 
 					break;
@@ -912,6 +918,7 @@ namespace rsx
 					{
 						// Move last 16 bits
 						dst[0] = convert(src[count - 1]);
+						rsx->invalidate_fragment_program(dst_dma, dst_offset, 2);
 						break;
 					}
 
@@ -920,6 +927,7 @@ namespace rsx
 						dst[i] = convert(src[i]);
 					}
 
+					rsx->invalidate_fragment_program(dst_dma, dst_offset, count * 2);
 					break;
 				}
 				default:
@@ -929,12 +937,6 @@ namespace rsx
 				}
 
 				//res->release(0);
-
-				if (!(dst_dma & CELL_GCM_LOCATION_MAIN))
-				{
-					// Set this flag on LOCAL memory transfer
-					rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
-				}
 
 				// Skip "handled methods"
 				rsx->fifo_ctrl->skip_methods(count - 1);
@@ -1086,6 +1088,8 @@ namespace rsx
 				const u32 nb_lines = std::min(clip_h, in_h);
 				const u32 data_length = nb_lines * src_line_length;
 
+				rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
+
 				if (const auto result = rsx->read_barrier(src_address, data_length, false);
 					result == rsx::result_zcull_intr)
 				{
@@ -1099,6 +1103,8 @@ namespace rsx
 			else
 			{
 				const u32 data_length = in_pitch * (in_h - 1) + src_line_length;
+
+				rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
 				rsx->read_barrier(src_address, data_length, true);
 			}
 
@@ -1437,6 +1443,8 @@ namespace rsx
 			const auto write_address = get_address(dst_offset, dst_dma, HERE);
 			const auto data_length = in_pitch * (line_count - 1) + line_length;
 
+			rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
+	
 			if (const auto result = rsx->read_barrier(read_address, data_length, !is_block_transfer);
 				result == rsx::result_zcull_intr)
 			{
