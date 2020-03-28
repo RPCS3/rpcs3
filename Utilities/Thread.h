@@ -427,6 +427,11 @@ class named_thread_group final
 
 	Thread* m_threads;
 
+	void init_threads()
+	{
+		m_threads = static_cast<Thread*>(::operator new(sizeof(Thread) * m_count, std::align_val_t{alignof(Thread)}));
+	}
+
 public:
 	// Lambda constructor, also the implicit deduction guide candidate
 	named_thread_group(std::string_view name, u32 count, const Context& f)
@@ -438,12 +443,31 @@ public:
 			return;
 		}
 
-		m_threads = static_cast<Thread*>(::operator new(sizeof(Thread) * m_count, std::align_val_t{alignof(Thread)}));
+		init_threads();
 
 		// Create all threads
 		for (u32 i = 0; i < m_count; i++)
 		{
 			new (static_cast<void*>(m_threads + i)) Thread(std::string(name) + std::to_string(i + 1), f);
+		}
+	}
+
+	// Default constructor
+	named_thread_group(std::string_view name, u32 count)
+		: m_count(count)
+		, m_threads(nullptr)
+	{
+		if (count == 0)
+		{
+			return;
+		}
+
+		init_threads();
+
+		// Create all threads
+		for (u32 i = 0; i < m_count; i++)
+		{
+			new (static_cast<void*>(m_threads + i)) Thread(std::string(name) + std::to_string(i + 1));
 		}
 	}
 
