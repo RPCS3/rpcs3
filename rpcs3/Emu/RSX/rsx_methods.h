@@ -1331,9 +1331,10 @@ namespace rsx
 			return decode<NV4097_SET_VERTEX_DATA_BASE_INDEX>().vertex_data_base_index();
 		}
 
-		u32 shader_program_address() const
+		std::pair<u32, u32> shader_program_address() const
 		{
-			return decode<NV4097_SET_SHADER_PROGRAM>().shader_program_address();
+			const u32 shader_address = decode<NV4097_SET_SHADER_PROGRAM>().shader_program_address();
+			return { shader_address & ~3, (shader_address & 3) - 1 };
 		}
 
 		u32 transform_program_start() const

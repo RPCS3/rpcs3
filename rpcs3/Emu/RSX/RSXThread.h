@@ -711,6 +711,8 @@ namespace rsx
 		 * returns whether surface is a render target and surface pitch in native format
 		 */
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
+	public:
+		bool invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size);
 
 	public:
 		u64 target_rsx_flip_time = 0;
