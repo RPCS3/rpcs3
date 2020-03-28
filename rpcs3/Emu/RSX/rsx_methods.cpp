@@ -2994,7 +2994,7 @@ namespace rsx
 		bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4S_M, 1, 32, nv4097::set_vertex_data4s_m>();
 		bind_range<NV4097_SET_TRANSFORM_CONSTANT, 1, 32, nv4097::set_transform_constant>();
-		bind_range<NV4097_SET_TRANSFORM_PROGRAM + 3, 4, 128, nv4097::set_transform_program>();
+		bind_range<NV4097_SET_TRANSFORM_PROGRAM + 3, 4, 32 / 4, nv4097::set_transform_program>();
 		bind<NV4097_GET_REPORT, nv4097::get_report>();
 		bind<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
 		bind<NV4097_SET_SURFACE_CLIP_HORIZONTAL, nv4097::set_surface_dirty_bit>();
