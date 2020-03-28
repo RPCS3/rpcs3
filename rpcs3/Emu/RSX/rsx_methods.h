@@ -541,8 +541,6 @@ namespace rsx
 			vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
 			vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
 		{
-			//NOTE: Transform constants persist through a context reset (NPEB00913)
-			transform_constants = {};
 		}
 
 		~rsx_state() = default;
