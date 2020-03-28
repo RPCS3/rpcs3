@@ -59,17 +59,13 @@ if errorlevel 1 (
 rem // Get commit count from (unshallowed) HEAD
 for /F %%I IN ('call %GIT% rev-list HEAD --count') do set COMMIT_COUNT=%%I
 
-rem // These environment variables are defined by Azure pipelines
-rem // BUILD_REPOSITORY_NAME will look like "RPCS3/rpcs3"
-rem // SYSTEM_PULLREQUEST_SOURCEBRANCH will look like "master"
-rem // BUILD_SOURCEBRANCHNAME will look like "master"
-rem // See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables
-set GIT_FULL_BRANCH=%BUILD_REPOSITORY_NAME%/%BUILD_SOURCEBRANCHNAME%
-
-rem // Echo for debug purposes
-echo %GIT_FULL_BRANCH%
-
 if defined SYSTEM_PULLREQUEST_SOURCEBRANCH (
+	rem // These environment variables are defined by Azure pipelines
+	rem // BUILD_REPOSITORY_NAME will look like "RPCS3/rpcs3"
+	rem // SYSTEM_PULLREQUEST_SOURCEBRANCH will look like "master"
+	rem // BUILD_SOURCEBRANCHNAME will look like "master"
+	rem // See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables
+	set GIT_FULL_BRANCH=%BUILD_REPOSITORY_NAME%/%BUILD_SOURCEBRANCHNAME%
 
 	if "%SYSTEM_PULLREQUEST_SOURCEBRANCH%"=="master" (
 		rem // If pull request comes from a master branch, GIT_BRANCH = username/branch in order to distinguish from upstream/master
@@ -87,10 +83,13 @@ if defined SYSTEM_PULLREQUEST_SOURCEBRANCH (
 	for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%COMMIT_COUNT%-%%I
 
 	for /F %%I IN ('call %GIT% rev-parse --abbrev-ref HEAD') do set GIT_BRANCH=%%I
+
+	set GIT_FULL_BRANCH=local_build
 )
 
 rem // Echo obtained GIT_VERSION for debug purposes if needed
 echo %GIT_VERSION%
+echo %GIT_FULL_BRANCH%
 
 rem // Don't modify the file if it already has the current version.
 if exist "%GIT_VERSION_FILE%" (
