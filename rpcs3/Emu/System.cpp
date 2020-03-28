@@ -31,6 +31,7 @@
 #include "../Crypto/unself.h"
 #include "../Crypto/unpkg.h"
 #include "util/yaml.hpp"
+#include "util/logs.hpp"
 
 #include "cereal/archives/binary.hpp"
 
@@ -1528,11 +1529,7 @@ void Emulator::Run(bool start_playtime)
 	m_pause_amend_time = 0;
 	m_state = system_state::running;
 
-	if (g_cfg.misc.silence_all_logs)
-	{
-		sys_log.notice("Now disabling logging...");
-		logs::silence();
-	}
+	ConfigureLogs();
 
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
@@ -1820,6 +1817,35 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 	}
 
 	return static_cast<s32>(arg);
+}
+
+void Emulator::ConfigureLogs()
+{
+	static bool was_silenced = false;
+
+	const bool silenced = g_cfg.misc.silence_all_logs.get();
+
+	if (silenced)
+	{
+		if (!was_silenced)
+		{
+			sys_log.notice("Disabling logging...");
+		}
+
+		logs::silence();
+	}
+	else
+	{
+		logs::reset();
+		logs::set_channel_levels(g_cfg.log.get_map());
+
+		if (was_silenced)
+		{
+			sys_log.notice("Logging enabled");
+		}
+	}
+
+	was_silenced = silenced;
 }
 
 template <>

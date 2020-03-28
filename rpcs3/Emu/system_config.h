@@ -263,7 +263,7 @@ struct cfg_root : cfg::node
 		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true, true };
 		cfg::_bool use_native_interface{ this, "Use native user interface", true };
 		cfg::string gdb_server{ this, "GDB Server", "127.0.0.1:2345" };
-		cfg::_bool silence_all_logs{ this, "Silence All Logs", false, false };
+		cfg::_bool silence_all_logs{ this, "Silence All Logs", false, true };
 		cfg::string title_format{ this, "Window Title Format", "FPS: %F | %R | %V | %T [%t]", true };
 	
 	} misc{ this };

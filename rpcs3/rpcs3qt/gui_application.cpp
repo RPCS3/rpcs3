@@ -427,6 +427,7 @@ void gui_application::OnChangeStyleSheetRequest(const QString& path)
 
 void gui_application::OnEmuSettingsChange()
 {
+	Emu.ConfigureLogs();
 	rsx::overlays::reset_performance_overlay();
 }
 
