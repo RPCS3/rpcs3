@@ -23,7 +23,7 @@ jobs:
   pool:
     vmImage: 'ubuntu-latest'
   steps:
-  - task: Cache@0
+  - task: Cache@2
     inputs:
       key: ccache | $(Agent.OS) | $(COMPILER)
       path: $(CCACHE_DIR)
@@ -57,7 +57,7 @@ jobs:
     vmImage: "windows-latest"
 
   steps:
-    - task: Cache@0
+    - task: Cache@2
       inputs:
         key: $(Agent.OS) | $(COMPILER)
         path: $(CACHE_DIR)
