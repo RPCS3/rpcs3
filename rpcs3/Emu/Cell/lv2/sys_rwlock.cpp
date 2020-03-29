@@ -371,6 +371,10 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 					lv2_obj::awake_all();
 				}
+				else if (rwlock->rq.empty() && rwlock->wq.empty())
+				{
+					rwlock->owner &= -2;
+				}
 
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
