@@ -1067,6 +1067,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 	::sockaddr_storage native_addr;
 	::socklen_t native_addrlen = sizeof(native_addr);
 	sys_net_error result{};
+	std::string _buf;
 
 	if (flags & SYS_NET_MSG_PEEK)
 	{
@@ -1139,11 +1140,12 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 		// Enable read event
 		sock.events += lv2_socket::poll::read;
+		_buf.resize(len);
 		sock.queue.emplace_back(ppu.id, [&](bs_t<lv2_socket::poll> events) -> bool
 		{
 			if (events & lv2_socket::poll::read)
 			{
-				native_result = ::recvfrom(sock.socket, reinterpret_cast<char*>(buf.get_ptr()), len, native_flags, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
+				native_result = ::recvfrom(sock.socket, _buf.data(), len, native_flags, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
 
 				if (native_result >= 0 || (result = get_last_error(!sock.so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0)))
 				{
@@ -1205,6 +1207,8 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 				sys_net.error("Error recvfrom(interrupted)");
 			return -SYS_NET_EINTR;
 		}
+
+		std::memcpy(buf.get_ptr(), _buf.c_str(), len);
 	}
 
 	if (ppu.is_stopped())
@@ -1293,6 +1297,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 	int native_flags = 0;
 	int native_result = -1;
 	::sockaddr_in name{};
+	std::string _buf(vm::_ptr<const char>(buf.addr()), vm::_ptr<const char>(buf.addr()) + len);
 
 	if (addr)
 	{
@@ -1358,7 +1363,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		{
 			if (events & lv2_socket::poll::write)
 			{
-				native_result = ::sendto(sock.socket, reinterpret_cast<const char*>(buf.get_ptr()), len, native_flags, addr ? reinterpret_cast<struct sockaddr*>(&name) : nullptr, addr ? namelen : 0);
+				native_result = ::sendto(sock.socket, _buf.c_str(), len, native_flags, addr ? reinterpret_cast<struct sockaddr*>(&name) : nullptr, addr ? namelen : 0);
 
 				if (native_result >= 0 || (result = get_last_error(!sock.so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0)))
 				{
