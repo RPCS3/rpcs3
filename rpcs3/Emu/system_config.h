@@ -74,12 +74,12 @@ struct cfg_root : cfg::node
 		cfg::string dev_usb000{ this, "/dev_usb000/", "$(EmulatorDir)dev_usb000/" };
 		cfg::string dev_bdvd{ this, "/dev_bdvd/" }; // Not mounted
 		cfg::string app_home{ this, "/app_home/" }; // Not mounted
-	
+
 		std::string get_dev_flash() const
 		{
 			return get(dev_flash, "dev_flash/");
 		}
-	
+
 		cfg::_bool host_root{ this, "Enable /host_root/" };
 		cfg::_bool init_dirs{ this, "Initialize Directories", true };
 
@@ -134,6 +134,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
 		cfg::_int<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 1, true };
 		cfg::_int<1, 1800> vblank_rate{ this, "Vblank Rate", 60, true }; // Changing this from 60 may affect game speed in unexpected ways
+		cfg::_int<0, 8191> rsx_mem_region_override{ this, "RSX Memory Region Override"}; // In 64KiB units
 
 		struct node_vk : cfg::node
 		{
@@ -250,7 +251,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
 		cfg::string psn_npid{this, "NPID", ""};
 	} net{this};
-	
+
 	struct node_misc : cfg::node
 	{
 		node_misc(cfg::node* _this) : cfg::node(_this, "Miscellaneous") {}
@@ -265,11 +266,11 @@ struct cfg_root : cfg::node
 		cfg::string gdb_server{ this, "GDB Server", "127.0.0.1:2345" };
 		cfg::_bool silence_all_logs{ this, "Silence All Logs", false, false };
 		cfg::string title_format{ this, "Window Title Format", "FPS: %F | %R | %V | %T [%t]", true };
-	
+
 	} misc{ this };
-	
+
 	cfg::log_entry log{ this, "Log" };
-	
+
 	std::string name;
 };
 

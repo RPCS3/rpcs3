@@ -1137,14 +1137,33 @@ namespace vm
 			g_stat_addr, g_stat_addr + UINT32_MAX,
 			g_reservations, g_reservations + UINT32_MAX);
 
+			u32 stack_base = 0xD0000000;
+			u32 video_size = 0x10000000;
+
+			if (const u32 ovr = g_cfg.video.rsx_mem_region_override * 65536)
+			{
+				if (g_cfg.video.rsx_mem_region_override > 4096)
+				{
+					vm_log.error("Stack Memory Region: reduced to 0x%08X bytes", 0x20000000 - ovr);
+					stack_base += (ovr - 0x10000000);
+					video_size += (ovr - 0x10000000);
+				}
+				else
+				{
+					video_size = ovr;
+				}
+
+				vm_log.error("RSX Memory Region: overridden to 0x%08X bytes", ovr);
+			}
+
 			g_locations =
 			{
 				std::make_shared<block_t>(0x00010000, 0x1FFF0000, 0x200), // main
 				std::make_shared<block_t>(0x20000000, 0x10000000, 0x201), // user 64k pages
 				nullptr, // user 1m pages
 				nullptr, // rsx context
-				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
-				std::make_shared<block_t>(0xD0000000, 0x10000000, 0x111), // stack
+				std::make_shared<block_t>(0xC0000000, video_size), // video
+				std::make_shared<block_t>(stack_base, 0xE0000000 - stack_base, 0x111), // stack
 				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU reserved
 			};
 		}
