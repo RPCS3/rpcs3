@@ -112,3 +112,6 @@ yaml-cpp.pc
 # libusb
 /3rdparty/libusb_cmake/config.h
 /3rdparty/libusb_cmake/libusb-1.0.pc
+
+# ssl certificate
+cacert.pem
