@@ -12,6 +12,8 @@
 #include <QMessageBox>
 #include <QLineEdit>
 
+#include "Emu/System.h"
+#include "Emu/system_config.h"
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKHelpers.h"
 #endif
