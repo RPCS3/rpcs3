@@ -706,7 +706,7 @@ SELF_KEY KeyVault::FindSelfKey(u32 type, u16 revision, u64 version)
 	// Empty key.
 	SELF_KEY key(0, 0, 0, 0, "", "", "", "", 0);
 
-	key_vault_log.notice("FindSelfKey: Type:0x%x, Revision:0x%x, Version:0x%x", type, revision, version);
+	key_vault_log.trace("FindSelfKey: Type:0x%x, Revision:0x%x, Version:0x%x", type, revision, version);
 
 	// Check SELF type.
 	switch (type)
