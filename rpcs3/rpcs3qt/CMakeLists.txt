@@ -3,6 +3,7 @@
 	auto_pause_settings_dialog.cpp
 	breakpoint_handler.cpp
 	breakpoint_list.cpp
+	call_stack_list.cpp
 	cg_disasm_window.cpp
 	cheat_manager.cpp
 	curl_handle.cpp

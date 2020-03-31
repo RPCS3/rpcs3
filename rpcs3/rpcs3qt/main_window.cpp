@@ -991,6 +991,7 @@ void main_window::OnEmuStop()
 
 	m_debugger_frame->EnableButtons(false);
 	m_debugger_frame->ClearBreakpoints();
+	m_debugger_frame->ClearCallStack();
 
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play\tCtrl+E") : tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);

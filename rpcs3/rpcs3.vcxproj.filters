@@ -646,6 +646,9 @@
     <ClCompile Include="rpcs3qt\breakpoint_list.cpp">
       <Filter>Gui\debugger</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\call_stack_list.cpp">
+      <Filter>Gui\debugger</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_breakpoint_list.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -656,6 +659,18 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_breakpoint_list.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_call_stack_list.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_call_stack_list.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_call_stack_list.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_call_stack_list.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\qrc_windows.cpp">
@@ -1155,6 +1170,9 @@
       <Filter>Gui\debugger</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\breakpoint_list.h">
+      <Filter>Gui\debugger</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\call_stack_list.h">
       <Filter>Gui\debugger</Filter>
     </CustomBuild>
     <CustomBuild Include="windows.qrc">
