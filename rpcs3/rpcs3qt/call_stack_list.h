@@ -16,7 +16,7 @@ public:
 	void UpdateCPUData(std::weak_ptr<cpu_thread> cpu, std::shared_ptr<CPUDisAsm> disasm);
 
 Q_SIGNALS:
-	void RequestShowAddress(u32 addr);
+	void RequestShowAddress(u32 addr, bool force = false);
 public Q_SLOTS:
 	void HandleUpdate(std::vector<u32> call_stack);
 private Q_SLOTS:
