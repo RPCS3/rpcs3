@@ -5,6 +5,7 @@
 #include "debugger_list.h"
 #include "breakpoint_list.h"
 #include "breakpoint_handler.h"
+#include "call_stack_list.h"
 #include "qt_utils.h"
 
 #include "Emu/System.h"
@@ -48,10 +49,12 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	hbox_b_main->setContentsMargins(0, 0, 0, 0);
 
 	m_breakpoint_handler = new breakpoint_handler();
+	m_breakpoint_list = new breakpoint_list(this, m_breakpoint_handler);
+
 	m_debugger_list = new debugger_list(this, settings, m_breakpoint_handler);
 	m_debugger_list->installEventFilter(this);
 
-	m_breakpoint_list = new breakpoint_list(this, m_breakpoint_handler);
+	m_call_stack_list = new call_stack_list(this);
 
 	m_choice_units = new QComboBox(this);
 	m_choice_units->setSizeAdjustPolicy(QComboBox::AdjustToContents);
@@ -97,13 +100,20 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	m_debugger_list->setFont(m_mono);
 	m_misc_state->setFont(m_mono);
 	m_regs->setFont(m_mono);
+	m_call_stack_list->setFont(m_mono);
 
 	m_right_splitter = new QSplitter(this);
 	m_right_splitter->setOrientation(Qt::Vertical);
 	m_right_splitter->addWidget(m_misc_state);
 	m_right_splitter->addWidget(m_regs);
+	m_right_splitter->addWidget(m_call_stack_list);
 	m_right_splitter->addWidget(m_breakpoint_list);
-	m_right_splitter->setStretchFactor(0, 1);
+
+	// Set relative sizes for widgets
+	m_right_splitter->setStretchFactor(0, 2); // misc state
+	m_right_splitter->setStretchFactor(1, 8); // registers
+	m_right_splitter->setStretchFactor(2, 3); // call stack
+	m_right_splitter->setStretchFactor(3, 1); // breakpoint list
 
 	m_splitter = new QSplitter(this);
 	m_splitter->addWidget(m_debugger_list);
@@ -160,6 +170,9 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 
 	connect(m_debugger_list, &debugger_list::BreakpointRequested, m_breakpoint_list, &breakpoint_list::HandleBreakpointRequest);
 	connect(m_breakpoint_list, &breakpoint_list::RequestShowAddress, m_debugger_list, &debugger_list::ShowAddress);
+
+	connect(this, &debugger_frame::CallStackUpdateRequested, m_call_stack_list, &call_stack_list::HandleUpdate);
+	connect(m_call_stack_list, &call_stack_list::RequestShowAddress, m_debugger_list, &debugger_list::ShowAddress);
 
 	m_debugger_list->ShowAddress(m_debugger_list->m_pc);
 	UpdateUnitList();
@@ -409,6 +422,7 @@ void debugger_frame::OnSelectUnit()
 
 	m_debugger_list->UpdateCPUData(this->cpu, m_disasm);
 	m_breakpoint_list->UpdateCPUData(this->cpu, m_disasm);
+	m_call_stack_list->UpdateCPUData(this->cpu, m_disasm);
 	DoUpdate();
 	UpdateUI();
 }
@@ -448,6 +462,8 @@ void debugger_frame::WritePanels()
 	m_regs->clear();
 	m_regs->setText(qstr(cpu->dump_regs()));
 	m_regs->verticalScrollBar()->setValue(loc);
+
+	Q_EMIT CallStackUpdateRequested(cpu->dump_callstack_list());
 }
 
 void debugger_frame::ShowGotoAddressDialog()
@@ -558,6 +574,11 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 void debugger_frame::ClearBreakpoints()
 {
 	m_breakpoint_list->ClearBreakpoints();
+}
+
+void debugger_frame::ClearCallStack()
+{
+	Q_EMIT CallStackUpdateRequested({});
 }
 
 void debugger_frame::ShowPC()
