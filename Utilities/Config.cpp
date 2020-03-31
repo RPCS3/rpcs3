@@ -289,7 +289,7 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 
 		if (YAML::convert<std::string>::decode(data, value))
 		{
-			rhs.from_string(value);
+			rhs.from_string(value, dynamic);
 		}
 
 		break; // ???

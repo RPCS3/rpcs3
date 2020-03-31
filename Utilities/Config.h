@@ -50,7 +50,7 @@ namespace cfg
 		_base(type _type);
 
 		// Owned entry constructor
-		_base(type _type, class node* owner, const std::string& name, bool dynamic = true);
+		_base(type _type, class node* owner, const std::string& name, bool dynamic);
 
 	public:
 		_base(const _base&) = delete;
@@ -359,15 +359,15 @@ namespace cfg
 		}
 	};
 
-	// Simple set entry with mutex (TODO: template for various types)
+	// Simple set entry (TODO: template for various types)
 	class set_entry final : public _base
 	{
 		std::set<std::string> m_set;
 
 	public:
 		// Default value is empty list in current implementation
-		set_entry(node* owner, const std::string& name, bool dynamic = false)
-			: _base(type::set, owner, name, dynamic)
+		set_entry(node* owner, const std::string& name)
+			: _base(type::set, owner, name, false)
 		{
 		}
 
@@ -402,7 +402,7 @@ namespace cfg
 
 	public:
 		log_entry(node* owner, const std::string& name)
-			: _base(type::log, owner, name)
+			: _base(type::log, owner, name, true)
 		{
 		}
 
