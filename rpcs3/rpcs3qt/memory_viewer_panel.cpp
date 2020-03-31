@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Utilities/mutex.h"
 #include "Emu/Memory/vm_locking.h"
+#include "Emu/Memory/vm.h"
 
 #include "memory_viewer_panel.h"
 
@@ -233,7 +234,9 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 
 	//Fill the QTextEdits
 	ShowMemory();
-	setFixedSize(sizeHint());
+
+	setFixedWidth(sizeHint().width());
+	setMinimumHeight(hbox_tools->sizeHint().height());
 }
 
 memory_viewer_panel::~memory_viewer_panel()
@@ -253,6 +256,29 @@ void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 
 	m_addr_line->setText(qstr(fmt::format("%08x", m_addr)));
 	ShowMemory();
+}
+
+void memory_viewer_panel::resizeEvent(QResizeEvent *event)
+{
+	QDialog::resizeEvent(event);
+
+	if (event->oldSize().height() != -1)
+		m_height_leftover += event->size().height() - event->oldSize().height();
+
+	const auto font_height = m_fontMetrics->height();
+
+	if (m_height_leftover >= font_height)
+	{
+		m_height_leftover -= font_height;
+		++m_rowcount;
+		ShowMemory();
+	}
+	else if (m_height_leftover < -font_height)
+	{
+		m_height_leftover += font_height;
+		--m_rowcount;
+		ShowMemory();
+	}
 }
 
 void memory_viewer_panel::ShowMemory()
