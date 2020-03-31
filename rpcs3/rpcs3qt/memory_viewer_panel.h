@@ -11,6 +11,7 @@ class memory_viewer_panel : public QDialog
 	u32 m_addr;
 	u32 m_colcount;
 	u32 m_rowcount;
+	s32 m_height_leftover{};
 
 	QLineEdit* m_addr_line;
 
@@ -25,7 +26,8 @@ public:
 	memory_viewer_panel(QWidget* parent);
 	~memory_viewer_panel();
 
-	virtual void wheelEvent(QWheelEvent *event);
+	void wheelEvent(QWheelEvent *event) override;
+	void resizeEvent(QResizeEvent *event) override;
 
 	virtual void ShowMemory();
 	void SetPC(const uint pc);
