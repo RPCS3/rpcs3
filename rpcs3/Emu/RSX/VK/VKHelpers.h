@@ -3228,11 +3228,7 @@ public:
 
 		bool check_query_status(u32 index)
 		{
-			// NOTE: Keeps NVIDIA driver from using partial results as they are broken (always returns true)
-			const VkQueryResultFlags flags =
-				(vk::get_driver_vendor() == vk::driver_vendor::NVIDIA ? 0 : VK_QUERY_RESULT_PARTIAL_BIT);
-
-			return poke_query(query_slot_status[index], index, flags);
+			return poke_query(query_slot_status[index], index, VK_QUERY_RESULT_PARTIAL_BIT);
 		}
 
 		u32 get_query_result(u32 index)
@@ -3240,13 +3236,9 @@ public:
 			// Check for cached result
 			auto& query_info = query_slot_status[index];
 
-			// Wait for full result on NVIDIA to avoid getting garbage results
-			const VkQueryResultFlags flags =
-				(vk::get_driver_vendor() == vk::driver_vendor::NVIDIA ? VK_QUERY_RESULT_WAIT_BIT : VK_QUERY_RESULT_PARTIAL_BIT);
-
 			while (!query_info.ready)
 			{
-				poke_query(query_info, index, flags);
+				poke_query(query_info, index, VK_QUERY_RESULT_PARTIAL_BIT);
 			}
 
 			return query_info.any_passed ? 1 : 0;
