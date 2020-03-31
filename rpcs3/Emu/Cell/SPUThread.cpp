@@ -1009,9 +1009,41 @@ spu_imm_table_t::spu_imm_table_t()
 	}
 }
 
-std::string spu_thread::dump() const
+std::string spu_thread::dump_all() const
 {
-	std::string ret = cpu_thread::dump();
+	std::string ret = cpu_thread::dump_misc() + '\n';
+
+	ret += dump_misc() + '\n';
+	ret += dump_regs();
+
+	return ret;
+}
+
+std::string spu_thread::dump_regs() const
+{
+	std::string ret;
+
+	for (u32 i = 0; i < 128; i++)
+	{
+		fmt::append(ret, "\nGPR[%d] = %s", i, gpr[i]);
+	}
+
+	return ret;
+}
+
+std::string spu_thread::dump_callstack() const
+{
+	return {};
+}
+
+std::vector<u32> spu_thread::dump_callstack_list() const
+{
+	return {};
+}
+
+std::string spu_thread::dump_misc() const
+{
+	std::string ret;
 
 	fmt::append(ret, "\nBlock Weight: %u (Retreats: %u)", block_counter, block_failure);
 
@@ -1028,7 +1060,6 @@ std::string spu_thread::dump() const
 		// Print chunk address from lowest 16 bits
 		fmt::append(ret, "...chunk-0x%05x", (name & 0xffff) * 4);
 	}
-
 	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
 	fmt::append(ret, "\nLocal Storage: 0x%08x..0x%08x", offset, offset + 0x3ffff);
 	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
@@ -1045,13 +1076,6 @@ std::string spu_thread::dump() const
 		{
 			fmt::append(ret, "\n[-]");
 		}
-	}
-
-	ret += "\nRegisters:\n=========";
-
-	for (u32 i = 0; i < 128; i++)
-	{
-		fmt::append(ret, "\nGPR[%d] = %s", i, gpr[i]);
 	}
 
 	return ret;

@@ -498,7 +498,11 @@ public:
 class spu_thread : public cpu_thread
 {
 public:
-	virtual std::string dump() const override;
+	virtual std::string dump_all() const override;
+	virtual std::string dump_regs() const override;
+	virtual std::string dump_callstack() const override;
+	virtual std::vector<u32> dump_callstack_list() const override;
+	virtual std::string dump_misc() const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_mem() override;
 	virtual void cpu_unmem() override;

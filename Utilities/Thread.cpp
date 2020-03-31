@@ -1505,7 +1505,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		{
 			if (!access_violation_recovered)
 			{
-				vm_log.notice("\n%s", cpu->dump());
+				vm_log.notice("\n%s", cpu->dump_all());
 				vm_log.error("Access violation %s location 0x%x (%s)", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
 			}
 
@@ -1536,7 +1536,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 	if (cpu && !access_violation_recovered)
 	{
-		vm_log.notice("\n%s", cpu->dump());
+		vm_log.notice("\n%s", cpu->dump_all());
 	}
 
 	// Note: a thread may access violate more than once after hack_alloc recovery
@@ -1617,7 +1617,7 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 
 		if (const auto cpu = get_current_cpu_thread())
 		{
-			sys_log.notice("\n%s", cpu->dump());
+			sys_log.notice("\n%s", cpu->dump_all());
 		}
 	}
 
@@ -1746,7 +1746,7 @@ static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 
 	if (const auto cpu = get_current_cpu_thread())
 	{
-		sys_log.notice("\n%s", cpu->dump());
+		sys_log.notice("\n%s", cpu->dump_all());
 	}
 
 	std::string msg = fmt::format("Segfault %s location %p at %p.\n", cause, info->si_addr, RIP(context));
