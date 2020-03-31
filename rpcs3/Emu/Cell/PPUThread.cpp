@@ -59,6 +59,7 @@
 #include <thread>
 #include <cfenv>
 #include <cctype>
+#include <string>
 
 const bool s_use_ssse3 = utils::has_ssse3();
 
@@ -384,7 +385,45 @@ std::string ppu_thread::dump_regs() const
 {
 	std::string ret;
 
-	for (uint i = 0; i < 32; ++i) fmt::append(ret, "GPR[%d] = 0x%llx\n", i, gpr[i]);
+	for (uint i = 0; i < 32; ++i)
+	{
+		auto reg = gpr[i];
+
+		fmt::append(ret, "GPR[%-2d] = 0x%-8llx", i, reg);
+
+		const u32 max_str_len = 32;
+		const u32 hex_count = 10;
+
+		if (vm::check_addr(reg, max_str_len, vm::page_readable))
+		{
+			const u64 reg_ptr = vm::read64(reg);
+
+			if (vm::check_addr(reg_ptr, max_str_len, vm::page_readable))
+			{
+				reg = reg_ptr;
+			}
+
+			const auto gpr_buf = vm::get_super_ptr<u8>(reg);
+
+			std::string buf_tmp(gpr_buf, gpr_buf + max_str_len);
+
+			if (std::isprint(static_cast<u8>(buf_tmp[0])) && std::isprint(static_cast<u8>(buf_tmp[1])) && std::isprint(static_cast<u8>(buf_tmp[2])))
+			{
+				fmt::append(ret, "  ->  \"%s\"", buf_tmp.c_str());
+			}
+			else
+			{
+				fmt::append(ret, "  ->  ");
+
+				for (u32 j = 0; j < hex_count; ++j)
+				{
+					fmt::append(ret, "%02x ", buf_tmp[j]);
+				}
+			}
+		}
+
+		fmt::append(ret, "\n");
+	}
 	for (uint i = 0; i < 32; ++i) fmt::append(ret, "FPR[%d] = %.6G\n", i, fpr[i]);
 	for (uint i = 0; i < 32; ++i) fmt::append(ret, "VR[%d] = %s [x: %g y: %g z: %g w: %g]\n", i, vr[i], vr[i]._f[3], vr[i]._f[2], vr[i]._f[1], vr[i]._f[0]);
 
@@ -629,7 +668,7 @@ void ppu_thread::exec_task()
 	{
 		const auto exec_op = [this](u64 op)
 		{
-			return reinterpret_cast<func_t>(op & 0xffffffff)(*this, {static_cast<u32>(op >> 32)});
+			return reinterpret_cast<func_t>(op & 0xffffffff)(*this, { static_cast<u32>(op >> 32) });
 		};
 
 		if (cia % 8 || state) [[unlikely]]
