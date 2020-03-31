@@ -1305,9 +1305,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 	}
 	else
 	{
-		if (type == SYS_NET_SOCK_DGRAM_P2P)
-			sys_net.error("Error sendto(bad socket)");
-		return -SYS_NET_EBADF
+		return -SYS_NET_EBADF;
 	}
 
 	if (addr)
