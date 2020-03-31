@@ -2322,9 +2322,10 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, dst_stage,
 			VK_ACCESS_SHADER_WRITE_BIT, dst_access);
 	}
-	else
+	else if (m_program)
 	{
-		rsx_log.error("Dubious query data pushed to cond render!, Please report to developers(q.pending=%d)", sources.front()->pending);
+		// This can sometimes happen when shaders are compiling, only log if there is a program hit
+		rsx_log.warning("Dubious query data pushed to cond render!, Please report to developers(q.pending=%d)", sources.front()->pending);
 	}
 
 	rsx::thread::begin_conditional_rendering(sources);
