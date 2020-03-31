@@ -84,16 +84,23 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	hbox_b_main->addWidget(m_choice_units);
 	hbox_b_main->addStretch();
 
-	//Registers
+	// Misc state
+	m_misc_state = new QTextEdit(this);
+	m_misc_state->setLineWrapMode(QTextEdit::NoWrap);
+	m_misc_state->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+
+	// Registers
 	m_regs = new QTextEdit(this);
 	m_regs->setLineWrapMode(QTextEdit::NoWrap);
 	m_regs->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 
 	m_debugger_list->setFont(m_mono);
+	m_misc_state->setFont(m_mono);
 	m_regs->setFont(m_mono);
 
 	m_right_splitter = new QSplitter(this);
 	m_right_splitter->setOrientation(Qt::Vertical);
+	m_right_splitter->addWidget(m_misc_state);
 	m_right_splitter->addWidget(m_regs);
 	m_right_splitter->addWidget(m_breakpoint_list);
 	m_right_splitter->setStretchFactor(0, 1);
@@ -416,22 +423,30 @@ void debugger_frame::DoUpdate()
 	}
 
 	ShowPC();
-	WriteRegs();
+	WritePanels();
 }
 
-void debugger_frame::WriteRegs()
+void debugger_frame::WritePanels()
 {
 	const auto cpu = this->cpu.lock();
 
 	if (!cpu)
 	{
+		m_misc_state->clear();
 		m_regs->clear();
 		return;
 	}
 
-	int loc = m_regs->verticalScrollBar()->value();
+	int loc;
+
+	loc = m_regs->verticalScrollBar()->value();
+	m_misc_state->clear();
+	m_misc_state->setText(qstr(cpu->dump_misc()));
+	m_misc_state->verticalScrollBar()->setValue(loc);
+
+	loc = m_regs->verticalScrollBar()->value();
 	m_regs->clear();
-	m_regs->setText(qstr(cpu->dump()));
+	m_regs->setText(qstr(cpu->dump_regs()));
 	m_regs->verticalScrollBar()->setValue(loc);
 }
 

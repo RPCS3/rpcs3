@@ -27,6 +27,7 @@ class debugger_frame : public custom_dock_widget
 	debugger_list* m_debugger_list;
 	QSplitter* m_right_splitter;
 	QFont m_mono;
+	QTextEdit* m_misc_state;
 	QTextEdit* m_regs;
 	QPushButton* m_go_to_addr;
 	QPushButton* m_go_to_pc;
@@ -65,7 +66,7 @@ public:
 
 	u32 GetPc() const;
 	void DoUpdate();
-	void WriteRegs();
+	void WritePanels();
 	void EnableButtons(bool enable);
 	void ShowGotoAddressDialog();
 	u64 EvaluateExpression(const QString& expression);
