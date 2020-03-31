@@ -9,6 +9,8 @@
 
 #include <QKeyEvent>
 #include <QMessageBox>
+#include <QMovie>
+
 #include <string>
 
 #include "png.h"
@@ -42,13 +44,17 @@ constexpr auto qstr = QString::fromStdString;
 gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
 	: QWindow(), m_gui_settings(gui_settings)
 {
+	m_movie = new QMovie(":/Icons/nggyu.gif");
+	m_movie->start();
+	connect(m_movie, &QMovie::frameChanged, [this]() { setIcon(QIcon(m_movie->currentPixmap())); });
+
 	m_disable_mouse = gui_settings->GetValue(gui::gs_disableMouse).toBool();
 
 	m_window_title = qstr(Emu.GetFormattedTitle(0));
 
 	if (!appIcon.isNull())
 	{
-		setIcon(appIcon);
+		setIcon(QIcon(":/Icons/nggyu.gif"));
 	}
 
 #ifdef __APPLE__
@@ -93,6 +99,11 @@ gs_frame::~gs_frame()
 #elif HAVE_QTDBUS
 	UpdateProgress(0, false);
 #endif
+	if (m_movie)
+	{
+		m_movie->stop();
+		delete m_movie;
+	}
 }
 
 void gs_frame::paintEvent(QPaintEvent *event)

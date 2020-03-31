@@ -28,7 +28,7 @@ void game_list_grid_delegate::paint(QPainter *painter, const QStyleOptionViewIte
 	painter->eraseRect(r);
 
 	// Get title and image
-	QPixmap image = qvariant_cast<QPixmap>(index.data(Qt::DecorationRole));
+	const QPixmap image = qvariant_cast<QPixmap>(index.data(Qt::DecorationRole));
 	const QString title = index.data(Qt::DisplayRole).toString();
 
 	// Paint from our stylesheet

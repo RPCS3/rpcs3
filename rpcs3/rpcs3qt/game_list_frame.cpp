@@ -93,6 +93,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_list->setAlternatingRowColors(true);
 	m_game_list->installEventFilter(this);
 	m_game_list->setColumnCount(gui::column_count);
+	m_game_list->setMouseTracking(true);
 
 	m_game_compat = std::make_unique<game_compatibility>(m_gui_settings);
 
@@ -129,6 +130,16 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 	connect(m_game_list, &QTableWidget::itemSelectionChanged, this, &game_list_frame::itemSelectionChangedSlot);
 	connect(m_game_list, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
+	connect(m_game_list, &QTableWidget::cellEntered, this, [this](int row, int column)
+	{
+		for (int i = 0; i < m_game_list->rowCount(); ++i)
+		{
+			if (auto item = dynamic_cast<custom_table_widget_item*>(m_game_list->item(i, gui::column_icon)))
+			{
+				item->set_active(i == row && column == gui::column_icon);
+			}
+		}
+	});
 
 	connect(m_game_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
 	connect(m_game_list->horizontalHeader(), &QHeaderView::customContextMenuRequested, [this](const QPoint& pos)
@@ -1909,7 +1920,30 @@ void game_list_frame::PopulateGameList()
 
 		// Icon
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
-		icon_item->setData(Qt::DecorationRole, game->pxmap);
+		icon_item->init_movie();
+
+		connect(icon_item->m_movie, &QMovie::frameChanged, [this, icon_item, static_icon = game->pxmap]()
+		{
+			if (icon_item->get_active())
+			{
+				QPixmap movie_icon(m_icon_size);
+				movie_icon.fill(m_icon_color);
+				const QPixmap scaled_icon = icon_item->m_movie->currentPixmap().scaled(m_icon_size, Qt::KeepAspectRatio);
+				const int x = m_icon_size.width() / 2 - scaled_icon.rect().width() / 2;
+				const int y = m_icon_size.height() / 2 - scaled_icon.rect().height() / 2;
+				QPainter painter;
+				painter.begin(&movie_icon);
+				painter.drawPixmap(QRect(x, y, scaled_icon.rect().width(), scaled_icon.rect().height()), scaled_icon);
+				painter.end();
+				icon_item->setData(Qt::DecorationRole, movie_icon);
+			}
+			else
+			{
+				icon_item->setData(Qt::DecorationRole, static_icon);
+				icon_item->m_movie->stop();
+			}
+		});
+		icon_item->m_movie->jumpToFrame(1);
 		icon_item->setData(Qt::UserRole, index, true);
 		icon_item->setData(gui::game_role, QVariant::fromValue(game));
 

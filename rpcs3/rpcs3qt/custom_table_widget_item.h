@@ -1,8 +1,8 @@
 #pragma once
 
-#include <QTableWidgetItem>
+#include "movie_item.h"
 
-class custom_table_widget_item : public QTableWidgetItem
+class custom_table_widget_item : public movie_item
 {
 private:
 	int m_sort_role = Qt::DisplayRole;
@@ -10,7 +10,7 @@ private:
 public:
 	custom_table_widget_item(){}
 	custom_table_widget_item(const std::string& text, int sort_role = Qt::DisplayRole, const QVariant& sort_value = 0)
-	: QTableWidgetItem(QString::fromStdString(text).simplified()) // simplified() forces single line text
+	: movie_item(QString::fromStdString(text).simplified()) // simplified() forces single line text
 	{
 		if (sort_role != Qt::DisplayRole)
 		{
@@ -18,7 +18,7 @@ public:
 		}
 	}
 	custom_table_widget_item(const QString& text, int sort_role = Qt::DisplayRole, const QVariant& sort_value = 0)
-	: QTableWidgetItem(text.simplified()) // simplified() forces single line text
+	: movie_item(text.simplified()) // simplified() forces single line text
 	{
 		if (sort_role != Qt::DisplayRole)
 		{

@@ -19,5 +19,10 @@
         <file>Icons/custom_config_2.png</file>
         <file>Icons/controllers_2.png</file>
         <file>Icons/combo_config_bordered.png</file>
+        <file>Icons/nggyu.gif</file>
+        <file>Icons/nggyu_2.gif</file>
+        <file>Icons/nggyu_3.gif</file>
+        <file>Icons/nggyu_pixel.gif</file>
+        <file>Icons/nggyu_sw.gif</file>
     </qresource>
 </RCC>

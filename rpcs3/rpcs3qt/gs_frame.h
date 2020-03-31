@@ -33,6 +33,7 @@ private:
 	u64 m_frames = 0;
 	QString m_window_title;
 	bool m_disable_mouse;
+	QMovie* m_movie = nullptr;
 
 public:
 	gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
@@ -65,7 +66,7 @@ protected:
 
 	display_handle_t handle() const override;
 
-	void flip(draw_context_t context, bool skip_frame=false) override;
+	void flip(draw_context_t context, bool skip_frame = false) override;
 	int client_width() override;
 	int client_height() override;
 
