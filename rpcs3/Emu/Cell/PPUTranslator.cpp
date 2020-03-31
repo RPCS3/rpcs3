@@ -1,5 +1,6 @@
 ﻿#ifdef LLVM_AVAILABLE
 
+#include "Emu/system_config.h"
 #include "PPUTranslator.h"
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
@@ -3878,8 +3879,18 @@ void PPUTranslator::FMADDS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b), GetType<f32>());
-	SetFpr(op.frd, result);
+
+	llvm::Value* result;
+	if (g_cfg.core.ppu_accurate_fma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
+	}
+	else
+	{
+		result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
+	}
+
+	SetFpr(op.frd, m_ir->CreateFPTrunc(result, GetType<f32>()));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c));
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
@@ -3896,8 +3907,18 @@ void PPUTranslator::FMSUBS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFSub(m_ir->CreateFMul(a, c), b), GetType<f32>());
-	SetFpr(op.frd, result);
+
+	llvm::Value* result;
+	if (g_cfg.core.ppu_accurate_fma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
+	}
+	else
+	{
+		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+	}
+
+	SetFpr(op.frd, m_ir->CreateFPTrunc(result, GetType<f32>()));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
@@ -3914,8 +3935,18 @@ void PPUTranslator::FNMSUBS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(a, c), b)), GetType<f32>());
-	SetFpr(op.frd, result);
+
+	llvm::Value* result;
+	if (g_cfg.core.ppu_accurate_fma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
+	}
+	else
+	{
+		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+	}
+
+	SetFpr(op.frd, m_ir->CreateFNeg(m_ir->CreateFPTrunc(result, GetType<f32>())));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
@@ -3932,8 +3963,18 @@ void PPUTranslator::FNMADDS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFNeg(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b)), GetType<f32>());
-	SetFpr(op.frd, result);
+
+	llvm::Value* result;
+	if (g_cfg.core.ppu_accurate_fma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
+	}
+	else
+	{
+		result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
+	}
+
+	SetFpr(op.frd, m_ir->CreateFNeg(m_ir->CreateFPTrunc(result, GetType<f32>())));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
@@ -4182,7 +4223,17 @@ void PPUTranslator::FMSUB(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+
+	llvm::Value* result;
+	if (g_cfg.core.ppu_accurate_fma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
+	}
+	else
+	{
+		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+	}
+
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
@@ -4200,7 +4251,17 @@ void PPUTranslator::FMADD(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
+
+	llvm::Value* result;
+	if (g_cfg.core.ppu_accurate_fma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, b });
+	}
+	else
+	{
+		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+	}
+
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c));
@@ -4218,8 +4279,18 @@ void PPUTranslator::FNMSUB(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(a, c), b));
-	SetFpr(op.frd, result);
+
+	llvm::Value* result;
+	if (g_cfg.core.ppu_accurate_fma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
+	}
+	else
+	{
+		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+	}
+
+	SetFpr(op.frd, m_ir->CreateFNeg(result));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fi", a, b, c));
@@ -4236,8 +4307,18 @@ void PPUTranslator::FNMADD(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFNeg(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b));
-	SetFpr(op.frd, result);
+
+	llvm::Value* result;
+	if (g_cfg.core.ppu_accurate_fma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
+	}
+	else
+	{
+		result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
+	}
+
+	SetFpr(op.frd, m_ir->CreateFNeg(result));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fi", a, b, c));

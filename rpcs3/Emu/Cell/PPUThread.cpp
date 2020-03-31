@@ -1531,6 +1531,7 @@ extern void ppu_initialize(const ppu_module& info)
 			enum class ppu_settings : u32
 			{
 				non_win32,
+				accurate_fma,
 
 				__bitset_enum_max
 			};
@@ -1540,6 +1541,10 @@ extern void ppu_initialize(const ppu_module& info)
 #ifndef _WIN32
 			settings += ppu_settings::non_win32;
 #endif
+			if (g_cfg.core.ppu_accurate_fma)
+			{
+				settings += ppu_settings::accurate_fma;
+			}
 
 			// Write version, hash, CPU, settings
 			fmt::append(obj_name, "v3-tane-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
