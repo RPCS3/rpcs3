@@ -186,7 +186,8 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	dmaControl.put = 0;
 	dmaControl.ref = 0; // Set later to -1 by cellGcmSys
 
-	if (false/*system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB*/)
+	if ((false/*system_mode & something*/ || g_cfg.video.decr_memory_layout)
+		&& g_cfg.core.debug_console_mode)
 		rsx::get_current_renderer()->main_mem_size = 0x20000000; //512MB
 	else
 		rsx::get_current_renderer()->main_mem_size = 0x10000000; //256MB
