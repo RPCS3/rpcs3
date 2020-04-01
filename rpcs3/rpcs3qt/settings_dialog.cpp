@@ -963,6 +963,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->debugConsoleMode, emu_settings::DebugConsoleMode);
 	SubscribeTooltip(ui->debugConsoleMode, tooltips.settings.debug_console_mode);
 
+	m_emu_settings->EnhanceCheckBox(ui->accuratePPUfma, emu_settings::AccuratePPUfma);
+	SubscribeTooltip(ui->accuratePPUfma, tooltips.settings.accurate_ppu_fma);
+
 	m_emu_settings->EnhanceCheckBox(ui->silenceAllLogs, emu_settings::SilenceAllLogs);
 	SubscribeTooltip(ui->silenceAllLogs, tooltips.settings.silence_all_logs);
 
