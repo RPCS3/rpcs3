@@ -170,7 +170,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	compat_log.notice("Beginning compatibility database download from: %s", m_url);
 
 	// Show Progress
-	m_progress_dialog = new progress_dialog(tr("Downloading Database"), tr("Please wait ..."), tr("Abort"), 0, 100, true);
+	m_progress_dialog = new progress_dialog(tr("Downloading Database"), tr("Please wait..."), tr("Abort"), 0, 100, true);
 	m_progress_dialog->show();
 
 	curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, m_url.c_str());

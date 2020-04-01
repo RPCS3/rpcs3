@@ -383,7 +383,7 @@
     <string>Install .pkg</string>
    </property>
    <property name="toolTip">
-    <string>Install application from pkg file</string>
+    <string>Install an application from a .pkg file.</string>
    </property>
   </action>
   <action name="bootInstallPupAct">
@@ -391,7 +391,7 @@
     <string>Install Firmware</string>
    </property>
    <property name="toolTip">
-    <string>Install firmware from PS3UPDAT.PUP</string>
+    <string>Install a firmware from PS3UPDAT.PUP.</string>
    </property>
   </action>
   <action name="sysPauseAct">
@@ -406,7 +406,7 @@
     <string>Pause</string>
    </property>
    <property name="toolTip">
-    <string>Start Emulation</string>
+    <string>Starts the emulation.</string>
    </property>
   </action>
   <action name="sysStopAct">
@@ -421,7 +421,7 @@
     <string>Stop</string>
    </property>
    <property name="toolTip">
-    <string>Stop Emulation</string>
+    <string>Stops the emulation.</string>
    </property>
   </action>
   <action name="sysSendOpenMenuAct">
@@ -445,7 +445,7 @@
     <string>CPU</string>
    </property>
    <property name="toolTip">
-    <string>Configure CPU</string>
+    <string>Configure the CPU setting.</string>
    </property>
   </action>
   <action name="confGPUAct">
@@ -453,7 +453,7 @@
     <string>GPU</string>
    </property>
    <property name="toolTip">
-    <string>Configure Graphics</string>
+    <string>Configure the graphic settings.</string>
    </property>
   </action>
   <action name="confPadsAct">
@@ -464,7 +464,7 @@
     <string>Pads</string>
    </property>
    <property name="toolTip">
-    <string>Configure Controls</string>
+    <string>Configure the control settings.</string>
    </property>
   </action>
   <action name="confAudioAct">
@@ -472,7 +472,7 @@
     <string>Audio</string>
    </property>
    <property name="toolTip">
-    <string>Configure Audio</string>
+    <string>Configure the audio settings.</string>
    </property>
   </action>
   <action name="confIOAct">
@@ -480,7 +480,7 @@
     <string>Input/Output</string>
    </property>
    <property name="toolTip">
-    <string>Configure Input/Output</string>
+    <string>Configure the Input/Output settings.</string>
    </property>
   </action>
   <action name="confSystemAct">
@@ -488,7 +488,7 @@
     <string>System</string>
    </property>
    <property name="toolTip">
-    <string>Configure System</string>
+    <string>Configure the system settings.</string>
    </property>
   </action>
   <action name="confAutopauseManagerAct">
@@ -499,7 +499,7 @@
     <string>Auto Pause</string>
    </property>
    <property name="toolTip">
-    <string>Configure Auto Pause</string>
+    <string>Configure the Auto Pause function.</string>
    </property>
   </action>
   <action name="exitAct">
@@ -507,10 +507,10 @@
     <string>Exit</string>
    </property>
    <property name="toolTip">
-    <string>Exit RPCS3</string>
+    <string>Exits RPCS3.</string>
    </property>
    <property name="statusTip">
-    <string>Exit the application</string>
+    <string>Exit the application.</string>
    </property>
   </action>
   <action name="confSavedataManagerAct">
@@ -521,7 +521,7 @@
     <string>Save Data</string>
    </property>
    <property name="toolTip">
-    <string>Manage Save Data</string>
+    <string>Manage your saved data.</string>
    </property>
   </action>
   <action name="actionManage_Trophy_Data">
@@ -532,7 +532,7 @@
     <string>Trophies</string>
    </property>
    <property name="toolTip">
-    <string>Manage Trophies</string>
+    <string>Manage your trophies.</string>
    </property>
   </action>
   <action name="actionManage_Users">
@@ -540,7 +540,7 @@
     <string>User Accounts</string>
    </property>
    <property name="toolTip">
-    <string>Manage User Accounts</string>
+    <string>Manage your user accounts.</string>
    </property>
   </action>
   <action name="toolsCgDisasmAct">
@@ -845,7 +845,7 @@
     <string>Start</string>
    </property>
    <property name="toolTip">
-    <string>Start emulation</string>
+    <string>Start the emulation.</string>
    </property>
   </action>
   <action name="toolbar_stop">
@@ -857,7 +857,7 @@
     <string>Stop</string>
    </property>
    <property name="toolTip">
-    <string>Stop emulation</string>
+    <string>Stop the emulation.</string>
    </property>
   </action>
   <action name="toolbar_config">
@@ -869,7 +869,7 @@
     <string>Config</string>
    </property>
    <property name="toolTip">
-    <string>Configure the emulator</string>
+    <string>Configure the emulator.</string>
    </property>
   </action>
   <action name="toolbar_controls">
@@ -881,7 +881,7 @@
     <string>Pads</string>
    </property>
    <property name="toolTip">
-    <string>Configure controls</string>
+    <string>Configure your controls.</string>
    </property>
   </action>
   <action name="toolbar_fullscreen">
@@ -893,7 +893,7 @@
     <string>FullScr</string>
    </property>
    <property name="toolTip">
-    <string>Toggle fullscreen</string>
+    <string>Toggle fullscreen.</string>
    </property>
   </action>
   <action name="toolbar_list">
@@ -905,7 +905,7 @@
     <string>List</string>
    </property>
    <property name="toolTip">
-    <string>Switch to list mode</string>
+    <string>Switch to list mode.</string>
    </property>
   </action>
   <action name="toolbar_grid">
@@ -917,7 +917,7 @@
     <string>Grid</string>
    </property>
    <property name="toolTip">
-    <string>Switch to grid mode</string>
+    <string>Switch to grid mode.</string>
    </property>
   </action>
   <action name="toolbar_refresh">
@@ -929,7 +929,7 @@
     <string>Refresh</string>
    </property>
    <property name="toolTip">
-    <string>Refresh gamelist</string>
+    <string>Refresh the gamelist.</string>
    </property>
   </action>
   <action name="toolbar_open">
@@ -941,7 +941,7 @@
     <string>Open</string>
    </property>
    <property name="toolTip">
-    <string>Boot game</string>
+    <string>Boot the selected game.</string>
    </property>
   </action>
   <action name="showCatOtherAct">
