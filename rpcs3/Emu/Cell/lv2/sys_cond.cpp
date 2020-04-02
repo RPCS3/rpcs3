@@ -24,13 +24,15 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 		return CELL_ESRCH;
 	}
 
-	if (auto error = lv2_obj::create<lv2_cond>(attr->pshared, attr->ipc_key, attr->flags, [&]
+	const auto _attr = *attr;
+
+	if (auto error = lv2_obj::create<lv2_cond>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
 	{
 		return std::make_shared<lv2_cond>(
-			attr->pshared,
-			attr->flags,
-			attr->ipc_key,
-			attr->name_u64,
+			_attr.pshared,
+			_attr.flags,
+			_attr.ipc_key,
+			_attr.name_u64,
 			std::move(mutex));
 	}))
 	{

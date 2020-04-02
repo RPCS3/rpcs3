@@ -364,6 +364,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 	}
 
 	const ppu_func_opd_t entry = param->entry.opd();
+	const u32 tls = param->tls;
 
 	// Clean some detached thread (hack)
 	g_fxo->get<ppu_thread_cleaner>()->clean(0);
@@ -389,6 +390,13 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 
 	std::string ppu_name;
 
+	if (threadname)
+	{
+		constexpr u32 max_size = 27; // max size including null terminator
+		const auto pname = threadname.get_ptr();
+		ppu_name.assign(pname, std::find(pname, pname + max_size, '\0'));
+	}
+
 	const u32 tid = idm::import<named_thread<ppu_thread>>([&]()
 	{
 		const u32 tid = idm::last_id();
@@ -397,10 +405,6 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 
 		if (threadname)
 		{
-			constexpr u32 max_size = 27; // max size including null terminator
-			const auto pname = threadname.get_ptr();
-			ppu_name.assign(pname, std::find(pname, pname + max_size, '\0'));
-
 			if (!ppu_name.empty())
 			{
 				fmt::append(full_name, " (%s)", ppu_name);
@@ -410,7 +414,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 		ppu_thread_params p;
 		p.stack_addr = stack_base;
 		p.stack_size = stack_size;
-		p.tls_addr = param->tls;
+		p.tls_addr = tls;
 		p.entry = entry;
 		p.arg0 = arg;
 		p.arg1 = unk;
@@ -426,7 +430,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 	}
 
 	*thread_id = tid;
-	sys_ppu_thread.warning(u8"_sys_ppu_thread_create(): Thread “%s” created (id=0x%x, func=*0x%x, rtoc=0x%x)", ppu_name, tid, entry.addr, entry.rtoc);
+	sys_ppu_thread.warning(u8"_sys_ppu_thread_create(): Thread “%s” created (id=0x%x, func=*0x%x, rtoc=0x%x, user-tls=0x%x)", ppu_name, tid, entry.addr, entry.rtoc, tls);
 	return CELL_OK;
 }
 
