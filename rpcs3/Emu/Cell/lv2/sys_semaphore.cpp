@@ -28,7 +28,9 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 		return CELL_EINVAL;
 	}
 
-	const u32 protocol = attr->protocol;
+	const auto _attr = *attr;
+
+	const u32 protocol = _attr.protocol;
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY)
 	{
@@ -36,9 +38,9 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 		return CELL_EINVAL;
 	}
 
-	if (auto error = lv2_obj::create<lv2_sema>(attr->pshared, attr->ipc_key, attr->flags, [&]
+	if (auto error = lv2_obj::create<lv2_sema>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
 	{
-		return std::make_shared<lv2_sema>(protocol, attr->pshared, attr->ipc_key, attr->flags, attr->name_u64, max_val, initial_val);
+		return std::make_shared<lv2_sema>(protocol, _attr.pshared, _attr.ipc_key, _attr.flags, _attr.name_u64, max_val, initial_val);
 	}))
 	{
 		return error;
@@ -268,13 +270,16 @@ error_code sys_semaphore_get_value(ppu_thread& ppu, u32 sem_id, vm::ptr<s32> cou
 		return CELL_EFAULT;
 	}
 
-	if (!idm::check<lv2_obj, lv2_sema>(sem_id, [=](lv2_sema& sema)
+	const auto sema = idm::check<lv2_obj, lv2_sema>(sem_id, [](lv2_sema& sema)
 	{
-		*count = std::max<s32>(0, sema.val);
-	}))
+		return std::max<s32>(0, sema.val);
+	});
+
+	if (!sema)
 	{
 		return CELL_ESRCH;
 	}
 
+	*count = sema.ret;
 	return CELL_OK;
 }

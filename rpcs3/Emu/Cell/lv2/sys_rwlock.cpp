@@ -22,7 +22,9 @@ error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<s
 		return CELL_EFAULT;
 	}
 
-	const u32 protocol = attr->protocol;
+	const auto _attr = *attr;
+
+	const u32 protocol = _attr.protocol;
 
 	if (protocol == SYS_SYNC_PRIORITY_INHERIT)
 		sys_rwlock.todo("sys_rwlock_create(): SYS_SYNC_PRIORITY_INHERIT");
@@ -33,9 +35,9 @@ error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<s
 		return CELL_EINVAL;
 	}
 
-	if (auto error = lv2_obj::create<lv2_rwlock>(attr->pshared, attr->ipc_key, attr->flags, [&]
+	if (auto error = lv2_obj::create<lv2_rwlock>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
 	{
-		return std::make_shared<lv2_rwlock>(protocol, attr->pshared, attr->ipc_key, attr->flags, attr->name_u64);
+		return std::make_shared<lv2_rwlock>(protocol, _attr.pshared, _attr.ipc_key, _attr.flags, _attr.name_u64);
 	}))
 	{
 		return error;
