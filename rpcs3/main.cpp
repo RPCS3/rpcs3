@@ -26,6 +26,8 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <unistd.h>
 #include <spawn.h>
 #include <sys/wait.h>
+#include <stdlib.h>
+#include <limits.h>
 #endif
 
 #ifdef __linux__
@@ -129,9 +131,24 @@ LOG_CHANNEL(sys_log, "SYS");
 #else
 			pid_t pid;
 			std::vector<char> data(text.data(), text.data() + text.size() + 1);
+			std::string run_arg = +s_argv0;
 			std::string err_arg = "--error";
-			char* argv[] = {+s_argv0, err_arg.data(), data.data(), nullptr};
-			int ret = posix_spawn(&pid, +s_argv0, nullptr, nullptr, argv, environ);
+
+			if (run_arg.find_first_of('/') == umax)
+			{
+				// AppImage has "rpcs3" in argv[0], can't just execute it
+#ifdef __linux__
+				char buffer[PATH_MAX]{};
+				if (::readlink("/proc/self/exe", buffer, sizeof(buffer) - 1) > 0)
+				{
+					printf("Found exec link: %s\n", buffer);
+					run_arg = buffer;
+				}
+#endif
+			}
+
+			char* argv[] = {run_arg.data(), err_arg.data(), data.data(), nullptr};
+			int ret = posix_spawn(&pid, run_arg.c_str(), nullptr, nullptr, argv, environ);
 
 			if (ret == 0)
 			{
