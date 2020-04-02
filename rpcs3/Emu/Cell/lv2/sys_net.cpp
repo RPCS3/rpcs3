@@ -1297,7 +1297,16 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 	int native_flags = 0;
 	int native_result = -1;
 	::sockaddr_in name{};
-	std::string _buf(vm::_ptr<const char>(buf.addr()), vm::_ptr<const char>(buf.addr()) + len);
+	std::string _buf;
+
+	if (idm::check<lv2_socket>(s))
+	{
+		_buf.assign(vm::_ptr<const char>(buf.addr()), vm::_ptr<const char>(buf.addr()) + len);
+	}
+	else
+	{
+		return -SYS_NET_EBADF;
+	}
 
 	if (addr)
 	{

@@ -45,6 +45,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<tsx_usage> enable_TSX{ this, "Enable TSX", tsx_usage::enabled }; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
 		cfg::_bool spu_accurate_xfloat{ this, "Accurate xfloat", false };
 		cfg::_bool spu_approx_xfloat{ this, "Approximate xfloat", true };
+		cfg::_bool ppu_accurate_fma{ this, "PPU Accurate FMA", true }; // Enable accurate FMA for CPUs which do not support it natively (can't be disabled for CPUs which do support it)
 
 		cfg::_bool debug_console_mode{ this, "Debug Console Mode", false }; // Debug console emulation, not recommended
 		cfg::_enum<lib_loading_type> lib_loading{ this, "Lib Loader", lib_loading_type::liblv2only };
@@ -134,6 +135,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
 		cfg::_int<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 1, true };
 		cfg::_int<1, 1800> vblank_rate{ this, "Vblank Rate", 60, true }; // Changing this from 60 may affect game speed in unexpected ways
+		cfg::_bool decr_memory_layout{ this, "DECR memory layout", false}; // Force enable increased allowed main memory range as DECR console 
 
 		struct node_vk : cfg::node
 		{
@@ -263,7 +265,7 @@ struct cfg_root : cfg::node
 		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true, true };
 		cfg::_bool use_native_interface{ this, "Use native user interface", true };
 		cfg::string gdb_server{ this, "GDB Server", "127.0.0.1:2345" };
-		cfg::_bool silence_all_logs{ this, "Silence All Logs", false, false };
+		cfg::_bool silence_all_logs{ this, "Silence All Logs", false, true };
 		cfg::string title_format{ this, "Window Title Format", "FPS: %F | %R | %V | %T [%t]", true };
 	
 	} misc{ this };

@@ -541,8 +541,6 @@ namespace rsx
 			vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
 			vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
 		{
-			//NOTE: Transform constants persist through a context reset (NPEB00913)
-			transform_constants = {};
 		}
 
 		~rsx_state() = default;
@@ -1331,9 +1329,10 @@ namespace rsx
 			return decode<NV4097_SET_VERTEX_DATA_BASE_INDEX>().vertex_data_base_index();
 		}
 
-		u32 shader_program_address() const
+		std::pair<u32, u32> shader_program_address() const
 		{
-			return decode<NV4097_SET_SHADER_PROGRAM>().shader_program_address();
+			const u32 shader_address = decode<NV4097_SET_SHADER_PROGRAM>().shader_program_address();
+			return { shader_address & ~3, (shader_address & 3) - 1 };
 		}
 
 		u32 transform_program_start() const
@@ -1610,20 +1609,14 @@ namespace rsx
 			return u16(registers[NV308A_SIZE_OUT] & 0xFFFF);
 		}
 
-		u32 transform_program_load()
+		u32 transform_program_load() const
 		{
 			return registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
 		}
 
-		void commit_4_transform_program_instructions(u32 index)
+		void transform_program_load_set(u32 value)
 		{
-			u32& load = registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
-
-			transform_program[load * 4] = registers[NV4097_SET_TRANSFORM_PROGRAM + index * 4];
-			transform_program[load * 4 + 1] = registers[NV4097_SET_TRANSFORM_PROGRAM + index * 4 + 1];
-			transform_program[load * 4 + 2] = registers[NV4097_SET_TRANSFORM_PROGRAM + index * 4 + 2];
-			transform_program[load * 4 + 3] = registers[NV4097_SET_TRANSFORM_PROGRAM + index * 4 + 3];
-			load++;
+			registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD] = value;
 		}
 
 		u32 transform_constant_load()

@@ -524,32 +524,44 @@ namespace rsx
 					rsx::frame_capture_data::replay_command replay_cmd;
 					replay_cmd.rsx_command = std::make_pair((reg << 2) | (1u << 18), value);
 
-					frame_capture.replay_commands.push_back(replay_cmd);
-					auto it = frame_capture.replay_commands.back();
+					auto& commands = frame_capture.replay_commands;
+					commands.push_back(replay_cmd);
 
 					switch (reg)
 					{
 					case NV3089_IMAGE_IN:
-						capture::capture_image_in(this, it);
+						capture::capture_image_in(this, commands.back());
 						break;
 					case NV0039_BUFFER_NOTIFY:
-						capture::capture_buffer_notify(this, it);
+						capture::capture_buffer_notify(this, commands.back());
 						break;
 					default:
 					{
-						// Use legacy logic for NV308A_COLOR - enqueue leading command with count
+						static constexpr std::array<std::pair<u32, u32>, 2> ranges
+						{{
+							{NV308A_COLOR, 0x700},
+							{NV4097_SET_TRANSFORM_PROGRAM, 32}
+						}};
+
+						// Use legacy logic - enqueue leading command with count
 						// Then enqueue each command arg alone with a no-op command
-						if (reg >= NV308A_COLOR && reg < NV308A_COLOR + 0x700)
+						for (const auto& range : ranges)
 						{
-							const u32 remaining = std::min<u32>(fifo_ctrl->get_remaining_args_count(), (NV308A_COLOR + 0x700) - reg);
-
-							it.rsx_command.first = (fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) | (reg << 2) | (remaining << 18);
-
-							for (u32 i = 0; i < remaining && fifo_ctrl->get_pos() + (i + 1) * 4 != (ctrl->put & ~3); i++)
+							if (reg >= range.first && reg < range.first + range.second)
 							{
-								replay_cmd.rsx_command = std::make_pair(0, vm::read32(fifo_ctrl->get_current_arg_ptr() + (i + 1) * 4));
+								const u32 remaining = std::min<u32>(fifo_ctrl->get_remaining_args_count() + 1,
+									(fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) ? UINT32_MAX : (range.first + range.second) - reg);
 
-								frame_capture.replay_commands.push_back(replay_cmd);
+								commands.back().rsx_command.first = (fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) | (reg << 2) | (remaining << 18);
+
+								for (u32 i = 1; i < remaining && fifo_ctrl->get_pos() + (i - 1) * 4 != (ctrl->put & ~3); i++)
+								{
+									replay_cmd.rsx_command = std::make_pair(0, vm::read32(fifo_ctrl->get_current_arg_ptr() + (i * 4)));
+
+									commands.push_back(replay_cmd);
+								}
+
+								break;
 							}
 						}
 
@@ -602,13 +614,6 @@ namespace rsx
 			if (auto method = methods[reg])
 			{
 				method(this, reg, value);
-
-				if (invalid_command_interrupt_raised)
-				{
-					fifo_ctrl->abort();
-					recover_fifo();
-					return;
-				}
 			}
 		}
 		while (fifo_ctrl->read_unsafe(command));

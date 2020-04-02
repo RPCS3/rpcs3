@@ -74,7 +74,7 @@
 #include "sync.h"
 #include "util/logs.hpp"
 
-LOG_CHANNEL(sig_log);
+LOG_CHANNEL(sig_log, "SIG");
 LOG_CHANNEL(sys_log, "SYS");
 LOG_CHANNEL(vm_log, "VM");
 

@@ -6,6 +6,7 @@
 #include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/RSX/Common/BufferUtils.h"
 
 #include <thread>
 #include <atomic>
@@ -42,7 +43,7 @@ namespace rsx
 		const u32 cmd = rsx->get_fifo_cmd();
 		rsx_log.error("Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg,
 		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
-		rsx->invalid_command_interrupt_raised = true;
+		rsx->recover_fifo();
 	}
 
 	void trace_method(thread* rsx, u32 _reg, u32 arg)
@@ -450,17 +451,30 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
-				if (rsx::method_registers.transform_program_load() >= 512)
+				// Get real args count
+				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
+					static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos() - 4)) / 4), 32 - index});
+
+				const u32 load_pos = rsx::method_registers.transform_program_load();
+
+				u32 rcount = count;
+
+				if (const u32 max = load_pos * 4 + rcount + (index % 4);
+					max > 512 * 4)
 				{
 					// PS3 seems to allow exceeding the program buffer by upto 32 instructions before crashing
 					// Discard the "excess" instructions to not overflow our transform program buffer
 					// TODO: Check if the instructions in the overflow area are executed by PS3
 					rsx_log.warning("Program buffer overflow!");
-					return;
+					rcount -= max - (512 * 4);
 				}
 
-				method_registers.commit_4_transform_program_instructions(index);
+				stream_data_to_memory_swapped_u32<true>(&rsx::method_registers.transform_program[load_pos * 4 + index % 4]
+					, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount, 4);
+
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+				rsx::method_registers.transform_program_load_set(load_pos + ((rcount + index % 4) / 4));
+				rsx->fifo_ctrl->skip_methods(count - 1);
 			}
 		};
 
@@ -527,7 +541,7 @@ namespace rsx
 				if (rsx::method_registers.current_draw_clause.primitive == rsx::primitive_type::invalid)
 				{
 					// Recover from invalid primitive only if draw clause is not empty
-					rsxthr->invalid_command_interrupt_raised = true;
+					rsxthr->recover_fifo();
 
 					rsx_log.error("NV4097_SET_BEGIN_END aborted due to invalid primitive!");
 					return;
@@ -741,7 +755,7 @@ namespace rsx
 			{
 				// Ignore invalid value, recover
 				method_registers.registers[reg] = method_registers.register_previous_value;
-				rsx->invalid_command_interrupt_raised = true;
+				rsx->recover_fifo();
 
 				rsx_log.error("Invalid NV4097_SET_INDEX_ARRAY_DMA value: 0x%x", arg);
 			}
@@ -862,16 +876,22 @@ namespace rsx
 					{
 						// Move last 32 bits
 						reinterpret_cast<u32*>(dst)[0] = reinterpret_cast<const u32*>(src)[count - 1];
-					}
-					else if (dst_dma & CELL_GCM_LOCATION_MAIN)
-					{
-						// May overlap
-						std::memmove(dst, src, data_length);
+						rsx->invalidate_fragment_program(dst_dma, dst_offset, 4);
 					}
 					else
 					{
-						// Never overlaps
-						std::memcpy(dst, src, data_length);
+						if (dst_dma & CELL_GCM_LOCATION_MAIN)
+						{
+							// May overlap
+							std::memmove(dst, src, data_length);
+						}
+						else
+						{
+							// Never overlaps
+							std::memcpy(dst, src, data_length);
+						}
+
+						rsx->invalidate_fragment_program(dst_dma, dst_offset, count * 4);
 					}
 
 					break;
@@ -898,6 +918,7 @@ namespace rsx
 					{
 						// Move last 16 bits
 						dst[0] = convert(src[count - 1]);
+						rsx->invalidate_fragment_program(dst_dma, dst_offset, 2);
 						break;
 					}
 
@@ -906,6 +927,7 @@ namespace rsx
 						dst[i] = convert(src[i]);
 					}
 
+					rsx->invalidate_fragment_program(dst_dma, dst_offset, count * 2);
 					break;
 				}
 				default:
@@ -915,12 +937,6 @@ namespace rsx
 				}
 
 				//res->release(0);
-
-				if (!(dst_dma & CELL_GCM_LOCATION_MAIN))
-				{
-					// Set this flag on LOCAL memory transfer
-					rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
-				}
 
 				// Skip "handled methods"
 				rsx->fifo_ctrl->skip_methods(count - 1);
@@ -1072,6 +1088,8 @@ namespace rsx
 				const u32 nb_lines = std::min(clip_h, in_h);
 				const u32 data_length = nb_lines * src_line_length;
 
+				rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
+
 				if (const auto result = rsx->read_barrier(src_address, data_length, false);
 					result == rsx::result_zcull_intr)
 				{
@@ -1085,6 +1103,8 @@ namespace rsx
 			else
 			{
 				const u32 data_length = in_pitch * (in_h - 1) + src_line_length;
+
+				rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
 				rsx->read_barrier(src_address, data_length, true);
 			}
 
@@ -1423,6 +1443,8 @@ namespace rsx
 			const auto write_address = get_address(dst_offset, dst_dma, HERE);
 			const auto data_length = in_pitch * (line_count - 1) + line_length;
 
+			rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
+	
 			if (const auto result = rsx->read_barrier(read_address, data_length, !is_block_transfer);
 				result == rsx::result_zcull_intr)
 			{
@@ -1564,6 +1586,8 @@ namespace rsx
 	{
 		// Reset all regsiters
 		registers.fill(0);
+		transform_program.fill(0);
+		transform_constants = {};
 
 		// Special values set at initialization, these are not set by a context reset
 		registers[NV4097_SET_SHADER_PROGRAM] = (0 << 2) | (CELL_GCM_LOCATION_LOCAL + 1);
@@ -2994,7 +3018,7 @@ namespace rsx
 		bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4S_M, 1, 32, nv4097::set_vertex_data4s_m>();
 		bind_range<NV4097_SET_TRANSFORM_CONSTANT, 1, 32, nv4097::set_transform_constant>();
-		bind_range<NV4097_SET_TRANSFORM_PROGRAM + 3, 4, 32 / 4, nv4097::set_transform_program>();
+		bind_range<NV4097_SET_TRANSFORM_PROGRAM, 1, 32, nv4097::set_transform_program>();
 		bind<NV4097_GET_REPORT, nv4097::get_report>();
 		bind<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
 		bind<NV4097_SET_SURFACE_CLIP_HORIZONTAL, nv4097::set_surface_dirty_bit>();

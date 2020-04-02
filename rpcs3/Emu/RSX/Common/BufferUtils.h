@@ -55,3 +55,11 @@ void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w);
  * Stream a 128 bits vector from src to dst.
  */
 void stream_vector_from_memory(void *dst, void *src);
+
+/**
+ * Stream and swap data in u32 units.
+ */
+template <bool unaligned = false>
+void stream_data_to_memory_swapped_u32(void *dst, const void *src, u32 vertex_count, u8 stride);
+
+

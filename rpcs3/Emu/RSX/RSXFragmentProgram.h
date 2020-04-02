@@ -230,6 +230,7 @@ struct RSXFragmentProgram
 	void *addr;
 	u32 offset;
 	u32 ucode_length;
+	u32 total_length;
 	u32 ctrl;
 	u16 unnormalized_coords;
 	u16 redirected_textures;

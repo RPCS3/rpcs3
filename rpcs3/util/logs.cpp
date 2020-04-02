@@ -208,6 +208,14 @@ namespace logs
 		}
 	}
 
+	void set_channel_levels(const std::map<std::string, logs::level>& map)
+	{
+		for (auto&& pair : map)
+		{
+			logs::set_level(pair.first, pair.second);
+		}
+	}
+
 	std::vector<std::string> get_channels()
 	{
 		std::vector<std::string> result;
