@@ -3881,7 +3881,7 @@ void PPUTranslator::FMADDS(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.ppu_accurate_fma)
+	if (g_cfg.core.llvm_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
 	}
@@ -3909,7 +3909,7 @@ void PPUTranslator::FMSUBS(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.ppu_accurate_fma)
+	if (g_cfg.core.llvm_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
 	}
@@ -3937,7 +3937,7 @@ void PPUTranslator::FNMSUBS(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.ppu_accurate_fma)
+	if (g_cfg.core.llvm_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
 	}
@@ -3965,7 +3965,7 @@ void PPUTranslator::FNMADDS(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.ppu_accurate_fma)
+	if (g_cfg.core.llvm_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
 	}
@@ -4225,7 +4225,7 @@ void PPUTranslator::FMSUB(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.ppu_accurate_fma)
+	if (g_cfg.core.llvm_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
 	}
@@ -4253,7 +4253,7 @@ void PPUTranslator::FMADD(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.ppu_accurate_fma)
+	if (g_cfg.core.llvm_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, b });
 	}
@@ -4281,7 +4281,7 @@ void PPUTranslator::FNMSUB(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.ppu_accurate_fma)
+	if (g_cfg.core.llvm_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
 	}
@@ -4309,7 +4309,7 @@ void PPUTranslator::FNMADD(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.ppu_accurate_fma)
+	if (g_cfg.core.llvm_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
 	}

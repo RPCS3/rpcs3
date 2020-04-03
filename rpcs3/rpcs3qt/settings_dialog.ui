@@ -1717,13 +1717,13 @@
                 </property>
                </widget>
               </item>
-              <item>
-               <widget class="QCheckBox" name="accuratePPUfma">
-                <property name="text">
-                 <string>Accurate PPU FMA</string>
-                </property>
-               </widget>
-              </item>
+            <item>
+             <widget class="QCheckBox" name="accurateLLVMdfma">
+              <property name="text">
+               <string>Accurate LLVM DFMA</string>
+              </property>
+             </widget>
+            </item>
               <item>
                <widget class="QCheckBox" name="silenceAllLogs">
                 <property name="text">
