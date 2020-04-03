@@ -455,7 +455,7 @@ std::string ppu_thread::dump_callstack() const
 	for (u32 sp : dump_callstack_list())
 	{
 		// TODO: function addresses too
-		fmt::append(ret, "> from 0x%04llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
+		fmt::append(ret, "> from 0x%08x (0x0)\n", sp);
 	}
 
 	return ret;
