@@ -40,11 +40,6 @@ struct lv2_cond final : lv2_obj
 	{
 		this->mutex->cond_count++;
 	}
-
-	~lv2_cond()
-	{
-		this->mutex->cond_count--;
-	}
 };
 
 class ppu_thread;
