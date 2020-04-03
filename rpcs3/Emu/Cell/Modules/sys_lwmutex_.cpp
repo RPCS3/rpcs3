@@ -178,7 +178,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 		// locking succeeded
 		auto old = lwmutex->vars.owner.exchange(tid);
 
-		if (old != lwmutex_reserved && old >> 24 != 1)
+		if (old != lwmutex_reserved)
 		{
 			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
 		}
@@ -308,7 +308,7 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 			// locking succeeded
 			auto old = lwmutex->vars.owner.exchange(tid);
 
-			if (old != lwmutex_reserved && old >> 24 != 1)
+			if (old != lwmutex_reserved)
 			{
 				fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
 			}
