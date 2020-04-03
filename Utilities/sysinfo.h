@@ -47,6 +47,12 @@ namespace utils
 
 	bool has_clwb();
 
+	bool has_invariant_tsc();
+
+	bool has_fma3();
+
+	bool has_fma4();
+
 	std::string get_cpu_brand();
 
 	std::string get_system_info();
