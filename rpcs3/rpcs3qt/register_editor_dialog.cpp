@@ -56,9 +56,9 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 	{
 		if (_cpu->id_type() == 1)
 		{
-			for (int i = 0; i < 32; i++) m_register_combo->addItem(qstr(fmt::format("GPR[%d]", i)));
-			for (int i = 0; i < 32; i++) m_register_combo->addItem(qstr(fmt::format("FPR[%d]", i)));
-			for (int i = 0; i < 32; i++) m_register_combo->addItem(qstr(fmt::format("VR[%d]", i)));
+			for (int i = 0; i < 32; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i)));
+			for (int i = 0; i < 32; i++) m_register_combo->addItem(qstr(fmt::format("f%d", i)));
+			for (int i = 0; i < 32; i++) m_register_combo->addItem(qstr(fmt::format("v%d", i)));
 			m_register_combo->addItem("CR");
 			m_register_combo->addItem("LR");
 			m_register_combo->addItem("CTR");
@@ -67,7 +67,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 		}
 		else
 		{
-			for (int i = 0; i < 128; i++) m_register_combo->addItem(qstr(fmt::format("GPR[%d]", i)));
+			for (int i = 0; i < 128; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i)));
 		}
 	}
 
