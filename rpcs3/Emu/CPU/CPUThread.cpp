@@ -412,7 +412,7 @@ void cpu_thread::operator()()
 		{
 			if (_this)
 			{
-				sys_log.warning("CPU Thread '%s' terminated abnormally:\n%s", name, _this->dump());
+				sys_log.warning("CPU Thread '%s' terminated abnormally:\n%s", name, _this->dump_all());
 				cleanup();
 			}
 		}
@@ -599,7 +599,27 @@ std::string cpu_thread::get_name() const
 	}
 }
 
-std::string cpu_thread::dump() const
+std::string cpu_thread::dump_all() const
+{
+	return {};
+}
+
+std::string cpu_thread::dump_regs() const
+{
+	return {};
+}
+
+std::string cpu_thread::dump_callstack() const
+{
+	return {};
+}
+
+std::vector<u32> cpu_thread::dump_callstack_list() const
+{
+	return {};
+}
+
+std::string cpu_thread::dump_misc() const
 {
 	return fmt::format("Type: %s\n" "State: %s\n", typeid(*this).name(), state.load());
 }

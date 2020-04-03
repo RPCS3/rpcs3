@@ -1,7 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "../Utilities/Thread.h"
 #include "../Utilities/bit_set.h"
+
+#include <vector>
 
 // Thread state flags
 enum class cpu_flag : u32
@@ -91,8 +93,20 @@ public:
 	// Get thread name (as assigned to named_thread)
 	std::string get_name() const;
 
-	// Get CPU state dump
-	virtual std::string dump() const;
+	// Get CPU state dump (everything)
+	virtual std::string dump_all() const = 0;
+
+	// Get CPU register dump
+	virtual std::string dump_regs() const;
+
+	// Get CPU call stack dump
+	virtual std::string dump_callstack() const;
+
+	// Get CPU call stack list
+	virtual std::vector<u32> dump_callstack_list() const;
+
+	// Get CPU dump of misc information
+	virtual std::string dump_misc() const;
 
 	// Thread entry point function
 	virtual void cpu_task() = 0;

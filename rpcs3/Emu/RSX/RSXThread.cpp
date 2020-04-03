@@ -1585,10 +1585,7 @@ namespace rsx
 		m_graphics_state &= ~(rsx::pipeline_state::fragment_program_dirty);
 		auto &result = current_fragment_program = {};
 
-		const u32 shader_program = rsx::method_registers.shader_program_address();
-
-		const u32 program_location = (shader_program & 0x3) - 1;
-		const u32 program_offset = (shader_program & ~0x3);
+		const auto [program_offset, program_location] = method_registers.shader_program_address();
 
 		result.addr = vm::base(rsx::get_address(program_offset, program_location, HERE));
 		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(result.addr);
@@ -1596,6 +1593,7 @@ namespace rsx
 		result.addr = (static_cast<u8*>(result.addr) + current_fp_metadata.program_start_offset);
 		result.offset = program_offset + current_fp_metadata.program_start_offset;
 		result.ucode_length = current_fp_metadata.program_ucode_length;
+		result.total_length = result.ucode_length + current_fp_metadata.program_start_offset;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.texcoord_control_mask = rsx::method_registers.texcoord_control_mask();
@@ -1735,6 +1733,22 @@ namespace rsx
 				rsx_log.error("FS exports depth component but depth test is disabled (INVALID_OPERATION)");
 			}
 		}
+	}
+
+	bool thread::invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size)
+	{
+		const auto [shader_offset, shader_dma] = rsx::method_registers.shader_program_address();
+
+		if ((dst_dma & CELL_GCM_LOCATION_MAIN) == shader_dma &&
+		address_range::start_length(shader_offset, current_fragment_program.total_length).overlaps(
+			address_range::start_length(dst_offset, size))) [[unlikely]]
+		{
+			// Data overlaps
+			m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+			return true;
+		}
+
+		return false;
 	}
 
 	void thread::reset()
@@ -2277,7 +2291,7 @@ namespace rsx
 		fifo_ctrl->set_get(restore_point);
 		fifo_ret_addr = saved_fifo_ret;
 		std::this_thread::sleep_for(1ms);
-		invalid_command_interrupt_raised = false;
+		fifo_ctrl->abort();
 
 		if (std::exchange(in_begin_end, false) && !rsx::method_registers.current_draw_clause.empty())
 		{

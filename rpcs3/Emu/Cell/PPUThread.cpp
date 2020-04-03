@@ -58,6 +58,8 @@
 
 #include <thread>
 #include <cfenv>
+#include <cctype>
+#include <string>
 
 const bool s_use_ssse3 = utils::has_ssse3();
 
@@ -368,9 +370,134 @@ extern bool ppu_patch(u32 addr, u32 value)
 	return true;
 }
 
-std::string ppu_thread::dump() const
+std::string ppu_thread::dump_all() const
 {
-	std::string ret = cpu_thread::dump();
+	std::string ret = cpu_thread::dump_misc() + '\n';
+
+	ret += dump_misc() + '\n';
+	ret += dump_regs() + '\n';
+	ret += dump_callstack();
+
+	return ret;
+}
+
+std::string ppu_thread::dump_regs() const
+{
+	std::string ret;
+
+	for (uint i = 0; i < 32; ++i)
+	{
+		auto reg = gpr[i];
+
+		fmt::append(ret, "GPR[%-2d] = 0x%-8llx", i, reg);
+
+		const u32 max_str_len = 32;
+		const u32 hex_count = 10;
+
+		if (vm::check_addr(reg, max_str_len, vm::page_readable))
+		{
+			const u64 reg_ptr = vm::read64(reg);
+
+			if (vm::check_addr(reg_ptr, max_str_len, vm::page_readable))
+			{
+				reg = reg_ptr;
+			}
+
+			const auto gpr_buf = vm::get_super_ptr<u8>(reg);
+
+			std::string buf_tmp(gpr_buf, gpr_buf + max_str_len);
+
+			if (std::isprint(static_cast<u8>(buf_tmp[0])) && std::isprint(static_cast<u8>(buf_tmp[1])) && std::isprint(static_cast<u8>(buf_tmp[2])))
+			{
+				fmt::append(ret, "  ->  \"%s\"", buf_tmp.c_str());
+			}
+			else
+			{
+				fmt::append(ret, "  ->  ");
+
+				for (u32 j = 0; j < hex_count; ++j)
+				{
+					fmt::append(ret, "%02x ", buf_tmp[j]);
+				}
+			}
+		}
+
+		fmt::append(ret, "\n");
+	}
+	for (uint i = 0; i < 32; ++i) fmt::append(ret, "FPR[%d] = %.6G\n", i, fpr[i]);
+	for (uint i = 0; i < 32; ++i) fmt::append(ret, "VR[%d] = %s [x: %g y: %g z: %g w: %g]\n", i, vr[i], vr[i]._f[3], vr[i]._f[2], vr[i]._f[1], vr[i]._f[0]);
+
+	fmt::append(ret, "CR = 0x%08x\n", cr.pack());
+	fmt::append(ret, "LR = 0x%llx\n", lr);
+	fmt::append(ret, "CTR = 0x%llx\n", ctr);
+	fmt::append(ret, "VRSAVE = 0x%08x\n", vrsave);
+	fmt::append(ret, "XER = [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
+	fmt::append(ret, "VSCR = [SAT=%u | NJ=%u]\n", sat, nj);
+	fmt::append(ret, "FPSCR = [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
+
+	return ret;
+}
+
+std::string ppu_thread::dump_callstack() const
+{
+	std::string ret;
+
+	fmt::append(ret, "Call stack:\n=========\n0x%08x (0x0) called\n", cia);
+
+	for (u32 sp : dump_callstack_list())
+	{
+		// TODO: function addresses too
+		fmt::append(ret, "> from 0x%04llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
+	}
+
+	return ret;
+}
+
+std::vector<u32> ppu_thread::dump_callstack_list() const
+{
+	//std::shared_lock rlock(vm::g_mutex); // Needs optimizations
+
+	// Determine stack range
+	const u32 stack_ptr = static_cast<u32>(gpr[1]);
+
+	if (!vm::check_addr(stack_ptr, 1, vm::page_writable))
+	{
+		// Normally impossible unless the code does not follow ABI rules
+		return {};
+	}
+
+	u32 stack_min = stack_ptr & ~0xfff;
+	u32 stack_max = stack_min + 4096;
+
+	while (stack_min && vm::check_addr(stack_min - 4096, 4096, vm::page_writable))
+	{
+		stack_min -= 4096;
+	}
+
+	while (stack_max + 4096 && vm::check_addr(stack_max, 4096, vm::page_writable))
+	{
+		stack_max += 4096;
+	}
+
+	std::vector<u32> call_stack_list;
+
+	for (
+		u64 sp = *vm::get_super_ptr<u64>(stack_ptr);
+		sp >= stack_min && std::max(sp, sp + 0x200) < stack_max;
+		sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp))
+		)
+	{
+		// TODO: function addresses too
+		call_stack_list.push_back(*vm::get_super_ptr<u64>(static_cast<u32>(sp + 16)));
+	}
+
+	return call_stack_list;
+}
+
+std::string ppu_thread::dump_misc() const
+{
+	std::string ret;
+
 	fmt::append(ret, "Priority: %d\n", +prio);
 	fmt::append(ret, "Stack: 0x%x..0x%x\n", stack_addr, stack_addr + stack_size - 1);
 	fmt::append(ret, "Joiner: %s\n", joiner.load());
@@ -411,51 +538,6 @@ std::string ppu_thread::dump() const
 	{
 		ret += '\n';
 	}
-
-	ret += "\nRegisters:\n=========\n";
-	for (uint i = 0; i < 32; ++i) fmt::append(ret, "GPR[%d] = 0x%llx\n", i, gpr[i]);
-	for (uint i = 0; i < 32; ++i) fmt::append(ret, "FPR[%d] = %.6G\n", i, fpr[i]);
-	for (uint i = 0; i < 32; ++i) fmt::append(ret, "VR[%d] = %s [x: %g y: %g z: %g w: %g]\n", i, vr[i], vr[i]._f[3], vr[i]._f[2], vr[i]._f[1], vr[i]._f[0]);
-
-	fmt::append(ret, "CR = 0x%08x\n", cr.pack());
-	fmt::append(ret, "LR = 0x%llx\n", lr);
-	fmt::append(ret, "CTR = 0x%llx\n", ctr);
-	fmt::append(ret, "VRSAVE = 0x%08x\n", vrsave);
-	fmt::append(ret, "XER = [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
-	fmt::append(ret, "VSCR = [SAT=%u | NJ=%u]\n", sat, nj);
-	fmt::append(ret, "FPSCR = [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
-	fmt::append(ret, "\nCall stack:\n=========\n0x%08x (0x0) called\n", cia);
-
-	//std::shared_lock rlock(vm::g_mutex); // Needs optimizations
-
-	// Determine stack range
-	u32 stack_ptr = static_cast<u32>(gpr[1]);
-
-	if (!vm::check_addr(stack_ptr, 1, vm::page_writable))
-	{
-		// Normally impossible unless the code does not follow ABI rules
-		return ret;
-	}
-
-	u32 stack_min = stack_ptr & ~0xfff;
-	u32 stack_max = stack_min + 4096;
-
-	while (stack_min && vm::check_addr(stack_min - 4096, 4096, vm::page_writable))
-	{
-		stack_min -= 4096;
-	}
-
-	while (stack_max + 4096 && vm::check_addr(stack_max, 4096, vm::page_writable))
-	{
-		stack_max += 4096;
-	}
-
-	for (u64 sp = *vm::get_super_ptr<u64>(stack_ptr); sp >= stack_min && std::max(sp, sp + 0x200) < stack_max; sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp)))
-	{
-		// TODO: print also function addresses
-		fmt::append(ret, "> from 0x%08llx (0x0)\n", *vm::get_super_ptr<u64>(static_cast<u32>(sp + 16)));
-	}
-
 	return ret;
 }
 
@@ -586,7 +668,7 @@ void ppu_thread::exec_task()
 	{
 		const auto exec_op = [this](u64 op)
 		{
-			return reinterpret_cast<func_t>(op & 0xffffffff)(*this, {static_cast<u32>(op >> 32)});
+			return reinterpret_cast<func_t>(op & 0xffffffff)(*this, { static_cast<u32>(op >> 32) });
 		};
 
 		if (cia % 8 || state) [[unlikely]]

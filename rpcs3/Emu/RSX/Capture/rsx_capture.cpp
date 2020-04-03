@@ -51,10 +51,7 @@ namespace rsx
 			std::unordered_set<u64>& mem_changes = frame_capture.replay_commands.back().memory_state;
 
 			// capture fragment shader mem
-			const u32 shader_program = method_registers.shader_program_address();
-
-			const u32 program_location = (shader_program & 0x3) - 1;
-			const u32 program_offset   = (shader_program & ~0x3);
+			const auto [program_offset, program_location] = method_registers.shader_program_address();
 
 			const u32 addr          = get_address(program_offset, program_location, HERE);
 			const auto program_info = program_hash_util::fragment_program_utils::analyse_fragment_program(vm::base(addr));

@@ -77,8 +77,10 @@ namespace
 		X = X << 5;
 		return{ X, Y, Z, 1 };
 	}
+}
 
-	inline void stream_data_to_memory_swapped_u32(void *dst, const void *src, u32 vertex_count, u8 stride)
+	template <bool unaligned>
+	void stream_data_to_memory_swapped_u32(void *dst, const void *src, u32 vertex_count, u8 stride)
 	{
 		const __m128i mask = _mm_set_epi8(
 			0xC, 0xD, 0xE, 0xF,
@@ -99,7 +101,15 @@ namespace
 			{
 				const __m128i vector = _mm_loadu_si128(src_ptr);
 				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
-				_mm_stream_si128(dst_ptr, shuffled_vector);
+
+				if constexpr (!unaligned)
+				{
+					_mm_stream_si128(dst_ptr, shuffled_vector);
+				}
+				else
+				{
+					_mm_storeu_si128(dst_ptr, shuffled_vector);
+				}
 
 				src_ptr++;
 				dst_ptr++;
@@ -112,7 +122,15 @@ namespace
 				const __m128i vec0 = _mm_loadu_si128(src_ptr);
 				const __m128i vec1 = _mm_or_si128(_mm_slli_epi16(vec0, 8), _mm_srli_epi16(vec0, 8));
 				const __m128i vec2 = _mm_or_si128(_mm_slli_epi32(vec1, 16), _mm_srli_epi32(vec1, 16));
-				_mm_stream_si128(dst_ptr, vec2);
+
+				if constexpr (!unaligned)
+				{
+					_mm_stream_si128(dst_ptr, vec2);
+				}
+				else
+				{
+					_mm_storeu_si128(dst_ptr, vec2);
+				}
 
 				src_ptr++;
 				dst_ptr++;
@@ -129,6 +147,11 @@ namespace
 		}
 	}
 
+	template void stream_data_to_memory_swapped_u32<false>(void *, const void *, u32, u8);
+	template void stream_data_to_memory_swapped_u32<true>(void*, const void*, u32, u8);
+
+namespace
+{
 	inline void stream_data_to_memory_swapped_u16(void *dst, const void *src, u32 vertex_count, u8 stride)
 	{
 		const __m128i mask = _mm_set_epi8(

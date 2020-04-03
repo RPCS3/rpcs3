@@ -28,7 +28,7 @@ public:
 	debugger_list(QWidget* parent, std::shared_ptr<gui_settings> settings, breakpoint_handler* handler);
 	void UpdateCPUData(std::weak_ptr<cpu_thread> cpu, std::shared_ptr<CPUDisAsm> disasm);
 public Q_SLOTS:
-	void ShowAddress(u32 addr);
+	void ShowAddress(u32 addr, bool force = false);
 protected:
 	void keyPressEvent(QKeyEvent* event) override;
 	void mouseDoubleClickEvent(QMouseEvent* event) override;

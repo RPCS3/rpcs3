@@ -22,7 +22,7 @@ public:
 	QColor m_text_color_bp;
 	QColor m_color_bp;
 Q_SIGNALS:
-	void RequestShowAddress(u32 addr);
+	void RequestShowAddress(u32 addr, bool force = false);
 public Q_SLOTS:
 	void HandleBreakpointRequest(u32 addr);
 private Q_SLOTS:
