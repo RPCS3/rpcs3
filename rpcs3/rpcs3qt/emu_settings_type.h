@@ -17,7 +17,7 @@ enum class emu_settings_type
 	EnableTSX,
 	AccurateGETLLAR,
 	AccuratePUTLLUC,
-	AccuratePPUfma,
+	AccurateLLVMdfma,
 	AccurateRSXAccess,
 	AccurateXFloat,
 	SetDAZandFTZ,

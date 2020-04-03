@@ -1628,7 +1628,7 @@ extern void ppu_initialize(const ppu_module& info)
 #ifndef _WIN32
 			settings += ppu_settings::non_win32;
 #endif
-			if (g_cfg.core.ppu_accurate_fma)
+			if (g_cfg.core.llvm_accurate_dfma)
 			{
 				settings += ppu_settings::accurate_fma;
 			}

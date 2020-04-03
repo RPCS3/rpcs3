@@ -45,7 +45,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<tsx_usage> enable_TSX{ this, "Enable TSX", tsx_usage::enabled }; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
 		cfg::_bool spu_accurate_xfloat{ this, "Accurate xfloat", false };
 		cfg::_bool spu_approx_xfloat{ this, "Approximate xfloat", true };
-		cfg::_bool ppu_accurate_fma{ this, "PPU Accurate FMA", true }; // Enable accurate FMA for CPUs which do not support it natively (can't be disabled for CPUs which do support it)
+		cfg::_bool llvm_accurate_dfma{ this, "LLVM Accurate DFMA", true }; // Enable accurate double-precision FMA for CPUs which do not support it natively
 
 		cfg::_bool debug_console_mode{ this, "Debug Console Mode", false }; // Debug console emulation, not recommended
 		cfg::_enum<lib_loading_type> lib_loading{ this, "Lib Loader", lib_loading_type::liblv2only };

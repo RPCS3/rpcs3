@@ -7192,22 +7192,58 @@ public:
 
 	void DFMA(spu_opcode_t op)
 	{
-		set_vr(op.rt, get_vr<f64[2]>(op.ra) * get_vr<f64[2]>(op.rb) + get_vr<f64[2]>(op.rt));
+		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
+
+		if (g_cfg.core.llvm_accurate_dfma)
+		{
+			value_t<f64[2]> r;
+			r.value = m_ir->CreateCall(get_intrinsic<f64[2]>(llvm::Intrinsic::fma), {a.value, b.value, c.value});
+			set_vr(op.rt, r);
+		}
+		else
+			set_vr(op.rt, a * b + c);
 	}
 
 	void DFMS(spu_opcode_t op)
 	{
-		set_vr(op.rt, get_vr<f64[2]>(op.ra) * get_vr<f64[2]>(op.rb) - get_vr<f64[2]>(op.rt));
+		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
+
+		if (g_cfg.core.llvm_accurate_dfma)
+		{
+			value_t<f64[2]> r;
+			r.value = m_ir->CreateCall(get_intrinsic<f64[2]>(llvm::Intrinsic::fma), {a.value, b.value, eval(-c).value});
+			set_vr(op.rt, r);
+		}
+		else
+			set_vr(op.rt, a * b - c);
 	}
 
 	void DFNMS(spu_opcode_t op)
 	{
-		set_vr(op.rt, get_vr<f64[2]>(op.rt) - get_vr<f64[2]>(op.ra) * get_vr<f64[2]>(op.rb));
+		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
+
+		if (g_cfg.core.llvm_accurate_dfma)
+		{
+			value_t<f64[2]> r;
+			r.value = m_ir->CreateCall(get_intrinsic<f64[2]>(llvm::Intrinsic::fma), {eval(-a).value, b.value, c.value});
+			set_vr(op.rt, r);
+		}
+		else
+			set_vr(op.rt, c - (a * b));
 	}
 
 	void DFNMA(spu_opcode_t op)
 	{
-		set_vr(op.rt, -(get_vr<f64[2]>(op.ra) * get_vr<f64[2]>(op.rb) + get_vr<f64[2]>(op.rt)));
+		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
+
+		if (g_cfg.core.llvm_accurate_dfma)
+		{
+			value_t<f64[2]> r;
+			r.value = m_ir->CreateCall(get_intrinsic<f64[2]>(llvm::Intrinsic::fma), {a.value, b.value, c.value});
+			set_vr(op.rt, -r);
+		}
+		else
+			set_vr(op.rt, -(a * b + c));
 	}
 
 	// clamping helpers

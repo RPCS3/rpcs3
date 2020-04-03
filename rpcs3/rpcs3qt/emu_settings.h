@@ -111,7 +111,7 @@ private:
 		{ emu_settings_type::EnableTSX,                { "Core", "Enable TSX"}},
 		{ emu_settings_type::AccurateGETLLAR,          { "Core", "Accurate GETLLAR"}},
 		{ emu_settings_type::AccuratePUTLLUC,          { "Core", "Accurate PUTLLUC"}},
-		{ emu_settings_type::AccuratePPUfma,           { "Core", "PPU Accurate FMA"}},
+		{ emu_settings_type::AccurateLLVMdfma,         { "Core", "LLVM Accurate DFMA"}},
 		{ emu_settings_type::AccurateRSXAccess,        { "Core", "Accurate RSX reservation access"}},
 		{ emu_settings_type::AccurateXFloat,           { "Core", "Accurate xfloat"}},
 		{ emu_settings_type::SetDAZandFTZ,             { "Core", "Set DAZ and FTZ"}},
