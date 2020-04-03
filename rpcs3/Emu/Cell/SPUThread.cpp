@@ -1011,9 +1011,8 @@ spu_imm_table_t::spu_imm_table_t()
 
 std::string spu_thread::dump_all() const
 {
-	std::string ret = cpu_thread::dump_misc() + '\n';
-
-	ret += dump_misc() + '\n';
+	std::string ret = cpu_thread::dump_misc();
+	ret += '\n';
 	ret += dump_regs();
 
 	return ret;
@@ -1025,7 +1024,7 @@ std::string spu_thread::dump_regs() const
 
 	for (u32 i = 0; i < 128; i++)
 	{
-		fmt::append(ret, "\nGPR[%d] = %s", i, gpr[i]);
+		fmt::append(ret, "r%d = %s\n", i, gpr[i]);
 	}
 
 	return ret;
@@ -1045,7 +1044,7 @@ std::string spu_thread::dump_misc() const
 {
 	std::string ret;
 
-	fmt::append(ret, "\nBlock Weight: %u (Retreats: %u)", block_counter, block_failure);
+	fmt::append(ret, "Block Weight: %u (Retreats: %u)", block_counter, block_failure);
 
 	if (g_cfg.core.spu_prof)
 	{
@@ -1074,7 +1073,7 @@ std::string spu_thread::dump_misc() const
 		}
 		else
 		{
-			fmt::append(ret, "\n[-]");
+			break;
 		}
 	}
 
