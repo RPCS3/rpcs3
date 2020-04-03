@@ -941,7 +941,7 @@
     <string>Open</string>
    </property>
    <property name="toolTip">
-    <string>Boot selected game</string>
+    <string>Boot a game</string>
    </property>
   </action>
   <action name="showCatOtherAct">
