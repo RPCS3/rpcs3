@@ -707,6 +707,12 @@ public:
 		return m_data;
 	}
 
+	// Unsafe direct access
+	const type& raw() const
+	{
+		return m_data;
+	}
+
 	// Atomically compare data with cmp, replace with exch if equal, return previous data value anyway
 	type compare_and_swap(const type& cmp, const type& exch)
 	{

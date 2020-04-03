@@ -1027,6 +1027,16 @@ std::string spu_thread::dump_regs() const
 		fmt::append(ret, "r%d = %s\n", i, gpr[i]);
 	}
 
+	fmt::append(ret, "\nEvent Stat: 0x%x\n", +ch_event_stat);
+	fmt::append(ret, "Event Mask: 0x%x\n", +ch_event_mask);
+	fmt::append(ret, "Interrupts Enabled: %s\n", interrupts_enabled.load());
+	fmt::append(ret, "Inbound Mailbox: %s\n", ch_in_mbox);
+	fmt::append(ret, "Out Mailbox: %s\n", ch_out_mbox);
+	fmt::append(ret, "Out Interrupts Mailbox: %s\n", ch_out_intr_mbox);
+	fmt::append(ret, "SNR config: 0x%llx\n", snr_config);
+	fmt::append(ret, "SNR1: %s\n", ch_snr1);
+	fmt::append(ret, "SNR2: %s\n", ch_snr2);
+
 	return ret;
 }
 
@@ -3277,6 +3287,32 @@ void spu_thread::fast_call(u32 ls_addr)
 	pc = old_pc;
 	gpr[0]._u32[3] = old_lr;
 	gpr[1]._u32[3] = old_stack;
+}
+
+template <>
+void fmt_class_string<spu_channel>::format(std::string& out, u64 arg)
+{
+	const auto& ch = get_object(arg);
+
+	const u64 raw = ch.data.load();
+
+	if (raw & spu_channel::bit_count)
+	{
+		fmt::append(out, "0x%08x", static_cast<u32>(raw));
+	}
+	else
+	{
+		out += "empty"; 
+	}
+}
+
+template <>
+void fmt_class_string<spu_channel_4_t>::format(std::string& out, u64 arg)
+{
+	const auto& ch = get_object(arg);
+
+	// TODO
+	fmt::append(out, "count = %d", ch.get_count());
 }
 
 DECLARE(spu_thread::g_raw_spu_ctr){};
