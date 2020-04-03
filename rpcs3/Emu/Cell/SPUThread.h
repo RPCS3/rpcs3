@@ -337,9 +337,9 @@ public:
 		});
 	}
 
-	u32 get_count()
+	u32 get_count() const
 	{
-		return values.raw().count;
+		return std::as_const(values).raw().count;
 	}
 
 	void set_values(u32 count, u32 value0, u32 value1 = 0, u32 value2 = 0, u32 value3 = 0)
