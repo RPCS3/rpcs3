@@ -100,7 +100,11 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	}
 
 	// if locking succeeded
-	lwmutex->all_info++;
+	lwmutex->lock_var.atomic_op([](typename sys_lwmutex_t::sync_var_t& var)
+	{
+		var.waiter++;
+		var.owner = lwmutex_reserved;
+	});
 
 	// call the syscall
 	if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, -1, 3))
@@ -110,7 +114,11 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 			return 0;
 		}
 
-		lwmutex->all_info--;
+		lwmutex->lock_var.atomic_op([&](typename sys_lwmutex_t::sync_var_t& var)
+		{
+			var.waiter--;
+			var.owner = ppu.id;
+		});
 
 		// unlock the lightweight mutex
 		sys_lwmutex_unlock(ppu, lwmutex);
@@ -245,7 +253,11 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 	}
 
 	// if locking succeeded
-	lwmutex->all_info++;
+	lwmutex->lock_var.atomic_op([](typename sys_lwmutex_t::sync_var_t& var)
+	{
+		var.waiter++;
+		var.owner = lwmutex_reserved;
+	});
 
 	// call the syscall
 	if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, ppu_thread_id, 3))
@@ -255,7 +267,11 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 			return 0;
 		}
 
-		lwmutex->all_info--;
+		lwmutex->lock_var.atomic_op([&](typename sys_lwmutex_t::sync_var_t& var)
+		{
+			var.waiter--;
+			var.owner = ppu.id;
+		});
 
 		// unlock the lightweight mutex
 		sys_lwmutex_unlock(ppu, lwmutex);
