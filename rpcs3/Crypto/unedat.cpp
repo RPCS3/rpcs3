@@ -2,6 +2,8 @@
 #include "key_vault.h"
 #include "unedat.h"
 
+#include "Emu/IdManager.h"
+
 #include <cmath>
 
 LOG_CHANNEL(edat_log, "EDAT");
@@ -878,6 +880,39 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 
 	output.seek(0);
 	return output;
+}
+
+std::unique_ptr<EDATADecrypter> EDATADecrypter::Create(fs::file&& input)
+{
+	std::unique_ptr<EDATADecrypter> result;
+
+	auto keys = g_fxo->get<loaded_npdrm_keys>();
+	if (keys->numKeys.try_inc(MAX_NPDRM_FILES))
+	{
+		result.reset(new EDATADecrypter(std::forward<fs::file>(input)));
+	}
+	return result;
+}
+
+std::unique_ptr<EDATADecrypter> EDATADecrypter::Create(fs::file&& input, const std::array<u8, 0x10>& dev_key, const std::array<u8, 0x10>& rif_key)
+{
+	std::unique_ptr<EDATADecrypter> result;
+
+	auto keys = g_fxo->get<loaded_npdrm_keys>();
+	if (keys->numKeys.try_inc(MAX_NPDRM_FILES))
+	{
+		result.reset(new EDATADecrypter(std::forward<fs::file>(input), dev_key, rif_key));
+	}
+	return result;
+}
+
+EDATADecrypter::~EDATADecrypter()
+{
+	auto keys = g_fxo->get<loaded_npdrm_keys>();
+	if (keys != nullptr)
+	{
+		--keys->numKeys;
+	}
 }
 
 bool EDATADecrypter::ReadHeader()

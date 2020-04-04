@@ -425,7 +425,11 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 			file.seek(0);
 			if (magic == "NPD\0"_u32)
 			{
-				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file));
+				auto sdata_file = EDATADecrypter::Create(std::move(file));
+				if (!sdata_file)
+				{
+					return {CELL_EMFILE, path};
+				}
 				if (!sdata_file->ReadHeader())
 				{
 					return {CELL_EFSSPECIFIC, path};
@@ -446,7 +450,11 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 			if (magic == "NPD\0"_u32)
 			{
 				auto edatkeys = g_fxo->get<loaded_npdrm_keys>();
-				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file), edatkeys->devKlic, edatkeys->rifKey);
+				auto sdata_file = EDATADecrypter::Create(std::move(file), edatkeys->devKlic, edatkeys->rifKey);
+				if (!sdata_file)
+				{
+					return {CELL_EMFILE, path};
+				}
 				if (!sdata_file->ReadHeader())
 				{
 					return {CELL_EFSSPECIFIC, path};
@@ -1227,7 +1235,11 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return CELL_EBADF;
 		}
 
-		auto sdata_file = std::make_unique<EDATADecrypter>(lv2_file::make_view(file, arg->offset));
+		auto sdata_file = EDATADecrypter::Create(lv2_file::make_view(file, arg->offset));
+		if (!sdata_file)
+		{
+			return CELL_EMFILE;
+		}
 
 		if (!sdata_file->ReadHeader())
 		{

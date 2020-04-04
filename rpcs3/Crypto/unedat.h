@@ -14,10 +14,14 @@ constexpr u32 EDAT_FLAG_0x10 = 0x00000010;
 constexpr u32 EDAT_FLAG_0x20 = 0x00000020;
 constexpr u32 EDAT_DEBUG_DATA_FLAG = 0x80000000;
 
+constexpr u32 MAX_NPDRM_FILES = 16;
+
 struct loaded_npdrm_keys
 {
 	std::array<u8, 0x10> devKlic{};
 	std::array<u8, 0x10> rifKey{};
+
+	atomic_t<u32> numKeys{};
 };
 
 struct NPD_HEADER
@@ -68,7 +72,8 @@ struct EDATADecrypter final : fs::file_base
 	// edat usage
 	std::array<u8, 0x10> rif_key{};
 	std::array<u8, 0x10> dev_key{};
-public:
+
+private:
 	// SdataByFd usage
 	EDATADecrypter(fs::file&& input)
 		: edata_file(std::move(input)) {}
@@ -76,7 +81,11 @@ public:
 	EDATADecrypter(fs::file&& input, const std::array<u8, 0x10>& dev_key, const std::array<u8, 0x10>& rif_key)
 		: edata_file(std::move(input)), rif_key(rif_key), dev_key(dev_key) {}
 
-	~EDATADecrypter() override {}
+public:
+	static std::unique_ptr<EDATADecrypter> Create(fs::file&& input);
+	static std::unique_ptr<EDATADecrypter> Create(fs::file&& input, const std::array<u8, 0x10>& dev_key, const std::array<u8, 0x10>& rif_key);
+
+	~EDATADecrypter() override;
 	// false if invalid
 	bool ReadHeader();
 	u64 ReadData(u64 pos, u8* data, u64 size);
