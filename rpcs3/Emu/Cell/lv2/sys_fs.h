@@ -3,6 +3,7 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Utilities/File.h"
+#include "Utilities/mutex.h"
 
 #include <string>
 
@@ -121,8 +122,6 @@ struct FsMselfEntry
 	u8 m_reserve[16];
 };
 
-struct lv2_fs_mount_point;
-
 enum class lv2_mp_flag
 {
 	read_only,
@@ -136,6 +135,15 @@ enum class lv2_file_type
 {
 	regular = 0,
 	npdrm,
+};
+
+struct lv2_fs_mount_point
+{
+	const u32 sector_size = 512;
+	const u32 block_size = 4096;
+	const bs_t<lv2_mp_flag> flags{};
+
+	shared_mutex mutex;
 };
 
 struct lv2_fs_object
