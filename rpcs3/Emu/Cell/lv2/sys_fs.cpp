@@ -10,15 +10,6 @@
 
 LOG_CHANNEL(sys_fs);
 
-struct lv2_fs_mount_point
-{
-	const u32 sector_size = 512;
-	const u32 block_size = 4096;
-	const bs_t<lv2_mp_flag> flags{};
-
-	shared_mutex mutex;
-};
-
 lv2_fs_mount_point g_mp_sys_dev_hdd0;
 lv2_fs_mount_point g_mp_sys_dev_hdd1{512, 32768, lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_usb{512, 4096, lv2_mp_flag::no_uid_gid};
@@ -1277,14 +1268,14 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		fs::file stream;
 		stream.reset(std::move(sdata_file));
-		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&]() -> std::shared_ptr<lv2_file>
+		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&file = *file, &stream = stream]() -> std::shared_ptr<lv2_file>
 		{
 			if (!g_fxo->get<loaded_npdrm_keys>()->npdrm_fds.try_inc(16))
 			{
 				return nullptr;
 			}
 
-			return std::make_shared<lv2_file>(*file, std::move(stream), file->mode, file->flags, lv2_file_type::npdrm);
+			return std::make_shared<lv2_file>(file, std::move(stream), file.mode, file.flags, lv2_file_type::npdrm);
 		}))
 		{
 			arg->out_code = CELL_OK;

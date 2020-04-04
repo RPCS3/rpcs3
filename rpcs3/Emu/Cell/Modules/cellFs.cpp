@@ -863,12 +863,6 @@ s32 cellFsStReadWaitCallback(u32 fd, u64 size, vm::ptr<void(s32 xfd, u64 xsize)>
 
 using fs_aio_cb_t = vm::ptr<void(vm::ptr<CellFsAio> xaio, s32 error, s32 xid, u64 size)>;
 
-// temporarily
-struct lv2_fs_mount_point
-{
-	std::mutex mutex;
-};
-
 struct fs_aio_thread : ppu_thread
 {
 	using ppu_thread::ppu_thread;
