@@ -3252,6 +3252,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Patchpoint unique id
 	u32 m_pp_id = 0;
 
+	// Next opcode
+	u32 m_next_op = 0;
+
 	// Current function (chunk)
 	llvm::Function* m_function;
 
@@ -4624,6 +4627,12 @@ public:
 						spu_log.error("[%s] Unexpected fallthrough to 0x%x (chunk=0x%x, entry=0x%x)", m_hash, m_pos, m_entry, m_function_queue[0]);
 						break;
 					}
+
+					// Set variable for set_link()
+					if (m_pos + 4 >= end)
+						m_next_op = 0;
+					else
+						m_next_op = func.data[(m_pos - start) / 4 + 1];
 
 					// Execute recompiler function (TODO)
 					(this->*decode(op))({op});
@@ -7929,23 +7938,27 @@ public:
 		}
 
 		m_ir->CreateStore(addr.value, spu_ptr<u32>(&spu_thread::pc));
-		const auto type = m_finfo->chunk->getFunctionType()->getPointerTo()->getPointerTo();
 
 		if (ret && g_cfg.core.spu_block_size >= spu_block_size_type::mega)
 		{
 			// Compare address stored in stack mirror with addr
 			const auto stack0 = eval(zext<u64>(sp) + ::offset32(&spu_thread::stack_mirror));
 			const auto stack1 = eval(stack0 + 8);
-			const auto _ret = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), type));
+			const auto _ret = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), get_type<u64*>()));
 			const auto link = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack1.value), get_type<u64*>()));
 			const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto done = llvm::BasicBlock::Create(m_context, "", m_function);
-			m_ir->CreateCondBr(m_ir->CreateICmpEQ(addr.value, m_ir->CreateTrunc(link, get_type<u32>())), done, fail, m_md_likely);
+			const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+			m_ir->CreateCondBr(m_ir->CreateICmpEQ(addr.value, m_ir->CreateTrunc(link, get_type<u32>())), next, fail, m_md_likely);
+			m_ir->SetInsertPoint(next);
+			const auto cmp2 = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u32*>()));
+			m_ir->CreateCondBr(m_ir->CreateICmpEQ(cmp2, m_ir->CreateTrunc(_ret, get_type<u32>())), done, fail, m_md_likely);
 			m_ir->SetInsertPoint(done);
 
 			// Clear stack mirror and return by tail call to the provided return address
 			m_ir->CreateStore(splat<u64[2]>(-1).eval(m_ir), m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), get_type<u64(*)[2]>()));
-			tail_chunk(_ret, m_ir->CreateTrunc(m_ir->CreateLShr(link, 32), get_type<u32>()));
+			const auto targ = m_ir->CreateAdd(m_ir->CreateLShr(_ret, 32), m_ir->getInt64(reinterpret_cast<u64>(jit_runtime::alloc(0, 0))));
+			tail_chunk(m_ir->CreateIntToPtr(targ, m_finfo->chunk->getFunctionType()->getPointerTo()), m_ir->CreateTrunc(m_ir->CreateLShr(link, 32), get_type<u32>()));
 			m_ir->SetInsertPoint(fail);
 		}
 
@@ -8309,8 +8322,10 @@ public:
 			const auto pfunc = add_function(m_pos + 4);
 			const auto stack0 = eval(zext<u64>(extract(get_reg_fixed(1), 3) & 0x3fff0) + ::offset32(&spu_thread::stack_mirror));
 			const auto stack1 = eval(stack0 + 8);
+			const auto rel_ptr = m_ir->CreateSub(m_ir->CreatePtrToInt(pfunc->chunk, get_type<u64>()), m_ir->getInt64(reinterpret_cast<u64>(jit_runtime::alloc(0, 0))));
+			const auto ptr_plus_op = m_ir->CreateOr(m_ir->CreateShl(rel_ptr, 32), m_ir->getInt64(m_next_op));
 			const auto base_plus_pc = m_ir->CreateOr(m_ir->CreateShl(m_ir->CreateZExt(m_base_pc, get_type<u64>()), 32), m_ir->getInt64(m_pos + 4));
-			m_ir->CreateStore(pfunc->chunk, m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), pfunc->chunk->getType()->getPointerTo()));
+			m_ir->CreateStore(ptr_plus_op, m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), get_type<u64*>()));
 			m_ir->CreateStore(base_plus_pc, m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack1.value), get_type<u64*>()));
 		}
 	}
