@@ -176,9 +176,7 @@ namespace utils
 
 		void set_min_max(const address_range &other)
 		{
-			const address_range _range = get_min_max(other);
-			start = _range.start;
-			end = _range.end;
+			*this = get_min_max(other);
 		}
 
 		bool is_page_range() const
