@@ -9,6 +9,7 @@
 #include "Utilities/cond.h"
 #include "Utilities/Thread.h"
 #include "Utilities/VirtualMemory.h"
+#include "Utilities/address_range.h"
 #include "Utilities/asm.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/lv2/sys_memory.h"
@@ -888,14 +889,21 @@ namespace vm
 
 	static bool _test_map(u32 addr, u32 size)
 	{
+		const auto range = utils::address_range::start_length(addr, size);
+
+		if (!range.valid())
+		{
+			return false;
+		}
+
 		for (auto& block : g_locations)
 		{
-			if (block && block->addr >= addr && block->addr <= addr + size - 1)
+			if (!block)
 			{
-				return false;
+				continue;
 			}
 
-			if (block && addr >= block->addr && addr <= block->addr + block->size - 1)
+			if (range.overlaps(utils::address_range::start_length(block->addr, block->size)))
 			{
 				return false;
 			}
@@ -990,7 +998,7 @@ namespace vm
 		}
 
 		// Return if size is invalid
-		if (!size || size > 0x40000000)
+		if (!size)
 		{
 			return nullptr;
 		}
