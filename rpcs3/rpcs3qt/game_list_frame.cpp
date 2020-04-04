@@ -804,12 +804,12 @@ void game_list_frame::itemSelectionChangedSlot()
 
 	if (m_is_list_layout)
 	{
-		if (const auto item = m_game_list->item(m_game_list->currentRow(), gui::column_icon); item->isSelected())
+		if (const auto item = m_game_list->item(m_game_list->currentRow(), gui::column_icon); item && item->isSelected())
 		{
 			game = GetGameInfoByMode(item);
 		}
 	}
-	else if (const auto item = m_game_grid->currentItem(); item->isSelected())
+	else if (const auto item = m_game_grid->currentItem(); item && item->isSelected())
 	{
 		game = GetGameInfoByMode(item);
 	}
