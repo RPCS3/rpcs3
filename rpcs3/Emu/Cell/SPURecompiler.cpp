@@ -465,6 +465,29 @@ void spu_cache::initialize()
 			const u32 start = func.lower_bound;
 			const u32 size0 = ::size32(func.data);
 
+			be_t<u64> hash_start;
+			{
+				sha1_context ctx;
+				u8 output[20];
+
+				sha1_starts(&ctx);
+				sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
+				sha1_finish(&ctx, output);
+				std::memcpy(&hash_start, output, sizeof(hash_start));
+			}
+
+			// Check hash against allowed bounds
+			const bool inverse_bounds = g_cfg.core.spu_llvm_lower_bound > g_cfg.core.spu_llvm_upper_bound;
+
+			if ((!inverse_bounds && (hash_start < g_cfg.core.spu_llvm_lower_bound || hash_start > g_cfg.core.spu_llvm_upper_bound)) ||
+				(inverse_bounds && (hash_start < g_cfg.core.spu_llvm_lower_bound && hash_start > g_cfg.core.spu_llvm_upper_bound)))
+			{
+				spu_log.error("[Debug] Skipped function %s", fmt::base57(hash_start));
+				g_progr_pdone++;
+				result++;
+				continue;
+			}
+
 			// Initialize LS with function data only
 			for (u32 i = 0, pos = start; i < size0; i++, pos += 4)
 			{
@@ -8848,7 +8871,15 @@ struct spu_fast : public spu_recompiler_base
 		// Install pointer carefully
 		const bool added = !add_loc->compiled && add_loc->compiled.compare_and_swap_test(nullptr, fn);
 
-		if (added)
+		// Check hash against allowed bounds
+		const bool inverse_bounds = g_cfg.core.spu_llvm_lower_bound > g_cfg.core.spu_llvm_upper_bound;
+
+		if ((!inverse_bounds && (m_hash_start < g_cfg.core.spu_llvm_lower_bound || m_hash_start > g_cfg.core.spu_llvm_upper_bound)) ||
+			(inverse_bounds && (m_hash_start < g_cfg.core.spu_llvm_lower_bound && m_hash_start > g_cfg.core.spu_llvm_upper_bound)))
+		{
+			spu_log.error("[Debug] Skipped function %s", fmt::base57(be_t<u64>{m_hash_start}));
+		}
+		else if (added)
 		{
 			// Send work to LLVM compiler thread
 			g_fxo->get<spu_llvm_thread>()->registered.push(m_hash_start, add_loc);
