@@ -2843,6 +2843,17 @@ struct fmt_unveil<llvm::TypeSize, void>
 };
 
 #ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif
+
+template <>
+inline llvm::Type* cpu_translator::get_type<__m128i>()
+{
+	return llvm::VectorType::get(llvm::Type::getInt8Ty(m_context), 16);
+}
+
+#ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif
 

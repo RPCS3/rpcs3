@@ -6462,10 +6462,25 @@ public:
 		set_vr(op.rt, fshl(a, zshuffle(a, 4, 0, 1, 2), b));
 	}
 
+	static __m128i exec_rotqby(__m128i a, u8 b)
+	{
+		alignas(32) const __m128i buf[2]{a, a};
+		return _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + (16 - (b & 0xf))));
+	}
+
 	void ROTQBY(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
+
+		if (!m_use_ssse3)
+		{
+			value_t<u8[16]> r;
+			r.value = call("spu_rotqby", &exec_rotqby, a.value, eval(extract(b, 12)).value);
+			set_vr(op.rt, r);
+			return;
+		}
+
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 		const auto sh = eval((sc - zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)) & 0xf);
 		set_vr(op.rt, pshufb(a, sh));
