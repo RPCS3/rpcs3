@@ -179,3 +179,10 @@ enum np_psn_status
 	disabled,
 	fake,
 };
+
+enum class shader_interpreter_mode
+{
+	disabled,
+	enabled,
+	forced
+};
