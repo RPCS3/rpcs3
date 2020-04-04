@@ -132,6 +132,12 @@ enum class lv2_mp_flag
 	__bitset_enum_max
 };
 
+enum class lv2_file_type
+{
+	regular = 0,
+	npdrm,
+};
+
 struct lv2_fs_object
 {
 	using id_type = lv2_fs_object;
@@ -174,23 +180,26 @@ struct lv2_file final : lv2_fs_object
 	const fs::file file;
 	const s32 mode;
 	const s32 flags;
+	const lv2_file_type type;
 
 	// Stream lock
 	atomic_t<u32> lock{0};
 
-	lv2_file(std::string_view filename, fs::file&& file, s32 mode, s32 flags)
+	lv2_file(std::string_view filename, fs::file&& file, s32 mode, s32 flags, lv2_file_type type = {})
 		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
+		, type(type)
 	{
 	}
 
-	lv2_file(const lv2_file& host, fs::file&& file, s32 mode, s32 flags)
+	lv2_file(const lv2_file& host, fs::file&& file, s32 mode, s32 flags, lv2_file_type type = {})
 		: lv2_fs_object(host.mp, host.name.data())
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
+		, type(type)
 	{
 	}
 
