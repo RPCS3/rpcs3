@@ -28,6 +28,8 @@ void fmt_class_string<CellSysCacheError>::format(std::string& out, u64 arg)
 	});
 }
 
+extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
+
 struct syscache_info
 {
 	const std::string cache_root = Emu.GetHdd1Dir() + "/caches/";
@@ -77,6 +79,8 @@ struct syscache_info
 		// Poison opened files in /dev_hdd1 to return CELL_EIO on access
 		if (remove_root)
 		{
+			std::lock_guard lock(g_mp_sys_dev_hdd1.mutex);
+
 			idm::select<lv2_fs_object, lv2_file>([](u32 id, lv2_file& file)
 			{
 				if (std::memcmp("/dev_hdd1", file.name.data(), 9) == 0)

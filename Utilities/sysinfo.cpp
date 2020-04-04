@@ -75,6 +75,24 @@ bool utils::has_clwb()
 	return g_value;
 }
 
+bool utils::has_invariant_tsc()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(0x80000007, 0)[3] & 0x100) == 0x100;
+	return g_value;
+}
+
+bool utils::has_fma3()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x1000;
+	return g_value;
+}
+
+bool utils::has_fma4()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(0x80000001, 0)[2] & 0x10000) == 0x10000;
+	return g_value;
+}
+
 std::string utils::get_cpu_brand()
 {
 	std::string brand;
@@ -113,7 +131,11 @@ std::string utils::get_system_info()
 
 	fmt::append(result, "%s | %d Threads | %.2f GiB RAM", brand, num_proc, mem_total / (1024.0f * 1024 * 1024));
 
-	if (const ullong tsc_freq = get_tsc_freq())
+	if (!has_invariant_tsc())
+	{
+		fmt::append(result, " | TSC: Bad");
+	}
+	else if (const ullong tsc_freq = get_tsc_freq())
 	{
 		fmt::append(result, " | TSC: %.02fGHz", tsc_freq / 1000000000.);
 	}
@@ -142,6 +164,24 @@ std::string utils::get_system_info()
 		}
 	}
 
+	if (has_fma3() || has_fma4())
+	{
+		result += " | FMA";
+		
+		if (has_fma3() && has_fma4())
+		{
+			result += "3+4";
+		}
+		else if (has_fma3())
+		{
+			result += "3";
+		}
+		else if (has_fma4())
+		{
+			result += "4";
+		}
+	}
+
 	if (has_rtm())
 	{
 		result += " | TSX";
@@ -155,7 +195,6 @@ std::string utils::get_system_info()
 		{
 			result += " disabled by default";
 		}
-
 	}
 
 	return result;

@@ -18,6 +18,7 @@ struct loaded_npdrm_keys
 {
 	std::array<u8, 0x10> devKlic{};
 	std::array<u8, 0x10> rifKey{};
+	atomic_t<u32> npdrm_fds{0};
 };
 
 struct NPD_HEADER
