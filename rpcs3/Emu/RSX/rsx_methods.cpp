@@ -422,34 +422,54 @@ namespace rsx
 		template<u32 index>
 		struct set_transform_constant
 		{
-			static void impl(thread* rsxthr, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*_reg*/, u32 /*arg*/)
 			{
 				static constexpr u32 reg = index / 4;
 				static constexpr u8 subreg = index % 4;
 
+				// Get real args count
+				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
+					static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos() - 4)) / 4), 32 - index});
+
 				const u32 load = rsx::method_registers.transform_constant_load();
-				const u32 address = load + reg;
-				if (address >= 468)
+
+				u32 rcount = count;
+				if (const u32 max = (load + reg) * 4 + count + subreg; max > 468 * 4)
 				{
 					// Ignore addresses outside the usable [0, 467] range
-					rsx_log.warning("Invalid transform register index (load=%d, index=%d)", load, index);
-					return;
+					rsx_log.warning("Invalid transform register index (load=%u, index=%u, count=%u)", load, index, count);
+					rcount -= max - (468 * 4);
 				}
 
-				auto &value = rsx::method_registers.transform_constants[load + reg][subreg];
-				if (value != arg)
+				alignas(64) u8 buffer[128];
+	
+				const auto values = &rsx::method_registers.transform_constants[load + reg][subreg];
+
+				if (rsx->m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
 				{
-					//Transform constants invalidation is expensive (~8k bytes per update)
-					value = arg;
-					rsxthr->m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+					// Minor optimization: don't compare values if we already know we need invalidation
+					stream_data_to_memory_swapped_u32<true>(values, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount, 4);
 				}
+				else
+				{
+					stream_data_to_memory_swapped_u32(buffer, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount, 4);
+
+					if (std::memcmp(values, buffer, rcount * 4) != 0)
+					{
+						// Transform constants invalidation is expensive (~8k bytes per update)
+						std::memcpy(values, buffer, rcount * 4);
+						rsx->m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+					}
+				}
+
+				rsx->fifo_ctrl->skip_methods(count - 1);
 			}
 		};
 
 		template<u32 index>
 		struct set_transform_program
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*_reg*/, u32 /*arg*/)
 			{
 				// Get real args count
 				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
