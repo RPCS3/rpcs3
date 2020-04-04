@@ -2272,12 +2272,12 @@ namespace rsx
 	{
 		const u64 current_time = get_system_time();
 
-		if (recovered_fifo_cmds_history.size() == 9u)
+		if (recovered_fifo_cmds_history.size() == 20u)
 		{
 			const auto cmd_info = recovered_fifo_cmds_history.front();
 
 			// Check timestamp of last tracked cmd
-			if (current_time - cmd_info.timestamp < 1'500'000u)
+			if (current_time - cmd_info.timestamp < 2'000'000u)
 			{
 				// Probably hopeless
 				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings." HERE);
@@ -2290,7 +2290,7 @@ namespace rsx
 		// Error. Should reset the queue
 		fifo_ctrl->set_get(restore_point);
 		fifo_ret_addr = saved_fifo_ret;
-		std::this_thread::sleep_for(1ms);
+		std::this_thread::sleep_for(2ms);
 		fifo_ctrl->abort();
 
 		if (std::exchange(in_begin_end, false) && !rsx::method_registers.current_draw_clause.empty())
