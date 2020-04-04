@@ -130,8 +130,8 @@ error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<Cell
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
+		search->state.store(search_state::idle);
 		func(ppu, CELL_SEARCH_EVENT_INITIALIZE_RESULT, CELL_OK, vm::null, userData);
-		search->state.release(search_state::idle);
 		return CELL_OK;
 	});
 
@@ -166,8 +166,8 @@ error_code cellSearchFinalize()
 			std::lock_guard lock(search->links_mutex);
 			search->content_links.clear();
 		}
+		search->state.store(search_state::not_initialized);
 		search->func(ppu, CELL_SEARCH_EVENT_FINALIZE_RESULT, CELL_OK, vm::null, search->userData);
-		search->state.release(search_state::not_initialized);
 		return CELL_OK;
 	});
 
@@ -230,8 +230,8 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 		resultParam->searchId = id;
 		resultParam->resultNum = 0; // TODO
 
+		search->state.store(search_state::idle);
 		search->func(ppu, CELL_SEARCH_EVENT_LISTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
-		search->state.release(search_state::idle);
 		return CELL_OK;
 	});
 
@@ -295,8 +295,8 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 		resultParam->searchId = id;
 		resultParam->resultNum = 0; // TODO
 
+		search->state.store(search_state::idle);
 		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_INLIST_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
-		search->state.release(search_state::idle);
 		return CELL_OK;
 	});
 
@@ -496,8 +496,8 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 		searchInFolder(fmt::format("/dev_hdd0/%s", media_dir), "");
 		resultParam->resultNum = ::narrow<s32>(curr_search->content_ids.size());
 
+		search->state.store(search_state::idle);
 		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
-		search->state.release(search_state::idle);
 		return CELL_OK;
 	});
 
@@ -557,8 +557,8 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 		resultParam->searchId = id;
 		resultParam->resultNum = 0; // TODO
 
+		search->state.store(search_state::idle);
 		search->func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_INVIDEO_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
-		search->state.release(search_state::idle);
 		return CELL_OK;
 	});
 
@@ -613,8 +613,8 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 		resultParam->searchId = id;
 		resultParam->resultNum = 0; // TODO
 
+		search->state.store(search_state::idle);
 		search->func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
-		search->state.release(search_state::idle);
 		return CELL_OK;
 	});
 
