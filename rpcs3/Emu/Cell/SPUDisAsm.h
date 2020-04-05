@@ -152,7 +152,7 @@ private:
 	}
 	void DisAsm(std::string op, field_de_t de, const char* a1, const char* a2)
 	{
-		Write(fmt::format("%s %s", FixOp(op.append(BrIndirectSuffix(de))), a1, a2));
+		Write(fmt::format("%s %s,%s", FixOp(op.append(BrIndirectSuffix(de))), a1, a2));
 	}
 
 public:

@@ -20,6 +20,12 @@ namespace cfg
 	// Convert string to signed integer
 	bool try_to_int64(s64* out, const std::string& value, s64 min, s64 max);
 
+	// Format min and max unsigned values
+	std::vector<std::string> make_uint_range(u64 min, u64 max);
+
+	// Convert string to unsigned integer
+	bool try_to_uint64(u64* out, const std::string& value, u64 min, u64 max);
+
 	// Internal hack
 	bool try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, const std::string&);
 
@@ -27,12 +33,13 @@ namespace cfg
 	std::vector<std::string> try_to_enum_list(decltype(&fmt_class_string<int>::format) func);
 
 	// Config tree entry type.
-	enum class type : uint
+	enum class type : unsigned
 	{
 		node = 0, // cfg::node type
 		_bool, // cfg::_bool type
 		_enum, // cfg::_enum type
 		_int, // cfg::_int type
+		uint, // cfg::uint type
 		string, // cfg::string type
 		set, // cfg::set_entry type
 		log,
@@ -301,6 +308,80 @@ namespace cfg
 
 	// Alias for 64 bit int
 	using int64 = _int<INT64_MIN, INT64_MAX>;
+
+	// Unsigned 32/64-bit integer entry with custom Min/Max range.
+	template <u64 Min, u64 Max>
+	class uint final : public _base
+	{
+		static_assert(Min < Max, "Invalid cfg::uint range");
+
+		// Prefer 32 bit type if possible
+		using int_type = std::conditional_t<Max <= UINT32_MAX, u32, u64>;
+
+		atomic_t<int_type> m_value;
+
+	public:
+		int_type def;
+
+		// Expose range
+		static const u64 max = Max;
+		static const u64 min = Min;
+
+		uint(node* owner, const std::string& name, int_type def = std::max<int_type>(Min, 0), bool dynamic = false)
+			: _base(type::uint, owner, name, dynamic)
+			, m_value(def)
+			, def(def)
+		{
+		}
+
+		operator int_type() const
+		{
+			return m_value;
+		}
+
+		int_type get() const
+		{
+			return m_value;
+		}
+
+		void from_default() override
+		{
+			m_value = def;
+		}
+
+		std::string to_string() const override
+		{
+			return std::to_string(m_value);
+		}
+
+		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
+		{
+			u64 result;
+			if (try_to_uint64(&result, value, Min, Max))
+			{
+				m_value = static_cast<int_type>(result);
+				return true;
+			}
+
+			return false;
+		}
+
+		void set(const u64& value)
+		{
+			m_value = static_cast<int_type>(value);
+		}
+
+		std::vector<std::string> to_list() const override
+		{
+			return make_uint_range(Min, Max);
+		}
+	};
+
+	// Alias for 32 bit uint
+	using uint32 = uint<0, UINT32_MAX>;
+
+	// Alias for 64 bit int
+	using uint64 = uint<0, UINT64_MAX>;
 
 	// Simple string entry with mutex
 	class string final : public _base
