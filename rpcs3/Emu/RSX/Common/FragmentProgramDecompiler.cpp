@@ -906,7 +906,7 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 
 	// SCB-only ops
 	case RSX_FP_OPCODE_COS: SetDst("cos($0.xxxx)"); return true;
-	case RSX_FP_OPCODE_DST: SetDst("distance($0, $1).xxxx", OPFLAGS::src_cast_f32); return true;
+	case RSX_FP_OPCODE_DST: SetDst("$Ty(1.0, $0.y * $1.y, $0.z, $1.w)", OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_REFL: SetDst(getFunction(FUNCTION::FUNCTION_REFL), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_EX2: SetDst("exp2($0.xxxx)"); return true;
 	case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); return true;
