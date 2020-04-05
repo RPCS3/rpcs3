@@ -66,7 +66,7 @@ namespace gl
 				program_handle.create();
 				program_handle.attach(vs);
 				program_handle.attach(fs);
-				program_handle.make();
+				program_handle.link();
 
 				fbo.create();
 

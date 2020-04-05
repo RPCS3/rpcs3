@@ -86,6 +86,9 @@ namespace gl
 	bool is_primitive_native(rsx::primitive_type in);
 	GLenum draw_mode(rsx::primitive_type in);
 
+	void set_primary_context_thread();
+	bool is_primary_context_thread();
+
 	// Texture helpers
 	std::array<GLenum, 4> apply_swizzle_remap(const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap);
 
@@ -390,6 +393,12 @@ namespace gl
 			m_value = nullptr;
 
 			return signaled;
+		}
+
+		void server_wait_sync() const
+		{
+			verify(HERE), m_value != nullptr;
+			glWaitSync(m_value, 0, GL_TIMEOUT_IGNORED);
 		}
 	};
 
@@ -2533,6 +2542,7 @@ public:
 		class program
 		{
 			GLuint m_id = 0;
+			fence m_fence;
 
 		public:
 			class uniform_t
@@ -2717,6 +2727,15 @@ public:
 
 					rsx_log.fatal("Linkage failed: %s", error_msg);
 				}
+				else
+				{
+					m_fence.create();
+
+					if (!is_primary_context_thread())
+					{
+						glFlush();
+					}
+				}
 			}
 
 			void validate()
@@ -2743,11 +2762,6 @@ public:
 				}
 			}
 
-			void make()
-			{
-				link();
-			}
-
 			uint id() const
 			{
 				return m_id;
@@ -2762,6 +2776,14 @@ public:
 			bool created() const
 			{
 				return m_id != 0;
+			}
+
+			void sync()
+			{
+				if (!m_fence.check_signaled())
+				{
+					m_fence.server_wait_sync();
+				}
 			}
 
 			explicit operator bool() const

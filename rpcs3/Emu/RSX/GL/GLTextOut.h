@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "GLHelpers.h"
@@ -63,7 +63,7 @@ namespace gl
 			m_program.create();
 			m_program.attach(m_vs);
 			m_program.attach(m_fs);
-			m_program.make();
+			m_program.link();
 		}
 
 		void load_program(float scale_x, float scale_y, float *offsets, size_t nb_offsets, color4f color)

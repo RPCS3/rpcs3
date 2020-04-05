@@ -50,7 +50,7 @@ namespace gl
 
                 m_program.create();
                 m_program.attach(m_shader);
-                m_program.make();
+                m_program.link();
 
                 compiled = true;
             }
