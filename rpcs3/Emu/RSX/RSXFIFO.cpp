@@ -537,10 +537,11 @@ namespace rsx
 						break;
 					default:
 					{
-						static constexpr std::array<std::pair<u32, u32>, 2> ranges
+						static constexpr std::array<std::pair<u32, u32>, 3> ranges
 						{{
 							{NV308A_COLOR, 0x700},
-							{NV4097_SET_TRANSFORM_PROGRAM, 32}
+							{NV4097_SET_TRANSFORM_PROGRAM, 32},
+							{NV4097_SET_TRANSFORM_CONSTANT, 32}
 						}};
 
 						// Use legacy logic - enqueue leading command with count

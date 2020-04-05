@@ -12,6 +12,7 @@
 #include "SPURecompiler.h"
 #include "lv2/sys_sync.h"
 #include "lv2/sys_prx.h"
+#include "lv2/sys_memory.h"
 #include "Emu/GDB.h"
 
 #ifdef LLVM_AVAILABLE
@@ -747,6 +748,11 @@ ppu_thread::~ppu_thread()
 {
 	// Deallocate Stack Area
 	vm::dealloc_verbose_nothrow(stack_addr, vm::stack);
+
+	if (const auto dct = g_fxo->get<lv2_memory_container>())
+	{
+		dct->used -= stack_size;
+	}
 }
 
 ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u32 prio, int detached)
