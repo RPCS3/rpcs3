@@ -18,7 +18,7 @@
 std::string wchar_to_utf8(wchar_t *src)
 {
 	std::string utf8_string;
-	auto tmp_size = WideCharToMultiByte(CP_UTF8, 0, src, -1, nullptr, 0, nullptr, nullptr);
+	const auto tmp_size = WideCharToMultiByte(CP_UTF8, 0, src, -1, nullptr, 0, nullptr, nullptr);
 	utf8_string.resize(tmp_size);
 	WideCharToMultiByte(CP_UTF8, 0, src, -1, utf8_string.data(), tmp_size, nullptr, nullptr);
 	return utf8_string;
@@ -47,7 +47,7 @@ std::string utf8_path_to_ansi_path(const std::string& src)
 	std::wstring buf_wide;
 
 	// Converts the utf-8 path to wide char
-	auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, src.c_str(), -1, nullptr, 0);
+	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, src.c_str(), -1, nullptr, 0);
 	buf_wide.resize(tmp_size);
 	MultiByteToWideChar(CP_UTF8, 0, src.c_str(), -1, buf_wide.data(), tmp_size);
 

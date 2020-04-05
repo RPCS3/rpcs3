@@ -333,8 +333,13 @@ bool update_manager::handle_rpcs3()
 
 #ifdef _WIN32
 	// Get executable path
-	wchar_t orig_path[32767];
-	GetModuleFileNameW(nullptr, orig_path, sizeof(orig_path) / 2);
+	const std::string orig_path = Emulator::GetExeDir() + "rpcs3.exe";
+
+	std::wstring wchar_orig_path;
+	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, orig_path.c_str(), -1, nullptr, 0);
+	wchar_orig_path.resize(tmp_size);
+	MultiByteToWideChar(CP_UTF8, 0, orig_path.c_str(), -1, wchar_orig_path.data(), tmp_size);
+
 #endif
 
 #ifdef __linux__
@@ -596,7 +601,7 @@ bool update_manager::handle_rpcs3()
 	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!"));
 
 #ifdef _WIN32
-	const int ret = _wexecl(orig_path, orig_path, L"--updating", nullptr);
+	const int ret = _wexecl(wchar_orig_path.data(), wchar_orig_path.data(), L"--updating", nullptr);
 #else
 	const int ret = execl(replace_path.c_str(), replace_path.c_str(), "--updating", nullptr);
 #endif
