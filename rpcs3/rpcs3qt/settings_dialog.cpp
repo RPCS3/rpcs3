@@ -241,23 +241,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ppu_bg->addButton(ui->ppu_fast,    static_cast<int>(ppu_decoder_type::fast));
 	ppu_bg->addButton(ui->ppu_llvm,    static_cast<int>(ppu_decoder_type::llvm));
 
-	{ // PPU Stuff
-		const QString selected_ppu = qstr(m_emu_settings->GetSetting(emu_settings::PPUDecoder));
-		QStringList ppu_list = m_emu_settings->GetSettingOptions(emu_settings::PPUDecoder);
-
-		for (int i = 0; i < ppu_list.count(); i++)
-		{
-			if (ppu_list[i] == selected_ppu)
-			{
-				ppu_bg->button(i)->setChecked(true);
-			}
-
-			connect(ppu_bg->button(i), &QAbstractButton::clicked, [=, this]()
-			{
-				m_emu_settings->SetSetting(emu_settings::PPUDecoder, sstr(ppu_list[i]));
-			});
-		}
-	}
+	m_emu_settings->EnhanceRadioButton(ppu_bg, emu_settings::PPUDecoder);
 
 	// SPU tool tips
 	SubscribeTooltip(ui->spu_precise, tooltips.settings.spu_precise);
@@ -271,23 +255,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	spu_bg->addButton(ui->spu_asmjit,  static_cast<int>(spu_decoder_type::asmjit));
 	spu_bg->addButton(ui->spu_llvm,    static_cast<int>(spu_decoder_type::llvm));
 
-	{ // Spu stuff
-		const QString selected_spu = qstr(m_emu_settings->GetSetting(emu_settings::SPUDecoder));
-		QStringList spu_list = m_emu_settings->GetSettingOptions(emu_settings::SPUDecoder);
-
-		for (int i = 0; i < spu_list.count(); i++)
-		{
-			if (spu_list[i] == selected_spu)
-			{
-				spu_bg->button(i)->setChecked(true);
-			}
-
-			connect(spu_bg->button(i), &QAbstractButton::clicked, [=, this]()
-			{
-				m_emu_settings->SetSetting(emu_settings::SPUDecoder, sstr(spu_list[i]));
-			});
-		}
-	}
+	m_emu_settings->EnhanceRadioButton(spu_bg, emu_settings::SPUDecoder);
 
 	connect(ui->spu_llvm, &QAbstractButton::toggled, [this](bool checked)
 	{
@@ -863,32 +831,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// Radio Buttons
 
-	SubscribeTooltip(ui->gb_enterButtonAssignment, tooltips.settings.enter_button_assignment);
-
 	// creating this in ui file keeps scrambling the order...
 	QButtonGroup *enter_button_assignment_bg = new QButtonGroup(this);
 	enter_button_assignment_bg->addButton(ui->enterButtonAssignCircle, 0);
 	enter_button_assignment_bg->addButton(ui->enterButtonAssignCross, 1);
 
-	{ // EnterButtonAssignment options
-		const QString assigned_button = qstr(m_emu_settings->GetSetting(emu_settings::EnterButtonAssignment));
-		QStringList assignable_buttons = m_emu_settings->GetSettingOptions(emu_settings::EnterButtonAssignment);
-
-		for (int i = 0; i < assignable_buttons.count(); i++)
-		{
-			enter_button_assignment_bg->button(i)->setText(assignable_buttons[i]);
-
-			if (assignable_buttons[i] == assigned_button)
-			{
-				enter_button_assignment_bg->button(i)->setChecked(true);
-			}
-
-			connect(enter_button_assignment_bg->button(i), &QAbstractButton::clicked, [=, this]()
-			{
-				m_emu_settings->SetSetting(emu_settings::EnterButtonAssignment, sstr(assignable_buttons[i]));
-			});
-		}
-	}
+	m_emu_settings->EnhanceRadioButton(enter_button_assignment_bg, emu_settings::EnterButtonAssignment);
+	SubscribeTooltip(ui->gb_enterButtonAssignment, tooltips.settings.enter_button_assignment);
 
 	//    _   _      _                      _      _______    _
 	//   | \ | |    | |                    | |    |__   __|  | |
@@ -1051,25 +1000,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	lib_mode_bg->addButton(ui->lib_lv2b, static_cast<int>(lib_loading_type::liblv2both));
 	lib_mode_bg->addButton(ui->lib_lv2l, static_cast<int>(lib_loading_type::liblv2list));
 
-	{// Handle lib loading options
-		const QString selected_lib = qstr(m_emu_settings->GetSetting(emu_settings::LibLoadOptions));
-		QStringList libmode_list = m_emu_settings->GetSettingOptions(emu_settings::LibLoadOptions);
-
-		for (int i = 0; i < libmode_list.count(); i++)
-		{
-			lib_mode_bg->button(i)->setText(libmode_list[i]);
-
-			if (libmode_list[i] == selected_lib)
-			{
-				lib_mode_bg->button(i)->setChecked(true);
-			}
-
-			connect(lib_mode_bg->button(i), &QAbstractButton::clicked, [=, this]()
-			{
-				m_emu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(libmode_list[i]));
-			});
-		}
-	}
+	m_emu_settings->EnhanceRadioButton(lib_mode_bg, emu_settings::LibLoadOptions);
 
 	// Sort string vector alphabetically
 	static const auto sort_string_vector = [](std::vector<std::string>& vec)

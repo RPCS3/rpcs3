@@ -4,6 +4,7 @@
 
 #include "stdafx.h"
 
+#include <QButtonGroup>
 #include <QCheckBox>
 #include <QStringList>
 #include <QMap>
@@ -236,6 +237,9 @@ public:
 	/** Connects a line edit with the target settings type*/
 	void EnhanceEdit(QLineEdit* edit, SettingsType type);
 
+	/** Connects a button group with the target settings type*/
+	void EnhanceRadioButton(QButtonGroup* button_group, SettingsType type);
+
 	std::vector<std::string> GetLoadedLibraries();
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
 
@@ -266,13 +270,13 @@ public:
 	/** Fixes all registered invalid settings after asking the user for permission.*/
 	void OpenCorrectionDialog(QWidget* parent = Q_NULLPTR);
 
+	/** Get a localized and therefore freely adjustable version of the string used in config.yml.*/
+	QString GetLocalizedSetting(const QString& original, SettingsType type, int index) const;
+
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
 private:
-	/** Get a localized and therefore freely adjustable version of the string used in config.yml.*/
-	QString GetLocalizedSetting(const QString& original, SettingsType type, int index) const;
-
 	/** A helper map that keeps track of where a given setting type is located*/
 	const QMap<SettingsType, cfg_location> m_settings_location =
 	{
