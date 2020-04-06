@@ -1549,7 +1549,7 @@
            <item>
             <widget class="QLabel" name="l_description">
              <property name="text">
-              <string>This text should be replaced by an actual description.&lt;br/&gt;&lt;br/&gt;</string>
+              <string notr="true">This text should be replaced by an actual description.&lt;br/&gt;&lt;br/&gt;</string>
              </property>
              <property name="textFormat">
               <enum>Qt::RichText</enum>

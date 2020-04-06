@@ -62,7 +62,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	m_choice_units->setMaximumWidth(500);
 	m_choice_units->setEditable(true);
 	m_choice_units->setInsertPolicy(QComboBox::NoInsert);
-	m_choice_units->lineEdit()->setPlaceholderText("Choose a thread");
+	m_choice_units->lineEdit()->setPlaceholderText(tr("Choose a thread"));
 	m_choice_units->completer()->setCompletionMode(QCompleter::PopupCompletion);
 	m_choice_units->completer()->setMaxVisibleItems(30);
 	m_choice_units->completer()->setFilterMode(Qt::MatchContains);

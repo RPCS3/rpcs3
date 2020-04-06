@@ -756,7 +756,7 @@ void trophy_manager_dialog::PopulateGameTable()
 		const int all_trophies = m_trophies_db[i]->trop_usr->GetTrophiesCount();
 		const int unlocked_trophies = m_trophies_db[i]->trop_usr->GetUnlockedTrophiesCount();
 		const int percentage = 100 * unlocked_trophies / all_trophies;
-		const QString progress = QString("%0% (%1/%2)").arg(percentage).arg(unlocked_trophies).arg(all_trophies);
+		const QString progress = tr("%0% (%1/%2)").arg(percentage).arg(unlocked_trophies).arg(all_trophies);
 		const QString name = qstr(m_trophies_db[i]->game_name).simplified();
 
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
@@ -789,7 +789,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 	const int unlocked_trophies = data->trop_usr->GetUnlockedTrophiesCount();
 	const int percentage = 100 * unlocked_trophies / all_trophies;
 
-	m_game_progress->setText(QString("Progress: %1% (%2/%3)").arg(percentage).arg(unlocked_trophies).arg(all_trophies));
+	m_game_progress->setText(tr("Progress: %1% (%2/%3)").arg(percentage).arg(unlocked_trophies).arg(all_trophies));
 
 	m_trophy_table->clearContents();
 	m_trophy_table->setRowCount(all_trophies);

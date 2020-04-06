@@ -1717,13 +1717,13 @@
                 </property>
                </widget>
               </item>
-            <item>
-             <widget class="QCheckBox" name="accuratePPUfma">
-              <property name="text">
-               <string>Accurate PPU FMA</string>
-              </property>
-             </widget>
-            </item>
+              <item>
+               <widget class="QCheckBox" name="accuratePPUfma">
+                <property name="text">
+                 <string>Accurate PPU FMA</string>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QCheckBox" name="silenceAllLogs">
                 <property name="text">
@@ -2133,7 +2133,7 @@
              <string>Point your mouse at an option to display a description in here.
 
 
-             </string>
+</string>
             </property>
             <property name="textFormat">
              <enum>Qt::PlainText</enum>
@@ -2411,7 +2411,7 @@
               <item>
                <widget class="QLabel" name="label_game_window_title_format">
                 <property name="text">
-                 <string>FPS: 60 | Renderer | Version | Game [ID]</string>
+                 <string notr="true">FPS: 60 | Renderer | Version | Game [ID]</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
