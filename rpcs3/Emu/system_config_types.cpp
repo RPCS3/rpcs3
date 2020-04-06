@@ -236,3 +236,154 @@ void fmt_class_string<np_psn_status>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<spu_decoder_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](spu_decoder_type type)
+	{
+		switch (type)
+		{
+		case spu_decoder_type::precise: return "Interpreter (precise)";
+		case spu_decoder_type::fast: return "Interpreter (fast)";
+		case spu_decoder_type::asmjit: return "Recompiler (ASMJIT)";
+		case spu_decoder_type::llvm: return "Recompiler (LLVM)";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<spu_block_size_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](spu_block_size_type type)
+	{
+		switch (type)
+		{
+		case spu_block_size_type::safe: return "Safe";
+		case spu_block_size_type::mega: return "Mega";
+		case spu_block_size_type::giga: return "Giga";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](frame_limit_type value)
+	{
+		switch (value)
+		{
+		case frame_limit_type::none: return "Off";
+		case frame_limit_type::_59_94: return "59.94";
+		case frame_limit_type::_50: return "50";
+		case frame_limit_type::_60: return "60";
+		case frame_limit_type::_30: return "30";
+		case frame_limit_type::_auto: return "Auto";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<microphone_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case microphone_handler::null: return "Null";
+		case microphone_handler::standard: return "Standard";
+		case microphone_handler::singstar: return "SingStar";
+		case microphone_handler::real_singstar: return "Real SingStar";
+		case microphone_handler::rocksmith: return "Rocksmith";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<camera_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case camera_handler::null: return "Null";
+		case camera_handler::fake: return "Fake";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<fake_camera_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case fake_camera_type::unknown: return "Unknown";
+		case fake_camera_type::eyetoy: return "EyeToy";
+		case fake_camera_type::eyetoy2: return "PS Eye";
+		case fake_camera_type::uvc1_1: return "UVC 1.1";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case move_handler::null: return "Null";
+		case move_handler::fake: return "Fake";
+		case move_handler::mouse: return "Mouse";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<lib_loading_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](lib_loading_type value)
+	{
+		switch (value)
+		{
+		case lib_loading_type::manual: return "Manually load selected libraries";
+		case lib_loading_type::hybrid: return "Load automatic and manual selection";
+		case lib_loading_type::liblv2only: return "Load liblv2.sprx only";
+		case lib_loading_type::liblv2both: return "Load liblv2.sprx and manual selection";
+		case lib_loading_type::liblv2list: return "Load liblv2.sprx and strict selection";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](ppu_decoder_type type)
+	{
+		switch (type)
+		{
+		case ppu_decoder_type::precise: return "Interpreter (precise)";
+		case ppu_decoder_type::fast: return "Interpreter (fast)";
+		case ppu_decoder_type::llvm: return "Recompiler (LLVM)";
+		}
+
+		return unknown;
+	});
+}

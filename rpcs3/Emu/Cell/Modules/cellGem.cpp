@@ -136,26 +136,6 @@ struct gem_config
 	}
 };
 
-// ************************
-// * HLE helper functions *
-// ************************
-
-template <>
-void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](auto value)
-	{
-		switch (value)
-		{
-		case move_handler::null: return "Null";
-		case move_handler::fake: return "Fake";
-		case move_handler::mouse: return "Mouse";
-		}
-
-		return unknown;
-	});
-}
-
 /**
  * \brief Verifies that a Move controller id is valid
  * \param gem_num Move controler ID to verify

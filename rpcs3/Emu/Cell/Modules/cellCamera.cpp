@@ -44,38 +44,6 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read);
 // * HLE helper functions *
 // ************************
 
-template <>
-void fmt_class_string<camera_handler>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](auto value)
-	{
-		switch (value)
-		{
-		case camera_handler::null: return "Null";
-		case camera_handler::fake: return "Fake";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<fake_camera_type>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](auto value)
-	{
-		switch (value)
-		{
-		case fake_camera_type::unknown: return "Unknown";
-		case fake_camera_type::eyetoy: return "EyeToy";
-		case fake_camera_type::eyetoy2: return "PS Eye";
-		case fake_camera_type::uvc1_1: return "UVC 1.1";
-		}
-
-		return unknown;
-	});
-}
-
 static const char* get_camera_attr_name(s32 value)
 {
 	switch (value)

@@ -38,24 +38,6 @@ extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 // HLE function name cache
 std::vector<std::string> g_ppu_function_names;
 
-template <>
-void fmt_class_string<lib_loading_type>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](lib_loading_type value)
-	{
-		switch (value)
-		{
-		case lib_loading_type::manual: return "Manually load selected libraries";
-		case lib_loading_type::hybrid: return "Load automatic and manual selection";
-		case lib_loading_type::liblv2only: return "Load liblv2.sprx only";
-		case lib_loading_type::liblv2both: return "Load liblv2.sprx and manual selection";
-		case lib_loading_type::liblv2list: return "Load liblv2.sprx and strict selection";
-		}
-
-		return unknown;
-	});
-}
-
 extern u32 ppu_generate_id(const char* name)
 {
 	// Symbol name suffix

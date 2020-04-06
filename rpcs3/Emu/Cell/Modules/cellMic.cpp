@@ -10,23 +10,6 @@
 
 LOG_CHANNEL(cellMic);
 
-template <>
-void fmt_class_string<microphone_handler>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](auto value) {
-		switch (value)
-		{
-		case microphone_handler::null: return "Null";
-		case microphone_handler::standard: return "Standard";
-		case microphone_handler::singstar: return "SingStar";
-		case microphone_handler::real_singstar: return "Real SingStar";
-		case microphone_handler::rocksmith: return "Rocksmith";
-		}
-
-		return unknown;
-	});
-}
-
 void mic_context::operator()()
 {
 	while (thread_ctrl::state() != thread_state::aborting)
