@@ -92,7 +92,8 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	std::vector<std::string> str_inputs = g_cfg_input.player[0]->handler.to_list();
 	for (size_t index = 0; index < str_inputs.size(); index++)
 	{
-		ui->chooseHandler->addItem(qstr(str_inputs[index]));
+		const QString item_data = qstr(str_inputs[index]);
+		ui->chooseHandler->addItem(GetLocalizedPadHandler(item_data, static_cast<pad_handler>(index)), QVariant(item_data));
 	}
 
 	// Combobox: Input type
@@ -144,26 +145,27 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 
 		while (dialog->exec() != QDialog::Rejected)
 		{
-			QString friendlyName = dialog->textValue();
-			if (friendlyName.isEmpty())
+			const QString profile_name = dialog->textValue();
+
+			if (profile_name.isEmpty())
 			{
 				QMessageBox::warning(this, tr("Error"), tr("Name cannot be empty"));
 				continue;
 			}
-			if (friendlyName.contains("."))
+			if (profile_name.contains("."))
 			{
 				QMessageBox::warning(this, tr("Error"), tr("Must choose a name without '.'"));
 				continue;
 			}
-			if (ui->chooseProfile->findText(friendlyName) != -1)
+			if (ui->chooseProfile->findText(profile_name) != -1)
 			{
 				QMessageBox::warning(this, tr("Error"), tr("Please choose a non-existing name"));
 				continue;
 			}
-			if (CreateConfigFile(qstr(PadHandlerBase::get_config_dir(g_cfg_input.player[i]->handler, m_title_id)), friendlyName))
+			if (CreateConfigFile(qstr(PadHandlerBase::get_config_dir(g_cfg_input.player[i]->handler, m_title_id)), profile_name))
 			{
-				ui->chooseProfile->addItem(friendlyName);
-				ui->chooseProfile->setCurrentText(friendlyName);
+				ui->chooseProfile->addItem(profile_name);
+				ui->chooseProfile->setCurrentText(profile_name);
 			}
 			break;
 		}
@@ -178,12 +180,12 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	// Refresh Button
 	connect(ui->b_refresh, &QPushButton::clicked, this, &pad_settings_dialog::RefreshInputTypes);
 
-	ui->chooseClass->addItem(tr("Standard (Pad)"));
-	ui->chooseClass->addItem(tr("Guitar"));
-	ui->chooseClass->addItem(tr("Drum"));
-	ui->chooseClass->addItem(tr("DJ"));
-	ui->chooseClass->addItem(tr("Dance Mat"));
-	ui->chooseClass->addItem(tr("Navigation"));
+	ui->chooseClass->addItem(tr("Standard (Pad)")); // CELL_PAD_PCLASS_TYPE_STANDARD   = 0x00,
+	ui->chooseClass->addItem(tr("Guitar"));         // CELL_PAD_PCLASS_TYPE_GUITAR     = 0x01,
+	ui->chooseClass->addItem(tr("Drum"));           // CELL_PAD_PCLASS_TYPE_DRUM       = 0x02,
+	ui->chooseClass->addItem(tr("DJ"));             // CELL_PAD_PCLASS_TYPE_DJ         = 0x03,
+	ui->chooseClass->addItem(tr("Dance Mat"));      // CELL_PAD_PCLASS_TYPE_DANCEMAT   = 0x04,
+	ui->chooseClass->addItem(tr("Navigation"));     // CELL_PAD_PCLASS_TYPE_NAVIGATION = 0x05,
 
 	// Initialize configurable buttons
 	InitButtons();
@@ -989,7 +991,7 @@ void pad_settings_dialog::ChangeInputType()
 	bool force_enable = false; // enable configs even with disconnected devices
 	const int player = m_tabs->currentIndex();
 
-	const std::string handler = sstr(ui->chooseHandler->currentText());
+	const std::string handler = sstr(ui->chooseHandler->currentData().toString());
 	const std::string device = g_cfg_input.player[player]->device.to_string();
 	const std::string profile = g_cfg_input.player[player]->profile.to_string();
 
@@ -1212,9 +1214,11 @@ void pad_settings_dialog::ChangeProfile()
 
 void pad_settings_dialog::RefreshInputTypes()
 {
+	const auto& handler = g_cfg_input.player[m_tabs->currentIndex()]->handler;
+
 	// Set the current input type from config. Disable signal to have ChangeInputType always executed exactly once
 	ui->chooseHandler->blockSignals(true);
-	ui->chooseHandler->setCurrentText(qstr(g_cfg_input.player[m_tabs->currentIndex()]->handler.to_string()));
+	ui->chooseHandler->setCurrentText(GetLocalizedPadHandler(qstr(handler.to_string()), handler));
 	ui->chooseHandler->blockSignals(false);
 
 	// Force Change
@@ -1289,4 +1293,25 @@ void pad_settings_dialog::CancelExit()
 	g_cfg_input.load();
 
 	QDialog::reject();
+}
+
+QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad_handler handler)
+{
+	switch (handler)
+	{
+		case pad_handler::null: return tr("Null");
+		case pad_handler::keyboard: return tr("Keyboard");
+		case pad_handler::ds3: return tr("DualShock 3");
+		case pad_handler::ds4: return tr("DualShock 4");
+#ifdef _WIN32
+		case pad_handler::xinput: return tr("XInput");
+		case pad_handler::mm: return tr("MMJoystick");
+#endif
+#ifdef HAVE_LIBEVDEV
+		case pad_handler::evdev: return tr("Evdev");
+#endif
+	default:
+		break;
+	}
+	return original;
 }
