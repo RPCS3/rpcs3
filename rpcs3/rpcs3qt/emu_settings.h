@@ -188,15 +188,15 @@ public:
 	{
 		bool supportsVulkan = false;
 		QStringList vulkanAdapters;
-		QString name_Null = tr("Disable Video Output");
-		QString name_Vulkan = tr("Vulkan");
-		QString name_OpenGL = tr("OpenGL");
+		QString name_Null;
+		QString name_Vulkan;
+		QString name_OpenGL;
 		Render_Info Vulkan;
 		Render_Info OpenGL;
 		Render_Info NullRender;
 		std::vector<Render_Info*> renderers;
 
-		Render_Creator();
+		Render_Creator(const QString& name_null, const QString& name_vulkan, const QString& name_openGL);
 	};
 
 	struct Microphone_Creator
@@ -270,6 +270,9 @@ public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
 private:
+	/** Get a localized and therefore freely adjustable version of the string used in config.yml.*/
+	QString GetLocalizedSetting(const QString& original, SettingsType type, int index) const;
+
 	/** A helper map that keeps track of where a given setting type is located*/
 	const QMap<SettingsType, cfg_location> m_settings_location =
 	{
