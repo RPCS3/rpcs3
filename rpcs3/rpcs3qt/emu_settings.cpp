@@ -200,6 +200,7 @@ emu_settings::Render_Creator::Render_Creator(const QString& name_null, const QSt
 }
 
 emu_settings::Microphone_Creator::Microphone_Creator()
+	: mic_none(tr("None", "Microphone device"))
 {
 	RefreshList();
 }
@@ -855,6 +856,13 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case spu_decoder_type::fast: return tr("Interpreter (fast)");
 		case spu_decoder_type::asmjit: return tr("Recompiler (ASMJIT)");
 		case spu_decoder_type::llvm: return tr("Recompiler (LLVM)");
+		}
+		break;
+	case emu_settings::EnterButtonAssignment:
+		switch (static_cast<enter_button_assign>(index))
+		{
+		case enter_button_assign::circle: return tr("Enter with circle", "Enter button assignment");
+		case enter_button_assign::cross: return tr("Enter with cross", "Enter button assignment");
 		}
 		break;
 	default:

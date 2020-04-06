@@ -203,7 +203,7 @@ public:
 	struct Microphone_Creator
 	{
 		QStringList microphones_list;
-		QString mic_none = tr("None");
+		QString mic_none;
 		std::array<std::string, 4> sel_list;
 		std::string SetDevice(u32 num, QString& text);
 		void ParseDevices(std::string list);
