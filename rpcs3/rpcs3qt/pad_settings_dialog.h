@@ -175,6 +175,8 @@ private:
 	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y);
 
 	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
+	
+	QString GetLocalizedPadHandler(const QString& original, pad_handler handler);
 
 protected:
 	/** Handle keyboard handler input */
