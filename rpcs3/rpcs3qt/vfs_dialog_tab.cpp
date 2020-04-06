@@ -45,7 +45,7 @@ vfs_dialog_tab::vfs_dialog_tab(vfs_settings_info settingsInfo, std::shared_ptr<g
 
 	QHBoxLayout* selectedConfigLayout = new QHBoxLayout;
 	m_selectedConfigLabel = new QLabel(current_dir.isEmpty() ? EmptyPath : current_dir);
-	selectedConfigLayout->addWidget(new QLabel(m_info.name + tr(" directory:")));
+	selectedConfigLayout->addWidget(new QLabel(tr("%0 directory:").arg(m_info.name)));
 	selectedConfigLayout->addWidget(m_selectedConfigLabel);
 	selectedConfigLayout->addStretch();
 	selectedConfigLayout->addWidget(addDir);
