@@ -117,7 +117,10 @@ static QStringList getOptions(cfg_location location)
 	return values;
 }
 
-emu_settings::Render_Creator::Render_Creator()
+emu_settings::Render_Creator::Render_Creator(const QString& name_null, const QString& name_vulkan, const QString& name_openGL)
+	: name_Null(name_null)
+	, name_Vulkan(name_vulkan)
+	, name_OpenGL(name_openGL)
 {
 #if defined(WIN32) || defined(HAVE_VULKAN)
 	// Some drivers can get stuck when checking for vulkan-compatible gpus, f.ex. if they're waiting for one to get
@@ -248,7 +251,12 @@ void emu_settings::Microphone_Creator::ParseDevices(std::string list)
 	}
 }
 
-emu_settings::emu_settings() : QObject()
+emu_settings::emu_settings()
+	: QObject()
+	, m_render_creator(
+		GetLocalizedSetting("Null", emu_settings::Renderer, static_cast<int>(video_renderer::null)),
+		GetLocalizedSetting("Vulkan", emu_settings::Renderer, static_cast<int>(video_renderer::vulkan)),
+		GetLocalizedSetting("OpenGl", emu_settings::Renderer, static_cast<int>(video_renderer::opengl)))
 {
 }
 
@@ -360,14 +368,15 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 	{
 		QStringList settings = GetSettingOptions(type);
 
-		if (sorted)
-		{
-			settings.sort();
-		}
-
 		for (const QString& setting : settings)
 		{
-			combobox->addItem(tr(setting.toStdString().c_str()), QVariant(setting));
+			const QString localized_setting = GetLocalizedSetting(setting, type, combobox->count());
+			combobox->addItem(localized_setting, QVariant(setting));
+		}
+
+		if (sorted)
+		{
+			combobox->model()->sort(0, Qt::AscendingOrder);
 		}
 	}
 
@@ -631,4 +640,164 @@ void emu_settings::OpenCorrectionDialog(QWidget* parent)
 		m_broken_types.clear();
 		cfg_log.success("You need to save the settings in order to make these changes permanent!");
 	}
+}
+
+QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType type, int index) const
+{
+	switch (type)
+	{
+	case emu_settings::SPUBlockSize:
+		switch (static_cast<spu_block_size_type>(index))
+		{
+		case spu_block_size_type::safe: return tr("Safe");
+		case spu_block_size_type::mega: return tr("Mega");
+		case spu_block_size_type::giga: return tr("Giga");
+		}
+		break;
+	case emu_settings::EnableTSX:
+		switch (static_cast<tsx_usage>(index))
+		{
+		case tsx_usage::disabled: return tr("Disabled");
+		case tsx_usage::enabled: return tr("Enabled");
+		case tsx_usage::forced: return tr("Forced");
+		}
+		break;
+	case emu_settings::Renderer:
+		switch (static_cast<video_renderer>(index))
+		{
+		case video_renderer::null: return tr("Disable Video Output");
+		case video_renderer::opengl: return tr("OpenGL");
+		case video_renderer::vulkan: return tr("Vulkan");
+		}
+		break;
+	case emu_settings::FrameLimit:
+		switch (static_cast<frame_limit_type>(index))
+		{
+		case frame_limit_type::none: return tr("Off");
+		case frame_limit_type::_59_94: return tr("59.94");
+		case frame_limit_type::_50: return tr("50");
+		case frame_limit_type::_60: return tr("60");
+		case frame_limit_type::_30: return tr("30");
+		case frame_limit_type::_auto: return tr("Auto");
+		}
+		break;
+	case emu_settings::MSAA:
+		switch (static_cast<msaa_level>(index))
+		{
+		case msaa_level::none: return tr("Disabled");
+		case msaa_level::_auto: return tr("Auto");
+		}
+		break;
+	case emu_settings::AudioRenderer:
+		switch (static_cast<audio_renderer>(index))
+		{
+		case audio_renderer::null: return tr("Disable Audio Output");
+#ifdef _WIN32
+		case audio_renderer::xaudio: return tr("XAudio2");
+#endif
+#ifdef HAVE_ALSA
+		case audio_renderer::alsa: return tr("ALSA");
+#endif
+#ifdef HAVE_PULSE
+		case audio_renderer::pulse: return tr("PulseAudio");
+#endif
+		case audio_renderer::openal: return tr("OpenAL");
+#ifdef HAVE_FAUDIO
+		case audio_renderer::faudio: return tr("FAudio");
+#endif
+		}
+		break;
+	case emu_settings::MicrophoneType:
+		switch (static_cast<microphone_handler>(index))
+		{
+		case microphone_handler::null: return tr("Disabled");
+		case microphone_handler::standard: return tr("Standard");
+		case microphone_handler::singstar: return tr("SingStar");
+		case microphone_handler::real_singstar: return tr("Real SingStar");
+		case microphone_handler::rocksmith: return tr("Rocksmith");
+		}
+		break;
+	case emu_settings::KeyboardHandler:
+		switch (static_cast<keyboard_handler>(index))
+		{
+		case keyboard_handler::null: return tr("Null");
+		case keyboard_handler::basic: return tr("Basic");
+		}
+		break;
+	case emu_settings::MouseHandler:
+		switch (static_cast<mouse_handler>(index))
+		{
+		case mouse_handler::null: return tr("Null");
+		case mouse_handler::basic: return tr("Basic");
+		}
+		break;
+	case emu_settings::CameraType:
+		switch (static_cast<fake_camera_type>(index))
+		{
+		case fake_camera_type::unknown: return tr("Unknown");
+		case fake_camera_type::eyetoy: return tr("EyeToy");
+		case fake_camera_type::eyetoy2: return tr("PS Eye");
+		case fake_camera_type::uvc1_1: return tr("UVC 1.1");
+		}
+		break;
+	case emu_settings::Camera:
+		switch (static_cast<camera_handler>(index))
+		{
+		case camera_handler::null: return tr("Null");
+		case camera_handler::fake: return tr("Fake");
+		}
+		break;
+	case emu_settings::Move:
+		switch (static_cast<move_handler>(index))
+		{
+		case move_handler::null: return tr("Null");
+		case move_handler::fake: return tr("Fake");
+		case move_handler::mouse: return tr("Mouse");
+		}
+		break;
+	case emu_settings::InternetStatus:
+		switch (static_cast<np_internet_status>(index))
+		{
+		case np_internet_status::disabled: return tr("Disconnected");
+		case np_internet_status::enabled: return tr("Connected");
+		}
+		break;
+	case emu_settings::PSNStatus:
+		switch (static_cast<np_psn_status>(index))
+		{
+		case np_psn_status::disabled: return tr("Disconnected");
+		case np_psn_status::fake: return tr("Simulated");
+		}
+		break;
+	case emu_settings::SleepTimersAccuracy:
+		switch (static_cast<sleep_timers_accuracy_level>(index))
+		{
+		case sleep_timers_accuracy_level::_as_host: return tr("As Host");
+		case sleep_timers_accuracy_level::_usleep: return tr("Usleep Only");
+		case sleep_timers_accuracy_level::_all_timers: return tr("All Timers");
+		}
+		break;
+	case emu_settings::PerfOverlayDetailLevel:
+		switch (static_cast<detail_level>(index))
+		{
+		case detail_level::minimal: return tr("Minimal");
+		case detail_level::low: return tr("Low");
+		case detail_level::medium: return tr("Medium");
+		case detail_level::high: return tr("High");
+		}
+		break;
+	case emu_settings::PerfOverlayPosition:
+		switch (static_cast<screen_quadrant>(index))
+		{
+		case screen_quadrant::top_left: return tr("Top Left");
+		case screen_quadrant::top_right: return tr("Top Right");
+		case screen_quadrant::bottom_left: return tr("Bottom Left");
+		case screen_quadrant::bottom_right: return tr("Bottom Right");
+		}
+		break;
+	default:
+		break;
+	}
+
+	return original;
 }

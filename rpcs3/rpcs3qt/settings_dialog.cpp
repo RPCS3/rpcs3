@@ -320,9 +320,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_renderer, tooltips.settings.renderer);
 	SubscribeTooltip(ui->gb_graphicsAdapter, tooltips.settings.graphics_adapter);
 
-	// Change displayed renderer names
-	ui->renderBox->setItemText(ui->renderBox->findData("Null"), render_creator.name_Null);
-
 	m_emu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
 	SubscribeTooltip(ui->gb_default_resolution, tooltips.settings.resolution);
 	// remove unsupported resolutions from the dropdown
@@ -745,8 +742,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #else
 	SubscribeTooltip(ui->gb_audio_out, tooltips.settings.audio_out_linux);
 #endif
-	// Change displayed backend names
-	ui->audioOutBox->setItemText(ui->renderBox->findData("Null"), tr("Disable Audio Output"));
 	connect(ui->audioOutBox, &QComboBox::currentTextChanged, enable_buffering);
 
 	// Microphone Comboboxes
@@ -775,7 +770,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	}
 
 	m_emu_settings->EnhanceComboBox(ui->microphoneBox, emu_settings::MicrophoneType);
-	ui->microphoneBox->setItemText(ui->microphoneBox->findData("Null"), tr("Disabled"));
 	SubscribeTooltip(ui->microphoneBox, tooltips.settings.microphone);
 	connect(ui->microphoneBox, &QComboBox::currentTextChanged, change_microphone_type);
 	propagate_used_devices(); // Enables/Disables comboboxes and checks values from config for sanity
