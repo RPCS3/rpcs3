@@ -133,7 +133,7 @@ std::string utils::get_system_info()
 
 	if (const ullong tsc_freq = get_tsc_freq())
 	{
-		fmt::append(result, " | TSC: %.06fGHz", tsc_freq / 1000000000.);
+		fmt::append(result, " | TSC: %.02fGHz", tsc_freq / 1000000000.);
 	}
 	else
 	{
@@ -262,6 +262,11 @@ std::string utils::get_OS_version()
 	return output;
 }
 
+static constexpr ullong round_tsc(ullong val)
+{
+	return ::rounded_div(val, 20'000'000) * 20'000'000;
+}
+
 ullong utils::get_tsc_freq()
 {
 	const ullong cal_tsc = []() -> ullong
@@ -274,7 +279,7 @@ ullong utils::get_tsc_freq()
 			return 0;
 
 		if (freq.QuadPart <= 9'999'999)
-			return freq.QuadPart * 1024;
+			return round_tsc(freq.QuadPart * 1024);
 
 		const ullong timer_freq = freq.QuadPart;
 		Sleep(1);
@@ -293,7 +298,7 @@ ullong utils::get_tsc_freq()
 
 		for (int i = 0; i < samples; i++)
 		{
-			rdtsc_data[i] = __rdtsc();
+			rdtsc_data[i] = (_mm_lfence(), __rdtsc());
 			if (i > 0)
 				rdtsc_diff[i - 1] = rdtsc_data[i] - rdtsc_data[i - 1];
 #ifdef _WIN32
@@ -321,7 +326,7 @@ ullong utils::get_tsc_freq()
 		}
 
 		// Rounding
-		return acc / (samples - 1);
+		return round_tsc(acc / (samples - 1));
 	}();
 
 	return cal_tsc;
