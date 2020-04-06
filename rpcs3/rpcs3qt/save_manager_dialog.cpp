@@ -123,7 +123,7 @@ void save_manager_dialog::Init(std::string dir)
 	// Bottom bar
 	int icon_size = m_gui_settings->GetValue(gui::sd_icon_size).toInt();
 	m_icon_size = QSize(icon_size, icon_size);
-	QLabel* label_icon_size = new QLabel("Icon size:", this);
+	QLabel* label_icon_size = new QLabel(tr("Icon size:"), this);
 	QSlider* slider_icon_size = new QSlider(Qt::Horizontal, this);
 	slider_icon_size->setMinimum(60);
 	slider_icon_size->setMaximum(225);
