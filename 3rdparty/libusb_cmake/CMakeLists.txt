@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.4)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_BINARY_DIR}/cmake/modules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 set(LIBUSB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libusb/)
 
