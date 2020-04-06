@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "stdafx.h"
+
 #include <QDialog>
 #include <QLineEdit>
 #include <QLabel>
@@ -8,6 +10,9 @@
 
 class memory_viewer_panel : public QDialog
 {
+	Q_OBJECT
+
+private:
 	u32 m_addr;
 	u32 m_colcount;
 	u32 m_rowcount;

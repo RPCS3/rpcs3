@@ -12,6 +12,7 @@
 	debugger_list.cpp
 	_discord_utils.cpp
 	emu_settings.cpp
+	fatal_error_dialog.cpp
 	find_dialog.cpp
 	game_compatibility.cpp
 	game_list_frame.cpp

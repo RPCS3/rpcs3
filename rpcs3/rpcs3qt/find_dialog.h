@@ -8,6 +8,8 @@
 
 class find_dialog : public QDialog
 {
+	Q_OBJECT
+
 public:
 	find_dialog(QTextEdit* edit, QWidget *parent = Q_NULLPTR, Qt::WindowFlags f = Qt::WindowFlags());
 

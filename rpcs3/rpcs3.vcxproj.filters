@@ -934,6 +934,81 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_screenshot_preview.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_skylander_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_skylander_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_skylander_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_skylander_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_find_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_find_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_find_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_find_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_memory_viewer_panel.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_memory_viewer_panel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_memory_viewer_panel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_memory_viewer_panel.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_instruction_editor_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_instruction_editor_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_instruction_editor_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_instruction_editor_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_trophy_notification_frame.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_trophy_notification_frame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_trophy_notification_frame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_trophy_notification_frame.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_fatal_error_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_fatal_error_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_fatal_error_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_fatal_error_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\fatal_error_dialog.cpp">
+      <Filter>Gui\misc dialogs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -969,9 +1044,6 @@
     <ClInclude Include="rpcs3qt\trophy_notification_helper.h">
       <Filter>Gui\trophy</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\trophy_notification_frame.h">
-      <Filter>Gui\trophy</Filter>
-    </ClInclude>
     <ClInclude Include="Input\pad_thread.h">
       <Filter>Io</Filter>
     </ClInclude>
@@ -987,17 +1059,8 @@
     <ClInclude Include="rpcs3qt\table_item_delegate.h">
       <Filter>Gui\game list</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\memory_viewer_panel.h">
-      <Filter>Gui\dev tools</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\instruction_editor_dialog.h">
-      <Filter>Gui\debugger</Filter>
-    </ClInclude>
     <ClInclude Include="Input\evdev_joystick_handler.h">
       <Filter>Io\evdev</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\find_dialog.h">
-      <Filter>Gui\misc dialogs</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\custom_table_widget_item.h">
       <Filter>Gui\game list</Filter>
@@ -1016,9 +1079,6 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\stylesheets.h">
       <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\skylander_dialog.h">
-      <Filter>Gui\skylanders</Filter>
     </ClInclude>
     <ClInclude Include="display_sleep_control.h">
       <Filter>Gui</Filter>
@@ -1225,6 +1285,24 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\screenshot_preview.h">
       <Filter>Gui\screenshot manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\skylander_dialog.h">
+      <Filter>Gui\skylanders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\find_dialog.h">
+      <Filter>Gui\misc dialogs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\memory_viewer_panel.h">
+      <Filter>Gui\dev tools</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\instruction_editor_dialog.h">
+      <Filter>Gui\debugger</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\trophy_notification_frame.h">
+      <Filter>Gui\trophy</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\fatal_error_dialog.h">
+      <Filter>Gui\misc dialogs</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

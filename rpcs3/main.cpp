@@ -6,14 +6,12 @@
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QFileInfo>
-#include <QLayout>
 #include <QTimer>
 #include <QObject>
-#include <QMessageBox>
-#include <QTextDocument>
 #include <QStyleFactory>
 
 #include "rpcs3qt/gui_application.h"
+#include "rpcs3qt/fatal_error_dialog.h"
 
 #include "headless_application.h"
 #include "Utilities/sema.h"
@@ -48,12 +46,6 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-template <typename... Args>
-inline auto tr(Args&&... args)
-{
-	return QObject::tr(std::forward<Args>(args)...);
-}
-
 static semaphore<> s_qt_init;
 
 static atomic_t<char*> s_argv0;
@@ -85,23 +77,8 @@ LOG_CHANNEL(sys_log, "SYS");
 
 	auto show_report = [](const std::string& text)
 	{
-		QMessageBox msg;
-		msg.setWindowTitle(tr("RPCS3: Fatal Error"));
-		msg.setIcon(QMessageBox::Critical);
-		msg.setTextFormat(Qt::RichText);
-		msg.setText(QString(R"(
-			<p style="white-space: nowrap;">
-				%1<br>
-				%2<br>
-				<a href='https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support'>https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support</a><br>
-				%3<br>
-			</p>
-			)")
-			.arg(Qt::convertFromPlainText(QString::fromStdString(text)))
-			.arg(tr("HOW TO REPORT ERRORS:"))
-			.arg(tr("Please, don't send incorrect reports. Thanks for understanding.")));
-		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
-		msg.exec();
+		fatal_error_dialog dlg(text);
+		dlg.exec();
 	};
 
 #ifdef __APPLE__
