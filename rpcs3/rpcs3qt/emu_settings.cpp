@@ -366,7 +366,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 	}
 	else
 	{
-		QStringList settings = GetSettingOptions(type);
+		const QStringList settings = GetSettingOptions(type);
 
 		for (const QString& setting : settings)
 		{
@@ -578,6 +578,41 @@ void emu_settings::EnhanceEdit(QLineEdit* edit, SettingsType type)
 	{
 		SetSetting(type, sstr(text));
 	});
+}
+
+void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, SettingsType type)
+{
+	if (!button_group)
+	{
+		cfg_log.fatal("EnhanceRadioButton '%s' was used with an invalid object", GetSettingName(type));
+		return;
+	}
+
+	const QString selected    = qstr(GetSetting(type));
+	const QStringList options = GetSettingOptions(type);
+
+	if (button_group->buttons().count() < options.size())
+	{
+		cfg_log.fatal("EnhanceRadioButton '%s': wrong button count", GetSettingName(type));
+		return;
+	}
+
+	for (int i = 0; i < options.count(); i++)
+	{
+		const QString localized_setting = GetLocalizedSetting(options[i], type, i);
+
+		button_group->button(i)->setText(localized_setting);
+
+		if (options[i] == selected)
+		{
+			button_group->button(i)->setChecked(true);
+		}
+
+		connect(button_group->button(i), &QAbstractButton::clicked, [=, this]()
+		{
+			SetSetting(type, sstr(options[i]));
+		});
+	}
 }
 
 std::vector<std::string> emu_settings::GetLoadedLibraries()
@@ -793,6 +828,33 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case screen_quadrant::top_right: return tr("Top Right");
 		case screen_quadrant::bottom_left: return tr("Bottom Left");
 		case screen_quadrant::bottom_right: return tr("Bottom Right");
+		}
+		break;
+	case emu_settings::LibLoadOptions:
+		switch (static_cast<lib_loading_type>(index))
+		{
+		case lib_loading_type::manual: return tr("Manually load selected libraries");
+		case lib_loading_type::hybrid: return tr("Load automatic and manual selection");
+		case lib_loading_type::liblv2only: return tr("Load liblv2.sprx only");
+		case lib_loading_type::liblv2both: return tr("Load liblv2.sprx and manual selection");
+		case lib_loading_type::liblv2list: return tr("Load liblv2.sprx and strict selection");
+		}
+		break;
+	case emu_settings::PPUDecoder:
+		switch (static_cast<ppu_decoder_type>(index))
+		{
+		case ppu_decoder_type::precise: return tr("Interpreter (precise)");
+		case ppu_decoder_type::fast: return tr("Interpreter (fast)");
+		case ppu_decoder_type::llvm: return tr("Recompiler (LLVM)");
+		}
+		break;
+	case emu_settings::SPUDecoder:
+		switch (static_cast<spu_decoder_type>(index))
+		{
+		case spu_decoder_type::precise: return tr("Interpreter (precise)");
+		case spu_decoder_type::fast: return tr("Interpreter (fast)");
+		case spu_decoder_type::asmjit: return tr("Recompiler (ASMJIT)");
+		case spu_decoder_type::llvm: return tr("Recompiler (LLVM)");
 		}
 		break;
 	default:
