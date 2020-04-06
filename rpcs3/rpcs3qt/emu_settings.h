@@ -271,7 +271,7 @@ public Q_SLOTS:
 	void SaveSettings();
 private:
 	/** A helper map that keeps track of where a given setting type is located*/
-	const QMap<SettingsType, cfg_location> SettingsLoc =
+	const QMap<SettingsType, cfg_location> m_settings_location =
 	{
 		// Core Tab
 		{ PPUDecoder,               { "Core", "PPU Decoder"}},
