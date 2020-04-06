@@ -685,177 +685,177 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 	case emu_settings::SPUBlockSize:
 		switch (static_cast<spu_block_size_type>(index))
 		{
-		case spu_block_size_type::safe: return tr("Safe");
-		case spu_block_size_type::mega: return tr("Mega");
-		case spu_block_size_type::giga: return tr("Giga");
+		case spu_block_size_type::safe: return tr("Safe", "SPU block size");
+		case spu_block_size_type::mega: return tr("Mega", "SPU block size");
+		case spu_block_size_type::giga: return tr("Giga", "SPU block size");
 		}
 		break;
 	case emu_settings::EnableTSX:
 		switch (static_cast<tsx_usage>(index))
 		{
-		case tsx_usage::disabled: return tr("Disabled");
-		case tsx_usage::enabled: return tr("Enabled");
-		case tsx_usage::forced: return tr("Forced");
+		case tsx_usage::disabled: return tr("Disabled", "Enable TSX");
+		case tsx_usage::enabled: return tr("Enabled", "Enable TSX");
+		case tsx_usage::forced: return tr("Forced", "Enable TSX");
 		}
 		break;
 	case emu_settings::Renderer:
 		switch (static_cast<video_renderer>(index))
 		{
-		case video_renderer::null: return tr("Disable Video Output");
-		case video_renderer::opengl: return tr("OpenGL");
-		case video_renderer::vulkan: return tr("Vulkan");
+		case video_renderer::null: return tr("Disable Video Output", "Video renderer");
+		case video_renderer::opengl: return tr("OpenGL", "Video renderer");
+		case video_renderer::vulkan: return tr("Vulkan", "Video renderer");
 		}
 		break;
 	case emu_settings::FrameLimit:
 		switch (static_cast<frame_limit_type>(index))
 		{
-		case frame_limit_type::none: return tr("Off");
-		case frame_limit_type::_59_94: return tr("59.94");
-		case frame_limit_type::_50: return tr("50");
-		case frame_limit_type::_60: return tr("60");
-		case frame_limit_type::_30: return tr("30");
-		case frame_limit_type::_auto: return tr("Auto");
+		case frame_limit_type::none: return tr("Off", "Frame limit");
+		case frame_limit_type::_59_94: return tr("59.94", "Frame limit");
+		case frame_limit_type::_50: return tr("50", "Frame limit");
+		case frame_limit_type::_60: return tr("60", "Frame limit");
+		case frame_limit_type::_30: return tr("30", "Frame limit");
+		case frame_limit_type::_auto: return tr("Auto", "Frame limit");
 		}
 		break;
 	case emu_settings::MSAA:
 		switch (static_cast<msaa_level>(index))
 		{
-		case msaa_level::none: return tr("Disabled");
-		case msaa_level::_auto: return tr("Auto");
+		case msaa_level::none: return tr("Disabled", "MSAA");
+		case msaa_level::_auto: return tr("Auto", "MSAA");
 		}
 		break;
 	case emu_settings::AudioRenderer:
 		switch (static_cast<audio_renderer>(index))
 		{
-		case audio_renderer::null: return tr("Disable Audio Output");
+		case audio_renderer::null: return tr("Disable Audio Output", "Audio renderer");
 #ifdef _WIN32
-		case audio_renderer::xaudio: return tr("XAudio2");
+		case audio_renderer::xaudio: return tr("XAudio2", "Audio renderer");
 #endif
 #ifdef HAVE_ALSA
-		case audio_renderer::alsa: return tr("ALSA");
+		case audio_renderer::alsa: return tr("ALSA", "Audio renderer");
 #endif
 #ifdef HAVE_PULSE
-		case audio_renderer::pulse: return tr("PulseAudio");
+		case audio_renderer::pulse: return tr("PulseAudio", "Audio renderer");
 #endif
-		case audio_renderer::openal: return tr("OpenAL");
+		case audio_renderer::openal: return tr("OpenAL", "Audio renderer");
 #ifdef HAVE_FAUDIO
-		case audio_renderer::faudio: return tr("FAudio");
+		case audio_renderer::faudio: return tr("FAudio", "Audio renderer");
 #endif
 		}
 		break;
 	case emu_settings::MicrophoneType:
 		switch (static_cast<microphone_handler>(index))
 		{
-		case microphone_handler::null: return tr("Disabled");
-		case microphone_handler::standard: return tr("Standard");
-		case microphone_handler::singstar: return tr("SingStar");
-		case microphone_handler::real_singstar: return tr("Real SingStar");
-		case microphone_handler::rocksmith: return tr("Rocksmith");
+		case microphone_handler::null: return tr("Disabled", "Microphone handler");
+		case microphone_handler::standard: return tr("Standard", "Microphone handler");
+		case microphone_handler::singstar: return tr("SingStar", "Microphone handler");
+		case microphone_handler::real_singstar: return tr("Real SingStar", "Microphone handler");
+		case microphone_handler::rocksmith: return tr("Rocksmith", "Microphone handler");
 		}
 		break;
 	case emu_settings::KeyboardHandler:
 		switch (static_cast<keyboard_handler>(index))
 		{
-		case keyboard_handler::null: return tr("Null");
-		case keyboard_handler::basic: return tr("Basic");
+		case keyboard_handler::null: return tr("Null", "Keyboard handler");
+		case keyboard_handler::basic: return tr("Basic", "Keyboard handler");
 		}
 		break;
 	case emu_settings::MouseHandler:
 		switch (static_cast<mouse_handler>(index))
 		{
-		case mouse_handler::null: return tr("Null");
-		case mouse_handler::basic: return tr("Basic");
+		case mouse_handler::null: return tr("Null", "Mouse handler");
+		case mouse_handler::basic: return tr("Basic", "Mouse handler");
 		}
 		break;
 	case emu_settings::CameraType:
 		switch (static_cast<fake_camera_type>(index))
 		{
-		case fake_camera_type::unknown: return tr("Unknown");
-		case fake_camera_type::eyetoy: return tr("EyeToy");
-		case fake_camera_type::eyetoy2: return tr("PS Eye");
-		case fake_camera_type::uvc1_1: return tr("UVC 1.1");
+		case fake_camera_type::unknown: return tr("Unknown", "Camera type");
+		case fake_camera_type::eyetoy: return tr("EyeToy", "Camera type");
+		case fake_camera_type::eyetoy2: return tr("PS Eye", "Camera type");
+		case fake_camera_type::uvc1_1: return tr("UVC 1.1", "Camera type");
 		}
 		break;
 	case emu_settings::Camera:
 		switch (static_cast<camera_handler>(index))
 		{
-		case camera_handler::null: return tr("Null");
-		case camera_handler::fake: return tr("Fake");
+		case camera_handler::null: return tr("Null", "Camera handler");
+		case camera_handler::fake: return tr("Fake", "Camera handler");
 		}
 		break;
 	case emu_settings::Move:
 		switch (static_cast<move_handler>(index))
 		{
-		case move_handler::null: return tr("Null");
-		case move_handler::fake: return tr("Fake");
-		case move_handler::mouse: return tr("Mouse");
+		case move_handler::null: return tr("Null", "Move handler");
+		case move_handler::fake: return tr("Fake", "Move handler");
+		case move_handler::mouse: return tr("Mouse", "Move handler");
 		}
 		break;
 	case emu_settings::InternetStatus:
 		switch (static_cast<np_internet_status>(index))
 		{
-		case np_internet_status::disabled: return tr("Disconnected");
-		case np_internet_status::enabled: return tr("Connected");
+		case np_internet_status::disabled: return tr("Disconnected", "Internet Status");
+		case np_internet_status::enabled: return tr("Connected", "Internet Status");
 		}
 		break;
 	case emu_settings::PSNStatus:
 		switch (static_cast<np_psn_status>(index))
 		{
-		case np_psn_status::disabled: return tr("Disconnected");
-		case np_psn_status::fake: return tr("Simulated");
+		case np_psn_status::disabled: return tr("Disconnected", "PSN Status");
+		case np_psn_status::fake: return tr("Simulated", "PSN Status");
 		}
 		break;
 	case emu_settings::SleepTimersAccuracy:
 		switch (static_cast<sleep_timers_accuracy_level>(index))
 		{
-		case sleep_timers_accuracy_level::_as_host: return tr("As Host");
-		case sleep_timers_accuracy_level::_usleep: return tr("Usleep Only");
-		case sleep_timers_accuracy_level::_all_timers: return tr("All Timers");
+		case sleep_timers_accuracy_level::_as_host: return tr("As Host", "Sleep timers accuracy");
+		case sleep_timers_accuracy_level::_usleep: return tr("Usleep Only", "Sleep timers accuracy");
+		case sleep_timers_accuracy_level::_all_timers: return tr("All Timers", "Sleep timers accuracy");
 		}
 		break;
 	case emu_settings::PerfOverlayDetailLevel:
 		switch (static_cast<detail_level>(index))
 		{
-		case detail_level::minimal: return tr("Minimal");
-		case detail_level::low: return tr("Low");
-		case detail_level::medium: return tr("Medium");
-		case detail_level::high: return tr("High");
+		case detail_level::minimal: return tr("Minimal", "Detail Level");
+		case detail_level::low: return tr("Low", "Detail Level");
+		case detail_level::medium: return tr("Medium", "Detail Level");
+		case detail_level::high: return tr("High", "Detail Level");
 		}
 		break;
 	case emu_settings::PerfOverlayPosition:
 		switch (static_cast<screen_quadrant>(index))
 		{
-		case screen_quadrant::top_left: return tr("Top Left");
-		case screen_quadrant::top_right: return tr("Top Right");
-		case screen_quadrant::bottom_left: return tr("Bottom Left");
-		case screen_quadrant::bottom_right: return tr("Bottom Right");
+		case screen_quadrant::top_left: return tr("Top Left", "Performance overlay position");
+		case screen_quadrant::top_right: return tr("Top Right", "Performance overlay position");
+		case screen_quadrant::bottom_left: return tr("Bottom Left", "Performance overlay position");
+		case screen_quadrant::bottom_right: return tr("Bottom Right", "Performance overlay position");
 		}
 		break;
 	case emu_settings::LibLoadOptions:
 		switch (static_cast<lib_loading_type>(index))
 		{
-		case lib_loading_type::manual: return tr("Manually load selected libraries");
-		case lib_loading_type::hybrid: return tr("Load automatic and manual selection");
-		case lib_loading_type::liblv2only: return tr("Load liblv2.sprx only");
-		case lib_loading_type::liblv2both: return tr("Load liblv2.sprx and manual selection");
-		case lib_loading_type::liblv2list: return tr("Load liblv2.sprx and strict selection");
+		case lib_loading_type::manual: return tr("Manually load selected libraries", "Libraries");
+		case lib_loading_type::hybrid: return tr("Load automatic and manual selection", "Libraries");
+		case lib_loading_type::liblv2only: return tr("Load liblv2.sprx only", "Libraries");
+		case lib_loading_type::liblv2both: return tr("Load liblv2.sprx and manual selection", "Libraries");
+		case lib_loading_type::liblv2list: return tr("Load liblv2.sprx and strict selection", "Libraries");
 		}
 		break;
 	case emu_settings::PPUDecoder:
 		switch (static_cast<ppu_decoder_type>(index))
 		{
-		case ppu_decoder_type::precise: return tr("Interpreter (precise)");
-		case ppu_decoder_type::fast: return tr("Interpreter (fast)");
-		case ppu_decoder_type::llvm: return tr("Recompiler (LLVM)");
+		case ppu_decoder_type::precise: return tr("Interpreter (precise)", "PPU decoder");
+		case ppu_decoder_type::fast: return tr("Interpreter (fast)", "PPU decoder");
+		case ppu_decoder_type::llvm: return tr("Recompiler (LLVM)", "PPU decoder");
 		}
 		break;
 	case emu_settings::SPUDecoder:
 		switch (static_cast<spu_decoder_type>(index))
 		{
-		case spu_decoder_type::precise: return tr("Interpreter (precise)");
-		case spu_decoder_type::fast: return tr("Interpreter (fast)");
-		case spu_decoder_type::asmjit: return tr("Recompiler (ASMJIT)");
-		case spu_decoder_type::llvm: return tr("Recompiler (LLVM)");
+		case spu_decoder_type::precise: return tr("Interpreter (precise)", "SPU decoder");
+		case spu_decoder_type::fast: return tr("Interpreter (fast)", "SPU decoder");
+		case spu_decoder_type::asmjit: return tr("Recompiler (ASMJIT)", "SPU decoder");
+		case spu_decoder_type::llvm: return tr("Recompiler (LLVM)", "SPU decoder");
 		}
 		break;
 	case emu_settings::EnterButtonAssignment:
