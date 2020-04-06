@@ -552,9 +552,8 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 
 	for (u64 i = 0; i < cheat_type_max; i++)
 	{
-		std::string type_formatted;
-		fmt::append(type_formatted, "%s", static_cast<cheat_type>(i));
-		cbx_cheat_search_type->insertItem(i, QString::fromStdString(type_formatted));
+		const QString item_text = get_localized_cheat_type(static_cast<cheat_type>(i));
+		cbx_cheat_search_type->addItem(item_text);
 	}
 	cbx_cheat_search_type->setCurrentIndex(static_cast<u8>(cheat_type::signed_32_cheat));
 	grp_add_cheat_sub_layout->addWidget(btn_new_search);
@@ -1011,4 +1010,25 @@ void cheat_manager_dialog::update_cheat_list()
 	}
 
 	g_cheat.save();
+}
+
+QString cheat_manager_dialog::get_localized_cheat_type(cheat_type type)
+{
+	switch (type)
+	{
+	case cheat_type::unsigned_8_cheat: return tr("Unsigned 8 bits");
+	case cheat_type::unsigned_16_cheat: return tr("Unsigned 16 bits");
+	case cheat_type::unsigned_32_cheat: return tr("Unsigned 32 bits");
+	case cheat_type::unsigned_64_cheat: return tr("Unsigned 64 bits");
+	case cheat_type::signed_8_cheat: return tr("Signed 8 bits");
+	case cheat_type::signed_16_cheat: return tr("Signed 16 bits");
+	case cheat_type::signed_32_cheat: return tr("Signed 32 bits");
+	case cheat_type::signed_64_cheat: return tr("Signed 64 bits");
+	case cheat_type::max:
+	default:
+		break;
+	}
+	std::string type_formatted;
+	fmt::append(type_formatted, "%s", type);
+	return QString::fromStdString(type_formatted);
 }

@@ -112,4 +112,6 @@ protected:
 
 private:
 	static cheat_manager_dialog* inst;
+
+	QString get_localized_cheat_type(cheat_type type);
 };
