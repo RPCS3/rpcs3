@@ -11,25 +11,6 @@
 #include <thread>
 #include <atomic>
 
-template <>
-void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](frame_limit_type value)
-	{
-		switch (value)
-		{
-		case frame_limit_type::none: return "Off";
-		case frame_limit_type::_59_94: return "59.94";
-		case frame_limit_type::_50: return "50";
-		case frame_limit_type::_60: return "60";
-		case frame_limit_type::_30: return "30";
-		case frame_limit_type::_auto: return "Auto";
-		}
-
-		return unknown;
-	});
-}
-
 namespace rsx
 {
 	rsx_state method_registers;

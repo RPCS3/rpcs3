@@ -88,22 +88,6 @@ void fmt_class_string<ppu_join_status>::format(std::string& out, u64 arg)
 	});
 }
 
-template <>
-void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](ppu_decoder_type type)
-	{
-		switch (type)
-		{
-		case ppu_decoder_type::precise: return "Interpreter (precise)";
-		case ppu_decoder_type::fast: return "Interpreter (fast)";
-		case ppu_decoder_type::llvm: return "Recompiler (LLVM)";
-		}
-
-		return unknown;
-	});
-}
-
 constexpr ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise;
 constexpr ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast;
 

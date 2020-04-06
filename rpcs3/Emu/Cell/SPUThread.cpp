@@ -93,39 +93,6 @@ extern u64 get_system_time();
 
 extern thread_local u64 g_tls_fault_spu;
 
-template <>
-void fmt_class_string<spu_decoder_type>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](spu_decoder_type type)
-	{
-		switch (type)
-		{
-		case spu_decoder_type::precise: return "Interpreter (precise)";
-		case spu_decoder_type::fast: return "Interpreter (fast)";
-		case spu_decoder_type::asmjit: return "Recompiler (ASMJIT)";
-		case spu_decoder_type::llvm: return "Recompiler (LLVM)";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<spu_block_size_type>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](spu_block_size_type type)
-	{
-		switch (type)
-		{
-		case spu_block_size_type::safe: return "Safe";
-		case spu_block_size_type::mega: return "Mega";
-		case spu_block_size_type::giga: return "Giga";
-		}
-
-		return unknown;
-	});
-}
-
 namespace spu
 {
 	namespace scheduler
