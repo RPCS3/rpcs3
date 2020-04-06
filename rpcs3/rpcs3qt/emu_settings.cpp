@@ -168,7 +168,7 @@ emu_settings::Render_Creator::Render_Creator()
 	if (thread_running)
 	{
 		cfg_log.error("Vulkan device enumeration timed out");
-		auto button = QMessageBox::critical(nullptr, tr("Vulkan Check Timeout"),
+		const auto button = QMessageBox::critical(nullptr, tr("Vulkan Check Timeout"),
 			tr("Querying for Vulkan-compatible devices is taking too long. This is usually caused by malfunctioning "
 			"graphics drivers, reinstalling them could fix the issue.\n\n"
 			"Selecting ignore starts the emulator without Vulkan support."),
@@ -347,9 +347,9 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 			cfg_log.warning("EnhanceCombobox '%s': ignoring sorting request on ranged combo box", GetSettingName(type));
 		}
 
-		QStringList range = GetSettingOptions(type);
+		const QStringList range = GetSettingOptions(type);
 
-		int max_item = use_max ? max : range.last().toInt();
+		const int max_item = use_max ? max : range.last().toInt();
 
 		for (int i = range.first().toInt(); i <= max_item; i++)
 		{
@@ -365,18 +365,18 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 			settings.sort();
 		}
 
-		for (QString setting : settings)
+		for (const QString& setting : settings)
 		{
 			combobox->addItem(tr(setting.toStdString().c_str()), QVariant(setting));
 		}
 	}
 
-	std::string selected = GetSetting(type);
-	int index = combobox->findData(qstr(selected));
+	const std::string selected = GetSetting(type);
+	const int index = combobox->findData(qstr(selected));
 
 	if (index == -1)
 	{
-		std::string def = GetSettingDefault(type);
+		const std::string def = GetSettingDefault(type);
 		cfg_log.fatal("EnhanceComboBox '%s' tried to set an invalid value: %s. Setting to default: %s", GetSettingName(type), selected, def);
 		combobox->setCurrentIndex(combobox->findData(qstr(def)));
 		m_broken_types.insert(type);
@@ -425,7 +425,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 
 	connect(checkbox, &QCheckBox::stateChanged, [=, this](int val)
 	{
-		std::string str = val != 0 ? "true" : "false";
+		const std::string str = val != 0 ? "true" : "false";
 		SetSetting(type, str);
 	});
 }
@@ -438,12 +438,12 @@ void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type)
 		return;
 	}
 
-	QStringList range = GetSettingOptions(type);
+	const QStringList range = GetSettingOptions(type);
 	bool ok_def, ok_sel, ok_min, ok_max;
 
-	int def = qstr(GetSettingDefault(type)).toInt(&ok_def);
-	int min = range.first().toInt(&ok_min);
-	int max = range.last().toInt(&ok_max);
+	const int def = qstr(GetSettingDefault(type)).toInt(&ok_def);
+	const int min = range.first().toInt(&ok_min);
+	const int max = range.last().toInt(&ok_max);
 
 	if (!ok_def || !ok_min || !ok_max)
 	{
@@ -451,7 +451,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type)
 		return;
 	}
 
-	QString selected = qstr(GetSetting(type));
+	const QString selected = qstr(GetSetting(type));
 	int val = selected.toInt(&ok_sel);
 
 	if (!ok_sel || val < min || val > max)
@@ -478,12 +478,12 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, SettingsType type, const QS
 		return;
 	}
 
-	QStringList range = GetSettingOptions(type);
+	const QStringList range = GetSettingOptions(type);
 	bool ok_def, ok_sel, ok_min, ok_max;
 
-	int def = qstr(GetSettingDefault(type)).toInt(&ok_def);
-	int min = range.first().toInt(&ok_min);
-	int max = range.last().toInt(&ok_max);
+	const int def = qstr(GetSettingDefault(type)).toInt(&ok_def);
+	const int min = range.first().toInt(&ok_min);
+	const int max = range.last().toInt(&ok_max);
 
 	if (!ok_def || !ok_min || !ok_max)
 	{
@@ -491,7 +491,7 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, SettingsType type, const QS
 		return;
 	}
 
-	std::string selected = GetSetting(type);
+	const std::string selected = GetSetting(type);
 	int val = qstr(selected).toInt(&ok_sel);
 
 	if (!ok_sel || val < min || val > max)
@@ -520,12 +520,12 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, SettingsType ty
 		return;
 	}
 
-	QStringList range = GetSettingOptions(type);
+	const QStringList range = GetSettingOptions(type);
 	bool ok_def, ok_sel, ok_min, ok_max;
 
-	double def = qstr(GetSettingDefault(type)).toDouble(&ok_def);
-	double min = range.first().toDouble(&ok_min);
-	double max = range.last().toDouble(&ok_max);
+	const double def = qstr(GetSettingDefault(type)).toDouble(&ok_def);
+	const double min = range.first().toDouble(&ok_min);
+	const double max = range.last().toDouble(&ok_max);
 
 	if (!ok_def || !ok_min || !ok_max)
 	{
@@ -533,7 +533,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, SettingsType ty
 		return;
 	}
 
-	std::string selected = GetSetting(type);
+	const std::string selected = GetSetting(type);
 	double val = qstr(selected).toDouble(&ok_sel);
 
 	if (!ok_sel || val < min || val > max)
@@ -583,28 +583,28 @@ void emu_settings::SaveSelectedLibraries(const std::vector<std::string>& libs)
 
 QStringList emu_settings::GetSettingOptions(SettingsType type) const
 {
-	return getOptions(const_cast<cfg_location&&>(SettingsLoc[type]));
+	return getOptions(const_cast<cfg_location&&>(m_settings_location[type]));
 }
 
 std::string emu_settings::GetSettingName(SettingsType type) const
 {
-	cfg_location loc = SettingsLoc[type];
+	const cfg_location loc = m_settings_location[type];
 	return loc[loc.size() - 1];
 }
 
 std::string emu_settings::GetSettingDefault(SettingsType type) const
 {
-	return cfg_adapter::get_node(m_defaultSettings, SettingsLoc[type]).Scalar();
+	return cfg_adapter::get_node(m_defaultSettings, m_settings_location[type]).Scalar();
 }
 
 std::string emu_settings::GetSetting(SettingsType type) const
 {
-	return cfg_adapter::get_node(m_currentSettings, SettingsLoc[type]).Scalar();
+	return cfg_adapter::get_node(m_currentSettings, m_settings_location[type]).Scalar();
 }
 
 void emu_settings::SetSetting(SettingsType type, const std::string& val)
 {
-	cfg_adapter::get_node(m_currentSettings, SettingsLoc[type]) = val;
+	cfg_adapter::get_node(m_currentSettings, m_settings_location[type]) = val;
 }
 
 void emu_settings::OpenCorrectionDialog(QWidget* parent)
@@ -622,8 +622,8 @@ void emu_settings::OpenCorrectionDialog(QWidget* parent)
 	{
 		for (const auto& type : m_broken_types)
 		{
-			std::string def = GetSettingDefault(type);
-			std::string old = GetSetting(type);
+			const std::string def = GetSettingDefault(type);
+			const std::string old = GetSetting(type);
 			SetSetting(type, def);
 			cfg_log.success("The config entry '%s' was corrected from '%s' to '%s'", GetSettingName(type), old, def);
 		}
