@@ -53,7 +53,7 @@ struct cfg_root : cfg::node
 		cfg::set_entry load_libraries{ this, "Load libraries" };
 		cfg::_bool hle_lwmutex{ this, "HLE lwmutex" }; // Force alternative lwmutex/lwcond implementation
 		cfg::uint64 spu_llvm_lower_bound{ this, "SPU LLVM Lower Bound" };
-		cfg::uint64 spu_llvm_upper_bound{ this, "SPU LLVM Upper Bound", 0xffff'ffff'ffff'ffff };
+		cfg::uint64 spu_llvm_upper_bound{ this, "SPU LLVM Upper Bound", 0xffffffffffffffff };
 
 		cfg::_int<10, 3000> clocks_scale{ this, "Clocks scale", 100, true }; // Changing this from 100 (percentage) may affect game speed in unexpected ways
 		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{ this, "Sleep Timers Accuracy",

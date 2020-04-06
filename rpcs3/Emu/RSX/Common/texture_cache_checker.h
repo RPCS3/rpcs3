@@ -129,7 +129,7 @@ namespace rsx {
 
 		void reset_refcount()
 		{
-			for (per_page_info_t* ptr = rsx_address_to_info_pointer(0); ptr <= rsx_address_to_info_pointer(0xFF'FF'FF'FF); ptr++)
+			for (per_page_info_t* ptr = rsx_address_to_info_pointer(0); ptr <= rsx_address_to_info_pointer(0xFFFFFFFF); ptr++)
 			{
 				ptr->reset_refcount();
 			}

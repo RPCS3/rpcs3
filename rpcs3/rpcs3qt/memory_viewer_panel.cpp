@@ -1,5 +1,4 @@
-﻿#include "stdafx.h"
-#include "Utilities/mutex.h"
+﻿#include "Utilities/mutex.h"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/Memory/vm.h"
 

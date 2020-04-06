@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "stdafx.h"
+
 #include <QDialog>
 #include <QPushButton>
 #include <QComboBox>
@@ -7,6 +9,8 @@
 
 class skylander_dialog : public QDialog
 {
+	Q_OBJECT
+
 public:
 	skylander_dialog(QWidget* parent);
 	~skylander_dialog();
