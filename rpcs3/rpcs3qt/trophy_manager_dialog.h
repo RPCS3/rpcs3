@@ -48,11 +48,6 @@ class trophy_manager_dialog : public QWidget
 {
 	Q_OBJECT
 
-	const QString Bronze   = "Bronze";
-	const QString Silver   = "Silver";
-	const QString Gold     = "Gold";
-	const QString Platinum = "Platinum";
-
 public:
 	explicit trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings);
 	~trophy_manager_dialog() override;
