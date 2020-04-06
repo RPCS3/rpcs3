@@ -499,7 +499,7 @@
     <string>Auto Pause</string>
    </property>
    <property name="toolTip">
-    <string>Configure the Auto Pause function</string>
+    <string>Configure Auto Pause</string>
    </property>
   </action>
   <action name="exitAct">
