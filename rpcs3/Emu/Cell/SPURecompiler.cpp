@@ -416,6 +416,8 @@ void spu_cache::initialize()
 		}
 	}
 
+	u32 worker_count = 0;
+
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		// Initialize progress dialog (wait for previous progress done)
@@ -426,9 +428,11 @@ void spu_cache::initialize()
 
 		g_progr = "Building SPU cache...";
 		g_progr_ptotal += ::size32(func_list);
+
+		worker_count = Emu.GetMaxThreads();
 	}
 
-	named_thread_group workers("SPU Worker ", Emu.GetMaxThreads(), [&]() -> uint
+	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
 	{
 		// Initialize compiler instances for parallel compilation
 		std::unique_ptr<spu_recompiler_base> compiler;
