@@ -941,11 +941,7 @@
     <string>Open</string>
    </property>
    <property name="toolTip">
-<<<<<<< HEAD
     <string>Boot a game</string>
-=======
-    <string>Boot selected game</string>
->>>>>>> b2a2ca3c3... Restoring the old wording for popup tooltips.
    </property>
   </action>
   <action name="showCatOtherAct">
