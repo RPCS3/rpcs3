@@ -383,7 +383,7 @@
     <string>Install .pkg</string>
    </property>
    <property name="toolTip">
-    <string>Install application from a .pkg file</string>
+    <string>Install an application from a .pkg file</string>
    </property>
   </action>
   <action name="bootInstallPupAct">
