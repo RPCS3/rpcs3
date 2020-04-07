@@ -35,7 +35,7 @@ private Q_SLOTS:
 	void OnApplyConfig();
 	void OnApplyStylesheet();
 private:
-	void EnhanceSlider(emu_settings::SettingsType settings_type, QSlider* slider, QLabel* label, const QString& label_text);
+	void EnhanceSlider(emu_settings_type settings_type, QSlider* slider, QLabel* label, const QString& label_text);
 
 	// Snapping of sliders when moved with mouse
 	void SnapSlider(QSlider* slider, int interval);
