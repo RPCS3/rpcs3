@@ -431,7 +431,7 @@ namespace rsx
 					if (performance_counters.state == FIFO_state::running)
 					{
 						performance_counters.FIFO_idle_timestamp = get_system_time();
-						sync_point_request = true;
+						sync_point_request.release(true);
 					}
 
 					performance_counters.state = FIFO_state::spinning;
@@ -450,7 +450,7 @@ namespace rsx
 					if (performance_counters.state == FIFO_state::running)
 					{
 						performance_counters.FIFO_idle_timestamp = get_system_time();
-						sync_point_request = true;
+						sync_point_request.release(true);
 					}
 
 					performance_counters.state = FIFO_state::spinning;

@@ -38,6 +38,47 @@ u64 rsxTimeStamp()
 	return get_timebased_time();
 }
 
+void lv2_rsx_config::send_event(u64 data1, u64 data2, u64 data3) const
+{
+	auto error = sys_event_port_send(rsx_event_port, data1, data2, data3);
+
+	while (error + 0u == CELL_EBUSY)
+	{
+		auto cpu = get_current_cpu_thread();
+
+		if (cpu && cpu->id_type() != 1)
+		{
+			cpu = nullptr;
+		}
+
+		if (cpu)
+		{
+			// Deschedule
+			lv2_obj::sleep(*cpu, 100);
+		}
+		else if (const auto rsx = rsx::get_current_renderer(); rsx->is_current_thread())
+		{
+			rsx->on_semaphore_acquire_wait();
+		}
+		
+		// Wait a bit before resending event
+		thread_ctrl::wait_for(100);
+
+		if (cpu && cpu->check_state())
+		{
+			error = 0;
+			break;
+		}
+
+		error = sys_event_port_send(rsx_event_port, data1, data2, data3);
+	}
+
+	if (error)
+	{
+		fmt::throw_exception("rsx_event_port_send() Failed to send event! (error=%x)" HERE, +error);
+	}
+}
+
 error_code sys_rsx_device_open()
 {
 	sys_rsx.todo("sys_rsx_device_open()");
@@ -202,6 +243,8 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	sys_event_queue_create(vm::get_addr(&driverInfo.handler_queue), attr, 0, 0x20);
 	sys_event_port_connect_local(rsx_cfg->rsx_event_port, driverInfo.handler_queue);
 
+	rsx_cfg->dma_address = vm::cast(*lpar_dma_control, HERE);
+
 	const auto render = rsx::get_current_renderer();
 	render->display_buffers_count = 0;
 	render->current_display_buffer = 0;
@@ -350,12 +393,17 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	switch (package_id)
 	{
 	case 0x001: // FIFO
+	{
 		render->pause();
+		const u64 get = static_cast<u32>(a3);
+		const u64 put = static_cast<u32>(a4);
+		vm::_ref<atomic_be_t<u64>>(rsx_cfg->dma_address + ::offset32(&RsxDmaControl::put)).release(put << 32 | get);
 		render->ctrl->get = static_cast<u32>(a3);
 		render->ctrl->put = static_cast<u32>(a4);
-		render->restore_point = static_cast<u32>(a3);
+		render->sync_point_request.release(true);
 		render->unpause();
 		break;
+	}
 
 	case 0x100: // Display mode set
 		break;
@@ -416,7 +464,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		verify(HERE), a3 < 2;
 
 		const u64 shift_offset = (a3 + 5);
-		sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1ull << shift_offset), 0);
+		rsx_cfg->send_event(0, (1ull << shift_offset), 0);
 
 		render->on_frame_end(static_cast<u32>(a4));
 	}
@@ -465,9 +513,10 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			return SYS_RSX_CONTEXT_ATTRIBUTE_ERROR;
 		}
 
-		u32 flipStatus = driverInfo.head[a3].flipFlags;
-		flipStatus = (flipStatus & static_cast<u32>(a4)) | static_cast<u32>(a5);
-		driverInfo.head[a3].flipFlags = flipStatus;
+		driverInfo.head[a3].flipFlags.atomic_op([&](be_t<u32>& flipStatus)
+		{
+			flipStatus = (flipStatus & static_cast<u32>(a4)) | static_cast<u32>(a5);
+		});
 	}
 	break;
 
@@ -549,29 +598,33 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		vm::_ref<u32>(render->label_addr + 0x10) = 0;
 
 		//if (a3 == 0)
-		//	sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 3), 0);
+		//	rsx_cfg->send_event(0, (1 << 3), 0);
 		//if (a3 == 1)
-		sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 4), 0);
+		rsx_cfg->send_event(0, (1 << 4), 0);
 		break;
 
 	case 0xFED: // hack: vblank command
+	{
 		// todo: this is wrong and should be 'second' vblank handler and freq, but since currently everything is reported as being 59.94, this should be fine
 		vm::_ref<u32>(render->device_addr + 0x30) = 1;
 		driverInfo.head[a3].vBlankCount++;
 		driverInfo.head[a3].lastSecondVTime = rsxTimeStamp();
-		sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 1), 0);
+
+		u64 event_flags = (1 << 1);
 
 		if (render->enable_second_vhandler)
-			sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 11), 0); // second vhandler
+			event_flags |= (1 << 11); // second vhandler
 
+		rsx_cfg->send_event(0, event_flags, 0);
 		break;
+	}
 
 	case 0xFEF: // hack: user command
 		// 'custom' invalid package id for now
 		// as i think we need custom lv1 interrupts to handle this accurately
 		// this also should probly be set by rsxthread
 		driverInfo.userCmdParam = static_cast<u32>(a4);
-		sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 7), 0);
+		rsx_cfg->send_event(0, (1 << 7), 0);
 		break;
 
 	default:

@@ -50,7 +50,7 @@ namespace rsx
 
 		void semaphore_acquire(thread* rsx, u32 /*_reg*/, u32 arg)
 		{
-			rsx->sync_point_request = true;
+			rsx->sync_point_request.release(true);
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e(), HERE);
 
 			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
@@ -132,7 +132,7 @@ namespace rsx
 			if (const bool is_flip_sema = (offset == 0x10 && ctxt == CELL_GCM_CONTEXT_DMA_SEMAPHORE_R);
 				!is_flip_sema)
 			{
-				rsx->sync_point_request = true;
+				rsx->sync_point_request.release(true);
 			}
 
 			const u32 addr = get_address(offset, ctxt, HERE);

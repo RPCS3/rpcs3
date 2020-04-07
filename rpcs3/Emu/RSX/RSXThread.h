@@ -725,7 +725,7 @@ namespace rsx
 		bool capture_current_frame = false;
 
 	public:
-		bool sync_point_request = false;
+		atomic_t<bool> sync_point_request = false;
 		bool in_begin_end = false;
 
 		struct desync_fifo_cmd_info
