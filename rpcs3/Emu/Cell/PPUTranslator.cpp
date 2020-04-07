@@ -2527,6 +2527,12 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 
 void PPUTranslator::LWARX(ppu_opcode_t op)
 {
+	if (g_cfg.core.ppu_128_reservations_loop_max_length > 0)
+	{
+		// CIA will be used in lwarx handler
+		m_ir->CreateStore(Trunc(GetAddr(), GetType<u32>()), m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(&m_cia - m_locals)), true);
+	}
+
 	SetGpr(op.rd, Call(GetType<u32>(), "__lwarx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
 }
 
@@ -2663,6 +2669,12 @@ void PPUTranslator::MULHW(ppu_opcode_t op)
 
 void PPUTranslator::LDARX(ppu_opcode_t op)
 {
+	if (g_cfg.core.ppu_128_reservations_loop_max_length > 0)
+	{
+		// CIA will be used in ldarx handler
+		m_ir->CreateStore(Trunc(GetAddr(), GetType<u32>()), m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(&m_cia - m_locals)), true);
+	}
+
 	SetGpr(op.rd, Call(GetType<u64>(), "__ldarx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
 }
 

@@ -273,7 +273,7 @@ namespace vm
 	{
 		if (auto& ptr = g_tls_locked)
 		{
-			*ptr = nullptr;
+			ptr->release(nullptr);
 			ptr = nullptr;
 
 			if (cpu.state & cpu_flag::memory)
