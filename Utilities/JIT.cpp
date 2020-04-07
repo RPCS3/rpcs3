@@ -965,6 +965,11 @@ public:
 			std::vector<uchar> gz = cached.to_vector<uchar>();
 			std::vector<uchar> out;
 			z_stream zs{};
+
+			if (gz.empty()) [[unlikely]]
+			{
+				return nullptr;
+			}
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -1015,6 +1020,11 @@ public:
 
 		if (fs::file cached{path, fs::read})
 		{
+			if (cached.size() == 0) [[unlikely]]
+			{
+				return nullptr;
+			}
+
 			auto buf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(cached.size());
 			cached.read(buf->getBufferStart(), buf->getBufferSize());
 			return buf;
@@ -1207,6 +1217,11 @@ bool jit_compiler::check(const std::string& path)
 		if (auto object_file = llvm::object::ObjectFile::createObjectFile(*cache))
 		{
 			return true;
+		}
+
+		if (fs::remove_file(path))
+		{
+			jit_log.error("ObjectCache: Removed damaged file: %s", path);
 		}
 	}
 
