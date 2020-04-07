@@ -11,28 +11,28 @@ void fmt_class_string<CellKbMappingType>::format(std::string& out, u64 arg)
 		{
 		case CELL_KB_MAPPING_101: return "English keyboard (US standard)";
 		case CELL_KB_MAPPING_106: return "Japanese keyboard";
-		case CELL_KB_MAPPING_106_KANA: return "Japanese keyboard(Kana state)";
+		case CELL_KB_MAPPING_106_KANA: return "Japanese keyboard (Kana state)";
 		case CELL_KB_MAPPING_GERMAN_GERMANY: return "German keyboard";
 		case CELL_KB_MAPPING_SPANISH_SPAIN: return "Spanish keyboard";
 		case CELL_KB_MAPPING_FRENCH_FRANCE: return "French keyboard";
 		case CELL_KB_MAPPING_ITALIAN_ITALY: return "Italian keyboard";
 		case CELL_KB_MAPPING_DUTCH_NETHERLANDS: return "Dutch keyboard";
-		case CELL_KB_MAPPING_PORTUGUESE_PORTUGAL: return "Portuguese keyboard(Portugal)";
+		case CELL_KB_MAPPING_PORTUGUESE_PORTUGAL: return "Portuguese keyboard (Portugal)";
 		case CELL_KB_MAPPING_RUSSIAN_RUSSIA: return "Russian keyboard";
-		case CELL_KB_MAPPING_ENGLISH_UK: return "English keyboard(UK standard)";
+		case CELL_KB_MAPPING_ENGLISH_UK: return "English keyboard (UK standard)";
 		case CELL_KB_MAPPING_KOREAN_KOREA: return "Korean keyboard";
 		case CELL_KB_MAPPING_NORWEGIAN_NORWAY: return "Norwegian keyboard";
 		case CELL_KB_MAPPING_FINNISH_FINLAND: return "Finnish keyboard";
 		case CELL_KB_MAPPING_DANISH_DENMARK: return "Danish keyboard";
 		case CELL_KB_MAPPING_SWEDISH_SWEDEN: return "Swedish keyboard";
-		case CELL_KB_MAPPING_CHINESE_TRADITIONAL: return "Chinese keyboard(Traditional)";
-		case CELL_KB_MAPPING_CHINESE_SIMPLIFIED: return "Chinese keyboard(Simplified)";
-		case CELL_KB_MAPPING_SWISS_FRENCH_SWITZERLAND: return "French keyboard(Switzerland)";
-		case CELL_KB_MAPPING_SWISS_GERMAN_SWITZERLAND: return "German keyboard(Switzerland)";
-		case CELL_KB_MAPPING_CANADIAN_FRENCH_CANADA: return "French keyboard(Canada)";
-		case CELL_KB_MAPPING_BELGIAN_BELGIUM: return "French keyboard(Belgium)";
+		case CELL_KB_MAPPING_CHINESE_TRADITIONAL: return "Chinese keyboard (Traditional)";
+		case CELL_KB_MAPPING_CHINESE_SIMPLIFIED: return "Chinese keyboard (Simplified)";
+		case CELL_KB_MAPPING_SWISS_FRENCH_SWITZERLAND: return "French keyboard (Switzerland)";
+		case CELL_KB_MAPPING_SWISS_GERMAN_SWITZERLAND: return "German keyboard (Switzerland)";
+		case CELL_KB_MAPPING_CANADIAN_FRENCH_CANADA: return "French keyboard (Canada)";
+		case CELL_KB_MAPPING_BELGIAN_BELGIUM: return "French keyboard (Belgium)";
 		case CELL_KB_MAPPING_POLISH_POLAND: return "Polish keyboard";
-		case CELL_KB_MAPPING_PORTUGUESE_BRAZIL: return "Portuguese keyboard(Brazil)";
+		case CELL_KB_MAPPING_PORTUGUESE_BRAZIL: return "Portuguese keyboard (Brazil)";
 		case CELL_KB_MAPPING_TURKISH_TURKEY: return "Turkish keyboard";
 		}
 

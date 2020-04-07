@@ -391,7 +391,7 @@
         <item>
          <widget class="QGroupBox" name="gb_left_stick">
           <property name="title">
-           <string>Left Analog</string>
+           <string>Left Stick</string>
           </property>
           <layout class="QVBoxLayout" name="gb_left_stick_layout">
            <property name="leftMargin">
@@ -1815,7 +1815,7 @@
         <item>
          <widget class="QGroupBox" name="gb_right_stick">
           <property name="title">
-           <string>Right Analog</string>
+           <string>Right Stick</string>
           </property>
           <layout class="QVBoxLayout" name="gb_right_stick_layout">
            <property name="leftMargin">
@@ -2074,7 +2074,7 @@
             <item>
              <widget class="QGroupBox" name="gb_sticks">
               <property name="title">
-               <string>Analog Deadzones</string>
+               <string>Analog Stick Deadzones</string>
               </property>
               <layout class="QHBoxLayout" name="gb_sticks_layout">
                <property name="leftMargin">

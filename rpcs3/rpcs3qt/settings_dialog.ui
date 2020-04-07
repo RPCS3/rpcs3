@@ -1378,14 +1378,14 @@
             <item>
              <widget class="QRadioButton" name="enterButtonAssignCircle">
               <property name="text">
-               <string notr="true">Enter with circle</string>
+               <string notr="true">Enter with the Circle button</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QRadioButton" name="enterButtonAssignCross">
               <property name="text">
-               <string notr="true">Enter with cross</string>
+               <string notr="true">Enter with the Cross button</string>
               </property>
              </widget>
             </item>

@@ -78,7 +78,7 @@ public:
 		const QString set_daz_and_ftz              = tr("Never use this.");
 		const QString accurate_getllar             = tr("Never use this.");
 		const QString accurate_putlluc             = tr("Never use this.");
-		const QString accurate_ppu_fma             = tr("Enables extra accuracy on FMA instructions, which can be needed by some games.\nIt can impact performance negatively on CPUs without FMA acceleration support");
+		const QString accurate_ppu_fma             = tr("Enables extra accuracy on FMA instructions, which can be needed by some games.\nIt can impact performance negatively on CPUs without FMA acceleration support.");
 		const QString accurate_rsx_access          = tr("Never use this.");
 		const QString hook_static_functions        = tr("Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.");
 		const QString gl_legacy_buffers            = tr("Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nIf unsure, don't use this option.");
@@ -134,7 +134,7 @@ public:
 		const QString anti_aliasing              = tr("Emulate PS3 multisampling layout.\nCan fix some otherwise difficult to solve graphics glitches.\nLow to moderate performance hit depending on your GPU hardware.");
 		const QString anisotropic_filter         = tr("Higher values increase sharpness of textures on sloped surfaces at the cost of GPU resources.\nModern GPUs can handle this setting just fine even at 16x.\nKeep this on Automatic if you want to use the original setting used by a real PS3.");
 		const QString resolution_scale           = tr("Scales the game's resolution by the given percentage.\nThe base resolution is always 1280x720.\nSet this value to 100% if you want to use the normal Resolution options.");
-		const QString minimum_scalable_dimension = tr("Only framebuffers greater than this size will be upscaled.\nIncreasing this value might fix problems with missing graphics when upscaling, especially when Write Color Buffers is enabled.\nDo not touch this setting if you are unsure.");
+		const QString minimum_scalable_dimension = tr("Only framebuffers greater than this size will be upscaled.\nIncreasing this value might fix problems with missing graphics when upscaling, especially when Write Color Buffers is enabled.\nIf unsure, don't change this option.");
 		const QString dump_color                 = tr("Enable this option if you get missing graphics or broken lighting ingame.\nMight degrade performance and introduce stuttering in some cases.\nRequired for Demon's Souls.");
 		const QString vsync                      = tr("By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.");
 		const QString strict_rendering_mode      = tr("Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.");
@@ -173,15 +173,15 @@ public:
 
 		const QString net_status = tr("If set to Connected, RPCS3 will allow programs to use your internet connection.");
 		const QString psn_status = tr("If set to Simulated, RPCS3 will fake PSN connection as best as it can.");
-		const QString dns        = tr("DNS used to resolve hostnames by applications");
-		const QString psn_npid   = tr("Identifier representing your account");
-		const QString dns_swap   = tr("DNS Swap List");
+		const QString dns        = tr("DNS used to resolve hostnames by applications.");
+		const QString psn_npid   = tr("Identifier representing your PSN account.");
+		const QString dns_swap   = tr("DNS Swap List.");
 
 		// system
 
 		const QString system_language         = tr("Some games may fail to boot if the system language is not available in the game itself.\nOther games will switch language automatically to what is selected here.\nIt is recommended leaving this on a language supported by the game.");
-		const QString keyboard_type           = tr(" Sets the used keyboard layout.\nCurrently only US, Japanese and German layouts are fully supported at this moment.");
-		const QString enter_button_assignment = tr("The button used for enter/accept/confirm in system dialogs.\nChange this to use the circle button instead, which is the default configuration on Japanese systems and in many Japanese games.\nIn these cases having the cross button assigned can often lead to confusion.");
+		const QString keyboard_type           = tr("Sets the used keyboard layout.\nCurrently only US, Japanese and German layouts are fully supported at this moment.");
+		const QString enter_button_assignment = tr("The button used for enter/accept/confirm in system dialogs.\nChange this to use the Circle button instead, which is the default configuration on Japanese systems and in many Japanese games.\nIn these cases having the cross button assigned can often lead to confusion.");
 		const QString enable_host_root        = tr("Required for some Homebrew.\nIf unsure, don't use this option.");
 		const QString limit_cache_size        = tr("Automatically removes older files from disk cache on boot if it grows larger than the specified value.\nGames can use the cache folder to temporarily store data outside of system memory. It is not used for long-term storage.");
 	} settings;
@@ -189,7 +189,7 @@ public:
 	const struct gamepad_settings
 	{
 		const QString null        = tr("This controller is disabled and will appear as disconnected to software. Choose another handler to enable it.");
-		const QString keyboard    = tr("While it is possible to use a keyboard as a pad in RPCS3, the use of an actual controller is strongly recommended. To bind mouse movement to a button or joystick, click on the desired button to activate it, then click and hold while dragging the mouse to a direction");
+		const QString keyboard    = tr("While it is possible to use a keyboard as a pad in RPCS3, the use of an actual controller is strongly recommended.\nTo bind mouse movement to a button or joystick, click on the desired button to activate it, then click and hold while dragging the mouse to a direction.");
 		const QString ds3_windows = tr("In order to use the DualShock 3 handler, you need to install the official DualShock 3 driver first.\nSee the <a href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.");
 		const QString ds3_linux   = tr("In order to use the DualShock 3 handler, you might need to add udev rules to let RPCS3 access the controller.\nSee the <a href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.");
 		const QString ds3_other   = tr("The DualShock 3 handler is recommended for official DualShock 3 controllers.");

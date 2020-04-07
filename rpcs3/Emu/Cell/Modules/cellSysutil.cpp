@@ -88,18 +88,18 @@ void fmt_class_string<CellSysutilLang>::format(std::string& out, u64 arg)
 		case CELL_SYSUTIL_LANG_GERMAN: return "German";
 		case CELL_SYSUTIL_LANG_ITALIAN: return "Italian";
 		case CELL_SYSUTIL_LANG_DUTCH: return "Dutch";
-		case CELL_SYSUTIL_LANG_PORTUGUESE_PT: return "Portuguese (PT)";
+		case CELL_SYSUTIL_LANG_PORTUGUESE_PT: return "Portuguese (Portugal)";
 		case CELL_SYSUTIL_LANG_RUSSIAN: return "Russian";
 		case CELL_SYSUTIL_LANG_KOREAN: return "Korean";
-		case CELL_SYSUTIL_LANG_CHINESE_T: return "Chinese (Trad.)";
-		case CELL_SYSUTIL_LANG_CHINESE_S: return "Chinese (Simp.)";
+		case CELL_SYSUTIL_LANG_CHINESE_T: return "Chinese (Traditional)";
+		case CELL_SYSUTIL_LANG_CHINESE_S: return "Chinese (Simplified)";
 		case CELL_SYSUTIL_LANG_FINNISH: return "Finnish";
 		case CELL_SYSUTIL_LANG_SWEDISH: return "Swedish";
 		case CELL_SYSUTIL_LANG_DANISH: return "Danish";
 		case CELL_SYSUTIL_LANG_NORWEGIAN: return "Norwegian";
 		case CELL_SYSUTIL_LANG_POLISH: return "Polish";
 		case CELL_SYSUTIL_LANG_ENGLISH_GB: return "English (UK)";
-		case CELL_SYSUTIL_LANG_PORTUGUESE_BR: return "Portuguese (BR)";
+		case CELL_SYSUTIL_LANG_PORTUGUESE_BR: return "Portuguese (Brazil)";
 		case CELL_SYSUTIL_LANG_TURKISH: return "Turkish";
 		}
 

@@ -383,7 +383,7 @@
     <string>Install .pkg</string>
    </property>
    <property name="toolTip">
-    <string>Install application from pkg file</string>
+    <string>Install application from a .pkg file</string>
    </property>
   </action>
   <action name="bootInstallPupAct">
@@ -406,7 +406,7 @@
     <string>Pause</string>
    </property>
    <property name="toolTip">
-    <string>Start Emulation</string>
+    <string>Start emulation</string>
    </property>
   </action>
   <action name="sysStopAct">
@@ -421,7 +421,7 @@
     <string>Stop</string>
    </property>
    <property name="toolTip">
-    <string>Stop Emulation</string>
+    <string>Stop emulation</string>
    </property>
   </action>
   <action name="sysSendOpenMenuAct">
@@ -453,7 +453,7 @@
     <string>GPU</string>
    </property>
    <property name="toolTip">
-    <string>Configure Graphics</string>
+    <string>Configure graphics</string>
    </property>
   </action>
   <action name="confPadsAct">
@@ -464,7 +464,7 @@
     <string>Pads</string>
    </property>
    <property name="toolTip">
-    <string>Configure Controls</string>
+    <string>Configure controls</string>
    </property>
   </action>
   <action name="confAudioAct">
@@ -472,7 +472,7 @@
     <string>Audio</string>
    </property>
    <property name="toolTip">
-    <string>Configure Audio</string>
+    <string>Configure audio</string>
    </property>
   </action>
   <action name="confIOAct">
@@ -488,7 +488,7 @@
     <string>System</string>
    </property>
    <property name="toolTip">
-    <string>Configure System</string>
+    <string>Configure system</string>
    </property>
   </action>
   <action name="confAutopauseManagerAct">
@@ -510,7 +510,7 @@
     <string>Exit RPCS3</string>
    </property>
    <property name="statusTip">
-    <string>Exit the application</string>
+    <string>Exit the application.</string>
    </property>
   </action>
   <action name="confSavedataManagerAct">
@@ -521,7 +521,7 @@
     <string>Save Data</string>
    </property>
    <property name="toolTip">
-    <string>Manage Save Data</string>
+    <string>Manage save data</string>
    </property>
   </action>
   <action name="actionManage_Trophy_Data">
@@ -532,7 +532,7 @@
     <string>Trophies</string>
    </property>
    <property name="toolTip">
-    <string>Manage Trophies</string>
+    <string>Manage trophies</string>
    </property>
   </action>
   <action name="actionManage_Users">
@@ -540,7 +540,7 @@
     <string>User Accounts</string>
    </property>
    <property name="toolTip">
-    <string>Manage User Accounts</string>
+    <string>Manage user accounts</string>
    </property>
   </action>
   <action name="toolsCgDisasmAct">
@@ -941,7 +941,7 @@
     <string>Open</string>
    </property>
    <property name="toolTip">
-    <string>Boot game</string>
+    <string>Boot a game</string>
    </property>
   </action>
   <action name="showCatOtherAct">
