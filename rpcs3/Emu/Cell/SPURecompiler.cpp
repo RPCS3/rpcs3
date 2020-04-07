@@ -8502,7 +8502,7 @@ struct spu_llvm
 
 		u32 worker_index = 0;
 
-		named_thread_group<spu_llvm_worker> workers("SPU LLVM Worker ", worker_count);
+		named_thread_group<spu_llvm_worker> workers("SPUW.", worker_count);
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
