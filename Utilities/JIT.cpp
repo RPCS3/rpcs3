@@ -1200,6 +1200,19 @@ void jit_compiler::add(const std::string& path)
 	}
 }
 
+bool jit_compiler::check(const std::string& path)
+{
+	if (auto cache = ObjectCache::load(path))
+	{
+		if (auto object_file = llvm::object::ObjectFile::createObjectFile(*cache))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void jit_compiler::fin()
 {
 	m_engine->finalizeObject();

@@ -171,6 +171,9 @@ public:
 	// Add object (path to obj file)
 	void add(const std::string& path);
 
+	// Check object file
+	static bool check(const std::string& path);
+
 	// Finalize
 	void fin();
 
