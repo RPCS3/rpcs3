@@ -269,7 +269,7 @@ static constexpr ullong round_tsc(ullong val)
 
 ullong utils::get_tsc_freq()
 {
-	const ullong cal_tsc = []() -> ullong
+	static const ullong cal_tsc = []() -> ullong
 	{
 		if (!has_invariant_tsc())
 			return 0;
