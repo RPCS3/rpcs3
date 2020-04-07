@@ -5,6 +5,7 @@
 
 #include "gui_settings.h"
 #include "emu_settings.h"
+#include "emu_settings_type.h"
 
 #include <QListWidget>
 #include <QLabel>
@@ -12,7 +13,7 @@
 struct vfs_settings_info
 {
 	QString name; // name of tab
-	emu_settings::SettingsType settingLoc; // Where the setting is saved in emu_settings
+	emu_settings_type settingLoc; // Where the setting is saved in emu_settings
 	gui_save listLocation; // Where the list of dir options are saved
 	cfg::string* cfg_node; // Needed since emu_settings overrides settings file and doesn't touch g_cfg currently.
 };

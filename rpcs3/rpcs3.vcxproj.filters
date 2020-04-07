@@ -1024,6 +1024,21 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_microphone_creator.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\render_creator.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_render_creator.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_render_creator.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_render_creator.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_render_creator.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -1112,6 +1127,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\curl_handle.h">
       <Filter>rpcs3</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\emu_settings_type.h">
+      <Filter>Gui\settings</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1320,6 +1338,9 @@
       <Filter>Gui\misc dialogs</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\microphone_creator.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\render_creator.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
   </ItemGroup>

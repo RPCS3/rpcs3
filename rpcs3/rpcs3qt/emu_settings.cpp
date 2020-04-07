@@ -1,21 +1,12 @@
 ﻿#include "emu_settings.h"
 
-#include <atomic>
-#include <chrono>
-#include <condition_variable>
-#include <mutex>
-
 #include "Utilities/Config.h"
-#include "Utilities/Thread.h"
 
 #include <QMessageBox>
 #include <QLineEdit>
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
-#if defined(_WIN32) || defined(HAVE_VULKAN)
-#include "Emu/RSX/VK/VKHelpers.h"
-#endif
 
 LOG_CHANNEL(cfg_log, "CFG");
 
@@ -114,94 +105,9 @@ static QStringList getOptions(cfg_location location)
 	return values;
 }
 
-emu_settings::Render_Creator::Render_Creator(const QString& name_null, const QString& name_vulkan, const QString& name_openGL)
-	: name_Null(name_null)
-	, name_Vulkan(name_vulkan)
-	, name_OpenGL(name_openGL)
-{
-#if defined(WIN32) || defined(HAVE_VULKAN)
-	// Some drivers can get stuck when checking for vulkan-compatible gpus, f.ex. if they're waiting for one to get
-	// plugged in. This whole contraption is for showing an error message in case that happens, so that user has
-	// some idea about why the emulator window isn't showing up.
-
-	static std::atomic<bool> was_called = false;
-	if (was_called.exchange(true))
-		fmt::throw_exception("Render_Creator cannot be created more than once" HERE);
-
-	static std::mutex mtx;
-	static std::condition_variable cond;
-	static bool thread_running = true;
-	static bool device_found = false;
-
-	static QStringList compatible_gpus;
-
-	std::thread enum_thread = std::thread([&]
-	{
-		thread_ctrl::set_native_priority(-1);
-
-		vk::context device_enum_context;
-		if (device_enum_context.createInstance("RPCS3", true))
-		{
-			device_enum_context.makeCurrentInstance();
-			std::vector<vk::physical_device> &gpus = device_enum_context.enumerateDevices();
-
-			if (!gpus.empty())
-			{
-				device_found = true;
-
-				for (auto &gpu : gpus)
-				{
-					compatible_gpus.append(qstr(gpu.get_name()));
-				}
-			}
-		}
-
-		std::scoped_lock{mtx}, thread_running = false;
-		cond.notify_all();
-	});
-
-	{
-		std::unique_lock lck(mtx);
-		cond.wait_for(lck, std::chrono::seconds(10), [&]{ return !thread_running; });
-	}
-
-	if (thread_running)
-	{
-		cfg_log.error("Vulkan device enumeration timed out");
-		const auto button = QMessageBox::critical(nullptr, tr("Vulkan Check Timeout"),
-			tr("Querying for Vulkan-compatible devices is taking too long. This is usually caused by malfunctioning "
-			"graphics drivers, reinstalling them could fix the issue.\n\n"
-			"Selecting ignore starts the emulator without Vulkan support."),
-			QMessageBox::Ignore | QMessageBox::Abort, QMessageBox::Abort);
-
-		enum_thread.detach();
-		if (button != QMessageBox::Ignore)
-			std::exit(1);
-
-		supportsVulkan = false;
-	}
-	else
-	{
-		supportsVulkan = device_found;
-		vulkanAdapters = std::move(compatible_gpus);
-		enum_thread.join();
-	}
-#endif
-
-	// Graphics Adapter
-	Vulkan = Render_Info(name_Vulkan, vulkanAdapters, supportsVulkan, emu_settings::VulkanAdapter, true);
-	OpenGL = Render_Info(name_OpenGL);
-	NullRender = Render_Info(name_Null);
-
-	renderers = { &Vulkan, &OpenGL, &NullRender };
-}
-
 emu_settings::emu_settings()
 	: QObject()
-	, m_render_creator(
-		GetLocalizedSetting("Null", emu_settings::Renderer, static_cast<int>(video_renderer::null)),
-		GetLocalizedSetting("Vulkan", emu_settings::Renderer, static_cast<int>(video_renderer::vulkan)),
-		GetLocalizedSetting("OpenGl", emu_settings::Renderer, static_cast<int>(video_renderer::opengl)))
+	, m_render_creator(new render_creator(this))
 {
 }
 
@@ -285,7 +191,7 @@ void emu_settings::SaveSettings()
 	config.close();
 }
 
-void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged, bool use_max, int max, bool sorted)
+void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged, bool use_max, int max, bool sorted)
 {
 	if (!combobox)
 	{
@@ -346,7 +252,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 	});
 }
 
-void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
+void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 {
 	if (!checkbox)
 	{
@@ -359,7 +265,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 
 	if (def != "true" && def != "false")
 	{
-		cfg_log.fatal("EnhanceCheckBox '%s' was used with an invalid SettingsType", GetSettingName(type));
+		cfg_log.fatal("EnhanceCheckBox '%s' was used with an invalid emu_settings_type", GetSettingName(type));
 		return;
 	}
 
@@ -384,7 +290,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 	});
 }
 
-void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type)
+void emu_settings::EnhanceSlider(QSlider* slider, emu_settings_type type)
 {
 	if (!slider)
 	{
@@ -401,7 +307,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type)
 
 	if (!ok_def || !ok_min || !ok_max)
 	{
-		cfg_log.fatal("EnhanceSlider '%s' was used with an invalid SettingsType", GetSettingName(type));
+		cfg_log.fatal("EnhanceSlider '%s' was used with an invalid emu_settings_type", GetSettingName(type));
 		return;
 	}
 
@@ -424,7 +330,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type)
 	});
 }
 
-void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, SettingsType type, const QString& prefix, const QString& suffix)
+void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, emu_settings_type type, const QString& prefix, const QString& suffix)
 {
 	if (!spinbox)
 	{
@@ -466,7 +372,7 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, SettingsType type, const QS
 	});
 }
 
-void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, SettingsType type, const QString& prefix, const QString& suffix)
+void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_type type, const QString& prefix, const QString& suffix)
 {
 	if (!spinbox)
 	{
@@ -508,7 +414,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, SettingsType ty
 	});
 }
 
-void emu_settings::EnhanceEdit(QLineEdit* edit, SettingsType type)
+void emu_settings::EnhanceEdit(QLineEdit* edit, emu_settings_type type)
 {
 	if (!edit)
 	{
@@ -525,7 +431,7 @@ void emu_settings::EnhanceEdit(QLineEdit* edit, SettingsType type)
 	});
 }
 
-void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, SettingsType type)
+void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_type type)
 {
 	if (!button_group)
 	{
@@ -570,28 +476,28 @@ void emu_settings::SaveSelectedLibraries(const std::vector<std::string>& libs)
 	m_currentSettings["Core"]["Load libraries"] = libs;
 }
 
-QStringList emu_settings::GetSettingOptions(SettingsType type) const
+QStringList emu_settings::GetSettingOptions(emu_settings_type type) const
 {
 	return getOptions(const_cast<cfg_location&&>(m_settings_location[type]));
 }
 
-std::string emu_settings::GetSettingName(SettingsType type) const
+std::string emu_settings::GetSettingName(emu_settings_type type) const
 {
 	const cfg_location loc = m_settings_location[type];
 	return loc[loc.size() - 1];
 }
 
-std::string emu_settings::GetSettingDefault(SettingsType type) const
+std::string emu_settings::GetSettingDefault(emu_settings_type type) const
 {
 	return cfg_adapter::get_node(m_defaultSettings, m_settings_location[type]).Scalar();
 }
 
-std::string emu_settings::GetSetting(SettingsType type) const
+std::string emu_settings::GetSetting(emu_settings_type type) const
 {
 	return cfg_adapter::get_node(m_currentSettings, m_settings_location[type]).Scalar();
 }
 
-void emu_settings::SetSetting(SettingsType type, const std::string& val)
+void emu_settings::SetSetting(emu_settings_type type, const std::string& val)
 {
 	cfg_adapter::get_node(m_currentSettings, m_settings_location[type]) = val;
 }
@@ -622,11 +528,11 @@ void emu_settings::OpenCorrectionDialog(QWidget* parent)
 	}
 }
 
-QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType type, int index) const
+QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_type type, int index) const
 {
 	switch (type)
 	{
-	case emu_settings::SPUBlockSize:
+	case emu_settings_type::SPUBlockSize:
 		switch (static_cast<spu_block_size_type>(index))
 		{
 		case spu_block_size_type::safe: return tr("Safe", "SPU block size");
@@ -634,7 +540,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case spu_block_size_type::giga: return tr("Giga", "SPU block size");
 		}
 		break;
-	case emu_settings::EnableTSX:
+	case emu_settings_type::EnableTSX:
 		switch (static_cast<tsx_usage>(index))
 		{
 		case tsx_usage::disabled: return tr("Disabled", "Enable TSX");
@@ -642,7 +548,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case tsx_usage::forced: return tr("Forced", "Enable TSX");
 		}
 		break;
-	case emu_settings::Renderer:
+	case emu_settings_type::Renderer:
 		switch (static_cast<video_renderer>(index))
 		{
 		case video_renderer::null: return tr("Disable Video Output", "Video renderer");
@@ -650,7 +556,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case video_renderer::vulkan: return tr("Vulkan", "Video renderer");
 		}
 		break;
-	case emu_settings::FrameLimit:
+	case emu_settings_type::FrameLimit:
 		switch (static_cast<frame_limit_type>(index))
 		{
 		case frame_limit_type::none: return tr("Off", "Frame limit");
@@ -661,14 +567,14 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case frame_limit_type::_auto: return tr("Auto", "Frame limit");
 		}
 		break;
-	case emu_settings::MSAA:
+	case emu_settings_type::MSAA:
 		switch (static_cast<msaa_level>(index))
 		{
 		case msaa_level::none: return tr("Disabled", "MSAA");
 		case msaa_level::_auto: return tr("Auto", "MSAA");
 		}
 		break;
-	case emu_settings::AudioRenderer:
+	case emu_settings_type::AudioRenderer:
 		switch (static_cast<audio_renderer>(index))
 		{
 		case audio_renderer::null: return tr("Disable Audio Output", "Audio renderer");
@@ -687,7 +593,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 #endif
 		}
 		break;
-	case emu_settings::MicrophoneType:
+	case emu_settings_type::MicrophoneType:
 		switch (static_cast<microphone_handler>(index))
 		{
 		case microphone_handler::null: return tr("Disabled", "Microphone handler");
@@ -697,21 +603,21 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case microphone_handler::rocksmith: return tr("Rocksmith", "Microphone handler");
 		}
 		break;
-	case emu_settings::KeyboardHandler:
+	case emu_settings_type::KeyboardHandler:
 		switch (static_cast<keyboard_handler>(index))
 		{
 		case keyboard_handler::null: return tr("Null", "Keyboard handler");
 		case keyboard_handler::basic: return tr("Basic", "Keyboard handler");
 		}
 		break;
-	case emu_settings::MouseHandler:
+	case emu_settings_type::MouseHandler:
 		switch (static_cast<mouse_handler>(index))
 		{
 		case mouse_handler::null: return tr("Null", "Mouse handler");
 		case mouse_handler::basic: return tr("Basic", "Mouse handler");
 		}
 		break;
-	case emu_settings::CameraType:
+	case emu_settings_type::CameraType:
 		switch (static_cast<fake_camera_type>(index))
 		{
 		case fake_camera_type::unknown: return tr("Unknown", "Camera type");
@@ -720,14 +626,14 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case fake_camera_type::uvc1_1: return tr("UVC 1.1", "Camera type");
 		}
 		break;
-	case emu_settings::Camera:
+	case emu_settings_type::Camera:
 		switch (static_cast<camera_handler>(index))
 		{
 		case camera_handler::null: return tr("Null", "Camera handler");
 		case camera_handler::fake: return tr("Fake", "Camera handler");
 		}
 		break;
-	case emu_settings::Move:
+	case emu_settings_type::Move:
 		switch (static_cast<move_handler>(index))
 		{
 		case move_handler::null: return tr("Null", "Move handler");
@@ -735,21 +641,21 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case move_handler::mouse: return tr("Mouse", "Move handler");
 		}
 		break;
-	case emu_settings::InternetStatus:
+	case emu_settings_type::InternetStatus:
 		switch (static_cast<np_internet_status>(index))
 		{
 		case np_internet_status::disabled: return tr("Disconnected", "Internet Status");
 		case np_internet_status::enabled: return tr("Connected", "Internet Status");
 		}
 		break;
-	case emu_settings::PSNStatus:
+	case emu_settings_type::PSNStatus:
 		switch (static_cast<np_psn_status>(index))
 		{
 		case np_psn_status::disabled: return tr("Disconnected", "PSN Status");
 		case np_psn_status::fake: return tr("Simulated", "PSN Status");
 		}
 		break;
-	case emu_settings::SleepTimersAccuracy:
+	case emu_settings_type::SleepTimersAccuracy:
 		switch (static_cast<sleep_timers_accuracy_level>(index))
 		{
 		case sleep_timers_accuracy_level::_as_host: return tr("As Host", "Sleep timers accuracy");
@@ -757,7 +663,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case sleep_timers_accuracy_level::_all_timers: return tr("All Timers", "Sleep timers accuracy");
 		}
 		break;
-	case emu_settings::PerfOverlayDetailLevel:
+	case emu_settings_type::PerfOverlayDetailLevel:
 		switch (static_cast<detail_level>(index))
 		{
 		case detail_level::minimal: return tr("Minimal", "Detail Level");
@@ -766,7 +672,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case detail_level::high: return tr("High", "Detail Level");
 		}
 		break;
-	case emu_settings::PerfOverlayPosition:
+	case emu_settings_type::PerfOverlayPosition:
 		switch (static_cast<screen_quadrant>(index))
 		{
 		case screen_quadrant::top_left: return tr("Top Left", "Performance overlay position");
@@ -775,7 +681,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case screen_quadrant::bottom_right: return tr("Bottom Right", "Performance overlay position");
 		}
 		break;
-	case emu_settings::LibLoadOptions:
+	case emu_settings_type::LibLoadOptions:
 		switch (static_cast<lib_loading_type>(index))
 		{
 		case lib_loading_type::manual: return tr("Manually load selected libraries", "Libraries");
@@ -785,7 +691,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case lib_loading_type::liblv2list: return tr("Load liblv2.sprx and strict selection", "Libraries");
 		}
 		break;
-	case emu_settings::PPUDecoder:
+	case emu_settings_type::PPUDecoder:
 		switch (static_cast<ppu_decoder_type>(index))
 		{
 		case ppu_decoder_type::precise: return tr("Interpreter (precise)", "PPU decoder");
@@ -793,7 +699,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case ppu_decoder_type::llvm: return tr("Recompiler (LLVM)", "PPU decoder");
 		}
 		break;
-	case emu_settings::SPUDecoder:
+	case emu_settings_type::SPUDecoder:
 		switch (static_cast<spu_decoder_type>(index))
 		{
 		case spu_decoder_type::precise: return tr("Interpreter (precise)", "SPU decoder");
@@ -802,7 +708,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, SettingsType 
 		case spu_decoder_type::llvm: return tr("Recompiler (LLVM)", "SPU decoder");
 		}
 		break;
-	case emu_settings::EnterButtonAssignment:
+	case emu_settings_type::EnterButtonAssignment:
 		switch (static_cast<enter_button_assign>(index))
 		{
 		case enter_button_assign::circle: return tr("Enter with circle", "Enter button assignment");

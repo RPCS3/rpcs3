@@ -40,6 +40,7 @@
 	progress_dialog.cpp
 	qt_utils.cpp
 	register_editor_dialog.cpp
+	render_creator.cpp
 	rsx_debugger.cpp
 	save_data_dialog.cpp
 	save_data_info_dialog.cpp
