@@ -4,6 +4,8 @@
 
 #include "stdafx.h"
 
+#include "microphone_creator.h"
+
 #include <QButtonGroup>
 #include <QCheckBox>
 #include <QStringList>
@@ -200,17 +202,6 @@ public:
 		Render_Creator(const QString& name_null, const QString& name_vulkan, const QString& name_openGL);
 	};
 
-	struct Microphone_Creator
-	{
-		QStringList microphones_list;
-		QString mic_none;
-		std::array<std::string, 4> sel_list;
-		std::string SetDevice(u32 num, QString& text);
-		void ParseDevices(std::string list);
-		void RefreshList();
-		Microphone_Creator();
-	};
-
 	std::set<SettingsType> m_broken_types; // list of broken settings
 
 	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml
@@ -262,7 +253,7 @@ public:
 	Render_Creator m_render_creator;
 
 	/** Gets a list of all the microphones available.*/
-	Microphone_Creator m_microphone_creator;
+	microphone_creator m_microphone_creator;
 
 	/** Loads the settings from path.*/
 	void LoadSettings(const std::string& title_id = "");

@@ -624,6 +624,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		enable_buffering_options(enabled && ui->enableBuffering->isChecked());
 	};
 
+	const QString mic_none = m_emu_settings->m_microphone_creator.get_none();
+
 	auto change_microphone_type = [=, this](QString text)
 	{
 		std::string s_standard, s_singstar, s_realsingstar, s_rocksmith;
@@ -632,15 +634,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			ui->microphone1Box->setEnabled(true);
 
-			if (max == 1 || ui->microphone1Box->currentText() == m_emu_settings->m_microphone_creator.mic_none)
+			if (max == 1 || ui->microphone1Box->currentText() == mic_none)
 				return;
 
 			ui->microphone2Box->setEnabled(true);
 
-			if (max > 2 && ui->microphone2Box->currentText() != m_emu_settings->m_microphone_creator.mic_none)
+			if (max > 2 && ui->microphone2Box->currentText() != mic_none)
 			{
 				ui->microphone3Box->setEnabled(true);
-				if (ui->microphone3Box->currentText() != m_emu_settings->m_microphone_creator.mic_none)
+				if (ui->microphone3Box->currentText() != mic_none)
 				{
 					ui->microphone4Box->setEnabled(true);
 				}
@@ -679,10 +681,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		for (u32 index = 0; index < 4; index++)
 		{
 			const QString cur_item = mics_combo[index]->currentText();
-			QStringList cur_list = m_emu_settings->m_microphone_creator.microphones_list;
+			QStringList cur_list = m_emu_settings->m_microphone_creator.get_microphone_list();
 			for (u32 subindex = 0; subindex < 4; subindex++)
 			{
-				if (subindex != index && mics_combo[subindex]->currentText() != m_emu_settings->m_microphone_creator.mic_none)
+				if (subindex != index && mics_combo[subindex]->currentText() != mic_none)
 					cur_list.removeOne(mics_combo[subindex]->currentText());
 			}
 			mics_combo[index]->blockSignals(true);
@@ -696,9 +698,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	auto change_microphone_device = [=, this](u32 next_index, QString text)
 	{
-		m_emu_settings->SetSetting(emu_settings::MicrophoneDevices, m_emu_settings->m_microphone_creator.SetDevice(next_index, text));
-		if (next_index < 4 && text == m_emu_settings->m_microphone_creator.mic_none)
-			mics_combo[next_index]->setCurrentText(m_emu_settings->m_microphone_creator.mic_none);
+		m_emu_settings->SetSetting(emu_settings::MicrophoneDevices, m_emu_settings->m_microphone_creator.set_device(next_index, text));
+		if (next_index < 4 && text == mic_none)
+			mics_combo[next_index]->setCurrentText(mic_none);
 		propagate_used_devices();
 	};
 
@@ -721,21 +723,26 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(mics_combo[1], &QComboBox::currentTextChanged, [=, this](const QString& text) { change_microphone_device(2, text); });
 	connect(mics_combo[2], &QComboBox::currentTextChanged, [=, this](const QString& text) { change_microphone_device(3, text); });
 	connect(mics_combo[3], &QComboBox::currentTextChanged, [=, this](const QString& text) { change_microphone_device(4, text); });
-	m_emu_settings->m_microphone_creator.RefreshList();
+	m_emu_settings->m_microphone_creator.refresh_list();
 	propagate_used_devices(); // Fills comboboxes list
 
-	m_emu_settings->m_microphone_creator.ParseDevices(m_emu_settings->GetSetting(emu_settings::MicrophoneDevices));
+	m_emu_settings->m_microphone_creator.parse_devices(m_emu_settings->GetSetting(emu_settings::MicrophoneDevices));
+
+	const auto mic_sel_list = m_emu_settings->m_microphone_creator.get_selection_list();
 
 	for (s32 index = 3; index >= 0; index--)
 	{
-		if (m_emu_settings->m_microphone_creator.sel_list[index].empty() || mics_combo[index]->findText(qstr(m_emu_settings->m_microphone_creator.sel_list[index])) == -1)
+		const auto mic = mic_sel_list[index];
+		const auto qmic = qstr(mic);
+
+		if (mic.empty() || mics_combo[index]->findText(qmic) == -1)
 		{
-			mics_combo[index]->setCurrentText(m_emu_settings->m_microphone_creator.mic_none);
-			change_microphone_device(index+1, m_emu_settings->m_microphone_creator.mic_none); // Ensures the value is set in config
+			mics_combo[index]->setCurrentText(mic_none);
+			change_microphone_device(index+1, mic_none); // Ensures the value is set in config
 		}
 		else
 		{
-			mics_combo[index]->setCurrentText(qstr(m_emu_settings->m_microphone_creator.sel_list[index]));
+			mics_combo[index]->setCurrentText(qmic);
 		}
 	}
 
