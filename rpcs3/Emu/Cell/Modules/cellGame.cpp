@@ -565,9 +565,13 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	const u32 new_data = sfo.empty() && !fs::is_file(vfs::get(dir + "/PARAM.SFO")) ? CELL_GAMEDATA_ISNEWDATA_YES : CELL_GAMEDATA_ISNEWDATA_NO;
 
-	if (!new_data && psf::get_string(sfo, "CATEGORY", "") != "GD")
+	if (!new_data)
 	{
-		return CELL_GAMEDATA_ERROR_BROKEN;
+		const auto cat = psf::get_string(sfo, "CATEGORY", "");
+		if (cat != "GD" && cat != "DG")
+		{
+			return CELL_GAMEDATA_ERROR_BROKEN;
+		}
 	}
 
 	cbGet->isNewData = new_data;
@@ -628,7 +632,11 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 		if (setParam)
 		{
-			psf::assign(sfo, "CATEGORY", psf::string(3, "GD"));
+			if (new_data)
+			{
+				psf::assign(sfo, "CATEGORY", psf::string(3, "GD"));
+			}
+
 			psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, setParam->titleId));
 			psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->title));
 			psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, setParam->dataVersion));
