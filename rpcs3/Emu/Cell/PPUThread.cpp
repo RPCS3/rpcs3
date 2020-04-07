@@ -4,6 +4,7 @@
 #include "Utilities/JIT.h"
 #include "Crypto/sha1.h"
 #include "Emu/Memory/vm_reservation.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/VFS.h"
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
@@ -71,6 +72,15 @@ extern atomic_t<u64> g_watchdog_hold_ctr;
 extern atomic_t<const char*> g_progr;
 extern atomic_t<u32> g_progr_ptotal;
 extern atomic_t<u32> g_progr_pdone;
+
+// Should be of the same type
+using spu_rdata_t = decltype(ppu_thread::full_rdata);
+
+extern void mov_rdata(spu_rdata_t& _dst, const spu_rdata_t& _src);
+extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs);
+
+// Verify AVX availability for TSX transactions
+static const bool s_tsx_avx = utils::has_avx();
 
 template <>
 void fmt_class_string<ppu_join_status>::format(std::string& out, u64 arg)
@@ -1095,6 +1105,58 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 	ppu.raddr = addr;
 	const u64 mask_res = g_use_rtm ? (-128 | vm::dma_lockb) : -1;
 
+	if (const s32 max = g_cfg.core.ppu_128_reservations_loop_max_length)
+	{
+		// If we use it in HLE it means we want the accurate version
+		ppu.use_full_rdata = max < 0 || ppu.current_function || [&]()
+		{
+			const u32 cia = ppu.cia;
+
+			if ((cia & 0xffff) >= 0x10000u - max * 4)
+			{
+				// Do not cross 64k boundary
+				return true;
+			}
+
+			const auto inst = vm::_ptr<const nse_t<u32>>(cia);
+
+			// Search for STWCX or STDCX nearby (LDARX-STWCX and LWARX-STDCX loops will use accurate 128-byte reservations)
+			constexpr u32 store_cond = se_storage<u32>::swap(sizeof(T) == 8 ? 0x7C00012D : 0x7C0001AD);
+			constexpr u32 mask = se_storage<u32>::swap(0xFC0007FF);
+
+			const auto store_vec = v128::from32p(store_cond);
+			const auto mask_vec = v128::from32p(mask);
+
+			s32 i = 2;
+
+			for (const s32 _max = max - 3; i < _max; i += 4)
+			{
+				const auto _inst = v128::loadu(inst + i) & mask_vec;
+
+				if (_mm_movemask_epi8(v128::eq32(_inst, store_vec).vi))
+				{
+					return false;
+				}
+			}
+
+			for (; i < max; i++)
+			{
+				const u32 val = inst[i] & mask;
+
+				if (val == store_cond)
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}();
+	}
+	else
+	{
+		ppu.use_full_rdata = false;
+	}
+
 	for (u64 count = 0;; [&]()
 	{
 		if (ppu.state)
@@ -1120,7 +1182,13 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			continue;
 		}
 
-		ppu.rdata = data;
+		const u64 rdata = data;
+
+		if (ppu.use_full_rdata)
+		{
+			mov_rdata(ppu.full_rdata, vm::_ref<spu_rdata_t>(addr & -128));
+			reinterpret_cast<be_t<u64>&>(ppu.full_rdata[addr & 0x78]) = rdata; // Must match with rdata and must be of atomic 64-bits load
+		}
 
 		if ((vm::reservation_acquire(addr, sizeof(T)) & mask_res) == ppu.rtime) [[likely]]
 		{
@@ -1129,6 +1197,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 				ppu_log.warning("%s took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
 			}
 
+			ppu.rdata = rdata;
 			return static_cast<T>(ppu.rdata << data_off >> size_off);
 		}
 	}
@@ -1190,6 +1259,251 @@ const auto ppu_stcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rda
 	c.ret();
 });
 
+const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const void* _old, u64 _new)>([](asmjit::X86Assembler& c, auto& args)
+{
+	using namespace asmjit;
+
+	Label fall = c.newLabel();
+	Label fail = c.newLabel();
+	Label _ret = c.newLabel();
+	Label skip = c.newLabel();
+	Label next = c.newLabel();
+
+	//if (utils::has_avx() && !s_tsx_avx)
+	//{
+	//	c.vzeroupper();
+	//}
+
+	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
+	c.push(x86::rbp);
+	c.push(x86::r13);
+	c.push(x86::r12);
+	c.push(x86::rbx);
+	c.sub(x86::rsp, 40);
+#ifdef _WIN32
+	if (!s_tsx_avx)
+	{
+		c.movups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
+		c.movups(x86::oword_ptr(x86::rsp, 16), x86::xmm7);
+	}
+#endif
+
+	// Prepare registers
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
+	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
+	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
+	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
+	c.and_(x86::rbp, -128);
+	c.movzx(args[0].r32(), args[0].r16());
+	c.shr(args[0].r32(), 1);
+	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
+	c.and_(x86::rbx, -128 / 2);
+	c.xor_(x86::r12d, x86::r12d);
+	c.mov(x86::r13, args[1]);
+	c.bswap(args[3]);
+
+	// Prepare data
+	if (s_tsx_avx)
+	{
+		c.vmovups(x86::ymm0, x86::yword_ptr(args[2], 0));
+		c.vmovups(x86::ymm1, x86::yword_ptr(args[2], 32));
+		c.vmovups(x86::ymm2, x86::yword_ptr(args[2], 64));
+		c.vmovups(x86::ymm3, x86::yword_ptr(args[2], 96));
+	}
+	else
+	{
+		c.movaps(x86::xmm0, x86::oword_ptr(args[2], 0));
+		c.movaps(x86::xmm1, x86::oword_ptr(args[2], 16));
+		c.movaps(x86::xmm2, x86::oword_ptr(args[2], 32));
+		c.movaps(x86::xmm3, x86::oword_ptr(args[2], 48));
+		c.movaps(x86::xmm4, x86::oword_ptr(args[2], 64));
+		c.movaps(x86::xmm5, x86::oword_ptr(args[2], 80));
+		c.movaps(x86::xmm6, x86::oword_ptr(args[2], 96));
+		c.movaps(x86::xmm7, x86::oword_ptr(args[2], 112));
+	}
+
+	// Begin transaction
+	build_transaction_enter(c, fall, x86::r12, 4);
+	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
+	c.and_(x86::rax, -128);
+	c.cmp(x86::rax, x86::r13);
+	c.jne(fail);
+	c.test(x86::qword_ptr(x86::rbx), 127);
+	c.jnz(skip);
+
+	if (s_tsx_avx)
+	{
+		c.vxorps(x86::ymm0, x86::ymm0, x86::yword_ptr(x86::rbp, 0));
+		c.vxorps(x86::ymm1, x86::ymm1, x86::yword_ptr(x86::rbp, 32));
+		c.vxorps(x86::ymm2, x86::ymm2, x86::yword_ptr(x86::rbp, 64));
+		c.vxorps(x86::ymm3, x86::ymm3, x86::yword_ptr(x86::rbp, 96));
+		c.vorps(x86::ymm0, x86::ymm0, x86::ymm1);
+		c.vorps(x86::ymm1, x86::ymm2, x86::ymm3);
+		c.vorps(x86::ymm0, x86::ymm1, x86::ymm0);
+		c.vptest(x86::ymm0, x86::ymm0);
+	}
+	else
+	{
+		c.xorps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
+		c.xorps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
+		c.xorps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
+		c.xorps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
+		c.xorps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
+		c.xorps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
+		c.xorps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
+		c.xorps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
+		c.orps(x86::xmm0, x86::xmm1);
+		c.orps(x86::xmm2, x86::xmm3);
+		c.orps(x86::xmm4, x86::xmm5);
+		c.orps(x86::xmm6, x86::xmm7);
+		c.orps(x86::xmm0, x86::xmm2);
+		c.orps(x86::xmm4, x86::xmm6);
+		c.orps(x86::xmm0, x86::xmm4);
+		c.ptest(x86::xmm0, x86::xmm0);
+	}
+
+	c.jnz(fail);
+
+	c.mov(x86::rax, x86::rbp);
+	c.shl(args[0], 1);
+	c.or_(x86::rax, args[0]);
+	c.mov(x86::qword_ptr(x86::rax), args[3]);
+	c.shr(args[0], 1);
+
+	c.sub(x86::qword_ptr(x86::rbx), -128);
+	c.xend();
+	c.mov(x86::eax, 1);
+	c.jmp(_ret);
+
+	c.bind(skip);
+	c.xor_(x86::eax, x86::eax);
+	c.xor_(x86::r12d, x86::r12d);
+	build_transaction_abort(c, 0);
+	//c.jmp(fall);
+
+	c.bind(fall);
+	c.sar(x86::eax, 24);
+	c.js(fail);
+	c.lock().bts(x86::dword_ptr(args[2], ::offset32(&ppu_thread::state) - ::offset32(&ppu_thread::full_rdata)), static_cast<u32>(cpu_flag::wait));
+
+	// Touch memory if transaction failed without RETRY flag on the first attempt
+	c.cmp(x86::r12, 1);
+	c.jne(next);
+	c.xor_(x86::rbp, 0xf80);
+	c.lock().add(x86::dword_ptr(x86::rbp), 0);
+	c.xor_(x86::rbp, 0xf80);
+
+	Label fall2 = c.newLabel();
+	Label fail2 = c.newLabel();
+
+	// Lightened transaction: only compare and swap data
+	c.bind(next);
+
+	// Try to "lock" reservation
+	c.mov(x86::rax, x86::r13);
+	c.add(x86::r13, 1);
+	c.lock().cmpxchg(x86::qword_ptr(x86::rbx), x86::r13);
+	c.jne(fail);
+
+	build_transaction_enter(c, fall2, x86::r12, 666);
+
+	if (s_tsx_avx)
+	{
+		c.vxorps(x86::ymm0, x86::ymm0, x86::yword_ptr(x86::rbp, 0));
+		c.vxorps(x86::ymm1, x86::ymm1, x86::yword_ptr(x86::rbp, 32));
+		c.vxorps(x86::ymm2, x86::ymm2, x86::yword_ptr(x86::rbp, 64));
+		c.vxorps(x86::ymm3, x86::ymm3, x86::yword_ptr(x86::rbp, 96));
+		c.vorps(x86::ymm0, x86::ymm0, x86::ymm1);
+		c.vorps(x86::ymm1, x86::ymm2, x86::ymm3);
+		c.vorps(x86::ymm0, x86::ymm1, x86::ymm0);
+		c.vptest(x86::ymm0, x86::ymm0);
+	}
+	else
+	{
+		c.xorps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
+		c.xorps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
+		c.xorps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
+		c.xorps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
+		c.xorps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
+		c.xorps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
+		c.xorps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
+		c.xorps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
+		c.orps(x86::xmm0, x86::xmm1);
+		c.orps(x86::xmm2, x86::xmm3);
+		c.orps(x86::xmm4, x86::xmm5);
+		c.orps(x86::xmm6, x86::xmm7);
+		c.orps(x86::xmm0, x86::xmm2);
+		c.orps(x86::xmm4, x86::xmm6);
+		c.orps(x86::xmm0, x86::xmm4);
+		c.ptest(x86::xmm0, x86::xmm0);
+	}
+
+	c.jnz(fail2);
+
+	c.mov(x86::rax, x86::rbp);
+	c.shl(args[0], 1);
+	c.or_(x86::rax, args[0]);
+	c.mov(x86::qword_ptr(x86::rax), args[3]);
+	c.shr(args[0], 1);
+
+	c.xend();
+	c.lock().add(x86::qword_ptr(x86::rbx), 127);
+	c.mov(x86::eax, 1);
+	c.jmp(_ret);
+
+	c.bind(fall2);
+	c.sar(x86::eax, 24);
+	c.js(fail2);
+	c.mov(x86::eax, 2);
+	c.jmp(_ret);
+
+	c.bind(fail);
+	build_transaction_abort(c, 0xff);
+	c.xor_(x86::eax, x86::eax);
+	c.jmp(_ret);
+
+	c.bind(fail2);
+	build_transaction_abort(c, 0xff);
+	c.lock().sub(x86::qword_ptr(x86::rbx), 1);
+	c.xor_(x86::eax, x86::eax);
+	//c.jmp(_ret);
+
+	c.bind(_ret);
+
+#ifdef _WIN32
+	if (s_tsx_avx)
+	{
+		c.vmovups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
+		c.vmovups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
+	}
+	else
+	{
+		c.movups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
+		c.movups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
+		c.movups(x86::xmm8, x86::oword_ptr(x86::rsp, 32));
+		c.movups(x86::xmm9, x86::oword_ptr(x86::rsp, 48));
+		c.movups(x86::xmm10, x86::oword_ptr(x86::rsp, 64));
+		c.movups(x86::xmm11, x86::oword_ptr(x86::rsp, 80));
+		c.movups(x86::xmm12, x86::oword_ptr(x86::rsp, 96));
+		c.movups(x86::xmm13, x86::oword_ptr(x86::rsp, 112));
+		c.movups(x86::xmm14, x86::oword_ptr(x86::rsp, 128));
+		c.movups(x86::xmm15, x86::oword_ptr(x86::rsp, 144));
+	}
+#endif
+
+	if (s_tsx_avx)
+	{
+		c.vzeroupper();
+	}
+
+	c.add(x86::rsp, 40);
+	c.pop(x86::rbx);
+	c.pop(x86::r12);
+	c.pop(x86::r13);
+	c.pop(x86::rbp);
+	c.ret();
+});
+
 template <typename T>
 static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
@@ -1199,11 +1513,9 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 	}
 
 	auto& data = vm::_ref<atomic_be_t<u64>>(addr & -8);
-	constexpr u64 size_off = (sizeof(T) * 8) & 63;
-	const u64 old_data = ppu.rdata;
-
-	const T old_data = static_cast<T>(ppu.rdata << ((addr & 7) * 8) >> size_off);
 	auto& res = vm::reservation_acquire(addr, sizeof(T));
+	const u64 old_data = ppu.rdata;
+	const u64 rtime = ppu.rtime;
 
 	if constexpr (sizeof(T) == sizeof(u32))
 	{
@@ -1223,80 +1535,151 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		reg_value = bf.all;
 	}
 
-	if ((std::exchange(ppu.raddr, 0) ^ addr) & -8 || old_data != data || ppu.rtime != (res & -128))
+	// Test if store address is on the same aligned 8-bytes memory as load
+	if (const u32 raddr = std::exchange(ppu.raddr, 0); raddr / 8 != addr / 8)
 	{
-		// Even when the reservation address does not match the target address must be valid
-		if (!vm::check_addr(addr, 1, vm::page_writable))
+		// If not and it is on the same aligned 128-byte memory, proceed only if 128-byte reservations are enabled
+		// In realhw the store address can be at any address of the 128-byte cache line
+		if (raddr / 128 != addr / 128 || !ppu.use_full_rdata)
 		{
-			// Access violate
-			data += 0;
-		}
-
-		return false;
-	}
-
-	if (reg_value == old_data)
-	{
-		if (res.compare_and_swap_test(ppu.rtime, ppu.rtime + 128))
-		{
-			res.notify_all();
-			return true;
-		}
-
-		return false;
-	}
-
-	addr &= -8;
-
-	if (g_use_rtm) [[likely]]
-	{
-		switch (ppu_stcx_tx(addr, ppu.rtime, old_data, reg_value))
-		{
-		case 0:
-		{
-			// Reservation lost
-			return false;
-		}
-		case 1:
-		{
-			res.notify_all();
-			return true;
-		}
-		}
-
-		if (res == ppu.rtime && vm::reservation_trylock(res, ppu.rtime))
-		{
-			if (data.compare_and_swap_test(old_data, reg_value))
+			// Even when the reservation address does not match the target address must be valid
+			if (!vm::check_addr(addr, 1, vm::page_writable))
 			{
-				res += 127;
-				res.notify_all();
-				return true;
+				// Access violate
+				data += 0;
 			}
 
-			res -= 1;
+			return false;
+		}
+	}
+
+	if (old_data != data || rtime != (res & -128))
+	{
+		return false;
+	}
+
+	if ([&]()
+	{
+		if (ppu.use_full_rdata) [[unlikely]]
+		{
+			if (g_use_rtm) [[likely]]
+			{
+				switch (ppu_stcx_accurate_tx(addr & -8, rtime, ppu.full_rdata, reg_value))
+				{
+				case 0:
+				{
+					// Reservation lost
+					return false;
+				}
+				case 1:
+				{
+					return true;
+				}
+				default: break;
+				}
+
+				cpu_thread::suspend_all cpu_lock(&ppu);
+
+				// Give up if PUTLLUC happened
+				if (res == (rtime | 1) && cmp_rdata(ppu.full_rdata, vm::_ref<spu_rdata_t>(addr & -128)))
+				{
+					data.release(reg_value);
+					res.release(rtime + 128);
+					return true;
+				}
+
+				res.release(rtime);
+				return false;
+			}
+
+			if (!vm::reservation_trylock(res, rtime))
+			{
+				return false;
+			}
+
+			// Align address: we do not need the lower 7 bits anymore
+			addr &= -128;
+
+			// Cache line data
+			auto& cline_data = vm::_ref<spu_rdata_t>(addr);
+
+			data += 0;
+
+			const auto render = rsx::get_rsx_if_needs_res_pause(addr);
+
+			if (render) render->pause();
+
+			auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
+			const bool success = [&]()
+			{
+				// Full lock (heavyweight)
+				// TODO: vm::check_addr
+				vm::writer_lock lock(addr);
+
+				if (cmp_rdata(ppu.full_rdata, super_data))
+				{
+					data.release(reg_value);
+					res.release(rtime + 128);
+					return true;
+				}
+
+				res.release(rtime);
+				return false;
+			}();
+
+			if (render) render->unpause();
+			return success;
 		}
 
-		return false;
-	}
+		if (reg_value == old_data)
+		{
+			return res.compare_and_swap_test(rtime, rtime + 128);
+		}
 
-	if (!vm::reservation_trylock(res, ppu.rtime))
+		// Aligned 8-byte reservations will be used here
+		addr &= -8;
+
+		if (g_use_rtm) [[likely]]
+		{
+			switch (ppu_stcx_tx(addr, rtime, old_data, reg_value))
+			{
+			case 0:
+			{
+				// Reservation lost
+				return false;
+			}
+			case 1:
+			{
+				return true;
+			}
+			default: break;
+			}
+
+			if (res == rtime && vm::reservation_trylock(res, rtime))
+			{
+				const bool ret = data.compare_and_swap_test(old_data, reg_value);
+				res.release(rtime + 128);
+				return ret;
+			}
+
+			return false;
+		}
+
+		if (!vm::reservation_trylock(res, ppu.rtime))
+		{
+			return false;
+		}
+
+		const bool ret = data.compare_and_swap_test(old_data, reg_value);
+		res.release(rtime + 128);
+		return ret;
+	}())
 	{
-		return false;
-	}
-
-	const bool result = data.compare_and_swap_test(old_data, reg_value);
-
-	if (result)
-	{
-		res.release(ppu.rtime + 128);
 		res.notify_all();
-	}
-	else
-	{
-		res.release(ppu.rtime);
+		return true;
 	}
 
-	return result;
+	return false;
 }
 
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
@@ -1645,6 +2028,7 @@ extern void ppu_initialize(const ppu_module& info)
 				accurate_ppu_vector_nan,
 				java_mode_handling,
 				accurate_cache_line_stores,
+				reservations_128_byte,
 
 				__bitset_enum_max
 			};
@@ -1669,6 +2053,10 @@ extern void ppu_initialize(const ppu_module& info)
 			if (has_dcbz == 2)
 			{
 				settings += ppu_settings::accurate_cache_line_stores;
+			}
+			if (g_cfg.core.ppu_128_reservations_loop_max_length > 0)
+			{
+				settings += ppu_settings::reservations_128_byte;
 			}
 
 			// Write version, hash, CPU, settings

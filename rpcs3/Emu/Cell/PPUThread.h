@@ -194,6 +194,8 @@ public:
 	u32 raddr{0}; // Reservation addr
 	u64 rtime{0};
 	u64 rdata{0}; // Reservation data
+	alignas(64) std::byte full_rdata[128]{}; // Full reservation data
+	bool use_full_rdata{};
 
 	atomic_t<s32> prio{0}; // Thread priority (0..3071)
 	const u32 stack_size; // Stack size
