@@ -173,9 +173,9 @@ public:
 
 		const QString net_status = tr("If set to Connected, RPCS3 will allow programs to use your internet connection.");
 		const QString psn_status = tr("If set to Simulated, RPCS3 will fake PSN connection as best as it can.");
-		const QString dns        = tr("DNS used to resolve hostnames by applications");
-		const QString psn_npid   = tr("Identifier representing your account");
-		const QString dns_swap   = tr("DNS Swap List");
+		const QString dns        = tr("DNS used to resolve hostnames by applications.");
+		const QString psn_npid   = tr("Identifier representing your PSN account.");
+		const QString dns_swap   = tr("DNS Swap List.");
 
 		// system
 
@@ -189,7 +189,7 @@ public:
 	const struct gamepad_settings
 	{
 		const QString null        = tr("This controller is disabled and will appear as disconnected to software. Choose another handler to enable it.");
-		const QString keyboard    = tr("While it is possible to use a keyboard as a pad in RPCS3, the use of an actual controller is strongly recommended. To bind mouse movement to a button or joystick, click on the desired button to activate it, then click and hold while dragging the mouse to a direction.");
+		const QString keyboard    = tr("While it is possible to use a keyboard as a pad in RPCS3, the use of an actual controller is strongly recommended.\nTo bind mouse movement to a button or joystick, click on the desired button to activate it, then click and hold while dragging the mouse to a direction.");
 		const QString ds3_windows = tr("In order to use the DualShock 3 handler, you need to install the official DualShock 3 driver first.\nSee the <a href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.");
 		const QString ds3_linux   = tr("In order to use the DualShock 3 handler, you might need to add udev rules to let RPCS3 access the controller.\nSee the <a href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.");
 		const QString ds3_other   = tr("The DualShock 3 handler is recommended for official DualShock 3 controllers.");
