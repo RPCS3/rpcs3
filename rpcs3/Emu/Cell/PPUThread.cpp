@@ -1650,7 +1650,7 @@ extern void ppu_initialize(const ppu_module& info)
 		link_workload.emplace_back(obj_name, false);
 
 		// Check object file
-		if (fs::is_file(cache_path + obj_name + ".gz") || fs::is_file(cache_path + obj_name))
+		if (jit_compiler::check(cache_path + obj_name))
 		{
 			if (!jit)
 			{
