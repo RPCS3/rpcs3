@@ -41,6 +41,7 @@ jobs:
     displayName: Docker setup and build
 
   - publish: $(Build.ArtifactStagingDirectory)
+    condition: eq(variables['COMPILER'], 'gcc')
 
 - job: Windows_Build
   variables:
