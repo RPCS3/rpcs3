@@ -37,7 +37,7 @@ struct RsxDriverInfo
 
 	be_t<u32> unk7;          // 0x12B8
 	be_t<u32> unk8;          // 0x12BC
-	be_t<u32> handlers;      // 0x12C0 -- flags showing which handlers are set
+	atomic_be_t<u32> handlers; // 0x12C0 -- flags showing which handlers are set
 	be_t<u32> unk9;          // 0x12C4
 	be_t<u32> unk10;         // 0x12C8
 	be_t<u32> userCmdParam;  // 0x12CC
@@ -60,6 +60,18 @@ enum : u64
 {
 	// Unused
 	SYS_RSX_IO_MAP_IS_STRICT = 1ull << 60
+};
+
+// Unofficial event names
+enum : u64
+{
+	//SYS_RSX_EVENT_GRAPHICS_ERROR = 1 << 0,
+	SYS_RSX_EVENT_VBLANK = 1 << 1,
+	SYS_RSX_EVENT_FLIP_BASE = 1 << 3,
+	SYS_RSX_EVENT_QUEUE_BASE = 1 << 5,
+	SYS_RSX_EVENT_USER_CMD = 1 << 7,
+	SYS_RSX_EVENT_SECOND_VBLANK_BASE = 1 << 10,
+	SYS_RSX_EVENT_UNMAPPED_BASE = 1ull << 32,
 };
 
 struct RsxDmaControl
