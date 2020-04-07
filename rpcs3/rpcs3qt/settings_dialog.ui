@@ -2423,7 +2423,7 @@
                 <item>
                  <widget class="QPushButton" name="reset_button_game_window_title_format">
                   <property name="toolTip">
-                   <string>Reset the game window title to default.</string>
+                   <string>Reset the game window title to default</string>
                   </property>
                   <property name="text">
                    <string>Reset</string>
@@ -2433,7 +2433,7 @@
                 <item>
                  <widget class="QPushButton" name="edit_button_game_window_title_format">
                   <property name="toolTip">
-                   <string>Edit the game window title.</string>
+                   <string>Edit the game window title</string>
                   </property>
                   <property name="text">
                    <string>Edit</string>
