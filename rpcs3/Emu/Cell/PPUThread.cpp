@@ -602,6 +602,12 @@ void ppu_thread::cpu_task()
 			cmd_pop(), ppu_function_manager::get().at(arg)(*this);
 			break;
 		}
+		case ppu_cmd::opd_call:
+		{
+			const ppu_func_opd_t opd = cmd_get(1).as<ppu_func_opd_t>(); 
+			cmd_pop(1), fast_call(opd.addr, opd.rtoc);
+			break;
+		}
 		case ppu_cmd::ptr_call:
 		{
 			const ppu_function_t func = cmd_get(1).as<ppu_function_t>();
@@ -747,6 +753,7 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	, stack_size(param.stack_size)
 	, stack_addr(param.stack_addr)
 	, joiner(detached != 0 ? ppu_join_status::detached : ppu_join_status::joinable)
+	, entry_func(param.entry)
 	, start_time(get_guest_system_time())
 	, ppu_tname(stx::shared_cptr<std::string>::make(name))
 {
@@ -760,13 +767,8 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 		cmd_list
 		({
 		    {ppu_cmd::set_args, 2}, param.arg0, param.arg1,
-		    {ppu_cmd::lle_call, param.entry},
+		    {ppu_cmd::opd_call, 0}, std::bit_cast<u64>(entry_func),
 		});
-	}
-	else
-	{
-		// Save entry for further use (interrupt handler workaround)
-		gpr[2] = param.entry;
 	}
 
 	// Trigger the scheduler

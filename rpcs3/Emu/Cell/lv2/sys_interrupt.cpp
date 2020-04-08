@@ -15,7 +15,7 @@ void lv2_int_serv::exec()
 	({
 		{ ppu_cmd::reset_stack, 0 },
 		{ ppu_cmd::set_args, 2 }, arg1, arg2,
-		{ ppu_cmd::lle_call, 2 },
+		{ ppu_cmd::opd_call, 0 }, std::bit_cast<u64>(thread->entry_func),
 		{ ppu_cmd::sleep, 0 }
 	});
 

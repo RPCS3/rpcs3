@@ -2,6 +2,8 @@
 
 #include "Emu/Cell/PPUThread.h"
 
+struct ppu_func_opd_t;
+
 namespace ppu_cb_detail
 {
 	enum _func_arg_type
@@ -179,11 +181,17 @@ namespace vm
 	template<typename AT, typename RT, typename... T>
 	FORCE_INLINE RT _ptr_base<RT(T...), AT>::operator()(ppu_thread& CPU, T... args) const
 	{
-		const auto data = vm::_ptr<u32>(vm::cast(m_addr, HERE));
-		const u32 pc = data[0];
-		const u32 rtoc = data[1];
+		const auto data = vm::_ptr<ppu_func_opd_t>(vm::cast(m_addr, HERE));
+		const u32 pc = data->addr;
+		const u32 rtoc = data->rtoc;
 
 		return ppu_cb_detail::_func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
+	}
+
+	template<typename AT, typename RT, typename... T>
+	FORCE_INLINE const ppu_func_opd_t& _ptr_base<RT(T...), AT>::opd() const
+	{
+		return vm::_ref<ppu_func_opd_t>(vm::cast(m_addr, HERE));
 	}
 }
 
