@@ -26,7 +26,7 @@ struct sys_ppu_thread_stack_t
 
 struct ppu_thread_param_t
 {
-	be_t<u32> entry; // vm::bptr<void(u64)>
+	vm::bptr<void(u64)> entry;
 	be_t<u32> tls; // vm::bptr<void>
 };
 

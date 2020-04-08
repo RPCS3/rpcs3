@@ -5,6 +5,7 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/PPUCallback.h"
 #include "sys_event.h"
 #include "sys_process.h"
 #include "sys_mmapper.h"
@@ -362,6 +363,8 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 		return CELL_EPERM;
 	}
 
+	const ppu_func_opd_t entry = param->entry.opd();
+
 	// Clean some detached thread (hack)
 	g_fxo->get<ppu_thread_cleaner>()->clean(0);
 
@@ -408,7 +411,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 		p.stack_addr = stack_base;
 		p.stack_size = stack_size;
 		p.tls_addr = param->tls;
-		p.entry = param->entry;
+		p.entry = entry;
 		p.arg0 = arg;
 		p.arg1 = unk;
 
@@ -423,7 +426,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 	}
 
 	*thread_id = tid;
-	sys_ppu_thread.warning(u8"_sys_ppu_thread_create(): Thread “%s” created (id=0x%x)", ppu_name, tid);
+	sys_ppu_thread.warning(u8"_sys_ppu_thread_create(): Thread “%s” created (id=0x%x, func=*0x%x, rtoc=0x%x)", ppu_name, tid, entry.addr, entry.rtoc);
 	return CELL_OK;
 }
 
