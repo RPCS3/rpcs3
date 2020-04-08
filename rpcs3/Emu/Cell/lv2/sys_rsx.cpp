@@ -83,9 +83,9 @@ void lv2_rsx_config::send_event(u64 data1, u64 event_flags, u64 data3) const
 		error = sys_event_port_send(rsx_event_port, data1, event_flags, data3);
 	}
 
-	if (error)
+	if (error && error + 0u != CELL_ENOTCONN)
 	{
-		fmt::throw_exception("rsx_event_port_send() Failed to send event! (error=%x)" HERE, +error);
+		fmt::throw_exception("lv2_rsx_config::send_event() Failed to send event! (error=%x)" HERE, +error);
 	}
 }
 
@@ -408,8 +408,6 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u64 get = static_cast<u32>(a3);
 		const u64 put = static_cast<u32>(a4);
 		vm::_ref<atomic_be_t<u64>>(rsx_cfg->dma_address + ::offset32(&RsxDmaControl::put)).release(put << 32 | get);
-		render->ctrl->get = static_cast<u32>(a3);
-		render->ctrl->put = static_cast<u32>(a4);
 		render->sync_point_request.release(true);
 		render->unpause();
 		break;
@@ -545,6 +543,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		//a5 high bits = ret.pitch = (pitch / 0x100) << 8;
 		//a5 low bits = ret.format = base | ((base + ((size - 1) / 0x10000)) << 13) | (comp << 26) | (1 << 30);
 
+		verify(HERE), a3 < std::size(render->tiles);
+
 		auto& tile = render->tiles[a3];
 
 		// When tile is going to be unbinded, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated
@@ -571,6 +571,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		//a5 low = offset = offset;
 		//a6 high = status0 = (zcullDir << 1) | (zcullFormat << 2) | ((sFunc & 0xF) << 12) | (sRef << 16) | (sMask << 24);
 		//a6 low = status1 = (0x2000 << 0) | (0x20 << 16);
+
+		verify(HERE), a3 < std::size(render->zculls);
 
 		auto &zcull = render->zculls[a3];
 		zcull.zFormat = ((a4 >> 32) >> 4) & 0xF;

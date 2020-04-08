@@ -244,7 +244,7 @@ s32 pad_thread::AddLddPad()
 	// Look for first null pad
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; i++)
 	{
-		if (g_cfg_input.player[i]->handler == pad_handler::null)
+		if (g_cfg_input.player[i]->handler == pad_handler::null && !m_pads[i]->ldd)
 		{
 			m_pads[i]->ldd = true;
 			num_ldd_pad++;
