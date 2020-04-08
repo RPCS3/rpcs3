@@ -983,6 +983,7 @@ std::string spu_thread::dump_all() const
 	ret += dump_misc();
 	ret += '\n';
 	ret += dump_regs();
+	ret += '\n';
 
 	return ret;
 }
@@ -998,13 +999,19 @@ std::string spu_thread::dump_regs() const
 
 	fmt::append(ret, "\nEvent Stat: 0x%x\n", +ch_event_stat);
 	fmt::append(ret, "Event Mask: 0x%x\n", +ch_event_mask);
+
+	if (const u32 addr = raddr)
+		fmt::append(ret, "Resrvation Addr: 0x%x\n", addr);
+	else
+		fmt::append(ret, "Resrvation Addr: none\n");
+
 	fmt::append(ret, "Interrupts Enabled: %s\n", interrupts_enabled.load());
 	fmt::append(ret, "Inbound Mailbox: %s\n", ch_in_mbox);
 	fmt::append(ret, "Out Mailbox: %s\n", ch_out_mbox);
 	fmt::append(ret, "Out Interrupts Mailbox: %s\n", ch_out_intr_mbox);
 	fmt::append(ret, "SNR config: 0x%llx\n", snr_config);
 	fmt::append(ret, "SNR1: %s\n", ch_snr1);
-	fmt::append(ret, "SNR2: %s\n", ch_snr2);
+	fmt::append(ret, "SNR2: %s", ch_snr2);
 
 	return ret;
 }
