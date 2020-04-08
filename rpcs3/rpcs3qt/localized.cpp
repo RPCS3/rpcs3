@@ -24,7 +24,7 @@ QString Localized::GetVerboseTimeByMs(qint64 elapsed_ms) const
 
 	if (hours <= 0)
 	{
-		if (hours <= 0)
+		if (minutes <= 0)
 		{
 			if (seconds == 1)
 			{
