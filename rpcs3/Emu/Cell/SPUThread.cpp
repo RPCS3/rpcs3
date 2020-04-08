@@ -1001,9 +1001,9 @@ std::string spu_thread::dump_regs() const
 	fmt::append(ret, "Event Mask: 0x%x\n", +ch_event_mask);
 
 	if (const u32 addr = raddr)
-		fmt::append(ret, "Resrvation Addr: 0x%x\n", addr);
+		fmt::append(ret, "Reservation Addr: 0x%x\n", addr);
 	else
-		fmt::append(ret, "Resrvation Addr: none\n");
+		fmt::append(ret, "Reservation Addr: none\n");
 
 	fmt::append(ret, "Interrupts Enabled: %s\n", interrupts_enabled.load());
 	fmt::append(ret, "Inbound Mailbox: %s\n", ch_in_mbox);
