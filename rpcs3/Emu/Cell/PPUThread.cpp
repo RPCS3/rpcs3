@@ -359,6 +359,8 @@ std::string ppu_thread::dump_all() const
 {
 	std::string ret = cpu_thread::dump_misc();
 	ret += '\n';
+	ret += dump_misc();
+	ret += '\n';
 	ret += dump_regs();
 	ret += '\n';
 	ret += dump_callstack();

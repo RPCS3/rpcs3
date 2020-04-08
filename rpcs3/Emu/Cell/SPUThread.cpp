@@ -980,6 +980,8 @@ std::string spu_thread::dump_all() const
 {
 	std::string ret = cpu_thread::dump_misc();
 	ret += '\n';
+	ret += dump_misc();
+	ret += '\n';
 	ret += dump_regs();
 
 	return ret;
