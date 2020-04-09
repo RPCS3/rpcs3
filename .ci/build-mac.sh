@@ -1,3 +1,5 @@
+#!/bin/sh -ex
+
 export CCACHE_SLOPPINESS=pch_defines,time_macros
 export CMAKE_PREFIX_PATH=/usr/local/opt/qt5/
 export PATH="/usr/local/opt/ccache/libexec:$PATH"
@@ -8,15 +10,18 @@ unzip -: gfx-portability-macos-latest.zip
 curl -sLO https://github.com/KhronosGroup/Vulkan-Headers/archive/sdk-1.1.106.0.zip
 unzip -: sdk-*.zip
 mkdir vulkan-sdk
-ln -s ${PWD}/Vulkan-Headers*/include vulkan-sdk/include
+ln -s "${PWD}"/Vulkan-Headers*/include vulkan-sdk/include
 mkdir vulkan-sdk/lib
 cp target/release/libportability.dylib vulkan-sdk/lib/libVulkan.dylib
 # Let macdeployqt locate and install Vulkan library
-install_name_tool -id ${PWD}/vulkan-sdk/lib/libVulkan.dylib vulkan-sdk/lib/libVulkan.dylib
-export VULKAN_SDK=${PWD}/vulkan-sdk
+install_name_tool -id "${PWD}"/vulkan-sdk/lib/libVulkan.dylib vulkan-sdk/lib/libVulkan.dylib
+export VULKAN_SDK="${PWD}/vulkan-sdk"
 
-git submodule update --quiet --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/span 3rdparty/libpng 3rdparty/cereal 3rdparty/hidapi 3rdparty/libusb 3rdparty/xxHash 3rdparty/yaml-cpp 3rdparty/FAudio Vulkan/glslang
+# Pull all the submodules except llvm
+# Note: Tried to use git submodule status, but it takes over 20 seconds
+# shellcheck disable=SC2046
+git submodule -q update --init $(awk '/path/ && !/llvm/ { print $3 }' .gitmodules)
 
-mkdir build; cd build
+mkdir build && cd build || exit 1
 cmake .. -DWITH_LLVM=OFF -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja
 ninja

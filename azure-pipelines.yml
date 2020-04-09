@@ -20,6 +20,7 @@ jobs:
         DEPLOY_APPIMAGE: true
   variables:
     CCACHE_DIR: $(Pipeline.Workspace)/ccache
+    IS_AZURE: true
   pool:
     vmImage: 'ubuntu-latest'
   steps:
@@ -33,14 +34,15 @@ jobs:
       docker pull --quiet rpcs3/rpcs3-travis-xenial:1.2
       docker run                      \
         -v $(pwd):/rpcs3              \
-        --env-file .travis/travis.env \
+        --env-file .ci/travis.env \
         -v $CCACHE_DIR:/root/.ccache  \
         -v $BUILD_ARTIFACTSTAGINGDIRECTORY:/root/artifacts \
         rpcs3/rpcs3-travis-xenial:1.2 \
-        /bin/bash -ex /rpcs3/.travis/build-linux.bash
+        /rpcs3/.ci/build-linux.sh
     displayName: Docker setup and build
 
   - publish: $(Build.ArtifactStagingDirectory)
+    condition: eq(variables['COMPILER'], 'gcc')
 
 - job: Windows_Build
   variables:
@@ -63,10 +65,10 @@ jobs:
         path: $(CACHE_DIR)
       displayName: Cache
 
-    - bash: .travis/setup-windows.sh
+    - bash: .ci/setup-windows.sh
       displayName: Download and unpack dependencies
 
-    - bash: .travis/export-azure-vars.sh
+    - bash: .ci/export-azure-vars.sh
       displayName: Export Variables
 
     - task: VSBuild@1
@@ -77,7 +79,7 @@ jobs:
         configuration: 'Release - LLVM'
       displayName: Compile RPCS3
 
-    - bash: .travis/deploy-windows.sh
+    - bash: .ci/deploy-windows.sh
       displayName: Pack up build artifacts
 
     - publish: $(Build.ArtifactStagingDirectory)

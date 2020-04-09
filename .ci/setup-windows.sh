@@ -46,7 +46,7 @@ rev()
 }
 
 # Usage: download_and_verify url checksum algo file
-# Check to see if its already cached, and the checksum matches. If not, download it.
+# Check to see if a file is already cached, and the checksum matches. If not, download it.
 # Tries up to 3 times
 download_and_verify()
 {
@@ -59,7 +59,7 @@ download_and_verify()
         [ -e "$CACHE_DIR/$fileName" ] || curl -L -o "$CACHE_DIR/$fileName" "$url"
         fileChecksum=$("${algo}sum" "$CACHE_DIR/$fileName" | awk '{ print $1 }')
         [ "$fileChecksum" = "$correctChecksum" ] && return 0
-        rm
+        rm "$CACHE_DIR/$fileName"
     done
 
     return 1;
@@ -111,6 +111,6 @@ fi
 # BUILD is the name of the release artifact
 # AVVER is used for GitHub releases, it is the version number.
 BRANCH="${REPO_NAME}/${REPO_BRANCH}"
-echo "BRANCH=$BRANCH" > .travis/azure-vars.env
-echo "BUILD=$BUILD" >> .travis/azure-vars.env
-echo "AVVER=$AVVER" >> .travis/azure-vars.env
+echo "BRANCH=$BRANCH" > .ci/azure-vars.env
+echo "BUILD=$BUILD" >> .ci/azure-vars.env
+echo "AVVER=$AVVER" >> .ci/azure-vars.env

@@ -10,4 +10,4 @@ while IFS='=' read -r key val; do
     # Skip over lines containing comments.
     [ "${key##\#*}" ] || continue
     echo "##vso[task.setvariable variable=$key]$val"
-done < ".travis/azure-vars.env"
+done < ".ci/azure-vars.env"

@@ -11,7 +11,7 @@ jobs:
           cache: ccache
           compiler: gcc
           install: "docker pull rpcs3/rpcs3-travis-xenial:1.2"
-          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .travis/travis.env rpcs3/rpcs3-travis-xenial:1.2 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
+          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .ci/travis.env rpcs3/rpcs3-travis-xenial:1.2 /rpcs3/.ci/build-linux.sh'
         - os: linux
           dist: xenial
           env:
@@ -21,7 +21,7 @@ jobs:
           cache: ccache
           compiler: clang
           install: "docker pull rpcs3/rpcs3-travis-xenial:1.2"
-          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .travis/travis.env rpcs3/rpcs3-travis-xenial:1.2 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
+          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .ci/travis.env rpcs3/rpcs3-travis-xenial:1.2 /rpcs3/.ci/build-linux.sh'
         # - os: osx
         #   osx_image: xcode11.3
         #   addons:
@@ -31,7 +31,7 @@ jobs:
         #             - glew
         #             - ninja
         #             - qt
-        #   script: "/bin/bash -ex .travis/build-mac.bash"
+        #   script: "/bin/bash -ex .ci/build-mac.sh"
         #   cache: ccache
     allow_failures:
         - os: osx
