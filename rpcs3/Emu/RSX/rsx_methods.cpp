@@ -422,8 +422,6 @@ namespace rsx
 					rcount -= max - (468 * 4);
 				}
 
-				alignas(64) u8 buffer[128];
-	
 				const auto values = &rsx::method_registers.transform_constants[load + reg][subreg];
 
 				if (rsx->m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
@@ -433,12 +431,9 @@ namespace rsx
 				}
 				else
 				{
-					stream_data_to_memory_swapped_u32(buffer, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount, 4);
-
-					if (std::memcmp(values, buffer, rcount * 4) != 0)
+					if (stream_data_to_memory_swapped_and_compare_u32<true>(values, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount * 4))
 					{
 						// Transform constants invalidation is expensive (~8k bytes per update)
-						std::memcpy(values, buffer, rcount * 4);
 						rsx->m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
 					}
 				}

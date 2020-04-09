@@ -61,5 +61,7 @@ void stream_vector_from_memory(void *dst, void *src);
  */
 template <bool unaligned = false>
 void stream_data_to_memory_swapped_u32(void *dst, const void *src, u32 vertex_count, u8 stride);
+template <bool unaligned = false>
+bool stream_data_to_memory_swapped_and_compare_u32(void *dst, const void *src, u32 size);
 
 
