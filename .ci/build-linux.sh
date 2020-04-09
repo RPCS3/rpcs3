@@ -20,27 +20,34 @@ tar -xzf ./llvmlibs-linux.tar.gz -C llvmlibs
 mkdir build && cd build || exit 1
 
 if [ "$COMPILER" = "gcc" ]; then
-	# These are set in the dockerfile
-	export CC=${GCC_BINARY}
-	export CXX=${GXX_BINARY}
-	export LINKER=gold
-	# We need to set the following variables for LTO to link properly
-	export AR=/usr/bin/gcc-ar-9
-	export RANLIB=/usr/bin/gcc-ranlib-9
-	export CFLAGS="-fuse-linker-plugin"
+    # These are set in the dockerfile
+    export CC=${GCC_BINARY}
+    export CXX=${GXX_BINARY}
+    export LINKER=gold
+    # We need to set the following variables for LTO to link properly
+    export AR=/usr/bin/gcc-ar-9
+    export RANLIB=/usr/bin/gcc-ranlib-9
+    export CFLAGS="-fuse-linker-plugin"
 else
-	export CC=${CLANG_BINARY}
-	export CXX=${CLANGXX_BINARY}
-	export LINKER=lld
-	export AR=/usr/bin/llvm-ar-$LLVMVER
-	export RANLIB=/usr/bin/llvm-ranlib-$LLVMVER
+    export CC=${CLANG_BINARY}
+    export CXX=${CLANGXX_BINARY}
+    export LINKER=lld
+    export AR=/usr/bin/llvm-ar-$LLVMVER
+    export RANLIB=/usr/bin/llvm-ranlib-$LLVMVER
 fi
 
 export CFLAGS="$CFLAGS -fuse-ld=${LINKER}"
 
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_LLVM_SUBMODULE=OFF -DUSE_COTIRE=OFF -DLLVM_DIR=llvmlibs/lib/cmake/llvm/ -DUSE_NATIVE_INSTRUCTIONS=OFF \
-  -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_CXX_FLAGS="$CFLAGS" -DCMAKE_AR=$AR -DCMAKE_RANLIB=$RANLIB \
-  -G Ninja
+cmake ..                                               \
+    -DCMAKE_INSTALL_PREFIX=/usr                        \
+    -DBUILD_LLVM_SUBMODULE=OFF -DUSE_COTIRE=OFF        \
+    -DLLVM_DIR=llvmlibs/lib/cmake/llvm/                \
+    -DUSE_NATIVE_INSTRUCTIONS=OFF                      \
+    -DCMAKE_C_FLAGS="$CFLAGS"                          \
+    -DCMAKE_CXX_FLAGS="$CFLAGS"                        \
+    -DCMAKE_AR="$AR"                                   \
+    -DCMAKE_RANLIB="$RANLIB"                           \
+    -G Ninja
 
 ninja; build_status=$?;
 
@@ -50,9 +57,9 @@ cd ..
 # Travis only deploys on master, and it publishes to GitHub releases. Azure publishes PRs as artifacts
 # only.
 {   [ "$IS_AZURE" = "true" ] ||
-	{ [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ]; };
+    { [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ]; };
 } && SHOULD_DEPLOY="true" || SHOULD_DEPLOY="false"
 
 if [ "$build_status" -eq 0 ] && [ "$SHOULD_DEPLOY" = "true" ]; then
-	.ci/deploy-linux.sh
+    .ci/deploy-linux.sh
 fi
