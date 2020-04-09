@@ -465,6 +465,12 @@ VKGSRender::VKGSRender() : GSRender()
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
 	m_texture_upload_buffer_ring_info.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
 
+	if (g_cfg.video.shader_interpreter_mode != shader_interpreter_mode::disabled)
+	{
+		m_vertex_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 16 * 0x100000, "vertex instructions buffer", 512 * 16);
+		m_fragment_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 16 * 0x100000, "fragment instructions buffer", 2048);
+	}
+
 	const auto limits = m_device->gpu().get_limits();
 	m_texbuffer_view_size = std::min(limits.maxTexelBufferElements, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000u);
 
@@ -544,6 +550,11 @@ VKGSRender::VKGSRender() : GSRender()
 
 	m_occlusion_query_pool.initialize(*m_current_command_buffer);
 
+	if (g_cfg.video.shader_interpreter_mode != shader_interpreter_mode::disabled)
+	{
+		m_shader_interpreter.init(*m_device);
+	}
+
 	backend_config.supports_multidraw = true;
 
 	// NOTE: We do not actually need multiple sample support for A2C to work
@@ -582,6 +593,7 @@ VKGSRender::~VKGSRender()
 	//Shaders
 	vk::finalize_compiler_context();
 	m_prog_buffer->clear();
+	m_shader_interpreter.destroy();
 
 	m_persistent_attribute_storage.reset();
 	m_volatile_attribute_storage.reset();
@@ -600,6 +612,8 @@ VKGSRender::~VKGSRender()
 	m_transform_constants_ring_info.destroy();
 	m_index_buffer_ring_info.destroy();
 	m_texture_upload_buffer_ring_info.destroy();
+	m_vertex_instructions_buffer.destroy();
+	m_fragment_instructions_buffer.destroy();
 
 	//Fallback bindables
 	null_buffer.reset();
@@ -937,19 +951,26 @@ void VKGSRender::check_descriptors()
 
 VkDescriptorSet VKGSRender::allocate_descriptor_set()
 {
-	verify(HERE), m_current_frame->used_descriptors < DESCRIPTOR_MAX_DRAW_CALLS;
+	if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
+	{
+		verify(HERE), m_current_frame->used_descriptors < DESCRIPTOR_MAX_DRAW_CALLS;
 
-	VkDescriptorSetAllocateInfo alloc_info = {};
-	alloc_info.descriptorPool = m_current_frame->descriptor_pool;
-	alloc_info.descriptorSetCount = 1;
-	alloc_info.pSetLayouts = &descriptor_layouts;
-	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		VkDescriptorSetAllocateInfo alloc_info = {};
+		alloc_info.descriptorPool = m_current_frame->descriptor_pool;
+		alloc_info.descriptorSetCount = 1;
+		alloc_info.pSetLayouts = &descriptor_layouts;
+		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 
-	VkDescriptorSet new_descriptor_set;
-	CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &new_descriptor_set));
-	m_current_frame->used_descriptors++;
+		VkDescriptorSet new_descriptor_set;
+		CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &new_descriptor_set));
+		m_current_frame->used_descriptors++;
 
-	return new_descriptor_set;
+		return new_descriptor_set;
+	}
+	else
+	{
+		return m_shader_interpreter.allocate_descriptor_set();
+	}
 }
 
 void VKGSRender::set_viewport()
@@ -1408,7 +1429,7 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 
 bool VKGSRender::load_program()
 {
-	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
+	if (m_interpreter_state = (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits))
 	{
 		get_current_fragment_program(fs_sampler_state);
 		verify(HERE), current_fragment_program.valid;
@@ -1552,38 +1573,82 @@ bool VKGSRender::load_program()
 	}
 
 	properties.renderpass_key = m_current_renderpass_key;
+	vk::glsl::program* active_interpreter = nullptr;
 
-	vk::enter_uninterruptible();
+	if (!m_interpreter_state && m_pipeline_properties == properties) [[likely]]
+	{
+		// Nothing changed
+		if (m_shader_interpreter.is_interpreter(m_program))
+		{
+			if (g_cfg.video.shader_interpreter_mode == shader_interpreter_mode::forced)
+			{
+				return true;
+			}
 
-	//Load current program from buffer
-	vertex_program.skip_vertex_input_check = true;
-	fragment_program.unnormalized_coords = 0;
-	m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
+			active_interpreter = m_program;
+		}
+		else
+		{
+			return true;
+		}
+	}
+
+	if (g_cfg.video.shader_interpreter_mode != shader_interpreter_mode::forced) [[likely]]
+	{
+		vk::enter_uninterruptible();
+
+		//Load current program from buffer
+		vertex_program.skip_vertex_input_check = true;
+		fragment_program.unnormalized_coords = 0;
+		m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
 			!g_cfg.video.disable_asynchronous_shader_compiler, true, *m_device, pipeline_layout).get();
 
-	vk::leave_uninterruptible();
+		vk::leave_uninterruptible();
 
-	if (m_prog_buffer->check_cache_missed())
-	{
-		// Notify the user with HUD notification
-		if (g_cfg.misc.show_shader_compilation_hint)
+		if (m_prog_buffer->check_cache_missed())
 		{
-			if (m_overlay_manager)
+			// Notify the user with HUD notification
+			if (g_cfg.misc.show_shader_compilation_hint)
 			{
-				if (auto dlg = m_overlay_manager->get<rsx::overlays::shader_compile_notification>())
+				if (m_overlay_manager)
 				{
-					// Extend duration
-					dlg->touch();
-				}
-				else
-				{
-					// Create dialog but do not show immediately
-					m_overlay_manager->create<rsx::overlays::shader_compile_notification>();
+					if (auto dlg = m_overlay_manager->get<rsx::overlays::shader_compile_notification>())
+					{
+						// Extend duration
+						dlg->touch();
+					}
+					else
+					{
+						// Create dialog but do not show immediately
+						m_overlay_manager->create<rsx::overlays::shader_compile_notification>();
+					}
 				}
 			}
 		}
 	}
+	else
+	{
+		m_program = nullptr;
+	}
 
+	if (!m_program && g_cfg.video.shader_interpreter_mode != shader_interpreter_mode::disabled)
+	{
+		if (!m_shader_interpreter.is_interpreter(old_program))
+		{
+			m_interpreter_state = rsx::invalidate_pipeline_bits;
+		}
+
+		if (active_interpreter) [[likely]]
+		{
+			m_program = active_interpreter;
+		}
+		else
+		{
+			m_program = m_shader_interpreter.get(properties);
+		}
+	}
+
+	m_pipeline_properties = properties;
 	return m_program != nullptr;
 }
 
@@ -1601,6 +1666,7 @@ void VKGSRender::load_program_env()
 	const bool update_vertex_env = !!(m_graphics_state & rsx::pipeline_state::vertex_state_dirty);
 	const bool update_fragment_env = !!(m_graphics_state & rsx::pipeline_state::fragment_state_dirty);
 	const bool update_fragment_texture_env = !!(m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
+	const bool update_instruction_buffers = (!!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program));
 
 	if (update_vertex_env)
 	{
@@ -1634,7 +1700,7 @@ void VKGSRender::load_program_env()
 		m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem, 8192 };
 	}
 
-	if (update_fragment_constants)
+	if (update_fragment_constants && !update_instruction_buffers)
 	{
 		check_heap_status(VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE);
 
@@ -1680,13 +1746,62 @@ void VKGSRender::load_program_env()
 		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 256 };
 	}
 
+	if (update_instruction_buffers)
+	{
+		if (m_interpreter_state & rsx::vertex_program_dirty)
+		{
+			// Attach vertex buffer data
+			const auto vp_block_length = current_vp_metadata.ucode_length + 16;
+			auto vp_mapping = m_vertex_instructions_buffer.alloc<256>(vp_block_length);
+			auto vp_buf = static_cast<u8*>(m_vertex_instructions_buffer.map(vp_mapping, vp_block_length));
+
+			auto vp_config = reinterpret_cast<u32*>(vp_buf);
+			vp_config[0] = current_vertex_program.base_address;
+			vp_config[1] = current_vertex_program.entry;
+			vp_config[2] = current_vertex_program.output_mask;
+
+			std::memcpy(vp_buf + 16, current_vertex_program.data.data(), current_vp_metadata.ucode_length);
+			m_vertex_instructions_buffer.unmap();
+
+			m_vertex_instructions_buffer_info = { m_vertex_instructions_buffer.heap->value, vp_mapping, vp_block_length };
+		}
+
+		if (m_interpreter_state & rsx::fragment_program_dirty)
+		{
+			// Attach fragment buffer data
+			const auto fp_block_length = current_fp_metadata.program_ucode_length + 16;
+			auto fp_mapping = m_fragment_instructions_buffer.alloc<256>(fp_block_length);
+			auto fp_buf = static_cast<u8*>(m_fragment_instructions_buffer.map(fp_mapping, fp_block_length));
+
+			// Control mask
+			const auto control_masks = reinterpret_cast<u32*>(fp_buf);
+			control_masks[0] = rsx::method_registers.shader_control();
+			control_masks[1] = current_fragment_program.texture_dimensions;
+
+			const auto fp_data = static_cast<u8*>(current_fragment_program.addr) + current_fp_metadata.program_start_offset;
+			std::memcpy(fp_buf + 16, fp_data, current_fp_metadata.program_ucode_length);
+			m_fragment_instructions_buffer.unmap();
+
+			m_fragment_instructions_buffer_info = { m_fragment_instructions_buffer.heap->value, fp_mapping, fp_block_length };
+		}
+	}
+
 	const auto& binding_table = m_device->get_pipeline_binding_table();
 
 	m_program->bind_uniform(m_vertex_env_buffer_info, binding_table.vertex_params_bind_slot, m_current_frame->descriptor_set);
 	m_program->bind_uniform(m_vertex_constants_buffer_info, binding_table.vertex_constant_buffers_bind_slot, m_current_frame->descriptor_set);
-	m_program->bind_uniform(m_fragment_constants_buffer_info, binding_table.fragment_constant_buffers_bind_slot, m_current_frame->descriptor_set);
 	m_program->bind_uniform(m_fragment_env_buffer_info, binding_table.fragment_state_bind_slot, m_current_frame->descriptor_set);
 	m_program->bind_uniform(m_fragment_texture_params_buffer_info, binding_table.fragment_texture_params_bind_slot, m_current_frame->descriptor_set);
+
+	if (!m_shader_interpreter.is_interpreter(m_program))
+	{
+		m_program->bind_uniform(m_fragment_constants_buffer_info, binding_table.fragment_constant_buffers_bind_slot, m_current_frame->descriptor_set);
+	}
+	else
+	{
+		m_program->bind_buffer(m_vertex_instructions_buffer_info, m_shader_interpreter.get_vertex_instruction_location(), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
+		m_program->bind_buffer(m_fragment_instructions_buffer_info, m_shader_interpreter.get_fragment_instruction_location(), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
+	}
 
 	if (vk::emulate_conditional_rendering())
 	{

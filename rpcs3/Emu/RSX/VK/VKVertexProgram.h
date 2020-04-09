@@ -5,8 +5,15 @@
 #include "VulkanAPI.h"
 #include "../VK/VKHelpers.h"
 
+namespace vk
+{
+	class shader_interpreter;
+}
+
 struct VKVertexDecompilerThread : public VertexProgramDecompiler
 {
+	friend class vk::shader_interpreter;
+
 	std::string &m_shader;
 	std::vector<vk::glsl::program_input> inputs;
 	class VKVertexProgram *vk_prog;

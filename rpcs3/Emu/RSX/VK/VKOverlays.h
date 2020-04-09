@@ -250,7 +250,7 @@ namespace vk
 
 			CHECK_RESULT(vkCreateGraphicsPipelines(*m_device, nullptr, 1, &info, NULL, &pipeline));
 
-			auto program = std::make_unique<vk::glsl::program>(*m_device, pipeline, get_vertex_inputs(), get_fragment_inputs());
+			auto program = std::make_unique<vk::glsl::program>(*m_device, pipeline, m_pipeline_layout, get_vertex_inputs(), get_fragment_inputs());
 			auto result = program.get();
 			m_program_cache[storage_key] = std::move(program);
 

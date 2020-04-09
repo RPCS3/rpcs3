@@ -8,6 +8,7 @@
 #include "VKOverlays.h"
 #include "VKProgramBuffer.h"
 #include "VKFramebuffer.h"
+#include "VKShaderInterpreter.h"
 #include "../GCM.h"
 
 #include <thread>
@@ -349,7 +350,8 @@ private:
 private:
 	VKFragmentProgram m_fragment_prog;
 	VKVertexProgram m_vertex_prog;
-	vk::glsl::program *m_program;
+	vk::glsl::program *m_program = nullptr;
+	vk::pipeline_props m_pipeline_properties;
 
 	vk::texture_cache m_texture_cache;
 	rsx::vk_render_targets m_rtts;
@@ -428,12 +430,18 @@ private:
 	vk::data_heap m_index_buffer_ring_info;            // Index data
 	vk::data_heap m_texture_upload_buffer_ring_info;   // Texture upload heap
 
+	vk::data_heap m_fragment_instructions_buffer;
+	vk::data_heap m_vertex_instructions_buffer;
+
 	VkDescriptorBufferInfo m_vertex_env_buffer_info;
 	VkDescriptorBufferInfo m_fragment_env_buffer_info;
 	VkDescriptorBufferInfo m_vertex_layout_stream_info;
 	VkDescriptorBufferInfo m_vertex_constants_buffer_info;
 	VkDescriptorBufferInfo m_fragment_constants_buffer_info;
 	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info;
+
+	VkDescriptorBufferInfo m_vertex_instructions_buffer_info;
+	VkDescriptorBufferInfo m_fragment_instructions_buffer_info;
 
 	std::array<vk::frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
 	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
@@ -463,6 +471,9 @@ private:
 
 	//Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
+
+	vk::shader_interpreter m_shader_interpreter;
+	u32 m_interpreter_state;
 
 #if defined(HAVE_X11) && defined(HAVE_VULKAN)
 	Display *m_display_handle = nullptr;
@@ -512,6 +523,7 @@ private:
 
 	void load_texture_env();
 	void bind_texture_env();
+	void bind_interpreter_texture_env();
 
 public:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);

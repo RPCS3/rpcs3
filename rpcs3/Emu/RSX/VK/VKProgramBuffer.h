@@ -178,7 +178,7 @@ struct VKTraits
 
 		CHECK_RESULT(vkCreateGraphicsPipelines(dev, nullptr, 1, &info, NULL, &pipeline));
 
-		pipeline_storage_type result = std::make_unique<vk::glsl::program>(dev, pipeline, vertexProgramData.uniforms, fragmentProgramData.uniforms);
+		pipeline_storage_type result = std::make_unique<vk::glsl::program>(dev, pipeline, common_pipeline_layout, vertexProgramData.uniforms, fragmentProgramData.uniforms);
 		result->link();
 		return result;
 	}
