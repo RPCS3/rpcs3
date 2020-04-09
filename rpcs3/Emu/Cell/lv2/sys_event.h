@@ -85,6 +85,7 @@ struct lv2_event_queue final : public lv2_obj
 	const u64 key;
 	const s32 size;
 
+	atomic_t<bool> exists = true; // Existence validation (workaround for shared-ptr ref-counting)
 	shared_mutex mutex;
 	std::deque<lv2_event> events;
 	std::deque<cpu_thread*> sq;
@@ -107,6 +108,10 @@ struct lv2_event_queue final : public lv2_obj
 
 	// Get event queue by its global key
 	static std::shared_ptr<lv2_event_queue> find(u64 ipc_key);
+
+	// Check queue ptr validity (use 'exists' member)
+	static bool check(const std::weak_ptr<lv2_event_queue>&);
+	static bool check(const std::shared_ptr<lv2_event_queue>&);
 };
 
 struct lv2_event_port final : lv2_obj

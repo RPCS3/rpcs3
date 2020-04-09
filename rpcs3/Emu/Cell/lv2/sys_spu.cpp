@@ -1271,7 +1271,7 @@ error_code sys_spu_thread_group_connect_event(ppu_thread& ppu, u32 id, u32 eq, u
 
 	std::lock_guard lock(group->mutex);
 
-	if (!ep->expired())
+	if (lv2_event_queue::check(*ep))
 	{
 		return CELL_EBUSY;
 	}
@@ -1313,7 +1313,7 @@ error_code sys_spu_thread_group_disconnect_event(ppu_thread& ppu, u32 id, u32 et
 
 	std::lock_guard lock(group->mutex);
 
-	if (ep->expired())
+	if (!lv2_event_queue::check(*ep))
 	{
 		return CELL_EINVAL;
 	}
@@ -1346,7 +1346,7 @@ error_code sys_spu_thread_connect_event(ppu_thread& ppu, u32 id, u32 eq, u32 et,
 
 	auto& port = thread->spup[spup];
 
-	if (!port.expired())
+	if (lv2_event_queue::check(port))
 	{
 		return CELL_EISCONN;
 	}
@@ -1379,7 +1379,7 @@ error_code sys_spu_thread_disconnect_event(ppu_thread& ppu, u32 id, u32 et, u8 s
 
 	auto& port = thread->spup[spup];
 
-	if (port.expired())
+	if (!lv2_event_queue::check(port))
 	{
 		return CELL_ENOTCONN;
 	}
@@ -1519,7 +1519,7 @@ error_code sys_spu_thread_group_connect_event_all_threads(ppu_thread& ppu, u32 i
 		{
 			if (t)
 			{
-				if (!t->spup[port].expired())
+				if (lv2_event_queue::check(t->spup[port]))
 				{
 					found = false;
 					break;

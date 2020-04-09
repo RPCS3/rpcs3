@@ -18,10 +18,29 @@ std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 	if (ipc_key == SYS_EVENT_QUEUE_LOCAL)
 	{
 		// Invalid IPC key
-		return{};
+		return {};
 	}
 
-	return ipc_manager<lv2_event_queue, u64>::get(ipc_key);
+	auto queue = ipc_manager<lv2_event_queue, u64>::get(ipc_key);
+
+	if (queue && !queue->exists)
+	{
+		queue.reset();
+	}
+
+	return queue;
+}
+
+bool lv2_event_queue::check(const std::weak_ptr<lv2_event_queue>& wkptr)
+{
+	const auto queue = wkptr.lock();
+
+	return queue && queue->exists;
+}
+
+bool lv2_event_queue::check(const std::shared_ptr<lv2_event_queue>& sptr)
+{
+	return sptr && sptr->exists;
 }
 
 bool lv2_event_queue::send(lv2_event event)
@@ -153,6 +172,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			return CELL_EBUSY;
 		}
 
+		queue.exists = false;
 		return {};
 	});
 
@@ -367,7 +387,7 @@ error_code sys_event_port_destroy(ppu_thread& ppu, u32 eport_id)
 
 	const auto port = idm::withdraw<lv2_obj, lv2_event_port>(eport_id, [](lv2_event_port& port) -> CellError
 	{
-		if (!port.queue.expired())
+		if (lv2_event_queue::check(port.queue))
 		{
 			return CELL_EISCONN;
 		}
@@ -408,7 +428,7 @@ error_code sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 		return CELL_EINVAL;
 	}
 
-	if (!port->queue.expired())
+	if (lv2_event_queue::check(port->queue))
 	{
 		return CELL_EISCONN;
 	}
@@ -445,7 +465,7 @@ error_code sys_event_port_connect_ipc(ppu_thread& ppu, u32 eport_id, u64 ipc_key
 		return CELL_EINVAL;
 	}
 
-	if (!port->queue.expired())
+	if (lv2_event_queue::check(port->queue))
 	{
 		return CELL_EISCONN;
 	}
@@ -470,7 +490,7 @@ error_code sys_event_port_disconnect(ppu_thread& ppu, u32 eport_id)
 		return CELL_ESRCH;
 	}
 
-	if (port->queue.expired())
+	if (!lv2_event_queue::check(port->queue))
 	{
 		return CELL_ENOTCONN;
 	}
@@ -490,7 +510,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id, [&](lv2_event_port& port) -> CellError
 	{
-		if (const auto queue = port.queue.lock())
+		if (const auto queue = port.queue.lock(); lv2_event_queue::check(queue))
 		{
 			const u64 source = port.name ? port.name : (s64{process_getpid()} << 32) | u64{eport_id};
 

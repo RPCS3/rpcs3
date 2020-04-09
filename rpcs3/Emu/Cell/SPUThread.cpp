@@ -2593,7 +2593,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup].lock());
 
-				if (!queue)
+				if (!lv2_event_queue::check(queue))
 				{
 					spu_log.warning("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (value & 0x00ffffff), data);
 					ch_in_mbox.set_values(1, CELL_ENOTCONN);
@@ -2625,7 +2625,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup].lock());
 
-				if (!queue)
+				if (!lv2_event_queue::check(queue))
 				{
 					spu_log.warning("sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (value & 0x00ffffff), data);
 					return true;
@@ -2999,14 +2999,14 @@ bool spu_thread::stop_and_signal(u32 code)
 				{
 					queue = v.second.lock();
 
-					if (queue)
+					if (lv2_event_queue::check(queue))
 					{
 						break;
 					}
 				}
 			}
 
-			if (!queue)
+			if (!lv2_event_queue::check(queue))
 			{
 				check_state();
 				return ch_in_mbox.set_values(1, CELL_EINVAL), true; // TODO: check error value
@@ -3116,14 +3116,14 @@ bool spu_thread::stop_and_signal(u32 code)
 		{
 			if (spuq == v.first)
 			{
-				if ((queue = v.second.lock()))
+				if (queue = v.second.lock(); lv2_event_queue::check(queue))
 				{
 					break;
 				}
 			}
 		}
 
-		if (!queue)
+		if (!lv2_event_queue::check(queue))
 		{
 			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
 		}
