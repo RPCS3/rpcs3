@@ -133,7 +133,7 @@ std::string utils::get_system_info()
 
 	if (const ullong tsc_freq = get_tsc_freq())
 	{
-		fmt::append(result, " | TSC: %.02fGHz", tsc_freq / 1000000000.);
+		fmt::append(result, " | TSC: %.03fGHz", tsc_freq / 1000000000.);
 	}
 	else
 	{
@@ -264,7 +264,7 @@ std::string utils::get_OS_version()
 
 static constexpr ullong round_tsc(ullong val)
 {
-	return ::rounded_div(val, 20'000'000) * 20'000'000;
+	return ::rounded_div(val, 1'000'000) * 1'000'000;
 }
 
 ullong utils::get_tsc_freq()
@@ -273,6 +273,7 @@ ullong utils::get_tsc_freq()
 	{
 		if (!has_invariant_tsc())
 			return 0;
+
 #ifdef _WIN32
 		LARGE_INTEGER freq;
 		if (!QueryPerformanceFrequency(&freq))
@@ -293,14 +294,11 @@ ullong utils::get_tsc_freq()
 		constexpr int samples = 40;
 		ullong rdtsc_data[samples];
 		ullong timer_data[samples];
-		ullong rdtsc_diff[samples - 1];
-		ullong timer_diff[samples - 1];
 
 		for (int i = 0; i < samples; i++)
 		{
 			rdtsc_data[i] = (_mm_lfence(), __rdtsc());
-			if (i > 0)
-				rdtsc_diff[i - 1] = rdtsc_data[i] - rdtsc_data[i - 1];
+
 #ifdef _WIN32
 			LARGE_INTEGER ctr;
 			QueryPerformanceCounter(&ctr);
@@ -314,15 +312,13 @@ ullong utils::get_tsc_freq()
 			timer_data[i] = ts.tv_nsec + (ts.tv_sec - sec_base) * 1'000'000'000;
 			usleep(200);
 #endif
-			if (i > 0)
-				timer_diff[i - 1] = timer_data[i] - timer_data[i - 1];
 		}
 
 		// Compute average TSC
 		ullong acc = 0;
 		for (int i = 0; i < samples - 1; i++)
 		{
-			acc += rdtsc_diff[i] * timer_freq / timer_diff[i];
+			acc += (rdtsc_data[i + 1] - rdtsc_data[i]) * timer_freq / (timer_data[i + 1] - timer_data[i]);
 		}
 
 		// Rounding

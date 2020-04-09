@@ -3278,7 +3278,7 @@ void fmt_class_string<spu_channel>::format(std::string& out, u64 arg)
 	}
 	else
 	{
-		out += "empty"; 
+		out += "empty";
 	}
 }
 
