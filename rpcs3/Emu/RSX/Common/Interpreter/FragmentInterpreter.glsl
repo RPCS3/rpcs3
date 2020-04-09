@@ -4,6 +4,8 @@ layout(location=1) out vec4 ocol1;
 layout(location=2) out vec4 ocol2;
 layout(location=3) out vec4 ocol3;
 
+layout(location=0) in vec4 in_regs[16];
+
 #define RSX_FP_OPCODE_NOP 0x00 // No-Operation
 #define RSX_FP_OPCODE_MOV 0x01 // Move
 #define RSX_FP_OPCODE_MUL 0x02 // Multiply
@@ -174,15 +176,17 @@ vec4 read_src(const in int index)
 			// TODO: wpos
 			value = vec4(0.); break;
 		case 1:
-			value = gl_FrontFacing? in_regs[0] : in_regs[2]; break;
-		case 2:
 			value = gl_FrontFacing? in_regs[1] : in_regs[3]; break;
+		case 2:
+			value = gl_FrontFacing? in_regs[2] : in_regs[4]; break;
 		case 3:
-			value = fetch_fog_value(fog_mode, in_regs[4]); break;
+			value = fetch_fog_value(fog_mode, in_regs[5]); break;
+		case 13:
+			value = in_regs[6]; break;
 		case 14:
 			value = gl_FrontFacing? vec4(1.) : vec4(-1.); break;
 		default:
-			value = in_regs[i + 1]; break;
+			value = in_regs[i + 3]; break;
 		}
 
 		break;

@@ -1,5 +1,8 @@
 R"(
 
+// Program outputs
+layout(location=0) out vec4 dest[16];
+
 #define RSX_SCA_OPCODE_NOP 0x00 // No-Operation
 #define RSX_SCA_OPCODE_MOV 0x01 // Move (copy)
 #define RSX_SCA_OPCODE_RCP 0x02 // Reciprocal
@@ -193,7 +196,6 @@ uvec4 instr;
 vec4 temp[32];
 ivec4 a[2] = { ivec4(0), ivec4(0) };
 vec4 cc[2] = { vec4(0), vec4(0) };
-vec4 dest[16];
 
 D0 d0;
 D1 d1;
@@ -248,15 +250,11 @@ void write_vec(in vec4 value)
 	}
 }
 
-vec4 write_output(const in int oid, const in int mask_bit)
+void write_output(const in int oid, const in int mask_bit)
 {
-	if (attribute_enabled(1 << mask_bit))
+	if (!attribute_enabled(1 << mask_bit))
 	{
-		return dest[oid];
-	}
-	else
-	{
-		return vec4(0., 0., 0., 1.);
+		dest[oid] = vec4(0., 0., 0., 1.);
 	}
 }
 
@@ -527,21 +525,19 @@ void main()
 	}
 
 	// TODO: 2-sided lighting
-	if (attribute_enabled(1 << 0 | 1 << 2))
+	if (!attribute_enabled(1 << 0 | 1 << 2))
 	{
-		diff_color = dest[1];
-		diff_color1 = dest[1];
+		dest[1] = dest[3] = vec4(0, 0, 0, 1);
 	}
 
-	if (attribute_enabled(1 << 1 | 1 << 3))
+	if (!attribute_enabled(1 << 1 | 1 << 3))
 	{
-		spec_color = dest[2];
-		spec_color1 = dest[2];
+		dest[2] = dest[4] = vec4(0, 0, 0, 1);
 	}
 
-	if (attribute_enabled(1 << 4))
+	if (!attribute_enabled(1 << 4))
 	{
-		fog_c = dest[5].xxxx;
+		dest[5].x = 0;
 	}
 
 	if (attribute_enabled(1 << 5))
@@ -567,19 +563,23 @@ void main()
 		gl_ClipDistance[5] = (user_clip_enabled[1].y > 0)? dest[6].w * user_clip_factor[1].y : 0.5f;
 	}
 
-	tc8 = write_output(15, 12);
-	tc9 = write_output(6, 13);
-	tc0 = write_output(7, 14);
-	tc1 = write_output(8, 15);
-	tc2 = write_output(9, 16);
-	tc3 = write_output(10, 17);
-	tc4 = write_output(11, 18);
-	tc5 = write_output(12, 19);
-	tc6 = write_output(13, 20);
-	tc7 = write_output(14, 21);
+	write_output(15, 12);
+	write_output(6, 13);
+	write_output(7, 14);
+	write_output(8, 15);
+	write_output(9, 16);
+	write_output(10, 17);
+	write_output(11, 18);
+	write_output(12, 19);
+	write_output(13, 20);
+	write_output(14, 21);
 
 	vec4 pos = dest[0] * scale_offset_mat;
+
+#ifdef Z_NEGATIVE_ONE_TO_ONE
 	pos.z = (pos.z + pos.z) - pos.w;
+#endif
+
 	gl_Position = pos;
 }
 

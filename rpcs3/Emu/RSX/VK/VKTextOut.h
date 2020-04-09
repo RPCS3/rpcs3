@@ -196,7 +196,7 @@ namespace vk
 			CHECK_RESULT(vkCreateGraphicsPipelines(dev, nullptr, 1, &info, NULL, &pipeline));
 
 			const std::vector<vk::glsl::program_input> unused;
-			m_program = std::make_unique<vk::glsl::program>(static_cast<VkDevice>(dev), pipeline, unused, unused);
+			m_program = std::make_unique<vk::glsl::program>(static_cast<VkDevice>(dev), pipeline, m_pipeline_layout, unused, unused);
 		}
 
 		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, const float *offsets, size_t nb_offsets, std::array<float, 4> color)

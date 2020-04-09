@@ -60,7 +60,7 @@ namespace vk
 			}
 
 			// Reserve descriptor pools
-			m_descriptor_pool.create(*get_current_renderer(), descriptor_pool_sizes.data(), ::size32(descriptor_pool_sizes), VK_MAX_COMPUTE_TASKS, 2);
+			m_descriptor_pool.create(*get_current_renderer(), descriptor_pool_sizes.data(), ::size32(descriptor_pool_sizes), VK_MAX_COMPUTE_TASKS, 3);
 
 			VkDescriptorSetLayoutCreateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -179,7 +179,7 @@ namespace vk
 				VkPipeline pipeline;
 				vkCreateComputePipelines(*get_current_renderer(), nullptr, 1, &info, nullptr, &pipeline);
 
-				m_program = std::make_unique<vk::glsl::program>(*get_current_renderer(), pipeline);
+				m_program = std::make_unique<vk::glsl::program>(*get_current_renderer(), pipeline, m_pipeline_layout);
 				declare_inputs();
 			}
 

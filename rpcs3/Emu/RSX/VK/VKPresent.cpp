@@ -217,6 +217,13 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resou
 
 		ctx->buffer_views_to_clean.clear();
 
+		if (g_cfg.video.shader_interpreter_mode != shader_interpreter_mode::disabled)
+		{
+			// TODO: This is jank AF
+			m_vertex_instructions_buffer.reset_allocation_stats();
+			m_fragment_instructions_buffer.reset_allocation_stats();
+		}
+
 		if (ctx->last_frame_sync_time > m_last_heap_sync_time)
 		{
 			m_last_heap_sync_time = ctx->last_frame_sync_time;

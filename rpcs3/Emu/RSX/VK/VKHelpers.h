@@ -3629,11 +3629,12 @@ public:
 
 		public:
 			VkPipeline pipeline;
+			VkPipelineLayout pipeline_layout;
 			u64 attribute_location_mask;
 			u64 vertex_attributes_mask;
 
-			program(VkDevice dev, VkPipeline p, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs);
-			program(VkDevice dev, VkPipeline p);
+			program(VkDevice dev, VkPipeline p, VkPipelineLayout layout, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs);
+			program(VkDevice dev, VkPipeline p, VkPipelineLayout layout);
 			program(const program&) = delete;
 			program(program&& other) = delete;
 			~program();
@@ -3649,6 +3650,7 @@ public:
 			void bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, VkDescriptorSet &descriptor_set);
 
 			void bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set);
+			void bind_descriptor_set(const VkCommandBuffer cmd, VkDescriptorSet descriptor_set);
 		};
 	}
 

@@ -5,8 +5,15 @@
 #include "VulkanAPI.h"
 #include "VKHelpers.h"
 
+namespace vk
+{
+	class shader_interpreter;
+}
+
 struct VKFragmentDecompilerThread : public FragmentProgramDecompiler
 {
+	friend class vk::shader_interpreter;
+
 	std::string& m_shader;
 	ParamArray& m_parrDummy;
 	std::vector<vk::glsl::program_input> inputs;

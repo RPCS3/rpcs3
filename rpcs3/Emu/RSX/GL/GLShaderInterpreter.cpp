@@ -101,9 +101,11 @@ namespace gl
 
 		std::stringstream builder;
 		comp.insertHeader(builder);
+
+		builder << "#define Z_NEGATIVE_ONE_TO_ONE\n\n";
+
 		comp.insertConstants(builder, {});
 		comp.insertInputs(builder, {});
-		comp.insertOutputs(builder, {});
 
 		// Insert vp stream input
 		builder << "\n"
@@ -179,10 +181,6 @@ namespace gl
 
 		::glsl::insert_subheader_block(builder);
 		comp.insertConstants(builder);
-
-		// Declare custom inputs
-		builder <<
-		"layout(location=1) in vec4 in_regs[15];\n\n";
 
 		const char* type_names[] = { "sampler1D", "sampler2D", "samplerCube", "sampler3D" };
 		for (int i = 0; i < 4; ++i)

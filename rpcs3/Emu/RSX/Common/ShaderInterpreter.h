@@ -5,7 +5,7 @@ namespace program_common
 {
 	namespace interpreter
 	{
-		std::string get_vertex_interpreter()
+		static std::string get_vertex_interpreter()
 		{
 			const char* s =
 			#include "Interpreter/VertexInterpreter.glsl"
@@ -13,7 +13,7 @@ namespace program_common
 			return s;
 		}
 
-		std::string get_fragment_interpreter()
+		static std::string get_fragment_interpreter()
 		{
 			const char* s =
 			#include "Interpreter/FragmentInterpreter.glsl"
