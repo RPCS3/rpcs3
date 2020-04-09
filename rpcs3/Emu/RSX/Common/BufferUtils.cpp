@@ -139,16 +139,104 @@ namespace
 
 		if (remaining)
 		{
-			auto src_ptr2 = reinterpret_cast<const u32*>(src_ptr);
-			auto dst_ptr2 = reinterpret_cast<u32*>(dst_ptr);
+			const auto src_ptr2 = reinterpret_cast<const se_t<u32, true, 1>*>(src_ptr);
+			const auto dst_ptr2 = reinterpret_cast<nse_t<u32, 1>*>(dst_ptr);
 
 			for (u32 i = 0; i < remaining; ++i)
-				dst_ptr2[i] = se_storage<u32>::swap(src_ptr2[i]);
+				dst_ptr2[i] = src_ptr2[i];
 		}
 	}
 
 	template void stream_data_to_memory_swapped_u32<false>(void *, const void *, u32, u8);
 	template void stream_data_to_memory_swapped_u32<true>(void*, const void*, u32, u8);
+
+	template <bool unaligned>
+	bool stream_data_to_memory_swapped_and_compare_u32(void *dst, const void *src, u32 size)
+	{
+		const __m128i mask = _mm_set_epi8(
+			0xC, 0xD, 0xE, 0xF,
+			0x8, 0x9, 0xA, 0xB,
+			0x4, 0x5, 0x6, 0x7,
+			0x0, 0x1, 0x2, 0x3);
+
+		auto dst_ptr = static_cast<__m128i*>(dst);
+		auto src_ptr = static_cast<const __m128i*>(src);
+
+		const u32 dword_count = size >> 2;
+		const u32 iterations = dword_count >> 2;
+
+		v128 bits_diff{};
+
+		if (s_use_ssse3) [[likely]]
+		{
+			for (u32 i = 0; i < iterations; ++i)
+			{
+				const __m128i vector = _mm_loadu_si128(src_ptr);
+				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
+
+				if constexpr (!unaligned)
+				{
+					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_load_si128(dst_ptr), shuffled_vector));
+					_mm_stream_si128(dst_ptr, shuffled_vector);
+				}
+				else
+				{
+					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_loadu_si128(dst_ptr), shuffled_vector));
+					_mm_storeu_si128(dst_ptr, shuffled_vector);
+				}
+
+				src_ptr++;
+				dst_ptr++;
+			}
+		}
+		else
+		{
+			for (u32 i = 0; i < iterations; ++i)
+			{
+				const __m128i vec0 = _mm_loadu_si128(src_ptr);
+				const __m128i vec1 = _mm_or_si128(_mm_slli_epi16(vec0, 8), _mm_srli_epi16(vec0, 8));
+				const __m128i vec2 = _mm_or_si128(_mm_slli_epi32(vec1, 16), _mm_srli_epi32(vec1, 16));
+
+				if constexpr (!unaligned)
+				{
+					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_load_si128(dst_ptr), vec2));
+					_mm_stream_si128(dst_ptr, vec2);
+				}
+				else
+				{
+					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_loadu_si128(dst_ptr), vec2));
+					_mm_storeu_si128(dst_ptr, vec2);
+				}
+
+				src_ptr++;
+				dst_ptr++;
+			}
+		}
+
+		const u32 remaining = dword_count % 4;
+
+		if (remaining)
+		{
+			const auto src_ptr2 = reinterpret_cast<const se_t<u32, true, 1>*>(src_ptr);
+			const auto dst_ptr2 = reinterpret_cast<nse_t<u32, 1>*>(dst_ptr);
+
+			for (u32 i = 0; i < remaining; ++i)
+			{
+				const u32 data = src_ptr2[i];
+
+				if (dst_ptr2[i] != data)
+				{
+					dst_ptr2[i] = data;
+					bits_diff._u32[0] = UINT32_MAX;
+				}
+			}
+		}
+
+		return bits_diff != v128{};
+	}
+
+	template bool stream_data_to_memory_swapped_and_compare_u32<false>(void *dst, const void *src, u32 size);
+	template bool stream_data_to_memory_swapped_and_compare_u32<true>(void *dst, const void *src, u32 size);
 
 namespace
 {
@@ -194,11 +282,11 @@ namespace
 
 		if (remaining)
 		{
-			auto src_ptr2 = reinterpret_cast<const u16*>(src_ptr);
-			auto dst_ptr2 = reinterpret_cast<u16*>(dst_ptr);
+			auto src_ptr2 = reinterpret_cast<const se_t<u16, true, 1>*>(src_ptr);
+			auto dst_ptr2 = reinterpret_cast<nse_t<u16, 1>*>(dst_ptr);
 
 			for (u32 i = 0; i < remaining; ++i)
-				dst_ptr2[i] = se_storage<u16>::swap(src_ptr2[i]);
+				dst_ptr2[i] = src_ptr2[i];
 		}
 	}
 
