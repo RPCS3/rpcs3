@@ -1603,15 +1603,14 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 				continue;
 			}
 
-			if (entry.is_directory == false)
+			if (!entry.is_directory)
 			{
 				if (!remove_file(path_append(path, entry.name)))
 				{
 					return false;
 				}
 			}
-
-			if (entry.is_directory == true)
+			else
 			{
 				if (!remove_all(path_append(path, entry.name)))
 				{
@@ -1651,12 +1650,11 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 			continue;
 		}
 
-		if (entry.is_directory == false)
+		if (!entry.is_directory)
 		{
 			result += ::align(entry.size, rounding_alignment);
 		}
-
-		if (entry.is_directory == true)
+		else
 		{
 			const u64 size = get_dir_size(path_append(path, entry.name), rounding_alignment);
 

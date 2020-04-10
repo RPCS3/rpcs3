@@ -81,7 +81,7 @@ namespace fmt
 	template <typename T>
 	std::string merge(const T& source, const std::string& separator)
 	{
-		if (!source.size())
+		if (source.empty())
 		{
 			return {};
 		}

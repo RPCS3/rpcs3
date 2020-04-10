@@ -245,12 +245,12 @@ bool cheat_engine::resolve_script(u32& final_offset, const u32 offset, const std
 
 	while (index < red_script.size())
 	{
-		if (red_script[index] >= '0' && red_script[index] <= '9')
+		if (std::isdigit(static_cast<u8>(red_script[index])))
 		{
 			std::string num_string;
 			for (; index < red_script.size(); index++)
 			{
-				if (red_script[index] < '0' || red_script[index] > '9')
+				if (!std::isdigit(static_cast<u8>(red_script[index])))
 					break;
 
 				num_string += red_script[index];
@@ -348,15 +348,15 @@ std::vector<u32> cheat_engine::search(const T value, const std::vector<u32>& to_
 	else
 	{
 		// Looks through mapped memory
-		for (u32 page_ind = (0x10000 / 4096); page_ind < (0xF0000000 / 4096); page_ind++)
+		for (u32 page_start = 0x10000; page_start < 0xF0000000; page_start += 4096)
 		{
-			if (vm::check_addr(page_ind * 4096))
+			if (vm::check_addr(page_start))
 			{
 				// Assumes the values are aligned
 				for (u32 index = 0; index < 4096; index += sizeof(T))
 				{
-					if (*vm::get_super_ptr<T>((page_ind * 4096) + index) == value_swapped)
-						results.push_back((page_ind * 4096) + index);
+					if (*vm::get_super_ptr<T>(page_start + index) == value_swapped)
+						results.push_back(page_start + index);
 				}
 			}
 		}
