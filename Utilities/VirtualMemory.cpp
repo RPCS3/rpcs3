@@ -154,7 +154,7 @@ namespace utils
 #else
 		while ((m_file = ::shm_open("/rpcs3-mem1", O_RDWR | O_CREAT | O_EXCL, S_IWUSR | S_IRUSR)) == -1)
 		{
-			if (m_file == -1 && errno == EMFILE)
+			if (errno == EMFILE)
 			{
 				fmt::throw_exception("Too many open files. Raise the limit and try again.");
 			}

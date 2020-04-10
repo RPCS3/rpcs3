@@ -543,7 +543,7 @@ bool gdb_thread::cmd_thread_info(gdb_cmd& cmd)
 	std::string result;
 	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
-		if (result.length()) {
+		if (!result.empty()) {
 			result += ",";
 		}
 		result += u64_to_padded_hex(static_cast<u64>(cpu.id));
@@ -572,7 +572,7 @@ bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
 		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
 		u32 rid = hex_to_u32(cmd.data);
 		std::string result = get_reg(ppu, rid);
-		if (!result.length()) {
+		if (result.empty()) {
 			GDB.warning("Wrong register id %d.", rid);
 			return send_cmd_ack("E01");
 		}
@@ -622,7 +622,7 @@ bool gdb_thread::cmd_read_memory(gdb_cmd& cmd)
 			//result += "xx";
 		}
 	}
-	if (len && !result.length()) {
+	if (len && result.empty()) {
 		//nothing read
 		return send_cmd_ack("E01");
 	}

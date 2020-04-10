@@ -359,14 +359,18 @@ void cpu_thread::operator()()
 		std::this_thread::sleep_for(1ms);
 	}
 
-	if (id_type() == 1 && false)
+	switch (id_type())
 	{
-		g_fxo->get<cpu_profiler>()->registered.push(id);
-	}
-
-	if (id_type() == 2 && g_cfg.core.spu_prof)
-	{
-		g_fxo->get<cpu_profiler>()->registered.push(id);
+	case 1: 
+		//g_fxo->get<cpu_profiler>()->registered.push(id);
+		break;
+	case 2:
+		if (g_cfg.core.spu_prof)
+		{
+			g_fxo->get<cpu_profiler>()->registered.push(id);
+		}
+		break;
+	default: ;
 	}
 
 	// Register thread in g_cpu_array
