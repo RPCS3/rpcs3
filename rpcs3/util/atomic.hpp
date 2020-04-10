@@ -1176,7 +1176,6 @@ class atomic_with_lock_bit
 	static_assert(std::is_pointer_v<T> == (BitWidth == 0), "BitWidth should be 0 for pointers");
 	static_assert(!std::is_pointer_v<T> || (alignof(std::remove_pointer_t<T>) >= 4), "Pointer type should have align 4 or more");
 
-	// Use the most significant bit as a mutex
 	atomic_t<type> m_data;
 
 public:
@@ -1255,7 +1254,6 @@ public:
 					// Try to set dirty bit if not set already
 					if (!m_data.compare_and_swap_test(old_val, old_val | c_dirty))
 					{
-						// Situation changed
 						continue;
 					}
 				}
@@ -1301,6 +1299,7 @@ public:
 			{
 				if (!m_data.compare_and_swap_test(old_val, old_val | c_dirty))
 				{
+					old_val = m_data.load();
 					continue;
 				}
 			}
@@ -1314,6 +1313,11 @@ public:
 
 	void store(T value)
 	{
+		static_cast<void>(exchange(value));
+	}
+
+	T exchange(T value)
+	{
 		type old_val = m_data.load();
 
 		while (is_locked(old_val) || !m_data.compare_and_swap_test(old_val, clamp_value(reinterpret_cast<type>(value)))) [[unlikely]]
@@ -1322,6 +1326,7 @@ public:
 			{
 				if (!m_data.compare_and_swap_test(old_val, old_val | c_dirty))
 				{
+					old_val = m_data.load();
 					continue;
 				}
 			}
@@ -1329,6 +1334,51 @@ public:
 			m_data.wait(old_val);
 			old_val = m_data.load();
 		}
+
+		return reinterpret_cast<T>(clamp_value(old_val));
+	}
+
+	T compare_and_swap(T cmp, T exch)
+	{
+		static_cast<void>(compare_exchange(cmp, exch));
+		return cmp;
+	}
+
+	bool compare_and_swap_test(T cmp, T exch)
+	{
+		return compare_exchange(cmp, exch);
+	}
+
+	bool compare_exchange(T& cmp_and_old, T exch)
+	{
+		type old_val = m_data.load();
+		type expected = clamp_value(reinterpret_cast<type>(cmp_and_old));
+		type new_val = clamp_value(reinterpret_cast<type>(exch));
+
+		while (is_locked(old_val) || (old_val == expected && !m_data.compare_and_swap_test(expected, new_val))) [[unlikely]]
+		{
+			if (old_val == expected)
+			{
+				old_val = m_data.load();
+				continue;
+			}
+
+			if ((old_val & c_dirty) == 0)
+			{
+				if (!m_data.compare_and_swap_test(old_val, old_val | c_dirty))
+				{
+					old_val = m_data.load();
+					continue;
+				}
+			}
+
+			m_data.wait(old_val);
+			old_val = m_data.load();
+		}
+
+		cmp_and_old = reinterpret_cast<T>(clamp_value(old_val));
+
+		return clamp_value(old_val) == expected;
 	}
 
 	template <typename F, typename RT = std::invoke_result_t<F, T&>>
@@ -1345,6 +1395,7 @@ public:
 				{
 					if (!m_data.compare_and_swap_test(old, old | c_dirty))
 					{
+						old = m_data.load();
 						continue;
 					}
 				}
