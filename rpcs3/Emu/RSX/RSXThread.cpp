@@ -1771,7 +1771,7 @@ namespace rsx
 	{
 		for (GcmTileInfo &tile : tiles)
 		{
-			if (!tile.binded || (tile.location & 1) != (location & 1))
+			if (!tile.bound || (tile.location & 1) != (location & 1))
 			{
 				continue;
 			}
@@ -2136,7 +2136,7 @@ namespace rsx
 				//Find zeta address in bound zculls
 				for (const auto& zcull : zculls)
 				{
-					if (zcull.binded)
+					if (zcull.bound)
 					{
 						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL, HERE);
 						if (rsx_address == zeta_address)

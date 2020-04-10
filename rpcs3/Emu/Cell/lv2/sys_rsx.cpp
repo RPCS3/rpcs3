@@ -573,11 +573,11 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u32 comp = ((a5 & 0xFFFFFFFF) >> 26) & 0xF;
 		const u32 base = (a5 & 0xFFFFFFFF) & 0x7FF;
 		const u32 bank = (((a4 >> 32) & 0xFFFFFFFF) >> 4) & 0xF;
-		const bool binded = ((a4 >> 32) & 0x3) != 0;
+		const bool bound = ((a4 >> 32) & 0x3) != 0;
 
 		const auto range = utils::address_range::start_length(offset, size);
 
-		if (binded)
+		if (bound)
 		{
 			if (!size || !pitch)
 			{
@@ -604,12 +604,12 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		std::lock_guard lock(s_rsxmem_mtx);
 
-		// When tile is going to be unbinded, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated
+		// When tile is going to be unbound, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated
 		// Todo: There may be more checks such as format/size/width can could be done
-		if (tile.binded && !binded)
+		if (tile.bound && !bound)
 			render->notify_tile_unbound(static_cast<u32>(a3));
 
-		if (location == CELL_GCM_LOCATION_MAIN && binded)
+		if (location == CELL_GCM_LOCATION_MAIN && bound)
 		{
 			vm::reader_lock rlock;
 
@@ -629,7 +629,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		tile.comp = comp;
 		tile.base = base;
 		tile.bank = base;
-		tile.binded = binded;
+		tile.bound = bound;
 	}
 	break;
 
@@ -650,9 +650,9 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		}
 
 		const u32 offset = (a5 & 0xFFFFFFFF);
-		const bool binded = (a6 & 0xFFFFFFFF) != 0;
+		const bool bound = (a6 & 0xFFFFFFFF) != 0;
 
-		if (binded)
+		if (bound)
 		{
 			if (offset >= render->local_mem_size)
 			{
@@ -678,7 +678,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		zcull.sFunc = ((a6 >> 32) >> 12) & 0xF;
 		zcull.sRef = ((a6 >> 32) >> 16) & 0xFF;
 		zcull.sMask = ((a6 >> 32) >> 24) & 0xFF;
-		zcull.binded = binded;
+		zcull.bound = bound;
 	}
 	break;
 
