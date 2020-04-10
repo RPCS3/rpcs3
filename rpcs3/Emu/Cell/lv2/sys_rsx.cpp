@@ -625,8 +625,16 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		// todo: this is wrong and should be 'second' vblank handler and freq, but since currently everything is reported as being 59.94, this should be fine
 		vm::_ref<u32>(render->device_addr + 0x30) = 1;
+
+		const u64 current_time = rsxTimeStamp();
+
+		driverInfo.head[a3].lastSecondVTime = current_time;
+
+		// Note: not atomic
+		driverInfo.head[a3].lastVTimeLow = static_cast<u32>(current_time);
+		driverInfo.head[a3].lastVTimeHigh = static_cast<u32>(current_time >> 32);
+
 		driverInfo.head[a3].vBlankCount++;
-		driverInfo.head[a3].lastSecondVTime = rsxTimeStamp();
 
 		u64 event_flags = SYS_RSX_EVENT_VBLANK;
 
