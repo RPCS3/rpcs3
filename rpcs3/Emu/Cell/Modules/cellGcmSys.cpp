@@ -266,7 +266,7 @@ error_code cellGcmBindTile(u8 index)
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	rsx::get_current_renderer()->tiles[index].binded = true;
+	rsx::get_current_renderer()->tiles[index].bound = true;
 
 	return CELL_OK;
 }
@@ -281,7 +281,7 @@ error_code cellGcmBindZcull(u8 index, u32 offset, u32 width, u32 height, u32 cul
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	rsx::get_current_renderer()->zculls[index].binded = true;
+	rsx::get_current_renderer()->zculls[index].bound = true;
 
 	return CELL_OK;
 }
@@ -701,7 +701,7 @@ void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart,
 	zcull.sFunc = sFunc;
 	zcull.sRef = sRef;
 	zcull.sMask = sMask;
-	zcull.binded = (zCullFormat > 0);
+	zcull.bound = (zCullFormat > 0);
 
 	vm::_ptr<CellGcmZcullInfo>(gcm_cfg->zculls_addr)[index] = zcull.pack();
 }
@@ -715,7 +715,7 @@ error_code cellGcmUnbindTile(u8 index)
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	rsx::get_current_renderer()->tiles[index].binded = false;
+	rsx::get_current_renderer()->tiles[index].bound = false;
 
 	return CELL_OK;
 }
@@ -729,7 +729,7 @@ error_code cellGcmUnbindZcull(u8 index)
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	rsx::get_current_renderer()->zculls[index].binded = false;
+	rsx::get_current_renderer()->zculls[index].bound = false;
 
 	return CELL_OK;
 }
@@ -1301,7 +1301,7 @@ error_code cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch
 	tile.comp = comp;
 	tile.base = base;
 	tile.bank = bank;
-	tile.binded = (pitch > 0);
+	tile.bound = (pitch > 0);
 
 	vm::_ptr<CellGcmTileInfo>(gcm_cfg->tiles_addr)[index] = tile.pack();
 	return CELL_OK;
