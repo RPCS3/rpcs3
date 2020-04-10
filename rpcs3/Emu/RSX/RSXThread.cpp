@@ -2262,6 +2262,11 @@ namespace rsx
 		zcull_ctrl->on_sync_hint(args);
 	}
 
+	bool thread::is_fifo_idle() const
+	{
+		return ctrl->get == (ctrl->put & ~3);
+	}
+
 	void thread::flush_fifo()
 	{
 		// Make sure GET value is exposed before sync points
