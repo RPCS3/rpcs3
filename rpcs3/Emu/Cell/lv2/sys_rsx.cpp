@@ -488,6 +488,10 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			return SYS_RSX_CONTEXT_ATTRIBUTE_ERROR;
 		}
 
+		std::lock_guard lock(s_rsxmem_mtx);
+
+		// Note: no error checking is being done
+
 		const u32 width = (a4 >> 32) & 0xFFFFFFFF;
 		const u32 height = a4 & 0xFFFFFFFF;
 		const u32 pitch = (a5 >> 32) & 0xFFFFFFFF;
@@ -547,19 +551,70 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		auto& tile = render->tiles[a3];
 
+		const u32 location = ((a4 >> 32) & 0x3) - 1;
+		const u32 offset = ((((a4 >> 32) & 0x7FFFFFFF) >> 16) * 0x10000);
+		const u32 size = ((((a4 & 0x7FFFFFFF) >> 16) + 1) * 0x10000) - offset;
+		const u32 pitch = (((a5 >> 32) & 0xFFFFFFFF) >> 8) * 0x100;
+		const u32 comp = ((a5 & 0xFFFFFFFF) >> 26) & 0xF;
+		const u32 base = (a5 & 0xFFFFFFFF) & 0x7FF;
+		const u32 bank = (((a4 >> 32) & 0xFFFFFFFF) >> 4) & 0xF;
+		const bool binded = ((a4 >> 32) & 0x3) != 0;
+
+		const auto range = utils::address_range::start_length(offset, size);
+
+		if (binded)
+		{
+			if (!size || !pitch)
+			{
+				return CELL_EINVAL;
+			}
+
+			u32 limit = UINT32_MAX;
+
+			switch (location)
+			{
+			case CELL_GCM_LOCATION_MAIN: limit = render->main_mem_size; break;
+			case CELL_GCM_LOCATION_LOCAL: limit = render->local_mem_size; break;
+			default: fmt::throw_exception("sys_rsx_context_attribute(): Unexpected location value (location=0x%x)" HERE, location);
+			}
+
+			if (!range.valid() || range.end >= limit)
+			{
+				return CELL_EINVAL;
+			}
+
+			// Hardcoded value in gcm
+			verify(HERE), !!(a5 & (1 << 30));
+		}
+
+		std::lock_guard lock(s_rsxmem_mtx);
+
 		// When tile is going to be unbinded, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated
 		// Todo: There may be more checks such as format/size/width can could be done
-		if (tile.binded && a5 == 0)
+		if (tile.binded && !binded)
 			render->notify_tile_unbound(static_cast<u32>(a3));
 
-		tile.location = ((a4 >> 32) & 0xF) - 1;
-		tile.offset = ((((a4 >> 32) & 0x7FFFFFFF) >> 16) * 0x10000);
-		tile.size = ((((a4 & 0x7FFFFFFF) >> 16) + 1) * 0x10000) - tile.offset;
-		tile.pitch = (((a5 >> 32) & 0xFFFFFFFF) >> 8) * 0x100;
-		tile.comp = ((a5 & 0xFFFFFFFF) >> 26) & 0xF;
-		tile.base = (a5 & 0xFFFFFFFF) & 0x7FF;
-		tile.bank = (((a4 >> 32) & 0xFFFFFFFF) >> 4) & 0xF;
-		tile.binded = a5 != 0;
+		if (location == CELL_GCM_LOCATION_MAIN && binded)
+		{
+			vm::reader_lock rlock;
+
+			for (u32 offs = (offset & ~0xfffff); offs <= range.end; offs += 0x100000)
+			{
+				if (render->iomap_table.io[offs >> 20] == umax)
+				{
+					return CELL_EINVAL;
+				}
+			}
+		}
+
+		tile.location = location;
+		tile.offset = offset;
+		tile.size = size;
+		tile.pitch = pitch;
+		tile.comp = comp;
+		tile.base = base;
+		tile.bank = base;
+		tile.binded = binded;
 	}
 	break;
 
@@ -574,19 +629,36 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		verify(HERE), a3 < std::size(render->zculls);
 
+		const u32 offset = (a5 & 0xFFFFFFFF);
+		const bool binded = (a6 & 0xFFFFFFFF) != 0;
+
+		if (binded)
+		{
+			if (offset >= render->local_mem_size)
+			{
+				return CELL_EINVAL;
+			}
+
+			// Hardcoded values in gcm
+			verify(HERE), !!(a4 & (1ull << 32)), (a6 & 0xFFFFFFFF) == 0u + ((0x2000 << 0) | (0x20 << 16));
+		}
+
+		std::lock_guard lock(s_rsxmem_mtx);
+
 		auto &zcull = render->zculls[a3];
+
 		zcull.zFormat = ((a4 >> 32) >> 4) & 0xF;
 		zcull.aaFormat = ((a4 >> 32) >> 8) & 0xF;
 		zcull.width = ((a4 & 0xFFFFFFFF) >> 22) << 6;
 		zcull.height = (((a4 & 0xFFFFFFFF) >> 6) & 0xFF) << 6;
 		zcull.cullStart = (a5 >> 32);
-		zcull.offset = (a5 & 0xFFFFFFFF);
+		zcull.offset = offset;
 		zcull.zcullDir = ((a6 >> 32) >> 1) & 0x1;
 		zcull.zcullFormat = ((a6 >> 32) >> 2) & 0x3FF;
 		zcull.sFunc = ((a6 >> 32) >> 12) & 0xF;
 		zcull.sRef = ((a6 >> 32) >> 16) & 0xFF;
 		zcull.sMask = ((a6 >> 32) >> 24) & 0xFF;
-		zcull.binded = (a6 & 0xFFFFFFFF) != 0;
+		zcull.binded = binded;
 	}
 	break;
 
