@@ -1610,10 +1610,10 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 			// Reset to elements array head
 			index = 0;
 
-			const auto src = _ptr<const __m128i>(args.eal & 0x3fff8);
-			const v128 data0 = v128::fromV(_mm_loadu_si128(src + 0));
-			const v128 data1 = v128::fromV(_mm_loadu_si128(src + 1));
-			const v128 data2 = v128::fromV(_mm_loadu_si128(src + 2));
+			const auto src = _ptr<const void>(args.eal & 0x3fff8);
+			const v128 data0 = v128::loadu(src, 0);
+			const v128 data1 = v128::loadu(src, 1);
+			const v128 data2 = v128::loadu(src, 2);
 
 			reinterpret_cast<v128*>(bufitems)[0] = data0;
 			reinterpret_cast<v128*>(bufitems)[1] = data1;

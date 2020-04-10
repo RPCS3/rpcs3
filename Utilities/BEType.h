@@ -223,6 +223,20 @@ union alignas(16) v128
 		return ret;
 	}
 
+	// Unaligned load with optional index offset
+	static v128 loadu(const void* ptr, std::size_t index = 0)
+	{
+		v128 ret;
+		std::memcpy(&ret, static_cast<const u8*>(ptr) + index * sizeof(v128), sizeof(v128));
+		return ret;
+	}
+
+	// Unaligned store with optional index offset
+	static void storeu(v128 value, void* ptr, std::size_t index = 0)
+	{
+		std::memcpy(static_cast<u8*>(ptr) + index * sizeof(v128), &value, sizeof(v128));
+	}
+
 	static inline v128 add8(const v128& left, const v128& right)
 	{
 		return fromV(_mm_add_epi8(left.vi, right.vi));

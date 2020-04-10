@@ -10,17 +10,17 @@ size_t vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgra
 {
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
 	size_t hash = 0xCBF29CE484222325ULL;
-	const qword* instbuffer = reinterpret_cast<const qword*>(program.data.data());
+	const void* instbuffer = program.data.data();
 	size_t instIndex = 0;
 	bool end = false;
 	for (unsigned i = 0; i < program.data.size() / 4; i++)
 	{
 		if (program.instruction_mask[i])
 		{
-			const qword inst = instbuffer[instIndex];
-			hash ^= inst.dword[0];
+			const auto inst = v128::loadu(instbuffer, instIndex);
+			hash ^= inst._u64[0];
 			hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
-			hash ^= inst.dword[1];
+			hash ^= inst._u64[1];
 			hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
 		}
 
@@ -75,9 +75,9 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 				}
 			}
 
-			const qword* instruction = reinterpret_cast<const qword*>(&data[current_instruction * 4]);
-			d1.HEX = instruction->word[1];
-			d3.HEX = instruction->word[3];
+			const auto instruction = v128::loadu(&data[current_instruction * 4]);
+			d1.HEX = instruction._u32[1];
+			d3.HEX = instruction._u32[3];
 
 			// Touch current instruction
 			result.instruction_mask[current_instruction] = true;
@@ -89,7 +89,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			{
 			case RSX_VEC_OPCODE_TXL:
 			{
-				d2.HEX = instruction->word[2];
+				d2.HEX = instruction._u32[2];
 				result.referenced_textures_mask |= (1 << d2.tex_num);
 				break;
 			}
@@ -102,7 +102,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			{
 			case RSX_SCA_OPCODE_BRI:
 			{
-				d0.HEX = instruction->word[0];
+				d0.HEX = instruction._u32[0];
 				static_jump = (d0.cond == 0x7);
 				// Fall through
 			}
@@ -119,7 +119,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 				instructions_to_patch[current_instruction] = true;
 				has_branch_instruction = true;
 
-				d2.HEX = instruction->word[2];
+				d2.HEX = instruction._u32[2];
 				const u32 jump_address = ((d2.iaddrh << 3) | d3.iaddrl);
 
 				if (function_call)
@@ -205,34 +205,32 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 	{
 		for (u32 i = instruction_range.first, count = 0; i <= instruction_range.second; ++i, ++count)
 		{
-			const qword* instruction = reinterpret_cast<const qword*>(&data[i * 4]);
-			qword* dst = reinterpret_cast<qword*>(&dst_prog.data[count * 4]);
+			const u32* instruction = &data[i * 4];
+			u32* dst = &dst_prog.data[count * 4];
 
 			if (result.instruction_mask[i])
 			{
-				dst->dword[0] = instruction->dword[0];
-				dst->dword[1] = instruction->dword[1];
+				v128::storeu(v128::loadu(instruction), dst);
 
 				if (instructions_to_patch[i])
 				{
-					d2.HEX = dst->word[2];
-					d3.HEX = dst->word[3];
+					d2.HEX = dst[2];
+					d3.HEX = dst[3];
 
 					u32 address = ((d2.iaddrh << 3) | d3.iaddrl);
 					address -= instruction_range.first;
 
 					d2.iaddrh = (address >> 3);
 					d3.iaddrl = (address & 0x7);
-					dst->word[2] = d2.HEX;
-					dst->word[3] = d3.HEX;
+					dst[2] = d2.HEX;
+					dst[3] = d3.HEX;
 
 					dst_prog.jump_table.emplace(address);
 				}
 			}
 			else
 			{
-				dst->dword[0] = 0ull;
-				dst->dword[1] = 0ull;
+				v128::storeu({}, dst);
 			}
 		}
 
@@ -270,8 +268,8 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 	if (!binary1.skip_vertex_input_check && !binary2.skip_vertex_input_check && binary1.rsx_vertex_inputs != binary2.rsx_vertex_inputs)
 		return false;
 
-	const qword* instBuffer1 = reinterpret_cast<const qword*>(binary1.data.data());
-	const qword* instBuffer2 = reinterpret_cast<const qword*>(binary2.data.data());
+	const void* instBuffer1 = binary1.data.data();
+	const void* instBuffer2 = binary2.data.data();
 	size_t instIndex = 0;
 	for (unsigned i = 0; i < binary1.data.size() / 4; i++)
 	{
@@ -283,9 +281,9 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 
 		if (active)
 		{
-			const qword& inst1 = instBuffer1[instIndex];
-			const qword& inst2 = instBuffer2[instIndex];
-			if (inst1.dword[0] != inst2.dword[0] || inst1.dword[1] != inst2.dword[1])
+			const auto inst1 = v128::loadu(instBuffer1, instIndex);
+			const auto inst2 = v128::loadu(instBuffer2, instIndex);
+			if (inst1 != inst2)
 			{
 				return false;
 			}
@@ -303,17 +301,17 @@ bool fragment_program_utils::is_constant(u32 sourceOperand)
 	return ((sourceOperand >> 8) & 0x3) == 2;
 }
 
-size_t fragment_program_utils::get_fragment_program_ucode_size(void *ptr)
+size_t fragment_program_utils::get_fragment_program_ucode_size(const void* ptr)
 {
-	const qword* instBuffer = reinterpret_cast<const qword*>(ptr);
+	const auto instBuffer = ptr;
 	size_t instIndex = 0;
 	while (true)
 	{
-		const qword& inst = instBuffer[instIndex];
-		bool isSRC0Constant = is_constant(inst.word[1]);
-		bool isSRC1Constant = is_constant(inst.word[2]);
-		bool isSRC2Constant = is_constant(inst.word[3]);
-		bool end = (inst.word[0] >> 8) & 0x1;
+		const v128 inst = v128::loadu(instBuffer, instIndex);
+		bool isSRC0Constant = is_constant(inst._u32[1]);
+		bool isSRC1Constant = is_constant(inst._u32[2]);
+		bool isSRC2Constant = is_constant(inst._u32[3]);
+		bool end = (inst._u32[0] >> 8) & 0x1;
 
 		if (isSRC0Constant || isSRC1Constant || isSRC2Constant)
 		{
@@ -328,9 +326,9 @@ size_t fragment_program_utils::get_fragment_program_ucode_size(void *ptr)
 	}
 }
 
-fragment_program_utils::fragment_program_metadata fragment_program_utils::analyse_fragment_program(void *ptr)
+fragment_program_utils::fragment_program_metadata fragment_program_utils::analyse_fragment_program(const void* ptr)
 {
-	const qword* instBuffer = reinterpret_cast<const qword*>(ptr);
+	const auto instBuffer = ptr;
 	s32 index = 0;
 	s32 program_offset = -1;
 	u32 ucode_size = 0;
@@ -339,8 +337,8 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 
 	while (true)
 	{
-		const qword& inst = instBuffer[index];
-		const u32 opcode = (inst.word[0] >> 16) & 0x3F;
+		const auto inst = v128::loadu(instBuffer, index);
+		const u32 opcode = (inst._u32[0] >> 16) & 0x3F;
 
 		if (opcode)
 		{
@@ -359,13 +357,13 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			{
 				//Bits 17-20 of word 1, swapped within u16 sections
 				//Bits 16-23 are swapped into the upper 8 bits (24-31)
-				const u32 tex_num = (inst.word[0] >> 25) & 15;
+				const u32 tex_num = (inst._u32[0] >> 25) & 15;
 				textures_mask |= (1 << tex_num);
 				break;
 			}
 			}
 
-			if (is_constant(inst.word[1]) || is_constant(inst.word[2]) || is_constant(inst.word[3]))
+			if (is_constant(inst._u32[1]) || is_constant(inst._u32[2]) || is_constant(inst._u32[3]))
 			{
 				//Instruction references constant, skip one slot occupied by data
 				index++;
@@ -379,7 +377,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			ucode_size += 16;
 		}
 
-		if ((inst.word[0] >> 8) & 0x1)
+		if ((inst._u32[0] >> 8) & 0x1)
 		{
 			if (program_offset < 0)
 			{
@@ -400,23 +398,23 @@ size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragment
 {
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
 	size_t hash = 0xCBF29CE484222325ULL;
-	const qword* instbuffer = reinterpret_cast<const qword*>(program.addr);
+	const void* instbuffer = program.addr;
 	size_t instIndex = 0;
 	while (true)
 	{
-		const qword& inst = instbuffer[instIndex];
-		hash ^= inst.dword[0];
+		const auto inst = v128::loadu(instbuffer, instIndex);
+		hash ^= inst._u64[0];
 		hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
-		hash ^= inst.dword[1];
+		hash ^= inst._u64[1];
 		hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
 		instIndex++;
 		// Skip constants
-		if (fragment_program_utils::is_constant(inst.word[1]) ||
-			fragment_program_utils::is_constant(inst.word[2]) ||
-			fragment_program_utils::is_constant(inst.word[3]))
+		if (fragment_program_utils::is_constant(inst._u32[1]) ||
+			fragment_program_utils::is_constant(inst._u32[2]) ||
+			fragment_program_utils::is_constant(inst._u32[3]))
 			instIndex++;
 
-		bool end = (inst.word[0] >> 8) & 0x1;
+		bool end = (inst._u32[0] >> 8) & 0x1;
 		if (end)
 			return hash;
 	}
@@ -452,25 +450,25 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 			return false;
 	}
 
-	const qword* instBuffer1 = reinterpret_cast<const qword*>(binary1.addr);
-	const qword* instBuffer2 = reinterpret_cast<const qword*>(binary2.addr);
+	const void* instBuffer1 = binary1.addr;
+	const void* instBuffer2 = binary2.addr;
 	size_t instIndex = 0;
 	while (true)
 	{
-		const qword& inst1 = instBuffer1[instIndex];
-		const qword& inst2 = instBuffer2[instIndex];
+		const auto inst1 = v128::loadu(instBuffer1, instIndex);
+		const auto inst2 = v128::loadu(instBuffer2, instIndex);
 
-		if (inst1.dword[0] != inst2.dword[0] || inst1.dword[1] != inst2.dword[1])
+		if (inst1 != inst2)
 			return false;
 
 		instIndex++;
 		// Skip constants
-		if (fragment_program_utils::is_constant(inst1.word[1]) ||
-			fragment_program_utils::is_constant(inst1.word[2]) ||
-			fragment_program_utils::is_constant(inst1.word[3]))
+		if (fragment_program_utils::is_constant(inst1._u32[1]) ||
+			fragment_program_utils::is_constant(inst1._u32[2]) ||
+			fragment_program_utils::is_constant(inst1._u32[3]))
 			instIndex++;
 
-		bool end = ((inst1.word[0] >> 8) & 0x1) && ((inst2.word[0] >> 8) & 0x1);
+		bool end = ((inst1._u32[0] >> 8) & 0x1) && ((inst2._u32[0] >> 8) & 0x1);
 		if (end)
 			return true;
 	}
