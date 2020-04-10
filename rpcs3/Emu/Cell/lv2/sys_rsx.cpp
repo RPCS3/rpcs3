@@ -309,6 +309,11 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 		return CELL_EINVAL;
 	}
 
+	if (!render->is_fifo_idle())
+	{
+		sys_rsx.warning("sys_rsx_context_iomap(): RSX is not idle while mapping io");
+	}
+
 	vm::reader_lock rlock;
 
 	for (u32 addr = ea, end = ea + size; addr < end; addr += 0x100000)
@@ -353,6 +358,11 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 			render->main_mem_size < io + u64{size})
 	{
 		return CELL_EINVAL;
+	}
+
+	if (!render->is_fifo_idle())
+	{
+		sys_rsx.warning("sys_rsx_context_iounmap(): RSX is not idle while unmapping io");
 	}
 
 	vm::reader_lock rlock;
@@ -549,6 +559,11 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		verify(HERE), a3 < std::size(render->tiles);
 
+		if (!render->is_fifo_idle())
+		{
+			sys_rsx.warning("sys_rsx_context_attribute(): RSX is not idle while setting tile");
+		}
+
 		auto& tile = render->tiles[a3];
 
 		const u32 location = ((a4 >> 32) & 0x3) - 1;
@@ -628,6 +643,11 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		//a6 low = status1 = (0x2000 << 0) | (0x20 << 16);
 
 		verify(HERE), a3 < std::size(render->zculls);
+
+		if (!render->is_fifo_idle())
+		{
+			sys_rsx.warning("sys_rsx_context_attribute(): RSX is not idle while setting zcull");
+		}
 
 		const u32 offset = (a5 & 0xFFFFFFFF);
 		const bool binded = (a6 & 0xFFFFFFFF) != 0;
