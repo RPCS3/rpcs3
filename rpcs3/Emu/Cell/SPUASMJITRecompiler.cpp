@@ -881,7 +881,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 	for (u32 d : words)
 		c->dd(d);
 
-	for (auto&& work : decltype(consts)(std::move(consts)))
+	for (auto&& work : ::as_rvalue(std::move(consts)))
 	{
 		work();
 	}
