@@ -693,7 +693,7 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 							}
 							else
 							{
-								u_var_7 = (u_var_7 ^ 10) - 1 >> 0x1f;
+								u_var_7 = ((u_var_7 ^ 10) - 1) >> 0x1f;
 							}
 						}
 					}
