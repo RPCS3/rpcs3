@@ -167,6 +167,24 @@ using get_uint_t = typename get_int_impl<N>::utype;
 template <std::size_t N>
 using get_sint_t = typename get_int_impl<N>::stype;
 
+template <typename T>
+T as_rvalue(T&& obj)
+{
+	return obj;
+}
+
+template <typename T>
+T as_rvalue(const T& obj)
+{
+	return obj;
+}
+
+template <typename T>
+T as_rvalue(const volatile T& obj)
+{
+	return obj;
+}
+
 // Formatting helper, type-specific preprocessing for improving safety and functionality
 template <typename T, typename = void>
 struct fmt_unveil;
