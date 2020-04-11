@@ -618,6 +618,7 @@ namespace rsx
 
 	public:
 		RsxDmaControl* ctrl = nullptr;
+		u32 dma_address{0};
 		rsx_iomap_table iomap_table;
 		u32 restore_point = 0;
 		atomic_t<u32> external_interrupt_lock{ 0 };

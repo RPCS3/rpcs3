@@ -45,7 +45,9 @@ namespace rsx
 		void set_reference(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx->sync();
-			rsx->ctrl->ref.exchange(arg);
+
+			// Write ref+get atomically (get will be written again with the same value at command end)
+			vm::_ref<atomic_be_t<u64>>(rsx->dma_address + ::offset32(&RsxDmaControl::get)).store(u64{rsx->fifo_ctrl->get_pos()} << 32 | arg);
 		}
 
 		void semaphore_acquire(thread* rsx, u32 /*_reg*/, u32 arg)
