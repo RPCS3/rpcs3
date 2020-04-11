@@ -13,7 +13,7 @@ namespace vm
 
 	// Register reader
 	void passive_lock(cpu_thread& cpu);
-	atomic_t<u64>* passive_lock(const u32 begin, const u32 end);
+	atomic_t<u64>* range_lock(u32 begin, u32 end);
 
 	// Unregister reader
 	void passive_unlock(cpu_thread& cpu);

@@ -141,8 +141,9 @@ namespace utils
 #endif
 	}
 
-	shm::shm(u32 size)
+	shm::shm(u32 size, u32 flags)
 		: m_size(::align(size, 0x10000))
+		, m_flags(flags)
 	{
 #ifdef _WIN32
 		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, m_size, NULL);

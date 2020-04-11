@@ -219,12 +219,12 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 #endif
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -496,12 +496,12 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 #endif
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -608,12 +608,12 @@ const auto spu_getll_inexact = build_function_asm<u64(*)(u32 raddr, void* rdata)
 #endif
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -775,12 +775,12 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 #endif
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -1464,7 +1464,46 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				break;
 			}
 
-			auto lock = vm::passive_lock(eal & -128, ::align(eal + size, 128));
+			u32 range_addr = eal & -128;
+			u32 range_end = ::align(eal + size, 128);
+
+			// Handle the case of crossing 64K page borders
+			if (range_addr >> 16 != (range_end - 1) >> 16)
+			{
+				u32 nexta = range_end & -65536;
+				u32 size0 = nexta - eal;
+				size -= size0;
+
+				// Split locking + transfer in two parts (before 64K border, and after it)
+				const auto lock = vm::range_lock(range_addr, nexta);
+#ifdef __GNUG__
+				std::memcpy(dst, src, size0);
+				dst += size0;
+				src += size0;
+#else
+				while (size0 >= 128)
+				{
+					mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));
+
+					dst += 128;
+					src += 128;
+					size0 -= 128;
+				}
+
+				while (size0)
+				{
+					*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+					dst += 16;
+					src += 16;
+					size0 -= 16;
+				}
+#endif
+				lock->release(0);
+				range_addr = nexta;
+			}
+
+			const auto lock = vm::range_lock(range_addr, range_end);
 
 #ifdef __GNUG__
 			std::memcpy(dst, src, size);
