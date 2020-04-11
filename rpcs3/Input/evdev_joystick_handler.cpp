@@ -217,7 +217,7 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 	if (!Init())
 		return button_values;
 
-	for (const auto entry : button_list)
+	for (const auto& entry : button_list)
 	{
 		const auto code = entry.first;
 		int val         = 0;
@@ -228,7 +228,7 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 		button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(val > 0 ? 255 : 0), false));
 	}
 
-	for (const auto entry : axis_list)
+	for (const auto& entry : axis_list)
 	{
 		const auto code = entry.first;
 		int val         = 0;
