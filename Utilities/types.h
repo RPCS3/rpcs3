@@ -168,21 +168,9 @@ template <std::size_t N>
 using get_sint_t = typename get_int_impl<N>::stype;
 
 template <typename T>
-T as_rvalue(T&& obj)
+std::remove_reference_t<T> as_rvalue(T&& obj)
 {
-	return obj;
-}
-
-template <typename T>
-T as_rvalue(const T& obj)
-{
-	return obj;
-}
-
-template <typename T>
-T as_rvalue(const volatile T& obj)
-{
-	return obj;
+    return std::forward<T>(obj);
 }
 
 // Formatting helper, type-specific preprocessing for improving safety and functionality
