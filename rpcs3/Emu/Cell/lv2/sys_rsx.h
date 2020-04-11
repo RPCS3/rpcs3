@@ -117,6 +117,11 @@ struct RsxDisplayInfo
 	be_t<u32> pitch;
 	be_t<u32> width;
 	be_t<u32> height;
+
+	bool valid() const
+	{
+		return height != 0u && width != 0u;
+	}
 };
 
 struct lv2_rsx_config

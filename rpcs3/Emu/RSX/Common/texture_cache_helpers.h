@@ -189,13 +189,21 @@ namespace rsx
 				for (u32 i = 0; i < renderer->display_buffers_count; ++i)
 				{
 					const auto& buffer = renderer->display_buffers[i];
-					const u32 pitch = buffer.pitch? static_cast<u32>(buffer.pitch) : g_fxo->get<rsx::avconf>()->get_bpp() * buffer.width;
+
+					if (!buffer.valid())
+					{
+						continue;
+					}
+
+					const u32 bpp = g_fxo->get<rsx::avconf>()->get_bpp();
+
+					const u32 pitch = buffer.pitch ? +buffer.pitch : bpp * buffer.width;
 					if (pitch != dst_pitch)
 					{
 						continue;
 					}
 
-					const auto buffer_range = address_range::start_length(rsx::constants::local_mem_base + buffer.offset, pitch * buffer.height);
+					const auto buffer_range = address_range::start_length(rsx::get_address(buffer.offset, CELL_GCM_LOCATION_LOCAL, HERE), pitch * (buffer.height - 1) + (buffer.width * bpp));
 					if (dst_range.inside(buffer_range))
 					{
 						// Match found
