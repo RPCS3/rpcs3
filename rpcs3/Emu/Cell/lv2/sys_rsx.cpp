@@ -260,6 +260,7 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	render->current_display_buffer = 0;
 	render->label_addr = vm::cast(*lpar_reports, HERE);
 	render->device_addr = rsx_cfg->device_addr;
+	render->dma_address = rsx_cfg->dma_address;
 	render->local_mem_size = rsx_cfg->memory_size;
 	render->init(vm::cast(*lpar_dma_control, HERE));
 
