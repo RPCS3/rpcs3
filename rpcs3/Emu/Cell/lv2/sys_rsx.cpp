@@ -74,7 +74,7 @@ void lv2_rsx_config::send_event(u64 data1, u64 event_flags, u64 data3) const
 		// Wait a bit before resending event
 		thread_ctrl::wait_for(100);
 
-		if (cpu && cpu->check_state())
+		if (Emu.IsStopped() || (cpu && cpu->check_state()))
 		{
 			error = 0;
 			break;
