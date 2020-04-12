@@ -1094,6 +1094,12 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 	sys_net.warning("sys_net_bnet_recvfrom(s=%d, buf=*0x%x, len=%u, flags=0x%x, addr=*0x%x, paddrlen=*0x%x)", s, buf, len, flags, addr, paddrlen);
 
+	// If addr is null, paddrlen must be null as well
+	if (!buf || !len || addr.operator bool() != paddrlen.operator bool())
+	{
+		return -SYS_NET_EINVAL;
+	}
+
 	if (flags & ~(SYS_NET_MSG_PEEK | SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL))
 	{
 		fmt::throw_exception("sys_net_bnet_recvfrom(s=%d): unknown flags (0x%x)", flags);
@@ -1260,10 +1266,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 		vm::ptr<sys_net_sockaddr_in> paddr = vm::cast(addr.addr());
 
-		if (paddrlen)
-		{
-			*paddrlen     = sizeof(sys_net_sockaddr_in);
-		}
+		*paddrlen         = sizeof(sys_net_sockaddr_in);
 
 		paddr->sin_len    = sizeof(sys_net_sockaddr_in);
 		paddr->sin_family = SYS_NET_AF_INET;
