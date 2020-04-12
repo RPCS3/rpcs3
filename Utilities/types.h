@@ -168,7 +168,7 @@ template <std::size_t N>
 using get_sint_t = typename get_int_impl<N>::stype;
 
 template <typename T>
-std::remove_reference_t<T> as_rvalue(T&& obj)
+std::remove_cvref_t<T> as_rvalue(T&& obj)
 {
     return std::forward<T>(obj);
 }
