@@ -1065,6 +1065,11 @@ error_code sys_net_bnet_listen(ppu_thread& ppu, s32 s, s32 backlog)
 
 	sys_net.warning("sys_net_bnet_listen(s=%d, backlog=%d)", s, backlog);
 
+	if (backlog <= 0)
+	{
+		return -SYS_NET_EINVAL;
+	}
+
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
 	{
 		std::lock_guard lock(sock.mutex);
