@@ -504,14 +504,24 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 
 	sys_net.warning("sys_net_bnet_bind(s=%d, addr=*0x%x, addrlen=%u)", s, addr, addrlen);
 
-	// 0 presumably defaults to AF_INET(to check?)
-	if (addr->sa_family != SYS_NET_AF_INET && addr->sa_family != 0)
+	if (!addr || addrlen < addr.size())
 	{
-		sys_net.error("sys_net_bnet_bind(s=%d): unsupported sa_family (%d)", s, addr->sa_family);
-		return -SYS_NET_EAFNOSUPPORT;
+		return -SYS_NET_EINVAL;
 	}
 
-	const auto psa_in = vm::_ptr<const sys_net_sockaddr_in>(addr.addr());
+	alignas(16) char addr_buf[sizeof(sys_net_sockaddr)];
+
+	if (idm::check<lv2_socket>(s))
+	{
+		std::memcpy(addr_buf, addr.get_ptr(), addr.size());
+	}
+	else
+	{
+		return -SYS_NET_EBADF;
+	}
+
+	const auto psa_in = reinterpret_cast<sys_net_sockaddr_in*>(addr_buf);
+	const auto _addr = reinterpret_cast<sys_net_sockaddr*>(addr_buf);
 
 	::sockaddr_in name{};
 	name.sin_family      = AF_INET;
@@ -521,10 +531,17 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
 	{
+		// 0 presumably defaults to AF_INET(to check?)
+		if (_addr->sa_family != SYS_NET_AF_INET && _addr->sa_family != 0)
+		{
+			sys_net.error("sys_net_bnet_bind(s=%d): unsupported sa_family (%d)", s, addr->sa_family);
+			return SYS_NET_EAFNOSUPPORT;
+		}
+
 		if (sock.type == SYS_NET_SOCK_DGRAM_P2P)
 		{
-			const u16 daport = reinterpret_cast<const sys_net_sockaddr_in*>(addr.get_ptr())->sin_port;
-			const u16 davport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
+			const u16 daport = reinterpret_cast<const sys_net_sockaddr_in*>(addr_buf)->sin_port;
+			const u16 davport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr_buf)->sin_vport;
 			sys_net.warning("Trying to bind %s:%d:%d", name.sin_addr, daport, davport);
 			name.sin_port = std::bit_cast<u16, be_t<u16>>(daport + davport); // htons(daport + davport)
 		}
