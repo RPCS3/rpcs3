@@ -1767,8 +1767,12 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 	u64 timeout = ms < 0 ? 0 : ms * 1000ull;
 
-	if (nfds)
+	std::vector<sys_net_pollfd> fds_buf;
+
+	if (nfds > 0)
 	{
+		fds_buf.assign(fds.get_ptr(), fds.get_ptr() + nfds);
+
 		std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
 
 		reader_lock lock(id_manager::g_mutex);
@@ -1781,26 +1785,26 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		for (s32 i = 0; i < nfds; i++)
 		{
 			_fds[i].fd = -1;
-			fds[i].revents = 0;
+			fds_buf[i].revents = 0;
 
-			if (fds[i].fd < 0)
+			if (fds_buf[i].fd < 0)
 			{
 				continue;
 			}
 
-			if (auto sock = idm::check_unlocked<lv2_socket>(fds[i].fd))
+			if (auto sock = idm::check_unlocked<lv2_socket>(fds_buf[i].fd))
 			{
 				// Check for fake packet for dns interceptions
 				const auto nph = g_fxo->get<named_thread<np_handler>>();
-				if (fds[i].events & SYS_NET_POLLIN && nph->is_dns(fds[i].fd) && nph->is_dns_queue(fds[i].fd))
-					fds[i].revents |= SYS_NET_POLLIN;
+				if (fds_buf[i].events & SYS_NET_POLLIN && nph->is_dns(fds_buf[i].fd) && nph->is_dns_queue(fds_buf[i].fd))
+					fds_buf[i].revents |= SYS_NET_POLLIN;
 
-				if (fds[i].events & ~(SYS_NET_POLLIN | SYS_NET_POLLOUT | SYS_NET_POLLERR))
+				if (fds_buf[i].events & ~(SYS_NET_POLLIN | SYS_NET_POLLOUT | SYS_NET_POLLERR))
 					sys_net.error("sys_net_bnet_poll(fd=%d): events=0x%x", fds[i].fd, fds[i].events);
 				_fds[i].fd = sock->socket;
-				if (fds[i].events & SYS_NET_POLLIN)
+				if (fds_buf[i].events & SYS_NET_POLLIN)
 					_fds[i].events |= POLLIN;
-				if (fds[i].events & SYS_NET_POLLOUT)
+				if (fds_buf[i].events & SYS_NET_POLLOUT)
 					_fds[i].events |= POLLOUT;
 #ifdef _WIN32
 				connecting[i] = sock->is_connecting;
@@ -1808,7 +1812,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 			}
 			else
 			{
-				fds[i].revents |= SYS_NET_POLLNVAL;
+				fds_buf[i].revents |= SYS_NET_POLLNVAL;
 				signaled++;
 			}
 		}
@@ -1821,13 +1825,13 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		for (s32 i = 0; i < nfds; i++)
 		{
 			if (_fds[i].revents & (POLLIN | POLLHUP))
-				fds[i].revents |= SYS_NET_POLLIN;
+				fds_buf[i].revents |= SYS_NET_POLLIN;
 			if (_fds[i].revents & POLLOUT)
-				fds[i].revents |= SYS_NET_POLLOUT;
+				fds_buf[i].revents |= SYS_NET_POLLOUT;
 			if (_fds[i].revents & POLLERR)
-				fds[i].revents |= SYS_NET_POLLERR;
+				fds_buf[i].revents |= SYS_NET_POLLERR;
 
-			if (fds[i].revents)
+			if (fds_buf[i].revents)
 			{
 				signaled++;
 			}
@@ -1840,12 +1844,12 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 		for (s32 i = 0; i < nfds; i++)
 		{
-			if (fds[i].fd < 0)
+			if (fds_buf[i].fd < 0)
 			{
 				continue;
 			}
 
-			if (auto sock = idm::check_unlocked<lv2_socket>(fds[i].fd))
+			if (auto sock = idm::check_unlocked<lv2_socket>(fds_buf[i].fd))
 			{
 				std::lock_guard lock(sock->mutex);
 
@@ -1855,24 +1859,24 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 				bs_t<lv2_socket::poll> selected = +lv2_socket::poll::error;
 
-				if (fds[i].events & SYS_NET_POLLIN)
+				if (fds_buf[i].events & SYS_NET_POLLIN)
 					selected += lv2_socket::poll::read;
-				if (fds[i].events & SYS_NET_POLLOUT)
+				if (fds_buf[i].events & SYS_NET_POLLOUT)
 					selected += lv2_socket::poll::write;
-				//if (fds[i].events & SYS_NET_POLLPRI) // Unimplemented
+				//if (fds_buf[i].events & SYS_NET_POLLPRI) // Unimplemented
 				//	selected += lv2_socket::poll::error;
 
 				sock->events += selected;
-				sock->queue.emplace_back(ppu.id, [sock, selected, fds, i, &signaled, &ppu](bs_t<lv2_socket::poll> events)
+				sock->queue.emplace_back(ppu.id, [sock, selected, &fds_buf, i, &signaled, &ppu](bs_t<lv2_socket::poll> events)
 				{
 					if (events & selected)
 					{
 						if (events & selected & lv2_socket::poll::read)
-							fds[i].revents |= SYS_NET_POLLIN;
+							fds_buf[i].revents |= SYS_NET_POLLIN;
 						if (events & selected & lv2_socket::poll::write)
-							fds[i].revents |= SYS_NET_POLLOUT;
+							fds_buf[i].revents |= SYS_NET_POLLOUT;
 						if (events & selected & lv2_socket::poll::error)
-							fds[i].revents |= SYS_NET_POLLERR;
+							fds_buf[i].revents |= SYS_NET_POLLERR;
 
 						signaled++;
 						g_fxo->get<network_context>()->s_to_awake.emplace_back(&ppu);
@@ -1926,6 +1930,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		}
 	}
 
+	std::memcpy(fds.get_ptr(), fds_buf.data(), nfds * sizeof(fds[0]));
 	return not_an_error(signaled);
 }
 
