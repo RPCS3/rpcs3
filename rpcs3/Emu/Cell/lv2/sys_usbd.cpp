@@ -476,7 +476,7 @@ error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 	usbh->is_init = false;
 
 	// Forcefully awake all waiters
-	for (auto& cpu : decltype(usbh->sq)(std::move(usbh->sq)))
+	for (auto& cpu : ::as_rvalue(std::move(usbh->sq)))
 	{
 		// Special ternimation signal value
 		cpu->gpr[4] = 4;

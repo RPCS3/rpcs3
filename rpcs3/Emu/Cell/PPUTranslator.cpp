@@ -904,18 +904,28 @@ void PPUTranslator::VLOGEFP(ppu_opcode_t op)
 
 void PPUTranslator::VMADDFP(ppu_opcode_t op)
 {
+	auto [a, b, c] = get_vrs<f32[4]>(op.va, op.vb, op.vc);
+
+	// Optimization: Emit only a floating multiply if the addend is zero
+	if (auto cv = llvm::dyn_cast<llvm::Constant>(b.value))
+	{
+		v128 data = get_const_vector(cv, m_addr, 2000);
+
+		if (data == v128{})
+		{
+			set_vr(op.vd, a * c);
+			ppu_log.notice("LLVM: VMADDFP with 0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			return;
+		}
+	}
+
 	if (m_use_fma)
 	{
-		const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
-		SetVr(op.vd, m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { acb[0], acb[1], acb[2] }));
+		SetVr(op.vd, m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { a.value, c.value, b.value }));
 		return;
 	}
 
 	// Emulated FMA via double precision
-	auto a = get_vr<f32[4]>(op.va);
-	auto b = get_vr<f32[4]>(op.vb);
-	auto c = get_vr<f32[4]>(op.vc);
-
 	const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
 	const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
 	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
@@ -1200,19 +1210,29 @@ void PPUTranslator::VMULOUH(ppu_opcode_t op)
 
 void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 {
+	auto [a, b, c] = get_vrs<f32[4]>(op.va, op.vb, op.vc);
+
+	// Optimization: Emit only a floating multiply if the addend is zero
+	if (auto cv = llvm::dyn_cast<llvm::Constant>(b.value))
+	{
+		v128 data = get_const_vector(cv, m_addr, 2004);
+
+		if (data == v128{})
+		{
+			set_vr(op.vd, -a * c);
+			ppu_log.notice("LLVM: VNMSUBFP with 0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			return;
+		}
+	}
+
 	// Differs from the emulated path with regards to negative zero
 	if (m_use_fma)
 	{
-		const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
-		SetVr(op.vd, m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { acb[0], acb[1], m_ir->CreateFNeg(acb[2]) })));
+		SetVr(op.vd, m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { a.value, c.value, m_ir->CreateFNeg(b.value) })));
 		return;
 	}
 
 	// Emulated FMA via double precision
-	auto a = get_vr<f32[4]>(op.va);
-	auto b = get_vr<f32[4]>(op.vb);
-	auto c = get_vr<f32[4]>(op.vc);
-
 	const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
 	const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
 	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());

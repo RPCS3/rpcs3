@@ -574,7 +574,7 @@ public:
 
 			if (const auto found = find_id<T, Get>(id))
 			{
-				ptr = std::static_pointer_cast<Get>(std::move(found->second));
+				ptr = std::static_pointer_cast<Get>(::as_rvalue(std::move(found->second)));
 			}
 		}
 
@@ -594,7 +594,7 @@ public:
 			if constexpr (std::is_void_v<FRT>)
 			{
 				func(*_ptr);
-				return std::static_pointer_cast<Get>(std::move(found->second));
+				return std::static_pointer_cast<Get>(::as_rvalue(std::move(found->second)));
 			}
 			else
 			{
@@ -606,7 +606,7 @@ public:
 					return {{found->second, _ptr}, std::move(ret)};
 				}
 
-				return {std::static_pointer_cast<Get>(std::move(found->second)), std::move(ret)};
+				return {std::static_pointer_cast<Get>(::as_rvalue(std::move(found->second))), std::move(ret)};
 			}
 		}
 

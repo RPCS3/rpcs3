@@ -24,7 +24,9 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 		return CELL_EFAULT;
 	}
 
-	const u32 protocol = attr->protocol;
+	const auto _attr = *attr;
+
+	const u32 protocol = _attr.protocol;
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY)
 	{
@@ -32,7 +34,7 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 		return CELL_EINVAL;
 	}
 
-	const u32 type = attr->type;
+	const u32 type = _attr.type;
 
 	if (type != SYS_SYNC_WAITER_SINGLE && type != SYS_SYNC_WAITER_MULTIPLE)
 	{
@@ -40,15 +42,15 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 		return CELL_EINVAL;
 	}
 
-	if (auto error = lv2_obj::create<lv2_event_flag>(attr->pshared, attr->ipc_key, attr->flags, [&]
+	if (auto error = lv2_obj::create<lv2_event_flag>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
 	{
 		return std::make_shared<lv2_event_flag>(
-			attr->protocol,
-			attr->pshared,
-			attr->ipc_key,
-			attr->flags,
-			attr->type,
-			attr->name_u64,
+			_attr.protocol,
+			_attr.pshared,
+			_attr.ipc_key,
+			_attr.flags,
+			_attr.type,
+			_attr.name_u64,
 			init);
 	}))
 	{

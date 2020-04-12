@@ -27,12 +27,12 @@ struct RsxDriverInfo
 		be_t<u32> flipBufferId;    // 0x10
 		be_t<u32> lastQueuedBufferId; // 0x14 todo: this is definately not this variable but its 'unused' so im using it for queueId to pass to flip handler
 		be_t<u32> unk3;            // 0x18
-		be_t<u32> unk6;            // 0x18 possible low bits of time stamp?  used in getlastVBlankTime
+		be_t<u32> lastVTimeLow;    // 0x1C last time for first vhandler freq (low 32-bits)
 		be_t<u64> lastSecondVTime; // 0x20 last time for second vhandler freq
 		be_t<u64> unk4;            // 0x28
-		atomic_be_t<u64> vBlankCount;     // 0x30
+		atomic_be_t<u64> vBlankCount; // 0x30
 		be_t<u32> unk;             // 0x38 possible u32, 'flip field', top/bottom for interlaced
-		be_t<u32> unk5;            // 0x3C possible high bits of time stamp? used in getlastVBlankTime
+		be_t<u32> lastVTimeHigh;   // 0x3C last time for first vhandler freq (high 32-bits)
 	} head[8]; // size = 0x40, 0x200
 
 	be_t<u32> unk7;          // 0x12B8
@@ -117,6 +117,11 @@ struct RsxDisplayInfo
 	be_t<u32> pitch;
 	be_t<u32> width;
 	be_t<u32> height;
+
+	bool valid() const
+	{
+		return height != 0u && width != 0u;
+	}
 };
 
 struct lv2_rsx_config

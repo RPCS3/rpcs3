@@ -618,10 +618,12 @@ namespace rsx
 
 	public:
 		RsxDmaControl* ctrl = nullptr;
+		u32 dma_address{0};
 		rsx_iomap_table iomap_table;
 		u32 restore_point = 0;
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
+		bool is_fifo_idle() const;
 		void flush_fifo();
 		void recover_fifo();
 		static void fifo_wake_delay(u64 div = 1);

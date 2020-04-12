@@ -291,7 +291,7 @@ namespace gl
 		glReadPixels(coord.x, coord.y, coord.width, coord.height, static_cast<GLenum>(format_), static_cast<GLenum>(type_), nullptr);
 	}
 
-	fbo fbo::get_binded_draw_buffer()
+	fbo fbo::get_bound_draw_buffer()
 	{
 		GLint value;
 		glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &value);
@@ -299,7 +299,7 @@ namespace gl
 		return{ static_cast<GLuint>(value) };
 	}
 
-	fbo fbo::get_binded_read_buffer()
+	fbo fbo::get_bound_read_buffer()
 	{
 		GLint value;
 		glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &value);
@@ -307,7 +307,7 @@ namespace gl
 		return{ static_cast<GLuint>(value) };
 	}
 
-	fbo fbo::get_binded_buffer()
+	fbo fbo::get_bound_buffer()
 	{
 		GLint value;
 		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &value);

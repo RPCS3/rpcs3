@@ -1261,6 +1261,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			tls_vaddr = vm::cast(prog.p_vaddr, HERE);
 			tls_fsize = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
 			tls_vsize = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
+
+			ppu_loader.notice("TLS info segment found: tls-image=*0x%x, image-size=0x%x, tls-size=0x%x", tls_vaddr, tls_fsize, tls_vsize);
 			break;
 		}
 
