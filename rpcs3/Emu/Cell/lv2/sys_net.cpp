@@ -1947,13 +1947,20 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 		sys_net.error("sys_net_bnet_select(): exceptfds not implemented");
 	}
 
-	sys_net_fd_set rread{};
-	sys_net_fd_set rwrite{};
-	sys_net_fd_set rexcept{};
+	sys_net_fd_set rread{}, _readfds{};
+	sys_net_fd_set rwrite{}, _writefds{};
+	sys_net_fd_set rexcept{}, _exceptfds{};
 	u64 timeout = !_timeout ? 0 : _timeout->tv_sec * 1000000ull + _timeout->tv_usec;
 
 	if (nfds > 0 && nfds <= 1024)
 	{
+		if (readfds)
+			_readfds = *readfds;
+		if (writefds)
+			_writefds = *writefds;
+		if (exceptfds)
+			_exceptfds = *exceptfds;
+
 		std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
 
 		reader_lock lock(id_manager::g_mutex);
@@ -1968,11 +1975,11 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 			_fds[i].fd = -1;
 			bs_t<lv2_socket::poll> selected{};
 
-			if (readfds && readfds->bit(i))
+			if (readfds && _readfds.bit(i))
 				selected += lv2_socket::poll::read;
-			if (writefds && writefds->bit(i))
+			if (writefds && _writefds.bit(i))
 				selected += lv2_socket::poll::write;
-			//if (exceptfds && exceptfds->bit(i))
+			//if (exceptfds && _exceptfds.bit(i))
 			//	selected += lv2_socket::poll::error;
 
 			if (selected)
@@ -2035,11 +2042,11 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 		{
 			bs_t<lv2_socket::poll> selected{};
 
-			if (readfds && readfds->bit(i))
+			if (readfds && _readfds.bit(i))
 				selected += lv2_socket::poll::read;
-			if (writefds && writefds->bit(i))
+			if (writefds && _writefds.bit(i))
 				selected += lv2_socket::poll::write;
-			//if (exceptfds && exceptfds->bit(i))
+			//if (exceptfds && _exceptfds.bit(i))
 			//	selected += lv2_socket::poll::error;
 
 			if (selected)
