@@ -752,39 +752,25 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 
 	sys_net.warning("sys_net_bnet_getpeername(s=%d, addr=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
 
+	// Note: paddrlen is both an input and output argument
+	if (!addr || !paddrlen || *paddrlen < addr.size())
+	{
+		return -SYS_NET_EINVAL;
+	}
+
+	::sockaddr_storage native_addr;
+	::socklen_t native_addrlen = sizeof(native_addr);
+	s32 type = 0;
+
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
 	{
 		std::lock_guard lock(sock.mutex);
 
-		::sockaddr_storage native_addr;
-		::socklen_t native_addrlen = sizeof(native_addr);
+		type = sock.type;
 
 		if (::getpeername(sock.socket, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen) == 0)
 		{
 			verify(HERE), native_addr.ss_family == AF_INET;
-
-			vm::ptr<sys_net_sockaddr_in> paddr = vm::cast(addr.addr());
-
-			if (paddrlen)
-			{
-				*paddrlen     = sizeof(sys_net_sockaddr_in);
-			}
-
-			paddr->sin_len    = sizeof(sys_net_sockaddr_in);
-			paddr->sin_family = SYS_NET_AF_INET;
-			paddr->sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
-			paddr->sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
-			paddr->sin_zero   = 0;
-
-			if (sock.type == SYS_NET_SOCK_DGRAM_P2P)
-			{
-				vm::ptr<sys_net_sockaddr_in_p2p> paddr_p2p = vm::cast(addr.addr());
-				paddr_p2p->sin_vport                       = paddr_p2p->sin_port - 3658;
-				paddr_p2p->sin_port                        = 3658;
-				struct in_addr rep;
-				rep.s_addr = htonl(paddr->sin_addr);
-				sys_net.error("Reporting P2P socket address as %s:%d:%d", rep, paddr_p2p->sin_port, paddr_p2p->sin_vport);
-			}
 
 			return {};
 		}
@@ -800,6 +786,26 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 	if (sock.ret)
 	{
 		return -sock.ret;
+	}
+
+	*paddrlen = sizeof(sys_net_sockaddr_in);
+
+	vm::ptr<sys_net_sockaddr_in> paddr = vm::cast(addr.addr());
+
+	paddr->sin_len    = sizeof(sys_net_sockaddr_in);
+	paddr->sin_family = SYS_NET_AF_INET;
+	paddr->sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+	paddr->sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
+	paddr->sin_zero   = 0;
+
+	if (type == SYS_NET_SOCK_DGRAM_P2P)
+	{
+		vm::ptr<sys_net_sockaddr_in_p2p> paddr_p2p = vm::cast(addr.addr());
+		paddr_p2p->sin_vport                       = paddr_p2p->sin_port - 3658;
+		paddr_p2p->sin_port                        = 3658;
+		struct in_addr rep;
+		rep.s_addr = htonl(paddr->sin_addr);
+		sys_net.error("Reporting P2P socket address as %s:%d:%d", rep, paddr_p2p->sin_port, paddr_p2p->sin_vport);
 	}
 
 	return CELL_OK;
