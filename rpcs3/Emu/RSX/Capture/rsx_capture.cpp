@@ -371,8 +371,8 @@ namespace rsx
 				auto& tstate = tilestate.tiles[i];
 				tstate.tile = tile.tile;
 				tstate.limit = tile.limit;
-				tstate.pitch = rsx->tiles[i].binded ? u32{tile.pitch} : 0;
-				tstate.format = rsx->tiles[i].binded ? u32{tile.format} : 0;
+				tstate.pitch = rsx->tiles[i].bound ? u32{tile.pitch} : 0;
+				tstate.format = rsx->tiles[i].bound ? u32{tile.format} : 0;
 			}
 
 			for (u32 i = 0; i < limits::zculls_count; ++i)
@@ -383,8 +383,8 @@ namespace rsx
 				zcstate.size = zc.size;
 				zcstate.start = zc.start;
 				zcstate.offset = zc.offset;
-				zcstate.status0 = rsx->zculls[i].binded ? u32{zc.status0} : 0;
-				zcstate.status1 = rsx->zculls[i].binded ? u32{zc.status1} : 0;
+				zcstate.status0 = rsx->zculls[i].bound ? u32{zc.status0} : 0;
+				zcstate.status1 = rsx->zculls[i].bound ? u32{zc.status1} : 0;
 			}
 
 			const u64 tsnum = XXH64(&tilestate, sizeof(frame_capture_data::tile_state), 0);

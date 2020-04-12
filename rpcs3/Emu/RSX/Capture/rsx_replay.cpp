@@ -200,7 +200,7 @@ namespace rsx
 					continue;
 
 				// wait until rsx idle and at our first 'stop' to apply state
-				while (!Emu.IsStopped() && (render->ctrl->get != render->ctrl->put) && (render->ctrl->get != fifo_stops[stopIdx]))
+				while (!Emu.IsStopped() && !render->is_fifo_idle() && (render->ctrl->get != fifo_stops[stopIdx]))
 				{
 					while (Emu.IsPaused())
 						std::this_thread::sleep_for(10ms);
@@ -222,7 +222,7 @@ namespace rsx
 			u32 end = fifo_stops.back();
 			render->ctrl->put = end;
 
-			while (render->ctrl->get != end && !Emu.IsStopped())
+			while (!render->is_fifo_idle() && !Emu.IsStopped())
 			{
 				while (Emu.IsPaused())
 					std::this_thread::sleep_for(10ms);

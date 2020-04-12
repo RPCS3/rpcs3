@@ -423,7 +423,7 @@ public:
 			return nullptr;
 		}
 
-		return {found->second, static_cast<Get*>(found->second.get())};
+		return std::static_pointer_cast<Get>(found->second);
 	}
 
 	// Get the object
@@ -439,7 +439,7 @@ public:
 			return nullptr;
 		}
 
-		return {found->second, static_cast<Get*>(found->second.get())};
+		return std::static_pointer_cast<Get>(found->second);
 	}
 
 	// Get the object, access object under reader lock
@@ -568,21 +568,17 @@ public:
 	template <typename T, typename Get = T>
 	static inline std::shared_ptr<Get> withdraw(u32 id)
 	{
-		std::shared_ptr<void> ptr;
+		std::shared_ptr<Get> ptr;
 		{
 			std::lock_guard lock(id_manager::g_mutex);
 
 			if (const auto found = find_id<T, Get>(id))
 			{
-				ptr = std::move(found->second);
-			}
-			else
-			{
-				return nullptr;
+				ptr = std::static_pointer_cast<Get>(::as_rvalue(std::move(found->second)));
 			}
 		}
 
-		return {ptr, static_cast<Get*>(ptr.get())};
+		return ptr;
 	}
 
 	// Remove the ID after accessing the object under writer lock, return the object and propagate return value
@@ -598,8 +594,7 @@ public:
 			if constexpr (std::is_void_v<FRT>)
 			{
 				func(*_ptr);
-				std::shared_ptr<void> ptr = std::move(found->second);
-				return {ptr, static_cast<Get*>(ptr.get())};
+				return std::static_pointer_cast<Get>(::as_rvalue(std::move(found->second)));
 			}
 			else
 			{
@@ -611,8 +606,7 @@ public:
 					return {{found->second, _ptr}, std::move(ret)};
 				}
 
-				std::shared_ptr<void> ptr = std::move(found->second);
-				return {{ptr, static_cast<Get*>(ptr.get())}, std::move(ret)};
+				return {std::static_pointer_cast<Get>(::as_rvalue(std::move(found->second))), std::move(ret)};
 			}
 		}
 

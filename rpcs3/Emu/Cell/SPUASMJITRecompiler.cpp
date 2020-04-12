@@ -846,7 +846,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		c->jmp(imm_ptr(spu_runtime::tr_dispatch));
 	}
 
-	for (auto&& work : decltype(after)(std::move(after)))
+	for (auto&& work : ::as_rvalue(std::move(after)))
 	{
 		work();
 	}
@@ -881,7 +881,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 	for (u32 d : words)
 		c->dd(d);
 
-	for (auto&& work : decltype(consts)(std::move(consts)))
+	for (auto&& work : ::as_rvalue(std::move(consts)))
 	{
 		work();
 	}

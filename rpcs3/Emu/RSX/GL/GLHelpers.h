@@ -2382,9 +2382,9 @@ public:
 		void copy_to(void* pixels, coordi coord, gl::texture::format format_, gl::texture::type type_, class pixel_pack_settings pixel_settings = pixel_pack_settings()) const;
 		void copy_to(const buffer& buf, coordi coord, gl::texture::format format_, gl::texture::type type_, class pixel_pack_settings pixel_settings = pixel_pack_settings()) const;
 
-		static fbo get_binded_draw_buffer();
-		static fbo get_binded_read_buffer();
-		static fbo get_binded_buffer();
+		static fbo get_bound_draw_buffer();
+		static fbo get_bound_read_buffer();
+		static fbo get_bound_buffer();
 
 		GLuint id() const;
 		void set_id(GLuint id);

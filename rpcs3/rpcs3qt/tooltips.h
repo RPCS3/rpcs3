@@ -78,7 +78,7 @@ public:
 		const QString set_daz_and_ftz              = tr("Never use this.");
 		const QString accurate_getllar             = tr("Never use this.");
 		const QString accurate_putlluc             = tr("Never use this.");
-		const QString accurate_llvm_dfma           = tr("Enables extra accuracy on FMA instructions, which can be needed by some games.\nIt can impact performance negatively on CPUs without FMA acceleration support.");
+		const QString accurate_llvm_dfma           = tr("Provides extra accuracy on FMA instructions at the cost of performance.\nWhile disabling it might give a decent performance boost if your CPU doesn't support FMA, it may also introduce subtle bugs that otherwise do not occur.\nYou can't disable it if your CPU supports FMA.");
 		const QString accurate_rsx_access          = tr("Never use this.");
 		const QString hook_static_functions        = tr("Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.");
 		const QString gl_legacy_buffers            = tr("Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nIf unsure, don't use this option.");
