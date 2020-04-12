@@ -560,13 +560,35 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 
 	sys_net.warning("sys_net_bnet_connect(s=%d, addr=*0x%x, addrlen=%u)", s, addr, addrlen);
 
-	const auto psa_in = vm::_ptr<sys_net_sockaddr_in>(addr.addr());
+	if (!addr || addrlen < addr.size())
+	{
+		return -SYS_NET_EINVAL;
+	}
+
+	struct
+	{
+		alignas(16) char buf[sizeof(sys_net_sockaddr)];
+		bool changed = false;
+	} addr_buf;
+
+	const auto psa_in = reinterpret_cast<sys_net_sockaddr_in*>(addr_buf.buf);
+	const auto _addr = reinterpret_cast<sys_net_sockaddr*>(addr_buf.buf);
 
 	s32 result = 0;
 	::sockaddr_in name{};
 	name.sin_family      = AF_INET;
-	name.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
-	name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
+
+	if (idm::check<lv2_socket>(s))
+	{
+		std::memcpy(addr_buf.buf, addr.get_ptr(), 16);
+		name.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
+		name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
+	}
+	else
+	{
+		return -SYS_NET_EBADF;
+	}
+
 	::socklen_t namelen  = sizeof(name);
 
 	sys_net.warning("Attempting to connect on %s:%d", name.sin_addr, std::bit_cast<be_t<u16>, u16>(name.sin_port)); // ntohs(name.sin_port)
@@ -575,7 +597,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 	{
 		std::lock_guard lock(sock.mutex);
 
-		if (addr->sa_family == 0 && !psa_in->sin_port && !psa_in->sin_addr)
+		if (_addr->sa_family == 0 && !psa_in->sin_port && !psa_in->sin_addr)
 		{
 			const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -587,13 +609,14 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 			psa_in->sin_family = SYS_NET_AF_INET;
 			psa_in->sin_port   = 53;
 			psa_in->sin_addr   = nph->get_dns();
+			addr_buf.changed = true;
 			sys_net.warning("sys_net_bnet_connect: using DNS...");
 
 			nph->add_dns_spy(s);
 		}
-		else if (addr->sa_family != SYS_NET_AF_INET)
+		else if (_addr->sa_family != SYS_NET_AF_INET)
 		{
-			sys_net.error("sys_net_bnet_connect(s=%d): unsupported sa_family (%d)", s, addr->sa_family);
+			sys_net.error("sys_net_bnet_connect(s=%d): unsupported sa_family (%d)", s, _addr->sa_family);
 		}
 
 		if (::connect(sock.socket, reinterpret_cast<struct sockaddr*>(&name), namelen) == 0)
@@ -680,6 +703,11 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 	if (!sock)
 	{
 		return -SYS_NET_EBADF;
+	}
+
+	if (addr_buf.changed)
+	{
+		std::memcpy(addr.get_ptr(), addr_buf.buf, sizeof(addr_buf.buf));
 	}
 
 	if (!sock.ret && result)
