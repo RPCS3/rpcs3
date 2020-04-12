@@ -1386,6 +1386,9 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		return -SYS_NET_EBADF;
 	}
 
+	// Used by DGRAM_P2P socket
+	const u16 davport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
+
 	if (addr)
 	{
 		name.sin_family      = AF_INET;
@@ -1407,8 +1410,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		type = sock.type;
 		if (sock.type == SYS_NET_SOCK_DGRAM_P2P)
 		{
-			const u16 daport  = reinterpret_cast<const sys_net_sockaddr_in*>(addr.get_ptr())->sin_port;
-			const u16 davport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
+			const u16 daport = std::bit_cast<be_t<u16>, u16>(name.sin_port);
 			sys_net.error("Sending a P2P packet to %s:%d:%d", name.sin_addr, daport, davport);
 			name.sin_port = std::bit_cast<u16, be_t<u16>>(daport + davport); // htons(daport + davport)
 		}
@@ -1420,7 +1422,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 			const auto nph = g_fxo->get<named_thread<np_handler>>();
 			if (nph->is_dns(s))
 			{
-				const s32 ret_analyzer = nph->analyze_dns_packet(s, static_cast<const u8*>(buf.get_ptr()), len);
+				const s32 ret_analyzer = nph->analyze_dns_packet(s, reinterpret_cast<const u8*>(_buf.c_str()), len);
 				// Check if the packet is intercepted
 				if (ret_analyzer >= 0)
 				{
@@ -1429,7 +1431,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 				}
 			}
 
-			native_result = ::sendto(sock.socket, reinterpret_cast<const char*>(buf.get_ptr()), len, native_flags, addr ? reinterpret_cast<struct sockaddr*>(&name) : nullptr, addr ? namelen : 0);
+			native_result = ::sendto(sock.socket, _buf.c_str(), len, native_flags, addr ? reinterpret_cast<struct sockaddr*>(&name) : nullptr, addr ? namelen : 0);
 
 			if (native_result >= 0)
 			{
