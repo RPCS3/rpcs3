@@ -361,16 +361,21 @@ void cpu_thread::operator()()
 
 	switch (id_type())
 	{
-	case 1: 
+	case 1:
+	{
 		//g_fxo->get<cpu_profiler>()->registered.push(id);
 		break;
+	}
 	case 2:
+	{
 		if (g_cfg.core.spu_prof)
 		{
 			g_fxo->get<cpu_profiler>()->registered.push(id);
 		}
+
 		break;
-	default: ;
+	}
+	default: break;
 	}
 
 	// Register thread in g_cpu_array
