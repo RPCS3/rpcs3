@@ -870,6 +870,18 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 
 	sys_net.warning("sys_net_bnet_getsockopt(s=%d, level=0x%x, optname=0x%x, optval=*0x%x, optlen=*0x%x)", s, level, optname, optval, optlen);
 
+	if (!optval || !optlen)
+	{
+		return -SYS_NET_EINVAL;
+	}
+
+	const u32 len = *optlen;
+
+	if (!len)
+	{
+		return -SYS_NET_EINVAL;
+	}
+
 	int native_level = -1;
 	int native_opt = -1;
 
@@ -882,11 +894,20 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 	} native_val;
 	::socklen_t native_len = sizeof(native_val);
 
+	union
+	{
+		char ch[128];
+		be_t<s32> _int = 0;
+		sys_net_timeval timeo;
+		sys_net_linger linger;
+	} out_val;
+	u32 out_len = sizeof(out_val);
+
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
 	{
 		std::lock_guard lock(sock.mutex);
 
-		if (*optlen < sizeof(int))
+		if (len < sizeof(s32))
 		{
 			return SYS_NET_EINVAL;
 		}
@@ -900,13 +921,15 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 			case SYS_NET_SO_NBIO:
 			{
 				// Special
-				vm::_ref<s32>(optval.addr()) = sock.so_nbio;
+				out_val._int = sock.so_nbio;
+				out_len = sizeof(s32);
 				return {};
 			}
 			case SYS_NET_SO_ERROR:
 			{
 				// Special
-				vm::_ref<s32>(optval.addr()) = std::exchange(sock.so_error, 0);
+				out_val._int = std::exchange(sock.so_error, 0);
+				out_len = sizeof(s32);
 				return {};
 			}
 			case SYS_NET_SO_KEEPALIVE:
@@ -942,12 +965,14 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 #ifdef _WIN32
 			case SYS_NET_SO_REUSEADDR:
 			{
-				vm::_ref<s32>(optval.addr()) = sock.so_reuseaddr;
+				out_val._int = sock.so_reuseaddr;
+				out_len = sizeof(s32);
 				return {};
 			}
 			case SYS_NET_SO_REUSEPORT:
 			{
-				vm::_ref<s32>(optval.addr()) = sock.so_reuseport;
+				out_val._int = sock.so_reuseport;
+				out_len = sizeof(s32);
 				return {};
 			}
 #else
@@ -965,7 +990,7 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 			case SYS_NET_SO_SNDTIMEO:
 			case SYS_NET_SO_RCVTIMEO:
 			{
-				if (*optlen < sizeof(sys_net_timeval))
+				if (len < sizeof(sys_net_timeval))
 					return SYS_NET_EINVAL;
 
 				native_opt = optname == SYS_NET_SO_SNDTIMEO ? SO_SNDTIMEO : SO_RCVTIMEO;
@@ -973,7 +998,7 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 			}
 			case SYS_NET_SO_LINGER:
 			{
-				if (*optlen < sizeof(sys_net_linger))
+				if (len < sizeof(sys_net_linger))
 					return SYS_NET_EINVAL;
 
 				native_opt = SO_LINGER;
@@ -995,7 +1020,8 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 			case SYS_NET_TCP_MAXSEG:
 			{
 				// Special (no effect)
-				vm::_ref<s32>(optval.addr()) = sock.so_tcp_maxseg;
+				out_val._int = sock.so_tcp_maxseg;
+				out_len = sizeof(s32);
 				return {};
 			}
 			case SYS_NET_TCP_NODELAY:
@@ -1029,20 +1055,23 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 			case SYS_NET_SO_RCVTIMEO:
 			{
 				// TODO
-				vm::_ref<sys_net_timeval>(optval.addr()) = { ::narrow<s64>(native_val.timeo.tv_sec), ::narrow<s64>(native_val.timeo.tv_usec) };
+				out_val.timeo = { ::narrow<s64>(native_val.timeo.tv_sec), ::narrow<s64>(native_val.timeo.tv_usec) };
+				out_len = sizeof(sys_net_timeval);
 				return {};
 			}
 			case SYS_NET_SO_LINGER:
 			{
 				// TODO
-				vm::_ref<sys_net_linger>(optval.addr()) = { ::narrow<s32>(native_val.linger.l_onoff), ::narrow<s32>(native_val.linger.l_linger) };
+				out_val.linger = { ::narrow<s32>(native_val.linger.l_onoff), ::narrow<s32>(native_val.linger.l_linger) };
+				out_len = sizeof(sys_net_linger);
 				return {};
 			}
 			}
 		}
 
 		// Fallback to int
-		vm::_ref<s32>(optval.addr()) = native_val._int;
+		out_val._int = native_val._int;
+		out_len = sizeof(s32);
 		return {};
 	});
 
@@ -1056,6 +1085,8 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 		return -sock.ret;
 	}
 
+	std::memcpy(optval.get_ptr(), out_val.ch, out_len);
+	*optlen = out_len;
 	return CELL_OK;
 }
 
