@@ -373,6 +373,11 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 
 	sys_net.warning("sys_net_bnet_accept(s=%d, addr=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
 
+	if (addr.operator bool() != paddrlen.operator bool() || (paddrlen && *paddrlen < addr.size()))
+	{
+		return -SYS_NET_EINVAL;
+	}
+
 	lv2_socket::socket_type native_socket = -1;
 	::sockaddr_storage native_addr;
 	::socklen_t native_addrlen = sizeof(native_addr);
@@ -480,10 +485,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 
 		vm::ptr<sys_net_sockaddr_in> paddr = vm::cast(addr.addr());
 
-		if (paddrlen)
-		{
-			*paddrlen     = sizeof(sys_net_sockaddr_in);
-		}
+		*paddrlen         = sizeof(sys_net_sockaddr_in);
 
 		paddr->sin_len    = sizeof(sys_net_sockaddr_in);
 		paddr->sin_family = SYS_NET_AF_INET;
