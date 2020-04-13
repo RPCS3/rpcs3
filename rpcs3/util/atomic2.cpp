@@ -1,6 +1,5 @@
 ﻿#include "atomic2.hpp"
 #include "Utilities/JIT.h"
-#include "Utilities/asm.h"
 #include "Utilities/sysinfo.h"
 
 //
@@ -265,7 +264,7 @@ static u64 rec_alloc()
 		if (ok)
 		{
 			// Find lowest clear bit
-			return group * 64 + utils::cnttz64(~bits, false);
+			return group * 64 + std::countr_one(bits);
 		}
 	}
 

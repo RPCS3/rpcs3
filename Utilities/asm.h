@@ -28,30 +28,6 @@ namespace utils
 #endif
 	}
 
-	inline u32 cnttz32(u32 arg, bool nonzero = false)
-	{
-#ifdef _MSC_VER
-		ulong res;
-		return _BitScanForward(&res, arg) || nonzero ? res : 32;
-#elif __BMI__
-		return _tzcnt_u32(arg);
-#else
-		return arg || nonzero ? __builtin_ctz(arg) : 32;
-#endif
-	}
-
-	inline u64 cnttz64(u64 arg, bool nonzero = false)
-	{
-#ifdef _MSC_VER
-		ulong res;
-		return _BitScanForward64(&res, arg) || nonzero ? res : 64;
-#elif __BMI__
-		return _tzcnt_u64(arg);
-#else
-		return arg || nonzero ? __builtin_ctzll(arg) : 64;
-#endif
-	}
-
 	inline u8 popcnt32(u32 arg)
 	{
 #ifdef _MSC_VER

@@ -107,7 +107,7 @@ static u64 slot_alloc()
 		if (ok)
 		{
 			// Find lowest clear bit
-			return group * 64 + utils::cnttz64(~bits, false);
+			return group * 64 + std::countr_one(bits);
 		}
 	}
 
@@ -269,7 +269,7 @@ static u32 sema_alloc()
 		if (ok)
 		{
 			// Find lowest clear bit
-			const u32 id = group * 64 + static_cast<u32>(utils::cnttz64(~bits, false));
+			const u32 id = group * 64 + static_cast<u32>(std::countr_one(bits));
 
 #ifdef USE_POSIX
 			// Initialize semaphore (should be very fast)

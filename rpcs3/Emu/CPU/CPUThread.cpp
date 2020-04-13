@@ -280,7 +280,7 @@ struct cpu_counter
 			if (ok) [[likely]]
 			{
 				// Get actual slot number
-				array_slot = i * 64 + utils::cnttz64(~bits, false);
+				array_slot = i * 64 + std::countr_one(bits);
 				break;
 			}
 		}
@@ -314,7 +314,7 @@ void for_all_cpu(F&& func) noexcept
 	{
 		for (u64 bits = ctr->cpu_array_bits[i]; bits; bits &= bits - 1)
 		{
-			const u64 index = i * 64 + utils::cnttz64(bits, true);
+			const u64 index = i * 64 + std::countr_zero(bits);
 
 			if (cpu_thread* cpu = ctr->cpu_array[index].load())
 			{

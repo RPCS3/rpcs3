@@ -989,7 +989,7 @@ struct ppu_acontext
 		// Return number of trailing zero bits
 		u64 tz() const
 		{
-			return utils::cnttz64(mask());
+			return std::countr_zero(mask());
 		}
 
 		// Range NOT

@@ -819,7 +819,7 @@ void VKGSRender::check_heap_status(u32 flags)
 	else if (flags)
 	{
 		heap_critical = false;
-		u32 test = 1 << utils::cnttz32(flags, true);
+		u32 test = 1u << std::countr_zero(flags);
 
 		do
 		{

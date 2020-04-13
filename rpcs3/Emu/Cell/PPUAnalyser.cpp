@@ -2144,7 +2144,7 @@ void ppu_acontext::MULLI(ppu_opcode_t op)
 		}
 	}
 
-	gpr[op.rd] = spec_gpr::range(min, max, gpr[op.ra].tz() + utils::cnttz64(op.simm16));
+	gpr[op.rd] = spec_gpr::range(min, max, gpr[op.ra].tz() + std::countr_zero<u64>(op.simm16));
 }
 
 void ppu_acontext::SUBFIC(ppu_opcode_t op)
