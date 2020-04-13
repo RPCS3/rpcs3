@@ -236,7 +236,7 @@ Type* PPUTranslator::ScaleType(Type* type, s32 pow2)
 
 	uint scaled = type->getScalarSizeInBits();
 
-	verify(HERE), utils::popcnt32(scaled) == 1;
+	verify(HERE), std::popcount(scaled) == 1;
 
 	if (pow2 > 0)
 	{

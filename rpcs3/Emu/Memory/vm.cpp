@@ -10,7 +10,6 @@
 #include "Utilities/Thread.h"
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/address_range.h"
-#include "Utilities/asm.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/RSX/GSRender.h"
@@ -1105,7 +1104,7 @@ namespace vm
 			if (is_write)
 				std::swap(src, dst);
 
-			if (size <= 16 && utils::popcnt32(size) == 1 && (addr & (size - 1)) == 0)
+			if (size <= 16 && std::popcount(size) == 1 && (addr & (size - 1)) == 0)
 			{
 				if (is_write)
 				{

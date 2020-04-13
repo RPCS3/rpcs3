@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Utilities/asm.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
