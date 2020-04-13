@@ -1236,7 +1236,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, T reg_value)
 	if (result)
 	{
 		res.release(old_time + 128);
-		vm::reservation_notifier(addr, sizeof(u64)).notify_all();
+		vm::reservation_notifier(addr, sizeof(T)).notify_all();
 	}
 	else
 	{
