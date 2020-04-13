@@ -619,6 +619,9 @@ public:
 
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
+	const char* current_func{}; // Current STOP or RDCH blocking function
+	u64 start_time{}; // Starting time of STOP or RDCH bloking function
+
 	void push_snr(u32 number, u32 value);
 	void do_dma_transfer(const spu_mfc_cmd& args);
 	bool do_dma_check(const spu_mfc_cmd& args);
@@ -667,5 +670,18 @@ public:
 		}
 
 		return -1;
+	}
+};
+
+class spu_function_logger
+{
+	spu_thread& spu;
+
+public:
+	spu_function_logger(spu_thread& spu, const char* func);
+
+	~spu_function_logger()
+	{
+		spu.start_time = 0;
 	}
 };
