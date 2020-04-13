@@ -304,6 +304,7 @@ bool cheat_engine::resolve_script(u32& final_offset, const u32 offset, const std
 					return false;
 
 				do_operation(cur_op, final_offset, res_value);
+				break;
 			}
 			case '+':
 				cur_op = operand_add;
