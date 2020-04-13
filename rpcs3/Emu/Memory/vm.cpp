@@ -697,7 +697,7 @@ namespace vm
 		const u32 size = ::align(orig_size, min_page_size) + (flags & 0x10 ? 0x2000 : 0);
 
 		// Check alignment (it's page allocation, so passing small values there is just silly)
-		if (align < min_page_size || align != (0x80000000u >> utils::cntlz32(align, true)))
+		if (align < min_page_size || align != (0x80000000u >> std::countl_zero(align)))
 		{
 			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)" HERE, size, align);
 		}
@@ -992,7 +992,7 @@ namespace vm
 		const u32 size = ::align(orig_size, 0x10000);
 
 		// Check alignment
-		if (align < 0x10000 || align != (0x80000000u >> utils::cntlz32(align, true)))
+		if (align < 0x10000 || align != (0x80000000u >> std::countl_zero(align)))
 		{
 			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)" HERE, size, align);
 		}

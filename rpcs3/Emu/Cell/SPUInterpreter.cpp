@@ -903,7 +903,7 @@ bool spu_interpreter::CLZ(spu_thread& spu, spu_opcode_t op)
 {
 	for (u32 i = 0; i < 4; i++)
 	{
-		spu.gpr[op.rt]._u32[i] = utils::cntlz32(spu.gpr[op.ra]._u32[i]);
+		spu.gpr[op.rt]._u32[i] = std::countl_zero(spu.gpr[op.ra]._u32[i]);
 	}
 	return true;
 }

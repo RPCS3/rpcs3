@@ -4,30 +4,6 @@
 
 namespace utils
 {
-	inline u32 cntlz32(u32 arg, bool nonzero = false)
-	{
-#ifdef _MSC_VER
-		ulong res;
-		return _BitScanReverse(&res, arg) || nonzero ? res ^ 31 : 32;
-#elif __LZCNT__
-		return _lzcnt_u32(arg);
-#else
-		return arg || nonzero ? __builtin_clz(arg) : 32;
-#endif
-	}
-
-	inline u64 cntlz64(u64 arg, bool nonzero = false)
-	{
-#ifdef _MSC_VER
-		ulong res;
-		return _BitScanReverse64(&res, arg) || nonzero ? res ^ 63 : 64;
-#elif __LZCNT__
-		return _lzcnt_u64(arg);
-#else
-		return arg || nonzero ? __builtin_clzll(arg) : 64;
-#endif
-	}
-
 	inline u8 popcnt32(u32 arg)
 	{
 #ifdef _MSC_VER
