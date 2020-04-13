@@ -1404,10 +1404,11 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 	}
 
 	// Used by DGRAM_P2P socket
-	const u16 davport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
+	u16 davport = 0;
 
 	if (addr)
 	{
+		davport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
 		name.sin_family      = AF_INET;
 		name.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
 		name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
@@ -1425,7 +1426,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
 	{
 		type = sock.type;
-		if (sock.type == SYS_NET_SOCK_DGRAM_P2P)
+		if (sock.type == SYS_NET_SOCK_DGRAM_P2P && addr)
 		{
 			const u16 daport = std::bit_cast<be_t<u16>, u16>(name.sin_port);
 			sys_net.error("Sending a P2P packet to %s:%d:%d", name.sin_addr, daport, davport);
