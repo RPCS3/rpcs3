@@ -410,6 +410,20 @@ struct alignas(16) CellSpursTracePacket
 
 CHECK_SIZE_ALIGN(CellSpursTracePacket, 16, 16);
 
+struct alignas(128) CellSpursJobChain
+{
+	u8 unk1[0x2C];                  // 0x0
+	u8 val2C;                       // 0x2C
+	u8 val2D;                       // 0x2D
+	u8 val2E;                       // 0x2E
+	u8 val2F;                       // 0x2F
+	atomic_be_t<u64> urgentCmds[4]; // 0x30
+	u8 unk2[0x24];                  // 0x50
+	be_t<u32> workloadId;           // 0x74
+	vm::bptr<CellSpurs> spurs;      // 0x78
+	u8 unk3[0x94];                  // 0x7C
+};
+
 // Core CellSpurs structures
 struct alignas(128) CellSpurs
 {
