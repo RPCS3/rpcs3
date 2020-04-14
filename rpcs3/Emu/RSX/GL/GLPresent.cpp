@@ -215,9 +215,11 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
 		}
 
-		areai screen_area = coordi({}, { static_cast<int>(buffer_width), static_cast<int>(buffer_height) });
+		const areai screen_area = coordi({}, { static_cast<int>(buffer_width), static_cast<int>(buffer_height) });
 
-		if (g_cfg.video.full_rgb_range_output && rsx::fcmp(avconfig->gamma, 1.f) && !avconfig->_3d)
+		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
+
+		if (use_full_rgb_range_output && rsx::fcmp(avconfig->gamma, 1.f) && !avconfig->_3d)
 		{
 			// Blit source image to the screen
 			m_flip_fbo.recreate();
@@ -230,7 +232,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		else
 		{
 			const f32 gamma = avconfig->gamma;
-			const bool limited_range = !g_cfg.video.full_rgb_range_output;
+			const bool limited_range = !use_full_rgb_range_output;
 			const rsx::simple_array<GLuint> images{ image_to_flip, image_to_flip2 };
 
 			gl::screen.bind();
