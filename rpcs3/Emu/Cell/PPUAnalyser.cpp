@@ -2245,14 +2245,14 @@ void ppu_acontext::RLWIMI(ppu_opcode_t op)
 	if (op.mb32 <= op.me32)
 	{
 		// 32-bit op, including mnemonics: INSLWI, INSRWI (TODO)
-		min = std::rotl(static_cast<u32>(min), op.sh32) & mask;
-		max = std::rotl(static_cast<u32>(max), op.sh32) & mask;
+		min = utils::rol32(static_cast<u32>(min), op.sh32) & mask;
+		max = utils::rol32(static_cast<u32>(max), op.sh32) & mask;
 	}
 	else
 	{
 		// Full 64-bit op with duplication
-		min = std::rotl<u64>(static_cast<u32>(min) | min << 32, op.sh32) & mask;
-		max = std::rotl<u64>(static_cast<u32>(max) | max << 32, op.sh32) & mask;
+		min = utils::rol64(static_cast<u32>(min) | min << 32, op.sh32) & mask;
+		max = utils::rol64(static_cast<u32>(max) | max << 32, op.sh32) & mask;
 	}
 
 	if (mask != umax)
@@ -2301,14 +2301,14 @@ void ppu_acontext::RLWINM(ppu_opcode_t op)
 			// EXTRWI and other possible mnemonics
 		}
 
-		min = std::rotl(static_cast<u32>(min), op.sh32) & mask;
-		max = std::rotl(static_cast<u32>(max), op.sh32) & mask;
+		min = utils::rol32(static_cast<u32>(min), op.sh32) & mask;
+		max = utils::rol32(static_cast<u32>(max), op.sh32) & mask;
 	}
 	else
 	{
 		// Full 64-bit op with duplication
-		min = std::rotl<u64>(static_cast<u32>(min) | min << 32, op.sh32) & mask;
-		max = std::rotl<u64>(static_cast<u32>(max) | max << 32, op.sh32) & mask;
+		min = utils::rol64(static_cast<u32>(min) | min << 32, op.sh32) & mask;
+		max = utils::rol64(static_cast<u32>(max) | max << 32, op.sh32) & mask;
 	}
 
 	gpr[op.ra] = spec_gpr::approx(min, max);
@@ -2396,8 +2396,8 @@ void ppu_acontext::RLDICL(ppu_opcode_t op)
 		return;
 	}
 
-	min = std::rotl(min, sh) & mask;
-	max = std::rotl(max, sh) & mask;
+	min = utils::rol64(min, sh) & mask;
+	max = utils::rol64(max, sh) & mask;
 	gpr[op.ra] = spec_gpr::approx(min, max);
 }
 
@@ -2425,8 +2425,8 @@ void ppu_acontext::RLDICR(ppu_opcode_t op)
 		return;
 	}
 
-	min = std::rotl(min, sh) & mask;
-	max = std::rotl(max, sh) & mask;
+	min = utils::rol64(min, sh) & mask;
+	max = utils::rol64(max, sh) & mask;
 	gpr[op.ra] = spec_gpr::approx(min, max);
 }
 
@@ -2451,8 +2451,8 @@ void ppu_acontext::RLDIC(ppu_opcode_t op)
 		return;
 	}
 
-	min = std::rotl(min, sh) & mask;
-	max = std::rotl(max, sh) & mask;
+	min = utils::rol64(min, sh) & mask;
+	max = utils::rol64(max, sh) & mask;
 	gpr[op.ra] = spec_gpr::approx(min, max);
 }
 
@@ -2474,8 +2474,8 @@ void ppu_acontext::RLDIMI(ppu_opcode_t op)
 		// INSRDI mnemonic
 	}
 
-	min = std::rotl(min, sh) & mask;
-	max = std::rotl(max, sh) & mask;
+	min = utils::rol64(min, sh) & mask;
+	max = utils::rol64(max, sh) & mask;
 
 	if (mask != umax)
 	{

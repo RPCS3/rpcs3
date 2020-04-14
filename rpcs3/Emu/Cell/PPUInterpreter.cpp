@@ -1873,7 +1873,7 @@ bool ppu_interpreter::VRLB(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (uint i = 0; i < 16; i++)
 	{
-		d._u8[i] = std::rotl(a._u8[i], b._u8[i]);
+		d._u8[i] = utils::rol8(a._u8[i], b._u8[i]);
 	}
 	return true;
 }
@@ -1886,7 +1886,7 @@ bool ppu_interpreter::VRLH(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (uint i = 0; i < 8; i++)
 	{
-		d._u16[i] = std::rotl(a._u16[i], b._u8[i * 2] & 0xf);
+		d._u16[i] = utils::rol16(a._u16[i], b._u8[i * 2] & 0xf);
 	}
 	return true;
 }
@@ -1899,7 +1899,7 @@ bool ppu_interpreter::VRLW(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (uint w = 0; w < 4; w++)
 	{
-		d._u32[w] = std::rotl(a._u32[w], b._u8[w * 4] & 0x1f);
+		d._u32[w] = utils::rol32(a._u32[w], b._u8[w * 4] & 0x1f);
 	}
 	return true;
 }
@@ -3063,21 +3063,21 @@ bool ppu_interpreter::BCCTR(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::RLWIMI(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 mask = ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
-	ppu.gpr[op.ra] = (ppu.gpr[op.ra] & ~mask) | (dup32(std::rotl(static_cast<u32>(ppu.gpr[op.rs]), op.sh32)) & mask);
+	ppu.gpr[op.ra] = (ppu.gpr[op.ra] & ~mask) | (dup32(utils::rol32(static_cast<u32>(ppu.gpr[op.rs]), op.sh32)) & mask);
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
 }
 
 bool ppu_interpreter::RLWINM(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.ra] = dup32(std::rotl(static_cast<u32>(ppu.gpr[op.rs]), op.sh32)) & ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
+	ppu.gpr[op.ra] = dup32(utils::rol32(static_cast<u32>(ppu.gpr[op.rs]), op.sh32)) & ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
 }
 
 bool ppu_interpreter::RLWNM(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.ra] = dup32(std::rotl(static_cast<u32>(ppu.gpr[op.rs]), ppu.gpr[op.rb] & 0x1f)) & ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
+	ppu.gpr[op.ra] = dup32(utils::rol32(static_cast<u32>(ppu.gpr[op.rs]), ppu.gpr[op.rb] & 0x1f)) & ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
 }
@@ -3122,21 +3122,21 @@ bool ppu_interpreter::ANDIS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::RLDICL(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.ra] = std::rotl(ppu.gpr[op.rs], op.sh64) & (~0ull >> op.mbe64);
+	ppu.gpr[op.ra] = utils::rol64(ppu.gpr[op.rs], op.sh64) & (~0ull >> op.mbe64);
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
 }
 
 bool ppu_interpreter::RLDICR(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.ra] = std::rotl(ppu.gpr[op.rs], op.sh64) & (~0ull << (op.mbe64 ^ 63));
+	ppu.gpr[op.ra] = utils::rol64(ppu.gpr[op.rs], op.sh64) & (~0ull << (op.mbe64 ^ 63));
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
 }
 
 bool ppu_interpreter::RLDIC(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.ra] = std::rotl(ppu.gpr[op.rs], op.sh64) & ppu_rotate_mask(op.mbe64, op.sh64 ^ 63);
+	ppu.gpr[op.ra] = utils::rol64(ppu.gpr[op.rs], op.sh64) & ppu_rotate_mask(op.mbe64, op.sh64 ^ 63);
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
 }
@@ -3144,21 +3144,21 @@ bool ppu_interpreter::RLDIC(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::RLDIMI(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 mask = ppu_rotate_mask(op.mbe64, op.sh64 ^ 63);
-	ppu.gpr[op.ra] = (ppu.gpr[op.ra] & ~mask) | (std::rotl(ppu.gpr[op.rs], op.sh64) & mask);
+	ppu.gpr[op.ra] = (ppu.gpr[op.ra] & ~mask) | (utils::rol64(ppu.gpr[op.rs], op.sh64) & mask);
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
 }
 
 bool ppu_interpreter::RLDCL(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.ra] = std::rotl(ppu.gpr[op.rs], ppu.gpr[op.rb] & 0x3f) & (~0ull >> op.mbe64);
+	ppu.gpr[op.ra] = utils::rol64(ppu.gpr[op.rs], ppu.gpr[op.rb] & 0x3f) & (~0ull >> op.mbe64);
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
 }
 
 bool ppu_interpreter::RLDCR(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.ra] = std::rotl(ppu.gpr[op.rs], ppu.gpr[op.rb] & 0x3f) & (~0ull << (op.mbe64 ^ 63));
+	ppu.gpr[op.ra] = utils::rol64(ppu.gpr[op.rs], ppu.gpr[op.rb] & 0x3f) & (~0ull << (op.mbe64 ^ 63));
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
 }
