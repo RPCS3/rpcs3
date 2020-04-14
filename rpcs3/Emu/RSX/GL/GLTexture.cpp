@@ -213,7 +213,7 @@ namespace gl
 		fmt::throw_exception("Unknown mag filter" HERE);
 	}
 
-	//Apply sampler state settings
+	// Apply sampler state settings
 	void sampler_state::apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image)
 	{
 		set_parameteri(GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));
@@ -263,8 +263,9 @@ namespace gl
 			set_parameterf(GL_TEXTURE_MAX_LOD, tex.max_lod());
 		}
 
-		const bool aniso_override = !g_cfg.video.strict_rendering_mode && g_cfg.video.anisotropic_level_override > 0;
-		f32 af_level = aniso_override ? g_cfg.video.anisotropic_level_override : max_aniso(tex.max_aniso());
+		const int aniso_override_level = g_cfg.video.anisotropic_level_override;
+		const bool aniso_override = !g_cfg.video.strict_rendering_mode && aniso_override_level > 0;
+		const f32 af_level = aniso_override ? aniso_override_level : max_aniso(tex.max_aniso());
 		set_parameterf(GL_TEXTURE_MAX_ANISOTROPY_EXT, af_level);
 		set_parameteri(GL_TEXTURE_MAG_FILTER, tex_mag_filter(tex.mag_filter()));
 

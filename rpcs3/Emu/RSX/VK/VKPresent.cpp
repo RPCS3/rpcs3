@@ -562,7 +562,9 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (image_to_flip)
 	{
-		if (!g_cfg.video.full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f) || avconfig->_3d) [[unlikely]]
+		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
+
+		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f) || avconfig->_3d) [[unlikely]]
 		{
 			calibration_src.push_back(dynamic_cast<vk::viewable_image*>(image_to_flip));
 			verify("Image not viewable" HERE), calibration_src.front();
@@ -592,7 +594,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			direct_fbo->add_ref();
 
 			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			m_video_output_pass->run(*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src, avconfig->gamma, !g_cfg.video.full_rgb_range_output, avconfig->_3d, single_target_pass);
+			m_video_output_pass->run(*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src, avconfig->gamma, !use_full_rgb_range_output, avconfig->_3d, single_target_pass);
 			image_to_flip->pop_layout(*m_current_command_buffer);
 
 			direct_fbo->release();

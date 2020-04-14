@@ -2617,8 +2617,8 @@ namespace rsx
 			{
 				m_skip_frame_ctr++;
 
-				if (m_skip_frame_ctr == g_cfg.video.consequtive_frames_to_draw)
-					m_skip_frame_ctr = -g_cfg.video.consequtive_frames_to_skip;
+				if (m_skip_frame_ctr >= g_cfg.video.consecutive_frames_to_draw)
+					m_skip_frame_ctr = -g_cfg.video.consecutive_frames_to_skip;
 
 				skip_current_frame = (m_skip_frame_ctr < 0);
 			}
