@@ -63,7 +63,7 @@ union ppu_opcode_t
 
 constexpr u64 ppu_rotate_mask(u32 mb, u32 me)
 {
-	return std::rotl<u64>(~0ull << (~(me - mb) & 63), mb);
+	return std::rotr<u64>(~0ull << (~(me - mb) & 63), mb);
 }
 
 constexpr u32 ppu_decode(u32 inst)
