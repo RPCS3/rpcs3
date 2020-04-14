@@ -1269,13 +1269,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	if (!game)
 	{
 		SubscribeTooltip(ui->gs_resizeOnBoot, tooltips.settings.resize_on_boot);
-
 		SubscribeTooltip(ui->gs_disableMouse, tooltips.settings.disable_mouse);
+		SubscribeTooltip(ui->gs_showMouseInFullscreen, tooltips.settings.show_mouse_in_fullscreen);
 
 		ui->gs_disableMouse->setChecked(m_gui_settings->GetValue(gui::gs_disableMouse).toBool());
-		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=, this](bool val)
+		connect(ui->gs_disableMouse, &QCheckBox::clicked, [this](bool val)
 		{
 			m_gui_settings->SetValue(gui::gs_disableMouse, val);
+		});
+
+		ui->gs_showMouseInFullscreen->setChecked(m_gui_settings->GetValue(gui::gs_showMouseFs).toBool());
+		connect(ui->gs_showMouseInFullscreen, &QCheckBox::clicked, [this](bool val)
+		{
+			m_gui_settings->SetValue(gui::gs_showMouseFs, val);
 		});
 
 		const bool enable_buttons = m_gui_settings->GetValue(gui::gs_resize).toBool();

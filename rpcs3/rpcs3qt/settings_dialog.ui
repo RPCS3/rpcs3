@@ -2264,6 +2264,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="gs_showMouseInFullscreen">
+                <property name="text">
+                 <string>Show mouse cursor in Fullscreen </string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QCheckBox" name="gs_resizeOnBoot">
                 <property name="text">
                  <string>Resize game window on boot</string>
