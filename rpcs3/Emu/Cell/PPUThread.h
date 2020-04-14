@@ -185,6 +185,7 @@ public:
 	u32 raddr{0}; // Reservation addr
 	u64 rtime{0};
 	u64 rdata{0}; // Reservation data
+	u32 rtag{UINT32_MAX}; // Reservation tag
 
 	atomic_t<s32> prio{0}; // Thread priority (0..3071)
 	const u32 stack_size; // Stack size

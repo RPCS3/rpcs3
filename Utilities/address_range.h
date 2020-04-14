@@ -37,7 +37,7 @@ namespace utils
 	/**
 	 * Address Range utility class
 	 */
-	class address_range
+	class alignas(8) address_range
 	{
 	public:
 		u32 start = UINT32_MAX; // First address in range
@@ -60,21 +60,16 @@ namespace utils
 			return (start1 >= start2 && end1 <= end2);
 		}
 
-		address_range(u32 _start, u32 _end) : start(_start), end(_end) {}
-
 	public:
 		// Constructors
-		address_range() = default;
-		address_range(const address_range &other) : start(other.start), end(other.end) {}
-
-		static inline address_range start_length(u32 _start, u32 _length)
+		static constexpr address_range start_length(u32 _start, u32 _length)
 		{
-			return address_range(_start, _start + (_length - 1));
+			return address_range{_start, _start + (_length - 1)};
 		}
 
-		static inline address_range start_end(u32 _start, u32 _end)
+		static constexpr address_range start_end(u32 _start, u32 _end)
 		{
-			return address_range(_start, _end);
+			return address_range{_start, _end};
 		}
 
 		// Length
@@ -227,6 +222,11 @@ namespace utils
 			return (start <= end);
 		}
 
+		operator bool() const
+		{
+			return valid();
+		}
+
 		void invalidate()
 		{
 			start = UINT32_MAX;
@@ -236,12 +236,12 @@ namespace utils
 		// Comparison Operators
 		bool operator ==(const address_range &other) const
 		{
-			return (start == other.start && end == other.end);
+			return std::memcmp(this, &other, sizeof(*this)) == 0;
 		}
 
 		bool operator !=(const address_range &other) const
 		{
-			return (start != other.start || end != other.end);
+			return std::memcmp(this, &other, sizeof(*this)) != 0;
 		}
 
 		/**

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vm.h"
+#include "Utilities/address_range.h"
 
 class cpu_thread;
 class shared_mutex;
@@ -13,7 +14,7 @@ namespace vm
 
 	// Register reader
 	void passive_lock(cpu_thread& cpu);
-	atomic_t<u64>* passive_lock(const u32 begin, const u32 end);
+	atomic_t<utils::address_range>* range_lock(utils::address_range range);
 
 	// Unregister reader
 	void passive_unlock(cpu_thread& cpu);
@@ -42,7 +43,7 @@ namespace vm
 	{
 		writer_lock(const writer_lock&) = delete;
 		writer_lock& operator=(const writer_lock&) = delete;
-		writer_lock(u32 addr = 0);
+		writer_lock(u32 tag = UINT32_MAX);
 		~writer_lock();
 	};
 } // namespace vm

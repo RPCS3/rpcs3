@@ -6,6 +6,7 @@
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/StrFmt.h"
 #include "Utilities/BEType.h"
+#include "Utilities/mutex.h"
 
 namespace vm
 {
@@ -13,7 +14,7 @@ namespace vm
 	extern u8* const g_sudo_addr;
 	extern u8* const g_exec_addr;
 	extern u8* const g_stat_addr;
-	extern u8* const g_reservations;
+	extern u8 g_reservations[];
 
 	struct writer_lock;
 
@@ -48,11 +49,24 @@ namespace vm
 	// Address type
 	enum addr_t : u32 {};
 
+	class shm : public utils::shm
+	{
+		static shared_mutex s_mutex;
+	public:
+		const u32 tag;
+
+		explicit shm(u32 size);
+		~shm();
+	};
+
 	// Change memory protection of specified memory region
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
 
 	// Check flags for specified memory range (unsafe)
-	bool check_addr(u32 addr, u32 size = 1, u8 flags = page_readable);
+	bool check_addr(u32 addr, u32 size = 1, u8 flags = page_readable) noexcept;
+
+	// Get unique tag for each memory allocation
+	u32 get_memory_tag(u32 addr) noexcept;
 
 	// Search and map memory in specified memory location (min alignment is 0x10000)
 	u32 alloc(u32 size, memory_location_t location, u32 align = 0x10000);
@@ -70,12 +84,12 @@ namespace vm
 	class block_t final
 	{
 		// Mapped regions: addr -> shm handle
-		std::map<u32, std::pair<u32, std::shared_ptr<utils::shm>>> m_map;
+		std::map<u32, std::pair<u32, std::shared_ptr<vm::shm>>> m_map;
 
 		// Common mapped region for special cases
-		std::shared_ptr<utils::shm> m_common;
+		std::shared_ptr<vm::shm> m_common;
 
-		bool try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&&);
+		bool try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<vm::shm>&&);
 
 	public:
 		block_t(u32 addr, u32 size, u64 flags = 0);
@@ -88,16 +102,16 @@ namespace vm
 		const u64 flags; // Currently unused
 
 		// Search and map memory (min alignment is 0x10000)
-		u32 alloc(u32 size, u32 align = 0x10000, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
+		u32 alloc(u32 size, u32 align = 0x10000, const std::shared_ptr<vm::shm>* = nullptr, u64 flags = 0);
 
 		// Try to map memory at fixed location
-		u32 falloc(u32 addr, u32 size, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
+		u32 falloc(u32 addr, u32 size, const std::shared_ptr<vm::shm>* = nullptr, u64 flags = 0);
 
 		// Unmap memory at specified location previously returned by alloc(), return size
-		u32 dealloc(u32 addr, const std::shared_ptr<utils::shm>* = nullptr);
+		u32 dealloc(u32 addr, const std::shared_ptr<vm::shm>* = nullptr);
 
 		// Get memory at specified address (if size = 0, addr assumed exact)
-		std::pair<u32, std::shared_ptr<utils::shm>> get(u32 addr, u32 size = 0);
+		std::pair<u32, std::shared_ptr<vm::shm>> get(u32 addr, u32 size = 0);
 
 		// Get allocated memory count
 		u32 used();

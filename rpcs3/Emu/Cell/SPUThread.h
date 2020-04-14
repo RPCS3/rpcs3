@@ -557,6 +557,7 @@ public:
 	u64 rtime = 0;
 	std::array<v128, 8> rdata{};
 	u32 raddr = 0;
+	u32 rtag = UINT32_MAX;
 
 	u32 srr0;
 	u32 ch_tag_upd;

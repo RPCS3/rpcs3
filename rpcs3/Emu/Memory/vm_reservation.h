@@ -10,7 +10,7 @@ namespace vm
 	inline atomic_t<u64>& reservation_acquire(u32 addr, u32 size)
 	{
 		// Access reservation info: stamp and the lock bit
-		return reinterpret_cast<atomic_t<u64>*>(g_reservations)[addr / 128];
+		return *reinterpret_cast<atomic_t<u64>*>(g_reservations + (addr & 0xff80) / 2);
 	}
 
 	// Update reservation status
@@ -23,7 +23,7 @@ namespace vm
 	// Get reservation sync variable
 	inline atomic_t<u64>& reservation_notifier(u32 addr, u32 size)
 	{
-		return reinterpret_cast<atomic_t<u64>*>(g_reservations)[addr / 128];
+		return *reinterpret_cast<atomic_t<u64>*>(g_reservations + (addr & 0xff80) / 2);
 	}
 
 	void reservation_lock_internal(atomic_t<u64>&);

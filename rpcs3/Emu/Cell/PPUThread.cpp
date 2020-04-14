@@ -604,7 +604,7 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::opd_call:
 		{
-			const ppu_func_opd_t opd = cmd_get(1).as<ppu_func_opd_t>(); 
+			const ppu_func_opd_t opd = cmd_get(1).as<ppu_func_opd_t>();
 			cmd_pop(1), fast_call(opd.addr, opd.rtoc);
 			break;
 		}
@@ -1001,10 +1001,11 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 {
 	// Always load aligned 64-bit value (unaligned reservation will fail to store)
 	auto& data = vm::_ref<const atomic_be_t<u64>>(addr & -8);
-	const u64 size_off = (sizeof(T) * 8) & 63;
+	constexpr u64 size_off = (sizeof(T) * 8) & 63;
 	const u64 data_off = (addr & 7) * 8;
 
 	ppu.raddr = addr;
+	ppu.rtag = vm::get_memory_tag(addr);
 
 	u64 count = 0;
 
@@ -1089,13 +1090,13 @@ const auto ppu_stwcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rd
 	Label fail = c.newLabel();
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::r10, x86::qword_ptr(x86::rax));
+	c.mov(x86::r10, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::r11, x86::qword_ptr(x86::rax));
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
-	c.shr(args[0], 7);
-	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
+	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 	c.xor_(args[0].r32(), args[0].r32());
 	c.bswap(args[2].r32());
 	c.bswap(args[3].r32());
@@ -1135,13 +1136,13 @@ const auto ppu_stdcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rd
 	Label fail = c.newLabel();
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::r10, x86::qword_ptr(x86::rax));
+	c.mov(x86::r10, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::r11, x86::qword_ptr(x86::rax));
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
-	c.shr(args[0], 7);
-	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
+	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 	c.xor_(args[0].r32(), args[0].r32());
 	c.bswap(args[2]);
 	c.bswap(args[3]);
@@ -1181,9 +1182,9 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, T reg_value)
 
 	const T old_data = static_cast<T>(ppu.rdata << ((addr & 7) * 8) >> size_off);
 
-	if (ppu.raddr != addr || addr % sizeof(T) || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(T)) & -128))
+	if (const u32 raddr = std::exchange(ppu.raddr, 0);
+		!raddr || (raddr ^ addr) % 128 || ppu.rtag != vm::get_memory_tag(addr) || addr % sizeof(T) || old_data != data || ppu.rtime != (vm::reservation_acquire(addr, sizeof(T)) & -128))
 	{
-		ppu.raddr = 0;
 		return false;
 	}
 
@@ -1196,20 +1197,16 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, T reg_value)
 		case 0:
 		{
 			// Reservation lost
-			ppu.raddr = 0;
 			return false;
 		}
 		case 1:
 		{
 			vm::reservation_notifier(addr, sizeof(T)).notify_all();
-			ppu.raddr = 0;
 			return true;
 		}
 		}
 
 		auto& res = vm::reservation_acquire(addr, sizeof(T));
-
-		ppu.raddr = 0;
 
 		if (res == ppu.rtime && res.compare_and_swap_test(ppu.rtime, ppu.rtime | 1))
 		{
@@ -1244,7 +1241,6 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, T reg_value)
 	}
 
 	vm::passive_lock(ppu);
-	ppu.raddr = 0;
 	return result;
 }
 

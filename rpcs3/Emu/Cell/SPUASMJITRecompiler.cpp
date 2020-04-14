@@ -1266,10 +1266,10 @@ void spu_recompiler::get_events()
 		Label fail = c->newLabel();
 		c->bind(rcheck);
 		c->mov(qw1->r32(), *addr);
-		c->mov(*qw0, imm_ptr(vm::g_reservations));
-		c->shr(qw1->r32(), 4);
+		c->mov(*qw0, imm_ptr(+vm::g_reservations));
+		c->and_(qw1->r32(), 0xff80);
+		c->shr(qw1->r32(), 1);
 		c->mov(*qw0, x86::qword_ptr(*qw0, *qw1));
-		c->and_(qw0->r64(), -128);
 		c->cmp(*qw0, SPU_OFF_64(rtime));
 		c->jne(fail);
 		c->mov(*qw0, imm_ptr(vm::g_base_addr));

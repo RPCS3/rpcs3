@@ -219,12 +219,12 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 #endif
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -496,12 +496,12 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 #endif
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -608,12 +608,12 @@ const auto spu_getll_inexact = build_function_asm<u64(*)(u32 raddr, void* rdata)
 #endif
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -775,12 +775,12 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 #endif
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -1464,7 +1464,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				break;
 			}
 
-			auto lock = vm::passive_lock(eal & -128, ::align(eal + size, 128));
+			const auto lock = vm::range_lock({eal & -128, (eal + size - 1) | 127});
 
 #ifdef __GNUG__
 			std::memcpy(dst, src, size);
@@ -1488,7 +1488,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			}
 #endif
 
-			lock->release(0);
+			lock->release({0, 0});
 			break;
 		}
 		}
@@ -1695,7 +1695,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 {
 	const u32 addr = args.eal & -128;
 
-	if (raddr && addr == raddr)
+	if (raddr && rtag == vm::get_memory_tag(addr))
 	{
 		// Last check for event before we clear the reservation
 		if ((vm::reservation_acquire(addr, 128) & -128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(addr)))
@@ -1895,6 +1895,7 @@ bool spu_thread::process_mfc_cmd()
 	case MFC_GETLLAR_CMD:
 	{
 		const u32 addr = ch_mfc_cmd.eal & -128;
+		const u32 tag = vm::get_memory_tag(addr);
 		auto& data = vm::_ref<decltype(rdata)>(addr);
 		auto& dst = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 		u64 ntime;
@@ -1923,7 +1924,7 @@ bool spu_thread::process_mfc_cmd()
 			}
 		}
 
-		if (g_use_rtm && !g_cfg.core.spu_accurate_getllar && raddr != addr) [[likely]]
+		if (g_use_rtm && !g_cfg.core.spu_accurate_getllar && rtag != tag) [[likely]]
 		{
 			// TODO: maybe always start from a transaction
 			ntime = spu_getll_inexact(addr, dst.data());
@@ -1986,7 +1987,7 @@ bool spu_thread::process_mfc_cmd()
 			}
 		}
 
-		if (raddr && raddr != addr)
+		if (raddr && rtag != tag)
 		{
 			// Last check for event before we replace the reservation with a new one
 			if ((vm::reservation_acquire(raddr, 128) & -128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(raddr)))
@@ -1994,7 +1995,7 @@ bool spu_thread::process_mfc_cmd()
 				ch_event_stat |= SPU_EVENT_LR;
 			}
 		}
-		else if (raddr == addr)
+		else if (rtag == tag)
 		{
 			// Lost previous reservation on polling
 			if (ntime != rtime || !cmp_rdata(rdata, dst))
@@ -2004,6 +2005,7 @@ bool spu_thread::process_mfc_cmd()
 		}
 
 		raddr = addr;
+		rtag = tag;
 		rtime = ntime;
 		mov_rdata(rdata, dst);
 
@@ -2015,9 +2017,10 @@ bool spu_thread::process_mfc_cmd()
 	{
 		// Store conditionally
 		const u32 addr = ch_mfc_cmd.eal & -128;
+		const u32 tag = vm::get_memory_tag(addr);
 		u32 result = 0;
 
-		if (raddr == addr)
+		if (rtag == tag)
 		{
 			const auto& to_write = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 
@@ -2111,7 +2114,7 @@ bool spu_thread::process_mfc_cmd()
 			if (raddr)
 			{
 				// Last check for event before we clear the reservation
-				if (raddr == addr || rtime != (vm::reservation_acquire(raddr, 128) & -128) || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(raddr)))
+				if (rtag == tag || rtime != (vm::reservation_acquire(raddr, 128) & -128) || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(raddr)))
 				{
 					ch_event_stat |= SPU_EVENT_LR;
 				}

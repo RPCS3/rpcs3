@@ -15,7 +15,7 @@ lv2_memory_alloca::lv2_memory_alloca(u32 size, u32 align, u64 flags, const std::
 	, align(align)
 	, flags(flags)
 	, ct(ct)
-	, shm(std::make_shared<utils::shm>(size))
+	, shm(std::make_shared<vm::shm>(size))
 {
 }
 
