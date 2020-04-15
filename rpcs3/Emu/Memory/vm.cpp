@@ -63,7 +63,7 @@ namespace vm
 	thread_local atomic_t<cpu_thread*>* g_tls_locked = nullptr;
 
 	// Currently locked cache line
-	atomic_t<u32> g_addr_lock = 0;
+	atomic_t<u64> g_addr_lock = 0;
 
 	// Memory mutex: passive locks
 	std::array<atomic_t<cpu_thread*>, g_cfg.core.ppu_threads.max> g_locks{};
@@ -100,7 +100,7 @@ namespace vm
 	static void _lock_shareable_cache(u8 /*value*/, u32 addr /*mutable*/, u32 end /*mutable*/)
 	{
 		// Special value to block new range locks
-		g_addr_lock = 1;
+		g_addr_lock = addr | u64{end - addr} << 32;
 
 		// Convert to 64K-page numbers
 		addr >>= 16;
@@ -151,11 +151,25 @@ namespace vm
 
 	atomic_t<u64>* range_lock(u32 addr, u32 end)
 	{
-		static const auto test_addr = [](u32 target, u32 addr, u32 end) -> u64
+		static const auto test_addr = [](u64 target, u32 addr, u32 end) -> u64
 		{
-			if (target == 1)
+			if (const u32 target_size = static_cast<u32>(target >> 32))
 			{
 				// Shareable info is being modified
+				const u32 target_addr = static_cast<u32>(target);
+
+				if (addr >= target_addr + target_size || end <= target_addr)
+				{
+					// Outside of the locked range: proceed normally
+					if (g_shareable[addr >> 16])
+					{
+						addr &= 0xffff;
+						end = ((end - 1) & 0xffff) + 1;
+					}
+
+					return u64{end} << 32 | addr;
+				}
+
 				return 0;
 			}
 
@@ -197,7 +211,7 @@ namespace vm
 
 		{
 			::reader_lock lock(g_mutex);
-			_ret = _register_range_lock(test_addr(-1, addr, end));
+			_ret = _register_range_lock(test_addr(UINT32_MAX, addr, end));
 		}
 
 		return _ret;
@@ -416,7 +430,7 @@ namespace vm
 			}
 
 			// Unlock
-			g_addr_lock.compare_and_swap(1, 0);
+			g_addr_lock.release(0);
 		}
 
 		// Notify rsx that range has become valid
@@ -566,7 +580,7 @@ namespace vm
 			}
 
 			// Unlock
-			g_addr_lock.compare_and_swap(1, 0);
+			g_addr_lock.release(0);
 		}
 
 		// Notify rsx to invalidate range
