@@ -2265,7 +2265,7 @@ namespace rsx
 
 	bool thread::is_fifo_idle() const
 	{
-		return ctrl->get == (ctrl->put & ~3);
+		return ctrl == nullptr || ctrl->get == (ctrl->put & ~3);
 	}
 
 	void thread::flush_fifo()
