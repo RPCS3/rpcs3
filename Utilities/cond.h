@@ -3,7 +3,6 @@
 #include "types.h"
 #include "util/atomic.hpp"
 #include <shared_mutex>
-#include "asm.h"
 
 // Lightweight condition variable
 class cond_variable
