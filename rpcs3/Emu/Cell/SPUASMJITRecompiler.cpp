@@ -1659,6 +1659,9 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 	{
 		const XmmLink& vr = XmmAlloc();
 		c->movzx(*addr, SPU_OFF_8(interrupts_enabled));
+		c->movzx(arg1->r32(), SPU_OFF_8(is_isolated));
+		c->shl(arg1->r32(), 1);
+		c->or_(addr->r32(), arg1->r32());
 		c->movd(vr, *addr);
 		c->pslldq(vr, 12);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);

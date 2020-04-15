@@ -380,3 +380,15 @@ error_code sys_raw_spu_read_puint_mb(ppu_thread&, u32 id, vm::ptr<u32> value);
 error_code sys_raw_spu_set_spu_cfg(ppu_thread&, u32 id, u32 value);
 error_code sys_raw_spu_get_spu_cfg(ppu_thread&, u32 id, vm::ptr<u32> value);
 error_code sys_raw_spu_recover_page_fault(ppu_thread&, u32 id);
+
+error_code sys_isolated_spu_create(ppu_thread&, vm::ptr<u32> id, vm::ptr<void> image, u64 arg1, u64 arg2, u64 arg3, u64 arg4);
+error_code sys_isolated_spu_start(ppu_thread&, u32 id);
+error_code sys_isolated_spu_destroy(ppu_thread& ppu, u32 id);
+error_code sys_isolated_spu_create_interrupt_tag(ppu_thread&, u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag);
+error_code sys_isolated_spu_set_int_mask(ppu_thread&, u32 id, u32 class_id, u64 mask);
+error_code sys_isolated_spu_get_int_mask(ppu_thread&, u32 id, u32 class_id, vm::ptr<u64> mask);
+error_code sys_isolated_spu_set_int_stat(ppu_thread&, u32 id, u32 class_id, u64 stat);
+error_code sys_isolated_spu_get_int_stat(ppu_thread&, u32 id, u32 class_id, vm::ptr<u64> stat);
+error_code sys_isolated_spu_read_puint_mb(ppu_thread&, u32 id, vm::ptr<u32> value);
+error_code sys_isolated_spu_set_spu_cfg(ppu_thread&, u32 id, u32 value);
+error_code sys_isolated_spu_get_spu_cfg(ppu_thread&, u32 id, vm::ptr<u32> value);

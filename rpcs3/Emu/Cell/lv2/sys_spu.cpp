@@ -12,6 +12,7 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "sys_interrupt.h"
 #include "sys_process.h"
@@ -1684,22 +1685,86 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 	return CELL_OK;
 }
 
-error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
+error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> image, u64 arg1, u64 arg2, u64 arg3, u64 arg4)
 {
 	vm::temporary_unlock(ppu);
 
-	sys_spu.warning("sys_raw_spu_destroy(id=%d)", id);
+	sys_spu.todo("sys_isolated_spu_create(id=*0x%x, image=*0x%x, arg1=0x%llx, arg2=0x%llx, arg3=0x%llx, arg4=0x%llx)", id, image, arg1, arg2, arg3, arg4);
 
+	// TODO: More accurate SPU image memory size calculation
+	u32 max = image.addr() & -4096;
+
+	while (max != 0u - 4096 && vm::check_addr(max))
+	{
+		max += 4096;
+	}
+
+	const auto obj = decrypt_self(fs::file{image.get_ptr(), max - image.addr()});
+
+	if (!obj)
+	{
+		return CELL_EAUTHFAIL;
+	}
+
+	// TODO: check number set by sys_spu_initialize()
+
+	if (!spu_thread::g_raw_spu_ctr.try_inc(5))
+	{
+		return CELL_EAGAIN;
+	}
+
+	u32 index = 0;
+
+	// Find free RawSPU ID
+	while (!spu_thread::g_raw_spu_id[index].try_inc(1))
+	{
+		if (++index == 5)
+			index = 0;
+	}
+
+	const vm::addr_t ls_addr{verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, 0x40000, vm::spu))};
+
+	const auto thread = idm::make_ptr<named_thread<spu_thread>>(fmt::format("IsoSPU[0x%x] Thread", index), ls_addr, nullptr, index, "", index, true);
+
+	thread->gpr[3] = v128::from64(0, arg1);
+	thread->gpr[4] = v128::from64(0, arg2);
+	thread->gpr[5] = v128::from64(0, arg3);
+	thread->gpr[6] = v128::from64(0, arg4);
+
+	spu_thread::g_raw_spu_id[index] = verify("IsoSPU ID" HERE, thread->id);
+
+	sys_spu_image img;
+	img.load(obj);
+
+	auto image_info = idm::get<lv2_obj, lv2_spu_image>(img.entry_point);
+	img.deploy(ls_addr, image_info->segs.get_ptr(), image_info->nsegs);
+
+	thread->write_reg(ls_addr + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, image_info->e_entry);
+	verify(HERE), idm::remove_verify<lv2_obj, lv2_spu_image>(img.entry_point, std::move(image_info));
+
+	*id = index;
+	return CELL_OK;
+}
+
+template <bool isolated = false> 
+error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
+{
 	const u32 idm_id = spu_thread::find_raw_spu(id);
 
 	auto thread = idm::get<named_thread<spu_thread>>(idm_id, [](named_thread<spu_thread>& thread)
 	{
+		if (thread.is_isolated != isolated)
+		{
+			return false;
+		}
+
 		// Stop thread
 		thread.state += cpu_flag::exit;
 		thread = thread_state::aborting;
+		return true;
 	});
 
-	if (!thread) [[unlikely]]
+	if (!thread || !thread.ret) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
@@ -1749,7 +1814,7 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 
 	(*thread)();
 
-	if (!idm::remove_verify<named_thread<spu_thread>>(idm_id, std::move(thread)))
+	if (!idm::remove_verify<named_thread<spu_thread>>(idm_id, std::move(thread.ptr)))
 	{
 		// Other thread destroyed beforehead
 		return CELL_ESRCH;
@@ -1758,12 +1823,27 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 	return CELL_OK;
 }
 
-error_code sys_raw_spu_create_interrupt_tag(ppu_thread& ppu, u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag)
+error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 {
 	vm::temporary_unlock(ppu);
 
-	sys_spu.warning("sys_raw_spu_create_interrupt_tag(id=%d, class_id=%d, hwthread=0x%x, intrtag=*0x%x)", id, class_id, hwthread, intrtag);
+	sys_spu.warning("sys_raw_spu_destroy(id=%d)", id);
 
+	return raw_spu_destroy(ppu, id);
+}
+
+error_code sys_isolated_spu_destroy(ppu_thread& ppu, u32 id)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.todo("sys_isolated_spu_destroy(id=%d)", id);
+
+	return raw_spu_destroy<true>(ppu, id);
+}
+
+template <bool isolated = false>
+error_code raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag)
+{
 	if (class_id != 0 && class_id != 2)
 	{
 		return CELL_EINVAL;
@@ -1777,7 +1857,7 @@ error_code sys_raw_spu_create_interrupt_tag(ppu_thread& ppu, u32 id, u32 class_i
 
 		auto thread = idm::check_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-		if (!thread || *thread == thread_state::aborting)
+		if (!thread || *thread == thread_state::aborting || thread->is_isolated != isolated)
 		{
 			error = CELL_ESRCH;
 			return result;
@@ -1805,12 +1885,27 @@ error_code sys_raw_spu_create_interrupt_tag(ppu_thread& ppu, u32 id, u32 class_i
 	return error;
 }
 
-error_code sys_raw_spu_set_int_mask(ppu_thread& ppu, u32 id, u32 class_id, u64 mask)
+error_code sys_raw_spu_create_interrupt_tag(ppu_thread& ppu, u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag)
 {
 	vm::temporary_unlock(ppu);
 
-	sys_spu.trace("sys_raw_spu_set_int_mask(id=%d, class_id=%d, mask=0x%llx)", id, class_id, mask);
+	sys_spu.warning("sys_raw_spu_create_interrupt_tag(id=%d, class_id=%d, hwthread=0x%x, intrtag=*0x%x)", id, class_id, hwthread, intrtag);
 
+	return raw_spu_create_interrupt_tag(id, class_id, hwthread, intrtag);
+}
+
+error_code sys_isolated_spu_create_interrupt_tag(ppu_thread& ppu, u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.todo("sys_isolated_spu_create_interrupt_tag(id=%d, class_id=%d, hwthread=0x%x, intrtag=*0x%x)", id, class_id, hwthread, intrtag);
+
+	return raw_spu_create_interrupt_tag<true>(id, class_id, hwthread, intrtag);
+}
+
+template <bool isolated = false>
+error_code raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask)
+{
 	if (class_id != 0 && class_id != 2)
 	{
 		return CELL_EINVAL;
@@ -1818,7 +1913,7 @@ error_code sys_raw_spu_set_int_mask(ppu_thread& ppu, u32 id, u32 class_id, u64 m
 
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-	if (!thread) [[unlikely]]
+	if (!thread || thread->is_isolated != isolated) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
@@ -1828,12 +1923,28 @@ error_code sys_raw_spu_set_int_mask(ppu_thread& ppu, u32 id, u32 class_id, u64 m
 	return CELL_OK;
 }
 
-error_code sys_raw_spu_get_int_mask(ppu_thread& ppu, u32 id, u32 class_id, vm::ptr<u64> mask)
+error_code sys_raw_spu_set_int_mask(ppu_thread& ppu, u32 id, u32 class_id, u64 mask)
 {
 	vm::temporary_unlock(ppu);
 
-	sys_spu.trace("sys_raw_spu_get_int_mask(id=%d, class_id=%d, mask=*0x%x)", id, class_id, mask);
+	sys_spu.trace("sys_raw_spu_set_int_mask(id=%d, class_id=%d, mask=0x%llx)", id, class_id, mask);
 
+	return raw_spu_set_int_mask(id, class_id, mask);
+}
+
+
+error_code sys_isolated_spu_set_int_mask(ppu_thread& ppu, u32 id, u32 class_id, u64 mask)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.todo("sys_isolated_spu_set_int_mask(id=%d, class_id=%d, mask=0x%llx)", id, class_id, mask);
+
+	return raw_spu_set_int_mask<true>(id, class_id, mask);
+}
+
+template <bool isolated = false>
+error_code raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat)
+{
 	if (class_id != 0 && class_id != 2)
 	{
 		return CELL_EINVAL;
@@ -1841,12 +1952,12 @@ error_code sys_raw_spu_get_int_mask(ppu_thread& ppu, u32 id, u32 class_id, vm::p
 
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-	if (!thread) [[unlikely]]
+	if (!thread || thread->is_isolated != isolated) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
 
-	*mask = thread->int_ctrl[class_id].mask;
+	thread->int_ctrl[class_id].clear(stat);
 
 	return CELL_OK;
 }
@@ -1857,6 +1968,21 @@ error_code sys_raw_spu_set_int_stat(ppu_thread& ppu, u32 id, u32 class_id, u64 s
 
 	sys_spu.trace("sys_raw_spu_set_int_stat(id=%d, class_id=%d, stat=0x%llx)", id, class_id, stat);
 
+	return raw_spu_set_int_stat(id, class_id, stat);
+}
+
+error_code sys_isolated_spu_set_int_stat(ppu_thread& ppu, u32 id, u32 class_id, u64 stat)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.todo("sys_isolated_spu_set_int_stat(id=%d, class_id=%d, stat=0x%llx)", id, class_id, stat);
+
+	return raw_spu_set_int_stat<true>(id, class_id, stat);
+}
+
+template <bool isolated = false>
+error_code raw_spu_get_int_control(u32 id, u32 class_id, vm::ptr<u64> value, atomic_t<u64> spu_int_ctrl_t::* control)
+{
 	if (class_id != 0 && class_id != 2)
 	{
 		return CELL_EINVAL;
@@ -1864,14 +1990,32 @@ error_code sys_raw_spu_set_int_stat(ppu_thread& ppu, u32 id, u32 class_id, u64 s
 
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-	if (!thread) [[unlikely]]
+	if (!thread || thread->is_isolated != isolated) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
 
-	thread->int_ctrl[class_id].clear(stat);
+	*value = thread->int_ctrl[class_id].*control;
 
 	return CELL_OK;
+}
+
+error_code sys_raw_spu_get_int_mask(ppu_thread& ppu, u32 id, u32 class_id, vm::ptr<u64> mask)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.trace("sys_raw_spu_get_int_mask(id=%d, class_id=%d, mask=*0x%x)", id, class_id, mask);
+
+	return raw_spu_get_int_control(id, class_id, mask, &spu_int_ctrl_t::mask);
+}
+
+error_code sys_isolated_spu_get_int_mask(ppu_thread& ppu, u32 id, u32 class_id, vm::ptr<u64> mask)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.trace("sys_isolated_spu_get_int_mask(id=%d, class_id=%d, mask=*0x%x)", id, class_id, mask);
+
+	return raw_spu_get_int_control<true>(id, class_id, mask, &spu_int_ctrl_t::mask);
 }
 
 error_code sys_raw_spu_get_int_stat(ppu_thread& ppu, u32 id, u32 class_id, vm::ptr<u64> stat)
@@ -1880,19 +2024,29 @@ error_code sys_raw_spu_get_int_stat(ppu_thread& ppu, u32 id, u32 class_id, vm::p
 
 	sys_spu.trace("sys_raw_spu_get_int_stat(id=%d, class_id=%d, stat=*0x%x)", id, class_id, stat);
 
-	if (class_id != 0 && class_id != 2)
-	{
-		return CELL_EINVAL;
-	}
+	return raw_spu_get_int_control(id, class_id, stat, &spu_int_ctrl_t::stat);
+}
 
+error_code sys_isolated_spu_get_int_stat(ppu_thread& ppu, u32 id, u32 class_id, vm::ptr<u64> stat)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.todo("sys_isolated_spu_get_int_stat(id=%d, class_id=%d, stat=*0x%x)", id, class_id, stat);
+
+	return raw_spu_get_int_control<true>(id, class_id, stat, &spu_int_ctrl_t::stat);
+}
+
+template <bool isolated = false>
+error_code raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
+{
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-	if (!thread) [[unlikely]]
+	if (!thread || thread->is_isolated != isolated) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
 
-	*stat = thread->int_ctrl[class_id].stat;
+	*value = thread->ch_out_intr_mbox.pop(*thread);
 
 	return CELL_OK;
 }
@@ -1903,14 +2057,34 @@ error_code sys_raw_spu_read_puint_mb(ppu_thread& ppu, u32 id, vm::ptr<u32> value
 
 	sys_spu.trace("sys_raw_spu_read_puint_mb(id=%d, value=*0x%x)", id, value);
 
+	return raw_spu_read_puint_mb(id, value);
+}
+
+error_code sys_isolated_spu_read_puint_mb(ppu_thread& ppu, u32 id, vm::ptr<u32> value)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.todo("sys_isolated_spu_read_puint_mb(id=%d, value=*0x%x)", id, value);
+
+	return raw_spu_read_puint_mb<true>(id, value);
+}
+
+template <bool isolated = false>
+error_code raw_spu_set_spu_cfg(u32 id, u32 value)
+{
+	if (value > 3)
+	{
+		fmt::throw_exception("Unexpected value (0x%x)" HERE, value);
+	}
+
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-	if (!thread) [[unlikely]]
+	if (!thread || thread->is_isolated != isolated) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
 
-	*value = thread->ch_out_intr_mbox.pop(*thread);
+	thread->snr_config = value;
 
 	return CELL_OK;
 }
@@ -1921,19 +2095,29 @@ error_code sys_raw_spu_set_spu_cfg(ppu_thread& ppu, u32 id, u32 value)
 
 	sys_spu.trace("sys_raw_spu_set_spu_cfg(id=%d, value=0x%x)", id, value);
 
-	if (value > 3)
-	{
-		fmt::throw_exception("Unexpected value (0x%x)" HERE, value);
-	}
+	return raw_spu_set_spu_cfg(id, value);
+}
 
+error_code sys_isolated_spu_set_spu_cfg(ppu_thread& ppu, u32 id, u32 value)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.todo("sys_isolated_spu_set_spu_cfg(id=%d, value=0x%x)", id, value);
+
+	return raw_spu_set_spu_cfg<true>(id, value);
+}
+
+template <bool isolated = false>
+error_code raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value)
+{
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-	if (!thread) [[unlikely]]
+	if (!thread || thread->is_isolated != isolated) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
 
-	thread->snr_config = value;
+	*value = static_cast<u32>(thread->snr_config);
 
 	return CELL_OK;
 }
@@ -1944,6 +2128,24 @@ error_code sys_raw_spu_get_spu_cfg(ppu_thread& ppu, u32 id, vm::ptr<u32> value)
 
 	sys_spu.trace("sys_raw_spu_get_spu_afg(id=%d, value=*0x%x)", id, value);
 
+	return raw_spu_get_spu_cfg(id, value);
+}
+
+error_code sys_isolated_spu_get_spu_cfg(ppu_thread& ppu, u32 id, vm::ptr<u32> value)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.todo("sys_isolated_spu_get_spu_afg(id=%d, value=*0x%x)", id, value);
+
+	return raw_spu_get_spu_cfg<true>(id, value);
+}
+
+error_code sys_isolated_spu_start(ppu_thread& ppu, u32 id)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.todo("sys_isolated_spu_start(id=%d)", id);
+
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
 	if (!thread) [[unlikely]]
@@ -1951,7 +2153,7 @@ error_code sys_raw_spu_get_spu_cfg(ppu_thread& ppu, u32 id, vm::ptr<u32> value)
 		return CELL_ESRCH;
 	}
 
-	*value = static_cast<u32>(thread->snr_config);
-
+	// TODO: Can return ESTAT if called twice
+	thread->write_reg(thread->offset + RAW_SPU_PROB_OFFSET + SPU_RunCntl_offs, SPU_RUNCNTL_RUN_REQUEST);
 	return CELL_OK;
 }
