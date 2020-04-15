@@ -24,6 +24,7 @@ enum : u32
 	PKG_FILE_ENTRY_NPDRMEDAT      = 2,
 	PKG_FILE_ENTRY_REGULAR        = 3,
 	PKG_FILE_ENTRY_FOLDER         = 4,
+	PKG_FILE_ENTRY_UNK0           = 5,
 	PKG_FILE_ENTRY_UNK1           = 6,
 	PKG_FILE_ENTRY_SDAT           = 9,
 
@@ -49,6 +50,22 @@ struct PKGHeader
 	be_t<u128> klicensee;   // Nonce
 };
 
+// Extended header in PSP and PSVita packages
+struct PkgExtHeader
+{
+	be_t<u32> magic;                            // 0x7F657874 (".ext")
+	be_t<u32> unknown_1;                        // Maybe version. always 1
+	be_t<u32> ext_hdr_size;                     // Extended header size. ex: 0x40
+	be_t<u32> ext_data_size;                    // ex: 0x180
+	be_t<u32> main_and_ext_headers_hmac_offset; // ex: 0x100
+	be_t<u32> metadata_header_hmac_offset;      // ex: 0x360, 0x390, 0x490 
+	be_t<u64> tail_offset;                      // tail size seams to be always 0x1A0
+	be_t<u32> padding1;
+	be_t<u32> pkg_key_id;                       // Id of the AES key used for decryption. PSP = 0x1, PSVita = 0xC0000002, PSM = 0xC0000004
+	be_t<u32> full_header_hmac_offset;          // ex: none (old pkg): 0, 0x930
+	u8 padding2[0x14];
+};
+
 struct PKGEntry
 {
 	be_t<u32> name_offset;  // File name offset
@@ -57,6 +74,19 @@ struct PKGEntry
 	be_t<u64> file_size;    // File size
 	be_t<u32> type;         // File type
 	be_t<u32> pad;          // Padding (zeros)
+};
+
+// https://www.psdevwiki.com/ps3/PKG_files#PKG_Metadata
+struct PKGMetaData
+{
+	be_t<u32> drm_type{ 0 };
+	be_t<u32> content_type{ 0 };
+	be_t<u32> package_type{ 0 };
+	be_t<u64> package_size{ 0 };
+	be_t<u32> package_revision{ 0 };
+	be_t<u64> software_revision{ 0 };
+	std::string title_id;
+	std::string install_dir;
 };
 
 bool pkg_install(const std::string& path, atomic_t<double>&);
