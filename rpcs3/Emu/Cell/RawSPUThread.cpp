@@ -17,7 +17,7 @@ inline void try_start(spu_thread& spu)
 			return false;
 		}
 
-		value.status = SPU_STATUS_RUNNING;
+		value.status = SPU_STATUS_RUNNING | (value.status & SPU_STATUS_IS_ISOLATED);
 		return true;
 	}).second)
 	{
