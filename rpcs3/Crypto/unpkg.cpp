@@ -28,8 +28,10 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 	auto archive_seek = [&](const s64 new_offset, const fs::seek_mode damode = fs::seek_set)
 	{
-		if(damode == fs::seek_set) cur_offset = new_offset;
-		else if (damode == fs::seek_cur) cur_offset += new_offset;
+		if (damode == fs::seek_set)
+			cur_offset = new_offset;
+		else if (damode == fs::seek_cur)
+			cur_offset += new_offset;
 
 		u64 _offset = 0;
 		for (u32 i = 0; i < filelist.size(); i++)
@@ -47,25 +49,30 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 	auto archive_read = [&](void* data_ptr, const u64 num_bytes)
 	{
-		u64 num_bytes_left = filelist[cur_file].size() - cur_file_offset;
-		//check if it continues in another file
+		const u64 num_bytes_left = filelist[cur_file].size() - cur_file_offset;
+
+		// check if it continues in another file
 		if (num_bytes > num_bytes_left)
 		{
 			filelist[cur_file].read(data_ptr, num_bytes_left);
-			if ((cur_file + 1) < filelist.size()) cur_file++;
+
+			if ((cur_file + 1) < filelist.size())
+			{
+				++cur_file;
+			}
 			else
 			{
 				cur_offset += num_bytes_left;
 				cur_file_offset = filelist[cur_file].size();
 				return num_bytes_left;
 			}
-			u64 num_read = filelist[cur_file].read(static_cast<u8*>(data_ptr) + num_bytes_left, num_bytes - num_bytes_left);
+			const u64 num_read = filelist[cur_file].read(static_cast<u8*>(data_ptr) + num_bytes_left, num_bytes - num_bytes_left);
 			cur_offset += (num_read + num_bytes_left);
 			cur_file_offset = num_read;
-			return (num_read+num_bytes_left);
+			return (num_read + num_bytes_left);
 		}
 
-		u64 num_read = filelist[cur_file].read(data_ptr, num_bytes);
+		const u64 num_read = filelist[cur_file].read(data_ptr, num_bytes);
 
 		cur_offset += num_read;
 		cur_file_offset += num_read;
@@ -81,6 +88,20 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		pkg_log.error("PKG file is too short!");
 		return false;
 	}
+
+	pkg_log.notice("Header: pkg_magic = 0x%x = %d", header.pkg_magic, header.pkg_magic);
+	pkg_log.notice("Header: pkg_type = 0x%x = %d", header.pkg_type, header.pkg_type);
+	pkg_log.notice("Header: pkg_platform = 0x%x = %d", header.pkg_platform, header.pkg_platform);
+	pkg_log.notice("Header: pkg_info_off = 0x%x = %d", header.pkg_info_off, header.pkg_info_off);
+	pkg_log.notice("Header: pkg_info_num = 0x%x = %d", header.pkg_info_num, header.pkg_info_num);
+	pkg_log.notice("Header: header_size = 0x%x = %d", header.header_size, header.header_size);
+	pkg_log.notice("Header: file_count = 0x%x = %d", header.file_count, header.file_count);
+	pkg_log.notice("Header: pkg_size = 0x%x = %d", header.pkg_size, header.pkg_size);
+	pkg_log.notice("Header: data_offset = 0x%x = %d", header.data_offset, header.data_offset);
+	pkg_log.notice("Header: data_size = 0x%x = %d", header.data_size, header.data_size);
+	pkg_log.notice("Header: title_id = %s", header.title_id);
+	pkg_log.notice("Header: qa_digest = 0x%x 0x%x", header.qa_digest[0], header.qa_digest[1]);
+	//pkg_log.notice("Header: klicensee = 0x%x = %d", header.klicensee, header.klicensee);
 
 	if (header.pkg_magic != "\x7FPKG"_u32)
 	{
@@ -119,11 +140,11 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 			return false;
 		}
 
-		std::string name_wo_number = path.substr(0, path.size() - 7);
+		const std::string name_wo_number = path.substr(0, path.size() - 7);
 		u64 cursize = filelist[0].size();
 		while (cursize < header.pkg_size)
 		{
-			std::string archive_filename = fmt::format("%s_%02d.pkg", name_wo_number, filelist.size());
+			const std::string archive_filename = fmt::format("%s_%02d.pkg", name_wo_number, filelist.size());
 
 			fs::file archive_file(archive_filename);
 			if (!archive_file)
@@ -143,8 +164,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		return false;
 	}
 
-	be_t<u32> drm_type{0};
-	be_t<u32> content_type{0};
+	PKGMetaData metadata;
 	std::string install_id;
 
 	// Read title ID and use it as an installation directory
@@ -169,22 +189,114 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		{
 		case 0x1:
 		{
-			if (packet.size == sizeof(drm_type))
+			if (packet.size == sizeof(metadata.drm_type))
 			{
-				archive_read(&drm_type, sizeof(drm_type));
+				archive_read(&metadata.drm_type, sizeof(metadata.drm_type));
+				pkg_log.notice("Metadata: DRM Type = 0x%x = %d", metadata.drm_type, metadata.drm_type);
 				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: DRM Type size mismatch (0x%x)", packet.size);
 			}
 
 			break;
 		}
 		case 0x2:
 		{
-			if (packet.size == sizeof(content_type))
+			if (packet.size == sizeof(metadata.content_type))
 			{
-				archive_read(&content_type, sizeof(content_type));
+				archive_read(&metadata.content_type, sizeof(metadata.content_type));
+				pkg_log.notice("Metadata: Content Type = 0x%x = %d", metadata.content_type, metadata.content_type);
 				continue;
 			}
+			else
+			{
+				pkg_log.error("Metadata: Content Type size mismatch (0x%x)", packet.size);
+			}
 
+			break;
+		}
+		case 0x3:
+		{
+			if (packet.size == sizeof(metadata.package_type))
+			{
+				archive_read(&metadata.package_type, sizeof(metadata.package_type));
+				pkg_log.notice("Metadata: Package Type = 0x%x = %d", metadata.package_type, metadata.package_type);
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: Package Type size mismatch (0x%x)", packet.size);
+			}
+			break;
+		}
+		case 0x4:
+		{
+			if (packet.size == sizeof(metadata.package_size))
+			{
+				archive_read(&metadata.package_size, sizeof(metadata.package_size));
+				pkg_log.notice("Metadata: Package Size = 0x%x = %d", metadata.package_size, metadata.package_size);
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: Package Size size mismatch (0x%x)", packet.size);
+			}
+			break;
+		}
+		case 0x5:
+		{
+			if (packet.size == sizeof(metadata.package_revision))
+			{
+				archive_read(&metadata.package_revision, sizeof(metadata.package_revision));
+				pkg_log.notice("Metadata: Package Revision = 0x%x", metadata.package_revision, metadata.package_revision);
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: Package Revision size mismatch (0x%x)", packet.size);
+			}
+			break;
+		}
+		case 0x6:
+		{
+			metadata.title_id.resize(12);
+
+			if (packet.size == metadata.title_id.size())
+			{
+				archive_read(&metadata.title_id, metadata.title_id.size());
+				pkg_log.notice("Metadata: Title ID = %s", metadata.title_id);
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: Title ID size mismatch (0x%x)", packet.size);
+			}
+			break;
+		}
+		case 0x7:
+		{
+			// QA Digest (24 bytes)
+			break;
+		}
+		case 0x8:
+		{
+			if (packet.size == sizeof(metadata.software_revision))
+			{
+				archive_read(&metadata.software_revision, sizeof(metadata.software_revision));
+				pkg_log.notice("Metadata: Software Revision = 0x%x", metadata.software_revision, metadata.software_revision);
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: Software Revision size mismatch (0x%x)", packet.size);
+			}
+			break;
+		}
+		case 0x9:
+		{
+			// Unknown (8 bytes)
 			break;
 		}
 		case 0xA:
@@ -195,9 +307,40 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 				install_id.resize(packet.size);
 				archive_read(&install_id.front(), packet.size);
 				install_id = install_id.c_str() + 8;
+				metadata.install_dir = install_id;
+				pkg_log.notice("Metadata: Install Dir = %s", metadata.install_dir);
 				continue;
 			}
+			else
+			{
+				pkg_log.error("Metadata: Install Dir size mismatch (0x%x)", packet.size);
+			}
 
+			break;
+		}
+		case 0xB:
+		{
+			// Unknown (8 bytes)
+			break;
+		}
+		case 0xC:
+		{
+			// Unknown
+			break;
+		}
+		case 0xD:
+		case 0xE:
+		case 0xF:
+		case 0x10:
+		case 0x11:
+		case 0x12:
+		{
+			// PSVita stuff
+			break;
+		}
+		default:
+		{
+			pkg_log.error("Unknown packet id %d", packet.id);
 			break;
 		}
 		}
@@ -213,7 +356,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 	if (!fs::create_path(dir))
 	{
-		pkg_log.error("PKG: Could not create the installation directory %s", dir);
+		pkg_log.error("Could not create the installation directory %s", dir);
 		return false;
 	}
 
@@ -258,8 +401,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 				buf[i] ^= hash._v128;
 			}
 		}
-
-		if (header.pkg_type == PKG_RELEASE_TYPE_RELEASE)
+		else if (header.pkg_type == PKG_RELEASE_TYPE_RELEASE)
 		{
 			aes_context ctx;
 
@@ -279,6 +421,10 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 				buf[i] ^= key;
 			}
 		}
+		else
+		{
+			pkg_log.error("Unknown release type (0x%x)", header.pkg_type);
+		}
 
 		// Return the amount of data written in buf
 		return read;
@@ -286,14 +432,16 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 	std::array<uchar, 16> dec_key;
 
-	if (header.pkg_platform == PKG_PLATFORM_TYPE_PSP && content_type >= 0x15 && content_type <= 0x17)
+	if (header.pkg_platform == PKG_PLATFORM_TYPE_PSP && metadata.content_type >= 0x15 && metadata.content_type <= 0x17)
 	{
+		// PSVita
+
 		const uchar psp2t1[] = {0xE3, 0x1A, 0x70, 0xC9, 0xCE, 0x1D, 0xD7, 0x2B, 0xF3, 0xC0, 0x62, 0x29, 0x63, 0xF2, 0xEC, 0xCB};
 		const uchar psp2t2[] = {0x42, 0x3A, 0xCA, 0x3A, 0x2B, 0xD5, 0x64, 0x9F, 0x96, 0x86, 0xAB, 0xAD, 0x6F, 0xD8, 0x80, 0x1F};
 		const uchar psp2t3[] = {0xAF, 0x07, 0xFD, 0x59, 0x65, 0x25, 0x27, 0xBA, 0xF1, 0x33, 0x89, 0x66, 0x8B, 0x17, 0xD9, 0xEA};
 
 		aes_context ctx;
-		aes_setkey_enc(&ctx, content_type == 0x15u ? psp2t1 : content_type == 0x16u ? psp2t2 : psp2t3, 128);
+		aes_setkey_enc(&ctx, metadata.content_type == 0x15u ? psp2t1 : metadata.content_type == 0x16u ? psp2t2 : psp2t3, 128);
 		aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const uchar*>(&header.klicensee), dec_key.data());
 		decrypt(0, header.file_count * sizeof(PKGEntry), dec_key.data());
 	}
@@ -311,8 +459,6 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 	for (const auto& entry : entries)
 	{
-		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
-
 		if (entry.name_size > 256)
 		{
 			num_failures++;
@@ -320,9 +466,12 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 			continue;
 		}
 
+		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
+
 		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : dec_key.data());
 
-		std::string name{reinterpret_cast<char*>(buf.get()), entry.name_size};
+		const std::string name{reinterpret_cast<char*>(buf.get()), entry.name_size};
+		const std::string path = dir + vfs::escape(name);
 
 		pkg_log.notice("Entry 0x%08x: %s", entry.type, name);
 
@@ -332,6 +481,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		case PKG_FILE_ENTRY_NPDRMEDAT:
 		case PKG_FILE_ENTRY_SDAT:
 		case PKG_FILE_ENTRY_REGULAR:
+		case PKG_FILE_ENTRY_UNK0:
 		case PKG_FILE_ENTRY_UNK1:
 		case 0xe:
 		case 0x10:
@@ -341,13 +491,11 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		case 0x16:
 		case 0x19:
 		{
-			const std::string path = dir + vfs::escape(name);
-
 			const bool did_overwrite = fs::is_file(path);
 
 			if (did_overwrite && !(entry.type & PKG_FILE_ENTRY_OVERWRITE))
 			{
-				pkg_log.notice("Didn't overwrite %s", name);
+				pkg_log.notice("Didn't overwrite %s", path);
 				break;
 			}
 
@@ -391,11 +539,11 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 				{
 					if (did_overwrite)
 					{
-						pkg_log.warning("Overwritten file %s", name);
+						pkg_log.warning("Overwritten file %s", path);
 					}
 					else
 					{
-						pkg_log.notice("Created file %s", name);
+						pkg_log.notice("Created file %s", path);
 					}
 				}
 				else
@@ -415,15 +563,13 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		case PKG_FILE_ENTRY_FOLDER:
 		case 0x12:
 		{
-			const std::string path = dir + vfs::escape(name);
-
 			if (fs::create_dir(path))
 			{
-				pkg_log.notice("Created directory %s", name);
+				pkg_log.notice("Created directory %s", path);
 			}
 			else if (fs::is_dir(path))
 			{
-				pkg_log.warning("Reused existing directory %s", name);
+				pkg_log.warning("Reused existing directory %s", path);
 			}
 			else
 			{
