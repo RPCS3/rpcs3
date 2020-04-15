@@ -675,7 +675,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 			}
 
 			// Determine which value will be duplicated at hole positions
-			const u32 w3 = func.data.at((j - start + ~std::countl_zero(cmask) % 4 * 4) / 4);
+			const u32 w3 = func.data.at((j - start + ~static_cast<u32>(std::countl_zero(cmask)) % 4 * 4) / 4);
 			words.push_back(cmask & 1 ? func.data[(j - start + 0) / 4] : w3);
 			words.push_back(cmask & 2 ? func.data[(j - start + 4) / 4] : w3);
 			words.push_back(cmask & 4 ? func.data[(j - start + 8) / 4] : w3);
