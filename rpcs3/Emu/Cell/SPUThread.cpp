@@ -3054,6 +3054,11 @@ bool spu_thread::stop_and_signal(u32 code)
 
 			std::lock_guard lock(group->mutex);
 
+			if (is_stopped())
+			{
+				return false;
+			}
+
 			if (group->run_state >= SPU_THREAD_GROUP_STATUS_WAITING && group->run_state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
 			{
 				// Try again
