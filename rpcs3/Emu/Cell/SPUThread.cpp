@@ -510,283 +510,6 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.ret();
 });
 
-const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](asmjit::X86Assembler& c, auto& args)
-{
-	using namespace asmjit;
-
-	Label fall = c.newLabel();
-	Label _ret = c.newLabel();
-
-	if (utils::has_avx() && !s_tsx_avx)
-	{
-		c.vzeroupper();
-	}
-
-	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
-	c.push(x86::rbp);
-	c.push(x86::r13);
-	c.push(x86::r12);
-	c.push(x86::rbx);
-	c.sub(x86::rsp, 72);
-#ifdef _WIN32
-	if (!s_tsx_avx)
-	{
-		c.movups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
-		c.movups(x86::oword_ptr(x86::rsp, 16), x86::xmm7);
-	}
-#endif
-
-	// Prepare registers
-	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
-	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
-	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
-	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.and_(args[0].r32(), 0xff80);
-	c.shr(args[0].r32(), 1);
-	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
-	c.xor_(x86::r12d, x86::r12d);
-	c.mov(x86::r13, args[1]);
-
-	// Begin transaction
-	build_transaction_enter(c, fall, x86::r12, 16);
-	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-
-	if (s_tsx_avx)
-	{
-		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
-		c.vmovaps(x86::ymm1, x86::yword_ptr(x86::rbp, 32));
-		c.vmovaps(x86::ymm2, x86::yword_ptr(x86::rbp, 64));
-		c.vmovaps(x86::ymm3, x86::yword_ptr(x86::rbp, 96));
-	}
-	else
-	{
-		c.movaps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
-		c.movaps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
-		c.movaps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
-		c.movaps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
-		c.movaps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
-		c.movaps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
-		c.movaps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
-		c.movaps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
-	}
-
-	c.xend();
-
-	if (s_tsx_avx)
-	{
-		c.vmovups(x86::yword_ptr(x86::r13, 0), x86::ymm0);
-		c.vmovups(x86::yword_ptr(x86::r13, 32), x86::ymm1);
-		c.vmovups(x86::yword_ptr(x86::r13, 64), x86::ymm2);
-		c.vmovups(x86::yword_ptr(x86::r13, 96), x86::ymm3);
-	}
-	else
-	{
-		c.movaps(x86::oword_ptr(x86::r13, 0), x86::xmm0);
-		c.movaps(x86::oword_ptr(x86::r13, 16), x86::xmm1);
-		c.movaps(x86::oword_ptr(x86::r13, 32), x86::xmm2);
-		c.movaps(x86::oword_ptr(x86::r13, 48), x86::xmm3);
-		c.movaps(x86::oword_ptr(x86::r13, 64), x86::xmm4);
-		c.movaps(x86::oword_ptr(x86::r13, 80), x86::xmm5);
-		c.movaps(x86::oword_ptr(x86::r13, 96), x86::xmm6);
-		c.movaps(x86::oword_ptr(x86::r13, 112), x86::xmm7);
-	}
-
-	c.and_(x86::rax, -128);
-	c.jmp(_ret);
-
-	c.bind(fall);
-	c.mov(x86::eax, 1);
-	//c.jmp(_ret);
-
-	c.bind(_ret);
-
-#ifdef _WIN32
-	if (!s_tsx_avx)
-	{
-		c.movups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
-		c.movups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
-	}
-#endif
-
-	if (s_tsx_avx)
-	{
-		c.vzeroupper();
-	}
-
-	c.add(x86::rsp, 72);
-	c.pop(x86::rbx);
-	c.pop(x86::r12);
-	c.pop(x86::r13);
-	c.pop(x86::rbp);
-	c.ret();
-});
-
-const auto spu_getll_inexact = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](asmjit::X86Assembler& c, auto& args)
-{
-	using namespace asmjit;
-
-	Label _ret = c.newLabel();
-
-	if (utils::has_avx() && !s_tsx_avx)
-	{
-		c.vzeroupper();
-	}
-
-	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
-	c.push(x86::rbp);
-	c.push(x86::r13);
-	c.push(x86::r12);
-	c.push(x86::rbx);
-	c.sub(x86::rsp, 72);
-#ifdef _WIN32
-	if (!s_tsx_avx)
-	{
-		c.movups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
-		c.movups(x86::oword_ptr(x86::rsp, 16), x86::xmm7);
-		c.movups(x86::oword_ptr(x86::rsp, 32), x86::xmm8);
-		c.movups(x86::oword_ptr(x86::rsp, 48), x86::xmm9);
-	}
-#endif
-
-	// Prepare registers
-	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
-	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
-	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
-	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.and_(args[0].r32(), 0xff80);
-	c.shr(args[0].r32(), 1);
-	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
-	c.xor_(x86::r12d, x86::r12d);
-	c.mov(x86::r13, args[1]);
-
-	// Begin copying
-	Label begin = c.newLabel();
-	Label test0 = c.newLabel();
-	c.bind(begin);
-	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-
-	if (s_tsx_avx)
-	{
-		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
-		c.vmovaps(x86::ymm1, x86::yword_ptr(x86::rbp, 32));
-		c.vmovaps(x86::ymm2, x86::yword_ptr(x86::rbp, 64));
-		c.vmovaps(x86::ymm3, x86::yword_ptr(x86::rbp, 96));
-	}
-	else
-	{
-		c.movaps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
-		c.movaps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
-		c.movaps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
-		c.movaps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
-		c.movaps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
-		c.movaps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
-		c.movaps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
-		c.movaps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
-	}
-
-	// Verify and retry if necessary.
-	c.mov(args[0], x86::rax);
-	c.xor_(args[0], x86::qword_ptr(x86::rbx));
-	c.test(args[0], -128);
-	c.jz(test0);
-	c.lea(x86::r12, x86::qword_ptr(x86::r12, 1));
-	c.jmp(begin);
-
-	c.bind(test0);
-	c.test(x86::eax, 127);
-	c.jz(_ret);
-	c.and_(x86::rax, -128);
-
-	// If there are lock bits set, verify data as well.
-	if (s_tsx_avx)
-	{
-		c.vxorps(x86::ymm4, x86::ymm0, x86::yword_ptr(x86::rbp, 0));
-		c.vxorps(x86::ymm5, x86::ymm1, x86::yword_ptr(x86::rbp, 32));
-		c.vorps(x86::ymm5, x86::ymm5, x86::ymm4);
-		c.vxorps(x86::ymm4, x86::ymm2, x86::yword_ptr(x86::rbp, 64));
-		c.vorps(x86::ymm5, x86::ymm5, x86::ymm4);
-		c.vxorps(x86::ymm4, x86::ymm3, x86::yword_ptr(x86::rbp, 96));
-		c.vorps(x86::ymm5, x86::ymm5, x86::ymm4);
-		c.vptest(x86::ymm5, x86::ymm5);
-	}
-	else
-	{
-		c.xorps(x86::xmm9, x86::xmm9);
-		c.movaps(x86::xmm8, x86::xmm0);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 0));
-		c.orps(x86::xmm9, x86::xmm8);
-		c.movaps(x86::xmm8, x86::xmm1);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 16));
-		c.orps(x86::xmm9, x86::xmm8);
-		c.movaps(x86::xmm8, x86::xmm2);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 32));
-		c.orps(x86::xmm9, x86::xmm8);
-		c.movaps(x86::xmm8, x86::xmm3);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 48));
-		c.orps(x86::xmm9, x86::xmm8);
-		c.movaps(x86::xmm8, x86::xmm4);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 64));
-		c.orps(x86::xmm9, x86::xmm8);
-		c.movaps(x86::xmm8, x86::xmm5);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 80));
-		c.orps(x86::xmm9, x86::xmm8);
-		c.movaps(x86::xmm8, x86::xmm6);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 96));
-		c.orps(x86::xmm9, x86::xmm8);
-		c.movaps(x86::xmm8, x86::xmm7);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 112));
-		c.orps(x86::xmm9, x86::xmm8);
-		c.ptest(x86::xmm9, x86::xmm9);
-	}
-
-	c.jz(_ret);
-	c.lea(x86::r12, x86::qword_ptr(x86::r12, 2));
-	c.jmp(begin);
-
-	c.bind(_ret);
-
-	if (s_tsx_avx)
-	{
-		c.vmovups(x86::yword_ptr(x86::r13, 0), x86::ymm0);
-		c.vmovups(x86::yword_ptr(x86::r13, 32), x86::ymm1);
-		c.vmovups(x86::yword_ptr(x86::r13, 64), x86::ymm2);
-		c.vmovups(x86::yword_ptr(x86::r13, 96), x86::ymm3);
-	}
-	else
-	{
-		c.movaps(x86::oword_ptr(x86::r13, 0), x86::xmm0);
-		c.movaps(x86::oword_ptr(x86::r13, 16), x86::xmm1);
-		c.movaps(x86::oword_ptr(x86::r13, 32), x86::xmm2);
-		c.movaps(x86::oword_ptr(x86::r13, 48), x86::xmm3);
-		c.movaps(x86::oword_ptr(x86::r13, 64), x86::xmm4);
-		c.movaps(x86::oword_ptr(x86::r13, 80), x86::xmm5);
-		c.movaps(x86::oword_ptr(x86::r13, 96), x86::xmm6);
-		c.movaps(x86::oword_ptr(x86::r13, 112), x86::xmm7);
-	}
-
-#ifdef _WIN32
-	if (!s_tsx_avx)
-	{
-		c.movups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
-		c.movups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
-		c.movups(x86::xmm8, x86::oword_ptr(x86::rsp, 32));
-		c.movups(x86::xmm9, x86::oword_ptr(x86::rsp, 48));
-	}
-#endif
-
-	if (s_tsx_avx)
-	{
-		c.vzeroupper();
-	}
-
-	c.add(x86::rsp, 72);
-	c.pop(x86::rbx);
-	c.pop(x86::r12);
-	c.pop(x86::r13);
-	c.pop(x86::rbp);
-	c.ret();
-});
-
 const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rdata, spu_thread* _spu)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
@@ -1994,7 +1717,7 @@ bool spu_thread::process_mfc_cmd()
 	case MFC_GETLLAR_CMD:
 	{
 		const u32 addr = ch_mfc_cmd.eal & -128;
-		auto& data = vm::_ref<decltype(rdata)>(addr);
+		const auto& data = vm::_ref<decltype(rdata)>(addr);
 		auto& dst = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 		u64 ntime;
 
@@ -2022,67 +1745,53 @@ bool spu_thread::process_mfc_cmd()
 			}
 		}
 
-		if (g_use_rtm && !g_cfg.core.spu_accurate_getllar && raddr != addr) [[likely]]
+		for (u64 i = 0;; [&]()
 		{
-			// TODO: maybe always start from a transaction
-			ntime = spu_getll_inexact(addr, dst.data());
-		}
-		else if (g_use_rtm)
-		{
-			ntime = spu_getll_tx(addr, dst.data());
-
-			if (ntime == 1)
+			if (ntime & 127 && g_use_rtm && !(state & cpu_flag::wait))
 			{
-				if (!g_cfg.core.spu_accurate_getllar)
-				{
-					ntime = spu_getll_inexact(addr, dst.data());
-				}
-				else
-				{
-					cpu_thread::suspend_all cpu_lock(this);
-
-					while (vm::reservation_acquire(addr, 128) & 127)
-					{
-						busy_wait(100);
-					}
-
-					ntime = vm::reservation_acquire(addr, 128);
-					mov_rdata(dst, data);
-				}
+				state += cpu_flag::wait;
 			}
-		}
-		else
-		{
-			auto& res = vm::reservation_lock(addr, 128);
-			const u64 old_time = res.load() & -128;
 
-			if (g_cfg.core.spu_accurate_getllar)
+			if (++i < 25) [[likely]]
 			{
-				*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
-
-				const auto render = get_rsx_if_needs_res_pause(addr);
-
-				if (render) render->pause();
-
-				const auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
-				{
-					// Full lock (heavyweight)
-					// TODO: vm::check_addr
-					vm::writer_lock lock(addr);
-
-					ntime = old_time;
-					mov_rdata(dst, super_data);
-					res.release(old_time);
-				}
-
-				if (render) render->unpause();
+				busy_wait(300);
 			}
 			else
 			{
-				ntime = old_time;
-				mov_rdata(dst, data);
-				res.release(old_time);
+				std::this_thread::yield();
 			}
+		}())
+		{
+			ntime = vm::reservation_acquire(addr, 128);
+
+			if (ntime & 127)
+			{
+				// There's an on-going reservation store, wait
+				continue;
+			}
+
+			mov_rdata(dst, data);
+
+			if (u64 time0 = vm::reservation_acquire(addr, 128);
+				ntime != time0)
+			{
+				// Reservation data has been modified recently
+				if (time0 & 127) i += 12, ntime = time0;
+				continue;
+			}
+
+			if (g_cfg.core.spu_accurate_getllar && !cmp_rdata(dst, data)) 
+			{
+				i += 2;
+				continue;
+			}
+
+			break;
+		}
+
+		if (test_stopped())
+		{
+			return false;
 		}
 
 		if (raddr && raddr != addr)
