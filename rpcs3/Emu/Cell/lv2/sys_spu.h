@@ -270,6 +270,7 @@ struct lv2_spu_group
 	cond_variable cond; // used to signal waiting PPU thread
 	atomic_t<u64> stop_count;
 	class ppu_thread* waiter = nullptr;
+	bool set_terminate = false;
 
 	std::array<std::shared_ptr<named_thread<spu_thread>>, 8> threads; // SPU Threads
 	std::array<s8, 256> threads_map; // SPU Threads map based number

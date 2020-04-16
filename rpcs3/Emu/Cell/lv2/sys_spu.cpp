@@ -668,6 +668,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 
 	group->join_state = 0;
 	group->running = max_threads;
+	group->set_terminate = false;
 
 	for (auto& thread : group->threads)
 	{
@@ -859,10 +860,13 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	if (group->run_state <= SPU_THREAD_GROUP_STATUS_INITIALIZED ||
 		group->run_state == SPU_THREAD_GROUP_STATUS_WAITING ||
-		group->run_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
+		group->run_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED ||
+		group->set_terminate)
 	{
 		return CELL_ESTAT;
 	}
+
+	group->set_terminate = true;
 
 	for (auto& thread : group->threads)
 	{
