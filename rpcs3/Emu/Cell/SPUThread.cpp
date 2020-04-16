@@ -3040,7 +3040,9 @@ bool spu_thread::stop_and_signal(u32 code)
 			queue.reset();
 
 			// Check group status, wait if necessary
-			while (group->run_state >= SPU_THREAD_GROUP_STATUS_WAITING && group->run_state <= SPU_THREAD_GROUP_STATUS_SUSPENDED)
+			for (auto _state = +group->run_state;
+				_state >= SPU_THREAD_GROUP_STATUS_WAITING && _state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED; 
+				_state = group->run_state)
 			{
 				if (is_stopped())
 				{
@@ -3118,10 +3120,13 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		while (true)
 		{
-			if (is_stopped())
+			if (state & (cpu_flag::exit + cpu_flag::dbg_global_stop))
 			{
 				return false;
 			}
+
+			// The thread group cannot be stopped while waiting for an event
+			verify(HERE), !(state & cpu_flag::stop);
 
 			if (!state.test_and_reset(cpu_flag::signal))
 			{
@@ -3243,19 +3248,42 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		spu_log.trace("sys_spu_thread_group_exit(status=0x%x)", value);
 
-		std::lock_guard lock(group->mutex);
-
-		for (auto& thread : group->threads)
+		while (true)
 		{
-			if (thread && thread.get() != this)
+			for (auto _state = +group->run_state;
+				_state >= SPU_THREAD_GROUP_STATUS_WAITING && _state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED; 
+				_state = group->run_state)
 			{
-				thread->state += cpu_flag::stop;
-				thread_ctrl::notify(*thread);
-			}
-		}
+				if (is_stopped())
+				{
+					return false;
+				}
 
-		group->exit_status = value;
-		group->join_state = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
+				thread_ctrl::wait();
+			}
+
+			std::lock_guard lock(group->mutex);
+
+			if (auto _state = +group->run_state;
+				_state >= SPU_THREAD_GROUP_STATUS_WAITING && _state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
+			{
+				// We can't exit while we are waiting on an SPU event
+				continue;
+			}
+
+			for (auto& thread : group->threads)
+			{
+				if (thread && thread.get() != this)
+				{
+					thread->state += cpu_flag::stop;
+					thread_ctrl::notify(*thread);
+				}
+			}
+
+			group->exit_status = value;
+			group->join_state = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
+			break;
+		}
 
 		state += cpu_flag::stop;
 		check_state();
