@@ -381,11 +381,10 @@ std::string ppu_thread::dump_regs() const
 		const u32 max_str_len = 32;
 		const u32 hex_count = 8;
 
-		if (reg <= UINT32_MAX && vm::check_addr(static_cast<u32>(reg), max_str_len, vm::page_readable))
+		if (reg <= UINT32_MAX && vm::check_addr(static_cast<u32>(reg), max_str_len))
 		{
-			const u64 reg_ptr = vm::read64(reg);
-
-			if (reg_ptr <= UINT32_MAX && vm::check_addr(static_cast<u32>(reg_ptr), max_str_len, vm::page_readable))
+			if (const u32 reg_ptr = *vm::get_super_ptr<u32>(static_cast<u32>(reg));
+				vm::check_addr(reg_ptr, max_str_len))
 			{
 				reg = reg_ptr;
 			}
