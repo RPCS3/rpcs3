@@ -1056,7 +1056,7 @@ std::string spu_thread::dump_misc() const
 	{
 		if (const auto func = current_func)
 		{
-			ret += "\nCurrent function: ";
+			ret += "\nIn function: ";
 			ret += func;
 		}
 		else
