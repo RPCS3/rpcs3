@@ -34,6 +34,8 @@ rsx::frame_capture_data frame_capture;
 
 extern CellGcmOffsetTable offsetTable;
 extern thread_local std::string(*g_tls_log_prefix)();
+extern u64 sys_time_get_timebase_frequency();
+extern u64 get_timebased_time();
 
 namespace rsx
 {
@@ -811,8 +813,15 @@ namespace rsx
 
 	u64 thread::timestamp()
 	{
-		// Get timestamp, and convert it from microseconds to nanoseconds
-		const u64 t = get_guest_system_time() * 1000;
+		const u64 freq = sys_time_get_timebase_frequency();
+
+		auto get_time_ns = [freq]()
+		{
+			const u64 t = get_timebased_time();
+			return (t / freq * 1'000'000'000 + t % freq * 1'000'000'000 / freq);
+		};
+
+		const u64 t = get_time_ns();
 		if (t != timestamp_ctrl)
 		{
 			timestamp_ctrl = t;
@@ -820,7 +829,23 @@ namespace rsx
 			return t;
 		}
 
-		timestamp_subvalue += 10;
+		// Check if we passed the limit of what fixed increments is legal for
+		// Wait for the next time value reported if we passed the limit
+		if ((1'000'000'000 / freq) - timestamp_subvalue <= 2)
+		{
+			u64 now = get_time_ns();
+
+			for (; t == now; now = get_time_ns())
+			{
+				_mm_pause();
+			}
+
+			timestamp_ctrl = now;
+			timestamp_subvalue = 0;
+			return now;
+		}
+
+		timestamp_subvalue += 2;
 		return t + timestamp_subvalue;
 	}
 
