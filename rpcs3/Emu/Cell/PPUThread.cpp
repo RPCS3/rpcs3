@@ -504,7 +504,7 @@ std::string ppu_thread::dump_misc() const
 
 	if (_func)
 	{
-		ret += "Current function: ";
+		ret += "In function: ";
 		ret += _func;
 		ret += '\n';
 
