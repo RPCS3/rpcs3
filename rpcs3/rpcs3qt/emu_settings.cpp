@@ -3,6 +3,7 @@
 #include "Utilities/Config.h"
 
 #include <QMessageBox>
+#include <QLabel>
 #include <QLineEdit>
 
 #include "Emu/System.h"
@@ -93,7 +94,7 @@ namespace cfg_adapter
 }
 
 /** Returns possible options for values for some particular setting.*/
-static QStringList getOptions(cfg_location location)
+static QStringList get_options(cfg_location location)
 {
 	QStringList values;
 	auto begin = location.cbegin();
@@ -105,9 +106,18 @@ static QStringList getOptions(cfg_location location)
 	return values;
 }
 
+/** Returns dynamic property for some particular setting.*/
+static bool get_is_dynamic(cfg_location location)
+{
+	auto begin = location.cbegin();
+	auto end = location.cend();
+	return cfg_adapter::get_cfg(g_cfg, begin, end).get_is_dynamic();
+}
+
 emu_settings::emu_settings()
 	: QObject()
 	, m_render_creator(new render_creator(this))
+	, m_dynamic_icon(QIcon(QStringLiteral(":/Icons/1200px-ScrewAttack_blue_bolt.png")))
 {
 }
 
@@ -199,6 +209,8 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 		return;
 	}
 
+	const bool is_dynamic = GetIsDynamicConfig(type);
+
 	if (is_ranged)
 	{
 		if (sorted)
@@ -212,7 +224,14 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 
 		for (int i = range.first().toInt(); i <= max_item; i++)
 		{
-			combobox->addItem(QString::number(i), QVariant(QString::number(i)));
+			if (is_dynamic)
+			{
+				combobox->addItem(m_dynamic_icon, QString::number(i), QVariant(QString::number(i)));
+			}
+			else
+			{
+				combobox->addItem(QString::number(i), QVariant(QString::number(i)));
+			}
 		}
 	}
 	else
@@ -222,7 +241,15 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 		for (const QString& setting : settings)
 		{
 			const QString localized_setting = GetLocalizedSetting(setting, type, combobox->count());
-			combobox->addItem(localized_setting, QVariant(setting));
+
+			if (is_dynamic)
+			{
+				combobox->addItem(m_dynamic_icon, localized_setting, QVariant(setting));
+			}
+			else
+			{
+				combobox->addItem(localized_setting, QVariant(setting));
+			}
 		}
 
 		if (sorted)
@@ -281,6 +308,11 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 		cfg_log.fatal("EnhanceCheckBox '%s' tried to set an invalid value: %s. Setting to default: %s", GetSettingName(type), selected, def);
 		checkbox->setChecked(def == "true");
 		m_broken_types.insert(type);
+	}
+
+	if (GetIsDynamicConfig(type))
+	{
+		checkbox->setIcon(m_dynamic_icon);
 	}
 
 	connect(checkbox, &QCheckBox::stateChanged, [=, this](int val)
@@ -414,7 +446,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_ty
 	});
 }
 
-void emu_settings::EnhanceEdit(QLineEdit* edit, emu_settings_type type)
+void emu_settings::EnhanceLineEdit(QLineEdit* edit, emu_settings_type type)
 {
 	if (!edit)
 	{
@@ -448,6 +480,8 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 		return;
 	}
 
+	const bool is_dynamic = GetIsDynamicConfig(type);
+
 	for (int i = 0; i < options.count(); i++)
 	{
 		const QString localized_setting = GetLocalizedSetting(options[i], type, i);
@@ -457,6 +491,11 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 		if (options[i] == selected)
 		{
 			button_group->button(i)->setChecked(true);
+		}
+
+		if (is_dynamic)
+		{
+			button_group->button(i)->setIcon(m_dynamic_icon);
 		}
 
 		connect(button_group->button(i), &QAbstractButton::clicked, [=, this]()
@@ -478,7 +517,7 @@ void emu_settings::SaveSelectedLibraries(const std::vector<std::string>& libs)
 
 QStringList emu_settings::GetSettingOptions(emu_settings_type type) const
 {
-	return getOptions(const_cast<cfg_location&&>(m_settings_location[type]));
+	return get_options(const_cast<cfg_location&&>(m_settings_location[type]));
 }
 
 std::string emu_settings::GetSettingName(emu_settings_type type) const
@@ -721,3 +760,21 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 
 	return original;
 }
+
+bool emu_settings::GetIsDynamicConfig(emu_settings_type type)
+{
+	const cfg_location loc = m_settings_location[type];
+	return get_is_dynamic(loc);
+}
+
+QString emu_settings::GetDynamicLabel(const QString& text)
+{
+	const int height = QLabel(text).fontMetrics().height();
+	return QStringLiteral(
+		"<img " \
+		"src=':/Icons/1200px-ScrewAttack_blue_bolt.png' " \
+		"align='left' " \
+		"height='") + QString::number(height) +
+		QStringLiteral("'> ") +
+		text;
+};

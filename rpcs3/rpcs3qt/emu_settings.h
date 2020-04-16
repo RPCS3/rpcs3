@@ -51,7 +51,7 @@ public:
 	void EnhanceDoubleSpinBox(QDoubleSpinBox* slider, emu_settings_type type, const QString& prefix = "", const QString& suffix = "");
 
 	/** Connects a line edit with the target settings type*/
-	void EnhanceEdit(QLineEdit* edit, emu_settings_type type);
+	void EnhanceLineEdit(QLineEdit* edit, emu_settings_type type);
 
 	/** Connects a button group with the target settings type*/
 	void EnhanceRadioButton(QButtonGroup* button_group, emu_settings_type type);
@@ -89,10 +89,15 @@ public:
 	/** Get a localized and therefore freely adjustable version of the string used in config.yml.*/
 	QString GetLocalizedSetting(const QString& original, emu_settings_type type, int index) const;
 
+	bool GetIsDynamicConfig(emu_settings_type type);
+	static QString GetDynamicLabel(const QString& text);
+
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
 private:
+	QIcon m_dynamic_icon;
+
 	/** A helper map that keeps track of where a given setting type is located*/
 	const QMap<emu_settings_type, cfg_location> m_settings_location =
 	{

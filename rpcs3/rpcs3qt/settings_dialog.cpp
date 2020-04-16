@@ -95,6 +95,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		setWindowTitle(tr("Settings", "Settings dialog"));
 	}
 
+	// Helper functions
+
+	static const auto& label_width = [](const QString& text)
+	{
+		return QLabel(text).sizeHint().width();
+	};
+
 	// Discord variables
 	m_use_discord = m_gui_settings->GetValue(gui::m_richPresence).toBool();
 	m_discord_state = m_gui_settings->GetValue(gui::m_discordState).toString();
@@ -239,7 +246,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->ppu_fast,    tooltips.settings.ppu_fast);
 	SubscribeTooltip(ui->ppu_llvm,    tooltips.settings.ppu_llvm);
 
-	QButtonGroup *ppu_bg = new QButtonGroup(this);
+	QButtonGroup *ppu_bg = new QButtonGroup(ui->gb_ppu);
 	ppu_bg->addButton(ui->ppu_precise, static_cast<int>(ppu_decoder_type::precise));
 	ppu_bg->addButton(ui->ppu_fast,    static_cast<int>(ppu_decoder_type::fast));
 	ppu_bg->addButton(ui->ppu_llvm,    static_cast<int>(ppu_decoder_type::llvm));
@@ -252,7 +259,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->spu_asmjit,  tooltips.settings.spu_asmjit);
 	SubscribeTooltip(ui->spu_llvm,    tooltips.settings.spu_llvm);
 
-	QButtonGroup *spu_bg = new QButtonGroup(this);
+	QButtonGroup *spu_bg = new QButtonGroup(ui->gb_spu);
 	spu_bg->addButton(ui->spu_precise, static_cast<int>(spu_decoder_type::precise));
 	spu_bg->addButton(ui->spu_fast,    static_cast<int>(spu_decoder_type::fast));
 	spu_bg->addButton(ui->spu_asmjit,  static_cast<int>(spu_decoder_type::asmjit));
@@ -420,31 +427,37 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	});
 
 	// Sliders
-	static const auto& minmax_label_width = [](const QString& sizer)
-	{
-		return QLabel(sizer).sizeHint().width();
-	};
 
 	m_emu_settings->EnhanceSlider(ui->resolutionScale, emu_settings_type::ResolutionScale);
 	SubscribeTooltip(ui->gb_resolutionScale, tooltips.settings.resolution_scale);
 	ui->gb_resolutionScale->setEnabled(!ui->scrictModeRendering->isChecked());
 	// rename label texts to fit current state of Resolution Scale
+	const bool resolution_scale_dynamic = m_emu_settings->GetIsDynamicConfig(emu_settings_type::ResolutionScale);
 	const int resolution_scale_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::ResolutionScale));
-	auto scaled_resolution = [resolution_scale_def](int percentage)
+	auto scaled_resolution = [resolution_scale_def, resolution_scale_dynamic](int percentage)
 	{
+		QString text;
 		if (percentage == resolution_scale_def)
 		{
-			return tr("100% (Default)", "Resolution scale");
+			text = tr("100% (Default)", "Resolution scale");
 		}
-		return tr("%1% (%2x%3)", "Resolution scale").arg(percentage).arg(1280 * percentage / 100).arg(720 * percentage / 100);
+		else
+		{
+			text = tr("%1% (%2x%3)", "Resolution scale").arg(percentage).arg(1280 * percentage / 100).arg(720 * percentage / 100);
+		}
+		if (resolution_scale_dynamic)
+		{
+			return emu_settings::GetDynamicLabel(text);
+		}
+		return text;
 	};
 	ui->resolutionScale->setPageStep(50);
 	ui->resolutionScaleMin->setText(QString::number(ui->resolutionScale->minimum()));
-	ui->resolutionScaleMin->setFixedWidth(minmax_label_width("00"));
+	ui->resolutionScaleMin->setFixedWidth(label_width(QStringLiteral("00")));
 	ui->resolutionScaleMax->setText(QString::number(ui->resolutionScale->maximum()));
-	ui->resolutionScaleMax->setFixedWidth(minmax_label_width("0000"));
+	ui->resolutionScaleMax->setFixedWidth(label_width(QStringLiteral("0000")));
 	ui->resolutionScaleVal->setText(scaled_resolution(ui->resolutionScale->value()));
-	connect(ui->resolutionScale, &QSlider::valueChanged, [=, this](int value)
+	connect(ui->resolutionScale, &QSlider::valueChanged, [scaled_resolution, this](int value)
 	{
 		ui->resolutionScaleVal->setText(scaled_resolution(value));
 	});
@@ -458,20 +471,30 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_minimumScalableDimension, tooltips.settings.minimum_scalable_dimension);
 	ui->gb_minimumScalableDimension->setEnabled(!ui->scrictModeRendering->isChecked());
 	// rename label texts to fit current state of Minimum Scalable Dimension
+	const bool minimum_scalable_dimension_dynamic = m_emu_settings->GetIsDynamicConfig(emu_settings_type::MinimumScalableDimension);
 	const int minimum_scalable_dimension_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::MinimumScalableDimension));
-	auto min_scalable_dimension = [minimum_scalable_dimension_def](int dim)
+	auto min_scalable_dimension = [minimum_scalable_dimension_def, minimum_scalable_dimension_dynamic](int dim)
 	{
+		QString text;
 		if (dim == minimum_scalable_dimension_def)
 		{
-			return tr("%1x%1 (Default)", "Minimum scalable dimension").arg(dim);
+			text = tr("%1x%1 (Default)", "Minimum scalable dimension").arg(dim);
 		}
-		return tr("%1x%1", "Minimum scalable dimension").arg(dim);
+		else
+		{
+			text = tr("%1x%1", "Minimum scalable dimension").arg(dim);
+		}
+		if (minimum_scalable_dimension_dynamic)
+		{
+			return emu_settings::GetDynamicLabel(text);
+		}
+		return text;
 	};
 	ui->minimumScalableDimension->setPageStep(64);
 	ui->minimumScalableDimensionMin->setText(QString::number(ui->minimumScalableDimension->minimum()));
-	ui->minimumScalableDimensionMin->setFixedWidth(minmax_label_width("00"));
+	ui->minimumScalableDimensionMin->setFixedWidth(label_width(QStringLiteral("00")));
 	ui->minimumScalableDimensionMax->setText(QString::number(ui->minimumScalableDimension->maximum()));
-	ui->minimumScalableDimensionMax->setFixedWidth(minmax_label_width("0000"));
+	ui->minimumScalableDimensionMax->setFixedWidth(label_width(QStringLiteral("0000")));
 	ui->minimumScalableDimensionVal->setText(min_scalable_dimension(ui->minimumScalableDimension->value()));
 	connect(ui->minimumScalableDimension, &QSlider::valueChanged, [=, this](int value)
 	{
@@ -635,7 +658,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	auto enable_buffering = [this, enable_buffering_options](const QString& text)
 	{
-		const bool enabled = text == "XAudio2" || text == "OpenAL" || text == "FAudio";
+		const bool enabled =
+#ifdef _WIN32
+			text == m_emu_settings->GetLocalizedSetting("XAudio2", emu_settings_type::AudioRenderer, static_cast<int>(audio_renderer::xaudio)) ||
+#endif
+			text == m_emu_settings->GetLocalizedSetting("OpenAL", emu_settings_type::AudioRenderer, static_cast<int>(audio_renderer::openal)) ||
+#ifdef HAVE_FAUDIO
+			text == m_emu_settings->GetLocalizedSetting("FAudio", emu_settings_type::AudioRenderer, static_cast<int>(audio_renderer::faudio)) ||
+#endif
+			false;
 		ui->enableBuffering->setEnabled(enabled);
 		enable_buffering_options(enabled && ui->enableBuffering->isChecked());
 	};
@@ -857,7 +888,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Radio Buttons
 
 	// creating this in ui file keeps scrambling the order...
-	QButtonGroup *enter_button_assignment_bg = new QButtonGroup(this);
+	QButtonGroup *enter_button_assignment_bg = new QButtonGroup(ui->gb_enterButtonAssignment);
 	enter_button_assignment_bg->addButton(ui->enterButtonAssignCircle, 0);
 	enter_button_assignment_bg->addButton(ui->enterButtonAssignCross, 1);
 
@@ -873,13 +904,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// Edits
 
-	m_emu_settings->EnhanceEdit(ui->edit_dns, emu_settings_type::DNSAddress);
+	m_emu_settings->EnhanceLineEdit(ui->edit_dns, emu_settings_type::DNSAddress);
 	SubscribeTooltip(ui->gb_edit_dns, tooltips.settings.dns);
 
-	m_emu_settings->EnhanceEdit(ui->edit_npid, emu_settings_type::PSNNPID);
+	m_emu_settings->EnhanceLineEdit(ui->edit_npid, emu_settings_type::PSNNPID);
 	SubscribeTooltip(ui->gb_edit_npid, tooltips.settings.psn_npid);
 
-	m_emu_settings->EnhanceEdit(ui->edit_swaps, emu_settings_type::IpSwapList);
+	m_emu_settings->EnhanceLineEdit(ui->edit_swaps, emu_settings_type::IpSwapList);
 	SubscribeTooltip(ui->gb_edit_swaps, tooltips.settings.dns_swap);
 
 	// Comboboxes
@@ -1019,7 +1050,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->lib_lv2l, tooltips.settings.libraries_liblv2list);
 
 	// creating this in ui file keeps scrambling the order...
-	QButtonGroup *lib_mode_bg = new QButtonGroup(this);
+	QButtonGroup *lib_mode_bg = new QButtonGroup(ui->gb_lib_settings);
 	lib_mode_bg->addButton(ui->lib_manu, static_cast<int>(lib_loading_type::manual));
 	lib_mode_bg->addButton(ui->lib_both, static_cast<int>(lib_loading_type::hybrid));
 	lib_mode_bg->addButton(ui->lib_lv2,  static_cast<int>(lib_loading_type::liblv2only));
@@ -1313,6 +1344,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	}
 
 	// Game window title builder
+	
+	const bool game_title_dynamic = m_emu_settings->GetIsDynamicConfig(emu_settings_type::WindowTitleFormat);
 
 	const auto get_game_window_title = [this, game](const QString& format)
 	{
@@ -1352,7 +1385,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		const auto elided_text = metrics.elidedText(game_window_title_format, Qt::ElideRight, width);
 		const auto tooltip = game_window_title_format + QStringLiteral("\n\n") + game_window_title;
 
-		ui->label_game_window_title_format->setText(elided_text);
+		ui->label_game_window_title_format->setText(game_title_dynamic ? emu_settings::GetDynamicLabel(elided_text) : elided_text);
 		ui->label_game_window_title_format->setToolTip(tooltip);
 	};
 
@@ -1731,10 +1764,15 @@ void settings_dialog::EnhanceSlider(emu_settings_type settings_type, QSlider* sl
 
 	if (slider && label)
 	{
-		label->setText(label_text.arg(slider->value()));
-		connect(slider, &QSlider::valueChanged, [label, label_text](int value)
+		const bool is_dynamic = m_emu_settings->GetIsDynamicConfig(settings_type);
+		const auto text = label_text.arg(slider->value());
+
+		label->setText(is_dynamic ? emu_settings::GetDynamicLabel(text) : text);
+
+		connect(slider, &QSlider::valueChanged, [is_dynamic, label, label_text](int value)
 		{
-			label->setText(label_text.arg(value));
+			const auto text = label_text.arg(value);
+			label->setText(is_dynamic ? emu_settings::GetDynamicLabel(text) : text);
 		});
 	}
 }
@@ -1896,7 +1934,10 @@ int settings_dialog::exec()
 
 void settings_dialog::SubscribeDescription(QLabel* description)
 {
+	const QString dynamic_hint = tr(": Changing an option with this icon will have an immediate effect on the game.");
 	description->setFixedHeight(description->sizeHint().height());
+	description->setTextFormat(Qt::TextFormat::RichText);
+	description->setText(description->text() + QStringLiteral("<br><br>") + emu_settings::GetDynamicLabel(dynamic_hint));
 	m_description_labels.append(QPair<QLabel*, QString>(description, description->text()));
 }
 
