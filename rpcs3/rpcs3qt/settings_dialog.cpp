@@ -197,7 +197,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings_type::PreferredSPUThreads, true);
 	SubscribeTooltip(ui->gb_spu_threads, tooltips.settings.preferred_spu_threads);
-	ui->preferredSPUThreads->setItemText(ui->preferredSPUThreads->findData("0"), tr("Auto", "Preferred SPU threads"));
+	ui->preferredSPUThreads->setItemText(ui->preferredSPUThreads->findData(0), tr("Auto", "Preferred SPU threads"));
 
 	if (utils::has_rtm())
 	{
@@ -420,10 +420,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	});
 
 	// Sliders
-	static const auto& minmax_label_width = [](const QString& sizer)
-	{
-		return QLabel(sizer).sizeHint().width();
-	};
 
 	m_emu_settings->EnhanceSlider(ui->resolutionScale, emu_settings_type::ResolutionScale);
 	SubscribeTooltip(ui->gb_resolutionScale, tooltips.settings.resolution_scale);
@@ -440,11 +436,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	};
 	ui->resolutionScale->setPageStep(50);
 	ui->resolutionScaleMin->setText(QString::number(ui->resolutionScale->minimum()));
-	ui->resolutionScaleMin->setFixedWidth(minmax_label_width("00"));
+	ui->resolutionScaleMin->setFixedWidth(gui::utils::get_label_width(QStringLiteral("00")));
 	ui->resolutionScaleMax->setText(QString::number(ui->resolutionScale->maximum()));
-	ui->resolutionScaleMax->setFixedWidth(minmax_label_width("0000"));
+	ui->resolutionScaleMax->setFixedWidth(gui::utils::get_label_width(QStringLiteral("0000")));
 	ui->resolutionScaleVal->setText(scaled_resolution(ui->resolutionScale->value()));
-	connect(ui->resolutionScale, &QSlider::valueChanged, [=, this](int value)
+	connect(ui->resolutionScale, &QSlider::valueChanged, [scaled_resolution, this](int value)
 	{
 		ui->resolutionScaleVal->setText(scaled_resolution(value));
 	});
@@ -469,9 +465,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	};
 	ui->minimumScalableDimension->setPageStep(64);
 	ui->minimumScalableDimensionMin->setText(QString::number(ui->minimumScalableDimension->minimum()));
-	ui->minimumScalableDimensionMin->setFixedWidth(minmax_label_width("00"));
+	ui->minimumScalableDimensionMin->setFixedWidth(gui::utils::get_label_width(QStringLiteral("00")));
 	ui->minimumScalableDimensionMax->setText(QString::number(ui->minimumScalableDimension->maximum()));
-	ui->minimumScalableDimensionMax->setFixedWidth(minmax_label_width("0000"));
+	ui->minimumScalableDimensionMax->setFixedWidth(gui::utils::get_label_width(QStringLiteral("0000")));
 	ui->minimumScalableDimensionVal->setText(min_scalable_dimension(ui->minimumScalableDimension->value()));
 	connect(ui->minimumScalableDimension, &QSlider::valueChanged, [=, this](int value)
 	{
@@ -633,8 +629,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		enable_time_stretching_options(enabled && ui->enableTimeStretching->isChecked());
 	};
 
-	auto enable_buffering = [this, enable_buffering_options](const QString& text)
+	auto enable_buffering = [this, enable_buffering_options](int index)
 	{
+		const auto text = ui->audioOutBox->currentData().toString();
 		const bool enabled = text == "XAudio2" || text == "OpenAL" || text == "FAudio";
 		ui->enableBuffering->setEnabled(enabled);
 		enable_buffering_options(enabled && ui->enableBuffering->isChecked());
@@ -728,7 +725,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #else
 	SubscribeTooltip(ui->gb_audio_out, tooltips.settings.audio_out_linux);
 #endif
-	connect(ui->audioOutBox, &QComboBox::currentTextChanged, enable_buffering);
+	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), enable_buffering);
 
 	// Microphone Comboboxes
 	mics_combo[0] = ui->microphone1Box;
@@ -786,7 +783,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->enableTimeStretching, tooltips.settings.enable_time_stretching);
 	connect(ui->enableTimeStretching, &QCheckBox::clicked, enable_time_stretching_options);
 
-	enable_buffering(ui->audioOutBox->currentText());
+	enable_buffering(ui->audioOutBox->currentIndex());
 
 	// Sliders
 
@@ -873,13 +870,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// Edits
 
-	m_emu_settings->EnhanceEdit(ui->edit_dns, emu_settings_type::DNSAddress);
+	m_emu_settings->EnhanceLineEdit(ui->edit_dns, emu_settings_type::DNSAddress);
 	SubscribeTooltip(ui->gb_edit_dns, tooltips.settings.dns);
 
-	m_emu_settings->EnhanceEdit(ui->edit_npid, emu_settings_type::PSNNPID);
+	m_emu_settings->EnhanceLineEdit(ui->edit_npid, emu_settings_type::PSNNPID);
 	SubscribeTooltip(ui->gb_edit_npid, tooltips.settings.psn_npid);
 
-	m_emu_settings->EnhanceEdit(ui->edit_swaps, emu_settings_type::IpSwapList);
+	m_emu_settings->EnhanceLineEdit(ui->edit_swaps, emu_settings_type::IpSwapList);
 	SubscribeTooltip(ui->gb_edit_swaps, tooltips.settings.dns_swap);
 
 	// Comboboxes
@@ -956,7 +953,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);
-	ui->maxSPURSThreads->setItemText(ui->maxSPURSThreads->findData("6"), tr("Unlimited (Default)", "Max SPURS threads"));
+	ui->maxSPURSThreads->setItemText(ui->maxSPURSThreads->findData(6), tr("Unlimited (Default)", "Max SPURS threads"));
 	SubscribeTooltip(ui->gb_max_spurs_threads, tooltips.settings.max_spurs_threads);
 
 	m_emu_settings->EnhanceComboBox(ui->sleepTimersAccuracy, emu_settings_type::SleepTimersAccuracy);
@@ -1148,7 +1145,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->maxLLVMThreads, emu_settings_type::MaxLLVMThreads, true, true, std::thread::hardware_concurrency());
 	SubscribeTooltip(ui->gb_max_llvm, tooltips.settings.max_llvm_threads);
-	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData("0"), tr("All (%1)", "Max LLVM threads").arg(std::thread::hardware_concurrency()));
+	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData(0), tr("All (%1)", "Max LLVM threads").arg(std::thread::hardware_concurrency()));
 
 	m_emu_settings->EnhanceComboBox(ui->perfOverlayDetailLevel, emu_settings_type::PerfOverlayDetailLevel);
 	SubscribeTooltip(ui->perf_overlay_detail_level, tooltips.settings.perf_overlay_detail_level);

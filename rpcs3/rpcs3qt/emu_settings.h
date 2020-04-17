@@ -51,7 +51,7 @@ public:
 	void EnhanceDoubleSpinBox(QDoubleSpinBox* slider, emu_settings_type type, const QString& prefix = "", const QString& suffix = "");
 
 	/** Connects a line edit with the target settings type*/
-	void EnhanceEdit(QLineEdit* edit, emu_settings_type type);
+	void EnhanceLineEdit(QLineEdit* edit, emu_settings_type type);
 
 	/** Connects a button group with the target settings type*/
 	void EnhanceRadioButton(QButtonGroup* button_group, emu_settings_type type);
