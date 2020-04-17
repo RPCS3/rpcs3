@@ -93,7 +93,7 @@ namespace cfg_adapter
 }
 
 /** Returns possible options for values for some particular setting.*/
-static QStringList getOptions(cfg_location location)
+static QStringList get_options(cfg_location location)
 {
 	QStringList values;
 	auto begin = location.cbegin();
@@ -212,7 +212,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 
 		for (int i = range.first().toInt(); i <= max_item; i++)
 		{
-			combobox->addItem(QString::number(i), QVariant(QString::number(i)));
+			combobox->addItem(QString::number(i), i);
 		}
 	}
 	else
@@ -414,7 +414,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_ty
 	});
 }
 
-void emu_settings::EnhanceEdit(QLineEdit* edit, emu_settings_type type)
+void emu_settings::EnhanceLineEdit(QLineEdit* edit, emu_settings_type type)
 {
 	if (!edit)
 	{
@@ -478,7 +478,7 @@ void emu_settings::SaveSelectedLibraries(const std::vector<std::string>& libs)
 
 QStringList emu_settings::GetSettingOptions(emu_settings_type type) const
 {
-	return getOptions(const_cast<cfg_location&&>(m_settings_location[type]));
+	return get_options(const_cast<cfg_location&&>(m_settings_location[type]));
 }
 
 std::string emu_settings::GetSettingName(emu_settings_type type) const
