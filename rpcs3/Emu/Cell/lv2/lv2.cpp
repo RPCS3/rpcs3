@@ -56,7 +56,7 @@ void fmt_class_string<ppu_syscall_code>::format(std::string& out, u64 arg)
 
 static bool null_func(ppu_thread& ppu)
 {
-	ppu_log.todo("Unimplemented syscall %s -> CELL_OK (r3=0x%llx, r4=0x%x, r5=0x%llx, r6=0x%llx, r7=0x%llx, r8=0x%llx, r9=0x%llx, r10=0x%llx)", ppu_syscall_code(ppu.gpr[11]),
+	ppu_log.todo("Unimplemented syscall %s -> CELL_OK (r3=0x%llx, r4=0x%llx, r5=0x%llx, r6=0x%llx, r7=0x%llx, r8=0x%llx, r9=0x%llx, r10=0x%llx)", ppu_syscall_code(ppu.gpr[11]),
 		ppu.gpr[3], ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7], ppu.gpr[8], ppu.gpr[9], ppu.gpr[10]);
 
 	ppu.gpr[3] = 0;
