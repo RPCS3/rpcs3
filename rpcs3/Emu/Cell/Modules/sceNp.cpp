@@ -436,6 +436,12 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		sceNp.notice("npDrmIsAvailable(): KLicense key %s", *reinterpret_cast<be_t<v128, 1>*>(k_licensee.data()));
 	}
 
+	if (Emu.GetCat() == "PE")
+	{
+		std::copy_n(NP_PSP_KEY_2, std::size(NP_PSP_KEY_2), k_licensee.begin());
+		sceNp.success("npDrmIsAvailable(): PSP remaster KLicense key apllied.");
+	}
+
 	const std::string enc_drm_path(drm_path.get_ptr(), std::find(drm_path.get_ptr(), drm_path.get_ptr() + 0x100, '\0'));
 
 	sceNp.warning(u8"npDrmIsAvailable(): drm_path=“%s”", enc_drm_path);
