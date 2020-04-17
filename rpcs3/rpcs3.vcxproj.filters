@@ -1039,6 +1039,9 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_render_creator.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\config_adapter.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -1129,6 +1132,9 @@
       <Filter>rpcs3</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\emu_settings_type.h">
+      <Filter>Gui\settings</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\config_adapter.h">
       <Filter>Gui\settings</Filter>
     </ClInclude>
   </ItemGroup>

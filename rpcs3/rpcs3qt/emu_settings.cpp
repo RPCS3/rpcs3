@@ -1,6 +1,5 @@
 ﻿#include "emu_settings.h"
-
-#include "Utilities/Config.h"
+#include "config_adapter.h"
 
 #include <QMessageBox>
 #include <QLineEdit>
@@ -54,63 +53,6 @@ namespace
 			}
 		}
 	}
-}
-
-// Helper methods to interact with YAML and the config settings.
-namespace cfg_adapter
-{
-	static cfg::_base& get_cfg(cfg::_base& root, const std::string& name)
-	{
-		if (root.get_type() == cfg::type::node)
-		{
-			for (const auto& pair : static_cast<cfg::node&>(root).get_nodes())
-			{
-				if (pair.first == name)
-				{
-					return *pair.second;
-				}
-			}
-		}
-
-		fmt::throw_exception("Node not found: %s", name);
-	}
-
-	static cfg::_base& get_cfg(cfg::_base& root, cfg_location::const_iterator begin, cfg_location::const_iterator end)
-	{
-		return begin == end ? root : get_cfg(get_cfg(root, *begin), begin + 1, end);
-	}
-
-	static YAML::Node get_node(const YAML::Node& node, cfg_location::const_iterator begin, cfg_location::const_iterator end)
-	{
-		return begin == end ? node : get_node(node[*begin], begin + 1, end); // TODO
-	}
-
-	/** Syntactic sugar to get a setting at a given config location. */
-	static YAML::Node get_node(const YAML::Node& node, cfg_location loc)
-	{
-		return get_node(node, loc.cbegin(), loc.cend());
-	}
-}
-
-/** Returns possible options for values for some particular setting.*/
-static QStringList get_options(cfg_location location)
-{
-	QStringList values;
-	auto begin = location.cbegin();
-	auto end = location.cend();
-	for (const auto& v : cfg_adapter::get_cfg(g_cfg, begin, end).to_list())
-	{
-		values.append(qstr(v));
-	}
-	return values;
-}
-
-/** Returns dynamic property for some particular setting.*/
-static bool get_is_dynamic(cfg_location location)
-{
-	auto begin = location.cbegin();
-	auto end = location.cend();
-	return cfg_adapter::get_cfg(g_cfg, begin, end).get_is_dynamic();
 }
 
 emu_settings::emu_settings()
@@ -515,28 +457,28 @@ void emu_settings::SaveSelectedLibraries(const std::vector<std::string>& libs)
 
 QStringList emu_settings::GetSettingOptions(emu_settings_type type) const
 {
-	return get_options(const_cast<cfg_location&&>(m_settings_location[type]));
+	return cfg_adapter::get_options(const_cast<cfg_location&&>(settings_location[type]));
 }
 
 std::string emu_settings::GetSettingName(emu_settings_type type) const
 {
-	const cfg_location loc = m_settings_location[type];
+	const cfg_location loc = settings_location[type];
 	return loc[loc.size() - 1];
 }
 
 std::string emu_settings::GetSettingDefault(emu_settings_type type) const
 {
-	return cfg_adapter::get_node(m_defaultSettings, m_settings_location[type]).Scalar();
+	return cfg_adapter::get_node(m_defaultSettings, settings_location[type]).Scalar();
 }
 
 std::string emu_settings::GetSetting(emu_settings_type type) const
 {
-	return cfg_adapter::get_node(m_currentSettings, m_settings_location[type]).Scalar();
+	return cfg_adapter::get_node(m_currentSettings, settings_location[type]).Scalar();
 }
 
 void emu_settings::SetSetting(emu_settings_type type, const std::string& val)
 {
-	cfg_adapter::get_node(m_currentSettings, m_settings_location[type]) = val;
+	cfg_adapter::get_node(m_currentSettings, settings_location[type]) = val;
 }
 
 void emu_settings::OpenCorrectionDialog(QWidget* parent)
@@ -757,10 +699,4 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	}
 
 	return original;
-}
-
-bool emu_settings::GetIsDynamicConfig(emu_settings_type type)
-{
-	const cfg_location loc = m_settings_location[type];
-	return get_is_dynamic(loc);
 }
