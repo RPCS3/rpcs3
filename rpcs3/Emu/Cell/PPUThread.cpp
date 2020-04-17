@@ -1033,26 +1033,42 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	ppu.raddr = addr;
 
-	u64 count = 0;
-
-	while (g_use_rtm) [[likely]]
+	for (u64 count = 0; g_use_rtm; [&]()
 	{
-		ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & -128;
+		if (++count < 20) [[likely]]
+		{
+			busy_wait(300);
+		}
+		else
+		{
+			std::this_thread::yield();
+		}
+	}())
+	{
+		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+
+		if (ppu.rtime & 127)
+		{
+			if (!(ppu.state & cpu_flag::wait))
+			{
+				ppu.state += cpu_flag::wait;
+			}
+
+			continue;
+		}
+
 		ppu.rdata = data;
 
-		if ((vm::reservation_acquire(addr, sizeof(T)) & -128) == ppu.rtime) [[likely]]
+		if (vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime) [[likely]]
 		{
+			ppu.test_stopped();
+
 			if (count >= 10) [[unlikely]]
 			{
 				ppu_log.error("%s took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
 			}
 
 			return static_cast<T>(ppu.rdata << data_off >> size_off);
-		}
-		else
-		{
-			_mm_pause();
-			count++;
 		}
 	}
 
