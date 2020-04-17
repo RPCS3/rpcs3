@@ -89,6 +89,8 @@ public:
 	/** Get a localized and therefore freely adjustable version of the string used in config.yml.*/
 	QString GetLocalizedSetting(const QString& original, emu_settings_type type, int index) const;
 
+	bool GetIsDynamicConfig(emu_settings_type type);
+
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
