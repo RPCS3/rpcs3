@@ -105,6 +105,14 @@ static QStringList get_options(cfg_location location)
 	return values;
 }
 
+/** Returns dynamic property for some particular setting.*/
+static bool get_is_dynamic(cfg_location location)
+{
+	auto begin = location.cbegin();
+	auto end = location.cend();
+	return cfg_adapter::get_cfg(g_cfg, begin, end).get_is_dynamic();
+}
+
 emu_settings::emu_settings()
 	: QObject()
 	, m_render_creator(new render_creator(this))
@@ -720,4 +728,10 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	}
 
 	return original;
+}
+
+bool emu_settings::GetIsDynamicConfig(emu_settings_type type)
+{
+	const cfg_location loc = m_settings_location[type];
+	return get_is_dynamic(loc);
 }
