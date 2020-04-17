@@ -631,7 +631,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	auto enable_buffering = [this, enable_buffering_options](int index)
 	{
-		const auto text = ui->audioOutBox->currentData().toString();
+		const QVariantList var_list = ui->audioOutBox->itemData(index).toList();
+		ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
+		const QString text = var_list[0].toString();
 		const bool enabled = text == "XAudio2" || text == "OpenAL" || text == "FAudio";
 		ui->enableBuffering->setEnabled(enabled);
 		enable_buffering_options(enabled && ui->enableBuffering->isChecked());
@@ -639,54 +641,39 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const QString mic_none = m_emu_settings->m_microphone_creator.get_none();
 
-	auto change_microphone_type = [=, this](QString text)
+	auto change_microphone_type = [mic_none, this](int index)
 	{
-		std::string s_standard, s_singstar, s_realsingstar, s_rocksmith;
-
-		auto enable_mics_combo = [=, this](u32 max)
+		if (index < 0)
 		{
-			ui->microphone1Box->setEnabled(true);
-
-			if (max == 1 || ui->microphone1Box->currentText() == mic_none)
-				return;
-
-			ui->microphone2Box->setEnabled(true);
-
-			if (max > 2 && ui->microphone2Box->currentText() != mic_none)
-			{
-				ui->microphone3Box->setEnabled(true);
-				if (ui->microphone3Box->currentText() != mic_none)
-				{
-					ui->microphone4Box->setEnabled(true);
-				}
-			}
-		};
-
-		ui->microphone1Box->setEnabled(false);
-		ui->microphone2Box->setEnabled(false);
-		ui->microphone3Box->setEnabled(false);
-		ui->microphone4Box->setEnabled(false);
-
-		fmt_class_string<microphone_handler>::format(s_standard, static_cast<u64>(microphone_handler::standard));
-		fmt_class_string<microphone_handler>::format(s_singstar, static_cast<u64>(microphone_handler::singstar));
-		fmt_class_string<microphone_handler>::format(s_realsingstar, static_cast<u64>(microphone_handler::real_singstar));
-		fmt_class_string<microphone_handler>::format(s_rocksmith, static_cast<u64>(microphone_handler::rocksmith));
-
-		if (text == s_standard.c_str())
-		{
-			enable_mics_combo(4);
 			return;
 		}
-		if (text == s_singstar.c_str())
+
+		const QVariantList var_list = ui->microphoneBox->itemData(index).toList();
+		ASSERT(var_list.size() == 2 && var_list[1].canConvert<int>());
+		const int handler_id = var_list[1].toInt();
+		int max = 0;
+
+		switch (static_cast<microphone_handler>(handler_id))
 		{
-			enable_mics_combo(2);
-			return;
+		case microphone_handler::standard:
+			max = 4;
+			break;
+		case microphone_handler::singstar:
+			max = 2;
+			break;
+		case microphone_handler::real_singstar:
+		case microphone_handler::rocksmith:
+			max = 1;
+			break;
+		case microphone_handler::null:
+		default:
+			break;
 		}
-		if (text == s_realsingstar.c_str() || text == s_rocksmith.c_str())
-		{
-			enable_mics_combo(1);
-			return;
-		}
+
+		ui->microphone1Box->setEnabled(max > 0);
+		ui->microphone2Box->setEnabled(max > 1 && ui->microphone1Box->currentText() != mic_none);
+		ui->microphone3Box->setEnabled(max > 2 && ui->microphone2Box->currentText() != mic_none);
+		ui->microphone4Box->setEnabled(ui->microphone3Box->isEnabled() && ui->microphone3Box->currentText() != mic_none);
 	};
 
 	auto propagate_used_devices = [=, this]()
@@ -706,7 +693,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			mics_combo[index]->setCurrentText(cur_item);
 			mics_combo[index]->blockSignals(false);
 		}
-		change_microphone_type(ui->microphoneBox->currentText());
+		change_microphone_type(ui->microphoneBox->currentIndex());
 	};
 
 	auto change_microphone_device = [=, this](u32 next_index, QString text)
@@ -761,7 +748,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->microphoneBox, emu_settings_type::MicrophoneType);
 	SubscribeTooltip(ui->microphoneBox, tooltips.settings.microphone);
-	connect(ui->microphoneBox, &QComboBox::currentTextChanged, change_microphone_type);
+	connect(ui->microphoneBox, QOverload<int>::of(&QComboBox::currentIndexChanged), change_microphone_type);
 	propagate_used_devices(); // Enables/Disables comboboxes and checks values from config for sanity
 
 	// Checkboxes

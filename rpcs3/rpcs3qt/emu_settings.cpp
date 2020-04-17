@@ -227,10 +227,10 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 	{
 		const QStringList settings = GetSettingOptions(type);
 
-		for (const QString& setting : settings)
+		for (int i = 0; i < settings.count(); i++)
 		{
-			const QString localized_setting = GetLocalizedSetting(setting, type, combobox->count());
-			combobox->addItem(localized_setting, QVariant(setting));
+			const QString localized_setting = GetLocalizedSetting(settings[i], type, combobox->count());
+			combobox->addItem(localized_setting, QVariant({settings[i], i}));
 		}
 
 		if (sorted)
@@ -240,7 +240,27 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 	}
 
 	const std::string selected = GetSetting(type);
-	const int index = combobox->findData(qstr(selected));
+	const QString selected_q = qstr(selected);
+	int index = -1;
+
+	if (is_ranged)
+	{
+		index = combobox->findData(selected_q);
+	}
+	else
+	{
+		for (int i = 0; i < combobox->count(); i++)
+		{
+			const QVariantList var_list = combobox->itemData(i).toList();
+			ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
+
+			if (selected_q == var_list[0].toString())
+			{
+				index = i;
+				break;
+			}
+		}
+	}
 
 	if (index == -1)
 	{
@@ -256,7 +276,16 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 
 	connect(combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=, this](int index)
 	{
-		SetSetting(type, sstr(combobox->itemData(index)));
+		if (is_ranged)
+		{
+			SetSetting(type, sstr(combobox->itemData(index)));
+		}
+		else
+		{
+			const QVariantList var_list = combobox->itemData(index).toList();
+			ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
+			SetSetting(type, sstr(var_list[0]));
+		}
 	});
 }
 
