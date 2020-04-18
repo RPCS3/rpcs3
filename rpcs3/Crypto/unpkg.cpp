@@ -276,10 +276,11 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		}
 		case 0x5:
 		{
-			if (packet.size == sizeof(metadata.package_revision))
+			if (packet.size == sizeof(metadata.package_revision.data))
 			{
-				archive_read(&metadata.package_revision, sizeof(metadata.package_revision));
-				pkg_log.notice("Metadata: Package Revision = 0x%x", metadata.package_revision, metadata.package_revision);
+				archive_read(&metadata.package_revision.data, sizeof(metadata.package_revision.data));
+				metadata.package_revision.interpret_data();
+				pkg_log.notice("Metadata: Package Revision = %s", metadata.package_revision.to_string());
 				continue;
 			}
 			else
@@ -312,10 +313,11 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		}
 		case 0x8:
 		{
-			if (packet.size == sizeof(metadata.software_revision))
+			if (packet.size == sizeof(metadata.software_revision.data))
 			{
-				archive_read(&metadata.software_revision, sizeof(metadata.software_revision));
-				pkg_log.notice("Metadata: Software Revision = 0x%x", metadata.software_revision, metadata.software_revision);
+				archive_read(&metadata.software_revision.data, sizeof(metadata.software_revision.data));
+				metadata.software_revision.interpret_data();
+				pkg_log.notice("Metadata: Software Revision = %s",  metadata.software_revision.to_string());
 				continue;
 			}
 			else
