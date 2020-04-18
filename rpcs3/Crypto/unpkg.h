@@ -38,9 +38,9 @@ struct PKGHeader
 	le_t<u32> pkg_magic;    // Magic (0x7f504b47) (" PKG")
 	be_t<u16> pkg_type;     // Release type (Retail:0x8000, Debug:0x0000)
 	be_t<u16> pkg_platform; // Platform type (PS3:0x0001, PSP:0x0002)
-	be_t<u32> pkg_info_off;
-	be_t<u32> pkg_info_num;
-	be_t<u32> header_size;  // Header size
+	be_t<u32> meta_offset;  // Metadata offset. Usually 0xC0 for PS3, usually 0x280 for PSP and PSVita
+	be_t<u32> meta_count;   // Metadata item count
+	be_t<u32> meta_size;    // Metadata size.
 	be_t<u32> file_count;   // Number of files
 	be_t<u64> pkg_size;     // PKG size in bytes
 	be_t<u64> data_offset;  // Encrypted data offset
