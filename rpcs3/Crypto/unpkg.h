@@ -35,7 +35,7 @@ enum : u32
 // Structs
 struct PKGHeader
 {
-	nse_t<u32> pkg_magic;   // Magic (0x7f504b47) (" PKG")
+	le_t<u32> pkg_magic;    // Magic (0x7f504b47) (" PKG")
 	be_t<u16> pkg_type;     // Release type (Retail:0x8000, Debug:0x0000)
 	be_t<u16> pkg_platform; // Platform type (PS3:0x0001, PSP:0x0002)
 	be_t<u32> pkg_info_off;
@@ -54,7 +54,7 @@ struct PKGHeader
 // Extended header in PSP and PSVita packages
 struct PKGExtHeader
 {
-	nse_t<u32> magic;                            // 0x7F657874 (" ext")
+	le_t<u32> magic;                            // 0x7F657874 (" ext")
 	be_t<u32> unknown_1;                        // Maybe version. always 1
 	be_t<u32> ext_hdr_size;                     // Extended header size. ex: 0x40
 	be_t<u32> ext_data_size;                    // ex: 0x180
