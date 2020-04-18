@@ -467,8 +467,8 @@ VKGSRender::VKGSRender() : GSRender()
 
 	if (g_cfg.video.shader_interpreter_mode != shader_interpreter_mode::disabled)
 	{
-		m_vertex_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 16 * 0x100000, "vertex instructions buffer", 512 * 16);
-		m_fragment_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 16 * 0x100000, "fragment instructions buffer", 2048);
+		m_vertex_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 64 * 0x100000, "vertex instructions buffer", 512 * 16);
+		m_fragment_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 64 * 0x100000, "fragment instructions buffer", 2048);
 	}
 
 	const auto limits = m_device->gpu().get_limits();
@@ -1759,6 +1759,7 @@ void VKGSRender::load_program_env()
 			vp_config[0] = current_vertex_program.base_address;
 			vp_config[1] = current_vertex_program.entry;
 			vp_config[2] = current_vertex_program.output_mask;
+			vp_config[3] = rsx::method_registers.two_side_light_en()? 1u: 0u;
 
 			std::memcpy(vp_buf + 16, current_vertex_program.data.data(), current_vp_metadata.ucode_length);
 			m_vertex_instructions_buffer.unmap();

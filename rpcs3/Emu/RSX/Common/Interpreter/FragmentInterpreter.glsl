@@ -176,9 +176,9 @@ vec4 read_src(const in int index)
 			// TODO: wpos
 			value = vec4(0.); break;
 		case 1:
-			value = gl_FrontFacing? in_regs[1] : in_regs[3]; break;
+			value = gl_FrontFacing? in_regs[3] : in_regs[1]; break;
 		case 2:
-			value = gl_FrontFacing? in_regs[2] : in_regs[4]; break;
+			value = gl_FrontFacing? in_regs[4] : in_regs[2]; break;
 		case 3:
 			value = fetch_fog_value(fog_mode, in_regs[5]); break;
 		case 13:

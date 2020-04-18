@@ -258,6 +258,13 @@ void write_output(const in int oid, const in int mask_bit)
 	}
 }
 
+// Cannot dynamically index into the gl_ClipDistance array without causing problems due to it's unknown size
+#define write_clip_distance(plane, mask_bit, test, value)\
+	if (test && attribute_enabled(1 << mask_bit))\
+		gl_ClipDistance[plane] = value;\
+	else\
+		gl_ClipDistance[plane] = 0.5f;\
+
 ivec4 read_addr_reg()
 {
 	return a[d0.addr_reg_sel_1];
@@ -524,15 +531,21 @@ void main()
 		}
 	}
 
-	// TODO: 2-sided lighting
-	if (!attribute_enabled(1 << 0 | 1 << 2))
-	{
-		dest[1] = dest[3] = vec4(0, 0, 0, 1);
-	}
+	// Unconditionally update COLOR0 and SPECULAR0
+	write_output(1, 0);
+	write_output(2, 1);
 
-	if (!attribute_enabled(1 << 1 | 1 << 3))
+	// Conditionally update COLOR1 and SPECULAR1 depending on 2-sided mask
+	if (control == 0)
 	{
-		dest[2] = dest[4] = vec4(0, 0, 0, 1);
+		dest[3] = dest[1];
+		dest[4] = dest[2];
+	}
+	else
+	{
+		// 2-sided lighting
+		write_output(3, 2);
+		write_output(4, 3);
 	}
 
 	if (!attribute_enabled(1 << 4))
@@ -549,19 +562,12 @@ void main()
 		gl_PointSize = point_size;
 	}
 
-	if (attribute_enabled(1 << 6 | 1 << 7 | 1 << 8))
-	{
-		gl_ClipDistance[0] = (user_clip_enabled[0].x > 0)? dest[5].y * user_clip_factor[0].x : 0.5f;
-		gl_ClipDistance[1] = (user_clip_enabled[0].y > 0)? dest[5].z * user_clip_factor[0].y : 0.5f;
-		gl_ClipDistance[2] = (user_clip_enabled[0].z > 0)? dest[5].w * user_clip_factor[0].z : 0.5f;
-	}
-
-	if (attribute_enabled(1 << 9 | 1 << 10 | 1 << 11))
-	{
-		gl_ClipDistance[3] = (user_clip_enabled[0].w > 0)? dest[6].y * user_clip_factor[0].w : 0.5f;
-		gl_ClipDistance[4] = (user_clip_enabled[1].x > 0)? dest[6].z * user_clip_factor[1].x : 0.5f;
-		gl_ClipDistance[5] = (user_clip_enabled[1].y > 0)? dest[6].w * user_clip_factor[1].y : 0.5f;
-	}
+	write_clip_distance(0, 6, user_clip_enabled[0].x > 0, dest[5].y * user_clip_factor[0].x);
+	write_clip_distance(1, 7, user_clip_enabled[0].y > 0, dest[5].z * user_clip_factor[0].y);
+	write_clip_distance(2, 8, user_clip_enabled[0].z > 0, dest[5].w * user_clip_factor[0].z);
+	write_clip_distance(3, 9, user_clip_enabled[0].w > 0, dest[6].y * user_clip_factor[0].w);
+	write_clip_distance(4, 10, user_clip_enabled[1].x > 0, dest[6].z * user_clip_factor[1].x);
+	write_clip_distance(5, 11, user_clip_enabled[1].y > 0, dest[6].w * user_clip_factor[1].y);
 
 	write_output(15, 12);
 	write_output(6, 13);

@@ -114,7 +114,7 @@ namespace gl
 		"	uint base_address;\n"
 		"	uint entry;\n"
 		"	uint output_mask;\n"
-		"	uint reserved;\n"
+		"	uint control;\n"
 		"	uvec4 vp_instructions[];\n"
 		"};\n\n";
 
@@ -285,26 +285,22 @@ namespace gl
 			return;
 		}
 
-		if (get_driver_caps().vendor_AMD)
+		// Overlapping texture bindings are trouble. Cannot bind one TIU to two types of samplers simultaneously
+		for (unsigned i = 0; i < replacement_map.size(); ++i)
 		{
-			// AMD drivers don't like texture bindings overlapping which means workarounds are needed
-			// Technically this is accurate to spec, but makes efficient usage of shader resources difficult
-			for (unsigned i = 0; i < replacement_map.size(); ++i)
+			for (int j = 0; j < 4; ++j)
 			{
-				for (int j = 0; j < 4; ++j)
+				auto& pool = allocator.pools[j];
+				for (int k = pool.num_used; k < pool.pool_size; ++k)
 				{
-					auto& pool = allocator.pools[j];
-					for (int k = pool.num_used; k < pool.pool_size; ++k)
+					if (pool.allocated[k] == replacement_map[i].second)
 					{
-						if (pool.allocated[k] == replacement_map[i].second)
-						{
-							pool.allocated[k] = replacement_map[i].first;
-							pool.flags |= static_cast<u32>(interpreter::texture_pool_flags::dirty);
+						pool.allocated[k] = replacement_map[i].first;
+						pool.flags |= static_cast<u32>(interpreter::texture_pool_flags::dirty);
 
-							// Exit nested loop
-							j = 4;
-							break;
-						}
+						// Exit nested loop
+						j = 4;
+						break;
 					}
 				}
 			}

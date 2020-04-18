@@ -34,7 +34,7 @@ namespace vk
 		"	uint base_address;\n"
 		"	uint entry;\n"
 		"	uint output_mask;\n"
-		"	uint reserved;\n"
+		"	uint control;\n"
 		"	uvec4 vp_instructions[];\n"
 		"};\n\n";
 

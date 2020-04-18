@@ -778,6 +778,7 @@ void GLGSRender::load_program_env()
 			vp_config[0] = current_vertex_program.base_address;
 			vp_config[1] = current_vertex_program.entry;
 			vp_config[2] = current_vertex_program.output_mask;
+			vp_config[3] = rsx::method_registers.two_side_light_en() ? 1u : 0u;
 
 			std::memcpy(vp_buf + 16, current_vertex_program.data.data(), current_vp_metadata.ucode_length);
 
