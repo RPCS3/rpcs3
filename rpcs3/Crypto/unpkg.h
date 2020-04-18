@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Utilities/BEType.h"
+#include <sstream>
+#include <iomanip>
 
 // Constants
 enum
@@ -80,12 +82,81 @@ struct PKGEntry
 // https://www.psdevwiki.com/ps3/PKG_files#PKG_Metadata
 struct PKGMetaData
 {
+private:
+	static std::string to_hex_string(u8 buf[], size_t size)
+	{
+		std::stringstream sstream;
+		for (size_t i = 0; i < size; i++)
+		{
+			sstream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(buf[i]);
+		}
+		return sstream.str();
+	}
+	static std::string to_hex_string(u8 buf[], size_t size, size_t dotpos)
+	{
+		std::string result = to_hex_string(buf, size);
+		if (result.size() > dotpos)
+		{
+			result.insert(dotpos, 1, '.');
+		}
+		return result;
+	}
+public:
 	be_t<u32> drm_type{ 0 };
 	be_t<u32> content_type{ 0 };
 	be_t<u32> package_type{ 0 };
 	be_t<u64> package_size{ 0 };
-	be_t<u32> package_revision{ 0 };
-	be_t<u64> software_revision{ 0 };
+
+	struct package_revision
+	{
+		struct package_revision_data
+		{
+			u8 make_package_npdrm_ver[2];
+			u8 version[2];
+		} data {};
+
+		std::string make_package_npdrm_ver;
+		std::string version;
+
+		void interpret_data()
+		{
+			make_package_npdrm_ver = to_hex_string(data.make_package_npdrm_ver, sizeof(data.make_package_npdrm_ver));
+			version = to_hex_string(data.version, sizeof(data.version), 2);
+		}
+		std::string to_string()
+		{
+			return fmt::format("make package npdrm version: %s, version: %s", make_package_npdrm_ver, version);
+		}
+	} package_revision;
+
+	struct software_revision
+	{
+		struct software_revision_data
+		{
+			u8 unk[1];
+			u8 firmware_version[3];
+			u8 version[2];
+			u8 app_version[2];
+		} data {};
+
+		std::string unk; // maybe hardware id
+		std::string firmware_version;
+		std::string version;
+		std::string app_version;
+
+		void interpret_data()
+		{
+			unk = to_hex_string(data.unk, sizeof(data.unk));
+			firmware_version = to_hex_string(data.firmware_version, sizeof(data.firmware_version), 2);
+			version = to_hex_string(data.version, sizeof(data.version), 2);
+			app_version = to_hex_string(data.app_version, sizeof(data.app_version), 2);
+		}
+		std::string to_string()
+		{
+			return fmt::format("unk: %s, firmware version: %s, version: %s, app version: %s", unk, firmware_version, version, app_version);
+		}
+	} software_revision;
+
 	std::string title_id;
 	std::string install_dir;
 };
