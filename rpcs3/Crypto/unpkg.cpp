@@ -308,7 +308,16 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		}
 		case 0x7:
 		{
-			// QA Digest (24 bytes)
+			if (packet.size == sizeof(metadata.qa_digest))
+			{
+				archive_read(&metadata.qa_digest, sizeof(metadata.qa_digest));
+				pkg_log.notice("Metadata: QA Digest = 0x%x", metadata.qa_digest);
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: QA Digest size mismatch (0x%x)", packet.size);
+			}
 			break;
 		}
 		case 0x8:
@@ -328,7 +337,16 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		}
 		case 0x9:
 		{
-			// Unknown (8 bytes)
+			if (packet.size == sizeof(metadata.unk_0x9))
+			{
+				archive_read(&metadata.unk_0x9, sizeof(metadata.unk_0x9));
+				pkg_log.notice("Metadata: unk_0x9 = 0x%x = %d", metadata.unk_0x9, metadata.unk_0x9);
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: unk_0x9 size mismatch (0x%x)", packet.size);
+			}
 			break;
 		}
 		case 0xA:
@@ -352,7 +370,16 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		}
 		case 0xB:
 		{
-			// Unknown (8 bytes)
+			if (packet.size == sizeof(metadata.unk_0xB))
+			{
+				archive_read(&metadata.unk_0xB, sizeof(metadata.unk_0xB));
+				pkg_log.notice("Metadata: unk_0xB = 0x%x = %d", metadata.unk_0xB, metadata.unk_0xB);
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: unk_0xB size mismatch (0x%x)", packet.size);
+			}
 			break;
 		}
 		case 0xC:
@@ -360,14 +387,87 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 			// Unknown
 			break;
 		}
-		case 0xD:
-		case 0xE:
-		case 0xF:
-		case 0x10:
-		case 0x11:
-		case 0x12:
+		case 0xD: // PSVita stuff
 		{
-			// PSVita stuff
+			if (packet.size == sizeof(metadata.item_info))
+			{
+				archive_read(&metadata.item_info, sizeof(metadata.item_info));
+				pkg_log.notice("Metadata: PSVita item info = %s", metadata.item_info.to_string());
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: Item info size mismatch (0x%x)", packet.size);
+			}
+			break;
+		}
+		case 0xE: // PSVita stuff
+		{
+			if (packet.size == sizeof(metadata.sfo_info))
+			{
+				archive_read(&metadata.sfo_info, sizeof(metadata.sfo_info));
+				pkg_log.notice("Metadata: PSVita sfo info = %s", metadata.sfo_info.to_string());
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: SFO info size mismatch (0x%x)", packet.size);
+			}
+			break;
+		}
+		case 0xF: // PSVita stuff
+		{
+			if (packet.size == sizeof(metadata.unknown_data_info))
+			{
+				archive_read(&metadata.unknown_data_info, sizeof(metadata.unknown_data_info));
+				pkg_log.notice("Metadata: PSVita unknown data info = %s", metadata.unknown_data_info.to_string());
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: unknown data info size mismatch (0x%x)", packet.size);
+			}
+			break;
+		}
+		case 0x10: // PSVita stuff
+		{
+			if (packet.size == sizeof(metadata.entirety_info))
+			{
+				archive_read(&metadata.entirety_info, sizeof(metadata.entirety_info));
+				pkg_log.notice("Metadata: PSVita entirety info = %s", metadata.entirety_info.to_string());
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: Entirety info size mismatch (0x%x)", packet.size);
+			}
+			break;
+		}
+		case 0x11: // PSVita stuff
+		{
+			if (packet.size == sizeof(metadata.version_info))
+			{
+				archive_read(&metadata.version_info, sizeof(metadata.version_info));
+				pkg_log.notice("Metadata: PSVita version info = %s", metadata.version_info.to_string());
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: Version info size mismatch (0x%x)", packet.size);
+			}
+		}
+		case 0x12: // PSVita stuff
+		{
+			if (packet.size == sizeof(metadata.self_info))
+			{
+				archive_read(&metadata.self_info, sizeof(metadata.self_info));
+				pkg_log.notice("Metadata: PSVita self info = %s", metadata.self_info.to_string());
+				continue;
+			}
+			else
+			{
+				pkg_log.error("Metadata: Self info size mismatch (0x%x)", packet.size);
+			}
 			break;
 		}
 		default:
@@ -521,6 +621,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		case 0x13:
 		case 0x15:
 		case 0x16:
+		case 0x18:
 		case 0x19:
 		{
 			const bool did_overwrite = fs::is_file(path);
