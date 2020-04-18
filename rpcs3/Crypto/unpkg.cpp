@@ -85,11 +85,11 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 	if (archive_read(&header, sizeof(header)) != sizeof(header))
 	{
-		pkg_log.error("PKG file is too short!");
+		pkg_log.error("Reading PKG header: file is too short!");
 		return false;
 	}
 
-	pkg_log.notice("Header: pkg_magic = 0x%x = %d", header.pkg_magic, header.pkg_magic);
+	pkg_log.notice("Header: pkg_magic = 0x%x = \"%s\"", +header.pkg_magic, std::string(reinterpret_cast<const char*>(&header.pkg_magic), 4));
 	pkg_log.notice("Header: pkg_type = 0x%x = %d", header.pkg_type, header.pkg_type);
 	pkg_log.notice("Header: pkg_platform = 0x%x = %d", header.pkg_platform, header.pkg_platform);
 	pkg_log.notice("Header: pkg_info_off = 0x%x = %d", header.pkg_info_off, header.pkg_info_off);
@@ -102,6 +102,32 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	pkg_log.notice("Header: title_id = %s", header.title_id);
 	pkg_log.notice("Header: qa_digest = 0x%x 0x%x", header.qa_digest[0], header.qa_digest[1]);
 	//pkg_log.notice("Header: klicensee = 0x%x = %d", header.klicensee, header.klicensee);
+
+	// Get extended PKG information for PSP or PSVita
+	if (header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA)
+	{
+		PKGExtHeader ext_header;
+
+		archive_seek(PKG_HEADER_SIZE);
+
+		if (archive_read(&ext_header, sizeof(ext_header)) != sizeof(ext_header))
+		{
+			pkg_log.error("Reading extended PKG header: file is too short!");
+			return false;
+		}
+
+		pkg_log.notice("Extended header: magic = 0x%x = \"%s\"", +ext_header.magic, std::string(reinterpret_cast<const char*>(&ext_header.magic), 4));
+		pkg_log.notice("Extended header: unknown_1 = 0x%x = %d", ext_header.unknown_1, ext_header.unknown_1);
+		pkg_log.notice("Extended header: ext_hdr_size = 0x%x = %d", ext_header.ext_hdr_size, ext_header.ext_hdr_size);
+		pkg_log.notice("Extended header: ext_data_size = 0x%x = %d", ext_header.ext_data_size, ext_header.ext_data_size);
+		pkg_log.notice("Extended header: main_and_ext_headers_hmac_offset = 0x%x = %d", ext_header.main_and_ext_headers_hmac_offset, ext_header.main_and_ext_headers_hmac_offset);
+		pkg_log.notice("Extended header: metadata_header_hmac_offset = 0x%x = %d", ext_header.metadata_header_hmac_offset, ext_header.metadata_header_hmac_offset);
+		pkg_log.notice("Extended header: tail_offset = 0x%x = %d", ext_header.tail_offset, ext_header.tail_offset);
+		//pkg_log.notice("Extended header: padding1 = 0x%x = %d", ext_header.padding1, ext_header.padding1);
+		pkg_log.notice("Extended header: pkg_key_id = 0x%x = %d", ext_header.pkg_key_id, ext_header.pkg_key_id);
+		pkg_log.notice("Extended header: full_header_hmac_offset = 0x%x = %d", ext_header.full_header_hmac_offset, ext_header.full_header_hmac_offset);
+		//pkg_log.notice("Extended header: padding2 = 0x%x = %d", ext_header.padding2, ext_header.padding2);
+	}
 
 	if (header.pkg_magic != "\x7FPKG"_u32)
 	{
@@ -123,7 +149,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	switch (const u16 platform = header.pkg_platform)
 	{
 	case PKG_PLATFORM_TYPE_PS3: break;
-	case PKG_PLATFORM_TYPE_PSP: break;
+	case PKG_PLATFORM_TYPE_PSP_PSVITA: break;
 	default:
 	{
 		pkg_log.error("Unknown PKG platform (0x%x)", platform);
@@ -432,7 +458,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 	std::array<uchar, 16> dec_key;
 
-	if (header.pkg_platform == PKG_PLATFORM_TYPE_PSP && metadata.content_type >= 0x15 && metadata.content_type <= 0x17)
+	if (header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA && metadata.content_type >= 0x15 && metadata.content_type <= 0x17)
 	{
 		// PSVita
 
@@ -448,7 +474,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	else
 	{
 		std::memcpy(dec_key.data(), PKG_AES_KEY, dec_key.size());
-		decrypt(0, header.file_count * sizeof(PKGEntry), header.pkg_platform == PKG_PLATFORM_TYPE_PSP ? PKG_AES_KEY2 : dec_key.data());
+		decrypt(0, header.file_count * sizeof(PKGEntry), header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA ? PKG_AES_KEY2 : dec_key.data());
 	}
 
 	size_t num_failures = 0;

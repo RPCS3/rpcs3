@@ -15,7 +15,7 @@ enum : u16
 	PKG_RELEASE_TYPE_DEBUG        = 0x0000,
 
 	PKG_PLATFORM_TYPE_PS3         = 0x0001,
-	PKG_PLATFORM_TYPE_PSP         = 0x0002,
+	PKG_PLATFORM_TYPE_PSP_PSVITA  = 0x0002,
 };
 
 enum : u32
@@ -35,7 +35,7 @@ enum : u32
 // Structs
 struct PKGHeader
 {
-	nse_t<u32> pkg_magic;   // Magic (0x7f504b47)
+	nse_t<u32> pkg_magic;   // Magic (0x7f504b47) (" PKG")
 	be_t<u16> pkg_type;     // Release type (Retail:0x8000, Debug:0x0000)
 	be_t<u16> pkg_platform; // Platform type (PS3:0x0001, PSP:0x0002)
 	be_t<u32> pkg_info_off;
@@ -48,12 +48,13 @@ struct PKGHeader
 	char title_id[48];      // Title ID
 	be_t<u64> qa_digest[2]; // This should be the hash of "files + attribs"
 	be_t<u128> klicensee;   // Nonce
+	// + some stuff
 };
 
 // Extended header in PSP and PSVita packages
-struct PkgExtHeader
+struct PKGExtHeader
 {
-	be_t<u32> magic;                            // 0x7F657874 (".ext")
+	nse_t<u32> magic;                            // 0x7F657874 (" ext")
 	be_t<u32> unknown_1;                        // Maybe version. always 1
 	be_t<u32> ext_hdr_size;                     // Extended header size. ex: 0x40
 	be_t<u32> ext_data_size;                    // ex: 0x180
