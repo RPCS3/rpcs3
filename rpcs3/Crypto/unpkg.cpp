@@ -567,6 +567,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	if (header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA && metadata.content_type >= 0x15 && metadata.content_type <= 0x17)
 	{
 		// PSVita
+		// TODO: Not all the keys seem to match the content types. I was only able to install a dlc (0x16) with PKG_AES_KEY_VITA_1
 
 		aes_context ctx;
 		aes_setkey_enc(&ctx, metadata.content_type == 0x15u ? PKG_AES_KEY_VITA_1 : metadata.content_type == 0x16u ? PKG_AES_KEY_VITA_2 : PKG_AES_KEY_VITA_3, 128);
@@ -615,6 +616,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		case 0x10:
 		case 0x11:
 		case 0x13:
+		case 0x14:
 		case 0x15:
 		case 0x16:
 		case 0x18:
