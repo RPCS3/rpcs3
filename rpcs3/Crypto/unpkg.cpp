@@ -129,7 +129,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		//pkg_log.notice("Extended header: padding2 = 0x%x = %d", ext_header.padding2, ext_header.padding2);
 	}
 
-	if (header.pkg_magic != "\x7FPKG"_u32)
+	if (header.pkg_magic != std::bit_cast<le_t<u32>>("\x7FPKG"_u32))
 	{
 		pkg_log.error("Not a PKG file!");
 		return false;
