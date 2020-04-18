@@ -2137,7 +2137,9 @@ namespace rsx
 				//Find zeta address in bound zculls
 				for (const auto& zcull : zculls)
 				{
-					if (zcull.bound)
+					if (zcull.bound &&
+						rsx::to_surface_depth_format(zcull.zFormat) == m_depth_surface_info.depth_format &&
+						rsx::to_surface_antialiasing(zcull.aaFormat) == rsx::method_registers.surface_antialias())
 					{
 						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL, HERE);
 						if (rsx_address == zeta_address)
