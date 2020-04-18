@@ -3,6 +3,7 @@
 #include "aes.h"
 #include "sha1.h"
 #include "key_vault.h"
+#include "Utilities/StrUtil.h"
 #include "Utilities/StrFmt.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
@@ -92,9 +93,9 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	pkg_log.notice("Header: pkg_magic = 0x%x = \"%s\"", +header.pkg_magic, std::string(reinterpret_cast<const char*>(&header.pkg_magic), 4));
 	pkg_log.notice("Header: pkg_type = 0x%x = %d", header.pkg_type, header.pkg_type);
 	pkg_log.notice("Header: pkg_platform = 0x%x = %d", header.pkg_platform, header.pkg_platform);
-	pkg_log.notice("Header: pkg_info_off = 0x%x = %d", header.pkg_info_off, header.pkg_info_off);
-	pkg_log.notice("Header: pkg_info_num = 0x%x = %d", header.pkg_info_num, header.pkg_info_num);
-	pkg_log.notice("Header: header_size = 0x%x = %d", header.header_size, header.header_size);
+	pkg_log.notice("Header: meta_offset = 0x%x = %d", header.meta_offset, header.meta_offset);
+	pkg_log.notice("Header: meta_count = 0x%x = %d", header.meta_count, header.meta_count);
+	pkg_log.notice("Header: meta_size = 0x%x = %d", header.meta_size, header.meta_size);
 	pkg_log.notice("Header: file_count = 0x%x = %d", header.file_count, header.file_count);
 	pkg_log.notice("Header: pkg_size = 0x%x = %d", header.pkg_size, header.pkg_size);
 	pkg_log.notice("Header: data_offset = 0x%x = %d", header.data_offset, header.data_offset);
@@ -191,16 +192,18 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	}
 
 	PKGMetaData metadata;
-	std::string install_id;
+	std::string install_dir;
 
 	// Read title ID and use it as an installation directory
-	install_id.resize(9);
+	install_dir.resize(9);
 	archive_seek(55);
-	archive_read(&install_id.front(), install_id.size());
+	archive_read(&install_dir.front(), install_dir.size());
 
-	archive_seek(header.pkg_info_off);
+	// Read package metadata
 
-	for (u32 i = 0; i < header.pkg_info_num; i++)
+	archive_seek(header.meta_offset);
+
+	for (u32 i = 0; i < header.meta_count; i++)
 	{
 		struct packet_T
 		{
@@ -292,6 +295,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 			if (packet.size == metadata.title_id.size())
 			{
 				archive_read(&metadata.title_id, metadata.title_id.size());
+				metadata.title_id = fmt::trim(metadata.title_id);
 				pkg_log.notice("Metadata: Title ID = %s", metadata.title_id);
 				continue;
 			}
@@ -330,10 +334,10 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 			if (packet.size > 8)
 			{
 				// Read an actual installation directory (DLC)
-				install_id.resize(packet.size);
-				archive_read(&install_id.front(), packet.size);
-				install_id = install_id.c_str() + 8;
-				metadata.install_dir = install_id;
+				install_dir.resize(packet.size);
+				archive_read(&install_dir.front(), packet.size);
+				install_dir = install_dir.c_str() + 8;
+				metadata.install_dir = install_dir;
 				pkg_log.notice("Metadata: Install Dir = %s", metadata.install_dir);
 				continue;
 			}
@@ -375,7 +379,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	}
 
 	// Get full path and create the directory
-	const std::string dir = Emulator::GetHddDir() + "game/" + install_id + '/';
+	const std::string dir = Emulator::GetHddDir() + "game/" + install_dir + '/';
 
 	// If false, an existing directory is being overwritten: cannot cancel the operation
 	const bool was_null = !fs::is_dir(dir);
