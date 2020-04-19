@@ -4279,7 +4279,7 @@ void PPUTranslator::FMADD(ppu_opcode_t op)
 	}
 	else
 	{
-		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+		result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
 	}
 
 	SetFpr(op.frd, result);
