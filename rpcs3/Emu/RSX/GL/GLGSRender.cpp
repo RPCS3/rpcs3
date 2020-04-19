@@ -621,13 +621,21 @@ bool GLGSRender::load_program()
 		current_vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
 		current_fragment_program.unnormalized_coords = 0; //unused
 	}
-	else if (m_program &&
-		(m_program != m_shader_interpreter.get() || interpreter_mode == shader_interpreter_mode::forced))
+	else if (m_program)
 	{
-		return true;
+		if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
+		{
+			return true;
+		}
+
+		if (interpreter_mode == shader_interpreter_mode::forced)
+		{
+			m_program = m_shader_interpreter.get(current_fp_metadata);
+			return true;
+		}
 	}
 
-	auto old_program = m_program;
+	const bool was_interpreter = m_shader_interpreter.is_interpreter(m_program);
 	if (interpreter_mode != shader_interpreter_mode::forced) [[likely]]
 	{
 		void* pipeline_properties = nullptr;
@@ -660,12 +668,16 @@ bool GLGSRender::load_program()
 			m_program->sync();
 		}
 	}
+	else
+	{
+		m_program = nullptr;
+	}
 
 	if (!m_program && interpreter_mode != shader_interpreter_mode::disabled)
 	{
 		// Fall back to interpreter
-		m_program = m_shader_interpreter.get();
-		if (old_program != m_program)
+		m_program = m_shader_interpreter.get(current_fp_metadata);
+		if (was_interpreter != m_shader_interpreter.is_interpreter(m_program))
 		{
 			// Program has changed, reupload
 			m_interpreter_state = rsx::invalidate_pipeline_bits;
@@ -689,7 +701,7 @@ void GLGSRender::load_program_env()
 	const bool update_vertex_env = !!(m_graphics_state & rsx::pipeline_state::vertex_state_dirty);
 	const bool update_fragment_env = !!(m_graphics_state & rsx::pipeline_state::fragment_state_dirty);
 	const bool update_fragment_texture_env = !!(m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
-	const bool update_instruction_buffers = (!!m_interpreter_state && m_program == m_shader_interpreter.get());
+	const bool update_instruction_buffers = (!!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program));
 
 	m_program->use();
 

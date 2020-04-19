@@ -223,6 +223,8 @@ vec4 read_cond()
 	return shuffle(cc[GET_BITS(1, 31, 1)], GET_BITS(1, 21, 8));
 }
 
+#ifdef WITH_TEXTURES
+
 vec4 _texture(in vec4 coord, float bias)
 {
 	const uint tex_num = GET_BITS(0, 17, 4);
@@ -274,6 +276,8 @@ vec4 _textureLod(in vec4 coord, float lod)
 
 	return vec4(0.);
 }
+
+#endif
 
 void write_dst(in vec4 value)
 {
@@ -423,8 +427,11 @@ void main()
 			value = sin(s0.xxxx); break;
 		case RSX_FP_OPCODE_NRM:
 			value.xyz = normalize(s0.xyz); break;
+
+#ifdef WITH_TEXTURES
 		case RSX_FP_OPCODE_TEX:
 			value = _texture(s0, 0.f); break;
+#endif
 		default:
 			handled = false;
 		}
@@ -470,6 +477,8 @@ void main()
 				value = s0 / s1.xxxx;
 			case RSX_FP_OPCODE_DIVSQ:
 				value = s0 * inversesqrt(s1.xxxx); break;
+
+#ifdef WITH_TEXTURES
 			//case RSX_FP_OPCODE_TXP:
 			//case RSX_FP_OPCODE_TXD:
 			case RSX_FP_OPCODE_TXL:
@@ -478,6 +487,7 @@ void main()
 				value = _texture(s0, s1.x); break;
 			//case RSX_FP_OPCODE_TEXBEM:
 			//case RSX_FP_OPCODE_TXPBEM:
+#endif
 			default:
 				handled = false;
 			}
@@ -529,29 +539,41 @@ void main()
 		write_dst(value);
 	}
 
-	if (!shader_attribute(CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS))
-	{
+#ifdef WITH_HALF_OUTPUT_REGISTER
 		ocol0 = regs16[0];
 		ocol1 = regs16[4];
 		ocol1 = regs16[6];
 		ocol1 = regs16[8];
-	}
-	else
-	{
+#else
 		ocol0 = regs32[0];
 		ocol1 = regs32[2];
 		ocol1 = regs32[3];
 		ocol1 = regs32[4];
-	}
+#endif
 
-	if (shader_attribute(CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT))
-	{
-		gl_FragDepth = regs32[1].z;
-	}
-	else
-	{
-		gl_FragDepth = gl_FragCoord.z;
-	}
+#ifdef WITH_DEPTH_EXPORT
+	gl_FragDepth = regs32[1].z;
+#endif
+
+// Typically an application will pick one strategy and stick with it
+#ifdef ALPHA_TEST_GEQUAL
+	if (ocol0.a < alpha_ref) discard; // gequal
+#endif
+#ifdef ALPHA_TEST_GREATER
+	if (ocol0.a > alpha_ref) discard; // greater
+#endif
+#ifdef ALPHA_TEST_LESS
+	if (ocol0.a >= alpha_ref) discard; // less
+#endif
+#ifdef ALPHA_TEST_LEQUAL
+	if (ocol0.a > alpha_ref) discard; // lequal
+#endif
+#ifdef ALPHA_TEST_EQUAL
+	if (ocol0.a != alpha_ref) discard; // equal
+#endif
+#ifdef ALPHA_TEST_NEQUAL
+	if (ocol0.a == alpha_ref) discard; // nequal
+#endif
 }
 
 )"
