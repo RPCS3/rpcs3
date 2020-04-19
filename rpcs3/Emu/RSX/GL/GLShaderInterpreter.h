@@ -1,10 +1,13 @@
 ﻿#pragma once
 #include "GLHelpers.h"
+#include "../Common/ProgramStateCache.h"
 
 namespace gl
 {
 	namespace interpreter
 	{
+		using program_metadata = program_hash_util::fragment_program_utils::fragment_program_metadata;
+
 		enum class texture_pool_flags
 		{
 			dirty = 1
@@ -48,17 +51,25 @@ namespace gl
 			void create(::gl::glsl::shader::type domain);
 			void allocate(int size);
 		};
+
+		struct cached_program
+		{
+			glsl::shader fs;
+			glsl::program prog;
+			texture_pool_allocator allocator;
+		};
 	}
 
 	class shader_interpreter
 	{
-		glsl::shader vs;
-		glsl::shader fs;
-		glsl::program program_handle;
-		interpreter::texture_pool_allocator texture_pools[2];
+		glsl::shader m_vs;
+		std::unordered_map<u64, std::unique_ptr<interpreter::cached_program>> m_program_cache;
 
 		void build_vs();
-		void build_fs();
+		void build_fs(u64 compiler_options, interpreter::cached_program& prog_data);
+		interpreter::cached_program* build_program(u64 compiler_options);
+
+		interpreter::cached_program* m_current_interpreter = nullptr;
 
 	public:
 		void create();
@@ -66,6 +77,7 @@ namespace gl
 
 		void update_fragment_textures(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, 16>& descriptors, u16 reference_mask, u32* out);
 
-		glsl::program* get();
+		glsl::program* get(const interpreter::program_metadata& fp_metadata);
+		bool is_interpreter(const glsl::program* program);
 	};
 }

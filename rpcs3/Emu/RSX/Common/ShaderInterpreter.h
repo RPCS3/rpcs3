@@ -5,6 +5,19 @@ namespace program_common
 {
 	namespace interpreter
 	{
+		enum compiler_option
+		{
+			COMPILER_OPT_ENABLE_TEXTURES = 1,
+			COMPILER_OPT_ENABLE_DEPTH_EXPORT = 2,
+			COMPILER_OPT_ENABLE_F32_EXPORT = 4,
+			COMPILER_OPT_ENABLE_ALPHA_TEST_GE = 8,
+			COMPILER_OPT_ENABLE_ALPHA_TEST_G = 16,
+			COMPILER_OPT_ENABLE_ALPHA_TEST_LE = 32,
+			COMPILER_OPT_ENABLE_ALPHA_TEST_L = 64,
+			COMPILER_OPT_ENABLE_ALPHA_TEST_EQ = 128,
+			COMPILER_OPT_ENABLE_ALPHA_TEST_NE = 256,
+		};
+
 		static std::string get_vertex_interpreter()
 		{
 			const char* s =
