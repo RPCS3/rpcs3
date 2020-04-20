@@ -9,7 +9,6 @@ namespace vk
 	class shader_interpreter
 	{
 		glsl::shader m_vs;
-		glsl::shader m_fs;
 
 		std::vector<glsl::program_input> m_vs_inputs;
 		std::vector<glsl::program_input> m_fs_inputs;
@@ -19,15 +18,27 @@ namespace vk
 		VkPipelineLayout m_shared_pipeline_layout = VK_NULL_HANDLE;
 		glsl::program* m_current_interpreter = nullptr;
 
-		struct key_hasher
+		struct pipeline_key
 		{
-			size_t operator()(const vk::pipeline_props& props) const
+			u64 compiler_opt;
+			vk::pipeline_props properties;
+
+			bool operator == (const pipeline_key& other) const
 			{
-				return rpcs3::hash_struct(props);
+				return other.compiler_opt == compiler_opt && other.properties == properties;
 			}
 		};
 
-		std::unordered_map<vk::pipeline_props, std::unique_ptr<glsl::program>, key_hasher> m_program_cache;
+		struct key_hasher
+		{
+			size_t operator()(const pipeline_key& key) const
+			{
+				return rpcs3::hash_struct(key.properties) ^ key.compiler_opt;
+			}
+		};
+
+		std::unordered_map<pipeline_key, std::unique_ptr<glsl::program>, key_hasher> m_program_cache;
+		std::unordered_map<u64, std::unique_ptr<glsl::shader>> m_fs_cache;
 		vk::descriptor_pool m_descriptor_pool;
 		size_t m_used_descriptors = 0;
 
@@ -35,18 +46,20 @@ namespace vk
 		uint32_t m_fragment_instruction_start = 0;
 		uint32_t m_fragment_textures_start = 0;
 
+		pipeline_key m_current_key{};
+
 		std::pair<VkDescriptorSetLayout, VkPipelineLayout> create_layout(VkDevice dev);
 		void create_descriptor_pools(const vk::render_device& dev);
 
 		void build_vs();
-		void build_fs();
-		glsl::program* link(const vk::pipeline_props& properties);
+		glsl::shader* build_fs(u64 compiler_opt);
+		glsl::program* link(const vk::pipeline_props& properties, u64 compiler_opt);
 
 	public:
 		void init(const vk::render_device& dev);
 		void destroy();
 
-		glsl::program* get(const vk::pipeline_props& properties);
+		glsl::program* get(const vk::pipeline_props& properties, const program_hash_util::fragment_program_utils::fragment_program_metadata& metadata);
 		bool is_interpreter(const glsl::program* prog) const;
 
 		uint32_t get_vertex_instruction_location() const;

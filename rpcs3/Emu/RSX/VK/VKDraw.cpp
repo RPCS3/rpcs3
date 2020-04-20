@@ -573,6 +573,12 @@ void VKGSRender::bind_texture_env()
 
 void VKGSRender::bind_interpreter_texture_env()
 {
+	if (current_fp_metadata.referenced_textures_mask == 0)
+	{
+		// Nothing to do
+		return;
+	}
+
 	std::array<VkDescriptorImageInfo, 68> texture_env;
 	VkDescriptorImageInfo fallback = { vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, VK_IMAGE_VIEW_TYPE_1D)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 

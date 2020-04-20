@@ -1573,22 +1573,12 @@ bool VKGSRender::load_program()
 	}
 
 	properties.renderpass_key = m_current_renderpass_key;
-	vk::glsl::program* active_interpreter = nullptr;
-
-	if (!m_interpreter_state && m_pipeline_properties == properties) [[likely]]
+	if (!m_interpreter_state && m_program) [[likely]]
 	{
-		// Nothing changed
-		if (m_shader_interpreter.is_interpreter(m_program))
+		if (!m_shader_interpreter.is_interpreter(m_program) &&
+			m_pipeline_properties == properties)
 		{
-			if (g_cfg.video.shader_interpreter_mode == shader_interpreter_mode::forced)
-			{
-				return true;
-			}
-
-			active_interpreter = m_program;
-		}
-		else
-		{
+			// Nothing changed
 			return true;
 		}
 	}
@@ -1638,14 +1628,7 @@ bool VKGSRender::load_program()
 			m_interpreter_state = rsx::invalidate_pipeline_bits;
 		}
 
-		if (active_interpreter) [[likely]]
-		{
-			m_program = active_interpreter;
-		}
-		else
-		{
-			m_program = m_shader_interpreter.get(properties);
-		}
+		m_program = m_shader_interpreter.get(properties, current_fp_metadata);
 	}
 
 	m_pipeline_properties = properties;
