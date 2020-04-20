@@ -14,6 +14,16 @@ extern std::string g_cfg_defaults; //! Default settings grabbed from Utilities/C
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
+static void set_dynamic(QWidget* widget, bool is_dynamic)
+{
+	if (widget)
+	{
+		widget->setProperty("dynamic_setting", is_dynamic);
+		widget->style()->unpolish(widget);
+		widget->style()->polish(widget);
+	}
+}
+
 // Emit sorted YAML
 namespace
 {
@@ -216,6 +226,8 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 		combobox->setCurrentIndex(index);
 	}
 
+	set_dynamic(combobox, cfg_adapter::get_is_dynamic(type));
+
 	connect(combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=, this](int index)
 	{
 		if (is_ranged)
@@ -262,7 +274,9 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 		m_broken_types.insert(type);
 	}
 
-	connect(checkbox, &QCheckBox::stateChanged, [=, this](int val)
+	set_dynamic(checkbox, cfg_adapter::get_is_dynamic(type));
+
+	connect(checkbox, &QCheckBox::stateChanged, [type, this](int val)
 	{
 		const std::string str = val != 0 ? "true" : "false";
 		SetSetting(type, str);
@@ -303,7 +317,9 @@ void emu_settings::EnhanceSlider(QSlider* slider, emu_settings_type type)
 	slider->setRange(min, max);
 	slider->setValue(val);
 
-	connect(slider, &QSlider::valueChanged, [=, this](int value)
+	set_dynamic(slider, cfg_adapter::get_is_dynamic(type));
+
+	connect(slider, &QSlider::valueChanged, [type, this](int value)
 	{
 		SetSetting(type, sstr(value));
 	});
@@ -345,7 +361,9 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, emu_settings_type type, con
 	spinbox->setRange(min, max);
 	spinbox->setValue(val);
 
-	connect(spinbox, &QSpinBox::textChanged, [=, this](const QString&/* text*/)
+	set_dynamic(spinbox, cfg_adapter::get_is_dynamic(type));
+
+	connect(spinbox, &QSpinBox::textChanged, [type, spinbox, this](const QString&/* text*/)
 	{
 		SetSetting(type, sstr(spinbox->cleanText()));
 	});
@@ -387,7 +405,9 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_ty
 	spinbox->setRange(min, max);
 	spinbox->setValue(val);
 
-	connect(spinbox, &QDoubleSpinBox::textChanged, [=, this](const QString&/* text*/)
+	set_dynamic(spinbox, cfg_adapter::get_is_dynamic(type));
+
+	connect(spinbox, &QDoubleSpinBox::textChanged, [type, spinbox, this](const QString&/* text*/)
 	{
 		SetSetting(type, sstr(spinbox->cleanText()));
 	});
@@ -404,7 +424,9 @@ void emu_settings::EnhanceLineEdit(QLineEdit* edit, emu_settings_type type)
 	const std::string set_text = GetSetting(type);
 	edit->setText(qstr(set_text));
 
-	connect(edit, &QLineEdit::textChanged, [=, this](const QString &text)
+	set_dynamic(edit, cfg_adapter::get_is_dynamic(type));
+
+	connect(edit, &QLineEdit::textChanged, [type, this](const QString &text)
 	{
 		SetSetting(type, sstr(text));
 	});
@@ -427,20 +449,33 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 		return;
 	}
 
+	const bool is_dynamic = cfg_adapter::get_is_dynamic(type);
+
 	for (int i = 0; i < options.count(); i++)
 	{
-		const QString localized_setting = GetLocalizedSetting(options[i], type, i);
+		auto* button = button_group->button(i);
 
-		button_group->button(i)->setText(localized_setting);
-
-		if (options[i] == selected)
+		if (!button)
 		{
-			button_group->button(i)->setChecked(true);
+			cfg_log.fatal("EnhanceRadioButton '%s': button %d is null", cfg_adapter::get_setting_name(type), i);
+			return;
 		}
 
-		connect(button_group->button(i), &QAbstractButton::clicked, [=, this]()
+		const QString option = options[i];
+		const QString localized_setting = GetLocalizedSetting(option, type, i);
+
+		button->setText(localized_setting);
+
+		if (option == selected)
 		{
-			SetSetting(type, sstr(options[i]));
+			button->setChecked(true);
+		}
+
+		set_dynamic(button, is_dynamic);
+
+		connect(button, &QAbstractButton::clicked, [type, option, this]()
+		{
+			SetSetting(type, sstr(option));
 		});
 	}
 }
