@@ -80,7 +80,7 @@ namespace vk
 		// TODO: Bind textures if needed
 	}
 
-	void shader_interpreter::build_fs()
+	glsl::shader* shader_interpreter::build_fs(u64 compiler_options)
 	{
 		::glsl::shader_properties properties{};
 		properties.domain = ::glsl::program_domain::glsl_fragment_program;
@@ -102,18 +102,63 @@ namespace vk
 		::glsl::insert_subheader_block(builder);
 		comp.insertConstants(builder);
 
-		const char* type_names[] = { "sampler1D", "sampler2D", "sampler3D", "samplerCube" };
-		for (int i = 0, bind_location = m_fragment_textures_start; i < 4; ++i)
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_GE)
 		{
-			builder << "layout(set=0, binding=" << bind_location++ << ") " << "uniform " << type_names[i] << " " << type_names[i] << "_array[16];\n";
+			builder << "#define ALPHA_TEST_GEQUAL\n";
 		}
 
-		builder << "\n"
-		"#define IS_TEXTURE_RESIDENT(index) true\n"
-		"#define SAMPLER1D(index) sampler1D_array[index]\n"
-		"#define SAMPLER2D(index) sampler2D_array[index]\n"
-		"#define SAMPLER3D(index) sampler3D_array[index]\n"
-		"#define SAMPLERCUBE(index) samplerCube_array[index]\n\n";
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_G)
+		{
+			builder << "#define ALPHA_TEST_GREATER\n";
+		}
+
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_LE)
+		{
+			builder << "#define ALPHA_TEST_LEQUAL\n";
+		}
+
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_L)
+		{
+			builder << "#define ALPHA_TEST_LESS\n";
+		}
+
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_EQ)
+		{
+			builder << "#define ALPHA_TEST_EQUAL\n";
+		}
+
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_NE)
+		{
+			builder << "#define ALPHA_TEST_NEQUAL\n";
+		}
+
+		if (!(compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT))
+		{
+			builder << "#define WITH_HALF_OUTPUT_REGISTER\n";
+		}
+
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT)
+		{
+			builder << "#define WITH_DEPTH_EXPORT\n";
+		}
+
+		const char* type_names[] = { "sampler1D", "sampler2D", "sampler3D", "samplerCube" };
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES)
+		{
+			builder << "#define WITH_TEXTURES\n\n";
+
+			for (int i = 0, bind_location = m_fragment_textures_start; i < 4; ++i)
+			{
+				builder << "layout(set=0, binding=" << bind_location++ << ") " << "uniform " << type_names[i] << " " << type_names[i] << "_array[16];\n";
+			}
+
+			builder << "\n"
+				"#define IS_TEXTURE_RESIDENT(index) true\n"
+				"#define SAMPLER1D(index) sampler1D_array[index]\n"
+				"#define SAMPLER2D(index) sampler2D_array[index]\n"
+				"#define SAMPLER3D(index) sampler3D_array[index]\n"
+				"#define SAMPLERCUBE(index) samplerCube_array[index]\n\n";
+		}
 
 		builder <<
 		"layout(std430, binding=" << m_fragment_instruction_start << ") readonly restrict buffer FragmentInstructionBlock\n"
@@ -130,8 +175,9 @@ namespace vk
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
 
-		m_fs.create(::glsl::program_domain::glsl_fragment_program, s);
-		m_fs.compile();
+		auto fs = new glsl::shader();
+		fs->create(::glsl::program_domain::glsl_fragment_program, s);
+		fs->compile();
 
 		// Prepare input table
 		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
@@ -156,6 +202,9 @@ namespace vk
 			in.name = std::string(type_names[i]) + "_array[16]";
 			m_fs_inputs.push_back(in);
 		}
+
+		m_fs_cache[compiler_options].reset(fs);
+		return fs;
 	}
 
 	std::pair<VkDescriptorSetLayout, VkPipelineLayout> shader_interpreter::create_layout(VkDevice dev)
@@ -319,18 +368,21 @@ namespace vk
 		create_descriptor_pools(dev);
 
 		build_vs();
-		build_fs();
-
 		// TODO: Seed the cache
 	}
 
 	void shader_interpreter::destroy()
 	{
-		m_vs.destroy();
-		m_fs.destroy();
-
 		m_program_cache.clear();
 		m_descriptor_pool.destroy();
+
+		for (auto &fs : m_fs_cache)
+		{
+			fs.second->destroy();
+		}
+
+		m_vs.destroy();
+		m_fs_cache.clear();
 
 		if (m_shared_pipeline_layout)
 		{
@@ -345,8 +397,18 @@ namespace vk
 		}
 	}
 
-	glsl::program* shader_interpreter::link(const vk::pipeline_props& properties)
+	glsl::program* shader_interpreter::link(const vk::pipeline_props& properties, u64 compiler_opt)
 	{
+		glsl::shader* fs;
+		if (auto found = m_fs_cache.find(compiler_opt); found != m_fs_cache.end())
+		{
+			fs = found->second.get();
+		}
+		else
+		{
+			fs = build_fs(compiler_opt);
+		}
+
 		VkPipelineShaderStageCreateInfo shader_stages[2] = {};
 		shader_stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		shader_stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -355,7 +417,7 @@ namespace vk
 
 		shader_stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		shader_stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		shader_stages[1].module = m_fs.get_handle();
+		shader_stages[1].module = fs->get_handle();
 		shader_stages[1].pName = "main";
 
 		VkDynamicState dynamic_state_descriptors[VK_DYNAMIC_STATE_RANGE_SIZE] = {};
@@ -462,17 +524,63 @@ namespace vk
 		return new_descriptor_set;
 	}
 
-	glsl::program* shader_interpreter::get(const vk::pipeline_props& properties)
+	glsl::program* shader_interpreter::get(const vk::pipeline_props& properties, const program_hash_util::fragment_program_utils::fragment_program_metadata& metadata)
 	{
-		auto found = m_program_cache.find(properties);
+		pipeline_key key;
+		key.compiler_opt = 0;
+		key.properties = properties;
+
+		if (rsx::method_registers.alpha_test_enabled()) [[unlikely]]
+		{
+			switch (rsx::method_registers.alpha_func())
+			{
+			case rsx::comparison_function::always:
+				break;
+			case rsx::comparison_function::never:
+				return nullptr;
+			case rsx::comparison_function::greater_or_equal:
+				key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_GE;
+				break;
+			case rsx::comparison_function::greater:
+				key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_G;
+				break;
+			case rsx::comparison_function::less_or_equal:
+				key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_LE;
+				break;
+			case rsx::comparison_function::less:
+				key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_L;
+				break;
+			case rsx::comparison_function::equal:
+				key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_EQ;
+				break;
+			case rsx::comparison_function::not_equal:
+				key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_NE;
+				break;
+			}
+		}
+
+		if (rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
+		if (rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
+		if (metadata.referenced_textures_mask) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES;
+
+		if (m_current_key == key) [[likely]]
+		{
+			return m_current_interpreter;
+		}
+		else
+		{
+			m_current_key = key;
+		}
+
+		auto found = m_program_cache.find(key);
 		if (found != m_program_cache.end()) [[likely]]
 		{
 			m_current_interpreter = found->second.get();
 			return m_current_interpreter;
 		}
 
-		m_current_interpreter = link(properties);
-		m_program_cache[properties].reset(m_current_interpreter);
+		m_current_interpreter = link(properties, key.compiler_opt);
+		m_program_cache[key].reset(m_current_interpreter);
 		return m_current_interpreter;
 	}
 
