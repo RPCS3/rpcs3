@@ -145,7 +145,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 {
 	if (!combobox)
 	{
-		cfg_log.fatal("EnhanceComboBox '%s' was used with an invalid object", GetSettingName(type));
+		cfg_log.fatal("EnhanceComboBox '%s' was used with an invalid object", cfg_adapter::get_setting_name(type));
 		return;
 	}
 
@@ -153,7 +153,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 	{
 		if (sorted)
 		{
-			cfg_log.warning("EnhanceCombobox '%s': ignoring sorting request on ranged combo box", GetSettingName(type));
+			cfg_log.warning("EnhanceCombobox '%s': ignoring sorting request on ranged combo box", cfg_adapter::get_setting_name(type));
 		}
 
 		const QStringList range = GetSettingOptions(type);
@@ -207,7 +207,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 	if (index == -1)
 	{
 		const std::string def = GetSettingDefault(type);
-		cfg_log.fatal("EnhanceComboBox '%s' tried to set an invalid value: %s. Setting to default: %s", GetSettingName(type), selected, def);
+		cfg_log.fatal("EnhanceComboBox '%s' tried to set an invalid value: %s. Setting to default: %s", cfg_adapter::get_setting_name(type), selected, def);
 		combobox->setCurrentIndex(combobox->findData(qstr(def)));
 		m_broken_types.insert(type);
 	}
@@ -235,7 +235,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 {
 	if (!checkbox)
 	{
-		cfg_log.fatal("EnhanceCheckBox '%s' was used with an invalid object", GetSettingName(type));
+		cfg_log.fatal("EnhanceCheckBox '%s' was used with an invalid object", cfg_adapter::get_setting_name(type));
 		return;
 	}
 
@@ -244,7 +244,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 
 	if (def != "true" && def != "false")
 	{
-		cfg_log.fatal("EnhanceCheckBox '%s' was used with an invalid emu_settings_type", GetSettingName(type));
+		cfg_log.fatal("EnhanceCheckBox '%s' was used with an invalid emu_settings_type", cfg_adapter::get_setting_name(type));
 		return;
 	}
 
@@ -257,7 +257,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 	}
 	else if (selected != "false")
 	{
-		cfg_log.fatal("EnhanceCheckBox '%s' tried to set an invalid value: %s. Setting to default: %s", GetSettingName(type), selected, def);
+		cfg_log.fatal("EnhanceCheckBox '%s' tried to set an invalid value: %s. Setting to default: %s", cfg_adapter::get_setting_name(type), selected, def);
 		checkbox->setChecked(def == "true");
 		m_broken_types.insert(type);
 	}
@@ -273,7 +273,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, emu_settings_type type)
 {
 	if (!slider)
 	{
-		cfg_log.fatal("EnhanceSlider '%s' was used with an invalid object", GetSettingName(type));
+		cfg_log.fatal("EnhanceSlider '%s' was used with an invalid object", cfg_adapter::get_setting_name(type));
 		return;
 	}
 
@@ -286,7 +286,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, emu_settings_type type)
 
 	if (!ok_def || !ok_min || !ok_max)
 	{
-		cfg_log.fatal("EnhanceSlider '%s' was used with an invalid emu_settings_type", GetSettingName(type));
+		cfg_log.fatal("EnhanceSlider '%s' was used with an invalid emu_settings_type", cfg_adapter::get_setting_name(type));
 		return;
 	}
 
@@ -295,7 +295,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, emu_settings_type type)
 
 	if (!ok_sel || val < min || val > max)
 	{
-		cfg_log.fatal("EnhanceSlider '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", GetSettingName(type), val, def, min, max);
+		cfg_log.fatal("EnhanceSlider '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", cfg_adapter::get_setting_name(type), val, def, min, max);
 		val = def;
 		m_broken_types.insert(type);
 	}
@@ -313,7 +313,7 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, emu_settings_type type, con
 {
 	if (!spinbox)
 	{
-		cfg_log.fatal("EnhanceSpinBox '%s' was used with an invalid object", GetSettingName(type));
+		cfg_log.fatal("EnhanceSpinBox '%s' was used with an invalid object", cfg_adapter::get_setting_name(type));
 		return;
 	}
 
@@ -326,7 +326,7 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, emu_settings_type type, con
 
 	if (!ok_def || !ok_min || !ok_max)
 	{
-		cfg_log.fatal("EnhanceSpinBox '%s' was used with an invalid type", GetSettingName(type));
+		cfg_log.fatal("EnhanceSpinBox '%s' was used with an invalid type", cfg_adapter::get_setting_name(type));
 		return;
 	}
 
@@ -335,7 +335,7 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, emu_settings_type type, con
 
 	if (!ok_sel || val < min || val > max)
 	{
-		cfg_log.fatal("EnhanceSpinBox '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", GetSettingName(type), selected, def, min, max);
+		cfg_log.fatal("EnhanceSpinBox '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", cfg_adapter::get_setting_name(type), selected, def, min, max);
 		val = def;
 		m_broken_types.insert(type);
 	}
@@ -355,7 +355,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_ty
 {
 	if (!spinbox)
 	{
-		cfg_log.fatal("EnhanceDoubleSpinBox '%s' was used with an invalid object", GetSettingName(type));
+		cfg_log.fatal("EnhanceDoubleSpinBox '%s' was used with an invalid object", cfg_adapter::get_setting_name(type));
 		return;
 	}
 
@@ -368,7 +368,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_ty
 
 	if (!ok_def || !ok_min || !ok_max)
 	{
-		cfg_log.fatal("EnhanceDoubleSpinBox '%s' was used with an invalid type", GetSettingName(type));
+		cfg_log.fatal("EnhanceDoubleSpinBox '%s' was used with an invalid type", cfg_adapter::get_setting_name(type));
 		return;
 	}
 
@@ -377,7 +377,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_ty
 
 	if (!ok_sel || val < min || val > max)
 	{
-		cfg_log.fatal("EnhanceDoubleSpinBox '%s' tried to set an invalid value: %f. Setting to default: %f. Allowed range: [%f, %f]", GetSettingName(type), val, def, min, max);
+		cfg_log.fatal("EnhanceDoubleSpinBox '%s' tried to set an invalid value: %f. Setting to default: %f. Allowed range: [%f, %f]", cfg_adapter::get_setting_name(type), val, def, min, max);
 		val = def;
 		m_broken_types.insert(type);
 	}
@@ -397,7 +397,7 @@ void emu_settings::EnhanceLineEdit(QLineEdit* edit, emu_settings_type type)
 {
 	if (!edit)
 	{
-		cfg_log.fatal("EnhanceEdit '%s' was used with an invalid object", GetSettingName(type));
+		cfg_log.fatal("EnhanceEdit '%s' was used with an invalid object", cfg_adapter::get_setting_name(type));
 		return;
 	}
 
@@ -414,7 +414,7 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 {
 	if (!button_group)
 	{
-		cfg_log.fatal("EnhanceRadioButton '%s' was used with an invalid object", GetSettingName(type));
+		cfg_log.fatal("EnhanceRadioButton '%s' was used with an invalid object", cfg_adapter::get_setting_name(type));
 		return;
 	}
 
@@ -423,7 +423,7 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 
 	if (button_group->buttons().count() < options.size())
 	{
-		cfg_log.fatal("EnhanceRadioButton '%s': wrong button count", GetSettingName(type));
+		cfg_log.fatal("EnhanceRadioButton '%s': wrong button count", cfg_adapter::get_setting_name(type));
 		return;
 	}
 
@@ -460,12 +460,6 @@ QStringList emu_settings::GetSettingOptions(emu_settings_type type) const
 	return cfg_adapter::get_options(const_cast<cfg_location&&>(settings_location[type]));
 }
 
-std::string emu_settings::GetSettingName(emu_settings_type type) const
-{
-	const cfg_location loc = settings_location[type];
-	return loc[loc.size() - 1];
-}
-
 std::string emu_settings::GetSettingDefault(emu_settings_type type) const
 {
 	return cfg_adapter::get_node(m_defaultSettings, settings_location[type]).Scalar();
@@ -499,7 +493,7 @@ void emu_settings::OpenCorrectionDialog(QWidget* parent)
 			const std::string def = GetSettingDefault(type);
 			const std::string old = GetSetting(type);
 			SetSetting(type, def);
-			cfg_log.success("The config entry '%s' was corrected from '%s' to '%s'", GetSettingName(type), old, def);
+			cfg_log.success("The config entry '%s' was corrected from '%s' to '%s'", cfg_adapter::get_setting_name(type), old, def);
 		}
 
 		m_broken_types.clear();

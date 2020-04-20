@@ -18,4 +18,7 @@ namespace cfg_adapter
 	
 	/** Returns dynamic property for some particular setting.*/
 	bool get_is_dynamic(emu_settings_type type);
+
+	/** Returns the string for a given setting.*/
+	std::string get_setting_name(emu_settings_type type);
 }

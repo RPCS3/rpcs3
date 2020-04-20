@@ -63,4 +63,10 @@ namespace cfg_adapter
 		const cfg_location loc = settings_location[type];
 		return get_is_dynamic(loc);
 	}
+
+	std::string get_setting_name(emu_settings_type type)
+	{
+		const cfg_location loc = settings_location[type];
+		return loc[loc.size() - 1];
+	}
 }
