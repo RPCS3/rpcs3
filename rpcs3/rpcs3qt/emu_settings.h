@@ -58,9 +58,6 @@ public:
 	/** Returns the valid options for a given setting.*/
 	QStringList GetSettingOptions(emu_settings_type type) const;
 
-	/** Returns the string for a given setting.*/
-	std::string GetSettingName(emu_settings_type type) const;
-
 	/** Returns the default value of the setting type.*/
 	std::string GetSettingDefault(emu_settings_type type) const;
 
