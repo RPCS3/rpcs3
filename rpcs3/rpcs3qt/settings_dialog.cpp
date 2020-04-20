@@ -54,11 +54,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->tab_widget_settings->setUsesScrollButtons(false);
 	ui->tab_widget_settings->tabBar()->setObjectName("tab_bar_settings");
 
-	const bool show_debug_tab = m_gui_settings->GetValue(gui::m_showDebugTab).toBool();
-	m_gui_settings->SetValue(gui::m_showDebugTab, show_debug_tab);
-	if (!show_debug_tab)
+	if (!m_gui_settings->GetValue(gui::m_showDebugTab).toBool())
 	{
 		ui->tab_widget_settings->removeTab(9);
+		m_gui_settings->SetValue(gui::m_showDebugTab, false);
 	}
 	if (game)
 	{
@@ -1870,7 +1869,7 @@ int settings_dialog::exec()
 	// switch to the cpu tab after conjuring the settings_dialog with another tab opened first.
 	// Weirdly enough this won't happen if we change the tab order so that anything else is at index 0.
 	ui->tab_widget_settings->setCurrentIndex(0);
-	QTimer::singleShot(0, [=, this]{ ui->tab_widget_settings->setCurrentIndex(m_tab_index); });
+	QTimer::singleShot(0, [this]{ ui->tab_widget_settings->setCurrentIndex(m_tab_index); });
 
 	// Open a dialog if your config file contained invalid entries
 	QTimer::singleShot(10, [this] { m_emu_settings->OpenCorrectionDialog(this); });
@@ -1901,16 +1900,23 @@ bool settings_dialog::eventFilter(QObject* object, QEvent* event)
 	if (event->type() == QEvent::Enter || event->type() == QEvent::Leave)
 	{
 		const int i = ui->tab_widget_settings->currentIndex();
-		QLabel* label = m_description_labels[i].first;
 
-		if (event->type() == QEvent::Enter)
+		if (i < m_description_labels.size())
 		{
-			label->setText(m_descriptions[object]);
-		}
-		else if (event->type() == QEvent::Leave)
-		{
-			const QString description = m_description_labels[i].second;
-			label->setText(description);
+			QLabel* label = m_description_labels[i].first;
+
+			if (label)
+			{
+				if (event->type() == QEvent::Enter)
+				{
+					label->setText(m_descriptions[object]);
+				}
+				else if (event->type() == QEvent::Leave)
+				{
+					const QString description = m_description_labels[i].second;
+					label->setText(description);
+				}
+			}
 		}
 	}
 
