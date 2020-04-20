@@ -970,7 +970,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceSlider(emu_settings_type::ClocksScale, ui->clockScale, ui->clockScaleText, tr("%0 %", "Clocks scale"));
 	SnapSlider(ui->clockScale, 10);
 	ui->clockScale->setPageStep(50);
-	const int clocks_scale_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::ResolutionScale));
+	const int clocks_scale_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::ClocksScale));
 	connect(ui->clockScaleReset, &QAbstractButton::clicked, [=, this]()
 	{
 		ui->clockScale->setValue(clocks_scale_def);
