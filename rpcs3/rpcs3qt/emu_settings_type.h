@@ -103,7 +103,6 @@ enum class emu_settings_type
 	MicrophoneDevices,
 
 	// Input / Output
-	PadHandler,
 	KeyboardHandler,
 	MouseHandler,
 	Camera,
@@ -116,7 +115,6 @@ enum class emu_settings_type
 	StartGameFullscreen,
 	PreventDisplaySleep,
 	ShowTrophyPopups,
-	ShowWelcomeScreen,
 	UseNativeInterface,
 	ShowShaderCompilationHint,
 	WindowTitleFormat,
@@ -242,7 +240,6 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MicrophoneDevices,       { "Audio", "Microphone Devices" }},
 
 	// Input / Output
-	{ emu_settings_type::PadHandler,      { "Input/Output", "Pad"}},
 	{ emu_settings_type::KeyboardHandler, { "Input/Output", "Keyboard"}},
 	{ emu_settings_type::MouseHandler,    { "Input/Output", "Mouse"}},
 	{ emu_settings_type::Camera,          { "Input/Output", "Camera"}},
@@ -255,7 +252,6 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::StartGameFullscreen,       { "Miscellaneous", "Start games in fullscreen mode"}},
 	{ emu_settings_type::PreventDisplaySleep,       { "Miscellaneous", "Prevent display sleep while running games"}},
 	{ emu_settings_type::ShowTrophyPopups,          { "Miscellaneous", "Show trophy popups"}},
-	{ emu_settings_type::ShowWelcomeScreen,         { "Miscellaneous", "Show Welcome Screen"}},
 	{ emu_settings_type::UseNativeInterface,        { "Miscellaneous", "Use native user interface"}},
 	{ emu_settings_type::ShowShaderCompilationHint, { "Miscellaneous", "Show shader compilation hint"}},
 	{ emu_settings_type::SilenceAllLogs,            { "Miscellaneous", "Silence All Logs" }},
