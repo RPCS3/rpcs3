@@ -239,6 +239,7 @@ public:
 
 	void ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent);
 	void ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent);
+	bool GetBootConfirmation(QWidget* parent, const gui_save& gui_save_entry = gui_save());
 
 	logs::level GetLogLevel();
 	bool GetGamelistColVisibility(int col);

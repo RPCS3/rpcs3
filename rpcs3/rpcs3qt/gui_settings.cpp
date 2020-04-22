@@ -3,6 +3,8 @@
 #include "qt_utils.h"
 #include "localized.h"
 
+#include "Emu/System.h"
+
 #include <QCheckBox>
 #include <QCoreApplication>
 #include <QMessageBox>
@@ -215,6 +217,36 @@ void gui_settings::ShowConfirmationBox(const QString& title, const QString& text
 void gui_settings::ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent = nullptr)
 {
 	ShowBox(false, title, text, entry, nullptr, parent, false);
+}
+
+bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save_entry)
+{
+	if (!Emu.IsStopped())
+	{
+		QString title = tr("Close Running Game?");
+		QString message = tr("Performing this action will close the current game.\nDo you really want to continue?\n\nAny unsaved progress will be lost!\n");
+
+		if (gui_save_entry == gui::ib_confirm_boot)
+		{
+			message = tr("Booting another game will close the current game.\nDo you really want to boot another game?\n\nAny unsaved progress will be lost!\n");
+		}
+		else if (gui_save_entry == gui::ib_confirm_exit)
+		{
+			title = tr("Exit RPCS3?");
+			message = tr("A game is currently running. Do you really want to close RPCS3?\n\nAny unsaved progress will be lost!\n");
+		}
+
+		int result = QMessageBox::Yes;
+
+		ShowConfirmationBox(title, message, gui_save_entry, &result, parent);
+
+		if (result != QMessageBox::Yes)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 void gui_settings::SetGamelistColVisibility(int col, bool val)

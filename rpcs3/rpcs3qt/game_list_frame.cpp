@@ -817,36 +817,6 @@ void game_list_frame::itemSelectionChangedSlot()
 	Q_EMIT NotifyGameSelection(game);
 }
 
-bool game_list_frame::GetBootConfirmation(const gui_save& gui_save_entry)
-{
-	if (m_gui_settings && !Emu.IsStopped())
-	{
-		QString title = tr("Close Running Game?");
-		QString message = tr("Performing this action will close the current game.\nDo you really want to continue?\n\nAny unsaved progress will be lost!\n");
-
-		if (gui_save_entry == gui::ib_confirm_boot)
-		{
-			message = tr("Booting another game will close the current game.\nDo you really want to boot another game?\n\nAny unsaved progress will be lost!\n");
-		}
-		else if (gui_save_entry == gui::ib_confirm_exit)
-		{
-			title = tr("Exit RPCS3?");
-			message = tr("A game is currently running. Do you really want to close RPCS3?\n\nAny unsaved progress will be lost!\n");
-		}
-
-		int result = QMessageBox::Yes;
-
-		m_gui_settings->ShowConfirmationBox(title, message, gui_save_entry, &result, this);
-
-		if (result != QMessageBox::Yes)
-		{
-			return false;
-		}
-	}
-
-	return true;
-}
-
 void game_list_frame::ShowContextMenu(const QPoint &pos)
 {
 	QPoint global_pos;
@@ -1071,7 +1041,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(create_ppu_cache, &QAction::triggered, [gameinfo, this]
 	{
-		if (GetBootConfirmation())
+		if (m_gui_settings->GetBootConfirmation(this))
 		{
 			CreatePPUCache(gameinfo);
 		}
@@ -1431,7 +1401,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		return;
 	}
 
-	if (!GetBootConfirmation())
+	if (!m_gui_settings->GetBootConfirmation(this))
 	{
 		return;
 	}
