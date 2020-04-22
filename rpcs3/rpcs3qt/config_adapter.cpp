@@ -1,6 +1,4 @@
-﻿#pragma once
-
-#include <QStringList>
+﻿#include <QStringList>
 
 #include "config_adapter.h"
 #include "Emu/system_config.h"
