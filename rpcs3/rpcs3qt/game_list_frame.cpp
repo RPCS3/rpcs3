@@ -817,6 +817,36 @@ void game_list_frame::itemSelectionChangedSlot()
 	Q_EMIT NotifyGameSelection(game);
 }
 
+bool game_list_frame::GetBootConfirmation(const gui_save& gui_save_entry)
+{
+	if (m_gui_settings && !Emu.IsStopped())
+	{
+		QString title = tr("Close Running Game?");
+		QString message = tr("Performing this action will close the current game.\nDo you really want to continue?\n\nAny unsaved progress will be lost!\n");
+
+		if (gui_save_entry == gui::ib_confirm_boot)
+		{
+			message = tr("Booting another game will close the current game.\nDo you really want to boot another game?\n\nAny unsaved progress will be lost!\n");
+		}
+		else if (gui_save_entry == gui::ib_confirm_exit)
+		{
+			title = tr("Exit RPCS3?");
+			message = tr("A game is currently running. Do you really want to close RPCS3?\n\nAny unsaved progress will be lost!\n");
+		}
+
+		int result = QMessageBox::Yes;
+
+		m_gui_settings->ShowConfirmationBox(title, message, gui_save_entry, &result, this);
+
+		if (result != QMessageBox::Yes)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 void game_list_frame::ShowContextMenu(const QPoint &pos)
 {
 	QPoint global_pos;
@@ -1029,7 +1059,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			Emu.GetCallbacks().enable_pads(true);
 		}
 	});
-	connect(hide_serial, &QAction::triggered, [=, this](bool checked)
+	connect(hide_serial, &QAction::triggered, [serial, this](bool checked)
 	{
 		if (checked)
 			m_hidden_list.insert(serial);
@@ -1039,9 +1069,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.values()));
 		Refresh();
 	});
-	connect(create_ppu_cache, &QAction::triggered, [=, this]
+	connect(create_ppu_cache, &QAction::triggered, [gameinfo, this]
 	{
-		CreatePPUCache(gameinfo);
+		if (GetBootConfirmation())
+		{
+			CreatePPUCache(gameinfo);
+		}
 	});
 	connect(remove_game, &QAction::triggered, [=, this]
 	{
@@ -1395,6 +1428,11 @@ void game_list_frame::BatchCreatePPUCaches()
 	if (total == 0)
 	{
 		QMessageBox::information(this, tr("PPU Cache Batch Creation"), tr("No titles found"), QMessageBox::Ok);
+		return;
+	}
+
+	if (!GetBootConfirmation())
+	{
 		return;
 	}
 

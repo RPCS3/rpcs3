@@ -300,17 +300,9 @@ void main_window::show_boot_error(game_boot_result status)
 
 void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
 {
-	if (!Emu.IsStopped())
+	if (!m_game_list_frame->GetBootConfirmation(gui::ib_confirm_boot))
 	{
-		int result = QMessageBox::Yes;
-		m_gui_settings->ShowConfirmationBox(tr("Close Running Game?"),
-			tr("Booting another game will close the current game.\nDo you really want to boot another game?\n\nAny unsaved progress will be lost!\n"),
-			gui::ib_confirm_boot, &result, this);
-
-		if (result != QMessageBox::Yes)
-		{
-			return;
-		}
+		return;
 	}
 
 	m_app_icon = gui::utils::get_app_icon_from_path(path, title_id);
@@ -427,6 +419,11 @@ void main_window::BootRsxCapture(std::string path)
 		path = sstr(file_path);
 	}
 
+	if (!m_game_list_frame->GetBootConfirmation())
+	{
+		return;
+	}
+
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
@@ -475,6 +472,11 @@ void main_window::InstallPackages(QStringList file_paths, bool show_confirm)
 void main_window::HandlePackageInstallation(QStringList file_paths)
 {
 	if (file_paths.isEmpty())
+	{
+		return;
+	}
+
+	if (!m_game_list_frame->GetBootConfirmation())
 	{
 		return;
 	}
@@ -597,6 +599,11 @@ void main_window::InstallPup(QString file_path)
 void main_window::HandlePupInstallation(QString file_path)
 {
 	if (file_path.isEmpty())
+	{
+		return;
+	}
+
+	if (!m_game_list_frame->GetBootConfirmation())
 	{
 		return;
 	}
@@ -754,6 +761,11 @@ void main_window::DecryptSPRXLibraries()
 	const QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select binary files"), path_last_sprx, tr("All Binaries (*.BIN *.self *.sprx);;BIN files (*.BIN);;SELF files (*.self);;SPRX files (*.sprx);;All files (*.*)"));
 
 	if (modules.isEmpty())
+	{
+		return;
+	}
+	
+	if (!m_game_list_frame->GetBootConfirmation())
 	{
 		return;
 	}
@@ -2037,6 +2049,11 @@ void main_window::RemoveFirmwareCache()
 
 void main_window::CreateFirmwareCache()
 {
+	if (!m_game_list_frame->GetBootConfirmation())
+	{
+		return;
+	}
+
 	Emu.SetForceBoot(true);
 	Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys/external/", "", true);
 }
@@ -2076,19 +2093,10 @@ void main_window::mouseDoubleClickEvent(QMouseEvent *event)
 */
 void main_window::closeEvent(QCloseEvent* closeEvent)
 {
-	if (!Emu.IsStopped() && m_gui_settings->GetValue(gui::ib_confirm_exit).toBool())
+	if (!m_game_list_frame->GetBootConfirmation(gui::ib_confirm_exit))
 	{
-		int result = QMessageBox::Yes;
-
-		m_gui_settings->ShowConfirmationBox(tr("Exit RPCS3?"),
-			tr("A game is currently running. Do you really want to close RPCS3?\n\nAny unsaved progress will be lost!\n"),
-			gui::ib_confirm_exit, &result, nullptr);
-
-		if (result != QMessageBox::Yes)
-		{
-			closeEvent->ignore();
-			return;
-		}
+		closeEvent->ignore();
+		return;
 	}
 
 	// Cleanly stop the emulator.

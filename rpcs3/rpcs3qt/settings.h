@@ -7,26 +7,7 @@
 
 #include <memory>
 
-struct gui_save
-{
-	QString key;
-	QString name;
-	QVariant def;
-
-	gui_save()
-	{
-		key = "";
-		name = "";
-		def = QVariant();
-	}
-
-	gui_save(const QString& k, const QString& n, const QVariant& d)
-	{
-		key = k;
-		name = n;
-		def = d;
-	}
-};
+#include "gui_save.h"
 
 typedef QPair<QString, QString> q_string_pair;
 typedef QPair<QString, QSize> q_size_pair;

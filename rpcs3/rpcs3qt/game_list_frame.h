@@ -4,6 +4,7 @@
 
 #include "custom_dock_widget.h"
 #include "game_compatibility.h"
+#include "gui_save.h"
 
 #include <QMainWindow>
 #include <QToolBar>
@@ -67,6 +68,8 @@ public:
 	void RepaintIcons(const bool& from_settings = false);
 
 	void SetShowHidden(bool show);
+
+	bool GetBootConfirmation(const gui_save& gui_save_entry = gui_save());
 
 public Q_SLOTS:
 	void BatchCreatePPUCaches();
