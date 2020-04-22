@@ -388,7 +388,7 @@ QString game_list_frame::GetLastPlayedBySerial(const QString& serial)
 
 std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
 {
-	return fs::get_cache_dir() + "cache/" + serial;
+	return Emu.GetCacheDir() + serial;
 }
 
 std::string game_list_frame::GetDataDirBySerial(const std::string& serial)

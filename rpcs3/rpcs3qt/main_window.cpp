@@ -741,8 +741,7 @@ void main_window::HandlePupInstallation(QString file_path)
 		gui_log.success("Successfully installed PS3 firmware version %s.", version_string);
 		m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), gui::ib_pup_success, this);
 
-		Emu.SetForceBoot(true);
-		Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys/external/", "", true);
+		CreateFirmwareCache();
 	}
 }
 
@@ -1412,6 +1411,9 @@ void main_window::CreateConnects()
 
 	connect(ui->removeDiskCacheAct, &QAction::triggered, this, &main_window::RemoveDiskCache);
 
+	connect(ui->removeFirmwareCacheAct, &QAction::triggered, this, &main_window::RemoveFirmwareCache);
+	connect(ui->createFirmwareCacheAct, &QAction::triggered, this, &main_window::CreateFirmwareCache);
+
 	connect(ui->sysPauseAct, &QAction::triggered, this, &main_window::OnPlayOrPause);
 	connect(ui->sysStopAct, &QAction::triggered, [this]() { Emu.Stop(); });
 	connect(ui->sysRebootAct, &QAction::triggered, [this]() { Emu.Restart(); });
@@ -1987,6 +1989,56 @@ void main_window::RemoveDiskCache()
 	{
 		QMessageBox::warning(this, tr("Error"), tr("Could not remove disk cache"));
 	}
+}
+
+void main_window::RemoveFirmwareCache()
+{
+	const std::string cache_dir = Emu.GetCacheDir();
+
+	if (!fs::is_dir(cache_dir))
+		return;
+
+	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove firmware cache?")) != QMessageBox::Yes)
+		return;
+
+	u32 caches_removed = 0;
+	u32 caches_total = 0;
+
+	const QStringList filter{ QStringLiteral("ppu-*-lib*.sprx")};
+
+	QDirIterator dir_iter(qstr(cache_dir), filter, QDir::Dirs | QDir::NoDotAndDotDot);
+
+	while (dir_iter.hasNext())
+	{
+		const QString path = dir_iter.next();
+
+		if (QDir(path).removeRecursively())
+		{
+			++caches_removed;
+			gui_log.notice("Removed firmware cache: %s", sstr(path));
+		}
+		else
+		{
+			gui_log.warning("Could not remove firmware cache: %s", sstr(path));
+		}
+
+		++caches_total;
+	}
+
+	const bool success = caches_total == caches_removed;
+
+	if (success)
+		gui_log.success("Removed firmware cache in %s", cache_dir);
+	else
+		gui_log.fatal("Only %d/%d firmware caches could be removed in %s", caches_removed, caches_total, cache_dir);
+
+	return;
+}
+
+void main_window::CreateFirmwareCache()
+{
+	Emu.SetForceBoot(true);
+	Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys/external/", "", true);
 }
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)

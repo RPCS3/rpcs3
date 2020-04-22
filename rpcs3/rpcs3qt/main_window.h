@@ -109,6 +109,10 @@ private Q_SLOTS:
 	void SetIconSizeActions(int idx);
 	void ResizeIcons(int index);
 
+	void RemoveDiskCache();
+	void RemoveFirmwareCache();
+	void CreateFirmwareCache();
+
 protected:
 	void closeEvent(QCloseEvent *event) override;
 	void keyPressEvent(QKeyEvent *keyEvent) override;
@@ -141,8 +145,6 @@ private:
 	void AddRecentAction(const q_string_pair& entry);
 
 	void UpdateLanguageActions(const QStringList& language_codes, const QString& language);
-
-	void RemoveDiskCache();
 
 	QString GetCurrentTitle();
 

@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>22</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -179,6 +179,13 @@
      <addaction name="separator"/>
      <addaction name="removeDiskCacheAct"/>
     </widget>
+    <widget class="QMenu" name="menuFirmware">
+     <property name="title">
+      <string>Firmware</string>
+     </property>
+     <addaction name="createFirmwareCacheAct"/>
+     <addaction name="removeFirmwareCacheAct"/>
+    </widget>
     <addaction name="bootElfAct"/>
     <addaction name="bootGameAct"/>
     <addaction name="bootRecentMenu"/>
@@ -189,6 +196,7 @@
     <addaction name="bootInstallPupAct"/>
     <addaction name="separator"/>
     <addaction name="menuBatch"/>
+    <addaction name="menuFirmware"/>
     <addaction name="separator"/>
     <addaction name="exitAct"/>
    </widget>
@@ -1037,6 +1045,16 @@
   <action name="actionManage_Screenshots">
    <property name="text">
     <string>Screenshots</string>
+   </property>
+  </action>
+  <action name="removeFirmwareCacheAct">
+   <property name="text">
+    <string>Remove Firmware Cache</string>
+   </property>
+  </action>
+  <action name="createFirmwareCacheAct">
+   <property name="text">
+    <string>Create Firmware Cache</string>
    </property>
   </action>
  </widget>
