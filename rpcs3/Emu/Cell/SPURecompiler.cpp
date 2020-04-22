@@ -4086,7 +4086,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			r.value = I == 0 ? r.value : m_ir->CreateLShr(r.value, u64{I});
 			r.value = !mask || N >= r.esize ? r.value : m_ir->CreateAnd(r.value, imm.data_mask() >> I);
 
-			if (r.esize != 32)
+			if constexpr (r.esize != 32)
 			{
 				r.value = m_ir->CreateZExtOrTrunc(r.value, get_type<T>()->getScalarType());
 			}
@@ -4120,7 +4120,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			r.value = N == 32 || N >= r.esize ? r.value : m_ir->CreateAShr(r.value, u64{32u - N});
 			r.value = I == 0 || N < r.esize ? r.value : m_ir->CreateLShr(r.value, u64{I});
 
-			if (r.esize != 32)
+			if constexpr (r.esize != 32)
 			{
 				r.value = m_ir->CreateSExtOrTrunc(r.value, get_type<T>()->getScalarType());
 			}

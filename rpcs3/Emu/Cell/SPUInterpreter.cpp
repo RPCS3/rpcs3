@@ -54,7 +54,7 @@ namespace asmjit
 
 		c.mov(x86::eax, op);
 
-		if (I >= 4)
+		if constexpr (I >= 4)
 		{
 			c.shr(x86::eax, I - 4);
 			c.and_(x86::eax, 0x7f << 4);
