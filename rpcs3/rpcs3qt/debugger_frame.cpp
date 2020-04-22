@@ -28,7 +28,6 @@
 #include <atomic>
 
 constexpr auto qstr = QString::fromStdString;
-extern std::atomic<bool> user_asked_for_frame_capture;
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
 	: custom_dock_widget(tr("Debugger"), parent), xgui_settings(settings)
@@ -69,7 +68,6 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 
 	m_go_to_addr = new QPushButton(tr("Go To Address"), this);
 	m_go_to_pc = new QPushButton(tr("Go To PC"), this);
-	m_btn_capture = new QPushButton(tr("RSX Capture"), this);
 	m_btn_step = new QPushButton(tr("Step"), this);
 	m_btn_step_over = new QPushButton(tr("Step Over"), this);
 	m_btn_run = new QPushButton(RunString, this);
@@ -80,7 +78,6 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 
 	hbox_b_main->addWidget(m_go_to_addr);
 	hbox_b_main->addWidget(m_go_to_pc);
-	hbox_b_main->addWidget(m_btn_capture);
 	hbox_b_main->addWidget(m_btn_step);
 	hbox_b_main->addWidget(m_btn_step_over);
 	hbox_b_main->addWidget(m_btn_run);
@@ -131,11 +128,6 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 
 	connect(m_go_to_addr, &QAbstractButton::clicked, this, &debugger_frame::ShowGotoAddressDialog);
 	connect(m_go_to_pc, &QAbstractButton::clicked, this, &debugger_frame::ShowPC);
-
-	connect(m_btn_capture, &QAbstractButton::clicked, [this]()
-	{
-		user_asked_for_frame_capture = true;
-	});
 
 	connect(m_btn_step, &QAbstractButton::clicked, this, &debugger_frame::DoStep);
 	connect(m_btn_step_over, &QAbstractButton::clicked, [this]() { DoStep(true); });
@@ -300,8 +292,6 @@ u32 debugger_frame::GetPc() const
 void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
-
-	m_btn_capture->setEnabled(Emu.IsRunning() || Emu.IsPaused());
 
 	if (m_no_thread_selected) return;
 
