@@ -2280,6 +2280,10 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
 	{
+		if (!m_game_list_frame->GetBootConfirmation())
+		{
+			return;
+		}
 		for (const auto& path : drop_paths)
 		{
 			AddGamesFromDir(path);
@@ -2289,6 +2293,10 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)
 	{
+		if (!m_game_list_frame->GetBootConfirmation())
+		{
+			return;
+		}
 		if (const auto error = Emu.BootGame(sstr(drop_paths.first()), "", true); error != game_boot_result::no_errors)
 		{
 			gui_log.error("Boot failed: reason: %s, path: %s", error, sstr(drop_paths.first()));
