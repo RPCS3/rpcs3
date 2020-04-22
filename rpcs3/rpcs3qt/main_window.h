@@ -62,7 +62,7 @@ class main_window : public QMainWindow
 	QStringList m_vulkan_adapters;
 #endif
 
-	enum drop_type
+	enum class drop_type
 	{
 		drop_error,
 		drop_pkg,
@@ -137,7 +137,7 @@ private:
 	void InstallPup(QString filePath = "");
 	void HandlePupInstallation(QString file_path = "");
 
-	int IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
+	drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
 	void AddGamesFromDir(const QString& path);
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
