@@ -1137,6 +1137,9 @@
     <ClInclude Include="rpcs3qt\config_adapter.h">
       <Filter>Gui\settings</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\gui_save.h">
+      <Filter>Gui\settings</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="debug\moc_predefs.h.cbt">

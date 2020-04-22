@@ -172,36 +172,39 @@ void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 void gui_settings::ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr, bool always_on_top = false)
 {
 	const std::string dialog_type = confirm ? "Confirmation" : "Info";
+	const bool has_gui_setting = !entry.name.isEmpty();
 
-	if (entry.name.isEmpty() || GetValue(entry).toBool())
+	if (has_gui_setting && !GetValue(entry).toBool())
 	{
-		const QFlags<QMessageBox::StandardButton> buttons = confirm ? QMessageBox::Yes | QMessageBox::No : QMessageBox::Ok;
-		const QMessageBox::Icon icon = confirm ? QMessageBox::Question : QMessageBox::Information;
-
-		QMessageBox* mb = new QMessageBox(icon, title, text, buttons, parent, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | (always_on_top ? Qt::WindowStaysOnTopHint : Qt::Widget));
-		mb->deleteLater();
-
-		if (!entry.name.isEmpty())
-		{
-			mb->setCheckBox(new QCheckBox(tr("Don't show again")));
-		}
-
-		connect(mb, &QMessageBox::finished, [&](int res)
-		{
-			if (result)
-			{
-				*result = res;
-			}
-			if (!entry.name.isEmpty() && mb->checkBox()->isChecked())
-			{
-				SetValue(entry, false);
-				cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, sstr(entry.name));
-			}
-		});
-
-		mb->exec();
+		cfg_log.notice("%s Dialog for Entry %s was ignored", dialog_type, sstr(entry.name));
+		return;
 	}
-	else cfg_log.notice("%s Dialog for Entry %s was ignored", dialog_type, sstr(entry.name));
+
+	const QFlags<QMessageBox::StandardButton> buttons = confirm ? QMessageBox::Yes | QMessageBox::No : QMessageBox::Ok;
+	const QMessageBox::Icon icon = confirm ? QMessageBox::Question : QMessageBox::Information;
+
+	QMessageBox* mb = new QMessageBox(icon, title, text, buttons, parent, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | (always_on_top ? Qt::WindowStaysOnTopHint : Qt::Widget));
+	mb->deleteLater();
+
+	if (has_gui_setting)
+	{
+		mb->setCheckBox(new QCheckBox(tr("Don't show again")));
+	}
+
+	connect(mb, &QMessageBox::finished, [&](int res)
+	{
+		if (result)
+		{
+			*result = res;
+		}
+		if (has_gui_setting && mb->checkBox()->isChecked())
+		{
+			SetValue(entry, false);
+			cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, sstr(entry.name));
+		}
+	});
+
+	mb->exec();
 }
 
 void gui_settings::ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr)
