@@ -651,7 +651,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		}
 
 		const u32 width = ((a4 & 0xFFFFFFFF) >> 22) << 6;
-		const u32 height = ((a4 & 0xFFFFFFFF) >> 6) << 6;
+		const u32 height = ((a4 & 0x0000FFFF) >> 6) << 6;
 		const u32 cullStart = (a5 >> 32) & ~0xFFF;
 		const u32 offset = (a5 & 0x0FFFFFFF);
 		const bool bound = (a6 & 0xFFFFFFFF) != 0;
