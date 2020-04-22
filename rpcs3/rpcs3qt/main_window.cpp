@@ -2148,9 +2148,9 @@ Check data for valid file types and cache their paths if necessary
 @param savePaths = flag for path caching
 @returns validity of file type
 */
-int main_window::IsValidFile(const QMimeData& md, QStringList* drop_paths)
+main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList* drop_paths)
 {
-	int drop_type = drop_type::drop_error;
+	auto drop_type = drop_type::drop_error;
 
 	const QList<QUrl> list = md.urls(); // get list of all the dropped file urls
 
@@ -2229,8 +2229,11 @@ void main_window::dropEvent(QDropEvent* event)
 	switch (IsValidFile(*event->mimeData(), &drop_paths)) // get valid file paths and drop type
 	{
 	case drop_type::drop_error:
+	{
 		break;
+	}
 	case drop_type::drop_pkg: // install the packages
+	{
 		if (drop_paths.count() > 1)
 		{
 			pkg_install_dialog dlg(drop_paths, this);
@@ -2249,10 +2252,14 @@ void main_window::dropEvent(QDropEvent* event)
 			InstallPackages(drop_paths, true);
 		}
 		break;
+	}
 	case drop_type::drop_pup: // install the firmware
+	{
 		InstallPup(drop_paths.first());
 		break;
+	}
 	case drop_type::drop_rap: // import rap files to exdata dir
+	{
 		for (const auto& rap : drop_paths)
 		{
 			const std::string rapname = sstr(QFileInfo(rap).fileName());
@@ -2270,14 +2277,18 @@ void main_window::dropEvent(QDropEvent* event)
 		// Refresh game list since we probably unlocked some games now.
 		m_game_list_frame->Refresh(true);
 		break;
+	}
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
+	{
 		for (const auto& path : drop_paths)
 		{
 			AddGamesFromDir(path);
 		}
 		m_game_list_frame->Refresh(true);
 		break;
+	}
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)
+	{
 		if (const auto error = Emu.BootGame(sstr(drop_paths.first()), "", true); error != game_boot_result::no_errors)
 		{
 			gui_log.error("Boot failed: reason: %s, path: %s", error, sstr(drop_paths.first()));
@@ -2289,18 +2300,23 @@ void main_window::dropEvent(QDropEvent* event)
 			m_game_list_frame->Refresh(true);
 		}
 		break;
+	}
 	case drop_type::drop_rrc: // replay a rsx capture file
+	{
 		BootRsxCapture(sstr(drop_paths.first()));
 		break;
+	}
 	default:
+	{
 		gui_log.warning("Invalid dropType in gamelist dropEvent");
 		break;
+	}
 	}
 }
 
 void main_window::dragEnterEvent(QDragEnterEvent* event)
 {
-	if (IsValidFile(*event->mimeData()))
+	if (IsValidFile(*event->mimeData()) != drop_type::drop_error)
 	{
 		event->accept();
 	}
@@ -2308,7 +2324,7 @@ void main_window::dragEnterEvent(QDragEnterEvent* event)
 
 void main_window::dragMoveEvent(QDragMoveEvent* event)
 {
-	if (IsValidFile(*event->mimeData()))
+	if (IsValidFile(*event->mimeData()) != drop_type::drop_error)
 	{
 		event->accept();
 	}
