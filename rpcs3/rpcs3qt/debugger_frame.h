@@ -32,7 +32,6 @@ class debugger_frame : public custom_dock_widget
 	QTextEdit* m_regs;
 	QPushButton* m_go_to_addr;
 	QPushButton* m_go_to_pc;
-	QPushButton* m_btn_capture;
 	QPushButton* m_btn_step;
 	QPushButton* m_btn_step_over;
 	QPushButton* m_btn_run;

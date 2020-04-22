@@ -50,6 +50,8 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
+extern std::atomic<bool> g_user_asked_for_frame_capture;
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
@@ -1088,6 +1090,7 @@ void main_window::EnableMenus(bool enabled)
 	ui->toolsmemory_viewerAct->setEnabled(enabled);
 	ui->toolsRsxDebuggerAct->setEnabled(enabled);
 	ui->toolsStringSearchAct->setEnabled(enabled);
+	ui->actionCreate_RSX_Capture->setEnabled(enabled);
 }
 
 void main_window::BootRecentAction(const QAction* act)
@@ -1359,6 +1362,10 @@ void main_window::CreateConnects()
 	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->actionopen_rsx_capture, &QAction::triggered, [this](){ BootRsxCapture(); });
+	connect(ui->actionCreate_RSX_Capture, &QAction::triggered, []()
+	{
+		g_user_asked_for_frame_capture = true;
+	});
 
 	connect(ui->addGamesAct, &QAction::triggered, [this]()
 	{

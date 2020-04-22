@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -250,7 +250,10 @@
     <addaction name="toolsStringSearchAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
+    <addaction name="separator"/>
     <addaction name="actionopen_rsx_capture"/>
+    <addaction name="separator"/>
+    <addaction name="actionCreate_RSX_Capture"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -1055,6 +1058,14 @@
   <action name="createFirmwareCacheAct">
    <property name="text">
     <string>Create Firmware Cache</string>
+   </property>
+  </action>
+  <action name="actionCreate_RSX_Capture">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Create RSX Capture</string>
    </property>
   </action>
  </widget>
