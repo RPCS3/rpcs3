@@ -300,7 +300,7 @@ void main_window::show_boot_error(game_boot_result status)
 
 void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
 {
-	if (!m_game_list_frame->GetBootConfirmation(gui::ib_confirm_boot))
+	if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_boot))
 	{
 		return;
 	}
@@ -419,7 +419,7 @@ void main_window::BootRsxCapture(std::string path)
 		path = sstr(file_path);
 	}
 
-	if (!m_game_list_frame->GetBootConfirmation())
+	if (!m_gui_settings->GetBootConfirmation(this))
 	{
 		return;
 	}
@@ -476,7 +476,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		return;
 	}
 
-	if (!m_game_list_frame->GetBootConfirmation())
+	if (!m_gui_settings->GetBootConfirmation(this))
 	{
 		return;
 	}
@@ -603,7 +603,7 @@ void main_window::HandlePupInstallation(QString file_path)
 		return;
 	}
 
-	if (!m_game_list_frame->GetBootConfirmation())
+	if (!m_gui_settings->GetBootConfirmation(this))
 	{
 		return;
 	}
@@ -765,7 +765,7 @@ void main_window::DecryptSPRXLibraries()
 		return;
 	}
 	
-	if (!m_game_list_frame->GetBootConfirmation())
+	if (!m_gui_settings->GetBootConfirmation(this))
 	{
 		return;
 	}
@@ -2049,7 +2049,7 @@ void main_window::RemoveFirmwareCache()
 
 void main_window::CreateFirmwareCache()
 {
-	if (!m_game_list_frame->GetBootConfirmation())
+	if (!m_gui_settings->GetBootConfirmation(this))
 	{
 		return;
 	}
@@ -2093,7 +2093,7 @@ void main_window::mouseDoubleClickEvent(QMouseEvent *event)
 */
 void main_window::closeEvent(QCloseEvent* closeEvent)
 {
-	if (!m_game_list_frame->GetBootConfirmation(gui::ib_confirm_exit))
+	if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_exit))
 	{
 		closeEvent->ignore();
 		return;
@@ -2280,7 +2280,7 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
 	{
-		if (!m_game_list_frame->GetBootConfirmation())
+		if (!m_gui_settings->GetBootConfirmation(this))
 		{
 			return;
 		}
@@ -2293,7 +2293,7 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)
 	{
-		if (!m_game_list_frame->GetBootConfirmation())
+		if (!m_gui_settings->GetBootConfirmation(this))
 		{
 			return;
 		}

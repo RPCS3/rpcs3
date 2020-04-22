@@ -69,8 +69,6 @@ public:
 
 	void SetShowHidden(bool show);
 
-	bool GetBootConfirmation(const gui_save& gui_save_entry = gui_save());
-
 public Q_SLOTS:
 	void BatchCreatePPUCaches();
 	void BatchRemovePPUCaches();
