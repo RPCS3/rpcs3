@@ -31,8 +31,8 @@ Q_SIGNALS:
 	void GuiRepaintRequest();
 	void EmuSettingsApplied();
 private Q_SLOTS:
-	void OnBackupCurrentConfig();
-	void OnApplyConfig();
+	void OnBackupCurrentGuiConfig();
+	void OnApplyGuiConfig();
 	void OnApplyStylesheet();
 private:
 	void EnhanceSlider(emu_settings_type settings_type, QSlider* slider, QLabel* label, const QString& label_text);
@@ -42,7 +42,7 @@ private:
 	QSlider* m_current_slider = nullptr;
 
 	// Emulator tab
-	void AddConfigs();
+	void AddGuiConfigs();
 	void AddStylesheets();
 	QString m_current_stylesheet;
 	QString m_current_gui_config;
