@@ -818,7 +818,7 @@ namespace glsl
 		case FUNCTION::FUNCTION_FRACT:
 			return "fract($0)";
 		case FUNCTION::FUNCTION_REFL:
-			return "$Ty($0 - 2.0 * (dot($0, $1)) * $1)";
+			return "reflect($0, $1)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D:
 			return "TEX1D($_i, $0.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS:

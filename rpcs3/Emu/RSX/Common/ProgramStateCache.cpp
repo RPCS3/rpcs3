@@ -328,61 +328,81 @@ size_t fragment_program_utils::get_fragment_program_ucode_size(const void* ptr)
 
 fragment_program_utils::fragment_program_metadata fragment_program_utils::analyse_fragment_program(const void* ptr)
 {
+	fragment_program_utils::fragment_program_metadata result{};
+	result.program_start_offset = UINT32_MAX;
 	const auto instBuffer = ptr;
 	s32 index = 0;
-	s32 program_offset = -1;
-	u32 ucode_size = 0;
-	u32 constants_size = 0;
-	u16 textures_mask = 0;
 
 	while (true)
 	{
 		const auto inst = v128::loadu(instBuffer, index);
-		const u32 opcode = (inst._u32[0] >> 16) & 0x3F;
 
-		if (opcode)
+		// Check for opcode high bit which indicates a branch instructions (opcode 0x40...0x45)
+		if (inst._u32[2] & (1 << 23))
 		{
-			if (program_offset < 0)
-				program_offset = index * 16;
+			result.has_branch_instructions = true;
+		}
+		else
+		{
+			const u32 opcode = (inst._u32[0] >> 16) & 0x3F;
+			if (opcode)
+			{
+				if (result.program_start_offset == umax)
+					result.program_start_offset = index * 16;
 
-			switch(opcode)
-			{
-			case RSX_FP_OPCODE_TEX:
-			case RSX_FP_OPCODE_TEXBEM:
-			case RSX_FP_OPCODE_TXP:
-			case RSX_FP_OPCODE_TXPBEM:
-			case RSX_FP_OPCODE_TXD:
-			case RSX_FP_OPCODE_TXB:
-			case RSX_FP_OPCODE_TXL:
-			{
-				//Bits 17-20 of word 1, swapped within u16 sections
-				//Bits 16-23 are swapped into the upper 8 bits (24-31)
-				const u32 tex_num = (inst._u32[0] >> 25) & 15;
-				textures_mask |= (1 << tex_num);
-				break;
-			}
+				switch (opcode)
+				{
+				case RSX_FP_OPCODE_TEX:
+				case RSX_FP_OPCODE_TEXBEM:
+				case RSX_FP_OPCODE_TXP:
+				case RSX_FP_OPCODE_TXPBEM:
+				case RSX_FP_OPCODE_TXD:
+				case RSX_FP_OPCODE_TXB:
+				case RSX_FP_OPCODE_TXL:
+				{
+					//Bits 17-20 of word 1, swapped within u16 sections
+					//Bits 16-23 are swapped into the upper 8 bits (24-31)
+					const u32 tex_num = (inst._u32[0] >> 25) & 15;
+					result.referenced_textures_mask |= (1 << tex_num);
+					break;
+				}
+				case RSX_FP_OPCODE_PK4:
+				case RSX_FP_OPCODE_UP4:
+				case RSX_FP_OPCODE_PK2:
+				case RSX_FP_OPCODE_UP2:
+				case RSX_FP_OPCODE_PKB:
+				case RSX_FP_OPCODE_UPB:
+				case RSX_FP_OPCODE_PK16:
+				case RSX_FP_OPCODE_UP16:
+				case RSX_FP_OPCODE_PKG:
+				case RSX_FP_OPCODE_UPG:
+				{
+					result.has_pack_instructions = true;
+					break;
+				}
+				}
 			}
 
 			if (is_constant(inst._u32[1]) || is_constant(inst._u32[2]) || is_constant(inst._u32[3]))
 			{
 				//Instruction references constant, skip one slot occupied by data
 				index++;
-				ucode_size += 16;
-				constants_size += 16;
+				result.program_ucode_length += 16;
+				result.program_constants_buffer_length += 16;
 			}
 		}
 
-		if (program_offset >= 0)
+		if (result.program_start_offset != umax)
 		{
-			ucode_size += 16;
+			result.program_ucode_length += 16;
 		}
 
 		if ((inst._u32[0] >> 8) & 0x1)
 		{
-			if (program_offset < 0)
+			if (result.program_start_offset == umax)
 			{
-				program_offset = index * 16;
-				ucode_size = 16;
+				result.program_start_offset = index * 16;
+				result.program_constants_buffer_length = 16;
 			}
 
 			break;
@@ -391,7 +411,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 		index++;
 	}
 
-	return{ static_cast<u32>(program_offset), ucode_size, constants_size, textures_mask };
+	return result;
 }
 
 size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentProgram& program)

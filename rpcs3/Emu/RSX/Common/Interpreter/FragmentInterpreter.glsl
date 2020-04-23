@@ -142,10 +142,21 @@ const float modifier_scale[] = {1.f, 2.f, 4.f, 8.f, 1.f, 0.5f, 0.25f, 0.125f};
 
 vec4 regs16[48];
 vec4 regs32[48];
-vec4 cc[2];
+vec4 cc[2] = { vec4(0.), vec4(0.) };
 int inst_length = 1;
 int ip = -1;
 instruction_t inst;
+
+#ifdef WITH_FLOW_CTRL
+int test_addr = -1;
+int jump_addr = -1;
+int loop_start_addr = -1;
+int loop_end_addr = -1;
+int counter = 0;
+#endif
+
+vec4 wpos = gl_FragCoord * vec4(abs(wpos_scale), wpos_scale, 1., 1.) + vec4(0., wpos_bias, 0., 0.);
+vec4 fogc = fetch_fog_value(fog_mode, in_regs[5]);
 
 vec4 read_src(const in int index)
 {
@@ -173,14 +184,13 @@ vec4 read_src(const in int index)
 		switch (i)
 		{
 		case 0:
-			// TODO: wpos
-			value = vec4(0.); break;
+			value = wpos; break;
 		case 1:
 			value = gl_FrontFacing? in_regs[3] : in_regs[1]; break;
 		case 2:
 			value = gl_FrontFacing? in_regs[4] : in_regs[2]; break;
 		case 3:
-			value = fetch_fog_value(fog_mode, in_regs[5]); break;
+			value = fogc; break;
 		case 13:
 			value = in_regs[6]; break;
 		case 14:
@@ -223,6 +233,40 @@ vec4 read_cond()
 	return shuffle(cc[GET_BITS(1, 31, 1)], GET_BITS(1, 21, 8));
 }
 
+#if defined(WITH_FLOW_CTRL) || defined(WITH_KIL)
+
+bool check_cond()
+{
+	const uint exec_mask = GET_BITS(1, 18, 3);
+	if (exec_mask == 0x7)
+	{
+		return true;
+	}
+	else
+	{
+		const vec4 cond = read_cond();
+		switch (exec_mask)
+		{
+		case EXEC_GT | EXEC_EQ:
+			return any(greaterThanEqual(cond, vec4(0.)));
+		case EXEC_LT | EXEC_EQ:
+			return any(lessThanEqual(cond, vec4(0.)));
+		case EXEC_LT | EXEC_GT:
+			return any(notEqual(cond, vec4(0.)));
+		case EXEC_GT:
+			return any(greaterThan(cond, vec4(0.)));
+		case EXEC_LT:
+			return any(lessThan(cond, vec4(0.)));
+		case EXEC_EQ:
+			return any(equal(cond, vec4(0.)));
+		default:
+			return false;
+		}
+	}
+}
+
+#endif
+
 #ifdef WITH_TEXTURES
 
 vec4 _texture(in vec4 coord, float bias)
@@ -236,19 +280,25 @@ vec4 _texture(in vec4 coord, float bias)
 	const uint type = bitfieldExtract(texture_control, int(tex_num + tex_num), 2);
 	coord.xy *= texture_parameters[tex_num].scale;
 
+	vec4 value;
 	switch (type)
 	{
 	case 0:
-		return texture(SAMPLER1D(tex_num), coord.x, bias);
+		value = texture(SAMPLER1D(tex_num), coord.x, bias); break;
 	case 1:
-		return texture(SAMPLER2D(tex_num), coord.xy, bias);
+		value = texture(SAMPLER2D(tex_num), coord.xy, bias); break;
 	case 2:
-		return texture(SAMPLER3D(tex_num), coord.xyz, bias);
+		value = texture(SAMPLERCUBE(tex_num), coord.xyz, bias); break;
 	case 3:
-		return texture(SAMPLERCUBE(tex_num), coord.xyz, bias);
+		value = texture(SAMPLER3D(tex_num), coord.xyz, bias); break;
 	}
 
-	return vec4(0.);
+	if (TEST_BIT(0, 21))
+	{
+		value = fma(value, vec4(2.), vec4(-1.));
+	}
+
+	return value;
 }
 
 vec4 _textureLod(in vec4 coord, float lod)
@@ -262,19 +312,25 @@ vec4 _textureLod(in vec4 coord, float lod)
 	const uint type = bitfieldExtract(texture_control, int(tex_num + tex_num), 2);
 	coord.xy *= texture_parameters[tex_num].scale;
 
+	vec4 value;
 	switch (type)
 	{
 	case 0:
-		return textureLod(SAMPLER1D(tex_num), coord.x, lod);
+		value = textureLod(SAMPLER1D(tex_num), coord.x, lod); break;
 	case 1:
-		return textureLod(SAMPLER2D(tex_num), coord.xy, lod);
+		value = textureLod(SAMPLER2D(tex_num), coord.xy, lod); break;
 	case 2:
-		return textureLod(SAMPLER3D(tex_num), coord.xyz, lod);
+		value = textureLod(SAMPLERCUBE(tex_num), coord.xyz, lod); break;
 	case 3:
-		return textureLod(SAMPLERCUBE(tex_num), coord.xyz, lod);
+		value = textureLod(SAMPLER3D(tex_num), coord.xyz, lod); break;
 	}
 
-	return vec4(0.);
+	if (TEST_BIT(0, 21))
+	{
+		value = fma(value, vec4(2.), vec4(-1.));
+	}
+
+	return value;
 }
 
 #endif
@@ -359,7 +415,9 @@ void initialize()
 		regs16[j++] = vec4(0.);
 		register_count--;
 	}
-}
+})"
+
+R"(
 
 void main()
 {
@@ -374,6 +432,28 @@ void main()
 		ip += inst_length;
 		inst_length = 1;
 
+#ifdef WITH_FLOW_CTRL
+		if (ip == test_addr)
+		{
+			ip = jump_addr;
+			test_addr = -1;
+			jump_addr = -1;
+		}
+		else if (ip == loop_end_addr)
+		{
+			if (counter > 0)
+			{
+				counter--;
+				ip = loop_start_addr;
+			}
+			else
+			{
+				loop_end_addr = -1;
+				loop_start_addr = -1;
+			}
+		}
+#endif
+
 		// Decode instruction
 		// endian swap + word swap
 		inst.words =
@@ -383,6 +463,64 @@ void main()
 		inst.opcode = GET_BITS(0, 24, 6);
 		inst.end = TEST_BIT(0, 0);
 
+#ifdef WITH_FLOW_CTRL
+		if (TEST_BIT(2, 31))
+		{
+			// Flow control
+			switch (inst.opcode | (1 << 6))
+			{
+			//case RSX_FP_OPCODE_CAL:
+				// Function call not yet found in the wild for this hw class
+			case RSX_FP_OPCODE_RET:
+				inst.end = true;
+				continue;
+			case RSX_FP_OPCODE_IFE:
+				if (check_cond())
+				{
+					// Go down IF path
+					if (inst.words.z < inst.words.w)
+					{
+						test_addr = int(inst.words.z >> 2);
+						jump_addr = int(inst.words.w >> 2);
+					}
+					// If simple IF..ENDIF, do nothing
+				}
+				else
+				{
+					// Go to ELSE path
+					ip = int(inst.words.z >> 2);
+					inst_length = 0;
+				}
+				continue;
+			case RSX_FP_OPCODE_LOOP:
+			case RSX_FP_OPCODE_REP:
+				if (check_cond())
+				{
+					counter = int(GET_BITS(2, 2, 8) - GET_BITS(2, 10, 8));
+					counter /= int(GET_BITS(2, 19, 8));
+					loop_start_addr = ip + 1;
+					loop_end_addr = int(inst.words.w >> 2);
+				}
+				else
+				{
+					ip = int(inst.words.w >> 2);
+					inst_length = 0;
+				}
+				continue;
+			case RSX_FP_OPCODE_BRK:
+				if (loop_end_addr > 0)
+				{
+					ip = loop_end_addr;
+					inst_length = 0;
+					counter = 0;
+				}
+				continue;
+			}
+
+			continue;
+		}
+#endif
+
 		// Class 1, no input/output
 		switch (inst.opcode)
 		{
@@ -390,8 +528,15 @@ void main()
 		case RSX_FP_OPCODE_FENCT:
 		case RSX_FP_OPCODE_FENCB:
 			continue;
+#ifdef WITH_KIL
 		case RSX_FP_OPCODE_KIL:
-			discard; return;
+			if (check_cond())
+			{
+				discard;
+				return;
+			}
+			continue;
+#endif
 		}
 
 		// Class 2, 1 input
@@ -431,6 +576,31 @@ void main()
 #ifdef WITH_TEXTURES
 		case RSX_FP_OPCODE_TEX:
 			value = _texture(s0, 0.f); break;
+		case RSX_FP_OPCODE_TXP:
+			value = _texture(vec4(s0.xyz / s0.w, s0.w), 0.f); break;
+#endif
+
+#ifdef WITH_PACKING
+		case RSX_FP_OPCODE_PK2:
+			value = vec4(uintBitsToFloat(packHalf2x16(s0.xy))); break;
+		case RSX_FP_OPCODE_PK4:
+			value = vec4(uintBitsToFloat(packSnorm4x8(s0))); break;
+		case RSX_FP_OPCODE_PK16:
+			value = vec4(uintBitsToFloat(packSnorm2x16(s0.xy))); break;
+		case RSX_FP_OPCODE_PKG:
+			// Should be similar to PKB but with gamma correction, see description of PK4UBG in khronos page
+		case RSX_FP_OPCODE_PKB:
+			value = vec4(uintBitsToFloat(packUnorm4x8(s0))); break;
+		case RSX_FP_OPCODE_UP2:
+			value = unpackHalf2x16(floatBitsToUint(s0.x)).xyxy; break;
+		case RSX_FP_OPCODE_UP4:
+			value = unpackSnorm4x8(floatBitsToUint(s0.x)); break;
+		case RSX_FP_OPCODE_UP16:
+			value = unpackSnorm2x16(floatBitsToUint(s0.x)).xyxy; break;
+		case RSX_FP_OPCODE_UPG:
+			// Same as UPB with gamma correction
+		case RSX_FP_OPCODE_UPB:
+			value = unpackUnorm4x8(floatBitsToUint(s0.x)); break;
 #endif
 		default:
 			handled = false;
@@ -474,12 +644,13 @@ void main()
 			case RSX_FP_OPCODE_POW:
 				value = pow(s0, s1).xxxx; break;
 			case RSX_FP_OPCODE_DIV:
-				value = s0 / s1.xxxx;
+				value = s0 / s1.xxxx; break;
 			case RSX_FP_OPCODE_DIVSQ:
 				value = s0 * inversesqrt(s1.xxxx); break;
+			case RSX_FP_OPCODE_REFL:
+				value = reflect(s0, s1); break;
 
 #ifdef WITH_TEXTURES
-			//case RSX_FP_OPCODE_TXP:
 			//case RSX_FP_OPCODE_TXD:
 			case RSX_FP_OPCODE_TXL:
 				value = _textureLod(s0, s1.x); break;
@@ -507,48 +678,27 @@ void main()
 				value = dot(s0.xy, s1.xy).xxxx + s2.xxxx; break;
 			}
 		}
-
-		// Flow control
-/*		case RSX_FP_OPCODE_BRK:
-		case RSX_FP_OPCODE_CAL:
-		case RSX_FP_OPCODE_IFE:
-		case RSX_FP_OPCODE_LOOP:
-		case RSX_FP_OPCODE_REP:
-		case RSX_FP_OPCODE_RET:
-
+#if 0
 		// Other
-		case RSX_FP_OPCODE_PK4:
-		case RSX_FP_OPCODE_UP4:
+		case RSX_FP_OPCODE_BEM:
+		case RSX_FP_OPCODE_BEMLUM:
 		case RSX_FP_OPCODE_LIT:
 		case RSX_FP_OPCODE_LIF:
-		case RSX_FP_OPCODE_PK2:
-		case RSX_FP_OPCODE_FENCT:
-		case RSX_FP_OPCODE_FENCB:
-		case RSX_FP_OPCODE_UP2:
-		case RSX_FP_OPCODE_PKB:
-		case RSX_FP_OPCODE_UPB:
-		case RSX_FP_OPCODE_PK16:
-		case RSX_FP_OPCODE_UP16:
-		case RSX_FP_OPCODE_BEM:
-		case RSX_FP_OPCODE_PKG:
-		case RSX_FP_OPCODE_UPG:
-		case RSX_FP_OPCODE_BEMLUM:
-		case RSX_FP_OPCODE_REFL:
-		case RSX_FP_OPCODE_TIMESWTEX:*/
-
+		case RSX_FP_OPCODE_TIMESWTEX:
+#endif
 		write_dst(value);
 	}
 
 #ifdef WITH_HALF_OUTPUT_REGISTER
 		ocol0 = regs16[0];
 		ocol1 = regs16[4];
-		ocol1 = regs16[6];
-		ocol1 = regs16[8];
+		ocol2 = regs16[6];
+		ocol3 = regs16[8];
 #else
 		ocol0 = regs32[0];
 		ocol1 = regs32[2];
-		ocol1 = regs32[3];
-		ocol1 = regs32[4];
+		ocol2 = regs32[3];
+		ocol3 = regs32[4];
 #endif
 
 #ifdef WITH_DEPTH_EXPORT
@@ -560,7 +710,7 @@ void main()
 	if (ocol0.a < alpha_ref) discard; // gequal
 #endif
 #ifdef ALPHA_TEST_GREATER
-	if (ocol0.a > alpha_ref) discard; // greater
+	if (ocol0.a <= alpha_ref) discard; // greater
 #endif
 #ifdef ALPHA_TEST_LESS
 	if (ocol0.a >= alpha_ref) discard; // less
