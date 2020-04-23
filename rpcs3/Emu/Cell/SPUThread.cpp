@@ -764,6 +764,8 @@ std::string spu_thread::dump_regs() const
 
 	fmt::append(ret, "\nEvent Stat: 0x%x\n", +ch_event_stat);
 	fmt::append(ret, "Event Mask: 0x%x\n", +ch_event_mask);
+	fmt::append(ret, "SRR0: 0x%05x\n", srr0);
+	fmt::append(ret, "Stall Stat: %s\n", ch_stall_stat);
 	fmt::append(ret, "Stall Mask: 0x%x\n", ch_stall_mask);
 	fmt::append(ret, "Tag Stat: %s\n", ch_tag_stat);
 
