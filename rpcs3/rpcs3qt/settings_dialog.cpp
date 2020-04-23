@@ -1526,7 +1526,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			// Only attempt to load a config if changes occurred.
 			if (m_current_gui_config != ui->combo_configs->currentText())
 			{
-				OnApplyConfig();
+				OnApplyGuiConfig();
 			}
 			if (m_current_stylesheet != m_gui_settings->GetValue(gui::m_currentStylesheet).toString())
 			{
@@ -1547,14 +1547,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				apply_gui_options(true);
 				m_gui_settings->Reset(true);
 				Q_EMIT GuiSettingsSyncRequest(true);
-				AddConfigs();
+				AddGuiConfigs();
 				AddStylesheets();
 				apply_gui_options();
 			}
 		});
 
-		connect(ui->pb_backup_config, &QAbstractButton::clicked, this, &settings_dialog::OnBackupCurrentConfig);
-		connect(ui->pb_apply_config, &QAbstractButton::clicked, this, &settings_dialog::OnApplyConfig);
+		connect(ui->pb_backup_config, &QAbstractButton::clicked, this, &settings_dialog::OnBackupCurrentGuiConfig);
+		connect(ui->pb_apply_config, &QAbstractButton::clicked, this, &settings_dialog::OnApplyGuiConfig);
 		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
 
 		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=, this]()
@@ -1630,7 +1630,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			color_dialog(gui::tr_icon_color, tr("Choose trophy manager icon color", "Settings: color dialog"), ui->pb_tr_icon_color);
 		});
 
-		AddConfigs();
+		AddGuiConfigs();
 		AddStylesheets();
 	}
 
@@ -1744,7 +1744,7 @@ void settings_dialog::SnapSlider(QSlider *slider, int interval)
 	});
 }
 
-void settings_dialog::AddConfigs()
+void settings_dialog::AddGuiConfigs()
 {
 	ui->combo_configs->clear();
 
@@ -1794,7 +1794,7 @@ void settings_dialog::AddStylesheets()
 	}
 }
 
-void settings_dialog::OnBackupCurrentConfig()
+void settings_dialog::OnBackupCurrentGuiConfig()
 {
 	QInputDialog* dialog = new QInputDialog(this);
 	dialog->setWindowTitle(tr("Choose a unique name", "Backup GUI config"));
@@ -1831,7 +1831,7 @@ void settings_dialog::OnBackupCurrentConfig()
 	}
 }
 
-void settings_dialog::OnApplyConfig()
+void settings_dialog::OnApplyGuiConfig()
 {
 	const QString new_config = ui->combo_configs->currentText();
 
