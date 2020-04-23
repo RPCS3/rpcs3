@@ -263,7 +263,7 @@ namespace vm
 
 		// Callback; defined in PPUCallback.h, passing context is mandatory
 		RT operator()(ppu_thread& ppu, T... args) const;
-		const ppu_func_opd_t& opd() const;
+		ppu_func_opd_t opd() const;
 	};
 
 	template<typename AT, typename RT, typename... T>

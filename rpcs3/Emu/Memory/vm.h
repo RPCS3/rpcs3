@@ -206,16 +206,6 @@ namespace vm
 		return g_base_addr + addr;
 	}
 
-	inline const u8& read8(u32 addr)
-	{
-		return g_base_addr[addr];
-	}
-
-	inline void write8(u32 addr, u8 value)
-	{
-		g_base_addr[addr] = value;
-	}
-
 	// Read or write virtual memory in a safe manner, returns false on failure
 	bool try_access(u32 addr, void* ptr, u32 size, bool is_write);
 
@@ -240,34 +230,92 @@ namespace vm
 			return reinterpret_cast<to_be_t<T>*>(g_sudo_addr + addr);
 		}
 
-		inline const be_t<u16>& read16(u32 addr)
+		template <typename T, bool bitcopy = true>
+		inline auto read(u32 addr)
 		{
-			return _ref<u16>(addr);
+			using type = std::remove_const_t<std::remove_reference_t<T>>;
+
+			if constexpr (bitcopy)
+			{
+				// Copy bits as is (copy padding bytes as well)
+				to_be_t<type> ret{};
+				std::memcpy(&ret, base(addr), sizeof(type));
+				return ret;
+			}
+			else
+			{
+				// Copy the object's value (unsafe)
+				return _ref<T>(addr);
+			}
 		}
 
-		inline void write16(u32 addr, be_t<u16> value)
+		template <typename T, bool bitcopy = true, typename V>
+		inline auto write(u32 addr, V&& value)
 		{
-			_ref<u16>(addr) = value;
+			using type = std::remove_const_t<std::remove_reference_t<T>>;
+
+			if constexpr (std::is_same_v<std::remove_const_t<std::remove_reference_t<T>>, to_be_t<type>>)
+			{
+				if constexpr (bitcopy)
+				{
+					// Copy bits as is (copy padding bytes as well)
+					std::memcpy(base(addr), std::addressof(value), sizeof(type));
+					return static_cast<type>(value);
+				}
+				else
+				{
+					// Copy the object's value (unsafe)
+					_ref<type>(addr) = value;
+					return value;
+				}
+			}
+			else
+			{
+				// Convert value
+				to_be_t<type> ret = ::as_rvalue(value);
+				std::memcpy(base(addr), std::addressof(ret), sizeof(ret));
+				return ret;
+			}
 		}
 
-		inline const be_t<u32>& read32(u32 addr)
+		inline u8 read8(u32 addr)
 		{
-			return _ref<u32>(addr);
+			return read<u8>(addr);
 		}
 
-		inline void write32(u32 addr, be_t<u32> value)
+		inline u8 write8(u32 addr, u8 value)
 		{
-			_ref<u32>(addr) = value;
+			return write<u8>(addr, value);
 		}
 
-		inline const be_t<u64>& read64(u32 addr)
+		inline be_t<u16> read16(u32 addr)
 		{
-			return _ref<u64>(addr);
+			return read<u16>(addr);
 		}
 
-		inline void write64(u32 addr, be_t<u64> value)
+		inline be_t<u16> write16(u32 addr, be_t<u16> value)
 		{
-			_ref<u64>(addr) = value;
+			return write<u16>(addr, value);
+		}
+
+		inline be_t<u32> read32(u32 addr)
+		{
+			return read<u32>(addr);
+		}
+
+		inline be_t<u32> write32(u32 addr, be_t<u32> value)
+		{
+			return write<u32>(addr, value);
+		}
+
+		inline be_t<u64> read64(u32 addr)
+		{
+			return read<u64>(addr);
+		}
+
+		inline be_t<u64> write64(u32 addr, be_t<u64> value)
+		{
+			return write<u64>(addr, value);
 		}
 
 		void init();

@@ -660,32 +660,32 @@ error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, v
 		switch (content_info->type)
 		{
 		case CELL_SEARCH_CONTENTTYPE_MUSIC:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.music, sizeof(content_info->data.music));
+			vm::write<CellSearchMusicInfo>(infoBuffer.addr(), content_info->data.music);
 			break;
 		case CELL_SEARCH_CONTENTTYPE_PHOTO:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.photo, sizeof(content_info->data.photo));
+			vm::write<CellSearchPhotoInfo>(infoBuffer.addr(), content_info->data.photo);
 			break;
 		case CELL_SEARCH_CONTENTTYPE_VIDEO:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.video, sizeof(content_info->data.photo));
+			vm::write<CellSearchVideoInfo>(infoBuffer.addr(), content_info->data.video);
 			break;
 		case CELL_SEARCH_CONTENTTYPE_MUSICLIST:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.music_list, sizeof(content_info->data.music_list));
+			vm::write<CellSearchMusicListInfo>(infoBuffer.addr(), content_info->data.music_list);
 			break;
 		case CELL_SEARCH_CONTENTTYPE_PHOTOLIST:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.photo_list, sizeof(content_info->data.photo_list));
+			vm::write<CellSearchPhotoListInfo>(infoBuffer.addr(), content_info->data.photo_list);
 			break;
 		case CELL_SEARCH_CONTENTTYPE_VIDEOLIST:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.video_list, sizeof(content_info->data.video_list));
+			vm::write<CellSearchVideoListInfo>(infoBuffer.addr(), content_info->data.video_list);
 			break;
 		case CELL_SEARCH_CONTENTTYPE_SCENE:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.scene, sizeof(content_info->data.scene));
+			vm::write<CellSearchVideoSceneInfo>(infoBuffer.addr(), content_info->data.scene);
 			break;
 		default:
 			return CELL_SEARCH_ERROR_GENERIC;
 		}
 
 		const u128 content_id_128 = content_id.first;
-		*outContentType = content_info->type;
+		outContentType.write(content_info->type);
 		std::memcpy(outContentId->data, &content_id_128, CELL_SEARCH_CONTENT_ID_SIZE);
 	}
 	else // content ID not found, perform a search first
@@ -729,31 +729,31 @@ error_code cellSearchGetContentInfoByContentId(vm::cptr<CellSearchContentId> con
 		switch (content_info->type)
 		{
 		case CELL_SEARCH_CONTENTTYPE_MUSIC:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.music, sizeof(content_info->data.music));
+			vm::write<CellSearchMusicInfo>(infoBuffer.addr(), content_info->data.music);
 			break;
 		case CELL_SEARCH_CONTENTTYPE_PHOTO:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.photo, sizeof(content_info->data.photo));
+			vm::write<CellSearchPhotoInfo>(infoBuffer.addr(), content_info->data.photo);
 			break;
 		case CELL_SEARCH_CONTENTTYPE_VIDEO:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.video, sizeof(content_info->data.photo));
+			vm::write<CellSearchVideoInfo>(infoBuffer.addr(), content_info->data.video);
 			break;
 		case CELL_SEARCH_CONTENTTYPE_MUSICLIST:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.music_list, sizeof(content_info->data.music_list));
+			vm::write<CellSearchMusicListInfo>(infoBuffer.addr(), content_info->data.music_list);
 			break;
 		case CELL_SEARCH_CONTENTTYPE_PHOTOLIST:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.photo_list, sizeof(content_info->data.photo_list));
+			vm::write<CellSearchPhotoListInfo>(infoBuffer.addr(), content_info->data.photo_list);
 			break;
 		case CELL_SEARCH_CONTENTTYPE_VIDEOLIST:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.video_list, sizeof(content_info->data.video_list));
+			vm::write<CellSearchVideoListInfo>(infoBuffer.addr(), content_info->data.video_list);
 			break;
 		case CELL_SEARCH_CONTENTTYPE_SCENE:
-			std::memcpy(infoBuffer.get_ptr(), &content_info->data.scene, sizeof(content_info->data.scene));
+			vm::write<CellSearchVideoSceneInfo>(infoBuffer.addr(), content_info->data.scene);
 			break;
 		default:
 			return CELL_SEARCH_ERROR_GENERIC;
 		}
 
-		*outContentType = content_info->type;
+		outContentType.write(content_info->type);
 	}
 	else // content ID not found, perform a search first
 	{
@@ -846,7 +846,7 @@ error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm:
 	{
 		auto& content_id = searchObject->content_ids.at(offset);
 		const u128 content_id_128 = content_id.first;
-		*outContentType = content_id.second->type;
+		outContentType.write(content_id.second->type);
 		std::memcpy(outContentId->data, &content_id_128, CELL_SEARCH_CONTENT_ID_SIZE);
 
 		if (outTimeInfo)
@@ -936,7 +936,7 @@ error_code cellSearchGetContentInfoPath(vm::cptr<CellSearchContentId> contentId,
 	auto found = content_map->find(id);
 	if(found != content_map->end())
 	{
-		std::memcpy(infoPath.get_ptr(), &found->second->infoPath, sizeof(found->second->infoPath));
+		infoPath.write(found->second->infoPath);
 	}
 	else
 	{

@@ -620,8 +620,8 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::lle_call:
 		{
-			const vm::ptr<u32> opd(arg < 32 ? vm::cast(gpr[arg]) : vm::cast(arg));
-			cmd_pop(), fast_call(opd[0], opd[1]);
+			const ppu_func_opd_t opd = vm::read<ppu_func_opd_t>(arg < 32 ? vm::cast(gpr[arg]) : vm::cast(arg));
+			cmd_pop(), fast_call(opd.addr, opd.rtoc);
 			break;
 		}
 		case ppu_cmd::hle_call:
@@ -947,7 +947,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 		else
 		{
 			const u32 addr = static_cast<u32>(context.gpr[1]);
-			vm::_ref<nse_t<u32>>(addr + size) = old_pos;
+			vm::write<nse_t<u32>>(addr + size, old_pos);
 			std::memset(vm::base(addr), 0, size);
 			return addr;
 		}
@@ -968,7 +968,7 @@ void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
 			return;
 		}
 
-		context.gpr[1] = vm::_ref<nse_t<u32>>(static_cast<u32>(context.gpr[1]) + size);
+		context.gpr[1] = vm::read<nse_t<u32>>(static_cast<u32>(context.gpr[1]) + size);
 		return;
 	}
 

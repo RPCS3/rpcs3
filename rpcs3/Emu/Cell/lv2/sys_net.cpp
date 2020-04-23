@@ -1560,7 +1560,7 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 
 		if (optlen >= sizeof(int))
 		{
-			native_int = vm::_ref<s32>(optval.addr());
+			native_int = vm::read<s32>(optval.addr());
 		}
 		else
 		{

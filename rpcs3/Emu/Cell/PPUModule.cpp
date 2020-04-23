@@ -403,21 +403,21 @@ static void ppu_patch_refs(std::vector<ppu_reloc>* out_relocs, u32 fref, u32 fad
 		{
 		case 1:
 		{
-			const u32 value = vm::_ref<u32>(ref->addr) = rdata;
+			const u32 value = vm::write32(ref->addr, rdata);
 			ppu_loader.trace("**** REF(1): 0x%x <- 0x%x", ref->addr, value);
 			break;
 		}
 
 		case 4:
 		{
-			const u16 value = vm::_ref<u16>(ref->addr) = static_cast<u16>(rdata);
+			const u16 value = vm::write16(ref->addr, static_cast<u16>(rdata));
 			ppu_loader.trace("**** REF(4): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
 			break;
 		}
 
 		case 6:
 		{
-			const u16 value = vm::_ref<u16>(ref->addr) = static_cast<u16>(rdata >> 16) + (rdata & 0x8000 ? 1 : 0);
+			const u16 value = vm::write16(ref->addr, static_cast<u16>(rdata >> 16) + (rdata & 0x8000 ? 1 : 0));
 			ppu_loader.trace("**** REF(6): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
 			break;
 		}
@@ -835,28 +835,28 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 				{
 				case 1: // R_PPC64_ADDR32
 				{
-					const u32 value = vm::_ref<u32>(raddr) = static_cast<u32>(rdata);
+					const u32 value = vm::write32(raddr, static_cast<u32>(rdata));
 					ppu_loader.trace("**** RELOCATION(1): 0x%x <- 0x%08x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
 				case 4: //R_PPC64_ADDR16_LO
 				{
-					const u16 value = vm::_ref<u16>(raddr) = static_cast<u16>(rdata);
+					const u16 value = vm::write16(raddr, static_cast<u16>(rdata));
 					ppu_loader.trace("**** RELOCATION(4): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
 				case 5: //R_PPC64_ADDR16_HI
 				{
-					const u16 value = vm::_ref<u16>(raddr) = static_cast<u16>(rdata >> 16);
+					const u16 value = vm::write16(raddr, static_cast<u16>(rdata >> 16));
 					ppu_loader.trace("**** RELOCATION(5): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
 				case 6: //R_PPC64_ADDR16_HA
 				{
-					const u16 value = vm::_ref<u16>(raddr) = static_cast<u16>(rdata >> 16) + (rdata & 0x8000 ? 1 : 0);
+					const u16 value = vm::write16(raddr, static_cast<u16>(rdata >> 16) + (rdata & 0x8000 ? 1 : 0));
 					ppu_loader.trace("**** RELOCATION(6): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
 					break;
 				}
@@ -877,14 +877,14 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 				case 38: //R_PPC64_ADDR64
 				{
-					const u64 value = vm::_ref<u64>(raddr) = rdata;
+					const u64 value = vm::write64(raddr, rdata);
 					ppu_loader.trace("**** RELOCATION(38): 0x%x <- 0x%016llx (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
 				case 44: //R_PPC64_REL64
 				{
-					const u64 value = vm::_ref<u64>(raddr) = rdata - raddr;
+					const u64 value = vm::write64(raddr, rdata - raddr);
 					ppu_loader.trace("**** RELOCATION(44): 0x%x <- 0x%016llx (0x%llx)", raddr, value, rdata);
 					break;
 				}

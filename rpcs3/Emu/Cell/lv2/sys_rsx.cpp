@@ -719,7 +719,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		driverInfo.head[1].flipBufferId = static_cast<u32>(a3);
 
 		// seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
-		vm::_ref<u32>(render->label_addr + 0x10) = 0;
+		vm::write32(render->label_addr + 0x10, 0);
 
 		rsx_cfg->send_event(0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
 		break;
@@ -730,7 +730,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		verify(HERE), a3 < 2;
 
 		// todo: this is wrong and should be 'second' vblank handler and freq, but since currently everything is reported as being 59.94, this should be fine
-		vm::_ref<u32>(render->device_addr + 0x30) = 1;
+		vm::write32(render->device_addr + 0x30, 1);
 
 		const u64 current_time = rsxTimeStamp();
 

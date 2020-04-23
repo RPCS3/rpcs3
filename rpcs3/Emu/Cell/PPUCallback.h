@@ -181,17 +181,17 @@ namespace vm
 	template<typename AT, typename RT, typename... T>
 	FORCE_INLINE RT _ptr_base<RT(T...), AT>::operator()(ppu_thread& CPU, T... args) const
 	{
-		const auto data = vm::_ptr<ppu_func_opd_t>(vm::cast(m_addr, HERE));
-		const u32 pc = data->addr;
-		const u32 rtoc = data->rtoc;
+		const auto data = vm::read<ppu_func_opd_t>(vm::cast(m_addr, HERE));
+		const u32 pc = data.addr;
+		const u32 rtoc = data.rtoc;
 
 		return ppu_cb_detail::_func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
 	}
 
 	template<typename AT, typename RT, typename... T>
-	FORCE_INLINE const ppu_func_opd_t& _ptr_base<RT(T...), AT>::opd() const
+	FORCE_INLINE ppu_func_opd_t _ptr_base<RT(T...), AT>::opd() const
 	{
-		return vm::_ref<ppu_func_opd_t>(vm::cast(m_addr, HERE));
+		return vm::read<ppu_func_opd_t>(vm::cast(m_addr, HERE));
 	}
 }
 
