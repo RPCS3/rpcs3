@@ -191,6 +191,29 @@ vec4 _distance(const in vec4 a, const in vec4 b)
 	return vec4(1., a.y * b.y, a.z, b.w);
 }
 
+bvec4 test_cond(const in vec4 cond, const in uint mode)
+{
+	switch (mode)
+	{
+	case EXEC_GT | EXEC_EQ | EXEC_LT:
+		return bvec4(true);
+	case EXEC_GT | EXEC_EQ:
+		return greaterThanEqual(cond, vec4(0.));
+	case EXEC_LT | EXEC_EQ:
+		return lessThanEqual(cond, vec4(0.));
+	case EXEC_LT | EXEC_GT:
+		return notEqual(cond, vec4(0.));
+	case EXEC_GT:
+		return greaterThan(cond, vec4(0.));
+	case EXEC_LT:
+		return lessThan(cond, vec4(0.));
+	case EXEC_EQ:
+		return equal(cond, vec4(0.));
+	default:
+		return bvec4(false);
+	}
+}
+
 // Local registers
 uvec4 instr;
 vec4 temp[32];
@@ -201,6 +224,11 @@ D0 d0;
 D1 d1;
 D2 d2;
 D3 d3;
+
+vec4 get_cond()
+{
+	return shuffle(cc[d0.cond_reg_sel_1], d0.swizzle);
+}
 
 void write_sca(in float value)
 {
@@ -229,23 +257,30 @@ void write_vec(in vec4 value)
 		value = clamp(value, 0, 1);
 	}
 
+	bvec4 write_mask = d3.vec_mask;
+	if (d0.cond_test_enable)
+	{
+		const bvec4 mask = test_cond(get_cond(), d0.cond);
+		write_mask = bvec4(uvec4(write_mask) & uvec4(mask));
+	}
+
 	if (d0.dst_tmp == 0x3f && !d0.vec_result)
 	{
 		if (d0.cond_update_enable_1)
 		{
-			reg_mov(cc[d0.cond_reg_sel_1], value, d3.vec_mask);
+			reg_mov(cc[d0.cond_reg_sel_1], value, write_mask);
 		}
 	}
 	else
 	{
 		if (d0.vec_result && d3.dst < 16)
 		{
-			reg_mov(dest[d3.dst], value, d3.vec_mask);
+			reg_mov(dest[d3.dst], value, write_mask);
 		}
 
 		if (d0.dst_tmp != 0x3f)
 		{
-			reg_mov(temp[d0.dst_tmp], value, d3.vec_mask);
+			reg_mov(temp[d0.dst_tmp], value, write_mask);
 		}
 	}
 }
@@ -286,34 +321,12 @@ bool static_branch()
 	return (cond == actual);
 }
 
-bvec4 test_cond(vec4 cond, uint mode)
-{
-	switch (mode)
-	{
-	case EXEC_GT | EXEC_EQ:
-		return greaterThanEqual(cond, vec4(0.));
-	case EXEC_LT | EXEC_EQ:
-		return lessThanEqual(cond, vec4(0.));
-	case EXEC_LT | EXEC_GT:
-		return notEqual(cond, vec4(0.));
-	case EXEC_GT:
-		return greaterThan(cond, vec4(0.));
-	case EXEC_LT:
-		return lessThan(cond, vec4(0.));
-	case EXEC_EQ:
-		return equal(cond, vec4(0.));
-	}
-
-	return bvec4(false);
-}
-
 bool dynamic_branch()
 {
 	if (d0.cond == (EXEC_LT | EXEC_GT | EXEC_EQ)) return true;
 	if (d0.cond == 0) return false;
 
-	vec4 cond = shuffle(cc[d0.cond_reg_sel_1], d0.swizzle);
-	return any(test_cond(cond, d0.cond));
+	return any(test_cond(get_cond(), d0.cond));
 }
 
 vec4 read_src(const in int index)

@@ -95,8 +95,10 @@ namespace gl
 
 		if (rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
 		if (rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
-
+		if (rsx::method_registers.shader_control() & RSX_SHADER_CONTROL_USES_KIL) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_KIL;
 		if (metadata.referenced_textures_mask) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES;
+		if (metadata.has_branch_instructions) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_FLOW_CTRL;
+		if (metadata.has_pack_instructions) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_PACKING;
 
 		if (auto it = m_program_cache.find(opt); it != m_program_cache.end()) [[likely]]
 		{
@@ -248,6 +250,21 @@ namespace gl
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT)
 		{
 			builder << "#define WITH_DEPTH_EXPORT\n";
+		}
+
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_FLOW_CTRL)
+		{
+			builder << "#define WITH_FLOW_CTRL\n";
+		}
+
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_PACKING)
+		{
+			builder << "#define WITH_PACKING\n";
+		}
+
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_KIL)
+		{
+			builder << "#define WITH_KIL\n";
 		}
 
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES)
