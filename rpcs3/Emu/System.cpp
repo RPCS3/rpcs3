@@ -617,7 +617,8 @@ bool Emulator::InstallPkg(const std::string& path)
 	// Run PKG unpacking asynchronously
 	named_thread worker("PKG Installer", [&]
 	{
-		return pkg_install(path, progress);
+		package_reader reader(path);
+		return reader.extract_data(progress);
 	});
 
 	{

@@ -254,4 +254,43 @@ public:
 	} self_info;
 };
 
-bool pkg_install(const std::string& path, atomic_t<double>&);
+enum class package_error
+{
+	no_error,
+	app_version,
+	other
+};
+
+class package_reader
+{
+public:
+	package_reader(const std::string& path);
+	~package_reader();
+
+	package_error check_target_app_version();
+	bool extract_data(atomic_t<double>& sync);
+
+private:
+	bool read_header();
+	bool read_metadata();
+	bool decrypt_data();
+	void archive_seek(const s64 new_offset, const fs::seek_mode damode = fs::seek_set);
+	u64 archive_read(void* data_ptr, const u64 num_bytes);
+	u64 decrypt(u64 offset, u64 size, const uchar* key);
+
+	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
+
+	bool m_is_valid = false;
+
+	std::string m_path;
+	std::string install_dir;
+	std::vector<fs::file> filelist;
+	size_t cur_file = 0;
+	u64 cur_offset = 0;
+	u64 cur_file_offset = 0;
+	std::unique_ptr<u128[]> buf;
+	std::array<uchar, 16> dec_key{};
+
+	PKGHeader header{};
+	PKGMetaData metadata{};
+};
