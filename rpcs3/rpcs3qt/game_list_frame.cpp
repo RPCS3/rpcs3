@@ -388,7 +388,7 @@ QString game_list_frame::GetLastPlayedBySerial(const QString& serial)
 
 std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
 {
-	return fs::get_cache_dir() + "cache/" + serial;
+	return Emu.GetCacheDir() + serial;
 }
 
 std::string game_list_frame::GetDataDirBySerial(const std::string& serial)
@@ -1029,7 +1029,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			Emu.GetCallbacks().enable_pads(true);
 		}
 	});
-	connect(hide_serial, &QAction::triggered, [=, this](bool checked)
+	connect(hide_serial, &QAction::triggered, [serial, this](bool checked)
 	{
 		if (checked)
 			m_hidden_list.insert(serial);
@@ -1039,9 +1039,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.values()));
 		Refresh();
 	});
-	connect(create_ppu_cache, &QAction::triggered, [=, this]
+	connect(create_ppu_cache, &QAction::triggered, [gameinfo, this]
 	{
-		CreatePPUCache(gameinfo);
+		if (m_gui_settings->GetBootConfirmation(this))
+		{
+			CreatePPUCache(gameinfo);
+		}
 	});
 	connect(remove_game, &QAction::triggered, [=, this]
 	{
@@ -1395,6 +1398,11 @@ void game_list_frame::BatchCreatePPUCaches()
 	if (total == 0)
 	{
 		QMessageBox::information(this, tr("PPU Cache Batch Creation"), tr("No titles found"), QMessageBox::Ok);
+		return;
+	}
+
+	if (!m_gui_settings->GetBootConfirmation(this))
+	{
 		return;
 	}
 

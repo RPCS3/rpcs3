@@ -56,7 +56,9 @@ void fmt_class_string<ppu_syscall_code>::format(std::string& out, u64 arg)
 
 static bool null_func(ppu_thread& ppu)
 {
-	ppu_log.todo("Unimplemented syscall %s -> CELL_OK", ppu_syscall_code(ppu.gpr[11]));
+	ppu_log.todo("Unimplemented syscall %s -> CELL_OK (r3=0x%llx, r4=0x%llx, r5=0x%llx, r6=0x%llx, r7=0x%llx, r8=0x%llx, r9=0x%llx, r10=0x%llx)", ppu_syscall_code(ppu.gpr[11]),
+		ppu.gpr[3], ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7], ppu.gpr[8], ppu.gpr[9], ppu.gpr[10]);
+
 	ppu.gpr[3] = 0;
 	ppu.cia += 4;
 	return false;
@@ -287,17 +289,17 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func, null_func, null_func, null_func, null_func,  //224  UNS
 	null_func, null_func, null_func, null_func, null_func,  //229  UNS?
 
-	null_func,//BIND_FUNC(sys_isolated_spu_create)          //230 (0x0E6)  ROOT
-	null_func,//BIND_FUNC(sys_isolated_spu_destroy)         //231 (0x0E7)  ROOT
-	null_func,//BIND_FUNC(sys_isolated_spu_start)           //232 (0x0E8)  ROOT
-	null_func,//BIND_FUNC(sys_isolated_spu_create_interrupt_tag) //233 (0x0E9)  ROOT
-	null_func,//BIND_FUNC(sys_isolated_spu_set_int_mask)    //234 (0x0EA)  ROOT
-	null_func,//BIND_FUNC(sys_isolated_spu_get_int_mask)    //235 (0x0EB)  ROOT
-	null_func,//BIND_FUNC(sys_isolated_spu_set_int_stat)    //236 (0x0EC)  ROOT
-	null_func,//BIND_FUNC(sys_isolated_spu_get_int_stat)    //237 (0x0ED)  ROOT
-	null_func,//BIND_FUNC(sys_isolated_spu_set_spu_cfg)     //238 (0x0EE)  ROOT
-	null_func,//BIND_FUNC(sys_isolated_spu_get_spu_cfg)     //239 (0x0EF)  ROOT
-	null_func,//BIND_FUNC(sys_isolated_spu_read_puint_mb)   //240 (0x0F0)  ROOT
+	BIND_FUNC(sys_isolated_spu_create),                     //230 (0x0E6)  ROOT
+	BIND_FUNC(sys_isolated_spu_destroy),                    //231 (0x0E7)  ROOT
+	BIND_FUNC(sys_isolated_spu_start),                      //232 (0x0E8)  ROOT
+	BIND_FUNC(sys_isolated_spu_create_interrupt_tag),       //233 (0x0E9)  ROOT
+	BIND_FUNC(sys_isolated_spu_set_int_mask),               //234 (0x0EA)  ROOT
+	BIND_FUNC(sys_isolated_spu_get_int_mask),               //235 (0x0EB)  ROOT
+	BIND_FUNC(sys_isolated_spu_set_int_stat),               //236 (0x0EC)  ROOT
+	BIND_FUNC(sys_isolated_spu_get_int_stat),               //237 (0x0ED)  ROOT
+	BIND_FUNC(sys_isolated_spu_set_spu_cfg),                //238 (0x0EE)  ROOT
+	BIND_FUNC(sys_isolated_spu_get_spu_cfg),                //239 (0x0EF)  ROOT
+	BIND_FUNC(sys_isolated_spu_read_puint_mb),              //240 (0x0F0)  ROOT
 	uns_func, uns_func, uns_func,                           //241-243 ROOT  UNS
 	null_func,//BIND_FUNC(sys_spu_thread_group_system_set_next_group) //244 (0x0F4)  ROOT
 	null_func,//BIND_FUNC(sys_spu_thread_group_system_unset_next_group) //245 (0x0F5)  ROOT
@@ -776,9 +778,9 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_ss_update_manager)            //863  ROOT
 	null_func,//BIND_FUNC(sys_ss_sec_hw_framework)          //864  DBG
 	BIND_FUNC(sys_ss_random_number_generator),              //865 (0x361)
-	null_func,//BIND_FUNC(sys_ss_secure_rtc)                //866  ROOT
+	BIND_FUNC(sys_ss_secure_rtc),                           //866  ROOT
 	null_func,//BIND_FUNC(sys_ss_appliance_info_manager)    //867  ROOT
-	null_func,//BIND_FUNC(sys_ss_individual_info_manager)   //868  ROOT / DBG  AUTHID
+	BIND_FUNC(sys_ss_individual_info_manager),              //868  ROOT / DBG  AUTHID
 	null_func,//BIND_FUNC(sys_ss_factory_data_manager)      //869  ROOT
 	BIND_FUNC(sys_ss_get_console_id),                       //870 (0x366)
 	BIND_FUNC(sys_ss_access_control_engine),                //871 (0x367)  DBG

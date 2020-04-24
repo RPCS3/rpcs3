@@ -190,3 +190,24 @@ error_code sys_ss_virtual_trm_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4
 
 	return CELL_OK;
 }
+
+error_code sys_ss_individual_info_manager(u64 pkg_id, u64 a2, vm::ptr<u64> out_size, u64 a4, u64 a5, u64 a6)
+{
+	sys_ss.todo("sys_ss_individual_info_manager(pkg=0x%llx, a2=0x%llx, out_size=*0x%llx, a4=0x%llx, a5=0x%llx, a6=0x%llx)", pkg_id, a2, out_size, a4, a5, a6);
+
+	switch (pkg_id)
+	{
+	// Read EID
+	case 0x17002:
+	{
+		// TODO
+		vm::_ref<u64>(a5) = a4; // Write back size of buffer
+		break;
+	}
+	// Get EID size
+	case 0x17001: *out_size = 0x100; break;
+	default: break;
+	}
+
+	return CELL_OK;
+}

@@ -35,9 +35,6 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="currentIndex">
-      <number>0</number>
-     </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
        <string>CPU</string>
@@ -48,7 +45,7 @@
          <item>
           <layout class="QVBoxLayout" name="coreTabLeftLayout">
            <item>
-            <widget class="QGroupBox" name="ppu">
+            <widget class="QGroupBox" name="gb_ppu">
              <property name="title">
               <string>PPU Decoder</string>
              </property>
@@ -78,7 +75,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="spu">
+            <widget class="QGroupBox" name="gb_spu">
              <property name="title">
               <string>SPU Decoder</string>
              </property>
@@ -1717,13 +1714,13 @@
                 </property>
                </widget>
               </item>
-            <item>
-             <widget class="QCheckBox" name="accurateLLVMdfma">
-              <property name="text">
-               <string>Accurate LLVM DFMA</string>
-              </property>
-             </widget>
-            </item>
+              <item>
+               <widget class="QCheckBox" name="accurateLLVMdfma">
+                <property name="text">
+                 <string>Accurate LLVM DFMA</string>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QCheckBox" name="silenceAllLogs">
                 <property name="text">
@@ -1771,7 +1768,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="lib_settings">
+            <widget class="QGroupBox" name="gb_lib_settings">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>

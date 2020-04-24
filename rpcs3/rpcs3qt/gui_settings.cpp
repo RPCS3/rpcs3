@@ -3,6 +3,8 @@
 #include "qt_utils.h"
 #include "localized.h"
 
+#include "Emu/System.h"
+
 #include <QCheckBox>
 #include <QCoreApplication>
 #include <QMessageBox>
@@ -172,36 +174,39 @@ void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 void gui_settings::ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr, bool always_on_top = false)
 {
 	const std::string dialog_type = confirm ? "Confirmation" : "Info";
+	const bool has_gui_setting = !entry.name.isEmpty();
 
-	if (entry.name.isEmpty() || GetValue(entry).toBool())
+	if (has_gui_setting && !GetValue(entry).toBool())
 	{
-		const QFlags<QMessageBox::StandardButton> buttons = confirm ? QMessageBox::Yes | QMessageBox::No : QMessageBox::Ok;
-		const QMessageBox::Icon icon = confirm ? QMessageBox::Question : QMessageBox::Information;
-
-		QMessageBox* mb = new QMessageBox(icon, title, text, buttons, parent, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | (always_on_top ? Qt::WindowStaysOnTopHint : Qt::Widget));
-		mb->deleteLater();
-
-		if (!entry.name.isEmpty())
-		{
-			mb->setCheckBox(new QCheckBox(tr("Don't show again")));
-		}
-
-		connect(mb, &QMessageBox::finished, [&](int res)
-		{
-			if (result)
-			{
-				*result = res;
-			}
-			if (!entry.name.isEmpty() && mb->checkBox()->isChecked())
-			{
-				SetValue(entry, false);
-				cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, sstr(entry.name));
-			}
-		});
-
-		mb->exec();
+		cfg_log.notice("%s Dialog for Entry %s was ignored", dialog_type, sstr(entry.name));
+		return;
 	}
-	else cfg_log.notice("%s Dialog for Entry %s was ignored", dialog_type, sstr(entry.name));
+
+	const QFlags<QMessageBox::StandardButton> buttons = confirm ? QMessageBox::Yes | QMessageBox::No : QMessageBox::Ok;
+	const QMessageBox::Icon icon = confirm ? QMessageBox::Question : QMessageBox::Information;
+
+	QMessageBox* mb = new QMessageBox(icon, title, text, buttons, parent, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | (always_on_top ? Qt::WindowStaysOnTopHint : Qt::Widget));
+	mb->deleteLater();
+
+	if (has_gui_setting)
+	{
+		mb->setCheckBox(new QCheckBox(tr("Don't show again")));
+	}
+
+	connect(mb, &QMessageBox::finished, [&](int res)
+	{
+		if (result)
+		{
+			*result = res;
+		}
+		if (has_gui_setting && mb->checkBox()->isChecked())
+		{
+			SetValue(entry, false);
+			cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, sstr(entry.name));
+		}
+	});
+
+	mb->exec();
 }
 
 void gui_settings::ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr)
@@ -212,6 +217,36 @@ void gui_settings::ShowConfirmationBox(const QString& title, const QString& text
 void gui_settings::ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent = nullptr)
 {
 	ShowBox(false, title, text, entry, nullptr, parent, false);
+}
+
+bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save_entry)
+{
+	if (!Emu.IsStopped())
+	{
+		QString title = tr("Close Running Game?");
+		QString message = tr("Performing this action will close the current game.\nDo you really want to continue?\n\nAny unsaved progress will be lost!\n");
+
+		if (gui_save_entry == gui::ib_confirm_boot)
+		{
+			message = tr("Booting another game will close the current game.\nDo you really want to boot another game?\n\nAny unsaved progress will be lost!\n");
+		}
+		else if (gui_save_entry == gui::ib_confirm_exit)
+		{
+			title = tr("Exit RPCS3?");
+			message = tr("A game is currently running. Do you really want to close RPCS3?\n\nAny unsaved progress will be lost!\n");
+		}
+
+		int result = QMessageBox::Yes;
+
+		ShowConfirmationBox(title, message, gui_save_entry, &result, parent);
+
+		if (result != QMessageBox::Yes)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 void gui_settings::SetGamelistColVisibility(int col, bool val)

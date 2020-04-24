@@ -1056,7 +1056,7 @@ std::string spu_thread::dump_misc() const
 	{
 		if (const auto func = current_func)
 		{
-			ret += "\nCurrent function: ";
+			ret += "\nIn function: ";
 			ret += func;
 		}
 		else
@@ -1131,8 +1131,8 @@ void spu_thread::cpu_init()
 		mfc_prxy_write_state = {};
 	}
 
+	status_npc.raw() = {is_isolated ? SPU_STATUS_IS_ISOLATED : 0, 0};
 	run_ctrl.raw() = 0;
-	status_npc.raw() = {};
 
 	int_ctrl[0].clear();
 	int_ctrl[1].clear();
@@ -1218,7 +1218,7 @@ void spu_thread::cpu_task()
 			name_cache = cpu->spu_tname.load();
 		}
 
-		return fmt::format("%sSPU[0x%07x] Thread (%s) [0x%05x]", cpu->offset >= RAW_SPU_BASE_ADDR ? "Raw" : "", cpu->lv2_id, *name_cache.get(), cpu->pc);
+		return fmt::format("%sSPU[0x%07x] Thread (%s) [0x%05x]", cpu->offset >= RAW_SPU_BASE_ADDR ? cpu->is_isolated ? "Iso" : "Raw" : "", cpu->lv2_id, *name_cache.get(), cpu->pc);
 	};
 
 	if (jit)
@@ -1286,8 +1286,9 @@ spu_thread::~spu_thread()
 	}
 }
 
-spu_thread::spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id)
+spu_thread::spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated)
 	: cpu_thread(idm::last_id())
+	, is_isolated(is_isolated)
 	, index(index)
 	, offset(ls)
 	, group(group)
@@ -2591,9 +2592,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case SPU_RdMachStat:
 	{
-		// HACK: "Not isolated" status
 		// Return SPU Interrupt status in LSB
-		return interrupts_enabled == true;
+		return u32{interrupts_enabled} | (u32{is_isolated} << 1);
 	}
 	}
 

@@ -3966,7 +3966,7 @@ void PPUTranslator::FNMSUBS(ppu_opcode_t op)
 		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
 	}
 
-	SetFpr(op.frd, m_ir->CreateFNeg(m_ir->CreateFPTrunc(result, GetType<f32>())));
+	SetFpr(op.frd, m_ir->CreateFPTrunc(m_ir->CreateFNeg(result), GetType<f32>()));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
@@ -3994,7 +3994,7 @@ void PPUTranslator::FNMADDS(ppu_opcode_t op)
 		result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
 	}
 
-	SetFpr(op.frd, m_ir->CreateFNeg(m_ir->CreateFPTrunc(result, GetType<f32>())));
+	SetFpr(op.frd, m_ir->CreateFPTrunc(m_ir->CreateFNeg(result), GetType<f32>()));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
@@ -4279,7 +4279,7 @@ void PPUTranslator::FMADD(ppu_opcode_t op)
 	}
 	else
 	{
-		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+		result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
 	}
 
 	SetFpr(op.frd, result);

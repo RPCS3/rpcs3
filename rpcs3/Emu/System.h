@@ -182,6 +182,7 @@ public:
 	static std::string GetEmuDir();
 	static std::string GetHddDir();
 	static std::string GetHdd1Dir();
+	static std::string GetCacheDir();
 	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& user, const std::string& title_id = "");
 
 	static std::string GetCustomConfigDir();

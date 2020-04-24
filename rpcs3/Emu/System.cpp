@@ -656,6 +656,11 @@ std::string Emulator::GetHdd1Dir()
 	return fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", GetEmuDir());
 }
 
+std::string Emulator::GetCacheDir()
+{
+	return fs::get_cache_dir() + "cache/";
+}
+
 #ifdef _WIN32
 std::string Emulator::GetExeDir()
 {
@@ -1430,7 +1435,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			ppu_load_exec(ppu_exec);
 
-			_main->cache = fs::get_cache_dir() + "cache/";
+			_main->cache = GetCacheDir();
 
 			if (!m_title_id.empty() && m_cat != "1P")
 			{

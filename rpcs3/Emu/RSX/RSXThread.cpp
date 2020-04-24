@@ -28,7 +28,7 @@ class GSRender;
 
 #define CMD_DEBUG 0
 
-std::atomic<bool> user_asked_for_frame_capture = false;
+std::atomic<bool> g_user_asked_for_frame_capture = false;
 rsx::frame_trace_data frame_debug;
 rsx::frame_capture_data frame_capture;
 
@@ -309,7 +309,7 @@ namespace rsx
 
 		m_graphics_state = pipeline_state::all_dirty;
 
-		user_asked_for_frame_capture = false;
+		g_user_asked_for_frame_capture = false;
 
 		if (g_cfg.misc.use_native_interface && (g_cfg.video.renderer == video_renderer::opengl || g_cfg.video.renderer == video_renderer::vulkan))
 		{
@@ -2137,7 +2137,9 @@ namespace rsx
 				//Find zeta address in bound zculls
 				for (const auto& zcull : zculls)
 				{
-					if (zcull.bound)
+					if (zcull.bound &&
+						rsx::to_surface_depth_format(zcull.zFormat) == m_depth_surface_info.depth_format &&
+						rsx::to_surface_antialiasing(zcull.aaFormat) == rsx::method_registers.surface_antialias())
 					{
 						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL, HERE);
 						if (rsx_address == zeta_address)
@@ -2556,7 +2558,7 @@ namespace rsx
 	void thread::on_frame_end(u32 buffer, bool forced)
 	{
 		// Marks the end of a frame scope GPU-side
-		if (user_asked_for_frame_capture.exchange(false) && !capture_current_frame)
+		if (g_user_asked_for_frame_capture.exchange(false) && !capture_current_frame)
 		{
 			capture_current_frame = true;
 			frame_debug.reset();
