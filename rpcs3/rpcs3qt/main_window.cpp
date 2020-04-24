@@ -489,6 +489,8 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 	// Synchronization variable
 	atomic_t<double> progress(0.);
 
+	package_error error = package_error::no_error;
+
 	bool cancelled = false;
 
 	for (int i = 0, count = file_paths.count(); i < count; i++)
@@ -510,9 +512,17 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		m_gui_settings->SetValue(gui::fd_install_pkg, file_info.path());
 
 		// Run PKG unpacking asynchronously
-		named_thread worker("PKG Installer", [path, &progress]
+		named_thread worker("PKG Installer", [path, &progress, &error]
 		{
-			return pkg_install(path, progress);
+			package_reader reader(path);
+			error = reader.check_target_app_version();
+
+			if (error == package_error::no_error)
+			{
+				return reader.extract_data(progress);
+			}
+
+			return false;
 		});
 
 		// Wait for the completion
@@ -557,8 +567,16 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		{
 			if (!cancelled)
 			{
-				gui_log.error("Failed to install %s.", file_name);
-				QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package %1!").arg(file_path));
+				if (error == package_error::app_version)
+				{
+					gui_log.error("Cannot install %s.", file_name);
+					QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(file_path));
+				}
+				else
+				{
+					gui_log.error("Failed to install %s.", file_name);
+					QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!").arg(file_path));
+				}
 			}
 			return;
 		}

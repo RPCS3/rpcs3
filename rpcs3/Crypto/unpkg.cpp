@@ -1,88 +1,48 @@
 ﻿#include "stdafx.h"
-#include "utils.h"
 #include "aes.h"
 #include "sha1.h"
 #include "key_vault.h"
+#include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
-#include "Utilities/StrFmt.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "unpkg.h"
+#include "Loader/PSF.h"
 
 LOG_CHANNEL(pkg_log, "PKG");
 
-bool pkg_install(const std::string& path, atomic_t<double>& sync)
+package_reader::package_reader(const std::string& path)
+	: m_path(path)
 {
 	if (!fs::is_file(path))
 	{
 		pkg_log.error("PKG file not found!");
-		return false;
+		return;
 	}
 
-	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
+	filelist.emplace_back(fs::file{ path });
 
-	std::vector<fs::file> filelist;
-	filelist.emplace_back(fs::file{path});
-	u32 cur_file = 0;
-	u64 cur_offset = 0;
-	u64 cur_file_offset = 0;
+	m_is_valid = read_header();
 
-	auto archive_seek = [&](const s64 new_offset, const fs::seek_mode damode = fs::seek_set)
+	if (!m_is_valid)
 	{
-		if (damode == fs::seek_set)
-			cur_offset = new_offset;
-		else if (damode == fs::seek_cur)
-			cur_offset += new_offset;
+		return;
+	}
 
-		u64 _offset = 0;
-		for (u32 i = 0; i < filelist.size(); i++)
-		{
-			if (cur_offset < (_offset + filelist[i].size()))
-			{
-				cur_file = i;
-				cur_file_offset = cur_offset - _offset;
-				filelist[i].seek(cur_file_offset);
-				break;
-			}
-			_offset += filelist[i].size();
-		}
-	};
+	m_is_valid = read_metadata();
+}
 
-	auto archive_read = [&](void* data_ptr, const u64 num_bytes)
+package_reader::~package_reader()
+{
+}
+
+bool package_reader::read_header()
+{
+	if (m_path.empty() || filelist.empty())
 	{
-		const u64 num_bytes_left = filelist[cur_file].size() - cur_file_offset;
-
-		// check if it continues in another file
-		if (num_bytes > num_bytes_left)
-		{
-			filelist[cur_file].read(data_ptr, num_bytes_left);
-
-			if ((cur_file + 1) < filelist.size())
-			{
-				++cur_file;
-			}
-			else
-			{
-				cur_offset += num_bytes_left;
-				cur_file_offset = filelist[cur_file].size();
-				return num_bytes_left;
-			}
-			const u64 num_read = filelist[cur_file].read(static_cast<u8*>(data_ptr) + num_bytes_left, num_bytes - num_bytes_left);
-			cur_offset += (num_read + num_bytes_left);
-			cur_file_offset = num_read;
-			return (num_read + num_bytes_left);
-		}
-
-		const u64 num_read = filelist[cur_file].read(data_ptr, num_bytes);
-
-		cur_offset += num_read;
-		cur_file_offset += num_read;
-
-		return num_read;
-	};
-
-	// Get basic PKG information
-	PKGHeader header;
+		pkg_log.error("Reading PKG header: no file to read!");
+		return false;
+	}
 
 	if (archive_read(&header, sizeof(header)) != sizeof(header))
 	{
@@ -161,13 +121,13 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	if (header.pkg_size > filelist[0].size())
 	{
 		// Check if multi-files pkg
-		if (!path.ends_with("_00.pkg"))
+		if (!m_path.ends_with("_00.pkg"))
 		{
 			pkg_log.error("PKG file size mismatch (pkg_size=0x%llx)", header.pkg_size);
 			return false;
 		}
 
-		const std::string name_wo_number = path.substr(0, path.size() - 7);
+		const std::string name_wo_number = m_path.substr(0, m_path.size() - 7);
 		u64 cursize = filelist[0].size();
 		while (cursize < header.pkg_size)
 		{
@@ -191,8 +151,15 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		return false;
 	}
 
-	PKGMetaData metadata;
-	std::string install_dir;
+	return true;
+}
+
+bool package_reader::read_metadata()
+{
+	if (!m_is_valid)
+	{
+		return false;
+	}
 
 	// Read title ID and use it as an installation directory
 	install_dir.resize(9);
@@ -326,7 +293,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 			{
 				archive_read(&metadata.software_revision.data, sizeof(metadata.software_revision.data));
 				metadata.software_revision.interpret_data();
-				pkg_log.notice("Metadata: Software Revision = %s",  metadata.software_revision.to_string());
+				pkg_log.notice("Metadata: Software Revision = %s", metadata.software_revision.to_string());
 				continue;
 			}
 			else
@@ -480,89 +447,15 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		archive_seek(packet.size, fs::seek_cur);
 	}
 
-	// Get full path and create the directory
-	const std::string dir = Emulator::GetHddDir() + "game/" + install_dir + '/';
+	return true;
+}
 
-	// If false, an existing directory is being overwritten: cannot cancel the operation
-	const bool was_null = !fs::is_dir(dir);
-
-	if (!fs::create_path(dir))
+bool package_reader::decrypt_data()
+{
+	if (!m_is_valid)
 	{
-		pkg_log.error("Could not create the installation directory %s", dir);
 		return false;
 	}
-
-	// Allocate buffer with BUF_SIZE size or more if required
-	const std::unique_ptr<u128[]> buf(new u128[std::max<u64>(BUF_SIZE, sizeof(PKGEntry) * header.file_count) / sizeof(u128)]);
-
-	// Define decryption subfunction (`psp` arg selects the key for specific block)
-	auto decrypt = [&](u64 offset, u64 size, const uchar* key) -> u64
-	{
-		archive_seek(header.data_offset + offset);
-
-		// Read the data and set available size
-		const u64 read = archive_read(buf.get(), size);
-
-		// Get block count
-		const u64 blocks = (read + 15) / 16;
-
-		if (header.pkg_type == PKG_RELEASE_TYPE_DEBUG)
-		{
-			// Debug key
-			be_t<u64> input[8] =
-			{
-				header.qa_digest[0],
-				header.qa_digest[0],
-				header.qa_digest[1],
-				header.qa_digest[1],
-			};
-
-			for (u64 i = 0; i < blocks; i++)
-			{
-				// Initialize stream cipher for current position
-				input[7] = offset / 16 + i;
-
-				union sha1_hash
-				{
-					u8 data[20];
-					u128 _v128;
-				} hash;
-
-				sha1(reinterpret_cast<const u8*>(input), sizeof(input), hash.data);
-
-				buf[i] ^= hash._v128;
-			}
-		}
-		else if (header.pkg_type == PKG_RELEASE_TYPE_RELEASE)
-		{
-			aes_context ctx;
-
-			// Set encryption key for stream cipher
-			aes_setkey_enc(&ctx, key, 128);
-
-			// Initialize stream cipher for start position
-			be_t<u128> input = header.klicensee.value() + offset / 16;
-
-			// Increment stream position for every block
-			for (u64 i = 0; i < blocks; i++, input++)
-			{
-				u128 key;
-
-				aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const u8*>(&input), reinterpret_cast<u8*>(&key));
-
-				buf[i] ^= key;
-			}
-		}
-		else
-		{
-			pkg_log.error("Unknown release type (0x%x)", header.pkg_type);
-		}
-
-		// Return the amount of data written in buf
-		return read;
-	};
-
-	std::array<uchar, 16> dec_key;
 
 	if (header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA && metadata.content_type >= 0x15 && metadata.content_type <= 0x17)
 	{
@@ -578,6 +471,210 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	{
 		std::memcpy(dec_key.data(), PKG_AES_KEY, dec_key.size());
 		decrypt(0, header.file_count * sizeof(PKGEntry), header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA ? PKG_AES_KEY2 : dec_key.data());
+	}
+
+	return true;
+}
+
+// TODO: maybe also check if VERSION matches
+package_error package_reader::check_target_app_version()
+{
+	if (!decrypt_data())
+	{
+		return package_error::other;
+	}
+
+	std::vector<PKGEntry> entries(header.file_count);
+
+	std::memcpy(entries.data(), buf.get(), entries.size() * sizeof(PKGEntry));
+
+	for (const auto& entry : entries)
+	{
+		if (entry.name_size > 256)
+		{
+			pkg_log.error("PKG name size is too big (0x%x)", entry.name_size);
+			continue;
+		}
+
+		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
+
+		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : dec_key.data());
+
+		const std::string name{ reinterpret_cast<char*>(buf.get()), entry.name_size };
+
+		// We're looking for the PARAM.SFO file, if there is any 
+		if (name != "PARAM.SFO")
+		{
+			continue;
+		}
+
+		// Read the package's PARAM.SFO
+		const std::string tmp_path = Emu.GetCacheDir() + "tmp.SFO";
+
+		if (fs::file tmp{ tmp_path, fs::rewrite })
+		{
+			for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
+			{
+				const u64 block_size = std::min<u64>(BUF_SIZE, entry.file_size - pos);
+
+				if (decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : dec_key.data()) != block_size)
+				{
+					pkg_log.error("Failed to extract file %s", tmp_path);
+					return package_error::other;
+				}
+
+				if (tmp.write(buf.get(), block_size) != block_size)
+				{
+					pkg_log.error("Failed to write file %s", tmp_path);
+					return package_error::other;
+				}
+			}
+
+			tmp.close();
+
+			const fs::file sfo_file(tmp_path);
+			if (!sfo_file)
+			{
+				pkg_log.error("Failed to read file %s", tmp_path);
+				return package_error::other;
+			}
+
+			const auto psf = psf::load_object(sfo_file);
+
+			const auto category = psf::get_string(psf, "CATEGORY", "");
+			const auto title_id = psf::get_string(psf, "TITLE_ID", "");
+			const auto app_ver = psf::get_string(psf, "APP_VER", "");
+			auto target_app_ver = psf::get_string(psf, "TARGET_APP_VER", "");
+
+			if (category != "GD")
+			{
+				// We allow anything that isn't an update for now
+				return package_error::no_error;
+			}
+
+			if (title_id.empty())
+			{
+				// Let's allow packages without ID for now
+				return package_error::no_error;
+			}
+
+			if (app_ver.empty())
+			{
+				if (!target_app_ver.empty())
+				{
+					// Let's see if this case exists
+					pkg_log.fatal("Trying to install an unversioned patch with a target app version (%s). Please contact a developer!", target_app_ver);
+				}
+
+				// This is probably not a version dependant patch, so we may install the package
+				return package_error::no_error;
+			}
+
+			const fs::file installed_sfo_file(Emu.GetHddDir() + "game/" + title_id + "/PARAM.SFO");
+			if (!installed_sfo_file)
+			{
+				if (!target_app_ver.empty())
+				{
+					// We are unable to compare anything with the target app version
+					pkg_log.error("A target app version is required (%s), but no PARAM.SFO was found for %s", target_app_ver, title_id);
+					return package_error::app_version;
+				}
+
+				// There is nothing we need to compare, so we may install the package
+				return package_error::no_error;
+			}
+
+			const auto installed_psf = psf::load_object(installed_sfo_file);
+
+			const auto installed_title_id = psf::get_string(installed_psf, "TITLE_ID", "");
+			const auto installed_app_ver = psf::get_string(installed_psf, "APP_VER", "");
+
+			if (title_id != installed_title_id || installed_app_ver.empty())
+			{
+				// Let's allow this package for now
+				return package_error::no_error;
+			}
+
+			std::add_pointer_t<char> ev0, ev1;
+			const double old_version = std::strtod(installed_app_ver.c_str(), &ev0);
+
+			if (installed_app_ver.c_str() + installed_app_ver.size() != ev0)
+			{
+				pkg_log.error("Failed to convert the installed app version to double (%s)", installed_app_ver);
+				return package_error::other;
+			}
+
+			if (target_app_ver.empty())
+			{
+				// This is most likely the first patch. Let's make sure its version is high enough for the installed game.
+
+				const double new_version = std::strtod(app_ver.c_str(), &ev1);
+
+				if (app_ver.c_str() + app_ver.size() != ev1)
+				{
+					pkg_log.error("Failed to convert the package's app version to double (%s)", app_ver);
+					return package_error::other;
+				}
+
+				if (new_version >= old_version)
+				{
+					// Yay! The patch has a higher or equal version than the installed game.
+					return package_error::no_error;
+				}
+
+				pkg_log.error("The new app version (%s) is smaller than the installed app version (%s)", app_ver, installed_app_ver);
+				return package_error::app_version;
+			}
+
+			// Check if the installed app version matches the target app version
+
+			const double target_version = std::strtod(target_app_ver.c_str(), &ev1);
+
+			if (target_app_ver.c_str() + target_app_ver.size() != ev1)
+			{
+				pkg_log.error("Failed to convert the package's target app version to double (%s)", target_app_ver);
+				return package_error::other;
+			}
+
+			if (target_version == old_version)
+			{
+				// Yay! This patch is for the installed game version.
+				return package_error::no_error;
+			}
+
+			pkg_log.error("The installed app version (%s) does not match the target app version (%s)", installed_app_ver, target_app_ver);
+			return package_error::app_version;
+		}
+
+		pkg_log.error("Failed to create file %s", tmp_path);
+		return package_error::other;
+	}
+
+	return package_error::no_error;
+}
+
+bool package_reader::extract_data(atomic_t<double>& sync)
+{
+	if (!m_is_valid)
+	{
+		return false;
+	}
+
+	// Get full path and create the directory
+	const std::string dir = Emulator::GetHddDir() + "game/" + install_dir + '/';
+
+	// If false, an existing directory is being overwritten: cannot cancel the operation
+	const bool was_null = !fs::is_dir(dir);
+
+	if (!fs::create_path(dir))
+	{
+		pkg_log.error("Could not create the installation directory %s", dir);
+		return false;
+	}
+
+	if (!decrypt_data())
+	{
+		return false;
 	}
 
 	size_t num_failures = 0;
@@ -599,7 +696,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : dec_key.data());
 
-		const std::string name{reinterpret_cast<char*>(buf.get()), entry.name_size};
+		const std::string name{ reinterpret_cast<char*>(buf.get()), entry.name_size };
 		const std::string path = dir + vfs::escape(name);
 
 		pkg_log.notice("Entry 0x%08x: %s", entry.type, name);
@@ -630,7 +727,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 				break;
 			}
 
-			if (fs::file out{path, fs::rewrite})
+			if (fs::file out{ path, fs::rewrite })
 			{
 				bool extract_success = true;
 				for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
@@ -728,5 +825,137 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		fs::remove_all(dir, true);
 		pkg_log.error("Package installation failed: %s", dir);
 	}
+
 	return num_failures == 0;
 }
+
+void package_reader::archive_seek(const s64 new_offset, const fs::seek_mode damode)
+{
+	if (damode == fs::seek_set)
+		cur_offset = new_offset;
+	else if (damode == fs::seek_cur)
+		cur_offset += new_offset;
+
+	u64 _offset = 0;
+	for (size_t i = 0; i < filelist.size(); i++)
+	{
+		if (cur_offset < (_offset + filelist[i].size()))
+		{
+			cur_file = i;
+			cur_file_offset = cur_offset - _offset;
+			filelist[i].seek(cur_file_offset);
+			break;
+		}
+		_offset += filelist[i].size();
+	}
+};
+
+u64 package_reader::archive_read(void* data_ptr, const u64 num_bytes)
+{
+	const u64 num_bytes_left = filelist[cur_file].size() - cur_file_offset;
+
+	// check if it continues in another file
+	if (num_bytes > num_bytes_left)
+	{
+		filelist[cur_file].read(data_ptr, num_bytes_left);
+
+		if ((cur_file + 1) < filelist.size())
+		{
+			++cur_file;
+		}
+		else
+		{
+			cur_offset += num_bytes_left;
+			cur_file_offset = filelist[cur_file].size();
+			return num_bytes_left;
+		}
+		const u64 num_read = filelist[cur_file].read(static_cast<u8*>(data_ptr) + num_bytes_left, num_bytes - num_bytes_left);
+		cur_offset += (num_read + num_bytes_left);
+		cur_file_offset = num_read;
+		return (num_read + num_bytes_left);
+	}
+
+	const u64 num_read = filelist[cur_file].read(data_ptr, num_bytes);
+
+	cur_offset += num_read;
+	cur_file_offset += num_read;
+
+	return num_read;
+};
+
+u64 package_reader::decrypt(u64 offset, u64 size, const uchar* key)
+{
+	if (!m_is_valid)
+	{
+		return 0;
+	}
+
+	if (!buf)
+	{
+		// Allocate buffer with BUF_SIZE size or more if required
+		buf.reset(new u128[std::max<u64>(BUF_SIZE, sizeof(PKGEntry) * header.file_count) / sizeof(u128)]);
+	}
+
+	archive_seek(header.data_offset + offset);
+
+	// Read the data and set available size
+	const u64 read = archive_read(buf.get(), size);
+
+	// Get block count
+	const u64 blocks = (read + 15) / 16;
+
+	if (header.pkg_type == PKG_RELEASE_TYPE_DEBUG)
+	{
+		// Debug key
+		be_t<u64> input[8] =
+		{
+			header.qa_digest[0],
+			header.qa_digest[0],
+			header.qa_digest[1],
+			header.qa_digest[1],
+		};
+
+		for (u64 i = 0; i < blocks; i++)
+		{
+			// Initialize stream cipher for current position
+			input[7] = offset / 16 + i;
+
+			union sha1_hash
+			{
+				u8 data[20];
+				u128 _v128;
+			} hash;
+
+			sha1(reinterpret_cast<const u8*>(input), sizeof(input), hash.data);
+
+			buf[i] ^= hash._v128;
+		}
+	}
+	else if (header.pkg_type == PKG_RELEASE_TYPE_RELEASE)
+	{
+		aes_context ctx;
+
+		// Set encryption key for stream cipher
+		aes_setkey_enc(&ctx, key, 128);
+
+		// Initialize stream cipher for start position
+		be_t<u128> input = header.klicensee.value() + offset / 16;
+
+		// Increment stream position for every block
+		for (u64 i = 0; i < blocks; i++, input++)
+		{
+			u128 key;
+
+			aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const u8*>(&input), reinterpret_cast<u8*>(&key));
+
+			buf[i] ^= key;
+		}
+	}
+	else
+	{
+		pkg_log.error("Unknown release type (0x%x)", header.pkg_type);
+	}
+
+	// Return the amount of data written in buf
+	return read;
+};

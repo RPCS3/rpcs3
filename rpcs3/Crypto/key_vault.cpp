@@ -1,6 +1,7 @@
 ﻿#include "utils.h"
 #include "aes.h"
 #include "key_vault.h"
+#include "util/logs.hpp"
 
 LOG_CHANNEL(key_vault_log, "KEY_VAULT");
 
