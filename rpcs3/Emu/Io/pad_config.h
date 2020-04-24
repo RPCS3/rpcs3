@@ -94,6 +94,8 @@ struct pad_config final : cfg::node
 	cfg::_int<0, 100> trigger_lerp_factor{ this, "Trigger Lerp Factor", 100 };
 
 	cfg::_int<0, 5> device_class_type{ this, "Device Class Type", 0 };
+	cfg::_int<0, 65535> vendor_id{ this, "Vendor ID", 0 };
+	cfg::_int<0, 65535> product_id{ this, "Product ID", 0 };
 
 	bool exist();
 	bool load();

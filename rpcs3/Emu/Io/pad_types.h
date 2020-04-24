@@ -181,6 +181,9 @@ struct Pad
 	u32 m_device_type;
 	u32 m_class_type;
 
+	u16 m_vendor_id;
+	u16 m_product_id;
+
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state;
 
@@ -226,12 +229,14 @@ struct Pad
 	bool ldd = false;
 	u8 ldd_data[132] = {};
 
-	void Init(u32 port_status, u32 device_capability, u32 device_type, u32 class_type)
+	void Init(u32 port_status, u32 device_capability, u32 device_type, u32 class_type, u16 vendor_id, u16 product_id)
 	{
 		m_port_status = port_status;
 		m_device_capability = device_capability;
 		m_device_type = device_type;
 		m_class_type = class_type;
+		m_vendor_id = vendor_id;
+		m_product_id = product_id;
 	}
 
 	Pad(u32 port_status, u32 device_capability, u32 device_type)
@@ -240,6 +245,8 @@ struct Pad
 		, m_device_capability(device_capability)
 		, m_device_type(device_type)
 		, m_class_type(0)
+		, m_vendor_id(0)
+		, m_product_id(0)
 		, m_cable_state(0)
 		, m_battery_level(0)
 
