@@ -584,8 +584,7 @@ std::vector<std::string> evdev_joystick_handler::ListDevices()
 				continue;
 			}
 			if (libevdev_has_event_type(dev, EV_KEY) &&
-				libevdev_has_event_code(dev, EV_ABS, ABS_X) &&
-				libevdev_has_event_code(dev, EV_ABS, ABS_Y))
+				libevdev_has_event_type(dev, EV_ABS))
 			{
 				// It's a joystick.
 				std::string name = get_device_name(dev);
