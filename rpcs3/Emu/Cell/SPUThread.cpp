@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Utilities/JIT.h"
+#include "Utilities/asm.h"
 #include "Utilities/sysinfo.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Memory/vm_reservation.h"
@@ -218,12 +219,12 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 #endif
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -495,12 +496,12 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 #endif
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -607,12 +608,12 @@ const auto spu_getll_inexact = build_function_asm<u64(*)(u32 raddr, void* rdata)
 #endif
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -774,12 +775,12 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 #endif
 
 	// Prepare registers
-	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -999,6 +1000,8 @@ std::string spu_thread::dump_regs() const
 
 	fmt::append(ret, "\nEvent Stat: 0x%x\n", +ch_event_stat);
 	fmt::append(ret, "Event Mask: 0x%x\n", +ch_event_mask);
+	fmt::append(ret, "Stall Mask: 0x%x\n", ch_stall_mask);
+	fmt::append(ret, "Tag Stat: %s\n", ch_tag_stat);
 
 	if (const u32 addr = raddr)
 		fmt::append(ret, "Reservation Addr: 0x%x\n", addr);
@@ -1045,10 +1048,31 @@ std::string spu_thread::dump_misc() const
 		// Print chunk address from lowest 16 bits
 		fmt::append(ret, "...chunk-0x%05x", (name & 0xffff) * 4);
 	}
+
 	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
 	fmt::append(ret, "\nLocal Storage: 0x%08x..0x%08x", offset, offset + 0x3ffff);
+
+	if (const u64 _time = start_time)
+	{
+		if (const auto func = current_func)
+		{
+			ret += "\nIn function: ";
+			ret += func;
+		}
+		else
+		{
+			ret += '\n';
+		}
+
+
+		fmt::append(ret, "\nWaiting: %fs", (get_system_time() - _time) / 1000000.);
+	}
+	else
+	{
+		ret += "\n\n";
+	}
+
 	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
-	fmt::append(ret, "\nMFC Stall: 0x%08x", ch_stall_mask);
 	fmt::append(ret, "\nMFC Queue Size: %u", mfc_size);
 
 	for (u32 i = 0; i < 16; i++)
@@ -1107,8 +1131,8 @@ void spu_thread::cpu_init()
 		mfc_prxy_write_state = {};
 	}
 
+	status_npc.raw() = {is_isolated ? SPU_STATUS_IS_ISOLATED : 0, 0};
 	run_ctrl.raw() = 0;
-	status_npc.raw() = {};
 
 	int_ctrl[0].clear();
 	int_ctrl[1].clear();
@@ -1194,7 +1218,7 @@ void spu_thread::cpu_task()
 			name_cache = cpu->spu_tname.load();
 		}
 
-		return fmt::format("%sSPU[0x%07x] Thread (%s) [0x%05x]", cpu->offset >= RAW_SPU_BASE_ADDR ? "Raw" : "", cpu->lv2_id, *name_cache.get(), cpu->pc);
+		return fmt::format("%sSPU[0x%07x] Thread (%s) [0x%05x]", cpu->offset >= RAW_SPU_BASE_ADDR ? cpu->is_isolated ? "Iso" : "Raw" : "", cpu->lv2_id, *name_cache.get(), cpu->pc);
 	};
 
 	if (jit)
@@ -1262,8 +1286,9 @@ spu_thread::~spu_thread()
 	}
 }
 
-spu_thread::spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id)
+spu_thread::spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated)
 	: cpu_thread(idm::last_id())
+	, is_isolated(is_isolated)
 	, index(index)
 	, offset(ls)
 	, group(group)
@@ -1440,7 +1465,46 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				break;
 			}
 
-			auto lock = vm::passive_lock(eal & -128, ::align(eal + size, 128));
+			u32 range_addr = eal & -128;
+			u32 range_end = ::align(eal + size, 128);
+
+			// Handle the case of crossing 64K page borders
+			if (range_addr >> 16 != (range_end - 1) >> 16)
+			{
+				u32 nexta = range_end & -65536;
+				u32 size0 = nexta - eal;
+				size -= size0;
+
+				// Split locking + transfer in two parts (before 64K border, and after it)
+				const auto lock = vm::range_lock(range_addr, nexta);
+#ifdef __GNUG__
+				std::memcpy(dst, src, size0);
+				dst += size0;
+				src += size0;
+#else
+				while (size0 >= 128)
+				{
+					mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));
+
+					dst += 128;
+					src += 128;
+					size0 -= 128;
+				}
+
+				while (size0)
+				{
+					*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+					dst += 16;
+					src += 16;
+					size0 -= 16;
+				}
+#endif
+				lock->release(0);
+				range_addr = nexta;
+			}
+
+			const auto lock = vm::range_lock(range_addr, range_end);
 
 #ifdef __GNUG__
 			std::memcpy(dst, src, size);
@@ -2130,7 +2194,7 @@ bool spu_thread::process_mfc_cmd()
 			break;
 		}
 
-		// Fallthrough
+		[[fallthrough]];
 	}
 	case MFC_PUT_CMD:
 	case MFC_PUTB_CMD:
@@ -2482,6 +2546,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 			return res;
 		}
 
+		spu_function_logger logger(*this, "MFC Events read");
+
 		const u32 mask1 = ch_event_mask;
 
 		if (mask1 & SPU_EVENT_LR && raddr)
@@ -2526,9 +2592,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case SPU_RdMachStat:
 	{
-		// HACK: "Not isolated" status
 		// Return SPU Interrupt status in LSB
-		return interrupts_enabled == true;
+		return u32{interrupts_enabled} | (u32{is_isolated} << 1);
 	}
 	}
 
@@ -2968,6 +3033,8 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		state += cpu_flag::wait;
 
+		spu_function_logger logger(*this, "sys_spu_thread_receive_event");
+
 		while (true)
 		{
 			queue.reset();
@@ -3263,6 +3330,13 @@ void spu_thread::fast_call(u32 ls_addr)
 	pc = old_pc;
 	gpr[0]._u32[3] = old_lr;
 	gpr[1]._u32[3] = old_stack;
+}
+
+spu_function_logger::spu_function_logger(spu_thread& spu, const char* func)
+	: spu(spu)
+{
+	spu.current_func = func;
+	spu.start_time = get_system_time();
 }
 
 template <>

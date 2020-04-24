@@ -4,7 +4,7 @@
 
 /**
  * Ring buffer memory helper :
- * There are 2 "pointers" (offset inside a memory buffer to be provided by class derrivative)
+ * There are 2 "pointers" (offset inside a memory buffer to be provided by class derivative)
  * PUT pointer "points" to the start of allocatable space.
  * GET pointer "points" to the start of memory in use by the GPU.
  * Space between GET and PUT is used by the GPU ; this structure check that this memory is not overwritten.

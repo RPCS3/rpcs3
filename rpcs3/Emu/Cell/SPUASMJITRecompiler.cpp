@@ -675,7 +675,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 			}
 
 			// Determine which value will be duplicated at hole positions
-			const u32 w3 = func.data.at((j - start + ~utils::cntlz32(cmask, true) % 4 * 4) / 4);
+			const u32 w3 = func.data.at((j - start + ~static_cast<u32>(std::countl_zero(cmask)) % 4 * 4) / 4);
 			words.push_back(cmask & 1 ? func.data[(j - start + 0) / 4] : w3);
 			words.push_back(cmask & 2 ? func.data[(j - start + 4) / 4] : w3);
 			words.push_back(cmask & 4 ? func.data[(j - start + 8) / 4] : w3);
@@ -1266,10 +1266,10 @@ void spu_recompiler::get_events()
 		Label fail = c->newLabel();
 		c->bind(rcheck);
 		c->mov(qw1->r32(), *addr);
-		c->mov(*qw0, imm_ptr(vm::g_reservations));
-		c->shr(qw1->r32(), 4);
+		c->mov(*qw0, imm_ptr(+vm::g_reservations));
+		c->and_(qw1->r32(), 0xff80);
+		c->shr(qw1->r32(), 1);
 		c->mov(*qw0, x86::qword_ptr(*qw0, *qw1));
-		c->and_(qw0->r64(), -128);
 		c->cmp(*qw0, SPU_OFF_64(rtime));
 		c->jne(fail);
 		c->mov(*qw0, imm_ptr(vm::g_base_addr));
@@ -1659,6 +1659,9 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 	{
 		const XmmLink& vr = XmmAlloc();
 		c->movzx(*addr, SPU_OFF_8(interrupts_enabled));
+		c->movzx(arg1->r32(), SPU_OFF_8(is_isolated));
+		c->shl(arg1->r32(), 1);
+		c->or_(addr->r32(), arg1->r32());
 		c->movd(vr, *addr);
 		c->pslldq(vr, 12);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);

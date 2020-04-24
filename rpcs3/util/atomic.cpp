@@ -5,7 +5,6 @@
 #endif
 
 #include "Utilities/sync.h"
-#include "Utilities/asm.h"
 
 #ifdef USE_POSIX
 #include <semaphore.h>
@@ -107,7 +106,7 @@ static u64 slot_alloc()
 		if (ok)
 		{
 			// Find lowest clear bit
-			return group * 64 + utils::cnttz64(~bits, false);
+			return group * 64 + std::countr_one(bits);
 		}
 	}
 
@@ -141,7 +140,7 @@ static sync_var* slot_get(std::uintptr_t iptr, sync_var* loc, u64 lv = 0)
 	}
 
 	// Get the number of leading equal bits to determine subslot
-	const u64 eq_bits = utils::cntlz64((((iptr ^ value) & (s_pointer_mask >> lv)) | ~s_pointer_mask) << 16, true);
+	const u64 eq_bits = std::countl_zero<u64>((((iptr ^ value) & (s_pointer_mask >> lv)) | ~s_pointer_mask) << 16);
 
 	// Proceed recursively, increment level
 	return slot_get(iptr, s_slot_list[(value & s_slot_mask) / one_v<s_slot_mask>].branch + eq_bits, eq_bits + 1);
@@ -166,7 +165,7 @@ static void slot_free(std::uintptr_t iptr, sync_var* loc, u64 lv = 0)
 		}
 
 		// Get the number of leading equal bits to determine subslot
-		const u64 eq_bits = utils::cntlz64((((iptr ^ value) & (s_pointer_mask >> lv)) | ~s_pointer_mask) << 16, true);
+		const u64 eq_bits = std::countl_zero<u64>((((iptr ^ value) & (s_pointer_mask >> lv)) | ~s_pointer_mask) << 16);
 
 		// Proceed recursively, to deallocate deepest branch first
 		slot_free(iptr, s_slot_list[(value & s_slot_mask) / one_v<s_slot_mask>].branch + eq_bits, eq_bits + 1);
@@ -269,7 +268,7 @@ static u32 sema_alloc()
 		if (ok)
 		{
 			// Find lowest clear bit
-			const u32 id = group * 64 + static_cast<u32>(utils::cnttz64(~bits, false));
+			const u32 id = group * 64 + static_cast<u32>(std::countr_one(bits));
 
 #ifdef USE_POSIX
 			// Initialize semaphore (should be very fast)
@@ -445,7 +444,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 		}
 
 		// Get the number of leading equal bits (between iptr and slot owner)
-		const u64 eq_bits = utils::cntlz64((((iptr ^ ok) & (s_pointer_mask >> lv)) | ~s_pointer_mask) << 16, true);
+		const u64 eq_bits = std::countl_zero<u64>((((iptr ^ ok) & (s_pointer_mask >> lv)) | ~s_pointer_mask) << 16);
 
 		// Collision; need to go deeper
 		ptr = s_slot_list[(ok & s_slot_mask) / one_v<s_slot_mask>].branch + eq_bits;

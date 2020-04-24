@@ -407,7 +407,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	if (!rsx_cfg->context_base || context_id != 0x55555555)
 	{
-		return CELL_EINVAL;
+		sys_rsx.error("sys_rsx_context_attribute(): invalid context failure (context_id=0x%x)", context_id);
+		return CELL_OK; // Actually returns CELL_OK, cellGCmSys seem to be relying on this as well
 	}
 
 	auto &driverInfo = vm::_ref<RsxDriverInfo>(rsx_cfg->driver_info);
@@ -614,9 +615,9 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		{
 			vm::reader_lock rlock;
 
-			for (u32 offs = (offset & ~0xfffff); offs <= range.end; offs += 0x100000)
+			for (u32 io = (offset >> 20), end = (range.end >> 20); io <= end; io++)
 			{
-				if (render->iomap_table.io[offs >> 20] == umax)
+				if (render->iomap_table.ea[io] == umax)
 				{
 					return CELL_EINVAL;
 				}
@@ -650,14 +651,26 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			sys_rsx.warning("sys_rsx_context_attribute(): RSX is not idle while setting zcull");
 		}
 
-		const u32 offset = (a5 & 0xFFFFFFFF);
+		const u32 width = ((a4 & 0xFFFFFFFF) >> 22) << 6;
+		const u32 height = ((a4 & 0x0000FFFF) >> 6) << 6;
+		const u32 cullStart = (a5 >> 32) & ~0xFFF;
+		const u32 offset = (a5 & 0x0FFFFFFF);
 		const bool bound = (a6 & 0xFFFFFFFF) != 0;
 
 		if (bound)
 		{
-			if (offset >= render->local_mem_size)
+			const auto cull_range = utils::address_range::start_length(cullStart, width * height);
+
+			// cullStart is an offset inside ZCULL RAM which is 3MB long, check bounds
+			// width and height are not allowed to be zero (checked by range.valid())
+			if (!cull_range.valid() || cull_range.end >= 3u << 20 || offset >= render->local_mem_size)
 			{
 				return CELL_EINVAL;
+			}
+
+			if (a5 & 0xF0000000)
+			{
+				sys_rsx.warning("sys_rsx_context_attribute(): ZCULL offset greater than 256MB (offset=0x%x)", offset);
 			}
 
 			// Hardcoded values in gcm
@@ -670,9 +683,9 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		zcull.zFormat = ((a4 >> 32) >> 4) & 0xF;
 		zcull.aaFormat = ((a4 >> 32) >> 8) & 0xF;
-		zcull.width = ((a4 & 0xFFFFFFFF) >> 22) << 6;
-		zcull.height = (((a4 & 0xFFFFFFFF) >> 6) & 0xFF) << 6;
-		zcull.cullStart = (a5 >> 32);
+		zcull.width = width;
+		zcull.height = height;
+		zcull.cullStart = cullStart;
 		zcull.offset = offset;
 		zcull.zcullDir = ((a6 >> 32) >> 1) & 0x1;
 		zcull.zcullFormat = ((a6 >> 32) >> 2) & 0x3FF;

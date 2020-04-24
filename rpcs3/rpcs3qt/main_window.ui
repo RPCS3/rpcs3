@@ -179,6 +179,13 @@
      <addaction name="separator"/>
      <addaction name="removeDiskCacheAct"/>
     </widget>
+    <widget class="QMenu" name="menuFirmware">
+     <property name="title">
+      <string>Firmware</string>
+     </property>
+     <addaction name="createFirmwareCacheAct"/>
+     <addaction name="removeFirmwareCacheAct"/>
+    </widget>
     <addaction name="bootElfAct"/>
     <addaction name="bootGameAct"/>
     <addaction name="bootRecentMenu"/>
@@ -189,6 +196,7 @@
     <addaction name="bootInstallPupAct"/>
     <addaction name="separator"/>
     <addaction name="menuBatch"/>
+    <addaction name="menuFirmware"/>
     <addaction name="separator"/>
     <addaction name="exitAct"/>
    </widget>
@@ -242,7 +250,10 @@
     <addaction name="toolsStringSearchAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
+    <addaction name="separator"/>
     <addaction name="actionopen_rsx_capture"/>
+    <addaction name="separator"/>
+    <addaction name="actionCreate_RSX_Capture"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -1037,6 +1048,24 @@
   <action name="actionManage_Screenshots">
    <property name="text">
     <string>Screenshots</string>
+   </property>
+  </action>
+  <action name="removeFirmwareCacheAct">
+   <property name="text">
+    <string>Remove Firmware Cache</string>
+   </property>
+  </action>
+  <action name="createFirmwareCacheAct">
+   <property name="text">
+    <string>Create Firmware Cache</string>
+   </property>
+  </action>
+  <action name="actionCreate_RSX_Capture">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Create RSX Capture</string>
    </property>
   </action>
  </widget>

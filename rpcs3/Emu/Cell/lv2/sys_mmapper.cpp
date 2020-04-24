@@ -17,7 +17,7 @@ lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, lv2_memory_container* ct)
 	, align(align)
 	, flags(flags)
 	, ct(ct)
-	, shm(std::make_shared<utils::shm>(size))
+	, shm(std::make_shared<utils::shm>(size, 1 /* shareable flag */))
 {
 }
 

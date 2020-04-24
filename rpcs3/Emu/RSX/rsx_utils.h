@@ -3,7 +3,6 @@
 #include "../system_config.h"
 #include "Utilities/address_range.h"
 #include "Utilities/geometry.h"
-#include "Utilities/asm.h"
 #include "gcm_enums.h"
 
 #include <memory>
@@ -158,6 +157,7 @@ namespace rsx
 			{
 			default:
 				rsx_log.error("Invalid AV format 0x%x", format);
+				[[fallthrough]];
 			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
 			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
 				return CELL_GCM_TEXTURE_A8R8G8B8;
@@ -172,6 +172,7 @@ namespace rsx
 			{
 			default:
 				rsx_log.error("Invalid AV format 0x%x", format);
+				[[fallthrough]];
 			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
 			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
 				return 4;
@@ -239,19 +240,19 @@ namespace rsx
 	//
 	static inline u32 floor_log2(u32 value)
 	{
-		return value <= 1 ? 0 : utils::cntlz32(value, true) ^ 31;
+		return value <= 1 ? 0 : std::countl_zero(value) ^ 31;
 	}
 
 	static inline u32 ceil_log2(u32 value)
 	{
-		return value <= 1 ? 0 : utils::cntlz32((value - 1) << 1, true) ^ 31;
+		return value <= 1 ? 0 : std::countl_zero((value - 1) << 1) ^ 31;
 	}
 
 	static inline u32 next_pow2(u32 x)
 	{
 		if (x <= 2) return x;
 
-		return static_cast<u32>((1ULL << 32) >> utils::cntlz32(x - 1, true));
+		return static_cast<u32>((1ULL << 32) >> std::countl_zero(x - 1));
 	}
 
 	static inline bool fcmp(float a, float b, float epsilon = 0.000001f)

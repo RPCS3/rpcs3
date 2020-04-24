@@ -3250,7 +3250,7 @@ bool ppu_interpreter::MFOCRF(ppu_thread& ppu, ppu_opcode_t op)
 	if (op.l11)
 	{
 		// MFOCRF
-		const u32 n = utils::cntlz32(op.crm) & 7;
+		const u32 n = std::countl_zero<u32>(op.crm) & 7;
 		const u32 p = n * 4;
 		const u32 v = ppu.cr[p + 0] << 3 | ppu.cr[p + 1] << 2 | ppu.cr[p + 2] << 1 | ppu.cr[p + 3] << 0;
 
@@ -3299,7 +3299,7 @@ bool ppu_interpreter::SLW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::CNTLZW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.ra] = utils::cntlz32(static_cast<u32>(ppu.gpr[op.rs]));
+	ppu.gpr[op.ra] = std::countl_zero(static_cast<u32>(ppu.gpr[op.rs]));
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
 }
@@ -3377,7 +3377,7 @@ bool ppu_interpreter::LWZUX(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::CNTLZD(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.ra] = utils::cntlz64(ppu.gpr[op.rs]);
+	ppu.gpr[op.ra] = std::countl_zero(ppu.gpr[op.rs]);
 	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
 }
@@ -3537,7 +3537,7 @@ bool ppu_interpreter::MTOCRF(ppu_thread& ppu, ppu_opcode_t op)
 	{
 		// MTOCRF
 
-		const u32 n = utils::cntlz32(op.crm) & 7;
+		const u32 n = std::countl_zero<u32>(op.crm) & 7;
 		const u64 v = (s >> ((n * 4) ^ 0x1c)) & 0xf;
 		ppu.cr.fields[n] = *reinterpret_cast<const u32*>(s_table + v);
 	}

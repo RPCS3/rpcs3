@@ -42,6 +42,9 @@ namespace gui
 		// Returns the font of the QLabels with object_name
 		QFont get_label_font(const QString& object_name);
 
+		// Returns the width of the text
+		int get_label_width(const QString& text);
+
 		// Returns the part of the image loaded from path that is inside the bounding box of its opaque areas
 		QImage get_opaque_image_area(const QString& path);
 

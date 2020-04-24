@@ -366,6 +366,7 @@ namespace gl
 						{
 						default:
 							rsx_log.error("gl::fence sync returned unknown error 0x%X", err);
+							[[fallthrough]];
 						case GL_ALREADY_SIGNALED:
 						case GL_CONDITION_SATISFIED:
 							done = true;

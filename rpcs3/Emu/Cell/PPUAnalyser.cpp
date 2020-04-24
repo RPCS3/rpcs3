@@ -664,7 +664,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			const u32 _toc_end = _toc + 0x8000;
 
 			// TODO: improve TOC constraints
-			if (_toc % 4 || _toc == 0 || _toc >= 0x40000000 || (_toc >= start && _toc < end))
+			if (_toc % 4 || !vm::check_addr(_toc) || _toc >= 0x40000000 || (_toc >= start && _toc < end))
 			{
 				sec_end.set(0);
 				break;
@@ -2144,7 +2144,7 @@ void ppu_acontext::MULLI(ppu_opcode_t op)
 		}
 	}
 
-	gpr[op.rd] = spec_gpr::range(min, max, gpr[op.ra].tz() + utils::cnttz64(op.simm16));
+	gpr[op.rd] = spec_gpr::range(min, max, gpr[op.ra].tz() + std::countr_zero<u64>(op.simm16));
 }
 
 void ppu_acontext::SUBFIC(ppu_opcode_t op)

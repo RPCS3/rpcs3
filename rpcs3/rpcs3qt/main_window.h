@@ -62,7 +62,7 @@ class main_window : public QMainWindow
 	QStringList m_vulkan_adapters;
 #endif
 
-	enum drop_type
+	enum class drop_type
 	{
 		drop_error,
 		drop_pkg,
@@ -109,6 +109,10 @@ private Q_SLOTS:
 	void SetIconSizeActions(int idx);
 	void ResizeIcons(int index);
 
+	void RemoveDiskCache();
+	void RemoveFirmwareCache();
+	void CreateFirmwareCache();
+
 protected:
 	void closeEvent(QCloseEvent *event) override;
 	void keyPressEvent(QKeyEvent *keyEvent) override;
@@ -133,7 +137,7 @@ private:
 	void InstallPup(QString filePath = "");
 	void HandlePupInstallation(QString file_path = "");
 
-	int IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
+	drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
 	void AddGamesFromDir(const QString& path);
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
@@ -141,8 +145,6 @@ private:
 	void AddRecentAction(const q_string_pair& entry);
 
 	void UpdateLanguageActions(const QStringList& language_codes, const QString& language);
-
-	void RemoveDiskCache();
 
 	QString GetCurrentTitle();
 

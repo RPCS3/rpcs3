@@ -17,9 +17,12 @@
 #include <limits>
 #include <array>
 
-#if __has_include(<bit>)
-#include <bit>
+#ifdef _MSC_VER
+#ifndef __cpp_lib_bitops
+#define __cpp_lib_bitops
 #endif
+#endif
+#include <bit>
 
 #ifndef __has_builtin
 	#define __has_builtin(x) 0

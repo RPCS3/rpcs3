@@ -450,7 +450,7 @@ namespace rsx
 
 					total_threads = CPUStats::get_thread_count();
 
-					// fallthrough
+					[[fallthrough]];
 				}
 				case detail_level::medium:
 				{
@@ -473,14 +473,14 @@ namespace rsx
 					spu_usage = std::clamp(cpu_usage * spu_cycles / total_cycles, 0.f, 100.f);
 					rsx_usage = std::clamp(cpu_usage * rsx_cycles / total_cycles, 0.f, 100.f);
 
-					// fallthrough
+					[[fallthrough]];
 				}
 				case detail_level::low:
 				{
 					if (cpu_usage < 0.)
 						cpu_usage = static_cast<f32>(m_cpu_stats.get_usage());
 
-					// fallthrough
+					[[fallthrough]];
 				}
 				case detail_level::minimal:
 				{

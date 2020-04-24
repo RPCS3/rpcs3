@@ -126,6 +126,11 @@ namespace gui
 			return dummy_font.font();
 		}
 
+		int get_label_width(const QString& text)
+		{
+			return QLabel(text).sizeHint().width();
+		}
+
 		QImage get_opaque_image_area(const QString& path)
 		{
 			QImage image = QImage(path);

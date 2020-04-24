@@ -989,7 +989,7 @@ struct ppu_acontext
 		// Return number of trailing zero bits
 		u64 tz() const
 		{
-			return utils::cnttz64(mask());
+			return std::countr_zero(mask());
 		}
 
 		// Range NOT
@@ -1238,7 +1238,7 @@ struct ppu_acontext
 			if (min < max)
 			{
 				// Inverted constant MSB mask
-				const u64 mix = ~0ull >> utils::cntlz64(min ^ max, true);
+				const u64 mix = ~0ull >> std::countl_zero(min ^ max);
 				r.bmin |= min & ~mix;
 				r.bmax &= max | mix;
 

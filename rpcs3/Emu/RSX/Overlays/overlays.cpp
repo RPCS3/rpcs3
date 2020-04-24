@@ -32,7 +32,7 @@ namespace rsx
 				return 0;
 			}
 
-			const u64 r = u64{1} << utils::cnttz64(~_old, false);
+			const u64 r = u64{1} << std::countr_one(_old);
 			::overlays.trace("Bit allocated (%u)", r);
 			return r;
 		}

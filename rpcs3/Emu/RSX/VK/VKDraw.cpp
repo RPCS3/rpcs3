@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "VKGSRender.h"
 #include "../Common/BufferUtils.h"
 
@@ -188,8 +188,9 @@ void VKGSRender::load_texture_env()
 					}
 				}
 
-				const bool aniso_override = !g_cfg.video.strict_rendering_mode && g_cfg.video.anisotropic_level_override > 0;
-				const f32 af_level = aniso_override ? g_cfg.video.anisotropic_level_override : vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso());
+				const int aniso_override_level = g_cfg.video.anisotropic_level_override;
+				const bool aniso_override = !g_cfg.video.strict_rendering_mode && aniso_override_level > 0;
+				const f32 af_level = aniso_override ? aniso_override_level : vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso());
 				const auto wrap_s = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s());
 				const auto wrap_t = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t());
 				const auto wrap_r = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r());

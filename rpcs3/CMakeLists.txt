@@ -1,6 +1,8 @@
 ﻿cmake_minimum_required(VERSION 3.8.2)
 
-include(cotire)
+if(USE_PRECOMPILED_HEADERS AND NOT COMMAND target_precompile_headers)
+	include(cotire)
+endif()
 
 # Generate git-version.h at build time.
 include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
@@ -110,12 +112,16 @@ else()
 	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS})
 endif()
 
-if(USE_COTIRE)
-	set_target_properties(rpcs3 PROPERTIES
-		COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h"
-		COTIRE_ADD_UNITY_BUILD OFF)
+if(USE_PRECOMPILED_HEADERS)
+	if(COMMAND target_precompile_headers)
+		target_precompile_headers(rpcs3 PRIVATE "${RPCS3_SRC_DIR}/stdafx.h")
+	else()
+		set_target_properties(rpcs3 PROPERTIES
+			COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h"
+			COTIRE_ADD_UNITY_BUILD OFF)
 
-	cotire(rpcs3)
+		cotire(rpcs3)
+	endif()
 endif()
 
 # Copy icons to executable directory

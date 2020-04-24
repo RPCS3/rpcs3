@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Utilities/asm.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
@@ -2114,7 +2113,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 	const u32 wmax = spurs->flags1 & SF1_32_WORKLOADS ? 0x20u : 0x10u; // TODO: check if can be changed
 	spurs->wklEnabled.atomic_op([spurs, wmax, &wnum](be_t<u32>& value)
 	{
-		wnum = utils::cntlz32(~value); // found empty position
+		wnum = std::countl_one<u32>(value); // found empty position
 		if (wnum < wmax)
 		{
 			value |= (0x80000000 >> wnum); // set workload bit
@@ -2237,7 +2236,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 				else
 				{
 					k |= 0x80000000 >> current->uniqueId;
-					res_wkl = utils::cntlz32(~k);
+					res_wkl = std::countl_one<u32>(k);
 				}
 			}
 		}

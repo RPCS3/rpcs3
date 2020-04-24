@@ -693,7 +693,7 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 							}
 							else
 							{
-								u_var_7 = (u_var_7 ^ 10) - 1 >> 0x1f;
+								u_var_7 = ((u_var_7 ^ 10) - 1) >> 0x1f;
 							}
 						}
 					}
@@ -1020,7 +1020,8 @@ error_code cellRtcTickAddMonths(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTic
 		return CELL_RTC_ERROR_INVALID_ARG;
 	}
 
-	u32 uVar1 = ((unk_1 * 0x51eb851f) >> 0x20);
+	u32 uVar1 = ((s64{unk_1} * 0x51eb851f) >> 0x20);
+
 	// Leap year check
 	u32 month_idx;
 	if ((unk_1 == (uVar1 >> 7) * 400) || ((unk_1 != (uVar1 >> 5) * 100 && ((unk_2 & 3) == 0))))
@@ -1069,7 +1070,8 @@ error_code cellRtcTickAddYears(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick
 		return CELL_RTC_ERROR_INVALID_ARG;
 	}
 
-	u32 uVar1 = ((unk_1 * 0x51eb851f) >> 0x20);
+	u32 uVar1 = ((s64{unk_1} * 0x51eb851f) >> 0x20);
+
 	// Leap year check
 	u32 month_idx;
 	if ((unk_1 == (uVar1 >> 7) * 400) || ((unk_1 != (uVar1 >> 5) * 100 && ((total_years & 3) == 0))))

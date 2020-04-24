@@ -118,21 +118,21 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_zcull_queries{ this, "Disable ZCull Occlusion Queries", false };
 		cfg::_bool disable_vertex_cache{ this, "Disable Vertex Cache", false };
 		cfg::_bool disable_FIFO_reordering{ this, "Disable FIFO Reordering", false };
-		cfg::_bool frame_skip_enabled{ this, "Enable Frame Skip", false };
+		cfg::_bool frame_skip_enabled{ this, "Enable Frame Skip", false, true };
 		cfg::_bool force_cpu_blit_processing{ this, "Force CPU Blit", false, true }; // Debugging option
 		cfg::_bool disable_on_disk_shader_cache{ this, "Disable On-Disk Shader Cache", false };
 		cfg::_bool disable_vulkan_mem_allocator{ this, "Disable Vulkan Memory Allocator", false };
-		cfg::_bool full_rgb_range_output{ this, "Use full RGB output range", true }; // Video out dynamic range
+		cfg::_bool full_rgb_range_output{ this, "Use full RGB output range", true, true }; // Video out dynamic range
 		cfg::_bool disable_asynchronous_shader_compiler{ this, "Disable Asynchronous Shader Compiler", false };
 		cfg::_bool strict_texture_flushing{ this, "Strict Texture Flushing", false };
 		cfg::_bool disable_native_float16{ this, "Disable native float16 support", false };
 		cfg::_bool multithreaded_rsx{ this, "Multithreaded RSX", false };
 		cfg::_bool relaxed_zcull_sync{ this, "Relaxed ZCULL Sync", false };
 		cfg::_bool enable_3d{ this, "Enable 3D", false };
-		cfg::_int<1, 8> consequtive_frames_to_draw{ this, "Consecutive Frames To Draw", 1 };
-		cfg::_int<1, 8> consequtive_frames_to_skip{ this, "Consecutive Frames To Skip", 1 };
+		cfg::_int<1, 8> consecutive_frames_to_draw{ this, "Consecutive Frames To Draw", 1, true};
+		cfg::_int<1, 8> consecutive_frames_to_skip{ this, "Consecutive Frames To Skip", 1, true};
 		cfg::_int<50, 800> resolution_scale_percent{ this, "Resolution Scale", 100 };
-		cfg::_int<0, 16> anisotropic_level_override{ this, "Anisotropic Filter Override", 0 };
+		cfg::_int<0, 16> anisotropic_level_override{ this, "Anisotropic Filter Override", 0, true };
 		cfg::_int<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16 };
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
 		cfg::_int<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 1, true };

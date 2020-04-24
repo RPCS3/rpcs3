@@ -100,14 +100,14 @@ enum : u64
 	SPU_INT2_STAT_SPU_MAILBOX_THRESHOLD_INT    = (1ull << 4),
 };
 
-enum
+enum : u32
 {
 	SPU_RUNCNTL_STOP_REQUEST = 0,
 	SPU_RUNCNTL_RUN_REQUEST  = 1,
 };
 
 // SPU Status Register bits (not accurate)
-enum
+enum : u32
 {
 	SPU_STATUS_STOPPED             = 0x0,
 	SPU_STATUS_RUNNING             = 0x1,
@@ -115,6 +115,7 @@ enum
 	SPU_STATUS_STOPPED_BY_HALT     = 0x4,
 	SPU_STATUS_WAITING_FOR_CHANNEL = 0x8,
 	SPU_STATUS_SINGLE_STEP         = 0x10,
+	SPU_STATUS_IS_ISOLATED         = 0x80,
 };
 
 enum : u32
@@ -514,7 +515,7 @@ public:
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
 
-	spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id);
+	spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated = false);
 
 	u32 pc = 0;
 
@@ -592,8 +593,8 @@ public:
 		u32 npc; // SPU Next Program Counter register
 	};
 
+	const bool is_isolated;
 	atomic_t<status_npc_sync_var> status_npc;
-
 	std::array<spu_int_ctrl_t, 3> int_ctrl; // SPU Class 0, 1, 2 Interrupt Management
 
 	std::array<std::pair<u32, std::weak_ptr<lv2_event_queue>>, 32> spuq; // Event Queue Keys for SPU Thread
@@ -618,6 +619,9 @@ public:
 	u64 saved_native_sp = 0; // Host thread's stack pointer for emulated longjmp
 
 	std::array<v128, 0x4000> stack_mirror; // Return address information
+
+	const char* current_func{}; // Current STOP or RDCH blocking function
+	u64 start_time{}; // Starting time of STOP or RDCH bloking function
 
 	void push_snr(u32 number, u32 value);
 	void do_dma_transfer(const spu_mfc_cmd& args);
@@ -667,5 +671,18 @@ public:
 		}
 
 		return -1;
+	}
+};
+
+class spu_function_logger
+{
+	spu_thread& spu;
+
+public:
+	spu_function_logger(spu_thread& spu, const char* func);
+
+	~spu_function_logger()
+	{
+		spu.start_time = 0;
 	}
 };

@@ -146,7 +146,7 @@ struct spu_elf_info
 				return CELL_ENOEXEC;
 			}
 
-			std::memcpy(&self, src.get_ptr(), sizeof(self));
+			std::memcpy(&self, static_cast<const uchar*>(src.get_ptr()) + sizeof(sce0), sizeof(self));
 			ehdr_off = static_cast<u32>(+self.se_elfoff);
 			phdr_off = static_cast<u32>(+self.se_phdroff);
 

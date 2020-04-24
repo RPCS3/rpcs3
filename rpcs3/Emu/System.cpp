@@ -656,6 +656,11 @@ std::string Emulator::GetHdd1Dir()
 	return fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", GetEmuDir());
 }
 
+std::string Emulator::GetCacheDir()
+{
+	return fs::get_cache_dir() + "cache/";
+}
+
 #ifdef _WIN32
 std::string Emulator::GetExeDir()
 {
@@ -1430,7 +1435,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			ppu_load_exec(ppu_exec);
 
-			_main->cache = fs::get_cache_dir() + "cache/";
+			_main->cache = GetCacheDir();
 
 			if (!m_title_id.empty() && m_cat != "1P")
 			{
@@ -1760,8 +1765,8 @@ std::string Emulator::GetFormattedTitle(double fps) const
 
 u32 Emulator::GetMaxThreads() const
 {
-	u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
-	u32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
+	const u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
+	const u32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
 	return thread_count;
 }
 

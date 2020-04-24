@@ -508,7 +508,7 @@ void GLGSRender::clear_surface(u32 arg)
 			{
 				verify(HERE), mask;
 
-				// Only one aspect was cleared. Make sure to memory intialize the other before removing dirty flag
+				// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
 				if (arg == 1)
 				{
 					// Depth was cleared, initialize stencil
@@ -549,7 +549,7 @@ void GLGSRender::clear_surface(u32 arg)
 		case rsx::surface_color_format::g8b8:
 		{
 			colormask = rsx::get_g8b8_r8g8_colormask(colormask);
-			// Fall through
+			[[fallthrough]];
 		}
 		default:
 		{

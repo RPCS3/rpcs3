@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Utilities/BitField.h"
-#include "Utilities/asm.h"
 
 template<typename T, u32 I, u32 N> using ppu_bf_t = bf_t<T, sizeof(T) * 8 - N - I, N>;
 
@@ -62,14 +61,14 @@ union ppu_opcode_t
 	cf_t<ppu_bf_t<s32, 6, 24>, ff_t<u32, 0, 2>> bt24;
 };
 
-inline u64 ppu_rotate_mask(u32 mb, u32 me)
+constexpr u64 ppu_rotate_mask(u32 mb, u32 me)
 {
-	return utils::ror64(~0ull << (~(me - mb) & 63), mb);
+	return std::rotr<u64>(~0ull << (~(me - mb) & 63), mb & 63);
 }
 
-inline u32 ppu_decode(u32 inst)
+constexpr u32 ppu_decode(u32 inst)
 {
-	return (inst >> 26 | inst << (32 - 26)) & 0x1ffff; // Rotate + mask
+	return std::rotr<u32>(inst, 26) & 0x1ffff; // Rotate + mask
 }
 
 // PPU decoder object. D provides functions. T is function pointer type returned.

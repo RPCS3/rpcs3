@@ -809,6 +809,7 @@ const char* rsx_debugger::ParseGCMEnum(u32 value, u32 type)
 	case a + m * 14: \
 	case a + m * 15: \
 	index = (cmd - a) / m; \
+	[[fallthrough]]; \
 	case a \
 
 QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)

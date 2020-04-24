@@ -4,6 +4,7 @@
 
 #include "custom_dock_widget.h"
 #include "game_compatibility.h"
+#include "gui_save.h"
 
 #include <QMainWindow>
 #include <QToolBar>

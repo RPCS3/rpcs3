@@ -162,11 +162,13 @@ namespace vk
 		{
 		case rsx::blend_equation::add_signed:
 			rsx_log.trace("blend equation add_signed used. Emulating using FUNC_ADD");
+			[[fallthrough]];
 		case rsx::blend_equation::add:
 			return VK_BLEND_OP_ADD;
 		case rsx::blend_equation::substract: return VK_BLEND_OP_SUBTRACT;
 		case rsx::blend_equation::reverse_substract_signed:
 			rsx_log.trace("blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
+			[[fallthrough]];
 		case rsx::blend_equation::reverse_substract: return VK_BLEND_OP_REVERSE_SUBTRACT;
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
 		case rsx::blend_equation::max: return VK_BLEND_OP_MAX;
@@ -819,7 +821,7 @@ void VKGSRender::check_heap_status(u32 flags)
 	else if (flags)
 	{
 		heap_critical = false;
-		u32 test = 1 << utils::cnttz32(flags, true);
+		u32 test = 1u << std::countr_zero(flags);
 
 		do
 		{
@@ -1090,7 +1092,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 				if (!g_cfg.video.read_depth_buffer)
 				{
-					// Only one aspect was cleared. Make sure to memory intialize the other before removing dirty flag
+					// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
 					if (mask == 1)
 					{
 						// Depth was cleared, initialize stencil
