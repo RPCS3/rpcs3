@@ -28,7 +28,7 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 		return CELL_EINVAL;
 	}
 
-	const auto _attr = *attr;
+	const auto _attr = attr.read();
 
 	const u32 protocol = _attr.protocol;
 

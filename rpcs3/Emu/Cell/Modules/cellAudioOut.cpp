@@ -144,7 +144,7 @@ error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudio
 			// Although it was constant on my tests so let's write that
 			_state.state = 0x10;
 			_state.soundMode.layout = 0xD00C1680;
-			std::memcpy(state.get_ptr(), &_state, state.size());
+			state.write(_state);
 			return CELL_OK;
 		}
 
@@ -171,7 +171,7 @@ error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudio
 		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	std::memcpy(state.get_ptr(), &_state, state.size());
+	state.write(_state);
 	return CELL_OK;
 }
 
@@ -239,7 +239,7 @@ error_code cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfig
 		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	std::memcpy(config.get_ptr(), &_config, config.size());
+	config.write(_config);
 	return CELL_OK;
 }
 
@@ -304,7 +304,7 @@ error_code cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<Cell
 	_info.availableModes[1].fs = CELL_AUDIO_OUT_FS_48KHZ;
 	_info.availableModes[1].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_2CH;
 
-	std::memcpy(info.get_ptr(), &_info, info.size());
+	info.write(_info);
 	return CELL_OK;
 }
 

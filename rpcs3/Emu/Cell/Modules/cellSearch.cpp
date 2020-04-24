@@ -851,7 +851,7 @@ error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm:
 
 		if (outTimeInfo)
 		{
-			std::memcpy(outTimeInfo.get_ptr(), &content_id.second->timeInfo, sizeof(content_id.second->timeInfo));
+			outTimeInfo.write(content_id.second->timeInfo);
 		}
 
 	}

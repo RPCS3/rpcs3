@@ -24,7 +24,7 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 		return CELL_EFAULT;
 	}
 
-	const auto _attr = *attr;
+	const auto _attr = attr.read();
 
 	const u32 protocol = _attr.protocol;
 

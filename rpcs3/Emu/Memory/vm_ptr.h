@@ -4,6 +4,8 @@
 #include "Utilities/BEType.h"
 #include "vm.h"
 
+#include <array>
+
 class ppu_thread;
 struct ppu_func_opd_t;
 
@@ -24,6 +26,8 @@ namespace vm
 		static_assert(!std::is_pointer<T>::value, "vm::_ptr_base<> error: invalid type (pointer)");
 		static_assert(!std::is_reference<T>::value, "vm::_ptr_base<> error: invalid type (reference)");
 
+		using _access_type = std::conditional_t<std::is_void_v<T>, char, std::remove_const_t<T>>;
+		using access_type = std::conditional_t<std::is_array_v<_access_type>, std::array<std::remove_extent_t<_access_type>, std::extent_v<_access_type>>, _access_type>;
 	public:
 		using type = T;
 		using addr_type = std::remove_cv_t<AT>;
@@ -201,12 +205,23 @@ namespace vm
 			return *this;
 		}
 
-		bool try_read(std::conditional_t<std::is_void_v<T>, char&, std::add_lvalue_reference_t<std::remove_const_t<T>>> out) const
+		access_type read() const
+		{
+			return vm::read<access_type>(vm::cast(m_addr, HERE));
+		}
+
+		template <typename V, typename = std::enable_if_t<!std::is_const_v<std::remove_reference_t<T>>>>
+		access_type write(V&& value) const
+		{
+			return vm::write<access_type>(vm::cast(m_addr, HERE), std::forward<V>(value));
+		}
+
+		bool try_read(access_type& out) const
 		{
 			return vm::try_access(vm::cast(m_addr, HERE), &out, sizeof(T), false);
 		}
 
-		bool try_write(std::conditional_t<std::is_void_v<T>, const char&, std::add_lvalue_reference_t<const T>> _in) const
+		bool try_write(const access_type& _in) const
 		{
 			return vm::try_access(vm::cast(m_addr, HERE), const_cast<T*>(&_in), sizeof(T), true);
 		}

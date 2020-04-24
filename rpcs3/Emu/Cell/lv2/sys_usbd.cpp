@@ -775,7 +775,7 @@ error_code sys_usbd_isochronous_transfer_data(u32 handle, u32 id_pipe, vm::ptr<U
 	const auto& pipe = usbh->get_pipe(id_pipe);
 	auto& transfer   = usbh->get_transfer(id_transfer);
 
-	memcpy(&transfer.iso_request, iso_request.get_ptr(), sizeof(UsbDeviceIsoRequest));
+	transfer.iso_request = iso_request.read();
 	pipe.device->isochronous_transfer(&transfer);
 
 	// returns an identifier specific to the transfer
@@ -795,8 +795,8 @@ error_code sys_usbd_get_transfer_status(u32 handle, u32 id_transfer, u32 unk1, v
 
 	auto& transfer = usbh->get_transfer(id_transfer);
 
-	*result = transfer.result;
-	*count  = transfer.count;
+	result.write(transfer.result);
+	count.write(transfer.count);
 
 	return CELL_OK;
 }
@@ -814,8 +814,8 @@ error_code sys_usbd_get_isochronous_transfer_status(u32 handle, u32 id_transfer,
 
 	auto& transfer = usbh->get_transfer(id_transfer);
 
-	*result = transfer.result;
-	memcpy(request.get_ptr(), &transfer.iso_request, sizeof(UsbDeviceIsoRequest));
+	result.write(transfer.result);
+	request.write(transfer.iso_request);
 
 	return CELL_OK;
 }

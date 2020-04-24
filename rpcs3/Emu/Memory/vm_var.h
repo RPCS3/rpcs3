@@ -53,7 +53,7 @@ namespace vm
 		_var_base(const T& right)
 		    : _var_base()
 		{
-			std::memcpy(pointer::get_ptr(), &right, sizeof(T));
+			pointer::write(right);
 		}
 
 		~_var_base()

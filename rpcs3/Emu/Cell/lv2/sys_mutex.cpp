@@ -22,7 +22,7 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 		return CELL_EFAULT;
 	}
 
-	const auto _attr = *attr;
+	const auto _attr = attr.read();
 
 	switch (_attr.protocol)
 	{

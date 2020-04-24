@@ -2505,7 +2505,7 @@ error_code sceNpManagerGetOnlineId(vm::ptr<SceNpOnlineId> onlineId)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	memcpy(onlineId.get_ptr(), &nph->get_online_id(), onlineId.size());
+	onlineId.write(nph->get_online_id());
 
 	return CELL_OK;
 }
@@ -2536,7 +2536,7 @@ error_code sceNpManagerGetNpId(ppu_thread& ppu, vm::ptr<SceNpId> npId)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	memcpy(npId.get_ptr(), &nph->get_npid(), npId.size());
+	npId.write(nph->get_npid());
 
 	return CELL_OK;
 }
@@ -2567,7 +2567,7 @@ error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	memcpy(onlineName.get_ptr(), &nph->get_online_name(), onlineName.size());
+	onlineName.write(nph->get_online_name());
 
 	return CELL_OK;
 }
@@ -2598,7 +2598,7 @@ error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	memcpy(avatarUrl.get_ptr(), &nph->get_avatar_url(), avatarUrl.size());
+	avatarUrl.write(nph->get_avatar_url());
 
 	return CELL_OK;
 }

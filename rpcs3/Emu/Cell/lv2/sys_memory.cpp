@@ -205,35 +205,40 @@ error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr
 
 	sys_memory.trace("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
 
-	vm::reader_lock rlock;
-
-	if (!vm::check_addr(addr))
+	sys_page_attr_t _attr;
 	{
-		return CELL_EINVAL;
+		vm::reader_lock rlock;
+
+		if (!vm::check_addr(addr))
+		{
+			return CELL_EINVAL;
+		}
+
+		if (!vm::check_addr(attr.addr(), attr.size()))
+		{
+			return CELL_EFAULT;
+		}
+
+		_attr.attribute = 0x40000ull; // SYS_MEMORY_PROT_READ_WRITE (TODO)
+		_attr.access_right = 0xFull; // SYS_MEMORY_ACCESS_RIGHT_ANY (TODO)
+
+		if (vm::check_addr(addr, 1, vm::page_1m_size))
+		{
+			_attr.page_size = 0x100000;
+		}
+		else if (vm::check_addr(addr, 1, vm::page_64k_size))
+		{
+			_attr.page_size = 0x10000;
+		}
+		else
+		{
+			_attr.page_size = 4096;
+		}
+
+		_attr.pad = 0; // Always write 0
 	}
 
-	if (!vm::check_addr(attr.addr(), attr.size()))
-	{
-		return CELL_EFAULT;
-	}
-
-	attr->attribute = 0x40000ull; // SYS_MEMORY_PROT_READ_WRITE (TODO)
-	attr->access_right = 0xFull; // SYS_MEMORY_ACCESS_RIGHT_ANY (TODO)
-
-	if (vm::check_addr(addr, 1, vm::page_1m_size))
-	{
-		attr->page_size = 0x100000;
-	}
-	else if (vm::check_addr(addr, 1, vm::page_64k_size))
-	{
-		attr->page_size = 0x10000;
-	}
-	else
-	{
-		attr->page_size = 4096;
-	}
-
-	attr->pad = 0; // Always write 0
+	attr.write(_attr);
 	return CELL_OK;
 }
 
@@ -246,17 +251,21 @@ error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 	// Get "default" memory container
 	const auto dct = g_fxo->get<lv2_memory_container>();
 
-	::reader_lock lock(s_memstats_mtx);
-
-	mem_info->total_user_memory = dct->size;
-	mem_info->available_user_memory = dct->size - dct->used;
-
-	// Scan other memory containers
-	idm::select<lv2_memory_container>([&](u32, lv2_memory_container& ct)
+	sys_memory_info_t _mem_info;
 	{
-		mem_info->total_user_memory -= ct.size;
-	});
+		::reader_lock lock(s_memstats_mtx);
 
+		_mem_info.total_user_memory = dct->size;
+		_mem_info.available_user_memory = dct->size - dct->used;
+
+		// Scan other memory containers
+		idm::select<lv2_memory_container>([&](u32, lv2_memory_container& ct)
+		{
+			_mem_info.total_user_memory -= ct.size;
+		});
+	}
+
+	mem_info.write(_mem_info);
 	return CELL_OK;
 }
 

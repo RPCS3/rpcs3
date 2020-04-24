@@ -24,7 +24,7 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 		return CELL_ESRCH;
 	}
 
-	const auto _attr = *attr;
+	const auto _attr = attr.read();
 
 	if (auto error = lv2_obj::create<lv2_cond>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
 	{

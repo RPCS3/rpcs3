@@ -22,7 +22,7 @@ error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<s
 		return CELL_EFAULT;
 	}
 
-	const auto _attr = *attr;
+	const auto _attr = attr.read();
 
 	const u32 protocol = _attr.protocol;
 
