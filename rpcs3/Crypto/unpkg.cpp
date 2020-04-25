@@ -509,9 +509,7 @@ package_error package_reader::check_target_app_version()
 		}
 
 		// Read the package's PARAM.SFO
-		const std::string tmp_path = Emu.GetCacheDir() + "tmp.SFO";
-
-		if (fs::file tmp{ tmp_path, fs::rewrite })
+		if (fs::file tmp = fs::make_stream<std::vector<uchar>>())
 		{
 			for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
 			{
@@ -519,27 +517,20 @@ package_error package_reader::check_target_app_version()
 
 				if (decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : dec_key.data()) != block_size)
 				{
-					pkg_log.error("Failed to extract file %s", tmp_path);
+					pkg_log.error("Failed to decrypt PARAM.SFO file");
 					return package_error::other;
 				}
 
 				if (tmp.write(buf.get(), block_size) != block_size)
 				{
-					pkg_log.error("Failed to write file %s", tmp_path);
+					pkg_log.error("Failed to write to temporary PARAM.SFO file");
 					return package_error::other;
 				}
 			}
 
-			tmp.close();
+			tmp.seek(0);
 
-			const fs::file sfo_file(tmp_path);
-			if (!sfo_file)
-			{
-				pkg_log.error("Failed to read file %s", tmp_path);
-				return package_error::other;
-			}
-
-			const auto psf = psf::load_object(sfo_file);
+			const auto psf = psf::load_object(tmp);
 
 			const auto category = psf::get_string(psf, "CATEGORY", "");
 			const auto title_id = psf::get_string(psf, "TITLE_ID", "");
@@ -646,7 +637,7 @@ package_error package_reader::check_target_app_version()
 			return package_error::app_version;
 		}
 
-		pkg_log.error("Failed to create file %s", tmp_path);
+		pkg_log.error("Failed to create temporary PARAM.SFO file");
 		return package_error::other;
 	}
 
