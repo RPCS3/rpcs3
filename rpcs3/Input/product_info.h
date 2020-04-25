@@ -13,6 +13,7 @@ namespace input
 		dj_hero_turntable,
 		harmonix_rockband_guitar,
 		harmonix_rockband_drum_kit,
+		rock_revolution_drum_kit
 	};
 
 	enum vendor_id
@@ -31,14 +32,15 @@ namespace input
 		harmonix_rockband_guitar   = 0x0200, // Harmonix Guitar (Rock Band II Guitar Controller)
 		harmonix_rockband_drum_kit = 0x0210, // Harmonix Drum Kit (Rock Band II Drum Controller)
 		playstation_3_controller   = 0x0268, // PlayStation 3 Controller
+		rock_revolution_drum_kit   = 0x0300, // Rock Revolution Drum Controller
 	};
 
 	struct product_info
 	{
 		product_type type;
-		uint16_t vendor_id;
-		uint16_t product_id;
-		uint32_t pclass_profile; // See CELL_PAD_PCLASS_PROFILE flags
+		unsigned short vendor_id;
+		unsigned short product_id;
+		unsigned int pclass_profile; // See CELL_PAD_PCLASS_PROFILE flags
 	};
 
 	static product_info get_product_info(product_type type)
@@ -74,6 +76,10 @@ namespace input
 		{
 			return product_info{ type, vendor_id::sony_cea, product_id::red_octane_gh_guitar, 0x000000FF };
 		}
+		case product_type::rock_revolution_drum_kit:
+		{
+			return product_info{ type, vendor_id::sony_cea, product_id::rock_revolution_drum_kit, 0x000000FB };
+		}
 		}
 	}
 
@@ -102,7 +108,8 @@ namespace input
 			return
 			{
 				get_product_info(product_type::red_octane_gh_drum_kit),
-				get_product_info(product_type::harmonix_rockband_drum_kit)
+				get_product_info(product_type::harmonix_rockband_drum_kit),
+				get_product_info(product_type::rock_revolution_drum_kit)
 			};
 		}
 		case 3: // CELL_PAD_PCLASS_TYPE_DJ
