@@ -1281,6 +1281,11 @@ void pad_settings_dialog::HandleDeviceClassChange(int index)
 			ui->chooseProduct->addItem(tr("Guitar Hero", "RedOctane Guitar Hero Guitar"), static_cast<int>(product.type));
 			break;
 		}
+		case input::product_type::rock_revolution_drum_kit:
+		{
+			ui->chooseProduct->addItem(tr("Rock Revolution", "Rock Revolution Drum Controller"), static_cast<int>(product.type));
+			break;
+		}
 		}
 	}
 }
