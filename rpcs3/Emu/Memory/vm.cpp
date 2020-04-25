@@ -1182,7 +1182,7 @@ namespace vm
 			if (is_write)
 				std::swap(src, dst);
 
-			if (size <= 16 && std::popcount(size) == 1 && (addr & (size - 1)) == 0)
+			if (size <= 16 && (size & (size - 1)) == 0 && (addr & (size - 1)) == 0)
 			{
 				if (is_write)
 				{
