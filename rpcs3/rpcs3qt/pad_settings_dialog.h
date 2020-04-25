@@ -98,6 +98,7 @@ private Q_SLOTS:
 	void OnTabChanged(int index);
 	void RefreshInputTypes();
 	void ChangeInputType();
+	void HandleDeviceClassChange(int index);
 	/** Save the Pad Configuration to the current Pad Handler Config File */
 	void SaveProfile();
 	void SaveExit();

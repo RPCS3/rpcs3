@@ -5,6 +5,7 @@
 
 #include "Emu/Io/pad_types.h"
 #include "Input/pad_thread.h"
+#include "Input/product_info.h"
 #include "cellPad.h"
 
 LOG_CHANNEL(sys_io);
@@ -433,7 +434,6 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 
 	const auto& pads = handler->GetPads();
 
-	// TODO: Support other types of controllers
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
 	{
 		if (i >= config->max_connect)
@@ -445,7 +445,7 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 		info->device_capability[i] = pads[i]->m_device_capability;
 		info->device_type[i] = pads[i]->m_device_type;
 		info->pclass_type[i] = pads[i]->m_class_type;
-		info->pclass_profile[i] = 0x0;
+		info->pclass_profile[i] = pads[i]->m_class_profile;
 	}
 
 	return CELL_OK;
@@ -478,10 +478,10 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	// todo: support for 'unique' controllers, which goes in offsets 24+ in padData
 	data->pclass_type = pad->m_class_type;
-	data->pclass_profile = 0x0;
+	data->pclass_profile = pad->m_class_profile;
 
+	// TODO: support for 'unique' controllers, which goes in offsets 24+ in padData (CELL_PAD_PCLASS_BTN_OFFSET)
 	return cellPadGetData(port_no, data.ptr(&CellPadPeriphData::cellpad_data));
 }
 
@@ -636,43 +636,40 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
 		info->status[i] = pads[i]->m_port_status;
 
-		// TODO: Allow selecting different product IDs
-		switch (pads[i]->m_class_type)
+		if (pads[i]->m_vendor_id == 0 || pads[i]->m_product_id == 0)
 		{
-		case CELL_PAD_PCLASS_TYPE_GUITAR:
-			// Sony Computer Entertainment America
-			info->vendor_id[i] = 0x12BA;
-			// RedOctane Guitar (Guitar Hero)
-			info->product_id[i] = 0x0100;
-			// Harmonix Guitar (Rock Band)
-			// info->product_id[i] = 0x0200;
-			break;
-		case CELL_PAD_PCLASS_TYPE_DRUM:
-			// Sony Computer Entertainment America
-			info->vendor_id[i] = 0x12BA;
-			// RedOctane Drum Kit (Guitar Hero)
-			info->product_id[i] = 0x0120;
-			// Harmonix Drum Kit (Rock Band)
-			// info->product_id[i] = 0x0210;
-			break;
-		case CELL_PAD_PCLASS_TYPE_DJ:
-			// Sony Computer Entertainment America
-			info->vendor_id[i] = 0x12BA;
-			// DJ Hero Turntable
-			info->product_id[i] = 0x0140;
-			break;
-		case CELL_PAD_PCLASS_TYPE_DANCEMAT:
-			// Konami Digital Entertainment
-			info->vendor_id[i] = 0x1CCF;
-			// Dance Dance Revolution Mat
-			info->product_id[i] = 0x0140;
-			break;
-		default:
-			// Sony Corp.
-			info->vendor_id[i] = 0x054C;
-			// PlayStation 3 Controller
-			info->product_id[i] = 0x0268;
-			break;
+			// Fallback to defaults
+
+			input::product_info product;
+
+			switch (pads[i]->m_class_type)
+			{
+			case CELL_PAD_PCLASS_TYPE_GUITAR:
+				product = input::get_product_info(input::product_type::red_octane_gh_guitar);
+				break;
+			case CELL_PAD_PCLASS_TYPE_DRUM:
+				product = input::get_product_info(input::product_type::red_octane_gh_drum_kit);
+				break;
+			case CELL_PAD_PCLASS_TYPE_DJ:
+				product = input::get_product_info(input::product_type::dj_hero_turntable);
+				break;
+			case CELL_PAD_PCLASS_TYPE_DANCEMAT:
+				product = input::get_product_info(input::product_type::dance_dance_revolution_mat);
+				break;
+			case CELL_PAD_PCLASS_TYPE_NAVIGATION:
+			case CELL_PAD_PCLASS_TYPE_STANDARD:
+			default:
+				product = input::get_product_info(input::product_type::playstation_3_controller);
+				break;
+			}
+
+			info->vendor_id[i] = product.vendor_id;
+			info->product_id[i] = product.product_id;
+		}
+		else
+		{
+			info->vendor_id[i] = pads[i]->m_vendor_id;
+			info->product_id[i] = pads[i]->m_product_id;
 		}
 	}
 
@@ -927,8 +924,19 @@ error_code cellPadLddRegisterController()
 	if (handle < 0)
 		return CELL_PAD_ERROR_TOO_MANY_DEVICES;
 
+	const auto product = input::get_product_info(input::product_type::playstation_3_controller);
+
 	auto& pads = handler->GetPads();
-	pads[handle]->Init(CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER, CELL_PAD_CAPABILITY_PS3_CONFORMITY, CELL_PAD_DEV_TYPE_LDD, 0);
+	pads[handle]->Init
+	(
+		CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER,
+		CELL_PAD_CAPABILITY_PS3_CONFORMITY,
+		CELL_PAD_DEV_TYPE_LDD,
+		CELL_PAD_PCLASS_TYPE_STANDARD,
+		product.pclass_profile,
+		product.vendor_id,
+		product.product_id
+	);
 	config->port_setting[handle] = 0;
 
 	return not_an_error(handle);

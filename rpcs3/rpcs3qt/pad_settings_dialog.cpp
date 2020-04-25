@@ -15,6 +15,7 @@
 
 #include "Emu/Io/Null/NullPadHandler.h"
 
+#include "Input/product_info.h"
 #include "Input/keyboard_pad_handler.h"
 #include "Input/ds3_pad_handler.h"
 #include "Input/ds4_pad_handler.h"
@@ -186,6 +187,8 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	ui->chooseClass->addItem(tr("DJ"));             // CELL_PAD_PCLASS_TYPE_DJ         = 0x03,
 	ui->chooseClass->addItem(tr("Dance Mat"));      // CELL_PAD_PCLASS_TYPE_DANCEMAT   = 0x04,
 	ui->chooseClass->addItem(tr("Navigation"));     // CELL_PAD_PCLASS_TYPE_NAVIGATION = 0x05,
+
+	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &pad_settings_dialog::HandleDeviceClassChange);
 
 	// Initialize configurable buttons
 	InitButtons();
@@ -527,6 +530,20 @@ void pad_settings_dialog::ReloadButtons()
 
 	ui->chooseClass->setCurrentIndex(m_handler_cfg.device_class_type);
 
+	// Trigger the change manually in case that the class dropdown didn't fire an event
+	HandleDeviceClassChange(ui->chooseClass->currentIndex());
+
+	const auto products = input::get_products_by_class(m_handler_cfg.device_class_type);
+
+	for (size_t i = 0; i < products.size(); i++)
+	{
+		if (products[i].vendor_id == m_handler_cfg.vendor_id && products[i].product_id == m_handler_cfg.product_id)
+		{
+			ui->chooseProduct->setCurrentIndex(static_cast<int>(i));
+			break;
+		}
+	}
+
 	// Enable Mouse Deadzones
 	std::vector<std::string> mouse_dz_range_x = m_handler_cfg.mouse_deadzone_x.to_list();
 	ui->mouse_dz_x->setRange(std::stoi(mouse_dz_range_x.front()), std::stoi(mouse_dz_range_x.back()));
@@ -620,6 +637,7 @@ void pad_settings_dialog::ReactivateButtons()
 	ui->chooseHandler->setFocusPolicy(Qt::WheelFocus);
 	ui->chooseDevice->setFocusPolicy(Qt::WheelFocus);
 	ui->chooseClass->setFocusPolicy(Qt::WheelFocus);
+	ui->chooseProduct->setFocusPolicy(Qt::WheelFocus);
 }
 
 void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y)
@@ -926,6 +944,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	ui->chooseHandler->setFocusPolicy(Qt::ClickFocus);
 	ui->chooseDevice->setFocusPolicy(Qt::ClickFocus);
 	ui->chooseClass->setFocusPolicy(Qt::ClickFocus);
+	ui->chooseProduct->setFocusPolicy(Qt::ClickFocus);
 
 	m_last_pos = QCursor::pos();
 
@@ -1086,6 +1105,7 @@ void pad_settings_dialog::ChangeInputType()
 	bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && ui->chooseDevice->count() > 0);
 	ui->chooseDevice->setEnabled(config_enabled);
 	ui->chooseClass->setEnabled(config_enabled);
+	ui->chooseProduct->setEnabled(config_enabled);
 
 	if (config_enabled)
 	{
@@ -1212,6 +1232,64 @@ void pad_settings_dialog::ChangeProfile()
 	}
 }
 
+void pad_settings_dialog::HandleDeviceClassChange(int index)
+{
+	if (index < 0)
+	{
+		return;
+	}
+
+	ui->chooseProduct->clear();
+
+	for (const auto& product : input::get_products_by_class(index))
+	{
+		switch (product.type)
+		{
+		default:
+		case input::product_type::playstation_3_controller:
+		{
+			ui->chooseProduct->addItem(tr("PS3 Controller", "PlayStation 3 Controller"), static_cast<int>(product.type));
+			break;
+		}
+		case input::product_type::dance_dance_revolution_mat:
+		{
+			ui->chooseProduct->addItem(tr("Dance Dance Revolution", "Dance Dance Revolution Mat"), static_cast<int>(product.type));
+			break;
+		}
+		case input::product_type::dj_hero_turntable:
+		{
+			ui->chooseProduct->addItem(tr("DJ Hero Turntable", "DJ Hero Turntable"), static_cast<int>(product.type));
+			break;
+		}
+		case input::product_type::harmonix_rockband_drum_kit:
+		{
+			ui->chooseProduct->addItem(tr("Rockband", "Harmonix Rockband Drum Kit"), static_cast<int>(product.type));
+			break;
+		}
+		case input::product_type::harmonix_rockband_guitar:
+		{
+			ui->chooseProduct->addItem(tr("Rockband", "Harmonix Rockband Guitar"), static_cast<int>(product.type));
+			break;
+		}
+		case input::product_type::red_octane_gh_drum_kit:
+		{
+			ui->chooseProduct->addItem(tr("Guitar Hero", "RedOctane Guitar Hero Drum Kit"), static_cast<int>(product.type));
+			break;
+		}
+		case input::product_type::red_octane_gh_guitar:
+		{
+			ui->chooseProduct->addItem(tr("Guitar Hero", "RedOctane Guitar Hero Guitar"), static_cast<int>(product.type));
+			break;
+		}
+		case input::product_type::rock_revolution_drum_kit:
+		{
+			ui->chooseProduct->addItem(tr("Rock Revolution", "Rock Revolution Drum Controller"), static_cast<int>(product.type));
+			break;
+		}
+		}
+	}
+}
+
 void pad_settings_dialog::RefreshInputTypes()
 {
 	const auto& handler = g_cfg_input.player[m_tabs->currentIndex()]->handler;
@@ -1263,6 +1341,11 @@ void pad_settings_dialog::SaveProfile()
 	}
 
 	m_handler_cfg.device_class_type.set(ui->chooseClass->currentIndex());
+
+	const auto info = input::get_product_info(static_cast<input::product_type>(ui->chooseProduct->currentData().toInt()));
+
+	m_handler_cfg.vendor_id.set(info.vendor_id);
+	m_handler_cfg.product_id.set(info.product_id);
 
 	m_handler_cfg.save();
 }

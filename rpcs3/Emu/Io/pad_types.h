@@ -88,6 +88,68 @@ enum ButtonDataOffset
 	CELL_PAD_BTN_OFFSET_SENSOR_G = 23,
 };
 
+enum CellPadPeriphGuitarBtnDataOffset
+{
+	// Basic
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_1      = 24,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_2      = 25,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_3      = 26,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_4      = 27,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_5      = 28,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_STRUM_UP    = 29,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_STRUM_DOWN  = 30,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_WHAMMYBAR   = 31, // 128-255
+
+	// Optional
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H1     = 32, // ROCKBAND Stratocaster
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H2     = 33,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H3     = 34,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H4     = 35,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H5     = 36,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_5WAY_EFFECT = 37,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_TILT_SENS   = 38,
+};
+
+enum CellPadPeriphDrumBtnDataOffset
+{
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_SNARE     = 24,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM       = 25,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM2      = 26,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM_FLOOR = 27,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_KICK      = 28,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_HiHAT = 29,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_CRASH = 30,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_RIDE  = 31,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_KICK2     = 32,
+};
+
+enum CellPadPeriphDJBtnDataOffset
+{
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_ATTACK     = 24,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_CROSSFADER = 25,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_DSP_DIAL   = 26,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM1    = 27,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM2    = 28,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM3    = 29,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_PLATTER    = 30,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM1    = 31,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM2    = 32,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM3    = 33,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_PLATTER    = 34,
+};
+
+enum CellPadPeriphDanceMatBtnDataOffset
+{
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_CIRCLE   = 24,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_CROSS    = 25,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_TRIANGLE = 26,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_SQUARE   = 27,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_RIGHT    = 28,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_LEFT     = 29,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_UP       = 30,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_DOWN     = 31,
+};
+
 enum
 {
 	CELL_PAD_ACTUATOR_MAX = 2,
@@ -180,6 +242,10 @@ struct Pad
 	u32 m_device_capability;
 	u32 m_device_type;
 	u32 m_class_type;
+	u32 m_class_profile;
+
+	u16 m_vendor_id;
+	u16 m_product_id;
 
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state;
@@ -226,12 +292,15 @@ struct Pad
 	bool ldd = false;
 	u8 ldd_data[132] = {};
 
-	void Init(u32 port_status, u32 device_capability, u32 device_type, u32 class_type)
+	void Init(u32 port_status, u32 device_capability, u32 device_type, u32 class_type, u32 class_profile, u16 vendor_id, u16 product_id)
 	{
 		m_port_status = port_status;
 		m_device_capability = device_capability;
 		m_device_type = device_type;
 		m_class_type = class_type;
+		m_class_profile = class_profile;
+		m_vendor_id = vendor_id;
+		m_product_id = product_id;
 	}
 
 	Pad(u32 port_status, u32 device_capability, u32 device_type)
@@ -240,6 +309,9 @@ struct Pad
 		, m_device_capability(device_capability)
 		, m_device_type(device_type)
 		, m_class_type(0)
+		, m_class_profile(0)
+		, m_vendor_id(0)
+		, m_product_id(0)
 		, m_cable_state(0)
 		, m_battery_level(0)
 

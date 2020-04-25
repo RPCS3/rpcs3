@@ -2,6 +2,7 @@
 #include "PadHandler.h"
 #include "Emu/System.h"
 #include "Input/pad_thread.h"
+#include "Input/product_info.h"
 
 cfg_input g_cfg_input;
 
@@ -429,12 +430,25 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string
 
 	std::array<u32, button::button_count> mapping = get_mapped_key_codes(pad_device, profile);
 
+	u32 pclass_profile = 0x0;
+
+	for (const auto product : input::get_products_by_class(profile->device_class_type))
+	{
+		if (product.vendor_id == profile->vendor_id && product.product_id == profile->product_id)
+		{
+			pclass_profile = product.pclass_profile;
+		}
+	}
+
 	pad->Init
 	(
 		CELL_PAD_STATUS_DISCONNECTED,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD,
-		profile->device_class_type
+		profile->device_class_type,
+		pclass_profile,
+		profile->vendor_id,
+		profile->product_id
 	);
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::up], CELL_PAD_CTRL_UP);

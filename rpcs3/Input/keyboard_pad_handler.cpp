@@ -1,5 +1,6 @@
 ﻿#include "keyboard_pad_handler.h"
 #include "Emu/Io/pad_config.h"
+#include "Input/product_info.h"
 
 #include <QApplication>
 
@@ -606,13 +607,26 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 		return key;
 	};
 
-	//Fixed assign change, default is both sensor and press off
+	u32 pclass_profile = 0x0;
+
+	for (const auto product : input::get_products_by_class(p_profile->device_class_type))
+	{
+		if (product.vendor_id == p_profile->vendor_id && product.product_id == p_profile->product_id)
+		{
+			pclass_profile = product.pclass_profile;
+		}
+	}
+
+	// Fixed assign change, default is both sensor and press off
 	pad->Init
 	(
 		CELL_PAD_STATUS_DISCONNECTED,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD,
-		p_profile->device_class_type
+		p_profile->device_class_type,
+		pclass_profile,
+		p_profile->vendor_id,
+		p_profile->product_id
 	);
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->left),     CELL_PAD_CTRL_LEFT);
