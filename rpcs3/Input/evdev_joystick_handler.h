@@ -84,6 +84,13 @@ class evdev_joystick_handler final : public PadHandlerBase
 		// Xbox One S Controller returns some buttons as key when connected through bluetooth
 		{ KEY_BACK            , "Back Key"    },
 		{ KEY_HOMEPAGE        , "Homepage Key"},
+		// Wii/Wii U Controller drivers use the following few keys
+		{ KEY_UP              , "Up Key"      },
+		{ KEY_LEFT            , "Left Key"    },
+		{ KEY_RIGHT           , "Right Key"   },
+		{ KEY_DOWN            , "Down Key"    },
+		{ KEY_NEXT            , "Next Key"    },
+		{ KEY_PREVIOUS        , "Previous Key"},
 		//{ BTN_MISC            , "Misc"        }, same as BTN_0
 		{ BTN_0               , "0"           },
 		{ BTN_1               , "1"           },
