@@ -434,7 +434,6 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 
 	const auto& pads = handler->GetPads();
 
-	// TODO: Support other types of controllers
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
 	{
 		if (i >= config->max_connect)
@@ -446,7 +445,7 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 		info->device_capability[i] = pads[i]->m_device_capability;
 		info->device_type[i] = pads[i]->m_device_type;
 		info->pclass_type[i] = pads[i]->m_class_type;
-		info->pclass_profile[i] = 0x0;
+		info->pclass_profile[i] = pads[i]->m_class_profile;
 	}
 
 	return CELL_OK;
@@ -479,10 +478,10 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	// todo: support for 'unique' controllers, which goes in offsets 24+ in padData
 	data->pclass_type = pad->m_class_type;
-	data->pclass_profile = 0x0;
+	data->pclass_profile = pad->m_class_profile;
 
+	// TODO: support for 'unique' controllers, which goes in offsets 24+ in padData (CELL_PAD_PCLASS_BTN_OFFSET)
 	return cellPadGetData(port_no, data.ptr(&CellPadPeriphData::cellpad_data));
 }
 
@@ -934,6 +933,7 @@ error_code cellPadLddRegisterController()
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY,
 		CELL_PAD_DEV_TYPE_LDD,
 		CELL_PAD_PCLASS_TYPE_STANDARD,
+		product.pclass_profile,
 		product.vendor_id,
 		product.product_id
 	);
