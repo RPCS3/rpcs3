@@ -101,7 +101,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<video_aspect> aspect_ratio{ this, "Aspect ratio", video_aspect::_16_9 };
 		cfg::_enum<frame_limit_type> frame_limit{ this, "Frame limit", frame_limit_type::none, true };
 		cfg::_enum<msaa_level> antialiasing_level{ this, "MSAA", msaa_level::_auto };
-		cfg::_enum<shader_interpreter_mode> shader_interpreter_mode{ this, "Enable shader interpreter", shader_interpreter_mode::disabled };
+		cfg::_enum<shader_interpreter_mode> interpreter_mode{ this, "Shader interpreter mode", shader_interpreter_mode::disabled };
 
 		cfg::_bool write_color_buffers{ this, "Write Color Buffers" };
 		cfg::_bool write_depth_buffer{ this, "Write Depth Buffer" };
@@ -132,7 +132,6 @@ struct cfg_root : cfg::node
 		cfg::_bool enable_3d{ this, "Enable 3D", false };
 		cfg::_int<1, 8> consecutive_frames_to_draw{ this, "Consecutive Frames To Draw", 1, true};
 		cfg::_int<1, 8> consecutive_frames_to_skip{ this, "Consecutive Frames To Skip", 1, true};
-		cfg::_bool enable_shader_interpreter{ this, "Enable Shader Interpreter", true };
 		cfg::_int<50, 800> resolution_scale_percent{ this, "Resolution Scale", 100 };
 		cfg::_int<0, 16> anisotropic_level_override{ this, "Anisotropic Filter Override", 0, true };
 		cfg::_int<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16 };

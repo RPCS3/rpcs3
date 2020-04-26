@@ -27,7 +27,7 @@ namespace gl
 					return false;
 				}
 
-				if (allocated.size() == num_used)
+				if (allocated.size() == unsigned(num_used))
 				{
 					allocated.push_back(value);
 				}
