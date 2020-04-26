@@ -1718,32 +1718,20 @@ bool spu_thread::process_mfc_cmd()
 	{
 		const u32 addr = ch_mfc_cmd.eal & -128;
 		const auto& data = vm::_ref<decltype(rdata)>(addr);
-		auto& dst = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
-		u64 ntime;
 
-		const bool is_polling = false; // TODO
-
-		if (is_polling)
+		if (addr == raddr && g_cfg.core.spu_loop_detection && rtime == vm::reservation_acquire(addr, 128) && cmp_rdata(rdata, data))
 		{
-			rtime = vm::reservation_acquire(addr, 128) & -128;
-
-			while (cmp_rdata(rdata, data) && (vm::reservation_acquire(addr, 128)) == rtime)
+			if (g_use_rtm)
 			{
 				state += cpu_flag::wait;
-
-				if (is_stopped())
-				{
-					break;
-				}
-
-				thread_ctrl::wait_for(500);
 			}
 
-			if (test_stopped())
-			{
-				return false;
-			}
+			// Spinning, might as well yield cpu resources
+			std::this_thread::yield();
 		}
+
+		auto& dst = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
+		u64 ntime;
 
 		for (u64 i = 0;; [&]()
 		{
