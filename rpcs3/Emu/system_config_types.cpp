@@ -388,6 +388,7 @@ void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
 void fmt_class_string<shader_interpreter_mode>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](shader_interpreter_mode value)

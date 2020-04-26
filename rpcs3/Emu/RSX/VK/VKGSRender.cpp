@@ -465,7 +465,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
 	m_texture_upload_buffer_ring_info.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
 
-	if (g_cfg.video.shader_interpreter_mode != shader_interpreter_mode::disabled)
+	if (g_cfg.video.interpreter_mode != shader_interpreter_mode::disabled)
 	{
 		m_vertex_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 64 * 0x100000, "vertex instructions buffer", 512 * 16);
 		m_fragment_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 64 * 0x100000, "fragment instructions buffer", 2048);
@@ -550,7 +550,7 @@ VKGSRender::VKGSRender() : GSRender()
 
 	m_occlusion_query_pool.initialize(*m_current_command_buffer);
 
-	if (g_cfg.video.shader_interpreter_mode != shader_interpreter_mode::disabled)
+	if (g_cfg.video.interpreter_mode != shader_interpreter_mode::disabled)
 	{
 		m_shader_interpreter.init(*m_device);
 	}
@@ -1583,7 +1583,7 @@ bool VKGSRender::load_program()
 		}
 	}
 
-	if (g_cfg.video.shader_interpreter_mode != shader_interpreter_mode::forced) [[likely]]
+	if (g_cfg.video.interpreter_mode != shader_interpreter_mode::forced) [[likely]]
 	{
 		vk::enter_uninterruptible();
 
@@ -1621,7 +1621,7 @@ bool VKGSRender::load_program()
 		m_program = nullptr;
 	}
 
-	if (!m_program && g_cfg.video.shader_interpreter_mode != shader_interpreter_mode::disabled)
+	if (!m_program && g_cfg.video.interpreter_mode != shader_interpreter_mode::disabled)
 	{
 		if (!m_shader_interpreter.is_interpreter(old_program))
 		{

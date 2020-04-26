@@ -222,7 +222,7 @@ void GLGSRender::on_init_thread()
 	m_texture_parameters_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_vertex_layout_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
-	if (g_cfg.video.shader_interpreter_mode != shader_interpreter_mode::disabled)
+	if (g_cfg.video.interpreter_mode != shader_interpreter_mode::disabled)
 	{
 		m_vertex_instructions_buffer->create(gl::buffer::target::ssbo, 16 * 0x100000);
 		m_fragment_instructions_buffer->create(gl::buffer::target::ssbo, 16 * 0x100000);
@@ -610,7 +610,7 @@ void GLGSRender::clear_surface(u32 arg)
 
 bool GLGSRender::load_program()
 {
-	const auto interpreter_mode = g_cfg.video.shader_interpreter_mode.get();
+	const auto interpreter_mode = g_cfg.video.interpreter_mode.get();
 	if (m_interpreter_state = (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits))
 	{
 		get_current_fragment_program(fs_sampler_state);
