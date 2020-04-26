@@ -41,8 +41,42 @@ static FORCE_INLINE bool cmp_rdata(const decltype(spu_thread::rdata)& lhs, const
 	return !(r._u64[0] | r._u64[1]);
 }
 
+static FORCE_INLINE void mov_rdata_avx(__m256i* dst, const __m256i* src)
+{
+#if defined(_MSC_VER) || defined(__AVX__)
+	_mm256_storeu_si256(dst + 0, _mm256_loadu_si256(src + 0));
+	_mm256_storeu_si256(dst + 1, _mm256_loadu_si256(src + 1));
+	_mm256_storeu_si256(dst + 2, _mm256_loadu_si256(src + 2));
+	_mm256_storeu_si256(dst + 3, _mm256_loadu_si256(src + 3));
+#else
+	__asm__(
+		"vmovdqu 0*32(%[src]), %%ymm0;" // load
+		"vmovdqu %%ymm0, 0*32(%[dst]);" // store
+		"vmovdqu 1*32(%[src]), %%ymm0;"
+		"vmovdqu %%ymm0, 1*32(%[dst]);"
+		"vmovdqu 2*32(%[src]), %%ymm0;"
+		"vmovdqu %%ymm0, 2*32(%[dst]);"
+		"vmovdqu 3*32(%[src]), %%ymm0;"
+		"vmovdqu %%ymm0, 3*32(%[dst]);"
+		"vzeroupper"
+		:
+		: [src] "r" (src)
+		, [dst] "r" (dst)
+		: "xmm0"
+	);
+#endif
+}
+
 static FORCE_INLINE void mov_rdata(decltype(spu_thread::rdata)& dst, const decltype(spu_thread::rdata)& src)
 {
+#ifndef __AVX__
+	if (s_tsx_avx) [[likely]]
+#endif
+	{
+		mov_rdata_avx(reinterpret_cast<__m256i*>(&dst), reinterpret_cast<const __m256i*>(&src));
+		return;
+	}
+
 	{
 		const v128 data0 = src[0];
 		const v128 data1 = src[1];
