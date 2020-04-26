@@ -1511,11 +1511,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 				// Split locking + transfer in two parts (before 64K border, and after it)
 				const auto lock = vm::range_lock(range_addr, nexta);
-#ifdef __GNUG__
-				std::memcpy(dst, src, size0);
-				dst += size0;
-				src += size0;
-#else
+
 				while (size0 >= 128)
 				{
 					mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));
@@ -1533,16 +1529,13 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					src += 16;
 					size0 -= 16;
 				}
-#endif
+
 				lock->release(0);
 				range_addr = nexta;
 			}
 
 			const auto lock = vm::range_lock(range_addr, range_end);
 
-#ifdef __GNUG__
-			std::memcpy(dst, src, size);
-#else
 			while (size >= 128)
 			{
 				mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));
@@ -1560,7 +1553,6 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				src += 16;
 				size -= 16;
 			}
-#endif
 
 			lock->release(0);
 			break;
@@ -1594,9 +1586,6 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	}
 	default:
 	{
-#ifdef __GNUG__
-		std::memcpy(dst, src, size);
-#else
 		while (size >= 128)
 		{
 			mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));
@@ -1614,7 +1603,6 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			src += 16;
 			size -= 16;
 		}
-#endif
 
 		break;
 	}
