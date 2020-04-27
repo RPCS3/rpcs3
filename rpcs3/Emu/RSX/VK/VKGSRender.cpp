@@ -465,7 +465,9 @@ VKGSRender::VKGSRender() : GSRender()
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
 	m_texture_upload_buffer_ring_info.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
 
-	if (g_cfg.video.interpreter_mode != shader_interpreter_mode::disabled)
+	const auto shadermode = g_cfg.video.shadermode.get();
+
+	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 	{
 		m_vertex_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 64 * 0x100000, "vertex instructions buffer", 512 * 16);
 		m_fragment_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 64 * 0x100000, "fragment instructions buffer", 2048);
@@ -550,7 +552,7 @@ VKGSRender::VKGSRender() : GSRender()
 
 	m_occlusion_query_pool.initialize(*m_current_command_buffer);
 
-	if (g_cfg.video.interpreter_mode != shader_interpreter_mode::disabled)
+	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 	{
 		m_shader_interpreter.init(*m_device);
 	}
@@ -1583,15 +1585,17 @@ bool VKGSRender::load_program()
 		}
 	}
 
-	if (g_cfg.video.interpreter_mode != shader_interpreter_mode::forced) [[likely]]
+	const auto shadermode = g_cfg.video.shadermode.get();
+
+	if (shadermode != shader_mode::interpreter_only) [[likely]]
 	{
 		vk::enter_uninterruptible();
 
-		//Load current program from buffer
+		// Load current program from buffer
 		vertex_program.skip_vertex_input_check = true;
 		fragment_program.unnormalized_coords = 0;
 		m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
-			!g_cfg.video.disable_asynchronous_shader_compiler, true, *m_device, pipeline_layout).get();
+			shadermode != shader_mode::recompiler, true, *m_device, pipeline_layout).get();
 
 		vk::leave_uninterruptible();
 
@@ -1621,7 +1625,7 @@ bool VKGSRender::load_program()
 		m_program = nullptr;
 	}
 
-	if (!m_program && g_cfg.video.interpreter_mode != shader_interpreter_mode::disabled)
+	if (!m_program && (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only))
 	{
 		if (!m_shader_interpreter.is_interpreter(old_program))
 		{

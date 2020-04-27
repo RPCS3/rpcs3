@@ -389,15 +389,16 @@ void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<shader_interpreter_mode>::format(std::string& out, u64 arg)
+void fmt_class_string<shader_mode>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](shader_interpreter_mode value)
+	format_enum(out, arg, [](shader_mode value)
 	{
 		switch (value)
 		{
-		case shader_interpreter_mode::disabled: return "Disabled";
-		case shader_interpreter_mode::enabled: return "Enabled";
-		case shader_interpreter_mode::forced: return "Forced";
+		case shader_mode::recompiler: return "Shader Recompiler";
+		case shader_mode::async_recompiler: return "Async Shader Recompiler";
+		case shader_mode::async_with_interpreter: return "Async with Shader Interpreter";
+		case shader_mode::interpreter_only: return "Shader Interpreter only";
 		}
 
 		return unknown;

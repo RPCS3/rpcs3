@@ -432,6 +432,22 @@
              </layout>
             </widget>
            </item>
+           <item>
+            <spacer name="gpu_tab_layout_right_spacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::MinimumExpanding</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
           </layout>
          </item>
          <item>
@@ -594,90 +610,152 @@
              </item>
             </layout>
            </item>
+           <item>
+            <spacer name="gpu_tab_layout_middle_spacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::MinimumExpanding</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
           </layout>
          </item>
          <item>
-          <widget class="QGroupBox" name="gb_additional_settings">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
+          <layout class="QVBoxLayout" name="gpuTabLayoutRight">
+           <property name="rightMargin">
+            <number>12</number>
            </property>
-           <property name="title">
-            <string>Additional Settings</string>
+           <property name="bottomMargin">
+            <number>12</number>
            </property>
-           <property name="alignment">
-            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-           </property>
-           <layout class="QVBoxLayout" name="gb_additional_settings_layout">
-            <item>
-             <widget class="QCheckBox" name="dumpColor">
-              <property name="text">
-               <string>Write Color Buffers</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="scrictModeRendering">
-              <property name="text">
-               <string>Strict Rendering Mode</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="vsync">
-              <property name="text">
-               <string>VSync</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="stretchToDisplayArea">
-              <property name="text">
-               <string>Stretch To Display Area</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="disableVertexCache">
-              <property name="text">
-               <string>Disable Vertex Cache</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="multithreadedRSX">
-              <property name="text">
-               <string>Multithreaded RSX</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="disableAsyncShaders">
-              <property name="text">
-               <string>Disable Async Shader Compiler</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="additional_settings_spacer">
-              <property name="orientation">
-               <enum>Qt::Vertical</enum>
-              </property>
-              <property name="sizeType">
-               <enum>QSizePolicy::MinimumExpanding</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-           </layout>
-          </widget>
+           <item>
+            <widget class="QGroupBox" name="gb_shader_mode">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>123</height>
+              </size>
+             </property>
+             <property name="title">
+              <string>Shader Mode</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout">
+              <item>
+               <widget class="QRadioButton" name="rb_legacy_recompiler">
+                <property name="text">
+                 <string notr="true">Legacy (single threaded)</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="rb_async_recompiler">
+                <property name="text">
+                 <string notr="true">Async (multi threaded)</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="rb_async_with_shader_interpreter">
+                <property name="text">
+                 <string notr="true">Async with Shader Interpreter</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="rb_shader_interpreter_only">
+                <property name="text">
+                 <string notr="true">Shader Interpreter only</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_additional_settings">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="title">
+              <string>Additional Settings</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             </property>
+             <layout class="QVBoxLayout" name="gb_additional_settings_layout">
+              <item>
+               <widget class="QCheckBox" name="dumpColor">
+                <property name="text">
+                 <string>Write Color Buffers</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="scrictModeRendering">
+                <property name="text">
+                 <string>Strict Rendering Mode</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="vsync">
+                <property name="text">
+                 <string>VSync</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="stretchToDisplayArea">
+                <property name="text">
+                 <string>Stretch To Display Area</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="disableVertexCache">
+                <property name="text">
+                 <string>Disable Vertex Cache</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="multithreadedRSX">
+                <property name="text">
+                 <string>Multithreaded RSX</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="additional_settings_spacer">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::MinimumExpanding</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </item>

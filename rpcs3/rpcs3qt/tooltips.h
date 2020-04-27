@@ -139,9 +139,13 @@ public:
 		const QString vsync                      = tr("By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.");
 		const QString strict_rendering_mode      = tr("Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.");
 		const QString disable_vertex_cache       = tr("Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.");
-		const QString disable_async_shaders      = tr("Disables asynchronous shader compilation.\nFixes missing graphics while shaders are compiling but introduces stuttering.\nDisable if you do not want to deal with graphics pop-in, or for testing before filing any bug reports.");
 		const QString stretch_to_display_area    = tr("Overrides the aspect ratio and stretches the image to the full display area.");
 		const QString multithreaded_rsx          = tr("Offloads some RSX operations to a secondary thread.\nMay improve performance for some high-core processors.\nMay cause slowdown in some situations due to the extra worker thread load.");
+
+		const QString legacy_shader_recompiler        = tr("Disables asynchronous shader compilation.\nFixes missing graphics while shaders are compiling but introduces severe stuttering or lag.\nUse this if you do not want to deal with graphics pop-in, or for testing before filing any bug reports.");
+		const QString async_shader_recompiler         = tr("This is the recommended option.\nIf a shader is not found in the cache, nothing will be rendered for this shader until it has compiled.\nYou may experience graphics pop-in.");
+		const QString async_with_shader_interpreter   = tr("Hybrid rendering mode.\nIf a shader is not found in the cache, the interpreter will be used to render approximated graphics for this shader until it has compiled.");
+		const QString shader_interpreter_only         = tr("All rendering is handled by the interpreter with no attempt to compile native shaders.\nThis mode is very slow and experimental.");
 
 		// gui
 
