@@ -69,7 +69,9 @@ void GLGSRender::on_init_thread()
 	// This allows context sharing to work (both GLRCs passed to wglShareLists have to be idle or you get ERROR_BUSY)
 	m_context = m_frame->make_context();
 
-	if (!g_cfg.video.disable_asynchronous_shader_compiler)
+	const auto shadermode = g_cfg.video.shadermode.get();
+
+	if (shadermode == shader_mode::async_recompiler || shadermode == shader_mode::async_with_interpreter)
 	{
 		m_decompiler_context = m_frame->make_context();
 	}
@@ -222,7 +224,7 @@ void GLGSRender::on_init_thread()
 	m_texture_parameters_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_vertex_layout_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
-	if (g_cfg.video.interpreter_mode != shader_interpreter_mode::disabled)
+	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 	{
 		m_vertex_instructions_buffer->create(gl::buffer::target::ssbo, 16 * 0x100000);
 		m_fragment_instructions_buffer->create(gl::buffer::target::ssbo, 16 * 0x100000);
@@ -610,7 +612,8 @@ void GLGSRender::clear_surface(u32 arg)
 
 bool GLGSRender::load_program()
 {
-	const auto interpreter_mode = g_cfg.video.interpreter_mode.get();
+	const auto shadermode = g_cfg.video.shadermode.get();
+
 	if (m_interpreter_state = (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits))
 	{
 		get_current_fragment_program(fs_sampler_state);
@@ -628,7 +631,7 @@ bool GLGSRender::load_program()
 			return true;
 		}
 
-		if (interpreter_mode == shader_interpreter_mode::forced)
+		if (shadermode == shader_mode::interpreter_only)
 		{
 			m_program = m_shader_interpreter.get(current_fp_metadata);
 			return true;
@@ -636,11 +639,11 @@ bool GLGSRender::load_program()
 	}
 
 	const bool was_interpreter = m_shader_interpreter.is_interpreter(m_program);
-	if (interpreter_mode != shader_interpreter_mode::forced) [[likely]]
+	if (shadermode != shader_mode::interpreter_only) [[likely]]
 	{
 		void* pipeline_properties = nullptr;
 		m_program = m_prog_buffer.get_graphics_pipeline(current_vertex_program, current_fragment_program, pipeline_properties,
-			!g_cfg.video.disable_asynchronous_shader_compiler, true).get();
+			shadermode != shader_mode::recompiler, true).get();
 
 		if (m_prog_buffer.check_cache_missed())
 		{
@@ -673,7 +676,7 @@ bool GLGSRender::load_program()
 		m_program = nullptr;
 	}
 
-	if (!m_program && interpreter_mode != shader_interpreter_mode::disabled)
+	if (!m_program && (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only))
 	{
 		// Fall back to interpreter
 		m_program = m_shader_interpreter.get(current_fp_metadata);

@@ -561,7 +561,9 @@ namespace rsx
 
 		g_fxo->init<named_thread>("RSX Decompiler Thread", [this]
 		{
-			if (g_cfg.video.disable_asynchronous_shader_compiler)
+			const auto shadermode = g_cfg.video.shadermode.get();
+
+			if (shadermode != shader_mode::async_recompiler && shadermode != shader_mode::async_with_interpreter)
 			{
 				// Die
 				return;

@@ -217,7 +217,9 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resou
 
 		ctx->buffer_views_to_clean.clear();
 
-		if (g_cfg.video.interpreter_mode != shader_interpreter_mode::disabled)
+		const auto shadermode = g_cfg.video.shadermode.get();
+
+		if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 		{
 			// TODO: This is jank AF
 			m_vertex_instructions_buffer.reset_allocation_stats();

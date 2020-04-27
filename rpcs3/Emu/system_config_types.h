@@ -180,9 +180,10 @@ enum np_psn_status
 	fake,
 };
 
-enum class shader_interpreter_mode
+enum class shader_mode
 {
-	disabled,
-	enabled,
-	forced
+	recompiler,
+	async_recompiler,
+	async_with_interpreter,
+	interpreter_only
 };
