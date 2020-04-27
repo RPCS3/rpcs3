@@ -43,11 +43,12 @@ static FORCE_INLINE bool cmp_rdata(const decltype(spu_thread::rdata)& lhs, const
 
 static FORCE_INLINE void mov_rdata_avx(__m256i* dst, const __m256i* src)
 {
-#if defined(_MSC_VER) || defined(__AVX__)
-	_mm256_storeu_si256(dst + 0, _mm256_loadu_si256(src + 0));
-	_mm256_storeu_si256(dst + 1, _mm256_loadu_si256(src + 1));
-	_mm256_storeu_si256(dst + 2, _mm256_loadu_si256(src + 2));
-	_mm256_storeu_si256(dst + 3, _mm256_loadu_si256(src + 3));
+#if defined(_MSC_VER) || defined(__AVX2__)
+	// In AVX-only mode, for some older CPU models, GCC/Clang may emit 128-bit loads/stores instead.
+	_mm256_store_si256(dst + 0, _mm256_loadu_si256(src + 0));
+	_mm256_store_si256(dst + 1, _mm256_loadu_si256(src + 1));
+	_mm256_store_si256(dst + 2, _mm256_loadu_si256(src + 2));
+	_mm256_store_si256(dst + 3, _mm256_loadu_si256(src + 3));
 #else
 	__asm__(
 		"vmovdqu 0*32(%[src]), %%ymm0;" // load
@@ -58,11 +59,17 @@ static FORCE_INLINE void mov_rdata_avx(__m256i* dst, const __m256i* src)
 		"vmovdqu %%ymm0, 2*32(%[dst]);"
 		"vmovdqu 3*32(%[src]), %%ymm0;"
 		"vmovdqu %%ymm0, 3*32(%[dst]);"
-		"vzeroupper"
+#ifndef __AVX__
+		"vzeroupper" // Don't need in AVX mode (should be emitted automatically)
+#endif
 		:
 		: [src] "r" (src)
 		, [dst] "r" (dst)
-		: "xmm0"
+#ifdef __AVX__
+		: "ymm0" // Clobber ymm0 register (acknowledge its modification)
+#else
+		: "xmm0" // ymm0 is "unknown" if not compiled in AVX mode, so clobber xmm0 only
+#endif
 	);
 #endif
 }
@@ -1512,6 +1519,16 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				// Split locking + transfer in two parts (before 64K border, and after it)
 				const auto lock = vm::range_lock(range_addr, nexta);
 
+				// Avoid unaligned stores in mov_rdata_avx
+				if (reinterpret_cast<u64>(dst) & 0x10)
+				{
+					*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+					dst += 16;
+					src += 16;
+					size0 -= 16;
+				}
+
 				while (size0 >= 128)
 				{
 					mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));
@@ -1535,6 +1552,16 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			}
 
 			const auto lock = vm::range_lock(range_addr, range_end);
+
+			// Avoid unaligned stores in mov_rdata_avx
+			if (reinterpret_cast<u64>(dst) & 0x10)
+			{
+				*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+				dst += 16;
+				src += 16;
+				size -= 16;
+			}
 
 			while (size >= 128)
 			{
@@ -1586,6 +1613,16 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	}
 	default:
 	{
+		// Avoid unaligned stores in mov_rdata_avx
+		if (reinterpret_cast<u64>(dst) & 0x10)
+		{
+			*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+			dst += 16;
+			src += 16;
+			size -= 16;
+		}
+
 		while (size >= 128)
 		{
 			mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));

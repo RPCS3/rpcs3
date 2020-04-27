@@ -556,7 +556,7 @@ public:
 
 	// Reservation Data
 	u64 rtime = 0;
-	std::array<v128, 8> rdata{};
+	alignas(64) std::array<v128, 8> rdata{};
 	u32 raddr = 0;
 
 	u32 srr0;
