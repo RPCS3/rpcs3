@@ -2,6 +2,7 @@
 #include "StrFmt.h"
 #include "File.h"
 #include "Emu/system_config.h"
+#include "Thread.h"
 
 #ifdef _WIN32
 #include "windows.h"
@@ -283,36 +284,47 @@ ullong utils::get_tsc_freq()
 			return round_tsc(freq.QuadPart * 1024);
 
 		const ullong timer_freq = freq.QuadPart;
-		Sleep(1);
 #else
 		const ullong timer_freq = 1'000'000'000;
-		ullong sec_base = 0;
-		usleep(200);
 #endif
 
 		// Calibrate TSC
 		constexpr int samples = 40;
 		ullong rdtsc_data[samples];
 		ullong timer_data[samples];
+		ullong error_data[samples];
+
+		// Narrow thread affinity to a single core
+		const u64 old_aff = thread_ctrl::get_thread_affinity_mask();
+		thread_ctrl::set_thread_affinity_mask(old_aff & (0 - old_aff));
+
+#ifndef _WIN32
+		struct timespec ts0;
+		clock_gettime(CLOCK_MONOTONIC, &ts0);
+		ullong sec_base = ts0.tv_sec;
+#endif
 
 		for (int i = 0; i < samples; i++)
 		{
-			rdtsc_data[i] = (_mm_lfence(), __rdtsc());
-
 #ifdef _WIN32
+			Sleep(1);
+			error_data[i] = (_mm_lfence(), __rdtsc());
 			LARGE_INTEGER ctr;
 			QueryPerformanceCounter(&ctr);
+			rdtsc_data[i] = (_mm_lfence(), __rdtsc());
 			timer_data[i] = ctr.QuadPart;
-			Sleep(1);
 #else
+			usleep(200);
+			error_data[i] = (_mm_lfence(), __rdtsc());
 			struct timespec ts;
 			clock_gettime(CLOCK_MONOTONIC, &ts);
-			if (i == 0)
-				sec_base = ts.tv_sec;
+			rdtsc_data[i] = (_mm_lfence(), __rdtsc());
 			timer_data[i] = ts.tv_nsec + (ts.tv_sec - sec_base) * 1'000'000'000;
-			usleep(200);
 #endif
 		}
+
+		// Restore main thread affinity
+		thread_ctrl::set_thread_affinity_mask(old_aff);
 
 		// Compute average TSC
 		ullong acc = 0;
