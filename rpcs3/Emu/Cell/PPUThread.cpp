@@ -1050,8 +1050,6 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 		if ((vm::reservation_acquire(addr, sizeof(T)) & -128) == ppu.rtime) [[likely]]
 		{
-			ppu.test_stopped();
-
 			if (count >= 10) [[unlikely]]
 			{
 				ppu_log.error("%s took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
