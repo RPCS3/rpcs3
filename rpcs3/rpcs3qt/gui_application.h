@@ -4,6 +4,7 @@
 
 #include <QApplication>
 #include <QElapsedTimer>
+#include <QTimer>
 #include <QTranslator>
 
 #include "main_application.h"
@@ -55,12 +56,14 @@ private:
 	void InitializeConnects();
 
 	void StartPlaytime(bool start_playtime);
+	void UpdatePlaytime();
 	void StopPlaytime();
 
 	QTranslator m_translator;
 	QTranslator m_translator_qt;
 	QString m_language_code;
 
+	QTimer m_timer;
 	QElapsedTimer m_timer_playtime;
 
 	std::shared_ptr<emu_settings> m_emu_settings;
