@@ -1045,21 +1045,10 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}())
 	{
-		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-
-		if (ppu.rtime & 127)
-		{
-			if (!(ppu.state & cpu_flag::wait))
-			{
-				ppu.state += cpu_flag::wait;
-			}
-
-			continue;
-		}
-
+		ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & -128;
 		ppu.rdata = data;
 
-		if (vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime) [[likely]]
+		if ((vm::reservation_acquire(addr, sizeof(T)) & -128) == ppu.rtime) [[likely]]
 		{
 			ppu.test_stopped();
 

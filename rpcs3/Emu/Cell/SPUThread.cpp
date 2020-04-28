@@ -1784,9 +1784,9 @@ bool spu_thread::process_mfc_cmd()
 
 		for (u64 i = 0;; [&]()
 		{
-			if (ntime & 127 && g_use_rtm && !(state & cpu_flag::wait))
+			if (is_paused())
 			{
-				state += cpu_flag::wait;
+				check_state();
 			}
 
 			if (++i < 25) [[likely]]
@@ -1813,7 +1813,7 @@ bool spu_thread::process_mfc_cmd()
 				ntime != time0)
 			{
 				// Reservation data has been modified recently
-				if (time0 & 127) i += 12, ntime = time0;
+				if (time0 & 127) i += 12;
 				continue;
 			}
 
