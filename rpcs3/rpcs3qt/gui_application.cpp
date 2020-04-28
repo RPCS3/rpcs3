@@ -179,6 +179,7 @@ QStringList gui_application::GetAvailableLanguageCodes()
 
 void gui_application::InitializeConnects()
 {
+	connect(&m_timer, &QTimer::timeout, this, &gui_application::UpdatePlaytime);
 	connect(this, &gui_application::OnEmulatorRun, this, &gui_application::StartPlaytime);
 	connect(this, &gui_application::OnEmulatorStop, this, &gui_application::StopPlaytime);
 	connect(this, &gui_application::OnEmulatorPause, this, &gui_application::StopPlaytime);
@@ -321,12 +322,36 @@ void gui_application::StartPlaytime(bool start_playtime = true)
 		return;
 	}
 
-	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
+	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
 	m_timer_playtime.start();
+	m_timer.start(10000); // Update every 10 seconds in case the emulation crashes
+}
+
+void gui_application::UpdatePlaytime()
+{
+	if (!m_timer_playtime.isValid())
+	{
+		m_timer.stop();
+		return;
+	}
+
+	const QString serial = qstr(Emu.GetTitleID());
+	if (serial.isEmpty())
+	{
+		m_timer_playtime.invalidate();
+		m_timer.stop();
+		return;
+	}
+
+	const qint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.restart();
+	m_persistent_settings->SetPlaytime(serial, playtime);
+	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
 }
 
 void gui_application::StopPlaytime()
 {
+	m_timer.stop();
+
 	if (!m_timer_playtime.isValid())
 		return;
 
