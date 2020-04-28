@@ -2431,6 +2431,66 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 		}
 	}
 
-	pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cs);
+	if (int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cs))
+	{
+		sig_log.error("Failed to set thread affinity 0x%x: error %d.", mask, err);
+	}
+#endif
+}
+
+u64 thread_ctrl::get_thread_affinity_mask()
+{
+#ifdef _WIN32
+	DWORD_PTR res, _sys;
+	if (!GetProcessAffinityMask(GetCurrentProcess(), &res, &_sys))
+	{
+		sig_log.error("Failed to get process affinity mask.");
+		return 0;
+	}
+
+	if (DWORD_PTR result = SetThreadAffinityMask(GetCurrentThread(), res))
+	{
+		if (res != result)
+		{
+			SetThreadAffinityMask(GetCurrentThread(), result);
+		}
+
+		return result;
+	}
+
+	sig_log.error("Failed to get thread affinity mask.");
+	return 0;
+#elif defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__)
+	cpu_set_t cs;
+	CPU_ZERO(&cs);
+
+	if (int err = pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &cs))
+	{
+		sig_log.error("Failed to get thread affinity mask: error %d.", err);
+		return 0;
+	}
+
+	u64 result;
+
+	for (u32 core = 0; core < 64u; core++)
+	{
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+		if (CPU_ISSET(core, &cs))
+#pragma GCC diagnostic pop
+		{
+			result |= 1ull << core;
+		}
+	}
+
+	if (result == 0)
+	{
+		sig_log.error("Thread affinity mask is out of u64 range.");
+		return 0;
+	}
+
+	return result;
+#else
+	return -1;
 #endif
 }
