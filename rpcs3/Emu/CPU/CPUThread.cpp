@@ -645,7 +645,10 @@ cpu_thread::suspend_all::suspend_all(cpu_thread* _this) noexcept
 
 	for_all_cpu([](cpu_thread* cpu)
 	{
-		cpu->state += cpu_flag::pause;
+		if (!(cpu->state & cpu_flag::pause))
+		{
+			cpu->state += cpu_flag::pause;
+		}
 	});
 
 	busy_wait(500);
