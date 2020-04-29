@@ -25,6 +25,28 @@ LOG_CHANNEL(sys_spu);
 
 extern u64 get_timebased_time();
 
+template <>
+void fmt_class_string<spu_group_status>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](spu_group_status value)
+	{
+		switch (value)
+		{
+		case SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED: return "uninitialized";
+		case SPU_THREAD_GROUP_STATUS_INITIALIZED: return "initialized";
+		case SPU_THREAD_GROUP_STATUS_READY: return "ready";
+		case SPU_THREAD_GROUP_STATUS_WAITING: return "waiting";
+		case SPU_THREAD_GROUP_STATUS_SUSPENDED: return "suspended";
+		case SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED: return "waiting and suspended";
+		case SPU_THREAD_GROUP_STATUS_RUNNING: return "running";
+		case SPU_THREAD_GROUP_STATUS_STOPPED: return "stopped";
+		case SPU_THREAD_GROUP_STATUS_UNKNOWN: break;
+		}
+
+		return unknown;
+	});
+}
+
 void sys_spu_image::load(const fs::file& stream)
 {
 	const spu_exec_object obj{stream, 0, elf_opt::no_sections + elf_opt::no_data};

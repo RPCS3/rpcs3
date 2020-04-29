@@ -77,7 +77,7 @@ void fmt_class_string<ppu_join_status>::format(std::string& out, u64 arg)
 	{
 		switch (js)
 		{
-		case ppu_join_status::joinable: return "";
+		case ppu_join_status::joinable: return "none";
 		case ppu_join_status::detached: return "detached";
 		case ppu_join_status::zombie: return "zombie";
 		case ppu_join_status::exited: return "exited";

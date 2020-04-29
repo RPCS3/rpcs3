@@ -48,7 +48,7 @@ enum
 	SYS_SPU_THREAD_GROUP_LOG_GET_STATUS = 0x2,
 };
 
-enum : u32
+enum spu_group_status : u32
 {
 	SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED,
 	SPU_THREAD_GROUP_STATUS_INITIALIZED,
@@ -263,7 +263,7 @@ struct lv2_spu_group
 
 	atomic_t<u32> init; // Initialization Counter
 	atomic_t<s32> prio; // SPU Thread Group Priority
-	atomic_t<u32> run_state; // SPU Thread Group State
+	atomic_t<spu_group_status> run_state; // SPU Thread Group State
 	atomic_t<s32> exit_status; // SPU Thread Group Exit Status
 	atomic_t<u32> join_state; // flags used to detect exit cause and signal
 	atomic_t<u32> running; // Number of running threads
