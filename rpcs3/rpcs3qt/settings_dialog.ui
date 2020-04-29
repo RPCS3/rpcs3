@@ -3980,6 +3980,12 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="vk_event_hack">
+              <property name="text">
+               <string>VK Event Hack</string>
+              </property>
+             </widget>
+            </item>
              <item>
               <widget class="QCheckBox" name="disableVulkanMemAllocator">
                <property name="text">

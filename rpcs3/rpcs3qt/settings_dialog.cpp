@@ -2171,6 +2171,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->reprotect_hack, emu_settings_type::ReprotectHack);
 	SubscribeTooltip(ui->reprotect_hack, tooltips.settings.reprotect_hack);
 
+	m_emu_settings->EnhanceCheckBox(ui->vk_event_hack, emu_settings_type::VKEventHack);
+	SubscribeTooltip(ui->vk_event_hack, tooltips.settings.vk_event_hack);
+
 	// Checkboxes: core debug options
 	m_emu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings_type::PPUDebug);
 	SubscribeTooltip(ui->ppuDebug, tooltips.settings.ppu_debug);
