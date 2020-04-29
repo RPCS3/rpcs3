@@ -1777,6 +1777,11 @@ bool spu_thread::process_mfc_cmd()
 
 			// Spinning, might as well yield cpu resources
 			std::this_thread::yield();
+
+			if (test_stopped())
+			{
+				return false;
+			}
 		}
 
 		auto& dst = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
@@ -1784,7 +1789,7 @@ bool spu_thread::process_mfc_cmd()
 
 		for (u64 i = 0;; [&]()
 		{
-			if (is_paused())
+			if (state & cpu_flag::pause)
 			{
 				check_state();
 			}
@@ -1795,7 +1800,16 @@ bool spu_thread::process_mfc_cmd()
 			}
 			else
 			{
+				if (g_use_rtm)
+				{
+					state += cpu_flag::wait;
+				}
+
 				std::this_thread::yield();
+
+				if (test_stopped())
+				{
+				}
 			}
 		}())
 		{
@@ -1824,11 +1838,6 @@ bool spu_thread::process_mfc_cmd()
 			}
 
 			break;
-		}
-
-		if (test_stopped())
-		{
-			return false;
 		}
 
 		if (raddr && raddr != addr)
