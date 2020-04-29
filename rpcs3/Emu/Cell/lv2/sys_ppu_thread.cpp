@@ -277,6 +277,8 @@ error_code sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop)
 	// Clean some detached thread (hack)
 	g_fxo->get<ppu_thread_cleaner>()->clean(0);
 
+	u32 prio;
+
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
 		if (thread.joiner == ppu_join_status::exited)
@@ -284,7 +286,7 @@ error_code sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop)
 			return false;
 		}
 
-		*priop = thread.prio;
+		prio = thread.prio;
 		return true;
 	});
 
@@ -293,6 +295,7 @@ error_code sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop)
 		return CELL_ESRCH;
 	}
 
+	*priop = prio;
 	return CELL_OK;
 }
 
