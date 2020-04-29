@@ -2399,6 +2399,30 @@ void thread_ctrl::set_native_priority(int priority)
 #endif
 }
 
+u64 thread_ctrl::get_process_affinity_mask()
+{
+	static const u64 mask = []() -> u64
+	{
+#ifdef _WIN32
+		DWORD_PTR res, _sys;
+		if (!GetProcessAffinityMask(GetCurrentProcess(), &res, &_sys))
+		{
+			sig_log.error("Failed to get process affinity mask.");
+			return 0;
+		}
+
+		return res;
+#else
+		// Assume it's called from the main thread (this is a bit shaky)
+		return thread_ctrl::get_thread_affinity_mask();
+#endif
+	}();
+
+	return mask;
+}
+
+DECLARE(thread_ctrl::process_affinity_mask) = get_process_affinity_mask();
+
 void thread_ctrl::set_thread_affinity_mask(u64 mask)
 {
 #ifdef _WIN32
@@ -2441,12 +2465,7 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 u64 thread_ctrl::get_thread_affinity_mask()
 {
 #ifdef _WIN32
-	DWORD_PTR res, _sys;
-	if (!GetProcessAffinityMask(GetCurrentProcess(), &res, &_sys))
-	{
-		sig_log.error("Failed to get process affinity mask.");
-		return 0;
-	}
+	const u64 res = get_process_affinity_mask();
 
 	if (DWORD_PTR result = SetThreadAffinityMask(GetCurrentThread(), res))
 	{

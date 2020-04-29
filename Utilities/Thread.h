@@ -249,8 +249,15 @@ public:
 	// Sets the preferred affinity mask for this thread
 	static void set_thread_affinity_mask(u64 mask);
 
+	// Get process affinity mask
+	static u64 get_process_affinity_mask();
+
 	// Miscellaneous
 	static u64 get_thread_affinity_mask();
+
+private:
+	// Miscellaneous
+	static const u64 process_affinity_mask;
 };
 
 // Derived from the callable object Context, possibly a lambda
