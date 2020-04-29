@@ -788,14 +788,11 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 
 	gpr[13] = param.tls_addr;
 
-	if (detached >= 0 && id != id_base)
+	if (detached >= 0)
 	{
-		// Initialize thread entry point
-		cmd_list
-		({
-		    {ppu_cmd::set_args, 2}, param.arg0, param.arg1,
-		    {ppu_cmd::opd_call, 0}, std::bit_cast<u64>(entry_func),
-		});
+		// Initialize thread args
+		gpr[3] = param.arg0;
+		gpr[4] = param.arg1;
 	}
 
 	// Trigger the scheduler
