@@ -26,6 +26,8 @@ void fmt_class_string<CellAudioOutError>::format(std::string& out, u64 arg)
 	});
 }
 
+error_code cellAudioOutGetNumberOfDevice(u32 audioOut);
+
 error_code cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 {
 	cellSysutil.warning("cellAudioOutGetSoundAvailability(audioOut=%d, type=%d, fs=0x%x, option=%d)", audioOut, type, fs, option);
@@ -122,29 +124,55 @@ error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudio
 		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	*state = {};
+
+	const auto num = cellAudioOutGetNumberOfDevice(audioOut);
+
+	if (num < 0)
+	{
+		return num;
+	}
+
+	CellAudioOutState _state;
+	std::memset(&_state, 0, sizeof(_state));
+
+	if (deviceIndex >= num + 0u)
+	{
+		if (audioOut == CELL_AUDIO_OUT_SECONDARY)
+		{
+			// Error codes are not returned here
+			// Random (uninitialized) data from the stack seems to be returned here
+			// Although it was constant on my tests so let's write that
+			_state.state = 0x10;
+			_state.soundMode.layout = 0xD00C1680;
+			std::memcpy(state.get_ptr(), &_state, state.size());
+			return CELL_OK;
+		}
+
+		return CELL_AUDIO_OUT_ERROR_PARAMETER_OUT_OF_RANGE;
+	}
 
 	switch (audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY:
-		state->state = CELL_AUDIO_OUT_OUTPUT_STATE_ENABLED;
-		state->encoder = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-		state->downMixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
-		state->soundMode.type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-		state->soundMode.channel = CELL_AUDIO_OUT_CHNUM_8;
-		state->soundMode.fs = CELL_AUDIO_OUT_FS_48KHZ;
-		state->soundMode.reserved = 0;
-		state->soundMode.layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
-
-		return CELL_OK;
-
 	case CELL_AUDIO_OUT_SECONDARY:
-		state->state = CELL_AUDIO_OUT_OUTPUT_STATE_DISABLED;
-
-		return CELL_OK;
+	{
+		_state.state = CELL_AUDIO_OUT_OUTPUT_STATE_ENABLED;
+		_state.encoder = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+		_state.downMixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
+		_state.soundMode.type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+		_state.soundMode.channel = CELL_AUDIO_OUT_CHNUM_8;
+		_state.soundMode.fs = CELL_AUDIO_OUT_FS_48KHZ;
+		_state.soundMode.reserved = 0;
+		_state.soundMode.layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
+		break;
 	}
 
-	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+	default:
+		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	std::memcpy(state.get_ptr(), &_state, state.size());
+	return CELL_OK;
 }
 
 error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration> config, vm::ptr<CellAudioOutOption> option, u32 waitForEvent)
@@ -159,6 +187,7 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 	switch (audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY:
+	{
 		if (config->channel)
 		{
 			//Emu.GetAudioManager().GetInfo().mode.channel = config->channel;
@@ -172,12 +201,14 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 		}
 
 		return CELL_OK;
-
-	case CELL_AUDIO_OUT_SECONDARY:
-		return CELL_OK;
 	}
 
-	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+	case CELL_AUDIO_OUT_SECONDARY:
+		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+	default: break;
+	}
+
+	return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 }
 
 error_code cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfiguration> config, vm::ptr<CellAudioOutOption> option)
@@ -189,30 +220,27 @@ error_code cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfig
 		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	if (option)
-	{
-		*option = {};
-	}
-
-	*config = {};
+	CellAudioOutConfiguration _config;
+	std::memset(&_config, 0, sizeof(_config));
 
 	switch (audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY:
-		config->channel = CELL_AUDIO_OUT_CHNUM_8;
-		config->encoder = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-		config->downMixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
-
-		return CELL_OK;
-
-	case CELL_AUDIO_OUT_SECONDARY:
-
-		return CELL_OK;
-	default:
+	{
+		_config.channel = CELL_AUDIO_OUT_CHNUM_8;
+		_config.encoder = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+		_config.downMixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
 		break;
 	}
 
-	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+	case CELL_AUDIO_OUT_SECONDARY:
+		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+	default:
+		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	std::memcpy(config.get_ptr(), &_config, config.size());
+	return CELL_OK;
 }
 
 error_code cellAudioOutGetNumberOfDevice(u32 audioOut)
@@ -229,7 +257,7 @@ error_code cellAudioOutGetNumberOfDevice(u32 audioOut)
 		break;
 	}
 
-	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+	return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 }
 
 error_code cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutDeviceInfo> info)
@@ -241,24 +269,42 @@ error_code cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<Cell
 		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	if (deviceIndex)
+	const auto num = cellAudioOutGetNumberOfDevice(audioOut);
+
+	if (num < 0)
 	{
-		return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
+		return num;
 	}
 
-	info->portType = CELL_AUDIO_OUT_PORT_HDMI;
-	info->availableModeCount = 2;
-	info->state = CELL_AUDIO_OUT_DEVICE_STATE_AVAILABLE;
-	info->latency = 1000;
-	info->availableModes[0].type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-	info->availableModes[0].channel = CELL_AUDIO_OUT_CHNUM_8;
-	info->availableModes[0].fs = CELL_AUDIO_OUT_FS_48KHZ;
-	info->availableModes[0].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
-	info->availableModes[1].type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-	info->availableModes[1].channel = CELL_AUDIO_OUT_CHNUM_2;
-	info->availableModes[1].fs = CELL_AUDIO_OUT_FS_48KHZ;
-	info->availableModes[1].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_2CH;
+	if (deviceIndex >= num + 0u)
+	{
+		if (audioOut == CELL_AUDIO_OUT_SECONDARY)
+		{
+			// Error codes are not returned here
+			std::memset(info.get_ptr(), 0, info.size());
+			return CELL_OK;
+		}
 
+		return CELL_AUDIO_OUT_ERROR_PARAMETER_OUT_OF_RANGE;
+	}
+
+	CellAudioOutDeviceInfo _info;
+	std::memset(&_info, 0, sizeof(_info));
+
+	_info.portType = CELL_AUDIO_OUT_PORT_HDMI;
+	_info.availableModeCount = 2;
+	_info.state = CELL_AUDIO_OUT_DEVICE_STATE_AVAILABLE;
+	_info.latency = 1000;
+	_info.availableModes[0].type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+	_info.availableModes[0].channel = CELL_AUDIO_OUT_CHNUM_8;
+	_info.availableModes[0].fs = CELL_AUDIO_OUT_FS_48KHZ;
+	_info.availableModes[0].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
+	_info.availableModes[1].type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+	_info.availableModes[1].channel = CELL_AUDIO_OUT_CHNUM_2;
+	_info.availableModes[1].fs = CELL_AUDIO_OUT_FS_48KHZ;
+	_info.availableModes[1].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_2CH;
+
+	std::memcpy(info.get_ptr(), &_info, info.size());
 	return CELL_OK;
 }
 
@@ -274,10 +320,11 @@ error_code cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 	switch (audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY:
-	case CELL_AUDIO_OUT_SECONDARY:
 		break;
-	default:
+	case CELL_AUDIO_OUT_SECONDARY:
 		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+	default:
+		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
 	return CELL_OK;
