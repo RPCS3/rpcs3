@@ -2154,7 +2154,7 @@ void thread_ctrl::detect_cpu_layout()
 	if (!g_native_core_layout.compare_and_swap_test(native_core_arrangement::undefined, native_core_arrangement::generic))
 		return;
 
-	const auto system_id = utils::get_system_info();
+	const auto system_id = utils::get_cpu_brand();
 	if (system_id.find("Ryzen") != umax)
 	{
 		g_native_core_layout.store(native_core_arrangement::amd_ccx);
@@ -2226,7 +2226,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 		case native_core_arrangement::amd_ccx:
 		{
 			u64 spu_mask, ppu_mask, rsx_mask;
-			const auto system_id = utils::get_system_info();
+			const auto system_id = utils::get_cpu_brand();
 			if (thread_count >= 32)
 			{
 				if (system_id.find("3950X") != umax)
