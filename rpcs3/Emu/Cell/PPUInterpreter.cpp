@@ -3436,6 +3436,7 @@ bool ppu_interpreter::LDARX(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DCBF(ppu_thread& ppu, ppu_opcode_t op)
 {
+	std::atomic_thread_fence(std::memory_order_seq_cst);
 	return true;
 }
 
@@ -3699,6 +3700,7 @@ bool ppu_interpreter::MULLW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DCBTST(ppu_thread& ppu, ppu_opcode_t op)
 {
+	std::atomic_thread_fence(std::memory_order_seq_cst);
 	return true;
 }
 

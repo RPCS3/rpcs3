@@ -2497,6 +2497,7 @@ void PPUTranslator::LDUX(ppu_opcode_t op)
 
 void PPUTranslator::DCBST(ppu_opcode_t op)
 {
+	m_ir->CreateFence(AtomicOrdering::SequentiallyConsistent);
 }
 
 void PPUTranslator::LWZUX(ppu_opcode_t op)
@@ -2555,6 +2556,7 @@ void PPUTranslator::LDARX(ppu_opcode_t op)
 
 void PPUTranslator::DCBF(ppu_opcode_t op)
 {
+	m_ir->CreateFence(AtomicOrdering::SequentiallyConsistent);
 }
 
 void PPUTranslator::LBZX(ppu_opcode_t op)
