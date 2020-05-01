@@ -185,8 +185,6 @@ namespace vk
 		"	uvec4 fp_instructions[];\n"
 		"};\n\n";
 
-		::program_common::insert_fog_declaration(builder, "vec4", "fogc", true);
-
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
 
