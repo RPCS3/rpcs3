@@ -828,7 +828,7 @@ struct llvm_neg
 
 	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || llvm_value_t<T>::is_float, "llvm_neg<>: invalid type");
 
-	static constexpr auto opc = llvm_value_t<T>::is_float ? llvm::Instruction::FSub : llvm::Instruction::Sub;
+	static constexpr auto opc = llvm_value_t<T>::is_float ? llvm::Instruction::FNeg : llvm::Instruction::Sub;
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
@@ -848,6 +848,19 @@ struct llvm_neg
 	llvm_match_tuple<A1> match(llvm::Value*& value) const
 	{
 		llvm::Value* v1 = {};
+
+		if constexpr (llvm_value_t<T>::is_float)
+		{
+			if (auto i = llvm::dyn_cast_or_null<llvm::UnaryOperator>(value); i && i->getOpcode() == opc)
+			{
+				v1 = i->getOperand(0);
+
+				if (auto r1 = a1.match(v1); v1)
+				{
+					return r1;
+				}
+			}
+		}
 
 		if (auto i = llvm::dyn_cast_or_null<llvm::BinaryOperator>(value); i && i->getOpcode() == opc)
 		{
