@@ -32,7 +32,7 @@ private:
 
 	u64 m_frames = 0;
 	QString m_window_title;
-	bool m_disable_mouse;
+	bool m_disable_kbm_shortcuts;
 
 public:
 	gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);

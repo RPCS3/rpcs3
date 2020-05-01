@@ -42,7 +42,7 @@ constexpr auto qstr = QString::fromStdString;
 gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
 	: QWindow(), m_gui_settings(gui_settings)
 {
-	m_disable_mouse = gui_settings->GetValue(gui::gs_disableMouse).toBool();
+	m_disable_kbm_shortcuts = gui_settings->GetValue(gui::gs_disableKbmShortcuts).toBool();
 
 	m_window_title = qstr(Emu.GetFormattedTitle(0));
 
@@ -126,16 +126,16 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		if (visibility() == FullScreen) { toggle_fullscreen(); return; }
 		break;
 	case Qt::Key_P:
-		if (keyEvent->modifiers() == Qt::ControlModifier && Emu.IsRunning()) { Emu.Pause(); return; }
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kbm_shortcuts && Emu.IsRunning()) { Emu.Pause(); return; }
 		break;
 	case Qt::Key_S:
-		if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.IsStopped())) { Emu.Stop(); return; }
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kbm_shortcuts && (!Emu.IsStopped())) { Emu.Stop(); return; }
 		break;
 	case Qt::Key_R:
-		if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.GetBoot().empty())) { Emu.Restart(); return; }
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kbm_shortcuts && (!Emu.GetBoot().empty())) { Emu.Restart(); return; }
 		break;
 	case Qt::Key_E:
-		if (keyEvent->modifiers() == Qt::ControlModifier)
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kbm_shortcuts)
 		{
 			if (Emu.IsReady()) { Emu.Run(true); return; }
 			else if (Emu.IsPaused()) { Emu.Resume(); return; }
@@ -400,7 +400,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (m_disable_mouse || g_cfg.io.move == move_handler::mouse) return;
+	if (m_disable_kbm_shortcuts || g_cfg.io.move == move_handler::mouse) return;
 
 	if (ev->button() == Qt::LeftButton)
 	{

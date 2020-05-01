@@ -1265,12 +1265,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		SubscribeTooltip(ui->gs_resizeOnBoot, tooltips.settings.resize_on_boot);
 
-		SubscribeTooltip(ui->gs_disableMouse, tooltips.settings.disable_mouse);
+		SubscribeTooltip(ui->gs_disableKbmShortcuts, tooltips.settings.disable_kbm_shortcuts);
 
-		ui->gs_disableMouse->setChecked(m_gui_settings->GetValue(gui::gs_disableMouse).toBool());
-		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=, this](bool val)
+		ui->gs_disableKbmShortcuts->setChecked(m_gui_settings->GetValue(gui::gs_disableKbmShortcuts).toBool());
+		connect(ui->gs_disableKbmShortcuts, &QCheckBox::clicked, [=, this](bool val)
 		{
-			m_gui_settings->SetValue(gui::gs_disableMouse, val);
+			m_gui_settings->SetValue(gui::gs_disableKbmShortcuts, val);
 		});
 
 		const bool enable_buttons = m_gui_settings->GetValue(gui::gs_resize).toBool();

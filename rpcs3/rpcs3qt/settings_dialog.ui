@@ -2332,9 +2332,9 @@
              </property>
              <layout class="QVBoxLayout" name="gb_viewport_layout">
               <item>
-               <widget class="QCheckBox" name="gs_disableMouse">
+               <widget class="QCheckBox" name="gs_disableKbmShortcuts">
                 <property name="text">
-                 <string>Ignore doubleclicks for Fullscreen</string>
+                 <string>Ignore doubleclicks and hotkeys for Fullscreen</string>
                 </property>
                </widget>
               </item>
