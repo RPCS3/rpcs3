@@ -912,12 +912,15 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 		return static_cast<u32>(key);
 	};
 
-	auto evdevbutton = [&, idx = i](const cfg::string& name)
+	auto evdevbutton = [&](const cfg::string& name)
 	{
+		// This function calls find_key, which also determines last_type and axis_orientations[i].
+		// i is incremented at the end of find_key, so we need to back it up.
+		const int current_index = i;
 		EvdevButton button;
 		button.code = find_key(name);
 		button.type = last_type;
-		button.dir  = axis_orientations[idx];
+		button.dir  = axis_orientations[current_index];
 		return button;
 	};
 
@@ -948,10 +951,10 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->square),   CELL_PAD_CTRL_SQUARE);
 
 	m_dev->trigger_left = evdevbutton(p_profile->l2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_left.code,       CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_left.code,      CELL_PAD_CTRL_L2);
 
 	m_dev->trigger_right = evdevbutton(p_profile->r2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_right.code,      CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_right.code,     CELL_PAD_CTRL_R2);
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->l1),       CELL_PAD_CTRL_L1);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->r1),       CELL_PAD_CTRL_R1);
