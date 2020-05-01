@@ -1144,53 +1144,7 @@ extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
 
-const auto ppu_stwcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rdata, u64 value)>([](asmjit::X86Assembler& c, auto& args)
-{
-	using namespace asmjit;
-
-	Label fall = c.newLabel();
-	Label fail = c.newLabel();
-
-	// Prepare registers
-	c.mov(x86::r10, imm_ptr(+vm::g_reservations));
-	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
-	c.mov(x86::r11, x86::qword_ptr(x86::rax));
-	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
-	c.and_(args[0].r32(), 0xff80);
-	c.shr(args[0].r32(), 1);
-	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
-	c.xor_(args[0].r32(), args[0].r32());
-	c.bswap(args[2].r32());
-	c.bswap(args[3].r32());
-
-	// Begin transaction
-	build_transaction_enter(c, fall, args[0], 16);
-	c.mov(x86::rax, x86::qword_ptr(x86::r10));
-	c.and_(x86::rax, -128 | vm::dma_lockb);
-	c.cmp(x86::rax, args[1]);
-	c.jne(fail);
-	c.cmp(x86::dword_ptr(x86::r11), args[2].r32());
-	c.jne(fail);
-	c.mov(x86::dword_ptr(x86::r11), args[3].r32());
-	c.sub(x86::qword_ptr(x86::r10), -128);
-	c.xend();
-	c.mov(x86::eax, 1);
-	c.ret();
-
-	// Return 2 after transaction failure
-	c.bind(fall);
-	c.sar(x86::eax, 24);
-	c.js(fail);
-	c.mov(x86::eax, 2);
-	c.ret();
-
-	c.bind(fail);
-	build_transaction_abort(c, 0xff);
-	c.xor_(x86::eax, x86::eax);
-	c.ret();
-});
-
-const auto ppu_stdcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rdata, u64 value)>([](asmjit::X86Assembler& c, auto& args)
+const auto ppu_stcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rdata, u64 value)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -1237,20 +1191,39 @@ const auto ppu_stdcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rd
 });
 
 template <typename T>
-static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, T reg_value)
+static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
 	if (addr % sizeof(T))
 	{
 		fmt::throw_exception("PPU %s: Unaligned address: 0x%08x" HERE, sizeof(T) == 4 ? "STWCX" : "STDCX", addr);
 	}
 
-	auto& data = vm::_ref<atomic_be_t<T>>(addr & (0 - sizeof(T)));
+	auto& data = vm::_ref<atomic_be_t<u64>>(addr & -8);
 	constexpr u64 size_off = (sizeof(T) * 8) & 63;
+	const u64 old_data = ppu.rdata;
 
 	const T old_data = static_cast<T>(ppu.rdata << ((addr & 7) * 8) >> size_off);
 	auto& res = vm::reservation_acquire(addr, sizeof(T));
 
-	if (std::exchange(ppu.raddr, 0) != addr || old_data != data || ppu.rtime != (res & -128))
+	if constexpr (sizeof(T) == sizeof(u32))
+	{
+		// Rebuild reg_value to be 32-bits of new data and 32-bits of old data
+		union bf64
+		{
+			u64 all;
+			bf_t<u64, 0, 32> low;
+			bf_t<u64, 32, 32> high;
+		} bf{old_data};
+
+		if (addr & 4)
+			bf.low = static_cast<u32>(reg_value);
+		else
+			bf.high = static_cast<u32>(reg_value);
+
+		reg_value = bf.all;
+	}
+
+	if ((std::exchange(ppu.raddr, 0) ^ addr) & -8 || old_data != data || ppu.rtime != (res & -128))
 	{
 		// Even when the reservation address does not match the target address must be valid
 		if (!vm::check_addr(addr, 1, vm::page_writable))
@@ -1273,11 +1246,11 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, T reg_value)
 		return false;
 	}
 
+	addr &= -8;
+
 	if (g_use_rtm) [[likely]]
 	{
-		constexpr auto& ppu_store_tx = sizeof(T) == 8 ? ppu_stdcx_tx : ppu_stwcx_tx;
-
-		switch (ppu_store_tx(addr, ppu.rtime, old_data, reg_value))
+		switch (ppu_stcx_tx(addr, ppu.rtime, old_data, reg_value))
 		{
 		case 0:
 		{
