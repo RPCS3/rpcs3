@@ -456,6 +456,10 @@ std::string ppu_thread::dump_regs() const
 	fmt::append(ret, "XER = [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
 	fmt::append(ret, "VSCR = [SAT=%u | NJ=%u]\n", sat, nj);
 	fmt::append(ret, "FPSCR = [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
+	if (const u32 addr = raddr)
+		fmt::append(ret, "Reservation Addr = 0x%x", addr);
+	else
+		fmt::append(ret, "Reservation Addr = none");
 
 	return ret;
 }
@@ -666,6 +670,7 @@ void ppu_thread::cpu_task()
 
 void ppu_thread::cpu_sleep()
 {
+	raddr = 0; // Clear reservation
 	vm::temporary_unlock(*this);
 	lv2_obj::awake(this);
 }

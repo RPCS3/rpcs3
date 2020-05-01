@@ -1109,9 +1109,16 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 		}
 
 		// Find and remove the thread
-		unqueue(g_ppu, ppu);
+		if (!unqueue(g_ppu, ppu))
+		{
+			// Already sleeping
+			ppu_log.trace("sleep(): called on already sleeping thread.");
+			return;
+		}
+
 		unqueue(g_pending, ppu);
 
+		ppu->raddr = 0; // Clear reservation
 		ppu->start_time = start_time;
 	}
 
