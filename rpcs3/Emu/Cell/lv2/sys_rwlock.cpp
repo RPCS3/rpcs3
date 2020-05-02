@@ -363,7 +363,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 					});
 
 					// Protocol doesn't matter here since they are all enqueued anyways
-					while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_FIFO))
+					for (auto cpu : ::as_rvalue(std::move(rwlock->rq)))
 					{
 						rwlock->append(cpu);
 					}
@@ -456,7 +456,7 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 		}
 		else if (auto readers = rwlock->rq.size())
 		{
-			while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_FIFO))
+			for (auto cpu : ::as_rvalue(std::move(rwlock->rq)))
 			{
 				rwlock->append(cpu);
 			}
