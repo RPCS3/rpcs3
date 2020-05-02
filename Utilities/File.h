@@ -516,6 +516,7 @@ namespace fs
 		readonly,
 		isdir,
 		toolong,
+		nospace,
 		unknown
 	};
 
