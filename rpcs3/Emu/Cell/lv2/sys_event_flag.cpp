@@ -377,8 +377,8 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 		// Set count
 		value = ::size32(flag->sq);
 
-		// Signal all threads to return CELL_ECANCELED
-		while (auto thread = flag->schedule<ppu_thread>(flag->sq, flag->protocol))
+		// Signal all threads to return CELL_ECANCELED (protocol does not matter)
+		for (auto thread : ::as_rvalue(std::move(flag->sq)))
 		{
 			auto& ppu = static_cast<ppu_thread&>(*thread);
 
