@@ -72,12 +72,11 @@ namespace rsx
 					locked_range.start = block_start;
 					locked_range.end = block_end;
 				}
-
-				if (guard_policy == protect_policy_one_page)
-				{
-					// protect exactly one page
-					locked_range.set_length(4096u);
-				}
+			}
+			else if (guard_policy == protect_policy_one_page)
+			{
+				// protect exactly one page
+				locked_range.set_length(4096u);
 			}
 
 			AUDIT( (locked_range.start == page_start(range.start)) || (locked_range.start == next_page(range.start)) );
