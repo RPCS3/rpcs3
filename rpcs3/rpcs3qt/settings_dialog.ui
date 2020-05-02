@@ -2339,6 +2339,13 @@
                </widget>
               </item>
               <item>
+                <widget class="QCheckBox" name="gs_disableKbHotkeys">
+                  <property name="text">
+                    <string>Ignore keyboard hotkeys</string>
+                  </property>
+                </widget>
+              </item>
+              <item>
                <widget class="QCheckBox" name="gs_showMouseInFullscreen">
                 <property name="text">
                  <string>Show mouse cursor in Fullscreen </string>
