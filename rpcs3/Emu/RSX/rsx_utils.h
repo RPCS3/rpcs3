@@ -601,7 +601,7 @@ namespace rsx
 
 	static inline const u16 apply_inverse_resolution_scale(u16 value, bool clamp)
 	{
-		u16 result = value;
+		u16 result;
 
 		if (clamp)
 			result = static_cast<u16>(std::max((value * 100) / get_resolution_scale_percent(), 1));

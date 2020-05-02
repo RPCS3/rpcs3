@@ -1938,7 +1938,7 @@ namespace rsx
 				continue;
 			}
 
-			rsx::vertex_base_type type = {};
+			rsx::vertex_base_type type;
 			s32 size = 0;
 			s32 attrib0 = 0;
 			s32 attrib1 = 0;
