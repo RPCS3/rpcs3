@@ -180,7 +180,7 @@ private:
 	{
 		if (auto sptr = queue.lock())
 		{
-			return sptr->send(source, d1, d2, d3);
+			return sptr->send(source, d1, d2, d3) == CELL_OK;
 		}
 		return false;
 	}

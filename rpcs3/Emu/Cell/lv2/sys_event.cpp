@@ -43,9 +43,14 @@ bool lv2_event_queue::check(const std::shared_ptr<lv2_event_queue>& sptr)
 	return sptr && sptr->exists;
 }
 
-bool lv2_event_queue::send(lv2_event event)
+CellError lv2_event_queue::send(lv2_event event)
 {
 	std::lock_guard lock(mutex);
+
+	if (!exists)
+	{
+		return CELL_ENOTCONN;
+	}
 
 	if (sq.empty())
 	{
@@ -53,10 +58,10 @@ bool lv2_event_queue::send(lv2_event event)
 		{
 			// Save event
 			events.emplace_back(event);
-			return true;
+			return {};
 		}
 
-		return false;
+		return CELL_EBUSY;
 	}
 
 	if (type == SYS_PPU_QUEUE)
@@ -85,7 +90,7 @@ bool lv2_event_queue::send(lv2_event event)
 		spu.notify();
 	}
 
-	return true;
+	return {};
 }
 
 error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size)
@@ -514,12 +519,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 		{
 			const u64 source = port.name ? port.name : (s64{process_getpid()} << 32) | u64{eport_id};
 
-			if (queue->send(source, data1, data2, data3))
-			{
-				return {};
-			}
-
-			return CELL_EBUSY;
+			return queue->send(source, data1, data2, data3);
 		}
 
 		return CELL_ENOTCONN;

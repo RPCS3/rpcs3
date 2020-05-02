@@ -1300,7 +1300,7 @@ void camera_context::operator()()
 						data3 = 0;	// unused
 					}
 
-					if (queue->send(evt_data.source, CELL_CAMERA_FRAME_UPDATE, data2, data3)) [[likely]]
+					if (queue->send(evt_data.source, CELL_CAMERA_FRAME_UPDATE, data2, data3) == CELL_OK) [[likely]]
 					{
 						++frame_num;
 					}
@@ -1347,7 +1347,7 @@ void camera_context::send_attach_state(bool attached)
 
 			if (auto queue = lv2_event_queue::find(key))
 			{
-				if (queue->send(evt_data.source, attached ? CELL_CAMERA_ATTACH : CELL_CAMERA_DETACH, 0, 0)) [[likely]]
+				if (queue->send(evt_data.source, attached ? CELL_CAMERA_ATTACH : CELL_CAMERA_DETACH, 0, 0) == CELL_OK) [[likely]]
 				{
 					is_attached = attached;
 				}

@@ -99,9 +99,9 @@ struct lv2_event_queue final : public lv2_obj
 	{
 	}
 
-	bool send(lv2_event);
+	CellError send(lv2_event);
 
-	bool send(u64 source, u64 d1, u64 d2, u64 d3)
+	CellError send(u64 source, u64 d1, u64 d2, u64 d3)
 	{
 		return send(std::make_tuple(source, d1, d2, d3));
 	}
