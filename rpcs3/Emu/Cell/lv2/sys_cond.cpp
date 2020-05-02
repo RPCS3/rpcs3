@@ -123,7 +123,7 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 			cpu_thread* result = nullptr;
 			cond.waiters -= ::size32(cond.sq);
 
-			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.mutex->protocol))
+			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, SYS_SYNC_PRIORITY))
 			{
 				if (cond.mutex->try_own(*cpu, cpu->id))
 				{
