@@ -1785,20 +1785,10 @@ bool spu_thread::process_mfc_cmd()
 		const u32 addr = ch_mfc_cmd.eal & -128;
 		const auto& data = vm::_ref<decltype(rdata)>(addr);
 
-		if (addr == raddr && g_cfg.core.spu_loop_detection && rtime == vm::reservation_acquire(addr, 128) && cmp_rdata(rdata, data))
+		if (addr == raddr && !g_use_rtm && g_cfg.core.spu_loop_detection && rtime == vm::reservation_acquire(addr, 128) && cmp_rdata(rdata, data))
 		{
-			if (g_use_rtm)
-			{
-				state += cpu_flag::wait;
-			}
-
 			// Spinning, might as well yield cpu resources
 			std::this_thread::yield();
-
-			if (test_stopped())
-			{
-				return false;
-			}
 		}
 
 		auto& dst = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
