@@ -43,6 +43,7 @@ gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::share
 	: QWindow(), m_gui_settings(gui_settings)
 {
 	m_disable_mouse = gui_settings->GetValue(gui::gs_disableMouse).toBool();
+	m_disable_kb_hotkeys = gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
 	m_show_mouse_in_fullscreen = gui_settings->GetValue(gui::gs_showMouseFs).toBool();
 
 	m_window_title = qstr(Emu.GetFormattedTitle(0));
@@ -127,16 +128,28 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		if (visibility() == FullScreen) { toggle_fullscreen(); return; }
 		break;
 	case Qt::Key_P:
-		if (keyEvent->modifiers() == Qt::ControlModifier && Emu.IsRunning()) { Emu.Pause(); return; }
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && Emu.IsRunning())
+		{
+			Emu.Pause();
+			return;
+		}
 		break;
 	case Qt::Key_S:
-		if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.IsStopped())) { Emu.Stop(); return; }
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && (!Emu.IsStopped()))
+		{
+			Emu.Stop();
+			return;
+		}
 		break;
 	case Qt::Key_R:
-		if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.GetBoot().empty())) { Emu.Restart(); return; }
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && (!Emu.GetBoot().empty()))
+		{
+			Emu.Restart();
+			return;
+		}
 		break;
 	case Qt::Key_E:
-		if (keyEvent->modifiers() == Qt::ControlModifier)
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
 		{
 			if (Emu.IsReady()) { Emu.Run(true); return; }
 			else if (Emu.IsPaused()) { Emu.Resume(); return; }

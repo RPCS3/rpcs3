@@ -2479,20 +2479,15 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup].lock());
 
-				if (!lv2_event_queue::check(queue))
+				const auto res = !queue ? CELL_ENOTCONN :
+					queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data);
+
+				if (res == CELL_ENOTCONN)
 				{
 					spu_log.warning("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (value & 0x00ffffff), data);
-					ch_in_mbox.set_values(1, CELL_ENOTCONN);
-					return true;
 				}
 
-				ch_in_mbox.set_values(1, CELL_OK);
-
-				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data))
-				{
-					ch_in_mbox.set_values(1, CELL_EBUSY);
-				}
-
+				ch_in_mbox.set_values(1, res);
 				return true;
 			}
 			else if (code < 128)
@@ -2511,16 +2506,10 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup].lock());
 
-				if (!lv2_event_queue::check(queue))
-				{
-					spu_log.warning("sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (value & 0x00ffffff), data);
-					return true;
-				}
-
 				// TODO: check passing spup value
-				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data))
+				if (auto res = queue ? queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data) : CELL_ENOTCONN)
 				{
-					spu_log.warning("sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x) failed (queue is full)", spup, (value & 0x00ffffff), data);
+					spu_log.warning("sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x) failed (error=%s)", spup, (value & 0x00ffffff), data, res);
 				}
 
 				return true;
@@ -2544,13 +2533,9 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
-				ch_in_mbox.set_values(1, CELL_OK);
-
 				// Use the syscall to set flag
-				if (s32 res = sys_event_flag_set(data, 1ull << flag))
-				{
-					ch_in_mbox.set_values(1, res);
-				}
+				const auto res = sys_event_flag_set(data, 1ull << flag);
+				ch_in_mbox.set_values(1, res);
 
 				return true;
 			}
@@ -2904,10 +2889,16 @@ bool spu_thread::stop_and_signal(u32 code)
 			if (!lv2_event_queue::check(queue))
 			{
 				check_state();
-				return ch_in_mbox.set_values(1, CELL_EINVAL), true; // TODO: check error value
+				return ch_in_mbox.set_values(1, CELL_EINVAL), true;
 			}
 
 			std::lock_guard qlock(queue->mutex);
+
+			if (!queue->exists)
+			{
+				check_state();
+				return ch_in_mbox.set_values(1, CELL_EINVAL), true;
+			}
 
 			if (queue->events.empty())
 			{
@@ -2941,13 +2932,12 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		while (true)
 		{
-			if (state & (cpu_flag::exit + cpu_flag::dbg_global_stop))
+			if (is_stopped())
 			{
+				// The thread group cannot be stopped while waiting for an event
+				verify(HERE), !(state & cpu_flag::stop);
 				return false;
 			}
-
-			// The thread group cannot be stopped while waiting for an event
-			verify(HERE), !(state & cpu_flag::stop);
 
 			if (!state.test_and_reset(cpu_flag::signal))
 			{
@@ -3027,6 +3017,11 @@ bool spu_thread::stop_and_signal(u32 code)
 		}
 
 		std::lock_guard qlock(queue->mutex);
+
+		if (!queue->exists)
+		{
+			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
+		}
 
 		if (queue->events.empty())
 		{
