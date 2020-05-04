@@ -9,7 +9,6 @@ mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
 	init_configs();
 
 	// Define border values
-	thumb_min = 0;
 	thumb_max = 255;
 	trigger_min = 0;
 	trigger_max = 255;

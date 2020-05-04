@@ -114,7 +114,6 @@ ds4_pad_handler::ds4_pad_handler() : PadHandlerBase(pad_handler::ds4)
 	init_configs();
 
 	// Define border values
-	thumb_min = 0;
 	thumb_max = 255;
 	trigger_min = 0;
 	trigger_max = 255;

@@ -25,7 +25,6 @@ evdev_joystick_handler::evdev_joystick_handler()
 	init_configs();
 
 	// Define border values
-	thumb_min     = 0;
 	thumb_max     = 255;
 	trigger_min   = 0;
 	trigger_max   = 255;
