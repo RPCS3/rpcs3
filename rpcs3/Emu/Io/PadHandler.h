@@ -123,8 +123,8 @@ protected:
 	static std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY, int squircle_factor);
 
 public:
-	s32 thumb_min = 0;
-	s32 thumb_max = 255;
+	// s32 thumb_min = 0; // Unused. Make sure all handlers report 0+ values for sticks in get_button_values.
+	s32 thumb_max = 255; // NOTE: Better keep this positive
 	s32 trigger_min = 0;
 	s32 trigger_max = 255;
 	s32 vibration_min = 0;

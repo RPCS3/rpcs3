@@ -174,12 +174,12 @@ u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multip
 // return is new x and y values in 0-255 range
 std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone)
 {
-	const float dzRange = deadzone / static_cast<float>((std::abs(thumb_max) + std::abs(thumb_min)));
+	const float dz_range = deadzone / static_cast<float>(std::abs(thumb_max)); // NOTE: thumb_max should be positive anyway
 
 	float X = inX / 255.0f;
 	float Y = inY / 255.0f;
 
-	if (dzRange > 0.f)
+	if (dz_range > 0.f)
 	{
 		const float mag = std::min(sqrtf(X * X + Y * Y), 1.f);
 
@@ -188,16 +188,16 @@ std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u3
 			return std::tuple<u16, u16>(ConvertAxis(X), ConvertAxis(Y));
 		}
 
-		if (mag > dzRange)
+		if (mag > dz_range)
 		{
-			const float pos = std::lerp(0.13f, 1.f, (mag - dzRange) / (1 - dzRange));
+			const float pos = std::lerp(0.13f, 1.f, (mag - dz_range) / (1 - dz_range));
 			const float scale = pos / mag;
 			X = X * scale;
 			Y = Y * scale;
 		}
 		else
 		{
-			const float pos = std::lerp(0.f, 0.13f, mag / dzRange);
+			const float pos = std::lerp(0.f, 0.13f, mag / dz_range);
 			const float scale = pos / mag;
 			X = X * scale;
 			Y = Y * scale;

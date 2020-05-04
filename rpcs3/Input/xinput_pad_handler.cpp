@@ -49,7 +49,6 @@ xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 	init_configs();
 
 	// Define border values
-	thumb_min = -32768;
 	thumb_max = 32767;
 	trigger_min = 0;
 	trigger_max = 255;
