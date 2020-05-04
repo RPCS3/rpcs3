@@ -100,7 +100,7 @@ long PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u64, std::stri
 }
 
 // Get new scaled value between 0 and 255 based on its minimum and maximum
-float PadHandlerBase::ScaleStickInput(s32 raw_value, int minimum, int maximum)
+float PadHandlerBase::ScaledInput(s32 raw_value, int minimum, int maximum)
 {
 	// value based on max range converted to [0, 1]
 	float val = static_cast<float>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
@@ -108,7 +108,7 @@ float PadHandlerBase::ScaleStickInput(s32 raw_value, int minimum, int maximum)
 }
 
 // Get new scaled value between -255 and 255 based on its minimum and maximum
-float PadHandlerBase::ScaleStickInput2(s32 raw_value, int minimum, int maximum)
+float PadHandlerBase::ScaledInput2(s32 raw_value, int minimum, int maximum)
 {
 	// value based on max range converted to [0, 1]
 	float val = static_cast<float>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
@@ -160,7 +160,7 @@ u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multip
 
 	if (ignore_threshold)
 	{
-		return static_cast<u16>(ScaleStickInput(scaled_value, 0, thumb_max));
+		return static_cast<u16>(ScaledInput(scaled_value, 0, thumb_max));
 	}
 	else
 	{

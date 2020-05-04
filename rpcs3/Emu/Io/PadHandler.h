@@ -89,10 +89,10 @@ protected:
 	static long FindKeyCodeByString(const std::unordered_map<u64, std::string>& map, const std::string& name, bool fallback = true);
 
 	// Get new scaled value between 0 and 255 based on its minimum and maximum
-	static float ScaleStickInput(s32 raw_value, int minimum, int maximum);
+	static float ScaledInput(s32 raw_value, int minimum, int maximum);
 
 	// Get new scaled value between -255 and 255 based on its minimum and maximum
-	static float ScaleStickInput2(s32 raw_value, int minimum, int maximum);
+	static float ScaledInput2(s32 raw_value, int minimum, int maximum);
 
 	// Get normalized trigger value based on the range defined by a threshold
 	u16 NormalizeTriggerInput(u16 value, int threshold);
