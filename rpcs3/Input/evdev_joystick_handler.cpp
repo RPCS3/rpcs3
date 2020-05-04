@@ -243,12 +243,12 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 		// Triggers do not need handling of negative values
 		if (min >= 0 && std::find(m_positive_axis.begin(), m_positive_axis.end(), code) == m_positive_axis.end())
 		{
-			const float fvalue = ScaleStickInput(val, min, max);
+			const float fvalue = ScaledInput(val, min, max);
 			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(fvalue), false));
 			continue;
 		}
 
-		const float fvalue = ScaleStickInput2(val, min, max);
+		const float fvalue = ScaledInput2(val, min, max);
 		if (fvalue < 0)
 			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(std::abs(fvalue)), true));
 		else
@@ -544,11 +544,11 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, const std::sha
 		{
 			m_is_negative          = false;
 			m_is_button_or_trigger = true;
-			value                  = static_cast<u16>(ScaleStickInput(val, min, max));
+			value                  = static_cast<u16>(ScaledInput(val, min, max));
 			return code;
 		}
 
-		const float fvalue = ScaleStickInput2(val, min, max);
+		const float fvalue = ScaledInput2(val, min, max);
 		m_is_negative      = fvalue < 0;
 		value              = static_cast<u16>(std::abs(fvalue));
 		return code;
