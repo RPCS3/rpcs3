@@ -103,7 +103,7 @@ long PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u64, std::stri
 float PadHandlerBase::ScaledInput(s32 raw_value, int minimum, int maximum)
 {
 	// value based on max range converted to [0, 1]
-	float val = static_cast<float>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
+	const float val = static_cast<float>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
 	return 255.0f * val;
 }
 
@@ -111,7 +111,7 @@ float PadHandlerBase::ScaledInput(s32 raw_value, int minimum, int maximum)
 float PadHandlerBase::ScaledInput2(s32 raw_value, int minimum, int maximum)
 {
 	// value based on max range converted to [0, 1]
-	float val = static_cast<float>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
+	const float val = static_cast<float>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
 	return (510.0f * val) - 255.0f;
 }
 
@@ -124,11 +124,12 @@ u16 PadHandlerBase::NormalizeTriggerInput(u16 value, int threshold)
 	}
 	else if (threshold <= trigger_min)
 	{
-		return value;
+		return static_cast<u16>(ScaledInput(value, trigger_min, trigger_max));
 	}
 	else
 	{
-		return static_cast<u16>(static_cast<float>(trigger_max) * (value - threshold) / (trigger_max - threshold));
+		const s32 val = static_cast<s32>(static_cast<float>(trigger_max) * (value - threshold) / (trigger_max - threshold));
+		return static_cast<u16>(ScaledInput(val, trigger_min, trigger_max));
 	}
 }
 
@@ -141,7 +142,7 @@ u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 max
 		return static_cast<u16>(0);
 	}
 
-	float val = static_cast<float>(std::clamp(raw_value, 0, maximum)) / maximum; // value based on max range converted to [0, 1]
+	const float val = static_cast<float>(std::clamp(raw_value, 0, maximum)) / maximum; // value based on max range converted to [0, 1]
 
 	if (threshold <= 0)
 	{
@@ -149,7 +150,7 @@ u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 max
 	}
 	else
 	{
-		float thresh = static_cast<float>(threshold) / maximum; // threshold converted to [0, 1]
+		const float thresh = static_cast<float>(threshold) / maximum; // threshold converted to [0, 1]
 		return static_cast<u16>(255.0f * std::min(1.0f, (val - thresh) / (1.0f - thresh)));
 	}
 }
