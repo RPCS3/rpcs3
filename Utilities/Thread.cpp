@@ -2489,7 +2489,7 @@ u64 thread_ctrl::get_thread_affinity_mask()
 		return 0;
 	}
 
-	u64 result;
+	u64 result = 0;
 
 	for (u32 core = 0; core < 64u; core++)
 	{
