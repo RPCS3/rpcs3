@@ -11,20 +11,16 @@ size_t vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgra
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
 	size_t hash = 0xCBF29CE484222325ULL;
 	const void* instbuffer = program.data.data();
-	size_t instIndex = 0;
-	bool end = false;
 	for (unsigned i = 0; i < program.data.size() / 4; i++)
 	{
 		if (program.instruction_mask[i])
 		{
-			const auto inst = v128::loadu(instbuffer, instIndex);
+			const auto inst = v128::loadu(instbuffer, i);
 			hash ^= inst._u64[0];
 			hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
 			hash ^= inst._u64[1];
 			hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
 		}
-
-		instIndex++;
 	}
 	return hash;
 }
@@ -65,6 +61,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 						rsx_log.error("vp_analyser: Possible infinite loop detected");
 						has_printed_error = true;
 					}
+
 					current_instruction++;
 					continue;
 				}
@@ -270,26 +267,23 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 
 	const void* instBuffer1 = binary1.data.data();
 	const void* instBuffer2 = binary2.data.data();
-	size_t instIndex = 0;
 	for (unsigned i = 0; i < binary1.data.size() / 4; i++)
 	{
-		const auto active = binary1.instruction_mask[instIndex];
-		if (active != binary2.instruction_mask[instIndex])
+		const auto active = binary1.instruction_mask[i];
+		if (active != binary2.instruction_mask[i])
 		{
 			return false;
 		}
 
 		if (active)
 		{
-			const auto inst1 = v128::loadu(instBuffer1, instIndex);
-			const auto inst2 = v128::loadu(instBuffer2, instIndex);
+			const auto inst1 = v128::loadu(instBuffer1, i);
+			const auto inst2 = v128::loadu(instBuffer2, i);
 			if (inst1 != inst2)
 			{
 				return false;
 			}
 		}
-
-		instIndex++;
 	}
 
 	return true;
@@ -311,7 +305,7 @@ size_t fragment_program_utils::get_fragment_program_ucode_size(const void* ptr)
 		bool isSRC0Constant = is_constant(inst._u32[1]);
 		bool isSRC1Constant = is_constant(inst._u32[2]);
 		bool isSRC2Constant = is_constant(inst._u32[3]);
-		bool end = (inst._u32[0] >> 8) & 0x1;
+		bool end = inst._bit[8];
 
 		if (isSRC0Constant || isSRC1Constant || isSRC2Constant)
 		{
@@ -338,13 +332,13 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 		const auto inst = v128::loadu(instBuffer, index);
 
 		// Check for opcode high bit which indicates a branch instructions (opcode 0x40...0x45)
-		if (inst._u32[2] & (1 << 23))
+		if (inst._bit[64 + 23])
 		{
 			result.has_branch_instructions = true;
 		}
 		else
 		{
-			const u32 opcode = (inst._u32[0] >> 16) & 0x3F;
+			const u32 opcode = inst._u16[1] & 0x3F;
 			if (opcode)
 			{
 				if (result.program_start_offset == umax)
@@ -397,7 +391,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			result.program_ucode_length += 16;
 		}
 
-		if ((inst._u32[0] >> 8) & 0x1)
+		if (inst._bit[8])
 		{
 			if (result.program_start_offset == umax)
 			{
@@ -434,7 +428,7 @@ size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragment
 			fragment_program_utils::is_constant(inst._u32[3]))
 			instIndex++;
 
-		bool end = (inst._u32[0] >> 8) & 0x1;
+		const bool end = inst._bit[8];
 		if (end)
 			return hash;
 	}
@@ -476,9 +470,7 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 	while (true)
 	{
 		const auto inst1 = v128::loadu(instBuffer1, instIndex);
-		const auto inst2 = v128::loadu(instBuffer2, instIndex);
-
-		if (inst1 != inst2)
+		if (inst1 != v128::loadu(instBuffer2, instIndex))
 			return false;
 
 		instIndex++;
@@ -488,7 +480,7 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 			fragment_program_utils::is_constant(inst1._u32[3]))
 			instIndex++;
 
-		bool end = ((inst1._u32[0] >> 8) & 0x1) && ((inst2._u32[0] >> 8) & 0x1);
+		const bool end = inst1._bit[8];
 		if (end)
 			return true;
 	}
