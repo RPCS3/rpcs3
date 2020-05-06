@@ -128,8 +128,8 @@ extern __m128 sse_log2_ps(__m128 A)
 
 extern SAFE_BUFFERS __m128i sse_pshufb(__m128i data, __m128i index)
 {
-	v128 m = v128::fromV(_mm_and_si128(index, _mm_set1_epi8(0xf)));
-	v128 a = v128::fromV(data);
+	v128 m = _mm_and_si128(index, _mm_set1_epi8(0xf));
+	v128 a = data;
 	v128 r;
 
 	for (int i = 0; i < 16; i++)
@@ -137,7 +137,7 @@ extern SAFE_BUFFERS __m128i sse_pshufb(__m128i data, __m128i index)
 		r._u8[i] = a._u8[m._u8[i]];
 	}
 
-	return _mm_and_si128(r.vi, _mm_cmpgt_epi8(index, _mm_set1_epi8(-1)));
+	return _mm_and_si128(r, _mm_cmpgt_epi8(index, _mm_set1_epi8(-1)));
 }
 
 extern SSSE3_FUNC __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C)
@@ -152,7 +152,7 @@ extern SSSE3_FUNC __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C)
 extern SAFE_BUFFERS __m128i sse_altivec_vperm_v0(__m128i A, __m128i B, __m128i C)
 {
 	__m128i ab[2]{B, A};
-	v128 index = v128::fromV(_mm_andnot_si128(C, _mm_set1_epi8(0x1f)));
+	v128 index = _mm_andnot_si128(C, _mm_set1_epi8(0x1f));
 	v128 res;
 
 	for (int i = 0; i < 16; i++)
@@ -160,7 +160,7 @@ extern SAFE_BUFFERS __m128i sse_altivec_vperm_v0(__m128i A, __m128i B, __m128i C
 		res._u8[i] = reinterpret_cast<u8*>(+ab)[index._u8[i]];
 	}
 
-	return res.vi;
+	return res;
 }
 
 extern __m128i sse_altivec_lvsl(u64 addr)
@@ -347,13 +347,13 @@ public:
 	{
 		for (s32 i = -31; i < 32; i++)
 		{
-			m_data[i + 31].vf = _mm_set1_ps(static_cast<float>(std::exp2(i)));
+			m_data[i + 31] = _mm_set1_ps(static_cast<float>(std::exp2(i)));
 		}
 	}
 
 	FORCE_INLINE __m128 operator [] (s32 scale) const
 	{
-		return m_data[scale + 31].vf;
+		return m_data[scale + 31];
 	}
 }
 const g_ppu_scale_table;
@@ -374,9 +374,9 @@ bool ppu_interpreter::MTVSCR(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VADDCUW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
-	ppu.vr[op.vd].vi = _mm_srli_epi32(_mm_cmpgt_epi32(_mm_xor_si128(b, _mm_set1_epi32(0x80000000)), _mm_xor_si128(a, _mm_set1_epi32(0x7fffffff))), 31);
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	ppu.vr[op.vd] = _mm_srli_epi32(_mm_cmpgt_epi32(_mm_xor_si128(b, _mm_set1_epi32(0x80000000)), _mm_xor_si128(a, _mm_set1_epi32(0x7fffffff))), 31);
 	return true;
 }
 
@@ -388,7 +388,7 @@ bool ppu_interpreter::VADDFP(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VADDSBS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_adds_epi8(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_adds_epi8(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
@@ -423,7 +423,7 @@ bool ppu_interpreter_precise::VADDSBS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VADDSHS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_adds_epi16(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_adds_epi16(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
@@ -463,9 +463,9 @@ bool ppu_interpreter_fast::VADDSWS(ppu_thread& ppu, ppu_opcode_t op)
 	const auto b = ppu.vr[op.vb];
 	const auto s = v128::add32(a, b); // a + b
 	const auto m = (a ^ s) & (b ^ s); // overflow bit
-	const auto x = _mm_srai_epi32(m.vi, 31); // saturation mask
-	const auto y = _mm_srai_epi32(_mm_and_si128(s.vi, m.vi), 31); // positive saturation mask
-	ppu.vr[op.vd].vi = _mm_xor_si128(_mm_xor_si128(_mm_srli_epi32(x, 1), y), _mm_or_si128(s.vi, x));
+	const auto x = _mm_srai_epi32(m, 31); // saturation mask
+	const auto y = _mm_srai_epi32(_mm_and_si128(s, m), 31); // positive saturation mask
+	ppu.vr[op.vd] = _mm_xor_si128(_mm_xor_si128(_mm_srli_epi32(x, 1), y), _mm_or_si128(s, x));
 	return true;
 }
 
@@ -506,7 +506,7 @@ bool ppu_interpreter::VADDUBM(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VADDUBS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_adds_epu8(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_adds_epu8(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
@@ -542,7 +542,7 @@ bool ppu_interpreter::VADDUHM(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VADDUHS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_adds_epu16(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_adds_epu16(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
@@ -579,9 +579,9 @@ bool ppu_interpreter::VADDUWM(ppu_thread& ppu, ppu_opcode_t op)
 // TODO: fix
 bool ppu_interpreter_fast::VADDUWS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
-	ppu.vr[op.vd].vi = _mm_or_si128(_mm_add_epi32(a, b), _mm_cmpgt_epi32(_mm_xor_si128(b, _mm_set1_epi32(0x80000000)), _mm_xor_si128(a, _mm_set1_epi32(0x7fffffff))));
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	ppu.vr[op.vd] = _mm_or_si128(_mm_add_epi32(a, b), _mm_cmpgt_epi32(_mm_xor_si128(b, _mm_set1_epi32(0x80000000)), _mm_xor_si128(a, _mm_set1_epi32(0x7fffffff))));
 	return true;
 }
 
@@ -628,7 +628,7 @@ bool ppu_interpreter::VAVGSB(ppu_thread& ppu, ppu_opcode_t op)
 	const auto summ = v128::add8(a, b) & v128::from8p(0xfe);
 	const auto sign = v128::from8p(0x80);
 	const auto overflow = (((a ^ summ) & (b ^ summ)) ^ summ ^ v128::eq8(b, sign)) & sign; // calculate msb
-	ppu.vr[op.vd].vi = _mm_or_si128(overflow.vi, _mm_srli_epi64(summ.vi, 1));
+	ppu.vr[op.vd] = _mm_or_si128(overflow, _mm_srli_epi64(summ, 1));
 	return true;
 }
 
@@ -639,7 +639,7 @@ bool ppu_interpreter::VAVGSH(ppu_thread& ppu, ppu_opcode_t op)
 	const auto summ = v128::add16(a, b);
 	const auto sign = v128::from16p(0x8000);
 	const auto overflow = (((a ^ summ) & (b ^ summ)) ^ summ ^ v128::eq16(b, sign)) & sign; // calculate msb
-	ppu.vr[op.vd].vi = _mm_or_si128(overflow.vi, _mm_srli_epi16(summ.vi, 1));
+	ppu.vr[op.vd] = _mm_or_si128(overflow, _mm_srli_epi16(summ, 1));
 	return true;
 }
 
@@ -650,19 +650,19 @@ bool ppu_interpreter::VAVGSW(ppu_thread& ppu, ppu_opcode_t op)
 	const auto summ = v128::add32(a, b);
 	const auto sign = v128::from32p(0x80000000);
 	const auto overflow = (((a ^ summ) & (b ^ summ)) ^ summ ^ v128::eq32(b, sign)) & sign; // calculate msb
-	ppu.vr[op.vd].vi = _mm_or_si128(overflow.vi, _mm_srli_epi32(summ.vi, 1));
+	ppu.vr[op.vd] = _mm_or_si128(overflow, _mm_srli_epi32(summ, 1));
 	return true;
 }
 
 bool ppu_interpreter::VAVGUB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_avg_epu8(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_avg_epu8(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
 bool ppu_interpreter::VAVGUH(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_avg_epu16(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_avg_epu16(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
@@ -671,117 +671,117 @@ bool ppu_interpreter::VAVGUW(ppu_thread& ppu, ppu_opcode_t op)
 	const auto a = ppu.vr[op.va];
 	const auto b = ppu.vr[op.vb];
 	const auto summ = v128::add32(v128::add32(a, b), v128::from32p(1));
-	const auto carry = _mm_xor_si128(_mm_slli_epi32(sse_cmpgt_epu32(summ.vi, a.vi), 31), _mm_set1_epi32(0x80000000));
-	ppu.vr[op.vd].vi = _mm_or_si128(carry, _mm_srli_epi32(summ.vi, 1));
+	const auto carry = _mm_xor_si128(_mm_slli_epi32(sse_cmpgt_epu32(summ, a), 31), _mm_set1_epi32(0x80000000));
+	ppu.vr[op.vd] = _mm_or_si128(carry, _mm_srli_epi32(summ, 1));
 	return true;
 }
 
 bool ppu_interpreter::VCFSX(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_mul_ps(_mm_cvtepi32_ps(ppu.vr[op.vb].vi), g_ppu_scale_table[0 - op.vuimm]);
+	ppu.vr[op.vd] = _mm_mul_ps(_mm_cvtepi32_ps(ppu.vr[op.vb]), g_ppu_scale_table[0 - op.vuimm]);
 	return true;
 }
 
 bool ppu_interpreter::VCFUX(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto b = ppu.vr[op.vb].vi;
+	const auto b = ppu.vr[op.vb];
 	const auto fix = _mm_and_ps(_mm_castsi128_ps(_mm_srai_epi32(b, 31)), _mm_set1_ps(0x80000000));
-	ppu.vr[op.vd].vf = _mm_mul_ps(_mm_add_ps(_mm_cvtepi32_ps(_mm_and_si128(b, _mm_set1_epi32(0x7fffffff))), fix), g_ppu_scale_table[0 - op.vuimm]);
+	ppu.vr[op.vd] = _mm_mul_ps(_mm_add_ps(_mm_cvtepi32_ps(_mm_and_si128(b, _mm_set1_epi32(0x7fffffff))), fix), g_ppu_scale_table[0 - op.vuimm]);
 	return true;
 }
 
 bool ppu_interpreter::VCMPBFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vf;
-	const auto b = ppu.vr[op.vb].vf;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
 	const auto sign = _mm_castsi128_ps(_mm_set1_epi32(0x80000000));
 	const auto cmp1 = _mm_cmpnle_ps(a, b);
 	const auto cmp2 = _mm_cmpnge_ps(a, _mm_xor_ps(b, sign));
-	ppu.vr[op.vd].vf = _mm_or_ps(_mm_and_ps(cmp1, sign), _mm_and_ps(cmp2, _mm_castsi128_ps(_mm_set1_epi32(0x40000000))));
+	ppu.vr[op.vd] = _mm_or_ps(_mm_and_ps(cmp1, sign), _mm_and_ps(cmp2, _mm_castsi128_ps(_mm_set1_epi32(0x40000000))));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, false, false, _mm_movemask_ps(_mm_or_ps(cmp1, cmp2)) == 0, false);
 	return true;
 }
 
 bool ppu_interpreter::VCMPEQFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto rmask = _mm_movemask_ps(ppu.vr[op.vd].vf = _mm_cmpeq_ps(ppu.vr[op.va].vf, ppu.vr[op.vb].vf));
+	const auto rmask = _mm_movemask_ps(ppu.vr[op.vd] = _mm_cmpeq_ps(ppu.vr[op.va], ppu.vr[op.vb]));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, rmask == 0xf, false, rmask == 0, false);
 	return true;
 }
 
 bool ppu_interpreter::VCMPEQUB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto rmask = _mm_movemask_epi8((ppu.vr[op.vd] = v128::eq8(ppu.vr[op.va], ppu.vr[op.vb])).vi);
+	const auto rmask = _mm_movemask_epi8((ppu.vr[op.vd] = v128::eq8(ppu.vr[op.va], ppu.vr[op.vb])));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, rmask == 0xffff, false, rmask == 0, false);
 	return true;
 }
 
 bool ppu_interpreter::VCMPEQUH(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto rmask = _mm_movemask_epi8((ppu.vr[op.vd] = v128::eq16(ppu.vr[op.va], ppu.vr[op.vb])).vi);
+	const auto rmask = _mm_movemask_epi8((ppu.vr[op.vd] = v128::eq16(ppu.vr[op.va], ppu.vr[op.vb])));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, rmask == 0xffff, false, rmask == 0, false);
 	return true;
 }
 
 bool ppu_interpreter::VCMPEQUW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto rmask = _mm_movemask_epi8((ppu.vr[op.vd] = v128::eq32(ppu.vr[op.va], ppu.vr[op.vb])).vi);
+	const auto rmask = _mm_movemask_epi8((ppu.vr[op.vd] = v128::eq32(ppu.vr[op.va], ppu.vr[op.vb])));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, rmask == 0xffff, false, rmask == 0, false);
 	return true;
 }
 
 bool ppu_interpreter::VCMPGEFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto rmask = _mm_movemask_ps(ppu.vr[op.vd].vf = _mm_cmpge_ps(ppu.vr[op.va].vf, ppu.vr[op.vb].vf));
+	const auto rmask = _mm_movemask_ps(ppu.vr[op.vd] = _mm_cmpge_ps(ppu.vr[op.va], ppu.vr[op.vb]));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, rmask == 0xf, false, rmask == 0, false);
 	return true;
 }
 
 bool ppu_interpreter::VCMPGTFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto rmask = _mm_movemask_ps(ppu.vr[op.vd].vf = _mm_cmpgt_ps(ppu.vr[op.va].vf, ppu.vr[op.vb].vf));
+	const auto rmask = _mm_movemask_ps(ppu.vr[op.vd] = _mm_cmpgt_ps(ppu.vr[op.va], ppu.vr[op.vb]));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, rmask == 0xf, false, rmask == 0, false);
 	return true;
 }
 
 bool ppu_interpreter::VCMPGTSB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto rmask = _mm_movemask_epi8(ppu.vr[op.vd].vi = _mm_cmpgt_epi8(ppu.vr[op.va].vi, ppu.vr[op.vb].vi));
+	const auto rmask = _mm_movemask_epi8(ppu.vr[op.vd] = _mm_cmpgt_epi8(ppu.vr[op.va], ppu.vr[op.vb]));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, rmask == 0xffff, false, rmask == 0, false);
 	return true;
 }
 
 bool ppu_interpreter::VCMPGTSH(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto rmask = _mm_movemask_epi8(ppu.vr[op.vd].vi = _mm_cmpgt_epi16(ppu.vr[op.va].vi, ppu.vr[op.vb].vi));
+	const auto rmask = _mm_movemask_epi8(ppu.vr[op.vd] = _mm_cmpgt_epi16(ppu.vr[op.va], ppu.vr[op.vb]));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, rmask == 0xffff, false, rmask == 0, false);
 	return true;
 }
 
 bool ppu_interpreter::VCMPGTSW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto rmask = _mm_movemask_epi8(ppu.vr[op.vd].vi = _mm_cmpgt_epi32(ppu.vr[op.va].vi, ppu.vr[op.vb].vi));
+	const auto rmask = _mm_movemask_epi8(ppu.vr[op.vd] = _mm_cmpgt_epi32(ppu.vr[op.va], ppu.vr[op.vb]));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, rmask == 0xffff, false, rmask == 0, false);
 	return true;
 }
 
 bool ppu_interpreter::VCMPGTUB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto rmask = _mm_movemask_epi8(ppu.vr[op.vd].vi = sse_cmpgt_epu8(ppu.vr[op.va].vi, ppu.vr[op.vb].vi));
+	const auto rmask = _mm_movemask_epi8(ppu.vr[op.vd] = sse_cmpgt_epu8(ppu.vr[op.va], ppu.vr[op.vb]));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, rmask == 0xffff, false, rmask == 0, false);
 	return true;
 }
 
 bool ppu_interpreter::VCMPGTUH(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto rmask = _mm_movemask_epi8(ppu.vr[op.vd].vi = sse_cmpgt_epu16(ppu.vr[op.va].vi, ppu.vr[op.vb].vi));
+	const auto rmask = _mm_movemask_epi8(ppu.vr[op.vd] = sse_cmpgt_epu16(ppu.vr[op.va], ppu.vr[op.vb]));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, rmask == 0xffff, false, rmask == 0, false);
 	return true;
 }
 
 bool ppu_interpreter::VCMPGTUW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto rmask = _mm_movemask_epi8(ppu.vr[op.vd].vi = sse_cmpgt_epu32(ppu.vr[op.va].vi, ppu.vr[op.vb].vi));
+	const auto rmask = _mm_movemask_epi8(ppu.vr[op.vd] = sse_cmpgt_epu32(ppu.vr[op.va], ppu.vr[op.vb]));
 	if (op.oe) [[unlikely]] ppu_cr_set(ppu, 6, rmask == 0xffff, false, rmask == 0, false);
 	return true;
 }
@@ -789,8 +789,8 @@ bool ppu_interpreter::VCMPGTUW(ppu_thread& ppu, ppu_opcode_t op)
 // TODO: fix
 bool ppu_interpreter_fast::VCTSXS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto scaled = _mm_mul_ps(ppu.vr[op.vb].vf, g_ppu_scale_table[op.vuimm]);
-	ppu.vr[op.vd].vi = _mm_xor_si128(_mm_cvttps_epi32(scaled), _mm_castps_si128(_mm_cmpge_ps(scaled, _mm_set1_ps(0x80000000))));
+	const auto scaled = _mm_mul_ps(ppu.vr[op.vb], g_ppu_scale_table[op.vuimm]);
+	ppu.vr[op.vd] = _mm_xor_si128(_mm_cvttps_epi32(scaled), _mm_castps_si128(_mm_cmpge_ps(scaled, _mm_set1_ps(0x80000000))));
 	return true;
 }
 
@@ -841,9 +841,9 @@ bool ppu_interpreter_precise::VCTSXS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VCTUXS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto scaled1 = _mm_max_ps(_mm_mul_ps(ppu.vr[op.vb].vf, g_ppu_scale_table[op.vuimm]), _mm_set1_ps(0.0f));
+	const auto scaled1 = _mm_max_ps(_mm_mul_ps(ppu.vr[op.vb], g_ppu_scale_table[op.vuimm]), _mm_set1_ps(0.0f));
 	const auto scaled2 = _mm_and_ps(_mm_sub_ps(scaled1, _mm_set1_ps(0x80000000)), _mm_cmpge_ps(scaled1, _mm_set1_ps(0x80000000)));
-	ppu.vr[op.vd].vi = _mm_or_si128(_mm_or_si128(_mm_cvttps_epi32(scaled1), _mm_cvttps_epi32(scaled2)), _mm_castps_si128(_mm_cmpge_ps(scaled1, _mm_set1_ps(0x100000000))));
+	ppu.vr[op.vd] = _mm_or_si128(_mm_or_si128(_mm_cvttps_epi32(scaled1), _mm_cvttps_epi32(scaled2)), _mm_castps_si128(_mm_cmpge_ps(scaled1, _mm_set1_ps(0x100000000))));
 	return true;
 }
 
@@ -898,19 +898,19 @@ bool ppu_interpreter_precise::VCTUXS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VEXPTEFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = sse_exp2_ps(ppu.vr[op.vb].vf);
+	ppu.vr[op.vd] = sse_exp2_ps(ppu.vr[op.vb]);
 	return true;
 }
 
 bool ppu_interpreter::VLOGEFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = sse_log2_ps(ppu.vr[op.vb].vf);
+	ppu.vr[op.vd] = sse_log2_ps(ppu.vr[op.vb]);
 	return true;
 }
 
 bool ppu_interpreter_fast::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_add_ps(_mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf), ppu.vr[op.vb].vf);
+	ppu.vr[op.vd] = _mm_add_ps(_mm_mul_ps(ppu.vr[op.va], ppu.vr[op.vc]), ppu.vr[op.vb]);
 	return true;
 }
 
@@ -932,64 +932,64 @@ bool ppu_interpreter_precise::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VMAXFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_max_ps(ppu.vr[op.va].vf, ppu.vr[op.vb].vf);
+	ppu.vr[op.vd] = _mm_max_ps(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
 bool ppu_interpreter::VMAXSB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
 	const auto m = _mm_cmpgt_epi8(a, b);
-	ppu.vr[op.vd].vi = _mm_or_si128(_mm_and_si128(m, a), _mm_andnot_si128(m, b));
+	ppu.vr[op.vd] = _mm_or_si128(_mm_and_si128(m, a), _mm_andnot_si128(m, b));
 	return true;
 }
 
 bool ppu_interpreter::VMAXSH(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_max_epi16(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_max_epi16(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
 bool ppu_interpreter::VMAXSW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
 	const auto m = _mm_cmpgt_epi32(a, b);
-	ppu.vr[op.vd].vi = _mm_or_si128(_mm_and_si128(m, a), _mm_andnot_si128(m, b));
+	ppu.vr[op.vd] = _mm_or_si128(_mm_and_si128(m, a), _mm_andnot_si128(m, b));
 	return true;
 }
 
 bool ppu_interpreter::VMAXUB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_max_epu8(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_max_epu8(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
 bool ppu_interpreter::VMAXUH(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const auto mask = _mm_set1_epi32(0x80008000);
-	ppu.vr[op.vd].vi = _mm_xor_si128(_mm_max_epi16(_mm_xor_si128(ppu.vr[op.va].vi, mask), _mm_xor_si128(ppu.vr[op.vb].vi, mask)), mask);
+	ppu.vr[op.vd] = _mm_xor_si128(_mm_max_epi16(_mm_xor_si128(ppu.vr[op.va], mask), _mm_xor_si128(ppu.vr[op.vb], mask)), mask);
 	return true;
 }
 
 bool ppu_interpreter::VMAXUW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
 	const auto m = sse_cmpgt_epu32(a, b);
-	ppu.vr[op.vd].vi = _mm_or_si128(_mm_and_si128(m, a), _mm_andnot_si128(m, b));
+	ppu.vr[op.vd] = _mm_or_si128(_mm_and_si128(m, a), _mm_andnot_si128(m, b));
 	return true;
 }
 
 bool ppu_interpreter_fast::VMHADDSHS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
-	const auto c = ppu.vr[op.vc].vi;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	const auto c = ppu.vr[op.vc];
 	const auto m = _mm_or_si128(_mm_srli_epi16(_mm_mullo_epi16(a, b), 15), _mm_slli_epi16(_mm_mulhi_epi16(a, b), 1));
 	const auto s = _mm_cmpeq_epi16(m, _mm_set1_epi16(-0x8000)); // detect special case (positive 0x8000)
-	ppu.vr[op.vd].vi = _mm_adds_epi16(_mm_adds_epi16(_mm_xor_si128(m, s), c), _mm_srli_epi16(s, 15));
+	ppu.vr[op.vd] = _mm_adds_epi16(_mm_adds_epi16(_mm_xor_si128(m, s), c), _mm_srli_epi16(s, 15));
 	return true;
 }
 
@@ -1026,9 +1026,9 @@ bool ppu_interpreter_precise::VMHADDSHS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VMHRADDSHS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
-	const auto c = ppu.vr[op.vc].vi;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	const auto c = ppu.vr[op.vc];
 	const auto x80 = _mm_set1_epi16(0x80); // 0x80 * 0x80 = 0x4000, add this to the product
 	const auto al = _mm_unpacklo_epi16(a, x80);
 	const auto ah = _mm_unpackhi_epi16(a, x80);
@@ -1038,7 +1038,7 @@ bool ppu_interpreter_fast::VMHRADDSHS(ppu_thread& ppu, ppu_opcode_t op)
 	const auto mh = _mm_srai_epi32(_mm_madd_epi16(ah, bh), 15);
 	const auto cl = _mm_srai_epi32(_mm_unpacklo_epi16(_mm_setzero_si128(), c), 16);
 	const auto ch = _mm_srai_epi32(_mm_unpackhi_epi16(_mm_setzero_si128(), c), 16);
-	ppu.vr[op.vd].vi = _mm_packs_epi32(_mm_add_epi32(ml, cl), _mm_add_epi32(mh, ch));
+	ppu.vr[op.vd] = _mm_packs_epi32(_mm_add_epi32(ml, cl), _mm_add_epi32(mh, ch));
 	return true;
 }
 
@@ -1075,118 +1075,118 @@ bool ppu_interpreter_precise::VMHRADDSHS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VMINFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vf;
-	const auto b = ppu.vr[op.vb].vf;
-	ppu.vr[op.vd].vf = _mm_or_ps(_mm_min_ps(a, b),  _mm_min_ps(b, a));
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	ppu.vr[op.vd] = _mm_or_ps(_mm_min_ps(a, b),  _mm_min_ps(b, a));
 	return true;
 }
 
 bool ppu_interpreter::VMINSB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
 	const auto m = _mm_cmpgt_epi8(a, b);
-	ppu.vr[op.vd].vi = _mm_or_si128(_mm_andnot_si128(m, a), _mm_and_si128(m, b));
+	ppu.vr[op.vd] = _mm_or_si128(_mm_andnot_si128(m, a), _mm_and_si128(m, b));
 	return true;
 }
 
 bool ppu_interpreter::VMINSH(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_min_epi16(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_min_epi16(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
 bool ppu_interpreter::VMINSW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
 	const auto m = _mm_cmpgt_epi32(a, b);
-	ppu.vr[op.vd].vi = _mm_or_si128(_mm_andnot_si128(m, a), _mm_and_si128(m, b));
+	ppu.vr[op.vd] = _mm_or_si128(_mm_andnot_si128(m, a), _mm_and_si128(m, b));
 	return true;
 }
 
 bool ppu_interpreter::VMINUB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_min_epu8(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_min_epu8(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
 bool ppu_interpreter::VMINUH(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const auto mask = _mm_set1_epi32(0x80008000);
-	ppu.vr[op.vd].vi = _mm_xor_si128(_mm_min_epi16(_mm_xor_si128(ppu.vr[op.va].vi, mask), _mm_xor_si128(ppu.vr[op.vb].vi, mask)), mask);
+	ppu.vr[op.vd] = _mm_xor_si128(_mm_min_epi16(_mm_xor_si128(ppu.vr[op.va], mask), _mm_xor_si128(ppu.vr[op.vb], mask)), mask);
 	return true;
 }
 
 bool ppu_interpreter::VMINUW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
 	const auto m = sse_cmpgt_epu32(a, b);
-	ppu.vr[op.vd].vi = _mm_or_si128(_mm_andnot_si128(m, a), _mm_and_si128(m, b));
+	ppu.vr[op.vd] = _mm_or_si128(_mm_andnot_si128(m, a), _mm_and_si128(m, b));
 	return true;
 }
 
 bool ppu_interpreter::VMLADDUHM(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_add_epi16(_mm_mullo_epi16(ppu.vr[op.va].vi, ppu.vr[op.vb].vi), ppu.vr[op.vc].vi);
+	ppu.vr[op.vd] = _mm_add_epi16(_mm_mullo_epi16(ppu.vr[op.va], ppu.vr[op.vb]), ppu.vr[op.vc]);
 	return true;
 }
 
 bool ppu_interpreter::VMRGHB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_unpackhi_epi8(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
+	ppu.vr[op.vd] = _mm_unpackhi_epi8(ppu.vr[op.vb], ppu.vr[op.va]);
 	return true;
 }
 
 bool ppu_interpreter::VMRGHH(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_unpackhi_epi16(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
+	ppu.vr[op.vd] = _mm_unpackhi_epi16(ppu.vr[op.vb], ppu.vr[op.va]);
 	return true;
 }
 
 bool ppu_interpreter::VMRGHW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_unpackhi_epi32(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
+	ppu.vr[op.vd] = _mm_unpackhi_epi32(ppu.vr[op.vb], ppu.vr[op.va]);
 	return true;
 }
 
 bool ppu_interpreter::VMRGLB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_unpacklo_epi8(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
+	ppu.vr[op.vd] = _mm_unpacklo_epi8(ppu.vr[op.vb], ppu.vr[op.va]);
 	return true;
 }
 
 bool ppu_interpreter::VMRGLH(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_unpacklo_epi16(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
+	ppu.vr[op.vd] = _mm_unpacklo_epi16(ppu.vr[op.vb], ppu.vr[op.va]);
 	return true;
 }
 
 bool ppu_interpreter::VMRGLW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_unpacklo_epi32(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
+	ppu.vr[op.vd] = _mm_unpacklo_epi32(ppu.vr[op.vb], ppu.vr[op.va]);
 	return true;
 }
 
 bool ppu_interpreter::VMSUMMBM(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi; // signed bytes
-	const auto b = ppu.vr[op.vb].vi; // unsigned bytes
-	const auto c = ppu.vr[op.vc].vi;
+	const auto a = ppu.vr[op.va]; // signed bytes
+	const auto b = ppu.vr[op.vb]; // unsigned bytes
+	const auto c = ppu.vr[op.vc];
 	const auto ah = _mm_srai_epi16(a, 8);
 	const auto bh = _mm_srli_epi16(b, 8);
 	const auto al = _mm_srai_epi16(_mm_slli_epi16(a, 8), 8);
 	const auto bl = _mm_and_si128(b, _mm_set1_epi16(0x00ff));
 	const auto sh = _mm_madd_epi16(ah, bh);
 	const auto sl = _mm_madd_epi16(al, bl);
-	ppu.vr[op.vd].vi = _mm_add_epi32(_mm_add_epi32(c, sh), sl);
+	ppu.vr[op.vd] = _mm_add_epi32(_mm_add_epi32(c, sh), sl);
 	return true;
 }
 
 bool ppu_interpreter::VMSUMSHM(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_add_epi32(_mm_madd_epi16(ppu.vr[op.va].vi, ppu.vr[op.vb].vi), ppu.vr[op.vc].vi);
+	ppu.vr[op.vd] = _mm_add_epi32(_mm_madd_epi16(ppu.vr[op.va], ppu.vr[op.vb]), ppu.vr[op.vc]);
 	return true;
 }
 
@@ -1264,9 +1264,9 @@ bool ppu_interpreter_precise::VMSUMSHS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VMSUMUBM(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
-	const auto c = ppu.vr[op.vc].vi;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	const auto c = ppu.vr[op.vc];
 	const auto mask = _mm_set1_epi16(0x00ff);
 	const auto ah = _mm_srli_epi16(a, 8);
 	const auto al = _mm_and_si128(a, mask);
@@ -1274,20 +1274,20 @@ bool ppu_interpreter::VMSUMUBM(ppu_thread& ppu, ppu_opcode_t op)
 	const auto bl = _mm_and_si128(b, mask);
 	const auto sh = _mm_madd_epi16(ah, bh);
 	const auto sl = _mm_madd_epi16(al, bl);
-	ppu.vr[op.vd].vi = _mm_add_epi32(_mm_add_epi32(c, sh), sl);
+	ppu.vr[op.vd] = _mm_add_epi32(_mm_add_epi32(c, sh), sl);
 	return true;
 }
 
 bool ppu_interpreter::VMSUMUHM(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
-	const auto c = ppu.vr[op.vc].vi;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	const auto c = ppu.vr[op.vc];
 	const auto ml = _mm_mullo_epi16(a, b); // low results
 	const auto mh = _mm_mulhi_epu16(a, b); // high results
 	const auto ls = _mm_add_epi32(_mm_srli_epi32(ml, 16), _mm_and_si128(ml, _mm_set1_epi32(0x0000ffff)));
 	const auto hs = _mm_add_epi32(_mm_slli_epi32(mh, 16), _mm_and_si128(mh, _mm_set1_epi32(0xffff0000)));
-	ppu.vr[op.vd].vi = _mm_add_epi32(_mm_add_epi32(c, ls), hs);
+	ppu.vr[op.vd] = _mm_add_epi32(_mm_add_epi32(c, ls), hs);
 	return true;
 }
 
@@ -1356,65 +1356,65 @@ bool ppu_interpreter_precise::VMSUMUHS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VMULESB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_mullo_epi16(_mm_srai_epi16(ppu.vr[op.va].vi, 8), _mm_srai_epi16(ppu.vr[op.vb].vi, 8));
+	ppu.vr[op.vd] = _mm_mullo_epi16(_mm_srai_epi16(ppu.vr[op.va], 8), _mm_srai_epi16(ppu.vr[op.vb], 8));
 	return true;
 }
 
 bool ppu_interpreter::VMULESH(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_madd_epi16(_mm_srli_epi32(ppu.vr[op.va].vi, 16), _mm_srli_epi32(ppu.vr[op.vb].vi, 16));
+	ppu.vr[op.vd] = _mm_madd_epi16(_mm_srli_epi32(ppu.vr[op.va], 16), _mm_srli_epi32(ppu.vr[op.vb], 16));
 	return true;
 }
 
 bool ppu_interpreter::VMULEUB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_mullo_epi16(_mm_srli_epi16(ppu.vr[op.va].vi, 8), _mm_srli_epi16(ppu.vr[op.vb].vi, 8));
+	ppu.vr[op.vd] = _mm_mullo_epi16(_mm_srli_epi16(ppu.vr[op.va], 8), _mm_srli_epi16(ppu.vr[op.vb], 8));
 	return true;
 }
 
 bool ppu_interpreter::VMULEUH(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
 	const auto ml = _mm_mullo_epi16(a, b);
 	const auto mh = _mm_mulhi_epu16(a, b);
-	ppu.vr[op.vd].vi = _mm_or_si128(_mm_srli_epi32(ml, 16), _mm_and_si128(mh, _mm_set1_epi32(0xffff0000)));
+	ppu.vr[op.vd] = _mm_or_si128(_mm_srli_epi32(ml, 16), _mm_and_si128(mh, _mm_set1_epi32(0xffff0000)));
 	return true;
 }
 
 bool ppu_interpreter::VMULOSB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_mullo_epi16(_mm_srai_epi16(_mm_slli_epi16(ppu.vr[op.va].vi, 8), 8), _mm_srai_epi16(_mm_slli_epi16(ppu.vr[op.vb].vi, 8), 8));
+	ppu.vr[op.vd] = _mm_mullo_epi16(_mm_srai_epi16(_mm_slli_epi16(ppu.vr[op.va], 8), 8), _mm_srai_epi16(_mm_slli_epi16(ppu.vr[op.vb], 8), 8));
 	return true;
 }
 
 bool ppu_interpreter::VMULOSH(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const auto mask = _mm_set1_epi32(0x0000ffff);
-	ppu.vr[op.vd].vi = _mm_madd_epi16(_mm_and_si128(ppu.vr[op.va].vi, mask), _mm_and_si128(ppu.vr[op.vb].vi, mask));
+	ppu.vr[op.vd] = _mm_madd_epi16(_mm_and_si128(ppu.vr[op.va], mask), _mm_and_si128(ppu.vr[op.vb], mask));
 	return true;
 }
 
 bool ppu_interpreter::VMULOUB(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const auto mask = _mm_set1_epi16(0x00ff);
-	ppu.vr[op.vd].vi = _mm_mullo_epi16(_mm_and_si128(ppu.vr[op.va].vi, mask), _mm_and_si128(ppu.vr[op.vb].vi, mask));
+	ppu.vr[op.vd] = _mm_mullo_epi16(_mm_and_si128(ppu.vr[op.va], mask), _mm_and_si128(ppu.vr[op.vb], mask));
 	return true;
 }
 
 bool ppu_interpreter::VMULOUH(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto a = ppu.vr[op.va].vi;
-	const auto b = ppu.vr[op.vb].vi;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
 	const auto ml = _mm_mullo_epi16(a, b);
 	const auto mh = _mm_mulhi_epu16(a, b);
-	ppu.vr[op.vd].vi = _mm_or_si128(_mm_slli_epi32(mh, 16), _mm_and_si128(ml, _mm_set1_epi32(0x0000ffff)));
+	ppu.vr[op.vd] = _mm_or_si128(_mm_slli_epi32(mh, 16), _mm_and_si128(ml, _mm_set1_epi32(0x0000ffff)));
 	return true;
 }
 
 bool ppu_interpreter::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_xor_ps(_mm_sub_ps(_mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf), ppu.vr[op.vb].vf), _mm_set1_ps(-0.0f));
+	ppu.vr[op.vd] = _mm_xor_ps(_mm_sub_ps(_mm_mul_ps(ppu.vr[op.va], ppu.vr[op.vc]), ppu.vr[op.vb]), _mm_set1_ps(-0.0f));
 	return true;
 }
 
@@ -1432,9 +1432,9 @@ bool ppu_interpreter::VOR(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VPERM(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = s_use_ssse3
-		? sse_altivec_vperm(ppu.vr[op.va].vi, ppu.vr[op.vb].vi, ppu.vr[op.vc].vi)
-		: sse_altivec_vperm_v0(ppu.vr[op.va].vi, ppu.vr[op.vb].vi, ppu.vr[op.vc].vi);
+	ppu.vr[op.vd] = s_use_ssse3
+		? sse_altivec_vperm(ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc])
+		: sse_altivec_vperm_v0(ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc]);
 	return true;
 }
 
@@ -1462,7 +1462,7 @@ bool ppu_interpreter::VPKPX(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VPKSHSS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_packs_epi16(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
+	ppu.vr[op.vd] = _mm_packs_epi16(ppu.vr[op.vb], ppu.vr[op.va]);
 	return true;
 }
 
@@ -1515,7 +1515,7 @@ bool ppu_interpreter_precise::VPKSHSS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VPKSHUS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_packus_epi16(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
+	ppu.vr[op.vd] = _mm_packus_epi16(ppu.vr[op.vb], ppu.vr[op.va]);
 	return true;
 }
 
@@ -1534,13 +1534,13 @@ bool ppu_interpreter_precise::VPKSHUS(ppu_thread& ppu, ppu_opcode_t op)
 		}
 	}
 
-	ppu.vr[op.vd].vi = _mm_packus_epi16(b.vi, a.vi);
+	ppu.vr[op.vd] = _mm_packus_epi16(b, a);
 	return true;
 }
 
 bool ppu_interpreter_fast::VPKSWSS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_packs_epi32(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
+	ppu.vr[op.vd] = _mm_packs_epi32(ppu.vr[op.vb], ppu.vr[op.va]);
 	return true;
 }
 
@@ -1593,7 +1593,7 @@ bool ppu_interpreter_precise::VPKSWSS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VPKSWUS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	//ppu.vr[op.vd].vi = _mm_packus_epi32(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
+	//ppu.vr[op.vd] = _mm_packus_epi32(ppu.vr[op.vb], ppu.vr[op.va]);
 	auto& d = ppu.vr[op.vd];
 	v128 VA = ppu.vr[op.va];
 	v128 VB = ppu.vr[op.vb];
@@ -1630,7 +1630,7 @@ bool ppu_interpreter_fast::VPKSWUS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_precise::VPKSWUS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	//ppu.vr[op.vd].vi = _mm_packus_epi32(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
+	//ppu.vr[op.vd] = _mm_packus_epi32(ppu.vr[op.vb], ppu.vr[op.va]);
 	auto& d = ppu.vr[op.vd];
 	v128 VA = ppu.vr[op.va];
 	v128 VB = ppu.vr[op.vb];
@@ -1813,7 +1813,7 @@ bool ppu_interpreter_precise::VPKUWUS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VREFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_div_ps(_mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f), ppu.vr[op.vb].vf);
+	ppu.vr[op.vd] = _mm_div_ps(_mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f), ppu.vr[op.vb]);
 	return true;
 }
 
@@ -1906,7 +1906,7 @@ bool ppu_interpreter::VRLW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VRSQRTEFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_div_ps(_mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f), _mm_sqrt_ps(ppu.vr[op.vb].vf));
+	ppu.vr[op.vd] = _mm_div_ps(_mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f), _mm_sqrt_ps(ppu.vr[op.vb]));
 	return true;
 }
 
@@ -2209,7 +2209,7 @@ bool ppu_interpreter::VSUBFP(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VSUBSBS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_subs_epi8(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_subs_epi8(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
@@ -2244,7 +2244,7 @@ bool ppu_interpreter_precise::VSUBSBS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VSUBSHS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_subs_epi16(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_subs_epi16(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
@@ -2335,7 +2335,7 @@ bool ppu_interpreter::VSUBUBM(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VSUBUBS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_subs_epu8(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_subs_epu8(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
@@ -2376,7 +2376,7 @@ bool ppu_interpreter::VSUBUHM(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VSUBUHS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vi = _mm_subs_epu16(ppu.vr[op.va].vi, ppu.vr[op.vb].vi);
+	ppu.vr[op.vd] = _mm_subs_epu16(ppu.vr[op.va], ppu.vr[op.vb]);
 	return true;
 }
 
@@ -3196,7 +3196,7 @@ bool ppu_interpreter::TW(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LVSL(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd].vi = sse_altivec_lvsl(addr);
+	ppu.vr[op.vd] = sse_altivec_lvsl(addr);
 	return true;
 }
 
@@ -3260,8 +3260,8 @@ bool ppu_interpreter::MFOCRF(ppu_thread& ppu, ppu_opcode_t op)
 	{
 		// MFCR
 		auto* lanes = reinterpret_cast<be_t<v128>*>(+ppu.cr.bits);
-		const u32 mh = _mm_movemask_epi8(_mm_slli_epi64(lanes[0].value().vi, 7));
-		const u32 ml = _mm_movemask_epi8(_mm_slli_epi64(lanes[1].value().vi, 7));
+		const u32 mh = _mm_movemask_epi8(_mm_slli_epi64(lanes[0].value(), 7));
+		const u32 ml = _mm_movemask_epi8(_mm_slli_epi64(lanes[1].value(), 7));
 
 		ppu.gpr[op.rd] = (mh << 16) | ml;
 	}
@@ -3335,7 +3335,7 @@ bool ppu_interpreter::CMPL(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LVSR(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd].vi = sse_altivec_lvsr(addr);
+	ppu.vr[op.vd] = sse_altivec_lvsr(addr);
 	return true;
 }
 
@@ -3961,7 +3961,7 @@ bool ppu_interpreter::DIVW(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LVLX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd].vi = s_use_ssse3 ? sse_cellbe_lvlx(addr) : sse_cellbe_lvlx_v0(addr);
+	ppu.vr[op.vd] = s_use_ssse3 ? sse_cellbe_lvlx(addr) : sse_cellbe_lvlx_v0(addr);
 	return true;
 }
 
@@ -4025,7 +4025,7 @@ bool ppu_interpreter::SRD(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LVRX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd].vi = s_use_ssse3 ? sse_cellbe_lvrx(addr) : sse_cellbe_lvrx_v0(addr);
+	ppu.vr[op.vd] = s_use_ssse3 ? sse_cellbe_lvrx(addr) : sse_cellbe_lvrx_v0(addr);
 	return true;
 }
 
@@ -4093,7 +4093,7 @@ bool ppu_interpreter::LFDUX(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::STVLX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	s_use_ssse3 ? sse_cellbe_stvlx(addr, ppu.vr[op.vs].vi) : sse_cellbe_stvlx_v0(addr, ppu.vr[op.vs].vi);
+	s_use_ssse3 ? sse_cellbe_stvlx(addr, ppu.vr[op.vs]) : sse_cellbe_stvlx_v0(addr, ppu.vr[op.vs]);
 	return true;
 }
 
@@ -4141,7 +4141,7 @@ bool ppu_interpreter::STFSX(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::STVRX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	s_use_ssse3 ? sse_cellbe_stvrx(addr, ppu.vr[op.vs].vi) : sse_cellbe_stvrx_v0(addr, ppu.vr[op.vs].vi);
+	s_use_ssse3 ? sse_cellbe_stvrx(addr, ppu.vr[op.vs]) : sse_cellbe_stvrx_v0(addr, ppu.vr[op.vs]);
 	return true;
 }
 

@@ -15,8 +15,8 @@ union alignas(16) v128
 {
 	char _bytes[16];
 
-	template <typename T, std::size_t N, std::size_t M>
-	struct masked_array_t // array type accessed as (index ^ M)
+	template <typename T, std::size_t M>
+	class masked_array_t // array type accessed as (index ^ M)
 	{
 		char m_data[16];
 
@@ -32,10 +32,10 @@ union alignas(16) v128
 		}
 	};
 
-	template <typename T, std::size_t N = 16 / sizeof(T)>
-	using normal_array_t = masked_array_t<T, N, std::endian::little == std::endian::native ? 0 : N - 1>;
-	template <typename T, std::size_t N = 16 / sizeof(T)>
-	using reversed_array_t = masked_array_t<T, N, std::endian::little == std::endian::native ? N - 1 : 0>;
+	template <typename T>
+	using normal_array_t = masked_array_t<T, std::endian::little == std::endian::native ? 0 : 16 / sizeof(T) - 1>;
+	template <typename T>
+	using reversed_array_t = masked_array_t<T, std::endian::little == std::endian::native ? 16 / sizeof(T) - 1 : 0>;
 
 	normal_array_t<u64> _u64;
 	normal_array_t<s64> _s64;
@@ -62,10 +62,6 @@ union alignas(16) v128
 	reversed_array_t<f32> fr;
 	reversed_array_t<f64> dr;
 
-	__m128 vf;
-	__m128i vi;
-	__m128d vd;
-
 	struct bit_array_128
 	{
 		char m_data[16];
@@ -73,11 +69,11 @@ union alignas(16) v128
 	public:
 		class bit_element
 		{
-			u64& data;
-			const u64 mask;
+			u32& data;
+			const u32 mask;
 
 		public:
-			bit_element(u64& data, const u64 mask)
+			bit_element(u32& data, const u32 mask)
 				: data(data)
 				, mask(mask)
 			{
@@ -118,40 +114,60 @@ union alignas(16) v128
 		// Index 0 returns the MSB and index 127 returns the LSB
 		bit_element operator[](u32 index)
 		{
-			const auto data_ptr = reinterpret_cast<u64*>(m_data);
+			const auto data_ptr = reinterpret_cast<u32*>(m_data);
 
 			if constexpr (std::endian::little == std::endian::native)
 			{
-				return bit_element(data_ptr[1 - (index >> 6)], 0x8000000000000000ull >> (index & 0x3F));
+				return bit_element(data_ptr[3 - (index >> 5)], 0x80000000u >> (index & 0x1F));
 			}
 			else
 			{
-				return bit_element(data_ptr[index >> 6], 0x8000000000000000ull >> (index & 0x3F));
+				return bit_element(data_ptr[index >> 5], 0x80000000u >> (index & 0x1F));
 			}
 		}
 
 		// Index 0 returns the MSB and index 127 returns the LSB
 		bool operator[](u32 index) const
 		{
-			const auto data_ptr = reinterpret_cast<const u64*>(m_data);
+			const auto data_ptr = reinterpret_cast<const u32*>(m_data);
 
 			if constexpr (std::endian::little == std::endian::native)
 			{
-				return (data_ptr[1 - (index >> 6)] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
+				return (data_ptr[3 - (index >> 5)] & (0x80000000u >> (index & 0x1F))) != 0;
 			}
 			else
 			{
-				return (data_ptr[index >> 6] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
+				return (data_ptr[index >> 5] & (0x80000000u >> (index & 0x1F))) != 0;
 			}
 		}
 	} _bit;
 
+	v128() = default;
+
+	template <typename T, typename type = std::remove_const_t<T>>
+	static constexpr bool is_v128_convertible = 
+		std::is_same_v<type, s128> ||
+		std::is_same_v<type, u128> ||
+		std::is_same_v<type, __m128> ||
+		std::is_same_v<type, __m128i> ||
+		std::is_same_v<type, __m128d>;
+
+	template <typename T, typename = std::enable_if_t<is_v128_convertible<std::remove_reference_t<T>>, void>>
+	v128(T&& value) noexcept
+	{
+		*this = std::bit_cast<v128>(std::forward<T>(value));
+	}
+
+	template <typename T, typename = std::enable_if_t<is_v128_convertible<T>, void>>
+	operator T() const noexcept
+	{
+		return std::bit_cast<T>(*this);
+	}
+
 	static v128 from64(u64 _0, u64 _1 = 0)
 	{
-		v128 ret;
-		ret._u64[0] = _0;
-		ret._u64[1] = _1;
-		return ret;
+		auto to_s64 = [](u64 val) { return static_cast<s64>(val); };
+		return _mm_set_epi64x(to_s64(_1), to_s64(_0));
 	}
 
 	static v128 from64r(u64 _1, u64 _0 = 0)
@@ -161,12 +177,8 @@ union alignas(16) v128
 
 	static v128 from32(u32 _0, u32 _1 = 0, u32 _2 = 0, u32 _3 = 0)
 	{
-		v128 ret;
-		ret._u32[0] = _0;
-		ret._u32[1] = _1;
-		ret._u32[2] = _2;
-		ret._u32[3] = _3;
-		return ret;
+		auto to_int = [](u32 val) { return static_cast<int>(val); };
+		return _mm_set_epi32(to_int(_3), to_int(_2), to_int(_1), to_int(_0));
 	}
 
 	static v128 from32r(u32 _3, u32 _2 = 0, u32 _1 = 0, u32 _0 = 0)
@@ -176,50 +188,23 @@ union alignas(16) v128
 
 	static v128 from32p(u32 value)
 	{
-		v128 ret;
-		ret.vi = _mm_set1_epi32(static_cast<s32>(value));
-		return ret;
+		return _mm_set1_epi32(static_cast<s32>(value));
 	}
 
 	static v128 from16p(u16 value)
 	{
-		v128 ret;
-		ret.vi = _mm_set1_epi16(static_cast<s16>(value));
-		return ret;
+		return _mm_set1_epi16(static_cast<s16>(value));
 	}
 
 	static v128 from8p(u8 value)
 	{
-		v128 ret;
-		ret.vi = _mm_set1_epi8(static_cast<s8>(value));
-		return ret;
+		return _mm_set1_epi8(static_cast<s8>(value));
 	}
 
 	static v128 fromBit(u32 bit)
 	{
-		v128 ret = {};
+		v128 ret{};
 		ret._bit[bit] = true;
-		return ret;
-	}
-
-	static v128 fromV(__m128i value)
-	{
-		v128 ret;
-		ret.vi = value;
-		return ret;
-	}
-
-	static v128 fromF(__m128 value)
-	{
-		v128 ret;
-		ret.vf = value;
-		return ret;
-	}
-
-	static v128 fromD(__m128d value)
-	{
-		v128 ret;
-		ret.vd = value;
 		return ret;
 	}
 
@@ -237,106 +222,105 @@ union alignas(16) v128
 		std::memcpy(static_cast<u8*>(ptr) + index * sizeof(v128), &value, sizeof(v128));
 	}
 
-	static inline v128 add8(const v128& left, const v128& right)
+	static inline v128 add8(v128 left, v128 right)
 	{
-		return fromV(_mm_add_epi8(left.vi, right.vi));
+		return _mm_add_epi8(left, right);
 	}
 
-	static inline v128 add16(const v128& left, const v128& right)
+	static inline v128 add16(v128 left, v128 right)
 	{
-		return fromV(_mm_add_epi16(left.vi, right.vi));
+		return _mm_add_epi16(left, right);
 	}
 
-	static inline v128 add32(const v128& left, const v128& right)
+	static inline v128 add32(v128 left, v128 right)
 	{
-		return fromV(_mm_add_epi32(left.vi, right.vi));
+		return _mm_add_epi32(left, right);
 	}
 
-	static inline v128 addfs(const v128& left, const v128& right)
+	static inline v128 addfs(v128 left, v128 right)
 	{
-		return fromF(_mm_add_ps(left.vf, right.vf));
+		return _mm_add_ps(left, right);
 	}
 
-	static inline v128 addfd(const v128& left, const v128& right)
+	static inline v128 addfd(v128 left, v128 right)
 	{
-		return fromD(_mm_add_pd(left.vd, right.vd));
+		return _mm_add_pd(left, right);
 	}
 
-	static inline v128 sub8(const v128& left, const v128& right)
+	static inline v128 sub8(v128 left, v128 right)
 	{
-		return fromV(_mm_sub_epi8(left.vi, right.vi));
+		return _mm_sub_epi8(left, right);
 	}
 
-	static inline v128 sub16(const v128& left, const v128& right)
+	static inline v128 sub16(v128 left, v128 right)
 	{
-		return fromV(_mm_sub_epi16(left.vi, right.vi));
+		return _mm_sub_epi16(left, right);
 	}
 
-	static inline v128 sub32(const v128& left, const v128& right)
+	static inline v128 sub32(v128 left, v128 right)
 	{
-		return fromV(_mm_sub_epi32(left.vi, right.vi));
+		return _mm_sub_epi32(left, right);
 	}
 
-	static inline v128 subfs(const v128& left, const v128& right)
+	static inline v128 subfs(v128 left, v128 right)
 	{
-		return fromF(_mm_sub_ps(left.vf, right.vf));
+		return _mm_sub_ps(left, right);
 	}
 
-	static inline v128 subfd(const v128& left, const v128& right)
+	static inline v128 subfd(v128 left, v128 right)
 	{
-		return fromD(_mm_sub_pd(left.vd, right.vd));
+		return _mm_sub_pd(left, right);
 	}
 
-	static inline v128 maxu8(const v128& left, const v128& right)
+	static inline v128 maxu8(v128 left, v128 right)
 	{
-		return fromV(_mm_max_epu8(left.vi, right.vi));
+		return _mm_max_epu8(left, right);
 	}
 
-	static inline v128 minu8(const v128& left, const v128& right)
+	static inline v128 minu8(v128 left, v128 right)
 	{
-		return fromV(_mm_min_epu8(left.vi, right.vi));
+		return _mm_min_epu8(left, right);
 	}
 
-	static inline v128 eq8(const v128& left, const v128& right)
+	static inline v128 eq8(v128 left, v128 right)
 	{
-		return fromV(_mm_cmpeq_epi8(left.vi, right.vi));
+		return _mm_cmpeq_epi8(left, right);
 	}
 
-	static inline v128 eq16(const v128& left, const v128& right)
+	static inline v128 eq16(v128 left, v128 right)
 	{
-		return fromV(_mm_cmpeq_epi16(left.vi, right.vi));
+		return _mm_cmpeq_epi16(left, right);
 	}
 
-	static inline v128 eq32(const v128& left, const v128& right)
+	static inline v128 eq32(v128 left, v128 right)
 	{
-		return fromV(_mm_cmpeq_epi32(left.vi, right.vi));
+		return _mm_cmpeq_epi32(left, right);
 	}
 
-	bool operator==(const v128& right) const
+	bool operator==(v128 right) const
 	{
 		return _u64[0] == right._u64[0] && _u64[1] == right._u64[1];
 	}
 
-	bool operator!=(const v128& right) const
+	bool operator!=(v128 right) const
 	{
 		return _u64[0] != right._u64[0] || _u64[1] != right._u64[1];
 	}
 
 	// result = (~left) & (right)
-	static inline v128 andnot(const v128& left, const v128& right)
+	static inline v128 andnot(v128 left, v128 right)
 	{
-		return fromV(_mm_andnot_si128(left.vi, right.vi));
+		return _mm_andnot_si128(left, right);
 	}
 
 	void clear()
 	{
-		_u64[0] = 0;
-		_u64[1] = 0;
+		*this = {};
 	}
 };
 
-template <typename T, std::size_t N, std::size_t M>
-struct offset32_array<v128::masked_array_t<T, N, M>>
+template <typename T, std::size_t M>
+struct offset32_array<v128::masked_array_t<T, M>>
 {
 	template <typename Arg>
 	static inline u32 index32(const Arg& arg)
@@ -345,24 +329,24 @@ struct offset32_array<v128::masked_array_t<T, N, M>>
 	}
 };
 
-inline v128 operator|(const v128& left, const v128& right)
+inline v128 operator|(v128 left, v128 right)
 {
-	return v128::fromV(_mm_or_si128(left.vi, right.vi));
+	return _mm_or_si128(left, right);
 }
 
-inline v128 operator&(const v128& left, const v128& right)
+inline v128 operator&(v128 left, v128 right)
 {
-	return v128::fromV(_mm_and_si128(left.vi, right.vi));
+	return _mm_and_si128(left, right);
 }
 
-inline v128 operator^(const v128& left, const v128& right)
+inline v128 operator^(v128 left, v128 right)
 {
-	return v128::fromV(_mm_xor_si128(left.vi, right.vi));
+	return _mm_xor_si128(left, right);
 }
 
-inline v128 operator~(const v128& other)
+inline v128 operator~(v128 other)
 {
-	return v128::from64(~other._u64[0], ~other._u64[1]);
+	return other ^ v128::eq32(other, other); // XOR with ones
 }
 
 using stx::se_t;

@@ -978,16 +978,6 @@ inline asmjit::X86Mem spu_recompiler::XmmConst(v128 data)
 	return asmjit::x86::oword_ptr(xmm_label);
 }
 
-inline asmjit::X86Mem spu_recompiler::XmmConst(__m128 data)
-{
-	return XmmConst(v128::fromF(data));
-}
-
-inline asmjit::X86Mem spu_recompiler::XmmConst(__m128i data)
-{
-	return XmmConst(v128::fromV(data));
-}
-
 inline asmjit::X86Mem spu_recompiler::get_pc(u32 addr)
 {
 	return asmjit::x86::qword_ptr(*pc0, addr - m_base);

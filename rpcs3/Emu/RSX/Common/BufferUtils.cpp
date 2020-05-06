@@ -176,12 +176,12 @@ namespace
 
 				if constexpr (!unaligned)
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_load_si128(dst_ptr), shuffled_vector));
+					bits_diff = bits_diff | _mm_xor_si128(_mm_load_si128(dst_ptr), shuffled_vector);
 					_mm_stream_si128(dst_ptr, shuffled_vector);
 				}
 				else
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_loadu_si128(dst_ptr), shuffled_vector));
+					bits_diff = bits_diff | _mm_xor_si128(_mm_loadu_si128(dst_ptr), shuffled_vector);
 					_mm_storeu_si128(dst_ptr, shuffled_vector);
 				}
 
@@ -199,12 +199,12 @@ namespace
 
 				if constexpr (!unaligned)
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_load_si128(dst_ptr), vec2));
+					bits_diff = bits_diff | _mm_xor_si128(_mm_load_si128(dst_ptr), vec2);
 					_mm_stream_si128(dst_ptr, vec2);
 				}
 				else
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_loadu_si128(dst_ptr), vec2));
+					bits_diff = bits_diff | _mm_xor_si128(_mm_loadu_si128(dst_ptr), vec2);
 					_mm_storeu_si128(dst_ptr, vec2);
 				}
 
