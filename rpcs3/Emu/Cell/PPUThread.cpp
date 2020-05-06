@@ -376,7 +376,7 @@ std::string ppu_thread::dump_regs() const
 	{
 		auto reg = gpr[i];
 
-		fmt::append(ret, "r%d%s = 0x%-8llx", i, i <= 9 ? " " : "", reg);
+		fmt::append(ret, "r%d%s: 0x%-8llx", i, i <= 9 ? " " : "", reg);
 
 		const u32 max_str_len = 32;
 		const u32 hex_count = 8;
@@ -441,25 +441,25 @@ std::string ppu_thread::dump_regs() const
 
 	for (uint i = 0; i < 32; ++i)
 	{
-		fmt::append(ret, "f%d%s = %.6G\n", i, i <= 9 ? " " : "", fpr[i]);
+		fmt::append(ret, "f%d%s: %.6G\n", i, i <= 9 ? " " : "", fpr[i]);
 	}
 
 	for (uint i = 0; i < 32; ++i)
 	{
-		fmt::append(ret, "v%d%s = %s [x: %g y: %g z: %g w: %g]\n", i, i <= 9 ? " " : "", vr[i], vr[i]._f[3], vr[i]._f[2], vr[i]._f[1], vr[i]._f[0]);
+		fmt::append(ret, "v%d%s: %s [x: %g y: %g z: %g w: %g]\n", i, i <= 9 ? " " : "", vr[i], vr[i]._f[3], vr[i]._f[2], vr[i]._f[1], vr[i]._f[0]);
 	}
 
-	fmt::append(ret, "CR = 0x%08x\n", cr.pack());
-	fmt::append(ret, "LR = 0x%llx\n", lr);
-	fmt::append(ret, "CTR = 0x%llx\n", ctr);
-	fmt::append(ret, "VRSAVE = 0x%08x\n", vrsave);
-	fmt::append(ret, "XER = [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
-	fmt::append(ret, "VSCR = [SAT=%u | NJ=%u]\n", sat, nj);
-	fmt::append(ret, "FPSCR = [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
+	fmt::append(ret, "CR: 0x%08x\n", cr.pack());
+	fmt::append(ret, "LR: 0x%llx\n", lr);
+	fmt::append(ret, "CTR: 0x%llx\n", ctr);
+	fmt::append(ret, "VRSAVE: 0x%08x\n", vrsave);
+	fmt::append(ret, "XER: [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
+	fmt::append(ret, "VSCR: [SAT=%u | NJ=%u]\n", sat, nj);
+	fmt::append(ret, "FPSCR: [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
 	if (const u32 addr = raddr)
-		fmt::append(ret, "Reservation Addr = 0x%x", addr);
+		fmt::append(ret, "Reservation Addr: 0x%x", addr);
 	else
-		fmt::append(ret, "Reservation Addr = none");
+		fmt::append(ret, "Reservation Addr: none");
 
 	return ret;
 }
@@ -541,7 +541,7 @@ std::string ppu_thread::dump_misc() const
 
 		for (u32 i = 3; i <= 6; i++)
 			if (gpr[i] != syscall_args[i - 3])
-				fmt::append(ret, " ** r%d = 0x%llx\n", i, syscall_args[i - 3]);
+				fmt::append(ret, " ** r%d: 0x%llx\n", i, syscall_args[i - 3]);
 	}
 	else if (is_paused())
 	{

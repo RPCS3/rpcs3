@@ -40,6 +40,7 @@
 /3rdparty/llvm_build
 /Vulkan/Vulkan-build
 /Vulkan/glslang-build
+/Vulkan/spirv-tools-build
 
 !/bin
 /bin/*

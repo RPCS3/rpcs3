@@ -806,7 +806,7 @@ std::string spu_thread::dump_regs() const
 
 	for (u32 i = 0; i < 128; i++)
 	{
-		fmt::append(ret, "r%d = %s\n", i, gpr[i]);
+		fmt::append(ret, "r%d: %s\n", i, gpr[i]);
 	}
 
 	fmt::append(ret, "\nEvent Stat: 0x%x\n", +ch_event_stat);

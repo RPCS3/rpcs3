@@ -297,7 +297,7 @@ if(USE_VULKAN)
 	if(VULKAN_FOUND)
 		add_library(3rdparty_vulkan INTERFACE)
 		target_compile_definitions(3rdparty_vulkan INTERFACE -DHAVE_VULKAN)
-		target_link_libraries(3rdparty_vulkan INTERFACE SPIRV Vulkan::Vulkan)
+		target_link_libraries(3rdparty_vulkan INTERFACE SPIRV SPIRV-Tools-opt Vulkan::Vulkan)
 
 		if(UNIX AND NOT APPLE)
 			find_package(Wayland)
