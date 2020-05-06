@@ -444,7 +444,6 @@ namespace vm
 		if (!shm)
 		{
 			utils::memory_protect(g_base_addr + addr, size, utils::protection::rw);
-			std::memset(g_base_addr + addr, 0, size);
 		}
 		else if (shm->map_critical(g_base_addr + addr) != g_base_addr + addr || shm->map_critical(g_sudo_addr + addr) != g_sudo_addr + addr)
 		{
@@ -595,6 +594,7 @@ namespace vm
 		if (!shm)
 		{
 			utils::memory_protect(g_base_addr + addr, size, utils::protection::no);
+			std::memset(g_sudo_addr + addr, 0, size);
 		}
 		else
 		{
