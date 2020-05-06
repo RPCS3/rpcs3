@@ -315,7 +315,7 @@ public:
 	// Handle compilation errors
 	void CompilationError(const std::string& error);
 
-	PPUTranslator(llvm::LLVMContext& context, llvm::Module* module, const ppu_module& info, llvm::ExecutionEngine& engine);
+	PPUTranslator(llvm::LLVMContext& context, llvm::Module* _module, const ppu_module& info, llvm::ExecutionEngine& engine);
 	~PPUTranslator();
 
 	// Get thread context struct type

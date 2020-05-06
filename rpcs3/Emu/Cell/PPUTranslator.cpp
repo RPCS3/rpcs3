@@ -13,8 +13,8 @@ using namespace llvm;
 constexpr ppu_decoder<PPUTranslator> s_ppu_decoder;
 constexpr ppu_decoder<ppu_iname> s_ppu_iname;
 
-PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info, ExecutionEngine& engine)
-	: cpu_translator(module, false)
+PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_module& info, ExecutionEngine& engine)
+	: cpu_translator(_module, false)
 	, m_info(info)
 	, m_pure_attr(AttributeList::get(m_context, AttributeList::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadNone}))
 {
@@ -25,7 +25,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 	const u32 gsuffix = m_info.name.empty() ? info.funcs[0].addr : info.funcs[0].addr - m_info.segs[0].addr;
 
 	// Memory base
-	m_base = new GlobalVariable(*module, ArrayType::get(GetType<char>(), 0x100000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__mptr%x", gsuffix));
+	m_base = new GlobalVariable(*_module, ArrayType::get(GetType<char>(), 0x100000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__mptr%x", gsuffix));
 	m_base->setInitializer(ConstantPointerNull::get(cast<PointerType>(m_base->getType()->getPointerElementType())));
 	m_base->setExternallyInitialized(true);
 
@@ -50,7 +50,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 	m_thread_type = StructType::create(m_context, thread_struct, "context_t");
 
 	// Callable
-	m_call = new GlobalVariable(*module, ArrayType::get(GetType<u32>(), 0x80000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__cptr%x", gsuffix));
+	m_call = new GlobalVariable(*_module, ArrayType::get(GetType<u32>(), 0x80000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__cptr%x", gsuffix));
 	m_call->setInitializer(ConstantPointerNull::get(cast<PointerType>(m_call->getType()->getPointerElementType())));
 	m_call->setExternallyInitialized(true);
 
@@ -65,7 +65,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 	// Create segment variables
 	for (const auto& seg : m_info.segs)
 	{
-		auto gv = new GlobalVariable(*module, GetType<u64>(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__seg%u_%x", m_segs.size(), gsuffix));
+		auto gv = new GlobalVariable(*_module, GetType<u64>(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__seg%u_%x", m_segs.size(), gsuffix));
 		gv->setInitializer(ConstantInt::get(GetType<u64>(), seg.addr));
 		gv->setExternallyInitialized(true);
 		m_segs.emplace_back(gv);

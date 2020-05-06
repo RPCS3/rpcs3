@@ -26,8 +26,8 @@
 LOG_CHANNEL(ppu_loader);
 
 extern void ppu_initialize_syscalls();
-extern std::string ppu_get_function_name(const std::string& module, u32 fnid);
-extern std::string ppu_get_variable_name(const std::string& module, u32 vnid);
+extern std::string ppu_get_function_name(const std::string& _module, u32 fnid);
+extern std::string ppu_get_variable_name(const std::string& _module, u32 vnid);
 extern void ppu_register_range(u32 addr, u32 size);
 extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr);
 extern void ppu_initialize(const ppu_module& info);
@@ -68,30 +68,30 @@ std::unordered_map<std::string, ppu_static_module*>& ppu_module_manager::access(
 	return map;
 }
 
-void ppu_module_manager::register_module(ppu_static_module* module)
+void ppu_module_manager::register_module(ppu_static_module* _module)
 {
-	access().emplace(module->name, module);
+	access().emplace(_module->name, _module);
 }
 
-ppu_static_function& ppu_module_manager::access_static_function(const char* module, u32 fnid)
+ppu_static_function& ppu_module_manager::access_static_function(const char* _module, u32 fnid)
 {
-	auto& res = access().at(module)->functions[fnid];
+	auto& res = access().at(_module)->functions[fnid];
 
 	if (res.name)
 	{
-		fmt::throw_exception("PPU FNID duplication in module %s (%s, 0x%x)", module, res.name, fnid);
+		fmt::throw_exception("PPU FNID duplication in module %s (%s, 0x%x)", _module, res.name, fnid);
 	}
 
 	return res;
 }
 
-ppu_static_variable& ppu_module_manager::access_static_variable(const char* module, u32 vnid)
+ppu_static_variable& ppu_module_manager::access_static_variable(const char* _module, u32 vnid)
 {
-	auto& res = access().at(module)->variables[vnid];
+	auto& res = access().at(_module)->variables[vnid];
 
 	if (res.name)
 	{
-		fmt::throw_exception("PPU VNID duplication in module %s (%s, 0x%x)", module, res.name, vnid);
+		fmt::throw_exception("PPU VNID duplication in module %s (%s, 0x%x)", _module, res.name, vnid);
 	}
 
 	return res;
@@ -107,7 +107,7 @@ const ppu_static_module* ppu_module_manager::get_module(const std::string& name)
 // Global linkage information
 struct ppu_linkage_info
 {
-	struct module
+	struct module_data
 	{
 		struct info
 		{
@@ -127,7 +127,7 @@ struct ppu_linkage_info
 	};
 
 	// Module map
-	std::unordered_map<std::string, module> modules;
+	std::unordered_map<std::string, module_data> modules;
 };
 
 // Initialize static modules.
@@ -289,23 +289,23 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 	u32 alloc_addr = 0;
 
 	// "Use" all the modules for correct linkage
-	for (auto& module : registered)
+	for (auto& _module : registered)
 	{
-		ppu_loader.trace("Registered static module: %s", module->name);
+		ppu_loader.trace("Registered static module: %s", _module->name);
 	}
 
 	for (auto& pair : ppu_module_manager::get())
 	{
-		const auto module = pair.second;
-		auto& linkage = link->modules[module->name];
+		const auto _module = pair.second;
+		auto& linkage = link->modules[_module->name];
 
-		for (auto& function : module->functions)
+		for (auto& function : _module->functions)
 		{
 			ppu_loader.trace("** 0x%08X: %s", function.first, function.second.name);
 
 			if (is_first)
 			{
-				g_ppu_function_names[function.second.index] = fmt::format("%s.%s", module->name, function.second.name);
+				g_ppu_function_names[function.second.index] = fmt::format("%s.%s", _module->name, function.second.name);
 			}
 
 			if ((function.second.flags & MFF_HIDDEN) == 0)
@@ -318,7 +318,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 			}
 		}
 
-		for (auto& variable : module->variables)
+		for (auto& variable : _module->variables)
 		{
 			ppu_loader.trace("** &0x%08X: %s (size=0x%x, align=0x%x)", variable.first, variable.second.name, variable.second.size, variable.second.align);
 
@@ -350,7 +350,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 				variable.second.var->set(variable.second.addr);
 			}
 
-			ppu_loader.trace("Allocated HLE variable %s.%s at 0x%x", module->name, variable.second.name, variable.second.var->addr());
+			ppu_loader.trace("Allocated HLE variable %s.%s at 0x%x", _module->name, variable.second.name, variable.second.var->addr());
 
 			// Initialize HLE variable
 			if (variable.second.init)
@@ -996,14 +996,14 @@ void ppu_unload_prx(const lv2_prx& prx)
 	// Clean linkage info
 	for (auto& imp : prx.imports)
 	{
-		auto pinfo = static_cast<ppu_linkage_info::module::info*>(imp.second);
+		auto pinfo = static_cast<ppu_linkage_info::module_data::info*>(imp.second);
 		pinfo->frefss.erase(imp.first);
 		pinfo->imports.erase(imp.first);
 	}
 
 	//for (auto& exp : prx.exports)
 	//{
-	//	auto pinfo = static_cast<ppu_linkage_info::module::info*>(exp.second);
+	//	auto pinfo = static_cast<ppu_linkage_info::module_data::info*>(exp.second);
 	//	if (pinfo->static_func)
 	//	{
 	//		pinfo->export_addr = ppu_function_manager::addr + 8 * pinfo->static_func->index;

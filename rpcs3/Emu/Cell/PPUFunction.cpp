@@ -640,9 +640,9 @@ extern std::string ppu_get_syscall_name(u64 code)
 }
 
 // Get function name by FNID
-extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
+extern std::string ppu_get_function_name(const std::string& _module, u32 fnid)
 {
-	if (module.empty()) switch (fnid)
+	if (_module.empty()) switch (fnid)
 	{
 	case 0x0d10fd3f: return "module_prologue";
 	case 0x330f7005: return "module_epilogue";
@@ -652,7 +652,7 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	}
 
 	// Check known FNIDs
-	if (module == "sys_libc" || module == "sys_libm") switch (fnid)
+	if (_module == "sys_libc" || _module == "sys_libm") switch (fnid)
 	{
 	case 0x00acf0e5: return "spu_printf_finalize";
 	case 0x00fb4a6b: return "spu_thread_sprintf";
@@ -1727,7 +1727,7 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	case 0xfffe79bf: return "_LCmulcc";
 	}
 
-	if (module == "sys_libstdcxx") switch (fnid)
+	if (_module == "sys_libstdcxx") switch (fnid)
 	{
 	case 0x002c338b: return "_ZNKSt8time_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE16do_get_monthnameES3_S3_RSt8ios_baseRNSt5_IosbIiE8_IostateEPSt2tm";
 	case 0x002e18d8: return "_ZNSt6locale7_LocimpD0Ev";
@@ -2287,7 +2287,7 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	case 0xfff6ef55: return "_ZNKSt7num_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE6do_getES3_S3_RSt8ios_baseRNSt5_IosbIiE8_IostateERb";
 	}
 
-	if (module == "sysPrxForUser") switch (fnid)
+	if (_module == "sysPrxForUser") switch (fnid)
 	{
 	case 0x02e20ec1: return "__sys_printf_basename";
 	case 0x0341bb97: return "sys_prx_get_module_id_by_address";
@@ -2422,7 +2422,7 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	}
 
 	// Check registered functions
-	if (const auto sm = ppu_module_manager::get_module(module))
+	if (const auto sm = ppu_module_manager::get_module(_module))
 	{
 		const auto found = sm->functions.find(fnid);
 
@@ -2436,15 +2436,15 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 }
 
 // Get variable name by VNID
-extern std::string ppu_get_variable_name(const std::string& module, u32 vnid)
+extern std::string ppu_get_variable_name(const std::string& _module, u32 vnid)
 {
-	if (module.empty()) switch (vnid)
+	if (_module.empty()) switch (vnid)
 	{
 	// these arent the actual hash, but its close enough
 	case 0xd7f43016: return "module_info";
 	}
 	// Check known FNIDs
-	if (module == "sys_libc") switch (vnid)
+	if (_module == "sys_libc") switch (vnid)
 	{
 	case 0x071928b0: return "_LNan";
 	case 0x0a331920: return "_Clocale";
@@ -2496,7 +2496,7 @@ extern std::string ppu_get_variable_name(const std::string& module, u32 vnid)
 	case 0xff2f0cc7: return "_FEps";
 	}
 
-	if (module == "sys_libm") switch (vnid)
+	if (_module == "sys_libm") switch (vnid)
 	{
 	case 0x1cf745bc: return "_LErf_one";
 	case 0x2259ef96: return "_LGamma_big";
@@ -2511,7 +2511,7 @@ extern std::string ppu_get_variable_name(const std::string& module, u32 vnid)
 	}
 
 	// Check registered variables
-	if (const auto sm = ppu_module_manager::get_module(module))
+	if (const auto sm = ppu_module_manager::get_module(_module))
 	{
 		const auto found = sm->variables.find(vnid);
 

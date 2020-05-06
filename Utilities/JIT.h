@@ -163,10 +163,10 @@ public:
 	}
 
 	// Add module (path to obj cache dir)
-	void add(std::unique_ptr<llvm::Module> module, const std::string& path);
+	void add(std::unique_ptr<llvm::Module> _module, const std::string& path);
 
 	// Add module (not cached)
-	void add(std::unique_ptr<llvm::Module> module);
+	void add(std::unique_ptr<llvm::Module> _module);
 
 	// Add object (path to obj file)
 	void add(const std::string& path);

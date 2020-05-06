@@ -1804,14 +1804,14 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	using namespace llvm;
 
 	// Create LLVM module
-	std::unique_ptr<Module> module = std::make_unique<Module>(obj_name, jit.get_context());
+	std::unique_ptr<Module> _module = std::make_unique<Module>(obj_name, jit.get_context());
 
 	// Initialize target
-	module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
-	module->setDataLayout(jit.get_engine().getTargetMachine()->createDataLayout());
+	_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
+	_module->setDataLayout(jit.get_engine().getTargetMachine()->createDataLayout());
 
 	// Initialize translator
-	PPUTranslator translator(jit.get_context(), module.get(), module_part, jit.get_engine());
+	PPUTranslator translator(jit.get_context(), _module.get(), module_part, jit.get_engine());
 
 	// Define some types
 	const auto _void = Type::getVoidTy(jit.get_context());
@@ -1822,13 +1822,13 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	{
 		if (func.size)
 		{
-			const auto f = cast<Function>(module->getOrInsertFunction(func.name, _func).getCallee());
+			const auto f = cast<Function>(_module->getOrInsertFunction(func.name, _func).getCallee());
 			f->addAttribute(1, Attribute::NoAlias);
 		}
 	}
 
 	{
-		legacy::FunctionPassManager pm(module.get());
+		legacy::FunctionPassManager pm(_module.get());
 
 		// Basic optimizations
 		//pm.add(createCFGSimplificationPass());
@@ -1888,12 +1888,12 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 		if (g_cfg.core.llvm_logs)
 		{
-			out << *module; // print IR
+			out << *_module; // print IR
 			fs::file(cache_path + obj_name + ".log", fs::rewrite).write(out.str());
 			result.clear();
 		}
 
-		if (verifyModule(*module, &out))
+		if (verifyModule(*_module, &out))
 		{
 			out.flush();
 			ppu_log.error("LLVM: Verification failed for %s:\n%s", obj_name, result);
@@ -1901,10 +1901,10 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 			return;
 		}
 
-		ppu_log.notice("LLVM: %zu functions generated", module->getFunctionList().size());
+		ppu_log.notice("LLVM: %zu functions generated", _module->getFunctionList().size());
 	}
 
 	// Load or compile module
-	jit.add(std::move(module), cache_path);
+	jit.add(std::move(_module), cache_path);
 #endif // LLVM_AVAILABLE
 }

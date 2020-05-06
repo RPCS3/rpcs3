@@ -1657,10 +1657,10 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 		//const auto uw = (u8*)(unwind_base + rtf->UnwindData);
 	}
 
-	for (HMODULE module : modules)
+	for (HMODULE _module : modules)
 	{
 		MODULEINFO info;
-		if (GetModuleInformation(GetCurrentProcess(), module, &info, sizeof(info)))
+		if (GetModuleInformation(GetCurrentProcess(), _module, &info, sizeof(info)))
 		{
 			const DWORD64 base = reinterpret_cast<DWORD64>(info.lpBaseOfDll);
 
@@ -1670,7 +1670,7 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 				for (DWORD size = 15; module_name.size() != size;)
 				{
 					module_name.resize(size);
-					size = GetModuleBaseNameA(GetCurrentProcess(), module, &module_name.front(), size + 1);
+					size = GetModuleBaseNameA(GetCurrentProcess(), _module, &module_name.front(), size + 1);
 					if (!size)
 					{
 						module_name.clear();

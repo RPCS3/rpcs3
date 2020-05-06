@@ -380,7 +380,7 @@ struct CellSpursTraceMapData
 
 struct CellSpursTraceStartData
 {
-	char module[4];
+	char _module[4];
 	be_t<u16> level;
 	be_t<u16> ls;
 };

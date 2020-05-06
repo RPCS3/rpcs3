@@ -915,10 +915,10 @@ public:
 
 	~ObjectCache() override = default;
 
-	void notifyObjectCompiled(const llvm::Module* module, llvm::MemoryBufferRef obj) override
+	void notifyObjectCompiled(const llvm::Module* _module, llvm::MemoryBufferRef obj) override
 	{
 		std::string name = m_path;
-		name.append(module->getName().data());
+		name.append(_module->getName().data());
 		//fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
 		name.append(".gz");
 
@@ -948,14 +948,14 @@ public:
 		}
 		default:
 		{
-			jit_log.error("LLVM: Failed to compress module: %s", module->getName().data());
+			jit_log.error("LLVM: Failed to compress module: %s", _module->getName().data());
 			deflateEnd(&zs);
 			return;
 		}
 		}
 
 		fs::file(name, fs::rewrite).write(zbuf.get(), zsz - zs.avail_out);
-		jit_log.notice("LLVM: Created module: %s", module->getName().data());
+		jit_log.notice("LLVM: Created module: %s", _module->getName().data());
 	}
 
 	static std::unique_ptr<llvm::MemoryBuffer> load(const std::string& path)
@@ -1033,14 +1033,14 @@ public:
 		return nullptr;
 	}
 
-	std::unique_ptr<llvm::MemoryBuffer> getObject(const llvm::Module* module) override
+	std::unique_ptr<llvm::MemoryBuffer> getObject(const llvm::Module* _module) override
 	{
 		std::string path = m_path;
-		path.append(module->getName().data());
+		path.append(_module->getName().data());
 
 		if (auto buf = load(path))
 		{
-			jit_log.notice("LLVM: Loaded module: %s", module->getName().data());
+			jit_log.notice("LLVM: Loaded module: %s", _module->getName().data());
 			return buf;
 		}
 
@@ -1166,13 +1166,13 @@ jit_compiler::~jit_compiler()
 {
 }
 
-void jit_compiler::add(std::unique_ptr<llvm::Module> module, const std::string& path)
+void jit_compiler::add(std::unique_ptr<llvm::Module> _module, const std::string& path)
 {
 	ObjectCache cache{path};
 	m_engine->setObjectCache(&cache);
 
-	const auto ptr = module.get();
-	m_engine->addModule(std::move(module));
+	const auto ptr = _module.get();
+	m_engine->addModule(std::move(_module));
 	m_engine->generateCodeForModule(ptr);
 	m_engine->setObjectCache(nullptr);
 
@@ -1183,10 +1183,10 @@ void jit_compiler::add(std::unique_ptr<llvm::Module> module, const std::string& 
 	}
 }
 
-void jit_compiler::add(std::unique_ptr<llvm::Module> module)
+void jit_compiler::add(std::unique_ptr<llvm::Module> _module)
 {
-	const auto ptr = module.get();
-	m_engine->addModule(std::move(module));
+	const auto ptr = _module.get();
+	m_engine->addModule(std::move(_module));
 	m_engine->generateCodeForModule(ptr);
 
 	for (auto& func : ptr->functions())

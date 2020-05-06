@@ -83,7 +83,7 @@ bool statichle_handler::load_patterns()
 		dapat.crc16_length = ::narrow<u8>(char_to_u8(pattern[1][0], pattern[1][1]), HERE);
 		dapat.crc16        = (char_to_u8(pattern[2][0], pattern[2][1]) << 8) | char_to_u8(pattern[2][2], pattern[2][3]);
 		dapat.total_length = (char_to_u8(pattern[3][0], pattern[3][1]) << 8) | char_to_u8(pattern[3][2], pattern[3][3]);
-		dapat.module       = pattern[4];
+		dapat._module      = pattern[4];
 		dapat.name         = pattern[5];
 
 		dapat.fnid = ppu_generate_id(dapat.name.c_str());
@@ -153,11 +153,11 @@ bool statichle_handler::check_against_patterns(vm::cptr<u8>& data, u32 size, u32
 		static_hle.success("Found function %s at 0x%x", pat.name, addr);
 
 		// patch the code
-		const auto smodule = ppu_module_manager::get_module(pat.module);
+		const auto smodule = ppu_module_manager::get_module(pat._module);
 
 		if (smodule == nullptr)
 		{
-			static_hle.error("Couldn't find module: %s", pat.module);
+			static_hle.error("Couldn't find module: %s", pat._module);
 			return false;
 		}
 

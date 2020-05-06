@@ -784,7 +784,7 @@ void main_window::DecryptSPRXLibraries()
 	{
 		return;
 	}
-	
+
 	if (!m_gui_settings->GetBootConfirmation(this))
 	{
 		return;
@@ -797,9 +797,9 @@ void main_window::DecryptSPRXLibraries()
 
 	gui_log.notice("Decrypting binaries...");
 
-	for (const QString& module : modules)
+	for (const QString& _module : modules)
 	{
-		const std::string old_path = sstr(module);
+		const std::string old_path = sstr(_module);
 
 		fs::file elf_file(old_path);
 
@@ -809,7 +809,7 @@ void main_window::DecryptSPRXLibraries()
 
 			if (elf_file)
 			{
-				const std::string bin_ext  = module.toLower().endsWith(".sprx") ? ".prx" : ".elf";
+				const std::string bin_ext  = _module.toLower().endsWith(".sprx") ? ".prx" : ".elf";
 				const std::string new_path = old_path.substr(0, old_path.find_last_of('.')) + bin_ext;
 
 				if (fs::file new_file{new_path, fs::rewrite})

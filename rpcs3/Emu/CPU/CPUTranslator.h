@@ -1009,8 +1009,8 @@ struct llvm_fshl
 
 	static llvm::Function* get_fshl(llvm::IRBuilder<>* ir)
 	{
-		const auto module = ir->GetInsertBlock()->getParent()->getParent();
-		return llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::fshl, {llvm_value_t<T>::get_type(ir->getContext())});
+		const auto _module = ir->GetInsertBlock()->getParent()->getParent();
+		return llvm::Intrinsic::getDeclaration(_module, llvm::Intrinsic::fshl, {llvm_value_t<T>::get_type(ir->getContext())});
 	}
 
 	static llvm::Value* fold(llvm::IRBuilder<>* ir, llvm::Value* v1, llvm::Value* v2, llvm::Value* v3)
@@ -1081,8 +1081,8 @@ struct llvm_fshr
 
 	static llvm::Function* get_fshr(llvm::IRBuilder<>* ir)
 	{
-		const auto module = ir->GetInsertBlock()->getParent()->getParent();
-		return llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::fshr, {llvm_value_t<T>::get_type(ir->getContext())});
+		const auto _module = ir->GetInsertBlock()->getParent()->getParent();
+		return llvm::Intrinsic::getDeclaration(_module, llvm::Intrinsic::fshr, {llvm_value_t<T>::get_type(ir->getContext())});
 	}
 
 	static llvm::Value* fold(llvm::IRBuilder<>* ir, llvm::Value* v1, llvm::Value* v2, llvm::Value* v3)
@@ -1642,7 +1642,7 @@ struct llvm_bitcast
 	using type = U;
 
 	llvm_expr_t<A1> a1;
-	llvm::Module* module;
+	llvm::Module* _module;
 
 	static constexpr uint bitsize0 = llvm_value_t<T>::is_vector ? llvm_value_t<T>::is_vector * llvm_value_t<T>::esize : llvm_value_t<T>::esize;
 	static constexpr uint bitsize1 = llvm_value_t<U>::is_vector ? llvm_value_t<U>::is_vector * llvm_value_t<U>::esize : llvm_value_t<U>::esize;
@@ -1668,7 +1668,7 @@ struct llvm_bitcast
 
 		if (const auto c1 = llvm::dyn_cast<llvm::Constant>(v1))
 		{
-			const auto result = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, rt, module->getDataLayout());
+			const auto result = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, rt, _module->getDataLayout());
 
 			if (result)
 			{
@@ -1714,7 +1714,7 @@ struct llvm_bitcast
 			const auto target = llvm_value_t<T>::get_type(c->getContext());
 
 			// Reverse bitcast on a constant
-			if (llvm::Value* cv = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c, target, module->getDataLayout()))
+			if (llvm::Value* cv = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c, target, _module->getDataLayout()))
 			{
 				if (auto r1 = a1.match(cv); cv)
 				{
@@ -2029,8 +2029,8 @@ struct llvm_add_sat
 
 	static llvm::Function* get_add_sat(llvm::IRBuilder<>* ir)
 	{
-		const auto module = ir->GetInsertBlock()->getParent()->getParent();
-		return llvm::Intrinsic::getDeclaration(module, intr, {llvm_value_t<T>::get_type(ir->getContext())});
+		const auto _module = ir->GetInsertBlock()->getParent()->getParent();
+		return llvm::Intrinsic::getDeclaration(_module, intr, {llvm_value_t<T>::get_type(ir->getContext())});
 	}
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
@@ -2100,8 +2100,8 @@ struct llvm_sub_sat
 
 	static llvm::Function* get_sub_sat(llvm::IRBuilder<>* ir)
 	{
-		const auto module = ir->GetInsertBlock()->getParent()->getParent();
-		return llvm::Intrinsic::getDeclaration(module, intr, {llvm_value_t<T>::get_type(ir->getContext())});
+		const auto _module = ir->GetInsertBlock()->getParent()->getParent();
+		return llvm::Intrinsic::getDeclaration(_module, intr, {llvm_value_t<T>::get_type(ir->getContext())});
 	}
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
@@ -2403,7 +2403,7 @@ struct llvm_shuffle2
 class cpu_translator
 {
 protected:
-	cpu_translator(llvm::Module* module, bool is_be);
+	cpu_translator(llvm::Module* _module, bool is_be);
 
 	// LLVM context
 	std::reference_wrapper<llvm::LLVMContext> m_context;
@@ -2695,8 +2695,8 @@ public:
 	template <typename... Types>
 	llvm::Function* get_intrinsic(llvm::Intrinsic::ID id)
 	{
-		const auto module = m_ir->GetInsertBlock()->getParent()->getParent();
-		return llvm::Intrinsic::getDeclaration(module, id, {get_type<Types>()...});
+		const auto _module = m_ir->GetInsertBlock()->getParent()->getParent();
+		return llvm::Intrinsic::getDeclaration(_module, id, {get_type<Types>()...});
 	}
 
 	template <typename T>

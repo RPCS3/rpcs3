@@ -904,7 +904,7 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 	// Trace - START: Module='SYS '
 	CellSpursTracePacket pkt{};
 	pkt.header.tag = CELL_SPURS_TRACE_TAG_START;
-	memcpy(pkt.data.start.module, "SYS ", 4);
+	std::memcpy(pkt.data.start._module, "SYS ", 4);
 	pkt.data.start.level = 1; // Policy module
 	pkt.data.start.ls = 0xA00 >> 2;
 	cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
@@ -1958,7 +1958,7 @@ void spursTasksetInit(spu_thread& spu, u32 pollStatus)
 	// Trace - START: Module='TKST'
 	CellSpursTracePacket pkt{};
 	pkt.header.tag = 0x52; // Its not clear what this tag means exactly but it seems similar to CELL_SPURS_TRACE_TAG_START
-	memcpy(pkt.data.start.module, "TKST", 4);
+	std::memcpy(pkt.data.start._module, "TKST", 4);
 	pkt.data.start.level = 2;
 	pkt.data.start.ls = 0xA00 >> 2;
 	cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
