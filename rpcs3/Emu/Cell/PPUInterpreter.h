@@ -373,6 +373,7 @@ struct ppu_interpreter_precise final : ppu_interpreter
 	static bool VCTSXS(ppu_thread&, ppu_opcode_t);
 	static bool VCTUXS(ppu_thread&, ppu_opcode_t);
 	static bool VMADDFP(ppu_thread&, ppu_opcode_t);
+	static bool VNMSUBFP(ppu_thread&, ppu_opcode_t);
 
 	static bool FDIVS(ppu_thread&, ppu_opcode_t);
 	static bool FSUBS(ppu_thread&, ppu_opcode_t);
@@ -430,6 +431,7 @@ struct ppu_interpreter_fast final : ppu_interpreter
 	static bool VCTSXS(ppu_thread&, ppu_opcode_t);
 	static bool VCTUXS(ppu_thread&, ppu_opcode_t);
 	static bool VMADDFP(ppu_thread&, ppu_opcode_t);
+	static bool VNMSUBFP(ppu_thread&, ppu_opcode_t);
 
 	static bool FDIVS(ppu_thread&, ppu_opcode_t);
 	static bool FSUBS(ppu_thread&, ppu_opcode_t);

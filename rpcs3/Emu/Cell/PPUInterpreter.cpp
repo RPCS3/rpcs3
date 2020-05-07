@@ -1405,9 +1405,19 @@ bool ppu_interpreter::VMULOUH(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.vr[op.vd] = _mm_xor_ps(_mm_sub_ps(_mm_mul_ps(ppu.vr[op.va], ppu.vr[op.vc]), ppu.vr[op.vb]), _mm_set1_ps(-0.0f));
+	return true;
+}
+
+bool ppu_interpreter_precise::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	const auto c = ppu.vr[op.vc];
+	const auto sign = v128::from32p(1u<<31);
+	ppu.vr[op.rd] = v128::fma32(a, c, b ^ sign) ^ sign;
 	return true;
 }
 
