@@ -2521,15 +2521,26 @@ struct registers_decoder<NV4097_SET_ALPHA_REF>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u8 alpha_ref() const
+		f32 alpha_ref8() const
 		{
-			return bf_decoder<0, 8>(value);
+			return bf_decoder<0, 8>(value) / 255.f;
+		}
+
+		f32 alpha_ref16() const
+		{
+			return rsx::decode_fp16(bf_decoder<0, 16>(value));
+		}
+
+		f32 alpha_ref32() const
+		{
+			return std::bit_cast<f32>(value);
 		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Alpha: ref = " + std::to_string(decoded_values.alpha_ref());
+		return "Alpha: ref unorm8 = " + std::to_string(decoded_values.alpha_ref8()) +
+			" f16 = " + std::to_string(decoded_values.alpha_ref16());
 	}
 };
 
