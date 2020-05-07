@@ -772,6 +772,44 @@ namespace rsx
 		return bits / To(1u << frac);
 	}
 
+	static inline f32 decode_fp16(u16 bits)
+	{
+		if (bits == 0)
+		{
+			return 0.f;
+		}
+
+		// Extract components
+		unsigned int sign = (bits >> 15) & 1;
+		unsigned int exp = (bits >> 10) & 0x1f;
+		unsigned int mantissa = bits & 0x3ff;
+
+		float base = (sign != 0) ? -1.f : 1.f;
+		float scale;
+
+		if (exp == 0x1F)
+		{
+			// specials (nan, inf)
+			u32 nan = 0x7F800000 | mantissa;
+			nan |= (sign << 31);
+			return std::bit_cast<f32>(nan);
+		}
+		else if (exp > 0)
+		{
+			// normal number, borrows a '1' from the hidden mantissa bit
+			base *= std::exp2f(f32(exp) - 15.f);
+			scale = (float(mantissa) / 1024.f) + 1.f;
+		}
+		else
+		{
+			// subnormal number, borrows a '0' from the hidden mantissa bit
+			base *= std::exp2f(1.f - 15.f);
+			scale = float(mantissa) / 1024.f;
+		}
+
+		return base * scale;
+	}
+
 	template <int N>
 	void unpack_bitset(const std::bitset<N>& block, u64* values)
 	{

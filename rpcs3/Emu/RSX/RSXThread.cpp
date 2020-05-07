@@ -742,7 +742,7 @@ namespace rsx
 	{
 		//TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
 		auto fragment_alpha_func = rsx::method_registers.alpha_func();
-		auto alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
+		auto alpha_ref = rsx::method_registers.alpha_ref();
 		auto rop_control = rsx::method_registers.alpha_test_enabled()? 1u : 0u;
 
 		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !backend_config.supports_hw_a2c)
