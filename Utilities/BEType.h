@@ -1,8 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "types.h"
 #include "util/endian.hpp"
 #include <cstring>
+#include <cmath>
 
 #if __has_include(<bit>)
 #include <bit>
@@ -10,9 +11,19 @@
 #include <type_traits>
 #endif
 
+#if defined(_MSC_VER)
+#define FMA_FUNC
+#else
+#define FMA_FUNC __attribute__((__target__("fma")))
+#endif
+
 // 128-bit vector type and also se_storage<> storage type
 union alignas(16) v128
 {
+private:
+	static const bool has_fma3;
+
+public:
 	char _bytes[16];
 
 	template <typename T, std::size_t M>
@@ -311,6 +322,49 @@ union alignas(16) v128
 	static inline v128 andnot(v128 left, v128 right)
 	{
 		return _mm_andnot_si128(left, right);
+	}
+
+	// result = fma(a, b, c)
+	static FMA_FUNC inline v128 fma32(v128 a, v128 b, v128 c)
+	{
+		if (has_fma3) [[likely]]
+		{
+			return _mm_fmadd_ps(a, b, c);
+		}
+
+		// Extend to 4 64-bit doubles in 2 vectors, multiply+add then truncate to 32-bit floats vector
+ 
+ 		const auto a1 = _mm_cvtps_pd(a);
+		const auto b1 = _mm_cvtps_pd(b);
+		const auto c1 = _mm_cvtps_pd(c);
+		const auto res1 = _mm_cvtpd_ps(_mm_add_pd(_mm_mul_pd(a1, b1), c1));
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+		const auto a2 = _mm_cvtps_pd(_mm_shuffle_ps(a, a, 0xe));
+		const auto b2 = _mm_cvtps_pd(_mm_shuffle_ps(b, b, 0xe));
+		const auto c2 = _mm_cvtps_pd(_mm_shuffle_ps(c, c, 0xe));
+		const auto mulres = _mm_cvtpd_ps(_mm_add_pd(_mm_mul_pd(a2, b2), c2));
+		const auto res2 = _mm_shuffle_ps(mulres, mulres, 0x4f);
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+
+		return _mm_or_ps(res1, res2);
+	}
+
+	// result = fma(a, b, c)
+	static FMA_FUNC inline v128 fma64(v128 a, v128 b, v128 c)
+	{
+		if (has_fma3) [[likely]]
+		{
+			return _mm_fmadd_pd(a, b, c);
+		}
+
+		auto do_fma = [&](std::size_t i) { return std::bit_cast<u64>(std::fma(a._d[i], b._d[i], c._d[i])); };
+		return from64(do_fma(0), do_fma(1));
 	}
 
 	void clear()

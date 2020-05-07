@@ -98,6 +98,8 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 	});
 }
 
+DECLARE(v128::has_fma3) = utils::has_fma3();
+
 void Emulator::Init()
 {
 	jit_runtime::initialize();

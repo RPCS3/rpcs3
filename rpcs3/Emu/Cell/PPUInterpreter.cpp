@@ -916,17 +916,10 @@ bool ppu_interpreter_fast::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_precise::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto& a = ppu.vr[op.va]._f;
-	const auto& b = ppu.vr[op.vb]._f;
-	const auto& c = ppu.vr[op.vc]._f;
-	auto& d = ppu.vr[op.rd]._f;
-
-	// TODO: Optimize
-	for (u32 i = 0; i < 4; i++)
-	{
-		d[i] = f32(f64{a[i]} * f64{c[i]} + f64{b[i]});
-	}
-
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	const auto c = ppu.vr[op.vc];
+	ppu.vr[op.rd] = v128::fma32(a, c, b);
 	return true;
 }
 
