@@ -1531,9 +1531,15 @@ error_code cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float 
 
 	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
 
-	for (u32 i = 0; i < samples * port.num_channels; i++)
+	const auto _volume = v128::from32p(std::bit_cast<u32>(volume));
+
+	const auto _src = src.get_ptr();
+
+	for (u32 i = 0; i < 256 / 4 * port.num_channels; i++)
 	{
-		dst[i] += src[i] * volume; // mix all channels
+		// Mix 4 samples at a time
+		const auto res = v128::fma32(std::bit_cast<be_t<v128>>(v128::loadu(_src, i)), _volume, std::bit_cast<be_t<v128>>(v128::loadu(dst, i))); // mix all channels
+		v128::storeu(std::bit_cast<be_t<v128>>(res), dst, i);
 	}
 
 	return CELL_OK;
@@ -1572,20 +1578,29 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 
 	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
 
+	const auto _volume = v128::from32p(std::bit_cast<u32>(volume));
+	const auto _src = src.get_ptr();
+
+	auto read64 = [](const void* ptr) { be_t<u64> val; std::memcpy(&val, ptr, 8); return val; };
+	auto write64 = [](void* ptr, be_t<u64> val) { std::memcpy(ptr, &val, 8); };
+ 
 	if (port.num_channels == 2)
 	{
-		for (u32 i = 0; i < samples; i++)
+		for (u32 i = 0; i < 256 / 4 * 2; i++)
 		{
-			dst[i * 2 + 0] += src[i * 2 + 0] * volume; // mix L ch
-			dst[i * 2 + 1] += src[i * 2 + 1] * volume; // mix R ch
+			const auto res = v128::fma32(std::bit_cast<be_t<v128>>(v128::loadu(_src, i)), _volume, std::bit_cast<be_t<v128>>(v128::loadu(dst, i))); // mix all channels
+			v128::storeu(std::bit_cast<be_t<v128>>(res), dst, i);
 		}
 	}
 	else if (port.num_channels == 6)
 	{
 		for (u32 i = 0; i < samples; i++)
 		{
-			dst[i * 6 + 0] += src[i * 2 + 0] * volume; // mix L ch
-			dst[i * 6 + 1] += src[i * 2 + 1] * volume; // mix R ch
+			v128 src_val, dst_val;
+			src_val._u64[0] = read64(&_src[i * 2 + 0]);
+			dst_val._u64[0] = read64(&dst[i * 6 + 0]);
+			dst_val = v128::fma32(src_val, _volume, dst_val);
+			write64(&dst[i * 6 + 0], dst_val._u64[0]); // mix L, R channels
 			//dst[i * 6 + 2] += 0.0f; // center
 			//dst[i * 6 + 3] += 0.0f; // LFE
 			//dst[i * 6 + 4] += 0.0f; // rear L
@@ -1596,8 +1611,11 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 	{
 		for (u32 i = 0; i < samples; i++)
 		{
-			dst[i * 8 + 0] += src[i * 2 + 0] * volume; // mix L ch
-			dst[i * 8 + 1] += src[i * 2 + 1] * volume; // mix R ch
+			v128 src_val, dst_val;
+			src_val._u64[0] = read64(&_src[i * 2 + 0]);
+			dst_val._u64[0] = read64(&dst[i * 8 + 0]);
+			dst_val = v128::fma32(src_val, _volume, dst_val);
+			write64(&dst[i * 8 + 0], dst_val._u64[0]); // mix L, R channels
 			//dst[i * 8 + 2] += 0.0f; // center
 			//dst[i * 8 + 3] += 0.0f; // LFE
 			//dst[i * 8 + 4] += 0.0f; // rear L
@@ -1640,28 +1658,34 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 
 	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
 
+	const auto _volume = v128::from32p(std::bit_cast<u32>(volume));
+	const auto _src = src.get_ptr();
+
+	auto read64 = [](const void* ptr) { be_t<u64> val; std::memcpy(&val, ptr, 8); return val; };
+	auto write64 = [](void* ptr, be_t<u64> val) { std::memcpy(ptr, &val, 8); };
+ 
 	if (port.num_channels == 6)
 	{
-		for (u32 i = 0; i < 256; i++)
+		for (u32 i = 0; i < 256 * 6 / 4; i++)
 		{
-			dst[i * 6 + 0] += src[i * 6 + 0] * volume; // mix L ch
-			dst[i * 6 + 1] += src[i * 6 + 1] * volume; // mix R ch
-			dst[i * 6 + 2] += src[i * 6 + 2] * volume; // mix center
-			dst[i * 6 + 3] += src[i * 6 + 3] * volume; // mix LFE
-			dst[i * 6 + 4] += src[i * 6 + 4] * volume; // mix rear L
-			dst[i * 6 + 5] += src[i * 6 + 5] * volume; // mix rear R
+			// mix L, R, center, LFE channels, rear L and rear R channels (4 at a time)
+			const auto res = v128::fma32(std::bit_cast<be_t<v128>>(v128::loadu(_src, i)), _volume, std::bit_cast<be_t<v128>>(v128::loadu(dst, i))); // mix 2 channels
+			v128::storeu(std::bit_cast<be_t<v128>>(res), dst, i);
 		}
 	}
 	else if (port.num_channels == 8)
 	{
 		for (u32 i = 0; i < 256; i++)
 		{
-			dst[i * 8 + 0] += src[i * 6 + 0] * volume; // mix L ch
-			dst[i * 8 + 1] += src[i * 6 + 1] * volume; // mix R ch
-			dst[i * 8 + 2] += src[i * 6 + 2] * volume; // mix center
-			dst[i * 8 + 3] += src[i * 6 + 3] * volume; // mix LFE
-			dst[i * 8 + 4] += src[i * 6 + 4] * volume; // mix rear L
-			dst[i * 8 + 5] += src[i * 6 + 5] * volume; // mix rear R
+			v128 src_val = std::bit_cast<be_t<v128>>(v128::loadu(_src + (i * 6)));
+			v128 dst_val = v128::fma32(src_val, _volume, std::bit_cast<be_t<v128>>(v128::loadu(dst + (i * 8))));
+			v128::storeu(std::bit_cast<be_t<v128>>(dst_val), dst, i); // mix L, R, center, LFE channels
+
+			src_val._u64[0] = read64(&_src[i * 6 + 0]);
+			dst_val._u64[0] = read64(&dst[i * 8 + 0]);
+			dst_val = v128::fma32(src_val, _volume, dst_val);
+			write64(&dst[i * 8 + 4], dst_val._u64[0]); // mix rear L, rear R channels
+
 			//dst[i * 8 + 6] += 0.0f; // side L
 			//dst[i * 8 + 7] += 0.0f; // side R
 		}
