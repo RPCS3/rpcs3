@@ -45,7 +45,7 @@ std::string VertexProgramDecompiler::GetDST(bool is_sca)
 	// ARL writes to special integer registers
 	const bool is_address_reg = !is_sca && (d1.vec_opcode == RSX_VEC_OPCODE_ARL);
 	const auto tmp_index = is_sca ? d3.sca_dst_tmp : d0.dst_tmp;
-	const bool is_result = is_sca ? (tmp_index == 0x3f) : d0.vec_result;
+	const bool is_result = is_sca ? !d0.vec_result : d0.vec_result;
 
 	if (is_result)
 	{
