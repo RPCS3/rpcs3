@@ -40,4 +40,14 @@ namespace vm
 		return res;
 	}
 
+	inline bool reservation_trylock(atomic_t<u64>& res, u64 rtime)
+	{
+		if (res.compare_and_swap_test(rtime, rtime | 1)) [[likely]]
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 } // namespace vm
