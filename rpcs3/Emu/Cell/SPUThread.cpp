@@ -1251,6 +1251,77 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 	if (!g_use_rtm && (!is_get || g_cfg.core.spu_accurate_putlluc)) [[unlikely]]
 	{
+		if (const u32 size = args.size; ((eal & 127) + size) <= 128 && is_get)
+		{
+			for (u64 i = 0;; [&]()
+			{
+				if (++i < 25) [[likely]]
+				{
+					busy_wait(300);
+				}
+				else
+				{
+					std::this_thread::yield();
+				}
+			}())
+			{
+				const u64 time0 = vm::reservation_acquire(eal, size);
+
+				if (time0 & 1)
+				{
+					continue;
+				}
+
+				switch (size)
+				{
+				case 1:
+				{
+					*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
+					break;
+				}
+				case 2:
+				{
+					*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
+					break;
+				}
+				case 4:
+				{
+					*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
+					break;
+				}
+				case 8:
+				{
+					*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
+					break;
+				}
+				default:
+				{
+					auto _dst = dst;
+					auto _src = src;
+					auto _size = size;
+
+					while (_size)
+					{
+						*reinterpret_cast<v128*>(_dst) = *reinterpret_cast<const v128*>(_src);
+
+						_dst += 16;
+						_src += 16;
+						_size -= 16;
+					}
+
+					break;
+				}
+				}
+
+				if (time0 != vm::reservation_acquire(eal, size))
+				{
+					continue;
+				}
+
+				return;
+			}
+		}
+
 		switch (u32 size = args.size)
 		{
 		case 1:
@@ -1592,7 +1663,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	if (raddr && addr == raddr)
 	{
 		// Last check for event before we clear the reservation
-		if ((vm::reservation_acquire(addr, 128) & -128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(addr)))
+		if (vm::reservation_acquire(addr, 128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(addr)))
 		{
 			ch_event_stat |= SPU_EVENT_LR;
 		}
@@ -1808,12 +1879,6 @@ bool spu_thread::process_mfc_cmd()
 		const u32 addr = ch_mfc_cmd.eal & -128;
 		const auto& data = vm::_ref<decltype(rdata)>(addr);
 
-		if (addr == raddr && !g_use_rtm && g_cfg.core.spu_loop_detection && rtime == vm::reservation_acquire(addr, 128) && cmp_rdata(rdata, data))
-		{
-			// Spinning, might as well yield cpu resources
-			std::this_thread::yield();
-		}
-
 		auto& dst = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 		u64 ntime;
 
@@ -1873,7 +1938,7 @@ bool spu_thread::process_mfc_cmd()
 		if (raddr && raddr != addr)
 		{
 			// Last check for event before we replace the reservation with a new one
-			if ((vm::reservation_acquire(raddr, 128) & -128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(raddr)))
+			if (vm::reservation_acquire(raddr, 128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(raddr)))
 			{
 				ch_event_stat |= SPU_EVENT_LR;
 			}
@@ -1899,93 +1964,90 @@ bool spu_thread::process_mfc_cmd()
 	{
 		// Store conditionally
 		const u32 addr = ch_mfc_cmd.eal & -128;
-		u32 result = 0;
 
-		if (raddr == addr)
+		if ([&]()
 		{
+			if (raddr != addr)
+			{
+				return false;
+			}
+
 			const auto& to_write = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
+			auto& res = vm::reservation_acquire(addr, 128);
+
+			if (!g_use_rtm && rtime != res)
+			{
+				return false;
+			}
+
+			if (cmp_rdata(to_write, rdata))
+			{
+				// Writeback of unchanged data. Only check memory change
+				return cmp_rdata(rdata, vm::_ref<decltype(rdata)>(addr)) && res.compare_and_swap_test(rtime, rtime + 128);
+			}
 
 			if (g_use_rtm) [[likely]]
 			{
-				result = spu_putllc_tx(addr, rtime, rdata.data(), to_write.data());
-
-				if (result == 2)
+				switch (spu_putllc_tx(addr, rtime, rdata.data(), to_write.data()))
 				{
-					result = 0;
-
+				case 2:
+				{
 					cpu_thread::suspend_all cpu_lock(this);
 
 					// Give up if PUTLLUC happened
-					if (vm::reservation_acquire(addr, 128) == (rtime | 1))
+					if (res == (rtime | 1))
 					{
 						auto& data = vm::_ref<decltype(rdata)>(addr);
 
-						if ((vm::reservation_acquire(addr, 128) & -128) == rtime && cmp_rdata(rdata, data))
+						if (cmp_rdata(rdata, data))
 						{
 							mov_rdata(data, to_write);
-							vm::reservation_acquire(addr, 128) += 127;
-							result = 1;
-						}
-						else
-						{
-							vm::reservation_acquire(addr, 128) -= 1;
+							res += 127;
+							return true;
 						}
 					}
-					else
-					{
-						vm::reservation_acquire(addr, 128) -= 1;
-					}
+
+					res -= 1;
+					return false;
+				}
+				case 1: return true;
+				case 0: return false;
+				default: ASSUME(0);
 				}
 			}
-			else if (auto& data = vm::_ref<decltype(rdata)>(addr); rtime == (vm::reservation_acquire(raddr, 128) & -128))
+
+			if (!vm::reservation_trylock(res, rtime))
 			{
-				if (cmp_rdata(rdata, to_write))
-				{
-					// Writeback of unchanged data. Only check memory change
-					result = cmp_rdata(rdata, data) && vm::reservation_acquire(raddr, 128).compare_and_swap_test(rtime, rtime + 128);
-				}
-				else
-				{
-					auto& res = vm::reservation_lock(raddr, 128);
-					const u64 old_time = res.load() & -128;
-
-					if (rtime == old_time)
-					{
-						*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
-
-						const auto render = get_rsx_if_needs_res_pause(addr);
-
-						if (render) render->pause();
-
-						auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
-						{
-							// Full lock (heavyweight)
-							// TODO: vm::check_addr
-							vm::writer_lock lock(addr);
-
-							if (cmp_rdata(rdata, super_data))
-							{
-								mov_rdata(super_data, to_write);
-								res.release(old_time + 128);
-								result = 1;
-							}
-							else
-							{
-								res.release(old_time);
-							}
-						}
-
-						if (render) render->unpause();
-					}
-					else
-					{
-						res.release(old_time);
-					}
-				}
+				return false;
 			}
-		}
 
-		if (result)
+			vm::_ref<atomic_t<u32>>(addr) += 0;
+
+			const auto render = get_rsx_if_needs_res_pause(addr);
+
+			if (render) render->pause();
+
+			auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
+			const bool success = [&]()
+			{
+				// Full lock (heavyweight)
+				// TODO: vm::check_addr
+				vm::writer_lock lock(addr);
+
+				if (cmp_rdata(rdata, super_data))
+				{
+					mov_rdata(super_data, to_write);
+					res.release(rtime + 128);
+					return true;
+				}
+
+				res.release(rtime);
+				return false;
+			}();
+
+			if (render) render->unpause();
+			return success;
+		}())
 		{
 			vm::reservation_notifier(addr, 128).notify_all();
 			ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS);
