@@ -310,12 +310,12 @@ public:
 
 	bool operator==(v128 right) const
 	{
-		return _u64[0] == right._u64[0] && _u64[1] == right._u64[1];
+		return _mm_movemask_epi8(v128::eq32(*this, right)) == 0xffff;
 	}
 
 	bool operator!=(v128 right) const
 	{
-		return _u64[0] != right._u64[0] || _u64[1] != right._u64[1];
+		return !operator==(right);
 	}
 
 	// result = (~left) & (right)

@@ -85,7 +85,7 @@ static FORCE_INLINE bool cmp_rdata(const decltype(spu_thread::rdata)& lhs, const
 	const v128 c = (lhs[4] ^ rhs[4]) | (lhs[5] ^ rhs[5]);
 	const v128 d = (lhs[6] ^ rhs[6]) | (lhs[7] ^ rhs[7]);
 	const v128 r = (a | b) | (c | d);
-	return !(r._u64[0] | r._u64[1]);
+	return r == v128{};
 }
 
 static FORCE_INLINE void mov_rdata_avx(__m256i* dst, const __m256i* src)
