@@ -691,6 +691,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 	const u32 max_threads = group->max_run;
 
 	group->join_state = 0;
+	group->exit_status = 0;
 	group->running = max_threads;
 	group->set_terminate = false;
 
