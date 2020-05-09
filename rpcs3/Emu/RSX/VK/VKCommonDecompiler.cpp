@@ -182,12 +182,12 @@ namespace vk
 				options.optimizeSize = true;
 				glslang::GlslangToSpv(*program.getIntermediate(lang), spv, &options);
 
-				// Now we optimize
-				spvtools::Optimizer optimizer(SPV_ENV_VULKAN_1_0);
-				optimizer.RegisterPass(spvtools::CreateUnifyConstantPass());      // Remove duplicate constants
-				optimizer.RegisterPass(spvtools::CreateMergeReturnPass());        // Huge savings in vertex interpreter and likely normal vertex shaders
-				optimizer.RegisterPass(spvtools::CreateAggressiveDCEPass());      // Remove dead code
-				optimizer.Run(spv.data(), spv.size(), &spv);
+				// Now we optimize (disabled)
+				//spvtools::Optimizer optimizer(SPV_ENV_VULKAN_1_0);
+				//optimizer.RegisterPass(spvtools::CreateUnifyConstantPass());      // Remove duplicate constants
+				//optimizer.RegisterPass(spvtools::CreateMergeReturnPass());        // Huge savings in vertex interpreter and likely normal vertex shaders
+				//optimizer.RegisterPass(spvtools::CreateAggressiveDCEPass());      // Remove dead code
+				//optimizer.Run(spv.data(), spv.size(), &spv);
 			}
 		}
 		else
