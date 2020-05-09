@@ -919,10 +919,15 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	case RSX_FP_OPCODE_LIF: SetDst("$Ty(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)", OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_LRP: SetDst("$Ty($2 * (1 - $0) + $1 * $0)", OPFLAGS::skip_type_cast); return true;
 	case RSX_FP_OPCODE_LG2: SetDst("_builtin_log2($0.x).xxxx"); return true;
-		// Pack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
+	// Pack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
+	// PK2 = PK2H (2 16-bit floats)
+	// PK16 = PK2US (2 unsigned 16-bit scalars)
+	// PK4 = PK4B (4 signed 8-bit scalars)
+	// PKB = PK4UB (4 unsigned 8-bit scalars)
+	// PK16/UP16 behavior confirmed by Saints Row: Gat out of Hell, ARGB8 -> X16Y16 conversion relies on this to render the wings
 	case RSX_FP_OPCODE_PK2: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packHalf2x16($0.xy)))"); return true;
 	case RSX_FP_OPCODE_PK4: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packSnorm4x8($0)))"); return true;
-	case RSX_FP_OPCODE_PK16: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packSnorm2x16($0.xy)))"); return true;
+	case RSX_FP_OPCODE_PK16: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm2x16($0.xy)))"); return true;
 	case RSX_FP_OPCODE_PKG:
 		// Should be similar to PKB but with gamma correction, see description of PK4UBG in khronos page
 	case RSX_FP_OPCODE_PKB: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm4x8($0)))"); return true;
@@ -1060,9 +1065,14 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		}
 		return false;
 	// Unpack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
+	// UP2 = UP2H (2 16-bit floats)
+	// UP16 = UP2US (2 unsigned 16-bit scalars)
+	// UP4 = UP4B (4 signed 8-bit scalars)
+	// UPB = UP4UB (4 unsigned 8-bit scalars)
+	// PK16/UP16 behavior confirmed by Saints Row: Gat out of Hell, ARGB8 -> X16Y16 conversion relies on this to render the wings
 	case RSX_FP_OPCODE_UP2: SetDst("unpackHalf2x16(floatBitsToUint($0.x)).xyxy"); return true;
 	case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8(floatBitsToUint($0.x))"); return true;
-	case RSX_FP_OPCODE_UP16: SetDst("unpackSnorm2x16(floatBitsToUint($0.x)).xyxy"); return true;
+	case RSX_FP_OPCODE_UP16: SetDst("unpackUnorm2x16(floatBitsToUint($0.x)).xyxy"); return true;
 	case RSX_FP_OPCODE_UPG:
 	// Same as UPB with gamma correction
 	case RSX_FP_OPCODE_UPB: SetDst("(unpackUnorm4x8(floatBitsToUint($0.x)))"); return true;
