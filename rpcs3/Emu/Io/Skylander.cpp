@@ -85,6 +85,11 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 				// Set LEDs colour
 				verify(HERE), buf_size == 4;
 				break;
+			case 'M':
+				q_result[0] = 0x4D;
+				q_result[1] = buf[1];
+				q_queries.push(q_result);
+				break;
 			case 'Q':
 				// Queries a block
 				verify(HERE), buf_size == 3;
