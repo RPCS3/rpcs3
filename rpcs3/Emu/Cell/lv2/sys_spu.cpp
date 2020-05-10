@@ -705,7 +705,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 	std::lock_guard lock(group->mutex);
 
 	// SPU_THREAD_GROUP_STATUS_READY state is not used
-	switch (group.run_state.compare_and_swap(SPU_THREAD_GROUP_STATUS_INITIALIZED, SPU_THREAD_GROUP_STATUS_RUNNING))
+	switch (group->run_state.compare_and_swap(SPU_THREAD_GROUP_STATUS_INITIALIZED, SPU_THREAD_GROUP_STATUS_RUNNING))
 	{
 	case SPU_THREAD_GROUP_STATUS_INITIALIZED: break;
 	case SPU_THREAD_GROUP_STATUS_DESTROYED: return CELL_ESRCH;
@@ -971,7 +971,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	if (group->set_terminate)
 	{
 		// Wait for termination, only then return error code
-		const u64 last_stop = group->stop_count - !group->running;
+		const u64 last_stop = group->stop_count;
 
 		while (group->stop_count == last_stop)
 		{
@@ -1003,7 +1003,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	group->join_state = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
 
 	// Wait until the threads are actually stopped
-	const u64 last_stop = group->stop_count - !group->running;
+	const u64 last_stop = group->stop_count;
 
 	while (group->stop_count == last_stop)
 	{
