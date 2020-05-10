@@ -695,23 +695,22 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 
 	sys_spu.trace("sys_spu_thread_group_start(id=0x%x)", id);
 
-	const auto group = idm::get<lv2_spu_group>(id, [](lv2_spu_group& group)
-	{
-		// SPU_THREAD_GROUP_STATUS_READY state is not used
-		return group.run_state.compare_and_swap_test(SPU_THREAD_GROUP_STATUS_INITIALIZED, SPU_THREAD_GROUP_STATUS_RUNNING);
-	});
+	const auto group = idm::get<lv2_spu_group>(id);
 
 	if (!group)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!group.ret)
-	{
-		return CELL_ESTAT;
-	}
-
 	std::lock_guard lock(group->mutex);
+
+	// SPU_THREAD_GROUP_STATUS_READY state is not used
+	switch (group.run_state.compare_and_swap(SPU_THREAD_GROUP_STATUS_INITIALIZED, SPU_THREAD_GROUP_STATUS_RUNNING))
+	{
+	case SPU_THREAD_GROUP_STATUS_INITIALIZED: break;
+	case SPU_THREAD_GROUP_STATUS_DESTROYED: return CELL_ESRCH;
+	default: return CELL_ESTAT;
+	}
 
 	const u32 max_threads = group->max_run;
 
