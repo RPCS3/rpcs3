@@ -25,8 +25,8 @@ if [ "$COMPILER" = "gcc" ]; then
     export CXX=${GXX_BINARY}
     export LINKER=gold
     # We need to set the following variables for LTO to link properly
-    export AR=/usr/bin/gcc-ar-9
-    export RANLIB=/usr/bin/gcc-ranlib-9
+    export AR=/usr/bin/gcc-ar-$GCCVER
+    export RANLIB=/usr/bin/gcc-ranlib-$GCCVER
     export CFLAGS="-fuse-linker-plugin"
 else
     export CC=${CLANG_BINARY}
