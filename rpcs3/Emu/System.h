@@ -59,8 +59,8 @@ class Emulator final
 
 	EmuCallbacks m_cb;
 
-	atomic_t<u64> m_pause_start_time; // set when paused
-	atomic_t<u64> m_pause_amend_time; // increased when resumed
+	atomic_t<u64> m_pause_start_time{0}; // set when paused
+	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
 
 	std::string m_path;
 	std::string m_path_old;

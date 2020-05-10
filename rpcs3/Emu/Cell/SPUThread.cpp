@@ -991,6 +991,12 @@ void spu_thread::cpu_stop()
 					group->join_state = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
 				}
 
+				if (status_npc.load().status >> 16 == SYS_SPU_THREAD_STOP_THREAD_EXIT)
+				{
+					// Set exit status now, in conjunction with group state changes
+					exit_status.set_value(last_exit_status);
+				}
+
 				if (const auto ppu = std::exchange(group->waiter, nullptr))
 				{
 					// Send exit status directly to the joining thread
@@ -1002,6 +1008,10 @@ void spu_thread::cpu_stop()
 
 			// Notify on last thread stopped
 			group->cond.notify_all();
+		}
+		else if (status_npc.load().status >> 16 == SYS_SPU_THREAD_STOP_THREAD_EXIT)
+		{
+			exit_status.set_value(last_exit_status);
 		}
 	}
 }
@@ -2737,10 +2747,8 @@ bool spu_thread::stop_and_signal(u32 code)
 {
 	spu_log.trace("stop_and_signal(code=0x%x)", code);
 
-	if (offset >= RAW_SPU_BASE_ADDR)
+	auto set_status_npc = [&]()
 	{
-		// Save next PC and current SPU Interrupt Status
-		state += cpu_flag::stop + cpu_flag::wait;
 		status_npc.atomic_op([&](status_npc_sync_var& state)
 		{
 			state.status = (state.status & 0xffff) | (code << 16);
@@ -2748,6 +2756,13 @@ bool spu_thread::stop_and_signal(u32 code)
 			state.status &= ~SPU_STATUS_RUNNING;
 			state.npc = (pc + 4) | +interrupts_enabled;
 		});
+	};
+
+	if (offset >= RAW_SPU_BASE_ADDR)
+	{
+		// Save next PC and current SPU Interrupt Status
+		state += cpu_flag::stop + cpu_flag::wait;
+		set_status_npc();
 
 		status_npc.notify_one();
 
@@ -2810,7 +2825,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		return true;
 	}
 
-	case 0x110:
+	case SYS_SPU_THREAD_STOP_RECEIVE_EVENT:
 	{
 		/* ===== sys_spu_thread_receive_event ===== */
 
@@ -2977,7 +2992,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		return true;
 	}
 
-	case 0x111:
+	case SYS_SPU_THREAD_STOP_TRY_RECEIVE_EVENT:
 	{
 		/* ===== sys_spu_thread_tryreceive_event ===== */
 
@@ -3037,7 +3052,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		return true;
 	}
 
-	case 0x100:
+	case SYS_SPU_THREAD_STOP_YIELD:
 	{
 		// SPU thread group yield (TODO)
 		if (ch_out_mbox.get_count())
@@ -3049,7 +3064,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		return true;
 	}
 
-	case 0x101:
+	case SYS_SPU_THREAD_STOP_GROUP_EXIT:
 	{
 		/* ===== sys_spu_thread_group_exit ===== */
 
@@ -3098,6 +3113,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 			group->exit_status = value;
 			group->join_state = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
+			set_status_npc();
 			break;
 		}
 
@@ -3106,7 +3122,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		return true;
 	}
 
-	case 0x102:
+	case SYS_SPU_THREAD_STOP_THREAD_EXIT:
 	{
 		/* ===== sys_spu_thread_exit ===== */
 
@@ -3117,8 +3133,10 @@ bool spu_thread::stop_and_signal(u32 code)
 			fmt::throw_exception("sys_spu_thread_exit(): Out_MBox is empty" HERE);
 		}
 
-		spu_log.trace("sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
-		status_npc = {SPU_STATUS_STOPPED_BY_STOP, 0};
+		const u32 value = ch_out_mbox.get_value();
+		spu_log.trace("sys_spu_thread_exit(status=0x%x)", value);
+		last_exit_status = value;
+		set_status_npc();
 		state += cpu_flag::stop;
 		check_state();
 		return true;
