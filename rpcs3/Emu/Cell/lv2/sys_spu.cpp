@@ -656,7 +656,7 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 			}
 
 			return false;
-		}))
+		}).second)
 		{
 			return CELL_EBUSY;
 		}
