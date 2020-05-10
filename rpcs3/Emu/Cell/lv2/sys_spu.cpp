@@ -647,9 +647,16 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 
 	const auto group = idm::withdraw<lv2_spu_group>(id, [](lv2_spu_group& group) -> CellError
 	{
-		const auto _old = group.run_state.compare_and_swap(SPU_THREAD_GROUP_STATUS_INITIALIZED, SPU_THREAD_GROUP_STATUS_DESTROYED);
+		if (!group.run_state.fetch_op([](spu_group_status& state)
+		{
+			if (state == SPU_THREAD_GROUP_STATUS_INITIALIZED || state == SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
+			{
+ 				state = SPU_THREAD_GROUP_STATUS_DESTROYED;
+				return true;
+			}
 
-		if (_old > SPU_THREAD_GROUP_STATUS_INITIALIZED)
+			return false;
+		}))
 		{
 			return CELL_EBUSY;
 		}
