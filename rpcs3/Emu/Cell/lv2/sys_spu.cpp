@@ -649,7 +649,7 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 	{
 		if (!group.run_state.fetch_op([](spu_group_status& state)
 		{
-			if (state == SPU_THREAD_GROUP_STATUS_INITIALIZED || state == SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
+			if (state <= SPU_THREAD_GROUP_STATUS_INITIALIZED)
 			{
  				state = SPU_THREAD_GROUP_STATUS_DESTROYED;
 				return true;
