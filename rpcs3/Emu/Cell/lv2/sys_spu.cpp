@@ -40,6 +40,7 @@ void fmt_class_string<spu_group_status>::format(std::string& out, u64 arg)
 		case SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED: return "waiting and suspended";
 		case SPU_THREAD_GROUP_STATUS_RUNNING: return "running";
 		case SPU_THREAD_GROUP_STATUS_STOPPED: return "stopped";
+		case SPU_THREAD_GROUP_STATUS_DESTROYED: return "destroyed";
 		case SPU_THREAD_GROUP_STATUS_UNKNOWN: break;
 		}
 
@@ -376,7 +377,17 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	std::lock_guard lock(group->mutex);
 
-	if (group->threads_map[spu_num] != -1 || group->run_state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
+	if (auto state = +group->run_state; state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
+	{
+		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+		{
+			return CELL_ESRCH;
+		}
+
+		return CELL_EBUSY;
+	}
+
+	if (group->threads_map[spu_num] != -1)
 	{
 		return CELL_EBUSY;
 	}
@@ -426,7 +437,12 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 			}
 		}
 
-		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
+		const auto old = group->run_state.compare_and_swap(SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED, SPU_THREAD_GROUP_STATUS_INITIALIZED);
+
+		if (old == SPU_THREAD_GROUP_STATUS_DESTROYED)
+		{
+			return CELL_ESRCH;
+		}
 	}
 
 	sys_spu.warning(u8"sys_spu_thread_initialize(): Thread “%s” created (id=0x%x)", thread_name, tid);
@@ -631,9 +647,16 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 
 	const auto group = idm::withdraw<lv2_spu_group>(id, [](lv2_spu_group& group) -> CellError
 	{
-		const auto _old = group.run_state.compare_and_swap(SPU_THREAD_GROUP_STATUS_INITIALIZED, SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED);
+		if (!group.run_state.fetch_op([](spu_group_status& state)
+		{
+			if (state <= SPU_THREAD_GROUP_STATUS_INITIALIZED)
+			{
+ 				state = SPU_THREAD_GROUP_STATUS_DESTROYED;
+				return true;
+			}
 
-		if (_old > SPU_THREAD_GROUP_STATUS_INITIALIZED)
+			return false;
+		}).second)
 		{
 			return CELL_EBUSY;
 		}
@@ -651,6 +674,8 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 	{
 		return group.ret;
 	}
+
+	group->mutex.lock_unlock();
 
 	for (const auto& t : group->threads)
 	{
@@ -670,23 +695,22 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 
 	sys_spu.trace("sys_spu_thread_group_start(id=0x%x)", id);
 
-	const auto group = idm::get<lv2_spu_group>(id, [](lv2_spu_group& group)
-	{
-		// SPU_THREAD_GROUP_STATUS_READY state is not used
-		return group.run_state.compare_and_swap_test(SPU_THREAD_GROUP_STATUS_INITIALIZED, SPU_THREAD_GROUP_STATUS_RUNNING);
-	});
+	const auto group = idm::get<lv2_spu_group>(id);
 
 	if (!group)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!group.ret)
-	{
-		return CELL_ESTAT;
-	}
-
 	std::lock_guard lock(group->mutex);
+
+	// SPU_THREAD_GROUP_STATUS_READY state is not used
+	switch (group->run_state.compare_and_swap(SPU_THREAD_GROUP_STATUS_INITIALIZED, SPU_THREAD_GROUP_STATUS_RUNNING))
+	{
+	case SPU_THREAD_GROUP_STATUS_INITIALIZED: break;
+	case SPU_THREAD_GROUP_STATUS_DESTROYED: return CELL_ESRCH;
+	default: return CELL_ESTAT;
+	}
 
 	const u32 max_threads = group->max_run;
 
@@ -757,28 +781,56 @@ error_code sys_spu_thread_group_suspend(ppu_thread& ppu, u32 id)
 
 	std::lock_guard lock(group->mutex);
 
-	if (group->run_state <= SPU_THREAD_GROUP_STATUS_INITIALIZED || group->run_state == SPU_THREAD_GROUP_STATUS_STOPPED)
-	{
-		return CELL_ESTAT;
-	}
+	CellError error;
 
-	// SPU_THREAD_GROUP_STATUS_READY state is not used
+	group->run_state.fetch_op([&error](spu_group_status& state)
+	{
+		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+		{
+			error = CELL_ESRCH;
+			return false;
+		}
 
-	if (group->run_state == SPU_THREAD_GROUP_STATUS_RUNNING)
+		if (state <= SPU_THREAD_GROUP_STATUS_INITIALIZED || state == SPU_THREAD_GROUP_STATUS_STOPPED)
+		{
+			error = CELL_ESTAT;
+			return false;
+		}
+
+		// SPU_THREAD_GROUP_STATUS_READY state is not used
+
+		if (state == SPU_THREAD_GROUP_STATUS_RUNNING)
+		{
+			state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
+		}
+		else if (state == SPU_THREAD_GROUP_STATUS_WAITING)
+		{
+			state = SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED;
+		}
+		else if (state == SPU_THREAD_GROUP_STATUS_SUSPENDED || state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
+		{
+			error = {};
+			return false;
+		}
+		else
+		{
+
+			error = CELL_ESTAT;
+			return false;
+		}
+
+		error = CellError{CELL_CANCEL};
+		return true;
+	});
+
+	if (error != CELL_CANCEL + 0u)
 	{
-		group->run_state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
-	}
-	else if (group->run_state == SPU_THREAD_GROUP_STATUS_WAITING)
-	{
-		group->run_state = SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED;
-	}
-	else if (group->run_state == SPU_THREAD_GROUP_STATUS_SUSPENDED || group->run_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
-	{
-		return CELL_OK;
-	}
-	else
-	{
-		return CELL_ESTAT;
+		if (!error)
+		{
+			return CELL_OK;
+		}
+
+		return error;
 	}
 
 	for (auto& thread : group->threads)
@@ -812,19 +864,39 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 
 	std::lock_guard lock(group->mutex);
 
-	// SPU_THREAD_GROUP_STATUS_READY state is not used
+	CellError error;
 
-	if (group->run_state == SPU_THREAD_GROUP_STATUS_SUSPENDED)
+	group->run_state.fetch_op([&error](spu_group_status& state)
 	{
-		group->run_state = SPU_THREAD_GROUP_STATUS_RUNNING;
-	}
-	else if (group->run_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
+		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+		{
+			error = CELL_ESRCH;
+			return false;
+		}
+
+		// SPU_THREAD_GROUP_STATUS_READY state is not used
+
+		if (state == SPU_THREAD_GROUP_STATUS_SUSPENDED)
+		{
+			state = SPU_THREAD_GROUP_STATUS_RUNNING;
+		}
+		else if (state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
+		{
+			state = SPU_THREAD_GROUP_STATUS_WAITING;
+		}
+		else
+		{
+			error = CELL_ESTAT;
+			return false;
+		}
+
+		error = CellError{CELL_CANCEL};
+		return true;
+	});
+
+	if (error != CELL_CANCEL + 0u)
 	{
-		group->run_state = SPU_THREAD_GROUP_STATUS_WAITING;
-	}
-	else
-	{
-		return CELL_ESTAT;
+		return error;
 	}
 
 	for (auto& thread : group->threads)
@@ -858,8 +930,13 @@ error_code sys_spu_thread_group_yield(ppu_thread& ppu, u32 id)
 		return CELL_OK;
 	}
 
-	if (group->run_state != SPU_THREAD_GROUP_STATUS_RUNNING)
+	if (auto state = +group->run_state; state != SPU_THREAD_GROUP_STATUS_RUNNING)
 	{
+		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+		{
+			return CELL_ESRCH;
+		}
+
 		return CELL_ESTAT;
 	}
 
@@ -883,11 +960,30 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	std::unique_lock lock(group->mutex);
 
-	if (group->run_state <= SPU_THREAD_GROUP_STATUS_INITIALIZED ||
-		group->run_state == SPU_THREAD_GROUP_STATUS_WAITING ||
-		group->run_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED ||
-		group->set_terminate)
+	if (auto state = +group->run_state;
+		state <= SPU_THREAD_GROUP_STATUS_INITIALIZED ||
+		state == SPU_THREAD_GROUP_STATUS_WAITING ||
+		state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED ||
+		state == SPU_THREAD_GROUP_STATUS_DESTROYED)
 	{
+		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+		{
+			return CELL_ESRCH;
+		}
+
+		return CELL_ESTAT;
+	}
+
+	if (group->set_terminate)
+	{
+		// Wait for termination, only then return error code
+		const u64 last_stop = group->stop_count;
+
+		while (group->stop_count == last_stop)
+		{
+			group->cond.wait(lock);
+		}
+
 		return CELL_ESTAT;
 	}
 
@@ -913,7 +1009,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	group->join_state = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
 
 	// Wait until the threads are actually stopped
-	const u64 last_stop = group->stop_count - !group->running;
+	const u64 last_stop = group->stop_count;
 
 	while (group->stop_count == last_stop)
 	{
@@ -940,7 +1036,14 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 	{
 		std::unique_lock lock(group->mutex);
 
-		if (group->run_state < SPU_THREAD_GROUP_STATUS_INITIALIZED)
+		const auto state = +group->run_state;
+
+		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+		{
+			return CELL_ESRCH;
+		}
+
+		if (state < SPU_THREAD_GROUP_STATUS_INITIALIZED)
 		{
 			return CELL_ESTAT;
 		}
@@ -951,7 +1054,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			return CELL_EBUSY;
 		}
 
-		if (group->join_state && group->run_state == SPU_THREAD_GROUP_STATUS_INITIALIZED)
+		if (group->join_state && state == SPU_THREAD_GROUP_STATUS_INITIALIZED)
 		{
 			// Already signaled
 			ppu.gpr[4] = group->join_state;
@@ -1129,8 +1232,14 @@ error_code sys_spu_thread_write_ls(ppu_thread& ppu, u32 id, u32 lsa, u64 value, 
 
 	std::lock_guard lock(group->mutex);
 
-	if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING || group->run_state > SPU_THREAD_GROUP_STATUS_RUNNING)
+	if (auto state = +group->run_state;
+		state < SPU_THREAD_GROUP_STATUS_WAITING || state > SPU_THREAD_GROUP_STATUS_RUNNING)
 	{
+		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+		{
+			return CELL_ESRCH;
+		}
+
 		return CELL_ESTAT;
 	}
 
@@ -1166,8 +1275,14 @@ error_code sys_spu_thread_read_ls(ppu_thread& ppu, u32 id, u32 lsa, vm::ptr<u64>
 
 	std::lock_guard lock(group->mutex);
 
-	if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING || group->run_state > SPU_THREAD_GROUP_STATUS_RUNNING)
+	if (auto state = +group->run_state;
+		state < SPU_THREAD_GROUP_STATUS_WAITING || state > SPU_THREAD_GROUP_STATUS_RUNNING)
 	{
+		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+		{
+			return CELL_ESRCH;
+		}
+
 		return CELL_ESTAT;
 	}
 
@@ -1529,8 +1644,14 @@ error_code sys_spu_thread_group_connect_event_all_threads(ppu_thread& ppu, u32 i
 
 	std::lock_guard lock(group->mutex);
 
-	if (group->run_state < SPU_THREAD_GROUP_STATUS_INITIALIZED)
+	if (auto state = +group->run_state;
+		state < SPU_THREAD_GROUP_STATUS_INITIALIZED || state == SPU_THREAD_GROUP_STATUS_DESTROYED)
 	{
+		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+		{
+			return CELL_ESRCH;
+		}
+
 		return CELL_ESTAT;
 	}
 

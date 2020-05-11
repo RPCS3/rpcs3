@@ -991,6 +991,19 @@ void spu_thread::cpu_stop()
 					group->join_state = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
 				}
 
+				for (const auto& thread : group->threads)
+				{
+					if (thread && thread.get() != this && thread->status_npc.load().status >> 16 == SYS_SPU_THREAD_STOP_THREAD_EXIT)
+					{
+						// Wait for all threads to have error codes if exited by sys_spu_thread_exit
+						for (u64 status; ((status = thread->exit_status.data) & spu_channel::bit_count) == 0
+							|| static_cast<u32>(status) != thread->last_exit_status;)
+						{
+							_mm_pause();
+						} 
+					}
+				}
+
 				if (status_npc.load().status >> 16 == SYS_SPU_THREAD_STOP_THREAD_EXIT)
 				{
 					// Set exit status now, in conjunction with group state changes
@@ -3135,7 +3148,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		const u32 value = ch_out_mbox.get_value();
 		spu_log.trace("sys_spu_thread_exit(status=0x%x)", value);
-		last_exit_status = value;
+		last_exit_status.release(value);
 		set_status_npc();
 		state += cpu_flag::stop;
 		check_state();
