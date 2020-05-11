@@ -20,6 +20,8 @@ public:
 	void operator=(skylander_dialog const&) = delete;
 
 protected:
+	// Checks if the skylander is initialized
+	bool is_initialized();
 	// Update the edits from skylander loaded in memory
 	void update_edits();
 	// Parse edits and apply them to skylander in memory
