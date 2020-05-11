@@ -52,6 +52,7 @@ LOG_CHANNEL(mark_log, "MARK");
 LOG_CHANNEL(gui_log, "GUI");
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
+extern atomic_t<bool> g_disable_frame_limit;
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -266,6 +267,14 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		if (keyEvent->modifiers() == Qt::AltModifier && !m_disable_kb_hotkeys)
 		{
 			g_user_asked_for_frame_capture = true;
+			return;
+		}
+		break;
+	case Qt::Key_F10:
+		if (keyEvent->modifiers() == Qt::ControlModifier)
+		{
+			g_disable_frame_limit = !g_disable_frame_limit;
+			gui_log.warning("%s boost mode", g_disable_frame_limit.load() ? "Enabled" : "Disabled");
 			return;
 		}
 		break;

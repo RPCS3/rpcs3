@@ -32,6 +32,7 @@ class GSRender;
 #define CMD_DEBUG 0
 
 atomic_t<bool> g_user_asked_for_frame_capture = false;
+atomic_t<bool> g_disable_frame_limit = false;
 rsx::frame_trace_data frame_debug;
 rsx::frame_capture_data frame_capture;
 
@@ -3071,7 +3072,7 @@ namespace rsx
 		}
 
 		double limit = 0.;
-		switch (g_cfg.video.frame_limit)
+		switch (g_disable_frame_limit ? frame_limit_type::none : g_cfg.video.frame_limit)
 		{
 		case frame_limit_type::none: limit = 0.; break;
 		case frame_limit_type::_59_94: limit = 59.94; break;

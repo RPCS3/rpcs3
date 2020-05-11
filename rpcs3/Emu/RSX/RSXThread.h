@@ -28,6 +28,7 @@
 #include "Emu/system_config.h"
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
+extern atomic_t<bool> g_disable_frame_limit; 
 extern rsx::frame_trace_data frame_debug;
 extern rsx::frame_capture_data frame_capture;
 
