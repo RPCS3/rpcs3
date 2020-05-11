@@ -809,7 +809,7 @@ error_code sys_spu_thread_group_suspend(ppu_thread& ppu, u32 id)
 		}
 		else if (state == SPU_THREAD_GROUP_STATUS_SUSPENDED || state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
 		{
-			error = CellError{CELL_OK};
+			error = {};
 			return false;
 		}
 		else
@@ -825,6 +825,11 @@ error_code sys_spu_thread_group_suspend(ppu_thread& ppu, u32 id)
 
 	if (error != CELL_CANCEL + 0u)
 	{
+		if (!error)
+		{
+			return CELL_OK;
+		}
+
 		return error;
 	}
 
@@ -955,7 +960,8 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	std::unique_lock lock(group->mutex);
 
-	if (auto state = +group->run_state; state <= SPU_THREAD_GROUP_STATUS_INITIALIZED ||
+	if (auto state = +group->run_state;
+		state <= SPU_THREAD_GROUP_STATUS_INITIALIZED ||
 		state == SPU_THREAD_GROUP_STATUS_WAITING ||
 		state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED ||
 		state == SPU_THREAD_GROUP_STATUS_DESTROYED)
