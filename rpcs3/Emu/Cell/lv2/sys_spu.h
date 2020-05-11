@@ -68,6 +68,16 @@ enum : s32
 	SYS_SPU_SEGMENT_TYPE_INFO = 4,
 };
 
+enum : u32
+{
+	SYS_SPU_THREAD_STOP_YIELD                = 0x0100,
+	SYS_SPU_THREAD_STOP_GROUP_EXIT           = 0x0101,
+	SYS_SPU_THREAD_STOP_THREAD_EXIT          = 0x0102,
+	SYS_SPU_THREAD_STOP_RECEIVE_EVENT        = 0x0110,
+	SYS_SPU_THREAD_STOP_TRY_RECEIVE_EVENT    = 0x0111,
+	SYS_SPU_THREAD_STOP_SWITCH_SYSTEM_MODULE = 0x0120,
+};
+
 struct sys_spu_thread_group_attribute
 {
 	be_t<u32> nsize; // name length including NULL terminator
@@ -367,7 +377,7 @@ error_code sys_spu_thread_connect_event(ppu_thread&, u32 id, u32 eq, u32 et, u8 
 error_code sys_spu_thread_disconnect_event(ppu_thread&, u32 id, u32 event_type, u8 spup);
 error_code sys_spu_thread_bind_queue(ppu_thread&, u32 id, u32 spuq, u32 spuq_num);
 error_code sys_spu_thread_unbind_queue(ppu_thread&, u32 id, u32 spuq_num);
-error_code sys_spu_thread_get_exit_status(ppu_thread&, u32 id, vm::ptr<u32> status);
+error_code sys_spu_thread_get_exit_status(ppu_thread&, u32 id, vm::ptr<s32> status);
 error_code sys_spu_thread_recover_page_fault(ppu_thread&, u32 id);
 
 error_code sys_raw_spu_create(ppu_thread&, vm::ptr<u32> id, vm::ptr<void> attr);

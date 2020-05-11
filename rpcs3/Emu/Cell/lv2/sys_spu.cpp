@@ -453,7 +453,7 @@ error_code sys_spu_thread_set_argument(ppu_thread& ppu, u32 id, vm::ptr<sys_spu_
 	return CELL_OK;
 }
 
-error_code sys_spu_thread_get_exit_status(ppu_thread& ppu, u32 id, vm::ptr<u32> status)
+error_code sys_spu_thread_get_exit_status(ppu_thread& ppu, u32 id, vm::ptr<s32> status)
 {
 	vm::temporary_unlock(ppu);
 
@@ -466,9 +466,11 @@ error_code sys_spu_thread_get_exit_status(ppu_thread& ppu, u32 id, vm::ptr<u32> 
 		return CELL_ESRCH;
 	}
 
-	if (thread->status_npc.load().status & SPU_STATUS_STOPPED_BY_STOP)
+	const u64 exit_status = thread->exit_status.data.load();
+
+	if (exit_status & spu_channel::bit_count)
 	{
-		*status = thread->ch_out_mbox.get_value();
+		*status = static_cast<s32>(exit_status);
 		return CELL_OK;
 	}
 
@@ -689,6 +691,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 	const u32 max_threads = group->max_run;
 
 	group->join_state = 0;
+	group->exit_status = 0;
 	group->running = max_threads;
 	group->set_terminate = false;
 

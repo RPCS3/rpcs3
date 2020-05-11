@@ -340,6 +340,8 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 		// Check for opcode high bit which indicates a branch instructions (opcode 0x40...0x45)
 		if (inst._u32[2] & (1 << 23))
 		{
+			// NOTE: Jump instructions are not yet proved to work outside of loops and if/else blocks
+			// Otherwise we would need to follow the execution chain
 			result.has_branch_instructions = true;
 		}
 		else
@@ -348,7 +350,9 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			if (opcode)
 			{
 				if (result.program_start_offset == umax)
+				{
 					result.program_start_offset = index * 16;
+				}
 
 				switch (opcode)
 				{
@@ -402,7 +406,8 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			if (result.program_start_offset == umax)
 			{
 				result.program_start_offset = index * 16;
-				result.program_constants_buffer_length = 16;
+				result.program_ucode_length = 16;
+				result.is_nop_shader = true;
 			}
 
 			break;
