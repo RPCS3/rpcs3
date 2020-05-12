@@ -69,7 +69,10 @@ np_handler::np_handler()
 				is_connected = false;
 				cur_ip       = "0.0.0.0";
 			}
-			cur_ip = p;
+			else
+			{
+				cur_ip = p;				
+			}
 
 			struct in_addr addr;
 			inet_pton(AF_INET, cur_ip.c_str(), &addr);
