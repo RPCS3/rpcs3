@@ -995,8 +995,8 @@ void spu_thread::cpu_stop()
 					if (thread && thread.get() != this && thread->status_npc.load().status >> 16 == SYS_SPU_THREAD_STOP_THREAD_EXIT)
 					{
 						// Wait for all threads to have error codes if exited by sys_spu_thread_exit
-						for (u64 status; ((status = thread->exit_status.data) & spu_channel::bit_count) == 0
-							|| static_cast<u32>(status) != thread->last_exit_status;)
+						for (u32 status; !thread->exit_status.try_read(status)
+							|| status != thread->last_exit_status;)
 						{
 							_mm_pause();
 						} 
@@ -3226,11 +3226,11 @@ void fmt_class_string<spu_channel>::format(std::string& out, u64 arg)
 {
 	const auto& ch = get_object(arg);
 
-	const u64 raw = ch.data.load();
+	u32 data = 0;
 
-	if (raw & spu_channel::bit_count)
+	if (ch.try_read(data))
 	{
-		fmt::append(out, "0x%08x", static_cast<u32>(raw));
+		fmt::append(out, "0x%08x", data);
 	}
 	else
 	{
@@ -3243,7 +3243,7 @@ void fmt_class_string<spu_channel_4_t>::format(std::string& out, u64 arg)
 {
 	const auto& ch = get_object(arg);
 
-	// TODO
+	// TODO (use try_read)
 	fmt::append(out, "count = %d", ch.get_count());
 }
 
