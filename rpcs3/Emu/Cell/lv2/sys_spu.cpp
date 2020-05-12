@@ -960,6 +960,14 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	std::unique_lock lock(group->mutex);
 
+	// There should be a small period of sleep when the PPU waits for a signal of termination
+	auto short_sleep = [](ppu_thread& ppu)
+	{
+		lv2_obj::sleep(ppu);
+		busy_wait(3000);
+		ppu.check_state();
+	};
+
 	if (auto state = +group->run_state;
 		state <= SPU_THREAD_GROUP_STATUS_INITIALIZED ||
 		state == SPU_THREAD_GROUP_STATUS_WAITING ||
@@ -979,6 +987,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 		// Wait for termination, only then return error code
 		const u64 last_stop = group->stop_count;
 		lock.unlock();
+		short_sleep(ppu);
 
 		while (group->stop_count == last_stop)
 		{
@@ -1012,6 +1021,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	// Wait until the threads are actually stopped
 	const u64 last_stop = group->stop_count;
 	lock.unlock();
+	short_sleep(ppu);
 
 	while (group->stop_count == last_stop)
 	{
