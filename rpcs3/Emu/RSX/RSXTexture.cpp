@@ -155,22 +155,51 @@ namespace rsx
 
 		switch (format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN))
 		{
+		case CELL_GCM_TEXTURE_X32_FLOAT:
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		{
+			// Floating point textures cannot be remapped on realhw, throws error 261
+			remap_ctl &= ~(0xFF);
+			remap_ctl |= 0xE4;
+			break;
+		}
+		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+		{
+			// Floating point textures cannot be remapped on realhw, throws error 261
+			// High word of remap ctrl remaps ARGB to YXXX
+			const u32 lo_word = (remap_override) ? 0x56 : 0x66;
+			remap_ctl &= ~(0xFF);
+			remap_ctl |= lo_word;
+			break;
+		}
 		case CELL_GCM_TEXTURE_X16:
 		case CELL_GCM_TEXTURE_Y16_X16:
-		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 		{
-			//Low bit in remap control affects whether the G component should match R and B components
-			//Components are usually interleaved R-G-R-G unless flag is set, then its R-R-R-G (Virtua Fighter 5)
-			//NOTE: The remap vector can also read from B-A-B-A in some cases (Mass Effect 3)
-			if (remap_override)
+			// These are special formats whose remap encoding is in 16-bit blocks
+			// The first channel is encoded as 0x4 (combination of 0 and 1) and the second channel is 0xE (combination of 2 and 3)
+			// There are only 2 valid combinations - 0xE4 or 0x4E, any attempts to mess with this will crash the system
+			// This means only R and G channels exist for these formats
+
+			// Low bit in remap override (high word) affects whether the G component should match R and B components
+			// Components are usually interleaved R-G-R-G unless flag is set, then its R-R-R-G (Virtua Fighter 5)
+			// NOTE: The remap vector can also read from B-A-B-A in some cases (Mass Effect 3)
+
+			u32 lo_word = remap_ctl & 0xFF;
+			remap_ctl &= 0xFF00;
+
+			if (lo_word == 0xE4)
 			{
-				auto r_component = (remap_ctl >> 2) & 3;
-				remap_ctl = (remap_ctl & ~(3 << 4)) | r_component << 4;
+				lo_word = (remap_override) ? 0x56 : 0x66;
+			}
+			else
+			{
+				lo_word = (remap_override) ? 0xA9 : 0x99;
 			}
 
-			remap_ctl &= 0xFFFF;
+			remap_ctl |= lo_word;
 			break;
 		}
 		case CELL_GCM_TEXTURE_B8:
