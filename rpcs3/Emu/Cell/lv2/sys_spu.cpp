@@ -482,11 +482,11 @@ error_code sys_spu_thread_get_exit_status(ppu_thread& ppu, u32 id, vm::ptr<s32> 
 		return CELL_ESRCH;
 	}
 
-	const u64 exit_status = thread->exit_status.data.load();
+	u32 data;
 
-	if (exit_status & spu_channel::bit_count)
+	if (thread->exit_status.try_read(data))
 	{
-		*status = static_cast<s32>(exit_status);
+		*status = static_cast<s32>(data);
 		return CELL_OK;
 	}
 
