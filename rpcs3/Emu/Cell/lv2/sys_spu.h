@@ -278,7 +278,6 @@ struct lv2_spu_group
 	atomic_t<s32> exit_status; // SPU Thread Group Exit Status
 	atomic_t<u32> join_state; // flags used to detect exit cause and signal
 	atomic_t<u32> running; // Number of running threads
-	cond_variable cond; // used to signal waiting PPU thread
 	atomic_t<u64> stop_count;
 	class ppu_thread* waiter = nullptr;
 	bool set_terminate = false;
