@@ -876,6 +876,8 @@ namespace glsl
 			return "textureLod($t, $0.xyz, 0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
 			return "TEX2D_DEPTH_RGBA8($_i, $0.xy)";
+		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA_PROJ:
+			return "TEX2D_DEPTH_RGBA8($_i, ($0.xy / $0.w))";
 		}
 	}
 
