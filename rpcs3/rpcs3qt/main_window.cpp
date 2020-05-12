@@ -1943,9 +1943,6 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 		}
 	}
 
-	// hide utilities from the average user
-	ui->menuUtilities->menuAction()->setVisible(m_gui_settings->GetValue(gui::m_showDebugTab).toBool());
-
 	ui->showLogAct->setChecked(m_gui_settings->GetValue(gui::mw_logger).toBool());
 	ui->showGameListAct->setChecked(m_gui_settings->GetValue(gui::mw_gamelist).toBool());
 	ui->showDebuggerAct->setChecked(m_gui_settings->GetValue(gui::mw_debugger).toBool());
