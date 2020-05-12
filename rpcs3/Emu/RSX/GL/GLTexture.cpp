@@ -393,8 +393,7 @@ namespace gl
 			return{ GL_ONE, GL_RED, GL_RED, GL_RED };
 
 		case CELL_GCM_TEXTURE_X16:
-			//Blue component is also R (Mass Effect 3)
-			return{ GL_RED, GL_ONE, GL_RED, GL_RED };
+			return{ GL_RED, GL_ONE, GL_RED, GL_ONE };
 
 		case CELL_GCM_TEXTURE_X32_FLOAT:
 			return{ GL_RED, GL_RED, GL_RED, GL_RED };
