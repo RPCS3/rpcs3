@@ -983,7 +983,6 @@ void spu_thread::cpu_stop()
 		{
 			{
 				std::lock_guard lock(group->mutex);
-				group->stop_count++;
 				group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 
 				if (!group->join_state)
@@ -1010,17 +1009,20 @@ void spu_thread::cpu_stop()
 					exit_status.set_value(last_exit_status);
 				}
 
+				group->stop_count++;
+
 				if (const auto ppu = std::exchange(group->waiter, nullptr))
 				{
 					// Send exit status directly to the joining thread
 					ppu->gpr[4] = group->join_state;
 					ppu->gpr[5] = group->exit_status;
 					group->join_state.release(0);
+					lv2_obj::awake(ppu);
 				}
 			}
 
 			// Notify on last thread stopped
-			group->cond.notify_all();
+			group->stop_count.notify_all();
 		}
 		else if (status_npc.load().status >> 16 == SYS_SPU_THREAD_STOP_THREAD_EXIT)
 		{
