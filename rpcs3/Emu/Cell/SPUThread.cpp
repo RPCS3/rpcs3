@@ -983,7 +983,6 @@ void spu_thread::cpu_stop()
 		{
 			{
 				std::lock_guard lock(group->mutex);
-				group->stop_count++;
 				group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 
 				if (!group->join_state)
@@ -996,8 +995,8 @@ void spu_thread::cpu_stop()
 					if (thread && thread.get() != this && thread->status_npc.load().status >> 16 == SYS_SPU_THREAD_STOP_THREAD_EXIT)
 					{
 						// Wait for all threads to have error codes if exited by sys_spu_thread_exit
-						for (u64 status; ((status = thread->exit_status.data) & spu_channel::bit_count) == 0
-							|| static_cast<u32>(status) != thread->last_exit_status;)
+						for (u32 status; !thread->exit_status.try_read(status)
+							|| status != thread->last_exit_status;)
 						{
 							_mm_pause();
 						} 
@@ -1010,17 +1009,20 @@ void spu_thread::cpu_stop()
 					exit_status.set_value(last_exit_status);
 				}
 
+				group->stop_count++;
+
 				if (const auto ppu = std::exchange(group->waiter, nullptr))
 				{
 					// Send exit status directly to the joining thread
 					ppu->gpr[4] = group->join_state;
 					ppu->gpr[5] = group->exit_status;
 					group->join_state.release(0);
+					lv2_obj::awake(ppu);
 				}
 			}
 
 			// Notify on last thread stopped
-			group->cond.notify_all();
+			group->stop_count.notify_all();
 		}
 		else if (status_npc.load().status >> 16 == SYS_SPU_THREAD_STOP_THREAD_EXIT)
 		{
@@ -3286,11 +3288,11 @@ void fmt_class_string<spu_channel>::format(std::string& out, u64 arg)
 {
 	const auto& ch = get_object(arg);
 
-	const u64 raw = ch.data.load();
+	u32 data = 0;
 
-	if (raw & spu_channel::bit_count)
+	if (ch.try_read(data))
 	{
-		fmt::append(out, "0x%08x", static_cast<u32>(raw));
+		fmt::append(out, "0x%08x", data);
 	}
 	else
 	{
@@ -3303,7 +3305,7 @@ void fmt_class_string<spu_channel_4_t>::format(std::string& out, u64 arg)
 {
 	const auto& ch = get_object(arg);
 
-	// TODO
+	// TODO (use try_read)
 	fmt::append(out, "count = %d", ch.get_count());
 }
 
