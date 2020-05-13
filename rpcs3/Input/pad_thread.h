@@ -28,6 +28,7 @@ public:
 	void UnregisterLddPad(u32 handle);
 
 protected:
+	void InitLddPad(u32 handle);
 	void ThreadFunc();
 
 	// List of all handlers

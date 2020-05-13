@@ -176,8 +176,11 @@ private:
 	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y);
 
 	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
-	
+
 	QString GetLocalizedPadHandler(const QString& original, pad_handler handler);
+
+	/** Checks if the port at the given index is already reserved by the application as custom controller (ldd pad) */
+	bool GetIsLddPad(int index) const;
 
 protected:
 	/** Handle keyboard handler input */

@@ -119,13 +119,26 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	switch (keyEvent->key())
 	{
 	case Qt::Key_L:
-		if (keyEvent->modifiers() == Qt::AltModifier) { static int count = 0; screenshot.success("Made forced mark %d in log", ++count); }
+		if (keyEvent->modifiers() == Qt::AltModifier)
+		{
+			static int count = 0;
+			screenshot.success("Made forced mark %d in log", ++count);
+			return;
+		}
 		break;
 	case Qt::Key_Return:
-		if (keyEvent->modifiers() == Qt::AltModifier) { toggle_fullscreen(); return; }
+		if (keyEvent->modifiers() == Qt::AltModifier)
+		{
+			toggle_fullscreen();
+			return;
+		}
 		break;
 	case Qt::Key_Escape:
-		if (visibility() == FullScreen) { toggle_fullscreen(); return; }
+		if (visibility() == FullScreen)
+		{
+			toggle_fullscreen();
+			return;
+		}
 		break;
 	case Qt::Key_P:
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && Emu.IsRunning())
@@ -135,14 +148,14 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		}
 		break;
 	case Qt::Key_S:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && (!Emu.IsStopped()))
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && !Emu.IsStopped())
 		{
 			Emu.Stop();
 			return;
 		}
 		break;
 	case Qt::Key_R:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && (!Emu.GetBoot().empty()))
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && !Emu.GetBoot().empty())
 		{
 			Emu.Restart();
 			return;
@@ -151,8 +164,16 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	case Qt::Key_E:
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
 		{
-			if (Emu.IsReady()) { Emu.Run(true); return; }
-			else if (Emu.IsPaused()) { Emu.Resume(); return; }
+			if (Emu.IsReady())
+			{
+				Emu.Run(true);
+				return;
+			}
+			else if (Emu.IsPaused())
+			{
+				Emu.Resume();
+				return;
+			}
 		}
 		break;
 	case Qt::Key_F12:

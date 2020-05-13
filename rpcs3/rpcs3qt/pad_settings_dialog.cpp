@@ -13,8 +13,10 @@
 #include "ui_pad_settings_dialog.h"
 #include "tooltips.h"
 
+#include "Emu/System.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 
+#include "Input/pad_thread.h"
 #include "Input/product_info.h"
 #include "Input/keyboard_pad_handler.h"
 #include "Input/ds3_pad_handler.h"
@@ -88,14 +90,6 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	QVBoxLayout* mainLayout = new QVBoxLayout;
 	mainLayout->addWidget(m_tabs);
 	setLayout(mainLayout);
-
-	// Fill input type combobox
-	std::vector<std::string> str_inputs = g_cfg_input.player[0]->handler.to_list();
-	for (size_t index = 0; index < str_inputs.size(); index++)
-	{
-		const QString item_data = qstr(str_inputs[index]);
-		ui->chooseHandler->addItem(GetLocalizedPadHandler(item_data, static_cast<pad_handler>(index)), QVariant(item_data));
-	}
 
 	// Combobox: Input type
 	connect(ui->chooseHandler, &QComboBox::currentTextChanged, this, &pad_settings_dialog::ChangeInputType);
@@ -1009,10 +1003,22 @@ void pad_settings_dialog::ChangeInputType()
 {
 	bool force_enable = false; // enable configs even with disconnected devices
 	const int player = m_tabs->currentIndex();
+	const bool is_ldd_pad = GetIsLddPad(player);
+	
+	std::string handler;
+	std::string device;
+	std::string profile;
 
-	const std::string handler = sstr(ui->chooseHandler->currentData().toString());
-	const std::string device = g_cfg_input.player[player]->device.to_string();
-	const std::string profile = g_cfg_input.player[player]->profile.to_string();
+	if (is_ldd_pad)
+	{
+		handler = fmt::format("%s", pad_handler::null);
+	}
+	else
+	{
+		handler = sstr(ui->chooseHandler->currentData().toString());
+		device = g_cfg_input.player[player]->device.to_string();
+		profile = g_cfg_input.player[player]->profile.to_string();
+	}
 
 	// Change this player's current handler
 	if (!g_cfg_input.player[player]->handler.from_string(handler))
@@ -1037,7 +1043,11 @@ void pad_settings_dialog::ChangeInputType()
 	switch (m_handler->m_type)
 	{
 	case pad_handler::null:
-		description = tooltips.gamepad_settings.null; break;
+		if (is_ldd_pad)
+			description = tooltips.gamepad_settings.ldd_pad;
+		else
+			description = tooltips.gamepad_settings.null;
+		break;
 	case pad_handler::keyboard:
 		description = tooltips.gamepad_settings.keyboard; break;
 #ifdef _WIN32
@@ -1091,6 +1101,15 @@ void pad_settings_dialog::ChangeInputType()
 		force_enable = true;
 		break;
 	}
+	case pad_handler::null:
+	{
+		if (is_ldd_pad)
+		{
+			ui->chooseDevice->addItem(tr("Custom Controller"));
+			break;
+		}
+		[[fallthrough]];
+	}
 	default:
 	{
 		for (size_t i = 0; i < device_list.size(); i++)
@@ -1120,14 +1139,15 @@ void pad_settings_dialog::ChangeInputType()
 			m_handler->get_next_button_press(info.name,
 				[this](u16, std::string, std::string pad_name, u32, pad_preview_values) { SwitchPadInfo(pad_name, true); },
 				[this](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+
 			if (info.name == device)
 			{
 				ui->chooseDevice->setCurrentIndex(i);
 			}
 		}
 
-		QString profile_dir = qstr(PadHandlerBase::get_config_dir(m_handler->m_type, m_title_id));
-		QStringList profiles = gui::utils::get_dir_entries(QDir(profile_dir), QStringList() << "*.yml");
+		const QString profile_dir = qstr(PadHandlerBase::get_config_dir(m_handler->m_type, m_title_id));
+		const QStringList profiles = gui::utils::get_dir_entries(QDir(profile_dir), QStringList() << "*.yml");
 
 		if (profiles.isEmpty())
 		{
@@ -1153,13 +1173,20 @@ void pad_settings_dialog::ChangeInputType()
 	else
 	{
 		ui->chooseProfile->addItem(tr("No Profiles"));
-		ui->chooseDevice->addItem(tr("No Device Detected"), -1);
+
+		if (ui->chooseDevice->count() == 0)
+		{
+			ui->chooseDevice->addItem(tr("No Device Detected"), -1);
+		}
 	}
 
 	// enable configuration and profile list if possible
 	SwitchButtons(config_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->b_addProfile->setEnabled(config_enabled);
 	ui->chooseProfile->setEnabled(config_enabled);
+
+	ui->b_reset->setEnabled(!is_ldd_pad);
+	ui->chooseHandler->setEnabled(!is_ldd_pad);
 }
 
 void pad_settings_dialog::ChangeProfile()
@@ -1292,11 +1319,29 @@ void pad_settings_dialog::HandleDeviceClassChange(int index)
 
 void pad_settings_dialog::RefreshInputTypes()
 {
-	const auto& handler = g_cfg_input.player[m_tabs->currentIndex()]->handler;
+	const int index = m_tabs->currentIndex();
 
 	// Set the current input type from config. Disable signal to have ChangeInputType always executed exactly once
 	ui->chooseHandler->blockSignals(true);
-	ui->chooseHandler->setCurrentText(GetLocalizedPadHandler(qstr(handler.to_string()), handler));
+	ui->chooseHandler->clear();
+
+	if (GetIsLddPad(index))
+	{
+		ui->chooseHandler->addItem(tr("Reserved"));
+	}
+	else
+	{
+		const std::vector<std::string> str_inputs = g_cfg_input.player[0]->handler.to_list();
+		for (size_t index = 0; index < str_inputs.size(); index++)
+		{
+			const QString item_data = qstr(str_inputs[index]);
+			ui->chooseHandler->addItem(GetLocalizedPadHandler(item_data, static_cast<pad_handler>(index)), QVariant(item_data));
+		}
+
+		const auto& handler = g_cfg_input.player[index]->handler;
+		ui->chooseHandler->setCurrentText(GetLocalizedPadHandler(qstr(handler.to_string()), handler));
+	}
+
 	ui->chooseHandler->blockSignals(false);
 
 	// Force Change
@@ -1397,4 +1442,18 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 		break;
 	}
 	return original;
+}
+
+bool pad_settings_dialog::GetIsLddPad(int index) const
+{
+	// We only check for ldd pads if the current dialog may affect the running application.
+	// To simplify this we include the global pad config indiscriminately as well as the relevant custom pad config.
+	if (index >= 0 && !Emu.IsStopped() && (m_title_id.empty() || m_title_id == Emu.GetTitleID()))
+	{
+		std::lock_guard lock(pad::g_pad_mutex);
+		const auto handler = pad::get_current_handler();
+		return handler && handler->GetPads().at(index)->ldd;
+	}
+
+	return false;
 }
