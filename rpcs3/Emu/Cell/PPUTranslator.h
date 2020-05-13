@@ -107,7 +107,10 @@ public:
 	auto vec_handle_nan(T&& expr)
 	{
 		value_t<typename T::type> result;
-		result.value = VecHandleNan(expr.eval(m_ir));
+		if (g_cfg.core.llvm_ppu_accurate_vector_nan)
+			result.value = VecHandleNan(expr.eval(m_ir));
+		else
+			result.value = expr.eval(m_ir);
 		return result;
 	}
 
