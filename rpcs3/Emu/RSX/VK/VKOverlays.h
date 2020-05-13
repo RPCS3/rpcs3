@@ -164,7 +164,7 @@ namespace vk
 			return fs_inputs;
 		}
 
-		virtual void get_dynamic_state_entries(VkDynamicState* /*state_descriptors*/, VkPipelineDynamicStateCreateInfo& /*info*/)
+		virtual void get_dynamic_state_entries(std::vector<VkDynamicState>& /*state_descriptors*/)
 		{}
 
 		virtual std::vector<VkPushConstantRange> get_push_constants()
@@ -207,15 +207,14 @@ namespace vk
 			shader_stages[1].module = m_fragment_shader.get_handle();
 			shader_stages[1].pName = "main";
 
-
 			std::vector<VkDynamicState> dynamic_state_descriptors;
-			VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
-			dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 			dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_VIEWPORT);
 			dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_SCISSOR);
-			dynamic_state_info.dynamicStateCount = ::size32(dynamic_state_descriptors);
+			get_dynamic_state_entries(dynamic_state_descriptors);
 
-			get_dynamic_state_entries(dynamic_state_descriptors.data(), dynamic_state_info);
+			VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
+			dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+			dynamic_state_info.dynamicStateCount = ::size32(dynamic_state_descriptors);
 			dynamic_state_info.pDynamicStates = dynamic_state_descriptors.data();
 
 			VkVertexInputBindingDescription vb = { 0, 16, VK_VERTEX_INPUT_RATE_VERTEX };
