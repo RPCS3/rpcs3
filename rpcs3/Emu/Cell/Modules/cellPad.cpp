@@ -924,19 +924,6 @@ error_code cellPadLddRegisterController()
 	if (handle < 0)
 		return CELL_PAD_ERROR_TOO_MANY_DEVICES;
 
-	const auto product = input::get_product_info(input::product_type::playstation_3_controller);
-
-	auto& pads = handler->GetPads();
-	pads[handle]->Init
-	(
-		CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER,
-		CELL_PAD_CAPABILITY_PS3_CONFORMITY,
-		CELL_PAD_DEV_TYPE_LDD,
-		CELL_PAD_PCLASS_TYPE_STANDARD,
-		product.pclass_profile,
-		product.vendor_id,
-		product.product_id
-	);
 	config->port_setting[handle] = 0;
 
 	return not_an_error(handle);
