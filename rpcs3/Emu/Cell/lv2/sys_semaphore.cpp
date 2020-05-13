@@ -265,11 +265,6 @@ error_code sys_semaphore_get_value(ppu_thread& ppu, u32 sem_id, vm::ptr<s32> cou
 
 	sys_semaphore.trace("sys_semaphore_get_value(sem_id=0x%x, count=*0x%x)", sem_id, count);
 
-	if (!count)
-	{
-		return CELL_EFAULT;
-	}
-
 	const auto sema = idm::check<lv2_obj, lv2_sema>(sem_id, [](lv2_sema& sema)
 	{
 		return std::max<s32>(0, sema.val);
@@ -278,6 +273,11 @@ error_code sys_semaphore_get_value(ppu_thread& ppu, u32 sem_id, vm::ptr<s32> cou
 	if (!sema)
 	{
 		return CELL_ESRCH;
+	}
+
+	if (!count)
+	{
+		return CELL_EFAULT;
 	}
 
 	*count = sema.ret;
