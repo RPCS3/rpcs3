@@ -5774,20 +5774,7 @@ public:
 
 			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(trunc<u8>(val).eval(m_ir)))
 			{
-				const auto eal = get_reg_fixed<u32>(s_reg_mfc_eal);
-				const auto lsa = get_reg_fixed<u32>(s_reg_mfc_lsa);
-				const auto tag = get_reg_fixed<u8>(s_reg_mfc_tag);
-
-				const auto size = get_reg_fixed<u16>(s_reg_mfc_size);
-				const auto mask = m_ir->CreateShl(m_ir->getInt32(1), zext<u32>(tag).eval(m_ir));
-				const auto exec = llvm::BasicBlock::Create(m_context, "", m_function);
-				const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
-				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-
-				const auto pf = spu_ptr<u32>(&spu_thread::mfc_fence);
-				const auto pb = spu_ptr<u32>(&spu_thread::mfc_barrier);
-
-				if (u64 cmdh = ci->getZExtValue() & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK); !g_use_rtm)
+				if (u64 cmdh = ci->getZExtValue() & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_RESULT_MASK); !g_use_rtm)
 				{
 					// TODO: don't require TSX (current implementation is TSX-only)
 					if (cmdh == MFC_GET_CMD && g_cfg.core.spu_accurate_putlluc)
@@ -5801,6 +5788,19 @@ public:
 					}
 				}
 	
+				const auto eal = get_reg_fixed<u32>(s_reg_mfc_eal);
+				const auto lsa = get_reg_fixed<u32>(s_reg_mfc_lsa);
+				const auto tag = get_reg_fixed<u8>(s_reg_mfc_tag);
+
+				const auto size = get_reg_fixed<u16>(s_reg_mfc_size);
+				const auto mask = m_ir->CreateShl(m_ir->getInt32(1), zext<u32>(tag).eval(m_ir));
+				const auto exec = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+
+				const auto pf = spu_ptr<u32>(&spu_thread::mfc_fence);
+				const auto pb = spu_ptr<u32>(&spu_thread::mfc_barrier);
+
 				switch (u64 cmd = ci->getZExtValue())
 				{
 				case MFC_GETLLAR_CMD:
