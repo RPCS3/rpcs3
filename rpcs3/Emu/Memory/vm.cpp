@@ -150,7 +150,7 @@ namespace vm
 
 		if (cpu.state & cpu_flag::memory)
 		{
-			cpu.state -= cpu_flag::memory;
+			cpu.state -= cpu_flag::memory + cpu_flag::wait;
 		}
 
 		if (g_mutex.is_lockable()) [[likely]]
