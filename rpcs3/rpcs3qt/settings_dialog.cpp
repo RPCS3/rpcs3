@@ -930,6 +930,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->accurateLLVMdfma, tooltips.settings.accurate_llvm_dfma);
 	ui->accurateLLVMdfma->setDisabled(utils::has_fma3() || utils::has_fma4());
 
+	m_emu_settings->EnhanceCheckBox(ui->AccurateVectorNaN, emu_settings_type::AccurateVectorNaN);
+	SubscribeTooltip(ui->AccurateVectorNaN, tooltips.settings.accurate_vector_nan);
+
 	m_emu_settings->EnhanceCheckBox(ui->silenceAllLogs, emu_settings_type::SilenceAllLogs);
 	SubscribeTooltip(ui->silenceAllLogs, tooltips.settings.silence_all_logs);
 
