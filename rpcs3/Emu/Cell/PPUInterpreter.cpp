@@ -360,30 +360,47 @@ public:
 const g_ppu_scale_table;
 
 constexpr u32 ppu_nan_u32 = 0x7FC00000u;
-const f32 ppu_nan_f32 = std::bit_cast<f32>(ppu_nan_u32);
+static const f32 ppu_nan_f32 = std::bit_cast<f32>(ppu_nan_u32);
+static const v128 ppu_vec_nans = v128::from32p(ppu_nan_u32);
+
+// NaNs production precedence: NaN from Va, Vb, Vc
+// and lastly the result of the operation in case none of the operands is a NaN
+// Signaling NaNs are 'quieted' (MSB of fraction is set) with other bits of data remain the same
+inline v128 vec_select_nan(v128 a)
+{
+	return a;
+}
+
+inline v128 vec_select_nan(v128 a, v128 b)
+{
+	const auto not_nan = v128::eq32f(a, a);
+	return (b & not_nan) | v128::andnot(not_nan, a | ppu_vec_nans);
+}
+
+template <typename... Args>
+inline v128 vec_select_nan(v128 a, v128 b, Args... args)
+{
+	return vec_select_nan(a, vec_select_nan(b, args...));
+}
+
+v128 vec_handle_nan(v128 result)
+{
+	const auto not_nan = v128::eq32f(result, result);
+	result = (result & not_nan) | v128::andnot(not_nan, ppu_vec_nans);
+
+	return result;
+}
 
 template<typename... Args>
 v128 vec_handle_nan(v128 result, Args... args)
 {
-	const auto is_nan = v128::fromF(_mm_cmpunord_ps(result.vf, result.vf));
-	const auto nans = v128::from32p(ppu_nan_u32);
-	result = (nans & is_nan) | v128::andnot(is_nan, result);
-
-	return result;
+	return vec_select_nan(args..., vec_handle_nan(result));
 }
 
 template<typename... Args>
 v128 vec_handle_nan(__m128 result, Args... args)
 {
-	return vec_handle_nan(v128::fromF(result));
-}
-
-template<typename... Args>
-float f32_handle_nan(float result, Args... args)
-{
-	if (std::isnan(result))
-		result = ppu_nan_f32;
-	return result;
+	return vec_handle_nan(v128::fromF(result), v128::fromF(args)...);
 }
 
 bool ppu_interpreter::MFVSCR(ppu_thread& ppu, ppu_opcode_t op)
@@ -945,23 +962,24 @@ bool ppu_interpreter_fast::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 	const auto b = ppu.vr[op.vc].vf;
 	const auto c = ppu.vr[op.vb].vf;
 	const auto result = _mm_add_ps(_mm_mul_ps(a, b), c);
-	ppu.vr[op.vd] = vec_handle_nan(result, a, b, c);
+	ppu.vr[op.vd] = vec_handle_nan(result);
 	return true;
 }
 
 bool ppu_interpreter_precise::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const auto& a = ppu.vr[op.va]._f;
-	const auto& b = ppu.vr[op.vb]._f;
-	const auto& c = ppu.vr[op.vc]._f;
-	auto& d = ppu.vr[op.rd]._f;
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	const auto c = ppu.vr[op.vc];
+	v128 d;
 
 	// TODO: Optimize
 	for (u32 i = 0; i < 4; i++)
 	{
-		d[i] = f32_handle_nan(f32(f64{a[i]} * f64{c[i]} + f64{b[i]}));
+		d._f[i] = f32(f64{a._f[i]} * f64{c._f[i]} + f64{b._f[i]});
 	}
 
+	ppu.vr[op.rd] = vec_handle_nan(d, a, b, c);
 	return true;
 }
 
@@ -1861,49 +1879,57 @@ bool ppu_interpreter::VREFP(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VRFIM(ppu_thread& ppu, ppu_opcode_t op)
 {
-	auto& d = ppu.vr[op.vd];
-	const auto& b = ppu.vr[op.vb];
+	const auto b = ppu.vr[op.vb];
+	v128 d;
 
 	for (uint w = 0; w < 4; w++)
 	{
-		d._f[w] = f32_handle_nan(std::floor(b._f[w]));
+		d._f[w] = std::floor(b._f[w]);
 	}
+
+	ppu.vr[op.vb] = vec_handle_nan(d, b);
 	return true;
 }
 
 bool ppu_interpreter::VRFIN(ppu_thread& ppu, ppu_opcode_t op)
 {
-	auto& d = ppu.vr[op.vd];
-	const auto& b = ppu.vr[op.vb];
+	const auto b = ppu.vr[op.vb];
+	v128 d;
 
 	for (uint w = 0; w < 4; w++)
 	{
-		d._f[w] = f32_handle_nan(std::nearbyint(b._f[w]));
+		d._f[w] = std::nearbyint(b._f[w]);
 	}
+
+	ppu.vr[op.vb] = vec_handle_nan(d, b);
 	return true;
 }
 
 bool ppu_interpreter::VRFIP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	auto& d = ppu.vr[op.vd];
-	const auto& b = ppu.vr[op.vb];
+	const auto b = ppu.vr[op.vb];
+	v128 d;
 
 	for (uint w = 0; w < 4; w++)
 	{
-		d._f[w] = f32_handle_nan(std::ceil(b._f[w]));
+		d._f[w] = std::ceil(b._f[w]);
 	}
+
+	ppu.vr[op.vb] = vec_handle_nan(d, b);
 	return true;
 }
 
 bool ppu_interpreter::VRFIZ(ppu_thread& ppu, ppu_opcode_t op)
 {
-	auto& d = ppu.vr[op.vd];
-	const auto& b = ppu.vr[op.vb];
+	const auto b = ppu.vr[op.vb];
+	v128 d;
 
 	for (uint w = 0; w < 4; w++)
 	{
-		d._f[w] = f32_handle_nan(std::truncf(b._f[w]));
+		d._f[w] = std::truncf(b._f[w]);
 	}
+
+	ppu.vr[op.vb] = vec_handle_nan(d, b);
 	return true;
 }
 
