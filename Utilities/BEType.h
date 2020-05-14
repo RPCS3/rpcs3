@@ -312,6 +312,16 @@ union alignas(16) v128
 		return fromV(_mm_cmpeq_epi32(left.vi, right.vi));
 	}
 
+	static inline v128 eq32f(const v128& left, const v128& right)
+	{
+		return fromF(_mm_cmpeq_ps(left.vf, right.vf));
+	}
+
+	static inline v128 eq64f(const v128& left, const v128& right)
+	{
+		return fromD(_mm_cmpeq_pd(left.vd, right.vd));
+	}
+
 	bool operator==(const v128& right) const
 	{
 		return _u64[0] == right._u64[0] && _u64[1] == right._u64[1];
