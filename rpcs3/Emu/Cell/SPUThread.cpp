@@ -3179,6 +3179,12 @@ bool spu_thread::stop_and_signal(u32 code)
 				continue;
 			}
 
+			if (std::exchange(group->set_terminate, true))
+			{
+				// Whoever terminated first decides the error status + cause
+				return true;
+			}
+
 			for (auto& thread : group->threads)
 			{
 				if (thread && thread.get() != this)
