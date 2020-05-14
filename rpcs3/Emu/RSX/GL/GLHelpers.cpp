@@ -202,13 +202,16 @@ namespace gl
 
 	void fbo::remove()
 	{
-		glDeleteFramebuffers(1, &m_id);
-		m_id = 0;
+		if (m_id != GL_NONE)
+		{
+			glDeleteFramebuffers(1, &m_id);
+			m_id = GL_NONE;
+		}
 	}
 
 	bool fbo::created() const
 	{
-		return m_id != 0;
+		return m_id != GL_NONE;
 	}
 
 	bool fbo::check() const
