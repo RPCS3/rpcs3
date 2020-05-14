@@ -1590,6 +1590,7 @@ extern void ppu_initialize(const ppu_module& info)
 			{
 				non_win32,
 				accurate_fma,
+				accurate_ppu_vector_nan,
 
 				__bitset_enum_max
 			};
@@ -1602,6 +1603,10 @@ extern void ppu_initialize(const ppu_module& info)
 			if (g_cfg.core.llvm_accurate_dfma)
 			{
 				settings += ppu_settings::accurate_fma;
+			}
+			if (g_cfg.core.llvm_ppu_accurate_vector_nan)
+			{
+				settings += ppu_settings::accurate_ppu_vector_nan;
 			}
 
 			// Write version, hash, CPU, settings

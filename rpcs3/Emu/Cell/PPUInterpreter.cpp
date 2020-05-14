@@ -8,8 +8,9 @@
 #include "Utilities/sysinfo.h"
 #include "Emu/Cell/Common.h"
 
-#include <cmath>
 #include <atomic>
+#include <bit>
+#include <cmath>
 
 #if !defined(_MSC_VER) && defined(__clang__)
 #pragma GCC diagnostic push
@@ -358,6 +359,33 @@ public:
 }
 const g_ppu_scale_table;
 
+constexpr u32 ppu_nan_u32 = 0x7FC00000u;
+const f32 ppu_nan_f32 = std::bit_cast<f32>(ppu_nan_u32);
+
+template<typename... Args>
+v128 vec_handle_nan(v128 result, Args... args)
+{
+	const auto is_nan = v128::fromF(_mm_cmpunord_ps(result.vf, result.vf));
+	const auto nans = v128::from32p(ppu_nan_u32);
+	result = (nans & is_nan) | v128::andnot(is_nan, result);
+
+	return result;
+}
+
+template<typename... Args>
+v128 vec_handle_nan(__m128 result, Args... args)
+{
+	return vec_handle_nan(v128::fromF(result));
+}
+
+template<typename... Args>
+float f32_handle_nan(float result, Args... args)
+{
+	if (std::isnan(result))
+		result = ppu_nan_f32;
+	return result;
+}
+
 bool ppu_interpreter::MFVSCR(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.vr[op.vd] = v128::from32(0, 0, 0, u32{ppu.sat} | (u32{ppu.nj} << 16));
@@ -382,7 +410,10 @@ bool ppu_interpreter::VADDCUW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VADDFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd] = v128::addfs(ppu.vr[op.va], ppu.vr[op.vb]);
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	const auto result = v128::addfs(a, b);
+	ppu.vr[op.vd] = vec_handle_nan(result, a, b);
 	return true;
 }
 
@@ -910,7 +941,11 @@ bool ppu_interpreter::VLOGEFP(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_fast::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_add_ps(_mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf), ppu.vr[op.vb].vf);
+	const auto a = ppu.vr[op.va].vf;
+	const auto b = ppu.vr[op.vc].vf;
+	const auto c = ppu.vr[op.vb].vf;
+	const auto result = _mm_add_ps(_mm_mul_ps(a, b), c);
+	ppu.vr[op.vd] = vec_handle_nan(result, a, b, c);
 	return true;
 }
 
@@ -924,7 +959,7 @@ bool ppu_interpreter_precise::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 	// TODO: Optimize
 	for (u32 i = 0; i < 4; i++)
 	{
-		d[i] = f32(f64{a[i]} * f64{c[i]} + f64{b[i]});
+		d[i] = f32_handle_nan(f32(f64{a[i]} * f64{c[i]} + f64{b[i]}));
 	}
 
 	return true;
@@ -932,7 +967,7 @@ bool ppu_interpreter_precise::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VMAXFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_max_ps(ppu.vr[op.va].vf, ppu.vr[op.vb].vf);
+	ppu.vr[op.vd] = vec_handle_nan(_mm_max_ps(ppu.vr[op.va].vf, ppu.vr[op.vb].vf));
 	return true;
 }
 
@@ -1077,7 +1112,8 @@ bool ppu_interpreter::VMINFP(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const auto a = ppu.vr[op.va].vf;
 	const auto b = ppu.vr[op.vb].vf;
-	ppu.vr[op.vd].vf = _mm_or_ps(_mm_min_ps(a, b),  _mm_min_ps(b, a));
+	const auto result = _mm_or_ps(_mm_min_ps(a, b), _mm_min_ps(b, a));
+	ppu.vr[op.vd] = vec_handle_nan(result, a, b);
 	return true;
 }
 
@@ -1414,7 +1450,10 @@ bool ppu_interpreter::VMULOUH(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_xor_ps(_mm_sub_ps(_mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf), ppu.vr[op.vb].vf), _mm_set1_ps(-0.0f));
+	const auto a = _mm_sub_ps(_mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf), ppu.vr[op.vb].vf);
+	const auto b = _mm_set1_ps(-0.0f);
+	const auto result = _mm_xor_ps(a, b);
+	ppu.vr[op.vd] = vec_handle_nan(result, a, b);
 	return true;
 }
 
@@ -1813,7 +1852,10 @@ bool ppu_interpreter_precise::VPKUWUS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VREFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_div_ps(_mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f), ppu.vr[op.vb].vf);
+	const auto a = _mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f);
+	const auto b = ppu.vr[op.vb].vf;
+	const auto result = _mm_div_ps(a, b);
+	ppu.vr[op.vd] = vec_handle_nan(result, a, b);
 	return true;
 }
 
@@ -1824,7 +1866,7 @@ bool ppu_interpreter::VRFIM(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (uint w = 0; w < 4; w++)
 	{
-		d._f[w] = std::floor(b._f[w]);
+		d._f[w] = f32_handle_nan(std::floor(b._f[w]));
 	}
 	return true;
 }
@@ -1836,7 +1878,7 @@ bool ppu_interpreter::VRFIN(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (uint w = 0; w < 4; w++)
 	{
-		d._f[w] = std::nearbyint(b._f[w]);
+		d._f[w] = f32_handle_nan(std::nearbyint(b._f[w]));
 	}
 	return true;
 }
@@ -1848,7 +1890,7 @@ bool ppu_interpreter::VRFIP(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (uint w = 0; w < 4; w++)
 	{
-		d._f[w] = std::ceil(b._f[w]);
+		d._f[w] = f32_handle_nan(std::ceil(b._f[w]));
 	}
 	return true;
 }
@@ -1860,7 +1902,7 @@ bool ppu_interpreter::VRFIZ(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (uint w = 0; w < 4; w++)
 	{
-		d._f[w] = std::truncf(b._f[w]);
+		d._f[w] = f32_handle_nan(std::truncf(b._f[w]));
 	}
 	return true;
 }
@@ -1906,7 +1948,10 @@ bool ppu_interpreter::VRLW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VRSQRTEFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_div_ps(_mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f), _mm_sqrt_ps(ppu.vr[op.vb].vf));
+	const auto a = _mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f);
+	const auto b = ppu.vr[op.vb].vf;
+	const auto result = _mm_div_ps(a, _mm_sqrt_ps(b));
+	ppu.vr[op.vd] = vec_handle_nan(result, a, b);
 	return true;
 }
 
@@ -2203,7 +2248,10 @@ bool ppu_interpreter::VSUBCUW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VSUBFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd] = v128::subfs(ppu.vr[op.va], ppu.vr[op.vb]);
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	const auto result = v128::subfs(a, b);
+	ppu.vr[op.vd] = vec_handle_nan(result, a, b);
 	return true;
 }
 
