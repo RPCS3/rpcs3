@@ -898,8 +898,11 @@ namespace gl
 
 		void remove()
 		{
-			glDeleteBuffers(1, &m_id);
-			m_id = 0;
+			if (m_id != GL_NONE)
+			{
+				glDeleteBuffers(1, &m_id);
+				m_id = GL_NONE;
+			}
 		}
 
 		GLsizeiptr size() const
@@ -919,7 +922,7 @@ namespace gl
 
 		bool created() const
 		{
-			return m_id != 0;
+			return m_id != GL_NONE;
 		}
 
 		explicit operator bool() const
@@ -1039,8 +1042,12 @@ namespace gl
 				m_size = 0;
 			}
 
-			glDeleteBuffers(1, &m_id);
-			m_id = 0;
+
+			if (m_id != GL_NONE)
+			{
+				glDeleteBuffers(1, &m_id);
+				m_id = GL_NONE;
+			}
 		}
 
 		virtual void reserve_storage_on_heap(u32 /*alloc_size*/) {}
@@ -1308,8 +1315,11 @@ namespace gl
 
 		void remove() noexcept
 		{
-			glDeleteVertexArrays(1, &m_id);
-			m_id = GL_NONE;
+			if (m_id != GL_NONE)
+			{
+				glDeleteVertexArrays(1, &m_id);
+				m_id = GL_NONE;
+			}
 		}
 
 		uint id() const noexcept
@@ -1573,7 +1583,7 @@ namespace gl
 		};
 
 	protected:
-		GLuint m_id = 0;
+		GLuint m_id = GL_NONE;
 		GLuint m_width = 0;
 		GLuint m_height = 0;
 		GLuint m_depth = 0;
@@ -1728,7 +1738,11 @@ namespace gl
 
 		virtual ~texture()
 		{
-			glDeleteTextures(1, &m_id);
+			if (m_id != GL_NONE)
+			{
+				glDeleteTextures(1, &m_id);
+				m_id = GL_NONE;
+			}
 		}
 
 		void set_native_component_layout(const std::array<GLenum, 4>& layout)
@@ -1765,7 +1779,7 @@ namespace gl
 
 		explicit operator bool() const noexcept
 		{
-			return (m_id != 0);
+			return (m_id != GL_NONE);
 		}
 
 		GLuint width() const
@@ -1927,7 +1941,7 @@ namespace gl
 
 	class texture_view
 	{
-		GLuint m_id = 0;
+		GLuint m_id = GL_NONE;
 		GLenum m_target = 0;
 		GLenum m_format = 0;
 		GLenum m_aspect_flags = 0;
@@ -2005,7 +2019,11 @@ namespace gl
 
 		~texture_view()
 		{
-			glDeleteTextures(1, &m_id);
+			if (m_id != GL_NONE)
+			{
+				glDeleteTextures(1, &m_id);
+				m_id = GL_NONE;
+			}
 		}
 
 		GLuint id() const
@@ -2099,7 +2117,7 @@ public:
 
 	class rbo
 	{
-		GLuint m_id = 0;
+		GLuint m_id = GL_NONE;
 
 	public:
 		rbo() = default;
@@ -2172,8 +2190,11 @@ public:
 
 		void remove()
 		{
-			glDeleteRenderbuffers(1, &m_id);
-			m_id = 0;
+			if (m_id != GL_NONE)
+			{
+				glDeleteRenderbuffers(1, &m_id);
+				m_id = GL_NONE;
+			}
 		}
 
 		uint id() const
@@ -2188,7 +2209,7 @@ public:
 
 		bool created() const
 		{
-			return m_id != 0;
+			return m_id != GL_NONE;
 		}
 
 		explicit operator bool() const
@@ -2289,7 +2310,7 @@ public:
 					return found->second;
 				}
 
-				return GL_NONE;
+				return 0;
 			}
 
 			void operator = (const rbo& rhs)
@@ -2522,8 +2543,11 @@ public:
 
 			void remove()
 			{
-				glDeleteShader(m_id);
-				m_id = 0;
+				if (m_id != GL_NONE)
+				{
+					glDeleteShader(m_id);
+					m_id = GL_NONE;
+				}
 			}
 
 			uint id() const
@@ -2538,7 +2562,7 @@ public:
 
 			bool created() const
 			{
-				return m_id != 0;
+				return m_id != GL_NONE;
 			}
 
 			explicit operator bool() const
@@ -2549,7 +2573,7 @@ public:
 
 		class program
 		{
-			GLuint m_id = 0;
+			GLuint m_id = GL_NONE;
 			fence m_fence;
 
 		public:
@@ -2697,8 +2721,11 @@ public:
 
 			void remove()
 			{
-				glDeleteProgram(m_id);
-				m_id = 0;
+				if (m_id != GL_NONE)
+				{
+					glDeleteProgram(m_id);
+					m_id = GL_NONE;
+				}
 				uniforms.clear();
 			}
 
@@ -2784,7 +2811,7 @@ public:
 
 			bool created() const
 			{
-				return m_id != 0;
+				return m_id != GL_NONE;
 			}
 
 			void sync()
