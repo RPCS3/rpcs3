@@ -59,7 +59,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 
 	if ((lwmutex->attribute & SYS_SYNC_ATTR_PROTOCOL_MASK) == SYS_SYNC_RETRY)
 	{
-		return _sys_lwcond_signal(ppu, lwcond->lwcond_queue, 0, -1, 2);
+		return _sys_lwcond_signal(ppu, lwcond->lwcond_queue, 0, UINT32_MAX, 2);
 	}
 
 	if (lwmutex->vars.owner.load() == ppu.id)
@@ -68,7 +68,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		lwmutex->all_info++;
 
 		// call the syscall
-		if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, -1, 1))
+		if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, UINT32_MAX, 1))
 		{
 			if (ppu.test_stopped())
 			{
@@ -96,7 +96,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		}
 
 		// call the syscall
-		return _sys_lwcond_signal(ppu, lwcond->lwcond_queue, 0, -1, 2);
+		return _sys_lwcond_signal(ppu, lwcond->lwcond_queue, 0, UINT32_MAX, 2);
 	}
 
 	// if locking succeeded
@@ -107,7 +107,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	});
 
 	// call the syscall
-	if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, -1, 3))
+	if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, UINT32_MAX, 3))
 	{
 		if (ppu.test_stopped())
 		{
@@ -202,9 +202,9 @@ error_code sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	return res;
 }
 
-error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id)
+error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ppu_thread_id)
 {
-	sysPrxForUser.trace("sys_lwcond_signal_to(lwcond=*0x%x, ppu_thread_id=0x%x)", lwcond, ppu_thread_id);
+	sysPrxForUser.trace("sys_lwcond_signal_to(lwcond=*0x%x, ppu_thread_id=0x%llx)", lwcond, ppu_thread_id);
 
 	if (g_cfg.core.hle_lwmutex)
 	{

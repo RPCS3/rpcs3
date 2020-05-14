@@ -63,7 +63,7 @@ error_code sys_lwcond_create(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, vm::
 error_code sys_lwcond_destroy(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond);
 error_code sys_lwcond_signal(ppu_thread& CPU, vm::ptr<sys_lwcond_t> lwcond);
 error_code sys_lwcond_signal_all(ppu_thread& CPU, vm::ptr<sys_lwcond_t> lwcond);
-error_code sys_lwcond_signal_to(ppu_thread& CPU, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id);
+error_code sys_lwcond_signal_to(ppu_thread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 ppu_thread_id);
 error_code sys_lwcond_wait(ppu_thread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout);
 
 error_code sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname);
