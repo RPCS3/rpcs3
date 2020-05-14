@@ -2060,9 +2060,9 @@ namespace rsx
 				return {};
 			};
 
-			auto validate_memory_range = [](u32 base_address, u32 write_end, u32 heurestic_end)
+			auto validate_memory_range = [](u32 base_address, u32 write_end, u32 heuristic_end)
 			{
-				if (heurestic_end <= write_end)
+				if (heuristic_end <= write_end)
 				{
 					return true;
 				}
@@ -2071,7 +2071,7 @@ namespace rsx
 				if (get_location(base_address) == CELL_GCM_LOCATION_LOCAL)
 				{
 					const auto vram_end = rsx::get_current_renderer()->local_mem_size + rsx::constants::local_mem_base;
-					if (heurestic_end > vram_end)
+					if (heuristic_end > vram_end)
 					{
 						// Outside available VRAM area
 						return false;
@@ -2079,7 +2079,7 @@ namespace rsx
 				}
 				else
 				{
-					if (!vm::check_addr(write_end, (heurestic_end - write_end), vm::page_info_t::page_allocated))
+					if (!vm::check_addr(write_end, (heuristic_end - write_end), vm::page_info_t::page_allocated))
 					{
 						// Enforce strict allocation size!
 						return false;
