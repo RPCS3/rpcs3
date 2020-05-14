@@ -342,9 +342,9 @@ namespace vk
 				{"usampler2DMS fs0"});
 		}
 
-		void get_dynamic_state_entries(VkDynamicState* state_descriptors, VkPipelineDynamicStateCreateInfo& info) override
+		void get_dynamic_state_entries(std::vector<VkDynamicState>& state_descriptors) override
 		{
-			state_descriptors[info.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_WRITE_MASK;
+			state_descriptors.push_back(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
 		}
 
 		void emit_geometry(vk::command_buffer& cmd) override
@@ -407,9 +407,9 @@ namespace vk
 				{ "usampler2D fs0" });
 		}
 
-		void get_dynamic_state_entries(VkDynamicState* state_descriptors, VkPipelineDynamicStateCreateInfo& info) override
+		void get_dynamic_state_entries(std::vector<VkDynamicState>& state_descriptors) override
 		{
-			state_descriptors[info.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_WRITE_MASK;
+			state_descriptors.push_back(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
 		}
 
 		void emit_geometry(vk::command_buffer& cmd) override

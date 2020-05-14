@@ -1063,20 +1063,6 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}
 
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-
-	if ((ppu.rtime & 127) == 0) [[likely]]
-	{
-		ppu.rdata = data;
-
-		if (vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime) [[likely]]
-		{
-			return static_cast<T>(ppu.rdata << data_off >> size_off);
-		}
-	}
-
-	vm::passive_unlock(ppu);
-
 	for (u64 i = 0;; i++)
 	{
 		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
@@ -1091,7 +1077,11 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			}
 		}
 
-		if (i < 20)
+		if (ppu.state)
+		{
+			ppu.check_state();
+		}
+		else if (i < 20)
 		{
 			busy_wait(300);
 		}
@@ -1101,7 +1091,6 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}
 
-	vm::passive_lock(ppu);
 	return static_cast<T>(ppu.rdata << data_off >> size_off);
 }
 

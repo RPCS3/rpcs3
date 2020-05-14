@@ -938,6 +938,34 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 
 bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 {
+	auto insert_texture_fetch = [this](const std::array<FUNCTION, 6>& functions)
+	{
+		const auto type = m_prog.get_texture_dimension(dst.tex_num);
+		std::string mask = "";
+		auto select = static_cast<u8>(type);
+
+		if (type == rsx::texture_dimension_extended::texture_dimension_2d)
+		{
+			if (m_prog.shadow_textures & (1 << dst.tex_num))
+			{
+				m_shadow_sampled_textures |= (1 << dst.tex_num);
+				select = 4;
+				mask = ".xxxx";
+			}
+			else
+			{
+				m_2d_sampled_textures |= (1 << dst.tex_num);
+				if (m_prog.redirected_textures & (1 << dst.tex_num))
+				{
+					select = 5;
+				}
+			}
+		}
+
+		auto function = functions[select];
+		SetDst(getFunction(function) + mask);
+	};
+
 	switch (opcode)
 	{
 	case RSX_FP_OPCODE_DDX: SetDst(getFunction(FUNCTION::FUNCTION_DFDX)); return true;
@@ -945,125 +973,97 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_NRM: SetDst("_builtin_normalize($0.xyz).xyzz", OPFLAGS::src_cast_f32); return true;
 	case RSX_FP_OPCODE_BEM: SetDst("$0.xyxy + $1.xxxx * $2.xzxz + $1.yyyy * $2.ywyw"); return true;
 	case RSX_FP_OPCODE_TEXBEM:
+	{
 		//Untested, should be x2d followed by TEX
 		AddX2d();
 		AddCode(Format("x2d = $0.xyxy + $1.xxxx * $2.xzxz + $1.yyyy * $2.ywyw;", true));
 		[[fallthrough]];
+	}
 	case RSX_FP_OPCODE_TEX:
+	{
 		AddTex();
-		switch (m_prog.get_texture_dimension(dst.tex_num))
-		{
-		case rsx::texture_dimension_extended::texture_dimension_1d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D));
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_2d:
-			if (m_prog.shadow_textures & (1 << dst.tex_num))
-			{
-				m_shadow_sampled_textures |= (1 << dst.tex_num);
-				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SHADOW2D) + ".xxxx");
-				return true;
-			}
-			if (m_prog.redirected_textures & (1 << dst.tex_num))
-				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA));
-			else
-				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D));
-			m_2d_sampled_textures |= (1 << dst.tex_num);
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_cubemap:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE));
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_3d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D));
-			return true;
-		}
-		return false;
+		insert_texture_fetch({
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE1D,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE3D,
+			FUNCTION::FUNCTION_TEXTURE_SHADOW2D,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA
+		});
+
+		return true;
+	}
 	case RSX_FP_OPCODE_TXPBEM:
-		//Untested, should be x2d followed by TXP
+	{
+		// Untested, should be x2d followed by TXP
 		AddX2d();
 		AddCode(Format("x2d = $0.xyxy + $1.xxxx * $2.xzxz + $1.yyyy * $2.ywyw;", true));
 		[[fallthrough]];
+	}
 	case RSX_FP_OPCODE_TXP:
+	{
 		AddTex();
-		switch (m_prog.get_texture_dimension(dst.tex_num))
-		{
-		case rsx::texture_dimension_extended::texture_dimension_1d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ));
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_2d:
-			//Note shadow comparison only returns a true/false result!
-			if (m_prog.shadow_textures & (1 << dst.tex_num))
-			{
-				m_shadow_sampled_textures |= (1 << dst.tex_num);
-				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SHADOW2D_PROJ) + ".xxxx");
-			}
-			else
-				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ));
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_cubemap:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ));
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_3d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_PROJ));
-			return true;
-		}
-		return false;
+		insert_texture_fetch({
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_PROJ,
+			FUNCTION::FUNCTION_TEXTURE_SHADOW2D_PROJ,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA_PROJ
+		});
+
+		return true;
+	}
 	case RSX_FP_OPCODE_TXD:
+	{
 		AddTex();
-		switch (m_prog.get_texture_dimension(dst.tex_num))
+
+		if (m_prog.redirected_textures & (1 << dst.tex_num) ||
+			m_prog.shadow_textures & (1 << dst.tex_num))
 		{
-		case rsx::texture_dimension_extended::texture_dimension_1d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_GRAD));
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_2d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD));
-			m_2d_sampled_textures |= (1 << dst.tex_num);
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_cubemap:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD));
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_3d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_GRAD));
-			return true;
+			// Doesn't make sense to sample with derivates for these types
+			rsx_log.error("[Unimplemented warning] TXD operation performed on shadow/redirected texture!");
 		}
-		return false;
+
+		insert_texture_fetch({
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_GRAD,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_GRAD,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD
+		});
+
+		return true;
+	}
 	case RSX_FP_OPCODE_TXB:
+	{
 		AddTex();
-		switch (m_prog.get_texture_dimension(dst.tex_num))
-		{
-		case rsx::texture_dimension_extended::texture_dimension_1d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS));
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_2d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_BIAS));
-			m_2d_sampled_textures |= (1 << dst.tex_num);
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_cubemap:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_BIAS));
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_3d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_BIAS));
-			return true;
-		}
-		return false;
+		insert_texture_fetch({
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_BIAS,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_BIAS,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_BIAS,
+			FUNCTION::FUNCTION_TEXTURE_SHADOW2D,              // Shadow and depth_rgba variants are generated for framebuffers where only LOD0 exists
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA
+		});
+
+		return true;
+	}
 	case RSX_FP_OPCODE_TXL:
+	{
 		AddTex();
-		switch (m_prog.get_texture_dimension(dst.tex_num))
-		{
-		case rsx::texture_dimension_extended::texture_dimension_1d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD));
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_2d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD));
-			m_2d_sampled_textures |= (1 << dst.tex_num);
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_cubemap:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD));
-			return true;
-		case rsx::texture_dimension_extended::texture_dimension_3d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_LOD));
-			return true;
-		}
-		return false;
+		insert_texture_fetch({
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD,
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_LOD,
+			FUNCTION::FUNCTION_TEXTURE_SHADOW2D,              // Shadow and depth_rgba variants are generated for framebuffers where only LOD0 exists
+			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA
+		});
+
+		return true;
+	}
 	// Unpack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 	// UP2 = UP2H (2 16-bit floats)
 	// UP16 = UP2US (2 unsigned 16-bit scalars)
