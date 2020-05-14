@@ -31,6 +31,11 @@
 #define GL_INTERPRETER_FRAGMENT_BLOCK 7
 #define GL_COMPUTE_BUFFER_SLOT(index) (index + 8)
 
+// Noop keyword outside of Windows (used in log_debug)
+#if !defined(_WIN32) && !defined(APIENTRY)
+#define APIENTRY
+#endif
+
 inline static void _SelectTexture(int unit) { glActiveTexture(GL_TEXTURE0 + unit); }
 
 namespace gl
