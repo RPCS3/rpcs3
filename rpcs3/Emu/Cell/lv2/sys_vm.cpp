@@ -28,6 +28,11 @@ sys_vm_t::~sys_vm_t()
 
 LOG_CHANNEL(sys_vm);
 
+struct sys_vm_global_t
+{
+	atomic_t<u32> total_vsize = 0;
+};
+
 error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {
 	vm::temporary_unlock(ppu);
@@ -48,8 +53,24 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 		return CELL_ESRCH;
 	}
 
+	if (!g_fxo->get<sys_vm_global_t>()->total_vsize.fetch_op([vsize](u32& size)
+	{
+		// A single process can hold up to 256MB of virtual memory, even on DECR
+		if (0x10000000 - size < vsize)
+		{
+			return false;
+		}
+
+		size += vsize;
+		return true;
+	}).second)
+	{
+		return CELL_EBUSY;
+	}
+
 	if (!ct->take(psize))
 	{
+		g_fxo->get<sys_vm_global_t>()->total_vsize -= vsize;
 		return CELL_ENOMEM;
 	}
 
@@ -67,6 +88,7 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 	}
 
 	ct->used -= psize;
+	g_fxo->get<sys_vm_global_t>()->total_vsize -= vsize;
 	return CELL_ENOMEM;
 }
 
@@ -100,6 +122,7 @@ error_code sys_vm_unmap(ppu_thread& ppu, u32 addr)
 
 		// Return memory
 		vmo.ct->used -= vmo.psize;
+		g_fxo->get<sys_vm_global_t>()->total_vsize -= vmo.size;
 	});
 
 	if (!vmo)
