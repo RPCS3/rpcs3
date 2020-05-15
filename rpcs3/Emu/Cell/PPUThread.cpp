@@ -998,10 +998,21 @@ extern __m128i sse_cellbe_lvrx_v0(u64 addr);
 extern void sse_cellbe_stvlx_v0(u64 addr, __m128i a);
 extern void sse_cellbe_stvrx_v0(u64 addr, __m128i a);
 
-[[noreturn]] static void ppu_trap(ppu_thread& ppu, u64 addr)
+void ppu_trap(ppu_thread& ppu, u64 addr)
 {
-	ppu.cia = ::narrow<u32>(addr);
-	fmt::throw_exception("Trap! (0x%llx)", addr);
+	verify(HERE), (addr & (~u64{UINT32_MAX} | 0x3)) == 0;
+	ppu.cia = static_cast<u32>(addr);
+
+	u32 add = static_cast<u32>(g_cfg.core.stub_ppu_traps) * 4;
+
+	// If stubbing is enabled, check current instruction and the following
+	if (!add || !vm::check_addr(ppu.cia, 4, vm::page_executable) || !vm::check_addr(ppu.cia + add, 4, vm::page_executable))
+	{
+		fmt::throw_exception("PPU Trap!" HERE);
+	}
+
+	ppu_log.error("PPU Trap: Stubbing %d instructions %s.", std::abs(static_cast<s32>(add) / 4), add >> 31 ? "backwards" : "forwards");
+	ppu.cia += add; // Skip instructions, hope for valid code (interprter may be invoked temporarily)
 }
 
 [[noreturn]] static void ppu_error(ppu_thread& ppu, u64 addr, u32 op)
