@@ -240,19 +240,27 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 		return CELL_EINVAL;
 	}
 
-	std::lock_guard lock(queue->mutex);
-
+	std::array<sys_event_t, 127> events;
 	s32 count = 0;
-
-	while (queue->sq.empty() && count < size && !queue->events.empty())
 	{
-		auto& dest = event_array[count++];
-		auto event = queue->events.front();
-		queue->events.pop_front();
+		std::lock_guard lock(queue->mutex);
 
-		std::tie(dest.source, dest.data1, dest.data2, dest.data3) = event;
+		for (; queue->sq.empty() && count < size && !queue->events.empty(); count++)
+		{
+			auto& dest = events[count];
+			const auto event = queue->events[count];
+
+			std::tie(dest.source, dest.data1, dest.data2, dest.data3) = event;
+		}
+
+		if (count)
+		{
+			const auto begin = queue->events.cbegin();
+			queue->events.erase(begin, begin + count);
+		}
 	}
 
+	std::memcpy(event_array.get_ptr(), events.data(), sizeof(sys_event_t) * count);
 	*number = count;
 
 	return CELL_OK;
