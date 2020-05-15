@@ -2312,9 +2312,6 @@ namespace rsx
 
 	void thread::check_zcull_status(bool framebuffer_swap)
 	{
-		if (g_cfg.video.disable_zcull_queries)
-			return;
-
 		if (framebuffer_swap)
 		{
 			zcull_surface_active = false;
@@ -2346,9 +2343,6 @@ namespace rsx
 
 	void thread::clear_zcull_stats(u32 type)
 	{
-		if (g_cfg.video.disable_zcull_queries)
-			return;
-
 		zcull_ctrl->clear(this, type);
 	}
 
