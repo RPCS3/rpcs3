@@ -1383,7 +1383,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 	if (cpu)
 	{
 		vm::temporary_unlock(*cpu);
-		u32 pf_port_id = 0;
+		std::shared_ptr<lv2_event_queue> pf_port;
 
 		if (auto pf_entries = g_fxo->get<page_fault_notification_entries>(); true)
 		{
@@ -1395,14 +1395,14 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 				{
 					if (entry.start_addr == mem->addr)
 					{
-						pf_port_id = entry.port_id;
+						pf_port = entry.port;
 						break;
 					}
 				}
 			}
 		}
 
-		if (pf_port_id)
+		if (lv2_event_queue::check(pf_port))
 		{
 			// We notify the game that a page fault occurred so it can rectify it.
 			// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
@@ -1462,10 +1462,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 				}
 			}
 
-			error_code sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
+			CellError sending_error = pf_port->send(SYS_MEMORY_PAGE_FAULT_EVENT_KEY, data1, data2, data3);
 
 			// If we fail due to being busy, wait a bit and try again.
-			while (static_cast<u32>(sending_error) == CELL_EBUSY)
+			while (sending_error == CELL_EBUSY)
 			{
 				if (cpu->id_type() == 1)
 				{
@@ -1473,7 +1473,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 				}
 
 				thread_ctrl::wait_for(1000);
-				sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
+				sending_error = pf_port->send(SYS_MEMORY_PAGE_FAULT_EVENT_KEY, data1, data2, data3);
 			}
 
 			if (cpu->id_type() == 1)

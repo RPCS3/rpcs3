@@ -42,11 +42,12 @@ enum : u64
 	SYS_MEMORY_PAGE_FAULT_TYPE_RAW_SPU     = 0x2ULL,
 };
 
+struct lv2_event_queue;
+
 struct page_fault_notification_entry
 {
 	u32 start_addr; // Starting address of region to monitor.
-	u32 event_queue_id; // Queue to be notified.
-	u32 port_id; // Port used to notify the queue.
+	std::shared_ptr<lv2_event_queue> port; // Port used to notify the queue.
 };
 
 // Used to hold list of queues to be notified on page fault event.

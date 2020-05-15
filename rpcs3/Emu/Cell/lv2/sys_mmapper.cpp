@@ -701,41 +701,29 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 
 	// TODO: Check memory region's flags to make sure the memory can be used for page faults.
 
-	auto queue = idm::get<lv2_obj, lv2_event_queue>(event_queue_id);
+	page_fault_notification_entry entry;
+	entry.port = idm::get<lv2_obj, lv2_event_queue>(event_queue_id);
+	entry.start_addr = start_addr;
 
-	if (!queue)
-	{ // Can't connect the queue if it doesn't exist.
+	if (!entry.port)
+	{
+		// Can't connect the queue if it doesn't exist.
 		return CELL_ESRCH;
 	}
 
-	vm::var<u32> port_id(0);
-	error_code res = sys_event_port_create(port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
-	sys_event_port_connect_local(*port_id, event_queue_id);
-
-	if (res + 0u == CELL_EAGAIN)
-	{
-		// Not enough system resources.
-		return CELL_EAGAIN;
-	}
-
 	auto pf_entries = g_fxo->get<page_fault_notification_entries>();
-	std::unique_lock lock(pf_entries->mutex);
+	std::lock_guard lock(pf_entries->mutex);
 
 	// Return error code if page fault notifications are already enabled
 	for (const auto& entry : pf_entries->entries)
 	{
 		if (entry.start_addr == start_addr)
 		{
-			lock.unlock();
-			sys_event_port_disconnect(ppu, *port_id);
-			sys_event_port_destroy(ppu, *port_id);
 			return CELL_EBUSY;
 		}
 	}
 
-	page_fault_notification_entry entry{ start_addr, event_queue_id, port_id->value() };
-	pf_entries->entries.emplace_back(entry);
-
+	pf_entries->entries.emplace_back(std::move(entry));
 	return CELL_OK;
 }
 

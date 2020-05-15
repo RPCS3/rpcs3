@@ -50,9 +50,12 @@ void lv2_rsx_config::send_event(u64 data1, u64 event_flags, u64 data3) const
 		return;
 	}
 
-	auto error = sys_event_port_send(rsx_event_port, data1, event_flags, data3);
+	// Not sure what it is exactly but I got it consistently on hw tests of unmap events
+	constexpr u64 key = 0x800000000088e9c0;
 
-	while (error + 0u == CELL_EBUSY)
+	CellError error = event_port->send(key, data1, event_flags, data3);
+
+	while (error == CELL_EBUSY)
 	{
 		auto cpu = get_current_cpu_thread();
 
@@ -76,14 +79,14 @@ void lv2_rsx_config::send_event(u64 data1, u64 event_flags, u64 data3) const
 
 		if (Emu.IsStopped() || (cpu && cpu->check_state()))
 		{
-			error = 0;
-			break;
+			rsx_log.warning("lv2_rsx_config::send_event() aborted from EBUSY loop");
+			return;
 		}
 
-		error = sys_event_port_send(rsx_event_port, data1, event_flags, data3);
+		error = event_port->send(key, data1, event_flags, data3);
 	}
 
-	if (error && error + 0u != CELL_ENOTCONN)
+	if (error && error != CELL_ENOTCONN)
 	{
 		fmt::throw_exception("lv2_rsx_config::send_event() Failed to send event! (error=%x)" HERE, +error);
 	}
@@ -249,10 +252,9 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	attr->type = SYS_PPU_QUEUE;
 	attr->name_u64 = 0;
 
-	sys_event_port_create(vm::get_addr(&driverInfo.handler_queue), SYS_EVENT_PORT_LOCAL, 0);
-	rsx_cfg->rsx_event_port = driverInfo.handler_queue;
 	sys_event_queue_create(vm::get_addr(&driverInfo.handler_queue), attr, 0, 0x20);
-	sys_event_port_connect_local(rsx_cfg->rsx_event_port, driverInfo.handler_queue);
+	rsx_cfg->event_port = idm::get<lv2_obj, lv2_event_queue>(driverInfo.handler_queue);
+	verify(HERE), rsx_cfg->event_port.operator bool();
 
 	rsx_cfg->dma_address = vm::cast(*lpar_dma_control, HERE);
 

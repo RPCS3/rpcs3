@@ -1893,6 +1893,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 	sys_spu_image img;
 	img.load(obj);
 
+	// TODO: Do not create ID
 	auto image_info = idm::get<lv2_obj, lv2_spu_image>(img.entry_point);
 	img.deploy(ls_addr, image_info->segs.get_ptr(), image_info->nsegs);
 
