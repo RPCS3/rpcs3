@@ -154,8 +154,9 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> int
 	{
-		if (const auto cpu = idm::check_unlocked<named_thread<ppu_thread>>(thread_id);
-			!cpu || cpu->joiner == ppu_join_status::exited)
+		auto cpu = idm::check_unlocked<named_thread<ppu_thread>>(thread_id);
+
+		if (!cpu || cpu->joiner == ppu_join_status::exited)
 		{
 			return -1;
 		}
@@ -164,21 +165,16 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 		{
 			std::lock_guard lock(cond.mutex->mutex);
 
-			for (auto cpu : cond.sq)
+			if (cond.unqueue(cond.sq, cpu))
 			{
-				if (cpu->id == thread_id)
+				cond.waiters--;
+
+				if (cond.mutex->try_own(*cpu, cpu->id))
 				{
-					verify(HERE), cond.unqueue(cond.sq, cpu);
-
-					cond.waiters--;
-
-					if (cond.mutex->try_own(*cpu, cpu->id))
-					{
-						cond.awake(cpu);
-					}
-
-					return 1;
+					cond.awake(cpu);
 				}
+
+				return 1;
 			}
 		}
 

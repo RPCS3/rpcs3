@@ -93,13 +93,11 @@ public:
 	template <typename T, typename E>
 	static bool unqueue(std::deque<T*>& queue, const E& object)
 	{
-		for (auto found = queue.cbegin(), end = queue.cend(); found != end; found++)
+		if (auto end = queue.cend(), it = std::find(queue.cbegin(), end, object);
+			it != end)
 		{
-			if (*found == object)
-			{
-				queue.erase(found);
-				return true;
-			}
+			queue.erase(it);
+			return true;
 		}
 
 		return false;
