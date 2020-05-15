@@ -65,6 +65,13 @@ bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 	const char* start = &value.front();
 	const char* end = &value.back() + 1;
 	int base = 10;
+	int sign = +1;
+
+	if (start[0] == '-')
+	{
+		sign = -1;
+		start += 1;
+	}
 
 	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
 	{
@@ -75,11 +82,13 @@ bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 
 	const auto ret = std::from_chars(start, end, result, base);
 
-	if (ret.ec != std::errc() || ret.ptr != end)
+	if (ret.ec != std::errc() || ret.ptr != end || (start[0] == '-' && sign < 0))
 	{
 		if (out) cfg_log.error("cfg::try_to_int('%s'): invalid integer", value);
 		return false;
 	}
+
+	result *= sign;
 
 	if (result < min || result > max)
 	{
