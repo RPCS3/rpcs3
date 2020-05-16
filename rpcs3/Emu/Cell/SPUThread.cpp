@@ -1865,6 +1865,27 @@ void spu_thread::do_mfc(bool wait)
 			ch_tag_upd = 0;
 		}
 	}
+
+	if (check_mfc_interrupts(pc + 4))
+	{
+		spu_runtime::g_escape(this);
+	}
+}
+
+bool spu_thread::check_mfc_interrupts(u32 next_pc)
+{
+	if (interrupts_enabled && (ch_event_mask & ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
+	{
+		interrupts_enabled.release(false);
+		srr0 = next_pc;
+
+		// Test for BR/BRA instructions (they are equivalent at zero pc)
+		const u32 br = _ref<u32>(0);
+		pc = (br & 0xfd80007f) == 0x30000000 ? (br >> 5) & 0x3fffc : 0;
+		return true;
+	}
+
+	return false;
 }
 
 u32 spu_thread::get_mfc_completed()
@@ -2188,6 +2209,11 @@ bool spu_thread::process_mfc_cmd()
 			if (cmd.cmd & MFC_BARRIER_MASK)
 			{
 				mfc_barrier |= utils::rol32(1, cmd.tag);
+			}
+
+			if (check_mfc_interrupts(pc + 4))
+			{
+				spu_runtime::g_escape(this);
 			}
 
 			return true;
