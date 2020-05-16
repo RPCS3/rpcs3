@@ -40,44 +40,6 @@ inline static void _SelectTexture(int unit) { glActiveTexture(GL_TEXTURE0 + unit
 
 namespace gl
 {
-#ifdef _DEBUG
-	struct __glcheck_impl_t
-	{
-		const char* file;
-		const char* function;
-		int line;
-
-		constexpr __glcheck_impl_t(const char* file, const char* function, int line)
-			: file(file)
-			, function(function)
-			, line(line)
-		{
-		}
-
-		~__glcheck_impl_t() noexcept(false)
-		{
-			if (GLenum err = glGetError())
-			{
-				std::string error;
-				switch (err)
-				{
-				case GL_INVALID_OPERATION:      error = "invalid operation";      break;
-				case GL_INVALID_ENUM:           error = "invalid enum";           break;
-				case GL_INVALID_VALUE:          error = "invalid value";          break;
-				case GL_OUT_OF_MEMORY:          error = "out of memory";          break;
-				case GL_INVALID_FRAMEBUFFER_OPERATION:  error = "invalid framebuffer operation";  break;
-				default: error = "unknown error"; break;
-				}
-
-				fmt::throw_exception("OpenGL error: %s\n(in file %s:%d, function %s)", error, file, line, function);
-			}
-		}
-	};
-#define __glcheck ::gl::__glcheck_impl_t{ __FILE__, __FUNCTION__, __LINE__ },
-#else
-#define __glcheck
-#endif
-
 	//Function call wrapped in ARB_DSA vs EXT_DSA compat check
 #define DSA_CALL(func, texture_name, target, ...)\
 	if (::gl::get_driver_caps().ARB_dsa_supported)\
