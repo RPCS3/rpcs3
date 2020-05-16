@@ -50,6 +50,12 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 
 		switch (cmd.cmd)
 		{
+		case MFC_SDCRT_CMD:
+		case MFC_SDCRTST_CMD:
+		{
+			value = MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
+			return true;
+		}
 		case MFC_SNDSIG_CMD:
 		case MFC_SNDSIGB_CMD:
 		case MFC_SNDSIGF_CMD:
@@ -77,6 +83,7 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 		case MFC_GETS_CMD:
 		case MFC_GETBS_CMD:
 		case MFC_GETFS_CMD:
+		case MFC_SDCRZ_CMD:
 		{
 			if (cmd.size)
 			{
