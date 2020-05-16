@@ -87,8 +87,8 @@ struct RsxDmaControl
 struct alignas(16) RsxSemaphore
 {
 	be_t<u32> val;
-	be_t<u32> pad;
-	be_t<u64> timestamp;
+	be_t<u32> zero;
+	be_t<u64> zero2;
 };
 
 struct alignas(16) RsxNotify
