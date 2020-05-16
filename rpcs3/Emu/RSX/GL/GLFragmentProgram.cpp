@@ -366,7 +366,7 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 		}
 	}
 
-	shader.create(gl::glsl::shader::type::fragment, source);
+	shader.create(::glsl::program_domain::glsl_fragment_program, source);
 }
 
 void GLFragmentProgram::Compile()

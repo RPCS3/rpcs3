@@ -270,7 +270,7 @@ void GLVertexProgram::Decompile(const RSXVertexProgram& prog)
 	GLVertexDecompilerThread decompiler(prog, source, parr);
 	decompiler.Task();
 
-	shader.create(gl::glsl::shader::type::vertex, source);
+	shader.create(::glsl::program_domain::glsl_vertex_program, source);
 }
 
 void GLVertexProgram::Compile()
