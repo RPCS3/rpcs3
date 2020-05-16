@@ -150,8 +150,7 @@ namespace gl
 		builder << program_common::interpreter::get_vertex_interpreter();
 		const std::string s = builder.str();
 
-		m_vs.create(glsl::shader::type::vertex);
-		m_vs.source(s);
+		m_vs.create(glsl::shader::type::vertex, s);
 		m_vs.compile();
 	}
 
@@ -303,8 +302,7 @@ namespace gl
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
 
-		prog_data.fs.create(glsl::shader::type::fragment);
-		prog_data.fs.source(s);
+		prog_data.fs.create(glsl::shader::type::fragment, s);
 		prog_data.fs.compile();
 	}
 
