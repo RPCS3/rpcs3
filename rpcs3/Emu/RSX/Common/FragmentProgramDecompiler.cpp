@@ -644,6 +644,21 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		break;
 	}
 
+	if (apply_precision_modifier && !src.neg)
+	{
+		if constexpr (!std::is_same<T, SRC0>::value)
+		{
+			if (dst.opcode == RSX_FP_OPCODE_MAD)
+			{
+				// Hardware tests show special behavior on MAD operation
+				// Only src0 obeys precision modifier (sat tested)
+				// Results: 1 * 100 + 0  = 100, 1 * 1 + 100 = 100, 100 * 1 + 0 = 1
+				// NOTE: Neg modifier seems to break this rule; 1 * -100 + 0 = -1 not -99
+				apply_precision_modifier = false;
+			}
+		}
+	}
+
 	static const char f[4] = { 'x', 'y', 'z', 'w' };
 
 	std::string swizzle;
