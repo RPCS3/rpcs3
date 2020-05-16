@@ -109,6 +109,9 @@ namespace gl
 			int find_count = 11;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
+			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
+			std::string version_string = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+			std::string renderer_string = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 
 			for (int i = 0; i < ext_count; i++)
 			{
@@ -194,8 +197,13 @@ namespace gl
 				}
 			}
 
+			// Check GL_VERSION and GL_RENDERER for the presence of Mesa
+			if (version_string.find("Mesa") != umax || renderer_string.find("Mesa") != umax)
+			{
+				vendor_MESA = true;
+			}
+
 			// Workaround for intel drivers which have terrible capability reporting
-			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 			if (!vendor_string.empty())
 			{
 				std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), ::tolower);
@@ -203,10 +211,10 @@ namespace gl
 			else
 			{
 				rsx_log.error("Failed to get vendor string from driver. Are we missing a context?");
-				vendor_string = "intel"; //lowest acceptable value
+				vendor_string = "intel"; // lowest acceptable value
 			}
 
-			if (vendor_string.find("intel") != umax)
+			if (!vendor_MESA && vendor_string.find("intel") != umax)
 			{
 				int version_major = 0;
 				int version_minor = 0;
@@ -230,13 +238,9 @@ namespace gl
 				if (!EXT_dsa_supported && glGetTextureImageEXT && glTextureBufferRangeEXT)
 					EXT_dsa_supported = true;
 			}
-			else if (vendor_string.find("nvidia") != umax)
+			else if (!vendor_MESA && vendor_string.find("nvidia") != umax)
 			{
 				vendor_NVIDIA = true;
-			}
-			else if (vendor_string.find("x.org") != umax)
-			{
-				vendor_MESA = true;
 			}
 #ifdef _WIN32
 			else if (vendor_string.find("amd") != umax || vendor_string.find("ati") != umax)
