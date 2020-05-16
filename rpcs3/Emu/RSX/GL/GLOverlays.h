@@ -55,12 +55,10 @@ namespace gl
 		{
 			if (!compiled)
 			{
-				fs.create(gl::glsl::shader::type::fragment);
-				fs.source(fs_src);
+				fs.create(::glsl::program_domain::glsl_fragment_program, fs_src);
 				fs.compile();
 
-				vs.create(gl::glsl::shader::type::vertex);
-				vs.source(vs_src);
+				vs.create(::glsl::program_domain::glsl_vertex_program, vs_src);
 				vs.compile();
 
 				program_handle.create();

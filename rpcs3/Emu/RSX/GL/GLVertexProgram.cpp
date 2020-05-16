@@ -4,7 +4,6 @@
 #include "Emu/System.h"
 
 #include "GLCommonDecompiler.h"
-#include "GLHelpers.h"
 #include "../Common/GLSLCommon.h"
 
 #include <algorithm>
@@ -267,55 +266,21 @@ GLVertexProgram::~GLVertexProgram()
 
 void GLVertexProgram::Decompile(const RSXVertexProgram& prog)
 {
-	GLVertexDecompilerThread decompiler(prog, shader, parr);
+	std::string source;
+	GLVertexDecompilerThread decompiler(prog, source, parr);
 	decompiler.Task();
+
+	shader.create(::glsl::program_domain::glsl_vertex_program, source);
 }
 
 void GLVertexProgram::Compile()
 {
-	if (id)
-	{
-		glDeleteShader(id);
-	}
-
-	id = glCreateShader(GL_VERTEX_SHADER);
-
-	const char* str = shader.c_str();
-	const int strlen = ::narrow<int>(shader.length());
-
-	if (g_cfg.video.log_programs)
-		fs::file(fs::get_cache_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".glsl", fs::rewrite).write(str);
-
-	glShaderSource(id, 1, &str, &strlen);
-	glCompileShader(id);
-
-	GLint r = GL_FALSE;
-	glGetShaderiv(id, GL_COMPILE_STATUS, &r);
-	if (r != GL_TRUE)
-	{
-		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &r);
-
-		if (r)
-		{
-			char* buf = new char[r + 1]();
-			GLsizei len;
-			glGetShaderInfoLog(id, r, &len, buf);
-			rsx_log.error("Failed to compile vertex shader: %s", buf);
-			delete[] buf;
-		}
-
-		rsx_log.notice("%s", shader.c_str());
-		Emu.Pause();
-	}
+	shader.compile();
+	id = shader.id();
 }
 
 void GLVertexProgram::Delete()
 {
-	shader.clear();
-
-	if (id)
-	{
-		glDeleteShader(id);
-		id = 0;
-	}
+	shader.remove();
+	id = 0;
 }
