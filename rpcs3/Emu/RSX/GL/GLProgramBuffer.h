@@ -79,8 +79,8 @@ struct GLTraits
 		rsx_log.notice("*** vp id = %d", vertexProgramData.id);
 		rsx_log.notice("*** fp id = %d", fragmentProgramData.id);
 
-		rsx_log.notice("*** vp shader = \n%s", vertexProgramData.shader.source.c_str());
-		rsx_log.notice("*** fp shader = \n%s", fragmentProgramData.shader.source.c_str());
+		rsx_log.notice("*** vp shader = \n%s", vertexProgramData.shader.get_source().c_str());
+		rsx_log.notice("*** fp shader = \n%s", fragmentProgramData.shader.get_source().c_str());
 
 		return result;
 	}

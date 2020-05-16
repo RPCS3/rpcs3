@@ -11,6 +11,7 @@
 #include "GLExecutionState.h"
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
+#include "../Common/GLSLTypes.h"
 
 #include "Emu/system_config.h"
 #include "Utilities/geometry.h"
@@ -2406,18 +2407,9 @@ public:
 	{
 		class shader
 		{
-		public:
 			std::string source;
-			enum class type
-			{
-				fragment = GL_FRAGMENT_SHADER,
-				vertex = GL_VERTEX_SHADER,
-				compute = GL_COMPUTE_SHADER
-			};
-
-		private:
+			::glsl::program_domain type;
 			GLuint m_id = GL_NONE;
-			type shader_type = type::vertex;
 
 		public:
 			shader() = default;
@@ -2427,7 +2419,7 @@ public:
 				set_id(id);
 			}
 
-			shader(type type_, const std::string& src)
+			shader(::glsl::program_domain type_, const std::string& src)
 			{
 				create(type_, src);
 			}
@@ -2438,15 +2430,31 @@ public:
 					remove();
 			}
 
-			void create(type type_, const std::string& src)
+			void create(::glsl::program_domain type_, const std::string& src)
 			{
-				shader_type = type_;
+				type = type_;
 				source = src;
 			}
 
 			shader& compile()
 			{
-				m_id = glCreateShader(static_cast<GLenum>(shader_type));
+				GLenum shader_type;
+				switch (type)
+				{
+				case ::glsl::program_domain::glsl_vertex_program:
+					shader_type = GL_VERTEX_SHADER;
+					break;
+				case ::glsl::program_domain::glsl_fragment_program:
+					shader_type = GL_FRAGMENT_SHADER;
+					break;
+				case ::glsl::program_domain::glsl_compute_program:
+					shader_type = GL_COMPUTE_SHADER;
+					break;
+				default:
+					rsx_log.fatal("gl::glsl::shader::compile(): Unhandled shader type");
+				}
+
+				m_id = glCreateShader(shader_type);
 				const char* str = source.c_str();
 				const GLint length = ::narrow<GLint>(source.length());
 
@@ -2455,13 +2463,13 @@ public:
 					std::string base_name;
 					switch (shader_type)
 					{
-					case type::vertex:
+					case ::glsl::program_domain::glsl_vertex_program:
 						base_name = "shaderlog/VertexProgram";
 						break;
-					case type::fragment:
+					case ::glsl::program_domain::glsl_fragment_program:
 						base_name = "shaderlog/FragmentProgram";
 						break;
-					case type::compute:
+					case ::glsl::program_domain::glsl_compute_program:
 						base_name = "shaderlog/ComputeProgram";
 						break;
 					}
@@ -2506,6 +2514,11 @@ public:
 			uint id() const
 			{
 				return m_id;
+			}
+
+			const std::string& get_source() const
+			{
+				return source;
 			}
 
 			void set_id(uint id)
