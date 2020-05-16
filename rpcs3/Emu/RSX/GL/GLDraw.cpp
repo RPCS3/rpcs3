@@ -162,7 +162,7 @@ void GLGSRender::update_draw_state()
 		gl_state.depth_func(gl::comparison_op(rsx::method_registers.depth_func()));
 	}
 
-	if (glDepthBoundsEXT && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
+	if (gl::get_driver_caps().EXT_depth_bounds_test && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
 	{
 		gl_state.depth_bounds(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
 	}
