@@ -77,6 +77,7 @@ namespace gl
 	{
 	public:
 		bool EXT_dsa_supported = false;
+		bool EXT_depth_bounds_test = false;
 		bool ARB_dsa_supported = false;
 		bool ARB_buffer_storage_supported = false;
 		bool ARB_texture_buffer_supported = false;
@@ -106,7 +107,7 @@ namespace gl
 
 		void initialize()
 		{
-			int find_count = 11;
+			int find_count = 12;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -189,6 +190,13 @@ namespace gl
 				if (check(ext_name, "GL_ARB_compute_shader"))
 				{
 					ARB_compute_shader_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (check(ext_name, "GL_EXT_depth_bounds_test"))
+				{
+					EXT_depth_bounds_test = true;
 					find_count--;
 					continue;
 				}
