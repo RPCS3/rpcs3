@@ -2407,6 +2407,7 @@ public:
 		class shader
 		{
 		public:
+			std::string source;
 			enum class type
 			{
 				fragment = GL_FRAGMENT_SHADER,
@@ -2415,12 +2416,10 @@ public:
 			};
 
 		private:
-
 			GLuint m_id = GL_NONE;
 			type shader_type = type::vertex;
 
 		public:
-
 			shader() = default;
 
 			shader(GLuint id)
@@ -2428,15 +2427,9 @@ public:
 				set_id(id);
 			}
 
-			shader(type type_)
-			{
-				create(type_);
-			}
-
 			shader(type type_, const std::string& src)
 			{
-				create(type_);
-				source(src);
+				create(type_, src);
 			}
 
 			~shader()
@@ -2445,24 +2438,18 @@ public:
 					remove();
 			}
 
-			void recreate(type type_)
+			void create(type type_, const std::string& src)
 			{
-				if (created())
-					remove();
-
-				create(type_);
-			}
-
-			void create(type type_)
-			{
-				m_id = glCreateShader(static_cast<GLenum>(type_));
 				shader_type = type_;
+				source = src;
 			}
 
-			void source(const std::string& src) const
+			shader& compile()
 			{
-				const char* str = src.c_str();
-				const GLint length = ::narrow<GLint>(src.length());
+				m_id = glCreateShader(static_cast<GLenum>(shader_type));
+				const char* str = source.c_str();
+				const GLint length = ::narrow<GLint>(source.length());
+
 				if (g_cfg.video.log_programs)
 				{
 					std::string base_name;
@@ -2483,10 +2470,6 @@ public:
 				}
 
 				glShaderSource(m_id, 1, &str, &length);
-			}
-
-			shader& compile()
-			{
 				glCompileShader(m_id);
 
 				GLint status = GL_FALSE;
@@ -2768,7 +2751,7 @@ public:
 				}
 			}
 
-			uint id() const
+			GLuint id() const
 			{
 				return m_id;
 			}
