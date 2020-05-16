@@ -2816,6 +2816,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case MFC_WrListStallAck:
 	{
+		value &= 0x1f;
+
 		// Reset stall status for specified tag
 		const u32 tag_mask = utils::rol32(1, value);
 
