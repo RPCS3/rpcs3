@@ -126,7 +126,7 @@ namespace rsx
 		{
 			rsx->sync();
 
-			const u32 offset = method_registers.semaphore_offset_406e();
+			const u32 offset = method_registers.semaphore_offset_406e() & -16;
 			const u32 ctxt = method_registers.semaphore_context_dma_406e();
 
 			// By avoiding doing this on flip's semaphore release
@@ -139,15 +139,19 @@ namespace rsx
 
 			const u32 addr = get_address(offset, ctxt, HERE);
 
-			if (g_use_rtm) [[likely]]
+			atomic_t<u64>* res{};
+
+			// TODO: Check if possible to write on reservations
+			if (!g_use_rtm && rsx->label_addr >> 28 != addr >> 28) [[likely]]
 			{
-				vm::_ref<atomic_be_t<u32>>(addr) = arg;
+				res = &vm::reservation_lock(addr, 4);
 			}
-			else
+
+			vm::_ref<atomic_t<RsxSemaphore>>(addr).store({arg, 0, 0});
+
+			if (res)
 			{
-				auto& res = vm::reservation_lock(addr, 4);
-				vm::write32(addr, arg);
-				res &= -128;
+				res->release(*res & -128);
 			}
 
 			vm::reservation_notifier(addr, 4).notify_all();
@@ -226,7 +230,7 @@ namespace rsx
 			{
 				arg,
 				0,
-				rsx->timestamp()
+				0
 			});
 		}
 
@@ -242,7 +246,7 @@ namespace rsx
 			{
 				val,
 				0,
-				rsx->timestamp()
+				0
 			});
 		}
 

@@ -204,8 +204,8 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	for (int i = 0; i < 256; ++i)
 	{
 		reports.semaphore[i].val = 0x1337C0D3;
-		reports.semaphore[i].pad = 0x1337BABE;
-		reports.semaphore[i].timestamp = -1; // technically different but should be fine
+		reports.semaphore[i].zero = 0x1337BABE;
+		reports.semaphore[i].zero2 = 0x1337BEEF1337F001;
 	}
 
 	for (int i = 0; i < 2048; ++i)
