@@ -55,7 +55,7 @@ namespace rsx
 			rsx->sync_point_request.release(true);
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e(), HERE);
 
-			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
+			const auto& sema = vm::_ref<RsxSemaphore>(addr).val;
 
 			// TODO: Remove vblank semaphore hack
 			if (addr == rsx->device_addr + 0x30) return;
@@ -126,7 +126,14 @@ namespace rsx
 		{
 			rsx->sync();
 
-			const u32 offset = method_registers.semaphore_offset_406e() & -16;
+			const u32 offset = method_registers.semaphore_offset_406e();
+
+			if (offset % 4)
+			{
+				rsx_log.warning("NV406E semaphore release is using unaligned semaphore, ignoring. (offset=0x%x)", offset);
+				return;
+			}
+
 			const u32 ctxt = method_registers.semaphore_context_dma_406e();
 
 			// By avoiding doing this on flip's semaphore release
@@ -147,7 +154,7 @@ namespace rsx
 				res = &vm::reservation_lock(addr, 4);
 			}
 
-			vm::_ref<atomic_t<RsxSemaphore>>(addr).store({arg, 0, 0});
+			vm::_ref<RsxSemaphore>(addr).val = arg;
 
 			if (res)
 			{
@@ -225,13 +232,16 @@ namespace rsx
 
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
-			const u32 offset = method_registers.semaphore_offset_4097() & -16;
-			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097(), HERE)).store(
+			const u32 offset = method_registers.semaphore_offset_4097();
+
+			if (offset % 16)
 			{
-				arg,
-				0,
-				0
-			});
+				rsx_log.error("NV4097 semaphore using unaligned offset, recovering. (offset=0x%x)", offset);
+				rsx->recover_fifo();
+				return;
+			}
+
+			vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097(), HERE)).val = arg;
 		}
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
@@ -240,14 +250,17 @@ namespace rsx
 			g_fxo->get<rsx::dma_manager>()->sync();
 			rsx->sync();
 
-			const u32 offset = method_registers.semaphore_offset_4097() & -16;
-			const u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097(), HERE)).store(
+			const u32 offset = method_registers.semaphore_offset_4097();
+
+			if (offset % 16)
 			{
-				val,
-				0,
-				0
-			});
+				rsx_log.error("NV4097 semaphore using unaligned offset, recovering. (offset=0x%x)", offset);
+				rsx->recover_fifo();
+				return;
+			}
+
+			const u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
+			vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097(), HERE)).val = val;
 		}
 
 		/**
