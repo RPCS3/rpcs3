@@ -7,8 +7,8 @@ PR_NUMBER="$SYSTEM_PULLREQUEST_PULLREQUESTID"
 
 # Resource/dependency URLs
 # Qt mirrors can be volatile and slow, so we list 2
-#QT_HOST="http://mirrors.ocf.berkeley.edu/qt/"
-QT_HOST="http://qt.mirror.constant.com/"
+QT_HOST="http://mirrors.ocf.berkeley.edu/qt/"
+#QT_HOST="http://qt.mirror.constant.com/"
 QT_URL_VER=$(echo "$QT_VER" | sed "s/\.//g")
 QT_PREFIX="online/qtsdkrepository/windows_x86/desktop/qt5_${QT_URL_VER}/qt.qt5.${QT_URL_VER}.win64_msvc2017_64/${QT_VER}-0-${QT_DATE}"
 QT_SUFFIX="-Windows-Windows_10-MSVC2017-Windows-Windows_10-X86_64.7z"
