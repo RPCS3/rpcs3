@@ -55,7 +55,7 @@ namespace rsx
 			rsx->sync_point_request.release(true);
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e(), HERE);
 
-			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
+			const auto& sema = vm::_ref<RsxSemaphore>(addr).val;
 
 			// TODO: Remove vblank semaphore hack
 			if (addr == rsx->device_addr + 0x30) return;
