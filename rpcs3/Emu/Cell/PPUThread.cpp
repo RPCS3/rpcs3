@@ -1063,20 +1063,6 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}
 
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-
-	if ((ppu.rtime & 127) == 0) [[likely]]
-	{
-		ppu.rdata = data;
-
-		if (vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime) [[likely]]
-		{
-			return static_cast<T>(ppu.rdata << data_off >> size_off);
-		}
-	}
-
-	vm::passive_unlock(ppu);
-
 	for (u64 i = 0;; i++)
 	{
 		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
@@ -1091,17 +1077,22 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			}
 		}
 
-		if (i < 20)
+		if (ppu.state)
+		{
+			ppu.check_state();
+		}
+		else if (i < 20)
 		{
 			busy_wait(300);
 		}
 		else
 		{
+			ppu.state += cpu_flag::wait;
 			std::this_thread::yield();
+			ppu.check_state();
 		}
 	}
 
-	vm::passive_lock(ppu);
 	return static_cast<T>(ppu.rdata << data_off >> size_off);
 }
 
@@ -1214,10 +1205,21 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, T reg_value)
 	constexpr u64 size_off = (sizeof(T) * 8) & 63;
 
 	const T old_data = static_cast<T>(ppu.rdata << ((addr & 7) * 8) >> size_off);
+	auto& res = vm::reservation_acquire(addr, sizeof(T));
 
-	if (ppu.raddr != addr || addr % sizeof(T) || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(T)) & -128))
+	if (std::exchange(ppu.raddr, 0) != addr || addr % sizeof(T) || old_data != data || ppu.rtime != res)
 	{
-		ppu.raddr = 0;
+		return false;
+	}
+
+	if (reg_value == old_data)
+	{
+		if (res.compare_and_swap_test(ppu.rtime, ppu.rtime + 128))
+		{
+			res.notify_all();
+			return true;
+		}
+
 		return false;
 	}
 
@@ -1230,27 +1232,21 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, T reg_value)
 		case 0:
 		{
 			// Reservation lost
-			ppu.raddr = 0;
 			return false;
 		}
 		case 1:
 		{
-			vm::reservation_notifier(addr, sizeof(T)).notify_all();
-			ppu.raddr = 0;
+			res.notify_all();
 			return true;
 		}
 		}
 
-		auto& res = vm::reservation_acquire(addr, sizeof(T));
-
-		ppu.raddr = 0;
-
-		if (res == ppu.rtime && res.compare_and_swap_test(ppu.rtime, ppu.rtime | 1))
+		if (res == ppu.rtime && vm::reservation_trylock(res, ppu.rtime))
 		{
 			if (data.compare_and_swap_test(old_data, reg_value))
 			{
 				res += 127;
-				vm::reservation_notifier(addr, sizeof(T)).notify_all();
+				res.notify_all();
 				return true;
 			}
 
@@ -1260,25 +1256,23 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, T reg_value)
 		return false;
 	}
 
-	vm::passive_unlock(ppu);
+	if (!vm::reservation_trylock(res, ppu.rtime))
+	{
+		return false;
+	}
 
-	auto& res = vm::reservation_lock(addr, sizeof(T));
-	const u64 old_time = res.load() & -128;
-
-	const bool result = ppu.rtime == old_time && data.compare_and_swap_test(old_data, reg_value);
+	const bool result = data.compare_and_swap_test(old_data, reg_value);
 
 	if (result)
 	{
-		res.release(old_time + 128);
-		vm::reservation_notifier(addr, sizeof(T)).notify_all();
+		res.release(ppu.rtime + 128);
+		res.notify_all();
 	}
 	else
 	{
-		res.release(old_time);
+		res.release(ppu.rtime);
 	}
 
-	vm::passive_lock(ppu);
-	ppu.raddr = 0;
 	return result;
 }
 
@@ -1598,6 +1592,7 @@ extern void ppu_initialize(const ppu_module& info)
 			{
 				non_win32,
 				accurate_fma,
+				accurate_ppu_vector_nan,
 
 				__bitset_enum_max
 			};
@@ -1610,6 +1605,10 @@ extern void ppu_initialize(const ppu_module& info)
 			if (g_cfg.core.llvm_accurate_dfma)
 			{
 				settings += ppu_settings::accurate_fma;
+			}
+			if (g_cfg.core.llvm_ppu_accurate_vector_nan)
+			{
+				settings += ppu_settings::accurate_ppu_vector_nan;
 			}
 
 			// Write version, hash, CPU, settings

@@ -84,11 +84,9 @@ struct RsxDmaControl
 	be_t<u32> unk1;
 };
 
-struct alignas(16) RsxSemaphore
+struct RsxSemaphore
 {
-	be_t<u32> val;
-	be_t<u32> pad;
-	be_t<u64> timestamp;
+	atomic_be_t<u32> val;
 };
 
 struct alignas(16) RsxNotify
@@ -106,7 +104,7 @@ struct alignas(16) RsxReport
 
 struct RsxReports
 {
-	RsxSemaphore semaphore[0x100];
+	RsxSemaphore semaphore[0x400];
 	RsxNotify notify[64];
 	RsxReport report[2048];
 };

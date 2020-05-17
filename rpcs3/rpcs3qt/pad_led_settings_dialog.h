@@ -17,7 +17,7 @@ public:
 	explicit pad_led_settings_dialog(const int& colorR, const int& colorG, const int& colorB, const bool& led_low_battery_blink, const bool& led_battery_indicator, const int& led_battery_indicator_brightness, QDialog* parent = Q_NULLPTR);
 	~pad_led_settings_dialog();
 
-signals:
+Q_SIGNALS:
 	void pass_led_settings(int m_cR, int m_cG, int m_cB, bool m_low_battery_blink, bool m_battery_indicator, int m_battery_indicator_brightness);
 
 private Q_SLOTS:

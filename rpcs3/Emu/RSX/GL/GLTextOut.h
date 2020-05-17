@@ -52,12 +52,10 @@ namespace gl
 				"}\n"
 			};
 
-			m_fs.create(gl::glsl::shader::type::fragment);
-			m_fs.source(fs);
+			m_fs.create(::glsl::program_domain::glsl_fragment_program, fs);
 			m_fs.compile();
 
-			m_vs.create(gl::glsl::shader::type::vertex);
-			m_vs.source(vs);
+			m_vs.create(::glsl::program_domain::glsl_vertex_program, vs);
 			m_vs.compile();
 
 			m_program.create();

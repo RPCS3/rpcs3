@@ -61,6 +61,8 @@ class PPUTranslator final : public cpu_translator
 	llvm::Value** const m_cr = m_locals + 99;
 	llvm::Value** const m_fc = m_locals + 131; // FPSCR bits (used partially)
 
+	llvm::Value* nan_vec4;
+
 #define DEF_VALUE(loc, glb, pos)\
 	llvm::Value*& loc = m_locals[pos];\
 	llvm::Value*& glb = m_globals[pos];
@@ -96,7 +98,20 @@ public:
 	template <typename T>
 	void set_vr(u32 vr, T&& expr)
 	{
-		return SetVr(vr, expr.eval(m_ir));
+		SetVr(vr, expr.eval(m_ir));
+	}
+
+	llvm::Value* VecHandleNan(llvm::Value* val);
+
+	template <typename T>
+	auto vec_handle_nan(T&& expr)
+	{
+		value_t<typename T::type> result;
+		if (g_cfg.core.llvm_ppu_accurate_vector_nan)
+			result.value = VecHandleNan(expr.eval(m_ir));
+		else
+			result.value = expr.eval(m_ir);
+		return result;
 	}
 
 	// Get current instruction address

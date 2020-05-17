@@ -930,7 +930,7 @@ namespace rsx
 			reserve(initial_size);
 			_size = initial_size;
 
-			for (int n = 0; n < initial_size; ++n)
+			for (u32 n = 0; n < initial_size; ++n)
 			{
 				_data[n] = val;
 			}

@@ -2060,6 +2060,35 @@ namespace rsx
 				return {};
 			};
 
+			auto validate_memory_range = [](u32 base_address, u32 write_end, u32 heuristic_end)
+			{
+				if (heuristic_end <= write_end)
+				{
+					return true;
+				}
+
+				// Confirm if the pages actually exist in vm
+				if (get_location(base_address) == CELL_GCM_LOCATION_LOCAL)
+				{
+					const auto vram_end = rsx::get_current_renderer()->local_mem_size + rsx::constants::local_mem_base;
+					if (heuristic_end > vram_end)
+					{
+						// Outside available VRAM area
+						return false;
+					}
+				}
+				else
+				{
+					if (!vm::check_addr(write_end, (heuristic_end - write_end), vm::page_info_t::page_allocated))
+					{
+						// Enforce strict allocation size!
+						return false;
+					}
+				}
+
+				return true;
+			};
+
 			// Check if src/dst are parts of render targets
 			typename surface_store_type::surface_overlap_info dst_subres;
 			bool use_null_region = false;
@@ -2470,7 +2499,13 @@ namespace rsx
 					u16 image_width = full_width;
 					u16 image_height = src.height;
 
-					if (dst.scale_x > 0.f && dst.scale_y > 0.f) [[likely]]
+					// Check if memory is valid
+					const bool use_full_range = validate_memory_range(
+						image_base,
+						(src_address + src_payload_length),
+						image_base + (image_height * src.pitch));
+
+					if (use_full_range && dst.scale_x > 0.f && dst.scale_y > 0.f) [[likely]]
 					{
 						// Loading full image from the corner address
 						// Translate src_area into the declared block
@@ -2565,18 +2600,9 @@ namespace rsx
 				u32 block_end = dst_base_address + (dst.pitch * dst_dimensions.height);
 
 				// Confirm if the pages actually exist in vm
-				// Only need to test the extra padding memory and only when its on main memory
-				// NOTE: When src is not a render target, padding is not added speculatively
-				if (src_is_render_target && get_location(dst_base_address) != CELL_GCM_LOCATION_LOCAL)
+				if (!validate_memory_range(dst_base_address, write_end, block_end))
 				{
-					if (block_end > write_end)
-					{
-						if (!vm::check_addr(write_end, (block_end - write_end), vm::page_info_t::page_allocated))
-						{
-							// Enforce strict allocation size!
-							block_end = write_end;
-						}
-					}
+					block_end = write_end;
 				}
 
 				const u32 usable_section_length = std::max(write_end, block_end) - dst_base_address;

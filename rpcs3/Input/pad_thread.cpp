@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "pad_thread.h"
+#include "product_info.h"
 #include "ds3_pad_handler.h"
 #include "ds4_pad_handler.h"
 #ifdef _WIN32
@@ -24,9 +25,10 @@ namespace pad
 
 struct pad_setting
 {
-	u32 port_status;
-	u32 device_capability;
-	u32 device_type;
+	u32 port_status = 0;
+	u32 device_capability = 0;
+	u32 device_type = 0;
+	s32 ldd_handle = -1;
 };
 
 pad_thread::pad_thread(void *_curthread, void *_curwindow, std::string_view title_id) : curthread(_curthread), curwindow(_curwindow)
@@ -52,18 +54,32 @@ void pad_thread::Init()
 	std::lock_guard lock(pad::g_pad_mutex);
 
 	// Cache old settings if possible
-	std::vector<pad_setting> pad_settings;
+	std::array<pad_setting, CELL_PAD_MAX_PORT_NUM> pad_settings;
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; i++) // max 7 pads
 	{
-		if (!m_pads[i])
+		if (m_pads[i])
 		{
-			pad_settings.push_back({ CELL_PAD_STATUS_DISCONNECTED, CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR, CELL_PAD_DEV_TYPE_STANDARD });
+			pad_settings[i] =
+			{
+				m_pads[i]->m_port_status,
+				m_pads[i]->m_device_capability,
+				m_pads[i]->m_device_type,
+				m_pads[i]->ldd ? static_cast<s32>(i) : -1
+			};
 		}
 		else
 		{
-			pad_settings.push_back({ m_pads[i]->m_port_status, m_pads[i]->m_device_capability, m_pads[i]->m_device_type });
+			pad_settings[i] =
+			{
+				CELL_PAD_STATUS_DISCONNECTED,
+				CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR,
+				CELL_PAD_DEV_TYPE_STANDARD,
+				-1
+			};
 		}
 	}
+
+	num_ldd_pad = 0;
 
 	m_info.now_connect = 0;
 
@@ -81,7 +97,8 @@ void pad_thread::Init()
 	{
 		std::shared_ptr<PadHandlerBase> cur_pad_handler;
 
-		const auto &handler_type = g_cfg_input.player[i]->handler;
+		const bool is_ldd_pad = pad_settings[i].ldd_handle == static_cast<s32>(i);
+		const auto handler_type = is_ldd_pad ? pad_handler::null : g_cfg_input.player[i]->handler.get();
 
 		if (handlers.count(handler_type) != 0)
 		{
@@ -125,10 +142,14 @@ void pad_thread::Init()
 
 		m_pads[i] = std::make_shared<Pad>(CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
 
-		if (cur_pad_handler->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string()) == false)
+		if (is_ldd_pad)
+		{
+			InitLddPad(pad_settings[i].ldd_handle);
+		}
+		else if (cur_pad_handler->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string()) == false)
 		{
 			// Failed to bind the device to cur_pad_handler so binds to NullPadHandler
-			input_log.error("Failed to bind device %s to handler %s", g_cfg_input.player[i]->device.to_string(), handler_type.to_string());
+			input_log.error("Failed to bind device %s to handler %s", g_cfg_input.player[i]->device.to_string(), handler_type);
 			nullpad->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string());
 		}
 	}
@@ -239,6 +260,30 @@ void pad_thread::ThreadFunc()
 	}
 }
 
+void pad_thread::InitLddPad(u32 handle)
+{
+	if (handle >= m_pads.size())
+	{
+		return;
+	}
+
+	static const auto product = input::get_product_info(input::product_type::playstation_3_controller);
+
+	m_pads[handle]->ldd = true;
+	m_pads[handle]->Init
+	(
+		CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER,
+		CELL_PAD_CAPABILITY_PS3_CONFORMITY,
+		CELL_PAD_DEV_TYPE_LDD,
+		0, // CELL_PAD_PCLASS_TYPE_STANDARD
+		product.pclass_profile,
+		product.vendor_id,
+		product.product_id
+	);
+
+	num_ldd_pad++;
+}
+
 s32 pad_thread::AddLddPad()
 {
 	// Look for first null pad
@@ -246,8 +291,7 @@ s32 pad_thread::AddLddPad()
 	{
 		if (g_cfg_input.player[i]->handler == pad_handler::null && !m_pads[i]->ldd)
 		{
-			m_pads[i]->ldd = true;
-			num_ldd_pad++;
+			InitLddPad(i);
 			return i;
 		}
 	}

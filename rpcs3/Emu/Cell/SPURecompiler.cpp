@@ -5772,14 +5772,22 @@ public:
 			m_block->store[s_reg_mfc_tag] = nullptr;
 			m_block->store[s_reg_mfc_size] = nullptr;
 
-			if (!g_use_rtm)
-			{
-				// TODO: don't require TSX (current implementation is TSX-only)
-				break;
-			}
-
 			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(trunc<u8>(val).eval(m_ir)))
 			{
+				if (u64 cmdh = ci->getZExtValue() & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_RESULT_MASK); !g_use_rtm)
+				{
+					// TODO: don't require TSX (current implementation is TSX-only)
+					if (cmdh == MFC_GET_CMD && g_cfg.core.spu_accurate_putlluc)
+					{
+						break;
+					}
+
+					if (cmdh == MFC_PUT_CMD || cmdh == MFC_SNDSIG_CMD)
+					{
+						break;
+					}
+				}
+	
 				const auto eal = get_reg_fixed<u32>(s_reg_mfc_eal);
 				const auto lsa = get_reg_fixed<u32>(s_reg_mfc_lsa);
 				const auto tag = get_reg_fixed<u8>(s_reg_mfc_tag);
@@ -5928,7 +5936,7 @@ public:
 							m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateBitCast(_src, vtype), true), m_ir->CreateBitCast(_dst, vtype), true);
 						}
 					}
-					else
+					else if (csize)
 					{
 						// TODO
 						auto spu_memcpy = [](u8* dst, const u8* src, u32 size)

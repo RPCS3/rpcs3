@@ -75,12 +75,14 @@ struct GLTraits
 		result->uniforms[0] = GL_STREAM_BUFFER_START + 0;
 		result->uniforms[1] = GL_STREAM_BUFFER_START + 1;
 
-		rsx_log.notice("*** prog id = %d", result->id());
-		rsx_log.notice("*** vp id = %d", vertexProgramData.id);
-		rsx_log.notice("*** fp id = %d", fragmentProgramData.id);
-
-		rsx_log.notice("*** vp shader = \n%s", vertexProgramData.shader.c_str());
-		rsx_log.notice("*** fp shader = \n%s", fragmentProgramData.shader.c_str());
+		if (g_cfg.video.log_programs)
+		{
+			rsx_log.notice("*** prog id = %d", result->id());
+			rsx_log.notice("*** vp id = %d", vertexProgramData.id);
+			rsx_log.notice("*** fp id = %d", fragmentProgramData.id);
+			rsx_log.notice("*** vp shader = \n%s", vertexProgramData.shader.get_source().c_str());
+			rsx_log.notice("*** fp shader = \n%s", fragmentProgramData.shader.get_source().c_str());
+		}
 
 		return result;
 	}

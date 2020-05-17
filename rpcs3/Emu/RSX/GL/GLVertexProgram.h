@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "../Common/VertexProgramDecompiler.h"
 #include "Emu/RSX/RSXVertexProgram.h"
+#include "GLHelpers.h"
 
 enum
 {
@@ -48,15 +49,14 @@ public:
 };
 
 class GLVertexProgram
-{ 
+{
 public:
 	GLVertexProgram();
 	~GLVertexProgram();
 
 	ParamArray parr;
-	u32 id = 0;
-	std::string shader;
-	bool interleaved;
+	u32 id;
+	gl::glsl::shader shader;
 
 	void Decompile(const RSXVertexProgram& prog);
 	void Compile();

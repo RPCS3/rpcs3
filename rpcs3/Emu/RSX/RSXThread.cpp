@@ -14,6 +14,7 @@
 #include "Overlays/overlay_perf_metrics.h"
 #include "Utilities/date_time.h"
 #include "Utilities/span.h"
+#include "Utilities/asm.h"
 #include "Utilities/StrUtil.h"
 
 #include <cereal/archives/binary.hpp>
@@ -2443,7 +2444,7 @@ namespace rsx
 
 				for (u32 ea = address >> 20, end = ea + (size >> 20); ea < end; ea++)
 				{
-					const u32 io = std::rotr<u32>(iomap_table.io[ea], 20);
+					const u32 io = utils::ror32(iomap_table.io[ea], 20);
 
 					if (io + 1)
 					{

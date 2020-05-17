@@ -129,7 +129,28 @@ namespace vm
 	{
 		if (g_tls_locked && *g_tls_locked == &cpu) [[unlikely]]
 		{
+			if (cpu.state & cpu_flag::wait)
+			{
+				while (true)
+				{
+					g_mutex.lock_unlock();
+					cpu.state -= cpu_flag::wait + cpu_flag::memory;
+
+					if (g_mutex.is_lockable()) [[likely]]
+					{
+						return;
+					}
+
+					cpu.state += cpu_flag::wait;
+				}
+			}
+
 			return;
+		}
+
+		if (cpu.state & cpu_flag::memory)
+		{
+			cpu.state -= cpu_flag::memory + cpu_flag::wait;
 		}
 
 		if (g_mutex.is_lockable()) [[likely]]
@@ -355,7 +376,8 @@ namespace vm
 
 			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
 			{
-				while (*lock)
+				cpu_thread* ptr;
+				while ((ptr = *lock) && !(ptr->state & cpu_flag::wait))
 				{
 					_mm_pause();
 				}

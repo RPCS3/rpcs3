@@ -482,11 +482,11 @@ error_code sys_spu_thread_get_exit_status(ppu_thread& ppu, u32 id, vm::ptr<s32> 
 		return CELL_ESRCH;
 	}
 
-	const u64 exit_status = thread->exit_status.data.load();
+	u32 data;
 
-	if (exit_status & spu_channel::bit_count)
+	if (thread->exit_status.try_read(data))
 	{
-		*status = static_cast<s32>(exit_status);
+		*status = static_cast<s32>(data);
 		return CELL_OK;
 	}
 
@@ -960,6 +960,14 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	std::unique_lock lock(group->mutex);
 
+	// There should be a small period of sleep when the PPU waits for a signal of termination
+	auto short_sleep = [](ppu_thread& ppu)
+	{
+		lv2_obj::sleep(ppu);
+		busy_wait(3000);
+		ppu.check_state();
+	};
+
 	if (auto state = +group->run_state;
 		state <= SPU_THREAD_GROUP_STATUS_INITIALIZED ||
 		state == SPU_THREAD_GROUP_STATUS_WAITING ||
@@ -978,10 +986,12 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	{
 		// Wait for termination, only then return error code
 		const u64 last_stop = group->stop_count;
+		lock.unlock();
+		short_sleep(ppu);
 
 		while (group->stop_count == last_stop)
 		{
-			group->cond.wait(lock);
+			group->stop_count.wait(last_stop);
 		}
 
 		return CELL_ESTAT;
@@ -1010,10 +1020,12 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	// Wait until the threads are actually stopped
 	const u64 last_stop = group->stop_count;
+	lock.unlock();
+	short_sleep(ppu);
 
 	while (group->stop_count == last_stop)
 	{
-		group->cond.wait(lock);
+		group->stop_count.wait(last_stop);
 	}
 
 	return CELL_OK;
@@ -1065,28 +1077,23 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		else
 		{
 			// Subscribe to receive status in r4-r5
-			ppu.gpr[4] = 0;
 			group->waiter = &ppu;
 		}
 
 		lv2_obj::sleep(ppu);
+		lock.unlock();
 
-		while (!ppu.gpr[4])
+		while (!ppu.state.test_and_reset(cpu_flag::signal))
 		{
 			if (ppu.is_stopped())
 			{
 				return 0;
 			}
 
-			group->cond.wait(lock);
+			thread_ctrl::wait();
 		}
 	}
 	while (0);
-
-	if (ppu.test_stopped())
-	{
-		return 0;
-	}
 
 	if (!cause)
 	{

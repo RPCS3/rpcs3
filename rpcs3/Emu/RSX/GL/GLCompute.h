@@ -44,8 +44,7 @@ namespace gl
         {
             if (!compiled)
             {
-                m_shader.create(gl::glsl::shader::type::compute);
-                m_shader.source(m_src);
+                m_shader.create(::glsl::program_domain::glsl_compute_program, m_src);
                 m_shader.compile();
 
                 m_program.create();

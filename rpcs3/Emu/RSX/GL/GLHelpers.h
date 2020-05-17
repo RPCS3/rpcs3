@@ -11,6 +11,7 @@
 #include "GLExecutionState.h"
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
+#include "../Common/GLSLTypes.h"
 
 #include "Emu/system_config.h"
 #include "Utilities/geometry.h"
@@ -31,48 +32,15 @@
 #define GL_INTERPRETER_FRAGMENT_BLOCK 7
 #define GL_COMPUTE_BUFFER_SLOT(index) (index + 8)
 
+// Noop keyword outside of Windows (used in log_debug)
+#if !defined(_WIN32) && !defined(APIENTRY)
+#define APIENTRY
+#endif
+
 inline static void _SelectTexture(int unit) { glActiveTexture(GL_TEXTURE0 + unit); }
 
 namespace gl
 {
-#ifdef _DEBUG
-	struct __glcheck_impl_t
-	{
-		const char* file;
-		const char* function;
-		int line;
-
-		constexpr __glcheck_impl_t(const char* file, const char* function, int line)
-			: file(file)
-			, function(function)
-			, line(line)
-		{
-		}
-
-		~__glcheck_impl_t() noexcept(false)
-		{
-			if (GLenum err = glGetError())
-			{
-				std::string error;
-				switch (err)
-				{
-				case GL_INVALID_OPERATION:      error = "invalid operation";      break;
-				case GL_INVALID_ENUM:           error = "invalid enum";           break;
-				case GL_INVALID_VALUE:          error = "invalid value";          break;
-				case GL_OUT_OF_MEMORY:          error = "out of memory";          break;
-				case GL_INVALID_FRAMEBUFFER_OPERATION:  error = "invalid framebuffer operation";  break;
-				default: error = "unknown error"; break;
-				}
-
-				fmt::throw_exception("OpenGL error: %s\n(in file %s:%d, function %s)", error, file, line, function);
-			}
-		}
-	};
-#define __glcheck ::gl::__glcheck_impl_t{ __FILE__, __FUNCTION__, __LINE__ },
-#else
-#define __glcheck
-#endif
-
 	//Function call wrapped in ARB_DSA vs EXT_DSA compat check
 #define DSA_CALL(func, texture_name, target, ...)\
 	if (::gl::get_driver_caps().ARB_dsa_supported)\
@@ -110,6 +78,7 @@ namespace gl
 	{
 	public:
 		bool EXT_dsa_supported = false;
+		bool EXT_depth_bounds_test = false;
 		bool ARB_dsa_supported = false;
 		bool ARB_buffer_storage_supported = false;
 		bool ARB_texture_buffer_supported = false;
@@ -139,9 +108,12 @@ namespace gl
 
 		void initialize()
 		{
-			int find_count = 11;
+			int find_count = 12;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
+			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
+			std::string version_string = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+			std::string renderer_string = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 
 			for (int i = 0; i < ext_count; i++)
 			{
@@ -225,10 +197,22 @@ namespace gl
 					find_count--;
 					continue;
 				}
+
+				if (check(ext_name, "GL_EXT_depth_bounds_test"))
+				{
+					EXT_depth_bounds_test = true;
+					find_count--;
+					continue;
+				}
+			}
+
+			// Check GL_VERSION and GL_RENDERER for the presence of Mesa
+			if (version_string.find("Mesa") != umax || renderer_string.find("Mesa") != umax)
+			{
+				vendor_MESA = true;
 			}
 
 			// Workaround for intel drivers which have terrible capability reporting
-			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 			if (!vendor_string.empty())
 			{
 				std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), ::tolower);
@@ -236,10 +220,10 @@ namespace gl
 			else
 			{
 				rsx_log.error("Failed to get vendor string from driver. Are we missing a context?");
-				vendor_string = "intel"; //lowest acceptable value
+				vendor_string = "intel"; // lowest acceptable value
 			}
 
-			if (vendor_string.find("intel") != umax)
+			if (!vendor_MESA && vendor_string.find("intel") != umax)
 			{
 				int version_major = 0;
 				int version_minor = 0;
@@ -263,13 +247,9 @@ namespace gl
 				if (!EXT_dsa_supported && glGetTextureImageEXT && glTextureBufferRangeEXT)
 					EXT_dsa_supported = true;
 			}
-			else if (vendor_string.find("nvidia") != umax)
+			else if (!vendor_MESA && vendor_string.find("nvidia") != umax)
 			{
 				vendor_NVIDIA = true;
-			}
-			else if (vendor_string.find("x.org") != umax)
-			{
-				vendor_MESA = true;
 			}
 #ifdef _WIN32
 			else if (vendor_string.find("amd") != umax || vendor_string.find("ati") != umax)
@@ -893,8 +873,11 @@ namespace gl
 
 		void remove()
 		{
-			glDeleteBuffers(1, &m_id);
-			m_id = 0;
+			if (m_id != GL_NONE)
+			{
+				glDeleteBuffers(1, &m_id);
+				m_id = GL_NONE;
+			}
 		}
 
 		GLsizeiptr size() const
@@ -914,7 +897,7 @@ namespace gl
 
 		bool created() const
 		{
-			return m_id != 0;
+			return m_id != GL_NONE;
 		}
 
 		explicit operator bool() const
@@ -1034,8 +1017,12 @@ namespace gl
 				m_size = 0;
 			}
 
-			glDeleteBuffers(1, &m_id);
-			m_id = 0;
+
+			if (m_id != GL_NONE)
+			{
+				glDeleteBuffers(1, &m_id);
+				m_id = GL_NONE;
+			}
 		}
 
 		virtual void reserve_storage_on_heap(u32 /*alloc_size*/) {}
@@ -1303,8 +1290,11 @@ namespace gl
 
 		void remove() noexcept
 		{
-			glDeleteVertexArrays(1, &m_id);
-			m_id = GL_NONE;
+			if (m_id != GL_NONE)
+			{
+				glDeleteVertexArrays(1, &m_id);
+				m_id = GL_NONE;
+			}
 		}
 
 		uint id() const noexcept
@@ -1568,7 +1558,7 @@ namespace gl
 		};
 
 	protected:
-		GLuint m_id = 0;
+		GLuint m_id = GL_NONE;
 		GLuint m_width = 0;
 		GLuint m_height = 0;
 		GLuint m_depth = 0;
@@ -1723,7 +1713,11 @@ namespace gl
 
 		virtual ~texture()
 		{
-			glDeleteTextures(1, &m_id);
+			if (m_id != GL_NONE)
+			{
+				glDeleteTextures(1, &m_id);
+				m_id = GL_NONE;
+			}
 		}
 
 		void set_native_component_layout(const std::array<GLenum, 4>& layout)
@@ -1760,7 +1754,7 @@ namespace gl
 
 		explicit operator bool() const noexcept
 		{
-			return (m_id != 0);
+			return (m_id != GL_NONE);
 		}
 
 		GLuint width() const
@@ -1922,7 +1916,7 @@ namespace gl
 
 	class texture_view
 	{
-		GLuint m_id = 0;
+		GLuint m_id = GL_NONE;
 		GLenum m_target = 0;
 		GLenum m_format = 0;
 		GLenum m_aspect_flags = 0;
@@ -2000,7 +1994,11 @@ namespace gl
 
 		~texture_view()
 		{
-			glDeleteTextures(1, &m_id);
+			if (m_id != GL_NONE)
+			{
+				glDeleteTextures(1, &m_id);
+				m_id = GL_NONE;
+			}
 		}
 
 		GLuint id() const
@@ -2094,7 +2092,7 @@ public:
 
 	class rbo
 	{
-		GLuint m_id = 0;
+		GLuint m_id = GL_NONE;
 
 	public:
 		rbo() = default;
@@ -2167,8 +2165,11 @@ public:
 
 		void remove()
 		{
-			glDeleteRenderbuffers(1, &m_id);
-			m_id = 0;
+			if (m_id != GL_NONE)
+			{
+				glDeleteRenderbuffers(1, &m_id);
+				m_id = GL_NONE;
+			}
 		}
 
 		uint id() const
@@ -2183,7 +2184,7 @@ public:
 
 		bool created() const
 		{
-			return m_id != 0;
+			return m_id != GL_NONE;
 		}
 
 		explicit operator bool() const
@@ -2284,7 +2285,7 @@ public:
 					return found->second;
 				}
 
-				return GL_NONE;
+				return 0;
 			}
 
 			void operator = (const rbo& rhs)
@@ -2410,21 +2411,11 @@ public:
 	{
 		class shader
 		{
-		public:
-			enum class type
-			{
-				fragment = GL_FRAGMENT_SHADER,
-				vertex = GL_VERTEX_SHADER,
-				compute = GL_COMPUTE_SHADER
-			};
-
-		private:
-
+			std::string source;
+			::glsl::program_domain type;
 			GLuint m_id = GL_NONE;
-			type shader_type = type::vertex;
 
 		public:
-
 			shader() = default;
 
 			shader(GLuint id)
@@ -2432,15 +2423,9 @@ public:
 				set_id(id);
 			}
 
-			shader(type type_)
+			shader(::glsl::program_domain type_, const std::string& src)
 			{
-				create(type_);
-			}
-
-			shader(type type_, const std::string& src)
-			{
-				create(type_);
-				source(src);
+				create(type_, src);
 			}
 
 			~shader()
@@ -2449,36 +2434,46 @@ public:
 					remove();
 			}
 
-			void recreate(type type_)
+			void create(::glsl::program_domain type_, const std::string& src)
 			{
-				if (created())
-					remove();
-
-				create(type_);
+				type = type_;
+				source = src;
 			}
 
-			void create(type type_)
+			shader& compile()
 			{
-				m_id = glCreateShader(static_cast<GLenum>(type_));
-				shader_type = type_;
-			}
+				GLenum shader_type;
+				switch (type)
+				{
+				case ::glsl::program_domain::glsl_vertex_program:
+					shader_type = GL_VERTEX_SHADER;
+					break;
+				case ::glsl::program_domain::glsl_fragment_program:
+					shader_type = GL_FRAGMENT_SHADER;
+					break;
+				case ::glsl::program_domain::glsl_compute_program:
+					shader_type = GL_COMPUTE_SHADER;
+					break;
+				default:
+					rsx_log.fatal("gl::glsl::shader::compile(): Unhandled shader type");
+				}
 
-			void source(const std::string& src) const
-			{
-				const char* str = src.c_str();
-				const GLint length = ::narrow<GLint>(src.length());
+				m_id = glCreateShader(shader_type);
+				const char* str = source.c_str();
+				const GLint length = ::narrow<GLint>(source.length());
+
 				if (g_cfg.video.log_programs)
 				{
 					std::string base_name;
 					switch (shader_type)
 					{
-					case type::vertex:
+					case ::glsl::program_domain::glsl_vertex_program:
 						base_name = "shaderlog/VertexProgram";
 						break;
-					case type::fragment:
+					case ::glsl::program_domain::glsl_fragment_program:
 						base_name = "shaderlog/FragmentProgram";
 						break;
-					case type::compute:
+					case ::glsl::program_domain::glsl_compute_program:
 						base_name = "shaderlog/ComputeProgram";
 						break;
 					}
@@ -2487,10 +2482,6 @@ public:
 				}
 
 				glShaderSource(m_id, 1, &str, &length);
-			}
-
-			shader& compile()
-			{
 				glCompileShader(m_id);
 
 				GLint status = GL_FALSE;
@@ -2517,13 +2508,21 @@ public:
 
 			void remove()
 			{
-				glDeleteShader(m_id);
-				m_id = 0;
+				if (m_id != GL_NONE)
+				{
+					glDeleteShader(m_id);
+					m_id = GL_NONE;
+				}
 			}
 
 			uint id() const
 			{
 				return m_id;
+			}
+
+			const std::string& get_source() const
+			{
+				return source;
 			}
 
 			void set_id(uint id)
@@ -2533,7 +2532,7 @@ public:
 
 			bool created() const
 			{
-				return m_id != 0;
+				return m_id != GL_NONE;
 			}
 
 			explicit operator bool() const
@@ -2544,7 +2543,7 @@ public:
 
 		class program
 		{
-			GLuint m_id = 0;
+			GLuint m_id = GL_NONE;
 			fence m_fence;
 
 		public:
@@ -2692,8 +2691,11 @@ public:
 
 			void remove()
 			{
-				glDeleteProgram(m_id);
-				m_id = 0;
+				if (m_id != GL_NONE)
+				{
+					glDeleteProgram(m_id);
+					m_id = GL_NONE;
+				}
 				uniforms.clear();
 			}
 
@@ -2766,7 +2768,7 @@ public:
 				}
 			}
 
-			uint id() const
+			GLuint id() const
 			{
 				return m_id;
 			}
@@ -2779,7 +2781,7 @@ public:
 
 			bool created() const
 			{
-				return m_id != 0;
+				return m_id != GL_NONE;
 			}
 
 			void sync()
