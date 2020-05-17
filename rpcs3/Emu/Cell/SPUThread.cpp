@@ -1713,6 +1713,8 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 			mov_rdata(vm::_ref<decltype(rdata)>(addr), to_write);
 			vm::reservation_acquire(addr, 128) += 64;
 		}
+
+		+test_stopped();
 	}
 	else
 	{
