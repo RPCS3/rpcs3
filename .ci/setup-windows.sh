@@ -7,8 +7,8 @@ PR_NUMBER="$SYSTEM_PULLREQUEST_PULLREQUESTID"
 
 # Resource/dependency URLs
 # Qt mirrors can be volatile and slow, so we list 2
-#QT_HOST="http://mirrors.ocf.berkeley.edu/qt/"
-QT_HOST="http://qt.mirror.constant.com/"
+QT_HOST="http://mirrors.ocf.berkeley.edu/qt/"
+#QT_HOST="http://qt.mirror.constant.com/"
 QT_URL_VER=$(echo "$QT_VER" | sed "s/\.//g")
 QT_PREFIX="online/qtsdkrepository/windows_x86/desktop/qt5_${QT_URL_VER}/qt.qt5.${QT_URL_VER}.win64_msvc2017_64/${QT_VER}-0-${QT_DATE}"
 QT_SUFFIX="-Windows-Windows_10-MSVC2017-Windows-Windows_10-X86_64.7z"
@@ -18,7 +18,7 @@ QT_DECL_URL="${QT_HOST}${QT_PREFIX}qtdeclarative${QT_SUFFIX}"
 QT_TOOL_URL="${QT_HOST}${QT_PREFIX}qttools${QT_SUFFIX}"
 LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z'
 GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'
-VULKAN_SDK_URL="https://sdk.lunarg.com/sdk/download/${VULKAN_VER}/windows/VulkanSDK-${VULKAN_VER}-Installer.exe"
+VULKAN_SDK_URL="https://www.dropbox.com/s/4xppf4rz8v2gd8x/VulkanSDK-${VULKAN_VER}-Installer.exe"
 
 DEP_URLS="         \
     $QT_BASE_URL   \
