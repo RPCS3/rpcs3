@@ -244,15 +244,16 @@ namespace glsl
 		"int preserve_sign_s16(const in uint bits)\n"
 		"{\n"
 		"	//convert raw 16 bit value into signed 32-bit integer counterpart\n"
-		"	if ((bits & 0x8000) == 0)\n"
+		"	if ((bits & 0x8000u) == 0)\n"
 		"		return int(bits);\n"
 		"	else\n"
-		"		return int(bits | 0xFFFF0000);\n"
+		"		return int(bits | 0xFFFF0000u);\n"
 		"}\n\n"
 
 		"#define get_s16(v, s) preserve_sign_s16(get_bits(v, s))\n\n";
 
-		//For intel GPUs which cannot access vectors in indexed mode (driver bug? or glsl version too low?)
+		// For intel GPUs which cannot access vectors in indexed mode (driver bug? or glsl version too low?)
+		// Note: Tested on Mesa iris with HD 530 and compilant path works fine, may be a bug on Windows proprietary drivers
 		if (!glsl4_compliant)
 		{
 			OS <<
@@ -343,9 +344,9 @@ namespace glsl
 		"			break;\n"
 		"		case 5:\n"
 		"			//cmp\n"
-		"			result.x = preserve_sign_s16((tmp.x & 0x7FF) << 5);\n"
-		"			result.y = preserve_sign_s16(((tmp.x >> 11) & 0x7FF) << 5);\n"
-		"			result.z = preserve_sign_s16(((tmp.x >> 22) & 0x3FF) << 6);\n"
+		"			result.x = preserve_sign_s16((tmp.x & 0x7FFu) << 5);\n"
+		"			result.y = preserve_sign_s16(((tmp.x >> 11) & 0x7FFu) << 5);\n"
+		"			result.z = preserve_sign_s16(((tmp.x >> 22) & 0x3FFu) << 6);\n"
 		"			result.w = 1.;\n"
 		"			scale = vec4(32767., 32767., 32767., 1.);\n"
 		"			break;\n"
@@ -388,14 +389,14 @@ namespace glsl
 
 		OS <<
 		"	attribute_desc result;\n"
-		"	result.stride = attrib.x & 0xFF;\n"
-		"	result.frequency = (attrib.x >> 8) & 0xFFFF;\n"
-		"	result.type = (attrib.x >> 24) & 0x7;\n"
-		"	result.attribute_size = (attrib.x >> 27) & 0x7;\n"
-		"	result.starting_offset = (attrib.y & 0x1FFFFFFF);\n"
-		"	result.swap_bytes = ((attrib.y >> 29) & 0x1) != 0;\n"
-		"	result.is_volatile = ((attrib.y >> 30) & 0x1) != 0;\n"
-		"	result.modulo = ((attrib.y >> 31) & 0x1) != 0;\n"
+		"	result.stride = attrib.x & 0xFFu;\n"
+		"	result.frequency = (attrib.x >> 8) & 0xFFFFu;\n"
+		"	result.type = (attrib.x >> 24) & 0x7u;\n"
+		"	result.attribute_size = (attrib.x >> 27) & 0x7u;\n"
+		"	result.starting_offset = (attrib.y & 0x1FFFFFFFu);\n"
+		"	result.swap_bytes = ((attrib.y >> 29) & 0x1u) != 0;\n"
+		"	result.is_volatile = ((attrib.y >> 30) & 0x1u) != 0;\n"
+		"	result.modulo = ((attrib.y >> 31) & 0x1u) != 0;\n"
 		"	return result;\n"
 		"}\n\n"
 
@@ -444,26 +445,26 @@ namespace glsl
 			"	{\n"
 			"		discard;\n"
 			"	}\n"
-			"	else if ((rop_control & 0xFF) != 0)\n";
+			"	else if ((rop_control & 0xFFu) != 0)\n";
 		}
 		else
 		{
-			OS << "	if ((rop_control & 0xFF) != 0)\n";
+			OS << "	if ((rop_control & 0xFFu) != 0)\n";
 		}
 
 		OS <<
 		"	{\n"
-		"		bool alpha_test = (rop_control & 0x1) > 0;\n"
-		"		uint alpha_func = ((rop_control >> 16) & 0x7);\n";
+		"		bool alpha_test = (rop_control & 0x1u) > 0;\n"
+		"		uint alpha_func = ((rop_control >> 16) & 0x7u);\n";
 
 		if (!props.fp32_outputs)
 		{
-			OS << "		bool srgb_convert = (rop_control & 0x2) > 0;\n\n";
+			OS << "		bool srgb_convert = (rop_control & 0x2u) > 0;\n\n";
 		}
 
 		if (props.emulate_coverage_tests)
 		{
-			OS << "		bool a2c_enabled = (rop_control & 0x10) > 0;\n";
+			OS << "		bool a2c_enabled = (rop_control & 0x10u) > 0;\n";
 		}
 
 		OS <<
@@ -587,7 +588,7 @@ namespace glsl
 			OS <<
 			"bool coverage_test_passes(const in vec4 _sample, const in uint control)\n"
 			"{\n"
-			"	if ((control & 0x1) == 0) return false;\n"
+			"	if ((control & 0x1u) == 0) return false;\n"
 			"\n"
 			"	float random  = _rand(gl_FragCoord);\n"
 			"	return (_sample.a > random);\n"
@@ -718,7 +719,7 @@ namespace glsl
 			"		return rgba;\n"
 			"	}\n"
 			"\n"
-			"	if ((control_bits & 0x10) != 0)\n"
+			"	if ((control_bits & 0x10u) != 0)\n"
 			"	{\n"
 			"		// Alphakill\n"
 			"		if (rgba.a < 0.000001)\n"
@@ -728,7 +729,7 @@ namespace glsl
 			"		}\n"
 			"	}\n"
 			"\n"
-			"	if ((control_bits & 0x20) != 0)\n"
+			"	if ((control_bits & 0x20u) != 0)\n"
 			"	{\n"
 			"		// Renormalize to 8-bit (PS3) accuracy\n"
 			"		rgba = floor(rgba * 255.);\n"
@@ -736,7 +737,7 @@ namespace glsl
 			"	}\n"
 			"\n"
 			"	//TODO: Verify gamma control bit ordering, looks to be 0x7 for rgb, 0xF for rgba\n"
-			"	uvec4 mask = uvec4(control_bits & 0xF) & uvec4(0x1, 0x2, 0x4, 0x8);\n"
+			"	uvec4 mask = uvec4(control_bits & 0xFu) & uvec4(0x1, 0x2, 0x4, 0x8);\n"
 			"	vec4 convert = srgb_to_linear(rgba);\n"
 			"	return _select(rgba, convert, notEqual(mask, uvec4(0)));\n"
 			"}\n\n"

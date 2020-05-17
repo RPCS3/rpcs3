@@ -283,7 +283,7 @@ std::string VertexProgramDecompiler::GetCond()
 std::string VertexProgramDecompiler::GetOptionalBranchCond()
 {
 	std::string cond_operator = d3.brb_cond_true ? " != " : " == ";
-	std::string cond = "(transform_branch_bits & (1 << " + std::to_string(d3.branch_index) + "))" + cond_operator + "0";
+	std::string cond = "(transform_branch_bits & (1u << " + std::to_string(d3.branch_index) + "))" + cond_operator + "0";
 
 	return "if (" + cond + ")";
 }

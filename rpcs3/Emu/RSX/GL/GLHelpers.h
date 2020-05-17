@@ -11,6 +11,7 @@
 #include "GLExecutionState.h"
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
+#include "../Common/GLSLTypes.h"
 
 #include "Emu/system_config.h"
 #include "Utilities/geometry.h"
@@ -77,6 +78,7 @@ namespace gl
 	{
 	public:
 		bool EXT_dsa_supported = false;
+		bool EXT_depth_bounds_test = false;
 		bool ARB_dsa_supported = false;
 		bool ARB_buffer_storage_supported = false;
 		bool ARB_texture_buffer_supported = false;
@@ -106,9 +108,12 @@ namespace gl
 
 		void initialize()
 		{
-			int find_count = 11;
+			int find_count = 12;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
+			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
+			std::string version_string = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+			std::string renderer_string = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 
 			for (int i = 0; i < ext_count; i++)
 			{
@@ -192,10 +197,22 @@ namespace gl
 					find_count--;
 					continue;
 				}
+
+				if (check(ext_name, "GL_EXT_depth_bounds_test"))
+				{
+					EXT_depth_bounds_test = true;
+					find_count--;
+					continue;
+				}
+			}
+
+			// Check GL_VERSION and GL_RENDERER for the presence of Mesa
+			if (version_string.find("Mesa") != umax || renderer_string.find("Mesa") != umax)
+			{
+				vendor_MESA = true;
 			}
 
 			// Workaround for intel drivers which have terrible capability reporting
-			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 			if (!vendor_string.empty())
 			{
 				std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), ::tolower);
@@ -203,10 +220,10 @@ namespace gl
 			else
 			{
 				rsx_log.error("Failed to get vendor string from driver. Are we missing a context?");
-				vendor_string = "intel"; //lowest acceptable value
+				vendor_string = "intel"; // lowest acceptable value
 			}
 
-			if (vendor_string.find("intel") != umax)
+			if (!vendor_MESA && vendor_string.find("intel") != umax)
 			{
 				int version_major = 0;
 				int version_minor = 0;
@@ -230,13 +247,9 @@ namespace gl
 				if (!EXT_dsa_supported && glGetTextureImageEXT && glTextureBufferRangeEXT)
 					EXT_dsa_supported = true;
 			}
-			else if (vendor_string.find("nvidia") != umax)
+			else if (!vendor_MESA && vendor_string.find("nvidia") != umax)
 			{
 				vendor_NVIDIA = true;
-			}
-			else if (vendor_string.find("x.org") != umax)
-			{
-				vendor_MESA = true;
 			}
 #ifdef _WIN32
 			else if (vendor_string.find("amd") != umax || vendor_string.find("ati") != umax)
@@ -2398,21 +2411,11 @@ public:
 	{
 		class shader
 		{
-		public:
-			enum class type
-			{
-				fragment = GL_FRAGMENT_SHADER,
-				vertex = GL_VERTEX_SHADER,
-				compute = GL_COMPUTE_SHADER
-			};
-
-		private:
-
+			std::string source;
+			::glsl::program_domain type;
 			GLuint m_id = GL_NONE;
-			type shader_type = type::vertex;
 
 		public:
-
 			shader() = default;
 
 			shader(GLuint id)
@@ -2420,15 +2423,9 @@ public:
 				set_id(id);
 			}
 
-			shader(type type_)
+			shader(::glsl::program_domain type_, const std::string& src)
 			{
-				create(type_);
-			}
-
-			shader(type type_, const std::string& src)
-			{
-				create(type_);
-				source(src);
+				create(type_, src);
 			}
 
 			~shader()
@@ -2437,36 +2434,46 @@ public:
 					remove();
 			}
 
-			void recreate(type type_)
+			void create(::glsl::program_domain type_, const std::string& src)
 			{
-				if (created())
-					remove();
-
-				create(type_);
+				type = type_;
+				source = src;
 			}
 
-			void create(type type_)
+			shader& compile()
 			{
-				m_id = glCreateShader(static_cast<GLenum>(type_));
-				shader_type = type_;
-			}
+				GLenum shader_type;
+				switch (type)
+				{
+				case ::glsl::program_domain::glsl_vertex_program:
+					shader_type = GL_VERTEX_SHADER;
+					break;
+				case ::glsl::program_domain::glsl_fragment_program:
+					shader_type = GL_FRAGMENT_SHADER;
+					break;
+				case ::glsl::program_domain::glsl_compute_program:
+					shader_type = GL_COMPUTE_SHADER;
+					break;
+				default:
+					rsx_log.fatal("gl::glsl::shader::compile(): Unhandled shader type");
+				}
 
-			void source(const std::string& src) const
-			{
-				const char* str = src.c_str();
-				const GLint length = ::narrow<GLint>(src.length());
+				m_id = glCreateShader(shader_type);
+				const char* str = source.c_str();
+				const GLint length = ::narrow<GLint>(source.length());
+
 				if (g_cfg.video.log_programs)
 				{
 					std::string base_name;
 					switch (shader_type)
 					{
-					case type::vertex:
+					case ::glsl::program_domain::glsl_vertex_program:
 						base_name = "shaderlog/VertexProgram";
 						break;
-					case type::fragment:
+					case ::glsl::program_domain::glsl_fragment_program:
 						base_name = "shaderlog/FragmentProgram";
 						break;
-					case type::compute:
+					case ::glsl::program_domain::glsl_compute_program:
 						base_name = "shaderlog/ComputeProgram";
 						break;
 					}
@@ -2475,10 +2482,6 @@ public:
 				}
 
 				glShaderSource(m_id, 1, &str, &length);
-			}
-
-			shader& compile()
-			{
 				glCompileShader(m_id);
 
 				GLint status = GL_FALSE;
@@ -2515,6 +2518,11 @@ public:
 			uint id() const
 			{
 				return m_id;
+			}
+
+			const std::string& get_source() const
+			{
+				return source;
 			}
 
 			void set_id(uint id)
@@ -2760,7 +2768,7 @@ public:
 				}
 			}
 
-			uint id() const
+			GLuint id() const
 			{
 				return m_id;
 			}

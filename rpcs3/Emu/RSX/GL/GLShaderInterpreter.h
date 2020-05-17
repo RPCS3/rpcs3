@@ -1,9 +1,12 @@
 ﻿#pragma once
 #include "GLHelpers.h"
 #include "../Common/ProgramStateCache.h"
+#include "../Common/TextureUtils.h"
 
 namespace gl
 {
+	using namespace ::glsl;
+
 	namespace interpreter
 	{
 		using program_metadata = program_hash_util::fragment_program_utils::fragment_program_metadata;
@@ -48,7 +51,7 @@ namespace gl
 			int used = 0;
 			std::vector<texture_pool> pools;
 
-			void create(::gl::glsl::shader::type domain);
+			void create(::glsl::program_domain domain);
 			void allocate(int size);
 		};
 
