@@ -408,12 +408,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings_type::StrictRenderingMode);
 	SubscribeTooltip(ui->scrictModeRendering, tooltips.settings.strict_rendering_mode);
-	connect(ui->scrictModeRendering, &QCheckBox::clicked, [this](bool checked)
+	const auto onStrictRenderingMode = [this](bool checked)
 	{
 		ui->gb_resolutionScale->setEnabled(!checked);
 		ui->gb_minimumScalableDimension->setEnabled(!checked);
 		ui->gb_anisotropicFilter->setEnabled(!checked);
-	});
+	};
+	connect(ui->scrictModeRendering, &QCheckBox::clicked, this, onStrictRenderingMode);
 
 	// Radio buttons
 	
@@ -434,7 +435,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceSlider(ui->resolutionScale, emu_settings_type::ResolutionScale);
 	SubscribeTooltip(ui->gb_resolutionScale, tooltips.settings.resolution_scale);
-	ui->gb_resolutionScale->setEnabled(!ui->scrictModeRendering->isChecked());
 	// rename label texts to fit current state of Resolution Scale
 	const int resolution_scale_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::ResolutionScale));
 	auto scaled_resolution = [resolution_scale_def](int percentage)
@@ -463,7 +463,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceSlider(ui->minimumScalableDimension, emu_settings_type::MinimumScalableDimension);
 	SubscribeTooltip(ui->gb_minimumScalableDimension, tooltips.settings.minimum_scalable_dimension);
-	ui->gb_minimumScalableDimension->setEnabled(!ui->scrictModeRendering->isChecked());
 	// rename label texts to fit current state of Minimum Scalable Dimension
 	const int minimum_scalable_dimension_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::MinimumScalableDimension));
 	auto min_scalable_dimension = [minimum_scalable_dimension_def](int dim)
@@ -616,6 +615,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
+	onStrictRenderingMode(ui->scrictModeRendering->isChecked());
 	fix_gl_legacy(ui->renderBox->currentText()); // Init
 	connect(ui->renderBox, &QComboBox::currentTextChanged, fix_gl_legacy);
 
