@@ -231,6 +231,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->enableTSX->setEnabled(false);
 		ui->enableTSX->addItem(tr("Not supported", "Enable TSX"));
 		SubscribeTooltip(ui->enableTSX, tr("Unfortunately your CPU model does not support this instruction set.", "Enable TSX"));
+
+		m_emu_settings->SetSetting(emu_settings_type::EnableTSX, fmt::format("%s", tsx_usage::disabled));
 	}
 
 	// PPU tool tips
