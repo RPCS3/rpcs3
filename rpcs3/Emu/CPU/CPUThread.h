@@ -27,9 +27,6 @@ enum class cpu_flag : u32
 
 class cpu_thread
 {
-	// PPU cache backward compatibility hack
-	char dummy[sizeof(std::shared_ptr<void>) - 8];
-
 public:
 	u64 block_hash = 0;
 

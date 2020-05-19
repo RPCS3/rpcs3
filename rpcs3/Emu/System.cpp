@@ -1849,10 +1849,6 @@ void Emulator::Stop(bool restart)
 
 	vm::close();
 
-#ifdef LLVM_AVAILABLE
-	extern void jit_finalize();
-	jit_finalize();
-#endif
 	jit_runtime::finalize();
 
 	if (restart)
