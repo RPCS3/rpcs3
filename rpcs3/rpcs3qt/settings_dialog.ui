@@ -702,7 +702,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="scrictModeRendering">
+               <widget class="QCheckBox" name="strictModeRendering">
                 <property name="text">
                  <string>Strict Rendering Mode</string>
                 </property>
@@ -2064,7 +2064,7 @@
                </widget>
               </item>
               <item>
-               <layout class="QHBoxLayout" name="wakeupDelayLAyout" stretch="1,0">
+               <layout class="QHBoxLayout" name="wakeupDelayLayout" stretch="1,0">
                 <item>
                  <widget class="QLabel" name="wakeupText">
                   <property name="text">

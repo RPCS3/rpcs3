@@ -439,7 +439,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 	if (Emu.GetCat() == "PE")
 	{
 		std::copy_n(NP_PSP_KEY_2, std::size(NP_PSP_KEY_2), k_licensee.begin());
-		sceNp.success("npDrmIsAvailable(): PSP remaster KLicense key apllied.");
+		sceNp.success("npDrmIsAvailable(): PSP remaster KLicense key applied.");
 	}
 
 	const std::string enc_drm_path(drm_path.get_ptr(), std::find(drm_path.get_ptr(), drm_path.get_ptr() + 0x100, '\0'));

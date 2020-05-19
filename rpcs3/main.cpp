@@ -311,7 +311,7 @@ int main(int argc, char** argv)
 			{
 				report_fatal_error("Cannot create RPCS3.log (access denied)."
 #ifdef _WIN32
-				"\nNote that RPCS3 cannot be installed in Program Files or similar directory with limited permissions."
+				"\nNote that RPCS3 cannot be installed in Program Files or similar directories with limited permissions."
 #else
 				"\nPlease, check RPCS3 permissions in '~/.config/rpcs3'."
 #endif
