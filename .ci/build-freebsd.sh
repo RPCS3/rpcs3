@@ -1,5 +1,7 @@
 #!/bin/sh -ex
 
+ccache -s # debug
+
 # Pull all the submodules except llvm
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
@@ -29,3 +31,5 @@ CONFIGURE_ARGS="
 # shellcheck disable=SC2086
 cmake -B build -G Ninja $CONFIGURE_ARGS
 cmake --build build
+
+ccache -s # debug
