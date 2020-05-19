@@ -1567,8 +1567,7 @@ error_code sys_spu_thread_bind_queue(ppu_thread& ppu, u32 id, u32 spuq, u32 spuq
 	for (auto& v : thread->spuq)
 	{
 		// Check if the entry is assigned at all
-		if (const decltype(v.second) test{};
-			!v.second.owner_before(test) && !test.owner_before(v.second))
+		if (!v.second)
 		{
 			if (!q)
 			{
@@ -1578,8 +1577,7 @@ error_code sys_spu_thread_bind_queue(ppu_thread& ppu, u32 id, u32 spuq, u32 spuq
 			continue;
 		}
 
-		if (v.first == spuq_num ||
-			(!v.second.owner_before(queue) && !queue.owner_before(v.second)))
+		if (v.first == spuq_num || v.second == queue)
 		{
 			return CELL_EBUSY;
 		}
@@ -1617,8 +1615,7 @@ error_code sys_spu_thread_unbind_queue(ppu_thread& ppu, u32 id, u32 spuq_num)
 			continue;
 		}
 
-		if (const decltype(v.second) test{};
-			!v.second.owner_before(test) && !test.owner_before(v.second))
+		if (!v.second)
 		{
 			continue;
 		}

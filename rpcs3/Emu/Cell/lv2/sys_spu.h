@@ -288,9 +288,9 @@ struct lv2_spu_group
 	std::array<std::pair<sys_spu_image, std::vector<sys_spu_segment>>, 8> imgs; // SPU Images
 	std::array<std::array<u64, 4>, 8> args; // SPU Thread Arguments
 
-	std::weak_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
-	std::weak_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
-	std::weak_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
+	std::shared_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
+	std::shared_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
+	std::shared_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
 
 	lv2_spu_group(std::string name, u32 num, s32 prio, s32 type, lv2_memory_container* ct, bool uses_scheduler, u32 mem_size)
 		: name(std::move(name))
@@ -314,25 +314,25 @@ struct lv2_spu_group
 
 	void send_run_event(u64 data1, u64 data2, u64 data3)
 	{
-		if (const auto queue = ep_run.lock())
+		if (ep_run)
 		{
-			queue->send(SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY, data1, data2, data3);
+			ep_run->send(SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY, data1, data2, data3);
 		}
 	}
 
 	void send_exception_event(u64 data1, u64 data2, u64 data3)
 	{
-		if (const auto queue = ep_exception.lock())
+		if (ep_exception)
 		{
-			queue->send(SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY, data1, data2, data3);
+			ep_exception->send(SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY, data1, data2, data3);
 		}
 	}
 
 	void send_sysmodule_event(u64 data1, u64 data2, u64 data3)
 	{
-		if (const auto queue = ep_sysmodule.lock())
+		if (ep_sysmodule)
 		{
-			queue->send(SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3);
+			ep_sysmodule->send(SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3);
 		}
 	}
 

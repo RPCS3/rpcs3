@@ -110,8 +110,10 @@ struct lv2_event_queue final : public lv2_obj
 	static std::shared_ptr<lv2_event_queue> find(u64 ipc_key);
 
 	// Check queue ptr validity (use 'exists' member)
-	static bool check(const std::weak_ptr<lv2_event_queue>&);
-	static bool check(const std::shared_ptr<lv2_event_queue>&);
+	static inline bool check(const std::shared_ptr<lv2_event_queue>& sptr)
+	{
+		return sptr && sptr->exists;
+	}
 };
 
 struct lv2_event_port final : lv2_obj
@@ -121,7 +123,7 @@ struct lv2_event_port final : lv2_obj
 	const s32 type; // Port type, must be SYS_EVENT_PORT_LOCAL
 	const u64 name; // Event source (generated from id and process id if not set)
 
-	std::weak_ptr<lv2_event_queue> queue; // Event queue this port is connected to
+	std::shared_ptr<lv2_event_queue> queue; // Event queue this port is connected to
 
 	lv2_event_port(s32 type, u64 name)
 		: type(type)

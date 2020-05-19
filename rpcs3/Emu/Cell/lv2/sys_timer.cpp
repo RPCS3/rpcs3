@@ -33,9 +33,9 @@ void lv2_timer_context::operator()()
 					continue;
 				}
 
-				if (const auto queue = port.lock())
+				if (port)
 				{
-					queue->send(source, data1, data2, next);
+					port->send(source, data1, data2, next);
 				}
 
 				if (period)
@@ -165,7 +165,7 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 			return CELL_EBUSY;
 		}
 
-		if (timer.port.expired())
+		if (!lv2_event_queue::check(timer.port))
 		{
 			return CELL_ENOTCONN;
 		}

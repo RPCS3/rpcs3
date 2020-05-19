@@ -2610,7 +2610,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
-				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup].lock());
+				const auto queue = (std::shared_lock{group->mutex}, this->spup[spup]);
 
 				const auto res = !queue ? CELL_ENOTCONN :
 					queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data);
@@ -2637,7 +2637,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
-				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup].lock());
+				const auto queue = (std::shared_lock{group->mutex}, this->spup[spup]);
 
 				// TODO: check passing spup value
 				if (auto res = queue ? queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data) : CELL_ENOTCONN)
@@ -3013,14 +3013,13 @@ bool spu_thread::stop_and_signal(u32 code)
 				continue;
 			}
 
-			for (auto& v : this->spuq)
+			for (const auto& v : this->spuq)
 			{
 				if (spuq == v.first)
 				{
-					queue = v.second.lock();
-
-					if (lv2_event_queue::check(queue))
+					if (lv2_event_queue::check(v.second))
 					{
+						queue = v.second;
 						break;
 					}
 				}
@@ -3140,12 +3139,13 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		std::shared_ptr<lv2_event_queue> queue;
 
-		for (auto& v : this->spuq)
+		for (const auto& v : this->spuq)
 		{
 			if (spuq == v.first)
 			{
-				if (queue = v.second.lock(); lv2_event_queue::check(queue))
+				if (lv2_event_queue::check(v.second))
 				{
+					queue = v.second;
 					break;
 				}
 			}

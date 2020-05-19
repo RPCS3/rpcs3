@@ -174,13 +174,13 @@ private:
 	u32 idm_id;
 
 	// queue for service/io event notifications
-	const std::weak_ptr<lv2_event_queue> queue;
+	const std::shared_ptr<lv2_event_queue> queue;
 
 	bool send_queue_event(u64 source, u64 d1, u64 d2, u64 d3) const
 	{
-		if (auto sptr = queue.lock())
+		if (queue)
 		{
-			return sptr->send(source, d1, d2, d3) == 0;
+			return queue->send(source, d1, d2, d3) == 0;
 		}
 		return false;
 	}
