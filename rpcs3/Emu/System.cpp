@@ -1722,10 +1722,6 @@ void Emulator::Stop(bool restart)
 		Init();
 	}
 
-#ifdef LLVM_AVAILABLE
-	extern void jit_finalize();
-	jit_finalize();
-#endif
 	jit_runtime::finalize();
 
 	if (restart)
