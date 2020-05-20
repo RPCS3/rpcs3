@@ -193,6 +193,7 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resou
 
 		if (m_overlay_manager && m_overlay_manager->has_dirty())
 		{
+			auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
 			m_overlay_manager->lock();
 
 			std::vector<u32> uids_to_dispose;
@@ -200,7 +201,7 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resou
 
 			for (const auto& view : m_overlay_manager->get_dirty())
 			{
-				m_ui_renderer->remove_temp_resources(view->uid);
+				ui_renderer->remove_temp_resources(view->uid);
 				uids_to_dispose.push_back(view->uid);
 			}
 
@@ -209,11 +210,6 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resou
 		}
 
 		vk::reset_global_resources();
-
-		m_attachment_clear_pass->free_resources();
-		m_depth_converter->free_resources();
-		m_ui_renderer->free_resources();
-		m_video_output_pass->free_resources();
 
 		ctx->buffer_views_to_clean.clear();
 
@@ -601,11 +597,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			direct_fbo = vk::get_framebuffer(*m_device, m_swapchain_dims.width, m_swapchain_dims.height, single_target_pass, m_swapchain->get_surface_format(), target_image);
 			direct_fbo->add_ref();
-
 			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			m_video_output_pass->run(*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src, avconfig->gamma, !use_full_rgb_range_output, avconfig->_3d, single_target_pass);
-			image_to_flip->pop_layout(*m_current_command_buffer);
 
+			vk::get_overlay_pass<vk::video_out_calibration_pass>()->run(
+				*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src,
+				avconfig->gamma, !use_full_rgb_range_output, avconfig->_3d, single_target_pass);
+
+			image_to_flip->pop_layout(*m_current_command_buffer);
 			direct_fbo->release();
 		}
 
@@ -682,11 +680,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		if (has_overlay)
 		{
 			// Lock to avoid modification during run-update chain
+			auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
 			std::lock_guard lock(*m_overlay_manager);
 
 			for (const auto& view : m_overlay_manager->get_views())
 			{
-				m_ui_renderer->run(*m_current_command_buffer, areau(aspect_ratio), direct_fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
+				ui_renderer->run(*m_current_command_buffer, areau(aspect_ratio), direct_fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
 			}
 		}
 

@@ -72,6 +72,7 @@ namespace vk
 	std::unordered_map<VkImageViewType, std::unique_ptr<image_view>> g_null_image_views;
 	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
 	std::unordered_map<u32, std::unique_ptr<vk::compute_task>> g_compute_tasks;
+	std::unordered_map<u32, std::unique_ptr<vk::overlay_pass>> g_overlay_passes;
 
 	// General purpose upload heap
 	// TODO: Clean this up and integrate cleanly with VKGSRender
@@ -384,10 +385,19 @@ namespace vk
 		}
 	}
 
+	void reset_overlay_passes()
+	{
+		for (const auto& p : g_overlay_passes)
+		{
+			p.second->free_resources();
+		}
+	}
+
 	void reset_global_resources()
 	{
 		vk::reset_compute_tasks();
 		vk::reset_resolve_resources();
+		vk::reset_overlay_passes();
 
 		g_upload_heap.reset_allocation_stats();
 	}
@@ -420,8 +430,13 @@ namespace vk
 		{
 			p.second->destroy();
 		}
-
 		g_compute_tasks.clear();
+
+		for (const auto& p : g_overlay_passes)
+		{
+			p.second->destroy();
+		}
+		g_overlay_passes.clear();
 	}
 
 	vk::mem_allocator_base* get_current_mem_allocator()

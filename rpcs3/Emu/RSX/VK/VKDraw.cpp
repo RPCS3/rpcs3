@@ -944,7 +944,7 @@ void VKGSRender::end()
 
 		// TODO: Stencil transfer
 		ds->old_contents[0].init_transfer(ds);
-		m_depth_converter->run(*m_current_command_buffer,
+		vk::get_overlay_pass<vk::depth_convert_pass>()->run(*m_current_command_buffer,
 			ds->old_contents[0].src_rect(),
 			ds->old_contents[0].dst_rect(),
 			src->get_view(0xAAE4, rsx::default_remap_vector),

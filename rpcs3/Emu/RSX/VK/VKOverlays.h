@@ -33,7 +33,7 @@ namespace vk
 		std::unique_ptr<vk::framebuffer> m_draw_fbo;
 		vk::data_heap m_vao;
 		vk::data_heap m_ubo;
-		vk::render_device* m_device = nullptr;
+		const vk::render_device* m_device = nullptr;
 
 		std::string vs_src;
 		std::string fs_src;
@@ -305,7 +305,7 @@ namespace vk
 			vkCmdBindVertexBuffers(cmd, 0, 1, &buffers, &offsets);
 		}
 
-		void create(vk::render_device &dev)
+		virtual void create(const vk::render_device &dev)
 		{
 			if (!initialized)
 			{
@@ -316,7 +316,7 @@ namespace vk
 			}
 		}
 
-		void destroy()
+		virtual void destroy()
 		{
 			if (initialized)
 			{
@@ -682,15 +682,14 @@ namespace vk
 			return result;
 		}
 
-		void create(vk::command_buffer &cmd, vk::data_heap &upload_heap)
+		void init(vk::command_buffer &cmd, vk::data_heap &upload_heap)
 		{
-			auto& dev = cmd.get_command_pool().get_owner();
-			overlay_pass::create(dev);
-
 			rsx::overlays::resource_config configuration;
 			configuration.load_files();
 
+			auto& dev = cmd.get_command_pool().get_owner();
 			u64 storage_key = 1;
+
 			for (const auto &res : configuration.texture_raw_data)
 			{
 				upload_simple_texture(dev, cmd, upload_heap, storage_key++, res->w, res->h, 1, false, false, res->data, UINT32_MAX);
@@ -699,7 +698,7 @@ namespace vk
 			configuration.free_resources();
 		}
 
-		void destroy()
+		void destroy() override
 		{
 			temp_image_cache.clear();
 			temp_view_cache.clear();
@@ -1032,6 +1031,69 @@ namespace vk
 		}
 	};
 
+	struct stencil_clear_pass : public overlay_pass
+	{
+		VkRect2D region = {};
+
+		stencil_clear_pass()
+		{
+			vs_src =
+				"#version 450\n"
+				"#extension GL_ARB_separate_shader_objects : enable\n"
+				"\n"
+				"void main()\n"
+				"{\n"
+				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
+				"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
+				"}\n";
+
+			fs_src =
+				"#version 420\n"
+				"#extension GL_ARB_separate_shader_objects : enable\n"
+				"layout(location=0) out vec4 out_color;\n"
+				"\n"
+				"void main()\n"
+				"{\n"
+				"	out_color = vec4(0.);\n"
+				"}\n";
+		}
+
+		void set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h) override
+		{
+			VkViewport vp{};
+			vp.x = static_cast<f32>(x);
+			vp.y = static_cast<f32>(y);
+			vp.width = static_cast<f32>(w);
+			vp.height = static_cast<f32>(h);
+			vp.minDepth = 0.f;
+			vp.maxDepth = 1.f;
+			vkCmdSetViewport(cmd, 0, 1, &vp);
+
+			vkCmdSetScissor(cmd, 0, 1, &region);
+		}
+
+		void run(vk::command_buffer& cmd, vk::render_target* target, VkRect2D rect, uint32_t stencil_clear, uint32_t stencil_write_mask, VkRenderPass render_pass)
+		{
+			region = rect;
+
+			// Stencil setup. Replace all pixels in the scissor region with stencil_clear with the correct write mask.
+			renderpass_config.enable_stencil_test(
+				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE,  // Always replace
+				VK_COMPARE_OP_ALWAYS,                                                 // Always pass
+				0xFF,                                                                 // Full write-through
+				stencil_clear);                                                       // Write active bit
+
+			renderpass_config.set_stencil_mask(stencil_write_mask);
+			renderpass_config.set_depth_mask(false);
+
+			// Coverage sampling disabled, but actually report correct number of samples
+			renderpass_config.set_multisample_state(target->samples(), 0xFFFF, false, false, false);
+
+			overlay_pass::run(cmd, { 0, 0, target->width(), target->height() }, target,
+				target->get_view(0xAAE4, rsx::default_remap_vector), render_pass);
+		}
+	};
+
 	struct video_out_calibration_pass : public overlay_pass
 	{
 		union config_t
@@ -1158,4 +1220,24 @@ namespace vk
 			overlay_pass::run(cmd, viewport, target, views, render_pass);
 		}
 	};
+
+	// TODO: Replace with a proper manager
+	extern std::unordered_map<u32, std::unique_ptr<vk::overlay_pass>> g_overlay_passes;
+
+	template<class T>
+	T* get_overlay_pass()
+	{
+		u32 index = id_manager::typeinfo::get_index<T>();
+		auto& e = g_overlay_passes[index];
+
+		if (!e)
+		{
+			e = std::make_unique<T>();
+			e->create(*vk::get_current_renderer());
+		}
+
+		return static_cast<T*>(e.get());
+	}
+
+	void reset_overlay_passes();
 }
