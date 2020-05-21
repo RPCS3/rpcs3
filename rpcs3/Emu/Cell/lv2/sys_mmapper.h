@@ -58,10 +58,9 @@ struct page_fault_notification_entries
 
 struct page_fault_event_entries
 {
-	// First = thread id, second = addr
-	std::unordered_map<u32, u32> events;
+	// First = thread, second = addr
+	std::unordered_map<class cpu_thread*, u32> events;
 	shared_mutex pf_mutex;
-	cond_variable cond;
 };
 
 struct mmapper_unk_entry_struct0
@@ -76,7 +75,7 @@ struct mmapper_unk_entry_struct0
 // Aux
 class ppu_thread;
 
-error_code mmapper_thread_recover_page_fault(u32 id);
+error_code mmapper_thread_recover_page_fault(cpu_thread* cpu);
 
 // SysCalls
 error_code sys_mmapper_allocate_address(ppu_thread&, u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr);

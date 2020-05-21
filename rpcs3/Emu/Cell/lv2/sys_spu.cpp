@@ -1790,7 +1790,7 @@ error_code sys_spu_thread_recover_page_fault(ppu_thread& ppu, u32 id)
 		return CELL_ESRCH;
 	}
 
-	return mmapper_thread_recover_page_fault(id);
+	return mmapper_thread_recover_page_fault(thread);
 }
 
 error_code sys_raw_spu_recover_page_fault(ppu_thread& ppu, u32 id)
@@ -1806,7 +1806,7 @@ error_code sys_raw_spu_recover_page_fault(ppu_thread& ppu, u32 id)
 		return CELL_ESRCH;
 	}
 
-	return mmapper_thread_recover_page_fault(id);
+	return mmapper_thread_recover_page_fault(thread.get());
 }
 
 error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> attr)
