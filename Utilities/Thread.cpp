@@ -1382,6 +1382,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 	if (cpu)
 	{
+		vm::temporary_unlock(*cpu);
 		u32 pf_port_id = 0;
 
 		if (auto pf_entries = g_fxo->get<page_fault_notification_entries>(); true)
