@@ -90,6 +90,7 @@ void fmt_class_string<ppu_join_status>::format(std::string& out, u64 arg)
 
 constexpr ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise;
 constexpr ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast;
+constexpr ppu_decoder<ppu_itype> g_ppu_itype;
 
 extern void ppu_initialize();
 extern void ppu_initialize(const ppu_module& info);
@@ -1419,7 +1420,7 @@ extern void ppu_initialize(const ppu_module& info)
 	struct jit_module
 	{
 		std::vector<u64*> vars;
-		std::vector<ppu_function_t> funcs;
+		std::vector<std::pair<u32, ppu_function_t>> funcs;
 		std::shared_ptr<jit_compiler> pjit;
 	};
 
@@ -1458,7 +1459,7 @@ extern void ppu_initialize(const ppu_module& info)
 	std::vector<std::pair<std::string, u64>> globals;
 
 	// Split module into fragments <= 1 MiB
-	std::size_t fpos = 0;
+	u32 fpos = 0, ipos = 0;
 
 	// Difference between function name and current location
 	const u32 reloc = info.name.empty() ? 0 : info.segs.at(0).addr;
@@ -1472,52 +1473,128 @@ extern void ppu_initialize(const ppu_module& info)
 	// Sync variable to acquire workloads
 	atomic_t<u32> work_cv = 0;
 
-	while (jit_mod.vars.empty() && fpos < info.funcs.size())
+	// Extracted blocks (addresses)
+	std::vector<std::pair<u32, u32>> blocks;
+
+	while (jit_mod.vars.empty() && ipos < info.segs.at(0).filesz)
 	{
 		// Initialize compiler instance
 		if (!jit && get_current_cpu_thread())
 		{
 			jit = std::make_shared<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu);
+
+			blocks.reserve(info.funcs.size() * 10);
+
+			// Extract blocks
+			for (auto&& func : info.funcs)
+			{
+				for (auto&& block : func.blocks)
+				{
+					if (block.second)
+					{
+						blocks.emplace_back(block.first, block.second);
+					}
+				}
+			}
 		}
 
-		// First function in current module part
-		const auto fstart = fpos;
-
-		// Copy module information (TODO: optimize)
+		// Copy module information
 		ppu_module part;
 		part.copy_part(info);
-		part.funcs.reserve(16000);
+		part.funcs.reserve(65536 / 4);
 
-		// Unique suffix for each module part
-		const u32 suffix = info.funcs.at(fstart).addr - reloc;
+		// Used for optimized fast block checking
+		u32 valid_before = 0;
 
-		// Overall block size in bytes
-		std::size_t bsize = 0;
-
-		while (fpos < info.funcs.size())
+		// Create a function for every "instruction"
+		for (; ipos < info.segs[0].filesz; ipos += 4)
 		{
-			auto& func = info.funcs[fpos];
+			const u32 iaddr = ipos + info.segs[0].addr;
 
-			if (bsize + func.size > 100 * 1024 && bsize)
+			// Verify that a block doesn't end with invalid instruction
+			if (valid_before <= iaddr)
+			{
+				bool is_good = true;
+
+				for (u32 ia = iaddr, enda = info.segs[0].addr + info.segs[0].filesz; ia < enda; ia += 4)
+				{
+					const u32 opc = vm::_ref<u32>(ia);
+					const auto it = g_ppu_itype.decode(opc);
+
+					switch (it)
+					{
+					case ppu_itype::UNK:
+					case ppu_itype::ECIWX:
+					case ppu_itype::ECOWX:
+					{
+						is_good = false;
+						ipos += (ia - iaddr);
+						break;
+					}
+					case ppu_itype::TD:
+					case ppu_itype::TDI:
+					case ppu_itype::TW:
+					case ppu_itype::TWI:
+					case ppu_itype::B:
+					case ppu_itype::BC:
+					case ppu_itype::BCCTR:
+					case ppu_itype::BCLR:
+					case ppu_itype::SC:
+					{
+						// Good block terminator found
+						break;
+					}
+					default:
+					{
+						// Normal instruction: keep scanning
+						continue;
+					}
+					}
+
+					if (is_good)
+					{
+						// Acknowledge "good" block
+						valid_before = ia + 4;
+					}
+
+					break;
+				}
+
+				if (!is_good)
+				{
+					// Skip bad block
+					continue;
+				}
+			}
+
+			ppu_function entry;
+			entry.addr = iaddr;
+			entry.size = 4;
+			fmt::append(entry.name, "__0x%x", entry.addr - reloc);
+
+			if (fpos < blocks.size())
+			{
+				auto& [baddr, bsize] = blocks[fpos];
+
+				if (baddr == entry.addr)
+				{
+					entry.size = bsize ? bsize : 4;
+					//entry.toc = ...;
+					fpos++;
+				}
+			}
+
+			jit_mod.funcs.emplace_back(entry.addr - reloc, nullptr);
+			part.funcs.emplace_back(std::move(entry));
+
+			if (part.funcs.size() >= 65536 / 4)
 			{
 				break;
 			}
-
-			for (auto&& block : func.blocks)
-			{
-				bsize += block.second;
-
-				// Also split functions blocks into functions (TODO)
-				ppu_function entry;
-				entry.addr = block.first;
-				entry.size = block.second;
-				entry.toc  = func.toc;
-				fmt::append(entry.name, "__0x%x", block.first - reloc);
-				part.funcs.emplace_back(std::move(entry));
-			}
-
-			fpos++;
 		}
+
+		// Unique suffix for each module part
+		const u32 suffix = part.funcs[0].addr - reloc;
 
 		// Compute module hash to generate (hopefully) unique object name
 		std::string obj_name;
@@ -1725,25 +1802,16 @@ extern void ppu_initialize(const ppu_module& info)
 		return;
 	}
 
-	// Jit can be null if the loop doesn't ever enter.
 	if (jit && jit_mod.vars.empty())
 	{
 		jit->fin();
 
 		// Get and install function addresses
-		for (const auto& func : info.funcs)
+		for (auto& func : jit_mod.funcs)
 		{
-			if (!func.size) continue;
-
-			for (const auto& block : func.blocks)
-			{
-				if (block.second)
-				{
-					const u64 addr = jit->get(fmt::format("__0x%x", block.first - reloc));
-					jit_mod.funcs.emplace_back(reinterpret_cast<ppu_function_t>(addr));
-					ppu_ref(block.first) = addr;
-				}
-			}
+			const u64 addr = jit->get(fmt::format("__0x%x", func.first));
+			func.second = verify(HERE, reinterpret_cast<ppu_function_t>(addr));
+			ppu_ref(func.first + reloc) = addr;
 		}
 
 		// Initialize global variables
@@ -1757,27 +1825,21 @@ extern void ppu_initialize(const ppu_module& info)
 			{
 				*reinterpret_cast<u64*>(addr) = var.second;
 			}
+			else
+			{
+				ppu_log.fatal("Variable not inited: %s", var.first);
+			}
 		}
 	}
 	else
 	{
-		std::size_t index = 0;
-
 		// Locate existing functions
-		for (const auto& func : info.funcs)
+		for (const auto& func : jit_mod.funcs)
 		{
-			if (!func.size) continue;
-
-			for (const auto& block : func.blocks)
-			{
-				if (block.second)
-				{
-					ppu_ref(block.first) = reinterpret_cast<uptr>(jit_mod.funcs[index++]);
-				}
-			}
+			ppu_ref(func.first + reloc) = reinterpret_cast<uptr>(func.second);
 		}
 
-		index = 0;
+		std::size_t index = 0;
 
 		// Rewrite global variables
 		while (index < jit_mod.vars.size())

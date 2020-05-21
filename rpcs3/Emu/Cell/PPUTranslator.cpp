@@ -11,6 +11,7 @@
 using namespace llvm;
 
 constexpr ppu_decoder<PPUTranslator> s_ppu_decoder;
+constexpr ppu_decoder<ppu_itype> s_ppu_itype;
 constexpr ppu_decoder<ppu_iname> s_ppu_iname;
 
 PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_module& info, ExecutionEngine& engine)
@@ -160,15 +161,45 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 
 	const auto body = BasicBlock::Create(m_context, "__body", m_function);
 
-	// Check status register in the entry block
-	const auto vstate = m_ir->CreateLoad(m_ir->CreateStructGEP(nullptr, m_thread, 1), true);
-	const auto vcheck = BasicBlock::Create(m_context, "__test", m_function);
-	m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), body, vcheck, m_md_likely);
+	bool need_check = info.size > 4;
 
-	// Create tail call to the check function
-	m_ir->SetInsertPoint(vcheck);
-	Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCallKind(llvm::CallInst::TCK_Tail);
-	m_ir->CreateRetVoid();
+	if (!need_check)
+	{
+		// Analyse first instruction, emit check in small blocks with branch or syscall
+		switch (auto it0 = s_ppu_itype.decode(vm::read32(vm::cast(m_addr + base))))
+		{
+		case ppu_itype::B:
+		case ppu_itype::BC:
+		case ppu_itype::BCCTR:
+		case ppu_itype::BCLR:
+		case ppu_itype::SC:
+		{
+			need_check = true;
+		}
+		default:
+		{
+			break;
+		}
+		}
+	}
+
+	if (need_check)
+	{
+		// Check status register in the entry block if necessary
+		const auto vstate = m_ir->CreateLoad(m_ir->CreateStructGEP(nullptr, m_thread, 1), true);
+		const auto vcheck = BasicBlock::Create(m_context, "__test", m_function);
+		m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), body, vcheck, m_md_likely);
+
+		// Create tail call to the check function
+		m_ir->SetInsertPoint(vcheck);
+		Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCallKind(llvm::CallInst::TCK_Tail);
+		m_ir->CreateRetVoid();
+	}
+	else
+	{
+		m_ir->CreateBr(body);
+	}
+
 	m_ir->SetInsertPoint(body);
 
 	// Process blocks
@@ -593,7 +624,7 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 
 void PPUTranslator::CompilationError(const std::string& error)
 {
-	ppu_log.error("LLVM: [0x%08x] Error: %s", m_addr + (m_reloc ? m_reloc->addr : 0), error);
+	ppu_log.warning("LLVM: [0x%08x] Error: %s", m_addr + (m_reloc ? m_reloc->addr : 0), error);
 }
 
 
@@ -4503,7 +4534,7 @@ Value* PPUTranslator::GetVr(u32 vr, VrType type)
 	case VrType::i128: return m_ir->CreateBitCast(value, GetType<u128>());
 	}
 
-	report_fatal_error("GetVr(): invalid type");
+	::report_fatal_error("GetVr(): invalid type");
 }
 
 void PPUTranslator::SetVr(u32 vr, Value* value)
@@ -4581,7 +4612,7 @@ void PPUTranslator::SetFPRF(Value* value, bool set_cr)
 	const bool is32 =
 		value->getType()->isFloatTy() ? true :
 		value->getType()->isDoubleTy() ? false :
-		(report_fatal_error("SetFPRF(): invalid value type"), false);
+		(::report_fatal_error("SetFPRF(): invalid value type"), false);
 
 	//const auto zero = ConstantFP::get(value->getType(), 0.0);
 	//const auto is_nan = m_ir->CreateFCmpUNO(value, zero);
