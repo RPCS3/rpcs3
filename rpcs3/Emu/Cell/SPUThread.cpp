@@ -1206,7 +1206,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				_ref<u32>(lsa) = value;
 				return;
 			}
-			else if (args.size == 4 && !is_get && thread->write_reg(eal, _ref<u32>(lsa)))
+			else if (args.size == 4 && !is_get && thread->write_reg(eal, args.cmd != MFC_SDCRZ_CMD ? +_ref<u32>(lsa) : 0))
 			{
 				return;
 			}
@@ -1229,7 +1229,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			}
 			else if (!is_get && args.size == 4 && (offset == SYS_SPU_THREAD_SNR1 || offset == SYS_SPU_THREAD_SNR2))
 			{
-				spu.push_snr(SYS_SPU_THREAD_SNR2 == offset, _ref<u32>(lsa));
+				spu.push_snr(SYS_SPU_THREAD_SNR2 == offset, args.cmd != MFC_SDCRZ_CMD ? +_ref<u32>(lsa) : 0);
 				return;
 			}
 			else
@@ -1243,12 +1243,26 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		}
 	}
 
-	u8* dst = vm::_ptr<u8>(eal);
-	u8* src = vm::_ptr<u8>(offset + lsa);
-
-	if (is_get)
+	// Keep src point to const
+	auto [dst, src] = [&]() -> std::pair<u8*, const u8*>
 	{
-		std::swap(dst, src);
+		u8* dst = vm::_ptr<u8>(eal);
+		u8* src = vm::_ptr<u8>(offset + lsa);
+
+		if (is_get)
+		{
+			std::swap(src, dst);
+		}
+
+		return {dst, src};
+	}();
+
+	// It is so rare that optimizations are not implemented (TODO)
+	alignas(64) static constexpr u8 zero_buf[0x10000]{};
+
+	if (args.cmd == MFC_SDCRZ_CMD)
+	{
+		src = zero_buf;
 	}
 
 	if (!g_use_rtm && (!is_get || g_cfg.core.spu_accurate_putlluc)) [[unlikely]]
@@ -1851,6 +1865,27 @@ void spu_thread::do_mfc(bool wait)
 			ch_tag_upd = 0;
 		}
 	}
+
+	if (check_mfc_interrupts(pc + 4))
+	{
+		spu_runtime::g_escape(this);
+	}
+}
+
+bool spu_thread::check_mfc_interrupts(u32 next_pc)
+{
+	if (interrupts_enabled && (ch_event_mask & ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
+	{
+		interrupts_enabled.release(false);
+		srr0 = next_pc;
+
+		// Test for BR/BRA instructions (they are equivalent at zero pc)
+		const u32 br = _ref<u32>(0);
+		pc = (br & 0xfd80007f) == 0x30000000 ? (br >> 5) & 0x3fffc : 0;
+		return true;
+	}
+
+	return false;
 }
 
 u32 spu_thread::get_mfc_completed()
@@ -1878,6 +1913,9 @@ bool spu_thread::process_mfc_cmd()
 
 	switch (ch_mfc_cmd.cmd)
 	{
+	case MFC_SDCRT_CMD:
+	case MFC_SDCRTST_CMD:
+		return true;
 	case MFC_GETLLAR_CMD:
 	{
 		const u32 addr = ch_mfc_cmd.eal & -128;
@@ -2115,6 +2153,7 @@ bool spu_thread::process_mfc_cmd()
 	case MFC_GET_CMD:
 	case MFC_GETB_CMD:
 	case MFC_GETF_CMD:
+	case MFC_SDCRZ_CMD:
 	{
 		if (ch_mfc_cmd.size <= 0x4000) [[likely]]
 		{
@@ -2170,6 +2209,11 @@ bool spu_thread::process_mfc_cmd()
 			if (cmd.cmd & MFC_BARRIER_MASK)
 			{
 				mfc_barrier |= utils::rol32(1, cmd.tag);
+			}
+
+			if (check_mfc_interrupts(pc + 4))
+			{
+				spu_runtime::g_escape(this);
 			}
 
 			return true;
@@ -2772,6 +2816,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case MFC_WrListStallAck:
 	{
+		value &= 0x1f;
+
 		// Reset stall status for specified tag
 		const u32 tag_mask = utils::rol32(1, value);
 

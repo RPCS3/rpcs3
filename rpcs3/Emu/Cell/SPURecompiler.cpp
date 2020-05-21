@@ -5803,6 +5803,11 @@ public:
 
 				switch (u64 cmd = ci->getZExtValue())
 				{
+				case MFC_SDCRT_CMD:
+				case MFC_SDCRTST_CMD:
+				{
+					return;
+				}
 				case MFC_GETLLAR_CMD:
 				case MFC_PUTLLC_CMD:
 				case MFC_PUTLLUC_CMD:
@@ -5816,6 +5821,7 @@ public:
 				case MFC_GETL_CMD:
 				case MFC_GETLB_CMD:
 				case MFC_GETLF_CMD:
+				case MFC_SDCRZ_CMD:
 				{
 					// TODO
 					m_ir->CreateBr(next);
@@ -6000,6 +6006,10 @@ public:
 				case MFC_GETL_CMD:
 				case MFC_GETLB_CMD:
 				case MFC_GETLF_CMD:
+				{
+					break;
+				}
+				case MFC_SDCRZ_CMD:
 				{
 					break;
 				}

@@ -669,6 +669,7 @@ public:
 	u32 get_events(bool waiting = false);
 	void set_events(u32 mask);
 	void set_interrupt_status(bool enable);
+	bool check_mfc_interrupts(u32 nex_pc);
 	u32 get_ch_count(u32 ch);
 	s64 get_ch_value(u32 ch);
 	bool set_ch_value(u32 ch, u32 value);

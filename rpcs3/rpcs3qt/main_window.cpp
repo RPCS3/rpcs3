@@ -129,13 +129,13 @@ void main_window::Init()
 	// enable play options if a recent game exists
 	const bool enable_play_last = !m_recent_game_acts.isEmpty() && m_recent_game_acts.first();
 
-	const QString start_toolip = enable_play_last ? tr("Play %0").arg(m_recent_game_acts.first()->text()) : tr("Play");
+	const QString start_tooltip = enable_play_last ? tr("Play %0").arg(m_recent_game_acts.first()->text()) : tr("Play");
 
 	if (enable_play_last)
 	{
 		ui->sysPauseAct->setText(tr("&Play last played game\tCtrl+E"));
 		ui->sysPauseAct->setIcon(m_icon_play);
-		ui->toolbar_start->setToolTip(start_toolip);
+		ui->toolbar_start->setToolTip(start_tooltip);
 	}
 
 	ui->sysPauseAct->setEnabled(enable_play_last);
@@ -147,7 +147,7 @@ void main_window::Init()
 	m_thumb_bar->setWindow(windowHandle());
 
 	m_thumb_playPause = new QWinThumbnailToolButton(m_thumb_bar);
-	m_thumb_playPause->setToolTip(start_toolip);
+	m_thumb_playPause->setToolTip(start_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 	m_thumb_playPause->setEnabled(enable_play_last);
 
@@ -677,11 +677,11 @@ void main_window::HandlePupInstallation(QString file_path)
 
 	fs::file update_files_f = pup.get_file(0x300);
 	tar_object update_files(update_files_f);
-	auto updatefilenames = update_files.get_filenames();
+	auto update_filenames = update_files.get_filenames();
 
-	updatefilenames.erase(std::remove_if(
-		updatefilenames.begin(), updatefilenames.end(), [](std::string s) { return s.find("dev_flash_") == umax; }),
-		updatefilenames.end());
+	update_filenames.erase(std::remove_if(
+		update_filenames.begin(), update_filenames.end(), [](std::string s) { return s.find("dev_flash_") == umax; }),
+		update_filenames.end());
 
 	std::string version_string = pup.get_file(0x100).to_string();
 
@@ -699,7 +699,7 @@ void main_window::HandlePupInstallation(QString file_path)
 		return;
 	}
 
-	progress_dialog pdlg(tr("RPCS3 Firmware Installer"), tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), false, this);
+	progress_dialog pdlg(tr("RPCS3 Firmware Installer"), tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(update_filenames.size()), false, this);
 	pdlg.show();
 
 	// Synchronization variable
@@ -708,13 +708,13 @@ void main_window::HandlePupInstallation(QString file_path)
 		// Run asynchronously
 		named_thread worker("Firmware Installer", [&]
 		{
-			for (const auto& updatefilename : updatefilenames)
+			for (const auto& update_filename : update_filenames)
 			{
 				if (progress == -1) break;
 
-				fs::file updatefile = update_files.get_file(updatefilename);
+				fs::file update_file = update_files.get_file(update_filename);
 
-				SCEDecrypter self_dec(updatefile);
+				SCEDecrypter self_dec(update_file);
 				self_dec.LoadHeaders();
 				self_dec.LoadMetadata(SCEPKG_ERK, SCEPKG_RIV);
 				self_dec.DecryptData();
@@ -832,7 +832,7 @@ void main_window::DecryptSPRXLibraries()
 	gui_log.notice("Finished decrypting all binaries.");
 }
 
-/** Needed so that when a backup occurs of window state in guisettings, the state is current.
+/** Needed so that when a backup occurs of window state in gui_settings, the state is current.
 * Also, so that on close, the window state is preserved.
 */
 void main_window::SaveWindowState()
