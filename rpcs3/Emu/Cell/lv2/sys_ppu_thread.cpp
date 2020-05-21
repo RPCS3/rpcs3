@@ -551,7 +551,7 @@ error_code sys_ppu_thread_recover_page_fault(u32 thread_id)
 		return CELL_ESRCH;
 	}
 
-	return mmapper_thread_recover_page_fault(thread_id);
+	return mmapper_thread_recover_page_fault(thread.ptr.get());
 }
 
 error_code sys_ppu_thread_get_page_fault_context(u32 thread_id, vm::ptr<sys_ppu_thread_icontext_t> ctxt)
@@ -572,7 +572,7 @@ error_code sys_ppu_thread_get_page_fault_context(u32 thread_id, vm::ptr<sys_ppu_
 	auto pf_events = g_fxo->get<page_fault_event_entries>();
 	std::shared_lock lock(pf_events->pf_mutex);
 
-	const auto evt = pf_events->events.find(thread_id);
+	const auto evt = pf_events->events.find(thread.ptr.get());
 	if (evt == pf_events->events.end())
 	{
 		return CELL_EINVAL;

@@ -739,13 +739,13 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 	return CELL_OK;
 }
 
-error_code mmapper_thread_recover_page_fault(u32 id)
+error_code mmapper_thread_recover_page_fault(cpu_thread* cpu)
 {
 	// We can only wake a thread if it is being suspended for a page fault.
 	auto pf_events = g_fxo->get<page_fault_event_entries>();
 	{
 		std::lock_guard pf_lock(pf_events->pf_mutex);
-		auto pf_event_ind = pf_events->events.find(id);
+		const auto pf_event_ind = pf_events->events.find(cpu);
 
 		if (pf_event_ind == pf_events->events.end())
 		{
@@ -756,6 +756,15 @@ error_code mmapper_thread_recover_page_fault(u32 id)
 		pf_events->events.erase(pf_event_ind);
 	}
 
-	pf_events->cond.notify_all();
+	if (cpu->id_type() == 1u)
+	{
+		lv2_obj::awake(cpu);
+	}
+	else
+	{
+		cpu->state += cpu_flag::signal;
+		cpu->notify();
+	}
+
 	return CELL_OK;
 }
