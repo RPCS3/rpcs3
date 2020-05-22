@@ -2318,5 +2318,5 @@ void PPUDisAsm::UNK(ppu_opcode_t op)
 		}
 	}
 
-	Write(fmt::format("Unknown/Illegal opcode! (0x%08x)", op.opcode));
+	Write("?? ??");
 }

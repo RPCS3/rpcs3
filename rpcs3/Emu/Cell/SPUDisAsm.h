@@ -966,8 +966,8 @@ public:
 		DisAsm("fms", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], spu_reg_name[op.rc]);
 	}
 
-	void UNK(spu_opcode_t op)
+	void UNK(spu_opcode_t /*op*/)
 	{
-		Write(fmt::format("Unknown/Illegal opcode! (0x%08x)", op.opcode));
+		Write("?? ??");
 	}
 };
