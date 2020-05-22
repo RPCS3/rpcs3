@@ -85,7 +85,7 @@ np_handler::np_handler()
 		close(sock);
 #endif
 
-		// Convert dns address
+		// Convert DNS address
 		std::string s_dns = g_cfg.net.dns;
 		in_addr conv;
 		if (!inet_pton(AF_INET, s_dns.c_str(), &conv))
@@ -97,7 +97,7 @@ np_handler::np_handler()
 		}
 		dns = conv.s_addr;
 
-		// Init switch map for dns
+		// Init switch map for DNS
 		auto swaps = fmt::split(g_cfg.net.swap_list, {"&&"});
 		for (std::size_t i = 0; i < swaps.size(); i++)
 		{
@@ -303,24 +303,24 @@ s32 np_handler::analyze_dns_packet(s32 s, const u8* buf, u32 len)
 
 	struct dns_header
 	{
-		u16 id; // identification number
+		u16 id; // Identification number
 
-		u8 rd : 1;     // recursion desired
-		u8 tc : 1;     // truncated message
-		u8 aa : 1;     // authoritive answer
-		u8 opcode : 4; // purpose of message
-		u8 qr : 1;     // query/response flag
+		u8 rd : 1;     // Recursion desired
+		u8 tc : 1;     // Truncated message
+		u8 aa : 1;     // Authoritive answer
+		u8 opcode : 4; // Purpose of message
+		u8 qr : 1;     // Query/response flag
 
-		u8 rcode : 4; // response code
-		u8 cd : 1;    // checking disabled
-		u8 ad : 1;    // authenticated data
-		u8 z : 1;     // its z! reserved
-		u8 ra : 1;    // recursion available
+		u8 rcode : 4; // Response code
+		u8 cd : 1;    // Checking disabled
+		u8 ad : 1;    // Authenticated data
+		u8 z : 1;     // It's z! reserved
+		u8 ra : 1;    // Recursion available
 
-		be_t<u16> q_count;    // number of question entries
-		be_t<u16> ans_count;  // number of answer entries
-		be_t<u16> auth_count; // number of authority entries
-		be_t<u16> add_count;  // number of resource entries
+		be_t<u16> q_count;    // Number of question entries
+		be_t<u16> ans_count;  // Number of answer entries
+		be_t<u16> auth_count; // Number of authority entries
+		be_t<u16> add_count;  // Number of resource entries
 	};
 
 	if (len < sizeof(dns_header))
@@ -355,7 +355,7 @@ s32 np_handler::analyze_dns_packet(s32 s, const u8* buf, u32 len)
 
 	if (switch_map.count(host))
 	{
-		// design fake packet
+		// Design fake packet
 		std::vector<u8> fake(len);
 		memcpy(fake.data(), buf, len);
 		dns_header* fake_header = reinterpret_cast<dns_header*>(fake.data());

@@ -856,7 +856,7 @@ namespace vm
 		// Align to minimal page size
 		const u32 size = ::align(orig_size, min_page_size);
 
-		// return if addr or size is invalid
+		// Return if addr or size is invalid
 		if (!size || addr < this->addr || orig_size > size || addr + u64{size} > this->addr + u64{this->size} || flags & 0x10)
 		{
 			return 0;
@@ -1055,7 +1055,7 @@ namespace vm
 	{
 		if (location != any)
 		{
-			// return selected location
+			// Return selected location
 			if (location < g_locations.size())
 			{
 				return g_locations[location];
@@ -1064,7 +1064,7 @@ namespace vm
 			return nullptr;
 		}
 
-		// search location by address
+		// Search location by address
 		for (auto& block : g_locations)
 		{
 			if (block && addr >= block->addr && addr <= block->addr + block->size - 1)
@@ -1164,7 +1164,7 @@ namespace vm
 		// Allocation on arbitrary address
 		if (location != any && location < g_locations.size())
 		{
-			// return selected location
+			// Return selected location
 			auto& loc = g_locations[location];
 
 			if (!loc)

@@ -24,7 +24,7 @@ namespace rsx
 				if (it != frame_capture.memory_data_map.end())
 				{
 					if (it->second.data != data.data)
-						// screw this
+						// Screw this
 						fmt::throw_exception("Memory map hash collision detected...cant capture");
 				}
 				else
@@ -39,18 +39,18 @@ namespace rsx
 
 		void capture_draw_memory(thread* rsx)
 		{
-			// the idea here is to copy any memory that is needed to make the calls work
-			// todo:
+			// The idea here is to copy any memory that is needed to make the calls work
+			// TODO:
 			//  - tile / zcull state changing during other commands
 			//  - track memory that is rendered into and ignore saving it later, this one will be tough
 
 			if (frame_capture.replay_commands.empty())
 				fmt::throw_exception("no replay commands to attach memory state to");
 
-			// shove the mem_changes onto the last issued command
+			// Shove the mem_changes onto the last issued command
 			std::unordered_set<u64>& mem_changes = frame_capture.replay_commands.back().memory_state;
 
-			// capture fragment shader mem
+			// Capture fragment shader mem
 			const auto [program_offset, program_location] = method_registers.shader_program_address();
 
 			const u32 addr          = get_address(program_offset, program_location, HERE);
@@ -66,9 +66,9 @@ namespace rsx
 			std::memcpy(block_data.data.data(), vm::base(addr), ucode_size + program_start);
 			insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
 
-			// vertex shader is passed in registers, so it can be ignored
+			// Vertex shader is passed in registers, so it can be ignored
 
-			// save fragment tex mem
+			// Save fragment tex mem
 			for (const auto& tex : method_registers.fragment_textures)
 			{
 				if (!tex.enabled())
@@ -77,7 +77,7 @@ namespace rsx
 				const u32 texaddr = get_address(tex.offset(), tex.location(), HERE);
 				auto layout       = get_subresources_layout(tex);
 
-				// todo: dont use this function and just get size somehow
+				// TODO: Don't use this function and just get size somehow
 				size_t texSize = 0;
 				for (const auto& l : layout)
 					texSize += l.data.size();
@@ -94,7 +94,7 @@ namespace rsx
 				insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
 			}
 
-			// save vertex texture mem
+			// Save vertex texture mem
 			for (const auto& tex : method_registers.vertex_textures)
 			{
 				if (!tex.enabled())
@@ -103,7 +103,7 @@ namespace rsx
 				const u32 texaddr = get_address(tex.offset(), tex.location(), HERE);
 				auto layout       = get_subresources_layout(tex);
 
-				// todo: dont use this function and just get size somehow
+				// TODO: Don't use this function and just get size somehow
 				size_t texSize = 0;
 				for (const auto& l : layout)
 					texSize += l.data.size();
@@ -120,7 +120,7 @@ namespace rsx
 				insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
 			}
 
-			// save vertex buffer memory
+			// Save vertex buffer memory
 			if (method_registers.current_draw_clause.command == draw_command::array)
 			{
 				const u32 input_mask = method_registers.vertex_attrib_input_mask();
@@ -134,7 +134,7 @@ namespace rsx
 					if (!info.size())
 						continue;
 
-					// vert buffer
+					// Vert buffer
 					const u32 base_address    = get_vertex_offset_from_base(method_registers.vertex_data_base_offset(), info.offset() & 0x7fffffff);
 					const u32 memory_location = info.offset() >> 31;
 
@@ -160,7 +160,7 @@ namespace rsx
 					while (method_registers.current_draw_clause.next());
 				}
 			}
-			// save index buffer if used
+			// Save index buffer if used
 			else if (method_registers.current_draw_clause.command == draw_command::indexed)
 			{
 				const u32 input_mask = method_registers.vertex_attrib_input_mask();
@@ -172,7 +172,7 @@ namespace rsx
 				const u32 type_size   = get_index_type_size(index_type);
 				const u32 base_addr   = get_address(base_address, memory_location, HERE) & (0 - type_size);
 
-				// manually parse index buffer and copy vertex buffer
+				// Manually parse index buffer and copy vertex buffer
 				u32 min_index = 0xFFFFFFFF, max_index = 0;
 
 				const bool is_primitive_restart_enabled = method_registers.restart_index_enabled();
@@ -242,7 +242,7 @@ namespace rsx
 						if (!info.size())
 							continue;
 
-						// vert buffer
+						// Vert buffer
 						const u32 vertStride      = info.stride();
 						const u32 base_address    = get_vertex_offset_from_base(method_registers.vertex_data_base_offset(), (info.offset() & 0x7fffffff));
 						const u32 memory_location = info.offset() >> 31;
@@ -265,7 +265,7 @@ namespace rsx
 			capture_display_tile_state(rsx, frame_capture.replay_commands.back());
 		}
 
-		// i realize these are a slight copy pasta of the rsx_method implementations but its kinda unavoidable currently
+		// I realize these are a slight copy pasta of the rsx_method implementations but it's kinda unavoidable currently
 		void capture_image_in(thread* rsx, frame_capture_data::replay_command& replay_command)
 		{
 			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
@@ -349,7 +349,7 @@ namespace rsx
 		{
 			frame_capture_data::display_buffers_state dbstate;
 			dbstate.count = rsx->display_buffers_count;
-			// should this only happen on flip?
+			// Should this only happen on flip?
 			for (u32 i = 0; i < rsx->display_buffers_count; ++i)
 			{
 				const auto& db            = rsx->display_buffers[i];
@@ -363,7 +363,7 @@ namespace rsx
 			if (frame_capture.display_buffers_map.find(dbnum) == frame_capture.display_buffers_map.end())
 				frame_capture.display_buffers_map.insert(std::make_pair(dbnum, std::move(dbstate)));
 
-			// todo: hook tile call sys_rsx call or something
+			// TODO: Hook tile call sys_rsx call or something
 			frame_capture_data::tile_state tilestate;
 			for (u32 i = 0; i < limits::tiles_count; ++i)
 			{

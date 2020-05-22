@@ -15,11 +15,11 @@ namespace rsx
 	{
 		u32 buffer_size = 4;
 
-		// run through replay commands to figure out how big command buffer needs to be
+		// Run through replay commands to figure out how big command buffer needs to be
 		for (const auto& rc : frame->replay_commands)
 		{
 			const u32 count = (rc.rsx_command.first >> 18) & 0x7ff;
-			// allocate for register plus w/e number of arguments it has
+			// Allocate for register plus w/e number of arguments it has
 			buffer_size += (count * 4) + 4;
 		}
 
@@ -56,8 +56,8 @@ namespace rsx
 
 	std::vector<u32> rsx_replay_thread::alloc_write_fifo(be_t<u32> context_id)
 	{
-		// copy commands into fifo buffer
-		// todo: could change rsx_command to just be values to avoid this loop,
+		// Copy commands into fifo buffer
+		// TODO: Could change rsx_command to just be values to avoid this loop
 		auto fifo_addr = vm::ptr<u32>::make(user_mem_addr + 0x10000000);
 		u32 count = 0;
 		std::vector<u32> fifo_stops;
@@ -69,7 +69,7 @@ namespace rsx
 			{
 				if (count != 0)
 				{
-					// todo: support memory state in the middle of incremented command
+					// TODO: Support memory state in the middle of incremented command
 					// This shouldn't ever happen as long as captures stay in 'strict' aka non-multidraw mode
 					fmt::throw_exception("capture replay: state change not supported between increment commands");
 				}
@@ -77,7 +77,7 @@ namespace rsx
 				fifo_stops.emplace_back(currentOffset);
 			}
 
-			// spit out command
+			// Spit out command
 			if (count == 0)
 			{
 				count = (rc.rsx_command.first >> 18) & 0x7ff;
@@ -101,7 +101,7 @@ namespace rsx
 
 	void rsx_replay_thread::apply_frame_state(be_t<u32> context_id, const frame_capture_data::replay_command& replay_cmd)
 	{
-		// apply memory needed for command
+		// Apply memory needed for command
 		for (const auto& state : replay_cmd.memory_state)
 		{
 			auto it = frame->memory_map.find(state);
@@ -180,7 +180,7 @@ namespace rsx
 			method_registers = frame->reg_state;
 			std::atomic_thread_fence(std::memory_order_seq_cst);
 
-			// start up fifo buffer by dumping the put ptr to first stop
+			// Start up fifo buffer by dumping the put ptr to first stop
 			sys_rsx_context_attribute(context_id, 0x001, 0x10000000, fifo_stops[0], 0, 0);
 
 			auto render = get_current_renderer();
@@ -199,7 +199,7 @@ namespace rsx
 				if (!(!replay_cmd.memory_state.empty() || (replay_cmd.display_buffer_state != 0) || (replay_cmd.tile_state != 0)))
 					continue;
 
-				// wait until rsx idle and at our first 'stop' to apply state
+				// Wait until rsx idle and at our first 'stop' to apply state
 				while (!Emu.IsStopped() && !render->is_fifo_idle() && (render->ctrl->get != fifo_stops[stopIdx]))
 				{
 					while (Emu.IsPaused())
@@ -211,14 +211,14 @@ namespace rsx
 
 				apply_frame_state(context_id, replay_cmd);
 
-				// move put ptr to next stop
+				// Move put ptr to next stop
 				if (stopIdx >= fifo_stops.size())
 					fmt::throw_exception("Capture Replay: StopIdx greater than size of fifo_stops");
 
 				render->ctrl->put = fifo_stops[stopIdx];
 			}
 
-			// dump put to end of stops, which should have actual end
+			// Dump put to end of stops, which should have actual end
 			u32 end = fifo_stops.back();
 			render->ctrl->put = end;
 
@@ -235,7 +235,7 @@ namespace rsx
 				render->request_emu_flip(1u);
 			}
 
-			// random pause to not destroy gpu
+			// Random pause to not destroy gpu
 			std::this_thread::sleep_for(10ms);
 		}
 	}

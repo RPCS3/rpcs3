@@ -42,7 +42,7 @@ namespace vm
 			return *static_cast<T*>(vm::base(vm::cast(m_addr, HERE)));
 		}
 
-		// convert to vm pointer
+		// Convert to vm pointer
 		vm::_ptr_base<T, u32> ptr() const
 		{
 			return vm::cast(m_addr, HERE);
@@ -169,10 +169,10 @@ namespace vm
 
 	inline namespace ps3_
 	{
-		// default reference for PS3 HLE functions (Native endianness reference to BE data)
+		// Default reference for PS3 HLE functions (Native endianness reference to BE data)
 		template<typename T, typename AT = u32> using ref = refb<T, AT>;
 
-		// default reference for PS3 HLE structures (BE reference to BE data)
+		// Default reference for PS3 HLE structures (BE reference to BE data)
 		template<typename T, typename AT = u32> using bref = brefb<T, AT>;
 	}
 }

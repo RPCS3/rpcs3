@@ -26,11 +26,11 @@ namespace rsx
 			}
 		};
 
-		// simple block to hold ps3 address and data
+		// Simple block to hold ps3 address and data
 		struct memory_block
 		{
 			u32 offset; // Offset in rsx address space
-			u32 location; // rsx memory location of the block
+			u32 location; // RSX memory location of the block
 			u64 data_state;
 
 			template<typename Archive>
@@ -44,9 +44,9 @@ namespace rsx
 
 		struct replay_command
 		{
-			std::pair<u32, u32> rsx_command;      // fifo command
-			std::unordered_set<u64> memory_state; // index into memory_map for the various memory blocks that need applying before this command can run
-			u64 tile_state{0};                    // tile state for this command
+			std::pair<u32, u32> rsx_command;      // FIFO command
+			std::unordered_set<u64> memory_state; // Index into memory_map for the various memory blocks that need applying before this command can run
+			u64 tile_state{0};                    // Tile state for this command
 			u64 display_buffer_state{0};
 
 			template<typename Archive>
@@ -97,7 +97,7 @@ namespace rsx
 			}
 		};
 
-		// bleh, may need to break these out, might be unnecessary to do both always
+		// Bleh, may need to break these out, might be unnecessary to do both always
 		struct tile_state
 		{
 			tile_info tiles[15];
@@ -143,15 +143,15 @@ namespace rsx
 
 		u32 magic;
 		u32 version;
-		// hashmap of holding various states for tile
+		// Hashmap of holding various states for tile
 		std::unordered_map<u64, tile_state> tile_map;
-		// hashmap of various memory 'changes' that can be applied to ps3 memory
+		// Hashmap of various memory 'changes' that can be applied to ps3 memory
 		std::unordered_map<u64, memory_block> memory_map;
-		// hashmap of memory blocks that can be applied, this is split from above for size decrease
+		// Hashmap of memory blocks that can be applied, this is split from above for size decrease
 		std::unordered_map<u64, memory_block_data> memory_data_map;
-		// display buffer state map
+		// Display buffer state map
 		std::unordered_map<u64, display_buffers_state> display_buffers_map;
-		// actual command queue to hold everything above
+		// Actual command queue to hold everything above
 		std::vector<replay_command> replay_commands;
 		// Initial registers state at the beginning of the capture
 		rsx::rsx_state reg_state;
