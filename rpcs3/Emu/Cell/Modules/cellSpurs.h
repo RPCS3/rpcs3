@@ -616,7 +616,7 @@ struct alignas(128) CellSpursEventFlag
 		be_t<u16> events;                // 0x00 Event bits
 		be_t<u16> spuTaskPendingRecv;    // 0x02 A bit is set to 1 when the condition of the SPU task using the slot are met and back to 0 when the SPU task unblocks
 		be_t<u16> ppuWaitMask;           // 0x04 Wait mask for blocked PPU thread
-		u8 ppuWaitSlotAndMode;           // 0x06 Top 4 bits: Wait slot number of the blocked PPU threa, Bottom 4 bits: Wait mode of the blocked PPU thread
+		u8 ppuWaitSlotAndMode;           // 0x06 Top 4 bits: Wait slot number of the blocked PPU threads, Bottom 4 bits: Wait mode of the blocked PPU thread
 		u8 ppuPendingRecv;               // 0x07 Set to 1 when the blocked PPU thread's conditions are met and back to 0 when the PPU thread is unblocked
 	};
 
