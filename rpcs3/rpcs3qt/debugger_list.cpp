@@ -103,6 +103,18 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 				continue;
 			}
 
+			if (!is_spu && !vm::check_addr(cpu_offset + pc, 4, vm::page_executable))
+			{
+				const u32 data = *vm::get_super_ptr<atomic_be_t<u32>>(cpu_offset + pc);
+				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
+				static_cast<u8>(data >> 24),
+				static_cast<u8>(data >> 16),
+				static_cast<u8>(data >> 8),
+				static_cast<u8>(data >> 0))));
+				count = 4;
+				continue;
+			}
+
 			count = m_disasm->disasm(m_disasm->dump_pc = pc);
 
 			item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(m_disasm->last_opcode));
