@@ -1,0 +1,19 @@
+env:
+  CIRRUS_CLONE_DEPTH: 0 # Unshallow clone to obtain proper GIT_VERSION
+
+freebsd_task:
+  matrix:
+    - name: FreeBSD 12.2 (snapshot)
+      freebsd_instance:
+        image_family: freebsd-12-1-snap
+        cpu: 8
+        memory: 8G
+  env:
+    CCACHE_MAXSIZE: 300M # 3x clean build, rounded
+    CCACHE_DIR: /tmp/ccache_dir
+  ccache_cache:
+    folder: /tmp/ccache_dir
+  packages_cache:
+    folder: /var/cache/pkg
+  install_script: "sh -ex ./.ci/install-freebsd.sh"
+  script: "./.ci/build-freebsd.sh"
