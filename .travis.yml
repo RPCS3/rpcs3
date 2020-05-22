@@ -22,11 +22,11 @@ jobs:
           compiler: clang
           install: "docker pull rpcs3/rpcs3-travis-xenial:1.4"
           script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .ci/travis.env rpcs3/rpcs3-travis-xenial:1.4 /rpcs3/.ci/build-linux.sh'
-        - os: freebsd
-          compiler: clang
-          cache: ccache
-          install: "./.ci/install-freebsd.sh"
-          script: "./.ci/build-freebsd.sh"
+        # - os: freebsd
+        #   compiler: clang
+        #   cache: ccache
+        #   install: "./.ci/install-freebsd.sh"
+        #   script: "./.ci/build-freebsd.sh"
         # - os: osx
         #   osx_image: xcode11.3
         #   addons:
