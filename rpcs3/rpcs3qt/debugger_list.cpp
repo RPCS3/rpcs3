@@ -82,7 +82,7 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 		u32 pc = m_pc;
 		for (uint i = 0; i < m_item_count; ++i, pc += 4)
 		{
-			item(i)->setText(qstr(fmt::format("   [%08x] illegal address", pc)));
+			item(i)->setText(qstr(fmt::format("   [%08x]  ?? ?? ?? ??:", pc)));
 		}
 	}
 	else
@@ -98,7 +98,19 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 		{
 			if (!vm::check_addr(cpu_offset + pc, 4))
 			{
-				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x] illegal address", pc)));
+				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
+				count = 4;
+				continue;
+			}
+
+			if (!is_spu && !vm::check_addr(cpu_offset + pc, 4, vm::page_executable))
+			{
+				const u32 data = *vm::get_super_ptr<atomic_be_t<u32>>(cpu_offset + pc);
+				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
+				static_cast<u8>(data >> 24),
+				static_cast<u8>(data >> 16),
+				static_cast<u8>(data >> 8),
+				static_cast<u8>(data >> 0))));
 				count = 4;
 				continue;
 			}

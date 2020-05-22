@@ -5803,6 +5803,11 @@ public:
 
 				switch (u64 cmd = ci->getZExtValue())
 				{
+				case MFC_SDCRT_CMD:
+				case MFC_SDCRTST_CMD:
+				{
+					return;
+				}
 				case MFC_GETLLAR_CMD:
 				case MFC_PUTLLC_CMD:
 				case MFC_PUTLLUC_CMD:
@@ -5816,6 +5821,7 @@ public:
 				case MFC_GETL_CMD:
 				case MFC_GETLB_CMD:
 				case MFC_GETLF_CMD:
+				case MFC_SDCRZ_CMD:
 				{
 					// TODO
 					m_ir->CreateBr(next);
@@ -6000,6 +6006,10 @@ public:
 				case MFC_GETL_CMD:
 				case MFC_GETLB_CMD:
 				case MFC_GETLF_CMD:
+				{
+					break;
+				}
+				case MFC_SDCRZ_CMD:
 				{
 					break;
 				}
@@ -7281,6 +7291,22 @@ public:
 		return eval(fmuladd(ca, cb, c));
 	}
 
+	// Checks for postive and negative zero, or Denormal (treated as zero)
+	bool is_spu_float_zero(v128 a)
+	{
+		for (u32 i = 0; i < 4; i++)
+		{	
+			const u32 exponent = a._u32[i] & 0x7f800000u;
+
+			if (exponent)
+			{
+				// Normalized number
+				return false;
+			}
+		}
+		return true;
+	}
+
 	void FREST(spu_opcode_t op)
 	{
 		// TODO
@@ -7316,6 +7342,55 @@ public:
 
 		const auto a = get_vr<f32[4]>(op.ra);
 		const auto b = get_vr<f32[4]>(op.rb);
+
+		if (auto cv = llvm::dyn_cast<llvm::Constant>(b.value))
+		{
+			v128 data = get_const_vector(cv, m_pos, 5000);
+			bool safe_int_compare = true;
+
+			for (u32 i = 0; i < 4; i++)
+			{	
+				const u32 exponent = data._u32[i] & 0x7f800000u;
+
+				if (data._u32[i] > 0x7f7fffffu || !exponent)
+				{
+					// Postive or negative zero, Denormal (treated as zero), Negative constant, or Normalized number with exponent +127
+		 			// Cannot used signed integer compare safely 
+					safe_int_compare = false;
+					break;
+				}
+			}
+
+			if (safe_int_compare)
+			{
+				set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
+				return;
+			}
+		}
+
+		if (auto cv = llvm::dyn_cast<llvm::Constant>(a.value))
+		{
+			v128 data = get_const_vector(cv, m_pos, 5000);
+			bool safe_int_compare = true;
+
+			for (u32 i = 0; i < 4; i++)
+			{	
+				const u32 exponent = data._u32[i] & 0x7f800000u;
+
+				if (data._u32[i] > 0x7f7fffffu || !exponent)
+				{
+					// See above
+					safe_int_compare = false;
+					break;
+				}
+			}
+
+			if (safe_int_compare)
+			{
+				set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
+				return;
+			}
+		}
 
 		if (g_cfg.core.spu_approx_xfloat)
 		{
@@ -7460,7 +7535,7 @@ public:
 		{
 			v128 data = get_const_vector(cv, m_pos, 4000);
 
-			if (data == v128{})
+			if (is_spu_float_zero(data))
 			{
 				r = eval(ca * cb);
 				return r;

@@ -233,7 +233,7 @@
     <addaction name="separator"/>
     <addaction name="actionManage_Users"/>
     <addaction name="confSavedataManagerAct"/>
-    <addaction name="actionManage_RAP_Licences"/>
+    <addaction name="actionManage_RAP_Licenses"/>
     <addaction name="actionManage_Trophy_Data"/>
     <addaction name="actionManage_Skylanders_Portal"/>
     <addaction name="actionManage_Cheats"/>
@@ -651,7 +651,7 @@
     <string>Game List Refresh</string>
    </property>
   </action>
-  <action name="actionManage_RAP_Licences">
+  <action name="actionManage_RAP_Licenses">
    <property name="enabled">
     <bool>false</bool>
    </property>

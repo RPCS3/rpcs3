@@ -27,6 +27,12 @@ enum MFC : u8
 	MFC_LIST_MASK    = 0x04,
 	MFC_START_MASK   = 0x08,
 	MFC_RESULT_MASK  = 0x10, // ???
+
+	MFC_SDCRT_CMD   = 0x80,
+	MFC_SDCRTST_CMD = 0x81,
+	MFC_SDCRZ_CMD   = 0x89,
+	MFC_SDCRS_CMD   = 0x8D,
+	MFC_SDCRF_CMD   = 0x8F,
 };
 
 // Atomic Status Update

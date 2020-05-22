@@ -502,15 +502,6 @@ VKGSRender::VKGSRender() : GSRender()
 		m_text_writer->init(*m_device, vk::get_renderpass(*m_device, key));
 	}
 
-	m_depth_converter = std::make_unique<vk::depth_convert_pass>();
-	m_depth_converter->create(*m_device);
-
-	m_attachment_clear_pass = std::make_unique<vk::attachment_clear_pass>();
-	m_attachment_clear_pass->create(*m_device);
-
-	m_video_output_pass = std::make_unique<vk::video_out_calibration_pass>();
-	m_video_output_pass->create(*m_device);
-
 	m_prog_buffer = std::make_unique<VKProgramBuffer>
 	(
 		[this](const vk::pipeline_props& props, const RSXVertexProgram& vp, const RSXFragmentProgram& fp)
@@ -547,8 +538,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_texture_cache.initialize((*m_device), m_swapchain->get_graphics_queue(),
 			m_texture_upload_buffer_ring_info);
 
-	m_ui_renderer = std::make_unique<vk::ui_overlay_renderer>();
-	m_ui_renderer->create(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
+	vk::get_overlay_pass<vk::ui_overlay_renderer>()->init(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
 
 	m_occlusion_query_pool.initialize(*m_current_command_buffer);
 
@@ -649,22 +639,6 @@ VKGSRender::~VKGSRender()
 
 	//Overlay text handler
 	m_text_writer.reset();
-
-	//Overlay UI renderer
-	m_ui_renderer->destroy();
-	m_ui_renderer.reset();
-
-	//RGBA->depth cast helper
-	m_depth_converter->destroy();
-	m_depth_converter.reset();
-
-	//Attachment clear helper
-	m_attachment_clear_pass->destroy();
-	m_attachment_clear_pass.reset();
-
-	// Video-out calibration (gamma, colorspace, etc)
-	m_video_output_pass->destroy();
-	m_video_output_pass.reset();
 
 	//Pipeline descriptors
 	vkDestroyPipelineLayout(*m_device, pipeline_layout, nullptr);
@@ -1192,7 +1166,8 @@ void VKGSRender::clear_surface(u32 mask)
 					};
 
 					VkRenderPass renderpass = VK_NULL_HANDLE;
-					m_attachment_clear_pass->update_config(colormask, clear_color);
+					auto attachment_clear_pass = vk::get_overlay_pass<vk::attachment_clear_pass>();
+					attachment_clear_pass->update_config(colormask, clear_color);
 
 					for (const auto &index : m_draw_buffers)
 					{
@@ -1211,7 +1186,7 @@ void VKGSRender::clear_surface(u32 mask)
 								renderpass = vk::get_renderpass(*m_device, key);
 							}
 
-							m_attachment_clear_pass->run(*m_current_command_buffer, rtt, region.rect, renderpass);
+							attachment_clear_pass->run(*m_current_command_buffer, rtt, region.rect, renderpass);
 
 							rtt->change_layout(*m_current_command_buffer, old_layout);
 						}
@@ -1237,9 +1212,32 @@ void VKGSRender::clear_surface(u32 mask)
 	{
 		if (m_rtts.m_bound_depth_stencil.first)
 		{
-			if (require_mem_load) m_rtts.m_bound_depth_stencil.second->write_barrier(*m_current_command_buffer);
+			if (require_mem_load)
+			{
+				m_rtts.m_bound_depth_stencil.second->write_barrier(*m_current_command_buffer);
+			}
 
-			clear_descriptors.push_back({ static_cast<VkImageAspectFlags>(depth_stencil_mask), 0, depth_stencil_clear_values });
+			if ((depth_stencil_mask & VK_IMAGE_ASPECT_STENCIL_BIT) &&
+				rsx::method_registers.stencil_mask() != 0xff)
+			{
+				// Partial stencil clear. Disables fast stencil clear
+				auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+				auto key = vk::get_renderpass_key({ ds });
+				auto renderpass = vk::get_renderpass(*m_device, key);
+
+				vk::get_overlay_pass<vk::stencil_clear_pass>()->run(
+					*m_current_command_buffer, ds, region.rect,
+					depth_stencil_clear_values.depthStencil.stencil,
+					rsx::method_registers.stencil_mask(), renderpass);
+
+				depth_stencil_mask &= ~VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
+
+			if (depth_stencil_mask)
+			{
+				clear_descriptors.push_back({ static_cast<VkImageAspectFlags>(depth_stencil_mask), 0, depth_stencil_clear_values });
+			}
+
 			update_z = true;
 		}
 	}

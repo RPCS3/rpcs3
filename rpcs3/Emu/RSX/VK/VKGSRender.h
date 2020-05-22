@@ -360,10 +360,6 @@ private:
 	std::unique_ptr<vk::buffer_view> null_buffer_view;
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
-	std::unique_ptr<vk::depth_convert_pass> m_depth_converter;
-	std::unique_ptr<vk::ui_overlay_renderer> m_ui_renderer;
-	std::unique_ptr<vk::attachment_clear_pass> m_attachment_clear_pass;
-	std::unique_ptr<vk::video_out_calibration_pass> m_video_output_pass;
 
 	std::unique_ptr<vk::buffer> m_cond_render_buffer;
 	u64 m_cond_render_sync_tag = 0;

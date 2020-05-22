@@ -83,7 +83,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 			switch (rel.type)
 			{
 
-			// Ignore relative relocations, they are handled in emmitted code
+			// Ignore relative relocations, they are handled in emitted code
 			// Comment out types we haven't confirmed as used and working
 			case 10:
 			case 11:

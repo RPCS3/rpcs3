@@ -188,7 +188,16 @@ void kernel_explorer::Update()
 		case SYS_PRX_OBJECT:
 		{
 			auto& prx = static_cast<lv2_prx&>(obj);
-			l_addTreeChild(node, qstr(fmt::format("PRX: ID = 0x%08x '%s'", id, prx.name)));
+			const u32 addr0 = !prx.segs.empty() ? prx.segs[0].addr : 0;
+
+			if (!addr0)
+			{
+				l_addTreeChild(node, qstr(fmt::format("PRX: ID = 0x%08x '%s' (HLE)", id, prx.name)));
+				break;
+			}
+
+			const u32 end0 = addr0 + prx.segs[0].size - 1;
+			l_addTreeChild(node, qstr(fmt::format("PRX: ID = 0x%08x '%s', seg0 = [0x%x...0x%x]", id, prx.name, addr0, end0)));
 			break;
 		}
 		case SYS_SPUPORT_OBJECT:
@@ -199,7 +208,7 @@ void kernel_explorer::Update()
 		case SYS_OVERLAY_OBJECT:
 		{
 			auto& ovl = static_cast<lv2_overlay&>(obj);
-			l_addTreeChild(node, qstr(fmt::format("OVL: ID = 0x%08x '%s'", id, ovl.name)));
+			l_addTreeChild(node, qstr(fmt::format("OVL: ID = 0x%08x '%s', seg0 = [0x%x...0x%x]", id, ovl.name, ovl.segs[0].addr, ovl.segs[0].addr + ovl.segs[0].size - 1)));
 			break;
 		}
 		case SYS_LWMUTEX_OBJECT:

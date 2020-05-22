@@ -408,15 +408,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	});
 	ui->disableVertexCache->setEnabled(!ui->multithreadedRSX->isChecked());
 
-	m_emu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings_type::StrictRenderingMode);
-	SubscribeTooltip(ui->scrictModeRendering, tooltips.settings.strict_rendering_mode);
+	m_emu_settings->EnhanceCheckBox(ui->strictModeRendering, emu_settings_type::StrictRenderingMode);
+	SubscribeTooltip(ui->strictModeRendering, tooltips.settings.strict_rendering_mode);
 	const auto onStrictRenderingMode = [this](bool checked)
 	{
 		ui->gb_resolutionScale->setEnabled(!checked);
 		ui->gb_minimumScalableDimension->setEnabled(!checked);
 		ui->gb_anisotropicFilter->setEnabled(!checked);
 	};
-	connect(ui->scrictModeRendering, &QCheckBox::clicked, this, onStrictRenderingMode);
+	connect(ui->strictModeRendering, &QCheckBox::clicked, this, onStrictRenderingMode);
 
 	// Radio buttons
 	
@@ -617,7 +617,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
-	onStrictRenderingMode(ui->scrictModeRendering->isChecked());
+	onStrictRenderingMode(ui->strictModeRendering->isChecked());
 	fix_gl_legacy(ui->renderBox->currentText()); // Init
 	connect(ui->renderBox, &QComboBox::currentTextChanged, fix_gl_legacy);
 
