@@ -35,7 +35,7 @@ DEP_URLS="         \
 # Pull all the submodules except llvm, since it is built separately and we just download that build
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
-git submodule -q update --init $(awk '/path/ && !/llvm/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ { print $3 }' .gitmodules)
 
 # Git bash doesn't have rev, so here it is
 rev()
