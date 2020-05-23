@@ -71,10 +71,18 @@ jobs:
     - bash: .ci/export-azure-vars.sh
       displayName: Export Variables
 
+    - task: MSBuild@1
+      inputs:
+        solution: './Vulkan/spirv-tools-build/spirv-tools-build.vcxproj'
+        maximumCpuCount: true
+        platform: x64
+        configuration: 'Release'
+      displayName: Compile SPIRV-Tools
+
     - task: VSBuild@1
       inputs:
         solution: 'rpcs3.sln'
-        msbuildArgs: '/m'
+        maximumCpuCount: true
         platform: x64
         configuration: 'Release - LLVM'
       displayName: Compile RPCS3
