@@ -284,15 +284,10 @@ Global
 		{DA6F56B4-06A4-441D-AD70-AC5A7D51FADB}.Release|x64.ActiveCfg = Release|x64
 		{DA6F56B4-06A4-441D-AD70-AC5A7D51FADB}.Release|x64.Build.0 = Release|x64
 		{4CBD3DDD-5555-49A4-A44D-DD3D8CB516A1}.Debug - LLVM|x64.ActiveCfg = Debug|x64
-		{4CBD3DDD-5555-49A4-A44D-DD3D8CB516A1}.Debug - LLVM|x64.Build.0 = Debug|x64
 		{4CBD3DDD-5555-49A4-A44D-DD3D8CB516A1}.Debug - MemLeak|x64.ActiveCfg = Debug|x64
-		{4CBD3DDD-5555-49A4-A44D-DD3D8CB516A1}.Debug - MemLeak|x64.Build.0 = Debug|x64
 		{4CBD3DDD-5555-49A4-A44D-DD3D8CB516A1}.Debug|x64.ActiveCfg = Debug|x64
-		{4CBD3DDD-5555-49A4-A44D-DD3D8CB516A1}.Debug|x64.Build.0 = Debug|x64
 		{4CBD3DDD-5555-49A4-A44D-DD3D8CB516A1}.Release - LLVM|x64.ActiveCfg = Release|x64
-		{4CBD3DDD-5555-49A4-A44D-DD3D8CB516A1}.Release - LLVM|x64.Build.0 = Release|x64
 		{4CBD3DDD-5555-49A4-A44D-DD3D8CB516A1}.Release|x64.ActiveCfg = Release|x64
-		{4CBD3DDD-5555-49A4-A44D-DD3D8CB516A1}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
