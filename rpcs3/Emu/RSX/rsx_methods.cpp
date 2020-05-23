@@ -980,11 +980,6 @@ namespace rsx
 			const f32 scale_x = method_registers.blit_engine_ds_dx();
 			const f32 scale_y = method_registers.blit_engine_dt_dy();
 
-			// NOTE: Do not round these value up!
-			// Sub-pixel offsets are used to signify pixel centers and do not mean to read from the next block (fill convention)
-			auto in_x = static_cast<u16>(std::floor(method_registers.blit_engine_in_x()));
-			auto in_y = static_cast<u16>(std::floor(method_registers.blit_engine_in_y()));
-
 			// Clipping
 			// Validate that clipping rect will fit onto both src and dst regions
 			const u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
@@ -1068,24 +1063,37 @@ namespace rsx
 				out_pitch = out_bpp * out_w;
 			}
 
-			if (in_x == 1 || in_y == 1) [[unlikely]]
+			if (in_bpp != out_bpp)
 			{
-				if (is_block_transfer && in_bpp == out_bpp)
-				{
-					// No scaling factor, so size in src == size in dst
-					// Check for texel wrapping where (offset + size) > size by 1 pixel
-					// TODO: Should properly RE this behaviour when I have time (kd-11)
-					if (in_x == 1 && in_w == clip_w) in_x = 0;
-					if (in_y == 1 && in_h == clip_h) in_y = 0;
-				}
-				else
-				{
-					// Graphics operation, ignore subpixel correction offsets
-					if (in_x == 1) in_x = 0;
-					if (in_y == 1) in_y = 0;
+				is_block_transfer = false;
+			}
 
-					is_block_transfer = false;
-				}
+			u16 in_x, in_y;
+			if (in_origin == blit_engine::transfer_origin::center)
+			{
+				// Convert to normal u,v addressing. Under this scheme offset of 1 is actually half-way inside pixel 0
+				const float x = std::max(method_registers.blit_engine_in_x(), 0.5f);
+				const float y = std::max(method_registers.blit_engine_in_y(), 0.5f);
+				in_x = static_cast<u16>(std::floor(x - 0.5f));
+				in_y = static_cast<u16>(std::floor(y - 0.5f));
+			}
+			else
+			{
+				in_x = static_cast<u16>(std::floor(method_registers.blit_engine_in_x()));
+				in_y = static_cast<u16>(std::floor(method_registers.blit_engine_in_y()));
+			}
+
+			// Check for subpixel addressing
+			if (scale_x < 1.f)
+			{
+				float dst_x = in_x * scale_x;
+				in_x = static_cast<u16>(std::floor(dst_x) / scale_x);
+			}
+
+			if (scale_y < 1.f)
+			{
+				float dst_y = in_y * scale_x;
+				in_y = static_cast<u16>(std::floor(dst_y) / scale_y);
 			}
 
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
