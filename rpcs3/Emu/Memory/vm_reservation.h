@@ -26,18 +26,23 @@ namespace vm
 		return *reinterpret_cast<atomic_t<u64>*>(g_reservations + (addr & 0xff80) / 2);
 	}
 
-	void reservation_lock_internal(atomic_t<u64>&);
+	bool reservation_lock_internal(u32, atomic_t<u64>&);
 
 	inline atomic_t<u64>& reservation_lock(u32 addr, u32 size)
 	{
-		auto& res = vm::reservation_acquire(addr, size);
+		auto res = &vm::reservation_acquire(addr, size);
 
-		if (res.bts(0)) [[unlikely]]
+		if (res->bts(0)) [[unlikely]]
 		{
-			reservation_lock_internal(res);
+			static atomic_t<u64> no_lock{};
+
+			if (!reservation_lock_internal(addr, *res))
+			{
+				res = &no_lock;
+			}
 		}
 
-		return res;
+		return *res;
 	}
 
 	inline bool reservation_trylock(atomic_t<u64>& res, u64 rtime)
