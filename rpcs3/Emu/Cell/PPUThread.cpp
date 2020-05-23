@@ -446,7 +446,8 @@ std::string ppu_thread::dump_regs() const
 
 	for (uint i = 0; i < 32; ++i)
 	{
-		fmt::append(ret, "v%d%s: %s [x: %g y: %g z: %g w: %g]\n", i, i <= 9 ? " " : "", vr[i], vr[i]._f[3], vr[i]._f[2], vr[i]._f[1], vr[i]._f[0]);
+		const auto _vr = vr[i];
+		fmt::append(ret, "v%d%s: %s [x: %g y: %g z: %g w: %g]\n", i, i <= 9 ? " " : "", _vr, _vr._f[3], _vr._f[2], _vr._f[1], _vr._f[0]);
 	}
 
 	fmt::append(ret, "CR: 0x%08x\n", cr.pack());
