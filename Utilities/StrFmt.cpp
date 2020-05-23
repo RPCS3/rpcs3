@@ -238,7 +238,7 @@ void fmt_class_string<bool>::format(std::string& out, u64 arg)
 template <>
 void fmt_class_string<v128>::format(std::string& out, u64 arg)
 {
-	const v128& vec = get_object(arg);
+	const v128 vec = get_object(arg);
 	fmt::append(out, "0x%016llx%016llx", vec._u64[1], vec._u64[0]);
 }
 
