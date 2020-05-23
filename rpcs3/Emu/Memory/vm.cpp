@@ -69,6 +69,16 @@ namespace vm
 	std::array<atomic_t<cpu_thread*>, g_cfg.core.ppu_threads.max> g_locks{};
 	std::array<atomic_t<u64>, 6> g_range_locks{};
 
+	// Page information
+	struct memory_page
+	{
+		// Memory flags
+		atomic_t<u8> flags;
+	};
+
+	// Memory pages
+	std::array<memory_page, 0x100000000 / 4096> g_pages{};
+
 	static void _register_lock(cpu_thread* _cpu)
 	{
 		for (u32 i = 0, max = g_cfg.core.ppu_threads;;)
@@ -215,14 +225,12 @@ namespace vm
 			return 0;
 		};
 
-		atomic_t<u64>* _ret;
-
 		if (u64 _a1 = test_addr(g_addr_lock.load(), addr, end)) [[likely]]
 		{
 			// Optimistic path (hope that address range is not locked)
-			_ret = _register_range_lock(_a1);
+			const auto _ret = _register_range_lock(_a1);
 
-			if (_a1 == test_addr(g_addr_lock.load(), addr, end)) [[likely]]
+			if (_a1 == test_addr(g_addr_lock.load(), addr, end) && !!(g_pages[addr / 4096].flags & page_readable)) [[likely]]
 			{
 				return _ret;
 			}
@@ -230,12 +238,22 @@ namespace vm
 			*_ret = 0;
 		}
 
+		while (true)
 		{
-			::reader_lock lock(g_mutex);
-			_ret = _register_range_lock(test_addr(UINT32_MAX, addr, end));
-		}
+			std::shared_lock lock(g_mutex);
 
-		return _ret;
+			if (!(g_pages[addr / 4096].flags & page_readable))
+			{
+				lock.unlock();
+
+				// Try tiggering a page fault (write)
+				// TODO: Read memory if needed
+				vm::_ref<atomic_t<u8>>(addr) += 0;
+				continue;
+			}
+
+			return _register_range_lock(test_addr(UINT32_MAX, addr, end));
+		}
 	}
 
 	void passive_unlock(cpu_thread& cpu)
@@ -397,7 +415,7 @@ namespace vm
 		g_mutex.unlock();
 	}
 
-	void reservation_lock_internal(atomic_t<u64>& res)
+	bool reservation_lock_internal(u32 addr, atomic_t<u64>& res)
 	{
 		for (u64 i = 0;; i++)
 		{
@@ -412,20 +430,18 @@ namespace vm
 			}
 			else
 			{
+				// TODO: Accurate locking in this case
+				if (!(g_pages[addr / 4096].flags & page_writable))
+				{
+					return false;
+				}
+
 				std::this_thread::yield();
 			}
 		}
+
+		return true;
 	}
-
-	// Page information
-	struct memory_page
-	{
-		// Memory flags
-		atomic_t<u8> flags;
-	};
-
-	// Memory pages
-	std::array<memory_page, 0x100000000 / 4096> g_pages{};
 
 	static void _page_map(u32 addr, u8 flags, u32 size, utils::shm* shm)
 	{
