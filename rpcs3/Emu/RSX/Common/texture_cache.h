@@ -1980,18 +1980,14 @@ namespace rsx
 				{
 					// TODO: Special case that needs wrapping around (custom blit)
 					rsx_log.error("Transfer cropped in Y, src_h=%d, offset_y=%d, block_h=%d", src_h, src.offset_y, src.height);
-
 					src_h = src.height - src.offset_y;
-					dst_h = u16(src_h * scale_y + 0.000001f);
 				}
 
 				if ((src_w + src.offset_x) > src.width) [[unlikely]]
 				{
 					// TODO: Special case that needs wrapping around (custom blit)
 					rsx_log.error("Transfer cropped in X, src_w=%d, offset_x=%d, block_w=%d", src_w, src.offset_x, src.width);
-
 					src_w = src.width - src.offset_x;
-					dst_w = u16(src_w * scale_x + 0.000001f);
 				}
 			}
 
