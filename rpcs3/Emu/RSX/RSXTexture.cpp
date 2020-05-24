@@ -182,6 +182,7 @@ namespace rsx
 			// The first channel is encoded as 0x4 (combination of 0 and 1) and the second channel is 0xE (combination of 2 and 3)
 			// There are only 2 valid combinations - 0xE4 or 0x4E, any attempts to mess with this will crash the system
 			// This means only R and G channels exist for these formats
+			// Note that for the X16 format, 0xE refers to the "second" channel of a Y16_X16 format. 0xE is actually the existing data in this case
 
 			// Low bit in remap override (high word) affects whether the G component should match R and B components
 			// Components are usually interleaved R-G-R-G unless flag is set, then its R-R-R-G (Virtua Fighter 5)
@@ -190,13 +191,20 @@ namespace rsx
 			u32 lo_word = remap_ctl & 0xFF;
 			remap_ctl &= 0xFF00;
 
-			if (lo_word == 0xE4)
+			switch (lo_word)
 			{
+			case 0xE4:
 				lo_word = (remap_override) ? 0x56 : 0x66;
-			}
-			else
-			{
+				break;
+			case 0x4E:
 				lo_word = (remap_override) ? 0xA9 : 0x99;
+				break;
+			case 0xEE:
+				lo_word = 0xAA;
+				break;
+			case 0x44:
+				lo_word = 0x55;
+				break;
 			}
 
 			remap_ctl |= lo_word;
@@ -204,12 +212,11 @@ namespace rsx
 		}
 		case CELL_GCM_TEXTURE_B8:
 		{
-			//Low bit in remap control seems to affect whether the A component is forced to 1
-			//Only seen in BLUS31604
-			//TODO: Verify with a hardware test
+			// Low bit in remap control seems to affect whether the A component is forced to 1
+			// Only seen in BLUS31604
 			if (remap_override)
 			{
-				//Set remap lookup for A component to FORCE_ONE
+				// Set remap lookup for A component to FORCE_ONE
 				remap_ctl = (remap_ctl & ~(3 << 8)) | (1 << 8);
 			}
 			break;
