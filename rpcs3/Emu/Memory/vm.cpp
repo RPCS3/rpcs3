@@ -1273,6 +1273,7 @@ namespace vm
 
 			std::memset(g_reservations, 0, sizeof(g_reservations));
 			std::memset(g_shareable, 0, sizeof(g_shareable));
+			std::memset(g_range_locks.data(), 0, sizeof(g_range_locks));
 		}
 	}
 
