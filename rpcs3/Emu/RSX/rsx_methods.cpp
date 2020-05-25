@@ -1092,7 +1092,7 @@ namespace rsx
 
 			if (scale_y < 1.f)
 			{
-				float dst_y = in_y * scale_x;
+				float dst_y = in_y * scale_y;
 				in_y = static_cast<u16>(std::floor(dst_y) / scale_y);
 			}
 

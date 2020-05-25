@@ -18,22 +18,39 @@ namespace id_manager
 	{
 		static_assert(sizeof(T) == 0, "ID object must specify: id_base, id_step, id_count");
 
-		static const u32 base    = 1;     // First ID (N = 0)
-		static const u32 step    = 1;     // Any ID: N * id_step + id_base
-		static const u32 count   = 65535; // Limit: N < id_count
-		static const u32 invalid = 0;
+		static constexpr u32 base    = 1;     // First ID (N = 0)
+		static constexpr u32 step    = 1;     // Any ID: N * id_step + id_base
+		static constexpr u32 count   = 65535; // Limit: N < id_count
+		static constexpr u32 invalid = 0;
+		static constexpr std::pair<u32, u32> invl_range{0, 0};
+	};
+
+	template <typename T, typename = void>
+	struct invl_range_extract_impl
+	{
+		static constexpr std::pair<u32, u32> invl_range{0, 0};
+	};
+
+	template <typename T>
+	struct invl_range_extract_impl<T, std::void_t<decltype(&T::id_invl_range)>>
+	{
+		static constexpr std::pair<u32, u32> invl_range = T::id_invl_range;
 	};
 
 	template <typename T>
 	struct id_traits<T, std::void_t<decltype(&T::id_base), decltype(&T::id_step), decltype(&T::id_count)>>
 	{
-		static const u32 base    = T::id_base;
-		static const u32 step    = T::id_step;
-		static const u32 count   = T::id_count;
-		static const u32 invalid = -+!base;
+		static constexpr u32 base    = T::id_base;
+		static constexpr u32 step    = T::id_step;
+		static constexpr u32 count   = T::id_count;
+		static constexpr u32 invalid = -+!base;
 
-		// Note: full 32 bits range cannot be used at current implementation
+		static constexpr std::pair<u32, u32> invl_range = invl_range_extract_impl<T>::invl_range;
+
 		static_assert(count && step && u64{step} * (count - 1) + base < u64{UINT32_MAX} + (base != 0 ? 1 : 0), "ID traits: invalid object range");
+	
+		// TODO: Add more conditions
+		static_assert(!invl_range.second || (u64{invl_range.second} + invl_range.first <= 32 /*....*/ ));
 	};
 
 	// Correct usage testing
@@ -138,8 +155,10 @@ class idm
 	{
 		using traits = id_manager::id_traits<T>;
 
+		constexpr u32 mask_out = ((1u << traits::invl_range.second) - 1) << traits::invl_range.first;
+
 		// Note: if id is lower than base, diff / step will be higher than count
-		u32 diff = id - traits::base;
+		u32 diff = (id & ~mask_out) - traits::base;
 
 		if (diff % traits::step)
 		{
@@ -230,7 +249,7 @@ class idm
 	};
 
 	// Prepare new ID (returns nullptr if out of resources)
-	static id_manager::id_map::pointer allocate_id(const id_manager::id_key& info, u32 base, u32 step, u32 count);
+	static id_manager::id_map::pointer allocate_id(const id_manager::id_key& info, u32 base, u32 step, u32 count, std::pair<u32, u32> invl_range);
 
 	// Find ID (additionally check type if types are not equal)
 	template <typename T, typename Type>
@@ -258,7 +277,10 @@ class idm
 		{
 			if (std::is_same<T, Type>::value || data.first.type() == get_type<Type>())
 			{
-				return &data;
+				if (!id_manager::id_traits<Type>::invl_range.second || data.first.value() == id)
+				{
+					return &data;
+				}
 			}
 		}
 
@@ -280,7 +302,7 @@ class idm
 		// Allocate new id
 		std::lock_guard lock(id_manager::g_mutex);
 
-		if (auto* place = allocate_id(info, traits::base, traits::step, traits::count))
+		if (auto* place = allocate_id(info, traits::base, traits::step, traits::count, traits::invl_range))
 		{
 			// Get object, store it
 			place->second = provider();

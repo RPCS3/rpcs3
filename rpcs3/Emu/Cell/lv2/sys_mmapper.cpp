@@ -147,6 +147,7 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u32 
 
 	if (auto error = create_lv2_shm(ipc_key != SYS_MMAPPER_NO_SHM_KEY, ipc_key, size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, dct))
 	{
+		dct->used -= size;
 		return error;
 	}
 
@@ -216,6 +217,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 
 	if (auto error = create_lv2_shm(ipc_key != SYS_MMAPPER_NO_SHM_KEY, ipc_key, size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, ct.ptr.get()))
 	{
+		ct->used -= size;
 		return error;
 	}
 
@@ -319,6 +321,7 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 
 	if (auto error = create_lv2_shm<true>(true, ipc_key, size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, dct))
 	{
+		dct->used -= size;
 		return error;
 	}
 
@@ -430,6 +433,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu
 
 	if (auto error = create_lv2_shm<true>(true, ipc_key, size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, ct.ptr.get()))
 	{
+		ct->used -= size;
 		return error;
 	}
 
