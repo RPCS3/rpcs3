@@ -59,10 +59,15 @@ jobs:
     vmImage: "windows-latest"
 
   steps:
+    - bash: .ci/get_keys-windows.sh
+      displayName: Get Cache Keys
+
     - task: Cache@2
       inputs:
-        key: $(Agent.OS) | $(COMPILER)
+        key: $(Agent.OS) | $(COMPILER) | "$(QT_VER)" | $(VULKAN_SDK_SHA) | llvm.lock | glslang.lock
         path: $(CACHE_DIR)
+        restoreKeys: |
+          $(Agent.OS) | $(COMPILER)
       displayName: Cache
 
     - bash: .ci/setup-windows.sh
