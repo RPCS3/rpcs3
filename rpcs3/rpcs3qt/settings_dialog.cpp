@@ -231,7 +231,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	else
 	{
 		ui->enableTSX->setEnabled(false);
-		ui->enableTSX->addItem(tr("Not supported", "Enable TSX"));
+		ui->enableTSX->setPlaceholderText(tr("Not supported", "Enable TSX"));
 		SubscribeTooltip(ui->enableTSX, tr("Unfortunately your CPU model does not support this instruction set.", "Enable TSX"));
 
 		m_emu_settings->SetSetting(emu_settings_type::EnableTSX, fmt::format("%s", tsx_usage::disabled));
@@ -555,14 +555,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			// Fill combobox with placeholder if no adapters needed
 			if (!renderer.has_adapters)
 			{
-				ui->graphicsAdapterBox->addItem(tr("Not needed for %1 renderer", "Graphics adapter").arg(text));
+				ui->graphicsAdapterBox->clear();
+				ui->graphicsAdapterBox->setPlaceholderText(tr("Not needed for %0 renderer", "Graphics adapter").arg(text));
 				return;
 			}
+
 			// Fill combobox
-			for (const auto& adapter : renderer.adapters)
-			{
-				ui->graphicsAdapterBox->addItem(adapter);
-			}
+			ui->graphicsAdapterBox->clear();
+			ui->graphicsAdapterBox->addItems(renderer.adapters);
+
 			// Reset Adapter to old config
 			int idx = ui->graphicsAdapterBox->findText(renderer.old_adapter);
 			if (idx < 0)
@@ -1057,18 +1058,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	ui->searchBox->setPlaceholderText(tr("Search libraries", "Library search box"));
 
-	auto on_lib_button_clicked = [this](int ind)
+	auto on_lib_button_clicked = [this](int id)
 	{
-		if (ind != static_cast<int>(lib_loading_type::liblv2only))
-		{
-			ui->searchBox->setEnabled(true);
-			ui->lleList->setEnabled(true);
-		}
-		else
-		{
-			ui->searchBox->setEnabled(false);
-			ui->lleList->setEnabled(false);
-		}
+		const bool enableLibs = id != static_cast<int>(lib_loading_type::liblv2only);
+		ui->searchBox->setEnabled(enableLibs);
+		ui->lleList->setEnabled(enableLibs);
 	};
 
 	auto on_search_box_text_changed = [this](QString text)
@@ -1101,7 +1095,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	};
 
 	// Events
-	connect(lib_mode_bg, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), on_lib_button_clicked);
+	connect(lib_mode_bg, &QButtonGroup::idClicked, on_lib_button_clicked);
 	connect(ui->searchBox, &QLineEdit::textChanged, on_search_box_text_changed);
 
 	// enable multiselection (there must be a better way)
@@ -1798,11 +1792,7 @@ void settings_dialog::SnapSlider(QSlider *slider, int interval)
 void settings_dialog::AddGuiConfigs()
 {
 	ui->combo_configs->clear();
-
-	for (const QString& entry : m_gui_settings->GetConfigEntries())
-	{
-		ui->combo_configs->addItem(entry);
-	}
+	ui->combo_configs->addItems(m_gui_settings->GetConfigEntries());
 
 	m_current_gui_config = m_gui_settings->GetValue(gui::m_currentConfig).toString();
 
