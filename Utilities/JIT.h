@@ -181,6 +181,7 @@ inline FT build_function_asm(F&& builder)
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/JITEventListener.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -192,6 +193,9 @@ class jit_compiler final
 {
 	// Local LLVM context
 	llvm::LLVMContext m_context;
+
+	// Aux
+	std::unique_ptr<llvm::JITEventListener> m_jite;
 
 	// Execution instance
 	std::unique_ptr<llvm::ExecutionEngine> m_engine;
