@@ -11,6 +11,9 @@ if(WITH_LLVM)
 		option(LLVM_INCLUDE_TESTS OFF)
 		option(LLVM_INCLUDE_TOOLS OFF)
 		option(LLVM_INCLUDE_UTILS OFF)
+	if(CMAKE_SYSTEM_NAME MATCHES "Windows" OR CMAKE_SYSTEM_NAME MATCHES "Linux")
+		option(LLVM_USE_INTEL_JITEVENTS ON)
+	endif()
 		option(WITH_POLLY OFF)
 		option(LLVM_CCACHE_BUILD ON)
 
@@ -53,7 +56,7 @@ if(WITH_LLVM)
 		endif()
 	endif()
 
-	set(LLVM_LIBS LLVMMCJIT LLVMX86CodeGen LLVMX86AsmParser)
+	set(LLVM_LIBS LLVMMCJIT LLVMX86CodeGen LLVMX86AsmParser LLVMIntelJITEvents)
 
 	add_library(3rdparty_llvm INTERFACE)
 	target_link_libraries(3rdparty_llvm INTERFACE ${LLVM_LIBS})

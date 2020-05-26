@@ -645,6 +645,16 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 			.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 			.setMCPU(m_cpu)
 			.create());
+
+		if (!flags)
+		{
+			m_jite.reset(llvm::JITEventListener::createIntelJITEventListener());
+
+			if (m_jite)
+			{
+				m_engine->RegisterJITEventListener(m_jite.get());
+			}
+		}
 	}
 	else
 	{
@@ -661,6 +671,13 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		for (auto&& [name, addr] : _link)
 		{
 			m_engine->addGlobalMapping(name, addr);
+		}
+
+		m_jite.reset(llvm::JITEventListener::createIntelJITEventListener());
+
+		if (m_jite)
+		{
+			m_engine->RegisterJITEventListener(m_jite.get());
 		}
 	}
 
