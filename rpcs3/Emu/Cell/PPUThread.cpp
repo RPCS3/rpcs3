@@ -671,7 +671,6 @@ void ppu_thread::cpu_task()
 
 void ppu_thread::cpu_sleep()
 {
-	raddr = 0; // Clear reservation
 	vm::temporary_unlock(*this);
 	lv2_obj::awake(this);
 }
