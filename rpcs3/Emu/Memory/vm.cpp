@@ -639,21 +639,32 @@ namespace vm
 
 	bool check_addr(u32 addr, u32 size, u8 flags)
 	{
-		// Overflow checking
-		if (addr + size < addr && (addr + size) != 0)
+		// Always check this flag
+		flags |= page_allocated;
+
+		u32 i = addr / 4096;
+		const u32 max = i + size / 4096 + aligned_div(addr % 4096 + size % 4096, 4096);
+
+		if (max > g_pages.size()) [[unlikely]]
 		{
 			return false;
 		}
 
-		// Always check this flag
-		flags |= page_allocated;
-
-		for (u32 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max; i++)
+		while (i < max)
 		{
-			if ((g_pages[i].flags & flags) != flags) [[unlikely]]
+			const auto _flags = +g_pages[i].flags;
+
+			if ((_flags & flags) != flags) [[unlikely]]
 			{
 				return false;
 			}
+
+			// Optimization: increment by 4kb count in the same page
+			const u32 inc = !(_flags & (page_1m_size | page_64k_size)) ? 1 :
+				(_flags & page_1m_size) ? 0x100000 / 4096 : 0x10000 / 4096;
+
+			i += inc;
+			i &= (0 - inc); // Rounding down after incrementation
 		}
 
 		return true;
