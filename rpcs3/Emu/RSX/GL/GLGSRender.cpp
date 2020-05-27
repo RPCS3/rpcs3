@@ -351,8 +351,6 @@ void GLGSRender::on_exit()
 		gl::g_typeless_transfer_buffer.remove();
 	}
 
-	zcull_ctrl.release();
-
 	m_prog_buffer.clear();
 	m_rtts.destroy();
 
@@ -475,6 +473,7 @@ void GLGSRender::on_exit()
 	glFinish();
 
 	GSRender::on_exit();
+	zcull_ctrl.release();
 }
 
 void GLGSRender::clear_surface(u32 arg)
