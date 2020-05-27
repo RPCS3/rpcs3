@@ -999,7 +999,7 @@ void spu_thread::cpu_stop()
 							|| status != thread->last_exit_status;)
 						{
 							_mm_pause();
-						} 
+						}
 					}
 				}
 
@@ -1728,7 +1728,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 			vm::reservation_acquire(addr, 128) += 64;
 		}
 
-		+test_stopped();
+		static_cast<void>(test_stopped());
 	}
 	else
 	{

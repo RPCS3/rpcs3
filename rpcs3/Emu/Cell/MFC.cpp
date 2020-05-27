@@ -45,6 +45,12 @@ void fmt_class_string<MFC>::format(std::string& out, u64 arg)
 		case MFC_EIEIO_CMD: return "EIEIO";
 		case MFC_SYNC_CMD: return "SYNC";
 
+		case MFC_SDCRT_CMD: return "SDCRT";
+		case MFC_SDCRTST_CMD: return "SDCRTST";
+		case MFC_SDCRZ_CMD: return "SDCRZ";
+		case MFC_SDCRS_CMD: return "SDCRS";
+		case MFC_SDCRF_CMD: return "SDCRF";
+
 		case MFC_BARRIER_MASK:
 		case MFC_FENCE_MASK:
 		case MFC_LIST_MASK:
