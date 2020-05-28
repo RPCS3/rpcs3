@@ -82,6 +82,9 @@ namespace rsx
 		scissor_setup_invalid = 0x400,       // Scissor configuration is broken
 		scissor_setup_clipped = 0x800,       // Scissor region is cropped by viewport constraint
 
+		polygon_stipple_pattern_dirty = 0x1000,  // Rasterizer stippling pattern changed
+		line_stipple_pattern_dirty = 0x2000,     // Line stippling pattern changed
+
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
 		all_dirty = ~0u

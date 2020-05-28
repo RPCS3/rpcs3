@@ -208,6 +208,7 @@ namespace vk
 		s64 frag_texparam_heap_ptr = 0;
 		s64 index_heap_ptr = 0;
 		s64 texture_upload_heap_ptr = 0;
+		s64 rasterizer_env_heap_ptr = 0;
 
 		u64 last_frame_sync_time = 0;
 
@@ -230,6 +231,7 @@ namespace vk
 			vtx_const_heap_ptr = other.vtx_const_heap_ptr;
 			index_heap_ptr = other.index_heap_ptr;
 			texture_upload_heap_ptr = other.texture_upload_heap_ptr;
+			rasterizer_env_heap_ptr = other.rasterizer_env_heap_ptr;
 		}
 
 		//Exchange storage (non-copyable)
@@ -238,7 +240,10 @@ namespace vk
 			std::swap(buffer_views_to_clean, other.buffer_views_to_clean);
 		}
 
-		void tag_frame_end(s64 attrib_loc, s64 vtxenv_loc, s64 fragenv_loc, s64 vtxlayout_loc, s64 fragtex_loc, s64 fragconst_loc,s64 vtxconst_loc, s64 index_loc, s64 texture_loc)
+		void tag_frame_end(
+			s64 attrib_loc, s64 vtxenv_loc, s64 fragenv_loc, s64 vtxlayout_loc,
+			s64 fragtex_loc, s64 fragconst_loc,s64 vtxconst_loc, s64 index_loc,
+			s64 texture_loc, s64 rasterizer_loc)
 		{
 			attrib_heap_ptr = attrib_loc;
 			vtx_env_heap_ptr = vtxenv_loc;
@@ -249,6 +254,7 @@ namespace vk
 			vtx_const_heap_ptr = vtxconst_loc;
 			index_heap_ptr = index_loc;
 			texture_upload_heap_ptr = texture_loc;
+			rasterizer_env_heap_ptr = rasterizer_loc;
 
 			last_frame_sync_time = get_system_time();
 		}
@@ -425,6 +431,7 @@ private:
 	vk::data_heap m_vertex_layout_ring_info;           // Vertex layout structure
 	vk::data_heap m_index_buffer_ring_info;            // Index data
 	vk::data_heap m_texture_upload_buffer_ring_info;   // Texture upload heap
+	vk::data_heap m_raster_env_ring_info;              // Raster control such as polygon and line stipple
 
 	vk::data_heap m_fragment_instructions_buffer;
 	vk::data_heap m_vertex_instructions_buffer;
@@ -435,6 +442,7 @@ private:
 	VkDescriptorBufferInfo m_vertex_constants_buffer_info;
 	VkDescriptorBufferInfo m_fragment_constants_buffer_info;
 	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info;
+	VkDescriptorBufferInfo m_raster_env_buffer_info;
 
 	VkDescriptorBufferInfo m_vertex_instructions_buffer_info;
 	VkDescriptorBufferInfo m_fragment_instructions_buffer_info;

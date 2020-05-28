@@ -279,6 +279,13 @@ namespace
 
 		idx++;
 
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		bindings[idx].binding = binding_table.rasterizer_env_bind_slot;
+
+		idx++;
+
 		for (auto binding = binding_table.textures_first_bind_slot;
 			 binding < binding_table.vertex_textures_first_bind_slot;
 			 binding++)
@@ -464,6 +471,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
 	m_texture_upload_buffer_ring_info.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
+	m_raster_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "raster env buffer");
 
 	const auto shadermode = g_cfg.video.shadermode.get();
 
@@ -472,6 +480,9 @@ VKGSRender::VKGSRender() : GSRender()
 		m_vertex_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 64 * 0x100000, "vertex instructions buffer", 512 * 16);
 		m_fragment_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 64 * 0x100000, "fragment instructions buffer", 2048);
 	}
+
+	// Initiailize optional allocation information with placeholders
+	m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, 0, 128 };
 
 	const auto limits = m_device->gpu().get_limits();
 	m_texbuffer_view_size = std::min(limits.maxTexelBufferElements, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000u);
@@ -606,6 +617,7 @@ VKGSRender::~VKGSRender()
 	m_texture_upload_buffer_ring_info.destroy();
 	m_vertex_instructions_buffer.destroy();
 	m_fragment_instructions_buffer.destroy();
+	m_raster_env_ring_info.destroy();
 
 	//Fallback bindables
 	null_buffer.reset();
@@ -806,7 +818,8 @@ void VKGSRender::check_heap_status(u32 flags)
 			m_vertex_layout_ring_info.is_critical() ||
 			m_fragment_constants_ring_info.is_critical() ||
 			m_transform_constants_ring_info.is_critical() ||
-			m_index_buffer_ring_info.is_critical();
+			m_index_buffer_ring_info.is_critical() ||
+			m_raster_env_ring_info.is_critical();
 	}
 	else if (flags)
 	{
@@ -829,7 +842,7 @@ void VKGSRender::check_heap_status(u32 flags)
 				heap_critical = m_vertex_env_ring_info.is_critical();
 				break;
 			case VK_HEAP_CHECK_FRAGMENT_ENV_STORAGE:
-				heap_critical = m_fragment_env_ring_info.is_critical();
+				heap_critical = m_fragment_env_ring_info.is_critical() || m_raster_env_ring_info.is_critical();
 				break;
 			case VK_HEAP_CHECK_TEXTURE_ENV_STORAGE:
 				heap_critical = m_fragment_texture_params_ring_info.is_critical();
@@ -880,6 +893,7 @@ void VKGSRender::check_heap_status(u32 flags)
 			m_transform_constants_ring_info.reset_allocation_stats();
 			m_attrib_ring_info.reset_allocation_stats();
 			m_texture_upload_buffer_ring_info.reset_allocation_stats();
+			m_raster_env_ring_info.reset_allocation_stats();
 			m_current_frame->reset_heap_ptrs();
 			m_last_heap_sync_time = get_system_time();
 		}
@@ -1652,6 +1666,7 @@ void VKGSRender::load_program_env()
 	const bool update_fragment_env = !!(m_graphics_state & rsx::pipeline_state::fragment_state_dirty);
 	const bool update_fragment_texture_env = !!(m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
 	const bool update_instruction_buffers = (!!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program));
+	const bool update_raster_env = (rsx::method_registers.polygon_stipple_enabled() && !!(m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
 
 	if (update_vertex_env)
 	{
@@ -1731,6 +1746,20 @@ void VKGSRender::load_program_env()
 		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 256 };
 	}
 
+	if (update_raster_env)
+	{
+		check_heap_status(VK_HEAP_CHECK_FRAGMENT_ENV_STORAGE);
+
+		auto mem = m_raster_env_ring_info.alloc<256>(256);
+		auto buf = m_raster_env_ring_info.map(mem, 128);
+
+		std::memcpy(buf, rsx::method_registers.polygon_stipple_pattern(), 128);
+		m_raster_env_ring_info.unmap();
+		m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, mem, 128 };
+
+		m_graphics_state &= ~(rsx::pipeline_state::polygon_stipple_pattern_dirty);
+	}
+
 	if (update_instruction_buffers)
 	{
 		if (m_interpreter_state & rsx::vertex_program_dirty)
@@ -1778,6 +1807,7 @@ void VKGSRender::load_program_env()
 	m_program->bind_uniform(m_vertex_constants_buffer_info, binding_table.vertex_constant_buffers_bind_slot, m_current_frame->descriptor_set);
 	m_program->bind_uniform(m_fragment_env_buffer_info, binding_table.fragment_state_bind_slot, m_current_frame->descriptor_set);
 	m_program->bind_uniform(m_fragment_texture_params_buffer_info, binding_table.fragment_texture_params_bind_slot, m_current_frame->descriptor_set);
+	m_program->bind_uniform(m_raster_env_buffer_info, binding_table.rasterizer_env_bind_slot, m_current_frame->descriptor_set);
 
 	if (!m_shader_interpreter.is_interpreter(m_program))
 	{
@@ -1869,7 +1899,8 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 			m_fragment_constants_ring_info.dirty() ||
 			m_index_buffer_ring_info.dirty() ||
 			m_transform_constants_ring_info.dirty() ||
-			m_texture_upload_buffer_ring_info.dirty())
+			m_texture_upload_buffer_ring_info.dirty() ||
+			m_raster_env_ring_info.dirty())
 		{
 			std::lock_guard lock(m_secondary_cb_guard);
 			m_secondary_command_buffer.begin();
@@ -1883,6 +1914,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 			m_index_buffer_ring_info.sync(m_secondary_command_buffer);
 			m_transform_constants_ring_info.sync(m_secondary_command_buffer);
 			m_texture_upload_buffer_ring_info.sync(m_secondary_command_buffer);
+			m_raster_env_ring_info.sync(m_secondary_command_buffer);
 
 			m_secondary_command_buffer.end();
 
