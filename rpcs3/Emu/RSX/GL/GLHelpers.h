@@ -2466,7 +2466,7 @@ public:
 				if (g_cfg.video.log_programs)
 				{
 					std::string base_name;
-					switch (shader_type)
+					switch (type)
 					{
 					case ::glsl::program_domain::glsl_vertex_program:
 						base_name = "shaderlog/VertexProgram";
