@@ -4074,6 +4074,29 @@ struct registers_decoder<NV4097_SET_TRANSFORM_CONSTANT_LOAD>
 	}
 };
 
+template<>
+struct registers_decoder<NV4097_SET_POLYGON_STIPPLE>
+{
+	struct decoded_type
+	{
+	private:
+		u32 value;
+
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		bool enabled() const
+		{
+			return value > 0;
+		}
+	};
+
+	static std::string dump(decoded_type&& decoded_values)
+	{
+		return std::string("polygon_stipple: ") + (decoded_values.enabled()? "true" : "false");
+	}
+};
+
 #define EXPAND_RANGE_1(index, MACRO) \
 	MACRO(index)
 

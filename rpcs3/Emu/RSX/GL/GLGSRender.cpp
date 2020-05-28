@@ -200,6 +200,7 @@ void GLGSRender::on_init_thread()
 		m_index_ring_buffer = std::make_unique<gl::legacy_ring_buffer>();
 		m_vertex_instructions_buffer = std::make_unique<gl::legacy_ring_buffer>();
 		m_fragment_instructions_buffer = std::make_unique<gl::legacy_ring_buffer>();
+		m_raster_env_ring_buffer = std::make_unique<gl::legacy_ring_buffer>();
 	}
 	else
 	{
@@ -213,6 +214,7 @@ void GLGSRender::on_init_thread()
 		m_index_ring_buffer = std::make_unique<gl::ring_buffer>();
 		m_vertex_instructions_buffer = std::make_unique<gl::ring_buffer>();
 		m_fragment_instructions_buffer = std::make_unique<gl::ring_buffer>();
+		m_raster_env_ring_buffer = std::make_unique<gl::ring_buffer>();
 	}
 
 	m_attrib_ring_buffer->create(gl::buffer::target::texture, 256 * 0x100000);
@@ -223,6 +225,7 @@ void GLGSRender::on_init_thread()
 	m_vertex_env_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_texture_parameters_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_vertex_layout_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_raster_env_ring_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
 	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 	{
@@ -447,6 +450,11 @@ void GLGSRender::on_exit()
 	if (m_fragment_instructions_buffer)
 	{
 		m_fragment_instructions_buffer->remove();
+	}
+
+	if (m_raster_env_ring_buffer)
+	{
+		m_raster_env_ring_buffer->remove();
 	}
 
 	m_null_textures.clear();
@@ -704,6 +712,7 @@ void GLGSRender::load_program_env()
 	const bool update_fragment_env = !!(m_graphics_state & rsx::pipeline_state::fragment_state_dirty);
 	const bool update_fragment_texture_env = !!(m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
 	const bool update_instruction_buffers = (!!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program));
+	const bool update_raster_env = (rsx::method_registers.polygon_stipple_enabled() && !!(m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
 
 	m_program->use();
 
@@ -714,6 +723,7 @@ void GLGSRender::load_program_env()
 		if (update_fragment_texture_env) m_texture_parameters_buffer->reserve_storage_on_heap(256);
 		if (update_fragment_constants) m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_constants_size, 256));
 		if (update_transform_constants) m_transform_constants_buffer->reserve_storage_on_heap(8192);
+		if (update_raster_env) m_raster_env_ring_buffer->reserve_storage_on_heap(128);
 
 		if (update_instruction_buffers)
 		{
@@ -779,6 +789,16 @@ void GLGSRender::load_program_env()
 		m_texture_parameters_buffer->bind_range(GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, mapping.second, 256);
 	}
 
+	if (update_raster_env)
+	{
+		auto mapping = m_raster_env_ring_buffer->alloc_from_heap(128, m_uniform_buffer_offset_align);
+
+		std::memcpy(mapping.first, rsx::method_registers.polygon_stipple_pattern(), 128);
+		m_raster_env_ring_buffer->bind_range(GL_RASTERIZER_STATE_BIND_SLOT, mapping.second, 128);
+
+		m_graphics_state &= ~(rsx::pipeline_state::polygon_stipple_pattern_dirty);
+	}
+
 	if (update_instruction_buffers)
 	{
 		if (m_interpreter_state & rsx::vertex_program_dirty)
@@ -830,6 +850,7 @@ void GLGSRender::load_program_env()
 		if (update_fragment_texture_env) m_texture_parameters_buffer->unmap();
 		if (update_fragment_constants) m_fragment_constants_buffer->unmap();
 		if (update_transform_constants) m_transform_constants_buffer->unmap();
+		if (update_raster_env) m_raster_env_ring_buffer->unmap();
 
 		if (update_instruction_buffers)
 		{

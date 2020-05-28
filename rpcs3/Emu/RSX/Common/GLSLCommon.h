@@ -430,6 +430,23 @@ namespace glsl
 		"}\n\n";
 	}
 
+	static void insert_rop_init(std::ostream& OS)
+	{
+		OS <<
+		"	if ((rop_control & (1u << 9)) != 0)\n"
+		"	{\n"
+		"		// Convert x,y to linear address\n"
+		"		uvec2 stipple_coord = uvec2(gl_FragCoord.xy) % uvec2(32u, 32u);\n"
+		"		uint address = stipple_coord.y * 32u + stipple_coord.x;\n"
+		"		uint mask = (1u << (address & 31u));\n\n"
+
+		"		if ((stipple_pattern[address >> 7u][(address >> 5u) & 3u] & mask) == 0u)\n"
+		"		{\n"
+		"			_kill();\n"
+		"		}\n"
+		"	}\n\n";
+	}
+
 	static void insert_rop(std::ostream& OS, const shader_properties& props)
 	{
 		const std::string reg0 = props.fp32_outputs ? "r0" : "h0";

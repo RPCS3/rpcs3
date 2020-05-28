@@ -3120,6 +3120,8 @@ namespace rsx
 		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind<NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma>();
 		bind<NV4097_SET_BLEND_EQUATION, nv4097::set_blend_equation>();
+		bind<NV4097_SET_POLYGON_STIPPLE, nv4097::notify_state_changed<fragment_state_dirty>>();
+		bind_array<NV4097_SET_POLYGON_STIPPLE, 1, 32, nv4097::notify_state_changed<polygon_stipple_pattern_dirty>>();
 
 		//NV308A (0xa400..0xbffc!)
 		bind_range<NV308A_COLOR + (256 * 0), 1, 256, nv308a::color, 256 * 0>();

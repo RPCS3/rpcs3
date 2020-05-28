@@ -792,6 +792,11 @@ namespace rsx
 			}
 		}
 
+		if (rsx::method_registers.polygon_stipple_enabled())
+		{
+			rop_control |= (1u << 9);
+		}
+
 		// Generate wpos coefficients
 		// wpos equation is now as follows:
 		// wpos.y = (frag_coord / resolution_scale) * ((window_origin!=top)?-1.: 1.) + ((window_origin!=top)? window_height : 0)

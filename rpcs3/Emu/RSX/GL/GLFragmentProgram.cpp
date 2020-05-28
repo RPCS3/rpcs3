@@ -190,6 +190,11 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "{\n";
 	OS << "	sampler_info texture_parameters[16];\n";
 	OS << "};\n\n";
+
+	OS << "layout(std140, binding = " << GL_RASTERIZER_STATE_BIND_SLOT << ") uniform RasterizerHeap\n";
+	OS << "{\n";
+	OS << "	uvec4 stipple_pattern[8];\n";
+	OS << "};\n\n";
 }
 
 void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
@@ -302,6 +307,8 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "void main()\n";
 	OS << "{\n";
+
+	::glsl::insert_rop_init(OS);
 
 	OS << "\n" << "	fs_main();\n\n";
 

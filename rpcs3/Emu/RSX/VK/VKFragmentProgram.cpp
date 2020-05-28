@@ -206,6 +206,11 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	sampler_info texture_parameters[16];\n";
 	OS << "};\n\n";
 
+	OS << "layout(std140, set = 0, binding = " << std::to_string(m_binding_table.rasterizer_env_bind_slot) << ") uniform RasterizerHeap\n";
+	OS << "{\n";
+	OS << "	uvec4 stipple_pattern[8];\n";
+	OS << "};\n\n";
+
 	vk::glsl::program_input in;
 	in.location = m_binding_table.fragment_constant_buffers_bind_slot;
 	in.domain = glsl::glsl_fragment_program;
@@ -219,6 +224,10 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	in.location = m_binding_table.fragment_texture_params_bind_slot;
 	in.name = "TextureParametersBuffer";
+	inputs.push_back(in);
+
+	in.location = m_binding_table.rasterizer_env_bind_slot;
+	in.name = "RasterizerHeap";
 	inputs.push_back(in);
 }
 
@@ -332,6 +341,8 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "void main()\n";
 	OS << "{\n";
+
+	::glsl::insert_rop_init(OS);
 
 	OS << "\n" << "	fs_main();\n\n";
 

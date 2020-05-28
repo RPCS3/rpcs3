@@ -1706,6 +1706,16 @@ namespace rsx
 		{
 			return decode<NV4097_SET_POINT_SPRITE_CONTROL>().texcoord_mask();
 		}
+
+		const void* polygon_stipple_pattern() const
+		{
+			return registers.data() + NV4097_SET_POLYGON_STIPPLE_PATTERN;
+		}
+
+		bool polygon_stipple_enabled() const
+		{
+			return decode<NV4097_SET_POLYGON_STIPPLE>().enabled();
+		}
 	};
 
 	extern rsx_state method_registers;
