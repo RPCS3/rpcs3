@@ -336,7 +336,7 @@ extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr);
 extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr);
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value);
 extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value);
-
+extern void ppu_trap(ppu_thread& ppu, u64 addr);
 
 
 class ppu_scale_table_t
@@ -2903,7 +2903,8 @@ bool ppu_interpreter::TDI(ppu_thread& ppu, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		fmt::throw_exception("Trap!" HERE);
+		ppu_trap(ppu, ppu.cia);
+		return false;
 	}
 
 	return true;
@@ -2920,7 +2921,8 @@ bool ppu_interpreter::TWI(ppu_thread& ppu, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		fmt::throw_exception("Trap!" HERE);
+		ppu_trap(ppu, ppu.cia);
+		return false;
 	}
 
 	return true;
@@ -3261,7 +3263,8 @@ bool ppu_interpreter::TW(ppu_thread& ppu, ppu_opcode_t op)
 		(static_cast<u32>(a) < static_cast<u32>(b) && (op.bo & 0x2)) ||
 		(static_cast<u32>(a) > static_cast<u32>(b) && (op.bo & 0x1)))
 	{
-		fmt::throw_exception("Trap!" HERE);
+		ppu_trap(ppu, ppu.cia);
+		return false;
 	}
 
 	return true;
@@ -3474,7 +3477,8 @@ bool ppu_interpreter::TD(ppu_thread& ppu, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		fmt::throw_exception("Trap!" HERE);
+		ppu_trap(ppu, ppu.cia);
+		return false;
 	}
 
 	return true;
