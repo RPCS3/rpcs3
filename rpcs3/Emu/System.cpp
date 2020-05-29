@@ -950,8 +950,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			// Force LLVM recompiler
 			g_cfg.core.ppu_decoder.from_default();
 
-			// Workaround for analyser glitches
-			vm::falloc(0x10000, 0xf0000, vm::main);
+			// Force lib loading mode
+			g_cfg.core.lib_loading.from_string("Manually load selected libraries");
+			verify(HERE), g_cfg.core.lib_loading == lib_loading_type::manual;
+			g_cfg.core.load_libraries.from_default();
+
+			// Fake arg (workaround)
+			argv.resize(1);
+			argv[0] = "/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN";
+			m_dir = "/dev_bdvd/PS3_GAME";
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this]
 			{
@@ -1007,6 +1014,40 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 
 				g_progr = "Compiling PPU modules";
+
+				if (std::string path = m_path + "/USRDIR/EBOOT.BIN"; fs::is_file(path))
+				{
+					// Compile EBOOT.BIN first
+					sys_log.notice("Trying to load EBOOT.BIN: %s", path);
+
+					fs::file src{path};
+
+					src = decrypt_self(std::move(src));
+
+					const ppu_exec_object obj = src;
+
+					if (obj == elf_error::ok)
+					{
+						const auto _main = g_fxo->get<ppu_module>();
+
+						ppu_load_exec(obj);
+
+						_main->path = path;
+
+						ConfigurePPUCache();
+
+						ppu_initialize(*_main);
+					}
+					else
+					{
+						sys_log.error("Failed to load EBOOT.BIN '%s' (%s)", path, obj.get_error());
+					}
+				}
+				else
+				{
+					// Workaround for analyser glitches
+					verify(HERE), vm::falloc(0x10000, 0xf0000, vm::main);
+				}
 
 				atomic_t<std::size_t> fnext = 0;
 
@@ -1436,26 +1477,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			ppu_load_exec(ppu_exec);
 
-			_main->cache = GetCacheDir();
-
-			if (!m_title_id.empty() && m_cat != "1P")
-			{
-				// TODO
-				_main->cache += Emu.GetTitleID();
-				_main->cache += '/';
-			}
-
-			fmt::append(_main->cache, "ppu-%s-%s/", fmt::base57(_main->sha1), _main->path.substr(_main->path.find_last_of('/') + 1));
-
-			if (!fs::create_path(_main->cache))
-			{
-				sys_log.error("Failed to create cache directory: %s (%s)", _main->cache, fs::g_tls_error);
-				return game_boot_result::file_creation_error;
-			}
-			else
-			{
-				sys_log.notice("Cache: %s", _main->cache);
-			}
+			ConfigurePPUCache();
 
 			g_fxo->init();
 			Emu.GetCallbacks().init_gs_render();
@@ -1852,6 +1874,30 @@ void Emulator::ConfigureLogs()
 	}
 
 	was_silenced = silenced;
+}
+
+void Emulator::ConfigurePPUCache()
+{
+	const auto _main = g_fxo->get<ppu_module>();
+
+	_main->cache = GetCacheDir();
+
+	if (!m_title_id.empty() && m_cat != "1P")
+	{
+		_main->cache += Emu.GetTitleID();
+		_main->cache += '/';
+	}
+
+	fmt::append(_main->cache, "ppu-%s-%s/", fmt::base57(_main->sha1), _main->path.substr(_main->path.find_last_of('/') + 1));
+
+	if (!fs::create_path(_main->cache))
+	{
+		sys_log.error("Failed to create cache directory: %s (%s)", _main->cache, fs::g_tls_error);
+	}
+	else
+	{
+		sys_log.notice("Cache: %s", _main->cache);
+	}
 }
 
 template <>

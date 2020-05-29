@@ -213,6 +213,7 @@ public:
 	u32 GetMaxThreads() const;
 
 	void ConfigureLogs();
+	void ConfigurePPUCache();
 
 private:
 	void LimitCacheSize();
