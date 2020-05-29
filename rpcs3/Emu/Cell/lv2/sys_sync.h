@@ -77,14 +77,11 @@ private:
 
 public:
 
-	static std::string_view name64(const u64& name_u64)
+	static std::string name64(const u64& name_u64)
 	{
-		std::string_view str{reinterpret_cast<const char*>(&name_u64), 7};
+		std::string str{reinterpret_cast<const char*>(&name_u64), 7};
 
-		if (const auto pos = str.find_first_of('\0'); pos != umax)
-		{
-			str.remove_suffix(str.size() - pos);
-		}
+		str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !std::isprint(c); }), str.end());
 
 		return str;
 	};

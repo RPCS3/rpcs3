@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Utilities/mutex.h"
 #include "Emu/Memory/vm_ptr.h"
 
 struct RsxDriverInfo
@@ -124,6 +125,7 @@ struct RsxDisplayInfo
 
 struct lv2_rsx_config
 {
+	shared_mutex mutex;
 	u32 memory_size{};
 	u32 rsx_event_port{};
 	u32 context_base{};
