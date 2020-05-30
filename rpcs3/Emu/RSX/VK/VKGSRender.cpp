@@ -481,7 +481,7 @@ VKGSRender::VKGSRender() : GSRender()
 		m_fragment_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 64 * 0x100000, "fragment instructions buffer", 2048);
 	}
 
-	// Initiailize optional allocation information with placeholders
+	// Initialize optional allocation information with placeholders
 	m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, 0, 128 };
 
 	const auto limits = m_device->gpu().get_limits();
