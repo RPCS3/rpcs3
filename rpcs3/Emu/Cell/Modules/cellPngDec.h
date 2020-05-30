@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "cellPng.h"
 
@@ -12,7 +12,7 @@ enum : u32
 };
 
 // Return Codes
-enum
+enum CellPngDecError
 {
 	CELL_PNGDEC_ERROR_HEADER        = 0x80611201,
 	CELL_PNGDEC_ERROR_STREAM_FORMAT = 0x80611202,
