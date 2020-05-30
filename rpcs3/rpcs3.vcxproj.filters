@@ -130,9 +130,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="\rpcs3qt\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
@@ -1044,9 +1041,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="\rpcs3qt\*.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Input\ds4_pad_handler.h">
       <Filter>Io\DS4</Filter>
     </ClInclude>
