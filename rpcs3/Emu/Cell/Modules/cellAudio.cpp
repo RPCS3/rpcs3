@@ -775,6 +775,8 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 
 	bool first_mix = true;
 
+	const float master_volume = g_cfg.audio.volume / 100.0f;
+
 	// mixing
 	for (auto& port : ports)
 	{
@@ -782,13 +784,12 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 
 		auto buf = port.get_vm_ptr(offset);
 		static const float k = 1.f;
-		static const float minus_3db = 0.707f; /* value taken from
-							  https://www.dolby.com/us/en/technologies/a-guide-to-dolby-metadata.pdf */
-		float& m = port.level;
+		static const float minus_3db = 0.707f; // value taken from https://www.dolby.com/us/en/technologies/a-guide-to-dolby-metadata.pdf
+		float m = master_volume;
 
 		// part of cellAudioSetPortLevel functionality
 		// spread port volume changes over 13ms
-		auto step_volume = [](audio_port& port)
+		auto step_volume = [master_volume, &m](audio_port& port)
 		{
 			const auto param = port.level_set.load();
 
@@ -803,6 +804,8 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					port.level_set.compare_and_swap(param, { param.value, 0.0f });
 				}
 			}
+
+			m = port.level * master_volume;
 		};
 
 		if (port.num_channels == 2)
@@ -864,8 +867,7 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 
 					if constexpr (DownmixToStereo)
 					{
-						const float mid = center * minus_3db; /* don't mix in the lfe as per
-											 dolby specification */
+						const float mid = center * minus_3db; // don't mix in the lfe as per dolby specification
 						out_buffer[out + 0] = (left + rear_left + (side_left * minus_3db) + mid) * k;
 						out_buffer[out + 1] = (right + rear_right + (side_right * minus_3db) + mid) * k;
 					}
@@ -1104,11 +1106,11 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 
 	if (attr & CELL_AUDIO_PORTATTR_INITLEVEL)
 	{
-		port->level = audioParam->level * g_cfg.audio.volume / 100.0f;
+		port->level = audioParam->level;
 	}
 	else
 	{
-		port->level = g_cfg.audio.volume / 100.0f;
+		port->level = 1.0f;
 	}
 
 	port->level_set.store({ port->level, 0.0f });
@@ -1332,8 +1334,6 @@ error_code cellAudioSetPortLevel(u32 portNum, float level)
 	{
 		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	}
-
-	level *= g_cfg.audio.volume / 100.0f;
 
 	if (level >= 0.0f)
 	{
