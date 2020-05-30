@@ -472,6 +472,21 @@ void main()
 	inst.end = false;
 	bool handled;
 
+#ifdef WITH_STIPPLING
+	uvr0.xy = uvec2(gl_FragCoord.xy) % uvec2(32u); // x,y location
+	ur0 = uvr0.y * 32u + uvr0.x;                   // linear address
+	ur1 = ur0 & 31u;                               // address % 32 -> fetch bit offset
+	ur1 = (1u << ur1);                             // address mask
+	uvr0.x = (ur0 >> 7u);                          // address to uvec4 row (each row has 32x4 bits)
+	ur0 = (ur0 >> 5u) & 3u;                        // address to uvec4 word (address / 32) % 4
+
+	if ((stipple_pattern[uvr0.x][ur0] & ur1) == 0u)
+	{
+		discard;
+		inst.end = true;
+	}
+#endif
+
 	while (!inst.end)
 	{
 		ip += inst_length;
