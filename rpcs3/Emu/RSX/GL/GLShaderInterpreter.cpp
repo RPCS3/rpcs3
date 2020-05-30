@@ -99,6 +99,7 @@ namespace gl
 		if (metadata.referenced_textures_mask) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES;
 		if (metadata.has_branch_instructions) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (metadata.has_pack_instructions) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_PACKING;
+		if (rsx::method_registers.polygon_stipple_enabled()) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_STIPPLING;
 
 		if (auto it = m_program_cache.find(opt); it != m_program_cache.end()) [[likely]]
 		{
@@ -264,6 +265,11 @@ namespace gl
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_KIL)
 		{
 			builder << "#define WITH_KIL\n";
+		}
+
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_STIPPLING)
+		{
+			builder << "#define WITH_STIPPLING\n";
 		}
 
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES)
