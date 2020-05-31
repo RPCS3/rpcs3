@@ -59,6 +59,8 @@ bool g_use_rtm;
 
 std::string g_cfg_defaults;
 
+atomic_t<u64> g_watchdog_hold_ctr{0};
+
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void ppu_initialize(const ppu_module&);
@@ -1710,7 +1712,7 @@ void Emulator::Stop(bool restart)
 
 	named_thread stop_watchdog("Stop Watchdog", [&]()
 	{
-		for (uint i = 0; thread_ctrl::state() != thread_state::aborting; i++)
+		for (uint i = 0; thread_ctrl::state() != thread_state::aborting;)
 		{
 			// We don't need accurate timekeeping, using clocks may interfere with debugging
 			if (i >= 1000)
@@ -1721,6 +1723,12 @@ void Emulator::Stop(bool restart)
 			}
 
 			thread_ctrl::wait_for(5'000);
+
+			if (!g_watchdog_hold_ctr)
+			{
+				// Don't count if there are still uninterruptable threads like PPU LLVM workers
+				i++;
+			}
 		}
 	});
 
