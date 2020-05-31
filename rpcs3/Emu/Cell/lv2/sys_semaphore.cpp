@@ -229,15 +229,18 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 	{
 		std::lock_guard lock(sem->mutex);
 
-		const s32 val = sem->val.fetch_op([=](s32& val)
+		const auto [val, ok] = sem->val.fetch_op([&](s32& val)
 		{
-			if (val + s64{count} <= sem->max)
+			if (count + 0u <= sem->max + 0u - val)
 			{
 				val += count;
+				return true;
 			}
+
+			return false;
 		});
 
-		if (val + s64{count} > sem->max)
+		if (!ok)
 		{
 			return not_an_error(CELL_EBUSY);
 		}
