@@ -16,6 +16,8 @@ class spu_cache
 	fs::file m_file;
 
 public:
+	spu_cache() = default;
+
 	spu_cache(const std::string& loc);
 
 	spu_cache(spu_cache&&) noexcept = default;

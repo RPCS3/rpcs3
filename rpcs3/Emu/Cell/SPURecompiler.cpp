@@ -546,7 +546,10 @@ void spu_cache::initialize()
 	}
 
 	// Initialize global cache instance
-	g_fxo->init<spu_cache>(std::move(cache));
+	if (g_cfg.core.spu_cache)
+	{
+		*g_fxo->get<spu_cache>() = std::move(cache);
+	}
 }
 
 bool spu_program::operator==(const spu_program& rhs) const noexcept
@@ -4219,7 +4222,7 @@ public:
 
 		std::string log;
 
-		if (auto cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
+		if (auto cache = g_fxo->get<spu_cache>(); *cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 		{
 			cache->add(func);
 		}
@@ -4814,7 +4817,7 @@ public:
 			fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
 		}
 
-		if (g_fxo->get<spu_cache>())
+		if (*g_fxo->get<spu_cache>())
 		{
 			spu_log.success("New block compiled successfully");
 		}
@@ -8584,6 +8587,12 @@ struct spu_llvm
 {
 	// Workload
 	lf_queue<std::pair<const u64, spu_item*>> registered;
+
+	spu_llvm()
+	{
+		// Dependency
+		g_fxo->init<spu_cache>();
+	}
 
 	void operator()()
 	{
