@@ -965,6 +965,18 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				std::vector<std::string> dir_queue;
 				dir_queue.emplace_back(m_path + '/');
 
+				// Find game update to use EBOOT.BIN from it, also add its directory to scan
+				if (m_cat == "DG")
+				{
+					const std::string hdd0_path = vfs::get("/dev_hdd0/game/") + m_title_id;
+
+					if (fs::is_file(hdd0_path + "/USRDIR/EBOOT.BIN"))
+					{
+						m_path = hdd0_path;
+						dir_queue.emplace_back(m_path + '/');
+					}
+				}
+
 				std::vector<std::pair<std::string, u64>> file_queue;
 				file_queue.reserve(2000);
 
