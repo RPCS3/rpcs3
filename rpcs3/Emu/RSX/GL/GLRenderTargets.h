@@ -355,8 +355,14 @@ struct gl_render_targets : public rsx::surface_store<gl_render_target_traits>
 		invalidated_resources.clear();
 	}
 
-	std::vector<GLuint> free_invalidated()
+	std::vector<GLuint> free_invalidated(gl::command_context& cmd)
 	{
+		// Do not allow more than 256M of RSX memory to be used by RTTs
+		if (check_memory_overload(256 * 0x100000))
+		{
+			handle_memory_overload(cmd);
+		}
+
 		std::vector<GLuint> removed;
 		invalidated_resources.remove_if([&](auto &rtt)
 		{
