@@ -111,7 +111,7 @@ void XAudio2Backend::Open(u32 /* num_buffers */)
 	}
 
 	AUDIT(m_source_voice != nullptr);
-	m_source_voice->SetVolume(channels == 2 ? 1.0f : 4.0f);
+	m_source_voice->SetVolume(1.0f);
 }
 
 bool XAudio2Backend::IsPlaying()
