@@ -105,7 +105,7 @@ void VKGSRender::advance_queued_frames()
 	check_present_status();
 
 	// m_rtts storage is double buffered and should be safe to tag on frame boundary
-	m_rtts.free_invalidated();
+	m_rtts.free_invalidated(*m_current_command_buffer);
 
 	// Texture cache is also double buffered to prevent use-after-free
 	m_texture_cache.on_frame_end();

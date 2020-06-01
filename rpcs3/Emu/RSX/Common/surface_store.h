@@ -65,6 +65,9 @@ namespace rsx
 		u64 cache_tag = 1ull; // Use 1 as the start since 0 is default tag on new surfaces
 		u64 write_tag = 1ull;
 
+		// Amount of virtual PS3 memory tied to allocated textures
+		u64 m_active_memory_used = 0;
+
 		surface_store() = default;
 		~surface_store() = default;
 		surface_store(const surface_store&) = delete;
@@ -96,12 +99,10 @@ namespace rsx
 					}
 					else
 					{
-						invalidated_resources.push_back(std::move(found->second));
+						invalidate(found->second);
 						data.erase(new_address);
 
 						auto &old = invalidated_resources.back();
-						Traits::notify_surface_invalidated(old);
-
 						if (Traits::surface_is_pitch_compatible(old, prev_surface->get_rsx_pitch()))
 						{
 							if (old->last_use_tag >= prev_surface->last_use_tag) [[unlikely]]
@@ -112,7 +113,13 @@ namespace rsx
 					}
 				}
 
+				const bool is_new_surface = !sink;
 				Traits::clone_surface(cmd, sink, region.source, new_address, region);
+
+				if (is_new_surface)
+				{
+					allocate_rsx_memory(Traits::get(sink));
+				}
 
 				if (invalidated) [[unlikely]]
 				{
@@ -175,7 +182,7 @@ namespace rsx
 				copy.src_y = 0;
 				copy.dst_x = 0;
 				copy.dst_y = 0;
-				copy.width = (old.width - _new.width) / bytes_to_texels_x;
+				copy.width = std::max<u16>((old.width - _new.width) / bytes_to_texels_x, 1);
 				copy.height = prev_surface->get_surface_height();
 				copy.transfer_scale_x = 1.f;
 				copy.transfer_scale_y = 1.f;
@@ -203,8 +210,8 @@ namespace rsx
 				copy.src_y = _new.height / prev_surface->samples_y;
 				copy.dst_x = 0;
 				copy.dst_y = 0;
-				copy.width = std::min(_new.width, old.width) / bytes_to_texels_x;
-				copy.height = (old.height - _new.height) / prev_surface->samples_y;
+				copy.width = std::max<u16>(std::min(_new.width, old.width) / bytes_to_texels_x, 1);
+				copy.height = std::max<u16>((old.height - _new.height) / prev_surface->samples_y, 1);
 				copy.transfer_scale_x = 1.f;
 				copy.transfer_scale_y = 1.f;
 				copy.target = nullptr;
@@ -400,8 +407,7 @@ namespace rsx
 						surface->read_barrier(cmd);
 					}
 
-					Traits::notify_surface_invalidated(object);
-					invalidated_resources.push_back(std::move(object));
+					invalidate(object);
 					storage.erase(e.first);
 				}
 			}
@@ -467,9 +473,10 @@ namespace rsx
 					}
 
 					// This will be unconditionally moved to invalidated list shortly
+					free_rsx_memory(Traits::get(surface));
 					Traits::notify_surface_invalidated(surface);
-					old_surface_storage = std::move(surface);
 
+					old_surface_storage = std::move(surface);
 					primary_storage->erase(It);
 				}
 			}
@@ -502,6 +509,7 @@ namespace rsx
 						}
 
 						new_surface = Traits::get(new_surface_storage);
+						allocate_rsx_memory(new_surface);
 						Traits::invalidate_surface_contents(command_list, new_surface, address, pitch);
 						Traits::prepare_surface_for_drawing(command_list, new_surface);
 						break;
@@ -521,6 +529,7 @@ namespace rsx
 				verify(HERE), store;
 				new_surface_storage = Traits::create_new_surface(address, format, width, height, pitch, antialias, std::forward<Args>(extra_params)...);
 				new_surface = Traits::get(new_surface_storage);
+				allocate_rsx_memory(new_surface);
 			}
 
 			// Remove and preserve if possible any overlapping/replaced surface from the other pool
@@ -539,8 +548,7 @@ namespace rsx
 					}
 				}
 
-				Traits::notify_surface_invalidated(aliased_surface->second);
-				invalidated_resources.push_back(std::move(aliased_surface->second));
+				invalidate(aliased_surface->second);
 				secondary_storage->erase(aliased_surface);
 			}
 
@@ -581,6 +589,35 @@ namespace rsx
 			return new_surface;
 		}
 
+		void allocate_rsx_memory(surface_type surface)
+		{
+			const auto memory_size = surface->get_memory_range().length();
+			m_active_memory_used += memory_size;
+		}
+
+		void free_rsx_memory(surface_type surface)
+		{
+			verify("Surface memory double free" HERE), surface->has_refs();
+
+			if (const auto memory_size = surface->get_memory_range().length();
+				m_active_memory_used >= memory_size) [[likely]]
+			{
+				m_active_memory_used -= memory_size;
+			}
+			else
+			{
+				rsx_log.error("Memory allocation underflow!");
+				m_active_memory_used = 0;
+			}
+		}
+
+		inline void invalidate(surface_storage_type& storage)
+		{
+			free_rsx_memory(Traits::get(storage));
+			Traits::notify_surface_invalidated(storage);
+			invalidated_resources.push_back(std::move(storage));
+		}
+
 	protected:
 		/**
 		* If render target already exists at address, issue state change operation on cmdList.
@@ -617,6 +654,50 @@ namespace rsx
 				depth_format == rsx::surface_depth_format::z16? 2 : 4,
 				std::forward<Args>(extra_params)...);
 		}
+
+		bool check_memory_overload(u64 max_safe_memory) const
+		{
+			if (m_active_memory_used <= max_safe_memory) [[likely]]
+			{
+				return false;
+			}
+			else
+			{
+				rsx_log.warning("Surface cache is using too much memory! (%dM)", m_active_memory_used / 0x100000);
+				return true;
+			}
+		}
+
+		void handle_memory_overload(command_list_type cmd)
+		{
+			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data)
+			{
+				for (auto It = data.begin(); It != data.end();)
+				{
+					auto surface = Traits::get(It->second);
+					if (surface->dirty())
+					{
+						// Force memory barrier to release some resources
+						surface->memory_barrier(cmd, rsx::surface_access::read);
+					}
+					else if (!surface->test())
+					{
+						// Remove this
+						invalidate(It->second);
+						It = data.erase(It);
+					}
+					else
+					{
+						++It;
+					}
+				}
+			};
+
+			// Try and find old surfaces to remove
+			process_list_function(m_render_targets_storage);
+			process_list_function(m_depth_stencil_storage);
+		}
+
 	public:
 		/**
 		 * Update bound color and depth surface.
@@ -746,8 +827,7 @@ namespace rsx
 				auto It = m_render_targets_storage.find(addr);
 				if (It != m_render_targets_storage.end())
 				{
-					Traits::notify_surface_invalidated(It->second);
-					invalidated_resources.push_back(std::move(It->second));
+					invalidate(It->second);
 					m_render_targets_storage.erase(It);
 
 					cache_tag = rsx::get_shared_tag();
@@ -759,8 +839,7 @@ namespace rsx
 				auto It = m_depth_stencil_storage.find(addr);
 				if (It != m_depth_stencil_storage.end())
 				{
-					Traits::notify_surface_invalidated(It->second);
-					invalidated_resources.push_back(std::move(It->second));
+					invalidate(It->second);
 					m_depth_stencil_storage.erase(It);
 
 					cache_tag = rsx::get_shared_tag();
@@ -999,8 +1078,7 @@ namespace rsx
 			{
 				for (auto &e : data)
 				{
-					Traits::notify_surface_invalidated(e.second);
-					invalidated_resources.push_back(std::move(e.second));
+					invalidate(e.second);
 				}
 
 				data.clear();
@@ -1008,6 +1086,8 @@ namespace rsx
 
 			free_resource_list(m_render_targets_storage);
 			free_resource_list(m_depth_stencil_storage);
+
+			verify(HERE), m_active_memory_used == 0;
 
 			m_bound_depth_stencil = std::make_pair(0, nullptr);
 			m_bound_render_targets_config = { 0, 0 };
