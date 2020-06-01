@@ -404,3 +404,20 @@ void fmt_class_string<shader_mode>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+template <>
+void fmt_class_string<audio_channels>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](audio_channels value)
+	{
+		switch (value)
+		{
+		case audio_channels::use_application_settings: return "Use application settings";
+		case audio_channels::downmix_to_stereo: return "Downmix to Stereo";
+		case audio_channels::downmix_to_5_1: return "Downmix to 5.1";
+		case audio_channels::surround_7_1: return "Surround 7.1";
+		}
+
+		return unknown;
+	});
+}
