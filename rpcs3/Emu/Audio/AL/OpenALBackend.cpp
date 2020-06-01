@@ -24,13 +24,19 @@ OpenALBackend::OpenALBackend()
 	alcMakeContextCurrent(m_context);
 	checkForAlcError("alcMakeContextCurrent");
 
-	if (get_channels() == 2)
+	const auto channels = get_channels();
+
+	switch (channels)
 	{
+	case 2:
 		m_format = (m_sample_size == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO_FLOAT32;
-	}
-	else
-	{
+		break;
+	case 6:
+		m_format = (m_sample_size == 2) ? AL_FORMAT_51CHN16 : AL_FORMAT_51CHN32;
+		break;
+	default:
 		m_format = (m_sample_size == 2) ? AL_FORMAT_71CHN16 : AL_FORMAT_71CHN32;
+		break;
 	}
 }
 

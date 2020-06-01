@@ -25,7 +25,7 @@ XAudio2Backend::XAudio2Backend()
 		return;
 	}
 
-	hr = instance->CreateMasteringVoice(&m_master_voice, g_cfg.audio.downmix_to_2ch ? 2 : 8, 48000);
+	hr = instance->CreateMasteringVoice(&m_master_voice, get_channels(), 48000);
 	if (FAILED(hr))
 	{
 		XAudio.error("CreateMasteringVoice() failed(0x%08x)", (u32)hr);

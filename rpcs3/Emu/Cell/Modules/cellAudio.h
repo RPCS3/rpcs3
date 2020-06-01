@@ -100,6 +100,7 @@ enum : u32
 	MAX_AUDIO_EVENT_QUEUES = 64,
 
 	AUDIO_BLOCK_SIZE_2CH = 2 * AUDIO_BUFFER_SAMPLES,
+	AUDIO_BLOCK_SIZE_6CH = 6 * AUDIO_BUFFER_SAMPLES,
 	AUDIO_BLOCK_SIZE_8CH = 8 * AUDIO_BUFFER_SAMPLES,
 
 	PORT_BUFFER_TAG_COUNT = 6,
@@ -107,6 +108,10 @@ enum : u32
 	PORT_BUFFER_TAG_LAST_2CH = AUDIO_BLOCK_SIZE_2CH - 1,
 	PORT_BUFFER_TAG_DELTA_2CH = PORT_BUFFER_TAG_LAST_2CH / (PORT_BUFFER_TAG_COUNT - 1),
 	PORT_BUFFER_TAG_FIRST_2CH = PORT_BUFFER_TAG_LAST_2CH % (PORT_BUFFER_TAG_COUNT - 1),
+
+	PORT_BUFFER_TAG_LAST_6CH = AUDIO_BLOCK_SIZE_6CH - 1,
+	PORT_BUFFER_TAG_DELTA_6CH = PORT_BUFFER_TAG_LAST_6CH / (PORT_BUFFER_TAG_COUNT - 1),
+	PORT_BUFFER_TAG_FIRST_6CH = PORT_BUFFER_TAG_LAST_6CH % (PORT_BUFFER_TAG_COUNT - 1),
 
 	PORT_BUFFER_TAG_LAST_8CH = AUDIO_BLOCK_SIZE_8CH - 1,
 	PORT_BUFFER_TAG_DELTA_8CH = PORT_BUFFER_TAG_LAST_8CH / (PORT_BUFFER_TAG_COUNT - 1),
@@ -337,7 +342,7 @@ class cell_audio_thread
 	void reset_ports(s32 offset = 0);
 	void advance(u64 timestamp, bool reset = true);
 	std::tuple<u32, u32, u32, u32> count_port_buffer_tags();
-	template <bool DownmixToStereo>
+	template <audio_channels downmix>
 	void mix(float *out_buffer, s32 offset = 0);
 	void finish_port_volume_stepping();
 

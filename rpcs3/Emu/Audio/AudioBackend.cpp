@@ -24,7 +24,21 @@ u32 AudioBackend::get_sample_size()
 
 u32 AudioBackend::get_channels()
 {
-	return g_cfg.audio.downmix_to_2ch ? 2 : 8;
+	const audio_channels channels = g_cfg.audio.audio_channel_downmix.get();
+
+	switch (channels)
+	{
+	case audio_channels::use_application_settings:
+		return 2; // TODO
+	case audio_channels::downmix_to_stereo:
+		return 2;
+	case audio_channels::downmix_to_5_1:
+		return 6;
+	case audio_channels::surround_7_1:
+		return 8;
+	default:
+		fmt::throw_exception("Unknown audio channel mode %s (%d)", channels, static_cast<int>(channels));
+	}
 }
 
 bool AudioBackend::has_capability(u32 cap) const

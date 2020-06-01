@@ -691,6 +691,15 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case enter_button_assign::cross: return tr("Enter with cross", "Enter button assignment");
 		}
 		break;
+	case emu_settings_type::AudioChannels:
+		switch (static_cast<audio_channels>(index))
+		{
+		case audio_channels::use_application_settings: return tr("Use application settings", "Audio channels");
+		case audio_channels::downmix_to_stereo: return tr("Downmix to Stereo", "Audio channels");
+		case audio_channels::downmix_to_5_1: return tr("Downmix to 5.1", "Audio channels");
+		case audio_channels::surround_7_1: return tr("Surround 7.1", "Audio channels");
+		}
+		break;
 	default:
 		break;
 	}

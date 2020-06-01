@@ -217,7 +217,7 @@ struct cfg_root : cfg::node
 
 		cfg::_bool dump_to_file{ this, "Dump to file" };
 		cfg::_bool convert_to_u16{ this, "Convert to 16 bit" };
-		cfg::_bool downmix_to_2ch{ this, "Downmix to Stereo", true };
+		cfg::_enum<audio_channels> audio_channel_downmix{ this, "Audio Channels", audio_channels::downmix_to_stereo };
 		cfg::_int<1, 128> startt{ this, "Start Threshold", 1 }; // TODO: used only by ALSA, should probably be removed once ALSA is upgraded
 		cfg::_int<0, 200> volume{ this, "Master Volume", 100, true };
 		cfg::_bool enable_buffering{ this, "Enable Buffering", true };
