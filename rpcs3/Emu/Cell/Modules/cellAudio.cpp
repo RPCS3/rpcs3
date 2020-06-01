@@ -784,7 +784,7 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 
 		auto buf = port.get_vm_ptr(offset);
 		static const float k = 1.f;
-		static const float minus_3db = 0.707f; // value taken from https://www.dolby.com/us/en/technologies/a-guide-to-dolby-metadata.pdf
+		static constexpr float minus_3db = 0.707f; // value taken from https://www.dolby.com/us/en/technologies/a-guide-to-dolby-metadata.pdf
 		float m = master_volume;
 
 		// part of cellAudioSetPortLevel functionality
@@ -867,9 +867,10 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 
 					if constexpr (DownmixToStereo)
 					{
-						const float mid = center * minus_3db; // don't mix in the lfe as per dolby specification
-						out_buffer[out + 0] = (left + rear_left + (side_left * minus_3db) + mid) * k;
-						out_buffer[out + 1] = (right + rear_right + (side_right * minus_3db) + mid) * k;
+						// Don't mix in the lfe as per dolby specification and based on documentation
+						const float mid = center * 0.5;
+						out_buffer[out + 0] = left * minus_3db + mid + side_left * 0.5 + rear_left * 0.5;
+						out_buffer[out + 1] = right * minus_3db + mid + side_right * 0.5 + rear_right * 0.5;
 					}
 					else
 					{
@@ -902,9 +903,10 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 
 					if constexpr (DownmixToStereo)
 					{
-						const float mid = center * minus_3db;
-						out_buffer[out + 0] += (left + rear_left + (side_left * minus_3db) + mid) * k;
-						out_buffer[out + 1] += (right + rear_right + (side_right * minus_3db) + mid) * k;
+						// Don't mix in the lfe as per dolby specification and based on documentation
+						const float mid = center * 0.5;
+						out_buffer[out + 0] += left * minus_3db + mid + side_left * 0.5 + rear_left * 0.5;
+						out_buffer[out + 1] += right * minus_3db + mid + side_right * 0.5 + rear_right * 0.5;
 					}
 					else
 					{
