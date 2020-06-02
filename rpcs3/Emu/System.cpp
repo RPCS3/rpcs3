@@ -220,7 +220,7 @@ void Emulator::Init()
 	make_path_verbose(fs::get_config_dir() + "captures/");
 
 	// Initialize patch engine
-	g_fxo->init<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
+	g_fxo->init<patch_engine>()->append_global_patches();
 }
 
 namespace
@@ -914,7 +914,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 
 		// Load patches from different locations
-		g_fxo->get<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
+		g_fxo->get<patch_engine>()->append_title_patches(m_title_id);
 
 		// Mount all devices
 		const std::string emu_dir = GetEmuDir();
