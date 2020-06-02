@@ -113,13 +113,14 @@ namespace rsx
 					}
 				}
 
-				const bool is_new_surface = !sink;
-				Traits::clone_surface(cmd, sink, region.source, new_address, region);
-
-				if (is_new_surface)
+				if (sink)
 				{
-					allocate_rsx_memory(Traits::get(sink));
+					// Memory requirements can be altered when cloning
+					free_rsx_memory(Traits::get(sink));
 				}
+
+				Traits::clone_surface(cmd, sink, region.source, new_address, region);
+				allocate_rsx_memory(Traits::get(sink));
 
 				if (invalidated) [[unlikely]]
 				{
@@ -509,9 +510,9 @@ namespace rsx
 						}
 
 						new_surface = Traits::get(new_surface_storage);
-						allocate_rsx_memory(new_surface);
 						Traits::invalidate_surface_contents(command_list, new_surface, address, pitch);
 						Traits::prepare_surface_for_drawing(command_list, new_surface);
+						allocate_rsx_memory(new_surface);
 						break;
 					}
 				}
