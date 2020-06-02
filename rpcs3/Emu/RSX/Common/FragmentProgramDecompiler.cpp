@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "../rsx_methods.h"
-
 #include "FragmentProgramDecompiler.h"
 
 #include <algorithm>
@@ -121,9 +120,10 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 		return;
 	}
 
-	std::string dest = AddReg(dst.dest_reg, !!dst.fp16) + "$m";
+	const std::string dest = AddReg(dst.dest_reg, !!dst.fp16) + "$m";
+	const std::string decoded_dest = Format(dest);
 
-	AddCodeCond(Format(dest), code);
+	AddCodeCond(decoded_dest, code);
 	//AddCode("$ifcond " + dest + code + (append_mask ? "$m;" : ";"));
 
 	if (dst.set_cond)
@@ -134,6 +134,20 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 	u32 reg_index = dst.fp16 ? dst.dest_reg >> 1 : dst.dest_reg;
 
 	verify(HERE), reg_index < temp_registers.size();
+
+	if (dst.opcode == RSX_FP_OPCODE_MOV &&
+		src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP &&
+		src0.tmp_reg_index == reg_index)
+	{
+		// The register did not acquire any new data
+		// Common in code with structures like r0.xy = r0.xy
+		// Unsure why such code would exist, maybe placeholders for dynamically generated shader code?
+		if (decoded_dest == Format(code))
+		{
+			return;
+		}
+	}
+
 	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
 }
 
