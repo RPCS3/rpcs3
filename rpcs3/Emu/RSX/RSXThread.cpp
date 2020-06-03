@@ -741,20 +741,28 @@ namespace rsx
 
 	void thread::fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program)
 	{
-		//TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
-		auto fragment_alpha_func = rsx::method_registers.alpha_func();
-		auto alpha_ref = rsx::method_registers.alpha_ref();
-		auto rop_control = rsx::method_registers.alpha_test_enabled()? 1u : 0u;
+		u32 rop_control = 0u;
+
+		if (rsx::method_registers.alpha_test_enabled())
+		{
+			const u32 alpha_func = static_cast<u32>(rsx::method_registers.alpha_func());
+			rop_control |= (alpha_func << 16);
+			rop_control |= ROP_control::alpha_test_enable;
+		}
+
+		if (rsx::method_registers.polygon_stipple_enabled())
+		{
+			rop_control |= ROP_control::polygon_stipple_enable;
+		}
 
 		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !backend_config.supports_hw_a2c)
 		{
+			// TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
 			// Alpha values generate a coverage mask for order independent blending
 			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
 			// Simulated using combined alpha blend and alpha test
-			const u32 mask_bit = rsx::method_registers.msaa_sample_mask() ? 1u : 0u;
-
-			rop_control |= (1u << 4);                 // CSAA enable bit
-			rop_control |= (mask_bit << 5);           // MSAA mask enable bit
+			if (rsx::method_registers.msaa_sample_mask()) rop_control |= ROP_control::msaa_mask_enable;
+			rop_control |= ROP_control::csaa_enable;
 
 			// Sample configuration bits
 			switch (rsx::method_registers.surface_antialias())
@@ -772,10 +780,7 @@ namespace rsx
 
 		const f32 fog0 = rsx::method_registers.fog_params_0();
 		const f32 fog1 = rsx::method_registers.fog_params_1();
-		const u32 alpha_func = static_cast<u32>(fragment_alpha_func);
 		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
-
-		rop_control |= (alpha_func << 16);
 
 		if (rsx::method_registers.framebuffer_srgb_enabled())
 		{
@@ -787,14 +792,9 @@ namespace rsx
 			case rsx::surface_color_format::x32:
 				break;
 			default:
-				rop_control |= (1u << 1);
+				rop_control |= ROP_control::framebuffer_srgb_enable;
 				break;
 			}
-		}
-
-		if (rsx::method_registers.polygon_stipple_enabled())
-		{
-			rop_control |= (1u << 9);
 		}
 
 		// Generate wpos coefficients
@@ -808,10 +808,11 @@ namespace rsx
 		const f32 resolution_scale = (window_height <= static_cast<u32>(g_cfg.video.min_scalable_dimension)) ? 1.f : rsx::get_resolution_scale();
 		const f32 wpos_scale = (window_origin == rsx::window_origin::top) ? (1.f / resolution_scale) : (-1.f / resolution_scale);
 		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
+		const f32 alpha_ref = rsx::method_registers.alpha_ref();
 
 		u32 *dst = static_cast<u32*>(buffer);
 		stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control, std::bit_cast<u32>(alpha_ref));
-		stream_vector(dst + 4, alpha_func, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
+		stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 
 	void thread::fill_fragment_texture_parameters(void *buffer, const RSXFragmentProgram &fragment_program)

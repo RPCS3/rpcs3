@@ -112,6 +112,17 @@ namespace rsx
 		result_zcull_intr = 2
 	};
 
+	enum ROP_control : u32
+	{
+		alpha_test_enable       = (1u << 0),
+		framebuffer_srgb_enable = (1u << 1),
+		csaa_enable             = (1u << 4),
+		msaa_mask_enable        = (1u << 5),
+		msaa_config_mask        = (3u << 6),
+		polygon_stipple_enable  = (1u << 9),
+		alpha_func_mask         = (7u << 16)
+	};
+
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
 	// TODO: Replace with std::source_location in c++20
