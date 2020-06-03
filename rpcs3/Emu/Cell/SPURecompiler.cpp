@@ -7355,7 +7355,7 @@ public:
 			{
 				const u32 exponent = data._u32[i] & 0x7f800000u;
 
-				if (data._u32[i] > 0x7f7fffffu || !exponent)
+				if (data._u32[i] >= 0x7f7fffffu || !exponent)
 				{
 					// Postive or negative zero, Denormal (treated as zero), Negative constant, or Normalized number with exponent +127
 		 			// Cannot used signed integer compare safely
@@ -7380,7 +7380,7 @@ public:
 			{
 				const u32 exponent = data._u32[i] & 0x7f800000u;
 
-				if (data._u32[i] > 0x7f7fffffu || !exponent)
+				if (data._u32[i] >= 0x7f7fffffu || !exponent)
 				{
 					// See above
 					safe_int_compare = false;
