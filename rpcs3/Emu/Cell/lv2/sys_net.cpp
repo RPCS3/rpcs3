@@ -1861,13 +1861,18 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 	sys_net.warning("sys_net_bnet_poll(fds=*0x%x, nfds=%d, ms=%d)", fds, nfds, ms);
 
+	if (nfds <= 0)
+	{
+		return not_an_error(0);
+	}
+
 	atomic_t<s32> signaled{0};
 
 	u64 timeout = ms < 0 ? 0 : ms * 1000ull;
 
 	std::vector<sys_net_pollfd> fds_buf;
 
-	if (nfds > 0)
+	if (auto res = [&]() -> std::pair<bool, u32>
 	{
 		fds_buf.assign(fds.get_ptr(), fds.get_ptr() + nfds);
 
@@ -1937,7 +1942,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 		if (ms == 0 || signaled)
 		{
-			return not_an_error(signaled);
+			return {true, +signaled};
 		}
 
 		for (s32 i = 0; i < nfds; i++)
@@ -1988,10 +1993,11 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		}
 
 		lv2_obj::sleep(ppu, timeout);
-	}
-	else
+		return {false, 0};
+	}(); res.first)
 	{
-		return not_an_error(0);
+		std::memcpy(fds.get_ptr(), fds_buf.data(), nfds * sizeof(fds[0]));
+		return not_an_error(res.second);
 	}
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
