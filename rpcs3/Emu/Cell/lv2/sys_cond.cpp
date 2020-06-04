@@ -59,7 +59,7 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 			return CELL_EBUSY;
 		}
 
-		cond.mutex->cond_count--;
+		cond.mutex->obj_count.atomic_op([](typename lv2_mutex::count_info& info){ info.cond_count--; });
 		return {};
 	});
 
