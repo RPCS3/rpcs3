@@ -75,6 +75,12 @@ private:
 		enqueue_cmd,
 	};
 
+	// Function executed under IDM mutex, error will make the object creation fail and the error will be returned
+	CellError on_id_create()
+	{
+		return {};
+	}
+
 public:
 
 	static std::string name64(const u64& name_u64)
@@ -202,23 +208,45 @@ public:
 			{
 				std::shared_ptr<T> result = make();
 
-				if (!ipc_manager<T, u64>::add(ipc_key, [&] { if (!idm::import_existing<lv2_obj, T>(result)) result.reset(); return result; }, &result))
+				CellError error{};
+
+				if (!ipc_manager<T, u64>::add(ipc_key, [&]()
 				{
+					if (!idm::import<lv2_obj, T>([&]()
+					{
+						if (result && (error = result->on_id_create()))
+							result.reset();
+						return result;
+					}))
+					{
+						result.reset();
+					}
+
+					return result;
+				}, &result))
+				{
+					if (error)
+					{
+						return error;
+					}
+
 					if (flags == SYS_SYNC_NEWLY_CREATED)
 					{
 						return CELL_EEXIST;
 					}
 
-					if (!idm::import_existing<lv2_obj, T>(result))
+					error = CELL_EAGAIN;
+
+					if (!idm::import<lv2_obj, T>([&]() { if (result && (error = result->on_id_create())) result.reset(); return std::move(result); }))
 					{
-						return CELL_EAGAIN;
+						return error;
 					}
 
 					return CELL_OK;
 				}
 				else if (!result)
 				{
-					return CELL_EAGAIN;
+					return error ? CELL_EAGAIN : error;
 				}
 				else
 				{
@@ -234,9 +262,11 @@ public:
 					return CELL_ESRCH;
 				}
 
-				if (!idm::import_existing<lv2_obj, T>(result))
+				CellError error = CELL_EAGAIN;
+
+				if (!idm::import<lv2_obj, T>([&]() { if (result && (error = result->on_id_create())) result.reset(); return std::move(result); }))
 				{
-					return CELL_EAGAIN;
+					return error;
 				}
 
 				return CELL_OK;
@@ -249,9 +279,13 @@ public:
 		}
 		case SYS_SYNC_NOT_PROCESS_SHARED:
 		{
-			if (!idm::import<lv2_obj, T>(std::forward<F>(make)))
+			std::shared_ptr<T> result = make();
+
+			CellError error = CELL_EAGAIN;
+
+			if (!idm::import<lv2_obj, T>([&]() { if (result && (error = result->on_id_create())) result.reset(); return std::move(result); }))
 			{
-				return CELL_EAGAIN;
+				return error;
 			}
 
 			return CELL_OK;
