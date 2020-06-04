@@ -914,17 +914,18 @@ void VKGSRender::end()
 	if (ds && ds->old_contents.size() == 1 &&
 		ds->old_contents[0].source->info.format == VK_FORMAT_B8G8R8A8_UNORM)
 	{
-		auto key = vk::get_renderpass_key(ds->info.format);
+		auto key = vk::get_renderpass_key({ static_cast<vk::image*>(ds) });
 		auto render_pass = vk::get_renderpass(*m_device, key);
 		verify("Usupported renderpass configuration" HERE), render_pass != VK_NULL_HANDLE;
 
 		VkClearDepthStencilValue clear = { 1.f, 0xFF };
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
 
-		// Initialize source
-		auto src = vk::as_rtt(ds->old_contents[0].source);
-		src->read_barrier(*m_current_command_buffer);
+		// Initialize source data
+		auto srcobj = vk::as_rtt(ds->old_contents[0].source);
+		srcobj->read_barrier(*m_current_command_buffer);
 
+		auto src = srcobj->get_surface(rsx::surface_access::read);
 		switch (src->current_layout)
 		{
 		case VK_IMAGE_LAYOUT_GENERAL:
@@ -950,7 +951,6 @@ void VKGSRender::end()
 			src->get_view(0xAAE4, rsx::default_remap_vector),
 			ds, render_pass);
 
-		// TODO: Flush management to avoid pass running out of ubo space (very unlikely)
 		ds->on_write();
 	}
 
