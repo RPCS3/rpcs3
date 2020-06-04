@@ -6,6 +6,8 @@
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/AudioDumper.h"
 
+struct lv2_event_queue;
+
 // Error codes
 enum CellAudioError : u32
 {
@@ -358,7 +360,7 @@ public:
 		u8 start_period; // Starting event_period
 		u32 flags; // iFlags
 		u64 source; // Event source
-		u64 key; // Key
+		std::weak_ptr<lv2_event_queue> port; // Underlying event port
 	};
 
 	std::vector<key_info> keys;
