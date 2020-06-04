@@ -460,7 +460,7 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 
 	for (const auto& key_inf : keys)
 	{
-		if (const auto queue = lv2_event_queue::find(key_inf.key))
+		if ((queues[queue_count] = key_inf.port.lock()))
 		{
 			if (key_inf.flags & CELL_AUDIO_EVENTFLAG_NOMIX)
 			{
@@ -483,11 +483,12 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 			if ((event_period ^ key_inf.start_period) & (periods - 1))
 			{
 				// The time has not come for this key to receive event
+				queues[queue_count].reset();
 				continue;
 			}
 
 			event_sources[queue_count] = key_inf.source;
-			queues[queue_count++] = queue;
+			queue_count++;
 		}
 	}
 
@@ -1429,21 +1430,35 @@ error_code AudioSetNotifyEventQueue(u64 key, u32 iFlags)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	if (!lv2_event_queue::find(key))
+	auto q = lv2_event_queue::find(key);
+
+	if (!q)
 	{
 		return CELL_AUDIO_ERROR_TRANS_EVENT;
 	}
 
-	for (const auto& k : g_audio->keys) // check for duplicates
+	for (auto i = g_audio->keys.cbegin(); i != g_audio->keys.cend();) // check for duplicates
 	{
-		if (k.key == key)
+		auto port = i->port.lock();
+
+		if (port == q)
 		{
 			return CELL_AUDIO_ERROR_TRANS_EVENT;
+		}
+
+		if (!lv2_event_queue::check(port))
+		{
+			// Cleanup, avoid cases where there are multiple ports with the same key
+			i = g_audio->keys.erase(i);
+		}
+		else
+		{
+			i++;
 		}
 	}
 
 	// Set unique source associated with the key
-	g_audio->keys.push_back({g_audio->event_period, iFlags, ((process_getpid() + u64{}) << 32) + lv2_event_port::id_base + (g_audio->key_count++ * lv2_event_port::id_step), key});
+	g_audio->keys.push_back({g_audio->event_period, iFlags, ((process_getpid() + u64{}) << 32) + lv2_event_port::id_base + (g_audio->key_count++ * lv2_event_port::id_step), std::move(q)});
 	g_audio->key_count %= lv2_event_port::id_count;
 
 	return CELL_OK;
@@ -1481,7 +1496,7 @@ error_code AudioRemoveNotifyEventQueue(u64 key, u32 iFlags)
 
 	for (auto i = g_audio->keys.cbegin(); i != g_audio->keys.cend(); i++)
 	{
-		if (i->key == key)
+		if ([&](auto port){ return lv2_event_queue::check(port) && port->key == key; }(i->port.lock()))
 		{
 			if (i->flags != iFlags)
 			{
