@@ -122,22 +122,24 @@ error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queu
 
 	auto queue = std::make_shared<lv2_event_queue>(protocol, type, attr->name_u64, event_queue_key, size);
 
+	CellError error = CELL_EAGAIN;
+
 	if (event_queue_key == SYS_EVENT_QUEUE_LOCAL)
 	{
 		// Not an IPC queue
-		if (const u32 _id = idm::import_existing<lv2_obj, lv2_event_queue>(std::move(queue)))
+		if (const u32 _id = idm::import<lv2_obj, lv2_event_queue>([&]() { if ((error = queue->on_id_create())) queue.reset(); return std::move(queue); } ))
 		{
 			*equeue_id = _id;
 			return CELL_OK;
 		}
 
-		return CELL_EAGAIN;
+		return error;
 	}
 
 	// Create IPC queue
 	if (!ipc_manager<lv2_event_queue, u64>::add(event_queue_key, [&]() -> std::shared_ptr<lv2_event_queue>
 	{
-		if (const u32 _id = idm::import_existing<lv2_obj, lv2_event_queue>(queue))
+		if (const u32 _id = idm::import<lv2_obj, lv2_event_queue>([&]() { if ((error = queue->on_id_create())) return decltype(queue){}; return queue; } ))
 		{
 			*equeue_id = _id;
 			return std::move(queue);
@@ -151,7 +153,7 @@ error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queu
 
 	if (queue)
 	{
-		return CELL_EAGAIN;
+		return error;
 	}
 
 	return CELL_OK;
@@ -177,7 +179,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			return CELL_EBUSY;
 		}
 
-		queue.exists = false;
+		queue.exists--;
 		return {};
 	});
 
