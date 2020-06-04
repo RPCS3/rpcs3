@@ -407,7 +407,7 @@ namespace vk
 			vs_src =
 				"#version 450\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
-				"layout(std140, set=0, binding=0) uniform static_data{ vec4 regs[8]; };\n"
+				"layout(push_constant) uniform static_data{ vec2 scale; };\n"
 				"layout(location=0) out vec2 tc0;\n"
 				"\n"
 				"void main()\n"
@@ -415,7 +415,7 @@ namespace vk
 				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
 				"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
 				"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
-				"	tc0 = coords[gl_VertexIndex % 4] * regs[0].xy;\n"
+				"	tc0 = coords[gl_VertexIndex % 4] * scale;\n"
 				"}\n";
 
 			fs_src =
@@ -435,15 +435,20 @@ namespace vk
 			renderpass_config.enable_depth_test(VK_COMPARE_OP_ALWAYS);
 		}
 
-		void update_uniforms(vk::command_buffer& /*cmd*/, vk::glsl::program* /*program*/) override
+		std::vector<VkPushConstantRange> get_push_constants() override
 		{
-			m_ubo_offset = static_cast<u32>(m_ubo.alloc<256>(128));
-			auto dst = static_cast<f32*>(m_ubo.map(m_ubo_offset, 128));
-			dst[0] = src_scale_x;
-			dst[1] = src_scale_y;
-			dst[2] = 0.f;
-			dst[3] = 0.f;
-			m_ubo.unmap();
+			VkPushConstantRange constant;
+			constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+			constant.offset = 0;
+			constant.size = 8;
+
+			return { constant };
+		}
+
+		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/) override
+		{
+			float dst[2] = { src_scale_x, src_scale_y };
+			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 8, dst);
 		}
 
 		void run(vk::command_buffer& cmd, const areai& src_area, const areai& dst_area, vk::image_view* src, vk::image* dst, VkRenderPass render_pass)
@@ -453,6 +458,9 @@ namespace vk
 
 			src_scale_x = static_cast<f32>(src_area.x2) / real_src->width();
 			src_scale_y = static_cast<f32>(src_area.y2) / real_src->height();
+
+			// Coverage sampling disabled, but actually report correct number of samples
+			renderpass_config.set_multisample_state(dst->samples(), 0xFFFF, false, false, false);
 
 			overlay_pass::run(cmd, static_cast<areau>(dst_area), dst, src, render_pass);
 		}
