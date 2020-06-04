@@ -3028,7 +3028,6 @@ bool spu_thread::stop_and_signal(u32 code)
 
 			if (!lv2_event_queue::check(queue))
 			{
-				check_state();
 				return ch_in_mbox.set_values(1, CELL_EINVAL), true;
 			}
 
@@ -3036,7 +3035,6 @@ bool spu_thread::stop_and_signal(u32 code)
 
 			if (!queue->exists)
 			{
-				check_state();
 				return ch_in_mbox.set_values(1, CELL_EINVAL), true;
 			}
 
@@ -3065,7 +3063,6 @@ bool spu_thread::stop_and_signal(u32 code)
 				const auto data3 = static_cast<u32>(std::get<3>(event));
 				ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
 				queue->events.pop_front();
-				check_state();
 				return true;
 			}
 		}
@@ -3113,7 +3110,6 @@ bool spu_thread::stop_and_signal(u32 code)
 			}
 		}
 
-		check_state();
 		return true;
 	}
 
