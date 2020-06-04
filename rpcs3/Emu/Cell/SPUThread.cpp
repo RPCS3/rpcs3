@@ -274,10 +274,10 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	Label skip = c.newLabel();
 	Label next = c.newLabel();
 
-	if (utils::has_avx() && !s_tsx_avx)
-	{
-		c.vzeroupper();
-	}
+	//if (utils::has_avx() && !s_tsx_avx)
+	//{
+	//	c.vzeroupper();
+	//}
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
 	c.push(x86::rbp);
@@ -566,10 +566,10 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	Label skip = c.newLabel();
 	Label next = c.newLabel();
 
-	if (utils::has_avx() && !s_tsx_avx)
-	{
-		c.vzeroupper();
-	}
+	//if (utils::has_avx() && !s_tsx_avx)
+	//{
+	//	c.vzeroupper();
+	//}
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
 	c.push(x86::rbp);

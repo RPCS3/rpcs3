@@ -332,14 +332,13 @@ void cpu_thread::operator()()
 	{
 		thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(id_type() == 1 ? thread_class::ppu : thread_class::spu));
 	}
-
-	if (g_cfg.core.lower_spu_priority && id_type() == 2)
-	{
-		thread_ctrl::set_native_priority(-1);
-	}
-
 	if (id_type() == 2)
 	{
+		if (g_cfg.core.lower_spu_priority)
+		{
+			thread_ctrl::set_native_priority(-1);
+		}
+	
 		// force input/output denormals to zero for SPU threads (FTZ/DAZ)
 		_mm_setcsr( _mm_getcsr() | 0x8040 );
 

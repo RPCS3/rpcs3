@@ -69,8 +69,7 @@ LOG_CHANNEL(sys_log, "SYS");
 		static char* argv[] = {+s_argv0};
 		app.reset(new QApplication{argc, argv});
 	}
-
-	if (!local)
+	else
 	{
 		fprintf(stderr, "RPCS3: %s\n", text.c_str());
 	}
