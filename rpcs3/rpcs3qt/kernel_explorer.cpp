@@ -320,15 +320,18 @@ void kernel_explorer::Update()
 
 	for (auto&& entry : lv2_types)
 	{
-		if (entry.node && entry.count)
+		if (entry.node)
 		{
-			// Append object count
-			entry.node->setText(0, entry.node->text(0) + qstr(fmt::format(" (%zu)", entry.count)));
-		}
-		else if (entry.node)
-		{
-			// Delete node otherwise
-			delete entry.node;
+			if (entry.count)
+			{
+				// Append object count
+				entry.node->setText(0, entry.node->text(0) + qstr(fmt::format(" (%zu)", entry.count)));
+			}
+			else
+			{
+				// Delete node otherwise
+				delete entry.node;
+			}
 		}
 	}
 

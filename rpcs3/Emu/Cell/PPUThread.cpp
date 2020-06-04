@@ -1892,7 +1892,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 			}
 		}
 
-		legacy::PassManager mpm;
+		//legacy::PassManager mpm;
 
 		// Remove unused functions, structs, global variables, etc
 		//mpm.add(createStripDeadPrototypesPass());
