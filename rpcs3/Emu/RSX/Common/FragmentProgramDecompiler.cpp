@@ -173,18 +173,17 @@ void FragmentProgramDecompiler::AddCode(const std::string& code)
 std::string FragmentProgramDecompiler::GetMask()
 {
 	std::string ret;
+	ret.reserve(5);
+	
+	static constexpr std::string_view dst_mask = "xyzw";
 
-	static const char dst_mask[4] =
-	{
-		'x', 'y', 'z', 'w',
-	};
-
+	ret += '.';
 	if (dst.mask_x) ret += dst_mask[0];
 	if (dst.mask_y) ret += dst_mask[1];
 	if (dst.mask_z) ret += dst_mask[2];
 	if (dst.mask_w) ret += dst_mask[3];
 
-	return ret.empty() || strncmp(ret.c_str(), dst_mask, 4) == 0 ? "" : ("." + ret);
+	return ret == "."sv || ret == ".xyzw"sv ? "" : (ret);
 }
 
 std::string FragmentProgramDecompiler::AddReg(u32 index, bool fp16)
@@ -366,14 +365,20 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 
 std::string FragmentProgramDecompiler::GetRawCond()
 {
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
+	static constexpr std::string_view f = "xyzw";
 
 	std::string swizzle, cond;
+	swizzle.reserve(5);
+	swizzle += '.';
 	swizzle += f[src0.cond_swizzle_x];
 	swizzle += f[src0.cond_swizzle_y];
 	swizzle += f[src0.cond_swizzle_z];
 	swizzle += f[src0.cond_swizzle_w];
-	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
+
+	if (swizzle == ".xyzw"sv)
+	{
+		swizzle.clear();
+	}
 
 	if (src0.exec_if_gr && src0.exec_if_eq)
 		cond = compareFunction(COMPARE::FUNCTION_SGE, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
@@ -663,15 +668,20 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		break;
 	}
 
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
+	static constexpr std::string_view f = "xyzw";
 
 	std::string swizzle;
+	swizzle.reserve(5);
+	swizzle += '.';
 	swizzle += f[src.swizzle_x];
 	swizzle += f[src.swizzle_y];
 	swizzle += f[src.swizzle_z];
 	swizzle += f[src.swizzle_w];
 
-	if (strncmp(swizzle.c_str(), f, 4) != 0) ret += "." + swizzle;
+	if (swizzle != ".xyzw"sv)
+	{
+		ret += swizzle;
+	}
 
 	// Warning: Modifier order matters. e.g neg should be applied after precision clamping (tested with Naruto UNS)
 	if (src.abs) ret = "abs(" + ret + ")";
