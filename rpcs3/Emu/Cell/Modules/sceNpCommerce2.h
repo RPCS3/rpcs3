@@ -1,11 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "cellRtc.h"
 
 #include "Utilities/BEType.h"
 
 // Return codes
-enum
+enum SceNpCommerce2Error
 {
 	SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED                      = 0x80023001,
 	SCE_NP_COMMERCE2_ERROR_ALREADY_INITIALIZED                  = 0x80023002,
@@ -274,6 +274,12 @@ struct SceNpCommerce2ProductCodeParam
 	s8 padding2[3];
 	s8 code3[SCE_NP_COMMERCE2_PRODUCT_CODE_BLOCK_LEN + 1];
 	s8 padding3[3];
+};
+
+struct SceNpCommerce2GetCategoryContentsResult
+{
+	SceNpCommerce2CommonData commonData;
+	SceNpCommerce2Range rangeOfContents;
 };
 
 using SceNpCommerce2Handler = void(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, vm::ptr<void> arg);
