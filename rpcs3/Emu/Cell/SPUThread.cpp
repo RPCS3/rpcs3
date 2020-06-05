@@ -1921,6 +1921,12 @@ bool spu_thread::process_mfc_cmd()
 		const u32 addr = ch_mfc_cmd.eal & -128;
 		const auto& data = vm::_ref<decltype(rdata)>(addr);
 
+		if (addr == raddr && !g_use_rtm && g_cfg.core.spu_getllar_polling_detection && rtime == vm::reservation_acquire(addr, 128) && cmp_rdata(rdata, data))
+		{
+			// Spinning, might as well yield cpu resources
+			std::this_thread::yield();
+		}
+
 		auto& dst = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 		u64 ntime;
 
