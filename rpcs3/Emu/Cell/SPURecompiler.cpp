@@ -7478,6 +7478,13 @@ public:
 		{
 			const auto a = get_vr<f32[4]>(op.ra);
 			const auto b = get_vr<f32[4]>(op.rb);
+
+			if (op.ra == op.rb && !m_interp_magn)
+			{
+				set_vr(op.rt, a * b);
+				return;
+			}
+
 			const auto ma = eval(sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.))));
 			const auto mb = eval(sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.))));
 			const auto ca = eval(bitcast<f32[4]>(bitcast<s32[4]>(a) & mb));
