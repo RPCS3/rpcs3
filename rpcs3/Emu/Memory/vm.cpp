@@ -86,7 +86,7 @@ namespace vm
 			if (!g_locks[i] && g_locks[i].compare_and_swap_test(nullptr, _cpu))
 			{
 				g_tls_locked = g_locks.data() + i;
-				return;
+				break;
 			}
 
 			if (++i == max) i = 0;
@@ -137,47 +137,38 @@ namespace vm
 
 	void passive_lock(cpu_thread& cpu)
 	{
-		if (g_tls_locked && *g_tls_locked == &cpu) [[unlikely]]
+		if (!g_tls_locked || *g_tls_locked != &cpu) [[unlikely]]
 		{
-			if (cpu.state & cpu_flag::wait)
-			{
-				while (true)
-				{
-					g_mutex.lock_unlock();
-					cpu.state -= cpu_flag::wait + cpu_flag::memory;
-
-					if (g_mutex.is_lockable()) [[likely]]
-					{
-						return;
-					}
-
-					cpu.state += cpu_flag::wait;
-				}
-			}
-
-			return;
-		}
-
-		if (cpu.state & cpu_flag::memory)
-		{
-			cpu.state -= cpu_flag::memory + cpu_flag::wait;
-		}
-
-		if (g_mutex.is_lockable()) [[likely]]
-		{
-			// Optimistic path (hope that mutex is not exclusively locked)
 			_register_lock(&cpu);
 
-			if (g_mutex.is_lockable()) [[likely]]
+			if (cpu.state) [[likely]]
+			{
+				cpu.state -= cpu_flag::wait + cpu_flag::memory;
+			}
+
+			if (g_mutex.is_lockable())
 			{
 				return;
 			}
 
-			passive_unlock(cpu);
+			cpu.state += cpu_flag::wait;
 		}
 
-		::reader_lock lock(g_mutex);
-		_register_lock(&cpu);
+		if (cpu.state & cpu_flag::wait)
+		{
+			while (true)
+			{
+				g_mutex.lock_unlock();
+				cpu.state -= cpu_flag::wait + cpu_flag::memory;
+
+				if (g_mutex.is_lockable()) [[likely]]
+				{
+					return;
+				}
+
+				cpu.state += cpu_flag::wait;
+			}
+		}
 	}
 
 	atomic_t<u64>* range_lock(u32 addr, u32 end)
@@ -284,7 +275,7 @@ namespace vm
 
 	void temporary_unlock(cpu_thread& cpu) noexcept
 	{
-		cpu.state += cpu_flag::wait;
+		if (!(cpu.state & cpu_flag::wait)) cpu.state += cpu_flag::wait;
 
 		if (g_tls_locked && g_tls_locked->compare_and_swap_test(&cpu, nullptr))
 		{
@@ -304,17 +295,23 @@ namespace vm
 	{
 		auto cpu = get_current_cpu_thread();
 
-		if (!cpu || !g_tls_locked || !g_tls_locked->compare_and_swap_test(cpu, nullptr))
+		if (cpu)
 		{
-			cpu = nullptr;
+			if (!g_tls_locked || *g_tls_locked != cpu)
+			{
+				cpu = nullptr;
+			}
+			else
+			{
+				cpu->state += cpu_flag::wait;
+			}
 		}
 
 		g_mutex.lock_shared();
 
 		if (cpu)
 		{
-			_register_lock(cpu);
-			cpu->state -= cpu_flag::memory;
+			cpu->state -= cpu_flag::memory + cpu_flag::wait;
 		}
 	}
 
@@ -345,9 +342,16 @@ namespace vm
 	{
 		auto cpu = get_current_cpu_thread();
 
-		if (!cpu || !g_tls_locked || !g_tls_locked->compare_and_swap_test(cpu, nullptr))
+		if (cpu)
 		{
-			cpu = nullptr;
+			if (!g_tls_locked || *g_tls_locked != cpu)
+			{
+				cpu = nullptr;
+			}
+			else
+			{
+				cpu->state += cpu_flag::wait;
+			}
 		}
 
 		g_mutex.lock();
@@ -356,7 +360,7 @@ namespace vm
 		{
 			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
 			{
-				if (cpu_thread* ptr = *lock)
+				if (auto ptr = +*lock; ptr && !(ptr->state & cpu_flag::memory))
 				{
 					ptr->state.test_and_set(cpu_flag::memory);
 				}
@@ -394,18 +398,17 @@ namespace vm
 
 			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
 			{
-				cpu_thread* ptr;
-				while ((ptr = *lock) && !(ptr->state & cpu_flag::wait))
+				if (auto ptr = +*lock)
 				{
-					_mm_pause();
+					while (!(ptr->state & cpu_flag::wait))
+						_mm_pause();
 				}
 			}
 		}
 
 		if (cpu)
 		{
-			_register_lock(cpu);
-			cpu->state -= cpu_flag::memory;
+			cpu->state -= cpu_flag::memory + cpu_flag::wait;
 		}
 	}
 

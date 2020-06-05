@@ -35,7 +35,7 @@ struct ppu_thread_cleaner
 
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	// Need to wait until the current writer finish
 	if (ppu.state & cpu_flag::memory) vm::g_mutex.lock_unlock();
@@ -90,7 +90,7 @@ s32 sys_ppu_thread_yield(ppu_thread& ppu)
 
 error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_ppu_thread.trace("sys_ppu_thread_join(thread_id=0x%x, vptr=*0x%x)", thread_id, vptr);
 

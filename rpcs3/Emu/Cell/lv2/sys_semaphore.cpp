@@ -13,7 +13,7 @@ template<> DECLARE(ipc_manager<lv2_sema, u64>::g_ipc) {};
 
 error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_semaphore.warning("sys_semaphore_create(sem_id=*0x%x, attr=*0x%x, initial_val=%d, max_val=%d)", sem_id, attr, initial_val, max_val);
 
@@ -52,7 +52,7 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 
 error_code sys_semaphore_destroy(ppu_thread& ppu, u32 sem_id)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_semaphore.warning("sys_semaphore_destroy(sem_id=0x%x)", sem_id);
 
@@ -81,7 +81,7 @@ error_code sys_semaphore_destroy(ppu_thread& ppu, u32 sem_id)
 
 error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_semaphore.trace("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
@@ -168,7 +168,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 error_code sys_semaphore_trywait(ppu_thread& ppu, u32 sem_id)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_semaphore.trace("sys_semaphore_trywait(sem_id=0x%x)", sem_id);
 
@@ -192,7 +192,7 @@ error_code sys_semaphore_trywait(ppu_thread& ppu, u32 sem_id)
 
 error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_semaphore.trace("sys_semaphore_post(sem_id=0x%x, count=%d)", sem_id, count);
 
@@ -264,7 +264,7 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 
 error_code sys_semaphore_get_value(ppu_thread& ppu, u32 sem_id, vm::ptr<s32> count)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_semaphore.trace("sys_semaphore_get_value(sem_id=0x%x, count=*0x%x)", sem_id, count);
 
