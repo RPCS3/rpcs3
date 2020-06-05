@@ -3,6 +3,7 @@
 #include "types.h"
 #include "util/endian.hpp"
 #include <cstring>
+#include <cmath>
 
 #if __has_include(<bit>)
 #include <bit>
@@ -320,6 +321,36 @@ union alignas(16) v128
 	static inline v128 eq64f(const v128& left, const v128& right)
 	{
 		return fromD(_mm_cmpeq_pd(left.vd, right.vd));
+	}
+
+	static inline bool use_fma = false;
+
+	static inline v128 fma32f(v128 a, const v128& b, const v128& c)
+	{
+#ifndef __FMA__
+		if (use_fma) [[likely]]
+		{
+#ifdef _MSC_VER
+			a.vf = _mm_fmadd_ps(a.vf, b.vf, c.vf);
+			return a;
+#else
+			__asm__("vfmadd213ps %[c], %[b], %[a]"
+				: [a] "+x" (a.vf)
+				: [b] "x" (b.vf)
+				, [c] "x" (c.vf));
+			return a;
+#endif
+		}
+
+		for (int i = 0; i < 4; i++)
+		{
+			a._f[i] = std::fmaf(a._f[i], b._f[i], c._f[i]);
+		}
+		return a;
+#else
+		a.vf = _mm_fmadd_ps(a.vf, b.vf, c.vf);
+		return a;
+#endif
 	}
 
 	bool operator==(const v128& right) const

@@ -959,9 +959,9 @@ bool ppu_interpreter::VLOGEFP(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter_fast::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const auto a = ppu.vr[op.va].vf;
-	const auto b = ppu.vr[op.vc].vf;
-	const auto c = ppu.vr[op.vb].vf;
-	const auto result = _mm_add_ps(_mm_mul_ps(a, b), c);
+	const auto b = ppu.vr[op.vb].vf;
+	const auto c = ppu.vr[op.vc].vf;
+	const auto result = _mm_add_ps(_mm_mul_ps(a, c), b);
 	ppu.vr[op.vd] = vec_handle_nan(result);
 	return true;
 }
@@ -971,15 +971,7 @@ bool ppu_interpreter_precise::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 	const auto a = ppu.vr[op.va];
 	const auto b = ppu.vr[op.vb];
 	const auto c = ppu.vr[op.vc];
-	v128 d;
-
-	// TODO: Optimize
-	for (u32 i = 0; i < 4; i++)
-	{
-		d._f[i] = f32(f64{a._f[i]} * f64{c._f[i]} + f64{b._f[i]});
-	}
-
-	ppu.vr[op.rd] = vec_handle_nan(d, a, b, c);
+	ppu.vr[op.rd] = vec_handle_nan(v128::fma32f(a, c, b), a, b, c);
 	return true;
 }
 

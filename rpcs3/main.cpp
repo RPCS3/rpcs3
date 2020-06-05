@@ -268,6 +268,8 @@ int main(int argc, char** argv)
 	const u64 intro_time = (intro_stats.ru_utime.tv_sec + intro_stats.ru_stime.tv_sec) * 1000000000ull + (intro_stats.ru_utime.tv_usec + intro_stats.ru_stime.tv_usec) * 1000ull;
 #endif
 
+	v128::use_fma = utils::has_fma3();
+
 	s_argv0 = argv[0]; // Save for report_fatal_error
 
 	// Only run RPCS3 to display an error
