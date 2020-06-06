@@ -2603,21 +2603,23 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 					fmt::throw_exception("sys_spu_thread_send_event(value=0x%x, spup=%d): Out_MBox is empty" HERE, value, spup);
 				}
 
-				if (u32 count = ch_in_mbox.get_count())
-				{
-					fmt::throw_exception("sys_spu_thread_send_event(value=0x%x, spup=%d): In_MBox is not empty (count=%d)" HERE, value, spup, count);
-				}
-
 				spu_log.trace("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
-				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup].lock());
+				std::lock_guard lock(group->mutex);
 
-				const auto res = !queue ? CELL_ENOTCONN :
+				const auto queue = this->spup[spup].lock();
+
+				const auto res = ch_in_mbox.get_count() ? CELL_EBUSY :
+					!queue ? CELL_ENOTCONN :
 					queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data);
 
-				if (res == CELL_ENOTCONN)
+				if (ch_in_mbox.get_count())
 				{
-					spu_log.warning("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (value & 0x00ffffff), data);
+					spu_log.warning("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): In_MBox is not empty (%d)", spup, (value & 0x00ffffff), data, ch_in_mbox.get_count());
+				}
+				else if (res == CELL_ENOTCONN)
+				{
+					spu_log.warning("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): error (%s)", spup, (value & 0x00ffffff), data, res);
 				}
 
 				ch_in_mbox.set_values(1, res);
@@ -2659,17 +2661,19 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 					fmt::throw_exception("sys_event_flag_set_bit(value=0x%x (flag=%d)): Out_MBox is empty" HERE, value, flag);
 				}
 
-				if (u32 count = ch_in_mbox.get_count())
-				{
-					fmt::throw_exception("sys_event_flag_set_bit(value=0x%x (flag=%d)): In_MBox is not empty (%d)" HERE, value, flag, count);
-				}
-
 				spu_log.trace("sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
-				// Use the syscall to set flag
-				const auto res = sys_event_flag_set(data, 1ull << flag);
-				ch_in_mbox.set_values(1, res);
+				std::lock_guard lock(group->mutex);
 
+				// Use the syscall to set flag
+				const auto res = ch_in_mbox.get_count() ? CELL_EBUSY : 0u + sys_event_flag_set(data, 1ull << flag);
+
+				if (res == CELL_EBUSY)
+				{
+					spu_log.warning("sys_event_flag_set_bit(value=0x%x (flag=%d)): In_MBox is not empty (%d)", value, flag, ch_in_mbox.get_count());
+				}
+
+				ch_in_mbox.set_values(1, res);
 				return true;
 			}
 			else if (code == 192)
