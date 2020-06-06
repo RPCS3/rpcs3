@@ -63,8 +63,12 @@ namespace vm
 	// Memory mutex acknowledgement
 	thread_local atomic_t<cpu_thread*>* g_tls_locked = nullptr;
 
-	// Currently locked cache line
-	atomic_t<u64> g_addr_lock = 0;
+	// Currently locked cache lines
+	static union
+	{
+		atomic_t<u32> g_addr_locks[2];
+		atomic_t<u64> g_addr_lock;
+	};
 
 	// Memory mutex: passive locks
 	std::array<atomic_t<cpu_thread*>, g_cfg.core.ppu_threads.max> g_locks{};
@@ -130,29 +134,16 @@ namespace vm
 		}
 	}
 
-	static void _lock_shareable_cache(u8 /*value*/, u32 addr /*mutable*/, u32 end /*mutable*/)
+	static void _lock_shareable_cache(u8 /*value*/)
 	{
 		// Special value to block new range locks
-		g_addr_lock = addr | u64{end - addr} << 32;
-
-		// Convert to 64K-page numbers
-		addr >>= 16;
-		end >>= 16;
+		g_addr_lock = -1;
 
 		// Wait for range locks to clear
 		for (auto& lock : g_range_locks)
 		{
 			while (const u64 _lock = lock.load())
 			{
-				if (const u32 lock_page = static_cast<u32>(_lock) >> 16)
-				{
-					if (lock_page < addr || lock_page >= end)
-					{
-						// Ignoreable range lock
-						break;
-					}
-				}
-
 				_mm_pause();
 			}
 		}
@@ -169,7 +160,7 @@ namespace vm
 				cpu.state -= cpu_flag::wait + cpu_flag::memory;
 			}
 
-			if (g_mutex.is_lockable())
+			if (g_mutex.is_free())
 			{
 				return;
 			}
@@ -184,7 +175,7 @@ namespace vm
 				g_mutex.lock_unlock();
 				cpu.state -= cpu_flag::wait + cpu_flag::memory;
 
-				if (g_mutex.is_lockable()) [[likely]]
+				if (g_mutex.is_free()) [[likely]]
 				{
 					return;
 				}
@@ -198,30 +189,9 @@ namespace vm
 	{
 		static const auto test_addr = [](u64 target, u32 addr, u32 end) -> u64
 		{
-			if (const u32 target_size = static_cast<u32>(target >> 32))
+			if (target == umax)
 			{
-				// Shareable info is being modified
-				const u32 target_addr = static_cast<u32>(target);
-
-				if (addr >= target_addr + target_size || end <= target_addr)
-				{
-					// Outside of the locked range: proceed normally
-					if (g_shareable[addr >> 16])
-					{
-						addr &= 0xffff;
-						end = ((end - 1) & 0xffff) + 1;
-					}
-
-					return u64{end} << 32 | addr;
-				}
-
 				return 0;
-			}
-
-			if (g_shareable[target >> 16])
-			{
-				// Target within shareable memory range
-				target &= 0xffff;
 			}
 
 			if (g_shareable[addr >> 16])
@@ -231,7 +201,29 @@ namespace vm
 				end = ((end - 1) & 0xffff) + 1;
 			}
 
-			if (addr > target || end <= target)
+			const auto check_single = [](u32 t, u32 addr, u32 end)
+			{
+				if (!t)
+				{
+					return true;
+				}
+
+				if (g_shareable[t >> 16])
+				{
+					// Target within shareable memory range
+					t &= 0xffff;
+				}
+
+				if (addr > t || end <= t)
+				{
+					return true;
+				}
+
+				return false;
+			};
+
+			if (check_single(static_cast<u32>(target >> 32), addr, end) &&
+				check_single(static_cast<u32>(target), addr, end))
 			{
 				return u64{end} << 32 | addr;
 			}
@@ -254,7 +246,7 @@ namespace vm
 
 		while (true)
 		{
-			std::shared_lock lock(g_mutex);
+			std::unique_lock lock(g_mutex);
 
 			if (!(g_pages[addr / 4096].flags & page_readable))
 			{
@@ -326,21 +318,22 @@ namespace vm
 			}
 			else
 			{
+				m_flags += flags_t::mem;
 				cpu->state += cpu_flag::wait;
 			}
 		}
 
 		g_mutex.lock_shared();
-
-		if (cpu)
-		{
-			cpu->state -= cpu_flag::memory + cpu_flag::wait;
-		}
 	}
 
 	reader_lock::~reader_lock()
 	{
-		if (m_upgraded)
+		if (m_flags & flags_t::mem)
+		{
+			get_current_cpu_thread()->state -= cpu_flag::wait;
+		}
+
+		if (m_flags & flags_t::upgrade)
 		{
 			g_mutex.unlock();
 		}
@@ -352,16 +345,16 @@ namespace vm
 
 	void reader_lock::upgrade()
 	{
-		if (m_upgraded)
+		if (m_flags.test_and_set(flags_t::upgrade))
 		{
 			return;
 		}
 
 		g_mutex.lock_upgrade();
-		m_upgraded = true;
 	}
 
-	writer_lock::writer_lock(u32 addr /*mutable*/)
+	writer_lock::writer_lock(u32 addr /*mutable*/, u64 rtime)
+		: addr(addr)
 	{
 		auto cpu = get_current_cpu_thread();
 
@@ -377,10 +370,35 @@ namespace vm
 			}
 		}
 
-		g_mutex.lock();
-
 		if (addr >= 0x10000)
 		{
+			g_mutex.lock_shared(2);
+
+			while (!(g_pages[addr / 4096].flags & page_writable))
+			{
+				g_mutex.unlock_shared();
+				_ref<atomic_t<u8>>(addr) += 0; // Access violate 
+				g_mutex.lock_shared(2);
+			}
+
+			// TODO: Cleanup and optimize into a single function
+			if (reservation_acquire(addr, 128) / 128 > rtime / 128)
+			{
+				g_mutex.unlock_shared();
+				this->addr |= 1;
+				return;
+			}
+
+			reservation_lock(addr, 128);
+
+			if (auto& res = reservation_acquire(addr, 128); res / 128 > rtime / 128)
+			{
+				res.release(res & -128);
+				g_mutex.unlock_shared();
+				this->addr |= 1;
+				return;
+			}
+
 			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
 			{
 				if (auto ptr = +*lock; ptr && !(ptr->state & cpu_flag::memory))
@@ -389,7 +407,7 @@ namespace vm
 				}
 			}
 
-			g_addr_lock = addr;
+			while (!g_addr_locks[g_addr_locks[0] ? 1 : 0].compare_and_swap_test(0, addr));
 
 			if (g_shareable[addr >> 16])
 			{
@@ -428,6 +446,10 @@ namespace vm
 				}
 			}
 		}
+		else
+		{
+			g_mutex.lock();
+		}
 
 		if (cpu)
 		{
@@ -437,8 +459,25 @@ namespace vm
 
 	writer_lock::~writer_lock()
 	{
-		g_addr_lock.release(0);
-		g_mutex.unlock();
+		if (!operator bool())
+		{
+			return;
+		}
+
+		if (addr >= 0x10000)
+		{
+			g_addr_locks[g_addr_locks[0] == addr ? 0 : 1].release(0);
+
+			// Always update reservation data (assume locked)
+			auto& res = reservation_acquire(addr, 128);
+			res.release((res | 127) + 1);
+
+			g_mutex.unlock_shared();
+		}
+		else
+		{
+			g_mutex.unlock();
+		}
 	}
 
 	u64 reservation_lock_internal(u32 addr, atomic_t<u64>& res, u64 lock_bits)
@@ -534,7 +573,7 @@ namespace vm
 
 		if (shm && shm->flags() != 0)
 		{
-			_lock_shareable_cache(1, addr, addr + size);
+			_lock_shareable_cache(1);
 
 			for (u32 i = addr / 65536; i < addr / 65536 + size / 65536; i++)
 			{
@@ -683,7 +722,7 @@ namespace vm
 
 		if (g_shareable[addr >> 16])
 		{
-			_lock_shareable_cache(0, addr, addr + size);
+			_lock_shareable_cache(0);
 
 			for (u32 i = addr / 65536; i < addr / 65536 + size / 65536; i++)
 			{
@@ -1348,6 +1387,7 @@ namespace vm
 			std::memset(g_reservations, 0, sizeof(g_reservations));
 			std::memset(g_shareable, 0, sizeof(g_shareable));
 			std::memset(g_range_locks.data(), 0, sizeof(g_range_locks));
+			g_addr_lock.release(0);
 		}
 	}
 

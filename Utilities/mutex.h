@@ -18,6 +18,7 @@ class shared_mutex final
 	atomic_t<u32> m_value{};
 
 	void imp_lock_shared(u32 val);
+	void imp_lock_shared(u32 val, u32 max);
 	void imp_unlock_shared(u32 old);
 	void imp_lock_low(u32 val);
 	void imp_unlock_low(u32 old);
@@ -41,6 +42,14 @@ public:
 		return value < c_one - 1 && m_value.compare_and_swap_test(value, value + 1);
 	}
 
+	bool try_lock_shared(u32 max_readers)
+	{
+		const u32 value = m_value.load();
+
+		// Conditional increment
+		return value < max_readers && m_value.compare_and_swap_test(value, value + 1);
+	}
+
 	void lock_shared()
 	{
 		const u32 value = m_value.load();
@@ -48,6 +57,16 @@ public:
 		if (value >= c_one - 1 || !m_value.compare_and_swap_test(value, value + 1)) [[unlikely]]
 		{
 			imp_lock_shared(value);
+		}
+	}
+
+	void lock_shared(u32 max_readers)
+	{
+		const u32 value = m_value.load();
+
+		if (value >= max_readers || !m_value.compare_and_swap_test(value, value + 1)) [[unlikely]]
+		{
+			imp_lock_shared(value, max_readers);
 		}
 	}
 

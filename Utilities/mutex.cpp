@@ -28,6 +28,34 @@ void shared_mutex::imp_lock_shared(u32 val)
 	lock_downgrade();
 }
 
+void shared_mutex::imp_lock_shared(u32 val, u32 max_readers)
+{
+	verify("shared_mutex underflow" HERE), val < c_err;
+
+	for (int i = 0; i < 10; i++)
+	{
+		busy_wait();
+
+		if (try_lock_shared(max_readers))
+		{
+			return;
+		}
+	}
+
+	// Acquire writer lock and downgrade
+	const u32 old = m_value.fetch_add(c_one);
+
+	if (old == 0)
+	{
+		lock_downgrade();
+		return;
+	}
+
+	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one < c_sig;
+	imp_wait();
+	lock_downgrade();
+}
+
 void shared_mutex::imp_unlock_shared(u32 old)
 {
 	verify("shared_mutex underflow" HERE), old - 1 < c_err;
