@@ -1872,13 +1872,13 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 	std::vector<sys_net_pollfd> fds_buf;
 
-	if (auto res = [&]() -> std::pair<bool, u32>
+	if (true)
 	{
 		fds_buf.assign(fds.get_ptr(), fds.get_ptr() + nfds);
 
-		std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
+		std::unique_lock nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
 
-		reader_lock lock(id_manager::g_mutex);
+		std::shared_lock lock(id_manager::g_mutex);
 
 		::pollfd _fds[1024]{};
 #ifdef _WIN32
@@ -1942,7 +1942,10 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 		if (ms == 0 || signaled)
 		{
-			return {true, +signaled};
+			lock.unlock();
+			nw_lock.unlock();
+			std::memcpy(fds.get_ptr(), fds_buf.data(), nfds * sizeof(fds[0]));
+			return not_an_error(signaled);
 		}
 
 		for (s32 i = 0; i < nfds; i++)
@@ -1993,11 +1996,6 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		}
 
 		lv2_obj::sleep(ppu, timeout);
-		return {false, 0};
-	}(); res.first)
-	{
-		std::memcpy(fds.get_ptr(), fds_buf.data(), nfds * sizeof(fds[0]));
-		return not_an_error(res.second);
 	}
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
