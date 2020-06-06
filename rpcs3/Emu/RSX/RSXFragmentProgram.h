@@ -158,8 +158,9 @@ union SRC1
 		u32 swizzle_w        : 2;
 		u32 neg              : 1;
 		u32 abs              : 1;
-		u32 input_prec_mod   : 3; // Looks to be a precision clamping modifier affecting all inputs (tested with Dark Souls II)
-		u32                  : 6;
+		u32 src0_prec_mod    : 3; // Precision modifier for src0 (many games)
+		u32 src1_prec_mod    : 3; // Precision modifier for src1 (CoD:MW series)
+		u32 src2_prec_mod    : 3; // Precision modifier for src2 (unproven, should affect MAD instruction)
 		u32 scale            : 3;
 		u32 opcode_is_branch : 1;
 	};
