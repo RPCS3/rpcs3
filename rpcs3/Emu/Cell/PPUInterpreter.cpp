@@ -1458,12 +1458,23 @@ bool ppu_interpreter::VMULOUH(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const auto a = _mm_sub_ps(_mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf), ppu.vr[op.vb].vf);
 	const auto b = _mm_set1_ps(-0.0f);
 	const auto result = _mm_xor_ps(a, b);
 	ppu.vr[op.vd] = vec_handle_nan(result, a, b);
+	return true;
+}
+
+bool ppu_interpreter_precise::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const auto m = _mm_set1_ps(-0.0f);
+	const auto a = ppu.vr[op.va];
+	const auto c = ppu.vr[op.vc];
+	const auto b = v128::fromF(_mm_xor_ps(ppu.vr[op.vb].vf, m));
+	const auto r = v128::fromF(_mm_xor_ps(v128::fma32f(a, c, b).vf, m));
+	ppu.vr[op.rd] = vec_handle_nan(r, a, b, c);
 	return true;
 }
 
