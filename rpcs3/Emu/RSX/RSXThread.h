@@ -46,8 +46,8 @@ namespace rsx
 
 		rsx_iomap_table() noexcept
 		{
-			std::fill(ea.begin(), ea.end(), -1);
-			std::fill(io.begin(), io.end(), -1);
+			std::memset(ea.data(), -1, sizeof(ea));
+			std::memset(io.data(), -1, sizeof(io));
 		}
 
 		// Try to get the real address given a mapped address
