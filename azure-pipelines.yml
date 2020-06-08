@@ -42,7 +42,8 @@ jobs:
     displayName: Docker setup and build
 
   - publish: $(Build.ArtifactStagingDirectory)
-    condition: eq(variables['COMPILER'], 'gcc')
+    condition: and(succeeded(), eq(variables['COMPILER'], 'gcc'))
+    artifact: RPCS3 for Linux
 
 - job: Windows_Build
   variables:
@@ -96,7 +97,8 @@ jobs:
       displayName: Pack up build artifacts
 
     - publish: $(Build.ArtifactStagingDirectory)
-      artifact: Windows App Bundle
+      condition: succeeded()
+      artifact: RPCS3 for Windows
 
     - task: GitHubRelease@1
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
