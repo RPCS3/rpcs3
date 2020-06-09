@@ -17,7 +17,7 @@
 #include <string_view>
 
 // attr_protocol (waiting scheduling policy)
-enum
+enum lv2_protocol : u32
 {
 	SYS_SYNC_FIFO                = 0x1, // First In, First Out Order
 	SYS_SYNC_PRIORITY            = 0x2, // Priority Order

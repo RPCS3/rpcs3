@@ -27,7 +27,7 @@ struct lv2_lwcond final : lv2_obj
 
 	const be_t<u64> name;
 	const u32 lwid;
-	const u32 protocol;
+	const lv2_protocol protocol;
 	vm::ptr<sys_lwcond_t> control;
 
 	shared_mutex mutex;
@@ -37,7 +37,7 @@ struct lv2_lwcond final : lv2_obj
 	lv2_lwcond(u64 name, u32 lwid, u32 protocol, vm::ptr<sys_lwcond_t> control)
 		: name(std::bit_cast<be_t<u64>>(name))
 		, lwid(lwid)
-		, protocol(protocol)
+		, protocol{protocol}
 		, control(control)
 	{
 	}

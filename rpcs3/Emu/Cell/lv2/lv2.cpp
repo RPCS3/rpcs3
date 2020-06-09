@@ -54,6 +54,23 @@ void fmt_class_string<ppu_syscall_code>::format(std::string& out, u64 arg)
 	out += ppu_get_syscall_name(arg);
 }
 
+template <>
+void fmt_class_string<lv2_protocol>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case SYS_SYNC_FIFO: return "FIFO";
+		case SYS_SYNC_PRIORITY: return "PRIO";
+		case SYS_SYNC_PRIORITY_INHERIT: return "PRIO-INHER";
+		case SYS_SYNC_RETRY: return "RETRY";
+		}
+
+		return unknown;
+	});
+}
+
 static bool null_func(ppu_thread& ppu)
 {
 	ppu_log.todo("Unimplemented syscall %s -> CELL_OK (r3=0x%llx, r4=0x%llx, r5=0x%llx, r6=0x%llx, r7=0x%llx, r8=0x%llx, r9=0x%llx, r10=0x%llx)", ppu_syscall_code(ppu.gpr[11]),

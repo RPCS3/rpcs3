@@ -26,16 +26,18 @@ struct lv2_cond final : lv2_obj
 	const s32 flags;
 	const u64 key;
 	const u64 name;
+	const u32 mtx_id;
 
 	std::shared_ptr<lv2_mutex> mutex; // Associated Mutex
 	atomic_t<u32> waiters{0};
 	std::deque<cpu_thread*> sq;
 
-	lv2_cond(u32 shared, s32 flags, u64 key, u64 name, std::shared_ptr<lv2_mutex> mutex)
+	lv2_cond(u32 shared, s32 flags, u64 key, u64 name, u32 mtx_id, std::shared_ptr<lv2_mutex> mutex)
 		: shared(shared)
 		, flags(flags)
 		, key(key)
 		, name(name)
+		, mtx_id(mtx_id)
 		, mutex(std::move(mutex))
 	{
 		this->mutex->cond_count++;

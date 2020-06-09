@@ -79,7 +79,7 @@ struct lv2_event_queue final : public lv2_obj
 {
 	static const u32 id_base = 0x8d000000;
 
-	const u32 protocol;
+	const lv2_protocol protocol;
 	const s32 type;
 	const u64 name;
 	const u64 key;
@@ -91,7 +91,7 @@ struct lv2_event_queue final : public lv2_obj
 	std::deque<cpu_thread*> sq;
 
 	lv2_event_queue(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
-		: protocol(protocol)
+		: protocol{protocol}
 		, type(type)
 		, name(name)
 		, key(ipc_key)

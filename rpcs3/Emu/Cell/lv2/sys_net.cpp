@@ -81,6 +81,42 @@ void fmt_class_string<sys_net_error>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<lv2_socket_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case SYS_NET_SOCK_STREAM: return "STREAM";
+		case SYS_NET_SOCK_DGRAM: return "DGRAM";
+		case SYS_NET_SOCK_RAW: return "RAW";
+		case SYS_NET_SOCK_DGRAM_P2P: return "DGRAM-P2P";
+		case SYS_NET_SOCK_STREAM_P2P: return "STREAM-P2P";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<lv2_socket_family>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case SYS_NET_AF_UNSPEC: return "UNSPEC";
+		case SYS_NET_AF_LOCAL: return "LOCAL";
+		case SYS_NET_AF_INET: return "INET";
+		case SYS_NET_AF_INET6: return "INET6";
+		}
+
+		return unknown;
+	});
+}
+
+
+template <>
 void fmt_class_string<struct in_addr>::format(std::string& out, u64 arg)
 {
 	const uchar* data = reinterpret_cast<const uchar*>(&get_object(arg));
@@ -346,8 +382,8 @@ struct network_thread
 
 using network_context = named_thread<network_thread>;
 
-lv2_socket::lv2_socket(lv2_socket::socket_type s, s32 s_type)
-	: socket(s), type(s_type)
+lv2_socket::lv2_socket(lv2_socket::socket_type s, s32 s_type, s32 family)
+	: socket(s), type{s_type}, family{family}
 {
 	// Set non-blocking
 #ifdef _WIN32
@@ -470,7 +506,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 		return 0;
 	}
 
-	auto newsock = std::make_shared<lv2_socket>(native_socket, 0);
+	auto newsock = std::make_shared<lv2_socket>(native_socket, 0, 0);
 
 	result = idm::import_existing<lv2_socket>(newsock);
 
@@ -1823,7 +1859,7 @@ error_code sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protoc
 		return -get_last_error(false);
 	}
 
-	const s32 s = idm::import_existing<lv2_socket>(std::make_shared<lv2_socket>(native_socket, type));
+	const s32 s = idm::import_existing<lv2_socket>(std::make_shared<lv2_socket>(native_socket, type, family));
 
 	if (s == id_manager::id_traits<lv2_socket>::invalid)
 	{

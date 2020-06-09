@@ -110,22 +110,11 @@ error_code sys_timer_get_information(ppu_thread& ppu, u32 timer_id, vm::ptr<sys_
 
 	sys_timer.trace("sys_timer_get_information(timer_id=0x%x, info=*0x%x)", timer_id, info);
 
+	sys_timer_information_t _info{};
+
 	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer)
 	{
-		std::shared_lock lock(timer.mutex);
-
-		if (timer.state == SYS_TIMER_STATE_RUN)
-		{
-			info->timer_state = SYS_TIMER_STATE_RUN;
-			info->next_expire = timer.expire;
-			info->period      = timer.period;
-		}
-		else
-		{
-			info->timer_state = SYS_TIMER_STATE_STOP;
-			info->next_expire = 0;
-			info->period      = 0;
-		}
+		timer.get_information(_info);
 	});
 
 	if (!timer)
@@ -133,6 +122,7 @@ error_code sys_timer_get_information(ppu_thread& ppu, u32 timer_id, vm::ptr<sys_
 		return CELL_ESRCH;
 	}
 
+	std::memcpy(info.get_ptr(), &_info, info.size());
 	return CELL_OK;
 }
 

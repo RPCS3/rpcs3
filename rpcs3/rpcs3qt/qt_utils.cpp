@@ -334,7 +334,7 @@ namespace gui
 			if (parent)
 			{
 				QTreeWidgetItem *tree_item = new QTreeWidgetItem();
-				tree_item->setText(0, text);
+				tree_item->setText(column, text);
 				parent->addChild(tree_item);
 				return tree_item;
 			}

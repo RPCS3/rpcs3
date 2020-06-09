@@ -13,12 +13,14 @@ class kernel_explorer : public QDialog
 
 	enum additional_nodes
 	{
-		memory_containers = sys_size + 0,
-		ppu_threads       = sys_size + 1,
-		spu_threads       = sys_size + 2,
-		spu_thread_groups = sys_size + 3,
-		rsx_contexts      = sys_size + 4,
-		file_descriptors  = sys_size + 5,
+		memory_containers = sys_size,
+		virtual_memory,
+		sockets,
+		ppu_threads,
+		spu_threads,
+		spu_thread_groups,
+		rsx_contexts,
+		file_descriptors,
 	};
 
 public:
