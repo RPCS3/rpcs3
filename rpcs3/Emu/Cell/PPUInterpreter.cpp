@@ -1890,7 +1890,7 @@ bool ppu_interpreter::VRFIM(ppu_thread& ppu, ppu_opcode_t op)
 		d._f[w] = std::floor(b._f[w]);
 	}
 
-	ppu.vr[op.vb] = vec_handle_nan(d, b);
+	ppu.vr[op.vd] = vec_handle_nan(d, b);
 	return true;
 }
 
@@ -1904,7 +1904,7 @@ bool ppu_interpreter::VRFIN(ppu_thread& ppu, ppu_opcode_t op)
 		d._f[w] = std::nearbyint(b._f[w]);
 	}
 
-	ppu.vr[op.vb] = vec_handle_nan(d, b);
+	ppu.vr[op.vd] = vec_handle_nan(d, b);
 	return true;
 }
 
@@ -1918,7 +1918,7 @@ bool ppu_interpreter::VRFIP(ppu_thread& ppu, ppu_opcode_t op)
 		d._f[w] = std::ceil(b._f[w]);
 	}
 
-	ppu.vr[op.vb] = vec_handle_nan(d, b);
+	ppu.vr[op.vd] = vec_handle_nan(d, b);
 	return true;
 }
 
@@ -1932,7 +1932,7 @@ bool ppu_interpreter::VRFIZ(ppu_thread& ppu, ppu_opcode_t op)
 		d._f[w] = std::truncf(b._f[w]);
 	}
 
-	ppu.vr[op.vb] = vec_handle_nan(d, b);
+	ppu.vr[op.vd] = vec_handle_nan(d, b);
 	return true;
 }
 
