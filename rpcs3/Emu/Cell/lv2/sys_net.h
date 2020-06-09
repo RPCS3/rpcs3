@@ -58,7 +58,7 @@ static constexpr sys_net_error operator-(sys_net_error v)
 }
 
 // Socket types (prefixed with SYS_NET_)
-enum
+enum lv2_socket_type : s32
 {
 	SYS_NET_SOCK_STREAM     = 1,
 	SYS_NET_SOCK_DGRAM      = 2,
@@ -95,7 +95,7 @@ enum
 };
 
 // Family (prefixed with SYS_NET_)
-enum
+enum lv2_socket_family : s32
 {
 	SYS_NET_AF_UNSPEC       = 0,
 	SYS_NET_AF_LOCAL        = 1,
@@ -328,7 +328,7 @@ struct lv2_socket final
 		__bitset_enum_max
 	};
 
-	lv2_socket(socket_type s, s32 s_type);
+	lv2_socket(socket_type s, s32 s_type, s32 family);
 	~lv2_socket();
 
 	shared_mutex mutex;
@@ -353,7 +353,8 @@ struct lv2_socket final
 	// Unsupported option
 	s32 so_tcp_maxseg = 1500;
 
-	s32 type = 0;
+	const lv2_socket_type type;
+	const lv2_socket_family family;
 
 	// Value keepers
 #ifdef _WIN32

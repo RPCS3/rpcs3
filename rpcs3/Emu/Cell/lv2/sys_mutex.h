@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "sys_sync.h"
 
@@ -25,7 +25,7 @@ struct lv2_mutex final : lv2_obj
 {
 	static const u32 id_base = 0x85000000;
 
-	const u32 protocol;
+	const lv2_protocol protocol;
 	const u32 recursive;
 	const u32 shared;
 	const u32 adaptive;
@@ -40,7 +40,7 @@ struct lv2_mutex final : lv2_obj
 	std::deque<cpu_thread*> sq;
 
 	lv2_mutex(u32 protocol, u32 recursive, u32 shared, u32 adaptive, u64 key, s32 flags, u64 name)
-		: protocol(protocol)
+		: protocol{protocol}
 		, recursive(recursive)
 		, shared(shared)
 		, adaptive(adaptive)

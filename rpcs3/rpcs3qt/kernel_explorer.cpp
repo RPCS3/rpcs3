@@ -24,7 +24,10 @@
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_spu.h"
 #include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/Cell/lv2/sys_timer.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/lv2/sys_vm.h"
+#include "Emu/Cell/lv2/sys_net.h"
 #include "Emu/Cell/lv2/sys_fs.h"
 
 #include "Emu/RSX/RSXThread.h"
@@ -169,6 +172,7 @@ void kernel_explorer::Update()
 
 	if (!dct)
 	{
+		m_tree->clear();
 		return;
 	}
 
@@ -176,7 +180,8 @@ void kernel_explorer::Update()
 
 	const std::unordered_map<u32, QString> tree_item_names =
 	{
-		{ SYS_MEM_OBJECT                 , tr("Memory")},
+		{ SYS_MEM_OBJECT                 , tr("Shared Memory")},
+		{ virtual_memory                 , tr("Virtual Memory")},
 		{ SYS_MUTEX_OBJECT               , tr("Mutexes")},
 		{ SYS_COND_OBJECT                , tr("Condition Variables")},
 		{ SYS_RWLOCK_OBJECT              , tr("Reader Writer Locks")},
@@ -201,6 +206,7 @@ void kernel_explorer::Update()
 		{ spu_threads                    , tr("SPU Threads")},
 		{ spu_thread_groups              , tr("SPU Thread Groups")},
 		{ rsx_contexts                   , tr("RSX Contexts")},
+		{ sockets                        , tr("Sockets")},
 		{ file_descriptors               , tr("File Descriptors")},
 	};
 
@@ -279,27 +285,27 @@ void kernel_explorer::Update()
 		case SYS_MEM_OBJECT:
 		{
 			auto& mem = static_cast<lv2_memory&>(obj);
-			add_leaf(node, qstr(fmt::format("Memory 0x%08x: Size: 0x%x (%0.2f MB), Granularity: %s, Mappings: %u", id, mem.size, mem.size * 1. / (1024 * 1024), mem.align == 0x10000u ? "64K" : "1MB", +mem.counter)));
+			add_leaf(node, qstr(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Granularity: %s, Mappings: %u", id, mem.size, mem.size * 1. / (1024 * 1024), mem.align == 0x10000u ? "64K" : "1MB", +mem.counter)));
 			break;
 		}
 		case SYS_MUTEX_OBJECT:
 		{
 			auto& mutex = static_cast<lv2_mutex&>(obj);
-			add_leaf(node, qstr(fmt::format(u8"Mutex 0x%08x: “%s”,%s Owner: %#x, Locks: %u, Key: %#llx, Conds: %u, Wq: %zu", id, lv2_obj::name64(mutex.name),
+			add_leaf(node, qstr(fmt::format(u8"Mutex 0x%08x: “%s”, %s,%s Owner: %#x, Locks: %u, Key: %#llx, Conds: %u, Wq: %zu", id, lv2_obj::name64(mutex.name), mutex.protocol,
 				mutex.recursive == SYS_SYNC_RECURSIVE ? " Recursive," : "", mutex.owner >> 1, +mutex.lock_count, mutex.key, +mutex.cond_count, mutex.sq.size())));
 			break;
 		}
 		case SYS_COND_OBJECT:
 		{
 			auto& cond = static_cast<lv2_cond&>(obj);
-			add_leaf(node, qstr(fmt::format(u8"Cond 0x%08x: “%s”, Key: %#llx, Wq: %u", id, lv2_obj::name64(cond.name), cond.key, +cond.waiters)));
+			add_leaf(node, qstr(fmt::format(u8"Cond 0x%08x: “%s”, %s, Mutex: 0x%08x, Key: %#llx, Wq: %u", id, lv2_obj::name64(cond.name), cond.mutex->protocol, cond.mtx_id, cond.key, +cond.waiters)));
 			break;
 		}
 		case SYS_RWLOCK_OBJECT:
 		{
 			auto& rw = static_cast<lv2_rwlock&>(obj);
 			const s64 val = rw.owner;
-			add_leaf(node, qstr(fmt::format(u8"RW Lock 0x%08x: “%s”, Owner: %#x(%d), Key: %#llx, Rq: %zu, Wq: %zu", id, lv2_obj::name64(rw.name),
+			add_leaf(node, qstr(fmt::format(u8"RW Lock 0x%08x: “%s”, %s, Owner: %#x(%d), Key: %#llx, Rq: %zu, Wq: %zu", id, lv2_obj::name64(rw.name), rw.protocol,
 				std::max<s64>(0, val >> 1), -std::min<s64>(0, val >> 1), rw.key, rw.rq.size(), rw.wq.size())));
 			break;
 		}
@@ -318,7 +324,7 @@ void kernel_explorer::Update()
 		case SYS_EVENT_QUEUE_OBJECT:
 		{
 			auto& eq = static_cast<lv2_event_queue&>(obj);
-			add_leaf(node, qstr(fmt::format(u8"Event Queue 0x%08x: “%s”, %s, Key: %#llx, Events: %zu/%d, Wq: %zu", id, lv2_obj::name64(eq.name),
+			add_leaf(node, qstr(fmt::format(u8"Event Queue 0x%08x: “%s”, %s, %s, Key: %#llx, Events: %zu/%d, Wq: %zu", id, lv2_obj::name64(eq.name), eq.protocol,
 				eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.key, eq.events.size(), eq.size, eq.sq.size())));
 			break;
 		}
@@ -391,38 +397,43 @@ void kernel_explorer::Update()
 			}
 			else
 			{
-				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, Wq: %zu (Couldn't extract control data)", id, lv2_obj::name64(lwm.name), lwm.sq.size())));
+				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Wq: %zu (Couldn't extract control data)", id, lv2_obj::name64(lwm.name), lwm.protocol, lwm.sq.size())));
 				break;
 			}
 
-			add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”,%s Owner: %s, Locks: %u, Wq: %zu", id, lv2_obj::name64(lwm.name),
+			add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Wq: %zu", id, lv2_obj::name64(lwm.name), lwm.protocol,
 					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, lwm.sq.size())));
 			break;
 		}
 		case SYS_TIMER_OBJECT:
 		{
-			// auto& timer = static_cast<lv2_timer&>(obj);
-			add_leaf(node, qstr(fmt::format("Timer 0x%08x", id)));
+			auto& timer = static_cast<lv2_timer&>(obj);
+
+			sys_timer_information_t info;
+			timer.get_information(info);
+
+			add_leaf(node, qstr(fmt::format("Timer 0x%08x: State: %s, Period: 0x%llx, Next Expire: 0x%llx", id, info.timer_state ? "Running" : "Stopped"
+				, info.period, info.next_expire)));
 			break;
 		}
 		case SYS_SEMAPHORE_OBJECT:
 		{
 			auto& sema = static_cast<lv2_sema&>(obj);
 			const auto val = +sema.val;
-			add_leaf(node, qstr(fmt::format(u8"Sema 0x%08x: “%s”, Count: %d/%d, Wq: %zu", id, lv2_obj::name64(sema.name),
-				std::max<s32>(val, 0), sema.max, -std::min<s32>(val, 0))));
+			add_leaf(node, qstr(fmt::format(u8"Sema 0x%08x: “%s”, %s, Count: %d/%d, Key: %#llx, Wq: %zu", id, lv2_obj::name64(sema.name), sema.protocol,
+				std::max<s32>(val, 0), sema.max, sema.key, -std::min<s32>(val, 0))));
 			break;
 		}
 		case SYS_LWCOND_OBJECT:
 		{
 			auto& lwc = static_cast<lv2_lwcond&>(obj);
-			add_leaf(node, qstr(fmt::format(u8"LWCond 0x%08x: “%s”, Wq: %zu", id, lv2_obj::name64(lwc.name), +lwc.waiters)));
+			add_leaf(node, qstr(fmt::format(u8"LWCond 0x%08x: “%s”, %s, OG LWMutex: 0x%08x, Wq: %zu", id, lv2_obj::name64(lwc.name), lwc.protocol, lwc.lwid, +lwc.waiters)));
 			break;
 		}
 		case SYS_EVENT_FLAG_OBJECT:
 		{
 			auto& ef = static_cast<lv2_event_flag&>(obj);
-			add_leaf(node, qstr(fmt::format(u8"Event Flag 0x%08x: “%s”, Type: 0x%x, Key: %#llx, Pattern: 0x%llx, Wq: %zu", id, lv2_obj::name64(ef.name),
+			add_leaf(node, qstr(fmt::format(u8"Event Flag 0x%08x: “%s”, %s, Type: 0x%x, Key: %#llx, Pattern: 0x%llx, Wq: %zu", id, lv2_obj::name64(ef.name), ef.protocol,
 				ef.type, ef.key, ef.pattern.load(), +ef.waiters)));
 			break;
 		}
@@ -431,6 +442,18 @@ void kernel_explorer::Update()
 			add_leaf(node, qstr(fmt::format("Unknown object 0x%08x", id)));
 		}
 		}
+	});
+
+	idm::select<sys_vm_t>([&](u32 /*id*/, sys_vm_t& vmo)
+	{
+		const u32 psize = vmo.psize;
+		add_leaf(find_node(m_tree, additional_nodes::virtual_memory), qstr(fmt::format("Virtual Mem 0x%08x: Virtual Size: 0x%x (%0.2f MB), Physical Size: 0x%x (%0.2f MB)", vmo.addr
+			, vmo.size, vmo.size * 1. / (1024 * 1024), psize, psize * 1. / (1024 * 1024))));
+	});
+
+	idm::select<lv2_socket>([&](u32 id, lv2_socket& sock)
+	{
+		add_leaf(find_node(m_tree, additional_nodes::sockets), qstr(fmt::format("Socket %u: Type: %s, Family: %s, Wq: %zu", id, sock.type, sock.family, sock.queue.size())));
 	});
 
 	idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container& container)
