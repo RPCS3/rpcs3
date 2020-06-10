@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QTableWidget>
 #include <QHeaderView>
+#include <QTreeWidgetItem>
 
 namespace gui
 {
@@ -65,5 +66,11 @@ namespace gui
 
 		// Open a path in the explorer and mark the file
 		void open_dir(const QString& path);
+
+		// Constructs and adds a child to a QTreeWidgetItem
+		QTreeWidgetItem* add_child(QTreeWidgetItem* parent, const QString& text, int column = 0);
+
+		// Removes all children of a QTreeWidgetItem
+		void remove_children(QTreeWidgetItem* parent);
 	} // utils
 } // gui
