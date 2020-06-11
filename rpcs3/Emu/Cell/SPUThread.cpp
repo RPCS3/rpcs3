@@ -1986,7 +1986,7 @@ bool spu_thread::process_mfc_cmd()
 		if (raddr && raddr != addr)
 		{
 			// Last check for event before we replace the reservation with a new one
-			if (vm::reservation_acquire(raddr, 128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(raddr)))
+			if ((vm::reservation_acquire(raddr, 128) & -128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(raddr)))
 			{
 				ch_event_stat |= SPU_EVENT_LR;
 			}
@@ -2028,7 +2028,7 @@ bool spu_thread::process_mfc_cmd()
 				return false;
 			}
 
-			if (cmp_rdata(to_write, rdata))
+			if (!g_use_rtm && cmp_rdata(to_write, rdata))
 			{
 				// Writeback of unchanged data. Only check memory change
 				return cmp_rdata(rdata, vm::_ref<decltype(rdata)>(addr)) && res.compare_and_swap_test(rtime, rtime + 128);
