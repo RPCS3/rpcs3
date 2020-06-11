@@ -2,6 +2,15 @@
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QEvent>
+#include <QScreen>
+#include <QHeaderView>
+#include <QHBoxLayout>
+#include <QPushButton>
+#include <QMenu>
+#include <QDesktopServices>
+#include <QMessageBox>
+#include <QGuiApplication>
+#include <QUrl>
 
 #include "user_manager_dialog.h"
 #include "table_item_delegate.h"
@@ -13,19 +22,6 @@
 #include "Utilities/StrUtil.h"
 #include "Utilities/File.h"
 #include "util/logs.hpp"
-
-#include <QRegExpValidator>
-#include <QInputDialog>
-#include <QScreen>
-#include <QKeyEvent>
-#include <QHeaderView>
-#include <QHBoxLayout>
-#include <QPushButton>
-#include <QMenu>
-#include <QDesktopServices>
-#include <QMessageBox>
-#include <QGuiApplication>
-#include <QUrl>
 
 constexpr auto qstr = QString::fromStdString;
 

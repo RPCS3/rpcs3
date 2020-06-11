@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>patch_manager_dialog</class>
+ <widget class="QDialog" name="patch_manager_dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>837</width>
+    <height>659</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Patch Manager</string>
+  </property>
+  <layout class="QVBoxLayout" name="dialog_layout">
+   <item>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <widget class="QWidget" name="verticalLayoutWidget">
+      <layout class="QVBoxLayout" name="patch_tree_layout">
+       <item>
+        <layout class="QHBoxLayout" name="patch_filter_layout">
+         <item>
+          <widget class="QLineEdit" name="patch_filter">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="placeholderText">
+            <string>Filter patches</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_collapse_all">
+           <property name="text">
+            <string>Collapse All</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_expand_all">
+           <property name="text">
+            <string>Expand All</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QTreeWidget" name="patch_tree">
+         <property name="contextMenuPolicy">
+          <enum>Qt::CustomContextMenu</enum>
+         </property>
+         <property name="headerHidden">
+          <bool>true</bool>
+         </property>
+         <column>
+          <property name="text">
+           <string notr="true">1</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="verticalLayoutWidget_2">
+      <layout class="QVBoxLayout" name="patch_info_layout">
+       <item>
+        <widget class="QGroupBox" name="gb_patch_info">
+         <property name="title">
+          <string>Patch Information</string>
+         </property>
+         <layout class="QVBoxLayout" name="patch_info_gb_layout">
+          <item>
+           <widget class="QGroupBox" name="gb_hash">
+            <property name="title">
+             <string>Hash</string>
+            </property>
+            <layout class="QVBoxLayout" name="hash_layout">
+             <item>
+              <widget class="QLabel" name="label_hash">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_title">
+            <property name="title">
+             <string>Title</string>
+            </property>
+            <layout class="QVBoxLayout" name="title_layout">
+             <item>
+              <widget class="QLabel" name="label_title">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_serials">
+            <property name="title">
+             <string>Serials</string>
+            </property>
+            <layout class="QVBoxLayout" name="serials_layout">
+             <item>
+              <widget class="QLabel" name="label_serials">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_description">
+            <property name="title">
+             <string>Description</string>
+            </property>
+            <layout class="QVBoxLayout" name="description_layout">
+             <item>
+              <widget class="QLabel" name="label_description">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_patch_version">
+            <property name="title">
+             <string>Patch Version</string>
+            </property>
+            <layout class="QVBoxLayout" name="patch_version_layout">
+             <item>
+              <widget class="QLabel" name="label_patch_version">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_author">
+            <property name="title">
+             <string>Author</string>
+            </property>
+            <layout class="QVBoxLayout" name="author_layout">
+             <item>
+              <widget class="QLabel" name="label_author">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_notes">
+            <property name="title">
+             <string>Notes</string>
+            </property>
+            <layout class="QVBoxLayout" name="notes_layout">
+             <item>
+              <widget class="QLabel" name="label_notes">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacerPatchInfo">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::MinimumExpanding</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel|QDialogButtonBox::Save</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

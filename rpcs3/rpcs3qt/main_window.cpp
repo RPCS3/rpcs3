@@ -22,6 +22,7 @@
 #include "progress_dialog.h"
 #include "skylander_dialog.h"
 #include "cheat_manager.h"
+#include "patch_manager_dialog.h"
 #include "pkg_install_dialog.h"
 #include "category.h"
 #include "gui_settings.h"
@@ -1546,6 +1547,12 @@ void main_window::CreateConnects()
 	{
 		cheat_manager_dialog* cheat_manager = cheat_manager_dialog::get_dlg(this);
 		cheat_manager->show();
+ 	});
+
+	connect(ui->actionManage_Game_Patches, &QAction::triggered, [this]
+	{
+		patch_manager_dialog patch_manager(this);
+		patch_manager.exec();
  	});
 
 	connect(ui->actionManage_Users, &QAction::triggered, [this]
