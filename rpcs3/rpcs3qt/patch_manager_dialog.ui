@@ -37,6 +37,13 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="cb_enable_legacy_patches">
+           <property name="text">
+            <string>Enable Legacy Patches</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="pb_collapse_all">
            <property name="text">
             <string>Collapse All</string>

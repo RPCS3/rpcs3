@@ -4,6 +4,8 @@
 
 LOG_CHANNEL(patch_log);
 
+static const std::string yml_key_enable_legacy_patches = "Enable Legacy Patches";
+
 template <>
 void fmt_class_string<YAML::NodeType::value>::format(std::string& out, u64 arg)
 {
@@ -87,7 +89,8 @@ void patch_engine::load(patch_map& patches_map, const std::string& path)
 	}
 
 	// Load patch config to determine which patches are enabled
-	patch_config_map patch_config = load_config();
+	bool enable_legacy_patches;
+	patch_config_map patch_config = load_config(enable_legacy_patches);
 
 	static const std::string target_version = "1.0";
 	std::string version;
@@ -122,7 +125,7 @@ void patch_engine::load(patch_map& patches_map, const std::string& path)
 		{
 			struct patch_info info{};
 			info.hash      = main_key;
-			info.enabled   = true;
+			info.enabled   = enable_legacy_patches;
 			info.is_legacy = true;
 
 			read_patch_node(info, pair.second, root);
@@ -463,7 +466,7 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 	return applied_total;
 }
 
-void patch_engine::save_config(const patch_map& patches_map)
+void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_patches)
 {
 	const std::string path = get_patch_config_path();
 	patch_log.notice("Saving patch config file %s", path);
@@ -478,6 +481,10 @@ void patch_engine::save_config(const patch_map& patches_map)
 	YAML::Emitter out;
 	out << YAML::BeginMap;
 
+	// Save "Enable Legacy Patches"
+	out << yml_key_enable_legacy_patches << enable_legacy_patches;
+
+	// Save 'enabled' state per hash and description
 	patch_config_map config_map;
 
 	for (const auto& [hash, title_info] : patches_map)
@@ -511,8 +518,10 @@ void patch_engine::save_config(const patch_map& patches_map)
 	file.write(out.c_str(), out.size());
 }
 
-patch_engine::patch_config_map patch_engine::load_config()
+patch_engine::patch_config_map patch_engine::load_config(bool& enable_legacy_patches)
 {
+	enable_legacy_patches = true; // Default to true
+
 	patch_config_map config_map;
 
 	const std::string path = get_patch_config_path();
@@ -526,6 +535,13 @@ patch_engine::patch_config_map patch_engine::load_config()
 		{
 			patch_log.fatal("Failed to load patch config file %s:\n%s", path, error);
 			return config_map;
+		}
+
+		// Try to load "Enable Legacy Patches" (default to true)
+		if (auto enable_legacy_node = root[yml_key_enable_legacy_patches])
+		{
+			enable_legacy_patches = enable_legacy_node.as<bool>(true);
+			root.remove(yml_key_enable_legacy_patches); // Remove the node in order to skip it in the next part
 		}
 
 		for (auto pair : root)

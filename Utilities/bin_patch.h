@@ -94,10 +94,10 @@ public:
 	static void add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root);
 
 	// Save to patch_config.yml
-	static void save_config(const patch_map& patches_map);
+	static void save_config(const patch_map& patches_map, bool enable_legacy_patches);
 
 	// Load patch_config.yml
-	static patch_config_map load_config();
+	static patch_config_map load_config(bool& enable_legacy_patches);
 
 	// Load from file and append to member patches map
 	void append_global_patches();

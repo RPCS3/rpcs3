@@ -262,7 +262,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 		m_broken_types.insert(type);
 	}
 
-	connect(checkbox, &QCheckBox::stateChanged, [=, this](int val)
+	connect(checkbox, &QCheckBox::stateChanged, [type, this](int val)
 	{
 		const std::string str = val != 0 ? "true" : "false";
 		SetSetting(type, str);
@@ -303,7 +303,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, emu_settings_type type)
 	slider->setRange(min, max);
 	slider->setValue(val);
 
-	connect(slider, &QSlider::valueChanged, [=, this](int value)
+	connect(slider, &QSlider::valueChanged, [type, this](int value)
 	{
 		SetSetting(type, sstr(value));
 	});
@@ -404,7 +404,7 @@ void emu_settings::EnhanceLineEdit(QLineEdit* edit, emu_settings_type type)
 	const std::string set_text = GetSetting(type);
 	edit->setText(qstr(set_text));
 
-	connect(edit, &QLineEdit::textChanged, [=, this](const QString &text)
+	connect(edit, &QLineEdit::textChanged, [type, this](const QString &text)
 	{
 		SetSetting(type, sstr(text));
 	});

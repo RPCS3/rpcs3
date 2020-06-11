@@ -23,6 +23,7 @@ private Q_SLOTS:
 	void on_item_selected(QTreeWidgetItem *current, QTreeWidgetItem *previous);
 	void on_item_changed(QTreeWidgetItem *item, int column);
 	void on_custom_context_menu_requested(const QPoint& pos);
+	void on_legacy_patches_enabled(int state);
 
 private:
 	void load_patches();
@@ -32,6 +33,7 @@ private:
 	void update_patch_info(const patch_engine::patch_info& info);
 
 	patch_engine::patch_map m_map;
+	bool m_legacy_patches_enabled = false;
 
 	Ui::patch_manager_dialog *ui;
 };
