@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QMenu>
 #include <QAction>
+#include <QCheckBox>
 
 #include "ui_patch_manager_dialog.h"
 #include "patch_manager_dialog.h"
@@ -39,6 +40,10 @@ patch_manager_dialog::patch_manager_dialog(QWidget* parent)
 	ui->setupUi(this);
 	setModal(true);
 
+	// Load config for special settings
+	patch_engine::load_config(m_legacy_patches_enabled);
+	ui->cb_enable_legacy_patches->setChecked(m_legacy_patches_enabled);
+
 	load_patches();
 	populate_tree();
 
@@ -50,6 +55,7 @@ patch_manager_dialog::patch_manager_dialog(QWidget* parent)
 	connect(ui->patch_tree, &QTreeWidget::customContextMenuRequested, this, &patch_manager_dialog::on_custom_context_menu_requested);
 	connect(ui->pb_expand_all, &QAbstractButton::clicked, ui->patch_tree, &QTreeWidget::expandAll);
 	connect(ui->pb_collapse_all, &QAbstractButton::clicked, ui->patch_tree, &QTreeWidget::collapseAll);
+	connect(ui->cb_enable_legacy_patches, &QCheckBox::stateChanged, this, &patch_manager_dialog::on_legacy_patches_enabled);
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
 	{
@@ -195,7 +201,7 @@ void patch_manager_dialog::populate_tree()
 
 void patch_manager_dialog::save()
 {
-	patch_engine::save_config(m_map);
+	patch_engine::save_config(m_map, m_legacy_patches_enabled);
 }
 
 void patch_manager_dialog::filter_patches(const QString& term)
@@ -341,4 +347,9 @@ void patch_manager_dialog::on_custom_context_menu_requested(const QPoint &pos)
 	}
 
 	menu->exec(ui->patch_tree->viewport()->mapToGlobal(pos));
+}
+
+void patch_manager_dialog::on_legacy_patches_enabled(int state)
+{
+	m_legacy_patches_enabled = state == Qt::CheckState::Checked;
 }
