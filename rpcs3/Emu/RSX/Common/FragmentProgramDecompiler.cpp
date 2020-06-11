@@ -48,13 +48,6 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 
 	if (!dst.no_dest)
 	{
-		if (dst.exp_tex)
-		{
-			//Expand [0,1] to [-1, 1]. Confirmed by Castlevania: LOS
-			AddCode("//exp tex flag is set");
-			code = "((" + code + "- 0.5) * 2.)";
-		}
-
 		if (dst.fp16 && device_props.has_native_half_support && !(flags & OPFLAGS::skip_type_cast))
 		{
 			// Cast to native data type
@@ -988,8 +981,20 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			}
 		}
 
+		if (dst.exp_tex)
+		{
+			properties.has_exp_tex_op = true;
+			AddCode("_enable_texture_expand();");
+		}
+
 		auto function = functions[select];
 		SetDst(getFunction(function) + mask);
+
+		if (dst.exp_tex)
+		{
+			// Cleanup
+			AddCode("_disable_texture_expand();");
+		}
 	};
 
 	switch (opcode)
