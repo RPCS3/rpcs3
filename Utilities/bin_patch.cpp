@@ -262,9 +262,14 @@ void patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 			if (const auto yml_type = addr_node.Type(); yml_type == YAML::NodeType::Scalar)
 			{
 				const auto anchor = addr_node.Scalar();
-				patch_log.warning("Incorrect anchor syntax found in legacy patch: %s (key: %s)", anchor, info.hash);
+				const auto anchor_node = root[anchor];
 
-				if (!(addr_node = root[anchor]))
+				if (anchor_node)
+				{
+					addr_node = anchor_node;
+					patch_log.warning("Incorrect anchor syntax found in legacy patch: %s (key: %s)", anchor, info.hash);
+				}
+				else
 				{
 					patch_log.error("Anchor not found in legacy patch: %s (key: %s)", anchor, info.hash);
 					return;
