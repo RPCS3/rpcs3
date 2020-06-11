@@ -36,6 +36,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<spu_decoder_type> spu_decoder{ this, "SPU Decoder", spu_decoder_type::llvm };
 		cfg::_bool lower_spu_priority{ this, "Lower SPU thread priority" };
 		cfg::_bool spu_getllar_polling_detection{ this, "SPU GETLLAR polling detection", false, true };
+		cfg::_bool spu_rchcnt_polling_detection{ this, "SPU RCHCNT polling detection", true };
 		cfg::_bool spu_debug{ this, "SPU Debug" };
 		cfg::_int<0, 6> preferred_spu_threads{ this, "Preferred SPU Threads", 0, true }; // Number of hardware threads dedicated to heavy simultaneous spu tasks
 		cfg::_int<0, 16> spu_delay_penalty{ this, "SPU delay penalty", 3 }; // Number of milliseconds to block a thread if a virtual 'core' isn't free

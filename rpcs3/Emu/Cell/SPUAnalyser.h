@@ -272,6 +272,7 @@ struct spu_iflag
 		use_ra = 1 << 8,
 		use_rb = 1 << 9,
 		use_rc = 1 << 10,
+		use_rt4 = 1 << 11,
 	};
 
 	enum flag
@@ -331,7 +332,7 @@ struct spu_iflag
 		BGX,
 		MPYHHA,
 		MPYHHAU,
-		MPYA,
+		MPYA = use_ra | use_rb | use_rc | use_rt4,
 		SELB,
 		SHUFB,
 		DFMA,

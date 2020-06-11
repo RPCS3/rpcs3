@@ -1,8 +1,10 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/File.h"
 #include "Utilities/JIT.h"
 #include "Utilities/lockless.h"
+#include "Utilities/bit_set.h"
+#include "Utilities/address_range.h"
 #include "SPUThread.h"
 #include <vector>
 #include <bitset>
@@ -48,6 +50,33 @@ struct spu_program
 
 	// Program data with intentionally wrong endianness (on LE platform opcode values are swapped)
 	std::vector<u32> data;
+
+	enum class inst_attr : u8
+	{
+		omit,
+		rchcnt_pattern,
+
+		__bitset_enum_max
+	};
+
+	std::vector<bs_t<inst_attr>> inst_attrs;
+
+	struct pattern_info
+	{
+		utils::address_range range;
+	};
+
+	std::unordered_map<u32, pattern_info> patterns;
+
+	void add_pattern(bs_t<inst_attr> attr, u32 start, u32 end)
+	{
+		patterns.try_emplace(start, pattern_info{utils::address_range::start_end(start, end)});
+
+		for (u32 i = start; i <= end; i += 4)
+		{
+			inst_attrs[i / 4] += +inst_attr::omit + attr;
+		}
+	}
 
 	bool operator==(const spu_program& rhs) const noexcept;
 

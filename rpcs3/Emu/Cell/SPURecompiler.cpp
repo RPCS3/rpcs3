@@ -305,32 +305,53 @@ std::deque<spu_program> spu_cache::get()
 	// TODO: signal truncated or otherwise broken file
 	while (true)
 	{
+		spu_program res;
+
 		be_t<u32> size;
 		be_t<u32> addr;
-		std::vector<u32> func;
 
 		if (!m_file.read(size) || !m_file.read(addr))
 		{
 			break;
 		}
 
-		func.resize(size);
+		res.data.resize(size);
+		res.inst_attrs.resize(size);
 
-		if (m_file.read(func.data(), func.size() * 4) != func.size() * 4)
+		if (m_file.read(res.data.data(), size * 4) != size * 4)
 		{
 			break;
 		}
 
-		if (!size || !func[0])
+		if (m_file.read(res.inst_attrs.data(), size * 1) != size * 1)
+		{
+			break;
+		}
+	
+		if (!size || !res.data[0])
 		{
 			// Skip old format Giga entries
 			continue;
 		}
 
-		spu_program res;
 		res.entry_point = addr;
 		res.lower_bound = addr;
-		res.data = std::move(func);
+
+		for (u32 i = 0, c = 0; i <= res.inst_attrs.size(); i++)
+		{
+			if (i < res.inst_attrs.size() && res.inst_attrs[i] - spu_program::inst_attr::omit)
+			{
+				c++;
+				continue;
+			}
+
+			if (c)
+			{
+				res.patterns.try_emplace(i * 4, spu_program::pattern_info{utils::address_range::start_end(i * 4, i * 4)});
+				c = 0;
+			}
+		}
+
 		result.emplace_front(std::move(res));
 	}
 
@@ -347,15 +368,16 @@ void spu_cache::add(const spu_program& func)
 	be_t<u32> size = ::size32(func.data);
 	be_t<u32> addr = func.entry_point;
 
-	const fs::iovec_clone gather[3]
+	const fs::iovec_clone gather[]
 	{
 		{&size, sizeof(size)},
 		{&addr, sizeof(addr)},
-		{func.data.data(), func.data.size() * 4}
+		{func.data.data(), func.data.size() * 4},
+		{func.inst_attrs.data(), func.inst_attrs.size() * 1}
 	};
 
 	// Append data
-	m_file.write_gather(gather, 3);
+	m_file.write_gather(gather, 4);
 }
 
 void spu_cache::initialize()
@@ -378,7 +400,7 @@ void spu_cache::initialize()
 	}
 
 	// SPU cache file (version + block size type)
-	const std::string loc = ppu_cache + "spu-" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v1-tane.dat";
+	const std::string loc = ppu_cache + "spu-" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v2-tane.dat";
 
 	spu_cache cache(loc);
 
@@ -1213,6 +1235,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 	// Result: addr + raw instruction data
 	spu_program result;
 	result.data.reserve(10000);
+	result.inst_attrs.reserve(10000);
 	result.entry_point = entry_point;
 	result.lower_bound = entry_point;
 
@@ -1237,6 +1260,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 	m_bbs.clear();
 	m_chunks.clear();
 	m_funcs.clear();
+
+	// First: address, Second: opcode
+	std::vector<std::pair<u32, spu_opcode_t>> m_rchcnt_ops;
 
 	// Value flags (TODO: only is_const is implemented)
 	enum class vf : u32
@@ -1525,6 +1551,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 						if (result.data.size() < new_size)
 						{
 							result.data.resize(new_size);
+							result.inst_attrs.resize(new_size);
 						}
 
 						for (u32 i = 0; i < jt_abs.size(); i++)
@@ -1544,6 +1571,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 						if (result.data.size() < new_size)
 						{
 							result.data.resize(new_size);
+							result.inst_attrs.resize(new_size);
 						}
 
 						for (u32 i = 0; i < jt_rel.size(); i++)
@@ -1917,7 +1945,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			values[op.rt] = values[op.ra] << (op.i7 & 0x1f);
 			break;
 		}
+		case spu_itype::RCHCNT:
+		{
+			const spu_opcode_t inst{ls[pos / 4]};
 
+			if (g_cfg.core.spu_rchcnt_polling_detection)
+			{
+				m_rchcnt_ops.emplace_back(pos, inst);
+			}
+
+			[[fallthrough]];
+		}
 		default:
 		{
 			// Unconst
@@ -1936,6 +1974,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			if (result.data.size() < new_size)
 			{
 				result.data.resize(new_size);
+				result.inst_attrs.resize(new_size);
 			}
 
 			result.data.emplace_back(std::bit_cast<u32, be_t<u32>>(data));
@@ -2036,6 +2075,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		}
 
 		result.data.resize((limit - lsa) / 4);
+		result.inst_attrs.resize((limit - lsa) / 4);
 
 		// Check holes in safe mode (TODO)
 		u32 valid_size = 0;
@@ -2056,6 +2096,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
 				{
 					result.data.resize(valid_size);
+					result.inst_attrs.resize(valid_size);
 					break;
 				}
 			}
@@ -2067,6 +2108,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 		// Even if NOP or LNOP, should be removed at the end
 		result.data.resize(valid_size);
+		result.inst_attrs.resize(valid_size);
 
 		// Repeat if blocks were removed
 		if (result.data.size() == initial_size)
@@ -3131,6 +3173,286 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		if (!need_repeat)
 		{
 			break;
+		}
+	}
+
+	for (const auto& _op : m_rchcnt_ops)
+	{
+		if (result.data.empty())
+		{
+			break;
+		}
+
+		const u32 end = _op.first;
+		const u32 dst_reg = _op.second.rt;
+		bool good = true;
+		bool amazing = true;
+
+		switch (_op.second.ra)
+		{
+		case SPU_WrOutMbox:
+		//case SPU_WrOutIntrMbox:
+		case SPU_RdSigNotify1:
+		case SPU_RdSigNotify2:
+		case SPU_RdInMbox:
+		case SPU_RdEventStat:
+		{
+			break;
+		}
+
+		default:
+		{
+			continue;
+		}
+		}
+
+		// List of instructions walked into: break optimization on the slightest suspicioun of infinite loop
+		std::vector<b8> passed(result.data.size());
+		std::function<void(u32, u32, std::unordered_map<u32, u32>)> iter;
+
+		iter = [&](u32 current, u32 close_end, std::unordered_map<u32, u32> dst_regs)
+		{
+			while (good)
+			{
+				if (current == end || current == close_end)
+				{
+					return;
+				}
+
+				if (current < result.entry_point || current >= result.entry_point + result.data.size() * 4 - 4)
+				{
+					good = false;
+					break;
+				}
+
+				if (std::exchange(passed[(current - result.entry_point) / 4], true))
+				{
+					good = false;
+					break;		
+				}
+
+				const spu_opcode_t op{ls[current / 4]};
+
+				if (const auto place = dst_regs.find(m_regmod[current / 4]); place != dst_regs.end())
+				{
+					switch (const auto type = s_spu_itype.decode(op.opcode))
+					{
+					case spu_itype::CEQI:
+					{
+						const s32 imm = op.si10;
+
+						if (op.ra == op.rt && (imm == 1 || imm == 0))
+						{
+							break;
+						}
+						else
+						{
+							good = false;
+							break;
+						}
+
+						break;
+					}
+					default:
+					{
+						good = false;
+						break;
+					}
+					}
+				}
+
+				switch (const auto type = s_spu_itype.decode(op.opcode))
+				{
+				case spu_itype::ORI:
+				{
+					const s32 imm = op.si10;
+
+					if (dst_regs.find(op.ra) != dst_regs.end())
+					{
+						dst_regs[op.rt] = dst_regs[op.ra] | imm;
+					}
+
+					break;
+				}
+				case spu_itype::CEQI:
+				//case spu_itype::CGTI:
+				//case spu_itype::CLGTI:
+				{
+					const s32 imm = op.si10;
+
+					if (dst_regs.find(op.ra) != dst_regs.end() && (imm == 1 || imm == 0))
+					{
+						if (dst_regs[op.ra] > 1u)
+						{
+							break;
+						}
+
+						dst_regs[op.rt] = dst_regs[op.ra] ? UINT32_MAX : 0;
+
+						if (type == spu_itype::CLGTI)
+						{
+							dst_regs[op.rt] ^= UINT32_MAX;
+						}
+
+						if (!imm)
+						{
+							dst_regs[op.rt] ^= UINT32_MAX;
+						}
+					}
+
+					break;
+				}
+
+				case spu_itype::STOP:
+				case spu_itype::STQD:
+				case spu_itype::STQX:
+				case spu_itype::STQR:
+				case spu_itype::STQA:
+				case spu_itype::IRET:
+					amazing = false;
+					break;
+
+				case spu_itype::BI:
+				case spu_itype::BISL:
+				case spu_itype::BISLED:
+				case spu_itype::BIZ:
+				case spu_itype::BINZ:
+				case spu_itype::BIHZ:
+				case spu_itype::BIHNZ:
+				{
+					if (op.e)
+					{
+						good = false;
+						break;
+					}
+
+					const auto af = vflags[op.ra];
+					const auto av = values[op.ra];
+
+					if (!(af & vf::is_const))
+					{
+						good = false;
+						break;
+					}
+
+					if (type != spu_itype::BI || type != spu_itype::BISL)
+					{
+						iter(current + 4, -1, dst_regs);
+					}
+
+					current = spu_branch_target(av);
+					continue;
+				}
+
+				case spu_itype::BRA:
+				case spu_itype::BRSL:
+				case spu_itype::BRASL:
+				{
+					current = spu_branch_target(type == spu_itype::BRASL ? 0 : current, op.i16);
+					continue;
+				}
+
+				case spu_itype::BR:
+				case spu_itype::BRZ:
+				case spu_itype::BRNZ:
+				case spu_itype::BRHZ:
+				case spu_itype::BRHNZ:
+				{
+					const u32 target = spu_branch_target(current, op.i16);
+
+					if (type != spu_itype::BR)
+					{
+						if (auto it = dst_regs.find(op.rt); it != dst_regs.end())
+						{
+							const u32 value = it->second;
+
+							// The register has been used, no longer need to check destination register changes
+							dst_regs.clear();
+					
+							if ((!value) != (type == spu_itype::BRZ || type == spu_itype::BRHZ))
+							{
+								current = target;
+								continue;
+							}
+
+							break;
+						}
+
+						iter(current + 4, target > current + 4 ? target : -1, dst_regs);
+					}
+
+					current = target;
+					continue;
+				}
+				case spu_itype::WRCH:
+				{
+					switch (op.ra)
+					{
+					case SPU_WrSRR0:
+					case MFC_LSA:
+					case MFC_EAH:
+					case MFC_EAL:
+					case MFC_Size:
+					case MFC_TagID:
+					case MFC_WrTagMask:
+					case MFC_WrTagUpdate:
+					case SPU_WrDec:
+					case SPU_WrEventMask:
+					case SPU_WrEventAck:
+					case 69:
+						break;
+					default:
+						amazing = false;
+						break;
+					}
+
+					break;
+				}
+				case spu_itype::RDCH:
+				{
+					switch (op.ra)
+					{
+					case SPU_RdInMbox:
+					case SPU_RdSigNotify1:
+					case SPU_RdSigNotify2:
+						amazing = false;
+						break;
+					default:
+						break;
+					}
+
+					break;
+				}
+				case spu_itype::UNK:
+				{
+					// Unreachable path
+					return;
+				}
+				default:
+				{
+					break;
+				}
+				}
+
+				current += 4;
+			}
+		};
+
+		iter(end + 4, -1, {{dst_reg, 1}});
+
+		if (!good)
+		{
+			amazing = false;
+		}
+
+		//if (good)
+		{
+			spu_log.always("[0x%x] Pattern 2 detected, Report to Elad (ch=%s, good=%d, amazing=%d)", _op.first, spu_ch_name[_op.second.ra], +good, +amazing);
+		}
+
+		if (good && amazing)
+		{
+			result.add_pattern(spu_program::inst_attr::rchcnt_pattern, _op.first - result.entry_point, _op.first - result.entry_point);
 		}
 	}
 
@@ -4640,6 +4962,18 @@ public:
 					else
 						m_next_op = func.data[(m_pos - start) / 4 + 1];
 
+					const auto attrib = func.inst_attrs[(m_pos - start) / 4];
+
+					if (attrib & spu_program::inst_attr::rchcnt_pattern)
+					{
+						if (rchcnt_loop_pattern(func, func.patterns.at((m_pos - start)).range))
+							continue;
+					}
+					//if (attrib & spu_program::inst_attr::omit)
+					//{
+					//	continue;
+					//}
+//
 					// Execute recompiler function (TODO)
 					(this->*decode(op))({op});
 				}
@@ -4854,6 +5188,73 @@ public:
 				}
 			}
 		}
+	}
+
+	bool rchcnt_loop_pattern(const spu_program& prog, utils::address_range range)
+	{
+		const spu_opcode_t op{std::bit_cast<be_t<u32>>(prog.data[range.start / 4])};
+
+		value_t<u32> res;
+
+		auto wait = llvm::BasicBlock::Create(m_context, "", m_function);
+		auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+
+		auto body = [&]()
+		{
+			m_ir->CreateCondBr(m_ir->CreateICmpEQ(res.value, m_ir->getInt32(0)), wait, next, m_md_unlikely);
+			m_ir->SetInsertPoint(wait);
+			update_pc(prog.entry_point + range.start);
+			call("wait_on_channel", &exec_wait_ch, m_thread, m_ir->getInt32(op.ra));
+			m_ir->CreateBr(next);
+			m_ir->SetInsertPoint(next);
+		};
+
+		switch (op.ra)
+		{
+		case SPU_WrOutMbox:
+		{
+			res.value = get_rchcnt(::offset32(&spu_thread::ch_out_mbox), true);
+			break;
+		}
+		case SPU_WrOutIntrMbox:
+		{
+			res.value = get_rchcnt(::offset32(&spu_thread::ch_out_intr_mbox), true);
+			break;
+		}
+		case SPU_RdSigNotify1:
+		{
+			res.value = get_rchcnt(::offset32(&spu_thread::ch_snr1));
+			break;
+		}
+		case SPU_RdSigNotify2:
+		{
+			res.value = get_rchcnt(::offset32(&spu_thread::ch_snr2));
+			break;
+		}
+		case SPU_RdInMbox:
+		{
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_in_mbox), true);
+			res.value = m_ir->CreateLShr(res.value, 8);
+			res.value = m_ir->CreateAnd(res.value, 7);
+			break;
+		}
+		case SPU_RdEventStat:
+		{
+			res.value = call("spu_get_events", &exec_get_events, m_thread);
+			res.value = m_ir->CreateICmpNE(res.value, m_ir->getInt32(0));
+			res.value = m_ir->CreateZExt(res.value, get_type<u32>());
+			break;
+		}
+
+		default:
+		{
+			return false;
+		}
+		}
+
+		body();
+		set_vr(op.rt, insert(splat<u32[4]>(0), 3, res));
+		return true;
 	}
 
 	spu_function_t compile_interpreter()
@@ -5350,6 +5751,19 @@ public:
 		{
 			spu_runtime::g_escape(_spu);
 		}
+
+		if (_spu->test_stopped())
+		{
+			_spu->pc += 4;
+			spu_runtime::g_escape(_spu);
+		}
+
+		return static_cast<u32>(result & 0xffffffff);
+	}
+
+	static u32 exec_wait_ch(spu_thread* _spu, u32 ch)
+	{
+		const u32 result = _spu->wait_on_ch(ch);
 
 		if (_spu->test_stopped())
 		{

@@ -402,6 +402,25 @@ public:
 		}
 	}
 
+	u32 set_wait()
+	{
+		u32 count;
+		values.fetch_op([&](sync_var_t& data)
+		{
+			count = data.count;
+
+			if (count)
+			{
+				return false;
+			}
+
+			data.waiting = 1;
+			return true;
+		});
+
+		return count;
+	}
+
 	// returns non-zero value on success: queue size before removal
 	uint try_pop(u32& out)
 	{
@@ -756,6 +775,7 @@ public:
 	bool check_mfc_interrupts(u32 nex_pc);
 	u32 get_ch_count(u32 ch);
 	s64 get_ch_value(u32 ch);
+	u32 wait_on_ch(u32 ch);
 	bool set_ch_value(u32 ch, u32 value);
 	bool stop_and_signal(u32 code);
 	void halt();

@@ -2641,6 +2641,127 @@ s64 spu_thread::get_ch_value(u32 ch)
 	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
 }
 
+u32 spu_thread::wait_on_ch(u32 ch)
+{
+	auto wait_read_channel = [&](spu_channel& channel) -> u32
+	{
+		if (u32 count = channel.get_count())
+		{
+			return count;
+		}
+
+		state += cpu_flag::wait;
+
+		for (int i = 0; i < 10; i++)
+		{
+			if (u32 count = channel.get_count())
+			{
+				check_state();
+				return count;
+			}
+
+			busy_wait();
+		}
+
+		channel.pop_wait(*this, false);
+		check_state();
+		return 1;
+	};
+
+	switch (ch)
+	{
+	case SPU_WrOutMbox:
+	{
+		if (u32 count = ch_out_mbox.get_count() ^ 1)
+		{
+			return count;
+		}
+
+		state += cpu_flag::wait;
+
+		if (!ch_out_mbox.push_wait(*this, 0, false))
+		{
+			return -1;
+		}
+
+		check_state();
+		return 1;
+	}
+	case SPU_WrOutIntrMbox:
+	{
+		if (u32 count = ch_out_intr_mbox.get_count() ^ 1)
+		{
+			return count;
+		}
+
+		state += cpu_flag::wait;
+
+		if (!ch_out_intr_mbox.push_wait(*this, 0, false))
+		{
+			return -1;
+		}
+
+		check_state();
+		return 1;
+	}
+	case SPU_RdSigNotify1:
+	{
+		return wait_read_channel(ch_snr1);
+	}
+	case SPU_RdSigNotify2:
+	{
+		return wait_read_channel(ch_snr2);
+	}
+	case SPU_RdInMbox:
+	{
+		if (uint count = ch_in_mbox.get_count())
+		{
+			return count;
+		}
+
+		state += cpu_flag::wait;
+
+		while (true)
+		{
+			for (int i = 0; i < 10; i++)
+			{
+				if (uint count = ch_in_mbox.get_count())
+				{
+					check_state();
+					return count;
+				}
+
+				busy_wait();
+			}
+
+			if (uint count = ch_in_mbox.get_count())
+			{
+				check_state();
+				return count;
+			}
+
+			if (uint count = ch_in_mbox.set_wait())
+			{
+				check_state();
+				return count;
+			}
+
+			if (is_stopped())
+			{
+				return -1;
+			}
+
+			thread_ctrl::wait();
+		}
+	}
+	case SPU_RdEventStat:
+	{
+		return get_ch_value(ch) != 0;
+	}
+	default: ASSUME(0);
+	}
+}
+
 bool spu_thread::set_ch_value(u32 ch, u32 value)
 {
 	spu_log.trace("set_ch_value(ch=%d [%s], value=0x%x)", ch, ch < 128 ? spu_ch_name[ch] : "???", value);
