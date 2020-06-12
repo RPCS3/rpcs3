@@ -10,6 +10,9 @@
     <height>659</height>
    </rect>
   </property>
+  <property name="acceptDrops">
+   <bool>true</bool>
+  </property>
   <property name="windowTitle">
    <string>Patch Manager</string>
   </property>

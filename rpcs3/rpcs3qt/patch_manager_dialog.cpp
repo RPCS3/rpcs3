@@ -6,6 +6,7 @@
 #include <QMenu>
 #include <QAction>
 #include <QCheckBox>
+#include <QMessageBox>
 
 #include "ui_patch_manager_dialog.h"
 #include "patch_manager_dialog.h"
@@ -44,11 +45,6 @@ patch_manager_dialog::patch_manager_dialog(QWidget* parent)
 	patch_engine::load_config(m_legacy_patches_enabled);
 	ui->cb_enable_legacy_patches->setChecked(m_legacy_patches_enabled);
 
-	load_patches();
-	populate_tree();
-
-	resize(QGuiApplication::primaryScreen()->availableSize() * 0.7);
-
 	connect(ui->patch_filter, &QLineEdit::textChanged, this, &patch_manager_dialog::filter_patches);
 	connect(ui->patch_tree, &QTreeWidget::currentItemChanged, this, &patch_manager_dialog::on_item_selected);
 	connect(ui->patch_tree, &QTreeWidget::itemChanged, this, &patch_manager_dialog::on_item_changed);
@@ -61,19 +57,29 @@ patch_manager_dialog::patch_manager_dialog(QWidget* parent)
 	{
 		if (button == ui->buttonBox->button(QDialogButtonBox::Save))
 		{
-			save();
+			save_config();
 			accept();
 		}
 		else if (button == ui->buttonBox->button(QDialogButtonBox::Apply))
 		{
-			save();
+			save_config();
 		}
 	});
+
+	refresh();
+
+	resize(QGuiApplication::primaryScreen()->availableSize() * 0.7);
 }
 
 patch_manager_dialog::~patch_manager_dialog()
 {
 	delete ui;
+}
+
+void patch_manager_dialog::refresh()
+{
+	load_patches();
+	populate_tree();
 }
 
 void patch_manager_dialog::load_patches()
@@ -199,7 +205,7 @@ void patch_manager_dialog::populate_tree()
 	ui->patch_tree->sortByColumn(0, Qt::SortOrder::AscendingOrder);
 }
 
-void patch_manager_dialog::save()
+void patch_manager_dialog::save_config()
 {
 	patch_engine::save_config(m_map, m_legacy_patches_enabled);
 }
@@ -349,7 +355,115 @@ void patch_manager_dialog::on_custom_context_menu_requested(const QPoint &pos)
 	menu->exec(ui->patch_tree->viewport()->mapToGlobal(pos));
 }
 
+bool patch_manager_dialog::is_valid_file(const QMimeData& md, QStringList* drop_paths)
+{
+	const QList<QUrl> list = md.urls(); // Get list of all the dropped file urls
+
+	if (list.size() != 1) // We only accept one file for now
+	{
+		return false;
+	}
+
+	for (auto&& url : list) // Check each file in url list for valid type
+	{
+		const QString path   = url.toLocalFile(); // Convert url to filepath
+		const QFileInfo info = path;
+
+		if (!info.fileName().endsWith("patch.yml"))
+		{
+			return false;
+		}
+
+		if (drop_paths)
+		{
+			drop_paths->append(path);
+		}
+	}
+
+	return true;
+}
+
+void patch_manager_dialog::dropEvent(QDropEvent* event)
+{
+	QStringList drop_paths;
+
+	if (!is_valid_file(*event->mimeData(), &drop_paths))
+	{
+		return;
+	}
+
+	QMessageBox box(QMessageBox::Icon::Question, tr("Patch Manager"), tr("What do you want to do with the patch file?"), QMessageBox::StandardButton::NoButton, this);
+	QAbstractButton* button_yes = box.addButton(tr("Import"), QMessageBox::YesRole);
+	QAbstractButton* button_no = box.addButton(tr("Validate"), QMessageBox::NoRole);
+	box.exec();
+
+	const bool do_import   = box.clickedButton() == button_yes;
+	const bool do_validate = do_import || box.clickedButton() == button_no;
+
+	if (!do_validate)
+	{
+		return;
+	}
+
+	for (const auto drop_path : drop_paths)
+	{
+		const auto path = drop_path.toStdString();
+		patch_engine::patch_map patches;
+		std::stringstream log_message;
+
+		if (patch_engine::load(patches, path, true, &log_message))
+		{
+			patch_log.success("Successfully validated patch file %s", path);
+
+			if (do_import)
+			{
+				static const std::string imported_patch_yml_path = fs::get_config_dir() + "patches/imported_patch.yml";
+
+				if (patch_engine::import_patches(patches, imported_patch_yml_path))
+				{
+					refresh();
+					QMessageBox::information(this, tr("Import successful"), tr("The patch file was imported to:\n%0").arg(QString::fromStdString(imported_patch_yml_path)));
+				}
+				else
+				{
+					QMessageBox::information(this, tr("Import failed"), tr("The patch file was not imported.\nPlease see the log for more information."));
+				}
+			}
+			else
+			{
+				QMessageBox::information(this, tr("Validation successful"), tr("The patch file passed the validation."));
+			}
+		}
+		else
+		{
+			patch_log.error("Errors found in patch file %s", path);
+			QMessageBox::warning(this, tr("Validation failed"), tr("Errors were found in the patch file. Log:\n\n") + QString::fromStdString(log_message.str()));
+		}
+	}
+}
+
 void patch_manager_dialog::on_legacy_patches_enabled(int state)
 {
 	m_legacy_patches_enabled = state == Qt::CheckState::Checked;
+}
+
+void patch_manager_dialog::dragEnterEvent(QDragEnterEvent* event)
+{
+	if (is_valid_file(*event->mimeData()))
+	{
+		event->accept();
+	}
+}
+
+void patch_manager_dialog::dragMoveEvent(QDragMoveEvent* event)
+{
+	if (is_valid_file(*event->mimeData()))
+	{
+		event->accept();
+	}
+}
+
+void patch_manager_dialog::dragLeaveEvent(QDragLeaveEvent* event)
+{
+	event->accept();
 }
