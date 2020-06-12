@@ -1590,13 +1590,15 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 	::timeval native_timeo;
 	::linger native_linger;
 
+	std::vector<char> optval_buf(vm::_ptr<char>(optval.addr()), vm::_ptr<char>(optval.addr() + optlen));
+
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
 	{
 		std::lock_guard lock(sock.mutex);
 
-		if (optlen >= sizeof(int))
+		if (optlen >= sizeof(s32))
 		{
-			native_int = vm::_ref<s32>(optval.addr());
+			std::memcpy(&native_int, optval_buf.data(), sizeof(s32));
 		}
 		else
 		{
@@ -1681,8 +1683,8 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 				native_opt = optname == SYS_NET_SO_SNDTIMEO ? SO_SNDTIMEO : SO_RCVTIMEO;
 				native_val = &native_timeo;
 				native_len = sizeof(native_timeo);
-				native_timeo.tv_sec = ::narrow<int>(vm::_ptr<const sys_net_timeval>(optval.addr())->tv_sec);
-				native_timeo.tv_usec = ::narrow<int>(vm::_ptr<const sys_net_timeval>(optval.addr())->tv_usec);
+				native_timeo.tv_sec = ::narrow<int>(reinterpret_cast<sys_net_timeval*>(optval_buf.data())->tv_sec);
+				native_timeo.tv_usec = ::narrow<int>(reinterpret_cast<sys_net_timeval*>(optval_buf.data())->tv_usec);
 				break;
 			}
 			case SYS_NET_SO_LINGER:
@@ -1694,8 +1696,8 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 				native_opt = SO_LINGER;
 				native_val = &native_linger;
 				native_len = sizeof(native_linger);
-				native_linger.l_onoff = vm::_ptr<const sys_net_linger>(optval.addr())->l_onoff;
-				native_linger.l_linger = vm::_ptr<const sys_net_linger>(optval.addr())->l_linger;
+				native_linger.l_onoff = reinterpret_cast<sys_net_linger*>(optval_buf.data())->l_onoff;
+				native_linger.l_linger = reinterpret_cast<sys_net_linger*>(optval_buf.data())->l_linger;
 				break;
 			}
 			case SYS_NET_SO_USECRYPTO:
