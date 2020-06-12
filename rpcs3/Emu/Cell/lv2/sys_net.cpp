@@ -2327,11 +2327,32 @@ error_code sys_net_abort(ppu_thread& ppu, s32 type, u64 arg, s32 flags)
 	return CELL_OK;
 }
 
+struct net_infoctl_cmd_9_t
+{
+	be_t<u32> zero;
+	vm::bptr<char> server_name;
+	// More (TODO)
+};
+
 error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 {
 	vm::temporary_unlock(ppu);
 
 	sys_net.todo("sys_net_infoctl(cmd=%d, arg=*0x%x)", cmd, arg);
+
+	// TODO
+	switch (cmd)
+	{
+	case 9:
+	{
+		// TODO: Find out if this string can change
+		constexpr auto name = "nameserver 192.168.1.1\0"sv; 
+		std::memcpy(vm::static_ptr_cast<net_infoctl_cmd_9_t>(arg)->server_name.get_ptr(), name.data(), name.size());
+		break;
+	}
+	default: break;
+	}
+
 	return CELL_OK;
 }
 
