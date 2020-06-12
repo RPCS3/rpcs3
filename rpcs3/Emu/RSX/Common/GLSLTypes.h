@@ -27,6 +27,7 @@ namespace glsl
 		bool require_depth_conversion;
 		bool require_texture_ops;
 		bool require_shadow_ops;
+		bool require_texture_expand;
 		bool emulate_coverage_tests;
 		bool emulate_shadow_compare;
 		bool low_precision_tests;

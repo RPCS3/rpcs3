@@ -240,6 +240,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_wpos = !!(properties.in_register_mask & in_wpos);
 	m_shader_props.require_texture_ops = properties.has_tex_op;
 	m_shader_props.require_shadow_ops = m_prog.shadow_textures != 0;
+	m_shader_props.require_texture_expand = properties.has_exp_tex_op;
 	m_shader_props.emulate_coverage_tests = g_cfg.video.antialiasing_level == msaa_level::none;
 	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
 	m_shader_props.low_precision_tests = vk::get_driver_vendor() == vk::driver_vendor::NVIDIA;

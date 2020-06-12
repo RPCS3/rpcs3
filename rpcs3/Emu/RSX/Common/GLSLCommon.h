@@ -753,28 +753,61 @@ namespace glsl
 			"		rgba /= 255.;"
 			"	}\n"
 			"\n"
-			"	//TODO: Verify gamma control bit ordering, looks to be 0x7 for rgb, 0xF for rgba\n"
-			"	uvec4 mask = uvec4(control_bits & 0xFu) & uvec4(0x1, 0x2, 0x4, 0x8);\n"
-			"	vec4 convert = srgb_to_linear(rgba);\n"
-			"	return _select(rgba, convert, notEqual(mask, uvec4(0)));\n"
-			"}\n\n"
+			"	uvec4 mask;\n"
+			"	vec4 convert;\n"
+			"	uint op_mask = control_bits & 0x3C0u;\n"
+			"\n"
+			"	if (op_mask != 0)\n"
+			"	{\n"
+			"		// Expand to signed normalized\n"
+			"		mask = uvec4(op_mask) & uvec4(0x80, 0x100, 0x200, 0x40);\n"
+			"		convert = (rgba * 2.f - 1.f);\n"
+			"		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));\n"
+			"	}\n"
+			"\n"
+			"	op_mask = control_bits & 0xFu;\n"
+			"	if (op_mask != 0u)\n"
+			"	{\n"
+			"		// Gamma correction\n"
+			"		mask = uvec4(op_mask) & uvec4(0x1, 0x2, 0x4, 0x8);\n"
+			"		convert = srgb_to_linear(rgba);\n"
+			"		return _select(rgba, convert, notEqual(mask, uvec4(0)));\n"
+			"	}\n"
+			"\n"
+			"	return rgba;\n"
+			"}\n\n";
 
+			if (props.require_texture_expand)
+			{
+				OS <<
+				"uint _texture_flag_override = 0;\n"
+				"#define _enable_texture_expand() _texture_flag_override = 0x3C0\n"
+				"#define _disable_texture_expand() _texture_flag_override = 0\n"
+				"#define TEX_FLAGS(index) (texture_parameters[index].flags | _texture_flag_override)\n";
+			}
+			else
+			{
+				OS <<
+				"#define TEX_FLAGS(index) texture_parameters[index].flags\n";
+			}
+
+			OS <<
 			"#define TEX_NAME(index) tex##index\n"
 			"#define TEX_NAME_STENCIL(index) tex##index##_stencil\n\n"
 
-			"#define TEX1D(index, coord1) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].scale.x), texture_parameters[index].flags)\n"
-			"#define TEX1D_BIAS(index, coord1, bias) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, bias), texture_parameters[index].flags)\n"
-			"#define TEX1D_LOD(index, coord1, lod) process_texel(textureLod(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, lod), texture_parameters[index].flags)\n"
-			"#define TEX1D_GRAD(index, coord1, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, dpdx, dpdy), texture_parameters[index].flags)\n"
-			"#define TEX1D_PROJ(index, coord2) process_texel(textureProj(TEX_NAME(index), coord2 * vec2(texture_parameters[index].scale.x, 1.)), texture_parameters[index].flags)\n"
+			"#define TEX1D(index, coord1) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].scale.x), TEX_FLAGS(index))\n"
+			"#define TEX1D_BIAS(index, coord1, bias) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, bias), TEX_FLAGS(index))\n"
+			"#define TEX1D_LOD(index, coord1, lod) process_texel(textureLod(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, lod), TEX_FLAGS(index))\n"
+			"#define TEX1D_GRAD(index, coord1, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, dpdx, dpdy), TEX_FLAGS(index))\n"
+			"#define TEX1D_PROJ(index, coord2) process_texel(textureProj(TEX_NAME(index), coord2 * vec2(texture_parameters[index].scale.x, 1.)), TEX_FLAGS(index))\n"
 
-			"#define TEX2D(index, coord2) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].scale), texture_parameters[index].flags)\n"
-			"#define TEX2D_BIAS(index, coord2, bias) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].scale, bias), texture_parameters[index].flags)\n"
-			"#define TEX2D_LOD(index, coord2, lod) process_texel(textureLod(TEX_NAME(index), coord2 * texture_parameters[index].scale, lod), texture_parameters[index].flags)\n"
-			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord2 * texture_parameters[index].scale, dpdx, dpdy), texture_parameters[index].flags)\n"
-			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.)), texture_parameters[index].flags)\n"
+			"#define TEX2D(index, coord2) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].scale), TEX_FLAGS(index))\n"
+			"#define TEX2D_BIAS(index, coord2, bias) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].scale, bias), TEX_FLAGS(index))\n"
+			"#define TEX2D_LOD(index, coord2, lod) process_texel(textureLod(TEX_NAME(index), coord2 * texture_parameters[index].scale, lod), TEX_FLAGS(index))\n"
+			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord2 * texture_parameters[index].scale, dpdx, dpdy), TEX_FLAGS(index))\n"
+			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.)), TEX_FLAGS(index))\n"
 
-			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].scale, texture_parameters[index].remap), texture_parameters[index].flags)\n";
+			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].scale, texture_parameters[index].remap), TEX_FLAGS(index))\n";
 
 			if (props.emulate_shadow_compare)
 			{
@@ -790,11 +823,11 @@ namespace glsl
 			}
 
 			OS <<
-			"#define TEX3D(index, coord3) process_texel(texture(TEX_NAME(index), coord3), texture_parameters[index].flags)\n"
-			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), coord3, bias), texture_parameters[index].flags)\n"
-			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), coord3, lod), texture_parameters[index].flags)\n"
-			"#define TEX3D_GRAD(index, coord3, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord3, dpdx, dpdy), texture_parameters[index].flags)\n"
-			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4), texture_parameters[index].flags)\n\n";
+			"#define TEX3D(index, coord3) process_texel(texture(TEX_NAME(index), coord3), TEX_FLAGS(index))\n"
+			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), coord3, bias), TEX_FLAGS(index))\n"
+			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), coord3, lod), TEX_FLAGS(index))\n"
+			"#define TEX3D_GRAD(index, coord3, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord3, dpdx, dpdy), TEX_FLAGS(index))\n"
+			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4), TEX_FLAGS(index))\n\n";
 		}
 
 		if (props.require_wpos)
