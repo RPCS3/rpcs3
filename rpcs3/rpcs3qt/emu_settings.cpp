@@ -104,7 +104,6 @@ void emu_settings::LoadSettings(const std::string& title_id)
 
 void emu_settings::SaveSettings()
 {
-	fs::file config;
 	YAML::Emitter out;
 	emitData(out, m_currentSettings);
 
@@ -119,26 +118,21 @@ void emu_settings::SaveSettings()
 		config_name = Emulator::GetCustomConfigPath(m_title_id);
 	}
 
-	config = fs::file(config_name, fs::read + fs::write + fs::create);
-
-	// Save config
-	config.seek(0);
-	config.trunc(0);
-	config.write(out.c_str(), out.size());
+	// Save config atomically
+	fs::file(config_name + ".tmp", fs::rewrite).write(out.c_str(), out.size());
+	fs::rename(config_name + ".tmp", config_name, true);
 
 	// Check if the running config/title is the same as the edited config/title.
 	if (config_name == g_cfg.name || m_title_id == Emu.GetTitleID())
 	{
 		// Update current config
-		g_cfg.from_string(config.to_string(), !Emu.IsStopped());
+		g_cfg.from_string({out.c_str(), out.size()}, !Emu.IsStopped());
 
 		if (!Emu.IsStopped()) // Don't spam the log while emulation is stopped. The config will be logged on boot anyway.
 		{
 			cfg_log.notice("Updated configuration:\n%s\n", g_cfg.to_string());
 		}
 	}
-
-	config.close();
 }
 
 void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged, bool use_max, int max, bool sorted)

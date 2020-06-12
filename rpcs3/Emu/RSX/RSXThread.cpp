@@ -1727,7 +1727,31 @@ namespace rsx
 					}
 				}
 
-				if (const auto srgb_mask = tex.gamma())
+				// Special operations applied to 8-bit formats such as gamma correction and sign conversion
+				// NOTE: The unsigned_remap being set to anything other than 0 flags the texture as being signed
+				// This is a separate method of setting the format to signed mode without doing so per-channel
+				// NOTE2: Modifier precedence is not respected here. This is another TODO (kd-11)
+				u32 argb8_convert = tex.gamma();
+				if (const u32 sign_convert = tex.unsigned_remap() ? 0xF : tex.argb_signed())
+				{
+					// Apply remap to avoid mapping 1 to -1. Only the sign conversion needs this check
+					// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
+					// TODO: Replace this clusterfuck of texture control with matrix transformation
+					const auto remap_ctrl = (tex.remap() >> 8) & 0xAA;
+					if (remap_ctrl == 0xAA)
+					{
+						argb8_convert |= (sign_convert & 0xFu) << 6;
+					}
+					else
+					{
+						if (remap_ctrl & 0x03) argb8_convert |= (sign_convert & 0x1u) << 6;
+						if (remap_ctrl & 0x0C) argb8_convert |= (sign_convert & 0x2u) << 6;
+						if (remap_ctrl & 0x30) argb8_convert |= (sign_convert & 0x4u) << 6;
+						if (remap_ctrl & 0xC0) argb8_convert |= (sign_convert & 0x8u) << 6;
+					}
+				}
+
+				if (argb8_convert)
 				{
 					switch (format)
 					{
@@ -1743,11 +1767,11 @@ namespace rsx
 					case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 					case CELL_GCM_TEXTURE_X32_FLOAT:
 					case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-						//Special data formats (XY, HILO, DEPTH) are not RGB formats
-						//Ignore gamma flags
+						// Special data formats (XY, HILO, DEPTH) are not RGB formats
+						// Ignore gamma flags
 						break;
 					default:
-						texture_control |= srgb_mask;
+						texture_control |= argb8_convert;
 						break;
 					}
 				}

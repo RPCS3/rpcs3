@@ -69,6 +69,7 @@ namespace rsx
 		rsx::texture_minify_filter  min_filter() const;
 		rsx::texture_magnify_filter  mag_filter() const;
 		u8  convolution_filter() const;
+		u8  argb_signed() const;
 		bool a_signed() const;
 		bool r_signed() const;
 		bool g_signed() const;
