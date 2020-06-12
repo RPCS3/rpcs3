@@ -3,7 +3,7 @@
 #include <QStringList>
 
 #include "emu_settings_type.h"
-#include "yaml-cpp/yaml.h"
+#include "util/yaml.hpp" // Use this instead of "yaml-cpp/yaml.h" to avoid warnings
 
 // Helper methods to interact with YAML and the config settings.
 namespace cfg_adapter

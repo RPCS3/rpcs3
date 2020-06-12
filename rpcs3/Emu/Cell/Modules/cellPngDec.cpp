@@ -4,7 +4,6 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_fs.h"
-#include "png.h"
 #include "cellPngDec.h"
 
 #if PNG_LIBPNG_VER_MAJOR >= 1 && (PNG_LIBPNG_VER_MINOR < 5 \

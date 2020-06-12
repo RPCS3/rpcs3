@@ -2,7 +2,13 @@
 
 #include "Emu/Io/PadHandler.h"
 
+#ifdef _MSC_VER
+#pragma warning(push, 0)
 #include "hidapi.h"
+#pragma warning(pop)
+#else
+#include "hidapi.h"
+#endif
 
 class ds3_pad_handler final : public PadHandlerBase
 {

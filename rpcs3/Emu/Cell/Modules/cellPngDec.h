@@ -4,7 +4,13 @@
 
 #include "Emu/Memory/vm_ptr.h"
 
+#ifdef _MSC_VER
+#pragma warning(push, 0)
 #include "png.h"
+#pragma warning(pop)
+#else
+#include "png.h"
+#endif
 
 enum : u32
 {

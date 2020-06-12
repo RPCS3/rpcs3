@@ -2,7 +2,14 @@
 
 #include "Emu/Io/PadHandler.h"
 #include "Utilities/CRC.h"
+
+#ifdef _MSC_VER
+#pragma warning(push, 0)
 #include "hidapi.h"
+#pragma warning(pop)
+#else
+#include "hidapi.h"
+#endif
 
 class ds4_pad_handler final : public PadHandlerBase
 {

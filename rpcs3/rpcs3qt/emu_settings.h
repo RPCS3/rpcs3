@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "yaml-cpp/yaml.h"
+#include "util/yaml.hpp" // Use this instead of "yaml-cpp/yaml.h" to avoid warnings
 
 #include "stdafx.h"
 
