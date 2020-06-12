@@ -358,7 +358,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			m_gl_texture_cache.lock_memory_region(
 				cmd, m_rtts.m_bound_depth_stencil.second, surface_range, true,
 				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,
-				depth_format_gl.format, depth_format_gl.type, true);
+				depth_format_gl.format, depth_format_gl.type, depth_format_gl.type != gl::texture::type::uint_24_8);
 		}
 		else
 		{
