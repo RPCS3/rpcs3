@@ -30,7 +30,11 @@ public:
 	{
 		patch_type type = patch_type::load;
 		u32 offset = 0;
-		u64 value = 0;
+		union
+		{
+			u64 long_value;
+			f64 double_value;
+		} value { 0 };
 	};
 
 	struct patch_info
@@ -78,23 +82,30 @@ public:
 	//   Patches:
 	//     60fps:
 	//       Author: Batman bin Suparman
+	//       Version: 1.3
 	//       Notes: This is super
 	//       Patch:
 	//         - [ be32, 0x000e522c, 0x995d0072 ]
 	//         - [ be32, 0x000e5234, 0x995d0074 ]
-	static void load(patch_map& patches, const std::string& path);
+	static bool load(patch_map& patches, const std::string& path, bool importing = false, std::stringstream* log_messages = nullptr);
 
 	// Read and add a patch node to the patch info
-	static void read_patch_node(patch_info& info, YAML::Node node, const YAML::Node& root);
+	static bool read_patch_node(patch_info& info, YAML::Node node, const YAML::Node& root, std::stringstream* log_messages = nullptr);
 
 	// Get the patch type of a patch node
 	static patch_type get_patch_type(YAML::Node node);
 
 	// Add the data of a patch node
-	static void add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root);
+	static bool add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root, std::stringstream* log_messages = nullptr);
 
 	// Save to patch_config.yml
 	static void save_config(const patch_map& patches_map, bool enable_legacy_patches);
+
+	// Save a patch file
+	static bool save_patches(const patch_map& patches, const std::string& path);
+
+	// Create or append patches to a file
+	static bool import_patches(const patch_map& patches, const std::string& path);
 
 	// Load patch_config.yml
 	static patch_config_map load_config(bool& enable_legacy_patches);
