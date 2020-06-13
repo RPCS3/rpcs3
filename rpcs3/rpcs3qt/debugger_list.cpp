@@ -82,10 +82,9 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 
 	if (!cpu)
 	{
-		u32 pc = m_pc;
-		for (uint i = 0; i < m_item_count; ++i, pc += 4)
+		for (uint i = 0; i < m_item_count; ++i)
 		{
-			item(i)->setText(qstr(fmt::format("   [%08x]  ?? ?? ?? ??:", pc)));
+			item(i)->setText(qstr(fmt::format("   [%08x]  ?? ?? ?? ??:", 0)));
 			item(i)->setForeground(default_foreground);
 			item(i)->setBackground(default_background);
 		}
