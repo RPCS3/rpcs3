@@ -79,6 +79,8 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 	pcVariant.setValue(pc);
 	breakpointItem->setData(Qt::UserRole, pcVariant);
 	addItem(breakpointItem);
+
+	Q_EMIT RequestShowAddress(pc);
 }
 
 /**
