@@ -77,12 +77,17 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 
 	const auto cpu = this->cpu.lock();
 
+	const auto default_foreground = palette().color(foregroundRole());
+	const auto default_background = palette().color(backgroundRole());
+
 	if (!cpu)
 	{
 		u32 pc = m_pc;
 		for (uint i = 0; i < m_item_count; ++i, pc += 4)
 		{
 			item(i)->setText(qstr(fmt::format("   [%08x]  ?? ?? ?? ??:", pc)));
+			item(i)->setForeground(default_foreground);
+			item(i)->setBackground(default_background);
 		}
 	}
 	else
@@ -96,6 +101,22 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 
 		for (uint i = 0, count = 4; i<m_item_count; ++i, pc = (pc + count) & address_limits)
 		{
+			if (cpu->is_paused() && pc == GetPc())
+			{
+				item(i)->setForeground(m_text_color_pc);
+				item(i)->setBackground(m_color_pc);
+			}
+			else if (IsBreakpoint(pc))
+			{
+				item(i)->setForeground(m_text_color_bp);
+				item(i)->setBackground(m_color_bp);
+			}
+			else
+			{
+				item(i)->setForeground(default_foreground);
+				item(i)->setBackground(default_background);
+			}
+
 			if (!vm::check_addr(cpu_offset + pc, 4))
 			{
 				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
@@ -118,22 +139,6 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 			count = m_disasm->disasm(m_disasm->dump_pc = pc);
 
 			item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(m_disasm->last_opcode));
-
-			if (cpu->is_paused() && pc == GetPc())
-			{
-				item(i)->setForeground(m_text_color_pc);
-				item(i)->setBackground(m_color_pc);
-			}
-			else if (IsBreakpoint(pc))
-			{
-				item(i)->setForeground(m_text_color_bp);
-				item(i)->setBackground(m_color_bp);
-			}
-			else
-			{
-				item(i)->setForeground(palette().color(foregroundRole()));
-				item(i)->setBackground(palette().color(backgroundRole()));
-			}
 		}
 	}
 
