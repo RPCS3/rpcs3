@@ -394,13 +394,13 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 
 			if constexpr (check_local_storage)
 			{
-				offset -= ls_addr;
-
 				if (offset < ls_addr || offset >= (ls_addr + filesz))
 				{
 					// This patch is out of range for this segment
 					continue;
 				}
+				
+				offset -= ls_addr;
 			}
 
 			auto ptr = dst + offset;
