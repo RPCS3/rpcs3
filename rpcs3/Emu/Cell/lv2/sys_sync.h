@@ -77,10 +77,13 @@ private:
 
 public:
 
-	static std::string name64(const u64& name_u64)
+	static std::string name64(u64 name_u64)
 	{
-		std::string str{reinterpret_cast<const char*>(&name_u64), 7};
+		const auto ptr = reinterpret_cast<const char*>(&name_u64);
 
+		// NTS string, ignore invalid/newline characters
+		// Example: "lv2\n\0tx" will be printed as "lv2" 
+		std::string str{ptr, std::find(ptr, ptr + 7, '\0')};
 		str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !std::isprint(c); }), str.end());
 
 		return str;
