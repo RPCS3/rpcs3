@@ -23,7 +23,7 @@ If you want to contribute as a developer, please take a look at the following pa
 * [Developer Information](https://github.com/RPCS3/rpcs3/wiki/Developer-Information)
 * [Roadmap](https://rpcs3.net/roadmap)
 
-You should also contact any of the developers in the forums or in the Discord server to learn more about the current state of the emulator.
+You should also contact any of the developers in the forums or in the Discord server to learn more about the current state of the emulator or if you have any questions about the process.
 
 ## Building
 
