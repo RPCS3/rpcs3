@@ -32,6 +32,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
+		case patch_type::invalid: return "invalid";
 		case patch_type::load: return "load";
 		case patch_type::byte: return "byte";
 		case patch_type::le16: return "le16";
@@ -72,12 +73,12 @@ std::string patch_engine::get_patch_config_path()
 static void append_log_message(std::stringstream* log_messages, const std::string& message)
 {
 	if (log_messages)
-		*log_messages << message;
+		*log_messages << message << std::endl;
 };
 
 bool patch_engine::load(patch_map& patches_map, const std::string& path, bool importing, std::stringstream* log_messages)
 {
-	append_log_message(log_messages, fmt::format("Reading file %s\n", path));
+	append_log_message(log_messages, fmt::format("Reading file %s", path));
 
 	// Load patch file
 	fs::file file{ path };
@@ -91,9 +92,9 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 	// Interpret yaml nodes
 	auto [root, error] = yaml_load(file.to_string());
 
-	if (!error.empty())
+	if (!error.empty() || !root)
 	{
-		append_log_message(log_messages, "Fatal Error: Failed to load file!\n");
+		append_log_message(log_messages, "Fatal Error: Failed to load file!");
 		patch_log.fatal("Failed to load patch file %s:\n%s", path, error);
 		return false;
 	}
@@ -116,19 +117,19 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 
 		if (version != patch_engine_version)
 		{
-			append_log_message(log_messages, fmt::format("Error: Patch engine target version %s does not match file version %s\n", patch_engine_version, version));
+			append_log_message(log_messages, fmt::format("Error: Patch engine target version %s does not match file version %s", patch_engine_version, version));
 			patch_log.error("Patch engine target version %s does not match file version %s in %s", patch_engine_version, version, path);
 			return false;
 		}
 
-		append_log_message(log_messages, fmt::format("Patch file version: %s\n", version));
+		append_log_message(log_messages, fmt::format("Patch file version: %s", version));
 
 		// We don't need the Version node in local memory anymore
 		root.remove("Version");
 	}
 	else if (importing)
 	{
-		append_log_message(log_messages, fmt::format("Error: Patch engine target version %s does not match file version %s\n", patch_engine_version, version));
+		append_log_message(log_messages, fmt::format("Error: Patch engine target version %s does not match file version %s", patch_engine_version, version));
 		patch_log.error("Patch engine version %s: No 'Version' entry found for file %s", patch_engine_version, path);
 		return false;
 	}
@@ -170,7 +171,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 
 		if (const auto yml_type = pair.second.Type(); yml_type != YAML::NodeType::Map)
 		{
-			append_log_message(log_messages, fmt::format("Error: Skipping key %s: expected Map, found %s\n", main_key, yml_type));
+			append_log_message(log_messages, fmt::format("Error: Skipping key %s: expected Map, found %s", main_key, yml_type));
 			patch_log.error("Skipping key %s: expected Map, found %s (file: %s)", main_key, yml_type, path);
 			is_valid = false;
 			continue;
@@ -199,7 +200,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 		{
 			if (const auto yml_type = patches_node.Type(); yml_type != YAML::NodeType::Map)
 			{
-				append_log_message(log_messages, fmt::format("Error: Skipping Patches: expected Map, found %s (key: %s)\n", yml_type, main_key));
+				append_log_message(log_messages, fmt::format("Error: Skipping Patches: expected Map, found %s (key: %s)", yml_type, main_key));
 				patch_log.error("Skipping Patches: expected Map, found %s (key: %s, file: %s)", yml_type, main_key, path);
 				is_valid = false;
 				continue;
@@ -226,7 +227,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 
 				if (const auto yml_type = patches_entry.second.Type(); yml_type != YAML::NodeType::Map)
 				{
-					append_log_message(log_messages, fmt::format("Error: Skipping Patch key %s: expected Map, found %s (key: %s)\n", description, yml_type, main_key));
+					append_log_message(log_messages, fmt::format("Error: Skipping Patch key %s: expected Map, found %s (key: %s)", description, yml_type, main_key));
 					patch_log.error("Skipping Patch key %s: expected Map, found %s (key: %s, file: %s)", description, yml_type, main_key, path);
 					is_valid = false;
 					continue;
@@ -275,23 +276,39 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 patch_type patch_engine::get_patch_type(YAML::Node node)
 {
 	u64 type_val = 0;
-	cfg::try_to_enum_value(&type_val, &fmt_class_string<patch_type>::format, node.Scalar());
+
+	if (!node || !node.IsScalar() || !cfg::try_to_enum_value(&type_val, &fmt_class_string<patch_type>::format, node.Scalar()))
+	{
+		return patch_type::invalid;
+	}
+
 	return static_cast<patch_type>(type_val);
 }
 
 bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root, std::stringstream* log_messages)
 {
+	if (!node || !node.IsSequence())
+	{
+		append_log_message(log_messages, fmt::format("Skipping invalid patch node %s. (key: %s)", info.description, info.hash));
+		patch_log.error("Skipping invalid patch node %s. (key: %s)", info.description, info.hash);
+		return false;
+	}
+
 	const auto type_node  = node[0];
 	auto addr_node        = node[1];
 	const auto value_node = node[2];
 
-	struct patch_data p_data{};
-	p_data.type   = get_patch_type(type_node);
-	p_data.offset = addr_node.as<u32>(0) + modifier;
+	const auto type = get_patch_type(type_node);
 
-	switch (p_data.type)
+	if (type == patch_type::invalid)
 	{
-	case patch_type::load:
+		const auto type_str = type_node && type_node.IsScalar() ? type_node.Scalar() : "";
+		append_log_message(log_messages, fmt::format("Skipping patch node %s: type '%s' is invalid. (key: %s)", info.description, type_str, info.hash));
+		patch_log.error("Skipping patch node %s: type '%s' is invalid. (key: %s)", info.description, type_str, info.hash);
+		return false;
+	}
+
+	if (type == patch_type::load)
 	{
 		// Special syntax: anchors (named sequence)
 
@@ -300,6 +317,12 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		{
 			if (const auto yml_type = addr_node.Type(); yml_type == YAML::NodeType::Scalar)
 			{
+				if (!root)
+				{
+					patch_log.fatal("Trying to parse legacy patch with invalid root."); // Sanity Check
+					return false;
+				}
+
 				const auto anchor = addr_node.Scalar();
 				const auto anchor_node = root[anchor];
 
@@ -341,19 +364,38 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 		return is_valid;
 	}
-	case patch_type::bef32:
-	case patch_type::lef32:
-	case patch_type::bef64:
-	case patch_type::lef64:
+
+	struct patch_data p_data{};
+	p_data.type   = type;
+	p_data.offset = addr_node.as<u32>(0) + modifier;
+
+	// Use try/catch instead of YAML::Node::as<T>(fallback) in order to get an error message
+	try
 	{
-		p_data.value.double_value = value_node.as<f64>();
-		break;
+		switch (p_data.type)
+		{
+		case patch_type::bef32:
+		case patch_type::lef32:
+		case patch_type::bef64:
+		case patch_type::lef64:
+		{
+			p_data.value.double_value = value_node.as<f64>();
+			break;
+		}
+		default:
+		{
+			p_data.value.long_value = value_node.as<u64>();
+			break;
+		}
+		}
 	}
-	default:
+	catch (const std::exception& e)
 	{
-		p_data.value.long_value = value_node.as<u64>();
-		break;
-	}
+		const std::string error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s) %s",
+			p_data.type, p_data.offset, value_node.IsScalar() && value_node.Scalar().size() ? value_node.Scalar() : "?", info.hash, e.what());
+		append_log_message(log_messages, error_message);
+		patch_log.error("%s", error_message);
+		return false;
 	}
 
 	info.data_list.emplace_back(p_data);
@@ -363,6 +405,13 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 bool patch_engine::read_patch_node(patch_info& info, YAML::Node node, const YAML::Node& root, std::stringstream* log_messages)
 {
+	if (!node)
+	{
+		append_log_message(log_messages, fmt::format("Skipping invalid patch node %s. (key: %s)", info.description, info.hash));
+		patch_log.error("Skipping invalid patch node %s. (key: %s)" HERE, info.description, info.hash);
+		return false;
+	}
+
 	if (const auto yml_type = node.Type(); yml_type != YAML::NodeType::Sequence)
 	{
 		append_log_message(log_messages, fmt::format("Skipping patch node %s: expected Sequence, found %s (key: %s)", info.description, yml_type, info.hash));
@@ -464,6 +513,7 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 
 			switch (p.type)
 			{
+			case patch_type::invalid:
 			case patch_type::load:
 			{
 				// Invalid in this context
@@ -686,7 +736,7 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 
 			for (const auto& data : info.data_list)
 			{
-				if (data.type == patch_type::load)
+				if (data.type == patch_type::invalid || data.type == patch_type::load)
 				{
 					// Unreachable with current logic
 					continue;
