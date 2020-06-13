@@ -9,6 +9,7 @@
 
 enum class patch_type
 {
+	invalid,
 	load,
 	byte,
 	le16,
