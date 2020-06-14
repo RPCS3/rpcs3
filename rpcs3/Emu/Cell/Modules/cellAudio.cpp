@@ -460,13 +460,13 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 
 	for (const auto& key_inf : keys)
 	{
+		if (key_inf.flags & CELL_AUDIO_EVENTFLAG_NOMIX)
+		{
+			continue;
+		}
+
 		if ((queues[queue_count] = key_inf.port.lock()))
 		{
-			if (key_inf.flags & CELL_AUDIO_EVENTFLAG_NOMIX)
-			{
-				continue;
-			}
-
 			u32 periods = 1;
 
 			if (key_inf.flags & CELL_AUDIO_EVENTFLAG_DECIMATE_2)
