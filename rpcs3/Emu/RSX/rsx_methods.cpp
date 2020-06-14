@@ -720,10 +720,12 @@ namespace rsx
 			set_surface_dirty_bit(rsx, reg, arg);
 		}
 
-		void set_surface_options_dirty_bit(thread* rsx, u32, u32)
+		void set_surface_options_dirty_bit(thread* rsx, u32 reg, u32)
 		{
-			if (rsx->m_framebuffer_state_contested)
-				rsx->m_rtts_dirty = true;
+			if (reg != method_registers.register_previous_value)
+			{
+				rsx->on_framebuffer_options_changed(reg);
+			}
 		}
 
 		template <u32 RsxFlags>
@@ -3092,6 +3094,16 @@ namespace rsx
 		bind<NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_COLOR_MASK_MRT, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_STENCIL_MASK, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_STENCIL_OP_ZPASS, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_STENCIL_OP_FAIL, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_STENCIL_OP_ZFAIL, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_BACK_STENCIL_MASK, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_BACK_STENCIL_OP_ZPASS, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_BACK_STENCIL_OP_FAIL, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_BACK_STENCIL_OP_ZFAIL, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
 		bind<NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
