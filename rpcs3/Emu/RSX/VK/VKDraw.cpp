@@ -908,52 +908,6 @@ void VKGSRender::end()
 
 	m_profiler.start();
 
-	// Check for data casts
-	// NOTE: This is deprecated and will be removed soon. The memory barrier invoked before rendering does this better
-	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-	if (ds && ds->old_contents.size() == 1 &&
-		ds->old_contents[0].source->info.format == VK_FORMAT_B8G8R8A8_UNORM)
-	{
-		auto key = vk::get_renderpass_key({ static_cast<vk::image*>(ds) });
-		auto render_pass = vk::get_renderpass(*m_device, key);
-		verify("Usupported renderpass configuration" HERE), render_pass != VK_NULL_HANDLE;
-
-		VkClearDepthStencilValue clear = { 1.f, 0xFF };
-		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
-
-		// Initialize source data
-		auto srcobj = vk::as_rtt(ds->old_contents[0].source);
-		srcobj->read_barrier(*m_current_command_buffer);
-
-		auto src = srcobj->get_surface(rsx::surface_access::read);
-		switch (src->current_layout)
-		{
-		case VK_IMAGE_LAYOUT_GENERAL:
-		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-			break;
-		//case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-		default:
-			src->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			break;
-		}
-
-		// Clear explicitly before starting the inheritance transfer
-		const bool preinitialized = (ds->current_layout == VK_IMAGE_LAYOUT_GENERAL);
-		if (!preinitialized) ds->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		vkCmdClearDepthStencilImage(*m_current_command_buffer, ds->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1, &range);
-		if (!preinitialized) ds->pop_layout(*m_current_command_buffer);
-
-		// TODO: Stencil transfer
-		ds->old_contents[0].init_transfer(ds);
-		vk::get_overlay_pass<vk::depth_convert_pass>()->run(*m_current_command_buffer,
-			ds->old_contents[0].src_rect(),
-			ds->old_contents[0].dst_rect(),
-			src->get_view(0xAAE4, rsx::default_remap_vector),
-			ds, render_pass);
-
-		ds->on_write();
-	}
-
 	load_texture_env();
 	m_frame_stats.textures_upload_time += m_profiler.duration();
 
@@ -1019,7 +973,7 @@ void VKGSRender::end()
 	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
 
 	// Apply write memory barriers
-	if (ds) ds->write_barrier(*m_current_command_buffer);
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil)) ds->write_barrier(*m_current_command_buffer);
 
 	for (auto &rtt : m_rtts.m_bound_render_targets)
 	{
