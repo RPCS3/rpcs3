@@ -114,7 +114,6 @@ private:
 	bool manually_flush_ring_buffers = false;
 
 	gl::text_writer m_text_printer;
-	gl::depth_convert_pass m_depth_converter;
 	gl::ui_overlay_renderer m_ui_renderer;
 	gl::video_out_calibration_pass m_video_output_pass;
 
