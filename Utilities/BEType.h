@@ -402,7 +402,7 @@ inline v128 operator^(const v128& left, const v128& right)
 
 inline v128 operator~(const v128& other)
 {
-	return other ^ v128::eq32(other, other); // XOR with ones
+	return other ^ v128::from32p(UINT32_MAX); // XOR with ones
 }
 
 using stx::se_t;
