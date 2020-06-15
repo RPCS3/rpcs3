@@ -719,7 +719,9 @@ namespace rsx
 				mip.dst_w = attr.width;
 				mip.dst_h = attr.height;
 
-				if (level.upload_context == rsx::texture_upload_context::framebuffer_storage)
+				// "Fast" framebuffer results are a perfect match for attr so we do not store transfer sizes
+				// Calculate transfer dimensions from attr
+				if (level.upload_context == rsx::texture_upload_context::framebuffer_storage) [[likely]]
 				{
 					mip.src_w = rsx::apply_resolution_scale(attr.width, true);
 					mip.src_h = rsx::apply_resolution_scale(attr.height, true);
@@ -734,7 +736,6 @@ namespace rsx
 			}
 			else
 			{
-
 				switch (level.external_subresource_desc.op)
 				{
 				case deferred_request_command::copy_image_dynamic:
@@ -744,10 +745,15 @@ namespace rsx
 					mip.src = level.external_subresource_desc.external_handle;
 					mip.xform = surface_transform::coordinate_transform;
 					mip.level = mipmap_level;
-					mip.src_w = level.external_subresource_desc.width;
-					mip.src_h = level.external_subresource_desc.height;
 					mip.dst_w = attr.width;
 					mip.dst_h = attr.height;
+
+					// NOTE: gather_texture_slices pre-applies resolution scaling
+					mip.src_x = level.external_subresource_desc.x;
+					mip.src_y = level.external_subresource_desc.y;
+					mip.src_w = level.external_subresource_desc.width;
+					mip.src_h = level.external_subresource_desc.height;
+
 					sections.push_back(mip);
 					break;
 				}
