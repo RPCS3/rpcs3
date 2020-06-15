@@ -1350,6 +1350,31 @@ namespace rsx
 			return any_found;
 		};
 
+		auto evaluate_depth_buffer_contested = [&]()
+		{
+			if (m_framebuffer_layout.zeta_address) [[likely]]
+			{
+				// Nothing to do, depth buffer already exists
+				return false;
+			}
+
+			// Check if depth read/write is enabled
+			if (m_framebuffer_layout.zeta_write_enabled ||
+				rsx::method_registers.depth_test_enabled())
+			{
+				return true;
+			}
+
+			// Check if stencil read is enabled
+			if (m_framebuffer_layout.depth_format == rsx::surface_depth_format::z24s8 &&
+				rsx::method_registers.stencil_test_enabled())
+			{
+				return true;
+			}
+
+			return false;
+		};
+
 		if (m_rtts_dirty)
 		{
 			// Nothing to do
@@ -1361,14 +1386,11 @@ namespace rsx
 		case NV4097_SET_DEPTH_TEST_ENABLE:
 		case NV4097_SET_DEPTH_MASK:
 		{
-			auto old_state = m_framebuffer_layout.zeta_write_enabled;
 			evaluate_depth_buffer_state();
 
-			if (m_framebuffer_state_contested &&
-				!old_state && m_framebuffer_layout.zeta_write_enabled)
+			if (m_framebuffer_state_contested)
 			{
-				// Z buffer needs to be recreated
-				m_rtts_dirty = true;
+				m_rtts_dirty |= evaluate_depth_buffer_contested();
 			}
 			break;
 		}
@@ -1384,7 +1406,6 @@ namespace rsx
 		case NV4097_SET_BACK_STENCIL_OP_ZFAIL:
 		{
 			// Stencil takes a back seat to depth buffer stuff
-			bool old_state = m_framebuffer_layout.zeta_write_enabled;
 			evaluate_depth_buffer_state();
 
 			if (!m_framebuffer_layout.zeta_write_enabled)
@@ -1392,11 +1413,9 @@ namespace rsx
 				evaluate_stencil_buffer_state();
 			}
 
-			if (m_framebuffer_state_contested &&
-				!old_state && m_framebuffer_layout.zeta_write_enabled)
+			if (m_framebuffer_state_contested)
 			{
-				// Z|S buffer needs to be recreated
-				m_rtts_dirty = true;
+				m_rtts_dirty |= evaluate_depth_buffer_contested();
 			}
 			break;
 		}
@@ -1413,7 +1432,7 @@ namespace rsx
 				bool old_state = false;
 				for (const auto& enabled : m_framebuffer_layout.color_write_enabled)
 				{
-					if (old_state = enabled) break;
+					if (old_state = enabled; old_state) break;
 				}
 
 				const auto new_state = evaluate_color_buffer_state();

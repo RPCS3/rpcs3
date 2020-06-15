@@ -59,7 +59,7 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 			return CELL_EBUSY;
 		}
 
-		cond.mutex->cond_count--;
+		cond.mutex->obj_count.atomic_op([](typename lv2_mutex::count_info& info){ info.cond_count--; });
 		return {};
 	});
 
@@ -205,16 +205,35 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 
 	sys_cond.trace("sys_cond_wait(cond_id=0x%x, timeout=%lld)", cond_id, timeout);
 
-	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond)
+	// Further function result
+	ppu.gpr[3] = CELL_OK;
+
+	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> s64
 	{
-		if (cond.mutex->owner >> 1 == ppu.id)
+		if (cond.mutex->owner >> 1 != ppu.id)
 		{
-			// Add a "promise" to add a waiter
-			cond.waiters++;
+			return -1;
 		}
 
+		std::lock_guard lock(cond.mutex->mutex);
+
+		// Register waiter
+		cond.sq.emplace_back(&ppu);
+		cond.waiters++;
+
+		// Unlock the mutex
+		const auto count = cond.mutex->lock_count.exchange(0);
+
+		if (auto cpu = cond.mutex->reown<ppu_thread>())
+		{
+			cond.mutex->append(cpu);
+		}
+
+		// Sleep current thread and schedule mutex waiter
+		cond.sleep(ppu, timeout);
+
 		// Save the recursive value
-		return cond.mutex->lock_count.load();
+		return count;
 	});
 
 	if (!cond)
@@ -222,31 +241,9 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	// Verify ownership
-	if (cond->mutex->owner >> 1 != ppu.id)
+	if (cond.ret < 0)
 	{
 		return CELL_EPERM;
-	}
-	else
-	{
-		// Further function result
-		ppu.gpr[3] = CELL_OK;
-
-		std::lock_guard lock(cond->mutex->mutex);
-
-		// Register waiter
-		cond->sq.emplace_back(&ppu);
-
-		// Unlock the mutex
-		cond->mutex->lock_count = 0;
-
-		if (auto cpu = cond->mutex->reown<ppu_thread>())
-		{
-			cond->mutex->append(cpu);
-		}
-
-		// Sleep current thread and schedule mutex waiter
-		cond->sleep(ppu, timeout);
 	}
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))

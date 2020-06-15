@@ -40,7 +40,22 @@ struct lv2_cond final : lv2_obj
 		, mtx_id(mtx_id)
 		, mutex(std::move(mutex))
 	{
-		this->mutex->cond_count++;
+	}
+
+	CellError on_id_create()
+	{
+		if (!mutex->obj_count.fetch_op([](typename lv2_mutex::count_info& info)
+		{
+			if (info.mutex_count)
+				return info.cond_count++, true;
+			return false;
+		}).second)
+		{
+			// Mutex has been destroyed, cannot create conditional variable
+			return CELL_ESRCH;
+		}
+
+		return {};
 	}
 };
 
