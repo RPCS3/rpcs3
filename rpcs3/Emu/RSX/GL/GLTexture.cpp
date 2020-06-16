@@ -106,7 +106,7 @@ namespace gl
 		case texture::internal_format::r32f:
 			return { GL_RED, GL_FLOAT, 4, true };
 		case texture::internal_format::rg8:
-			return { GL_RG, GL_UNSIGNED_BYTE, 1, false };
+			return { GL_RG, GL_UNSIGNED_SHORT, 2, true };
 		case texture::internal_format::rg16:
 			return { GL_RG, GL_UNSIGNED_SHORT, 2, true };
 		case texture::internal_format::rg16f:
