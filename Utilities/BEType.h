@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿#ifndef BETYPE_H_GUARD
+#define BETYPE_H_GUARD
 
 #include "types.h"
 #include "util/endian.hpp"
@@ -505,3 +506,5 @@ struct fmt_unveil<se_t<T, Se, Align>, void>
 		return fmt_unveil<T>::get(arg);
 	}
 };
+
+#endif // BETYPE_H_GUARD
