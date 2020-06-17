@@ -588,7 +588,7 @@ namespace gl
 					// Dimensions were given in 'dst' space. Work out the real source coordinates
 					const auto src_bpp = slice.src->pitch() / slice.src->width();
 					src_x = (src_x * dst_bpp) / src_bpp;
-					src_w = (src_w * dst_bpp) / src_bpp;
+					src_w = ::aligned_div<u16>(src_w * dst_bpp, src_bpp);
 				}
 
 				if (auto surface = dynamic_cast<gl::render_target*>(slice.src))

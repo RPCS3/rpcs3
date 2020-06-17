@@ -586,7 +586,7 @@ namespace vk
 					// Dimensions were given in 'dst' space. Work out the real source coordinates
 					const auto src_bpp = vk::get_format_texel_width(section.src->format());
 					src_x = (src_x * dst_bpp) / src_bpp;
-					src_w = (src_w * dst_bpp) / src_bpp;
+					src_w = ::aligned_div<u16>(src_w * dst_bpp, src_bpp);
 
 					transform &= ~(rsx::surface_transform::coordinate_transform);
 				}
