@@ -7350,7 +7350,6 @@ public:
 		{
 			v128 data = get_const_vector(cv, m_pos, 5000);
 			bool safe_int_compare = true;
-			bool safe_simple_compare = true;
 
 			for (u32 i = 0; i < 4; i++)
 			{
@@ -7367,27 +7366,11 @@ public:
 					// this optimization for values outside of the range of x86 floating point hardware.
 					safe_int_compare = false;
 				}
-
-				if (absolute_float_bits < 0x7f7fffffu)
-				{
-					// Zero or a float in normalized range for x86
-					continue;
-				}
-				else
-				{
-					safe_simple_compare = false;
-				}
 			}
 
 			if (safe_int_compare)
 			{
 				set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
-				return;
-			}
-
-			if (safe_simple_compare)
-			{
-				set_vr(op.rt, sext<s32[4]>(fcmp_uno(a > b)));
 				return;
 			}
 		}
