@@ -191,7 +191,7 @@ namespace rsx
 		rsx::vertex_base_type type;
 		u8 attribute_size;
 		u8 stride;
-		gsl::span<const std::byte> data;
+		std::span<const std::byte> data;
 		u8 index;
 		bool is_be;
 	};
@@ -216,7 +216,7 @@ namespace rsx
 
 	struct draw_indexed_array_command
 	{
-		gsl::span<const std::byte> raw_index_buffer;
+		std::span<const std::byte> raw_index_buffer;
 	};
 
 	struct draw_inlined_array
@@ -853,7 +853,7 @@ namespace rsx
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
 		virtual void sync_hint(FIFO_hint hint, void* args);
 
-		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
+		std::span<const std::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
 
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;

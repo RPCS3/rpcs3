@@ -17,12 +17,12 @@
 #include "Overlays/overlay_perf_metrics.h"
 #include "Program/GLSLCommon.h"
 #include "Utilities/date_time.h"
-#include "Utilities/span.h"
 #include "Utilities/StrUtil.h"
 
 #include "util/cereal.hpp"
 #include "util/asm.hpp"
 
+#include <span>
 #include <sstream>
 #include <thread>
 #include <unordered_set>
@@ -892,7 +892,7 @@ namespace rsx
 		return t + timestamp_subvalue;
 	}
 
-	gsl::span<const std::byte> thread::get_raw_index_array(const draw_clause& draw_indexed_clause) const
+	std::span<const std::byte> thread::get_raw_index_array(const draw_clause& draw_indexed_clause) const
 	{
 		if (!element_push_buffer.empty())
 		{

@@ -24,7 +24,7 @@ constexpr auto qstr = QString::fromStdString;
 namespace
 {
 	template <typename T>
-	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
+	std::span<T> as_const_span(std::span<const std::byte> unformated_span)
 	{
 		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
 	}
@@ -412,7 +412,7 @@ namespace
 		return std::bit_cast<f32>(raw);
 	}
 
-	std::array<u8, 3> get_value(gsl::span<const std::byte> orig_buffer, rsx::surface_color_format format, usz idx)
+	std::array<u8, 3> get_value(std::span<const std::byte> orig_buffer, rsx::surface_color_format format, usz idx)
 	{
 		switch (format)
 		{
@@ -471,7 +471,7 @@ namespace
 	/**
 	 * Return a new buffer that can be passed to QImage.
 	 */
-	u8* convert_to_QImage_buffer(rsx::surface_color_format format, gsl::span<const std::byte> orig_buffer, usz width, usz height) noexcept
+	u8* convert_to_QImage_buffer(rsx::surface_color_format format, std::span<const std::byte> orig_buffer, usz width, usz height) noexcept
 	{
 		u8* buffer = static_cast<u8*>(std::malloc(width * height * 4));
 		if (!buffer || width == 0 || height == 0)
@@ -521,7 +521,7 @@ void rsx_debugger::OnClickDrawCalls()
 	{
 		if (width && height && !draw_call.depth_stencil[0].empty())
 		{
-			const gsl::span<const std::byte> orig_buffer = draw_call.depth_stencil[0];
+			const std::span<const std::byte> orig_buffer = draw_call.depth_stencil[0];
 			u8* buffer = static_cast<u8*>(std::malloc(4ULL * width * height));
 
 			if (draw_call.state.surface_depth_fmt() == rsx::surface_depth_format::z24s8)
@@ -562,7 +562,7 @@ void rsx_debugger::OnClickDrawCalls()
 	{
 		if (width && height && !draw_call.depth_stencil[1].empty())
 		{
-			const gsl::span<const std::byte> orig_buffer = draw_call.depth_stencil[1];
+			const std::span<const std::byte> orig_buffer = draw_call.depth_stencil[1];
 			u8* buffer = static_cast<u8*>(std::malloc(4ULL * width * height));
 
 			for (u32 row = 0; row < height; row++)
