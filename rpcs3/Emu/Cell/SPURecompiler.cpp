@@ -7354,8 +7354,6 @@ public:
 			for (u32 i = 0; i < 4; i++)
 			{
 				const u32 exponent = data._u32[i] & 0x7f800000u;
-				const u32 sign_bit = data._u32[i] & 0x80000000u;
-				const u32 absolute_float_bits = data._u32[i] & 0x7fffffffu;
 
 				if (data._u32[i] >= 0x7f7fffffu || !exponent)
 				{
