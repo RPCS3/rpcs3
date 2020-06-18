@@ -313,7 +313,6 @@ void GLGSRender::on_init_thread()
 	glEnable(GL_CLIP_DISTANCE0 + 4);
 	glEnable(GL_CLIP_DISTANCE0 + 5);
 
-	m_depth_converter.create();
 	m_ui_renderer.create();
 	m_video_output_pass.create();
 
@@ -460,7 +459,6 @@ void GLGSRender::on_exit()
 	m_null_textures.clear();
 	m_text_printer.close();
 	m_gl_texture_cache.destroy();
-	m_depth_converter.destroy();
 	m_ui_renderer.destroy();
 	m_video_output_pass.destroy();
 

@@ -617,7 +617,7 @@ namespace rsx
 		// Framebuffer setup
 		rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
 		rsx::gcm_framebuffer_info m_depth_surface_info;
-		framebuffer_layout m_framebuffer_layout;
+		framebuffer_layout m_framebuffer_layout{};
 		bool framebuffer_status_valid = false;
 
 		// Overlays
@@ -692,7 +692,7 @@ namespace rsx
 		u32 main_mem_size{0};
 		u32 local_mem_size{0};
 
-		bool m_rtts_dirty;
+		bool m_rtts_dirty = true;
 		std::array<bool, 16> m_textures_dirty;
 		std::array<bool, 4> m_vertex_textures_dirty;
 		bool m_framebuffer_state_contested = false;
@@ -727,8 +727,10 @@ namespace rsx
 		 * returns whether surface is a render target and surface pitch in native format
 		 */
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
+
 	public:
 		bool invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size);
+		void on_framebuffer_options_changed(u32 opt);
 
 	public:
 		u64 target_rsx_flip_time = 0;

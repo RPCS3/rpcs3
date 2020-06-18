@@ -231,7 +231,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 			u32 result = 0;
 
-			for (const auto cpu : ::as_rvalue(std::move(cond.sq)))
+			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.protocol))
 			{
 				cond.waiters--;
 

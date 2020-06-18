@@ -1037,9 +1037,9 @@ namespace rsx
 			if ((!mask || !active_write_op) && rsx::method_registers.two_sided_stencil_test_enabled())
 			{
 				mask |= rsx::method_registers.back_stencil_mask();
-				active_write_op |= (rsx::method_registers.stencil_op_zpass() != rsx::stencil_op::keep ||
-					rsx::method_registers.stencil_op_fail() != rsx::stencil_op::keep ||
-					rsx::method_registers.stencil_op_zfail() != rsx::stencil_op::keep);
+				active_write_op |= (rsx::method_registers.back_stencil_op_zpass() != rsx::stencil_op::keep ||
+					rsx::method_registers.back_stencil_op_fail() != rsx::stencil_op::keep ||
+					rsx::method_registers.back_stencil_op_zfail() != rsx::stencil_op::keep);
 			}
 
 			layout.zeta_write_enabled = (mask && active_write_op);
@@ -1298,6 +1298,155 @@ namespace rsx
 		}
 
 		layout.ignore_change = false;
+	}
+
+	void thread::on_framebuffer_options_changed(u32 opt)
+	{
+		auto evaluate_depth_buffer_state = [&]()
+		{
+			m_framebuffer_layout.zeta_write_enabled =
+				(rsx::method_registers.depth_test_enabled() && rsx::method_registers.depth_write_enabled());
+		};
+
+		auto evaluate_stencil_buffer_state = [&]()
+		{
+			if (!m_framebuffer_layout.zeta_write_enabled &&
+				rsx::method_registers.stencil_test_enabled() &&
+				m_framebuffer_layout.depth_format == rsx::surface_depth_format::z24s8)
+			{
+				// Check if stencil data is modified
+				auto mask = rsx::method_registers.stencil_mask();
+				bool active_write_op = (rsx::method_registers.stencil_op_zpass() != rsx::stencil_op::keep ||
+					rsx::method_registers.stencil_op_fail() != rsx::stencil_op::keep ||
+					rsx::method_registers.stencil_op_zfail() != rsx::stencil_op::keep);
+
+				if ((!mask || !active_write_op) && rsx::method_registers.two_sided_stencil_test_enabled())
+				{
+					mask |= rsx::method_registers.back_stencil_mask();
+					active_write_op |= (rsx::method_registers.back_stencil_op_zpass() != rsx::stencil_op::keep ||
+						rsx::method_registers.back_stencil_op_fail() != rsx::stencil_op::keep ||
+						rsx::method_registers.back_stencil_op_zfail() != rsx::stencil_op::keep);
+				}
+
+				m_framebuffer_layout.zeta_write_enabled = (mask && active_write_op);
+			}
+		};
+
+		auto evaluate_color_buffer_state = [&]() -> bool
+		{
+			const auto mrt_buffers = rsx::utility::get_rtt_indexes(m_framebuffer_layout.target);
+			bool any_found = false;
+
+			for (uint i = 0; i < mrt_buffers.size(); ++i)
+			{
+				if (rsx::method_registers.color_write_enabled(i))
+				{
+					const auto real_index = mrt_buffers[i];
+					m_framebuffer_layout.color_write_enabled[real_index] = true;
+					any_found = true;
+				}
+			}
+
+			return any_found;
+		};
+
+		auto evaluate_depth_buffer_contested = [&]()
+		{
+			if (m_framebuffer_layout.zeta_address) [[likely]]
+			{
+				// Nothing to do, depth buffer already exists
+				return false;
+			}
+
+			// Check if depth read/write is enabled
+			if (m_framebuffer_layout.zeta_write_enabled ||
+				rsx::method_registers.depth_test_enabled())
+			{
+				return true;
+			}
+
+			// Check if stencil read is enabled
+			if (m_framebuffer_layout.depth_format == rsx::surface_depth_format::z24s8 &&
+				rsx::method_registers.stencil_test_enabled())
+			{
+				return true;
+			}
+
+			return false;
+		};
+
+		if (m_rtts_dirty)
+		{
+			// Nothing to do
+			return;
+		}
+
+		switch (opt)
+		{
+		case NV4097_SET_DEPTH_TEST_ENABLE:
+		case NV4097_SET_DEPTH_MASK:
+		{
+			evaluate_depth_buffer_state();
+
+			if (m_framebuffer_state_contested)
+			{
+				m_rtts_dirty |= evaluate_depth_buffer_contested();
+			}
+			break;
+		}
+		case NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE:
+		case NV4097_SET_STENCIL_TEST_ENABLE:
+		case NV4097_SET_STENCIL_MASK:
+		case NV4097_SET_STENCIL_OP_ZPASS:
+		case NV4097_SET_STENCIL_OP_FAIL:
+		case NV4097_SET_STENCIL_OP_ZFAIL:
+		case NV4097_SET_BACK_STENCIL_MASK:
+		case NV4097_SET_BACK_STENCIL_OP_ZPASS:
+		case NV4097_SET_BACK_STENCIL_OP_FAIL:
+		case NV4097_SET_BACK_STENCIL_OP_ZFAIL:
+		{
+			// Stencil takes a back seat to depth buffer stuff
+			evaluate_depth_buffer_state();
+
+			if (!m_framebuffer_layout.zeta_write_enabled)
+			{
+				evaluate_stencil_buffer_state();
+			}
+
+			if (m_framebuffer_state_contested)
+			{
+				m_rtts_dirty |= evaluate_depth_buffer_contested();
+			}
+			break;
+		}
+		case NV4097_SET_COLOR_MASK:
+		case NV4097_SET_COLOR_MASK_MRT:
+		{
+			if (!m_framebuffer_state_contested) [[likely]]
+			{
+				// Update write masks and continue
+				evaluate_color_buffer_state();
+			}
+			else
+			{
+				bool old_state = false;
+				for (const auto& enabled : m_framebuffer_layout.color_write_enabled)
+				{
+					if (old_state = enabled; old_state) break;
+				}
+
+				const auto new_state = evaluate_color_buffer_state();
+				if (!old_state && new_state)
+				{
+					// Color buffers now in use
+					m_rtts_dirty = true;
+				}
+			}
+			break;
+		}
+		default:
+			rsx_log.fatal("Unhandled framebuffer option changed 0x%x", opt);
+		}
 	}
 
 	bool thread::get_scissor(areau& region, bool clip_viewport)
@@ -2182,9 +2331,6 @@ namespace rsx
 
 	void thread::check_zcull_status(bool framebuffer_swap)
 	{
-		if (g_cfg.video.disable_zcull_queries)
-			return;
-
 		if (framebuffer_swap)
 		{
 			zcull_surface_active = false;
@@ -2216,9 +2362,6 @@ namespace rsx
 
 	void thread::clear_zcull_stats(u32 type)
 	{
-		if (g_cfg.video.disable_zcull_queries)
-			return;
-
 		zcull_ctrl->clear(this, type);
 	}
 

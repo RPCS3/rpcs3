@@ -88,7 +88,17 @@ error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id)
 			return CELL_EBUSY;
 		}
 
-		if (mutex.cond_count)
+		if (!mutex.obj_count.fetch_op([](typename lv2_mutex::count_info& info)
+		{
+			if (info.cond_count)
+			{
+				return false;
+			}
+
+			// Decrement mutex copies count
+			info.mutex_count--;
+			return true;
+		}).second)
 		{
 			return CELL_EPERM;
 		}
