@@ -239,30 +239,44 @@ void shared_mutex::imp_lock_upgrade()
 
 void shared_mutex::imp_lock_unlock()
 {
-	u32 _max = 1;
+	u32 old = m_value;
+
+	if (!old || old & c_sig)
+	{
+		return;
+	}
 
 	for (int i = 0; i < 30; i++)
 	{
 		const u32 val = m_value;
 
-		if (val % c_one == 0 && (val / c_one < _max || val >= c_sig))
+		if (!val || val / c_one < old / c_one || val & c_sig || static_cast<bool>(val % c_one) != static_cast<bool>(old % c_one))
 		{
 			// Return if have cought a state where:
 			// 1) Mutex is free
 			// 2) Total number of waiters decreased since last check
 			// 3) Signal bit is set (if used on the platform)
+			// 4) Mutex was acquired by readers at some point but now not
 			return;
 		}
 
-		_max = val / c_one;
+		old = val;
 
 		busy_wait(1500);
 	}
 
 	// Lock and unlock
-	if (!m_value.fetch_add(c_one))
+	if (!m_value.fetch_op([&](u32& val)
 	{
-		unlock();
+		if (!val || val / c_one < old / c_one || val & c_sig || (val % c_one == 0 && old % c_one))
+		{
+			return false;
+		}
+
+		val += c_one;
+		return true;
+	}).second)
+	{
 		return;
 	}
 
