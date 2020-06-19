@@ -31,6 +31,7 @@ public:
 	{
 		patch_type type = patch_type::load;
 		u32 offset = 0;
+		std::string original_value; // Used for import consistency (avoid rounding etc.)
 		union
 		{
 			u64 long_value;

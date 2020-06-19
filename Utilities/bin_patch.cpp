@@ -359,8 +359,9 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	}
 
 	struct patch_data p_data{};
-	p_data.type   = type;
-	p_data.offset = addr_node.as<u32>(0) + modifier;
+	p_data.type           = type;
+	p_data.offset         = addr_node.as<u32>(0) + modifier;
+	p_data.original_value = value_node.IsScalar() ? value_node.Scalar() : "";
 
 	// Use try/catch instead of YAML::Node::as<T>(fallback) in order to get an error message
 	try
@@ -385,7 +386,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	catch (const std::exception& e)
 	{
 		const std::string error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s) %s",
-			p_data.type, p_data.offset, value_node.IsScalar() && value_node.Scalar().size() ? value_node.Scalar() : "?", info.hash, e.what());
+			p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, e.what());
 		append_log_message(log_messages, error_message);
 		patch_log.error("%s", error_message);
 		return false;
@@ -736,25 +737,7 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 				out << YAML::BeginSeq;
 				out << fmt::format("%s", data.type);
 				out << fmt::format("0x%.8x", data.offset);
-
-				switch (data.type)
-				{
-				case patch_type::lef32:
-				case patch_type::bef32:
-				case patch_type::lef64:
-				case patch_type::bef64:
-				{
-					// Using YAML formatting seems good enough for now
-					out << data.value.double_value;
-					break;
-				}
-				default:
-				{
-					out << fmt::format("0x%.8x", data.value.long_value);
-					break;
-				}
-				}
-
+				out << data.original_value;
 				out << YAML::EndSeq;
 			}
 
