@@ -1,6 +1,7 @@
 ﻿#include "bin_patch.h"
 #include "File.h"
 #include "Config.h"
+#include "version.h"
 
 LOG_CHANNEL(patch_log);
 
@@ -639,7 +640,7 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 	file.write(out.c_str(), out.size());
 }
 
-static void append_patches(patch_engine::patch_map& existing_patches, const patch_engine::patch_map& new_patches)
+static bool append_patches(patch_engine::patch_map& existing_patches, const patch_engine::patch_map& new_patches, std::stringstream* log_messages)
 {
 	for (const auto& [hash, new_container] : new_patches)
 	{
@@ -661,24 +662,21 @@ static void append_patches(patch_engine::patch_map& existing_patches, const patc
 
 			auto& info = container.patch_info_map[description];
 
-			const auto version_is_bigger = [](const std::string& v0, const std::string& v1, const std::string& hash, const std::string& description)
+			bool ok;
+			const bool version_is_bigger = utils::compare_versions(new_info.patch_version, info.patch_version, ok) > 0;
+
+			if (!ok)
 			{
-				std::add_pointer_t<char> ev0, ev1;
-				const double ver0 = std::strtod(v0.c_str(), &ev0);
-				const double ver1 = std::strtod(v1.c_str(), &ev1);
-
-				if (v0.c_str() + v0.size() == ev0 && v1.c_str() + v1.size() == ev1)
-				{
-					return ver0 > ver1;
-				}
-
-				patch_log.error("Failed to compare patch versions ('%s' vs '%s') for %s: %s", v0, v1, hash, description);
+				patch_log.error("Failed to compare patch versions ('%s' vs '%s') for %s: %s", new_info.patch_version, info.patch_version, hash, description);
+				append_log_message(log_messages, fmt::format("Failed to compare patch versions ('%s' vs '%s') for %s: %s", new_info.patch_version, info.patch_version, hash, description));
 				return false;
-			};
+			}
 
-			if (!version_is_bigger(new_info.patch_version, info.patch_version, hash, description))
+			if (!version_is_bigger)
 			{
-				continue;
+				patch_log.error("A higher or equal patch version already exists ('%s' vs '%s') for %s: %s", new_info.patch_version, info.patch_version, hash, description);
+				append_log_message(log_messages, fmt::format("A higher or equal patch version already exists ('%s' vs '%s') for %s: %s", new_info.patch_version, info.patch_version, hash, description));
+				return false;
 			}
 
 			if (!new_info.patch_version.empty()) info.patch_version = new_info.patch_version;
@@ -689,14 +687,17 @@ static void append_patches(patch_engine::patch_map& existing_patches, const patc
 			if (!new_info.data_list.empty())     info.data_list     = new_info.data_list;
 		}
 	}
+
+	return true;
 }
 
-bool patch_engine::save_patches(const patch_map& patches, const std::string& path)
+bool patch_engine::save_patches(const patch_map& patches, const std::string& path, std::stringstream* log_messages)
 {
 	fs::file file(path, fs::rewrite);
 	if (!file)
 	{
 		patch_log.fatal("save_patches: Failed to open patch file %s", path);
+		append_log_message(log_messages, fmt::format("Failed to open patch file %s", path));
 		return false;
 	}
 
@@ -755,14 +756,16 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 	return true;
 }
 
-bool patch_engine::import_patches(const patch_engine::patch_map& patches, const std::string& path)
+bool patch_engine::import_patches(const patch_engine::patch_map& patches, const std::string& path, std::stringstream* log_messages)
 {
 	patch_engine::patch_map existing_patches;
 
-	if (load(existing_patches, path, true))
+	if (load(existing_patches, path, true, log_messages))
 	{
-		append_patches(existing_patches, patches);
-		return save_patches(existing_patches, path);
+		if (append_patches(existing_patches, patches, log_messages))
+		{
+			return save_patches(existing_patches, path, log_messages);
+		}
 	}
 
 	return false;

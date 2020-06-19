@@ -102,10 +102,10 @@ public:
 	static void save_config(const patch_map& patches_map, bool enable_legacy_patches);
 
 	// Save a patch file
-	static bool save_patches(const patch_map& patches, const std::string& path);
+	static bool save_patches(const patch_map& patches, const std::string& path, std::stringstream* log_messages = nullptr);
 
 	// Create or append patches to a file
-	static bool import_patches(const patch_map& patches, const std::string& path);
+	static bool import_patches(const patch_map& patches, const std::string& path, std::stringstream* log_messages = nullptr);
 
 	// Load patch_config.yml
 	static patch_config_map load_config(bool& enable_legacy_patches);
