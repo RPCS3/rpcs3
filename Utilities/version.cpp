@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "version.h"
 
+#include <regex>
+
 namespace utils
 {
 	std::string to_string(version_type type)
@@ -47,5 +49,52 @@ namespace utils
 		}
 
 		return version;
+	}
+
+	// Based on https://www.geeksforgeeks.org/compare-two-version-numbers/
+	int compare_versions(const std::string& v1, const std::string& v2, bool& ok)
+	{
+		// Check if both version strings are valid
+		ok = std::regex_match(v1, std::regex("[0-9.]*")) && std::regex_match(v2, std::regex("[0-9.]*"));
+
+		if (!ok)
+		{
+			return -1;
+		}
+
+		// vnum stores each numeric part of version
+		int vnum1 = 0;
+		int vnum2 = 0;
+
+		// Loop until both strings are processed
+		for (int i = 0, j = 0; (i < v1.length() || j < v2.length());)
+		{
+			// Storing numeric part of version 1 in vnum1
+			while (i < v1.length() && v1[i] != '.')
+			{
+				vnum1 = vnum1 * 10 + (v1[i] - '0');
+				i++;
+			}
+
+			// Storing numeric part of version 2 in vnum2
+			while (j < v2.length() && v2[j] != '.')
+			{
+				vnum2 = vnum2 * 10 + (v2[j] - '0');
+				j++;
+			}
+
+			if (vnum1 > vnum2)
+				return 1;
+
+			if (vnum2 > vnum1)
+				return -1;
+
+			// If equal, reset variables and go for next numeric part
+			vnum1 = vnum2 = 0;
+			i++;
+			j++;
+		}
+
+		return 0;
 	}
 }

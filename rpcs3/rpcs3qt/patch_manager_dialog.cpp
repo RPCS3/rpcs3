@@ -424,7 +424,9 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 			{
 				static const std::string imported_patch_yml_path = fs::get_config_dir() + "patches/imported_patch.yml";
 
-				if (patch_engine::import_patches(patches, imported_patch_yml_path))
+				log_message.clear();
+
+				if (patch_engine::import_patches(patches, imported_patch_yml_path, &log_message))
 				{
 					refresh();
 					QMessageBox::information(this, tr("Import successful"), tr("The patch file was imported to:\n%0").arg(QString::fromStdString(imported_patch_yml_path)));
