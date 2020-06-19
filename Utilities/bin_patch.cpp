@@ -363,30 +363,29 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	p_data.offset         = addr_node.as<u32>(0) + modifier;
 	p_data.original_value = value_node.IsScalar() ? value_node.Scalar() : "";
 
-	// Use try/catch instead of YAML::Node::as<T>(fallback) in order to get an error message
-	try
+	std::string error_message;
+
+	switch (p_data.type)
 	{
-		switch (p_data.type)
-		{
-		case patch_type::bef32:
-		case patch_type::lef32:
-		case patch_type::bef64:
-		case patch_type::lef64:
-		{
-			p_data.value.double_value = value_node.as<f64>();
-			break;
-		}
-		default:
-		{
-			p_data.value.long_value = value_node.as<u64>();
-			break;
-		}
-		}
+	case patch_type::bef32:
+	case patch_type::lef32:
+	case patch_type::bef64:
+	case patch_type::lef64:
+	{
+		p_data.value.double_value = get_yaml_node_value<f64>(value_node, error_message);
+		break;
 	}
-	catch (const std::exception& e)
+	default:
 	{
-		const std::string error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s) %s",
-			p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, e.what());
+		p_data.value.long_value = get_yaml_node_value<u64>(value_node, error_message);
+		break;
+	}
+	}
+
+	if (!error_message.empty())
+	{
+		error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s) %s",
+			p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, error_message);
 		append_log_message(log_messages, error_message);
 		patch_log.error("%s", error_message);
 		return false;
