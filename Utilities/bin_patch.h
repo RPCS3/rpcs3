@@ -79,11 +79,11 @@ public:
 	// PPU-8007056e52279bea26c15669d1ee08c2df321d00:
 	//   Patches:
 	//     60fps:
-	//       Title: Fancy Game
+	//       Game Title: Fancy Game
 	//       Serials: ABCD12345, SUPA13337 v.1.3
 	//       Author: Batman bin Suparman
-	//       Version: 1.3
 	//       Notes: This is super
+	//       Patch Version: 1.3
 	//       Patch:
 	//         - [ be32, 0x000e522c, 0x995d0072 ]
 	//         - [ be32, 0x000e5234, 0x995d0074 ]
