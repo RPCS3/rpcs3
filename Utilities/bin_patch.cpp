@@ -71,6 +71,11 @@ std::string patch_engine::get_patch_config_path()
 #endif
 }
 
+std::string patch_engine::get_imported_patch_path()
+{
+	return fs::get_config_dir() + "patches/imported_patch.yml";
+}
+
 static void append_log_message(std::stringstream* log_messages, const std::string& message)
 {
 	if (log_messages)
@@ -461,7 +466,7 @@ void patch_engine::append_global_patches()
 	load(m_map, fs::get_config_dir() + "patches/patch.yml");
 
 	// Imported patch.yml
-	load(m_map, fs::get_config_dir() + "patches/imported_patch.yml");
+	load(m_map, get_imported_patch_path());
 }
 
 void patch_engine::append_title_patches(const std::string& title_id)
@@ -729,6 +734,11 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 
 	for (const auto& [hash, container] : patches)
 	{
+		if (container.patch_info_map.empty())
+		{
+			continue;
+		}
+
 		out << YAML::Newline << YAML::Newline;
 		out << hash << YAML::BeginMap;
 		out << "Patches" << YAML::BeginMap;
@@ -787,6 +797,27 @@ bool patch_engine::import_patches(const patch_engine::patch_map& patches, const 
 		if (append_patches(existing_patches, patches, log_messages))
 		{
 			return save_patches(existing_patches, path, log_messages);
+		}
+	}
+
+	return false;
+}
+
+bool patch_engine::remove_patch(const patch_info& info)
+{
+	patch_engine::patch_map patches;
+
+	if (load(patches, info.source_path))
+	{
+		if (patches.find(info.hash) != patches.end())
+		{
+			auto& container = patches[info.hash];
+
+			if (container.patch_info_map.find(info.description) != container.patch_info_map.end())
+			{
+				container.patch_info_map.erase(info.description);
+				return save_patches(patches, info.source_path);
+			}
 		}
 	}
 

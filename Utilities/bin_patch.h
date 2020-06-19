@@ -74,6 +74,9 @@ public:
 	// Returns the directory in which patch_config.yml is located
 	static std::string get_patch_config_path();
 
+	// Returns the filepath for the imported_patch.yml
+	static std::string get_imported_patch_path();
+
 	// Load from file and append to specified patches map
 	// Example entry:
 	//
@@ -107,6 +110,9 @@ public:
 
 	// Create or append patches to a file
 	static bool import_patches(const patch_map& patches, const std::string& path, std::stringstream* log_messages = nullptr);
+
+	// Remove a patch from a file
+	static bool remove_patch(const patch_info& info);
 
 	// Load patch_config.yml
 	static patch_config_map load_config(bool& enable_legacy_patches);
