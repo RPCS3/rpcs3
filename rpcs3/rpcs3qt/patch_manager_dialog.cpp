@@ -356,6 +356,29 @@ void patch_manager_dialog::on_custom_context_menu_requested(const QPoint &pos)
 			}
 		});
 	}
+	else
+	{
+		// Find the patch for this item and add menu items accordingly
+		const std::string hash = item->data(0, hash_role).toString().toStdString();
+		const std::string description = item->data(0, description_role).toString().toStdString();
+
+		if (m_map.find(hash) != m_map.end())
+		{
+			const auto& container = m_map.at(hash);
+
+			if (!container.is_legacy && container.patch_info_map.find(description) != container.patch_info_map.end())
+			{
+				const auto info = container.patch_info_map.at(description);
+
+				QAction* open_filepath = new QAction("Show Patch File");
+				menu->addAction(open_filepath);
+				connect(open_filepath, &QAction::triggered, this, [info](bool)
+				{
+					gui::utils::open_dir(info.source_path);
+				});
+			}
+		}
+	}
 
 	menu->exec(ui->patch_tree->viewport()->mapToGlobal(pos));
 }
