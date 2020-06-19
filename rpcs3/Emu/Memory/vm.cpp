@@ -231,34 +231,25 @@ namespace vm
 			return 0;
 		};
 
-		if (u64 _a1 = test_addr(g_addr_lock.load(), addr, end)) [[likely]]
-		{
-			// Optimistic path (hope that address range is not locked)
-			const auto _ret = _register_range_lock(_a1);
-
-			if (_a1 == test_addr(g_addr_lock.load(), addr, end) && !!(g_pages[addr / 4096].flags & page_readable)) [[likely]]
-			{
-				return _ret;
-			}
-
-			*_ret = 0;
-		}
-
 		while (true)
 		{
-			std::unique_lock lock(g_mutex);
-
-			if (!(g_pages[addr / 4096].flags & page_readable))
+			if (u64 _a1 = test_addr(g_addr_lock.load(), addr, end)) [[likely]]
 			{
-				lock.unlock();
+				// Optimistic path (hope that address range is not locked)
+				const auto _ret = _register_range_lock(_a1);
 
-				// Try tiggering a page fault (write)
-				// TODO: Read memory if needed
-				vm::_ref<atomic_t<u8>>(addr) += 0;
-				continue;
+				if (_a1 == test_addr(g_addr_lock.load(), addr, end) && !!(g_pages[addr / 4096].flags & page_readable)) [[likely]]
+				{
+					return _ret;
+				}
+
+				_ret->release(0);
 			}
 
-			return _register_range_lock(test_addr(UINT32_MAX, addr, end));
+			// Try tiggering a page fault (write)
+			// TODO: Read memory if needed
+			vm::_ref<atomic_t<u8>>(addr) += 0;
+			g_mutex.lock_unlock();
 		}
 	}
 
