@@ -540,14 +540,28 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 
 				log_message.clear();
 
-				if (patch_engine::import_patches(patches, imported_patch_yml_path, &log_message))
+				size_t count = 0;
+				size_t total = 0;
+
+				if (patch_engine::import_patches(patches, imported_patch_yml_path, count, total, &log_message))
 				{
 					refresh();
-					QMessageBox::information(this, tr("Import successful"), tr("The patch file was imported to:\n%0").arg(QString::fromStdString(imported_patch_yml_path)));
+					const QString msg = log_message.str().empty() ? "-" : QString::fromStdString(log_message.str());
+
+					if (count == 0)
+					{
+						QMessageBox::warning(this, tr("Nothing to import"), tr("None of the found %0 patches were imported.\n\nLog:\n\n%2")
+							.arg(total).arg(msg));
+					}
+					else
+					{
+						QMessageBox::information(this, tr("Import successful"), tr("Imported %0/%1 patches to:\n%2\n\nLog:\n\n%3")
+							.arg(count).arg(total).arg(QString::fromStdString(imported_patch_yml_path)).arg(msg));
+					}
 				}
 				else
 				{
-					QMessageBox::information(this, tr("Import failed"), tr("The patch file was not imported.\nPlease see the log for more information."));
+					QMessageBox::warning(this, tr("Import failed"), tr("The patch file was not imported.\n\nLog:\n\n").arg(QString::fromStdString(log_message.str())));
 				}
 			}
 			else
@@ -558,7 +572,7 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 		else
 		{
 			patch_log.error("Errors found in patch file %s", path);
-			QMessageBox::warning(this, tr("Validation failed"), tr("Errors were found in the patch file. Log:\n\n") + QString::fromStdString(log_message.str()));
+			QMessageBox::warning(this, tr("Validation failed"), tr("Errors were found in the patch file.\n\nLog:\n\n%0").arg(QString::fromStdString(log_message.str())));
 		}
 	}
 }

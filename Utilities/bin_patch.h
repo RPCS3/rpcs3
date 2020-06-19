@@ -109,7 +109,7 @@ public:
 	static bool save_patches(const patch_map& patches, const std::string& path, std::stringstream* log_messages = nullptr);
 
 	// Create or append patches to a file
-	static bool import_patches(const patch_map& patches, const std::string& path, std::stringstream* log_messages = nullptr);
+	static bool import_patches(const patch_map& patches, const std::string& path, size_t& count, size_t& total, std::stringstream* log_messages = nullptr);
 
 	// Remove a patch from a file
 	static bool remove_patch(const patch_info& info);
