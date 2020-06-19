@@ -31,7 +31,8 @@ enum patch_column : int
 enum patch_role : int
 {
 	hash_role = Qt::UserRole,
-	description_role
+	description_role,
+	persistance_role
 };
 
 patch_manager_dialog::patch_manager_dialog(QWidget* parent)
@@ -84,6 +85,8 @@ void patch_manager_dialog::refresh()
 
 void patch_manager_dialog::load_patches()
 {
+	m_map.clear();
+
 	// Legacy path (in case someone puts it there)
 	patch_engine::load(m_map, fs::get_config_dir() + "patch.yml");
 
@@ -98,7 +101,7 @@ void patch_manager_dialog::load_patches()
 	}
 }
 
-static QList<QTreeWidgetItem*> find_children_by_data(QTreeWidgetItem* parent, int role, const QVariant& data)
+static QList<QTreeWidgetItem*> find_children_by_data(QTreeWidgetItem* parent, const QList<QPair<int /*role*/, const QVariant& /*data*/>>& criteria)
 {
 	QList<QTreeWidgetItem*> list;
 
@@ -106,9 +109,23 @@ static QList<QTreeWidgetItem*> find_children_by_data(QTreeWidgetItem* parent, in
 	{
 		for (int i = 0; i < parent->childCount(); i++)
 		{
-			if (parent->child(i)->data(0, role) == data)
+			if (auto item = parent->child(i))
 			{
-				list << parent->child(i);
+				bool match = true;
+
+				for (const auto [role, data] : criteria)
+				{
+					if (item->data(0, role) != data)
+					{
+						match = false;
+						break;
+					}
+				}
+
+				if (match)
+				{
+					list << item;
+				}
 			}
 		}
 	}
@@ -118,7 +135,15 @@ static QList<QTreeWidgetItem*> find_children_by_data(QTreeWidgetItem* parent, in
 
 void patch_manager_dialog::populate_tree()
 {
-	ui->patch_tree->clear();
+	// "Reset" currently used items. Items that aren't persisted will be removed later.
+	// Using this logic instead of clearing the tree here should persist the expanded status of items.
+	for (auto item : ui->patch_tree->findItems(".*", Qt::MatchFlag::MatchRegExp | Qt::MatchFlag::MatchRecursive))
+	{
+		if (item)
+		{
+			item->setData(0, persistance_role, false);
+		}
+	}
 
 	for (const auto& [hash, container] : m_map)
 	{
@@ -178,8 +203,10 @@ void patch_manager_dialog::populate_tree()
 			const QString q_description = QString::fromStdString(description);
 			QString visible_description = q_description;
 
+			const auto match_criteria = QList<QPair<int, const QVariant&>>() << QPair(description_role, q_description) << QPair(persistance_role, true);
+
 			// Add counter to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
-			if (const auto matches = find_children_by_data(serial_level_item, description_role, q_description); matches.count() > 0)
+			if (const auto matches = find_children_by_data(serial_level_item, match_criteria); matches.count() > 0)
 			{
 				if (auto only_match = matches.count() == 1 ? matches[0] : nullptr)
 				{
@@ -195,21 +222,49 @@ void patch_manager_dialog::populate_tree()
 			patch_level_item->setData(0, description_role, q_description);
 
 			serial_level_item->addChild(patch_level_item);
+
+			// Persist items
+			title_level_item->setData(0, persistance_role, true);
+			serial_level_item->setData(0, persistance_role, true);
+			patch_level_item->setData(0, persistance_role, true);
 		}
 	}
 
 	ui->patch_tree->sortByColumn(0, Qt::SortOrder::AscendingOrder);
 
-	for (int i = 0; i < ui->patch_tree->topLevelItemCount(); i++)
+	for (int i = ui->patch_tree->topLevelItemCount() - 1; i >= 0; i--)
 	{
 		if (auto title_level_item = ui->patch_tree->topLevelItem(i))
 		{
+			if (!title_level_item->data(0, persistance_role).toBool())
+			{
+				delete ui->patch_tree->takeTopLevelItem(i);
+				continue;
+			}
+
 			title_level_item->sortChildren(0, Qt::SortOrder::AscendingOrder);
 
-			for (int i = 0; i < title_level_item->childCount(); i++)
+			for (int j = title_level_item->childCount() - 1; j >= 0; j--)
 			{
-				if (auto serial_level_item = title_level_item->child(i))
+				if (auto serial_level_item = title_level_item->child(j))
 				{
+					if (!serial_level_item->data(0, persistance_role).toBool())
+					{
+						delete title_level_item->takeChild(j);
+						continue;
+					}
+
+					for (int k = serial_level_item->childCount() - 1; k >= 0; k--)
+					{
+						if (auto leaf_item = serial_level_item->child(k))
+						{
+							if (!leaf_item->data(0, persistance_role).toBool())
+							{
+								delete serial_level_item->takeChild(k);
+							}
+						}
+					}
+
 					serial_level_item->sortChildren(0, Qt::SortOrder::AscendingOrder);
 				}
 			}
