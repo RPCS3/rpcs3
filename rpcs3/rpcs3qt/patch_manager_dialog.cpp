@@ -101,7 +101,7 @@ void patch_manager_dialog::load_patches()
 	}
 }
 
-static QList<QTreeWidgetItem*> find_children_by_data(QTreeWidgetItem* parent, const QList<QPair<int /*role*/, const QVariant& /*data*/>>& criteria)
+static QList<QTreeWidgetItem*> find_children_by_data(QTreeWidgetItem* parent, const QList<QPair<int /*role*/, QVariant /*data*/>>& criteria)
 {
 	QList<QTreeWidgetItem*> list;
 
@@ -203,7 +203,7 @@ void patch_manager_dialog::populate_tree()
 			const QString q_description = QString::fromStdString(description);
 			QString visible_description = q_description;
 
-			const auto match_criteria = QList<QPair<int, const QVariant&>>() << QPair(description_role, q_description) << QPair(persistance_role, true);
+			const auto match_criteria = QList<QPair<int, QVariant>>() << QPair(description_role, q_description) << QPair(persistance_role, true);
 
 			// Add counter to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
 			if (const auto matches = find_children_by_data(serial_level_item, match_criteria); matches.count() > 0)
@@ -436,6 +436,37 @@ void patch_manager_dialog::on_custom_context_menu_requested(const QPoint &pos)
 				{
 					gui::utils::open_dir(info.source_path);
 				});
+
+				if (info.source_path == patch_engine::get_imported_patch_path())
+				{
+					menu->addSeparator();
+
+					QAction* remove_patch = new QAction("Remove Patch");
+					menu->addAction(remove_patch);
+					connect(remove_patch, &QAction::triggered, this, [info, this](bool)
+					{
+						const auto answer = QMessageBox::question(this, tr("Remove Patch?"),
+							tr("Do you really want to remove the selected patch?\nThis action is immediate and irreversible!"));
+
+						if (answer != QMessageBox::StandardButton::Yes)
+						{
+							return;
+						}
+
+						if (patch_engine::remove_patch(info))
+						{
+							patch_log.success("Successfully removed patch %s: %s from %s", info.hash, info.description, info.source_path);
+							refresh(); // Refresh before showing the dialog
+							QMessageBox::information(this, tr("Success"), tr("The patch was successfully removed!"));
+						}
+						else
+						{
+							patch_log.error("Could not remove patch %s: %s from %s", info.hash, info.description, info.source_path);
+							refresh(); // Refresh before showing the dialog
+							QMessageBox::warning(this, tr("Failure"), tr("The patch could not be removed!"));
+						}
+					});
+				}
 			}
 		}
 	}
@@ -493,7 +524,7 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 		return;
 	}
 
-	for (const auto drop_path : drop_paths)
+	for (const QString& drop_path : drop_paths)
 	{
 		const auto path = drop_path.toStdString();
 		patch_engine::patch_map patches;
@@ -505,7 +536,7 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 
 			if (do_import)
 			{
-				static const std::string imported_patch_yml_path = fs::get_config_dir() + "patches/imported_patch.yml";
+				static const std::string imported_patch_yml_path = patch_engine::get_imported_patch_path();
 
 				log_message.clear();
 
