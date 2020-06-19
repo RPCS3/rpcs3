@@ -224,7 +224,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 				info.hash        = main_key;
 				info.version     = version;
 
-				if (const auto title_node = patches_entry.second["Title"])
+				if (const auto title_node = patches_entry.second["Game Title"])
 				{
 					info.title = title_node.Scalar();
 				}
@@ -239,7 +239,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 					info.author = author_node.Scalar();
 				}
 
-				if (const auto patch_version_node = patches_entry.second["Version"])
+				if (const auto patch_version_node = patches_entry.second["Patch Version"])
 				{
 					info.patch_version = patch_version_node.Scalar();
 				}
@@ -715,11 +715,11 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 			out << description;
 			out << YAML::BeginMap;
 
-			if (!info.title.empty())         out << "Title"   << info.title;
-			if (!info.serials.empty())       out << "Serials" << info.serials;
-			if (!info.author.empty())        out << "Author"  << info.author;
-			if (!info.patch_version.empty()) out << "Version" << info.patch_version;
-			if (!info.notes.empty())         out << "Notes"   << info.notes;
+			if (!info.title.empty())         out << "Game Title"    << info.title;
+			if (!info.serials.empty())       out << "Serials"       << info.serials;
+			if (!info.author.empty())        out << "Author"        << info.author;
+			if (!info.patch_version.empty()) out << "Patch Version" << info.patch_version;
+			if (!info.notes.empty())         out << "Notes"         << info.notes;
 
 			out << "Patch";
 			out << YAML::BeginSeq;

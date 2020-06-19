@@ -109,7 +109,7 @@
           <item>
            <widget class="QGroupBox" name="gb_title">
             <property name="title">
-             <string>Title</string>
+             <string>Game Title</string>
             </property>
             <layout class="QVBoxLayout" name="title_layout">
              <item>
