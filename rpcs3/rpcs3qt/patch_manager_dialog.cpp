@@ -120,33 +120,30 @@ void patch_manager_dialog::populate_tree()
 {
 	ui->patch_tree->clear();
 
-	for (const auto& [hash, title_info] : m_map)
+	for (const auto& [hash, container] : m_map)
 	{
 		// Don't show legacy patches, because you can't configure them anyway
-		if (title_info.is_legacy)
+		if (container.is_legacy)
 		{
 			continue;
 		}
 
-		QTreeWidgetItem* title_level_item = nullptr;
-		QTreeWidgetItem* serial_level_item = nullptr;
-
-		const QString q_hash    = QString::fromStdString(hash);
-		const QString q_serials = title_info.serials.empty() ? tr("Unknown Version") : QString::fromStdString(title_info.serials);
-		const QString q_title   = QString::fromStdString(title_info.title);
-
-		// Find top level item for this title
-		if (const auto list = ui->patch_tree->findItems(q_title, Qt::MatchFlag::MatchExactly, 0); list.size() > 0)
-		{
-			title_level_item = list[0];
-		}
-
-		// Find out if there is a node item for this serial
-		serial_level_item = gui::utils::find_child(title_level_item, q_serials);
+		const QString q_hash = QString::fromStdString(hash);
 
 		// Add patch items
-		for (const auto& [description, patch] : title_info.patch_info_map)
+		for (const auto& [description, patch] : container.patch_info_map)
 		{
+			const QString q_title   = patch.title.empty() ? tr("Unknown Title") : QString::fromStdString(patch.title);
+			const QString q_serials = patch.serials.empty() ? tr("Unknown Version") : QString::fromStdString(patch.serials);
+
+			QTreeWidgetItem* title_level_item = nullptr;
+
+			// Find top level item for this title
+			if (const auto list = ui->patch_tree->findItems(q_title, Qt::MatchFlag::MatchExactly, 0); list.size() > 0)
+			{
+				title_level_item = list[0];
+			}
+
 			// Add a top level item for this title if it doesn't exist yet
 			if (!title_level_item)
 			{
@@ -157,6 +154,9 @@ void patch_manager_dialog::populate_tree()
 				ui->patch_tree->addTopLevelItem(title_level_item);
 			}
 			assert(title_level_item);
+
+			// Find out if there is a node item for this serial
+			QTreeWidgetItem* serial_level_item = gui::utils::find_child(title_level_item, q_serials);
 
 			// Add a node item for this serial if it doesn't exist yet
 			if (!serial_level_item)
@@ -191,18 +191,25 @@ void patch_manager_dialog::populate_tree()
 
 			serial_level_item->addChild(patch_level_item);
 		}
-
-		if (title_level_item)
-		{
-			title_level_item->sortChildren(0, Qt::SortOrder::AscendingOrder);
-		}
-		if (serial_level_item)
-		{
-			serial_level_item->sortChildren(0, Qt::SortOrder::AscendingOrder);
-		}
 	}
 
 	ui->patch_tree->sortByColumn(0, Qt::SortOrder::AscendingOrder);
+
+	for (int i = 0; i < ui->patch_tree->topLevelItemCount(); i++)
+	{
+		if (auto title_level_item = ui->patch_tree->topLevelItem(i))
+		{
+			title_level_item->sortChildren(0, Qt::SortOrder::AscendingOrder);
+
+			for (int i = 0; i < title_level_item->childCount(); i++)
+			{
+				if (auto serial_level_item = title_level_item->child(i))
+				{
+					serial_level_item->sortChildren(0, Qt::SortOrder::AscendingOrder);
+				}
+			}
+		}
+	}
 }
 
 void patch_manager_dialog::save_config()
@@ -265,21 +272,19 @@ void patch_manager_dialog::on_item_selected(QTreeWidgetItem *current, QTreeWidge
 
 	if (m_map.find(hash) != m_map.end())
 	{
-		const auto& title_info = m_map.at(hash);
+		const auto& container = m_map.at(hash);
 
 		// Find the patch for this item and show its metadata
-		if (!title_info.is_legacy && title_info.patch_info_map.find(description) != title_info.patch_info_map.end())
+		if (!container.is_legacy && container.patch_info_map.find(description) != container.patch_info_map.end())
 		{
-			update_patch_info(title_info.patch_info_map.at(description));
+			update_patch_info(container.patch_info_map.at(description));
 			return;
 		}
 
 		// Show shared info if no patch was found
 		patch_engine::patch_info info{};
-		info.hash = hash;
-		info.title = title_info.title;
-		info.serials = title_info.serials;
-		info.version = title_info.version;
+		info.hash    = hash;
+		info.version = container.version;
 		update_patch_info(info);
 		return;
 	}
@@ -306,9 +311,9 @@ void patch_manager_dialog::on_item_changed(QTreeWidgetItem *item, int /*column*/
 	// Enable/disable the patch for this item and show its metadata
 	if (m_map.find(hash) != m_map.end())
 	{
-		auto& title_info = m_map[hash];
+		auto& container = m_map[hash];
 
-		if (!title_info.is_legacy && title_info.patch_info_map.find(description) != title_info.patch_info_map.end())
+		if (!container.is_legacy && container.patch_info_map.find(description) != container.patch_info_map.end())
 		{
 			auto& patch = m_map[hash].patch_info_map[description];
 			patch.enabled = enabled;

@@ -43,30 +43,28 @@ public:
 		// Patch information
 		std::vector<patch_engine::patch_data> data_list;
 		std::string description;
+		std::string title;
+		std::string serials;
 		std::string patch_version;
 		std::string author;
 		std::string notes;
 		bool enabled = false;
 
-		// Redundant information for accessibility (see patch_title_info)
+		// Redundant information for accessibility (see patch_container)
 		std::string hash;
 		std::string version;
-		std::string title;
-		std::string serials;
 		bool is_legacy = false;
 	};
 
-	struct patch_title_info
+	struct patch_container
 	{
 		std::unordered_map<std::string /*description*/, patch_engine::patch_info> patch_info_map;
 		std::string hash;
 		std::string version;
-		std::string title;
-		std::string serials;
 		bool is_legacy = false;
 	};
 
-	using patch_map = std::unordered_map<std::string /*hash*/, patch_title_info>;
+	using patch_map = std::unordered_map<std::string /*hash*/, patch_container>;
 	using patch_config_map = std::unordered_map<std::string /*hash*/, std::unordered_map<std::string /*description*/, bool /*enabled*/>>;
 
 	patch_engine();
@@ -78,10 +76,10 @@ public:
 	// Example entry:
 	//
 	// PPU-8007056e52279bea26c15669d1ee08c2df321d00:
-	//   Title: Fancy Game
-	//   Serials: ABCD12345, SUPA13337 v.1.3
 	//   Patches:
 	//     60fps:
+	//       Title: Fancy Game
+	//       Serials: ABCD12345, SUPA13337 v.1.3
 	//       Author: Batman bin Suparman
 	//       Version: 1.3
 	//       Notes: This is super

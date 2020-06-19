@@ -4,7 +4,7 @@
 
 LOG_CHANNEL(patch_log);
 
-static const std::string patch_engine_version = "1.0";
+static const std::string patch_engine_version = "1.1";
 static const std::string yml_key_enable_legacy_patches = "Enable Legacy Patches";
 
 template <>
@@ -160,10 +160,10 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 			}
 
 			// Find or create an entry matching the key/hash in our map
-			auto& title_info = patches_map[main_key];
-			title_info.hash      = main_key;
-			title_info.is_legacy = true;
-			title_info.patch_info_map["legacy"] = info;
+			auto& container = patches_map[main_key];
+			container.hash      = main_key;
+			container.is_legacy = true;
+			container.patch_info_map["legacy"] = info;
 			continue;
 		}
 
@@ -183,19 +183,6 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 			continue;
 		}
 
-		std::string title;
-		std::string serials;
-
-		if (const auto title_node = pair.second["Title"])
-		{
-			title = title_node.Scalar();
-		}
-
-		if (const auto serials_node = pair.second["Serials"])
-		{
-			serials = serials_node.Scalar();
-		}
-
 		if (const auto patches_node = pair.second["Patches"])
 		{
 			if (const auto yml_type = patches_node.Type(); yml_type != YAML::NodeType::Map)
@@ -207,12 +194,10 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 			}
 
 			// Find or create an entry matching the key/hash in our map
-			auto& title_info = patches_map[main_key];
-			title_info.is_legacy = false;
-			title_info.hash      = main_key;
-			title_info.title     = title;
-			title_info.serials   = serials;
-			title_info.version   = version;
+			auto& container = patches_map[main_key];
+			container.is_legacy = false;
+			container.hash      = main_key;
+			container.version   = version;
 
 			// Go through each patch
 			for (auto patches_entry : patches_node)
@@ -238,8 +223,16 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 				info.description = description;
 				info.hash        = main_key;
 				info.version     = version;
-				info.serials     = serials;
-				info.title       = title;
+
+				if (const auto title_node = patches_entry.second["Title"])
+				{
+					info.title = title_node.Scalar();
+				}
+
+				if (const auto serials_node = patches_entry.second["Serials"])
+				{
+					info.serials = serials_node.Scalar();
+				}
 
 				if (const auto author_node = patches_entry.second["Author"])
 				{
@@ -265,7 +258,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 				}
 
 				// Insert patch information
-				title_info.patch_info_map[description] = info;
+				container.patch_info_map[description] = info;
 			}
 		}
 	}
@@ -482,10 +475,10 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 	}
 
 	size_t applied_total = 0;
-	const auto& title_info = m_map.at(name);
+	const auto& container = m_map.at(name);
 
 	// Apply modifications sequentially
-	for (const auto& [description, patch] : title_info.patch_info_map)
+	for (const auto& [description, patch] : container.patch_info_map)
 	{
 		if (!patch.enabled)
 		{
@@ -579,7 +572,7 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 			++applied;
 		}
 
-		if (title_info.is_legacy)
+		if (container.is_legacy)
 		{
 			patch_log.notice("Applied legacy patch (<- %d)", applied);
 		}
@@ -615,14 +608,14 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 	// Save 'enabled' state per hash and description
 	patch_config_map config_map;
 
-	for (const auto& [hash, title_info] : patches_map)
+	for (const auto& [hash, container] : patches_map)
 	{
-		if (title_info.is_legacy)
+		if (container.is_legacy)
 		{
 			continue;
 		}
 
-		for (const auto& [description, patch] : title_info.patch_info_map)
+		for (const auto& [description, patch] : container.patch_info_map)
 		{
 			config_map[hash][description] = patch.enabled;
 		}
@@ -648,28 +641,25 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 
 static void append_patches(patch_engine::patch_map& existing_patches, const patch_engine::patch_map& new_patches)
 {
-	for (const auto& [hash, new_title_info] : new_patches)
+	for (const auto& [hash, new_container] : new_patches)
 	{
 		if (existing_patches.find(hash) == existing_patches.end())
 		{
-			existing_patches[hash] = new_title_info;
+			existing_patches[hash] = new_container;
 			continue;
 		}
 
-		auto& title_info = existing_patches[hash];
+		auto& container = existing_patches[hash];
 
-		if (!new_title_info.title.empty())   title_info.title   = new_title_info.title;
-		if (!new_title_info.serials.empty()) title_info.serials = new_title_info.serials;
-
-		for (const auto& [description, new_info] : new_title_info.patch_info_map)
+		for (const auto& [description, new_info] : new_container.patch_info_map)
 		{
-			if (title_info.patch_info_map.find(description) == title_info.patch_info_map.end())
+			if (container.patch_info_map.find(description) == container.patch_info_map.end())
 			{
-				title_info.patch_info_map[description] = new_info;
+				container.patch_info_map[description] = new_info;
 				continue;
 			}
 
-			auto& info = title_info.patch_info_map[description];
+			auto& info = container.patch_info_map[description];
 
 			const auto version_is_bigger = [](const std::string& v0, const std::string& v1, const std::string& hash, const std::string& description)
 			{
@@ -692,6 +682,8 @@ static void append_patches(patch_engine::patch_map& existing_patches, const patc
 			}
 
 			if (!new_info.patch_version.empty()) info.patch_version = new_info.patch_version;
+			if (!new_info.title.empty())         info.title         = new_info.title;
+			if (!new_info.serials.empty())       info.serials       = new_info.serials;
 			if (!new_info.author.empty())        info.author        = new_info.author;
 			if (!new_info.notes.empty())         info.notes         = new_info.notes;
 			if (!new_info.data_list.empty())     info.data_list     = new_info.data_list;
@@ -710,23 +702,21 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 
 	YAML::Emitter out;
 	out << YAML::BeginMap;
-	out << "Version" << "1.0";
+	out << "Version" << patch_engine_version;
 
-	for (const auto& [hash, title_info] : patches)
+	for (const auto& [hash, container] : patches)
 	{
 		out << YAML::Newline << YAML::Newline;
 		out << hash << YAML::BeginMap;
-
-		if (!title_info.title.empty())   out << "Title"   << title_info.title;
-		if (!title_info.serials.empty()) out << "Serials" << title_info.serials;
-
 		out << "Patches" << YAML::BeginMap;
 
-		for (auto [description, info] : title_info.patch_info_map)
+		for (auto [description, info] : container.patch_info_map)
 		{
 			out << description;
 			out << YAML::BeginMap;
 
+			if (!info.title.empty())         out << "Title"   << info.title;
+			if (!info.serials.empty())       out << "Serials" << info.serials;
 			if (!info.author.empty())        out << "Author"  << info.author;
 			if (!info.patch_version.empty()) out << "Version" << info.patch_version;
 			if (!info.notes.empty())         out << "Notes"   << info.notes;
