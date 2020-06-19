@@ -1,4 +1,5 @@
 ﻿#include "util/yaml.hpp"
+#include "Utilities/types.h"
 
 std::pair<YAML::Node, std::string> yaml_load(const std::string& from)
 {
@@ -15,3 +16,21 @@ std::pair<YAML::Node, std::string> yaml_load(const std::string& from)
 
 	return{result, ""};
 }
+
+template <typename T>
+T get_yaml_node_value(YAML::Node node, std::string& error_message)
+{
+	try
+	{
+		return node.as<T>();
+	}
+	catch (const std::exception& e)
+	{
+		error_message = e.what();
+	}
+
+	return {};
+}
+
+template u64 get_yaml_node_value<u64>(YAML::Node, std::string&);
+template f64 get_yaml_node_value<f64>(YAML::Node, std::string&);
