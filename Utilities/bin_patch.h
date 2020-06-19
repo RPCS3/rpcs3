@@ -49,6 +49,7 @@ public:
 		std::string patch_version;
 		std::string author;
 		std::string notes;
+		std::string source_path;
 		bool enabled = false;
 
 		// Redundant information for accessibility (see patch_container)

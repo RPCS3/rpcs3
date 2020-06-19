@@ -151,9 +151,10 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 		if (is_legacy_patch)
 		{
 			struct patch_info info{};
-			info.hash      = main_key;
-			info.enabled   = enable_legacy_patches;
-			info.is_legacy = true;
+			info.hash        = main_key;
+			info.enabled     = enable_legacy_patches;
+			info.is_legacy   = true;
+			info.source_path = path;
 
 			if (!read_patch_node(info, pair.second, root, log_messages))
 			{
@@ -224,6 +225,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 				info.description = description;
 				info.hash        = main_key;
 				info.version     = version;
+				info.source_path = path;
 
 				if (const auto title_node = patches_entry.second["Game Title"])
 				{
@@ -255,6 +257,25 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 					if (!read_patch_node(info, patch_node, root, log_messages))
 					{
 						is_valid = false;
+					}
+				}
+
+				// Skip this patch if a higher patch version already exists
+				if (container.patch_info_map.find(description) != container.patch_info_map.end())
+				{
+					bool ok;
+					const auto existing_version  = container.patch_info_map[description].patch_version;
+					const bool version_is_bigger = utils::compare_versions(info.patch_version, existing_version, ok) > 0;
+
+					if (!ok || !version_is_bigger)
+					{
+						patch_log.warning("A higher or equal patch version already exists ('%s' vs '%s') for %s: %s (in file %s)", info.patch_version, existing_version, main_key, description, path);
+						append_log_message(log_messages, fmt::format("A higher or equal patch version already exists ('%s' vs '%s') for %s: %s (in file %s)", info.patch_version, existing_version, main_key, description, path));
+						continue;
+					}
+					else if (!importing)
+					{
+						patch_log.warning("A lower patch version was found ('%s' vs '%s') for %s: %s (in file %s)", existing_version, info.patch_version, main_key, description,  container.patch_info_map[description].source_path);
 					}
 				}
 
@@ -685,6 +706,7 @@ static bool append_patches(patch_engine::patch_map& existing_patches, const patc
 			if (!new_info.author.empty())        info.author        = new_info.author;
 			if (!new_info.notes.empty())         info.notes         = new_info.notes;
 			if (!new_info.data_list.empty())     info.data_list     = new_info.data_list;
+			if (!new_info.source_path.empty())   info.source_path   = new_info.source_path;
 		}
 	}
 
