@@ -84,8 +84,6 @@ static void append_log_message(std::stringstream* log_messages, const std::strin
 
 bool patch_engine::load(patch_map& patches_map, const std::string& path, bool importing, std::stringstream* log_messages)
 {
-	append_log_message(log_messages, fmt::format("Reading file %s", path));
-
 	// Load patch file
 	fs::file file{ path };
 
@@ -127,8 +125,6 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 			patch_log.error("Patch engine target version %s does not match file version %s in %s", patch_engine_version, version, path);
 			return false;
 		}
-
-		append_log_message(log_messages, fmt::format("Patch file version: %s", version));
 
 		// We don't need the Version node in local memory anymore
 		root.remove("Version");
@@ -666,13 +662,16 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 	file.write(out.c_str(), out.size());
 }
 
-static bool append_patches(patch_engine::patch_map& existing_patches, const patch_engine::patch_map& new_patches, std::stringstream* log_messages)
+static void append_patches(patch_engine::patch_map& existing_patches, const patch_engine::patch_map& new_patches, size_t& count, size_t& total, std::stringstream* log_messages)
 {
 	for (const auto& [hash, new_container] : new_patches)
 	{
+		total += new_container.patch_info_map.size();
+
 		if (existing_patches.find(hash) == existing_patches.end())
 		{
 			existing_patches[hash] = new_container;
+			count += new_container.patch_info_map.size();
 			continue;
 		}
 
@@ -683,6 +682,7 @@ static bool append_patches(patch_engine::patch_map& existing_patches, const patc
 			if (container.patch_info_map.find(description) == container.patch_info_map.end())
 			{
 				container.patch_info_map[description] = new_info;
+				count++;
 				continue;
 			}
 
@@ -695,14 +695,14 @@ static bool append_patches(patch_engine::patch_map& existing_patches, const patc
 			{
 				patch_log.error("Failed to compare patch versions ('%s' vs '%s') for %s: %s", new_info.patch_version, info.patch_version, hash, description);
 				append_log_message(log_messages, fmt::format("Failed to compare patch versions ('%s' vs '%s') for %s: %s", new_info.patch_version, info.patch_version, hash, description));
-				return false;
+				continue;
 			}
 
 			if (!version_is_bigger)
 			{
 				patch_log.error("A higher or equal patch version already exists ('%s' vs '%s') for %s: %s", new_info.patch_version, info.patch_version, hash, description);
 				append_log_message(log_messages, fmt::format("A higher or equal patch version already exists ('%s' vs '%s') for %s: %s", new_info.patch_version, info.patch_version, hash, description));
-				return false;
+				continue;
 			}
 
 			if (!new_info.patch_version.empty()) info.patch_version = new_info.patch_version;
@@ -712,10 +712,10 @@ static bool append_patches(patch_engine::patch_map& existing_patches, const patc
 			if (!new_info.notes.empty())         info.notes         = new_info.notes;
 			if (!new_info.data_list.empty())     info.data_list     = new_info.data_list;
 			if (!new_info.source_path.empty())   info.source_path   = new_info.source_path;
+
+			count++;
 		}
 	}
-
-	return true;
 }
 
 bool patch_engine::save_patches(const patch_map& patches, const std::string& path, std::stringstream* log_messages)
@@ -788,16 +788,14 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 	return true;
 }
 
-bool patch_engine::import_patches(const patch_engine::patch_map& patches, const std::string& path, std::stringstream* log_messages)
+bool patch_engine::import_patches(const patch_engine::patch_map& patches, const std::string& path, size_t& count, size_t& total, std::stringstream* log_messages)
 {
 	patch_engine::patch_map existing_patches;
 
 	if (load(existing_patches, path, true, log_messages))
 	{
-		if (append_patches(existing_patches, patches, log_messages))
-		{
-			return save_patches(existing_patches, path, log_messages);
-		}
+		append_patches(existing_patches, patches, count, total, log_messages);
+		return count == 0 || save_patches(existing_patches, path, log_messages);
 	}
 
 	return false;
