@@ -133,6 +133,11 @@ void patch_manager_dialog::populate_tree()
 		// Add patch items
 		for (const auto& [description, patch] : container.patch_info_map)
 		{
+			if (patch.is_legacy)
+			{
+				continue;
+			}
+
 			const QString q_title   = patch.title.empty() ? tr("Unknown Title") : QString::fromStdString(patch.title);
 			const QString q_serials = patch.serials.empty() ? tr("Unknown Version") : QString::fromStdString(patch.serials);
 
