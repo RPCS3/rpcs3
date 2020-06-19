@@ -87,17 +87,28 @@ void patch_manager_dialog::load_patches()
 {
 	m_map.clear();
 
+	// NOTE: Make sure to load these in the same order as they are applied on boot
+
 	// Legacy path (in case someone puts it there)
 	patch_engine::load(m_map, fs::get_config_dir() + "patch.yml");
 
 	// New paths
+	const std::string imports_path = patch_engine::get_imported_patch_path();
 	const std::string patches_path = fs::get_config_dir() + "patches/";
-	const QStringList filters      = QStringList() << "*patch.yml";
+	const QStringList filters      = QStringList() << "*_patch.yml";
 	const QStringList path_list    = QDir(QString::fromStdString(patches_path)).entryList(filters);
+
+	patch_engine::load(m_map, patches_path + "patch.yml");
+	patch_engine::load(m_map, imports_path);
 
 	for (const auto& path : path_list)
 	{
-		patch_engine::load(m_map, patches_path + path.toStdString());
+		const std::string patch_path = patches_path + path.toStdString();
+
+		if (patch_path != imports_path)
+		{
+			patch_engine::load(m_map, patch_path);
+		}
 	}
 }
 
