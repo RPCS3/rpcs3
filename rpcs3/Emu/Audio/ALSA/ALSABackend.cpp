@@ -1,4 +1,4 @@
-#ifndef HAVE_ALSA
+﻿#ifndef HAVE_ALSA
 #error "ALSA support disabled but still being built."
 #endif
 
@@ -26,6 +26,7 @@ static bool check(int err, const char* reason)
 }
 
 ALSABackend::ALSABackend()
+	: AudioBackend()
 {
 }
 
@@ -51,14 +52,14 @@ void ALSABackend::Open(u32 num_buffers)
 	if (!check(snd_pcm_hw_params_set_access(tls_handle, tls_hw_params, SND_PCM_ACCESS_RW_INTERLEAVED), "snd_pcm_hw_params_set_access"))
 		return;
 
-	if (!check(snd_pcm_hw_params_set_format(tls_handle, tls_hw_params, g_cfg.audio.convert_to_u16 ? SND_PCM_FORMAT_S16_LE : SND_PCM_FORMAT_FLOAT_LE), "snd_pcm_hw_params_set_format"))
+	if (!check(snd_pcm_hw_params_set_format(tls_handle, tls_hw_params, m_convert_to_u16 ? SND_PCM_FORMAT_S16_LE : SND_PCM_FORMAT_FLOAT_LE), "snd_pcm_hw_params_set_format"))
 		return;
 
-	uint rate = get_sampling_rate();
+	uint rate = m_sampling_rate;
 	if (!check(snd_pcm_hw_params_set_rate_near(tls_handle, tls_hw_params, &rate, nullptr), "snd_pcm_hw_params_set_rate_near"))
 		return;
 
-	if (!check(snd_pcm_hw_params_set_channels(tls_handle, tls_hw_params, get_channels()), "snd_pcm_hw_params_set_channels"))
+	if (!check(snd_pcm_hw_params_set_channels(tls_handle, tls_hw_params, m_channels), "snd_pcm_hw_params_set_channels"))
 		return;
 
 	//uint period = 5333;
@@ -92,7 +93,7 @@ void ALSABackend::Open(u32 num_buffers)
 	if (!check(snd_pcm_sw_params_current(tls_handle, tls_sw_params), "snd_pcm_sw_params_current"))
 		return;
 
-	period_frames *= g_cfg.audio.startt;
+	period_frames *= m_start_threshold;
 
 	if (!check(snd_pcm_sw_params_set_start_threshold(tls_handle, tls_sw_params, period_frames + 1), "snd_pcm_sw_params_set_start_threshold"))
 		return;
@@ -132,7 +133,7 @@ void ALSABackend::Close()
 
 bool ALSABackend::AddData(const void* src, u32 num_samples)
 {
-	u32 num_frames = num_samples / get_channels();
+	u32 num_frames = num_samples / m_channels;
 
 	int res = snd_pcm_writei(tls_handle, src, num_frames);
 

@@ -12,8 +12,7 @@ LOG_CHANNEL(OpenAL);
 #define checkForAlcError(sit) do { ALCenum g_last_alc_error = alcGetError(m_device); if(g_last_alc_error != ALC_NO_ERROR) { OpenAL.error("%s: OpenALC error 0x%04x", sit, g_last_alc_error); return; }} while(0)
 
 OpenALBackend::OpenALBackend()
-	: m_sampling_rate(get_sampling_rate())
-	, m_sample_size(get_sample_size())
+	: AudioBackend()
 {
 	ALCdevice* m_device = alcOpenDevice(nullptr);
 	checkForAlcError("alcOpenDevice");
@@ -24,9 +23,7 @@ OpenALBackend::OpenALBackend()
 	alcMakeContextCurrent(m_context);
 	checkForAlcError("alcMakeContextCurrent");
 
-	const auto channels = get_channels();
-
-	switch (channels)
+	switch (m_channels)
 	{
 	case 2:
 		m_format = (m_sample_size == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO_FLOAT32;

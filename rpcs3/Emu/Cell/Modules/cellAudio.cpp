@@ -44,6 +44,43 @@ void fmt_class_string<CellAudioError>::format(std::string& out, u64 arg)
 
 cell_audio_config::cell_audio_config()
 {
+	reset();
+}
+
+void cell_audio_config::reset()
+{
+	backend.reset();
+	backend = Emu.GetCallbacks().get_audio();
+
+	audio_channels = backend->get_channels();
+	audio_sampling_rate = backend->get_sampling_rate();
+	audio_block_period = AUDIO_BUFFER_SAMPLES * 1000000 / audio_sampling_rate;
+
+	audio_buffer_length = AUDIO_BUFFER_SAMPLES * audio_channels;
+	audio_buffer_size = audio_buffer_length * backend->get_sample_size();
+
+	desired_buffer_duration = g_cfg.audio.desired_buffer_duration * 1000llu;
+
+	const bool raw_buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering);
+
+	buffering_enabled = raw_buffering_enabled && backend->has_capability(AudioBackend::PLAY_PAUSE_FLUSH | AudioBackend::IS_PLAYING);;
+
+	minimum_block_period = audio_block_period / 2;
+	maximum_block_period = (6 * audio_block_period) / 5;
+
+	desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 3 : 2;
+	num_allocated_buffers = desired_full_buffers + EXTRA_AUDIO_BUFFERS;
+
+	fully_untouched_timeout = static_cast<u64>(audio_block_period) * 2;
+	partially_untouched_timeout = static_cast<u64>(audio_block_period) * 4;
+
+	const s64 raw_time_stretching_threshold = g_cfg.audio.time_stretching_threshold;
+	const bool raw_time_stretching_enabled = buffering_enabled && g_cfg.audio.enable_time_stretching && (raw_time_stretching_threshold > 0);
+
+	time_stretching_enabled = raw_time_stretching_enabled && backend->has_capability(AudioBackend::SET_FREQUENCY_RATIO);
+
+	time_stretching_threshold = raw_time_stretching_threshold / 100.0f;
+
 	// Warn if audio backend does not support all requested features
 	if (raw_buffering_enabled && !buffering_enabled)
 	{
@@ -500,6 +537,31 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 	}
 }
 
+namespace audio
+{
+	void configure_audio()
+	{
+		if (const auto g_audio = g_fxo->get<cell_audio>())
+		{
+			g_audio->m_update_configuration = true;
+		}
+	}
+}
+
+void cell_audio_thread::update_config()
+{
+	std::lock_guard lock(mutex);
+
+	// Clear ringbuffer
+	ringbuffer.reset();
+
+	// Reload config
+	cfg.reset();
+
+	// Allocate ringbuffer
+	ringbuffer.reset(new audio_ringbuffer(cfg));
+}
+
 void cell_audio_thread::operator()()
 {
 	thread_ctrl::set_native_priority(1);
@@ -519,6 +581,12 @@ void cell_audio_thread::operator()()
 	// Main cellAudio loop
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
+		if (m_update_configuration)
+		{
+			update_config();
+			m_update_configuration = false;
+		}
+
 		const u64 timestamp = ringbuffer->update();
 
 		if (Emu.IsPaused())
@@ -959,7 +1027,7 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 	{
 		std::memset(out_buffer, 0, out_buffer_sz * sizeof(float));
 	}
-	else if (g_cfg.audio.convert_to_u16)
+	else if (cfg.backend->get_convert_to_u16())
 	{
 		// convert the data from float to u16 with clipping:
 		// 2x MULPS
