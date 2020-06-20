@@ -454,9 +454,6 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 	auto npdrmkeys = g_fxo->get<loaded_npdrm_keys>();
 
-	npdrmkeys->devKlic.fill(0);
-	npdrmkeys->rifKey.fill(0);
-
 	std::string rap_dir_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/";
 
 	const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
