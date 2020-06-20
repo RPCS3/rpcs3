@@ -437,7 +437,7 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 			if (magic == "NPD\0"_u32)
 			{
 				auto edatkeys = g_fxo->get<loaded_npdrm_keys>();
-				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file), edatkeys->devKlic, edatkeys->rifKey);
+				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file), edatkeys->devKlic.load(), edatkeys->rifKey.load());
 				if (!sdata_file->ReadHeader())
 				{
 					return {CELL_EFSSPECIFIC, path};
