@@ -123,7 +123,7 @@ void FAudioBackend::Open(u32 /* num_buffers */)
 	}
 
 	AUDIT(m_source_voice != nullptr);
-	FAudioVoice_SetVolume(m_source_voice, channels == 2 ? 1.0f : 4.0f, FAUDIO_COMMIT_NOW);
+	FAudioVoice_SetVolume(m_source_voice, 1.0f, FAUDIO_COMMIT_NOW);
 }
 
 bool FAudioBackend::AddData(const void* src, u32 num_samples)
