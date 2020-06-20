@@ -15,7 +15,8 @@
 // 128-bit vector type and also se_storage<> storage type
 union alignas(16) v128
 {
-	char _bytes[16];
+	uchar _bytes[16];
+	char _chars[16];
 
 	template <typename T, std::size_t N, std::size_t M>
 	struct masked_array_t // array type accessed as (index ^ M)
