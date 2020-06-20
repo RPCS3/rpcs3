@@ -14,6 +14,7 @@
 #include "_discord_utils.h"
 #endif
 
+#include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/RSX/Overlays/overlay_perf_metrics.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
@@ -474,6 +475,7 @@ void gui_application::OnEmuSettingsChange()
 	}
 
 	Emu.ConfigureLogs();
+	audio::configure_audio();
 	rsx::overlays::reset_performance_overlay();
 }
 

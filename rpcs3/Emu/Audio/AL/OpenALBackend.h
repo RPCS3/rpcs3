@@ -15,9 +15,6 @@ private:
 	u32 m_next_buffer = 0;
 	u32 m_num_unqueued = 0;
 
-	const u32 m_sampling_rate;
-	const u32 m_sample_size;
-
 	void unqueue_processed();
 
 public:

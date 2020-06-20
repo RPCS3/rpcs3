@@ -16,6 +16,7 @@
 LOG_CHANNEL(XAudio);
 
 XAudio2Backend::XAudio2Backend()
+	: AudioBackend()
 {
 	Microsoft::WRL::ComPtr<IXAudio2> instance;
 
@@ -30,7 +31,7 @@ XAudio2Backend::XAudio2Backend()
 		return;
 	}
 
-	hr = instance->CreateMasteringVoice(&m_master_voice, get_channels(), 48000);
+	hr = instance->CreateMasteringVoice(&m_master_voice, m_channels, 48000);
 	if (FAILED(hr))
 	{
 		XAudio.error("CreateMasteringVoice() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
@@ -94,17 +95,13 @@ void XAudio2Backend::Open(u32 /* num_buffers */)
 {
 	HRESULT hr;
 
-	const u32 sample_size = AudioBackend::get_sample_size();
-	const u32 channels = AudioBackend::get_channels();
-	const u32 sampling_rate = AudioBackend::get_sampling_rate();
-
 	WAVEFORMATEX waveformatex;
-	waveformatex.wFormatTag = g_cfg.audio.convert_to_u16 ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
-	waveformatex.nChannels = channels;
-	waveformatex.nSamplesPerSec = sampling_rate;
-	waveformatex.nAvgBytesPerSec = static_cast<DWORD>(sampling_rate * channels * sample_size);
-	waveformatex.nBlockAlign = channels * sample_size;
-	waveformatex.wBitsPerSample = sample_size * 8;
+	waveformatex.wFormatTag = m_convert_to_u16 ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
+	waveformatex.nChannels = m_channels;
+	waveformatex.nSamplesPerSec = m_sampling_rate;
+	waveformatex.nAvgBytesPerSec = static_cast<DWORD>(m_sampling_rate * m_channels * m_sample_size);
+	waveformatex.nBlockAlign = m_channels * m_sample_size;
+	waveformatex.wBitsPerSample = m_sample_size * 8;
 	waveformatex.cbSize = 0;
 
 	hr = m_xaudio2_instance->CreateSourceVoice(&m_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO);
@@ -144,7 +141,7 @@ bool XAudio2Backend::AddData(const void* src, u32 num_samples)
 
 	XAUDIO2_BUFFER buffer;
 
-	buffer.AudioBytes = num_samples * AudioBackend::get_sample_size();
+	buffer.AudioBytes = num_samples * m_sample_size;
 	buffer.Flags = 0;
 	buffer.LoopBegin = XAUDIO2_NO_LOOP_REGION;
 	buffer.LoopCount = 0;

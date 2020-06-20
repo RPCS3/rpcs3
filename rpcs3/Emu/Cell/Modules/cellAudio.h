@@ -187,49 +187,46 @@ struct audio_port
 
 struct cell_audio_config
 {
-	const std::shared_ptr<AudioBackend> backend = Emu.GetCallbacks().get_audio();
+	std::shared_ptr<AudioBackend> backend = nullptr;
 
-	const u32 audio_channels = AudioBackend::get_channels();
-	const u32 audio_sampling_rate = AudioBackend::get_sampling_rate();
-	const u32 audio_block_period = AUDIO_BUFFER_SAMPLES * 1000000 / audio_sampling_rate;
+	u32 audio_channels = 0;
+	u32 audio_sampling_rate = 0;
+	u32 audio_block_period = 0;
 
-	const u32 audio_buffer_length = AUDIO_BUFFER_SAMPLES * audio_channels;
-	const u32 audio_buffer_size = audio_buffer_length * AudioBackend::get_sample_size();
+	u32 audio_buffer_length = 0;
+	u32 audio_buffer_size = 0;
 
 	/*
 	 * Buffering
 	 */
-	const u64 desired_buffer_duration = g_cfg.audio.desired_buffer_duration * 1000llu;
-private:
-	const bool raw_buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering);
-public:
+
+	u64 desired_buffer_duration = 0;
+
 	// We need a non-blocking backend (implementing play/pause/flush) to be able to do buffering correctly
 	// We also need to be able to query the current playing state
-	const bool buffering_enabled = raw_buffering_enabled && backend->has_capability(AudioBackend::PLAY_PAUSE_FLUSH | AudioBackend::IS_PLAYING);
+	bool buffering_enabled = false;
 
-	const u64 minimum_block_period = audio_block_period / 2; // the block period will not be dynamically lowered below this value (usecs)
-	const u64 maximum_block_period = (6 * audio_block_period) / 5; // the block period will not be dynamically increased above this value (usecs)
+	u64 minimum_block_period = 0; // the block period will not be dynamically lowered below this value (usecs)
+	u64 maximum_block_period = 0; // the block period will not be dynamically increased above this value (usecs)
 
-	const u32 desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 3 : 2;
-	const u32 num_allocated_buffers = desired_full_buffers + EXTRA_AUDIO_BUFFERS; // number of ringbuffer buffers
+	u32 desired_full_buffers = 0;
+	u32 num_allocated_buffers = 0; // number of ringbuffer buffers
 
 	const f32 period_average_alpha = 0.02f; // alpha factor for the m_average_period rolling average
 
 	const s64 period_comparison_margin = 250; // when comparing the current period time with the desired period, if it is below this number of usecs we do not wait any longer
 
-	const u64 fully_untouched_timeout = 2 * audio_block_period; // timeout if the game has not touched any audio buffer yet
-	const u64 partially_untouched_timeout = 4 * audio_block_period; // timeout if the game has not touched all audio buffers yet
+	u64 fully_untouched_timeout = 0; // timeout if the game has not touched any audio buffer yet
+	u64 partially_untouched_timeout = 0; // timeout if the game has not touched all audio buffers yet
 
 	/*
 	 * Time Stretching
 	 */
-private:
-	const bool raw_time_stretching_enabled = buffering_enabled && g_cfg.audio.enable_time_stretching && (g_cfg.audio.time_stretching_threshold > 0);
-public:
-	// We need to be able to set a dynamic frequency ratio to be able to do time stretching
-	const bool time_stretching_enabled = raw_time_stretching_enabled && backend->has_capability(AudioBackend::SET_FREQUENCY_RATIO);
 
-	const f32 time_stretching_threshold = g_cfg.audio.time_stretching_threshold / 100.0f; // we only apply time stretching below this buffer fill rate (adjusted for average period)
+	// We need to be able to set a dynamic frequency ratio to be able to do time stretching
+	bool time_stretching_enabled = false;
+
+	f32 time_stretching_threshold = 0.0f; // we only apply time stretching below this buffer fill rate (adjusted for average period)
 	const f32 time_stretching_step = 0.1f; // will only reduce/increase the frequency ratio in steps of at least this value
 	const f32 time_stretching_scale = 0.9f;
 
@@ -237,6 +234,11 @@ public:
 	 * Constructor
 	 */
 	cell_audio_config();
+
+	/*
+	 * Config changes
+	 */
+	void reset();
 };
 
 class audio_ringbuffer
@@ -337,6 +339,7 @@ public:
 
 class cell_audio_thread
 {
+private:
 	std::unique_ptr<audio_ringbuffer> ringbuffer;
 
 	void reset_ports(s32 offset = 0);
@@ -351,8 +354,11 @@ class cell_audio_thread
 		return (time_left > 350) ? time_left - 250 : 100;
 	}
 
+	void update_config();
+
 public:
 	cell_audio_config cfg;
+	atomic_t<bool> m_update_configuration = false;
 
 	shared_mutex mutex;
 	atomic_t<u32> init = 0;
@@ -375,7 +381,7 @@ public:
 	u64 m_counter = 0;
 	u64 m_start_time = 0;
 	u64 m_dynamic_period = 0;
-	f32 m_average_playtime;
+	f32 m_average_playtime = 0.0f;
 
 	void operator()();
 
@@ -405,3 +411,8 @@ public:
 };
 
 using cell_audio = named_thread<cell_audio_thread>;
+
+namespace audio
+{
+	void configure_audio();
+}

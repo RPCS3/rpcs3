@@ -2,43 +2,67 @@
 #include "AudioBackend.h"
 #include "Emu/system_config.h"
 
-/*
- * Helper methods
- */
-u32 AudioBackend::get_sampling_rate()
+AudioBackend::AudioBackend()
 {
+	m_convert_to_u16 = static_cast<bool>(g_cfg.audio.convert_to_u16);
+	m_sample_size = m_convert_to_u16 ? sizeof(u16) : sizeof(float);
+	m_start_threshold = g_cfg.audio.start_threshold;
+
 	const u32 sampling_period_multiplier_u32 = g_cfg.audio.sampling_period_multiplier;
 
 	if (sampling_period_multiplier_u32 == 100)
-		return DEFAULT_AUDIO_SAMPLING_RATE;
+	{
+		m_sampling_rate = DEFAULT_AUDIO_SAMPLING_RATE;
+	}
+	else
+	{
+		const f32 sampling_period_multiplier = sampling_period_multiplier_u32 / 100.0f;
+		const f32 sampling_rate_multiplier = 1.0f / sampling_period_multiplier;
+		m_sampling_rate = static_cast<u32>(f32{ DEFAULT_AUDIO_SAMPLING_RATE } *sampling_rate_multiplier);
+	}
 
-	const f32 sampling_period_multiplier = sampling_period_multiplier_u32 / 100.0f;
-	const f32 sampling_rate_multiplier = 1.0f / sampling_period_multiplier;
-	return static_cast<u32>(f32{DEFAULT_AUDIO_SAMPLING_RATE} * sampling_rate_multiplier);
-}
-
-u32 AudioBackend::get_sample_size()
-{
-	return g_cfg.audio.convert_to_u16 ? sizeof(u16) : sizeof(float);
-}
-
-u32 AudioBackend::get_channels()
-{
 	const audio_channels channels = g_cfg.audio.audio_channel_downmix.get();
 
 	switch (channels)
 	{
 	case audio_channels::use_application_settings:
-		return 2; // TODO
+		m_channels = 2; // TODO
+		break;
 	case audio_channels::downmix_to_stereo:
-		return 2;
+		m_channels = 2;
+		break;
 	case audio_channels::downmix_to_5_1:
-		return 6;
+		m_channels = 6;
+		break;
 	case audio_channels::surround_7_1:
-		return 8;
+		m_channels = 8;
+		break;
 	default:
 		fmt::throw_exception("Unknown audio channel mode %s (%d)", channels, static_cast<int>(channels));
 	}
+}
+
+/*
+ * Helper methods
+ */
+u32 AudioBackend::get_sampling_rate() const
+{
+	return m_sampling_rate;
+}
+
+u32 AudioBackend::get_sample_size() const
+{
+	return m_sample_size;
+}
+
+u32 AudioBackend::get_channels() const
+{
+	return m_channels;
+}
+
+bool AudioBackend::get_convert_to_u16() const
+{
+	return m_convert_to_u16;
 }
 
 bool AudioBackend::has_capability(u32 cap) const
