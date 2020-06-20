@@ -19,6 +19,10 @@ XAudio2Backend::XAudio2Backend()
 {
 	Microsoft::WRL::ComPtr<IXAudio2> instance;
 
+	// In order to prevent errors on CreateMasteringVoice, apparently we need CoInitializeEx according to:
+	// https://docs.microsoft.com/en-us/windows/win32/api/xaudio2fx/nf-xaudio2fx-xaudio2createvolumemeter
+	CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
 	HRESULT hr = XAudio2Create(instance.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
 	if (FAILED(hr))
 	{
