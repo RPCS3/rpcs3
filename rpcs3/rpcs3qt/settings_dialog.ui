@@ -4148,6 +4148,20 @@
                </layout>
               </widget>
              </item>
+              <item>
+               <layout class="QHBoxLayout" name="layout_ppu_trap" stretch="0,0">
+                <item>
+               <widget class="QLabel" name="ppu_trap_label">
+                <property name="text">
+                 <string>Stub PPU Traps:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="ppu_trap"/>
+                </item>
+               </layout>
+              </item>
              <item>
               <widget class="QGroupBox" name="gb_num_ppu_threads">
                <property name="title">

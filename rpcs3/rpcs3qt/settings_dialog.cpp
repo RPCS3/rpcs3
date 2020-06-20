@@ -2214,7 +2214,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_accurate_ppu_128, tooltips.settings.accurate_ppu_128_loop);
 	ui->combo_accurate_ppu_128->setItemText(ui->combo_accurate_ppu_128->findData(-1), tr("Always Enabled", "Accurate PPU 128 Reservations"));
 	ui->combo_accurate_ppu_128->setItemText(ui->combo_accurate_ppu_128->findData(0), tr("Disabled", "Accurate PPU 128 Reservations"));
-	
+    m_emu_settings->EnhanceSpinBox(ui->ppu_trap, emu_settings_type::StubPPUTraps);
+
 	// Comboboxes: spu instructions accuracy
 	m_emu_settings->EnhanceComboBox(ui->spuAccuracyFCGT, emu_settings_type::SPU_FCGT_Accuracy);
 	m_emu_settings->EnhanceComboBox(ui->spuAccuracyFCMGT, emu_settings_type::SPU_FCMGT_Accuracy);
