@@ -29,19 +29,11 @@ QString Localized::GetVerboseTimeByMs(qint64 elapsed_ms, bool show_days) const
 		{
 			return tr("%n day(s)", "", days);
 		}
-		if (days == 1 && hours == 1)
-		{
-			return tr("%0 day and %1 hour").arg(days).arg(hours);
-		}
 		if (days == 1)
 		{
-			return tr("%0 day and %1 hours").arg(days).arg(hours);
+			return tr("%0 day and %n hour(s)", "", hours).arg(days);
 		}
-		if (hours == 1)
-		{
-			return tr("%0 days and %1 hour").arg(days).arg(hours);
-		}
-		return tr("%0 days and %1 hours").arg(days).arg(hours);
+		return tr("%0 days and %n hour(s)", "", hours).arg(days);
 	}
 
 	const qint64 minutes = (elapsed_seconds % 3600) / 60;
@@ -58,19 +50,13 @@ QString Localized::GetVerboseTimeByMs(qint64 elapsed_ms, bool show_days) const
 		{
 			return tr("%n minute(s)", "", minutes);
 		}
-		if (minutes == 1 && seconds == 1)
-		{
-			return tr("%0 minute and %1 second").arg(minutes).arg(seconds);
-		}
+
 		if (minutes == 1)
 		{
-			return tr("%0 minute and %1 seconds").arg(minutes).arg(seconds);
+			return tr("%0 minute and %n second(s)", "", seconds).arg(minutes);
 		}
-		if (seconds == 1)
-		{
-			return tr("%0 minutes and %1 second").arg(minutes).arg(seconds);
-		}
-		return tr("%0 minutes and %1 seconds").arg(minutes).arg(seconds);
+		
+        return tr("%0 minutes and %n second(s)", "", seconds).arg(minutes);
 	}
 
 	if (minutes <= 0)
