@@ -234,14 +234,14 @@ bool update_manager::handle_json(bool automatic)
 			.arg(cur_str)
 			.arg(latest["version"].toString())
 			.arg(lts_str)
-			.arg(localized.GetVerboseTimeByMs(diff_msec));
+			.arg(localized.GetVerboseTimeByMs(diff_msec, true));
 	}
 	else
 	{
 		message = tr("You're currently using a custom or PR build.\n\nLatest version: %0 (%1)\nThe latest version is %2 old.\n\nDo you want to update to the latest official RPCS3 version?")
 			.arg(latest["version"].toString())
 			.arg(lts_str)
-			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec)));
+			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec), true));
 	}
 
 	if (QMessageBox::question(m_progress_dialog, tr("Update Available"), message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
@@ -598,7 +598,7 @@ bool update_manager::handle_rpcs3()
 		return false;
 #endif
 
-	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!"));
+	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!\nRPCS3 will now restart."));
 
 #ifdef _WIN32
 	const int ret = _wexecl(wchar_orig_path.data(), wchar_orig_path.data(), L"--updating", nullptr);
