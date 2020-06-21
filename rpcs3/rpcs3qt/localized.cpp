@@ -27,11 +27,7 @@ QString Localized::GetVerboseTimeByMs(qint64 elapsed_ms, bool show_days) const
 
 		if (hours <= 0)
 		{
-			if (days == 1)
-			{
-				return tr("%0 day").arg(days);
-			}
-			return tr("%0 days").arg(days);
+			return tr("%n day(s)", "", days);
 		}
 		if (days == 1 && hours == 1)
 		{
@@ -55,20 +51,12 @@ QString Localized::GetVerboseTimeByMs(qint64 elapsed_ms, bool show_days) const
 	{
 		if (minutes <= 0)
 		{
-			if (seconds == 1)
-			{
-				return tr("%0 second").arg(seconds);
-			}
-			return tr("%0 seconds").arg(seconds);
+			return tr("%n second(s)", "", seconds);
 		}
 
 		if (seconds <= 0)
 		{
-			if (minutes == 1)
-			{
-				return tr("%0 minute").arg(minutes);
-			}
-			return tr("%0 minutes").arg(minutes);
+			return tr("%n minute(s)", "", minutes);
 		}
 		if (minutes == 1 && seconds == 1)
 		{
@@ -87,11 +75,7 @@ QString Localized::GetVerboseTimeByMs(qint64 elapsed_ms, bool show_days) const
 
 	if (minutes <= 0)
 	{
-		if (hours == 1)
-		{
-			return tr("%0 hour").arg(hours);
-		}
-		return tr("%0 hours").arg(hours);
+		return tr("%n hour(s)", "", hours);
 	}
 	if (hours == 1 && minutes == 1)
 	{
