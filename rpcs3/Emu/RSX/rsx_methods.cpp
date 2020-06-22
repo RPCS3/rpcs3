@@ -728,6 +728,31 @@ namespace rsx
 			}
 		}
 
+		void set_stencil_op(thread* rsx, u32 reg, u32 arg)
+		{
+			if (arg != method_registers.register_previous_value)
+			{
+				switch (arg)
+				{
+				case CELL_GCM_INVERT:
+				case CELL_GCM_KEEP:
+				case CELL_GCM_REPLACE:
+				case CELL_GCM_INCR:
+				case CELL_GCM_DECR:
+				case CELL_GCM_INCR_WRAP:
+				case CELL_GCM_DECR_WRAP:
+				case CELL_GCM_ZERO:
+					set_surface_options_dirty_bit(rsx, reg, arg);
+					break;
+
+				default:
+					// Ignored on RSX
+					method_registers.decode(reg, method_registers.register_previous_value);
+					break;
+				}
+			}
+		}
+
 		template <u32 RsxFlags>
 		void notify_state_changed(thread* rsx, u32, u32 arg)
 		{
@@ -3097,13 +3122,13 @@ namespace rsx
 		bind<NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_STENCIL_MASK, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_STENCIL_OP_ZPASS, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_STENCIL_OP_FAIL, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_STENCIL_OP_ZFAIL, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_STENCIL_OP_ZPASS, nv4097::set_stencil_op>();
+		bind<NV4097_SET_STENCIL_OP_FAIL, nv4097::set_stencil_op>();
+		bind<NV4097_SET_STENCIL_OP_ZFAIL, nv4097::set_stencil_op>();
 		bind<NV4097_SET_BACK_STENCIL_MASK, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_BACK_STENCIL_OP_ZPASS, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_BACK_STENCIL_OP_FAIL, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_BACK_STENCIL_OP_ZFAIL, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_BACK_STENCIL_OP_ZPASS, nv4097::set_stencil_op>();
+		bind<NV4097_SET_BACK_STENCIL_OP_FAIL, nv4097::set_stencil_op>();
+		bind<NV4097_SET_BACK_STENCIL_OP_ZFAIL, nv4097::set_stencil_op>();
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
 		bind<NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
