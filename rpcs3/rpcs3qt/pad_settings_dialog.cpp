@@ -413,7 +413,7 @@ void pad_settings_dialog::InitButtons()
 	// Use timer to get button input
 	connect(&m_timer_input, &QTimer::timeout, [this, callback, fail_callback]()
 	{
-		std::vector<std::string> buttons =
+		const std::vector<std::string> buttons =
 		{
 			m_cfg_entries[button_ids::id_pad_l2].key, m_cfg_entries[button_ids::id_pad_r2].key, m_cfg_entries[button_ids::id_pad_lstick_left].key,
 			m_cfg_entries[button_ids::id_pad_lstick_right].key, m_cfg_entries[button_ids::id_pad_lstick_down].key, m_cfg_entries[button_ids::id_pad_lstick_up].key,
@@ -443,7 +443,7 @@ void pad_settings_dialog::InitButtons()
 
 void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor)
 {
-	QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+	const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
 	m_handler->SetPadData(m_device_name, large_motor, small_motor, led_color.red(), led_color.green(), led_color.blue(), static_cast<bool>(m_handler_cfg.led_battery_indicator), m_handler_cfg.led_battery_indicator_brightness);
 }
 

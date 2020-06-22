@@ -116,6 +116,8 @@ void gs_frame::showEvent(QShowEvent *event)
 
 void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 {
+	// NOTE: needs to be updated with keyboard_pad_handler::processKeyEvent
+
 	switch (keyEvent->key())
 	{
 	case Qt::Key_L:
