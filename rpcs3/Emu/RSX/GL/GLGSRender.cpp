@@ -580,6 +580,7 @@ void GLGSRender::clear_surface(u32 arg)
 		case rsx::surface_color_format::w32z32y32x32:
 		{
 			//Nop
+			colormask = 0;
 			break;
 		}
 		case rsx::surface_color_format::g8b8:
