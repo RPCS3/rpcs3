@@ -568,6 +568,11 @@ void GLGSRender::clear_surface(u32 arg)
 
 	if (auto colormask = (arg & 0xf0))
 	{
+		u8 clear_a = rsx::method_registers.clear_color_a();
+		u8 clear_r = rsx::method_registers.clear_color_r();
+		u8 clear_g = rsx::method_registers.clear_color_g();
+		u8 clear_b = rsx::method_registers.clear_color_b();
+
 		switch (rsx::method_registers.surface_color())
 		{
 		case rsx::surface_color_format::x32:
@@ -579,16 +584,22 @@ void GLGSRender::clear_surface(u32 arg)
 		}
 		case rsx::surface_color_format::g8b8:
 		{
+			rsx::get_g8b8_clear_color(clear_r, clear_g, clear_b, clear_a);
 			colormask = rsx::get_g8b8_r8g8_colormask(colormask);
-			[[fallthrough]];
+			break;
 		}
-		default:
+		case rsx::surface_color_format::a8b8g8r8:
+		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
 		{
-			u8 clear_a = rsx::method_registers.clear_color_a();
-			u8 clear_r = rsx::method_registers.clear_color_r();
-			u8 clear_g = rsx::method_registers.clear_color_g();
-			u8 clear_b = rsx::method_registers.clear_color_b();
+			rsx::get_abgr8_clear_color(clear_r, clear_g, clear_b, clear_a);
+			colormask = rsx::get_abgr8_colormask(colormask);
+			break;
+		}
+		}
 
+		if (colormask)
+		{
 			gl_state.clear_color(clear_r, clear_g, clear_b, clear_a);
 			mask |= GLenum(gl::buffers::color);
 
@@ -601,8 +612,6 @@ void GLGSRender::clear_surface(u32 arg)
 			}
 
 			update_color = true;
-			break;
-		}
 		}
 	}
 
