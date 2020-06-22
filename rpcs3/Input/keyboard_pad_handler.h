@@ -95,7 +95,6 @@ public:
 
 protected:
 	void Key(const u32 code, bool pressed, u16 value = 255);
-	int GetModifierCode(QKeyEvent* e);
 
 private:
 	QWindow* m_target = nullptr;

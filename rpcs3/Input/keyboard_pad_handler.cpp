@@ -132,35 +132,6 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 	}
 }
 
-int keyboard_pad_handler::GetModifierCode(QKeyEvent* e)
-{
-	switch (e->key())
-	{
-	case Qt::Key_Control:
-	case Qt::Key_Alt:
-	case Qt::Key_AltGr:
-	case Qt::Key_Shift:
-	case Qt::Key_Meta:
-	case Qt::Key_NumLock:
-		return 0;
-	default:
-		break;
-	}
-
-	if (e->modifiers() == Qt::ControlModifier)
-		return Qt::ControlModifier;
-	else if (e->modifiers() == Qt::AltModifier)
-		return Qt::AltModifier;
-	else if (e->modifiers() == Qt::MetaModifier)
-		return Qt::MetaModifier;
-	else if (e->modifiers() == Qt::ShiftModifier)
-		return Qt::ShiftModifier;
-	else if (e->modifiers() == Qt::KeypadModifier)
-		return Qt::KeypadModifier;
-
-	return 0;
-}
-
 bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 {
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
