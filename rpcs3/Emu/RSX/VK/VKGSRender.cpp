@@ -1158,7 +1158,7 @@ void VKGSRender::clear_surface(u32 mask)
 			{
 				rsx::get_abgr8_clear_color(clear_r, clear_g, clear_b, clear_a);
 				colormask = rsx::get_abgr8_colormask(colormask);
-				break;
+				[[fallthrough]];
 			}
 			default:
 			{
