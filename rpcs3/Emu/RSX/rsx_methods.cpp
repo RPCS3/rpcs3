@@ -829,6 +829,37 @@ namespace rsx
 			}
 		}
 
+		void set_blend_factor(thread* rsx, u32 reg, u32 arg)
+		{
+			for (u32 i = 0; i < 32u; i += 16)
+			{
+				switch ((arg >> i) & 0xffff)
+				{
+				case CELL_GCM_ZERO:
+				case CELL_GCM_ONE:
+				case CELL_GCM_SRC_COLOR:
+				case CELL_GCM_ONE_MINUS_SRC_COLOR:
+				case CELL_GCM_SRC_ALPHA:
+				case CELL_GCM_ONE_MINUS_SRC_ALPHA:
+				case CELL_GCM_DST_ALPHA:
+				case CELL_GCM_ONE_MINUS_DST_ALPHA:
+				case CELL_GCM_DST_COLOR:
+				case CELL_GCM_ONE_MINUS_DST_COLOR:
+				case CELL_GCM_SRC_ALPHA_SATURATE:
+				case CELL_GCM_CONSTANT_COLOR:
+				case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
+				case CELL_GCM_CONSTANT_ALPHA:
+				case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA:
+					break;
+
+				default:
+					// Ignore invalid values as a whole
+					method_registers.decode(reg, method_registers.register_previous_value);
+					return;
+				}
+			}
+		}
+
 		template<u32 index>
 		struct set_texture_dirty_bit
 		{
@@ -3157,6 +3188,8 @@ namespace rsx
 		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind<NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma>();
 		bind<NV4097_SET_BLEND_EQUATION, nv4097::set_blend_equation>();
+		bind<NV4097_SET_BLEND_FUNC_SFACTOR, nv4097::set_blend_factor>();
+		bind<NV4097_SET_BLEND_FUNC_DFACTOR, nv4097::set_blend_factor>();
 		bind<NV4097_SET_POLYGON_STIPPLE, nv4097::notify_state_changed<fragment_state_dirty>>();
 		bind_array<NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nv4097::notify_state_changed<polygon_stipple_pattern_dirty>>();
 
