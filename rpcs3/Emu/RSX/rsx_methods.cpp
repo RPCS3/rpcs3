@@ -720,9 +720,9 @@ namespace rsx
 			set_surface_dirty_bit(rsx, reg, arg);
 		}
 
-		void set_surface_options_dirty_bit(thread* rsx, u32 reg, u32)
+		void set_surface_options_dirty_bit(thread* rsx, u32 reg, u32 arg)
 		{
-			if (reg != method_registers.register_previous_value)
+			if (arg != method_registers.register_previous_value)
 			{
 				rsx->on_framebuffer_options_changed(reg);
 			}
