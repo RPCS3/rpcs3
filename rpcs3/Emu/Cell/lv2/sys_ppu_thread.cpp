@@ -404,13 +404,13 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 	{
 		const u32 tid = idm::last_id();
 
-		std::string full_name = fmt::format("PPU[0x%x] Thread", tid);
+		std::string full_name = fmt::format("PPU[0x%x] ", tid);
 
 		if (threadname)
 		{
 			if (!ppu_name.empty())
 			{
-				fmt::append(full_name, " (%s)", ppu_name);
+				fmt::append(full_name, "%s ", ppu_name);
 			}
 		}
 
