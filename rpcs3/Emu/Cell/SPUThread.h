@@ -872,6 +872,7 @@ public:
 	void fast_call(u32 ls_addr);
 
 	bool capture_local_storage() const;
+	void wakeup_delay(u32 div = 1) const;
 
 	// Convert specified SPU LS address to a pointer of specified (possibly converted to BE) type
 	template<typename T>
