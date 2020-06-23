@@ -6,6 +6,7 @@
 #include "MFC.h"
 #include "Emu/Memory/vm.h"
 #include "Utilities/BEType.h"
+#include "Emu/system_config.h"
 
 #include <map>
 
@@ -761,6 +762,12 @@ public:
 	void halt();
 
 	void fast_call(u32 ls_addr);
+
+	void wakeup_delay(u32 div = 1) const
+	{
+		if (g_cfg.core.spu_wakeup_delay_mask & (1u << index))
+			thread_ctrl::wait_for<true>(::aligned_div(+g_cfg.core.spu_wakeup_delay, div), false);
+	}
 
 	// Convert specified SPU LS address to a pointer of specified (possibly converted to BE) type
 	template<typename T>
