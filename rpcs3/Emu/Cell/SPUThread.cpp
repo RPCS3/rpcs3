@@ -3849,6 +3849,12 @@ s64 spu_thread::get_ch_value(u32 ch)
 		}
 
 		const s64 out = channel.pop_wait(*this);
+
+		if (state & cpu_flag::wait)
+		{
+			wakeup_delay();
+		}
+
 		static_cast<void>(test_stopped());
 		return out;
 	};
@@ -4068,6 +4074,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			thread_ctrl::wait_on(state, old, 100);
 		}
 
+		wakeup_delay();
 		check_state();
 		return events.events & mask1;
 	}
@@ -4114,6 +4121,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 			}
 
 			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
+			wakeup_delay();
 			check_state();
 			return true;
 		}
@@ -4680,6 +4688,7 @@ bool spu_thread::stop_and_signal(u32 code)
 			thread_ctrl::wait_on(state, old);
 		}
 
+		wakeup_delay();
 		return true;
 	}
 
@@ -4998,6 +5007,12 @@ bool spu_thread::capture_local_storage() const
 
 	spu_log.success("SPU Local Storage image saved to '%s'", elf_path);
 	return true;
+}
+
+void spu_thread::wakeup_delay(u32 div) const
+{
+	if (g_cfg.core.spu_wakeup_delay_mask & (1u << index))
+		thread_ctrl::wait_for_accurate(utils::aligned_div(+g_cfg.core.spu_wakeup_delay, div));
 }
 
 spu_function_logger::spu_function_logger(spu_thread& spu, const char* func)
