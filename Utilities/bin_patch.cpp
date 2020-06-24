@@ -65,7 +65,15 @@ patch_engine::patch_engine()
 std::string patch_engine::get_patch_config_path()
 {
 #ifdef _WIN32
-	return fs::get_config_dir() + "config/patch_config.yml";
+	const std::string config_dir = fs::get_config_dir() + "config/";
+	const std::string patch_path = config_dir + "patch_config.yml";
+
+	if (!fs::create_path(config_dir))
+	{
+		patch_log.error("Could not create path: %s", patch_path);
+	}
+
+	return patch_path;
 #else
 	return fs::get_config_dir() + "patch_config.yml";
 #endif
@@ -597,11 +605,11 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 
 		if (container.is_legacy)
 		{
-			patch_log.notice("Applied legacy patch (<- %d)", applied);
+			patch_log.notice("Applied legacy patch (hash='%s')(<- %d)", name, applied);
 		}
 		else
 		{
-			patch_log.notice("Applied patch (description='%s', author='%s', patch_version='%s', file_version='%s') (<- %d)", description, patch.author, patch.patch_version, patch.version, applied);
+			patch_log.notice("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %d)", name, description, patch.author, patch.patch_version, patch.version, applied);
 		}
 
 		applied_total += applied;
