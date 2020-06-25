@@ -772,7 +772,7 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
-			current_fragment_program, gl::get_driver_caps().vendor_NVIDIA);
+			current_fragment_program, true);
 
 		m_fragment_constants_buffer->bind_range(GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, fragment_constants_size);
 	}
