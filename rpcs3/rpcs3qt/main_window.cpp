@@ -1551,7 +1551,7 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Game_Patches, &QAction::triggered, [this]
 	{
-		patch_manager_dialog patch_manager(this);
+		patch_manager_dialog patch_manager(m_gui_settings, this);
 		patch_manager.exec();
  	});
 

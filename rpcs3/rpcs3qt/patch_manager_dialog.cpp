@@ -11,6 +11,7 @@
 #include "ui_patch_manager_dialog.h"
 #include "patch_manager_dialog.h"
 #include "table_item_delegate.h"
+#include "gui_settings.h"
 #include "qt_utils.h"
 #include "Utilities/File.h"
 #include "util/logs.hpp"
@@ -35,8 +36,9 @@ enum patch_role : int
 	persistance_role
 };
 
-patch_manager_dialog::patch_manager_dialog(QWidget* parent)
+patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
 	: QDialog(parent)
+	, m_gui_settings(gui_settings)
 	, ui(new Ui::patch_manager_dialog)
 {
 	ui->setupUi(this);
@@ -66,21 +68,43 @@ patch_manager_dialog::patch_manager_dialog(QWidget* parent)
 			save_config();
 		}
 	});
-
-	refresh();
-
-	resize(QGuiApplication::primaryScreen()->availableSize() * 0.7);
 }
 
 patch_manager_dialog::~patch_manager_dialog()
 {
+	// Save gui settings
+	m_gui_settings->SetValue(gui::pm_geometry, saveGeometry());
+	m_gui_settings->SetValue(gui::pm_splitter_state, ui->splitter->saveState());
+
 	delete ui;
 }
 
-void patch_manager_dialog::refresh()
+int patch_manager_dialog::exec()
+{
+	show();
+	refresh(true);
+	return QDialog::exec();
+}
+
+void patch_manager_dialog::refresh(bool restore_layout)
 {
 	load_patches();
 	populate_tree();
+
+	if (restore_layout)
+	{
+		if (!restoreGeometry(m_gui_settings->GetValue(gui::pm_geometry).toByteArray()))
+		{
+			resize(QGuiApplication::primaryScreen()->availableSize() * 0.7);
+		}
+
+		if (!ui->splitter->restoreState(m_gui_settings->GetValue(gui::pm_splitter_state).toByteArray()))
+		{
+			const int width_left = ui->splitter->width() * 0.7;
+			const int width_right = ui->splitter->width() - width_left;
+			ui->splitter->setSizes({ width_left, width_right });
+		}
+	}
 }
 
 void patch_manager_dialog::load_patches()
