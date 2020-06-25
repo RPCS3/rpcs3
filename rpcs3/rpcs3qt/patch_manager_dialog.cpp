@@ -33,7 +33,15 @@ enum patch_role : int
 {
 	hash_role = Qt::UserRole,
 	description_role,
-	persistance_role
+	persistance_role,
+	node_level_role
+};
+
+enum node_level : int
+{
+	title_level,
+	serial_level,
+	patch_level
 };
 
 patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
@@ -128,38 +136,6 @@ void patch_manager_dialog::load_patches()
 	}
 }
 
-static QList<QTreeWidgetItem*> find_children_by_data(QTreeWidgetItem* parent, const QList<QPair<int /*role*/, QVariant /*data*/>>& criteria)
-{
-	QList<QTreeWidgetItem*> list;
-
-	if (parent)
-	{
-		for (int i = 0; i < parent->childCount(); i++)
-		{
-			if (auto item = parent->child(i))
-			{
-				bool match = true;
-
-				for (const auto [role, data] : criteria)
-				{
-					if (item->data(0, role) != data)
-					{
-						match = false;
-						break;
-					}
-				}
-
-				if (match)
-				{
-					list << item;
-				}
-			}
-		}
-	}
-
-	return list;
-}
-
 void patch_manager_dialog::populate_tree()
 {
 	// "Reset" currently used items. Items that aren't persisted will be removed later.
@@ -207,6 +183,7 @@ void patch_manager_dialog::populate_tree()
 				title_level_item = new QTreeWidgetItem();
 				title_level_item->setText(0, q_title);
 				title_level_item->setData(0, hash_role, q_hash);
+				title_level_item->setData(0, node_level_role, node_level::title_level);
 
 				ui->patch_tree->addTopLevelItem(title_level_item);
 			}
@@ -221,6 +198,7 @@ void patch_manager_dialog::populate_tree()
 				serial_level_item = new QTreeWidgetItem();
 				serial_level_item->setText(0, q_serials);
 				serial_level_item->setData(0, hash_role, q_hash);
+				serial_level_item->setData(0, node_level_role, node_level::serial_level);
 
 				title_level_item->addChild(serial_level_item);
 			}
@@ -233,7 +211,7 @@ void patch_manager_dialog::populate_tree()
 			const auto match_criteria = QList<QPair<int, QVariant>>() << QPair(description_role, q_description) << QPair(persistance_role, true);
 
 			// Add counter to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
-			if (const auto matches = find_children_by_data(serial_level_item, match_criteria); matches.count() > 0)
+			if (const auto matches = gui::utils::find_children_by_data(serial_level_item, match_criteria); matches.count() > 0)
 			{
 				if (auto only_match = matches.count() == 1 ? matches[0] : nullptr)
 				{
@@ -247,6 +225,7 @@ void patch_manager_dialog::populate_tree()
 			patch_level_item->setCheckState(0, patch.enabled ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
 			patch_level_item->setData(0, hash_role, q_hash);
 			patch_level_item->setData(0, description_role, q_description);
+			patch_level_item->setData(0, node_level_role, node_level::patch_level);
 
 			serial_level_item->addChild(patch_level_item);
 
@@ -354,8 +333,9 @@ void patch_manager_dialog::on_item_selected(QTreeWidgetItem *current, QTreeWidge
 	}
 
 	// Get patch identifiers stored in item data
+	const node_level level = static_cast<node_level>(current->data(0, node_level_role).toInt());
 	const std::string hash = current->data(0, hash_role).toString().toStdString();
-	const std::string description = current->data(0, description_role).toString().toStdString();
+	std::string description = current->data(0, description_role).toString().toStdString();
 
 	if (m_map.find(hash) != m_map.end())
 	{
@@ -372,6 +352,29 @@ void patch_manager_dialog::on_item_selected(QTreeWidgetItem *current, QTreeWidge
 		patch_engine::patch_info info{};
 		info.hash    = hash;
 		info.version = container.version;
+
+		// Use the first entry for more shared information
+		const auto match_criteria = QList<QPair<int, QVariant>>() << QPair(node_level_role, node_level::patch_level);
+
+		if (const auto matches = gui::utils::find_children_by_data(current, match_criteria, true); matches.count() > 0 && matches[0])
+		{
+			description = matches[0]->data(0, description_role).toString().toStdString();
+
+			if (container.patch_info_map.find(description) != container.patch_info_map.end())
+			{
+				const auto& fallback_info = container.patch_info_map.at(description);
+
+				if (level >= node_level::title_level)
+				{
+					info.title = fallback_info.title;
+				}
+				if (level >= node_level::serial_level)
+				{
+					info.serials = fallback_info.serials;
+				}
+			}
+		}
+
 		update_patch_info(info);
 		return;
 	}
