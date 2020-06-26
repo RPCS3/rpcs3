@@ -40,23 +40,16 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="cb_owned_games_only">
+           <property name="text">
+            <string>Only show owned games</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QCheckBox" name="cb_enable_legacy_patches">
            <property name="text">
             <string>Enable Legacy Patches</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pb_collapse_all">
-           <property name="text">
-            <string>Collapse All</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pb_expand_all">
-           <property name="text">
-            <string>Expand All</string>
            </property>
           </widget>
          </item>

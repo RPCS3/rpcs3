@@ -2230,3 +2230,8 @@ void game_list_frame::SetShowCompatibilityInGrid(bool show)
 	RepaintIcons();
 	m_gui_settings->SetValue(gui::gl_draw_compat, show);
 }
+
+QList<game_info> game_list_frame::GetGameInfo() const
+{
+	return m_game_data;
+}

@@ -1535,7 +1535,18 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Game_Patches, &QAction::triggered, [this]
 	{
-		patch_manager_dialog patch_manager(m_gui_settings, this);
+		std::unordered_map<std::string, std::set<std::string>> games;
+		if (m_game_list_frame)
+		{
+			for (const auto game : m_game_list_frame->GetGameInfo())
+			{
+				if (game)
+				{
+					games[game->info.serial].insert(game->info.app_ver);
+				}
+			}
+		}
+		patch_manager_dialog patch_manager(m_gui_settings, games, this);
 		patch_manager.exec();
  	});
 
