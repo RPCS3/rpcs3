@@ -66,9 +66,12 @@ namespace gui
 
 		// Open a path in the explorer and mark the file
 		void open_dir(const QString& path);
-		
+
 		// Finds a child of a QTreeWidgetItem with given text
 		QTreeWidgetItem* find_child(QTreeWidgetItem* parent, const QString& text);
+
+		// Finds all children of a QTreeWidgetItem that match the given criteria
+		QList<QTreeWidgetItem*> find_children_by_data(QTreeWidgetItem* parent, const QList<QPair<int /*role*/, QVariant /*data*/>>& criteria, bool recursive = false);
 
 		// Constructs and adds a child to a QTreeWidgetItem
 		QTreeWidgetItem* add_child(QTreeWidgetItem* parent, const QString& text, int column = 0);
