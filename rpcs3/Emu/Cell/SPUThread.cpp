@@ -1201,11 +1201,11 @@ void spu_thread::push_snr(u32 number, u32 value)
 	// Check corresponding SNR register settings
 	if ((snr_config >> number) & 1)
 	{
-		channel->push_or(*this, value);
+		channel->push_or(value);
 	}
 	else
 	{
-		channel->push(*this, value);
+		channel->push(value);
 	}
 }
 
@@ -2401,19 +2401,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 			busy_wait();
 		}
 
-		u32 out = 0;
-
-		while (!channel.try_pop(out))
-		{
-			if (is_stopped())
-			{
-				return -1;
-			}
-
-			thread_ctrl::wait();
-		}
-
-		check_state();
+		const s64 out = channel.pop_wait(*this);
+		static_cast<void>(test_stopped());
 		return out;
 	};
 
@@ -2461,9 +2450,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case MFC_RdTagStat:
 	{
-		if (ch_tag_stat.get_count())
+		if (u32 out; ch_tag_stat.try_read(out))
 		{
-			u32 out = ch_tag_stat.get_value();
 			ch_tag_stat.set_value(0, false);
 			return out;
 		}
@@ -2489,9 +2477,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case MFC_RdAtomicStat:
 	{
-		if (ch_atomic_stat.get_count())
+		if (u32 out; ch_atomic_stat.try_read(out))
 		{
-			u32 out = ch_atomic_stat.get_value();
 			ch_atomic_stat.set_value(0, false);
 			return out;
 		}
@@ -2502,9 +2489,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case MFC_RdListStallStat:
 	{
-		if (ch_stall_stat.get_count())
+		if (u32 out; ch_stall_stat.try_read(out))
 		{
-			u32 out = ch_stall_stat.get_value();
 			ch_stall_stat.set_value(0, false);
 			return out;
 		}
@@ -2611,16 +2597,14 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 	{
 		if (offset >= RAW_SPU_BASE_ADDR)
 		{
-			while (!ch_out_intr_mbox.try_push(value))
+			if (ch_out_intr_mbox.get_count())
 			{
 				state += cpu_flag::wait;
+			}
 
-				if (is_stopped())
-				{
-					return false;
-				}
-
-				thread_ctrl::wait();
+			if (!ch_out_intr_mbox.push_wait(*this, value))
+			{
+				return false;
 			}
 
 			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
@@ -2751,16 +2735,14 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutMbox:
 	{
-		while (!ch_out_mbox.try_push(value))
+		if (ch_out_mbox.get_count())
 		{
 			state += cpu_flag::wait;
+		}
 
-			if (is_stopped())
-			{
-				return false;
-			}
-
-			thread_ctrl::wait();
+		if (!ch_out_mbox.push_wait(*this, value))
+		{
+			return false;
 		}
 
 		check_state();
@@ -3149,7 +3131,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 				if (thread.get() != this)
 				{
-					thread_ctrl::notify(*thread);
+					thread_ctrl::raw_notify(*thread);
 				}
 			}
 		}
@@ -3278,7 +3260,7 @@ bool spu_thread::stop_and_signal(u32 code)
 				if (thread && thread.get() != this)
 				{
 					thread->state += cpu_flag::stop;
-					thread_ctrl::notify(*thread);
+					thread_ctrl::raw_notify(*thread);
 				}
 			}
 

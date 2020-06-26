@@ -754,7 +754,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 		if (thread && ran_threads--)
 		{
 			thread->state -= cpu_flag::stop;
-			thread_ctrl::notify(*thread);
+			thread_ctrl::raw_notify(*thread);
 		}
 	}
 
@@ -904,7 +904,7 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 		if (thread)
 		{
 			thread->state -= cpu_flag::suspend;
-			thread_ctrl::notify(*thread);
+			thread_ctrl::raw_notify(*thread);
 		}
 	}
 
@@ -1011,7 +1011,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	{
 		if (thread && group->running)
 		{
-			thread_ctrl::notify(*thread);
+			thread_ctrl::raw_notify(*thread);
 		}
 	}
 
@@ -2203,7 +2203,7 @@ error_code raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
 		return CELL_ESRCH;
 	}
 
-	*value = thread->ch_out_intr_mbox.pop(*thread);
+	*value = thread->ch_out_intr_mbox.pop();
 
 	return CELL_OK;
 }
