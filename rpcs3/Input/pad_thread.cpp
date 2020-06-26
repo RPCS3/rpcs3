@@ -22,8 +22,8 @@ namespace pad
 	std::recursive_mutex g_pad_mutex;
 	std::string g_title_id;
 	atomic_t<bool> g_reset{false};
-	atomic_t<bool> g_enabled{false};
-	atomic_t<bool> g_active;
+	atomic_t<bool> g_enabled{true};
+	atomic_t<bool> g_active{false};
 }
 
 struct pad_setting
