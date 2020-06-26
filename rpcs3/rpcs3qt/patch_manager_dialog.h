@@ -31,7 +31,7 @@ class patch_manager_dialog : public QDialog
 	};
 
 public:
-	explicit patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = nullptr);
+	explicit patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::unordered_map<std::string, std::set<std::string>> games, QWidget* parent = nullptr);
 	~patch_manager_dialog();
 
 	int exec() override;
@@ -42,6 +42,7 @@ private Q_SLOTS:
 	void on_item_changed(QTreeWidgetItem *item, int column);
 	void on_custom_context_menu_requested(const QPoint& pos);
 	void on_legacy_patches_enabled(int state);
+	void on_show_owned_games_only(int state);
 
 private:
 	void refresh(bool restore_layout = false);
@@ -52,6 +53,9 @@ private:
 	bool is_valid_file(const QMimeData& md, QStringList* drop_paths = nullptr);
 
 	std::shared_ptr<gui_settings> m_gui_settings;
+
+	std::unordered_map<std::string, std::set<std::string>> m_owned_games;
+	bool m_show_owned_games_only = false;
 
 	patch_engine::patch_map m_map;
 	bool m_legacy_patches_enabled = false;

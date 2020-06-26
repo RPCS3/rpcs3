@@ -69,6 +69,8 @@ public:
 
 	void SetShowHidden(bool show);
 
+	QList<game_info> GetGameInfo() const;
+
 public Q_SLOTS:
 	void BatchCreatePPUCaches();
 	void BatchRemovePPUCaches();
