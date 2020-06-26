@@ -32,7 +32,11 @@ enum patch_column : int
 enum patch_role : int
 {
 	hash_role = Qt::UserRole,
+	title_role,
+	serial_role,
+	app_version_role,
 	description_role,
+	patch_group_role,
 	persistance_role,
 	node_level_role
 };
@@ -41,6 +45,7 @@ enum node_level : int
 {
 	title_level,
 	serial_level,
+	app_version_level,
 	patch_level
 };
 
@@ -166,77 +171,122 @@ void patch_manager_dialog::populate_tree()
 				continue;
 			}
 
-			const QString q_title   = patch.title.empty() ? tr("Unknown Title") : QString::fromStdString(patch.title);
-			const QString q_serials = patch.serials.empty() ? tr("Unknown Version") : QString::fromStdString(patch.serials);
+			const QString q_patch_group = QString::fromStdString(patch.patch_group);
 
-			QTreeWidgetItem* title_level_item = nullptr;
-
-			// Find top level item for this title
-			if (const auto list = ui->patch_tree->findItems(q_title, Qt::MatchFlag::MatchExactly, 0); list.size() > 0)
+			for (const auto& [title, serials] : patch.titles)
 			{
-				title_level_item = list[0];
-			}
-
-			// Add a top level item for this title if it doesn't exist yet
-			if (!title_level_item)
-			{
-				title_level_item = new QTreeWidgetItem();
-				title_level_item->setText(0, q_title);
-				title_level_item->setData(0, hash_role, q_hash);
-				title_level_item->setData(0, node_level_role, node_level::title_level);
-
-				ui->patch_tree->addTopLevelItem(title_level_item);
-			}
-			assert(title_level_item);
-
-			// Find out if there is a node item for this serial
-			QTreeWidgetItem* serial_level_item = gui::utils::find_child(title_level_item, q_serials);
-
-			// Add a node item for this serial if it doesn't exist yet
-			if (!serial_level_item)
-			{
-				serial_level_item = new QTreeWidgetItem();
-				serial_level_item->setText(0, q_serials);
-				serial_level_item->setData(0, hash_role, q_hash);
-				serial_level_item->setData(0, node_level_role, node_level::serial_level);
-
-				title_level_item->addChild(serial_level_item);
-			}
-			assert(serial_level_item);
-
-			// Add a checkable leaf item for this patch
-			const QString q_description = QString::fromStdString(description);
-			QString visible_description = q_description;
-
-			const auto match_criteria = QList<QPair<int, QVariant>>() << QPair(description_role, q_description) << QPair(persistance_role, true);
-
-			// Add counter to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
-			if (const auto matches = gui::utils::find_children_by_data(serial_level_item, match_criteria); matches.count() > 0)
-			{
-				if (auto only_match = matches.count() == 1 ? matches[0] : nullptr)
+				if (serials.empty())
 				{
-					only_match->setText(0, q_description + QStringLiteral(" (1)"));
+					continue;
 				}
-				visible_description += QStringLiteral(" (") + QString::number(matches.count() + 1) + QStringLiteral(")");
+
+				const QString q_title = QString::fromStdString(title);
+
+				QTreeWidgetItem* title_level_item = nullptr;
+
+				// Find top level item for this title
+				if (const auto list = ui->patch_tree->findItems(q_title, Qt::MatchFlag::MatchExactly, 0); list.size() > 0)
+				{
+					title_level_item = list[0];
+				}
+
+				// Add a top level item for this title if it doesn't exist yet
+				if (!title_level_item)
+				{
+					title_level_item = new QTreeWidgetItem();
+					title_level_item->setText(0, q_title);
+					title_level_item->setData(0, title_role, q_title);
+					title_level_item->setData(0, node_level_role, node_level::title_level);
+					title_level_item->setData(0, persistance_role, true);
+
+					ui->patch_tree->addTopLevelItem(title_level_item);
+				}
+				assert(title_level_item);
+
+				for (const auto& [serial, app_versions] : serials)
+				{
+					if (app_versions.empty())
+					{
+						continue;
+					}
+
+					const QString q_serial = QString::fromStdString(serial);
+
+					// Find out if there is a node item for this serial
+					QTreeWidgetItem* serial_level_item = gui::utils::find_child(title_level_item, q_serial);
+
+					// Add a node item for this serial if it doesn't exist yet
+					if (!serial_level_item)
+					{
+						serial_level_item = new QTreeWidgetItem();
+						serial_level_item->setText(0, q_serial);
+						serial_level_item->setData(0, title_role, q_title);
+						serial_level_item->setData(0, serial_role, q_serial);
+						serial_level_item->setData(0, node_level_role, node_level::serial_level);
+						serial_level_item->setData(0, persistance_role, true);
+
+						title_level_item->addChild(serial_level_item);
+					}
+					assert(serial_level_item);
+
+					for (const auto& [app_version, enabled] : app_versions)
+					{
+						const QString q_app_version = QString::fromStdString(app_version);
+
+						// Find out if there is a node item for this app version
+						QTreeWidgetItem* app_version_level_item = gui::utils::find_child(serial_level_item, q_app_version);
+
+						// Add a node item for this app version if it doesn't exist yet
+						if (!app_version_level_item)
+						{
+							app_version_level_item = new QTreeWidgetItem();
+							app_version_level_item->setText(0, q_app_version);
+							app_version_level_item->setData(0, title_role, q_title);
+							app_version_level_item->setData(0, serial_role, q_serial);
+							app_version_level_item->setData(0, app_version_role, q_app_version);
+							app_version_level_item->setData(0, node_level_role, node_level::app_version_level);
+							app_version_level_item->setData(0, persistance_role, true);
+
+							serial_level_item->addChild(app_version_level_item);
+						}
+						assert(app_version_level_item);
+
+						// Add a checkable leaf item for this patch
+						const QString q_description = QString::fromStdString(description);
+						QString visible_description = q_description;
+
+						const auto match_criteria = QList<QPair<int, QVariant>>() << QPair(description_role, q_description) << QPair(persistance_role, true);
+
+						// Add counter to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
+						if (const auto matches = gui::utils::find_children_by_data(app_version_level_item, match_criteria, false); matches.count() > 0)
+						{
+							if (auto only_match = matches.count() == 1 ? matches[0] : nullptr)
+							{
+								only_match->setText(0, q_description + QStringLiteral(" (1)"));
+							}
+							visible_description += QStringLiteral(" (") + QString::number(matches.count() + 1) + QStringLiteral(")");
+						}
+
+						QTreeWidgetItem* patch_level_item = new QTreeWidgetItem();
+						patch_level_item->setText(0, visible_description);
+						patch_level_item->setCheckState(0, enabled ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+						patch_level_item->setData(0, hash_role, q_hash);
+						patch_level_item->setData(0, title_role, q_title);
+						patch_level_item->setData(0, serial_role, q_serial);
+						patch_level_item->setData(0, app_version_role, q_app_version);
+						patch_level_item->setData(0, description_role, q_description);
+						patch_level_item->setData(0, patch_group_role, q_patch_group);
+						patch_level_item->setData(0, node_level_role, node_level::patch_level);
+						patch_level_item->setData(0, persistance_role, true);
+
+						app_version_level_item->addChild(patch_level_item);
+					}
+				}
 			}
-
-			QTreeWidgetItem* patch_level_item = new QTreeWidgetItem();
-			patch_level_item->setText(0, visible_description);
-			patch_level_item->setCheckState(0, patch.enabled ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
-			patch_level_item->setData(0, hash_role, q_hash);
-			patch_level_item->setData(0, description_role, q_description);
-			patch_level_item->setData(0, node_level_role, node_level::patch_level);
-
-			serial_level_item->addChild(patch_level_item);
-
-			// Persist items
-			title_level_item->setData(0, persistance_role, true);
-			serial_level_item->setData(0, persistance_role, true);
-			patch_level_item->setData(0, persistance_role, true);
 		}
 	}
 
-	ui->patch_tree->sortByColumn(0, Qt::SortOrder::AscendingOrder);
+	const auto match_criteria = QList<QPair<int, QVariant>>() << QPair(persistance_role, true);
 
 	for (int i = ui->patch_tree->topLevelItemCount() - 1; i >= 0; i--)
 	{
@@ -248,34 +298,11 @@ void patch_manager_dialog::populate_tree()
 				continue;
 			}
 
-			title_level_item->sortChildren(0, Qt::SortOrder::AscendingOrder);
-
-			for (int j = title_level_item->childCount() - 1; j >= 0; j--)
-			{
-				if (auto serial_level_item = title_level_item->child(j))
-				{
-					if (!serial_level_item->data(0, persistance_role).toBool())
-					{
-						delete title_level_item->takeChild(j);
-						continue;
-					}
-
-					for (int k = serial_level_item->childCount() - 1; k >= 0; k--)
-					{
-						if (auto leaf_item = serial_level_item->child(k))
-						{
-							if (!leaf_item->data(0, persistance_role).toBool())
-							{
-								delete serial_level_item->takeChild(k);
-							}
-						}
-					}
-
-					serial_level_item->sortChildren(0, Qt::SortOrder::AscendingOrder);
-				}
-			}
+			gui::utils::remove_children(title_level_item, match_criteria, true);
 		}
 	}
+
+	gui::utils::sort_tree(ui->patch_tree, Qt::SortOrder::AscendingOrder, true);
 }
 
 void patch_manager_dialog::save_config()
@@ -314,73 +341,74 @@ void patch_manager_dialog::filter_patches(const QString& term)
 	}
 }
 
-void patch_manager_dialog::update_patch_info(const patch_engine::patch_info& info)
+void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_patch_info& info)
 {
-	ui->label_hash->setText(QString::fromStdString(info.hash));
-	ui->label_author->setText(QString::fromStdString(info.author));
-	ui->label_notes->setText(QString::fromStdString(info.notes));
-	ui->label_description->setText(QString::fromStdString(info.description));
-	ui->label_patch_version->setText(QString::fromStdString(info.patch_version));
-	ui->label_serials->setText(QString::fromStdString(info.serials));
-	ui->label_title->setText(QString::fromStdString(info.title));
+	ui->label_hash->setText(info.hash);
+	ui->label_author->setText(info.author);
+	ui->label_notes->setText(info.notes);
+	ui->label_description->setText(info.description);
+	ui->label_patch_version->setText(info.patch_version);
+	ui->label_serial->setText(info.serial);
+	ui->label_title->setText(info.title);
+	ui->label_app_version->setText(info.app_version);
 }
 
 void patch_manager_dialog::on_item_selected(QTreeWidgetItem *current, QTreeWidgetItem * /*previous*/)
 {
 	if (!current)
 	{
+		// Clear patch info if no item is selected
+		update_patch_info({});
 		return;
 	}
 
-	// Get patch identifiers stored in item data
 	const node_level level = static_cast<node_level>(current->data(0, node_level_role).toInt());
-	const std::string hash = current->data(0, hash_role).toString().toStdString();
-	std::string description = current->data(0, description_role).toString().toStdString();
 
-	if (m_map.find(hash) != m_map.end())
+	patch_manager_dialog::gui_patch_info info{};
+
+	switch (level)
 	{
-		const auto& container = m_map.at(hash);
+	case node_level::patch_level:
+	{
+		// Get patch identifiers stored in item data
+		info.hash = current->data(0, hash_role).toString();
+		const std::string hash = info.hash.toStdString();
+		const std::string description = current->data(0, description_role).toString().toStdString();
 
-		// Find the patch for this item and show its metadata
-		if (!container.is_legacy && container.patch_info_map.find(description) != container.patch_info_map.end())
+		// Find the patch for this item and get its metadata
+		if (m_map.find(hash) != m_map.end())
 		{
-			update_patch_info(container.patch_info_map.at(description));
-			return;
-		}
+			const auto& container = m_map.at(hash);
 
-		// Show shared info if no patch was found
-		patch_engine::patch_info info{};
-		info.hash    = hash;
-		info.version = container.version;
-
-		// Use the first entry for more shared information
-		const auto match_criteria = QList<QPair<int, QVariant>>() << QPair(node_level_role, node_level::patch_level);
-
-		if (const auto matches = gui::utils::find_children_by_data(current, match_criteria, true); matches.count() > 0 && matches[0])
-		{
-			description = matches[0]->data(0, description_role).toString().toStdString();
-
-			if (container.patch_info_map.find(description) != container.patch_info_map.end())
+			if (!container.is_legacy && container.patch_info_map.find(description) != container.patch_info_map.end())
 			{
-				const auto& fallback_info = container.patch_info_map.at(description);
-
-				if (level >= node_level::title_level)
-				{
-					info.title = fallback_info.title;
-				}
-				if (level >= node_level::serial_level)
-				{
-					info.serials = fallback_info.serials;
-				}
+				const auto& found_info = container.patch_info_map.at(description);
+				info.author = QString::fromStdString(found_info.author);
+				info.notes = QString::fromStdString(found_info.notes);
+				info.description = QString::fromStdString(found_info.description);
+				info.patch_version = QString::fromStdString(found_info.patch_version);
 			}
 		}
-
-		update_patch_info(info);
-		return;
+		[[fallthrough]];
+	}
+	case node_level::app_version_level:
+	{
+		info.app_version = current->data(0, app_version_role).toString();
+		[[fallthrough]];
+	}
+	case node_level::serial_level:
+	{
+		info.serial = current->data(0, serial_role).toString();
+		[[fallthrough]];
+	}
+	case node_level::title_level:
+	default:
+	{
+		info.title = current->data(0, title_role).toString();
+		break;
+	}
 	}
 
-	// Clear patch info if no info was found
-	patch_engine::patch_info info{};
 	update_patch_info(info);
 }
 
@@ -395,8 +423,30 @@ void patch_manager_dialog::on_item_changed(QTreeWidgetItem *item, int /*column*/
 	const bool enabled = item->checkState(0) == Qt::CheckState::Checked;
 
 	// Get patch identifiers stored in item data
+	const node_level level = static_cast<node_level>(item->data(0, node_level_role).toInt());
 	const std::string hash = item->data(0, hash_role).toString().toStdString();
+	const std::string title = item->data(0, title_role).toString().toStdString();
+	const std::string serial = item->data(0, serial_role).toString().toStdString();
+	const std::string app_version = item->data(0, app_version_role).toString().toStdString();
 	const std::string description = item->data(0, description_role).toString().toStdString();
+	const std::string patch_group = item->data(0, patch_group_role).toString().toStdString();
+
+	// Uncheck other patches with the same patch_group if this patch was enabled
+	if (const auto node = item->parent(); node && enabled && !patch_group.empty() && level == node_level::patch_level)
+	{
+		for (int i = 0; i < node->childCount(); i++)
+		{
+			if (const auto other = node->child(i); other && other != item)
+			{
+				const std::string other_patch_group = other->data(0, patch_group_role).toString().toStdString();
+
+				if (other_patch_group == patch_group)
+				{
+					other->setCheckState(0, Qt::CheckState::Unchecked);
+				}
+			}
+		}
+	}
 
 	// Enable/disable the patch for this item and show its metadata
 	if (m_map.find(hash) != m_map.end())
@@ -405,9 +455,8 @@ void patch_manager_dialog::on_item_changed(QTreeWidgetItem *item, int /*column*/
 
 		if (!container.is_legacy && container.patch_info_map.find(description) != container.patch_info_map.end())
 		{
-			auto& patch = m_map[hash].patch_info_map[description];
-			patch.enabled = enabled;
-			update_patch_info(patch);
+			m_map[hash].patch_info_map[description].titles[title][serial][app_version] = enabled;
+			on_item_selected(item, nullptr);
 			return;
 		}
 	}

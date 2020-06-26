@@ -18,6 +18,18 @@ class patch_manager_dialog : public QDialog
 {
 	Q_OBJECT
 
+	struct gui_patch_info
+	{
+		QString hash;
+		QString title;
+		QString serial;
+		QString app_version;
+		QString author;
+		QString notes;
+		QString description;
+		QString patch_version;
+	};
+
 public:
 	explicit patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = nullptr);
 	~patch_manager_dialog();
@@ -36,7 +48,7 @@ private:
 	void load_patches();
 	void populate_tree();
 	void save_config();
-	void update_patch_info(const patch_engine::patch_info& info);
+	void update_patch_info(const gui_patch_info& info);
 	bool is_valid_file(const QMimeData& md, QStringList* drop_paths = nullptr);
 
 	std::shared_ptr<gui_settings> m_gui_settings;

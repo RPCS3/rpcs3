@@ -38,36 +38,39 @@ public:
 			f64 double_value;
 		} value { 0 };
 	};
+	
+	using patch_app_versions = std::unordered_map<std::string /*app_version*/, bool /*enabled*/>;
+	using patch_serials = std::unordered_map<std::string /*serial*/, patch_app_versions>;
+	using patch_titles = std::unordered_map<std::string /*serial*/, patch_serials>;
 
 	struct patch_info
 	{
 		// Patch information
-		std::vector<patch_engine::patch_data> data_list;
+		std::vector<patch_data> data_list;
+		patch_titles titles;
 		std::string description;
-		std::string title;
-		std::string serials;
 		std::string patch_version;
+		std::string patch_group;
 		std::string author;
 		std::string notes;
 		std::string source_path;
-		bool enabled = false;
 
 		// Redundant information for accessibility (see patch_container)
 		std::string hash;
 		std::string version;
 		bool is_legacy = false;
+		bool is_enabled = false; // only for legacy patches
 	};
 
 	struct patch_container
 	{
-		std::unordered_map<std::string /*description*/, patch_engine::patch_info> patch_info_map;
+		std::unordered_map<std::string /*description*/, patch_info> patch_info_map;
 		std::string hash;
 		std::string version;
 		bool is_legacy = false;
 	};
 
 	using patch_map = std::unordered_map<std::string /*hash*/, patch_container>;
-	using patch_config_map = std::unordered_map<std::string /*hash*/, std::unordered_map<std::string /*description*/, bool /*enabled*/>>;
 
 	patch_engine();
 
@@ -115,7 +118,7 @@ public:
 	static bool remove_patch(const patch_info& info);
 
 	// Load patch_config.yml
-	static patch_config_map load_config(bool& enable_legacy_patches);
+	static patch_map load_config(bool& enable_legacy_patches);
 
 	// Load from file and append to member patches map
 	void append_global_patches();
