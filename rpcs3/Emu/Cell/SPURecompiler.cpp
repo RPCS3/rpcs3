@@ -5724,14 +5724,14 @@ public:
 				else if (upd == 1)
 				{
 					const auto cond = m_ir->CreateICmpNE(completed, m_ir->getInt32(0));
-					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(1), m_ir->getInt32(0)), upd_ptr);
+					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(0), m_ir->getInt32(1)), upd_ptr);
 					m_ir->CreateStore(m_ir->CreateSelect(cond, stat_val, m_ir->getInt64(0)), stat_ptr);
 					return;
 				}
 				else if (upd == 2)
 				{
 					const auto cond = m_ir->CreateICmpEQ(completed, tag_mask);
-					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(2), m_ir->getInt32(0)), upd_ptr);
+					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(0), m_ir->getInt32(2)), upd_ptr);
 					m_ir->CreateStore(m_ir->CreateSelect(cond, stat_val, m_ir->getInt64(0)), stat_ptr);
 					return;
 				}
