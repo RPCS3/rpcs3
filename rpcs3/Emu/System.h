@@ -64,6 +64,7 @@ class Emulator final
 	std::string m_path_old;
 	std::string m_title_id;
 	std::string m_title;
+	std::string m_app_version;
 	std::string m_cat;
 	std::string m_dir;
 	std::string m_sfo_dir;
@@ -129,6 +130,11 @@ public:
 	const std::string GetTitleAndTitleID() const
 	{
 		return m_title + (m_title_id.empty() ? "" : " [" + m_title_id + "]");
+	}
+
+	const std::string& GetAppVersion() const
+	{
+		return m_app_version;
 	}
 
 	const std::string& GetCat() const
