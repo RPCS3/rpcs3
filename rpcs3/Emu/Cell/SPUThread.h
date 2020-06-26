@@ -175,23 +175,20 @@ public:
 	// Returns true on success
 	bool try_push(u32 value)
 	{
-		const u64 old = data.fetch_op([value](u64& data)
+		return data.fetch_op([value](u64& data)
 		{
-			if (data & bit_count) [[unlikely]]
-			{
-				data |= bit_wait;
-			}
-			else
+			if (!(data & bit_count)) [[likely]]
 			{
 				data = bit_count | value;
+				return true;
 			}
-		});
 
-		return !(old & bit_count);
+			return false;
+		}).second;
 	}
 
 	// Push performing bitwise OR with previous value, may require notification
-	void push_or(cpu_thread& spu, u32 value)
+	void push_or(u32 value)
 	{
 		const u64 old = data.fetch_op([value](u64& data)
 		{
@@ -201,7 +198,7 @@ public:
 
 		if (old & bit_wait)
 		{
-			spu.notify();
+			data.notify_one();
 		}
 	}
 
@@ -211,31 +208,28 @@ public:
 	}
 
 	// Push unconditionally (overwriting previous value), may require notification
-	void push(cpu_thread& spu, u32 value)
+	void push(u32 value)
 	{
 		if (data.exchange(bit_count | value) & bit_wait)
 		{
-			spu.notify();
+			data.notify_one();
 		}
 	}
 
 	// Returns true on success
 	bool try_pop(u32& out)
 	{
-		const u64 old = data.fetch_op([&](u64& data)
+		return data.fetch_op([&](u64& data)
 		{
 			if (data & bit_count) [[likely]]
 			{
 				out = static_cast<u32>(data);
 				data = 0;
+				return true;
 			}
-			else
-			{
-				data |= bit_wait;
-			}
-		});
 
-		return (old & bit_count) != 0;
+			return false;
+		}).second;
 	}
 
 	// Reading without modification
@@ -253,17 +247,93 @@ public:
 	}
 
 	// Pop unconditionally (loading last value), may require notification
-	u32 pop(cpu_thread& spu)
+	u32 pop()
 	{
 		// Value is not cleared and may be read again
 		const u64 old = data.fetch_and(~(bit_count | bit_wait));
 
 		if (old & bit_wait)
 		{
-			spu.notify();
+			data.notify_one();
 		}
 
 		return static_cast<u32>(old);
+	}
+
+	// Waiting for channel pop state availability, actually popping if specified
+	s64 pop_wait(cpu_thread& spu, bool pop = true)
+	{
+		while (true)
+		{
+			const u64 old = data.fetch_op([&](u64& data)
+			{
+				if (data & bit_count) [[likely]]
+				{
+					if (pop)
+					{
+						data = 0;
+						return true;
+					}
+
+					return false;
+				}
+
+				data = bit_wait;
+				return true;
+			}).first;
+
+			if (old & bit_count)
+			{
+				return static_cast<u32>(old);
+			}
+
+			if (spu.is_stopped())
+			{
+				return -1;
+			}
+
+			data.wait(bit_wait);
+		}
+	}
+
+	// Waiting for channel push state availability, actually pushing if specified
+	bool push_wait(cpu_thread& spu, u32 value, bool push = true)
+	{
+		while (true) 
+		{
+			u64 state;
+			data.fetch_op([&](u64& data)
+			{
+				if (data & bit_count) [[unlikely]]
+				{
+					data |= bit_wait;
+				}
+				else if (push)
+				{
+					data = bit_count | value;
+				}
+				else
+				{
+					state = data;
+					return false;
+				}
+
+				state = data;
+				return true;
+			});
+
+			if (!(state & bit_wait))
+			{
+				return true;
+			}
+
+			if (spu.is_stopped())
+			{
+				return false;
+			}
+
+			data.wait(state);
+		}
 	}
 
 	void set_value(u32 value, bool count = true)
