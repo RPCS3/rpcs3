@@ -15,8 +15,8 @@ PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
 // Search an unordered map for a string value and return found keycode
 int PadHandlerBase::FindKeyCode(const std::unordered_map<u32, std::string>& map, const cfg::string& name, bool fallback)
 {
-	std::string def = name.def;
-	std::string nam = name.to_string();
+	const std::string def = name.def;
+	const std::string nam = name.to_string();
 	int def_code = -1;
 
 	for (auto it = map.begin(); it != map.end(); ++it)
@@ -40,8 +40,8 @@ int PadHandlerBase::FindKeyCode(const std::unordered_map<u32, std::string>& map,
 
 long PadHandlerBase::FindKeyCode(const std::unordered_map<u64, std::string>& map, const cfg::string& name, bool fallback)
 {
-	std::string def = name.def;
-	std::string nam = name.to_string();
+	const std::string def = name.def;
+	const std::string nam = name.to_string();
 	long def_code = -1;
 
 	for (auto it = map.begin(); it != map.end(); ++it)
@@ -422,7 +422,7 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string
 	if (!pad_device)
 		return false;
 
-	int index = static_cast<int>(bindings.size());
+	const int index = static_cast<int>(bindings.size());
 	m_pad_configs[index].load();
 	pad_device->config = &m_pad_configs[index];
 	pad_config* profile = pad_device->config;
@@ -546,12 +546,12 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 		bool pressed;
 
 		// m_keyCodeMin is the mapped key for left or down
-		u32 key_min = pad->m_sticks[i].m_keyCodeMin;
+		const u32 key_min = pad->m_sticks[i].m_keyCodeMin;
 		u16 val_min = button_values[key_min];
 		TranslateButtonPress(device, key_min, pressed, val_min, true);
 
 		// m_keyCodeMax is the mapped key for right or up
-		u32 key_max = pad->m_sticks[i].m_keyCodeMax;
+		const u32 key_max = pad->m_sticks[i].m_keyCodeMax;
 		u16 val_max = button_values[key_max];
 		TranslateButtonPress(device, key_max, pressed, val_max, true);
 
