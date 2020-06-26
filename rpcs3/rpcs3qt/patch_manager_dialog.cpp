@@ -478,41 +478,11 @@ void patch_manager_dialog::on_custom_context_menu_requested(const QPoint &pos)
 		return;
 	}
 
+	const node_level level = static_cast<node_level>(item->data(0, node_level_role).toInt());
+
 	QMenu* menu = new QMenu(this);
 
-	QAction* collapse_all = new QAction(tr("Collapse All"));
-	menu->addAction(collapse_all);
-	connect(collapse_all, &QAction::triggered, ui->patch_tree, &QTreeWidget::collapseAll);
-
-	QAction* expand_all = new QAction(tr("Expand All"));
-	menu->addAction(expand_all);
-	connect(expand_all, &QAction::triggered, ui->patch_tree, &QTreeWidget::expandAll);
-
-	menu->addSeparator();
-
-	if (item->childCount() > 0)
-	{
-		QAction* collapse_children = new QAction(tr("Collapse Children"));
-		menu->addAction(collapse_children);
-		connect(collapse_children, &QAction::triggered, this, [&item](bool)
-		{
-			for (int i = 0; i < item->childCount(); i++)
-			{
-				item->child(i)->setExpanded(false);
-			}
-		});
-
-		QAction* expand_children = new QAction(tr("Expand Children"));
-		menu->addAction(expand_children);
-		connect(expand_children, &QAction::triggered, this, [&item](bool)
-		{
-			for (int i = 0; i < item->childCount(); i++)
-			{
-				item->child(i)->setExpanded(true);
-			}
-		});
-	}
-	else
+	if (level == node_level::patch_level)
 	{
 		// Find the patch for this item and add menu items accordingly
 		const std::string hash = item->data(0, hash_role).toString().toStdString();
@@ -533,10 +503,10 @@ void patch_manager_dialog::on_custom_context_menu_requested(const QPoint &pos)
 					gui::utils::open_dir(info.source_path);
 				});
 
+				menu->addSeparator();
+
 				if (info.source_path == patch_engine::get_imported_patch_path())
 				{
-					menu->addSeparator();
-
 					QAction* remove_patch = new QAction(tr("Remove Patch"));
 					menu->addAction(remove_patch);
 					connect(remove_patch, &QAction::triggered, this, [info, this](bool)
@@ -562,10 +532,69 @@ void patch_manager_dialog::on_custom_context_menu_requested(const QPoint &pos)
 							QMessageBox::warning(this, tr("Failure"), tr("The patch could not be removed!"));
 						}
 					});
+
+					menu->addSeparator();
 				}
 			}
 		}
 	}
+
+	if (item->childCount() > 0)
+	{
+		if (item->isExpanded())
+		{
+			QAction* collapse = new QAction(tr("Collapse"));
+			menu->addAction(collapse);
+			connect(collapse, &QAction::triggered, this, [&item](bool)
+			{
+				item->setExpanded(false);
+			});
+
+			if (level < (node_level::patch_level - 1))
+			{
+				menu->addSeparator();
+
+				QAction* expand_children = new QAction(tr("Expand Children"));
+				menu->addAction(expand_children);
+				connect(expand_children, &QAction::triggered, this, [&item](bool)
+				{
+					for (int i = 0; i < item->childCount(); i++)
+					{
+						item->child(i)->setExpanded(true);
+					}
+				});
+
+				QAction* collapse_children = new QAction(tr("Collapse Children"));
+				menu->addAction(collapse_children);
+				connect(collapse_children, &QAction::triggered, this, [&item](bool)
+				{
+					for (int i = 0; i < item->childCount(); i++)
+					{
+						item->child(i)->setExpanded(false);
+					}
+				});
+			}
+		}
+		else
+		{
+			QAction* expand = new QAction(tr("Expand"));
+			menu->addAction(expand);
+			connect(expand, &QAction::triggered, this, [&item](bool)
+			{
+				item->setExpanded(true);
+			});
+		}
+
+		menu->addSeparator();
+	}
+
+	QAction* expand_all = new QAction(tr("Expand All"));
+	menu->addAction(expand_all);
+	connect(expand_all, &QAction::triggered, ui->patch_tree, &QTreeWidget::expandAll);
+
+	QAction* collapse_all = new QAction(tr("Collapse All"));
+	menu->addAction(collapse_all);
+	connect(collapse_all, &QAction::triggered, ui->patch_tree, &QTreeWidget::collapseAll);
 
 	menu->exec(ui->patch_tree->viewport()->mapToGlobal(pos));
 }
