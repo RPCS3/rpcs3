@@ -245,9 +245,29 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 						continue;
 					}
 
+					const bool title_is_all_key = title == patch_key::all;
+
 					for (const auto serial_node : game_node.second)
 					{
 						const std::string& serial = serial_node.first.Scalar();
+
+						if (serial == patch_key::all)
+						{
+							if (!title_is_all_key)
+							{
+								append_log_message(log_messages, fmt::format("Error: Using '%s' as serial is not allowed for titles other than '%s' (title: %s, patch: %s, key: %s)", patch_key::all, patch_key::all, title, description, main_key));
+								patch_log.error("Error: Using '%s' as serial is not allowed for titles other than '%s' (title: %s, patch: %s, key: %s, file: %s)", patch_key::all, patch_key::all, title, description, main_key, path);
+								is_valid = false;
+								continue;
+							}
+						}
+						else if (title_is_all_key)
+						{
+							append_log_message(log_messages, fmt::format("Error: Only '%s' is allowed as serial if the title is '%s' (serial: %s, patch: %s, key: %s)", patch_key::all, patch_key::all, serial, description, main_key));
+							patch_log.error("Error: Only '%s' is allowed as serial if the title is '%s' (serial: %s, patch: %s, key: %s, file: %s)", patch_key::all, patch_key::all, serial, description, main_key, path);
+							is_valid = false;
+							continue;
+						}
 
 						if (const auto yml_type = serial_node.second.Type(); yml_type != YAML::NodeType::Sequence)
 						{
