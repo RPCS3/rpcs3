@@ -315,7 +315,8 @@ void patch_manager_dialog::filter_patches(const QString& term)
 				const std::string serial = item->data(0, serial_role).toString().toStdString();
 				const std::string app_version = item->data(0, app_version_role).toString().toStdString();
 
-				if (m_owned_games.find(serial) == m_owned_games.end() || !m_owned_games.at(serial).contains(app_version))
+				if (serial != patch_key::all &&
+					(m_owned_games.find(serial) == m_owned_games.end() || !m_owned_games.at(serial).contains(app_version)))
 				{
 					item->setHidden(true);
 					return 0;
