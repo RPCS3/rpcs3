@@ -194,7 +194,7 @@ void patch_manager_dialog::populate_tree()
 				if (!title_level_item)
 				{
 					title_level_item = new QTreeWidgetItem();
-					title_level_item->setText(0, q_title);
+					title_level_item->setText(0, title == patch_key::all ? tr_all_titles : q_title);
 					title_level_item->setData(0, title_role, q_title);
 					title_level_item->setData(0, node_level_role, node_level::title_level);
 					title_level_item->setData(0, persistance_role, true);
@@ -211,11 +211,13 @@ void patch_manager_dialog::populate_tree()
 					}
 
 					const QString q_serial = QString::fromStdString(serial);
+					const QString visible_serial = serial == patch_key::all ? tr_all_serials : q_serial;
 
 					for (const auto& [app_version, enabled] : app_versions)
 					{
 						const QString q_app_version = QString::fromStdString(app_version);
-						const QString q_serial_and_version = q_serial + QStringLiteral(" v.") + q_app_version;
+						const QString q_version_suffix = app_version == patch_key::all ? (QStringLiteral(" - ") + tr_all_versions) : (QStringLiteral(" v.") + q_app_version);
+						const QString q_serial_and_version = visible_serial + q_version_suffix;
 
 						// Find out if there is a node item for this serial
 						QTreeWidgetItem* serial_level_item = gui::utils::find_child(title_level_item, q_serial_and_version);
@@ -404,14 +406,23 @@ void patch_manager_dialog::on_item_selected(QTreeWidgetItem *current, QTreeWidge
 	}
 	case node_level::serial_level:
 	{
-		info.serial = current->data(0, serial_role).toString();
-		info.app_version = current->data(0, app_version_role).toString();
+		const QString serial = current->data(0, serial_role).toString();
+		info.serial = serial.toStdString() == patch_key::all ? tr_all_serials : serial;
+
+		const QString app_version = current->data(0, app_version_role).toString();
+		info.app_version = app_version.toStdString() == patch_key::all ? tr_all_versions : app_version;
+
 		[[fallthrough]];
 	}
 	case node_level::title_level:
+	{
+		const QString title = current->data(0, title_role).toString();
+		info.title = title.toStdString() == patch_key::all ? tr_all_titles : title;
+
+		[[fallthrough]];
+	}
 	default:
 	{
-		info.title = current->data(0, title_role).toString();
 		break;
 	}
 	}

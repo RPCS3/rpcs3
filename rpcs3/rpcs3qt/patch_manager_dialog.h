@@ -30,6 +30,10 @@ class patch_manager_dialog : public QDialog
 		QString patch_version;
 	};
 
+	const QString tr_all_titles   = tr("All titles");
+	const QString tr_all_serials  = tr("All serials");
+	const QString tr_all_versions = tr("All versions");
+
 public:
 	explicit patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::unordered_map<std::string, std::set<std::string>> games, QWidget* parent = nullptr);
 	~patch_manager_dialog();

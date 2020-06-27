@@ -7,6 +7,11 @@
 
 #include "util/yaml.hpp"
 
+namespace patch_key
+{
+	static const std::string all = "All";
+}
+
 enum class patch_type
 {
 	invalid,
@@ -81,19 +86,6 @@ public:
 	static std::string get_imported_patch_path();
 
 	// Load from file and append to specified patches map
-	// Example entry:
-	//
-	// PPU-8007056e52279bea26c15669d1ee08c2df321d00:
-	//   Patches:
-	//     60fps:
-	//       Game Title: Fancy Game
-	//       Serials: ABCD12345, SUPA13337 v.1.3
-	//       Author: Batman bin Suparman
-	//       Notes: This is super
-	//       Patch Version: 1.3
-	//       Patch:
-	//         - [ be32, 0x000e522c, 0x995d0072 ]
-	//         - [ be32, 0x000e5234, 0x995d0074 ]
 	static bool load(patch_map& patches, const std::string& path, bool importing = false, std::stringstream* log_messages = nullptr);
 
 	// Read and add a patch node to the patch info
