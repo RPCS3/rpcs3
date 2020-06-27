@@ -5715,23 +5715,16 @@ public:
 				const auto stat_ptr  = spu_ptr<u64>(&spu_thread::ch_tag_stat);
 				const auto stat_val  = m_ir->CreateOr(m_ir->CreateZExt(completed, get_type<u64>()), INT64_MIN);
 
-				if (upd == 0)
+				if (upd == MFC_TAG_UPDATE_IMMEDIATE)
 				{
-					m_ir->CreateStore(m_ir->getInt32(0), upd_ptr);
+					m_ir->CreateStore(m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE), upd_ptr);
 					m_ir->CreateStore(stat_val, stat_ptr);
 					return;
 				}
-				else if (upd == 1)
+				else if (upd <= MFC_TAG_UPDATE_ALL)
 				{
-					const auto cond = m_ir->CreateICmpNE(completed, m_ir->getInt32(0));
-					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(1), m_ir->getInt32(0)), upd_ptr);
-					m_ir->CreateStore(m_ir->CreateSelect(cond, stat_val, m_ir->getInt64(0)), stat_ptr);
-					return;
-				}
-				else if (upd == 2)
-				{
-					const auto cond = m_ir->CreateICmpEQ(completed, tag_mask);
-					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(2), m_ir->getInt32(0)), upd_ptr);
+					const auto cond = upd == MFC_TAG_UPDATE_ANY ? m_ir->CreateICmpNE(completed, m_ir->getInt32(0)) : m_ir->CreateICmpEQ(completed, tag_mask);
+					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE), m_ir->getInt32(static_cast<u32>(upd))), upd_ptr);
 					m_ir->CreateStore(m_ir->CreateSelect(cond, stat_val, m_ir->getInt64(0)), stat_ptr);
 					return;
 				}
