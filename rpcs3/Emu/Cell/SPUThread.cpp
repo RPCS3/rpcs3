@@ -1889,15 +1889,15 @@ void spu_thread::do_mfc(bool wait)
 	{
 		const u32 completed = get_mfc_completed();
 
-		if (completed && ch_tag_upd == 1)
+		if (completed && ch_tag_upd == MFC_TAG_UPDATE_ANY)
 		{
 			ch_tag_stat.set_value(completed);
-			ch_tag_upd = 0;
+			ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
 		}
-		else if (completed == ch_tag_mask && ch_tag_upd == 2)
+		else if (completed == ch_tag_mask && ch_tag_upd == MFC_TAG_UPDATE_ALL)
 		{
 			ch_tag_stat.set_value(completed);
-			ch_tag_upd = 0;
+			ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
 		}
 	}
 
@@ -2769,15 +2769,15 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 		{
 			const u32 completed = get_mfc_completed();
 
-			if (completed && ch_tag_upd == 1)
+			if (completed && ch_tag_upd == MFC_TAG_UPDATE_ANY)
 			{
 				ch_tag_stat.set_value(completed);
-				ch_tag_upd = 0;
+				ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
 			}
-			else if (completed == value && ch_tag_upd == 2)
+			else if (completed == value && ch_tag_upd == MFC_TAG_UPDATE_ALL)
 			{
 				ch_tag_stat.set_value(completed);
-				ch_tag_upd = 0;
+				ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
 			}
 		}
 
@@ -2786,7 +2786,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case MFC_WrTagUpdate:
 	{
-		if (value > 2)
+		if (value > MFC_TAG_UPDATE_ALL)
 		{
 			break;
 		}
@@ -2795,17 +2795,17 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 		if (!value)
 		{
-			ch_tag_upd = 0;
+			ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
 			ch_tag_stat.set_value(completed);
 		}
-		else if (completed && value == 1)
+		else if (completed && value == MFC_TAG_UPDATE_ANY)
 		{
-			ch_tag_upd = 0;
+			ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
 			ch_tag_stat.set_value(completed);
 		}
-		else if (completed == ch_tag_mask && value == 2)
+		else if (completed == ch_tag_mask && value == MFC_TAG_UPDATE_ALL)
 		{
-			ch_tag_upd = 0;
+			ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
 			ch_tag_stat.set_value(completed);
 		}
 		else
