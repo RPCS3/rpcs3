@@ -622,6 +622,7 @@ public:
 	virtual void cpu_mem() override;
 	virtual void cpu_unmem() override;
 	virtual void cpu_return() override;
+	virtual void cpu_work() override;
 	virtual ~spu_thread() override;
 	void cpu_init();
 
@@ -651,6 +652,7 @@ public:
 	u32 mfc_size = 0;
 	u32 mfc_barrier = -1;
 	u32 mfc_fence = -1;
+	u64 mfc_last_timestamp = 0;
 
 	// MFC proxy command data
 	spu_mfc_cmd mfc_prxy_cmd;
@@ -746,7 +748,7 @@ public:
 	bool do_dma_check(const spu_mfc_cmd& args);
 	bool do_list_transfer(spu_mfc_cmd& args);
 	void do_putlluc(const spu_mfc_cmd& args);
-	void do_mfc(bool wait = true);
+	void do_mfc(bool can_escape = true);
 	u32 get_mfc_completed();
 
 	bool process_mfc_cmd();
