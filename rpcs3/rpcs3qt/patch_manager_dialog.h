@@ -30,7 +30,7 @@ class patch_manager_dialog : public QDialog
 		QString patch_version;
 	};
 
-	const QString tr_all_titles   = tr("All titles");
+	const QString tr_all_titles   = tr("All titles - Warning: These patches will apply globally to all games. Use with caution!");
 	const QString tr_all_serials  = tr("All serials");
 	const QString tr_all_versions = tr("All versions");
 
