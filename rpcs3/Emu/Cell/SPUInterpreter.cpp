@@ -116,7 +116,10 @@ void spu_interpreter::set_interrupt_status(spu_thread& spu, spu_opcode_t op)
 		spu.set_interrupt_status(false);
 	}
 
-	spu.check_mfc_interrupts(spu.pc);
+	if (spu.check_mfc_interrupts(spu.pc) && spu.state & cpu_flag::pending)
+	{
+		spu.do_mfc();
+	}
 }
 
 
