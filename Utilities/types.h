@@ -958,11 +958,12 @@ struct cmd64 : any64
 static_assert(sizeof(cmd64) == 8 && std::is_trivially_copyable_v<cmd64>, "Incorrect cmd64 type");
 
 // Error code type (return type), implements error reporting. Could be a template.
-struct error_code
+class error_code
 {
 	// Use fixed s32 type for now
 	s32 value;
 
+public:
 	error_code() = default;
 
 	// Implementation must be provided specially
