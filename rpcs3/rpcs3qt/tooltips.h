@@ -93,6 +93,8 @@ public:
 		const QString disable_fifo_reordering      = tr("Disables RSX FIFO optimizations completely. Draws are processed as they are received by the DMA puller.");
 		const QString gpu_texture_scaling          = tr("Force all texture transfer, scaling and conversion operations on the GPU.\nMay cause texture corruption in some cases.");
 		const QString strict_texture_flushing      = tr("Forces texture flushing even in situations where it is not necessary/correct. Known to cause visual artifacts, but useful for debugging certain texture cache issues.");
+		const QString disable_native_fp16          = tr("Disables hardware half-float support which is known to cause problems in some rare cases on some GPUs.");
+		const QString enable_3d                    = tr("Enables 3D stereo rendering.\nNote that only anaglyph viewing is supported at the moment.");
 
 		// emulator
 
