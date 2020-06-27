@@ -181,11 +181,12 @@ void patch_manager_dialog::populate_tree()
 				}
 
 				const QString q_title = QString::fromStdString(title);
+				const QString visible_title = title == patch_key::all ? tr_all_titles : q_title;
 
 				QTreeWidgetItem* title_level_item = nullptr;
 
 				// Find top level item for this title
-				if (const auto list = ui->patch_tree->findItems(q_title, Qt::MatchFlag::MatchExactly, 0); list.size() > 0)
+				if (const auto list = ui->patch_tree->findItems(visible_title, Qt::MatchFlag::MatchExactly, 0); list.size() > 0)
 				{
 					title_level_item = list[0];
 				}
@@ -194,14 +195,14 @@ void patch_manager_dialog::populate_tree()
 				if (!title_level_item)
 				{
 					title_level_item = new QTreeWidgetItem();
-					title_level_item->setText(0, title == patch_key::all ? tr_all_titles : q_title);
+					title_level_item->setText(0, visible_title);
 					title_level_item->setData(0, title_role, q_title);
 					title_level_item->setData(0, node_level_role, node_level::title_level);
 					title_level_item->setData(0, persistance_role, true);
 
 					ui->patch_tree->addTopLevelItem(title_level_item);
 				}
-				assert(title_level_item);
+				ASSERT(title_level_item);
 
 				for (const auto& [serial, app_versions] : serials)
 				{
@@ -235,7 +236,7 @@ void patch_manager_dialog::populate_tree()
 
 							title_level_item->addChild(serial_level_item);
 						}
-						assert(serial_level_item);
+						ASSERT(serial_level_item);
 
 						// Add a checkable leaf item for this patch
 						const QString q_description = QString::fromStdString(description);
@@ -289,6 +290,21 @@ void patch_manager_dialog::populate_tree()
 	}
 
 	gui::utils::sort_tree(ui->patch_tree, Qt::SortOrder::AscendingOrder, true);
+
+	// Move "All titles" to the top
+	// NOTE: "All serials" is only allowed as the only node in "All titles", so there is no need to move it up
+	// NOTE: "All versions" will be above valid numerical versions through sorting anyway
+	if (const auto all_title_items = ui->patch_tree->findItems(tr_all_titles, Qt::MatchExactly); all_title_items.size() > 0)
+	{
+		auto item = all_title_items[0];
+		ASSERT(item && all_title_items.size() == 1);
+
+		if (const int index = ui->patch_tree->indexOfTopLevelItem(item); index >= 0)
+		{
+			ui->patch_tree->takeTopLevelItem(index);
+			ui->patch_tree->insertTopLevelItem(0, item);
+		}
+	}
 }
 
 void patch_manager_dialog::save_config()
