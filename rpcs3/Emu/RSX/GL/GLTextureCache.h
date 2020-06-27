@@ -953,6 +953,7 @@ namespace gl
 			case CELL_GCM_TEXTURE_R5G6B5:
 				return (ifmt == gl::texture::internal_format::rgb565);
 			case CELL_GCM_TEXTURE_A8R8G8B8:
+			case CELL_GCM_TEXTURE_D8R8G8B8:
 				return (ifmt == gl::texture::internal_format::rgba8 ||
 						ifmt == gl::texture::internal_format::depth24_stencil8 ||
 						ifmt == gl::texture::internal_format::depth32f_stencil8);

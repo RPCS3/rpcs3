@@ -720,11 +720,36 @@ namespace rsx
 			set_surface_dirty_bit(rsx, reg, arg);
 		}
 
-		void set_surface_options_dirty_bit(thread* rsx, u32 reg, u32)
+		void set_surface_options_dirty_bit(thread* rsx, u32 reg, u32 arg)
 		{
-			if (reg != method_registers.register_previous_value)
+			if (arg != method_registers.register_previous_value)
 			{
 				rsx->on_framebuffer_options_changed(reg);
+			}
+		}
+
+		void set_stencil_op(thread* rsx, u32 reg, u32 arg)
+		{
+			if (arg != method_registers.register_previous_value)
+			{
+				switch (arg)
+				{
+				case CELL_GCM_INVERT:
+				case CELL_GCM_KEEP:
+				case CELL_GCM_REPLACE:
+				case CELL_GCM_INCR:
+				case CELL_GCM_DECR:
+				case CELL_GCM_INCR_WRAP:
+				case CELL_GCM_DECR_WRAP:
+				case CELL_GCM_ZERO:
+					set_surface_options_dirty_bit(rsx, reg, arg);
+					break;
+
+				default:
+					// Ignored on RSX
+					method_registers.decode(reg, method_registers.register_previous_value);
+					break;
+				}
 			}
 		}
 
@@ -800,6 +825,37 @@ namespace rsx
 					method_registers.decode(reg, method_registers.register_previous_value);
 					return;
 				}
+				}
+			}
+		}
+
+		void set_blend_factor(thread* rsx, u32 reg, u32 arg)
+		{
+			for (u32 i = 0; i < 32u; i += 16)
+			{
+				switch ((arg >> i) & 0xffff)
+				{
+				case CELL_GCM_ZERO:
+				case CELL_GCM_ONE:
+				case CELL_GCM_SRC_COLOR:
+				case CELL_GCM_ONE_MINUS_SRC_COLOR:
+				case CELL_GCM_SRC_ALPHA:
+				case CELL_GCM_ONE_MINUS_SRC_ALPHA:
+				case CELL_GCM_DST_ALPHA:
+				case CELL_GCM_ONE_MINUS_DST_ALPHA:
+				case CELL_GCM_DST_COLOR:
+				case CELL_GCM_ONE_MINUS_DST_COLOR:
+				case CELL_GCM_SRC_ALPHA_SATURATE:
+				case CELL_GCM_CONSTANT_COLOR:
+				case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
+				case CELL_GCM_CONSTANT_ALPHA:
+				case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA:
+					break;
+
+				default:
+					// Ignore invalid values as a whole
+					method_registers.decode(reg, method_registers.register_previous_value);
+					return;
 				}
 			}
 		}
@@ -3097,13 +3153,13 @@ namespace rsx
 		bind<NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_STENCIL_MASK, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_STENCIL_OP_ZPASS, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_STENCIL_OP_FAIL, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_STENCIL_OP_ZFAIL, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_STENCIL_OP_ZPASS, nv4097::set_stencil_op>();
+		bind<NV4097_SET_STENCIL_OP_FAIL, nv4097::set_stencil_op>();
+		bind<NV4097_SET_STENCIL_OP_ZFAIL, nv4097::set_stencil_op>();
 		bind<NV4097_SET_BACK_STENCIL_MASK, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_BACK_STENCIL_OP_ZPASS, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_BACK_STENCIL_OP_FAIL, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_BACK_STENCIL_OP_ZFAIL, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_BACK_STENCIL_OP_ZPASS, nv4097::set_stencil_op>();
+		bind<NV4097_SET_BACK_STENCIL_OP_FAIL, nv4097::set_stencil_op>();
+		bind<NV4097_SET_BACK_STENCIL_OP_ZFAIL, nv4097::set_stencil_op>();
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
 		bind<NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
@@ -3132,6 +3188,8 @@ namespace rsx
 		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind<NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma>();
 		bind<NV4097_SET_BLEND_EQUATION, nv4097::set_blend_equation>();
+		bind<NV4097_SET_BLEND_FUNC_SFACTOR, nv4097::set_blend_factor>();
+		bind<NV4097_SET_BLEND_FUNC_DFACTOR, nv4097::set_blend_factor>();
 		bind<NV4097_SET_POLYGON_STIPPLE, nv4097::notify_state_changed<fragment_state_dirty>>();
 		bind_array<NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nv4097::notify_state_changed<polygon_stipple_pattern_dirty>>();
 

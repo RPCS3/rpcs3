@@ -25,6 +25,39 @@
 #include <atomic>
 #include <thread>
 
+template <>
+void fmt_class_string<mfc_atomic_status>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](mfc_atomic_status arg)
+	{
+		switch (arg)
+		{
+		case MFC_PUTLLC_SUCCESS: return "PUTLLC";
+		case MFC_PUTLLC_FAILURE: return "PUTLLC-FAIL";
+		case MFC_PUTLLUC_SUCCESS: return "PUTLLUC";
+		case MFC_GETLLAR_SUCCESS: return "GETLLAR";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<mfc_tag_update>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](mfc_tag_update arg)
+	{
+		switch (arg)
+		{
+		case MFC_TAG_UPDATE_IMMEDIATE: return "empty";
+		case MFC_TAG_UPDATE_ANY: return "ANY";
+		case MFC_TAG_UPDATE_ALL: return "ALL";
+		}
+
+		return unknown;
+	});
+}
+
 // Verify AVX availability for TSX transactions
 static const bool s_tsx_avx = utils::has_avx();
 
@@ -815,12 +848,14 @@ std::string spu_thread::dump_regs() const
 	fmt::append(ret, "Stall Stat: %s\n", ch_stall_stat);
 	fmt::append(ret, "Stall Mask: 0x%x\n", ch_stall_mask);
 	fmt::append(ret, "Tag Stat: %s\n", ch_tag_stat);
+	fmt::append(ret, "Tag Update: %s\n", mfc_tag_update{ch_tag_upd});
 
 	if (const u32 addr = raddr)
 		fmt::append(ret, "Reservation Addr: 0x%x\n", addr);
 	else
 		fmt::append(ret, "Reservation Addr: none\n");
 
+	fmt::append(ret, "Atomic Stat: %s\n", ch_atomic_stat); // TODO: use mfc_atomic_status formatting
 	fmt::append(ret, "Interrupts Enabled: %s\n", interrupts_enabled.load());
 	fmt::append(ret, "Inbound Mailbox: %s\n", ch_in_mbox);
 	fmt::append(ret, "Out Mailbox: %s\n", ch_out_mbox);

@@ -36,7 +36,7 @@ enum MFC : u8
 };
 
 // Atomic Status Update
-enum : u32
+enum mfc_atomic_status : u32
 {
 	MFC_PUTLLC_SUCCESS = 0,
 	MFC_PUTLLC_FAILURE = 1, // reservation was lost
@@ -45,7 +45,7 @@ enum : u32
 };
 
 // MFC Write Tag Status Update Request Channel (ch23) operations
-enum : u32
+enum mfc_tag_update : u32
 {
 	MFC_TAG_UPDATE_IMMEDIATE = 0,
 	MFC_TAG_UPDATE_ANY       = 1,

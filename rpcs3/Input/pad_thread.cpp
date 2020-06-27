@@ -21,6 +21,9 @@ namespace pad
 	atomic_t<pad_thread*> g_current = nullptr;
 	std::recursive_mutex g_pad_mutex;
 	std::string g_title_id;
+	atomic_t<bool> g_reset{false};
+	atomic_t<bool> g_enabled{true};
+	atomic_t<bool> g_active{false};
 }
 
 struct pad_setting
@@ -43,7 +46,7 @@ pad_thread::pad_thread(void *_curthread, void *_curwindow, std::string_view titl
 pad_thread::~pad_thread()
 {
 	pad::g_current = nullptr;
-	active = false;
+	pad::g_active = false;
 	thread->join();
 
 	handlers.clear();
@@ -167,17 +170,6 @@ void pad_thread::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor)
 	}
 }
 
-void pad_thread::Reset(std::string_view title_id)
-{
-	pad::g_title_id = title_id;
-	reset = active.load();
-}
-
-void pad_thread::SetEnabled(bool enabled)
-{
-	is_enabled = enabled;
-}
-
 void pad_thread::SetIntercepted(bool intercepted)
 {
 	if (intercepted)
@@ -193,16 +185,16 @@ void pad_thread::SetIntercepted(bool intercepted)
 
 void pad_thread::ThreadFunc()
 {
-	active = true;
-	while (active)
+	pad::g_active = true;
+	while (pad::g_active)
 	{
-		if (!is_enabled)
+		if (!pad::g_enabled)
 		{
 			std::this_thread::sleep_for(1ms);
 			continue;
 		}
 
-		if (reset && reset.exchange(false))
+		if (pad::g_reset && pad::g_reset.exchange(false))
 		{
 			Init();
 		}
