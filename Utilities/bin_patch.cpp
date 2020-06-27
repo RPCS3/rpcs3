@@ -563,15 +563,35 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 
 		for (const auto& [title, serials] : patch.titles)
 		{
-			if (serials.find(serial) != serials.end())
+			std::string found_serial;
+
+			if (serials.find(patch_key::all) != serials.end())
 			{
-				if (const auto& app_versions = serials.at(serial); app_versions.find(app_version) != app_versions.end())
+				found_serial = patch_key::all;
+			}
+			else if (serials.find(serial) != serials.end())
+			{
+				found_serial = serial;
+			}
+
+			if (!found_serial.empty())
+			{
+				const auto& app_versions = serials.at(found_serial);
+				std::string found_app_version;
+
+				if (app_versions.find(patch_key::all) != app_versions.end())
 				{
-					if (app_versions.at(app_version))
-					{
-						enabled = true;
-						break;
-					}
+					found_app_version = patch_key::all;
+				}
+				else if (app_versions.find(app_version) != app_versions.end())
+				{
+					found_app_version = app_version;
+				}
+
+				if (!found_app_version.empty() && app_versions.at(found_app_version))
+				{
+					enabled = true;
+					break;
 				}
 			}
 		}
