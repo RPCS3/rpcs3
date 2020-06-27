@@ -57,16 +57,7 @@ EmuCallbacks main_application::CreateCallbacks()
 {
 	EmuCallbacks callbacks;
 
-	callbacks.reset_pads = [this](const std::string& title_id)
-	{
-		pad::get_current_handler()->Reset(title_id);
-	};
-	callbacks.enable_pads = [this](bool enable)
-	{
-		pad::get_current_handler()->SetEnabled(enable);
-	};
-
-	callbacks.init_kb_handler = [=, this]()
+	callbacks.init_kb_handler = [this]()
 	{
 		switch (keyboard_handler type = g_cfg.io.keyboard)
 		{
@@ -86,7 +77,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		}
 	};
 
-	callbacks.init_mouse_handler = [=, this]()
+	callbacks.init_mouse_handler = [this]()
 	{
 		switch (mouse_handler type = g_cfg.io.mouse)
 		{

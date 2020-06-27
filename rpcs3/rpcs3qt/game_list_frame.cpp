@@ -19,6 +19,7 @@
 #include "Utilities/types.h"
 #include "Utilities/lockless.h"
 #include "util/yaml.hpp"
+#include "Input/pad_thread.h"
 
 #include <algorithm>
 #include <iterator>
@@ -1006,27 +1007,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(pad_configure, &QAction::triggered, [=, this]()
 	{
-		if (!Emu.IsStopped())
-		{
-			Emu.GetCallbacks().enable_pads(false);
-		}
 		pad_settings_dialog dlg(this, &current_game);
-		connect(&dlg, &QDialog::finished, [this](int/* result*/)
-		{
-			if (Emu.IsStopped())
-			{
-				return;
-			}
-			Emu.GetCallbacks().reset_pads(Emu.GetTitleID());
-		});
+
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomPadConfig)
 		{
 			gameinfo->hasCustomPadConfig = true;
 			ShowCustomConfigIcon(gameinfo);
-		}
-		if (!Emu.IsStopped())
-		{
-			Emu.GetCallbacks().enable_pads(true);
 		}
 	});
 	connect(hide_serial, &QAction::triggered, [serial, this](bool checked)
@@ -1250,9 +1236,9 @@ bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, 
 		}
 		if (!Emu.IsStopped() && Emu.GetTitleID() == title_id)
 		{
-			Emu.GetCallbacks().enable_pads(false);
-			Emu.GetCallbacks().reset_pads(title_id);
-			Emu.GetCallbacks().enable_pads(true);
+			pad::set_enabled(false);
+			pad::reset(title_id);
+			pad::set_enabled(true);
 		}
 		game_list_log.notice("Removed pad configuration directory: %s", config_dir);
 		return true;

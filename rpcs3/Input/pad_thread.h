@@ -20,8 +20,6 @@ public:
 	auto& GetPads() { return m_pads; }
 	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor);
 	void Init();
-	void Reset(std::string_view title_id);
-	void SetEnabled(bool enabled);
 	void SetIntercepted(bool intercepted);
 
 	s32 AddLddPad();
@@ -41,9 +39,6 @@ protected:
 	PadInfo m_info{ 0, 0, false };
 	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads;
 
-	atomic_t<bool> active{ false };
-	atomic_t<bool> reset{ false };
-	atomic_t<bool> is_enabled{ true };
 	std::shared_ptr<std::thread> thread;
 
 	u32 num_ldd_pad = 0;
@@ -54,10 +49,29 @@ namespace pad
 	extern atomic_t<pad_thread*> g_current;
 	extern std::recursive_mutex g_pad_mutex;
 	extern std::string g_title_id;
+	extern atomic_t<bool> g_enabled;
+	extern atomic_t<bool> g_reset;
+	extern atomic_t<bool> g_active;
 
-	static inline class pad_thread* get_current_handler()
+	static inline class pad_thread* get_current_handler(bool relaxed = false)
 	{
+		if (relaxed)
+		{
+			return g_current.load();
+		}
+
 		return verify(HERE, g_current.load());
+	}
+
+	static inline void set_enabled(bool enabled)
+	{
+		g_enabled = enabled;
+	}
+
+	static inline void reset(std::string_view title_id)
+	{
+		g_title_id = title_id;
+		g_reset = g_active.load();
 	}
 
 	static inline void SetIntercepted(bool intercepted)
