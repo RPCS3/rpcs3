@@ -739,6 +739,12 @@ bool cpu_thread::check_state() noexcept
 				cpu_counter::add(this);
 			}
 
+			if (state & cpu_flag::pending)
+			{
+				// Execute pending work
+				cpu_work();
+			}
+
 			if (retval)
 			{
 				cpu_on_stop();

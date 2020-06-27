@@ -1655,6 +1655,18 @@ void spu_thread::cpu_task()
 	}
 }
 
+void spu_thread::cpu_work()
+{
+	const auto timeout = +g_cfg.core.mfc_transfers_timeout;
+
+	// If either MFC size exceeds limit or timeout has been reached execute pending MFC commands
+	if (mfc_size > g_cfg.core.mfc_transfers_shuffling || (timeout && get_system_time() - mfc_last_timestamp >= timeout))
+	{
+		do_mfc(false);
+		check_mfc_interrupts(pc + 4);
+	}
+}
+
 struct raw_spu_cleanup
 {
 	raw_spu_cleanup() = default;
@@ -2948,14 +2960,15 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	vm::reservation_notifier(addr).notify_all(-128);
 }
 
-void spu_thread::do_mfc(bool /*wait*/)
+void spu_thread::do_mfc(bool can_escape)
 {
 	u32 removed = 0;
 	u32 barrier = 0;
 	u32 fence = 0;
+	u16 exec_mask = 0;
+	bool pending = false;
 
-	// Process enqueued commands
-	static_cast<void>(std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, [&](spu_mfc_cmd& args)
+	auto process_command = [&](spu_mfc_cmd& args)
 	{
 		// Select tag bit in the tag mask or the stall mask
 		const u32 mask = utils::rol32(1, args.tag);
@@ -2989,6 +3002,20 @@ void spu_thread::do_mfc(bool /*wait*/)
 				barrier |= mask;
 			}
 
+			return false;
+		}
+
+		// If command is not enabled in execution mask, execute it later
+		if (!(exec_mask & (1u << (&args - mfc_queue))))
+		{
+			if (args.cmd & MFC_BARRIER_MASK)
+			{
+				barrier |= mask;
+			}
+
+			// Fence is set for any command
+			fence |= mask;
+			pending = true;
 			return false;
 		}
 
@@ -3028,31 +3055,63 @@ void spu_thread::do_mfc(bool /*wait*/)
 
 		removed++;
 		return true;
-	}));
+	};
 
-	mfc_size -= removed;
-	mfc_barrier = barrier;
-	mfc_fence = fence;
-
-	if (removed && ch_tag_upd)
+	auto get_exec_mask = [&size = mfc_size]
 	{
-		const u32 completed = get_mfc_completed();
+		// Get commands' execution mask
+		// Mask bits are always set when mfc_transfers_shuffling is 0
+		return static_cast<u16>((0 - (1u << std::min<u32>(g_cfg.core.mfc_transfers_shuffling, size))) | __rdtsc());
+	};
 
-		if (completed && ch_tag_upd == MFC_TAG_UPDATE_ANY)
+	// Process enqueued commands
+	while (true)
+	{
+		removed = 0;
+		barrier = 0;
+		fence = 0;
+
+		// Shuffle commands execution (if enabled), explicit barriers are obeyed
+		pending = false;
+		exec_mask = get_exec_mask();
+
+		static_cast<void>(std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, process_command));
+
+		mfc_size -= removed;
+		mfc_barrier = barrier;
+		mfc_fence = fence;
+
+		if (removed && ch_tag_upd)
 		{
-			ch_tag_stat.set_value(completed);
-			ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
+			const u32 completed = get_mfc_completed();
+
+			if (completed && ch_tag_upd == MFC_TAG_UPDATE_ANY)
+			{
+				ch_tag_stat.set_value(completed);
+				ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
+			}
+			else if (completed == ch_tag_mask && ch_tag_upd == MFC_TAG_UPDATE_ALL)
+			{
+				ch_tag_stat.set_value(completed);
+				ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
+			}
 		}
-		else if (completed == ch_tag_mask && ch_tag_upd == MFC_TAG_UPDATE_ALL)
+
+		if (can_escape && check_mfc_interrupts(pc + 4))
 		{
-			ch_tag_stat.set_value(completed);
-			ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
+			spu_runtime::g_escape(this);
+		}
+
+		if (!pending)
+		{
+			break;
 		}
 	}
 
-	if (check_mfc_interrupts(pc + 4))
+	if (state & cpu_flag::pending)
 	{
-		spu_runtime::g_escape(this);
+		// No more pending work
+		state -= cpu_flag::pending;
 	}
 }
 
@@ -3109,6 +3168,15 @@ bool spu_thread::process_mfc_cmd()
 	// Stall infinitely if MFC queue is full
 	while (mfc_size >= 16) [[unlikely]]
 	{
+		// Reset MFC timestamp in the case of full queue
+		mfc_last_timestamp = 0;
+
+		// Process MFC commands
+		if (!test_stopped())
+		{
+			return false;
+		}
+
 		auto old = state.add_fetch(cpu_flag::wait);
 
 		if (is_stopped(old))
@@ -3382,12 +3450,18 @@ bool spu_thread::process_mfc_cmd()
 		{
 			if (do_dma_check(ch_mfc_cmd)) [[likely]]
 			{
-				if (ch_mfc_cmd.size)
+				if (!g_cfg.core.mfc_transfers_shuffling)
 				{
-					do_dma_transfer(this, ch_mfc_cmd, ls);
+					if (ch_mfc_cmd.size)
+					{
+						do_dma_transfer(this, ch_mfc_cmd, ls);
+					}
+
+					return true;
 				}
 
-				return true;
+				if (!state.test_and_set(cpu_flag::pending))
+					mfc_last_timestamp = get_system_time();
 			}
 
 			mfc_queue[mfc_size++] = ch_mfc_cmd;
@@ -3429,9 +3503,17 @@ bool spu_thread::process_mfc_cmd()
 
 			if (do_dma_check(cmd)) [[likely]]
 			{
-				if (!cmd.size || do_list_transfer(cmd)) [[likely]]
+				if (!g_cfg.core.mfc_transfers_shuffling)
 				{
-					return true;
+					if (!cmd.size || do_list_transfer(cmd)) [[likely]]
+					{
+						return true;
+					}
+				}
+				else
+				{
+					if (!state.test_and_set(cpu_flag::pending))
+						mfc_last_timestamp = get_system_time();
 				}
 			}
 
@@ -3445,6 +3527,7 @@ bool spu_thread::process_mfc_cmd()
 
 			if (check_mfc_interrupts(pc + 4))
 			{
+				do_mfc(false);
 				spu_runtime::g_escape(this);
 			}
 
@@ -3714,6 +3797,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 			state += cpu_flag::wait + cpu_flag::temp;
 		}
 
+		if (state & cpu_flag::pending)
+		{
+			do_mfc();
+		}
+
 		for (int i = 0; i < 10 && channel.get_count() == 0; i++)
 		{
 			busy_wait();
@@ -3739,6 +3827,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		while (true)
 		{
+			if (state & cpu_flag::pending)
+			{
+				do_mfc();
+			}
+
 			for (int i = 0; i < 10 && ch_in_mbox.get_count() == 0; i++)
 			{
 				busy_wait();
@@ -3770,13 +3863,17 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case MFC_RdTagStat:
 	{
+		if (state & cpu_flag::pending)
+		{
+			do_mfc();
+		}
+
 		if (u32 out; ch_tag_stat.try_read(out))
 		{
 			ch_tag_stat.set_value(0, false);
 			return out;
 		}
 
-		// Will stall infinitely
 		return read_channel(ch_tag_stat);
 	}
 
@@ -3929,6 +4026,11 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 	{
 		if (get_type() >= spu_type::raw)
 		{
+			if (state & cpu_flag::pending)
+			{
+				do_mfc();
+			}
+
 			if (ch_out_intr_mbox.get_count())
 			{
 				state += cpu_flag::wait;
@@ -4060,6 +4162,11 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutMbox:
 	{
+		if (state & cpu_flag::pending)
+		{
+			do_mfc();
+		}
+
 		if (ch_out_mbox.get_count())
 		{
 			state += cpu_flag::wait;
