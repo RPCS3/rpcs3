@@ -34,6 +34,41 @@ enum : u32
 	PKG_FILE_ENTRY_PSP            = 0x10000000,
 };
 
+enum : u32
+{
+	PKG_CONTENT_TYPE_UNKNOWN_1      = 0x01, // ?
+	PKG_CONTENT_TYPE_UNKNOWN_2      = 0x02, // ?
+	PKG_CONTENT_TYPE_UNKNOWN_3      = 0x03, // ?
+	PKG_CONTENT_TYPE_GAME_DATA      = 0x04, // GameData (also patches)
+	PKG_CONTENT_TYPE_GAME_EXEC      = 0x05, // GameExec
+	PKG_CONTENT_TYPE_PS1_EMU        = 0x06, // PS1emu
+	PKG_CONTENT_TYPE_PC_ENGINE      = 0x07, // PSP & PCEngine
+	PKG_CONTENT_TYPE_UNKNOWN_4      = 0x08, // ?
+	PKG_CONTENT_TYPE_THEME          = 0x09, // Theme
+	PKG_CONTENT_TYPE_WIDGET         = 0x0A, // Widget
+	PKG_CONTENT_TYPE_LICENSE        = 0x0B, // License
+	PKG_CONTENT_TYPE_VSH_MODULE     = 0x0C, // VSHModule
+	PKG_CONTENT_TYPE_PSN_AVATAR     = 0x0D, // PSN Avatar
+	PKG_CONTENT_TYPE_PSP_GO         = 0x0E, // PSPgo
+	PKG_CONTENT_TYPE_MINIS          = 0x0F, // Minis
+	PKG_CONTENT_TYPE_NEOGEO         = 0x10, // NEOGEO
+	PKG_CONTENT_TYPE_VMC            = 0x11, // VMC
+	PKG_CONTENT_TYPE_PS2_CLASSIC    = 0x12, // ?PS2Classic? Seen on PS2 classic
+	PKG_CONTENT_TYPE_UNKNOWN_5      = 0x13, // ?
+	PKG_CONTENT_TYPE_PSP_REMASTERED = 0x14, // ?
+	PKG_CONTENT_TYPE_PSP2_GD        = 0x15, // PSVita Game Data
+	PKG_CONTENT_TYPE_PSP2_AC        = 0x16, // PSVita Additional Content
+	PKG_CONTENT_TYPE_PSP2_LA        = 0x17, // PSVita LiveArea
+	PKG_CONTENT_TYPE_PSM_1          = 0x18, // PSVita PSM ?
+	PKG_CONTENT_TYPE_WT             = 0x19, // Web TV ?
+	PKG_CONTENT_TYPE_UNKNOWN_6      = 0x1A, // ?
+	PKG_CONTENT_TYPE_UNKNOWN_7      = 0x1B, // ?
+	PKG_CONTENT_TYPE_UNKNOWN_8      = 0x1C, // ?
+	PKG_CONTENT_TYPE_PSM_2          = 0x1D, // PSVita PSM ?
+	PKG_CONTENT_TYPE_UNKNOWN_9      = 0x1E, // ?
+	PKG_CONTENT_TYPE_PSP2_THEME     = 0x1F, // PSVita Theme
+};
+
 // Structs
 struct PKGHeader
 {
