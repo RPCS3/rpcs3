@@ -75,6 +75,7 @@ namespace vk
 		INTEL
 	};
 
+	// Chip classes grouped by vendor in order of release
 	enum class chip_class
 	{
 		unknown,
@@ -87,7 +88,8 @@ namespace vk
 		NV_maxwell,
 		NV_pascal,
 		NV_volta,
-		NV_turing
+		NV_turing,
+		NV_ampere
 	};
 
 	enum // special remap_encoding enums
@@ -298,6 +300,7 @@ namespace vk
 				return found->second;
 			}
 
+			rsx_log.warning("Unknown chip with device ID 0x%x", device_id);
 			return default_;
 		}
 	};
