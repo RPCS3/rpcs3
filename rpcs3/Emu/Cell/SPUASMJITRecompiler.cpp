@@ -2477,7 +2477,7 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		Label ret = c->newLabel();
 		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->mov(SPU_OFF_32(ch_tag_mask), qw0->r32());
-		c->cmp(SPU_OFF_32(ch_tag_upd), 0);
+		c->cmp(SPU_OFF_32(ch_tag_upd), MFC_TAG_UPDATE_IMMEDIATE);
 		c->jnz(upd);
 
 		after.emplace_back([=, this, pos = m_pos]
