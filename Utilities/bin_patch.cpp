@@ -559,6 +559,99 @@ std::size_t patch_engine::apply_with_ls_check(const std::string& name, u8* dst, 
 }
 
 template <bool check_local_storage>
+static std::size_t apply_modification(const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 ls_addr)
+{
+	size_t applied = 0;
+
+	for (const auto& p : patch.data_list)
+	{
+		u32 offset = p.offset;
+
+		if constexpr (check_local_storage)
+		{
+			if (offset < ls_addr || offset >= (ls_addr + filesz))
+			{
+				// This patch is out of range for this segment
+				continue;
+			}
+			
+			offset -= ls_addr;
+		}
+
+		auto ptr = dst + offset;
+
+		switch (p.type)
+		{
+		case patch_type::invalid:
+		case patch_type::load:
+		{
+			// Invalid in this context
+			continue;
+		}
+		case patch_type::byte:
+		{
+			*ptr = static_cast<u8>(p.value.long_value);
+			break;
+		}
+		case patch_type::le16:
+		{
+			*reinterpret_cast<le_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
+			break;
+		}
+		case patch_type::le32:
+		{
+			*reinterpret_cast<le_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
+			break;
+		}
+		case patch_type::lef32:
+		{
+			*reinterpret_cast<le_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
+			break;
+		}
+		case patch_type::le64:
+		{
+			*reinterpret_cast<le_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
+			break;
+		}
+		case patch_type::lef64:
+		{
+			*reinterpret_cast<le_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
+			break;
+		}
+		case patch_type::be16:
+		{
+			*reinterpret_cast<be_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
+			break;
+		}
+		case patch_type::be32:
+		{
+			*reinterpret_cast<be_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
+			break;
+		}
+		case patch_type::bef32:
+		{
+			*reinterpret_cast<be_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
+			break;
+		}
+		case patch_type::be64:
+		{
+			*reinterpret_cast<be_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
+			break;
+		}
+		case patch_type::bef64:
+		{
+			*reinterpret_cast<be_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
+			break;
+		}
+		}
+
+		++applied;
+	}
+
+	return applied;
+}
+
+template <bool check_local_storage>
 std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
 {
 	if (m_map.find(name) == m_map.cend())
@@ -571,18 +664,27 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 	const auto serial = Emu.GetTitleID();
 	const auto app_version = Emu.GetAppVersion();
 
-	// Apply modifications sequentially
+	// Different containers in order to seperate the patches
+	std::vector<patch_engine::patch_info> patches_for_this_serial_and_this_version;
+	std::vector<patch_engine::patch_info> patches_for_this_serial_and_all_versions;
+	std::vector<patch_engine::patch_info> patches_for_all_serials_and_this_version;
+	std::vector<patch_engine::patch_info> patches_for_all_serials_and_all_versions;
+
+	// Sort patches into different vectors based on their serial and version
 	for (const auto& [description, patch] : container.patch_info_map)
 	{
+		// Find out if this legacy patch is enabled
 		if (patch.is_legacy && !patch.is_enabled)
 		{
 			continue;
 		}
 
-		bool enabled = false;
-
+		// Find out if this patch is enabled
 		for (const auto& [title, serials] : patch.titles)
 		{
+			bool is_all_serials = false;
+			bool is_all_versions = false;
+
 			std::string found_serial;
 
 			if (serials.find(serial) != serials.end())
@@ -592,35 +694,65 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 			else if (serials.find(patch_key::all) != serials.end())
 			{
 				found_serial = patch_key::all;
+				is_all_serials = true;
 			}
 
-			if (!found_serial.empty())
+			if (found_serial.empty())
 			{
-				const auto& app_versions = serials.at(found_serial);
-				std::string found_app_version;
+				continue;
+			}
 
-				if (app_versions.find(app_version) != app_versions.end())
+			const auto& app_versions = serials.at(found_serial);
+			std::string found_app_version;
+
+			if (app_versions.find(app_version) != app_versions.end())
+			{
+				found_app_version = app_version;
+			}
+			else if (app_versions.find(patch_key::all) != app_versions.end())
+			{
+				found_app_version = patch_key::all;
+				is_all_versions = true;
+			}
+
+			if (!found_app_version.empty() && app_versions.at(found_app_version))
+			{
+				// This patch is enabled
+				if (is_all_serials)
 				{
-					found_app_version = app_version;
+					if (is_all_versions)
+					{
+						patches_for_all_serials_and_all_versions.push_back(patch);
+					}
+					else
+					{
+						patches_for_all_serials_and_this_version.push_back(patch);
+					}
 				}
-				else if (app_versions.find(patch_key::all) != app_versions.end())
+				else if (is_all_versions)
 				{
-					found_app_version = patch_key::all;
+					patches_for_this_serial_and_all_versions.push_back(patch);
+				}
+				else
+				{
+					patches_for_this_serial_and_this_version.push_back(patch);
 				}
 
-				if (!found_app_version.empty() && app_versions.at(found_app_version))
-				{
-					enabled = true;
-					break;
-				}
+				break;
 			}
 		}
+	}
 
-		if (!enabled)
-		{
-			continue;
-		}
+	// Sort specific patches in front of global patches
+	std::vector<patch_engine::patch_info> sorted_patches;
+	sorted_patches.insert(sorted_patches.end(), patches_for_this_serial_and_this_version.begin(), patches_for_this_serial_and_this_version.end());
+	sorted_patches.insert(sorted_patches.end(), patches_for_this_serial_and_all_versions.begin(), patches_for_this_serial_and_all_versions.end());
+	sorted_patches.insert(sorted_patches.end(), patches_for_all_serials_and_this_version.begin(), patches_for_all_serials_and_this_version.end());
+	sorted_patches.insert(sorted_patches.end(), patches_for_all_serials_and_all_versions.begin(), patches_for_all_serials_and_all_versions.end());
 
+	// Apply modifications sequentially
+	for (const auto& patch : sorted_patches)
+	{
 		if (!patch.patch_group.empty())
 		{
 			if (m_applied_groups.contains(patch.patch_group))
@@ -631,103 +763,17 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 			m_applied_groups.insert(patch.patch_group);
 		}
 
-		size_t applied = 0;
+		const size_t applied = apply_modification<check_local_storage>(patch, dst, filesz, ls_addr);
+		applied_total += applied;
 
-		for (const auto& p : patch.data_list)
+		if (patch.is_legacy)
 		{
-			u32 offset = p.offset;
-
-			if constexpr (check_local_storage)
-			{
-				if (offset < ls_addr || offset >= (ls_addr + filesz))
-				{
-					// This patch is out of range for this segment
-					continue;
-				}
-				
-				offset -= ls_addr;
-			}
-
-			auto ptr = dst + offset;
-
-			switch (p.type)
-			{
-			case patch_type::invalid:
-			case patch_type::load:
-			{
-				// Invalid in this context
-				continue;
-			}
-			case patch_type::byte:
-			{
-				*ptr = static_cast<u8>(p.value.long_value);
-				break;
-			}
-			case patch_type::le16:
-			{
-				*reinterpret_cast<le_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
-				break;
-			}
-			case patch_type::le32:
-			{
-				*reinterpret_cast<le_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
-				break;
-			}
-			case patch_type::lef32:
-			{
-				*reinterpret_cast<le_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
-				break;
-			}
-			case patch_type::le64:
-			{
-				*reinterpret_cast<le_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
-				break;
-			}
-			case patch_type::lef64:
-			{
-				*reinterpret_cast<le_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
-				break;
-			}
-			case patch_type::be16:
-			{
-				*reinterpret_cast<be_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
-				break;
-			}
-			case patch_type::be32:
-			{
-				*reinterpret_cast<be_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
-				break;
-			}
-			case patch_type::bef32:
-			{
-				*reinterpret_cast<be_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
-				break;
-			}
-			case patch_type::be64:
-			{
-				*reinterpret_cast<be_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
-				break;
-			}
-			case patch_type::bef64:
-			{
-				*reinterpret_cast<be_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
-				break;
-			}
-			}
-
-			++applied;
-		}
-
-		if (container.is_legacy)
-		{
-			patch_log.notice("Applied legacy patch (hash='%s')(<- %d)", name, applied);
+			patch_log.notice("Applied legacy patch (hash='%s')(<- %d)", patch.hash, applied);
 		}
 		else
 		{
-			patch_log.notice("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %d)", name, description, patch.author, patch.patch_version, patch.version, applied);
+			patch_log.notice("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %d)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied);
 		}
-
-		applied_total += applied;
 	}
 
 	return applied_total;
