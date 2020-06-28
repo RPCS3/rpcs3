@@ -110,13 +110,13 @@ void register_editor_dialog::updateRegister(const QString& text)
 		if (first_brk != umax)
 		{
 			long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
-			if (reg.starts_with("GPR")) str = fmt::format("%016llx", ppu.gpr[reg_index]);
-			if (reg.starts_with("FPR")) str = fmt::format("%016llx", ppu.fpr[reg_index]);
-			if (reg.starts_with("VR"))  str = fmt::format("%016llx%016llx", ppu.vr[reg_index]._u64[1], ppu.vr[reg_index]._u64[0]);
+			if (reg.starts_with("r")) str = fmt::format("%016llx", ppu.gpr[reg_index]);
+			else if (reg.starts_with("f")) str = fmt::format("%016llx", ppu.fpr[reg_index]);
+			else if (reg.starts_with("v"))  str = fmt::format("%016llx%016llx", ppu.vr[reg_index]._u64[1], ppu.vr[reg_index]._u64[0]);
 		}
-		if (reg == "CR")  str = fmt::format("%08x", ppu.cr.pack());
-		if (reg == "LR")  str = fmt::format("%016llx", ppu.lr);
-		if (reg == "CTR") str = fmt::format("%016llx", ppu.ctr);
+		else if (reg == "CR")  str = fmt::format("%08x", ppu.cr.pack());
+		else if (reg == "LR")  str = fmt::format("%016llx", ppu.lr);
+		else if (reg == "CTR") str = fmt::format("%016llx", ppu.ctr);
 	}
 	else
 	{
@@ -127,7 +127,7 @@ void register_editor_dialog::updateRegister(const QString& text)
 		{
 			long reg_index;
 			reg_index = atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());
-			if (reg.starts_with("GPR")) str = fmt::format("%016llx%016llx", spu.gpr[reg_index]._u64[1], spu.gpr[reg_index]._u64[0]);
+			if (reg.starts_with("r")) str = fmt::format("%016llx%016llx", spu.gpr[reg_index]._u64[1], spu.gpr[reg_index]._u64[0]);
 		}
 	}
 
@@ -145,21 +145,21 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 	{
 		auto& ppu = *static_cast<ppu_thread*>(cpu);
 
-		while (value.length() < 32) value = "0" + value;
+		if (auto len = value.length(); len < 32) value.insert(0, 32 - len, '0');
 		const auto first_brk = reg.find('[');
 		// TODO: handle invalid conversions
 		{
 			if (first_brk != umax)
 			{
 				const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
-				if (reg.starts_with("GPR") || reg.starts_with("FPR"))
+				if (reg.starts_with("r") || reg.starts_with("f"))
 				{
 					const ullong reg_value = std::stoull(value.substr(16, 31), 0, 16);
-					if (reg.starts_with("GPR")) ppu.gpr[reg_index] = static_cast<u64>(reg_value);
-					if (reg.starts_with("FPR")) ppu.fpr[reg_index] = std::bit_cast<f64>(reg_value);
+					if (reg.starts_with("r")) ppu.gpr[reg_index] = static_cast<u64>(reg_value);
+					else if (reg.starts_with("f")) ppu.fpr[reg_index] = std::bit_cast<f64>(reg_value);
 					return;
 				}
-				if (reg.starts_with("VR"))
+				else if (reg.starts_with("v"))
 				{
 					const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
 					const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
@@ -168,17 +168,17 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 					return;
 				}
 			}
-			if (reg == "LR" || reg == "CTR")
+			else if (reg == "LR" || reg == "CTR")
 			{
 				const ullong reg_value = std::stoull(value.substr(16, 31), 0, 16);
 				if (reg == "LR") ppu.lr = static_cast<u64>(reg_value);
-				if (reg == "CTR") ppu.ctr = static_cast<u64>(reg_value);
+				else if (reg == "CTR") ppu.ctr = static_cast<u64>(reg_value);
 				return;
 			}
-			if (reg == "CR")
+			else if (reg == "CR")
 			{
 				const ullong reg_value = std::stoull(value.substr(24, 31), 0, 16);
-				if (reg == "CR") ppu.cr.unpack(static_cast<u32>(reg_value));
+				ppu.cr.unpack(static_cast<u32>(reg_value));
 				return;
 			}
 		}
@@ -187,14 +187,14 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 	{
 		auto& spu = *static_cast<spu_thread*>(cpu);
 
-		while (value.length() < 32) value = "0" + value;
+		if (auto len = value.length(); len < 32) value.insert(0, 32 - len, '0');
 		const auto first_brk = reg.find('[');
 		// TODO: handle invalid conversions
 		{
 			if (first_brk != umax)
 			{
 				const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());
-				if (reg.starts_with("GPR"))
+				if (reg.starts_with("r"))
 				{
 					const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
 					const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);

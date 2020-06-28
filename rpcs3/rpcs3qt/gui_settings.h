@@ -106,6 +106,7 @@ namespace gui
 	const QString fs           = "FileSystem";
 	const QString gs_frame     = "GSFrame";
 	const QString trophy       = "Trophy";
+	const QString patches      = "Patches";
 	const QString savedata     = "SaveData";
 	const QString users        = "Users";
 	const QString notes        = "Notes";
@@ -212,6 +213,9 @@ namespace gui
 	const gui_save tr_splitterState = gui_save(trophy, "splitterState", QByteArray());
 	const gui_save tr_games_state   = gui_save(trophy, "games_state",   QByteArray());
 	const gui_save tr_trophy_state  = gui_save(trophy, "trophy_state",  QByteArray());
+
+	const gui_save pm_geometry       = gui_save(patches, "geometry",      QByteArray());
+	const gui_save pm_splitter_state = gui_save(patches, "splitter_state", QByteArray());
 
 	const gui_save sd_geometry   = gui_save(savedata, "geometry",   QByteArray());
 	const gui_save sd_icon_size  = gui_save(savedata, "icon_size",  60);

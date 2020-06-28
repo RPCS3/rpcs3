@@ -4,7 +4,7 @@ Localized::Localized()
 {
 }
 
-QString Localized::GetVerboseTimeByMs(qint64 elapsed_ms) const
+QString Localized::GetVerboseTimeByMs(qint64 elapsed_ms, bool show_days) const
 {
 	if (elapsed_ms <= 0)
 	{
@@ -13,14 +13,43 @@ QString Localized::GetVerboseTimeByMs(qint64 elapsed_ms) const
 
 	const qint64 elapsed_seconds = (elapsed_ms / 1000) + ((elapsed_ms % 1000) > 0 ? 1 : 0);
 
-	const qint64 hours   = elapsed_seconds / 3600;
-	const qint64 minutes = (elapsed_seconds % 3600) / 60;
-	const qint64 seconds = (elapsed_seconds % 3600) % 60;
+	qint64 hours = elapsed_seconds / 3600;
 
 	// For anyone who was wondering why there need to be so many cases:
 	// 1. Using variables won't work for future localization due to varying sentence structure in different languages.
 	// 2. The provided Qt functionality only works if localization is already enabled
 	// 3. The provided Qt functionality only works for single variables
+
+	if (show_days && hours >= 24)
+	{
+		const qint64 days  = hours / 24;
+		hours = hours % 24;
+
+		if (hours <= 0)
+		{
+			if (days == 1)
+			{
+				return tr("%0 day").arg(days);
+			}
+			return tr("%0 days").arg(days);
+		}
+		if (days == 1 && hours == 1)
+		{
+			return tr("%0 day and %1 hour").arg(days).arg(hours);
+		}
+		if (days == 1)
+		{
+			return tr("%0 day and %1 hours").arg(days).arg(hours);
+		}
+		if (hours == 1)
+		{
+			return tr("%0 days and %1 hour").arg(days).arg(hours);
+		}
+		return tr("%0 days and %1 hours").arg(days).arg(hours);
+	}
+
+	const qint64 minutes = (elapsed_seconds % 3600) / 60;
+	const qint64 seconds = (elapsed_seconds % 3600) % 60;
 
 	if (hours <= 0)
 	{

@@ -329,6 +329,43 @@ namespace gui
 			return nullptr;
 		}
 
+		QList<QTreeWidgetItem*> find_children_by_data(QTreeWidgetItem* parent, const QList<QPair<int /*role*/, QVariant /*data*/>>& criteria, bool recursive)
+		{
+			QList<QTreeWidgetItem*> list;
+
+			if (parent)
+			{
+				for (int i = 0; i < parent->childCount(); i++)
+				{
+					if (auto item = parent->child(i))
+					{
+						bool match = true;
+
+						for (const auto [role, data] : criteria)
+						{
+							if (item->data(0, role) != data)
+							{
+								match = false;
+								break;
+							}
+						}
+
+						if (match)
+						{
+							list << item;
+						}
+
+						if (recursive)
+						{
+							list << find_children_by_data(item, criteria, recursive);
+						}
+					}
+				}
+			}
+
+			return list;
+		}
+
 		QTreeWidgetItem* add_child(QTreeWidgetItem *parent, const QString& text, int column)
 		{
 			if (parent)

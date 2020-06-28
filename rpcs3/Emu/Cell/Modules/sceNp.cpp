@@ -428,17 +428,17 @@ error_code sceNpTerm()
 
 error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
-	std::array<u8, 0x10> k_licensee{};
+	v128 k_licensee{};
 
 	if (k_licensee_addr)
 	{
-		std::copy_n(k_licensee_addr.get_ptr(), k_licensee.size(), k_licensee.begin());
-		sceNp.notice("npDrmIsAvailable(): KLicense key %s", *reinterpret_cast<be_t<v128, 1>*>(k_licensee.data()));
+		std::memcpy(&k_licensee, k_licensee_addr.get_ptr(), sizeof(k_licensee));
+		sceNp.notice("npDrmIsAvailable(): KLicense key %s", std::bit_cast<be_t<v128>>(k_licensee));
 	}
 
 	if (Emu.GetCat() == "PE")
 	{
-		std::copy_n(NP_PSP_KEY_2, std::size(NP_PSP_KEY_2), k_licensee.begin());
+		std::memcpy(&k_licensee, NP_PSP_KEY_2, sizeof(k_licensee));
 		sceNp.success("npDrmIsAvailable(): PSP remaster KLicense key applied.");
 	}
 
@@ -453,9 +453,6 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 	}
 
 	auto npdrmkeys = g_fxo->get<loaded_npdrm_keys>();
-
-	npdrmkeys->devKlic.fill(0);
-	npdrmkeys->rifKey.fill(0);
 
 	std::string rap_dir_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/";
 
@@ -472,9 +469,9 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		if (!k_licensee_addr)
 			k_licensee = get_default_self_klic();
 
-		if (verify_npdrm_self_headers(enc_file, k_licensee.data()))
+		if (verify_npdrm_self_headers(enc_file, k_licensee._bytes))
 		{
-			npdrmkeys->devKlic = std::move(k_licensee);
+			npdrmkeys->devKlic = k_licensee;
 		}
 		else
 		{
@@ -488,10 +485,10 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 		std::string contentID;
 
-		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, k_licensee, &contentID))
+		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, k_licensee._bytes, &contentID))
 		{
 			const std::string rap_file = rap_dir_path + contentID + ".rap";
-			npdrmkeys->devKlic         = std::move(k_licensee);
+			npdrmkeys->devKlic = k_licensee;
 
 			if (fs::is_file(vfs::get(rap_file)))
 				npdrmkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{vfs::get(rap_file)});

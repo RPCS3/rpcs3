@@ -58,6 +58,8 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	: QDialog(parent), ui(new Ui::pad_settings_dialog)
 {
+	pad::set_enabled(false);
+
 	ui->setupUi(this);
 
 	// load input config
@@ -207,6 +209,13 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 pad_settings_dialog::~pad_settings_dialog()
 {
 	delete ui;
+
+	if (!Emu.IsStopped())
+	{
+		pad::reset(Emu.GetTitleID());
+	}
+
+	pad::set_enabled(true);
 }
 
 void pad_settings_dialog::InitButtons()
@@ -1451,8 +1460,10 @@ bool pad_settings_dialog::GetIsLddPad(int index) const
 	if (index >= 0 && !Emu.IsStopped() && (m_title_id.empty() || m_title_id == Emu.GetTitleID()))
 	{
 		std::lock_guard lock(pad::g_pad_mutex);
-		const auto handler = pad::get_current_handler();
-		return handler && handler->GetPads().at(index)->ldd;
+		if (const auto handler = pad::get_current_handler(true))
+		{
+			return handler->GetPads().at(index)->ldd;
+		}
 	}
 
 	return false;

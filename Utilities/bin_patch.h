@@ -9,6 +9,7 @@
 
 enum class patch_type
 {
+	invalid,
 	load,
 	byte,
 	le16,
@@ -30,7 +31,12 @@ public:
 	{
 		patch_type type = patch_type::load;
 		u32 offset = 0;
-		u64 value = 0;
+		std::string original_value; // Used for import consistency (avoid rounding etc.)
+		union
+		{
+			u64 long_value;
+			f64 double_value;
+		} value { 0 };
 	};
 
 	struct patch_info
@@ -38,30 +44,29 @@ public:
 		// Patch information
 		std::vector<patch_engine::patch_data> data_list;
 		std::string description;
+		std::string title;
+		std::string serials;
 		std::string patch_version;
 		std::string author;
 		std::string notes;
+		std::string source_path;
 		bool enabled = false;
 
-		// Redundant information for accessibility (see patch_title_info)
+		// Redundant information for accessibility (see patch_container)
 		std::string hash;
 		std::string version;
-		std::string title;
-		std::string serials;
 		bool is_legacy = false;
 	};
 
-	struct patch_title_info
+	struct patch_container
 	{
 		std::unordered_map<std::string /*description*/, patch_engine::patch_info> patch_info_map;
 		std::string hash;
 		std::string version;
-		std::string title;
-		std::string serials;
 		bool is_legacy = false;
 	};
 
-	using patch_map = std::unordered_map<std::string /*hash*/, patch_title_info>;
+	using patch_map = std::unordered_map<std::string /*hash*/, patch_container>;
 	using patch_config_map = std::unordered_map<std::string /*hash*/, std::unordered_map<std::string /*description*/, bool /*enabled*/>>;
 
 	patch_engine();
@@ -69,32 +74,45 @@ public:
 	// Returns the directory in which patch_config.yml is located
 	static std::string get_patch_config_path();
 
+	// Returns the filepath for the imported_patch.yml
+	static std::string get_imported_patch_path();
+
 	// Load from file and append to specified patches map
 	// Example entry:
 	//
 	// PPU-8007056e52279bea26c15669d1ee08c2df321d00:
-	//   Title: Fancy Game
-	//   Serials: ABCD12345, SUPA13337 v.1.3
 	//   Patches:
 	//     60fps:
+	//       Game Title: Fancy Game
+	//       Serials: ABCD12345, SUPA13337 v.1.3
 	//       Author: Batman bin Suparman
 	//       Notes: This is super
+	//       Patch Version: 1.3
 	//       Patch:
 	//         - [ be32, 0x000e522c, 0x995d0072 ]
 	//         - [ be32, 0x000e5234, 0x995d0074 ]
-	static void load(patch_map& patches, const std::string& path);
+	static bool load(patch_map& patches, const std::string& path, bool importing = false, std::stringstream* log_messages = nullptr);
 
 	// Read and add a patch node to the patch info
-	static void read_patch_node(patch_info& info, YAML::Node node, const YAML::Node& root);
+	static bool read_patch_node(patch_info& info, YAML::Node node, const YAML::Node& root, std::stringstream* log_messages = nullptr);
 
 	// Get the patch type of a patch node
 	static patch_type get_patch_type(YAML::Node node);
 
 	// Add the data of a patch node
-	static void add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root);
+	static bool add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root, std::stringstream* log_messages = nullptr);
 
 	// Save to patch_config.yml
 	static void save_config(const patch_map& patches_map, bool enable_legacy_patches);
+
+	// Save a patch file
+	static bool save_patches(const patch_map& patches, const std::string& path, std::stringstream* log_messages = nullptr);
+
+	// Create or append patches to a file
+	static bool import_patches(const patch_map& patches, const std::string& path, size_t& count, size_t& total, std::stringstream* log_messages = nullptr);
+
+	// Remove a patch from a file
+	static bool remove_patch(const patch_info& info);
 
 	// Load patch_config.yml
 	static patch_config_map load_config(bool& enable_legacy_patches);

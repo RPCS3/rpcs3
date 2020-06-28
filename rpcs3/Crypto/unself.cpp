@@ -3,6 +3,7 @@
 #include "sha1.h"
 #include "utils.h"
 #include "unself.h"
+#include "Utilities/BEType.h"
 #include "Emu/VFS.h"
 #include "Emu/System.h"
 
@@ -1483,9 +1484,7 @@ bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 	return true;
 }
 
-std::array<u8, 0x10> get_default_self_klic()
+v128 get_default_self_klic()
 {
-	std::array<u8, 0x10> key;
-	std::copy(std::begin(NP_KLIC_FREE), std::end(NP_KLIC_FREE), std::begin(key));
-	return key;
+	return std::bit_cast<v128>(NP_KLIC_FREE);
 }
