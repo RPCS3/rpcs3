@@ -121,7 +121,7 @@
           <item>
            <widget class="QGroupBox" name="gb_app_version">
             <property name="title">
-             <string>App Version</string>
+             <string>Game Version</string>
             </property>
             <layout class="QVBoxLayout" name="layout_app_version">
              <item>
