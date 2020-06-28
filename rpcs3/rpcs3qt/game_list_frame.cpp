@@ -1946,20 +1946,13 @@ void game_list_frame::PopulateGameList()
 		}
 
 		// Version
-		QString app_version = qstr(game->info.app_ver);
-		const QString unknown = localized.category.unknown;
-
-		if (app_version == unknown)
-		{
-			// Fall back to Disc/Pkg Revision
-			app_version = qstr(game->info.version);
-		}
+		QString app_version = qstr(GetGameVersion(game));
 
 		if (game->info.bootable && !game->compat.latest_version.isEmpty())
 		{
 			// If the app is bootable and the compat database contains info about the latest patch version:
 			// add a hint for available software updates if the app version is unknown or lower than the latest version.
-			if (app_version == unknown || game->compat.latest_version.toDouble() > app_version.toDouble())
+			if (app_version == localized.category.unknown || game->compat.latest_version.toDouble() > app_version.toDouble())
 			{
 				app_version = tr("%0 (Update available: %1)").arg(app_version, game->compat.latest_version);
 			}
@@ -2234,4 +2227,15 @@ void game_list_frame::SetShowCompatibilityInGrid(bool show)
 QList<game_info> game_list_frame::GetGameInfo() const
 {
 	return m_game_data;
+}
+
+std::string game_list_frame::GetGameVersion(const game_info& game)
+{
+	if (game->info.app_ver == sstr(Localized().category.unknown))
+	{
+		// Fall back to Disc/Pkg Revision
+		return game->info.version;
+	}
+
+	return game->info.app_ver;
 }
