@@ -75,6 +75,7 @@ namespace vk
 		INTEL
 	};
 
+	// Chip classes grouped by vendor in order of release
 	enum class chip_class
 	{
 		unknown,
