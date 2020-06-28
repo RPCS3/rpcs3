@@ -119,10 +119,10 @@ public:
 	void append_title_patches(const std::string& title_id);
 
 	// Apply patch (returns the number of entries applied)
-	std::size_t apply(const std::string& name, u8* dst) const;
+	std::size_t apply(const std::string& name, u8* dst);
 
 	// Apply patch with a check that the address exists in SPU local storage
-	std::size_t apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr) const;
+	std::size_t apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
 
 private:
 	// Load from file and append to member patches map
@@ -130,8 +130,11 @@ private:
 
 	// Internal: Apply patch (returns the number of entries applied)
 	template <bool check_local_storage>
-	std::size_t apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr) const;
+	std::size_t apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
 
 	// Database
 	patch_map m_map;
+
+	// Only one patch per patch group can be applied
+	std::set<std::string> m_applied_groups;
 };

@@ -548,18 +548,18 @@ void patch_engine::append_title_patches(const std::string& title_id)
 	load(m_map, fs::get_config_dir() + "patches/" +  title_id + "_patch.yml");
 }
 
-std::size_t patch_engine::apply(const std::string& name, u8* dst) const
+std::size_t patch_engine::apply(const std::string& name, u8* dst)
 {
 	return apply_patch<false>(name, dst, 0, 0);
 }
 
-std::size_t patch_engine::apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr) const
+std::size_t patch_engine::apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
 {
 	return apply_patch<true>(name, dst, filesz, ls_addr);
 }
 
 template <bool check_local_storage>
-std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr) const
+std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
 {
 	if (m_map.find(name) == m_map.cend())
 	{
@@ -570,9 +570,6 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 	const auto& container = m_map.at(name);
 	const auto serial = Emu.GetTitleID();
 	const auto app_version = Emu.GetAppVersion();
-
-	// Only one patch per patch group is allowed
-	std::set<std::string> applied_groups;
 
 	// Apply modifications sequentially
 	for (const auto& [description, patch] : container.patch_info_map)
@@ -626,12 +623,12 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 
 		if (!patch.patch_group.empty())
 		{
-			if (applied_groups.contains(patch.patch_group))
+			if (m_applied_groups.contains(patch.patch_group))
 			{
 				continue;
 			}
 
-			applied_groups.insert(patch.patch_group);
+			m_applied_groups.insert(patch.patch_group);
 		}
 
 		size_t applied = 0;
