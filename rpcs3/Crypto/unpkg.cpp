@@ -652,7 +652,36 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 	}
 
 	// Get full path and create the directory
-	const std::string dir = Emulator::GetHddDir() + "game/" + install_dir + '/';
+	std::string dir = Emulator::GetHddDir();
+
+	// Based on https://www.psdevwiki.com/ps3/PKG_files#ContentType
+	switch (metadata.content_type)
+	{
+	case PKG_CONTENT_TYPE_THEME:
+		dir += "theme/";
+		break;
+	case PKG_CONTENT_TYPE_WIDGET:
+		dir += "widget/";
+		break;
+	case PKG_CONTENT_TYPE_LICENSE:
+		dir += "home/" + Emu.GetUsr() + "/exdata/";
+		break;
+	case PKG_CONTENT_TYPE_VSH_MODULE:
+		dir += "vsh/modules/";
+		break;
+	case PKG_CONTENT_TYPE_PSN_AVATAR:
+		dir += "home/" + Emu.GetUsr() + "/psn_avatar/";
+		break;
+	case PKG_CONTENT_TYPE_VMC:
+		dir += "tmp/vmc/";
+		break;
+	// TODO: Find out if other content types are installed elsewhere
+	default:
+		dir += "game/";
+		break;
+	}
+
+	dir += install_dir + '/';
 
 	// If false, an existing directory is being overwritten: cannot cancel the operation
 	const bool was_null = !fs::is_dir(dir);
@@ -843,6 +872,8 @@ void package_reader::archive_seek(const s64 new_offset, const fs::seek_mode damo
 
 u64 package_reader::archive_read(void* data_ptr, const u64 num_bytes)
 {
+	ASSERT(filelist.size() > cur_file && filelist[cur_file]);
+
 	const u64 num_bytes_left = filelist[cur_file].size() - cur_file_offset;
 
 	// check if it continues in another file
