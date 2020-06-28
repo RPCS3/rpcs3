@@ -88,7 +88,8 @@ namespace vk
 		NV_maxwell,
 		NV_pascal,
 		NV_volta,
-		NV_turing
+		NV_turing,
+		NV_ampere
 	};
 
 	enum // special remap_encoding enums
@@ -299,6 +300,7 @@ namespace vk
 				return found->second;
 			}
 
+			rsx_log.warning("Unknown chip with device ID 0x%x", device_id);
 			return default_;
 		}
 	};
