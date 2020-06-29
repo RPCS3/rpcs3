@@ -292,7 +292,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 						if (app_versions.empty())
 						{
 							append_log_message(log_messages, fmt::format("Error: Skipping %s: empty Sequence (title: %s, patch: %s, key: %s)", serial, title, description, main_key));
-							patch_log.error("Skipping %s: empty Sequence (title: %s, patch: %s, key: %s, file: %s)", serial,title, description, main_key, path);
+							patch_log.error("Skipping %s: empty Sequence (title: %s, patch: %s, key: %s, file: %s)", serial, title, description, main_key, path);
 							is_valid = false;
 						}
 						else
@@ -315,7 +315,26 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 
 			if (const auto notes_node = patches_entry.second["Notes"])
 			{
-				info.notes = notes_node.Scalar();
+				if (notes_node.IsSequence())
+				{
+					for (const auto note : notes_node)
+					{
+						if (note && note.IsScalar())
+						{
+							info.notes += note.Scalar();
+						}
+						else
+						{
+							append_log_message(log_messages, fmt::format("Error: Skipping sequenced Note (patch: %s, key: %s)", description, main_key));
+							patch_log.error("Skipping sequenced Note (patch: %s, key: %s, file: %s)", description, main_key, path);
+							is_valid = false;
+						}
+					}
+				}
+				else
+				{
+					info.notes = notes_node.Scalar();
+				}
 			}
 
 			if (const auto patch_group_node = patches_entry.second["Group"])
