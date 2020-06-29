@@ -7,7 +7,11 @@
 LOG_CHANNEL(patch_log);
 
 static const std::string patch_engine_version = "1.2";
-static const std::string yml_key_enable_legacy_patches = "Enable Legacy Patches";
+
+namespace config_key
+{
+	static const std::string enable_legacy_patches = "Enable Legacy Patches";
+}
 
 template <>
 void fmt_class_string<YAML::NodeType::value>::format(std::string& out, u64 arg)
@@ -124,7 +128,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 	std::string version;
 	bool is_legacy_patch = false;
 
-	if (const auto version_node = root["Version"])
+	if (const auto version_node = root[patch_key::version])
 	{
 		version = version_node.Scalar();
 
@@ -136,12 +140,12 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 		}
 
 		// We don't need the Version node in local memory anymore
-		root.remove("Version");
+		root.remove(patch_key::version);
 	}
 	else if (importing)
 	{
-		append_log_message(log_messages, fmt::format("Error: No 'Version' entry found. Patch engine version = %s (file: %s)", patch_engine_version, path));
-		patch_log.error("No 'Version' entry found. Patch engine version = %s (file: %s)", patch_engine_version, path);
+		append_log_message(log_messages, fmt::format("Error: No '%s' entry found. Patch engine version = %s (file: %s)", patch_key::version, patch_engine_version, path));
+		patch_log.error("No '%s' entry found. Patch engine version = %s (file: %s)", patch_key::version, patch_engine_version, path);
 		return false;
 	}
 	else
@@ -190,7 +194,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 		}
 
 		// Skip Anchors
-		if (main_key == "Anchors")
+		if (main_key == patch_key::anchors)
 		{
 			continue;
 		}
@@ -223,7 +227,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 			info.version     = version;
 			info.source_path = path;
 
-			if (const auto games_node = patches_entry.second["Games"])
+			if (const auto games_node = patches_entry.second[patch_key::games])
 			{
 				if (const auto yml_type = games_node.Type(); yml_type != YAML::NodeType::Map)
 				{
@@ -303,17 +307,17 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 				}
 			}
 
-			if (const auto author_node = patches_entry.second["Author"])
+			if (const auto author_node = patches_entry.second[patch_key::author])
 			{
 				info.author = author_node.Scalar();
 			}
 
-			if (const auto patch_version_node = patches_entry.second["Patch Version"])
+			if (const auto patch_version_node = patches_entry.second[patch_key::patch_version])
 			{
 				info.patch_version = patch_version_node.Scalar();
 			}
 
-			if (const auto notes_node = patches_entry.second["Notes"])
+			if (const auto notes_node = patches_entry.second[patch_key::notes])
 			{
 				if (notes_node.IsSequence())
 				{
@@ -337,12 +341,12 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 				}
 			}
 
-			if (const auto patch_group_node = patches_entry.second["Group"])
+			if (const auto patch_group_node = patches_entry.second[patch_key::group])
 			{
 				info.patch_group = patch_group_node.Scalar();
 			}
 
-			if (const auto patch_node = patches_entry.second["Patch"])
+			if (const auto patch_node = patches_entry.second[patch_key::patch])
 			{
 				if (!read_patch_node(info, patch_node, root, log_messages))
 				{
@@ -821,7 +825,7 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 	out << YAML::BeginMap;
 
 	// Save "Enable Legacy Patches"
-	out << yml_key_enable_legacy_patches << enable_legacy_patches;
+	out << config_key::enable_legacy_patches << enable_legacy_patches;
 
 	// Save 'enabled' state per hash, description, serial and app_version
 	patch_map config_map;
@@ -973,7 +977,7 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 
 	YAML::Emitter out;
 	out << YAML::BeginMap;
-	out << "Version" << patch_engine_version;
+	out << patch_key::version << patch_engine_version;
 
 	for (const auto& [hash, container] : patches)
 	{
@@ -984,12 +988,11 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 
 		out << YAML::Newline << YAML::Newline;
 		out << hash << YAML::BeginMap;
-		out << "Patches" << YAML::BeginMap;
 
 		for (const auto& [description, info] : container.patch_info_map)
 		{
 			out << description << YAML::BeginMap;
-			out << "Games" << YAML::BeginMap;
+			out << patch_key::games << YAML::BeginMap;
 
 			for (const auto& [title, serials] : info.titles)
 			{
@@ -999,7 +1002,7 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 				{
 					out << serial << YAML::BeginSeq;
 
-					for (const auto& app_version : serials)
+					for (const auto& app_version : app_versions)
 					{
 						out << app_version.first;
 					}
@@ -1012,11 +1015,12 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 
 			out << YAML::EndMap;
 
-			if (!info.author.empty())        out << "Author"        << info.author;
-			if (!info.patch_version.empty()) out << "Patch Version" << info.patch_version;
-			if (!info.notes.empty())         out << "Notes"         << info.notes;
+			if (!info.author.empty())        out << patch_key::author        << info.author;
+			if (!info.patch_version.empty()) out << patch_key::patch_version << info.patch_version;
+			if (!info.patch_group.empty())   out << patch_key::group         << info.patch_group;
+			if (!info.notes.empty())         out << patch_key::notes         << info.notes;
 
-			out << "Patch" << YAML::BeginSeq;
+			out << patch_key::patch << YAML::BeginSeq;
 
 			for (const auto& data : info.data_list)
 			{
@@ -1038,7 +1042,6 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 			out << YAML::EndMap;
 		}
 
-		out << YAML::EndMap;
 		out << YAML::EndMap;
 	}
 
@@ -1103,10 +1106,10 @@ patch_engine::patch_map patch_engine::load_config(bool& enable_legacy_patches)
 		}
 
 		// Try to load "Enable Legacy Patches" (default to true)
-		if (auto enable_legacy_node = root[yml_key_enable_legacy_patches])
+		if (auto enable_legacy_node = root[config_key::enable_legacy_patches])
 		{
 			enable_legacy_patches = enable_legacy_node.as<bool>(true);
-			root.remove(yml_key_enable_legacy_patches); // Remove the node in order to skip it in the next part
+			root.remove(config_key::enable_legacy_patches); // Remove the node in order to skip it in the next part
 		}
 
 		for (const auto pair : root)

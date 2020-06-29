@@ -10,6 +10,14 @@
 namespace patch_key
 {
 	static const std::string all = "All";
+	static const std::string anchors = "Anchors";
+	static const std::string author = "Author";
+	static const std::string games = "Games";
+	static const std::string group = "Group";
+	static const std::string notes = "Notes";
+	static const std::string patch = "Patch";
+	static const std::string patch_version = "Patch Version";
+	static const std::string version = "Version";
 }
 
 enum class patch_type
