@@ -249,9 +249,12 @@ void patch_manager_dialog::populate_tree()
 						{
 							if (auto only_match = matches.count() == 1 ? matches[0] : nullptr)
 							{
-								only_match->setText(0, q_description + QStringLiteral(" (1)"));
+								only_match->setText(0, q_description + QStringLiteral(" (01)"));
 							}
-							visible_description += QStringLiteral(" (") + QString::number(matches.count() + 1) + QStringLiteral(")");
+							const int counter = matches.count() + 1;
+							visible_description += QStringLiteral(" (");
+							if (counter < 10) visible_description += '0';
+							visible_description += QString::number(counter) + ')';
 						}
 
 						QTreeWidgetItem* patch_level_item = new QTreeWidgetItem();
