@@ -667,9 +667,10 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 		return;
 	}
 
-	QMessageBox box(QMessageBox::Icon::Question, tr("Patch Manager"), tr("What do you want to do with the patch file?"), QMessageBox::StandardButton::NoButton, this);
-	QAbstractButton* button_yes = box.addButton(tr("Import"), QMessageBox::YesRole);
-	QAbstractButton* button_no = box.addButton(tr("Validate"), QMessageBox::NoRole);
+	QMessageBox box(QMessageBox::Icon::Question, tr("Patch Manager"), tr("What do you want to do with the patch file?"), QMessageBox::StandardButton::Cancel, this);
+	QPushButton* button_yes = box.addButton(tr("Import"), QMessageBox::YesRole);
+	QPushButton* button_no = box.addButton(tr("Validate"), QMessageBox::NoRole);
+	box.setDefaultButton(button_yes);
 	box.exec();
 
 	const bool do_import   = box.clickedButton() == button_yes;
