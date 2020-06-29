@@ -3,7 +3,6 @@
 #include "unedat.h"
 
 #include "Utilities/mutex.h"
-#include "util/endian.hpp"
 #include <cmath>
 
 LOG_CHANNEL(edat_log, "EDAT");
