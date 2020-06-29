@@ -113,7 +113,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 	}
 
 	// Load patch config to determine which patches are enabled
-	bool enable_legacy_patches;
+	bool enable_legacy_patches = false;
 	patch_map patch_config;
 
 	if (!importing)
@@ -130,8 +130,8 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 
 		if (version != patch_engine_version)
 		{
-			append_log_message(log_messages, fmt::format("Error: Patch engine target version %s does not match file version %s", patch_engine_version, version));
-			patch_log.error("Patch engine target version %s does not match file version %s in %s", patch_engine_version, version, path);
+			append_log_message(log_messages, fmt::format("Error: File version %s does not match patch engine target version %s", version, patch_engine_version));
+			patch_log.error("File version %s does not match patch engine target version %s (file: %s)", version, patch_engine_version, path);
 			return false;
 		}
 
@@ -140,7 +140,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 	}
 	else if (importing)
 	{
-		append_log_message(log_messages, fmt::format("Error: Patch engine target version %s does not match file version %s", patch_engine_version, version));
+		append_log_message(log_messages, fmt::format("Error: No 'Version' entry found. Patch engine version = %s", patch_engine_version));
 		patch_log.error("Patch engine version %s: No 'Version' entry found for file %s", patch_engine_version, path);
 		return false;
 	}
@@ -684,6 +684,7 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 	const auto app_version = Emu.GetAppVersion();
 
 	// Different containers in order to seperate the patches
+	std::vector<patch_engine::patch_info> legacy_patches;
 	std::vector<patch_engine::patch_info> patches_for_this_serial_and_this_version;
 	std::vector<patch_engine::patch_info> patches_for_this_serial_and_all_versions;
 	std::vector<patch_engine::patch_info> patches_for_all_serials_and_this_version;
@@ -693,8 +694,13 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 	for (const auto& [description, patch] : container.patch_info_map)
 	{
 		// Find out if this legacy patch is enabled
-		if (patch.is_legacy && !patch.is_enabled)
+		if (patch.is_legacy)
 		{
+			if (patch.is_enabled)
+			{
+				legacy_patches.push_back(patch);
+			}
+
 			continue;
 		}
 
@@ -764,6 +770,7 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 
 	// Sort specific patches in front of global patches
 	std::vector<patch_engine::patch_info> sorted_patches;
+	sorted_patches.insert(sorted_patches.end(), legacy_patches.begin(), legacy_patches.end());
 	sorted_patches.insert(sorted_patches.end(), patches_for_this_serial_and_this_version.begin(), patches_for_this_serial_and_this_version.end());
 	sorted_patches.insert(sorted_patches.end(), patches_for_this_serial_and_all_versions.begin(), patches_for_this_serial_and_all_versions.end());
 	sorted_patches.insert(sorted_patches.end(), patches_for_all_serials_and_this_version.begin(), patches_for_all_serials_and_this_version.end());
