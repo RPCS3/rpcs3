@@ -166,7 +166,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		src = std::move(lv2_file);
 	}
 
-	const ppu_prx_object obj = decrypt_self(std::move(src), g_fxo->get<loaded_npdrm_keys>()->devKlic.data());
+	const ppu_prx_object obj = decrypt_self(std::move(src), g_fxo->get<loaded_npdrm_keys>()->devKlic.load()._bytes);
 
 	if (obj != elf_error::ok)
 	{

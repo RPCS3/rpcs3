@@ -30,7 +30,7 @@
 
 #ifdef _MSC_VER
 
-#define ASSUME(...) __assume(__VA_ARGS__) // MSVC __assume ignores side-effects
+#define ASSUME(...) ((__VA_ARGS__) ? void() : __assume(0))  // MSVC __assume ignores side-effects
 #define SAFE_BUFFERS __declspec(safebuffers)
 #define NEVER_INLINE __declspec(noinline)
 #define FORCE_INLINE __forceinline
@@ -40,13 +40,12 @@
 
 #ifdef __clang__
 #if defined(__has_builtin) && __has_builtin(__builtin_assume)
-#pragma clang diagnostic ignored "-Wassume" // ignore the clang "side-effects ignored" warning
-#define ASSUME(...) __builtin_assume(!!(__VA_ARGS__)) // __builtin_assume (supported by modern clang) ignores side-effects
+#define ASSUME(...) ((__VA_ARGS__) ? void() : __builtin_assume(0)) // __builtin_assume (supported by modern clang) ignores side-effects
 #endif
 #endif
 
 #ifndef ASSUME // gcc and old clang
-#define ASSUME(...) do { if (!(__VA_ARGS__)) __builtin_unreachable(); } while (0)  // note: the compiler will generate code to evaluate "cond" if the expression is opaque
+#define ASSUME(...) ((__VA_ARGS__) ? void() : __builtin_unreachable())  // note: the compiler will generate code to evaluate "cond" if the expression is opaque
 #endif
 
 #define SAFE_BUFFERS __attribute__((no_stack_protector))
@@ -77,7 +76,7 @@
 #define STR_CASE(...) case __VA_ARGS__: return #__VA_ARGS__
 
 
-#define ASSERT(...) do { if(!(__VA_ARGS__)) fmt::raw_error("Assertion failed: " STRINGIZE(__VA_ARGS__) HERE); } while(0)
+#define ASSERT(...) ((__VA_ARGS__) ? void() : fmt::raw_error("Assertion failed: " STRINGIZE(__VA_ARGS__) HERE))
 
 #if defined(_DEBUG) || defined(_AUDIT)
 #define AUDIT(...) ASSERT(__VA_ARGS__)

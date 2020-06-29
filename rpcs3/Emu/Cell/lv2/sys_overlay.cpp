@@ -31,7 +31,7 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 		src = std::move(lv2_file);
 	}
 
-	const ppu_exec_object obj = decrypt_self(std::move(src), g_fxo->get<loaded_npdrm_keys>()->devKlic.data());
+	const ppu_exec_object obj = decrypt_self(std::move(src), g_fxo->get<loaded_npdrm_keys>()->devKlic.load()._bytes);
 
 	if (obj != elf_error::ok)
 	{
