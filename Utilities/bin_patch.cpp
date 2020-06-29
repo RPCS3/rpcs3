@@ -130,7 +130,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 
 		if (version != patch_engine_version)
 		{
-			append_log_message(log_messages, fmt::format("Error: File version %s does not match patch engine target version %s", version, patch_engine_version));
+			append_log_message(log_messages, fmt::format("Error: File version %s does not match patch engine target version %s (file: %s)", version, patch_engine_version, path));
 			patch_log.error("File version %s does not match patch engine target version %s (file: %s)", version, patch_engine_version, path);
 			return false;
 		}
@@ -140,8 +140,8 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 	}
 	else if (importing)
 	{
-		append_log_message(log_messages, fmt::format("Error: No 'Version' entry found. Patch engine version = %s", patch_engine_version));
-		patch_log.error("Patch engine version %s: No 'Version' entry found for file %s", patch_engine_version, path);
+		append_log_message(log_messages, fmt::format("Error: No 'Version' entry found. Patch engine version = %s (file: %s)", patch_engine_version, path));
+		patch_log.error("No 'Version' entry found. Patch engine version = %s (file: %s)", patch_engine_version, path);
 		return false;
 	}
 	else
