@@ -702,16 +702,18 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 				if (patch_engine::import_patches(patches, imported_patch_yml_path, count, total, &log_message))
 				{
 					refresh();
-					const QString msg = log_message.str().empty() ? "-" : QString::fromStdString(log_message.str());
+
+					const std::string message = log_message.str();
+					const QString msg = message.empty() ? "" : tr("\n\nLog:\n%0").arg(QString::fromStdString(message));
 
 					if (count == 0)
 					{
-						QMessageBox::warning(this, tr("Nothing to import"), tr("None of the found %0 patches were imported.\n\nLog:\n%2")
+						QMessageBox::warning(this, tr("Nothing to import"), tr("None of the found %0 patches were imported.%1")
 							.arg(total).arg(msg));
 					}
 					else
 					{
-						QMessageBox::information(this, tr("Import successful"), tr("Imported %0/%1 patches to:\n%2\n\nLog:\n%3")
+						QMessageBox::information(this, tr("Import successful"), tr("Imported %0/%1 patches to:\n%2%3")
 							.arg(count).arg(total).arg(QString::fromStdString(imported_patch_yml_path)).arg(msg));
 					}
 				}
