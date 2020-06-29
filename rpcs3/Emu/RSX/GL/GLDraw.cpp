@@ -600,26 +600,6 @@ void GLGSRender::end()
 
 	m_frame_stats.setup_time += m_profiler.duration();
 
-	gl::command_context cmd{ gl_state };
-	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-
-	// Handle special memory barrier for ARGB8->D24S8 in an active DSV
-	if (ds && ds->old_contents.size() == 1 &&
-		ds->old_contents[0].source->get_internal_format() == gl::texture::internal_format::rgba8)
-	{
-		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
-
-		// TODO: Stencil transfer
-		gl::g_hw_blitter->fast_clear_image(cmd, ds, 1.f, 0xFF);
-		ds->old_contents[0].init_transfer(ds);
-
-		m_depth_converter.run(ds->old_contents[0].src_rect(),
-			ds->old_contents[0].dst_rect(),
-			ds->old_contents[0].source, ds);
-
-		ds->on_write();
-	}
-
 	// Active texture environment is used to decode shaders
 	m_profiler.start();
 	load_texture_env();
@@ -645,71 +625,16 @@ void GLGSRender::end()
 	m_gl_texture_cache.release_uncached_temporary_subresources();
 	m_frame_stats.textures_upload_time += m_profiler.duration();
 
-	// Optionally do memory synchronization if the texture stage has not yet triggered this
-	if (true)//g_cfg.video.strict_rendering_mode)
+	gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
+
+	gl::command_context cmd{ gl_state };
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil)) ds->write_barrier(cmd);
+
+	for (auto &rtt : m_rtts.m_bound_render_targets)
 	{
-		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
-
-		if (ds) ds->write_barrier(cmd);
-
-		for (auto &rtt : m_rtts.m_bound_render_targets)
+		if (auto surface = std::get<1>(rtt))
 		{
-			if (auto surface = std::get<1>(rtt))
-			{
-				surface->write_barrier(cmd);
-			}
-		}
-	}
-	else
-	{
-		rsx::simple_array<int> buffers_to_clear;
-		bool clear_all_color = true;
-		bool clear_depth = false;
-
-		for (int index = 0; index < 4; index++)
-		{
-			if (m_rtts.m_bound_render_targets[index].first)
-			{
-				if (!m_rtts.m_bound_render_targets[index].second->dirty())
-					clear_all_color = false;
-				else
-					buffers_to_clear.push_back(index);
-			}
-		}
-
-		if (ds && ds->dirty())
-		{
-			clear_depth = true;
-		}
-
-		if (clear_depth || !buffers_to_clear.empty())
-		{
-			gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
-			GLenum mask = 0;
-
-			if (clear_depth)
-			{
-				gl_state.depth_mask(GL_TRUE);
-				gl_state.clear_depth(1.f);
-				gl_state.clear_stencil(255);
-				mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
-			}
-
-			if (clear_all_color)
-				mask |= GL_COLOR_BUFFER_BIT;
-
-			glClear(mask);
-
-			if (!buffers_to_clear.empty() && !clear_all_color)
-			{
-				GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
-				//It is impossible for the render target to be type A or B here (clear all would have been flagged)
-				for (auto &i : buffers_to_clear)
-					glClearBufferfv(GL_COLOR, i, colors);
-			}
-
-			if (clear_depth)
-				gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
+			surface->write_barrier(cmd);
 		}
 	}
 

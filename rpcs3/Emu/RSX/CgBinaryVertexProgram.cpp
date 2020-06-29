@@ -19,6 +19,8 @@ void CgBinaryDisasm::AddVecCodeDisasm(const std::string& code)
 std::string CgBinaryDisasm::GetMaskDisasm(bool is_sca)
 {
 	std::string ret;
+	ret.reserve(5);
+	ret += '.';
 
 	if (is_sca)
 	{
@@ -35,7 +37,7 @@ std::string CgBinaryDisasm::GetMaskDisasm(bool is_sca)
 		if (d3.vec_writemask_w) ret += "w";
 	}
 
-	return ret.empty() || ret == "xyzw" ? "" : ("." + ret);
+	return ret == "."sv || ret == ".xyzw"sv ? "" : (ret);
 }
 
 std::string CgBinaryDisasm::GetVecMaskDisasm()
@@ -103,21 +105,25 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 		break;
 	}
 
-	static const std::string f = "xyzw";
+	static constexpr std::string_view f = "xyzw";
 
 	std::string swizzle;
-
+	swizzle.reserve(5);
+	swizzle += '.';
 	swizzle += f[src[n].swz_x];
 	swizzle += f[src[n].swz_y];
 	swizzle += f[src[n].swz_z];
 	swizzle += f[src[n].swz_w];
 
-	if (swizzle == "xxxx") swizzle = "x";
-	if (swizzle == "yyyy") swizzle = "y";
-	if (swizzle == "zzzz") swizzle = "z";
-	if (swizzle == "wwww") swizzle = "w";
+	if (swizzle == ".xxxx") swizzle = ".x";
+	else if (swizzle == ".yyyy") swizzle = ".y";
+	else if (swizzle == ".zzzz") swizzle = ".z";
+	else if (swizzle == ".wwww") swizzle = ".w";
 
-	if (swizzle != f) ret += '.' + swizzle;
+	if (swizzle != ".xyzw"sv)
+	{
+		ret += swizzle;
+	}
 
 	bool abs = false;
 
@@ -221,20 +227,25 @@ std::string CgBinaryDisasm::GetCondDisasm()
 		"ERROR"
 	};
 
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
+	static constexpr std::string_view f = "xyzw";
 
 	std::string swizzle;
+	swizzle.reserve(5);
+	swizzle += '.';
 	swizzle += f[d0.mask_x];
 	swizzle += f[d0.mask_y];
 	swizzle += f[d0.mask_z];
 	swizzle += f[d0.mask_w];
 
-	if (swizzle == "xxxx") swizzle = "x";
-	if (swizzle == "yyyy") swizzle = "y";
-	if (swizzle == "zzzz") swizzle = "z";
-	if (swizzle == "wwww") swizzle = "w";
+	if (swizzle == ".xxxx") swizzle = ".x";
+	else if (swizzle == ".yyyy") swizzle = ".y";
+	else if (swizzle == ".zzzz") swizzle = ".z";
+	else if (swizzle == ".wwww") swizzle = ".w";
 
-	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
+	if (swizzle == ".xyzw"sv)
+	{
+		swizzle.clear();
+	}
 
 	return fmt::format("(%s%s)", cond_string_table[d0.cond], swizzle.c_str());
 }
@@ -268,21 +279,26 @@ void CgBinaryDisasm::AddCodeCondDisasm(const std::string& dst, const std::string
 		"ERROR"
 	};
 
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
+	static constexpr std::string_view f = "xyzw";
 
 	std::string swizzle;
+	swizzle.reserve(5);
+	swizzle += '.';
 	swizzle += f[d0.mask_x];
 	swizzle += f[d0.mask_y];
 	swizzle += f[d0.mask_z];
 	swizzle += f[d0.mask_w];
 
-	if (swizzle == "xxxx") swizzle = "x";
-	if (swizzle == "yyyy") swizzle = "y";
-	if (swizzle == "zzzz") swizzle = "z";
-	if (swizzle == "wwww") swizzle = "w";
+	if (swizzle == ".xxxx") swizzle = ".x";
+	else if (swizzle == ".yyyy") swizzle = ".y";
+	else if (swizzle == ".zzzz") swizzle = ".z";
+	else if (swizzle == ".wwww") swizzle = ".w";
 
-	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-
+	if (swizzle == ".xyzw"sv)
+	{
+		swizzle.clear();
+	}
+	
 	std::string cond = fmt::format("%s%s", cond_string_table[d0.cond], swizzle.c_str());
 	AddCodeDisasm(dst + "(" + cond + ") " + ", " + src + ";");
 }
@@ -290,13 +306,13 @@ void CgBinaryDisasm::AddCodeCondDisasm(const std::string& dst, const std::string
 
 std::string CgBinaryDisasm::AddAddrMaskDisasm()
 {
-	static const char f[] = { 'x', 'y', 'z', 'w' };
+	static constexpr std::string_view f = "xyzw";
 	return std::string(".") + f[d0.addr_swz];
 }
 
 std::string CgBinaryDisasm::AddAddrRegDisasm()
 {
-	static const char f[] = { 'x', 'y', 'z', 'w' };
+	//static constexpr std::string_view f = "xyzw";
 	return fmt::format("A%d", d0.addr_reg_sel_1) + AddAddrMaskDisasm();
 }
 

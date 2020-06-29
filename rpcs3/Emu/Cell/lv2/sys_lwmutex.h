@@ -55,7 +55,7 @@ struct lv2_lwmutex final : lv2_obj
 {
 	static const u32 id_base = 0x95000000;
 
-	const u32 protocol;
+	const lv2_protocol protocol;
 	const vm::ptr<sys_lwmutex_t> control;
 	const be_t<u64> name;
 
@@ -65,7 +65,7 @@ struct lv2_lwmutex final : lv2_obj
 	atomic_t<s32> lwcond_waiters{0};
 
 	lv2_lwmutex(u32 protocol, vm::ptr<sys_lwmutex_t> control, u64 name)
-		: protocol(protocol)
+		: protocol{protocol}
 		, control(control)
 		, name(std::bit_cast<be_t<u64>>(name))
 	{

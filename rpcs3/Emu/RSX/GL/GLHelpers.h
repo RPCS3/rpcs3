@@ -2712,7 +2712,7 @@ public:
 				glUseProgram(m_id);
 			}
 
-			void link()
+			void link(std::function<void(program*)> init_func = {})
 			{
 				glLinkProgram(m_id);
 
@@ -2736,6 +2736,11 @@ public:
 				}
 				else
 				{
+					if (init_func)
+					{
+						init_func(this);
+					}
+
 					m_fence.create();
 
 					if (!is_primary_context_thread())

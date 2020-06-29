@@ -741,20 +741,28 @@ namespace rsx
 
 	void thread::fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program)
 	{
-		//TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
-		auto fragment_alpha_func = rsx::method_registers.alpha_func();
-		auto alpha_ref = rsx::method_registers.alpha_ref();
-		auto rop_control = rsx::method_registers.alpha_test_enabled()? 1u : 0u;
+		u32 rop_control = 0u;
+
+		if (rsx::method_registers.alpha_test_enabled())
+		{
+			const u32 alpha_func = static_cast<u32>(rsx::method_registers.alpha_func());
+			rop_control |= (alpha_func << 16);
+			rop_control |= ROP_control::alpha_test_enable;
+		}
+
+		if (rsx::method_registers.polygon_stipple_enabled())
+		{
+			rop_control |= ROP_control::polygon_stipple_enable;
+		}
 
 		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !backend_config.supports_hw_a2c)
 		{
+			// TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
 			// Alpha values generate a coverage mask for order independent blending
 			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
 			// Simulated using combined alpha blend and alpha test
-			const u32 mask_bit = rsx::method_registers.msaa_sample_mask() ? 1u : 0u;
-
-			rop_control |= (1u << 4);                 // CSAA enable bit
-			rop_control |= (mask_bit << 5);           // MSAA mask enable bit
+			if (rsx::method_registers.msaa_sample_mask()) rop_control |= ROP_control::msaa_mask_enable;
+			rop_control |= ROP_control::csaa_enable;
 
 			// Sample configuration bits
 			switch (rsx::method_registers.surface_antialias())
@@ -772,10 +780,7 @@ namespace rsx
 
 		const f32 fog0 = rsx::method_registers.fog_params_0();
 		const f32 fog1 = rsx::method_registers.fog_params_1();
-		const u32 alpha_func = static_cast<u32>(fragment_alpha_func);
 		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
-
-		rop_control |= (alpha_func << 16);
 
 		if (rsx::method_registers.framebuffer_srgb_enabled())
 		{
@@ -787,14 +792,9 @@ namespace rsx
 			case rsx::surface_color_format::x32:
 				break;
 			default:
-				rop_control |= (1u << 1);
+				rop_control |= ROP_control::framebuffer_srgb_enable;
 				break;
 			}
-		}
-
-		if (rsx::method_registers.polygon_stipple_enabled())
-		{
-			rop_control |= (1u << 9);
 		}
 
 		// Generate wpos coefficients
@@ -808,10 +808,11 @@ namespace rsx
 		const f32 resolution_scale = (window_height <= static_cast<u32>(g_cfg.video.min_scalable_dimension)) ? 1.f : rsx::get_resolution_scale();
 		const f32 wpos_scale = (window_origin == rsx::window_origin::top) ? (1.f / resolution_scale) : (-1.f / resolution_scale);
 		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
+		const f32 alpha_ref = rsx::method_registers.alpha_ref();
 
 		u32 *dst = static_cast<u32*>(buffer);
 		stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control, std::bit_cast<u32>(alpha_ref));
-		stream_vector(dst + 4, alpha_func, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
+		stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 
 	void thread::fill_fragment_texture_parameters(void *buffer, const RSXFragmentProgram &fragment_program)
@@ -1036,9 +1037,9 @@ namespace rsx
 			if ((!mask || !active_write_op) && rsx::method_registers.two_sided_stencil_test_enabled())
 			{
 				mask |= rsx::method_registers.back_stencil_mask();
-				active_write_op |= (rsx::method_registers.stencil_op_zpass() != rsx::stencil_op::keep ||
-					rsx::method_registers.stencil_op_fail() != rsx::stencil_op::keep ||
-					rsx::method_registers.stencil_op_zfail() != rsx::stencil_op::keep);
+				active_write_op |= (rsx::method_registers.back_stencil_op_zpass() != rsx::stencil_op::keep ||
+					rsx::method_registers.back_stencil_op_fail() != rsx::stencil_op::keep ||
+					rsx::method_registers.back_stencil_op_zfail() != rsx::stencil_op::keep);
 			}
 
 			layout.zeta_write_enabled = (mask && active_write_op);
@@ -1297,6 +1298,155 @@ namespace rsx
 		}
 
 		layout.ignore_change = false;
+	}
+
+	void thread::on_framebuffer_options_changed(u32 opt)
+	{
+		auto evaluate_depth_buffer_state = [&]()
+		{
+			m_framebuffer_layout.zeta_write_enabled =
+				(rsx::method_registers.depth_test_enabled() && rsx::method_registers.depth_write_enabled());
+		};
+
+		auto evaluate_stencil_buffer_state = [&]()
+		{
+			if (!m_framebuffer_layout.zeta_write_enabled &&
+				rsx::method_registers.stencil_test_enabled() &&
+				m_framebuffer_layout.depth_format == rsx::surface_depth_format::z24s8)
+			{
+				// Check if stencil data is modified
+				auto mask = rsx::method_registers.stencil_mask();
+				bool active_write_op = (rsx::method_registers.stencil_op_zpass() != rsx::stencil_op::keep ||
+					rsx::method_registers.stencil_op_fail() != rsx::stencil_op::keep ||
+					rsx::method_registers.stencil_op_zfail() != rsx::stencil_op::keep);
+
+				if ((!mask || !active_write_op) && rsx::method_registers.two_sided_stencil_test_enabled())
+				{
+					mask |= rsx::method_registers.back_stencil_mask();
+					active_write_op |= (rsx::method_registers.back_stencil_op_zpass() != rsx::stencil_op::keep ||
+						rsx::method_registers.back_stencil_op_fail() != rsx::stencil_op::keep ||
+						rsx::method_registers.back_stencil_op_zfail() != rsx::stencil_op::keep);
+				}
+
+				m_framebuffer_layout.zeta_write_enabled = (mask && active_write_op);
+			}
+		};
+
+		auto evaluate_color_buffer_state = [&]() -> bool
+		{
+			const auto mrt_buffers = rsx::utility::get_rtt_indexes(m_framebuffer_layout.target);
+			bool any_found = false;
+
+			for (uint i = 0; i < mrt_buffers.size(); ++i)
+			{
+				if (rsx::method_registers.color_write_enabled(i))
+				{
+					const auto real_index = mrt_buffers[i];
+					m_framebuffer_layout.color_write_enabled[real_index] = true;
+					any_found = true;
+				}
+			}
+
+			return any_found;
+		};
+
+		auto evaluate_depth_buffer_contested = [&]()
+		{
+			if (m_framebuffer_layout.zeta_address) [[likely]]
+			{
+				// Nothing to do, depth buffer already exists
+				return false;
+			}
+
+			// Check if depth read/write is enabled
+			if (m_framebuffer_layout.zeta_write_enabled ||
+				rsx::method_registers.depth_test_enabled())
+			{
+				return true;
+			}
+
+			// Check if stencil read is enabled
+			if (m_framebuffer_layout.depth_format == rsx::surface_depth_format::z24s8 &&
+				rsx::method_registers.stencil_test_enabled())
+			{
+				return true;
+			}
+
+			return false;
+		};
+
+		if (m_rtts_dirty)
+		{
+			// Nothing to do
+			return;
+		}
+
+		switch (opt)
+		{
+		case NV4097_SET_DEPTH_TEST_ENABLE:
+		case NV4097_SET_DEPTH_MASK:
+		{
+			evaluate_depth_buffer_state();
+
+			if (m_framebuffer_state_contested)
+			{
+				m_rtts_dirty |= evaluate_depth_buffer_contested();
+			}
+			break;
+		}
+		case NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE:
+		case NV4097_SET_STENCIL_TEST_ENABLE:
+		case NV4097_SET_STENCIL_MASK:
+		case NV4097_SET_STENCIL_OP_ZPASS:
+		case NV4097_SET_STENCIL_OP_FAIL:
+		case NV4097_SET_STENCIL_OP_ZFAIL:
+		case NV4097_SET_BACK_STENCIL_MASK:
+		case NV4097_SET_BACK_STENCIL_OP_ZPASS:
+		case NV4097_SET_BACK_STENCIL_OP_FAIL:
+		case NV4097_SET_BACK_STENCIL_OP_ZFAIL:
+		{
+			// Stencil takes a back seat to depth buffer stuff
+			evaluate_depth_buffer_state();
+
+			if (!m_framebuffer_layout.zeta_write_enabled)
+			{
+				evaluate_stencil_buffer_state();
+			}
+
+			if (m_framebuffer_state_contested)
+			{
+				m_rtts_dirty |= evaluate_depth_buffer_contested();
+			}
+			break;
+		}
+		case NV4097_SET_COLOR_MASK:
+		case NV4097_SET_COLOR_MASK_MRT:
+		{
+			if (!m_framebuffer_state_contested) [[likely]]
+			{
+				// Update write masks and continue
+				evaluate_color_buffer_state();
+			}
+			else
+			{
+				bool old_state = false;
+				for (const auto& enabled : m_framebuffer_layout.color_write_enabled)
+				{
+					if (old_state = enabled; old_state) break;
+				}
+
+				const auto new_state = evaluate_color_buffer_state();
+				if (!old_state && new_state)
+				{
+					// Color buffers now in use
+					m_rtts_dirty = true;
+				}
+			}
+			break;
+		}
+		default:
+			rsx_log.fatal("Unhandled framebuffer option changed 0x%x", opt);
+		}
 	}
 
 	bool thread::get_scissor(areau& region, bool clip_viewport)
@@ -1726,7 +1876,31 @@ namespace rsx
 					}
 				}
 
-				if (const auto srgb_mask = tex.gamma())
+				// Special operations applied to 8-bit formats such as gamma correction and sign conversion
+				// NOTE: The unsigned_remap being set to anything other than 0 flags the texture as being signed
+				// This is a separate method of setting the format to signed mode without doing so per-channel
+				// NOTE2: Modifier precedence is not respected here. This is another TODO (kd-11)
+				u32 argb8_convert = tex.gamma();
+				if (const u32 sign_convert = tex.unsigned_remap() ? 0xF : tex.argb_signed())
+				{
+					// Apply remap to avoid mapping 1 to -1. Only the sign conversion needs this check
+					// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
+					// TODO: Replace this clusterfuck of texture control with matrix transformation
+					const auto remap_ctrl = (tex.remap() >> 8) & 0xAA;
+					if (remap_ctrl == 0xAA)
+					{
+						argb8_convert |= (sign_convert & 0xFu) << 6;
+					}
+					else
+					{
+						if (remap_ctrl & 0x03) argb8_convert |= (sign_convert & 0x1u) << 6;
+						if (remap_ctrl & 0x0C) argb8_convert |= (sign_convert & 0x2u) << 6;
+						if (remap_ctrl & 0x30) argb8_convert |= (sign_convert & 0x4u) << 6;
+						if (remap_ctrl & 0xC0) argb8_convert |= (sign_convert & 0x8u) << 6;
+					}
+				}
+
+				if (argb8_convert)
 				{
 					switch (format)
 					{
@@ -1742,11 +1916,11 @@ namespace rsx
 					case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 					case CELL_GCM_TEXTURE_X32_FLOAT:
 					case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-						//Special data formats (XY, HILO, DEPTH) are not RGB formats
-						//Ignore gamma flags
+						// Special data formats (XY, HILO, DEPTH) are not RGB formats
+						// Ignore gamma flags
 						break;
 					default:
-						texture_control |= srgb_mask;
+						texture_control |= argb8_convert;
 						break;
 					}
 				}
@@ -2157,9 +2331,6 @@ namespace rsx
 
 	void thread::check_zcull_status(bool framebuffer_swap)
 	{
-		if (g_cfg.video.disable_zcull_queries)
-			return;
-
 		if (framebuffer_swap)
 		{
 			zcull_surface_active = false;
@@ -2191,9 +2362,6 @@ namespace rsx
 
 	void thread::clear_zcull_stats(u32 type)
 	{
-		if (g_cfg.video.disable_zcull_queries)
-			return;
-
 		zcull_ctrl->clear(this, type);
 	}
 

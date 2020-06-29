@@ -509,6 +509,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellJpgEnc.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_overlay.h" />
     <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellPngEnc.h" />
     <ClInclude Include="Emu\Cell\Modules\cellVoice.h" />
     <ClInclude Include="Emu\Cell\Modules\StaticHLE.h" />
     <ClInclude Include="Emu\Cell\PPUAnalyser.h" />

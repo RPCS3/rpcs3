@@ -6,6 +6,8 @@
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/AudioDumper.h"
 
+struct lv2_event_queue;
+
 // Error codes
 enum CellAudioError : u32
 {
@@ -29,23 +31,31 @@ enum CellAudioError : u32
 // constants
 enum
 {
-	CELL_AUDIO_BLOCK_16                = 16,
 	CELL_AUDIO_BLOCK_8                 = 8,
+	CELL_AUDIO_BLOCK_16                = 16,
+	CELL_AUDIO_BLOCK_32                = 32,
 	CELL_AUDIO_BLOCK_SAMPLES           = 256,
+
 	CELL_AUDIO_CREATEEVENTFLAG_SPU     = 0x00000001,
-	CELL_AUDIO_EVENT_HEADPHONE         = 1,
+	
 	CELL_AUDIO_EVENT_MIX               = 0,
+	CELL_AUDIO_EVENT_HEADPHONE         = 1,
+
 	CELL_AUDIO_EVENTFLAG_BEFOREMIX     = 0x80000000,
 	CELL_AUDIO_EVENTFLAG_DECIMATE_2    = 0x08000000,
 	CELL_AUDIO_EVENTFLAG_DECIMATE_4    = 0x10000000,
 	CELL_AUDIO_EVENTFLAG_HEADPHONE     = 0x20000000,
 	CELL_AUDIO_EVENTFLAG_NOMIX         = 0x40000000,
+
 	CELL_AUDIO_MAX_PORT                = 4,
 	CELL_AUDIO_MAX_PORT_2              = 8,
+
 	CELL_AUDIO_MISC_ACCVOL_ALLDEVICE   = 0x0000ffffUL,
 	CELL_AUDIO_PERSONAL_DEVICE_PRIMARY = 0x8000,
+
 	CELL_AUDIO_PORT_2CH                = 2,
 	CELL_AUDIO_PORT_8CH                = 8,
+
 	CELL_AUDIO_PORTATTR_BGM            = 0x0000000000000010ULL,
 	CELL_AUDIO_PORTATTR_INITLEVEL      = 0x0000000000001000ULL,
 	CELL_AUDIO_PORTATTR_OUT_NO_ROUTE   = 0x0000000000100000ULL,
@@ -54,6 +64,7 @@ enum
 	CELL_AUDIO_PORTATTR_OUT_PERSONAL_2 = 0x0000000004000000ULL,
 	CELL_AUDIO_PORTATTR_OUT_PERSONAL_3 = 0x0000000008000000ULL,
 	CELL_AUDIO_PORTATTR_OUT_SECONDARY  = 0x0000000000000001ULL,
+
 	CELL_AUDIO_STATUS_CLOSE            = 0x1010,
 	CELL_AUDIO_STATUS_READY            = 1,
 	CELL_AUDIO_STATUS_RUN              = 2,
@@ -349,7 +360,7 @@ public:
 		u8 start_period; // Starting event_period
 		u32 flags; // iFlags
 		u64 source; // Event source
-		u64 key; // Key
+		std::weak_ptr<lv2_event_queue> port; // Underlying event port
 	};
 
 	std::vector<key_info> keys;

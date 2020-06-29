@@ -249,7 +249,7 @@ error_code sys_spu_image_open(ppu_thread& ppu, vm::ptr<sys_spu_image> img, vm::c
 		return {fs_error, path};
 	}
 
-	const fs::file elf_file = decrypt_self(std::move(file), g_fxo->get<loaded_npdrm_keys>()->devKlic.data());
+	const fs::file elf_file = decrypt_self(std::move(file), g_fxo->get<loaded_npdrm_keys>()->devKlic.load()._bytes);
 
 	if (!elf_file)
 	{
@@ -405,11 +405,11 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	verify(HERE), idm::import<named_thread<spu_thread>>([&]()
 	{
-		std::string full_name = fmt::format("SPU[0x%07x] Thread", tid);
+		std::string full_name = fmt::format("SPU[0x%07x] ", tid);
 
 		if (!thread_name.empty())
 		{
-			fmt::append(full_name, " (%s)", thread_name);
+			fmt::append(full_name, "%s ", thread_name);
 		}
 
 		const auto spu = std::make_shared<named_thread<spu_thread>>(full_name, ls_addr, group.get(), spu_num, thread_name, tid);
@@ -1790,7 +1790,7 @@ error_code sys_spu_thread_recover_page_fault(ppu_thread& ppu, u32 id)
 		return CELL_ESRCH;
 	}
 
-	return mmapper_thread_recover_page_fault(id);
+	return mmapper_thread_recover_page_fault(thread);
 }
 
 error_code sys_raw_spu_recover_page_fault(ppu_thread& ppu, u32 id)
@@ -1806,7 +1806,7 @@ error_code sys_raw_spu_recover_page_fault(ppu_thread& ppu, u32 id)
 		return CELL_ESRCH;
 	}
 
-	return mmapper_thread_recover_page_fault(id);
+	return mmapper_thread_recover_page_fault(thread.get());
 }
 
 error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> attr)
@@ -1833,7 +1833,7 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 
 	const vm::addr_t ls_addr{verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, 0x40000, vm::spu))};
 
-	const u32 tid = idm::make<named_thread<spu_thread>>(fmt::format("RawSPU[0x%x] Thread", index), ls_addr, nullptr, index, "", index);
+	const u32 tid = idm::make<named_thread<spu_thread>>(fmt::format("RawSPU[0x%x] ", index), ls_addr, nullptr, index, "", index);
 
 	spu_thread::g_raw_spu_id[index] = verify("RawSPU ID" HERE, tid);
 
@@ -1881,7 +1881,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 
 	const vm::addr_t ls_addr{verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, 0x40000, vm::spu))};
 
-	const auto thread = idm::make_ptr<named_thread<spu_thread>>(fmt::format("IsoSPU[0x%x] Thread", index), ls_addr, nullptr, index, "", index, true);
+	const auto thread = idm::make_ptr<named_thread<spu_thread>>(fmt::format("IsoSPU[0x%x] ", index), ls_addr, nullptr, index, "", index, true);
 
 	thread->gpr[3] = v128::from64(0, arg1);
 	thread->gpr[4] = v128::from64(0, arg2);

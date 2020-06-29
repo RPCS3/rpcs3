@@ -586,7 +586,7 @@ namespace vk
 					// Dimensions were given in 'dst' space. Work out the real source coordinates
 					const auto src_bpp = vk::get_format_texel_width(section.src->format());
 					src_x = (src_x * dst_bpp) / src_bpp;
-					src_w = (src_w * dst_bpp) / src_bpp;
+					src_w = ::aligned_div<u16>(src_w * dst_bpp, src_bpp);
 
 					transform &= ~(rsx::surface_transform::coordinate_transform);
 				}
@@ -1334,6 +1334,7 @@ namespace vk
 			case CELL_GCM_TEXTURE_R5G6B5:
 				return (vk_format == VK_FORMAT_R5G6B5_UNORM_PACK16);
 			case CELL_GCM_TEXTURE_A8R8G8B8:
+			case CELL_GCM_TEXTURE_D8R8G8B8:
 				return (vk_format == VK_FORMAT_B8G8R8A8_UNORM || vk_format == VK_FORMAT_D24_UNORM_S8_UINT || vk_format == VK_FORMAT_D32_SFLOAT_S8_UINT);
 			case CELL_GCM_TEXTURE_B8:
 				return (vk_format == VK_FORMAT_R8_UNORM);

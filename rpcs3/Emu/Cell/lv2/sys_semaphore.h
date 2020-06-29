@@ -23,7 +23,7 @@ struct lv2_sema final : lv2_obj
 {
 	static const u32 id_base = 0x96000000;
 
-	const u32 protocol;
+	const lv2_protocol protocol;
 	const u32 shared;
 	const u64 key;
 	const u64 name;
@@ -35,7 +35,7 @@ struct lv2_sema final : lv2_obj
 	std::deque<cpu_thread*> sq;
 
 	lv2_sema(u32 protocol, u32 shared, u64 key, s32 flags, u64 name, s32 max, s32 value)
-		: protocol(protocol)
+		: protocol{protocol}
 		, shared(shared)
 		, key(key)
 		, name(name)

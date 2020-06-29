@@ -870,8 +870,19 @@ namespace rsx
 			invalidated_resources.clear();
 		}
 
-		void free_invalidated()
+		void free_invalidated(vk::command_buffer& cmd)
 		{
+			// Do not allow more than 256M of RSX memory to be used by RTTs
+			if (check_memory_overload(256 * 0x100000))
+			{
+				if (!cmd.is_recording())
+				{
+					cmd.begin();
+				}
+
+				handle_memory_overload(cmd);
+			}
+
 			const u64 last_finished_frame = vk::get_last_completed_frame_id();
 			invalidated_resources.remove_if([&](std::unique_ptr<vk::render_target> &rtt)
 			{

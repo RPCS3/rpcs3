@@ -17,7 +17,7 @@
 #include <string_view>
 
 // attr_protocol (waiting scheduling policy)
-enum
+enum lv2_protocol : u32
 {
 	SYS_SYNC_FIFO                = 0x1, // First In, First Out Order
 	SYS_SYNC_PRIORITY            = 0x2, // Priority Order
@@ -75,16 +75,22 @@ private:
 		enqueue_cmd,
 	};
 
+	// Function executed under IDM mutex, error will make the object creation fail and the error will be returned
+	CellError on_id_create()
+	{
+		return {};
+	}
+
 public:
 
-	static std::string_view name64(const u64& name_u64)
+	static std::string name64(u64 name_u64)
 	{
-		std::string_view str{reinterpret_cast<const char*>(&name_u64), 7};
+		const auto ptr = reinterpret_cast<const char*>(&name_u64);
 
-		if (const auto pos = str.find_first_of('\0'); pos != umax)
-		{
-			str.remove_suffix(str.size() - pos);
-		}
+		// NTS string, ignore invalid/newline characters
+		// Example: "lv2\n\0tx" will be printed as "lv2" 
+		std::string str{ptr, std::find(ptr, ptr + 7, '\0')};
+		str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !std::isprint(c); }), str.end());
 
 		return str;
 	};
@@ -205,23 +211,45 @@ public:
 			{
 				std::shared_ptr<T> result = make();
 
-				if (!ipc_manager<T, u64>::add(ipc_key, [&] { if (!idm::import_existing<lv2_obj, T>(result)) result.reset(); return result; }, &result))
+				CellError error{};
+
+				if (!ipc_manager<T, u64>::add(ipc_key, [&]()
 				{
+					if (!idm::import<lv2_obj, T>([&]()
+					{
+						if (result && (error = result->on_id_create()))
+							result.reset();
+						return result;
+					}))
+					{
+						result.reset();
+					}
+
+					return result;
+				}, &result))
+				{
+					if (error)
+					{
+						return error;
+					}
+
 					if (flags == SYS_SYNC_NEWLY_CREATED)
 					{
 						return CELL_EEXIST;
 					}
 
-					if (!idm::import_existing<lv2_obj, T>(result))
+					error = CELL_EAGAIN;
+
+					if (!idm::import<lv2_obj, T>([&]() { if (result && (error = result->on_id_create())) result.reset(); return std::move(result); }))
 					{
-						return CELL_EAGAIN;
+						return error;
 					}
 
 					return CELL_OK;
 				}
 				else if (!result)
 				{
-					return CELL_EAGAIN;
+					return error ? CELL_EAGAIN : error;
 				}
 				else
 				{
@@ -237,9 +265,11 @@ public:
 					return CELL_ESRCH;
 				}
 
-				if (!idm::import_existing<lv2_obj, T>(result))
+				CellError error = CELL_EAGAIN;
+
+				if (!idm::import<lv2_obj, T>([&]() { if (result && (error = result->on_id_create())) result.reset(); return std::move(result); }))
 				{
-					return CELL_EAGAIN;
+					return error;
 				}
 
 				return CELL_OK;
@@ -252,9 +282,13 @@ public:
 		}
 		case SYS_SYNC_NOT_PROCESS_SHARED:
 		{
-			if (!idm::import<lv2_obj, T>(std::forward<F>(make)))
+			std::shared_ptr<T> result = make();
+
+			CellError error = CELL_EAGAIN;
+
+			if (!idm::import<lv2_obj, T>([&]() { if (result && (error = result->on_id_create())) result.reset(); return std::move(result); }))
 			{
-				return CELL_EAGAIN;
+				return error;
 			}
 
 			return CELL_OK;

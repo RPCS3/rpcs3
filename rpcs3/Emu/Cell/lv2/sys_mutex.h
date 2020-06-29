@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "sys_sync.h"
 
@@ -25,7 +25,7 @@ struct lv2_mutex final : lv2_obj
 {
 	static const u32 id_base = 0x85000000;
 
-	const u32 protocol;
+	const lv2_protocol protocol;
 	const u32 recursive;
 	const u32 shared;
 	const u32 adaptive;
@@ -33,14 +33,20 @@ struct lv2_mutex final : lv2_obj
 	const u64 name;
 	const s32 flags;
 
+	struct alignas(8) count_info
+	{
+		u32 mutex_count; // Mutex copies count (0 means doesn't exist anymore)
+		u32 cond_count; // Condition Variables
+	};
+
 	shared_mutex mutex;
-	atomic_t<u32> owner{0}; // Owner Thread ID
+	atomic_t<u32> owner{0};
 	atomic_t<u32> lock_count{0}; // Recursive Locks
-	atomic_t<u32> cond_count{0}; // Condition Variables
+	atomic_t<count_info> obj_count{};
 	std::deque<cpu_thread*> sq;
 
 	lv2_mutex(u32 protocol, u32 recursive, u32 shared, u32 adaptive, u64 key, s32 flags, u64 name)
-		: protocol(protocol)
+		: protocol{protocol}
 		, recursive(recursive)
 		, shared(shared)
 		, adaptive(adaptive)
@@ -48,6 +54,12 @@ struct lv2_mutex final : lv2_obj
 		, name(name)
 		, flags(flags)
 	{
+	}
+
+	CellError on_id_create()
+	{
+		obj_count.atomic_op([](count_info& info){ info.mutex_count++; });
+		return {};
 	}
 
 	CellError try_lock(u32 id)

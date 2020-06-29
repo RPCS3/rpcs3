@@ -323,6 +323,14 @@ public:
 	// Remove all objects
 	static void clear();
 
+	// Remove all objects of a type
+	template <typename T>
+	static inline void clear()
+	{
+		std::lock_guard lock(id_manager::g_mutex);
+		g_map[id_manager::typeinfo::get_index<T>()].clear();
+	}
+
 	// Get last ID (updated in create_id/allocate_id)
 	static inline u32 last_id()
 	{

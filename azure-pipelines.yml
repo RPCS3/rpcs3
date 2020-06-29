@@ -42,13 +42,14 @@ jobs:
     displayName: Docker setup and build
 
   - publish: $(Build.ArtifactStagingDirectory)
-    condition: eq(variables['COMPILER'], 'gcc')
+    condition: and(succeeded(), eq(variables['COMPILER'], 'gcc'))
+    artifact: RPCS3 for Linux
 
 - job: Windows_Build
   variables:
     COMPILER: msvc
-    QT_VER: '5.14.1'
-    QT_DATE: '202001240957'
+    QT_VER: '5.14.2'
+    QT_DATE: '202003291224'
     QTDIR: C:\Qt\$(QT_VER)\msvc2017_64
     VULKAN_VER: '1.2.135.0'
     VULKAN_SDK_SHA: '181b3353612c8b0fc5e1857b652d62140191ae42b98f2f0d532cf349cebfd8c6'
@@ -96,7 +97,8 @@ jobs:
       displayName: Pack up build artifacts
 
     - publish: $(Build.ArtifactStagingDirectory)
-      artifact: Windows App Bundle
+      condition: succeeded()
+      artifact: RPCS3 for Windows
 
     - task: GitHubRelease@1
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')

@@ -508,4 +508,6 @@ private:
 
 fs::file decrypt_self(fs::file elf_or_self, u8* klic_key = nullptr, SelfAdditionalInfo* additional_info = nullptr);
 bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key = nullptr);
-std::array<u8, 0x10> get_default_self_klic();
+
+union v128;
+v128 get_default_self_klic();

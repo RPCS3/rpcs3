@@ -218,34 +218,8 @@ error_code sceNpTrophyTerm()
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	u32 it = 0;
-	u32 ids[std::max(trophy_context_t::id_count, trophy_handle_t::id_count)];
-
-	const auto get_handles = [&](u32 id, trophy_handle_t&)
-	{
-		ids[it++] = id;
-	};
-
-	const auto get_contexts = [&](u32 id, trophy_context_t&)
-	{
-		ids[it++] = id;
-	};
-
-	// This functionality could be implemented in idm instead
-	idm::select<trophy_handle_t>(get_handles);
-
-	while (it)
-	{
-		idm::remove<trophy_handle_t>(ids[--it]);
-	}
-
-	it = 0;
-	idm::select<trophy_context_t>(get_contexts);
-
-	while (it)
-	{
-		idm::remove<trophy_context_t>(ids[--it]);
-	}
+	idm::clear<trophy_context_t>();
+	idm::clear<trophy_handle_t>();
 
 	trophy_manager->is_initialized = false;
 

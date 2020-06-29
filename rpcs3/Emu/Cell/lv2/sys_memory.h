@@ -76,21 +76,6 @@ struct lv2_memory_container
 	}
 };
 
-struct lv2_memory_alloca
-{
-	static const u32 id_base = 0x1;
-	static const u32 id_step = 0x1;
-	static const u32 id_count = 0x2000;
-
-	const u32 size; // Memory size
-	const u32 align; // Alignment required
-	const u64 flags;
-	const std::shared_ptr<lv2_memory_container> ct;
-	const std::shared_ptr<utils::shm> shm;
-
-	lv2_memory_alloca(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct);
-};
-
 struct sys_memory_user_memory_stat_t
 {
 	be_t<u32> a; // 0x0

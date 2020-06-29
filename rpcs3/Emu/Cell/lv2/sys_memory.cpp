@@ -4,20 +4,17 @@
 #include "Utilities/VirtualMemory.h"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/IdManager.h"
+#include <shared_mutex>
 
 LOG_CHANNEL(sys_memory);
 
 //
 static shared_mutex s_memstats_mtx;
 
-lv2_memory_alloca::lv2_memory_alloca(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct)
-	: size(size)
-	, align(align)
-	, flags(flags)
-	, ct(ct)
-	, shm(std::make_shared<utils::shm>(size))
+struct sys_memory_address_table
 {
-}
+	atomic_t<lv2_memory_container*> addrs[65536]{};
+};
 
 // Todo: fix order of error checks
 
@@ -26,6 +23,11 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	vm::temporary_unlock();
 
 	sys_memory.warning("sys_memory_allocate(size=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, flags, alloc_addr);
+
+	if (!size)
+	{
+		return {CELL_EALIGN, size};
+	}
 
 	// Check allocation size
 	const u32 align =
@@ -56,6 +58,8 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	{
 		if (u32 addr = area->alloc(size, align))
 		{
+			verify(HERE), !g_fxo->get<sys_memory_address_table>()->addrs[addr >> 16].exchange(dct);
+
 			if (alloc_addr)
 			{
 				*alloc_addr = addr;
@@ -77,6 +81,11 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 	vm::temporary_unlock();
 
 	sys_memory.warning("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, cid, flags, alloc_addr);
+
+	if (!size)
+	{
+		return {CELL_EALIGN, size};
+	}
 
 	// Check allocation size
 	const u32 align =
@@ -115,13 +124,12 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 		return ct.ret;
 	}
 
-	// Create phantom memory object
-	const auto mem = idm::make_ptr<lv2_memory_alloca>(size, align, flags, ct.ptr);
-
 	if (const auto area = vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, ::align(size, 0x10000000), 0x401))
 	{
-		if (u32 addr = area->alloc(size, mem->align, &mem->shm))
+		if (u32 addr = area->alloc(size))
 		{
+			verify(HERE), !g_fxo->get<sys_memory_address_table>()->addrs[addr >> 16].exchange(ct.ptr.get());
+
 			if (alloc_addr)
 			{
 				*alloc_addr = addr;
@@ -134,7 +142,6 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 		}
 	}
 
-	idm::remove<lv2_memory_alloca>(idm::last_id());
 	ct->used -= size;
 	return CELL_ENOMEM;
 }
@@ -145,57 +152,15 @@ error_code sys_memory_free(u32 addr)
 
 	sys_memory.warning("sys_memory_free(addr=0x%x)", addr);
 
-	const auto area = vm::get(vm::any, addr);
+	const auto ct = addr % 0x10000 ? nullptr : g_fxo->get<sys_memory_address_table>()->addrs[addr >> 16].exchange(nullptr);
 
-	if (!area || (area->flags & 3) != 1)
+	if (!ct)
 	{
 		return {CELL_EINVAL, addr};
 	}
 
-	const auto shm = area->get(addr);
-
-	if (!shm.second)
-	{
-		return {CELL_EINVAL, addr};
-	}
-
-	// Retrieve phantom memory object
-	const auto mem = idm::select<lv2_memory_alloca>([&](u32 id, lv2_memory_alloca& mem) -> u32
-	{
-		if (mem.shm.get() == shm.second.get())
-		{
-			return id;
-		}
-
-		return 0;
-	});
-
-	if (!mem)
-	{
-		// Deallocate memory (simple)
-		if (!area->dealloc(addr))
-		{
-			return {CELL_EINVAL, addr};
-		}
-
-		// Return "physical memory" to the default container
-		g_fxo->get<lv2_memory_container>()->used -= shm.second->size();
-
-		return CELL_OK;
-	}
-
-	// Deallocate memory
-	if (!area->dealloc(addr, &shm.second))
-	{
-		return {CELL_EINVAL, addr};
-	}
-
-	// Return "physical memory"
-	mem->ct->used -= mem->size;
-
-	// Remove phantom memory object
-	verify(HERE), idm::remove<lv2_memory_alloca>(mem.ret);
-
+	const auto size = verify(HERE, vm::dealloc(addr));
+	std::shared_lock{id_manager::g_mutex}, ct->used -= size;
 	return CELL_OK;
 }
 

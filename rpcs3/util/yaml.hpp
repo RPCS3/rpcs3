@@ -18,3 +18,7 @@
 
 // Load from string and consume exception
 std::pair<YAML::Node, std::string> yaml_load(const std::string& from);
+
+// Use try/catch in YAML::Node::as<T>() instead of YAML::Node::as<T>(fallback) in order to get an error message
+template <typename T>
+T get_yaml_node_value(YAML::Node node, std::string& error_message);

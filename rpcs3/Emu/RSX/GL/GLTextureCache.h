@@ -588,7 +588,7 @@ namespace gl
 					// Dimensions were given in 'dst' space. Work out the real source coordinates
 					const auto src_bpp = slice.src->pitch() / slice.src->width();
 					src_x = (src_x * dst_bpp) / src_bpp;
-					src_w = (src_w * dst_bpp) / src_bpp;
+					src_w = ::aligned_div<u16>(src_w * dst_bpp, src_bpp);
 				}
 
 				if (auto surface = dynamic_cast<gl::render_target*>(slice.src))
@@ -953,6 +953,7 @@ namespace gl
 			case CELL_GCM_TEXTURE_R5G6B5:
 				return (ifmt == gl::texture::internal_format::rgb565);
 			case CELL_GCM_TEXTURE_A8R8G8B8:
+			case CELL_GCM_TEXTURE_D8R8G8B8:
 				return (ifmt == gl::texture::internal_format::rgba8 ||
 						ifmt == gl::texture::internal_format::depth24_stencil8 ||
 						ifmt == gl::texture::internal_format::depth32f_stencil8);

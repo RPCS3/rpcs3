@@ -79,19 +79,19 @@ struct lv2_event_queue final : public lv2_obj
 {
 	static const u32 id_base = 0x8d000000;
 
-	const u32 protocol;
+	const lv2_protocol protocol;
 	const s32 type;
 	const u64 name;
 	const u64 key;
 	const s32 size;
 
-	atomic_t<bool> exists = true; // Existence validation (workaround for shared-ptr ref-counting)
+	atomic_t<u32> exists = 0; // Existence validation (workaround for shared-ptr ref-counting)
 	shared_mutex mutex;
 	std::deque<lv2_event> events;
 	std::deque<cpu_thread*> sq;
 
 	lv2_event_queue(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
-		: protocol(protocol)
+		: protocol{protocol}
 		, type(type)
 		, name(name)
 		, key(ipc_key)
@@ -112,6 +112,12 @@ struct lv2_event_queue final : public lv2_obj
 	// Check queue ptr validity (use 'exists' member)
 	static bool check(const std::weak_ptr<lv2_event_queue>&);
 	static bool check(const std::shared_ptr<lv2_event_queue>&);
+
+	CellError on_id_create()
+	{
+		exists++;
+		return {};
+	}
 };
 
 struct lv2_event_port final : lv2_obj

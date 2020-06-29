@@ -1130,33 +1130,45 @@ void VKGSRender::clear_surface(u32 mask)
 		if (!m_draw_buffers.empty())
 		{
 			bool use_fast_clear = false;
-			bool ignore_clear = false;
+			u8 clear_a = rsx::method_registers.clear_color_a();
+			u8 clear_r = rsx::method_registers.clear_color_r();
+			u8 clear_g = rsx::method_registers.clear_color_g();
+			u8 clear_b = rsx::method_registers.clear_color_b();
+
 			switch (rsx::method_registers.surface_color())
 			{
 			case rsx::surface_color_format::x32:
 			case rsx::surface_color_format::w16z16y16x16:
 			case rsx::surface_color_format::w32z32y32x32:
+			{
 				//NOP
-				ignore_clear = true;
+				colormask = 0;
 				break;
+			}
 			case rsx::surface_color_format::g8b8:
+			{
+				rsx::get_g8b8_clear_color(clear_r, clear_g, clear_b, clear_a);
 				colormask = rsx::get_g8b8_r8g8_colormask(colormask);
 				use_fast_clear = (colormask == (0x10 | 0x20));
-				ignore_clear = (colormask == 0);
-				colormask |= (0x40 | 0x80);
 				break;
+			}
+			case rsx::surface_color_format::a8b8g8r8:
+			case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+			case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
+			{
+				rsx::get_abgr8_clear_color(clear_r, clear_g, clear_b, clear_a);
+				colormask = rsx::get_abgr8_colormask(colormask);
+				[[fallthrough]];
+			}
 			default:
+			{
 				use_fast_clear = (colormask == (0x10 | 0x20 | 0x40 | 0x80));
 				break;
 			}
+			}
 
-			if (!ignore_clear)
+			if (colormask)
 			{
-				u8 clear_a = rsx::method_registers.clear_color_a();
-				u8 clear_r = rsx::method_registers.clear_color_r();
-				u8 clear_g = rsx::method_registers.clear_color_g();
-				u8 clear_b = rsx::method_registers.clear_color_b();
-
 				color_clear_values.color.float32[0] = static_cast<float>(clear_r) / 255;
 				color_clear_values.color.float32[1] = static_cast<float>(clear_g) / 255;
 				color_clear_values.color.float32[2] = static_cast<float>(clear_b) / 255;
@@ -1711,7 +1723,7 @@ void VKGSRender::load_program_env()
 			auto buf = m_fragment_constants_ring_info.map(mem, fragment_constants_size);
 
 			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
-				current_fragment_program, vk::sanitize_fp_values());
+				current_fragment_program, true);
 
 			m_fragment_constants_ring_info.unmap();
 			m_fragment_constants_buffer_info = { m_fragment_constants_ring_info.heap->value, mem, fragment_constants_size };

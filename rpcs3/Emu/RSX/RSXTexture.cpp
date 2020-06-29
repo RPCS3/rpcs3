@@ -267,6 +267,11 @@ namespace rsx
 		return ((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 13) & 0xf);
 	}
 
+	u8 fragment_texture::argb_signed() const
+	{
+		return ((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 28) & 0xf);
+	}
+
 	bool fragment_texture::a_signed() const
 	{
 		return ((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 28) & 0x1);

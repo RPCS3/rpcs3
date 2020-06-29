@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "../rsx_methods.h"
-
 #include "FragmentProgramDecompiler.h"
 
 #include <algorithm>
@@ -49,13 +48,6 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 
 	if (!dst.no_dest)
 	{
-		if (dst.exp_tex)
-		{
-			//Expand [0,1] to [-1, 1]. Confirmed by Castlevania: LOS
-			AddCode("//exp tex flag is set");
-			code = "((" + code + "- 0.5) * 2.)";
-		}
-
 		if (dst.fp16 && device_props.has_native_half_support && !(flags & OPFLAGS::skip_type_cast))
 		{
 			// Cast to native data type
@@ -121,9 +113,10 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 		return;
 	}
 
-	std::string dest = AddReg(dst.dest_reg, !!dst.fp16) + "$m";
+	const std::string dest = AddReg(dst.dest_reg, !!dst.fp16) + "$m";
+	const std::string decoded_dest = Format(dest);
 
-	AddCodeCond(Format(dest), code);
+	AddCodeCond(decoded_dest, code);
 	//AddCode("$ifcond " + dest + code + (append_mask ? "$m;" : ";"));
 
 	if (dst.set_cond)
@@ -134,6 +127,20 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 	u32 reg_index = dst.fp16 ? dst.dest_reg >> 1 : dst.dest_reg;
 
 	verify(HERE), reg_index < temp_registers.size();
+
+	if (dst.opcode == RSX_FP_OPCODE_MOV &&
+		src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP &&
+		src0.tmp_reg_index == reg_index)
+	{
+		// The register did not acquire any new data
+		// Common in code with structures like r0.xy = r0.xy
+		// Unsure why such code would exist, maybe placeholders for dynamically generated shader code?
+		if (decoded_dest == Format(code))
+		{
+			return;
+		}
+	}
+
 	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
 }
 
@@ -166,18 +173,17 @@ void FragmentProgramDecompiler::AddCode(const std::string& code)
 std::string FragmentProgramDecompiler::GetMask()
 {
 	std::string ret;
+	ret.reserve(5);
+	
+	static constexpr std::string_view dst_mask = "xyzw";
 
-	static const char dst_mask[4] =
-	{
-		'x', 'y', 'z', 'w',
-	};
-
+	ret += '.';
 	if (dst.mask_x) ret += dst_mask[0];
 	if (dst.mask_y) ret += dst_mask[1];
 	if (dst.mask_z) ret += dst_mask[2];
 	if (dst.mask_w) ret += dst_mask[3];
 
-	return ret.empty() || strncmp(ret.c_str(), dst_mask, 4) == 0 ? "" : ("." + ret);
+	return ret == "."sv || ret == ".xyzw"sv ? "" : (ret);
 }
 
 std::string FragmentProgramDecompiler::AddReg(u32 index, bool fp16)
@@ -359,14 +365,20 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 
 std::string FragmentProgramDecompiler::GetRawCond()
 {
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
+	static constexpr std::string_view f = "xyzw";
 
 	std::string swizzle, cond;
+	swizzle.reserve(5);
+	swizzle += '.';
 	swizzle += f[src0.cond_swizzle_x];
 	swizzle += f[src0.cond_swizzle_y];
 	swizzle += f[src0.cond_swizzle_z];
 	swizzle += f[src0.cond_swizzle_w];
-	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
+
+	if (swizzle == ".xyzw"sv)
+	{
+		swizzle.clear();
+	}
 
 	if (src0.exec_if_gr && src0.exec_if_eq)
 		cond = compareFunction(COMPARE::FUNCTION_SGE, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
@@ -466,7 +478,20 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& lhs, const std::s
 template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 {
 	std::string ret;
-	bool apply_precision_modifier = !!src1.input_prec_mod;
+	u32 precision_modifier = 0;
+
+	if constexpr (std::is_same<T, SRC0>::value)
+	{
+		precision_modifier = src1.src0_prec_mod;
+	}
+	else if constexpr (std::is_same<T, SRC1>::value)
+	{
+		precision_modifier = src1.src1_prec_mod;
+	}
+	else if constexpr (std::is_same<T, SRC2>::value)
+	{
+		precision_modifier = src1.src2_prec_mod;
+	}
 
 	switch (src.reg_type)
 	{
@@ -490,10 +515,10 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				}
 			}
 		}
-		else if (src1.input_prec_mod == RSX_FP_PRECISION_HALF)
+		else if (precision_modifier == RSX_FP_PRECISION_HALF)
 		{
 			// clamp16() is not a cheap operation when emulated; avoid at all costs
-			apply_precision_modifier = false;
+			precision_modifier = RSX_FP_PRECISION_REAL;
 		}
 
 		ret += AddReg(src.tmp_reg_index, src.fp16);
@@ -540,7 +565,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			if (!src2.use_index_reg)
 			{
 				ret += "_saturate(" + reg_var + ")";
-				apply_precision_modifier = false;
+				precision_modifier = RSX_FP_PRECISION_REAL;
 			}
 			else
 			{
@@ -611,7 +636,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			}
 
 			ret += reg_var;
-			apply_precision_modifier = false;
+			precision_modifier = RSX_FP_PRECISION_REAL;
 			break;
 		}
 		}
@@ -627,7 +652,6 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	case RSX_FP_REGISTER_TYPE_CONSTANT:
 		ret += AddConst();
-		apply_precision_modifier = false;
 		break;
 
 	case RSX_FP_REGISTER_TYPE_UNKNOWN: // ??? Used by a few games, what is it?
@@ -635,7 +659,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				dst.opcode, dst.HEX, src0.HEX, src1.HEX, src2.HEX);
 
 		ret += AddType3();
-		apply_precision_modifier = false;
+		precision_modifier = RSX_FP_PRECISION_REAL;
 		break;
 
 	default:
@@ -644,34 +668,24 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		break;
 	}
 
-	if (apply_precision_modifier && !src.neg)
-	{
-		if constexpr (!std::is_same<T, SRC0>::value)
-		{
-			if (dst.opcode == RSX_FP_OPCODE_MAD)
-			{
-				// Hardware tests show special behavior on MAD operation
-				// Only src0 obeys precision modifier (sat tested)
-				// Results: 1 * 100 + 0  = 100, 1 * 1 + 100 = 100, 100 * 1 + 0 = 1
-				// NOTE: Neg modifier seems to break this rule; 1 * -100 + 0 = -1 not -99
-				apply_precision_modifier = false;
-			}
-		}
-	}
-
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
+	static constexpr std::string_view f = "xyzw";
 
 	std::string swizzle;
+	swizzle.reserve(5);
+	swizzle += '.';
 	swizzle += f[src.swizzle_x];
 	swizzle += f[src.swizzle_y];
 	swizzle += f[src.swizzle_z];
 	swizzle += f[src.swizzle_w];
 
-	if (strncmp(swizzle.c_str(), f, 4) != 0) ret += "." + swizzle;
+	if (swizzle != ".xyzw"sv)
+	{
+		ret += swizzle;
+	}
 
 	// Warning: Modifier order matters. e.g neg should be applied after precision clamping (tested with Naruto UNS)
 	if (src.abs) ret = "abs(" + ret + ")";
-	if (apply_precision_modifier) ret = ClampValue(ret, src1.input_prec_mod);
+	if (precision_modifier) ret = ClampValue(ret, precision_modifier);
 	if (src.neg) ret = "-" + ret;
 
 	return ret;
@@ -977,8 +991,20 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			}
 		}
 
+		if (dst.exp_tex)
+		{
+			properties.has_exp_tex_op = true;
+			AddCode("_enable_texture_expand();");
+		}
+
 		auto function = functions[select];
 		SetDst(getFunction(function) + mask);
+
+		if (dst.exp_tex)
+		{
+			// Cleanup
+			AddCode("_disable_texture_expand();");
+		}
 	};
 
 	switch (opcode)

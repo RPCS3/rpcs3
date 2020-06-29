@@ -128,6 +128,9 @@
     <Filter Include="Gui\screenshot manager">
       <UniqueIdentifier>{b227bdd4-16f5-4f6e-a8b2-8b1f4bdc606a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\patch manager">
+      <UniqueIdentifier>{e72a0cbe-fbcd-4a0b-8c17-a2a3b7a42258}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -1039,6 +1042,21 @@
     <ClCompile Include="rpcs3qt\config_adapter.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\patch_manager_dialog.cpp">
+      <Filter>Gui\patch manager</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_patch_manager_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_patch_manager_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_patch_manager_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_patch_manager_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1136,6 +1154,9 @@
     </ClInclude>
     <ClInclude Include="Input\product_info.h">
       <Filter>Io</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_patch_manager_dialog.h">
+      <Filter>Generated Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1348,6 +1369,12 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\render_creator.h">
       <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\patch_manager_dialog.h">
+      <Filter>Gui\patch manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\patch_manager_dialog.ui">
+      <Filter>Form Files</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

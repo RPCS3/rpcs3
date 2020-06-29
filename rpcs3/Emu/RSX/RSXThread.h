@@ -46,8 +46,8 @@ namespace rsx
 
 		rsx_iomap_table() noexcept
 		{
-			std::fill(ea.begin(), ea.end(), -1);
-			std::fill(io.begin(), io.end(), -1);
+			std::memset(ea.data(), -1, sizeof(ea));
+			std::memset(io.data(), -1, sizeof(io));
 		}
 
 		// Try to get the real address given a mapped address
@@ -110,6 +110,17 @@ namespace rsx
 		result_none = 0,
 		result_error = 1,
 		result_zcull_intr = 2
+	};
+
+	enum ROP_control : u32
+	{
+		alpha_test_enable       = (1u << 0),
+		framebuffer_srgb_enable = (1u << 1),
+		csaa_enable             = (1u << 4),
+		msaa_mask_enable        = (1u << 5),
+		msaa_config_mask        = (3u << 6),
+		polygon_stipple_enable  = (1u << 9),
+		alpha_func_mask         = (7u << 16)
 	};
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
@@ -606,7 +617,7 @@ namespace rsx
 		// Framebuffer setup
 		rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
 		rsx::gcm_framebuffer_info m_depth_surface_info;
-		framebuffer_layout m_framebuffer_layout;
+		framebuffer_layout m_framebuffer_layout{};
 		bool framebuffer_status_valid = false;
 
 		// Overlays
@@ -681,7 +692,7 @@ namespace rsx
 		u32 main_mem_size{0};
 		u32 local_mem_size{0};
 
-		bool m_rtts_dirty;
+		bool m_rtts_dirty = true;
 		std::array<bool, 16> m_textures_dirty;
 		std::array<bool, 4> m_vertex_textures_dirty;
 		bool m_framebuffer_state_contested = false;
@@ -716,8 +727,10 @@ namespace rsx
 		 * returns whether surface is a render target and surface pitch in native format
 		 */
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
+
 	public:
 		bool invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size);
+		void on_framebuffer_options_changed(u32 opt);
 
 	public:
 		u64 target_rsx_flip_time = 0;

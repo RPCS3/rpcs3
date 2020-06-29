@@ -396,68 +396,6 @@ namespace vk
 		}
 	};
 
-	// @Deprecated!!
-	struct depth_convert_pass : public overlay_pass
-	{
-		f32 src_scale_x;
-		f32 src_scale_y;
-
-		depth_convert_pass()
-		{
-			vs_src =
-				"#version 450\n"
-				"#extension GL_ARB_separate_shader_objects : enable\n"
-				"layout(std140, set=0, binding=0) uniform static_data{ vec4 regs[8]; };\n"
-				"layout(location=0) out vec2 tc0;\n"
-				"\n"
-				"void main()\n"
-				"{\n"
-				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
-				"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
-				"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
-				"	tc0 = coords[gl_VertexIndex % 4] * regs[0].xy;\n"
-				"}\n";
-
-			fs_src =
-				"#version 420\n"
-				"#extension GL_ARB_separate_shader_objects : enable\n"
-				"#extension GL_ARB_shader_stencil_export : enable\n\n"
-				"layout(set=0, binding=1) uniform sampler2D fs0;\n"
-				"layout(location=0) in vec2 tc0;\n"
-				"\n"
-				"void main()\n"
-				"{\n"
-				"	vec4 rgba_in = texture(fs0, tc0);\n"
-				"	gl_FragDepth = rgba_in.w * 0.99609 + rgba_in.x * 0.00389 + rgba_in.y * 0.00002;\n"
-				"}\n";
-
-			renderpass_config.set_depth_mask(true);
-			renderpass_config.enable_depth_test(VK_COMPARE_OP_ALWAYS);
-		}
-
-		void update_uniforms(vk::command_buffer& /*cmd*/, vk::glsl::program* /*program*/) override
-		{
-			m_ubo_offset = static_cast<u32>(m_ubo.alloc<256>(128));
-			auto dst = static_cast<f32*>(m_ubo.map(m_ubo_offset, 128));
-			dst[0] = src_scale_x;
-			dst[1] = src_scale_y;
-			dst[2] = 0.f;
-			dst[3] = 0.f;
-			m_ubo.unmap();
-		}
-
-		void run(vk::command_buffer& cmd, const areai& src_area, const areai& dst_area, vk::image_view* src, vk::image* dst, VkRenderPass render_pass)
-		{
-			auto real_src = src->image();
-			verify(HERE), real_src;
-
-			src_scale_x = static_cast<f32>(src_area.x2) / real_src->width();
-			src_scale_y = static_cast<f32>(src_area.y2) / real_src->height();
-
-			overlay_pass::run(cmd, static_cast<areau>(dst_area), dst, src, render_pass);
-		}
-	};
-
 	struct ui_overlay_renderer : public overlay_pass
 	{
 		f32 m_time = 0.f;

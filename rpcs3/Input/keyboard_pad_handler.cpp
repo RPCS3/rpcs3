@@ -1,4 +1,5 @@
 ﻿#include "keyboard_pad_handler.h"
+#include "pad_thread.h"
 #include "Emu/Io/pad_config.h"
 #include "Input/product_info.h"
 
@@ -11,7 +12,7 @@ constexpr auto qstr = QString::fromStdString;
 
 bool keyboard_pad_handler::Init()
 {
-	std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+	const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
 	m_last_mouse_move_left  = now;
 	m_last_mouse_move_right = now;
 	m_last_mouse_move_up    = now;
@@ -67,6 +68,11 @@ void keyboard_pad_handler::init_config(pad_config* cfg, const std::string& name)
 
 void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 {
+	if (!pad::g_enabled)
+	{
+		return;
+	}
+
 	value = Clamp0To255(value);
 
 	for (auto pad : bindings)
@@ -99,10 +105,10 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 		for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
 		{
-			bool is_max = pad->m_sticks[i].m_keyCodeMax == code;
-			bool is_min = pad->m_sticks[i].m_keyCodeMin == code;
+			const bool is_max = pad->m_sticks[i].m_keyCodeMax == code;
+			const bool is_min = pad->m_sticks[i].m_keyCodeMin == code;
 
-			u16 normalized_value = std::max<u16>(1, static_cast<u16>(std::floor(value / 2.0)));
+			const u16 normalized_value = std::max<u16>(1, static_cast<u16>(std::floor(value / 2.0)));
 
 			if (is_max)
 				m_stick_max[i] = pressed ? 128 + normalized_value : 128;
@@ -220,7 +226,7 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 		if (list.isEmpty())
 			return;
 
-		bool is_num_key = list.contains("Num");
+		const bool is_num_key = list.contains("Num");
 		if (is_num_key)
 			list.removeAll("Num");
 
@@ -240,8 +246,7 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 	};
 
 	// We need to ignore keys when using rpcs3 keyboard shortcuts
-	int key = event->key();
-	switch (key)
+	switch (event->key())
 	{
 	case Qt::Key_Escape:
 		break;
@@ -405,7 +410,7 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 
 void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
 {
-	QPoint direction = event->angleDelta();
+	const QPoint direction = event->angleDelta();
 
 	if (direction.isNull())
 	{
@@ -415,7 +420,8 @@ void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
 
 	if (const int x = direction.x())
 	{
-		bool to_left = event->inverted() ? x < 0 : x > 0;
+		const bool to_left = event->inverted() ? x < 0 : x > 0;
+
 		if (to_left)
 		{
 			Key(mouse::wheel_left, true);
@@ -429,7 +435,8 @@ void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
 	}
 	if (const int y = direction.y())
 	{
-		bool to_up = event->inverted() ? y < 0 : y > 0;
+		const bool to_up = event->inverted() ? y < 0 : y > 0;
+
 		if (to_up)
 		{
 			Key(mouse::wheel_up, true);
@@ -457,8 +464,7 @@ std::string keyboard_pad_handler::GetMouseName(const QMouseEvent* event)
 
 std::string keyboard_pad_handler::GetMouseName(u32 button)
 {
-	auto it = mouse_list.find(button);
-	if (it != mouse_list.end())
+	if (auto it = mouse_list.find(button); it != mouse_list.end())
 		return it->second;
 	return "FAIL";
 }
@@ -582,7 +588,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	if (device != "Keyboard")
 		return false;
 
-	int index = static_cast<int>(bindings.size());
+	const int index = static_cast<int>(bindings.size());
 	m_pad_configs[index].load();
 	pad_config* p_profile = &m_pad_configs[index];
 	if (p_profile == nullptr)
@@ -793,6 +799,7 @@ void keyboard_pad_handler::ThreadProc()
 	// Next activation is set to distant future to avoid activating this on every proc
 	const auto update_threshold = now - std::chrono::milliseconds(100);
 	const auto distant_future = now + std::chrono::hours(24);
+
 	if (update_threshold >= m_last_wheel_move_up)
 	{
 		Key(mouse::wheel_up, false);

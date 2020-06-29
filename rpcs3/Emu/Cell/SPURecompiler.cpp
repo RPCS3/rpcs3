@@ -5693,6 +5693,13 @@ public:
 		{
 			// TODO
 			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_tag_mask));
+			const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+			const auto _mfc = llvm::BasicBlock::Create(m_context, "", m_function);
+			m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_upd)), m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE)), _mfc, next);
+			m_ir->SetInsertPoint(_mfc);
+			call("spu_write_channel", &exec_wrch, m_thread, m_ir->getInt32(op.ra), val.value);
+			m_ir->CreateBr(next);
+			m_ir->SetInsertPoint(next);
 			return;
 		}
 		case MFC_WrTagUpdate:
@@ -5708,23 +5715,16 @@ public:
 				const auto stat_ptr  = spu_ptr<u64>(&spu_thread::ch_tag_stat);
 				const auto stat_val  = m_ir->CreateOr(m_ir->CreateZExt(completed, get_type<u64>()), INT64_MIN);
 
-				if (upd == 0)
+				if (upd == MFC_TAG_UPDATE_IMMEDIATE)
 				{
-					m_ir->CreateStore(m_ir->getInt32(0), upd_ptr);
+					m_ir->CreateStore(m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE), upd_ptr);
 					m_ir->CreateStore(stat_val, stat_ptr);
 					return;
 				}
-				else if (upd == 1)
+				else if (upd <= MFC_TAG_UPDATE_ALL)
 				{
-					const auto cond = m_ir->CreateICmpNE(completed, m_ir->getInt32(0));
-					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(1), m_ir->getInt32(0)), upd_ptr);
-					m_ir->CreateStore(m_ir->CreateSelect(cond, stat_val, m_ir->getInt64(0)), stat_ptr);
-					return;
-				}
-				else if (upd == 2)
-				{
-					const auto cond = m_ir->CreateICmpEQ(completed, tag_mask);
-					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(2), m_ir->getInt32(0)), upd_ptr);
+					const auto cond = upd == MFC_TAG_UPDATE_ANY ? m_ir->CreateICmpNE(completed, m_ir->getInt32(0)) : m_ir->CreateICmpEQ(completed, tag_mask);
+					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE), m_ir->getInt32(static_cast<u32>(upd))), upd_ptr);
 					m_ir->CreateStore(m_ir->CreateSelect(cond, stat_val, m_ir->getInt64(0)), stat_ptr);
 					return;
 				}
@@ -7281,7 +7281,7 @@ public:
 
 	value_t<f32[4]> clamp_smax(value_t<f32[4]> v)
 	{
-		return eval(clamp_negative_smax(clamp_positive_smax(v)));
+		return eval(clamp_positive_smax(clamp_negative_smax(v)));
 	}
 
 	// FMA favouring zeros
@@ -7355,12 +7355,14 @@ public:
 			{
 				const u32 exponent = data._u32[i] & 0x7f800000u;
 
-				if (data._u32[i] > 0x7f7fffffu || !exponent)
+				if (data._u32[i] >= 0x7f7fffffu || !exponent)
 				{
 					// Postive or negative zero, Denormal (treated as zero), Negative constant, or Normalized number with exponent +127
 		 			// Cannot used signed integer compare safely
+					// Note: Technically this optimization is accurate for any positive value, but due to the fact that
+					// we don't produce "extended range" values the same way as real hardware, it's not safe to apply
+					// this optimization for values outside of the range of x86 floating point hardware.
 					safe_int_compare = false;
-					break;
 				}
 			}
 
@@ -7380,7 +7382,7 @@ public:
 			{
 				const u32 exponent = data._u32[i] & 0x7f800000u;
 
-				if (data._u32[i] > 0x7f7fffffu || !exponent)
+				if (data._u32[i] >= 0x7f7fffffu || !exponent)
 				{
 					// See above
 					safe_int_compare = false;
@@ -7457,6 +7459,13 @@ public:
 		{
 			const auto a = get_vr<f32[4]>(op.ra);
 			const auto b = get_vr<f32[4]>(op.rb);
+
+			if (op.ra == op.rb && !m_interp_magn)
+			{
+				set_vr(op.rt, a * b);
+				return;
+			}
+
 			const auto ma = eval(sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.))));
 			const auto mb = eval(sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.))));
 			const auto ca = eval(bitcast<f32[4]>(bitcast<s32[4]>(a) & mb));
@@ -7527,10 +7536,6 @@ public:
 	value_t<f32[4]> fma32x4(value_t<f32[4]> a, value_t<f32[4]> b, value_t<f32[4]> c)
 	{
 		value_t<f32[4]> r;
-		const auto ma = eval(sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.))));
-		const auto mb = eval(sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.))));
-		const auto ca = eval(bitcast<f32[4]>(bitcast<s32[4]>(a) & mb));
-		const auto cb = eval(bitcast<f32[4]>(bitcast<s32[4]>(b) & ma));
 
 		// Optimization: Emit only a floating multiply if the addend is zero
 		// This is odd since SPU code could just use the FM instruction, but it seems common enough
@@ -7540,20 +7545,41 @@ public:
 
 			if (is_spu_float_zero(data))
 			{
-				r = eval(ca * cb);
+				r = eval(a * b);
 				return r;
+			}
+		}
+
+		if (auto cv = llvm::dyn_cast<llvm::Constant>(b.value))
+		{
+			v128 data = get_const_vector(cv, m_pos, 4000);
+
+			if (is_spu_float_zero(data))
+			{
+				// Just return the added value if either a or b is 0
+				return c;
+			}
+		}
+
+		if (auto cv = llvm::dyn_cast<llvm::Constant>(a.value))
+		{
+			v128 data = get_const_vector(cv, m_pos, 4000);
+
+			if (is_spu_float_zero(data))
+			{
+				return c;
 			}
 		}
 
 		if (m_use_fma)
 		{
-			r.value = m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), {ca.value, cb.value, c.value});
+			r.value = m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), {a.value, b.value, c.value});
 			return r;
 		}
 
 		// Convert to doubles
-		const auto xa = m_ir->CreateFPExt(ca.value, get_type<f64[4]>());
-		const auto xb = m_ir->CreateFPExt(cb.value, get_type<f64[4]>());
+		const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
+		const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
 		const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
 		const auto xr = m_ir->CreateCall(get_intrinsic<f64[4]>(llvm::Intrinsic::fmuladd), {xa, xb, xc});
 		r.value = m_ir->CreateFPTrunc(xr, get_type<f32[4]>());
@@ -7566,9 +7592,13 @@ public:
 		if (g_cfg.core.spu_accurate_xfloat)
 			set_vr(op.rt4, fmuladd(eval(-get_vr<f64[4]>(op.ra)), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
 		else if (g_cfg.core.spu_approx_xfloat)
-			set_vr(op.rt4, fma32x4(eval(-get_vr<f32[4]>(op.ra)), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
+		{
+			const auto a = eval(clamp_smax(get_vr<f32[4]>(op.ra)));
+			const auto b = eval(clamp_smax(get_vr<f32[4]>(op.rb)));
+			set_vr(op.rt4, fma32x4(eval(-(a)), (b), get_vr<f32[4]>(op.rc)));
+		}
 		else
-			set_vr(op.rt4, get_vr<f32[4]>(op.rc) - get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb));
+			set_vr(op.rt4, fma32x4(eval(-get_vr<f32[4]>(op.ra)), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
 	}
 
 	void FMA(spu_opcode_t op)
@@ -7577,9 +7607,17 @@ public:
 		if (g_cfg.core.spu_accurate_xfloat)
 			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
 		else if (g_cfg.core.spu_approx_xfloat)
-			set_vr(op.rt4, fma32x4(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
+		{
+			const auto a = get_vr<f32[4]>(op.ra);
+			const auto b = get_vr<f32[4]>(op.rb);
+			const auto ma = eval(sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.))));
+			const auto mb = eval(sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.))));
+			const auto ca = eval(bitcast<f32[4]>(bitcast<s32[4]>(a) & mb));
+			const auto cb = eval(bitcast<f32[4]>(bitcast<s32[4]>(b) & ma));
+			set_vr(op.rt4, fma32x4((ca), (cb), get_vr<f32[4]>(op.rc)));
+		}
 		else
-			set_vr(op.rt4, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb) + get_vr<f32[4]>(op.rc));
+			set_vr(op.rt4, fma32x4(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
 	}
 
 	void FMS(spu_opcode_t op)
@@ -7588,9 +7626,13 @@ public:
 		if (g_cfg.core.spu_accurate_xfloat)
 			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))));
 		else if (g_cfg.core.spu_approx_xfloat)
-			set_vr(op.rt4, fma32x4(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), eval(-get_vr<f32[4]>(op.rc))));
+		{
+			const auto a = eval(clamp_smax(get_vr<f32[4]>(op.ra)));
+			const auto b = eval(clamp_smax(get_vr<f32[4]>(op.rb)));
+			set_vr(op.rt4, fma32x4((a), (b), eval(-get_vr<f32[4]>(op.rc))));
+		}
 		else
-			set_vr(op.rt4, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb) - get_vr<f32[4]>(op.rc));
+			set_vr(op.rt4, fma32x4(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), eval(-get_vr<f32[4]>(op.rc))));
 	}
 
 	void FI(spu_opcode_t op)

@@ -160,8 +160,6 @@ static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 
 	const auto handler = pad::get_current_handler();
 
-	const PadInfo& rinfo = handler->GetInfo();
-
 	auto& pads = handler->GetPads();
 	auto pad = pads[port_no];
 
@@ -249,9 +247,6 @@ static bool ds3_input_to_ext(const u32 port_no, CellGemExtPortData& ext)
 	const auto handler = pad::get_current_handler();
 
 	auto& pads = handler->GetPads();
-
-	const PadInfo& rinfo = handler->GetInfo();
-
 	auto pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -283,7 +278,7 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 
 	std::scoped_lock lock(handler->mutex);
 
-	if (!handler || mouse_no >= handler->GetMice().size())
+	if (mouse_no >= handler->GetMice().size())
 	{
 		return false;
 	}
@@ -316,7 +311,7 @@ static bool mouse_pos_to_gem_image_state(const u32 mouse_no, vm::ptr<CellGemImag
 
 	std::scoped_lock lock(handler->mutex);
 
-	if (!gem_image_state || !handler || mouse_no >= handler->GetMice().size())
+	if (!gem_image_state || mouse_no >= handler->GetMice().size())
 	{
 		return false;
 	}
@@ -346,7 +341,7 @@ static bool mouse_pos_to_gem_state(const u32 mouse_no, vm::ptr<CellGemState>& ge
 
 	std::scoped_lock lock(handler->mutex);
 
-	if (!gem_state || !handler || mouse_no >= handler->GetMice().size())
+	if (!gem_state || mouse_no >= handler->GetMice().size())
 	{
 		return false;
 	}

@@ -75,6 +75,7 @@ namespace vk
 		INTEL
 	};
 
+	// Chip classes grouped by vendor in order of release
 	enum class chip_class
 	{
 		unknown,
@@ -87,7 +88,8 @@ namespace vk
 		NV_maxwell,
 		NV_pascal,
 		NV_volta,
-		NV_turing
+		NV_turing,
+		NV_ampere
 	};
 
 	enum // special remap_encoding enums
@@ -155,6 +157,9 @@ namespace vk
 	void acquire_global_submit_lock();
 	void release_global_submit_lock();
 	void queue_submit(VkQueue queue, const VkSubmitInfo* info, fence* pfence, VkBool32 flush = VK_FALSE);
+
+	bool is_renderpass_open(VkCommandBuffer cmd);
+	void end_renderpass(VkCommandBuffer cmd);
 
 	template<class T>
 	T* get_compute_task();
@@ -295,6 +300,7 @@ namespace vk
 				return found->second;
 			}
 
+			rsx_log.warning("Unknown chip with device ID 0x%x", device_id);
 			return default_;
 		}
 	};
@@ -3211,12 +3217,7 @@ public:
 
 		void begin_query(vk::command_buffer &cmd, u32 index)
 		{
-			if (query_slot_status[index].active)
-			{
-				//Synchronization must be done externally
-				vkCmdResetQueryPool(cmd, query_pool, index, 1);
-				query_slot_status[index] = {};
-			}
+			verify(HERE), query_slot_status[index].active == false;
 
 			vkCmdBeginQuery(cmd, query_pool, index, 0);//VK_QUERY_CONTROL_PRECISE_BIT);
 			query_slot_status[index].active = true;
@@ -3250,13 +3251,11 @@ public:
 			vkCmdCopyQueryPoolResults(cmd, query_pool, index, 1, dst, dst_offset, 4, VK_QUERY_RESULT_WAIT_BIT);
 		}
 
-		void reset_query(vk::command_buffer &cmd, u32 index)
+		void reset_query(vk::command_buffer &/*cmd*/, u32 index)
 		{
 			if (query_slot_status[index].active)
 			{
-				vkCmdResetQueryPool(cmd, query_pool, index, 1);
-
-				query_slot_status[index] = {};
+				// Actual reset is handled later on demand
 				available_slots.push_back(index);
 			}
 		}
@@ -3277,17 +3276,32 @@ public:
 			}
 		}
 
-		u32 find_free_slot()
+		u32 find_free_slot(vk::command_buffer& cmd)
 		{
 			if (available_slots.empty())
 			{
 				return ~0u;
 			}
 
-			u32 result = available_slots.front();
-			available_slots.pop_front();
+			const u32 result = available_slots.front();
+			if (query_slot_status[result].active)
+			{
+				// Trigger reset if round robin allocation has gone back to the first item
+				if (vk::is_renderpass_open(cmd))
+				{
+					vk::end_renderpass(cmd);
+				}
 
-			verify(HERE), !query_slot_status[result].active;
+				// At this point, the first available slot is not reset which means they're all active
+				for (auto It = available_slots.cbegin(); It != available_slots.cend(); ++It)
+				{
+					const auto index = *It;
+					vkCmdResetQueryPool(cmd, query_pool, index, 1);
+					query_slot_status[index] = {};
+				}
+			}
+
+			available_slots.pop_front();
 			return result;
 		}
 	};

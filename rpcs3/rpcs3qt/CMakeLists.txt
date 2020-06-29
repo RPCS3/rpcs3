@@ -36,6 +36,7 @@
 	osk_dialog_frame.cpp
 	pad_led_settings_dialog.cpp
 	pad_settings_dialog.cpp
+	patch_manager_dialog.cpp
 	persistent_settings.cpp
 	pkg_install_dialog.cpp
 	progress_dialog.cpp

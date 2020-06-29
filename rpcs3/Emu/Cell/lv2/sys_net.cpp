@@ -81,6 +81,42 @@ void fmt_class_string<sys_net_error>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<lv2_socket_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case SYS_NET_SOCK_STREAM: return "STREAM";
+		case SYS_NET_SOCK_DGRAM: return "DGRAM";
+		case SYS_NET_SOCK_RAW: return "RAW";
+		case SYS_NET_SOCK_DGRAM_P2P: return "DGRAM-P2P";
+		case SYS_NET_SOCK_STREAM_P2P: return "STREAM-P2P";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<lv2_socket_family>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case SYS_NET_AF_UNSPEC: return "UNSPEC";
+		case SYS_NET_AF_LOCAL: return "LOCAL";
+		case SYS_NET_AF_INET: return "INET";
+		case SYS_NET_AF_INET6: return "INET6";
+		}
+
+		return unknown;
+	});
+}
+
+
+template <>
 void fmt_class_string<struct in_addr>::format(std::string& out, u64 arg)
 {
 	const uchar* data = reinterpret_cast<const uchar*>(&get_object(arg));
@@ -346,8 +382,8 @@ struct network_thread
 
 using network_context = named_thread<network_thread>;
 
-lv2_socket::lv2_socket(lv2_socket::socket_type s, s32 s_type)
-	: socket(s), type(s_type)
+lv2_socket::lv2_socket(lv2_socket::socket_type s, s32 s_type, s32 family)
+	: socket(s), type{s_type}, family{family}
 {
 	// Set non-blocking
 #ifdef _WIN32
@@ -470,7 +506,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 		return 0;
 	}
 
-	auto newsock = std::make_shared<lv2_socket>(native_socket, 0);
+	auto newsock = std::make_shared<lv2_socket>(native_socket, 0, 0);
 
 	result = idm::import_existing<lv2_socket>(newsock);
 
@@ -1554,13 +1590,15 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 	::timeval native_timeo;
 	::linger native_linger;
 
+	std::vector<char> optval_buf(vm::_ptr<char>(optval.addr()), vm::_ptr<char>(optval.addr() + optlen));
+
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
 	{
 		std::lock_guard lock(sock.mutex);
 
-		if (optlen >= sizeof(int))
+		if (optlen >= sizeof(s32))
 		{
-			native_int = vm::_ref<s32>(optval.addr());
+			std::memcpy(&native_int, optval_buf.data(), sizeof(s32));
 		}
 		else
 		{
@@ -1645,8 +1683,8 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 				native_opt = optname == SYS_NET_SO_SNDTIMEO ? SO_SNDTIMEO : SO_RCVTIMEO;
 				native_val = &native_timeo;
 				native_len = sizeof(native_timeo);
-				native_timeo.tv_sec = ::narrow<int>(vm::_ptr<const sys_net_timeval>(optval.addr())->tv_sec);
-				native_timeo.tv_usec = ::narrow<int>(vm::_ptr<const sys_net_timeval>(optval.addr())->tv_usec);
+				native_timeo.tv_sec = ::narrow<int>(reinterpret_cast<sys_net_timeval*>(optval_buf.data())->tv_sec);
+				native_timeo.tv_usec = ::narrow<int>(reinterpret_cast<sys_net_timeval*>(optval_buf.data())->tv_usec);
 				break;
 			}
 			case SYS_NET_SO_LINGER:
@@ -1658,8 +1696,8 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 				native_opt = SO_LINGER;
 				native_val = &native_linger;
 				native_len = sizeof(native_linger);
-				native_linger.l_onoff = vm::_ptr<const sys_net_linger>(optval.addr())->l_onoff;
-				native_linger.l_linger = vm::_ptr<const sys_net_linger>(optval.addr())->l_linger;
+				native_linger.l_onoff = reinterpret_cast<sys_net_linger*>(optval_buf.data())->l_onoff;
+				native_linger.l_linger = reinterpret_cast<sys_net_linger*>(optval_buf.data())->l_linger;
 				break;
 			}
 			case SYS_NET_SO_USECRYPTO:
@@ -1823,7 +1861,7 @@ error_code sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protoc
 		return -get_last_error(false);
 	}
 
-	const s32 s = idm::import_existing<lv2_socket>(std::make_shared<lv2_socket>(native_socket, type));
+	const s32 s = idm::import_existing<lv2_socket>(std::make_shared<lv2_socket>(native_socket, type, family));
 
 	if (s == id_manager::id_traits<lv2_socket>::invalid)
 	{
@@ -1861,19 +1899,24 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 	sys_net.warning("sys_net_bnet_poll(fds=*0x%x, nfds=%d, ms=%d)", fds, nfds, ms);
 
+	if (nfds <= 0)
+	{
+		return not_an_error(0);
+	}
+
 	atomic_t<s32> signaled{0};
 
 	u64 timeout = ms < 0 ? 0 : ms * 1000ull;
 
 	std::vector<sys_net_pollfd> fds_buf;
 
-	if (nfds > 0)
+	if (true)
 	{
 		fds_buf.assign(fds.get_ptr(), fds.get_ptr() + nfds);
 
-		std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
+		std::unique_lock nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
 
-		reader_lock lock(id_manager::g_mutex);
+		std::shared_lock lock(id_manager::g_mutex);
 
 		::pollfd _fds[1024]{};
 #ifdef _WIN32
@@ -1937,6 +1980,9 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 		if (ms == 0 || signaled)
 		{
+			lock.unlock();
+			nw_lock.unlock();
+			std::memcpy(fds.get_ptr(), fds_buf.data(), nfds * sizeof(fds[0]));
 			return not_an_error(signaled);
 		}
 
@@ -1988,10 +2034,6 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		}
 
 		lv2_obj::sleep(ppu, timeout);
-	}
-	else
-	{
-		return not_an_error(0);
 	}
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
@@ -2287,11 +2329,32 @@ error_code sys_net_abort(ppu_thread& ppu, s32 type, u64 arg, s32 flags)
 	return CELL_OK;
 }
 
+struct net_infoctl_cmd_9_t
+{
+	be_t<u32> zero;
+	vm::bptr<char> server_name;
+	// More (TODO)
+};
+
 error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 {
 	vm::temporary_unlock(ppu);
 
 	sys_net.todo("sys_net_infoctl(cmd=%d, arg=*0x%x)", cmd, arg);
+
+	// TODO
+	switch (cmd)
+	{
+	case 9:
+	{
+		// TODO: Find out if this string can change
+		constexpr auto name = "nameserver 192.168.1.1\0"sv; 
+		std::memcpy(vm::static_ptr_cast<net_infoctl_cmd_9_t>(arg)->server_name.get_ptr(), name.data(), name.size());
+		break;
+	}
+	default: break;
+	}
+
 	return CELL_OK;
 }
 

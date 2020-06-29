@@ -460,13 +460,13 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 
 	for (const auto& key_inf : keys)
 	{
-		if (const auto queue = lv2_event_queue::find(key_inf.key))
+		if (key_inf.flags & CELL_AUDIO_EVENTFLAG_NOMIX)
 		{
-			if (key_inf.flags & CELL_AUDIO_EVENTFLAG_NOMIX)
-			{
-				continue;
-			}
+			continue;
+		}
 
+		if ((queues[queue_count] = key_inf.port.lock()))
+		{
 			u32 periods = 1;
 
 			if (key_inf.flags & CELL_AUDIO_EVENTFLAG_DECIMATE_2)
@@ -483,11 +483,12 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 			if ((event_period ^ key_inf.start_period) & (periods - 1))
 			{
 				// The time has not come for this key to receive event
+				queues[queue_count].reset();
 				continue;
 			}
 
 			event_sources[queue_count] = key_inf.source;
-			queues[queue_count++] = queue;
+			queue_count++;
 		}
 	}
 
@@ -1041,16 +1042,16 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 	// check attributes
 	if (num_channels != CELL_AUDIO_PORT_2CH &&
 		num_channels != CELL_AUDIO_PORT_8CH &&
-		num_channels)
+		num_channels != 0)
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	if (num_blocks != CELL_AUDIO_BLOCK_8 &&
-		num_blocks != CELL_AUDIO_BLOCK_16 &&
-		num_blocks != 2 &&
+	if (num_blocks != 2 &&
 		num_blocks != 4 &&
-		num_blocks != 32)
+		num_blocks != CELL_AUDIO_BLOCK_8 &&
+		num_blocks != CELL_AUDIO_BLOCK_16 &&
+		num_blocks != CELL_AUDIO_BLOCK_32)
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}
@@ -1096,6 +1097,9 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 	{
 		return CELL_AUDIO_ERROR_PORT_FULL;
 	}
+	
+	// TODO: is this necessary in any way? (Based on libaudio.prx)
+	//const u64 num_channels_non_0 = std::max<u64>(1, num_channels);
 
 	port->num_channels   = ::narrow<u32>(num_channels);
 	port->num_blocks     = ::narrow<u32>(num_blocks);
@@ -1116,6 +1120,11 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 	}
 
 	port->level_set.store({ port->level, 0.0f });
+
+	if (port->level <= -1.0f)
+	{
+		return CELL_AUDIO_ERROR_PORT_OPEN;
+	}
 
 	*portNum = port->number;
 	return CELL_OK;
@@ -1145,10 +1154,18 @@ error_code cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> port
 
 	switch (auto state = port.state.load())
 	{
-	case audio_port_state::closed: portConfig->status = CELL_AUDIO_STATUS_CLOSE; break;
-	case audio_port_state::opened: portConfig->status = CELL_AUDIO_STATUS_READY; break;
-	case audio_port_state::started: portConfig->status = CELL_AUDIO_STATUS_RUN; break;
-	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
+	case audio_port_state::closed:
+		portConfig->status = CELL_AUDIO_STATUS_CLOSE;
+		break;
+	case audio_port_state::opened:
+		portConfig->status = CELL_AUDIO_STATUS_READY;
+		break;
+	case audio_port_state::started:
+		portConfig->status = CELL_AUDIO_STATUS_RUN;
+		break;
+	default:
+		cellAudio.error("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
+		return CELL_AUDIO_ERROR_AUDIOSYSTEM;
 	}
 
 	portConfig->nChannel = port.num_channels;
@@ -1266,12 +1283,13 @@ error_code cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 
 	if (port.global_counter < tag)
 	{
-		cellAudio.error("cellAudioGetPortTimestamp(portNum=%d, tag=0x%llx, stamp=*0x%x) -> CELL_AUDIO_ERROR_TAG_NOT_FOUND", portNum, tag, stamp);
 		return CELL_AUDIO_ERROR_TAG_NOT_FOUND;
 	}
 
-	u64 delta_tag = port.global_counter - tag;
-	u64 delta_tag_stamp = delta_tag * g_audio->cfg.audio_block_period;
+	const u64 delta_tag = port.global_counter - tag;
+	const u64 delta_tag_stamp = delta_tag * g_audio->cfg.audio_block_period;
+
+	// Apparently no error is returned if stamp is null
 	*stamp = port.timestamp - delta_tag_stamp;
 
 	return CELL_OK;
@@ -1307,6 +1325,7 @@ error_code cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
+	// Apparently no error is returned if tag is null
 	*tag = port.global_counter + blockNo - port.cur_pos;
 
 	return CELL_OK;
@@ -1413,21 +1432,35 @@ error_code AudioSetNotifyEventQueue(u64 key, u32 iFlags)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	if (!lv2_event_queue::find(key))
+	auto q = lv2_event_queue::find(key);
+
+	if (!q)
 	{
 		return CELL_AUDIO_ERROR_TRANS_EVENT;
 	}
 
-	for (const auto& k : g_audio->keys) // check for duplicates
+	for (auto i = g_audio->keys.cbegin(); i != g_audio->keys.cend();) // check for duplicates
 	{
-		if (k.key == key)
+		auto port = i->port.lock();
+
+		if (port == q)
 		{
 			return CELL_AUDIO_ERROR_TRANS_EVENT;
+		}
+
+		if (!lv2_event_queue::check(port))
+		{
+			// Cleanup, avoid cases where there are multiple ports with the same key
+			i = g_audio->keys.erase(i);
+		}
+		else
+		{
+			i++;
 		}
 	}
 
 	// Set unique source associated with the key
-	g_audio->keys.push_back({g_audio->event_period, iFlags, ((process_getpid() + u64{}) << 32) + lv2_event_port::id_base + (g_audio->key_count++ * lv2_event_port::id_step), key});
+	g_audio->keys.push_back({g_audio->event_period, iFlags, ((process_getpid() + u64{}) << 32) + lv2_event_port::id_base + (g_audio->key_count++ * lv2_event_port::id_step), std::move(q)});
 	g_audio->key_count %= lv2_event_port::id_count;
 
 	return CELL_OK;
@@ -1465,7 +1498,7 @@ error_code AudioRemoveNotifyEventQueue(u64 key, u32 iFlags)
 
 	for (auto i = g_audio->keys.cbegin(); i != g_audio->keys.cend(); i++)
 	{
-		if (i->key == key)
+		if ([&](auto port){ return lv2_event_queue::check(port) && port->key == key; }(i->port.lock()))
 		{
 			if (i->flags != iFlags)
 			{
@@ -1513,15 +1546,8 @@ error_code cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float 
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	if (portNum >= AUDIO_PORT_COUNT || !src || !src.aligned())
+	if (portNum >= AUDIO_PORT_COUNT || !src || !src.aligned() || samples != CELL_AUDIO_BLOCK_SAMPLES)
 	{
-		return CELL_AUDIO_ERROR_PARAM;
-	}
-
-	if (samples != 256)
-	{
-		// despite the docs, seems that only fixed value is supported
-		cellAudio.error("cellAudioAddData(): invalid samples value (%d)", samples);
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
@@ -1554,15 +1580,8 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	if (portNum >= AUDIO_PORT_COUNT || !src || !src.aligned())
+	if (portNum >= AUDIO_PORT_COUNT || !src || !src.aligned() || samples != CELL_AUDIO_BLOCK_SAMPLES)
 	{
-		return CELL_AUDIO_ERROR_PARAM;
-	}
-
-	if (samples != 256)
-	{
-		// despite the docs, seems that only fixed value is supported
-		cellAudio.error("cellAudioAdd2chData(): invalid samples value (%d)", samples);
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
@@ -1644,7 +1663,7 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 
 	if (port.num_channels == 6)
 	{
-		for (u32 i = 0; i < 256; i++)
+		for (u32 i = 0; i < CELL_AUDIO_BLOCK_SAMPLES; i++)
 		{
 			dst[i * 6 + 0] += src[i * 6 + 0] * volume; // mix L ch
 			dst[i * 6 + 1] += src[i * 6 + 1] * volume; // mix R ch
@@ -1656,7 +1675,7 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 	}
 	else if (port.num_channels == 8)
 	{
-		for (u32 i = 0; i < 256; i++)
+		for (u32 i = 0; i < CELL_AUDIO_BLOCK_SAMPLES; i++)
 		{
 			dst[i * 8 + 0] += src[i * 6 + 0] * volume; // mix L ch
 			dst[i * 8 + 1] += src[i * 6 + 1] * volume; // mix R ch
@@ -1679,6 +1698,18 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 error_code cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
 {
 	cellAudio.todo("cellAudioMiscSetAccessoryVolume(devNum=%d, volume=%f)", devNum, volume);
+
+	const auto g_audio = g_fxo->get<cell_audio>();
+
+	std::unique_lock lock(g_audio->mutex);
+
+	if (!g_audio->init)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
@@ -1691,12 +1722,47 @@ error_code cellAudioSendAck(u64 data3)
 error_code cellAudioSetPersonalDevice(s32 iPersonalStream, s32 iDevice)
 {
 	cellAudio.todo("cellAudioSetPersonalDevice(iPersonalStream=%d, iDevice=%d)", iPersonalStream, iDevice);
+
+	const auto g_audio = g_fxo->get<cell_audio>();
+
+	std::unique_lock lock(g_audio->mutex);
+
+	if (!g_audio->init)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
+
+	if (iPersonalStream < 0 || iPersonalStream >= 4 ||
+		(iDevice != CELL_AUDIO_PERSONAL_DEVICE_PRIMARY && (iDevice < 0 || iDevice >= 5)))
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
 error_code cellAudioUnsetPersonalDevice(s32 iPersonalStream)
 {
 	cellAudio.todo("cellAudioUnsetPersonalDevice(iPersonalStream=%d)", iPersonalStream);
+
+	const auto g_audio = g_fxo->get<cell_audio>();
+
+	std::unique_lock lock(g_audio->mutex);
+
+	if (!g_audio->init)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
+
+	if (iPersonalStream < 0 || iPersonalStream >= 4)
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 

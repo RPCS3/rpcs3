@@ -11,8 +11,6 @@ LOG_CHANNEL(sys_rsx);
 
 extern u64 get_timebased_time();
 
-static shared_mutex s_rsxmem_mtx;
-
 // Unknown error code returned by sys_rsx_context_attribute
 enum sys_rsx_error : s32
 {
@@ -175,7 +173,7 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 
 	auto rsx_cfg = g_fxo->get<lv2_rsx_config>();
 
-	std::lock_guard lock(s_rsxmem_mtx);
+	std::lock_guard lock(rsx_cfg->mutex);
 
 	if (rsx_cfg->context_base)
 	{
@@ -279,9 +277,9 @@ error_code sys_rsx_context_free(u32 context_id)
 {
 	sys_rsx.todo("sys_rsx_context_free(context_id=0x%x)", context_id);
 
-	std::scoped_lock lock(s_rsxmem_mtx);
-
 	auto rsx_cfg = g_fxo->get<lv2_rsx_config>();
+
+	std::scoped_lock lock(rsx_cfg->mutex);
 
 	if (context_id != 0x55555555 || !rsx_cfg->context_base)
 	{
@@ -328,7 +326,7 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 
 	io >>= 20, ea >>= 20, size >>= 20;
 
-	std::scoped_lock lock(s_rsxmem_mtx);
+	std::scoped_lock lock(g_fxo->get<lv2_rsx_config>()->mutex);
 
 	for (u32 i = 0; i < size; i++)
 	{
@@ -369,7 +367,7 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 
 	vm::reader_lock rlock;
 
-	std::scoped_lock lock(s_rsxmem_mtx);
+	std::scoped_lock lock(g_fxo->get<lv2_rsx_config>()->mutex);
 
 	for (const u32 end = (io >>= 20) + (size >>= 20); io < end;)
 	{
@@ -501,7 +499,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			return SYS_RSX_CONTEXT_ATTRIBUTE_ERROR;
 		}
 
-		std::lock_guard lock(s_rsxmem_mtx);
+		std::lock_guard lock(rsx_cfg->mutex);
 
 		// Note: no error checking is being done
 
@@ -605,7 +603,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			verify(HERE), !!(a5 & (1 << 30));
 		}
 
-		std::lock_guard lock(s_rsxmem_mtx);
+		std::lock_guard lock(rsx_cfg->mutex);
 
 		// When tile is going to be unbound, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated
 		// Todo: There may be more checks such as format/size/width can could be done
@@ -678,7 +676,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			verify(HERE), !!(a4 & (1ull << 32)), (a6 & 0xFFFFFFFF) == 0u + ((0x2000 << 0) | (0x20 << 16));
 		}
 
-		std::lock_guard lock(s_rsxmem_mtx);
+		std::lock_guard lock(rsx_cfg->mutex);
 
 		auto &zcull = render->zculls[a3];
 

@@ -69,8 +69,7 @@ LOG_CHANNEL(sys_log, "SYS");
 		static char* argv[] = {+s_argv0};
 		app.reset(new QApplication{argc, argv});
 	}
-
-	if (!local)
+	else
 	{
 		fprintf(stderr, "RPCS3: %s\n", text.c_str());
 	}
@@ -268,6 +267,8 @@ int main(int argc, char** argv)
 	::getrusage(RUSAGE_THREAD, &intro_stats);
 	const u64 intro_time = (intro_stats.ru_utime.tv_sec + intro_stats.ru_stime.tv_sec) * 1000000000ull + (intro_stats.ru_utime.tv_usec + intro_stats.ru_stime.tv_usec) * 1000ull;
 #endif
+
+	v128::use_fma = utils::has_fma3();
 
 	s_argv0 = argv[0]; // Save for report_fatal_error
 
