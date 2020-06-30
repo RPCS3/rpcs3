@@ -456,6 +456,7 @@ namespace rsx
 
 			// Conditionally sync any pending writes if range overlaps
 			flags32_t read_barrier(class ::rsx::thread* ptimer, u32 memory_address, u32 memory_range, flags32_t flags);
+			flags32_t read_barrier(class ::rsx::thread* ptimer, u32 memory_address, occlusion_query_info* query);
 
 			// Call once every 'tick' to update, optional address provided to partially sync until address is processed
 			void update(class ::rsx::thread* ptimer, u32 sync_address = 0, bool hint = false);
