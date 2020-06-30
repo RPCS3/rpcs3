@@ -149,11 +149,11 @@ void patch_manager_dialog::load_patches(bool show_error)
 	if (show_error && has_errors)
 	{
 		// Open a warning dialog after the patch manager was opened
-		QTimer::singleShot(100, [this]()
+		QTimer::singleShot(100, [this, patches_path]()
 		{
 			QMessageBox::warning(this, tr("Incompatible patches detected"),
 				tr("Some of your patches are not compatible with the current version of RPCS3's Patch Manager.\n\nMake sure that all the patches located in \"%0\" contain the proper formatting that is required for the Patch Manager Version %1.")
-				.arg(QString::fromStdString(patch_engine::get_patches_path())).arg(QString::fromStdString(patch_engine_version)));
+				.arg(QString::fromStdString(patches_path)).arg(QString::fromStdString(patch_engine_version)));
 		});
 	}
 }
