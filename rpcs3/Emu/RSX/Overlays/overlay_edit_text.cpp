@@ -5,6 +5,30 @@ namespace rsx
 {
 	namespace overlays
 	{
+		static size_t get_line_start(const std::u32string& text, size_t pos)
+		{
+			if (pos == 0)
+			{
+				return 0;
+			}
+			const size_t line_start = text.rfind('\n', pos - 1);
+			if (line_start == std::string::npos)
+			{
+				return 0;
+			}
+			return line_start + 1;
+		}
+
+		static size_t get_line_end(const std::u32string& text, size_t pos)
+		{
+			const size_t line_end = text.find('\n', pos);
+			if (line_end == std::string::npos)
+			{
+				return text.length();
+			}
+			return line_end;
+		}
+
 		void edit_text::move_caret(direction dir)
 		{
 			switch (dir)
@@ -29,105 +53,40 @@ namespace rsx
 			}
 			case up:
 			{
-				if (caret_position == 0)
-				{
-					break;
-				}
-				u64 current_line_start = text.rfind('\n', caret_position - 1); // search from previous char
-				if (current_line_start == std::string::npos)
+				const size_t current_line_start = get_line_start(text, caret_position);
+				if (current_line_start == 0)
 				{
 					// This is the first line, so caret moves to the very beginning
 					caret_position = 0;
 					refresh();
 					break;
 				}
-				else
-				{
-					// if line is not first, than caret should move forward as find result points to '\n'
-					current_line_start += 1;
-				}
-				const u64 caret_pos_in_line = caret_position - current_line_start;
-				const u64 prev_line_end     = current_line_start - 2; // ignore current char and \n before it
-				u64 prev_line_start         = text.rfind('\n', prev_line_end);
-				if (prev_line_start == std::string::npos)
-				{
-					// if previous line is the first line, there is no '\n' at the beginning
-					prev_line_start = 0;
-				}
-				else
-				{
-					// if previous line is not first, than caret should move forward as find result points to '\n'
-					prev_line_start += 1;
-				}
-				const u64 prev_line_length = prev_line_end - prev_line_start + 1; // delta in indexes requires +1
+				const size_t caret_pos_in_line = caret_position - current_line_start;
+				const size_t prev_line_end     = current_line_start - 1;
+				const size_t prev_line_start   = get_line_start(text, prev_line_end);
 				// TODO : Save caret position to some kind of buffer, so after switching back and forward, caret would be on initial position
-				if (prev_line_length < caret_pos_in_line)
-				{
-					// Previous line is shorter than current caret position, so caret moves to the very end of the previous line
-					caret_position = prev_line_end + 1;
-				}
-				else
-				{
-					// Previous line is longer than current caret position, so caret moves from prev_line_beginning the exact same distance as in current line
-					caret_position = prev_line_start + caret_pos_in_line;
-				}
+				caret_position = std::min(prev_line_end, prev_line_start + caret_pos_in_line);
+
 				refresh();
 				break;
 			}
 			case down:
 			{
-				if (caret_position == text.length())
-				{
-					break;
-				}
-				u64 current_line_end = text.find('\n', caret_position);
-				if (current_line_end == std::string::npos)
+				const size_t current_line_end = get_line_end(text, caret_position);
+				if (current_line_end == text.length())
 				{
 					// This is the last line, so caret moves to the very end
-					caret_position = text.length();
+					caret_position = current_line_end;
 					refresh();
 					break;
 				}
-				else
-				{
-					// move to the last character of the current line
-					current_line_end -= 1;
-				}
-				u64 current_line_start = text.rfind('\n', current_line_end);
-				if (current_line_start == std::string::npos)
-				{
-					// if current line is the first one - there is no '\n' before it, so line starts from index 0
-					current_line_start = 0;
-				}
-				else
-				{
-					// if line is not first, than caret should move forward as find result points to '\n'
-					current_line_start += 1;
-				}
-				const u64 caret_pos_in_line = caret_position - current_line_start;
-				const u64 next_line_start   = current_line_end + 2; // ignore last char and '\n'
-				u64 next_line_end           = text.find('\n', next_line_start);
-				if (next_line_end == std::string::npos)
-				{
-					// if next line is the last line, there is no '\n' at the end, so next_line_end is set to text end
-					next_line_end = text.length() - 1;
-				}
-				else
-				{
-					next_line_end -= 1; // move to the last char in the line, as find result points to '\n'
-				}
-				const u64 next_line_length = next_line_end - next_line_start + 1; // delta in indexes requires +1
+				const size_t current_line_start = get_line_start(text, caret_position);
+				const size_t caret_pos_in_line  = caret_position - current_line_start;
+				const size_t next_line_start    = current_line_end + 1;
+				const size_t next_line_end      = get_line_end(text, next_line_start);
 				// TODO : Save caret position to some kind of buffer, so after switching back and forward, caret would be on initial position
-				if (next_line_length < caret_pos_in_line)
-				{
-					// Next line is shorter than current caret position, so caret moves to the very end of the next line
-					caret_position = next_line_end + 1;
-				}
-				else
-				{
-					// Next line is longer than current caret position, so caret moves from next_line_start the exact same distance as in current line
-					caret_position = next_line_start + caret_pos_in_line;
-				}
+				caret_position = std::min(next_line_end, next_line_start + caret_pos_in_line);
+
 				refresh();
 				break;
 			}
