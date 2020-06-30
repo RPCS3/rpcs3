@@ -28,7 +28,7 @@ public:
 		const QString app_video = tr("Video App");
 		const QString bc_video  = tr("Broadcast Video");
 		const QString disc_game = tr("Disc Game");
-		const QString hdd_game  = tr("Downloaded Game");
+		const QString hdd_game  = tr("HDD Game");
 		const QString home      = tr("Home");
 		const QString network   = tr("Network");
 		const QString store_fe  = tr("Store");
