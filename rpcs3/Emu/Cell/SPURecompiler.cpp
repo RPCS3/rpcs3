@@ -7143,6 +7143,12 @@ public:
 		set_vr(op.rt4, (get_vr(op.rb) & c) | (get_vr(op.ra) & ~c));
 	}
 
+	template <typename TA>
+	static auto byteswap(TA&& a)
+	{
+		return zshuffle(std::forward<TA>(a), 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+	}
+
 	void SHUFB(spu_opcode_t op) //
 	{
 		if (match_vr<u8[16], u16[8], u32[4], u64[2]>(op.rc, [&](auto c, auto MP)
@@ -7245,11 +7251,63 @@ public:
 			spu_log.todo("[0x%x] Const SHUFB mask: %s", m_pos, mask);
 		}
 
+		const auto a = get_vr<u8[16]>(op.ra);
+		const auto b = get_vr<u8[16]>(op.rb);
+
+		// Data with swapped endian from a load instruction
+		if (auto [ok, v0] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		{
+			if (auto [ok, v1] = match_expr(b, byteswap(match<u8[16]>())); ok)
+			{
+				// Undo endian swapping, and rely on pshufb to re-reverse endianness
+				const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
+				const auto as = byteswap(a);
+				const auto bs = byteswap(b);
+				const auto ax = pshufb(as, c);
+				const auto bx = pshufb(bs, c);
+				set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, bx) | x);
+				return;
+			}
+
+			if (auto ci = llvm::dyn_cast<llvm::Constant>(b.value))
+			{
+				v128 data = get_const_vector(ci, m_pos, 7000);
+
+				if (data == v128{})
+				{
+					// See above
+					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
+					const auto as = byteswap(a);
+					const auto ax = pshufb(as, c);
+					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, b) | x);
+					return;
+				}
+			}
+		}
+
+		if (auto [ok, v0] = match_expr(b, byteswap(match<u8[16]>())); ok)
+		{
+			if (auto ci = llvm::dyn_cast<llvm::Constant>(a.value))
+			{
+				v128 data = get_const_vector(ci, m_pos, 7000);
+
+				if (data == v128{})
+				{
+					// See above
+					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
+					const auto bs = byteswap(b);
+					const auto bx = pshufb(bs, c);
+					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, a, bx) | x);
+					return;
+				}
+			}
+		}
+
 		const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
 		const auto cr = eval(c ^ 0xf);
-		const auto a = pshufb(get_vr<u8[16]>(op.ra), cr);
-		const auto b = pshufb(get_vr<u8[16]>(op.rb), cr);
-		set_vr(op.rt4, select(noncast<s8[16]>(cr << 3) >= 0, a, b) | x);
+		const auto ax = pshufb(a, cr);
+		const auto bx = pshufb(b, cr);
+		set_vr(op.rt4, select(noncast<s8[16]>(cr << 3) >= 0, ax, bx) | x);
 	}
 
 	void MPYA(spu_opcode_t op)
@@ -7990,7 +8048,7 @@ public:
 
 	void make_store_ls(value_t<u64> addr, value_t<u8[16]> data)
 	{
-		const auto bswapped = zshuffle(data, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+		const auto bswapped = byteswap(data);
 		m_ir->CreateStore(bswapped.eval(m_ir), m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()), true);
 	}
 
@@ -7998,7 +8056,7 @@ public:
 	{
 		value_t<u8[16]> data;
 		data.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()), true);
-		return zshuffle(data, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+		return byteswap(data);
 	}
 
 	void STQX(spu_opcode_t op)
