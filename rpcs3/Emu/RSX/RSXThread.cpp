@@ -355,7 +355,8 @@ namespace rsx
 			}
 			else
 			{
-				zcull_ctrl->read_barrier(this, cond_render_ctrl.eval_address, 4, reports::sync_no_notify);
+				// NOTE: eval_sources list is reversed with newest query first
+				zcull_ctrl->read_barrier(this, cond_render_ctrl.eval_address, cond_render_ctrl.eval_sources.front());
 				verify(HERE), !cond_render_ctrl.eval_pending();
 			}
 		}
@@ -3620,6 +3621,16 @@ namespace rsx
 			}
 
 			return result_zcull_intr;
+		}
+
+		flags32_t ZCULL_control::read_barrier(class ::rsx::thread* ptimer, u32 memory_address, occlusion_query_info* query)
+		{
+			while (query->pending && !Emu.IsStopped())
+			{
+				update(ptimer, memory_address);
+			}
+
+			return result_none;
 		}
 
 		query_search_result ZCULL_control::find_query(vm::addr_t sink_address, bool all)
