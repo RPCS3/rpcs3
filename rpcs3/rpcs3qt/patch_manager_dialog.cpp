@@ -198,11 +198,12 @@ void patch_manager_dialog::populate_tree()
 					title_level_item->setText(0, visible_title);
 					title_level_item->setData(0, title_role, q_title);
 					title_level_item->setData(0, node_level_role, node_level::title_level);
-					title_level_item->setData(0, persistance_role, true);
 
 					ui->patch_tree->addTopLevelItem(title_level_item);
 				}
 				ASSERT(title_level_item);
+
+				title_level_item->setData(0, persistance_role, true);
 
 				for (const auto& [serial, app_versions] : serials)
 				{
@@ -232,11 +233,12 @@ void patch_manager_dialog::populate_tree()
 							serial_level_item->setData(0, serial_role, q_serial);
 							serial_level_item->setData(0, app_version_role, q_app_version);
 							serial_level_item->setData(0, node_level_role, node_level::serial_level);
-							serial_level_item->setData(0, persistance_role, true);
 
 							title_level_item->addChild(serial_level_item);
 						}
 						ASSERT(serial_level_item);
+
+						serial_level_item->setData(0, persistance_role, true);
 
 						// Add a checkable leaf item for this patch
 						const QString q_description = QString::fromStdString(description);
@@ -299,13 +301,24 @@ void patch_manager_dialog::populate_tree()
 	// NOTE: "All versions" will be above valid numerical versions through sorting anyway
 	if (const auto all_title_items = ui->patch_tree->findItems(tr_all_titles, Qt::MatchExactly); all_title_items.size() > 0)
 	{
-		auto item = all_title_items[0];
+		const auto item = all_title_items[0];
 		ASSERT(item && all_title_items.size() == 1);
 
 		if (const int index = ui->patch_tree->indexOfTopLevelItem(item); index >= 0)
 		{
+			const bool all_titles_expanded = item->isExpanded();
+			const auto all_serials_item = item->child(0);
+			const bool all_serials_expanded = all_serials_item && all_serials_item->isExpanded();
+
 			ui->patch_tree->takeTopLevelItem(index);
 			ui->patch_tree->insertTopLevelItem(0, item);
+
+			item->setExpanded(all_titles_expanded);
+
+			if (all_serials_item)
+			{
+				all_serials_item->setExpanded(all_serials_expanded);
+			}
 		}
 	}
 }
