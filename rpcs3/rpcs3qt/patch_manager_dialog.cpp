@@ -7,6 +7,7 @@
 #include <QAction>
 #include <QCheckBox>
 #include <QMessageBox>
+#include <QTimer>
 
 #include "ui_patch_manager_dialog.h"
 #include "patch_manager_dialog.h"
@@ -100,7 +101,7 @@ int patch_manager_dialog::exec()
 
 void patch_manager_dialog::refresh(bool restore_layout)
 {
-	load_patches();
+	load_patches(restore_layout);
 	populate_tree();
 	filter_patches(ui->patch_filter->text());
 
@@ -120,13 +121,13 @@ void patch_manager_dialog::refresh(bool restore_layout)
 	}
 }
 
-void patch_manager_dialog::load_patches()
+void patch_manager_dialog::load_patches(bool show_error)
 {
 	m_map.clear();
 
 	// NOTE: Make sure these paths are loaded in the same order as they are applied on boot
 
-	const std::string patches_path = fs::get_config_dir() + "patches/";
+	const std::string patches_path = patch_engine::get_patches_path();
 	const QStringList filters      = QStringList() << "*_patch.yml";
 
 	QStringList path_list;
@@ -135,9 +136,25 @@ void patch_manager_dialog::load_patches()
 	path_list << QDir(QString::fromStdString(patches_path)).entryList(filters);
 	path_list.removeDuplicates(); // make sure to load patch.yml and imported_patch.yml only once
 
+	bool has_errors = false;
+
 	for (const auto& path : path_list)
 	{
-		patch_engine::load(m_map, patches_path + path.toStdString());
+		if (!patch_engine::load(m_map, patches_path + path.toStdString()))
+		{
+			has_errors = true;
+		}
+	}
+
+	if (show_error && has_errors)
+	{
+		// Open a warning dialog after the patch manager was opened
+		QTimer::singleShot(100, [this]()
+		{
+			QMessageBox::warning(this, tr("Incompatible patches detected"),
+				tr("Some of your patches are not compatible with the current version of RPCS3's Patch Manager.\n\nMake sure that all the patches located in \"%0\" contain the proper formatting that is required for the Patch Manager Version %1.")
+				.arg(QString::fromStdString(patch_engine::get_patches_path())).arg(QString::fromStdString(patch_engine_version)));
+		});
 	}
 }
 

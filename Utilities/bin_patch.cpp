@@ -6,8 +6,6 @@
 
 LOG_CHANNEL(patch_log);
 
-static const std::string patch_engine_version = "1.2";
-
 namespace config_key
 {
 	static const std::string enable_legacy_patches = "Enable Legacy Patches";
@@ -82,6 +80,11 @@ std::string patch_engine::get_patch_config_path()
 #else
 	return fs::get_config_dir() + "patch_config.yml";
 #endif
+}
+
+std::string patch_engine::get_patches_path()
+{
+	return fs::get_config_dir() + "patches/";
 }
 
 std::string patch_engine::get_imported_patch_path()

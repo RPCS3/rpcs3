@@ -20,6 +20,8 @@ namespace patch_key
 	static const std::string version = "Version";
 }
 
+static const std::string patch_engine_version = "1.2";
+
 enum class patch_type
 {
 	invalid,
@@ -89,6 +91,9 @@ public:
 
 	// Returns the directory in which patch_config.yml is located
 	static std::string get_patch_config_path();
+
+	// Returns the directory in which patches are located
+	static std::string get_patches_path();
 
 	// Returns the filepath for the imported_patch.yml
 	static std::string get_imported_patch_path();
