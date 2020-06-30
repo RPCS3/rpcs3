@@ -69,6 +69,11 @@ public:
 
 	void SetShowHidden(bool show);
 
+	QList<game_info> GetGameInfo() const;
+
+	// Returns the visible version string in the game list
+	static std::string GetGameVersion(const game_info& game);
+
 public Q_SLOTS:
 	void BatchCreatePPUCaches();
 	void BatchRemovePPUCaches();

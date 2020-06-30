@@ -850,7 +850,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 		m_cat = psf::get_string(_psf, "CATEGORY");
 
-		const std::string version_app  = psf::get_string(_psf, "APP_VER", "Unknown");
+		m_app_version = psf::get_string(_psf, "APP_VER", "Unknown");
 		const std::string version_disc = psf::get_string(_psf, "VERSION", "Unknown");
 
 		if (!_psf.empty() && m_cat.empty())
@@ -862,7 +862,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		sys_log.notice("Title: %s", GetTitle());
 		sys_log.notice("Serial: %s", GetTitleID());
 		sys_log.notice("Category: %s", GetCat());
-		sys_log.notice("Version: %s / %s", version_app, version_disc);
+		sys_log.notice("Version: %s / %s", GetAppVersion(), version_disc);
 
 		if (!add_only && !force_global_config)
 		{

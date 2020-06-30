@@ -40,23 +40,16 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="cb_owned_games_only">
+           <property name="text">
+            <string>Only show owned games</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QCheckBox" name="cb_enable_legacy_patches">
            <property name="text">
             <string>Enable Legacy Patches</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pb_collapse_all">
-           <property name="text">
-            <string>Collapse All</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pb_expand_all">
-           <property name="text">
-            <string>Expand All</string>
            </property>
           </widget>
          </item>
@@ -88,25 +81,6 @@
          </property>
          <layout class="QVBoxLayout" name="patch_info_gb_layout">
           <item>
-           <widget class="QGroupBox" name="gb_hash">
-            <property name="title">
-             <string>Hash</string>
-            </property>
-            <layout class="QVBoxLayout" name="hash_layout">
-             <item>
-              <widget class="QLabel" name="label_hash">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="wordWrap">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item>
            <widget class="QGroupBox" name="gb_title">
             <property name="title">
              <string>Game Title</string>
@@ -126,13 +100,48 @@
            </widget>
           </item>
           <item>
-           <widget class="QGroupBox" name="gb_serials">
+           <widget class="QGroupBox" name="gb_serial">
             <property name="title">
-             <string>Serials</string>
+             <string>Serial</string>
             </property>
-            <layout class="QVBoxLayout" name="serials_layout">
+            <layout class="QVBoxLayout" name="serial_layout">
              <item>
-              <widget class="QLabel" name="label_serials">
+              <widget class="QLabel" name="label_serial">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_app_version">
+            <property name="title">
+             <string>Game Version</string>
+            </property>
+            <layout class="QVBoxLayout" name="layout_app_version">
+             <item>
+              <widget class="QLabel" name="label_app_version">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_hash">
+            <property name="title">
+             <string>Hash</string>
+            </property>
+            <layout class="QVBoxLayout" name="hash_layout">
+             <item>
+              <widget class="QLabel" name="label_hash">
                <property name="text">
                 <string/>
                </property>
