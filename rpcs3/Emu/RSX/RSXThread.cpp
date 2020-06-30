@@ -3611,7 +3611,11 @@ namespace rsx
 					}
 				}
 
-				update(ptimer, sync_address);
+				// There can be multiple queries all writing to the same address, loop to flush all of them
+				while (query->pending && !Emu.IsStopped())
+				{
+					update(ptimer, sync_address);
+				}
 				return result_none;
 			}
 
