@@ -49,7 +49,7 @@ private:
 	// Gpu tab
 	QString m_old_renderer = "";
 	// Audio tab
-	QComboBox *mics_combo[4];
+	QComboBox *m_mics_combo[4];
 
 	int m_tab_index;
 	Ui::settings_dialog *ui;

@@ -1212,7 +1212,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	}
 
 	// connect boot
-	connect(act, &QAction::triggered, [=, this]() {BootRecentAction(act); });
+	connect(act, &QAction::triggered, [act, this]() {BootRecentAction(act); });
 
 	return act;
 }
