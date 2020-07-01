@@ -95,7 +95,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_list->installEventFilter(this);
 	m_game_list->setColumnCount(gui::column_count);
 
-	m_game_compat = std::make_unique<game_compatibility>(m_gui_settings);
+	m_game_compat = new game_compatibility(m_gui_settings, this);
 
 	m_central_widget = new QStackedWidget(this);
 	m_central_widget->addWidget(m_game_list);
@@ -143,7 +143,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(m_game_grid, &QTableWidget::itemSelectionChanged, this, &game_list_frame::itemSelectionChangedSlot);
 	connect(m_game_grid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 
-	connect(m_game_compat.get(), &game_compatibility::DownloadStarted, [this]()
+	connect(m_game_compat, &game_compatibility::DownloadStarted, [this]()
 	{
 		for (const auto& game : m_game_data)
 		{
@@ -151,7 +151,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		}
 		Refresh();
 	});
-	connect(m_game_compat.get(), &game_compatibility::DownloadFinished, [this]()
+	connect(m_game_compat, &game_compatibility::DownloadFinished, [this]()
 	{
 		for (const auto& game : m_game_data)
 		{
@@ -159,14 +159,14 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		}
 		Refresh();
 	});
-	connect(m_game_compat.get(), &game_compatibility::DownloadError, [this](const QString& error)
+	connect(m_game_compat, &game_compatibility::DownloadError, [this](const QString& error)
 	{
 		for (const auto& game : m_game_data)
 		{
 			game->compat = m_game_compat->GetCompatibility(game->info.serial);
 		}
 		Refresh();
-		QMessageBox::warning(this, tr("Warning!"), tr("Failed to retrieve the online compatibility database!\nFalling back to local database.\n\n") + tr(qPrintable(error)));
+		QMessageBox::warning(this, tr("Warning!"), tr("Failed to retrieve the online compatibility database!\nFalling back to local database.\n\n%0").arg(error));
 	});
 
 	for (int col = 0; col < m_columnActs.count(); ++col)

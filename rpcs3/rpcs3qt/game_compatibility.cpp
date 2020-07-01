@@ -1,77 +1,67 @@
 ﻿#include "game_compatibility.h"
 #include "gui_settings.h"
-#include "progress_dialog.h"
-#include "curl_handle.h"
+#include "downloader.h"
 
 #include <QApplication>
 #include <QMessageBox>
 #include <QJsonDocument>
-#include <QThread>
 
 LOG_CHANNEL(compat_log, "Compat");
 
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-size_t curl_write_cb_compat(char* ptr, size_t /*size*/, size_t nmemb, void* userdata)
+game_compatibility::game_compatibility(std::shared_ptr<gui_settings> settings, QWidget* parent)
+	: QObject(parent)
+	, m_gui_settings(settings)
 {
-	game_compatibility* gm_cmp = reinterpret_cast<game_compatibility*>(userdata);
-	return gm_cmp->update_buffer(ptr, nmemb);
-}
-
-game_compatibility::game_compatibility(std::shared_ptr<gui_settings> settings) : m_xgui_settings(settings)
-{
-	m_filepath = m_xgui_settings->GetSettingsDir() + "/compat_database.dat";
-	m_url = "https://rpcs3.net/compatibility?api=v1&export";
-
-	m_curl = new curl_handle(this);
-
+	m_filepath = m_gui_settings->GetSettingsDir() + "/compat_database.dat";
+	m_downloader = new downloader("Compat Update", parent);
 	RequestCompatibility();
 
-	// We need this signal in order to update the GUI from the main thread
-	connect(this, &game_compatibility::signal_buffer_update, this, &game_compatibility::handle_buffer_update);
+	connect(m_downloader, &downloader::signal_download_error, this, &game_compatibility::handle_download_error);
+	connect(m_downloader, &downloader::signal_download_finished, this, &game_compatibility::handle_download_finished);
 }
 
-void game_compatibility::handle_buffer_update(int size, int max)
+void game_compatibility::handle_download_error(const QString& error)
 {
-	if (m_progress_dialog)
-	{
-		m_progress_dialog->setMaximum(max);
-		m_progress_dialog->setValue(size);
-		QApplication::processEvents();
-	}
+	Q_EMIT DownloadError(error);
 }
 
-size_t game_compatibility::update_buffer(char* data, size_t size)
+void game_compatibility::handle_download_finished(const QByteArray& data)
 {
-	if (m_curl_abort)
+	compat_log.notice("Database download finished");
+
+	// Create new map from database and write database to file if database was valid
+	if (ReadJSON(QJsonDocument::fromJson(data).object(), true))
 	{
-		return 0;
-	}
+		// We have a new database in map, therefore refresh gamelist to new state
+		Q_EMIT DownloadFinished();
 
-	const auto old_size = m_curl_buf.size();
-	const auto new_size = old_size + size;
-	m_curl_buf.resize(static_cast<int>(new_size));
-	memcpy(m_curl_buf.data() + old_size, data, size);
+		// Write database to file
+		QFile file(m_filepath);
 
-	int max = m_progress_dialog ? m_progress_dialog->maximum() : 0;
-
-	if (m_actual_dwnld_size < 0)
-	{
-		if (curl_easy_getinfo(m_curl->get_curl(), CURLINFO_CONTENT_LENGTH_DOWNLOAD, &m_actual_dwnld_size) == CURLE_OK && m_actual_dwnld_size > 0)
+		if (file.exists())
 		{
-			max = static_cast<int>(m_actual_dwnld_size);
+			compat_log.notice("Database file found: %s", sstr(m_filepath));
 		}
+
+		if (!file.open(QIODevice::WriteOnly))
+		{
+			compat_log.error("Database Error - Could not write database to file: %s", sstr(m_filepath));
+			return;
+		}
+
+		file.write(data);
+		file.close();
+
+		compat_log.success("Wrote database to file: %s", sstr(m_filepath));
 	}
-
-	Q_EMIT signal_buffer_update(static_cast<int>(new_size), max);
-
-	return size;
 }
 
 bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_download)
 {
-	int return_code = json_data["return_code"].toInt();
+	const int return_code = json_data["return_code"].toInt();
 
 	if (return_code < 0)
 	{
@@ -167,77 +157,10 @@ void game_compatibility::RequestCompatibility(bool online)
 		return;
 	}
 
-	compat_log.notice("Beginning compatibility database download from: %s", m_url);
+	const std::string url = "https://rpcs3.net/compatibility?api=v1&export";
+	compat_log.notice("Beginning compatibility database download from: %s", url);
 
-	// Show Progress
-	m_progress_dialog = new progress_dialog(tr("Downloading Database"), tr("Please wait..."), tr("Abort"), 0, 100, true);
-	m_progress_dialog->show();
-
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, m_url.c_str());
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEFUNCTION, curl_write_cb_compat);
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEDATA, this);
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_FOLLOWLOCATION, 1);
-
-	m_curl_buf.clear();
-	m_curl_abort = false;
-
-	// Handle abort
-	connect(m_progress_dialog, &QProgressDialog::canceled, [this] { m_curl_abort = true; });
-	connect(m_progress_dialog, &QProgressDialog::finished, m_progress_dialog, &QProgressDialog::deleteLater);
-
-	auto thread = QThread::create([&]
-	{
-		const auto result = curl_easy_perform(m_curl->get_curl());
-		m_curl_result = result == CURLE_OK;
-
-		if (!m_curl_result)
-		{
-			Q_EMIT DownloadError(qstr("Curl error: ") + qstr(curl_easy_strerror(result)));
-		}
-	});
-	connect(thread, &QThread::finished, this, [this, online]()
-	{
-		if (m_progress_dialog)
-		{
-			m_progress_dialog->close();
-			m_progress_dialog = nullptr;
-		}
-
-		if (!m_curl_result)
-		{
-			return;
-		}
-
-		compat_log.notice("Database download finished");
-
-		// Create new map from database and write database to file if database was valid
-		if (ReadJSON(QJsonDocument::fromJson(m_curl_buf).object(), online))
-		{
-			// We have a new database in map, therefore refresh gamelist to new state
-			Q_EMIT DownloadFinished();
-
-			// Write database to file
-			QFile file(m_filepath);
-
-			if (file.exists())
-			{
-				compat_log.notice("Database file found: %s", sstr(m_filepath));
-			}
-
-			if (!file.open(QIODevice::WriteOnly))
-			{
-				compat_log.error("Database Error - Could not write database to file: %s", sstr(m_filepath));
-				return;
-			}
-
-			file.write(m_curl_buf);
-			file.close();
-
-			compat_log.success("Wrote database to file: %s", sstr(m_filepath));
-		}
-	});
-	thread->setObjectName("Compat Update");
-	thread->start();
+	m_downloader->start(url, true, true, tr("Downloading Database"));
 
 	// We want to retrieve a new database, therefore refresh gamelist and indicate that
 	Q_EMIT DownloadStarted();
