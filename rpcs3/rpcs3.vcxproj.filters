@@ -131,6 +131,9 @@
     <Filter Include="Gui\patch manager">
       <UniqueIdentifier>{e72a0cbe-fbcd-4a0b-8c17-a2a3b7a42258}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\network">
+      <UniqueIdentifier>{bad5498c-a915-4a96-b0cc-f754c02d8e65}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -901,9 +904,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_update_manager.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\curl_handle.cpp">
-      <Filter>rpcs3</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\screenshot_manager_dialog.cpp">
       <Filter>Gui\screenshot manager</Filter>
     </ClCompile>
@@ -1057,6 +1057,24 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_patch_manager_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\curl_handle.cpp">
+      <Filter>Gui\network</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\downloader.cpp">
+      <Filter>Gui\network</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_downloader.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_downloader.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_downloader.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_downloader.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1140,9 +1158,6 @@
     <ClInclude Include="rpcs3qt\category.h">
       <Filter>Gui\game list</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\curl_handle.h">
-      <Filter>rpcs3</Filter>
-    </ClInclude>
     <ClInclude Include="rpcs3qt\emu_settings_type.h">
       <Filter>Gui\settings</Filter>
     </ClInclude>
@@ -1157,6 +1172,9 @@
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_patch_manager_dialog.h">
       <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\curl_handle.h">
+      <Filter>Gui\network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1375,6 +1393,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\patch_manager_dialog.ui">
       <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\downloader.h">
+      <Filter>Gui\network</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

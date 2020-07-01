@@ -1537,7 +1537,18 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->cb_show_pkg_install->setChecked(m_gui_settings->GetValue(gui::ib_pkg_success).toBool());
 		ui->cb_show_pup_install->setChecked(m_gui_settings->GetValue(gui::ib_pup_success).toBool());
 
-		ui->cb_check_update_start->setChecked(m_gui_settings->GetValue(gui::m_check_upd_start).toBool());
+		const QString updates_yes        = tr("Yes", "Updates");
+		const QString updates_background = tr("Background", "Updates");
+		const QString updates_no         = tr("No", "Updates");
+
+		ui->combo_updates->addItem(updates_yes, "true");
+		ui->combo_updates->addItem(updates_background, "background");
+		ui->combo_updates->addItem(updates_no, "false");
+		ui->combo_updates->setCurrentIndex(ui->combo_updates->findData(m_gui_settings->GetValue(gui::m_check_upd_start).toString()));
+		connect(ui->combo_updates, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this](int index)
+		{
+			m_gui_settings->SetValue(gui::m_check_upd_start, ui->combo_updates->itemData(index));
+		});
 
 		const bool enable_ui_colors = m_gui_settings->GetValue(gui::m_enableUIColors).toBool();
 		ui->cb_custom_colors->setChecked(enable_ui_colors);
@@ -1611,10 +1622,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		connect(ui->cb_show_pup_install, &QCheckBox::clicked, [this](bool val)
 		{
 			m_gui_settings->SetValue(gui::ib_pup_success, val);
-		});
-		connect(ui->cb_check_update_start, &QCheckBox::clicked, [this](bool val)
-		{
-			m_gui_settings->SetValue(gui::m_check_upd_start, val);
 		});
 
 		connect(ui->cb_custom_colors, &QCheckBox::clicked, [this](bool val)

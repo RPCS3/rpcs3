@@ -3143,13 +3143,6 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="cb_check_update_start">
-                <property name="text">
-                 <string>Check for updates on startup</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <spacer name="guiTabSpacerRight">
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>
@@ -3164,6 +3157,18 @@
                  </size>
                 </property>
                </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_updates">
+             <property name="title">
+              <string>Check for updates on startup</string>
+             </property>
+             <layout class="QVBoxLayout" name="layout_gb_updates">
+              <item>
+               <widget class="QComboBox" name="combo_updates"/>
               </item>
              </layout>
             </widget>

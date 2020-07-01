@@ -11,6 +11,7 @@
 	custom_dialog.cpp
 	debugger_frame.cpp
 	debugger_list.cpp
+	downloader.cpp
 	_discord_utils.cpp
 	emu_settings.cpp
 	fatal_error_dialog.cpp

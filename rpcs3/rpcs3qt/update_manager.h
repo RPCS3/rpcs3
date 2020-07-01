@@ -4,37 +4,30 @@
 #include <QObject>
 #include <QByteArray>
 
-class curl_handle;
-class progress_dialog;
+class downloader;
 
 class update_manager final :  public QObject
 {
 	Q_OBJECT
 
 private:
-	std::atomic<bool> m_update_dialog  = false;
-	progress_dialog* m_progress_dialog = nullptr;
-	QWidget* m_parent                  = nullptr;
+	downloader* m_downloader = nullptr;
+	QWidget* m_parent        = nullptr;
 
-	curl_handle* m_curl = nullptr;
-	QByteArray m_curl_buf;
-	std::atomic<bool> m_curl_abort = false;
-	std::atomic<bool> m_curl_result = false;
+	QString m_update_message;
 
+	std::string m_request_url;
 	std::string m_expected_hash;
 	u64 m_expected_size = 0;
 
-	bool handle_json(bool automatic);
-	bool handle_rpcs3();
+	bool handle_json(bool automatic, bool check_only, const QByteArray& data);
+	bool handle_rpcs3(const QByteArray& data);
 
 public:
 	update_manager();
-	void check_for_updates(bool automatic, QWidget* parent = nullptr);
-	size_t update_buffer(char* data, size_t size);
+	void check_for_updates(bool automatic, bool check_only, QWidget* parent = nullptr);
+	void update(bool automatic);
 
 Q_SIGNALS:
-	void signal_buffer_update(int size);
-
-private Q_SLOTS:
-	void handle_buffer_update(int size);
+	void signal_update_available(bool update_available);
 };

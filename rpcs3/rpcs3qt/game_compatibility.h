@@ -5,9 +5,8 @@
 #include <QPainter>
 #include <QJsonObject>
 
-class curl_handle;
+class downloader;
 class gui_settings;
-class progress_dialog;
 
 struct compat_status
 {
@@ -35,16 +34,9 @@ private:
 		{ "NoData",   { 6, "", "",        tr("Database missing"), tr("Right click here and download the current database.\nMake sure you are connected to the internet.") } },
 		{ "Download", { 7, "", "",        tr("Retrieving..."),    tr("Downloading the compatibility database. Please wait...") } }
 	};
-	int m_timer_count = 0;
+	std::shared_ptr<gui_settings> m_gui_settings;
 	QString m_filepath;
-	std::string m_url;
-	std::atomic<bool> m_curl_result = false;
-	std::atomic<bool> m_curl_abort = false;
-	double m_actual_dwnld_size = -1.0;
-	curl_handle* m_curl = nullptr;
-	QByteArray m_curl_buf;
-	progress_dialog* m_progress_dialog = nullptr;
-	std::shared_ptr<gui_settings> m_xgui_settings;
+	downloader* m_downloader = nullptr;
 	std::map<std::string, compat_status> m_compat_database;
 
 	/** Creates new map from the database */
@@ -52,7 +44,7 @@ private:
 
 public:
 	/** Handles reads, writes and downloads for the compatibility database */
-	game_compatibility(std::shared_ptr<gui_settings> settings);
+	game_compatibility(std::shared_ptr<gui_settings> settings, QWidget* parent);
 
 	/** Reads database. If online set to true: Downloads and writes the database to file */
 	void RequestCompatibility(bool online = false);
@@ -63,16 +55,14 @@ public:
 	/** Returns the data for the requested status */
 	compat_status GetStatusData(const QString& status);
 
-	size_t update_buffer(char* data, size_t size);
-
 Q_SIGNALS:
 	void DownloadStarted();
 	void DownloadFinished();
 	void DownloadError(const QString& error);
-	void signal_buffer_update(int size, int max);
 
 private Q_SLOTS:
-	void handle_buffer_update(int size, int max);
+	void handle_download_error(const QString& error);
+	void handle_download_finished(const QByteArray& data);
 };
 
 class compat_pixmap : public QPixmap
