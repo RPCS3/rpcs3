@@ -7,6 +7,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
 
+#include <QCoreApplication>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <string>
@@ -84,7 +85,8 @@ gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::share
 gs_frame::~gs_frame()
 {
 #ifdef _WIN32
-	if (m_tb_progress)
+	// QWinTaskbarProgress::hide() will crash if the application is already about to close, even if the object is not null.
+	if (m_tb_progress && !QCoreApplication::closingDown())
 	{
 		m_tb_progress->hide();
 	}
