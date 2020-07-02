@@ -5702,9 +5702,9 @@ public:
 		}
 		case MFC_WrTagUpdate:
 		{
-			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(val.value))
+			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(val.value); true)
 			{
-				const u64 upd = ci->getZExtValue();
+				const u64 upd = ci ? ci->getZExtValue() : UINT64_MAX;
 
 				const auto tag_mask  = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_mask));
 				const auto mfc_fence = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::mfc_fence));
@@ -5722,8 +5722,14 @@ public:
 				else if (upd <= MFC_TAG_UPDATE_ALL)
 				{
 					const auto cond = upd == MFC_TAG_UPDATE_ANY ? m_ir->CreateICmpNE(completed, m_ir->getInt32(0)) : m_ir->CreateICmpEQ(completed, tag_mask);
-					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE), m_ir->getInt32(static_cast<u32>(upd))), upd_ptr);
-					m_ir->CreateStore(m_ir->CreateSelect(cond, stat_val, m_ir->getInt64(0)), stat_ptr);
+					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE), val.value), upd_ptr);
+					const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+					const auto update = llvm::BasicBlock::Create(m_context, "", m_function);
+					m_ir->CreateCondBr(cond, update, next);
+					m_ir->SetInsertPoint(update);
+					m_ir->CreateStore(stat_val, stat_ptr);
+					m_ir->CreateBr(next);
+					m_ir->SetInsertPoint(next);
 					return;
 				}
 			}

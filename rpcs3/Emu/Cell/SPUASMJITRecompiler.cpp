@@ -2515,7 +2515,6 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 
 			c->bind(zero);
 			c->mov(SPU_OFF_32(ch_tag_upd), qw0->r32());
-			c->mov(SPU_OFF_64(ch_tag_stat), 0);
 			c->jmp(ret);
 		});
 
