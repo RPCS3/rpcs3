@@ -5585,9 +5585,7 @@ public:
 		}
 		case MFC_WrTagUpdate:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_upd), true);
-			res.value = m_ir->CreateICmpEQ(res.value, m_ir->getInt32(0));
-			res.value = m_ir->CreateZExt(res.value, get_type<u32>());
+			res.value = m_ir->getInt32(1);
 			break;
 		}
 		case MFC_Cmd:

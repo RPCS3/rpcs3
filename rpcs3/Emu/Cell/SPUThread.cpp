@@ -2368,7 +2368,7 @@ u32 spu_thread::get_ch_count(u32 ch)
 	case SPU_RdInMbox:        return ch_in_mbox.get_count();
 	case MFC_RdTagStat:       return ch_tag_stat.get_count();
 	case MFC_RdListStallStat: return ch_stall_stat.get_count();
-	case MFC_WrTagUpdate:     return ch_tag_upd == 0;
+	case MFC_WrTagUpdate:     return 1;
 	case SPU_RdSigNotify1:    return ch_snr1.get_count();
 	case SPU_RdSigNotify2:    return ch_snr2.get_count();
 	case MFC_RdAtomicStat:    return ch_atomic_stat.get_count();
