@@ -106,8 +106,8 @@ void gs_frame::showEvent(QShowEvent *event)
 {
 	// we have to calculate new window positions, since the frame is only known once the window was created
 	// the left and right margins are too big on my setup for some reason yet unknown, so we'll have to ignore them
-	int x = geometry().left(); //std::max(geometry().left(), frameMargins().left());
-	int y = std::max(geometry().top(), frameMargins().top());
+	const int x = geometry().left(); //std::max(geometry().left(), frameMargins().left());
+	const int y = std::max(geometry().top(), frameMargins().top());
 
 	setPosition(x, y);
 
@@ -116,6 +116,8 @@ void gs_frame::showEvent(QShowEvent *event)
 
 void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 {
+	// NOTE: needs to be updated with keyboard_pad_handler::processKeyEvent
+
 	switch (keyEvent->key())
 	{
 	case Qt::Key_L:
