@@ -14,6 +14,7 @@ private:
 	downloader* m_downloader = nullptr;
 	QWidget* m_parent        = nullptr;
 
+	// This message is empty if there is no download available
 	QString m_update_message;
 
 	std::string m_request_url;

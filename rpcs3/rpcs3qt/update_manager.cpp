@@ -41,6 +41,8 @@ update_manager::update_manager()
 
 void update_manager::check_for_updates(bool automatic, bool check_only, QWidget* parent)
 {
+	m_update_message.clear();
+
 #ifdef __linux__
 	if (automatic && !::getenv("APPIMAGE"))
 	{
@@ -75,7 +77,7 @@ void update_manager::check_for_updates(bool automatic, bool check_only, QWidget*
 			}
 		}
 
-		Q_EMIT signal_update_available(result_json);
+		Q_EMIT signal_update_available(result_json && !m_update_message.isEmpty());
 	});
 
 	const std::string url = "https://update.rpcs3.net/?api=v1&c=" + rpcs3::get_commit_and_hash().second;
@@ -205,7 +207,8 @@ bool update_manager::handle_json(bool automatic, bool check_only, const QByteArr
 
 void update_manager::update()
 {
-	if (QMessageBox::question(m_downloader->get_progress_dialog(), tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
+	if (m_update_message.isEmpty() ||
+		QMessageBox::question(m_downloader->get_progress_dialog(), tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
 	{
 		m_downloader->close_progress_dialog();
 		return;
