@@ -50,7 +50,7 @@ private Q_SLOTS:
 
 private:
 	void refresh(bool restore_layout = false);
-	void load_patches();
+	void load_patches(bool show_error);
 	void populate_tree();
 	void save_config();
 	void update_patch_info(const gui_patch_info& info);
