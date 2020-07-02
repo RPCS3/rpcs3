@@ -5702,10 +5702,8 @@ public:
 		}
 		case MFC_WrTagUpdate:
 		{
-			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(val.value); true)
+			if (true)
 			{
-				const u64 upd = ci ? ci->getZExtValue() : UINT64_MAX;
-
 				const auto tag_mask  = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_mask));
 				const auto mfc_fence = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::mfc_fence));
 				const auto completed = m_ir->CreateAnd(tag_mask, m_ir->CreateNot(mfc_fence));
@@ -5713,29 +5711,39 @@ public:
 				const auto stat_ptr  = spu_ptr<u64>(&spu_thread::ch_tag_stat);
 				const auto stat_val  = m_ir->CreateOr(m_ir->CreateZExt(completed, get_type<u64>()), INT64_MIN);
 
-				if (upd == MFC_TAG_UPDATE_IMMEDIATE)
-				{
-					m_ir->CreateStore(m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE), upd_ptr);
-					m_ir->CreateStore(stat_val, stat_ptr);
-					return;
-				}
-				else if (upd <= MFC_TAG_UPDATE_ALL)
-				{
-					const auto cond = upd == MFC_TAG_UPDATE_ANY ? m_ir->CreateICmpNE(completed, m_ir->getInt32(0)) : m_ir->CreateICmpEQ(completed, tag_mask);
-					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE), val.value), upd_ptr);
-					const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-					const auto update = llvm::BasicBlock::Create(m_context, "", m_function);
-					m_ir->CreateCondBr(cond, update, next);
-					m_ir->SetInsertPoint(update);
-					m_ir->CreateStore(stat_val, stat_ptr);
-					m_ir->CreateBr(next);
-					m_ir->SetInsertPoint(next);
-					return;
-				}
-			}
+				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto next0 = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto imm = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto any = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto update = llvm::BasicBlock::Create(m_context, "", m_function);
 
-			spu_log.warning("[0x%x] MFC_WrTagUpdate: $%u is not a good constant", m_pos, +op.rt);
-			break;
+				m_ir->CreateCondBr(m_ir->CreateICmpEQ(val.value, m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE)), imm, next0);
+				m_ir->SetInsertPoint(imm);
+				m_ir->CreateStore(val.value, upd_ptr);
+				m_ir->CreateStore(stat_val, stat_ptr);
+				m_ir->CreateBr(next);
+				m_ir->SetInsertPoint(next0);
+				m_ir->CreateCondBr(m_ir->CreateICmpULE(val.value, m_ir->getInt32(MFC_TAG_UPDATE_ALL)), any, fail, m_md_likely);
+
+				// Illegal update, access violate with special address
+				m_ir->SetInsertPoint(fail);
+				const auto ptr = _ptr<u32>(m_memptr, 0xffdead04);
+				m_ir->CreateStore(m_ir->getInt32("TAG\0"_u32), ptr, true);
+				m_ir->CreateBr(next);
+
+				m_ir->SetInsertPoint(any);
+				const auto cond = m_ir->CreateSelect(m_ir->CreateICmpEQ(val.value, m_ir->getInt32(MFC_TAG_UPDATE_ANY))
+					,  m_ir->CreateICmpNE(completed, m_ir->getInt32(0)), m_ir->CreateICmpEQ(completed, tag_mask));
+
+				m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE), val.value), upd_ptr);
+				m_ir->CreateCondBr(cond, update, next, m_md_likely);
+				m_ir->SetInsertPoint(update);
+				m_ir->CreateStore(stat_val, stat_ptr);
+				m_ir->CreateBr(next);
+				m_ir->SetInsertPoint(next);
+				return;
+			}
 		}
 		case MFC_LSA:
 		{
