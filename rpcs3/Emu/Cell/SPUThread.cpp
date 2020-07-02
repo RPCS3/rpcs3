@@ -2811,7 +2811,6 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 		else
 		{
 			ch_tag_upd = value;
-			ch_tag_stat.set_value(0, false);
 		}
 
 		return true;
