@@ -26,7 +26,7 @@ private:
 public:
 	update_manager();
 	void check_for_updates(bool automatic, bool check_only, QWidget* parent = nullptr);
-	void update(bool automatic);
+	void update();
 
 Q_SIGNALS:
 	void signal_update_available(bool update_available);
