@@ -79,6 +79,11 @@ atomic_t<u32> g_progr_fdone{0};
 atomic_t<u32> g_progr_ptotal{0};
 atomic_t<u32> g_progr_pdone{0};
 
+namespace
+{
+	struct progress_dialog_server;
+}
+
 template<>
 void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 {
@@ -117,6 +122,7 @@ void Emulator::Init()
 
 	idm::init();
 	g_fxo->reset();
+	g_fxo->init<named_thread<progress_dialog_server>>();
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
@@ -2013,5 +2019,3 @@ void stx::manual_fixed_typemap<void>::destroy_reporter(const char* name, unsigne
 }
 
 Emulator Emu;
-
-named_thread<progress_dialog_server> g_progress_dlg_server;
