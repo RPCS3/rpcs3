@@ -199,11 +199,11 @@ bool update_manager::handle_json(bool automatic, bool check_only, const QByteArr
 		return true;
 	}
 
-	update(automatic);
+	update();
 	return true;
 }
 
-void update_manager::update(bool automatic)
+void update_manager::update()
 {
 	if (QMessageBox::question(m_downloader->get_progress_dialog(), tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
 	{
@@ -213,15 +213,12 @@ void update_manager::update(bool automatic)
 
 	m_downloader->disconnect();
 
-	connect(m_downloader, &downloader::signal_download_error, this, [this, automatic](const QString& /*error*/)
+	connect(m_downloader, &downloader::signal_download_error, this, [this](const QString& /*error*/)
 	{
-		if (!automatic)
-		{
-			QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
-		}
+		QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
 	});
 
-	connect(m_downloader, &downloader::signal_download_finished, this, [this, automatic](const QByteArray& data)
+	connect(m_downloader, &downloader::signal_download_finished, this, [this](const QByteArray& data)
 	{
 		const bool result_json = handle_rpcs3(data);
 
@@ -230,10 +227,7 @@ void update_manager::update(bool automatic)
 			// The progress dialog is configured to stay open, so we need to close it manually if the download succeeds.
 			m_downloader->close_progress_dialog();
 
-			if (!automatic)
-			{
-				QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
-			}
+			QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
 		}
 
 		Q_EMIT signal_update_available(false);

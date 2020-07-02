@@ -186,7 +186,7 @@ void main_window::Init()
 	QAction *download_action = new QAction(tr("Download Update"), download_menu);
 	connect(download_action, &QAction::triggered, this, [this]
 	{
-		m_updater.update(false);
+		m_updater.update();
 	});
 
 	download_menu->addAction(download_action);
