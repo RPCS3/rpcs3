@@ -158,7 +158,7 @@ private:
 	void SetPadData(u32 large_motor, u32 small_motor);
 
 	/** Update all the Button Labels with current button mapping */
-	void UpdateLabel(bool is_reset = false);
+	void UpdateLabels(bool is_reset = false);
 	void SwitchPadInfo(const std::string& name, bool is_connected);
 
 	/** Enable/Disable Buttons while trying to remap an other */
@@ -173,7 +173,7 @@ private:
 	void ChangeProfile();
 
 	/** Repaints a stick deadzone preview label */
-	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y);
+	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, double multiplier);
 
 	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
 
