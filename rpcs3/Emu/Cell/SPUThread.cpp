@@ -872,7 +872,7 @@ std::string spu_thread::dump_callstack() const
 	return {};
 }
 
-std::vector<u32> spu_thread::dump_callstack_list() const
+std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 {
 	return {};
 }

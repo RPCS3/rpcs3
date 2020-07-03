@@ -103,7 +103,7 @@ public:
 	virtual std::string dump_callstack() const;
 
 	// Get CPU call stack list
-	virtual std::vector<u32> dump_callstack_list() const;
+	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const;
 
 	// Get CPU dump of misc information
 	virtual std::string dump_misc() const;

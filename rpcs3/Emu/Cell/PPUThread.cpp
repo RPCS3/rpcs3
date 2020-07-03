@@ -472,16 +472,16 @@ std::string ppu_thread::dump_callstack() const
 
 	fmt::append(ret, "Call stack:\n=========\n0x%08x (0x0) called\n", cia);
 
-	for (u32 sp : dump_callstack_list())
+	for (const auto& sp : dump_callstack_list())
 	{
 		// TODO: function addresses too
-		fmt::append(ret, "> from 0x%08x (0x0)\n", sp);
+		fmt::append(ret, "> from 0x%08x (r1=0x%08x)\n", sp.first, sp.second);
 	}
 
 	return ret;
 }
 
-std::vector<u32> ppu_thread::dump_callstack_list() const
+std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 {
 	//std::shared_lock rlock(vm::g_mutex); // Needs optimizations
 
@@ -507,7 +507,7 @@ std::vector<u32> ppu_thread::dump_callstack_list() const
 		stack_max += 4096;
 	}
 
-	std::vector<u32> call_stack_list;
+	std::vector<std::pair<u32, u32>> call_stack_list;
 
 	for (
 		u64 sp = *vm::get_super_ptr<u64>(stack_ptr);
@@ -523,7 +523,7 @@ std::vector<u32> ppu_thread::dump_callstack_list() const
 		}
 
 		// TODO: function addresses too
-		call_stack_list.push_back(static_cast<u32>(addr));
+		call_stack_list.emplace_back(static_cast<u32>(addr), static_cast<u32>(sp));
 	}
 
 	return call_stack_list;
