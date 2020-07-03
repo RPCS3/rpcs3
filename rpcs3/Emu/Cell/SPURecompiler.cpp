@@ -6043,6 +6043,7 @@ public:
 				case MFC_SYNC_CMD:
 				{
 					m_ir->CreateStore(m_ir->getInt32(-1), pb);
+					m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(pf), mask), pf);
 					break;
 				}
 				default:

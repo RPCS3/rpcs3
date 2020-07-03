@@ -722,13 +722,13 @@
                 </property>
                </widget>
               </item>
-            <item>
-             <widget class="QCheckBox" name="Enable3D">
-              <property name="text">
-               <string>Enable 3D</string>
-              </property>
-             </widget>
-            </item>
+              <item>
+               <widget class="QCheckBox" name="Enable3D">
+                <property name="text">
+                 <string>Enable 3D</string>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QCheckBox" name="disableVertexCache">
                 <property name="text">
@@ -2041,13 +2041,13 @@
                 </property>
                </widget>
               </item>
-            <item>
-             <widget class="QCheckBox" name="DisableNativefp16">
-              <property name="text">
-               <string>Disable native float16 support</string>
-              </property>
-             </widget>
-            </item>
+              <item>
+               <widget class="QCheckBox" name="DisableNativefp16">
+                <property name="text">
+                 <string>Disable native float16 support</string>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QCheckBox" name="relaxedZCULL">
                 <property name="text">
@@ -2360,11 +2360,11 @@
                </widget>
               </item>
               <item>
-                <widget class="QCheckBox" name="gs_disableKbHotkeys">
-                  <property name="text">
-                    <string>Ignore keyboard hotkeys</string>
-                  </property>
-                </widget>
+               <widget class="QCheckBox" name="gs_disableKbHotkeys">
+                <property name="text">
+                 <string>Ignore keyboard hotkeys</string>
+                </property>
+               </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="gs_showMouseInFullscreen">
@@ -3143,13 +3143,6 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="cb_check_update_start">
-                <property name="text">
-                 <string>Check for updates on startup</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <spacer name="guiTabSpacerRight">
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>
@@ -3164,6 +3157,18 @@
                  </size>
                 </property>
                </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_updates">
+             <property name="title">
+              <string>Check for updates on startup</string>
+             </property>
+             <layout class="QVBoxLayout" name="layout_gb_updates">
+              <item>
+               <widget class="QComboBox" name="combo_updates"/>
               </item>
              </layout>
             </widget>

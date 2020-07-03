@@ -176,10 +176,35 @@ void main_window::Init()
 	// Fix possible hidden game list columns. The game list has to be visible already. Use this after show()
 	m_game_list_frame->FixNarrowColumns();
 
-#if defined(_WIN32) || defined(__linux__)
-	if (m_gui_settings->GetValue(gui::m_check_upd_start).toBool())
+	// RPCS3 Updater
+
+	QMenuBar *corner_bar = new QMenuBar(ui->menuBar);
+
+	QMenu *download_menu = new QMenu(tr("Update Available!"), corner_bar);
+	corner_bar->addMenu(download_menu);
+
+	QAction *download_action = new QAction(tr("Download Update"), download_menu);
+	connect(download_action, &QAction::triggered, this, [this]
 	{
-		m_updater.check_for_updates(true, this);
+		m_updater.update();
+	});
+
+	download_menu->addAction(download_action);
+	ui->menuBar->setCornerWidget(corner_bar);
+	ui->menuBar->cornerWidget()->setVisible(false);
+
+	connect(&m_updater, &update_manager::signal_update_available, this, [this](bool update_available)
+	{
+		if (ui->menuBar->cornerWidget())
+		{
+			ui->menuBar->cornerWidget()->setVisible(update_available);
+		}
+	});
+
+#if defined(_WIN32) || defined(__linux__)
+	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != "false")
+	{
+		m_updater.check_for_updates(true, update_value != "true", this);
 	}
 #endif
 }
@@ -1212,7 +1237,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	}
 
 	// connect boot
-	connect(act, &QAction::triggered, [=, this]() {BootRecentAction(act); });
+	connect(act, &QAction::triggered, [act, this]() {BootRecentAction(act); });
 
 	return act;
 }
@@ -1538,7 +1563,7 @@ void main_window::CreateConnects()
 		std::unordered_map<std::string, std::set<std::string>> games;
 		if (m_game_list_frame)
 		{
-			for (const auto game : m_game_list_frame->GetGameInfo())
+			for (const auto& game : m_game_list_frame->GetGameInfo())
 			{
 				if (game)
 				{
@@ -1675,7 +1700,7 @@ void main_window::CreateConnects()
 			QMessageBox::warning(this, tr("Auto-updater"), tr("Please stop the emulation before trying to update."));
 			return;
 		}
-		m_updater.check_for_updates(false, this);
+		m_updater.check_for_updates(false, false, this);
 	});
 
 	connect(ui->aboutAct, &QAction::triggered, [this]
