@@ -8,6 +8,7 @@
 #include "persistent_settings.h"
 #include "gs_frame.h"
 #include "gl_gs_frame.h"
+#include "display_sleep_control.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
@@ -460,6 +461,18 @@ void gui_application::OnChangeStyleSheetRequest(const QString& path)
 
 void gui_application::OnEmuSettingsChange()
 {
+	if (Emu.IsRunning())
+	{
+		if (g_cfg.misc.prevent_display_sleep)
+		{
+			enable_display_sleep();
+		}
+		else
+		{
+			disable_display_sleep();
+		}
+	}
+
 	Emu.ConfigureLogs();
 	rsx::overlays::reset_performance_overlay();
 }

@@ -1618,10 +1618,8 @@ bool Emulator::Pause()
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
 
-	if (g_cfg.misc.prevent_display_sleep)
-	{
-		enable_display_sleep();
-	}
+	// Always Enable display sleep, not only if it was prevented.
+	enable_display_sleep();
 
 	return true;
 }
@@ -1776,10 +1774,8 @@ void Emulator::Stop(bool restart)
 
 	m_force_boot = false;
 
-	if (g_cfg.misc.prevent_display_sleep)
-	{
-		enable_display_sleep();
-	}
+	// Always Enable display sleep, not only if it was prevented.
+	enable_display_sleep();
 
 	if (do_exit || full_stop)
 	{
