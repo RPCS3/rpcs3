@@ -66,6 +66,8 @@ main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared
 
 	// We have to setup the ui before using a translation
 	ui->setupUi(this);
+
+	setAttribute(Qt::WA_DeleteOnClose);
 }
 
 main_window::~main_window()
@@ -2152,10 +2154,6 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 	Emu.Stop();
 
 	SaveWindowState();
-
-	// I need the gui settings to sync, and that means having the destructor called as guiSetting's parent is main_window.
-	setAttribute(Qt::WA_DeleteOnClose);
-	QMainWindow::close();
 
 	// It's possible to have other windows open, like games.  So, force the application to die.
 	QApplication::quit();
