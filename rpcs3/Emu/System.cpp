@@ -1752,19 +1752,6 @@ void Emulator::Stop(bool restart)
 
 	vm::close();
 
-	if (do_exit)
-	{
-		GetCallbacks().exit(true);
-	}
-	else
-	{
-		if (full_stop)
-		{
-			GetCallbacks().exit(false);
-		}
-		Init();
-	}
-
 #ifdef LLVM_AVAILABLE
 	extern void jit_finalize();
 	jit_finalize();
@@ -1793,6 +1780,24 @@ void Emulator::Stop(bool restart)
 	{
 		enable_display_sleep();
 	}
+
+	if (do_exit || full_stop)
+	{
+		if (Quit(do_exit))
+		{
+			return;
+		}
+	}
+
+	Init();
+}
+
+bool Emulator::Quit(bool force_quit) const
+{
+	Emu.SetForceBoot(false);
+	Emu.Stop();
+
+	return GetCallbacks().exit(force_quit);
 }
 
 std::string Emulator::GetFormattedTitle(double fps) const

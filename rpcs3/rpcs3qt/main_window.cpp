@@ -72,6 +72,7 @@ main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared
 
 main_window::~main_window()
 {
+	SaveWindowState();
 	delete ui;
 }
 
@@ -2140,7 +2141,7 @@ void main_window::mouseDoubleClickEvent(QMouseEvent *event)
 	}
 }
 
-/** Override the Qt close event to have the emulator stop and the application die.  May add a warning dialog in future.
+/** Override the Qt close event to have the emulator stop and the application die.
 */
 void main_window::closeEvent(QCloseEvent* closeEvent)
 {
@@ -2150,13 +2151,8 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 		return;
 	}
 
-	// Cleanly stop the emulator.
-	Emu.Stop();
-
-	SaveWindowState();
-
-	// It's possible to have other windows open, like games.  So, force the application to die.
-	QApplication::quit();
+	// Cleanly stop and quit the emulator.
+	Emu.Quit(true);
 }
 
 /**
