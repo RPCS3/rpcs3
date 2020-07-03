@@ -267,13 +267,21 @@ void gui_application::InitializeCallbacks()
 {
 	EmuCallbacks callbacks = CreateCallbacks();
 
-	callbacks.exit = [this](bool force_quit)
+	callbacks.exit = [this](bool force_quit) -> bool
 	{
 		// Close rpcs3 if closed in no-gui mode
 		if (force_quit || !m_main_window)
 		{
+			if (m_main_window)
+			{
+				// Close main window in order to save its window state
+				m_main_window->close();
+			}
 			quit();
+			return true;
 		}
+
+		return false;
 	};
 	callbacks.call_after = [this](std::function<void()> func)
 	{
