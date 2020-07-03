@@ -513,7 +513,7 @@ void save_manager_dialog::UpdateDetails()
 		m_button_delete->setDisabled( !(selected > 1) );
 		m_details_title->setText(
 			selected > 1 ? tr("%n item(s) selected", "", selected) : tr("Select an item to view details")
-		)
+		);
 		m_button_folder->setDisabled(true);
 	}
 	else
