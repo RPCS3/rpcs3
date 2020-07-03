@@ -511,12 +511,19 @@ std::vector<u32> ppu_thread::dump_callstack_list() const
 
 	for (
 		u64 sp = *vm::get_super_ptr<u64>(stack_ptr);
-		sp >= stack_min && std::max(sp, sp + 0x200) < stack_max;
+		sp % 0x10 == 0u && sp >= stack_min && sp <= stack_max - ppu_stack_start_offset;
 		sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp))
 		)
 	{
+		const u64 addr = *vm::get_super_ptr<u64>(static_cast<u32>(sp + 16));
+
+		if (addr > UINT32_MAX || addr % 4 || !vm::check_addr(static_cast<u32>(addr), 1, vm::page_executable))
+		{
+			break;
+		}
+
 		// TODO: function addresses too
-		call_stack_list.push_back(*vm::get_super_ptr<u64>(static_cast<u32>(sp + 16)));
+		call_stack_list.push_back(static_cast<u32>(addr));
 	}
 
 	return call_stack_list;
@@ -659,7 +666,7 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::reset_stack:
 		{
-			cmd_pop(), gpr[1] = stack_addr + stack_size - 0x70;
+			cmd_pop(), gpr[1] = stack_addr + stack_size - ppu_stack_start_offset;
 			break;
 		}
 		default:
@@ -791,7 +798,7 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	, start_time(get_guest_system_time())
 	, ppu_tname(stx::shared_cptr<std::string>::make(name))
 {
-	gpr[1] = stack_addr + stack_size - 0x70;
+	gpr[1] = stack_addr + stack_size - ppu_stack_start_offset;
 
 	gpr[13] = param.tls_addr;
 
