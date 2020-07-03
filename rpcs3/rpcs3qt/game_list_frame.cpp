@@ -1417,7 +1417,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		}
 	}
 
-	pdlg->setLabelText(tr("Created PPU Caches for %0 titles").arg(created));
+	pdlg->setLabelText(tr("Created PPU Caches for %n title(s)", "", created));
 	pdlg->setCancelButtonText(tr("OK"));
 	QApplication::beep();
 }
@@ -1458,7 +1458,7 @@ void game_list_frame::BatchRemovePPUCaches()
 		}
 	}
 
-	pdlg->setLabelText(tr("%0/%1 caches cleared").arg(removed).arg(total));
+	pdlg->setLabelText(tr("%0/%n cache(s) cleared", "", total).arg(removed));
 	pdlg->setCancelButtonText(tr("OK"));
 	QApplication::beep();
 }
@@ -1499,7 +1499,7 @@ void game_list_frame::BatchRemoveSPUCaches()
 		}
 	}
 
-	pdlg->setLabelText(tr("%0/%1 caches cleared").arg(removed).arg(total));
+	pdlg->setLabelText(tr("%0/%n cache(s) cleared", "", total).arg(removed));
 	pdlg->setCancelButtonText(tr("OK"));
 	QApplication::beep();
 }
@@ -1543,7 +1543,7 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 		}
 	}
 
-	pdlg->setLabelText(tr("%0/%1 custom configurations cleared").arg(removed).arg(total));
+	pdlg->setLabelText(tr("%0/%n custom configuration(s) cleared", "", total).arg(removed));
 	pdlg->setCancelButtonText(tr("OK"));
 	QApplication::beep();
 	Refresh(true);
@@ -1588,7 +1588,7 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 		}
 	}
 
-	pdlg->setLabelText(tr("%0/%1 custom pad configurations cleared").arg(removed).arg(total));
+	pdlg->setLabelText(tr("%0/%n custom pad configuration(s) cleared", "", total).arg(removed));
 	pdlg->setCancelButtonText(tr("OK"));
 	QApplication::beep();
 	Refresh(true);
@@ -1630,7 +1630,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 		}
 	}
 
-	pdlg->setLabelText(tr("%0/%1 shader caches cleared").arg(removed).arg(total));
+	pdlg->setLabelText(tr("%0/%n shader cache(s) cleared", "", total).arg(removed));
 	pdlg->setCancelButtonText(tr("OK"));
 	QApplication::beep();
 }

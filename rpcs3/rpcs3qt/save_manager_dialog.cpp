@@ -429,7 +429,7 @@ void save_manager_dialog::OnEntriesRemove()
 		return;
 	}
 
-	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %1 items?").arg(selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these item(s) ?", "", selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
 		std::sort(selection.rbegin(), selection.rend());
 		for (QModelIndex index : selection)
@@ -510,16 +510,10 @@ void save_manager_dialog::UpdateDetails()
 		m_details_details->setText("");
 		m_details_note->setText("");
 
-		if (selected > 1)
-		{
-			m_button_delete->setDisabled(false);
-			m_details_title->setText(tr("%1 items selected").arg(selected));
-		}
-		else
-		{
-			m_button_delete->setDisabled(true);
-			m_details_title->setText(tr("Select an item to view details"));
-		}
+		m_button_delete->setDisabled( !(selected > 1) );
+		m_details_title->setText(
+			selected > 1 ? tr("%n item(s) selected", "", selected) : tr("Select an item to view details")
+		)
 		m_button_folder->setDisabled(true);
 	}
 	else
