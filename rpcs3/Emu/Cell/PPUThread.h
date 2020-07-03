@@ -36,6 +36,11 @@ enum class ppu_syscall_code : u64
 {
 };
 
+enum : u32
+{
+	ppu_stack_start_offset = 0x70,
+};
+
 // ppu function descriptor
 struct ppu_func_opd_t
 {
