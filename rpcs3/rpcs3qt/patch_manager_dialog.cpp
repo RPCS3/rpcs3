@@ -60,8 +60,15 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 
 	// Load config for special settings
 	patch_engine::load_config(m_legacy_patches_enabled);
-	ui->cb_enable_legacy_patches->setChecked(m_legacy_patches_enabled);
 
+	// Load gui settings
+	m_show_owned_games_only = m_gui_settings->GetValue(gui::pm_show_owned).toBool();
+
+	// Initialize gui controls
+	ui->cb_enable_legacy_patches->setChecked(m_legacy_patches_enabled);
+	ui->cb_owned_games_only->setChecked(m_show_owned_games_only);
+
+	// Create connects
 	connect(ui->patch_filter, &QLineEdit::textChanged, this, &patch_manager_dialog::filter_patches);
 	connect(ui->patch_tree, &QTreeWidget::currentItemChanged, this, &patch_manager_dialog::on_item_selected);
 	connect(ui->patch_tree, &QTreeWidget::itemChanged, this, &patch_manager_dialog::on_item_changed);
@@ -774,6 +781,7 @@ void patch_manager_dialog::on_legacy_patches_enabled(int state)
 void patch_manager_dialog::on_show_owned_games_only(int state)
 {
 	m_show_owned_games_only = state == Qt::CheckState::Checked;
+	m_gui_settings->SetValue(gui::pm_show_owned, m_show_owned_games_only);
 	filter_patches(ui->patch_filter->text());
 }
 
