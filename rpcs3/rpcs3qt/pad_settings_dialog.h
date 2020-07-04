@@ -101,8 +101,6 @@ private Q_SLOTS:
 	void HandleDeviceClassChange(int index);
 	/** Save the Pad Configuration to the current Pad Handler Config File */
 	void SaveProfile();
-	void SaveExit();
-	void CancelExit();
 
 private:
 	Ui::pad_settings_dialog *ui;
@@ -150,6 +148,9 @@ private:
 
 	// Input timer. Its Callback handles the input
 	QTimer m_timer_input;
+
+	void SaveExit();
+	void CancelExit();
 
 	// Set vibrate data while keeping the current color
 	void SetPadData(u32 large_motor, u32 small_motor);
