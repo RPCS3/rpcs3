@@ -197,22 +197,22 @@ namespace gui
 				return;
 
 			int item_count = table->rowCount();
-			bool is_empty = item_count < 1;
+			const bool is_empty = item_count < 1;
 			if (is_empty)
 				table->insertRow(0);
 
-			int item_height = table->rowHeight(0);
+			const int item_height = table->rowHeight(0);
 			if (is_empty)
 			{
 				table->clearContents();
 				table->setRowCount(0);
 			}
 
-			int available_height = table->rect().height() - table->horizontalHeader()->height() - table->frameWidth() * 2;
+			const int available_height = table->rect().height() - table->horizontalHeader()->height() - table->frameWidth() * 2;
 			if (available_height < item_height || item_height < 1)
 				return;
 
-			int new_item_count = available_height / item_height;
+			const int new_item_count = available_height / item_height;
 			if (new_item_count == item_count)
 				return;
 
