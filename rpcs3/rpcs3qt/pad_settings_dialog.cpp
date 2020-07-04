@@ -170,11 +170,27 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 		}
 	});
 
-	// Cancel Button
-	connect(ui->b_cancel, &QAbstractButton::clicked, this, &pad_settings_dialog::CancelExit);
+	ui->buttonBox->button(QDialogButtonBox::Reset)->setText(tr("Filter Noise"));
 
-	// Save Button
-	connect(ui->b_ok, &QAbstractButton::clicked, this, &pad_settings_dialog::SaveExit);
+	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
+	{
+		if (button == ui->buttonBox->button(QDialogButtonBox::Save))
+		{
+			SaveExit();
+		}
+		else if (button == ui->buttonBox->button(QDialogButtonBox::Cancel))
+		{
+			CancelExit();
+		}
+		else if (button == ui->buttonBox->button(QDialogButtonBox::Reset))
+		{
+			OnPadButtonClicked(button_ids::id_blacklist);
+		}
+		else if (button == ui->buttonBox->button(QDialogButtonBox::RestoreDefaults))
+		{
+			OnPadButtonClicked(button_ids::id_reset_parameters);
+		}
+	});
 
 	// Refresh Button
 	connect(ui->b_refresh, &QPushButton::clicked, this, &pad_settings_dialog::RefreshInputTypes);
@@ -260,12 +276,8 @@ void pad_settings_dialog::InitButtons()
 	insertButton(button_ids::id_pad_rstick_right, ui->b_rstick_right);
 	insertButton(button_ids::id_pad_rstick_up, ui->b_rstick_up);
 
-	m_padButtons->addButton(ui->b_reset, button_ids::id_reset_parameters);
-	m_padButtons->addButton(ui->b_blacklist, button_ids::id_blacklist);
 	m_padButtons->addButton(ui->b_refresh, button_ids::id_refresh);
 	m_padButtons->addButton(ui->b_addProfile, button_ids::id_add_profile);
-	m_padButtons->addButton(ui->b_ok, button_ids::id_ok);
-	m_padButtons->addButton(ui->b_cancel, button_ids::id_cancel);
 
 	connect(m_padButtons, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &pad_settings_dialog::OnPadButtonClicked);
 
@@ -556,6 +568,11 @@ void pad_settings_dialog::ReactivateButtons()
 	SwitchButtons(true);
 
 	for (auto but : m_padButtons->buttons())
+	{
+		but->setFocusPolicy(Qt::StrongFocus);
+	}
+
+	for (auto but : ui->buttonBox->buttons())
 	{
 		but->setFocusPolicy(Qt::StrongFocus);
 	}
@@ -894,7 +911,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_mouse_accel->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_mouse_dz->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_stick_lerp->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
-	ui->b_blacklist->setEnabled(is_enabled && m_handler->m_type != pad_handler::keyboard);
+	ui->buttonBox->button(QDialogButtonBox::Reset)->setEnabled(is_enabled && m_handler->m_type != pad_handler::keyboard);
 
 	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
 	{
@@ -927,6 +944,11 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	}
 
 	for (auto but : m_padButtons->buttons())
+	{
+		but->setFocusPolicy(Qt::ClickFocus);
+	}
+
+	for (auto but : ui->buttonBox->buttons())
 	{
 		but->setFocusPolicy(Qt::ClickFocus);
 	}
@@ -1184,7 +1206,7 @@ void pad_settings_dialog::ChangeInputType()
 	ui->b_addProfile->setEnabled(config_enabled);
 	ui->chooseProfile->setEnabled(config_enabled);
 
-	ui->b_reset->setEnabled(!is_ldd_pad);
+	ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(!is_ldd_pad);
 	ui->chooseHandler->setEnabled(!is_ldd_pad);
 }
 
@@ -1464,10 +1486,18 @@ bool pad_settings_dialog::GetIsLddPad(int index) const
 
 void pad_settings_dialog::ResizeDialog()
 {
+	// Widgets
+	const QSize buttons_size(0, ui->buttonBox->sizeHint().height());
+	const QSize tabwidget_size = ui->tabWidget->sizeHint();
+
+	// Spacing
+	const int nr_of_spacings = 1; // Number of widgets - 1
+	const QSize spacing_size(0, layout()->spacing() * nr_of_spacings);
+
+	// Margins
 	const auto margins = layout()->contentsMargins();
-	const QSize tab_size = ui->tabWidget->sizeHint();
 	const QSize margin_size(margins.left() + margins.right(), margins.top() + margins.bottom());
 
-	resize(tab_size + margin_size);
+	resize(tabwidget_size + buttons_size + margin_size + spacing_size);
 	setMaximumSize(size());
 }

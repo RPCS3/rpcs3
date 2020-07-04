@@ -38,7 +38,7 @@
         <x>0</x>
         <y>0</y>
         <width>848</width>
-        <height>697</height>
+        <height>668</height>
        </rect>
       </property>
       <widget class="QWidget" name="tab">
@@ -979,30 +979,6 @@
                </size>
               </property>
              </spacer>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="button_layout_left">
-              <item>
-               <widget class="QPushButton" name="b_ok">
-                <property name="text">
-                 <string>Save</string>
-                </property>
-                <property name="autoDefault">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="b_cancel">
-                <property name="text">
-                 <string>Close</string>
-                </property>
-                <property name="default">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-             </layout>
             </item>
            </layout>
           </item>
@@ -2089,7 +2065,7 @@
             <item>
              <widget class="QStackedWidget" name="right_stack">
               <property name="currentIndex">
-               <number>0</number>
+               <number>1</number>
               </property>
               <widget class="QWidget" name="stick_page">
                <layout class="QVBoxLayout" name="stick_page_layout">
@@ -2370,30 +2346,6 @@
               </property>
              </spacer>
             </item>
-            <item>
-             <layout class="QHBoxLayout" name="button_layout_right" stretch="0,1">
-              <item>
-               <widget class="QPushButton" name="b_blacklist">
-                <property name="text">
-                 <string>Filter Noise</string>
-                </property>
-                <property name="autoDefault">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="b_reset">
-                <property name="text">
-                 <string>Restore Defaults</string>
-                </property>
-                <property name="autoDefault">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
            </layout>
           </item>
          </layout>
@@ -2401,6 +2353,16 @@
        </layout>
       </widget>
      </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Reset|QDialogButtonBox::RestoreDefaults|QDialogButtonBox::Save</set>
+     </property>
+     <property name="centerButtons">
+      <bool>false</bool>
+     </property>
     </widget>
    </item>
   </layout>
