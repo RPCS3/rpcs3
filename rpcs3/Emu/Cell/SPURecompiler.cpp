@@ -6166,6 +6166,12 @@ public:
 		return (std::forward<TA>(a) << 16 >> 16) * (std::forward<TB>(b) << 16 >> 16);
 	}
 
+	template <typename TA, typename TB>
+	static auto fm(TA&& a, TB&& b)
+	{
+		return (std::forward<TA>(a)) * (std::forward<TB>(b));
+	}
+
 	void SF(spu_opcode_t op)
 	{
 		set_vr(op.rt, get_vr(op.rb) - get_vr(op.ra));
@@ -7280,6 +7286,19 @@ public:
 			set_vr(op.rt, -(a * b + c));
 	}
 
+	bool is_input_positive(value_t<f32[4]> a)
+	{
+		if (auto [ok, v0, v1] = match_expr(a, fm(match<f32[4]>(), match<f32[4]>())); ok)
+		{
+			if (v0.value == v1.value)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	// clamping helpers
 	value_t<f32[4]> clamp_positive_smax(value_t<f32[4]> v)
 	{
@@ -7288,6 +7307,11 @@ public:
 
 	value_t<f32[4]> clamp_negative_smax(value_t<f32[4]> v)
 	{
+		if (is_input_positive(v))
+		{
+			return v;
+		}
+
 		return eval(bitcast<f32[4]>(min(bitcast<u32[4]>(v),splat<u32[4]>(0xff7fffff))));
 	}
 
@@ -7474,7 +7498,7 @@ public:
 
 			if (op.ra == op.rb && !m_interp_magn)
 			{
-				set_vr(op.rt, a * b);
+				set_vr(op.rt, fm(a, b));
 				return;
 			}
 
@@ -7482,7 +7506,7 @@ public:
 			const auto mb = eval(sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.))));
 			const auto ca = eval(bitcast<f32[4]>(bitcast<s32[4]>(a) & mb));
 			const auto cb = eval(bitcast<f32[4]>(bitcast<s32[4]>(b) & ma));
-			set_vr(op.rt, ca * cb);
+			set_vr(op.rt, fm(ca, cb));
 		}
 		else
 			set_vr(op.rt, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb));
