@@ -78,20 +78,22 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	}
 
 	// Create tab widget for 7 players
-	m_tabs = new QTabWidget;
 	for (int i = 1; i < 8; i++)
 	{
-		QWidget* tab = new QWidget;
-		m_tabs->addTab(tab, tr("Player %0").arg(i));
+		const QString tab_title = tr("Player %0").arg(i);
+
+		if (i == 1)
+		{
+			ui->tabWidget->setTabText(0, tab_title);
+		}
+		else
+		{
+			ui->tabWidget->addTab(new QWidget, tab_title);
+		}
 	}
 
-	// on tab change: move the layout to the new tab and refresh
-	connect(m_tabs, &QTabWidget::currentChanged, this, &pad_settings_dialog::OnTabChanged);
-
-	// Set tab widget as layout
-	QVBoxLayout* mainLayout = new QVBoxLayout;
-	mainLayout->addWidget(m_tabs);
-	setLayout(mainLayout);
+	// On tab change: move the layout to the new tab and refresh
+	connect(ui->tabWidget, &QTabWidget::currentChanged, this, &pad_settings_dialog::OnTabChanged);
 
 	// Combobox: Input type
 	connect(ui->chooseHandler, &QComboBox::currentTextChanged, this, &pad_settings_dialog::ChangeInputType);
@@ -105,7 +107,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 		}
 		const pad_device_info info = ui->chooseDevice->itemData(index).value<pad_device_info>();
 		m_device_name = info.name;
-		if (!g_cfg_input.player[m_tabs->currentIndex()]->device.from_string(m_device_name))
+		if (!g_cfg_input.player[ui->tabWidget->currentIndex()]->device.from_string(m_device_name))
 		{
 			// Something went wrong
 			cfg_log.error("Failed to convert device string: %s", m_device_name);
@@ -121,7 +123,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 			return;
 		}
 		m_profile = sstr(prof);
-		if (!g_cfg_input.player[m_tabs->currentIndex()]->profile.from_string(m_profile))
+		if (!g_cfg_input.player[ui->tabWidget->currentIndex()]->profile.from_string(m_profile))
 		{
 			// Something went wrong
 			cfg_log.error("Failed to convert profile string: %s", m_profile);
@@ -133,7 +135,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	// Pushbutton: Add Profile
 	connect(ui->b_addProfile, &QAbstractButton::clicked, [this]()
 	{
-		const int i = m_tabs->currentIndex();
+		const int i = ui->tabWidget->currentIndex();
 
 		QInputDialog* dialog = new QInputDialog(this);
 		dialog->setWindowTitle(tr("Choose a unique name"));
@@ -195,15 +197,12 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	// repaint controller image
 	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(*ui->l_controller->pixmap(), QColor(), gui::utils::get_label_color("l_controller"), false, true));
 
-	// set tab layout constraint to the first tab
-	m_tabs->widget(0)->layout()->setSizeConstraint(QLayout::SetFixedSize);
-
-	layout()->setSizeConstraint(QLayout::SetFixedSize);
-
 	show();
 
 	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), 0, 0, 0);
 	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0, 0);
+
+	ResizeDialog();
 }
 
 pad_settings_dialog::~pad_settings_dialog()
@@ -561,7 +560,7 @@ void pad_settings_dialog::ReactivateButtons()
 		but->setFocusPolicy(Qt::StrongFocus);
 	}
 
-	m_tabs->setFocusPolicy(Qt::TabFocus);
+	ui->tabWidget->setFocusPolicy(Qt::TabFocus);
 
 	ui->chooseProfile->setFocusPolicy(Qt::WheelFocus);
 	ui->chooseHandler->setFocusPolicy(Qt::WheelFocus);
@@ -932,7 +931,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 		but->setFocusPolicy(Qt::ClickFocus);
 	}
 
-	m_tabs->setFocusPolicy(Qt::ClickFocus);
+	ui->tabWidget->setFocusPolicy(Qt::ClickFocus);
 
 	ui->chooseProfile->setFocusPolicy(Qt::ClickFocus);
 	ui->chooseHandler->setFocusPolicy(Qt::ClickFocus);
@@ -957,7 +956,7 @@ void pad_settings_dialog::OnTabChanged(int index)
 	SaveProfile();
 
 	// Move layout to the new tab
-	m_tabs->widget(index)->setLayout(ui->mainLayout);
+	ui->tabWidget->widget(index)->setLayout(ui->mainLayout);
 
 	// Refresh handlers
 	RefreshInputTypes();
@@ -1002,7 +1001,7 @@ std::shared_ptr<PadHandlerBase> pad_settings_dialog::GetHandler(pad_handler type
 void pad_settings_dialog::ChangeInputType()
 {
 	bool force_enable = false; // enable configs even with disconnected devices
-	const int player = m_tabs->currentIndex();
+	const int player = ui->tabWidget->currentIndex();
 	const bool is_ldd_pad = GetIsLddPad(player);
 	
 	std::string handler;
@@ -1319,7 +1318,7 @@ void pad_settings_dialog::HandleDeviceClassChange(int index)
 
 void pad_settings_dialog::RefreshInputTypes()
 {
-	const int index = m_tabs->currentIndex();
+	const int index = ui->tabWidget->currentIndex();
 
 	// Set the current input type from config. Disable signal to have ChangeInputType always executed exactly once
 	ui->chooseHandler->blockSignals(true);
@@ -1405,7 +1404,7 @@ void pad_settings_dialog::SaveExit()
 	// Check for invalid selection
 	if (!ui->chooseDevice->isEnabled() || ui->chooseDevice->currentIndex() < 0)
 	{
-		const int i = m_tabs->currentIndex();
+		const int i = ui->tabWidget->currentIndex();
 
 		g_cfg_input.player[i]->handler.from_default();
 		g_cfg_input.player[i]->device.from_default();
@@ -1461,4 +1460,14 @@ bool pad_settings_dialog::GetIsLddPad(int index) const
 	}
 
 	return false;
+}
+
+void pad_settings_dialog::ResizeDialog()
+{
+	const auto margins = layout()->contentsMargins();
+	const QSize tab_size = ui->tabWidget->sizeHint();
+	const QSize margin_size(margins.left() + margins.right(), margins.top() + margins.bottom());
+
+	resize(tab_size + margin_size);
+	setMaximumSize(size());
 }
