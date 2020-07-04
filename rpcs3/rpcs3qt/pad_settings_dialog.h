@@ -108,9 +108,6 @@ private:
 	Ui::pad_settings_dialog *ui;
 	std::string m_title_id;
 
-	// TabWidget
-	QTabWidget* m_tabs = nullptr;
-
 	// Capabilities
 	bool m_enable_buttons{ false };
 	bool m_enable_rumble{ false };
@@ -181,6 +178,9 @@ private:
 
 	/** Checks if the port at the given index is already reserved by the application as custom controller (ldd pad) */
 	bool GetIsLddPad(int index) const;
+
+	/** Resizes the dialog. We need to do this because the main scroll area can't determine the size on its own. */
+	void ResizeDialog();
 
 protected:
 	/** Handle keyboard handler input */
