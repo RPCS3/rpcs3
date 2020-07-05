@@ -597,6 +597,10 @@ void GLGSRender::clear_surface(u32 arg)
 			colormask = rsx::get_abgr8_colormask(colormask);
 			break;
 		}
+		default:
+		{
+			break;
+		}
 		}
 
 		if (colormask)
