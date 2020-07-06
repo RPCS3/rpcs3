@@ -101,15 +101,10 @@ private Q_SLOTS:
 	void HandleDeviceClassChange(int index);
 	/** Save the Pad Configuration to the current Pad Handler Config File */
 	void SaveProfile();
-	void SaveExit();
-	void CancelExit();
 
 private:
 	Ui::pad_settings_dialog *ui;
 	std::string m_title_id;
-
-	// TabWidget
-	QTabWidget* m_tabs = nullptr;
 
 	// Capabilities
 	bool m_enable_buttons{ false };
@@ -154,11 +149,14 @@ private:
 	// Input timer. Its Callback handles the input
 	QTimer m_timer_input;
 
+	void SaveExit();
+	void CancelExit();
+
 	// Set vibrate data while keeping the current color
 	void SetPadData(u32 large_motor, u32 small_motor);
 
 	/** Update all the Button Labels with current button mapping */
-	void UpdateLabel(bool is_reset = false);
+	void UpdateLabels(bool is_reset = false);
 	void SwitchPadInfo(const std::string& name, bool is_connected);
 
 	/** Enable/Disable Buttons while trying to remap an other */
@@ -173,7 +171,7 @@ private:
 	void ChangeProfile();
 
 	/** Repaints a stick deadzone preview label */
-	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y);
+	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, double multiplier);
 
 	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
 
@@ -181,6 +179,9 @@ private:
 
 	/** Checks if the port at the given index is already reserved by the application as custom controller (ldd pad) */
 	bool GetIsLddPad(int index) const;
+
+	/** Resizes the dialog. We need to do this because the main scroll area can't determine the size on its own. */
+	void ResizeDialog();
 
 protected:
 	/** Handle keyboard handler input */
