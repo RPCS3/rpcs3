@@ -2347,9 +2347,24 @@ error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 	{
 	case 9:
 	{
-		// TODO: Find out if this string can change
-		constexpr auto name = "nameserver 192.168.1.1\0"sv; 
-		std::memcpy(vm::static_ptr_cast<net_infoctl_cmd_9_t>(arg)->server_name.get_ptr(), name.data(), name.size());
+		const auto nph = g_fxo->get<named_thread<np_handler>>();
+		if (nph->get_dns())
+		{
+			struct sockaddr_in serv;
+			memset(&serv, 0, sizeof(serv));
+			serv.sin_addr.s_addr = nph->get_dns();
+
+			char buffer[80];
+			const char* p = inet_ntop(AF_INET, &serv.sin_addr, buffer, 80);
+
+			std::string name = "nameserver " + std::string(p);
+			std::memcpy(vm::static_ptr_cast<net_infoctl_cmd_9_t>(arg)->server_name.get_ptr(), name.data(), name.size());
+		}
+		else
+		{
+			constexpr auto name = "nameserver 192.168.1.1\0"sv;
+			std::memcpy(vm::static_ptr_cast<net_infoctl_cmd_9_t>(arg)->server_name.get_ptr(), name.data(), name.size());
+		}
 		break;
 	}
 	default: break;
