@@ -572,6 +572,13 @@ error_code sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 error_code sceNpDrmExecuteGamePurchase()
 {
 	sceNp.todo("sceNpDrmExecuteGamePurchase()");
+
+	// TODO:
+	// 0. Check if the game can be purchased (return GAME_ERR_NOT_XMBBUY_CONTENT otherwise)
+	// 1. Send game termination request
+	// 2. "Buy game" transaction (a.k.a. do nothing for now)
+	// 3. Reboot game with CELL_GAME_ATTRIBUTE_XMBBUY attribute set (cellGameBootCheck)
+
 	return CELL_OK;
 }
 
@@ -581,10 +588,10 @@ error_code sceNpDrmGetTimelimit(vm::cptr<char> path, vm::ptr<u64> time_remain)
 
 	if (!path || !time_remain)
 	{
-		return SCE_NP_ERROR_INVALID_ARGUMENT;
+		return SCE_NP_DRM_ERROR_INVALID_PARAM;
 	}
 
-	*time_remain = 0x7FFFFFFFFFFFFFFFULL;
+	*time_remain = SCE_NP_DRM_TIME_INFO_ENDLESS;
 
 	return CELL_OK;
 }
@@ -611,6 +618,7 @@ error_code sceNpDrmProcessExitSpawn2(ppu_thread& ppu, vm::cptr<u8> klicensee, vm
 		return error;
 	}
 
+	// TODO: check if SCE_NP_DRM_EXITSPAWN2_EXIT_WO_FINI logic is implemented
 	ppu_execute<&sys_game_process_exitspawn2>(ppu, path, argv, envp, data, data_size, prio, flags);
 	return CELL_OK;
 }
