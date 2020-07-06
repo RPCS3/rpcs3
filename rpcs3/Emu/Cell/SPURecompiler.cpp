@@ -7028,6 +7028,73 @@ public:
 			return;
 		}
 
+		const auto c = get_vr(op.rc);
+
+		// Check if the constant mask doesn't require bit granularity
+		if (auto ci = llvm::dyn_cast<llvm::Constant>(c.value))
+		{
+			v128 mask = get_const_vector(ci, m_pos, 8000);
+	
+			bool sel_32 = true;
+			for (u32 i = 0; i < 4; i++)
+			{
+				if (mask._u32[i] && mask._u32[i] != 0xFFFFFFFF)
+				{
+					sel_32 = false;
+					break;
+				}
+			}
+
+			if (sel_32)
+			{
+				if (auto [a, b] = match_vrs<f64[4]>(op.ra, op.rb); a || b)
+				{
+					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0,  get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
+					return;
+				}
+				else if (auto [a, b] = match_vrs<f32[4]>(op.ra, op.rb); a || b)
+				{
+					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0,  get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.ra)));
+					return;
+				}
+
+				set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<u32[4]>(op.rb), get_vr<u32[4]>(op.ra)));
+				return;
+			}
+			
+			bool sel_16 = true;
+			for (u32 i = 0; i < 8; i++)
+			{
+				if (mask._u16[i] && mask._u16[i] != 0xFFFF)
+				{
+					sel_16 = false;
+					break;
+				}
+			}
+
+			if (sel_16)
+			{
+				set_vr(op.rt4, select(bitcast<s16[8]>(c) != 0, get_vr<u16[8]>(op.rb), get_vr<u16[8]>(op.ra)));
+				return;
+			}
+			
+			bool sel_8 = true;
+			for (u32 i = 0; i < 16; i++)
+			{
+				if (mask._u8[i] && mask._u8[i] != 0xFF)
+				{
+					sel_8 = false;
+					break;
+				}
+			}
+
+			if (sel_8)
+			{
+				set_vr(op.rt4, select(bitcast<s8[16]>(c) != 0,get_vr<u8[16]>(op.rb), get_vr<u8[16]>(op.ra)));
+				return;
+			}
+		}
+
 		const auto op1 = get_reg_raw(op.rb);
 		const auto op2 = get_reg_raw(op.ra);
 
@@ -7044,7 +7111,6 @@ public:
 			return;
 		}
 
-		const auto c = get_vr(op.rc);
 		set_vr(op.rt4, (get_vr(op.rb) & c) | (get_vr(op.ra) & ~c));
 	}
 

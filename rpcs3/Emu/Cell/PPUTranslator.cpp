@@ -1409,7 +1409,64 @@ void PPUTranslator::VRSQRTEFP(ppu_opcode_t op)
 
 void PPUTranslator::VSEL(ppu_opcode_t op)
 {
-	const auto [a, b, c] = get_vrs<u32[4]>(op.va, op.vb, op.vc);
+	const auto c = get_vr<u32[4]>(op.vc);
+
+	// Check if the constant mask doesn't require bit granularity
+	if (auto ci = llvm::dyn_cast<llvm::Constant>(c.value))
+	{
+		v128 mask = get_const_vector(ci, m_addr, 9000);
+		
+		bool sel_32 = true;
+		for (u32 i = 0; i < 4; i++)
+		{
+			if (mask._u32[i] && mask._u32[i] != 0xFFFFFFFF)
+			{
+				sel_32 = false;
+				break;
+			}
+		}
+
+		if (sel_32)
+		{
+			set_vr(op.vd, select(noncast<s32[4]>(c) != 0, get_vr<u32[4]>(op.vb), get_vr<u32[4]>(op.va)));
+			return;
+		}
+		
+		bool sel_16 = true;
+		for (u32 i = 0; i < 8; i++)
+		{
+			if (mask._u16[i] && mask._u16[i] != 0xFFFF)
+			{
+				sel_16 = false;
+				break;
+			}
+		}
+
+		if (sel_16)
+		{
+			set_vr(op.vd, select(bitcast<s16[8]>(c) != 0, get_vr<u16[8]>(op.vb), get_vr<u16[8]>(op.va)));
+			return;
+		}
+		
+
+		bool sel_8 = true;
+		for (u32 i = 0; i < 16; i++)
+		{
+			if (mask._u8[i] && mask._u8[i] != 0xFF)
+			{
+				sel_8 = false;
+				break;
+			}
+		}
+
+		if (sel_8)
+		{
+			set_vr(op.vd, select(bitcast<s8[16]>(c) != 0,get_vr<u8[16]>(op.vb), get_vr<u8[16]>(op.va)));
+			return;
+		}
+	}
+
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
 	set_vr(op.vd, eval((b & c) | (a & ~c)));
 }
 
