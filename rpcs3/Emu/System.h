@@ -202,7 +202,7 @@ public:
 	void Resume();
 	void Stop(bool restart = false);
 	void Restart() { Stop(true); }
-	bool Quit(bool force_quit) const;
+	bool Quit(bool force_quit);
 
 	bool IsRunning() const { return m_state == system_state::running; }
 	bool IsPaused()  const { return m_state == system_state::paused; }

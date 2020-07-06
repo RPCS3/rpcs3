@@ -1731,9 +1731,6 @@ void Emulator::Stop(bool restart)
 		}
 	});
 
-	const bool full_stop = !restart && !m_force_boot;
-	const bool do_exit   = full_stop && g_cfg.misc.autoexit;
-
 	sys_log.notice("Stopping emulator...");
 
 	GetCallbacks().on_stop();
@@ -1772,25 +1769,21 @@ void Emulator::Stop(bool restart)
 	klic.clear();
 	hdd1.clear();
 
-	m_force_boot = false;
-
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();
 
-	if (do_exit || full_stop)
+	if (Quit(g_cfg.misc.autoexit.get()))
 	{
-		if (Quit(do_exit))
-		{
-			return;
-		}
+		return;
 	}
 
+	m_force_boot = false;
 	Init();
 }
 
-bool Emulator::Quit(bool force_quit) const
+bool Emulator::Quit(bool force_quit)
 {
-	Emu.SetForceBoot(false);
+	m_force_boot = false;
 	Emu.Stop();
 
 	return GetCallbacks().exit(force_quit);
