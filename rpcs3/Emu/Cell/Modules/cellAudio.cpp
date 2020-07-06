@@ -44,6 +44,7 @@ void fmt_class_string<CellAudioError>::format(std::string& out, u64 arg)
 
 cell_audio_config::cell_audio_config()
 {
+	raw = audio::get_raw_config();
 	reset();
 }
 
@@ -59,11 +60,9 @@ void cell_audio_config::reset()
 	audio_buffer_length = AUDIO_BUFFER_SAMPLES * audio_channels;
 	audio_buffer_size = audio_buffer_length * backend->get_sample_size();
 
-	desired_buffer_duration = g_cfg.audio.desired_buffer_duration * 1000llu;
+	desired_buffer_duration = raw.desired_buffer_duration * 1000llu;
 
-	const bool raw_buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering);
-
-	buffering_enabled = raw_buffering_enabled && backend->has_capability(AudioBackend::PLAY_PAUSE_FLUSH | AudioBackend::IS_PLAYING);;
+	buffering_enabled = raw.buffering_enabled && backend->has_capability(AudioBackend::PLAY_PAUSE_FLUSH | AudioBackend::IS_PLAYING);;
 
 	minimum_block_period = audio_block_period / 2;
 	maximum_block_period = (6 * audio_block_period) / 5;
@@ -74,15 +73,14 @@ void cell_audio_config::reset()
 	fully_untouched_timeout = static_cast<u64>(audio_block_period) * 2;
 	partially_untouched_timeout = static_cast<u64>(audio_block_period) * 4;
 
-	const s64 raw_time_stretching_threshold = g_cfg.audio.time_stretching_threshold;
-	const bool raw_time_stretching_enabled = buffering_enabled && g_cfg.audio.enable_time_stretching && (raw_time_stretching_threshold > 0);
+	const bool raw_time_stretching_enabled = buffering_enabled && raw.enable_time_stretching && (raw.time_stretching_threshold > 0);
 
 	time_stretching_enabled = raw_time_stretching_enabled && backend->has_capability(AudioBackend::SET_FREQUENCY_RATIO);
 
-	time_stretching_threshold = raw_time_stretching_threshold / 100.0f;
+	time_stretching_threshold = raw.time_stretching_threshold / 100.0f;
 
 	// Warn if audio backend does not support all requested features
-	if (raw_buffering_enabled && !buffering_enabled)
+	if (raw.buffering_enabled && !buffering_enabled)
 	{
 		cellAudio.error("Audio backend %s does not support buffering, this option will be ignored.", backend->GetName());
 	}
@@ -539,11 +537,43 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 
 namespace audio
 {
+	cell_audio_config::raw_config get_raw_config()
+	{
+		return
+		{
+			.buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering),
+			.desired_buffer_duration = g_cfg.audio.desired_buffer_duration,
+			.enable_time_stretching = static_cast<bool>(g_cfg.audio.enable_time_stretching),
+			.time_stretching_threshold = g_cfg.audio.time_stretching_threshold,
+			.convert_to_u16 = static_cast<bool>(g_cfg.audio.convert_to_u16),
+			.start_threshold = static_cast<u32>(g_cfg.audio.start_threshold),
+			.sampling_period_multiplier = static_cast<u32>(g_cfg.audio.sampling_period_multiplier),
+			.channels = g_cfg.audio.audio_channel_downmix,
+			.renderer = g_cfg.audio.renderer
+		};
+	}
+
 	void configure_audio()
 	{
 		if (const auto g_audio = g_fxo->get<cell_audio>())
 		{
-			g_audio->m_update_configuration = true;
+			// Only reboot the audio renderer if a relevant setting changed
+			const auto new_raw = get_raw_config();
+
+			if (const auto raw = g_audio->cfg.raw;
+				raw.desired_buffer_duration != new_raw.desired_buffer_duration ||
+				raw.buffering_enabled != new_raw.buffering_enabled ||
+				raw.time_stretching_threshold != new_raw.time_stretching_threshold ||
+				raw.enable_time_stretching != new_raw.enable_time_stretching ||
+				raw.convert_to_u16 != new_raw.convert_to_u16 ||
+				raw.start_threshold != new_raw.start_threshold ||
+				raw.sampling_period_multiplier != new_raw.sampling_period_multiplier ||
+				raw.channels != new_raw.channels ||
+				raw.renderer != new_raw.renderer)
+			{
+				g_audio->cfg.raw = new_raw;
+				g_audio->m_update_configuration = true;
+			}
 		}
 	}
 }
