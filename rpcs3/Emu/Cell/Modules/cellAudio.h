@@ -187,6 +187,19 @@ struct audio_port
 
 struct cell_audio_config
 {
+	struct raw_config
+	{
+		bool buffering_enabled = false;
+		s64 desired_buffer_duration = 0;
+		bool enable_time_stretching = false;
+		s64 time_stretching_threshold = 0;
+		bool convert_to_u16 = false;
+		u32 start_threshold = 0;
+		u32 sampling_period_multiplier = 0;
+		audio_channels channels = audio_channels::downmix_to_stereo;
+		audio_renderer renderer = audio_renderer::null;
+	} raw;
+
 	std::shared_ptr<AudioBackend> backend = nullptr;
 
 	u32 audio_channels = 0;
@@ -414,5 +427,6 @@ using cell_audio = named_thread<cell_audio_thread>;
 
 namespace audio
 {
+	cell_audio_config::raw_config get_raw_config();
 	void configure_audio();
 }
