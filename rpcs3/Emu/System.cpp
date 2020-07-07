@@ -1618,10 +1618,8 @@ bool Emulator::Pause()
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
 
-	if (g_cfg.misc.prevent_display_sleep)
-	{
-		enable_display_sleep();
-	}
+	// Always Enable display sleep, not only if it was prevented.
+	enable_display_sleep();
 
 	return true;
 }
@@ -1733,9 +1731,6 @@ void Emulator::Stop(bool restart)
 		}
 	});
 
-	const bool full_stop = !restart && !m_force_boot;
-	const bool do_exit   = full_stop && g_cfg.misc.autoexit;
-
 	sys_log.notice("Stopping emulator...");
 
 	GetCallbacks().on_stop();
@@ -1751,19 +1746,6 @@ void Emulator::Stop(bool restart)
 	sys_log.notice("Objects cleared...");
 
 	vm::close();
-
-	if (do_exit)
-	{
-		GetCallbacks().exit(true);
-	}
-	else
-	{
-		if (full_stop)
-		{
-			GetCallbacks().exit(false);
-		}
-		Init();
-	}
 
 #ifdef LLVM_AVAILABLE
 	extern void jit_finalize();
@@ -1787,12 +1769,24 @@ void Emulator::Stop(bool restart)
 	klic.clear();
 	hdd1.clear();
 
-	m_force_boot = false;
+	// Always Enable display sleep, not only if it was prevented.
+	enable_display_sleep();
 
-	if (g_cfg.misc.prevent_display_sleep)
+	if (Quit(g_cfg.misc.autoexit.get()))
 	{
-		enable_display_sleep();
+		return;
 	}
+
+	m_force_boot = false;
+	Init();
+}
+
+bool Emulator::Quit(bool force_quit)
+{
+	m_force_boot = false;
+	Emu.Stop();
+
+	return GetCallbacks().exit(force_quit);
 }
 
 std::string Emulator::GetFormattedTitle(double fps) const

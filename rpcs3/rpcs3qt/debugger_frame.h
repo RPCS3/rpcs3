@@ -86,7 +86,7 @@ protected:
 
 Q_SIGNALS:
 	void DebugFrameClosed();
-	void CallStackUpdateRequested(std::vector<u32> call_stack);
+	void CallStackUpdateRequested(std::vector<std::pair<u32, u32>> call_stack);
 
 public Q_SLOTS:
 	void DoStep(bool stepOver = false);
