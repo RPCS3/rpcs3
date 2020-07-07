@@ -2347,24 +2347,28 @@ error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 	{
 	case 9:
 	{
+		constexpr auto nameserver = "nameserver \0"sv;
+		constexpr auto default_ip = "192.168.1.1\0"sv;
+
+		char buffer[nameserver.size() + 80];
+		std::memcpy(buffer, nameserver.data(), nameserver.size());
+
 		const auto nph = g_fxo->get<named_thread<np_handler>>();
 		if (nph->get_dns())
 		{
 			struct sockaddr_in serv;
-			memset(&serv, 0, sizeof(serv));
+			std::memset(&serv, 0, sizeof(serv));
 			serv.sin_addr.s_addr = nph->get_dns();
-
-			char buffer[80];
-			const char* p = inet_ntop(AF_INET, &serv.sin_addr, buffer, 80);
-
-			std::string name = "nameserver " + std::string(p);
-			std::memcpy(vm::static_ptr_cast<net_infoctl_cmd_9_t>(arg)->server_name.get_ptr(), name.data(), name.size());
+			inet_ntop(AF_INET, &serv.sin_addr, buffer + nameserver.size() - 1, sizeof(buffer) - nameserver.size());
 		}
 		else
 		{
-			constexpr auto name = "nameserver 192.168.1.1\0"sv;
-			std::memcpy(vm::static_ptr_cast<net_infoctl_cmd_9_t>(arg)->server_name.get_ptr(), name.data(), name.size());
+			std::memcpy(buffer + nameserver.size() - 1, default_ip.data(), default_ip.size());
 		}
+
+		std::string_view name{buffer};
+		vm::static_ptr_cast<net_infoctl_cmd_9_t>(arg)->zero = 0;
+		std::memcpy(vm::static_ptr_cast<net_infoctl_cmd_9_t>(arg)->server_name.get_ptr(), name.data(), name.size());
 		break;
 	}
 	default: break;
