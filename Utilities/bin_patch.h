@@ -7,6 +7,21 @@
 
 #include "util/yaml.hpp"
 
+namespace patch_key
+{
+	static const std::string all = "All";
+	static const std::string anchors = "Anchors";
+	static const std::string author = "Author";
+	static const std::string games = "Games";
+	static const std::string group = "Group";
+	static const std::string notes = "Notes";
+	static const std::string patch = "Patch";
+	static const std::string patch_version = "Patch Version";
+	static const std::string version = "Version";
+}
+
+static const std::string patch_engine_version = "1.2";
+
 enum class patch_type
 {
 	invalid,
@@ -38,59 +53,52 @@ public:
 			f64 double_value;
 		} value { 0 };
 	};
+	
+	using patch_app_versions = std::unordered_map<std::string /*app_version*/, bool /*enabled*/>;
+	using patch_serials = std::unordered_map<std::string /*serial*/, patch_app_versions>;
+	using patch_titles = std::unordered_map<std::string /*serial*/, patch_serials>;
 
 	struct patch_info
 	{
 		// Patch information
-		std::vector<patch_engine::patch_data> data_list;
+		std::vector<patch_data> data_list;
+		patch_titles titles;
 		std::string description;
-		std::string title;
-		std::string serials;
 		std::string patch_version;
+		std::string patch_group;
 		std::string author;
 		std::string notes;
 		std::string source_path;
-		bool enabled = false;
 
 		// Redundant information for accessibility (see patch_container)
 		std::string hash;
 		std::string version;
 		bool is_legacy = false;
+		bool is_enabled = false; // only for legacy patches
 	};
 
 	struct patch_container
 	{
-		std::unordered_map<std::string /*description*/, patch_engine::patch_info> patch_info_map;
+		std::unordered_map<std::string /*description*/, patch_info> patch_info_map;
 		std::string hash;
 		std::string version;
 		bool is_legacy = false;
 	};
 
 	using patch_map = std::unordered_map<std::string /*hash*/, patch_container>;
-	using patch_config_map = std::unordered_map<std::string /*hash*/, std::unordered_map<std::string /*description*/, bool /*enabled*/>>;
 
 	patch_engine();
 
 	// Returns the directory in which patch_config.yml is located
 	static std::string get_patch_config_path();
 
+	// Returns the directory in which patches are located
+	static std::string get_patches_path();
+
 	// Returns the filepath for the imported_patch.yml
 	static std::string get_imported_patch_path();
 
 	// Load from file and append to specified patches map
-	// Example entry:
-	//
-	// PPU-8007056e52279bea26c15669d1ee08c2df321d00:
-	//   Patches:
-	//     60fps:
-	//       Game Title: Fancy Game
-	//       Serials: ABCD12345, SUPA13337 v.1.3
-	//       Author: Batman bin Suparman
-	//       Notes: This is super
-	//       Patch Version: 1.3
-	//       Patch:
-	//         - [ be32, 0x000e522c, 0x995d0072 ]
-	//         - [ be32, 0x000e5234, 0x995d0074 ]
 	static bool load(patch_map& patches, const std::string& path, bool importing = false, std::stringstream* log_messages = nullptr);
 
 	// Read and add a patch node to the patch info
@@ -115,7 +123,7 @@ public:
 	static bool remove_patch(const patch_info& info);
 
 	// Load patch_config.yml
-	static patch_config_map load_config(bool& enable_legacy_patches);
+	static patch_map load_config(bool& enable_legacy_patches);
 
 	// Load from file and append to member patches map
 	void append_global_patches();
@@ -124,10 +132,10 @@ public:
 	void append_title_patches(const std::string& title_id);
 
 	// Apply patch (returns the number of entries applied)
-	std::size_t apply(const std::string& name, u8* dst) const;
+	std::size_t apply(const std::string& name, u8* dst);
 
 	// Apply patch with a check that the address exists in SPU local storage
-	std::size_t apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr) const;
+	std::size_t apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
 
 private:
 	// Load from file and append to member patches map
@@ -135,8 +143,11 @@ private:
 
 	// Internal: Apply patch (returns the number of entries applied)
 	template <bool check_local_storage>
-	std::size_t apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr) const;
+	std::size_t apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
 
 	// Database
 	patch_map m_map;
+
+	// Only one patch per patch group can be applied
+	std::set<std::string> m_applied_groups;
 };

@@ -519,7 +519,8 @@ namespace vk
 				case VK_FORMAT_D24_UNORM_S8_UINT:
 				{
 					const VkImageAspectFlags depth_stencil = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-					if (vk::get_chip_family() != vk::chip_class::NV_turing)
+					if (const auto chip_family = vk::get_chip_family();
+						chip_family > vk::chip_class::NV_generic && chip_family < vk::chip_class::NV_turing)
 					{
 						auto typeless = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM, typeless_w, typeless_h);
 						change_image_layout(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL);

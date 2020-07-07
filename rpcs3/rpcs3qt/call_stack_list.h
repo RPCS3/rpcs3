@@ -18,7 +18,7 @@ public:
 Q_SIGNALS:
 	void RequestShowAddress(u32 addr, bool force = false);
 public Q_SLOTS:
-	void HandleUpdate(std::vector<u32> call_stack);
+	void HandleUpdate(std::vector<std::pair<u32, u32>> call_stack);
 private Q_SLOTS:
 	void OnCallStackListDoubleClicked();
 private:

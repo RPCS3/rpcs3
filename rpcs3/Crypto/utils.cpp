@@ -15,14 +15,6 @@
 
 // Auxiliary functions (endian swap, xor).
 
-void xor_key(unsigned char *dest, const u8* src1, const u8* src2)
-{
-	for(int i = 0; i < 0x10; i++)
-	{
-		dest[i] = src1[i] ^ src2[i];
-	}
-}
-
 // Hex string conversion auxiliary functions.
 u64 hex_to_u64(const char* hex_str)
 {
@@ -67,22 +59,6 @@ void hex_to_bytes(unsigned char* data, const char* hex_str, unsigned int str_len
 	}
 }
 
-bool is_hex(const char* hex_str, unsigned int str_length)
-{
-	static const char hex_chars[] = "0123456789abcdefABCDEF";
-
-	if (hex_str == NULL)
-		return false;
-
-	unsigned int i;
-	for (i = 0; i < str_length; i++)
-	{
-		if (strchr(hex_chars, hex_str[i]) == 0)
-			return false;
-	}
-
-	return true;
-}
 
 // Crypto functions (AES128-CBC, AES128-ECB, SHA1-HMAC and AES-CMAC).
 void aescbc128_decrypt(unsigned char *key, unsigned char *iv, unsigned char *in, unsigned char *out, int len)

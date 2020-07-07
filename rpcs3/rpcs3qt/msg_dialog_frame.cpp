@@ -1,6 +1,7 @@
 ﻿#include "msg_dialog_frame.h"
 #include "custom_dialog.h"
 
+#include <QCoreApplication>
 #include <QPushButton>
 #include <QFormLayout>
 
@@ -173,7 +174,8 @@ msg_dialog_frame::msg_dialog_frame() {}
 msg_dialog_frame::~msg_dialog_frame()
 {
 #ifdef _WIN32
-	if (m_tb_progress)
+	// QWinTaskbarProgress::hide() will crash if the application is already about to close, even if the object is not null.
+	if (m_tb_progress && !QCoreApplication::closingDown())
 	{
 		m_tb_progress->hide();
 	}

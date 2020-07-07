@@ -32,6 +32,11 @@ bool display_sleep_control_supported()
 
 void enable_display_sleep()
 {
+	if (!display_sleep_control_supported())
+	{
+		return;
+	}
+
 #ifdef _WIN32
 	SetThreadExecutionState(ES_CONTINUOUS);
 #elif defined(__APPLE__)
@@ -52,6 +57,11 @@ void enable_display_sleep()
 
 void disable_display_sleep()
 {
+	if (!display_sleep_control_supported())
+	{
+		return;
+	}
+
 #ifdef _WIN32
 	SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
 #elif defined(__APPLE__)

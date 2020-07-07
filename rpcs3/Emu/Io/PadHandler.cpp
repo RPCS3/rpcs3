@@ -135,7 +135,7 @@ u16 PadHandlerBase::NormalizeTriggerInput(u16 value, int threshold)
 
 // normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
 // the input values must lie in 0+
-u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 maximum)
+u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 maximum) const
 {
 	if (threshold >= maximum || maximum <= 0)
 	{
@@ -155,7 +155,7 @@ u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 max
 	}
 }
 
-u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold)
+u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold) const
 {
 	const s32 scaled_value = (multiplier * raw_value) / 100;
 
@@ -328,7 +328,11 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 
 	const auto status = update_connection(device);
 	if (status == connection::disconnected)
-		return fail_callback(pad_id);
+	{
+		if (fail_callback)
+			fail_callback(pad_id);
+		return;
+	}
 	else if (status == connection::no_data)
 		return;
 
@@ -373,10 +377,13 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 	const auto preview_values = get_preview_values(data);
 	const auto battery_level = get_battery_level(pad_id);
 
-	if (pressed_button.first > 0)
-		return callback(pressed_button.first, pressed_button.second, pad_id, battery_level, preview_values);
-	else
-		return callback(0, "", pad_id, battery_level, preview_values);
+	if (callback)
+	{
+		if (pressed_button.first > 0)
+			return callback(pressed_button.first, pressed_button.second, pad_id, battery_level, preview_values);
+		else
+			return callback(0, "", pad_id, battery_level, preview_values);
+	}
 
 	return;
 }

@@ -3,7 +3,7 @@
 #include "progress_dialog.h"
 #include "localized.h"
 #include "rpcs3_version.h"
-#include "curl_handle.h"
+#include "downloader.h"
 #include "Utilities/StrUtil.h"
 #include "Crypto/sha256.h"
 #include "Emu/System.h"
@@ -35,48 +35,14 @@
 
 LOG_CHANNEL(update_log, "UPDATER");
 
-size_t curl_write_cb(char* ptr, size_t /*size*/, size_t nmemb, void* userdata)
-{
-	update_manager* upd_mgr = reinterpret_cast<update_manager*>(userdata);
-	return upd_mgr->update_buffer(ptr, nmemb);
-}
-
 update_manager::update_manager()
 {
-	m_curl = new curl_handle(this);
-
-	// We need this signal in order to update the GUI from the main thread
-	connect(this, &update_manager::signal_buffer_update, this, &update_manager::handle_buffer_update);
 }
 
-void update_manager::handle_buffer_update(int size)
+void update_manager::check_for_updates(bool automatic, bool check_only, QWidget* parent)
 {
-	if (m_progress_dialog && m_update_dialog)
-	{
-		m_progress_dialog->setValue(size);
-		QApplication::processEvents();
-	}
-}
+	m_update_message.clear();
 
-size_t update_manager::update_buffer(char* data, size_t size)
-{
-	if (m_curl_abort)
-	{
-		return 0;
-	}
-
-	const auto old_size = m_curl_buf.size();
-	const auto new_size = old_size + size;
-	m_curl_buf.resize(static_cast<int>(new_size));
-	memcpy(m_curl_buf.data() + old_size, data, size);
-
-	Q_EMIT signal_buffer_update(static_cast<int>(new_size));
-
-	return size;
-}
-
-void update_manager::check_for_updates(bool automatic, QWidget* parent)
-{
 #ifdef __linux__
 	if (automatic && !::getenv("APPIMAGE"))
 	{
@@ -85,59 +51,42 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 	}
 #endif
 
-	m_parent        = parent;
-	m_curl_abort    = false;
-	m_update_dialog = false;
-	m_curl_buf.clear();
+	m_parent     = parent;
+	m_downloader = new downloader("RPCS3 Updater", parent);
 
-	m_progress_dialog = new progress_dialog(tr("Checking For Updates"), tr("Please wait..."), tr("Abort"), 0, 100, true, parent);
-	m_progress_dialog->setAutoClose(false);
-	m_progress_dialog->setAutoReset(false);
-	m_progress_dialog->show();
-
-	connect(m_progress_dialog, &QProgressDialog::canceled, [this]() { m_curl_abort = true; });
-	connect(m_progress_dialog, &QProgressDialog::finished, m_progress_dialog, &QProgressDialog::deleteLater);
-
-	const std::string request_url = "https://update.rpcs3.net/?api=v1&c=" + rpcs3::get_commit_and_hash().second;
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, request_url.c_str());
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEFUNCTION, curl_write_cb);
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEDATA, this);
-
-	auto thread = QThread::create([this]
+	connect(m_downloader, &downloader::signal_download_error, this, [this, automatic](const QString& /*error*/)
 	{
-		const auto curl_result = curl_easy_perform(m_curl->get_curl());
-		m_curl_result = curl_result == CURLE_OK;
-
-		if (!m_curl_result)
+		if (!automatic)
 		{
-			update_log.error("Curl error(query): %s", curl_easy_strerror(curl_result));
+			QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
 		}
 	});
-	connect(thread, &QThread::finished, this, [this, automatic]()
-	{
-		const bool result_json = m_curl_result && handle_json(automatic);
 
-		if (!result_json && !m_curl_abort)
+	connect(m_downloader, &downloader::signal_download_finished, this, [this, automatic, check_only](const QByteArray& data)
+	{
+		const bool result_json = handle_json(automatic, check_only, data);
+
+		if (!result_json)
 		{
+			// The progress dialog is configured to stay open, so we need to close it manually if the download succeeds.
+			m_downloader->close_progress_dialog();
+
 			if (!automatic)
 			{
 				QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
 			}
-
-			if (m_progress_dialog)
-			{
-				m_progress_dialog->close();
-				m_progress_dialog = nullptr;
-			}
 		}
+
+		Q_EMIT signal_update_available(result_json && !m_update_message.isEmpty());
 	});
-	thread->setObjectName("RPCS3 Update Check");
-	thread->start();
+
+	const std::string url = "https://update.rpcs3.net/?api=v1&c=" + rpcs3::get_commit_and_hash().second;
+	m_downloader->start(url, true, !automatic, tr("Checking For Updates"), true);
 }
 
-bool update_manager::handle_json(bool automatic)
+bool update_manager::handle_json(bool automatic, bool check_only, const QByteArray& data)
 {
-	const QJsonObject json_data = QJsonDocument::fromJson(m_curl_buf).object();
+	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
 	const int return_code       = json_data["return_code"].toInt(-255);
 
 	bool hash_found = true;
@@ -202,7 +151,7 @@ bool update_manager::handle_json(bool automatic)
 	if (hash_found && return_code == 0)
 	{
 		update_log.success("RPCS3 is up to date!");
-		m_progress_dialog->close();
+		m_downloader->close_progress_dialog();
 
 		if (!automatic)
 			QMessageBox::information(m_parent, tr("Auto-updater"), tr("Your version is already up to date!"));
@@ -225,11 +174,9 @@ bool update_manager::handle_json(bool automatic)
 
 	Localized localized;
 
-	QString message;
-
 	if (hash_found)
 	{
-		message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 old.\n\nDo you want to update?")
+		m_update_message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 old.\n\nDo you want to update?")
 			.arg(current["version"].toString())
 			.arg(cur_str)
 			.arg(latest["version"].toString())
@@ -238,73 +185,67 @@ bool update_manager::handle_json(bool automatic)
 	}
 	else
 	{
-		message = tr("You're currently using a custom or PR build.\n\nLatest version: %0 (%1)\nThe latest version is %2 old.\n\nDo you want to update to the latest official RPCS3 version?")
+		m_update_message = tr("You're currently using a custom or PR build.\n\nLatest version: %0 (%1)\nThe latest version is %2 old.\n\nDo you want to update to the latest official RPCS3 version?")
 			.arg(latest["version"].toString())
 			.arg(lts_str)
 			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec), true));
 	}
 
-	if (QMessageBox::question(m_progress_dialog, tr("Update Available"), message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
-	{
-		m_progress_dialog->close();
-		return true;
-	}
-
+	m_request_url   = latest[os]["download"].toString().toStdString();
 	m_expected_hash = latest[os]["checksum"].toString().toStdString();
 	m_expected_size = latest[os]["size"].toInt();
 
-	m_progress_dialog->setWindowTitle(tr("Downloading Update"));
-
-	// Download RPCS3
-	m_progress_dialog->setMaximum(m_expected_size);
-	m_progress_dialog->setValue(0);
-	m_update_dialog = true;
-
-	const std::string request_url = latest[os]["download"].toString().toStdString();
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, request_url.c_str());
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_FOLLOWLOCATION, 1);
-
-	m_curl_buf.clear();
-
-	auto thread = QThread::create([this]
+	if (check_only)
 	{
-		const auto curl_result = curl_easy_perform(m_curl->get_curl());
-		m_curl_result = curl_result == CURLE_OK;
+		m_downloader->close_progress_dialog();
+		return true;
+	}
 
-		if (!m_curl_result)
-		{
-			update_log.error("Curl error(download): %s", curl_easy_strerror(curl_result));
-		}
-	});
-	connect(thread, &QThread::finished, this, [this, automatic]()
-	{
-		const bool result_rpcs3 = m_curl_result && handle_rpcs3();
-
-		if (!result_rpcs3 && !m_curl_abort)
-		{
-			if (!automatic)
-			{
-				QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
-			}
-
-			if (m_progress_dialog)
-			{
-				m_progress_dialog->close();
-				m_progress_dialog = nullptr;
-			}
-		}
-	});
-	thread->setObjectName("RPCS3 Updater");
-	thread->start();
-
+	update();
 	return true;
 }
 
-bool update_manager::handle_rpcs3()
+void update_manager::update()
 {
-	if (m_expected_size != m_curl_buf.size() + 0u)
+	if (m_update_message.isEmpty() ||
+		QMessageBox::question(m_downloader->get_progress_dialog(), tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
 	{
-		update_log.error("Download size mismatch: %d expected: %d", m_curl_buf.size(), m_expected_size);
+		m_downloader->close_progress_dialog();
+		return;
+	}
+
+	m_downloader->disconnect();
+
+	connect(m_downloader, &downloader::signal_download_error, this, [this](const QString& /*error*/)
+	{
+		QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
+	});
+
+	connect(m_downloader, &downloader::signal_download_finished, this, [this](const QByteArray& data)
+	{
+		const bool result_json = handle_rpcs3(data);
+
+		if (!result_json)
+		{
+			// The progress dialog is configured to stay open, so we need to close it manually if the download succeeds.
+			m_downloader->close_progress_dialog();
+
+			QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
+		}
+
+		Q_EMIT signal_update_available(false);
+	});
+
+	m_downloader->start(m_request_url, true, true, tr("Downloading Update"), true, m_expected_size);
+}
+
+bool update_manager::handle_rpcs3(const QByteArray& data)
+{
+	m_downloader->update_progress_dialog(tr("Updating RPCS3"));
+
+	if (m_expected_size != data.size() + 0u)
+	{
+		update_log.error("Download size mismatch: %d expected: %d", data.size(), m_expected_size);
 		return false;
 	}
 
@@ -312,7 +253,7 @@ bool update_manager::handle_rpcs3()
 	mbedtls_sha256_context ctx;
 	mbedtls_sha256_init(&ctx);
 	mbedtls_sha256_starts_ret(&ctx, 0);
-	mbedtls_sha256_update_ret(&ctx, reinterpret_cast<const unsigned char*>(m_curl_buf.data()), m_curl_buf.size());
+	mbedtls_sha256_update_ret(&ctx, reinterpret_cast<const unsigned char*>(data.data()), data.size());
 	mbedtls_sha256_finish_ret(&ctx, res_hash);
 
 	std::string res_hash_string("0000000000000000000000000000000000000000000000000000000000000000");
@@ -329,9 +270,8 @@ bool update_manager::handle_rpcs3()
 		return false;
 	}
 
-	std::string replace_path;
-
 #ifdef _WIN32
+
 	// Get executable path
 	const std::string orig_path = Emulator::GetExeDir() + "rpcs3.exe";
 
@@ -339,61 +279,6 @@ bool update_manager::handle_rpcs3()
 	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, orig_path.c_str(), -1, nullptr, 0);
 	wchar_orig_path.resize(tmp_size);
 	MultiByteToWideChar(CP_UTF8, 0, orig_path.c_str(), -1, wchar_orig_path.data(), tmp_size);
-
-#endif
-
-#ifdef __linux__
-
-	const char* appimage_path = ::getenv("APPIMAGE");
-	if (appimage_path != nullptr)
-	{
-		replace_path = appimage_path;
-		update_log.notice("Found AppImage path: %s", appimage_path);
-	}
-	else
-	{
-		update_log.warning("Failed to find AppImage path");
-		char exe_path[PATH_MAX];
-		ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-
-		if (len == -1)
-		{
-			update_log.error("Failed to find executable path");
-			return false;
-		}
-
-		exe_path[len] = '\0';
-		update_log.trace("Found exec path: %s", exe_path);
-
-		replace_path = exe_path;
-	}
-
-	m_progress_dialog->setWindowTitle(tr("Updating RPCS3"));
-
-	// Move the appimage/exe and replace with new appimage
-	const std::string move_dest = replace_path + "_old";
-	fs::rename(replace_path, move_dest, true);
-	fs::file new_appimage(replace_path, fs::read + fs::write + fs::create + fs::trunc);
-	if (!new_appimage)
-	{
-		update_log.error("Failed to create new AppImage file: %s", replace_path);
-		return false;
-	}
-	if (new_appimage.write(m_curl_buf.data(), m_curl_buf.size()) != m_curl_buf.size() + 0u)
-	{
-		update_log.error("Failed to write new AppImage file: %s", replace_path);
-		return false;
-	}
-	if (fchmod(new_appimage.get_handle(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == -1)
-	{
-		update_log.error("Failed to chmod rwxrxrx %s", replace_path);
-		return false;
-	}
-	new_appimage.close();
-
-	update_log.success("Successfully updated %s!", replace_path);
-
-#elif defined(_WIN32)
 
 	char temp_path[PATH_MAX];
 
@@ -409,14 +294,12 @@ bool update_manager::handle_rpcs3()
 		update_log.error("Failed to create temporary file: %s", tmpfile_path);
 		return false;
 	}
-	if (tmpfile.write(m_curl_buf.data(), m_curl_buf.size()) != m_curl_buf.size())
+	if (tmpfile.write(data.data(), data.size()) != data.size())
 	{
 		update_log.error("Failed to write temporary file: %s", tmpfile_path);
 		return false;
 	}
 	tmpfile.close();
-
-	m_progress_dialog->setWindowTitle(tr("Updating RPCS3"));
 
 	// 7z stuff (most of this stuff is from 7z Util sample and has been reworked to be more stl friendly)
 
@@ -596,7 +479,61 @@ bool update_manager::handle_rpcs3()
 	error_free7z();
 	if (res)
 		return false;
+
+#else
+
+	std::string replace_path;
+
+	const char* appimage_path = ::getenv("APPIMAGE");
+	if (appimage_path != nullptr)
+	{
+		replace_path = appimage_path;
+		update_log.notice("Found AppImage path: %s", appimage_path);
+	}
+	else
+	{
+		update_log.warning("Failed to find AppImage path");
+		char exe_path[PATH_MAX];
+		ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+
+		if (len == -1)
+		{
+			update_log.error("Failed to find executable path");
+			return false;
+		}
+
+		exe_path[len] = '\0';
+		update_log.trace("Found exec path: %s", exe_path);
+
+		replace_path = exe_path;
+	}
+
+	// Move the appimage/exe and replace with new appimage
+	const std::string move_dest = replace_path + "_old";
+	fs::rename(replace_path, move_dest, true);
+	fs::file new_appimage(replace_path, fs::read + fs::write + fs::create + fs::trunc);
+	if (!new_appimage)
+	{
+		update_log.error("Failed to create new AppImage file: %s", replace_path);
+		return false;
+	}
+	if (new_appimage.write(data.data(), data.size()) != data.size() + 0u)
+	{
+		update_log.error("Failed to write new AppImage file: %s", replace_path);
+		return false;
+	}
+	if (fchmod(new_appimage.get_handle(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == -1)
+	{
+		update_log.error("Failed to chmod rwxrxrx %s", replace_path);
+		return false;
+	}
+	new_appimage.close();
+
+	update_log.success("Successfully updated %s!", replace_path);
+
 #endif
+
+	m_downloader->close_progress_dialog();
 
 	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!\nRPCS3 will now restart."));
 

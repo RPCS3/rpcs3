@@ -37,7 +37,7 @@ struct EmuCallbacks
 	std::function<void()> on_resume;
 	std::function<void()> on_stop;
 	std::function<void()> on_ready;
-	std::function<void(bool)> exit; // (force_quit) close RPCS3
+	std::function<bool(bool)> exit; // (force_quit) close RPCS3
 	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit
 	std::function<void()> init_kb_handler;
 	std::function<void()> init_mouse_handler;
@@ -64,6 +64,7 @@ class Emulator final
 	std::string m_path_old;
 	std::string m_title_id;
 	std::string m_title;
+	std::string m_app_version;
 	std::string m_cat;
 	std::string m_dir;
 	std::string m_sfo_dir;
@@ -131,6 +132,11 @@ public:
 		return m_title + (m_title_id.empty() ? "" : " [" + m_title_id + "]");
 	}
 
+	const std::string& GetAppVersion() const
+	{
+		return m_app_version;
+	}
+
 	const std::string& GetCat() const
 	{
 		return m_cat;
@@ -196,6 +202,7 @@ public:
 	void Resume();
 	void Stop(bool restart = false);
 	void Restart() { Stop(true); }
+	bool Quit(bool force_quit);
 
 	bool IsRunning() const { return m_state == system_state::running; }
 	bool IsPaused()  const { return m_state == system_state::paused; }

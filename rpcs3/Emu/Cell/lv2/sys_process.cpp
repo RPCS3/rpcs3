@@ -341,7 +341,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 	ppu.state += cpu_flag::wait;
 
-	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc), hdd1 = std::move(hdd1), klic = g_fxo->get<loaded_npdrm_keys>()->devKlic]() mutable
+	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc), hdd1 = std::move(hdd1), klic = g_fxo->get<loaded_npdrm_keys>()->devKlic.load()]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);
 		Emu.SetForceBoot(true);
@@ -352,9 +352,10 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 		Emu.disc = std::move(disc);
 		Emu.hdd1 = std::move(hdd1);
 
-		if (klic != std::array<u8, 16>{})
+		if (klic != v128{})
 		{
-			Emu.klic.assign(klic.begin(), klic.end());
+			// TODO: Use std::optional
+			Emu.klic.assign(std::begin(klic._bytes), std::end(klic._bytes));
 		}
 
 		Emu.SetForceBoot(true);

@@ -7,6 +7,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
 
+#include <QCoreApplication>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <string>
@@ -84,7 +85,8 @@ gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::share
 gs_frame::~gs_frame()
 {
 #ifdef _WIN32
-	if (m_tb_progress)
+	// QWinTaskbarProgress::hide() will crash if the application is already about to close, even if the object is not null.
+	if (m_tb_progress && !QCoreApplication::closingDown())
 	{
 		m_tb_progress->hide();
 	}
@@ -106,8 +108,8 @@ void gs_frame::showEvent(QShowEvent *event)
 {
 	// we have to calculate new window positions, since the frame is only known once the window was created
 	// the left and right margins are too big on my setup for some reason yet unknown, so we'll have to ignore them
-	int x = geometry().left(); //std::max(geometry().left(), frameMargins().left());
-	int y = std::max(geometry().top(), frameMargins().top());
+	const int x = geometry().left(); //std::max(geometry().left(), frameMargins().left());
+	const int y = std::max(geometry().top(), frameMargins().top());
 
 	setPosition(x, y);
 
@@ -116,6 +118,8 @@ void gs_frame::showEvent(QShowEvent *event)
 
 void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 {
+	// NOTE: needs to be updated with keyboard_pad_handler::processKeyEvent
+
 	switch (keyEvent->key())
 	{
 	case Qt::Key_L:

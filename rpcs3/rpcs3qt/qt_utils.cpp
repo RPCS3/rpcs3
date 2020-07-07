@@ -197,22 +197,22 @@ namespace gui
 				return;
 
 			int item_count = table->rowCount();
-			bool is_empty = item_count < 1;
+			const bool is_empty = item_count < 1;
 			if (is_empty)
 				table->insertRow(0);
 
-			int item_height = table->rowHeight(0);
+			const int item_height = table->rowHeight(0);
 			if (is_empty)
 			{
 				table->clearContents();
 				table->setRowCount(0);
 			}
 
-			int available_height = table->rect().height() - table->horizontalHeader()->height() - table->frameWidth() * 2;
+			const int available_height = table->rect().height() - table->horizontalHeader()->height() - table->frameWidth() * 2;
 			if (available_height < item_height || item_height < 1)
 				return;
 
-			int new_item_count = available_height / item_height;
+			const int new_item_count = available_height / item_height;
 			if (new_item_count == item_count)
 				return;
 
@@ -341,7 +341,7 @@ namespace gui
 					{
 						bool match = true;
 
-						for (const auto [role, data] : criteria)
+						for (const auto& [role, data] : criteria)
 						{
 							if (item->data(0, role) != data)
 							{
@@ -382,9 +382,73 @@ namespace gui
 		{
 			if (parent)
 			{
-				for (int i = 0; i < parent->childCount(); i++)
+				for (int i = parent->childCount() - 1; i >= 0; i--)
 				{
 					parent->removeChild(parent->child(i));
+				}
+			}
+		}
+
+		void remove_children(QTreeWidgetItem* parent, const QList<QPair<int /*role*/, QVariant /*data*/>>& criteria, bool recursive)
+		{
+			if (parent)
+			{
+				for (int i = parent->childCount() - 1; i >= 0; i--)
+				{
+					if (auto item = parent->child(i))
+					{
+						bool match = true;
+
+						for (const auto [role, data] : criteria)
+						{
+							if (item->data(0, role) != data)
+							{
+								match = false;
+								break;
+							}
+						}
+
+						if (!match)
+						{
+							parent->removeChild(item);
+						}
+						else if (recursive)
+						{
+							remove_children(item, criteria, recursive);
+						}
+					}
+				}
+			}
+		}
+
+		void sort_tree_item(QTreeWidgetItem* item, Qt::SortOrder sort_order, bool recursive)
+		{
+			if (item)
+			{
+				item->sortChildren(0, sort_order);
+
+				if (recursive)
+				{
+					for (int i = 0; i < item->childCount(); i++)
+					{
+						sort_tree_item(item->child(i), sort_order, recursive);
+					}
+				}
+			}
+		}
+
+		void sort_tree(QTreeWidget* tree, Qt::SortOrder sort_order, bool recursive)
+		{
+			if (tree)
+			{
+				tree->sortByColumn(0, sort_order);
+
+				if (recursive)
+				{
+					for (int i = 0; i < tree->topLevelItemCount(); i++)
+					{
+						sort_tree_item(tree->topLevelItem(i), sort_order, recursive);
+					}
 				}
 			}
 		}

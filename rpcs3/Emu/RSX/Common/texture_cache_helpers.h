@@ -306,12 +306,15 @@ namespace rsx
 					const u16 delta = u16(-rebased);
 					src_y += delta;
 					dst_y += delta;
+
+					verify(HERE), dst_y == slice_begin;
 				}
 
 				verify(HERE), dst_y >= slice_begin;
+
+				const auto h = std::min(section_end, slice_end) - dst_y;
 				dst_y = (dst_y - slice_begin);
 
-				const auto h = std::min(section_end, slice_end) - section.dst_area.y;
 				const auto src_width = rsx::apply_resolution_scale(section.src_area.width, true);
 				const auto src_height = rsx::apply_resolution_scale(h, true);
 				const auto dst_width = rsx::apply_resolution_scale(section.dst_area.width, true);

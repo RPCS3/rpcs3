@@ -850,7 +850,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 		m_cat = psf::get_string(_psf, "CATEGORY");
 
-		const std::string version_app  = psf::get_string(_psf, "APP_VER", "Unknown");
+		m_app_version = psf::get_string(_psf, "APP_VER", "Unknown");
 		const std::string version_disc = psf::get_string(_psf, "VERSION", "Unknown");
 
 		if (!_psf.empty() && m_cat.empty())
@@ -862,7 +862,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		sys_log.notice("Title: %s", GetTitle());
 		sys_log.notice("Serial: %s", GetTitleID());
 		sys_log.notice("Category: %s", GetCat());
-		sys_log.notice("Version: %s / %s", version_app, version_disc);
+		sys_log.notice("Version: %s / %s", GetAppVersion(), version_disc);
 
 		if (!add_only && !force_global_config)
 		{
@@ -1618,10 +1618,8 @@ bool Emulator::Pause()
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
 
-	if (g_cfg.misc.prevent_display_sleep)
-	{
-		enable_display_sleep();
-	}
+	// Always Enable display sleep, not only if it was prevented.
+	enable_display_sleep();
 
 	return true;
 }
@@ -1733,9 +1731,6 @@ void Emulator::Stop(bool restart)
 		}
 	});
 
-	const bool full_stop = !restart && !m_force_boot;
-	const bool do_exit   = full_stop && g_cfg.misc.autoexit;
-
 	sys_log.notice("Stopping emulator...");
 
 	GetCallbacks().on_stop();
@@ -1751,19 +1746,6 @@ void Emulator::Stop(bool restart)
 	sys_log.notice("Objects cleared...");
 
 	vm::close();
-
-	if (do_exit)
-	{
-		GetCallbacks().exit(true);
-	}
-	else
-	{
-		if (full_stop)
-		{
-			GetCallbacks().exit(false);
-		}
-		Init();
-	}
 
 #ifdef LLVM_AVAILABLE
 	extern void jit_finalize();
@@ -1787,12 +1769,24 @@ void Emulator::Stop(bool restart)
 	klic.clear();
 	hdd1.clear();
 
-	m_force_boot = false;
+	// Always Enable display sleep, not only if it was prevented.
+	enable_display_sleep();
 
-	if (g_cfg.misc.prevent_display_sleep)
+	if (Quit(g_cfg.misc.autoexit.get()))
 	{
-		enable_display_sleep();
+		return;
 	}
+
+	m_force_boot = false;
+	Init();
+}
+
+bool Emulator::Quit(bool force_quit)
+{
+	m_force_boot = false;
+	Emu.Stop();
+
+	return GetCallbacks().exit(force_quit);
 }
 
 std::string Emulator::GetFormattedTitle(double fps) const

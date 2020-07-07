@@ -214,7 +214,8 @@ namespace gui
 	const gui_save tr_games_state   = gui_save(trophy, "games_state",   QByteArray());
 	const gui_save tr_trophy_state  = gui_save(trophy, "trophy_state",  QByteArray());
 
-	const gui_save pm_geometry       = gui_save(patches, "geometry",      QByteArray());
+	const gui_save pm_show_owned     = gui_save(patches, "show_owned",     false);
+	const gui_save pm_geometry       = gui_save(patches, "geometry",       QByteArray());
 	const gui_save pm_splitter_state = gui_save(patches, "splitter_state", QByteArray());
 
 	const gui_save sd_geometry   = gui_save(savedata, "geometry",   QByteArray());

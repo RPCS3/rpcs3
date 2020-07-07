@@ -355,7 +355,8 @@ namespace rsx
 			}
 			else
 			{
-				zcull_ctrl->read_barrier(this, cond_render_ctrl.eval_address, 4, reports::sync_no_notify);
+				// NOTE: eval_sources list is reversed with newest query first
+				zcull_ctrl->read_barrier(this, cond_render_ctrl.eval_address, cond_render_ctrl.eval_sources.front());
 				verify(HERE), !cond_render_ctrl.eval_pending();
 			}
 		}
@@ -3261,6 +3262,35 @@ namespace rsx
 			}
 		}
 
+		void ZCULL_control::retire(::rsx::thread* ptimer, queued_report_write* writer, u32 result)
+		{
+			if (!writer->forwarder)
+			{
+				// No other queries in the chain, write result
+				const auto value = (writer->type == CELL_GCM_ZPASS_PIXEL_CNT) ? m_statistics_map[writer->counter_tag] : result;
+				write(writer, ptimer->timestamp(), value);
+			}
+
+			if (writer->query && writer->query->sync_tag == ptimer->cond_render_ctrl.eval_sync_tag)
+			{
+				bool eval_failed;
+				if (!writer->forwarder) [[likely]]
+				{
+					// Normal evaluation
+					eval_failed = (result == 0u);
+				}
+				else
+				{
+					// Eval was inserted while ZCULL was active but not enqueued to write to memory yet
+					// write(addr) -> enable_zpass_stats -> eval_condition -> write(addr)
+					// In this case, use what already exists in memory, not the current counter
+					eval_failed = (vm::_ref<CellGcmReportData>(writer->sink).value == 0u);
+				}
+
+				ptimer->cond_render_ctrl.set_eval_result(ptimer, eval_failed);
+			}
+		}
+
 		void ZCULL_control::sync(::rsx::thread* ptimer)
 		{
 			if (!m_pending_writes.empty())
@@ -3319,19 +3349,7 @@ namespace rsx
 						free_query(query);
 					}
 
-					if (!writer.forwarder)
-					{
-						// No other queries in the chain, write result
-						const auto value = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT) ? m_statistics_map[writer.counter_tag] : result;
-						write(&writer, ptimer->timestamp(), value);
-
-						if (query && query->sync_tag == ptimer->cond_render_ctrl.eval_sync_tag)
-						{
-							const bool eval_failed = (result == 0);
-							ptimer->cond_render_ctrl.set_eval_result(ptimer, eval_failed);
-						}
-					}
-
+					retire(ptimer, &writer, result);
 					processed++;
 				}
 
@@ -3450,7 +3468,7 @@ namespace rsx
 				u32 result = m_statistics_map[writer.counter_tag];
 
 				const bool force_read = (sync_address != 0);
-				if (force_read && writer.sink == sync_address)
+				if (force_read && writer.sink == sync_address && !writer.forwarder)
 				{
 					// Forced reads end here
 					sync_address = 0;
@@ -3517,19 +3535,7 @@ namespace rsx
 
 				stat_tag_to_remove = writer.counter_tag;
 
-				if (!writer.forwarder)
-				{
-					// No other queries in the chain, write result
-					const auto value = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT) ? m_statistics_map[writer.counter_tag] : result;
-					write(&writer, ptimer->timestamp(), value);
-
-					if (query && query->sync_tag == ptimer->cond_render_ctrl.eval_sync_tag)
-					{
-						const bool eval_failed = (result == 0);
-						ptimer->cond_render_ctrl.set_eval_result(ptimer, eval_failed);
-					}
-				}
-
+				retire(ptimer, &writer, result);
 				processed++;
 			}
 
@@ -3611,11 +3617,25 @@ namespace rsx
 					}
 				}
 
-				update(ptimer, sync_address);
+				// There can be multiple queries all writing to the same address, loop to flush all of them
+				while (query->pending && !Emu.IsStopped())
+				{
+					update(ptimer, sync_address);
+				}
 				return result_none;
 			}
 
 			return result_zcull_intr;
+		}
+
+		flags32_t ZCULL_control::read_barrier(class ::rsx::thread* ptimer, u32 memory_address, occlusion_query_info* query)
+		{
+			while (query->pending && !Emu.IsStopped())
+			{
+				update(ptimer, memory_address);
+			}
+
+			return result_none;
 		}
 
 		query_search_result ZCULL_control::find_query(vm::addr_t sink_address, bool all)
