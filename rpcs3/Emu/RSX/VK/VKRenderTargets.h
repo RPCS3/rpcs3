@@ -15,6 +15,9 @@ namespace vk
 
 	class render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<vk::viewable_image*>
 	{
+		u64 cyclic_reference_sync_tag = 0;
+		u64 write_barrier_sync_tag = 0;
+
 		// Get the linear resolve target bound to this surface. Initialize if none exists
 		vk::viewable_image* get_resolve_target_safe(vk::command_buffer& cmd)
 		{
@@ -357,6 +360,23 @@ namespace vk
 			return (rsx::apply_resolution_scale(_width, true) == width()) && (rsx::apply_resolution_scale(_height, true) == height());
 		}
 
+		void texture_barrier(vk::command_buffer& cmd)
+		{
+			if (samples() == 1)
+			{
+				if (!write_barrier_sync_tag) write_barrier_sync_tag++; // Activate barrier sync
+				cyclic_reference_sync_tag = write_barrier_sync_tag;    // Match tags
+			}
+
+			vk::insert_texture_barrier(cmd, this, VK_IMAGE_LAYOUT_GENERAL);
+		}
+
+		void reset_surface_counters()
+		{
+			frame_tag = 0;
+			write_barrier_sync_tag = 0;
+		}
+
 		image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT) override
 		{
@@ -391,6 +411,49 @@ namespace vk
 					// TODO: Figure out why merely returning and failing the test does not work when reading (TLoU)
 					// The result should have been the same either way
 					state_flags |= rsx::surface_state_flags::erase_bkgnd;
+				}
+			}
+
+			if (!read_access && write_barrier_sync_tag != 0)
+			{
+				if (current_layout == VK_IMAGE_LAYOUT_GENERAL)
+				{
+					if (write_barrier_sync_tag != cyclic_reference_sync_tag)
+					{
+						// This barrier catches a very specific case where 2 draw calls are executed with general layout (cyclic ref) but no texture barrier in between.
+						// This happens when a cyclic ref is broken. In this case previous draw must finish drawing before the new one renders to avoid current draw breaking previous one.
+						VkPipelineStageFlags src_stage, dst_stage;
+						VkAccessFlags src_access, dst_access;
+
+						if (!is_depth_surface()) [[likely]]
+						{
+							src_stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+							dst_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+							src_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+							dst_access = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+						}
+						else
+						{
+							src_stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+							dst_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+							src_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+							dst_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+						}
+
+						vk::insert_image_memory_barrier(cmd, value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
+							src_stage, dst_stage, src_access, dst_access, { aspect(), 0, 1, 0, 1 });
+
+						write_barrier_sync_tag = 0; // Disable for next draw
+					}
+					else
+					{
+						// Synced externally for this draw
+						write_barrier_sync_tag++;
+					}
+				}
+				else
+				{
+					write_barrier_sync_tag = 0; // Disable
 				}
 			}
 
@@ -771,7 +834,7 @@ namespace rsx
 				surface->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 
-			surface->frame_tag = 0;
+			surface->reset_surface_counters();
 			surface->memory_usage_flags |= rsx::surface_usage_flags::attachment;
 		}
 
