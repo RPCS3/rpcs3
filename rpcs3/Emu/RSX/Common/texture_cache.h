@@ -1731,17 +1731,36 @@ namespace rsx
 			u8 subsurface_count;
 			size2f scale{ 1.f, 1.f };
 
+			if (is_unnormalized)
+			{
+				if (extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d)
+				{
+					scale.width /= attributes.width;
+					scale.height /= attributes.height;
+				}
+				else
+				{
+					rsx_log.error("Unimplemented unnormalized sampling for texture type %d", static_cast<u32>(extended_dimension));
+				}
+			}
+
+			const auto packed_pitch = get_format_packed_pitch(attributes.gcm_format, attributes.width, !tex.border_type(), is_swizzled);
 			if (!is_swizzled) [[likely]]
 			{
 				if (attributes.pitch = tex.pitch(); !attributes.pitch)
 				{
-					attributes.pitch = get_format_packed_pitch(attributes.gcm_format, attributes.width, !tex.border_type(), false);
+					attributes.pitch = packed_pitch;
 					scale = { 0.f, 0.f };
+				}
+				else if (packed_pitch > attributes.pitch && !options.is_compressed_format)
+				{
+					scale.width *= f32(packed_pitch) / attributes.pitch;
+					attributes.width = attributes.pitch / attributes.bpp;
 				}
 			}
 			else
 			{
-				attributes.pitch = get_format_packed_pitch(attributes.gcm_format, attributes.width, !tex.border_type(), true);
+				attributes.pitch = packed_pitch;
 			}
 
 			switch (extended_dimension)
@@ -1772,19 +1791,6 @@ namespace rsx
 				required_surface_height = tex_size / attributes.pitch;
 				attributes.slice_h = required_surface_height / attributes.depth;
 				break;
-			}
-
-			if (is_unnormalized)
-			{
-				if (extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d)
-				{
-					scale.width /= attributes.width;
-					scale.height /= attributes.height;
-				}
-				else
-				{
-					rsx_log.error("Unimplemented unnormalized sampling for texture type %d", static_cast<u32>(extended_dimension));
-				}
 			}
 
 			if (options.is_compressed_format)
