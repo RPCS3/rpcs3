@@ -834,13 +834,13 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="gb_audio_channels">
+            <widget class="QGroupBox" name="gb_audio_downmix">
              <property name="title">
               <string>Audio Channels</string>
              </property>
              <layout class="QVBoxLayout" name="gb_audio_channels_layout">
               <item>
-               <widget class="QComboBox" name="combo_audio_channels"/>
+               <widget class="QComboBox" name="combo_audio_downmix"/>
               </item>
              </layout>
             </widget>

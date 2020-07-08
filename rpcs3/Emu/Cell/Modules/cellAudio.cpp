@@ -548,7 +548,7 @@ namespace audio
 			.convert_to_u16 = static_cast<bool>(g_cfg.audio.convert_to_u16),
 			.start_threshold = static_cast<u32>(g_cfg.audio.start_threshold),
 			.sampling_period_multiplier = static_cast<u32>(g_cfg.audio.sampling_period_multiplier),
-			.channels = g_cfg.audio.audio_channel_downmix,
+			.downmix = g_cfg.audio.audio_channel_downmix,
 			.renderer = g_cfg.audio.renderer
 		};
 	}
@@ -568,7 +568,7 @@ namespace audio
 				raw.convert_to_u16 != new_raw.convert_to_u16 ||
 				raw.start_threshold != new_raw.start_threshold ||
 				raw.sampling_period_multiplier != new_raw.sampling_period_multiplier ||
-				raw.channels != new_raw.channels ||
+				raw.downmix != new_raw.downmix ||
 				raw.renderer != new_raw.renderer)
 			{
 				g_audio->cfg.raw = new_raw;
@@ -844,13 +844,13 @@ void cell_audio_thread::operator()()
 		switch (cfg.audio_channels)
 		{
 		case 2:
-			mix<audio_channels::downmix_to_stereo>(buf);
+			mix<audio_downmix::downmix_to_stereo>(buf);
 			break;
 		case 6:
-			mix<audio_channels::downmix_to_5_1>(buf);
+			mix<audio_downmix::downmix_to_5_1>(buf);
 			break;
 		case 8:
-			mix<audio_channels::surround_7_1>(buf);
+			mix<audio_downmix::no_downmix>(buf);
 			break;
 		default:
 			fmt::throw_exception("Unsupported number of audio channels: %u", cfg.audio_channels);
@@ -867,12 +867,12 @@ void cell_audio_thread::operator()()
 	ringbuffer.reset();
 }
 
-template <audio_channels downmix>
+template <audio_downmix downmix>
 void cell_audio_thread::mix(float *out_buffer, s32 offset)
 {
 	AUDIT(out_buffer != nullptr);
 
-	constexpr u32 channels = downmix == audio_channels::surround_7_1 ? 8 : downmix == audio_channels::downmix_to_5_1 ? 6 : 2;
+	constexpr u32 channels = downmix == audio_downmix::no_downmix ? 8 : downmix == audio_downmix::downmix_to_5_1 ? 6 : 2;
 	constexpr u32 out_buffer_sz = channels * AUDIO_BUFFER_SAMPLES;
 
 	bool first_mix = true;
@@ -924,14 +924,14 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					out_buffer[out + 0] = left;
 					out_buffer[out + 1] = right;
 
-					if constexpr (downmix != audio_channels::downmix_to_stereo)
+					if constexpr (downmix != audio_downmix::downmix_to_stereo)
 					{
 						out_buffer[out + 2] = 0.0f;
 						out_buffer[out + 3] = 0.0f;
 						out_buffer[out + 4] = 0.0f;
 						out_buffer[out + 5] = 0.0f;
 
-						if constexpr (downmix != audio_channels::downmix_to_5_1)
+						if constexpr (downmix != audio_downmix::downmix_to_5_1)
 						{
 							out_buffer[out + 6] = 0.0f;
 							out_buffer[out + 7] = 0.0f;
@@ -971,14 +971,14 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					const float side_left  = buf[in + 6] * m;
 					const float side_right = buf[in + 7] * m;
 
-					if constexpr (downmix == audio_channels::downmix_to_stereo)
+					if constexpr (downmix == audio_downmix::downmix_to_stereo)
 					{
 						// Don't mix in the lfe as per dolby specification and based on documentation
 						const float mid = center * 0.5;
 						out_buffer[out + 0] = left * minus_3db + mid + side_left * 0.5 + rear_left * 0.5;
 						out_buffer[out + 1] = right * minus_3db + mid + side_right * 0.5 + rear_right * 0.5;
 					}
-					else if constexpr (downmix == audio_channels::downmix_to_5_1)
+					else if constexpr (downmix == audio_downmix::downmix_to_5_1)
 					{
 						out_buffer[out + 0] = left;
 						out_buffer[out + 1] = right;
@@ -1016,14 +1016,14 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					const float side_left  = buf[in + 6] * m;
 					const float side_right = buf[in + 7] * m;
 
-					if constexpr (downmix == audio_channels::downmix_to_stereo)
+					if constexpr (downmix == audio_downmix::downmix_to_stereo)
 					{
 						// Don't mix in the lfe as per dolby specification and based on documentation
 						const float mid = center * 0.5;
 						out_buffer[out + 0] += left * minus_3db + mid + side_left * 0.5 + rear_left * 0.5;
 						out_buffer[out + 1] += right * minus_3db + mid + side_right * 0.5 + rear_right * 0.5;
 					}
-					else if constexpr (downmix == audio_channels::downmix_to_5_1)
+					else if constexpr (downmix == audio_downmix::downmix_to_5_1)
 					{
 						out_buffer[out + 0] += left;
 						out_buffer[out + 1] += right;

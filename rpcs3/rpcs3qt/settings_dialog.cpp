@@ -727,10 +727,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #endif
 	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), enable_buffering);
 
-	m_emu_settings->EnhanceComboBox(ui->combo_audio_channels, emu_settings_type::AudioChannels);
-	SubscribeTooltip(ui->gb_audio_channels, tooltips.settings.audio_channels);
-	// TODO: enable this setting once cellAudioOutConfigure can change channels on the fly
-	ui->combo_audio_channels->removeItem(static_cast<int>(audio_channels::use_application_settings));
+	m_emu_settings->EnhanceComboBox(ui->combo_audio_downmix, emu_settings_type::AudioChannels);
+	SubscribeTooltip(ui->gb_audio_downmix, tooltips.settings.downmix);
+	// TODO: enable this setting once cellAudioOutConfigure can change downmix on the fly
+	ui->combo_audio_downmix->removeItem(static_cast<int>(audio_downmix::use_application_settings));
 
 	// Microphone Comboboxes
 	m_mics_combo[0] = ui->microphone1Box;

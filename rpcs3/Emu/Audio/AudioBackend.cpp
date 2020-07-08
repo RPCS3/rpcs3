@@ -21,24 +21,24 @@ AudioBackend::AudioBackend()
 		m_sampling_rate = static_cast<u32>(f32{ DEFAULT_AUDIO_SAMPLING_RATE } *sampling_rate_multiplier);
 	}
 
-	const audio_channels channels = g_cfg.audio.audio_channel_downmix.get();
+	const audio_downmix downmix = g_cfg.audio.audio_channel_downmix.get();
 
-	switch (channels)
+	switch (downmix)
 	{
-	case audio_channels::use_application_settings:
-		m_channels = 2; // TODO
-		break;
-	case audio_channels::downmix_to_stereo:
-		m_channels = 2;
-		break;
-	case audio_channels::downmix_to_5_1:
-		m_channels = 6;
-		break;
-	case audio_channels::surround_7_1:
+	case audio_downmix::no_downmix:
 		m_channels = 8;
 		break;
+	case audio_downmix::downmix_to_stereo:
+		m_channels = 2;
+		break;
+	case audio_downmix::downmix_to_5_1:
+		m_channels = 6;
+		break;
+	case audio_downmix::use_application_settings:
+		m_channels = 2; // TODO
+		break;
 	default:
-		fmt::throw_exception("Unknown audio channel mode %s (%d)", channels, static_cast<int>(channels));
+		fmt::throw_exception("Unknown audio channel mode %s (%d)", downmix, static_cast<int>(downmix));
 	}
 }
 
