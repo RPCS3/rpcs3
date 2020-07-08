@@ -647,7 +647,7 @@
                <number>0</number>
               </property>
               <property name="currentIndex">
-               <number>1</number>
+               <number>0</number>
               </property>
               <widget class="QWidget" name="pad_page">
                <layout class="QVBoxLayout" name="pad_page_layout">
@@ -2065,7 +2065,7 @@
             <item>
              <widget class="QStackedWidget" name="right_stack">
               <property name="currentIndex">
-               <number>1</number>
+               <number>0</number>
               </property>
               <widget class="QWidget" name="stick_page">
                <layout class="QVBoxLayout" name="stick_page_layout">
