@@ -45,7 +45,7 @@ public:
 		const QString audio_out_linux           = tr("OpenAL uses a cross-platform approach and supports audio buffering, so it is the recommended option.\nPulseAudio uses the native Linux sound system, and is the next best alternative. If neither are available, ALSA can be used instead.");
 		const QString audio_dump                = tr("Saves all audio as a raw wave file. If unsure, leave this unchecked.");
 		const QString convert                   = tr("Uses 16-bit audio samples instead of default 32-bit floating point.\nUse with buggy audio drivers if you have no sound or completely broken sound.");
-		const QString audio_channels            = tr("Uses chosen audio output instead of default 7.1 surround sound.\nUse downmix to stereo with stereo audio devices. Use 5.1 or higher only if you are using a surround sound audio system.");
+		const QString downmix                   = tr("Uses chosen audio output instead of default 7.1 surround sound.\nUse downmix to stereo with stereo audio devices. Use 5.1 or higher only if you are using a surround sound audio system.");
 		const QString master_volume             = tr("Controls the overall volume of the emulation.\nValues above 100% might reduce the audio quality.");
 		const QString enable_buffering          = tr("Enables audio buffering, which reduces crackle/stutter but increases audio latency (requires XAudio2 or OpenAL).");
 		const QString audio_buffer_duration     = tr("Target buffer duration in milliseconds.\nHigher values make the buffering algorithm's job easier, but may introduce noticeable audio latency.");

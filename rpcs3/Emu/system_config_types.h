@@ -75,12 +75,12 @@ enum class audio_renderer
 #endif
 };
 
-enum class audio_channels
+enum class audio_downmix
 {
-	use_application_settings,
+	no_downmix, // Surround 7.1
 	downmix_to_stereo,
 	downmix_to_5_1,
-	surround_7_1
+	use_application_settings
 };
 
 enum class camera_handler

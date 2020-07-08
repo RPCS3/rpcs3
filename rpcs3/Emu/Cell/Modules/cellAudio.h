@@ -196,7 +196,7 @@ struct cell_audio_config
 		bool convert_to_u16 = false;
 		u32 start_threshold = 0;
 		u32 sampling_period_multiplier = 0;
-		audio_channels channels = audio_channels::downmix_to_stereo;
+		audio_downmix downmix = audio_downmix::downmix_to_stereo;
 		audio_renderer renderer = audio_renderer::null;
 	} raw;
 
@@ -358,7 +358,7 @@ private:
 	void reset_ports(s32 offset = 0);
 	void advance(u64 timestamp, bool reset = true);
 	std::tuple<u32, u32, u32, u32> count_port_buffer_tags();
-	template <audio_channels downmix>
+	template <audio_downmix downmix>
 	void mix(float *out_buffer, s32 offset = 0);
 	void finish_port_volume_stepping();
 
