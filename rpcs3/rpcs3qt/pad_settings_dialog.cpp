@@ -207,17 +207,22 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	// Initialize configurable buttons
 	InitButtons();
 
-	// Set up first tab
-	OnTabChanged(0);
-
-	// repaint controller image
+	// Repaint controller image
 	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(*ui->l_controller->pixmap(), QColor(), gui::utils::get_label_color("l_controller"), false, true));
 
-	show();
+	// Show default widgets first in order to calculate the required size for the scroll area (see pad_settings_dialog::ResizeDialog)
+	ui->left_stack->setCurrentIndex(0);
+	ui->right_stack->setCurrentIndex(0);
 
 	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), 0, 0, 0);
 	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0, 0);
 
+	show();
+
+	// Set up first tab
+	OnTabChanged(0);
+
+	// Resize in order to fit into our scroll area
 	ResizeDialog();
 }
 
@@ -589,7 +594,7 @@ void pad_settings_dialog::ReactivateButtons()
 
 void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, double multiplier)
 {
-	const int deadzone_max = m_handler->thumb_max;
+	const int deadzone_max = m_handler ? m_handler->thumb_max : 255; // 255 used as fallback. The deadzone circle shall be small.
 	const qreal device_pixel_ratio = devicePixelRatioF();
 	const qreal scaled_width = desired_width * device_pixel_ratio;
 	const qreal origin = desired_width / 2.0;
@@ -694,7 +699,8 @@ void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 		return;
 	}
 
-	QPoint direction = event->angleDelta();
+	const QPoint direction = event->angleDelta();
+
 	if (direction.isNull())
 	{
 		// Scrolling started/ended event, no direction given
@@ -702,10 +708,10 @@ void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 	}
 
 	u32 key;
+
 	if (const int x = direction.x())
 	{
-		bool to_left = event->inverted() ? x < 0 : x > 0;
-		if (to_left)
+		if (event->inverted() ? x < 0 : x > 0)
 		{
 			key = mouse::wheel_left;
 		}
@@ -717,8 +723,8 @@ void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 	else
 	{
 		const int y = direction.y();
-		bool to_up = event->inverted() ? y < 0 : y > 0;
-		if (to_up)
+
+		if (event->inverted() ? y < 0 : y > 0)
 		{
 			key = mouse::wheel_up;
 		}
