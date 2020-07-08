@@ -578,6 +578,7 @@ void pad_settings_dialog::ReactivateButtons()
 	}
 
 	ui->tabWidget->setFocusPolicy(Qt::TabFocus);
+	ui->scrollArea->setFocusPolicy(Qt::StrongFocus);
 
 	ui->chooseProfile->setFocusPolicy(Qt::WheelFocus);
 	ui->chooseHandler->setFocusPolicy(Qt::WheelFocus);
@@ -954,6 +955,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	}
 
 	ui->tabWidget->setFocusPolicy(Qt::ClickFocus);
+	ui->scrollArea->setFocusPolicy(Qt::ClickFocus);
 
 	ui->chooseProfile->setFocusPolicy(Qt::ClickFocus);
 	ui->chooseHandler->setFocusPolicy(Qt::ClickFocus);
