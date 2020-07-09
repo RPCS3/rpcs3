@@ -1956,6 +1956,12 @@ bool spu_thread::process_mfc_cmd()
 		const u32 addr = ch_mfc_cmd.eal & -128;
 		const auto& data = vm::_ref<decltype(rdata)>(addr);
 
+		if (addr == raddr && !g_use_rtm && g_cfg.core.spu_getllar_polling_detection && rtime == vm::reservation_acquire(addr, 128) && cmp_rdata(rdata, data))
+		{
+			// Spinning, might as well yield cpu resources
+			std::this_thread::yield();
+		}
+
 		auto& dst = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 		u64 ntime;
 
@@ -2015,7 +2021,7 @@ bool spu_thread::process_mfc_cmd()
 		if (raddr && raddr != addr)
 		{
 			// Last check for event before we replace the reservation with a new one
-			if (vm::reservation_acquire(raddr, 128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(raddr)))
+			if ((vm::reservation_acquire(raddr, 128) & -128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(raddr)))
 			{
 				ch_event_stat |= SPU_EVENT_LR;
 			}
@@ -2057,7 +2063,7 @@ bool spu_thread::process_mfc_cmd()
 				return false;
 			}
 
-			if (cmp_rdata(to_write, rdata))
+			if (!g_use_rtm && cmp_rdata(to_write, rdata))
 			{
 				// Writeback of unchanged data. Only check memory change
 				return cmp_rdata(rdata, vm::_ref<decltype(rdata)>(addr)) && res.compare_and_swap_test(rtime, rtime + 128);

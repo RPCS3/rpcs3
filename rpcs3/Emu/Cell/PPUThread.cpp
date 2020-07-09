@@ -1227,7 +1227,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, T reg_value)
 	const T old_data = static_cast<T>(ppu.rdata << ((addr & 7) * 8) >> size_off);
 	auto& res = vm::reservation_acquire(addr, sizeof(T));
 
-	if (std::exchange(ppu.raddr, 0) != addr || addr % sizeof(T) || old_data != data || ppu.rtime != res)
+	if (std::exchange(ppu.raddr, 0) != addr || addr % sizeof(T) || old_data != data || ppu.rtime != (res & -128))
 	{
 		return false;
 	}

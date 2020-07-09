@@ -162,6 +162,7 @@ public:
 
 	static inline bool awake(cpu_thread* const thread, s32 prio = enqueue_cmd)
 	{
+		vm::temporary_unlock();
 		std::lock_guard lock(g_mutex);
 		return awake_unlocked(thread, prio);
 	}

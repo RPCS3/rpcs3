@@ -464,13 +464,7 @@ bool cpu_thread::check_state() noexcept
 	}
 
 	bool cpu_sleep_called = false;
-	bool cpu_flag_memory = false;
 	bool escape, retval;
-
-	if (!(state & cpu_flag::wait))
-	{
-		state += cpu_flag::wait;
-	}
 
 	while (true)
 	{
@@ -490,20 +484,20 @@ bool cpu_thread::check_state() noexcept
 			if (!(flags & (cpu_flag::exit + cpu_flag::dbg_global_stop + cpu_flag::ret + cpu_flag::stop)))
 			{
 				// Check pause flags which hold thread inside check_state
-				if (flags & (cpu_flag::pause + cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause))
+				if (flags & (cpu_flag::pause + cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::memory))
 				{
+					if (!(flags & cpu_flag::wait))
+					{
+						flags += cpu_flag::wait;
+						store = true;
+					}
+
 					escape = false;
 					return store;
 				}
 
-				if (flags & cpu_flag::memory)
+				if (flags & cpu_flag::wait)
 				{
-					// wait flag will be cleared later (optimization)
-					cpu_flag_memory = true;
-				}
-				else
-				{
-					AUDIT(!cpu_flag_memory);
 					flags -= cpu_flag::wait;
 					store = true;
 				}
@@ -512,7 +506,12 @@ bool cpu_thread::check_state() noexcept
 			}
 			else
 			{
-				cpu_flag_memory = false;
+				if (!(flags & cpu_flag::wait))
+				{
+					flags += cpu_flag::wait;
+					store = true;
+				}
+
 				retval = true;
 			}
 
@@ -529,17 +528,6 @@ bool cpu_thread::check_state() noexcept
 
 		if (escape)
 		{
-			if (cpu_flag_memory)
-			{
-				cpu_mem();
-
-				if (state & (cpu_flag::pause + cpu_flag::memory)) [[unlikely]]
-				{
-					state += cpu_flag::wait;
-					continue;
-				}
-			}
-
 			return retval;
 		}
 		else if (!cpu_sleep_called && state0 & cpu_flag::suspend)
@@ -555,6 +543,12 @@ bool cpu_thread::check_state() noexcept
 		}
 		else
 		{
+			if (state0 == (cpu_flag::memory + cpu_flag::wait))
+			{
+				vm::passive_lock(*this);
+				continue;
+			}
+
 			// If only cpu_flag::pause was set, notification won't arrive
 			g_fxo->get<cpu_counter>()->cpu_suspend_lock.lock_unlock();
 		}

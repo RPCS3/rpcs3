@@ -44,7 +44,7 @@ void lv2_int_serv::join()
 
 error_code sys_interrupt_tag_destroy(ppu_thread& ppu, u32 intrtag)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_interrupt.warning("sys_interrupt_tag_destroy(intrtag=0x%x)", intrtag);
 
@@ -73,7 +73,7 @@ error_code sys_interrupt_tag_destroy(ppu_thread& ppu, u32 intrtag)
 
 error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32 intrtag, u32 intrthread, u64 arg1, u64 arg2)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_interrupt.warning("_sys_interrupt_thread_establish(ih=*0x%x, intrtag=0x%x, intrthread=0x%x, arg1=0x%llx, arg2=0x%llx)", ih, intrtag, intrthread, arg1, arg2);
 
@@ -133,7 +133,7 @@ error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32
 
 error_code _sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih, vm::ptr<u64> r13)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_interrupt.warning("_sys_interrupt_thread_disestablish(ih=0x%x, r13=*0x%x)", ih, r13);
 
@@ -163,7 +163,7 @@ error_code _sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih, vm::ptr<u
 
 void sys_interrupt_thread_eoi(ppu_thread& ppu)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_interrupt.trace("sys_interrupt_thread_eoi()");
 
