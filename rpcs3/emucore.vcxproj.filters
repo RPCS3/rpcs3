@@ -78,6 +78,15 @@
     <Filter Include="Emu\GPU\RSX\Common\Interpreter">
       <UniqueIdentifier>{bc97b324-1eea-445a-8fa9-6fc49e3df47c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\Audio\FAudio">
+      <UniqueIdentifier>{7555ff6f-67a9-4d02-b744-0bf896751edb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Audio\ALSA">
+      <UniqueIdentifier>{c76057f1-bb19-4981-8ab0-5ba20ac27552}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Audio\Pulse">
+      <UniqueIdentifier>{84c0e40e-efb6-4cfd-b2f5-13c720b09105}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -931,6 +940,15 @@
     </ClCompile>
     <ClCompile Include="util\shared_cptr.cpp">
       <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
+      <Filter>Emu\Audio\FAudio</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Audio\ALSA\ALSABackend.cpp">
+      <Filter>Emu\Audio\ALSA</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Audio\Pulse\PulseBackend.cpp">
+      <Filter>Emu\Audio\Pulse</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1794,6 +1812,15 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\ShaderInterpreter.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\FAudio\FAudioBackend.h">
+      <Filter>Emu\Audio\FAudio</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\ALSA\ALSABackend.h">
+      <Filter>Emu\Audio\ALSA</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\Pulse\PulseBackend.h">
+      <Filter>Emu\Audio\Pulse</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

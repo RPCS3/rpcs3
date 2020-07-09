@@ -35,10 +35,11 @@ struct cfg_root : cfg::node
 		cfg::_bool set_daz_and_ftz{ this, "Set DAZ and FTZ", false };
 		cfg::_enum<spu_decoder_type> spu_decoder{ this, "SPU Decoder", spu_decoder_type::llvm };
 		cfg::_bool lower_spu_priority{ this, "Lower SPU thread priority" };
+		cfg::_bool spu_getllar_polling_detection{ this, "SPU GETLLAR polling detection", false, true };
 		cfg::_bool spu_debug{ this, "SPU Debug" };
 		cfg::_int<0, 6> preferred_spu_threads{ this, "Preferred SPU Threads", 0, true }; // Number of hardware threads dedicated to heavy simultaneous spu tasks
 		cfg::_int<0, 16> spu_delay_penalty{ this, "SPU delay penalty", 3 }; // Number of milliseconds to block a thread if a virtual 'core' isn't free
-		cfg::_bool spu_loop_detection{ this, "SPU loop detection", true }; // Try to detect wait loops and trigger thread yield
+		cfg::_bool spu_loop_detection{ this, "SPU loop detection", true, true }; // Try to detect wait loops and trigger thread yield
 		cfg::_int<0, 6> max_spurs_threads{ this, "Max SPURS Threads", 6 }; // HACK. If less then 6, max number of running SPURS threads in each thread group.
 		cfg::_enum<spu_block_size_type> spu_block_size{ this, "SPU Block Size", spu_block_size_type::safe };
 		cfg::_bool spu_accurate_getllar{ this, "Accurate GETLLAR", false };
@@ -208,23 +209,23 @@ struct cfg_root : cfg::node
 
 		cfg::_enum<audio_renderer> renderer{ this, "Renderer",
 #ifdef _WIN32
-			audio_renderer::xaudio };
+			audio_renderer::xaudio, true };
 #elif HAVE_FAUDIO
-			audio_renderer::faudio };
+			audio_renderer::faudio, true };
 #else
-			audio_renderer::openal };
+			audio_renderer::openal, true };
 #endif
 
 		cfg::_bool dump_to_file{ this, "Dump to file" };
-		cfg::_bool convert_to_u16{ this, "Convert to 16 bit" };
-		cfg::_bool downmix_to_2ch{ this, "Downmix to Stereo", true };
-		cfg::_int<1, 128> startt{ this, "Start Threshold", 1 }; // TODO: used only by ALSA, should probably be removed once ALSA is upgraded
+		cfg::_bool convert_to_u16{ this, "Convert to 16 bit", false, true };
+		cfg::_enum<audio_downmix> audio_channel_downmix{ this, "Audio Channels", audio_downmix::downmix_to_stereo, true };
+		cfg::_int<1, 128> start_threshold{ this, "Start Threshold", 1, true }; // TODO: used only by ALSA, should probably be removed once ALSA is upgraded
 		cfg::_int<0, 200> volume{ this, "Master Volume", 100, true };
-		cfg::_bool enable_buffering{ this, "Enable Buffering", true };
-		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 100 };
-		cfg::_int<1, 1000> sampling_period_multiplier{ this, "Sampling Period Multiplier", 100 };
-		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false };
-		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75 };
+		cfg::_bool enable_buffering{ this, "Enable Buffering", true, true };
+		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 100, true };
+		cfg::_int<1, 1000> sampling_period_multiplier{ this, "Sampling Period Multiplier", 100, true };
+		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false, true };
+		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
 		cfg::string microphone_devices{ this, "Microphone Devices", ";;;;" };
 	} audio{ this };
