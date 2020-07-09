@@ -404,3 +404,20 @@ void fmt_class_string<shader_mode>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+template <>
+void fmt_class_string<audio_downmix>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](audio_downmix value)
+	{
+		switch (value)
+		{
+		case audio_downmix::no_downmix: return "No downmix";
+		case audio_downmix::downmix_to_stereo: return "Downmix to Stereo";
+		case audio_downmix::downmix_to_5_1: return "Downmix to 5.1";
+		case audio_downmix::use_application_settings: return "Use application settings";
+		}
+
+		return unknown;
+	});
+}

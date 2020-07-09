@@ -727,6 +727,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #endif
 	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), enable_buffering);
 
+	m_emu_settings->EnhanceComboBox(ui->combo_audio_downmix, emu_settings_type::AudioChannels);
+	SubscribeTooltip(ui->gb_audio_downmix, tooltips.settings.downmix);
+	// TODO: enable this setting once cellAudioOutConfigure can change downmix on the fly
+	ui->combo_audio_downmix->removeItem(static_cast<int>(audio_downmix::use_application_settings));
+
 	// Microphone Comboboxes
 	m_mics_combo[0] = ui->microphone1Box;
 	m_mics_combo[1] = ui->microphone2Box;
@@ -771,9 +776,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->convert, emu_settings_type::ConvertTo16Bit);
 	SubscribeTooltip(ui->convert, tooltips.settings.convert);
-
-	m_emu_settings->EnhanceCheckBox(ui->downmix, emu_settings_type::DownmixStereo);
-	SubscribeTooltip(ui->downmix, tooltips.settings.downmix);
 
 	m_emu_settings->EnhanceCheckBox(ui->enableBuffering, emu_settings_type::EnableBuffering);
 	SubscribeTooltip(ui->enableBuffering, tooltips.settings.enable_buffering);

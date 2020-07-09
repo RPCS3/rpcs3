@@ -1,4 +1,4 @@
-#ifndef HAVE_FAUDIO
+﻿#ifndef HAVE_FAUDIO
 #error "FAudio support disabled but still being built."
 #endif
 
@@ -10,6 +10,7 @@
 LOG_CHANNEL(FAudio_, "FAudio");
 
 FAudioBackend::FAudioBackend()
+	: AudioBackend()
 {
 	u32 res;
 
@@ -20,7 +21,7 @@ FAudioBackend::FAudioBackend()
 		return;
 	}
 
-	res = FAudio_CreateMasteringVoice(m_instance, &m_master_voice, g_cfg.audio.downmix_to_2ch ? 2 : 8, 48000, 0, 0, nullptr);
+	res = FAudio_CreateMasteringVoice(m_instance, &m_master_voice, m_channels, 48000, 0, 0, nullptr);
 	if (res)
 	{
 		FAudio_.fatal("FAudio_CreateMasteringVoice() failed(0x%08x)", res);
@@ -102,17 +103,13 @@ void FAudioBackend::Close()
 
 void FAudioBackend::Open(u32 /* num_buffers */)
 {
-	const u32 sample_size   = AudioBackend::get_sample_size();
-	const u32 channels      = AudioBackend::get_channels();
-	const u32 sampling_rate = AudioBackend::get_sampling_rate();
-
 	FAudioWaveFormatEx waveformatex;
-	waveformatex.wFormatTag      = g_cfg.audio.convert_to_u16 ? FAUDIO_FORMAT_PCM : FAUDIO_FORMAT_IEEE_FLOAT;
-	waveformatex.nChannels       = channels;
-	waveformatex.nSamplesPerSec  = sampling_rate;
-	waveformatex.nAvgBytesPerSec = static_cast<u32>(sampling_rate * channels * sample_size);
-	waveformatex.nBlockAlign     = channels * sample_size;
-	waveformatex.wBitsPerSample  = sample_size * 8;
+	waveformatex.wFormatTag      = m_convert_to_u16 ? FAUDIO_FORMAT_PCM : FAUDIO_FORMAT_IEEE_FLOAT;
+	waveformatex.nChannels       = m_channels;
+	waveformatex.nSamplesPerSec  = m_sampling_rate;
+	waveformatex.nAvgBytesPerSec = static_cast<u32>(m_sampling_rate * m_channels * m_sample_size);
+	waveformatex.nBlockAlign     = m_channels * m_sample_size;
+	waveformatex.wBitsPerSample  = m_sample_size * 8;
 	waveformatex.cbSize          = 0;
 
 	u32 res = FAudio_CreateSourceVoice(m_instance, &m_source_voice, &waveformatex, 0, FAUDIO_DEFAULT_FREQ_RATIO, nullptr, nullptr, nullptr);
@@ -140,7 +137,7 @@ bool FAudioBackend::AddData(const void* src, u32 num_samples)
 	}
 
 	FAudioBuffer buffer;
-	buffer.AudioBytes = num_samples * AudioBackend::get_sample_size();
+	buffer.AudioBytes = num_samples * m_sample_size;
 	buffer.Flags      = 0;
 	buffer.LoopBegin  = FAUDIO_NO_LOOP_REGION;
 	buffer.LoopCount  = 0;

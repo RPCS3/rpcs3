@@ -209,23 +209,23 @@ struct cfg_root : cfg::node
 
 		cfg::_enum<audio_renderer> renderer{ this, "Renderer",
 #ifdef _WIN32
-			audio_renderer::xaudio };
+			audio_renderer::xaudio, true };
 #elif HAVE_FAUDIO
-			audio_renderer::faudio };
+			audio_renderer::faudio, true };
 #else
-			audio_renderer::openal };
+			audio_renderer::openal, true };
 #endif
 
 		cfg::_bool dump_to_file{ this, "Dump to file" };
-		cfg::_bool convert_to_u16{ this, "Convert to 16 bit" };
-		cfg::_bool downmix_to_2ch{ this, "Downmix to Stereo", true };
-		cfg::_int<1, 128> startt{ this, "Start Threshold", 1 }; // TODO: used only by ALSA, should probably be removed once ALSA is upgraded
+		cfg::_bool convert_to_u16{ this, "Convert to 16 bit", false, true };
+		cfg::_enum<audio_downmix> audio_channel_downmix{ this, "Audio Channels", audio_downmix::downmix_to_stereo, true };
+		cfg::_int<1, 128> start_threshold{ this, "Start Threshold", 1, true }; // TODO: used only by ALSA, should probably be removed once ALSA is upgraded
 		cfg::_int<0, 200> volume{ this, "Master Volume", 100, true };
-		cfg::_bool enable_buffering{ this, "Enable Buffering", true };
-		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 100 };
-		cfg::_int<1, 1000> sampling_period_multiplier{ this, "Sampling Period Multiplier", 100 };
-		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false };
-		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75 };
+		cfg::_bool enable_buffering{ this, "Enable Buffering", true, true };
+		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 100, true };
+		cfg::_int<1, 1000> sampling_period_multiplier{ this, "Sampling Period Multiplier", 100, true };
+		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false, true };
+		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
 		cfg::string microphone_devices{ this, "Microphone Devices", ";;;;" };
 	} audio{ this };
