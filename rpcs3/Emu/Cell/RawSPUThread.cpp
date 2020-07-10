@@ -28,7 +28,9 @@ inline void try_start(spu_thread& spu)
 
 bool spu_thread::read_reg(const u32 addr, u32& value)
 {
-	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - this->offset - RAW_SPU_PROB_OFFSET;
+
+	spu_log.trace("RawSPU[%u]: Read32(0x%x, offset=0x%x)", index, addr, offset);
 
 	switch (offset)
 	{
@@ -157,13 +159,15 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 	}
 	}
 
-	spu_log.error("RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
+	spu_log.error("RawSPU[%u]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
 	return false;
 }
 
 bool spu_thread::write_reg(const u32 addr, const u32 value)
 {
-	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - this->offset - RAW_SPU_PROB_OFFSET;
+
+	spu_log.trace("RawSPU[%u]: Write32(0x%x, offset=0x%x, value=0x%x)", index, addr, offset, value);
 
 	switch (offset)
 	{
@@ -311,7 +315,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 	}
 	}
 
-	spu_log.error("RawSPUThread[%d]: Write32(0x%x, value=0x%x): unknown/illegal offset (0x%x)", index, addr, value, offset);
+	spu_log.error("RawSPU[%u]: Write32(0x%x, value=0x%x): unknown/illegal offset (0x%x)", index, addr, value, offset);
 	return false;
 }
 

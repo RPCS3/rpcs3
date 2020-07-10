@@ -1715,10 +1715,8 @@ void spu_recompiler::RCHCNT(spu_opcode_t op)
 	{
 		const XmmLink& vr = XmmAlloc();
 		const XmmLink& v1 = XmmAlloc();
-		c->movd(vr, SPU_OFF_32(ch_tag_upd));
-		c->pxor(v1, v1);
-		c->pcmpeqd(vr, v1);
-		c->psrld(vr, 31);
+		c->mov(addr->r32(), 1);
+		c->movd(vr, addr->r32());
 		c->pslldq(vr, 12);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 		return;
@@ -2517,7 +2515,6 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 
 			c->bind(zero);
 			c->mov(SPU_OFF_32(ch_tag_upd), qw0->r32());
-			c->mov(SPU_OFF_64(ch_tag_stat), 0);
 			c->jmp(ret);
 		});
 
