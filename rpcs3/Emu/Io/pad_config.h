@@ -69,7 +69,8 @@ struct pad_config final : cfg::node
 	cfg::_int<0, 1000000> rstickdeadzone{ this, "Right Stick Deadzone", 0 };
 	cfg::_int<0, 1000000> ltriggerthreshold{ this, "Left Trigger Threshold", 0 };
 	cfg::_int<0, 1000000> rtriggerthreshold{ this, "Right Trigger Threshold", 0 };
-	cfg::_int<0, 1000000> padsquircling{ this, "Pad Squircling Factor", 0 };
+	cfg::_int<0, 1000000> lpadsquircling{ this, "Left Pad Squircling Factor", 0 };
+	cfg::_int<0, 1000000> rpadsquircling{ this, "Right Pad Squircling Factor", 0 };
 
 	cfg::_int<0, 255> colorR{ this, "Color Value R", 0 };
 	cfg::_int<0, 255> colorG{ this, "Color Value G", 0 };
