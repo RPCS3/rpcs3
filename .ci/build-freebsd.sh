@@ -3,7 +3,7 @@
 # Pull all the submodules except llvm
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
-git submodule -q update --init $(awk '/path/ && !/llvm/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ { print $3 }' .gitmodules)
 
 # XXX Drop after Travis upgrades FreeBSD to 12.2 (see also .ci/install-freebsd.sh)
 case $(${CXX:-c++} --version) in
