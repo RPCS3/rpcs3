@@ -6435,11 +6435,29 @@ public:
 		set_vr(op.rt, sext<s8[16]>(m));
 	}
 
+	template <typename TA>
+	static auto byteswap(TA&& a)
+	{
+		return zshuffle(std::forward<TA>(a), 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+	}
+
 	void ROTQBYBI(spu_opcode_t op)
 	{
+		const auto a = get_vr<u8[16]>(op.ra);
+
+		// Data with swapped endian from a load instruction
+		if (auto [ok, v0] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		{
+			const auto as = byteswap(a);
+			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+			const auto sh = (sc + (zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3)) & 0xf;
+			set_vr(op.rt, pshufb(as, sh));
+			return;
+		}
+
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 		const auto sh = (sc - (zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3)) & 0xf;
-		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
+		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	void ROTQMBYBI(spu_opcode_t op)
@@ -6554,6 +6572,16 @@ public:
 			value_t<u8[16]> r;
 			r.value = call("spu_rotqby", &exec_rotqby, a.value, eval(extract(b, 12)).value);
 			set_vr(op.rt, r);
+			return;
+		}
+
+		// Data with swapped endian from a load instruction
+		if (auto [ok, v0] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		{
+			const auto as = byteswap(a);
+			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+			const auto sh = eval((sc + zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)) & 0xf);
+			set_vr(op.rt, pshufb(as, sh));
 			return;
 		}
 
@@ -7143,12 +7171,6 @@ public:
 		set_vr(op.rt4, (get_vr(op.rb) & c) | (get_vr(op.ra) & ~c));
 	}
 
-	template <typename TA>
-	static auto byteswap(TA&& a)
-	{
-		return zshuffle(std::forward<TA>(a), 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-	}
-
 	void SHUFB(spu_opcode_t op) //
 	{
 		if (match_vr<u8[16], u16[8], u32[4], u64[2]>(op.rc, [&](auto c, auto MP)
@@ -7273,7 +7295,18 @@ public:
 			{
 				v128 data = get_const_vector(ci, m_pos, 7000);
 
-				if (data == v128{})
+				bool all_bytes_equiv = true;
+
+				for (u32 i = 0; i < 16; i++)
+				{
+					if (data._u8[0] != data._u8[i])
+					{
+						all_bytes_equiv = false;
+						break;
+					}
+				}
+
+				if (all_bytes_equiv)
 				{
 					// See above
 					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
@@ -7291,7 +7324,18 @@ public:
 			{
 				v128 data = get_const_vector(ci, m_pos, 7000);
 
-				if (data == v128{})
+				bool all_bytes_equiv = true;
+
+				for (u32 i = 0; i < 16; i++)
+				{
+					if (data._u8[0] != data._u8[i])
+					{
+						all_bytes_equiv = false;
+						break;
+					}
+				}
+
+				if (all_bytes_equiv)
 				{
 					// See above
 					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
