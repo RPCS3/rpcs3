@@ -117,7 +117,8 @@ void xinput_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->rstickdeadzone.def    = XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE; // between 0 and 32767
 	cfg->ltriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD;    // between 0 and 255
 	cfg->rtriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD;    // between 0 and 255
-	cfg->padsquircling.def     = 8000;
+	cfg->lpadsquircling.def    = 8000;
+	cfg->rpadsquircling.def    = 8000;
 
 	// apply defaults
 	cfg->from_default();

@@ -262,11 +262,12 @@ void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l3.def = button_list.at(DS3KeyCodes::L3);
 
 	// Set default misc variables
-	cfg->lstickdeadzone.def = 40; // between 0 and 255
-	cfg->rstickdeadzone.def = 40; // between 0 and 255
+	cfg->lstickdeadzone.def    = 40; // between 0 and 255
+	cfg->rstickdeadzone.def    = 40; // between 0 and 255
 	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
 	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
-	cfg->padsquircling.def = 0;
+	cfg->lpadsquircling.def    = 0;
+	cfg->rpadsquircling.def    = 0;
 
 	// Set color value
 	cfg->colorR.def = 0;
