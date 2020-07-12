@@ -612,12 +612,7 @@ void rsx_debugger::GetMemory()
 			ea + 1)
 		{
 			u32 cmd = *vm::get_super_ptr<u32>(ea);
-			u32 count = (cmd >> 18) & 0x7ff;
-
-			if (cmd & RSX_METHOD_NON_METHOD_CMD_MASK)
-			{
-				count = 0;
-			}
+			const u32 count = cmd & RSX_METHOD_NON_METHOD_CMD_MASK ? 0 : (cmd >> 18) & 0x7ff;
 
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
 			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr)));
