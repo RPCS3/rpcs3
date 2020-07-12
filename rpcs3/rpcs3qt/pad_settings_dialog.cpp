@@ -881,6 +881,15 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		ui->stick_multi_right->setRange(std::stod(stick_multi_range_right.front()) / 100.0, std::stod(stick_multi_range_right.back()) / 100.0);
 		ui->stick_multi_right->setValue(m_handler_cfg.rstickmultiplier / 100.0);
 
+		// Update Squircle Factors
+		std::vector<std::string> squircle_range_left = m_handler_cfg.lpadsquircling.to_list();
+		ui->squircle_left->setRange(std::stoi(squircle_range_left.front()), std::stoi(squircle_range_left.back()));
+		ui->squircle_left->setValue(m_handler_cfg.lpadsquircling);
+
+		std::vector<std::string> squircle_range_right = m_handler_cfg.rpadsquircling.to_list();
+		ui->squircle_right->setRange(std::stoi(squircle_range_right.front()), std::stoi(squircle_range_right.back()));
+		ui->squircle_right->setValue(m_handler_cfg.rpadsquircling);
+
 		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), lx, ly, m_handler_cfg.lstickmultiplier / 100.0);
 		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry, m_handler_cfg.rstickmultiplier / 100.0);
 
@@ -1391,6 +1400,8 @@ void pad_settings_dialog::SaveProfile()
 
 	m_handler_cfg.lstickmultiplier.set(ui->stick_multi_left->value() * 100);
 	m_handler_cfg.rstickmultiplier.set(ui->stick_multi_right->value() * 100);
+	m_handler_cfg.lpadsquircling.set(ui->squircle_left->value());
+	m_handler_cfg.rpadsquircling.set(ui->squircle_right->value());
 
 	if (m_handler->has_rumble())
 	{
