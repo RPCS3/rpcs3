@@ -214,8 +214,8 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	ui->left_stack->setCurrentIndex(0);
 	ui->right_stack->setCurrentIndex(0);
 
-	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), 0, 0, 0);
-	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0, 0);
+	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), 0, 0, 0, 0);
+	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0, 0, 0);
 
 	show();
 
@@ -347,12 +347,12 @@ void pad_settings_dialog::InitButtons()
 
 	connect(ui->slider_stick_left, &QSlider::valueChanged, [&](int value)
 	{
-		RepaintPreviewLabel(ui->preview_stick_left, value, ui->slider_stick_left->size().width(), lx, ly, ui->stick_multi_left->value());
+		RepaintPreviewLabel(ui->preview_stick_left, value, ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
 	});
 
 	connect(ui->slider_stick_right, &QSlider::valueChanged, [&](int value)
 	{
-		RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->size().width(), rx, ry, ui->stick_multi_right->value());
+		RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
 	});
 
 	// Open LED settings
@@ -381,15 +381,15 @@ void pad_settings_dialog::InitButtons()
 			ui->preview_trigger_left->setValue(preview_values[0]);
 			ui->preview_trigger_right->setValue(preview_values[1]);
 
-			if (lx != preview_values[2] || ly != preview_values[3])
+			if (m_lx != preview_values[2] || m_ly != preview_values[3])
 			{
-				lx = preview_values[2], ly = preview_values[3];
-				RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), lx, ly, ui->stick_multi_left->value());
+				m_lx = preview_values[2], m_ly = preview_values[3];
+				RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
 			}
-			if (rx != preview_values[4] || ry != preview_values[5])
+			if (m_rx != preview_values[4] || m_ry != preview_values[5])
 			{
-				rx = preview_values[4], ry = preview_values[5];
-				RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry, ui->stick_multi_right->value());
+				m_rx = preview_values[4], m_ry = preview_values[5];
+				RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
 			}
 		}
 
@@ -592,18 +592,37 @@ void pad_settings_dialog::ReactivateButtons()
 	ui->chooseProduct->setFocusPolicy(Qt::WheelFocus);
 }
 
-void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, double multiplier)
+void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier)
 {
 	const int deadzone_max = m_handler ? m_handler->thumb_max : 255; // 255 used as fallback. The deadzone circle shall be small.
+
+	constexpr qreal relative_size = 0.9;
 	const qreal device_pixel_ratio = devicePixelRatioF();
 	const qreal scaled_width = desired_width * device_pixel_ratio;
 	const qreal origin = desired_width / 2.0;
-	const qreal relative_size = 0.8;
 	const qreal outer_circle_diameter = relative_size * desired_width;
 	const qreal inner_circle_diameter = outer_circle_diameter * deadzone / deadzone_max;
 	const qreal outer_circle_radius = outer_circle_diameter / 2.0;
-	const qreal stick_x = outer_circle_radius * x * multiplier / deadzone_max;
-	const qreal stick_y = outer_circle_radius * -y * multiplier / deadzone_max;
+	const qreal inner_circle_radius = inner_circle_diameter / 2.0;
+	const qreal stick_x = std::clamp(outer_circle_radius * x * multiplier / deadzone_max, -outer_circle_radius, outer_circle_radius);
+	const qreal stick_y = std::clamp(outer_circle_radius * -y * multiplier / deadzone_max, -outer_circle_radius, outer_circle_radius);
+
+	u16 real_x = 0;
+	u16 real_y = 0;
+
+	if (m_handler)
+	{
+		const int m_in = multiplier * 100.0;
+		const u16 normal_x = m_handler->NormalizeStickInput(static_cast<u16>(std::abs(x)), deadzone, m_in, true);
+		const u16 normal_y = m_handler->NormalizeStickInput(static_cast<u16>(std::abs(y)), deadzone, m_in, true);
+		const s32 x_in = x >= 0 ? normal_x : 0 - normal_x;
+		const s32 y_in = y >= 0 ? normal_y : 0 - normal_y;
+		m_handler->convert_stick_values(real_x, real_y, x_in, y_in, deadzone, squircle);
+	}
+
+	constexpr qreal real_max = 126;
+	const qreal ingame_x = std::clamp(outer_circle_radius * (static_cast<qreal>(real_x) - real_max) / real_max, -outer_circle_radius, outer_circle_radius);
+	const qreal ingame_y = std::clamp(outer_circle_radius * -(static_cast<qreal>(real_y) - real_max) / real_max, -outer_circle_radius, outer_circle_radius);
 
 	// Set up the canvas for our work of art
 	QPixmap pixmap(scaled_width, scaled_width);
@@ -613,20 +632,31 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desir
 	// Configure the painter and set its origin
 	QPainter painter(&pixmap);
 	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.setRenderHint(QPainter::TextAntialiasing, true);
 	painter.translate(origin, origin);
 	painter.setBrush(QBrush(Qt::white));
 
+	// Draw a black outer squircle that roughly represents the DS3's max values
+	QPainterPath path;
+	path.addRoundedRect(QRectF(-outer_circle_radius, -outer_circle_radius, outer_circle_diameter, outer_circle_diameter), 5, 5, Qt::SizeMode::RelativeSize);
+	painter.setPen(QPen(Qt::black, 1.0));
+	painter.drawPath(path);
+
 	// Draw a black outer circle that represents the maximum for the deadzone
-	painter.setPen(QPen(Qt::black, 2));
-	painter.drawEllipse(QRectF(-outer_circle_diameter / 2.0, -outer_circle_diameter / 2.0, outer_circle_diameter, outer_circle_diameter));
+	painter.setPen(QPen(Qt::black, 1.0));
+	painter.drawEllipse(QRectF(-outer_circle_radius, -outer_circle_radius, outer_circle_diameter, outer_circle_diameter));
 
 	// Draw a red inner circle that represents the current deadzone
-	painter.setPen(QPen(Qt::red, 2));
-	painter.drawEllipse(QRectF(-inner_circle_diameter / 2.0, -inner_circle_diameter / 2.0, inner_circle_diameter, inner_circle_diameter));
+	painter.setPen(QPen(Qt::red, 1.0));
+	painter.drawEllipse(QRectF(-inner_circle_radius, -inner_circle_radius, inner_circle_diameter, inner_circle_diameter));
 
 	// Draw a blue dot that represents the current stick orientation
-	painter.setPen(QPen(Qt::blue, 2));
-	painter.drawEllipse(QRectF(stick_x, stick_y, 1, 1));
+	painter.setPen(QPen(Qt::blue, 2.0));
+	painter.drawEllipse(QRectF(stick_x - 1.0, stick_y - 1.0, 1.0, 1.0));
+
+	// Draw a red dot that represents the current ingame stick orientation
+	painter.setPen(QPen(Qt::red, 2.0));
+	painter.drawEllipse(QRectF(ingame_x - 1.0, ingame_y - 1.0, 1.0, 1.0));
 
 	l->setPixmap(pixmap);
 }
@@ -890,8 +920,8 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		ui->squircle_right->setRange(std::stoi(squircle_range_right.front()), std::stoi(squircle_range_right.back()));
 		ui->squircle_right->setValue(m_handler_cfg.rpadsquircling);
 
-		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), lx, ly, m_handler_cfg.lstickmultiplier / 100.0);
-		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry, m_handler_cfg.rstickmultiplier / 100.0);
+		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, m_handler_cfg.lpadsquircling, m_handler_cfg.lstickmultiplier / 100.0);
+		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, m_handler_cfg.rpadsquircling, m_handler_cfg.rstickmultiplier / 100.0);
 
 		// Apply stored/default LED settings to the device
 		m_enable_led = m_handler->has_led();

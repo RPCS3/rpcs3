@@ -119,10 +119,10 @@ private:
 	std::map<int /*id*/, pad_button /*info*/> m_cfg_entries;
 
 	// Real time stick values
-	int lx = 0;
-	int ly = 0;
-	int rx = 0;
-	int ry = 0;
+	int m_lx = 0;
+	int m_ly = 0;
+	int m_rx = 0;
+	int m_ry = 0;
 
 	// Rumble
 	s32 m_min_force = 0;
@@ -171,7 +171,7 @@ private:
 	void ChangeProfile();
 
 	/** Repaints a stick deadzone preview label */
-	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, double multiplier);
+	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier);
 
 	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
 
