@@ -611,7 +611,7 @@ void rsx_debugger::GetMemory()
 		if (const u32 ea = rsx::get_current_renderer()->iomap_table.get_addr(addr);
 			ea + 1)
 		{
-			u32 cmd = *vm::get_super_ptr<u32>(ea);
+			const u32 cmd = *vm::get_super_ptr<u32>(ea);
 			const u32 count = cmd & RSX_METHOD_NON_METHOD_CMD_MASK ? 0 : (cmd >> 18) & 0x7ff;
 
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
