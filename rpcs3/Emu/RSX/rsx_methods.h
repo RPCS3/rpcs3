@@ -88,6 +88,7 @@ namespace rsx
 		// Add a new draw command
 		void append_draw_command(const draw_range_t& range)
 		{
+			current_range_index = draw_command_ranges.size();
 			draw_command_ranges.push_back(range);
 		}
 
@@ -97,6 +98,7 @@ namespace rsx
 			auto range_It = draw_command_ranges.begin();
 			std::advance(range_It, index);
 
+			current_range_index = index;
 			draw_command_ranges.insert(range_It, range);
 
 			// Update all barrier draw ids after this one
@@ -168,6 +170,9 @@ namespace rsx
 		 */
 		void compile()
 		{
+			// End draw call append mode
+			current_range_index = ~0u;
+
 			// TODO
 		}
 
@@ -182,7 +187,7 @@ namespace rsx
 
 			if (!draw_command_ranges.empty())
 			{
-				auto& last = draw_command_ranges.back();
+				auto& last = draw_command_ranges[current_range_index];
 
 				if (last.count == 0)
 				{
