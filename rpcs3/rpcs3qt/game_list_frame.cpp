@@ -1007,7 +1007,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(pad_configure, &QAction::triggered, [=, this]()
 	{
-		pad_settings_dialog dlg(this, &current_game);
+		pad_settings_dialog dlg(m_gui_settings, this, &current_game);
 
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomPadConfig)
 		{
