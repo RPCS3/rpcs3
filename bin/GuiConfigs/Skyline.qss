@@ -482,10 +482,6 @@ QSpinBox:hover, QDoubleSpinBox:hover {
 	color: #455971;
 }
 
-QSpinBox::up-button, QSpinBox::down-button, QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
-	background: transparent;
-}
-
 QSpinBox:disabled, QDoubleSpinBox:disabled {
 	background-color: #b3b3b3;
 	color: #455971;
