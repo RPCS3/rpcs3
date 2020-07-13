@@ -112,6 +112,7 @@ namespace gui
 	const QString notes        = "Notes";
 	const QString titles       = "Titles";
 	const QString localization = "Localization";
+	const QString pad_settings = "PadSettings";
 
 	const QColor gl_icon_color = QColor(240, 240, 240, 255);
 
@@ -226,6 +227,8 @@ namespace gui
 	const gui_save um_active_user = gui_save(users, "active_user", "00000001");
 
 	const gui_save loc_language = gui_save(localization, "language", "en");
+
+	const gui_save pads_show_emulated = gui_save(pad_settings, "show_emulated_values", false);
 }
 
 /** Class for GUI settings..

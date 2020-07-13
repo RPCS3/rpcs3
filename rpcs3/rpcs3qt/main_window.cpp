@@ -1530,7 +1530,7 @@ void main_window::CreateConnects()
 
 	auto open_pad_settings = [this]
 	{
-		pad_settings_dialog dlg(this);
+		pad_settings_dialog dlg(m_gui_settings, this);
 		dlg.exec();
 	};
 

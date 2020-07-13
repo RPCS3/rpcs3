@@ -12,6 +12,7 @@
 #include "pad_led_settings_dialog.h"
 #include "ui_pad_settings_dialog.h"
 #include "tooltips.h"
+#include "gui_settings.h"
 
 #include "Emu/System.h"
 #include "Emu/Io/Null/NullPadHandler.h"
@@ -55,8 +56,8 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 	return true;
 }
 
-pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
-	: QDialog(parent), ui(new Ui::pad_settings_dialog)
+pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget *parent, const GameInfo *game)
+	: QDialog(parent), ui(new Ui::pad_settings_dialog), m_gui_settings(gui_settings)
 {
 	pad::set_enabled(false);
 
@@ -203,6 +204,15 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	ui->chooseClass->addItem(tr("Navigation"));     // CELL_PAD_PCLASS_TYPE_NAVIGATION = 0x05,
 
 	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &pad_settings_dialog::HandleDeviceClassChange);
+
+	ui->chb_show_emulated_values->setChecked(m_gui_settings->GetValue(gui::pads_show_emulated).toBool());
+
+	connect(ui->chb_show_emulated_values, &QCheckBox::clicked, [this](bool checked)
+	{
+		m_gui_settings->SetValue(gui::pads_show_emulated, checked);
+		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, m_handler_cfg.lpadsquircling, m_handler_cfg.lstickmultiplier / 100.0);
+		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, m_handler_cfg.rpadsquircling, m_handler_cfg.rstickmultiplier / 100.0);
+	});
 
 	// Initialize configurable buttons
 	InitButtons();
@@ -624,22 +634,10 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desir
 	const qreal stick_x = std::clamp(outer_circle_radius * x * multiplier / deadzone_max, -outer_circle_radius, outer_circle_radius);
 	const qreal stick_y = std::clamp(outer_circle_radius * -y * multiplier / deadzone_max, -outer_circle_radius, outer_circle_radius);
 
-	u16 real_x = 0;
-	u16 real_y = 0;
+	const bool show_emulated_values = ui->chb_show_emulated_values->isChecked();
 
-	if (m_handler)
-	{
-		const int m_in = multiplier * 100.0;
-		const u16 normal_x = m_handler->NormalizeStickInput(static_cast<u16>(std::abs(x)), deadzone, m_in, true);
-		const u16 normal_y = m_handler->NormalizeStickInput(static_cast<u16>(std::abs(y)), deadzone, m_in, true);
-		const s32 x_in = x >= 0 ? normal_x : 0 - normal_x;
-		const s32 y_in = y >= 0 ? normal_y : 0 - normal_y;
-		m_handler->convert_stick_values(real_x, real_y, x_in, y_in, deadzone, squircle);
-	}
-
-	constexpr qreal real_max = 126;
-	const qreal ingame_x = std::clamp(outer_circle_radius * (static_cast<qreal>(real_x) - real_max) / real_max, -outer_circle_radius, outer_circle_radius);
-	const qreal ingame_y = std::clamp(outer_circle_radius * -(static_cast<qreal>(real_y) - real_max) / real_max, -outer_circle_radius, outer_circle_radius);
+	qreal ingame_x;
+	qreal ingame_y;
 
 	// Set up the canvas for our work of art
 	QPixmap pixmap(scaled_width, scaled_width);
@@ -653,11 +651,31 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desir
 	painter.translate(origin, origin);
 	painter.setBrush(QBrush(Qt::white));
 
-	// Draw a black outer squircle that roughly represents the DS3's max values
-	QPainterPath path;
-	path.addRoundedRect(QRectF(-outer_circle_radius, -outer_circle_radius, outer_circle_diameter, outer_circle_diameter), 5, 5, Qt::SizeMode::RelativeSize);
-	painter.setPen(QPen(Qt::black, 1.0));
-	painter.drawPath(path);
+	if (show_emulated_values)
+	{
+		u16 real_x = 0;
+		u16 real_y = 0;
+
+		if (m_handler)
+		{
+			const int m_in = multiplier * 100.0;
+			const u16 normal_x = m_handler->NormalizeStickInput(static_cast<u16>(std::abs(x)), deadzone, m_in, true);
+			const u16 normal_y = m_handler->NormalizeStickInput(static_cast<u16>(std::abs(y)), deadzone, m_in, true);
+			const s32 x_in = x >= 0 ? normal_x : 0 - normal_x;
+			const s32 y_in = y >= 0 ? normal_y : 0 - normal_y;
+			m_handler->convert_stick_values(real_x, real_y, x_in, y_in, deadzone, squircle);
+		}
+
+		constexpr qreal real_max = 126;
+		ingame_x = std::clamp(outer_circle_radius * (static_cast<qreal>(real_x) - real_max) / real_max, -outer_circle_radius, outer_circle_radius);
+		ingame_y = std::clamp(outer_circle_radius * -(static_cast<qreal>(real_y) - real_max) / real_max, -outer_circle_radius, outer_circle_radius);
+
+		// Draw a black outer squircle that roughly represents the DS3's max values
+		QPainterPath path;
+		path.addRoundedRect(QRectF(-outer_circle_radius, -outer_circle_radius, outer_circle_diameter, outer_circle_diameter), 5, 5, Qt::SizeMode::RelativeSize);
+		painter.setPen(QPen(Qt::black, 1.0));
+		painter.drawPath(path);
+	}
 
 	// Draw a black outer circle that represents the maximum for the deadzone
 	painter.setPen(QPen(Qt::black, 1.0));
@@ -669,11 +687,14 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desir
 
 	// Draw a blue dot that represents the current stick orientation
 	painter.setPen(QPen(Qt::blue, 2.0));
-	painter.drawEllipse(QRectF(stick_x - 1.0, stick_y - 1.0, 1.0, 1.0));
+	painter.drawEllipse(QRectF(stick_x - 0.5, stick_y - 0.5, 1.0, 1.0));
 
-	// Draw a red dot that represents the current ingame stick orientation
-	painter.setPen(QPen(Qt::red, 2.0));
-	painter.drawEllipse(QRectF(ingame_x - 1.0, ingame_y - 1.0, 1.0, 1.0));
+	if (show_emulated_values)
+	{
+		// Draw a red dot that represents the current ingame stick orientation
+		painter.setPen(QPen(Qt::red, 2.0));
+		painter.drawEllipse(QRectF(ingame_x - 0.5, ingame_y - 0.5, 1.0, 1.0));
+	}
 
 	l->setPixmap(pixmap);
 }

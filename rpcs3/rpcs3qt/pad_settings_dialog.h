@@ -9,6 +9,7 @@
 #include "Emu/Io/pad_config.h"
 #include "Emu/GameInfo.h"
 
+class gui_settings;
 class PadHandlerBase;
 
 namespace Ui
@@ -87,7 +88,7 @@ class pad_settings_dialog : public QDialog
 	const QString Disconnected_suffix = tr(" (disconnected)");
 
 public:
-	explicit pad_settings_dialog(QWidget *parent = nullptr, const GameInfo *game = nullptr);
+	explicit pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget *parent = nullptr, const GameInfo *game = nullptr);
 	~pad_settings_dialog();
 
 public Q_SLOTS:
@@ -105,6 +106,7 @@ private Q_SLOTS:
 private:
 	Ui::pad_settings_dialog *ui;
 	std::string m_title_id;
+	std::shared_ptr<gui_settings> m_gui_settings;
 
 	// Capabilities
 	bool m_enable_buttons{ false };
