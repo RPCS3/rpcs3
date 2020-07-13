@@ -3,6 +3,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QPainter>
+#include <QPainterPath>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QColorDialog>
