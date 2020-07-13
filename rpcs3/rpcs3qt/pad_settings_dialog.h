@@ -108,6 +108,10 @@ private:
 	std::string m_title_id;
 	std::shared_ptr<gui_settings> m_gui_settings;
 
+	// Tooltips
+	QString m_description;
+	QHash<QObject*, QString> m_descriptions;
+
 	// Capabilities
 	bool m_enable_buttons{ false };
 	bool m_enable_rumble{ false };
@@ -184,6 +188,12 @@ private:
 
 	/** Resizes the dialog. We need to do this because the main scroll area can't determine the size on its own. */
 	void ResizeDialog();
+
+	/** Register a widget for tooltips */
+	void SubscribeTooltip(QObject* object, const QString& tooltip);
+
+	/** Used to keep all tooltip subscriptions in one place. */
+	void SubscribeTooltips();
 
 protected:
 	/** Handle keyboard handler input */
