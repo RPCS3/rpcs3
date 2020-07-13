@@ -6,6 +6,7 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QColorDialog>
+#include <QPainterPath>
 
 #include "qt_utils.h"
 #include "pad_settings_dialog.h"
