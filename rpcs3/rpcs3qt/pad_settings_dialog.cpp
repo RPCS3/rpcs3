@@ -404,6 +404,7 @@ void pad_settings_dialog::InitButtons()
 		}
 
 		cfg_log.notice("get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
+
 		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end)
 		{
 			m_cfg_entries[m_button_id].key  = name;
@@ -423,6 +424,22 @@ void pad_settings_dialog::InitButtons()
 		if (m_enable_battery)
 		{
 			ui->pb_battery->setValue(0);
+		}
+		if (m_handler->has_deadzones())
+		{
+			ui->preview_trigger_left->setValue(0);
+			ui->preview_trigger_right->setValue(0);
+
+			if (m_lx != 0 || m_ly != 0)
+			{
+				m_lx = 0, m_ly = 0;
+				RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
+			}
+			if (m_rx != 0 || m_ry != 0)
+			{
+				m_rx = 0, m_ry = 0;
+				RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
+			}
 		}
 	};
 
