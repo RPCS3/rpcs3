@@ -80,14 +80,8 @@ QToolTip {
 }
 
 
-/* CG Disasm and Trophy Manager: background-image doesn't work, use static color */
-QWidget#cg_disasm, QWidget#trophy_manager {
-	background: #b3ac98;
-}
-
-
-/* Main Window and Dialogs */
-QDialog, QMainWindow#main_window {
+/* Main Window, Dialogs and some Dialogs that are actually widgets */
+QDialog, QWidget#trophy_manager, QWidget#cg_disasm, QMainWindow#main_window {
 	border-image: url("GuiConfigs/YoRHa-background.jpg");
 }
 

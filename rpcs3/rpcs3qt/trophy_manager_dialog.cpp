@@ -47,6 +47,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	setWindowTitle(tr("Trophy Manager"));
 	setObjectName("trophy_manager");
 	setAttribute(Qt::WA_DeleteOnClose);
+	setAttribute(Qt::WA_StyledBackground);
 
 	m_game_icon_size_index   = m_gui_settings->GetValue(gui::tr_game_iconSize).toInt();
 	m_icon_height            = m_gui_settings->GetValue(gui::tr_icon_height).toInt();
