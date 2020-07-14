@@ -3,6 +3,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QPainter>
+#include <QPainterPath>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QColorDialog>
@@ -216,6 +217,9 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 
 	// Initialize configurable buttons
 	InitButtons();
+
+	// Initialize tooltips
+	SubscribeTooltips();
 
 	// Repaint controller image
 	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(*ui->l_controller->pixmap(), QColor(), gui::utils::get_label_color("l_controller"), false, true));
@@ -867,6 +871,26 @@ bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 	{
 		mouseMoveEvent(static_cast<QMouseEvent*>(event));
 	}
+
+	if (event->type() == QEvent::Enter || event->type() == QEvent::Leave)
+	{
+		if (ui->l_description && m_descriptions.contains(object))
+		{
+			if (event->type() == QEvent::Enter)
+			{
+				// Check for visibility when entering a widget (needed in case of overlapping widgets in a QStackedWidget for example)
+				if (const auto widget = qobject_cast<QWidget*>(object); widget && widget->isVisible())
+				{
+					ui->l_description->setText(m_descriptions[object]);
+				}
+			}
+			else if (event->type() == QEvent::Leave)
+			{
+				ui->l_description->setText(m_description);
+			}
+		}
+	}
+
 	return QDialog::eventFilter(object, event);
 }
 
@@ -1145,45 +1169,44 @@ void pad_settings_dialog::ChangeInputType()
 	Tooltips tooltips;
 
 	// Change the description
-	QString description;
 	switch (m_handler->m_type)
 	{
 	case pad_handler::null:
 		if (is_ldd_pad)
-			description = tooltips.gamepad_settings.ldd_pad;
+			m_description = tooltips.gamepad_settings.ldd_pad;
 		else
-			description = tooltips.gamepad_settings.null;
+			m_description = tooltips.gamepad_settings.null;
 		break;
 	case pad_handler::keyboard:
-		description = tooltips.gamepad_settings.keyboard; break;
+		m_description = tooltips.gamepad_settings.keyboard; break;
 #ifdef _WIN32
 	case pad_handler::xinput:
-		description = tooltips.gamepad_settings.xinput; break;
+		m_description = tooltips.gamepad_settings.xinput; break;
 	case pad_handler::mm:
-		description = tooltips.gamepad_settings.mmjoy; break;
+		m_description = tooltips.gamepad_settings.mmjoy; break;
 	case pad_handler::ds3:
-		description = tooltips.gamepad_settings.ds3_windows; break;
+		m_description = tooltips.gamepad_settings.ds3_windows; break;
 	case pad_handler::ds4:
-		description = tooltips.gamepad_settings.ds4_windows; break;
+		m_description = tooltips.gamepad_settings.ds4_windows; break;
 #elif __linux__
 	case pad_handler::ds3:
-		description = tooltips.gamepad_settings.ds3_linux; break;
+		m_description = tooltips.gamepad_settings.ds3_linux; break;
 	case pad_handler::ds4:
-		description = tooltips.gamepad_settings.ds4_linux; break;
+		m_description = tooltips.gamepad_settings.ds4_linux; break;
 #else
 	case pad_handler::ds3:
-		description = tooltips.gamepad_settings.ds3_other; break;
+		m_description = tooltips.gamepad_settings.ds3_other; break;
 	case pad_handler::ds4:
-		description = tooltips.gamepad_settings.ds4_other; break;
+		m_description = tooltips.gamepad_settings.ds4_other; break;
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
-		description = tooltips.gamepad_settings.evdev; break;
+		m_description = tooltips.gamepad_settings.evdev; break;
 #endif
 	default:
-		description = "";
+		m_description = "";
 	}
-	ui->l_description->setText(description);
+	ui->l_description->setText(m_description);
 
 	// change our contextual widgets
 	ui->left_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
@@ -1587,4 +1610,26 @@ void pad_settings_dialog::ResizeDialog()
 
 	resize(tabwidget_size + buttons_size + margin_size + spacing_size);
 	setMaximumSize(size());
+}
+
+void pad_settings_dialog::SubscribeTooltip(QObject* object, const QString& tooltip)
+{
+	m_descriptions[object] = tooltip;
+	object->installEventFilter(this);
+}
+
+void pad_settings_dialog::SubscribeTooltips()
+{
+	// Localized tooltips
+	Tooltips tooltips;
+
+	SubscribeTooltip(ui->gb_squircle, tooltips.gamepad_settings.squircle_factor);
+	SubscribeTooltip(ui->gb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
+	SubscribeTooltip(ui->gb_vibration, tooltips.gamepad_settings.vibration);
+	SubscribeTooltip(ui->gb_sticks, tooltips.gamepad_settings.stick_deadzones);
+	SubscribeTooltip(ui->gb_stick_preview, tooltips.gamepad_settings.emulated_preview);
+	SubscribeTooltip(ui->gb_triggers, tooltips.gamepad_settings.trigger_deadzones);
+	SubscribeTooltip(ui->gb_stick_lerp, tooltips.gamepad_settings.stick_lerp);
+	SubscribeTooltip(ui->gb_mouse_accel, tooltips.gamepad_settings.mouse_acceleration);
+	SubscribeTooltip(ui->gb_mouse_dz, tooltips.gamepad_settings.mouse_deadzones);
 }
