@@ -3,6 +3,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QPainter>
+#include <QPainterPath>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QColorDialog>
@@ -12,6 +13,7 @@
 #include "pad_led_settings_dialog.h"
 #include "ui_pad_settings_dialog.h"
 #include "tooltips.h"
+#include "gui_settings.h"
 
 #include "Emu/System.h"
 #include "Emu/Io/Null/NullPadHandler.h"
@@ -55,8 +57,8 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 	return true;
 }
 
-pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
-	: QDialog(parent), ui(new Ui::pad_settings_dialog)
+pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget *parent, const GameInfo *game)
+	: QDialog(parent), ui(new Ui::pad_settings_dialog), m_gui_settings(gui_settings)
 {
 	pad::set_enabled(false);
 
@@ -204,8 +206,20 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 
 	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &pad_settings_dialog::HandleDeviceClassChange);
 
+	ui->chb_show_emulated_values->setChecked(m_gui_settings->GetValue(gui::pads_show_emulated).toBool());
+
+	connect(ui->chb_show_emulated_values, &QCheckBox::clicked, [this](bool checked)
+	{
+		m_gui_settings->SetValue(gui::pads_show_emulated, checked);
+		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, m_handler_cfg.lpadsquircling, m_handler_cfg.lstickmultiplier / 100.0);
+		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, m_handler_cfg.rpadsquircling, m_handler_cfg.rstickmultiplier / 100.0);
+	});
+
 	// Initialize configurable buttons
 	InitButtons();
+
+	// Initialize tooltips
+	SubscribeTooltips();
 
 	// Repaint controller image
 	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(*ui->l_controller->pixmap(), QColor(), gui::utils::get_label_color("l_controller"), false, true));
@@ -214,8 +228,8 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	ui->left_stack->setCurrentIndex(0);
 	ui->right_stack->setCurrentIndex(0);
 
-	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), 0, 0, 0);
-	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0, 0);
+	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), 0, 0, 0, 0);
+	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0, 0, 0);
 
 	show();
 
@@ -347,12 +361,12 @@ void pad_settings_dialog::InitButtons()
 
 	connect(ui->slider_stick_left, &QSlider::valueChanged, [&](int value)
 	{
-		RepaintPreviewLabel(ui->preview_stick_left, value, ui->slider_stick_left->size().width(), lx, ly, ui->stick_multi_left->value());
+		RepaintPreviewLabel(ui->preview_stick_left, value, ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
 	});
 
 	connect(ui->slider_stick_right, &QSlider::valueChanged, [&](int value)
 	{
-		RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->size().width(), rx, ry, ui->stick_multi_right->value());
+		RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
 	});
 
 	// Open LED settings
@@ -381,15 +395,15 @@ void pad_settings_dialog::InitButtons()
 			ui->preview_trigger_left->setValue(preview_values[0]);
 			ui->preview_trigger_right->setValue(preview_values[1]);
 
-			if (lx != preview_values[2] || ly != preview_values[3])
+			if (m_lx != preview_values[2] || m_ly != preview_values[3])
 			{
-				lx = preview_values[2], ly = preview_values[3];
-				RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), lx, ly, ui->stick_multi_left->value());
+				m_lx = preview_values[2], m_ly = preview_values[3];
+				RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
 			}
-			if (rx != preview_values[4] || ry != preview_values[5])
+			if (m_rx != preview_values[4] || m_ry != preview_values[5])
 			{
-				rx = preview_values[4], ry = preview_values[5];
-				RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry, ui->stick_multi_right->value());
+				m_rx = preview_values[4], m_ry = preview_values[5];
+				RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
 			}
 		}
 
@@ -404,6 +418,7 @@ void pad_settings_dialog::InitButtons()
 		}
 
 		cfg_log.notice("get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
+
 		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end)
 		{
 			m_cfg_entries[m_button_id].key  = name;
@@ -423,6 +438,22 @@ void pad_settings_dialog::InitButtons()
 		if (m_enable_battery)
 		{
 			ui->pb_battery->setValue(0);
+		}
+		if (m_handler->has_deadzones())
+		{
+			ui->preview_trigger_left->setValue(0);
+			ui->preview_trigger_right->setValue(0);
+
+			if (m_lx != 0 || m_ly != 0)
+			{
+				m_lx = 0, m_ly = 0;
+				RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
+			}
+			if (m_rx != 0 || m_ry != 0)
+			{
+				m_rx = 0, m_ry = 0;
+				RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
+			}
 		}
 	};
 
@@ -592,18 +623,25 @@ void pad_settings_dialog::ReactivateButtons()
 	ui->chooseProduct->setFocusPolicy(Qt::WheelFocus);
 }
 
-void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, double multiplier)
+void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier)
 {
 	const int deadzone_max = m_handler ? m_handler->thumb_max : 255; // 255 used as fallback. The deadzone circle shall be small.
+
+	constexpr qreal relative_size = 0.9;
 	const qreal device_pixel_ratio = devicePixelRatioF();
 	const qreal scaled_width = desired_width * device_pixel_ratio;
 	const qreal origin = desired_width / 2.0;
-	const qreal relative_size = 0.8;
 	const qreal outer_circle_diameter = relative_size * desired_width;
 	const qreal inner_circle_diameter = outer_circle_diameter * deadzone / deadzone_max;
 	const qreal outer_circle_radius = outer_circle_diameter / 2.0;
-	const qreal stick_x = outer_circle_radius * x * multiplier / deadzone_max;
-	const qreal stick_y = outer_circle_radius * -y * multiplier / deadzone_max;
+	const qreal inner_circle_radius = inner_circle_diameter / 2.0;
+	const qreal stick_x = std::clamp(outer_circle_radius * x * multiplier / deadzone_max, -outer_circle_radius, outer_circle_radius);
+	const qreal stick_y = std::clamp(outer_circle_radius * -y * multiplier / deadzone_max, -outer_circle_radius, outer_circle_radius);
+
+	const bool show_emulated_values = ui->chb_show_emulated_values->isChecked();
+
+	qreal ingame_x;
+	qreal ingame_y;
 
 	// Set up the canvas for our work of art
 	QPixmap pixmap(scaled_width, scaled_width);
@@ -613,20 +651,54 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desir
 	// Configure the painter and set its origin
 	QPainter painter(&pixmap);
 	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.setRenderHint(QPainter::TextAntialiasing, true);
 	painter.translate(origin, origin);
 	painter.setBrush(QBrush(Qt::white));
 
+	if (show_emulated_values)
+	{
+		u16 real_x = 0;
+		u16 real_y = 0;
+
+		if (m_handler)
+		{
+			const int m_in = multiplier * 100.0;
+			const u16 normal_x = m_handler->NormalizeStickInput(static_cast<u16>(std::abs(x)), deadzone, m_in, true);
+			const u16 normal_y = m_handler->NormalizeStickInput(static_cast<u16>(std::abs(y)), deadzone, m_in, true);
+			const s32 x_in = x >= 0 ? normal_x : 0 - normal_x;
+			const s32 y_in = y >= 0 ? normal_y : 0 - normal_y;
+			m_handler->convert_stick_values(real_x, real_y, x_in, y_in, deadzone, squircle);
+		}
+
+		constexpr qreal real_max = 126;
+		ingame_x = std::clamp(outer_circle_radius * (static_cast<qreal>(real_x) - real_max) / real_max, -outer_circle_radius, outer_circle_radius);
+		ingame_y = std::clamp(outer_circle_radius * -(static_cast<qreal>(real_y) - real_max) / real_max, -outer_circle_radius, outer_circle_radius);
+
+		// Draw a black outer squircle that roughly represents the DS3's max values
+		QPainterPath path;
+		path.addRoundedRect(QRectF(-outer_circle_radius, -outer_circle_radius, outer_circle_diameter, outer_circle_diameter), 5, 5, Qt::SizeMode::RelativeSize);
+		painter.setPen(QPen(Qt::black, 1.0));
+		painter.drawPath(path);
+	}
+
 	// Draw a black outer circle that represents the maximum for the deadzone
-	painter.setPen(QPen(Qt::black, 2));
-	painter.drawEllipse(QRectF(-outer_circle_diameter / 2.0, -outer_circle_diameter / 2.0, outer_circle_diameter, outer_circle_diameter));
+	painter.setPen(QPen(Qt::black, 1.0));
+	painter.drawEllipse(QRectF(-outer_circle_radius, -outer_circle_radius, outer_circle_diameter, outer_circle_diameter));
 
 	// Draw a red inner circle that represents the current deadzone
-	painter.setPen(QPen(Qt::red, 2));
-	painter.drawEllipse(QRectF(-inner_circle_diameter / 2.0, -inner_circle_diameter / 2.0, inner_circle_diameter, inner_circle_diameter));
+	painter.setPen(QPen(Qt::red, 1.0));
+	painter.drawEllipse(QRectF(-inner_circle_radius, -inner_circle_radius, inner_circle_diameter, inner_circle_diameter));
 
 	// Draw a blue dot that represents the current stick orientation
-	painter.setPen(QPen(Qt::blue, 2));
-	painter.drawEllipse(QRectF(stick_x, stick_y, 1, 1));
+	painter.setPen(QPen(Qt::blue, 2.0));
+	painter.drawEllipse(QRectF(stick_x - 0.5, stick_y - 0.5, 1.0, 1.0));
+
+	if (show_emulated_values)
+	{
+		// Draw a red dot that represents the current ingame stick orientation
+		painter.setPen(QPen(Qt::red, 2.0));
+		painter.drawEllipse(QRectF(ingame_x - 0.5, ingame_y - 0.5, 1.0, 1.0));
+	}
 
 	l->setPixmap(pixmap);
 }
@@ -799,6 +871,26 @@ bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 	{
 		mouseMoveEvent(static_cast<QMouseEvent*>(event));
 	}
+
+	if (event->type() == QEvent::Enter || event->type() == QEvent::Leave)
+	{
+		if (ui->l_description && m_descriptions.contains(object))
+		{
+			if (event->type() == QEvent::Enter)
+			{
+				// Check for visibility when entering a widget (needed in case of overlapping widgets in a QStackedWidget for example)
+				if (const auto widget = qobject_cast<QWidget*>(object); widget && widget->isVisible())
+				{
+					ui->l_description->setText(m_descriptions[object]);
+				}
+			}
+			else if (event->type() == QEvent::Leave)
+			{
+				ui->l_description->setText(m_description);
+			}
+		}
+	}
+
 	return QDialog::eventFilter(object, event);
 }
 
@@ -881,8 +973,17 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		ui->stick_multi_right->setRange(std::stod(stick_multi_range_right.front()) / 100.0, std::stod(stick_multi_range_right.back()) / 100.0);
 		ui->stick_multi_right->setValue(m_handler_cfg.rstickmultiplier / 100.0);
 
-		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), lx, ly, m_handler_cfg.lstickmultiplier / 100.0);
-		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry, m_handler_cfg.rstickmultiplier / 100.0);
+		// Update Squircle Factors
+		std::vector<std::string> squircle_range_left = m_handler_cfg.lpadsquircling.to_list();
+		ui->squircle_left->setRange(std::stoi(squircle_range_left.front()), std::stoi(squircle_range_left.back()));
+		ui->squircle_left->setValue(m_handler_cfg.lpadsquircling);
+
+		std::vector<std::string> squircle_range_right = m_handler_cfg.rpadsquircling.to_list();
+		ui->squircle_right->setRange(std::stoi(squircle_range_right.front()), std::stoi(squircle_range_right.back()));
+		ui->squircle_right->setValue(m_handler_cfg.rpadsquircling);
+
+		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, m_handler_cfg.lpadsquircling, m_handler_cfg.lstickmultiplier / 100.0);
+		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, m_handler_cfg.rpadsquircling, m_handler_cfg.rstickmultiplier / 100.0);
 
 		// Apply stored/default LED settings to the device
 		m_enable_led = m_handler->has_led();
@@ -1068,45 +1169,44 @@ void pad_settings_dialog::ChangeInputType()
 	Tooltips tooltips;
 
 	// Change the description
-	QString description;
 	switch (m_handler->m_type)
 	{
 	case pad_handler::null:
 		if (is_ldd_pad)
-			description = tooltips.gamepad_settings.ldd_pad;
+			m_description = tooltips.gamepad_settings.ldd_pad;
 		else
-			description = tooltips.gamepad_settings.null;
+			m_description = tooltips.gamepad_settings.null;
 		break;
 	case pad_handler::keyboard:
-		description = tooltips.gamepad_settings.keyboard; break;
+		m_description = tooltips.gamepad_settings.keyboard; break;
 #ifdef _WIN32
 	case pad_handler::xinput:
-		description = tooltips.gamepad_settings.xinput; break;
+		m_description = tooltips.gamepad_settings.xinput; break;
 	case pad_handler::mm:
-		description = tooltips.gamepad_settings.mmjoy; break;
+		m_description = tooltips.gamepad_settings.mmjoy; break;
 	case pad_handler::ds3:
-		description = tooltips.gamepad_settings.ds3_windows; break;
+		m_description = tooltips.gamepad_settings.ds3_windows; break;
 	case pad_handler::ds4:
-		description = tooltips.gamepad_settings.ds4_windows; break;
+		m_description = tooltips.gamepad_settings.ds4_windows; break;
 #elif __linux__
 	case pad_handler::ds3:
-		description = tooltips.gamepad_settings.ds3_linux; break;
+		m_description = tooltips.gamepad_settings.ds3_linux; break;
 	case pad_handler::ds4:
-		description = tooltips.gamepad_settings.ds4_linux; break;
+		m_description = tooltips.gamepad_settings.ds4_linux; break;
 #else
 	case pad_handler::ds3:
-		description = tooltips.gamepad_settings.ds3_other; break;
+		m_description = tooltips.gamepad_settings.ds3_other; break;
 	case pad_handler::ds4:
-		description = tooltips.gamepad_settings.ds4_other; break;
+		m_description = tooltips.gamepad_settings.ds4_other; break;
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
-		description = tooltips.gamepad_settings.evdev; break;
+		m_description = tooltips.gamepad_settings.evdev; break;
 #endif
 	default:
-		description = "";
+		m_description = "";
 	}
-	ui->l_description->setText(description);
+	ui->l_description->setText(m_description);
 
 	// change our contextual widgets
 	ui->left_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
@@ -1391,6 +1491,8 @@ void pad_settings_dialog::SaveProfile()
 
 	m_handler_cfg.lstickmultiplier.set(ui->stick_multi_left->value() * 100);
 	m_handler_cfg.rstickmultiplier.set(ui->stick_multi_right->value() * 100);
+	m_handler_cfg.lpadsquircling.set(ui->squircle_left->value());
+	m_handler_cfg.rpadsquircling.set(ui->squircle_right->value());
 
 	if (m_handler->has_rumble())
 	{
@@ -1508,4 +1610,26 @@ void pad_settings_dialog::ResizeDialog()
 
 	resize(tabwidget_size + buttons_size + margin_size + spacing_size);
 	setMaximumSize(size());
+}
+
+void pad_settings_dialog::SubscribeTooltip(QObject* object, const QString& tooltip)
+{
+	m_descriptions[object] = tooltip;
+	object->installEventFilter(this);
+}
+
+void pad_settings_dialog::SubscribeTooltips()
+{
+	// Localized tooltips
+	Tooltips tooltips;
+
+	SubscribeTooltip(ui->gb_squircle, tooltips.gamepad_settings.squircle_factor);
+	SubscribeTooltip(ui->gb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
+	SubscribeTooltip(ui->gb_vibration, tooltips.gamepad_settings.vibration);
+	SubscribeTooltip(ui->gb_sticks, tooltips.gamepad_settings.stick_deadzones);
+	SubscribeTooltip(ui->gb_stick_preview, tooltips.gamepad_settings.emulated_preview);
+	SubscribeTooltip(ui->gb_triggers, tooltips.gamepad_settings.trigger_deadzones);
+	SubscribeTooltip(ui->gb_stick_lerp, tooltips.gamepad_settings.stick_lerp);
+	SubscribeTooltip(ui->gb_mouse_accel, tooltips.gamepad_settings.mouse_acceleration);
+	SubscribeTooltip(ui->gb_mouse_dz, tooltips.gamepad_settings.mouse_deadzones);
 }

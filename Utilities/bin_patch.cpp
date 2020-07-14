@@ -801,11 +801,11 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 
 		if (patch.is_legacy)
 		{
-			patch_log.notice("Applied legacy patch (hash='%s')(<- %d)", patch.hash, applied);
+			patch_log.success("Applied legacy patch (hash='%s')(<- %d)", patch.hash, applied);
 		}
 		else
 		{
-			patch_log.notice("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %d)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied);
+			patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %d)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied);
 		}
 	}
 
