@@ -61,6 +61,9 @@ namespace rsx
 		// List of sections derived from a section that has been split and invalidated
 		std::vector<surface_type> orphaned_surfaces;
 
+		// List of sections that have been wholly inherited and invalidated
+		std::vector<surface_type> superseded_surfaces;
+
 		std::list<surface_storage_type> invalidated_resources;
 		u64 cache_tag = 1ull; // Use 1 as the start since 0 is default tag on new surfaces
 		u64 write_tag = 1ull;
@@ -410,6 +413,7 @@ namespace rsx
 
 					invalidate(object);
 					storage.erase(e.first);
+					superseded_surfaces.push_back(surface);
 				}
 			}
 		}

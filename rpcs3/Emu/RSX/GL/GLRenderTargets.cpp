@@ -329,6 +329,16 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	m_gl_texture_cache.clear_ro_tex_invalidate_intr();
 
+	if (!m_rtts.superseded_surfaces.empty())
+	{
+		for (auto& surface : m_rtts.superseded_surfaces)
+		{
+			m_gl_texture_cache.discard_framebuffer_memory_region(cmd, surface->get_memory_range());
+		}
+
+		m_rtts.superseded_surfaces.clear();
+	}
+
 	const auto color_format = rsx::internals::surface_color_format_to_gl(m_framebuffer_layout.color_format);
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
