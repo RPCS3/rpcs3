@@ -2,6 +2,7 @@
 #include "Utilities/JIT.h"
 #include "Utilities/asm.h"
 #include "Utilities/sysinfo.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Memory/vm_reservation.h"
 
@@ -1111,7 +1112,7 @@ void spu_thread::cpu_task()
 				continue;
 			}
 
-			spu_runtime::g_gateway(*this, vm::_ptr<u8>(offset), nullptr);
+			spu_runtime::g_gateway(*this, _ptr<u8>(0), nullptr);
 		}
 
 		// Print some stats
@@ -1129,7 +1130,7 @@ void spu_thread::cpu_task()
 					break;
 			}
 
-			spu_runtime::g_interpreter(*this, vm::_ptr<u8>(offset), nullptr);
+			spu_runtime::g_interpreter(*this, _ptr<u8>(0), nullptr);
 		}
 	}
 
@@ -1148,8 +1149,21 @@ void spu_thread::cpu_unmem()
 
 spu_thread::~spu_thread()
 {
-	// Deallocate Local Storage
-	vm::dealloc_verbose_nothrow(offset);
+	{
+		const auto [_, shm] = vm::get(vm::any, offset)->get(offset);
+
+		for (s32 i = -1; i < 2; i++)
+		{
+			// Unmap LS mirrors
+			shm->unmap_critical(ls + (i * SPU_LS_SIZE));
+		}
+
+		// Deallocate Local Storage
+		vm::dealloc_verbose_nothrow(offset);
+	}
+
+	// Release LS mirrors area
+	utils::memory_release(ls - SPU_LS_SIZE, SPU_LS_SIZE * 3);
 
 	// Deallocate RawSPU ID
 	if (!group && offset >= RAW_SPU_BASE_ADDR)
@@ -1159,11 +1173,26 @@ spu_thread::~spu_thread()
 	}
 }
 
-spu_thread::spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated)
+spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated)
 	: cpu_thread(idm::last_id())
 	, is_isolated(is_isolated)
 	, index(index)
-	, offset(ls)
+	, offset(_ls)
+	, ls([&]()
+	{
+		const auto [_, shm] = vm::get(vm::any, _ls)->get(_ls);
+		const auto addr = static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 3));
+
+		for (u32 i = 0; i < 3; i++)
+		{
+			// Map LS mirrors
+			const auto ptr = addr + (i * SPU_LS_SIZE);
+			verify(HERE), shm->map_critical(ptr) == ptr;
+		}
+
+		// Use the middle mirror
+		return addr + SPU_LS_SIZE;
+	}())
 	, group(group)
 	, lv2_id(lv2_id)
 	, spu_tname(stx::shared_cptr<std::string>::make(name))
@@ -1233,7 +1262,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			}
 
 			u32 value;
-			if ((eal - RAW_SPU_BASE_ADDR) % RAW_SPU_OFFSET + args.size - 1 < 0x40000) // LS access
+			if ((eal - RAW_SPU_BASE_ADDR) % RAW_SPU_OFFSET + args.size - 1 < SPU_LS_SIZE) // LS access
 			{
 			}
 			else if (args.size == 4 && is_get && thread->read_reg(eal, value))
@@ -1258,7 +1287,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		{
 			auto& spu = static_cast<spu_thread&>(*group->threads[group->threads_map[index]]);
 
-			if (offset + args.size - 1 < 0x40000) // LS access
+			if (offset + args.size - 1 < SPU_LS_SIZE) // LS access
 			{
 				eal = spu.offset + offset; // redirect access
 			}
@@ -1282,7 +1311,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	auto [dst, src] = [&]() -> std::pair<u8*, const u8*>
 	{
 		u8* dst = vm::_ptr<u8>(eal);
-		u8* src = vm::_ptr<u8>(offset + lsa);
+		u8* src = _ptr<u8>(lsa);
 
 		if (is_get)
 		{
@@ -1638,6 +1667,7 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 	transfer.cmd  = MFC(args.cmd & ~MFC_LIST_MASK);
 
 	args.lsa &= 0x3fff0;
+	args.eal &= 0x3fff8;
 
 	u32 index = fetch_size;
 
@@ -1650,7 +1680,7 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 			// Reset to elements array head
 			index = 0;
 
-			const auto src = _ptr<const void>(args.eal & 0x3fff8);
+			const auto src = _ptr<const void>(args.eal);
 			const v128 data0 = v128::loadu(src, 0);
 			const v128 data1 = v128::loadu(src, 1);
 			const v128 data2 = v128::loadu(src, 2);
@@ -2947,7 +2977,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		spu_log.warning("STOP 0x0");
 
 		// HACK: find an ILA instruction
-		for (u32 addr = pc; addr < 0x40000; addr += 4)
+		for (u32 addr = pc; addr < SPU_LS_SIZE; addr += 4)
 		{
 			const u32 instr = _ref<u32>(addr);
 
