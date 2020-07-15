@@ -6,50 +6,80 @@
 #include "3rdparty/OpenAL/include/alext.h"
 
 // Error Codes
-enum
+enum CellMicInError : u32
 {
-	CELL_MIC_ERROR_ALREADY_INIT       = 0x80140101,
-	CELL_MIC_ERROR_SYSTEM             = 0x80140102,
-	CELL_MIC_ERROR_NOT_INIT           = 0x80140103,
-	CELL_MIC_ERROR_PARAM              = 0x80140104,
-	CELL_MIC_ERROR_PORT_FULL          = 0x80140105,
-	CELL_MIC_ERROR_ALREADY_OPEN       = 0x80140106,
-	CELL_MIC_ERROR_NOT_OPEN           = 0x80140107,
-	CELL_MIC_ERROR_NOT_RUN            = 0x80140108,
-	CELL_MIC_ERROR_TRANS_EVENT        = 0x80140109,
-	CELL_MIC_ERROR_OPEN               = 0x8014010a,
-	CELL_MIC_ERROR_SHAREDMEMORY       = 0x8014010b,
-	CELL_MIC_ERROR_MUTEX              = 0x8014010c,
-	CELL_MIC_ERROR_EVENT_QUEUE        = 0x8014010d,
-	CELL_MIC_ERROR_DEVICE_NOT_FOUND   = 0x8014010e,
-	CELL_MIC_ERROR_SYSTEM_NOT_FOUND   = 0x8014010e,
-	CELL_MIC_ERROR_FATAL              = 0x8014010f,
-	CELL_MIC_ERROR_DEVICE_NOT_SUPPORT = 0x80140110,
+	CELL_MICIN_ERROR_ALREADY_INIT       = 0x80140101,
+	CELL_MICIN_ERROR_DEVICE             = 0x80140102,
+	CELL_MICIN_ERROR_NOT_INIT           = 0x80140103,
+	CELL_MICIN_ERROR_PARAM              = 0x80140104,
+	CELL_MICIN_ERROR_PORT_FULL          = 0x80140105,
+	CELL_MICIN_ERROR_ALREADY_OPEN       = 0x80140106,
+	CELL_MICIN_ERROR_NOT_OPEN           = 0x80140107,
+	CELL_MICIN_ERROR_NOT_RUN            = 0x80140108,
+	CELL_MICIN_ERROR_TRANS_EVENT        = 0x80140109,
+	CELL_MICIN_ERROR_OPEN               = 0x8014010a,
+	CELL_MICIN_ERROR_SHAREDMEMORY       = 0x8014010b,
+	CELL_MICIN_ERROR_MUTEX              = 0x8014010c,
+	CELL_MICIN_ERROR_EVENT_QUEUE        = 0x8014010d,
+	CELL_MICIN_ERROR_DEVICE_NOT_FOUND   = 0x8014010e,
+	CELL_MICIN_ERROR_FATAL              = 0x8014010f,
+	CELL_MICIN_ERROR_DEVICE_NOT_SUPPORT = 0x80140110,
+	// CELL_MICIN_ERROR_SYSTEM             = CELL_MICIN_ERROR_DEVICE,
+	// CELL_MICIN_ERROR_SYSTEM_NOT_FOUND   = CELL_MICIN_ERROR_DEVICE_NOT_FOUND,
+	// CELL_MICIN_ERROR_SYSTEM_NOT_SUPPORT = CELL_MICIN_ERROR_DEVICE_NOT_SUPPORT
 };
 
-struct CellMicInputFormat
+enum CellMicInErrorDsp : u32
 {
-	u8 channelNum;
-	u8 subframeSize;
-	u8 bitResolution;
-	u8 dataType;
-	be_t<u32> sampleRate;
+	CELL_MICIN_ERROR_DSP              = 0x80140200,
+	CELL_MICIN_ERROR_DSP_ASSERT       = 0x80140201,
+	CELL_MICIN_ERROR_DSP_PATH         = 0x80140202,
+	CELL_MICIN_ERROR_DSP_FILE         = 0x80140203,
+	CELL_MICIN_ERROR_DSP_PARAM        = 0x80140204,
+	CELL_MICIN_ERROR_DSP_MEMALLOC     = 0x80140205,
+	CELL_MICIN_ERROR_DSP_POINTER      = 0x80140206,
+	CELL_MICIN_ERROR_DSP_FUNC         = 0x80140207,
+	CELL_MICIN_ERROR_DSP_MEM          = 0x80140208,
+	CELL_MICIN_ERROR_DSP_ALIGN16      = 0x80140209,
+	CELL_MICIN_ERROR_DSP_ALIGN128     = 0x8014020a,
+	CELL_MICIN_ERROR_DSP_EAALIGN128   = 0x8014020b,
+	CELL_MICIN_ERROR_DSP_LIB_HANDLER  = 0x80140216,
+	CELL_MICIN_ERROR_DSP_LIB_INPARAM  = 0x80140217,
+	CELL_MICIN_ERROR_DSP_LIB_NOSPU    = 0x80140218,
+	CELL_MICIN_ERROR_DSP_LIB_SAMPRATE = 0x80140219,
 };
 
 enum CellMicSignalState : u32
 {
-	CELL_MIC_SIGSTATE_LOCTALK = 0,
-	CELL_MIC_SIGSTATE_FARTALK = 1,
-	CELL_MIC_SIGSTATE_NSR     = 3,
-	CELL_MIC_SIGSTATE_AGC     = 4,
-	CELL_MIC_SIGSTATE_MICENG  = 5,
-	CELL_MIC_SIGSTATE_SPKENG  = 6,
+	CELLMIC_SIGSTATE_LOCTALK = 0,
+	CELLMIC_SIGSTATE_FARTALK = 1,
+	CELLMIC_SIGSTATE_NSR     = 3,
+	CELLMIC_SIGSTATE_AGC     = 4,
+	CELLMIC_SIGSTATE_MICENG  = 5,
+	CELLMIC_SIGSTATE_SPKENG  = 6,
 };
 
 enum CellMicCommand
 {
-	CELL_MIC_ATTACH = 2,
-	CELL_MIC_DATA   = 5,
+	CELLMIC_INIT = 0,
+	CELLMIC_END,
+	CELLMIC_ATTACH,
+	CELLMIC_DETACH,
+	CELLMIC_SWITCH,
+	CELLMIC_DATA,
+	CELLMIC_OPEN,
+	CELLMIC_CLOSE,
+	CELLMIC_START,
+	CELLMIC_STOP,
+	CELLMIC_QUERY,
+	CELLMIC_CONFIG,
+	CELLMIC_CALLBACK,
+	CELLMIC_RESET,
+	CELLMIC_STATUS,
+	CELLMIC_IPC,
+	CELLMIC_CALLBACK2,
+	CELLMIC_WEAK,
+	CELLMIC_INIT2,
 };
 
 enum CellMicDeviceAttr : u32
@@ -64,11 +94,11 @@ enum CellMicDeviceAttr : u32
 
 enum CellMicSignalAttr : u32
 {
-	CELLMIC_SIGATTR_BKNGAIN,
-	CELLMIC_SIGATTR_REVERB,
-	CELLMIC_SIGATTR_AGCLEVEL,
-	CELLMIC_SIGATTR_VOLUME,
-	CELLMIC_SIGATTR_PITCHSHIFT
+	CELLMIC_SIGATTR_BKNGAIN    = 0,
+	CELLMIC_SIGATTR_REVERB     = 9,
+	CELLMIC_SIGATTR_AGCLEVEL   = 26,
+	CELLMIC_SIGATTR_VOLUME     = 301,
+	CELLMIC_SIGATTR_PITCHSHIFT = 331
 };
 
 enum CellMicSignalType : u8
@@ -88,7 +118,67 @@ enum CellMicType : s32
 	CELLMIC_TYPE_USBAUDIO  = 3,
 	CELLMIC_TYPE_BLUETOOTH = 4,
 	CELLMIC_TYPE_A2DP      = 5,
-} CellMicType;
+};
+
+enum
+{
+	MaxNumMicInputs = 8,
+	CELL_MAX_MICS = MaxNumMicInputs,
+	MAX_MICS_PERMISSABLE = 4,
+
+	NullDeviceID = -1,
+
+	SYSMICIN_KEYBASE             = 0x8000CA7211071000ULL,
+	EQUEUE_KEY_MICIN_ACCESSPOINT = 0x8000CA7211072abcULL,
+	LIBMIC_KEYBASE               = 0x8000000000000100ULL,
+
+	CELL_MIC_STARTFLAG_LATENCY_4 = 0x00000001,
+	CELL_MIC_STARTFLAG_LATENCY_2 = 0x00000002,
+	CELL_MIC_STARTFLAG_LATENCY_1 = 0x00000003,
+};
+
+struct CellMicInputFormatI
+{
+	u8 channelNum;
+	u8 subframeSize;
+	u8 bitResolution;
+	u8 dataType;
+	be_t<u32> sampleRate;
+};
+
+struct CellMicInputStream
+{
+	be_t<u32> uiBufferBottom;
+	be_t<u32> uiBufferSize;
+	be_t<u32> uiBuffer;
+};
+
+struct CellMicInputDefinition
+{
+	// TODO: Data types
+	volatile uint32_t   uiDevId;
+	CellMicInputStream  data;
+	CellMicInputFormatI aux_format;
+	CellMicInputFormatI raw_format;
+	CellMicInputFormatI sig_format;
+};
+
+struct CellMicStatus
+{
+	be_t<s32> raw_samprate;
+	be_t<s32> dsp_samprate;
+	be_t<s32> dsp_volume;
+	be_t<s32> isStart;
+	be_t<s32> isOpen;
+	be_t<s32> local_voice;
+	be_t<s32> remote_voice;
+	be_t<f32> mic_energy;
+	be_t<f32> spk_energy;
+};
+
+
+// --- End of cell definitions ---
+
 
 template <std::size_t S>
 class simple_ringbuf
@@ -177,11 +267,11 @@ public:
 
 	void add_device(const std::string& name);
 
-	s32 open_microphone(const u8 type, const u32 dsp_r, const u32 raw_r, const u8 channels = 2);
-	s32 close_microphone();
+	error_code open_microphone(const u8 type, const u32 dsp_r, const u32 raw_r, const u8 channels = 2);
+	error_code close_microphone();
 
-	s32 start_microphone();
-	s32 stop_microphone();
+	error_code start_microphone();
+	error_code stop_microphone();
 
 	void update_audio();
 	bool has_data() const;
@@ -243,7 +333,7 @@ private:
 
 	u8 signal_types = CELLMIC_SIGTYPE_NULL;
 
-	u32 sample_size; // Determined at opening for internal use
+	u32 sample_size = 0; // Determined at opening for internal use
 
 	static constexpr std::size_t inbuf_size = 400000; // Default value unknown
 
