@@ -173,7 +173,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 	{
 	case MFC_LSA_offs:
 	{
-		if (value >= 0x40000)
+		if (value >= SPU_LS_SIZE)
 		{
 			break;
 		}
@@ -321,7 +321,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 
 void spu_load_exec(const spu_exec_object& elf)
 {
-	auto ls0 = vm::cast(vm::falloc(RAW_SPU_BASE_ADDR, 0x80000, vm::spu));
+	auto ls0 = vm::cast(vm::falloc(RAW_SPU_BASE_ADDR, SPU_LS_SIZE, vm::spu));
 	auto spu = idm::make_ptr<named_thread<spu_thread>>("TEST_SPU", ls0, nullptr, 0, "", 0);
 
 	spu_thread::g_raw_spu_ctr++;
@@ -331,7 +331,7 @@ void spu_load_exec(const spu_exec_object& elf)
 	{
 		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
 		{
-			std::memcpy(vm::base(spu->offset + prog.p_vaddr), prog.bin.data(), prog.p_filesz);
+			std::memcpy(spu->_ptr<void>(prog.p_vaddr), prog.bin.data(), prog.p_filesz);
 		}
 	}
 
