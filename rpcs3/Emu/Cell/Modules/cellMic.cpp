@@ -677,7 +677,7 @@ error_code cellMicStartEx(s32 dev_num, u32 iflags)
 	if (!device.is_opened())
 		return CELL_MICIN_ERROR_NOT_OPEN;
 
-	cellMic.error("We're getting started mate!");
+	cellMic.success("We're getting started mate!");
 
 	return device.start_microphone();
 }

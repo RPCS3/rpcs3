@@ -1,27 +1,27 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(cellLibprof);
 
-s32 cellUserTraceInit()
+error_code cellUserTraceInit()
 {
 	UNIMPLEMENTED_FUNC(cellLibprof);
 	return CELL_OK;
 }
 
-s32 cellUserTraceRegister()
+error_code cellUserTraceRegister()
 {
 	UNIMPLEMENTED_FUNC(cellLibprof);
 	return CELL_OK;
 }
 
-s32 cellUserTraceUnregister()
+error_code cellUserTraceUnregister()
 {
 	UNIMPLEMENTED_FUNC(cellLibprof);
 	return CELL_OK;
 }
 
-s32 cellUserTraceTerminate()
+error_code cellUserTraceTerminate()
 {
 	UNIMPLEMENTED_FUNC(cellLibprof);
 	return CELL_OK;
