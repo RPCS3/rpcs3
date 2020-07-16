@@ -37,7 +37,7 @@ error_code sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)
 
 	if (*lock || lock->exchange(0xabadcafe))
 	{
-		return CELL_EBUSY;
+		return not_an_error(CELL_EBUSY);
 	}
 
 	return CELL_OK;
