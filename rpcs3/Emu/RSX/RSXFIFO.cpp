@@ -177,15 +177,6 @@ namespace rsx
 				return;
 			}
 
-			// Validate the args ptr if the command attempts to read from it
-			m_args_ptr = m_iotable->get_addr(m_internal_get + 4);
-			if (m_args_ptr == umax) [[unlikely]]
-			{
-				// Optional recovery
-				data.reg = FIFO_ERROR;
-				return;
-			}
-
 			verify(HERE), !m_remaining_commands;
 			const u32 count = (m_cmd >> 18) & 0x7ff;
 
@@ -193,6 +184,15 @@ namespace rsx
 			{
 				m_ctrl->get.release(m_internal_get + 4);
 				data.reg = FIFO_NOP;
+				return;
+			}
+
+			// Validate the args ptr if the command attempts to read from it
+			m_args_ptr = m_iotable->get_addr(m_internal_get + 4);
+			if (m_args_ptr == umax) [[unlikely]]
+			{
+				// Optional recovery
+				data.reg = FIFO_ERROR;
 				return;
 			}
 
