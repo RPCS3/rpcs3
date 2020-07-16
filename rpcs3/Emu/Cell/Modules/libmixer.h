@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 
 // Error Codes
-enum
+enum CellLibmixerError : u32
 {
 	CELL_LIBMIXER_ERROR_NOT_INITIALIZED   = 0x80310002,
 	CELL_LIBMIXER_ERROR_INVALID_PARAMATER = 0x80310003,

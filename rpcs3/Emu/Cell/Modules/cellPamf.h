@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 
 // Error Codes
-enum
+enum CellPamfError : u32
 {
 	CELL_PAMF_ERROR_STREAM_NOT_FOUND    = 0x80610501,
 	CELL_PAMF_ERROR_INVALID_PAMF        = 0x80610502,
@@ -396,7 +396,7 @@ struct CellPamfReader
 
 CHECK_SIZE(CellPamfReader, 128);
 
-s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::cptr<PamfHeader> pAddr, u64 fileSize, u32 attribute);
+error_code cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::cptr<PamfHeader> pAddr, u64 fileSize, u32 attribute);
 
 #include <mutex>
 #include <condition_variable>

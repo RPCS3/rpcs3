@@ -1,10 +1,10 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(cellUsbPspcm);
 
 // Return Codes
-enum
+enum CellUsbpspcmError : u32
 {
 	CELL_USBPSPCM_ERROR_NOT_INITIALIZED = 0x80110401,
 	CELL_USBPSPCM_ERROR_ALREADY         = 0x80110402,
@@ -20,163 +20,188 @@ enum
 	CELL_USBPSPCM_ERROR_NO_DATA         = 0x8011040C,
 };
 
-s32 cellUsbPspcmInit()
+template<>
+void fmt_class_string<CellUsbpspcmError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_USBPSPCM_ERROR_NOT_INITIALIZED);
+			STR_CASE(CELL_USBPSPCM_ERROR_ALREADY);
+			STR_CASE(CELL_USBPSPCM_ERROR_INVALID);
+			STR_CASE(CELL_USBPSPCM_ERROR_NO_MEMORY);
+			STR_CASE(CELL_USBPSPCM_ERROR_BUSY);
+			STR_CASE(CELL_USBPSPCM_ERROR_INPROGRESS);
+			STR_CASE(CELL_USBPSPCM_ERROR_NO_SPACE);
+			STR_CASE(CELL_USBPSPCM_ERROR_CANCELED);
+			STR_CASE(CELL_USBPSPCM_ERROR_RESETTING);
+			STR_CASE(CELL_USBPSPCM_ERROR_RESET_END);
+			STR_CASE(CELL_USBPSPCM_ERROR_CLOSED);
+			STR_CASE(CELL_USBPSPCM_ERROR_NO_DATA);
+		}
+
+		return unknown;
+	});
+}
+
+error_code cellUsbPspcmInit()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmEnd()
+error_code cellUsbPspcmEnd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmCalcPoolSize()
+error_code cellUsbPspcmCalcPoolSize()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmRegister()
+error_code cellUsbPspcmRegister()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmUnregister()
+error_code cellUsbPspcmUnregister()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmGetAddr()
+error_code cellUsbPspcmGetAddr()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmBind()
+error_code cellUsbPspcmBind()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmBindAsync()
+error_code cellUsbPspcmBindAsync()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmWaitBindAsync()
+error_code cellUsbPspcmWaitBindAsync()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmPollBindAsync()
+error_code cellUsbPspcmPollBindAsync()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmCancelBind()
+error_code cellUsbPspcmCancelBind()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmClose()
+error_code cellUsbPspcmClose()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmSend()
+error_code cellUsbPspcmSend()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmSendAsync()
+error_code cellUsbPspcmSendAsync()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmWaitSendAsync()
+error_code cellUsbPspcmWaitSendAsync()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmPollSendAsync()
+error_code cellUsbPspcmPollSendAsync()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmRecv()
+error_code cellUsbPspcmRecv()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmRecvAsync()
+error_code cellUsbPspcmRecvAsync()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmWaitRecvAsync()
+error_code cellUsbPspcmWaitRecvAsync()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmPollRecvAsync()
+error_code cellUsbPspcmPollRecvAsync()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmReset()
+error_code cellUsbPspcmReset()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmResetAsync()
+error_code cellUsbPspcmResetAsync()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmWaitResetAsync()
+error_code cellUsbPspcmWaitResetAsync()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmPollResetAsync()
+error_code cellUsbPspcmPollResetAsync()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmWaitData()
+error_code cellUsbPspcmWaitData()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmPollData()
+error_code cellUsbPspcmPollData()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-s32 cellUsbPspcmCancelWaitData()
+error_code cellUsbPspcmCancelWaitData()
 {
 	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;

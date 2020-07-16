@@ -3,103 +3,103 @@
 
 LOG_CHANNEL(cellVideoPlayerUtility);
 
-s32 cellVideoPlayerInitialize()
+error_code cellVideoPlayerInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerSetStartPosition()
+error_code cellVideoPlayerSetStartPosition()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerGetVolume()
+error_code cellVideoPlayerGetVolume()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerFinalize()
+error_code cellVideoPlayerFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerSetStopPosition()
+error_code cellVideoPlayerSetStopPosition()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerClose()
+error_code cellVideoPlayerClose()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerGetTransferPictureInfo()
+error_code cellVideoPlayerGetTransferPictureInfo()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerSetDownloadPosition()
+error_code cellVideoPlayerSetDownloadPosition()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerStartThumbnail()
+error_code cellVideoPlayerStartThumbnail()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerEndThumbnail()
+error_code cellVideoPlayerEndThumbnail()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerOpen()
+error_code cellVideoPlayerOpen()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerSetVolume()
+error_code cellVideoPlayerSetVolume()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerGetOutputStereoPicture()
+error_code cellVideoPlayerGetOutputStereoPicture()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerGetPlaybackStatus()
+error_code cellVideoPlayerGetPlaybackStatus()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerSetTransferComplete()
+error_code cellVideoPlayerSetTransferComplete()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerGetOutputPicture()
+error_code cellVideoPlayerGetOutputPicture()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;
 }
 
-s32 cellVideoPlayerPlaybackControl()
+error_code cellVideoPlayerPlaybackControl()
 {
 	UNIMPLEMENTED_FUNC(cellVideoPlayerUtility);
 	return CELL_OK;

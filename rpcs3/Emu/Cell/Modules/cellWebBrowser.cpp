@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellWebBrowser.h"
@@ -12,13 +12,13 @@ struct browser_info
 	vm::ptr<void> userData;
 };
 
-s32 cellWebBrowserActivate()
+error_code cellWebBrowserActivate()
 {
 	cellSysutil.todo("cellWebBrowserActivate()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfig()
+error_code cellWebBrowserConfig()
 {
 	cellSysutil.todo("cellWebBrowserConfig()");
 	return CELL_OK;
@@ -30,31 +30,31 @@ error_code cellWebBrowserConfig2(vm::cptr<CellWebBrowserConfig2> config, u32 ver
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigGetHeapSize()
+error_code cellWebBrowserConfigGetHeapSize()
 {
 	cellSysutil.todo("cellWebBrowserConfigGetHeapSize()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigGetHeapSize2()
+error_code cellWebBrowserConfigGetHeapSize2()
 {
 	cellSysutil.todo("cellWebBrowserConfigGetHeapSize2()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigSetCustomExit()
+error_code cellWebBrowserConfigSetCustomExit()
 {
 	cellSysutil.todo("cellWebBrowserConfigSetCustomExit()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigSetDisableTabs()
+error_code cellWebBrowserConfigSetDisableTabs()
 {
 	cellSysutil.todo("cellWebBrowserConfigSetDisableTabs()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigSetErrorHook2()
+error_code cellWebBrowserConfigSetErrorHook2()
 {
 	cellSysutil.todo("cellWebBrowserConfigSetErrorHook2()");
 	return CELL_OK;
@@ -66,13 +66,13 @@ error_code cellWebBrowserConfigSetFullScreen2(vm::cptr<CellWebBrowserConfig2> co
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigSetFullVersion2()
+error_code cellWebBrowserConfigSetFullVersion2()
 {
 	cellSysutil.todo("cellWebBrowserConfigSetFullVersion2()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigSetFunction()
+error_code cellWebBrowserConfigSetFunction()
 {
 	cellSysutil.todo("cellWebBrowserConfigSetFunction()");
 	return CELL_OK;
@@ -84,7 +84,7 @@ error_code cellWebBrowserConfigSetFunction2(vm::ptr<CellWebBrowserConfig2> confi
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigSetHeapSize()
+error_code cellWebBrowserConfigSetHeapSize()
 {
 	cellSysutil.todo("cellWebBrowserConfigSetHeapSize()");
 	return CELL_OK;
@@ -96,7 +96,7 @@ error_code cellWebBrowserConfigSetHeapSize2(vm::ptr<CellWebBrowserConfig2> confi
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigSetMimeSet()
+error_code cellWebBrowserConfigSetMimeSet()
 {
 	cellSysutil.todo("cellWebBrowserConfigSetMimeSet()");
 	return CELL_OK;
@@ -108,13 +108,13 @@ error_code cellWebBrowserConfigSetNotifyHook2(vm::cptr<CellWebBrowserConfig2> co
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigSetRequestHook2()
+error_code cellWebBrowserConfigSetRequestHook2()
 {
 	cellSysutil.todo("cellWebBrowserConfigSetRequestHook2()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigSetStatusHook2()
+error_code cellWebBrowserConfigSetStatusHook2()
 {
 	cellSysutil.todo("cellWebBrowserConfigSetStatusHook2()");
 	return CELL_OK;
@@ -132,7 +132,7 @@ error_code cellWebBrowserConfigSetUnknownMIMETypeHook2(vm::cptr<CellWebBrowserCo
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigSetVersion()
+error_code cellWebBrowserConfigSetVersion()
 {
 	cellSysutil.todo("cellWebBrowserConfigSetVersion()");
 	return CELL_OK;
@@ -144,79 +144,79 @@ error_code cellWebBrowserConfigSetViewCondition2(vm::ptr<CellWebBrowserConfig2> 
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigSetViewRect2()
+error_code cellWebBrowserConfigSetViewRect2()
 {
 	cellSysutil.todo("cellWebBrowserConfigSetViewRect2()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigWithVer()
+error_code cellWebBrowserConfigWithVer()
 {
 	cellSysutil.todo("cellWebBrowserConfigWithVer()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserCreate()
+error_code cellWebBrowserCreate()
 {
 	cellSysutil.todo("cellWebBrowserCreate()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserCreate2()
+error_code cellWebBrowserCreate2()
 {
 	cellSysutil.todo("cellWebBrowserCreate2()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserCreateRender2()
+error_code cellWebBrowserCreateRender2()
 {
 	cellSysutil.todo("cellWebBrowserCreateRender2()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserCreateRenderWithRect2()
+error_code cellWebBrowserCreateRenderWithRect2()
 {
 	cellSysutil.todo("cellWebBrowserCreateRenderWithRect2()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserCreateWithConfig()
+error_code cellWebBrowserCreateWithConfig()
 {
 	cellSysutil.todo("cellWebBrowserCreateWithConfig()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserCreateWithConfigFull()
+error_code cellWebBrowserCreateWithConfigFull()
 {
 	cellSysutil.todo("cellWebBrowserCreateWithConfigFull()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserCreateWithRect2()
+error_code cellWebBrowserCreateWithRect2()
 {
 	cellSysutil.todo("cellWebBrowserCreateWithRect2()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserDeactivate()
+error_code cellWebBrowserDeactivate()
 {
 	cellSysutil.todo("cellWebBrowserDeactivate()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserDestroy()
+error_code cellWebBrowserDestroy()
 {
 	cellSysutil.todo("cellWebBrowserDestroy()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserDestroy2()
+error_code cellWebBrowserDestroy2()
 {
 	cellSysutil.todo("cellWebBrowserDestroy2()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserEstimate()
+error_code cellWebBrowserEstimate()
 {
 	cellSysutil.todo("cellWebBrowserEstimate()");
 	return CELL_OK;
@@ -254,19 +254,19 @@ error_code cellWebBrowserInitialize(vm::ptr<CellWebBrowserSystemCallback> system
 	return CELL_OK;
 }
 
-s32 cellWebBrowserNavigate2()
+error_code cellWebBrowserNavigate2()
 {
 	cellSysutil.todo("cellWebBrowserNavigate2()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserSetLocalContentsAdditionalTitleID()
+error_code cellWebBrowserSetLocalContentsAdditionalTitleID()
 {
 	cellSysutil.todo("cellWebBrowserSetLocalContentsAdditionalTitleID()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserSetSystemCallbackUsrdata()
+error_code cellWebBrowserSetSystemCallbackUsrdata()
 {
 	cellSysutil.todo("cellWebBrowserSetSystemCallbackUsrdata()");
 	return CELL_OK;
@@ -285,31 +285,31 @@ void cellWebBrowserShutdown()
 	});
 }
 
-s32 cellWebBrowserUpdatePointerDisplayPos2()
+error_code cellWebBrowserUpdatePointerDisplayPos2()
 {
 	cellSysutil.todo("cellWebBrowserUpdatePointerDisplayPos2()");
 	return CELL_OK;
 }
 
-s32 cellWebBrowserWakeupWithGameExit()
+error_code cellWebBrowserWakeupWithGameExit()
 {
 	cellSysutil.todo("cellWebBrowserWakeupWithGameExit()");
 	return CELL_OK;
 }
 
-s32 cellWebComponentCreate()
+error_code cellWebComponentCreate()
 {
 	cellSysutil.todo("cellWebComponentCreate()");
 	return CELL_OK;
 }
 
-s32 cellWebComponentCreateAsync()
+error_code cellWebComponentCreateAsync()
 {
 	cellSysutil.todo("cellWebComponentCreateAsync()");
 	return CELL_OK;
 }
 
-s32 cellWebComponentDestroy()
+error_code cellWebComponentDestroy()
 {
 	cellSysutil.todo("cellWebComponentDestroy()");
 	return CELL_OK;

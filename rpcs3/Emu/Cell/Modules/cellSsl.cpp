@@ -69,7 +69,7 @@ error_code cellSslEnd()
 	return CELL_OK;
 }
 
-s32 cellSslGetMemoryInfo()
+error_code cellSslGetMemoryInfo()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
@@ -314,505 +314,505 @@ error_code cellSslCertGetMd5Fingerprint(vm::cptr<void> sslCert, vm::cptr<u8> buf
 	return CELL_OK;
 }
 
-s32 _cellSslConvertCipherId()
+error_code _cellSslConvertCipherId()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 _cellSslConvertSslVersion()
+error_code _cellSslConvertSslVersion()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 _cellSslIsInitd()
+error_code _cellSslIsInitd()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 _cellSslPemReadPrivateKey()
+error_code _cellSslPemReadPrivateKey()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 _cellSslPemReadX509()
+error_code _cellSslPemReadX509()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BER_read_item()
+error_code BER_read_item()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_ctrl()
+error_code BIO_ctrl()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_dump()
+error_code BIO_dump()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_free()
+error_code BIO_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_get_cb_arg()
+error_code BIO_get_cb_arg()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_get_retry_reason()
+error_code BIO_get_retry_reason()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_new_mem()
+error_code BIO_new_mem()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_new_socket()
+error_code BIO_new_socket()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_printf()
+error_code BIO_printf()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_ptr_ctrl()
+error_code BIO_ptr_ctrl()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_set_cb_arg()
+error_code BIO_set_cb_arg()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 ERR_clear_error()
+error_code ERR_clear_error()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 ERR_get_error()
+error_code ERR_get_error()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 ERR_error_string()
+error_code ERR_error_string()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 ERR_func_error_string()
+error_code ERR_func_error_string()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 ERR_peek_error()
+error_code ERR_peek_error()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 EVP_PKEY_free()
+error_code EVP_PKEY_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 R_time()
+error_code R_time()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 R_time_cmp()
+error_code R_time_cmp()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 R_time_export()
+error_code R_time_export()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 R_time_free()
+error_code R_time_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 R_time_import()
+error_code R_time_import()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 R_time_new()
+error_code R_time_new()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CIPHER_description()
+error_code SSL_CIPHER_description()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CIPHER_get_bits()
+error_code SSL_CIPHER_get_bits()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CIPHER_get_id()
+error_code SSL_CIPHER_get_id()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CIPHER_get_name()
+error_code SSL_CIPHER_get_name()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CIPHER_get_version()
+error_code SSL_CIPHER_get_version()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_ctrl()
+error_code SSL_CTX_ctrl()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_free()
+error_code SSL_CTX_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_new()
+error_code SSL_CTX_new()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_set_app_verify_cb()
+error_code SSL_CTX_set_app_verify_cb()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_set_info_cb()
+error_code SSL_CTX_set_info_cb()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_set_options()
+error_code SSL_CTX_set_options()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_set_verify_mode()
+error_code SSL_CTX_set_verify_mode()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_use_certificate()
+error_code SSL_CTX_use_certificate()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_use_PrivateKey()
+error_code SSL_CTX_use_PrivateKey()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_SESSION_free()
+error_code SSL_SESSION_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_alert_desc_string_long()
+error_code SSL_alert_desc_string_long()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_alert_type_string_long()
+error_code SSL_alert_type_string_long()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_clear()
+error_code SSL_clear()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32	SSL_do_handshake()
+error_code	SSL_do_handshake()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_free()
+error_code SSL_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_get_current_cipher()
+error_code SSL_get_current_cipher()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_get_error()
+error_code SSL_get_error()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_get_rbio()
+error_code SSL_get_rbio()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_get_version()
+error_code SSL_get_version()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_new()
+error_code SSL_new()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_peek()
+error_code SSL_peek()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_read()
+error_code SSL_read()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_set_bio()
+error_code SSL_set_bio()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_set_connect_state()
+error_code SSL_set_connect_state()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_set_session()
+error_code SSL_set_session()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_set_ssl_method()
+error_code SSL_set_ssl_method()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_shutdown()
+error_code SSL_shutdown()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_state()
+error_code SSL_state()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_state_string_long()
+error_code SSL_state_string_long()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_version()
+error_code SSL_version()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_want()
+error_code SSL_want()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_write()
+error_code SSL_write()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_check_private_key()
+error_code SSLCERT_check_private_key()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_free()
+error_code SSLCERT_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_from_binary()
+error_code SSLCERT_from_binary()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_basic_constraints_int()
+error_code SSLCERT_get_basic_constraints_int()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_extension()
+error_code SSLCERT_get_extension()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_issuer_name()
+error_code SSLCERT_get_issuer_name()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_notAfter()
+error_code SSLCERT_get_notAfter()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_notBefore()
+error_code SSLCERT_get_notBefore()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_pubkey()
+error_code SSLCERT_get_pubkey()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_subject_name()
+error_code SSLCERT_get_subject_name()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_NAME_cmp()
+error_code SSLCERT_NAME_cmp()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_NAME_ENTRY_get_info()
+error_code SSLCERT_NAME_ENTRY_get_info()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_NAME_get_entry()
+error_code SSLCERT_NAME_get_entry()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_NAME_get_entry_count()
+error_code SSLCERT_NAME_get_entry_count()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_NAME_oneline()
+error_code SSLCERT_NAME_oneline()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_OID_to_string()
+error_code SSLCERT_OID_to_string()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_verify()
+error_code SSLCERT_verify()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLv3_client_method()
+error_code SSLv3_client_method()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 TLSv1_client_method()
+error_code TLSv1_client_method()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;

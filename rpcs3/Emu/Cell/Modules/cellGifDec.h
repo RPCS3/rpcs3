@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 
 // Return Codes
-enum
+enum CellGifDecError : u32
 {
 	CELL_GIFDEC_ERROR_OPEN_FILE     = 0x80611300,
 	CELL_GIFDEC_ERROR_STREAM_FORMAT = 0x80611301,
