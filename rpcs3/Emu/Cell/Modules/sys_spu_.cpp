@@ -377,7 +377,7 @@ error_code sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
+error_code sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 {
 	sysPrxForUser.warning("sys_raw_spu_load(id=%d, path=%s, entry=*0x%x)", id, path, entry);
 
@@ -385,7 +385,6 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 
 	if (!elf_file)
 	{
-		sysPrxForUser.error("sys_raw_spu_load() error: %s not found!", path);
 		return CELL_ENOENT;
 	}
 
@@ -399,7 +398,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_image_load(ppu_thread& ppu, s32 id, vm::ptr<sys_spu_image> img)
+error_code sys_raw_spu_image_load(ppu_thread& ppu, s32 id, vm::ptr<sys_spu_image> img)
 {
 	sysPrxForUser.warning("sys_raw_spu_image_load(id=%d, img=*0x%x)", id, img);
 

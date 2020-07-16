@@ -11,6 +11,27 @@
 
 LOG_CHANNEL(libmixer);
 
+template<>
+void fmt_class_string<CellLibmixerError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_LIBMIXER_ERROR_NOT_INITIALIZED);
+			STR_CASE(CELL_LIBMIXER_ERROR_INVALID_PARAMATER);
+			STR_CASE(CELL_LIBMIXER_ERROR_NO_MEMORY);
+			STR_CASE(CELL_LIBMIXER_ERROR_ALREADY_EXIST);
+			STR_CASE(CELL_LIBMIXER_ERROR_FULL);
+			STR_CASE(CELL_LIBMIXER_ERROR_NOT_EXIST);
+			STR_CASE(CELL_LIBMIXER_ERROR_TYPE_MISMATCH);
+			STR_CASE(CELL_LIBMIXER_ERROR_NOT_FOUND);
+		}
+
+		return unknown;
+	});
+}
+
 struct SurMixerConfig
 {
 	std::mutex mutex;

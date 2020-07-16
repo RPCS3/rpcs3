@@ -1,45 +1,45 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(libad_core);
 
-s32 sceAdOpenContext()
+error_code sceAdOpenContext()
 {
 	UNIMPLEMENTED_FUNC(libad_core);
 	return CELL_OK;
 }
 
-s32 sceAdFlushReports()
+error_code sceAdFlushReports()
 {
 	UNIMPLEMENTED_FUNC(libad_core);
 	return CELL_OK;
 }
 
-s32 sceAdGetAssetInfo()
+error_code sceAdGetAssetInfo()
 {
 	UNIMPLEMENTED_FUNC(libad_core);
 	return CELL_OK;
 }
 
-s32 sceAdCloseContext()
+error_code sceAdCloseContext()
 {
 	UNIMPLEMENTED_FUNC(libad_core);
 	return CELL_OK;
 }
 
-s32 sceAdGetSpaceInfo()
+error_code sceAdGetSpaceInfo()
 {
 	UNIMPLEMENTED_FUNC(libad_core);
 	return CELL_OK;
 }
 
-s32 sceAdGetConnectionInfo()
+error_code sceAdGetConnectionInfo()
 {
 	UNIMPLEMENTED_FUNC(libad_core);
 	return CELL_OK;
 }
 
-s32 sceAdConnectContext()
+error_code sceAdConnectContext()
 {
 	UNIMPLEMENTED_FUNC(libad_core);
 	return CELL_OK;

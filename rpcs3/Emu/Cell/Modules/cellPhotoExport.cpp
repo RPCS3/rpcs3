@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "cellSysutil.h"
 
@@ -7,7 +7,7 @@
 LOG_CHANNEL(cellPhotoExport);
 
 // Return Codes
-enum
+enum CellPhotoExportError : u32
 {
 	CELL_PHOTO_EXPORT_UTIL_ERROR_BUSY         = 0x8002c201,
 	CELL_PHOTO_EXPORT_UTIL_ERROR_INTERNAL     = 0x8002c202,
@@ -21,6 +21,29 @@ enum
 	CELL_PHOTO_EXPORT_UTIL_ERROR_INITIALIZE   = 0x8002c20a,
 };
 
+template<>
+void fmt_class_string<CellPhotoExportError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_PHOTO_EXPORT_UTIL_ERROR_BUSY);
+			STR_CASE(CELL_PHOTO_EXPORT_UTIL_ERROR_INTERNAL);
+			STR_CASE(CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM);
+			STR_CASE(CELL_PHOTO_EXPORT_UTIL_ERROR_ACCESS_ERROR);
+			STR_CASE(CELL_PHOTO_EXPORT_UTIL_ERROR_DB_INTERNAL);
+			STR_CASE(CELL_PHOTO_EXPORT_UTIL_ERROR_DB_REGIST);
+			STR_CASE(CELL_PHOTO_EXPORT_UTIL_ERROR_SET_META);
+			STR_CASE(CELL_PHOTO_EXPORT_UTIL_ERROR_FLUSH_META);
+			STR_CASE(CELL_PHOTO_EXPORT_UTIL_ERROR_MOVE);
+			STR_CASE(CELL_PHOTO_EXPORT_UTIL_ERROR_INITIALIZE);
+		}
+
+		return unknown;
+	});
+}
+
 struct CellPhotoExportSetParam
 {
 	vm::bptr<char> photo_title;
@@ -31,19 +54,19 @@ struct CellPhotoExportSetParam
 
 using CellPhotoExportUtilFinishCallback = void(s32 result, vm::ptr<void> userdata);
 
-s32 cellPhotoInitialize()
+error_code cellPhotoInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoExport);
 	return CELL_OK;
 }
 
-s32 cellPhotoFinalize()
+error_code cellPhotoFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoExport);
 	return CELL_OK;
 }
 
-s32 cellPhotoRegistFromFile()
+error_code cellPhotoRegistFromFile()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoExport);
 	return CELL_OK;

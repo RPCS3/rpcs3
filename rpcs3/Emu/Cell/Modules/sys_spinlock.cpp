@@ -31,7 +31,7 @@ error_code sys_spinlock_lock(ppu_thread& ppu, vm::ptr<atomic_be_t<u32>> lock)
 	return CELL_OK;
 }
 
-s32 sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)
+error_code sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.trace("sys_spinlock_trylock(lock=*0x%x)", lock);
 

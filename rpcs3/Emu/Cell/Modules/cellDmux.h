@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 
 // Error Codes
-enum
+enum CellDmuxError :u32
 {
 	CELL_DMUX_ERROR_ARG     = 0x80610201,
 	CELL_DMUX_ERROR_SEQ     = 0x80610202,

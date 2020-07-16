@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/lv2/sys_tty.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Utilities/cfmt.h"
@@ -383,7 +383,7 @@ u32 _sys_memalign(u32 align, u32 size)
 	return vm::alloc(size, vm::main, std::max<u32>(align, 0x10000));
 }
 
-s32 _sys_free(u32 addr)
+error_code _sys_free(u32 addr)
 {
 	sysPrxForUser.warning("_sys_free(addr=0x%x)", addr);
 
@@ -412,7 +412,7 @@ s32 _sys_snprintf(ppu_thread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> 
 	}
 }
 
-s32 _sys_printf(ppu_thread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_args)
+error_code _sys_printf(ppu_thread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
 	sysPrxForUser.warning("_sys_printf(fmt=%s, ...)", fmt);
 
@@ -434,19 +434,19 @@ s32 _sys_sprintf(ppu_thread& ppu, vm::ptr<char> buffer, vm::cptr<char> fmt, ppu_
 	return static_cast<s32>(result.size());
 }
 
-s32 _sys_vprintf()
+error_code _sys_vprintf()
 {
 	sysPrxForUser.todo("_sys_vprintf()");
 	return CELL_OK;
 }
 
-s32 _sys_vsnprintf()
+error_code _sys_vsnprintf()
 {
 	sysPrxForUser.todo("_sys_vsnprintf()");
 	return CELL_OK;
 }
 
-s32 _sys_vsprintf()
+error_code _sys_vsprintf()
 {
 	sysPrxForUser.todo("_sys_vsprintf()");
 	return CELL_OK;

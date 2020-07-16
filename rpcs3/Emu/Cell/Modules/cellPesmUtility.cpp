@@ -1,93 +1,93 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(cellPesmUtility);
 
-s32 cellPesmCloseDevice()
+error_code cellPesmCloseDevice()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmEncryptSample()
+error_code cellPesmEncryptSample()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmEncryptSample2()
+error_code cellPesmEncryptSample2()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmEndMovieRec()
+error_code cellPesmEndMovieRec()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmFinalize()
+error_code cellPesmFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmFinalize2()
+error_code cellPesmFinalize2()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmGetSinf()
+error_code cellPesmGetSinf()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmInitEntry()
+error_code cellPesmInitEntry()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmInitEntry2()
+error_code cellPesmInitEntry2()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmInitialize()
+error_code cellPesmInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmLoadAsync()
+error_code cellPesmLoadAsync()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmOpenDevice()
+error_code cellPesmOpenDevice()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmPrepareRec()
+error_code cellPesmPrepareRec()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmStartMovieRec()
+error_code cellPesmStartMovieRec()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;
 }
 
-s32 cellPesmUnloadAsync()
+error_code cellPesmUnloadAsync()
 {
 	UNIMPLEMENTED_FUNC(cellPesmUtility);
 	return CELL_OK;

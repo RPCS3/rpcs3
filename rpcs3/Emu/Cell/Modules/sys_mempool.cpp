@@ -29,7 +29,7 @@ struct memory_pool_t
 	std::vector<vm::ptr<void>> free_blocks;
 };
 
-s32 sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<void> chunk, const u64 chunk_size, const u64 block_size, const u64 ralignment)
+error_code sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<void> chunk, const u64 chunk_size, const u64 block_size, const u64 ralignment)
 {
 	sysPrxForUser.warning("sys_mempool_create(mempool=*0x%x, chunk=*0x%x, chunk_size=%d, block_size=%d, ralignment=%d)", mempool, chunk, chunk_size, block_size, ralignment);
 
@@ -131,7 +131,7 @@ void sys_mempool_destroy(ppu_thread& ppu, sys_mempool_t mempool)
 	}
 }
 
-s32 sys_mempool_free_block(ppu_thread& ppu, sys_mempool_t mempool, vm::ptr<void> block)
+error_code sys_mempool_free_block(ppu_thread& ppu, sys_mempool_t mempool, vm::ptr<void> block)
 {
 	sysPrxForUser.warning("sys_mempool_free_block(mempool=%d, block=*0x%x)", mempool, block);
 

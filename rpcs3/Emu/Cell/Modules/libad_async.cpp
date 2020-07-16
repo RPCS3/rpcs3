@@ -1,39 +1,39 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(libad_async);
 
-s32 sceAdAsyncOpenContext()
+error_code sceAdAsyncOpenContext()
 {
 	UNIMPLEMENTED_FUNC(libad_async);
 	return CELL_OK;
 }
 
-s32 sceAdAsyncConnectContext()
+error_code sceAdAsyncConnectContext()
 {
 	UNIMPLEMENTED_FUNC(libad_async);
 	return CELL_OK;
 }
 
-s32 sceAdAsyncSpaceOpen()
+error_code sceAdAsyncSpaceOpen()
 {
 	UNIMPLEMENTED_FUNC(libad_async);
 	return CELL_OK;
 }
 
-s32 sceAdAsyncFlushReports()
+error_code sceAdAsyncFlushReports()
 {
 	UNIMPLEMENTED_FUNC(libad_async);
 	return CELL_OK;
 }
 
-s32 sceAdAsyncSpaceClose()
+error_code sceAdAsyncSpaceClose()
 {
 	UNIMPLEMENTED_FUNC(libad_async);
 	return CELL_OK;
 }
 
-s32 sceAdAsyncCloseContext()
+error_code sceAdAsyncCloseContext()
 {
 	UNIMPLEMENTED_FUNC(libad_async);
 	return CELL_OK;
