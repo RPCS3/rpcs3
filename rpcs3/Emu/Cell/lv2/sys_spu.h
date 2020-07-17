@@ -222,7 +222,7 @@ struct sys_spu_image
 
 	void load(const fs::file& stream);
 	void free();
-	static void deploy(u32 loc, sys_spu_segment* segs, u32 nsegs);
+	static void deploy(u8* loc, sys_spu_segment* segs, u32 nsegs);
 };
 
 enum : u32

@@ -59,6 +59,22 @@ void fmt_class_string<mfc_tag_update>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<spu_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](spu_type arg)
+	{
+		switch (arg)
+		{
+		case spu_type::threaded: return "Threaded";
+		case spu_type::raw: return "Raw";
+		case spu_type::isolated: return "Isolated";
+		}
+
+		return unknown;
+	});
+}
+
 // Verify AVX availability for TSX transactions
 static const bool s_tsx_avx = utils::has_avx();
 
@@ -968,7 +984,7 @@ void spu_thread::cpu_init()
 	ch_dec_start_timestamp = get_timebased_time(); // ???
 	ch_dec_value = 0;
 
-	if (offset >= RAW_SPU_BASE_ADDR)
+	if (get_type() >= spu_type::raw)
 	{
 		ch_in_mbox.clear();
 		ch_snr1.data.raw() = {};
@@ -980,7 +996,7 @@ void spu_thread::cpu_init()
 		mfc_prxy_write_state = {};
 	}
 
-	status_npc.raw() = {is_isolated ? SPU_STATUS_IS_ISOLATED : 0, 0};
+	status_npc.raw() = {get_type() == spu_type::isolated ? SPU_STATUS_IS_ISOLATED : 0, 0};
 	run_ctrl.raw() = 0;
 
 	int_ctrl[0].clear();
@@ -992,7 +1008,7 @@ void spu_thread::cpu_init()
 
 void spu_thread::cpu_stop()
 {
-	if (!group && offset >= RAW_SPU_BASE_ADDR)
+	if (get_type() >= spu_type::raw)
 	{
 		if (status_npc.fetch_op([this](status_npc_sync_var& state)
 		{
@@ -1011,7 +1027,7 @@ void spu_thread::cpu_stop()
 			status_npc.notify_one();
 		}
 	}
-	else if (group && is_stopped())
+	else if (is_stopped())
 	{
 		ch_in_mbox.clear();
 
@@ -1092,7 +1108,8 @@ void spu_thread::cpu_task()
 			name_cache = cpu->spu_tname.load();
 		}
 
-		return fmt::format("%sSPU[0x%07x] Thread (%s) [0x%05x]", cpu->offset >= RAW_SPU_BASE_ADDR ? cpu->is_isolated ? "Iso" : "Raw" : "", cpu->lv2_id, *name_cache.get(), cpu->pc);
+		const auto type = cpu->get_type();
+		return fmt::format("%sSPU[0x%07x] Thread (%s) [0x%05x]", type >= spu_type::raw ? type == spu_type::isolated ? "Iso" : "Raw" : "", cpu->lv2_id, *name_cache.get(), cpu->pc);
 	};
 
 	if (jit)
@@ -1166,7 +1183,7 @@ spu_thread::~spu_thread()
 	utils::memory_release(ls - SPU_LS_SIZE, SPU_LS_SIZE * 3);
 
 	// Deallocate RawSPU ID
-	if (!group && offset >= RAW_SPU_BASE_ADDR)
+	if (get_type() >= spu_type::raw)
 	{
 		g_raw_spu_id[index] = 0;
 		g_raw_spu_ctr--;
@@ -1175,9 +1192,7 @@ spu_thread::~spu_thread()
 
 spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated)
 	: cpu_thread(idm::last_id())
-	, is_isolated(is_isolated)
 	, index(index)
-	, offset(_ls)
 	, ls([&]()
 	{
 		const auto [_, shm] = vm::get(vm::any, _ls)->get(_ls);
@@ -1193,6 +1208,8 @@ spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::str
 		// Use the middle mirror
 		return addr + SPU_LS_SIZE;
 	}())
+	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
+	, offset(_ls)
 	, group(group)
 	, lv2_id(lv2_id)
 	, spu_tname(stx::shared_cptr<std::string>::make(name))
@@ -1216,7 +1233,7 @@ spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::str
 		}
 	}
 
-	if (!group && offset >= RAW_SPU_BASE_ADDR)
+	if (get_type() >= spu_type::raw)
 	{
 		cpu_init();
 	}
@@ -1279,7 +1296,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				fmt::throw_exception("Invalid RawSPU MMIO offset (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
 			}
 		}
-		else if (this->offset >= RAW_SPU_BASE_ADDR)
+		else if (get_type() >= spu_type::raw)
 		{
 			fmt::throw_exception("SPU MMIO used for RawSPU (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
 		}
@@ -2618,7 +2635,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 	case SPU_RdMachStat:
 	{
 		// Return SPU Interrupt status in LSB
-		return u32{interrupts_enabled} | (u32{is_isolated} << 1);
+		return u32{interrupts_enabled} | (u32{get_type() == spu_type::isolated} << 1);
 	}
 	}
 
@@ -2639,7 +2656,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutIntrMbox:
 	{
-		if (offset >= RAW_SPU_BASE_ADDR)
+		if (get_type() >= spu_type::raw)
 		{
 			while (!ch_out_intr_mbox.try_push(value))
 			{
@@ -2957,7 +2974,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		});
 	};
 
-	if (offset >= RAW_SPU_BASE_ADDR)
+	if (get_type() >= spu_type::raw)
 	{
 		// Save next PC and current SPU Interrupt Status
 		state += cpu_flag::stop + cpu_flag::wait;
@@ -3351,7 +3368,7 @@ void spu_thread::halt()
 {
 	spu_log.trace("halt()");
 
-	if (offset >= RAW_SPU_BASE_ADDR)
+	if (get_type() >= spu_type::raw)
 	{
 		state += cpu_flag::stop + cpu_flag::wait;
 
