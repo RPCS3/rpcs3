@@ -391,7 +391,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 
 	sys_spu_image img;
 	img.load(elf_file);
-	img.deploy(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id, img.segs.get_ptr(), img.nsegs);
+	img.deploy(vm::_ptr<u8>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), img.segs.get_ptr(), img.nsegs);
 	img.free();
 
 	*entry = img.entry_point;
@@ -404,7 +404,7 @@ s32 sys_raw_spu_image_load(ppu_thread& ppu, s32 id, vm::ptr<sys_spu_image> img)
 	sysPrxForUser.warning("sys_raw_spu_image_load(id=%d, img=*0x%x)", id, img);
 
 	// Load SPU segments
-	img->deploy(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id, img->segs.get_ptr(), img->nsegs);
+	img->deploy(vm::_ptr<u8>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), img->segs.get_ptr(), img->nsegs);
 
 	// Use MMIO
 	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point);

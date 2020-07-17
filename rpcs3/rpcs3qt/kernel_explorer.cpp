@@ -471,18 +471,7 @@ void kernel_explorer::Update()
 
 	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
 	{
-		std::string_view type = "threaded";
-
-		if (spu.is_isolated)
-		{
-			type = "isolated";
-		}
-		else if (spu.offset >= RAW_SPU_BASE_ADDR)
-		{
-			type = "raw";
-		}
-
-		add_leaf(find_node(m_tree, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), type)));
+		add_leaf(find_node(m_tree, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type())));
 	});
 
 	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)

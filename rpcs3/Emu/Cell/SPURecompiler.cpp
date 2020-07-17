@@ -5502,7 +5502,7 @@ public:
 		case SPU_RdMachStat:
 		{
 			res.value = m_ir->CreateZExt(m_ir->CreateLoad(spu_ptr<u8>(&spu_thread::interrupts_enabled)), get_type<u32>());
-			res.value = m_ir->CreateOr(res.value, m_ir->CreateShl(m_ir->CreateZExt(m_ir->CreateLoad(spu_ptr<u8>(&spu_thread::is_isolated)), get_type<u32>()), m_ir->getInt32(1)));
+			res.value = m_ir->CreateOr(res.value, m_ir->CreateAnd(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::thread_type)), m_ir->getInt32(2)));
 			break;
 		}
 
