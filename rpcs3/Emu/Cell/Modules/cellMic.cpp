@@ -133,7 +133,7 @@ void mic_context::load_config_and_init()
 		{
 		case microphone_handler::standard:
 		{
-			for (u32 index = 0; index < device_list.size(); index++)
+			for (s32 index = 0; index < static_cast<s32>(device_list.size()); index++)
 			{
 				mic_list.emplace(std::piecewise_construct, std::forward_as_tuple(index), std::forward_as_tuple(microphone_handler::standard));
 				mic_list.at(index).add_device(device_list[index]);

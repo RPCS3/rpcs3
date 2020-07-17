@@ -353,7 +353,7 @@ public:
 
 	u64 event_queue_key = 0;
 
-	std::unordered_map<u8, microphone_device> mic_list;
+	std::unordered_map<s32, microphone_device> mic_list;
 
 	shared_mutex mutex;
 	atomic_t<u32> init = 0;
