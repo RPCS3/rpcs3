@@ -223,7 +223,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 }
 
 
-// Trunc denormal/subnormal values (-FLT_MIN, FLT_MIN) to 0
+// Trunc denormal/subnormal values (-FLT_MIN, FLT_MIN) to +0
 // VREFP always generates infinity giving a denormal value,
 // that causes subsequent VMADDFP/VNMSUBFP generates NaN instead of correct value.
 //

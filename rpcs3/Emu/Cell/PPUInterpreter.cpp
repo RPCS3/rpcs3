@@ -394,7 +394,7 @@ inline v128 vec_select_nan(v128 a, v128 b, Args... args)
 	return vec_select_nan(a, vec_select_nan(b, args...));
 }
 
-// Trunc denormal/subnormal values (-FLT_MIN, FLT_MIN) to 0
+// Trunc denormal/subnormal values (-FLT_MIN, FLT_MIN) to +0
 // VREFP always generates infinity giving a denormal value,
 // that causes subsequent VMADDFP/VNMSUBFP generates NaN instead of correct value.
 //
