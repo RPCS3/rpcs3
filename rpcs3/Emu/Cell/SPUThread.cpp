@@ -1180,7 +1180,7 @@ spu_thread::~spu_thread()
 	}
 
 	// Release LS mirrors area
-	utils::memory_release(ls - SPU_LS_SIZE, SPU_LS_SIZE * 3);
+	utils::memory_release(ls - (SPU_LS_SIZE * 2), SPU_LS_SIZE * 5);
 
 	// Deallocate RawSPU ID
 	if (get_type() >= spu_type::raw)
@@ -1196,9 +1196,9 @@ spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::str
 	, ls([&]()
 	{
 		const auto [_, shm] = vm::get(vm::any, _ls)->get(_ls);
-		const auto addr = static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 3));
+		const auto addr = static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 5));
 
-		for (u32 i = 0; i < 3; i++)
+		for (u32 i = 1; i < 4; i++)
 		{
 			// Map LS mirrors
 			const auto ptr = addr + (i * SPU_LS_SIZE);
@@ -1206,7 +1206,7 @@ spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::str
 		}
 
 		// Use the middle mirror
-		return addr + SPU_LS_SIZE;
+		return addr + (SPU_LS_SIZE * 2);
 	}())
 	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
 	, offset(_ls)
