@@ -12,6 +12,13 @@
 #include <bit>
 #include <cmath>
 
+
+#if defined(_MSC_VER)
+#define AVX_FUNC
+#else
+#define AVX_FUNC __attribute__((__target__("avx")))
+#endif
+
 #if !defined(_MSC_VER) && defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -363,6 +370,10 @@ constexpr u32 ppu_nan_u32 = 0x7FC00000u;
 static const f32 ppu_nan_f32 = std::bit_cast<f32>(ppu_nan_u32);
 static const v128 ppu_vec_nans = v128::from32p(ppu_nan_u32);
 
+
+static const auto ZERO_M128 = _mm_set1_ps(0.0f);
+static const auto SUBNORMAL_MASK    = _mm_set1_epi32(0x7f800000u);
+
 // NaNs production precedence: NaN from Va, Vb, Vc
 // and lastly the result of the operation in case none of the operands is a NaN
 // Signaling NaNs are 'quieted' (MSB of fraction is set) with other bits of data remain the same
@@ -381,6 +392,17 @@ template <typename... Args>
 inline v128 vec_select_nan(v128 a, v128 b, Args... args)
 {
 	return vec_select_nan(a, vec_select_nan(b, args...));
+}
+
+// Trunc denormal/subnormal values (-FLT_MIN, FLT_MIN) to 0
+// VREFP always generates infinity giving a denormal value,
+// that causes subsequent VMADDFP/VNMSUBFP generates NaN instead of correct value.
+//
+extern AVX_FUNC __m128 vec_handle_subnormal(__m128 result)
+{
+	const auto val_ge_zero     = _mm_and_si128(_mm_castps_si128(result), SUBNORMAL_MASK);
+	const auto val_cmp_fltmin  = _mm_cmp_ps(_mm_castsi128_ps(val_ge_zero), ZERO_M128, _CMP_GT_OQ);
+	return _mm_and_ps(result, val_cmp_fltmin);
 }
 
 v128 vec_handle_nan(v128 result)
@@ -961,8 +983,8 @@ bool ppu_interpreter_fast::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 	const auto a = ppu.vr[op.va].vf;
 	const auto b = ppu.vr[op.vb].vf;
 	const auto c = ppu.vr[op.vc].vf;
-	const auto result = _mm_add_ps(_mm_mul_ps(a, c), b);
-	ppu.vr[op.vd] = vec_handle_nan(result);
+	auto result = _mm_add_ps(_mm_mul_ps(a, c), b);	
+	ppu.vr[op.vd] = vec_handle_nan(vec_handle_subnormal(result));
 	return true;
 }
 
@@ -971,7 +993,9 @@ bool ppu_interpreter_precise::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 	const auto a = ppu.vr[op.va];
 	const auto b = ppu.vr[op.vb];
 	const auto c = ppu.vr[op.vc];
-	ppu.vr[op.rd] = vec_handle_nan(v128::fma32f(a, c, b), a, b, c);
+	auto result = v128::fma32f(a, c, b);
+	result.vf    = vec_handle_subnormal(result.vf);
+	ppu.vr[op.rd] = vec_handle_nan(result, a, b, c);
 	return true;
 }
 
@@ -1462,7 +1486,7 @@ bool ppu_interpreter_fast::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const auto a = _mm_sub_ps(_mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf), ppu.vr[op.vb].vf);
 	const auto b = _mm_set1_ps(-0.0f);
-	const auto result = _mm_xor_ps(a, b);
+	const auto result = vec_handle_subnormal(_mm_xor_ps(a, b));
 	ppu.vr[op.vd] = vec_handle_nan(result, a, b);
 	return true;
 }
@@ -1473,7 +1497,7 @@ bool ppu_interpreter_precise::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
 	const auto a = ppu.vr[op.va];
 	const auto c = ppu.vr[op.vc];
 	const auto b = v128::fromF(_mm_xor_ps(ppu.vr[op.vb].vf, m));
-	const auto r = v128::fromF(_mm_xor_ps(v128::fma32f(a, c, b).vf, m));
+	const auto r = v128::fromF(vec_handle_subnormal(_mm_xor_ps(v128::fma32f(a, c, b).vf, m)));
 	ppu.vr[op.rd] = vec_handle_nan(r, a, b, c);
 	return true;
 }

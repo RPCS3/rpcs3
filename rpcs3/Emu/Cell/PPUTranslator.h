@@ -103,6 +103,8 @@ public:
 
 	llvm::Value* VecHandleNan(llvm::Value* val);
 
+	llvm::Value* VecHandleSubnormal(llvm::Value* val);
+
 	template <typename T>
 	auto vec_handle_nan(T&& expr)
 	{

@@ -222,6 +222,24 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	return m_function;
 }
 
+
+// Trunc denormal/subnormal values (-FLT_MIN, FLT_MIN) to 0
+// VREFP always generates infinity giving a denormal value,
+// that causes subsequent VMADDFP/VNMSUBFP generates NaN instead of correct value.
+//
+Value* PPUTranslator::VecHandleSubnormal(Value* val)
+{
+	const auto zero_vec4 = ConstantVector::getSplat(4, ConstantInt::get(GetType<u32>(), 0u));
+	const auto subnormal_mask = ConstantVector::getSplat(4, ConstantInt::get(GetType<u32>(), 0x7f800000u));
+
+	auto val_u32  = m_ir->CreateBitCast(val, GetType<u32[4]>());	
+	auto sub_mask = m_ir->CreateAnd(subnormal_mask, val_u32);	
+	sub_mask = Solid(m_ir->CreateICmpUGT(sub_mask, zero_vec4));
+	sub_mask = m_ir->CreateBitCast(sub_mask, GetType<u32[4]>());
+	val = m_ir->CreateAnd(sub_mask, val_u32);
+	return m_ir->CreateBitCast(val, GetType<f32[4]>());
+}
+
 Value* PPUTranslator::VecHandleNan(Value* val)
 {
 	const auto is_nan = m_ir->CreateFCmpUNO(val, val);
@@ -927,7 +945,10 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 
 		if (data == v128{})
 		{
-			set_vr(op.vd, vec_handle_nan(a * c));
+			if (g_cfg.core.llvm_ppu_accurate_vector_nan)
+				SetVr(op.vd, VecHandleNan(VecHandleSubnormal((a * c).eval(m_ir))));
+			else
+				SetVr(op.vd, VecHandleSubnormal((a * c).eval(m_ir)));
 			ppu_log.notice("LLVM: VMADDFP with 0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 			return;
 		}
@@ -935,7 +956,7 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 
 	if (m_use_fma)
 	{
-		SetVr(op.vd, VecHandleNan(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { a.value, c.value, b.value })));
+		SetVr(op.vd, VecHandleNan(VecHandleSubnormal(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), {a.value, c.value, b.value}))));
 		return;
 	}
 
@@ -945,7 +966,7 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
 
 	const auto xr = m_ir->CreateCall(get_intrinsic<f64[4]>(llvm::Intrinsic::fmuladd), {xa, xc, xb});
-	SetVr(op.vd, VecHandleNan(m_ir->CreateFPTrunc(xr, get_type<f32[4]>())));
+	SetVr(op.vd, VecHandleNan(VecHandleSubnormal(m_ir->CreateFPTrunc(xr, get_type<f32[4]>()))));
 }
 
 void PPUTranslator::VMAXFP(ppu_opcode_t op)
@@ -1233,7 +1254,10 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 
 		if (data == v128{})
 		{
-			set_vr(op.vd, vec_handle_nan(-a * c));
+			if (g_cfg.core.llvm_ppu_accurate_vector_nan)
+				SetVr(op.vd, VecHandleNan(VecHandleSubnormal((-a * c).eval(m_ir))));
+			else
+				SetVr(op.vd, VecHandleSubnormal((-a * c).eval(m_ir)));
 			ppu_log.notice("LLVM: VNMSUBFP with 0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 			return;
 		}
@@ -1242,7 +1266,7 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 	// Differs from the emulated path with regards to negative zero
 	if (m_use_fma)
 	{
-		SetVr(op.vd, VecHandleNan(m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { a.value, c.value, m_ir->CreateFNeg(b.value) }))));
+		SetVr(op.vd, VecHandleNan(VecHandleSubnormal(m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), {a.value, c.value, m_ir->CreateFNeg(b.value)})))));
 		return;
 	}
 
@@ -1252,7 +1276,7 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
 
 	const auto xr = m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(xa, xc), xb));
-	SetVr(op.vd, VecHandleNan(m_ir->CreateFPTrunc(xr, get_type<f32[4]>())));
+	SetVr(op.vd, VecHandleNan(VecHandleSubnormal(m_ir->CreateFPTrunc(xr, get_type<f32[4]>()))));
 }
 
 void PPUTranslator::VNOR(ppu_opcode_t op)
