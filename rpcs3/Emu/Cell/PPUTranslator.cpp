@@ -223,10 +223,8 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 }
 
 
-// Trunc denormal/subnormal values (-FLT_MIN, FLT_MIN) to +0
-// VREFP always generates infinity giving a denormal value,
-// that causes subsequent VMADDFP/VNMSUBFP generates NaN instead of correct value.
-//
+// Explicitly emits codes for flushing denormal/subnormal numbers (-FLT_MIN, FLT_MIN) to 0 
+// TODO: Emits LLVM FTZ flag instead
 Value* PPUTranslator::VecHandleSubnormal(Value* val)
 {
 	const auto zero_vec4 = ConstantVector::getSplat(4, ConstantInt::get(GetType<u32>(), 0u));
