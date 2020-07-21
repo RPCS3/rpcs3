@@ -810,24 +810,27 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		do_the_search();
 	});
 
-	connect(btn_filter_results, &QPushButton::clicked, [=, this](bool /*checked*/) { do_the_search(); });
+	connect(btn_filter_results, &QPushButton::clicked, [this](bool /*checked*/) { do_the_search(); });
 
-	connect(lst_search, &QListWidget::customContextMenuRequested, [=, this](const QPoint& loc)
+	connect(lst_search, &QListWidget::customContextMenuRequested, [this](const QPoint& loc)
 	{
-		QPoint globalPos      = lst_search->mapToGlobal(loc);
-		QListWidgetItem* item = lst_search->item(lst_search->currentRow());
-		if (!item)
+		const QPoint globalPos = lst_search->mapToGlobal(loc);
+		const int current_row  = lst_search->currentRow();
+		QListWidgetItem* item  = lst_search->item(current_row);
+
+		// Skip if the item was a placeholder
+		if (!item || item->data(Qt::UserRole).toBool())
 			return;
 
 		QMenu* menu = new QMenu();
 
 		QAction* add_to_cheat_list = new QAction(tr("Add to cheat list"), menu);
 
-		const u32 offset       = offsets_found[lst_search->currentRow()];
+		const u32 offset       = offsets_found[current_row];
 		const cheat_type type  = static_cast<cheat_type>(cbx_cheat_search_type->currentIndex());
 		const std::string name = Emu.GetTitle();
 
-		connect(add_to_cheat_list, &QAction::triggered, [=, this]()
+		connect(add_to_cheat_list, &QAction::triggered, [name, offset, type, this]()
 		{
 			if (g_cheat.exist(name, offset))
 			{
@@ -864,13 +867,13 @@ cheat_manager_dialog* cheat_manager_dialog::get_dlg(QWidget* parent)
 }
 
 template <typename T>
-T cheat_manager_dialog::convert_from_QString(QString& str, bool& success)
+T cheat_manager_dialog::convert_from_QString(const QString& str, bool& success)
 {
 	T result;
 
 	if constexpr (std::is_same<T, u8>::value)
 	{
-		u16 result_16 = str.toUShort(&success);
+		const u16 result_16 = str.toUShort(&success);
 
 		if (result_16 > 0xFF)
 			success = false;
@@ -889,7 +892,7 @@ T cheat_manager_dialog::convert_from_QString(QString& str, bool& success)
 
 	if constexpr (std::is_same<T, s8>::value)
 	{
-		s16 result_16 = str.toShort(&success);
+		const s16 result_16 = str.toShort(&success);
 		if (result_16 < -128 || result_16 > 127)
 			success = false;
 
@@ -911,11 +914,10 @@ T cheat_manager_dialog::convert_from_QString(QString& str, bool& success)
 template <typename T>
 bool cheat_manager_dialog::convert_and_search()
 {
-	T value;
 	bool res_conv;
-	QString to_search = edt_cheat_search_value->text();
+	const QString to_search = edt_cheat_search_value->text();
 
-	value = convert_from_QString<T>(to_search, res_conv);
+	T value = convert_from_QString<T>(to_search, res_conv);
 
 	if (!res_conv)
 		return false;
@@ -927,11 +929,10 @@ bool cheat_manager_dialog::convert_and_search()
 template <typename T>
 std::pair<bool, bool> cheat_manager_dialog::convert_and_set(u32 offset)
 {
-	T value;
 	bool res_conv;
-	QString to_set = edt_value_final->text();
+	const QString to_set = edt_value_final->text();
 
-	value = convert_from_QString<T>(to_set, res_conv);
+	T value = convert_from_QString<T>(to_set, res_conv);
 
 	if (!res_conv)
 		return {false, false};
@@ -941,7 +942,7 @@ std::pair<bool, bool> cheat_manager_dialog::convert_and_set(u32 offset)
 
 void cheat_manager_dialog::do_the_search()
 {
-	bool res_conv          = false;
+	bool res_conv = false;
 
 	// TODO: better way to do this?
 	switch (static_cast<cheat_type>(cbx_cheat_search_type->currentIndex()))
@@ -964,10 +965,30 @@ void cheat_manager_dialog::do_the_search()
 	}
 
 	lst_search->clear();
-	for (u32 row = 0; row < offsets_found.size(); row++)
+
+	const size_t size = offsets_found.size();
+
+	if (size == 0)
 	{
-		lst_search->insertItem(row, tr("0x%1").arg(offsets_found[row], 1, 16).toUpper());
+		QListWidgetItem* item = new QListWidgetItem(tr("Nothing found"));
+		item->setData(Qt::UserRole, true);
+		lst_search->insertItem(0, item);
 	}
+	else if (size > 10000)
+	{
+		// Only show entries below a fixed amount. Too many entries can take forever to render and fill up memory quickly.
+		QListWidgetItem* item = new QListWidgetItem(tr("Too many entries to display (%0)").arg(size));
+		item->setData(Qt::UserRole, true);
+		lst_search->insertItem(0, item);
+	}
+	else
+	{
+		for (u32 row = 0; row < size; row++)
+		{
+			lst_search->insertItem(row, tr("0x%0").arg(offsets_found[row], 1, 16).toUpper());
+		}
+	}
+
 	btn_filter_results->setEnabled(!offsets_found.empty());
 }
 
