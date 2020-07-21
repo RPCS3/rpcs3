@@ -300,13 +300,15 @@ if(USE_VULKAN)
 		target_link_libraries(3rdparty_vulkan INTERFACE SPIRV SPIRV-Tools-opt Vulkan::Vulkan)
 
 		if(UNIX AND NOT APPLE)
-			find_package(Wayland)
-			if (WAYLAND_FOUND)
-				target_include_directories(3rdparty_vulkan
-					INTERFACE ${WAYLAND_INCLUDE_DIR})
+			if(USE_WAYLAND)
+				find_package(Wayland)
+				if (WAYLAND_FOUND)
+					target_include_directories(3rdparty_vulkan
+						INTERFACE ${WAYLAND_INCLUDE_DIR})
 
-				target_compile_definitions(3rdparty_vulkan
-					INTERFACE -DVK_USE_PLATFORM_WAYLAND_KHR)
+					target_compile_definitions(3rdparty_vulkan
+						INTERFACE -DVK_USE_PLATFORM_WAYLAND_KHR)
+				endif()
 			endif()
 		endif()
 
