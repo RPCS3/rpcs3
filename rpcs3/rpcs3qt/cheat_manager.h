@@ -86,7 +86,7 @@ protected:
 	void do_the_search();
 
 	template <typename T>
-	T convert_from_QString(QString& str, bool& success);
+	T convert_from_QString(const QString& str, bool& success);
 
 	template <typename T>
 	bool convert_and_search();
@@ -94,18 +94,18 @@ protected:
 	std::pair<bool, bool> convert_and_set(u32 offset);
 
 protected:
-	QTableWidget* tbl_cheats;
-	QListWidget* lst_search;
+	QTableWidget* tbl_cheats = nullptr;
+	QListWidget* lst_search = nullptr;
 
-	QLineEdit* edt_value_final;
-	QPushButton* btn_apply;
+	QLineEdit* edt_value_final = nullptr;
+	QPushButton* btn_apply = nullptr;
 
-	QLineEdit* edt_cheat_search_value;
-	QComboBox* cbx_cheat_search_type;
+	QLineEdit* edt_cheat_search_value = nullptr;
+	QComboBox* cbx_cheat_search_type = nullptr;
 
-	QPushButton* btn_filter_results;
+	QPushButton* btn_filter_results = nullptr;
 
-	u32 current_offset;
+	u32 current_offset{};
 	std::vector<u32> offsets_found;
 
 	cheat_engine g_cheat;
