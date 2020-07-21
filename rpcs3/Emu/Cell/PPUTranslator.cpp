@@ -223,19 +223,23 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 }
 
 
-// Explicitly emits codes for flushing denormal/subnormal numbers (-FLT_MIN, FLT_MIN) to 0 
-// TODO: Emits LLVM FTZ flag instead
+// Explicitly emits codes for flushing denormal/subnormal numbers (-FLT_MIN, FLT_MIN) to 0
+// Fix issue #6296
 Value* PPUTranslator::VecHandleSubnormal(Value* val)
 {
 	const auto zero_vec4 = ConstantVector::getSplat(4, ConstantInt::get(GetType<u32>(), 0u));
 	const auto subnormal_mask = ConstantVector::getSplat(4, ConstantInt::get(GetType<u32>(), 0x7f800000u));
+	const auto sign_mask = ConstantVector::getSplat(4, ConstantInt::get(GetType<u32>(), 0x80000000u));
 
 	auto val_u32  = m_ir->CreateBitCast(val, GetType<u32[4]>());	
-	auto sub_mask = m_ir->CreateAnd(subnormal_mask, val_u32);	
+	auto sub_mask = m_ir->CreateAnd(subnormal_mask, val_u32);
+	auto sign_flag = m_ir->CreateAnd(sign_mask, val_u32);
 	sub_mask = Solid(m_ir->CreateICmpUGT(sub_mask, zero_vec4));
 	sub_mask = m_ir->CreateBitCast(sub_mask, GetType<u32[4]>());
 	val = m_ir->CreateAnd(sub_mask, val_u32);
-	return m_ir->CreateBitCast(val, GetType<f32[4]>());
+	val = m_ir->CreateOr(sign_flag, val);
+	val = m_ir->CreateBitCast(val, GetType<f32[4]>());
+	return val;
 }
 
 Value* PPUTranslator::VecHandleNan(Value* val)
