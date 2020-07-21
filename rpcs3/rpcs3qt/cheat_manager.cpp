@@ -546,6 +546,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 	QVBoxLayout* grp_add_cheat_layout     = new QVBoxLayout();
 	QHBoxLayout* grp_add_cheat_sub_layout = new QHBoxLayout();
 	QPushButton* btn_new_search           = new QPushButton(tr("New Search"));
+	btn_new_search->setEnabled(false);
 	btn_filter_results                    = new QPushButton(tr("Filter Results"));
 	btn_filter_results->setEnabled(false);
 	edt_cheat_search_value = new QLineEdit();
@@ -810,6 +811,18 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		do_the_search();
 	});
 
+	connect(edt_cheat_search_value, &QLineEdit::textChanged, this, [btn_new_search, this](const QString& text)
+	{
+		if (btn_new_search)
+		{
+			btn_new_search->setEnabled(!text.isEmpty());
+		}
+		if (btn_filter_results)
+		{
+			btn_filter_results->setEnabled(!text.isEmpty() && !offsets_found.empty());
+		}
+	});
+
 	connect(btn_filter_results, &QPushButton::clicked, [this](bool /*checked*/) { do_the_search(); });
 
 	connect(lst_search, &QListWidget::customContextMenuRequested, [this](const QPoint& loc)
@@ -989,7 +1002,7 @@ void cheat_manager_dialog::do_the_search()
 		}
 	}
 
-	btn_filter_results->setEnabled(!offsets_found.empty());
+	btn_filter_results->setEnabled(!offsets_found.empty() && edt_cheat_search_value && !edt_cheat_search_value->text().isEmpty());
 }
 
 void cheat_manager_dialog::update_cheat_list()
