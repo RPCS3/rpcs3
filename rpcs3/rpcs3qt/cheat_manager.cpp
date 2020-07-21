@@ -46,65 +46,19 @@ void fmt_class_string<cheat_type>::format(std::string& out, u64 arg)
 	});
 }
 
-namespace YAML
-{
-	template <>
-	struct convert<cheat_info>
-	{
-		static bool decode(const Node& node, cheat_info& rhs)
-		{
-			if (node.size() != 3)
-			{
-				return false;
-			}
-
-			rhs.description = node[0].as<std::string>();
-			u64 type64      = 0;
-			if (!cfg::try_to_enum_value(&type64, &fmt_class_string<cheat_type>::format, node[1].Scalar()))
-				return false;
-			if (type64 >= cheat_type_max)
-				return false;
-			rhs.type       = cheat_type{::narrow<u8>(type64)};
-			rhs.red_script = node[2].as<std::string>();
-			return true;
-		}
-	};
-} // namespace YAML
-
 YAML::Emitter& operator<<(YAML::Emitter& out, const cheat_info& rhs)
 {
 	std::string type_formatted;
 	fmt::append(type_formatted, "%s", rhs.type);
 
-	out << YAML::BeginSeq << rhs.description << type_formatted << rhs.red_script << YAML::EndSeq;
+	out << YAML::BeginSeq
+	    << rhs.description
+	    << type_formatted
+	    << rhs.red_script
+	    << rhs.apply_on_boot
+	    << YAML::EndSeq;
 
 	return out;
-}
-
-bool cheat_info::from_str(const std::string& cheat_line)
-{
-	auto cheat_vec = fmt::split(cheat_line, {"@@@"}, false);
-
-	s64 val64 = 0;
-	if (cheat_vec.size() != 5 || !cfg::try_to_int64(&val64, cheat_vec[2], 0, cheat_type_max - 1))
-	{
-		log_cheat.fatal("Failed to parse cheat line");
-		return false;
-	}
-
-	game        = cheat_vec[0];
-	description = cheat_vec[1];
-	type        = cheat_type{::narrow<u8>(val64)};
-	offset      = std::stoul(cheat_vec[3]);
-	red_script  = cheat_vec[4];
-
-	return true;
-}
-
-std::string cheat_info::to_str() const
-{
-	std::string cheat_str = game + "@@@" + description + "@@@" + std::to_string(static_cast<u8>(type)) + "@@@" + std::to_string(offset) + "@@@" + red_script + "@@@";
-	return cheat_str;
 }
 
 cheat_engine::cheat_engine()
@@ -116,15 +70,43 @@ cheat_engine::cheat_engine()
 		if (!error.empty())
 		{
 			log_cheat.error("Error parsing %s: %s", cheats_filename, error);
+			return;
 		}
 
 		for (const auto& yml_cheat : yml_cheats)
 		{
 			const std::string& game_name = yml_cheat.first.Scalar();
+
+			if (!yml_cheat.second || yml_cheat.second.Type() != YAML::NodeType::Map)
+			{
+				log_cheat.error("Error parsing %s: node %s is not a map", cheats_filename, game_name);
+				return;
+			}
+
 			for (const auto& yml_offset : yml_cheat.second)
 			{
-				const u32 offset          = yml_offset.first.as<u32>();
-				cheat_info cheat          = yml_offset.second.as<cheat_info>();
+				if (!yml_offset.second || !yml_offset.second.Type() == YAML::NodeType::Sequence)
+				{
+					log_cheat.error("Error parsing %s: node %s is not a sequence", cheats_filename, yml_offset.first.Scalar());
+					return;
+				}
+
+				std::string error;
+
+				const u32 offset = get_yaml_node_value<u32>(yml_offset.first, error);
+				if (!error.empty())
+				{
+					log_cheat.error("Error parsing %s: node key %s is not a u32 offset", cheats_filename, yml_offset.first.Scalar());
+					return;
+				}
+
+				cheat_info cheat = get_yaml_node_value<cheat_info>(yml_offset.second, error);
+				if (!error.empty())
+				{
+					log_cheat.error("Error parsing %s: node %s is not a cheat_info node", cheats_filename, yml_offset.first.Scalar());
+					return;
+				}
+
 				cheat.game                = game_name;
 				cheat.offset              = offset;
 				cheats[game_name][offset] = std::move(cheat);
@@ -517,7 +499,8 @@ u32 cheat_engine::reverse_lookup(const u32 addr, const u32 max_offset, const u32
 
 enum cheat_table_columns : int
 {
-	title = 0,
+	apply_on_boot = 0,
+	title,
 	description,
 	type,
 	offset,
@@ -537,8 +520,8 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 	tbl_cheats->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
 	tbl_cheats->setSelectionBehavior(QAbstractItemView::SelectRows);
 	tbl_cheats->setContextMenuPolicy(Qt::CustomContextMenu);
-	tbl_cheats->setColumnCount(5);
-	tbl_cheats->setHorizontalHeaderLabels(QStringList() << tr("Game") << tr("Description") << tr("Type") << tr("Offset") << tr("Script"));
+	tbl_cheats->setColumnCount(6);
+	tbl_cheats->setHorizontalHeaderLabels(QStringList() << tr("Apply on boot") << tr("Game") << tr("Description") << tr("Type") << tr("Offset") << tr("Script"));
 	main_layout->addWidget(tbl_cheats);
 
 	QHBoxLayout* btn_layout = new QHBoxLayout();
@@ -653,12 +636,13 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 
 	connect(tbl_cheats, &QTableWidget::cellChanged, [this](int row, int column)
 	{
-		if (!tbl_cheats->item(row, column))
+		QTableWidgetItem* item = tbl_cheats->item(row, column);
+		if (!item)
 		{
 			return;
 		}
 
-		if (column != cheat_table_columns::description && column != cheat_table_columns::script)
+		if (column != cheat_table_columns::apply_on_boot && column != cheat_table_columns::description && column != cheat_table_columns::script)
 		{
 			log_cheat.fatal("A column other than description and script was edited");
 			return;
@@ -673,9 +657,17 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 
 		switch (column)
 		{
-		case cheat_table_columns::description: cheat->description = tbl_cheats->item(row, cheat_table_columns::description)->text().toStdString(); break;
-		case cheat_table_columns::script: cheat->red_script = tbl_cheats->item(row, cheat_table_columns::script)->text().toStdString(); break;
-		default: break;
+		case cheat_table_columns::apply_on_boot:
+			cheat->apply_on_boot = item->checkState() == Qt::CheckState::Checked;
+			break;
+		case cheat_table_columns::description:
+			cheat->description = item->text().toStdString();
+			break;
+		case cheat_table_columns::script:
+			cheat->red_script = item->text().toStdString();
+			break;
+		default:
+			break;
 		}
 
 		g_cheat.save();
@@ -1032,8 +1024,13 @@ void cheat_manager_dialog::update_cheat_list()
 		const QSignalBlocker blocker(tbl_cheats);
 		for (const auto& game : g_cheat.cheats)
 		{
-			for (const auto& offset : g_cheat.cheats[game.first])
+			for (const auto& offset : game.second)
 			{
+				QTableWidgetItem* item_applied = new QTableWidgetItem();
+				item_applied->setFlags(item_applied->flags() & ~Qt::ItemIsEditable);
+				item_applied->setCheckState(offset.second.apply_on_boot ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+				tbl_cheats->setItem(row, cheat_table_columns::apply_on_boot, item_applied);
+
 				QTableWidgetItem* item_game = new QTableWidgetItem(QString::fromStdString(offset.second.game));
 				item_game->setFlags(item_game->flags() & ~Qt::ItemIsEditable);
 				tbl_cheats->setItem(row, cheat_table_columns::title, item_game);

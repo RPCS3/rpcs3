@@ -35,6 +35,7 @@ target_sources(rpcs3_emu PRIVATE
 	../util/yaml.cpp
 	../util/cereal.cpp
 	../../Utilities/bin_patch.cpp
+	../../Utilities/cheat_info.cpp
 	../../Utilities/cond.cpp
 	../../Utilities/Config.cpp
 	../../Utilities/dynamic_library.cpp
