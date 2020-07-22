@@ -10,7 +10,6 @@
 #include <QComboBox>
 #include <QPushButton>
 
-
 enum class cheat_error
 {
 	ok,
@@ -58,7 +57,7 @@ public:
 	std::recursive_mutex mtx;
 
 private:
-	const std::string cheats_filename = "/cheats.yml";
+	const std::string cheats_filename = "cheats.yml";
 };
 
 class cheat_manager_dialog : public QDialog

@@ -20,6 +20,7 @@
 
 #include "util/yaml.hpp"
 #include "Utilities/StrUtil.h"
+#include "Utilities/bin_patch.h" // get_patches_path()
 
 LOG_CHANNEL(log_cheat, "Cheat");
 
@@ -129,13 +130,15 @@ T convert_from_QString(const QString& str, bool& success)
 
 cheat_engine::cheat_engine()
 {
-	if (fs::file cheat_file{fs::get_config_dir() + cheats_filename, fs::read + fs::create})
+	const std::string path = patch_engine::get_patches_path() + cheats_filename;
+
+	if (fs::file cheat_file{path, fs::read + fs::create})
 	{
 		auto [yml_cheats, error] = yaml_load(cheat_file.to_string());
 
 		if (!error.empty())
 		{
-			log_cheat.error("Error parsing %s: %s", cheats_filename, error);
+			log_cheat.error("Error parsing %s: %s", path, error);
 			return;
 		}
 
@@ -145,7 +148,7 @@ cheat_engine::cheat_engine()
 
 			if (!yml_cheat.second || yml_cheat.second.Type() != YAML::NodeType::Map)
 			{
-				log_cheat.error("Error parsing %s: node %s is not a map", cheats_filename, serial);
+				log_cheat.error("Error parsing %s: node %s is not a map", path, serial);
 				return;
 			}
 
@@ -160,7 +163,7 @@ cheat_engine::cheat_engine()
 				}
 				else
 				{
-					log_cheat.warning("No title found parsing node %s in %s", serial, cheats_filename);
+					log_cheat.warning("No title found parsing node %s in %s", serial, path);
 				}
 			}
 
@@ -168,7 +171,7 @@ cheat_engine::cheat_engine()
 
 			if (!cheat_node || cheat_node.Type() != YAML::NodeType::Map)
 			{
-				log_cheat.error("Error parsing %s: cheat node in %s is not a map", cheats_filename, serial);
+				log_cheat.error("Error parsing %s: cheat node in %s is not a map", path, serial);
 				return;
 			}
 
@@ -176,7 +179,7 @@ cheat_engine::cheat_engine()
 			{
 				if (!yml_offset.second || yml_offset.second.Type() != YAML::NodeType::Map)
 				{
-					log_cheat.error("Error parsing %s: node %s is not a map", cheats_filename, yml_offset.first.Scalar());
+					log_cheat.error("Error parsing %s: node %s is not a map", path, yml_offset.first.Scalar());
 					return;
 				}
 
@@ -185,14 +188,14 @@ cheat_engine::cheat_engine()
 				const u32 offset = get_yaml_node_value<u32>(yml_offset.first, error);
 				if (!error.empty())
 				{
-					log_cheat.error("Error parsing %s: node key %s is not a u32 offset", cheats_filename, yml_offset.first.Scalar());
+					log_cheat.error("Error parsing %s: node key %s is not a u32 offset", path, yml_offset.first.Scalar());
 					return;
 				}
 
 				cheat_info cheat = get_yaml_node_value<cheat_info>(yml_offset.second, error);
 				if (!error.empty())
 				{
-					log_cheat.error("Error parsing %s: node %s is not a cheat_info node", cheats_filename, yml_offset.first.Scalar());
+					log_cheat.error("Error parsing %s: node %s is not a cheat_info node", path, yml_offset.first.Scalar());
 					return;
 				}
 
@@ -205,13 +208,15 @@ cheat_engine::cheat_engine()
 	}
 	else
 	{
-		log_cheat.error("Error loading %s", cheats_filename);
+		log_cheat.error("Error loading %s", path);
 	}
 }
 
 void cheat_engine::save()
 {
-	fs::file cheat_file(fs::get_config_dir() + cheats_filename, fs::rewrite);
+	const std::string path = patch_engine::get_patches_path() + cheats_filename;
+
+	fs::file cheat_file(path, fs::rewrite);
 	if (!cheat_file)
 		return;
 
