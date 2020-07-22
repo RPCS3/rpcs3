@@ -31,7 +31,7 @@ namespace cheat_key
 struct cheat_info
 {
 	std::string serial;
-	std::string game;
+	std::string title;
 	std::string description;
 	cheat_type type = cheat_type::max;
 	u32 offset{};

@@ -82,6 +82,51 @@ YAML::Emitter& operator<<(YAML::Emitter& out, const cheat_info& rhs)
 	return out;
 }
 
+template <typename T>
+T convert_from_QString(const QString& str, bool& success)
+{
+	T result;
+
+	if constexpr (std::is_same<T, u8>::value)
+	{
+		const u16 result_16 = str.toUShort(&success);
+
+		if (result_16 > 0xFF)
+			success = false;
+
+		result = static_cast<T>(result_16);
+	}
+
+	if constexpr (std::is_same<T, u16>::value)
+		result = str.toUShort(&success);
+
+	if constexpr (std::is_same<T, u32>::value)
+		result = str.toUInt(&success);
+
+	if constexpr (std::is_same<T, u64>::value)
+		result = str.toULongLong(&success);
+
+	if constexpr (std::is_same<T, s8>::value)
+	{
+		const s16 result_16 = str.toShort(&success);
+		if (result_16 < -128 || result_16 > 127)
+			success = false;
+
+		result = static_cast<T>(result_16);
+	}
+
+	if constexpr (std::is_same<T, s16>::value)
+		result = str.toShort(&success);
+
+	if constexpr (std::is_same<T, s32>::value)
+		result = str.toInt(&success);
+
+	if constexpr (std::is_same<T, s64>::value)
+		result = str.toLongLong(&success);
+
+	return result;
+}
+
 cheat_engine::cheat_engine()
 {
 	if (fs::file cheat_file{fs::get_config_dir() + cheats_filename, fs::read + fs::create})
@@ -129,7 +174,7 @@ cheat_engine::cheat_engine()
 
 			for (const auto& yml_offset : cheat_node)
 			{
-				if (!yml_offset.second || !yml_offset.second.Type() == YAML::NodeType::Map)
+				if (!yml_offset.second || yml_offset.second.Type() != YAML::NodeType::Map)
 				{
 					log_cheat.error("Error parsing %s: node %s is not a map", cheats_filename, yml_offset.first.Scalar());
 					return;
@@ -151,7 +196,7 @@ cheat_engine::cheat_engine()
 					return;
 				}
 
-				cheat.game               = title;
+				cheat.title              = title;
 				cheat.serial             = serial;
 				cheat.offset             = offset;
 				m_cheats[serial][offset] = std::move(cheat);
@@ -164,13 +209,15 @@ cheat_engine::cheat_engine()
 	}
 }
 
-void cheat_engine::save() const
+void cheat_engine::save()
 {
 	fs::file cheat_file(fs::get_config_dir() + cheats_filename, fs::rewrite);
 	if (!cheat_file)
 		return;
 
 	YAML::Emitter out;
+
+	std::lock_guard lock(mtx);
 
 	out << YAML::BeginMap;
 	for (const auto& [serial, cheats] : m_cheats)
@@ -183,7 +230,7 @@ void cheat_engine::save() const
 		out << serial;
 		out << YAML::BeginMap;
 
-		if (const std::string title = cheats.begin()->second.game; !title.empty())
+		if (const std::string title = cheats.begin()->second.title; !title.empty())
 		{
 			out << cheat_key::title << title;
 		}
@@ -212,13 +259,18 @@ void cheat_engine::import_cheats_from_str(const std::string& str_cheats)
 	{
 		cheat_info new_cheat;
 		if (new_cheat.from_str(cheat_line))
+		{
+			std::lock_guard lock(mtx);
 			m_cheats[new_cheat.serial][new_cheat.offset] = new_cheat;
+		}
 	}
 }
 
-std::string cheat_engine::export_cheats_to_str() const
+std::string cheat_engine::export_cheats_to_str()
 {
 	std::string cheats_str;
+
+	std::lock_guard lock(mtx);
 
 	for (const auto& [serial, cheats] : m_cheats)
 	{
@@ -232,17 +284,20 @@ std::string cheat_engine::export_cheats_to_str() const
 	return cheats_str;
 }
 
-bool cheat_engine::exist(const std::string& serial, const u32 offset) const
+bool cheat_engine::exist(const std::string& serial, const u32 offset)
 {
+	std::lock_guard lock(mtx);
+
 	if (m_cheats.count(serial) && m_cheats.at(serial).count(offset))
 		return true;
 
 	return false;
 }
 
-void cheat_engine::add(const std::string& serial, const std::string& game, const std::string& description, const cheat_type type, const u32 offset, u64 value, const std::string& red_script, bool apply_on_boot)
+void cheat_engine::add(const std::string& serial, const std::string& title, const std::string& description, const cheat_type type, const u32 offset, u64 value, const std::string& red_script, bool apply_on_boot)
 {
-	m_cheats[serial][offset] = cheat_info{serial, game, description, type, offset, value, red_script, apply_on_boot};
+	std::lock_guard lock(mtx);
+	m_cheats[serial][offset] = cheat_info{serial, title, description, type, offset, value, red_script, apply_on_boot};
 }
 
 cheat_info* cheat_engine::get(const std::string& serial, const u32 offset)
@@ -250,6 +305,7 @@ cheat_info* cheat_engine::get(const std::string& serial, const u32 offset)
 	if (!exist(serial, offset))
 		return nullptr;
 
+	std::lock_guard lock(mtx);
 	return &m_cheats[serial][offset];
 }
 
@@ -258,6 +314,7 @@ bool cheat_engine::erase(const std::string& serial, const u32 offset)
 	if (!exist(serial, offset))
 		return false;
 
+	std::lock_guard lock(mtx);
 	m_cheats[serial].erase(offset);
 	return true;
 }
@@ -557,6 +614,161 @@ u32 cheat_engine::reverse_lookup(const u32 addr, const u32 max_offset, const u32
 	return 0;
 }
 
+template <typename T>
+std::tuple<bool, bool, T> cheat_engine::convert_and_set(u32 offset, T value, bool from_text, const QString& text)
+{
+	if (from_text)
+	{
+		bool res_conv;
+		value = convert_from_QString<T>(text, res_conv);
+
+		if (!res_conv)
+			return { false, false, {} };
+	}
+
+	return { true, cheat_engine::set_value(offset, value), value };
+}
+
+cheat_error cheat_engine::apply_cheat(cheat_info* cheat, bool from_text, const QString& text)
+{
+	log_cheat.notice("apply_cheat(cheat=*0x%x, from_text=%d, text=%s)", cheat, from_text, text.toStdString());
+
+	if (!cheat)
+	{
+		log_cheat.error("apply_cheat: cheat is nullptr");
+		return cheat_error::bad_param;
+	}
+
+	u32 final_offset;
+	if (!cheat->red_script.empty())
+	{
+		final_offset = 0;
+		if (!resolve_script(final_offset, cheat->offset, cheat->red_script))
+		{
+			log_cheat.error("apply_cheat: could not resolve script");
+			return cheat_error::bad_script;
+		}
+	}
+	else
+	{
+		final_offset = cheat->offset;
+	}
+
+	bool conversion_ok = false;
+	bool cheat_applied = false;
+
+	// TODO: better way to do this?
+	switch (cheat->type)
+	{
+	case cheat_type::unsigned_8_cheat:
+	{
+		u8 val;
+		std::tie(conversion_ok, cheat_applied, val) = convert_and_set<u8>(final_offset, ::narrow<u8>(cheat->value.u), from_text, text);
+		if (conversion_ok && from_text)
+			cheat->value.u = val;
+		break;
+	}
+	case cheat_type::unsigned_16_cheat:
+	{
+		u16 val;
+		std::tie(conversion_ok, cheat_applied, val) = convert_and_set<u16>(final_offset, ::narrow<u16>(cheat->value.u), from_text, text);
+		if (conversion_ok && from_text)
+			cheat->value.u = val;
+		break;
+	}
+	case cheat_type::unsigned_32_cheat:
+	{
+		u32 val;
+		std::tie(conversion_ok, cheat_applied, val) = convert_and_set<u32>(final_offset, ::narrow<u32>(cheat->value.u), from_text, text);
+		if (conversion_ok && from_text)
+			cheat->value.u = val;
+		break;
+	}
+	case cheat_type::unsigned_64_cheat:
+	{
+		u64 val;
+		std::tie(conversion_ok, cheat_applied, val) = convert_and_set<u64>(final_offset, cheat->value.u, from_text, text);
+		if (conversion_ok && from_text)
+			cheat->value.u = val;
+		break;
+	}
+	case cheat_type::signed_8_cheat:
+	{
+		s8 val;
+		std::tie(conversion_ok, cheat_applied, val) = convert_and_set<s8>(final_offset, ::narrow<s8>(cheat->value.s), from_text, text);
+		if (conversion_ok && from_text)
+			cheat->value.s = val;
+		break;
+	}
+	case cheat_type::signed_16_cheat:
+	{
+		s16 val;
+		std::tie(conversion_ok, cheat_applied, val) = convert_and_set<s16>(final_offset, ::narrow<s16>(cheat->value.s), from_text, text);
+		if (conversion_ok && from_text)
+			cheat->value.s = val;
+		break;
+	}
+	case cheat_type::signed_32_cheat:
+	{
+		s32 val;
+		std::tie(conversion_ok, cheat_applied, val) = convert_and_set<s32>(final_offset, ::narrow<s32>(cheat->value.s), from_text, text);
+		if (conversion_ok && from_text)
+			cheat->value.s = val;
+		break;
+	}
+	case cheat_type::signed_64_cheat:
+	{
+		s64 val;
+		std::tie(conversion_ok, cheat_applied, val) = convert_and_set<s64>(final_offset, cheat->value.s, from_text, text);
+		if (conversion_ok && from_text)
+			cheat->value.s = val;
+		break;
+	}
+	default:
+	{
+		log_cheat.fatal("apply_cheat: Unsupported cheat type");
+		break;
+	}
+	}
+
+	if (!conversion_ok)
+	{
+		log_cheat.error("apply_cheat: Bad conversion");
+		return cheat_error::bad_conversion;
+	}
+
+	if (!cheat_applied)
+	{
+		log_cheat.warning("apply_cheat: Cheat not applied");
+		return cheat_error::not_applied;
+	}
+
+	return cheat_error::ok;
+}
+
+void cheat_engine::apply_cheats(bool apply_on_boot)
+{
+	if (Emu.IsStopped())
+	{
+		return;
+	}
+
+	const std::string serial = Emu.GetTitleID();
+
+	std::lock_guard lock(mtx);
+
+	if (m_cheats.count(serial))
+	{
+		for (auto [offset, cheat] : m_cheats.at(serial))
+		{
+			if (!apply_on_boot || cheat.apply_on_boot)
+			{
+				apply_cheat(&cheat, false, "");
+			}
+		}
+	}
+}
+
 enum cheat_table_columns : int
 {
 	apply_on_boot = 0,
@@ -588,7 +800,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		QStringList()
 		<< tr("Apply on boot")
 		<< tr("Serial")
-		<< tr("Game")
+		<< tr("Title")
 		<< tr("Description")
 		<< tr("Type")
 		<< tr("Offset")
@@ -848,110 +1060,34 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			return;
 		}
 
-		u32 final_offset;
-		if (!cheat->red_script.empty())
-		{
-			final_offset = 0;
-			if (!g_cheat.resolve_script(final_offset, cheat->offset, cheat->red_script))
-			{
-				btn_apply->setEnabled(false);
-				edt_value_final->setText(tr("Failed to resolve redirection script"));
-			}
-		}
-		else
-		{
-			final_offset = cheat->offset;
-		}
+		const cheat_error error = g_cheat.apply_cheat(cheat, true, edt_value_final->text());
 
-		bool conversion_ok = false;
-		bool cheat_applied = false;
-
-		// TODO: better way to do this?
-		switch (static_cast<cheat_type>(cbx_cheat_search_type->currentIndex()))
+		switch (error)
 		{
-		case cheat_type::unsigned_8_cheat:
+		case cheat_error::bad_script:
 		{
-			u8 val;
-			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<u8>(final_offset);
-			if (conversion_ok)
-				cheat->value.u = val;
-			break;
-		}
-		case cheat_type::unsigned_16_cheat:
-		{
-			u16 val;
-			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<u16>(final_offset);
-			if (conversion_ok)
-				cheat->value.u = val;
-			break;
-		}
-		case cheat_type::unsigned_32_cheat:
-		{
-			u32 val;
-			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<u32>(final_offset);
-			if (conversion_ok)
-				cheat->value.u = val;
-			break;
-		}
-		case cheat_type::unsigned_64_cheat:
-		{
-			u64 val;
-			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<u64>(final_offset);
-			if (conversion_ok)
-				cheat->value.u = val;
-			break;
-		}
-		case cheat_type::signed_8_cheat:
-		{
-			s8 val;
-			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<s8>(final_offset);
-			if (conversion_ok)
-				cheat->value.s = val;
-			break;
-		}
-		case cheat_type::signed_16_cheat:
-		{
-			s16 val;
-			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<s16>(final_offset);
-			if (conversion_ok)
-				cheat->value.s = val;
-			break;
-		}
-		case cheat_type::signed_32_cheat:
-		{
-			s32 val;
-			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<s32>(final_offset);
-			if (conversion_ok)
-				cheat->value.s = val;
-			break;
-		}
-		case cheat_type::signed_64_cheat:
-		{
-			s64 val;
-			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<s64>(final_offset);
-			if (conversion_ok)
-				cheat->value.s = val;
-			break;
-		}
-		default:
-		{
-			log_cheat.fatal("Unsupported cheat type");
+			btn_apply->setEnabled(false);
+			edt_value_final->setText(tr("Failed to resolve redirection script"));
 			return;
 		}
-		}
-
-		if (!conversion_ok)
+		case cheat_error::bad_conversion:
 		{
 			QMessageBox::warning(this, tr("Error converting value"), tr("Couldn't convert the value you typed to the integer type of that cheat"), QMessageBox::Ok);
 			return;
 		}
-
-		update_cheat_list();
-
-		if (!cheat_applied)
+		case cheat_error::not_applied:
 		{
+			update_cheat_list();
 			QMessageBox::warning(this, tr("Error applying value"), tr("Couldn't patch memory"), QMessageBox::Ok);
 			return;
+		}
+		case cheat_error::bad_param:
+		case cheat_error::ok:
+		default:
+		{
+			update_cheat_list();
+			break;
+		}
 		}
 	});
 
@@ -993,11 +1129,11 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		const u32 offset         = offsets_found[current_row];
 		const cheat_type type    = static_cast<cheat_type>(cbx_cheat_search_type->currentIndex());
 		const std::string serial = Emu.GetTitleID();
-		const std::string name   = Emu.GetTitle();
+		const std::string title   = Emu.GetTitle();
 
-		connect(add_to_cheat_list, &QAction::triggered, [serial, name, offset, type, this]()
+		connect(add_to_cheat_list, &QAction::triggered, [serial, title, offset, type, this]()
 		{
-			if (g_cheat.exist(name, offset))
+			if (g_cheat.exist(serial, offset))
 			{
 				if (QMessageBox::question(this, tr("Cheat already exist"), tr("Do you want to overwrite the existing cheat?"), QMessageBox::Ok | QMessageBox::Cancel) != QMessageBox::Ok)
 					return;
@@ -1007,7 +1143,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			if (!cheat_engine::is_addr_safe(offset))
 				comment = "Unsafe";
 
-			g_cheat.add(serial, name, comment, type, offset, 0, "", false);
+			g_cheat.add(serial, title, comment, type, offset, 0, "", false);
 			update_cheat_list();
 		});
 
@@ -1032,51 +1168,6 @@ cheat_manager_dialog* cheat_manager_dialog::get_dlg(QWidget* parent)
 }
 
 template <typename T>
-T cheat_manager_dialog::convert_from_QString(const QString& str, bool& success)
-{
-	T result;
-
-	if constexpr (std::is_same<T, u8>::value)
-	{
-		const u16 result_16 = str.toUShort(&success);
-
-		if (result_16 > 0xFF)
-			success = false;
-
-		result = static_cast<T>(result_16);
-	}
-
-	if constexpr (std::is_same<T, u16>::value)
-		result = str.toUShort(&success);
-
-	if constexpr (std::is_same<T, u32>::value)
-		result = str.toUInt(&success);
-
-	if constexpr (std::is_same<T, u64>::value)
-		result = str.toULongLong(&success);
-
-	if constexpr (std::is_same<T, s8>::value)
-	{
-		const s16 result_16 = str.toShort(&success);
-		if (result_16 < -128 || result_16 > 127)
-			success = false;
-
-		result = static_cast<T>(result_16);
-	}
-
-	if constexpr (std::is_same<T, s16>::value)
-		result = str.toShort(&success);
-
-	if constexpr (std::is_same<T, s32>::value)
-		result = str.toInt(&success);
-
-	if constexpr (std::is_same<T, s64>::value)
-		result = str.toLongLong(&success);
-
-	return result;
-}
-
-template <typename T>
 bool cheat_manager_dialog::convert_and_search()
 {
 	bool res_conv;
@@ -1089,20 +1180,6 @@ bool cheat_manager_dialog::convert_and_search()
 
 	offsets_found = cheat_engine::search(value, offsets_found);
 	return true;
-}
-
-template <typename T>
-std::tuple<bool, bool, T> cheat_manager_dialog::convert_and_set(u32 offset)
-{
-	bool res_conv;
-	const QString to_set = edt_value_final->text();
-
-	T value = convert_from_QString<T>(to_set, res_conv);
-
-	if (!res_conv)
-		return { false, false, {} };
-
-	return { true, cheat_engine::set_value(offset, value), value };
 }
 
 void cheat_manager_dialog::do_the_search()
@@ -1159,6 +1236,8 @@ void cheat_manager_dialog::do_the_search()
 
 void cheat_manager_dialog::update_cheat_list()
 {
+	std::lock_guard lock(g_cheat.mtx);
+
 	size_t num_rows = 0;
 	for (const auto& name : g_cheat.m_cheats)
 		num_rows += g_cheat.m_cheats[name.first].size();
@@ -1181,9 +1260,9 @@ void cheat_manager_dialog::update_cheat_list()
 				item_serial->setFlags(item_serial->flags() & ~Qt::ItemIsEditable);
 				tbl_cheats->setItem(row, cheat_table_columns::serial, item_serial);
 
-				QTableWidgetItem* item_game = new QTableWidgetItem(QString::fromStdString(cheat.game));
-				item_game->setFlags(item_game->flags() & ~Qt::ItemIsEditable);
-				tbl_cheats->setItem(row, cheat_table_columns::title, item_game);
+				QTableWidgetItem* item_title = new QTableWidgetItem(QString::fromStdString(cheat.title));
+				item_title->setFlags(item_title->flags() & ~Qt::ItemIsEditable);
+				tbl_cheats->setItem(row, cheat_table_columns::title, item_title);
 
 				tbl_cheats->setItem(row, cheat_table_columns::description, new QTableWidgetItem(QString::fromStdString(cheat.description)));
 

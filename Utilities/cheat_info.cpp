@@ -17,7 +17,7 @@ bool cheat_info::from_str(const std::string& cheat_line)
 	}
 
 	serial        = cheat_vec[0];
-	game          = cheat_vec[1];
+	title         = cheat_vec[1];
 	description   = cheat_vec[2];
 	type          = cheat_type{::narrow<u8>(val64)};
 	offset        = std::stoul(cheat_vec[4]);
@@ -50,7 +50,7 @@ std::string cheat_info::to_str() const
 	static const std::string del = "@@@";
 	std::string cheat_str =
 		serial + del +
-		game + del +
+		title + del +
 		description + del +
 		std::to_string(static_cast<u8>(type)) + del +
 		std::to_string(offset) + del;

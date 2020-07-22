@@ -10,19 +10,29 @@
 #include <QComboBox>
 #include <QPushButton>
 
+
+enum class cheat_error
+{
+	ok,
+	bad_param,
+	bad_script,
+	bad_conversion,
+	not_applied
+};
+
 class cheat_engine
 {
 public:
 	cheat_engine();
 
-	bool exist(const std::string& serial, const u32 offset) const;
-	void add(const std::string& serial, const std::string& game, const std::string& description, const cheat_type type, const u32 offset, u64 value, const std::string& red_script, bool apply_on_boot);
+	bool exist(const std::string& serial, const u32 offset);
+	void add(const std::string& serial, const std::string& title, const std::string& description, const cheat_type type, const u32 offset, u64 value, const std::string& red_script, bool apply_on_boot);
 	cheat_info* get(const std::string& serial, const u32 offset);
 	bool erase(const std::string& serial, const u32 offset);
 
 	void import_cheats_from_str(const std::string& str_cheats);
-	std::string export_cheats_to_str() const;
-	void save() const;
+	std::string export_cheats_to_str();
+	void save();
 
 	// Static functions to find/get/set values in ps3 memory
 	static bool resolve_script(u32& final_offset, const u32 offset, const std::string& red_script);
@@ -38,8 +48,14 @@ public:
 	static bool is_addr_safe(const u32 offset);
 	static u32 reverse_lookup(const u32 addr, const u32 max_offset, const u32 max_depth, const u32 cur_depth = 0);
 
-public:
+	template <typename T>
+	std::tuple<bool, bool, T> convert_and_set(u32 offset, T value, bool from_text, const QString& text);
+
+	cheat_error apply_cheat(cheat_info* cheat, bool from_text, const QString& text);
+	void apply_cheats(bool apply_on_boot);
+
 	std::map<std::string, std::map<u32, cheat_info>> m_cheats;
+	std::recursive_mutex mtx;
 
 private:
 	const std::string cheats_filename = "/cheats.yml";
@@ -61,12 +77,7 @@ protected:
 	void do_the_search();
 
 	template <typename T>
-	T convert_from_QString(const QString& str, bool& success);
-
-	template <typename T>
 	bool convert_and_search();
-	template <typename T>
-	std::tuple<bool, bool, T> convert_and_set(u32 offset);
 
 protected:
 	QTableWidget* tbl_cheats = nullptr;
