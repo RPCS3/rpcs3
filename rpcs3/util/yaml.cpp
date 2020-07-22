@@ -10,20 +10,68 @@ namespace YAML
 	{
 		static bool decode(const Node& node, cheat_info& rhs)
 		{
-			if (node.size() != 4)
+			if (!node || node.Type() != NodeType::Map)
 			{
 				return false;
 			}
 
-			rhs.description = node[0].Scalar();
-			u64 type64      = 0;
-			if (!cfg::try_to_enum_value(&type64, &fmt_class_string<cheat_type>::format, node[1].Scalar()))
+			if (const auto key_node = node[cheat_key::type]; key_node && key_node.IsScalar())
+			{
+				u64 type64 = 0;
+				if (!cfg::try_to_enum_value(&type64, &fmt_class_string<cheat_type>::format, key_node.Scalar()))
+					return false;
+				if (type64 >= cheat_type_max)
+					return false;
+				rhs.type = cheat_type{::narrow<u8>(type64)};
+			}
+			else
+			{
 				return false;
-			if (type64 >= cheat_type_max)
+			}
+
+			if (const auto key_node = node[cheat_key::value])
+			{
+				switch (rhs.type)
+				{
+				case cheat_type::signed_8_cheat:
+				case cheat_type::signed_16_cheat:
+				case cheat_type::signed_32_cheat:
+				case cheat_type::signed_64_cheat:
+					rhs.value.s = key_node.as<s64>();
+					break;
+				case cheat_type::unsigned_8_cheat:
+				case cheat_type::unsigned_16_cheat:
+				case cheat_type::unsigned_32_cheat:
+				case cheat_type::unsigned_64_cheat:
+					rhs.value.u = key_node.as<u64>();
+					break;
+				default:
+					return false;
+				}
+			}
+			else
+			{
 				return false;
-			rhs.type          = cheat_type{::narrow<u8>(type64)};
-			rhs.red_script    = node[2].Scalar();
-			rhs.apply_on_boot = node[3].as<bool>(false);
+			}
+
+			if (const auto key_node = node[cheat_key::script]; key_node && key_node.IsScalar())
+			{
+				rhs.red_script = key_node.Scalar();
+			}
+			else
+			{
+				return false;
+			}
+
+			if (const auto key_node = node[cheat_key::apply_on_boot])
+			{
+				rhs.apply_on_boot = key_node.as<bool>(false);
+			}
+			else
+			{
+				return false;
+			}
+
 			return true;
 		}
 	};

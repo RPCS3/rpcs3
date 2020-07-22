@@ -15,10 +15,10 @@ class cheat_engine
 public:
 	cheat_engine();
 
-	bool exist(const std::string& game, const u32 offset) const;
-	void add(const std::string& game, const std::string& description, const cheat_type type, const u32 offset, const std::string& red_script);
-	cheat_info* get(const std::string& game, const u32 offset);
-	bool erase(const std::string& game, const u32 offset);
+	bool exist(const std::string& serial, const u32 offset) const;
+	void add(const std::string& serial, const std::string& game, const std::string& description, const cheat_type type, const u32 offset, u64 value, const std::string& red_script, bool apply_on_boot);
+	cheat_info* get(const std::string& serial, const u32 offset);
+	bool erase(const std::string& serial, const u32 offset);
 
 	void import_cheats_from_str(const std::string& str_cheats);
 	std::string export_cheats_to_str() const;
@@ -39,7 +39,7 @@ public:
 	static u32 reverse_lookup(const u32 addr, const u32 max_offset, const u32 max_depth, const u32 cur_depth = 0);
 
 public:
-	std::map<std::string, std::map<u32, cheat_info>> cheats;
+	std::map<std::string, std::map<u32, cheat_info>> m_cheats;
 
 private:
 	const std::string cheats_filename = "/cheats.yml";
@@ -66,7 +66,7 @@ protected:
 	template <typename T>
 	bool convert_and_search();
 	template <typename T>
-	std::pair<bool, bool> convert_and_set(u32 offset);
+	std::tuple<bool, bool, T> convert_and_set(u32 offset);
 
 protected:
 	QTableWidget* tbl_cheats = nullptr;

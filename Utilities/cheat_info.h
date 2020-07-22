@@ -17,12 +17,29 @@ enum class cheat_type : u8
 
 constexpr u8 cheat_type_max = static_cast<u8>(cheat_type::max);
 
+namespace cheat_key
+{
+	static const std::string cheats = "Cheats";
+	static const std::string description = "Description";
+	static const std::string title = "Title";
+	static const std::string script = "Script";
+	static const std::string type = "Type";
+	static const std::string value = "Value";
+	static const std::string apply_on_boot = "Apply on boot";
+}
+
 struct cheat_info
 {
+	std::string serial;
 	std::string game;
 	std::string description;
 	cheat_type type = cheat_type::max;
 	u32 offset{};
+	union
+	{
+		u64 u;
+		s64 s;
+	} value{};
 	std::string red_script;
 	bool apply_on_boot = false;
 

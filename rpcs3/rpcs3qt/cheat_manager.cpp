@@ -7,6 +7,7 @@
 #include <QGuiApplication>
 
 #include "cheat_manager.h"
+#include "table_item_delegate.h"
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -51,12 +52,32 @@ YAML::Emitter& operator<<(YAML::Emitter& out, const cheat_info& rhs)
 	std::string type_formatted;
 	fmt::append(type_formatted, "%s", rhs.type);
 
-	out << YAML::BeginSeq
-	    << rhs.description
-	    << type_formatted
-	    << rhs.red_script
-	    << rhs.apply_on_boot
-	    << YAML::EndSeq;
+	out << YAML::BeginMap
+		<< cheat_key::description << rhs.description
+		<< cheat_key::type << type_formatted;
+
+	switch (rhs.type)
+	{
+	case cheat_type::signed_8_cheat:
+	case cheat_type::signed_16_cheat:
+	case cheat_type::signed_32_cheat:
+	case cheat_type::signed_64_cheat:
+		out << cheat_key::value << rhs.value.s;
+		break;
+	case cheat_type::unsigned_8_cheat:
+	case cheat_type::unsigned_16_cheat:
+	case cheat_type::unsigned_32_cheat:
+	case cheat_type::unsigned_64_cheat:
+		out << cheat_key::value << rhs.value.u;
+		break;
+	default:
+		out << cheat_key::value << 0;
+		break;
+	}
+
+	out << cheat_key::script << rhs.red_script
+	    << cheat_key::apply_on_boot << rhs.apply_on_boot
+	    << YAML::EndMap;
 
 	return out;
 }
@@ -73,21 +94,44 @@ cheat_engine::cheat_engine()
 			return;
 		}
 
-		for (const auto& yml_cheat : yml_cheats)
+		for (auto& yml_cheat : yml_cheats)
 		{
-			const std::string& game_name = yml_cheat.first.Scalar();
+			const std::string& serial = yml_cheat.first.Scalar();
 
 			if (!yml_cheat.second || yml_cheat.second.Type() != YAML::NodeType::Map)
 			{
-				log_cheat.error("Error parsing %s: node %s is not a map", cheats_filename, game_name);
+				log_cheat.error("Error parsing %s: node %s is not a map", cheats_filename, serial);
 				return;
 			}
 
-			for (const auto& yml_offset : yml_cheat.second)
+			std::string title;
+
+			if (const auto key_node = yml_cheat.second[cheat_key::description])
 			{
-				if (!yml_offset.second || !yml_offset.second.Type() == YAML::NodeType::Sequence)
+				if (key_node.IsScalar())
 				{
-					log_cheat.error("Error parsing %s: node %s is not a sequence", cheats_filename, yml_offset.first.Scalar());
+					title = key_node.Scalar();
+					yml_cheat.second.remove(cheat_key::description);
+				}
+				else
+				{
+					log_cheat.warning("No title found parsing node %s in %s", serial, cheats_filename);
+				}
+			}
+
+			const auto cheat_node = yml_cheat.second[cheat_key::cheats];
+
+			if (!cheat_node || cheat_node.Type() != YAML::NodeType::Map)
+			{
+				log_cheat.error("Error parsing %s: cheat node in %s is not a map", cheats_filename, serial);
+				return;
+			}
+
+			for (const auto& yml_offset : cheat_node)
+			{
+				if (!yml_offset.second || !yml_offset.second.Type() == YAML::NodeType::Map)
+				{
+					log_cheat.error("Error parsing %s: node %s is not a map", cheats_filename, yml_offset.first.Scalar());
 					return;
 				}
 
@@ -107,9 +151,10 @@ cheat_engine::cheat_engine()
 					return;
 				}
 
-				cheat.game                = game_name;
-				cheat.offset              = offset;
-				cheats[game_name][offset] = std::move(cheat);
+				cheat.game               = title;
+				cheat.serial             = serial;
+				cheat.offset             = offset;
+				m_cheats[serial][offset] = std::move(cheat);
 			}
 		}
 	}
@@ -128,15 +173,30 @@ void cheat_engine::save() const
 	YAML::Emitter out;
 
 	out << YAML::BeginMap;
-	for (const auto& game_entry : cheats)
+	for (const auto& [serial, cheats] : m_cheats)
 	{
-		out << game_entry.first;
-		out << YAML::BeginMap;
-		for (const auto& offset_entry : game_entry.second)
+		if (cheats.size() == 0)
 		{
-			out << YAML::Hex << offset_entry.first;
-			out << offset_entry.second;
+			continue;
 		}
+
+		out << serial;
+		out << YAML::BeginMap;
+
+		if (const std::string title = cheats.begin()->second.game; !title.empty())
+		{
+			out << cheat_key::title << title;
+		}
+
+		out << cheat_key::cheats;
+		out << YAML::BeginMap;
+
+		for (const auto& [offset, cheat] : cheats)
+		{
+			out << YAML::Hex << offset;
+			out << cheat;
+		}
+		out << YAML::EndMap;
 		out << YAML::EndMap;
 	}
 	out << YAML::EndMap;
@@ -152,7 +212,7 @@ void cheat_engine::import_cheats_from_str(const std::string& str_cheats)
 	{
 		cheat_info new_cheat;
 		if (new_cheat.from_str(cheat_line))
-			cheats[new_cheat.game][new_cheat.offset] = new_cheat;
+			m_cheats[new_cheat.serial][new_cheat.offset] = new_cheat;
 	}
 }
 
@@ -160,11 +220,11 @@ std::string cheat_engine::export_cheats_to_str() const
 {
 	std::string cheats_str;
 
-	for (const auto& game : cheats)
+	for (const auto& [serial, cheats] : m_cheats)
 	{
-		for (const auto& offset : cheats.at(game.first))
+		for (const auto& [offset, cheat] : cheats)
 		{
-			cheats_str += offset.second.to_str();
+			cheats_str += cheat.to_str();
 			cheats_str += "^^^";
 		}
 	}
@@ -172,33 +232,33 @@ std::string cheat_engine::export_cheats_to_str() const
 	return cheats_str;
 }
 
-bool cheat_engine::exist(const std::string& name, const u32 offset) const
+bool cheat_engine::exist(const std::string& serial, const u32 offset) const
 {
-	if (cheats.count(name) && cheats.at(name).count(offset))
+	if (m_cheats.count(serial) && m_cheats.at(serial).count(offset))
 		return true;
 
 	return false;
 }
 
-void cheat_engine::add(const std::string& game, const std::string& description, const cheat_type type, const u32 offset, const std::string& red_script)
+void cheat_engine::add(const std::string& serial, const std::string& game, const std::string& description, const cheat_type type, const u32 offset, u64 value, const std::string& red_script, bool apply_on_boot)
 {
-	cheats[game][offset] = cheat_info{game, description, type, offset, red_script};
+	m_cheats[serial][offset] = cheat_info{serial, game, description, type, offset, value, red_script, apply_on_boot};
 }
 
-cheat_info* cheat_engine::get(const std::string& game, const u32 offset)
+cheat_info* cheat_engine::get(const std::string& serial, const u32 offset)
 {
-	if (!exist(game, offset))
+	if (!exist(serial, offset))
 		return nullptr;
 
-	return &cheats[game][offset];
+	return &m_cheats[serial][offset];
 }
 
-bool cheat_engine::erase(const std::string& game, const u32 offset)
+bool cheat_engine::erase(const std::string& serial, const u32 offset)
 {
-	if (!exist(game, offset))
+	if (!exist(serial, offset))
 		return false;
 
-	cheats[game].erase(offset);
+	m_cheats[serial].erase(offset);
 	return true;
 }
 
@@ -500,10 +560,12 @@ u32 cheat_engine::reverse_lookup(const u32 addr, const u32 max_offset, const u32
 enum cheat_table_columns : int
 {
 	apply_on_boot = 0,
+	serial,
 	title,
 	description,
 	type,
 	offset,
+	value,
 	script
 };
 
@@ -517,11 +579,22 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 	QVBoxLayout* main_layout = new QVBoxLayout();
 
 	tbl_cheats = new QTableWidget(this);
+	tbl_cheats->setItemDelegate(new table_item_delegate(this)); // to get rid of cell selection rectangles include "table_item_delegate.h"
 	tbl_cheats->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
 	tbl_cheats->setSelectionBehavior(QAbstractItemView::SelectRows);
 	tbl_cheats->setContextMenuPolicy(Qt::CustomContextMenu);
-	tbl_cheats->setColumnCount(6);
-	tbl_cheats->setHorizontalHeaderLabels(QStringList() << tr("Apply on boot") << tr("Game") << tr("Description") << tr("Type") << tr("Offset") << tr("Script"));
+	tbl_cheats->setColumnCount(8);
+	tbl_cheats->setHorizontalHeaderLabels(
+		QStringList()
+		<< tr("Apply on boot")
+		<< tr("Serial")
+		<< tr("Game")
+		<< tr("Description")
+		<< tr("Type")
+		<< tr("Offset")
+		<< tr("Value")
+		<< tr("Script")
+	);
 	main_layout->addWidget(tbl_cheats);
 
 	QHBoxLayout* btn_layout = new QHBoxLayout();
@@ -576,8 +649,9 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		if (row == -1)
 			return;
 
-		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
-		if (cheat)
+		const std::string serial = tbl_cheats->item(row, cheat_table_columns::serial)->text().toStdString();
+
+		if (cheat_info* cheat = g_cheat.get(serial, tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt()))
 		{
 			QString cur_value;
 			bool success;
@@ -597,33 +671,41 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 				final_offset = cheat->offset;
 			}
 
-			u64 result_value;
-			switch (cheat->type)
+			if (Emu.IsStopped() || Emu.GetTitleID() != serial)
 			{
-			case cheat_type::unsigned_8_cheat: result_value = cheat_engine::get_value<u8>(final_offset, success); break;
-			case cheat_type::unsigned_16_cheat: result_value = cheat_engine::get_value<u16>(final_offset, success); break;
-			case cheat_type::unsigned_32_cheat: result_value = cheat_engine::get_value<u32>(final_offset, success); break;
-			case cheat_type::unsigned_64_cheat: result_value = cheat_engine::get_value<u64>(final_offset, success); break;
-			case cheat_type::signed_8_cheat: result_value = cheat_engine::get_value<s8>(final_offset, success); break;
-			case cheat_type::signed_16_cheat: result_value = cheat_engine::get_value<s16>(final_offset, success); break;
-			case cheat_type::signed_32_cheat: result_value = cheat_engine::get_value<s32>(final_offset, success); break;
-			case cheat_type::signed_64_cheat: result_value = cheat_engine::get_value<s64>(final_offset, success); break;
-			default: log_cheat.fatal("Unsupported cheat type"); return;
-			}
-
-			if (success)
-			{
-				if (cheat->type >= cheat_type::signed_8_cheat && cheat->type <= cheat_type::signed_64_cheat)
-					cur_value = tr("%1").arg(static_cast<s64>(result_value));
-				else
-					cur_value = tr("%1").arg(result_value);
-
-				btn_apply->setEnabled(true);
+				cur_value = tr("This Application is not running");
+				btn_apply->setEnabled(false);
 			}
 			else
 			{
-				cur_value = tr("Failed to get the value from memory");
-				btn_apply->setEnabled(false);
+				u64 result_value;
+				switch (cheat->type)
+				{
+				case cheat_type::unsigned_8_cheat: result_value = cheat_engine::get_value<u8>(final_offset, success); break;
+				case cheat_type::unsigned_16_cheat: result_value = cheat_engine::get_value<u16>(final_offset, success); break;
+				case cheat_type::unsigned_32_cheat: result_value = cheat_engine::get_value<u32>(final_offset, success); break;
+				case cheat_type::unsigned_64_cheat: result_value = cheat_engine::get_value<u64>(final_offset, success); break;
+				case cheat_type::signed_8_cheat: result_value = cheat_engine::get_value<s8>(final_offset, success); break;
+				case cheat_type::signed_16_cheat: result_value = cheat_engine::get_value<s16>(final_offset, success); break;
+				case cheat_type::signed_32_cheat: result_value = cheat_engine::get_value<s32>(final_offset, success); break;
+				case cheat_type::signed_64_cheat: result_value = cheat_engine::get_value<s64>(final_offset, success); break;
+				default: log_cheat.fatal("Unsupported cheat type"); return;
+				}
+
+				if (success)
+				{
+					if (cheat->type >= cheat_type::signed_8_cheat && cheat->type <= cheat_type::signed_64_cheat)
+						cur_value = tr("%1").arg(static_cast<s64>(result_value));
+					else
+						cur_value = tr("%1").arg(result_value);
+
+					btn_apply->setEnabled(true);
+				}
+				else
+				{
+					cur_value = tr("Failed to get the value from memory");
+					btn_apply->setEnabled(false);
+				}
 			}
 
 			edt_value_final->setText(cur_value);
@@ -648,7 +730,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			return;
 		}
 
-		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::serial)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
 		if (!cheat)
 		{
 			log_cheat.fatal("Failed to retrieve cheat edited from internal cheat_engine");
@@ -695,7 +777,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 				if (rows.count(row))
 					continue;
 
-				g_cheat.erase(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+				g_cheat.erase(tbl_cheats->item(row, cheat_table_columns::serial)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
 				rows.insert(row);
 			}
 
@@ -723,7 +805,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 				if (rows.count(row))
 					continue;
 
-				cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+				cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::serial)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
 				if (cheat)
 					export_string += cheat->to_str() + "^^^";
 
@@ -758,15 +840,13 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 	connect(btn_apply, &QPushButton::clicked, [this](bool /*checked*/)
 	{
 		const int row     = tbl_cheats->currentRow();
-		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::serial)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
 
 		if (!cheat)
 		{
 			log_cheat.fatal("Failed to retrieve cheat selected from internal cheat_engine");
 			return;
 		}
-
-		std::pair<bool, bool> results;
 
 		u32 final_offset;
 		if (!cheat->red_script.empty())
@@ -783,27 +863,92 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			final_offset = cheat->offset;
 		}
 
+		bool conversion_ok = false;
+		bool cheat_applied = false;
+
 		// TODO: better way to do this?
 		switch (static_cast<cheat_type>(cbx_cheat_search_type->currentIndex()))
 		{
-		case cheat_type::unsigned_8_cheat: results = convert_and_set<u8>(final_offset); break;
-		case cheat_type::unsigned_16_cheat: results = convert_and_set<u16>(final_offset); break;
-		case cheat_type::unsigned_32_cheat: results = convert_and_set<u32>(final_offset); break;
-		case cheat_type::unsigned_64_cheat: results = convert_and_set<u64>(final_offset); break;
-		case cheat_type::signed_8_cheat: results = convert_and_set<s8>(final_offset); break;
-		case cheat_type::signed_16_cheat: results = convert_and_set<s16>(final_offset); break;
-		case cheat_type::signed_32_cheat: results = convert_and_set<s32>(final_offset); break;
-		case cheat_type::signed_64_cheat: results = convert_and_set<s64>(final_offset); break;
-		default: log_cheat.fatal("Unsupported cheat type"); return;
+		case cheat_type::unsigned_8_cheat:
+		{
+			u8 val;
+			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<u8>(final_offset);
+			if (conversion_ok)
+				cheat->value.u = val;
+			break;
+		}
+		case cheat_type::unsigned_16_cheat:
+		{
+			u16 val;
+			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<u16>(final_offset);
+			if (conversion_ok)
+				cheat->value.u = val;
+			break;
+		}
+		case cheat_type::unsigned_32_cheat:
+		{
+			u32 val;
+			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<u32>(final_offset);
+			if (conversion_ok)
+				cheat->value.u = val;
+			break;
+		}
+		case cheat_type::unsigned_64_cheat:
+		{
+			u64 val;
+			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<u64>(final_offset);
+			if (conversion_ok)
+				cheat->value.u = val;
+			break;
+		}
+		case cheat_type::signed_8_cheat:
+		{
+			s8 val;
+			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<s8>(final_offset);
+			if (conversion_ok)
+				cheat->value.s = val;
+			break;
+		}
+		case cheat_type::signed_16_cheat:
+		{
+			s16 val;
+			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<s16>(final_offset);
+			if (conversion_ok)
+				cheat->value.s = val;
+			break;
+		}
+		case cheat_type::signed_32_cheat:
+		{
+			s32 val;
+			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<s32>(final_offset);
+			if (conversion_ok)
+				cheat->value.s = val;
+			break;
+		}
+		case cheat_type::signed_64_cheat:
+		{
+			s64 val;
+			std::tie(conversion_ok, cheat_applied, val) = convert_and_set<s64>(final_offset);
+			if (conversion_ok)
+				cheat->value.s = val;
+			break;
+		}
+		default:
+		{
+			log_cheat.fatal("Unsupported cheat type");
+			return;
+		}
 		}
 
-		if (!results.first)
+		if (!conversion_ok)
 		{
 			QMessageBox::warning(this, tr("Error converting value"), tr("Couldn't convert the value you typed to the integer type of that cheat"), QMessageBox::Ok);
 			return;
 		}
 
-		if (!results.second)
+		update_cheat_list();
+
+		if (!cheat_applied)
 		{
 			QMessageBox::warning(this, tr("Error applying value"), tr("Couldn't patch memory"), QMessageBox::Ok);
 			return;
@@ -845,11 +990,12 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 
 		QAction* add_to_cheat_list = new QAction(tr("Add to cheat list"), menu);
 
-		const u32 offset       = offsets_found[current_row];
-		const cheat_type type  = static_cast<cheat_type>(cbx_cheat_search_type->currentIndex());
-		const std::string name = Emu.GetTitle();
+		const u32 offset         = offsets_found[current_row];
+		const cheat_type type    = static_cast<cheat_type>(cbx_cheat_search_type->currentIndex());
+		const std::string serial = Emu.GetTitleID();
+		const std::string name   = Emu.GetTitle();
 
-		connect(add_to_cheat_list, &QAction::triggered, [name, offset, type, this]()
+		connect(add_to_cheat_list, &QAction::triggered, [serial, name, offset, type, this]()
 		{
 			if (g_cheat.exist(name, offset))
 			{
@@ -861,7 +1007,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			if (!cheat_engine::is_addr_safe(offset))
 				comment = "Unsafe";
 
-			g_cheat.add(name, comment, type, offset, "");
+			g_cheat.add(serial, name, comment, type, offset, 0, "", false);
 			update_cheat_list();
 		});
 
@@ -946,7 +1092,7 @@ bool cheat_manager_dialog::convert_and_search()
 }
 
 template <typename T>
-std::pair<bool, bool> cheat_manager_dialog::convert_and_set(u32 offset)
+std::tuple<bool, bool, T> cheat_manager_dialog::convert_and_set(u32 offset)
 {
 	bool res_conv;
 	const QString to_set = edt_value_final->text();
@@ -954,9 +1100,9 @@ std::pair<bool, bool> cheat_manager_dialog::convert_and_set(u32 offset)
 	T value = convert_from_QString<T>(to_set, res_conv);
 
 	if (!res_conv)
-		return {false, false};
+		return { false, false, {} };
 
-	return {true, cheat_engine::set_value(offset, value)};
+	return { true, cheat_engine::set_value(offset, value), value };
 }
 
 void cheat_manager_dialog::do_the_search()
@@ -1014,41 +1160,70 @@ void cheat_manager_dialog::do_the_search()
 void cheat_manager_dialog::update_cheat_list()
 {
 	size_t num_rows = 0;
-	for (const auto& name : g_cheat.cheats)
-		num_rows += g_cheat.cheats[name.first].size();
+	for (const auto& name : g_cheat.m_cheats)
+		num_rows += g_cheat.m_cheats[name.first].size();
 
 	tbl_cheats->setRowCount(::narrow<int>(num_rows));
 
 	u32 row = 0;
 	{
 		const QSignalBlocker blocker(tbl_cheats);
-		for (const auto& game : g_cheat.cheats)
+		for (const auto& [serial, cheats] : g_cheat.m_cheats)
 		{
-			for (const auto& offset : game.second)
+			for (const auto& [offset, cheat] : cheats)
 			{
 				QTableWidgetItem* item_applied = new QTableWidgetItem();
 				item_applied->setFlags(item_applied->flags() & ~Qt::ItemIsEditable);
-				item_applied->setCheckState(offset.second.apply_on_boot ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+				item_applied->setCheckState(cheat.apply_on_boot ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
 				tbl_cheats->setItem(row, cheat_table_columns::apply_on_boot, item_applied);
 
-				QTableWidgetItem* item_game = new QTableWidgetItem(QString::fromStdString(offset.second.game));
+				QTableWidgetItem* item_serial = new QTableWidgetItem(QString::fromStdString(serial));
+				item_serial->setFlags(item_serial->flags() & ~Qt::ItemIsEditable);
+				tbl_cheats->setItem(row, cheat_table_columns::serial, item_serial);
+
+				QTableWidgetItem* item_game = new QTableWidgetItem(QString::fromStdString(cheat.game));
 				item_game->setFlags(item_game->flags() & ~Qt::ItemIsEditable);
 				tbl_cheats->setItem(row, cheat_table_columns::title, item_game);
 
-				tbl_cheats->setItem(row, cheat_table_columns::description, new QTableWidgetItem(QString::fromStdString(offset.second.description)));
+				tbl_cheats->setItem(row, cheat_table_columns::description, new QTableWidgetItem(QString::fromStdString(cheat.description)));
 
 				std::string type_formatted;
-				fmt::append(type_formatted, "%s", offset.second.type);
+				fmt::append(type_formatted, "%s", cheat.type);
 				QTableWidgetItem* item_type = new QTableWidgetItem(QString::fromStdString(type_formatted));
 				item_type->setFlags(item_type->flags() & ~Qt::ItemIsEditable);
 				tbl_cheats->setItem(row, cheat_table_columns::type, item_type);
 
-				QTableWidgetItem* item_offset = new QTableWidgetItem(tr("0x%1").arg(offset.second.offset, 1, 16).toUpper());
-				item_offset->setData(Qt::UserRole, QVariant(offset.second.offset));
+				QTableWidgetItem* item_offset = new QTableWidgetItem(tr("0x%1").arg(cheat.offset, 1, 16).toUpper());
+				item_offset->setData(Qt::UserRole, QVariant(cheat.offset));
 				item_offset->setFlags(item_offset->flags() & ~Qt::ItemIsEditable);
 				tbl_cheats->setItem(row, cheat_table_columns::offset, item_offset);
 
-				tbl_cheats->setItem(row, cheat_table_columns::script, new QTableWidgetItem(QString::fromStdString(offset.second.red_script)));
+				QTableWidgetItem* item_value;
+				switch (cheat.type)
+				{
+				case cheat_type::signed_8_cheat:
+				case cheat_type::signed_16_cheat:
+				case cheat_type::signed_32_cheat:
+				case cheat_type::signed_64_cheat:
+					item_value = new QTableWidgetItem(QString::number(cheat.value.s));
+					item_value->setData(Qt::UserRole, QVariant(cheat.value.s));
+					break;
+				case cheat_type::unsigned_8_cheat:
+				case cheat_type::unsigned_16_cheat:
+				case cheat_type::unsigned_32_cheat:
+				case cheat_type::unsigned_64_cheat:
+					item_value = new QTableWidgetItem(QString::number(cheat.value.u));
+					item_value->setData(Qt::UserRole, QVariant(cheat.value.u));
+					break;
+				default:
+					item_value = new QTableWidgetItem(tr("Not set"));
+					item_value->setData(Qt::UserRole, QVariant(0));
+					break;
+				}
+				item_value->setFlags(item_value->flags() & ~Qt::ItemIsEditable);
+				tbl_cheats->setItem(row, cheat_table_columns::value, item_value);
+
+				tbl_cheats->setItem(row, cheat_table_columns::script, new QTableWidgetItem(QString::fromStdString(cheat.red_script)));
 
 				row++;
 			}
