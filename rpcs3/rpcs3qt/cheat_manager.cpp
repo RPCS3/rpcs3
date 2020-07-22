@@ -151,12 +151,12 @@ cheat_engine::cheat_engine()
 
 			std::string title;
 
-			if (const auto key_node = yml_cheat.second[cheat_key::description])
+			if (const auto key_node = yml_cheat.second[cheat_key::title])
 			{
 				if (key_node.IsScalar())
 				{
 					title = key_node.Scalar();
-					yml_cheat.second.remove(cheat_key::description);
+					yml_cheat.second.remove(cheat_key::title);
 				}
 				else
 				{
@@ -230,9 +230,14 @@ void cheat_engine::save()
 		out << serial;
 		out << YAML::BeginMap;
 
-		if (const std::string title = cheats.begin()->second.title; !title.empty())
+		// Search title
+		for (const auto& [offset, cheat] : cheats)
 		{
-			out << cheat_key::title << title;
+			if (!cheat.title.empty())
+			{
+				out << cheat_key::title << cheat.title;
+				break;
+			}
 		}
 
 		out << cheat_key::cheats;

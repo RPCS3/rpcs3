@@ -72,6 +72,15 @@ namespace YAML
 				return false;
 			}
 
+			if (const auto key_node = node[cheat_key::description]; key_node && key_node.IsScalar())
+			{
+				rhs.description = key_node.Scalar();
+			}
+			else
+			{
+				return false;
+			}
+
 			return true;
 		}
 	};
