@@ -57,7 +57,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 
 patch_engine::patch_engine()
 {
-	const std::string patches_path = fs::get_config_dir() + "patches/";
+	const std::string patches_path = get_patches_path();
 
 	if (!fs::create_path(patches_path))
 	{
@@ -89,7 +89,7 @@ std::string patch_engine::get_patches_path()
 
 std::string patch_engine::get_imported_patch_path()
 {
-	return fs::get_config_dir() + "patches/imported_patch.yml";
+	return get_patches_path() + "imported_patch.yml";
 }
 
 static void append_log_message(std::stringstream* log_messages, const std::string& message)
@@ -554,7 +554,7 @@ void patch_engine::append_global_patches()
 	load(m_map, fs::get_config_dir() + "patch.yml");
 
 	// New patch.yml
-	load(m_map, fs::get_config_dir() + "patches/patch.yml");
+	load(m_map, get_patches_path() + "patch.yml");
 
 	// Imported patch.yml
 	load(m_map, get_imported_patch_path());
@@ -571,7 +571,7 @@ void patch_engine::append_title_patches(const std::string& title_id)
 	load(m_map, fs::get_config_dir() + "data/" + title_id + "/patch.yml");
 
 	// New patch.yml
-	load(m_map, fs::get_config_dir() + "patches/" +  title_id + "_patch.yml");
+	load(m_map, get_patches_path() + title_id + "_patch.yml");
 }
 
 std::size_t patch_engine::apply(const std::string& name, u8* dst)

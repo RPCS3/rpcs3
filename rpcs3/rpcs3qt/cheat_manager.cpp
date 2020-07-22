@@ -19,6 +19,7 @@
 
 #include "util/yaml.hpp"
 #include "Utilities/StrUtil.h"
+#include "Utilities/bin_patch.h" // get_patches_path()
 
 LOG_CHANNEL(log_cheat, "Cheat");
 
@@ -109,13 +110,16 @@ std::string cheat_info::to_str() const
 
 cheat_engine::cheat_engine()
 {
-	if (fs::file cheat_file{fs::get_config_dir() + cheats_filename, fs::read + fs::create})
+	const std::string path = patch_engine::get_patches_path() + m_cheats_filename;
+
+	if (fs::file cheat_file{path, fs::read + fs::create})
 	{
 		auto [yml_cheats, error] = yaml_load(cheat_file.to_string());
 
 		if (!error.empty())
 		{
-			log_cheat.error("Error parsing %s: %s", cheats_filename, error);
+			log_cheat.error("Error parsing %s: %s", path, error);
+			return;
 		}
 
 		for (const auto& yml_cheat : yml_cheats)
@@ -133,13 +137,15 @@ cheat_engine::cheat_engine()
 	}
 	else
 	{
-		log_cheat.error("Error loading %s", cheats_filename);
+		log_cheat.error("Error loading %s", path);
 	}
 }
 
 void cheat_engine::save() const
 {
-	fs::file cheat_file(fs::get_config_dir() + cheats_filename, fs::rewrite);
+	const std::string path = patch_engine::get_patches_path() + m_cheats_filename;
+
+	fs::file cheat_file(path, fs::rewrite);
 	if (!cheat_file)
 		return;
 
