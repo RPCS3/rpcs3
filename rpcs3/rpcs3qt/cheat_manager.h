@@ -67,7 +67,7 @@ public:
 	std::map<std::string, std::map<u32, cheat_info>> cheats;
 
 private:
-	const std::string cheats_filename = "/cheats.yml";
+	const std::string m_cheats_filename = "cheats.yml";
 };
 
 class cheat_manager_dialog : public QDialog
