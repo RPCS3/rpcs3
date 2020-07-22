@@ -1290,18 +1290,15 @@ void cheat_manager_dialog::update_cheat_list()
 				case cheat_type::signed_32_cheat:
 				case cheat_type::signed_64_cheat:
 					item_value = new QTableWidgetItem(QString::number(cheat.value.s));
-					item_value->setData(Qt::UserRole, QVariant(cheat.value.s));
 					break;
 				case cheat_type::unsigned_8_cheat:
 				case cheat_type::unsigned_16_cheat:
 				case cheat_type::unsigned_32_cheat:
 				case cheat_type::unsigned_64_cheat:
 					item_value = new QTableWidgetItem(QString::number(cheat.value.u));
-					item_value->setData(Qt::UserRole, QVariant(cheat.value.u));
 					break;
 				default:
 					item_value = new QTableWidgetItem(tr("Not set"));
-					item_value->setData(Qt::UserRole, QVariant(0));
 					break;
 				}
 				item_value->setFlags(item_value->flags() & ~Qt::ItemIsEditable);
