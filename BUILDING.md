@@ -5,15 +5,15 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 
 ## Setup your environment
 
-### Windows 7 or later
+### Windows
 
 * [CMake 3.14.1+](https://www.cmake.org/download/) (add to PATH)
-* [Python 3.3+](https://www.python.org/downloads/) (add to PATH)
+* [Python 3.6+](https://www.python.org/downloads/) (add to PATH)
 * [Qt 5.14.2](https://www.qt.io/download-qt-installer)
 * [Visual Studio 2019](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community)
-* [Vulkan SDK 1.1.126+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
+* [Vulkan SDK 1.2.135+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
 
-**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.14.2\msvc2017_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools-19123)**
+**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.14.2\msvc2017_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2019)**
 
 ### Linux
 
@@ -22,7 +22,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 * Clang 9+ or GCC 9+
 * [CMake 3.14.1+](https://www.cmake.org/download/)
 * [Qt 5.14.2](https://www.qt.io/download-qt-installer)
-* [Vulkan SDK 1.1.126+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))
+* [Vulkan SDK 1.2.135+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))
 * [SDL2](https://www.libsdl.org/download-2.0.php) (for the FAudio backend)
 
 **If you have an NVIDIA GPU, you may need to install the libglvnd package.**
@@ -90,12 +90,10 @@ sudo apt-get install cmake
 
 ## Setup the project
 
-Clone and initialize the repository
+Clone and initialize the repository with all its submodules:
 
 ```
-git clone https://github.com/RPCS3/rpcs3.git
-cd rpcs3
-git submodule update --init
+git clone --recurse-submodules --shallow-submodules https://github.com/RPCS3/rpcs3.git
 ```
 
 ### Windows
@@ -110,9 +108,9 @@ git submodule update --init
 
 Open `rpcs3.sln`. The recommended build configuration is `Release - LLVM` for all purposes.
 
-You may want to download the precompiled [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z) and extract them to the root rpcs3 folder (which contains `rpcs3.sln`), as well as download and extract the [additional libs](https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z) to `lib\%CONFIGURATION%-x64\` to speed up compilation time (unoptimised/debug libs are currently not available precompiled).
+You may also want to download the precompiled [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z) and extract them into the repository's root folder (which contains `rpcs3.sln`) to speed up compilation time. Unoptimised/debug libs are currently not available precompiled.
 
-If you're not using the precompiled libs, build the projects in *__BUILD_BEFORE* folder: right-click on every project > *Build*.
+If you're not using the precompiled libs, build the projects in  `__BUILD_BEFORE` folder: right-click on every project > *Build*.
 
 `Build > Build Solution`
 
