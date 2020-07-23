@@ -108,7 +108,7 @@ void sys_spu_image::free()
 	}
 }
 
-void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
+void sys_spu_image::deploy(u8* loc, sys_spu_segment* segs, u32 nsegs)
 {
 	// Segment info dump
 	std::string dump;
@@ -129,7 +129,7 @@ void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 		// Hash big-endian values
 		if (seg.type == SYS_SPU_SEGMENT_TYPE_COPY)
 		{
-			std::memcpy(vm::base(loc + seg.ls), vm::base(seg.addr), seg.size);
+			std::memcpy(loc + seg.ls, vm::base(seg.addr), seg.size);
 			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.size), sizeof(seg.size));
 			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.ls), sizeof(seg.ls));
 			sha1_update(&sha, vm::_ptr<uchar>(seg.addr), seg.size);
@@ -141,7 +141,7 @@ void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 				spu_log.error("Unaligned SPU FILL type segment (ls=0x%x, size=0x%x)", seg.ls, seg.size);
 			}
 
-			std::fill_n(vm::_ptr<u32>(loc + seg.ls), seg.size / 4, seg.addr);
+			std::fill_n(reinterpret_cast<be_t<u32>*>(loc + seg.ls), seg.size / 4, seg.addr);
 			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.size), sizeof(seg.size));
 			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.ls), sizeof(seg.ls));
 			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.addr), sizeof(seg.addr));
@@ -165,12 +165,12 @@ void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 	}
 
 	// Apply the patch
-	auto applied = g_fxo->get<patch_engine>()->apply(hash, vm::_ptr<u8>(loc));
+	auto applied = g_fxo->get<patch_engine>()->apply(hash, loc);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::_ptr<u8>(loc));
+		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, loc);
 	}
 
 	spu_log.notice("Loaded SPU image: %s (<- %u)%s", hash, applied, dump);
@@ -397,7 +397,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		sys_spu.warning("Unimplemented SPU Thread options (0x%x)", option);
 	}
 
-	const vm::addr_t ls_addr{verify("SPU LS" HERE, vm::alloc(0x80000, vm::main))};
+	const vm::addr_t ls_addr{verify("SPU LS" HERE, vm::alloc(SPU_LS_SIZE, vm::main))};
 
 	const u32 inited = group->init;
 
@@ -579,7 +579,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	if (type & SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM)
 	{
 		// Constant size, unknown what it means but it's definitely not for each spu thread alone
-		mem_size = 0x40000;
+		mem_size = SPU_LS_SIZE;
 		use_scheduler = false;
 	}
 	else if (type & SYS_SPU_THREAD_GROUP_TYPE_NON_CONTEXT)
@@ -591,7 +591,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	else
 	{
 		// 256kb for each spu thread, probably for saving and restoring SPU LS (used by scheduler?)
-		mem_size = 0x40000 * num;
+		mem_size = SPU_LS_SIZE * num;
 	}
 
 	if (num < min_threads || num > max_threads ||
@@ -726,7 +726,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			auto& args = group->args[thread->lv2_id >> 24];
 			auto& img = group->imgs[thread->lv2_id >> 24];
 
-			sys_spu_image::deploy(thread->offset, img.second.data(), img.first.nsegs);
+			sys_spu_image::deploy(thread->ls, img.second.data(), img.first.nsegs);
 
 			thread->cpu_init();
 			thread->gpr[3] = v128::from64(0, args[0]);
@@ -1225,7 +1225,7 @@ error_code sys_spu_thread_write_ls(ppu_thread& ppu, u32 id, u32 lsa, u64 value, 
 
 	sys_spu.trace("sys_spu_thread_write_ls(id=0x%x, lsa=0x%05x, value=0x%llx, type=%d)", id, lsa, value, type);
 
-	if (lsa >= 0x40000 || type > 8 || !type || (type | lsa) & (type - 1)) // check range and alignment
+	if (lsa >= SPU_LS_SIZE || type > 8 || !type || (type | lsa) & (type - 1)) // check range and alignment
 	{
 		return CELL_EINVAL;
 	}
@@ -1268,7 +1268,7 @@ error_code sys_spu_thread_read_ls(ppu_thread& ppu, u32 id, u32 lsa, vm::ptr<u64>
 
 	sys_spu.trace("sys_spu_thread_read_ls(id=0x%x, lsa=0x%05x, value=*0x%x, type=%d)", id, lsa, value, type);
 
-	if (lsa >= 0x40000 || type > 8 || !type || (type | lsa) & (type - 1)) // check range and alignment
+	if (lsa >= SPU_LS_SIZE || type > 8 || !type || (type | lsa) & (type - 1)) // check range and alignment
 	{
 		return CELL_EINVAL;
 	}
@@ -1831,7 +1831,7 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 			index = 0;
 	}
 
-	const vm::addr_t ls_addr{verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, 0x40000, vm::spu))};
+	const vm::addr_t ls_addr{verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, vm::spu))};
 
 	const u32 tid = idm::make<named_thread<spu_thread>>(fmt::format("RawSPU[0x%x] ", index), ls_addr, nullptr, index, "", index);
 
@@ -1879,7 +1879,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 			index = 0;
 	}
 
-	const vm::addr_t ls_addr{verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, 0x40000, vm::spu))};
+	const vm::addr_t ls_addr{verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, vm::spu))};
 
 	const auto thread = idm::make_ptr<named_thread<spu_thread>>(fmt::format("IsoSPU[0x%x] ", index), ls_addr, nullptr, index, "", index, true);
 
@@ -1894,7 +1894,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 	img.load(obj);
 
 	auto image_info = idm::get<lv2_obj, lv2_spu_image>(img.entry_point);
-	img.deploy(ls_addr, image_info->segs.get_ptr(), image_info->nsegs);
+	img.deploy(thread->ls, image_info->segs.get_ptr(), image_info->nsegs);
 
 	thread->write_reg(ls_addr + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, image_info->e_entry);
 	verify(HERE), idm::remove_verify<lv2_obj, lv2_spu_image>(img.entry_point, std::move(image_info));
@@ -1910,7 +1910,7 @@ error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 
 	auto thread = idm::get<named_thread<spu_thread>>(idm_id, [](named_thread<spu_thread>& thread)
 	{
-		if (thread.is_isolated != isolated)
+		if (thread.get_type() != (isolated ? spu_type::isolated : spu_type::raw))
 		{
 			return false;
 		}
@@ -2014,7 +2014,7 @@ error_code raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::
 
 		auto thread = idm::check_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-		if (!thread || *thread == thread_state::aborting || thread->is_isolated != isolated)
+		if (!thread || *thread == thread_state::aborting || thread->get_type() != (isolated ? spu_type::isolated : spu_type::raw))
 		{
 			error = CELL_ESRCH;
 			return result;
@@ -2070,7 +2070,7 @@ error_code raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask)
 
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-	if (!thread || thread->is_isolated != isolated) [[unlikely]]
+	if (!thread || thread->get_type() != (isolated ? spu_type::isolated : spu_type::raw)) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
@@ -2109,7 +2109,7 @@ error_code raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat)
 
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-	if (!thread || thread->is_isolated != isolated) [[unlikely]]
+	if (!thread || thread->get_type() != (isolated ? spu_type::isolated : spu_type::raw)) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
@@ -2147,7 +2147,7 @@ error_code raw_spu_get_int_control(u32 id, u32 class_id, vm::ptr<u64> value, ato
 
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-	if (!thread || thread->is_isolated != isolated) [[unlikely]]
+	if (!thread || thread->get_type() != (isolated ? spu_type::isolated : spu_type::raw)) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
@@ -2198,7 +2198,7 @@ error_code raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
 {
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-	if (!thread || thread->is_isolated != isolated) [[unlikely]]
+	if (!thread || thread->get_type() != (isolated ? spu_type::isolated : spu_type::raw)) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
@@ -2236,7 +2236,7 @@ error_code raw_spu_set_spu_cfg(u32 id, u32 value)
 
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-	if (!thread || thread->is_isolated != isolated) [[unlikely]]
+	if (!thread || thread->get_type() != (isolated ? spu_type::isolated : spu_type::raw)) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
@@ -2269,7 +2269,7 @@ error_code raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value)
 {
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 
-	if (!thread || thread->is_isolated != isolated) [[unlikely]]
+	if (!thread || thread->get_type() != (isolated ? spu_type::isolated : spu_type::raw)) [[unlikely]]
 	{
 		return CELL_ESRCH;
 	}
@@ -2311,6 +2311,6 @@ error_code sys_isolated_spu_start(ppu_thread& ppu, u32 id)
 	}
 
 	// TODO: Can return ESTAT if called twice
-	thread->write_reg(thread->offset + RAW_SPU_PROB_OFFSET + SPU_RunCntl_offs, SPU_RUNCNTL_RUN_REQUEST);
+	thread->write_reg(RAW_SPU_BASE_ADDR + thread->lv2_id * RAW_SPU_OFFSET + RAW_SPU_PROB_OFFSET + SPU_RunCntl_offs, SPU_RUNCNTL_RUN_REQUEST);
 	return CELL_OK;
 }

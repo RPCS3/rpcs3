@@ -272,8 +272,7 @@ DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, sp
 
 	// Tail call, GHC CC (second arg)
 	c.mov(x86::r13, args[0]);
-	c.mov(x86::ebp, x86::dword_ptr(args[0], ::offset32(&spu_thread::offset)));
-	c.add(x86::rbp, x86::qword_ptr(args[0], ::offset32(&spu_thread::memory_base_addr)));
+	c.mov(x86::rbp, x86::qword_ptr(args[0], ::offset32(&spu_thread::ls)));
 	c.mov(x86::r12, args[2]);
 	c.xor_(x86::ebx, x86::ebx);
 	c.jmp(args[1]);
@@ -1138,7 +1137,7 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	}
 
 	// Find function
-	const auto func = spu.jit->get_runtime().find(static_cast<u32*>(vm::base(spu.offset)), spu.pc);
+	const auto func = spu.jit->get_runtime().find(static_cast<u32*>(spu._ptr<void>(0)), spu.pc);
 
 	if (!func)
 	{
@@ -5503,7 +5502,7 @@ public:
 		case SPU_RdMachStat:
 		{
 			res.value = m_ir->CreateZExt(m_ir->CreateLoad(spu_ptr<u8>(&spu_thread::interrupts_enabled)), get_type<u32>());
-			res.value = m_ir->CreateOr(res.value, m_ir->CreateShl(m_ir->CreateZExt(m_ir->CreateLoad(spu_ptr<u8>(&spu_thread::is_isolated)), get_type<u32>()), m_ir->getInt32(1)));
+			res.value = m_ir->CreateOr(res.value, m_ir->CreateAnd(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::thread_type)), m_ir->getInt32(2)));
 			break;
 		}
 
@@ -6165,6 +6164,12 @@ public:
 	static auto mpyu(TA&& a, TB&& b)
 	{
 		return (std::forward<TA>(a) << 16 >> 16) * (std::forward<TB>(b) << 16 >> 16);
+	}
+
+	template <typename TA, typename TB>
+	static auto fm(TA&& a, TB&& b)
+	{
+		return (std::forward<TA>(a)) * (std::forward<TB>(b));
 	}
 
 	void SF(spu_opcode_t op)
@@ -7281,6 +7286,19 @@ public:
 			set_vr(op.rt, -(a * b + c));
 	}
 
+	bool is_input_positive(value_t<f32[4]> a)
+	{
+		if (auto [ok, v0, v1] = match_expr(a, fm(match<f32[4]>(), match<f32[4]>())); ok)
+		{
+			if (v0.value == v1.value)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	// clamping helpers
 	value_t<f32[4]> clamp_positive_smax(value_t<f32[4]> v)
 	{
@@ -7289,6 +7307,11 @@ public:
 
 	value_t<f32[4]> clamp_negative_smax(value_t<f32[4]> v)
 	{
+		if (is_input_positive(v))
+		{
+			return v;
+		}
+
 		return eval(bitcast<f32[4]>(min(bitcast<u32[4]>(v),splat<u32[4]>(0xff7fffff))));
 	}
 
@@ -7475,7 +7498,7 @@ public:
 
 			if (op.ra == op.rb && !m_interp_magn)
 			{
-				set_vr(op.rt, a * b);
+				set_vr(op.rt, fm(a, b));
 				return;
 			}
 
@@ -7483,7 +7506,7 @@ public:
 			const auto mb = eval(sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.))));
 			const auto ca = eval(bitcast<f32[4]>(bitcast<s32[4]>(a) & mb));
 			const auto cb = eval(bitcast<f32[4]>(bitcast<s32[4]>(b) & ma));
-			set_vr(op.rt, ca * cb);
+			set_vr(op.rt, fm(ca, cb));
 		}
 		else
 			set_vr(op.rt, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb));
@@ -7902,13 +7925,51 @@ public:
 
 	void STQX(spu_opcode_t op)
 	{
-		value_t<u64> addr = eval(zext<u64>((extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0x3fff0));
+		const auto a = get_vr(op.ra);
+		const auto b = get_vr(op.rb);
+
+		for (auto pair : std::initializer_list<std::pair<value_t<u32[4]>, value_t<u32[4]>>>{{a, b}, {b, a}})
+		{
+			if (auto cv = llvm::dyn_cast<llvm::Constant>(pair.first.value))
+			{
+				v128 data = get_const_vector(cv, m_pos, 10000);
+				data._u32[3] %= SPU_LS_SIZE;
+
+				if (data._u32[3] % 0x10 == 0)
+				{
+					value_t<u64> addr = eval(splat<u64>(data._u32[3]) + zext<u64>(extract(pair.second, 3) & 0x3fff0));
+					make_store_ls(addr, get_vr<u8[16]>(op.rt));
+					return;
+				}
+			}
+		}
+
+		value_t<u64> addr = eval(zext<u64>((extract(a, 3) + extract(b, 3)) & 0x3fff0));
 		make_store_ls(addr, get_vr<u8[16]>(op.rt));
 	}
 
 	void LQX(spu_opcode_t op)
 	{
-		value_t<u64> addr = eval(zext<u64>((extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0x3fff0));
+		const auto a = get_vr(op.ra);
+		const auto b = get_vr(op.rb);
+
+		for (auto pair : std::initializer_list<std::pair<value_t<u32[4]>, value_t<u32[4]>>>{{a, b}, {b, a}})
+		{
+			if (auto cv = llvm::dyn_cast<llvm::Constant>(pair.first.value))
+			{
+				v128 data = get_const_vector(cv, m_pos, 10000);
+				data._u32[3] %= SPU_LS_SIZE;
+
+				if (data._u32[3] % 0x10 == 0)
+				{
+					value_t<u64> addr = eval(splat<u64>(data._u32[3]) + zext<u64>(extract(pair.second, 3) & 0x3fff0));
+					set_vr(op.rt, make_load_ls(addr));
+					return;
+				}
+			}
+		}
+
+		value_t<u64> addr = eval(zext<u64>((extract(a, 3) + extract(b, 3)) & 0x3fff0));
 		set_vr(op.rt, make_load_ls(addr));
 	}
 
@@ -7928,7 +7989,7 @@ public:
 	{
 		value_t<u64> addr;
 		addr.value = m_ir->CreateZExt(m_interp_magn ? m_interp_pc : get_pc(m_pos), get_type<u64>());
-		addr = eval(((get_imm<u64>(op.i16, false) << 2) + addr) & 0x3fff0);
+		addr = eval(((get_imm<u64>(op.i16, false) << 2) + addr) & (m_interp_magn ? 0x3fff0 : ~0xf));
 		make_store_ls(addr, get_vr<u8[16]>(op.rt));
 	}
 
@@ -7936,7 +7997,7 @@ public:
 	{
 		value_t<u64> addr;
 		addr.value = m_ir->CreateZExt(m_interp_magn ? m_interp_pc : get_pc(m_pos), get_type<u64>());
-		addr = eval(((get_imm<u64>(op.i16, false) << 2) + addr) & 0x3fff0);
+		addr = eval(((get_imm<u64>(op.i16, false) << 2) + addr) & (m_interp_magn ? 0x3fff0 : ~0xf));
 		set_vr(op.rt, make_load_ls(addr));
 	}
 
@@ -7953,13 +8014,13 @@ public:
 			}
 		}
 
-		value_t<u64> addr = eval(zext<u64>((extract(get_vr(op.ra), 3) + (get_imm<u32>(op.si10) << 4)) & 0x3fff0));
+		value_t<u64> addr = eval(zext<u64>(extract(get_vr(op.ra), 3) & 0x3fff0) + (get_imm<u64>(op.si10) << 4));
 		make_store_ls(addr, get_vr<u8[16]>(op.rt));
 	}
 
 	void LQD(spu_opcode_t op)
 	{
-		value_t<u64> addr = eval(zext<u64>((extract(get_vr(op.ra), 3) + (get_imm<u32>(op.si10) << 4)) & 0x3fff0));
+		value_t<u64> addr = eval(zext<u64>(extract(get_vr(op.ra), 3) & 0x3fff0) + (get_imm<u64>(op.si10) << 4));
 		set_vr(op.rt, make_load_ls(addr));
 	}
 

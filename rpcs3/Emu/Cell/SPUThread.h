@@ -118,6 +118,11 @@ enum : u32
 	SPU_STATUS_IS_ISOLATED         = 0x80,
 };
 
+enum : s32
+{
+	SPU_LS_SIZE = 0x40000,
+};
+
 enum : u32
 {
 	SYS_SPU_THREAD_BASE_LOW  = 0xf0000000,
@@ -528,6 +533,13 @@ public:
 	}
 };
 
+enum class spu_type : u32
+{
+	threaded,
+	raw,
+	isolated,
+};
+
 class spu_thread : public cpu_thread
 {
 public:
@@ -625,7 +637,6 @@ public:
 		u32 npc; // SPU Next Program Counter register
 	};
 
-	const bool is_isolated;
 	atomic_t<status_npc_sync_var> status_npc;
 	std::array<spu_int_ctrl_t, 3> int_ctrl; // SPU Class 0, 1, 2 Interrupt Management
 
@@ -635,8 +646,10 @@ public:
 	atomic_t<u32> last_exit_status; // Value to be written in exit_status after checking group termination
 
 	const u32 index; // SPU index
-	const u32 offset; // SPU LS offset
+	const std::add_pointer_t<u8> ls; // SPU LS pointer 
+	const spu_type thread_type;
 private:
+	const u32 offset; // SPU LS offset
 	lv2_spu_group* const group; // SPU Thread Group (only safe to access in the spu thread itself)
 public:
 	const u32 lv2_id; // The actual id that is used by syscalls
@@ -680,16 +693,21 @@ public:
 
 	// Convert specified SPU LS address to a pointer of specified (possibly converted to BE) type
 	template<typename T>
-	inline to_be_t<T>* _ptr(u32 lsa)
+	to_be_t<T>* _ptr(u32 lsa) const
 	{
-		return static_cast<to_be_t<T>*>(vm::base(offset + lsa));
+		return reinterpret_cast<to_be_t<T>*>(ls + lsa);
 	}
 
 	// Convert specified SPU LS address to a reference of specified (possibly converted to BE) type
 	template<typename T>
-	inline to_be_t<T>& _ref(u32 lsa)
+	to_be_t<T>& _ref(u32 lsa) const
 	{
 		return *_ptr<T>(lsa);
+	}
+
+	spu_type get_type() const
+	{
+		return thread_type;
 	}
 
 	bool read_reg(const u32 addr, u32& value);

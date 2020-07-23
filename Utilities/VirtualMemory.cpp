@@ -63,6 +63,17 @@ namespace utils
 #ifdef _WIN32
 		return ::VirtualAlloc(use_addr, size, MEM_RESERVE, PAGE_NOACCESS);
 #else
+		if (use_addr && reinterpret_cast<uptr>(use_addr) % 0x10000)
+		{
+			return nullptr;
+		}
+
+		if (!use_addr)
+		{
+			// Hack: Ensure aligned 64k allocations
+			size += 0x10000;
+		}
+
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
 
 		if (ptr == reinterpret_cast<void*>(-1))
@@ -74,6 +85,20 @@ namespace utils
 		{
 			::munmap(ptr, size);
 			return nullptr;
+		}
+
+		if (!use_addr && ptr)
+		{
+			// Continuation of the hack above
+			const auto misalign = reinterpret_cast<uptr>(ptr) % 0x10000;
+			::munmap(ptr, 0x10000 - misalign);
+
+			if (misalign)
+			{
+				::munmap(static_cast<u8*>(ptr) + size - misalign, misalign);
+			}
+
+			ptr = static_cast<u8*>(ptr) + (0x10000 - misalign);
 		}
 
 		return ptr;
