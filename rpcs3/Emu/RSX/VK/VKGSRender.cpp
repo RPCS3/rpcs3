@@ -2114,6 +2114,16 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		flush_command_queue();
 	}
 
+	if (!m_rtts.superseded_surfaces.empty())
+	{
+		for (auto& surface : m_rtts.superseded_surfaces)
+		{
+			m_texture_cache.discard_framebuffer_memory_region(*m_current_command_buffer, surface->get_memory_range());
+		}
+
+		m_rtts.superseded_surfaces.clear();
+	}
+
 	const auto color_fmt_info = get_compatible_gcm_format(m_framebuffer_layout.color_format);
 	for (u8 index : m_draw_buffers)
 	{
