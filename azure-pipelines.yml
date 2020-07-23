@@ -65,7 +65,7 @@ jobs:
 
     - task: Cache@2
       inputs:
-        key: $(Agent.OS) | $(COMPILER) | "$(QT_VER)" | $(VULKAN_SDK_SHA) | llvm.lock | glslang.lock
+        key: $(Agent.OS) | $(COMPILER) | "$(QT_VER)" | $(VULKAN_SDK_SHA) | llvm.lock
         path: $(CACHE_DIR)
         restoreKeys: |
           $(Agent.OS) | $(COMPILER)
@@ -76,14 +76,6 @@ jobs:
 
     - bash: .ci/export-azure-vars.sh
       displayName: Export Variables
-
-    - task: MSBuild@1
-      inputs:
-        solution: './Vulkan/spirv-tools-build/spirv-tools-build.vcxproj'
-        maximumCpuCount: true
-        platform: x64
-        configuration: 'Release'
-      displayName: Compile SPIRV-Tools
 
     - task: VSBuild@1
       inputs:

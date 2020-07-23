@@ -17,7 +17,6 @@ QT_WINE_URL="${QT_HOST}${QT_PREFIX}qtwinextras${QT_SUFFIX}"
 QT_DECL_URL="${QT_HOST}${QT_PREFIX}qtdeclarative${QT_SUFFIX}"
 QT_TOOL_URL="${QT_HOST}${QT_PREFIX}qttools${QT_SUFFIX}"
 LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z'
-GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'
 VULKAN_SDK_URL="https://www.dropbox.com/s/4xppf4rz8v2gd8x/VulkanSDK-${VULKAN_VER}-Installer.exe"
 
 DEP_URLS="         \
@@ -26,7 +25,6 @@ DEP_URLS="         \
     $QT_DECL_URL   \
     $QT_TOOL_URL   \
     $LLVMLIBS_URL  \
-    $GLSLANG_URL   \
     $VULKAN_SDK_URL"
 
 # Azure pipelines doesn't make a cache dir if it doesn't exist, so we do it manually
@@ -75,7 +73,6 @@ for url in $DEP_URLS; do
     case "$url" in
     *qt*) checksum=$(curl -L "${url}.sha1"); algo="sha1"; outDir='C:\Qt\' ;;
     *llvm*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="." ;;
-    *glslang*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="./lib/Release - LLVM-x64" ;;
     *Vulkan*)
         # Vulkan setup needs to be run in batch environment
         # Need to subshell this or else it doesn't wait
