@@ -171,6 +171,8 @@ namespace vk
 	void vmm_notify_memory_allocated(void* handle, u32 memory_type, u64 memory_size);
 	void vmm_notify_memory_freed(void* handle);
 	void vmm_reset();
+	void vmm_check_memory_usage();
+	bool vmm_handle_memory_pressure(rsx::problem_severity severity);
 
 	/**
 	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
@@ -323,6 +325,7 @@ namespace vk
 		virtual void unmap(mem_handle_t mem_handle) = 0;
 		virtual VkDeviceMemory get_vk_device_memory(mem_handle_t mem_handle) = 0;
 		virtual u64 get_vk_device_memory_offset(mem_handle_t mem_handle) = 0;
+		virtual f32 get_memory_usage() = 0;
 
 	protected:
 		VkDevice m_device;
@@ -337,6 +340,9 @@ namespace vk
 	public:
 		mem_allocator_vma(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev)
 		{
+			// Initialize stats pool
+			std::fill(stats.begin(), stats.end(), VmaBudget{});
+
 			VmaAllocatorCreateInfo allocatorInfo = {};
 			allocatorInfo.physicalDevice = pdev;
 			allocatorInfo.device = dev;
@@ -361,7 +367,26 @@ namespace vk
 			mem_req.size = block_sz;
 			mem_req.alignment = alignment;
 			create_info.memoryTypeBits = 1u << memory_type_index;
-			CHECK_RESULT(vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr));
+
+			if (VkResult result = vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr);
+				result != VK_SUCCESS)
+			{
+				if (result == VK_ERROR_OUT_OF_DEVICE_MEMORY &&
+					vmm_handle_memory_pressure(rsx::problem_severity::fatal))
+				{
+					// If we just ran out of VRAM, attempt to release resources and try again
+					result = vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr);
+				}
+
+				if (result != VK_SUCCESS)
+				{
+					die_with_error(HERE, result);
+				}
+				else
+				{
+					rsx_log.warning("Renderer ran out of video memory but successfully recovered.");
+				}
+			}
 
 			vmm_notify_memory_allocated(vma_alloc, memory_type_index, block_sz);
 			return vma_alloc;
@@ -405,8 +430,28 @@ namespace vk
 			return alloc_info.offset;
 		}
 
+		f32 get_memory_usage() override
+		{
+			vmaGetBudget(m_allocator, stats.data());
+
+			float max_usage = 0.f;
+			for (const auto& info : stats)
+			{
+				if (!info.budget)
+				{
+					break;
+				}
+
+				const float this_usage = (info.usage * 100.f) / info.budget;
+				max_usage = std::max(max_usage, this_usage);
+			}
+
+			return max_usage;
+		}
+
 	private:
 		VmaAllocator m_allocator;
+		std::array<VmaBudget, VK_MAX_MEMORY_HEAPS> stats;
 	};
 
 	// Memory Allocator - built-in Vulkan device memory allocate/free
@@ -426,7 +471,26 @@ namespace vk
 			info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 			info.allocationSize = block_sz;
 			info.memoryTypeIndex = memory_type_index;
-			CHECK_RESULT(vkAllocateMemory(m_device, &info, nullptr, &memory));
+
+			if (VkResult result = vkAllocateMemory(m_device, &info, nullptr, &memory);
+				result != VK_SUCCESS)
+			{
+				if (result == VK_ERROR_OUT_OF_DEVICE_MEMORY &&
+					vmm_handle_memory_pressure(rsx::problem_severity::fatal))
+				{
+					// If we just ran out of VRAM, attempt to release resources and try again
+					result = vkAllocateMemory(m_device, &info, nullptr, &memory);
+				}
+
+				if (result != VK_SUCCESS)
+				{
+					die_with_error(HERE, result);
+				}
+				else
+				{
+					rsx_log.warning("Renderer ran out of video memory but successfully recovered.");
+				}
+			}
 
 			vmm_notify_memory_allocated(memory, memory_type_index, block_sz);
 			return memory;
@@ -458,6 +522,11 @@ namespace vk
 		u64 get_vk_device_memory_offset(mem_handle_t /*mem_handle*/) override
 		{
 			return 0;
+		}
+
+		f32 get_memory_usage() override
+		{
+			return 0.f;
 		}
 
 	private:

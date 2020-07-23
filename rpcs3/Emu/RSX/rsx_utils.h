@@ -31,6 +31,14 @@ namespace rsx
 
 	extern atomic_t<u64> g_rsx_shared_tag;
 
+	enum class problem_severity : u8
+	{
+		low,
+		moderate,
+		severe,
+		fatal
+	};
+
 	//Base for resources with reference counting
 	class ref_counted
 	{
