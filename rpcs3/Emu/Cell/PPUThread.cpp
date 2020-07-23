@@ -1613,6 +1613,7 @@ extern void ppu_initialize(const ppu_module& info)
 				non_win32,
 				accurate_fma,
 				accurate_ppu_vector_nan,
+				java_mode_handling,
 
 				__bitset_enum_max
 			};
@@ -1629,6 +1630,10 @@ extern void ppu_initialize(const ppu_module& info)
 			if (g_cfg.core.llvm_ppu_accurate_vector_nan)
 			{
 				settings += ppu_settings::accurate_ppu_vector_nan;
+			}
+			if (g_cfg.core.llvm_ppu_jm_handling)
+			{
+				settings += ppu_settings::java_mode_handling;
 			}
 
 			// Write version, hash, CPU, settings
