@@ -546,6 +546,9 @@ public:
 	// External callback in case we need to suddenly submit a commandlist unexpectedly, e.g in a violation handler
 	void emergency_query_cleanup(vk::command_buffer* commands);
 
+	// External callback to handle out of video memory problems
+	bool on_vram_exhausted(rsx::problem_severity severity);
+
 	// Conditional rendering
 	void begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources) override;
 	void end_conditional_rendering() override;

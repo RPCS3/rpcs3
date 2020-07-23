@@ -1342,6 +1342,23 @@ namespace rsx
 			m_storage.purge_unreleased_sections();
 		}
 
+		bool handle_memory_pressure(problem_severity severity)
+		{
+			if (m_storage.m_unreleased_texture_objects)
+			{
+				m_storage.purge_unreleased_sections();
+				return true;
+			}
+
+			if (severity >= problem_severity::severe)
+			{
+				// Things are bad, previous check should have released 'unreleased' pool
+				return m_storage.purge_unlocked_sections();
+			}
+
+			return false;
+		}
+
 		image_view_type create_temporary_subresource(commandbuffer_type &cmd, deferred_subresource& desc)
 		{
 			if (!desc.do_not_cache) [[likely]]
