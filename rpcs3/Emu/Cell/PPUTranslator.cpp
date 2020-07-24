@@ -515,12 +515,14 @@ Value* PPUTranslator::Shuffle(Value* left, Value* right, std::initializer_list<u
 
 Value* PPUTranslator::SExt(Value* value, Type* type)
 {
-	return m_ir->CreateSExt(value, type ? type : ScaleType(value->getType(), 1));
+	type = type ? type : ScaleType(value->getType(), 1);
+	return value->getType() != type ? m_ir->CreateSExt(value, type) : value;
 }
 
 Value* PPUTranslator::ZExt(Value* value, Type* type)
 {
-	return m_ir->CreateZExt(value, type ? type : ScaleType(value->getType(), 1));
+	type = type ? type : ScaleType(value->getType(), 1);
+	return value->getType() != type ? m_ir->CreateZExt(value, type) : value;
 }
 
 Value* PPUTranslator::Add(std::initializer_list<Value*> args)
@@ -536,7 +538,8 @@ Value* PPUTranslator::Add(std::initializer_list<Value*> args)
 
 Value* PPUTranslator::Trunc(Value* value, Type* type)
 {
-	return m_ir->CreateTrunc(value, type ? type : ScaleType(value->getType(), -1));
+	type = type ? type : ScaleType(value->getType(), -1);
+	return type != value->getType() ? m_ir->CreateTrunc(value, type) : value;
 }
 
 void PPUTranslator::UseCondition(MDNode* hint, Value* cond)
@@ -4454,12 +4457,12 @@ void PPUTranslator::UNK(ppu_opcode_t op)
 
 Value* PPUTranslator::GetGpr(u32 r, u32 num_bits)
 {
-	return m_ir->CreateTrunc(RegLoad(m_gpr[r]), m_ir->getIntNTy(num_bits));
+	return Trunc(RegLoad(m_gpr[r]), m_ir->getIntNTy(num_bits));
 }
 
 void PPUTranslator::SetGpr(u32 r, Value* value)
 {
-	RegStore(m_ir->CreateZExt(value, GetType<u64>()), m_gpr[r]);
+	RegStore(ZExt(value, GetType<u64>()), m_gpr[r]);
 }
 
 Value* PPUTranslator::GetFpr(u32 r, u32 bits, bool as_int)
@@ -4476,7 +4479,7 @@ Value* PPUTranslator::GetFpr(u32 r, u32 bits, bool as_int)
 	}
 	else
 	{
-		return m_ir->CreateTrunc(m_ir->CreateBitCast(value, GetType<u64>()), m_ir->getIntNTy(bits));
+		return Trunc(m_ir->CreateBitCast(value, GetType<u64>()), m_ir->getIntNTy(bits));
 	}
 }
 

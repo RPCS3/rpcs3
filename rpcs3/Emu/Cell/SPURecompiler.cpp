@@ -6679,6 +6679,7 @@ public:
 
 	void SHLQBYI(spu_opcode_t op)
 	{
+		if (!m_interp_magn && !op.i7) return set_vr(op.rt, get_vr(op.ra)); // For expressions matching
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 		const auto sh = sc - (get_imm<u8[16]>(op.i7, false) & 0x1f);
@@ -6878,16 +6879,19 @@ public:
 
 	void ORI(spu_opcode_t op)
 	{
+		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra)); // For expressions matching
 		set_vr(op.rt, get_vr<s32[4]>(op.ra) | get_imm<s32[4]>(op.si10));
 	}
 
 	void ORHI(spu_opcode_t op)
 	{
+		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s16[8]>(op.ra) | get_imm<s16[8]>(op.si10));
 	}
 
 	void ORBI(spu_opcode_t op)
 	{
+		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s8[16]>(op.ra) | get_imm<s8[16]>(op.si10));
 	}
 
@@ -6903,41 +6907,49 @@ public:
 
 	void ANDI(spu_opcode_t op)
 	{
+		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s32[4]>(op.ra) & get_imm<s32[4]>(op.si10));
 	}
 
 	void ANDHI(spu_opcode_t op)
 	{
+		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s16[8]>(op.ra) & get_imm<s16[8]>(op.si10));
 	}
 
 	void ANDBI(spu_opcode_t op)
 	{
+		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s8[16]>(op.ra) & get_imm<s8[16]>(op.si10));
 	}
 
 	void AI(spu_opcode_t op)
 	{
+		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s32[4]>(op.ra) + get_imm<s32[4]>(op.si10));
 	}
 
 	void AHI(spu_opcode_t op)
 	{
+		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s16[8]>(op.ra) + get_imm<s16[8]>(op.si10));
 	}
 
 	void XORI(spu_opcode_t op)
 	{
+		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s32[4]>(op.ra) ^ get_imm<s32[4]>(op.si10));
 	}
 
 	void XORHI(spu_opcode_t op)
 	{
+		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s16[8]>(op.ra) ^ get_imm<s16[8]>(op.si10));
 	}
 
 	void XORBI(spu_opcode_t op)
 	{
+		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s8[16]>(op.ra) ^ get_imm<s8[16]>(op.si10));
 	}
 
