@@ -5,13 +5,13 @@
 
 LOG_CHANNEL(cellFontFT);
 
-s32 cellFontInitLibraryFreeType()
+error_code cellFontInitLibraryFreeType()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontLibraryConfigFT> config, vm::pptr<CellFontLibrary> lib)
+error_code cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontLibraryConfigFT> config, vm::pptr<CellFontLibrary> lib)
 {
 	cellFontFT.warning("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config=*0x%x, lib=**0x%x)", revisionFlags, config, lib);
 
@@ -20,247 +20,247 @@ s32 cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontL
 	return CELL_OK;
 }
 
-s32 cellFontFTGetRevisionFlags()
+error_code cellFontFTGetRevisionFlags()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 cellFontFTGetInitializedRevisionFlags()
+error_code cellFontFTGetInitializedRevisionFlags()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTCacheStream_CacheEnd()
+error_code FTCacheStream_CacheEnd()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTCacheStream_CacheInit()
+error_code FTCacheStream_CacheInit()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTCacheStream_CalcCacheIndexSize()
+error_code FTCacheStream_CalcCacheIndexSize()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTCacheStream_End()
+error_code FTCacheStream_End()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTCacheStream_Init()
+error_code FTCacheStream_Init()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_Close()
+error_code FTFaceH_Close()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_FontFamilyName()
+error_code FTFaceH_FontFamilyName()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_FontStyleName()
+error_code FTFaceH_FontStyleName()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetAscender()
+error_code FTFaceH_GetAscender()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetBoundingBoxHeight()
+error_code FTFaceH_GetBoundingBoxHeight()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetBoundingBoxMaxX()
+error_code FTFaceH_GetBoundingBoxMaxX()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetBoundingBoxMaxY()
+error_code FTFaceH_GetBoundingBoxMaxY()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetBoundingBoxMinX()
+error_code FTFaceH_GetBoundingBoxMinX()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetBoundingBoxMinY()
+error_code FTFaceH_GetBoundingBoxMinY()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetBoundingBoxWidth()
+error_code FTFaceH_GetBoundingBoxWidth()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetCompositeCodes()
+error_code FTFaceH_GetCompositeCodes()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetGlyphImage()
+error_code FTFaceH_GetGlyphImage()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetGlyphMetrics()
+error_code FTFaceH_GetGlyphMetrics()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetKerning()
+error_code FTFaceH_GetKerning()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetMaxHorizontalAdvance()
+error_code FTFaceH_GetMaxHorizontalAdvance()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetMaxVerticalAdvance()
+error_code FTFaceH_GetMaxVerticalAdvance()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetRenderBufferSize()
+error_code FTFaceH_GetRenderBufferSize()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetRenderEffectSlant()
+error_code FTFaceH_GetRenderEffectSlant()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetRenderEffectWeight()
+error_code FTFaceH_GetRenderEffectWeight()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetRenderScale()
+error_code FTFaceH_GetRenderScale()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetRenderScalePixel()
+error_code FTFaceH_GetRenderScalePixel()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_GetRenderScalePoint()
+error_code FTFaceH_GetRenderScalePoint()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_SetCompositeCodes()
+error_code FTFaceH_SetCompositeCodes()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_SetRenderEffectSlant()
+error_code FTFaceH_SetRenderEffectSlant()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_SetRenderEffectWeight()
+error_code FTFaceH_SetRenderEffectWeight()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_SetRenderScalePixel()
+error_code FTFaceH_SetRenderScalePixel()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTFaceH_SetRenderScalePoint()
+error_code FTFaceH_SetRenderScalePoint()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTManager_CloseFace()
+error_code FTManager_CloseFace()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTManager_Done_FreeType()
+error_code FTManager_Done_FreeType()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTManager_Init_FreeType()
+error_code FTManager_Init_FreeType()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTManager_OpenFileFace()
+error_code FTManager_OpenFileFace()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTManager_OpenMemFace()
+error_code FTManager_OpenMemFace()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTManager_OpenStreamFace()
+error_code FTManager_OpenStreamFace()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-s32 FTManager_SetFontOpenMode()
+error_code FTManager_SetFontOpenMode()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;

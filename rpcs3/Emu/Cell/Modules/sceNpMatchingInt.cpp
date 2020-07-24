@@ -1,21 +1,21 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(sceNpMatchingInt);
 
-s32 sceNpMatchingCancelRequest()
+error_code sceNpMatchingCancelRequest()
 {
 	UNIMPLEMENTED_FUNC(sceNpMatchingInt);
 	return CELL_OK;
 }
 
-s32 sceNpMatchingGetRoomMemberList()
+error_code sceNpMatchingGetRoomMemberList()
 {
 	UNIMPLEMENTED_FUNC(sceNpMatchingInt);
 	return CELL_OK;
 }
 
-s32 sceNpMatchingJoinRoomWithoutGUI()
+error_code sceNpMatchingJoinRoomWithoutGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNpMatchingInt);
 	return CELL_OK;
@@ -23,49 +23,49 @@ s32 sceNpMatchingJoinRoomWithoutGUI()
 
 // Parameter "unknown" added to distinguish this function
 // from the one in sceNp.cpp which has the same name
-s32 sceNpMatchingJoinRoomGUI(vm::ptr<void> unknown)
+error_code sceNpMatchingJoinRoomGUI(vm::ptr<void> unknown)
 {
 	UNIMPLEMENTED_FUNC(sceNpMatchingInt);
 	return CELL_OK;
 }
 
-s32 sceNpMatchingSetRoomInfoNoLimit(vm::ptr<void> unknown)
+error_code sceNpMatchingSetRoomInfoNoLimit(vm::ptr<void> unknown)
 {
 	UNIMPLEMENTED_FUNC(sceNpMatchingInt);
 	return CELL_OK;
 }
 
-s32 sceNpMatchingGetRoomListWithoutGUI()
+error_code sceNpMatchingGetRoomListWithoutGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNpMatchingInt);
 	return CELL_OK;
 }
 
-s32 sceNpMatchingGetRoomListGUI()
+error_code sceNpMatchingGetRoomListGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNpMatchingInt);
 	return CELL_OK;
 }
 
-s32 sceNpMatchingGetRoomInfoNoLimit(vm::ptr<void> unknown)
+error_code sceNpMatchingGetRoomInfoNoLimit(vm::ptr<void> unknown)
 {
 	UNIMPLEMENTED_FUNC(sceNpMatchingInt);
 	return CELL_OK;
 }
 
-s32 sceNpMatchingCancelRequestGUI()
+error_code sceNpMatchingCancelRequestGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNpMatchingInt);
 	return CELL_OK;
 }
 
-s32 sceNpMatchingSendRoomMessage()
+error_code sceNpMatchingSendRoomMessage()
 {
 	UNIMPLEMENTED_FUNC(sceNpMatchingInt);
 	return CELL_OK;
 }
 
-s32 sceNpMatchingCreateRoomWithoutGUI()
+error_code sceNpMatchingCreateRoomWithoutGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNpMatchingInt);
 	return CELL_OK;

@@ -151,49 +151,49 @@ void sys_game_process_exitspawn2(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr
 	return exitspawn(ppu, path, argv, envp, data, data_size, prio, (flags >> 62) >= 2 ? flags & 0xf0 : flags & 0xc0000000000000f0ull);
 }
 
-s32 sys_game_board_storage_read()
+error_code sys_game_board_storage_read()
 {
 	sysPrxForUser.todo("sys_game_board_storage_read()");
 	return CELL_OK;
 }
 
-s32 sys_game_board_storage_write()
+error_code sys_game_board_storage_write()
 {
 	sysPrxForUser.todo("sys_game_board_storage_write()");
 	return CELL_OK;
 }
 
-s32 sys_game_get_rtc_status()
+error_code sys_game_get_rtc_status()
 {
 	sysPrxForUser.todo("sys_game_get_rtc_status()");
 	return CELL_OK;
 }
 
-s32 sys_game_get_system_sw_version()
+error_code sys_game_get_system_sw_version()
 {
 	sysPrxForUser.todo("sys_game_get_system_sw_version()");
 	return CELL_OK;
 }
 
-s32 sys_game_get_temperature()
+error_code sys_game_get_temperature()
 {
 	sysPrxForUser.todo("sys_game_get_temperature()");
 	return CELL_OK;
 }
 
-s32 sys_game_watchdog_clear()
+error_code sys_game_watchdog_clear()
 {
 	sysPrxForUser.todo("sys_game_watchdog_clear()");
 	return CELL_OK;
 }
 
-s32 sys_game_watchdog_start()
+error_code sys_game_watchdog_start()
 {
 	sysPrxForUser.todo("sys_game_watchdog_start()");
 	return CELL_OK;
 }
 
-s32 sys_game_watchdog_stop()
+error_code sys_game_watchdog_stop()
 {
 	sysPrxForUser.todo("sys_game_watchdog_stop()");
 	return CELL_OK;

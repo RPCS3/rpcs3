@@ -8,49 +8,49 @@ extern void cellKb_init();
 extern void cellMouse_init();
 
 
-s32 sys_config_start()
+error_code sys_config_start()
 {
 	sys_io.todo("sys_config_start()");
 	return CELL_OK;
 }
 
-s32 sys_config_stop()
+error_code sys_config_stop()
 {
 	sys_io.todo("sys_config_stop()");
 	return CELL_OK;
 }
 
-s32 sys_config_add_service_listener()
+error_code sys_config_add_service_listener()
 {
 	sys_io.todo("sys_config_add_service_listener()");
 	return CELL_OK;
 }
 
-s32 sys_config_remove_service_listener()
+error_code sys_config_remove_service_listener()
 {
 	sys_io.todo("sys_config_remove_service_listener()");
 	return CELL_OK;
 }
 
-s32 sys_config_register_io_error_handler()
+error_code sys_config_register_io_error_handler()
 {
 	sys_io.todo("sys_config_register_io_error_handler()");
 	return CELL_OK;
 }
 
-s32 sys_config_register_service()
+error_code sys_config_register_service()
 {
 	sys_io.todo("sys_config_register_service()");
 	return CELL_OK;
 }
 
-s32 sys_config_unregister_io_error_handler()
+error_code sys_config_unregister_io_error_handler()
 {
 	sys_io.todo("sys_config_unregister_io_error_handler()");
 	return CELL_OK;
 }
 
-s32 sys_config_unregister_service()
+error_code sys_config_unregister_service()
 {
 	sys_io.todo("sys_config_unregister_service()");
 	return CELL_OK;

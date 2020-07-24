@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 
@@ -6,7 +6,7 @@
 LOG_CHANNEL(cellSysutilAp);
 
 // Return Codes
-enum
+enum CellSysutilApError : u32
 {
 	CELL_SYSUTIL_AP_ERROR_OUT_OF_MEMORY        = 0x8002cd00,
 	CELL_SYSUTIL_AP_ERROR_FATAL                = 0x8002cd01,
@@ -17,6 +17,27 @@ enum
 	CELL_SYSUTIL_AP_ERROR_NETIF_NO_CABLE       = 0x8002cd15,
 	CELL_SYSUTIL_AP_ERROR_NETIF_CANNOT_CONNECT = 0x8002cd16,
 };
+
+template<>
+void fmt_class_string<CellSysutilApError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_SYSUTIL_AP_ERROR_OUT_OF_MEMORY);
+			STR_CASE(CELL_SYSUTIL_AP_ERROR_FATAL);
+			STR_CASE(CELL_SYSUTIL_AP_ERROR_INVALID_VALUE);
+			STR_CASE(CELL_SYSUTIL_AP_ERROR_NOT_INITIALIZED);
+			STR_CASE(CELL_SYSUTIL_AP_ERROR_ZERO_REGISTERED);
+			STR_CASE(CELL_SYSUTIL_AP_ERROR_NETIF_DISABLED);
+			STR_CASE(CELL_SYSUTIL_AP_ERROR_NETIF_NO_CABLE);
+			STR_CASE(CELL_SYSUTIL_AP_ERROR_NETIF_CANNOT_CONNECT);
+		}
+
+		return unknown;
+	});
+}
 
 enum
 {
@@ -58,13 +79,13 @@ s32 cellSysutilApGetRequiredMemSize()
 	return 1024*1024; // Return 1 MB as required size
 }
 
-s32 cellSysutilApOn(vm::ptr<CellSysutilApParam> pParam, u32 container)
+error_code cellSysutilApOn(vm::ptr<CellSysutilApParam> pParam, u32 container)
 {
 	cellSysutilAp.todo("cellSysutilApOn(pParam=*0x%x, container=0x%x)", pParam, container);
 	return CELL_OK;
 }
 
-s32 cellSysutilApOff()
+error_code cellSysutilApOff()
 {
 	cellSysutilAp.todo("cellSysutilApOff()");
 	return CELL_OK;

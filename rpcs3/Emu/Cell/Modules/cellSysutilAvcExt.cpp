@@ -1,183 +1,183 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(cellSysutilAvcExt);
 
-s32 cellSysutilAvcExtIsMicAttached()
+error_code cellSysutilAvcExtIsMicAttached()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtStopCameraDetection()
+error_code cellSysutilAvcExtStopCameraDetection()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtSetWindowRotation()
+error_code cellSysutilAvcExtSetWindowRotation()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtGetWindowPosition()
+error_code cellSysutilAvcExtGetWindowPosition()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtSetHideNamePlate()
+error_code cellSysutilAvcExtSetHideNamePlate()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtSetWindowPosition()
+error_code cellSysutilAvcExtSetWindowPosition()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtGetWindowSize()
+error_code cellSysutilAvcExtGetWindowSize()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtStartCameraDetection()
+error_code cellSysutilAvcExtStartCameraDetection()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtGetWindowShowStatus()
+error_code cellSysutilAvcExtGetWindowShowStatus()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtSetChatMode()
+error_code cellSysutilAvcExtSetChatMode()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtGetNamePlateShowStatus()
+error_code cellSysutilAvcExtGetNamePlateShowStatus()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtSetWindowAlpha()
+error_code cellSysutilAvcExtSetWindowAlpha()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtSetWindowSize()
+error_code cellSysutilAvcExtSetWindowSize()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtShowPanelEx()
+error_code cellSysutilAvcExtShowPanelEx()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtLoadAsyncEx()
+error_code cellSysutilAvcExtLoadAsyncEx()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtSetShowNamePlate()
+error_code cellSysutilAvcExtSetShowNamePlate()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtStopVoiceDetection()
+error_code cellSysutilAvcExtStopVoiceDetection()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtShowWindow()
+error_code cellSysutilAvcExtShowWindow()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtIsCameraAttached()
+error_code cellSysutilAvcExtIsCameraAttached()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtHidePanelEx()
+error_code cellSysutilAvcExtHidePanelEx()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtHideWindow()
+error_code cellSysutilAvcExtHideWindow()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtSetChatGroup()
+error_code cellSysutilAvcExtSetChatGroup()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtGetWindowRotation()
+error_code cellSysutilAvcExtGetWindowRotation()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtStartMicDetection()
+error_code cellSysutilAvcExtStartMicDetection()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtGetWindowAlpha()
+error_code cellSysutilAvcExtGetWindowAlpha()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtStartVoiceDetection()
+error_code cellSysutilAvcExtStartVoiceDetection()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtGetSurfacePointer()
+error_code cellSysutilAvcExtGetSurfacePointer()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtStopMicDetection()
+error_code cellSysutilAvcExtStopMicDetection()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtInitOptionParam()
+error_code cellSysutilAvcExtInitOptionParam()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcExtSetWindowZorder()
+error_code cellSysutilAvcExtSetWindowZorder()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAvcExt);
 	return CELL_OK;

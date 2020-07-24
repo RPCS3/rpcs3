@@ -1,11 +1,11 @@
-#pragma once
+﻿#pragma once
 
 
 
 // libDaisy = 0x80410501 - 0x804105ff
 
 // Error codes
-enum
+enum CellDaisyError : u32
 {
 	CELL_DAISY_ERROR_NO_BEGIN = 0x80410501,
 	CELL_DAISY_ERROR_INVALID_PORT_ATTACH = 0x80410502,

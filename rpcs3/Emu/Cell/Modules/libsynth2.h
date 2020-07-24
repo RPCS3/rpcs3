@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/BEType.h"
 
 // Error Codes
-enum
+enum CellSoundSynth2Error : u32
 {
 	CELL_SOUND_SYNTH2_ERROR_FATAL = 0x80310201,
 	CELL_SOUND_SYNTH2_ERROR_INVALID_PARAMETER = 0x80310202,

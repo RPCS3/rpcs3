@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 
 
 
 // Error Codes
-enum
+enum CellJpgEncError : u32
 {
 	CELL_JPGENC_ERROR_ARG   = 0x80611191,
 	CELL_JPGENC_ERROR_SEQ   = 0x80611192,
