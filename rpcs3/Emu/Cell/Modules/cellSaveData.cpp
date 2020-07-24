@@ -1120,7 +1120,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				if (operation != SAVEDATA_OP_FIXED_SAVE && operation != SAVEDATA_OP_FIXED_LOAD && operation != SAVEDATA_OP_FIXED_DELETE)
 				{
-					lv2_sleep(ppu, 5000);
+					lv2_sleep(ppu, 30000);
 					break;
 				}
 
@@ -1162,7 +1162,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				break;
 			}
 			case CELL_SAVEDATA_OPTION_NOCONFIRM:
-				lv2_sleep(ppu, 5000);
+				lv2_sleep(ppu, 30000);
 				break;
 
 			default :
