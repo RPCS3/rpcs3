@@ -2399,7 +2399,7 @@ void PPUTranslator::MULHWU(ppu_opcode_t op)
 	const auto a = ZExt(GetGpr(op.ra, 32));
 	const auto b = ZExt(GetGpr(op.rb, 32));
 	SetGpr(op.rd, m_ir->CreateLShr(m_ir->CreateMul(a, b), 32));
-	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 }
 
 void PPUTranslator::MFOCRF(ppu_opcode_t op)
@@ -2586,7 +2586,7 @@ void PPUTranslator::MULHW(ppu_opcode_t op)
 	const auto a = SExt(GetGpr(op.ra, 32));
 	const auto b = SExt(GetGpr(op.rb, 32));
 	SetGpr(op.rd, m_ir->CreateAShr(m_ir->CreateMul(a, b), 32));
-	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 }
 
 void PPUTranslator::LDARX(ppu_opcode_t op)
@@ -3034,7 +3034,7 @@ void PPUTranslator::DIVDU(ppu_opcode_t op)
 	const auto o = IsZero(b);
 	const auto result = m_ir->CreateUDiv(a, m_ir->CreateSelect(o, m_ir->getInt64(-1), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt64(0), result));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
 
@@ -3045,7 +3045,7 @@ void PPUTranslator::DIVWU(ppu_opcode_t op)
 	const auto o = IsZero(b);
 	const auto result = m_ir->CreateUDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(0xffffffff), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt32(0), result));
-	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
 
@@ -3095,7 +3095,7 @@ void PPUTranslator::DIVD(ppu_opcode_t op)
 	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt64(1ull << 63)), IsOnes(b)));
 	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt64(1ull << 63), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt64(0), result));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
 
@@ -3106,7 +3106,7 @@ void PPUTranslator::DIVW(ppu_opcode_t op)
 	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt32(INT32_MIN)), IsOnes(b)));
 	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(INT32_MIN), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt32(0), result));
-	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
 
