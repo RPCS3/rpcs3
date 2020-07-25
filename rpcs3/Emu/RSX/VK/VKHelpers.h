@@ -92,7 +92,7 @@ namespace vk
 		NV_ampere
 	};
 
-	enum // special remap_encoding enums
+	enum : u32// special remap_encoding enums
 	{
 		VK_REMAP_IDENTITY = 0xCAFEBABE,             // Special view encoding to return an identity image view
 		VK_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF     // Special encoding for multisampled images; returns a multisampled image view
