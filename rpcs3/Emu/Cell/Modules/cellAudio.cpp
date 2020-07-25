@@ -974,9 +974,9 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					if constexpr (downmix == audio_downmix::downmix_to_stereo)
 					{
 						// Don't mix in the lfe as per dolby specification and based on documentation
-						const float mid = center * 0.5;
-						out_buffer[out + 0] = left * minus_3db + mid + side_left * 0.5 + rear_left * 0.5;
-						out_buffer[out + 1] = right * minus_3db + mid + side_right * 0.5 + rear_right * 0.5;
+						const float mid = center * 0.5f;
+						out_buffer[out + 0] = left * minus_3db + mid + side_left * 0.5f + rear_left * 0.5f;
+						out_buffer[out + 1] = right * minus_3db + mid + side_right * 0.5f + rear_right * 0.5f;
 					}
 					else if constexpr (downmix == audio_downmix::downmix_to_5_1)
 					{
@@ -1019,9 +1019,9 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					if constexpr (downmix == audio_downmix::downmix_to_stereo)
 					{
 						// Don't mix in the lfe as per dolby specification and based on documentation
-						const float mid = center * 0.5;
-						out_buffer[out + 0] += left * minus_3db + mid + side_left * 0.5 + rear_left * 0.5;
-						out_buffer[out + 1] += right * minus_3db + mid + side_right * 0.5 + rear_right * 0.5;
+						const float mid = center * 0.5f;
+						out_buffer[out + 0] += left * minus_3db + mid + side_left * 0.5f + rear_left * 0.5f;
+						out_buffer[out + 1] += right * minus_3db + mid + side_right * 0.5f + rear_right * 0.5f;
 					}
 					else if constexpr (downmix == audio_downmix::downmix_to_5_1)
 					{
