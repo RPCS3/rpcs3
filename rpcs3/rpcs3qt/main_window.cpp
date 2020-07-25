@@ -181,10 +181,7 @@ void main_window::Init()
 
 	// RPCS3 Updater
 
-	QMenuBar *corner_bar = new QMenuBar(ui->menuBar);
-
-	QMenu *download_menu = new QMenu(tr("Update Available!"), corner_bar);
-	corner_bar->addMenu(download_menu);
+	QMenu* download_menu = new QMenu(tr("Update Available!"));
 
 	QAction *download_action = new QAction(tr("Download Update"), download_menu);
 	connect(download_action, &QAction::triggered, this, [this]
@@ -193,14 +190,31 @@ void main_window::Init()
 	});
 
 	download_menu->addAction(download_action);
+
+#ifdef _WIN32
+	// Use a menu at the top right corner to indicate the new version.
+	QMenuBar *corner_bar = new QMenuBar(ui->menuBar);
+	m_download_menu_action = corner_bar->addMenu(download_menu);
 	ui->menuBar->setCornerWidget(corner_bar);
 	ui->menuBar->cornerWidget()->setVisible(false);
+#else
+	// Append a menu to the right of the regular menus to indicate the new version.
+	// Some distros just can't handle corner widgets at the moment.
+	m_download_menu_action = ui->menuBar->addMenu(download_menu);
+#endif
+
+	ASSERT(m_download_menu_action);
+	m_download_menu_action->setVisible(false);
 
 	connect(&m_updater, &update_manager::signal_update_available, this, [this](bool update_available)
 	{
-		if (ui->menuBar->cornerWidget())
+		if (ui->menuBar && ui->menuBar->cornerWidget())
 		{
 			ui->menuBar->cornerWidget()->setVisible(update_available);
+		}
+		if (m_download_menu_action)
+		{
+			m_download_menu_action->setVisible(update_available);
 		}
 	});
 
@@ -1516,7 +1530,7 @@ void main_window::CreateConnects()
 
 	auto open_pad_settings = [this]
 	{
-		pad_settings_dialog dlg(this);
+		pad_settings_dialog dlg(m_gui_settings, this);
 		dlg.exec();
 	};
 

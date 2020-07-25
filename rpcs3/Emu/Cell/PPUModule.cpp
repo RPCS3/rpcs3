@@ -973,7 +973,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
-	ppu_loader.notice("PRX library hash: %s (<- %u)", hash, applied);
+	ppu_loader.success("PRX library hash: %s (<- %u)", hash, applied);
 
 	if (Emu.IsReady() && g_fxo->get<ppu_module>()->segs.empty())
 	{
@@ -1134,7 +1134,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
-	ppu_loader.notice("PPU executable hash: %s (<- %u)", hash, applied);
+	ppu_loader.success("PPU executable hash: %s (<- %u)", hash, applied);
 
 	// Initialize HLE modules
 	ppu_initialize_modules(link);
@@ -1209,7 +1209,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			}
 		}
 
-		ppu_loader.notice("SPU executable hash: %s (<- %u)%s", hash, applied, dump);
+		ppu_loader.success("SPU executable hash: %s (<- %u)%s", hash, applied, dump);
 
 	}
 
@@ -1706,7 +1706,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
-	ppu_loader.notice("OVL executable hash: %s (<- %u)", hash, applied);
+	ppu_loader.success("OVL executable hash: %s (<- %u)", hash, applied);
 
 	// Load other programs
 	for (auto& prog : elf.progs)

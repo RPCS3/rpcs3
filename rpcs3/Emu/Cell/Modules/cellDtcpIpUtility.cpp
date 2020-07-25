@@ -1,81 +1,81 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(cellDtcpIpUtility);
 
-s32 cellDtcpIpRead()
+error_code cellDtcpIpRead()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;
 }
 
-s32 cellDtcpIpFinalize()
+error_code cellDtcpIpFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;
 }
 
-s32 cellDtcpIpActivate()
+error_code cellDtcpIpActivate()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;
 }
 
-s32 cellDtcpIpOpen()
+error_code cellDtcpIpOpen()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;
 }
 
-s32 cellDtcpIpCheckActivation()
+error_code cellDtcpIpCheckActivation()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;
 }
 
-s32 cellDtcpIpInitialize()
+error_code cellDtcpIpInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;
 }
 
-s32 cellDtcpIpGetDecryptedData()
+error_code cellDtcpIpGetDecryptedData()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;
 }
 
-s32 cellDtcpIpStopSequence()
+error_code cellDtcpIpStopSequence()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;
 }
 
-s32 cellDtcpIpSeek()
+error_code cellDtcpIpSeek()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;
 }
 
-s32 cellDtcpIpStartSequence()
+error_code cellDtcpIpStartSequence()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;
 }
 
-s32 cellDtcpIpSetEncryptedData()
+error_code cellDtcpIpSetEncryptedData()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;
 }
 
-s32 cellDtcpIpClose()
+error_code cellDtcpIpClose()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;
 }
 
-s32 cellDtcpIpSuspendActivationForDebug()
+error_code cellDtcpIpSuspendActivationForDebug()
 {
 	UNIMPLEMENTED_FUNC(cellDtcpIpUtility);
 	return CELL_OK;

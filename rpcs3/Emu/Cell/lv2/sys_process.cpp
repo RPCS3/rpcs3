@@ -281,7 +281,7 @@ error_code sys_process_detach_child(u64 unk)
 
 void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_process.warning("_sys_process_exit(status=%d, arg2=0x%x, arg3=0x%x)", status, arg2, arg3);
 
@@ -339,7 +339,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 	if (disc.empty() && !Emu.GetTitleID().empty())
 		disc = vfs::get(Emu.GetDir());
 
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc), hdd1 = std::move(hdd1), klic = g_fxo->get<loaded_npdrm_keys>()->devKlic.load()]() mutable
 	{

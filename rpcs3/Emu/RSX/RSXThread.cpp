@@ -1094,6 +1094,17 @@ namespace rsx
 						break;
 					}
 				}
+
+				if (depth_buffer_unused) [[unlikely]]
+				{
+					// Check if depth bounds is active. Depth bounds test does NOT need depth test to be enabled to access the Z buffer
+					// Bind Z buffer in read mode for bounds check in this case
+					if (rsx::method_registers.depth_bounds_test_enabled() &&
+						(rsx::method_registers.depth_bounds_min() > 0.f || rsx::method_registers.depth_bounds_max() < 1.f))
+					{
+						depth_buffer_unused = false;
+					}
+				}
 			}
 
 			color_buffer_unused = !color_write_enabled || layout.target == rsx::surface_target::none;

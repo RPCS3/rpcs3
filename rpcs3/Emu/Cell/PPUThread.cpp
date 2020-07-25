@@ -1227,7 +1227,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, T reg_value)
 	const T old_data = static_cast<T>(ppu.rdata << ((addr & 7) * 8) >> size_off);
 	auto& res = vm::reservation_acquire(addr, sizeof(T));
 
-	if (std::exchange(ppu.raddr, 0) != addr || addr % sizeof(T) || old_data != data || ppu.rtime != res)
+	if (std::exchange(ppu.raddr, 0) != addr || addr % sizeof(T) || old_data != data || ppu.rtime != (res & -128))
 	{
 		return false;
 	}
@@ -1613,6 +1613,7 @@ extern void ppu_initialize(const ppu_module& info)
 				non_win32,
 				accurate_fma,
 				accurate_ppu_vector_nan,
+				java_mode_handling,
 
 				__bitset_enum_max
 			};
@@ -1629,6 +1630,10 @@ extern void ppu_initialize(const ppu_module& info)
 			if (g_cfg.core.llvm_ppu_accurate_vector_nan)
 			{
 				settings += ppu_settings::accurate_ppu_vector_nan;
+			}
+			if (g_cfg.core.llvm_ppu_jm_handling)
+			{
+				settings += ppu_settings::java_mode_handling;
 			}
 
 			// Write version, hash, CPU, settings

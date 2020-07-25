@@ -834,6 +834,18 @@
             </widget>
            </item>
            <item>
+            <widget class="QGroupBox" name="gb_audio_downmix">
+             <property name="title">
+              <string>Audio Channels</string>
+             </property>
+             <layout class="QVBoxLayout" name="gb_audio_channels_layout">
+              <item>
+               <widget class="QComboBox" name="combo_audio_downmix"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
             <widget class="QGroupBox" name="gb_audio_settings">
              <property name="title">
               <string>Audio Settings</string>
@@ -850,16 +862,6 @@
                <widget class="QCheckBox" name="convert">
                 <property name="text">
                  <string>Convert to 16-bit</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="downmix">
-                <property name="text">
-                 <string>Downmix to Stereo</string>
-                </property>
-                <property name="checked">
-                 <bool>false</bool>
                 </property>
                </widget>
               </item>

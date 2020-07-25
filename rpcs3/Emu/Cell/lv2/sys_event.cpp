@@ -161,7 +161,7 @@ error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queu
 
 error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event.warning("sys_event_queue_destroy(equeue_id=0x%x, mode=%d)", equeue_id, mode);
 
@@ -226,7 +226,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event.trace("sys_event_queue_tryreceive(equeue_id=0x%x, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
 
@@ -262,7 +262,7 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 
 error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event.trace("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx)", equeue_id, dummy_event, timeout);
 
@@ -346,7 +346,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 error_code sys_event_queue_drain(ppu_thread& ppu, u32 equeue_id)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event.trace("sys_event_queue_drain(equeue_id=0x%x)", equeue_id);
 
@@ -388,7 +388,7 @@ error_code sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 
 error_code sys_event_port_destroy(ppu_thread& ppu, u32 eport_id)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event.warning("sys_event_port_destroy(eport_id=0x%x)", eport_id);
 
@@ -447,7 +447,7 @@ error_code sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 
 error_code sys_event_port_connect_ipc(ppu_thread& ppu, u32 eport_id, u64 ipc_key)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event.warning("sys_event_port_connect_ipc(eport_id=0x%x, ipc_key=0x%x)", eport_id, ipc_key);
 
@@ -484,7 +484,7 @@ error_code sys_event_port_connect_ipc(ppu_thread& ppu, u32 eport_id, u64 ipc_key
 
 error_code sys_event_port_disconnect(ppu_thread& ppu, u32 eport_id)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event.warning("sys_event_port_disconnect(eport_id=0x%x)", eport_id);
 

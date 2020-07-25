@@ -22,13 +22,15 @@ inline void try_start(spu_thread& spu)
 	}).second)
 	{
 		spu.state -= cpu_flag::stop;
-		thread_ctrl::notify(static_cast<named_thread<spu_thread>&>(spu));
+		thread_ctrl::raw_notify(static_cast<named_thread<spu_thread>&>(spu));
 	}
 };
 
 bool spu_thread::read_reg(const u32 addr, u32& value)
 {
-	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - this->offset - RAW_SPU_PROB_OFFSET;
+
+	spu_log.trace("RawSPU[%u]: Read32(0x%x, offset=0x%x)", index, addr, offset);
 
 	switch (offset)
 	{
@@ -121,7 +123,7 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 
 	case SPU_Out_MBox_offs:
 	{
-		value = ch_out_mbox.pop(*this);
+		value = ch_out_mbox.pop();
 		return true;
 	}
 
@@ -157,19 +159,21 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 	}
 	}
 
-	spu_log.error("RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
+	spu_log.error("RawSPU[%u]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
 	return false;
 }
 
 bool spu_thread::write_reg(const u32 addr, const u32 value)
 {
-	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - this->offset - RAW_SPU_PROB_OFFSET;
+
+	spu_log.trace("RawSPU[%u]: Write32(0x%x, offset=0x%x, value=0x%x)", index, addr, offset, value);
 
 	switch (offset)
 	{
 	case MFC_LSA_offs:
 	{
-		if (value >= 0x40000)
+		if (value >= SPU_LS_SIZE)
 		{
 			break;
 		}
@@ -311,13 +315,13 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 	}
 	}
 
-	spu_log.error("RawSPUThread[%d]: Write32(0x%x, value=0x%x): unknown/illegal offset (0x%x)", index, addr, value, offset);
+	spu_log.error("RawSPU[%u]: Write32(0x%x, value=0x%x): unknown/illegal offset (0x%x)", index, addr, value, offset);
 	return false;
 }
 
 void spu_load_exec(const spu_exec_object& elf)
 {
-	auto ls0 = vm::cast(vm::falloc(RAW_SPU_BASE_ADDR, 0x80000, vm::spu));
+	auto ls0 = vm::cast(vm::falloc(RAW_SPU_BASE_ADDR, SPU_LS_SIZE, vm::spu));
 	auto spu = idm::make_ptr<named_thread<spu_thread>>("TEST_SPU", ls0, nullptr, 0, "", 0);
 
 	spu_thread::g_raw_spu_ctr++;
@@ -327,7 +331,7 @@ void spu_load_exec(const spu_exec_object& elf)
 	{
 		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
 		{
-			std::memcpy(vm::base(spu->offset + prog.p_vaddr), prog.bin.data(), prog.p_filesz);
+			std::memcpy(spu->_ptr<void>(prog.p_vaddr), prog.bin.data(), prog.p_filesz);
 		}
 	}
 

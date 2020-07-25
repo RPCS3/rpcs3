@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "cellSysutil.h"
 
@@ -7,7 +7,7 @@
 LOG_CHANNEL(cellMusicExport);
 
 // Return Codes
-enum
+enum CellMusicExportError : u32
 {
 	CELL_MUSIC_EXPORT_UTIL_ERROR_BUSY         = 0x8002c601,
 	CELL_MUSIC_EXPORT_UTIL_ERROR_INTERNAL     = 0x8002c602,
@@ -20,6 +20,29 @@ enum
 	CELL_MUSIC_EXPORT_UTIL_ERROR_MOVE         = 0x8002c609,
 	CELL_MUSIC_EXPORT_UTIL_ERROR_INITIALIZE   = 0x8002c60a,
 };
+
+template<>
+void fmt_class_string<CellMusicExportError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_MUSIC_EXPORT_UTIL_ERROR_BUSY);
+			STR_CASE(CELL_MUSIC_EXPORT_UTIL_ERROR_INTERNAL);
+			STR_CASE(CELL_MUSIC_EXPORT_UTIL_ERROR_PARAM);
+			STR_CASE(CELL_MUSIC_EXPORT_UTIL_ERROR_ACCESS_ERROR);
+			STR_CASE(CELL_MUSIC_EXPORT_UTIL_ERROR_DB_INTERNAL);
+			STR_CASE(CELL_MUSIC_EXPORT_UTIL_ERROR_DB_REGIST);
+			STR_CASE(CELL_MUSIC_EXPORT_UTIL_ERROR_SET_META);
+			STR_CASE(CELL_MUSIC_EXPORT_UTIL_ERROR_FLUSH_META);
+			STR_CASE(CELL_MUSIC_EXPORT_UTIL_ERROR_MOVE);
+			STR_CASE(CELL_MUSIC_EXPORT_UTIL_ERROR_INITIALIZE);
+		}
+
+		return unknown;
+	});
+}
 
 struct CellMusicExportSetParam
 {

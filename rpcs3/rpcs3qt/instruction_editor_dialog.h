@@ -15,7 +15,7 @@ class instruction_editor_dialog : public QDialog
 
 private:
 	u32 m_pc;
-	u32 m_cpu_offset;
+	u8* m_cpu_offset;
 	CPUDisAsm* m_disasm;
 	QLineEdit* m_instr;
 	QLabel* m_preview;

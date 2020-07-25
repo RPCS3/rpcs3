@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "cellSysutil.h"
@@ -8,7 +8,7 @@
 LOG_CHANNEL(cellPhotoImportUtil);
 
 // Return Codes
-enum
+enum CellPhotoImportError : u32
 {
 	CELL_PHOTO_IMPORT_ERROR_BUSY         = 0x8002c701,
 	CELL_PHOTO_IMPORT_ERROR_INTERNAL     = 0x8002c702,
@@ -17,6 +17,25 @@ enum
 	CELL_PHOTO_IMPORT_ERROR_COPY         = 0x8002c705,
 	CELL_PHOTO_IMPORT_ERROR_INITIALIZE   = 0x8002c706,
 };
+
+template<>
+void fmt_class_string<CellPhotoImportError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_PHOTO_IMPORT_ERROR_BUSY);
+			STR_CASE(CELL_PHOTO_IMPORT_ERROR_INTERNAL);
+			STR_CASE(CELL_PHOTO_IMPORT_ERROR_PARAM);
+			STR_CASE(CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR);
+			STR_CASE(CELL_PHOTO_IMPORT_ERROR_COPY);
+			STR_CASE(CELL_PHOTO_IMPORT_ERROR_INITIALIZE);
+		}
+
+		return unknown;
+	});
+}
 
 enum
 {

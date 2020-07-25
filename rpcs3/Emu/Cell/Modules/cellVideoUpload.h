@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 
@@ -44,7 +44,7 @@ enum
 };
 
 // Return Codes
-enum
+enum CellVideoUploadError : u32
 {
 	CELL_VIDEO_UPLOAD_ERROR_CANCEL              = 0x8002d000,
 	CELL_VIDEO_UPLOAD_ERROR_NETWORK             = 0x8002d001,

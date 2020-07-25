@@ -172,7 +172,7 @@ u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multip
 // This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%
 // X and Y is expected to be in (-255) to 255 range, deadzone should be in terms of thumb stick range
 // return is new x and y values in 0-255 range
-std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone)
+std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone) const
 {
 	const float dz_range = deadzone / static_cast<float>(std::abs(thumb_max)); // NOTE: thumb_max should be positive anyway
 
@@ -388,6 +388,18 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 	return;
 }
 
+void PadHandlerBase::convert_stick_values(u16& x_out, u16& y_out, const s32& x_in, const s32& y_in, const s32& deadzone, const s32& padsquircling) const
+{
+	// Normalize our stick axis based on the deadzone
+	std::tie(x_out, y_out) = NormalizeStickDeadzone(x_in, y_in, deadzone);
+
+	// Apply pad squircling if necessary
+	if (padsquircling != 0)
+	{
+		std::tie(x_out, y_out) = ConvertToSquirclePoint(x_out, y_out, padsquircling);
+	}
+}
+
 // Update the pad button values based on their type and thresholds. With this you can use axis or triggers as buttons or vice versa
 void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u64 keyCode, bool& pressed, u16& val, bool ignore_stick_threshold, bool ignore_trigger_threshold)
 {
@@ -568,15 +580,9 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 
 	u16 lx, ly, rx, ry;
 
-	// Normalize our two stick's axis based on the thresholds
-	std::tie(lx, ly) = NormalizeStickDeadzone(stick_val[0], stick_val[1], profile->lstickdeadzone);
-	std::tie(rx, ry) = NormalizeStickDeadzone(stick_val[2], stick_val[3], profile->rstickdeadzone);
-
-	if (profile->padsquircling != 0)
-	{
-		std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, profile->padsquircling);
-		std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, profile->padsquircling);
-	}
+	// Normalize and apply pad squircling
+	convert_stick_values(lx, ly, stick_val[0], stick_val[1], profile->lstickdeadzone, profile->lpadsquircling);
+	convert_stick_values(rx, ry, stick_val[2], stick_val[3], profile->rstickdeadzone, profile->rpadsquircling);
 
 	if (m_type == pad_handler::ds4)
 	{

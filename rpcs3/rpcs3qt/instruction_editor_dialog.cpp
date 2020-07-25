@@ -24,8 +24,8 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	setMinimumSize(300, sizeHint().height());
 
 	const auto cpu = _cpu.get();
-	m_cpu_offset = cpu->id_type() != 1 ? static_cast<spu_thread&>(*cpu).offset : 0;
-	QString instruction = qstr(fmt::format("%08x", vm::read32(m_cpu_offset + m_pc).value()));
+	m_cpu_offset = cpu->id_type() != 1 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
+	QString instruction = qstr(fmt::format("%08x", *reinterpret_cast<be_t<u32>*>(m_cpu_offset + m_pc)));
 
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
 	QHBoxLayout* hbox_panel(new QHBoxLayout());
@@ -83,7 +83,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 		}
 		else if (cpu->id_type() == 1)
 		{
-			if (!ppu_patch(m_cpu_offset + m_pc, static_cast<u32>(opcode)))
+			if (!ppu_patch(m_pc, static_cast<u32>(opcode)))
 			{
 				QMessageBox::critical(this, tr("Error"), tr("Failed to patch PPU instruction."));
 				return;
@@ -91,7 +91,8 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 		}
 		else
 		{
-			vm::write32(m_cpu_offset + m_pc, static_cast<u32>(opcode));
+			const be_t<u32> swapped{static_cast<u32>(opcode)};
+			std::memcpy(m_cpu_offset + m_pc, &swapped, 4);
 		}
 
 		accept();

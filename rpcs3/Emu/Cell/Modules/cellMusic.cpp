@@ -11,13 +11,63 @@
 
 LOG_CHANNEL(cellMusic);
 
+template<>
+void fmt_class_string<CellMusicError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_MUSIC_CANCELED);
+			STR_CASE(CELL_MUSIC_PLAYBACK_FINISHED);
+			STR_CASE(CELL_MUSIC_ERROR_PARAM);
+			STR_CASE(CELL_MUSIC_ERROR_BUSY);
+			STR_CASE(CELL_MUSIC_ERROR_NO_ACTIVE_CONTENT);
+			STR_CASE(CELL_MUSIC_ERROR_NO_MATCH_FOUND);
+			STR_CASE(CELL_MUSIC_ERROR_INVALID_CONTEXT);
+			STR_CASE(CELL_MUSIC_ERROR_PLAYBACK_FAILURE);
+			STR_CASE(CELL_MUSIC_ERROR_NO_MORE_CONTENT);
+			STR_CASE(CELL_MUSIC_DIALOG_OPEN);
+			STR_CASE(CELL_MUSIC_DIALOG_CLOSE);
+			STR_CASE(CELL_MUSIC_ERROR_GENERIC);
+		}
+
+		return unknown;
+	});
+}
+
+template<>
+void fmt_class_string<CellMusic2Error>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_MUSIC2_CANCELED);
+			STR_CASE(CELL_MUSIC2_PLAYBACK_FINISHED);
+			STR_CASE(CELL_MUSIC2_ERROR_PARAM);
+			STR_CASE(CELL_MUSIC2_ERROR_BUSY);
+			STR_CASE(CELL_MUSIC2_ERROR_NO_ACTIVE_CONTENT);
+			STR_CASE(CELL_MUSIC2_ERROR_NO_MATCH_FOUND);
+			STR_CASE(CELL_MUSIC2_ERROR_INVALID_CONTEXT);
+			STR_CASE(CELL_MUSIC2_ERROR_PLAYBACK_FAILURE);
+			STR_CASE(CELL_MUSIC2_ERROR_NO_MORE_CONTENT);
+			STR_CASE(CELL_MUSIC2_DIALOG_OPEN);
+			STR_CASE(CELL_MUSIC2_DIALOG_CLOSE);
+			STR_CASE(CELL_MUSIC2_ERROR_GENERIC);
+		}
+
+		return unknown;
+	});
+}
+
 struct music_state
 {
 	vm::ptr<void(u32 event, vm::ptr<void> param, vm::ptr<void> userData)> func;
 	vm::ptr<void> userData;
 };
 
-s32 cellMusicGetSelectionContext(vm::ptr<CellMusicSelectionContext> context)
+error_code cellMusicGetSelectionContext(vm::ptr<CellMusicSelectionContext> context)
 {
 	cellMusic.todo("cellMusicGetSelectionContext(context=*0x%x)", context);
 
@@ -27,7 +77,7 @@ s32 cellMusicGetSelectionContext(vm::ptr<CellMusicSelectionContext> context)
 	return CELL_OK;
 }
 
-s32 cellMusicSetSelectionContext2(vm::ptr<CellMusicSelectionContext> context)
+error_code cellMusicSetSelectionContext2(vm::ptr<CellMusicSelectionContext> context)
 {
 	cellMusic.todo("cellMusicSetSelectionContext2(context=*0x%x)", context);
 
@@ -48,7 +98,7 @@ s32 cellMusicSetSelectionContext2(vm::ptr<CellMusicSelectionContext> context)
 	return CELL_OK;
 }
 
-s32 cellMusicSetVolume2(f32 level)
+error_code cellMusicSetVolume2(f32 level)
 {
 	cellMusic.todo("cellMusicSetVolume2(level=0x%x)", level);
 
@@ -68,7 +118,7 @@ s32 cellMusicSetVolume2(f32 level)
 	return CELL_OK;
 }
 
-s32 cellMusicGetContentsId(vm::ptr<CellSearchContentId> contents_id)
+error_code cellMusicGetContentsId(vm::ptr<CellSearchContentId> contents_id)
 {
 	cellMusic.todo("cellMusicGetContentsId(contents_id=*0x%x)", contents_id);
 
@@ -78,7 +128,7 @@ s32 cellMusicGetContentsId(vm::ptr<CellSearchContentId> contents_id)
 	return CELL_OK;
 }
 
-s32 cellMusicSetSelectionContext(vm::ptr<CellMusicSelectionContext> context)
+error_code cellMusicSetSelectionContext(vm::ptr<CellMusicSelectionContext> context)
 {
 	cellMusic.todo("cellMusicSetSelectionContext(context=*0x%x)", context);
 
@@ -99,7 +149,7 @@ s32 cellMusicSetSelectionContext(vm::ptr<CellMusicSelectionContext> context)
 	return CELL_OK;
 }
 
-s32 cellMusicInitialize2SystemWorkload(s32 mode, vm::ptr<CellMusic2Callback> func, vm::ptr<void> userData, vm::ptr<CellSpurs> spurs, vm::cptr<u8> priority, vm::cptr<struct CellSpursSystemWorkloadAttribute> attr)
+error_code cellMusicInitialize2SystemWorkload(s32 mode, vm::ptr<CellMusic2Callback> func, vm::ptr<void> userData, vm::ptr<CellSpurs> spurs, vm::cptr<u8> priority, vm::cptr<struct CellSpursSystemWorkloadAttribute> attr)
 {
 	cellMusic.todo("cellMusicInitialize2SystemWorkload(mode=0x%x, func=*0x%x, userData=*0x%x, spurs=*0x%x, priority=*0x%x, attr=*0x%x)", mode, func, userData, spurs, priority, attr);
 
@@ -125,7 +175,7 @@ s32 cellMusicInitialize2SystemWorkload(s32 mode, vm::ptr<CellMusic2Callback> fun
 	return CELL_OK;
 }
 
-s32 cellMusicGetPlaybackStatus2(vm::ptr<s32> status)
+error_code cellMusicGetPlaybackStatus2(vm::ptr<s32> status)
 {
 	cellMusic.todo("cellMusicGetPlaybackStatus2(status=*0x%x)", status);
 
@@ -135,7 +185,7 @@ s32 cellMusicGetPlaybackStatus2(vm::ptr<s32> status)
 	return CELL_OK;
 }
 
-s32 cellMusicGetContentsId2(vm::ptr<CellSearchContentId> contents_id)
+error_code cellMusicGetContentsId2(vm::ptr<CellSearchContentId> contents_id)
 {
 	cellMusic.todo("cellMusicGetContentsId2(contents_id=*0x%x)", contents_id);
 
@@ -145,7 +195,7 @@ s32 cellMusicGetContentsId2(vm::ptr<CellSearchContentId> contents_id)
 	return CELL_OK;
 }
 
-s32 cellMusicFinalize()
+error_code cellMusicFinalize()
 {
 	cellMusic.todo("cellMusicFinalize()");
 
@@ -163,7 +213,7 @@ s32 cellMusicFinalize()
 	return CELL_OK;
 }
 
-s32 cellMusicInitializeSystemWorkload(s32 mode, u32 container, vm::ptr<CellMusicCallback> func, vm::ptr<void> userData, vm::ptr<CellSpurs> spurs, vm::cptr<u8> priority, vm::cptr<struct CellSpursSystemWorkloadAttribute> attr)
+error_code cellMusicInitializeSystemWorkload(s32 mode, u32 container, vm::ptr<CellMusicCallback> func, vm::ptr<void> userData, vm::ptr<CellSpurs> spurs, vm::cptr<u8> priority, vm::cptr<struct CellSpursSystemWorkloadAttribute> attr)
 {
 	cellMusic.todo("cellMusicInitializeSystemWorkload(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x, spurs=*0x%x, priority=*0x%x, attr=*0x%x)", mode, container, func, userData, spurs, priority, attr);
 
@@ -189,7 +239,7 @@ s32 cellMusicInitializeSystemWorkload(s32 mode, u32 container, vm::ptr<CellMusic
 	return CELL_OK;
 }
 
-s32 cellMusicInitialize(s32 mode, u32 container, s32 spuPriority, vm::ptr<CellMusicCallback> func, vm::ptr<void> userData)
+error_code cellMusicInitialize(s32 mode, u32 container, s32 spuPriority, vm::ptr<CellMusicCallback> func, vm::ptr<void> userData)
 {
 	cellMusic.todo("cellMusicInitialize(mode=0x%x, container=0x%x, spuPriority=0x%x, func=*0x%x, userData=*0x%x)", mode, container, spuPriority, func, userData);
 
@@ -215,7 +265,7 @@ s32 cellMusicInitialize(s32 mode, u32 container, s32 spuPriority, vm::ptr<CellMu
 	return CELL_OK;
 }
 
-s32 cellMusicFinalize2()
+error_code cellMusicFinalize2()
 {
 	cellMusic.todo("cellMusicFinalize2()");
 
@@ -233,7 +283,7 @@ s32 cellMusicFinalize2()
 	return CELL_OK;
 }
 
-s32 cellMusicGetSelectionContext2(vm::ptr<CellMusicSelectionContext> context)
+error_code cellMusicGetSelectionContext2(vm::ptr<CellMusicSelectionContext> context)
 {
 	cellMusic.todo("cellMusicGetSelectionContext2(context=*0x%x)", context);
 
@@ -243,7 +293,7 @@ s32 cellMusicGetSelectionContext2(vm::ptr<CellMusicSelectionContext> context)
 	return CELL_OK;
 }
 
-s32 cellMusicGetVolume(vm::ptr<f32> level)
+error_code cellMusicGetVolume(vm::ptr<f32> level)
 {
 	cellMusic.todo("cellMusicGetVolume(level=*0x%x)", level);
 
@@ -253,7 +303,7 @@ s32 cellMusicGetVolume(vm::ptr<f32> level)
 	return CELL_OK;
 }
 
-s32 cellMusicGetPlaybackStatus(vm::ptr<s32> status)
+error_code cellMusicGetPlaybackStatus(vm::ptr<s32> status)
 {
 	cellMusic.todo("cellMusicGetPlaybackStatus(status=*0x%x)", status);
 
@@ -263,7 +313,7 @@ s32 cellMusicGetPlaybackStatus(vm::ptr<s32> status)
 	return CELL_OK;
 }
 
-s32 cellMusicSetPlaybackCommand2(s32 command, vm::ptr<void> param)
+error_code cellMusicSetPlaybackCommand2(s32 command, vm::ptr<void> param)
 {
 	cellMusic.todo("cellMusicSetPlaybackCommand2(command=0x%x, param=*0x%x)", command, param);
 
@@ -284,7 +334,7 @@ s32 cellMusicSetPlaybackCommand2(s32 command, vm::ptr<void> param)
 	return CELL_OK;
 }
 
-s32 cellMusicSetPlaybackCommand(s32 command, vm::ptr<void> param)
+error_code cellMusicSetPlaybackCommand(s32 command, vm::ptr<void> param)
 {
 	cellMusic.todo("cellMusicSetPlaybackCommand(command=0x%x, param=*0x%x)", command, param);
 
@@ -305,7 +355,7 @@ s32 cellMusicSetPlaybackCommand(s32 command, vm::ptr<void> param)
 	return CELL_OK;
 }
 
-s32 cellMusicSelectContents2()
+error_code cellMusicSelectContents2()
 {
 	cellMusic.todo("cellMusicSelectContents2()");
 
@@ -323,7 +373,7 @@ s32 cellMusicSelectContents2()
 	return CELL_OK;
 }
 
-s32 cellMusicSelectContents(u32 container)
+error_code cellMusicSelectContents(u32 container)
 {
 	cellMusic.todo("cellMusicSelectContents(container=0x%x)", container);
 
@@ -341,7 +391,7 @@ s32 cellMusicSelectContents(u32 container)
 	return CELL_OK;
 }
 
-s32 cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> func, vm::ptr<void> userData)
+error_code cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> func, vm::ptr<void> userData)
 {
 	cellMusic.todo("cellMusicInitialize2(mode=%d, spuPriority=%d, func=*0x%x, userData=*0x%x)", mode, spuPriority, func, userData);
 
@@ -367,7 +417,7 @@ s32 cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> 
 	return CELL_OK;
 }
 
-s32 cellMusicSetVolume(f32 level)
+error_code cellMusicSetVolume(f32 level)
 {
 	cellMusic.todo("cellMusicSetVolume(level=0x%x)", level);
 
@@ -387,7 +437,7 @@ s32 cellMusicSetVolume(f32 level)
 	return CELL_OK;
 }
 
-s32 cellMusicGetVolume2(vm::ptr<f32> level)
+error_code cellMusicGetVolume2(vm::ptr<f32> level)
 {
 	cellMusic.todo("cellMusicGetVolume2(level=*0x%x)", level);
 

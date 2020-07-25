@@ -167,4 +167,5 @@ private:
 	std::shared_ptr<persistent_settings> m_persistent_settings;
 
 	update_manager m_updater;
+	QAction* m_download_menu_action = nullptr;
 };

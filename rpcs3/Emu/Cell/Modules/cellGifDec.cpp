@@ -11,6 +11,27 @@
 
 LOG_CHANNEL(cellGifDec);
 
+template <>
+void fmt_class_string<CellGifDecError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_GIFDEC_ERROR_OPEN_FILE);
+			STR_CASE(CELL_GIFDEC_ERROR_STREAM_FORMAT);
+			STR_CASE(CELL_GIFDEC_ERROR_SEQ);
+			STR_CASE(CELL_GIFDEC_ERROR_ARG);
+			STR_CASE(CELL_GIFDEC_ERROR_FATAL);
+			STR_CASE(CELL_GIFDEC_ERROR_SPU_UNSUPPORT);
+			STR_CASE(CELL_GIFDEC_ERROR_SPU_ERROR);
+			STR_CASE(CELL_GIFDEC_ERROR_CB_PARAM);
+		}
+
+		return unknown;
+	});
+}
+
 // cellGifDec aliases (only for cellGifDec.cpp)
 using PPMainHandle = vm::pptr<GifDecoder>;
 using PMainHandle = vm::ptr<GifDecoder>;
@@ -28,19 +49,19 @@ using POutParam = vm::ptr<CellGifDecOutParam>;
 using PDataCtrlParam = vm::cptr<CellGifDecDataCtrlParam>;
 using PDataOutInfo = vm::ptr<CellGifDecDataOutInfo>;
 
-s32 cellGifDecCreate(PPMainHandle mainHandle, PThreadInParam threadInParam, PThreadOutParam threadOutParam)
+error_code cellGifDecCreate(PPMainHandle mainHandle, PThreadInParam threadInParam, PThreadOutParam threadOutParam)
 {
 	UNIMPLEMENTED_FUNC(cellGifDec);
 	return CELL_OK;
 }
 
-s32 cellGifDecExtCreate(PPMainHandle mainHandle, PThreadInParam threadInParam, PThreadOutParam threadOutParam, PExtThreadInParam extThreadInParam, PExtThreadOutParam extThreadOutParam)
+error_code cellGifDecExtCreate(PPMainHandle mainHandle, PThreadInParam threadInParam, PThreadOutParam threadOutParam, PExtThreadInParam extThreadInParam, PExtThreadOutParam extThreadOutParam)
 {
 	UNIMPLEMENTED_FUNC(cellGifDec);
 	return CELL_OK;
 }
 
-s32 cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc src, POpenInfo openInfo)
+error_code cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc src, POpenInfo openInfo)
 {
 	cellGifDec.warning("cellGifDecOpen(mainHandle=*0x%x, subHandle=**0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
 
@@ -73,13 +94,13 @@ s32 cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc src, POpe
 	return CELL_OK;
 }
 
-s32 cellGifDecExtOpen()
+error_code cellGifDecExtOpen()
 {
 	cellGifDec.todo("cellGifDecExtOpen()");
 	return CELL_OK;
 }
 
-s32 cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo info)
+error_code cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo info)
 {
 	cellGifDec.warning("cellGifDecReadHeader(mainHandle=*0x%x, subHandle=*0x%x, info=*0x%x)", mainHandle, subHandle, info);
 
@@ -126,13 +147,13 @@ s32 cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo inf
 	return CELL_OK;
 }
 
-s32 cellGifDecExtReadHeader()
+error_code cellGifDecExtReadHeader()
 {
 	cellGifDec.todo("cellGifDecExtReadHeader()");
 	return CELL_OK;
 }
 
-s32 cellGifDecSetParameter(PMainHandle mainHandle, PSubHandle subHandle, PInParam inParam, POutParam outParam)
+error_code cellGifDecSetParameter(PMainHandle mainHandle, PSubHandle subHandle, PInParam inParam, POutParam outParam)
 {
 	cellGifDec.warning("cellGifDecSetParameter(mainHandle=*0x%x, subHandle=*0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
 
@@ -157,13 +178,13 @@ s32 cellGifDecSetParameter(PMainHandle mainHandle, PSubHandle subHandle, PInPara
 	return CELL_OK;
 }
 
-s32 cellGifDecExtSetParameter()
+error_code cellGifDecExtSetParameter()
 {
 	cellGifDec.todo("cellGifDecExtSetParameter()");
 	return CELL_OK;
 }
 
-s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u8> data, PDataCtrlParam dataCtrlParam, PDataOutInfo dataOutInfo)
+error_code cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u8> data, PDataCtrlParam dataCtrlParam, PDataOutInfo dataOutInfo)
 {
 	cellGifDec.warning("cellGifDecDecodeData(mainHandle=*0x%x, subHandle=*0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x)", mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);
 
@@ -275,13 +296,13 @@ s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u
 	return CELL_OK;
 }
 
-s32 cellGifDecExtDecodeData()
+error_code cellGifDecExtDecodeData()
 {
 	cellGifDec.todo("cellGifDecExtDecodeData()");
 	return CELL_OK;
 }
 
-s32 cellGifDecClose(PMainHandle mainHandle, PSubHandle subHandle)
+error_code cellGifDecClose(PMainHandle mainHandle, PSubHandle subHandle)
 {
 	cellGifDec.warning("cellGifDecClose(mainHandle=*0x%x, subHandle=*0x%x)", mainHandle, subHandle);
 
@@ -292,7 +313,7 @@ s32 cellGifDecClose(PMainHandle mainHandle, PSubHandle subHandle)
 	return CELL_OK;
 }
 
-s32 cellGifDecDestroy(PMainHandle mainHandle)
+error_code cellGifDecDestroy(PMainHandle mainHandle)
 {
 	UNIMPLEMENTED_FUNC(cellGifDec);
 	return CELL_OK;

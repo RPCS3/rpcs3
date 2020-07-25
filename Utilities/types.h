@@ -94,6 +94,11 @@ namespace std
 	{
 		static_assert(sizeof(To) == sizeof(From), "std::bit_cast<>: incompatible type size");
 
+		if constexpr ((std::is_same_v<std::remove_const_t<To>, std::remove_const_t<From>> && std::is_constructible_v<To, From>) || (std::is_integral_v<From> && std::is_integral_v<To>))
+		{
+			return static_cast<To>(from);
+		}
+
 		To result{};
 		std::memcpy(&result, &from, sizeof(From));
 		return result;

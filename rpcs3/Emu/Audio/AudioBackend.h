@@ -20,6 +20,8 @@ public:
 		SET_FREQUENCY_RATIO = 0x8, // Implements SetFrequencyRatio
 	};
 
+	AudioBackend();
+
 	virtual ~AudioBackend() = default;
 
 	/*
@@ -94,13 +96,22 @@ public:
 	/*
 	 * Helper methods
 	 */
-	static u32 get_sampling_rate();
+	u32 get_sampling_rate() const;
 
-	static u32 get_sample_size();
+	u32 get_sample_size() const;
 
-	static u32 get_channels();
+	u32 get_channels() const;
+	
+	bool get_convert_to_u16() const;
 
 	bool has_capability(u32 cap) const;
 
 	void dump_capabilities(std::string& out) const;
+
+protected:
+	bool m_convert_to_u16 = false;
+	u32 m_sample_size = sizeof(float);
+	u32 m_sampling_rate = DEFAULT_AUDIO_SAMPLING_RATE;
+	u32 m_channels = 0;
+	u32 m_start_threshold = 1;
 };

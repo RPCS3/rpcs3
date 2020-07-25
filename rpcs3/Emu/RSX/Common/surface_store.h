@@ -61,6 +61,9 @@ namespace rsx
 		// List of sections derived from a section that has been split and invalidated
 		std::vector<surface_type> orphaned_surfaces;
 
+		// List of sections that have been wholly inherited and invalidated
+		std::vector<surface_type> superseded_surfaces;
+
 		std::list<surface_storage_type> invalidated_resources;
 		u64 cache_tag = 1ull; // Use 1 as the start since 0 is default tag on new surfaces
 		u64 write_tag = 1ull;
@@ -410,6 +413,7 @@ namespace rsx
 
 					invalidate(object);
 					storage.erase(e.first);
+					superseded_surfaces.push_back(surface);
 				}
 			}
 		}
@@ -654,49 +658,6 @@ namespace rsx
 				width, height, pitch,
 				depth_format == rsx::surface_depth_format::z16? 2 : 4,
 				std::forward<Args>(extra_params)...);
-		}
-
-		bool check_memory_overload(u64 max_safe_memory) const
-		{
-			if (m_active_memory_used <= max_safe_memory) [[likely]]
-			{
-				return false;
-			}
-			else
-			{
-				rsx_log.warning("Surface cache is using too much memory! (%dM)", m_active_memory_used / 0x100000);
-				return true;
-			}
-		}
-
-		void handle_memory_overload(command_list_type cmd)
-		{
-			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data)
-			{
-				for (auto It = data.begin(); It != data.end();)
-				{
-					auto surface = Traits::get(It->second);
-					if (surface->dirty())
-					{
-						// Force memory barrier to release some resources
-						surface->memory_barrier(cmd, rsx::surface_access::read);
-					}
-					else if (!surface->test())
-					{
-						// Remove this
-						invalidate(It->second);
-						It = data.erase(It);
-					}
-					else
-					{
-						++It;
-					}
-				}
-			};
-
-			// Try and find old surfaces to remove
-			process_list_function(m_render_targets_storage);
-			process_list_function(m_depth_stencil_storage);
 		}
 
 	public:
@@ -1117,6 +1078,53 @@ namespace rsx
 					ds.second->state_flags |= rsx::surface_state_flags::erase_bkgnd;
 				}
 			}
+		}
+
+		bool check_memory_usage(u64 max_safe_memory) const
+		{
+			if (m_active_memory_used <= max_safe_memory) [[likely]]
+			{
+				return false;
+			}
+			else
+			{
+				rsx_log.warning("Surface cache is using too much memory! (%dM)", m_active_memory_used / 0x100000);
+				return true;
+			}
+		}
+
+		bool handle_memory_pressure(command_list_type cmd, problem_severity /*severity*/)
+		{
+			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data)
+			{
+				for (auto It = data.begin(); It != data.end();)
+				{
+					auto surface = Traits::get(It->second);
+					if (surface->dirty())
+					{
+						// Force memory barrier to release some resources
+						surface->memory_barrier(cmd, rsx::surface_access::read);
+					}
+					else if (!surface->test())
+					{
+						// Remove this
+						invalidate(It->second);
+						It = data.erase(It);
+					}
+					else
+					{
+						++It;
+					}
+				}
+			};
+
+			const auto old_usage = m_active_memory_used;
+
+			// Try and find old surfaces to remove
+			process_list_function(m_render_targets_storage);
+			process_list_function(m_depth_stencil_storage);
+
+			return (m_active_memory_used < old_usage);
 		}
 	};
 }

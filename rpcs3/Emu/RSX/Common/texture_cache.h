@@ -753,14 +753,6 @@ namespace rsx
 							tex.is_flushable() &&
 							tex.get_section_base() != fault_range_in.start)
 						{
-							if (tex.get_context() == texture_upload_context::framebuffer_storage &&
-								tex.inside(fault_range, section_bounds::full_range))
-							{
-								// FBO data 'lives on' in the new region. Surface cache handles memory intersection for us.
-								verify(HERE), tex.inside(fault_range, section_bounds::locked_range);
-								tex.discard(false);
-							}
-
 							// HACK: When being superseded by an fbo, we preserve overlapped flushables unless the start addresses match
 							continue;
 						}
@@ -1174,6 +1166,20 @@ namespace rsx
 			invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::committed_as_fbo, std::forward<Args>(extras)...);
 		}
 
+		template <typename ...Args>
+		void discard_framebuffer_memory_region(commandbuffer_type& cmd, const address_range& rsx_range, Args&&... extras)
+		{
+			if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
+			{
+				auto* region_ptr = find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, false, false);
+				if (region_ptr && region_ptr->is_locked() && region_ptr->get_context() == texture_upload_context::framebuffer_storage)
+				{
+					verify(HERE), region_ptr->get_protection() == utils::protection::no;
+					region_ptr->discard(false);
+				}
+			}
+		}
+
 		void set_memory_read_flags(const address_range &memory_range, memory_read_flags flags)
 		{
 			std::lock_guard lock(m_cache_mutex);
@@ -1334,6 +1340,23 @@ namespace rsx
 			std::lock_guard lock(m_cache_mutex);
 
 			m_storage.purge_unreleased_sections();
+		}
+
+		bool handle_memory_pressure(problem_severity severity)
+		{
+			if (m_storage.m_unreleased_texture_objects)
+			{
+				m_storage.purge_unreleased_sections();
+				return true;
+			}
+
+			if (severity >= problem_severity::severe)
+			{
+				// Things are bad, previous check should have released 'unreleased' pool
+				return m_storage.purge_unlocked_sections();
+			}
+
+			return false;
 		}
 
 		image_view_type create_temporary_subresource(commandbuffer_type &cmd, deferred_subresource& desc)
@@ -1731,17 +1754,36 @@ namespace rsx
 			u8 subsurface_count;
 			size2f scale{ 1.f, 1.f };
 
+			if (is_unnormalized)
+			{
+				if (extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d)
+				{
+					scale.width /= attributes.width;
+					scale.height /= attributes.height;
+				}
+				else
+				{
+					rsx_log.error("Unimplemented unnormalized sampling for texture type %d", static_cast<u32>(extended_dimension));
+				}
+			}
+
+			const auto packed_pitch = get_format_packed_pitch(attributes.gcm_format, attributes.width, !tex.border_type(), is_swizzled);
 			if (!is_swizzled) [[likely]]
 			{
 				if (attributes.pitch = tex.pitch(); !attributes.pitch)
 				{
-					attributes.pitch = get_format_packed_pitch(attributes.gcm_format, attributes.width, !tex.border_type(), false);
+					attributes.pitch = packed_pitch;
 					scale = { 0.f, 0.f };
+				}
+				else if (packed_pitch > attributes.pitch && !options.is_compressed_format)
+				{
+					scale.width *= f32(packed_pitch) / attributes.pitch;
+					attributes.width = attributes.pitch / attributes.bpp;
 				}
 			}
 			else
 			{
-				attributes.pitch = get_format_packed_pitch(attributes.gcm_format, attributes.width, !tex.border_type(), true);
+				attributes.pitch = packed_pitch;
 			}
 
 			switch (extended_dimension)
@@ -1772,19 +1814,6 @@ namespace rsx
 				required_surface_height = tex_size / attributes.pitch;
 				attributes.slice_h = required_surface_height / attributes.depth;
 				break;
-			}
-
-			if (is_unnormalized)
-			{
-				if (extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d)
-				{
-					scale.width /= attributes.width;
-					scale.height /= attributes.height;
-				}
-				else
-				{
-					rsx_log.error("Unimplemented unnormalized sampling for texture type %d", static_cast<u32>(extended_dimension));
-				}
 			}
 
 			if (options.is_compressed_format)

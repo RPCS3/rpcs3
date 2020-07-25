@@ -11,25 +11,47 @@
 
 LOG_CHANNEL(cellJpgDec);
 
-s32 cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
+template <>
+void fmt_class_string<CellJpgDecError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_JPGDEC_ERROR_HEADER);
+			STR_CASE(CELL_JPGDEC_ERROR_STREAM_FORMAT);
+			STR_CASE(CELL_JPGDEC_ERROR_ARG);
+			STR_CASE(CELL_JPGDEC_ERROR_SEQ);
+			STR_CASE(CELL_JPGDEC_ERROR_BUSY);
+			STR_CASE(CELL_JPGDEC_ERROR_FATAL);
+			STR_CASE(CELL_JPGDEC_ERROR_OPEN_FILE);
+			STR_CASE(CELL_JPGDEC_ERROR_SPU_UNSUPPORT);
+			STR_CASE(CELL_JPGDEC_ERROR_CB_PARAM);
+		}
+
+		return unknown;
+	});
+}
+
+error_code cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
 	UNIMPLEMENTED_FUNC(cellJpgDec);
 	return CELL_OK;
 }
 
-s32 cellJpgDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u32 extThreadInParam, u32 extThreadOutParam)
+error_code cellJpgDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u32 extThreadInParam, u32 extThreadOutParam)
 {
 	UNIMPLEMENTED_FUNC(cellJpgDec);
 	return CELL_OK;
 }
 
-s32 cellJpgDecDestroy(u32 mainHandle)
+error_code cellJpgDecDestroy(u32 mainHandle)
 {
 	UNIMPLEMENTED_FUNC(cellJpgDec);
 	return CELL_OK;
 }
 
-s32 cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc> src, vm::ptr<CellJpgDecOpnInfo> openInfo)
+error_code cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc> src, vm::ptr<CellJpgDecOpnInfo> openInfo)
 {
 	cellJpgDec.warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=*0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
 
@@ -62,13 +84,13 @@ s32 cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 	return CELL_OK;
 }
 
-s32 cellJpgDecExtOpen()
+error_code cellJpgDecExtOpen()
 {
 	cellJpgDec.todo("cellJpgDecExtOpen()");
 	return CELL_OK;
 }
 
-s32 cellJpgDecClose(u32 mainHandle, u32 subHandle)
+error_code cellJpgDecClose(u32 mainHandle, u32 subHandle)
 {
 	cellJpgDec.warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x)", mainHandle, subHandle);
 
@@ -85,7 +107,7 @@ s32 cellJpgDecClose(u32 mainHandle, u32 subHandle)
 	return CELL_OK;
 }
 
-s32 cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> info)
+error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> info)
 {
 	cellJpgDec.trace("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info=*0x%x)", mainHandle, subHandle, info);
 
@@ -157,13 +179,13 @@ s32 cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 	return CELL_OK;
 }
 
-s32 cellJpgDecExtReadHeader()
+error_code cellJpgDecExtReadHeader()
 {
 	cellJpgDec.todo("cellJpgDecExtReadHeader()");
 	return CELL_OK;
 }
 
-s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cptr<CellJpgDecDataCtrlParam> dataCtrlParam, vm::ptr<CellJpgDecDataOutInfo> dataOutInfo)
+error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cptr<CellJpgDecDataCtrlParam> dataCtrlParam, vm::ptr<CellJpgDecDataOutInfo> dataOutInfo)
 {
 	cellJpgDec.trace("cellJpgDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x)", mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);
 
@@ -297,13 +319,13 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 	return CELL_OK;
 }
 
-s32 cellJpgDecExtDecodeData()
+error_code cellJpgDecExtDecodeData()
 {
 	cellJpgDec.todo("cellJpgDecExtDecodeData()");
 	return CELL_OK;
 }
 
-s32 cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::cptr<CellJpgDecInParam> inParam, vm::ptr<CellJpgDecOutParam> outParam)
+error_code cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::cptr<CellJpgDecInParam> inParam, vm::ptr<CellJpgDecOutParam> outParam)
 {
 	cellJpgDec.trace("cellJpgDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
 
@@ -348,7 +370,7 @@ s32 cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::cptr<CellJpgDecInP
 	return CELL_OK;
 }
 
-s32 cellJpgDecExtSetParameter()
+error_code cellJpgDecExtSetParameter()
 {
 	cellJpgDec.todo("cellJpgDecExtSetParameter()");
 	return CELL_OK;

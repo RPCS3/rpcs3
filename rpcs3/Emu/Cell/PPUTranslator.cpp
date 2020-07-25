@@ -46,6 +46,8 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 	thread_struct.insert(thread_struct.end(), 3, GetType<bool>()); // so, ov, ca
 	thread_struct.insert(thread_struct.end(), 1, GetType<u8>()); // cnt
 	thread_struct.insert(thread_struct.end(), 2, GetType<bool>()); // sat, nj
+	thread_struct.emplace_back(ArrayType::get(GetType<char>(), 2)); // Padding
+	thread_struct.insert(thread_struct.end(), 1, GetType<u32>()); // jm_mask
 
 	m_thread_type = StructType::create(m_context, thread_struct, "context_t");
 
@@ -228,6 +230,25 @@ Value* PPUTranslator::VecHandleNan(Value* val)
 
 	val = m_ir->CreateSelect(is_nan, nan_vec4, val);
 
+	return val;
+}
+
+Value* PPUTranslator::VecHandleDenormal(Value* val)
+{
+	const auto type = val->getType();
+	const auto value = type == GetType<u32[4]>() ? val : m_ir->CreateBitCast(val, GetType<u32[4]>());
+
+	const auto mask = SExt(m_ir->CreateICmpEQ(m_ir->CreateAnd(value, Broadcast(RegLoad(m_jm_mask), 4)), ConstantVector::getSplat(4, m_ir->getInt32(0))), GetType<s32[4]>());
+	const auto nz = m_ir->CreateLShr(mask, 1);
+	const auto result = m_ir->CreateAnd(m_ir->CreateNot(nz), value);
+
+	return type == GetType<u32[4]>() ? result : m_ir->CreateBitCast(result, type);
+}
+
+Value* PPUTranslator::VecHandleResult(Value* val)
+{
+	val = g_cfg.core.llvm_ppu_accurate_vector_nan ? VecHandleNan(val) : val;
+	val = g_cfg.core.llvm_ppu_jm_handling ? VecHandleDenormal(val) : val;
 	return val;
 }
 
@@ -515,12 +536,14 @@ Value* PPUTranslator::Shuffle(Value* left, Value* right, std::initializer_list<u
 
 Value* PPUTranslator::SExt(Value* value, Type* type)
 {
-	return m_ir->CreateSExt(value, type ? type : ScaleType(value->getType(), 1));
+	type = type ? type : ScaleType(value->getType(), 1);
+	return value->getType() != type ? m_ir->CreateSExt(value, type) : value;
 }
 
 Value* PPUTranslator::ZExt(Value* value, Type* type)
 {
-	return m_ir->CreateZExt(value, type ? type : ScaleType(value->getType(), 1));
+	type = type ? type : ScaleType(value->getType(), 1);
+	return value->getType() != type ? m_ir->CreateZExt(value, type) : value;
 }
 
 Value* PPUTranslator::Add(std::initializer_list<Value*> args)
@@ -536,7 +559,8 @@ Value* PPUTranslator::Add(std::initializer_list<Value*> args)
 
 Value* PPUTranslator::Trunc(Value* value, Type* type)
 {
-	return m_ir->CreateTrunc(value, type ? type : ScaleType(value->getType(), -1));
+	type = type ? type : ScaleType(value->getType(), -1);
+	return type != value->getType() ? m_ir->CreateTrunc(value, type) : value;
 }
 
 void PPUTranslator::UseCondition(MDNode* hint, Value* cond)
@@ -606,7 +630,9 @@ void PPUTranslator::MFVSCR(ppu_opcode_t op)
 void PPUTranslator::MTVSCR(ppu_opcode_t op)
 {
 	const auto vscr = m_ir->CreateExtractElement(GetVr(op.vb, VrType::vi32), m_ir->getInt32(m_is_be ? 3 : 0));
-	RegStore(Trunc(m_ir->CreateLShr(vscr, 16), GetType<bool>()), m_nj);
+	const auto nj = Trunc(m_ir->CreateLShr(vscr, 16), GetType<bool>());
+	RegStore(nj, m_nj);
+	if (g_cfg.core.llvm_ppu_jm_handling) RegStore(m_ir->CreateSelect(nj, m_ir->getInt32(0x7f80'0000), m_ir->getInt32(0x7fff'ffff)), m_jm_mask);
 	RegStore(Trunc(vscr, GetType<bool>()), m_sat);
 }
 
@@ -622,7 +648,7 @@ void PPUTranslator::VADDFP(ppu_opcode_t op)
 	const auto a = get_vr<f32[4]>(op.va);
 	const auto b = get_vr<f32[4]>(op.vb);
 
-	set_vr(op.vd, vec_handle_nan(a + b));
+	set_vr(op.vd, vec_handle_result(a + b));
 }
 
 void PPUTranslator::VADDSBS(ppu_opcode_t op)
@@ -927,7 +953,7 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 
 		if (data == v128{})
 		{
-			set_vr(op.vd, vec_handle_nan(a * c));
+			set_vr(op.vd, vec_handle_result(a * c));
 			ppu_log.notice("LLVM: VMADDFP with 0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 			return;
 		}
@@ -935,7 +961,7 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 
 	if (m_use_fma)
 	{
-		SetVr(op.vd, VecHandleNan(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { a.value, c.value, b.value })));
+		SetVr(op.vd, VecHandleResult(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { a.value, c.value, b.value })));
 		return;
 	}
 
@@ -945,13 +971,13 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
 
 	const auto xr = m_ir->CreateCall(get_intrinsic<f64[4]>(llvm::Intrinsic::fmuladd), {xa, xc, xb});
-	SetVr(op.vd, VecHandleNan(m_ir->CreateFPTrunc(xr, get_type<f32[4]>())));
+	SetVr(op.vd, VecHandleResult(m_ir->CreateFPTrunc(xr, get_type<f32[4]>())));
 }
 
 void PPUTranslator::VMAXFP(ppu_opcode_t op)
 {
 	const auto ab = GetVrs(VrType::vf, op.va, op.vb);
-	SetVr(op.vd, VecHandleNan(m_ir->CreateSelect(m_ir->CreateFCmpOGT(ab[0], ab[1]), ab[0], ab[1])));
+	SetVr(op.vd, VecHandleResult(m_ir->CreateSelect(m_ir->CreateFCmpOGT(ab[0], ab[1]), ab[0], ab[1])));
 }
 
 void PPUTranslator::VMAXSB(ppu_opcode_t op)
@@ -1023,7 +1049,7 @@ void PPUTranslator::VMHRADDSHS(ppu_opcode_t op)
 void PPUTranslator::VMINFP(ppu_opcode_t op)
 {
 	const auto ab = GetVrs(VrType::vf, op.va, op.vb);
-	SetVr(op.vd, VecHandleNan(m_ir->CreateSelect(m_ir->CreateFCmpOLT(ab[0], ab[1]), ab[0], ab[1])));
+	SetVr(op.vd, VecHandleResult(m_ir->CreateSelect(m_ir->CreateFCmpOLT(ab[0], ab[1]), ab[0], ab[1])));
 }
 
 void PPUTranslator::VMINSB(ppu_opcode_t op)
@@ -1233,7 +1259,7 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 
 		if (data == v128{})
 		{
-			set_vr(op.vd, vec_handle_nan(-a * c));
+			set_vr(op.vd, vec_handle_result(-a * c));
 			ppu_log.notice("LLVM: VNMSUBFP with 0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 			return;
 		}
@@ -1242,7 +1268,7 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 	// Differs from the emulated path with regards to negative zero
 	if (m_use_fma)
 	{
-		SetVr(op.vd, VecHandleNan(m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { a.value, c.value, m_ir->CreateFNeg(b.value) }))));
+		SetVr(op.vd, VecHandleResult(m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { a.value, c.value, m_ir->CreateFNeg(b.value) }))));
 		return;
 	}
 
@@ -1252,7 +1278,7 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
 
 	const auto xr = m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(xa, xc), xb));
-	SetVr(op.vd, VecHandleNan(m_ir->CreateFPTrunc(xr, get_type<f32[4]>())));
+	SetVr(op.vd, VecHandleResult(m_ir->CreateFPTrunc(xr, get_type<f32[4]>())));
 }
 
 void PPUTranslator::VNOR(ppu_opcode_t op)
@@ -1358,28 +1384,28 @@ void PPUTranslator::VPKUWUS(ppu_opcode_t op)
 
 void PPUTranslator::VREFP(ppu_opcode_t op)
 {
-	const auto result = VecHandleNan(m_ir->CreateFDiv(ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 1.0)), GetVr(op.vb, VrType::vf)));
+	const auto result = VecHandleResult(m_ir->CreateFDiv(ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 1.0)), GetVr(op.vb, VrType::vf)));
 	SetVr(op.vd, result);
 }
 
 void PPUTranslator::VRFIM(ppu_opcode_t op)
 {
-	SetVr(op.vd, VecHandleNan(Call(GetType<f32[4]>(), "llvm.floor.v4f32", GetVr(op.vb, VrType::vf))));
+	SetVr(op.vd, VecHandleResult(Call(GetType<f32[4]>(), "llvm.floor.v4f32", GetVr(op.vb, VrType::vf))));
 }
 
 void PPUTranslator::VRFIN(ppu_opcode_t op)
 {
-	SetVr(op.vd, VecHandleNan(Call(GetType<f32[4]>(), "llvm.nearbyint.v4f32", GetVr(op.vb, VrType::vf))));
+	SetVr(op.vd, VecHandleResult(Call(GetType<f32[4]>(), "llvm.nearbyint.v4f32", GetVr(op.vb, VrType::vf))));
 }
 
 void PPUTranslator::VRFIP(ppu_opcode_t op)
 {
-	SetVr(op.vd, VecHandleNan(Call(GetType<f32[4]>(), "llvm.ceil.v4f32", GetVr(op.vb, VrType::vf))));
+	SetVr(op.vd, VecHandleResult(Call(GetType<f32[4]>(), "llvm.ceil.v4f32", GetVr(op.vb, VrType::vf))));
 }
 
 void PPUTranslator::VRFIZ(ppu_opcode_t op)
 {
-	SetVr(op.vd, VecHandleNan(Call(GetType<f32[4]>(), "llvm.trunc.v4f32", GetVr(op.vb, VrType::vf))));
+	SetVr(op.vd, VecHandleResult(Call(GetType<f32[4]>(), "llvm.trunc.v4f32", GetVr(op.vb, VrType::vf))));
 }
 
 void PPUTranslator::VRLB(ppu_opcode_t op)
@@ -1404,7 +1430,7 @@ void PPUTranslator::VRSQRTEFP(ppu_opcode_t op)
 {
 	const auto result = m_ir->CreateFDiv(ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 1.0)), Call(GetType<f32[4]>(), "llvm.sqrt.v4f32", GetVr(op.vb, VrType::vf)));
 
-	SetVr(op.vd, VecHandleNan(result));
+	SetVr(op.vd, VecHandleResult(result));
 }
 
 void PPUTranslator::VSEL(ppu_opcode_t op)
@@ -1619,7 +1645,7 @@ void PPUTranslator::VSUBFP(ppu_opcode_t op)
 {
 	const auto a = get_vr<f32[4]>(op.va);
 	const auto b = get_vr<f32[4]>(op.vb);
-	SetVr(op.vd, VecHandleNan(eval(a - b).eval(m_ir)));
+	SetVr(op.vd, VecHandleResult(eval(a - b).eval(m_ir)));
 }
 
 void PPUTranslator::VSUBSBS(ppu_opcode_t op)
@@ -2430,7 +2456,7 @@ void PPUTranslator::MULHWU(ppu_opcode_t op)
 	const auto a = ZExt(GetGpr(op.ra, 32));
 	const auto b = ZExt(GetGpr(op.rb, 32));
 	SetGpr(op.rd, m_ir->CreateLShr(m_ir->CreateMul(a, b), 32));
-	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 }
 
 void PPUTranslator::MFOCRF(ppu_opcode_t op)
@@ -2617,7 +2643,7 @@ void PPUTranslator::MULHW(ppu_opcode_t op)
 	const auto a = SExt(GetGpr(op.ra, 32));
 	const auto b = SExt(GetGpr(op.rb, 32));
 	SetGpr(op.rd, m_ir->CreateAShr(m_ir->CreateMul(a, b), 32));
-	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 }
 
 void PPUTranslator::LDARX(ppu_opcode_t op)
@@ -3065,7 +3091,7 @@ void PPUTranslator::DIVDU(ppu_opcode_t op)
 	const auto o = IsZero(b);
 	const auto result = m_ir->CreateUDiv(a, m_ir->CreateSelect(o, m_ir->getInt64(-1), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt64(0), result));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
 
@@ -3076,7 +3102,7 @@ void PPUTranslator::DIVWU(ppu_opcode_t op)
 	const auto o = IsZero(b);
 	const auto result = m_ir->CreateUDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(0xffffffff), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt32(0), result));
-	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
 
@@ -3126,7 +3152,7 @@ void PPUTranslator::DIVD(ppu_opcode_t op)
 	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt64(1ull << 63)), IsOnes(b)));
 	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt64(1ull << 63), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt64(0), result));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
 
@@ -3137,7 +3163,7 @@ void PPUTranslator::DIVW(ppu_opcode_t op)
 	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt32(INT32_MIN)), IsOnes(b)));
 	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(INT32_MIN), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt32(0), result));
-	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
 
@@ -4511,12 +4537,12 @@ void PPUTranslator::UNK(ppu_opcode_t op)
 
 Value* PPUTranslator::GetGpr(u32 r, u32 num_bits)
 {
-	return m_ir->CreateTrunc(RegLoad(m_gpr[r]), m_ir->getIntNTy(num_bits));
+	return Trunc(RegLoad(m_gpr[r]), m_ir->getIntNTy(num_bits));
 }
 
 void PPUTranslator::SetGpr(u32 r, Value* value)
 {
-	RegStore(m_ir->CreateZExt(value, GetType<u64>()), m_gpr[r]);
+	RegStore(ZExt(value, GetType<u64>()), m_gpr[r]);
 }
 
 Value* PPUTranslator::GetFpr(u32 r, u32 bits, bool as_int)
@@ -4533,7 +4559,7 @@ Value* PPUTranslator::GetFpr(u32 r, u32 bits, bool as_int)
 	}
 	else
 	{
-		return m_ir->CreateTrunc(m_ir->CreateBitCast(value, GetType<u64>()), m_ir->getIntNTy(bits));
+		return Trunc(m_ir->CreateBitCast(value, GetType<u64>()), m_ir->getIntNTy(bits));
 	}
 }
 

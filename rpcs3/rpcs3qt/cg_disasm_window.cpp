@@ -23,6 +23,7 @@ cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgu
 	setWindowTitle(tr("Cg Disasm"));
 	setObjectName("cg_disasm");
 	setAttribute(Qt::WA_DeleteOnClose);
+	setAttribute(Qt::WA_StyledBackground);
 	setAcceptDrops(true);
 	setMinimumSize(QSize(200, 150)); // seems fine on win 10
 	resize(QSize(620, 395));

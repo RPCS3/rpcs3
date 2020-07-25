@@ -5,55 +5,55 @@
 
 LOG_CHANNEL(sysPrxForUser);
 
-s32 sys_rsxaudio_close_connection()
+error_code sys_rsxaudio_close_connection()
 {
 	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
-s32 sys_rsxaudio_create_connection()
+error_code sys_rsxaudio_create_connection()
 {
 	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
-s32 sys_rsxaudio_finalize()
+error_code sys_rsxaudio_finalize()
 {
 	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
-s32 sys_rsxaudio_import_shared_memory()
+error_code sys_rsxaudio_import_shared_memory()
 {
 	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
-s32 sys_rsxaudio_initialize()
+error_code sys_rsxaudio_initialize()
 {
 	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
-s32 sys_rsxaudio_prepare_process()
+error_code sys_rsxaudio_prepare_process()
 {
 	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
-s32 sys_rsxaudio_start_process()
+error_code sys_rsxaudio_start_process()
 {
 	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
-s32 sys_rsxaudio_stop_process()
+error_code sys_rsxaudio_stop_process()
 {
 	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
-s32 sys_rsxaudio_unimport_shared_memory()
+error_code sys_rsxaudio_unimport_shared_memory()
 {
 	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
