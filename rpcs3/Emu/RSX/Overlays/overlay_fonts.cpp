@@ -314,7 +314,7 @@ namespace rsx
 							skip_whitespace = false;
 						}
 
-						if (quad.x1 > max_width)
+						if (x_advance > max_width)
 						{
 							bool wrapped              = false;
 							bool non_whitespace_break = false;
