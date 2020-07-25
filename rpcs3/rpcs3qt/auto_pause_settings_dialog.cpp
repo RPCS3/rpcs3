@@ -10,7 +10,7 @@
 
 LOG_CHANNEL(autopause_log, "AutoPause");
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialog(parent)
 {

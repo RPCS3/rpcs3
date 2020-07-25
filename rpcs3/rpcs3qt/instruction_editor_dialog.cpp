@@ -9,7 +9,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 extern bool ppu_patch(u32 addr, u32 value);
 

@@ -6,7 +6,7 @@
 #include <QHeaderView>
 #include "Emu/System.h"
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget* parent)
 	: QDialog(parent), m_entry(save)

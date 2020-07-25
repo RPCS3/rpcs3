@@ -13,7 +13,7 @@
 
 #include <memory>
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> settings, breakpoint_handler* handler)
 	: QListWidget(parent)

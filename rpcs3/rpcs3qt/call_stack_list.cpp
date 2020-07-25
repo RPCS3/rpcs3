@@ -1,6 +1,6 @@
 ﻿#include "call_stack_list.h"
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 call_stack_list::call_stack_list(QWidget* parent) : QListWidget(parent)
 {

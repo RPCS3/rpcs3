@@ -11,7 +11,7 @@
 #include "Emu/System.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 namespace gui
 {

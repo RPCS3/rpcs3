@@ -8,7 +8,7 @@
 
 LOG_CHANNEL(compat_log, "Compat");
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 game_compatibility::game_compatibility(std::shared_ptr<gui_settings> settings, QWidget* parent)

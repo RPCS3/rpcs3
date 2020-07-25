@@ -10,7 +10,7 @@
 #include <QPushButton>
 #include <QRegExpValidator>
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 osk_dialog_frame::osk_dialog_frame()
 {

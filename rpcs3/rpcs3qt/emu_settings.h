@@ -14,7 +14,7 @@
 #include <QComboBox>
 #include <QSpinBox>
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 class emu_settings : public QObject
 {

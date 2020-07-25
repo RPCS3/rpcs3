@@ -19,7 +19,7 @@ enum GCMEnumTypes
 	CELL_GCM_PRIMITIVE_ENUM,
 };
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 namespace
 {

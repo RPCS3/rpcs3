@@ -24,7 +24,7 @@ extern atomic_t<s64> g_tty_size;
 extern std::array<std::deque<std::string>, 16> g_tty_input;
 extern std::mutex g_tty_mutex;
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 struct gui_listener : logs::listener
 {

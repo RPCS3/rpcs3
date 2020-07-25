@@ -16,7 +16,7 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 render_creator::render_creator(QObject *parent) : QObject(parent)
 {

@@ -4,7 +4,7 @@
 
 #include "3rdparty/OpenAL/include/alext.h"
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 microphone_creator::microphone_creator()
 {

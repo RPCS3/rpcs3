@@ -8,7 +8,7 @@
 LOG_CHANNEL(input_log, "Input");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 bool keyboard_pad_handler::Init()
 {

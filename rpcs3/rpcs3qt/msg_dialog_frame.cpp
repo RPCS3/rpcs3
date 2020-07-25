@@ -13,7 +13,7 @@
 #include <QtDBus/QDBusConnection>
 #endif
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 {

@@ -36,7 +36,7 @@ LOG_CHANNEL(gui_log, "GUI");
 
 namespace
 {
-	constexpr auto qstr = QString::fromStdString;
+	inline auto qstr(std::string s) { return QString::fromStdString(s); }
 	inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 }
 

@@ -34,7 +34,7 @@
 LOG_CHANNEL(cfg_log, "CFG");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 inline bool CreateConfigFile(const QString& dir, const QString& name)
 {

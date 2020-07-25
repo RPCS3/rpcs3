@@ -38,7 +38,7 @@
 
 LOG_CHANNEL(screenshot);
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
 	: QWindow(), m_gui_settings(gui_settings)

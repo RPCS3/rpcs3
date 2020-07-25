@@ -13,7 +13,7 @@
 #include <QWheelEvent>
 #include <shared_mutex>
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	: QDialog(parent)

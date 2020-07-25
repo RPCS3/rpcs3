@@ -35,7 +35,7 @@
 #include "kernel_explorer.h"
 #include "qt_utils.h"
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 enum kernel_item_role
 {

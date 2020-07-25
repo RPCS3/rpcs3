@@ -23,7 +23,7 @@
 #include "Utilities/File.h"
 #include "util/logs.hpp"
 
-constexpr auto qstr = QString::fromStdString;
+inline auto qstr(std::string s) { return QString::fromStdString(s); }
 
 LOG_CHANNEL(gui_log, "GUI");
 
