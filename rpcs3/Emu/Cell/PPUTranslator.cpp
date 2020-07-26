@@ -1904,7 +1904,7 @@ void PPUTranslator::ADDI(ppu_opcode_t op)
 
 void PPUTranslator::ADDIS(ppu_opcode_t op)
 {
-	Value* imm = m_ir->getInt64(op.simm16 << 16);
+	Value* imm = m_ir->getInt64(op.simm16 * 65536);
 
 	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
