@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "VKResourceManager.h"
+#include "VKGSRender.h"
 
 namespace vk
 {
@@ -74,5 +75,37 @@ namespace vk
 	{
 		g_vmm_memory_usage.clear();
 		g_vmm_allocations.clear();
+	}
+
+	bool vmm_handle_memory_pressure(rsx::problem_severity severity)
+	{
+		if (auto vkthr = dynamic_cast<VKGSRender*>(rsx::get_current_renderer()))
+		{
+			return vkthr->on_vram_exhausted(severity);
+		}
+
+		return false;
+	}
+
+	void vmm_check_memory_usage()
+	{
+		const auto vmm_load = get_current_mem_allocator()->get_memory_usage();
+		rsx::problem_severity load_severity = rsx::problem_severity::low;
+
+		if (vmm_load > 90.f)
+		{
+			rsx_log.warning("Video memory usage exceeding 90%. Will attempt to reclaim resources.");
+			load_severity = rsx::problem_severity::severe;
+		}
+		else if (vmm_load > 75.f)
+		{
+			rsx_log.notice("Video memory usage exceeding 75%. Will attempt to reclaim resources.");
+			load_severity = rsx::problem_severity::moderate;
+		}
+
+		if (load_severity >= rsx::problem_severity::moderate)
+		{
+			vmm_handle_memory_pressure(load_severity);
+		}
 	}
 }

@@ -682,6 +682,44 @@ namespace rsx
 			AUDIT(m_unreleased_texture_objects == 0);
 		}
 
+		bool purge_unlocked_sections()
+		{
+			// Reclaims all graphics memory consumed by unlocked textures
+			bool any_released = false;
+			for (auto it = m_in_use.begin(); it != m_in_use.end();)
+			{
+				auto* block = *it;
+
+				if (block->get_exists_count() > block->get_locked_count())
+				{
+					for (auto& tex : *block)
+					{
+						if (tex.get_context() == rsx::texture_upload_context::framebuffer_storage ||
+							tex.is_locked() ||
+							!tex.exists())
+						{
+							continue;
+						}
+
+						ASSERT(!tex.is_locked() && tex.exists());
+						tex.destroy();
+						any_released = true;
+					}
+				}
+
+				if (block->get_exists_count() == 0)
+				{
+					it = m_in_use.erase(it);
+				}
+				else
+				{
+					it++;
+				}
+			}
+
+			return any_released;
+		}
+
 
 		/**
 		 * Callbacks

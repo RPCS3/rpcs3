@@ -936,14 +936,14 @@ namespace rsx
 		void free_invalidated(vk::command_buffer& cmd)
 		{
 			// Do not allow more than 256M of RSX memory to be used by RTTs
-			if (check_memory_overload(256 * 0x100000))
+			if (check_memory_usage(256 * 0x100000))
 			{
 				if (!cmd.is_recording())
 				{
 					cmd.begin();
 				}
 
-				handle_memory_overload(cmd);
+				handle_memory_pressure(cmd, rsx::problem_severity::moderate);
 			}
 
 			const u64 last_finished_frame = vk::get_last_completed_frame_id();

@@ -91,7 +91,7 @@ error_code sceNpCommerce2Term()
 
 error_code sceNpCommerce2CreateCtx(u32 version, vm::cptr<SceNpId> npId, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg, vm::ptr<u32> ctx_id)
 {
-	sceNpCommerce2.todo("sceNpCommerce2ExecuteStoreBrowse(version=%d, npId=*0x%x, handler=*0x%x, arg=*0x%x, ctx_id=*0x%x)", version, npId, handler, arg, ctx_id);
+	sceNpCommerce2.todo("sceNpCommerce2CreateCtx(version=%d, npId=*0x%x, handler=*0x%x, arg=*0x%x, ctx_id=*0x%x)", version, npId, handler, arg, ctx_id);
 	return CELL_OK;
 }
 

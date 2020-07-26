@@ -3,7 +3,7 @@
 
 LOG_CHANNEL(cellSysmodule);
 
-enum
+enum CellSysmoduleError : u32
 {
 	CELL_SYSMODULE_LOADED                     = CELL_OK,
 	CELL_SYSMODULE_ERROR_DUPLICATED           = 0x80012001,
@@ -12,6 +12,24 @@ enum
 	CELL_SYSMODULE_ERROR_INVALID_MEMCONTAINER = 0x80012004,
 	CELL_SYSMODULE_ERROR_FATAL                = 0x800120ff,
 };
+
+template<>
+void fmt_class_string<CellSysmoduleError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_SYSMODULE_ERROR_DUPLICATED);
+			STR_CASE(CELL_SYSMODULE_ERROR_UNKNOWN);
+			STR_CASE(CELL_SYSMODULE_ERROR_UNLOADED);
+			STR_CASE(CELL_SYSMODULE_ERROR_INVALID_MEMCONTAINER);
+			STR_CASE(CELL_SYSMODULE_ERROR_FATAL);
+		}
+
+		return unknown;
+	});
+}
 
 static const char* get_module_name(u16 id)
 {
@@ -259,33 +277,32 @@ static const char* get_module_id(u16 id)
 	return tls_id_name;
 }
 
-s32 cellSysmoduleInitialize()
+error_code cellSysmoduleInitialize()
 {
 	cellSysmodule.warning("cellSysmoduleInitialize()");
 	return CELL_OK;
 }
 
-s32 cellSysmoduleFinalize()
+error_code cellSysmoduleFinalize()
 {
 	cellSysmodule.warning("cellSysmoduleFinalize()");
 	return CELL_OK;
 }
 
-s32 cellSysmoduleSetMemcontainer(u32 ct_id)
+error_code cellSysmoduleSetMemcontainer(u32 ct_id)
 {
 	cellSysmodule.todo("cellSysmoduleSetMemcontainer(ct_id=0x%x)", ct_id);
 	return CELL_OK;
 }
 
-s32 cellSysmoduleLoadModule(u16 id)
+error_code cellSysmoduleLoadModule(u16 id)
 {
-	cellSysmodule.warning("cellSysmoduleLoadModule(id=%s)", get_module_id(id));
+	cellSysmodule.warning("cellSysmoduleLoadModule(id=0x%04X=%s)", id, get_module_id(id));
 
 	const auto name = get_module_name(id);
 
 	if (!name)
 	{
-		cellSysmodule.error("cellSysmoduleLoadModule() failed: unknown module 0x%04X", id);
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
@@ -298,15 +315,14 @@ s32 cellSysmoduleLoadModule(u16 id)
 	return CELL_OK;
 }
 
-s32 cellSysmoduleUnloadModule(u16 id)
+error_code cellSysmoduleUnloadModule(u16 id)
 {
-	cellSysmodule.warning("cellSysmoduleUnloadModule(id=%s)", get_module_id(id));
+	cellSysmodule.warning("cellSysmoduleUnloadModule(id=0x%04X=%s)", id, get_module_id(id));
 
 	const auto name = get_module_name(id);
 
 	if (!name)
 	{
-		cellSysmodule.error("cellSysmoduleUnloadModule() failed: unknown module 0x%04X", id);
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
@@ -324,15 +340,14 @@ s32 cellSysmoduleUnloadModule(u16 id)
 	return CELL_OK;
 }
 
-s32 cellSysmoduleIsLoaded(u16 id)
+error_code cellSysmoduleIsLoaded(u16 id)
 {
-	cellSysmodule.warning("cellSysmoduleIsLoaded(id=%s)", get_module_id(id));
+	cellSysmodule.warning("cellSysmoduleIsLoaded(id=0x%04X=%s)", id, get_module_id(id));
 
 	const auto name = get_module_name(id);
 
 	if (!name)
 	{
-		cellSysmodule.error("cellSysmoduleIsLoaded() failed: unknown module 0x%04X", id);
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
@@ -348,43 +363,43 @@ s32 cellSysmoduleIsLoaded(u16 id)
 	return CELL_SYSMODULE_LOADED;
 }
 
-s32 cellSysmoduleGetImagesize()
+error_code cellSysmoduleGetImagesize()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
 }
 
-s32 cellSysmoduleFetchImage()
+error_code cellSysmoduleFetchImage()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
 }
 
-s32 cellSysmoduleUnloadModuleInternal()
+error_code cellSysmoduleUnloadModuleInternal()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
 }
 
-s32 cellSysmoduleLoadModuleInternal()
+error_code cellSysmoduleLoadModuleInternal()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
 }
 
-s32 cellSysmoduleUnloadModuleEx()
+error_code cellSysmoduleUnloadModuleEx()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
 }
 
-s32 cellSysmoduleLoadModuleEx()
+error_code cellSysmoduleLoadModuleEx()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
 }
 
-s32 cellSysmoduleIsLoadedEx()
+error_code cellSysmoduleIsLoadedEx()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;

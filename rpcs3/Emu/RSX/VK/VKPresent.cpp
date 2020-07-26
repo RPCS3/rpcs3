@@ -104,6 +104,9 @@ void VKGSRender::advance_queued_frames()
 	// Check all other frames for completion and clear resources
 	check_present_status();
 
+	// Run video memory balancer
+	vk::vmm_check_memory_usage();
+
 	// m_rtts storage is double buffered and should be safe to tag on frame boundary
 	m_rtts.free_invalidated(*m_current_command_buffer);
 

@@ -1,33 +1,33 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(cellRtcAlarm);
 
-s32 cellRtcAlarmRegister()
+error_code cellRtcAlarmRegister()
 {
 	UNIMPLEMENTED_FUNC(cellRtcAlarm);
 	return CELL_OK;
 }
 
-s32 cellRtcAlarmUnregister()
+error_code cellRtcAlarmUnregister()
 {
 	UNIMPLEMENTED_FUNC(cellRtcAlarm);
 	return CELL_OK;
 }
 
-s32 cellRtcAlarmNotification()
+error_code cellRtcAlarmNotification()
 {
 	UNIMPLEMENTED_FUNC(cellRtcAlarm);
 	return CELL_OK;
 }
 
-s32 cellRtcAlarmStopRunning()
+error_code cellRtcAlarmStopRunning()
 {
 	UNIMPLEMENTED_FUNC(cellRtcAlarm);
 	return CELL_OK;
 }
 
-s32 cellRtcAlarmGetStatus()
+error_code cellRtcAlarmGetStatus()
 {
 	UNIMPLEMENTED_FUNC(cellRtcAlarm);
 	return CELL_OK;

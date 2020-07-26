@@ -439,6 +439,7 @@ namespace rsx
 			std::function<void(u32)> shader_load_worker = [&](u32 stop_at)
 			{
 				u32 pos;
+				// Processed is incremented before work starts in order to avoid two workers working on the same shader
 				while (((pos = processed++) < stop_at) && !Emu.IsStopped())
 				{
 					fs::dir_entry tmp = entries[pos];
@@ -459,6 +460,8 @@ namespace rsx
 
 					unpacked[unpacked.push_begin()] = entry;
 				}
+				// Do not account for an extra shader that was never processed
+				processed--;
 			};
 
 			await_workers(nb_workers, 0, shader_load_worker, processed, entry_count, dlg);
@@ -472,11 +475,14 @@ namespace rsx
 			std::function<void(u32)> shader_comp_worker = [&](u32 stop_at)
 			{
 				u32 pos;
+				// Processed is incremented before work starts in order to avoid two workers working on the same shader
 				while (((pos = processed++) < stop_at) && !Emu.IsStopped())
 				{
 					auto& entry = unpacked[pos];
 					m_storage.add_pipeline_entry(std::get<1>(entry), std::get<2>(entry), std::get<0>(entry), std::forward<Args>(args)...);
 				}
+				// Do not account for an extra shader that was never processed
+				processed--;
 			};
 
 			await_workers(nb_workers, 1, shader_comp_worker, processed, entry_count, dlg);
@@ -535,6 +541,8 @@ namespace rsx
 					}
 				}
 			}
+
+			verify(HERE), processed == entry_count;
 		}
 
 	public:

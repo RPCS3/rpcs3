@@ -787,6 +787,26 @@ void VKGSRender::on_semaphore_acquire_wait()
 	}
 }
 
+bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
+{
+	ASSERT(!vk::is_uninterruptible() && rsx::get_current_renderer()->is_current_thread());
+	bool released = m_texture_cache.handle_memory_pressure(severity);
+
+	if (severity <= rsx::problem_severity::moderate)
+	{
+		released |= m_rtts.handle_memory_pressure(*m_current_command_buffer, severity);
+		return released;
+	}
+
+	if (released && severity >= rsx::problem_severity::fatal)
+	{
+		// Imminent crash, full GPU sync is the least of our problems
+		flush_command_queue(true);
+	}
+
+	return released;
+}
+
 void VKGSRender::notify_tile_unbound(u32 tile)
 {
 	//TODO: Handle texture writeback
@@ -2092,6 +2112,16 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_dma_transfer)
 	{
 		flush_command_queue();
+	}
+
+	if (!m_rtts.superseded_surfaces.empty())
+	{
+		for (auto& surface : m_rtts.superseded_surfaces)
+		{
+			m_texture_cache.discard_framebuffer_memory_region(*m_current_command_buffer, surface->get_memory_range());
+		}
+
+		m_rtts.superseded_surfaces.clear();
 	}
 
 	const auto color_fmt_info = get_compatible_gcm_format(m_framebuffer_layout.color_format);

@@ -210,6 +210,12 @@ public:
 		static_cast<thread_base&>(thread).notify();
 	}
 
+	template <typename T>
+	static void raw_notify(named_thread<T>& thread)
+	{
+		static_cast<thread_base&>(thread).notify_abort();
+	}
+
 	// Read current state
 	static inline thread_state state()
 	{

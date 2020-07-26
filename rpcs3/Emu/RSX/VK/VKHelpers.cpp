@@ -77,9 +77,6 @@ namespace vk
 	// TODO: Clean this up and integrate cleanly with VKGSRender
 	data_heap g_upload_heap;
 
-	// Garbage collection
-	std::vector<std::unique_ptr<image>> g_deleted_typeless_textures;
-
 	VkSampler g_null_sampler = nullptr;
 
 	rsx::atomic_bitmask_t<runtime_state, u64> g_runtime_state;
@@ -335,8 +332,9 @@ namespace vk
 		{
 			if (ptr)
 			{
-				// Safely move to deleted pile
-				g_deleted_typeless_textures.emplace_back(std::move(ptr));
+				requested_width = std::max(requested_width, ptr->width());
+				requested_height = std::max(requested_height, ptr->height());
+				get_resource_manager()->dispose(ptr);
 			}
 
 			ptr.reset(create_texture());
@@ -417,7 +415,6 @@ namespace vk
 		g_upload_heap.destroy();
 
 		g_typeless_textures.clear();
-		g_deleted_typeless_textures.clear();
 
 		if (g_null_sampler)
 		{

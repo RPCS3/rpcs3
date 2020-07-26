@@ -1,57 +1,57 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(cellNetAoi);
 
-s32 cellNetAoiDeletePeer()
+error_code cellNetAoiDeletePeer()
 {
 	UNIMPLEMENTED_FUNC(cellNetAoi);
 	return CELL_OK;
 }
 
-s32 cellNetAoiInit()
+error_code cellNetAoiInit()
 {
 	UNIMPLEMENTED_FUNC(cellNetAoi);
 	return CELL_OK;
 }
 
-s32 cellNetAoiGetPspTitleId()
+error_code cellNetAoiGetPspTitleId()
 {
 	UNIMPLEMENTED_FUNC(cellNetAoi);
 	return CELL_OK;
 }
 
-s32 cellNetAoiTerm()
+error_code cellNetAoiTerm()
 {
 	UNIMPLEMENTED_FUNC(cellNetAoi);
 	return CELL_OK;
 }
 
-s32 cellNetAoiStop()
+error_code cellNetAoiStop()
 {
 	UNIMPLEMENTED_FUNC(cellNetAoi);
 	return CELL_OK;
 }
 
-s32 cellNetAoiGetRemotePeerInfo()
+error_code cellNetAoiGetRemotePeerInfo()
 {
 	UNIMPLEMENTED_FUNC(cellNetAoi);
 	return CELL_OK;
 }
 
-s32 cellNetAoiStart()
+error_code cellNetAoiStart()
 {
 	UNIMPLEMENTED_FUNC(cellNetAoi);
 	return CELL_OK;
 }
 
-s32 cellNetAoiGetLocalInfo()
+error_code cellNetAoiGetLocalInfo()
 {
 	UNIMPLEMENTED_FUNC(cellNetAoi);
 	return CELL_OK;
 }
 
-s32 cellNetAoiAddPeer()
+error_code cellNetAoiAddPeer()
 {
 	UNIMPLEMENTED_FUNC(cellNetAoi);
 	return CELL_OK;
