@@ -7295,17 +7295,7 @@ public:
 			{
 				v128 data = get_const_vector(ci, m_pos, 7000);
 
-				bool all_bytes_equiv = true;
-
-				for (u32 i = 0; i < 16; i++)
-				{
-					if (data._u8[0] != data._u8[i])
-					{
-						all_bytes_equiv = false;
-						break;
-					}
-				}
-
+				const bool all_bytes_equiv = data == v128::from8p(data._u8[0]);
 				if (all_bytes_equiv)
 				{
 					// See above
@@ -7324,17 +7314,7 @@ public:
 			{
 				v128 data = get_const_vector(ci, m_pos, 7000);
 
-				bool all_bytes_equiv = true;
-
-				for (u32 i = 0; i < 16; i++)
-				{
-					if (data._u8[0] != data._u8[i])
-					{
-						all_bytes_equiv = false;
-						break;
-					}
-				}
-
+				const bool all_bytes_equiv = data == v128::from8p(data._u8[0]);
 				if (all_bytes_equiv)
 				{
 					// See above
