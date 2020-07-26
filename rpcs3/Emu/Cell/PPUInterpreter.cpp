@@ -3332,7 +3332,7 @@ bool ppu_interpreter::MULHWU(ppu_thread& ppu, ppu_opcode_t op)
 	u32 a = static_cast<u32>(ppu.gpr[op.ra]);
 	u32 b = static_cast<u32>(ppu.gpr[op.rb]);
 	ppu.gpr[op.rd] = (u64{a} * b) >> 32;
-	if (op.rc) [[unlikely]] ppu_cr_set(ppu, 0, false, false, false, ppu.xer.so);
+	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);
 	return true;
 }
 
@@ -3515,7 +3515,7 @@ bool ppu_interpreter::MULHW(ppu_thread& ppu, ppu_opcode_t op)
 	s32 a = static_cast<s32>(ppu.gpr[op.ra]);
 	s32 b = static_cast<s32>(ppu.gpr[op.rb]);
 	ppu.gpr[op.rd] = (s64{a} * b) >> 32;
-	if (op.rc) [[unlikely]] ppu_cr_set(ppu, 0, false, false, false, ppu.xer.so);
+	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);
 	return true;
 }
 
@@ -3785,7 +3785,7 @@ bool ppu_interpreter::MULLW(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.gpr[op.rd] = s64{static_cast<s32>(ppu.gpr[op.ra])} * static_cast<s32>(ppu.gpr[op.rb]);
 	if (op.oe) [[unlikely]] ppu_ov_set(ppu, s64(ppu.gpr[op.rd]) < INT32_MIN || s64(ppu.gpr[op.rd]) > INT32_MAX);
-	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
+	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);
 	return true;
 }
 
@@ -3981,7 +3981,7 @@ bool ppu_interpreter::DIVWU(ppu_thread& ppu, ppu_opcode_t op)
 	const u32 RB = static_cast<u32>(ppu.gpr[op.rb]);
 	ppu.gpr[op.rd] = RB == 0 ? 0 : RA / RB;
 	if (op.oe) [[unlikely]] ppu_ov_set(ppu, RB == 0);
-	if (op.rc) [[unlikely]] ppu_cr_set(ppu, 0, false, false, false, ppu.xer.so);
+	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);
 	return true;
 }
 
@@ -4046,7 +4046,7 @@ bool ppu_interpreter::DIVW(ppu_thread& ppu, ppu_opcode_t op)
 	const bool o = RB == 0 || (RA == INT32_MIN && RB == -1);
 	ppu.gpr[op.rd] = o ? 0 : static_cast<u32>(RA / RB);
 	if (op.oe) [[unlikely]] ppu_ov_set(ppu, o);
-	if (op.rc) [[unlikely]] ppu_cr_set(ppu, 0, false, false, false, ppu.xer.so);
+	if (op.rc) [[unlikely]] ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);
 	return true;
 }
 
