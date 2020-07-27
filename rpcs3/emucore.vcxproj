@@ -69,6 +69,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Utilities\cheat_info.cpp" />
     <ClCompile Include="Emu\Audio\ALSA\ALSABackend.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
@@ -446,6 +447,7 @@
   <ItemGroup>
     <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
+    <ClInclude Include="..\Utilities\cheat_info.h" />
     <ClInclude Include="Emu\Audio\ALSA\ALSABackend.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>

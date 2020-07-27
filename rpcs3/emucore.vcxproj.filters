@@ -950,6 +950,9 @@
     <ClCompile Include="Emu\Audio\Pulse\PulseBackend.cpp">
       <Filter>Emu\Audio\Pulse</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\cheat_info.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1821,6 +1824,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Audio\Pulse\PulseBackend.h">
       <Filter>Emu\Audio\Pulse</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\cheat_info.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
