@@ -47,7 +47,7 @@ namespace rsx
 			text_view.align_text(overlay_element::text_align::center);
 			text_view.back_color.a = 0.f;
 
-			sliding_animation.duration = 1.5;
+			sliding_animation.duration = 1.5f;
 			sliding_animation.type = animation_type::ease_in_out_cubic;
 			sliding_animation.current = { -f32(frame.w), 0, 0 };
 			sliding_animation.end = { 0, 0, 0};
