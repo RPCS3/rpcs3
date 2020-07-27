@@ -47,31 +47,6 @@ void fmt_class_string<cheat_type>::format(std::string& out, u64 arg)
 	});
 }
 
-namespace YAML
-{
-	template <>
-	struct convert<cheat_info>
-	{
-		static bool decode(const Node& node, cheat_info& rhs)
-		{
-			if (node.size() != 3)
-			{
-				return false;
-			}
-
-			rhs.description = node[0].as<std::string>();
-			u64 type64      = 0;
-			if (!cfg::try_to_enum_value(&type64, &fmt_class_string<cheat_type>::format, node[1].Scalar()))
-				return false;
-			if (type64 >= cheat_type_max)
-				return false;
-			rhs.type       = cheat_type{::narrow<u8>(type64)};
-			rhs.red_script = node[2].as<std::string>();
-			return true;
-		}
-	};
-} // namespace YAML
-
 YAML::Emitter& operator<<(YAML::Emitter& out, const cheat_info& rhs)
 {
 	std::string type_formatted;
@@ -80,32 +55,6 @@ YAML::Emitter& operator<<(YAML::Emitter& out, const cheat_info& rhs)
 	out << YAML::BeginSeq << rhs.description << type_formatted << rhs.red_script << YAML::EndSeq;
 
 	return out;
-}
-
-bool cheat_info::from_str(const std::string& cheat_line)
-{
-	auto cheat_vec = fmt::split(cheat_line, {"@@@"}, false);
-
-	s64 val64 = 0;
-	if (cheat_vec.size() != 5 || !cfg::try_to_int64(&val64, cheat_vec[2], 0, cheat_type_max - 1))
-	{
-		log_cheat.fatal("Failed to parse cheat line");
-		return false;
-	}
-
-	game        = cheat_vec[0];
-	description = cheat_vec[1];
-	type        = cheat_type{::narrow<u8>(val64)};
-	offset      = std::stoul(cheat_vec[3]);
-	red_script  = cheat_vec[4];
-
-	return true;
-}
-
-std::string cheat_info::to_str() const
-{
-	std::string cheat_str = game + "@@@" + description + "@@@" + std::to_string(static_cast<u8>(type)) + "@@@" + std::to_string(offset) + "@@@" + red_script + "@@@";
-	return cheat_str;
 }
 
 cheat_engine::cheat_engine()
@@ -125,10 +74,25 @@ cheat_engine::cheat_engine()
 		for (const auto& yml_cheat : yml_cheats)
 		{
 			const std::string& game_name = yml_cheat.first.Scalar();
+
 			for (const auto& yml_offset : yml_cheat.second)
 			{
-				const u32 offset          = yml_offset.first.as<u32>();
-				cheat_info cheat          = yml_offset.second.as<cheat_info>();
+				std::string error;
+
+				const u32 offset = get_yaml_node_value<u32>(yml_offset.first, error);
+				if (!error.empty())
+				{
+					log_cheat.error("Error parsing %s: node key %s is not a u32 offset", path, yml_offset.first.Scalar());
+					return;
+				}
+
+				cheat_info cheat = get_yaml_node_value<cheat_info>(yml_offset.second, error);
+				if (!error.empty())
+				{
+					log_cheat.error("Error parsing %s: node %s is not a cheat_info node", path, yml_offset.first.Scalar());
+					return;
+				}
+
 				cheat.game                = game_name;
 				cheat.offset              = offset;
 				cheats[game_name][offset] = std::move(cheat);
@@ -659,7 +623,8 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 
 	connect(tbl_cheats, &QTableWidget::cellChanged, [this](int row, int column)
 	{
-		if (!tbl_cheats->item(row, column))
+		QTableWidgetItem* item = tbl_cheats->item(row, column);
+		if (!item)
 		{
 			return;
 		}
@@ -679,8 +644,8 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 
 		switch (column)
 		{
-		case cheat_table_columns::description: cheat->description = tbl_cheats->item(row, cheat_table_columns::description)->text().toStdString(); break;
-		case cheat_table_columns::script: cheat->red_script = tbl_cheats->item(row, cheat_table_columns::script)->text().toStdString(); break;
+		case cheat_table_columns::description: cheat->description = item->text().toStdString(); break;
+		case cheat_table_columns::script: cheat->red_script = item->text().toStdString(); break;
 		default: break;
 		}
 
@@ -1029,7 +994,7 @@ void cheat_manager_dialog::update_cheat_list()
 {
 	size_t num_rows = 0;
 	for (const auto& name : g_cheat.cheats)
-		num_rows += g_cheat.cheats[name.first].size();
+		num_rows += name.second.size();
 
 	tbl_cheats->setRowCount(::narrow<int>(num_rows));
 
@@ -1038,7 +1003,7 @@ void cheat_manager_dialog::update_cheat_list()
 		const QSignalBlocker blocker(tbl_cheats);
 		for (const auto& game : g_cheat.cheats)
 		{
-			for (const auto& offset : g_cheat.cheats[game.first])
+			for (const auto& offset : game.second)
 			{
 				QTableWidgetItem* item_game = new QTableWidgetItem(QString::fromStdString(offset.second.game));
 				item_game->setFlags(item_game->flags() & ~Qt::ItemIsEditable);
