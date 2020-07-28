@@ -127,7 +127,11 @@ void Emulator::Init()
 
 	if (const fs::file cfg_file{cfg_path, fs::read + fs::create})
 	{
-		g_cfg.from_string(cfg_file.to_string());
+		if (!g_cfg.from_string(cfg_file.to_string()))
+		{
+			sys_log.fatal("Failed to apply global config: %s", cfg_path);
+		}
+
 		g_cfg.name = cfg_path;
 	}
 	else
@@ -873,22 +877,37 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			if (fs::file cfg_file{ config_path_old })
 			{
 				sys_log.notice("Applying custom config: %s", config_path_old);
-				g_cfg.from_string(cfg_file.to_string());
+
+				if (!g_cfg.from_string(cfg_file.to_string()))
+				{
+					sys_log.fatal("Failed to apply custom config: %s", config_path_old);
+				}
 			}
 
 			// Load custom config-2
 			if (fs::file cfg_file{ config_path_new })
 			{
 				sys_log.notice("Applying custom config: %s", config_path_new);
-				g_cfg.from_string(cfg_file.to_string());
-				g_cfg.name = config_path_new;
+
+				if (g_cfg.from_string(cfg_file.to_string()))
+				{
+					g_cfg.name = config_path_new;
+				}
+				else
+				{
+					sys_log.fatal("Failed to apply custom config: %s", config_path_new);
+				}
 			}
 
 			// Load custom config-3
 			if (fs::file cfg_file{ m_path + ".yml" })
 			{
 				sys_log.notice("Applying custom config: %s.yml", m_path);
-				g_cfg.from_string(cfg_file.to_string());
+
+				if (!g_cfg.from_string(cfg_file.to_string()))
+				{
+					sys_log.fatal("Failed to apply custom config: %s.yml", m_path);
+				}
 			}
 		}
 
