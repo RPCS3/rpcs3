@@ -7,6 +7,8 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 
+#include "util/yaml.hpp"
+
 LOG_CHANNEL(cfg_log, "CFG");
 
 extern std::string g_cfg_defaults; //! Default settings grabbed from Utilities/Config.h
@@ -73,31 +75,71 @@ void emu_settings::LoadSettings(const std::string& title_id)
 	fs::create_path(title_id.empty() ? fs::get_config_dir() : Emulator::GetCustomConfigDir());
 
 	// Load default config
-	m_defaultSettings = YAML::Load(g_cfg_defaults);
-	m_currentSettings = YAML::Load(g_cfg_defaults);
+	auto [default_config, default_error] = yaml_load(g_cfg_defaults);
+
+	if (default_error.empty())
+	{
+		m_defaultSettings = default_config;
+		m_currentSettings = YAML::Clone(default_config);
+	}
+	else
+	{
+		cfg_log.fatal("Failed to load default config:\n%s", default_error);
+		QMessageBox::critical(nullptr, tr("Config Error"), tr("Failed to load default config:\n%0")
+			.arg(QString::fromStdString(default_error)), QMessageBox::Ok);
+	}
 
 	// Add global config
-	fs::file config(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
-	m_currentSettings += YAML::Load(config.to_string());
+	const std::string global_config_path = fs::get_config_dir() + "config.yml";
+	fs::file config(global_config_path, fs::read + fs::write + fs::create);
+	auto [global_config, global_error] = yaml_load(config.to_string());
 	config.close();
+
+	if (global_error.empty())
+	{
+		m_currentSettings += global_config;
+	}
+	else
+	{
+		cfg_log.fatal("Failed to load global config %s:\n%s", global_config_path, global_error);
+		QMessageBox::critical(nullptr, tr("Config Error"), tr("Failed to load global config:\nFile: %0\nError: %1")
+			.arg(QString::fromStdString(global_config_path)).arg(QString::fromStdString(global_error)), QMessageBox::Ok);
+	}
 
 	// Add game config
 	if (!title_id.empty())
 	{
 		const std::string config_path_new = Emulator::GetCustomConfigPath(m_title_id);
 		const std::string config_path_old = Emulator::GetCustomConfigPath(m_title_id, true);
+		std::string custom_config_path;
 
 		if (fs::is_file(config_path_new))
 		{
-			config = fs::file(config_path_new, fs::read + fs::write);
-			m_currentSettings += YAML::Load(config.to_string());
-			config.close();
+			custom_config_path = config_path_new;
 		}
 		else if (fs::is_file(config_path_old))
 		{
-			config = fs::file(config_path_old, fs::read + fs::write);
-			m_currentSettings += YAML::Load(config.to_string());
-			config.close();
+			custom_config_path = config_path_old;
+		}
+
+		if (!custom_config_path.empty())
+		{
+			if (config = fs::file(custom_config_path, fs::read + fs::write))
+			{
+				auto [custom_config, custom_error] = yaml_load(config.to_string());
+				config.close();
+
+				if (custom_error.empty())
+				{
+					m_currentSettings += custom_config;
+				}
+				else
+				{
+					cfg_log.fatal("Failed to load custom config %s:\n%s", custom_config_path, custom_error);
+					QMessageBox::critical(nullptr, tr("Config Error"), tr("Failed to load custom config:\nFile: %0\nError: %1")
+						.arg(QString::fromStdString(custom_config_path)).arg(QString::fromStdString(custom_error)), QMessageBox::Ok);
+				}
+			}
 		}
 	}
 }
@@ -126,9 +168,11 @@ void emu_settings::SaveSettings()
 	if (config_name == g_cfg.name || m_title_id == Emu.GetTitleID())
 	{
 		// Update current config
-		g_cfg.from_string({out.c_str(), out.size()}, !Emu.IsStopped());
-
-		if (!Emu.IsStopped()) // Don't spam the log while emulation is stopped. The config will be logged on boot anyway.
+		if (!g_cfg.from_string({out.c_str(), out.size()}, !Emu.IsStopped()))
+		{
+			cfg_log.fatal("Failed to update configuration");
+		}
+		else if (!Emu.IsStopped()) // Don't spam the log while emulation is stopped. The config will be logged on boot anyway.
 		{
 			cfg_log.notice("Updated configuration:\n%s\n", g_cfg.to_string());
 		}
