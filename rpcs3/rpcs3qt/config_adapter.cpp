@@ -3,6 +3,8 @@
 #include "config_adapter.h"
 #include "Emu/system_config.h"
 
+LOG_CHANNEL(cfg_log, "CFG");
+
 // Helper methods to interact with YAML and the config settings.
 namespace cfg_adapter
 {
@@ -29,7 +31,18 @@ namespace cfg_adapter
 
 	YAML::Node get_node(const YAML::Node& node, cfg_location::const_iterator begin, cfg_location::const_iterator end)
 	{
-		return begin == end ? node : get_node(node[*begin], begin + 1, end); // TODO
+		if (begin == end)
+		{
+			return node;
+		}
+
+		if (!node || !node.IsMap())
+		{
+			cfg_log.fatal("Node error. A cfg_location does not match its cfg::node");
+			return YAML::Node();
+		}
+
+		return get_node(node[*begin], begin + 1, end); // TODO
 	}
 
 	YAML::Node get_node(const YAML::Node& node, cfg_location loc)

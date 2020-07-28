@@ -500,12 +500,24 @@ QStringList emu_settings::GetSettingOptions(emu_settings_type type) const
 
 std::string emu_settings::GetSettingDefault(emu_settings_type type) const
 {
-	return cfg_adapter::get_node(m_defaultSettings, settings_location[type]).Scalar();
+	if (auto node = cfg_adapter::get_node(m_defaultSettings, settings_location[type]); node && node.IsScalar())
+	{
+		return node.Scalar();
+	}
+	
+	cfg_log.fatal("GetSettingDefault(type=%d) could not retrieve the requested node", static_cast<int>(type));
+	return "";
 }
 
 std::string emu_settings::GetSetting(emu_settings_type type) const
 {
-	return cfg_adapter::get_node(m_currentSettings, settings_location[type]).Scalar();
+	if (auto node = cfg_adapter::get_node(m_currentSettings, settings_location[type]); node && node.IsScalar())
+	{
+		return node.Scalar();
+	}
+
+	cfg_log.fatal("GetSetting(type=%d) could not retrieve the requested node", static_cast<int>(type));
+	return "";
 }
 
 void emu_settings::SetSetting(emu_settings_type type, const std::string& val)
