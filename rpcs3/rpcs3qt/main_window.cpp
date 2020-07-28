@@ -681,14 +681,14 @@ void main_window::HandlePupInstallation(QString file_path)
 	if (!pup_f)
 	{
 		gui_log.error("Error opening PUP file %s", path);
-		QMessageBox::critical(this, tr("Failure!"), tr("The selected firmware file couldn't be opened."));
+		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The selected firmware file couldn't be opened."));
 		return;
 	}
 
 	if (pup_f.size() < sizeof(PUPHeader))
 	{
 		gui_log.error("Too small PUP file: %llu", pup_f.size());
-		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file size is invalid."));
+		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The provided file is empty."));
 		return;
 	}
 
@@ -698,8 +698,8 @@ void main_window::HandlePupInstallation(QString file_path)
 
 	if (header.header_length + header.data_length != pup_f.size())
 	{
-		gui_log.error("Firmware size mismatch, expected: %llu, actual: %llu + %llu", pup_f.size(), header.header_length, header.data_length);
-		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file is corrupted."));
+		gui_log.error("Firmware size mismatch, expected: %llu + %llu, actual: %llu", header.header_length, header.data_length, pup_f.size());
+		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The provided file is incomplete. Try redownloading it."));
 		return;
 	}
 
@@ -707,14 +707,14 @@ void main_window::HandlePupInstallation(QString file_path)
 	if (!pup)
 	{
 		gui_log.error("Error while installing firmware: PUP file is invalid.");
-		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file is invalid."));
+		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The provided file is corrupted."));
 		return;
 	}
 
 	if (!pup.validate_hashes())
 	{
-		gui_log.error("Error while installing firmware: Hash check failed. ");
-		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file contents are invalid."));
+		gui_log.error("Error while installing firmware: Hash check failed.");
+		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The provided file's contents are corrupted."));
 		return;
 	}
 
@@ -766,7 +766,7 @@ void main_window::HandlePupInstallation(QString file_path)
 				if (dev_flash_tar_f.size() < 3)
 				{
 					gui_log.error("Error while installing firmware: PUP contents are invalid.");
-					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP contents are invalid."));
+					QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: Firmware could not be decompressed"));
 					progress = -1;
 				}
 
@@ -774,7 +774,7 @@ void main_window::HandlePupInstallation(QString file_path)
 				if (!dev_flash_tar.extract(g_cfg.vfs.get_dev_flash(), "dev_flash/"))
 				{
 					gui_log.error("Error while installing firmware: TAR contents are invalid.");
-					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: TAR contents are invalid."));
+					QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: Firmware contents could not be extracted."));
 					progress = -1;
 				}
 
