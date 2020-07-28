@@ -208,13 +208,13 @@ void main_window::Init()
 
 	connect(&m_updater, &update_manager::signal_update_available, this, [this](bool update_available)
 	{
-		if (ui->menuBar && ui->menuBar->cornerWidget())
-		{
-			ui->menuBar->cornerWidget()->setVisible(update_available);
-		}
 		if (m_download_menu_action)
 		{
 			m_download_menu_action->setVisible(update_available);
+		}
+		if (ui->menuBar && ui->menuBar->cornerWidget())
+		{
+			ui->menuBar->cornerWidget()->setVisible(update_available);
 		}
 	});
 
