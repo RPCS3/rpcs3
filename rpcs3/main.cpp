@@ -48,6 +48,7 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 static semaphore<> s_qt_init;
 
+static atomic_t<bool> s_headless = false;
 static atomic_t<char*> s_argv0;
 
 #ifndef _WIN32
@@ -58,6 +59,12 @@ LOG_CHANNEL(sys_log, "SYS");
 
 [[noreturn]] extern void report_fatal_error(const std::string& text)
 {
+	if (s_headless)
+	{
+		fprintf(stderr, "RPCS3: %s\n", text.c_str());
+		return;
+	}
+
 	const bool local = s_qt_init.try_lock();
 
 	// Possibly created and assigned here
@@ -438,6 +445,7 @@ int main(int argc, char** argv)
 	}
 	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
 	{
+		s_headless = true;
 		headless_app->Init();
 	}
 
