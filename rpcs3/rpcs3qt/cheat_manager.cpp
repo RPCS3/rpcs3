@@ -59,7 +59,15 @@ YAML::Emitter& operator<<(YAML::Emitter& out, const cheat_info& rhs)
 
 cheat_engine::cheat_engine()
 {
-	const std::string path = patch_engine::get_patches_path() + m_cheats_filename;
+	const std::string patches_path = patch_engine::get_patches_path();
+
+	if (!fs::create_path(patches_path))
+	{
+		log_cheat.fatal("Failed to create path: %s (%s)", patches_path, fs::g_tls_error);
+		return;
+	}
+
+	const std::string path = patches_path + m_cheats_filename;
 
 	if (fs::file cheat_file{path, fs::read + fs::create})
 	{
@@ -107,7 +115,15 @@ cheat_engine::cheat_engine()
 
 void cheat_engine::save() const
 {
-	const std::string path = patch_engine::get_patches_path() + m_cheats_filename;
+	const std::string patches_path = patch_engine::get_patches_path();
+
+	if (!fs::create_path(patches_path))
+	{
+		log_cheat.fatal("Failed to create path: %s (%s)", patches_path, fs::g_tls_error);
+		return;
+	}
+
+	const std::string path = patches_path + m_cheats_filename;
 
 	fs::file cheat_file(path, fs::rewrite);
 	if (!cheat_file)
