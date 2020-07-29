@@ -129,9 +129,8 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 		m_reloc = &m_info.segs[0];
 	}
 
-	const auto nan_u32 = ConstantInt::get(get_type<u32>(), 0x7FC00000u);
-	const auto nan_f32 = ConstantExpr::getBitCast(nan_u32, get_type<f32>());
-	nan_vec4 = ConstantVector::getSplat(4, nan_f32);
+	const auto nan_v = v128::from32p(0x7FC00000u);
+	nan_vec4 = make_const_vector(nan_v, get_type<f32[4]>());
 }
 
 PPUTranslator::~PPUTranslator()
@@ -236,13 +235,13 @@ Value* PPUTranslator::VecHandleNan(Value* val)
 Value* PPUTranslator::VecHandleDenormal(Value* val)
 {
 	const auto type = val->getType();
-	const auto value = type == GetType<u32[4]>() ? val : m_ir->CreateBitCast(val, GetType<u32[4]>());
+	const auto value = bitcast(val, GetType<u32[4]>());
 
 	const auto mask = SExt(m_ir->CreateICmpEQ(m_ir->CreateAnd(value, Broadcast(RegLoad(m_jm_mask), 4)), ConstantVector::getSplat(4, m_ir->getInt32(0))), GetType<s32[4]>());
 	const auto nz = m_ir->CreateLShr(mask, 1);
 	const auto result = m_ir->CreateAnd(m_ir->CreateNot(nz), value);
 
-	return type == GetType<u32[4]>() ? result : m_ir->CreateBitCast(result, type);
+	return bitcast(result, type);
 }
 
 Value* PPUTranslator::VecHandleResult(Value* val)
@@ -398,7 +397,7 @@ void PPUTranslator::FlushRegisters()
 				m_ir->SetInsertPoint(block);
 			}
 
-			m_ir->CreateStore(local, m_ir->CreateBitCast(m_globals[index], local->getType()->getPointerTo()));
+			m_ir->CreateStore(local, bitcast(m_globals[index], local->getType()->getPointerTo()));
 			m_globals[index] = nullptr;
 		}
 	}
@@ -414,20 +413,20 @@ Value* PPUTranslator::Solid(Value* value)
 
 	if (value->getType() == GetType<bool[4]>())
 	{
-		return m_ir->CreateBitCast(SExt(value, GetType<u32[4]>()), m_ir->getIntNTy(128));
+		return bitcast(SExt(value, GetType<u32[4]>()), m_ir->getIntNTy(128));
 	}
 
 	if (value->getType() == GetType<bool[8]>())
 	{
-		return m_ir->CreateBitCast(SExt(value, GetType<u16[8]>()), m_ir->getIntNTy(128));
+		return bitcast(SExt(value, GetType<u16[8]>()), m_ir->getIntNTy(128));
 	}
 
 	if (value->getType() == GetType<bool[16]>())
 	{
-		return m_ir->CreateBitCast(SExt(value, GetType<u8[16]>()), m_ir->getIntNTy(128));
+		return bitcast(SExt(value, GetType<u8[16]>()), m_ir->getIntNTy(128));
 	}
 
-	return m_ir->CreateBitCast(value, m_ir->getIntNTy(size));
+	return bitcast(value, m_ir->getIntNTy(size));
 }
 
 Value* PPUTranslator::IsZero(Value* value)
@@ -580,7 +579,7 @@ void PPUTranslator::UseCondition(MDNode* hint, Value* cond)
 
 llvm::Value* PPUTranslator::GetMemory(llvm::Value* addr, llvm::Type* type)
 {
-	return m_ir->CreateBitCast(m_ir->CreateGEP(m_base_loaded, {m_ir->getInt64(0), addr}), type->getPointerTo());
+	return bitcast(m_ir->CreateGEP(m_base_loaded, {m_ir->getInt64(0), addr}), type->getPointerTo());
 }
 
 Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
@@ -592,7 +591,7 @@ Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 		// Read, byteswap, bitcast
 		const auto int_type = m_ir->getIntNTy(size);
 		const auto value = m_ir->CreateAlignedLoad(GetMemory(addr, int_type), llvm::MaybeAlign{align}, true);
-		return m_ir->CreateBitCast(Call(int_type, fmt::format("llvm.bswap.i%u", size), value), type);
+		return bitcast(Call(int_type, fmt::format("llvm.bswap.i%u", size), value), type);
 	}
 
 	// Read normally
@@ -608,7 +607,7 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 	{
 		// Bitcast, byteswap
 		const auto int_type = m_ir->getIntNTy(size);
-		value = Call(int_type, fmt::format("llvm.bswap.i%u", size), m_ir->CreateBitCast(value, int_type));
+		value = Call(int_type, fmt::format("llvm.bswap.i%u", size), bitcast(value, int_type));
 	}
 
 	// Write
@@ -2771,7 +2770,7 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 
 			const auto index = m_ir->CreateAnd(m_ir->CreateLShr(value, 28 - i * 4), 15);
 			const auto src = m_ir->CreateGEP(m_mtocr_table, {m_ir->getInt32(0), m_ir->CreateShl(index, 2)});
-			const auto dst = m_ir->CreateBitCast(m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(m_cr - m_locals) + i * 4), GetType<u8*>());
+			const auto dst = bitcast(m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(m_cr - m_locals) + i * 4), GetType<u8*>());
 			Call(GetType<void>(), "llvm.memcpy.p0i8.p0i8.i32", dst, src, m_ir->getInt32(4), m_ir->getFalse());
 		}
 	}
@@ -4553,15 +4552,15 @@ Value* PPUTranslator::GetFpr(u32 r, u32 bits, bool as_int)
 	}
 	else
 	{
-		return Trunc(m_ir->CreateBitCast(value, GetType<u64>()), m_ir->getIntNTy(bits));
+		return Trunc(bitcast(value, GetType<u64>()), m_ir->getIntNTy(bits));
 	}
 }
 
 void PPUTranslator::SetFpr(u32 r, Value* val)
 {
 	const auto f64_val =
-		val->getType() == GetType<s32>() ? m_ir->CreateBitCast(SExt(val), GetType<f64>()) :
-		val->getType() == GetType<s64>() ? m_ir->CreateBitCast(val, GetType<f64>()) :
+		val->getType() == GetType<s32>() ? bitcast(SExt(val), GetType<f64>()) :
+		val->getType() == GetType<s64>() ? bitcast(val, GetType<f64>()) :
 		val->getType() == GetType<f32>() ? m_ir->CreateFPExt(val, GetType<f64>()) : val;
 
 	RegStore(f64_val, m_fpr[r]);
@@ -4571,16 +4570,19 @@ Value* PPUTranslator::GetVr(u32 vr, VrType type)
 {
 	const auto value = RegLoad(m_vr[vr]);
 
+	llvm::Type* _type{};
+
 	switch (type)
 	{
-	case VrType::vi32: return m_ir->CreateBitCast(value, GetType<u32[4]>());
-	case VrType::vi8: return m_ir->CreateBitCast(value, GetType<u8[16]>());
-	case VrType::vi16: return m_ir->CreateBitCast(value, GetType<u16[8]>());
-	case VrType::vf: return m_ir->CreateBitCast(value, GetType<f32[4]>());
-	case VrType::i128: return m_ir->CreateBitCast(value, GetType<u128>());
+	case VrType::vi32: _type = GetType<u32[4]>(); break;
+	case VrType::vi8 : _type = GetType<u8[16]>(); break;
+	case VrType::vi16: _type = GetType<u16[8]>(); break;
+	case VrType::vf  : _type = GetType<f32[4]>(); break;
+	case VrType::i128: _type = GetType<u128>(); break;
+	default: report_fatal_error("GetVr(): invalid type");
 	}
 
-	report_fatal_error("GetVr(): invalid type");
+	return bitcast(value, _type);
 }
 
 void PPUTranslator::SetVr(u32 vr, Value* value)
