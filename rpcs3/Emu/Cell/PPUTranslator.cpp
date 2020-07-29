@@ -947,10 +947,8 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 	auto [a, b, c] = get_vrs<f32[4]>(op.va, op.vb, op.vc);
 
 	// Optimization: Emit only a floating multiply if the addend is zero
-	if (auto cv = llvm::dyn_cast<llvm::Constant>(b.value))
+	if (auto [ok, data] = get_const_vector(b.value, m_addr, 2000); ok)
 	{
-		v128 data = get_const_vector(cv, m_addr, 2000);
-
 		if (data == v128{})
 		{
 			set_vr(op.vd, vec_handle_result(a * c));
@@ -1253,10 +1251,8 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 	auto [a, b, c] = get_vrs<f32[4]>(op.va, op.vb, op.vc);
 
 	// Optimization: Emit only a floating multiply if the addend is zero
-	if (const auto cv = llvm::dyn_cast<llvm::Constant>(b.value))
+	if (const auto [ok, data] = get_const_vector(b.value, m_addr, 2004); ok)
 	{
-		const v128 data = get_const_vector(cv, m_addr, 2004);
-
 		if (data == v128{})
 		{
 			set_vr(op.vd, vec_handle_result(-a * c));
@@ -1438,10 +1434,8 @@ void PPUTranslator::VSEL(ppu_opcode_t op)
 	const auto c = get_vr<u32[4]>(op.vc);
 
 	// Check if the constant mask doesn't require bit granularity
-	if (auto ci = llvm::dyn_cast<llvm::Constant>(c.value))
+	if (auto [ok, mask] = get_const_vector(c.value, m_addr, 9000); ok)
 	{
-		v128 mask = get_const_vector(ci, m_addr, 9000);
-		
 		bool sel_32 = true;
 		for (u32 i = 0; i < 4; i++)
 		{
