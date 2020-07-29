@@ -195,6 +195,12 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 	{
 		qputenv("DISPLAY", ":0");
 	}
+
+	// Set QT_AUTO_SCALE_FACTOR to 0. This value is deprecated but still seems to make problems on some distros
+	if (!qEnvironmentVariable("QT_AUTO_SCALE_FACTOR", "").isEmpty())
+	{
+		qputenv("QT_AUTO_SCALE_FACTOR", "0");
+	}
 #endif
 
 	bool use_high_dpi = true;
