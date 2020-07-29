@@ -7088,10 +7088,8 @@ public:
 		const auto c = get_vr(op.rc);
 
 		// Check if the constant mask doesn't require bit granularity
-		if (auto ci = llvm::dyn_cast<llvm::Constant>(c.value))
+		if (auto [ok, mask] = get_const_vector(c.value, m_pos, 8000); ok)
 		{
-			v128 mask = get_const_vector(ci, m_pos, 8000);
-	
 			bool sel_32 = true;
 			for (u32 i = 0; i < 4; i++)
 			{
@@ -7192,11 +7190,9 @@ public:
 
 		const auto c = get_vr<u8[16]>(op.rc);
 
-		if (auto ci = llvm::dyn_cast<llvm::Constant>(c.value))
+		if (auto [ok, mask] = get_const_vector(c.value, m_pos, 57216); ok)
 		{
 			// Optimization: SHUFB with constant mask
-			v128 mask = get_const_vector(ci, m_pos, 57216);
-
 			if (((mask._u64[0] | mask._u64[1]) & 0xe0e0e0e0e0e0e0e0) == 0)
 			{
 				// Trivial insert or constant shuffle (TODO)
@@ -7291,10 +7287,8 @@ public:
 				return;
 			}
 
-			if (auto ci = llvm::dyn_cast<llvm::Constant>(b.value))
+			if (auto [ok, data] = get_const_vector(b.value, m_pos, 7000); ok)
 			{
-				v128 data = get_const_vector(ci, m_pos, 7000);
-
 				const bool all_bytes_equiv = data == v128::from8p(data._u8[0]);
 				if (all_bytes_equiv)
 				{
@@ -7310,10 +7304,8 @@ public:
 
 		if (auto [ok, v0] = match_expr(b, byteswap(match<u8[16]>())); ok)
 		{
-			if (auto ci = llvm::dyn_cast<llvm::Constant>(a.value))
+			if (auto [ok, data] = get_const_vector(a.value, m_pos, 7000); ok)
 			{
-				v128 data = get_const_vector(ci, m_pos, 7000);
-
 				const bool all_bytes_equiv = data == v128::from8p(data._u8[0]);
 				if (all_bytes_equiv)
 				{
@@ -7542,9 +7534,8 @@ public:
 		const auto a = get_vr<f32[4]>(op.ra);
 		const auto b = get_vr<f32[4]>(op.rb);
 
-		if (auto cv = llvm::dyn_cast<llvm::Constant>(b.value))
+		if (auto [ok, data] = get_const_vector(b.value, m_pos, 5000); ok)
 		{
-			v128 data = get_const_vector(cv, m_pos, 5000);
 			bool safe_int_compare = true;
 
 			for (u32 i = 0; i < 4; i++)
@@ -7569,9 +7560,8 @@ public:
 			}
 		}
 
-		if (auto cv = llvm::dyn_cast<llvm::Constant>(a.value))
+		if (auto [ok, data] = get_const_vector(a.value, m_pos, 5000); ok)
 		{
-			v128 data = get_const_vector(cv, m_pos, 5000);
 			bool safe_int_compare = true;
 
 			for (u32 i = 0; i < 4; i++)
@@ -7735,10 +7725,8 @@ public:
 
 		// Optimization: Emit only a floating multiply if the addend is zero
 		// This is odd since SPU code could just use the FM instruction, but it seems common enough
-		if (auto cv = llvm::dyn_cast<llvm::Constant>(c.value))
+		if (auto [ok, data] = get_const_vector(c.value, m_pos, 4000); ok)
 		{
-			v128 data = get_const_vector(cv, m_pos, 4000);
-
 			if (is_spu_float_zero(data))
 			{
 				r = eval(a * b);
@@ -7746,10 +7734,8 @@ public:
 			}
 		}
 
-		if (auto cv = llvm::dyn_cast<llvm::Constant>(b.value))
+		if (auto [ok, data] = get_const_vector(b.value, m_pos, 4000); ok)
 		{
-			v128 data = get_const_vector(cv, m_pos, 4000);
-
 			if (is_spu_float_zero(data))
 			{
 				// Just return the added value if either a or b is 0
@@ -7757,10 +7743,8 @@ public:
 			}
 		}
 
-		if (auto cv = llvm::dyn_cast<llvm::Constant>(a.value))
+		if (auto [ok, data] = get_const_vector(a.value, m_pos, 4000); ok)
 		{
-			v128 data = get_const_vector(cv, m_pos, 4000);
-
 			if (is_spu_float_zero(data))
 			{
 				return c;
@@ -7995,9 +7979,8 @@ public:
 			value_t<s32[4]> a = get_vr<s32[4]>(op.ra);
 			value_t<f64[4]> r;
 
-			if (auto ca = llvm::dyn_cast<llvm::Constant>(a.value))
+			if (auto [ok, data] = get_const_vector(a.value, m_pos, 25971); ok)
 			{
-				v128 data = get_const_vector(ca, m_pos, 25971);
 				r.value = build<f64[4]>(data._s32[0], data._s32[1], data._s32[2], data._s32[3]).eval(m_ir);
 			}
 			else
@@ -8036,9 +8019,8 @@ public:
 			value_t<s32[4]> a = get_vr<s32[4]>(op.ra);
 			value_t<f64[4]> r;
 
-			if (auto ca = llvm::dyn_cast<llvm::Constant>(a.value))
+			if (auto [ok, data] = get_const_vector(a.value, m_pos, 20971); ok)
 			{
-				v128 data = get_const_vector(ca, m_pos, 20971);
 				r.value = build<f64[4]>(data._u32[0], data._u32[1], data._u32[2], data._u32[3]).eval(m_ir);
 			}
 			else
@@ -8090,9 +8072,8 @@ public:
 
 		for (auto pair : std::initializer_list<std::pair<value_t<u32[4]>, value_t<u32[4]>>>{{a, b}, {b, a}})
 		{
-			if (auto cv = llvm::dyn_cast<llvm::Constant>(pair.first.value))
+			if (auto [ok, data] = get_const_vector(pair.first.value, m_pos, 10000); ok)
 			{
-				v128 data = get_const_vector(cv, m_pos, 10000);
 				data._u32[3] %= SPU_LS_SIZE;
 
 				if (data._u32[3] % 0x10 == 0)
@@ -8115,9 +8096,8 @@ public:
 
 		for (auto pair : std::initializer_list<std::pair<value_t<u32[4]>, value_t<u32[4]>>>{{a, b}, {b, a}})
 		{
-			if (auto cv = llvm::dyn_cast<llvm::Constant>(pair.first.value))
+			if (auto [ok, data] = get_const_vector(pair.first.value, m_pos, 10000); ok)
 			{
-				v128 data = get_const_vector(cv, m_pos, 10000);
 				data._u32[3] %= SPU_LS_SIZE;
 
 				if (data._u32[3] % 0x10 == 0)

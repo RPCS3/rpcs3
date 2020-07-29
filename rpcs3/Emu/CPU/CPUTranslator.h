@@ -2837,7 +2837,7 @@ public:
 	}
 
 	template <typename R = v128>
-	R get_const_vector(llvm::Constant*, u32 a, u32 b);
+	std::pair<bool, R> get_const_vector(llvm::Value*, u32 a, u32 b);
 
 	template <typename T = v128>
 	llvm::Constant* make_const_vector(T, llvm::Type*);
