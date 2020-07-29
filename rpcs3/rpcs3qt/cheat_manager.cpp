@@ -580,61 +580,64 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			return;
 
 		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
-		if (cheat)
+		if (!cheat)
 		{
-			QString cur_value;
-			bool success;
+			log_cheat.fatal("Failed to retrieve cheat selected from internal cheat_engine");
+			return;
+		}
 
-			u32 final_offset;
-			if (!cheat->red_script.empty())
+		u32 final_offset;
+		if (!cheat->red_script.empty())
+		{
+			final_offset = 0;
+			if (!cheat_engine::resolve_script(final_offset, cheat->offset, cheat->red_script))
 			{
-				final_offset = 0;
-				if (!cheat_engine::resolve_script(final_offset, cheat->offset, cheat->red_script))
-				{
-					btn_apply->setEnabled(false);
-					edt_value_final->setText(tr("Failed to resolve redirection script"));
-				}
-			}
-			else
-			{
-				final_offset = cheat->offset;
-			}
-
-			u64 result_value;
-			switch (cheat->type)
-			{
-			case cheat_type::unsigned_8_cheat: result_value = cheat_engine::get_value<u8>(final_offset, success); break;
-			case cheat_type::unsigned_16_cheat: result_value = cheat_engine::get_value<u16>(final_offset, success); break;
-			case cheat_type::unsigned_32_cheat: result_value = cheat_engine::get_value<u32>(final_offset, success); break;
-			case cheat_type::unsigned_64_cheat: result_value = cheat_engine::get_value<u64>(final_offset, success); break;
-			case cheat_type::signed_8_cheat: result_value = cheat_engine::get_value<s8>(final_offset, success); break;
-			case cheat_type::signed_16_cheat: result_value = cheat_engine::get_value<s16>(final_offset, success); break;
-			case cheat_type::signed_32_cheat: result_value = cheat_engine::get_value<s32>(final_offset, success); break;
-			case cheat_type::signed_64_cheat: result_value = cheat_engine::get_value<s64>(final_offset, success); break;
-			default: log_cheat.fatal("Unsupported cheat type"); return;
-			}
-
-			if (success)
-			{
-				if (cheat->type >= cheat_type::signed_8_cheat && cheat->type <= cheat_type::signed_64_cheat)
-					cur_value = tr("%1").arg(static_cast<s64>(result_value));
-				else
-					cur_value = tr("%1").arg(result_value);
-
-				btn_apply->setEnabled(true);
-			}
-			else
-			{
-				cur_value = tr("Failed to get the value from memory");
 				btn_apply->setEnabled(false);
+				edt_value_final->setText(tr("Failed to resolve redirection script"));
+				return;
 			}
-
-			edt_value_final->setText(cur_value);
 		}
 		else
 		{
-			log_cheat.fatal("Failed to retrieve cheat selected from internal cheat_engine");
+			final_offset = cheat->offset;
 		}
+
+		if (Emu.IsStopped())
+		{
+			btn_apply->setEnabled(false);
+			edt_value_final->setText(tr("This Application is not running"));
+			return;
+		}
+
+		bool success;
+		u64 result_value;
+
+		switch (cheat->type)
+		{
+		case cheat_type::unsigned_8_cheat: result_value = cheat_engine::get_value<u8>(final_offset, success); break;
+		case cheat_type::unsigned_16_cheat: result_value = cheat_engine::get_value<u16>(final_offset, success); break;
+		case cheat_type::unsigned_32_cheat: result_value = cheat_engine::get_value<u32>(final_offset, success); break;
+		case cheat_type::unsigned_64_cheat: result_value = cheat_engine::get_value<u64>(final_offset, success); break;
+		case cheat_type::signed_8_cheat: result_value = cheat_engine::get_value<s8>(final_offset, success); break;
+		case cheat_type::signed_16_cheat: result_value = cheat_engine::get_value<s16>(final_offset, success); break;
+		case cheat_type::signed_32_cheat: result_value = cheat_engine::get_value<s32>(final_offset, success); break;
+		case cheat_type::signed_64_cheat: result_value = cheat_engine::get_value<s64>(final_offset, success); break;
+		default: log_cheat.fatal("Unsupported cheat type"); return;
+		}
+
+		if (success)
+		{
+			if (cheat->type >= cheat_type::signed_8_cheat && cheat->type <= cheat_type::signed_64_cheat)
+				edt_value_final->setText(tr("%1").arg(static_cast<s64>(result_value)));
+			else
+				edt_value_final->setText(tr("%1").arg(result_value));
+		}
+		else
+		{
+			edt_value_final->setText(tr("Failed to get the value from memory"));
+		}
+
+		btn_apply->setEnabled(success);
 	});
 
 	connect(tbl_cheats, &QTableWidget::cellChanged, [this](int row, int column)
