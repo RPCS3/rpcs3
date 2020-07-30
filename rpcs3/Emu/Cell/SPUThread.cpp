@@ -981,8 +981,8 @@ void spu_thread::cpu_init()
 	interrupts_enabled.raw() = false;
 	raddr = 0;
 
-	ch_dec_start_timestamp = get_timebased_time(); // ???
-	ch_dec_value = 0;
+	ch_dec_start_timestamp = get_timebased_time();
+	ch_dec_value = option & SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE ? ~static_cast<u32>(ch_dec_start_timestamp) : 0;
 
 	if (get_type() >= spu_type::raw)
 	{
@@ -1188,7 +1188,7 @@ spu_thread::~spu_thread()
 	}
 }
 
-spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated)
+spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)
 	: cpu_thread(idm::last_id())
 	, index(index)
 	, ls([&]()
@@ -1209,6 +1209,7 @@ spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::str
 	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
 	, offset(_ls)
 	, group(group)
+	, option(option)
 	, lv2_id(lv2_id)
 	, spu_tname(stx::shared_cptr<std::string>::make(name))
 {

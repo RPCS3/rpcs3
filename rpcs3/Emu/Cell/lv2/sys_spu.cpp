@@ -322,7 +322,9 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	sys_spu.warning("sys_spu_thread_initialize(thread=*0x%x, group=0x%x, spu_num=%d, img=*0x%x, attr=*0x%x, arg=*0x%x)", thread, group_id, spu_num, img, attr, arg);
 
-	if (attr->name_len > 0x80 || attr->option & ~(SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE | SYS_SPU_THREAD_OPTION_ASYNC_INTR_ENABLE))
+	const u32 option = attr->option;
+
+	if (attr->name_len > 0x80 || option & ~(SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE | SYS_SPU_THREAD_OPTION_ASYNC_INTR_ENABLE))
 	{
 		return CELL_EINVAL;
 	}
@@ -392,7 +394,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		return CELL_EBUSY;
 	}
 
-	if (u32 option = attr->option)
+	if (option & SYS_SPU_THREAD_OPTION_ASYNC_INTR_ENABLE)
 	{
 		sys_spu.warning("Unimplemented SPU Thread options (0x%x)", option);
 	}
@@ -412,7 +414,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 			fmt::append(full_name, "%s ", thread_name);
 		}
 
-		const auto spu = std::make_shared<named_thread<spu_thread>>(full_name, ls_addr, group.get(), spu_num, thread_name, tid);
+		const auto spu = std::make_shared<named_thread<spu_thread>>(full_name, ls_addr, group.get(), spu_num, thread_name, tid, false, option);
 		group->threads[inited] = spu;
 		group->threads_map[spu_num] = static_cast<s8>(inited);
 		return spu;
