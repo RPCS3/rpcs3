@@ -988,7 +988,10 @@ bool ppu_interpreter_precise::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VMAXFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd] = vec_handle_denormal(ppu, vec_handle_nan(_mm_max_ps(ppu.vr[op.va].vf, ppu.vr[op.vb].vf)));
+	const auto a = ppu.vr[op.va];
+	const auto b = ppu.vr[op.vb];
+	const auto result = _mm_and_ps(_mm_max_ps(a.vf, b.vf), _mm_max_ps(b.vf, a.vf));
+	ppu.vr[op.vd] = vec_handle_denormal(ppu, vec_handle_nan(v128::fromF(result), a, b));
 	return true;
 }
 
