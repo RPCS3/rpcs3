@@ -433,11 +433,21 @@ void cpu_thread::operator()()
 		if (!(state & cpu_flag::stop))
 		{
 			cpu_task();
-			state -= cpu_flag::ret;
+
+			if (state & cpu_flag::ret && state.test_and_reset(cpu_flag::ret))
+			{
+				cpu_return();
+			}
+
 			continue;
 		}
 
 		thread_ctrl::wait();
+
+		if (state & cpu_flag::ret && state.test_and_reset(cpu_flag::ret))
+		{
+			cpu_return();
+		}
 	}
 
 	// Complete cleanup gracefully
