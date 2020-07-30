@@ -1747,11 +1747,11 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 
 	if (applied.empty())
 	{
-		ppu_loader.warning("PPU executable hash: %s", hash);
+		ppu_loader.always()("PPU executable hash: %s", hash);
 	}
 	else
 	{
-		ppu_loader.success("PPU executable hash: %s (<- %u)", hash, applied.size());
+		ppu_loader.always()("PPU executable hash: %s (<- %u)", hash, applied.size());
 	}
 
 	// Initialize HLE modules
@@ -2368,11 +2368,11 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 
 	if (applied.empty())
 	{
-		ppu_loader.warning("OVL hash of %s: %s", ovlm->name, hash);
+		ppu_loader.always()("OVL hash of %s: %s", ovlm->name, hash);
 	}
 	else
 	{
-		ppu_loader.success("OVL hash of %s: %s (<- %u)", ovlm->name, hash, applied.size());
+		ppu_loader.always()("OVL hash of %s: %s (<- %u)", ovlm->name, hash, applied.size());
 	}
 
 	// Load other programs
