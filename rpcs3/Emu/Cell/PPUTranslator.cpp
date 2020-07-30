@@ -973,8 +973,8 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 
 void PPUTranslator::VMAXFP(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vf, op.va, op.vb);
-	SetVr(op.vd, VecHandleResult(m_ir->CreateSelect(m_ir->CreateFCmpOGT(ab[0], ab[1]), ab[0], ab[1])));
+	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
+	set_vr(op.vd, vec_handle_result(select(bitcast<u32[4]>(fmin(a, b)) == bitcast<u32[4]>(a), b, a)));
 }
 
 void PPUTranslator::VMAXSB(ppu_opcode_t op)
@@ -1045,8 +1045,8 @@ void PPUTranslator::VMHRADDSHS(ppu_opcode_t op)
 
 void PPUTranslator::VMINFP(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vf, op.va, op.vb);
-	SetVr(op.vd, VecHandleResult(m_ir->CreateSelect(m_ir->CreateFCmpOLT(ab[0], ab[1]), ab[0], ab[1])));
+	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
+	set_vr(op.vd, vec_handle_result(select(bitcast<u32[4]>(fmax(a, b)) == bitcast<u32[4]>(a), b, a)));
 }
 
 void PPUTranslator::VMINSB(ppu_opcode_t op)
