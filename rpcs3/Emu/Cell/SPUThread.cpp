@@ -1006,7 +1006,7 @@ void spu_thread::cpu_init()
 	gpr[1]._u32[3] = 0x3FFF0; // initial stack frame pointer
 }
 
-void spu_thread::cpu_stop()
+void spu_thread::cpu_return()
 {
 	if (get_type() >= spu_type::raw)
 	{
@@ -1150,8 +1150,6 @@ void spu_thread::cpu_task()
 			spu_runtime::g_interpreter(*this, _ptr<u8>(0), nullptr);
 		}
 	}
-
-	cpu_stop();
 }
 
 void spu_thread::cpu_mem()
@@ -2959,7 +2957,7 @@ bool spu_thread::stop_and_signal(u32 code)
 	if (get_type() >= spu_type::raw)
 	{
 		// Save next PC and current SPU Interrupt Status
-		state += cpu_flag::stop + cpu_flag::wait;
+		state += cpu_flag::stop + cpu_flag::wait + cpu_flag::ret;
 		set_status_npc();
 
 		status_npc.notify_one();
@@ -3306,7 +3304,7 @@ bool spu_thread::stop_and_signal(u32 code)
 			{
 				if (thread && thread.get() != this)
 				{
-					thread->state += cpu_flag::stop;
+					thread->state += cpu_flag::stop + cpu_flag::ret;
 					thread_ctrl::raw_notify(*thread);
 				}
 			}
@@ -3317,7 +3315,7 @@ bool spu_thread::stop_and_signal(u32 code)
 			break;
 		}
 
-		state += cpu_flag::stop;
+		state += cpu_flag::stop + cpu_flag::ret;
 		check_state();
 		return true;
 	}
@@ -3337,7 +3335,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		spu_log.trace("sys_spu_thread_exit(status=0x%x)", value);
 		last_exit_status.release(value);
 		set_status_npc();
-		state += cpu_flag::stop;
+		state += cpu_flag::stop + cpu_flag::ret;
 		check_state();
 		return true;
 	}
