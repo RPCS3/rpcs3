@@ -2,6 +2,8 @@
 
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
+#include "Emu/IdManager.h"
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "Emu/Io/Null/NullMouseHandler.h"
 #include "Emu/Io/KeyboardHandler.h"
@@ -23,14 +25,6 @@
 #endif
 #ifdef HAVE_FAUDIO
 #include "Emu/Audio/FAudio/FAudioBackend.h"
-#endif
-
-#include "Emu/RSX/GSRender.h"
-#include "Emu/RSX/Null/NullGSRender.h"
-#include "Emu/RSX/GL/GLGSRender.h"
-
-#if defined(_WIN32) || defined(HAVE_VULKAN)
-#include "Emu/RSX/VK/VKGSRender.h"
 #endif
 
 LOG_CHANNEL(sys_log, "SYS");
@@ -108,31 +102,6 @@ EmuCallbacks main_application::CreateCallbacks()
 	callbacks.init_pad_handler = [this](std::string_view title_id)
 	{
 		g_fxo->init<pad_thread>(get_thread(), m_game_window, title_id);
-	};
-
-	callbacks.init_gs_render = []()
-	{
-		switch (video_renderer type = g_cfg.video.renderer)
-		{
-		case video_renderer::null:
-		{
-			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
-			break;
-		}
-		case video_renderer::opengl:
-		{
-			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
-			break;
-		}
-#if defined(_WIN32) || defined(HAVE_VULKAN)
-		case video_renderer::vulkan:
-		{
-			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
-			break;
-		}
-#endif
-		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
-		}
 	};
 
 	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
