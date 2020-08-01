@@ -1019,6 +1019,7 @@ namespace rsx
 
 		u32 gcm_format = 0;
 		bool pack_unpack_swap_bytes = false;
+		bool swizzled = false;
 
 		u64 sync_timestamp = 0;
 		bool synchronized = false;
@@ -1584,6 +1585,11 @@ namespace rsx
 			gcm_format = format;
 		}
 
+		void set_swizzled(bool is_swizzled)
+		{
+			swizzled = is_swizzled;
+		}
+
 		void set_memory_read_flags(memory_read_flags flags, bool notify_texture_cache = true)
 		{
 			const bool changed = (flags != readback_behaviour);
@@ -1651,6 +1657,11 @@ namespace rsx
 			return gcm_format;
 		}
 
+		bool is_swizzled() const
+		{
+			return swizzled;
+		}
+
 		memory_read_flags get_memory_read_flags() const
 		{
 			return readback_behaviour;
@@ -1681,12 +1692,12 @@ namespace rsx
 		/**
 		 * Comparison
 		 */
-		inline bool matches(const address_range &memory_range)
+		inline bool matches(const address_range &memory_range) const
 		{
 			return valid_range() && rsx::buffered_section::matches(memory_range);
 		}
 
-		bool matches(u32 format, u32 width, u32 height, u32 depth, u32 mipmaps)
+		bool matches(u32 format, u32 width, u32 height, u32 depth, u32 mipmaps) const
 		{
 			if (!valid_range())
 				return false;
@@ -1712,7 +1723,7 @@ namespace rsx
 			return true;
 		}
 
-		bool matches(u32 rsx_address, u32 format, u32 width, u32 height, u32 depth, u32 mipmaps)
+		bool matches(u32 rsx_address, u32 format, u32 width, u32 height, u32 depth, u32 mipmaps) const
 		{
 			if (!valid_range())
 				return false;
@@ -1723,7 +1734,7 @@ namespace rsx
 			return matches(format, width, height, depth, mipmaps);
 		}
 
-		bool matches(const address_range& memory_range, u32 format, u32 width, u32 height, u32 depth, u32 mipmaps)
+		bool matches(const address_range& memory_range, u32 format, u32 width, u32 height, u32 depth, u32 mipmaps) const
 		{
 			if (!valid_range())
 				return false;
