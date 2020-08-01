@@ -56,6 +56,8 @@ struct spu_program
 	{
 		none,
 		omit,
+		putllc16,
+		putllc0,
 	};
 
 	std::vector<inst_attr> inst_attrs;
