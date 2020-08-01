@@ -292,6 +292,21 @@ namespace vk
 			// Set cb flag for queued dma operations
 			cmd.set_flag(vk::command_buffer::cb_has_dma_transfer);
 
+			if (get_context() == rsx::texture_upload_context::dma)
+			{
+				// Save readback hint in case transformation is required later
+				switch (internal_bpp)
+				{
+				case 2:
+					gcm_format = CELL_GCM_TEXTURE_R5G6B5;
+					break;
+				case 4:
+				default:
+					gcm_format = CELL_GCM_TEXTURE_A8R8G8B8;
+					break;
+				}
+			}
+
 			synchronized = true;
 			sync_timestamp = get_system_time();
 		}
@@ -390,6 +405,32 @@ namespace vk
 
 			const auto range = get_confirmed_range();
 			vk::flush_dma(range.start, range.length());
+
+			if (is_swizzled())
+			{
+				// This format is completely worthless to CPU processing algorithms where cache lines on die are linear.
+				// If this is happening, usually it means it was not a planned readback (e.g shared pages situation)
+				rsx_log.warning("[Performance warning] CPU readback of swizzled data");
+
+				// Read-modify-write to avoid corrupting already resident memory outside texture region
+				void* data = get_ptr(range.start);
+				std::vector<u8> tmp_data(rsx_pitch * height);
+				std::memcpy(tmp_data.data(), data, tmp_data.size());
+
+				switch (gcm_format)
+				{
+				case CELL_GCM_TEXTURE_A8R8G8B8:
+				case CELL_GCM_TEXTURE_DEPTH24_D8:
+					rsx::convert_linear_swizzle<u32, false>(tmp_data.data(), data, width, height, rsx_pitch);
+					break;
+				case CELL_GCM_TEXTURE_R5G6B5:
+				case CELL_GCM_TEXTURE_DEPTH16:
+					rsx::convert_linear_swizzle<u16, false>(tmp_data.data(), data, width, height, rsx_pitch);
+					break;
+				default:
+					rsx_log.error("Unexpected swizzled texture format 0x%x", gcm_format);
+				}
+			}
 
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
