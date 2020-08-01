@@ -813,6 +813,7 @@ namespace rsx
 			sink->rsx_pitch = ref->get_rsx_pitch();
 			sink->set_old_contents_region(prev, false);
 			sink->last_use_tag = ref->last_use_tag;
+			sink->raster_type = ref->raster_type;     // Can't actually cut up swizzled data
 		}
 
 		static bool is_compatible_surface(const vk::render_target* surface, const vk::render_target* ref, u16 width, u16 height, u8 sample_count)
@@ -853,6 +854,7 @@ namespace rsx
 			surface->last_use_tag = 0;
 			surface->stencil_init_flags = 0;
 			surface->memory_usage_flags = rsx::surface_usage_flags::unknown;
+			surface->raster_type = rsx::surface_raster_type::linear;
 		}
 
 		static void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)
