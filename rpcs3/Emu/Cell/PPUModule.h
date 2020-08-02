@@ -274,7 +274,7 @@ public:
 	static const ppu_static_module static_hle;
 
 private:
-	inline static std::unordered_map<std::string, ppu_static_module*> static_module_map;
+	inline static std::unordered_map<std::string, ppu_static_module*> s_module_map;
 };
 
 template <auto* Func>
