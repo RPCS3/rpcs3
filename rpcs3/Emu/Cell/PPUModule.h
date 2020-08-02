@@ -164,9 +164,9 @@ public:
 	}
 
 	// We need this to deal with the enumeration over all ppu_static_modules that happens in ppu_initialize_modules
-	static const auto& get()
+	static const std::unordered_map<std::string, ppu_static_module*>& get()
 	{
-		return (const std::unordered_map<std::string, ppu_static_module*>&)staticModuleMap;
+		return staticModuleMap;
 	}
 
 	static const ppu_static_module cellAdec;
