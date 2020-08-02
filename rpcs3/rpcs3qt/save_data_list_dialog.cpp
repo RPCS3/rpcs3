@@ -2,6 +2,7 @@
 #include "save_data_list_dialog.h"
 #include "save_data_info_dialog.h"
 #include "gui_settings.h"
+#include "persistent_settings.h"
 
 #include <QPushButton>
 #include <QHBoxLayout>
@@ -33,6 +34,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	setMinimumSize(QSize(400, 400));
 
 	m_gui_settings.reset(new gui_settings());
+	m_persistent_settings.reset(new persistent_settings());
 
 	// Table
 	m_list = new QTableWidget(this);
@@ -103,12 +105,12 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col)
 	{
-		const int originalIndex = m_list->item(row, 0)->data(Qt::UserRole).toInt();
-		const SaveDataEntry originalEntry = m_save_entries[originalIndex];
-		const QString originalDirName = qstr(originalEntry.dirName);
-		QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
-		currNotes[originalDirName] = m_list->item(row, col)->text();
-		m_gui_settings->SetValue(gui::m_saveNotes, currNotes);
+		const int original_index = m_list->item(row, 0)->data(Qt::UserRole).toInt();
+		const SaveDataEntry original_entry = m_save_entries[original_index];
+		const QString original_dir_name = qstr(original_entry.dirName);
+		QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
+		notes[original_dir_name] = m_list->item(row, col)->text();
+		m_persistent_settings->SetValue(gui::persistent::save_notes, notes);
 	});
 
 	m_list->setCurrentCell(focusedEntry, 0);
@@ -179,7 +181,19 @@ void save_data_list_dialog::UpdateList()
 	m_list->clearContents();
 	m_list->setRowCount(::narrow<int>(m_save_entries.size()));
 
-	const QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
+	QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
+
+	// Find deprecated values (older than August 2nd 2020)
+	if (notes.isEmpty())
+	{
+		notes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
+
+		// Move to persistent settings
+		if (!notes.isEmpty())
+		{
+			m_persistent_settings->SetValue(gui::persistent::save_notes, notes);
+		}
+	}
 
 	int row = 0;
 	for (const SaveDataEntry& entry: m_save_entries)
@@ -204,9 +218,9 @@ void save_data_list_dialog::UpdateList()
 		QTableWidgetItem* noteItem = new QTableWidgetItem();
 		noteItem->setFlags(noteItem->flags() | Qt::ItemIsEditable);
 
-		if (currNotes.contains(dirName))
+		if (notes.contains(dirName))
 		{
-			noteItem->setText(currNotes[dirName].toString());
+			noteItem->setText(notes[dirName].toString());
 		}
 
 		m_list->setItem(row, 3, noteItem);
