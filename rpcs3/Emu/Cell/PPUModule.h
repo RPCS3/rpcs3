@@ -4,6 +4,7 @@
 #include "PPUCallback.h"
 #include "ErrorCodes.h"
 #include <typeinfo>
+#include <type_traits>
 #include "Emu/Memory/vm_var.h"
 
 // Helper function
@@ -101,7 +102,8 @@ class ppu_module_manager final
 {
 	friend class ppu_static_module;
 
-	static std::unordered_map<std::string, ppu_static_module*>& access();
+	// this is now replaced by the staticModuleMap static member variable
+	//static std::unordered_map<std::string, ppu_static_module*>& access();
 
 	static void register_module(ppu_static_module*);
 
@@ -161,9 +163,10 @@ public:
 		return info;
 	}
 
+	// We need this to deal with the enumeration over all ppu_static_modules that happens in ppu_initialize_modules
 	static const auto& get()
 	{
-		return access();
+		return (const std::unordered_map<std::string, ppu_static_module*>&)staticModuleMap;
 	}
 
 	static const ppu_static_module cellAdec;
@@ -273,6 +276,9 @@ public:
 	static const ppu_static_module sys_libc;
 	static const ppu_static_module sys_lv2dbg;
 	static const ppu_static_module static_hle;
+
+private:
+	inline static std::unordered_map<std::string, ppu_static_module*> staticModuleMap;
 };
 
 template <auto* Func>

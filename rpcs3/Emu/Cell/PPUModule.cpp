@@ -61,21 +61,22 @@ ppu_static_module::ppu_static_module(const char* name)
 	ppu_module_manager::register_module(this);
 }
 
-std::unordered_map<std::string, ppu_static_module*>& ppu_module_manager::access()
-{
-	static std::unordered_map<std::string, ppu_static_module*> map;
-
-	return map;
-}
+// We move the static unordered_map up into the ppu_module_manager definition
+//std::unordered_map<std::string, ppu_static_module*>& ppu_module_manager::access()
+//{
+//	static std::unordered_map<std::string, ppu_static_module*> map;
+//
+//	return map;
+//}
 
 void ppu_module_manager::register_module(ppu_static_module* _module)
 {
-	access().emplace(_module->name, _module);
+	ppu_module_manager::staticModuleMap.emplace(_module->name, _module);
 }
 
 ppu_static_function& ppu_module_manager::access_static_function(const char* _module, u32 fnid)
 {
-	auto& res = access().at(_module)->functions[fnid];
+	auto& res = ppu_module_manager::staticModuleMap.at(_module)->functions[fnid];
 
 	if (res.name)
 	{
@@ -87,7 +88,7 @@ ppu_static_function& ppu_module_manager::access_static_function(const char* _mod
 
 ppu_static_variable& ppu_module_manager::access_static_variable(const char* _module, u32 vnid)
 {
-	auto& res = access().at(_module)->variables[vnid];
+	auto& res = ppu_module_manager::staticModuleMap.at(_module)->variables[vnid];
 
 	if (res.name)
 	{
@@ -99,7 +100,7 @@ ppu_static_variable& ppu_module_manager::access_static_variable(const char* _mod
 
 const ppu_static_module* ppu_module_manager::get_module(const std::string& name)
 {
-	const auto& map = access();
+	const auto& map  = ppu_module_manager::staticModuleMap;
 	const auto found = map.find(name);
 	return found != map.end() ? found->second : nullptr;
 }
