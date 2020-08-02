@@ -63,12 +63,12 @@ ppu_static_module::ppu_static_module(const char* name)
 
 void ppu_module_manager::register_module(ppu_static_module* _module)
 {
-	ppu_module_manager::static_module_map.emplace(_module->name, _module);
+	ppu_module_manager::s_module_map.emplace(_module->name, _module);
 }
 
 ppu_static_function& ppu_module_manager::access_static_function(const char* _module, u32 fnid)
 {
-	auto& res = ppu_module_manager::static_module_map.at(_module)->functions[fnid];
+	auto& res = ppu_module_manager::s_module_map.at(_module)->functions[fnid];
 
 	if (res.name)
 	{
@@ -80,7 +80,7 @@ ppu_static_function& ppu_module_manager::access_static_function(const char* _mod
 
 ppu_static_variable& ppu_module_manager::access_static_variable(const char* _module, u32 vnid)
 {
-	auto& res = ppu_module_manager::static_module_map.at(_module)->variables[vnid];
+	auto& res = ppu_module_manager::s_module_map.at(_module)->variables[vnid];
 
 	if (res.name)
 	{
@@ -92,7 +92,7 @@ ppu_static_variable& ppu_module_manager::access_static_variable(const char* _mod
 
 const ppu_static_module* ppu_module_manager::get_module(const std::string& name)
 {
-	const auto& map = ppu_module_manager::static_module_map;
+	const auto& map = ppu_module_manager::s_module_map;
 	const auto found = map.find(name);
 	return found != map.end() ? found->second : nullptr;
 }
