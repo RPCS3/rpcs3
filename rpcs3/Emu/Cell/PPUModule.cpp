@@ -61,14 +61,6 @@ ppu_static_module::ppu_static_module(const char* name)
 	ppu_module_manager::register_module(this);
 }
 
-// We move the static unordered_map up into the ppu_module_manager definition
-//std::unordered_map<std::string, ppu_static_module*>& ppu_module_manager::access()
-//{
-//	static std::unordered_map<std::string, ppu_static_module*> map;
-//
-//	return map;
-//}
-
 void ppu_module_manager::register_module(ppu_static_module* _module)
 {
 	ppu_module_manager::static_module_map.emplace(_module->name, _module);
