@@ -171,6 +171,7 @@ const char* arg_rounding   = "dpi-rounding";
 const char* arg_styles     = "styles";
 const char* arg_style      = "style";
 const char* arg_stylesheet = "stylesheet";
+const char* arg_config     = "config";
 const char* arg_error      = "error";
 const char* arg_updating   = "updating";
 
@@ -405,8 +406,8 @@ int main(int argc, char** argv)
 	parser.addPositionalArgument("(S)ELF", "Path for directly executing a (S)ELF");
 	parser.addPositionalArgument("[Args...]", "Optional args for the executable");
 
-	const QCommandLineOption helpOption    = parser.addHelpOption();
-	const QCommandLineOption versionOption = parser.addVersionOption();
+	const QCommandLineOption help_option    = parser.addHelpOption();
+	const QCommandLineOption version_option = parser.addVersionOption();
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
@@ -414,11 +415,14 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
 	parser.addOption(QCommandLineOption(arg_style, "Loads a custom style.", "style", ""));
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
+	const QCommandLineOption config_option(arg_config, "Forces the emulator to use this configuration file.", "path", "");
+	parser.addOption(config_option);
+	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
-	if (parser.isSet(versionOption) || parser.isSet(helpOption))
+	if (parser.isSet(version_option) || parser.isSet(help_option))
 		return 0;
 
 	if (parser.isSet(arg_styles))
@@ -460,10 +464,30 @@ int main(int argc, char** argv)
 	}
 #endif
 
-	QStringList args = parser.positionalArguments();
+	std::string config_override_path;
 
-	if (args.length() > 0)
+	if (parser.isSet(arg_config))
 	{
+		config_override_path = parser.value(config_option).toStdString();
+
+		if (!fs::is_file(config_override_path))
+		{
+			report_fatal_error(fmt::format("No config file found: %s", config_override_path));
+			return 0;
+		}
+
+		Emu.SetConfigOverride(config_override_path);
+	}
+
+	for (const auto& opt : parser.optionNames())
+	{
+		sys_log.notice("Option passed via command line: %s = %s", opt.toStdString(), parser.value(opt).toStdString());
+	}
+
+	if (const QStringList args = parser.positionalArguments(); !args.isEmpty())
+	{
+		sys_log.notice("Booting application from command line: %s", args.at(0).toStdString());
+
 		// Propagate command line arguments
 		std::vector<std::string> argv;
 
@@ -473,12 +497,14 @@ int main(int argc, char** argv)
 
 			for (int i = 1; i < args.length(); i++)
 			{
-				argv.emplace_back(args[i].toStdString());
+				const std::string arg = args[i].toStdString();
+				argv.emplace_back(arg);
+				sys_log.notice("Optional command line argument %d: %s", i, arg);
 			}
 		}
 
 		// Ugly workaround
-		QTimer::singleShot(2, [path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
+		QTimer::singleShot(2, [config_override_path, path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
 		{
 			Emu.argv = std::move(argv);
 			Emu.SetForceBoot(true);
