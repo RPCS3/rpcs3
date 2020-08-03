@@ -56,6 +56,7 @@ namespace rsx
 		u16 pitch;
 		u16 slice_h;
 		u8  bpp;
+		bool swizzled;
 	};
 
 	struct blit_op_result

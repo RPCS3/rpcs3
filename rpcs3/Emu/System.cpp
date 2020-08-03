@@ -1815,6 +1815,7 @@ std::string Emulator::GetFormattedTitle(double fps) const
 	title_data.title = GetTitle();
 	title_data.title_id = GetTitleID();
 	title_data.renderer = g_cfg.video.renderer.to_string();
+	title_data.vulkan_adapter = g_cfg.video.vk.adapter.to_string();
 	title_data.fps = fps;
 
 	return rpcs3::get_formatted_title(title_data);

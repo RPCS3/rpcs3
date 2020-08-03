@@ -333,6 +333,31 @@ namespace gl
 				}
 			}
 
+			if (is_swizzled())
+			{
+				// This format is completely worthless to CPU processing algorithms where cache lines on die are linear.
+				// If this is happening, usually it means it was not a planned readback (e.g shared pages situation)
+				rsx_log.warning("[Performance warning] CPU readback of swizzled data");
+
+				// Read-modify-write to avoid corrupting already resident memory outside texture region
+				std::vector<u8> tmp_data(rsx_pitch * height);
+				std::memcpy(tmp_data.data(), dst, tmp_data.size());
+
+				switch (type)
+				{
+				case gl::texture::type::uint_8_8_8_8:
+				case gl::texture::type::uint_24_8:
+					rsx::convert_linear_swizzle<u32, false>(tmp_data.data(), dst, width, height, rsx_pitch);
+					break;
+				case gl::texture::type::ushort_5_6_5:
+				case gl::texture::type::ushort:
+					rsx::convert_linear_swizzle<u16, false>(tmp_data.data(), dst, width, height, rsx_pitch);
+					break;
+				default:
+					rsx_log.error("Unexpected swizzled texture format 0x%x", static_cast<u32>(format));
+				}
+			}
+
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
 				// Update memory tag
@@ -818,7 +843,7 @@ namespace gl
 		}
 
 		cached_texture_section* create_new_texture(gl::command_context&, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
-			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags) override
+			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::texture_create_flags flags) override
 		{
 			auto image = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
 
@@ -834,6 +859,7 @@ namespace gl
 			cached.set_context(context);
 			cached.set_image_type(type);
 			cached.set_gcm_format(gcm_format);
+			cached.set_swizzled(swizzled);
 
 			cached.create(width, height, depth, mipmaps, image, pitch, true);
 			cached.set_dirty(false);
@@ -901,7 +927,7 @@ namespace gl
 		cached_texture_section* upload_image_from_cpu(gl::command_context &cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
 			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool input_swizzled) override
 		{
-			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type,
+			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type, input_swizzled,
 				rsx::texture_create_flags::default_component_order);
 
 			gl::upload_texture(section->get_raw_texture()->id(), gcm_format, width, height, depth, mipmaps,

@@ -240,6 +240,7 @@ struct gl_render_target_traits
 		sink->set_rsx_pitch(ref->get_rsx_pitch());
 		sink->set_old_contents_region(prev, false);
 		sink->last_use_tag = ref->last_use_tag;
+		sink->raster_type = ref->raster_type;     // Can't actually cut up swizzled data
 	}
 
 	static
@@ -275,6 +276,7 @@ struct gl_render_target_traits
 		surface->last_use_tag = 0;
 		surface->stencil_init_flags = 0;
 		surface->memory_usage_flags = rsx::surface_usage_flags::unknown;
+		surface->raster_type = rsx::surface_raster_type::linear;
 	}
 
 	static

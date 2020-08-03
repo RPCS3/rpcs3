@@ -292,6 +292,21 @@ namespace vk
 			// Set cb flag for queued dma operations
 			cmd.set_flag(vk::command_buffer::cb_has_dma_transfer);
 
+			if (get_context() == rsx::texture_upload_context::dma)
+			{
+				// Save readback hint in case transformation is required later
+				switch (internal_bpp)
+				{
+				case 2:
+					gcm_format = CELL_GCM_TEXTURE_R5G6B5;
+					break;
+				case 4:
+				default:
+					gcm_format = CELL_GCM_TEXTURE_A8R8G8B8;
+					break;
+				}
+			}
+
 			synchronized = true;
 			sync_timestamp = get_system_time();
 		}
@@ -390,6 +405,32 @@ namespace vk
 
 			const auto range = get_confirmed_range();
 			vk::flush_dma(range.start, range.length());
+
+			if (is_swizzled())
+			{
+				// This format is completely worthless to CPU processing algorithms where cache lines on die are linear.
+				// If this is happening, usually it means it was not a planned readback (e.g shared pages situation)
+				rsx_log.warning("[Performance warning] CPU readback of swizzled data");
+
+				// Read-modify-write to avoid corrupting already resident memory outside texture region
+				void* data = get_ptr(range.start);
+				std::vector<u8> tmp_data(rsx_pitch * height);
+				std::memcpy(tmp_data.data(), data, tmp_data.size());
+
+				switch (gcm_format)
+				{
+				case CELL_GCM_TEXTURE_A8R8G8B8:
+				case CELL_GCM_TEXTURE_DEPTH24_D8:
+					rsx::convert_linear_swizzle<u32, false>(tmp_data.data(), data, width, height, rsx_pitch);
+					break;
+				case CELL_GCM_TEXTURE_R5G6B5:
+				case CELL_GCM_TEXTURE_DEPTH16:
+					rsx::convert_linear_swizzle<u16, false>(tmp_data.data(), data, width, height, rsx_pitch);
+					break;
+				default:
+					rsx_log.error("Unexpected swizzled texture format 0x%x", gcm_format);
+				}
+			}
 
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
@@ -1100,7 +1141,7 @@ namespace vk
 		}
 
 		cached_texture_section* create_new_texture(vk::command_buffer& cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps,  u16 pitch,
-			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags) override
+			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::texture_create_flags flags) override
 		{
 			const u16 section_depth = depth;
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
@@ -1180,6 +1221,7 @@ namespace vk
 			region.set_context(context);
 			region.set_gcm_format(gcm_format);
 			region.set_image_type(type);
+			region.set_swizzled(swizzled);
 
 			region.create(width, height, section_depth, mipmaps, image, pitch, true, gcm_format);
 			region.set_dirty(false);
@@ -1232,7 +1274,7 @@ namespace vk
 		cached_texture_section* upload_image_from_cpu(vk::command_buffer& cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
 			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) override
 		{
-			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type,
+			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type, swizzled,
 					rsx::texture_create_flags::default_component_order);
 
 			auto image = section->get_raw_texture();

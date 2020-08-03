@@ -101,7 +101,7 @@ jobs:
       artifact: RPCS3 for Windows
 
     - task: GitHubRelease@1
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'))
       inputs:
         gitHubConnection: 'RPCS3-Token'
         repositoryName: 'RPCS3/rpcs3-binaries-win'

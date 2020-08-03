@@ -318,7 +318,7 @@ namespace rsx
 		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_storage_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void release_temporary_subresource(image_view_type rsc) = 0;
 		virtual section_storage_type* create_new_texture(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
-			rsx::texture_upload_context context, rsx::texture_dimension_extended type, texture_create_flags flags) = 0;
+			rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, texture_create_flags flags) = 0;
 		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format, texture_upload_context context,
 			const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) = 0;
 		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range &rsx_range, bool memory_load) = 0;
@@ -1597,6 +1597,14 @@ namespace rsx
 							continue;
 						}
 #endif
+						if (attr.swizzled != cached_texture->is_swizzled())
+						{
+							// We can have the correct data in cached_texture but it needs decoding before it can be sampled.
+							// Usually a sign of a game bug where the developer forgot to mark the texture correctly the first time we see it.
+							rsx_log.error("A texture was found in cache for address 0x%x, but swizzle flag does not match", attr.address);
+							continue;
+						}
+
 						return{ cached_texture->get_view(encoded_remap, remap), cached_texture->get_context(), cached_texture->get_format_type(), scale, cached_texture->get_image_type() };
 					}
 				}
@@ -1743,9 +1751,9 @@ namespace rsx
 			attributes.bpp = get_format_block_size_in_bytes(attributes.gcm_format);
 			attributes.width = tex.width();
 			attributes.height = tex.height();
+			attributes.swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
 
 			const bool is_unnormalized = !!(tex.format() & CELL_GCM_TEXTURE_UN);
-			const bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
 			auto extended_dimension = tex.get_extended_texture_dimension();
 
 			options.is_compressed_format = helpers::is_compressed_gcm_format(attributes.gcm_format);
@@ -1767,8 +1775,8 @@ namespace rsx
 				}
 			}
 
-			const auto packed_pitch = get_format_packed_pitch(attributes.gcm_format, attributes.width, !tex.border_type(), is_swizzled);
-			if (!is_swizzled) [[likely]]
+			const auto packed_pitch = get_format_packed_pitch(attributes.gcm_format, attributes.width, !tex.border_type(), attributes.swizzled);
+			if (!attributes.swizzled) [[likely]]
 			{
 				if (attributes.pitch = tex.pitch(); !attributes.pitch)
 				{
@@ -1883,7 +1891,7 @@ namespace rsx
 					attr2.height = std::max(attr2.height / 2, 1);
 					attr2.slice_h = attr2.height;
 
-					if (is_swizzled)
+					if (attributes.swizzled)
 					{
 						attr2.pitch = attr2.width * attr2.bpp;
 					}
@@ -1943,7 +1951,7 @@ namespace rsx
 
 			// Upload from CPU. Note that sRGB conversion is handled in the FS
 			auto uploaded = upload_image_from_cpu(cmd, tex_range, attributes.width, attributes.height, attributes.depth, tex.get_exact_mipmap_count(), attributes.pitch, attributes.gcm_format,
-				texture_upload_context::shader_read, subresources_layout, extended_dimension, is_swizzled);
+				texture_upload_context::shader_read, subresources_layout, extended_dimension, attributes.swizzled);
 
 			return{ uploaded->get_view(tex.remap(), tex.decoded_remap()),
 					texture_upload_context::shader_read, format_class, scale, extended_dimension };
@@ -2672,7 +2680,7 @@ namespace rsx
 					{
 						cached_dest = create_new_texture(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
 							preferred_dst_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
-							channel_order);
+							false, channel_order);
 					}
 					else
 					{
@@ -2710,6 +2718,9 @@ namespace rsx
 			// Invalidate any cached subresources in modified range
 			notify_surface_changed(dst_range);
 
+			// What type of data is being moved?
+			const auto raster_type = src_is_render_target ? src_subres.surface->raster_type : rsx::surface_raster_type::undefined;
+
 			if (cached_dest)
 			{
 				// Validate modified range
@@ -2721,12 +2732,15 @@ namespace rsx
 				cached_dest->reprotect(utils::protection::no, { mem_offset, dst_payload_length });
 				cached_dest->touch(m_cache_update_tag);
 				update_cache_tag();
+
+				// Set swizzle flag
+				cached_dest->set_swizzled(raster_type == rsx::surface_raster_type::swizzle);
 			}
 			else
 			{
 				// NOTE: This doesn't work very well in case of Cell access
 				// Need to lock the affected memory range and actually attach this subres to a locked_region
-				dst_subres.surface->on_write_copy(rsx::get_shared_tag());
+				dst_subres.surface->on_write_copy(rsx::get_shared_tag(), false, raster_type);
 				m_rtts.notify_memory_structure_changed();
 
 				// Reset this object's synchronization status if it is locked

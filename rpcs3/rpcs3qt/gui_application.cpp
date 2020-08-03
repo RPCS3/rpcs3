@@ -29,6 +29,14 @@
 
 #include <clocale>
 
+#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/Null/NullGSRender.h"
+#include "Emu/RSX/GL/GLGSRender.h"
+
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+#include "Emu/RSX/VK/VKGSRender.h"
+#endif
+
 LOG_CHANNEL(gui_log, "GUI");
 
 gui_application::gui_application(int& argc, char** argv) : QApplication(argc, argv)
@@ -288,6 +296,34 @@ void gui_application::InitializeCallbacks()
 	callbacks.call_after = [this](std::function<void()> func)
 	{
 		RequestCallAfter(std::move(func));
+	};
+
+	callbacks.init_gs_render = []()
+	{
+		switch (video_renderer type = g_cfg.video.renderer)
+		{
+		case video_renderer::null:
+		{
+			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
+			break;
+		}
+		case video_renderer::opengl:
+		{
+			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
+			break;
+		}
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+		case video_renderer::vulkan:
+		{
+			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
+			break;
+		}
+#endif
+		default:
+		{
+			fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+		}
+		}
 	};
 
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };

@@ -62,7 +62,7 @@ LOG_CHANNEL(sys_log, "SYS");
 	if (s_headless)
 	{
 		fprintf(stderr, "RPCS3: %s\n", text.c_str());
-		return;
+		std::abort();
 	}
 
 	const bool local = s_qt_init.try_lock();
