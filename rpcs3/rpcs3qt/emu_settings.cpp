@@ -245,7 +245,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 	if (index == -1)
 	{
 		const std::string def = GetSettingDefault(type);
-		cfg_log.fatal("EnhanceComboBox '%s' tried to set an invalid value: %s. Setting to default: %s", cfg_adapter::get_setting_name(type), selected, def);
+		cfg_log.error("EnhanceComboBox '%s' tried to set an invalid value: %s. Setting to default: %s", cfg_adapter::get_setting_name(type), selected, def);
 		combobox->setCurrentIndex(combobox->findData(qstr(def)));
 		m_broken_types.insert(type);
 	}
@@ -295,7 +295,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 	}
 	else if (selected != "false")
 	{
-		cfg_log.fatal("EnhanceCheckBox '%s' tried to set an invalid value: %s. Setting to default: %s", cfg_adapter::get_setting_name(type), selected, def);
+		cfg_log.error("EnhanceCheckBox '%s' tried to set an invalid value: %s. Setting to default: %s", cfg_adapter::get_setting_name(type), selected, def);
 		checkbox->setChecked(def == "true");
 		m_broken_types.insert(type);
 	}
@@ -333,7 +333,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, emu_settings_type type)
 
 	if (!ok_sel || val < min || val > max)
 	{
-		cfg_log.fatal("EnhanceSlider '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", cfg_adapter::get_setting_name(type), val, def, min, max);
+		cfg_log.error("EnhanceSlider '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", cfg_adapter::get_setting_name(type), val, def, min, max);
 		val = def;
 		m_broken_types.insert(type);
 	}
@@ -373,7 +373,7 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, emu_settings_type type, con
 
 	if (!ok_sel || val < min || val > max)
 	{
-		cfg_log.fatal("EnhanceSpinBox '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", cfg_adapter::get_setting_name(type), selected, def, min, max);
+		cfg_log.error("EnhanceSpinBox '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", cfg_adapter::get_setting_name(type), selected, def, min, max);
 		val = def;
 		m_broken_types.insert(type);
 	}
@@ -415,7 +415,7 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_ty
 
 	if (!ok_sel || val < min || val > max)
 	{
-		cfg_log.fatal("EnhanceDoubleSpinBox '%s' tried to set an invalid value: %f. Setting to default: %f. Allowed range: [%f, %f]", cfg_adapter::get_setting_name(type), val, def, min, max);
+		cfg_log.error("EnhanceDoubleSpinBox '%s' tried to set an invalid value: %f. Setting to default: %f. Allowed range: [%f, %f]", cfg_adapter::get_setting_name(type), val, def, min, max);
 		val = def;
 		m_broken_types.insert(type);
 	}
