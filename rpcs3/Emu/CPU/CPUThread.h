@@ -120,6 +120,9 @@ public:
 	// Callback for vm::temporary_unlock
 	virtual void cpu_unmem() {}
 
+	// Callback for cpu_flag::ret
+	virtual void cpu_return() {}
+
 	// Thread locker
 	class suspend_all
 	{

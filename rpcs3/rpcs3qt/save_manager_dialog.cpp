@@ -3,6 +3,7 @@
 #include "custom_table_widget_item.h"
 #include "qt_utils.h"
 #include "gui_settings.h"
+#include "persistent_settings.h"
 
 #include "Emu/System.h"
 #include "Emu/Memory/vm.h"
@@ -91,10 +92,11 @@ namespace
 	}
 }
 
-save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::string dir, QWidget* parent)
+save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, std::string dir, QWidget* parent)
 	: QDialog(parent)
 	, m_dir(dir)
 	, m_gui_settings(gui_settings)
+	, m_persistent_settings(persistent_settings)
 {
 	setWindowTitle(tr("Save Manager"));
 	setMinimumSize(QSize(400, 400));
@@ -214,12 +216,12 @@ void save_manager_dialog::Init(std::string dir)
 		{
 			return;
 		}
-		const int originalIndex = user_item->data(Qt::UserRole).toInt();
-		const SaveDataEntry originalEntry = m_save_entries[originalIndex];
-		const QString originalDirName = qstr(originalEntry.dirName);
-		QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
-		currNotes[originalDirName] = text_item->text();
-		m_gui_settings->SetValue(gui::m_saveNotes, currNotes);
+		const int original_index = user_item->data(Qt::UserRole).toInt();
+		const SaveDataEntry originalEntry = m_save_entries[original_index];
+		const QString original_dir_name = qstr(originalEntry.dirName);
+		QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
+		notes[original_dir_name] = text_item->text();
+		m_persistent_settings->SetValue(gui::persistent::save_notes, notes);
 	});
 	connect(m_list, &QTableWidget::itemSelectionChanged, this, &save_manager_dialog::UpdateDetails);
 }
@@ -236,7 +238,7 @@ void save_manager_dialog::UpdateList()
 	m_list->clearContents();
 	m_list->setRowCount(static_cast<int>(m_save_entries.size()));
 
-	QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
+	QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
 
 	if (m_gui_settings->GetValue(gui::m_enableUIColors).toBool())
 	{
@@ -271,7 +273,7 @@ void save_manager_dialog::UpdateList()
 		const auto& entry = m_save_entries[i];
 
 		QString title = qstr(entry.title) + QStringLiteral("\n") + qstr(entry.subtitle);
-		QString dirName = qstr(entry.dirName);
+		QString dir_name = qstr(entry.dirName);
 
 		custom_table_widget_item* iconItem = new custom_table_widget_item;
 		iconItem->setData(Qt::UserRole, icons[i]);
@@ -287,15 +289,15 @@ void save_manager_dialog::UpdateList()
 		timeItem->setFlags(timeItem->flags() & ~Qt::ItemIsEditable);
 		m_list->setItem(i, 2, timeItem);
 
-		QTableWidgetItem* dirNameItem = new QTableWidgetItem(dirName);
+		QTableWidgetItem* dirNameItem = new QTableWidgetItem(dir_name);
 		dirNameItem->setFlags(dirNameItem->flags() & ~Qt::ItemIsEditable);
 		m_list->setItem(i, 3, dirNameItem);
 
 		QTableWidgetItem* noteItem = new QTableWidgetItem();
 		noteItem->setFlags(noteItem->flags() | Qt::ItemIsEditable);
-		if (currNotes.contains(dirName))
+		if (notes.contains(dir_name))
 		{
-			noteItem->setText(currNotes[dirName].toString());
+			noteItem->setText(notes[dir_name].toString());
 		}
 		m_list->setItem(i, 4, noteItem);
 	}

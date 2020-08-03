@@ -29,6 +29,14 @@
 
 #include <clocale>
 
+#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/Null/NullGSRender.h"
+#include "Emu/RSX/GL/GLGSRender.h"
+
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+#include "Emu/RSX/VK/VKGSRender.h"
+#endif
+
 LOG_CHANNEL(gui_log, "GUI");
 
 gui_application::gui_application(int& argc, char** argv) : QApplication(argc, argv)
@@ -50,8 +58,14 @@ void gui_application::Init()
 	m_gui_settings.reset(new gui_settings());
 	m_persistent_settings.reset(new persistent_settings());
 
+	// Get deprecated active user (before August 2nd 2020)
+	QString active_user = m_gui_settings->GetValue(gui::um_active_user).toString();
+
+	// Get active user with deprecated active user as fallback
+	active_user = m_persistent_settings->GetCurrentUser(active_user.isEmpty() ? "00000001" : active_user);
+
 	// Force init the emulator
-	InitializeEmulator(m_gui_settings->GetCurrentUser().toStdString(), true, m_show_gui);
+	InitializeEmulator(active_user.toStdString(), true, m_show_gui);
 
 	// Create the main window
 	if (m_show_gui)
@@ -288,6 +302,34 @@ void gui_application::InitializeCallbacks()
 	callbacks.call_after = [this](std::function<void()> func)
 	{
 		RequestCallAfter(std::move(func));
+	};
+
+	callbacks.init_gs_render = []()
+	{
+		switch (video_renderer type = g_cfg.video.renderer)
+		{
+		case video_renderer::null:
+		{
+			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
+			break;
+		}
+		case video_renderer::opengl:
+		{
+			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
+			break;
+		}
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+		case video_renderer::vulkan:
+		{
+			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
+			break;
+		}
+#endif
+		default:
+		{
+			fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+		}
+		}
 	};
 
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };

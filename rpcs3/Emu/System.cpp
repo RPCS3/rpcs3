@@ -122,21 +122,47 @@ void Emulator::Init()
 	g_cfg.from_default();
 	g_cfg_defaults = g_cfg.to_string();
 
-	// Reload global configuration
-	const auto cfg_path = fs::get_config_dir() + "/config.yml";
-
-	if (const fs::file cfg_file{cfg_path, fs::read + fs::create})
+	// Reload override configuration set via command line
+	if (!m_config_override_path.empty())
 	{
-		if (!g_cfg.from_string(cfg_file.to_string()))
+		if (const fs::file cfg_file{m_config_override_path, fs::read + fs::create})
 		{
-			sys_log.fatal("Failed to apply global config: %s", cfg_path);
+			if (!g_cfg.from_string(cfg_file.to_string()))
+			{
+				sys_log.fatal("Failed to apply config override: %s. Proceeding with regular configuration.", m_config_override_path);
+				m_config_override_path.clear();
+			}
+			else
+			{
+				sys_log.success("Applied config override: %s", m_config_override_path);
+				g_cfg.name = m_config_override_path;
+			}
 		}
-
-		g_cfg.name = cfg_path;
+		else
+		{
+			sys_log.fatal("Failed to access config override: %s (%s). Proceeding with regular configuration.", m_config_override_path, fs::g_tls_error);
+			m_config_override_path.clear();
+		}
 	}
-	else
+
+	// Reload global configuration
+	if (m_config_override_path.empty())
 	{
-		sys_log.fatal("Failed to access global config: %s (%s)", cfg_path, fs::g_tls_error);
+		const auto cfg_path = fs::get_config_dir() + "/config.yml";
+
+		if (const fs::file cfg_file{cfg_path, fs::read + fs::create})
+		{
+			if (!g_cfg.from_string(cfg_file.to_string()))
+			{
+				sys_log.fatal("Failed to apply global config: %s", cfg_path);
+			}
+
+			g_cfg.name = cfg_path;
+		}
+		else
+		{
+			sys_log.fatal("Failed to access global config: %s (%s)", cfg_path, fs::g_tls_error);
+		}
 	}
 
 	// Create directories (can be disabled if necessary)
@@ -868,7 +894,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		sys_log.notice("Category: %s", GetCat());
 		sys_log.notice("Version: %s / %s", GetAppVersion(), version_disc);
 
-		if (!add_only && !force_global_config)
+		if (!add_only && !force_global_config && m_config_override_path.empty())
 		{
 			const std::string config_path_new = GetCustomConfigPath(m_title_id);
 			const std::string config_path_old = GetCustomConfigPath(m_title_id, true);
@@ -1815,6 +1841,7 @@ std::string Emulator::GetFormattedTitle(double fps) const
 	title_data.title = GetTitle();
 	title_data.title_id = GetTitleID();
 	title_data.renderer = g_cfg.video.renderer.to_string();
+	title_data.vulkan_adapter = g_cfg.video.vk.adapter.to_string();
 	title_data.fps = fps;
 
 	return rpcs3::get_formatted_title(title_data);

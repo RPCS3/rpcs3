@@ -981,8 +981,8 @@ void spu_thread::cpu_init()
 	interrupts_enabled.raw() = false;
 	raddr = 0;
 
-	ch_dec_start_timestamp = get_timebased_time(); // ???
-	ch_dec_value = 0;
+	ch_dec_start_timestamp = get_timebased_time();
+	ch_dec_value = option & SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE ? ~static_cast<u32>(ch_dec_start_timestamp) : 0;
 
 	if (get_type() >= spu_type::raw)
 	{
@@ -1006,7 +1006,7 @@ void spu_thread::cpu_init()
 	gpr[1]._u32[3] = 0x3FFF0; // initial stack frame pointer
 }
 
-void spu_thread::cpu_stop()
+void spu_thread::cpu_return()
 {
 	if (get_type() >= spu_type::raw)
 	{
@@ -1150,8 +1150,6 @@ void spu_thread::cpu_task()
 			spu_runtime::g_interpreter(*this, _ptr<u8>(0), nullptr);
 		}
 	}
-
-	cpu_stop();
 }
 
 void spu_thread::cpu_mem()
@@ -1190,7 +1188,7 @@ spu_thread::~spu_thread()
 	}
 }
 
-spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated)
+spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)
 	: cpu_thread(idm::last_id())
 	, index(index)
 	, ls([&]()
@@ -1211,6 +1209,7 @@ spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::str
 	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
 	, offset(_ls)
 	, group(group)
+	, option(option)
 	, lv2_id(lv2_id)
 	, spu_tname(stx::shared_cptr<std::string>::make(name))
 {
@@ -2959,7 +2958,7 @@ bool spu_thread::stop_and_signal(u32 code)
 	if (get_type() >= spu_type::raw)
 	{
 		// Save next PC and current SPU Interrupt Status
-		state += cpu_flag::stop + cpu_flag::wait;
+		state += cpu_flag::stop + cpu_flag::wait + cpu_flag::ret;
 		set_status_npc();
 
 		status_npc.notify_one();
@@ -3306,7 +3305,7 @@ bool spu_thread::stop_and_signal(u32 code)
 			{
 				if (thread && thread.get() != this)
 				{
-					thread->state += cpu_flag::stop;
+					thread->state += cpu_flag::stop + cpu_flag::ret;
 					thread_ctrl::raw_notify(*thread);
 				}
 			}
@@ -3317,7 +3316,7 @@ bool spu_thread::stop_and_signal(u32 code)
 			break;
 		}
 
-		state += cpu_flag::stop;
+		state += cpu_flag::stop + cpu_flag::ret;
 		check_state();
 		return true;
 	}
@@ -3337,7 +3336,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		spu_log.trace("sys_spu_thread_exit(status=0x%x)", value);
 		last_exit_status.release(value);
 		set_status_npc();
-		state += cpu_flag::stop;
+		state += cpu_flag::stop + cpu_flag::ret;
 		check_state();
 		return true;
 	}

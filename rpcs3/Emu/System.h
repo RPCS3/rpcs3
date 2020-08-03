@@ -60,6 +60,7 @@ class Emulator final
 	atomic_t<u64> m_pause_start_time{0}; // set when paused
 	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
 
+	std::string m_config_override_path;
 	std::string m_path;
 	std::string m_path_old;
 	std::string m_title_id;
@@ -212,6 +213,8 @@ public:
 
 	bool HasGui() const { return m_has_gui; }
 	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
+
+	void SetConfigOverride(std::string path) { m_config_override_path = std::move(path); }
 
 	std::string GetFormattedTitle(double fps) const;
 

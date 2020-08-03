@@ -262,7 +262,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 			if (get_current_cpu_thread() == this)
 			{
 				// TODO
-				state += cpu_flag::stop;
+				state += cpu_flag::stop + cpu_flag::ret;
 				return true;
 			}
 
@@ -270,7 +270,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 
 			if (status_npc.load().status & SPU_STATUS_RUNNING)
 			{
-				state += cpu_flag::stop;
+				state += cpu_flag::stop + cpu_flag::ret;
 
 				for (status_npc_sync_var old; (old = status_npc).status & SPU_STATUS_RUNNING;)
 				{

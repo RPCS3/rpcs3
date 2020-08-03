@@ -2744,19 +2744,41 @@ public:
 	}
 
 	// TODO: Support doubles
-	auto fre(value_t<f32[4]> a)
+	template <typename T, typename = std::enable_if_t<llvm_value_t<typename T::type>::esize == 32u && llvm_value_t<typename T::type>::is_float>>
+	auto fre(T a)
 	{
-		decltype(a) result;
+		value_t<typename T::type> result;
 		const auto av = a.eval(m_ir);
 		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rcp.ps", av->getType(), av->getType()).getCallee(), {av});
 		return result;
 	}
 
-	auto frsqe(value_t<f32[4]> a)
+	template <typename T, typename = std::enable_if_t<llvm_value_t<typename T::type>::esize == 32u && llvm_value_t<typename T::type>::is_float>>
+	auto frsqe(T a)
 	{
-		decltype(a) result;
+		value_t<typename T::type> result;
 		const auto av = a.eval(m_ir);
 		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rsqrt.ps", av->getType(), av->getType()).getCallee(), {av});
+		return result;
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<typename T::type, typename U::type> && llvm_value_t<typename T::type>::esize == 32u && llvm_value_t<typename T::type>::is_float>>
+	auto fmax(T a, U b)
+	{
+		value_t<typename T::type> result;
+		const auto av = a.eval(m_ir);
+		const auto bv = b.eval(m_ir);
+		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.max.ps", av->getType(), av->getType(), av->getType()).getCallee(), {av, bv});
+		return result;
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<typename T::type, typename U::type> && llvm_value_t<typename T::type>::esize == 32u && llvm_value_t<typename T::type>::is_float>>
+	auto fmin(T a, U b)
+	{
+		value_t<typename T::type> result;
+		const auto av = a.eval(m_ir);
+		const auto bv = b.eval(m_ir);
+		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.min.ps", av->getType(), av->getType(), av->getType()).getCallee(), {av, bv});
 		return result;
 	}
 
@@ -2837,7 +2859,7 @@ public:
 	}
 
 	template <typename R = v128>
-	R get_const_vector(llvm::Constant*, u32 a, u32 b);
+	std::pair<bool, R> get_const_vector(llvm::Value*, u32 a, u32 b);
 
 	template <typename T = v128>
 	llvm::Constant* make_const_vector(T, llvm::Type*);

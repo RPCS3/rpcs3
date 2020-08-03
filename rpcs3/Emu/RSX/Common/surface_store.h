@@ -52,6 +52,8 @@ namespace rsx
 		bool m_invalidate_on_write = false;
 		bool m_skip_write_updates = false;
 
+		rsx::surface_raster_type m_active_raster_type = rsx::surface_raster_type::linear;
+
 	public:
 		std::pair<u8, u8> m_bound_render_targets_config = {};
 		std::array<std::pair<u32, surface_type>, 4> m_bound_render_targets = {};
@@ -672,6 +674,7 @@ namespace rsx
 			u32 clip_horizontal_reg, u32 clip_vertical_reg,
 			surface_target set_surface_target,
 			surface_antialiasing antialias,
+			surface_raster_type raster_type,
 			const std::array<u32, 4> &surface_addresses, u32 address_z,
 			const std::array<u32, 4> &surface_pitch, u32 zeta_pitch,
 			Args&&... extra_params)
@@ -681,6 +684,7 @@ namespace rsx
 
 			cache_tag = rsx::get_shared_tag();
 			m_invalidate_on_write = (antialias != rsx::surface_antialiasing::center_1_sample);
+			m_active_raster_type = raster_type;
 			m_bound_buffers_count = 0;
 
 			// Make previous RTTs sampleable
@@ -995,7 +999,7 @@ namespace rsx
 					auto& surface = m_bound_render_targets[i].second;
 					if (surface->last_use_tag != write_tag)
 					{
-						m_bound_render_targets[i].second->on_write(write_tag);
+						m_bound_render_targets[i].second->on_write(write_tag, surface_state_flags::require_resolve, m_active_raster_type);
 					}
 					else if (m_invalidate_on_write)
 					{
@@ -1011,7 +1015,7 @@ namespace rsx
 				auto& surface = m_bound_depth_stencil.second;
 				if (surface->last_use_tag != write_tag)
 				{
-					m_bound_depth_stencil.second->on_write(write_tag);
+					m_bound_depth_stencil.second->on_write(write_tag, surface_state_flags::require_resolve, m_active_raster_type);
 				}
 				else if (m_invalidate_on_write)
 				{

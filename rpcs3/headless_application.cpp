@@ -1,6 +1,7 @@
 ﻿#include "headless_application.h"
 
 #include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/Cell/Modules/cellOskDialog.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
@@ -54,7 +55,38 @@ void headless_application::InitializeCallbacks()
 		RequestCallAfter(std::move(func));
 	};
 
-	callbacks.get_gs_frame                   = []() -> std::unique_ptr<GSFrameBase> { return std::unique_ptr<GSFrameBase>(); };
+	callbacks.init_gs_render = []()
+	{
+		switch (video_renderer type = g_cfg.video.renderer)
+		{
+		case video_renderer::null:
+		{
+			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
+			break;
+		}
+		case video_renderer::opengl:
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+		case video_renderer::vulkan:
+#endif
+		{
+			fmt::throw_exception("Headless mode can only be used with the %s video renderer. Current renderer: %s", video_renderer::null, type);
+		}
+		default:
+		{
+			fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+		}
+		}
+	};
+
+	callbacks.get_gs_frame = []() -> std::unique_ptr<GSFrameBase>
+	{
+		if (g_cfg.video.renderer != video_renderer::null)
+		{
+			fmt::throw_exception("Headless mode can only be used with the %s video renderer. Current renderer: %s", video_renderer::null, g_cfg.video.renderer.get());
+		}
+		return std::unique_ptr<GSFrameBase>();
+	};
+
 	callbacks.get_msg_dialog                 = []() -> std::shared_ptr<MsgDialogBase> { return std::shared_ptr<MsgDialogBase>(); };
 	callbacks.get_osk_dialog                 = []() -> std::shared_ptr<OskDialogBase> { return std::shared_ptr<OskDialogBase>(); };
 	callbacks.get_save_dialog                = []() -> std::unique_ptr<SaveDialogBase> { return std::unique_ptr<SaveDialogBase>(); };

@@ -342,6 +342,7 @@ namespace rsx
 		rsx::surface_color_format color_format;
 		rsx::surface_depth_format depth_format;
 		rsx::surface_antialiasing aa_mode;
+		rsx::surface_raster_type raster_type;
 		u32 aa_factors[2];
 		bool depth_float;
 		bool ignore_change;
