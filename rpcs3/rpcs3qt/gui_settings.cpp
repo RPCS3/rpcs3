@@ -26,23 +26,6 @@ gui_settings::gui_settings(QObject* parent) : settings(parent)
 	}
 }
 
-QString gui_settings::GetCurrentUser()
-{
-	// load user
-	bool is_valid_user;
-	const QString user = GetValue(gui::um_active_user).toString();
-	const u32 user_id = user.toInt(&is_valid_user);
-
-	// set user if valid
-	if (is_valid_user && user_id > 0)
-	{
-		return user;
-	}
-
-	cfg_log.fatal("Could not parse user setting: '%s' = '%d'.", user.toStdString(), user_id);
-	return QString();
-}
-
 bool gui_settings::ChangeToConfig(const QString& config_name)
 {
 	if (m_current_name == config_name)

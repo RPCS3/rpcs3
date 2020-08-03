@@ -10,6 +10,7 @@
 #include <QLabel>
 
 class gui_settings;
+class persistent_settings;
 
 //Display a list of SaveData. Would need to be initialized.
 //Can also be used as a Save Data Chooser.
@@ -41,6 +42,7 @@ private:
 	std::vector<SaveDataEntry> m_save_entries;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
+	std::shared_ptr<persistent_settings> m_persistent_settings;
 
 	int m_sort_column = 0;
 	bool m_sort_ascending = true;

@@ -70,11 +70,11 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 
 	// Create connects
 	connect(ui->patch_filter, &QLineEdit::textChanged, this, &patch_manager_dialog::filter_patches);
-	connect(ui->patch_tree, &QTreeWidget::currentItemChanged, this, &patch_manager_dialog::on_item_selected);
-	connect(ui->patch_tree, &QTreeWidget::itemChanged, this, &patch_manager_dialog::on_item_changed);
-	connect(ui->patch_tree, &QTreeWidget::customContextMenuRequested, this, &patch_manager_dialog::on_custom_context_menu_requested);
-	connect(ui->cb_enable_legacy_patches, &QCheckBox::stateChanged, this, &patch_manager_dialog::on_legacy_patches_enabled);
-	connect(ui->cb_owned_games_only, &QCheckBox::stateChanged, this, &patch_manager_dialog::on_show_owned_games_only);
+	connect(ui->patch_tree, &QTreeWidget::currentItemChanged, this, &patch_manager_dialog::handle_item_selected);
+	connect(ui->patch_tree, &QTreeWidget::itemChanged, this, &patch_manager_dialog::handle_item_changed);
+	connect(ui->patch_tree, &QTreeWidget::customContextMenuRequested, this, &patch_manager_dialog::handle_custom_context_menu_requested);
+	connect(ui->cb_enable_legacy_patches, &QCheckBox::stateChanged, this, &patch_manager_dialog::handle_legacy_patches_enabled);
+	connect(ui->cb_owned_games_only, &QCheckBox::stateChanged, this, &patch_manager_dialog::handle_show_owned_games_only);
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
 	{
@@ -423,7 +423,7 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 	ui->label_app_version->setText(info.app_version);
 }
 
-void patch_manager_dialog::on_item_selected(QTreeWidgetItem *current, QTreeWidgetItem * /*previous*/)
+void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeWidgetItem * /*previous*/)
 {
 	if (!current)
 	{
@@ -487,7 +487,7 @@ void patch_manager_dialog::on_item_selected(QTreeWidgetItem *current, QTreeWidge
 	update_patch_info(info);
 }
 
-void patch_manager_dialog::on_item_changed(QTreeWidgetItem *item, int /*column*/)
+void patch_manager_dialog::handle_item_changed(QTreeWidgetItem *item, int /*column*/)
 {
 	if (!item)
 	{
@@ -531,13 +531,13 @@ void patch_manager_dialog::on_item_changed(QTreeWidgetItem *item, int /*column*/
 		if (!container.is_legacy && container.patch_info_map.find(description) != container.patch_info_map.end())
 		{
 			m_map[hash].patch_info_map[description].titles[title][serial][app_version] = enabled;
-			on_item_selected(item, nullptr);
+			handle_item_selected(item, nullptr);
 			return;
 		}
 	}
 }
 
-void patch_manager_dialog::on_custom_context_menu_requested(const QPoint &pos)
+void patch_manager_dialog::handle_custom_context_menu_requested(const QPoint &pos)
 {
 	QTreeWidgetItem* item = ui->patch_tree->itemAt(pos);
 
@@ -773,12 +773,12 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 	}
 }
 
-void patch_manager_dialog::on_legacy_patches_enabled(int state)
+void patch_manager_dialog::handle_legacy_patches_enabled(int state)
 {
 	m_legacy_patches_enabled = state == Qt::CheckState::Checked;
 }
 
-void patch_manager_dialog::on_show_owned_games_only(int state)
+void patch_manager_dialog::handle_show_owned_games_only(int state)
 {
 	m_show_owned_games_only = state == Qt::CheckState::Checked;
 	m_gui_settings->SetValue(gui::pm_show_owned, m_show_owned_games_only);

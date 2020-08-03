@@ -8,6 +8,7 @@
 #include <QTableWidget>
 
 class gui_settings;
+class persistent_settings;
 
 class save_manager_dialog : public QDialog
 {
@@ -19,7 +20,7 @@ public:
 	* Plus, there's the added complexity of an additional way in which the dialog will spawn differently.
 	* There'll be some duplicated code.  But, in the future, there'll be no duplicated code. So, I don't care.
 	*/
-	explicit save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::string dir = "", QWidget* parent = nullptr);
+	explicit save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, std::string dir = "", QWidget* parent = nullptr);
 public Q_SLOTS:
 	void HandleRepaintUiRequest();
 private Q_SLOTS:
@@ -42,6 +43,7 @@ private:
 	std::vector<SaveDataEntry> m_save_entries;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
+	std::shared_ptr<persistent_settings> m_persistent_settings;
 
 	int m_sort_column = 1;
 	bool m_sort_ascending = true;
