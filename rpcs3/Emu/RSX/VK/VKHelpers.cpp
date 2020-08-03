@@ -66,9 +66,8 @@ namespace vk
 	const context* g_current_vulkan_ctx = nullptr;
 	const render_device* g_current_renderer;
 
-	std::unique_ptr<image> g_null_texture;
 	std::unique_ptr<buffer> g_scratch_buffer;
-	std::unordered_map<VkImageViewType, std::unique_ptr<image_view>> g_null_image_views;
+	std::unordered_map<VkImageViewType, std::unique_ptr<viewable_image>> g_null_image_views;
 	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
 	std::unordered_map<u32, std::unique_ptr<vk::compute_task>> g_compute_tasks;
 	std::unordered_map<u32, std::unique_ptr<vk::overlay_pass>> g_overlay_passes;
@@ -292,27 +291,57 @@ namespace vk
 		if (auto found = g_null_image_views.find(type);
 			found != g_null_image_views.end())
 		{
-			return found->second.get();
+			return found->second->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector);
 		}
 
-		if (!g_null_texture)
+		VkImageType image_type;
+		u32 num_layers = 1;
+		u32 flags = 0;
+		u16 size = 4;
+
+		switch (type)
 		{
-			g_null_texture = std::make_unique<image>(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
-
-			// Initialize memory to transparent black
-			VkClearColorValue clear_color = {};
-			VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-			change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-			vkCmdClearColorImage(cmd, g_null_texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
-
-			// Prep for shader access
-			change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
+		case VK_IMAGE_VIEW_TYPE_1D:
+			image_type = VK_IMAGE_TYPE_1D;
+			size = 1;
+			break;
+		case VK_IMAGE_VIEW_TYPE_2D:
+			image_type = VK_IMAGE_TYPE_2D;
+			break;
+		case VK_IMAGE_VIEW_TYPE_3D:
+			image_type = VK_IMAGE_TYPE_3D;
+			break;
+		case VK_IMAGE_VIEW_TYPE_CUBE:
+			image_type = VK_IMAGE_TYPE_2D;
+			flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+			num_layers = 6;
+			break;
+		case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
+			image_type = VK_IMAGE_TYPE_2D;
+			num_layers = 2;
+			break;
+		default:
+			rsx_log.fatal("Unexpected image view type 0x%x", static_cast<u32>(type));
+			return nullptr;
 		}
 
-		auto& ret = g_null_image_views[type] = std::make_unique<image_view>(*g_current_renderer, g_null_texture.get(), type);
-		return ret.get();
+		auto& tex = g_null_image_views[type];
+		tex = std::make_unique<viewable_image>(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			image_type, VK_FORMAT_B8G8R8A8_UNORM, size, size, 1, 1, num_layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, flags);
+
+		// Initialize memory to transparent black
+		tex->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+		VkClearColorValue clear_color = {};
+		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+		vkCmdClearColorImage(cmd, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+
+		// Prep for shader access
+		tex->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		// Return view
+		return tex->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector);
 	}
 
 	vk::image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height)
@@ -409,7 +438,6 @@ namespace vk
 		vk::vmm_reset();
 		vk::get_resource_manager()->destroy();
 
-		g_null_texture.reset();
 		g_null_image_views.clear();
 		g_scratch_buffer.reset();
 		g_upload_heap.destroy();
@@ -791,7 +819,7 @@ namespace vk
 	{
 		if (image->current_layout == new_layout) return;
 
-		change_image_layout(cmd, image->value, image->current_layout, new_layout, { image->aspect(), 0, 1, 0, 1 });
+		change_image_layout(cmd, image->value, image->current_layout, new_layout, { image->aspect(), 0, image->mipmaps(), 0, image->layers() });
 		image->current_layout = new_layout;
 	}
 
