@@ -38,7 +38,7 @@ std::pair<YAML::Node, std::string> yaml_load(const std::string& from)
 	}
 	catch(const std::exception& e)
 	{
-		return{YAML::Node(), std::string("YAML exception:\n") + e.what()};
+		return{YAML::Node(), std::string("YAML exception: ") + e.what()};
 	}
 
 	return{result, ""};
