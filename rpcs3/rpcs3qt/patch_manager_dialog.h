@@ -42,11 +42,11 @@ public:
 
 private Q_SLOTS:
 	void filter_patches(const QString& term);
-	void on_item_selected(QTreeWidgetItem *current, QTreeWidgetItem *previous);
-	void on_item_changed(QTreeWidgetItem *item, int column);
-	void on_custom_context_menu_requested(const QPoint& pos);
-	void on_legacy_patches_enabled(int state);
-	void on_show_owned_games_only(int state);
+	void handle_item_selected(QTreeWidgetItem *current, QTreeWidgetItem *previous);
+	void handle_item_changed(QTreeWidgetItem *item, int column);
+	void handle_custom_context_menu_requested(const QPoint& pos);
+	void handle_legacy_patches_enabled(int state);
+	void handle_show_owned_games_only(int state);
 
 private:
 	void refresh(bool restore_layout = false);

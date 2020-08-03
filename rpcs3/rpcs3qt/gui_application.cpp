@@ -58,8 +58,14 @@ void gui_application::Init()
 	m_gui_settings.reset(new gui_settings());
 	m_persistent_settings.reset(new persistent_settings());
 
+	// Get deprecated active user (before August 2nd 2020)
+	QString active_user = m_gui_settings->GetValue(gui::um_active_user).toString();
+
+	// Get active user with deprecated active user as fallback
+	active_user = m_persistent_settings->GetCurrentUser(active_user.isEmpty() ? "00000001" : active_user);
+
 	// Force init the emulator
-	InitializeEmulator(m_gui_settings->GetCurrentUser().toStdString(), true, m_show_gui);
+	InitializeEmulator(active_user.toStdString(), true, m_show_gui);
 
 	// Create the main window
 	if (m_show_gui)

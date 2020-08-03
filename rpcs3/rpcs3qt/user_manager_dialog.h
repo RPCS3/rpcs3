@@ -7,12 +7,13 @@
 #include <QTableWidget>
 
 class gui_settings;
+class persistent_settings;
 
 class user_manager_dialog : public QDialog
 {
 	Q_OBJECT
 public:
-	explicit user_manager_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = nullptr);
+	explicit user_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent = nullptr);
 Q_SIGNALS:
 	void OnUserLoginSuccess();
 private Q_SLOTS:
@@ -39,6 +40,7 @@ private:
 	std::map<u32, UserAccount> m_user_list;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
+	std::shared_ptr<persistent_settings> m_persistent_settings;
 
 	int m_sort_column = 1;
 	bool m_sort_ascending = true;
