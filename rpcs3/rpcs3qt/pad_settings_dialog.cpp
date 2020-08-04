@@ -238,6 +238,9 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 
 	// Resize in order to fit into our scroll area
 	ResizeDialog();
+
+	// Restrict out inner layout size. This is necessary because redrawing things will slow down the dialog otherwise.
+	ui->mainLayout->setSizeConstraint(QLayout::SizeConstraint::SetFixedSize);
 }
 
 pad_settings_dialog::~pad_settings_dialog()
@@ -1002,7 +1005,8 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 			entry.second.text = qstr(entry.second.key);
 		}
 
-		m_padButtons->button(entry.first)->setText(entry.second.text);
+		// The button has to contain at least a space, because it would be square'ish otherwise
+		m_padButtons->button(entry.first)->setText(entry.second.text.isEmpty() ? QStringLiteral(" ") : entry.second.text);
 	}
 }
 
