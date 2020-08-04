@@ -491,21 +491,25 @@ bool main_window::InstallRapFile(const QString& path, const std::string& filenam
 	return fs::copy_file(sstr(path), Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + filename, true);
 }
 
-void main_window::InstallPackages(QStringList file_paths, bool show_confirm)
+void main_window::InstallPackages(QStringList file_paths)
 {
 	if (file_paths.isEmpty())
 	{
+		// If this function was called without a path, ask the user for files to install.
 		const QString path_last_pkg = m_gui_settings->GetValue(gui::fd_install_pkg).toString();
-		const QStringList file_path = QFileDialog::getOpenFileNames(this, tr("Select packages and/or rap files to install"),
+		const QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select packages and/or rap files to install"),
 			path_last_pkg, tr("All relevant (*.pkg *.rap);;Package files (*.pkg);;Rap files (*.rap);;All files (*.*)"));
 
-		if (!file_path.isEmpty())
+		if (paths.isEmpty())
 		{
-			file_paths.append(file_path);
+			return;
 		}
+
+		file_paths.append(paths);
 	}
-	else if (show_confirm)
+	else if (file_paths.count() == 1)
 	{
+		// This can currently only happen by drag and drop.
 		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(file_paths.front()),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
@@ -514,36 +518,53 @@ void main_window::InstallPackages(QStringList file_paths, bool show_confirm)
 		}
 	}
 
-	if (!file_paths.isEmpty())
+	// Install rap files if available
+	for (const auto& rap : file_paths.filter(QRegExp(".*\\.rap")))
 	{
-		for (const auto& rap : file_paths.filter(QRegExp(".*\\.rap")))
+		const QFileInfo file_info(rap);
+		const std::string rapname = sstr(file_info.fileName());
+
+		if (InstallRapFile(rap, rapname))
 		{
-			const QFileInfo file_info(rap);
-			const std::string rapname = sstr(file_info.fileName());
-
-			if (InstallRapFile(rap, rapname))
-			{
-				gui_log.success("Successfully copied rap file: %s", rapname);
-			}
-			else
-			{
-				gui_log.warning("Could not copy rap file: %s", rapname);
-			}
-
-			m_gui_settings->SetValue(gui::fd_install_pkg, file_info.path());
+			gui_log.success("Successfully copied rap file: %s", rapname);
+		}
+		else
+		{
+			gui_log.error("Could not copy rap file: %s", rapname);
 		}
 
-		file_paths = file_paths.filter(QRegExp(".*\\.pkg"));
-
-		if (!file_paths.isEmpty())
-		{
-			// Handle the actual installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
-			QTimer::singleShot(0, [this, file_paths]()
-			{
-				HandlePackageInstallation(file_paths);
-			});
-		}
+		m_gui_settings->SetValue(gui::fd_install_pkg, file_info.path());
 	}
+
+	// Find remaining package files
+	file_paths = file_paths.filter(QRegExp(".*\\.pkg"));
+
+	if (file_paths.isEmpty())
+	{
+		return;
+	}
+
+	// Let the user choose the packages to install and select the order in which they shall be installed.
+	if (file_paths.size() > 1)
+	{
+		pkg_install_dialog dlg(file_paths, this);
+		connect(&dlg, &QDialog::accepted, [&file_paths, &dlg]()
+		{
+			file_paths = dlg.GetPathsToInstall();
+		});
+		dlg.exec();
+	}
+
+	if (file_paths.empty())
+	{
+		return;
+	}
+
+	// Handle the actual installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
+	QTimer::singleShot(0, [this, file_paths]()
+	{
+		HandlePackageInstallation(file_paths);
+	});
 }
 
 void main_window::HandlePackageInstallation(QStringList file_paths)
@@ -2321,23 +2342,7 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_pkg: // install the packages
 	{
-		if (drop_paths.count() > 1)
-		{
-			pkg_install_dialog dlg(drop_paths, this);
-			connect(&dlg, &QDialog::accepted, [this, &dlg]()
-			{
-				const QStringList paths = dlg.GetPathsToInstall();
-				if (!paths.isEmpty())
-				{
-					InstallPackages(paths, false);
-				}
-			});
-			dlg.exec();
-		}
-		else
-		{
-			InstallPackages(drop_paths, true);
-		}
+		InstallPackages(drop_paths);
 		break;
 	}
 	case drop_type::drop_pup: // install the firmware

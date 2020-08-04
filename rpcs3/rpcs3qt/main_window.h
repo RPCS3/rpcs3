@@ -133,7 +133,7 @@ private:
 
 	static bool InstallRapFile(const QString& path, const std::string& filename);
 
-	void InstallPackages(QStringList file_paths = QStringList(), bool show_confirm = true);
+	void InstallPackages(QStringList file_paths = QStringList());
 	void HandlePackageInstallation(QStringList file_paths = QStringList());
 
 	void InstallPup(QString filePath = "");
