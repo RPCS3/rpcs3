@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>22</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -392,7 +392,7 @@
   </action>
   <action name="bootInstallPkgAct">
    <property name="text">
-    <string>Install .pkg</string>
+    <string>Install Packages/Raps</string>
    </property>
    <property name="toolTip">
     <string>Install application from a .pkg file</string>
