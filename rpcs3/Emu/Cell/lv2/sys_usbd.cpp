@@ -173,7 +173,10 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x1415, 0x0000, 0x0000, "Singstar Microphone");
 		check_device(0x12BA, 0x0100, 0x0100, "Guitar Hero Guitar");
 		check_device(0x12BA, 0x0120, 0x0120, "Guitar Hero Drums");
-		found_ghltar = check_device(0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar");
+		if (check_device(0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar"))
+		{
+			found_ghltar = true;
+		}
 
 		check_device(0x12BA, 0x0140, 0x0140, "DJ Hero Turntable");
 		check_device(0x12BA, 0x0200, 0x020F, "Harmonix Guitar");
