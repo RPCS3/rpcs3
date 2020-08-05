@@ -139,7 +139,6 @@ namespace rsx
 
 		std::unique_ptr<typename std::remove_pointer<image_storage_type>::type> resolve_surface;
 		surface_sample_layout sample_layout = surface_sample_layout::null;
-		surface_raster_type raster_type = surface_raster_type::linear;
 
 		flags32_t memory_usage_flags = surface_usage_flags::unknown;
 		flags32_t state_flags = surface_state_flags::ready;
@@ -507,9 +506,7 @@ namespace rsx
 			}
 		}
 
-		void on_write(u64 write_tag = 0,
-			rsx::surface_state_flags resolve_flags = surface_state_flags::require_resolve,
-			surface_raster_type type = rsx::surface_raster_type::undefined)
+		void on_write(u64 write_tag = 0, rsx::surface_state_flags resolve_flags = surface_state_flags::require_resolve)
 		{
 			if (write_tag)
 			{
@@ -532,18 +529,11 @@ namespace rsx
 			{
 				clear_rw_barrier();
 			}
-
-			if (type != rsx::surface_raster_type::undefined)
-			{
-				raster_type = type;
-			}
 		}
 
-		void on_write_copy(u64 write_tag = 0,
-			bool keep_optimizations = false,
-			surface_raster_type type = rsx::surface_raster_type::undefined)
+		void on_write_copy(u64 write_tag = 0, bool keep_optimizations = false)
 		{
-			on_write(write_tag, rsx::surface_state_flags::require_unresolve, type);
+			on_write(write_tag, rsx::surface_state_flags::require_unresolve);
 
 			if (!keep_optimizations && is_depth_surface())
 			{

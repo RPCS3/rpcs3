@@ -163,7 +163,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	m_rtts.prepare_render_target(cmd,
 		m_framebuffer_layout.color_format, m_framebuffer_layout.depth_format,
 		m_framebuffer_layout.width, m_framebuffer_layout.height,
-		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode, m_framebuffer_layout.raster_type,
+		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode,
 		m_framebuffer_layout.color_addresses, m_framebuffer_layout.zeta_address,
 		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch);
 

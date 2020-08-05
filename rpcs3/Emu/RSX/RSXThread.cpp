@@ -1119,10 +1119,10 @@ namespace rsx
 		u32 minimum_color_pitch = 64u;
 		u32 minimum_zeta_pitch = 64u;
 
-		switch (layout.raster_type = rsx::method_registers.surface_type())
+		switch (const auto mode = rsx::method_registers.surface_type())
 		{
 		default:
-			rsx_log.error("Unknown raster mode 0x%x", static_cast<u32>(layout.raster_type));
+			rsx_log.error("Unknown raster mode 0x%x", static_cast<u32>(mode));
 			[[fallthrough]];
 		case rsx::surface_raster_type::linear:
 			break;

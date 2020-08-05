@@ -61,7 +61,6 @@ namespace rsx
 
 	enum class surface_raster_type : u8
 	{
-		undefined = 0,
 		linear = 1,
 		swizzle = 2,
 	};
