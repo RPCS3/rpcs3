@@ -1089,6 +1089,7 @@ namespace rsx
 
 			gcm_format = 0;
 			pack_unpack_swap_bytes = false;
+			swizzled = false;
 
 			sync_timestamp = 0ull;
 			synchronized = false;
