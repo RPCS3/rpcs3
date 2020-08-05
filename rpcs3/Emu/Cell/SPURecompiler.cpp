@@ -7620,7 +7620,7 @@ public:
 	void FA(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) + get_vr<f64[4]>(op.rb));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) + get_vr<f64[4]>(op.rb) + fsplat<f64[4]>(0.));
 		else
 			set_vr(op.rt, get_vr<f32[4]>(op.ra) + get_vr<f32[4]>(op.rb));
 	}
@@ -7628,7 +7628,7 @@ public:
 	void FS(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) - get_vr<f64[4]>(op.rb));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) - get_vr<f64[4]>(op.rb) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto b = eval(clamp_smax(get_vr<f32[4]>(op.rb))); // for #4478
@@ -7641,7 +7641,7 @@ public:
 	void FM(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = get_vr<f32[4]>(op.ra);
@@ -7795,7 +7795,7 @@ public:
 	{
 		// See FMA.
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(eval(-get_vr<f64[4]>(op.ra)), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
+			set_vr(op.rt4, fmuladd(eval(-get_vr<f64[4]>(op.ra)), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = eval(clamp_smax(get_vr<f32[4]>(op.ra)));
@@ -7810,7 +7810,7 @@ public:
 	{
 		// Hardware FMA produces the same result as multiple + add on the limited double range (xfloat).
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
+			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = get_vr<f32[4]>(op.ra);
@@ -7829,7 +7829,7 @@ public:
 	{
 		// See FMA.
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))));
+			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = eval(clamp_smax(get_vr<f32[4]>(op.ra)));
