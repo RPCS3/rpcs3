@@ -333,31 +333,6 @@ namespace gl
 				}
 			}
 
-			if (is_swizzled())
-			{
-				// This format is completely worthless to CPU processing algorithms where cache lines on die are linear.
-				// If this is happening, usually it means it was not a planned readback (e.g shared pages situation)
-				rsx_log.warning("[Performance warning] CPU readback of swizzled data");
-
-				// Read-modify-write to avoid corrupting already resident memory outside texture region
-				std::vector<u8> tmp_data(rsx_pitch * height);
-				std::memcpy(tmp_data.data(), dst, tmp_data.size());
-
-				switch (type)
-				{
-				case gl::texture::type::uint_8_8_8_8:
-				case gl::texture::type::uint_24_8:
-					rsx::convert_linear_swizzle<u32, false>(tmp_data.data(), dst, width, height, rsx_pitch);
-					break;
-				case gl::texture::type::ushort_5_6_5:
-				case gl::texture::type::ushort:
-					rsx::convert_linear_swizzle<u16, false>(tmp_data.data(), dst, width, height, rsx_pitch);
-					break;
-				default:
-					rsx_log.error("Unexpected swizzled texture format 0x%x", static_cast<u32>(format));
-				}
-			}
-
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
 				// Update memory tag
