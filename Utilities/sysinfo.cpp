@@ -64,6 +64,13 @@ bool utils::has_avx512()
 	return g_value;
 }
 
+bool utils::has_avx512_icl()
+{
+	// Check AVX512IFMA, AVX512VBMI, AVX512VBMI2, AVX512VPOPCNTDQ, AVX512BITALG, AVX512VNNI, AVX512VPCLMULQDQ, AVX512GFNI, AVX512VAES (Icelake-client level support)
+	static const bool g_value = has_avx512() && (get_cpuid(7, 0)[1] & 0x00200000) == 0x00200000 && (get_cpuid(7, 0)[2] & 0x00005f42) == 0x00005f42;
+	return g_value;
+}
+
 bool utils::has_xop()
 {
 	static const bool g_value = has_avx() && get_cpuid(0x80000001, 0)[2] & 0x800;
@@ -145,12 +152,16 @@ std::string utils::get_system_info()
 	{
 		result += " | AVX";
 
-		if (has_avx2())
-		{
-			result += '+';
-		}
-
 		if (has_avx512())
+		{
+			result += "-512";
+
+			if (has_avx512_icl())
+			{
+				result += '+';
+			}
+		}
+		else if (has_avx2())
 		{
 			result += '+';
 		}
