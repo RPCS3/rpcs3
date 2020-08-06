@@ -94,6 +94,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_list->setAlternatingRowColors(true);
 	m_game_list->installEventFilter(this);
 	m_game_list->setColumnCount(gui::column_count);
+	m_game_list->horizontalHeader()->setSectionResizeMode(gui::column_icon, QHeaderView::Fixed);
 
 	m_game_compat = new game_compatibility(m_gui_settings, this);
 
@@ -363,7 +364,9 @@ void game_list_frame::SortGameList()
 	// Fixate vertical header and row height
 	m_game_list->verticalHeader()->setMinimumSectionSize(m_icon_size.height());
 	m_game_list->verticalHeader()->setMaximumSectionSize(m_icon_size.height());
-	m_game_list->resizeRowsToContents();
+
+	// Removed for better performance. I can't see any visual difference with and without this code
+	// m_game_list->resizeRowsToContents();
 
 	// Resize columns if the game list was empty before
 	if (!old_row_count && !old_game_count)
@@ -374,9 +377,6 @@ void game_list_frame::SortGameList()
 	{
 		m_game_list->resizeColumnToContents(gui::column_icon);
 	}
-
-	// Fixate icon column
-	m_game_list->horizontalHeader()->setSectionResizeMode(gui::column_icon, QHeaderView::Fixed);
 
 	// Shorten the last section to remove horizontal scrollbar if possible
 	m_game_list->resizeColumnToContents(gui::column_count - 1);
