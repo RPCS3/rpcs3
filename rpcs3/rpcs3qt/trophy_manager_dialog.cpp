@@ -89,6 +89,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_table->setHorizontalHeaderLabels(QStringList{ tr("Icon"), tr("Game"), tr("Progress") });
 	m_game_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	m_game_table->horizontalHeader()->setStretchLastSection(true);
+	m_game_table->horizontalHeader()->setSectionResizeMode(GameColumns::GameIcon, QHeaderView::Fixed);
 	m_game_table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	m_game_table->verticalHeader()->setVisible(false);
 	m_game_table->setAlternatingRowColors(true);
@@ -110,6 +111,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_trophy_table->setHorizontalHeaderLabels(QStringList{ tr("Icon"), tr("Name"), tr("Description"), tr("Type"), tr("Status"), tr("ID"), tr("Platinum Relevant") });
 	m_trophy_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	m_trophy_table->horizontalHeader()->setStretchLastSection(true);
+	m_trophy_table->horizontalHeader()->setSectionResizeMode(TrophyColumns::Icon, QHeaderView::Fixed);
 	m_trophy_table->verticalHeader()->setVisible(false);
 	m_trophy_table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	m_trophy_table->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -886,11 +888,12 @@ void trophy_manager_dialog::ReadjustGameTable()
 	// Fixate vertical header and row height
 	m_game_table->verticalHeader()->setMinimumSectionSize(m_game_icon_size.height());
 	m_game_table->verticalHeader()->setMaximumSectionSize(m_game_icon_size.height());
-	m_game_table->resizeRowsToContents();
 
-	// Resize and fixate icon column
+	// Removed for better performance. I can't see any visual difference with and without this code
+	// m_game_table->resizeRowsToContents();
+
+	// Resize icon column
 	m_game_table->resizeColumnToContents(GameColumns::GameIcon);
-	m_game_table->horizontalHeader()->setSectionResizeMode(GameColumns::GameIcon, QHeaderView::Fixed);
 
 	// Shorten the last section to remove horizontal scrollbar if possible
 	m_game_table->resizeColumnToContents(GameColumns::GameColumnsCount - 1);
@@ -901,11 +904,12 @@ void trophy_manager_dialog::ReadjustTrophyTable()
 	// Fixate vertical header and row height
 	m_trophy_table->verticalHeader()->setMinimumSectionSize(m_icon_height);
 	m_trophy_table->verticalHeader()->setMaximumSectionSize(m_icon_height);
-	m_trophy_table->resizeRowsToContents();
 
-	// Resize and fixate icon column
+	// Removed for better performance. I can't see any visual difference with and without this code
+	// m_trophy_table->resizeRowsToContents();
+
+	// Resize icon column
 	m_trophy_table->resizeColumnToContents(TrophyColumns::Icon);
-	m_trophy_table->horizontalHeader()->setSectionResizeMode(TrophyColumns::Icon, QHeaderView::Fixed);
 
 	// Shorten the last section to remove horizontal scrollbar if possible
 	m_trophy_table->resizeColumnToContents(TrophyColumns::Count - 1);
