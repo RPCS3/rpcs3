@@ -173,7 +173,10 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x1415, 0x0000, 0x0000, "Singstar Microphone");
 		check_device(0x12BA, 0x0100, 0x0100, "Guitar Hero Guitar");
 		check_device(0x12BA, 0x0120, 0x0120, "Guitar Hero Drums");
-		found_ghltar = check_device(0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar");
+		if (check_device(0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar"))
+		{
+			found_ghltar = true;
+		}
 
 		check_device(0x12BA, 0x0140, 0x0140, "DJ Hero Turntable");
 		check_device(0x12BA, 0x0200, 0x020F, "Harmonix Guitar");
@@ -253,23 +256,26 @@ void usb_handler_thread::operator()()
 
 			u64 timestamp = get_system_time() - Emu.GetPauseTime();
 
-			for (auto it = fake_transfers.begin(); it != fake_transfers.end(); it++)
+			for (auto it = fake_transfers.begin(); it != fake_transfers.end();)
 			{
 				auto transfer = *it;
 
 				ASSERT(transfer->busy && transfer->fake);
 
 				if (transfer->expected_time > timestamp)
+				{
+					++it;
 					continue;
+				}
+
 
 				transfer->result = transfer->expected_result;
 				transfer->count  = transfer->expected_count;
 				transfer->fake   = false;
 				transfer->busy   = false;
 
-				fake_transfers.erase(it--);
-
 				send_message(SYS_USBD_TRANSFER_COMPLETE, transfer->transfer_id);
+				it = fake_transfers.erase(it); // if we've processed this, then we erase this entry (replacing the iterator with the new reference)
 			}
 		}
 
@@ -387,14 +393,13 @@ void usb_handler_thread::check_devices_vs_ldds()
 					continue;
 				}
 
-				sys_usbd.success("Ldd device matchup for <%s>", ldd.name);
-
 				dev->read_descriptors();
+				dev->assigned_number = dev_counter++; // assign current dev_counter, and atomically increment
 
-				dev->assigned_number = dev_counter;
-				handled_devices.emplace(dev_counter, std::pair(UsbInternalDevice{0x00, dev_counter, 0x02, 0x40}, dev));
-				send_message(SYS_USBD_ATTACH, dev_counter);
-				dev_counter++;
+				sys_usbd.success("Ldd device matchup for <%s>, assigned as handled_device=0x%x", ldd.name, dev->assigned_number);
+
+				handled_devices.emplace(dev->assigned_number, std::pair(UsbInternalDevice{0x00, narrow<u8>(dev->assigned_number), 0x02, 0x40}, dev));
+				send_message(SYS_USBD_ATTACH, dev->assigned_number);
 			}
 		}
 	}
