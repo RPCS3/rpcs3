@@ -17,7 +17,7 @@ headless_application::headless_application(int& argc, char** argv) : QCoreApplic
 void headless_application::Init()
 {
 	// Force init the emulator
-	InitializeEmulator("1", true, false); // TODO: get user from cli args if possible
+	InitializeEmulator("00000001", true, false); // TODO: get user from cli args if possible
 
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
