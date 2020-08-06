@@ -537,7 +537,7 @@ void main_window::InstallPackages(QStringList file_paths)
 	}
 
 	// Find remaining package files
-	file_paths = file_paths.filter(QRegExp(".*\\.pkg"));
+	file_paths = file_paths.filter(QRegExp(".*\\.pkg", Qt::CaseInsensitive));
 
 	if (file_paths.isEmpty())
 	{
