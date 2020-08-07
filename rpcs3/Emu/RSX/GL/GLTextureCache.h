@@ -95,6 +95,11 @@ namespace gl
 				ASSERT(!managed_texture);
 			}
 
+			if (auto rtt = dynamic_cast<gl::render_target*>(image))
+			{
+				swizzled = (rtt->raster_type != rsx::surface_raster_type::linear);
+			}
+
 			flushed = false;
 			synchronized = false;
 			sync_timestamp = 0ull;

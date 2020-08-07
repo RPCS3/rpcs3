@@ -66,6 +66,11 @@ namespace vk
 				managed_texture.reset(vram_texture);
 			}
 
+			if (auto rtt = dynamic_cast<vk::render_target*>(image))
+			{
+				swizzled = (rtt->raster_type != rsx::surface_raster_type::linear);
+			}
+
 			if (synchronized)
 			{
 				// Even if we are managing the same vram section, we cannot guarantee contents are static
