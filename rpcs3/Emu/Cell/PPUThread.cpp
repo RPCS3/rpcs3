@@ -1740,7 +1740,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}())
 	{
-		res.notify_all();
+		res.notify_one();
 		return true;
 	}
 
