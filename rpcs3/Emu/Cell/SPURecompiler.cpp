@@ -7483,13 +7483,14 @@ public:
 	}
 
 	// Checks for postive and negative zero, or Denormal (treated as zero)
-	bool is_spu_float_zero(v128 a)
+	// If sign is +-1 check equality againts all sign bits
+	bool is_spu_float_zero(v128 a, int sign = 0)
 	{
 		for (u32 i = 0; i < 4; i++)
 		{
 			const u32 exponent = a._u32[i] & 0x7f800000u;
 
-			if (exponent)
+			if (exponent || (sign && (sign >= 0) != (a._s32[i] >= 0)))
 			{
 				// Normalized number
 				return false;
@@ -7619,7 +7620,7 @@ public:
 	void FA(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) + get_vr<f64[4]>(op.rb));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) + get_vr<f64[4]>(op.rb) + fsplat<f64[4]>(0.));
 		else
 			set_vr(op.rt, get_vr<f32[4]>(op.ra) + get_vr<f32[4]>(op.rb));
 	}
@@ -7627,7 +7628,7 @@ public:
 	void FS(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) - get_vr<f64[4]>(op.rb));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) - get_vr<f64[4]>(op.rb) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto b = eval(clamp_smax(get_vr<f32[4]>(op.rb))); // for #4478
@@ -7640,7 +7641,7 @@ public:
 	void FM(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = get_vr<f32[4]>(op.ra);
@@ -7727,28 +7728,52 @@ public:
 		// This is odd since SPU code could just use the FM instruction, but it seems common enough
 		if (auto [ok, data] = get_const_vector(c.value, m_pos, 4000); ok)
 		{
-			if (is_spu_float_zero(data))
+			if (is_spu_float_zero(data, -1))
 			{
 				r = eval(a * b);
 				return r;
 			}
 		}
 
-		if (auto [ok, data] = get_const_vector(b.value, m_pos, 4000); ok)
+		if ([&]()
 		{
-			if (is_spu_float_zero(data))
+			if (auto [ok, data] = get_const_vector(a.value, m_pos, 4000); ok)
 			{
-				// Just return the added value if either a or b is 0
-				return c;
-			}
-		}
+				if (!is_spu_float_zero(data, +1))
+				{
+					return false;
+				}
 
-		if (auto [ok, data] = get_const_vector(a.value, m_pos, 4000); ok)
-		{
-			if (is_spu_float_zero(data))
-			{
-				return c;
+				if (auto [ok0, data0] = get_const_vector(b.value, m_pos, 4000); ok0)
+				{
+					if (is_spu_float_zero(data0, +1))
+					{
+						return true;
+					}
+				}
 			}
+
+			if (auto [ok, data] = get_const_vector(a.value, m_pos, 4000); ok)
+			{
+				if (!is_spu_float_zero(data, -1))
+				{
+					return false;
+				}
+
+				if (auto [ok0, data0] = get_const_vector(b.value, m_pos, 4000); ok0)
+				{
+					if (is_spu_float_zero(data0, -1))
+					{
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}())
+		{
+			// Just return the added value if both a and b is +0 or -0 (+0 and -0 arent't allowed alone)
+			return c;
 		}
 
 		if (m_use_fma)
@@ -7770,7 +7795,7 @@ public:
 	{
 		// See FMA.
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(eval(-get_vr<f64[4]>(op.ra)), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
+			set_vr(op.rt4, fmuladd(eval(-get_vr<f64[4]>(op.ra)), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = eval(clamp_smax(get_vr<f32[4]>(op.ra)));
@@ -7785,7 +7810,7 @@ public:
 	{
 		// Hardware FMA produces the same result as multiple + add on the limited double range (xfloat).
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
+			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = get_vr<f32[4]>(op.ra);
@@ -7804,7 +7829,7 @@ public:
 	{
 		// See FMA.
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))));
+			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = eval(clamp_smax(get_vr<f32[4]>(op.ra)));
