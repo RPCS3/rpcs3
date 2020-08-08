@@ -535,7 +535,7 @@ package_error package_reader::check_target_app_version()
 			const auto category = psf::get_string(psf, "CATEGORY", "");
 			const auto title_id = psf::get_string(psf, "TITLE_ID", "");
 			const auto app_ver = psf::get_string(psf, "APP_VER", "");
-			auto target_app_ver = psf::get_string(psf, "TARGET_APP_VER", "");
+			const auto target_app_ver = psf::get_string(psf, "TARGET_APP_VER", "");
 
 			if (category != "GD")
 			{
@@ -561,7 +561,7 @@ package_error package_reader::check_target_app_version()
 				return package_error::no_error;
 			}
 
-			const fs::file installed_sfo_file(Emu.GetHddDir() + "game/" + title_id + "/PARAM.SFO");
+			const fs::file installed_sfo_file(Emu.GetHddDir() + "game/" + std::string(title_id) + "/PARAM.SFO");
 			if (!installed_sfo_file)
 			{
 				if (!target_app_ver.empty())
@@ -587,9 +587,9 @@ package_error package_reader::check_target_app_version()
 			}
 
 			std::add_pointer_t<char> ev0, ev1;
-			const double old_version = std::strtod(installed_app_ver.c_str(), &ev0);
+			const double old_version = std::strtod(installed_app_ver.data(), &ev0);
 
-			if (installed_app_ver.c_str() + installed_app_ver.size() != ev0)
+			if (installed_app_ver.data() + installed_app_ver.size() != ev0)
 			{
 				pkg_log.error("Failed to convert the installed app version to double (%s)", installed_app_ver);
 				return package_error::other;
@@ -599,9 +599,9 @@ package_error package_reader::check_target_app_version()
 			{
 				// This is most likely the first patch. Let's make sure its version is high enough for the installed game.
 
-				const double new_version = std::strtod(app_ver.c_str(), &ev1);
+				const double new_version = std::strtod(app_ver.data(), &ev1);
 
-				if (app_ver.c_str() + app_ver.size() != ev1)
+				if (app_ver.data() + app_ver.size() != ev1)
 				{
 					pkg_log.error("Failed to convert the package's app version to double (%s)", app_ver);
 					return package_error::other;
@@ -619,9 +619,9 @@ package_error package_reader::check_target_app_version()
 
 			// Check if the installed app version matches the target app version
 
-			const double target_version = std::strtod(target_app_ver.c_str(), &ev1);
+			const double target_version = std::strtod(target_app_ver.data(), &ev1);
 
-			if (target_app_ver.c_str() + target_app_ver.size() != ev1)
+			if (target_app_ver.data() + target_app_ver.size() != ev1)
 			{
 				pkg_log.error("Failed to convert the package's target app version to double (%s)", target_app_ver);
 				return package_error::other;

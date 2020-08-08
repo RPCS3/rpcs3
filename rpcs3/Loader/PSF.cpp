@@ -265,7 +265,7 @@ namespace psf
 		}
 	}
 
-	std::string get_string(const registry& psf, const std::string& key, const std::string& def)
+	std::string_view get_string(const registry& psf, const std::string& key, std::string_view def)
 	{
 		const auto found = psf.find(key);
 

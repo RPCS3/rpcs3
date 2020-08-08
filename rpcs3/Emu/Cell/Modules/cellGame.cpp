@@ -876,7 +876,7 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
 
-	const std::string value = psf::get_string(prm->sfo, std::string(key.name));
+	const auto value = psf::get_string(prm->sfo, std::string(key.name));
 
 	if (value.empty() && !prm->sfo.count(std::string(key.name)))
 	{
