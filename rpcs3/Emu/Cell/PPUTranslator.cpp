@@ -955,7 +955,7 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 			return;
 		}
 
-		if (data == v128{})
+		if (!m_use_fma && data == v128{})
 		{
 			set_vr(op.vd, vec_handle_result(a * c + fsplat<f32[4]>(0.f)));
 			ppu_log.notice("LLVM: VNMSUBFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
@@ -1266,7 +1266,7 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 			return;
 		}
 
-		if (data == v128::from32p(1u << 31))
+		if (!m_use_fma && data == v128::from32p(1u << 31))
 		{
 			set_vr(op.vd, vec_handle_result(-a * c + fsplat<f32[4]>(0.f)));
 			ppu_log.notice("LLVM: VNMSUBFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
