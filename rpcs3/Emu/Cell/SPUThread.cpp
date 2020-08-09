@@ -210,16 +210,12 @@ static FORCE_INLINE void mov_rdata(decltype(spu_thread::rdata)& dst, const declt
 // Returns nullptr if rsx does not need pausing on reservations op, rsx ptr otherwise
 static FORCE_INLINE rsx::thread* get_rsx_if_needs_res_pause(u32 addr)
 {
-	if (!g_cfg.core.rsx_accurate_res_access) [[likely]]
-	{
-		return {};
-	}
-
 	const auto render = rsx::get_current_renderer();
 
 	ASSUME(render);
 
-	if (render->iomap_table.io[addr >> 20].load() == umax) [[likely]]
+	if (static_cast<s32>(render->iomap_table.io[addr >> 20]) < 
+		(g_cfg.core.rsx_accurate_res_access ? 0 : 0x0e000000)) [[likely]]
 	{
 		return {};
 	}
