@@ -951,7 +951,14 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 		if (data == v128::from32p(1u << 31))
 		{
 			set_vr(op.vd, vec_handle_result(a * c));
-			ppu_log.notice("LLVM: VMADDFP with 0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			ppu_log.notice("LLVM: VMADDFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			return;
+		}
+
+		if (data == v128{})
+		{
+			set_vr(op.vd, vec_handle_result(a * c + fsplat<f32[4]>(0.f)));
+			ppu_log.notice("LLVM: VNMSUBFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 			return;
 		}
 	}
@@ -1258,12 +1265,19 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 			ppu_log.notice("LLVM: VNMSUBFP with 0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 			return;
 		}
+
+		if (data == v128::from32p(1u << 31))
+		{
+			set_vr(op.vd, vec_handle_result(-a * c + fsplat<f32[4]>(0.f)));
+			ppu_log.notice("LLVM: VNMSUBFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			return;
+		}
 	}
 
 	// Differs from the emulated path with regards to negative zero
 	if (m_use_fma)
 	{
-		SetVr(op.vd, VecHandleResult(m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { a.value, c.value, m_ir->CreateFNeg(b.value) }))));
+		SetVr(op.vd, VecHandleResult(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { m_ir->CreateFNeg(a).value, c.value, b.value }))));
 		return;
 	}
 
