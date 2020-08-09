@@ -958,7 +958,7 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 		if (!m_use_fma && data == v128{})
 		{
 			set_vr(op.vd, vec_handle_result(a * c + fsplat<f32[4]>(0.f)));
-			ppu_log.notice("LLVM: VNMSUBFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			ppu_log.notice("LLVM: VMADDFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 			return;
 		}
 	}
