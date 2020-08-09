@@ -1277,7 +1277,7 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 	// Differs from the emulated path with regards to negative zero
 	if (m_use_fma)
 	{
-		SetVr(op.vd, VecHandleResult(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { m_ir->CreateFNeg(a).value, c.value, b.value }))));
+		SetVr(op.vd, VecHandleResult(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { m_ir->CreateFNeg(a.value), c.value, b.value }))));
 		return;
 	}
 
