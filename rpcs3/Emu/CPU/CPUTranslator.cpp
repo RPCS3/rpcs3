@@ -57,6 +57,15 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 	{
 		m_use_fma = true;
 	}
+
+	// Test AVX-512_icelake features (TODO)
+	if (cpu == "icelake" ||
+		cpu == "icelake-client" ||
+		cpu == "icelake-server" ||
+		cpu == "tigerlake")
+	{
+		m_use_avx512_icl = true;
+	}
 }
 
 llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type)
