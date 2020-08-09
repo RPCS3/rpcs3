@@ -948,7 +948,7 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 	// Optimization: Emit only a floating multiply if the addend is zero
 	if (auto [ok, data] = get_const_vector(b.value, m_addr, 2000); ok)
 	{
-		if (data == v128{})
+		if (data == v128::from32p(1u << 31))
 		{
 			set_vr(op.vd, vec_handle_result(a * c));
 			ppu_log.notice("LLVM: VMADDFP with 0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));

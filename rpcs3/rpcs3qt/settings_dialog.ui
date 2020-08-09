@@ -1809,6 +1809,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="accurateRSXAccess">
+                <property name="text">
+                 <string>Accurate RSX reservation access</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QCheckBox" name="AccurateVectorNaN">
                 <property name="text">
                  <string>PPU LLVM Accurate Vector NaNs</string>
@@ -3401,13 +3408,6 @@
              <widget class="QCheckBox" name="accuratePUTLLUC">
               <property name="text">
                <string>Accurate PUTLLUC</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="accurateRSXAccess">
-              <property name="text">
-               <string>Accurate RSX reservation access</string>
               </property>
              </widget>
             </item>

@@ -1419,22 +1419,17 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 
 			// Update PARAM.SFO
-			psf.clear();
-			psf.insert(
-			{
-				{ "ACCOUNT_ID", psf::array(16, "0000000000000000") }, // ???
-				{ "ATTRIBUTE", statSet->setParam->attribute.value() },
-				{ "CATEGORY",  psf::string(4, "SD") }, // ???
-				{ "PARAMS", psf::string(1024, {}) }, // ???
-				{ "PARAMS2", psf::string(12, {}) }, // ???
-				{ "PARENTAL_LEVEL", statSet->setParam->parental_level.value() },
-				{ "DETAIL", psf::string(CELL_SAVEDATA_SYSP_DETAIL_SIZE, statSet->setParam->detail) },
-				{ "SAVEDATA_DIRECTORY", psf::string(CELL_SAVEDATA_DIRNAME_SIZE, save_entry.dirName) },
-				{ "SAVEDATA_LIST_PARAM", psf::string(CELL_SAVEDATA_SYSP_LPARAM_SIZE, statSet->setParam->listParam) },
-				{ "SUB_TITLE", psf::string(CELL_SAVEDATA_SYSP_SUBTITLE_SIZE, statSet->setParam->subTitle) },
-				{ "TITLE", psf::string(CELL_SAVEDATA_SYSP_TITLE_SIZE, statSet->setParam->title) }
-			});
-
+			psf::assign(psf, "ACCOUNT_ID", psf::array(16, "0000000000000000")); // ???
+			psf::assign(psf, "ATTRIBUTE", statSet->setParam->attribute.value());
+			psf::assign(psf, "CATEGORY", psf::string(4, "SD")); // ???
+			psf::assign(psf, "PARAMS", psf::string(1024, {})); // ???
+			psf::assign(psf, "PARAMS2", psf::string(12, {})); // ???
+			psf::assign(psf, "PARENTAL_LEVEL", statSet->setParam->parental_level.value());
+			psf::assign(psf, "DETAIL", psf::string(CELL_SAVEDATA_SYSP_DETAIL_SIZE, statSet->setParam->detail));
+			psf::assign(psf, "SAVEDATA_DIRECTORY", psf::string(CELL_SAVEDATA_DIRNAME_SIZE, save_entry.dirName));
+			psf::assign(psf, "SAVEDATA_LIST_PARAM", psf::string(CELL_SAVEDATA_SYSP_LPARAM_SIZE, statSet->setParam->listParam));
+			psf::assign(psf, "SUB_TITLE", psf::string(CELL_SAVEDATA_SYSP_SUBTITLE_SIZE, statSet->setParam->subTitle));
+			psf::assign(psf, "TITLE", psf::string(CELL_SAVEDATA_SYSP_TITLE_SIZE, statSet->setParam->title));
 			has_modified = true;
 		}
 		else if (save_entry.isNew)
@@ -1466,6 +1461,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				// ****** sysutil savedata parameter error : 50 ******
 				return {CELL_SAVEDATA_ERROR_PARAM, "50"};
 			}
+
+			cellSaveData.warning("savedata_op(): Recreating savedata. (mode=%d)", statSet->reCreateMode);
 
 			// Clear secure file info
 			for (auto it = psf.cbegin(), end = psf.cend(); it != end;)
@@ -1717,6 +1714,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				*it = "";
 		};
 		// clang-format on
+
+		cellSaveData.warning("savedata_op(): Fileop: file=\"%s\", type=%d, op=%d", file_path, fileSet->fileType, fileSet->fileOperation);
 
 		if ((file_path == "." || file_path == "..") && fileSet->fileOperation <= CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC)
 		{

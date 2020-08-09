@@ -181,6 +181,7 @@ void Emulator::Init()
 	};
 
 	const std::string save_path = dev_hdd0 + "home/" + m_usr + "/savedata/";
+	const std::string user_path = dev_hdd0 + "home/" + m_usr + "/localusername";
 
 	if (g_cfg.vfs.init_dirs)
 	{
@@ -198,11 +199,11 @@ void Emulator::Init()
 		make_path_verbose(save_path);
 		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/trophy/");
 
-		if (!fs::write_file(dev_hdd0 + "home/" + m_usr + "/localusername", fs::create + fs::excl + fs::write, "User"s))
+		if (!fs::write_file(user_path, fs::create + fs::excl + fs::write, "User"s))
 		{
 			if (fs::g_tls_error != fs::error::exist)
 			{
-				sys_log.fatal("Failed to create file: %shome/%s/localusername (%s)", dev_hdd0, m_usr, fs::g_tls_error);
+				sys_log.fatal("Failed to create file: %s (%s)", user_path, fs::g_tls_error);
 			}
 		}
 
@@ -210,6 +211,41 @@ void Emulator::Init()
 		make_path_verbose(dev_hdd0 + "savedata/");
 		make_path_verbose(dev_hdd0 + "savedata/vmc/");
 		make_path_verbose(dev_hdd1 + "caches/");
+	}
+
+	// Log user
+	if (m_usr.empty())
+	{
+		sys_log.fatal("No user configured");
+	}
+	else
+	{
+		std::string username;
+
+		if (const fs::file file = fs::file(user_path))
+		{
+			if (const std::string localusername = file.to_string(); !localusername.empty())
+			{
+				username = localusername;
+			}
+			else
+			{
+				sys_log.warning("Empty username in file: '%s'. Consider setting a username for user '%s' in the user manager.", user_path, m_usr);
+			}
+		}
+		else
+		{
+			sys_log.error("Could not read file: '%s'", user_path);
+		}
+
+		if (username.empty())
+		{
+			sys_log.notice("Logged in as user '%s'", m_usr);
+		}
+		else
+		{
+			sys_log.notice("Logged in as user '%s' with the username '%s'", m_usr, username);
+		}
 	}
 
 	// Fixup savedata
