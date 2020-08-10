@@ -579,8 +579,8 @@ namespace rsx
 			switch (report_dma)
 			{
 			case blit_engine::context_dma::to_memory_get_report: location = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL; break;
+			case blit_engine::context_dma::memory_host_buffer:
 			case blit_engine::context_dma::report_location_main: location = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN; break;
-			case blit_engine::context_dma::memory_host_buffer: location = CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER; break;
 			default:
 				return vm::addr_t(0);
 			}
