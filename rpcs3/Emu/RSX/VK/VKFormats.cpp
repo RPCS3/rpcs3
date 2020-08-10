@@ -28,6 +28,16 @@ namespace vk
 		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_B8G8R8A8_UNORM, &props);
 		result.bgra8_linear = !!(props.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
 
+		// Check if device supports RGBA8 format
+		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_R8G8B8A8_UNORM, &props);
+		if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) ||
+			!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) ||
+			!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT))
+		{
+			// Non-fatal. Most games use BGRA layout due to legacy reasons as old GPUs typically supported BGRA and RGBA was emulated.
+			rsx_log.error("Your GPU and/or driver does not support RGBA8 format. This can cause problems in some rare games that use this memory layout.");
+		}
+
 		return result;
 	}
 
