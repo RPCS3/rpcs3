@@ -395,10 +395,11 @@ namespace vk
 			//8-bit
 		case VK_FORMAT_R8_UNORM:
 		case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
-		case VK_FORMAT_R8G8B8A8_UNORM:
 			return{ false, 1 };
 		case VK_FORMAT_B8G8R8A8_UNORM:
+		case VK_FORMAT_R8G8B8A8_UNORM:
 		case VK_FORMAT_B8G8R8A8_SRGB:
+		case VK_FORMAT_R8G8B8A8_SRGB:
 			return{ true, 4 };
 			//16-bit
 		case VK_FORMAT_R16_UINT:
