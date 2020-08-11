@@ -515,14 +515,14 @@ namespace gl
 		}
 
 		gl::texture_view* create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_type, u32 gcm_format,
-				u16 x, u16 y, u16 width, u16 height, const rsx::texture_channel_remap_t& remap, bool copy)
+				u16 x, u16 y, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap, bool copy)
 		{
 			if (sized_internal_fmt == GL_NONE)
 			{
 				sized_internal_fmt = gl::get_sized_internal_format(gcm_format);
 			}
 
-			std::unique_ptr<gl::texture> dst = std::make_unique<gl::viewable_image>(dst_type, width, height, 1, 1, sized_internal_fmt);
+			std::unique_ptr<gl::texture> dst = std::make_unique<gl::viewable_image>(dst_type, width, height, depth, mipmaps, sized_internal_fmt);
 
 			if (copy)
 			{
@@ -736,57 +736,31 @@ namespace gl
 		gl::texture_view* create_temporary_subresource_view(gl::command_context &cmd, gl::texture** src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
 				const rsx::texture_channel_remap_t& remap_vector) override
 		{
-			return create_temporary_subresource_impl(cmd, *src, GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h, remap_vector, true);
+			return create_temporary_subresource_impl(cmd, *src, GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h, 1, 1, remap_vector, true);
 		}
 
 		gl::texture_view* create_temporary_subresource_view(gl::command_context &cmd, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
 				const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			return create_temporary_subresource_impl(cmd, src, static_cast<GLenum>(src->get_internal_format()),
-					GL_TEXTURE_2D, gcm_format, x, y, w, h, remap_vector, true);
+					GL_TEXTURE_2D, gcm_format, x, y, w, h, 1, 1, remap_vector, true);
 		}
 
-		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& /*remap_vector*/) override
+		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& remap_vector) override
 		{
-			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
-			std::unique_ptr<gl::texture> dst_image = std::make_unique<gl::viewable_image>(GL_TEXTURE_CUBE_MAP, size, size, 1, 1, ifmt);
-			auto view = std::make_unique<gl::texture_view>(dst_image.get(), GL_TEXTURE_CUBE_MAP, ifmt);
+			auto _template = get_template_from_collection_impl(sources);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_3D, gcm_format, 0, 0, size, size, 1, 1, remap_vector, false);
 
-			//Empty GL_ERROR
-			glGetError();
-
-			copy_transfer_regions_impl(cmd, dst_image.get(), sources);
-
-			if (GLenum err = glGetError())
-			{
-				rsx_log.warning("Failed to copy image subresource with GL error 0x%X", err);
-				return nullptr;
-			}
-
-			auto result = view.get();
-			m_temporary_surfaces.emplace_back(dst_image, view);
+			copy_transfer_regions_impl(cmd, result->image(), sources);
 			return result;
 		}
 
-		gl::texture_view* generate_3d_from_2d_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& /*remap_vector*/) override
+		gl::texture_view* generate_3d_from_2d_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& remap_vector) override
 		{
-			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
-			std::unique_ptr<gl::texture> dst_image = std::make_unique<gl::viewable_image>(GL_TEXTURE_3D, width, height, depth, 1, ifmt);
-			auto view = std::make_unique<gl::texture_view>(dst_image.get(), GL_TEXTURE_3D, ifmt);
+			auto _template = get_template_from_collection_impl(sources);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_3D, gcm_format, 0, 0, width, height, depth, 1, remap_vector, false);
 
-			//Empty GL_ERROR
-			glGetError();
-
-			copy_transfer_regions_impl(cmd, dst_image.get(), sources);
-
-			if (GLenum err = glGetError())
-			{
-				rsx_log.warning("Failed to copy image subresource with GL error 0x%X", err);
-				return nullptr;
-			}
-
-			auto result = view.get();
-			m_temporary_surfaces.emplace_back(dst_image, view);
+			copy_transfer_regions_impl(cmd, result->image(), sources);
 			return result;
 		}
 
@@ -794,30 +768,21 @@ namespace gl
 				const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			auto _template = get_template_from_collection_impl(sections_to_copy);
-			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, 1, 1, remap_vector, false);
 
 			copy_transfer_regions_impl(cmd, result->image(), sections_to_copy);
 			return result;
 		}
 
-		gl::texture_view* generate_2d_mipmaps_from_images(gl::command_context& cmd, u32 /*gcm_format*/, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
+		gl::texture_view* generate_2d_mipmaps_from_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
 			const rsx::texture_channel_remap_t& remap_vector) override
 		{
-			const auto _template = sections_to_copy.front().src;
-			const GLenum ifmt = static_cast<GLenum>(_template->get_internal_format());
-			const u8 mipmaps = ::narrow<u8>(sections_to_copy.size());
-			const auto swizzle = _template->get_native_component_layout();
+			const auto mipmaps = ::narrow<u8>(sections_to_copy.size());
+			auto _template = get_template_from_collection_impl(sections_to_copy);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, 1, mipmaps, remap_vector, false);
 
-			auto image_ptr = new gl::viewable_image(GL_TEXTURE_2D, width, height, 1, mipmaps, ifmt);
-			image_ptr->set_native_component_layout(swizzle);
-
-			copy_transfer_regions_impl(cmd, image_ptr, sections_to_copy);
-
-			auto view = image_ptr->get_view(get_remap_encoding(remap_vector), remap_vector);
-
-			std::unique_ptr<gl::texture> dst_image(image_ptr);
-			m_temporary_surfaces.emplace_back(dst_image);
-			return view;
+			copy_transfer_regions_impl(cmd, result->image(), sections_to_copy);
+			return result;
 		}
 
 		void release_temporary_subresource(gl::texture_view* view) override
