@@ -1,6 +1,6 @@
 ﻿#include "stdafx.h"
 #include "VKGSRender.h"
-
+#include "Emu/Cell/Modules/cellVideoOut.h"
 
 void VKGSRender::reinitialize_swapchain()
 {
@@ -347,8 +347,22 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 			flush_command_queue();
 		}
 
+		VkFormat format;
+		switch (avconfig->format)
+		{
+		default:
+			rsx_log.error("Unhandled video output format 0x%x", avconfig->format);
+			[[fallthrough]];
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+			format = VK_FORMAT_B8G8R8A8_UNORM;
+			break;
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+			format = VK_FORMAT_R8G8B8A8_UNORM;
+			break;
+		}
+
 		m_texture_cache.invalidate_range(*m_current_command_buffer, range, rsx::invalidation_cause::read);
-		image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, info->address, info->width, info->height, info->pitch);
+		image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, format, info->address, info->width, info->height, info->pitch);
 	}
 
 	return image_to_flip;

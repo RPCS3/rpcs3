@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "GLGSRender.h"
+#include "Emu/Cell/Modules/cellVideoOut.h"
 
 LOG_CHANNEL(screenshot);
 
@@ -76,7 +77,21 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 		const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
 		m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
-		m_flip_tex_color->copy_from(vm::base(info->address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
+		gl::texture::format fmt;
+		switch (avconfig->format)
+		{
+		default:
+			rsx_log.error("Unhandled video output format 0x%x", avconfig->format);
+			[[fallthrough]];
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+			fmt = gl::texture::format::bgra;
+			break;
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+			fmt = gl::texture::format::rgba;
+			break;
+		}
+
+		m_flip_tex_color->copy_from(vm::base(info->address), fmt, gl::texture::type::uint_8_8_8_8, unpack_settings);
 		image = m_flip_tex_color.get();
 	}
 

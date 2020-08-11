@@ -1471,9 +1471,24 @@ namespace vk
 			baseclass::on_frame_end();
 		}
 
-		vk::image *upload_image_simple(vk::command_buffer& cmd, u32 address, u32 width, u32 height, u32 pitch)
+		vk::image *upload_image_simple(vk::command_buffer& cmd, VkFormat format, u32 address, u32 width, u32 height, u32 pitch)
 		{
-			if (!m_formats_support.bgra8_linear)
+			bool linear_format_supported = false;
+
+			switch (format)
+			{
+			case VK_FORMAT_B8G8R8A8_UNORM:
+				linear_format_supported = m_formats_support.bgra8_linear;
+				break;
+			case VK_FORMAT_R8G8B8A8_UNORM:
+				linear_format_supported = m_formats_support.argb8_linear;
+				break;
+			default:
+				rsx_log.error("Unsupported VkFormat 0x%x" HERE, static_cast<u32>(format));
+				return nullptr;
+			}
+
+			if (!linear_format_supported)
 			{
 				return nullptr;
 			}
@@ -1482,7 +1497,7 @@ namespace vk
 			auto image = std::make_unique<vk::viewable_image>(*m_device, m_memory_types.host_visible_coherent,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 				VK_IMAGE_TYPE_2D,
-				VK_FORMAT_B8G8R8A8_UNORM,
+				format,
 				width, height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
 				VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
 
