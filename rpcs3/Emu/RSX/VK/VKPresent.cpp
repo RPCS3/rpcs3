@@ -659,7 +659,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			memcpy(sshot_frame.data(), src, sshot_size);
 			sshot_vkbuf.unmap();
 
-			m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
+			const bool is_bgra = image_to_flip->format() == VK_FORMAT_B8G8R8A8_UNORM;
+			m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, is_bgra);
 		}
 	}
 

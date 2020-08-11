@@ -50,7 +50,7 @@ public:
 	void progress_increment(int delta);
 	void progress_set_limit(int limit);
 
-	void take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height) override;
+	void take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height, bool is_bgra) override;
 
 protected:
 	virtual void paintEvent(QPaintEvent *event);
