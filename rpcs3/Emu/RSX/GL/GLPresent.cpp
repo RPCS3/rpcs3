@@ -220,14 +220,14 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			pack_settings.apply();
 
 			if (gl::get_driver_caps().ARB_dsa_supported)
-				glGetTextureImage(image_to_flip, 0, GL_BGRA, GL_UNSIGNED_BYTE, buffer_height * buffer_width * 4, sshot_frame.data());
+				glGetTextureImage(image_to_flip, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer_height * buffer_width * 4, sshot_frame.data());
 			else
-				glGetTextureImageEXT(image_to_flip, GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, sshot_frame.data());
+				glGetTextureImageEXT(image_to_flip, GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, sshot_frame.data());
 
 			if (GLenum err; (err = glGetError()) != GL_NO_ERROR)
 				screenshot.error("Failed to capture image: 0x%x", err);
 			else
-				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
+				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, false);
 		}
 
 		const areai screen_area = coordi({}, { static_cast<int>(buffer_width), static_cast<int>(buffer_height) });
