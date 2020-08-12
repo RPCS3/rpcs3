@@ -335,10 +335,10 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 	}
 }
 
-void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height)
+void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height, bool is_bgra)
 {
 	std::thread(
-		[sshot_width, sshot_height](const std::vector<u8> sshot_data)
+		[sshot_width, sshot_height, is_bgra](const std::vector<u8> sshot_data)
 		{
 			std::string screen_path = fs::get_config_dir() + "screenshots/";
 
@@ -361,9 +361,19 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 			const u32* sshot_ptr = reinterpret_cast<const u32*>(sshot_data.data());
 			u32* alpha_ptr       = reinterpret_cast<u32*>(sshot_data_alpha.data());
 
-			for (size_t index = 0; index < sshot_data.size() / sizeof(u32); index++)
+			if (is_bgra) [[likely]]
 			{
-				alpha_ptr[index] = ((sshot_ptr[index] & 0xFF) << 16) | (sshot_ptr[index] & 0xFF00) | ((sshot_ptr[index] & 0xFF0000) >> 16) | 0xFF000000;
+				for (size_t index = 0; index < sshot_data.size() / sizeof(u32); index++)
+				{
+					alpha_ptr[index] = ((sshot_ptr[index] & 0xFF) << 16) | (sshot_ptr[index] & 0xFF00) | ((sshot_ptr[index] & 0xFF0000) >> 16) | 0xFF000000;
+				}
+			}
+			else
+			{
+				for (size_t index = 0; index < sshot_data.size() / sizeof(u32); index++)
+				{
+					alpha_ptr[index] = sshot_ptr[index] | 0xFF000000;
+				}
 			}
 
 			std::vector<u8> encoded_png;
