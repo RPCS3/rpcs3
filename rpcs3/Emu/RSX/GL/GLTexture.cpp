@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "GLTexture.h"
 #include "GLCompute.h"
+#include "GLRenderTargets.h"
 #include "../GCM.h"
 #include "../RSXThread.h"
 #include "../RSXTexture.h"
@@ -131,6 +132,29 @@ namespace gl
 		default:
 			fmt::throw_exception("Unexpected internal format 0x%X" HERE, static_cast<u32>(format));
 		}
+	}
+
+	pixel_buffer_layout get_format_type(const gl::texture* tex)
+	{
+		const auto ifmt = tex->get_internal_format();
+		if (ifmt == gl::texture::internal_format::rgba8)
+		{
+			// Multiple RTT layouts can map to this format. Override ABGR formats
+			if (auto rtt = dynamic_cast<const gl::render_target*>(tex))
+			{
+				switch (rtt->format_info.gcm_color_format)
+				{
+				case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
+				case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+				case rsx::surface_color_format::a8b8g8r8:
+					return { GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 4, false };
+				default:
+					break;
+				}
+			}
+		}
+
+		return get_format_type(ifmt);
 	}
 
 	GLenum get_srgb_format(GLenum in_format)
@@ -780,8 +804,8 @@ namespace gl
 		}
 
 		const auto& caps = gl::get_driver_caps();
-		const auto pack_info = get_format_type(src->get_internal_format());
-		const auto unpack_info = get_format_type(dst->get_internal_format());
+		auto pack_info = get_format_type(src);
+		auto unpack_info = get_format_type(dst);
 
 		// Start pack operation
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
