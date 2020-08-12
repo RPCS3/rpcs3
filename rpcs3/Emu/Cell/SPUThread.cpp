@@ -1775,6 +1775,10 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	{
 		const u32 result = spu_putlluc_tx(addr, to_write.data(), this);
 
+		const auto render = result != 1 ? get_rsx_if_needs_res_pause(addr) : nullptr;
+
+		if (render) render->pause();
+
 		if (result == 2)
 		{
 			cpu_thread::suspend_all cpu_lock(this);
@@ -1809,6 +1813,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 			vm::reservation_acquire(addr, 128) += 64;
 		}
 
+		if (render) render->unpause();
 		static_cast<void>(test_stopped());
 	}
 	else
@@ -2121,6 +2126,10 @@ bool spu_thread::process_mfc_cmd()
 				{
 				case 2:
 				{
+					const auto render = get_rsx_if_needs_res_pause(addr);
+
+					if (render) render->pause();
+
 					cpu_thread::suspend_all cpu_lock(this);
 
 					// Give up if PUTLLUC happened
@@ -2132,11 +2141,13 @@ bool spu_thread::process_mfc_cmd()
 						{
 							mov_rdata(data, to_write);
 							res += 127;
+							if (render) render->unpause();
 							return true;
 						}
 					}
 
 					res -= 1;
+					if (render) render->unpause();
 					return false;
 				}
 				case 1: return true;
