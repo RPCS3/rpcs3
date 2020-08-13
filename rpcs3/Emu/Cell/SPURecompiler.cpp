@@ -7727,17 +7727,47 @@ public:
 	void FCEQ(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
+		{
 			set_vr(op.rt, sext<s32[4]>(fcmp_ord(get_vr<f64[4]>(op.ra) == get_vr<f64[4]>(op.rb))));
+		}
+		
+		const auto a = get_vr<f32[4]>(op.ra);
+		const auto b = get_vr<f32[4]>(op.rb);
+
+		if (g_cfg.core.spu_approx_xfloat)
+		{
+			// TODO: just use an integer comparison if either value is nonzero constant
+			const auto ai = eval(bitcast<s32[4]>(a));
+			const auto bi = eval(bitcast<s32[4]>(b));
+			set_vr(op.rt, (sext<s32[4]>(fcmp_ord(a == b)) | sext<s32[4]>(ai == bi)));
+		}
 		else
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(get_vr<f32[4]>(op.ra) == get_vr<f32[4]>(op.rb))));
+		{
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a == b)));
+		}
 	}
 
 	void FCMEQ(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
+		{
 			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fabs(get_vr<f64[4]>(op.ra)) == fabs(get_vr<f64[4]>(op.rb)))));
+		}
+
+		const auto a = eval(fabs(get_vr<f32[4]>(op.ra)));
+		const auto b = eval(fabs(get_vr<f32[4]>(op.rb)));
+
+		if (g_cfg.core.spu_approx_xfloat)
+		{
+			// TODO: just use an integer comparison if either value is nonzero constant
+			const auto ai = eval(bitcast<s32[4]>(a));
+			const auto bi = eval(bitcast<s32[4]>(b));
+			set_vr(op.rt, (sext<s32[4]>(fcmp_ord(a == b)) | sext<s32[4]>(ai == bi)));
+		}
 		else
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fabs(get_vr<f32[4]>(op.ra)) == fabs(get_vr<f32[4]>(op.rb)))));
+		{
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a == b)));
+		}
 	}
 
 	value_t<f32[4]> fma32x4(value_t<f32[4]> a, value_t<f32[4]> b, value_t<f32[4]> c)
