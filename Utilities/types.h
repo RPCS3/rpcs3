@@ -89,7 +89,8 @@
 #else
 namespace std
 {
-	template <class To, class From, typename = std::enable_if_t<sizeof(To) == sizeof(From)>>
+	template <class To, class From, std::enable_if_t<std::conjunction_v<std::bool_constant<sizeof(To) == sizeof(From)>,
+		std::is_trivially_copyable<To>, std::is_trivially_copyable<From>>, int> = 0>
 	constexpr To bit_cast(const From& from) noexcept
 	{
 		static_assert(sizeof(To) == sizeof(From), "std::bit_cast<>: incompatible type size");
