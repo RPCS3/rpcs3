@@ -7753,6 +7753,12 @@ public:
 				r = eval(a * b);
 				return r;
 			}
+
+			if (!m_use_fma && is_spu_float_zero(data, +1))
+			{
+				r = eval(a * b + fsplat<f32[4]>(0.f));
+				return r;
+			}
 		}
 
 		if ([&]()
