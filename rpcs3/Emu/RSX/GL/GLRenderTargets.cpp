@@ -2,6 +2,8 @@
 #include "GLGSRender.h"
 #include "Emu/RSX/rsx_methods.h"
 
+#include <span>
+
 color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_format color_format)
 {
 	//color format
@@ -418,7 +420,7 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
 	subres.pitch_in_block = rsx_pitch / get_bpp();
 	subres.depth = 1;
-	subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<std::span<const std::byte>::index_type>(rsx_pitch * surface_height * samples_y) };
+	subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<std::span<const std::byte>::size_type>(rsx_pitch * surface_height * samples_y) };
 
 	// TODO: MSAA support
 	if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]

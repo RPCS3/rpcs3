@@ -15,11 +15,11 @@
 
 #include "Loader/PSF.h"
 #include "Utilities/StrUtil.h"
-#include "Utilities/span.h"
 #include "Utilities/date_time.h"
 
 #include <mutex>
 #include <algorithm>
+#include <span>
 
 #include "util/asm.hpp"
 
@@ -1654,7 +1654,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (dotpos)
 			{
 				// Copy file name
-				gsl::span dst(name, dotpos + 1);
+				std::span dst(name, dotpos + 1);
 				strcpy_trunc(dst, file_path);
 
 				// Allow multiple '.' even though sysutil_check_name_string does not
@@ -1691,7 +1691,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (file_path.size() > dotpos + 1)
 			{
 				// Copy file extension
-				gsl::span dst(name, file_path.size() - dotpos);
+				std::span dst(name, file_path.size() - dotpos);
 				strcpy_trunc(dst, file_path.operator std::string_view().substr(dotpos + 1));
 
 				// Allow '_' at start even though sysutil_check_name_string does not

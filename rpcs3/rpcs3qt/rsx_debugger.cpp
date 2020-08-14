@@ -13,6 +13,8 @@
 #include <QPushButton>
 #include <QKeyEvent>
 
+#include <span>
+
 enum GCMEnumTypes
 {
 	CELL_GCM_ENUM,

@@ -4,6 +4,8 @@
 #include "../rsx_methods.h"
 #include "vkutils/buffer_object.h"
 
+#include <span>
+
 namespace vk
 {
 	VkPrimitiveTopology get_appropriate_topology(rsx::primitive_type mode, bool &requires_modification)
