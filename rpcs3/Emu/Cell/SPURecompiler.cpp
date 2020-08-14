@@ -6169,7 +6169,7 @@ public:
 	template <typename TA, typename TB>
 	static auto fm(TA&& a, TB&& b)
 	{
-		return (std::forward<TA>(a)) * (std::forward<TB>(b));
+		return (std::forward<TA>(a)) * (std::forward<TB>(b)) + fsplat<typename std::remove_cvref_t<TA>::type>(0.f);
 	}
 
 	void SF(spu_opcode_t op)
@@ -7663,10 +7663,8 @@ public:
 				return;
 			}
 
-			const auto ma = eval(sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.))));
-			const auto mb = eval(sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.))));
-			const auto ca = eval(bitcast<f32[4]>(bitcast<s32[4]>(a) & mb));
-			const auto cb = eval(bitcast<f32[4]>(bitcast<s32[4]>(b) & ma));
+			const auto ca = eval(clamp_smax(a));
+			const auto cb = eval(clamp_smax(b));
 			set_vr(op.rt, fm(ca, cb));
 		}
 		else
@@ -7831,11 +7829,9 @@ public:
 		{
 			const auto a = get_vr<f32[4]>(op.ra);
 			const auto b = get_vr<f32[4]>(op.rb);
-			const auto ma = eval(sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.))));
-			const auto mb = eval(sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.))));
-			const auto ca = eval(bitcast<f32[4]>(bitcast<s32[4]>(a) & mb));
-			const auto cb = eval(bitcast<f32[4]>(bitcast<s32[4]>(b) & ma));
-			set_vr(op.rt4, fma32x4((ca), (cb), get_vr<f32[4]>(op.rc)));
+			const auto ca = eval(clamp_smax(a));
+			const auto cb = eval(clamp_smax(b));
+			set_vr(op.rt4, fma32x4((ca), (cb), get_vr<f32[4]>(op.rc)) + fsplat<f32[4]>(0.f));
 		}
 		else
 			set_vr(op.rt4, fma32x4(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
