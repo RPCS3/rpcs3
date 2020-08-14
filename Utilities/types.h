@@ -17,11 +17,6 @@
 #include <limits>
 #include <array>
 
-#ifdef _MSC_VER
-#ifndef __cpp_lib_bitops
-#define __cpp_lib_bitops
-#endif
-#endif
 #include <bit>
 
 #ifndef __has_builtin
