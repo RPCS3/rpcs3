@@ -243,7 +243,7 @@ namespace vk
 				gcm_format = get_compatible_gcm_format(format_info.gcm_color_format).first;
 			}
 
-			rsx_subresource_layout subres{};
+			rsx::subresource_layout subres{};
 			subres.width_in_block = subres.width_in_texel = surface_width * samples_x;
 			subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
 			subres.pitch_in_block = rsx_pitch / get_bpp();
@@ -273,7 +273,7 @@ namespace vk
 				}
 				else
 				{
-					content = vk::get_typeless_helper(format(), subres.width_in_block, subres.height_in_block);
+					content = vk::get_typeless_helper(format(), rsx::classify_format(gcm_format), subres.width_in_block, subres.height_in_block);
 					content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 				}
 
@@ -286,10 +286,10 @@ namespace vk
 					// Avoid layout push/pop on scratch memory by setting explicit layout here
 					content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-					vk::copy_scaled_image(cmd, content->value, final_dst->value, content->current_layout, final_dst->current_layout,
-						{ 0, 0, subres.width_in_block, subres.height_in_block }, { 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
-						1, aspect(), true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST,
-						format(), format());
+					vk::copy_scaled_image(cmd, content, final_dst,
+						{ 0, 0, subres.width_in_block, subres.height_in_block },
+						{ 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
+						1, true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST);
 				}
 
 				final_dst->pop_layout(cmd);
@@ -670,7 +670,7 @@ namespace rsx
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage_flags,
-				0);
+				0, RSX_FORMAT_CLASS_COLOR);
 
 			rtt->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
@@ -728,7 +728,7 @@ namespace rsx
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage_flags,
-				0);
+				0, rsx::classify_format(format));
 
 			ds->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 

@@ -135,8 +135,6 @@ namespace rsx
 		u8  samples_x = 1;
 		u8  samples_y = 1;
 
-		format_type format_class = format_type::color;
-
 		std::unique_ptr<typename std::remove_pointer<image_storage_type>::type> resolve_surface;
 		surface_sample_layout sample_layout = surface_sample_layout::null;
 		surface_raster_type raster_type = surface_raster_type::linear;
@@ -266,15 +264,6 @@ namespace rsx
 		void set_format(rsx::surface_depth_format2 format)
 		{
 			format_info.gcm_depth_format = format;
-
-			if (format >= rsx::surface_depth_format2::z16_float)
-			{
-				format_class = rsx::format_type::depth_float;
-			}
-			else
-			{
-				format_class = rsx::format_type::depth_uint;
-			}
 		}
 
 		rsx::surface_color_format get_surface_color_format() const
@@ -285,11 +274,6 @@ namespace rsx
 		rsx::surface_depth_format2 get_surface_depth_format() const
 		{
 			return format_info.gcm_depth_format;
-		}
-
-		rsx::format_type get_format_type() const
-		{
-			return format_class;
 		}
 
 		bool dirty() const

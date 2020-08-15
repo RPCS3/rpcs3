@@ -458,7 +458,7 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 		get_compatible_gcm_format(format_info.gcm_depth_format).first :
 		get_compatible_gcm_format(format_info.gcm_color_format).first;
 
-	rsx_subresource_layout subres{};
+	rsx::subresource_layout subres{};
 	subres.width_in_block = subres.width_in_texel = surface_width * samples_x;
 	subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
 	subres.pitch_in_block = rsx_pitch / get_bpp();

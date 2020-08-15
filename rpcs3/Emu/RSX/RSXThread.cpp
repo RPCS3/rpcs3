@@ -1830,7 +1830,7 @@ namespace rsx
 				if (raw_format & CELL_GCM_TEXTURE_UN)
 					result.unnormalized_coords |= (1 << i);
 
-				if (sampler_descriptors[i]->format_class != format_type::color)
+				if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)
 				{
 					switch (format)
 					{
@@ -1844,7 +1844,7 @@ namespace rsx
 					{
 						// Reading depth data as XRGB8 is supported with in-shader conversion
 						// TODO: Optionally add support for 16-bit formats (not necessary since type casts are easy with that)
-						u32 control_bits = sampler_descriptors[i]->format_class == format_type::depth_float? (1u << 16) : 0u;
+						u32 control_bits = sampler_descriptors[i]->format_class == RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32? (1u << 16) : 0u;
 						control_bits |= tex.remap() & 0xFFFF;
 						result.redirected_textures |= (1 << i);
 						result.texture_scale[i][2] = std::bit_cast<f32>(control_bits);
