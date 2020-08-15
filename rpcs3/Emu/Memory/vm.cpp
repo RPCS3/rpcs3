@@ -79,6 +79,28 @@ namespace vm
 	// Memory pages
 	std::array<memory_page, 0x100000000 / 4096> g_pages{};
 
+	void reservation_update(u32 addr, u32 size, bool lsb)
+	{
+		u64 old = UINT64_MAX;
+		const auto cpu = get_current_cpu_thread();
+
+		while (true)
+		{
+			const auto [ok, rtime] = try_reservation_update(addr, size, lsb);
+			if (ok || old / 128 < rtime / 128)
+			{
+				return;
+			}
+
+			old = rtime;
+
+			if (cpu && cpu->test_stopped())
+			{
+				return;
+			}
+		}
+	}
+
 	static void _register_lock(cpu_thread* _cpu)
 	{
 		for (u32 i = 0, max = g_cfg.core.ppu_threads;;)
