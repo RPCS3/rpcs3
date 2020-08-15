@@ -14,11 +14,16 @@ namespace vm
 	}
 
 	// Update reservation status
-	inline void reservation_update(u32 addr, u32 size, bool lsb = false)
+	inline std::pair<bool, u64> try_reservation_update(u32 addr, u32 size, bool lsb = false)
 	{
 		// Update reservation info with new timestamp
-		reservation_acquire(addr, size) += 128;
+		auto& res = reservation_acquire(addr, size);
+		const u64 rtime = res;
+
+		return {!(rtime & 127) && res.compare_and_swap_test(rtime, rtime + 128), rtime};
 	}
+
+	void reservation_update(u32 addr, u32 size, bool lsb = false);
 
 	// Get reservation sync variable
 	inline atomic_t<u64>& reservation_notifier(u32 addr, u32 size)
