@@ -280,6 +280,8 @@ namespace vk
 				"// Depth format conversions\n"
 				"#define d24_to_f32(bits)             floatBitsToUint(float(bits) / 16777215.f)\n"
 				"#define f32_to_d24(bits)             uint(uintBitsToFloat(bits) * 16777215.f)\n"
+				"#define d24f_to_f32(bits)            (bits << 7)\n"
+				"#define f32_to_d24f(bits)            (bits >> 7)\n"
 				"#define d24x8_to_f32(bits)           d24_to_f32(bits >> 8)\n"
 				"#define d24x8_to_d24x8_swapped(bits) (bits & 0xFF00) | (bits & 0xFF0000) >> 16 | (bits & 0xFF) << 16\n"
 				"#define f32_to_d24x8_swapped(bits)   d24x8_to_d24x8_swapped(f32_to_d24(bits))\n"
@@ -492,7 +494,7 @@ namespace vk
 		}
 	};
 
-	template<bool _SwapBytes = false>
+	template<bool _SwapBytes = false, bool _DepthFloat = false>
 	struct cs_gather_d32x8 : cs_interleave_task
 	{
 		cs_gather_d32x8()
@@ -500,8 +502,20 @@ namespace vk
 			work_kernel =
 				"		if (index >= block_length)\n"
 				"			return;\n"
-				"\n"
-				"		depth = f32_to_d24(data[index + z_offset]);\n"
+				"\n";
+
+			if constexpr (!_DepthFloat)
+			{
+				work_kernel +=
+				"		depth = f32_to_d24(data[index + z_offset]);\n";
+			}
+			else
+			{
+				work_kernel +=
+				"		depth = f32_to_d24f(data[index + z_offset]);\n";
+			}
+
+			work_kernel +=
 				"		stencil_offset = (index / 4);\n"
 				"		stencil_shift = (index % 4) * 8;\n"
 				"		stencil = data[stencil_offset + s_offset];\n"
@@ -542,6 +556,7 @@ namespace vk
 		}
 	};
 
+	template<bool _DepthFloat = false>
 	struct cs_scatter_d32x8 : cs_interleave_task
 	{
 		cs_scatter_d32x8()
@@ -550,8 +565,20 @@ namespace vk
 				"		if (index >= block_length)\n"
 				"			return;\n"
 				"\n"
-				"		value = data[index];\n"
-				"		data[index + z_offset] = d24_to_f32(value >> 8);\n"
+				"		value = data[index];\n";
+
+			if constexpr (!_DepthFloat)
+			{
+				work_kernel +=
+				"		data[index + z_offset] = d24_to_f32(value >> 8);\n";
+			}
+			else
+			{
+				work_kernel +=
+				"		data[index + z_offset] = d24f_to_f32(value >> 8);\n";
+			}
+
+			work_kernel +=
 				"		stencil_offset = (index / 4);\n"
 				"		stencil_shift = (index % 4) * 8;\n"
 				"		stencil = (value & 0xFF) << stencil_shift;\n"

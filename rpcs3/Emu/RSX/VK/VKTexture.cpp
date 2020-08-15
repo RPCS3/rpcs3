@@ -78,6 +78,11 @@ namespace vk
 			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, dst->value, 1, &region);
 			break;
 		}
+		case VK_FORMAT_D32_SFLOAT:
+		{
+			fmt::throw_exception("Unsupported transfer (D16_FLOAT");
+			break;
+		}
 		case VK_FORMAT_D24_UNORM_S8_UINT:
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		{
@@ -113,6 +118,11 @@ namespace vk
 				{
 					job = vk::get_compute_task<vk::cs_gather_d24x8<false>>();
 				}
+				else if (auto dsv = dynamic_cast<const vk::render_target*>(src);
+						 dsv && dsv->get_format_type() == rsx::format_type::depth_float)
+				{
+					job = vk::get_compute_task<vk::cs_gather_d32x8<false, true>>();
+				}
 				else
 				{
 					job = vk::get_compute_task<vk::cs_gather_d32x8<false>>();
@@ -123,6 +133,11 @@ namespace vk
 				if (src->format() == VK_FORMAT_D24_UNORM_S8_UINT)
 				{
 					job = vk::get_compute_task<vk::cs_gather_d24x8<true>>();
+				}
+				else if (auto dsv = dynamic_cast<const vk::render_target*>(src);
+						 dsv && dsv->get_format_type() == rsx::format_type::depth_float)
+				{
+					job = vk::get_compute_task<vk::cs_gather_d32x8<true, true>>();
 				}
 				else
 				{
@@ -162,6 +177,11 @@ namespace vk
 			vkCmdCopyBufferToImage(cmd, src->value, dst->value, dst->current_layout, 1, &region);
 			break;
 		}
+		case VK_FORMAT_D32_SFLOAT:
+		{
+			fmt::throw_exception("Unsupported transfer (D16_FLOAT");
+			break;
+		}
 		case VK_FORMAT_D24_UNORM_S8_UINT:
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		{
@@ -191,9 +211,14 @@ namespace vk
 			{
 				job = vk::get_compute_task<vk::cs_scatter_d24x8>();
 			}
+			else if (auto dsv = dynamic_cast<const vk::render_target*>(dst);
+					 dsv && dsv->get_format_type() == rsx::format_type::depth_float)
+			{
+				job = vk::get_compute_task<vk::cs_scatter_d32x8<true>>();
+			}
 			else
 			{
-				job = vk::get_compute_task<vk::cs_scatter_d32x8>();
+				job = vk::get_compute_task<vk::cs_scatter_d32x8<false>>();
 			}
 
 			job->run(cmd, src, data_offset, packed_length, z_offset, s_offset);
@@ -514,6 +539,13 @@ namespace vk
 				case VK_FORMAT_D16_UNORM:
 				{
 					auto typeless = vk::get_typeless_helper(VK_FORMAT_R16_UNORM, typeless_w, typeless_h);
+					change_image_layout(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL);
+					stretch_image_typeless_unsafe(src, dst, typeless->value, src_rect, dst_rect, VK_IMAGE_ASPECT_DEPTH_BIT);
+					break;
+				}
+				case VK_FORMAT_D32_SFLOAT:
+				{
+					auto typeless = vk::get_typeless_helper(VK_FORMAT_R32_SFLOAT, typeless_w, typeless_h);
 					change_image_layout(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL);
 					stretch_image_typeless_unsafe(src, dst, typeless->value, src_rect, dst_rect, VK_IMAGE_ASPECT_DEPTH_BIT);
 					break;
