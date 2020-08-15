@@ -692,7 +692,7 @@ namespace rsx
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
 			u32 address,
-			surface_depth_format format,
+			surface_depth_format2 format,
 			size_t width, size_t height, size_t pitch,
 			rsx::surface_antialiasing antialias,
 			vk::render_device &device, vk::command_buffer& cmd)
@@ -738,11 +738,7 @@ namespace rsx
 			ds->memory_usage_flags= rsx::surface_usage_flags::attachment;
 			ds->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			ds->native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
-
-			ds->native_pitch = static_cast<u16>(width) * 2 * ds->samples_x;
-			if (format == rsx::surface_depth_format::z24s8)
-				ds->native_pitch *= 2;
-
+			ds->native_pitch = static_cast<u16>(width) * get_format_block_size_in_bytes(format) * ds->samples_x;
 			ds->rsx_pitch = static_cast<u16>(pitch);
 			ds->surface_width = static_cast<u16>(width);
 			ds->surface_height = static_cast<u16>(height);
@@ -911,7 +907,7 @@ namespace rsx
 
 		static bool surface_matches_properties(
 			const std::unique_ptr<vk::render_target> &surface,
-			surface_depth_format format,
+			surface_depth_format2 format,
 			size_t width, size_t height,
 			rsx::surface_antialiasing antialias,
 			bool check_refs = false)

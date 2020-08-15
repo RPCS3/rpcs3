@@ -1473,11 +1473,9 @@ namespace gl
 			bgr = GL_BGR,
 			bgra = GL_BGRA,
 
-			stencil = GL_STENCIL_INDEX,
 			stencil8 = GL_STENCIL_INDEX8,
-			depth = GL_DEPTH_COMPONENT,
 			depth16 = GL_DEPTH_COMPONENT16,
-			depth_stencil = GL_DEPTH_STENCIL,
+			depth32f = GL_DEPTH_COMPONENT32F,
 			depth24_stencil8 = GL_DEPTH24_STENCIL8,
 			depth32f_stencil8 = GL_DEPTH32F_STENCIL8,
 

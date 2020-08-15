@@ -1310,9 +1310,17 @@ namespace rsx
 			return decode<NV4097_SET_SURFACE_FORMAT>().color_fmt();
 		}
 
-		surface_depth_format surface_depth_fmt() const
+		surface_depth_format2 surface_depth_fmt() const
 		{
-			return decode<NV4097_SET_SURFACE_FORMAT>().depth_fmt();
+			const auto base_fmt = decode<NV4097_SET_SURFACE_FORMAT>().depth_fmt();
+			if (!depth_buffer_float_enabled()) [[likely]]
+			{
+				return static_cast<surface_depth_format2>(base_fmt);
+			}
+
+			return base_fmt == surface_depth_format::z16 ?
+				surface_depth_format2::z16_float :
+				surface_depth_format2::z24s8_float;
 		}
 
 		surface_raster_type surface_type() const
@@ -1640,57 +1648,57 @@ namespace rsx
 			registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD] = value;
 		}
 
-		u32 transform_constant_load()
+		u32 transform_constant_load() const
 		{
 			return registers[NV4097_SET_TRANSFORM_CONSTANT_LOAD];
 		}
 
-		u32 transform_branch_bits()
+		u32 transform_branch_bits() const
 		{
 			return registers[NV4097_SET_TRANSFORM_BRANCH_BITS];
 		}
 
-		u16 msaa_sample_mask()
+		u16 msaa_sample_mask() const
 		{
 			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_sample_mask();
 		}
 
-		bool msaa_enabled()
+		bool msaa_enabled() const
 		{
 			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_enabled();
 		}
 
-		bool msaa_alpha_to_coverage_enabled()
+		bool msaa_alpha_to_coverage_enabled() const
 		{
 			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_alpha_to_coverage();
 		}
 
-		bool msaa_alpha_to_one_enabled()
+		bool msaa_alpha_to_one_enabled() const
 		{
 			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_alpha_to_one();
 		}
 
-		bool depth_clamp_enabled()
+		bool depth_clamp_enabled() const
 		{
 			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clamp_enabled();
 		}
 
-		bool depth_clip_enabled()
+		bool depth_clip_enabled() const
 		{
 			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clip_enabled();
 		}
 
-		bool depth_clip_ignore_w()
+		bool depth_clip_ignore_w() const
 		{
 			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clip_ignore_w();
 		}
 
-		bool framebuffer_srgb_enabled()
+		bool framebuffer_srgb_enabled() const
 		{
 			return decode<NV4097_SET_SHADER_PACKER>().srgb_output_enabled();
 		}
 
-		bool depth_buffer_float_enabled()
+		bool depth_buffer_float_enabled() const
 		{
 			return decode<NV4097_SET_CONTROL0>().depth_float();
 		}

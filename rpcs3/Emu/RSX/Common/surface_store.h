@@ -650,7 +650,7 @@ namespace rsx
 		surface_type bind_address_as_depth_stencil(
 			command_list_type command_list,
 			u32 address,
-			surface_depth_format depth_format,
+			surface_depth_format2 depth_format,
 			surface_antialiasing antialias,
 			size_t width, size_t height, size_t pitch,
 			Args&&... extra_params)
@@ -658,7 +658,7 @@ namespace rsx
 			return bind_surface_address<true>(
 				command_list, address, depth_format, antialias,
 				width, height, pitch,
-				depth_format == rsx::surface_depth_format::z16? 2 : 4,
+				get_format_block_size_in_bytes(depth_format),
 				std::forward<Args>(extra_params)...);
 		}
 
@@ -670,7 +670,7 @@ namespace rsx
 		template <typename ...Args>
 		void prepare_render_target(
 			command_list_type command_list,
-			surface_color_format color_format, surface_depth_format depth_format,
+			surface_color_format color_format, surface_depth_format2 depth_format,
 			u32 clip_horizontal_reg, u32 clip_vertical_reg,
 			surface_target set_surface_target,
 			surface_antialiasing antialias,
