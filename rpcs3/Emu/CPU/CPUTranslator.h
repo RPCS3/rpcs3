@@ -2423,6 +2423,9 @@ protected:
 	// Allow FMA
 	bool m_use_fma = false;
 
+	// Allow Icelake tier AVX-512 
+	bool m_use_avx512_icl = false;
+
 	// IR builder
 	llvm::IRBuilder<>* m_ir;
 
@@ -2779,6 +2782,48 @@ public:
 		const auto av = a.eval(m_ir);
 		const auto bv = b.eval(m_ir);
 		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.min.ps", av->getType(), av->getType(), av->getType()).getCallee(), {av, bv});
+		return result;
+	}
+
+	template <typename T1, typename T2>
+	value_t<u8[16]> gf2p8affineqb(T1 a, T2 b, u8 c)
+	{
+		value_t<u8[16]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+
+		const auto immediate = (llvm_const_int<u8>{c});
+		const auto imm8 = immediate.eval(m_ir);
+
+		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_vgf2p8affineqb_128), {data0, data1, imm8});
+		return result;
+	}
+
+	template <typename T1, typename T2, typename T3>
+	value_t<u8[16]> vperm2b(T1 a, T2 b, T3 c)
+	{
+		value_t<u8[16]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+		const auto index = c.eval(m_ir);
+		const auto zeros = llvm::ConstantAggregateZero::get(get_type<u8[16]>());
+
+		if (auto c = llvm::dyn_cast<llvm::Constant>(index))
+		{
+			// Convert VPERM2B index back to LLVM vector shuffle mask
+			const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(c);
+
+			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
+			{
+				result.value = m_ir->CreateZExt(cv, get_type<u32[16]>());
+				result.value = m_ir->CreateShuffleVector(data0, data1, result.value);
+				return result;
+			}
+		}
+
+		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_vpermi2var_qi_128), {data0, index, data1});
 		return result;
 	}
 

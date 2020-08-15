@@ -245,18 +245,17 @@ namespace rsx
 		}
 	}
 
-	//
-	static inline u32 floor_log2(u32 value)
+	static constexpr u32 floor_log2(u32 value)
 	{
 		return value <= 1 ? 0 : std::countl_zero(value) ^ 31;
 	}
 
-	static inline u32 ceil_log2(u32 value)
+	static constexpr u32 ceil_log2(u32 value)
 	{
-		return value <= 1 ? 0 : std::countl_zero((value - 1) << 1) ^ 31;
+		return floor_log2(value) + u32{!!(value & (value - 1))};
 	}
 
-	static inline u32 next_pow2(u32 x)
+	static constexpr u32 next_pow2(u32 x)
 	{
 		if (x <= 2) return x;
 

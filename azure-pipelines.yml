@@ -100,16 +100,8 @@ jobs:
       condition: succeeded()
       artifact: RPCS3 for Windows
 
-    - task: GitHubRelease@1
+    - bash: .ci/github-upload-windows.sh
       condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'))
-      inputs:
-        gitHubConnection: 'RPCS3-Token'
-        repositoryName: 'RPCS3/rpcs3-binaries-win'
-        releaseNotesFilePath: 'GitHubReleaseMessage.txt'
-        action: 'create'
-        target: '7d09e3be30805911226241afbb14f8cdc2eb054e'
-        tagSource: 'userSpecifiedTag'
-        tag: 'build-$(Build.SourceVersion)'
-        title: $(AVVER)
-        addChangeLog: false
       displayName: Push build to GitHub
+      env:
+        RPCS3_TOKEN: $(RPCS3-Token)

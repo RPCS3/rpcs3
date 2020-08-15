@@ -1022,7 +1022,7 @@ std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format)
 	case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 	case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
 	case rsx::surface_color_format::a8b8g8r8:
-		return{ CELL_GCM_TEXTURE_A8R8G8B8, false };
+		return{ CELL_GCM_TEXTURE_A8R8G8B8, true };
 
 	case rsx::surface_color_format::w16z16y16x16:
 		return{ CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT, true };

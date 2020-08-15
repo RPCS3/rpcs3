@@ -7277,10 +7277,20 @@ public:
 		{
 			if (auto [ok, v1] = match_expr(b, byteswap(match<u8[16]>())); ok)
 			{
-				// Undo endian swapping, and rely on pshufb to re-reverse endianness
-				const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
+				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
 				const auto as = byteswap(a);
 				const auto bs = byteswap(b);
+
+				if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
+				{
+					const auto m = gf2p8affineqb(build<u8[16]>(0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04), c, 0x7f);
+					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+					const auto ab = vperm2b(as, bs, c);
+					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+					return;
+				}
+
+				const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
 				const auto ax = pshufb(as, c);
 				const auto bx = pshufb(bs, c);
 				set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, bx) | x);
@@ -7317,6 +7327,16 @@ public:
 					return;
 				}
 			}
+		}
+
+		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
+		{
+			const auto m = gf2p8affineqb(build<u8[16]>(0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04), c, 0x7f);
+			const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+			const auto cr = eval(~c);
+			const auto ab = vperm2b(b, a, cr);
+			set_vr(op.rt4, select(noncast<s8[16]>(cr) >= 0, mm, ab));
+			return;
 		}
 
 		const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
@@ -7483,13 +7503,14 @@ public:
 	}
 
 	// Checks for postive and negative zero, or Denormal (treated as zero)
-	bool is_spu_float_zero(v128 a)
+	// If sign is +-1 check equality againts all sign bits
+	bool is_spu_float_zero(v128 a, int sign = 0)
 	{
 		for (u32 i = 0; i < 4; i++)
 		{
 			const u32 exponent = a._u32[i] & 0x7f800000u;
 
-			if (exponent)
+			if (exponent || (sign && (sign >= 0) != (a._s32[i] >= 0)))
 			{
 				// Normalized number
 				return false;
@@ -7531,63 +7552,53 @@ public:
 			return;
 		}
 
-		const auto a = get_vr<f32[4]>(op.ra);
-		const auto b = get_vr<f32[4]>(op.rb);
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+		const value_t<f32[4]> ab[2]{a, b};
 
-		if (auto [ok, data] = get_const_vector(b.value, m_pos, 5000); ok)
+		std::bitset<2> safe_int_compare(0);
+		std::bitset<2> safe_nonzero_compare(0);
+
+		for (u32 i = 0; i < 2; i++)
 		{
-			bool safe_int_compare = true;
-
-			for (u32 i = 0; i < 4; i++)
+			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, 5000); ok)
 			{
-				const u32 exponent = data._u32[i] & 0x7f800000u;
+				safe_int_compare.set(i);
+				safe_nonzero_compare.set(i);
 
-				if (data._u32[i] >= 0x7f7fffffu || !exponent)
+				for (u32 j = 0; j < 4; j++)
 				{
-					// Postive or negative zero, Denormal (treated as zero), Negative constant, or Normalized number with exponent +127
-		 			// Cannot used signed integer compare safely
-					// Note: Technically this optimization is accurate for any positive value, but due to the fact that
-					// we don't produce "extended range" values the same way as real hardware, it's not safe to apply
-					// this optimization for values outside of the range of x86 floating point hardware.
-					safe_int_compare = false;
-				}
-			}
+					const u32 value = data._u32[j];
+					const u8 exponent = static_cast<u8>(value >> 23);
 
-			if (safe_int_compare)
-			{
-				set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
-				return;
+					if (value >= 0x7f7fffffu || !exponent)
+					{
+						// Postive or negative zero, Denormal (treated as zero), Negative constant, or Normalized number with exponent +127
+		 				// Cannot used signed integer compare safely
+						// Note: Technically this optimization is accurate for any positive value, but due to the fact that
+						// we don't produce "extended range" values the same way as real hardware, it's not safe to apply
+						// this optimization for values outside of the range of x86 floating point hardware.
+						safe_int_compare.reset(i);
+						if (!exponent) safe_nonzero_compare.reset(i);
+					}
+				}
 			}
 		}
 
-		if (auto [ok, data] = get_const_vector(a.value, m_pos, 5000); ok)
+		if (safe_int_compare.any())
 		{
-			bool safe_int_compare = true;
-
-			for (u32 i = 0; i < 4; i++)
-			{
-				const u32 exponent = data._u32[i] & 0x7f800000u;
-
-				if (data._u32[i] >= 0x7f7fffffu || !exponent)
-				{
-					// See above
-					safe_int_compare = false;
-					break;
-				}
-			}
-
-			if (safe_int_compare)
-			{
-				set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
-				return;
-			}
+			set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
+			return;
 		}
 
 		if (g_cfg.core.spu_approx_xfloat)
 		{
-			const auto ca = eval(clamp_positive_smax(a));
-			const auto cb = eval(clamp_negative_smax(b));
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(ca > cb)));
+			const auto ai = eval(bitcast<s32[4]>(a));
+			const auto bi = eval(bitcast<s32[4]>(b));
+
+			if (!safe_nonzero_compare.any())
+				set_vr(op.rt, sext<s32[4]>(fcmp_uno(a != b) & select((ai & bi) >= 0, ai > bi, ai < bi)));
+			else
+				set_vr(op.rt, sext<s32[4]>(select((ai & bi) >= 0, ai > bi, ai < bi)));
 		}
 		else
 		{
@@ -7619,7 +7630,7 @@ public:
 	void FA(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) + get_vr<f64[4]>(op.rb));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) + get_vr<f64[4]>(op.rb) + fsplat<f64[4]>(0.));
 		else
 			set_vr(op.rt, get_vr<f32[4]>(op.ra) + get_vr<f32[4]>(op.rb));
 	}
@@ -7627,7 +7638,7 @@ public:
 	void FS(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) - get_vr<f64[4]>(op.rb));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) - get_vr<f64[4]>(op.rb) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto b = eval(clamp_smax(get_vr<f32[4]>(op.rb))); // for #4478
@@ -7640,7 +7651,7 @@ public:
 	void FM(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = get_vr<f32[4]>(op.ra);
@@ -7727,28 +7738,58 @@ public:
 		// This is odd since SPU code could just use the FM instruction, but it seems common enough
 		if (auto [ok, data] = get_const_vector(c.value, m_pos, 4000); ok)
 		{
-			if (is_spu_float_zero(data))
+			if (is_spu_float_zero(data, -1))
 			{
 				r = eval(a * b);
 				return r;
 			}
-		}
 
-		if (auto [ok, data] = get_const_vector(b.value, m_pos, 4000); ok)
-		{
-			if (is_spu_float_zero(data))
+			if (!m_use_fma && is_spu_float_zero(data, +1))
 			{
-				// Just return the added value if either a or b is 0
-				return c;
+				r = eval(a * b + fsplat<f32[4]>(0.f));
+				return r;
 			}
 		}
 
-		if (auto [ok, data] = get_const_vector(a.value, m_pos, 4000); ok)
+		if ([&]()
 		{
-			if (is_spu_float_zero(data))
+			if (auto [ok, data] = get_const_vector(a.value, m_pos, 4000); ok)
 			{
-				return c;
+				if (!is_spu_float_zero(data, +1))
+				{
+					return false;
+				}
+
+				if (auto [ok0, data0] = get_const_vector(b.value, m_pos, 4000); ok0)
+				{
+					if (is_spu_float_zero(data0, +1))
+					{
+						return true;
+					}
+				}
 			}
+
+			if (auto [ok, data] = get_const_vector(a.value, m_pos, 4000); ok)
+			{
+				if (!is_spu_float_zero(data, -1))
+				{
+					return false;
+				}
+
+				if (auto [ok0, data0] = get_const_vector(b.value, m_pos, 4000); ok0)
+				{
+					if (is_spu_float_zero(data0, -1))
+					{
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}())
+		{
+			// Just return the added value if both a and b is +0 or -0 (+0 and -0 arent't allowed alone)
+			return c;
 		}
 
 		if (m_use_fma)
@@ -7770,7 +7811,7 @@ public:
 	{
 		// See FMA.
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(eval(-get_vr<f64[4]>(op.ra)), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
+			set_vr(op.rt4, fmuladd(eval(-get_vr<f64[4]>(op.ra)), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = eval(clamp_smax(get_vr<f32[4]>(op.ra)));
@@ -7785,7 +7826,7 @@ public:
 	{
 		// Hardware FMA produces the same result as multiple + add on the limited double range (xfloat).
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
+			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = get_vr<f32[4]>(op.ra);
@@ -7804,7 +7845,7 @@ public:
 	{
 		// See FMA.
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))));
+			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))) + fsplat<f64[4]>(0.));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = eval(clamp_smax(get_vr<f32[4]>(op.ra)));
