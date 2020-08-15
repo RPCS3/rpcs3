@@ -131,15 +131,19 @@ namespace rsx
 			return gcm_format;
 		}
 
-		static inline u32 get_sized_blit_format(bool _32_bit, bool depth_format)
+		static inline u32 get_sized_blit_format(bool is_32_bit, bool depth_format, bool format_conversion)
 		{
-			if (_32_bit) [[likely]]
+			if (format_conversion)
+			{
+				return (is_32_bit) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
+			}
+			else if (is_32_bit)
 			{
 				return (!depth_format) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_DEPTH24_D8;
 			}
 			else
 			{
-				return (!depth_format) ? CELL_GCM_TEXTURE_R5G6B5 : CELL_GCM_TEXTURE_DEPTH16;
+				return (!depth_format) ? CELL_GCM_TEXTURE_X16 : CELL_GCM_TEXTURE_DEPTH16;
 			}
 		}
 
