@@ -7,6 +7,7 @@
 #include "VKFormats.h"
 #include "VKCompute.h"
 #include "VKRenderPass.h"
+#include "VKRenderTargets.h"
 
 namespace vk
 {
@@ -265,8 +266,8 @@ namespace vk
 		{
 			vk::copy_image_to_buffer(cmd, src, scratch_buf, src_copy);
 
-			const auto src_convert = get_format_convert_flags(src->info.format);
-			const auto dst_convert = get_format_convert_flags(dst->info.format);
+			auto src_convert = get_format_convert_flags(src->info.format);
+			auto dst_convert = get_format_convert_flags(dst->info.format);
 
 			if (src_convert.first || dst_convert.first)
 			{

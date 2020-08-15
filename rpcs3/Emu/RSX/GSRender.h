@@ -90,7 +90,7 @@ public:
 	virtual display_handle_t handle() const = 0;
 
 	std::atomic<bool> screenshot_toggle = false;
-	virtual void take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height) = 0;
+	virtual void take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height, bool is_bgra) = 0;
 };
 
 class GSRender : public rsx::thread

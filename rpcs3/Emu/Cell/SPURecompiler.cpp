@@ -7277,10 +7277,20 @@ public:
 		{
 			if (auto [ok, v1] = match_expr(b, byteswap(match<u8[16]>())); ok)
 			{
-				// Undo endian swapping, and rely on pshufb to re-reverse endianness
-				const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
+				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
 				const auto as = byteswap(a);
 				const auto bs = byteswap(b);
+
+				if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
+				{
+					const auto m = gf2p8affineqb(build<u8[16]>(0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04), c, 0x7f);
+					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+					const auto ab = vperm2b(as, bs, c);
+					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+					return;
+				}
+
+				const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
 				const auto ax = pshufb(as, c);
 				const auto bx = pshufb(bs, c);
 				set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, bx) | x);
@@ -7317,6 +7327,16 @@ public:
 					return;
 				}
 			}
+		}
+
+		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
+		{
+			const auto m = gf2p8affineqb(build<u8[16]>(0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04), c, 0x7f);
+			const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+			const auto cr = eval(~c);
+			const auto ab = vperm2b(b, a, cr);
+			set_vr(op.rt4, select(noncast<s8[16]>(cr) >= 0, mm, ab));
+			return;
 		}
 
 		const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
@@ -7532,63 +7552,53 @@ public:
 			return;
 		}
 
-		const auto a = get_vr<f32[4]>(op.ra);
-		const auto b = get_vr<f32[4]>(op.rb);
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+		const value_t<f32[4]> ab[2]{a, b};
 
-		if (auto [ok, data] = get_const_vector(b.value, m_pos, 5000); ok)
+		std::bitset<2> safe_int_compare(0);
+		std::bitset<2> safe_nonzero_compare(0);
+
+		for (u32 i = 0; i < 2; i++)
 		{
-			bool safe_int_compare = true;
-
-			for (u32 i = 0; i < 4; i++)
+			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, 5000); ok)
 			{
-				const u32 exponent = data._u32[i] & 0x7f800000u;
+				safe_int_compare.set(i);
+				safe_nonzero_compare.set(i);
 
-				if (data._u32[i] >= 0x7f7fffffu || !exponent)
+				for (u32 j = 0; j < 4; j++)
 				{
-					// Postive or negative zero, Denormal (treated as zero), Negative constant, or Normalized number with exponent +127
-		 			// Cannot used signed integer compare safely
-					// Note: Technically this optimization is accurate for any positive value, but due to the fact that
-					// we don't produce "extended range" values the same way as real hardware, it's not safe to apply
-					// this optimization for values outside of the range of x86 floating point hardware.
-					safe_int_compare = false;
-				}
-			}
+					const u32 value = data._u32[j];
+					const u8 exponent = static_cast<u8>(value >> 23);
 
-			if (safe_int_compare)
-			{
-				set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
-				return;
+					if (value >= 0x7f7fffffu || !exponent)
+					{
+						// Postive or negative zero, Denormal (treated as zero), Negative constant, or Normalized number with exponent +127
+		 				// Cannot used signed integer compare safely
+						// Note: Technically this optimization is accurate for any positive value, but due to the fact that
+						// we don't produce "extended range" values the same way as real hardware, it's not safe to apply
+						// this optimization for values outside of the range of x86 floating point hardware.
+						safe_int_compare.reset(i);
+						if (!exponent) safe_nonzero_compare.reset(i);
+					}
+				}
 			}
 		}
 
-		if (auto [ok, data] = get_const_vector(a.value, m_pos, 5000); ok)
+		if (safe_int_compare.any())
 		{
-			bool safe_int_compare = true;
-
-			for (u32 i = 0; i < 4; i++)
-			{
-				const u32 exponent = data._u32[i] & 0x7f800000u;
-
-				if (data._u32[i] >= 0x7f7fffffu || !exponent)
-				{
-					// See above
-					safe_int_compare = false;
-					break;
-				}
-			}
-
-			if (safe_int_compare)
-			{
-				set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
-				return;
-			}
+			set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
+			return;
 		}
 
 		if (g_cfg.core.spu_approx_xfloat)
 		{
-			const auto ca = eval(clamp_positive_smax(a));
-			const auto cb = eval(clamp_negative_smax(b));
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(ca > cb)));
+			const auto ai = eval(bitcast<s32[4]>(a));
+			const auto bi = eval(bitcast<s32[4]>(b));
+
+			if (!safe_nonzero_compare.any())
+				set_vr(op.rt, sext<s32[4]>(fcmp_uno(a != b) & select((ai & bi) >= 0, ai > bi, ai < bi)));
+			else
+				set_vr(op.rt, sext<s32[4]>(select((ai & bi) >= 0, ai > bi, ai < bi)));
 		}
 		else
 		{
@@ -7731,6 +7741,12 @@ public:
 			if (is_spu_float_zero(data, -1))
 			{
 				r = eval(a * b);
+				return r;
+			}
+
+			if (!m_use_fma && is_spu_float_zero(data, +1))
+			{
+				r = eval(a * b + fsplat<f32[4]>(0.f));
 				return r;
 			}
 		}
