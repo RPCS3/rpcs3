@@ -135,8 +135,11 @@ texture_memory_info upload_texture_subresource(gsl::span<std::byte> dst_buffer, 
 u8 get_format_block_size_in_bytes(int format);
 u8 get_format_block_size_in_texel(int format);
 u8 get_format_block_size_in_bytes(rsx::surface_color_format format);
+u8 get_format_block_size_in_bytes(rsx::surface_depth_format2 format);
 
 u8 get_format_sample_count(rsx::surface_antialiasing antialias);
+u32 get_max_depth_value(rsx::surface_depth_format2 format);
+bool is_depth_stencil_format(rsx::surface_depth_format2 format);
 
 /**
  * Returns number of texel rows encoded in one pitch-length line of bytes
@@ -163,4 +166,4 @@ u32 get_remap_encoding(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& re
  * Get gcm texel layout. Returns <format, byteswapped>
  */
 std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format);
-std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_depth_format format);
+std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_depth_format2 format);

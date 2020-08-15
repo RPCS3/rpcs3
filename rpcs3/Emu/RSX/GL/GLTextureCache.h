@@ -960,13 +960,12 @@ namespace gl
 			case CELL_GCM_TEXTURE_DEPTH24_D8:
 			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 				return (ifmt == gl::texture::internal_format::depth24_stencil8 ||
-						ifmt == gl::texture::internal_format::depth32f_stencil8 ||
-						ifmt == gl::texture::internal_format::depth_stencil);
+						ifmt == gl::texture::internal_format::depth32f_stencil8);
 			case CELL_GCM_TEXTURE_X16:
 			case CELL_GCM_TEXTURE_DEPTH16:
 			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 				return (ifmt == gl::texture::internal_format::depth16 ||
-						ifmt == gl::texture::internal_format::depth);
+						ifmt == gl::texture::internal_format::depth32f);
 			}
 		}
 

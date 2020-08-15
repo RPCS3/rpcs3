@@ -114,8 +114,7 @@ namespace rsx
 		u32 pitch = 0;
 
 		rsx::surface_color_format color_format;
-		rsx::surface_depth_format depth_format;
-		bool depth_buffer_float;
+		rsx::surface_depth_format2 depth_format;
 
 		u16 width = 0;
 		u16 height = 0;

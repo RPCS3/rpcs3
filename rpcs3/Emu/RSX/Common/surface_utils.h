@@ -149,7 +149,7 @@ namespace rsx
 		union
 		{
 			rsx::surface_color_format gcm_color_format;
-			rsx::surface_depth_format gcm_depth_format;
+			rsx::surface_depth_format2 gcm_depth_format;
 		}
 		format_info;
 
@@ -263,16 +263,17 @@ namespace rsx
 			format_info.gcm_color_format = format;
 		}
 
-		void set_format(rsx::surface_depth_format format)
+		void set_format(rsx::surface_depth_format2 format)
 		{
 			format_info.gcm_depth_format = format;
-		}
 
-		void set_depth_render_mode(bool integer)
-		{
-			if (is_depth_surface())
+			if (format >= rsx::surface_depth_format2::z16_float)
 			{
-				format_class = (integer) ? format_type::depth_uint : format_type::depth_float;
+				format_class = rsx::format_type::depth_float;
+			}
+			else
+			{
+				format_class = rsx::format_type::depth_uint;
 			}
 		}
 
@@ -281,7 +282,7 @@ namespace rsx
 			return format_info.gcm_color_format;
 		}
 
-		rsx::surface_depth_format get_surface_depth_format() const
+		rsx::surface_depth_format2 get_surface_depth_format() const
 		{
 			return format_info.gcm_depth_format;
 		}

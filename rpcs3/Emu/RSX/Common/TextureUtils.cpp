@@ -839,6 +839,18 @@ u8 get_format_block_size_in_bytes(rsx::surface_color_format format)
 	}
 }
 
+u8 get_format_block_size_in_bytes(rsx::surface_depth_format2 format)
+{
+	switch (format)
+	{
+	case rsx::surface_depth_format2::z24s8_uint:
+	case rsx::surface_depth_format2::z24s8_float:
+		return 4;
+	default:
+		return 2;
+	}
+}
+
 u8 get_format_sample_count(rsx::surface_antialiasing antialias)
 {
 	switch (antialias)
@@ -853,6 +865,18 @@ u8 get_format_sample_count(rsx::surface_antialiasing antialias)
 		default:
 			ASSUME(0);
 			return 0;
+	}
+}
+
+bool is_depth_stencil_format(rsx::surface_depth_format2 format)
+{
+	switch (format)
+	{
+	case rsx::surface_depth_format2::z24s8_uint:
+	case rsx::surface_depth_format2::z24s8_float:
+		return true;
+	default:
+		return false;
 	}
 }
 
@@ -1047,15 +1071,24 @@ std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format)
 	}
 }
 
-std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_depth_format format)
+std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_depth_format2 format)
 {
 	switch (format)
 	{
-	case rsx::surface_depth_format::z16:
+	case rsx::surface_depth_format2::z16_uint:
 		return{ CELL_GCM_TEXTURE_DEPTH16, true };
-	case rsx::surface_depth_format::z24s8:
+	case rsx::surface_depth_format2::z24s8_uint:
 		return{ CELL_GCM_TEXTURE_DEPTH24_D8, true };
+	case rsx::surface_depth_format2::z16_float :
+		return{ CELL_GCM_TEXTURE_DEPTH16_FLOAT, true };
+	case rsx::surface_depth_format2::z24s8_float:
+		return{ CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT, true };
 	default:
 		ASSUME(0);
 	}
+}
+
+u32 get_max_depth_value(rsx::surface_depth_format2 format)
+{
+	return get_format_block_size_in_bytes(format) == 2 ? 0xFFFF : 0xFFFFFF;
 }

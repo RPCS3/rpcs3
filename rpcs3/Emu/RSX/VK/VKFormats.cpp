@@ -42,16 +42,24 @@ namespace vk
 		return result;
 	}
 
-	VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support, rsx::surface_depth_format format)
+	VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support, rsx::surface_depth_format2 format)
 	{
 		switch (format)
 		{
-		case rsx::surface_depth_format::z16: return VK_FORMAT_D16_UNORM;
-		case rsx::surface_depth_format::z24s8:
+		case rsx::surface_depth_format2::z16_uint:
+			return VK_FORMAT_D16_UNORM;
+		case rsx::surface_depth_format2::z16_float:
+			return VK_FORMAT_D32_SFLOAT;
+		case rsx::surface_depth_format2::z24s8_uint:
 		{
 			if (support.d24_unorm_s8) return VK_FORMAT_D24_UNORM_S8_UINT;
 			if (support.d32_sfloat_s8) return VK_FORMAT_D32_SFLOAT_S8_UINT;
 			fmt::throw_exception("No hardware support for z24s8" HERE);
+		}
+		case rsx::surface_depth_format2::z24s8_float:
+		{
+			if (support.d32_sfloat_s8) return VK_FORMAT_D32_SFLOAT_S8_UINT;
+			fmt::throw_exception("No hardware support for z24s8_float" HERE);
 		}
 		default:
 			break;
