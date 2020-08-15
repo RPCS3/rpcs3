@@ -487,4 +487,16 @@ namespace vk
 
 		return false;
 	}
+
+	bool formats_are_bitcast_compatible(image* image1, image* image2)
+	{
+		if (const u32 transfer_class = image1->format_class() | image2->format_class();
+			transfer_class & RSX_FORMAT_CLASS_DEPTH_FLOAT_MASK)
+		{
+			// If any one of the two images is a depth float, the other must match exactly or bust
+			return (image1->format_class() == image2->format_class());
+		}
+
+		return formats_are_bitcast_compatible(image1->format(), image2->format());
+	}
 }

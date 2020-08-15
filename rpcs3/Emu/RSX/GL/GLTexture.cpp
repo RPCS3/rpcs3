@@ -480,9 +480,9 @@ namespace gl
 	}
 
 	void fill_texture(rsx::texture_dimension_extended dim, u16 mipmap_count, int format, u16 width, u16 height, u16 depth,
-			const std::vector<rsx_subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
+			const std::vector<rsx::subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
 	{
-		texture_uploader_capabilities caps{ true, false, false, 4 };
+		rsx::texture_uploader_capabilities caps{ true, false, false, 4 };
 
 		pixel_unpack_settings unpack_settings;
 		unpack_settings.row_length(0).alignment(4);
@@ -496,7 +496,7 @@ namespace gl
 
 			const GLsizei format_block_size = (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16;
 
-			for (const rsx_subresource_layout& layout : input_layouts)
+			for (const rsx::subresource_layout& layout : input_layouts)
 			{
 				upload_texture_subresource(staging_buffer, layout, format, is_swizzled, caps);
 				const sizei image_size{ align(layout.width_in_texel, 4), align(layout.height_in_texel, 4) };
@@ -561,7 +561,7 @@ namespace gl
 				unpack_settings.apply();
 			}
 
-			for (const rsx_subresource_layout& layout : input_layouts)
+			for (const rsx::subresource_layout& layout : input_layouts)
 			{
 				auto op = upload_texture_subresource(staging_buffer, layout, format, is_swizzled, caps);
 				if (apply_settings)
@@ -627,7 +627,7 @@ namespace gl
 	}
 
 	void upload_texture(GLuint id, u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
-			const std::vector<rsx_subresource_layout>& subresources_layout)
+			const std::vector<rsx::subresource_layout>& subresources_layout)
 	{
 		GLenum target;
 		switch (type)
@@ -652,7 +652,7 @@ namespace gl
 		// The rest of sampler state is now handled by sampler state objects
 
 		// Calculate staging buffer size
-		const u32 aligned_pitch = align<u32>(width * get_format_block_size_in_bytes(gcm_format), 4);
+		const u32 aligned_pitch = align<u32>(width * rsx::get_format_block_size_in_bytes(gcm_format), 4);
 		size_t texture_data_sz = depth * height * aligned_pitch;
 		std::vector<std::byte> data_upload_buf(texture_data_sz);
 

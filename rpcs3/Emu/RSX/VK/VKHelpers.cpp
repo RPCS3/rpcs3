@@ -344,7 +344,7 @@ namespace vk
 		return tex->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector);
 	}
 
-	vk::image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height)
+	vk::image* get_typeless_helper(VkFormat format, rsx::format_class format_class, u32 requested_width, u32 requested_height)
 	{
 		auto create_texture = [&]()
 		{
@@ -356,7 +356,9 @@ namespace vk
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
 		};
 
-		auto& ptr = g_typeless_textures[+format];
+		const u32 key = (format_class << 24u) | format;
+		auto& ptr = g_typeless_textures[key];
+
 		if (!ptr || ptr->width() < requested_width || ptr->height() < requested_height)
 		{
 			if (ptr)
