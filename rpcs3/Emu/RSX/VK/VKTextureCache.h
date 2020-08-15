@@ -1101,8 +1101,9 @@ namespace vk
 		{
 			const u16 section_depth = depth;
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
-			VkFormat vk_format;
-			VkImageAspectFlags aspect_flags;
+			const VkFormat vk_format = get_compatible_sampler_format(m_formats_support, gcm_format);
+			const VkImageAspectFlags aspect_flags = get_aspect_flags(vk_format);
+
 			VkImageType image_type;
 			VkImageViewType image_view_type;
 			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -1136,26 +1137,6 @@ namespace vk
 				break;
 			default:
 				ASSUME(0);
-				break;
-			}
-
-			switch (gcm_format)
-			{
-			case CELL_GCM_TEXTURE_DEPTH24_D8:
-			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-				aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-				usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-				vk_format = m_formats_support.d24_unorm_s8? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT;
-				break;
-			case CELL_GCM_TEXTURE_DEPTH16:
-			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-				aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
-				usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-				vk_format = VK_FORMAT_D16_UNORM;
-				break;
-			default:
-				aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
-				vk_format = get_compatible_sampler_format(m_formats_support, gcm_format);
 				break;
 			}
 
