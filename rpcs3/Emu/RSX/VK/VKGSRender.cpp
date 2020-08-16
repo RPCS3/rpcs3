@@ -955,14 +955,25 @@ void VKGSRender::set_viewport()
 {
 	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
 	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
+	const auto zclip_near = rsx::method_registers.clip_min();
+	const auto zclip_far = rsx::method_registers.clip_max();
 
 	//NOTE: The scale_offset matrix already has viewport matrix factored in
 	m_viewport.x = 0;
 	m_viewport.y = 0;
 	m_viewport.width = clip_width;
 	m_viewport.height = clip_height;
-	m_viewport.minDepth = 0.f;
-	m_viewport.maxDepth = 1.f;
+
+	if (m_device->get_unrestricted_depth_range_support())
+	{
+		m_viewport.minDepth = zclip_near;
+		m_viewport.maxDepth = zclip_far;
+	}
+	else
+	{
+		m_viewport.minDepth = 0.f;
+		m_viewport.maxDepth = 1.f;
+	}
 }
 
 void VKGSRender::set_scissor(bool clip_viewport)

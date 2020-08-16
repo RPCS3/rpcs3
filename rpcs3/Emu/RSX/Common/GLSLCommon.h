@@ -573,20 +573,37 @@ namespace glsl
 			"}\n\n";
 		}
 
-		if (props.domain == glsl::program_domain::glsl_vertex_program)
+		if (props.domain == glsl::program_domain::glsl_vertex_program && props.emulate_zclip_transform)
 		{
 			OS <<
 			"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
 			"{\n"
-			"	float d = pos.z / pos.w;\n"
-			"	if (d < 0.f && d >= near_plane)\n"
-			"		d = 0.f;\n" //force clamp negative values
-			"	else if (d > 1.f && d <= far_plane)\n"
-			"		d = min(1., 0.99 + (0.01 * (pos.z - near_plane) / (far_plane - near_plane)));\n"
-			"	else\n"
-			"		return pos; //d = (0.99 * d);\n" //range compression for normal values is disabled until a solution to ops comparing z is found
-			"\n"
-			"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n"
+			"	float d = pos.z / pos.w;\n";
+
+			if (!props.emulate_depth_clip_only)
+			{
+				OS <<
+				"	if (d < 0.f && d >= near_plane)\n"
+				"		d = 0.f;\n" //force clamp negative values
+				"	else if (d > 1.f && d <= far_plane)\n"
+				"		d = min(1., 0.99 + (0.01 * (pos.z - near_plane) / (far_plane - near_plane)));\n"
+				"	else\n"
+				"		return pos; //d = (0.99 * d);\n" //range compression for normal values is disabled until a solution to ops comparing z is found
+				"\n"
+				"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n";
+			}
+			else
+			{
+				// Technically the depth value here is the 'final' depth that should be stored in the Z buffer.
+				// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
+				OS <<
+				"	double inv_range = double(1.0) / double(far_plane - near_plane);\n"
+				"	double new_d = (double(d) - double(near_plane)) * inv_range;\n"
+				"\n"
+				"	return vec4(pos.x, pos.y, float(new_d * pos.w), pos.w);\n";
+			}
+
+			OS <<
 			"}\n\n";
 
 			return;

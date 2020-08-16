@@ -167,6 +167,11 @@ void GLGSRender::update_draw_state()
 		gl_state.depth_bounds(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
 	}
 
+	if (gl::get_driver_caps().NV_depth_buffer_float_supported)
+	{
+		gl_state.depth_range(rsx::method_registers.clip_min(), rsx::method_registers.clip_max());
+	}
+
 	gl_state.enable(rsx::method_registers.dither_enabled(), GL_DITHER);
 
 	if (gl_state.enable(rsx::method_registers.stencil_test_enabled(), GL_STENCIL_TEST))
