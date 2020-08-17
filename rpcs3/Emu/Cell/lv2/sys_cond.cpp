@@ -299,7 +299,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	verify(HERE), cond->mutex->owner >> 1 == ppu.id;
 
 	// Restore the recursive value
-	cond->mutex->lock_count = cond.ret;
+	cond->mutex->lock_count.release(static_cast<u32>(cond.ret));
 
 	return not_an_error(ppu.gpr[3]);
 }
