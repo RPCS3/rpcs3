@@ -222,6 +222,9 @@
     <addaction name="confAudioAct"/>
     <addaction name="confIOAct"/>
     <addaction name="confSystemAct"/>
+    <addaction name="confAdvAct"/>
+    <addaction name="confEmuAct"/>
+    <addaction name="confGuiAct"/>
     <addaction name="separator"/>
     <addaction name="confAutopauseManagerAct"/>
    </widget>
@@ -501,6 +504,30 @@
    </property>
    <property name="toolTip">
     <string>Configure system</string>
+   </property>
+  </action>
+  <action name="confAdvAct">
+   <property name="text">
+    <string>Advanced</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure advanced emulator settings</string>
+   </property>
+  </action>
+  <action name="confEmuAct">
+   <property name="text">
+    <string>Emulator</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Emulator settings</string>
+   </property>
+  </action>
+  <action name="confGuiAct">
+   <property name="text">
+    <string>GUI</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure GUI settings</string>
    </property>
   </action>
   <action name="confAutopauseManagerAct">

@@ -43,6 +43,8 @@ namespace utils
 
 	bool has_avx512();
 
+	bool has_avx512_icl();
+
 	bool has_xop();
 
 	bool has_clwb();

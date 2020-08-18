@@ -537,7 +537,7 @@ void main_window::InstallPackages(QStringList file_paths)
 	}
 
 	// Find remaining package files
-	file_paths = file_paths.filter(QRegExp(".*\\.pkg"));
+	file_paths = file_paths.filter(QRegExp(".*\\.pkg", Qt::CaseInsensitive));
 
 	if (file_paths.isEmpty())
 	{
@@ -1578,6 +1578,9 @@ void main_window::CreateConnects()
 	connect(ui->confAudioAct,  &QAction::triggered, [=, this]() { open_settings(2); });
 	connect(ui->confIOAct,     &QAction::triggered, [=, this]() { open_settings(3); });
 	connect(ui->confSystemAct, &QAction::triggered, [=, this]() { open_settings(4); });
+	connect(ui->confAdvAct,    &QAction::triggered, [=, this]() { open_settings(6); });
+	connect(ui->confEmuAct,    &QAction::triggered, [=, this]() { open_settings(7); });
+	connect(ui->confGuiAct,    &QAction::triggered, [=, this]() { open_settings(8); });
 
 	auto open_pad_settings = [this]
 	{

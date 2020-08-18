@@ -12,6 +12,7 @@ namespace
 		{
 			case VK_FORMAT_R5G6B5_UNORM_PACK16:
 				return "r16ui";
+			case VK_FORMAT_R8G8B8A8_UNORM:
 			case VK_FORMAT_B8G8R8A8_UNORM:
 				return "rgba8";
 			case VK_FORMAT_R16G16B16A16_SFLOAT:

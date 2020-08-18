@@ -28,6 +28,9 @@
   </PropertyGroup>
   <Import Project="..\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
   <Import Project="..\common_default_macros.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -64,6 +67,9 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
     <ClCompile />
     <ClCompile />
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="emucore.vcxproj">
