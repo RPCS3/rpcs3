@@ -576,19 +576,34 @@ namespace glsl
 		if (props.domain == glsl::program_domain::glsl_vertex_program && props.emulate_zclip_transform)
 		{
 			OS <<
-			"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
+			"double rcp_precise(double x)\n"
 			"{\n"
-			"	float d = pos.z / pos.w;\n";
+			"	double scaled = x * 0.0009765625;\n"
+			"	double inv = 1.0 / scaled;\n"
+			"	return inv * 0.0009765625;\n"
+			"}\n"
+			"\n"
+			"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
+			"{\n";
 
 			if (!props.emulate_depth_clip_only)
 			{
 				OS <<
+				"	float d = float(pos.z * rcp_precise(pos.w));\n"
 				"	if (d < 0.f && d >= near_plane)\n"
-				"		d = 0.f;\n" //force clamp negative values
+				"	{\n"
+				"		// Clamp\n"
+				"		d = 0.f;\n"
+				"	}\n"
 				"	else if (d > 1.f && d <= far_plane)\n"
+				"	{\n"
+				"		// Compress Z and store towards highest end of the range\n"
 				"		d = min(1., 0.99 + (0.01 * (pos.z - near_plane) / (far_plane - near_plane)));\n"
+				"	}\n"
 				"	else\n"
-				"		return pos; //d = (0.99 * d);\n" //range compression for normal values is disabled until a solution to ops comparing z is found
+				"	{\n"
+				"		return pos;\n"
+				"	}\n"
 				"\n"
 				"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n";
 			}
@@ -597,10 +612,18 @@ namespace glsl
 				// Technically the depth value here is the 'final' depth that should be stored in the Z buffer.
 				// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
 				OS <<
-				"	double inv_range = double(1.0) / double(far_plane - near_plane);\n"
-				"	double new_d = (double(d) - double(near_plane)) * inv_range;\n"
-				"\n"
-				"	return vec4(pos.x, pos.y, float(new_d * pos.w), pos.w);\n";
+				"	if (far_plane != 0.0)\n"
+				"	{\n"
+				"		double z_range = (far_plane > near_plane)? (far_plane - near_plane) : far_plane;\n"
+				"		double inv_range = rcp_precise(z_range);\n"
+				"		float d = float(pos.z * rcp_precise(pos.w));\n"
+				"		float new_d = (d - near_plane) * float(inv_range);\n"
+				"		return vec4(pos.x, pos.y, (new_d * pos.w), pos.w);\n"
+				"	}\n"
+				"	else\n"
+				"	{\n"
+				"		return pos;\n" // Only values where Z=0 can ever pass this clip
+				"	}\n";
 			}
 
 			OS <<

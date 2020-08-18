@@ -117,8 +117,9 @@ void VKGSRender::update_draw_state()
 		}
 		else
 		{
-			bounds_min = rsx::method_registers.clip_min();
-			bounds_max = rsx::method_registers.clip_max();
+			// Avoid special case where min=max and depth bounds (incorrectly) fails
+			bounds_min = std::min(0.f, rsx::method_registers.clip_min());
+			bounds_max = std::max(1.f, rsx::method_registers.clip_max());
 		}
 
 		if (!m_device->get_unrestricted_depth_range_support())
