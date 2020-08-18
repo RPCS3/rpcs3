@@ -670,6 +670,17 @@ int evdev_joystick_handler::add_device(const std::string& device, const std::sha
 				{
 					m_dev                  = std::make_shared<EvdevDevice>();
 					settings_added[device] = bindings.size();
+
+					// Let's log axis information while we are in the settings in order to identify problems more easily.
+					for (const auto& [code, axis_name] : axis_list)
+					{
+						if (const input_absinfo *info = libevdev_get_abs_info(dev, code))
+						{
+							const auto code_name = libevdev_event_code_get_name(EV_ABS, code);
+							evdev_log.notice("Axis info for %s: %s (%s) => minimum=%d, maximum=%d, fuzz=%d, resolution=%d",
+								name, code_name, axis_name, info->minimum, info->maximum, info->fuzz, info->resolution);
+						}
+					}
 				}
 
 				// Alright, now that we've confirmed we haven't added this joystick yet, les do dis.
