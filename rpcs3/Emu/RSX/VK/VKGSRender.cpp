@@ -974,6 +974,8 @@ void VKGSRender::set_viewport()
 		m_viewport.minDepth = 0.f;
 		m_viewport.maxDepth = 1.f;
 	}
+
+	m_graphics_state &= ~(rsx::pipeline_state::zclip_config_state_dirty);
 }
 
 void VKGSRender::set_scissor(bool clip_viewport)
@@ -990,6 +992,17 @@ void VKGSRender::set_scissor(bool clip_viewport)
 
 void VKGSRender::bind_viewport()
 {
+	if (m_graphics_state & rsx::pipeline_state::zclip_config_state_dirty)
+	{
+		if (m_device->get_unrestricted_depth_range_support())
+		{
+			m_viewport.minDepth = rsx::method_registers.clip_min();
+			m_viewport.maxDepth = rsx::method_registers.clip_max();
+		}
+
+		m_graphics_state &= ~(rsx::pipeline_state::zclip_config_state_dirty);
+	}
+
 	vkCmdSetViewport(*m_current_command_buffer, 0, 1, &m_viewport);
 	vkCmdSetScissor(*m_current_command_buffer, 0, 1, &m_scissor);
 }
