@@ -77,6 +77,9 @@
   </PropertyGroup>
   <Import Project="..\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
   <Import Project="..\common_default_macros.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -115,6 +118,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;..\Vulkan\glslang\glslang\Public;..\Vulkan\glslang;..\Vulkan\spirv-tools\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">MaxSpeed</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
