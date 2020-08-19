@@ -122,7 +122,7 @@ private:
 	}
 	void DisAsm(std::string op, const char* a1, int a2)
 	{
-		Write(fmt::format("%s %s,0x%x", FixOp(op), a1, a2));
+		Write(fmt::format("%s %s,%s", FixOp(op), a1, SignedHex(a2)));
 	}
 	void DisAsm(std::string op, int a1, int a2)
 	{
@@ -134,11 +134,11 @@ private:
 	}
 	void DisAsm(std::string op, const char* a1, int a2, const char* a3)
 	{
-		Write(fmt::format("%s %s,0x%x(%s)", FixOp(op), a1, a2, a3));
+		Write(fmt::format("%s %s,%s(%s)", FixOp(op), a1, SignedHex(a2), a3));
 	}
 	void DisAsm(std::string op, const char* a1, const char* a2, int a3)
 	{
-		Write(fmt::format("%s %s,%s,0x%x", FixOp(op), a1, a2, a3));
+		Write(fmt::format("%s %s,%s,%s", FixOp(op), a1, a2, SignedHex(a3)));
 	}
 	void DisAsm(std::string op, const char* a1, const char* a2, const char* a3, const char* a4)
 	{
@@ -819,7 +819,7 @@ public:
 	}
 	void ORBI(spu_opcode_t op)
 	{
-		DisAsm("orbi", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si10);
+		DisAsm("orbi", spu_reg_name[op.rt], spu_reg_name[op.ra], static_cast<u8>(op.si10));
 	}
 	void SFI(spu_opcode_t op)
 	{
@@ -839,7 +839,7 @@ public:
 	}
 	void ANDBI(spu_opcode_t op)
 	{
-		DisAsm("andbi", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si10);
+		DisAsm("andbi", spu_reg_name[op.rt], spu_reg_name[op.ra], static_cast<u8>(op.si10));
 	}
 	void AI(spu_opcode_t op)
 	{
@@ -867,7 +867,7 @@ public:
 	}
 	void XORBI(spu_opcode_t op)
 	{
-		DisAsm("xorbi", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si10);
+		DisAsm("xorbi", spu_reg_name[op.rt], spu_reg_name[op.ra], static_cast<u8>(op.si10));
 	}
 	void CGTI(spu_opcode_t op)
 	{
