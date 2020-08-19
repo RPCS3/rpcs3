@@ -553,7 +553,7 @@ bool cpu_thread::check_state() noexcept
 		}
 		else
 		{
-			if (state0 == (cpu_flag::memory + cpu_flag::wait))
+			if (state0 & cpu_flag::memory)
 			{
 				vm::passive_lock(*this);
 				continue;

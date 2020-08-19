@@ -71,6 +71,22 @@ QWidget {
 	color: #4d4940;
 }
 
+/* Style QTreeWidget checkboxes */
+QTreeWidget::indicator {
+	border: 0.05em solid #4d4940;
+}
+QTreeWidget::indicator::unchecked {
+	background-color: #b3ac98;
+}
+QTreeWidget::indicator::checked {
+	background-color: #4d4940;
+}
+QTreeWidget::indicator::disabled {
+	background-color: #828790;
+}
+QTreeWidget::item::selected {
+	color: #4d4940;
+}
 
 /* Mouse Tooltips */
 QToolTip {

@@ -101,7 +101,7 @@ jobs:
       artifact: RPCS3 for Windows
 
     - bash: .ci/github-upload-windows.sh
-      condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'))
+      condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
       displayName: Push build to GitHub
       env:
         RPCS3_TOKEN: $(RPCS3-Token)

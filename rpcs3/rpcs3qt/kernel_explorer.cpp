@@ -501,7 +501,7 @@ void kernel_explorer::Update()
 
 		const QString branch_name = "RSX Context 0x55555555";
 		QTreeWidgetItem* rsx_tree = add_volatile_node(m_tree, rsx_context_node, branch_name,
-			branch_name + qstr(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x", context_info->memory_size >> 20, base, context_info->device_addr)));
+			branch_name + qstr(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", context_info->memory_size >> 20, base, context_info->device_addr, +vm::_ref<RsxDriverInfo>(context_info->driver_info).handlers)));
 
 		QTreeWidgetItem* io_tree = add_volatile_node(m_tree, rsx_tree, tr("IO-EA Table"));
 		QTreeWidgetItem* zc_tree = add_volatile_node(m_tree, rsx_tree, tr("Zcull Bindings"));

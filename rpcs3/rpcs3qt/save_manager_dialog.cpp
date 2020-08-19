@@ -372,7 +372,14 @@ void save_manager_dialog::UpdateIcons()
 			icon_item->setData(Qt::DecorationRole, scaled[i]);
 	}
 
-	m_list->resizeRowsToContents();
+	// Fixate vertical header and row height
+	m_list->verticalHeader()->setMinimumSectionSize(m_icon_size.height());
+	m_list->verticalHeader()->setMaximumSectionSize(m_icon_size.height());
+	
+	// Removed for better performance. I can't see any visual difference with and without this code
+	// m_list->resizeRowsToContents();
+
+	// Resize icon column
 	m_list->resizeColumnToContents(0);
 }
 
