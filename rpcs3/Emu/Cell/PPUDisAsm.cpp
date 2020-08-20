@@ -1164,7 +1164,18 @@ void PPUDisAsm::RLWIMI(ppu_opcode_t op)
 
 void PPUDisAsm::RLWINM(ppu_opcode_t op)
 {
-	DisAsm_R2_INT3_RC("rlwinm", op.ra, op.rs, op.sh32, op.mb32, op.me32, op.rc);
+	if (op.mb32 == 0 && op.sh32 == 31 - op.me32)
+	{
+		DisAsm_R2_INT1_RC("slwi", op.ra, op.rs, op.sh32, op.rc);
+	}
+	else if (op.me32 == 31 && op.sh32 == 32 - op.mb32)
+	{
+		DisAsm_R2_INT1_RC("srwi", op.ra, op.rs, 32 - op.sh32, op.rc);
+	}
+	else
+	{
+		DisAsm_R2_INT3_RC("rlwinm", op.ra, op.rs, op.sh32, op.mb32, op.me32, op.rc);
+	}
 }
 
 void PPUDisAsm::RLWNM(ppu_opcode_t op)
@@ -1233,7 +1244,14 @@ void PPUDisAsm::RLDICR(ppu_opcode_t op)
 	const u32 sh = op.sh64;
 	const u32 me = op.mbe64;
 
-	DisAsm_R2_INT2_RC("rldicr", op.ra, op.rs, sh, me, op.rc);
+	if (sh == 63 - me)
+	{
+		DisAsm_R2_INT1_RC("sldi", op.ra, op.rs, sh, op.rc);
+	}
+	else
+	{
+		DisAsm_R2_INT2_RC("rldicr", op.ra, op.rs, sh, me, op.rc);
+	}
 }
 
 void PPUDisAsm::RLDIC(ppu_opcode_t op)
