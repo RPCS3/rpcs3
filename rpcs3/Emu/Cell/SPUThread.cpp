@@ -2362,9 +2362,12 @@ u32 spu_thread::get_events(bool waiting)
 		raddr = 0;
 	}
 
-	// SPU Decrementer Event
-	if (!ch_dec_value || (ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 31)
+	// SPU Decrementer Event on underflow (use the upper 32-bits to determine it)
+	if (const u64 res = (ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 32)
 	{
+		// Set next event to the next time the decrementer underflows
+		ch_dec_start_timestamp -= res << 32;
+
 		if ((ch_event_stat & SPU_EVENT_TM) == 0)
 		{
 			ch_event_stat |= SPU_EVENT_TM;
