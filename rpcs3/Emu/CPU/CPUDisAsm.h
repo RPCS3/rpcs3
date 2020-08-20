@@ -56,7 +56,23 @@ protected:
 
 	virtual u32 DisAsmBranchTarget(const s32 imm) = 0;
 
-	std::string FixOp(std::string op)
+	// TODO: Add builtin fmt helpper for best performance
+	template <typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
+	static std::string SignedHex(T value)
+	{
+		const auto v = static_cast<std::make_signed_t<T>>(value);
+		const auto av = std::abs(v);
+
+		if (av < 10)
+		{
+			// Does not need hex
+			return fmt::format("%d", v);
+		}
+
+		return fmt::format("%s%s", v < 0 ? "-" : "", av);
+	}
+
+	static std::string FixOp(std::string op)
 	{
 		op.resize(std::max<std::size_t>(op.length(), 10), ' ');
 		return op;
