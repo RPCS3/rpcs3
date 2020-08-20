@@ -1252,7 +1252,6 @@ void spu_recompiler::get_events()
 	Label label1 = c->newLabel();
 	Label rcheck = c->newLabel();
 	Label tcheck = c->newLabel();
-	Label treset = c->newLabel();
 	Label label2 = c->newLabel();
 
 	// Check if reservation exists
@@ -1323,35 +1322,27 @@ void spu_recompiler::get_events()
 	});
 
 	c->bind(label1);
-	c->cmp(SPU_OFF_32(ch_dec_value), 0);
-	c->jnz(tcheck);
+	c->jmp(tcheck);
 
 	// Check decrementer event (unlikely)
 	after.emplace_back([=, this]()
 	{
 		auto sub = [](spu_thread* _spu)
 		{
-			if ((_spu->ch_dec_value - (get_timebased_time() - _spu->ch_dec_start_timestamp)) >> 31)
+			if (const u64 res = (_spu->ch_dec_value - (get_timebased_time() - _spu->ch_dec_start_timestamp)) >> 32)
 			{
-				_spu->ch_event_stat |= SPU_EVENT_TM;
+				_spu->ch_dec_start_timestamp -= res << 32;
+
+				if (!(_spu->ch_event_stat & SPU_EVENT_TM))
+				{
+					_spu->ch_event_stat |= SPU_EVENT_TM;
+				}
 			}
 		};
 
 		c->bind(tcheck);
 		c->mov(*arg0, *cpu);
 		c->call(imm_ptr<void(*)(spu_thread*)>(sub));
-		c->jmp(label2);
-	});
-
-	// Check whether SPU_EVENT_TM is already set
-	c->bt(SPU_OFF_32(ch_event_stat), 5);
-	c->jnc(treset);
-
-	// Set SPU_EVENT_TM (unlikely)
-	after.emplace_back([=, this]()
-	{
-		c->bind(treset);
-		c->lock().bts(SPU_OFF_32(ch_event_stat), 5);
 		c->jmp(label2);
 	});
 
