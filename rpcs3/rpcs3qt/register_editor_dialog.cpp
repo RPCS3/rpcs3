@@ -9,10 +9,44 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QMessageBox>
+#include <charconv>
 
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
+
+enum registers : int
+{
+	ppu_r0,
+	ppu_r31 = ppu_r0 + 31,
+	ppu_f0,
+	ppu_f31 = ppu_f0 + 31,
+	ppu_ff0,
+	ppu_ff31 = ppu_ff0 + 31,
+	ppu_v0,
+	ppu_v31 = ppu_v0 + 31,
+	spu_r0 = ::align(ppu_v31 + 1u, 128),
+	spu_r127 = spu_r0 + 127,
+	PPU_CR,
+	PPU_LR,
+	PPU_CTR,
+	PPU_XER,
+	PPU_VSCR,
+	PPU_FPSCR,
+	PPU_VRSAVE,
+	MFC_PEVENTS,
+	MFC_EVENTS_MASK,
+	MFC_TAG_UPD,
+	MFC_TAG_MASK,
+	MFC_ATOMIC_STAT,
+	SPU_SRR0,
+	SPU_SNR1,
+	SPU_SNR2,
+	SPU_OUT_MBOX,
+	SPU_OUT_INTR_MBOX,
+	SPU_FPSCR,
+	PC,
+};
 
 register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
 	: QDialog(parent)
@@ -56,19 +90,34 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 	{
 		if (_cpu->id_type() == 1)
 		{
-			for (int i = 0; i < 32; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i)));
-			for (int i = 0; i < 32; i++) m_register_combo->addItem(qstr(fmt::format("f%d", i)));
-			for (int i = 0; i < 32; i++) m_register_combo->addItem(qstr(fmt::format("v%d", i)));
-			m_register_combo->addItem("CR");
-			m_register_combo->addItem("LR");
-			m_register_combo->addItem("CTR");
-			//m_register_combo->addItem("XER");
-			//m_register_combo->addItem("FPSCR");
+			for (int i = ppu_r0; i <= ppu_r31; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i % 32)), i);
+			for (int i = ppu_f0; i <= ppu_f31; i++) m_register_combo->addItem(qstr(fmt::format("f%d", i % 32)), i);
+			for (int i = ppu_ff0; i <= ppu_ff31; i++) m_register_combo->addItem(qstr(fmt::format("ff%d", i % 32)), i);
+			for (int i = ppu_v0; i <= ppu_v31; i++) m_register_combo->addItem(qstr(fmt::format("v%d", i % 32)), i);
+			m_register_combo->addItem("CR", +PPU_CR);
+			m_register_combo->addItem("LR", +PPU_LR);
+			m_register_combo->addItem("CTR", PPU_CTR);
+			m_register_combo->addItem("VRSAVE", +PPU_VRSAVE);
+			//m_register_combo->addItem("XER", +PPU_XER);
+			//m_register_combo->addItem("FPSCR", +PPU_FPSCR);
+			//m_register_combo->addItem("VSCR", +PPU_VSCR);
 		}
 		else
 		{
-			for (int i = 0; i < 128; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i)));
+			for (int i = spu_r0; i <= spu_r127; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i % 128)), i);
+			m_register_combo->addItem("MFC Pending Events", +MFC_PEVENTS);
+			m_register_combo->addItem("MFC Events Mask", +MFC_EVENTS_MASK);
+			m_register_combo->addItem("MFC Tag Mask", +MFC_TAG_MASK);
+			//m_register_combo->addItem("MFC Tag Update", +MFC_TAG_UPD);
+			//m_register_combo->addItem("MFC Atomic Status", +MFC_ATOMIC_STAT);
+			m_register_combo->addItem("SPU SNR1", +SPU_SNR1);
+			m_register_combo->addItem("SPU SNR2", +SPU_SNR2);
+			m_register_combo->addItem("SPU Out Mailbox", +SPU_OUT_MBOX);
+			m_register_combo->addItem("SPU Out-Intr Mailbox", +SPU_OUT_INTR_MBOX);
+			m_register_combo->addItem("SRR0", +SPU_SRR0);
 		}
+
+		m_register_combo->addItem("PC", +PC);
 	}
 
 	// Main Layout
@@ -84,51 +133,62 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 	// Events
 	connect(button_ok, &QAbstractButton::clicked, this, [=, this](){OnOkay(_cpu); accept();});
 	connect(button_cancel, &QAbstractButton::clicked, this, &register_editor_dialog::reject);
-	connect(m_register_combo, &QComboBox::currentTextChanged, this, &register_editor_dialog::updateRegister);
+	connect(m_register_combo, &QComboBox::currentTextChanged, this, [this](const QString&)
+	{
+		if (auto qvar = m_register_combo->currentData(); qvar.canConvert(QMetaType::Int))
+		{
+			updateRegister(qvar.toInt());
+		}
+	});
 
-	updateRegister(m_register_combo->currentText());
+	updateRegister(m_register_combo->currentData().toInt());
 }
 
-void register_editor_dialog::updateRegister(const QString& text)
+void register_editor_dialog::updateRegister(int reg)
 {
-	if (text.isEmpty())
-	{
-		m_value_line->setText("");
-		return;
-	}
-
 	const auto cpu = this->cpu.lock();
+	std::string str = sstr(tr("Error parsing register value!"));
 
-	std::string reg = sstr(text);
-	std::string str;
-
-	if (cpu->id_type() == 1)
+	if (!cpu)
 	{
-		auto& ppu = *static_cast<ppu_thread*>(cpu.get());
+	}
+	else if (cpu->id_type() == 1)
+	{
+		const auto& ppu = *static_cast<const ppu_thread*>(cpu.get());
 
-		std::size_t first_brk = reg.find('[');
-		if (first_brk != umax)
+		if (reg >= ppu_r0 && reg <= ppu_v31)
 		{
-			long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
-			if (reg.starts_with("r")) str = fmt::format("%016llx", ppu.gpr[reg_index]);
-			else if (reg.starts_with("f")) str = fmt::format("%016llx", ppu.fpr[reg_index]);
-			else if (reg.starts_with("v"))  str = fmt::format("%016llx%016llx", ppu.vr[reg_index]._u64[1], ppu.vr[reg_index]._u64[0]);
+			const u32 reg_index = reg % 32;
+
+			if (reg >= ppu_r0 && reg <= ppu_r31) str = fmt::format("%016llx", ppu.gpr[reg_index]);
+			else if (reg >= ppu_ff0 && reg <= ppu_ff31) str = fmt::format("%g", ppu.fpr[reg_index]);
+			else if (reg >= ppu_ff0 && reg <= ppu_ff31) str = fmt::format("%016llx", std::bit_cast<u64>(ppu.fpr[reg_index]));
+			else if (reg >= ppu_v0 && reg <= ppu_v31)  str = fmt::format("%016llx%016llx", ppu.vr[reg_index]._u64[1], ppu.vr[reg_index]._u64[0]);
 		}
-		else if (reg == "CR")  str = fmt::format("%08x", ppu.cr.pack());
-		else if (reg == "LR")  str = fmt::format("%016llx", ppu.lr);
-		else if (reg == "CTR") str = fmt::format("%016llx", ppu.ctr);
+		else if (reg == PPU_CR)  str = fmt::format("%08x", ppu.cr.pack());
+		else if (reg == PPU_LR)  str = fmt::format("%016llx", ppu.lr);
+		else if (reg == PPU_CTR) str = fmt::format("%016llx", ppu.ctr);
+		else if (reg == PPU_VRSAVE) str = fmt::format("%08x", ppu.vrsave);
+		else if (reg == PC) str = fmt::format("%08x", ppu.cia);
 	}
 	else
 	{
-		auto& spu = *static_cast<spu_thread*>(cpu.get());
+		const auto& spu = *static_cast<const spu_thread*>(cpu.get());
 
-		std::string::size_type first_brk = reg.find('[');
-		if (first_brk != umax)
+		if (reg >= spu_r0 && reg <= spu_r127)
 		{
-			long reg_index;
-			reg_index = atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());
-			if (reg.starts_with("r")) str = fmt::format("%016llx%016llx", spu.gpr[reg_index]._u64[1], spu.gpr[reg_index]._u64[0]);
+			const u32 reg_index = reg % 128;
+			str = fmt::format("%016llx%016llx", spu.gpr[reg_index]._u64[1], spu.gpr[reg_index]._u64[0]);
 		}
+		else if (reg == MFC_PEVENTS) str = fmt::format("%08x", +spu.ch_event_stat);
+		else if (reg == MFC_EVENTS_MASK) str = fmt::format("%08x", +spu.ch_event_mask);
+		else if (reg == MFC_TAG_MASK) str = fmt::format("%08x", spu.ch_tag_mask);
+		else if (reg == SPU_SRR0) str = fmt::format("%08x", spu.srr0);
+		else if (reg == SPU_SNR1) str = fmt::format("%s", spu.ch_snr1);
+		else if (reg == SPU_SNR2) str = fmt::format("%s", spu.ch_snr2);
+		else if (reg == SPU_OUT_MBOX) str = fmt::format("%s", spu.ch_out_mbox);
+		else if (reg == SPU_OUT_INTR_MBOX) str = fmt::format("%s", spu.ch_out_intr_mbox);
+		else if (reg == PC) str = fmt::format("%08x", spu.pc);
 	}
 
 	m_value_line->setText(qstr(str));
@@ -138,48 +198,94 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 {
 	const auto cpu = _cpu.get();
 
-	std::string reg = sstr(m_register_combo->currentText());
+	const int reg = m_register_combo->currentData().toInt();
 	std::string value = sstr(m_value_line->text());
 
-	if (cpu->id_type() == 1)
+	auto check_res = [](std::from_chars_result res, const char* end)
+	{
+		return res.ec == std::errc() && res.ptr == end;
+	};
+
+	if (auto len = value.size(); len < 32 && !(reg >= ppu_ff0 && reg <= ppu_ff31))
+	{
+		const bool is_int = !value.empty() && std::isxdigit(value[0]);
+
+		if (value.starts_with("0x") || value.starts_with("0X"))
+		{
+			value = value.substr(2);
+		}
+
+		if (is_int)
+		{
+			value.insert(0, 32 - len, '0');
+		}
+	}
+	else if (value.size() > 32u && !(reg >= ppu_ff0 && reg <= ppu_ff31))
+	{
+		// Invalid integer
+		value.clear();
+	}
+	
+	if (!cpu)
+	{
+	}
+	else if (cpu->id_type() == 1)
 	{
 		auto& ppu = *static_cast<ppu_thread*>(cpu);
 
-		if (auto len = value.length(); len < 32) value.insert(0, 32 - len, '0');
-		const auto first_brk = reg.find('[');
-		// TODO: handle invalid conversions
+		if (reg >= ppu_r0 && reg <= ppu_v31)
 		{
-			if (first_brk != umax)
+			const u32 reg_index = reg % 32;
+	
+			if ((reg >= ppu_r0 && reg <= ppu_r31) || (reg >= ppu_f0 && reg <= ppu_f31))
 			{
-				const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
-				if (reg.starts_with("r") || reg.starts_with("f"))
+				if (u64 reg_value; check_res(std::from_chars(value.c_str() + 16, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
 				{
-					const ullong reg_value = std::stoull(value.substr(16, 31), 0, 16);
-					if (reg.starts_with("r")) ppu.gpr[reg_index] = static_cast<u64>(reg_value);
-					else if (reg.starts_with("f")) ppu.fpr[reg_index] = std::bit_cast<f64>(reg_value);
-					return;
-				}
-				else if (reg.starts_with("v"))
-				{
-					const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
-					const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
-					ppu.vr[reg_index]._u64[0] = static_cast<u64>(reg_value0);
-					ppu.vr[reg_index]._u64[1] = static_cast<u64>(reg_value1);
+					if (reg >= ppu_r0 && reg <= ppu_r31) ppu.gpr[reg_index] = reg_value;
+					else if (reg >= ppu_f0 && reg <= ppu_f31) ppu.fpr[reg_index] = std::bit_cast<f64>(reg_value);
 					return;
 				}
 			}
-			else if (reg == "LR" || reg == "CTR")
+			else if (reg >= ppu_ff0 && reg <= ppu_ff31)
 			{
-				const ullong reg_value = std::stoull(value.substr(16, 31), 0, 16);
-				if (reg == "LR") ppu.lr = static_cast<u64>(reg_value);
-				else if (reg == "CTR") ppu.ctr = static_cast<u64>(reg_value);
+				char* end{};
+				if (double reg_value = std::strtod(value.c_str(), &end); end != value.c_str())
+				{
+					ppu.fpr[reg_index] = static_cast<f64>(reg_value);
+					return;
+				}
+			}
+			else if (reg >= ppu_v0 && reg <= ppu_v31)
+			{
+				u64 reg_value0, reg_value1;
+
+				if (check_res(std::from_chars(value.c_str(), value.c_str() + 16, reg_value0, 16), value.c_str() + 16) &&
+					check_res(std::from_chars(value.c_str() + 16, value.c_str() + 32, reg_value1, 16), value.c_str() + 32))
+				{
+					ppu.vr[reg_index] = v128::from64(reg_value0, reg_value1);
+					return;
+				}
+			}
+		}
+		else if (reg == PPU_LR || reg == PPU_CTR)
+		{
+			if (u64 reg_value; check_res(std::from_chars(value.c_str() + 16, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
+			{
+				if (reg == PPU_LR) ppu.lr = reg_value;
+				else if (reg == PPU_CTR) ppu.ctr = reg_value;
 				return;
 			}
-			else if (reg == "CR")
+		}
+		else if (reg == PPU_CR || reg == PPU_VRSAVE || reg == PC)
+		{
+			if (u32 reg_value; check_res(std::from_chars(value.c_str() + 24, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
 			{
-				const ullong reg_value = std::stoull(value.substr(24, 31), 0, 16);
-				ppu.cr.unpack(static_cast<u32>(reg_value));
-				return;
+				bool ok = true;
+				if (reg == PPU_CR) ppu.cr.unpack(reg_value);
+				else if (reg == PPU_VRSAVE) ppu.vrsave = reg_value;
+				else if (reg == PC && reg_value % 4 == 0 && vm::check_addr(reg_value, 4, vm::page_executable)) ppu.cia = reg_value & -4;
+				else ok = false;
+				if (ok) return;
 			}
 		}
 	}
@@ -187,23 +293,47 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 	{
 		auto& spu = *static_cast<spu_thread*>(cpu);
 
-		if (auto len = value.length(); len < 32) value.insert(0, 32 - len, '0');
-		const auto first_brk = reg.find('[');
-		// TODO: handle invalid conversions
+		if (reg >= spu_r0 && reg <= spu_r127)
 		{
-			if (first_brk != umax)
+			const u32 reg_index = reg % 128;
+			u64 reg_value0, reg_value1;
+
+			if (check_res(std::from_chars(value.c_str(), value.c_str() + 16, reg_value0, 16), value.c_str() + 16) &&
+				check_res(std::from_chars(value.c_str() + 16, value.c_str() + 32, reg_value1, 16), value.c_str() + 32))
 			{
-				const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());
-				if (reg.starts_with("r"))
-				{
-					const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
-					const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
-					spu.gpr[reg_index]._u64[0] = static_cast<u64>(reg_value0);
-					spu.gpr[reg_index]._u64[1] = static_cast<u64>(reg_value1);
-					return;
-				}
+				spu.gpr[reg_index] = v128::from64(reg_value0, reg_value1);
+				return;
+			}
+		}
+		else if (reg == MFC_PEVENTS || reg == MFC_EVENTS_MASK || reg == MFC_TAG_MASK || reg == SPU_SRR0 || reg == PC)
+		{
+			if (u32 reg_value; check_res(std::from_chars(value.c_str() + 24, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
+			{
+				bool ok = true;
+				if (reg == MFC_PEVENTS && !(reg_value & ~SPU_EVENT_IMPLEMENTED)) spu.ch_event_stat = reg_value;
+				else if (reg == MFC_EVENTS_MASK && !(reg_value & ~SPU_EVENT_IMPLEMENTED)) spu.ch_event_mask = reg_value;
+				else if (reg == MFC_TAG_MASK) spu.ch_tag_mask = reg_value;
+				else if (reg == SPU_SRR0) spu.srr0 = reg_value & 0x3fffc;
+				else if (reg == PC) spu.pc = reg_value & 0x3fffc;
+				else ok = false;
+
+				if (ok) return;
+			}
+		}
+		else if (reg == SPU_SNR1 || reg == SPU_SNR2 || reg == SPU_OUT_MBOX || reg == SPU_OUT_INTR_MBOX)
+		{
+			const bool count = (value != "empty");
+			if (u32 reg_value = 0;
+				!count || check_res(std::from_chars(value.c_str() + 24, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
+			{
+				if (reg == SPU_SNR1) spu.ch_snr1.set_value(reg_value, count);
+				else if (reg == SPU_SNR2) spu.ch_snr2.set_value(reg_value, count);
+				else if (reg == SPU_OUT_MBOX) spu.ch_out_mbox.set_value(reg_value, count);
+				else if (reg == SPU_OUT_INTR_MBOX) spu.ch_out_intr_mbox.set_value(reg_value, count);
+				return;
 			}
 		}
 	}
+
 	QMessageBox::critical(this, tr("Error"), tr("This value could not be converted.\nNo changes were made."));
 }

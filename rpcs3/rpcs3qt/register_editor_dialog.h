@@ -28,5 +28,5 @@ private:
 	void OnOkay(const std::shared_ptr<cpu_thread>& _cpu);
 
 private Q_SLOTS:
-	void updateRegister(const QString& text);
+	void updateRegister(int reg);
 };
