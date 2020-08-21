@@ -501,7 +501,14 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 	//std::shared_lock rlock(vm::g_mutex); // Needs optimizations
 
 	// Determine stack range
-	const u32 stack_ptr = static_cast<u32>(gpr[1]);
+	const u64 r1 = gpr[1];
+
+	if (r1 > UINT32_MAX || r1 % 0x10)
+	{
+		return {};
+	}
+
+	const u32 stack_ptr = static_cast<u32>(r1);
 
 	if (!vm::check_addr(stack_ptr, 1, vm::page_writable))
 	{
