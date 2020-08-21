@@ -199,7 +199,6 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x054C, 0x0042, 0x0042, "buzzer2");
 		check_device(0x046D, 0xC220, 0xC220, "buzzer9");
 
-
 		//GCon3 Gun
 		check_device(0x0B9A, 0x0800, 0x0800, "guncon3");
 		
