@@ -199,9 +199,8 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x054C, 0x0042, 0x0042, "buzzer2");
 		check_device(0x046D, 0xC220, 0xC220, "buzzer9");
 
-		//GCon3 Gun
+		// GCon3 Gun
 		check_device(0x0B9A, 0x0800, 0x0800, "guncon3");
-		
 	}
 
 	libusb_free_device_list(list, 1);
@@ -579,8 +578,11 @@ error_code sys_usbd_register_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_p
 	// The register_ldd appears to be a more promiscuous mode function, where all device 'inserts' would be presented to the cellUsbd for Probing.
 	// Unsure how many more devices might need similar treatment (i.e. just a compare and force VID/PID add), or if it's worth adding a full promiscuous
 	// capability
-	if(strcmp(s_product.get_ptr(), "guncon3")==0)
+	if (strcmp(s_product.get_ptr(), "guncon3") == 0)
+	{
+		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
 		sys_usbd_register_extra_ldd(handle, s_product, slen_product, 0x0B9A, 0x0800, 0x0800);
+	}
 	else
 		sys_usbd.todo("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x)", handle, s_product, slen_product);
 	return CELL_OK;
