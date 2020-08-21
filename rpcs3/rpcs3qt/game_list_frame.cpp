@@ -556,12 +556,12 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				GameInfo game;
 				game.path         = dir;
 				game.icon_path    = sfo_dir + "/ICON0.PNG";
-				game.serial       = psf::get_string(psf, "TITLE_ID", "");
-				game.name         = psf::get_string(psf, "TITLE", cat_unknown_localized);
-				game.app_ver      = psf::get_string(psf, "APP_VER", cat_unknown_localized);
-				game.version      = psf::get_string(psf, "VERSION", cat_unknown_localized);
-				game.category     = psf::get_string(psf, "CATEGORY", cat_unknown);
-				game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown_localized);
+				game.serial       = std::string(psf::get_string(psf, "TITLE_ID", ""));
+				game.name         = std::string(psf::get_string(psf, "TITLE", cat_unknown_localized));
+				game.app_ver      = std::string(psf::get_string(psf, "APP_VER", cat_unknown_localized));
+				game.version      = std::string(psf::get_string(psf, "VERSION", cat_unknown_localized));
+				game.category     = std::string(psf::get_string(psf, "CATEGORY", cat_unknown));
+				game.fw           = std::string(psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown_localized));
 				game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
 				game.resolution   = psf::get_integer(psf, "RESOLUTION", 0);
 				game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
