@@ -232,8 +232,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		return;
 	}
 
-	const u32 start_pc = m_debugger_list->m_pc - m_debugger_list->m_item_count * 4;
-	const u32 pc = start_pc + i * 4;
+	const u32 pc = m_debugger_list->m_pc + i * 4;
 
 	if (QApplication::keyboardModifiers() & Qt::ControlModifier)
 	{

@@ -333,25 +333,40 @@ extern void ppu_remove_breakpoint(u32 addr)
 
 extern bool ppu_patch(u32 addr, u32 value)
 {
-	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm && Emu.GetStatus() != system_state::ready)
+	if (addr % 4)
+	{
+		ppu_log.fatal("Patch failed at 0x%x: unanligned memory address.", addr);
+		return false;
+	}
+
+	vm::reader_lock rlock;
+
+	if (!vm::check_addr(addr, sizeof(value)))
+	{
+		ppu_log.fatal("Patch failed at 0x%x: invalid memory address.", addr);
+		return false;
+	}
+
+	const bool is_exec = vm::check_addr(addr, sizeof(value), vm::page_executable);
+
+	if (is_exec && g_cfg.core.ppu_decoder == ppu_decoder_type::llvm && !Emu.IsReady())
 	{
 		// TODO: support recompilers
 		ppu_log.fatal("Patch failed at 0x%x: LLVM recompiler is used.", addr);
 		return false;
 	}
 
-	if (!vm::try_access(addr, &value, sizeof(value), true))
-	{
-		ppu_log.fatal("Patch failed at 0x%x: invalid memory address.", addr);
-		return false;
-	}
+	*vm::get_super_ptr<u32>(addr) = value;
 
 	const u32 _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_fallback));
 
-	if (ppu_ref<u32>(addr) != _break && ppu_ref<u32>(addr) != fallback)
+	if (is_exec)
 	{
-		ppu_ref(addr) = ppu_cache(addr);
+		if (ppu_ref<u32>(addr) != _break && ppu_ref<u32>(addr) != fallback)
+		{
+			ppu_ref(addr) = ppu_cache(addr);
+		}
 	}
 
 	return true;
