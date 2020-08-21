@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <string_view>
 
 namespace psf
 {
@@ -48,7 +49,7 @@ namespace psf
 	void save_object(const fs::file&, const registry&);
 
 	// Get string value or default value
-	std::string get_string(const registry& psf, const std::string& key, const std::string& def = {});
+	std::string_view get_string(const registry& psf, const std::string& key, std::string_view def = ""sv);
 
 	// Get integer value or default value
 	u32 get_integer(const registry& psf, const std::string& key, u32 def = 0);
@@ -69,14 +70,14 @@ namespace psf
 	}
 
 	// Make string entry
-	inline entry string(u32 max_size, const std::string& value)
+	inline entry string(u32 max_size, std::string_view value)
 	{
-		return {format::string, max_size, value};
+		return {format::string, max_size, std::string(value)};
 	}
 
 	// Make array entry
-	inline entry array(u32 max_size, const std::string& value)
+	inline entry array(u32 max_size, std::string_view value)
 	{
-		return {format::array, max_size, value};
+		return {format::array, max_size, std::string(value)};
 	}
 }
