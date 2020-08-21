@@ -413,10 +413,9 @@ std::string ppu_thread::dump_regs() const
 					if (toc % 4 == 0 && vm::check_addr(toc))
 					{
 						is_function = true;
+						reg = reg_ptr;
 					}
 				}
-
-				reg = reg_ptr;
 			}
 			else if (reg % 4 == 0 && vm::check_addr(reg, 4, vm::page_executable))
 			{
