@@ -94,7 +94,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_list->setAlternatingRowColors(true);
 	m_game_list->installEventFilter(this);
 	m_game_list->setColumnCount(gui::column_count);
-	m_game_list->horizontalHeader()->setSectionResizeMode(gui::column_icon, QHeaderView::Fixed);
 
 	m_game_compat = new game_compatibility(m_gui_settings, this);
 
@@ -364,9 +363,7 @@ void game_list_frame::SortGameList()
 	// Fixate vertical header and row height
 	m_game_list->verticalHeader()->setMinimumSectionSize(m_icon_size.height());
 	m_game_list->verticalHeader()->setMaximumSectionSize(m_icon_size.height());
-
-	// Removed for better performance. I can't see any visual difference with and without this code
-	// m_game_list->resizeRowsToContents();
+	m_game_list->resizeRowsToContents();
 
 	// Resize columns if the game list was empty before
 	if (!old_row_count && !old_game_count)
@@ -377,6 +374,9 @@ void game_list_frame::SortGameList()
 	{
 		m_game_list->resizeColumnToContents(gui::column_icon);
 	}
+
+	// Fixate icon column
+	m_game_list->horizontalHeader()->setSectionResizeMode(gui::column_icon, QHeaderView::Fixed);
 
 	// Shorten the last section to remove horizontal scrollbar if possible
 	m_game_list->resizeColumnToContents(gui::column_count - 1);
@@ -556,12 +556,12 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				GameInfo game;
 				game.path         = dir;
 				game.icon_path    = sfo_dir + "/ICON0.PNG";
-				game.serial       = psf::get_string(psf, "TITLE_ID", "");
-				game.name         = psf::get_string(psf, "TITLE", cat_unknown_localized);
-				game.app_ver      = psf::get_string(psf, "APP_VER", cat_unknown_localized);
-				game.version      = psf::get_string(psf, "VERSION", cat_unknown_localized);
-				game.category     = psf::get_string(psf, "CATEGORY", cat_unknown);
-				game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown_localized);
+				game.serial       = std::string(psf::get_string(psf, "TITLE_ID", ""));
+				game.name         = std::string(psf::get_string(psf, "TITLE", cat_unknown_localized));
+				game.app_ver      = std::string(psf::get_string(psf, "APP_VER", cat_unknown_localized));
+				game.version      = std::string(psf::get_string(psf, "VERSION", cat_unknown_localized));
+				game.category     = std::string(psf::get_string(psf, "CATEGORY", cat_unknown));
+				game.fw           = std::string(psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown_localized));
 				game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
 				game.resolution   = psf::get_integer(psf, "RESOLUTION", 0);
 				game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
