@@ -584,7 +584,9 @@ error_code sys_usbd_register_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_p
 		sys_usbd_register_extra_ldd(handle, s_product, slen_product, 0x0B9A, 0x0800, 0x0800);
 	}
 	else
+	{
 		sys_usbd.todo("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x)", handle, s_product, slen_product);
+	}
 	return CELL_OK;
 }
 
