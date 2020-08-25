@@ -42,7 +42,8 @@ namespace vk
 					VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_TILING_OPTIMAL,
 					usage,
-					0));
+					0,
+					format_class()));
 
 				resolve_surface->native_component_map = native_component_map;
 				resolve_surface->change_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
@@ -518,20 +519,13 @@ namespace vk
 				const auto src_bpp = src_texture->get_bpp();
 				rsx::typeless_xfer typeless_info{};
 
-				if (src_texture->info.format == info.format) [[likely]]
+				if (src_texture->aspect() != aspect() ||
+					!formats_are_bitcast_compatible(this, src_texture))
 				{
-					verify(HERE), src_bpp == dst_bpp;
-				}
-				else
-				{
-					if (!formats_are_bitcast_compatible(format(), src_texture->format()) ||
-						src_texture->aspect() != aspect())
-					{
-						typeless_info.src_is_typeless = true;
-						typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
-						typeless_info.src_native_format_override = static_cast<u32>(info.format);
-						typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
-					}
+					typeless_info.src_is_typeless = true;
+					typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
+					typeless_info.src_native_format_override = static_cast<u32>(info.format);
+					typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
 				}
 
 				section.init_transfer(this);
@@ -768,7 +762,8 @@ namespace rsx
 					VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_TILING_OPTIMAL,
 					ref->info.usage,
-					ref->info.flags);
+					ref->info.flags,
+					ref->format_class());
 
 				sink->add_ref();
 				sink->set_spp(ref->get_spp());
