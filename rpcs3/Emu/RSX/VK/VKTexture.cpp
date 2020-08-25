@@ -240,10 +240,23 @@ namespace vk
 	void copy_image_typeless(const vk::command_buffer& cmd, vk::image* src, vk::image* dst, const areai& src_rect, const areai& dst_rect,
 		u32 mipmaps, VkImageAspectFlags src_transfer_mask, VkImageAspectFlags dst_transfer_mask)
 	{
-		if (src->info.format == dst->info.format)
+		if (src->format() == dst->format())
 		{
-			copy_image(cmd, src, dst, src_rect, dst_rect, mipmaps, src_transfer_mask, dst_transfer_mask);
-			return;
+			if (src->format_class() == dst->format_class())
+			{
+				rsx_log.warning("[Performance warning] Image copy requested incorrectly for matching formats.");
+				copy_image(cmd, src, dst, src_rect, dst_rect, mipmaps, src_transfer_mask, dst_transfer_mask);
+				return;
+			}
+			else
+			{
+				// Should only happen for DEPTH_FLOAT <-> DEPTH_UINT at this time
+				const u32 mask = src->format_class() | dst->format_class();
+				if (mask != (RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32 | RSX_FORMAT_CLASS_DEPTH24_UNORM_X8_PACK32))
+				{
+					rsx_log.error("Unexpected (and possibly incorrect) typeless transfer setup.");
+				}
+			}
 		}
 
 		if (vk::is_renderpass_open(cmd))
@@ -353,6 +366,7 @@ namespace vk
 			src->format() != dst->format())
 		{
 			// Copying between depth formats must match
+			rsx_log.error("[Performance warning] Image copy was requested incorrectly for mismatched depth formats");
 			copy_image_typeless(cmd, src, dst, src_rect, dst_rect, mipmaps);
 			return;
 		}
