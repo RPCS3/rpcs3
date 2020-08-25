@@ -750,7 +750,7 @@ public:
 	u32 get_mfc_completed();
 
 	bool process_mfc_cmd();
-	u32 get_events(bool waiting = false);
+	u32 get_events(u32 mask_hint = -1);
 	void set_events(u32 mask);
 	void set_interrupt_status(bool enable);
 	bool check_mfc_interrupts(u32 nex_pc);
