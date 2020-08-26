@@ -94,7 +94,7 @@ QWidget#cg_disasm, QWidget#trophy_manager {
 
 /* Main Window and Dialogs */
 QDialog, QMainWindow#main_window {
-	border-image: url("GuiConfigs/kot-bg.jpg");
+	border-image: url("GuiConfigs/kot-bg.png");
 }
 
 
@@ -287,7 +287,7 @@ QDockWidget {
 	font-weight: 500;
 }
 [floating="true"] {
-	border-image: url("GuiConfigs/kot-bg.jpg");
+	border-image: url("GuiConfigs/kot-bg.png");
 }
 QDockWidget::title {
 	background: #bfa163;
