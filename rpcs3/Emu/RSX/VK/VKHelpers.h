@@ -1518,6 +1518,12 @@ private:
 			change_image_layout(cmd, this, layout);
 		}
 
+		void push_barrier(VkCommandBuffer cmd, VkImageLayout layout)
+		{
+			m_layout_stack.push(current_layout);
+			insert_texture_barrier(cmd, this, layout);
+		}
+
 		void pop_layout(VkCommandBuffer cmd)
 		{
 			verify(HERE), !m_layout_stack.empty();

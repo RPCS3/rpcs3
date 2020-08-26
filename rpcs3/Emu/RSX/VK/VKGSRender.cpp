@@ -1190,8 +1190,7 @@ void VKGSRender::clear_surface(u32 mask)
 							if (require_mem_load) rtt->write_barrier(*m_current_command_buffer);
 
 							// Add a barrier to ensure previous writes are visible; also transitions into GENERAL layout
-							const auto old_layout = rtt->current_layout;
-							vk::insert_texture_barrier(*m_current_command_buffer, rtt, VK_IMAGE_LAYOUT_GENERAL);
+							rtt->push_barrier(*m_current_command_buffer, VK_IMAGE_LAYOUT_GENERAL);
 
 							if (!renderpass)
 							{
@@ -1201,8 +1200,7 @@ void VKGSRender::clear_surface(u32 mask)
 							}
 
 							attachment_clear_pass->run(*m_current_command_buffer, rtt, region.rect, renderpass);
-
-							rtt->change_layout(*m_current_command_buffer, old_layout);
+							rtt->pop_layout(*m_current_command_buffer);
 						}
 						else
 							fmt::throw_exception("Unreachable" HERE);
