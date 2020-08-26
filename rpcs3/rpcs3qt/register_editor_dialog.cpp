@@ -162,7 +162,7 @@ void register_editor_dialog::updateRegister(int reg)
 
 			if (reg >= ppu_r0 && reg <= ppu_r31) str = fmt::format("%016llx", ppu.gpr[reg_index]);
 			else if (reg >= ppu_ff0 && reg <= ppu_ff31) str = fmt::format("%g", ppu.fpr[reg_index]);
-			else if (reg >= ppu_ff0 && reg <= ppu_ff31) str = fmt::format("%016llx", std::bit_cast<u64>(ppu.fpr[reg_index]));
+			else if (reg >= ppu_f0 && reg <= ppu_f31) str = fmt::format("%016llx", std::bit_cast<u64>(ppu.fpr[reg_index]));
 			else if (reg >= ppu_v0 && reg <= ppu_v31)  str = fmt::format("%016llx%016llx", ppu.vr[reg_index]._u64[1], ppu.vr[reg_index]._u64[0]);
 		}
 		else if (reg == PPU_CR)  str = fmt::format("%08x", ppu.cr.pack());
@@ -226,7 +226,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		value.clear();
 	}
 	
-	if (!cpu)
+	if (!cpu || value.empty())
 	{
 	}
 	else if (cpu->id_type() == 1)
