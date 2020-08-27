@@ -23,6 +23,10 @@ enum lv2_protocol : u32
 	SYS_SYNC_PRIORITY            = 0x2, // Priority Order
 	SYS_SYNC_PRIORITY_INHERIT    = 0x3, // Basic Priority Inheritance Protocol
 	SYS_SYNC_RETRY               = 0x4, // Not selected while unlocking
+};
+
+enum : u32
+{
 	SYS_SYNC_ATTR_PROTOCOL_MASK  = 0xf,
 };
 
@@ -88,7 +92,7 @@ public:
 		const auto ptr = reinterpret_cast<const char*>(&name_u64);
 
 		// NTS string, ignore invalid/newline characters
-		// Example: "lv2\n\0tx" will be printed as "lv2" 
+		// Example: "lv2\n\0tx" will be printed as "lv2"
 		std::string str{ptr, std::find(ptr, ptr + 7, '\0')};
 		str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !std::isprint(c); }), str.end());
 
