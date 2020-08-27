@@ -299,7 +299,7 @@ public:
 	// Waiting for channel push state availability, actually pushing if specified
 	bool push_wait(cpu_thread& spu, u32 value, bool push = true)
 	{
-		while (true) 
+		while (true)
 		{
 			u64 state;
 			data.fetch_op([&](u64& data)
@@ -716,7 +716,7 @@ public:
 	atomic_t<u32> last_exit_status; // Value to be written in exit_status after checking group termination
 
 	const u32 index; // SPU index
-	const std::add_pointer_t<u8> ls; // SPU LS pointer 
+	const std::add_pointer_t<u8> ls; // SPU LS pointer
 	const spu_type thread_type;
 private:
 	const u32 offset; // SPU LS offset
@@ -750,7 +750,7 @@ public:
 	u32 get_mfc_completed();
 
 	bool process_mfc_cmd();
-	u32 get_events(u32 mask_hint = -1);
+	u32 get_events(u32 mask_hint = -1, bool waiting = false);
 	void set_events(u32 mask);
 	void set_interrupt_status(bool enable);
 	bool check_mfc_interrupts(u32 nex_pc);
