@@ -1677,39 +1677,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="gb_edit_npid">
-              <property name="title">
-               <string>PSN settings</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_edit_npid_layout">
-               <item>
-                <layout class="QHBoxLayout" name="edit_npid_layout">
-                 <item>
-                  <widget class="QLabel" name="edit_npid_label">
-                   <property name="text">
-                    <string>NPID:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLineEdit" name="edit_npid">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="maxLength">
-                    <number>16</number>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
              <spacer name="networkTabSpacerRight">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
