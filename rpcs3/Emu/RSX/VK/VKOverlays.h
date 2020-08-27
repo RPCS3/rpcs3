@@ -1027,8 +1027,7 @@ namespace vk
 			// Coverage sampling disabled, but actually report correct number of samples
 			renderpass_config.set_multisample_state(target->samples(), 0xFFFF, false, false, false);
 
-			overlay_pass::run(cmd, { 0, 0, target->width(), target->height() }, target,
-				target->get_view(0xAAE4, rsx::default_remap_vector), render_pass);
+			overlay_pass::run(cmd, { 0, 0, target->width(), target->height() }, target, std::vector<vk::image_view*>{}, render_pass);
 		}
 	};
 

@@ -631,12 +631,11 @@ namespace gl
 
 		switch (const auto fmt = dst->get_internal_format())
 		{
-		case texture::internal_format::depth:
 		case texture::internal_format::depth16:
+		case texture::internal_format::depth32f:
 			clear_mask = GL_DEPTH_BUFFER_BIT;
 			attachment = GL_DEPTH_ATTACHMENT;
 			break;
-		case texture::internal_format::depth_stencil:
 		case texture::internal_format::depth24_stencil8:
 		case texture::internal_format::depth32f_stencil8:
 			clear_mask = GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;

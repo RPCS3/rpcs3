@@ -113,10 +113,11 @@ namespace rsx
 			{
 			case CELL_GCM_TEXTURE_DEPTH24_D8:
 			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-			case CELL_GCM_TEXTURE_A8R8G8B8:
-				return CELL_GCM_TEXTURE_DEPTH24_D8;
 			case CELL_GCM_TEXTURE_DEPTH16:
 			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+				return gcm_format;
+			case CELL_GCM_TEXTURE_A8R8G8B8:
+				return CELL_GCM_TEXTURE_DEPTH24_D8;
 			case CELL_GCM_TEXTURE_X16:
 				//case CELL_GCM_TEXTURE_A4R4G4B4:
 				//case CELL_GCM_TEXTURE_G8B8:
@@ -131,15 +132,19 @@ namespace rsx
 			return gcm_format;
 		}
 
-		static inline u32 get_sized_blit_format(bool _32_bit, bool depth_format)
+		static inline u32 get_sized_blit_format(bool is_32_bit, bool depth_format, bool format_conversion)
 		{
-			if (_32_bit) [[likely]]
+			if (format_conversion)
+			{
+				return (is_32_bit) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
+			}
+			else if (is_32_bit)
 			{
 				return (!depth_format) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_DEPTH24_D8;
 			}
 			else
 			{
-				return (!depth_format) ? CELL_GCM_TEXTURE_R5G6B5 : CELL_GCM_TEXTURE_DEPTH16;
+				return (!depth_format) ? CELL_GCM_TEXTURE_X16 : CELL_GCM_TEXTURE_DEPTH16;
 			}
 		}
 
@@ -157,21 +162,6 @@ namespace rsx
 			case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 			case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 				return true;
-			}
-		}
-
-		static inline format_type get_format_class(u32 gcm_format)
-		{
-			switch (gcm_format)
-			{
-			default:
-				return format_type::color;
-			case CELL_GCM_TEXTURE_DEPTH16:
-			case CELL_GCM_TEXTURE_DEPTH24_D8:
-				return format_type::depth_uint;
-			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-				return format_type::depth_float;
 			}
 		}
 
@@ -552,7 +542,7 @@ namespace rsx
 					const auto scaled_w = rsx::apply_resolution_scale(attr2.width, true);
 					const auto scaled_h = rsx::apply_resolution_scale(attr2.height, true);
 
-					const auto format_class = (force_convert) ? get_format_class(attr2.gcm_format) : texptr->get_format_type();
+					const auto format_class = (force_convert) ? classify_format(attr2.gcm_format) : texptr->format_class();
 					const auto command = surface_is_rop_target ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
 
 					attr2.width = scaled_w;
@@ -564,7 +554,7 @@ namespace rsx
 				}
 
 				return{ texptr->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage,
-						texptr->get_format_type(), scale, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target };
+						texptr->format_class(), scale, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target };
 			}
 
 			const auto scaled_w = rsx::apply_resolution_scale(attr2.width, true);
@@ -574,7 +564,7 @@ namespace rsx
 			{
 				return{ texptr->get_surface(rsx::surface_access::read), deferred_request_command::_3d_unwrap,
 						attr2, {},
-						texture_upload_context::framebuffer_storage, texptr->get_format_type(), scale,
+						texture_upload_context::framebuffer_storage, texptr->format_class(), scale,
 						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 			}
 
@@ -585,7 +575,7 @@ namespace rsx
 
 			return{ texptr->get_surface(rsx::surface_access::read), deferred_request_command::cubemap_unwrap,
 					attr2, {},
-					texture_upload_context::framebuffer_storage, texptr->get_format_type(), scale,
+					texture_upload_context::framebuffer_storage, texptr->format_class(), scale,
 					rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 		}
 
@@ -655,7 +645,7 @@ namespace rsx
 			// If this method was called, there is no easy solution, likely means atlas gather is needed
 			auto scaled_w = rsx::apply_resolution_scale(attr2.width, true);
 			auto scaled_h = rsx::apply_resolution_scale(attr2.height, true);
-			const auto format_class = get_format_class(attr2.gcm_format);
+			const auto format_class = classify_format(attr2.gcm_format);
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap)
 			{

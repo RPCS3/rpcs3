@@ -44,7 +44,7 @@ namespace gl
 	 * static_state - set up the texture without consideration for sampler state (useful for vertex textures which have no real sampler state on RSX)
 	 */
 	void upload_texture(GLuint id, u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
-		const std::vector<rsx_subresource_layout>& subresources_layout);
+		const std::vector<rsx::subresource_layout>& subresources_layout);
 
 	class sampler_state
 	{

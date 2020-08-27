@@ -7,35 +7,6 @@
 #include "VKResourceManager.h"
 #include "VKCommandStream.h"
 
-namespace
-{
-	u32 get_max_depth_value(rsx::surface_depth_format format)
-	{
-		switch (format)
-		{
-		case rsx::surface_depth_format::z16: return 0xFFFF;
-		case rsx::surface_depth_format::z24s8: return 0xFFFFFF;
-		default:
-			ASSUME(0);
-			break;
-		}
-		fmt::throw_exception("Unknown depth format" HERE);
-	}
-
-	u8 get_pixel_size(rsx::surface_depth_format format)
-	{
-		switch (format)
-		{
-		case rsx::surface_depth_format::z16: return 2;
-		case rsx::surface_depth_format::z24s8: return 4;
-		default:
-			ASSUME(0);
-			break;
-		}
-		fmt::throw_exception("Unknown depth format" HERE);
-	}
-}
-
 namespace vk
 {
 	VkCompareOp get_compare_func(rsx::comparison_function op, bool reverse_direction = false);
@@ -1089,7 +1060,7 @@ void VKGSRender::clear_surface(u32 mask)
 		{
 			u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
-			u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
+			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
 			float depth_clear = static_cast<float>(clear_depth) / max_depth_value;
 
 			depth_stencil_clear_values.depthStencil.depth = depth_clear;
@@ -1098,7 +1069,7 @@ void VKGSRender::clear_surface(u32 mask)
 			depth_stencil_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
 		}
 
-		if (surface_depth_format == rsx::surface_depth_format::z24s8)
+		if (is_depth_stencil_format(surface_depth_format))
 		{
 			if (mask & 0x2)
 			{
@@ -1219,8 +1190,7 @@ void VKGSRender::clear_surface(u32 mask)
 							if (require_mem_load) rtt->write_barrier(*m_current_command_buffer);
 
 							// Add a barrier to ensure previous writes are visible; also transitions into GENERAL layout
-							const auto old_layout = rtt->current_layout;
-							vk::insert_texture_barrier(*m_current_command_buffer, rtt, VK_IMAGE_LAYOUT_GENERAL);
+							rtt->push_barrier(*m_current_command_buffer, VK_IMAGE_LAYOUT_GENERAL);
 
 							if (!renderpass)
 							{
@@ -1230,8 +1200,7 @@ void VKGSRender::clear_surface(u32 mask)
 							}
 
 							attachment_clear_pass->run(*m_current_command_buffer, rtt, region.rect, renderpass);
-
-							rtt->change_layout(*m_current_command_buffer, old_layout);
+							rtt->pop_layout(*m_current_command_buffer);
 						}
 						else
 							fmt::throw_exception("Unreachable" HERE);
@@ -2067,8 +2036,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_depth_surface_info.width = m_framebuffer_layout.width;
 		m_depth_surface_info.height = m_framebuffer_layout.height;
 		m_depth_surface_info.depth_format = m_framebuffer_layout.depth_format;
-		m_depth_surface_info.depth_buffer_float = m_framebuffer_layout.depth_float;
-		m_depth_surface_info.bpp = (m_framebuffer_layout.depth_format == rsx::surface_depth_format::z16? 2 : 4);
+		m_depth_surface_info.bpp = get_format_block_size_in_bytes(m_framebuffer_layout.depth_format);
 		m_depth_surface_info.samples = samples;
 	}
 
@@ -2095,7 +2063,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
 	{
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-		ds->set_depth_render_mode(!m_framebuffer_layout.depth_float);
 		m_fbo_images.push_back(ds);
 
 		m_depth_surface_info.address = m_framebuffer_layout.zeta_address;

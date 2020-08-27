@@ -169,7 +169,7 @@ namespace rsx
 
 			sampled_image_descriptor() = default;
 
-			sampled_image_descriptor(image_view_type handle, texture_upload_context ctx, format_type ftype,
+			sampled_image_descriptor(image_view_type handle, texture_upload_context ctx, rsx::format_class ftype,
 				size2f scale, rsx::texture_dimension_extended type, bool cyclic_reference = false)
 			{
 				image_handle = handle;
@@ -183,7 +183,7 @@ namespace rsx
 
 			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason,
 				const image_section_attributes_t& attr, position2u src_offset,
-				texture_upload_context ctx, format_type ftype, size2f scale,
+				texture_upload_context ctx, rsx::format_class ftype, size2f scale,
 				rsx::texture_dimension_extended type, const texture_channel_remap_t& remap)
 			{
 				external_subresource_desc = { external_handle, reason, attr, src_offset, remap };
@@ -320,7 +320,7 @@ namespace rsx
 		virtual section_storage_type* create_new_texture(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
 			rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, texture_create_flags flags) = 0;
 		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format, texture_upload_context context,
-			const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) = 0;
+			const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) = 0;
 		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range &rsx_range, bool memory_load) = 0;
 		virtual void enforce_surface_creation_type(section_storage_type& section, u32 gcm_format, texture_create_flags expected) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex) = 0;
@@ -1516,7 +1516,7 @@ namespace rsx
 				// Most mesh textures are stored as compressed to make the most of the limited memory
 				if (auto cached_texture = find_texture_from_dimensions(attr.address, attr.gcm_format, attr.width, attr.height, attr.depth))
 				{
-					return{ cached_texture->get_view(encoded_remap, remap), cached_texture->get_context(), cached_texture->get_format_type(), scale, cached_texture->get_image_type() };
+					return{ cached_texture->get_view(encoded_remap, remap), cached_texture->get_context(), cached_texture->get_format_class(), scale, cached_texture->get_image_type() };
 				}
 			}
 			else
@@ -1605,7 +1605,7 @@ namespace rsx
 							continue;
 						}
 
-						return{ cached_texture->get_view(encoded_remap, remap), cached_texture->get_context(), cached_texture->get_format_type(), scale, cached_texture->get_image_type() };
+						return{ cached_texture->get_view(encoded_remap, remap), cached_texture->get_context(), cached_texture->get_format_class(), scale, cached_texture->get_image_type() };
 					}
 				}
 
@@ -1677,7 +1677,7 @@ namespace rsx
 							new_attr.gcm_format = gcm_format;
 
 							return { last->get_raw_texture(), deferred_request_command::copy_image_static, new_attr, {},
-									last->get_context(), helpers::get_format_class(gcm_format), scale, extended_dimension, remap };
+									last->get_context(), classify_format(gcm_format), scale, extended_dimension, remap };
 						}
 					}
 
@@ -1936,7 +1936,7 @@ namespace rsx
 
 			// Do direct upload from CPU as the last resort
 			const auto subresources_layout = get_subresources_layout(tex);
-			const auto format_class = helpers::get_format_class(attributes.gcm_format);
+			const auto format_class = classify_format(attributes.gcm_format);
 
 			if (!tex_size)
 			{
@@ -2154,14 +2154,14 @@ namespace rsx
 				if (!typeless) [[likely]]
 				{
 					// Use format as-is
-					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, src_subres.is_depth);
+					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, src_subres.is_depth, false);
 				}
 				else
 				{
 					// Enable type scaling in src
 					typeless_info.src_is_typeless = true;
 					typeless_info.src_scaling_hint = static_cast<f32>(bpp) / src_bpp;
-					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false);
+					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, is_format_convert);
 				}
 
 				if (surf->get_surface_width(rsx::surface_metrics::pixels) != surf->width() ||
@@ -2229,14 +2229,14 @@ namespace rsx
 
 				if (!typeless) [[likely]]
 				{
-					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, dst_subres.is_depth);
+					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, dst_subres.is_depth, false);
 				}
 				else
 				{
 					// Enable type scaling in dst
 					typeless_info.dst_is_typeless = true;
 					typeless_info.dst_scaling_hint = static_cast<f32>(bpp) / dst_bpp;
-					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false);
+					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert);
 				}
 			}
 
@@ -2354,14 +2354,15 @@ namespace rsx
 						}
 					}
 
+					// Prefer formats which will not trigger a typeless conversion later
+					// Only color formats are supported as destination as most access from blit engine will be color
 					switch (surface->get_gcm_format())
 					{
 					case CELL_GCM_TEXTURE_A8R8G8B8:
-					case CELL_GCM_TEXTURE_DEPTH24_D8:
 						if (!dst_is_argb8) continue;
 						break;
+					case CELL_GCM_TEXTURE_X16:
 					case CELL_GCM_TEXTURE_R5G6B5:
-					case CELL_GCM_TEXTURE_DEPTH16:
 						if (dst_is_argb8) continue;
 						break;
 					default:
@@ -2411,17 +2412,6 @@ namespace rsx
 						{
 							verify(HERE), src_is_render_target;
 							src_is_depth = (typeless_info.src_is_typeless) ? false : src_subres.is_depth;
-						}
-
-						if (cached_dest->is_depth_texture() != src_is_depth)
-						{
-							// Opt to cancel the destination. Can also use typeless convert
-							rsx_log.warning("Format mismatch on blit destination block. Performance warning.");
-
-							// The invalidate call before creating a new target will remove this section
-							cached_dest = nullptr;
-							dest_texture = 0;
-							dst_area = old_dst_area;
 						}
 					}
 
@@ -2481,6 +2471,7 @@ namespace rsx
 					}
 					case CELL_GCM_TEXTURE_R5G6B5:
 					case CELL_GCM_TEXTURE_DEPTH16:
+					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 					case CELL_GCM_TEXTURE_X16:
 					case CELL_GCM_TEXTURE_G8B8:
 					case CELL_GCM_TEXTURE_A1R5G5B5:
@@ -2553,8 +2544,8 @@ namespace rsx
 						image_height = src_h;
 					}
 
-					std::vector<rsx_subresource_layout> subresource_layout;
-					rsx_subresource_layout subres = {};
+					std::vector<rsx::subresource_layout> subresource_layout;
+					rsx::subresource_layout subres = {};
 					subres.width_in_block = subres.width_in_texel = image_width;
 					subres.height_in_block = subres.height_in_texel = image_height;
 					subres.pitch_in_block = full_width;
@@ -2562,7 +2553,7 @@ namespace rsx
 					subres.data = { vm::_ptr<const std::byte>(image_base), static_cast<gsl::span<const std::byte>::index_type>(src.pitch * image_height) };
 					subresource_layout.push_back(subres);
 
-					const u32 gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_is_depth_surface);
+					const u32 gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_is_depth_surface, is_format_convert);
 					const auto rsx_range = address_range::start_length(image_base, src.pitch * image_height);
 
 					lock.upgrade();
@@ -2575,11 +2566,6 @@ namespace rsx
 					typeless_info.src_gcm_format = gcm_format;
 				}
 				else if (cached_src->is_depth_texture() != dst_is_depth_surface)
-				{
-					typeless_info.src_is_typeless = true;
-					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_is_depth_surface);
-				}
-				else
 				{
 					typeless_info.src_gcm_format = cached_src->get_gcm_format();
 				}
@@ -2595,7 +2581,7 @@ namespace rsx
 			}
 
 			const auto src_is_depth_format = helpers::is_gcm_depth_format(typeless_info.src_gcm_format);
-			const auto preferred_dst_format = helpers::get_sized_blit_format(dst_is_argb8, src_is_depth_format);
+			const auto preferred_dst_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert);
 
 			if (cached_dest && !use_null_region)
 			{
@@ -2690,8 +2676,8 @@ namespace rsx
 						utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
 
 						const u16 pitch_in_block = dst.pitch / dst_bpp;
-						std::vector<rsx_subresource_layout> subresource_layout;
-						rsx_subresource_layout subres = {};
+						std::vector<rsx::subresource_layout> subresource_layout;
+						rsx::subresource_layout subres = {};
 						subres.width_in_block = subres.width_in_texel = dst_dimensions.width;
 						subres.height_in_block = subres.height_in_texel = dst_dimensions.height;
 						subres.pitch_in_block = pitch_in_block;
@@ -2704,12 +2690,11 @@ namespace rsx
 							rsx::texture_dimension_extended::texture_dimension_2d, false);
 
 						enforce_surface_creation_type(*cached_dest, preferred_dst_format, channel_order);
-
-						typeless_info.dst_gcm_format = preferred_dst_format;
 					}
 
 					dest_texture = cached_dest->get_raw_texture();
 					typeless_info.dst_context = texture_upload_context::blit_engine_dst;
+					typeless_info.dst_gcm_format = preferred_dst_format;
 				}
 			}
 
@@ -2769,34 +2754,6 @@ namespace rsx
 						}
 					}
 				}
-
-				if (src_is_render_target)
-				{
-					if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format) !=
-						helpers::is_gcm_depth_format(typeless_info.dst_gcm_format))
-					{
-						verify(HERE), !typeless_info.dst_is_typeless || !typeless_info.src_is_typeless;
-						verify(HERE), src_is_argb8 == dst_is_argb8;
-
-						if (typeless_info.src_is_typeless == typeless_info.dst_is_typeless)
-						{
-							// None are typeless. Cast src
-							typeless_info.src_is_typeless = true;
-							typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_subres.is_depth);
-						}
-						else if (typeless_info.src_is_typeless)
-						{
-							// Src is already getting cast
-							typeless_info.src_gcm_format = typeless_info.dst_gcm_format;
-						}
-						else
-						{
-							// Dst is already getting cast
-							verify(HERE), typeless_info.dst_is_typeless;
-							typeless_info.dst_gcm_format = typeless_info.src_gcm_format;
-						}
-					}
-				}
 			}
 
 			if (rsx::get_resolution_scale_percent() != 100)
@@ -2845,27 +2802,29 @@ namespace rsx
 				dst_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer, dst_area);
 			}
 
+			if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format) !=
+				helpers::is_gcm_depth_format(typeless_info.dst_gcm_format))
+			{
+				if (!typeless_info.src_is_typeless && !typeless_info.dst_is_typeless)
+				{
+					// Make the depth side typeless
+					if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format))
+					{
+						typeless_info.src_is_typeless = true;
+						typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, false);
+					}
+					else
+					{
+						typeless_info.dst_is_typeless = true;
+						typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, false);
+					}
+				}
+			}
+
 			if (!use_null_region) [[likely]]
 			{
 				// Do preliminary analysis
 				typeless_info.analyse();
-
-				if (dst_is_render_target && src_is_render_target &&
-					dst_subres.is_depth != src_subres.is_depth) [[unlikely]]
-				{
-					// Rare corner case. Typeless transfer from whatever channel is Z
-					if (!typeless_info.src_is_typeless && !typeless_info.dst_is_typeless)
-					{
-						if (dst_subres.is_depth)
-						{
-							typeless_info.dst_is_typeless = true;
-						}
-						else
-						{
-							typeless_info.src_is_typeless = true;
-						}
-					}
-				}
 
 				blitter.scale_image(cmd, vram_texture, dest_texture, src_area, dst_area, interpolate, typeless_info);
 			}

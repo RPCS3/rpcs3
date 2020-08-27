@@ -198,7 +198,7 @@ void VKGSRender::load_texture_env()
 
 				// Check if non-point filtering can even be used on this format
 				bool can_sample_linear;
-				if (sampler_state->format_class == rsx::format_type::color) [[likely]]
+				if (sampler_state->format_class == RSX_FORMAT_CLASS_COLOR) [[likely]]
 				{
 					// Most PS3-like formats can be linearly filtered without problem
 					can_sample_linear = true;

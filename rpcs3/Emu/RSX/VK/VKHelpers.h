@@ -36,6 +36,9 @@
 #define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
 #define GENERAL_WAIT_TIMEOUT  2000000ull  // 2 seconds
 
+//using enum rsx::format_class;
+using namespace ::rsx::format_class_;
+
 namespace rsx
 {
 	class fragment_texture;
@@ -145,7 +148,7 @@ namespace vk
 
 	VkSampler null_sampler();
 	image_view* null_image_view(vk::command_buffer&, VkImageViewType type);
-	image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height);
+	image* get_typeless_helper(VkFormat format, rsx::format_class format_class, u32 requested_width, u32 requested_height);
 	buffer* get_scratch_buffer(u32 min_required_size = 0);
 	data_heap* get_upload_heap();
 
@@ -180,7 +183,7 @@ namespace vk
 	* dst_image must be in TRANSFER_DST_OPTIMAL layout and upload_buffer have TRANSFER_SRC_BIT usage flag.
 	*/
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
-		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
+		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align = 0);
 
 	//Other texture management helpers
@@ -192,16 +195,15 @@ namespace vk
 	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
 
 	void copy_image_typeless(const command_buffer &cmd, image *src, image *dst, const areai& src_rect, const areai& dst_rect,
-		u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
-		VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
+		u32 mipmaps, VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
-	void copy_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
-			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
+	void copy_image(const vk::command_buffer& cmd, vk::image* src, vk::image* dst,
+			const areai& src_rect, const areai& dst_rect, u32 mipmaps,
 			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
-	void copy_scaled_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
-			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags aspect, bool compatible_formats,
-			VkFilter filter = VK_FILTER_LINEAR, VkFormat src_format = VK_FORMAT_UNDEFINED, VkFormat dst_format = VK_FORMAT_UNDEFINED);
+	void copy_scaled_image(const vk::command_buffer& cmd, vk::image* src, vk::image* dst,
+			const areai& src_rect, const areai& dst_rect, u32 mipmaps,
+			bool compatible_formats, VkFilter filter = VK_FILTER_LINEAR);
 
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 
@@ -1385,6 +1387,7 @@ private:
 		std::stack<VkImageLayout> m_layout_stack;
 		VkImageAspectFlags m_storage_aspect = 0;
 
+		rsx::format_class m_format_class = RSX_FORMAT_CLASS_UNDEFINED;
 	public:
 		VkImage value = VK_NULL_HANDLE;
 		VkComponentMapping native_component_map = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
@@ -1403,7 +1406,8 @@ private:
 			VkImageLayout initial_layout,
 			VkImageTiling tiling,
 			VkImageUsageFlags usage,
-			VkImageCreateFlags image_flags)
+			VkImageCreateFlags image_flags,
+			rsx::format_class format_class = RSX_FORMAT_CLASS_UNDEFINED)
 			: current_layout(initial_layout)
 			, m_device(dev)
 		{
@@ -1437,6 +1441,20 @@ private:
 			CHECK_RESULT(vkBindImageMemory(m_device, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset()));
 
 			m_storage_aspect = get_aspect_flags(format);
+
+			if (format_class == RSX_FORMAT_CLASS_UNDEFINED)
+			{
+				if (m_storage_aspect != VK_IMAGE_ASPECT_COLOR_BIT)
+				{
+					rsx_log.error("Depth/stencil textures must have format class explicitly declared");
+				}
+				else
+				{
+					format_class = RSX_FORMAT_CLASS_COLOR;
+				}
+			}
+
+			m_format_class = format_class;
 		}
 
 		// TODO: Ctor that uses a provided memory heap
@@ -1489,10 +1507,21 @@ private:
 			return m_storage_aspect;
 		}
 
+		rsx::format_class format_class() const
+		{
+			return m_format_class;
+		}
+
 		void push_layout(VkCommandBuffer cmd, VkImageLayout layout)
 		{
 			m_layout_stack.push(current_layout);
 			change_image_layout(cmd, this, layout);
+		}
+
+		void push_barrier(VkCommandBuffer cmd, VkImageLayout layout)
+		{
+			m_layout_stack.push(current_layout);
+			insert_texture_barrier(cmd, this, layout);
 		}
 
 		void pop_layout(VkCommandBuffer cmd)
