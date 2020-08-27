@@ -1442,7 +1442,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		if (!disc_sfo_dir.empty() && fs::is_file(disc_sfo_dir))
 		{
-			const auto bdvd_title = psf::get_string(psf::load_object(fs::file{ disc_sfo_dir }), "TITLE");
+			const auto psf_obj = psf::load_object(fs::file{ disc_sfo_dir });
+			const auto bdvd_title = psf::get_string(psf_obj, "TITLE");
 
 			if (!bdvd_title.empty() && bdvd_title != m_title)
 			{
