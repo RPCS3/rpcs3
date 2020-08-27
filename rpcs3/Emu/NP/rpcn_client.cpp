@@ -52,10 +52,10 @@ rpcn_client::~rpcn_client()
 
 std::string rpcn_client::get_wolfssl_error(int error)
 {
-	std::string error_string(80, '\0');
+	char error_string[80]{};
 	auto wssl_err = wolfSSL_get_error(wssl, error);
 	wolfSSL_ERR_error_string(wssl_err, &error_string[0]);
-	return error_string;
+	return std::string(error_string);
 }
 
 void rpcn_client::disconnect()
