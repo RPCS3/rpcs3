@@ -2346,7 +2346,7 @@ bool spu_thread::process_mfc_cmd()
 		ch_mfc_cmd.cmd, ch_mfc_cmd.lsa, ch_mfc_cmd.eal, ch_mfc_cmd.tag, ch_mfc_cmd.size);
 }
 
-u32 spu_thread::get_events(u32 mask_hint)
+u32 spu_thread::get_events(u32 mask_hint, bool waiting)
 {
 	const u32 mask1 = ch_event_mask;
 
@@ -2378,7 +2378,17 @@ u32 spu_thread::get_events(u32 mask_hint)
 	}
 
 	// Simple polling or polling with atomically set/removed SPU_EVENT_WAITING flag
-	return ch_event_stat & mask1;
+	return !waiting ? ch_event_stat & mask1 : ch_event_stat.atomic_op([&](u32& stat) -> u32
+	{
+		if (u32 res = stat & mask1)
+		{
+			stat &= ~SPU_EVENT_WAITING;
+			return res;
+		}
+
+		stat |= SPU_EVENT_WAITING;
+		return 0;
+	});
 }
 
 void spu_thread::set_events(u32 mask)
@@ -2608,7 +2618,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			return res;
 		}
 
-		while (res = get_events(mask1), !res)
+		while (res = get_events(mask1, true), !res)
 		{
 			state += cpu_flag::wait;
 
