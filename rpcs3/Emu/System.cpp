@@ -766,7 +766,7 @@ std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const 
 
 				if (entry.is_directory && fs::is_file(sfo_path))
 				{
-					const auto psf           = psf::load_object(fs::file(sfo_path));
+					const auto psf = psf::load_object(fs::file(sfo_path));
 					const auto serial = psf::get_string(psf, "TITLE_ID");
 					if (serial == title_id)
 					{
