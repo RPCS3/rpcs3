@@ -255,7 +255,7 @@ static void network_clear_queue(ppu_thread& ppu)
 // Object in charge of retransmiting packets for STREAM_P2P sockets
 class tcp_timeout_monitor
 {
-	public:
+public:
 	void add_message(s32 sock_id, const sockaddr_in *dst, std::vector<u8> data, u64 seq)
 	{
 		{
@@ -305,6 +305,9 @@ class tcp_timeout_monitor
 				wakey.wait_until(lock, msgs.begin()->first);
 			else
 				wakey.wait(lock);
+
+			if (abort)
+				return;
 
 			const auto now = std::chrono::system_clock::now();
 			// Check for messages that haven't been acked
@@ -368,11 +371,12 @@ class tcp_timeout_monitor
 		}
 	}
 
-	public:
+public:
 	std::condition_variable wakey;
-	static constexpr auto thread_name = "Tcp Over Udp Timeout Manager Thread"sv;	
+	static constexpr auto thread_name = "Tcp Over Udp Timeout Manager Thread"sv;
+	std::atomic<bool> abort = false;
 
-	private:
+private:
 	std::mutex data_mutex;
 	// List of outgoing messages
 	struct message
@@ -835,6 +839,7 @@ struct network_thread
 		WSACleanup();
 #endif
 		auto tcpm = g_fxo->get<named_thread<tcp_timeout_monitor>>();
+		tcpm->abort = true;
 		tcpm->wakey.notify_one();
 	}
 
