@@ -285,7 +285,11 @@ bool gs_frame::get_mouse_lock_state()
 
 void gs_frame::close()
 {
-	Emu.Stop();
+	if (!Emu.IsStopped())
+	{
+		Emu.Stop();
+	}
+
 	Emu.CallAfter([this]() { deleteLater(); });
 }
 
