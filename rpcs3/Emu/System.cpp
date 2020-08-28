@@ -1957,7 +1957,7 @@ void Emulator::Stop(bool restart)
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();
 
-	if (Quit(g_cfg.misc.autoexit.get()))
+	if (!m_force_boot && Quit(g_cfg.misc.autoexit.get()))
 	{
 		return;
 	}
