@@ -1243,15 +1243,22 @@ void spu_thread::push_snr(u32 number, u32 value)
 	// Get channel
 	const auto channel = number & 1 ? &ch_snr2 : &ch_snr1;
 
+	// TODO: may be useful to make it a transaction
+	ch_event_stat += SPU_EVENT_LOCK_ONCE;
+
 	// Check corresponding SNR register settings
 	if ((snr_config >> number) & 1)
 	{
-		channel->push_or(value);
+		if (channel->push_or(value))
+			set_events(SPU_EVENT_S1 >> (number & 1));
 	}
 	else
 	{
-		channel->push(value);
+		if (channel->push(value))
+			set_events(SPU_EVENT_S1 >> (number & 1));
 	}
+
+	ch_event_stat -= SPU_EVENT_LOCK_ONCE;
 }
 
 void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
@@ -2377,18 +2384,38 @@ u32 spu_thread::get_events(u32 mask_hint, bool waiting)
 		}
 	}
 
-	// Simple polling or polling with atomically set/removed SPU_EVENT_WAITING flag
-	return !waiting ? ch_event_stat & mask1 : ch_event_stat.atomic_op([&](u32& stat) -> u32
+	u32 result = ch_event_stat.load();
+
+	while (true)
 	{
+		if (mask_hint & SPU_EVENT_NEED_LOCK_TEST && result & SPU_EVENT_LOCK_MASK)
+		{
+			// Wait until event mask update is complete
+			busy_wait(1000);
+			result = ch_event_stat.load();
+			continue;
+		}
+
+		if (!waiting)
+		{
+			return result & mask1;
+		}
+
+		// Simple polling or polling with atomically set/removed SPU_EVENT_WAITING flag
+		u32 stat = result;
+
 		if (u32 res = stat & mask1)
 		{
 			stat &= ~SPU_EVENT_WAITING;
-			return res;
+			if (ch_event_stat.compare_exchange(result, stat))
+				return res;
+			continue;
 		}
 
 		stat |= SPU_EVENT_WAITING;
-		return 0;
-	});
+		if (ch_event_stat.compare_exchange(result, stat))
+			return 0;
+	}
 }
 
 void spu_thread::set_events(u32 mask)
