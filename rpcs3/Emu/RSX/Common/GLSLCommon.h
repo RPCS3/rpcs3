@@ -691,10 +691,13 @@ namespace glsl
 				OS <<
 				"vec4 shadowCompare(sampler2D tex, const in vec3 p, const in uint func)\n"
 				"{\n"
-				"	vec4 samples = textureGather(tex, p.xy).xxxx;\n"
-				"	vec4 ref = clamp(p.z, 0., 1.).xxxx;\n"
+				"	vec4 samples = textureGather(tex, p.xy, 0);\n"
+				"	float advance_x = dFdx(p).z;\n"
+				"	float advance_y = -dFdy(p).z;\n"
+				"	vec4 off = vec4(advance_y, (advance_x + advance_y), advance_x, 0.);\n"
+				"	vec4 ref = clamp(off + p.z, 0., 1.);\n"
 				"	vec4 filtered = vec4(comparison_passes(samples, ref, func));\n"
-				"	return filtered * dot(filtered, vec4(0.25f));\n"
+				"	return dot(filtered, vec4(0.25f)).xxxx;\n"
 				"}\n\n"
 
 				"vec4 shadowCompareProj(sampler2D tex, const in vec4 p, const in uint func)\n"
