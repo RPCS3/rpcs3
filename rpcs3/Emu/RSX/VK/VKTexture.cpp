@@ -244,7 +244,7 @@ namespace vk
 		{
 			if (src->format_class() == dst->format_class())
 			{
-				rsx_log.warning("[Performance warning] Image copy requested incorrectly for matching formats.");
+				rsx_log.error("[Performance warning] Image copy requested incorrectly for matching formats.");
 				copy_image(cmd, src, dst, src_rect, dst_rect, mipmaps, src_transfer_mask, dst_transfer_mask);
 				return;
 			}
@@ -360,12 +360,12 @@ namespace vk
 			const areai& src_rect, const areai& dst_rect, u32 mipmaps,
 			VkImageAspectFlags src_transfer_mask, VkImageAspectFlags dst_transfer_mask)
 	{
-		// NOTE: src_aspect should match dst_aspect according to spec but drivers seem to work just fine with the mismatch
-		// TODO: Implement separate pixel transfer for drivers that refuse this workaround
-		if ((src->aspect() & VK_IMAGE_ASPECT_DEPTH_BIT) != 0 &&
+		// NOTE: src_aspect should match dst_aspect according to spec but some drivers seem to work just fine with the mismatch
+		if (const u32 aspect_bridge = (src->aspect() | dst->aspect());
+			(aspect_bridge & VK_IMAGE_ASPECT_COLOR_BIT) == 0 &&
 			src->format() != dst->format())
 		{
-			// Copying between depth formats must match
+			// Copying between two depth formats must match exactly or crashes will happen
 			rsx_log.error("[Performance warning] Image copy was requested incorrectly for mismatched depth formats");
 			copy_image_typeless(cmd, src, dst, src_rect, dst_rect, mipmaps);
 			return;
