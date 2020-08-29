@@ -75,10 +75,6 @@ gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::share
 	// Configure the mouse hide on idle timer
 	connect(&m_mousehide_timer, &QTimer::timeout, this, &gs_frame::MouseHideTimeout);
 	m_mousehide_timer.setSingleShot(true);
-	if (m_hide_mouse_after_idletime)
-	{
-		m_mousehide_timer.start(m_hide_mouse_idletime); // we start the idle timer
-	}
 
 #ifdef _WIN32
 	m_tb_button = new QWinTaskbarButton();
