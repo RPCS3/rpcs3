@@ -5,6 +5,7 @@
 
 #include <QWindow>
 #include <QPaintEvent>
+#include <QTimer>
 
 #ifdef _WIN32
 #include <QWinTaskbarProgress>
@@ -29,12 +30,15 @@ private:
 #endif
 
 	std::shared_ptr<gui_settings> m_gui_settings;
+	QTimer m_mousehide_timer;
 
 	u64 m_frames = 0;
 	QString m_window_title;
 	bool m_disable_mouse = false;
 	bool m_disable_kb_hotkeys = false;
 	bool m_show_mouse_in_fullscreen = false;
+	bool m_hide_mouse_after_idletime = false;
+	u32 m_hide_mouse_idletime = 2000; // ms
 
 public:
 	gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
@@ -75,4 +79,5 @@ protected:
 
 private Q_SLOTS:
 	void HandleCursor(QWindow::Visibility visibility);
+	void MouseHideTimeout();
 };
