@@ -1269,14 +1269,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		});
 
 		ui->gs_hideMouseOnIdle->setChecked(m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool());
-		connect(ui->gs_hideMouseOnIdle, &QCheckBox::clicked, [this](bool val)
+		connect(ui->gs_hideMouseOnIdle, &QCheckBox::clicked, [this](bool checked)
 		{
-			m_gui_settings->SetValue(gui::gs_hideMouseIdle, val);
-			ui->gs_hideMouseOnIdleTime->setEnabled(val);
+			m_gui_settings->SetValue(gui::gs_hideMouseIdle, checked);
+			ui->gs_hideMouseOnIdleTime->setEnabled(checked);
 		});
-		ui->gs_hideMouseOnIdleTime->setEnabled(m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool());
+		ui->gs_hideMouseOnIdleTime->setEnabled(ui->gs_hideMouseOnIdle->checkState() == Qt::CheckState::Checked);
 		ui->gs_hideMouseOnIdleTime->setValue(m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt());
-		connect(ui->gs_hideMouseOnIdleTime, &QSpinBox::editingFinished, [=, this]()
+		connect(ui->gs_hideMouseOnIdleTime, &QSpinBox::editingFinished, [this]()
 		{
 			m_gui_settings->SetValue(gui::gs_hideMouseIdleTime, ui->gs_hideMouseOnIdleTime->value());
 		});

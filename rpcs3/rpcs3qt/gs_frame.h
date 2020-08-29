@@ -38,7 +38,7 @@ private:
 	bool m_disable_kb_hotkeys = false;
 	bool m_show_mouse_in_fullscreen = false;
 	bool m_hide_mouse_after_idletime = false;
-	u32 m_hide_mouse_idletime = 2000; // 2000 milliseconds)
+	u32 m_hide_mouse_idletime = 2000; // ms
 
 public:
 	gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
