@@ -8,7 +8,6 @@
 #include "Emu/Cell/Modules/cellScreenshot.h"
 
 #include <QCoreApplication>
-#include <QTimer>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <string>
@@ -74,7 +73,7 @@ gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::share
 	connect(this, &QWindow::visibilityChanged, this, &gs_frame::HandleCursor);
 
 	// Configure the mouse hide on idle timer
-	connect(&m_mousehide_timer, SIGNAL(timeout()), this, SLOT(MouseHideTimeout()));
+	connect(&m_mousehide_timer, &QTimer::timeout, &gs_frame::MouseHideTimeout);
 	m_mousehide_timer.setSingleShot(true);
 	if (m_hide_mouse_after_idletime)
 	{
@@ -527,7 +526,7 @@ bool gs_frame::event(QEvent* ev)
 		}
 		close();
 	}
-	if (ev->type() == QEvent::MouseMove)
+	else if (ev->type() == QEvent::MouseMove)
 	{
 		// this will make the cursor visible again if it was hidden by the mouse idle timeout
 		gs_frame::HandleCursor(visibility());
