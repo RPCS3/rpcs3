@@ -1268,6 +1268,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			m_gui_settings->SetValue(gui::gs_showMouseFs, val);
 		});
 
+		ui->gs_hideMouseOnIdle->setChecked(m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool());
+		connect(ui->gs_hideMouseOnIdle, &QCheckBox::clicked, [this](bool val)
+		{
+			m_gui_settings->SetValue(gui::gs_hideMouseIdle, val);
+			ui->gs_hideMouseOnIdleTime->setEnabled(val);
+		});
+		ui->gs_hideMouseOnIdleTime->setEnabled(m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool());
+		ui->gs_hideMouseOnIdleTime->setValue(m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt());
+		connect(ui->gs_hideMouseOnIdleTime, &QSpinBox::editingFinished, [=, this]()
+		{
+			m_gui_settings->SetValue(gui::gs_hideMouseIdleTime, ui->gs_hideMouseOnIdleTime->value());
+		});
+
 		const bool enable_buttons = m_gui_settings->GetValue(gui::gs_resize).toBool();
 		ui->gs_resizeOnBoot->setChecked(enable_buttons);
 		ui->gs_width->setEnabled(enable_buttons);
