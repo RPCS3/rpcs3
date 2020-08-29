@@ -126,6 +126,7 @@ struct content_permission final
 	stx::init_mutex init;
 
 	atomic_t<u32> can_create = 0;
+	atomic_t<bool> exists = false;
 	atomic_t<bool> restrict_sfo_params = true;
 
 	content_permission() = default;
@@ -133,6 +134,16 @@ struct content_permission final
 	content_permission(const content_permission&) = delete;
 
 	content_permission& operator=(const content_permission&) = delete;
+
+	void reset()
+	{
+		dir.clear();
+		sfo.clear();
+		temp.clear();
+		can_create = 0;
+		exists = false;
+		restrict_sfo_params = true;
+	}
 
 	~content_permission()
 	{
@@ -388,9 +399,6 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	perm->dir = std::move(dir);
 	perm->sfo = std::move(sfo);
 
-	perm->temp.clear();
-	perm->can_create = 0;
-
 	return CELL_OK;
 }
 
@@ -426,9 +434,6 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 
 	perm->dir = Emu.GetTitleID();
 	perm->sfo = std::move(sfo);
-
-	perm->temp.clear();
-	perm->can_create = 0;
 
 	return CELL_OK;
 }
@@ -473,8 +478,6 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	}
 
 	perm->dir = std::move(name);
-	perm->sfo.clear();
-	perm->temp.clear();
 
 	if (type == CELL_GAME_GAMETYPE_GAMEDATA)
 	{
@@ -489,6 +492,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		return not_an_error(CELL_GAME_RET_NONE);
 	}
 
+	perm->exists = true;
 	perm->sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 	return CELL_OK;
 }
@@ -515,6 +519,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 
 	if (perm->can_create && perm->temp.empty() && !fs::is_dir(vfs::get(dir)))
 	{
+		perm->reset();
 		strcpy_trunc(*contentInfoPath, "");
 		strcpy_trunc(*usrdirPath, "");
 		return CELL_OK;
@@ -538,6 +543,9 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 			cellGame.error("cellGameContentPermit(): failed to initialize directory '%s' (%s)", dir, fs::g_tls_error);
 		}
 	}
+
+	// Cleanup
+	perm->reset();
 
 	strcpy_trunc(*contentInfoPath, dir);
 	strcpy_trunc(*usrdirPath, dir + "/USRDIR");
@@ -694,6 +702,11 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 {
 	cellGame.error("cellGameCreateGameData(init=*0x%x, tmp_contentInfoPath=*0x%x, tmp_usrdirPath=*0x%x)", init, tmp_contentInfoPath, tmp_usrdirPath);
 
+	if (!init)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
+
 	const auto prm = g_fxo->get<content_permission>();
 
 	const auto _init = prm->init.access();
@@ -706,6 +719,11 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 	if (!prm->can_create)
 	{
 		return CELL_GAME_ERROR_NOTSUPPORTED;
+	}
+
+	if (prm->exists)
+	{
+		return CELL_GAME_ERROR_EXIST;
 	}
 
 	std::string dirname = "_GDATA_" + std::to_string(steady_clock::now().time_since_epoch().count());
@@ -894,7 +912,7 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 
 error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 {
-	cellGame.warning("cellGameSetParamString(id=%d, buf=*0x%x)", id, buf);
+	cellGame.warning("cellGameSetParamString(id=%d, buf=*0x%x %s)", id, buf, buf);
 
 	if (!buf)
 	{
