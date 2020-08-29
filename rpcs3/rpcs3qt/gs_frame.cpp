@@ -8,6 +8,7 @@
 #include "Emu/Cell/Modules/cellScreenshot.h"
 
 #include <QCoreApplication>
+#include <QTimer>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <string>
@@ -46,6 +47,8 @@ gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::share
 	m_disable_mouse = gui_settings->GetValue(gui::gs_disableMouse).toBool();
 	m_disable_kb_hotkeys = gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
 	m_show_mouse_in_fullscreen = gui_settings->GetValue(gui::gs_showMouseFs).toBool();
+	m_hide_mouse_after_idletime = gui_settings->GetValue(gui::gs_hideMouseIdle).toBool();
+	m_hide_mouse_idletime = gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
 
 	m_window_title = qstr(Emu.GetFormattedTitle(0));
 
@@ -69,6 +72,14 @@ gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::share
 
 	// Change cursor when in fullscreen.
 	connect(this, &QWindow::visibilityChanged, this, &gs_frame::HandleCursor);
+
+	// Configure the mouse hide on idle timer
+	connect(&m_mousehide_timer, SIGNAL(timeout()), this, SLOT(MouseHideTimeout()));
+	m_mousehide_timer.setSingleShot(true);
+	if (m_hide_mouse_after_idletime)
+	{
+		m_mousehide_timer.start(m_hide_mouse_idletime); // we start the idle timer
+	}
 
 #ifdef _WIN32
 	m_tb_button = new QWinTaskbarButton();
@@ -462,10 +473,24 @@ void gs_frame::HandleCursor(QWindow::Visibility visibility)
 	if (visibility == QWindow::Visibility::FullScreen && !m_show_mouse_in_fullscreen)
 	{
 		setCursor(Qt::BlankCursor);
+		m_mousehide_timer.stop();
 	}
 	else
 	{
 		setCursor(Qt::ArrowCursor);
+		if (m_hide_mouse_after_idletime)
+		{
+			m_mousehide_timer.start(m_hide_mouse_idletime);
+		}
+	}
+}
+
+void gs_frame::MouseHideTimeout()
+{
+	// our idle timeout occured, so we blank the cursor
+	if (m_hide_mouse_after_idletime)
+	{
+		setCursor(Qt::BlankCursor);
 	}
 }
 
@@ -501,6 +526,11 @@ bool gs_frame::event(QEvent* ev)
 			}
 		}
 		close();
+	}
+	if (ev->type() == QEvent::MouseMove)
+	{
+		// this will make the cursor visible again if it was hidden by the mouse idle timeout
+		gs_frame::HandleCursor(visibility());
 	}
 	return QWindow::event(ev);
 }
