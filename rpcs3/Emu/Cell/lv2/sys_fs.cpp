@@ -821,7 +821,14 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 	if (vpath.find_first_not_of('/') == umax)
 	{
-		*sb = {CELL_FS_S_IFDIR | 0444};
+		sb->mode = CELL_FS_S_IFDIR | 0711;
+		sb->uid = -1;
+		sb->gid = -1;
+		sb->atime = -1;
+		sb->mtime = -1;
+		sb->ctime = -1;
+		sb->size = 258;
+		sb->blksize = 512;
 		return CELL_OK;
 	}
 
@@ -879,7 +886,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime;
-	sb->size = info.size;
+	sb->size = info.is_directory ? mp->block_size : info.size;
 	sb->blksize = mp->block_size;
 
 	if (mp->flags & lv2_mp_flag::read_only)
