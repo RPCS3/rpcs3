@@ -276,5 +276,5 @@ void AutoPauseConfigDialog::OnUpdateValue()
 	ullong value = m_id->text().toULongLong(&ok, 16);
 	const bool is_ok = ok && value <= UINT32_MAX;
 
-	m_current_converted->setText(qstr(fmt::format("Current value: %08x (%s)", u32(value), is_ok ? "OK" : "conversion failed")));
+	m_current_converted->setText(tr("Current value: %1 (%2)").arg(value,8,16).arg(is_ok ? tr("OK") : tr("Conversion failed")));
 }

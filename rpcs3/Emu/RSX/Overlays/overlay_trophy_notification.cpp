@@ -2,6 +2,8 @@
 #include "overlay_trophy_notification.h"
 #include "Emu/RSX/RSXThread.h"
 
+#include <QCoreApplication>
+
 namespace rsx
 {
 	namespace overlays
@@ -121,14 +123,14 @@ namespace rsx
 			std::string trophy_message;
 			switch (trophy.trophyGrade)
 			{
-			case SCE_NP_TROPHY_GRADE_BRONZE: trophy_message = "bronze"; break;
-			case SCE_NP_TROPHY_GRADE_SILVER: trophy_message = "silver"; break;
-			case SCE_NP_TROPHY_GRADE_GOLD: trophy_message = "gold"; break;
-			case SCE_NP_TROPHY_GRADE_PLATINUM: trophy_message = "platinum"; break;
+			case SCE_NP_TROPHY_GRADE_BRONZE: trophy_message = QCoreApplication::translate("RSXOverlay", "Bronze").toStdString(); break;
+			case SCE_NP_TROPHY_GRADE_SILVER: trophy_message = QCoreApplication::translate("RSXOverlay", "Silver").toStdString(); break;
+			case SCE_NP_TROPHY_GRADE_GOLD: trophy_message = QCoreApplication::translate("RSXOverlay", "Gold").toStdString(); break;
+			case SCE_NP_TROPHY_GRADE_PLATINUM: trophy_message = QCoreApplication::translate("RSXOverlay", "Platinum").toStdString(); break;
 			default: break;
 			}
 
-			trophy_message = "You have earned the " + trophy_message + " trophy\n" + trophy.name;
+			trophy_message = QCoreApplication::translate("RSXOverlay", "You have earned the %1 trophy\n%2").arg(trophy_message.c_str()).arg(trophy.name).toStdString();
 			text_view.set_text(trophy_message);
 			text_view.auto_resize();
 

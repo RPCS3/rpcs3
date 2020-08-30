@@ -4,6 +4,8 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/ErrorCodes.h"
 
+#include <QCoreApplication>
+
 namespace rsx
 {
 	namespace overlays
@@ -197,13 +199,13 @@ namespace rsx
 				if (interactive)
 				{
 					btn_cancel.set_pos(585, btn_cancel.y);
-					btn_cancel.set_text("Cancel");
+					btn_cancel.set_text(QCoreApplication::translate("RSXOverlay", "Cancel").toStdString());
 					cancel_only = true;
 				}
 				break;
 			case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK:
 				btn_ok.set_pos(600, btn_ok.y);
-				btn_ok.set_text("OK");
+				btn_ok.set_text(QCoreApplication::translate("RSXOverlay", "OK").toStdString());
 				interactive = true;
 				ok_only     = true;
 				break;

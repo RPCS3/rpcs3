@@ -3,6 +3,8 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 
+#include <QCoreApplication>
+
 LOG_CHANNEL(osk, "OSK");
 
 namespace rsx
@@ -227,27 +229,27 @@ namespace rsx
 
 			m_btn_cancel.set_pos(frame_x, frame_y + frame_h + 10);
 			m_btn_cancel.set_size(140, 30);
-			m_btn_cancel.set_text("Cancel");
+			m_btn_cancel.set_text(QCoreApplication::translate("RSXOverlay", "Cancel").toStdString());
 			m_btn_cancel.set_text_vertical_adjust(5);
 
 			m_btn_space.set_pos(frame_x + 100, frame_y + frame_h + 10);
 			m_btn_space.set_size(100, 30);
-			m_btn_space.set_text("Space");
+			m_btn_space.set_text(QCoreApplication::translate("RSXOverlay", "Space").toStdString());
 			m_btn_space.set_text_vertical_adjust(5);
 
 			m_btn_delete.set_pos(frame_x + 200, frame_y + frame_h + 10);
 			m_btn_delete.set_size(100, 30);
-			m_btn_delete.set_text("Backspace");
+			m_btn_delete.set_text(QCoreApplication::translate("RSXOverlay", "Backspace").toStdString());
 			m_btn_delete.set_text_vertical_adjust(5);
 
 			m_btn_shift.set_pos(frame_x + 320, frame_y + frame_h + 10);
 			m_btn_shift.set_size(80, 30);
-			m_btn_shift.set_text("Shift");
+			m_btn_shift.set_text(QCoreApplication::translate("RSXOverlay", "Shift").toStdString());
 			m_btn_shift.set_text_vertical_adjust(5);
 
 			m_btn_accept.set_pos(frame_x + 400, frame_y + frame_h + 10);
 			m_btn_accept.set_size(100, 30);
-			m_btn_accept.set_text("Accept");
+			m_btn_accept.set_text(QCoreApplication::translate("RSXOverlay", "Accept").toStdString());
 			m_btn_accept.set_text_vertical_adjust(5);
 
 			m_update = true;
@@ -664,10 +666,10 @@ namespace rsx
 		{
 			if (m_password_mode)
 			{
-				return U"[Enter Password]";
+				return QCoreApplication::translate("RSXOverlay","[Enter Password]").toStdU32String();
 			}
 
-			return U"[Enter Text]";
+			return QCoreApplication::translate("RSXOverlay", "[Enter Text]").toStdU32String();
 		}
 
 		void osk_dialog::update()

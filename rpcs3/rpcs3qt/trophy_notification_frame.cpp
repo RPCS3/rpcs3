@@ -43,14 +43,14 @@ trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& i
 	QString trophyType = "";
 	switch (trophy.trophyGrade)
 	{
-	case SCE_NP_TROPHY_GRADE_BRONZE:   trophyType = "bronze";   break;
-	case SCE_NP_TROPHY_GRADE_SILVER:   trophyType = "silver";   break;
-	case SCE_NP_TROPHY_GRADE_GOLD:     trophyType = "gold";     break;
-	case SCE_NP_TROPHY_GRADE_PLATINUM: trophyType = "platinum"; break;
+	case SCE_NP_TROPHY_GRADE_BRONZE:   trophyType = tr("Bronze");   break;
+	case SCE_NP_TROPHY_GRADE_SILVER:   trophyType = tr("Silver");   break;
+	case SCE_NP_TROPHY_GRADE_GOLD:     trophyType = tr("Gold");     break;
+	case SCE_NP_TROPHY_GRADE_PLATINUM: trophyType = tr("Platinum"); break;
 	default: break;
 	}
 
-	trophyName->setText(tr("You have earned the %1 trophy.\n").arg(trophyType) + qstr(trophy.name));
+	trophyName->setText(tr("You have earned the %1 trophy.\n%2").arg(trophyType).arg(trophy.name));
 	trophyName->setAutoFillBackground(true);
 	trophyName->setPalette(black_background);
 

@@ -2,6 +2,8 @@
 #include "overlay_save_dialog.h"
 #include "Utilities/date_time.h"
 
+#include <QCoreApplication>
+
 namespace rsx
 {
 	namespace overlays
@@ -176,15 +178,15 @@ namespace rsx
 
 			if (op >= 8)
 			{
-				m_description->set_text("Delete Save");
+				m_description->set_text(QCoreApplication::translate("RSXOverlay", "Delete Save").toStdString());
 			}
 			else if (op & 1)
 			{
-				m_description->set_text("Load Save");
+				m_description->set_text(QCoreApplication::translate("RSXOverlay", "Load Save").toStdString());
 			}
 			else
 			{
-				m_description->set_text("Save");
+				m_description->set_text(QCoreApplication::translate("RSXOverlay", "Save").toStdString());
 			}
 
 			const bool newpos_head = listSet && listSet->newData && listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_HEAD;

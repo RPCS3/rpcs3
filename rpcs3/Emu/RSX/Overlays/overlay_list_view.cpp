@@ -2,6 +2,8 @@
 #include "overlay_controls.h"
 #include "Emu/system_config.h"
 
+#include <QCoreApplication>
+
 namespace rsx
 {
 	namespace overlays
@@ -40,8 +42,8 @@ namespace rsx
 			m_accept_btn->set_pos(30, height + 20);
 			m_cancel_btn->set_pos(180, height + 20);
 
-			m_accept_btn->set_text("Select");
-			m_cancel_btn->set_text("Cancel");
+			m_accept_btn->set_text(QCoreApplication::translate("RSXOverlay","Select").toStdString());
+			m_cancel_btn->set_text(QCoreApplication::translate("RSXOverlay", "Cancel").toStdString());
 
 			m_accept_btn->set_font("Arial", 16);
 			m_cancel_btn->set_font("Arial", 16);
