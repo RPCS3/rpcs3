@@ -313,6 +313,18 @@ void keyboard_pad_handler::mouseReleaseEvent(QMouseEvent* event)
 	event->ignore();
 }
 
+bool keyboard_pad_handler::get_mouse_lock_state()
+{
+	if (m_target)
+	{
+		auto mouse_locked = m_target->property("mouse_locked");
+		if (mouse_locked.isValid())
+			return mouse_locked.toBool();
+		return false;
+	}
+	return false;
+}
+
 void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 {
 	static int movement_x = 0;
@@ -320,7 +332,7 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 	static int last_pos_x = 0;
 	static int last_pos_y = 0;
 
-	if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen && m_target->isActive())
+	if (m_target && m_target->isActive() && get_mouse_lock_state())
 	{
 		// get the screen dimensions
 		const QSize screen = m_target->size();

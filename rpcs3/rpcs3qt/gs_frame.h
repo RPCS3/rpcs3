@@ -36,6 +36,7 @@ private:
 	QString m_window_title;
 	bool m_disable_mouse = false;
 	bool m_disable_kb_hotkeys = false;
+	bool m_mouse_hide_and_lock = false;
 	bool m_show_mouse_in_fullscreen = false;
 	bool m_hide_mouse_after_idletime = false;
 	u32 m_hide_mouse_idletime = 2000; // ms
@@ -76,6 +77,9 @@ protected:
 	int client_height() override;
 
 	bool event(QEvent* ev) override;
+
+private:
+	void toggle_mouselock();
 
 private Q_SLOTS:
 	void HandleCursor(QWindow::Visibility visibility);
