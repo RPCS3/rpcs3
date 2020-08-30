@@ -89,11 +89,23 @@ void basic_mouse_handler::MouseScroll(QWheelEvent* event)
 	MouseHandlerBase::Scroll(event->angleDelta().y());
 }
 
+bool basic_mouse_handler::get_mouse_lock_state()
+{
+	if (m_target)
+	{
+		auto mouse_locked = m_target->property("mouse_locked");
+		if (mouse_locked.isValid())
+			return mouse_locked.toBool();
+		return false;
+	}
+	return false;
+}
+
 void basic_mouse_handler::MouseMove(QMouseEvent* event)
 {
 	if (is_time_for_update())
 	{
-		if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen && m_target->isActive())
+		if (m_target && m_target->isActive() && get_mouse_lock_state())
 		{
 			// get the screen dimensions
 			const QSize screen = m_target->size();
