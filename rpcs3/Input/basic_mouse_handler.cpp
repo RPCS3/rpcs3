@@ -91,13 +91,8 @@ void basic_mouse_handler::MouseScroll(QWheelEvent* event)
 
 bool basic_mouse_handler::get_mouse_lock_state()
 {
-	if (m_target)
-	{
-		auto mouse_locked = m_target->property("mouse_locked");
-		if (mouse_locked.isValid())
-			return mouse_locked.toBool();
-		return false;
-	}
+	if (auto game_frame = dynamic_cast<gs_frame*>(m_target))
+		return game_frame->get_mouse_lock_state();
 	return false;
 }
 

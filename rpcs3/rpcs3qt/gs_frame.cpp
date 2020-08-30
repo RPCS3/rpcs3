@@ -78,8 +78,6 @@ gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::share
 
 	// We default the mouse lock to being off
 	m_mouse_hide_and_lock = false;
-	// and we 'publish' this to the property values of this window
-	setProperty("mouse_locked", m_mouse_hide_and_lock);
 
 #ifdef _WIN32
 	m_tb_button = new QWinTaskbarButton();
@@ -211,10 +209,15 @@ void gs_frame::toggle_fullscreen()
 		if (visibility() == FullScreen)
 		{
 			setVisibility(Windowed);
+			// in windowed mode we default to not hiding / locking the mouse
+			m_mouse_hide_and_lock = false;
 		}
 		else
 		{
 			setVisibility(FullScreen);
+			// in fullscreen (unless we want to show mouse) then we default to hiding and locking
+			if (!m_show_mouse_in_fullscreen)
+				m_mouse_hide_and_lock = true;
 		}
 	});
 }
@@ -224,10 +227,13 @@ void gs_frame::toggle_mouselock()
 	// first we toggle the value
 	m_mouse_hide_and_lock = !m_mouse_hide_and_lock;
 
-	// and then we publish it to the window properties
-	setProperty("mouse_locked", m_mouse_hide_and_lock);
-
+	// and update the cursor
 	HandleCursor(this->visibility());
+}
+
+bool gs_frame::get_mouse_lock_state()
+{
+	return m_mouse_hide_and_lock;
 }
 
 void gs_frame::close()
@@ -484,19 +490,16 @@ void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 	}
 }
 
-void gs_frame::HandleCursor(QWindow::Visibility visibility)
+void gs_frame::HandleCursor(QWindow::Visibility /*visibility*/)
 {
-	if (m_mouse_hide_and_lock || (visibility == QWindow::Visibility::FullScreen && !m_show_mouse_in_fullscreen))
+	if (m_mouse_hide_and_lock)
 	{
 		setCursor(Qt::BlankCursor);
 		m_mousehide_timer.stop();
 	}
 	else
 	{
-		if (!m_mouse_hide_and_lock)
-		{
-			setCursor(Qt::ArrowCursor);
-		}
+		setCursor(Qt::ArrowCursor);
 
 		if (m_hide_mouse_after_idletime)
 		{
