@@ -75,6 +75,12 @@ gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::share
 		handle_cursor(visibility, true, true);
 	});
 
+	// Change cursor when this window gets or loses focus.
+	connect(this, &QWindow::activeChanged, this, [this]()
+	{
+		handle_cursor(visibility(), false, true);
+	});
+
 	// Configure the mouse hide on idle timer
 	connect(&m_mousehide_timer, &QTimer::timeout, this, &gs_frame::MouseHideTimeout);
 	m_mousehide_timer.setSingleShot(true);
@@ -260,7 +266,7 @@ void gs_frame::update_cursor()
 
 bool gs_frame::get_mouse_lock_state()
 {
-	update_cursor();
+	handle_cursor(visibility(), false, true);
 
 	return isActive() && m_mouse_hide_and_lock;
 }
@@ -528,9 +534,6 @@ void gs_frame::handle_cursor(QWindow::Visibility visibility, bool from_event, bo
 		m_mouse_hide_and_lock = visibility == QWindow::Visibility::FullScreen;
 	}
 
-	// Update the cursor visibility
-	update_cursor();
-
 	// Update the mouse hide timer
 	if (m_hide_mouse_after_idletime && start_idle_timer)
 	{
@@ -540,12 +543,15 @@ void gs_frame::handle_cursor(QWindow::Visibility visibility, bool from_event, bo
 	{
 		m_mousehide_timer.stop();
 	}
+
+	// Update the cursor visibility
+	update_cursor();
 }
 
 void gs_frame::MouseHideTimeout()
 {
 	// Our idle timeout occured, so we update the cursor
-	if (m_hide_mouse_after_idletime && m_show_mouse.exchange(false))
+	if (m_hide_mouse_after_idletime && m_show_mouse)
 	{
 		handle_cursor(visibility(), false, false);
 	}

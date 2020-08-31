@@ -79,7 +79,7 @@ protected:
 
 	display_handle_t handle() const override;
 
-	void flip(draw_context_t context, bool skip_frame=false) override;
+	void flip(draw_context_t context, bool skip_frame = false) override;
 	int client_width() override;
 	int client_height() override;
 
