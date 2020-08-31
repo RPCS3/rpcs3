@@ -1,7 +1,8 @@
-#include "basic_mouse_handler.h"
-
-#include <QApplication>
+﻿#include <QApplication>
 #include <QCursor>
+
+#include "basic_mouse_handler.h"
+#include "rpcs3qt/gs_frame.h"
 
 LOG_CHANNEL(input_log, "Input");
 

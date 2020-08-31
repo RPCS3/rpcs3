@@ -2,7 +2,6 @@
 
 #include "stdafx.h"
 #include "Emu/Io/MouseHandler.h"
-#include "rpcs3qt/gs_frame.h"
 
 #include <QWindow>
 #include <QMouseEvent>

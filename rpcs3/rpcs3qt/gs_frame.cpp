@@ -70,14 +70,14 @@ gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::share
 	create();
 
 	// Change cursor when in fullscreen.
-	connect(this, &QWindow::visibilityChanged, this, &gs_frame::HandleCursor);
+	connect(this, &QWindow::visibilityChanged, this, [this](QWindow::Visibility visibility)
+	{
+		handle_cursor(visibility, true, true);
+	});
 
 	// Configure the mouse hide on idle timer
 	connect(&m_mousehide_timer, &QTimer::timeout, this, &gs_frame::MouseHideTimeout);
 	m_mousehide_timer.setSingleShot(true);
-
-	// We default the mouse lock to being off
-	m_mouse_hide_and_lock = false;
 
 #ifdef _WIN32
 	m_tb_button = new QWinTaskbarButton();
@@ -209,15 +209,10 @@ void gs_frame::toggle_fullscreen()
 		if (visibility() == FullScreen)
 		{
 			setVisibility(Windowed);
-			// in windowed mode we default to not hiding / locking the mouse
-			m_mouse_hide_and_lock = false;
 		}
 		else
 		{
 			setVisibility(FullScreen);
-			// in fullscreen (unless we want to show mouse) then we default to hiding and locking
-			if (!m_show_mouse_in_fullscreen)
-				m_mouse_hide_and_lock = true;
 		}
 	});
 }
@@ -228,12 +223,46 @@ void gs_frame::toggle_mouselock()
 	m_mouse_hide_and_lock = !m_mouse_hide_and_lock;
 
 	// and update the cursor
-	HandleCursor(this->visibility());
+	handle_cursor(visibility(), false, true);
+}
+
+void gs_frame::update_cursor()
+{
+	bool show_mouse;
+
+	if (!isActive())
+	{
+		// Show the mouse by default if this is not the active window
+		show_mouse = true;
+	}
+	else if (m_hide_mouse_after_idletime && !m_mousehide_timer.isActive())
+	{
+		// Hide the mouse if the idle timeout was reached (which means that the timer isn't running)
+		show_mouse = false;
+	}
+	else if (visibility() == QWindow::Visibility::FullScreen)
+	{
+		// Fullscreen: Show or hide the mouse depending on the settings.
+		show_mouse = m_show_mouse_in_fullscreen;
+	}
+	else
+	{
+		// Windowed: Hide the mouse if it was locked by the user
+		show_mouse = !m_mouse_hide_and_lock;
+	}
+
+	// Update Cursor if necessary
+	if (show_mouse != m_show_mouse.exchange(show_mouse))
+	{
+		setCursor(m_show_mouse ? Qt::ArrowCursor : Qt::BlankCursor);
+	}
 }
 
 bool gs_frame::get_mouse_lock_state()
 {
-	return m_mouse_hide_and_lock;
+	update_cursor();
+
+	return isActive() && m_mouse_hide_and_lock;
 }
 
 void gs_frame::close()
@@ -490,30 +519,35 @@ void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 	}
 }
 
-void gs_frame::HandleCursor(QWindow::Visibility /*visibility*/)
+void gs_frame::handle_cursor(QWindow::Visibility visibility, bool from_event, bool start_idle_timer)
 {
-	if (m_mouse_hide_and_lock)
+	// Update the mouse lock state if the visibility changed.
+	if (from_event)
 	{
-		setCursor(Qt::BlankCursor);
-		m_mousehide_timer.stop();
+		// In fullscreen we default to hiding and locking. In windowed mode we do not want the lock by default.
+		m_mouse_hide_and_lock = visibility == QWindow::Visibility::FullScreen;
+	}
+
+	// Update the cursor visibility
+	update_cursor();
+
+	// Update the mouse hide timer
+	if (m_hide_mouse_after_idletime && start_idle_timer)
+	{
+		m_mousehide_timer.start(m_hide_mouse_idletime);
 	}
 	else
 	{
-		setCursor(Qt::ArrowCursor);
-
-		if (m_hide_mouse_after_idletime)
-		{
-			m_mousehide_timer.start(m_hide_mouse_idletime);
-		}
+		m_mousehide_timer.stop();
 	}
 }
 
 void gs_frame::MouseHideTimeout()
 {
-	// our idle timeout occured, so we blank the cursor
-	if (m_hide_mouse_after_idletime)
+	// Our idle timeout occured, so we update the cursor
+	if (m_hide_mouse_after_idletime && m_show_mouse.exchange(false))
 	{
-		setCursor(Qt::BlankCursor);
+		handle_cursor(visibility(), false, false);
 	}
 }
 
@@ -550,10 +584,10 @@ bool gs_frame::event(QEvent* ev)
 		}
 		close();
 	}
-	else if (ev->type() == QEvent::MouseMove)
+	else if (ev->type() == QEvent::MouseMove && !m_show_mouse)
 	{
-		// this will make the cursor visible again if it was hidden by the mouse idle timeout
-		gs_frame::HandleCursor(visibility());
+		// This will make the cursor visible again if it was hidden by the mouse idle timeout
+		handle_cursor(visibility(), false, true);
 	}
 	return QWindow::event(ev);
 }
