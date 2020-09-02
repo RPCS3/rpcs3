@@ -968,6 +968,9 @@
     <ClCompile Include="Emu\NP\rpcn_config.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\localized_string.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1857,6 +1860,9 @@
     </ClInclude>
     <ClInclude Include="Emu\NP\rpcn_config.h">
       <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\localized_string.h">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

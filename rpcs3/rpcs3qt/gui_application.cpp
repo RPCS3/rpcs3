@@ -9,6 +9,7 @@
 #include "gs_frame.h"
 #include "gl_gs_frame.h"
 #include "display_sleep_control.h"
+#include "localized_emu.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
@@ -356,6 +357,16 @@ void gui_application::InitializeCallbacks()
 			default: gui_log.fatal("Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value); break;
 			}
 		}
+	};
+
+	callbacks.get_localized_string = [](localized_string_id id) -> std::string
+	{
+		return localized_emu::get_string(id);
+	};
+
+	callbacks.get_localized_u32string = [](localized_string_id id) -> std::u32string
+	{
+		return localized_emu::get_u32string(id);
 	};
 
 	Emu.SetCallbacks(std::move(callbacks));

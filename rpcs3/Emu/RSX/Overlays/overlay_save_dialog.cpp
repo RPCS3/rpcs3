@@ -90,7 +90,7 @@ namespace rsx
 
 			m_description->set_font("Arial", 20);
 			m_description->set_pos(20, 37);
-			m_description->set_text("Save Dialog");
+			m_description->set_text(localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_TITLE);
 
 			m_time_thingy->set_font("Arial", 14);
 			m_time_thingy->set_pos(1000, 30);
@@ -176,15 +176,15 @@ namespace rsx
 
 			if (op >= 8)
 			{
-				m_description->set_text("Delete Save");
+				m_description->set_text(localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_DELETE);
 			}
 			else if (op & 1)
 			{
-				m_description->set_text("Load Save");
+				m_description->set_text(localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_LOAD);
 			}
 			else
 			{
-				m_description->set_text("Save");
+				m_description->set_text(localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_SAVE);
 			}
 
 			const bool newpos_head = listSet && listSet->newData && listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_HEAD;
