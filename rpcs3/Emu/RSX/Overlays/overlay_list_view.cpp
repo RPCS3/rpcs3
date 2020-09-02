@@ -40,8 +40,8 @@ namespace rsx
 			m_accept_btn->set_pos(30, height + 20);
 			m_cancel_btn->set_pos(180, height + 20);
 
-			m_accept_btn->set_text("Select");
-			m_cancel_btn->set_text("Cancel");
+			m_accept_btn->set_text(localized_string_id::RSX_OVERLAYS_LIST_SELECT);
+			m_cancel_btn->set_text(localized_string_id::RSX_OVERLAYS_LIST_CANCEL);
 
 			m_accept_btn->set_font("Arial", 16);
 			m_cancel_btn->set_font("Arial", 16);

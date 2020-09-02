@@ -8,6 +8,8 @@
 u64 get_system_time();
 u64 get_guest_system_time();
 
+enum class localized_string_id;
+
 enum class system_state
 {
 	running,
@@ -49,6 +51,8 @@ struct EmuCallbacks
 	std::function<std::shared_ptr<class OskDialogBase>()> get_osk_dialog;
 	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
 	std::function<std::unique_ptr<class TrophyNotificationBase>()> get_trophy_notification_dialog;
+	std::function<std::string(localized_string_id)> get_localized_string;
+	std::function<std::u32string(localized_string_id)> get_localized_u32string;
 };
 
 class Emulator final
