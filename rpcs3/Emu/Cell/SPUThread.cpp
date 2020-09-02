@@ -1398,7 +1398,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
 					break;
 				}
-				//case 128:
+				case 128:
 				{
 					mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));
 					break;
@@ -1480,7 +1480,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 					switch (size0)
 					{
-					//case 128:
+					case 128:
 					{
 						mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));
 						break;
