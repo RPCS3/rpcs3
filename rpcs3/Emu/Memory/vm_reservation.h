@@ -9,7 +9,7 @@ namespace vm
 	enum reservation_lock_bit : u64
 	{
 		stcx_lockb = 1 << 0, // Exclusive conditional reservation lock
-		dma_lockb = 1 << 1, // Inexclusive unconditional reservstion lock
+		dma_lockb = 1 << 1, // Inexclusive unconditional reservation lock
 		putlluc_lockb = 1 << 6, // Exclusive unconditional reservation lock
 	};
 
