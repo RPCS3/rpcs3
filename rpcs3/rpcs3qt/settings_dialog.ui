@@ -3418,6 +3418,13 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="accurateSpuDMA">
+              <property name="text">
+               <string>Accurate SPU DMA</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QCheckBox" name="hookStFunc">
               <property name="text">
                <string>Hook static functions</string>

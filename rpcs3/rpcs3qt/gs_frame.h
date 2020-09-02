@@ -34,8 +34,10 @@ private:
 
 	u64 m_frames = 0;
 	QString m_window_title;
+	std::atomic<bool> m_show_mouse = true;
 	bool m_disable_mouse = false;
 	bool m_disable_kb_hotkeys = false;
+	bool m_mouse_hide_and_lock = false;
 	bool m_show_mouse_in_fullscreen = false;
 	bool m_hide_mouse_after_idletime = false;
 	u32 m_hide_mouse_idletime = 2000; // ms
@@ -54,6 +56,12 @@ public:
 	void progress_increment(int delta);
 	void progress_set_limit(int limit);
 
+	/*
+		Returns true if the mouse is locked inside the game window.
+		Also conveniently updates the cursor visibility, because using it from a mouse handler indicates mouse emulation.
+	*/
+	bool get_mouse_lock_state();
+
 	void take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height, bool is_bgra) override;
 
 protected:
@@ -71,13 +79,17 @@ protected:
 
 	display_handle_t handle() const override;
 
-	void flip(draw_context_t context, bool skip_frame=false) override;
+	void flip(draw_context_t context, bool skip_frame = false) override;
 	int client_width() override;
 	int client_height() override;
 
 	bool event(QEvent* ev) override;
 
+private:
+	void toggle_mouselock();
+	void update_cursor();
+	void handle_cursor(QWindow::Visibility visibility, bool from_event, bool start_idle_timer);
+
 private Q_SLOTS:
-	void HandleCursor(QWindow::Visibility visibility);
 	void MouseHideTimeout();
 };
