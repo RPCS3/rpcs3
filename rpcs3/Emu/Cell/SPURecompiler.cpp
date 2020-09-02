@@ -5788,6 +5788,11 @@ public:
 
 			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(trunc<u8>(val).eval(m_ir)))
 			{
+				if (g_cfg.core.spu_accurate_dma)
+				{
+					break;
+				}
+
 				if (u64 cmdh = ci->getZExtValue() & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_RESULT_MASK); !g_use_rtm)
 				{
 					// TODO: don't require TSX (current implementation is TSX-only)

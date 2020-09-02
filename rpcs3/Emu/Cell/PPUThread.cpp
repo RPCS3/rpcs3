@@ -1097,10 +1097,16 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}())
 	{
-		ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & -128;
+		ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & (-128 | vm::dma_lockb);
+
+		if (ppu.rtime & 127)
+		{
+			continue;
+		}
+
 		ppu.rdata = data;
 
-		if ((vm::reservation_acquire(addr, sizeof(T)) & -128) == ppu.rtime) [[likely]]
+		if ((vm::reservation_acquire(addr, sizeof(T)) & (-128 | vm::dma_lockb)) == ppu.rtime) [[likely]]
 		{
 			if (count >= 10) [[unlikely]]
 			{
@@ -1176,7 +1182,7 @@ const auto ppu_stwcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rd
 	// Begin transaction
 	build_transaction_enter(c, fall, args[0], 16);
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
-	c.and_(x86::rax, -128);
+	c.and_(x86::rax, -128 | vm::dma_lockb);
 	c.cmp(x86::rax, args[1]);
 	c.jne(fail);
 	c.cmp(x86::dword_ptr(x86::r11), args[2].r32());
@@ -1222,7 +1228,7 @@ const auto ppu_stdcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rd
 	// Begin transaction
 	build_transaction_enter(c, fall, args[0], 16);
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
-	c.and_(x86::rax, -128);
+	c.and_(x86::rax, -128 | vm::dma_lockb);
 	c.cmp(x86::rax, args[1]);
 	c.jne(fail);
 	c.cmp(x86::qword_ptr(x86::r11), args[2]);
