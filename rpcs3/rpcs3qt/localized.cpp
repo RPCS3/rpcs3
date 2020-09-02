@@ -56,7 +56,7 @@ QString Localized::GetVerboseTimeByMs(qint64 elapsed_ms, bool show_days) const
 			return tr("%0 minute and %n second(s)", "", seconds).arg(minutes);
 		}
 		
-        return tr("%0 minutes and %n second(s)", "", seconds).arg(minutes);
+		return tr("%0 minutes and %n second(s)", "", seconds).arg(minutes);
 	}
 
 	if (minutes <= 0)
