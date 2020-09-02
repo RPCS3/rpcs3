@@ -5387,7 +5387,7 @@ public:
 
 	static u32 exec_read_events(spu_thread* _spu)
 	{
-		if (const u32 events = _spu->get_events())
+		if (const u32 events = _spu->get_events(_spu->ch_event_mask))
 		{
 			return events;
 		}
@@ -5522,9 +5522,9 @@ public:
 		return _spu->get_ch_count(ch);
 	}
 
-	static u32 exec_get_events(spu_thread* _spu)
+	static u32 exec_get_events(spu_thread* _spu, u32 mask)
 	{
-		return _spu->get_events();
+		return _spu->get_events(mask);
 	}
 
 	llvm::Value* get_rchcnt(u32 off, u64 inv = 0)
@@ -5602,7 +5602,7 @@ public:
 		}
 		case SPU_RdEventStat:
 		{
-			res.value = call("spu_get_events", &exec_get_events, m_thread);
+			res.value = call("spu_get_events", &exec_get_events, m_thread, m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_event_mask)));
 			res.value = m_ir->CreateICmpNE(res.value, m_ir->getInt32(0));
 			res.value = m_ir->CreateZExt(res.value, get_type<u32>());
 			break;
@@ -6092,6 +6092,7 @@ public:
 		}
 		case SPU_WrDec:
 		{
+			call("spu_get_events", &exec_get_events, m_thread, m_ir->getInt32(SPU_EVENT_TM));
 			m_ir->CreateStore(call("get_timebased_time", &get_timebased_time), spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
 			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_dec_value));
 			return;
@@ -6103,6 +6104,8 @@ public:
 		}
 		case SPU_WrEventAck:
 		{
+			// "Collect" events before final acknowledgment
+			call("spu_get_events", &exec_get_events, m_thread, val.value);
 			m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::And, spu_ptr<u32>(&spu_thread::ch_event_stat), eval(~val).value, llvm::AtomicOrdering::Release);
 			return;
 		}
@@ -8583,7 +8586,7 @@ public:
 		if (m_block) m_block->block_end = m_ir->GetInsertBlock();
 		const auto addr = eval(extract(get_vr(op.ra), 3) & 0x3fffc);
 		set_link(op);
-		const auto res = call("spu_get_events", &exec_get_events, m_thread);
+		const auto res = call("spu_get_events", &exec_get_events, m_thread, m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_event_mask)));
 		const auto target = add_block_indirect(op, addr);
 		m_ir->CreateCondBr(m_ir->CreateICmpNE(res, m_ir->getInt32(0)), target, add_block_next());
 	}

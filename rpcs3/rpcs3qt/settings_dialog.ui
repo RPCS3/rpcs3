@@ -1677,39 +1677,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="gb_edit_npid">
-              <property name="title">
-               <string>PSN settings</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_edit_npid_layout">
-               <item>
-                <layout class="QHBoxLayout" name="edit_npid_layout">
-                 <item>
-                  <widget class="QLabel" name="edit_npid_label">
-                   <property name="text">
-                    <string>NPID:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLineEdit" name="edit_npid">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="maxLength">
-                    <number>16</number>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
              <spacer name="networkTabSpacerRight">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -2378,9 +2345,48 @@
               <item>
                <widget class="QCheckBox" name="gs_showMouseInFullscreen">
                 <property name="text">
-                 <string>Show mouse cursor in Fullscreen </string>
+                 <string>Show mouse cursor in Fullscreen</string>
                 </property>
                </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="layout_hideMouseOnIdle" stretch="0,0">
+                <item>
+                 <widget class="QCheckBox" name="gs_hideMouseOnIdle">
+                  <property name="text">
+                   <string>Hide mouse cursor if idle</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="gs_hideMouseOnIdleTime">
+                  <property name="accelerated">
+                   <bool>true</bool>
+                  </property>
+                  <property name="correctionMode">
+                   <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+                  </property>
+                  <property name="keyboardTracking">
+                   <bool>false</bool>
+                  </property>
+                  <property name="suffix">
+                   <string>ms</string>
+                  </property>
+                  <property name="minimum">
+                   <number>200</number>
+                  </property>
+                  <property name="maximum">
+                   <number>99999</number>
+                  </property>
+                  <property name="stepType">
+                   <enum>QAbstractSpinBox::DefaultStepType</enum>
+                  </property>
+                  <property name="value">
+                   <number>2000</number>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
               <item>
                <widget class="QCheckBox" name="gs_resizeOnBoot">

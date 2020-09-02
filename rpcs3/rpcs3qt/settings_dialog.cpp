@@ -875,9 +875,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceLineEdit(ui->edit_dns, emu_settings_type::DNSAddress);
 	SubscribeTooltip(ui->gb_edit_dns, tooltips.settings.dns);
 
-	m_emu_settings->EnhanceLineEdit(ui->edit_npid, emu_settings_type::PSNNPID);
-	SubscribeTooltip(ui->gb_edit_npid, tooltips.settings.psn_npid);
-
 	m_emu_settings->EnhanceLineEdit(ui->edit_swaps, emu_settings_type::IpSwapList);
 	SubscribeTooltip(ui->gb_edit_swaps, tooltips.settings.dns_swap);
 
@@ -891,28 +888,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->edit_dns->setEnabled(index > 0);
 	});
 	ui->edit_dns->setEnabled(ui->netStatusBox->currentIndex() > 0);
-
-	connect(ui->psnStatusBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
-	{
-		ui->edit_npid->setEnabled(index > 0);
-
-		if (index > 0 && ui->edit_npid->text() == "")
-		{
-			QString gen_npid = "RPCS3_";
-
-			constexpr char list_chars[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',
-			    'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
-
-			std::srand(time(0));
-
-			for (int i = 0; i < 10; i++)
-			{
-				gen_npid += list_chars[std::rand() % (sizeof(list_chars) - 1)];
-			}
-
-			ui->edit_npid->setText(gen_npid);
-		}
-	});
 
 	m_emu_settings->EnhanceComboBox(ui->psnStatusBox, emu_settings_type::PSNStatus);
 	SubscribeTooltip(ui->gb_psnStatusBox, tooltips.settings.psn_status);
@@ -1291,6 +1266,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		connect(ui->gs_showMouseInFullscreen, &QCheckBox::clicked, [this](bool val)
 		{
 			m_gui_settings->SetValue(gui::gs_showMouseFs, val);
+		});
+
+		ui->gs_hideMouseOnIdle->setChecked(m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool());
+		connect(ui->gs_hideMouseOnIdle, &QCheckBox::clicked, [this](bool checked)
+		{
+			m_gui_settings->SetValue(gui::gs_hideMouseIdle, checked);
+			ui->gs_hideMouseOnIdleTime->setEnabled(checked);
+		});
+		ui->gs_hideMouseOnIdleTime->setEnabled(ui->gs_hideMouseOnIdle->checkState() == Qt::CheckState::Checked);
+		ui->gs_hideMouseOnIdleTime->setValue(m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt());
+		connect(ui->gs_hideMouseOnIdleTime, &QSpinBox::editingFinished, [this]()
+		{
+			m_gui_settings->SetValue(gui::gs_hideMouseIdleTime, ui->gs_hideMouseOnIdleTime->value());
 		});
 
 		const bool enable_buttons = m_gui_settings->GetValue(gui::gs_resize).toBool();

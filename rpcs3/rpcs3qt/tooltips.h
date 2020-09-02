@@ -109,6 +109,7 @@ public:
 		const QString disable_kb_hotkeys           = tr("Disables keyboard hotkeys such as Ctrl-S, Ctrl-E, Ctrl-R, Ctrl-P while the game screen is active.\nCheck this if you want to play with mouse and keyboard.");
 		const QString max_llvm_threads             = tr("Limits the maximum number of threads used for the initial PPU and SPU module compilation.\nLower this in order to increase performance of other open applications.\nThe default uses all available threads.");
 		const QString show_mouse_in_fullscreen     = tr("Shows the mouse cursor when the fullscreen mode is active.\nCurrently this may not work every time.");
+		const QString hide_mouse_on_idle           = tr("Hides the mouse cursor if no mouse movement is detected for the configured time.");
 		const QString show_shader_compilation_hint = tr("Shows 'Compiling shaders' hint using the native overlay.");
 		const QString use_native_interface         = tr("Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, the on-screen keyboard only supports the English key layout.");
 
@@ -180,11 +181,10 @@ public:
 
 		// network
 
-		const QString net_status = tr("If set to Connected, RPCS3 will allow programs to use your internet connection.");
-		const QString psn_status = tr("If set to Simulated, RPCS3 will fake PSN connection as best as it can.");
-		const QString dns        = tr("DNS used to resolve hostnames by applications.");
-		const QString psn_npid   = tr("Identifier representing your PSN account.");
-		const QString dns_swap   = tr("DNS Swap List.");
+		const QString net_status    = tr("If set to Connected, RPCS3 will allow programs to use your internet connection.");
+		const QString psn_status    = tr("If set to Simulated, RPCS3 will fake PSN connection as best as it can.");
+		const QString dns           = tr("DNS used to resolve hostnames by applications.");
+		const QString dns_swap      = tr("DNS Swap List.");
 
 		// system
 

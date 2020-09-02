@@ -17,6 +17,11 @@
 
 LOG_CHANNEL(cellSpurs);
 
+extern u64 ppu_ldarx(ppu_thread&, u32);
+extern u32 ppu_lwarx(ppu_thread&, u32);
+extern bool ppu_stwcx(ppu_thread&, u32, u32);
+extern bool ppu_stdcx(ppu_thread&, u32, u64);
+
 error_code sys_spu_image_close(ppu_thread&, vm::ptr<sys_spu_image> img);
 
 //----------------------------------------------------------------------------
@@ -4087,9 +4092,60 @@ s32 cellSpursJobHeaderSetJobbin2Param()
 	return CELL_OK;
 }
 
-s32 cellSpursAddUrgentCommand()
+s32 cellSpursAddUrgentCommand(ppu_thread& ppu, vm::ptr<CellSpursJobChain> jobChain, u64 newCmd)
 {
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	cellSpurs.trace("cellSpursAddUrgentCommand(jobChain=*0x%x, newCmd=0x%llx)", jobChain, newCmd);
+
+	if (!jobChain)
+		return CELL_SPURS_JOB_ERROR_NULL_POINTER;
+
+	if (!jobChain.aligned(128))
+		return CELL_SPURS_JOB_ERROR_ALIGN;
+
+	if (jobChain->workloadId >= 32)
+		return CELL_SPURS_JOB_ERROR_INVAL;
+
+	for (u32 i = 0;;)
+	{
+		if (i >= std::size(jobChain->urgentCmds))
+		{
+			// Exausted all slots
+			return CELL_SPURS_JOB_ERROR_BUSY;
+		}
+
+		u64 currCmd = ppu_ldarx(ppu, jobChain.ptr(&CellSpursJobChain::urgentCmds, i).addr());
+		std::atomic_thread_fence(std::memory_order_acq_rel);
+
+		bool found = false;
+		bool reset = false;
+
+		if (!currCmd)
+		{
+			if (i != 0 && !jobChain->urgentCmds[i - 1])
+			{
+				// Restart search, someone emptied out the previous one
+				reset = true;
+			}
+			else
+			{
+				found = true;
+				currCmd = newCmd;
+			}
+		}
+
+		if (reset || !ppu_stdcx(ppu, jobChain.ptr(&CellSpursJobChain::urgentCmds, i).addr(), currCmd))
+		{
+			// Someone modified the job chain or the previous slot is empty, restart search
+			i = 0;
+			continue;
+		}
+
+		if (found)
+			break;
+
+		i++;
+	}
+
 	return CELL_OK;
 }
 

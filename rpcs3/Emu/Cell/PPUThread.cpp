@@ -929,7 +929,14 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 			name_cache = _this->ppu_tname.load();
 		}
 
-		return fmt::format("PPU[0x%x] Thread (%s) [0x%08x]", _this->id, *name_cache.get(), _this->cia);
+		const auto cia = _this->cia;
+
+		if (_this->current_function && vm::read32(cia) != ppu_instructions::SC(0))
+		{
+			return fmt::format("PPU[0x%x] Thread (%s) [HLE:0x%08x, LR:0x%08x]", _this->id, *name_cache.get(), cia, _this->lr);	
+		}
+
+		return fmt::format("PPU[0x%x] Thread (%s) [0x%08x]", _this->id, *name_cache.get(), cia);
 	};
 
 	auto at_ret = [&]()

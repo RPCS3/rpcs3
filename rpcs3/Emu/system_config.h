@@ -262,7 +262,6 @@ struct cfg_root : cfg::node
 		cfg::string swap_list{this, "IP swap list", ""};
 
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
-		cfg::string psn_npid{this, "NPID", ""};
 	} net{this};
 
 	struct node_misc : cfg::node

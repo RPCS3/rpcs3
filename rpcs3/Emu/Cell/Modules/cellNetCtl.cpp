@@ -177,7 +177,7 @@ error_code cellNetCtlDelHandler(s32 hid)
 
 error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
-	cellNetCtl.todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
+	cellNetCtl.warning("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -213,7 +213,7 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	}
 	else if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
 	{
-		strcpy_trunc(info->ip_address, nph->get_ip());
+		strcpy_trunc(info->ip_address, np_handler::ip_to_string(nph->get_local_ip_addr()));
 	}
 	else if (code == CELL_NET_CTL_INFO_NETMASK)
 	{
@@ -306,7 +306,6 @@ error_code cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogR
 	result->result = nph->get_net_status() == CELL_NET_CTL_STATE_IPObtained ? 0 : CELL_NET_CTL_ERROR_DIALOG_CANCELED;
 
 	sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
-
 	return CELL_OK;
 }
 
@@ -330,6 +329,10 @@ error_code cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 	{
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
+
+	natInfo->nat_type = CELL_NET_CTL_NATINFO_NAT_TYPE_2;
+	natInfo->stun_status = CELL_NET_CTL_NATINFO_STUN_OK;
+	natInfo->upnp_status = CELL_NET_CTL_NATINFO_UPNP_NO;
 
 	return CELL_OK;
 }
@@ -466,7 +469,6 @@ error_code cellGameUpdateCheckStartWithoutDialogAsyncEx(vm::ptr<CellGameUpdateCa
 	});
 	return CELL_OK;
 }
-
 
 DECLARE(ppu_module_manager::cellNetCtl)("cellNetCtl", []()
 {
