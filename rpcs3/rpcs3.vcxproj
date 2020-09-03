@@ -1575,7 +1575,6 @@
     <ClCompile Include="rpcs3qt\gui_application.cpp" />
     <ClCompile Include="rpcs3qt\input_dialog.cpp" />
     <ClCompile Include="rpcs3qt\localized.cpp" />
-    <ClCompile Include="rpcs3qt\localized_emu.cpp" />
     <ClCompile Include="rpcs3qt\microphone_creator.cpp" />
     <ClCompile Include="rpcs3qt\osk_dialog_frame.cpp" />
     <ClCompile Include="rpcs3qt\pad_led_settings_dialog.cpp" />

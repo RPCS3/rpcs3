@@ -128,8 +128,7 @@ namespace rsx
 			default: break;
 			}
 
-			text_view.set_text(trophy.name);
-			text_view.set_text(get_localized_u32string(string_id) + text_view.text);
+			text_view.set_text(get_localized_u32string(string_id, trophy.name));
 			text_view.auto_resize();
 
 			// Resize background to cover the text

@@ -1090,9 +1090,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_rpcn_settings_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\localized_emu.cpp">
-      <Filter>Gui\settings</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_localized_emu.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>

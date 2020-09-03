@@ -359,14 +359,14 @@ void gui_application::InitializeCallbacks()
 		}
 	};
 
-	callbacks.get_localized_string = [](localized_string_id id) -> std::string
+	callbacks.get_localized_string = [](localized_string_id id, const char* args) -> std::string
 	{
-		return localized_emu::get_string(id);
+		return localized_emu::get_string(id, args);
 	};
 
-	callbacks.get_localized_u32string = [](localized_string_id id) -> std::u32string
+	callbacks.get_localized_u32string = [](localized_string_id id, const char* args) -> std::u32string
 	{
-		return localized_emu::get_u32string(id);
+		return localized_emu::get_u32string(id, args);
 	};
 
 	Emu.SetCallbacks(std::move(callbacks));
