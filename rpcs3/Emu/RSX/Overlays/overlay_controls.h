@@ -446,8 +446,7 @@ namespace rsx
 
 			virtual void set_text(localized_string_id id)
 			{
-				this->text  = get_localized_u32string(id);
-				is_compiled = false;
+				set_text(get_localized_u32string(id));
 			}
 
 			virtual void set_font(const char* font_name, u16 font_size)
