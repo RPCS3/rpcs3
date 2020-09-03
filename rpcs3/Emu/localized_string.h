@@ -30,5 +30,5 @@ enum class localized_string_id
 	RSX_OVERLAYS_LIST_CANCEL,
 };
 
-std::string get_localized_string(localized_string_id id);
-std::u32string get_localized_u32string(localized_string_id id);
+std::string get_localized_string(localized_string_id id, const char* args = "");
+std::u32string get_localized_u32string(localized_string_id id, const char* args = "");
