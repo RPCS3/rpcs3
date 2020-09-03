@@ -1438,7 +1438,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		}
 	}
 
-	pdlg->setLabelText(tr("Created PPU Caches for %0 titles").arg(created));
+	pdlg->setLabelText(tr("Created PPU Caches for %n title(s)", "", created));
 	pdlg->setCancelButtonText(tr("OK"));
 	QApplication::beep();
 }

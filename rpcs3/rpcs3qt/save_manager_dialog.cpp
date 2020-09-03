@@ -431,7 +431,7 @@ void save_manager_dialog::OnEntriesRemove()
 		return;
 	}
 
-	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %1 items?").arg(selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %n items?", "", selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
 		std::sort(selection.rbegin(), selection.rend());
 		for (QModelIndex index : selection)
