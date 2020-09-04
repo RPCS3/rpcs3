@@ -3,7 +3,7 @@
 #include <string>
 #include <QObject>
 
-#include "Emu/localized_string.h"
+#include "Emu/localized_string_id.h"
 
 /**
  * Localized emucore string collection class

@@ -1864,6 +1864,9 @@
     <ClInclude Include="Emu\localized_string.h">
       <Filter>Emu</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\localized_string_id.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl">
