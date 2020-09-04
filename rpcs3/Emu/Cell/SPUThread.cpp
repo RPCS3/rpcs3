@@ -1345,7 +1345,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		src = zero_buf;
 	}
 
-	if ((!g_use_rtm && (!is_get || g_cfg.core.spu_accurate_putlluc)) || g_cfg.core.spu_accurate_dma)  [[unlikely]]
+	if ((!g_use_rtm && !is_get) || g_cfg.core.spu_accurate_dma)  [[unlikely]]
 	{
 		for (u32 size = args.size, size0; is_get;
 			size -= size0, dst += size0, src += size0)
@@ -1370,8 +1370,8 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			{
 				const u64 time0 = vm::reservation_acquire(eal, size0);
 
-				// Ignore DMA lock bits
-				if (time0 & (127 & ~vm::dma_lockb))
+				// Ignore DMA lock bit on incomplete cache line accesses
+				if (time0 & (127 - (size0 != 128 ? vm::dma_lockb : 0)))
 				{
 					continue;
 				}
@@ -1422,7 +1422,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				}
 				}
 
-				if (time0 != vm::reservation_acquire(eal, size0))
+				if (time0 != vm::reservation_acquire(eal, size0) || (size0 == 128 && !cmp_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src))))
 				{
 					continue;
 				}

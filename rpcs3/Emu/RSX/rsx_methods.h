@@ -148,20 +148,18 @@ namespace rsx
 			if (type == primitive_restart_barrier)
 			{
 				// Rasterization flow barrier
-				const auto& last = draw_command_ranges.back();
+				const auto& last = draw_command_ranges[current_range_index];
 				const auto address = last.first + last.count;
 
-				const auto command_index = draw_command_ranges.size() - 1;
-				_do_barrier_insert({ command_index, 0, address, arg, 0, type });
+				_do_barrier_insert({ current_range_index, 0, address, arg, 0, type });
 			}
 			else
 			{
 				// Execution dependency barrier
 				append_draw_command({});
-				const auto command_index = draw_command_ranges.size() - 1;
 
-				_do_barrier_insert({ command_index, get_system_time(), ~0u, arg, 0, type });
-				last_execution_barrier_index = command_index;
+				_do_barrier_insert({ current_range_index, get_system_time(), ~0u, arg, 0, type });
+				last_execution_barrier_index = current_range_index;
 			}
 		}
 
