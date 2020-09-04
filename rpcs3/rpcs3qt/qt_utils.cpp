@@ -399,7 +399,7 @@ namespace gui
 					{
 						bool match = true;
 
-						for (const auto [role, data] : criteria)
+						for (const auto& [role, data] : criteria)
 						{
 							if (item->data(0, role) != data)
 							{
