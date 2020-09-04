@@ -3,6 +3,8 @@
 
 #include <QMessageBox>
 #include <QLineEdit>
+#include <QTimer>
+#include <QCalendarWidget>
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -304,6 +306,123 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 	{
 		const std::string str = val != 0 ? "true" : "false";
 		SetSetting(type, str);
+	});
+}
+
+void emu_settings::EnhanceDateTimeEdit(QDateTimeEdit* date_time_edit, emu_settings_type type, const QString& format, bool use_calendar, bool as_offset_from_now, int offset_update_time)
+{
+	if (!date_time_edit)
+	{
+		cfg_log.fatal("EnhanceDateTimeEdit '%s' was used with an invalid object", cfg_adapter::get_setting_name(type));
+		return;
+	}
+
+	date_time_edit->setDisplayFormat(format);
+	date_time_edit->setCalendarPopup(use_calendar);
+
+	if (as_offset_from_now)
+	{
+		// If using offset from now, then we disable the keyboard tracking to reduce the numebr of events that occur (since for each event we will lose focus)
+		date_time_edit->setKeyboardTracking(false);
+
+		bool ok_def = false, ok_min = false, ok_max = false;
+		const QStringList range = GetSettingOptions(type);
+		const s64 def = qstr(GetSettingDefault(type)).toLongLong(&ok_def);
+		const s64 min = range.first().toLongLong(&ok_min);
+		const s64 max = range.last().toLongLong(&ok_max);
+		if (!ok_def || !ok_min || !ok_max)
+		{
+			cfg_log.fatal("EnhanceDateTimeEdit '%s' was used with an invalid emu_settings_type", cfg_adapter::get_setting_name(type));
+			return;
+		}
+
+		bool ok_sel = false;
+		s64 val = qstr(GetSetting(type)).toLongLong(&ok_sel);
+		if (!ok_sel || val < min || val > max)
+		{
+			cfg_log.error("EnhanceDateTimeEdit '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", cfg_adapter::get_setting_name(type), val, def, min, max);
+			val = def;
+			m_broken_types.insert(type);
+			SetSetting(type, std::to_string(def));
+		}
+
+		// we'll capture the DateTime once, and apply the min/max and offset against it here.
+		const QDateTime now = QDateTime::currentDateTime();
+
+		// we set the allowed limits
+		date_time_edit->setDateTimeRange(now.addSecs(min), now.addSecs(max));
+
+		// we add the offset, and set the control to have this datetime value
+		const QDateTime date_time = now.addSecs(val);
+		date_time_edit->setDateTime(date_time);
+
+		// if we have an invalid update time then we won't run the update timer
+		if (offset_update_time > 0)
+		{
+			QTimer* console_time_update = new QTimer(date_time_edit);
+			connect(console_time_update, &QTimer::timeout, [this, date_time_edit, min, max]()
+			{
+				if (!date_time_edit->hasFocus() && (!date_time_edit->calendarPopup() || !date_time_edit->calendarWidget()->hasFocus()))
+				{
+					const auto now   = QDateTime::currentDateTime();
+					const s64 offset = qstr(GetSetting(emu_settings_type::ConsoleTimeOffset)).toLongLong();
+					date_time_edit->setDateTime(now.addSecs(offset));
+					date_time_edit->setDateTimeRange(now.addSecs(min), now.addSecs(max));
+				}
+			});
+
+			console_time_update->start(offset_update_time);
+		}
+	}
+	else
+	{
+		auto str                = qstr(GetSettingDefault(type));
+		const QStringList range = GetSettingOptions(type);
+		const auto def          = QDateTime::fromString(str, Qt::ISODate);
+		const auto min          = QDateTime::fromString(range.first(), Qt::ISODate);
+		const auto max          = QDateTime::fromString(range.last(), Qt::ISODate);
+		if (!def.isValid() || !min.isValid() || !max.isValid())
+		{
+			cfg_log.fatal("EnhanceDateTimeEdit '%s' was used with an invalid emu_settings_type", cfg_adapter::get_setting_name(type));
+			return;
+		}
+
+		str = qstr(GetSetting(type));
+		auto val = QDateTime::fromString(str, Qt::ISODate);
+		if (!val.isValid() || val < min || val > max)
+		{
+			cfg_log.error("EnhanceDateTimeEdit '%s' tried to set an invalid value: %s. Setting to default: %s Allowed range: [%s, %s]",
+				cfg_adapter::get_setting_name(type), val.toString(Qt::ISODate).toStdString(), def.toString(Qt::ISODate).toStdString(),
+				min.toString(Qt::ISODate).toStdString(), max.toString(Qt::ISODate).toStdString());
+			val = def;
+			m_broken_types.insert(type);
+			SetSetting(type, sstr(def.toString(Qt::ISODate)));
+		}
+
+		// we set the allowed limits
+		date_time_edit->setDateTimeRange(min, max);
+
+		// set the date_time value to the control
+		date_time_edit->setDateTime(val);
+	}
+
+	connect(date_time_edit, &QDateTimeEdit::dateTimeChanged, [date_time_edit, type, as_offset_from_now, this](const QDateTime& datetime)
+	{
+		if (as_offset_from_now)
+		{
+			// offset will be applied in seconds
+			const s64 offset = QDateTime::currentDateTime().secsTo(datetime);
+			SetSetting(type, std::to_string(offset));
+
+			// HACK: We are only looking at whether the control has focus to prevent the time from updating dynamically, so we
+			// clear the focus, so that this dynamic updating isn't suppressed.
+			date_time_edit->clearFocus();
+		}
+		else
+		{
+			// date time will be written straight into settings
+			SetSetting(type, sstr(datetime.toString(Qt::ISODate)));
+		}
 	});
 }
 
