@@ -1345,7 +1345,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		src = zero_buf;
 	}
 
-	if ((!g_use_rtm && (!is_get || g_cfg.core.spu_accurate_putlluc)) || g_cfg.core.spu_accurate_dma)  [[unlikely]]
+	if ((!g_use_rtm && !is_get) || g_cfg.core.spu_accurate_dma)  [[unlikely]]
 	{
 		for (u32 size = args.size, size0; is_get;
 			size -= size0, dst += size0, src += size0)
