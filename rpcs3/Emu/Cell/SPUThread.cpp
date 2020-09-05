@@ -1348,7 +1348,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	if ((!g_use_rtm && !is_get) || g_cfg.core.spu_accurate_dma)  [[unlikely]]
 	{
 		for (u32 size = args.size, size0; is_get;
-			size -= size0, dst += size0, src += size0)
+			size -= size0, dst += size0, src += size0, eal += size0)
 		{
 			size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
 
@@ -1470,8 +1470,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		{
 			if (g_cfg.core.spu_accurate_dma)
 			{
-				for (u32 size0;;
-					size -= size0, dst += size0, src += size0)
+				for (u32 size0;; size -= size0, dst += size0, src += size0, eal += size0)
 				{
 					size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
 
