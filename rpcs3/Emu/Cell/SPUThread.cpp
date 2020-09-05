@@ -1370,8 +1370,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			{
 				const u64 time0 = vm::reservation_acquire(eal, size0);
 
-				// Ignore DMA lock bit on incomplete cache line accesses
-				if (time0 & (127 - (size0 != 128 ? vm::dma_lockb : 0)))
+				if (time0 & 127)
 				{
 					continue;
 				}
