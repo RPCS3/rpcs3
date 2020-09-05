@@ -591,7 +591,7 @@ namespace vk
 		}
 	};
 
-	template<typename To, typename From, bool _SwapSrc = false, bool _SwapDst = false>
+	template<typename From, typename To, bool _SwapSrc = false, bool _SwapDst = false>
 	struct cs_fconvert_task : cs_shuffle_base
 	{
 		u32 m_ssbo_length = 0;
@@ -629,7 +629,7 @@ namespace vk
 				"	uint out_offset = params[0].z >> 2;\n"
 				"	uvec4 tmp;\n";
 
-			work_kernel +=
+			work_kernel =
 				"		if (index >= block_length)\n"
 				"			return;\n";
 
@@ -651,7 +651,7 @@ namespace vk
 				}
 
 				// Convert
-				work_kernel += "		tmp.z = pack_e4m12_pack16(tmp);\n";
+				work_kernel += "		tmp.z = pack_e4m12_pack16(tmp.xy);\n";
 
 				if constexpr (_SwapDst)
 				{
@@ -681,7 +681,7 @@ namespace vk
 
 				if constexpr (_SwapDst)
 				{
-					work_kernel += "		tmp.yz = bswap_u16(tmp.yz);\n";
+					work_kernel += "		tmp.yz = bswap_u32(tmp.yz);\n";
 				}
 
 				work_kernel +=
