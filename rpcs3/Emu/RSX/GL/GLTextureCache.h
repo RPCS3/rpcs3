@@ -15,6 +15,7 @@
 #include "GLRenderTargets.h"
 #include "GLOverlays.h"
 #include "GLTexture.h"
+#include "GLCompute.h"
 #include "../Common/TextureUtils.h"
 #include "../Common/texture_cache.h"
 
@@ -151,9 +152,7 @@ namespace gl
 		void dma_transfer(gl::command_context& /*cmd*/, gl::texture* src, const areai& /*src_area*/, const utils::address_range& /*valid_range*/, u32 pitch)
 		{
 			init_buffer(src);
-
 			glGetError();
-			pbo.bind(buffer::target::pixel_pack);
 
 			if (context == rsx::texture_upload_context::dma)
 			{
@@ -161,23 +160,68 @@ namespace gl
 				const auto format_info = gl::get_format_type(src->get_internal_format());
 				format = static_cast<gl::texture::format>(format_info.format);
 				type = static_cast<gl::texture::type>(format_info.type);
+				pack_unpack_swap_bytes = format_info.swap_bytes;
+			}
 
-				if ((src->aspect() & gl::image_aspect::stencil) == 0)
+			bool use_driver_pixel_transform = true;
+			if (get_driver_caps().ARB_compute_shader_supported) [[likely]]
+			{
+				if (src->aspect() & image_aspect::stencil)
 				{
-					pack_unpack_swap_bytes = format_info.swap_bytes;
-				}
-				else
-				{
-					// Z24S8 decode is done on the CPU for now
-					pack_unpack_swap_bytes = false;
+					buffer scratch_mem;
+					scratch_mem.create(buffer::target::pixel_pack, pbo.size(), nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+					scratch_mem.bind();
+
+					pixel_pack_settings pack_settings;
+					pack_settings.alignment(1);
+					src->copy_to(nullptr, format, type, pack_settings);
+
+					// Invoke compute
+					if (auto error = glGetError(); !error) [[likely]]
+					{
+						cs_shuffle_base * job;
+						if (pack_unpack_swap_bytes)
+						{
+							job = get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<true>>();
+						}
+						else
+						{
+							job = get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<false>>();
+						}
+
+						const auto job_length = src->pitch() * src->height();
+						job->run(&scratch_mem, job_length);
+
+						glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
+						glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+						scratch_mem.copy_to(&pbo, 0, 0, job_length);
+					}
+					else
+					{
+						rsx_log.error("Memory transfer failed with error 0x%x. Format=0x%x, Type=0x%x", error, static_cast<u32>(format), static_cast<u32>(type));
+					}
+
+					scratch_mem.remove();
+					use_driver_pixel_transform = false;
 				}
 			}
 
-			pixel_pack_settings pack_settings;
-			pack_settings.alignment(1);
-			pack_settings.swap_bytes(pack_unpack_swap_bytes);
+			if (use_driver_pixel_transform)
+			{
+				if (src->aspect() & image_aspect::stencil)
+				{
+					pack_unpack_swap_bytes = false;
+				}
 
-			src->copy_to(nullptr, format, type, pack_settings);
+				pbo.bind(buffer::target::pixel_pack);
+
+				pixel_pack_settings pack_settings;
+				pack_settings.alignment(1);
+				pack_settings.swap_bytes(pack_unpack_swap_bytes);
+
+				src->copy_to(nullptr, format, type, pack_settings);
+			}
+
 			real_pitch = src->pitch();
 			rsx_pitch = pitch;
 
@@ -297,20 +341,15 @@ namespace gl
 			const u32 valid_length = valid_range.second;
 			void *dst = get_ptr(get_section_base() + valid_offset);
 
-			if (pack_unpack_swap_bytes)
+			if (!gl::get_driver_caps().ARB_compute_shader_supported)
 			{
-				// Shuffle
-				// TODO: Do this with a compute shader
 				switch (type)
 				{
 				case gl::texture::type::sbyte:
 				case gl::texture::type::ubyte:
 				{
-					if (pack_unpack_swap_bytes)
-					{
-						// byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
-						rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, align(valid_length, rsx_pitch) / rsx_pitch);
-					}
+					// byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
+					verify(HERE), !pack_unpack_swap_bytes;
 					break;
 				}
 				case gl::texture::type::uint_24_8:

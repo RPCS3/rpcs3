@@ -745,7 +745,6 @@ namespace gl
 				m_target = static_cast<GLenum>(target_);
 			}
 
-
 			~save_binding_state()
 			{
 				glBindBuffer(m_target, m_last_binding);
@@ -941,6 +940,18 @@ namespace gl
 		void bind_range(target target_, u32 index, u32 offset, u32 size) const
 		{
 			glBindBufferRange(static_cast<GLenum>(target_), index, id(), offset, size);
+		}
+
+		void copy_to(buffer* other, u64 src_offset, u64 dst_offset, u64 size)
+		{
+			if (get_driver_caps().ARB_dsa_supported)
+			{
+				glCopyNamedBufferSubData(this->id(), other->id(), src_offset, dst_offset, size);
+			}
+			else
+			{
+				glNamedCopyBufferSubDataEXT(this->id(), other->id(), src_offset, dst_offset, size);
+			}
 		}
 	};
 
@@ -1638,7 +1649,12 @@ namespace gl
 					m_aspect_flags = image_aspect::depth;
 					break;
 				}
-				case GL_DEPTH_COMPONENT32: // Unimplemented decode
+				case GL_DEPTH_COMPONENT32F:
+				{
+					m_pitch = width * 4;
+					m_aspect_flags = image_aspect::depth;
+					break;
+				}
 				case GL_DEPTH24_STENCIL8:
 				case GL_DEPTH32F_STENCIL8:
 				{
@@ -1678,17 +1694,17 @@ namespace gl
 				{
 					fmt::throw_exception("Unhandled GL format 0x%X" HERE, sized_format);
 				}
-			}
 
-			if (format_class == RSX_FORMAT_CLASS_UNDEFINED)
-			{
-				if (m_aspect_flags != image_aspect::color)
+				if (format_class == RSX_FORMAT_CLASS_UNDEFINED)
 				{
-					rsx_log.error("Undefined format class for depth texture is not allowed");
-				}
-				else
-				{
-					format_class = RSX_FORMAT_CLASS_COLOR;
+					if (m_aspect_flags != image_aspect::color)
+					{
+						rsx_log.error("Undefined format class for depth texture is not allowed");
+					}
+					else
+					{
+						format_class = RSX_FORMAT_CLASS_COLOR;
+					}
 				}
 			}
 
