@@ -69,9 +69,9 @@ namespace gl
 		case CELL_GCM_TEXTURE_G8B8: return std::make_tuple(GL_RG, GL_UNSIGNED_BYTE);
 		case CELL_GCM_TEXTURE_R6G5B5: return std::make_tuple(GL_RGB, GL_UNSIGNED_SHORT_5_6_5);
 		case CELL_GCM_TEXTURE_DEPTH24_D8: return std::make_tuple(GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8);
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: return std::make_tuple(GL_DEPTH_STENCIL, GL_FLOAT); // TODO, requires separate aspect readback
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: return std::make_tuple(GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV);
 		case CELL_GCM_TEXTURE_DEPTH16: return std::make_tuple(GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT);
-		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return std::make_tuple(GL_DEPTH_COMPONENT, GL_HALF_FLOAT);
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return std::make_tuple(GL_DEPTH_COMPONENT, GL_FLOAT);
 		case CELL_GCM_TEXTURE_X16: return std::make_tuple(GL_RED, GL_UNSIGNED_SHORT);
 		case CELL_GCM_TEXTURE_Y16_X16: return std::make_tuple(GL_RG, GL_UNSIGNED_SHORT);
 		case CELL_GCM_TEXTURE_R5G5B5A1: return std::make_tuple(GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1);
@@ -126,6 +126,8 @@ namespace gl
 			return { GL_RGBA, GL_FLOAT, 4, true };
 		case texture::internal_format::depth16:
 			return { GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, 2, true };
+		case texture::internal_format::depth32f:
+			return { GL_DEPTH_COMPONENT, GL_FLOAT, 2, true };
 		case texture::internal_format::depth24_stencil8:
 		case texture::internal_format::depth32f_stencil8:
 			return { GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 4, true };
@@ -154,7 +156,13 @@ namespace gl
 			}
 		}
 
-		return get_format_type(ifmt);
+		auto ret = get_format_type(ifmt);
+		if (tex->format_class() == RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32)
+		{
+			ret.type = GL_FLOAT_32_UNSIGNED_INT_24_8_REV;
+		}
+
+		return ret;
 	}
 
 	GLenum get_srgb_format(GLenum in_format)
@@ -459,6 +467,7 @@ namespace gl
 
 		GLenum target;
 		GLenum internal_format = get_sized_internal_format(gcm_format);
+		auto format_class = rsx::classify_format(gcm_format);
 
 		switch (type)
 		{
@@ -476,7 +485,7 @@ namespace gl
 			break;
 		}
 
-		return new gl::viewable_image(target, width, height, depth, mipmaps, internal_format);
+		return new gl::viewable_image(target, width, height, depth, mipmaps, internal_format, format_class);
 	}
 
 	void fill_texture(rsx::texture_dimension_extended dim, u16 mipmap_count, int format, u16 width, u16 height, u16 depth,
@@ -538,6 +547,14 @@ namespace gl
 		else
 		{
 			bool apply_settings = true;
+			buffer upload_scratch_mem, compute_scratch_mem;
+
+			cs_shuffle_base* pixel_transform = nullptr;
+			gsl::span<gsl::byte> dst_buffer = staging_buffer;
+			void* out_pointer = staging_buffer.data();
+			u8 block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
+			u64 image_linear_size;
+
 			switch (gl_type)
 			{
 			case GL_UNSIGNED_INT_8_8_8_8:
@@ -552,6 +569,21 @@ namespace gl
 				apply_settings = (gl_format == GL_RED);
 				caps.supports_byteswap = apply_settings;
 				break;
+			case GL_UNSIGNED_INT_24_8:
+				if (gl::get_driver_caps().ARB_compute_shader_supported)
+				{
+					apply_settings = false;
+					pixel_transform = gl::get_compute_task<cs_shuffle_x8d24_to_d24x8<true>>();
+				}
+				break;
+			case GL_FLOAT:
+				// TODO: Expand depth16f to depth32f
+				gl_type = GL_HALF_FLOAT;
+				break;
+			case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:
+				// TODO: Expand depth24 to depth32f
+				gl_type = GL_UNSIGNED_INT_24_8;
+				break;
 			default:
 				break;
 			}
@@ -561,10 +593,39 @@ namespace gl
 				unpack_settings.apply();
 			}
 
+			if (pixel_transform)
+			{
+				upload_scratch_mem.create(staging_buffer.size(), nullptr, buffer::memory_type::host_visible, GL_STREAM_DRAW);
+				compute_scratch_mem.create(staging_buffer.size(), nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+				out_pointer = nullptr;
+			}
+
 			for (const rsx::subresource_layout& layout : input_layouts)
 			{
-				auto op = upload_texture_subresource(staging_buffer, layout, format, is_swizzled, caps);
-				if (apply_settings)
+				if (pixel_transform)
+				{
+					const u64 row_pitch = rsx::align2(layout.width_in_block * block_size_in_bytes, caps.alignment);
+					image_linear_size = row_pitch * layout.height_in_block * layout.depth;
+					dst_buffer = { reinterpret_cast<gsl::byte*>(upload_scratch_mem.map(buffer::access::write)), image_linear_size };
+				}
+
+				auto op = upload_texture_subresource(dst_buffer, layout, format, is_swizzled, caps);
+
+				if (pixel_transform)
+				{
+					// 1. Unmap buffer
+					upload_scratch_mem.unmap();
+
+					// 2. Execute compute job
+					upload_scratch_mem.copy_to(&compute_scratch_mem, 0, 0, image_linear_size);
+					pixel_transform->run(&compute_scratch_mem, image_linear_size);
+
+					// 3. Bind compute buffer as pixel unpack buffer
+					glMemoryBarrier(GL_PIXEL_UNPACK_BUFFER);
+					glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
+					compute_scratch_mem.bind(buffer::target::pixel_unpack);
+				}
+				else if (apply_settings)
 				{
 					unpack_settings.swap_bytes(op.require_swap);
 					unpack_settings.apply();
@@ -574,21 +635,27 @@ namespace gl
 				switch (dim)
 				{
 				case rsx::texture_dimension_extended::texture_dimension_1d:
-					glTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, layout.width_in_texel, gl_format, gl_type, staging_buffer.data());
+					glTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, layout.width_in_texel, gl_format, gl_type, out_pointer);
 					break;
 				case rsx::texture_dimension_extended::texture_dimension_2d:
-					glTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, gl_type, staging_buffer.data());
+					glTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, gl_type, out_pointer);
 					break;
 				case rsx::texture_dimension_extended::texture_dimension_cubemap:
-					glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, gl_type, staging_buffer.data());
+					glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, gl_type, out_pointer);
 					break;
 				case rsx::texture_dimension_extended::texture_dimension_3d:
-					glTexSubImage3D(GL_TEXTURE_3D, layout.layer, 0, 0, 0, layout.width_in_texel, layout.height_in_texel, depth, gl_format, gl_type, staging_buffer.data());
+					glTexSubImage3D(GL_TEXTURE_3D, layout.layer, 0, 0, 0, layout.width_in_texel, layout.height_in_texel, depth, gl_format, gl_type, out_pointer);
 					break;
 				default:
 					ASSUME(0);
 					fmt::throw_exception("Unreachable" HERE);
 				}
+			}
+
+			if (pixel_transform)
+			{
+				upload_scratch_mem.remove();
+				compute_scratch_mem.remove();
 			}
 		}
 	}
@@ -754,40 +821,97 @@ namespace gl
 		return false;
 	}
 
-	cs_shuffle_base* get_pixel_transform_job(const pixel_buffer_layout& pack_info)
+	cs_shuffle_base* get_trivial_transform_job(const pixel_buffer_layout& pack_info)
 	{
-		const bool is_depth_stencil = (pack_info.type == GL_UNSIGNED_INT_24_8);
-		if (!is_depth_stencil) [[likely]]
+		if (!pack_info.swap_bytes)
 		{
-			if (!pack_info.swap_bytes)
+			return nullptr;
+		}
+
+		switch (pack_info.size)
+		{
+		case 1:
+			return nullptr;
+		case 2:
+			return gl::get_compute_task<gl::cs_shuffle_16>();
+			break;
+		case 4:
+			return gl::get_compute_task<gl::cs_shuffle_32>();
+			break;
+		default:
+			fmt::throw_exception("Unsupported format");
+		}
+	}
+
+	cs_shuffle_base* get_image_to_buffer_job(const pixel_buffer_layout& pack_info, u32 aspect_mask)
+	{
+		switch (aspect_mask)
+		{
+		case image_aspect::color:
+		{
+			return get_trivial_transform_job(pack_info);
+		}
+		case image_aspect::depth:
+		{
+			if (pack_info.type == GL_FLOAT)
 			{
+				// TODO: D16F
 				return nullptr;
 			}
 
-			switch (pack_info.size)
-			{
-			case 1:
-				return nullptr;
-			case 2:
-				return gl::get_compute_task<gl::cs_shuffle_16>();
-				break;
-			case 4:
-				return gl::get_compute_task<gl::cs_shuffle_32>();
-				break;
-			default:
-				fmt::throw_exception("Unsupported format");
-			}
+			return get_trivial_transform_job(pack_info);
 		}
-		else
+		case image_aspect::depth | image_aspect::stencil:
 		{
-			if (pack_info.swap_bytes)
+			verify(HERE), pack_info.swap_bytes;
+			if (pack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
 			{
-				return gl::get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<true>>();
+				// TODO: D24FX8
+				return nullptr;
 			}
-			else
+
+			return gl::get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<true>>();
+		}
+		default:
+		{
+			fmt::throw_exception("Invalid aspect mask 0x%x" HERE, aspect_mask);
+		}
+		}
+	}
+
+	cs_shuffle_base* get_buffer_to_image_job(const pixel_buffer_layout& unpack_info, u32 aspect_mask)
+	{
+		switch (aspect_mask)
+		{
+		case image_aspect::color:
+		{
+			return get_trivial_transform_job(unpack_info);
+		}
+		case image_aspect::depth:
+		{
+			if (unpack_info.type == GL_FLOAT)
 			{
-				return gl::get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<false>>();
+				// TODO: D16F
+				return nullptr;
 			}
+
+			return get_trivial_transform_job(unpack_info);
+		}
+		case image_aspect::depth | image_aspect::stencil:
+		{
+			verify(HERE), unpack_info.swap_bytes;
+			if (unpack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
+			{
+				// TODO: D24FX8
+				return nullptr;
+			}
+
+			return gl::get_compute_task<gl::cs_shuffle_x8d24_to_d24x8<true>>();
+		}
+		default:
+		{
+			fmt::throw_exception("Invalid aspect mask 0x%x" HERE, aspect_mask);
+		}
 		}
 	}
 
@@ -806,6 +930,28 @@ namespace gl
 		const auto& caps = gl::get_driver_caps();
 		auto pack_info = get_format_type(src);
 		auto unpack_info = get_format_type(dst);
+
+		if (!caps.ARB_compute_shader_supported)
+		{
+			auto remove_depth_transformation = [](const texture* tex, pixel_buffer_layout& pack_info)
+			{
+				if (tex->aspect() & image_aspect::depth)
+				{
+					switch (pack_info.type)
+					{
+					case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:
+						pack_info.type = GL_UNSIGNED_INT_24_8;
+						break;
+					case GL_FLOAT:
+						pack_info.type = GL_HALF_FLOAT;
+						break;
+					}
+				}
+			};
+
+			remove_depth_transformation(src, pack_info);
+			remove_depth_transformation(dst, unpack_info);
+		}
 
 		// Start pack operation
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
@@ -829,8 +975,8 @@ namespace gl
 
 		if (caps.ARB_compute_shader_supported) [[likely]]
 		{
-			auto src_transform = get_pixel_transform_job(pack_info);
-			auto dst_transform = get_pixel_transform_job(unpack_info);
+			auto src_transform = get_image_to_buffer_job(pack_info, src->aspect());
+			auto dst_transform = get_buffer_to_image_job(unpack_info, dst->aspect());
 
 			if (src->aspect() == gl::image_aspect::color && dst->aspect() == gl::image_aspect::color)
 			{
