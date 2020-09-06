@@ -454,6 +454,161 @@ namespace gl
 		fmt::throw_exception("Unknown format 0x%x" HERE, texture_format);
 	}
 
+	cs_shuffle_base* get_trivial_transform_job(const pixel_buffer_layout& pack_info)
+	{
+		if (!pack_info.swap_bytes)
+		{
+			return nullptr;
+		}
+
+		switch (pack_info.size)
+		{
+		case 1:
+			return nullptr;
+		case 2:
+			return get_compute_task<gl::cs_shuffle_16>();
+			break;
+		case 4:
+			return get_compute_task<gl::cs_shuffle_32>();
+			break;
+		default:
+			fmt::throw_exception("Unsupported format");
+		}
+	}
+
+	void* copy_image_to_buffer(const pixel_buffer_layout& pack_info, const gl::texture* src, gl::buffer* dst,
+		const int src_level, const coord3u& src_region,  image_memory_requirements* mem_info)
+	{
+		auto initialize_scratch_mem = [&]()
+		{
+			const u64 max_mem = (mem_info->memory_required) ? mem_info->memory_required : mem_info->image_size_in_bytes;
+			if (!(*dst) || max_mem > static_cast<u64>(dst->size()))
+			{
+				if (*dst) dst->remove();
+				dst->create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+			}
+
+			dst->bind(buffer::target::pixel_pack);
+			src->copy_to(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_level, src_region, {});
+		};
+
+		void* result = nullptr;
+		if (src->aspect() == image_aspect::color ||
+			pack_info.type == GL_UNSIGNED_SHORT ||
+			pack_info.type == GL_UNSIGNED_INT_24_8)
+		{
+			initialize_scratch_mem();
+			if (auto job = get_trivial_transform_job(pack_info))
+			{
+				job->run(dst, static_cast<u32>(mem_info->image_size_in_bytes));
+			}
+		}
+		else if (pack_info.type == GL_FLOAT)
+		{
+			verify(HERE), mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 4);
+			mem_info->memory_required = (mem_info->image_size_in_texels * 6);
+			initialize_scratch_mem();
+
+			get_compute_task<cs_fconvert_task<f32, f16, false, true>>()->run(dst, 0,
+				static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_bytes));
+			result = reinterpret_cast<void*>(mem_info->image_size_in_bytes);
+		}
+		else if (pack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
+		{
+			verify(HERE), mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 8);
+			mem_info->memory_required = (mem_info->image_size_in_texels * 12);
+			initialize_scratch_mem();
+
+			get_compute_task<cs_shuffle_d32fx8_to_x8d24f>()->run(dst, 0,
+				static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_texels));
+			result = reinterpret_cast<void*>(mem_info->image_size_in_bytes);
+		}
+		else
+		{
+			fmt::throw_exception("Invalid depth/stencil type 0x%x" HERE, pack_info.type);
+		}
+
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_PIXEL_BUFFER_BARRIER_BIT);
+		return result;
+	}
+
+	void copy_buffer_to_image(const pixel_buffer_layout& unpack_info, gl::buffer* src, gl::texture* dst,
+		const void* src_offset, const int dst_level, const coord3u& dst_region, image_memory_requirements* mem_info)
+	{
+		buffer scratch_mem;
+		buffer* transfer_buf = src;
+		bool skip_barrier = false;
+		u32 in_offset = static_cast<u32>(reinterpret_cast<u64>(src_offset));
+		u32 out_offset = in_offset;
+
+		auto initialize_scratch_mem = [&]()
+		{
+			if (in_offset >= mem_info->memory_required)
+			{
+				return;
+			}
+
+			const u64 max_mem = mem_info->memory_required + mem_info->image_size_in_bytes;
+			if ((max_mem + in_offset) <= static_cast<u64>(src->size()))
+			{
+				out_offset = static_cast<u32>(in_offset + mem_info->image_size_in_bytes);
+				return;
+			}
+
+			scratch_mem.create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+
+			glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+			src->copy_to(&scratch_mem, in_offset, 0, mem_info->image_size_in_bytes);
+
+			in_offset = 0;
+			out_offset = static_cast<u32>(mem_info->image_size_in_bytes);
+			transfer_buf = &scratch_mem;
+		};
+
+		if (dst->aspect() == image_aspect::color ||
+			unpack_info.type == GL_UNSIGNED_SHORT ||
+			unpack_info.type == GL_UNSIGNED_INT_24_8)
+		{
+			if (auto job = get_trivial_transform_job(unpack_info))
+			{
+				job->run(src, static_cast<u32>(mem_info->image_size_in_bytes), in_offset);
+			}
+			else
+			{
+				skip_barrier = true;
+			}
+		}
+		else if (unpack_info.type == GL_FLOAT)
+		{
+			mem_info->memory_required = (mem_info->image_size_in_texels * 4);
+			initialize_scratch_mem();
+			get_compute_task<cs_fconvert_task<f16, f32, true, false>>()->run(transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
+		}
+		else if (unpack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
+		{
+			mem_info->memory_required = (mem_info->image_size_in_texels * 8);
+			initialize_scratch_mem();
+			get_compute_task<cs_shuffle_x8d24f_to_d32fx8>()->run(transfer_buf, in_offset, out_offset, static_cast<u32>(mem_info->image_size_in_texels));
+		}
+		else
+		{
+			fmt::throw_exception("Invalid depth/stencil type 0x%x" HERE, unpack_info.type);
+		}
+
+		if (!skip_barrier)
+		{
+			glMemoryBarrier(GL_PIXEL_BUFFER_BARRIER_BIT);
+		}
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
+		transfer_buf->bind(buffer::target::pixel_unpack);
+
+		dst->copy_from(reinterpret_cast<void*>(u64(out_offset)), static_cast<texture::format>(unpack_info.format),
+			static_cast<texture::type>(unpack_info.type), dst_level, dst_region, {});
+
+		if (scratch_mem) scratch_mem.remove();
+	}
+
 	gl::viewable_image* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps,
 			rsx::texture_dimension_extended type)
 	{
@@ -488,8 +643,9 @@ namespace gl
 		return new gl::viewable_image(target, width, height, depth, mipmaps, internal_format, format_class);
 	}
 
-	void fill_texture(rsx::texture_dimension_extended dim, u16 mipmap_count, int format, u16 width, u16 height, u16 depth,
-			const std::vector<rsx::subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
+	void fill_texture(texture* dst, int format,
+			const std::vector<rsx::subresource_layout> &input_layouts,
+			bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
 	{
 		rsx::texture_uploader_capabilities caps{ true, false, false, 4 };
 
@@ -500,8 +656,10 @@ namespace gl
 		{
 			caps.supports_vtc_decoding = gl::get_driver_caps().vendor_NVIDIA;
 
-			unpack_settings.row_length(align(width, 4));
+			unpack_settings.row_length(align(dst->width(), 4));
 			unpack_settings.apply();
+
+			glBindTexture(static_cast<GLenum>(dst->get_target()), dst->id());
 
 			const GLsizei format_block_size = (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16;
 
@@ -510,27 +668,27 @@ namespace gl
 				upload_texture_subresource(staging_buffer, layout, format, is_swizzled, caps);
 				const sizei image_size{ align(layout.width_in_texel, 4), align(layout.height_in_texel, 4) };
 
-				switch (dim)
+				switch (dst->get_target())
 				{
-				case rsx::texture_dimension_extended::texture_dimension_1d:
+				case texture::target::texture1D:
 				{
 					const GLsizei size = layout.width_in_block * format_block_size;
 					glCompressedTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, image_size.width, gl_format, size, staging_buffer.data());
 					break;
 				}
-				case rsx::texture_dimension_extended::texture_dimension_2d:
+				case texture::target::texture2D:
 				{
 					const GLsizei size = layout.width_in_block * layout.height_in_block * format_block_size;
 					glCompressedTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, image_size.width, image_size.height, gl_format, size, staging_buffer.data());
 					break;
 				}
-				case rsx::texture_dimension_extended::texture_dimension_cubemap:
+				case texture::target::textureCUBE:
 				{
 					const GLsizei size = layout.width_in_block * layout.height_in_block * format_block_size;
 					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, image_size.width, image_size.height, gl_format, size, staging_buffer.data());
 					break;
 				}
-				case rsx::texture_dimension_extended::texture_dimension_3d:
+				case texture::target::texture3D:
 				{
 					const GLsizei size = layout.width_in_block * layout.height_in_block * layout.depth * format_block_size;
 					glCompressedTexSubImage3D(GL_TEXTURE_3D, layout.level, 0, 0, 0, image_size.width, image_size.height, layout.depth, gl_format, size, staging_buffer.data());
@@ -547,9 +705,11 @@ namespace gl
 		else
 		{
 			bool apply_settings = true;
+			bool use_compute_transform = false;
 			buffer upload_scratch_mem, compute_scratch_mem;
+			image_memory_requirements mem_info;
+			pixel_buffer_layout mem_layout;
 
-			cs_shuffle_base* pixel_transform = nullptr;
 			gsl::span<gsl::byte> dst_buffer = staging_buffer;
 			void* out_pointer = staging_buffer.data();
 			u8 block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
@@ -569,90 +729,72 @@ namespace gl
 				apply_settings = (gl_format == GL_RED);
 				caps.supports_byteswap = apply_settings;
 				break;
-			case GL_UNSIGNED_INT_24_8:
-				if (gl::get_driver_caps().ARB_compute_shader_supported)
-				{
-					apply_settings = false;
-					pixel_transform = gl::get_compute_task<cs_shuffle_x8d24_to_d24x8<true>>();
-				}
-				break;
 			case GL_FLOAT:
-				// TODO: Expand depth16f to depth32f
-				gl_type = GL_HALF_FLOAT;
-				break;
+			case GL_UNSIGNED_INT_24_8:
 			case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:
-				// TODO: Expand depth24 to depth32f
-				gl_type = GL_UNSIGNED_INT_24_8;
-				break;
-			default:
+				mem_layout.format = gl_format;
+				mem_layout.type = gl_type;
+				mem_layout.swap_bytes = true;
+				mem_layout.size = 4;
+				use_compute_transform = true;
+				apply_settings = false;
 				break;
 			}
 
-			if (!apply_settings)
-			{
-				unpack_settings.apply();
-			}
-
-			if (pixel_transform)
+			if (use_compute_transform)
 			{
 				upload_scratch_mem.create(staging_buffer.size(), nullptr, buffer::memory_type::host_visible, GL_STREAM_DRAW);
-				compute_scratch_mem.create(staging_buffer.size(), nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+				compute_scratch_mem.create(std::max<GLsizeiptr>(512, staging_buffer.size() * 3), nullptr, buffer::memory_type::local, GL_STATIC_COPY);
 				out_pointer = nullptr;
 			}
 
 			for (const rsx::subresource_layout& layout : input_layouts)
 			{
-				if (pixel_transform)
+				if (use_compute_transform)
 				{
-					const u64 row_pitch = rsx::align2(layout.width_in_block * block_size_in_bytes, caps.alignment);
+					const u64 row_pitch = rsx::align2<u64, u64>(layout.width_in_block * block_size_in_bytes, caps.alignment);
 					image_linear_size = row_pitch * layout.height_in_block * layout.depth;
 					dst_buffer = { reinterpret_cast<gsl::byte*>(upload_scratch_mem.map(buffer::access::write)), image_linear_size };
 				}
 
 				auto op = upload_texture_subresource(dst_buffer, layout, format, is_swizzled, caps);
 
-				if (pixel_transform)
+				// Define upload region
+				coord3u region;
+				region.x = 0;
+				region.y = 0;
+				region.z = layout.layer;
+				region.width = layout.width_in_texel;
+				region.height = layout.height_in_texel;
+				region.depth = layout.depth;
+
+				if (use_compute_transform)
 				{
 					// 1. Unmap buffer
 					upload_scratch_mem.unmap();
 
-					// 2. Execute compute job
+					// 2. Upload memory to GPU
 					upload_scratch_mem.copy_to(&compute_scratch_mem, 0, 0, image_linear_size);
-					pixel_transform->run(&compute_scratch_mem, image_linear_size);
 
-					// 3. Bind compute buffer as pixel unpack buffer
-					glMemoryBarrier(GL_PIXEL_UNPACK_BUFFER);
-					glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
-					compute_scratch_mem.bind(buffer::target::pixel_unpack);
+					// 3. Dispatch compute routines
+					mem_info.image_size_in_texels = image_linear_size / block_size_in_bytes;
+					mem_info.image_size_in_bytes = image_linear_size;
+					mem_info.memory_required = 0;
+					copy_buffer_to_image(mem_layout, &compute_scratch_mem, dst, nullptr, layout.level, region, & mem_info);
 				}
-				else if (apply_settings)
+				else
 				{
-					unpack_settings.swap_bytes(op.require_swap);
-					unpack_settings.apply();
-					apply_settings = false;
-				}
+					if (apply_settings)
+					{
+						unpack_settings.swap_bytes(op.require_swap);
+						apply_settings = false;
+					}
 
-				switch (dim)
-				{
-				case rsx::texture_dimension_extended::texture_dimension_1d:
-					glTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, layout.width_in_texel, gl_format, gl_type, out_pointer);
-					break;
-				case rsx::texture_dimension_extended::texture_dimension_2d:
-					glTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, gl_type, out_pointer);
-					break;
-				case rsx::texture_dimension_extended::texture_dimension_cubemap:
-					glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, gl_type, out_pointer);
-					break;
-				case rsx::texture_dimension_extended::texture_dimension_3d:
-					glTexSubImage3D(GL_TEXTURE_3D, layout.layer, 0, 0, 0, layout.width_in_texel, layout.height_in_texel, depth, gl_format, gl_type, out_pointer);
-					break;
-				default:
-					ASSUME(0);
-					fmt::throw_exception("Unreachable" HERE);
+					dst->copy_from(out_pointer, static_cast<texture::format>(gl_format), static_cast<texture::type>(gl_type), layout.level, region, unpack_settings);
 				}
 			}
 
-			if (pixel_transform)
+			if (use_compute_transform)
 			{
 				upload_scratch_mem.remove();
 				compute_scratch_mem.remove();
@@ -693,41 +835,18 @@ namespace gl
 		return remap_values;
 	}
 
-	void upload_texture(GLuint id, u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
-			const std::vector<rsx::subresource_layout>& subresources_layout)
+	void upload_texture(texture* dst, u32 gcm_format, bool is_swizzled, const std::vector<rsx::subresource_layout>& subresources_layout)
 	{
-		GLenum target;
-		switch (type)
-		{
-		case rsx::texture_dimension_extended::texture_dimension_1d:
-			target = GL_TEXTURE_1D;
-			break;
-		case rsx::texture_dimension_extended::texture_dimension_2d:
-			target = GL_TEXTURE_2D;
-			break;
-		case rsx::texture_dimension_extended::texture_dimension_3d:
-			target = GL_TEXTURE_3D;
-			break;
-		case rsx::texture_dimension_extended::texture_dimension_cubemap:
-			target = GL_TEXTURE_CUBE_MAP;
-			break;
-		}
-
-		glBindTexture(target, id);
-		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, mipmaps - 1);
-		// The rest of sampler state is now handled by sampler state objects
-
 		// Calculate staging buffer size
-		const u32 aligned_pitch = align<u32>(width * rsx::get_format_block_size_in_bytes(gcm_format), 4);
-		size_t texture_data_sz = depth * height * aligned_pitch;
+		const u32 aligned_pitch = align<u32>(dst->pitch(), 4);
+		size_t texture_data_sz = dst->depth() * dst->height() * aligned_pitch;
 		std::vector<std::byte> data_upload_buf(texture_data_sz);
 
 		// TODO: GL drivers support byteswapping and this should be used instead of doing so manually
 		const auto format_type = get_format_type(gcm_format);
 		const GLenum gl_format = std::get<0>(format_type);
 		const GLenum gl_type = std::get<1>(format_type);
-		fill_texture(type, mipmaps, gcm_format, width, height, depth, subresources_layout, is_swizzled, gl_format, gl_type, data_upload_buf);
+		fill_texture(dst, gcm_format, subresources_layout, is_swizzled, gl_format, gl_type, data_upload_buf);
 	}
 
 	u32 get_format_texel_width(GLenum format)
@@ -821,111 +940,12 @@ namespace gl
 		return false;
 	}
 
-	cs_shuffle_base* get_trivial_transform_job(const pixel_buffer_layout& pack_info)
-	{
-		if (!pack_info.swap_bytes)
-		{
-			return nullptr;
-		}
-
-		switch (pack_info.size)
-		{
-		case 1:
-			return nullptr;
-		case 2:
-			return gl::get_compute_task<gl::cs_shuffle_16>();
-			break;
-		case 4:
-			return gl::get_compute_task<gl::cs_shuffle_32>();
-			break;
-		default:
-			fmt::throw_exception("Unsupported format");
-		}
-	}
-
-	cs_shuffle_base* get_image_to_buffer_job(const pixel_buffer_layout& pack_info, u32 aspect_mask)
-	{
-		switch (aspect_mask)
-		{
-		case image_aspect::color:
-		{
-			return get_trivial_transform_job(pack_info);
-		}
-		case image_aspect::depth:
-		{
-			if (pack_info.type == GL_FLOAT)
-			{
-				// TODO: D16F
-				return nullptr;
-			}
-
-			return get_trivial_transform_job(pack_info);
-		}
-		case image_aspect::depth | image_aspect::stencil:
-		{
-			verify(HERE), pack_info.swap_bytes;
-			if (pack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
-			{
-				// TODO: D24FX8
-				return nullptr;
-			}
-
-			return gl::get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<true>>();
-		}
-		default:
-		{
-			fmt::throw_exception("Invalid aspect mask 0x%x" HERE, aspect_mask);
-		}
-		}
-	}
-
-	cs_shuffle_base* get_buffer_to_image_job(const pixel_buffer_layout& unpack_info, u32 aspect_mask)
-	{
-		switch (aspect_mask)
-		{
-		case image_aspect::color:
-		{
-			return get_trivial_transform_job(unpack_info);
-		}
-		case image_aspect::depth:
-		{
-			if (unpack_info.type == GL_FLOAT)
-			{
-				// TODO: D16F
-				return nullptr;
-			}
-
-			return get_trivial_transform_job(unpack_info);
-		}
-		case image_aspect::depth | image_aspect::stencil:
-		{
-			verify(HERE), unpack_info.swap_bytes;
-			if (unpack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
-			{
-				// TODO: D24FX8
-				return nullptr;
-			}
-
-			return gl::get_compute_task<gl::cs_shuffle_x8d24_to_d24x8<true>>();
-		}
-		default:
-		{
-			fmt::throw_exception("Invalid aspect mask 0x%x" HERE, aspect_mask);
-		}
-		}
-	}
-
 	void copy_typeless(texture * dst, const texture * src, const coord3u& dst_region, const coord3u& src_region)
 	{
-		const u32 src_mem = src->pitch() * src_region.height;
-		const u32 dst_mem = dst->pitch() * dst_region.height;
-
-		auto max_mem = std::max(src_mem, dst_mem);
-		if (!g_typeless_transfer_buffer || max_mem > g_typeless_transfer_buffer.size())
-		{
-			if (g_typeless_transfer_buffer) g_typeless_transfer_buffer.remove();
-			g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
-		}
+		const auto src_bpp = src->pitch() / src->width();
+		const auto dst_bpp = dst->pitch() / dst->width();
+		image_memory_requirements src_mem = { src_region.width * src_region.height, src_region.width * src_bpp * src_region.height, 0ull };
+		image_memory_requirements dst_mem = { dst_region.width * dst_region.height, dst_region.width * dst_bpp * dst_region.height, 0ull };
 
 		const auto& caps = gl::get_driver_caps();
 		auto pack_info = get_format_type(src);
@@ -954,54 +974,31 @@ namespace gl
 		}
 
 		// Start pack operation
-		g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
-
+		void* transfer_offset = nullptr;
 		if (caps.ARB_compute_shader_supported) [[likely]]
 		{
-			// Raw copy
-			src->copy_to(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_region, {});
-		}
-		else
-		{
-			pixel_pack_settings pack_settings{};
-			pack_settings.swap_bytes(pack_info.swap_bytes);
-			src->copy_to(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_region, pack_settings);
-		}
-
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
-
-		// Start unpack operation
-		pixel_unpack_settings unpack_settings{};
-
-		if (caps.ARB_compute_shader_supported) [[likely]]
-		{
-			auto src_transform = get_image_to_buffer_job(pack_info, src->aspect());
-			auto dst_transform = get_buffer_to_image_job(unpack_info, dst->aspect());
-
-			if (src->aspect() == gl::image_aspect::color && dst->aspect() == gl::image_aspect::color)
+			// Apply transformation
+			bool skip_transform = false;
+			if ((src->aspect() | dst->aspect()) == gl::image_aspect::color)
 			{
-				if (src_transform == dst_transform)
-				{
-					src_transform = dst_transform = nullptr;
-				}
-				else if (src_transform && dst_transform)
-				{
-					src_transform = gl::get_compute_task<cs_shuffle_32_16>();
-					dst_transform = nullptr;
-				}
+				skip_transform = (pack_info.format == unpack_info.format &&
+					pack_info.type == unpack_info.type &&
+					pack_info.swap_bytes == unpack_info.swap_bytes &&
+					pack_info.size == unpack_info.size);
 			}
 
-			const auto job_length = std::min(src_mem, dst_mem);
-			if (src_transform)
+			if (skip_transform) [[likely]]
 			{
-				src_transform->run(&g_typeless_transfer_buffer, job_length);
-				glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_PIXEL_BUFFER_BARRIER_BIT);
-			}
+				const bool old_swap_bytes = pack_info.swap_bytes;
+				pack_info.swap_bytes = false;
 
-			if (dst_transform)
+				copy_image_to_buffer(pack_info, src, &g_typeless_transfer_buffer, 0, src_region, &src_mem);
+				pack_info.swap_bytes = old_swap_bytes;
+			}
+			else
 			{
-				dst_transform->run(&g_typeless_transfer_buffer, job_length);
-				glMemoryBarrier(GL_PIXEL_BUFFER_BARRIER_BIT);
+				void* data_ptr = copy_image_to_buffer(pack_info, src, &g_typeless_transfer_buffer, 0, src_region, &src_mem);
+				copy_buffer_to_image(unpack_info, &g_typeless_transfer_buffer, dst, data_ptr, 0, dst_region, &dst_mem);
 			}
 
 			// NOTE: glBindBufferRange also binds the buffer to the old-school target.
@@ -1010,11 +1007,32 @@ namespace gl
 		}
 		else
 		{
+			const u64 max_mem = std::max(src_mem.image_size_in_bytes, dst_mem.image_size_in_bytes);
+			if (!g_typeless_transfer_buffer || max_mem > static_cast<u64>(g_typeless_transfer_buffer.size()))
+			{
+				if (g_typeless_transfer_buffer) g_typeless_transfer_buffer.remove();
+				g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+			}
+
+			pixel_pack_settings pack_settings{};
+			pack_settings.swap_bytes(pack_info.swap_bytes);
+
+			g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
+			src->copy_to(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), 0, src_region, pack_settings);
+		}
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
+
+		// Start unpack operation
+		pixel_unpack_settings unpack_settings{};
+
+		if (!caps.ARB_compute_shader_supported) [[unlikely]]
+		{
 			unpack_settings.swap_bytes(unpack_info.swap_bytes);
 		}
 
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
-		dst->copy_from(nullptr, static_cast<texture::format>(unpack_info.format), static_cast<texture::type>(unpack_info.type), dst_region, unpack_settings);
+		dst->copy_from(transfer_offset, static_cast<texture::format>(unpack_info.format), static_cast<texture::type>(unpack_info.type), 0, dst_region, unpack_settings);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 	}
 

@@ -1479,14 +1479,6 @@ namespace gl
 
 		enum class internal_format
 		{
-			r = GL_RED,
-			rg = GL_RG,
-			rgb = GL_RGB,
-			rgba = GL_RGBA,
-
-			bgr = GL_BGR,
-			bgra = GL_BGRA,
-
 			stencil8 = GL_STENCIL_INDEX8,
 			depth16 = GL_DEPTH_COMPONENT16,
 			depth32f = GL_DEPTH_COMPONENT32F,
@@ -1821,7 +1813,7 @@ namespace gl
 			return m_component_layout;
 		}
 
-		void copy_from(const void* src, texture::format format, texture::type type, const coord3u region, const pixel_unpack_settings& pixel_settings)
+		void copy_from(const void* src, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings)
 		{
 			pixel_settings.apply();
 
@@ -1829,25 +1821,25 @@ namespace gl
 			{
 			case GL_TEXTURE_1D:
 			{
-				DSA_CALL(TextureSubImage1D, m_id, GL_TEXTURE_1D, 0, region.x, region.width, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+				DSA_CALL(TextureSubImage1D, m_id, GL_TEXTURE_1D, level, region.x, region.width, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
 				break;
 			}
 			case GL_TEXTURE_2D:
 			{
-				DSA_CALL(TextureSubImage2D, m_id, GL_TEXTURE_2D, 0, region.x, region.y, region.width, region.height, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+				DSA_CALL(TextureSubImage2D, m_id, GL_TEXTURE_2D, level, region.x, region.y, region.width, region.height, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
 				break;
 			}
 			case GL_TEXTURE_3D:
 			case GL_TEXTURE_2D_ARRAY:
 			{
-				DSA_CALL(TextureSubImage3D, m_id, target_, 0, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+				DSA_CALL(TextureSubImage3D, m_id, target_, level, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
 				break;
 			}
 			case GL_TEXTURE_CUBE_MAP:
 			{
 				if (get_driver_caps().ARB_dsa_supported)
 				{
-					glTextureSubImage3D(m_id, 0, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+					glTextureSubImage3D(m_id, level, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
 				}
 				else
 				{
@@ -1856,7 +1848,7 @@ namespace gl
 					const auto end = std::min(6u, region.z + region.depth);
 					for (unsigned face = region.z; face < end; ++face)
 					{
-						glTextureSubImage2DEXT(m_id, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, region.x, region.y, region.width, region.height, static_cast<GLenum>(format), static_cast<GLenum>(type), ptr);
+						glTextureSubImage2DEXT(m_id, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level, region.x, region.y, region.width, region.height, static_cast<GLenum>(format), static_cast<GLenum>(type), ptr);
 						ptr += (region.width * region.height * 4); //TODO
 					}
 				}
@@ -1868,7 +1860,7 @@ namespace gl
 		void copy_from(const void* src, texture::format format, texture::type type, const pixel_unpack_settings& pixel_settings)
 		{
 			const coord3u region = { {}, size3D() };
-			copy_from(src, format, type, region, pixel_settings);
+			copy_from(src, format, type, 0, region, pixel_settings);
 		}
 
 		void copy_from(buffer &buf, u32 gl_format_type, u32 offset, u32 length)
@@ -1884,7 +1876,7 @@ namespace gl
 			copy_from(*view.value(), view.format(), view.offset(), view.range());
 		}
 
-		void copy_to(void* dst, texture::format format, texture::type type, const coord3u& region, const pixel_pack_settings& pixel_settings) const
+		void copy_to(void* dst, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const
 		{
 			pixel_settings.apply();
 			const auto& caps = get_driver_caps();
@@ -1893,13 +1885,13 @@ namespace gl
 				region.width == m_width && region.height == m_height && region.depth == m_depth)
 			{
 				if (caps.ARB_dsa_supported)
-					glGetTextureImage(m_id, 0, static_cast<GLenum>(format), static_cast<GLenum>(type), INT32_MAX, dst);
+					glGetTextureImage(m_id, level, static_cast<GLenum>(format), static_cast<GLenum>(type), INT32_MAX, dst);
 				else
-					glGetTextureImageEXT(m_id, static_cast<GLenum>(m_target), 0, static_cast<GLenum>(format), static_cast<GLenum>(type), dst);
+					glGetTextureImageEXT(m_id, static_cast<GLenum>(m_target), level, static_cast<GLenum>(format), static_cast<GLenum>(type), dst);
 			}
 			else if (caps.ARB_dsa_supported)
 			{
-				glGetTextureSubImage(m_id, 0, region.x, region.y, region.z, region.width, region.height, region.depth,
+				glGetTextureSubImage(m_id, level, region.x, region.y, region.z, region.width, region.height, region.depth,
 					static_cast<GLenum>(format), static_cast<GLenum>(type), INT32_MAX, dst);
 			}
 			else
@@ -1907,18 +1899,18 @@ namespace gl
 				// Worst case scenario. For some reason, EXT_dsa does not have glGetTextureSubImage
 				const auto target_ = static_cast<GLenum>(m_target);
 				texture tmp{ target_, region.width, region.height, region.depth, 1, static_cast<GLenum>(m_internal_format) };
-				glCopyImageSubData(m_id, target_, 0, region.x, region.y, region.z, tmp.id(), target_, 0, 0, 0, 0,
+				glCopyImageSubData(m_id, target_, level, region.x, region.y, region.z, tmp.id(), target_, 0, 0, 0, 0,
 					region.width, region.height, region.depth);
 
 				const coord3u region2 = { {0, 0, 0}, region.size };
-				tmp.copy_to(dst, format, type, region2, pixel_settings);
+				tmp.copy_to(dst, format, type, 0, region2, pixel_settings);
 			}
 		}
 
 		void copy_to(void* dst, texture::format format, texture::type type, const pixel_pack_settings& pixel_settings) const
 		{
 			const coord3u region = { {}, size3D() };
-			copy_to(dst, format, type, region, pixel_settings);
+			copy_to(dst, format, type, 0, region, pixel_settings);
 		}
 	};
 
