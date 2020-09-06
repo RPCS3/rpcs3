@@ -53,11 +53,52 @@ namespace rsx
 
 	enum class surface_depth_format : u8
 	{
-		z16, // unsigned 16 bits depth
-		z24s8, // unsigned 24 bits depth + 8 bits stencil
+		z16,   // typeless 16 bits depth
+		z24s8, // typeless 24 bits depth + 8 bits stencil
+	};
+
+	enum class surface_depth_format2 : u8
+	{
+		z16_uint,    // unsigned 16 bits depth
+		z24s8_uint,  // unsigned 24 bits depth + 8 bits stencil
+		z16_float,   // floating point 16 bits depth
+		z24s8_float, // floating point 24 bits depth + 8 bits stencil
 	};
 
 	surface_depth_format to_surface_depth_format(u8 in);
+
+	constexpr
+	bool operator == (surface_depth_format2 rhs, surface_depth_format lhs)
+	{
+		switch (lhs)
+		{
+		case surface_depth_format::z16:
+			return (rhs == surface_depth_format2::z16_uint || rhs == surface_depth_format2::z16_float);
+		case surface_depth_format::z24s8:
+			return (rhs == surface_depth_format2::z24s8_uint || rhs == surface_depth_format2::z24s8_float);
+		default:
+			ASSUME(0);
+		}
+	}
+
+	// GCC requires every operator declared explicitly
+	constexpr
+	bool operator == (surface_depth_format rhs, surface_depth_format2 lhs)
+	{
+		return lhs == rhs;
+	}
+
+	constexpr
+	bool operator != (surface_depth_format2 rhs, surface_depth_format lhs)
+	{
+		return !(rhs == lhs);
+	}
+
+	constexpr
+	bool operator != (surface_depth_format rhs, surface_depth_format2 lhs)
+	{
+		return !(lhs == rhs);
+	}
 
 	enum class surface_raster_type : u8
 	{

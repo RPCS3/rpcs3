@@ -141,7 +141,7 @@
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>gdi32.lib;..\hidapi.lib;..\libusb-1.0.lib;winmm.lib;OpenAL.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;HLSL.lib;Advapi32.lib;user32.lib;zlib.lib;..\libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;$(QTDIR)\lib\qtmain.lib;shell32.lib;$(QTDIR)\lib\Qt5Widgets.lib;$(QTDIR)\lib\Qt5Gui.lib;$(QTDIR)\lib\Qt5Core.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5WinExtras.lib;Qt5Concurrent.lib;7zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>gdi32.lib;..\hidapi.lib;..\libusb-1.0.lib;winmm.lib;OpenAL.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;MachineIndependent.lib;GenericCodeGen.lib;Advapi32.lib;user32.lib;zlib.lib;..\libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;$(QTDIR)\lib\qtmain.lib;shell32.lib;$(QTDIR)\lib\Qt5Widgets.lib;$(QTDIR)\lib\Qt5Gui.lib;$(QTDIR)\lib\Qt5Core.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5WinExtras.lib;Qt5Concurrent.lib;7zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\3rdparty\OpenAL\libs\Win64;..\Vulkan\glslang-build\hlsl\Release;..\Vulkan\glslang-build\SPIRV\Release;..\Vulkan\glslang-build\OGLCompilersDLL\Release;..\Vulkan\glslang-build\glslang\OSDependent\Windows\Release;..\Vulkan\glslang-build\glslang\Release;..\Vulkan\spirv-tools-build\source\opt\Release;..\lib\$(CONFIGURATION)-$(PLATFORM);..\3rdparty\XAudio2Redist\libs;..\3rdparty\discord-rpc\lib;$(QTDIR)\lib;%(AdditionalLibraryDirectories);$(VULKAN_SDK)\Lib</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -175,7 +175,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\3rdparty\wolfssl;..\3rdparty\curl\include;..\3rdparty\libusb\libusb;$(VULKAN_SDK)\Include;..\3rdparty\XAudio2Redist\include;$(QTDIR)\include;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtCore;.\release;$(QTDIR)\mkspecs\win32-msvc2015;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;$(QTDIR)\include\QtWinExtras;$(QTDIR)\include\QtConcurrent;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\flatbuffers\include;..\3rdparty\wolfssl;..\3rdparty\curl\include;..\3rdparty\libusb\libusb;$(VULKAN_SDK)\Include;..\3rdparty\XAudio2Redist\include;$(QTDIR)\include;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtCore;.\release;$(QTDIR)\mkspecs\win32-msvc2015;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;$(QTDIR)\include\QtWinExtras;$(QTDIR)\include\QtConcurrent;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>-Zc:strictStrings -Zc:throwingNew -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>release\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
@@ -192,7 +192,7 @@
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>gdi32.lib;..\hidapi.lib;..\libusb-1.0.lib;winmm.lib;OpenAL.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;HLSL.lib;Advapi32.lib;user32.lib;zlib.lib;..\libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;$(QTDIR)\lib\qtmain.lib;shell32.lib;$(QTDIR)\lib\Qt5Widgets.lib;$(QTDIR)\lib\Qt5Gui.lib;$(QTDIR)\lib\Qt5Core.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5WinExtras.lib;Qt5Concurrent.lib;7zlib.lib;SPIRV-Tools.lib;SPIRV-Tools-opt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>gdi32.lib;..\hidapi.lib;..\libusb-1.0.lib;winmm.lib;OpenAL.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;MachineIndependent.lib;GenericCodeGen.lib;Advapi32.lib;user32.lib;zlib.lib;..\libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;$(QTDIR)\lib\qtmain.lib;shell32.lib;$(QTDIR)\lib\Qt5Widgets.lib;$(QTDIR)\lib\Qt5Gui.lib;$(QTDIR)\lib\Qt5Core.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5WinExtras.lib;Qt5Concurrent.lib;7zlib.lib;SPIRV-Tools.lib;SPIRV-Tools-opt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\3rdparty\OpenAL\libs\Win64;..\Vulkan\glslang-build\hlsl\Release;..\Vulkan\glslang-build\SPIRV\Release;..\Vulkan\glslang-build\OGLCompilersDLL\Release;..\Vulkan\glslang-build\glslang\OSDependent\Windows\Release;..\Vulkan\glslang-build\glslang\Release;..\Vulkan\spirv-tools-build\source\Release;..\Vulkan\spirv-tools-build\source\opt\Release;..\lib\$(CONFIGURATION)-$(PLATFORM);..\3rdparty\XAudio2Redist\libs;..\3rdparty\discord-rpc\lib;$(QTDIR)\lib;%(AdditionalLibraryDirectories);$(VULKAN_SDK)\Lib</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -226,7 +226,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\3rdparty\wolfssl;..\3rdparty\curl\include;..\3rdparty\libusb\libusb;$(VULKAN_SDK)\Include;..\3rdparty\XAudio2Redist\include;$(QTDIR)\include;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtCore;.\debug;$(QTDIR)\mkspecs\win32-msvc2015;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtWinExtras;$(QTDIR)\include\QtConcurrent;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\flatbuffers\include;..\3rdparty\wolfssl;..\3rdparty\curl\include;..\3rdparty\libusb\libusb;$(VULKAN_SDK)\Include;..\3rdparty\XAudio2Redist\include;$(QTDIR)\include;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtCore;.\debug;$(QTDIR)\mkspecs\win32-msvc2015;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtWinExtras;$(QTDIR)\include\QtConcurrent;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>-Zc:strictStrings -Zc:throwingNew -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>debug\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
@@ -278,7 +278,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\3rdparty\wolfssl;..\3rdparty\curl\include;..\3rdparty\libusb\libusb;$(VULKAN_SDK)\Include;..\3rdparty\XAudio2Redist\include;$(QTDIR)\include;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtCore;.\debug;$(QTDIR)\mkspecs\win32-msvc2015;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtWinExtras;$(QTDIR)\include\QtConcurrent;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\flatbuffers\include;..\3rdparty\wolfssl;..\3rdparty\curl\include;..\3rdparty\libusb\libusb;$(VULKAN_SDK)\Include;..\3rdparty\XAudio2Redist\include;$(QTDIR)\include;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtCore;.\debug;$(QTDIR)\mkspecs\win32-msvc2015;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtWinExtras;$(QTDIR)\include\QtConcurrent;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>-Zc:strictStrings -Zc:throwingNew -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>debug\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
@@ -537,6 +537,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_render_creator.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_rpcn_settings_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -827,6 +832,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_render_creator.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_rpcn_settings_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
@@ -1141,6 +1151,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_rpcn_settings_dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_rsx_debugger.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -1431,6 +1446,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_rpcn_settings_dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_rsx_debugger.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -1542,6 +1562,7 @@
     <ClCompile Include="rpcs3qt\pkg_install_dialog.cpp" />
     <ClCompile Include="rpcs3qt\persistent_settings.cpp" />
     <ClCompile Include="rpcs3qt\render_creator.cpp" />
+    <ClCompile Include="rpcs3qt\rpcn_settings_dialog.cpp" />
     <ClCompile Include="rpcs3qt\screenshot_manager_dialog.cpp" />
     <ClCompile Include="rpcs3qt\screenshot_preview.cpp" />
     <ClCompile Include="rpcs3qt\settings.cpp" />
@@ -2348,6 +2369,24 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">Moc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\rpcn_settings_dialog.h">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
     </CustomBuild>
     <ClInclude Include="rpcs3qt\stylesheets.h" />
     <CustomBuild Include="rpcs3qt\skylander_dialog.h">

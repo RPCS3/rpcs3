@@ -1011,7 +1011,6 @@ namespace rsx
 
 		layout.color_format = rsx::method_registers.surface_color();
 		layout.depth_format = rsx::method_registers.surface_depth_fmt();
-		layout.depth_float = rsx::method_registers.depth_buffer_float_enabled();
 		layout.target = rsx::method_registers.surface_color_target();
 
 		const auto mrt_buffers = rsx::utility::get_rtt_indexes(layout.target);
@@ -1020,9 +1019,9 @@ namespace rsx
 		const u32 aa_factor_v = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
 		const u8 sample_count = get_format_sample_count(aa_mode);
 
-		const auto depth_texel_size = (layout.depth_format == rsx::surface_depth_format::z16 ? 2 : 4) * aa_factor_u;
+		const auto depth_texel_size = get_format_block_size_in_bytes(layout.depth_format) * aa_factor_u;
 		const auto color_texel_size = get_format_block_size_in_bytes(layout.color_format) * aa_factor_u;
-		const bool stencil_test_enabled = layout.depth_format == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
+		const bool stencil_test_enabled = is_depth_stencil_format(layout.depth_format) && rsx::method_registers.stencil_test_enabled();
 		const bool depth_test_enabled = rsx::method_registers.depth_test_enabled();
 
 		// Check write masks
@@ -1301,7 +1300,6 @@ namespace rsx
 		{
 			if (layout.zeta_address == m_depth_surface_info.address &&
 				layout.depth_format == m_depth_surface_info.depth_format &&
-				layout.depth_float == m_depth_surface_info.depth_buffer_float &&
 				sample_count == m_depth_surface_info.samples)
 			{
 				// Same target is reused
@@ -1324,7 +1322,7 @@ namespace rsx
 		{
 			if (!m_framebuffer_layout.zeta_write_enabled &&
 				rsx::method_registers.stencil_test_enabled() &&
-				m_framebuffer_layout.depth_format == rsx::surface_depth_format::z24s8)
+				is_depth_stencil_format(m_framebuffer_layout.depth_format))
 			{
 				// Check if stencil data is modified
 				auto mask = rsx::method_registers.stencil_mask();
@@ -1378,7 +1376,7 @@ namespace rsx
 			}
 
 			// Check if stencil read is enabled
-			if (m_framebuffer_layout.depth_format == rsx::surface_depth_format::z24s8 &&
+			if (is_depth_stencil_format(m_framebuffer_layout.depth_format) &&
 				rsx::method_registers.stencil_test_enabled())
 			{
 				return true;
@@ -1832,7 +1830,7 @@ namespace rsx
 				if (raw_format & CELL_GCM_TEXTURE_UN)
 					result.unnormalized_coords |= (1 << i);
 
-				if (sampler_descriptors[i]->format_class != format_type::color)
+				if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)
 				{
 					switch (format)
 					{
@@ -1846,7 +1844,7 @@ namespace rsx
 					{
 						// Reading depth data as XRGB8 is supported with in-shader conversion
 						// TODO: Optionally add support for 16-bit formats (not necessary since type casts are easy with that)
-						u32 control_bits = sampler_descriptors[i]->format_class == format_type::depth_float? (1u << 16) : 0u;
+						u32 control_bits = sampler_descriptors[i]->format_class == RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32? (1u << 16) : 0u;
 						control_bits |= tex.remap() & 0xFFFF;
 						result.redirected_textures |= (1 << i);
 						result.texture_scale[i][2] = std::bit_cast<f32>(control_bits);

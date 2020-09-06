@@ -43,19 +43,31 @@ namespace rsx
 		transfer = 2
 	};
 
-	enum format_type : u8
+	// Defines how the underlying PS3-visible memory backed by a texture is accessed
+	namespace format_class_
 	{
-		color = 0,
-		depth_uint = 1,
-		depth_float = 2
-	};
+		// TODO: Remove when enum import is supported by GCC
+		enum format_class : u8
+		{
+			RSX_FORMAT_CLASS_UNDEFINED = 0,
+			RSX_FORMAT_CLASS_COLOR = 1,
+			RSX_FORMAT_CLASS_DEPTH16_UNORM = 2,
+			RSX_FORMAT_CLASS_DEPTH16_FLOAT = 4,
+			RSX_FORMAT_CLASS_DEPTH24_UNORM_X8_PACK32 = 8,
+			RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32 = 16,
+
+			RSX_FORMAT_CLASS_DEPTH_FLOAT_MASK = (RSX_FORMAT_CLASS_DEPTH16_FLOAT | RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32)
+		};
+	}
+
+	using namespace format_class_;
 
 	//Sampled image descriptor
 	struct sampled_image_descriptor_base
 	{
 		texture_upload_context upload_context = texture_upload_context::shader_read;
 		rsx::texture_dimension_extended image_type = texture_dimension_extended::texture_dimension_2d;
-		rsx::format_type format_class = rsx::format_type::color;
+		rsx::format_class format_class = RSX_FORMAT_CLASS_UNDEFINED;
 		bool is_cyclic_reference = false;
 		f32 scale_x = 1.f;
 		f32 scale_y = 1.f;
@@ -82,85 +94,91 @@ namespace rsx
 
 		void analyse();
 	};
+
+	struct subresource_layout
+	{
+		gsl::span<const std::byte> data;
+		u16 width_in_texel;
+		u16 height_in_texel;
+		u16 width_in_block;
+		u16 height_in_block;
+		u16 depth;
+		u16 level;
+		u16 layer;
+		u8  border;
+		u8  reserved;
+		u32 pitch_in_block;
+	};
+
+	struct texture_memory_info
+	{
+		int element_size;
+		int block_length;
+		bool require_swap;
+		bool require_deswizzle;
+	};
+
+	struct texture_uploader_capabilities
+	{
+		bool supports_byteswap;
+		bool supports_vtc_decoding;
+		bool supports_hw_deswizzle;
+		size_t alignment;
+	};
+
+	/**
+	* Get size to store texture in a linear fashion.
+	* Storage is assumed to use a rowPitchAlignment boundary for every row of texture.
+	*/
+	size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignment, size_t mipmap_alignment);
+	size_t get_placed_texture_storage_size(const rsx::fragment_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment = 0x200);
+	size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment = 0x200);
+
+	/**
+	 * get all rsx::subresource_layout for texture.
+	 * The subresources are ordered per layer then per mipmap level (as in rsx memory).
+	 */
+	std::vector<subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture);
+	std::vector<subresource_layout> get_subresources_layout(const rsx::vertex_texture &texture);
+
+	texture_memory_info upload_texture_subresource(gsl::span<std::byte> dst_buffer, const subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps);
+
+	u8 get_format_block_size_in_bytes(int format);
+	u8 get_format_block_size_in_texel(int format);
+	u8 get_format_block_size_in_bytes(rsx::surface_color_format format);
+	u8 get_format_block_size_in_bytes(rsx::surface_depth_format2 format);
+
+	u8 get_format_sample_count(rsx::surface_antialiasing antialias);
+	u32 get_max_depth_value(rsx::surface_depth_format2 format);
+	bool is_depth_stencil_format(rsx::surface_depth_format2 format);
+
+	/**
+	 * Returns number of texel rows encoded in one pitch-length line of bytes
+	 */
+	u8 get_format_texel_rows_per_line(u32 format);
+
+	/**
+	* Get number of bytes occupied by texture in RSX mem
+	*/
+	size_t get_texture_size(const rsx::fragment_texture &texture);
+	size_t get_texture_size(const rsx::vertex_texture &texture);
+
+	/**
+	* Get packed pitch
+	*/
+	u32 get_format_packed_pitch(u32 format, u16 width, bool border = false, bool swizzled = false);
+
+	/**
+	* Reverse encoding
+	*/
+	u32 get_remap_encoding(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap);
+
+	/**
+	 * Get gcm texel layout. Returns <format, byteswapped>
+	 */
+	std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format);
+	std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_depth_format2 format);
+
+	format_class classify_format(rsx::surface_depth_format2 format);
+	format_class classify_format(u32 gcm_format);
 }
-
-struct rsx_subresource_layout
-{
-	gsl::span<const std::byte> data;
-	u16 width_in_texel;
-	u16 height_in_texel;
-	u16 width_in_block;
-	u16 height_in_block;
-	u16 depth;
-	u16 level;
-	u16 layer;
-	u8  border;
-	u8  reserved;
-	u32 pitch_in_block;
-};
-
-struct texture_memory_info
-{
-	int element_size;
-	int block_length;
-	bool require_swap;
-	bool require_deswizzle;
-};
-
-struct texture_uploader_capabilities
-{
-	bool supports_byteswap;
-	bool supports_vtc_decoding;
-	bool supports_hw_deswizzle;
-	size_t alignment;
-};
-
-/**
-* Get size to store texture in a linear fashion.
-* Storage is assumed to use a rowPitchAlignment boundary for every row of texture.
-*/
-size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignment, size_t mipmap_alignment);
-size_t get_placed_texture_storage_size(const rsx::fragment_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment = 0x200);
-size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment = 0x200);
-
-/**
- * get all rsx_subresource_layout for texture.
- * The subresources are ordered per layer then per mipmap level (as in rsx memory).
- */
-std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture);
-std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::vertex_texture &texture);
-
-texture_memory_info upload_texture_subresource(gsl::span<std::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps);
-
-u8 get_format_block_size_in_bytes(int format);
-u8 get_format_block_size_in_texel(int format);
-u8 get_format_block_size_in_bytes(rsx::surface_color_format format);
-
-u8 get_format_sample_count(rsx::surface_antialiasing antialias);
-
-/**
- * Returns number of texel rows encoded in one pitch-length line of bytes
- */
-u8 get_format_texel_rows_per_line(u32 format);
-
-/**
-* Get number of bytes occupied by texture in RSX mem
-*/
-size_t get_texture_size(const rsx::fragment_texture &texture);
-size_t get_texture_size(const rsx::vertex_texture &texture);
-
-/**
-* Get packed pitch
-*/
-u32 get_format_packed_pitch(u32 format, u16 width, bool border = false, bool swizzled = false);
-
-/**
-* Reverse encoding
-*/
-u32 get_remap_encoding(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap);
-
-/**
- * Get gcm texel layout. Returns <format, byteswapped>
- */
-std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format);
-std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_depth_format format);

@@ -38,7 +38,7 @@ namespace rsx
 	namespace internals
 	{
 		color_format surface_color_format_to_gl(rsx::surface_color_format color_format);
-		depth_format surface_depth_format_to_gl(rsx::surface_depth_format depth_format);
+		depth_format surface_depth_format_to_gl(rsx::surface_depth_format2 depth_format);
 		u8 get_pixel_size(rsx::surface_depth_format format);
 	}
 }
@@ -166,7 +166,7 @@ struct gl_render_target_traits
 	static
 	std::unique_ptr<gl::render_target> create_new_surface(
 			u32 address,
-		rsx::surface_depth_format surface_depth_format,
+			rsx::surface_depth_format2 surface_depth_format,
 			size_t width, size_t height, size_t pitch,
 			rsx::surface_antialiasing antialias
 		)
@@ -178,12 +178,7 @@ struct gl_render_target_traits
 		result->set_aa_mode(antialias);
 		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u16>(pitch));
 		result->set_format(surface_depth_format);
-
-		u16 native_pitch = static_cast<u16>(width) * 2 * result->samples_x;
-		if (surface_depth_format == rsx::surface_depth_format::z24s8)
-			native_pitch *= 2;
-
-		result->set_native_pitch(native_pitch);
+		result->set_native_pitch(static_cast<u16>(width) * get_format_block_size_in_bytes(surface_depth_format) * result->samples_x);
 
 		std::array<GLenum, 4> native_layout = { GL_RED, GL_RED, GL_RED, GL_RED };
 		result->set_native_component_layout(native_layout);
@@ -333,7 +328,7 @@ struct gl_render_target_traits
 	static
 	bool surface_matches_properties(
 		const std::unique_ptr<gl::render_target> &surface,
-		rsx::surface_depth_format format,
+		rsx::surface_depth_format2 format,
 		size_t width, size_t height,
 		rsx::surface_antialiasing antialias,
 		bool check_refs = false)

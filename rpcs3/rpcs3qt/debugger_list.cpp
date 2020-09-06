@@ -153,10 +153,10 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 	switch (event->key())
 	{
-	case Qt::Key_PageUp:   ShowAddress(m_pc - (m_item_count * 2) * 4); return;
-	case Qt::Key_PageDown: ShowAddress(m_pc); return;
-	case Qt::Key_Up:       ShowAddress(m_pc - (m_item_count + 1) * 4); return;
-	case Qt::Key_Down:     ShowAddress(m_pc - (m_item_count - 1) * 4); return;
+	case Qt::Key_PageUp:   ShowAddress(m_pc - (m_item_count * 4), true); return;
+	case Qt::Key_PageDown: ShowAddress(m_pc + (m_item_count * 4), true); return;
+	case Qt::Key_Up:       ShowAddress(m_pc - 4, true); return;
+	case Qt::Key_Down:     ShowAddress(m_pc + 4, true); return;
 	default: break;
 	}
 }

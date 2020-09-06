@@ -74,6 +74,9 @@ else()
 	add_library(3rdparty_7z INTERFACE)
 endif()
 
+add_library(3rdparty_flatbuffers INTERFACE)
+target_include_directories(3rdparty_flatbuffers INTERFACE flatbuffers/include)
+
 # libPNG
 # Select the version of libpng to use, default is builtin
 if (NOT USE_SYSTEM_LIBPNG)
@@ -413,16 +416,17 @@ endif()
 # LLVM
 include(llvm.cmake)
 
+# WOLFSSL
+add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
+
 # CURL
 if(USE_SYSTEM_CURL)
 	message("-- RPCS3: using shared libcurl")
 	find_package(CURL REQUIRED)
-	add_library(wolfssl-3-static INTERFACE)
 	add_library(libcurl INTERFACE)
 	target_link_libraries(libcurl INTERFACE CURL::libcurl)
 else()
 	message("-- RPCS3: building libcurl + wolfssl submodules")
-	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 	add_subdirectory(curl EXCLUDE_FROM_ALL)
 endif()
 
@@ -430,6 +434,7 @@ endif()
 add_library(3rdparty::libusb ALIAS usb-1.0-static)
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::7z ALIAS 3rdparty_7z)
+add_library(3rdparty::flatbuffers ALIAS 3rdparty_flatbuffers)
 add_library(3rdparty::pugixml ALIAS pugixml)
 add_library(3rdparty::yaml-cpp ALIAS yaml-cpp)
 add_library(3rdparty::xxhash ALIAS xxhash)

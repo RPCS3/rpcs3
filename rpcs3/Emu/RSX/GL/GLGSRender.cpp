@@ -7,19 +7,6 @@
 
 #define DUMP_VERTEX_DATA 0
 
-namespace
-{
-	u32 get_max_depth_value(rsx::surface_depth_format format)
-	{
-		switch (format)
-		{
-		case rsx::surface_depth_format::z16: return 0xFFFF;
-		case rsx::surface_depth_format::z24s8: return 0xFFFFFF;
-		}
-		fmt::throw_exception("Unknown depth format" HERE);
-	}
-}
-
 u64 GLGSRender::get_cycles()
 {
 	return thread_ctrl::get_cycles(static_cast<named_thread<GLGSRender>&>(*this));
@@ -510,21 +497,21 @@ void GLGSRender::clear_surface(u32 arg)
 		rsx::method_registers.scissor_height() < rsx::method_registers.surface_clip_height();
 
 	bool update_color = false, update_z = false;
-	rsx::surface_depth_format surface_depth_format = rsx::method_registers.surface_depth_fmt();
+	rsx::surface_depth_format2 surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & 0x3)
 	{
 		if (arg & 0x1)
 		{
 			u32 max_depth_value = get_max_depth_value(surface_depth_format);
-			u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
+			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
 
 			gl_state.depth_mask(GL_TRUE);
 			gl_state.clear_depth(f32(clear_depth) / max_depth_value);
 			mask |= GLenum(gl::buffers::depth);
 		}
 
-		if (surface_depth_format == rsx::surface_depth_format::z24s8)
+		if (is_depth_stencil_format(surface_depth_format))
 		{
 			if (arg & 0x2)
 			{

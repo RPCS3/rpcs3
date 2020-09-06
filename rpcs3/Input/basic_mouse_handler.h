@@ -24,4 +24,5 @@ public:
 	bool eventFilter(QObject* obj, QEvent* ev) override;
 private:
 	QWindow* m_target = nullptr;
+	bool get_mouse_lock_state();
 };

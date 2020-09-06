@@ -1329,15 +1329,7 @@ void spu_recompiler::get_events()
 	{
 		auto sub = [](spu_thread* _spu)
 		{
-			if (const u64 res = (_spu->ch_dec_value - (get_timebased_time() - _spu->ch_dec_start_timestamp)) >> 32)
-			{
-				_spu->ch_dec_start_timestamp -= res << 32;
-
-				if (!(_spu->ch_event_stat & SPU_EVENT_TM))
-				{
-					_spu->ch_event_stat |= SPU_EVENT_TM;
-				}
-			}
+			_spu->get_events(SPU_EVENT_TM);
 		};
 
 		c->bind(tcheck);

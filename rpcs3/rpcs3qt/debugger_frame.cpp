@@ -232,8 +232,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		return;
 	}
 
-	const u32 start_pc = m_debugger_list->m_pc - m_debugger_list->m_item_count * 4;
-	const u32 pc = start_pc + i * 4;
+	const u32 pc = m_debugger_list->m_pc + i * 4;
 
 	if (QApplication::keyboardModifiers() & Qt::ControlModifier)
 	{
@@ -479,7 +478,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	expression_input->setFixedWidth(190);
 
 	// Ok/Cancel
-	QPushButton* button_ok = new QPushButton(tr("Ok"));
+	QPushButton* button_ok = new QPushButton(tr("OK"));
 	QPushButton* button_cancel = new QPushButton(tr("Cancel"));
 
 	hbox_address_preview_panel->addWidget(address_preview_label);
