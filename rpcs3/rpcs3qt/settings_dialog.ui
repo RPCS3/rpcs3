@@ -2350,119 +2350,151 @@
                </widget>
               </item>
               <item>
-               <layout class="QHBoxLayout" name="layout_hideMouseOnIdle" stretch="0,0">
-                <item>
-                 <widget class="QCheckBox" name="gs_hideMouseOnIdle">
-                  <property name="text">
-                   <string>Hide mouse cursor if idle</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QSpinBox" name="gs_hideMouseOnIdleTime">
-                  <property name="accelerated">
-                   <bool>true</bool>
-                  </property>
-                  <property name="correctionMode">
-                   <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
-                  </property>
-                  <property name="keyboardTracking">
-                   <bool>false</bool>
-                  </property>
-                  <property name="suffix">
-                   <string>ms</string>
-                  </property>
-                  <property name="minimum">
-                   <number>200</number>
-                  </property>
-                  <property name="maximum">
-                   <number>99999</number>
-                  </property>
-                  <property name="stepType">
-                   <enum>QAbstractSpinBox::DefaultStepType</enum>
-                  </property>
-                  <property name="value">
-                   <number>2000</number>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="gs_resizeOnBoot">
-                <property name="text">
-                 <string>Resize game window on boot</string>
-                </property>
+               <widget class="QWidget" name="gs_hideMouseOnIdle_widget" native="true">
+                <layout class="QHBoxLayout" name="gs_hideMouseOnIdle_layout" stretch="0,0">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QCheckBox" name="gs_hideMouseOnIdle">
+                   <property name="text">
+                    <string>Hide mouse cursor if idle</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="gs_hideMouseOnIdleTime">
+                   <property name="accelerated">
+                    <bool>true</bool>
+                   </property>
+                   <property name="correctionMode">
+                    <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+                   </property>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                   <property name="suffix">
+                    <string>ms</string>
+                   </property>
+                   <property name="minimum">
+                    <number>200</number>
+                   </property>
+                   <property name="maximum">
+                    <number>99999</number>
+                   </property>
+                   <property name="stepType">
+                    <enum>QAbstractSpinBox::DefaultStepType</enum>
+                   </property>
+                   <property name="value">
+                    <number>2000</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
               <item>
-               <layout class="QHBoxLayout" name="gs_resolution_layout">
-                <item>
-                 <widget class="QGroupBox" name="gb_gs_width">
-                  <property name="title">
-                   <string>Width</string>
-                  </property>
-                  <layout class="QVBoxLayout" name="gb_gs_width_layout">
+               <widget class="QWidget" name="gs_resizeOnBoot_widget" native="true">
+                <layout class="QVBoxLayout" name="gs_resizeOnBoot_layout">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QCheckBox" name="gs_resizeOnBoot">
+                   <property name="text">
+                    <string>Resize game window on boot</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <layout class="QHBoxLayout" name="gs_resolution_layout">
                    <item>
-                    <widget class="QSpinBox" name="gs_width">
-                     <property name="accelerated">
-                      <bool>true</bool>
+                    <widget class="QGroupBox" name="gb_gs_width">
+                     <property name="title">
+                      <string>Width</string>
                      </property>
-                     <property name="correctionMode">
-                      <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+                     <layout class="QVBoxLayout" name="gb_gs_width_layout">
+                      <item>
+                       <widget class="QSpinBox" name="gs_width">
+                        <property name="accelerated">
+                         <bool>true</bool>
+                        </property>
+                        <property name="correctionMode">
+                         <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+                        </property>
+                        <property name="keyboardTracking">
+                         <bool>false</bool>
+                        </property>
+                        <property name="minimum">
+                         <number>0</number>
+                        </property>
+                        <property name="maximum">
+                         <number>9999</number>
+                        </property>
+                        <property name="value">
+                         <number>0</number>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QGroupBox" name="gb_gs_height">
+                     <property name="title">
+                      <string>Height</string>
                      </property>
-                     <property name="keyboardTracking">
-                      <bool>false</bool>
-                     </property>
-                     <property name="minimum">
-                      <number>0</number>
-                     </property>
-                     <property name="maximum">
-                      <number>9999</number>
-                     </property>
-                     <property name="value">
-                      <number>0</number>
-                     </property>
+                     <layout class="QVBoxLayout" name="gb_gs_height_layout">
+                      <item>
+                       <widget class="QSpinBox" name="gs_height">
+                        <property name="frame">
+                         <bool>true</bool>
+                        </property>
+                        <property name="accelerated">
+                         <bool>true</bool>
+                        </property>
+                        <property name="correctionMode">
+                         <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+                        </property>
+                        <property name="keyboardTracking">
+                         <bool>false</bool>
+                        </property>
+                        <property name="minimum">
+                         <number>0</number>
+                        </property>
+                        <property name="maximum">
+                         <number>9999</number>
+                        </property>
+                        <property name="value">
+                         <number>0</number>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
                     </widget>
                    </item>
                   </layout>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QGroupBox" name="gb_gs_height">
-                  <property name="title">
-                   <string>Height</string>
-                  </property>
-                  <layout class="QVBoxLayout" name="gb_gs_height_layout">
-                   <item>
-                    <widget class="QSpinBox" name="gs_height">
-                     <property name="frame">
-                      <bool>true</bool>
-                     </property>
-                     <property name="accelerated">
-                      <bool>true</bool>
-                     </property>
-                     <property name="correctionMode">
-                      <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
-                     </property>
-                     <property name="keyboardTracking">
-                      <bool>false</bool>
-                     </property>
-                     <property name="minimum">
-                      <number>0</number>
-                     </property>
-                     <property name="maximum">
-                      <number>9999</number>
-                     </property>
-                     <property name="value">
-                      <number>0</number>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
-               </layout>
+                 </item>
+                </layout>
+               </widget>
               </item>
              </layout>
             </widget>
