@@ -1611,6 +1611,11 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		}
 		}
 
+		if (g_cfg.core.spu_accurate_dma)
+		{
+			std::atomic_thread_fence(std::memory_order_seq_cst);
+		}
+
 		return;
 	}
 
