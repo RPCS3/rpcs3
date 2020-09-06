@@ -84,10 +84,10 @@ static const bool s_tsx_haswell = utils::has_rtm() && !utils::has_mpx();
 static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 {
 #if defined(_MSC_VER) || defined(__AVX__)
-	const __m256 x0 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_load_si256(lhs + 0)), _mm256_castsi256_ps(_mm256_load_si256(rhs + 0)));
-	const __m256 x1 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_load_si256(lhs + 1)), _mm256_castsi256_ps(_mm256_load_si256(rhs + 1)));
-	const __m256 x2 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_load_si256(lhs + 2)), _mm256_castsi256_ps(_mm256_load_si256(rhs + 2)));
-	const __m256 x3 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_load_si256(lhs + 3)), _mm256_castsi256_ps(_mm256_load_si256(rhs + 3)));
+	const __m256 x0 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 0)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 0)));
+	const __m256 x1 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 1)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 1)));
+	const __m256 x2 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 2)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 2)));
+	const __m256 x3 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 3)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 3)));
 	const __m256 c0 = _mm256_or_ps(x0, x1);
 	const __m256 c1 = _mm256_or_ps(x2, x3);
 	const __m256 c2 = _mm256_or_ps(c0, c1);
@@ -95,10 +95,10 @@ static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 #else
 	bool result = 0;
 	__asm__(
-		"vmovaps 0*32(%[lhs]), %%ymm0;" // load
-		"vmovaps 1*32(%[lhs]), %%ymm1;"
-		"vmovaps 2*32(%[lhs]), %%ymm2;"
-		"vmovaps 3*32(%[lhs]), %%ymm3;"
+		"vmovups 0*32(%[lhs]), %%ymm0;" // load
+		"vmovups 1*32(%[lhs]), %%ymm1;"
+		"vmovups 2*32(%[lhs]), %%ymm2;"
+		"vmovups 3*32(%[lhs]), %%ymm3;"
 		"vxorps 0*32(%[rhs]), %%ymm0, %%ymm0;" // compare
 		"vxorps 1*32(%[rhs]), %%ymm1, %%ymm1;"
 		"vxorps 2*32(%[rhs]), %%ymm2, %%ymm2;"
