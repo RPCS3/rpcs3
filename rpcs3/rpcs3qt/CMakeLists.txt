@@ -44,6 +44,7 @@
 	qt_utils.cpp
 	register_editor_dialog.cpp
 	render_creator.cpp
+	rpcn_settings_dialog.cpp
 	rsx_debugger.cpp
 	save_data_dialog.cpp
 	save_data_info_dialog.cpp

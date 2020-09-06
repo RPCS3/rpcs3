@@ -94,7 +94,7 @@ QWidget#cg_disasm, QWidget#trophy_manager {
 
 /* Main Window and Dialogs */
 QDialog, QMainWindow#main_window {
-	border-image: url("GuiConfigs/kot-bg.png");
+	border-image: url("GuiConfigs/kot-bg.jpg");
 }
 
 
@@ -246,7 +246,7 @@ QPushButton::disabled {
 
 
 /* QSpinBox (Settings -> Emulator -> width/height) */
-/* QDoubleSpinBox (Pads -> Mouse Acceleration -> x/y) */ 
+/* QDoubleSpinBox (Pads -> Mouse Acceleration -> x/y) */
 QSpinBox, QDoubleSpinBox {
 	background: transparent;
 	/*background-color: #bfa163;*/
@@ -287,7 +287,7 @@ QDockWidget {
 	font-weight: 500;
 }
 [floating="true"] {
-	border-image: url("GuiConfigs/kot-bg.png");
+	border-image: url("GuiConfigs/kot-bg.jpg");
 }
 QDockWidget::title {
 	background: #bfa163;

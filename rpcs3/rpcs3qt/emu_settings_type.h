@@ -22,6 +22,7 @@ enum class emu_settings_type
 	EnableTSX,
 	AccurateGETLLAR,
 	AccuratePUTLLUC,
+	AccurateSpuDMA,
 	AccurateLLVMdfma,
 	AccurateVectorNaN,
 	AccurateRSXAccess,
@@ -127,7 +128,6 @@ enum class emu_settings_type
 	DNSAddress,
 	IpSwapList,
 	PSNStatus,
-	PSNNPID,
 
 	// System
 	Language,
@@ -163,6 +163,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::EnableTSX,                { "Core", "Enable TSX"}},
 	{ emu_settings_type::AccurateGETLLAR,          { "Core", "Accurate GETLLAR"}},
 	{ emu_settings_type::AccuratePUTLLUC,          { "Core", "Accurate PUTLLUC"}},
+	{ emu_settings_type::AccurateSpuDMA,           { "Core", "Accurate SPU DMA"}},
 	{ emu_settings_type::AccurateLLVMdfma,         { "Core", "LLVM Accurate DFMA"}},
 	{ emu_settings_type::AccurateVectorNaN,        { "Core", "PPU LLVM Accurate Vector NaN values"}},
 	{ emu_settings_type::AccurateRSXAccess,        { "Core", "Accurate RSX reservation access"}},
@@ -268,7 +269,6 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DNSAddress,     { "Net", "DNS address"}},
 	{ emu_settings_type::IpSwapList,     { "Net", "IP swap list"}},
 	{ emu_settings_type::PSNStatus,      { "Net", "PSN status"}},
-	{ emu_settings_type::PSNNPID,        { "Net", "NPID"}},
 
 	// System
 	{ emu_settings_type::Language,              { "System", "Language"}},

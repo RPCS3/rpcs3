@@ -1,8 +1,12 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
 
 #include "sceNpCommerce2.h"
 #include "sceNp.h"
+#include "cellSysutil.h"
+
+#include "Emu/NP/np_handler.h"
 
 LOG_CHANNEL(sceNpCommerce2);
 
@@ -91,19 +95,40 @@ error_code sceNpCommerce2Term()
 
 error_code sceNpCommerce2CreateCtx(u32 version, vm::cptr<SceNpId> npId, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg, vm::ptr<u32> ctx_id)
 {
-	sceNpCommerce2.todo("sceNpCommerce2CreateCtx(version=%d, npId=*0x%x, handler=*0x%x, arg=*0x%x, ctx_id=*0x%x)", version, npId, handler, arg, ctx_id);
+	sceNpCommerce2.warning("sceNpCommerce2CreateCtx(version=%d, npId=*0x%x, handler=*0x%x, arg=*0x%x, ctx_id=*0x%x)", version, npId, handler, arg, ctx_id);
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	*ctx_id = nph->create_commerce2_context(version, npId, handler, arg);
+
 	return CELL_OK;
 }
 
-error_code sceNpCommerce2DestroyCtx(u32 ctx_id)
+s32 sceNpCommerce2DestroyCtx(u32 ctx_id)
 {
-	sceNpCommerce2.todo("sceNpCommerce2DestroyCtx(ctx_id=%d)", ctx_id);
+	sceNpCommerce2.warning("sceNpCommerce2DestroyCtx(ctx_id=%d)", ctx_id);
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	nph->destroy_commerce2_context(ctx_id);
+	
 	return CELL_OK;
 }
 
-error_code sceNpCommerce2EmptyStoreCheckStart(u32 ctx_id, s32 store_check_type, vm::cptr<char> target_id)
+s32 sceNpCommerce2EmptyStoreCheckStart(u32 ctx_id, s32 store_check_type, vm::cptr<char> target_id)
 {
-	sceNpCommerce2.todo("sceNpCommerce2EmptyStoreCheckStart(ctx_id=%d, store_check_type=%d, target_id=%s)", ctx_id, store_check_type, target_id);
+	sceNpCommerce2.warning("sceNpCommerce2EmptyStoreCheckStart(ctx_id=%d, store_check_type=%d, target_id=*0x%x(%s))", ctx_id, store_check_type, target_id, target_id);
+
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	const auto ctx = nph->get_commerce2_context(ctx_id);
+
+	if (ctx->context_callback)
+	{
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+			ctx->context_callback(cb_ppu, ctx_id, 0, SCE_NP_COMMERCE2_EVENT_EMPTY_STORE_CHECK_DONE, 0, ctx->context_callback_param);
+			return 0;
+		});
+	}
+
 	return CELL_OK;
 }
 
@@ -113,15 +138,28 @@ error_code sceNpCommerce2EmptyStoreCheckAbort(u32 ctx_id)
 	return CELL_OK;
 }
 
-error_code sceNpCommerce2EmptyStoreCheckFinish(u32 ctx_id, vm::ptr<int> is_empty)
+s32 sceNpCommerce2EmptyStoreCheckFinish(u32 ctx_id, vm::ptr<s32> is_empty)
 {
-	sceNpCommerce2.todo("sceNpCommerce2EmptyStoreCheckFinish(ctx_id=%d, is_empty=*0x%x)", ctx_id, is_empty);
+	sceNpCommerce2.warning("sceNpCommerce2EmptyStoreCheckFinish(ctx_id=%d, is_empty=*0x%x)", ctx_id, is_empty);
+	*is_empty = SCE_NP_COMMERCE2_STORE_IS_NOT_EMPTY;
 	return CELL_OK;
 }
 
-error_code sceNpCommerce2CreateSessionStart(u32 ctx_id)
+s32 sceNpCommerce2CreateSessionStart(u32 ctx_id)
 {
-	sceNpCommerce2.todo("sceNpCommerce2CreateSessionStart(ctx_id=%d)", ctx_id);
+	sceNpCommerce2.warning("sceNpCommerce2CreateSessionStart(ctx_id=%d)", ctx_id);
+	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	const auto ctx = nph->get_commerce2_context(ctx_id);
+
+	if (ctx->context_callback)
+	{
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+			ctx->context_callback(cb_ppu, ctx_id, 0, SCE_NP_COMMERCE2_EVENT_CREATE_SESSION_DONE, 0, ctx->context_callback_param);
+			return 0;
+		});
+	}
+
 	return CELL_OK;
 }
 
@@ -131,9 +169,10 @@ error_code sceNpCommerce2CreateSessionAbort(u32 ctx_id)
 	return CELL_OK;
 }
 
-error_code sceNpCommerce2CreateSessionFinish(u32 ctx_id, vm::ptr<SceNpCommerce2SessionInfo> sessionInfo)
+s32 sceNpCommerce2CreateSessionFinish(u32 ctx_id, vm::ptr<SceNpCommerce2SessionInfo> sessionInfo)
 {
-	sceNpCommerce2.todo("sceNpCommerce2CreateSessionFinish(ctx_id=%d, sessionInfo=*0x%x)", ctx_id, sessionInfo);
+	sceNpCommerce2.warning("sceNpCommerce2CreateSessionFinish(ctx_id=%d, sessionInfo=*0x%x)", ctx_id, sessionInfo);
+	memset(sessionInfo.get_ptr(), 0, sizeof(sessionInfo));
 	return CELL_OK;
 }
 

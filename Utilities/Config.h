@@ -384,7 +384,7 @@ namespace cfg
 	using uint64 = uint<0, UINT64_MAX>;
 
 	// Simple string entry with mutex
-	class string final : public _base
+	class string : public _base
 	{
 		const std::string m_name;
 

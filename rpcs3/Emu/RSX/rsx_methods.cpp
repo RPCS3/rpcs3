@@ -151,14 +151,14 @@ namespace rsx
 			// TODO: Check if possible to write on reservations
 			if (!g_use_rtm && rsx->label_addr >> 28 != addr >> 28) [[likely]]
 			{
-				res = &vm::reservation_lock(addr, 4);
+				res = &vm::reservation_lock(addr, 4).first;
 			}
 
 			vm::_ref<RsxSemaphore>(addr).val = arg;
 
 			if (res)
 			{
-				res->release(*res & -128);
+				res->release(*res + 127);
 			}
 
 			vm::reservation_notifier(addr, 4).notify_all();

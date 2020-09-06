@@ -335,6 +335,7 @@ namespace vk
 		case VK_FORMAT_R32G32B32A32_SFLOAT:
 			return 16;
 		case VK_FORMAT_D16_UNORM:
+		case VK_FORMAT_D32_SFLOAT:
 			return 2;
 		case VK_FORMAT_D32_SFLOAT_S8_UINT: //TODO: Translate to D24S8
 		case VK_FORMAT_D24_UNORM_S8_UINT:
@@ -396,6 +397,7 @@ namespace vk
 			return{ 4, 1 };
 		//Depth
 		case VK_FORMAT_D16_UNORM:
+		case VK_FORMAT_D32_SFLOAT:
 			return{ 2, 1 };
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		case VK_FORMAT_D24_UNORM_S8_UINT:

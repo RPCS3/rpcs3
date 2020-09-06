@@ -4433,8 +4433,17 @@ bool ppu_interpreter::ICBI(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::DCBZ(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+	const u32 addr0 = vm::cast(addr, HERE) & ~127;
 
-	std::memset(vm::base(vm::cast(addr, HERE) & ~127), 0, 128);
+	if (g_cfg.core.spu_accurate_dma)
+	{
+		auto [res, rtime] = vm::reservation_lock(addr0, 128, vm::dma_lockb);
+		std::memset(vm::base(addr0), 0, 128);
+		res.release(rtime + 128);
+		return true;
+	}
+
+	std::memset(vm::base(addr0), 0, 128);
 	return true;
 }
 

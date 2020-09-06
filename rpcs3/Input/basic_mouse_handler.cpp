@@ -1,7 +1,8 @@
-#include "basic_mouse_handler.h"
-
-#include <QApplication>
+﻿#include <QApplication>
 #include <QCursor>
+
+#include "basic_mouse_handler.h"
+#include "rpcs3qt/gs_frame.h"
 
 LOG_CHANNEL(input_log, "Input");
 
@@ -89,11 +90,18 @@ void basic_mouse_handler::MouseScroll(QWheelEvent* event)
 	MouseHandlerBase::Scroll(event->angleDelta().y());
 }
 
+bool basic_mouse_handler::get_mouse_lock_state()
+{
+	if (auto game_frame = dynamic_cast<gs_frame*>(m_target))
+		return game_frame->get_mouse_lock_state();
+	return false;
+}
+
 void basic_mouse_handler::MouseMove(QMouseEvent* event)
 {
 	if (is_time_for_update())
 	{
-		if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen && m_target->isActive())
+		if (m_target && m_target->isActive() && get_mouse_lock_state())
 		{
 			// get the screen dimensions
 			const QSize screen = m_target->size();

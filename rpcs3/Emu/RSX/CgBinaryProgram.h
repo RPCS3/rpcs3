@@ -213,15 +213,7 @@ public:
 
 	std::string GetCgParamName(u32 offset) const
 	{
-		std::stringstream str_stream;
-		std::string name;
-		while (m_buffer[offset] != 0)
-		{
-			str_stream << m_buffer[offset];
-			offset++;
-		}
-		name += str_stream.str();
-		return name;
+		return std::string(reinterpret_cast<char*>(&m_buffer[offset]));
 	}
 
 	std::string GetCgParamRes(u32 /*offset*/) const
@@ -233,15 +225,7 @@ public:
 
 	std::string GetCgParamSemantic(u32 offset) const
 	{
-		std::stringstream str_stream;
-		std::string semantic;
-		while (m_buffer[offset] != 0)
-		{
-			str_stream << m_buffer[offset];
-			offset++;
-		}
-		semantic += str_stream.str();
-		return semantic;
+		return std::string(reinterpret_cast<char*>(&m_buffer[offset]));
 	}
 
 	std::string GetCgParamValue(u32 offset, u32 end_offset) const

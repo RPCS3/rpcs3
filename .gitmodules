@@ -71,4 +71,7 @@
 	path = 3rdparty/wolfssl
 	url = https://github.com/RipleyTom/wolfssl.git
 	ignore = dirty
-
+[submodule "3rdparty/flatbuffers"]
+	path = 3rdparty/flatbuffers
+	url = https://github.com/google/flatbuffers.git
+	ignore = dirty

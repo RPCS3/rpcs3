@@ -2,6 +2,7 @@
 #include "pad_thread.h"
 #include "Emu/Io/pad_config.h"
 #include "Input/product_info.h"
+#include "rpcs3qt/gs_frame.h"
 
 #include <QApplication>
 
@@ -313,6 +314,13 @@ void keyboard_pad_handler::mouseReleaseEvent(QMouseEvent* event)
 	event->ignore();
 }
 
+bool keyboard_pad_handler::get_mouse_lock_state()
+{
+	if (auto game_frame = dynamic_cast<gs_frame*>(m_target))
+		return game_frame->get_mouse_lock_state();
+	return false;
+}
+
 void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 {
 	static int movement_x = 0;
@@ -320,7 +328,7 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 	static int last_pos_x = 0;
 	static int last_pos_y = 0;
 
-	if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen && m_target->isActive())
+	if (m_target && m_target->isActive() && get_mouse_lock_state())
 	{
 		// get the screen dimensions
 		const QSize screen = m_target->size();

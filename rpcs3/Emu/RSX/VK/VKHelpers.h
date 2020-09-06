@@ -2851,7 +2851,10 @@ public:
 
 			CHECK_RESULT(createDebugReportCallback(m_instance, &dbgCreateInfo, NULL, &m_debugger));
 		}
-
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast"
+#endif
 		bool createInstance(const char *app_name, bool fast = false)
 		{
 			//Initialize a vulkan instance
@@ -2934,7 +2937,9 @@ public:
 
 			return true;
 		}
-
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 		void makeCurrentInstance()
 		{
 			// Register some global states
