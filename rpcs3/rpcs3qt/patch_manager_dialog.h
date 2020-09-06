@@ -12,6 +12,7 @@ namespace Ui
 	class patch_manager_dialog;
 }
 
+class downloader;
 class gui_settings;
 
 class patch_manager_dialog : public QDialog
@@ -55,6 +56,8 @@ private:
 	void save_config();
 	void update_patch_info(const gui_patch_info& info);
 	bool is_valid_file(const QMimeData& md, QStringList* drop_paths = nullptr);
+	void download_update();
+	bool handle_json(const QByteArray& data);
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
@@ -63,6 +66,8 @@ private:
 
 	patch_engine::patch_map m_map;
 	bool m_legacy_patches_enabled = false;
+
+	downloader* m_downloader = nullptr;
 
 	Ui::patch_manager_dialog *ui;
 

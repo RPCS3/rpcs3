@@ -12,7 +12,7 @@ class downloader : public QObject
 	Q_OBJECT
 
 public:
-	downloader(const std::string& thread_name, QWidget* parent = nullptr);
+	downloader(QWidget* parent = nullptr);
 
 	void start(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title = "", bool keep_progress_dialog_open = false, int expected_size = -1);
 	size_t update_buffer(char* data, size_t size);
@@ -32,7 +32,6 @@ Q_SIGNALS:
 
 private:
 	QWidget* m_parent = nullptr;
-	std::string m_thread_name;
 
 	curl_handle* m_curl = nullptr;
 	QByteArray m_curl_buf;
