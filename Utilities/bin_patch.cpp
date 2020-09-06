@@ -98,19 +98,24 @@ static void append_log_message(std::stringstream* log_messages, const std::strin
 		*log_messages << message << std::endl;
 };
 
-bool patch_engine::load(patch_map& patches_map, const std::string& path, bool importing, std::stringstream* log_messages)
+bool patch_engine::load(patch_map& patches_map, const std::string& path, std::string content, bool importing, std::stringstream* log_messages)
 {
-	// Load patch file
-	fs::file file{ path };
-
-	if (!file)
+	if (content.empty())
 	{
-		// Do nothing
-		return true;
+		// Load patch file
+		fs::file file{path};
+
+		if (!file)
+		{
+			// Do nothing
+			return true;
+		}
+
+		content = file.to_string();
 	}
 
 	// Interpret yaml nodes
-	auto [root, error] = yaml_load(file.to_string());
+	auto [root, error] = yaml_load(content);
 
 	if (!error.empty() || !root)
 	{
@@ -1059,7 +1064,7 @@ bool patch_engine::import_patches(const patch_engine::patch_map& patches, const 
 {
 	patch_engine::patch_map existing_patches;
 
-	if (load(existing_patches, path, true, log_messages))
+	if (load(existing_patches, path, "", true, log_messages))
 	{
 		append_patches(existing_patches, patches, count, total, log_messages);
 		return count == 0 || save_patches(existing_patches, path, log_messages);

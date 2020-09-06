@@ -99,7 +99,7 @@ public:
 	static std::string get_imported_patch_path();
 
 	// Load from file and append to specified patches map
-	static bool load(patch_map& patches, const std::string& path, bool importing = false, std::stringstream* log_messages = nullptr);
+	static bool load(patch_map& patches, const std::string& path, std::string content = "", bool importing = false, std::stringstream* log_messages = nullptr);
 
 	// Read and add a patch node to the patch info
 	static bool read_patch_node(patch_info& info, YAML::Node node, const YAML::Node& root, std::stringstream* log_messages = nullptr);

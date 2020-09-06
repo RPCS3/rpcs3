@@ -52,7 +52,7 @@ void update_manager::check_for_updates(bool automatic, bool check_only, QWidget*
 #endif
 
 	m_parent     = parent;
-	m_downloader = new downloader("RPCS3 Updater", parent);
+	m_downloader = new downloader(parent);
 
 	connect(m_downloader, &downloader::signal_download_error, this, [this, automatic](const QString& /*error*/)
 	{

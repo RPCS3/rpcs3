@@ -15,10 +15,9 @@ size_t curl_write_cb_compat(char* ptr, size_t /*size*/, size_t nmemb, void* user
 	return download->update_buffer(ptr, nmemb);
 }
 
-downloader::downloader(const std::string& thread_name, QWidget* parent)
+downloader::downloader(QWidget* parent)
 	: QObject(parent)
 	, m_parent(parent)
-	, m_thread_name(thread_name)
 {
 	m_curl = new curl_handle(this);
 }
