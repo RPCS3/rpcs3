@@ -40,6 +40,8 @@ enum class thread_state : u32
 	finished  // Final state, always set at the end of thread execution
 };
 
+class need_wakeup {};
+
 template <class Context>
 class named_thread;
 
@@ -413,6 +415,11 @@ public:
 			if (s == thread_state::aborting)
 			{
 				thread::notify_abort();
+			}
+
+			if constexpr (std::is_base_of_v<need_wakeup, Context>)
+			{
+				this->wake_up();
 			}
 		}
 

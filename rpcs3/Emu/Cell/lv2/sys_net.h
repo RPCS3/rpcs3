@@ -380,7 +380,7 @@ struct lv2_socket final
 			CWR = (1 << 7),
 		};
 
-		static constexpr be_t<u32> U2S_sig = static_cast<u8>('U') << 24 | static_cast<u8>('2') << 16 | static_cast<u8>('S') << 8 | static_cast<u8>('0');
+		static constexpr be_t<u32> U2S_sig = (static_cast<u32>('U') << 24 | static_cast<u32>('2') << 16 | static_cast<u32>('S') << 8 | static_cast<u32>('0'));
 		static constexpr std::size_t MAX_RECEIVED_BUFFER = (1024*1024*10);
 
 		// P2P stream socket specific
@@ -412,10 +412,9 @@ struct lv2_socket final
 		u16 op_port = 0, op_vport = 0;
 		u32 op_addr = 0;
 
-		std::vector<u8> received_data; // resized if needed, on recv will give all continuous data available and move data to beginning of vector
 		u64 data_beg_seq = 0; // Seq of first byte of received_data
 		u32 data_available = 0; // Amount of continuous data available(calculated on ACK send)
-		std::map<u64, u64> data_mapping; // holds seq/size of data received
+		std::map<u64, std::vector<u8>> received_data; // holds seq/data of data received
 
 		u32 cur_seq = 0; // SEQ of next packet to be sent
 	} p2ps;
