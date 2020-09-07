@@ -234,15 +234,10 @@ namespace vk
 		{
 			auto& upload_heap = *vk::get_upload_heap();
 
-			u32 gcm_format;
-			if (is_depth_surface())
-			{
-				gcm_format = get_compatible_gcm_format(format_info.gcm_depth_format).first;
-			}
-			else
-			{
-				gcm_format = get_compatible_gcm_format(format_info.gcm_color_format).first;
-			}
+			const bool is_swizzled = (raster_type == rsx::surface_raster_type::swizzle);
+			const u32 gcm_format = is_depth_surface() ?
+				get_compatible_gcm_format(format_info.gcm_depth_format).first :
+				get_compatible_gcm_format(format_info.gcm_color_format).first;
 
 			rsx::subresource_layout subres{};
 			subres.width_in_block = subres.width_in_texel = surface_width * samples_x;
@@ -254,7 +249,7 @@ namespace vk
 			if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 			{
 				push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-				vk::copy_mipmaped_image_using_buffer(cmd, this, { subres }, gcm_format, false, 1, aspect(), upload_heap, rsx_pitch);
+				vk::copy_mipmaped_image_using_buffer(cmd, this, { subres }, gcm_format, is_swizzled, 1, aspect(), upload_heap, rsx_pitch);
 				pop_layout(cmd);
 			}
 			else
@@ -279,7 +274,7 @@ namespace vk
 				}
 
 				// Load Cell data into temp buffer
-				vk::copy_mipmaped_image_using_buffer(cmd, content, { subres }, gcm_format, false, 1, aspect(), upload_heap, rsx_pitch);
+				vk::copy_mipmaped_image_using_buffer(cmd, content, { subres }, gcm_format, is_swizzled, 1, aspect(), upload_heap, rsx_pitch);
 
 				// Write into final image
 				if (content != final_dst)
