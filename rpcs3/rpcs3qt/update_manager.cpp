@@ -5,7 +5,6 @@
 #include "rpcs3_version.h"
 #include "downloader.h"
 #include "Utilities/StrUtil.h"
-#include "Crypto/sha256.h"
 #include "Emu/System.h"
 
 #include <QApplication>
@@ -249,22 +248,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 		return false;
 	}
 
-	u8 res_hash[32];
-	mbedtls_sha256_context ctx;
-	mbedtls_sha256_init(&ctx);
-	mbedtls_sha256_starts_ret(&ctx, 0);
-	mbedtls_sha256_update_ret(&ctx, reinterpret_cast<const unsigned char*>(data.data()), data.size());
-	mbedtls_sha256_finish_ret(&ctx, res_hash);
-
-	std::string res_hash_string("0000000000000000000000000000000000000000000000000000000000000000");
-	for (size_t index = 0; index < 32; index++)
-	{
-		constexpr auto pal               = "0123456789ABCDEF";
-		res_hash_string[index * 2]       = pal[res_hash[index] >> 4];
-		res_hash_string[(index * 2) + 1] = pal[res_hash[index] & 15];
-	}
-
-	if (m_expected_hash != res_hash_string)
+	if (const std::string res_hash_string = downloader::get_hash(data.data(), data.size(), false);
+		m_expected_hash != res_hash_string)
 	{
 		update_log.error("Hash mismatch: %s expected: %s", res_hash_string, m_expected_hash);
 		return false;
