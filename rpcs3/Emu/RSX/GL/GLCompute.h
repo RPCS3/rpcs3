@@ -110,7 +110,7 @@ namespace gl
 		u32 m_data_length = 0;
 		u32 kernel_size = 1;
 
-		std::string uniforms, variables, work_kernel, loop_advance, suffix;
+		std::string uniforms, variables, work_kernel, loop_advance, suffix, method_declarations;
 
 		cs_shuffle_base()
 		{
@@ -146,10 +146,8 @@ namespace gl
 				"#define bswap_u16_u32(bits) (bits & 0xFFFF) << 16 | (bits & 0xFFFF0000) >> 16\n"
 				"\n"
 				"// Depth format conversions\n"
-                "#define d24x8_to_x8d24(bits) (bits << 8) | (bits >> 24)\n"
-                "#define d24x8_to_x8d24_swapped(bits) bswap_u32(d24x8_to_x8d24(bits))\n"
-                "#define x8d24_to_d24x8(bits) (bits >> 8) | (bits << 24)\n"
-                "#define x8d24_to_d24x8_swapped(bits) x8d24_to_d24x8(bswap_u32(bits))\n"
+				"#define d24f_to_f32(bits) (bits << 7)\n"
+				"#define f32_to_d24f(bits) (bits >> 7)\n"
 				"\n"
 				"uint linear_invocation_id()\n"
 				"{\n"
@@ -157,6 +155,7 @@ namespace gl
 				"	return (gl_GlobalInvocationID.y * size_in_x) + gl_GlobalInvocationID.x;\n"
 				"}\n"
 				"\n"
+				"%md"
 				"void main()\n"
 				"{\n"
 				"	uint invocation_id = linear_invocation_id();\n"
@@ -173,6 +172,7 @@ namespace gl
 				{ "%vars", variables },
 				{ "%f", function_name },
 				{ "%ub", uniforms },
+				{ "%md", method_declarations }
 			};
 
 			m_src = fmt::replace_all(m_src, syntax_replace);
@@ -265,35 +265,229 @@ namespace gl
 		}
 	};
 
-    template<bool _SwapBytes = false>
-	struct cs_shuffle_d24x8_to_x8d24 : cs_shuffle_base
+	struct cs_shuffle_d32fx8_to_x8d24f : cs_shuffle_base
 	{
-		cs_shuffle_d24x8_to_x8d24()
+		u32 m_ssbo_length = 0;
+
+		cs_shuffle_d32fx8_to_x8d24f()
 		{
-            if constexpr (_SwapBytes)
-            {
-			    cs_shuffle_base::build("d24x8_to_x8d24_swapped");
-            }
-            else
-            {
-			    cs_shuffle_base::build("d24x8_to_x8d24");
-            }
+			uniforms = "uniform uint in_ptr, out_ptr;\n";
+
+			variables =
+				"	uint in_offset = in_ptr >> 2;\n"
+				"	uint out_offset = out_ptr >> 2;\n"
+				"	uint depth, stencil;\n";
+
+			work_kernel =
+				"		depth = data[index * 2 + in_offset];\n"
+				"		stencil = data[index * 2 + (in_offset + 1)] & 0xFFu;\n"
+				"		value = f32_to_d24f(depth) << 8;\n"
+				"		value |= stencil;\n"
+				"		data[index + out_ptr] = bswap_u32(value);\n";
+
+			cs_shuffle_base::build("");
+		}
+
+		void bind_resources() override
+		{
+			m_data->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_ssbo_length);
+		}
+
+		void run(const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels)
+		{
+			u32 data_offset;
+			if (src_offset > dst_offset)
+			{
+				data_offset = dst_offset;
+				m_ssbo_length = (src_offset + num_texels * 8) - data_offset;
+			}
+			else
+			{
+				data_offset = src_offset;
+				m_ssbo_length = (dst_offset + num_texels * 4) - data_offset;
+			}
+
+			m_program.uniforms["in_ptr"] = src_offset - data_offset;
+			m_program.uniforms["out_ptr"] = dst_offset - data_offset;
+			cs_shuffle_base::run(data, num_texels * 4, data_offset);
 		}
 	};
 
-    template<bool _SwapBytes = false>
-	struct cs_shuffle_x8d24_to_d24x8 : cs_shuffle_base
+	struct cs_shuffle_x8d24f_to_d32fx8 : cs_shuffle_base
 	{
-		cs_shuffle_x8d24_to_d24x8()
+		u32 m_ssbo_length = 0;
+
+		cs_shuffle_x8d24f_to_d32fx8()
 		{
-            if constexpr (_SwapBytes)
-            {
-			    cs_shuffle_base::build("x8d24_to_d24x8_swapped");
-            }
-            else
-            {
-			    cs_shuffle_base::build("x8d24_to_d24x8");
-            }
+			uniforms = "uniform uint texel_count, in_ptr, out_ptr;\n";
+
+			variables =
+				"	uint in_offset = in_ptr >> 2;\n"
+				"	uint out_offset = out_ptr >> 2;\n"
+				"	uint depth, stencil;\n";
+
+			work_kernel =
+				"		value = data[index + in_offset];\n"
+				"		value = bswap_u32(value);\n"
+				"		stencil = (value & 0xFFu);\n"
+				"		depth = (value >> 8);\n"
+				"		data[index * 2 + out_offset] = d24f_to_f32(depth);\n"
+				"		data[index * 2 + (out_offset + 1)] = stencil;\n";
+
+			cs_shuffle_base::build("");
+		}
+
+		void bind_resources() override
+		{
+			m_data->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_ssbo_length);
+		}
+
+		void run(const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels)
+		{
+			u32 data_offset;
+			if (src_offset > dst_offset)
+			{
+				data_offset = dst_offset;
+				m_ssbo_length = (src_offset + num_texels * 4) - data_offset;
+			}
+			else
+			{
+				data_offset = src_offset;
+				m_ssbo_length = (dst_offset + num_texels * 8) - data_offset;
+			}
+
+			m_program.uniforms["in_ptr"] = src_offset - data_offset;
+			m_program.uniforms["out_ptr"] = dst_offset - data_offset;
+			cs_shuffle_base::run(data, num_texels * 4, data_offset);
+		}
+	};
+
+
+	template<typename From, typename To, bool _SwapSrc = false, bool _SwapDst = false>
+	struct cs_fconvert_task : cs_shuffle_base
+	{
+		u32 m_ssbo_length = 0;
+
+		void declare_f16_expansion()
+		{
+			method_declarations +=
+				"uvec2 unpack_e4m12_pack16(const in uint value)\n"
+				"{\n"
+				"	uvec2 result = uvec2(bitfieldExtract(value, 0, 16), bitfieldExtract(value, 16, 16));\n"
+				"	result <<= 11;\n"
+				"	result += (120 << 23);\n"
+				"	return result;\n"
+				"}\n\n";
+		}
+
+		void declare_f16_contraction()
+		{
+			method_declarations +=
+				"uint pack_e4m12_pack16(const in uvec2 value)\n"
+				"{\n"
+				"	uvec2 result = (value - (120 << 23)) >> 11;\n"
+				"	return (result.x & 0xFFFF) | (result.y << 16);\n"
+				"}\n\n";
+		}
+
+		cs_fconvert_task()
+		{
+			uniforms =
+				"uniform uint data_length_in_bytes, in_ptr, out_ptr;\n";
+
+			variables =
+				"	uint block_length = data_length_in_bytes >> 2;\n"
+				"	uint in_offset = in_ptr >> 2;\n"
+				"	uint out_offset = out_ptr >> 2;\n"
+				"	uvec4 tmp;\n";
+
+			work_kernel =
+				"		if (index >= block_length)\n"
+				"			return;\n";
+
+			if constexpr (sizeof(From) == 4)
+			{
+				static_assert(sizeof(To) == 2);
+				declare_f16_contraction();
+
+				work_kernel +=
+					"		const uint src_offset = (index * 2) + in_offset;\n"
+					"		const uint dst_offset = index + out_offset;\n"
+					"		tmp.x = data[src_offset];\n"
+					"		tmp.y = data[src_offset + 1];\n";
+
+				if constexpr (_SwapSrc)
+				{
+					work_kernel +=
+						"		tmp = bswap_u32(tmp);\n";
+				}
+
+				// Convert
+				work_kernel += "		tmp.z = pack_e4m12_pack16(tmp.xy);\n";
+
+				if constexpr (_SwapDst)
+				{
+					work_kernel += "		tmp.z = bswap_u16(tmp.z);\n";
+				}
+
+				work_kernel += "		data[dst_offset] = tmp.z;\n";
+			}
+			else
+			{
+				static_assert(sizeof(To) == 4);
+				declare_f16_expansion();
+
+				work_kernel +=
+					"		const uint src_offset = index + in_offset;\n"
+					"		const uint dst_offset = (index * 2) + out_offset;\n"
+					"		tmp.x = data[src_offset];\n";
+
+				if constexpr (_SwapSrc)
+				{
+					work_kernel +=
+						"		tmp.x = bswap_u16(tmp.x);\n";
+				}
+
+				// Convert
+				work_kernel += "		tmp.yz = unpack_e4m12_pack16(tmp.x);\n";
+
+				if constexpr (_SwapDst)
+				{
+					work_kernel += "		tmp.yz = bswap_u32(tmp.yz);\n";
+				}
+
+				work_kernel +=
+					"		data[dst_offset] = tmp.y;\n"
+					"		data[dst_offset + 1] = tmp.z;\n";
+			}
+
+			cs_shuffle_base::build("");
+		}
+
+		void bind_resources() override
+		{
+			m_data->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_ssbo_length);
+		}
+
+		void run(const gl::buffer* data, u32 src_offset, u32 src_length, u32 dst_offset)
+		{
+			u32 data_offset;
+			if (src_offset > dst_offset)
+			{
+				m_ssbo_length = (src_offset + src_length) - dst_offset;
+				data_offset = dst_offset;
+			}
+			else
+			{
+				m_ssbo_length = (dst_offset - src_offset) + (src_length / sizeof(From)) * sizeof(To);
+				data_offset = src_offset;
+			}
+
+			m_program.uniforms["data_length_in_bytes"] = src_length;
+			m_program.uniforms["in_ptr"] = src_offset - data_offset;
+			m_program.uniforms["out_ptr"] = dst_offset - data_offset;
+
+			cs_shuffle_base::run(data, src_length, data_offset);
 		}
 	};
 

@@ -108,12 +108,12 @@ namespace vk
 			// 3. Do conversion with byteswap [D32->D16F]
 			if (!swap_bytes) [[likely]]
 			{
-				auto job = vk::get_compute_task<vk::cs_fconvert_task<u16, u32>>();
+				auto job = vk::get_compute_task<vk::cs_fconvert_task<f32, f16>>();
 				job->run(cmd, dst, z32_offset, packed32_length, data_offset);
 			}
 			else
 			{
-				auto job = vk::get_compute_task<vk::cs_fconvert_task<u16, u32, false, true>>();
+				auto job = vk::get_compute_task<vk::cs_fconvert_task<f32, f16, false, true>>();
 				job->run(cmd, dst, z32_offset, packed32_length, data_offset);
 			}
 
@@ -237,7 +237,7 @@ namespace vk
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
 			// 2. Do conversion with byteswap [D16F->D32F]
-			auto job = vk::get_compute_task<vk::cs_fconvert_task<u32, u16>>();
+			auto job = vk::get_compute_task<vk::cs_fconvert_task<f16, f32>>();
 			job->run(cmd, src, data_offset, packed16_length, z32_offset);
 
 			// 4. Post-compute barrier

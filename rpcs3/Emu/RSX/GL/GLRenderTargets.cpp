@@ -73,7 +73,7 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 	case rsx::surface_depth_format2::z16_uint:
 		return{ ::gl::texture::type::ushort, ::gl::texture::format::depth, ::gl::texture::internal_format::depth16 };
 	case rsx::surface_depth_format2::z16_float:
-		return{ ::gl::texture::type::f16, ::gl::texture::format::depth, ::gl::texture::internal_format::depth32f };
+		return{ ::gl::texture::type::f32, ::gl::texture::format::depth, ::gl::texture::internal_format::depth32f };
 
 	case rsx::surface_depth_format2::z24s8_uint:
 		if (g_cfg.video.force_high_precision_z_buffer && ::gl::get_driver_caps().ARB_depth_buffer_float_supported)
@@ -81,8 +81,7 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 		else
 			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth24_stencil8 };
 	case rsx::surface_depth_format2::z24s8_float:
-		// TODO, requires separate aspect transfer for reading
-		return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
+		return{ ::gl::texture::type::float32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
 
 	default:
 		fmt::throw_exception("Unsupported depth format 0x%x" HERE, static_cast<u32>(depth_format));
@@ -468,14 +467,12 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	// TODO: MSAA support
 	if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 	{
-		gl::upload_texture(id(), gcm_format, surface_width, surface_height, 1, 1,
-			false, rsx::texture_dimension_extended::texture_dimension_2d, { subres });
+		gl::upload_texture(this, gcm_format, false, { subres });
 	}
 	else
 	{
 		auto tmp = std::make_unique<gl::texture>(GL_TEXTURE_2D, subres.width_in_block, subres.height_in_block, 1, 1, static_cast<GLenum>(get_internal_format()));
-		gl::upload_texture(tmp->id(), gcm_format, surface_width, surface_height, 1, 1,
-			false, rsx::texture_dimension_extended::texture_dimension_2d, { subres });
+		gl::upload_texture(tmp.get(), gcm_format, false, { subres });
 
 		gl::g_hw_blitter->scale_image(cmd, tmp.get(), this,
 			{ 0, 0, subres.width_in_block, subres.height_in_block },

@@ -21,6 +21,13 @@ namespace gl
 		bool   swap_bytes;
 	};
 
+	struct image_memory_requirements
+	{
+		u64 image_size_in_texels;
+		u64 image_size_in_bytes;
+		u64 memory_required;
+	};
+
 	GLenum get_target(rsx::texture_dimension_extended type);
 	GLenum get_sized_internal_format(u32 texture_format);
 	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format);
@@ -35,16 +42,13 @@ namespace gl
 	void copy_typeless(texture* dst, const texture* src, const coord3u& dst_region, const coord3u& src_region);
 	void copy_typeless(texture* dst, const texture* src);
 
-	/**
-	 * is_swizzled - determines whether input bytes are in morton order
-	 * subresources_layout - descriptor of the mipmap levels in memory
-	 * decoded_remap - two vectors, first one contains index to read, e.g if v[0] = 1 then component 0[A] in the texture should read as component 1[R]
-	 * - layout of vector is in A-R-G-B
-	 * - second vector contains overrides to force the value to either 0 or 1 instead of reading from texture
-	 * static_state - set up the texture without consideration for sampler state (useful for vertex textures which have no real sampler state on RSX)
-	 */
-	void upload_texture(GLuint id, u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
-		const std::vector<rsx::subresource_layout>& subresources_layout);
+	void* copy_image_to_buffer(const pixel_buffer_layout& pack_info, const gl::texture* src, gl::buffer* dst,
+		const int src_level, const coord3u& src_region, image_memory_requirements* mem_info);
+
+	void copy_buffer_to_image(const pixel_buffer_layout& unpack_info, gl::buffer* src, gl::texture* dst,
+		const void* src_offset, const int dst_level, const coord3u& dst_region, image_memory_requirements* mem_info);
+
+	void upload_texture(texture* dst, u32 gcm_format, bool is_swizzled, const std::vector<rsx::subresource_layout>& subresources_layout);
 
 	class sampler_state
 	{
