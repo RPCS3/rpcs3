@@ -320,7 +320,7 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 		case "COM"_u32:
 		case "LPT"_u32:
 		{
-			if (name.size() >= 4 && name[3] >= '1' && name[4] <= '9')
+			if (name.size() >= 4 && name[3] >= '1' && name[3] <= '9')
 			{
 				if (name.size() == 4 || name[4] == '.')
 				{
