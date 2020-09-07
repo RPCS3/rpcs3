@@ -50,7 +50,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	QLabel* inputCount = new QLabel(QString("%1/%2").arg(text.length()).arg(charlimit));
 
 	// Ok Button
-	QPushButton* button_ok = new QPushButton("Ok", m_dialog);
+	QPushButton* button_ok = new QPushButton(tr("OK"), m_dialog);
 
 	// Button Layout
 	QHBoxLayout* buttonsLayout = new QHBoxLayout;

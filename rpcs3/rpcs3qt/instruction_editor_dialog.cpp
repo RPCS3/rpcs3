@@ -33,7 +33,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	QVBoxLayout* vbox_right_panel(new QVBoxLayout());
 	QHBoxLayout* hbox_b_panel(new QHBoxLayout());
 
-	QPushButton* button_ok(new QPushButton(tr("Ok")));
+	QPushButton* button_ok(new QPushButton(tr("OK")));
 	QPushButton* button_cancel(new QPushButton(tr("Cancel")));
 	button_ok->setFixedWidth(80);
 	button_cancel->setFixedWidth(80);
