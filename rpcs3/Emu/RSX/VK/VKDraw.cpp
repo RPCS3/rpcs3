@@ -108,15 +108,27 @@ void VKGSRender::update_draw_state()
 
 	if (m_device->get_depth_bounds_support())
 	{
+		f32 bounds_min, bounds_max;
 		if (rsx::method_registers.depth_bounds_test_enabled())
 		{
-			//Update depth bounds min/max
-			vkCmdSetDepthBounds(*m_current_command_buffer, rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
+			// Update depth bounds min/max
+			bounds_min = rsx::method_registers.depth_bounds_min();
+			bounds_max = rsx::method_registers.depth_bounds_max();
 		}
 		else
 		{
-			vkCmdSetDepthBounds(*m_current_command_buffer, 0.f, 1.f);
+			// Avoid special case where min=max and depth bounds (incorrectly) fails
+			bounds_min = std::min(0.f, rsx::method_registers.clip_min());
+			bounds_max = std::max(1.f, rsx::method_registers.clip_max());
 		}
+
+		if (!m_device->get_unrestricted_depth_range_support())
+		{
+			bounds_min = std::clamp(bounds_min, 0.f, 1.f);
+			bounds_max = std::clamp(bounds_max, 0.f, 1.f);
+		}
+
+		vkCmdSetDepthBounds(*m_current_command_buffer, bounds_min, bounds_max);
 	}
 
 	bind_viewport();
