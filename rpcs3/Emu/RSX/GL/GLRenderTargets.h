@@ -54,8 +54,8 @@ namespace gl
 		void initialize_memory(gl::command_context& cmd, bool read_access);
 
 	public:
-		render_target(GLuint width, GLuint height, GLenum sized_format)
-			: viewable_image(GL_TEXTURE_2D, width, height, 1, 1, sized_format)
+		render_target(GLuint width, GLuint height, GLenum sized_format, rsx::format_class format_class)
+			: viewable_image(GL_TEXTURE_2D, width, height, 1, 1, sized_format, format_class)
 		{}
 
 		// Internal pitch is the actual row length in bytes of the openGL texture
@@ -146,7 +146,8 @@ struct gl_render_target_traits
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
 
 		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale(static_cast<u16>(width), true),
-			rsx::apply_resolution_scale(static_cast<u16>(height), true), static_cast<GLenum>(format.internal_format)));
+			rsx::apply_resolution_scale(static_cast<u16>(height), true), static_cast<GLenum>(format.internal_format),
+			RSX_FORMAT_CLASS_COLOR));
 
 		result->set_aa_mode(antialias);
 		result->set_native_pitch(static_cast<u16>(width) * get_format_block_size_in_bytes(surface_color_format) * result->samples_x);
@@ -173,7 +174,8 @@ struct gl_render_target_traits
 	{
 		auto format = rsx::internals::surface_depth_format_to_gl(surface_depth_format);
 		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale(static_cast<u16>(width), true),
-				rsx::apply_resolution_scale(static_cast<u16>(height), true), static_cast<GLenum>(format.internal_format)));
+			rsx::apply_resolution_scale(static_cast<u16>(height), true), static_cast<GLenum>(format.internal_format),
+			rsx::classify_format(surface_depth_format)));
 
 		result->set_aa_mode(antialias);
 		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u16>(pitch));
@@ -202,7 +204,7 @@ struct gl_render_target_traits
 			const auto new_w = rsx::apply_resolution_scale(prev.width, true, ref->get_surface_width(rsx::surface_metrics::pixels));
 			const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height(rsx::surface_metrics::pixels));
 
-			sink = std::make_unique<gl::render_target>(new_w, new_h, internal_format);
+			sink = std::make_unique<gl::render_target>(new_w, new_h, internal_format, ref->format_class());
 			sink->add_ref();
 
 			sink->memory_usage_flags = rsx::surface_usage_flags::storage;

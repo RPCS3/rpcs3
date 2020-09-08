@@ -300,13 +300,13 @@ namespace gui
 				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to reveal POSIX file \"" + path + "\"" });
 				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to activate" });
 #else
-		// open parent directory
-				QDesktopServices::openUrl(QUrl("file:///" + qstr(fs::get_parent_dir(spath))));
+				// open parent directory
+				QDesktopServices::openUrl(QUrl::fromLocalFile(qstr(fs::get_parent_dir(spath))));
 #endif
 				return;
 			}
 
-			QDesktopServices::openUrl(QUrl("file:///" + path));
+			QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 		}
 
 		void open_dir(const QString& path)

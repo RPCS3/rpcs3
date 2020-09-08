@@ -84,10 +84,10 @@ static const bool s_tsx_haswell = utils::has_rtm() && !utils::has_mpx();
 static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 {
 #if defined(_MSC_VER) || defined(__AVX__)
-	const __m256 x0 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_load_si256(lhs + 0)), _mm256_castsi256_ps(_mm256_load_si256(rhs + 0)));
-	const __m256 x1 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_load_si256(lhs + 1)), _mm256_castsi256_ps(_mm256_load_si256(rhs + 1)));
-	const __m256 x2 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_load_si256(lhs + 2)), _mm256_castsi256_ps(_mm256_load_si256(rhs + 2)));
-	const __m256 x3 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_load_si256(lhs + 3)), _mm256_castsi256_ps(_mm256_load_si256(rhs + 3)));
+	const __m256 x0 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 0)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 0)));
+	const __m256 x1 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 1)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 1)));
+	const __m256 x2 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 2)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 2)));
+	const __m256 x3 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 3)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 3)));
 	const __m256 c0 = _mm256_or_ps(x0, x1);
 	const __m256 c1 = _mm256_or_ps(x2, x3);
 	const __m256 c2 = _mm256_or_ps(c0, c1);
@@ -95,10 +95,10 @@ static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 #else
 	bool result = 0;
 	__asm__(
-		"vmovaps 0*32(%[lhs]), %%ymm0;" // load
-		"vmovaps 1*32(%[lhs]), %%ymm1;"
-		"vmovaps 2*32(%[lhs]), %%ymm2;"
-		"vmovaps 3*32(%[lhs]), %%ymm3;"
+		"vmovups 0*32(%[lhs]), %%ymm0;" // load
+		"vmovups 1*32(%[lhs]), %%ymm1;"
+		"vmovups 2*32(%[lhs]), %%ymm2;"
+		"vmovups 3*32(%[lhs]), %%ymm3;"
 		"vxorps 0*32(%[rhs]), %%ymm0, %%ymm0;" // compare
 		"vxorps 1*32(%[rhs]), %%ymm1, %%ymm1;"
 		"vxorps 2*32(%[rhs]), %%ymm2, %%ymm2;"
@@ -142,10 +142,10 @@ static FORCE_INLINE void mov_rdata_avx(__m256i* dst, const __m256i* src)
 {
 #if defined(_MSC_VER) || defined(__AVX2__)
 	// In AVX-only mode, for some older CPU models, GCC/Clang may emit 128-bit loads/stores instead.
-	_mm256_store_si256(dst + 0, _mm256_loadu_si256(src + 0));
-	_mm256_store_si256(dst + 1, _mm256_loadu_si256(src + 1));
-	_mm256_store_si256(dst + 2, _mm256_loadu_si256(src + 2));
-	_mm256_store_si256(dst + 3, _mm256_loadu_si256(src + 3));
+	_mm256_storeu_si256(dst + 0, _mm256_loadu_si256(src + 0));
+	_mm256_storeu_si256(dst + 1, _mm256_loadu_si256(src + 1));
+	_mm256_storeu_si256(dst + 2, _mm256_loadu_si256(src + 2));
+	_mm256_storeu_si256(dst + 3, _mm256_loadu_si256(src + 3));
 #else
 	__asm__(
 		"vmovdqu 0*32(%[src]), %%ymm0;" // load
@@ -1348,7 +1348,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	if ((!g_use_rtm && !is_get) || g_cfg.core.spu_accurate_dma)  [[unlikely]]
 	{
 		for (u32 size = args.size, size0; is_get;
-			size -= size0, dst += size0, src += size0)
+			size -= size0, dst += size0, src += size0, eal += size0)
 		{
 			size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
 
@@ -1370,8 +1370,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			{
 				const u64 time0 = vm::reservation_acquire(eal, size0);
 
-				// Ignore DMA lock bit on incomplete cache line accesses
-				if (time0 & (127 - (size0 != 128 ? vm::dma_lockb : 0)))
+				if (time0 & 127)
 				{
 					continue;
 				}
@@ -1470,8 +1469,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		{
 			if (g_cfg.core.spu_accurate_dma)
 			{
-				for (u32 size0;;
-					size -= size0, dst += size0, src += size0)
+				for (u32 size0;; size -= size0, dst += size0, src += size0, eal += size0)
 				{
 					size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
 
@@ -1611,6 +1609,11 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			lock->release(0);
 			break;
 		}
+		}
+
+		if (g_cfg.core.spu_accurate_dma)
+		{
+			std::atomic_thread_fence(std::memory_order_seq_cst);
 		}
 
 		return;

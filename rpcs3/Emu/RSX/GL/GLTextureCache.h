@@ -151,9 +151,7 @@ namespace gl
 		void dma_transfer(gl::command_context& /*cmd*/, gl::texture* src, const areai& /*src_area*/, const utils::address_range& /*valid_range*/, u32 pitch)
 		{
 			init_buffer(src);
-
 			glGetError();
-			pbo.bind(buffer::target::pixel_pack);
 
 			if (context == rsx::texture_upload_context::dma)
 			{
@@ -161,25 +159,68 @@ namespace gl
 				const auto format_info = gl::get_format_type(src->get_internal_format());
 				format = static_cast<gl::texture::format>(format_info.format);
 				type = static_cast<gl::texture::type>(format_info.type);
+				pack_unpack_swap_bytes = format_info.swap_bytes;
+			}
 
-				if ((src->aspect() & gl::image_aspect::stencil) == 0)
+			real_pitch = src->pitch();
+			rsx_pitch = pitch;
+
+			bool use_driver_pixel_transform = true;
+			if (get_driver_caps().ARB_compute_shader_supported) [[likely]]
+			{
+				if (src->aspect() & image_aspect::depth)
 				{
-					pack_unpack_swap_bytes = format_info.swap_bytes;
-				}
-				else
-				{
-					// Z24S8 decode is done on the CPU for now
-					pack_unpack_swap_bytes = false;
+					buffer scratch_mem;
+
+					// Invoke compute
+					if (auto error = glGetError(); !error) [[likely]]
+					{
+						pixel_buffer_layout pack_info{};
+						image_memory_requirements mem_info{};
+
+						pack_info.format = static_cast<GLenum>(format);
+						pack_info.type = static_cast<GLenum>(type);
+						pack_info.size = (src->aspect() & image_aspect::stencil) ? 4 : 2;
+						pack_info.swap_bytes = true;
+
+						mem_info.image_size_in_texels = src->width() * src->height();
+						mem_info.image_size_in_bytes = src->pitch() * src->height();
+						mem_info.memory_required = 0;
+
+						void* out_offset = copy_image_to_buffer(pack_info, src, &scratch_mem, 0, { {}, src->size3D() }, &mem_info);
+
+						glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
+						glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+
+						real_pitch = pack_info.size * src->width();
+						const u64 data_length = pack_info.size * mem_info.image_size_in_texels;
+						scratch_mem.copy_to(&pbo, reinterpret_cast<u64>(out_offset), 0, data_length);
+					}
+					else
+					{
+						rsx_log.error("Memory transfer failed with error 0x%x. Format=0x%x, Type=0x%x", error, static_cast<u32>(format), static_cast<u32>(type));
+					}
+
+					scratch_mem.remove();
+					use_driver_pixel_transform = false;
 				}
 			}
 
-			pixel_pack_settings pack_settings;
-			pack_settings.alignment(1);
-			pack_settings.swap_bytes(pack_unpack_swap_bytes);
+			if (use_driver_pixel_transform)
+			{
+				if (src->aspect() & image_aspect::stencil)
+				{
+					pack_unpack_swap_bytes = false;
+				}
 
-			src->copy_to(nullptr, format, type, pack_settings);
-			real_pitch = src->pitch();
-			rsx_pitch = pitch;
+				pbo.bind(buffer::target::pixel_pack);
+
+				pixel_pack_settings pack_settings;
+				pack_settings.alignment(1);
+				pack_settings.swap_bytes(pack_unpack_swap_bytes);
+
+				src->copy_to(nullptr, format, type, pack_settings);
+			}
 
 			if (auto error = glGetError())
 			{
@@ -297,20 +338,15 @@ namespace gl
 			const u32 valid_length = valid_range.second;
 			void *dst = get_ptr(get_section_base() + valid_offset);
 
-			if (pack_unpack_swap_bytes)
+			if (!gl::get_driver_caps().ARB_compute_shader_supported)
 			{
-				// Shuffle
-				// TODO: Do this with a compute shader
 				switch (type)
 				{
 				case gl::texture::type::sbyte:
 				case gl::texture::type::ubyte:
 				{
-					if (pack_unpack_swap_bytes)
-					{
-						// byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
-						rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, align(valid_length, rsx_pitch) / rsx_pitch);
-					}
+					// byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
+					verify(HERE), !pack_unpack_swap_bytes;
 					break;
 				}
 				case gl::texture::type::uint_24_8:
@@ -522,7 +558,7 @@ namespace gl
 				sized_internal_fmt = gl::get_sized_internal_format(gcm_format);
 			}
 
-			std::unique_ptr<gl::texture> dst = std::make_unique<gl::viewable_image>(dst_type, width, height, depth, mipmaps, sized_internal_fmt);
+			std::unique_ptr<gl::texture> dst = std::make_unique<gl::viewable_image>(dst_type, width, height, depth, mipmaps, sized_internal_fmt, rsx::classify_format(gcm_format));
 
 			if (copy)
 			{
@@ -900,8 +936,7 @@ namespace gl
 			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type, input_swizzled,
 				rsx::texture_create_flags::default_component_order);
 
-			gl::upload_texture(section->get_raw_texture()->id(), gcm_format, width, height, depth, mipmaps,
-					input_swizzled, type, subresource_layout);
+			gl::upload_texture(section->get_raw_texture(), gcm_format, input_swizzled, subresource_layout);
 
 			section->last_write_tag = rsx::get_shared_tag();
 			return section;
