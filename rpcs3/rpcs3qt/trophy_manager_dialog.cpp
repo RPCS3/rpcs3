@@ -668,7 +668,7 @@ void trophy_manager_dialog::ShowContextMenu(const QPoint& pos)
 	connect(show_trophy_dir, &QAction::triggered, [=, this]()
 	{
 		QString path = qstr(m_trophies_db[db_ind]->path);
-		QDesktopServices::openUrl(QUrl("file:///" + path));
+		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 	});
 
 	menu->addAction(show_trophy_dir);
