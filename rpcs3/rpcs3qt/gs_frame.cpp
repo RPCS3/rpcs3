@@ -590,7 +590,7 @@ bool gs_frame::event(QEvent* ev)
 		}
 		close();
 	}
-	else if (ev->type() == QEvent::MouseMove && !m_show_mouse)
+	else if (ev->type() == QEvent::MouseMove && (!m_show_mouse || m_mousehide_timer.isActive()))
 	{
 		// This will make the cursor visible again if it was hidden by the mouse idle timeout
 		handle_cursor(visibility(), false, true);
