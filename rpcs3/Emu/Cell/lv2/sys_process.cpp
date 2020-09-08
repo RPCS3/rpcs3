@@ -359,7 +359,14 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 		}
 
 		Emu.SetForceBoot(true);
-		Emu.BootGame(path, "", true);
+
+		auto res = Emu.BootGame(path, "", true);
+
+		if (res != game_boot_result::no_errors)
+		{
+			sys_process.fatal("Failed to boot from exitspawn! (path=\"%s\", error=%s)", path, res);
+			Emu.Stop();
+		}
 	});
 
 	ppu.state += cpu_flag::dbg_global_stop;
