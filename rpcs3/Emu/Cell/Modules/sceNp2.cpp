@@ -423,11 +423,25 @@ error_code sceNpMatching2SignalingGetConnectionStatus(
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto& infos = nph->get_peer_infos(ctxId, roomId, memberId);
+	if (!connStatus)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
 
-	*connStatus           = infos.connStatus;
-	(*peerAddr).np_s_addr = infos.addr; // infos.addr is already BE
-	*peerPort             = std::bit_cast<u16, be_t<u16>>(infos.port); // infos.port is already BE
+	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
+	const auto si   = sigh->get_sig2_infos(roomId, memberId);
+
+	*connStatus = si.connStatus;
+
+	if (peerAddr)
+	{
+		(*peerAddr).np_s_addr = si.addr; // infos.addr is already BE
+	}
+
+	if (peerPort)
+	{
+		*peerPort = si.port;
+	}
 
 	return CELL_OK;
 }
@@ -619,9 +633,10 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 		}
 		case 5:
 		{
-			const auto& infos = nph->get_peer_infos(ctxId, roomId, memberId);
-			connInfo->address.port = infos.port;
-			connInfo->address.addr.np_s_addr = infos.addr;
+			const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
+			const auto si = sigh->get_sig2_infos(roomId, memberId);
+			connInfo->address.port = std::bit_cast<u16, be_t<u16>>(si.port);
+			connInfo->address.addr.np_s_addr = si.addr;
 			break;
 		}
 		case 6:
@@ -739,7 +754,7 @@ error_code sceNpMatching2GetServerInfo(
 
 error_code sceNpMatching2GetEventData(SceNpMatching2ContextId ctxId, SceNpMatching2EventKey eventKey, vm::ptr<void> buf, u64 bufLen)
 {
-	sceNp2.todo("sceNpMatching2GetEventData(ctxId=%d, eventKey=%d, buf=*0x%x, bufLen=%d)", ctxId, eventKey, buf, bufLen);
+	sceNp2.notice("sceNpMatching2GetEventData(ctxId=%d, eventKey=%d, buf=*0x%x, bufLen=%d)", ctxId, eventKey, buf, bufLen);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -1058,9 +1073,12 @@ error_code sceNpMatching2GetServerIdListLocal(SceNpMatching2ContextId ctxId, vm:
 
 	u32 num_servs = std::min(static_cast<u32>(slist.size()), serverIdNum);
 
-	for (u32 i = 0; i < num_servs; i++)
+	if (serverId)
 	{
-		serverId[i] = slist[i];
+		for (u32 i = 0; i < num_servs; i++)
+		{
+			serverId[i] = slist[i];
+		}
 	}
 
 	return not_an_error(static_cast<s32>(num_servs));
@@ -1142,7 +1160,7 @@ error_code sceNpMatching2GetSignalingOptParamLocal(SceNpMatching2ContextId ctxId
 
 error_code sceNpMatching2RegisterSignalingCallback(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2SignalingCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	sceNp2.todo("sceNpMatching2RegisterSignalingCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
+	sceNp2.notice("sceNpMatching2RegisterSignalingCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -1151,9 +1169,8 @@ error_code sceNpMatching2RegisterSignalingCallback(SceNpMatching2ContextId ctxId
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
-	nph->signal_event_cb = cbFunc;
-	nph->signal_event_cb_ctx = ctxId;
-	nph->signal_event_cb_arg = cbFuncArg;
+	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh->set_sig2_cb(ctxId, cbFunc, cbFuncArg);
 
 	return CELL_OK;
 }

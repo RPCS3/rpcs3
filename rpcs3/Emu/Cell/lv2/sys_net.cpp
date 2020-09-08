@@ -26,7 +26,6 @@
 #include "Emu/NP/np_handler.h"
 
 #include <limits>
-#include <random>
 #include <chrono>
 
 LOG_CHANNEL(sys_net);
@@ -253,7 +252,7 @@ static void network_clear_queue(ppu_thread& ppu)
 }
 
 // Object in charge of retransmiting packets for STREAM_P2P sockets
-class tcp_timeout_monitor
+class tcp_timeout_monitor : public need_wakeup
 {
 public:
 	void add_message(s32 sock_id, const sockaddr_in *dst, std::vector<u8> data, u64 seq)
@@ -306,7 +305,7 @@ public:
 			else
 				wakey.wait(lock);
 
-			if (abort)
+			if (thread_ctrl::state() == thread_state::aborting)
 				return;
 
 			const auto now = std::chrono::system_clock::now();
@@ -314,88 +313,88 @@ public:
 			std::set<s32> rtt_increased;
 			for (auto it = msgs.begin(); it != msgs.end();)
 			{
-				if (it->first >= now)
-				{
-					// reply is late, increases rtt
-					auto& msg = it->second;
-					const auto addr = msg.dst_addr.sin_addr.s_addr;
-					rtt_info rtt = rtts[msg.sock_id];
-					// Only increases rtt once per loop(in case a big number of packets are sent at once)
-					if (!rtt_increased.count(msg.sock_id))
-					{
-						rtt.num_retries += 1;
-						// Increases current rtt by 10%
-						rtt.rtt_time *= 1.1;
-						rtts[addr] = rtt;
-
-						rtt_increased.emplace(msg.sock_id);
-					}
-
-					if (rtt.num_retries >= 10)
-					{
-						// Too many retries, need to notify the socket that the connection is dead
-						idm::check<lv2_socket>(msg.sock_id, [&](lv2_socket& sock)
-						{
-							sock.p2ps.status = lv2_socket::p2ps_i::stream_status::stream_closed;
-						});
-						it = msgs.erase(it);
-						continue;
-					}
-
-					// resend the message
-					const auto res = idm::check<lv2_socket>(msg.sock_id, [&](lv2_socket& sock) -> bool
-					{
-						if (sendto(sock.socket, reinterpret_cast<char *>(msg.data.data()), msg.data.size(), 0, reinterpret_cast<const sockaddr *>(&msg.dst_addr), sizeof(msg.dst_addr)) == -1)
-						{
-							sock.p2ps.status = lv2_socket::p2ps_i::stream_status::stream_closed;
-							return false;
-						}
-						return true;
-					});
-
-					if (!res || !res.ret)
-					{
-						it = msgs.erase(it);
-						continue;
-					}
-
-					// Update key timeout
-					msgs.insert(std::make_pair(now + rtt.rtt_time, std::move(msg)));
-					it = msgs.erase(it);
-				}
-				else
-				{
+				if (it->first > now)
 					break;
+
+				// reply is late, increases rtt
+				auto& msg       = it->second;
+				const auto addr = msg.dst_addr.sin_addr.s_addr;
+				rtt_info rtt    = rtts[msg.sock_id];
+				// Only increases rtt once per loop(in case a big number of packets are sent at once)
+				if (!rtt_increased.count(msg.sock_id))
+				{
+					rtt.num_retries += 1;
+					// Increases current rtt by 10%
+					rtt.rtt_time += (rtt.rtt_time / 10);
+					rtts[addr] = rtt;
+
+					rtt_increased.emplace(msg.sock_id);
 				}
+
+				if (rtt.num_retries >= 10)
+				{
+					// Too many retries, need to notify the socket that the connection is dead
+					idm::check<lv2_socket>(msg.sock_id, [&](lv2_socket& sock)
+					{
+						sock.p2ps.status = lv2_socket::p2ps_i::stream_status::stream_closed;
+					});
+					it = msgs.erase(it);
+					continue;
+				}
+
+				// resend the message
+				const auto res = idm::check<lv2_socket>(msg.sock_id, [&](lv2_socket& sock) -> bool
+				{
+					if (sendto(sock.socket, reinterpret_cast<char*>(msg.data.data()), msg.data.size(), 0, reinterpret_cast<const sockaddr*>(&msg.dst_addr), sizeof(msg.dst_addr)) == -1)
+					{
+						sock.p2ps.status = lv2_socket::p2ps_i::stream_status::stream_closed;
+						return false;
+					}
+					return true;
+				});
+
+				if (!res || !res.ret)
+				{
+					it = msgs.erase(it);
+					continue;
+				}
+
+				// Update key timeout
+				msgs.insert(std::make_pair(now + rtt.rtt_time, std::move(msg)));
+				it = msgs.erase(it);
 			}
 		}
 	}
 
-public:
-	std::condition_variable wakey;
-	static constexpr auto thread_name = "Tcp Over Udp Timeout Manager Thread"sv;
-	std::atomic<bool> abort = false;
+	void wake_up()
+	{
+		wakey.notify_one();
+	}
 
-private:
-	std::mutex data_mutex;
-	// List of outgoing messages
-	struct message
-	{
-		s32 sock_id;
-		::sockaddr_in dst_addr;
-		std::vector<u8> data;
-		u64 seq;
-		std::chrono::time_point<std::chrono::system_clock> initial_sendtime;
+	public:
+		static constexpr auto thread_name = "Tcp Over Udp Timeout Manager Thread"sv;
+
+	private:
+		std::condition_variable wakey;
+		std::mutex data_mutex;
+		// List of outgoing messages
+		struct message
+		{
+			s32 sock_id;
+			::sockaddr_in dst_addr;
+			std::vector<u8> data;
+			u64 seq;
+			std::chrono::time_point<std::chrono::system_clock> initial_sendtime;
+		};
+		std::map<std::chrono::time_point<std::chrono::system_clock>, message> msgs; // (wakeup time, msg)
+		// List of rtts
+		struct rtt_info
+		{
+			unsigned long num_retries          = 0;
+			std::chrono::milliseconds rtt_time = 50ms;
+		};
+		std::unordered_map<s32, rtt_info> rtts; // (sock_id, rtt)
 	};
-	std::map<std::chrono::time_point<std::chrono::system_clock>, message> msgs; // (wakeup time, msg)
-	// List of rtts
-	struct rtt_info
-	{
-		unsigned long num_retries          = 0;
-		std::chrono::milliseconds rtt_time = 50ms;
-	};
-	std::unordered_map<s32, rtt_info> rtts; // (sock_id, rtt)
-};
 
 struct nt_p2p_port
 {
@@ -412,11 +411,12 @@ struct nt_p2p_port
 
 	// Queued messages from RPCN
 	shared_mutex s_rpcn_mutex;
-	std::queue<std::vector<u8>> rpcn_msgs{};
+	std::vector<std::vector<u8>> rpcn_msgs{};
+	// Queued signaling messages
+	shared_mutex s_sign_mutex;
+	std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> sign_msgs{};
 
 	std::array<u8, 65535> p2p_recv_data{};
-
-	std::mt19937 randgen;
 
 	nt_p2p_port(u16 port) : port(port)
 	{
@@ -447,10 +447,6 @@ struct nt_p2p_port
 			sys_net.fatal("Failed to bind DGRAM socket to %d for P2P!", port);
 
 		sys_net.notice("P2P port %d was bound!", port);
-
-		// Initializes random generator
-		std::random_device rd;
-		randgen.seed(rd());
 	}
 
 	~nt_p2p_port()
@@ -492,15 +488,20 @@ struct nt_p2p_port
 		memcpy(packet_data+sizeof(u16), &header, sizeof(lv2_socket::p2ps_i::encapsulated_tcp));
 		if(datasize)
 			memcpy(packet_data+sizeof(u16)+sizeof(lv2_socket::p2ps_i::encapsulated_tcp), data, datasize);
+		
+		auto* hdr_ptr = reinterpret_cast<lv2_socket::p2ps_i::encapsulated_tcp *>(packet_data+sizeof(u16));
+		hdr_ptr->checksum = 0;
+		hdr_ptr->checksum = tcp_checksum(reinterpret_cast<u16 *>(hdr_ptr), sizeof(lv2_socket::p2ps_i::encapsulated_tcp) + datasize);
 
 		return packet;
 	}
 
 	static void send_u2s_packet(lv2_socket &sock, s32 sock_id, std::vector<u8> data, const ::sockaddr_in* dst, u32 seq = 0, bool require_ack = true)
 	{
-		if (sendto(sock.socket, reinterpret_cast<char *>(data.data()), data.size(), 0, reinterpret_cast<const sockaddr*>(&dst), sizeof(sockaddr)) == -1)
+		sys_net.trace("Sending U2S packet on socket %d(id:%d): data(%d, seq %d, require_ack %d) to %s:%d", sock.socket, sock_id, data.size(), seq, require_ack, inet_ntoa(dst->sin_addr), std::bit_cast<u16, be_t<u16>>(dst->sin_port));
+		if (sendto(sock.socket, reinterpret_cast<char *>(data.data()), data.size(), 0, reinterpret_cast<const sockaddr*>(dst), sizeof(sockaddr_in)) == -1)
 		{
-			sys_net.warning("Attempting to send a u2s packet failed, closing socket!");
+			sys_net.error("Attempting to send a u2s packet failed(%s), closing socket!", get_last_error(false));
 			sock.p2ps.status = lv2_socket::p2ps_i::stream_status::stream_closed;
 			return;
 		}
@@ -513,6 +514,12 @@ struct nt_p2p_port
 		}
 	}
 
+	void dump_packet(lv2_socket::p2ps_i::encapsulated_tcp* tcph)
+	{
+		const std::string result = fmt::format("src_port: %d\ndst_port: %d\nflags: %d\nseq: %d\nack: %d\nlen: %d", tcph->src_port, tcph->dst_port, tcph->flags, tcph->seq, tcph->ack, tcph->length);
+		sys_net.trace("PACKET DUMP:\n%s", result);
+	}
+
 	bool handle_connected(s32 sock_id, lv2_socket::p2ps_i::encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr)
 	{
 		const auto sock = idm::check<lv2_socket>(sock_id, [&](lv2_socket& sock) -> bool
@@ -521,6 +528,8 @@ struct nt_p2p_port
 
 			if (sock.p2ps.status != lv2_socket::p2ps_i::stream_status::stream_connected && sock.p2ps.status != lv2_socket::p2ps_i::stream_status::stream_handshaking)
 				return false;
+			
+			dump_packet(tcp_header);
 
 			if (tcp_header->flags == lv2_socket::p2ps_i::ACK)
 			{
@@ -531,9 +540,9 @@ struct nt_p2p_port
 			auto send_ack = [&]()
 			{
 				auto final_ack = sock.p2ps.data_beg_seq;
-				while (sock.p2ps.data_mapping.count(final_ack))
+				while (sock.p2ps.received_data.count(final_ack))
 				{
-					final_ack += sock.p2ps.data_mapping[final_ack];
+					final_ack += sock.p2ps.received_data.at(final_ack).size();
 				}
 				sock.p2ps.data_available = final_ack - sock.p2ps.data_beg_seq;
 
@@ -542,25 +551,17 @@ struct nt_p2p_port
 				send_hdr.dst_port = tcp_header->src_port;
 				send_hdr.flags    = lv2_socket::p2ps_i::ACK;
 				send_hdr.ack      = final_ack;
-				send_hdr.length   = 0;
-				send_hdr.checksum = nt_p2p_port::tcp_checksum(reinterpret_cast<u16*>(&send_hdr), sizeof(lv2_socket::p2ps_i::encapsulated_tcp));
 				auto packet       = generate_u2s_packet(send_hdr, nullptr, 0);
+				sys_net.trace("Sent ack %d", final_ack);
 				send_u2s_packet(sock, sock_id, std::move(packet), reinterpret_cast<::sockaddr_in*>(op_addr), 0, false);
 			};
-
-			if (tcp_header->seq < sock.p2ps.data_beg_seq)
-			{
-				// Data has already been processed
-				if (tcp_header->flags != lv2_socket::p2ps_i::ACK && tcp_header->flags != lv2_socket::p2ps_i::RST)
-					send_ack();
-				return true;
-			}
 
 			if (sock.p2ps.status == lv2_socket::p2ps_i::stream_status::stream_handshaking)
 			{
 				// Only expect SYN|ACK
 				if (tcp_header->flags == (lv2_socket::p2ps_i::SYN | lv2_socket::p2ps_i::ACK))
 				{
+					sys_net.trace("Received SYN|ACK, status is now connected");
 					sock.p2ps.data_beg_seq = tcp_header->seq + 1;
 					sock.p2ps.status       = lv2_socket::p2ps_i::stream_status::stream_connected;
 					send_ack();
@@ -570,25 +571,28 @@ struct nt_p2p_port
 			}
 			else if (sock.p2ps.status == lv2_socket::p2ps_i::stream_status::stream_connected)
 			{
+				if (tcp_header->seq < sock.p2ps.data_beg_seq)
+				{
+					// Data has already been processed
+					sys_net.trace("Data has already been processed");
+					if (tcp_header->flags != lv2_socket::p2ps_i::ACK && tcp_header->flags != lv2_socket::p2ps_i::RST)
+						send_ack();
+					return true;
+				}
+
 				switch (tcp_header->flags)
 				{
 				case lv2_socket::p2ps_i::PSH:
 				case 0:
 				{
-					const auto offset = tcp_header->seq - sock.p2ps.data_beg_seq;
-					if ((offset + tcp_header->length) > lv2_socket::p2ps_i::MAX_RECEIVED_BUFFER)
-					{
-						// Data is too far ahead(max 10mb of input cache), ignore the packet
-						return true;
-					}
-					if (!sock.p2ps.data_mapping.count(tcp_header->seq))
+					if (!sock.p2ps.received_data.count(tcp_header->seq))
 					{
 						// New data
-						if ((offset + tcp_header->length) < sock.p2ps.received_data.size())
-							sock.p2ps.received_data.resize(offset + tcp_header->length);
-
-						memcpy(sock.p2ps.received_data.data() + offset, data, tcp_header->length);
-						sock.p2ps.data_mapping.insert(std::make_pair(tcp_header->seq, tcp_header->length));
+						sock.p2ps.received_data.emplace(tcp_header->seq, std::vector<u8>(data, data + tcp_header->length));
+					}
+					else
+					{
+						sys_net.trace("Data was not new!");
 					}
 
 					send_ack();
@@ -629,27 +633,25 @@ struct nt_p2p_port
 			return false;
 
 		// Only valid packet
-		if (tcp_header->flags != lv2_socket::p2ps_i::SYN && sock->p2ps.backlog.size() < sock->p2ps.max_backlog)
+		if (tcp_header->flags == lv2_socket::p2ps_i::SYN && sock->p2ps.backlog.size() < sock->p2ps.max_backlog)
 		{
 			// Yes, new connection and a backlog is available, create a new lv2_socket for it and send SYN|ACK
 			// Prepare reply packet
+			sys_net.notice("Received connection on listening STREAM-P2P socket!");
 			lv2_socket::p2ps_i::encapsulated_tcp send_hdr;
 			send_hdr.src_port = tcp_header->dst_port;
 			send_hdr.dst_port = tcp_header->src_port;
 			send_hdr.flags    = lv2_socket::p2ps_i::SYN | lv2_socket::p2ps_i::ACK;
 			send_hdr.ack      = tcp_header->seq + 1;
-			send_hdr.length   = 0;
 			// Generates random starting SEQ
-			std::uniform_int_distribution<int> seq_gen(std::numeric_limits<u32>::min(), std::numeric_limits<u32>::max());
-			send_hdr.seq      = seq_gen(randgen);
-			send_hdr.checksum = nt_p2p_port::tcp_checksum(reinterpret_cast<u16*>(&send_hdr), sizeof(lv2_socket::p2ps_i::encapsulated_tcp));
+			send_hdr.seq      = rand();
 
 			// Create new socket
 			auto sock_lv2               = std::make_shared<lv2_socket>(0, SYS_NET_SOCK_STREAM_P2P, SYS_NET_AF_INET);
 			sock_lv2->socket            = sock->socket;
 			sock_lv2->p2p.port          = sock->p2p.port;
 			sock_lv2->p2p.vport         = sock->p2p.vport;
-			sock_lv2->p2ps.op_addr      = std::bit_cast<u32, be_t<u32>>((reinterpret_cast<struct sockaddr_in*>(op_addr)->sin_addr.s_addr));
+			sock_lv2->p2ps.op_addr      = reinterpret_cast<struct sockaddr_in*>(op_addr)->sin_addr.s_addr;
 			sock_lv2->p2ps.op_port      = std::bit_cast<u16, be_t<u16>>((reinterpret_cast<struct sockaddr_in*>(op_addr)->sin_port));
 			sock_lv2->p2ps.op_vport     = tcp_header->src_port;
 			sock_lv2->p2ps.cur_seq      = send_hdr.seq + 1;
@@ -670,12 +672,11 @@ struct nt_p2p_port
 		else if (tcp_header->flags == lv2_socket::p2ps_i::SYN)
 		{
 			// Send a RST packet on backlog full
+			sys_net.trace("Backlog was full, sent a RST packet");
 			lv2_socket::p2ps_i::encapsulated_tcp send_hdr;
 			send_hdr.src_port = tcp_header->dst_port;
 			send_hdr.dst_port = tcp_header->src_port;
 			send_hdr.flags    = lv2_socket::p2ps_i::RST;
-			send_hdr.length   = 0;
-			send_hdr.checksum = nt_p2p_port::tcp_checksum(reinterpret_cast<u16*>(&send_hdr), sizeof(lv2_socket::p2ps_i::encapsulated_tcp));
 			auto packet       = generate_u2s_packet(send_hdr, nullptr, 0);
 			send_u2s_packet(*sock, sock_id, std::move(packet), reinterpret_cast<::sockaddr_in*>(op_addr), 0, false);
 		}
@@ -685,7 +686,7 @@ struct nt_p2p_port
 		return true;
 	}
 
-	void recv_data()
+	bool recv_data()
 	{
 		::sockaddr_storage native_addr;
 		::socklen_t native_addrlen = sizeof(native_addr);
@@ -693,14 +694,17 @@ struct nt_p2p_port
 
 		if (recv_res == -1)
 		{
-			sys_net.error("Error recvfrom on P2P socket: %d", get_last_error(false));
-			return;
+			auto lerr = get_last_error(false);
+			if (lerr != SYS_NET_EINPROGRESS && lerr != SYS_NET_EWOULDBLOCK)
+				sys_net.error("Error recvfrom on P2P socket: %d", lerr);
+
+			return false;
 		}
 
 		if (recv_res < static_cast<s32>(sizeof(u16)))
 		{
 			sys_net.error("Received badly formed packet on P2P port(no vport)!");
-			return;
+			return true;
 		}
 
 		u16 dst_vport = reinterpret_cast<le_t<u16>&>(p2p_recv_data[0]);
@@ -711,8 +715,29 @@ struct nt_p2p_port
 			memcpy(rpcn_msg.data(), p2p_recv_data.data() + sizeof(u16), recv_res - sizeof(u16));
 
 			std::lock_guard lock(s_rpcn_mutex);
-			rpcn_msgs.push(std::move(rpcn_msg));
-			return;
+			rpcn_msgs.push_back(std::move(rpcn_msg));
+			return true;
+		}
+
+		if (dst_vport == 65535) // Reserved for signaling
+		{
+			std::vector<u8> sign_msg(recv_res - sizeof(u16));
+			memcpy(sign_msg.data(), p2p_recv_data.data() + sizeof(u16), recv_res - sizeof(u16));
+
+			std::pair<std::pair<u32, u16>, std::vector<u8>> msg;
+			msg.first.first = reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr;
+			msg.first.second = std::bit_cast<u16, be_t<u16>>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+			msg.second = std::move(sign_msg);
+
+			{
+				std::lock_guard lock(s_sign_mutex);
+				sign_msgs.push_back(std::move(msg));
+			}
+
+			const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
+			sigh->wake_up();
+
+			return true;
 		}
 
 		{
@@ -743,11 +768,11 @@ struct nt_p2p_port
 				if (!sock)
 					bound_p2p_vports.erase(dst_vport);
 
-				return;
+				return true;
 			}
 		}
 
-		// Not directed at a bound DGRAM_P2P vport so check if the packet is a STREAM_P2P packet
+		// Not directed at a bound DGRAM_P2P vport so check if the packet is a STREAM-P2P packet
 
 		const auto sp_size = recv_res - sizeof(u16);
 		u8 *sp_data = p2p_recv_data.data() + sizeof(u16);
@@ -755,7 +780,7 @@ struct nt_p2p_port
 		if (sp_size < sizeof(lv2_socket::p2ps_i::encapsulated_tcp))
 		{
 			sys_net.trace("Received P2P packet targeted at unbound vport(likely) or invalid");
-			return;
+			return true;
 		}
 
 		auto* tcp_header = reinterpret_cast<lv2_socket::p2ps_i::encapsulated_tcp*>(sp_data);
@@ -764,20 +789,20 @@ struct nt_p2p_port
 		if (tcp_header->signature != lv2_socket::p2ps_i::U2S_sig)
 		{
 			sys_net.trace("Received P2P packet targeted at unbound vport");
-			return;
+			return true;
 		}
 
 		if (tcp_header->length != (sp_size - sizeof(lv2_socket::p2ps_i::encapsulated_tcp)))
 		{
-			sys_net.error("Received STREAM_P2P packet tcp length didn't match packet length");
-			return;
+			sys_net.error("Received STREAM-P2P packet tcp length didn't match packet length");
+			return true;
 		}
 
 		// Sanity check
 		if (tcp_header->dst_port != dst_vport)
 		{
-			sys_net.error("Received STREAM_P2P packet with dst_port != vport");
-			return;
+			sys_net.error("Received STREAM-P2P packet with dst_port != vport");
+			return true;
 		}
 
 		// Validate checksum
@@ -786,7 +811,7 @@ struct nt_p2p_port
 		if (given_checksum != nt_p2p_port::tcp_checksum(reinterpret_cast<const u16*>(sp_data), sp_size))
 		{
 			sys_net.error("Checksum is invalid, dropping packet!");
-			return;
+			return true;
 		}
 
 		// The packet is valid, check if it's bound
@@ -798,19 +823,22 @@ struct nt_p2p_port
 			if (bound_p2p_streams.count(key_connected))
 			{
 				const auto sock_id = bound_p2p_streams.at(key_connected);
+				sys_net.trace("Received packet for connected STREAM-P2P socket(s=%d)", sock_id);
 				handle_connected(sock_id, tcp_header, sp_data + sizeof(lv2_socket::p2ps_i::encapsulated_tcp), &native_addr);
-				return;
+				return true;
 			}
 
 			if(bound_p2p_streams.count(key_listening))
 			{
 				const auto sock_id = bound_p2p_streams.at(key_listening);
+				sys_net.trace("Received packet for listening STREAM-P2P socket(s=%d)", sock_id);
 				handle_listening(sock_id, tcp_header, sp_data + sizeof(lv2_socket::p2ps_i::encapsulated_tcp), &native_addr);
-				return;
+				return true;
 			}
 		}
 
-		sys_net.trace("Received a P2P_STREAM packet with no bound target");
+		sys_net.trace("Received a STREAM-P2P packet with no bound target");
+		return true;
 	}
 };
 
@@ -838,9 +866,6 @@ struct network_thread
 #ifdef _WIN32
 		WSACleanup();
 #endif
-		auto tcpm = g_fxo->get<named_thread<tcp_timeout_monitor>>();
-		tcpm->abort = true;
-		tcpm->wakey.notify_one();
 	}
 
 	void operator()()
@@ -894,7 +919,7 @@ struct network_thread
 						{
 							if ((p2p_fd[fd_index].revents & POLLIN) == POLLIN || (p2p_fd[fd_index].revents & POLLRDNORM) == POLLRDNORM)
 							{
-								p2p_port.second.recv_data();
+								while(p2p_port.second.recv_data());
 							}
 							fd_index++;
 						}
@@ -1010,9 +1035,9 @@ s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& ad
 	return res;
 }
 
-std::queue<std::vector<u8>> get_rpcn_msgs()
+std::vector<std::vector<u8>> get_rpcn_msgs()
 {
-	auto msgs     = std::queue<std::vector<u8>>();
+	auto msgs     = std::vector<std::vector<u8>>();
 	const auto nc = g_fxo->get<network_context>();
 	{
 		std::lock_guard list_lock(nc->list_p2p_ports_mutex);
@@ -1020,12 +1045,30 @@ std::queue<std::vector<u8>> get_rpcn_msgs()
 		{
 			std::lock_guard lock(def_port.s_rpcn_mutex);
 			msgs               = std::move(def_port.rpcn_msgs);
-			def_port.rpcn_msgs = std::queue<std::vector<u8>>();
+			def_port.rpcn_msgs.clear();
 		}
 	}
 
 	return msgs;
 }
+
+std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> get_sign_msgs()
+{
+	auto msgs     = std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>>();
+	const auto nc = g_fxo->get<network_context>();
+	{
+		std::lock_guard list_lock(nc->list_p2p_ports_mutex);
+		auto& def_port = nc->list_p2p_ports.at(3658);
+		{
+			std::lock_guard lock(def_port.s_sign_mutex);
+			msgs = std::move(def_port.sign_msgs);
+			def_port.sign_msgs.clear();
+		}
+	}
+
+	return msgs;
+}
+
 
 lv2_socket::lv2_socket(lv2_socket::socket_type s, s32 s_type, s32 family)
 	: socket(s), type{s_type}, family{family}
@@ -1044,7 +1087,7 @@ lv2_socket::lv2_socket(lv2_socket::socket_type s, s32 s_type, s32 family)
 
 lv2_socket::~lv2_socket()
 {
-	if (type != SYS_NET_SOCK_DGRAM_P2P)
+	if (type != SYS_NET_SOCK_DGRAM_P2P && type != SYS_NET_SOCK_STREAM_P2P)
 	{
 #ifdef _WIN32
 		::closesocket(socket);
@@ -1083,6 +1126,8 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 				result = SYS_NET_EWOULDBLOCK;
 				return false;
 			}
+
+			sys_net.trace("Found a socket in backlog!");
 
 			p2ps = true;
 			result = sock.p2ps.backlog.front();
@@ -1158,7 +1203,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 
 	if (p2ps)
 	{
-		return result;
+		return not_an_error(result);
 	}
 
 	if (!sock.ret)
@@ -1415,6 +1460,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 						if (sock.p2p.vport == 0)
 						{
 							// Unassigned vport, assigns one
+							sys_net.warning("vport was unassigned before connect!");
 							u16 found_vport = 30000;
 							while (true)
 							{
@@ -1439,13 +1485,15 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 				send_hdr.dst_port = dst_vport;
 				send_hdr.flags    = lv2_socket::p2ps_i::SYN;
 				send_hdr.seq      = rand();
-				send_hdr.checksum = nt_p2p_port::tcp_checksum(reinterpret_cast<u16*>(&send_hdr), sizeof(lv2_socket::p2ps_i::encapsulated_tcp));
 
 				// sock.socket            = p2p_socket;
+				sock.p2ps.op_addr      = name.sin_addr.s_addr;
 				sock.p2ps.op_port      = dst_port;
 				sock.p2ps.op_vport     = dst_vport;
 				sock.p2ps.cur_seq      = send_hdr.seq + 1;
 				sock.p2ps.data_beg_seq = 0;
+				sock.p2ps.data_available = 0;
+				sock.p2ps.received_data.clear();
 				sock.p2ps.status       = lv2_socket::p2ps_i::stream_status::stream_handshaking;
 
 				packet = nt_p2p_port::generate_u2s_packet(send_hdr, nullptr, 0);
@@ -2089,29 +2137,32 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 					return false;
 				}
 
-				native_result = std::min(sock.p2ps.data_available, len);
-				memcpy(buf.get_ptr(), sock.p2ps.received_data.data(), native_result);
+				const u32 to_give = std::min(sock.p2ps.data_available, len);
+				sys_net.trace("STREAM-P2P socket had %d available, given %d", sock.p2ps.data_available, to_give);
 
-				sock.p2ps.data_beg_seq += native_result;
-				for(auto it = sock.p2ps.data_mapping.begin(); it != sock.p2ps.data_mapping.end();)
+				u32 left_to_give = to_give;
+				while (left_to_give)
 				{
-					if ((it->first + it->second) <= sock.p2ps.data_beg_seq)
+					auto& cur_data = sock.p2ps.received_data.begin()->second;
+					auto to_give_for_this_packet = std::min(static_cast<u32>(cur_data.size()), left_to_give);
+					memcpy(reinterpret_cast<u8 *>(buf.get_ptr()) + (to_give - left_to_give), cur_data.data(), to_give_for_this_packet);
+					if (cur_data.size() != to_give_for_this_packet)
 					{
-						it = sock.p2ps.data_mapping.erase(it);
-						continue;
+						auto amount_left = cur_data.size() - to_give_for_this_packet;
+						std::vector<u8> new_vec(amount_left);
+						memcpy(new_vec.data(), cur_data.data() + to_give_for_this_packet, amount_left);
+						auto new_key = (sock.p2ps.received_data.begin()->first) + to_give_for_this_packet;
+						sock.p2ps.received_data.emplace(new_key, std::move(new_vec));
 					}
 
-					if (it->first < sock.p2ps.data_beg_seq)
-					{
-						auto new_size = (it->first + it->second) - sock.p2ps.data_beg_seq;
-						sock.p2ps.data_mapping.erase(it);
-						sock.p2ps.data_mapping.emplace(sock.p2ps.data_beg_seq, new_size);
-					}
+					sock.p2ps.received_data.erase(sock.p2ps.received_data.begin());
 
-					break;
+					left_to_give -= to_give_for_this_packet;
 				}
 
-				sock.p2ps.data_available -= native_result;
+				sock.p2ps.data_available -= to_give;
+				sock.p2ps.data_beg_seq += to_give;
+				native_result = to_give;
 
 				return true;
 			}
@@ -2311,6 +2362,8 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		name.sin_family      = AF_INET;
 		name.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
 		name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
+
+		sys_net.trace("Sending to %s:%d", inet_ntoa(name.sin_addr), psa_in->sin_port);
 	}
 
 	::socklen_t namelen = sizeof(name);
@@ -2355,7 +2408,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 			// Prepare address
 			name.sin_family = AF_INET;
 			name.sin_port        = std::bit_cast<u16, be_t<u16>>(sock.p2ps.op_port);
-			name.sin_addr.s_addr = std::bit_cast<u32, be_t<u32>>(sock.p2ps.op_addr);
+			name.sin_addr.s_addr = sock.p2ps.op_addr;
 			// Prepares encapsulated tcp
 			lv2_socket::p2ps_i::encapsulated_tcp tcp_header;
 			tcp_header.src_port = sock.p2p.vport;
@@ -2366,7 +2419,6 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 			while(cur_total_len > 0)
 			{
 				s64 cur_data_len;
-				std::vector<u8> cur_data;
 				if (cur_total_len >= max_data_len)
 					cur_data_len = max_data_len;
 				else
@@ -2374,43 +2426,26 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 				tcp_header.length = cur_data_len;
 				tcp_header.seq = sock.p2ps.cur_seq;
-				tcp_header.checksum = 0;
 
-				cur_data.resize(sizeof(u16) + sizeof(lv2_socket::p2ps_i::encapsulated_tcp) + cur_data_len);
-				reinterpret_cast<le_t<u16>&>(cur_data[0]) = sock.p2ps.op_vport;
-				memcpy(cur_data.data()+sizeof(u16), &tcp_header, sizeof(lv2_socket::p2ps_i::encapsulated_tcp));
-				memcpy(cur_data.data()+sizeof(u16)+sizeof(lv2_socket::p2ps_i::encapsulated_tcp), &_buf[len - cur_total_len], cur_data_len);
-
-				auto *tcp_pointer = reinterpret_cast<lv2_socket::p2ps_i::encapsulated_tcp *>(cur_data.data() + sizeof(u16));
-				tcp_pointer->checksum = nt_p2p_port::tcp_checksum(reinterpret_cast<u16 *>(cur_data.data()+sizeof(u16)), cur_data_len+sizeof(lv2_socket::p2ps_i::encapsulated_tcp));
-
-				stream_packets.emplace_back(std::move(cur_data));
+				auto packet       = nt_p2p_port::generate_u2s_packet(tcp_header, &_buf[len - cur_total_len], cur_data_len);
+				nt_p2p_port::send_u2s_packet(sock, s, std::move(packet), &name, tcp_header.seq);
 
 				cur_total_len -= cur_data_len;
 				sock.p2ps.cur_seq += cur_data_len;
 			}
-			// Send the packets
-			for (const auto &packet : stream_packets)
-			{
-				native_result = sendto(sock.socket, reinterpret_cast<const char *>(packet.data()), packet.size(), 0, reinterpret_cast<sockaddr *>(&name), namelen);
-				if (native_result < 0)
-				{
-					result = get_last_error(!sock.so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
-					sys_net.error("P2P Stream sendto error :%s!", result);
-
-					if (result)
-					{
-						return false;
-					}
-				}
-				native_result = len;
-				return true;
-			}
+	
+			native_result = len;
+			return true;
 		}
 
 		//if (!(sock.events & lv2_socket::poll::write))
 		{
 			const auto nph = g_fxo->get<named_thread<np_handler>>();
+			if (addr && type == SYS_NET_SOCK_DGRAM && psa_in->sin_port == 53)
+			{
+				nph->add_dns_spy(s);
+			}
+
 			if (nph->is_dns(s))
 			{
 				const s32 ret_analyzer = nph->analyze_dns_packet(s, reinterpret_cast<const u8*>(_buf.data()), len);
@@ -2873,7 +2908,7 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 				p2p_port.bound_p2p_vports.erase(sock->p2p.vport);
 			}
 		}
-	}		
+	}
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 	nph->remove_dns_spy(s);

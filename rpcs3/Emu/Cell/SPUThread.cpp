@@ -142,10 +142,10 @@ static FORCE_INLINE void mov_rdata_avx(__m256i* dst, const __m256i* src)
 {
 #if defined(_MSC_VER) || defined(__AVX2__)
 	// In AVX-only mode, for some older CPU models, GCC/Clang may emit 128-bit loads/stores instead.
-	_mm256_store_si256(dst + 0, _mm256_loadu_si256(src + 0));
-	_mm256_store_si256(dst + 1, _mm256_loadu_si256(src + 1));
-	_mm256_store_si256(dst + 2, _mm256_loadu_si256(src + 2));
-	_mm256_store_si256(dst + 3, _mm256_loadu_si256(src + 3));
+	_mm256_storeu_si256(dst + 0, _mm256_loadu_si256(src + 0));
+	_mm256_storeu_si256(dst + 1, _mm256_loadu_si256(src + 1));
+	_mm256_storeu_si256(dst + 2, _mm256_loadu_si256(src + 2));
+	_mm256_storeu_si256(dst + 3, _mm256_loadu_si256(src + 3));
 #else
 	__asm__(
 		"vmovdqu 0*32(%[src]), %%ymm0;" // load

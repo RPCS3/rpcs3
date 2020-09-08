@@ -1082,10 +1082,15 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 	const u64 data_off = (addr & 7) * 8;
 
 	ppu.raddr = addr;
+	const u64 mask_res = g_use_rtm ? (-128 | vm::dma_lockb) : -1;
 
-	for (u64 count = 0; g_use_rtm; [&]()
+	for (u64 count = 0;; [&]()
 	{
-		if (++count < 20) [[likely]]
+		if (ppu.state)
+		{ 
+			ppu.check_state();
+		}
+		else if (++count < 20) [[likely]]
 		{
 			busy_wait(300);
 		}
@@ -1097,7 +1102,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}())
 	{
-		ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & (-128 | vm::dma_lockb);
+		ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & mask_res;
 
 		if (ppu.rtime & 127)
 		{
@@ -1106,7 +1111,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 		ppu.rdata = data;
 
-		if ((vm::reservation_acquire(addr, sizeof(T)) & (-128 | vm::dma_lockb)) == ppu.rtime) [[likely]]
+		if ((vm::reservation_acquire(addr, sizeof(T)) & mask_res) == ppu.rtime) [[likely]]
 		{
 			if (count >= 10) [[unlikely]]
 			{
@@ -1116,38 +1121,6 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			return static_cast<T>(ppu.rdata << data_off >> size_off);
 		}
 	}
-
-	for (u64 i = 0;; i++)
-	{
-		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-
-		if ((ppu.rtime & 127) == 0) [[likely]]
-		{
-			ppu.rdata = data;
-
-			if (vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime) [[likely]]
-			{
-				break;
-			}
-		}
-
-		if (ppu.state)
-		{
-			ppu.check_state();
-		}
-		else if (i < 20)
-		{
-			busy_wait(300);
-		}
-		else
-		{
-			ppu.state += cpu_flag::wait;
-			std::this_thread::yield();
-			ppu.check_state();
-		}
-	}
-
-	return static_cast<T>(ppu.rdata << data_off >> size_off);
 }
 
 extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr)
