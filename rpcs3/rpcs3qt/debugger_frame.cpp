@@ -478,7 +478,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	expression_input->setFixedWidth(190);
 
 	// Ok/Cancel
-	QPushButton* button_ok = new QPushButton(tr("Ok"));
+	QPushButton* button_ok = new QPushButton(tr("OK"));
 	QPushButton* button_cancel = new QPushButton(tr("Cancel"));
 
 	hbox_address_preview_panel->addWidget(address_preview_label);

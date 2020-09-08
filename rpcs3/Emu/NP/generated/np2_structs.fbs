@@ -1,0 +1,225 @@
+table BinAttr {
+    id:uint16;
+    data:[uint8];
+}
+
+table IntAttr {
+    id:uint16;
+    num:uint32;
+}
+
+table MemberBinAttrInternal {
+    updateDate:uint64;
+    data:BinAttr;
+}
+
+table BinAttrInternal {
+    updateDate:uint64;
+    updateMemberId:uint16;
+    data:BinAttr;
+}
+
+table OptParam {
+    type:uint8;
+    flag:uint8;
+    hubMemberId:uint16 ;
+}
+
+table GroupConfig {
+    slotNum:uint32;
+    withLabel:bool;
+    label:[uint8];
+    withPassword:bool;
+}
+
+table UserInfo2 {
+    npId:string;
+    onlineName:string;
+    avatarUrl:string;
+}
+
+table RoomMemberDataInternal {
+    userInfo:UserInfo2;
+    joinDate:uint64;
+    memberId:uint16;
+    teamId:uint8;
+    roomGroup:uint8;
+    natType:uint8;
+    flagAttr:uint32;
+    roomMemberBinAttrInternal:[MemberBinAttrInternal];
+}
+
+table RoomGroup {
+    groupId:uint8;
+    withPassword:bool;
+    withLabel:bool;
+    label:[uint8];
+    slotNum:uint32;
+    curGroupMemberNum:uint32;
+}
+
+table RoomDataInternal {
+    serverId:uint16;
+    worldId:uint32;
+    lobbyId:uint64;
+    roomId:uint64;
+    passwordSlotMask:uint64;
+    maxSlot:uint32;
+    memberList:[RoomMemberDataInternal];
+    ownerId:uint16;
+    roomGroup:[RoomGroup];
+    flagAttr:uint32;
+    roomBinAttrInternal:[BinAttrInternal];
+}
+
+table RoomDataExternal {
+    serverId:uint16;
+    worldId:uint32;
+    publicSlotNum:uint16;
+    privateSlotNum:uint16;
+    lobbyId:uint64;
+    roomId:uint64;
+    openPublicSlotNum:uint16;
+    maxSlot:uint16;
+    openPrivateSlotNum:uint16;
+    curMemberNum:uint16;
+    passwordSlotMask:uint64;
+    owner:UserInfo2;
+    roomGroup:[RoomGroup];
+    flagAttr:uint32;
+    roomSearchableIntAttrExternal:[IntAttr];
+    roomSearchableBinAttrExternal:[BinAttr];
+    roomBinAttrExternal:[BinAttr];
+}
+
+table IntSearchFilter {
+    searchOperator:uint8;
+    attr:IntAttr;
+}
+
+table BinSearchFilter {
+    searchOperator:uint8;
+    attr:BinAttr;
+}
+
+table PresenceOptionData {
+    data:[uint8];
+    len:uint32;
+}
+
+table RoomGroupPasswordConfig {
+    groupId:[uint8];
+    withPassword:bool;
+}
+
+table SearchRoomRequest {
+    option:int32;
+    worldId:uint32;
+    lobbyId:uint64;
+    rangeFilter_startIndex:uint32;
+    rangeFilter_max:uint32;
+    flagFilter:uint32;
+    flagAttr:uint32;
+    intFilter:[IntSearchFilter];
+    binFilter:[BinSearchFilter];
+    attrId:[uint16];
+}
+
+table SearchRoomResponse {
+    startIndex:uint32;
+    total:uint32;
+    size:uint32;
+    rooms:[RoomDataExternal];
+}
+
+table CreateJoinRoomRequest {
+    worldId:uint32;
+    lobbyId:uint64;
+    maxSlot:uint32;
+    flagAttr:uint32;
+    roomBinAttrInternal:[BinAttr];
+    roomSearchableIntAttrExternal:[IntAttr];
+    roomSearchableBinAttrExternal:[BinAttr];
+    roomBinAttrExternal:[BinAttr];
+    roomPassword:[uint8];
+    groupConfig:[GroupConfig];
+    passwordSlotMask:uint64;
+    allowedUser:[string];
+    blockedUser:[string];
+
+    joinRoomGroupLabel:[uint8];
+    roomMemberBinAttrInternal:[BinAttr];
+    teamId:uint8;
+    sigOptParam:OptParam;
+}
+
+table JoinRoomRequest {
+    roomId:uint64;
+    roomPassword:[uint8];
+    joinRoomGroupLabel:[uint8];
+    roomMemberBinAttrInternal:[BinAttr];
+    optData:PresenceOptionData;
+    teamId:uint8;
+}
+
+table LeaveRoomRequest {
+    roomId:uint64;
+    optData:PresenceOptionData;
+}
+
+table SetRoomDataExternalRequest {
+    roomId:uint64;
+    roomSearchableIntAttrExternal:[IntAttr];
+    roomSearchableBinAttrExternal:[BinAttr];
+    roomBinAttrExternal:[BinAttr];
+}
+
+table SetRoomDataInternalRequest {
+    roomId:uint64;
+    flagFilter:uint32;
+    flagAttr:uint32;
+    roomBinAttrInternal:[BinAttr];
+    passwordConfig:[RoomGroupPasswordConfig];
+    passwordSlotMask:uint64;
+    ownerPrivilegeRank:[uint16];
+}
+
+table GetRoomDataInternalRequest {
+    roomId:uint64;
+    attrId:[uint16];
+}
+
+table RoomMemberUpdateInfo {
+    roomMemberDataInternal:RoomMemberDataInternal;
+    eventCause:uint8;
+    optData:PresenceOptionData;
+}
+
+table RoomUpdateInfo {
+    eventCause:uint8;
+    errorCode:int32;
+    optData:PresenceOptionData;
+}
+
+table GetPingInfoResponse {
+    serverId:uint16;
+    worldId:uint32;
+    roomId:uint64;
+    rtt:uint32;
+}
+
+table SendRoomMessageRequest {
+    roomId:uint64;
+    castType:uint8;
+    dst:[uint16];
+    msg:[uint8];
+    option:uint8;
+}
+
+table RoomMessageInfo {
+    filtered:bool;
+    castType:uint8;
+    dst:[uint16];
+    srcMember:UserInfo2;
+    msg:[uint8];
+}

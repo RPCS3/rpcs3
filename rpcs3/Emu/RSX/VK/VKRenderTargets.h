@@ -42,7 +42,8 @@ namespace vk
 					VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_TILING_OPTIMAL,
 					usage,
-					0));
+					0,
+					format_class()));
 
 				resolve_surface->native_component_map = native_component_map;
 				resolve_surface->change_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
@@ -233,17 +234,12 @@ namespace vk
 		{
 			auto& upload_heap = *vk::get_upload_heap();
 
-			u32 gcm_format;
-			if (is_depth_surface())
-			{
-				gcm_format = get_compatible_gcm_format(format_info.gcm_depth_format).first;
-			}
-			else
-			{
-				gcm_format = get_compatible_gcm_format(format_info.gcm_color_format).first;
-			}
+			const bool is_swizzled = (raster_type == rsx::surface_raster_type::swizzle);
+			const u32 gcm_format = is_depth_surface() ?
+				get_compatible_gcm_format(format_info.gcm_depth_format).first :
+				get_compatible_gcm_format(format_info.gcm_color_format).first;
 
-			rsx_subresource_layout subres{};
+			rsx::subresource_layout subres{};
 			subres.width_in_block = subres.width_in_texel = surface_width * samples_x;
 			subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
 			subres.pitch_in_block = rsx_pitch / get_bpp();
@@ -253,7 +249,7 @@ namespace vk
 			if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 			{
 				push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-				vk::copy_mipmaped_image_using_buffer(cmd, this, { subres }, gcm_format, false, 1, aspect(), upload_heap, rsx_pitch);
+				vk::copy_mipmaped_image_using_buffer(cmd, this, { subres }, gcm_format, is_swizzled, 1, aspect(), upload_heap, rsx_pitch);
 				pop_layout(cmd);
 			}
 			else
@@ -273,12 +269,12 @@ namespace vk
 				}
 				else
 				{
-					content = vk::get_typeless_helper(format(), subres.width_in_block, subres.height_in_block);
+					content = vk::get_typeless_helper(format(), rsx::classify_format(gcm_format), subres.width_in_block, subres.height_in_block);
 					content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 				}
 
 				// Load Cell data into temp buffer
-				vk::copy_mipmaped_image_using_buffer(cmd, content, { subres }, gcm_format, false, 1, aspect(), upload_heap, rsx_pitch);
+				vk::copy_mipmaped_image_using_buffer(cmd, content, { subres }, gcm_format, is_swizzled, 1, aspect(), upload_heap, rsx_pitch);
 
 				// Write into final image
 				if (content != final_dst)
@@ -286,10 +282,10 @@ namespace vk
 					// Avoid layout push/pop on scratch memory by setting explicit layout here
 					content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-					vk::copy_scaled_image(cmd, content->value, final_dst->value, content->current_layout, final_dst->current_layout,
-						{ 0, 0, subres.width_in_block, subres.height_in_block }, { 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
-						1, aspect(), true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST,
-						format(), format());
+					vk::copy_scaled_image(cmd, content, final_dst,
+						{ 0, 0, subres.width_in_block, subres.height_in_block },
+						{ 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
+						1, true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST);
 				}
 
 				final_dst->pop_layout(cmd);
@@ -518,20 +514,13 @@ namespace vk
 				const auto src_bpp = src_texture->get_bpp();
 				rsx::typeless_xfer typeless_info{};
 
-				if (src_texture->info.format == info.format) [[likely]]
+				if (src_texture->aspect() != aspect() ||
+					!formats_are_bitcast_compatible(this, src_texture))
 				{
-					verify(HERE), src_bpp == dst_bpp;
-				}
-				else
-				{
-					if (!formats_are_bitcast_compatible(format(), src_texture->format()) ||
-						src_texture->aspect() != aspect())
-					{
-						typeless_info.src_is_typeless = true;
-						typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
-						typeless_info.src_native_format_override = static_cast<u32>(info.format);
-						typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
-					}
+					typeless_info.src_is_typeless = true;
+					typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
+					typeless_info.src_native_format_override = static_cast<u32>(info.format);
+					typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
 				}
 
 				section.init_transfer(this);
@@ -670,7 +659,7 @@ namespace rsx
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage_flags,
-				0);
+				0, RSX_FORMAT_CLASS_COLOR);
 
 			rtt->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
@@ -692,7 +681,7 @@ namespace rsx
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
 			u32 address,
-			surface_depth_format format,
+			surface_depth_format2 format,
 			size_t width, size_t height, size_t pitch,
 			rsx::surface_antialiasing antialias,
 			vk::render_device &device, vk::command_buffer& cmd)
@@ -728,7 +717,7 @@ namespace rsx
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage_flags,
-				0);
+				0, rsx::classify_format(format));
 
 			ds->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
@@ -738,11 +727,7 @@ namespace rsx
 			ds->memory_usage_flags= rsx::surface_usage_flags::attachment;
 			ds->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			ds->native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
-
-			ds->native_pitch = static_cast<u16>(width) * 2 * ds->samples_x;
-			if (format == rsx::surface_depth_format::z24s8)
-				ds->native_pitch *= 2;
-
+			ds->native_pitch = static_cast<u16>(width) * get_format_block_size_in_bytes(format) * ds->samples_x;
 			ds->rsx_pitch = static_cast<u16>(pitch);
 			ds->surface_width = static_cast<u16>(width);
 			ds->surface_height = static_cast<u16>(height);
@@ -772,7 +757,8 @@ namespace rsx
 					VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_TILING_OPTIMAL,
 					ref->info.usage,
-					ref->info.flags);
+					ref->info.flags,
+					ref->format_class());
 
 				sink->add_ref();
 				sink->set_spp(ref->get_spp());
@@ -911,7 +897,7 @@ namespace rsx
 
 		static bool surface_matches_properties(
 			const std::unique_ptr<vk::render_target> &surface,
-			surface_depth_format format,
+			surface_depth_format2 format,
 			size_t width, size_t height,
 			rsx::surface_antialiasing antialias,
 			bool check_refs = false)

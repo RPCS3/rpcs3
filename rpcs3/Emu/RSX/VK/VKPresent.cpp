@@ -275,7 +275,7 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 	vk::image* image_to_flip = nullptr;
 
 	// Check the surface store first
-	const auto format_bpp = get_format_block_size_in_bytes(info->format);
+	const auto format_bpp = rsx::get_format_block_size_in_bytes(info->format);
 	const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer,
 		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::read);
 
@@ -601,8 +601,26 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (calibration_src.empty()) [[likely]]
 		{
-			vk::copy_scaled_image(*m_current_command_buffer, image_to_flip->value, target_image, image_to_flip->current_layout, target_layout,
-				{ 0, 0, static_cast<s32>(buffer_width), static_cast<s32>(buffer_height) }, aspect_ratio, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);
+			// Do raw transfer here as there is no image object associated with textures owned by the driver (TODO)
+			const areai dst_rect = aspect_ratio;
+			VkImageBlit rgn = {};
+
+			rgn.srcSubresource = { image_to_flip->aspect(), 0, 0, 1 };
+			rgn.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+			rgn.srcOffsets[0] = { 0, 0, 0 };
+			rgn.srcOffsets[1] = { s32(buffer_width), s32(buffer_height), 1 };
+			rgn.dstOffsets[0] = { dst_rect.x1, dst_rect.y1, 0 };
+			rgn.dstOffsets[1] = { dst_rect.x2, dst_rect.y2, 1 };
+
+			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			if (target_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+			{
+				vk::change_image_layout(*m_current_command_buffer, target_image, target_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+				target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			}
+
+			vkCmdBlitImage(*m_current_command_buffer, image_to_flip->value, image_to_flip->current_layout, target_image, target_layout, 1, &rgn, VK_FILTER_LINEAR);
+			image_to_flip->pop_layout(*m_current_command_buffer);
 		}
 		else
 		{

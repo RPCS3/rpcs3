@@ -926,7 +926,13 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\NP\fb_helpers.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\NP\np_handler.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\signaling_handler.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp">
@@ -952,6 +958,15 @@
     </ClCompile>
     <ClCompile Include="..\Utilities\cheat_info.cpp">
       <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\np_structs_extra.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\rpcn_client.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\rpcn_config.cpp">
+      <Filter>Emu\NP</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1786,6 +1801,9 @@
     <ClInclude Include="Emu\NP\np_handler.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\NP\signaling_handler.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_osk_panel.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
@@ -1827,6 +1845,18 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\cheat_info.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\np_structs_extra.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\rpcn_client.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\generated\np2_structs_generated.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\rpcn_config.h">
+      <Filter>Emu\NP</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

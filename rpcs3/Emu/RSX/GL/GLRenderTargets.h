@@ -38,7 +38,7 @@ namespace rsx
 	namespace internals
 	{
 		color_format surface_color_format_to_gl(rsx::surface_color_format color_format);
-		depth_format surface_depth_format_to_gl(rsx::surface_depth_format depth_format);
+		depth_format surface_depth_format_to_gl(rsx::surface_depth_format2 depth_format);
 		u8 get_pixel_size(rsx::surface_depth_format format);
 	}
 }
@@ -54,8 +54,8 @@ namespace gl
 		void initialize_memory(gl::command_context& cmd, bool read_access);
 
 	public:
-		render_target(GLuint width, GLuint height, GLenum sized_format)
-			: viewable_image(GL_TEXTURE_2D, width, height, 1, 1, sized_format)
+		render_target(GLuint width, GLuint height, GLenum sized_format, rsx::format_class format_class)
+			: viewable_image(GL_TEXTURE_2D, width, height, 1, 1, sized_format, format_class)
 		{}
 
 		// Internal pitch is the actual row length in bytes of the openGL texture
@@ -146,7 +146,8 @@ struct gl_render_target_traits
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
 
 		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale(static_cast<u16>(width), true),
-			rsx::apply_resolution_scale(static_cast<u16>(height), true), static_cast<GLenum>(format.internal_format)));
+			rsx::apply_resolution_scale(static_cast<u16>(height), true), static_cast<GLenum>(format.internal_format),
+			RSX_FORMAT_CLASS_COLOR));
 
 		result->set_aa_mode(antialias);
 		result->set_native_pitch(static_cast<u16>(width) * get_format_block_size_in_bytes(surface_color_format) * result->samples_x);
@@ -166,24 +167,20 @@ struct gl_render_target_traits
 	static
 	std::unique_ptr<gl::render_target> create_new_surface(
 			u32 address,
-		rsx::surface_depth_format surface_depth_format,
+			rsx::surface_depth_format2 surface_depth_format,
 			size_t width, size_t height, size_t pitch,
 			rsx::surface_antialiasing antialias
 		)
 	{
 		auto format = rsx::internals::surface_depth_format_to_gl(surface_depth_format);
 		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale(static_cast<u16>(width), true),
-				rsx::apply_resolution_scale(static_cast<u16>(height), true), static_cast<GLenum>(format.internal_format)));
+			rsx::apply_resolution_scale(static_cast<u16>(height), true), static_cast<GLenum>(format.internal_format),
+			rsx::classify_format(surface_depth_format)));
 
 		result->set_aa_mode(antialias);
 		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u16>(pitch));
 		result->set_format(surface_depth_format);
-
-		u16 native_pitch = static_cast<u16>(width) * 2 * result->samples_x;
-		if (surface_depth_format == rsx::surface_depth_format::z24s8)
-			native_pitch *= 2;
-
-		result->set_native_pitch(native_pitch);
+		result->set_native_pitch(static_cast<u16>(width) * get_format_block_size_in_bytes(surface_depth_format) * result->samples_x);
 
 		std::array<GLenum, 4> native_layout = { GL_RED, GL_RED, GL_RED, GL_RED };
 		result->set_native_component_layout(native_layout);
@@ -207,7 +204,7 @@ struct gl_render_target_traits
 			const auto new_w = rsx::apply_resolution_scale(prev.width, true, ref->get_surface_width(rsx::surface_metrics::pixels));
 			const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height(rsx::surface_metrics::pixels));
 
-			sink = std::make_unique<gl::render_target>(new_w, new_h, internal_format);
+			sink = std::make_unique<gl::render_target>(new_w, new_h, internal_format, ref->format_class());
 			sink->add_ref();
 
 			sink->memory_usage_flags = rsx::surface_usage_flags::storage;
@@ -333,7 +330,7 @@ struct gl_render_target_traits
 	static
 	bool surface_matches_properties(
 		const std::unique_ptr<gl::render_target> &surface,
-		rsx::surface_depth_format format,
+		rsx::surface_depth_format2 format,
 		size_t width, size_t height,
 		rsx::surface_antialiasing antialias,
 		bool check_refs = false)

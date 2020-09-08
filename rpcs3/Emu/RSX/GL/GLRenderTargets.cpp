@@ -66,18 +66,22 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 	}
 }
 
-depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_format depth_format)
+depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_format2 depth_format)
 {
 	switch (depth_format)
 	{
-	case rsx::surface_depth_format::z16:
+	case rsx::surface_depth_format2::z16_uint:
 		return{ ::gl::texture::type::ushort, ::gl::texture::format::depth, ::gl::texture::internal_format::depth16 };
+	case rsx::surface_depth_format2::z16_float:
+		return{ ::gl::texture::type::f32, ::gl::texture::format::depth, ::gl::texture::internal_format::depth32f };
 
-	case rsx::surface_depth_format::z24s8:
+	case rsx::surface_depth_format2::z24s8_uint:
 		if (g_cfg.video.force_high_precision_z_buffer && ::gl::get_driver_caps().ARB_depth_buffer_float_supported)
 			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
 		else
 			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth24_stencil8 };
+	case rsx::surface_depth_format2::z24s8_float:
+		return{ ::gl::texture::type::float32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
 
 	default:
 		fmt::throw_exception("Unsupported depth format 0x%x" HERE, static_cast<u32>(depth_format));
@@ -215,7 +219,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	{
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		depth_stencil_target = ds->id();
-		ds->set_depth_render_mode(!m_framebuffer_layout.depth_float);
 
 		verify("Pitch mismatch!" HERE), std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == m_framebuffer_layout.actual_zeta_pitch;
 
@@ -224,8 +227,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		m_depth_surface_info.width = m_framebuffer_layout.width;
 		m_depth_surface_info.height = m_framebuffer_layout.height;
 		m_depth_surface_info.depth_format = m_framebuffer_layout.depth_format;
-		m_depth_surface_info.depth_buffer_float = m_framebuffer_layout.depth_float;
-		m_depth_surface_info.bpp = (m_framebuffer_layout.depth_format == rsx::surface_depth_format::z16? 2 : 4);
+		m_depth_surface_info.bpp = get_format_block_size_in_bytes(m_framebuffer_layout.depth_format);
 		m_depth_surface_info.samples = samples;
 
 		m_gl_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(m_framebuffer_layout.aa_factors));
@@ -279,7 +281,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 		if (depth_stencil_target)
 		{
-			if (m_framebuffer_layout.depth_format == rsx::surface_depth_format::z24s8)
+			if (is_depth_stencil_format(m_framebuffer_layout.depth_format))
 			{
 				m_draw_fbo->depth_stencil = depth_stencil_target;
 			}
@@ -451,11 +453,12 @@ void gl::render_target::clear_memory(gl::command_context& cmd)
 
 void gl::render_target::load_memory(gl::command_context& cmd)
 {
+	const bool is_swizzled = (raster_type == rsx::surface_raster_type::swizzle);
 	const u32 gcm_format = is_depth_surface() ?
 		get_compatible_gcm_format(format_info.gcm_depth_format).first :
 		get_compatible_gcm_format(format_info.gcm_color_format).first;
 
-	rsx_subresource_layout subres{};
+	rsx::subresource_layout subres{};
 	subres.width_in_block = subres.width_in_texel = surface_width * samples_x;
 	subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
 	subres.pitch_in_block = rsx_pitch / get_bpp();
@@ -465,14 +468,12 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	// TODO: MSAA support
 	if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 	{
-		gl::upload_texture(id(), gcm_format, surface_width, surface_height, 1, 1,
-			false, rsx::texture_dimension_extended::texture_dimension_2d, { subres });
+		gl::upload_texture(this, gcm_format, is_swizzled, { subres });
 	}
 	else
 	{
 		auto tmp = std::make_unique<gl::texture>(GL_TEXTURE_2D, subres.width_in_block, subres.height_in_block, 1, 1, static_cast<GLenum>(get_internal_format()));
-		gl::upload_texture(tmp->id(), gcm_format, surface_width, surface_height, 1, 1,
-			false, rsx::texture_dimension_extended::texture_dimension_2d, { subres });
+		gl::upload_texture(tmp.get(), gcm_format, is_swizzled, { subres });
 
 		gl::g_hw_blitter->scale_image(cmd, tmp.get(), this,
 			{ 0, 0, subres.width_in_block, subres.height_in_block },

@@ -1673,21 +1673,9 @@ namespace rsx
 			return sync_timestamp;
 		}
 
-		format_type get_format_type() const
+		rsx::format_class get_format_class() const
 		{
-			switch (gcm_format)
-			{
-			default:
-				return format_type::color;
-			case CELL_GCM_TEXTURE_DEPTH16:
-			case CELL_GCM_TEXTURE_DEPTH24_D8:
-				return format_type::depth_uint;
-			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-				return format_type::depth_float;
-			case 0:
-				fmt::throw_exception("Unreachable" HERE);
-			}
+			return classify_format(gcm_format);
 		}
 
 		/**
