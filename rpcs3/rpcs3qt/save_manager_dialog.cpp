@@ -203,7 +203,7 @@ void save_manager_dialog::Init(std::string dir)
 		}
 		const int idx_real = item->data(Qt::UserRole).toInt();
 		const QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
-		QDesktopServices::openUrl(QUrl("file:///" + path));
+		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 	});
 	connect(slider_icon_size, &QAbstractSlider::valueChanged, this, &save_manager_dialog::SetIconSize);
 	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &save_manager_dialog::OnSort);
@@ -480,7 +480,7 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 		}
 		const int idx_real = item->data(Qt::UserRole).toInt();
 		const QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
-		QDesktopServices::openUrl(QUrl("file:///" + path));
+		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 	});
 
 	menu->exec(m_list->viewport()->mapToGlobal(pos));

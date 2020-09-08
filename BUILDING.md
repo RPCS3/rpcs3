@@ -40,11 +40,11 @@ Ubuntu is usually horrendously out of date, and some packages need to be downloa
 
 Ubuntu usually does not have a new enough Qt package to suit rpcs3's needs. There is a PPA available to work around this. Run the following:
 ```
-ucodename=$(lsb_release -sc)
-sudo add-apt-repository ppa:beineri/opt-qt-5.14.2-$ucodename
+. /etc/os-release
+sudo add-apt-repository ppa:beineri/opt-qt-5.14.2-$UBUNTU_CODENAME
 sudo apt-get update
-. /opt/qt514/bin/qt514-env.sh >/dev/null 2>&1
 sudo apt-get install qt514-meta-minimal qt514svg
+. /opt/qt514/bin/qt514-env.sh >/dev/null 2>&1
 ```
 
 ##### GCC 9.x installation
@@ -62,22 +62,22 @@ You can either use `update-alternatives` to setup `gcc-9`/`g++-9` as your defaul
 
 For Ubuntu systems, it is strongly recommended to use the PPA from [LunarG](https://packages.lunarg.com/) which will provide a compatible Vulkan SDK to compile RPCS3. If your Vulkan SDK is older, it can lead to compilation errors.
 ```
-ucodename=$(lsb_release -sc)
-wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
-sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.1.126-$ucodename.list http://packages.lunarg.com/vulkan/1.1.126/lunarg-vulkan-1.1.126-$ucodename.list
+. /etc/os-release
+wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.148-$UBUNTU_CODENAME.list https://packages.lunarg.com/vulkan/1.2.148/lunarg-vulkan-1.2.148-$UBUNTU_CODENAME.list
 sudo apt update
 sudo apt install vulkan-sdk
 ```
 
 ##### CMake
 ```
+. /etc/os-release
 wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
-sudo apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -sc) main"
+sudo apt-add-repository "deb https://apt.kitware.com/ubuntu/ $UBUNTU_CODENAME main"
 sudo apt-get update
 sudo apt-get install kitware-archive-keyring
 sudo apt-key --keyring /etc/apt/trusted.gpg del C1F34CDD40CD72DA
 sudo apt-get install cmake
-
 ```
 
 #### Fedora
