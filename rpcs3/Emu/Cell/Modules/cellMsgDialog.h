@@ -54,6 +54,17 @@ enum : s32
 	CELL_MSGDIALOG_BUTTON_ESCAPE  = 3,
 };
 
+// Only for use with the cellMsgDialogOpen function
+enum : u32
+{
+	CELL_MSGDIALOG_DIALOG_TYPE_ERROR    = 0 << 0,
+	CELL_MSGDIALOG_DIALOG_TYPE_NORMAL   = 1 << 0,
+	CELL_MSGDIALOG_BUTTON_TYPE_NONE     = 0 << 1,
+	CELL_MSGDIALOG_BUTTON_TYPE_YESNO    = 1 << 1,
+	CELL_MSGDIALOG_DEFAULT_CURSOR_YES   = 0 << 2,
+	CELL_MSGDIALOG_DEFAULT_CURSOR_NO    = 1 << 2,
+};
+
 enum CellMsgDialogProgressBarIndex
 {
 	CELL_MSGDIALOG_PROGRESSBAR_INDEX_SINGLE       = 0, // the only bar in a single bar dialog

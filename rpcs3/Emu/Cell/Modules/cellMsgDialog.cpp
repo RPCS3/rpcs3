@@ -340,9 +340,24 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 
 error_code cellMsgDialogOpen(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
-	// Note: This function needs proper implementation, solve first argument "type" conflict with MsgDialogOpen2 in cellMsgDialog.h.
-	cellSysutil.todo("cellMsgDialogOpen(type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
-	return cellMsgDialogOpen2(type, msgString, callback, userData, extParam);
+	cellSysutil.warning("cellMsgDialogOpen(type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
+
+	// PS3 testing indicated that cellMsgDialogOpen does have quite a few differences in regards to the YesNo selection, plus is only a subset of Open2 functionality
+	// The easiest way is to just bit test these, and set the corresponding flags for the cellMsgDialogOpen2 function
+	u32 msg_dialog_open2_type = 0;
+
+	if (type & CELL_MSGDIALOG_DIALOG_TYPE_NORMAL)
+		msg_dialog_open2_type |= CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL;
+
+	if (type & CELL_MSGDIALOG_BUTTON_TYPE_YESNO)
+	{
+		msg_dialog_open2_type |= CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO;
+
+		if (type & CELL_MSGDIALOG_DEFAULT_CURSOR_NO )
+			msg_dialog_open2_type |= CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO;
+	}
+
+	return cellMsgDialogOpen2(msg_dialog_open2_type, msgString, callback, userData, extParam);
 }
 
 error_code cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
@@ -489,13 +504,14 @@ error_code cellMsgDialogAbort()
 
 error_code cellMsgDialogOpenSimulViewWarning(vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
-	cellSysutil.todo("cellMsgDialogOpenSimulViewWarning(callback=*0x%x, userData=*0x%x, extParam=*0x%x)", callback, userData, extParam);
+	cellSysutil.warning("cellMsgDialogOpenSimulViewWarning(callback=*0x%x, userData=*0x%x, extParam=*0x%x)", callback, userData, extParam);
 
-	error_code ret = cellMsgDialogOpen2(CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, vm::make_str("SimulView Warning"), callback, userData, extParam);
+	error_code ret = cellMsgDialogOpen2(CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_NONE | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON,
+		vm::make_str("SimulView Mode displays two different images on screen.\nPlease put on SimulView 3D glasses before playing or watching in this mode."), callback, userData, extParam);
 
-	// The dialog should ideally only be closeable by pressing ok after 3 seconds until it closes itself automatically after 5 seconds
+	// The dialog is not cancellable, and in firmware 4.84 the OK button is not present at all, with the dialog just closing after 3 seconds.
 	if (ret == CELL_OK)
-		cellMsgDialogClose(5000.0f);
+		cellMsgDialogClose(3000.0f);
 
 	return ret;
 }
