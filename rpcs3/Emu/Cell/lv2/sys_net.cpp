@@ -1510,7 +1510,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 		{
 			const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-			// Hack for DNS (8.8.8.8:53)
+			// Hack for DNS
 			name.sin_port        = std::bit_cast<u16, be_t<u16>>(53);
 			name.sin_addr.s_addr = nph->get_dns_ip();
 
@@ -3426,23 +3426,13 @@ error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 	case 9:
 	{
 		constexpr auto nameserver = "nameserver \0"sv;
-		constexpr auto default_ip = "192.168.1.1\0"sv;
 
-		char buffer[nameserver.size() + 80];
+		char buffer[nameserver.size() + 80]{};
 		std::memcpy(buffer, nameserver.data(), nameserver.size());
 
 		const auto nph = g_fxo->get<named_thread<np_handler>>();
-		if (nph->get_dns_ip())
-		{
-			struct sockaddr_in serv;
-			std::memset(&serv, 0, sizeof(serv));
-			serv.sin_addr.s_addr = nph->get_dns_ip();
-			inet_ntop(AF_INET, &serv.sin_addr, buffer + nameserver.size() - 1, sizeof(buffer) - nameserver.size());
-		}
-		else
-		{
-			std::memcpy(buffer + nameserver.size() - 1, default_ip.data(), default_ip.size());
-		}
+		const auto dns_str = np_handler::ip_to_string(nph->get_dns_ip());
+		std::memcpy(buffer + nameserver.size() - 1, dns_str.data(), dns_str.size());
 
 		std::string_view name{buffer};
 		vm::static_ptr_cast<net_infoctl_cmd_9_t>(arg)->zero = 0;
