@@ -634,11 +634,6 @@ namespace glsl
 
 		program_common::insert_compare_op(OS, props.low_precision_tests);
 
-		if (props.require_shadow_ops && props.emulate_shadow_compare)
-		{
-			program_common::insert_compare_op_vector(OS);
-		}
-
 		if (props.emulate_coverage_tests)
 		{
 			// Purely stochastic
@@ -726,26 +721,6 @@ namespace glsl
 
 		if (props.require_texture_ops)
 		{
-			if (props.require_shadow_ops && props.emulate_shadow_compare)
-			{
-				OS <<
-				"vec4 shadowCompare(sampler2D tex, const in vec3 p, const in uint func)\n"
-				"{\n"
-				"	vec4 samples = textureGather(tex, p.xy, 0);\n"
-				"	float advance_x = dFdx(p).z;\n"
-				"	float advance_y = -dFdy(p).z;\n"
-				"	vec4 off = vec4(advance_y, (advance_x + advance_y), advance_x, 0.);\n"
-				"	vec4 ref = clamp(off + p.z, 0., 1.);\n"
-				"	vec4 filtered = vec4(comparison_passes(samples, ref, func));\n"
-				"	return dot(filtered, vec4(0.25f)).xxxx;\n"
-				"}\n\n"
-
-				"vec4 shadowCompareProj(sampler2D tex, const in vec4 p, const in uint func)\n"
-				"{\n"
-				"	return shadowCompare(tex, p.xyz / p.w, func);\n"
-				"}\n\n";
-			}
-
 			OS <<
 
 #ifdef __APPLE__
@@ -855,8 +830,8 @@ namespace glsl
 			if (props.emulate_shadow_compare)
 			{
 				OS <<
-				"#define TEX2D_SHADOW(index, coord3) shadowCompare(TEX_NAME(index), coord3 * vec3(texture_parameters[index].scale, 1.), texture_parameters[index].flags >> 8)\n"
-				"#define TEX2D_SHADOWPROJ(index, coord4) shadowCompareProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.), texture_parameters[index].flags >> 8)\n";
+				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), vec3(coord3.xy * texture_parameters[index].scale, min(coord3.z, 1.)))\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), vec4(coord4.xy * texture_parameters[index].scale, min(coord4.z, coord4.w), coord4.w))\n";
 			}
 			else
 			{
