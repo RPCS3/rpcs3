@@ -417,7 +417,29 @@ endif()
 include(llvm.cmake)
 
 # WOLFSSL
-add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
+if(USE_SYSTEM_WOLFSSL)
+	message("-- RPCS3: using shared wolfssl")
+	find_package(WolfSSL REQUIRED)
+	add_library(wolfssl INTERFACE)
+	target_link_libraries(wolfssl INTERFACE WolfSSL_LIBRARIES)
+	target_include_directories(wolfssl INTERFACE WolfSSL_INCLUDE_DIRS)
+else()
+	SET(BUILD_TESTS NO CACHE BOOL "Build test applications")
+	add_definitions(-DHAVE_FFDHE_2048 -DTFM_TIMING_RESISTANT -DECC_TIMING_RESISTANT 
+					-DWC_RSA_BLINDING -DHAVE_AESGCM -DWOLFSSL_SHA512 -DWOLFSSL_SHA384 -DNO_DSA -DHAVE_ECC -DTFM_ECC256 -DECC_SHAMIR 
+					-DNO_RC4 -DNO_HC128 -DNO_RABBIT -DWOLFSSL_SHA224 -DWOLFSSL_SHA3 -DWOLFSSL_SHAKE256 -DHAVE_POLY1305 
+					-DHAVE_ONE_TIME_AUTH -DHAVE_CHACHA -DHAVE_HASHDRBG -DHAVE_TLS_EXTENSIONS -DHAVE_SNI -DHAVE_SUPPORTED_CURVES 
+					-DHAVE_EXTENDED_MASTER -DNO_RC4 -DHAVE_ENCRYPT_THEN_MAC -DNO_PSK -DNO_MD4 
+					-DWC_NO_ASYNC_THREADING -DOPENSSL_EXTRA -DWOLFSSL_DES_ECB)
+	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
+	target_include_directories(wolfssl INTERFACE "wolfssl/")
+	# This is needed for CURL
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/wolfssl/options.h.in ${CMAKE_CURRENT_BINARY_DIR}/wolfssl/wolfssl/options.h)
+	set(WolfSSL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/libwolfssl.a")
+	set(WolfSSL_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/libwolfssl.a")
+	set(WolfSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/" "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/")
+	set(WolfSSL_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/" "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/")
+endif()
 
 # CURL
 if(USE_SYSTEM_CURL)
@@ -427,6 +449,11 @@ if(USE_SYSTEM_CURL)
 	target_link_libraries(libcurl INTERFACE CURL::libcurl)
 else()
 	message("-- RPCS3: building libcurl + wolfssl submodules")
+	option(BUILD_CURL_EXE "Set to ON to build curl executable." OFF)
+	option(CMAKE_USE_WOLFSSL "enable wolfSSL for SSL/TLS" ON)
+	option(HTTP_ONLY "disables all protocols except HTTP (This overrides all CURL_DISABLE_* options)" ON)
+	option(CURL_ZLIB "Set to ON to enable building curl with zlib support." OFF)
+	set(CURL_CA_PATH "none" CACHE STRING "Location of default CA path. Set 'none' to disable or 'auto' for auto-detection. Defaults to 'auto'.")
 	add_subdirectory(curl EXCLUDE_FROM_ALL)
 endif()
 
@@ -453,5 +480,5 @@ add_library(3rdparty::vulkan ALIAS ${VULKAN_TARGET})
 add_library(3rdparty::openal ALIAS 3rdparty_openal)
 add_library(3rdparty::ffmpeg ALIAS 3rdparty_ffmpeg)
 add_library(3rdparty::glew ALIAS 3rdparty_glew)
-add_library(3rdparty::wolfssl ALIAS wolfssl-3-static)
+add_library(3rdparty::wolfssl ALIAS wolfssl)
 add_library(3rdparty::libcurl ALIAS libcurl)
