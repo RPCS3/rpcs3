@@ -323,6 +323,12 @@ bool keyboard_pad_handler::get_mouse_lock_state()
 
 void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 {
+	if (!m_mouse_move_used)
+	{
+		event->ignore();
+		return;
+	}
+
 	static int movement_x = 0;
 	static int movement_y = 0;
 	static int last_pos_x = 0;
@@ -632,6 +638,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	if (p_profile == nullptr)
 		return false;
 
+	m_mouse_move_used = false;
 	m_deadzone_x = p_profile->mouse_deadzone_x;
 	m_deadzone_y = p_profile->mouse_deadzone_y;
 	m_multi_x = p_profile->mouse_acceleration_x / 100.0;
@@ -641,13 +648,15 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	m_analog_lerp_factor  = p_profile->analog_lerp_factor / 100.0f;
 	m_trigger_lerp_factor = p_profile->trigger_lerp_factor / 100.0f;
 
-	auto find_key = [&](const cfg::string& name)
+	const auto find_key = [this](const cfg::string& name)
 	{
 		int key = FindKeyCode(mouse_list, name, false);
 		if (key < 0)
 			key = GetKeyCode(name);
 		if (key < 0)
 			key = 0;
+		else if (!m_mouse_move_used && (key == mouse::move_left || key == mouse::move_right || key == mouse::move_up || key == mouse::move_down))
+			m_mouse_move_used = true;
 		return key;
 	};
 
