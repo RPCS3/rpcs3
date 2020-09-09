@@ -737,7 +737,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 	// sendfile will work with non-socket output (i.e. regular file) on Linux 2.6.33+
 	off_t bytes_copied = 0;
 	struct ::stat fileinfo = { 0 };
-	if (::fstat(input, &fileinfo) || ::sendfile(output, input, &bytes_copied, fileinfo.st_size))
+	if (::fstat(input, &fileinfo) == -1 || ::sendfile(output, input, &bytes_copied, fileinfo.st_size) == -1)
 #else
 #error "Native file copy implementation is missing"
 #endif
