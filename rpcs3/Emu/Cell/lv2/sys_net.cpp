@@ -858,7 +858,8 @@ struct network_thread
 		WSADATA wsa_data;
 		WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #endif
-		list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(3658), std::forward_as_tuple(3658));
+		if (g_cfg.net.psn_status == np_psn_status::rpcn)
+			list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(3658), std::forward_as_tuple(3658));
 	}
 
 	~network_thread()
