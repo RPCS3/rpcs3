@@ -140,8 +140,7 @@ static FORCE_INLINE bool cmp_rdata(const decltype(spu_thread::rdata)& lhs, const
 
 static FORCE_INLINE void mov_rdata_avx(__m256i* dst, const __m256i* src)
 {
-#if defined(_MSC_VER) || defined(__AVX2__)
-	// In AVX-only mode, for some older CPU models, GCC/Clang may emit 128-bit loads/stores instead.
+#ifdef _MSC_VER
 	_mm256_storeu_si256(dst + 0, _mm256_loadu_si256(src + 0));
 	_mm256_storeu_si256(dst + 1, _mm256_loadu_si256(src + 1));
 	_mm256_storeu_si256(dst + 2, _mm256_loadu_si256(src + 2));
