@@ -73,7 +73,7 @@ std::string patch_engine::get_patch_config_path()
 
 	if (!fs::create_path(config_dir))
 	{
-		patch_log.error("Could not create path: %s", patch_path);
+		patch_log.error("Could not create path: %s (%s)", patch_path, fs::g_tls_error);
 	}
 
 	return patch_path;
@@ -825,7 +825,7 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 	fs::file file(path, fs::rewrite);
 	if (!file)
 	{
-		patch_log.fatal("Failed to open patch config file %s", path);
+		patch_log.fatal("Failed to open patch config file %s (%s)", path, fs::g_tls_error);
 		return;
 	}
 
@@ -978,8 +978,8 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 	fs::file file(path, fs::rewrite);
 	if (!file)
 	{
-		patch_log.fatal("save_patches: Failed to open patch file %s", path);
-		append_log_message(log_messages, fmt::format("Failed to open patch file %s", path));
+		patch_log.fatal("save_patches: Failed to open patch file %s (%s)", path, fs::g_tls_error);
+		append_log_message(log_messages, fmt::format("Failed to open patch file %s (%s)", path, fs::g_tls_error));
 		return false;
 	}
 
