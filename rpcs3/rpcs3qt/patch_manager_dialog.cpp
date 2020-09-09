@@ -846,7 +846,7 @@ void patch_manager_dialog::download_update()
 		}
 		else
 		{
-			patch_log.error("Could not open patch file: %s", path);
+			patch_log.error("Could not open patch file: %s (%s)", path, fs::g_tls_error);
 			return;
 		}
 	}
@@ -945,7 +945,7 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 			if (const std::string path_old = path + ".old";
 				!fs::copy_file(path, path_old, true))
 			{
-				patch_log.error("Could not back up current patches to %s", path_old);
+				patch_log.error("Could not back up current patches to %s (%s)", path_old, fs::g_tls_error);
 				return false;
 			}
 		}
@@ -957,7 +957,7 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 		}
 		else
 		{
-			patch_log.error("Could not save new patches to %s", path);
+			patch_log.error("Could not save new patches to %s (%s)", path, fs::g_tls_error);
 			return false;
 		}
 
