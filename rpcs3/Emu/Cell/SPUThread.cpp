@@ -3058,44 +3058,6 @@ bool spu_thread::stop_and_signal(u32 code)
 
 	switch (code)
 	{
-	case 0x000:
-	{
-		spu_log.warning("STOP 0x0");
-
-		// HACK: find an ILA instruction
-		for (u32 addr = pc; addr < SPU_LS_SIZE; addr += 4)
-		{
-			const u32 instr = _ref<u32>(addr);
-
-			if (instr >> 25 == 0x21)
-			{
-				pc = addr;
-				return false;
-			}
-
-			if (instr > 0x1fffff)
-			{
-				break;
-			}
-		}
-
-		// HACK: wait for executable code
-		while (!_ref<u32>(pc))
-		{
-			state += cpu_flag::wait;
-
-			if (is_stopped())
-			{
-				return false;
-			}
-
-			thread_ctrl::wait_for(1000);
-		}
-
-		check_state();
-		return false;
-	}
-
 	case 0x001:
 	{
 		state += cpu_flag::wait;
