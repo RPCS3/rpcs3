@@ -821,7 +821,7 @@ error_code sys_spu_thread_group_suspend(ppu_thread& ppu, u32 id)
 			return false;
 		}
 
-		error = CellError{CELL_CANCEL};
+		error = CellError{CELL_CANCEL + 0u};
 		return true;
 	});
 
@@ -892,7 +892,7 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 			return false;
 		}
 
-		error = CellError{CELL_CANCEL};
+		error = CellError{CELL_CANCEL + 0u};
 		return true;
 	});
 

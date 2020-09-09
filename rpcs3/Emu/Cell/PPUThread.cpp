@@ -1113,9 +1113,9 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 		if ((vm::reservation_acquire(addr, sizeof(T)) & mask_res) == ppu.rtime) [[likely]]
 		{
-			if (count >= 10) [[unlikely]]
+			if (count >= 15) [[unlikely]]
 			{
-				ppu_log.error("%s took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
+				ppu_log.warning("%s took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
 			}
 
 			return static_cast<T>(ppu.rdata << data_off >> size_off);
