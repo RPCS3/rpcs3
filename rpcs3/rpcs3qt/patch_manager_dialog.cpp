@@ -942,10 +942,10 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 		// Back up current patch file if possible
 		if (fs::is_file(path))
 		{
-			if (const std::string path_old = path + ".old";
-				!fs::copy_file(path, path_old, true))
+			if (const std::string back_up_path = path + ".old";
+				!fs::rename(path, back_up_path, true))
 			{
-				patch_log.error("Could not back up current patches to %s (%s)", path_old, fs::g_tls_error);
+				patch_log.error("Could not back up current patches to %s (%s)", back_up_path, fs::g_tls_error);
 				return false;
 			}
 		}
