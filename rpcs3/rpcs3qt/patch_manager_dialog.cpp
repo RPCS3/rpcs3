@@ -962,6 +962,9 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 		}
 
 		refresh();
+
+		patch_log.success("Successfully downloaded latest patch file");
+		QMessageBox::information(this, tr("Download successful"), tr("Your patch file is now up to date"));
 	}
 	else
 	{
@@ -969,7 +972,5 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 		QMessageBox::critical(this, tr("Validation failed"), tr("Errors were found in the downloaded patch file.\n\nLog:\n%0").arg(QString::fromStdString(log_message.str())));
 	}
 
-	patch_log.success("Successfully downloaded latest patch file");
-	QMessageBox::information(this, tr("Download successful"), tr("Your patch file is now up to date"));
 	return true;
 }
