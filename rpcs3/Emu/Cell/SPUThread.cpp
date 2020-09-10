@@ -1162,6 +1162,16 @@ void spu_thread::cpu_unmem()
 	//state.test_and_set(cpu_flag::memory);
 }
 
+void spu_thread::cpu_work()
+{
+	const auto timeout = +g_cfg.core.mfc_transfers_timeout;
+	if (mfc_size > g_cfg.core.mfc_transfers_shuffling || (timeout && get_system_time() >= mfc_last_timestamp + g_cfg.core.mfc_transfers_timeout))
+	{
+		do_mfc(false);
+		check_mfc_interrupts(pc + 4);
+	}
+}
+
 spu_thread::~spu_thread()
 {
 	{
@@ -1918,111 +1928,152 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	vm::reservation_notifier(addr, 128).notify_all();
 }
 
-void spu_thread::do_mfc(bool wait)
+void spu_thread::do_mfc(bool can_escape)
 {
 	u32 removed = 0;
 	u32 barrier = 0;
 	u32 fence = 0;
 
-	// Process enqueued commands
-	static_cast<void>(std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, [&](spu_mfc_cmd& args)
+	auto get_exec_mask = [&size = mfc_size]
 	{
-		// Select tag bit in the tag mask or the stall mask
-		const u32 mask = utils::rol32(1, args.tag);
+		return static_cast<u16>((0 - (1u << std::min<u32>(g_cfg.core.mfc_transfers_shuffling, size))) | __rdtsc());
+	};
 
-		if ((args.cmd & ~0xc) == MFC_BARRIER_CMD)
+	// Shuffle commands execution (if enabled), explicit barriers are obeyed
+	u16 exec_mask = get_exec_mask();
+	bool pending = false;
+
+	// Process enqueued commands
+	while (true)
+	{
+		static_cast<void>(std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, [&](spu_mfc_cmd& args)
 		{
-			if (&args - mfc_queue <= removed)
+			// Select tag bit in the tag mask or the stall mask
+			const u32 mask = utils::rol32(1, args.tag);
+
+			if ((args.cmd & ~0xc) == MFC_BARRIER_CMD)
 			{
-				// Remove barrier-class command if it's the first in the queue
-				std::atomic_thread_fence(std::memory_order_seq_cst);
-				removed++;
-				return true;
-			}
-
-			// Block all tags
-			barrier |= -1;
-			fence |= mask;
-			return false;
-		}
-
-		if (barrier & mask)
-		{
-			fence |= mask;
-			return false;
-		}
-
-		if (args.cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK) && fence & mask)
-		{
-			if (args.cmd & MFC_BARRIER_MASK)
-			{
-				barrier |= mask;
-			}
-
-			return false;
-		}
-
-		if (args.cmd & MFC_LIST_MASK)
-		{
-			if (!(args.tag & 0x80))
-			{
-				if (do_list_transfer(args))
+				if (&args - mfc_queue <= removed)
 				{
+					// Remove barrier-class command if it's the first in the queue
+					std::atomic_thread_fence(std::memory_order_seq_cst);
 					removed++;
 					return true;
 				}
-			}
 
-			if (args.cmd & MFC_BARRIER_MASK)
-			{
-				barrier |= mask;
-			}
-
-			fence |= mask;
-			return false;
-		}
-
-		if (args.cmd == MFC_PUTQLLUC_CMD)
-		{
-			if (fence & mask)
-			{
+				// Block all tags
+				barrier |= -1;
+				fence |= mask;
 				return false;
 			}
 
-			do_putlluc(args);
-		}
-		else if (args.size)
+			if (barrier & mask)
+			{
+				fence |= mask;
+				return false;
+			}
+
+			if (args.cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK) && fence & mask)
+			{
+				if (args.cmd & MFC_BARRIER_MASK)
+				{
+					barrier |= mask;
+				}
+
+				return false;
+			}
+
+			if (!(exec_mask & (1u << (&args - mfc_queue))))
+			{
+				if (args.cmd & MFC_BARRIER_MASK)
+				{
+					barrier |= mask;
+				}
+
+				fence |= mask;
+				pending = true;
+				return false;
+			}
+
+			if (args.cmd & MFC_LIST_MASK)
+			{
+				if (!(args.tag & 0x80))
+				{
+					if (do_list_transfer(args))
+					{
+						removed++;
+						return true;
+					}
+				}
+
+				if (args.cmd & MFC_BARRIER_MASK)
+				{
+					barrier |= mask;
+				}
+
+				fence |= mask;
+				return false;
+			}
+
+			if (args.cmd == MFC_PUTQLLUC_CMD)
+			{
+				if (fence & mask)
+				{
+					return false;
+				}
+
+				do_putlluc(args);
+			}
+			else if (args.size)
+			{
+				do_dma_transfer(args);
+			}
+
+			removed++;
+			return true;
+		}));
+
+
+		mfc_size -= removed;
+		mfc_barrier = barrier;
+		mfc_fence = fence;
+
+		if (removed && ch_tag_upd)
 		{
-			do_dma_transfer(args);
+			const u32 completed = get_mfc_completed();
+
+			if (completed && ch_tag_upd == MFC_TAG_UPDATE_ANY)
+			{
+				ch_tag_stat.set_value(completed);
+				ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
+			}
+			else if (completed == ch_tag_mask && ch_tag_upd == MFC_TAG_UPDATE_ALL)
+			{
+				ch_tag_stat.set_value(completed);
+				ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
+			}
 		}
 
-		removed++;
-		return true;
-	}));
-
-	mfc_size -= removed;
-	mfc_barrier = barrier;
-	mfc_fence = fence;
-
-	if (removed && ch_tag_upd)
-	{
-		const u32 completed = get_mfc_completed();
-
-		if (completed && ch_tag_upd == MFC_TAG_UPDATE_ANY)
+		if (can_escape && check_mfc_interrupts(pc + 4))
 		{
-			ch_tag_stat.set_value(completed);
-			ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
+			spu_runtime::g_escape(this);
 		}
-		else if (completed == ch_tag_mask && ch_tag_upd == MFC_TAG_UPDATE_ALL)
+
+		if (!pending)
 		{
-			ch_tag_stat.set_value(completed);
-			ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
+			break;
 		}
+
+		removed = 0;
+		barrier = 0;
+		fence = 0;
+		pending = false;
+		exec_mask = get_exec_mask();
 	}
 
-	if (check_mfc_interrupts(pc + 4))
+	if (state & cpu_flag::pending)
 	{
-		spu_runtime::g_escape(this);
+		state -= cpu_flag::pending;
 	}
 }
 
@@ -2057,6 +2108,11 @@ bool spu_thread::process_mfc_cmd()
 		if (is_stopped())
 		{
 			return false;
+		}
+
+		if (state & cpu_flag::pending)
+		{
+			do_mfc();
 		}
 
 		thread_ctrl::wait();
@@ -2325,12 +2381,18 @@ bool spu_thread::process_mfc_cmd()
 		{
 			if (do_dma_check(ch_mfc_cmd)) [[likely]]
 			{
-				if (ch_mfc_cmd.size)
+				if (!g_cfg.core.mfc_transfers_shuffling)
 				{
-					do_dma_transfer(ch_mfc_cmd);
+					if (ch_mfc_cmd.size)
+					{
+						do_dma_transfer(ch_mfc_cmd);
+					}
+
+					return true;
 				}
 
-				return true;
+				if (!state.test_and_set(cpu_flag::pending))
+					mfc_last_timestamp = get_system_time();
 			}
 
 			mfc_queue[mfc_size++] = ch_mfc_cmd;
@@ -2363,9 +2425,17 @@ bool spu_thread::process_mfc_cmd()
 
 			if (do_dma_check(cmd)) [[likely]]
 			{
-				if (!cmd.size || do_list_transfer(cmd)) [[likely]]
+				if (!g_cfg.core.mfc_transfers_shuffling)
 				{
-					return true;
+					if (!cmd.size || do_list_transfer(cmd)) [[likely]]
+					{
+						return true;
+					}
+				}
+				else
+				{
+					if (!state.test_and_set(cpu_flag::pending))
+						mfc_last_timestamp = get_system_time();
 				}
 			}
 
@@ -2379,6 +2449,7 @@ bool spu_thread::process_mfc_cmd()
 
 			if (check_mfc_interrupts(pc + 4))
 			{
+				do_mfc(false);
 				spu_runtime::g_escape(this);
 			}
 
@@ -2527,6 +2598,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 			state += cpu_flag::wait;
 		}
 
+		if (state & cpu_flag::pending)
+		{
+			do_mfc();
+		}
+
 		for (int i = 0; i < 10 && channel.get_count() == 0; i++)
 		{
 			busy_wait();
@@ -2552,6 +2628,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		while (true)
 		{
+			if (state & cpu_flag::pending)
+			{
+				do_mfc();
+			}
+
 			for (int i = 0; i < 10 && ch_in_mbox.get_count() == 0; i++)
 			{
 				busy_wait();
@@ -2581,13 +2662,17 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case MFC_RdTagStat:
 	{
+		if (state & cpu_flag::pending)
+		{
+			do_mfc();
+		}
+
 		if (u32 out; ch_tag_stat.try_read(out))
 		{
 			ch_tag_stat.set_value(0, false);
 			return out;
 		}
 
-		// Will stall infinitely
 		return read_channel(ch_tag_stat);
 	}
 
@@ -2728,6 +2813,11 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 	{
 		if (get_type() >= spu_type::raw)
 		{
+			if (state & cpu_flag::pending)
+			{
+				do_mfc();
+			}
+
 			if (ch_out_intr_mbox.get_count())
 			{
 				state += cpu_flag::wait;
@@ -2866,6 +2956,11 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutMbox:
 	{
+		if (state & cpu_flag::pending)
+		{
+			do_mfc();
+		}
+
 		if (ch_out_mbox.get_count())
 		{
 			state += cpu_flag::wait;

@@ -468,6 +468,11 @@ cpu_thread::cpu_thread(u32 id)
 
 bool cpu_thread::check_state() noexcept
 {
+	if (state & cpu_flag::pending)
+	{
+		cpu_work();
+	}
+
 	if (state & cpu_flag::dbg_pause)
 	{
 		g_fxo->get<gdb_server>()->pause_from(this);
