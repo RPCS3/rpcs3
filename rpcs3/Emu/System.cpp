@@ -1212,7 +1212,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
 		const std::size_t game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
-		const std::size_t bdvd_pos = m_cat == "DG" && bdvd_dir.empty() && disc.empty() ? elf_dir.rfind("/USRDIR") - game_dir_size : 0;
+		const std::size_t bdvd_pos = m_cat == "DG" && bdvd_dir.empty() && disc.empty() && (elf_dir.rfind("/USRDIR") != umax) ? elf_dir.rfind("/USRDIR") - game_dir_size : 0;
 		const bool from_hdd0_game = m_path.find(hdd0_game) != umax;
 
 		if (bdvd_pos && from_hdd0_game)
