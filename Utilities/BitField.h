@@ -147,7 +147,7 @@ struct bf_t : bf_base<T, N>
 
 	bf_t& operator &=(vtype right)
 	{
-		this->m_data &= static_cast<vtype>((static_cast<utype>(right) & bf_t::vmask) << bitpos);
+		this->m_data &= static_cast<vtype>(((static_cast<utype>(right) & bf_t::vmask) << bitpos) | ~(bf_t::vmask << bitpos));
 		return *this;
 	}
 
