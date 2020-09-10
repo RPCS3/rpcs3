@@ -3443,13 +3443,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="accuratePUTLLUC">
-              <property name="text">
-               <string>Accurate PUTLLUC</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QCheckBox" name="accurateSpuDMA">
               <property name="text">
                <string>Accurate SPU DMA</string>
