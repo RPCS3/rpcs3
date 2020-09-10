@@ -1891,28 +1891,20 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 
 		*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
-		if (g_cfg.core.spu_accurate_putlluc)
+		const auto render = get_rsx_if_needs_res_pause(addr);
+
+		if (render) render->pause();
+
+		auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
 		{
-			const auto render = get_rsx_if_needs_res_pause(addr);
-
-			if (render) render->pause();
-
-			auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
-			{
-				// Full lock (heavyweight)
-				// TODO: vm::check_addr
-				vm::writer_lock lock(addr);
-				mov_rdata(super_data, to_write);
-				res.release(time0 + 128);
-			}
-
-			if (render) render->unpause();
-		}
-		else
-		{
-			mov_rdata(data, to_write);
+			// Full lock (heavyweight)
+			// TODO: vm::check_addr
+			vm::writer_lock lock(addr);
+			mov_rdata(super_data, to_write);
 			res.release(time0 + 128);
 		}
+
+		if (render) render->unpause();
 	}
 
 	vm::reservation_notifier(addr, 128).notify_all();
