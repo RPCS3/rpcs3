@@ -964,7 +964,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				fs::remove_all(old_path);
 
 				// Remove savedata by renaming
-				if (!vfs::host::rename(del_path, old_path, false))
+				if (!vfs::host::rename(del_path, old_path, &g_mp_sys_dev_hdd0, false))
 				{
 					fmt::throw_exception("Failed to move directory %s (%s)", del_path, fs::g_tls_error);
 				}
@@ -1917,13 +1917,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		fs::remove_all(old_path);
 
 		// Backup old savedata
-		if (!vfs::host::rename(dir_path, old_path, false))
+		if (!vfs::host::rename(dir_path, old_path, &g_mp_sys_dev_hdd0, false))
 		{
 			fmt::throw_exception("Failed to move directory %s (%s)", dir_path, fs::g_tls_error);
 		}
 
 		// Commit new savedata
-		if (!vfs::host::rename(new_path, dir_path, false))
+		if (!vfs::host::rename(new_path, dir_path, &g_mp_sys_dev_hdd0, false))
 		{
 			// TODO: handle the case when only commit failed at the next save load
 			fmt::throw_exception("Failed to move directory %s (%s)", new_path, fs::g_tls_error);

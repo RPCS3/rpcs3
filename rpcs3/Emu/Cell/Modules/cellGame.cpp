@@ -4,6 +4,7 @@
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_fs.h"
 
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
@@ -555,7 +556,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		psf::save_object(fs::file(perm->temp + "/PARAM.SFO", fs::rewrite), perm->sfo);
 
 		// Make temporary directory persistent (atomically)
-		if (vfs::host::rename(perm->temp, vfs::get(dir), false))
+		if (vfs::host::rename(perm->temp, vfs::get(dir), &g_mp_sys_dev_hdd0, false))
 		{
 			cellGame.success("cellGameContentPermit(): directory '%s' has been created", dir);
 

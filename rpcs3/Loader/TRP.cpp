@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Emu/VFS.h"
 #include "Emu/System.h"
+#include "Emu/Cell/lv2/sys_fs.h"
 #include "TRP.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
@@ -41,7 +42,11 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 	{
 		trp_f.seek(entry.offset);
 		buffer.resize(entry.size);
-		if (!trp_f.read(buffer)) continue; // ???
+		if (!trp_f.read(buffer))
+		{
+			trp_log.error("Failed to read TRPEntry at: offset=0x%x, size=0x%x", entry.offset, entry.size);
+			continue; // ???
+		}
 
 		// Create the file in the temporary directory
 		success = fs::write_file(temp + vfs::escape(entry.name), fs::create + fs::excl, buffer);	
@@ -53,7 +58,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 
 	if (success)
 	{
-		success = vfs::host::remove_all(local_path, Emu.GetHddDir(), true) || !fs::is_dir(local_path);
+		success = vfs::host::remove_all(local_path, Emu.GetHddDir(), &g_mp_sys_dev_hdd0, true) || !fs::is_dir(local_path);
 
 		if (success)
 		{
