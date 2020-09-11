@@ -498,6 +498,9 @@ namespace fs
 	// Get common cache directory
 	const std::string& get_cache_dir();
 
+	// Get real path for comparisons (TODO: investigate std::filesystem::path::compare implementation)
+	std::string escape_path(std::string_view path);
+
 	// Delete directory and all its contents recursively
 	bool remove_all(const std::string& path, bool remove_root = true);
 

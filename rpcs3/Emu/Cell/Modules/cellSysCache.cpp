@@ -71,7 +71,7 @@ struct syscache_info
 	void clear(bool remove_root) noexcept
 	{
 		// Clear cache
-		if (!vfs::host::remove_all(cache_root + cache_id, cache_root, remove_root))
+		if (!vfs::host::remove_all(cache_root + cache_id, cache_root, &g_mp_sys_dev_hdd1, remove_root))
 		{
 			cellSysutil.fatal("cellSysCache: failed to clear cache directory '%s%s' (%s)", cache_root, cache_id, fs::g_tls_error);
 		}
