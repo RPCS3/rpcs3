@@ -122,6 +122,7 @@ void fmt_class_string<CellSysutilParamId>::format(std::string& out, u64 arg)
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE: return "ID_TIMEZONE";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME: return "ID_SUMMERTIME";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL: return "ID_GAME_PARENTAL_LEVEL";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_LICENSE_AREA: return "ID_LICENSE_AREA";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT: return "ID_GAME_PARENTAL_LEVEL0_RESTRICT";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT: return "ID_CURRENT_USER_HAS_NP_ACCOUNT";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ: return "ID_CAMERA_PLFREQ";
@@ -247,6 +248,20 @@ error_code cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> valu
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL:
 		*value = CELL_SYSUTIL_GAME_PARENTAL_OFF;
 		break;
+
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_LICENSE_AREA:
+	{
+		if (g_ps3_process_info.sdk_ver > 0x23FFFFu)
+		{
+			return CELL_SYSUTIL_ERROR_VALUE;
+		}
+
+		extern s32 cellSysutilGetLicenseArea();
+
+		// Identical until proved otherwise
+		*value = cellSysutilGetLicenseArea();
+		break;
+	}
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT:
 		*value = CELL_SYSUTIL_GAME_PARENTAL_LEVEL0_RESTRICT_OFF;
