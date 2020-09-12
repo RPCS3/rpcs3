@@ -314,12 +314,13 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 				return false;
 			}
 
-			_this->m_state_notifier.release(data);
-
 			if (!data)
 			{
+				_this->m_state_notifier.release(data);
 				return true;
 			}
+
+			_this->m_state_notifier.store(data);
 
 			if (_this->m_state >= thread_state::aborting)
 			{
