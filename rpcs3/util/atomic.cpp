@@ -536,7 +536,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 	bool fallback = false;
 
-	if (sema_id && ptr_cmp(data, size, old_value, mask) && s_tls_wait_cb(data))
+	if (sema_id && s_tls_wait_cb(data) && ptr_cmp(data, size, old_value, mask))
 	{
 #ifdef USE_FUTEX
 		struct timespec ts;
