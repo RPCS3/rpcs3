@@ -225,10 +225,12 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	return CELL_OK;
 }
 
-error_code cellHddGameCheck2()
+error_code cellHddGameCheck2(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
-	cellGame.todo("cellHddGameCheck2()");
-	return CELL_OK;
+	cellGame.trace("cellHddGameCheck2()");
+
+	// Identical function
+	return cellHddGameCheck(ppu, version, dirName, errDialog, funcStat, container);
 }
 
 error_code cellHddGameGetSizeKB(vm::ptr<u32> size)
