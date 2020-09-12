@@ -746,6 +746,7 @@ public:
 	bool do_dma_check(const spu_mfc_cmd& args);
 	bool do_list_transfer(spu_mfc_cmd& args);
 	void do_putlluc(const spu_mfc_cmd& args);
+	bool do_putllc(const spu_mfc_cmd& args);
 	void do_mfc(bool wait = true);
 	u32 get_mfc_completed();
 

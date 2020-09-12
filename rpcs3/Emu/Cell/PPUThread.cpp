@@ -1076,7 +1076,12 @@ static void ppu_trace(u64 addr)
 template <typename T>
 static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 {
-	// Always load aligned 64-bit value (unaligned reservation will fail to store)
+	if (addr % sizeof(T))
+	{
+		fmt::throw_exception("PPU %s: Unaligned address: 0x%08x" HERE, sizeof(T) == 4 ? "LWARX" : "LDARX", addr);
+	}
+
+	// Always load aligned 64-bit value
 	auto& data = vm::_ref<const atomic_be_t<u64>>(addr & -8);
 	const u64 size_off = (sizeof(T) * 8) & 63;
 	const u64 data_off = (addr & 7) * 8;
@@ -1228,14 +1233,26 @@ const auto ppu_stdcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rd
 template <typename T>
 static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, T reg_value)
 {
+	if (addr % sizeof(T))
+	{
+		fmt::throw_exception("PPU %s: Unaligned address: 0x%08x" HERE, sizeof(T) == 4 ? "STWCX" : "STDCX", addr);
+	}
+
 	auto& data = vm::_ref<atomic_be_t<T>>(addr & (0 - sizeof(T)));
 	constexpr u64 size_off = (sizeof(T) * 8) & 63;
 
 	const T old_data = static_cast<T>(ppu.rdata << ((addr & 7) * 8) >> size_off);
 	auto& res = vm::reservation_acquire(addr, sizeof(T));
 
-	if (std::exchange(ppu.raddr, 0) != addr || addr % sizeof(T) || old_data != data || ppu.rtime != (res & -128))
+	if (std::exchange(ppu.raddr, 0) != addr || old_data != data || ppu.rtime != (res & -128))
 	{
+		// Even when the reservation address does not match the target address must be valid
+		if (!vm::check_addr(addr, 1, vm::page_writable))
+		{
+			// Access violate
+			data += 0;
+		}
+
 		return false;
 	}
 
