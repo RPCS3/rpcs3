@@ -28,6 +28,7 @@ void fmt_class_string<CellSysutilError>::format(std::string& out, u64 arg)
 			STR_CASE(CELL_SYSUTIL_ERROR_BUSY);
 			STR_CASE(CELL_SYSUTIL_ERROR_STATUS);
 			STR_CASE(CELL_SYSUTIL_ERROR_MEMORY);
+			STR_CASE(CELL_SYSUTIL_ERROR_3D_SUPPORT);
 		}
 
 		return unknown;
@@ -221,68 +222,68 @@ error_code cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> valu
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG:
 		*value = g_cfg.sys.language;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN:
 		*value = static_cast<s32>(g_cfg.sys.enter_button_assignment.get());
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT:
 		*value = CELL_SYSUTIL_DATE_FMT_DDMMYYYY;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT:
 		*value = CELL_SYSUTIL_TIME_FMT_CLOCK24;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE:
 		*value = 180;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME:
 		*value = 0;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL:
 		*value = CELL_SYSUTIL_GAME_PARENTAL_OFF;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT:
 		*value = CELL_SYSUTIL_GAME_PARENTAL_LEVEL0_RESTRICT_OFF;
-	break;
+		break;
 
 	// Report user has an NP account when np_psn_status is Fake or RPCN
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT:
 		*value = g_cfg.net.psn_status != np_psn_status::disabled;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ:
 		*value = CELL_SYSUTIL_CAMERA_PLFREQ_DISABLED;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE:
 		*value = CELL_SYSUTIL_PAD_RUMBLE_ON;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE:
 		*value = g_cfg.sys.keyboard_type;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD:
-		*value = 0;
-	break;
+		*value = CELL_SYSUTIL_KEYBOARD_ENTRY_METHOD_ROMAJI_INPUT;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD:
-		*value = 0;
-	break;
+		*value = CELL_SYSUTIL_KEYBOARD_ENTRY_METHOD_ZHUYIN_INPUT;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF:
-		*value = 0;
-	break;
+		*value = CELL_SYSUTIL_PAD_AUTOOFF_OFF;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_MAGNETOMETER:
-		*value = 0;
-	break;
+		*value = CELL_SYSUTIL_MAGNETOMETER_OFF;
+		break;
 
 	default:
 		return CELL_SYSUTIL_ERROR_VALUE;
