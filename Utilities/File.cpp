@@ -967,7 +967,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		disp = mode & fs::trunc ? TRUNCATE_EXISTING : OPEN_EXISTING;
 	}
 
-	DWORD share = 0;
+	DWORD share = FILE_SHARE_DELETE;
 	if (!(mode & fs::unread) || !(mode & fs::write))
 	{
 		share |= FILE_SHARE_READ;
@@ -975,7 +975,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 	if (!(mode & (fs::lock + fs::unread)) || !(mode & fs::write))
 	{
-		share |= FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+		share |= FILE_SHARE_WRITE;
 	}
 
 	const HANDLE handle = CreateFileW(to_wchar(path).get(), access, share, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
