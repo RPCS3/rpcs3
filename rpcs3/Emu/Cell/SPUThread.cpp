@@ -3352,10 +3352,22 @@ bool spu_thread::stop_and_signal(u32 code)
 
 			for (auto& thread : group->threads)
 			{
-				if (thread && thread.get() != this)
+				if (thread)
 				{
-					thread->state += cpu_flag::stop + cpu_flag::ret;
-					thread_ctrl::raw_notify(*thread);
+					thread->state.fetch_op([](bs_t<cpu_flag>& flags)
+					{
+						if (flags & cpu_flag::stop)
+						{
+							// In case the thread raised the ret flag itself at some point do not raise it again
+							return false;
+						}
+
+						flags += cpu_flag::stop + cpu_flag::ret;
+						return true;
+					});
+
+					if (thread.get() != this)
+						thread_ctrl::raw_notify(*thread);
 				}
 			}
 
@@ -3365,7 +3377,6 @@ bool spu_thread::stop_and_signal(u32 code)
 			break;
 		}
 
-		state += cpu_flag::stop + cpu_flag::ret;
 		check_state();
 		return true;
 	}
