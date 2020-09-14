@@ -328,8 +328,11 @@ static bool sema_get(u32 id)
 			{
 				// Increase reference from non-zero value
 				refs++;
+				return true;
 			}
-		}))
+
+			return false:
+		}).second)
 		{
 			return true;
 		}
