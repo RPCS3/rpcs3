@@ -28,6 +28,7 @@
 	instruction_editor_dialog.cpp
 	kernel_explorer.cpp
 	localized.cpp
+	localized_emu.h
 	log_frame.cpp
 	main_window.cpp
 	memory_string_searcher.cpp
