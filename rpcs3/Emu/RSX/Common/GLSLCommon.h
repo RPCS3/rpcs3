@@ -830,8 +830,8 @@ namespace glsl
 			if (props.emulate_shadow_compare)
 			{
 				OS <<
-				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), vec3(coord3.xy * texture_parameters[index].scale, min(coord3.z, 1.)))\n"
-				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), vec4(coord4.xy * texture_parameters[index].scale, min(coord4.z, coord4.w), coord4.w))\n";
+				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), vec3(coord3.xy * texture_parameters[index].scale, min(float(coord3.z), 1.)))\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), vec4(coord4.xy, min(coord4.z, coord4.w), coord4.w) * vec4(texture_parameters[index].scale, 1., 1.))\n";
 			}
 			else
 			{
