@@ -331,7 +331,7 @@ static bool sema_get(u32 id)
 				return true;
 			}
 
-			return false:
+			return false;
 		}).second)
 		{
 			return true;
