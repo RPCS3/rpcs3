@@ -188,7 +188,7 @@ namespace vm
 					break;
 				}
 
-				range_lock->store(0);
+				range_lock->release(0);
 			}
 
 			std::shared_lock lock(g_mutex, std::try_to_lock);
@@ -289,7 +289,35 @@ namespace vm
 		// Block or signal new range locks
 		g_range_lock = addr | u64{size} << 35 | flags;
 
+		const auto range = utils::address_range::start_length(addr, size);
 
+		while (true)
+		{
+			const u64 bads = for_all_range_locks([&](u32 addr2, u32 size2)
+			{
+				// TODO (currently not possible): handle 2 64K pages (inverse range), or more pages
+				if (g_shareable[addr2 >> 16])
+				{
+					addr2 &= 0xffff;
+				}
+
+				ASSUME(size2);
+
+				if (range.overlaps(utils::address_range::start_length(addr2, size2))) [[unlikely]]
+				{
+					return 1;
+				}
+
+				return 0;
+			});
+
+			if (!bads) [[likely]]
+			{
+				break;
+			}
+
+			_mm_pause();
+		}
 	}
 
 	void passive_lock(cpu_thread& cpu)
