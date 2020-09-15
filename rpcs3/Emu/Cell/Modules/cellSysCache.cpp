@@ -79,8 +79,6 @@ struct syscache_info
 		// Poison opened files in /dev_hdd1 to return CELL_EIO on access
 		if (remove_root)
 		{
-			std::lock_guard lock(g_mp_sys_dev_hdd1.mutex);
-
 			idm::select<lv2_fs_object, lv2_file>([](u32 id, lv2_file& file)
 			{
 				if (std::memcmp("/dev_hdd1", file.name.data(), 9) == 0)
@@ -108,6 +106,7 @@ error_code cellSysCacheClear()
 	// Clear existing cache
 	if (!cache->cache_id.empty())
 	{
+		std::lock_guard lock0(g_mp_sys_dev_hdd1.mutex);
 		cache->clear(false);
 	}
 
@@ -148,6 +147,8 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 		cellSysutil.success("Mounted existing cache at %s", new_path);
 		return not_an_error(CELL_SYSCACHE_RET_OK_RELAYED);
 	}
+
+	std::lock_guard lock0(g_mp_sys_dev_hdd1.mutex);
 
 	// Clear existing cache
 	if (!cache->cache_id.empty())
