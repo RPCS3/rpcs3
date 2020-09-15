@@ -592,7 +592,7 @@ void kernel_explorer::Update()
 
 	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& fo)
 	{
-		add_leaf(find_node(m_tree, additional_nodes::file_descriptors), qstr(fmt::format(u8"FD %u: “%s”", id, fo.name.data())));
+		add_leaf(find_node(m_tree, additional_nodes::file_descriptors), qstr(fmt::format("FD %u: %s", id, fo.to_string())));
 	});
 
 	// RawSPU Threads (TODO)
