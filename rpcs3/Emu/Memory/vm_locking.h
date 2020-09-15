@@ -40,6 +40,7 @@ namespace vm
 	void range_lock_internal(atomic_t<u64, 64>* range_lock, u32 begin, u32 size);
 
 	// Lock memory range
+	template <bool TouchMem = true>
 	FORCE_INLINE void range_lock(atomic_t<u64, 64>* range_lock, u32 begin, u32 size)
 	{
 		const u64 lock_val = g_range_lock.load();
@@ -59,7 +60,7 @@ namespace vm
 			addr = addr & 0xffff;
 		}
 
-		if (addr + size <= lock_addr || addr >= lock_addr + lock_size || ((lock_val >> 32) ^ (range_locked >> 32)) & (range_full_mask >> 32)) [[likely]]
+		if (addr + size <= lock_addr || addr >= lock_addr + lock_size || (TouchMem && ((lock_val >> 32) ^ (range_locked >> 32)) & (range_full_mask >> 32))) [[likely]]
 		{
 			// Optimistic locking.
 			// Note that we store the range we will be accessing, without any clamping.
@@ -69,10 +70,30 @@ namespace vm
 
 			if (!new_lock_val || new_lock_val == lock_val) [[likely]]
 			{
+				if constexpr (!TouchMem)
+				{
+					if (!vm::check_addr(begin, size, vm::page_writable))
+					{
+						range_lock->release(0);
+					}
+				}
+	
 				return;
 			}
 
-			range_lock->store(0);
+			range_lock->release(0);
+
+			if constexpr (!TouchMem)
+			{
+				return;
+			}
+		}
+
+		if constexpr (!TouchMem)
+		{
+			// Give up
+			range_lock->release(0);
+			return;
 		}
 
 		// Fallback to slow path
