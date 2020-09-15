@@ -1076,6 +1076,9 @@ static void ppu_trace(u64 addr)
 template <typename T>
 static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 {
+	// Do not allow stores accessed from the same cache line to past reservation load
+	std::atomic_thread_fence(std::memory_order_seq_cst);
+
 	if (addr % sizeof(T))
 	{
 		fmt::throw_exception("PPU %s: Unaligned address: 0x%08x" HERE, sizeof(T) == 4 ? "LWARX" : "LDARX", addr);
