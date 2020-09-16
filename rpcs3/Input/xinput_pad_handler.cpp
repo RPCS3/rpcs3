@@ -454,13 +454,16 @@ void xinput_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& dev
 	pad->m_cable_state = battery_info.BatteryType == BATTERY_TYPE_WIRED ? 1 : 0;
 	pad->m_battery_level = pad->m_cable_state ? BATTERY_LEVEL_FULL : battery_info.BatteryLevel;
 
-	SCP_DS3_ACCEL sensors;
-	if (xinputGetCustomData && xinputGetCustomData(dev->deviceNumber, 0, &sensors) == ERROR_SUCCESS)
+	if (xinputGetCustomData)
 	{
-		pad->m_sensors[0].m_value = sensors.SCP_ACCEL_X;
-		pad->m_sensors[1].m_value = sensors.SCP_ACCEL_Y;
-		pad->m_sensors[2].m_value = sensors.SCP_ACCEL_Z;
-		pad->m_sensors[3].m_value = sensors.SCP_GYRO;
+		SCP_DS3_ACCEL sensors;
+		if (xinputGetCustomData(dev->deviceNumber, 0, &sensors) == ERROR_SUCCESS)
+		{
+			pad->m_sensors[0].m_value = sensors.SCP_ACCEL_X;
+			pad->m_sensors[1].m_value = sensors.SCP_ACCEL_Y;
+			pad->m_sensors[2].m_value = sensors.SCP_ACCEL_Z;
+			pad->m_sensors[3].m_value = sensors.SCP_GYRO;
+		}
 	}
 }
 
