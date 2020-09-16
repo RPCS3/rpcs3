@@ -386,7 +386,7 @@ void kernel_explorer::Update()
 				case lwmutex_reserved: owner_str = "reserved"; break;
 				default:
 				{
-					if (owner >= ppu_thread::id_base && owner <= ppu_thread::id_base + ppu_thread::id_count - 1)
+					if (idm::check_unlocked<named_thread<ppu_thread>>(owner))
 					{
 						owner_str = fmt::format("0x%x", owner);
 					}
