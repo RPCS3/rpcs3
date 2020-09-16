@@ -80,7 +80,47 @@ namespace vk
 		}
 		case VK_FORMAT_D32_SFLOAT:
 		{
-			fmt::throw_exception("Unsupported transfer (D16_FLOAT");
+			rsx_log.error("Unsupported transfer (D16_FLOAT)"); // Need real games to test this.
+			verify(HERE), region.imageSubresource.aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT;
+
+			const u32 out_w = region.bufferRowLength ? region.bufferRowLength : region.imageExtent.width;
+			const u32 out_h = region.bufferImageHeight ? region.bufferImageHeight : region.imageExtent.height;
+			const u32 packed32_length = out_w * out_h * 4;
+			const u32 packed16_length = out_w * out_h * 2;
+
+			const auto allocation_end = region.bufferOffset + packed32_length + packed16_length;
+			verify(HERE), dst->size() >= allocation_end;
+
+			const auto data_offset = u32(region.bufferOffset);
+			const auto z32_offset = align<u32>(data_offset + packed16_length, 256);
+
+			// 1. Copy the depth to buffer
+			VkBufferImageCopy region2;
+			region2 = region;
+			region2.bufferOffset = z32_offset;
+			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, dst->value, 1, &region2);
+
+			// 2. Pre-compute barrier
+			vk::insert_buffer_memory_barrier(cmd, dst->value, z32_offset, packed32_length,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+
+			// 3. Do conversion with byteswap [D32->D16F]
+			if (!swap_bytes) [[likely]]
+			{
+				auto job = vk::get_compute_task<vk::cs_fconvert_task<f32, f16>>();
+				job->run(cmd, dst, z32_offset, packed32_length, data_offset);
+			}
+			else
+			{
+				auto job = vk::get_compute_task<vk::cs_fconvert_task<f32, f16, false, true>>();
+				job->run(cmd, dst, z32_offset, packed32_length, data_offset);
+			}
+
+			// 4. Post-compute barrier
+			vk::insert_buffer_memory_barrier(cmd, dst->value, region.bufferOffset, packed16_length,
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 			break;
 		}
 		case VK_FORMAT_D24_UNORM_S8_UINT:
@@ -177,7 +217,38 @@ namespace vk
 		}
 		case VK_FORMAT_D32_SFLOAT:
 		{
-			fmt::throw_exception("Unsupported transfer (D16_FLOAT");
+			rsx_log.error("Unsupported transfer (D16_FLOAT)");
+			verify(HERE), region.imageSubresource.aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT;
+
+			const u32 out_w = region.bufferRowLength ? region.bufferRowLength : region.imageExtent.width;
+			const u32 out_h = region.bufferImageHeight ? region.bufferImageHeight : region.imageExtent.height;
+			const u32 packed32_length = out_w * out_h * 4;
+			const u32 packed16_length = out_w * out_h * 2;
+
+			const auto allocation_end = region.bufferOffset + packed32_length + packed16_length;
+			verify(HERE), src->size() >= allocation_end;
+
+			const auto data_offset = u32(region.bufferOffset);
+			const auto z32_offset = align<u32>(data_offset + packed16_length, 256);
+
+			// 1. Pre-compute barrier
+			vk::insert_buffer_memory_barrier(cmd, src->value, z32_offset, packed32_length,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+
+			// 2. Do conversion with byteswap [D16F->D32F]
+			auto job = vk::get_compute_task<vk::cs_fconvert_task<f16, f32>>();
+			job->run(cmd, src, data_offset, packed16_length, z32_offset);
+
+			// 4. Post-compute barrier
+			vk::insert_buffer_memory_barrier(cmd, src->value, z32_offset, packed32_length,
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+			// 5. Copy the depth data to image
+			VkBufferImageCopy region2 = region;
+			region2.bufferOffset = z32_offset;
+			vkCmdCopyBufferToImage(cmd, src->value, dst->value, dst->current_layout, 1, &region2);
 			break;
 		}
 		case VK_FORMAT_D24_UNORM_S8_UINT:
@@ -770,6 +841,7 @@ namespace vk
 		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align)
 	{
+		const bool requires_depth_processing = (dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || (format == CELL_GCM_TEXTURE_DEPTH16_FLOAT);
 		u32 block_in_pixel = rsx::get_format_block_size_in_texel(format);
 		u8  block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
 
@@ -842,7 +914,7 @@ namespace vk
 			copy_info.imageSubresource.mipLevel = layout.level;
 			copy_info.bufferRowLength = std::max<u32>(block_in_pixel * row_pitch / block_size_in_bytes, layout.width_in_texel);
 
-			if (opt.require_swap || opt.require_deswizzle || dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
+			if (opt.require_swap || opt.require_deswizzle || requires_depth_processing)
 			{
 				if (!scratch_buf)
 				{
@@ -871,7 +943,7 @@ namespace vk
 			}
 		}
 
-		if (opt.require_swap || opt.require_deswizzle || dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
+		if (opt.require_swap || opt.require_deswizzle || requires_depth_processing)
 		{
 			verify(HERE), scratch_buf;
 			vkCmdCopyBuffer(cmd, upload_heap.heap->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
@@ -902,7 +974,7 @@ namespace vk
 		}
 
 		// CopyBufferToImage routines
-		if (dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
+		if (requires_depth_processing)
 		{
 			// Upload in reverse to avoid polluting data in lower space
 			for (auto rIt = copy_regions.crbegin(); rIt != copy_regions.crend(); ++rIt)

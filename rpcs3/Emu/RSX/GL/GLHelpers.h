@@ -52,11 +52,7 @@ namespace gl
 	else\
 		gl##func##EXT(texture_name, target, __VA_ARGS__);
 
-	class capabilities;
-	class blitter;
-
 	void enable_debugging();
-	capabilities& get_driver_caps();
 	bool is_primitive_native(rsx::primitive_type in);
 	GLenum draw_mode(rsx::primitive_type in);
 
@@ -75,194 +71,6 @@ namespace gl
 		const char* what() const noexcept override
 		{
 			return m_what.c_str();
-		}
-	};
-
-	class capabilities
-	{
-	public:
-		bool EXT_dsa_supported = false;
-		bool EXT_depth_bounds_test = false;
-		bool ARB_dsa_supported = false;
-		bool ARB_buffer_storage_supported = false;
-		bool ARB_texture_buffer_supported = false;
-		bool ARB_shader_draw_parameters_supported = false;
-		bool ARB_depth_buffer_float_supported = false;
-		bool ARB_texture_barrier_supported = false;
-		bool NV_texture_barrier_supported = false;
-		bool NV_gpu_shader5_supported = false;
-		bool AMD_gpu_shader_half_float_supported = false;
-		bool ARB_compute_shader_supported = false;
-		bool initialized = false;
-		bool vendor_INTEL = false;  // has broken GLSL compiler
-		bool vendor_AMD = false;    // has broken ARB_multidraw
-		bool vendor_NVIDIA = false; // has NaN poisoning issues
-		bool vendor_MESA = false;   // requires CLIENT_STORAGE bit set for streaming buffers
-
-		bool check(const std::string& ext_name, const char* test)
-		{
-			if (ext_name == test)
-			{
-				rsx_log.notice("Extension %s is supported", ext_name);
-				return true;
-			}
-
-			return false;
-		}
-
-		void initialize()
-		{
-			int find_count = 12;
-			int ext_count = 0;
-			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
-			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
-			std::string version_string = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-			std::string renderer_string = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
-
-			for (int i = 0; i < ext_count; i++)
-			{
-				if (!find_count) break;
-
-				const std::string ext_name = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
-
-				if (check(ext_name, "GL_ARB_shader_draw_parameters"))
-				{
-					ARB_shader_draw_parameters_supported = true;
-					find_count--;
-					continue;
-				}
-
-				if (check(ext_name, "GL_EXT_direct_state_access"))
-				{
-					EXT_dsa_supported = true;
-					find_count--;
-					continue;
-				}
-
-				if (check(ext_name, "GL_ARB_direct_state_access"))
-				{
-					ARB_dsa_supported = true;
-					find_count--;
-					continue;
-				}
-
-				if (check(ext_name, "GL_ARB_buffer_storage"))
-				{
-					ARB_buffer_storage_supported = true;
-					find_count--;
-					continue;
-				}
-
-				if (check(ext_name, "GL_ARB_texture_buffer_object"))
-				{
-					ARB_texture_buffer_supported = true;
-					find_count--;
-					continue;
-				}
-
-				if (check(ext_name, "GL_ARB_depth_buffer_float"))
-				{
-					ARB_depth_buffer_float_supported = true;
-					find_count--;
-					continue;
-				}
-
-				if (check(ext_name, "GL_ARB_texture_barrier"))
-				{
-					ARB_texture_barrier_supported = true;
-					find_count--;
-					continue;
-				}
-
-				if (check(ext_name, "GL_NV_texture_barrier"))
-				{
-					NV_texture_barrier_supported = true;
-					find_count--;
-					continue;
-				}
-
-				if (check(ext_name, "GL_NV_gpu_shader5"))
-				{
-					NV_gpu_shader5_supported = true;
-					find_count--;
-					continue;
-				}
-
-				if (check(ext_name, "GL_AMD_gpu_shader_half_float"))
-				{
-					AMD_gpu_shader_half_float_supported = true;
-					find_count--;
-					continue;
-				}
-
-				if (check(ext_name, "GL_ARB_compute_shader"))
-				{
-					ARB_compute_shader_supported = true;
-					find_count--;
-					continue;
-				}
-
-				if (check(ext_name, "GL_EXT_depth_bounds_test"))
-				{
-					EXT_depth_bounds_test = true;
-					find_count--;
-					continue;
-				}
-			}
-
-			// Check GL_VERSION and GL_RENDERER for the presence of Mesa
-			if (version_string.find("Mesa") != umax || renderer_string.find("Mesa") != umax)
-			{
-				vendor_MESA = true;
-			}
-
-			// Workaround for intel drivers which have terrible capability reporting
-			if (!vendor_string.empty())
-			{
-				std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), ::tolower);
-			}
-			else
-			{
-				rsx_log.error("Failed to get vendor string from driver. Are we missing a context?");
-				vendor_string = "intel"; // lowest acceptable value
-			}
-
-			if (!vendor_MESA && vendor_string.find("intel") != umax)
-			{
-				int version_major = 0;
-				int version_minor = 0;
-
-				glGetIntegerv(GL_MAJOR_VERSION, &version_major);
-				glGetIntegerv(GL_MINOR_VERSION, &version_minor);
-
-				vendor_INTEL = true;
-
-				//Texture buffers moved into core at GL 3.3
-				if (version_major > 3 || (version_major == 3 && version_minor >= 3))
-					ARB_texture_buffer_supported = true;
-
-				//Check for expected library entry-points for some required functions
-				if (!ARB_buffer_storage_supported && glBufferStorage && glMapBufferRange)
-					ARB_buffer_storage_supported = true;
-
-				if (!ARB_dsa_supported && glGetTextureImage && glTextureBufferRange)
-					ARB_dsa_supported = true;
-
-				if (!EXT_dsa_supported && glGetTextureImageEXT && glTextureBufferRangeEXT)
-					EXT_dsa_supported = true;
-			}
-			else if (!vendor_MESA && vendor_string.find("nvidia") != umax)
-			{
-				vendor_NVIDIA = true;
-			}
-#ifdef _WIN32
-			else if (vendor_string.find("amd") != umax || vendor_string.find("ati") != umax)
-			{
-				vendor_AMD = true;
-			}
-#endif
-
-			initialized = true;
 		}
 	};
 
@@ -745,7 +553,6 @@ namespace gl
 				m_target = static_cast<GLenum>(target_);
 			}
 
-
 			~save_binding_state()
 			{
 				glBindBuffer(m_target, m_last_binding);
@@ -941,6 +748,18 @@ namespace gl
 		void bind_range(target target_, u32 index, u32 offset, u32 size) const
 		{
 			glBindBufferRange(static_cast<GLenum>(target_), index, id(), offset, size);
+		}
+
+		void copy_to(buffer* other, u64 src_offset, u64 dst_offset, u64 size)
+		{
+			if (get_driver_caps().ARB_dsa_supported)
+			{
+				glCopyNamedBufferSubData(this->id(), other->id(), src_offset, dst_offset, size);
+			}
+			else
+			{
+				glNamedCopyBufferSubDataEXT(this->id(), other->id(), src_offset, dst_offset, size);
+			}
 		}
 	};
 
@@ -1468,14 +1287,6 @@ namespace gl
 
 		enum class internal_format
 		{
-			r = GL_RED,
-			rg = GL_RG,
-			rgb = GL_RGB,
-			rgba = GL_RGBA,
-
-			bgr = GL_BGR,
-			bgra = GL_BGRA,
-
 			stencil8 = GL_STENCIL_INDEX8,
 			depth16 = GL_DEPTH_COMPONENT16,
 			depth32f = GL_DEPTH_COMPONENT32F,
@@ -1638,7 +1449,12 @@ namespace gl
 					m_aspect_flags = image_aspect::depth;
 					break;
 				}
-				case GL_DEPTH_COMPONENT32: // Unimplemented decode
+				case GL_DEPTH_COMPONENT32F:
+				{
+					m_pitch = width * 4;
+					m_aspect_flags = image_aspect::depth;
+					break;
+				}
 				case GL_DEPTH24_STENCIL8:
 				case GL_DEPTH32F_STENCIL8:
 				{
@@ -1678,17 +1494,17 @@ namespace gl
 				{
 					fmt::throw_exception("Unhandled GL format 0x%X" HERE, sized_format);
 				}
-			}
 
-			if (format_class == RSX_FORMAT_CLASS_UNDEFINED)
-			{
-				if (m_aspect_flags != image_aspect::color)
+				if (format_class == RSX_FORMAT_CLASS_UNDEFINED)
 				{
-					rsx_log.error("Undefined format class for depth texture is not allowed");
-				}
-				else
-				{
-					format_class = RSX_FORMAT_CLASS_COLOR;
+					if (m_aspect_flags != image_aspect::color)
+					{
+						rsx_log.error("Undefined format class for depth texture is not allowed");
+					}
+					else
+					{
+						format_class = RSX_FORMAT_CLASS_COLOR;
+					}
 				}
 			}
 
@@ -1805,7 +1621,7 @@ namespace gl
 			return m_component_layout;
 		}
 
-		void copy_from(const void* src, texture::format format, texture::type type, const coord3u region, const pixel_unpack_settings& pixel_settings)
+		void copy_from(const void* src, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings)
 		{
 			pixel_settings.apply();
 
@@ -1813,25 +1629,25 @@ namespace gl
 			{
 			case GL_TEXTURE_1D:
 			{
-				DSA_CALL(TextureSubImage1D, m_id, GL_TEXTURE_1D, 0, region.x, region.width, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+				DSA_CALL(TextureSubImage1D, m_id, GL_TEXTURE_1D, level, region.x, region.width, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
 				break;
 			}
 			case GL_TEXTURE_2D:
 			{
-				DSA_CALL(TextureSubImage2D, m_id, GL_TEXTURE_2D, 0, region.x, region.y, region.width, region.height, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+				DSA_CALL(TextureSubImage2D, m_id, GL_TEXTURE_2D, level, region.x, region.y, region.width, region.height, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
 				break;
 			}
 			case GL_TEXTURE_3D:
 			case GL_TEXTURE_2D_ARRAY:
 			{
-				DSA_CALL(TextureSubImage3D, m_id, target_, 0, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+				DSA_CALL(TextureSubImage3D, m_id, target_, level, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
 				break;
 			}
 			case GL_TEXTURE_CUBE_MAP:
 			{
 				if (get_driver_caps().ARB_dsa_supported)
 				{
-					glTextureSubImage3D(m_id, 0, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+					glTextureSubImage3D(m_id, level, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
 				}
 				else
 				{
@@ -1840,7 +1656,7 @@ namespace gl
 					const auto end = std::min(6u, region.z + region.depth);
 					for (unsigned face = region.z; face < end; ++face)
 					{
-						glTextureSubImage2DEXT(m_id, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, region.x, region.y, region.width, region.height, static_cast<GLenum>(format), static_cast<GLenum>(type), ptr);
+						glTextureSubImage2DEXT(m_id, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level, region.x, region.y, region.width, region.height, static_cast<GLenum>(format), static_cast<GLenum>(type), ptr);
 						ptr += (region.width * region.height * 4); //TODO
 					}
 				}
@@ -1852,7 +1668,7 @@ namespace gl
 		void copy_from(const void* src, texture::format format, texture::type type, const pixel_unpack_settings& pixel_settings)
 		{
 			const coord3u region = { {}, size3D() };
-			copy_from(src, format, type, region, pixel_settings);
+			copy_from(src, format, type, 0, region, pixel_settings);
 		}
 
 		void copy_from(buffer &buf, u32 gl_format_type, u32 offset, u32 length)
@@ -1868,7 +1684,7 @@ namespace gl
 			copy_from(*view.value(), view.format(), view.offset(), view.range());
 		}
 
-		void copy_to(void* dst, texture::format format, texture::type type, const coord3u& region, const pixel_pack_settings& pixel_settings) const
+		void copy_to(void* dst, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const
 		{
 			pixel_settings.apply();
 			const auto& caps = get_driver_caps();
@@ -1877,13 +1693,13 @@ namespace gl
 				region.width == m_width && region.height == m_height && region.depth == m_depth)
 			{
 				if (caps.ARB_dsa_supported)
-					glGetTextureImage(m_id, 0, static_cast<GLenum>(format), static_cast<GLenum>(type), INT32_MAX, dst);
+					glGetTextureImage(m_id, level, static_cast<GLenum>(format), static_cast<GLenum>(type), INT32_MAX, dst);
 				else
-					glGetTextureImageEXT(m_id, static_cast<GLenum>(m_target), 0, static_cast<GLenum>(format), static_cast<GLenum>(type), dst);
+					glGetTextureImageEXT(m_id, static_cast<GLenum>(m_target), level, static_cast<GLenum>(format), static_cast<GLenum>(type), dst);
 			}
 			else if (caps.ARB_dsa_supported)
 			{
-				glGetTextureSubImage(m_id, 0, region.x, region.y, region.z, region.width, region.height, region.depth,
+				glGetTextureSubImage(m_id, level, region.x, region.y, region.z, region.width, region.height, region.depth,
 					static_cast<GLenum>(format), static_cast<GLenum>(type), INT32_MAX, dst);
 			}
 			else
@@ -1891,18 +1707,18 @@ namespace gl
 				// Worst case scenario. For some reason, EXT_dsa does not have glGetTextureSubImage
 				const auto target_ = static_cast<GLenum>(m_target);
 				texture tmp{ target_, region.width, region.height, region.depth, 1, static_cast<GLenum>(m_internal_format) };
-				glCopyImageSubData(m_id, target_, 0, region.x, region.y, region.z, tmp.id(), target_, 0, 0, 0, 0,
+				glCopyImageSubData(m_id, target_, level, region.x, region.y, region.z, tmp.id(), target_, 0, 0, 0, 0,
 					region.width, region.height, region.depth);
 
 				const coord3u region2 = { {0, 0, 0}, region.size };
-				tmp.copy_to(dst, format, type, region2, pixel_settings);
+				tmp.copy_to(dst, format, type, 0, region2, pixel_settings);
 			}
 		}
 
 		void copy_to(void* dst, texture::format format, texture::type type, const pixel_pack_settings& pixel_settings) const
 		{
 			const coord3u region = { {}, size3D() };
-			copy_to(dst, format, type, region, pixel_settings);
+			copy_to(dst, format, type, 0, region, pixel_settings);
 		}
 	};
 

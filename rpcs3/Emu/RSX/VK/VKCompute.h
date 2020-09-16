@@ -286,13 +286,14 @@ namespace vk
 				"#define d24x8_to_d24x8_swapped(bits) (bits & 0xFF00) | (bits & 0xFF0000) >> 16 | (bits & 0xFF) << 16\n"
 				"#define f32_to_d24x8_swapped(bits)   d24x8_to_d24x8_swapped(f32_to_d24(bits))\n"
 				"\n"
+				"%md"
 				"void main()\n"
 				"{\n"
 				"	uint invocations_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);"
 				"	uint invocation_id = (gl_GlobalInvocationID.y * invocations_x) + gl_GlobalInvocationID.x;\n"
 				"	uint index = invocation_id * KERNEL_SIZE;\n"
 				"	uint value;\n"
-				"	%vars"
+				"%vars"
 				"\n";
 
 			const auto parameters_size = align(push_constants_size, 16) / 16;
@@ -302,6 +303,7 @@ namespace vk
 				{ "%ks", std::to_string(kernel_size) },
 				{ "%vars", variables },
 				{ "%f", function_name },
+				{ "%md", method_declarations },
 				{ "%ub", use_push_constants? "layout(push_constant) uniform ubo{ uvec4 params[" + std::to_string(parameters_size) + "]; };\n" : "" },
 			};
 
@@ -458,6 +460,7 @@ namespace vk
 			u32 parameters[4] = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
 			set_parameters(cmd, parameters, 4);
 
+			verify(HERE), stencil_offset > data_offset;
 			m_ssbo_length = stencil_offset + (data_length / 4) - data_offset;
 			cs_shuffle_base::run(cmd, data, data_length, data_offset);
 		}
@@ -585,6 +588,132 @@ namespace vk
 				"		atomicOr(data[stencil_offset + s_offset], stencil);\n";
 
 			cs_shuffle_base::build("");
+		}
+	};
+
+	template<typename From, typename To, bool _SwapSrc = false, bool _SwapDst = false>
+	struct cs_fconvert_task : cs_shuffle_base
+	{
+		u32 m_ssbo_length = 0;
+
+		void declare_f16_expansion()
+		{
+			method_declarations +=
+				"uvec2 unpack_e4m12_pack16(const in uint value)\n"
+				"{\n"
+				"	uvec2 result = uvec2(bitfieldExtract(value, 0, 16), bitfieldExtract(value, 16, 16));\n"
+				"	result <<= 11;\n"
+				"	result += (120 << 23);\n"
+				"	return result;\n"
+				"}\n\n";
+		}
+
+		void declare_f16_contraction()
+		{
+			method_declarations +=
+				"uint pack_e4m12_pack16(const in uvec2 value)\n"
+				"{\n"
+				"	uvec2 result = (value - (120 << 23)) >> 11;\n"
+				"	return (result.x & 0xFFFF) | (result.y << 16);\n"
+				"}\n\n";
+		}
+
+		cs_fconvert_task()
+		{
+			use_push_constants = true;
+			push_constants_size = 16;
+
+			variables =
+				"	uint block_length = params[0].x >> 2;\n"
+				"	uint in_offset = params[0].y >> 2;\n"
+				"	uint out_offset = params[0].z >> 2;\n"
+				"	uvec4 tmp;\n";
+
+			work_kernel =
+				"		if (index >= block_length)\n"
+				"			return;\n";
+
+			if constexpr (sizeof(From) == 4)
+			{
+				static_assert(sizeof(To) == 2);
+				declare_f16_contraction();
+
+				work_kernel +=
+					"		const uint src_offset = (index * 2) + in_offset;\n"
+					"		const uint dst_offset = index + out_offset;\n"
+					"		tmp.x = data[src_offset];\n"
+					"		tmp.y = data[src_offset + 1];\n";
+
+				if constexpr (_SwapSrc)
+				{
+					work_kernel +=
+						"		tmp = bswap_u32(tmp);\n";
+				}
+
+				// Convert
+				work_kernel += "		tmp.z = pack_e4m12_pack16(tmp.xy);\n";
+
+				if constexpr (_SwapDst)
+				{
+					work_kernel += "		tmp.z = bswap_u16(tmp.z);\n";
+				}
+
+				work_kernel += "		data[dst_offset] = tmp.z;\n";
+			}
+			else
+			{
+				static_assert(sizeof(To) == 4);
+				declare_f16_expansion();
+
+				work_kernel +=
+					"		const uint src_offset = index + in_offset;\n"
+					"		const uint dst_offset = (index * 2) + out_offset;\n"
+					"		tmp.x = data[src_offset];\n";
+
+				if constexpr (_SwapSrc)
+				{
+					work_kernel +=
+						"		tmp.x = bswap_u16(tmp.x);\n";
+				}
+
+				// Convert
+				work_kernel += "		tmp.yz = unpack_e4m12_pack16(tmp.x);\n";
+
+				if constexpr (_SwapDst)
+				{
+					work_kernel += "		tmp.yz = bswap_u32(tmp.yz);\n";
+				}
+
+				work_kernel +=
+					"		data[dst_offset] = tmp.y;\n"
+					"		data[dst_offset + 1] = tmp.z;\n";
+			}
+
+			cs_shuffle_base::build("");
+		}
+
+		void bind_resources() override
+		{
+			m_program->bind_buffer({ m_data->value, m_data_offset, m_ssbo_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+		}
+
+		void run(VkCommandBuffer cmd, const vk::buffer* data, u32 src_offset, u32 src_length, u32 dst_offset)
+		{
+			u32 data_offset;
+			if (src_offset > dst_offset)
+			{
+				m_ssbo_length = (src_offset + src_length) - dst_offset;
+				data_offset = dst_offset;
+			}
+			else
+			{
+				m_ssbo_length = (dst_offset - src_offset) + (src_length / sizeof(From)) * sizeof(To);
+				data_offset = src_offset;
+			}
+
+			u32 parameters[4] = { src_length, src_offset - data_offset, dst_offset - data_offset, 0 };
+			set_parameters(cmd, parameters, 4);
+			cs_shuffle_base::run(cmd, data, src_length, data_offset);
 		}
 	};
 

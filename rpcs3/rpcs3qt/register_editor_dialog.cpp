@@ -5,6 +5,8 @@
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
 
+#include "Emu/Cell/lv2/sys_ppu_thread.h"
+
 #include <QLabel>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -32,6 +34,8 @@ enum registers : int
 	PPU_CTR,
 	PPU_XER,
 	PPU_VSCR,
+	PPU_PRIO,
+	PPU_PRIO2, // sys_mutex special priority protocol stuff
 	PPU_FPSCR,
 	PPU_VRSAVE,
 	MFC_PEVENTS,
@@ -101,6 +105,8 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 			//m_register_combo->addItem("XER", +PPU_XER);
 			//m_register_combo->addItem("FPSCR", +PPU_FPSCR);
 			//m_register_combo->addItem("VSCR", +PPU_VSCR);
+			m_register_combo->addItem("Priority", +PPU_PRIO);
+			//m_register_combo->addItem("Priority 2", +PPU_PRIO2);
 		}
 		else
 		{
@@ -169,6 +175,7 @@ void register_editor_dialog::updateRegister(int reg)
 		else if (reg == PPU_LR)  str = fmt::format("%016llx", ppu.lr);
 		else if (reg == PPU_CTR) str = fmt::format("%016llx", ppu.ctr);
 		else if (reg == PPU_VRSAVE) str = fmt::format("%08x", ppu.vrsave);
+		else if (reg == PPU_PRIO) str = fmt::format("%08x", +ppu.prio);
 		else if (reg == PC) str = fmt::format("%08x", ppu.cia);
 	}
 	else
@@ -276,13 +283,14 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 				return;
 			}
 		}
-		else if (reg == PPU_CR || reg == PPU_VRSAVE || reg == PC)
+		else if (reg == PPU_CR || reg == PPU_VRSAVE || reg == PPU_PRIO || reg == PC)
 		{
 			if (u32 reg_value; check_res(std::from_chars(value.c_str() + 24, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
 			{
 				bool ok = true;
 				if (reg == PPU_CR) ppu.cr.unpack(reg_value);
 				else if (reg == PPU_VRSAVE) ppu.vrsave = reg_value;
+				else if (reg == PPU_PRIO && !sys_ppu_thread_set_priority(ppu, ppu.id, reg_value)) {}
 				else if (reg == PC && reg_value % 4 == 0 && vm::check_addr(reg_value, 4, vm::page_executable)) ppu.cia = reg_value & -4;
 				else ok = false;
 				if (ok) return;

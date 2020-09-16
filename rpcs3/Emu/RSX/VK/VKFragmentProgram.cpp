@@ -130,7 +130,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			const auto mask = (1 << index);
 
-			if (!device_props.emulate_depth_compare && m_prog.shadow_textures & mask)
+			if (m_prog.shadow_textures & mask)
 			{
 				if (m_shadow_sampled_textures & mask)
 				{

@@ -98,6 +98,9 @@ void headless_application::InitializeCallbacks()
 	callbacks.on_stop   = []() {};
 	callbacks.on_ready  = []() {};
 
+	callbacks.get_localized_string    = [](localized_string_id, const char*) -> std::string { return {}; };
+	callbacks.get_localized_u32string = [](localized_string_id, const char*) -> std::u32string { return {}; };
+
 	Emu.SetCallbacks(std::move(callbacks));
 }
 
