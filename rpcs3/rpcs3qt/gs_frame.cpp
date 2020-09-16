@@ -38,6 +38,8 @@
 
 LOG_CHANNEL(screenshot);
 
+extern std::atomic<bool> g_user_asked_for_frame_capture;
+
 constexpr auto qstr = QString::fromStdString;
 
 gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
@@ -198,6 +200,13 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 				Emu.Resume();
 				return;
 			}
+		}
+		break;
+	case Qt::Key_C:
+		if (keyEvent->modifiers() == Qt::AltModifier && !m_disable_kb_hotkeys)
+		{
+			g_user_asked_for_frame_capture = true;
+			return;
 		}
 		break;
 	case Qt::Key_F12:
