@@ -74,6 +74,7 @@ xinput_pad_handler::~xinput_pad_handler()
 		FreeLibrary(library);
 		library = nullptr;
 		xinputGetExtended = nullptr;
+		xinputGetCustomData = nullptr;
 		xinputGetState = nullptr;
 		xinputSetState = nullptr;
 		xinputGetBatteryInformation = nullptr;
@@ -303,6 +304,7 @@ bool xinput_pad_handler::Init()
 		if (library)
 		{
 			xinputGetExtended = reinterpret_cast<PFN_XINPUTGETEXTENDED>(GetProcAddress(library, "XInputGetExtended")); // Optional
+			xinputGetCustomData = reinterpret_cast<PFN_XINPUTGETCUSTOMDATA>(GetProcAddress(library, "XInputGetCustomData")); // Optional
 			xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, reinterpret_cast<LPCSTR>(100)));
 			if (!xinputGetState)
 				xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, "XInputGetState"));
@@ -319,6 +321,7 @@ bool xinput_pad_handler::Init()
 			FreeLibrary(library);
 			library = nullptr;
 			xinputGetExtended = nullptr;
+			xinputGetCustomData = nullptr;
 			xinputGetState = nullptr;
 			xinputSetState = nullptr;
 			xinputGetBatteryInformation = nullptr;
@@ -450,6 +453,15 @@ void xinput_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& dev
 	(*xinputGetBatteryInformation)(padnum, BATTERY_DEVTYPE_GAMEPAD, &battery_info);
 	pad->m_cable_state = battery_info.BatteryType == BATTERY_TYPE_WIRED ? 1 : 0;
 	pad->m_battery_level = pad->m_cable_state ? BATTERY_LEVEL_FULL : battery_info.BatteryLevel;
+
+	SCP_DS3_ACCEL sensors;
+	if (xinputGetCustomData && xinputGetCustomData(dev->deviceNumber, 0, &sensors) == ERROR_SUCCESS)
+	{
+		pad->m_sensors[0].m_value = sensors.SCP_ACCEL_X;
+		pad->m_sensors[1].m_value = sensors.SCP_ACCEL_Y;
+		pad->m_sensors[2].m_value = sensors.SCP_ACCEL_Z;
+		pad->m_sensors[3].m_value = sensors.SCP_GYRO;
+	}
 }
 
 void xinput_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
