@@ -5387,11 +5387,6 @@ public:
 
 	static u32 exec_read_events(spu_thread* _spu)
 	{
-		if (const u32 events = _spu->get_events(_spu->ch_event_mask))
-		{
-			return events;
-		}
-
 		// TODO
 		return exec_rdch(_spu, SPU_RdEventStat);
 	}

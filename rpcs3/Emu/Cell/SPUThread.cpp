@@ -2669,7 +2669,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 				fmt::throw_exception("Not supported: event mask 0x%x" HERE, mask1);
 			}
 
-			while (res = get_events(mask1), !res)
+			for (; !res; res = get_events(mask1))
 			{
 				state += cpu_flag::wait;
 
@@ -2685,7 +2685,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			return res;
 		}
 
-		while (res = get_events(mask1, true), !res)
+		for (; !res; res = get_events(mask1, true))
 		{
 			state += cpu_flag::wait;
 
