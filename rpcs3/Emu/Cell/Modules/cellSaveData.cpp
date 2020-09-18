@@ -136,6 +136,11 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 
 		for (const auto& entry2 : fs::dir(base_dir + entry.name))
 		{
+			if (entry2.is_directory)
+			{
+				continue;
+			}
+
 			save_entry.size += entry2.size;
 		}
 
@@ -643,6 +648,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 						for (const auto& entry2 : fs::dir(base_dir + entry.name))
 						{
+							if (entry2.is_directory)
+							{
+								continue;
+							}
+
 							save_entry2.size += entry2.size;
 						}
 
