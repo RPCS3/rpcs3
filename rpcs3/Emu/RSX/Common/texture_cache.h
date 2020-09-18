@@ -1602,7 +1602,7 @@ namespace rsx
 							// We can have the correct data in cached_texture but it needs decoding before it can be sampled.
 							// Usually a sign of a game bug where the developer forgot to mark the texture correctly the first time we see it.
 							// TODO: This section should execute under an exclusive lock, but we're not actually modifying any object references, only flags
-							rsx_log.error("A texture was found in cache for address 0x%x, but swizzle flag does not match", attr.address);
+							rsx_log.warning("A texture was found in cache for address 0x%x, but swizzle flag does not match", attr.address);
 							cached_texture->unprotect();
 							cached_texture->set_dirty(true);
 							return {};
