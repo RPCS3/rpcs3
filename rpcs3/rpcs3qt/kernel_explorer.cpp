@@ -382,13 +382,17 @@ void kernel_explorer::Update()
 				switch (const u32 owner = lwm_data.vars.owner)
 				{
 				case lwmutex_free: owner_str = "free"; break;
-				//case lwmutex_dead: owner_str = "dead"; break;
+				case lwmutex_dead: owner_str = "dead"; break;
 				case lwmutex_reserved: owner_str = "reserved"; break;
 				default:
 				{
-					if (owner >= ppu_thread::id_base && owner <= ppu_thread::id_base + ppu_thread::id_step - 1)
+					if (idm::check_unlocked<named_thread<ppu_thread>>(owner))
 					{
 						owner_str = fmt::format("0x%x", owner);
+					}
+					else
+					{
+						fmt::append(owner_str, " (0x%x)", owner);
 					}
 
 					break;

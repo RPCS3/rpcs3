@@ -77,6 +77,9 @@ class ds3_pad_handler final : public PadHandlerBase
 		u8 large_motor = 0;
 		u8 small_motor = 0;
 		u8 status = DS3Status::Disconnected;
+#ifdef _WIN32
+		u8 report_id = 0;
+#endif
 	};
 
 	const u16 DS3_VID = 0x054C;
