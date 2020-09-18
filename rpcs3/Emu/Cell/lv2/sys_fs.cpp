@@ -1887,20 +1887,19 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 		return CELL_OK;
 	}
 
-	fs::device_stat info;
-	if (!fs::statfs(local_path, info))
+	// avail_free is the only value used by cellFsGetFreeSize
+	if (mp == &g_mp_sys_dev_hdd1)
 	{
-		switch (auto error = fs::g_tls_error)
-		{
-		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_disk_free(): unknown error %s", error);
-		}
-
-		return {CELL_EIO, path};  // ???
+		*avail_free = (1u << 31) - mp->sector_size; // 2GB (TODO: Should be the total size)
+	}
+	else //if (mp == &g_mp_sys_dev_hdd0)
+	{
+		*avail_free = (40ull * 1024 * 1024 * 1024 - mp->sector_size); // Read explanation in cellHddGameCheck
 	}
 
-	*total_free = info.total_free;
-	*avail_free = info.avail_free; //Only value used by cellFsGetFreeSize
+	// HACK: Hopefully nothing uses this value or once at max because its hacked here:
+	// The total size can change based on the size of the directory 
+	*total_free = *avail_free + fs::get_dir_size(local_path, mp->sector_size);
 
 	return CELL_OK;
 }
