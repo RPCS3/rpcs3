@@ -961,6 +961,9 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 		return CELL_GAME_ERROR_PARAM;
 	}
 
+	// Always reset to 0 at start
+	*size = 0;
+
 	const auto prm = g_fxo->get<content_permission>();
 
 	const auto init = prm->init.access();
@@ -980,7 +983,6 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 
 		if (!fs::exists(local_dir))
 		{
-			*size = 0;
 			return CELL_OK;
 		}
 		else
