@@ -1302,15 +1302,8 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		const auto mp = lv2_fs_object::get_mp("/dev_hdd0");
 
-		fs::device_stat info;
-		if (!fs::statfs(vfs::get("/dev_hdd0"), info))
-		{
-			sys_fs.error("sys_fs_fcntl(0xc0000002): unexpected error %s", fs::g_tls_error);
-			return CELL_EIO; // ???
-		}
-
 		arg->out_block_size = mp->block_size;
-		arg->out_block_count = info.avail_free / mp->block_size;
+		arg->out_block_count = (40ull * 1024 * 1024 * 1024 - 1) / mp->block_size; // Read explanation in cellHddGameCheck
 		return CELL_OK;
 	}
 
