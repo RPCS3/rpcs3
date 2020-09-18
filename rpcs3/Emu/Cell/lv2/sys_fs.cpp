@@ -1302,8 +1302,10 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return CELL_EIO; // ???
 		}
 
+		const fs::cell_device_stat hdd_info(info);
+
 		arg->out_block_size = mp->block_size;
-		arg->out_block_count = info.avail_free / mp->block_size;
+		arg->out_block_count = hdd_info.avail_free / mp->block_size;
 		return CELL_OK;
 	}
 
@@ -1899,8 +1901,10 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 		return {CELL_EIO, path};  // ???
 	}
 
-	*total_free = info.total_free;
-	*avail_free = info.avail_free; //Only value used by cellFsGetFreeSize
+	const fs::cell_device_stat hdd_info(info);
+
+	*total_free = hdd_info.total_free;
+	*avail_free = hdd_info.avail_free; // Only value used by cellFsGetFreeSize
 
 	return CELL_OK;
 }

@@ -928,7 +928,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		auto delete_save = [&]()
 		{
 			strcpy_trunc(doneGet->dirName, save_entries[selected].dirName);
-			doneGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+			doneGet->hddFreeSizeKB = ::narrow<s32>(fs::max_disk_space); // TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 			doneGet->excResult     = CELL_OK;
 			std::memset(doneGet->reserved, 0, sizeof(doneGet->reserved));
 
@@ -1251,7 +1251,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			// funcStat is called even if the directory doesn't exist.
 		}
 
-		statGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+		statGet->hddFreeSizeKB = ::narrow<s32>(fs::max_disk_space); // TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 		statGet->isNewData = save_entry.isNew = psf.empty();
 
 		statGet->dir.atime = save_entry.atime = dir_info.atime;

@@ -7,6 +7,28 @@
 
 #include <string>
 
+// Helper
+
+namespace fs
+{
+	// 40 GB - 1 kilobyte. The reasoning is that many games take this number and multiply it by 1024, to get the amount of bytes. With 40GB exactly,
+	// this will result in an overflow, and the size would be 0, preventing the game from running. By reducing 1 kilobyte, we make sure that even
+	// after said overflow, the number would still be high enough to contain the game's data. (40 * 1024 * 1024) * 1024 & 0xffffffff == 0
+	constexpr u64 max_disk_space = 40 * 1024 * 1024 - 1;
+
+	struct cell_device_stat
+	{
+		u64 avail_free;
+		u64 total_free;
+
+		cell_device_stat(const fs::device_stat& info)
+		{
+			avail_free = std::min(info.avail_free, max_disk_space);
+			total_free = std::min(info.total_free, max_disk_space);
+		}
+	};
+}
+
 // Open Flags
 enum : s32
 {

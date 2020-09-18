@@ -359,8 +359,11 @@ error_code cellFsGetFreeSize(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> 
 
 	fs::device_stat info;
 	fs::statfs(vfs::get(path.get_ptr()), info);
+
+	const fs::cell_device_stat hdd_info(info);
+
 	*block_size  = 4096;
-	*block_count = info.avail_free / 4096;
+	*block_count = hdd_info.avail_free / 4096;
 	return CELL_OK;
 }
 
