@@ -123,11 +123,11 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_icon_size = gui_settings::SizeFromSlider(m_game_icon_size_index);
 
 	// Checkboxes to control dialog
-	QCheckBox* check_lock_trophy = new QCheckBox(tr("Show Not Earned Trophies"));
+	QCheckBox* check_lock_trophy = new QCheckBox(tr("Show Unlocked Trophies"));
 	check_lock_trophy->setCheckable(true);
 	check_lock_trophy->setChecked(m_show_locked_trophies);
 
-	QCheckBox* check_unlock_trophy = new QCheckBox(tr("Show Earned Trophies"));
+	QCheckBox* check_unlock_trophy = new QCheckBox(tr("Show Locked Trophies"));
 	check_unlock_trophy->setCheckable(true);
 	check_unlock_trophy->setChecked(m_show_unlocked_trophies);
 
@@ -857,7 +857,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 			}
 		}
 
-		const QString unlockstate = data->trop_usr->GetTrophyUnlockState(trophy_id) ? tr("Earned") : tr("Not Earned");
+		const QString unlockstate = data->trop_usr->GetTrophyUnlockState(trophy_id) ? tr("Unlocked") : tr("Locked");
 
 		custom_table_widget_item* icon_item = new custom_table_widget_item();
 		icon_item->setData(Qt::UserRole, hidden, true);
