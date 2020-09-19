@@ -432,6 +432,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 		size->sysSizeKB = 0; // TODO
 	}
 
+	perm->restrict_sfo_params = false;
 	perm->dir = Emu.GetTitleID();
 	perm->sfo = std::move(sfo);
 
@@ -935,7 +936,7 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 		return CELL_GAME_ERROR_INVALID_ID;
 	}
 
-	if (key.flags & strkey_flag::read_only || (key.flags & strkey_flag::set && prm->restrict_sfo_params))
+	if (!prm->can_create || key.flags & strkey_flag::read_only || (key.flags & strkey_flag::set && prm->restrict_sfo_params))
 	{
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
