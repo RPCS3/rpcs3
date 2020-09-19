@@ -2514,7 +2514,7 @@ u32 spu_thread::get_ch_count(u32 ch)
 	case MFC_Cmd:             return 16 - mfc_size;
 	}
 
-	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
+	fmt::throw_exception("Unknown/illegal channel in RCHCNT (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
 }
 
 s64 spu_thread::get_ch_value(u32 ch)
@@ -2709,7 +2709,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 	}
 	}
 
-	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
+	fmt::throw_exception("Unknown/illegal channel in RDCH (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
 }
 
 bool spu_thread::set_ch_value(u32 ch, u32 value)
@@ -3060,13 +3060,15 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 		return true;
 	}
 
-	case 69:
+	case SPU_Set_Bkmk_Tag:
+	case SPU_PM_Start_Ev:
+	case SPU_PM_Stop_Ev:
 	{
 		return true;
 	}
 	}
 
-	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s], value=0x%x)" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???", value);
+	fmt::throw_exception("Unknown/illegal channel in WRCH (ch=%d [%s], value=0x%x)" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???", value);
 }
 
 bool spu_thread::stop_and_signal(u32 code)
