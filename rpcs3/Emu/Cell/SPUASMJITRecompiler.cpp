@@ -1559,7 +1559,6 @@ void spu_recompiler::RCHCNT(spu_opcode_t op)
 	case MFC_WrTagUpdate:
 	{
 		const XmmLink& vr = XmmAlloc();
-		const XmmLink& v1 = XmmAlloc();
 		c->mov(addr->r32(), 1);
 		c->movd(vr, addr->r32());
 		c->pslldq(vr, 12);
@@ -1585,6 +1584,34 @@ void spu_recompiler::RCHCNT(spu_opcode_t op)
 		c->movdqa(vr, SPU_OFF_128(ch_in_mbox));
 		c->pslldq(vr, 14);
 		c->psrldq(vr, 3);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		return;
+	}
+	// Channels with a constant count of 1:
+	case SPU_WrEventMask:
+	case SPU_WrEventAck:
+	case SPU_WrDec:
+	case SPU_RdDec:
+	case SPU_RdEventMask:
+	case SPU_RdMachStat:
+	case SPU_WrSRR0:
+	case SPU_RdSRR0:
+	case SPU_Set_Bkmk_Tag:
+	case SPU_PM_Start_Ev:
+	case SPU_PM_Stop_Ev:
+	case MFC_RdTagMask:
+	case MFC_LSA:
+	case MFC_EAH:
+	case MFC_EAL:
+	case MFC_Size:
+	case MFC_TagID:
+	case MFC_WrTagMask:
+	case MFC_WrListStallAck:
+	{
+		const XmmLink& vr = XmmAlloc();
+		c->mov(addr->r32(), 1);
+		c->movd(vr, addr->r32());
+		c->pslldq(vr, 12);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 		return;
 	}
