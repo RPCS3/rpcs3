@@ -2470,7 +2470,9 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		// TODO
 		break;
 	}
-	case 69:
+	case SPU_Set_Bkmk_Tag:
+	case SPU_PM_Start_Ev:
+	case SPU_PM_Stop_Ev:
 	{
 		return;
 	}

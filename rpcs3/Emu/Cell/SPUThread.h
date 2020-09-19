@@ -35,6 +35,9 @@ enum : u32
 	SPU_WrOutMbox       = 28, // Write outbound mailbox contents
 	SPU_RdInMbox        = 29, // Read inbound mailbox contents
 	SPU_WrOutIntrMbox   = 30, // Write outbound interrupt mailbox contents (interrupting PPU)
+	SPU_Set_Bkmk_Tag    = 69, // Causes an event that can be logged in the performance monitor logic if enabled in the SPU
+	SPU_PM_Start_Ev     = 70, // Starts the performance monitor event if enabled
+	SPU_PM_Stop_Ev      = 71, // Stops the performance monitor event if enabled
 };
 
 // MFC Channels
