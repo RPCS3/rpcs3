@@ -539,7 +539,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 
 	const std::string dir = perm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + perm->dir;
 
-	if (perm->can_create && perm->temp.empty() && !fs::is_dir(vfs::get(dir)))
+	if (perm->can_create && perm->temp.empty() && !perm->exists)
 	{
 		perm->reset();
 		strcpy_trunc(*contentInfoPath, "");
@@ -564,6 +564,11 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		{
 			cellGame.error("cellGameContentPermit(): failed to initialize directory '%s' (%s)", dir, fs::g_tls_error);
 		}
+	}
+	else if (perm->can_create)
+	{
+		// Update PARAM.SFO
+		psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite - fs::create), perm->sfo);
 	}
 
 	// Cleanup
