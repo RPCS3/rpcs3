@@ -497,7 +497,21 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		}
 	}
 
+	// TODO: Callbacks
+	// From RE-ing a game's state machine, it seems the possible order is one of the following:
+	// * Install (Not installed)  - Setup - Progress * ? - Finalize - Complete - Installed
+	// * Reinstall (Corrupted)    - Setup - Progress * ? - Finalize - Complete - Installed
+	// * Update (Required update) - Setup - Progress * ? - Finalize - Complete - Installed
+	// * Installed
+
 	const std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name;
+
+	// The callback is called once and then if it returns >= 0 the cb is called through events(coming from vsh) that are passed to the CB through cellSysutilCheckCallback
+	if (statusCb(ppu, context, fs::is_dir(vfs::get(trophyPath)) ? SCE_NP_TROPHY_STATUS_INSTALLED : SCE_NP_TROPHY_STATUS_NOT_INSTALLED, 0, 0, arg) < 0)
+	{
+		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
+	}
+
 	if (!trp.Install(trophyPath))
 	{
 		sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to install trophy context '%s' (%s)", trophyPath, fs::g_tls_error);
@@ -509,20 +523,6 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	const std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
 	tropusr->Load(trophyUsrPath, trophyConfPath);
 	ctxt->tropusr.reset(tropusr);
-
-	// TODO: Callbacks
-	// From RE-ing a game's state machine, it seems the possible order is one of the following:
-	// * Install (Not installed)  - Setup - Progress * ? - Finalize - Complete - Installed
-	// * Reinstall (Corrupted)    - Setup - Progress * ? - Finalize - Complete - Installed
-	// * Update (Required update) - Setup - Progress * ? - Finalize - Complete - Installed
-	// * Installed
-	// We will go with the easy path of Installed, and that's it.
-
-	// The callback is called once and then if it returns >= 0 the cb is called through events(coming from vsh) that are passed to the CB through cellSysutilCheckCallback
-	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 0, 0, arg) < 0)
-	{
-		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
-	}
 
 	// This emulates vsh sending the events and ensures that not 2 events are processed at once
 	const std::pair<u32, s32> statuses[] =
