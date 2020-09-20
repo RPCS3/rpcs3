@@ -154,6 +154,28 @@ void fmt_class_string<SceNpTrophyError>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<SceNpCommunicationSignature>::format(std::string& out, u64 arg)
+{
+	const auto& sign = get_object(arg);
+
+	// Format as a C byte array for ease of use
+	fmt::append(out, "{ ");
+
+	for (std::size_t i = 0;; i++)
+	{
+		if (i == std::size(sign.data) - 1)
+		{
+			fmt::append(out, "0x%02X", sign.data[i]);
+			break;
+		}
+
+		fmt::append(out, "0x%02X, ", sign.data[i]);
+	}
+
+	fmt::append(out, " }");
+}
+
 // Helpers
 
 static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophyId, SceNpTrophyDetails* details, SceNpTrophyData* data);
@@ -330,6 +352,8 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	{
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
+
+	sceNpTrophy.notice("sceNpTrophyCreateContext(): commSign = %s", *commSign);
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
