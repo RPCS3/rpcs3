@@ -352,14 +352,40 @@ bool fs::stat(const std::string& path, stat_t& info)
 	}
 
 #ifdef _WIN32
-	WIN32_FIND_DATA attrs;
 	std::string_view epath = path;
 
 	// '/' and '\\' Not allowed by FindFirstFileExW at the end of path but we should allow it
 	if (auto not_del = epath.find_last_not_of("/\\"); not_del != umax && not_del != epath.size() - 1)
 	{
-		epath.remove_suffix(path.size() - 1 - not_del);
+		epath.remove_suffix(epath.size() - 1 - not_del);
 	}
+
+	// Handle drives specially
+	if (epath.find_first_of("/\\") == umax && epath.ends_with(':'))
+	{
+		WIN32_FILE_ATTRIBUTE_DATA attrs;
+
+		// Must end with a delimiter
+		if (!GetFileAttributesExW(to_wchar(std::string(epath) + '/').get(), GetFileExInfoStandard, &attrs))
+		{
+			g_tls_error = to_error(GetLastError());
+			return false;	
+		}
+
+		info.is_directory = true; // Handle drives as directories
+		info.is_writable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
+		info.size = attrs.nFileSizeLow | (u64{attrs.nFileSizeHigh} << 32);
+		info.atime = to_time(attrs.ftLastAccessTime);
+		info.mtime = to_time(attrs.ftLastWriteTime);
+		info.ctime = info.mtime;
+
+		if (info.atime < info.mtime)
+			info.atime = info.mtime;
+
+		return true;
+	}
+
+	WIN32_FIND_DATA attrs;
 
 	// Allowed by FindFirstFileExW but we should not allow it
 	if (epath.ends_with("*"))
