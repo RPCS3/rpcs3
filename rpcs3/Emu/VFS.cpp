@@ -701,6 +701,11 @@ std::string vfs::unescape(std::string_view name)
 	return result;
 }
 
+std::string vfs::host::hash_path(const std::string& path, const std::string& dev_root)
+{
+	return fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
+}
+
 bool vfs::host::rename(const std::string& from, const std::string& to, bool overwrite)
 {
 	while (!fs::rename(from, to, overwrite))
@@ -725,7 +730,7 @@ bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 	else
 	{
 		// Rename to special dummy name which will be ignored by VFS (but opened file handles can still read or write it)
-		const std::string dummy = fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
+		const std::string dummy = hash_path(path, dev_root);
 
 		if (!fs::rename(path, dummy, true))
 		{
@@ -755,7 +760,7 @@ bool vfs::host::remove_all(const std::string& path, const std::string& dev_root,
 	if (remove_root)
 	{
 		// Rename to special dummy folder which will be ignored by VFS (but opened file handles can still read or write it)
-		const std::string dummy = fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
+		const std::string dummy = hash_path(path, dev_root);
 
 		if (!vfs::host::rename(path, dummy, false))
 		{

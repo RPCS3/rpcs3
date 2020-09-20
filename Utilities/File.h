@@ -628,7 +628,8 @@ namespace fs
 	template <typename... Args>
 	bool write_file(const std::string& path, bs_t<fs::open_mode> mode, const Args&... args)
 	{
-		if (fs::file f{path, mode})
+		// Always use write flag, remove read flag
+		if (fs::file f{path, mode + fs::write - fs::read})
 		{
 			// Write args sequentially
 			(f.write(args), ...);
