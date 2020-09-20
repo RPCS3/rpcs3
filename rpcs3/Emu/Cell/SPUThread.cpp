@@ -2534,9 +2534,12 @@ u32 spu_thread::get_ch_count(u32 ch)
 	case MFC_WrTagMask:
 	case MFC_WrListStallAck:
 		return 1;
+	default: break;
 	}
 
-	fmt::throw_exception("Unknown/illegal channel in RCHCNT (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
+	verify(HERE), ch < 128u;
+	spu_log.error("Unknown/illegal channel in RCHCNT (ch=%d [%s])", ch, spu_ch_name[ch]);
+	return 0; // Default count
 }
 
 s64 spu_thread::get_ch_value(u32 ch)
