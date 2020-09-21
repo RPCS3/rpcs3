@@ -356,8 +356,6 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 		return SCE_NP_TROPHY_ERROR_INVALID_NP_COMM_ID;
 	}
 
-	sceNpTrophy.warning("sceNpTrophyCreateContext data=%s term=%s num=%d", commId->data, commId->term, commId->num);
-
 	// NOTE: commId->term is unused in our code (at least until someone finds out if we need to account for it)
 
 	// generate trophy context name, limited to 9 characters
@@ -368,6 +366,8 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	{
 		name_sv = name_sv.substr(0, pos);
 	}
+
+	sceNpTrophy.warning("sceNpTrophyCreateContext(): data='%s' term='%c' (0x%x) num=%d", name_sv, commId->term, commId->term, commId->num);
 
 	// append the commId number as "_xx"
 	const std::string name = fmt::format("%s_%02d", name_sv, commId->num);
