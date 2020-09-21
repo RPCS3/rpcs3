@@ -461,6 +461,21 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	// TODO: not sure what should be checked there
 
 	const auto perm = g_fxo->get<content_permission>();
+	auto psf = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+
+	if (![&]()
+	{
+		switch (type)
+		{
+		case CELL_GAME_GAMETYPE_HDD: return psf::get_string(sfo, "CATEGORY", "HG") == "HG";
+		case CELL_GAME_GAMETYPE_GAMEDATA: return psf::get_string(sfo, "CATEGORY", "GD") == "GD";
+		case CELL_GAME_GAMETYPE_DISC: return psf::get_string(sfo, "CATEGORY", "DG") == "DG";
+		default: ASSUME(0);
+		}
+	}())
+	{
+		return CELL_GAME_ERROR_BROKEN;
+	}
 
 	const auto init = perm->init.init();
 
@@ -495,7 +510,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	}
 
 	perm->exists = true;
-	perm->sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+	perm->sfo = std::move(sfo);
 	return CELL_OK;
 }
 
