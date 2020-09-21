@@ -138,9 +138,6 @@ public:
 	std::size_t apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
 
 private:
-	// Load from file and append to member patches map
-	void append(const std::string& path);
-
 	// Internal: Apply patch (returns the number of entries applied)
 	template <bool check_local_storage>
 	std::size_t apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
