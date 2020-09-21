@@ -441,7 +441,7 @@ void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
 std::vector<std::string> keyboard_pad_handler::ListDevices()
 {
 	std::vector<std::string> list_devices;
-	list_devices.emplace_back("Keyboard");
+	list_devices.emplace_back(pad::keyboard_device_name);
 	return list_devices;
 }
 
@@ -629,7 +629,7 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 
 bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
 {
-	if (device != "Keyboard")
+	if (device != pad::keyboard_device_name)
 		return false;
 
 	const int index = static_cast<int>(bindings.size());
