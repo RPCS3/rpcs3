@@ -461,7 +461,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	// TODO: not sure what should be checked there
 
 	const auto perm = g_fxo->get<content_permission>();
-	auto psf = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+	auto sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 
 	if (![&]()
 	{
