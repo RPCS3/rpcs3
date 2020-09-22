@@ -31,6 +31,9 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 		return false;
 	}
 
+	// Save TROPUSR.DAT
+	fs::copy_file(temp + "/TROPUSR.DAT", local_path + "/TROPUSR.DAT", false);
+
 	std::vector<char> buffer(65536);
 
 	bool success = true;
@@ -50,7 +53,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 
 	if (success)
 	{
-		success = vfs::host::remove_all(local_path, Emu.GetHddDir(), true);
+		success = vfs::host::remove_all(local_path, Emu.GetHddDir(), true) || !fs::is_dir(local_path);
 
 		if (success)
 		{
