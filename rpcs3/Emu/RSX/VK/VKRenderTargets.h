@@ -233,11 +233,7 @@ namespace vk
 		void load_memory(vk::command_buffer& cmd)
 		{
 			auto& upload_heap = *vk::get_upload_heap();
-
 			const bool is_swizzled = (raster_type == rsx::surface_raster_type::swizzle);
-			const u32 gcm_format = is_depth_surface() ?
-				get_compatible_gcm_format(format_info.gcm_depth_format).first :
-				get_compatible_gcm_format(format_info.gcm_color_format).first;
 
 			rsx::subresource_layout subres{};
 			subres.width_in_block = subres.width_in_texel = surface_width * samples_x;
@@ -249,7 +245,7 @@ namespace vk
 			if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 			{
 				push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-				vk::copy_mipmaped_image_using_buffer(cmd, this, { subres }, gcm_format, is_swizzled, 1, aspect(), upload_heap, rsx_pitch);
+				vk::copy_mipmaped_image_using_buffer(cmd, this, { subres }, get_gcm_format(), is_swizzled, 1, aspect(), upload_heap, rsx_pitch);
 				pop_layout(cmd);
 			}
 			else
@@ -269,12 +265,12 @@ namespace vk
 				}
 				else
 				{
-					content = vk::get_typeless_helper(format(), rsx::classify_format(gcm_format), subres.width_in_block, subres.height_in_block);
+					content = vk::get_typeless_helper(format(), format_class(), subres.width_in_block, subres.height_in_block);
 					content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 				}
 
 				// Load Cell data into temp buffer
-				vk::copy_mipmaped_image_using_buffer(cmd, content, { subres }, gcm_format, is_swizzled, 1, aspect(), upload_heap, rsx_pitch);
+				vk::copy_mipmaped_image_using_buffer(cmd, content, { subres }, get_gcm_format(), is_swizzled, 1, aspect(), upload_heap, rsx_pitch);
 
 				// Write into final image
 				if (content != final_dst)
@@ -520,6 +516,7 @@ namespace vk
 					typeless_info.src_is_typeless = true;
 					typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
 					typeless_info.src_native_format_override = static_cast<u32>(info.format);
+					typeless_info.src_gcm_format = src_texture->get_gcm_format();
 					typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
 				}
 
