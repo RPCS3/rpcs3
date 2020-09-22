@@ -482,7 +482,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		}
 	}())
 	{
-		if (fs::is_file(vfs::get(dir + "/PARAM.SFO"))
+		if (fs::is_file(vfs::get(dir + "/PARAM.SFO")))
 		{
 			init.cancel();		
 			return CELL_GAME_ERROR_BROKEN;
