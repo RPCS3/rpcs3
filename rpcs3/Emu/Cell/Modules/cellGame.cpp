@@ -471,13 +471,13 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	auto sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 
-	if (![&]()
+	if (psf::get_string(sfo, "CATEGORY") != [&]()
 	{
 		switch (type)
 		{
-		case CELL_GAME_GAMETYPE_HDD: return psf::get_string(sfo, "CATEGORY") == "HG";
-		case CELL_GAME_GAMETYPE_GAMEDATA: return psf::get_string(sfo, "CATEGORY") == "GD";
-		case CELL_GAME_GAMETYPE_DISC: return psf::get_string(sfo, "CATEGORY") == "DG";
+		case CELL_GAME_GAMETYPE_HDD: return "HG"sv;
+		case CELL_GAME_GAMETYPE_GAMEDATA: return "GD"sv;
+		case CELL_GAME_GAMETYPE_DISC: return "DG"sv;
 		default: ASSUME(0);
 		}
 	}())
