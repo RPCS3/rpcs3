@@ -406,7 +406,7 @@ void gui_application::UpdatePlaytime()
 		return;
 	}
 
-	const qint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.restart();
+	const quint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.restart();
 	m_persistent_settings->SetPlaytime(serial, playtime);
 	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
 }
@@ -425,7 +425,7 @@ void gui_application::StopPlaytime()
 		return;
 	}
 
-	const qint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
+	const quint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
 	m_persistent_settings->SetPlaytime(serial, playtime);
 	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
 	m_timer_playtime.invalidate();
