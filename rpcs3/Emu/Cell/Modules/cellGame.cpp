@@ -467,14 +467,17 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	{
 		switch (type)
 		{
-		case CELL_GAME_GAMETYPE_HDD: return psf::get_string(sfo, "CATEGORY", "HG") == "HG";
-		case CELL_GAME_GAMETYPE_GAMEDATA: return psf::get_string(sfo, "CATEGORY", "GD") == "GD";
-		case CELL_GAME_GAMETYPE_DISC: return psf::get_string(sfo, "CATEGORY", "DG") == "DG";
+		case CELL_GAME_GAMETYPE_HDD: return psf::get_string(sfo, "CATEGORY") == "HG";
+		case CELL_GAME_GAMETYPE_GAMEDATA: return psf::get_string(sfo, "CATEGORY") == "GD";
+		case CELL_GAME_GAMETYPE_DISC: return psf::get_string(sfo, "CATEGORY") == "DG";
 		default: ASSUME(0);
 		}
 	}())
 	{
-		return CELL_GAME_ERROR_BROKEN;
+		if (fs::is_file(vfs::get(dir + "/PARAM.SFO"))
+		{
+			return CELL_GAME_ERROR_BROKEN;
+		}
 	}
 
 	const auto init = perm->init.init();
@@ -503,7 +506,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	perm->restrict_sfo_params = false;
 
-	if (!fs::is_dir(vfs::get(dir)))
+	if (sfo.empty())
 	{
 		cellGame.warning("cellGameDataCheck(): directory '%s' not found", dir);
 		return not_an_error(CELL_GAME_RET_NONE);
