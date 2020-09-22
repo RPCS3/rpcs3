@@ -461,6 +461,14 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	// TODO: not sure what should be checked there
 
 	const auto perm = g_fxo->get<content_permission>();
+
+	auto init = perm->init.init();
+
+	if (!init)
+	{
+		return CELL_GAME_ERROR_BUSY;
+	}
+
 	auto sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 
 	if (![&]()
@@ -476,15 +484,9 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	{
 		if (fs::is_file(vfs::get(dir + "/PARAM.SFO"))
 		{
+			init.cancel();		
 			return CELL_GAME_ERROR_BROKEN;
 		}
-	}
-
-	const auto init = perm->init.init();
-
-	if (!init)
-	{
-		return CELL_GAME_ERROR_BUSY;
 	}
 
 	if (size)
