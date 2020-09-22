@@ -2,6 +2,9 @@
 <ui version="4.0">
  <class>settings_dialog</class>
  <widget class="QDialog" name="settings_dialog">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -3493,13 +3496,6 @@
              <widget class="QCheckBox" name="accurateGETLLAR">
               <property name="text">
                <string>Accurate GETLLAR</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="accuratePUTLLUC">
-              <property name="text">
-               <string>Accurate PUTLLUC</string>
               </property>
              </widget>
             </item>

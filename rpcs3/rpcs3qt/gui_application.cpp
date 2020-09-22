@@ -9,6 +9,7 @@
 #include "gs_frame.h"
 #include "gl_gs_frame.h"
 #include "display_sleep_control.h"
+#include "localized_emu.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
@@ -358,6 +359,16 @@ void gui_application::InitializeCallbacks()
 		}
 	};
 
+	callbacks.get_localized_string = [](localized_string_id id, const char* args) -> std::string
+	{
+		return localized_emu::get_string(id, args);
+	};
+
+	callbacks.get_localized_u32string = [](localized_string_id id, const char* args) -> std::u32string
+	{
+		return localized_emu::get_u32string(id, args);
+	};
+
 	Emu.SetCallbacks(std::move(callbacks));
 }
 
@@ -395,7 +406,7 @@ void gui_application::UpdatePlaytime()
 		return;
 	}
 
-	const qint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.restart();
+	const quint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.restart();
 	m_persistent_settings->SetPlaytime(serial, playtime);
 	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
 }
@@ -414,7 +425,7 @@ void gui_application::StopPlaytime()
 		return;
 	}
 
-	const qint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
+	const quint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
 	m_persistent_settings->SetPlaytime(serial, playtime);
 	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
 	m_timer_playtime.invalidate();

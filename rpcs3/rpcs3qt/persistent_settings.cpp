@@ -9,15 +9,15 @@ persistent_settings::persistent_settings(QObject* parent) : settings(parent)
 	m_settings.reset(new QSettings(ComputeSettingsDir() + gui::persistent::persistent_file_name + ".dat", QSettings::Format::IniFormat, parent));
 }
 
-void persistent_settings::SetPlaytime(const QString& serial, const qint64& elapsed)
+void persistent_settings::SetPlaytime(const QString& serial, const quint64& elapsed)
 {
-	m_playtime[serial] = std::max<qint64>(0, elapsed);
+	m_playtime[serial] = elapsed;
 	SetValue(gui::persistent::playtime, serial, m_playtime[serial]);
 }
 
-qint64 persistent_settings::GetPlaytime(const QString& serial)
+quint64 persistent_settings::GetPlaytime(const QString& serial)
 {
-	return std::max<qint64>(0, m_playtime[serial]);
+	return m_playtime[serial];
 }
 
 void persistent_settings::SetLastPlayed(const QString& serial, const QString& date)

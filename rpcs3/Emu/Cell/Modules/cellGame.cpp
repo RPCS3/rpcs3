@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include "Emu/localized_string.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
@@ -125,6 +126,7 @@ struct content_permission final
 	stx::init_mutex init;
 
 	atomic_t<u32> can_create = 0;
+	atomic_t<bool> exists = false;
 	atomic_t<bool> restrict_sfo_params = true;
 
 	content_permission() = default;
@@ -132,6 +134,16 @@ struct content_permission final
 	content_permission(const content_permission&) = delete;
 
 	content_permission& operator=(const content_permission&) = delete;
+
+	void reset()
+	{
+		dir.clear();
+		sfo.clear();
+		temp.clear();
+		can_create = 0;
+		exists = false;
+		restrict_sfo_params = true;
+	}
 
 	~content_permission()
 	{
@@ -225,10 +237,12 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	return CELL_OK;
 }
 
-error_code cellHddGameCheck2()
+error_code cellHddGameCheck2(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
-	cellGame.todo("cellHddGameCheck2()");
-	return CELL_OK;
+	cellGame.trace("cellHddGameCheck2()");
+
+	// Identical function
+	return cellHddGameCheck(ppu, version, dirName, errDialog, funcStat, container);
 }
 
 error_code cellHddGameGetSizeKB(vm::ptr<u32> size)
@@ -271,7 +285,7 @@ error_code cellHddGameSetSystemVer(vm::cptr<char> systemVersion)
 error_code cellHddGameExitBroken()
 {
 	cellGame.warning("cellHddGameExitBroken()");
-	return open_exit_dialog("There has been an error!\n\nPlease reinstall the HDD boot game.", true);
+	return open_exit_dialog(get_localized_string(localized_string_id::CELL_HDD_GAME_EXIT_BROKEN), true);
 }
 
 error_code cellGameDataGetSizeKB(vm::ptr<u32> size)
@@ -319,7 +333,7 @@ error_code cellGameDataSetSystemVer(vm::cptr<char> systemVersion)
 error_code cellGameDataExitBroken()
 {
 	cellGame.warning("cellGameDataExitBroken()");
-	return open_exit_dialog("There has been an error!\n\nPlease remove the game data for this title.", true);
+	return open_exit_dialog(get_localized_string(localized_string_id::CELL_GAME_DATA_EXIT_BROKEN), true);
 }
 
 error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
@@ -384,9 +398,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 
 	perm->dir = std::move(dir);
 	perm->sfo = std::move(sfo);
-
-	perm->temp.clear();
-	perm->can_create = 0;
+	perm->restrict_sfo_params = *type == u32{CELL_GAME_GAMETYPE_HDD}; // Ratchet & Clank: All 4 One (PSN versions) rely on this error checking (TODO: Needs proper hw tests)
 
 	return CELL_OK;
 }
@@ -421,11 +433,9 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 		size->sysSizeKB = 0; // TODO
 	}
 
+	perm->restrict_sfo_params = false;
 	perm->dir = Emu.GetTitleID();
 	perm->sfo = std::move(sfo);
-
-	perm->temp.clear();
-	perm->can_create = 0;
 
 	return CELL_OK;
 }
@@ -470,8 +480,6 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	}
 
 	perm->dir = std::move(name);
-	perm->sfo.clear();
-	perm->temp.clear();
 
 	if (type == CELL_GAME_GAMETYPE_GAMEDATA)
 	{
@@ -486,6 +494,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		return not_an_error(CELL_GAME_RET_NONE);
 	}
 
+	perm->exists = true;
 	perm->sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 	return CELL_OK;
 }
@@ -512,6 +521,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 
 	if (perm->can_create && perm->temp.empty() && !fs::is_dir(vfs::get(dir)))
 	{
+		perm->reset();
 		strcpy_trunc(*contentInfoPath, "");
 		strcpy_trunc(*usrdirPath, "");
 		return CELL_OK;
@@ -535,6 +545,9 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 			cellGame.error("cellGameContentPermit(): failed to initialize directory '%s' (%s)", dir, fs::g_tls_error);
 		}
 	}
+
+	// Cleanup
+	perm->reset();
 
 	strcpy_trunc(*contentInfoPath, dir);
 	strcpy_trunc(*usrdirPath, dir + "/USRDIR");
@@ -691,6 +704,11 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 {
 	cellGame.error("cellGameCreateGameData(init=*0x%x, tmp_contentInfoPath=*0x%x, tmp_usrdirPath=*0x%x)", init, tmp_contentInfoPath, tmp_usrdirPath);
 
+	if (!init)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
+
 	const auto prm = g_fxo->get<content_permission>();
 
 	const auto _init = prm->init.access();
@@ -703,6 +721,11 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 	if (!prm->can_create)
 	{
 		return CELL_GAME_ERROR_NOTSUPPORTED;
+	}
+
+	if (prm->exists)
+	{
+		return CELL_GAME_ERROR_EXIST;
 	}
 
 	std::string dirname = "_GDATA_" + std::to_string(steady_clock::now().time_since_epoch().count());
@@ -891,7 +914,7 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 
 error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 {
-	cellGame.warning("cellGameSetParamString(id=%d, buf=*0x%x)", id, buf);
+	cellGame.warning("cellGameSetParamString(id=%d, buf=*0x%x %s)", id, buf, buf);
 
 	if (!buf)
 	{
@@ -914,7 +937,7 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 		return CELL_GAME_ERROR_INVALID_ID;
 	}
 
-	if (key.flags & strkey_flag::read_only || (key.flags & strkey_flag::set && prm->restrict_sfo_params))
+	if (!prm->can_create || key.flags & strkey_flag::read_only || (key.flags & strkey_flag::set && prm->restrict_sfo_params))
 	{
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
@@ -940,6 +963,9 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 		return CELL_GAME_ERROR_PARAM;
 	}
 
+	// Always reset to 0 at start
+	*size = 0;
+
 	const auto prm = g_fxo->get<content_permission>();
 
 	const auto init = prm->init.access();
@@ -959,7 +985,6 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 
 		if (!fs::exists(local_dir))
 		{
-			*size = 0;
 			return CELL_OK;
 		}
 		else
@@ -1002,26 +1027,36 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 {
 	cellGame.warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName=%s)", type, errNeedSizeKB, dirName);
 
-	std::string errorName;
+	std::string error_msg;
+
 	switch (type)
 	{
-	case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:      errorName = "Game data is corrupted. The application will continue.";          break;
-	case CELL_GAME_ERRDIALOG_BROKEN_HDDGAME:       errorName = "HDD boot game is corrupted. The application will continue.";      break;
-	case CELL_GAME_ERRDIALOG_NOSPACE:              errorName = "Not enough available space. The application will continue.";      break;
-	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA: errorName = "Game data is corrupted. The application will be terminated.";     break;
-	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_HDDGAME:  errorName = "HDD boot game is corrupted. The application will be terminated."; break;
-	case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:         errorName = "Not enough available space. The application will be terminated."; break;
-	default: return CELL_GAME_ERROR_PARAM;
-	}
-
-	std::string errorMsg;
-	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
-	{
-		errorMsg = fmt::format("ERROR: %s\nSpace needed: %d KB", errorName, errNeedSizeKB);
-	}
-	else
-	{
-		errorMsg = fmt::format("ERROR: %s", errorName);
+	case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:
+		// Game data is corrupted. The application will continue.
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_BROKEN_GAMEDATA);
+		break;
+	case CELL_GAME_ERRDIALOG_BROKEN_HDDGAME:
+		// HDD boot game is corrupted. The application will continue.
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_BROKEN_HDDGAME);
+		break;
+	case CELL_GAME_ERRDIALOG_NOSPACE:
+		// Not enough available space. The application will continue.
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_NOSPACE, fmt::format("%d", errNeedSizeKB).c_str());
+		break;
+	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA:
+		// Game data is corrupted. The application will be terminated.
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_BROKEN_EXIT_GAMEDATA);
+		break;
+	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_HDDGAME:
+		// HDD boot game is corrupted. The application will be terminated.
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_BROKEN_EXIT_HDDGAME);
+		break;
+	case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:
+		// Not enough available space. The application will be terminated.
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_NOSPACE_EXIT, fmt::format("%d", errNeedSizeKB).c_str());
+		break;
+	default:
+		return CELL_GAME_ERROR_PARAM;
 	}
 
 	if (dirName)
@@ -1031,10 +1066,10 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 			return CELL_GAME_ERROR_PARAM;
 		}
 
-		errorMsg += fmt::format("\nDirectory name: %s", dirName);
+		error_msg += "\n" + get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, fmt::format("%s", dirName).c_str());
 	}
 
-	return open_exit_dialog(errorMsg, type > CELL_GAME_ERRDIALOG_NOSPACE);
+	return open_exit_dialog(error_msg, type > CELL_GAME_ERRDIALOG_NOSPACE);
 }
 
 error_code cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileName, u32 option)

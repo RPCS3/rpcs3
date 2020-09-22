@@ -126,7 +126,7 @@ void emu_settings::LoadSettings(const std::string& title_id)
 
 		if (!custom_config_path.empty())
 		{
-			if (config = fs::file(custom_config_path, fs::read + fs::write))
+			if ((config = fs::file(custom_config_path, fs::read + fs::write)))
 			{
 				auto [custom_config, custom_error] = yaml_load(config.to_string());
 				config.close();
@@ -804,6 +804,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		{
 		case np_psn_status::disabled: return tr("Disconnected", "PSN Status");
 		case np_psn_status::fake: return tr("Simulated", "PSN Status");
+		case np_psn_status::rpcn: return tr("RPCN", "PSN Status");
 		}
 		break;
 	case emu_settings_type::SleepTimersAccuracy:

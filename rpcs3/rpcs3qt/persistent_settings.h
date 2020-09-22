@@ -37,12 +37,12 @@ public:
 	QString GetCurrentUser(const QString& fallback) const;
 
 public Q_SLOTS:
-	void SetPlaytime(const QString& serial, const qint64& elapsed);
-	qint64 GetPlaytime(const QString& serial);
+	void SetPlaytime(const QString& serial, const quint64& elapsed);
+	quint64 GetPlaytime(const QString& serial);
 
 	void SetLastPlayed(const QString& serial, const QString& date);
 	QString GetLastPlayed(const QString& serial);
 private:
-	QMap<QString, qint64> m_playtime;
+	QMap<QString, quint64> m_playtime;
 	QMap<QString, QString> m_last_played;
 };

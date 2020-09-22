@@ -352,16 +352,83 @@ bool fs::stat(const std::string& path, stat_t& info)
 	}
 
 #ifdef _WIN32
-	WIN32_FILE_ATTRIBUTE_DATA attrs;
-	if (!GetFileAttributesExW(to_wchar(path).get(), GetFileExInfoStandard, &attrs))
+	std::string_view epath = path;
+
+	// '/' and '\\' Not allowed by FindFirstFileExW at the end of path but we should allow it
+	if (auto not_del = epath.find_last_not_of("/\\"); not_del != umax && not_del != epath.size() - 1)
+	{
+		epath.remove_suffix(epath.size() - 1 - not_del);
+	}
+
+	// Handle drives specially
+	if (epath.find_first_of("/\\") == umax && epath.ends_with(':'))
+	{
+		WIN32_FILE_ATTRIBUTE_DATA attrs;
+
+		// Must end with a delimiter
+		if (!GetFileAttributesExW(to_wchar(std::string(epath) + '/').get(), GetFileExInfoStandard, &attrs))
+		{
+			g_tls_error = to_error(GetLastError());
+			return false;	
+		}
+
+		info.is_directory = true; // Handle drives as directories
+		info.is_writable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
+		info.size = attrs.nFileSizeLow | (u64{attrs.nFileSizeHigh} << 32);
+		info.atime = to_time(attrs.ftLastAccessTime);
+		info.mtime = to_time(attrs.ftLastWriteTime);
+		info.ctime = info.mtime;
+
+		if (info.atime < info.mtime)
+			info.atime = info.mtime;
+
+		return true;
+	}
+
+	WIN32_FIND_DATA attrs;
+
+	// Allowed by FindFirstFileExW but we should not allow it
+	if (epath.ends_with("*"))
+	{
+		g_tls_error = fs::error::noent;
+		return false;
+	}
+
+	const auto wchar_ptr = to_wchar(std::string(epath));
+	const std::wstring_view wpath_view = wchar_ptr.get();
+
+	const HANDLE handle = FindFirstFileExW(wpath_view.data(), FindExInfoStandard, &attrs, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_CASE_SENSITIVE);
+
+	if (handle == INVALID_HANDLE_VALUE)
 	{
 		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 
+	struct close_t
+	{
+		HANDLE handle;
+		~close_t() { FindClose(handle); }
+	};
+
+	for (close_t find_manage{handle}; attrs.cFileName != wpath_view.substr(wpath_view.find_last_of(L"/\\") + 1);)
+	{
+		if (!FindNextFileW(handle, &attrs))
+		{
+			if (const DWORD err = GetLastError(); err != ERROR_NO_MORE_FILES)
+			{
+				g_tls_error = to_error(err);
+				return false;		
+			}
+
+			g_tls_error = fs::error::noent;
+			return false;
+		}
+	}
+
 	info.is_directory = (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 	info.is_writable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
-	info.size = (u64)attrs.nFileSizeLow | ((u64)attrs.nFileSizeHigh << 32);
+	info.size = attrs.nFileSizeLow | (u64{attrs.nFileSizeHigh} << 32);
 	info.atime = to_time(attrs.ftLastAccessTime);
 	info.mtime = to_time(attrs.ftLastWriteTime);
 	info.ctime = info.mtime;
@@ -389,73 +456,19 @@ bool fs::stat(const std::string& path, stat_t& info)
 
 bool fs::exists(const std::string& path)
 {
-	if (auto device = get_virtual_device(path))
-	{
-		stat_t info;
-		return device->stat(path, info);
-	}
-
-#ifdef _WIN32
-	if (GetFileAttributesW(to_wchar(path).get()) == INVALID_FILE_ATTRIBUTES)
-	{
-		g_tls_error = to_error(GetLastError());
-		return false;
-	}
-
-	return true;
-#else
-	struct ::stat file_info;
-	if (::stat(path.c_str(), &file_info) != 0)
-	{
-		g_tls_error = to_error(errno);
-		return false;
-	}
-
-	return true;
-#endif
+	fs::stat_t info{};
+	return fs::stat(path, info);
 }
 
 bool fs::is_file(const std::string& path)
 {
-	if (auto device = get_virtual_device(path))
+	fs::stat_t info{};
+	if (!fs::stat(path, info))
 	{
-		stat_t info;
-		if (!device->stat(path, info))
-		{
-			return false;
-		}
-
-		if (info.is_directory)
-		{
-			g_tls_error = error::exist;
-			return false;
-		}
-
-		return true;
-	}
-
-#ifdef _WIN32
-	const DWORD attrs = GetFileAttributesW(to_wchar(path).get());
-	if (attrs == INVALID_FILE_ATTRIBUTES)
-	{
-		g_tls_error = to_error(GetLastError());
 		return false;
 	}
-#else
-	struct ::stat file_info;
-	if (::stat(path.c_str(), &file_info) != 0)
-	{
-		g_tls_error = to_error(errno);
-		return false;
-	}
-#endif
 
-	// TODO: correct file type check
-#ifdef _WIN32
-	if ((attrs & FILE_ATTRIBUTE_DIRECTORY) != 0)
-#else
-	if (S_ISDIR(file_info.st_mode))
-#endif
+	if (info.is_directory)
 	{
 		g_tls_error = error::exist;
 		return false;
@@ -466,44 +479,13 @@ bool fs::is_file(const std::string& path)
 
 bool fs::is_dir(const std::string& path)
 {
-	if (auto device = get_virtual_device(path))
+	fs::stat_t info{};
+	if (!fs::stat(path, info))
 	{
-		stat_t info;
-		if (!device->stat(path, info))
-		{
-			return false;
-		}
-
-		if (info.is_directory == false)
-		{
-			g_tls_error = error::exist;
-			return false;
-		}
-
-		return true;
-	}
-
-#ifdef _WIN32
-	const DWORD attrs = GetFileAttributesW(to_wchar(path).get());
-	if (attrs == INVALID_FILE_ATTRIBUTES)
-	{
-		g_tls_error = to_error(GetLastError());
 		return false;
 	}
-#else
-	struct ::stat file_info;
-	if (::stat(path.c_str(), &file_info) != 0)
-	{
-		g_tls_error = to_error(errno);
-		return false;
-	}
-#endif
 
-#ifdef _WIN32
-	if ((attrs & FILE_ATTRIBUTE_DIRECTORY) == 0)
-#else
-	if (!S_ISDIR(file_info.st_mode))
-#endif
+	if (!info.is_directory)
 	{
 		g_tls_error = error::exist;
 		return false;
@@ -781,7 +763,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 	// sendfile will work with non-socket output (i.e. regular file) on Linux 2.6.33+
 	off_t bytes_copied = 0;
 	struct ::stat fileinfo = { 0 };
-	if (::fstat(input, &fileinfo) || ::sendfile(output, input, &bytes_copied, fileinfo.st_size))
+	if (::fstat(input, &fileinfo) == -1 || ::sendfile(output, input, &bytes_copied, fileinfo.st_size) == -1)
 #else
 #error "Native file copy implementation is missing"
 #endif

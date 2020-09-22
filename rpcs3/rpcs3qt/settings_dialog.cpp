@@ -1732,9 +1732,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->accurateGETLLAR, emu_settings_type::AccurateGETLLAR);
 	SubscribeTooltip(ui->accurateGETLLAR, tooltips.settings.accurate_getllar);
 
-	m_emu_settings->EnhanceCheckBox(ui->accuratePUTLLUC, emu_settings_type::AccuratePUTLLUC);
-	SubscribeTooltip(ui->accuratePUTLLUC, tooltips.settings.accurate_putlluc);
-
 	m_emu_settings->EnhanceCheckBox(ui->accurateSpuDMA, emu_settings_type::AccurateSpuDMA);
 	SubscribeTooltip(ui->accurateSpuDMA, tooltips.settings.accurate_spu_dma);
 

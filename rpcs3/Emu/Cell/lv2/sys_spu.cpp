@@ -821,7 +821,7 @@ error_code sys_spu_thread_group_suspend(ppu_thread& ppu, u32 id)
 			return false;
 		}
 
-		error = CellError{CELL_CANCEL};
+		error = CellError{CELL_CANCEL + 0u};
 		return true;
 	});
 
@@ -892,7 +892,7 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 			return false;
 		}
 
-		error = CellError{CELL_CANCEL};
+		error = CellError{CELL_CANCEL + 0u};
 		return true;
 	});
 
@@ -1005,7 +1005,17 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	{
 		if (thread)
 		{
-			thread->state += cpu_flag::stop + cpu_flag::ret;
+			thread->state.fetch_op([](bs_t<cpu_flag>& flags)
+			{
+				if (flags & cpu_flag::stop)
+				{
+					// In case the thread raised the ret flag itself at some point do not raise it again
+					return false;
+				}
+
+				flags += cpu_flag::stop + cpu_flag::ret;
+				return true;
+			});
 		}
 	}
 

@@ -821,7 +821,14 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 	if (vpath.find_first_not_of('/') == umax)
 	{
-		*sb = {CELL_FS_S_IFDIR | 0444};
+		sb->mode = CELL_FS_S_IFDIR | 0711;
+		sb->uid = -1;
+		sb->gid = -1;
+		sb->atime = -1;
+		sb->mtime = -1;
+		sb->ctime = -1;
+		sb->size = 258;
+		sb->blksize = 512;
 		return CELL_OK;
 	}
 
@@ -879,7 +886,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime;
-	sb->size = info.size;
+	sb->size = info.is_directory ? mp->block_size : info.size;
 	sb->blksize = mp->block_size;
 
 	if (mp->flags & lv2_mp_flag::read_only)
@@ -1295,15 +1302,8 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		const auto mp = lv2_fs_object::get_mp("/dev_hdd0");
 
-		fs::device_stat info;
-		if (!fs::statfs(vfs::get("/dev_hdd0"), info))
-		{
-			sys_fs.error("sys_fs_fcntl(0xc0000002): unexpected error %s", fs::g_tls_error);
-			return CELL_EIO; // ???
-		}
-
 		arg->out_block_size = mp->block_size;
-		arg->out_block_count = info.avail_free / mp->block_size;
+		arg->out_block_count = (40ull * 1024 * 1024 * 1024 - 1) / mp->block_size; // Read explanation in cellHddGameCheck
 		return CELL_OK;
 	}
 
@@ -1887,20 +1887,19 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 		return CELL_OK;
 	}
 
-	fs::device_stat info;
-	if (!fs::statfs(local_path, info))
+	// avail_free is the only value used by cellFsGetFreeSize
+	if (mp == &g_mp_sys_dev_hdd1)
 	{
-		switch (auto error = fs::g_tls_error)
-		{
-		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_disk_free(): unknown error %s", error);
-		}
-
-		return {CELL_EIO, path};  // ???
+		*avail_free = (1u << 31) - mp->sector_size; // 2GB (TODO: Should be the total size)
+	}
+	else //if (mp == &g_mp_sys_dev_hdd0)
+	{
+		*avail_free = (40ull * 1024 * 1024 * 1024 - mp->sector_size); // Read explanation in cellHddGameCheck
 	}
 
-	*total_free = info.total_free;
-	*avail_free = info.avail_free; //Only value used by cellFsGetFreeSize
+	// HACK: Hopefully nothing uses this value or once at max because its hacked here:
+	// The total size can change based on the size of the directory 
+	*total_free = *avail_free + fs::get_dir_size(local_path, mp->sector_size);
 
 	return CELL_OK;
 }

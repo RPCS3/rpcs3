@@ -96,7 +96,17 @@ bool ds3_pad_handler::Init()
 #ifdef _WIN32
 		u8 buf[0xFF];
 		buf[0] = 0xF2;
-		if (handle && (hid_get_feature_report(handle, buf, 0xFF) >= 0))
+		bool got_report = false;
+		if (handle)
+		{
+			got_report = hid_get_feature_report(handle, buf, 0xFF) >= 0;
+			if (!got_report)
+			{
+				buf[0] = 0;
+				got_report = hid_get_feature_report(handle, buf, 0xFF) >= 0;
+			}
+		}
+		if (got_report)
 #else
 		if(handle)
 #endif
@@ -104,6 +114,9 @@ bool ds3_pad_handler::Init()
 			std::shared_ptr<ds3_device> ds3dev = std::make_shared<ds3_device>();
 			ds3dev->device = hid_info->path;
 			ds3dev->handle = handle;
+#ifdef _WIN32
+			ds3dev->report_id = buf[0];
+#endif
 			controllers.emplace_back(ds3dev);
 		}
 		else
@@ -286,7 +299,7 @@ ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_d
 	auto& dbuf = ds3dev->buf;
 
 #ifdef _WIN32
-	dbuf[0] = 0xF2;
+	dbuf[0] = ds3dev->report_id;
 	int result = hid_get_feature_report(ds3dev->handle, dbuf, sizeof(dbuf));
 #else
 	int result = hid_read(ds3dev->handle, dbuf, sizeof(dbuf));
@@ -295,7 +308,7 @@ ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_d
 	if (result > 0)
 	{
 #ifdef _WIN32
-		if(dbuf[0] == 0xF2)
+		if (dbuf[0] == ds3dev->report_id)
 #else
 		if (dbuf[0] == 0x01 && dbuf[1] != 0xFF)
 #endif

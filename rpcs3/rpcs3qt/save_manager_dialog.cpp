@@ -203,7 +203,7 @@ void save_manager_dialog::Init(std::string dir)
 		}
 		const int idx_real = item->data(Qt::UserRole).toInt();
 		const QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
-		QDesktopServices::openUrl(QUrl("file:///" + path));
+		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 	});
 	connect(slider_icon_size, &QAbstractSlider::valueChanged, this, &save_manager_dialog::SetIconSize);
 	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &save_manager_dialog::OnSort);
@@ -431,7 +431,7 @@ void save_manager_dialog::OnEntriesRemove()
 		return;
 	}
 
-	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %1 items?").arg(selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %n items?", "", selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
 		std::sort(selection.rbegin(), selection.rend());
 		for (QModelIndex index : selection)
@@ -480,7 +480,7 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 		}
 		const int idx_real = item->data(Qt::UserRole).toInt();
 		const QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
-		QDesktopServices::openUrl(QUrl("file:///" + path));
+		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 	});
 
 	menu->exec(m_list->viewport()->mapToGlobal(pos));
