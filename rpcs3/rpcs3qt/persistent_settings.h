@@ -37,7 +37,8 @@ public:
 	QString GetCurrentUser(const QString& fallback) const;
 
 public Q_SLOTS:
-	void SetPlaytime(const QString& serial, const quint64& elapsed);
+	void SetPlaytime(const QString& serial, quint64 playtime);
+	void AddPlaytime(const QString& serial, quint64 elapsed);
 	quint64 GetPlaytime(const QString& serial);
 
 	void SetLastPlayed(const QString& serial, const QString& date);

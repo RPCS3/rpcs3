@@ -399,6 +399,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	perm->dir = std::move(dir);
 	perm->sfo = std::move(sfo);
 	perm->restrict_sfo_params = *type == u32{CELL_GAME_GAMETYPE_HDD}; // Ratchet & Clank: All 4 One (PSN versions) rely on this error checking (TODO: Needs proper hw tests)
+	perm->exists = true;
 
 	return CELL_OK;
 }
@@ -436,6 +437,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 	perm->restrict_sfo_params = false;
 	perm->dir = Emu.GetTitleID();
 	perm->sfo = std::move(sfo);
+	perm->exists = true;
 
 	return CELL_OK;
 }
@@ -539,7 +541,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 
 	const std::string dir = perm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + perm->dir;
 
-	if (perm->can_create && perm->temp.empty() && !perm->exists)
+	if (perm->temp.empty() && !perm->exists)
 	{
 		perm->reset();
 		strcpy_trunc(*contentInfoPath, "");
@@ -568,7 +570,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 	else if (perm->can_create)
 	{
 		// Update PARAM.SFO
-		psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite - fs::create), perm->sfo);
+		psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite), perm->sfo);
 	}
 
 	// Cleanup
