@@ -5602,6 +5602,31 @@ public:
 			break;
 		}
 
+		// Channels with a constant count of 1:
+		case SPU_WrEventMask:
+		case SPU_WrEventAck:
+		case SPU_WrDec:
+		case SPU_RdDec:
+		case SPU_RdEventMask:
+		case SPU_RdMachStat:
+		case SPU_WrSRR0:
+		case SPU_RdSRR0:
+		case SPU_Set_Bkmk_Tag:
+		case SPU_PM_Start_Ev:
+		case SPU_PM_Stop_Ev:
+		case MFC_RdTagMask:
+		case MFC_LSA:
+		case MFC_EAH:
+		case MFC_EAL:
+		case MFC_Size:
+		case MFC_TagID:
+		case MFC_WrTagMask:
+		case MFC_WrListStallAck:
+		{
+			res.value = m_ir->getInt32(1);
+			break;
+		}
+
 		default:
 		{
 			res.value = call("spu_read_channel_count", &exec_rchcnt, m_thread, m_ir->getInt32(op.ra));
@@ -6091,7 +6116,9 @@ public:
 			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_dec_value));
 			return;
 		}
-		case 69:
+		case SPU_Set_Bkmk_Tag:
+		case SPU_PM_Start_Ev:
+		case SPU_PM_Stop_Ev:
 		{
 			return;
 		}

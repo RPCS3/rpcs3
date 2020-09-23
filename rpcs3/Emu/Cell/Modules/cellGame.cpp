@@ -399,6 +399,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	perm->dir = std::move(dir);
 	perm->sfo = std::move(sfo);
 	perm->restrict_sfo_params = *type == u32{CELL_GAME_GAMETYPE_HDD}; // Ratchet & Clank: All 4 One (PSN versions) rely on this error checking (TODO: Needs proper hw tests)
+	perm->exists = true;
 
 	return CELL_OK;
 }
@@ -436,6 +437,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 	perm->restrict_sfo_params = false;
 	perm->dir = Emu.GetTitleID();
 	perm->sfo = std::move(sfo);
+	perm->exists = true;
 
 	return CELL_OK;
 }
@@ -462,11 +464,31 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	const auto perm = g_fxo->get<content_permission>();
 
-	const auto init = perm->init.init();
+	auto init = perm->init.init();
 
 	if (!init)
 	{
 		return CELL_GAME_ERROR_BUSY;
+	}
+
+	auto sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+
+	if (psf::get_string(sfo, "CATEGORY") != [&]()
+	{
+		switch (type)
+		{
+		case CELL_GAME_GAMETYPE_HDD: return "HG"sv;
+		case CELL_GAME_GAMETYPE_GAMEDATA: return "GD"sv;
+		case CELL_GAME_GAMETYPE_DISC: return "DG"sv;
+		default: ASSUME(0);
+		}
+	}())
+	{
+		if (fs::is_file(vfs::get(dir + "/PARAM.SFO")))
+		{
+			init.cancel();		
+			return CELL_GAME_ERROR_BROKEN;
+		}
 	}
 
 	if (size)
@@ -488,14 +510,14 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	perm->restrict_sfo_params = false;
 
-	if (!fs::is_dir(vfs::get(dir)))
+	if (sfo.empty())
 	{
 		cellGame.warning("cellGameDataCheck(): directory '%s' not found", dir);
 		return not_an_error(CELL_GAME_RET_NONE);
 	}
 
 	perm->exists = true;
-	perm->sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+	perm->sfo = std::move(sfo);
 	return CELL_OK;
 }
 
@@ -519,7 +541,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 
 	const std::string dir = perm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + perm->dir;
 
-	if (perm->can_create && perm->temp.empty() && !fs::is_dir(vfs::get(dir)))
+	if (perm->temp.empty() && !perm->exists)
 	{
 		perm->reset();
 		strcpy_trunc(*contentInfoPath, "");
@@ -544,6 +566,11 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		{
 			cellGame.error("cellGameContentPermit(): failed to initialize directory '%s' (%s)", dir, fs::g_tls_error);
 		}
+	}
+	else if (perm->can_create)
+	{
+		// Update PARAM.SFO
+		psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite), perm->sfo);
 	}
 
 	// Cleanup

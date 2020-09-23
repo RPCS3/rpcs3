@@ -2807,15 +2807,20 @@ namespace rsx
 			if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format) !=
 				helpers::is_gcm_depth_format(typeless_info.dst_gcm_format))
 			{
-				if (!typeless_info.src_is_typeless && !typeless_info.dst_is_typeless)
+				// Make the depth side typeless because the other side is guaranteed to be color
+				if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format))
 				{
-					// Make the depth side typeless
-					if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format))
+					// SRC is depth, transfer must be done typelessly
+					if (!typeless_info.src_is_typeless)
 					{
 						typeless_info.src_is_typeless = true;
 						typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, false);
 					}
-					else
+				}
+				else
+				{
+					// DST is depth, transfer must be done typelessly
+					if (!typeless_info.dst_is_typeless)
 					{
 						typeless_info.dst_is_typeless = true;
 						typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, false);

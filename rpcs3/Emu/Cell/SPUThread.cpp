@@ -2512,9 +2512,34 @@ u32 spu_thread::get_ch_count(u32 ch)
 	case MFC_RdAtomicStat:    return ch_atomic_stat.get_count();
 	case SPU_RdEventStat:     return get_events().count;
 	case MFC_Cmd:             return 16 - mfc_size;
+
+	// Channels with a constant count of 1:
+	case SPU_WrEventMask:
+	case SPU_WrEventAck:
+	case SPU_WrDec:
+	case SPU_RdDec:
+	case SPU_RdEventMask:
+	case SPU_RdMachStat:
+	case SPU_WrSRR0:
+	case SPU_RdSRR0:
+	case SPU_Set_Bkmk_Tag:
+	case SPU_PM_Start_Ev:
+	case SPU_PM_Stop_Ev:
+	case MFC_RdTagMask:
+	case MFC_LSA:
+	case MFC_EAH:
+	case MFC_EAL:
+	case MFC_Size:
+	case MFC_TagID:
+	case MFC_WrTagMask:
+	case MFC_WrListStallAck:
+		return 1;
+	default: break;
 	}
 
-	fmt::throw_exception("Unknown/illegal channel in RCHCNT (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
+	verify(HERE), ch < 128u;
+	spu_log.error("Unknown/illegal channel in RCHCNT (ch=%d [%s])", ch, spu_ch_name[ch]);
+	return 0; // Default count
 }
 
 s64 spu_thread::get_ch_value(u32 ch)
