@@ -810,7 +810,7 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 
 		if (psf::get_string(sfo, "CATEGORY") != "GD" && fs::is_file(dir + "/PARAM.SFO"))
 		{
-			return CELL_GAMEDATA_ERROR_BROKEN;
+			return CELL_GAMEDATA_ERROR_NOTSUPPORTED;
 		}
 
 		if (sfo.empty())
