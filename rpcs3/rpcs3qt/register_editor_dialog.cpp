@@ -4,6 +4,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
+#include "Emu/Memory/vm_reservation.h"
 
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
 
