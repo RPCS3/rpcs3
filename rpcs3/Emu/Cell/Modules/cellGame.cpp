@@ -786,14 +786,72 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 
 error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 {
-	cellGame.todo("cellGameDeleteGameData(dirName=%s)", dirName);
+	cellGame.warning("cellGameDeleteGameData(dirName=%s)", dirName);
 
 	if (!dirName)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
 
-	return CELL_OK;
+	const std::string name = dirName.get_ptr();
+	const std::string dir = vfs::get("/dev_hdd0/game/"s + name);
+
+	const auto prm = g_fxo->get<content_permission>();
+
+	auto remove_gd = [&]() -> error_code
+	{
+		psf::registry sfo = psf::load_object(fs::file(dir + "/PARAM.SFO"));
+
+		if (psf::get_string(sfo, "CATEGORY") != "GD" && fs::is_file(dir + "/PARAM.SFO"))
+		{
+			return CELL_GAMEDATA_ERROR_BROKEN;
+		}
+
+		// Actually remove game data
+		if (!vfs::host::remove_all(dir, Emu.GetHddDir(), true))
+		{
+			if (!fs::is_dir(dir))
+			{
+				// Nothing to remove
+				return CELL_GAME_ERROR_NOTFOUND;
+			}
+
+			return {CELL_GAME_ERROR_ACCESS_ERROR, dir};
+		}
+
+		return CELL_OK;
+	};
+
+	while (true)
+	{
+		// Obtain exclusive lock and cancel init
+		auto _init = prm->init.init();
+
+		if (!_init)
+		{
+			// Or access it
+			if (auto access = prm->init.access(); access)
+			{
+				// Cannot remove it when it is accessed by cellGameDataCheck
+				// If it is HG data then resort to remove_gd for ERROR_BROKEN
+				if (prm->dir == name && prm->can_create)
+				{
+					return CELL_GAME_ERROR_NOTSUPPORTED;
+				}
+
+				return remove_gd();
+			}
+			else
+			{
+				// Reacquire lock
+				continue;
+			}
+		}
+
+		auto err = remove_gd();
+		_init.cancel();
+		return err;
+	}
 }
 
 error_code cellGameGetParamInt(s32 id, vm::ptr<s32> value)
