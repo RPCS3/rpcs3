@@ -567,6 +567,11 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 			cellGame.error("cellGameContentPermit(): failed to initialize directory '%s' (%s)", dir, fs::g_tls_error);
 		}
 	}
+	else if (perm->can_create)
+	{
+		// Update PARAM.SFO
+		psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite), perm->sfo);
+	}
 
 	// Cleanup
 	perm->reset();
