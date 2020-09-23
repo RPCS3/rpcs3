@@ -800,9 +800,9 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 
 	auto remove_gd = [&]() -> error_code
 	{
-		if (Emu.GetCat() == "GD" && Emu.GetTitleID() == name)
+		if (Emu.GetCat() == "GD" && Emu.GetDir().substr(Emu.GetDir().find_last_of('/') + 1) == name)
 		{
-			// Cannot delete its own directory
+			// Boot patch cannot delete its own directory
 			return CELL_GAME_ERROR_NOTSUPPORTED;
 		}
 
@@ -817,6 +817,11 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 		{
 			// Nothing to remove
 			return CELL_GAME_ERROR_NOTFOUND;
+		}
+
+		if (auto id = psf::get_string(sfo, "TITLE_ID"); !id.empty() && id != Emu.GetTitleID())
+		{
+			cellGame.error("cellGameDeleteGameData(%s): Attempts to delete GameData with TITLE ID which does not match the program's (%s)", id, Emu.GetTitleID());
 		}
 
 		// Actually remove game data
