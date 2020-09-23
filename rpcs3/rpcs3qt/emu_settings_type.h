@@ -135,6 +135,7 @@ enum class emu_settings_type
 	EnableHostRoot,
 	LimitCacheSize,
 	MaximumCacheSize,
+	ConsoleTimeOffset,
 
 	// Virtual File System
 	emulatorLocation,
@@ -275,6 +276,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::EnableHostRoot,        { "VFS", "Enable /host_root/"}},
 	{ emu_settings_type::LimitCacheSize,        { "VFS", "Limit disk cache size"}},
 	{ emu_settings_type::MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
+	{ emu_settings_type::ConsoleTimeOffset,     { "System", "Console time offset (s)"}},
 
 	// Virtual File System
 	{ emu_settings_type::emulatorLocation,   { "VFS", "$(EmulatorDir)"}},
