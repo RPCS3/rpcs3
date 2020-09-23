@@ -50,6 +50,7 @@ enum registers : int
 	SPU_OUT_MBOX,
 	SPU_OUT_INTR_MBOX,
 	SPU_FPSCR,
+	RESERVATION_LOST,
 	PC,
 };
 
@@ -125,6 +126,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 			m_register_combo->addItem("SRR0", +SPU_SRR0);
 		}
 
+		m_register_combo->addItem("Reserv Invalidation", +RESERVATIIN_LOST);
 		m_register_combo->addItem("PC", +PC);
 	}
 
@@ -200,6 +202,8 @@ void register_editor_dialog::updateRegister(int reg)
 		else if (reg == SPU_OUT_INTR_MBOX) str = fmt::format("%s", spu.ch_out_intr_mbox);
 		else if (reg == PC) str = fmt::format("%08x", spu.pc);
 	}
+
+	if (reg == RESERVATION_LOST) str = "Reservation is lost after \"modification\"";
 
 	m_value_line->setText(qstr(str));
 }
@@ -299,6 +303,11 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 				if (ok) return;
 			}
 		}
+		else if (reg == RESERVATION_LOST)
+		{
+			if (u32 raddr = ppu.raddr) vm::reservation_update(raddr, 128);
+			return;
+		}
 	}
 	else
 	{
@@ -344,6 +353,11 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 				else if (reg == SPU_OUT_INTR_MBOX) spu.ch_out_intr_mbox.set_value(reg_value, count);
 				return;
 			}
+		}
+		else if (reg == RESERVATION_LOST)
+		{
+			if (u32 raddr = spu.raddr) vm::reservation_update(raddr, 128);
+			return;
 		}
 	}
 
