@@ -848,6 +848,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_DiskCacheClearing, tooltips.settings.limit_cache_size);
 	connect(ui->enableCacheClearing, &QCheckBox::stateChanged, ui->maximumCacheSize, &QSlider::setEnabled);
 
+	// Date Time Edit Box
+	m_emu_settings->EnhanceDateTimeEdit(ui->console_time_edit, emu_settings_type::ConsoleTimeOffset, tr("dd MMM yyyy HH:mm"), true, true, 15000);
+	connect(ui->console_time_reset, &QAbstractButton::clicked, [this]()
+	{
+		ui->console_time_edit->setDateTime(QDateTime::currentDateTime());
+	});
+	SubscribeTooltip(ui->gb_console_time, tooltips.settings.console_time_offset);
+
 	// Sliders
 
 	EnhanceSlider(emu_settings_type::MaximumCacheSize, ui->maximumCacheSize, ui->maximumCacheSizeLabel, tr("Maximum size: %0 MB", "Maximum cache size"));
