@@ -32,7 +32,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 	}
 
 	// Save TROPUSR.DAT
-	fs::copy_file(temp + "/TROPUSR.DAT", local_path + "/TROPUSR.DAT", false);
+	fs::copy_file(local_path + "/TROPUSR.DAT", temp + "/TROPUSR.DAT", false);
 
 	std::vector<char> buffer(65536);
 
