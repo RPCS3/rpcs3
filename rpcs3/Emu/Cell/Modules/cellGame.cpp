@@ -800,6 +800,12 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 
 	auto remove_gd = [&]() -> error_code
 	{
+		if (Emu.GetCat() == "GD" && Emu.GetTitleID() == name)
+		{
+			// Cannot delete its own directory
+			return CELL_GAME_ERROR_NOTSUPPORTED;
+		}
+
 		psf::registry sfo = psf::load_object(fs::file(dir + "/PARAM.SFO"));
 
 		if (psf::get_string(sfo, "CATEGORY") != "GD" && fs::is_file(dir + "/PARAM.SFO"))
@@ -807,15 +813,15 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 			return CELL_GAMEDATA_ERROR_BROKEN;
 		}
 
+		if (sfo.empty())
+		{
+			// Nothing to remove
+			return CELL_GAME_ERROR_NOTFOUND;
+		}
+
 		// Actually remove game data
 		if (!vfs::host::remove_all(dir, Emu.GetHddDir(), true))
 		{
-			if (!fs::is_dir(dir))
-			{
-				// Nothing to remove
-				return CELL_GAME_ERROR_NOTFOUND;
-			}
-
 			return {CELL_GAME_ERROR_ACCESS_ERROR, dir};
 		}
 
