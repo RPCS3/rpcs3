@@ -127,7 +127,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 			m_register_combo->addItem("SRR0", +SPU_SRR0);
 		}
 
-		m_register_combo->addItem("Reserv Invalidation", +RESERVATIIN_LOST);
+		m_register_combo->addItem("Reserv Invalidation", +RESERVATION_LOST);
 		m_register_combo->addItem("PC", +PC);
 	}
 
