@@ -276,6 +276,7 @@ namespace vk
 
 	struct gpu_shader_types_support
 	{
+		bool allow_float64;
 		bool allow_float16;
 		bool allow_int8;
 	};
@@ -634,6 +635,7 @@ namespace vk
 		std::unordered_map<VkFormat, VkFormatProperties> format_properties;
 		gpu_shader_types_support shader_types_support{};
 		VkPhysicalDeviceDriverPropertiesKHR driver_properties{};
+
 		bool stencil_export_support = false;
 		bool conditional_render_support = false;
 		bool unrestricted_depth_range_support = false;
@@ -680,6 +682,7 @@ private:
 				verify("vkGetInstanceProcAddress failed to find entry point!" HERE), getPhysicalDeviceFeatures2KHR;
 				getPhysicalDeviceFeatures2KHR(dev, &features2);
 
+				shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
 				shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
 				shader_types_support.allow_int8 = !!shader_support_info.shaderInt8;
 				features = features2.features;
@@ -915,6 +918,7 @@ private:
 			enabled_features.depthBounds = VK_TRUE;
 			enabled_features.wideLines = VK_TRUE;
 			enabled_features.largePoints = VK_TRUE;
+			enabled_features.shaderFloat64 = VK_TRUE;
 
 			if (g_cfg.video.antialiasing_level != msaa_level::none)
 			{
@@ -943,6 +947,12 @@ private:
 			enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
 			// Optionally disable unsupported stuff
+			if (!pgpu->features.shaderFloat64)
+			{
+				rsx_log.error("Your GPU does not support double precision floats in shaders. Graphics may not work correctly.");
+				enabled_features.shaderFloat64 = VK_FALSE;
+			}
+
 			if (!pgpu->features.depthBounds)
 			{
 				rsx_log.error("Your GPU does not support depth bounds testing. Graphics may not work correctly.");
