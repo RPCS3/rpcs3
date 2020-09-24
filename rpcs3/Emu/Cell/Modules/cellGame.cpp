@@ -794,14 +794,83 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 
 error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 {
-	cellGame.todo("cellGameDeleteGameData(dirName=%s)", dirName);
+	cellGame.warning("cellGameDeleteGameData(dirName=%s)", dirName);
 
 	if (!dirName)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
 
-	return CELL_OK;
+	const std::string name = dirName.get_ptr();
+	const std::string dir = vfs::get("/dev_hdd0/game/"s + name);
+
+	const auto prm = g_fxo->get<content_permission>();
+
+	auto remove_gd = [&]() -> error_code
+	{
+		if (Emu.GetCat() == "GD" && Emu.GetDir().substr(Emu.GetDir().find_last_of('/') + 1) == name)
+		{
+			// Boot patch cannot delete its own directory
+			return CELL_GAME_ERROR_NOTSUPPORTED;
+		}
+
+		psf::registry sfo = psf::load_object(fs::file(dir + "/PARAM.SFO"));
+
+		if (psf::get_string(sfo, "CATEGORY") != "GD" && fs::is_file(dir + "/PARAM.SFO"))
+		{
+			return CELL_GAME_ERROR_NOTSUPPORTED;
+		}
+
+		if (sfo.empty())
+		{
+			// Nothing to remove
+			return CELL_GAME_ERROR_NOTFOUND;
+		}
+
+		if (auto id = psf::get_string(sfo, "TITLE_ID"); !id.empty() && id != Emu.GetTitleID())
+		{
+			cellGame.error("cellGameDeleteGameData(%s): Attempts to delete GameData with TITLE ID which does not match the program's (%s)", id, Emu.GetTitleID());
+		}
+
+		// Actually remove game data
+		if (!vfs::host::remove_all(dir, Emu.GetHddDir(), true))
+		{
+			return {CELL_GAME_ERROR_ACCESS_ERROR, dir};
+		}
+
+		return CELL_OK;
+	};
+
+	while (true)
+	{
+		// Obtain exclusive lock and cancel init
+		auto _init = prm->init.init();
+
+		if (!_init)
+		{
+			// Or access it
+			if (auto access = prm->init.access(); access)
+			{
+				// Cannot remove it when it is accessed by cellGameDataCheck
+				// If it is HG data then resort to remove_gd for ERROR_BROKEN
+				if (prm->dir == name && prm->can_create)
+				{
+					return CELL_GAME_ERROR_NOTSUPPORTED;
+				}
+
+				return remove_gd();
+			}
+			else
+			{
+				// Reacquire lock
+				continue;
+			}
+		}
+
+		auto err = remove_gd();
+		_init.cancel();
+		return err;
+	}
 }
 
 error_code cellGameGetParamInt(s32 id, vm::ptr<s32> value)
