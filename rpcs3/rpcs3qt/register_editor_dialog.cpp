@@ -4,6 +4,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
+#include "Emu/Memory/vm_reservation.h"
 
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
 
@@ -50,6 +51,7 @@ enum registers : int
 	SPU_OUT_MBOX,
 	SPU_OUT_INTR_MBOX,
 	SPU_FPSCR,
+	RESERVATION_LOST,
 	PC,
 };
 
@@ -125,6 +127,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 			m_register_combo->addItem("SRR0", +SPU_SRR0);
 		}
 
+		m_register_combo->addItem("Reservation Clear", +RESERVATION_LOST);
 		m_register_combo->addItem("PC", +PC);
 	}
 
@@ -178,6 +181,7 @@ void register_editor_dialog::updateRegister(int reg)
 		else if (reg == PPU_CTR) str = fmt::format("%016llx", ppu.ctr);
 		else if (reg == PPU_VRSAVE) str = fmt::format("%08x", ppu.vrsave);
 		else if (reg == PPU_PRIO) str = fmt::format("%08x", +ppu.prio);
+		else if (reg == RESERVATION_LOST) str = sstr(ppu.raddr ? tr("Lose reservation on OK") : tr("Reservation is inactive"));
 		else if (reg == PC) str = fmt::format("%08x", ppu.cia);
 	}
 	else
@@ -198,6 +202,7 @@ void register_editor_dialog::updateRegister(int reg)
 		else if (reg == SPU_SNR2) str = fmt::format("%s", spu.ch_snr2);
 		else if (reg == SPU_OUT_MBOX) str = fmt::format("%s", spu.ch_out_mbox);
 		else if (reg == SPU_OUT_INTR_MBOX) str = fmt::format("%s", spu.ch_out_intr_mbox);
+		else if (reg == RESERVATION_LOST) str = sstr(spu.raddr ? tr("Lose reservation on OK") : tr("Reservation is inactive"));
 		else if (reg == PC) str = fmt::format("%08x", spu.pc);
 	}
 
@@ -299,6 +304,11 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 				if (ok) return;
 			}
 		}
+		else if (reg == RESERVATION_LOST)
+		{
+			if (u32 raddr = ppu.raddr) vm::reservation_update(raddr, 128);
+			return;
+		}
 	}
 	else
 	{
@@ -344,6 +354,11 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 				else if (reg == SPU_OUT_INTR_MBOX) spu.ch_out_intr_mbox.set_value(reg_value, count);
 				return;
 			}
+		}
+		else if (reg == RESERVATION_LOST)
+		{
+			if (u32 raddr = spu.raddr) vm::reservation_update(raddr, 128);
+			return;
 		}
 	}
 
