@@ -181,6 +181,7 @@ void register_editor_dialog::updateRegister(int reg)
 		else if (reg == PPU_CTR) str = fmt::format("%016llx", ppu.ctr);
 		else if (reg == PPU_VRSAVE) str = fmt::format("%08x", ppu.vrsave);
 		else if (reg == PPU_PRIO) str = fmt::format("%08x", +ppu.prio);
+		else if (reg == RESERVATION_LOST) str = sstr(ppu.raddr ? tr("Lose reservation on OK") : tr("Reservation is inactive"));
 		else if (reg == PC) str = fmt::format("%08x", ppu.cia);
 	}
 	else
@@ -201,10 +202,9 @@ void register_editor_dialog::updateRegister(int reg)
 		else if (reg == SPU_SNR2) str = fmt::format("%s", spu.ch_snr2);
 		else if (reg == SPU_OUT_MBOX) str = fmt::format("%s", spu.ch_out_mbox);
 		else if (reg == SPU_OUT_INTR_MBOX) str = fmt::format("%s", spu.ch_out_intr_mbox);
+		else if (reg == RESERVATION_LOST) str = sstr(spu.raddr ? tr("Lose reservation on OK") : tr("Reservation is inactive"));
 		else if (reg == PC) str = fmt::format("%08x", spu.pc);
 	}
-
-	if (reg == RESERVATION_LOST) str = "Reservation is lost after \"modification\"";
 
 	m_value_line->setText(qstr(str));
 }
