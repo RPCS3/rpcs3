@@ -221,6 +221,22 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 		}
 	}
 
+	// Since the QComboBox has localised strings, we can't just findText / findData, so we need to manually iterate through it to find our index
+	auto find_index = [&](const QString& value)
+	{
+		for (int i = 0; i < combobox->count(); i++)
+		{
+			const QVariantList var_list = combobox->itemData(i).toList();
+			ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
+
+			if (value == var_list[0].toString())
+			{
+				return i;
+			}
+		}
+		return -1;
+	};
+
 	const std::string selected = GetSetting(type);
 	const QString selected_q = qstr(selected);
 	int index = -1;
@@ -231,30 +247,27 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 	}
 	else
 	{
-		for (int i = 0; i < combobox->count(); i++)
-		{
-			const QVariantList var_list = combobox->itemData(i).toList();
-			ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
-
-			if (selected_q == var_list[0].toString())
-			{
-				index = i;
-				break;
-			}
-		}
+		index = find_index(selected_q);
 	}
 
 	if (index == -1)
 	{
 		const std::string def = GetSettingDefault(type);
 		cfg_log.error("EnhanceComboBox '%s' tried to set an invalid value: %s. Setting to default: %s", cfg_adapter::get_setting_name(type), selected, def);
-		combobox->setCurrentIndex(combobox->findData(qstr(def)));
+
+		if (is_ranged)
+		{
+			index = combobox->findData(selected_q);
+		}
+		else
+		{
+			index = find_index(qstr(def));
+		}
+
 		m_broken_types.insert(type);
 	}
-	else
-	{
-		combobox->setCurrentIndex(index);
-	}
+
+	combobox->setCurrentIndex(index);
 
 	connect(combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=, this](int index)
 	{
