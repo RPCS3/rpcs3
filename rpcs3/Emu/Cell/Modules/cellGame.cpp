@@ -808,7 +808,7 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 
 	auto remove_gd = [&]() -> error_code
 	{
-		if (Emu.GetCat() == "GD" && Emu.GetDir().substr(Emu.GetDir().find_last_of('/') + 1) == name)
+		if (Emu.GetCat() == "GD" && Emu.GetDir().substr(Emu.GetDir().find_last_of('/') + 1) == vfs::escape(name))
 		{
 			// Boot patch cannot delete its own directory
 			return CELL_GAME_ERROR_NOTSUPPORTED;
@@ -833,7 +833,7 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 		}
 
 		// Actually remove game data
-		if (!vfs::host::remove_all(dir, Emu.GetHddDir(), true))
+		if (!vfs::host::remove_all(dir, Emu.GetHddDir(), &g_mp_sys_dev_hdd0, true))
 		{
 			return {CELL_GAME_ERROR_ACCESS_ERROR, dir};
 		}
