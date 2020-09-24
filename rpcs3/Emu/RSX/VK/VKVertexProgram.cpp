@@ -186,7 +186,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.domain = glsl::glsl_vertex_program;
 	properties2.require_lit_emulation = properties.has_lit_op;
 	properties2.emulate_zclip_transform = true;
-	properties2.emulate_depth_clip_only = true;
+	properties2.emulate_depth_clip_only = vk::get_current_renderer()->get_shader_types_support().allow_float64;
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);
