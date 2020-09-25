@@ -3507,6 +3507,13 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="accurateClineStores">
+              <property name="text">
+               <string>Accurate Cache Line Stores</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QCheckBox" name="hookStFunc">
               <property name="text">
                <string>Hook static functions</string>
