@@ -11,12 +11,12 @@
 namespace fs
 {
 #ifdef _WIN32
-	static constexpr auto delim = "/\\";
-	static constexpr auto wdelim = L"/\\";
+	static constexpr auto& delim = "/\\";
+	static constexpr auto& wdelim = L"/\\";
 	using native_handle = void*;
 #else
-	static constexpr auto delim = "/";
-	static constexpr auto wdelim = L"/";
+	static constexpr auto& delim = "/";
+	static constexpr auto& wdelim = L"/";
 	using native_handle = int;
 #endif
 
