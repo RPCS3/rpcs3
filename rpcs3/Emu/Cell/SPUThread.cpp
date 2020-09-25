@@ -229,6 +229,8 @@ static FORCE_INLINE rsx::thread* get_rsx_if_needs_res_pause(u32 addr)
 extern u64 get_timebased_time();
 extern u64 get_system_time();
 
+void do_cell_atomic_128_store(u32 addr, const void* to_write);
+
 extern thread_local u64 g_tls_fault_spu;
 
 namespace spu
@@ -606,7 +608,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.ret();
 });
 
-const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rdata, spu_thread* _spu)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rdata, cpu_thread* _spu)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -701,7 +703,7 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	//c.jmp(fall);
 
 	c.bind(fall);
-	c.lock().bts(x86::dword_ptr(args[2], ::offset32(&spu_thread::state)), static_cast<u32>(cpu_flag::wait));
+	c.lock().bts(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::wait));
 
 	// Touch memory if transaction failed without RETRY flag on the first attempt
 	c.cmp(x86::r12, 1);
@@ -1474,6 +1476,19 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				{
 					size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
 
+					if (size0 == 128u && g_cfg.core.accurate_cache_line_stores)
+					{
+						// As atomic as PUTLLUC
+						do_cell_atomic_128_store(eal, src);
+
+						if (size == size0)
+						{
+							break;
+						}
+
+						continue;
+					}
+
 					// Lock each cache line execlusively
 					auto [res, time0] = vm::reservation_lock(eal, size0, vm::dma_lockb);
 
@@ -1937,6 +1952,80 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 	}
 }
 
+void do_cell_atomic_128_store(u32 addr, const void* to_write)
+{
+	using rdata_t = decltype(spu_thread::rdata);
+	const auto cpu = get_current_cpu_thread();
+
+	if (g_use_rtm) [[likely]]
+	{
+		const u32 result = spu_putlluc_tx(addr, to_write, cpu);
+
+		const auto render = result != 1 ? get_rsx_if_needs_res_pause(addr) : nullptr;
+
+		if (render) render->pause();
+
+		if (result == 2)
+		{
+			cpu_thread::suspend_all cpu_lock(cpu);
+
+			if (vm::reservation_acquire(addr, 128) & 64)
+			{
+				// Wait for PUTLLC to complete
+				while (vm::reservation_acquire(addr, 128) & 63)
+				{
+					busy_wait(100);
+				}
+
+				mov_rdata(vm::_ref<rdata_t>(addr), *static_cast<const rdata_t*>(to_write));
+				vm::reservation_acquire(addr, 128) += 64;
+			}
+		}
+		else if (result == 0)
+		{
+			cpu_thread::suspend_all cpu_lock(cpu);
+
+			while (vm::reservation_acquire(addr, 128).bts(std::countr_zero<u32>(vm::putlluc_lockb)))
+			{
+				busy_wait(100);
+			}
+
+			while (vm::reservation_acquire(addr, 128) & 63)
+			{
+				busy_wait(100);
+			}
+
+			mov_rdata(vm::_ref<rdata_t>(addr), *static_cast<const rdata_t*>(to_write));
+			vm::reservation_acquire(addr, 128) += 64;
+		}
+
+		if (render) render->unpause();
+		static_cast<void>(cpu->test_stopped());
+	}
+	else
+	{
+		auto& data = vm::_ref<rdata_t>(addr);
+		auto [res, time0] = vm::reservation_lock(addr, 128);
+
+		*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
+
+		const auto render = get_rsx_if_needs_res_pause(addr);
+
+		if (render) render->pause();
+
+		auto& super_data = *vm::get_super_ptr<rdata_t>(addr);
+		{
+			// Full lock (heavyweight)
+			// TODO: vm::check_addr
+			vm::writer_lock lock(addr);
+			mov_rdata(super_data, *static_cast<const rdata_t*>(to_write));
+			res.release(time0 + 128);
+		}
+
+		if (render) render->unpause();
+	}
+}
+
 void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 {
 	const u32 addr = args.eal & -128;
@@ -1955,77 +2044,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 		// Failure, fallback to the main implementation
 	}
 
-	const auto& to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
-
-	// Store unconditionally
-	if (g_use_rtm) [[likely]]
-	{
-		const u32 result = spu_putlluc_tx(addr, to_write.data(), this);
-
-		const auto render = result != 1 ? get_rsx_if_needs_res_pause(addr) : nullptr;
-
-		if (render) render->pause();
-
-		if (result == 2)
-		{
-			cpu_thread::suspend_all cpu_lock(this);
-
-			if (vm::reservation_acquire(addr, 128) & 64)
-			{
-				// Wait for PUTLLC to complete
-				while (vm::reservation_acquire(addr, 128) & 63)
-				{
-					busy_wait(100);
-				}
-
-				mov_rdata(vm::_ref<decltype(rdata)>(addr), to_write);
-				vm::reservation_acquire(addr, 128) += 64;
-			}
-		}
-		else if (result == 0)
-		{
-			cpu_thread::suspend_all cpu_lock(this);
-
-			while (vm::reservation_acquire(addr, 128).bts(std::countr_zero<u32>(vm::putlluc_lockb)))
-			{
-				busy_wait(100);
-			}
-
-			while (vm::reservation_acquire(addr, 128) & 63)
-			{
-				busy_wait(100);
-			}
-
-			mov_rdata(vm::_ref<decltype(rdata)>(addr), to_write);
-			vm::reservation_acquire(addr, 128) += 64;
-		}
-
-		if (render) render->unpause();
-		static_cast<void>(test_stopped());
-	}
-	else
-	{
-		auto& data = vm::_ref<decltype(rdata)>(addr);
-		auto [res, time0] = vm::reservation_lock(addr, 128);
-
-		*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
-
-		const auto render = get_rsx_if_needs_res_pause(addr);
-
-		if (render) render->pause();
-
-		auto& super_data = *vm::get_super_ptr<decltype(rdata)>(addr);
-		{
-			// Full lock (heavyweight)
-			// TODO: vm::check_addr
-			vm::writer_lock lock(addr);
-			mov_rdata(super_data, to_write);
-			res.release(time0 + 128);
-		}
-
-		if (render) render->unpause();
-	}
-
+	do_cell_atomic_128_store(addr, _ptr<decltype(rdata)>(args.lsa & 0x3ff80));
 	vm::reservation_notifier(addr, 128).notify_all();
 }
 

@@ -92,12 +92,15 @@ void fmt_class_string<ppu_join_status>::format(std::string& out, u64 arg)
 
 constexpr ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise;
 constexpr ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast;
+constexpr ppu_decoder<ppu_itype> g_ppu_itype;
 
 extern void ppu_initialize();
 extern void ppu_initialize(const ppu_module& info);
 static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op);
+
+extern void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
 // Get pointer to executable cache
 template<typename T = u64>
@@ -1420,6 +1423,7 @@ extern void ppu_initialize(const ppu_module& info)
 			{ "__lvrx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_lvrx) : reinterpret_cast<u64>(sse_cellbe_lvrx_v0) },
 			{ "__stvlx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_stvlx) : reinterpret_cast<u64>(sse_cellbe_stvlx_v0) },
 			{ "__stvrx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_stvrx) : reinterpret_cast<u64>(sse_cellbe_stvrx_v0) },
+			{ "__dcbz", reinterpret_cast<u64>(+[](u32 addr){ alignas(64) static constexpr u8 z[128]{}; do_cell_atomic_128_store(addr, z); }) },
 			{ "__resupdate", reinterpret_cast<u64>(vm::reservation_update) },
 			{ "sys_config_io_event", reinterpret_cast<u64>(ppu_get_syscall(523)) },
 		};
@@ -1571,6 +1575,8 @@ extern void ppu_initialize(const ppu_module& info)
 			u8 output[20];
 			sha1_starts(&ctx);
 
+			int has_dcbz = !!g_cfg.core.accurate_cache_line_stores;
+
 			for (const auto& func : part.funcs)
 			{
 				if (func.size == 0)
@@ -1614,6 +1620,18 @@ extern void ppu_initialize(const ppu_module& info)
 						addr = roff + 4;
 					}
 
+					if (has_dcbz == 1)
+					{
+						for (u32 i = addr, end = block.second + block.first - 1; i <= end; i += 4)
+						{
+							if (g_ppu_itype.decode(vm::read32(i)) == ppu_itype::DCBZ)
+							{
+								has_dcbz = 2;
+								break;
+							}
+						}
+					}
+
 					// Hash from addr to the end of the block
 					sha1_update(&ctx, vm::_ptr<const u8>(addr), block.second - (addr - block.first));
 				}
@@ -1621,6 +1639,18 @@ extern void ppu_initialize(const ppu_module& info)
 				if (reloc)
 				{
 					continue;
+				}
+
+				if (has_dcbz == 1)
+				{
+					for (u32 i = func.addr, end = func.addr + func.size - 1; i <= end; i += 4)
+					{
+						if (g_ppu_itype.decode(vm::read32(i)) == ppu_itype::DCBZ)
+						{
+							has_dcbz = 2;
+							break;
+						}
+					}
 				}
 
 				sha1_update(&ctx, vm::_ptr<const u8>(func.addr), func.size);
@@ -1641,6 +1671,7 @@ extern void ppu_initialize(const ppu_module& info)
 				accurate_fma,
 				accurate_ppu_vector_nan,
 				java_mode_handling,
+				accurate_cache_line_stores,
 
 				__bitset_enum_max
 			};
@@ -1661,6 +1692,10 @@ extern void ppu_initialize(const ppu_module& info)
 			if (g_cfg.core.llvm_ppu_jm_handling)
 			{
 				settings += ppu_settings::java_mode_handling;
+			}
+			if (has_dcbz == 2)
+			{
+				settings += ppu_settings::accurate_cache_line_stores;
 			}
 
 			// Write version, hash, CPU, settings

@@ -25,6 +25,8 @@
 
 const bool s_use_ssse3 = utils::has_ssse3();
 
+extern void do_cell_atomic_128_store(u32 addr, const void* to_write);
+
 inline u64 dup32(u32 x) { return x | static_cast<u64>(x) << 32; }
 
 // Write values to CR field
@@ -4435,11 +4437,10 @@ bool ppu_interpreter::DCBZ(ppu_thread& ppu, ppu_opcode_t op)
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
 	const u32 addr0 = vm::cast(addr, HERE) & ~127;
 
-	if (g_cfg.core.spu_accurate_dma)
+	if (g_cfg.core.accurate_cache_line_stores)
 	{
-		auto [res, rtime] = vm::reservation_lock(addr0, 128, vm::dma_lockb);
-		std::memset(vm::base(addr0), 0, 128);
-		res.release(rtime + 128);
+		alignas(64) static constexpr u8 zero_buf[128]{};
+		do_cell_atomic_128_store(addr0, zero_buf);
 		return true;
 	}
 
