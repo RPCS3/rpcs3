@@ -4468,7 +4468,7 @@ error_code sceNpSignalingGetCtxOpt(u32 ctx_id, s32 optname, vm::ptr<s32> optval)
 
 error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, vm::ptr<u32> conn_id)
 {
-	sceNp.warning("sceNpSignalingActivateConnection(ctx_id=%d, npId=*0x%x, conn_id=%d)", ctx_id, npId, conn_id);
+	sceNp.warning("sceNpSignalingActivateConnection(ctx_id=%d, npId=*0x%x, conn_id=*0x%x)", ctx_id, npId, conn_id);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
