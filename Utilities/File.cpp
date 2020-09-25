@@ -325,12 +325,6 @@ std::string fs::get_parent_dir(const std::string& path)
 	// Search upper bound (set to the last character, npos for empty string)
 	auto last = path.size() - 1;
 
-#ifdef _WIN32
-	const auto& delim = "/\\";
-#else
-	const auto& delim = "/";
-#endif
-
 	while (true)
 	{
 		const auto pos = path.find_last_of(delim, last, sizeof(delim) - 1);
@@ -355,13 +349,13 @@ bool fs::stat(const std::string& path, stat_t& info)
 	std::string_view epath = path;
 
 	// '/' and '\\' Not allowed by FindFirstFileExW at the end of path but we should allow it
-	if (auto not_del = epath.find_last_not_of("/\\"); not_del != umax && not_del != epath.size() - 1)
+	if (auto not_del = epath.find_last_not_of(delim); not_del != umax && not_del != epath.size() - 1)
 	{
 		epath.remove_suffix(epath.size() - 1 - not_del);
 	}
 
 	// Handle drives specially
-	if (epath.find_first_of("/\\") == umax && epath.ends_with(':'))
+	if (epath.find_first_of(delim) == umax && epath.ends_with(':'))
 	{
 		WIN32_FILE_ATTRIBUTE_DATA attrs;
 
@@ -411,7 +405,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 		~close_t() { FindClose(handle); }
 	};
 
-	for (close_t find_manage{handle}; attrs.cFileName != wpath_view.substr(wpath_view.find_last_of(L"/\\") + 1);)
+	for (close_t find_manage{handle}; attrs.cFileName != wpath_view.substr(wpath_view.find_last_of(wdelim) + 1);)
 	{
 		if (!FindNextFileW(handle, &attrs))
 		{
@@ -1619,12 +1613,6 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 std::string fs::escape_path(std::string_view path)
 {
 	std::string real; real.resize(path.size());
-
-#ifdef _WIN32
-	constexpr auto& delim = "/\\";
-#else
-	constexpr auto& delim = "/";
-#endif
 
 	auto get_char = [&](std::size_t& from, std::size_t& to, std::size_t count)
 	{

@@ -8,6 +8,7 @@
 #include <time.h>
 #include "Utilities/StrUtil.h"
 #include "Utilities/span.h"
+#include "Utilities/File.h"
 
 #include <memory>
 #include <string>
@@ -124,7 +125,7 @@ char* extract_file_name(const char* file_path, char real_file_name[MAX_PATH])
 {
 	std::string_view v(file_path);
 
-	if (auto pos = v.find_last_of("/\\"); pos != umax)
+	if (auto pos = v.find_last_of(fs::delim); pos != umax)
 	{
 		v.remove_prefix(pos + 1);
 	}

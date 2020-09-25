@@ -712,14 +712,8 @@ std::string vfs::host::hash_path(const std::string& path, const std::string& dev
 
 bool vfs::host::rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite)
 {
-#ifdef _WIN32
-	constexpr auto& delim = "/\\";
-#else
-	constexpr auto& delim = "/";
-#endif
-
 	// Lock mount point, close file descriptors, retry 
-	const auto from0 = std::string_view(from).substr(0, from.find_last_not_of(delim) + 1);
+	const auto from0 = std::string_view(from).substr(0, from.find_last_not_of(fs::delim) + 1);
 	const auto escaped_from = fs::escape_path(from);
 
 	// Lock app_home as well because it could be in the same drive as current mount point (TODO)
@@ -727,7 +721,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	auto check_path = [&](std::string_view path)
 	{
-		return path.starts_with(from) && (path.size() == from.size() || path[from.size()] == delim[0] || path[from.size()] == delim[1]);
+		return path.starts_with(from) && (path.size() == from.size() || path[from.size()] == fs::delim[0] || path[from.size()] == fs::delim[1]);
 	};
 
 	idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
