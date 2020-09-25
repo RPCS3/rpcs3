@@ -213,44 +213,17 @@ namespace glsl
 
 	static void insert_vertex_input_fetch(std::stringstream& OS, glsl_rules rules, bool glsl4_compliant=true)
 	{
-		std::string vertex_id_name = (rules == glsl_rules_opengl4) ? "gl_VertexID" : "gl_VertexIndex";
+		std::string vertex_id_name = (rules != glsl_rules_spirv) ? "gl_VertexID" : "gl_VertexIndex";
 
 		//Actually decode a vertex attribute from a raw byte stream
 		OS <<
-		"struct attribute_desc\n"
-		"{\n"
-		"	uint type;\n"
-		"	uint attribute_size;\n"
-		"	uint starting_offset;\n"
-		"	uint stride;\n"
-		"	uint frequency;\n"
-		"	bool swap_bytes;\n"
-		"	bool is_volatile;\n"
-		"	bool modulo;\n"
-		"};\n\n"
-
-		"uint get_bits(const in uint x, const in uint y, const in uint z, const in uint w, const in bool swap)\n"
-		"{\n"
-		"	if (swap) return (w | z << 8 | y << 16 | x << 24);\n"
-		"	return (x | y << 8 | z << 16 | w << 24);\n"
-		"}\n\n"
-
-		"uint get_bits(const in uint x, const in uint y, const in bool swap)\n"
-		"{\n"
-		"	if (swap) return (y | x << 8);\n"
-		"	return (x | y << 8);\n"
-		"}\n\n"
-
-		"int preserve_sign_s16(const in uint bits)\n"
-		"{\n"
-		"	//convert raw 16 bit value into signed 32-bit integer counterpart\n"
-		"	if ((bits & 0x8000u) == 0)\n"
-		"		return int(bits);\n"
-		"	else\n"
-		"		return int(bits | 0xFFFF0000u);\n"
-		"}\n\n"
-
-		"#define get_s16(v, s) preserve_sign_s16(get_bits(v, s))\n\n";
+		"#define VTX_FMT_SNORM16 0\n"
+		"#define VTX_FMT_FLOAT32 1\n"
+		"#define VTX_FMT_FLOAT16 2\n"
+		"#define VTX_FMT_UNORM8  3\n"
+		"#define VTX_FMT_SINT16  4\n"
+		"#define VTX_FMT_COMP32  5\n"
+		"#define VTX_FMT_UINT8   6\n\n";
 
 		// For intel GPUs which cannot access vectors in indexed mode (driver bug? or glsl version too low?)
 		// Note: Tested on Mesa iris with HD 530 and compilant path works fine, may be a bug on Windows proprietary drivers
@@ -266,9 +239,8 @@ namespace glsl
 			"		case 2: vector.z = scalar; return;\n"
 			"		case 3: vector.w = scalar; return;\n"
 			"	}\n"
-			"}\n";
+			"}\n\n"
 
-			OS <<
 			"uint ref(const in uvec4 vector, const in int index)\n"
 			"{\n"
 			"	switch(index)\n"
@@ -278,7 +250,7 @@ namespace glsl
 			"		case 2: return vector.z;\n"
 			"		case 3: return vector.w;\n"
 			"	}\n"
-			"}\n";
+			"}\n\n";
 		}
 		else
 		{
@@ -288,73 +260,107 @@ namespace glsl
 		}
 
 		OS <<
+		"struct attribute_desc\n"
+		"{\n"
+		"	uint type;\n"
+		"	uint attribute_size;\n"
+		"	uint starting_offset;\n"
+		"	uint stride;\n"
+		"	uint frequency;\n"
+		"	bool swap_bytes;\n"
+		"	bool is_volatile;\n"
+		"	bool modulo;\n"
+		"};\n\n"
+
+		"uint gen_bits(const in uint x, const in uint y, const in uint z, const in uint w, const in bool swap)\n"
+		"{\n"
+		"	return (swap) ?\n"
+		"		bitfieldInsert(bitfieldInsert(bitfieldInsert(w, z, 8, 8), y, 16, 8), x, 24, 8) :\n"
+		"		bitfieldInsert(bitfieldInsert(bitfieldInsert(x, y, 8, 8), z, 16, 8), w, 24, 8);\n"
+		"}\n\n"
+
+		"uint gen_bits(const in uint x, const in uint y, const in bool swap)\n"
+		"{\n"
+		"	return (swap)? bitfieldInsert(y, x, 8, 8) : bitfieldInsert(x, y, 8, 8);\n"
+		"}\n\n"
+
+		"vec4 sext(const in ivec4 bits)\n"
+		"{\n"
+		"	// convert raw 16 bit values into signed 32-bit float4 counterpart\n"
+		"	bvec4 sign_check = lessThan(bits, ivec4(0x8000));\n"
+		"	return _select(bits | ivec4(0xFFFF0000), bits, sign_check);\n"
+		"}\n\n"
+
+		"float sext(const in int bits)\n"
+		"{\n"
+		"	return (bits < 0x8000) ? float(bits) : float(bits | 0xFFFF0000); \n"
+		"}\n\n"
+
 		"vec4 fetch_attribute(const in attribute_desc desc, const in int vertex_id, usamplerBuffer input_stream)\n"
 		"{\n"
-		"	vec4 result = vec4(0., 0., 0., 1.);\n"
-		"	vec4 scale = vec4(1.);\n"
-		"	bool reverse_order = false;\n"
-		"\n"
 		"	const int elem_size_table[] = { 2, 4, 2, 1, 2, 4, 1 };\n"
+		"	const float scaling_table[] = { 32768., 1., 1., 255., 1., 32767., 1. };\n"
 		"	const int elem_size = elem_size_table[desc.type];\n"
-		"	uvec4 tmp;\n"
-		"\n"
-		"	int n;\n"
-		"	int i = int((vertex_id * desc.stride) + desc.starting_offset);\n"
-		"\n"
+		"	const vec4 scale = scaling_table[desc.type].xxxx;\n\n"
+
+		"	uvec4 tmp, result = uvec4(0u);\n"
+		"	vec4 ret;\n"
+		"	int n, i = int((vertex_id * desc.stride) + desc.starting_offset);\n\n"
+
 		"	for (n = 0; n < desc.attribute_size; n++)\n"
 		"	{\n"
 		"		tmp.x = texelFetch(input_stream, i++).x;\n"
 		"		if (elem_size == 2)\n"
 		"		{\n"
 		"			tmp.y = texelFetch(input_stream, i++).x;\n"
-		"			tmp.x = get_bits(tmp.x, tmp.y, desc.swap_bytes);\n"
+		"			tmp.x = gen_bits(tmp.x, tmp.y, desc.swap_bytes);\n"
 		"		}\n"
 		"		else if (elem_size == 4)\n"
 		"		{\n"
 		"			tmp.y = texelFetch(input_stream, i++).x;\n"
 		"			tmp.z = texelFetch(input_stream, i++).x;\n"
 		"			tmp.w = texelFetch(input_stream, i++).x;\n"
-		"			tmp.x = get_bits(tmp.x, tmp.y, tmp.z, tmp.w, desc.swap_bytes);\n"
-		"		}\n"
-		"\n"
-		"		switch (desc.type)\n"
-		"		{\n"
-		"		case 0:\n"
-		"			//signed normalized 16-bit\n"
-		"			mov(scale, n, 32767.);\n"
-		"		case 4:\n"
-		"			//signed word\n"
-		"			mov(result, n, preserve_sign_s16(tmp.x));\n"
-		"			break;\n"
-		"		case 1:\n"
-		"			//float\n"
-		"			mov(result, n, uintBitsToFloat(tmp.x));\n"
-		"			break;\n"
-		"		case 2:\n"
-		"			//half\n"
-		"			mov(result, n, unpackHalf2x16(tmp.x).x);\n"
-		"			break;\n"
-		"		case 3:\n"
-		"			//unsigned byte\n"
-		"			mov(scale, n, 255.);\n"
-		"		case 6:\n"
-		"			//ub256\n"
-		"			mov(result, n, tmp.x);\n"
-		"			reverse_order = desc.swap_bytes;\n"
-		"			break;\n"
-		"		case 5:\n"
-		"			//cmp\n"
-		"			result.x = preserve_sign_s16((tmp.x & 0x7FFu) << 5);\n"
-		"			result.y = preserve_sign_s16(((tmp.x >> 11) & 0x7FFu) << 5);\n"
-		"			result.z = preserve_sign_s16(((tmp.x >> 22) & 0x3FFu) << 6);\n"
-		"			result.w = 1.;\n"
-		"			scale = vec4(32767., 32767., 32767., 1.);\n"
-		"			break;\n"
-		"		}\n"
+		"			tmp.x = gen_bits(tmp.x, tmp.y, tmp.z, tmp.w, desc.swap_bytes);\n"
+		"		}\n\n"
+
+		"		mov(result, n, tmp.x);\n"
+		"	}\n\n"
+
+		"	// Actual decoding step is done in vector space, outside the loop\n"
+		"	if (desc.type == VTX_FMT_SNORM16 || desc.type == VTX_FMT_SINT16)\n"
+		"	{\n"
+		"		ret = sext(ivec4(result));\n"
 		"	}\n"
-		"\n"
-		"	result /= scale;\n"
-		"	return (reverse_order)? result.wzyx: result;\n"
+		"	else if (desc.type == VTX_FMT_FLOAT32)\n"
+		"	{\n"
+		"		ret = uintBitsToFloat(result);\n"
+		"	}\n"
+		"	else if (desc.type == VTX_FMT_FLOAT16)\n"
+		"	{\n"
+		"		tmp.x = bitfieldInsert(result.x, result.y, 16, 16);\n"
+		"		tmp.y = bitfieldInsert(result.z, result.w, 16, 16);\n"
+		"		ret.xy = unpackHalf2x16(tmp.x);\n"
+		"		ret.zw = unpackHalf2x16(tmp.y);\n"
+		"	}\n"
+		"	else if (desc.type == VTX_FMT_UINT8 || desc.type == VTX_FMT_UNORM8)\n"
+		"	{\n"
+		"		ret = vec4(desc.swap_bytes? result.wzyx : result);\n"
+		"	}\n"
+		"	else //if (desc.type == VTX_FMT_COMP32)\n"
+		"	{\n"
+		"		result = uvec4(bitfieldExtract(result.x, 0, 11),\n"
+		"			bitfieldExtract(result.x, 11, 11),\n"
+		"			bitfieldExtract(result.x, 22, 10),\n"
+		"			uint(scale.x));\n"
+		"		ret = sext(ivec4(result) << ivec4(5, 5, 6, 0));\n"
+		"	}\n\n"
+
+		"	if (desc.attribute_size < 4)\n"
+		"	{\n"
+		"		ret.w = scale.x;\n"
+		"	}\n\n"
+
+		"	return ret / scale; \n"
 		"}\n\n"
 
 		"attribute_desc fetch_desc(const in int location)\n"
@@ -368,7 +374,7 @@ namespace glsl
 		"	// [32-60] starting offset\n"
 		"	// [60-61] swap bytes flag\n"
 		"	// [61-62] volatile flag\n"
-		"	// [62-63] modulo enable flag\n";
+		"	// [62-63] modulo enable flag\n\n";
 
 		if (rules == glsl_rules_opengl4)
 		{
@@ -378,7 +384,7 @@ namespace glsl
 			"	int sub_block = (location & 1) << 1;\n"
 			"	uvec2 attrib = uvec2(\n"
 			"		ref(input_attributes_blob[block], sub_block + 0),\n"
-			"		ref(input_attributes_blob[block], sub_block + 1));\n";
+			"		ref(input_attributes_blob[block], sub_block + 1));\n\n";
 		}
 		else
 		{
@@ -389,25 +395,20 @@ namespace glsl
 
 		OS <<
 		"	attribute_desc result;\n"
-		"	result.stride = attrib.x & 0xFFu;\n"
-		"	result.frequency = (attrib.x >> 8) & 0xFFFFu;\n"
-		"	result.type = (attrib.x >> 24) & 0x7u;\n"
-		"	result.attribute_size = (attrib.x >> 27) & 0x7u;\n"
-		"	result.starting_offset = (attrib.y & 0x1FFFFFFFu);\n"
-		"	result.swap_bytes = ((attrib.y >> 29) & 0x1u) != 0;\n"
-		"	result.is_volatile = ((attrib.y >> 30) & 0x1u) != 0;\n"
-		"	result.modulo = ((attrib.y >> 31) & 0x1u) != 0;\n"
+		"	result.stride = bitfieldExtract(attrib.x, 0, 8);\n"
+		"	result.frequency = bitfieldExtract(attrib.x, 8, 16);\n"
+		"	result.type = bitfieldExtract(attrib.x, 24, 3);\n"
+		"	result.attribute_size = bitfieldExtract(attrib.x, 27, 3);\n"
+		"	result.starting_offset = bitfieldExtract(attrib.y, 0, 29);\n"
+		"	result.swap_bytes = bitfieldExtract(attrib.y, 29, 1) != 0;\n"
+		"	result.is_volatile = bitfieldExtract(attrib.y, 30, 1) != 0;\n"
+		"	result.modulo = bitfieldExtract(attrib.y, 31, 1) != 0;\n"
 		"	return result;\n"
 		"}\n\n"
 
 		"vec4 read_location(const in int location)\n"
 		"{\n"
 		"	attribute_desc desc = fetch_desc(location);\n"
-		"	if (desc.attribute_size == 0)\n"
-		"	{\n"
-		"		//default value\n"
-		"		return vec4(0., 0., 0., 1.);\n"
-		"	}\n\n"
 		"	int vertex_id = " << vertex_id_name << " - int(vertex_base_index);\n"
 		"	if (desc.frequency == 0)\n"
 		"	{\n"
@@ -421,8 +422,8 @@ namespace glsl
 		"	else\n"
 		"	{\n"
 		"		vertex_id /= int(desc.frequency); \n"
-		"	}\n"
-		"\n"
+		"	}\n\n"
+
 		"	if (desc.is_volatile)\n"
 		"		return fetch_attribute(desc, vertex_id, volatile_input_stream);\n"
 		"	else\n"
