@@ -6,7 +6,6 @@
 #include "cellSysutil.h"
 
 #include "cellSearch.h"
-#include "xxhash.h"
 #include "Utilities/StrUtil.h"
 
 LOG_CHANNEL(cellSearch);
@@ -398,7 +397,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 				// TODO - Identify sorting method and insert the appropriate values where applicable
 				const std::string item_path(relative_vpath + "/" + item.name);
 
-				const u64 hash = XXH64(item_path.c_str(), item_path.length(), 0);
+				const u64 hash = std::hash<std::string>()(item_path);
 				auto found = content_map->find(hash);
 				if (found == content_map->end()) // content isn't yet being tracked
 				{
