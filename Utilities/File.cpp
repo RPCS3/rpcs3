@@ -322,20 +322,12 @@ std::shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name,
 
 std::string fs::get_parent_dir(const std::string& path)
 {
-	// Search upper bound (set to the last character, npos for empty string)
-	auto last = path.size() - 1;
+	// Get (basically) processed path
+	const auto real_path = fs::escape_path(path);
 
-	while (true)
-	{
-		const auto pos = path.find_last_of(delim, last, sizeof(delim) - 1);
+	const auto pos = real_path.find_last_of(delim);
 
-		// Contiguous slashes are ignored at the end
-		if (std::exchange(last, pos - 1) != pos)
-		{
-			// Return empty string if the path doesn't contain at least 2 elements
-			return path.substr(0, pos != umax && path.find_last_not_of(delim, pos, sizeof(delim) - 1) != umax ? pos : 0);
-		}
-	}
+	return real_path.substr(0, pos == umax ? 0 : pos);
 }
 
 bool fs::stat(const std::string& path, stat_t& info)
