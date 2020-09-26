@@ -17,7 +17,7 @@ namespace rsx
 		{
 			if (!data.data.empty())
 			{
-				u64 data_hash    = XXH64(data.data.data(), data.data.size(), 0);
+				u64 data_hash = XXH64(data.data.data(), data.data.size(), 0);
 				block.data_state = data_hash;
 
 				auto it = frame_capture.memory_data_map.find(data_hash);
