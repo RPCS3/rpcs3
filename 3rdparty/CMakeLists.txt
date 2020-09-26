@@ -164,6 +164,7 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX_OLD})
 
 # xxHash
 set(XXHASH_BUNDLED_MODE ON)
+set(XXHASH_BUILD_XXHSUM OFF)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Make xxHash build static libs")
 add_subdirectory(xxHash/cmake_unofficial EXCLUDE_FROM_ALL)
 target_include_directories(xxhash INTERFACE xxHash)
