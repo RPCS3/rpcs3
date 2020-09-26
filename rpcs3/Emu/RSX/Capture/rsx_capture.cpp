@@ -17,7 +17,7 @@ namespace rsx
 		{
 			if (!data.data.empty())
 			{
-				u64 data_hash    = XXH3_64bits(data.data.data(), data.data.size());
+				u64 data_hash    = XXH64(data.data.data(), data.data.size(), 0);
 				block.data_state = data_hash;
 
 				auto it = frame_capture.memory_data_map.find(data_hash);
@@ -30,7 +30,7 @@ namespace rsx
 				else
 					frame_capture.memory_data_map.insert(std::make_pair(data_hash, std::move(data)));
 
-				u64 block_hash = XXH3_64bits(&block, sizeof(frame_capture_data::memory_block));
+				u64 block_hash = XXH64(&block, sizeof(frame_capture_data::memory_block), 0);
 				mem_changes.insert(block_hash);
 				if (frame_capture.memory_map.find(block_hash) == frame_capture.memory_map.end())
 					frame_capture.memory_map.insert(std::make_pair(block_hash, std::move(block)));
@@ -359,7 +359,7 @@ namespace rsx
 				dbstate.buffers[i].pitch  = db.pitch;
 			}
 
-			const u64 dbnum = XXH3_64bits(&dbstate, sizeof(frame_capture_data::display_buffers_state));
+			const u64 dbnum = XXH64(&dbstate, sizeof(frame_capture_data::display_buffers_state), 0);
 			if (frame_capture.display_buffers_map.find(dbnum) == frame_capture.display_buffers_map.end())
 				frame_capture.display_buffers_map.insert(std::make_pair(dbnum, std::move(dbstate)));
 
@@ -387,7 +387,7 @@ namespace rsx
 				zcstate.status1 = rsx->zculls[i].bound ? u32{zc.status1} : 0;
 			}
 
-			const u64 tsnum = XXH3_64bits(&tilestate, sizeof(frame_capture_data::tile_state));
+			const u64 tsnum = XXH64(&tilestate, sizeof(frame_capture_data::tile_state), 0);
 
 			if (frame_capture.tile_map.find(tsnum) == frame_capture.tile_map.end())
 				frame_capture.tile_map.insert(std::make_pair(tsnum, std::move(tilestate)));
