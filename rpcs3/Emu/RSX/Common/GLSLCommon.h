@@ -275,13 +275,13 @@ namespace glsl
 		"uint gen_bits(const in uint x, const in uint y, const in uint z, const in uint w, const in bool swap)\n"
 		"{\n"
 		"	return (swap) ?\n"
-		"		bitfieldInsert(bitfieldInsert(bitfieldInsert(w, z, 8, 8), y, 16, 8), x, 24, 8) :\n"
-		"		bitfieldInsert(bitfieldInsert(bitfieldInsert(x, y, 8, 8), z, 16, 8), w, 24, 8);\n"
+		"		_set_bits(_set_bits(_set_bits(w, z, 8, 8), y, 16, 8), x, 24, 8) :\n"
+		"		_set_bits(_set_bits(_set_bits(x, y, 8, 8), z, 16, 8), w, 24, 8);\n"
 		"}\n\n"
 
 		"uint gen_bits(const in uint x, const in uint y, const in bool swap)\n"
 		"{\n"
-		"	return (swap)? bitfieldInsert(y, x, 8, 8) : bitfieldInsert(x, y, 8, 8);\n"
+		"	return (swap)? _set_bits(y, x, 8, 8) : _set_bits(x, y, 8, 8);\n"
 		"}\n\n"
 
 		"vec4 sext(const in ivec4 bits)\n"
@@ -337,8 +337,8 @@ namespace glsl
 		"	}\n"
 		"	else if (desc.type == VTX_FMT_FLOAT16)\n"
 		"	{\n"
-		"		tmp.x = bitfieldInsert(result.x, result.y, 16, 16);\n"
-		"		tmp.y = bitfieldInsert(result.z, result.w, 16, 16);\n"
+		"		tmp.x = _set_bits(result.x, result.y, 16, 16);\n"
+		"		tmp.y = _set_bits(result.z, result.w, 16, 16);\n"
 		"		ret.xy = unpackHalf2x16(tmp.x);\n"
 		"		ret.zw = unpackHalf2x16(tmp.y);\n"
 		"	}\n"
@@ -348,9 +348,9 @@ namespace glsl
 		"	}\n"
 		"	else //if (desc.type == VTX_FMT_COMP32)\n"
 		"	{\n"
-		"		result = uvec4(bitfieldExtract(result.x, 0, 11),\n"
-		"			bitfieldExtract(result.x, 11, 11),\n"
-		"			bitfieldExtract(result.x, 22, 10),\n"
+		"		result = uvec4(_get_bits(result.x, 0, 11),\n"
+		"			_get_bits(result.x, 11, 11),\n"
+		"			_get_bits(result.x, 22, 10),\n"
 		"			uint(scale.x));\n"
 		"		ret = sext(ivec4(result) << ivec4(5, 5, 6, 0));\n"
 		"	}\n\n"
@@ -395,14 +395,14 @@ namespace glsl
 
 		OS <<
 		"	attribute_desc result;\n"
-		"	result.stride = bitfieldExtract(attrib.x, 0, 8);\n"
-		"	result.frequency = bitfieldExtract(attrib.x, 8, 16);\n"
-		"	result.type = bitfieldExtract(attrib.x, 24, 3);\n"
-		"	result.attribute_size = bitfieldExtract(attrib.x, 27, 3);\n"
-		"	result.starting_offset = bitfieldExtract(attrib.y, 0, 29);\n"
-		"	result.swap_bytes = bitfieldExtract(attrib.y, 29, 1) != 0;\n"
-		"	result.is_volatile = bitfieldExtract(attrib.y, 30, 1) != 0;\n"
-		"	result.modulo = bitfieldExtract(attrib.y, 31, 1) != 0;\n"
+		"	result.stride = _get_bits(attrib.x, 0, 8);\n"
+		"	result.frequency = _get_bits(attrib.x, 8, 16);\n"
+		"	result.type = _get_bits(attrib.x, 24, 3);\n"
+		"	result.attribute_size = _get_bits(attrib.x, 27, 3);\n"
+		"	result.starting_offset = _get_bits(attrib.y, 0, 29);\n"
+		"	result.swap_bytes = _test_bit(attrib.y, 29);\n"
+		"	result.is_volatile = _test_bit(attrib.y, 30);\n"
+		"	result.modulo = _test_bit(attrib.y, 31);\n"
 		"	return result;\n"
 		"}\n\n"
 
@@ -434,14 +434,16 @@ namespace glsl
 	static void insert_rop_init(std::ostream& OS)
 	{
 		OS <<
-		"	if ((rop_control & (1u << 9)) != 0)\n"
+		"	if (_test_bit(rop_control, 9))\n"
 		"	{\n"
 		"		// Convert x,y to linear address\n"
-		"		uvec2 stipple_coord = uvec2(gl_FragCoord.xy) % uvec2(32u, 32u);\n"
-		"		uint address = stipple_coord.y * 32u + stipple_coord.x;\n"
-		"		uint mask = (1u << (address & 31u));\n\n"
+		"		const ivec2 stipple_coord = ivec2(gl_FragCoord.xy) % ivec2(32, 32);\n"
+		"		const int address = stipple_coord.y * 32 + stipple_coord.x;\n"
+		"		const int bit_offset = (address & 31);\n"
+		"		const int word_index = _get_bits(address, 7, 3);\n"
+		"		const int sub_index = _get_bits(address, 5, 2);\n\n"
 
-		"		if ((stipple_pattern[address >> 7u][(address >> 5u) & 3u] & mask) == 0u)\n"
+		"		if (_test_bit(stipple_pattern[word_index][sub_index], bit_offset))\n"
 		"		{\n"
 		"			_kill();\n"
 		"		}\n"
@@ -463,26 +465,26 @@ namespace glsl
 			"	{\n"
 			"		discard;\n"
 			"	}\n"
-			"	else if ((rop_control & 0xFFu) != 0)\n";
+			"	else if (_get_bits(rop_control, 0, 8) != 0)\n";
 		}
 		else
 		{
-			OS << "	if ((rop_control & 0xFFu) != 0)\n";
+			OS << "	if (_get_bits(rop_control, 0, 8) != 0)\n";
 		}
 
 		OS <<
 		"	{\n"
-		"		bool alpha_test = (rop_control & 0x1u) > 0;\n"
-		"		uint alpha_func = ((rop_control >> 16) & 0x7u);\n";
+		"		const bool alpha_test = _test_bit(rop_control, 0);\n"
+		"		const uint alpha_func = _get_bits(rop_control, 16, 3);\n";
 
 		if (!props.fp32_outputs)
 		{
-			OS << "		bool srgb_convert = (rop_control & 0x2u) > 0;\n\n";
+			OS << "		const bool srgb_convert = _test_bit(rop_control, 1);\n\n";
 		}
 
 		if (props.emulate_coverage_tests)
 		{
-			OS << "		bool a2c_enabled = (rop_control & 0x10u) > 0;\n";
+			OS << "		const bool a2c_enabled = _test_bit(rop_control, 4);\n";
 		}
 
 		OS <<
@@ -540,6 +542,9 @@ namespace glsl
 	{
 		OS << "#define _select mix\n";
 		OS << "#define _saturate(x) clamp(x, 0., 1.)\n";
+		OS << "#define _get_bits(x, off, count) bitfieldExtract(x, off, count)\n";
+		OS << "#define _set_bits(x, y, off, count) bitfieldInsert(x, y, off, count)\n";
+		OS << "#define _test_bit(x, y) (_get_bits(x, y, 1) != 0)\n";
 		OS << "#define _rand(seed) fract(sin(dot(seed.xy, vec2(12.9898f, 78.233f))) * 43758.5453f)\n\n";
 
 		if (props.domain == glsl::program_domain::glsl_fragment_program)
@@ -641,7 +646,7 @@ namespace glsl
 			OS <<
 			"bool coverage_test_passes(const in vec4 _sample, const in uint control)\n"
 			"{\n"
-			"	if ((control & 0x1u) == 0) return false;\n"
+			"	if (!_test_bit(control, 0)) return false;\n"
 			"\n"
 			"	float random  = _rand(gl_FragCoord);\n"
 			"	return (_sample.a > random);\n"
@@ -671,18 +676,18 @@ namespace glsl
 			"	if (depth_float == 0)\n"
 			"		value = uint(depth_value * 16777215.);\n"
 			"	else\n"
-			"		value = (floatBitsToUint(depth_value) >> 7) & 0xffffff;\n"
+			"		value = _get_bits(floatBitsToUint(depth_value), 7, 24);\n"
 			"\n"
-			"	uint b = (value & 0xff);\n"
-			"	uint g = (value >> 8) & 0xff;\n"
-			"	uint r = (value >> 16) & 0xff;\n"
+			"	uint b = _get_bits(value, 0, 8);\n"
+			"	uint g = _get_bits(value, 8, 8);\n"
+			"	uint r = _get_bits(value, 16, 8);\n"
 			"	return vec4(float(g)/255., float(b)/255., 1., float(r)/255.);\n"
 			"}\n\n"
 
 			"vec4 remap_vector(const in vec4 color, const in uint remap)\n"
 			"{\n"
 			"	vec4 result;\n"
-			"	if ((remap & 0xFF) == 0xE4)\n"
+			"	if (_get_bits(remap, 0, 8) == 0xE4)\n"
 			"	{\n"
 			"		result = color;\n"
 			"	}\n"
@@ -699,7 +704,7 @@ namespace glsl
 			"		result.b = color[remap_channel.b];\n"
 			"	}\n\n"
 
-			"	if ((remap >> 8) == 0xAA)\n"
+			"	if (_get_bits(remap, 8, 8) == 0xAA)\n"
 			"		return result;\n\n"
 
 			"	uvec4 remap_select = uvec4(remap) >> uvec4(10, 12, 14, 8);\n"
@@ -755,7 +760,7 @@ namespace glsl
 			"		return rgba;\n"
 			"	}\n"
 			"\n"
-			"	if ((control_bits & 0x10u) != 0)\n"
+			"	if (_test_bit(control_bits, 4))\n"
 			"	{\n"
 			"		// Alphakill\n"
 			"		if (rgba.a < 0.000001)\n"
@@ -765,7 +770,7 @@ namespace glsl
 			"		}\n"
 			"	}\n"
 			"\n"
-			"	if ((control_bits & 0x20u) != 0)\n"
+			"	if (_test_bit(control_bits, 5))\n"
 			"	{\n"
 			"		// Renormalize to 8-bit (PS3) accuracy\n"
 			"		rgba = floor(rgba * 255.);\n"
@@ -882,9 +887,9 @@ namespace glsl
 		case FUNCTION::FUNCTION_DPH:
 			return "$Ty(dot(vec4($0.xyz, 1.0), $1))";
 		case FUNCTION::FUNCTION_SFL:
-			return "$Ty(0., 0., 0., 0.)";
+			return "$Ty(0.)";
 		case FUNCTION::FUNCTION_STR:
-			return "$Ty(1., 1., 1., 1.)";
+			return "$Ty(1.)";
 		case FUNCTION::FUNCTION_FRACT:
 			return "fract($0)";
 		case FUNCTION::FUNCTION_REFL:
