@@ -8,7 +8,7 @@ struct CellSpurs;
 struct CellSpursTaskset;
 
 // Core return codes.
-enum
+enum CellSpursCoreError : u32
 {
 	CELL_SPURS_CORE_ERROR_AGAIN        = 0x80410701,
 	CELL_SPURS_CORE_ERROR_INVAL        = 0x80410702,
@@ -22,7 +22,7 @@ enum
 };
 
 //
-enum
+enum CellSpursPolicyModuleError : u32
 {
 	CELL_SPURS_POLICY_MODULE_ERROR_AGAIN        = 0x80410801,
 	CELL_SPURS_POLICY_MODULE_ERROR_INVAL        = 0x80410802,
@@ -43,7 +43,7 @@ enum
 };
 
 // Task return codes.
-enum
+enum CellSpursTaskError : u32
 {
 	CELL_SPURS_TASK_ERROR_AGAIN        = 0x80410901,
 	CELL_SPURS_TASK_ERROR_INVAL        = 0x80410902,
@@ -61,7 +61,7 @@ enum
 	CELL_SPURS_TASK_ERROR_SHUTDOWN     = 0x80410920,
 };
 
-enum
+enum CellSpursJobError : u32
 {
 	CELL_SPURS_JOB_ERROR_AGAIN               = 0x80410A01,
 	CELL_SPURS_JOB_ERROR_INVAL               = 0x80410A02,
@@ -412,7 +412,9 @@ CHECK_SIZE_ALIGN(CellSpursTracePacket, 16, 16);
 
 struct alignas(128) CellSpursJobChain
 {
-	u8 unk1[0x2C];                  // 0x0
+	u8 unk0[0x24];                  // 0x0
+	u8 val24;                       // 0x24
+	u8 unk1[0x7];                   // 0x25
 	u8 val2C;                       // 0x2C
 	u8 val2D;                       // 0x2D
 	u8 val2E;                       // 0x2E
@@ -420,9 +422,26 @@ struct alignas(128) CellSpursJobChain
 	atomic_be_t<u64> urgentCmds[4]; // 0x30
 	u8 unk2[0x24];                  // 0x50
 	be_t<u32> workloadId;           // 0x74
-	vm::bptr<CellSpurs> spurs;      // 0x78
-	u8 unk3[0x94];                  // 0x7C
+	be_t<u32> reserved;             // 0x78
+	vm::bptr<CellSpurs> spurs;      // 0x7C
+	u8 unk3[0x90];                  // 0x80
 };
+
+struct alignas(128) CellSpursJobGuard
+{
+	atomic_be_t<u32> ncount0;             // 0x00
+	be_t<u32> ncount1;                    // 0x04
+	vm::bptr<CellSpursJobChain> jobChain; // 0x0C
+	be_t<u32> unk0;
+	be_t<u32> requestSpuCount;            // 0x10
+	be_t<u32> unk1[3];
+	be_t<u32> autoReset;                  // 0x20
+	be_t<u32> unk2[3];
+	be_t<u32> zero;                       // 0x30
+	u8 unk3[0x80 - 0x34];
+};
+
+CHECK_SIZE_ALIGN(CellSpursJobGuard, 128, 128);
 
 // Core CellSpurs structures
 struct alignas(128) CellSpurs
@@ -585,6 +604,18 @@ struct alignas(128) CellSpurs
 		else
 		{
 			return wklState1[wid & 0xf];
+		}
+	}
+
+	atomic_t<u8>& readyCount(u32 wid)
+	{
+		if (wid & 0x10)
+		{
+			return wklReadyCount1[wid & 0xf];
+		}
+		else
+		{
+			return wklIdleSpuCountOrReadyCount2[wid & 0xf];
 		}
 	}
 };
@@ -852,6 +883,17 @@ struct alignas(16) CellSpursTaskBinInfo
 	be_t<u32> reserved;
 	CellSpursTaskLsPattern lsPattern;
 };
+
+struct alignas(128) CellSpursBarrier
+{
+	be_t<u32> zero;                     // 0x00 
+	be_t<u32> remained;                 // 0x04
+	u8 unk0[0x34 - 0x8];
+	vm::bptr<CellSpursTaskset> taskset; // 0x34
+	u8 unk1[0x80 - 0x38];
+};
+
+CHECK_SIZE_ALIGN(CellSpursBarrier, 128, 128);
 
 // The SPURS kernel context. This resides at 0x100 of the LS.
 struct SpursKernelContext
