@@ -40,6 +40,8 @@ enum class thread_state : u32
 	finished  // Final state, always set at the end of thread execution
 };
 
+class need_wakeup {};
+
 template <class Context>
 class named_thread;
 
@@ -312,12 +314,13 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 				return false;
 			}
 
-			_this->m_state_notifier.release(data);
-
 			if (!data)
 			{
+				_this->m_state_notifier.release(data);
 				return true;
 			}
+
+			_this->m_state_notifier.store(data);
 
 			if (_this->m_state >= thread_state::aborting)
 			{
@@ -413,6 +416,11 @@ public:
 			if (s == thread_state::aborting)
 			{
 				thread::notify_abort();
+			}
+
+			if constexpr (std::is_base_of_v<need_wakeup, Context>)
+			{
+				this->wake_up();
 			}
 		}
 

@@ -1112,8 +1112,12 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 
 	if (ctrl->npdrm.license == 1)  // Network license.
 	{
-		self_log.error("SELF: Can't decrypt network NPDRM!");
-		return false;
+		// Try to find a RAP file to get the key.
+		if (!GetKeyFromRap(ctrl->npdrm.content_id, npdrm_key))
+		{
+			self_log.error("SELF: Can't decrypt network NPDRM!");
+			return false;
+		}
 	}
 	else if (ctrl->npdrm.license == 2)  // Local license.
 	{

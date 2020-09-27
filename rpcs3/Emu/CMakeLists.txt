@@ -1,5 +1,6 @@
 ﻿add_library(rpcs3_emu
 	IdManager.cpp
+	localized_string.cpp
 	System.cpp
 	system_config.cpp
 	system_config_types.cpp
@@ -12,7 +13,7 @@ target_link_libraries(rpcs3_emu
 	PRIVATE
 		3rdparty::zlib 3rdparty::yaml-cpp
 	PUBLIC
-		3rdparty::libevdev)
+		3rdparty::libevdev 3rdparty::flatbuffers)
 
 
 find_package(Threads REQUIRED)
@@ -362,7 +363,12 @@ target_sources(rpcs3_emu PRIVATE
 
 # Np
 target_sources(rpcs3_emu PRIVATE
+	NP/fb_helpers.cpp
 	NP/np_handler.cpp
+	NP/signaling_handler.cpp
+	NP/np_structs_extra.cpp
+	NP/rpcn_client.cpp
+	NP/rpcn_config.cpp
 )
 
 # Memory
@@ -452,7 +458,7 @@ target_link_libraries(rpcs3_emu
 		3rdparty::ffmpeg 3rdparty::cereal
 		3rdparty::opengl 3rdparty::stblib
 		3rdparty::vulkan 3rdparty::glew
-		3rdparty::libusb
+		3rdparty::libusb 3rdparty::wolfssl
 	PRIVATE
 		3rdparty::span 3rdparty::xxhash
 )

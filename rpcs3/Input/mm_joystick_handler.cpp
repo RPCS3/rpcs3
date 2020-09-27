@@ -474,11 +474,11 @@ bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev)
 std::shared_ptr<PadDevice> mm_joystick_handler::get_device(const std::string& device)
 {
 	if (!Init())
-		return false;
+		return nullptr;
 
 	int id = GetIDByName(device);
 	if (id < 0)
-		return false;
+		return nullptr;
 
 	std::shared_ptr<MMJOYDevice> joy_device = std::make_shared<MMJOYDevice>(m_devices.at(id));
 	return joy_device;

@@ -124,6 +124,8 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	glsl::shader_properties properties2{};
 	properties2.domain = glsl::glsl_vertex_program;
 	properties2.require_lit_emulation = properties.has_lit_op;
+	properties2.emulate_zclip_transform = true;
+	properties2.emulate_depth_clip_only = dev_caps.NV_depth_buffer_float_supported;
 
 	insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, dev_caps.vendor_INTEL == false);

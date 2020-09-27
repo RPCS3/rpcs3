@@ -440,16 +440,20 @@ namespace vm
 		g_mutex.unlock();
 	}
 
-	bool reservation_lock_internal(u32 addr, atomic_t<u64>& res)
+	u64 reservation_lock_internal(u32 addr, atomic_t<u64>& res, u64 lock_bits)
 	{
 		for (u64 i = 0;; i++)
 		{
-			if (!res.bts(0)) [[likely]]
+			if (u64 rtime = res; !(rtime & 127) && reservation_trylock(res, rtime, lock_bits)) [[likely]]
 			{
-				break;
+				return rtime;
 			}
 
-			if (i < 15)
+			if (auto cpu = get_current_cpu_thread(); cpu && cpu->state)
+			{
+				cpu->check_state();
+			}
+			else if (i < 15)
 			{
 				busy_wait(500);
 			}
@@ -458,14 +462,12 @@ namespace vm
 				// TODO: Accurate locking in this case
 				if (!(g_pages[addr / 4096].flags & page_writable))
 				{
-					return false;
+					return -1;
 				}
 
 				std::this_thread::yield();
 			}
 		}
-
-		return true;
 	}
 
 	static void _page_map(u32 addr, u8 flags, u32 size, utils::shm* shm)
@@ -803,7 +805,7 @@ namespace vm
 			vm::writer_lock lock(0);
 
 			// Deallocate all memory
-			for (auto it = m_map.begin(), end = m_map.end(); !m_common && it != end;)
+			for (auto it = m_map.begin(), end = m_map.end(); it != end;)
 			{
 				const auto next = std::next(it);
 				const auto size = it->second.first;

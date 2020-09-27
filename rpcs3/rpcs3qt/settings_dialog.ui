@@ -2,6 +2,9 @@
 <ui version="4.0">
  <class>settings_dialog</class>
  <widget class="QDialog" name="settings_dialog">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -1444,7 +1447,61 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="systemTabSpacerWidget1" native="true"/>
+          <widget class="QGroupBox" name="gb_console_time">
+           <property name="title">
+            <string>Console Time</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_2">
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout">
+              <item>
+               <widget class="QDateTimeEdit" name="console_time_edit">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>10</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="wrapping">
+                 <bool>false</bool>
+                </property>
+                <property name="frame">
+                 <bool>true</bool>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+                <property name="readOnly">
+                 <bool>false</bool>
+                </property>
+                <property name="buttonSymbols">
+                 <enum>QAbstractSpinBox::UpDownArrows</enum>
+                </property>
+                <property name="accelerated">
+                 <bool>true</bool>
+                </property>
+                <property name="showGroupSeparator" stdset="0">
+                 <bool>false</bool>
+                </property>
+                <property name="calendarPopup">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="console_time_reset">
+                <property name="text">
+                 <string>Set to Now</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
          </item>
          <item>
           <widget class="QWidget" name="systemTabSpacerWidget2" native="true"/>
@@ -1672,39 +1729,6 @@
               <layout class="QVBoxLayout" name="gb_psnStatusBox_layout">
                <item>
                 <widget class="QComboBox" name="psnStatusBox"/>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QGroupBox" name="gb_edit_npid">
-              <property name="title">
-               <string>PSN settings</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_edit_npid_layout">
-               <item>
-                <layout class="QHBoxLayout" name="edit_npid_layout">
-                 <item>
-                  <widget class="QLabel" name="edit_npid_label">
-                   <property name="text">
-                    <string>NPID:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLineEdit" name="edit_npid">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="maxLength">
-                    <number>16</number>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
                </item>
               </layout>
              </widget>
@@ -2378,85 +2402,156 @@
               <item>
                <widget class="QCheckBox" name="gs_showMouseInFullscreen">
                 <property name="text">
-                 <string>Show mouse cursor in Fullscreen </string>
+                 <string>Show mouse cursor in Fullscreen</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="gs_resizeOnBoot">
-                <property name="text">
-                 <string>Resize game window on boot</string>
-                </property>
+               <widget class="QWidget" name="gs_hideMouseOnIdle_widget" native="true">
+                <layout class="QHBoxLayout" name="gs_hideMouseOnIdle_layout" stretch="0,0">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QCheckBox" name="gs_hideMouseOnIdle">
+                   <property name="text">
+                    <string>Hide mouse cursor if idle</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="gs_hideMouseOnIdleTime">
+                   <property name="accelerated">
+                    <bool>true</bool>
+                   </property>
+                   <property name="correctionMode">
+                    <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+                   </property>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                   <property name="suffix">
+                    <string>ms</string>
+                   </property>
+                   <property name="minimum">
+                    <number>200</number>
+                   </property>
+                   <property name="maximum">
+                    <number>99999</number>
+                   </property>
+                   <property name="stepType">
+                    <enum>QAbstractSpinBox::DefaultStepType</enum>
+                   </property>
+                   <property name="value">
+                    <number>2000</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
               <item>
-               <layout class="QHBoxLayout" name="gs_resolution_layout">
-                <item>
-                 <widget class="QGroupBox" name="gb_gs_width">
-                  <property name="title">
-                   <string>Width</string>
-                  </property>
-                  <layout class="QVBoxLayout" name="gb_gs_width_layout">
+               <widget class="QWidget" name="gs_resizeOnBoot_widget" native="true">
+                <layout class="QVBoxLayout" name="gs_resizeOnBoot_layout">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QCheckBox" name="gs_resizeOnBoot">
+                   <property name="text">
+                    <string>Resize game window on boot</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <layout class="QHBoxLayout" name="gs_resolution_layout">
                    <item>
-                    <widget class="QSpinBox" name="gs_width">
-                     <property name="accelerated">
-                      <bool>true</bool>
+                    <widget class="QGroupBox" name="gb_gs_width">
+                     <property name="title">
+                      <string>Width</string>
                      </property>
-                     <property name="correctionMode">
-                      <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+                     <layout class="QVBoxLayout" name="gb_gs_width_layout">
+                      <item>
+                       <widget class="QSpinBox" name="gs_width">
+                        <property name="accelerated">
+                         <bool>true</bool>
+                        </property>
+                        <property name="correctionMode">
+                         <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+                        </property>
+                        <property name="keyboardTracking">
+                         <bool>false</bool>
+                        </property>
+                        <property name="minimum">
+                         <number>0</number>
+                        </property>
+                        <property name="maximum">
+                         <number>9999</number>
+                        </property>
+                        <property name="value">
+                         <number>0</number>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QGroupBox" name="gb_gs_height">
+                     <property name="title">
+                      <string>Height</string>
                      </property>
-                     <property name="keyboardTracking">
-                      <bool>false</bool>
-                     </property>
-                     <property name="minimum">
-                      <number>0</number>
-                     </property>
-                     <property name="maximum">
-                      <number>9999</number>
-                     </property>
-                     <property name="value">
-                      <number>0</number>
-                     </property>
+                     <layout class="QVBoxLayout" name="gb_gs_height_layout">
+                      <item>
+                       <widget class="QSpinBox" name="gs_height">
+                        <property name="frame">
+                         <bool>true</bool>
+                        </property>
+                        <property name="accelerated">
+                         <bool>true</bool>
+                        </property>
+                        <property name="correctionMode">
+                         <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+                        </property>
+                        <property name="keyboardTracking">
+                         <bool>false</bool>
+                        </property>
+                        <property name="minimum">
+                         <number>0</number>
+                        </property>
+                        <property name="maximum">
+                         <number>9999</number>
+                        </property>
+                        <property name="value">
+                         <number>0</number>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
                     </widget>
                    </item>
                   </layout>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QGroupBox" name="gb_gs_height">
-                  <property name="title">
-                   <string>Height</string>
-                  </property>
-                  <layout class="QVBoxLayout" name="gb_gs_height_layout">
-                   <item>
-                    <widget class="QSpinBox" name="gs_height">
-                     <property name="frame">
-                      <bool>true</bool>
-                     </property>
-                     <property name="accelerated">
-                      <bool>true</bool>
-                     </property>
-                     <property name="correctionMode">
-                      <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
-                     </property>
-                     <property name="keyboardTracking">
-                      <bool>false</bool>
-                     </property>
-                     <property name="minimum">
-                      <number>0</number>
-                     </property>
-                     <property name="maximum">
-                      <number>9999</number>
-                     </property>
-                     <property name="value">
-                      <number>0</number>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
-               </layout>
+                 </item>
+                </layout>
+               </widget>
               </item>
              </layout>
             </widget>
@@ -3405,9 +3500,9 @@
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="accuratePUTLLUC">
+             <widget class="QCheckBox" name="accurateSpuDMA">
               <property name="text">
-               <string>Accurate PUTLLUC</string>
+               <string>Accurate SPU DMA</string>
               </property>
              </widget>
             </item>

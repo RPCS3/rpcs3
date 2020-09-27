@@ -4,6 +4,8 @@
 #include <string>
 #include <string_view>
 
+struct lv2_fs_mount_point;
+
 namespace vfs
 {
 	// Mount VFS device
@@ -21,13 +23,15 @@ namespace vfs
 	// Functions in this namespace operate on host filepaths, similar to fs::
 	namespace host
 	{
+		std::string hash_path(const std::string& path, const std::string& dev_root);
+
 		// Call fs::rename with retry on access error
-		bool rename(const std::string& from, const std::string& to, bool overwrite);
+		bool rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite);
 
 		// Delete file without deleting its contents, emulated with MoveFileEx on Windows
 		bool unlink(const std::string& path, const std::string& dev_root);
 
 		// Delete folder contents using rename, done atomically if remove_root is true
-		bool remove_all(const std::string& path, const std::string& dev_root, bool remove_root = true);
+		bool remove_all(const std::string& path, const std::string& dev_root, const lv2_fs_mount_point* mp, bool remove_root = true);
 	}
 }

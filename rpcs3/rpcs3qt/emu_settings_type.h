@@ -21,7 +21,7 @@ enum class emu_settings_type
 	MaxLLVMThreads,
 	EnableTSX,
 	AccurateGETLLAR,
-	AccuratePUTLLUC,
+	AccurateSpuDMA,
 	AccurateLLVMdfma,
 	AccurateVectorNaN,
 	AccurateRSXAccess,
@@ -127,7 +127,6 @@ enum class emu_settings_type
 	DNSAddress,
 	IpSwapList,
 	PSNStatus,
-	PSNNPID,
 
 	// System
 	Language,
@@ -136,6 +135,7 @@ enum class emu_settings_type
 	EnableHostRoot,
 	LimitCacheSize,
 	MaximumCacheSize,
+	ConsoleTimeOffset,
 
 	// Virtual File System
 	emulatorLocation,
@@ -162,7 +162,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MaxLLVMThreads,           { "Core", "Max LLVM Compile Threads"}},
 	{ emu_settings_type::EnableTSX,                { "Core", "Enable TSX"}},
 	{ emu_settings_type::AccurateGETLLAR,          { "Core", "Accurate GETLLAR"}},
-	{ emu_settings_type::AccuratePUTLLUC,          { "Core", "Accurate PUTLLUC"}},
+	{ emu_settings_type::AccurateSpuDMA,           { "Core", "Accurate SPU DMA"}},
 	{ emu_settings_type::AccurateLLVMdfma,         { "Core", "LLVM Accurate DFMA"}},
 	{ emu_settings_type::AccurateVectorNaN,        { "Core", "PPU LLVM Accurate Vector NaN values"}},
 	{ emu_settings_type::AccurateRSXAccess,        { "Core", "Accurate RSX reservation access"}},
@@ -268,7 +268,6 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DNSAddress,     { "Net", "DNS address"}},
 	{ emu_settings_type::IpSwapList,     { "Net", "IP swap list"}},
 	{ emu_settings_type::PSNStatus,      { "Net", "PSN status"}},
-	{ emu_settings_type::PSNNPID,        { "Net", "NPID"}},
 
 	// System
 	{ emu_settings_type::Language,              { "System", "Language"}},
@@ -277,6 +276,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::EnableHostRoot,        { "VFS", "Enable /host_root/"}},
 	{ emu_settings_type::LimitCacheSize,        { "VFS", "Limit disk cache size"}},
 	{ emu_settings_type::MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
+	{ emu_settings_type::ConsoleTimeOffset,     { "System", "Console time offset (s)"}},
 
 	// Virtual File System
 	{ emu_settings_type::emulatorLocation,   { "VFS", "$(EmulatorDir)"}},

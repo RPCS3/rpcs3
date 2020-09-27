@@ -242,7 +242,7 @@ error_code sys_spu_image_open(ppu_thread& ppu, vm::ptr<sys_spu_image> img, vm::c
 
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
-	auto [fs_error, ppath, file] = lv2_file::open(path.get_ptr(), 0, 0);
+	auto [fs_error, ppath, path0, file, type] = lv2_file::open(path.get_ptr(), 0, 0);
 
 	if (fs_error)
 	{
@@ -821,7 +821,7 @@ error_code sys_spu_thread_group_suspend(ppu_thread& ppu, u32 id)
 			return false;
 		}
 
-		error = CellError{CELL_CANCEL};
+		error = CellError{CELL_CANCEL + 0u};
 		return true;
 	});
 
@@ -892,7 +892,7 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 			return false;
 		}
 
-		error = CellError{CELL_CANCEL};
+		error = CellError{CELL_CANCEL + 0u};
 		return true;
 	});
 
@@ -1005,7 +1005,17 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	{
 		if (thread)
 		{
-			thread->state += cpu_flag::stop + cpu_flag::ret;
+			thread->state.fetch_op([](bs_t<cpu_flag>& flags)
+			{
+				if (flags & cpu_flag::stop)
+				{
+					// In case the thread raised the ret flag itself at some point do not raise it again
+					return false;
+				}
+
+				flags += cpu_flag::stop + cpu_flag::ret;
+				return true;
+			});
 		}
 	}
 

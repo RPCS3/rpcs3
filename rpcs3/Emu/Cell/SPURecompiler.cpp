@@ -5404,11 +5404,6 @@ public:
 
 	static u32 exec_read_events(spu_thread* _spu)
 	{
-		if (const u32 events = _spu->get_events())
-		{
-			return events;
-		}
-
 		// TODO
 		return exec_rdch(_spu, SPU_RdEventStat);
 	}
@@ -5507,7 +5502,7 @@ public:
 		}
 		case SPU_RdEventMask:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_event_mask));
+			res.value = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
 			break;
 		}
 		case SPU_RdEventStat:
@@ -5539,9 +5534,9 @@ public:
 		return _spu->get_ch_count(ch);
 	}
 
-	static u32 exec_get_events(spu_thread* _spu)
+	static u32 exec_get_events(spu_thread* _spu, u32 mask)
 	{
-		return _spu->get_events();
+		return _spu->get_events(mask).count;
 	}
 
 	llvm::Value* get_rchcnt(u32 off, u64 inv = 0)
@@ -5619,9 +5614,33 @@ public:
 		}
 		case SPU_RdEventStat:
 		{
-			res.value = call("spu_get_events", &exec_get_events, m_thread);
-			res.value = m_ir->CreateICmpNE(res.value, m_ir->getInt32(0));
-			res.value = m_ir->CreateZExt(res.value, get_type<u32>());
+			const auto mask = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
+			res.value = call("spu_get_events", &exec_get_events, m_thread, mask);
+			break;
+		}
+
+		// Channels with a constant count of 1:
+		case SPU_WrEventMask:
+		case SPU_WrEventAck:
+		case SPU_WrDec:
+		case SPU_RdDec:
+		case SPU_RdEventMask:
+		case SPU_RdMachStat:
+		case SPU_WrSRR0:
+		case SPU_RdSRR0:
+		case SPU_Set_Bkmk_Tag:
+		case SPU_PM_Start_Ev:
+		case SPU_PM_Stop_Ev:
+		case MFC_RdTagMask:
+		case MFC_LSA:
+		case MFC_EAH:
+		case MFC_EAL:
+		case MFC_Size:
+		case MFC_TagID:
+		case MFC_WrTagMask:
+		case MFC_WrListStallAck:
+		{
+			res.value = m_ir->getInt32(1);
 			break;
 		}
 
@@ -5805,14 +5824,14 @@ public:
 
 			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(trunc<u8>(val).eval(m_ir)))
 			{
+				if (g_cfg.core.spu_accurate_dma)
+				{
+					break;
+				}
+
 				if (u64 cmdh = ci->getZExtValue() & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_RESULT_MASK); !g_use_rtm)
 				{
 					// TODO: don't require TSX (current implementation is TSX-only)
-					if (cmdh == MFC_GET_CMD && g_cfg.core.spu_accurate_putlluc)
-					{
-						break;
-					}
-
 					if (cmdh == MFC_PUT_CMD || cmdh == MFC_SNDSIG_CMD)
 					{
 						break;
@@ -6109,21 +6128,14 @@ public:
 		}
 		case SPU_WrDec:
 		{
+			call("spu_get_events", &exec_get_events, m_thread, m_ir->getInt32(SPU_EVENT_TM));
 			m_ir->CreateStore(call("get_timebased_time", &get_timebased_time), spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
 			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_dec_value));
 			return;
 		}
-		case SPU_WrEventMask:
-		{
-			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_event_mask))->setVolatile(true);
-			return;
-		}
-		case SPU_WrEventAck:
-		{
-			m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::And, spu_ptr<u32>(&spu_thread::ch_event_stat), eval(~val).value, llvm::AtomicOrdering::Release);
-			return;
-		}
-		case 69:
+		case SPU_Set_Bkmk_Tag:
+		case SPU_PM_Start_Ev:
+		case SPU_PM_Stop_Ev:
 		{
 			return;
 		}
@@ -8294,7 +8306,7 @@ public:
 	{
 		_spu->set_interrupt_status(true);
 
-		if ((_spu->ch_event_mask & _spu->ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
+		if (_spu->ch_events.load().count)
 		{
 			_spu->interrupts_enabled = false;
 			_spu->srr0 = addr;
@@ -8600,7 +8612,8 @@ public:
 		if (m_block) m_block->block_end = m_ir->GetInsertBlock();
 		const auto addr = eval(extract(get_vr(op.ra), 3) & 0x3fffc);
 		set_link(op);
-		const auto res = call("spu_get_events", &exec_get_events, m_thread);
+		const auto mask = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
+		const auto res = call("spu_get_events", &exec_get_events, m_thread, mask);
 		const auto target = add_block_indirect(op, addr);
 		m_ir->CreateCondBr(m_ir->CreateICmpNE(res, m_ir->getInt32(0)), target, add_block_next());
 	}

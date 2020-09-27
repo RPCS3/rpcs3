@@ -276,6 +276,7 @@ namespace vk
 
 	struct gpu_shader_types_support
 	{
+		bool allow_float64;
 		bool allow_float16;
 		bool allow_int8;
 	};
@@ -634,9 +635,10 @@ namespace vk
 		std::unordered_map<VkFormat, VkFormatProperties> format_properties;
 		gpu_shader_types_support shader_types_support{};
 		VkPhysicalDeviceDriverPropertiesKHR driver_properties{};
+
 		bool stencil_export_support = false;
 		bool conditional_render_support = false;
-		bool host_query_reset_support = false;
+		bool unrestricted_depth_range_support = false;
 
 		friend class render_device;
 private:
@@ -680,6 +682,7 @@ private:
 				verify("vkGetInstanceProcAddress failed to find entry point!" HERE), getPhysicalDeviceFeatures2KHR;
 				getPhysicalDeviceFeatures2KHR(dev, &features2);
 
+				shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
 				shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
 				shader_types_support.allow_int8 = !!shader_support_info.shaderInt8;
 				features = features2.features;
@@ -687,7 +690,7 @@ private:
 
 			stencil_export_support = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 			conditional_render_support = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
-			host_query_reset_support = device_extensions.is_supported(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
+			unrestricted_depth_range_support = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 		}
 
 	public:
@@ -863,7 +866,6 @@ private:
 		// Exported device endpoints
 		PFN_vkCmdBeginConditionalRenderingEXT cmdBeginConditionalRenderingEXT = nullptr;
 		PFN_vkCmdEndConditionalRenderingEXT cmdEndConditionalRenderingEXT = nullptr;
-		PFN_vkResetQueryPoolEXT resetQueryPoolEXT = nullptr;
 
 	public:
 		render_device() = default;
@@ -903,9 +905,9 @@ private:
 				requested_extensions.push_back(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
 			}
 
-			if (pgpu->host_query_reset_support)
+			if (pgpu->unrestricted_depth_range_support)
 			{
-				requested_extensions.push_back(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
+				requested_extensions.push_back(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 			}
 
 			enabled_features.robustBufferAccess = VK_TRUE;
@@ -916,6 +918,7 @@ private:
 			enabled_features.depthBounds = VK_TRUE;
 			enabled_features.wideLines = VK_TRUE;
 			enabled_features.largePoints = VK_TRUE;
+			enabled_features.shaderFloat64 = VK_TRUE;
 
 			if (g_cfg.video.antialiasing_level != msaa_level::none)
 			{
@@ -944,6 +947,12 @@ private:
 			enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
 			// Optionally disable unsupported stuff
+			if (!pgpu->features.shaderFloat64)
+			{
+				rsx_log.error("Your GPU does not support double precision floats in shaders. Graphics may not work correctly.");
+				enabled_features.shaderFloat64 = VK_FALSE;
+			}
+
 			if (!pgpu->features.depthBounds)
 			{
 				rsx_log.error("Your GPU does not support depth bounds testing. Graphics may not work correctly.");
@@ -996,11 +1005,6 @@ private:
 			{
 				cmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT"));
 				cmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
-			}
-
-			if (pgpu->host_query_reset_support)
-			{
-				resetQueryPoolEXT = reinterpret_cast<PFN_vkResetQueryPoolEXT>(vkGetDeviceProcAddr(dev, "vkResetQueryPoolEXT"));
 			}
 
 			memory_map = vk::get_memory_mapping(pdev);
@@ -1113,9 +1117,9 @@ private:
 			return pgpu->conditional_render_support;
 		}
 
-		bool get_host_query_reset_support() const
+		bool get_unrestricted_depth_range_support() const
 		{
-			return pgpu->host_query_reset_support;
+			return pgpu->unrestricted_depth_range_support;
 		}
 
 		mem_allocator_base* get_allocator() const
@@ -2851,7 +2855,10 @@ public:
 
 			CHECK_RESULT(createDebugReportCallback(m_instance, &dbgCreateInfo, NULL, &m_debugger));
 		}
-
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast"
+#endif
 		bool createInstance(const char *app_name, bool fast = false)
 		{
 			//Initialize a vulkan instance
@@ -2934,7 +2941,9 @@ public:
 
 			return true;
 		}
-
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 		void makeCurrentInstance()
 		{
 			// Register some global states

@@ -42,8 +42,8 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_loop_detection{ this, "SPU loop detection", true, true }; // Try to detect wait loops and trigger thread yield
 		cfg::_int<0, 6> max_spurs_threads{ this, "Max SPURS Threads", 6 }; // HACK. If less then 6, max number of running SPURS threads in each thread group.
 		cfg::_enum<spu_block_size_type> spu_block_size{ this, "SPU Block Size", spu_block_size_type::safe };
-		cfg::_bool spu_accurate_getllar{ this, "Accurate GETLLAR", false };
-		cfg::_bool spu_accurate_putlluc{ this, "Accurate PUTLLUC", false };
+		cfg::_bool spu_accurate_getllar{ this, "Accurate GETLLAR", false, true };
+		cfg::_bool spu_accurate_dma{ this, "Accurate SPU DMA", false };
 		cfg::_bool rsx_accurate_res_access{this, "Accurate RSX reservation access", false, true};
 		cfg::_bool spu_verification{ this, "SPU Verification", true }; // Should be enabled
 		cfg::_bool spu_cache{ this, "SPU Cache", true };
@@ -249,6 +249,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<CellSysutilLang> language{ this, "Language", CellSysutilLang{1} }; // CELL_SYSUTIL_LANG_ENGLISH_US
 		cfg::_enum<CellKbMappingType> keyboard_type{ this, "Keyboard Type", CellKbMappingType{0} }; // CELL_KB_MAPPING_101 = US
 		cfg::_enum<enter_button_assign> enter_button_assignment{ this, "Enter button assignment", enter_button_assign::cross };
+		cfg::_int<-60*60*24*365*100LL, 60*60*24*365*100LL> console_time_offset{ this, "Console time offset (s)", 0 }; // console time offset, limited to +/-100years
 
 	} sys{ this };
 
@@ -262,7 +263,6 @@ struct cfg_root : cfg::node
 		cfg::string swap_list{this, "IP swap list", ""};
 
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
-		cfg::string psn_npid{this, "NPID", ""};
 	} net{this};
 
 	struct node_misc : cfg::node

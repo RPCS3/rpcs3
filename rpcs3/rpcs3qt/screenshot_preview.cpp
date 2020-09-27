@@ -18,7 +18,7 @@ screenshot_preview::screenshot_preview(const QString& filepath, QWidget* parent)
 
 	m_image = reader.read();
 
-	setWindowTitle(tr("Screenshot Preview"));
+	setWindowTitle(tr("Screenshot Viewer"));
 	setObjectName("screenshot_preview");
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);

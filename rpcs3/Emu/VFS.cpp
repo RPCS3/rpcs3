@@ -3,12 +3,16 @@
 #include "System.h"
 #include "VFS.h"
 
+#include "Cell/lv2/sys_fs.h"
+
 #include "Utilities/mutex.h"
 #include "Utilities/StrUtil.h"
 
 #ifdef _WIN32
 #include <Windows.h>
 #endif
+
+#include <thread>
 
 struct vfs_directory
 {
@@ -320,7 +324,7 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 		case "COM"_u32:
 		case "LPT"_u32:
 		{
-			if (name.size() >= 4 && name[3] >= '1' && name[4] <= '9')
+			if (name.size() >= 4 && name[3] >= '1' && name[3] <= '9')
 			{
 				if (name.size() == 4 || name[4] == '.')
 				{
@@ -701,18 +705,76 @@ std::string vfs::unescape(std::string_view name)
 	return result;
 }
 
-bool vfs::host::rename(const std::string& from, const std::string& to, bool overwrite)
+std::string vfs::host::hash_path(const std::string& path, const std::string& dev_root)
 {
-	while (!fs::rename(from, to, overwrite))
+	return fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
+}
+
+bool vfs::host::rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite)
+{
+	// Lock mount point, close file descriptors, retry 
+	const auto from0 = std::string_view(from).substr(0, from.find_last_not_of(fs::delim) + 1);
+	const auto escaped_from = fs::escape_path(from);
+
+	// Lock app_home as well because it could be in the same drive as current mount point (TODO)
+	std::scoped_lock lock(mp->mutex, g_mp_sys_app_home.mutex);
+
+	auto check_path = [&](std::string_view path)
 	{
-		// Try to ignore access error in order to prevent spurious failure
+		return path.starts_with(from) && (path.size() == from.size() || path[from.size()] == fs::delim[0] || path[from.size()] == fs::delim[1]);
+	};
+
+	idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
+	{
+		if (check_path(fs::escape_path(file.real_path)))
+		{
+			verify(HERE), file.mp == mp || file.mp == &g_mp_sys_app_home;
+			file.restore_data.seek_pos = file.file.pos();
+			file.file.close(); // Actually close it!
+		}
+	});
+
+	bool res = false;
+
+	for (;; std::this_thread::yield())
+	{
+		if (fs::rename(from, to, overwrite))
+		{
+			res = true;
+			break;
+		}
+
 		if (Emu.IsStopped() || fs::g_tls_error != fs::error::acces)
 		{
-			return false;
+			res = false;
+			break;
 		}
 	}
 
-	return true;
+	const auto fs_error = fs::g_tls_error;
+
+	idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
+	{
+		const auto escaped_real = fs::escape_path(file.real_path);
+
+		if (check_path(escaped_real))
+		{
+			// Update internal path
+			if (res)
+			{
+				file.real_path = to + (escaped_real != escaped_from ? '/' + file.real_path.substr(from0.size()) : ""s);
+			}
+
+			// Reopen with ignored TRUNC, APPEND, CREATE and EXCL flags
+			auto res0 = lv2_file::open_raw(file.real_path, file.flags & CELL_FS_O_ACCMODE, file.mode, file.type, file.mp);
+			file.file = std::move(res0.file);
+			verify(HERE), file.file.operator bool();
+			file.file.seek(file.restore_data.seek_pos);
+		}
+	});
+
+	fs::g_tls_error = fs_error;
+	return res;
 }
 
 bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
@@ -725,7 +787,7 @@ bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 	else
 	{
 		// Rename to special dummy name which will be ignored by VFS (but opened file handles can still read or write it)
-		const std::string dummy = fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
+		const std::string dummy = hash_path(path, dev_root);
 
 		if (!fs::rename(path, dummy, true))
 		{
@@ -749,20 +811,20 @@ bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 #endif
 }
 
-bool vfs::host::remove_all(const std::string& path, const std::string& dev_root, bool remove_root)
+bool vfs::host::remove_all(const std::string& path, const std::string& dev_root, const lv2_fs_mount_point* mp, bool remove_root)
 {
 #ifdef _WIN32
 	if (remove_root)
 	{
 		// Rename to special dummy folder which will be ignored by VFS (but opened file handles can still read or write it)
-		const std::string dummy = fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
+		const std::string dummy = hash_path(path, dev_root);
 
-		if (!vfs::host::rename(path, dummy, false))
+		if (!vfs::host::rename(path, dummy, mp, false))
 		{
 			return false;
 		}
 
-		if (!vfs::host::remove_all(dummy, dev_root, false))
+		if (!vfs::host::remove_all(dummy, dev_root, mp, false))
 		{
 			return false;
 		}
@@ -797,7 +859,7 @@ bool vfs::host::remove_all(const std::string& path, const std::string& dev_root,
 			}
 			else
 			{
-				if (!vfs::host::remove_all(path + '/' + entry.name, dev_root))
+				if (!vfs::host::remove_all(path + '/' + entry.name, dev_root, mp))
 				{
 					return false;
 				}

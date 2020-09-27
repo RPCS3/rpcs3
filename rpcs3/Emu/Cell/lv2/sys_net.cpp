@@ -25,6 +25,9 @@
 
 #include "Emu/NP/np_handler.h"
 
+#include <limits>
+#include <chrono>
+
 LOG_CHANNEL(sys_net);
 
 template<>
@@ -248,11 +251,604 @@ static void network_clear_queue(ppu_thread& ppu)
 	});
 }
 
+// Object in charge of retransmiting packets for STREAM_P2P sockets
+class tcp_timeout_monitor : public need_wakeup
+{
+public:
+	void add_message(s32 sock_id, const sockaddr_in *dst, std::vector<u8> data, u64 seq)
+	{
+		{
+			std::lock_guard lock(data_mutex);
+
+			const auto now = std::chrono::system_clock::now();
+
+			message msg;
+			msg.dst_addr = *dst;
+			msg.sock_id = sock_id;
+			msg.data = std::move(data);
+			msg.seq = seq;
+			msg.initial_sendtime = now;
+
+			rtt_info rtt = rtts[sock_id];
+
+			const auto expected_time = now + rtt.rtt_time;
+
+			msgs.insert(std::make_pair(expected_time, std::move(msg)));
+		}
+		wakey.notify_one(); // TODO: Should be improved to only wake if new timeout < old timeout
+	}
+
+	void confirm_data_received(s32 sock_id, u64 ack)
+	{
+		std::lock_guard lock(data_mutex);
+		rtts[sock_id].num_retries = 0;
+		// TODO: reduce RTT?
+		for (auto it = msgs.begin(); it != msgs.end();)
+		{
+			auto& msg = it->second;
+			if (msg.sock_id == sock_id && msg.seq < ack)
+			{
+				it = msgs.erase(it);
+				continue;
+			}
+			it++;
+		}
+	}
+
+	void operator()()
+	{
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			std::unique_lock<std::mutex> lock(data_mutex);
+			if (msgs.size())
+				wakey.wait_until(lock, msgs.begin()->first);
+			else
+				wakey.wait(lock);
+
+			if (thread_ctrl::state() == thread_state::aborting)
+				return;
+
+			const auto now = std::chrono::system_clock::now();
+			// Check for messages that haven't been acked
+			std::set<s32> rtt_increased;
+			for (auto it = msgs.begin(); it != msgs.end();)
+			{
+				if (it->first > now)
+					break;
+
+				// reply is late, increases rtt
+				auto& msg       = it->second;
+				const auto addr = msg.dst_addr.sin_addr.s_addr;
+				rtt_info rtt    = rtts[msg.sock_id];
+				// Only increases rtt once per loop(in case a big number of packets are sent at once)
+				if (!rtt_increased.count(msg.sock_id))
+				{
+					rtt.num_retries += 1;
+					// Increases current rtt by 10%
+					rtt.rtt_time += (rtt.rtt_time / 10);
+					rtts[addr] = rtt;
+
+					rtt_increased.emplace(msg.sock_id);
+				}
+
+				if (rtt.num_retries >= 10)
+				{
+					// Too many retries, need to notify the socket that the connection is dead
+					idm::check<lv2_socket>(msg.sock_id, [&](lv2_socket& sock)
+					{
+						sock.p2ps.status = lv2_socket::p2ps_i::stream_status::stream_closed;
+					});
+					it = msgs.erase(it);
+					continue;
+				}
+
+				// resend the message
+				const auto res = idm::check<lv2_socket>(msg.sock_id, [&](lv2_socket& sock) -> bool
+				{
+					if (sendto(sock.socket, reinterpret_cast<char*>(msg.data.data()), msg.data.size(), 0, reinterpret_cast<const sockaddr*>(&msg.dst_addr), sizeof(msg.dst_addr)) == -1)
+					{
+						sock.p2ps.status = lv2_socket::p2ps_i::stream_status::stream_closed;
+						return false;
+					}
+					return true;
+				});
+
+				if (!res || !res.ret)
+				{
+					it = msgs.erase(it);
+					continue;
+				}
+
+				// Update key timeout
+				msgs.insert(std::make_pair(now + rtt.rtt_time, std::move(msg)));
+				it = msgs.erase(it);
+			}
+		}
+	}
+
+	void wake_up()
+	{
+		wakey.notify_one();
+	}
+
+	public:
+		static constexpr auto thread_name = "Tcp Over Udp Timeout Manager Thread"sv;
+
+	private:
+		std::condition_variable wakey;
+		std::mutex data_mutex;
+		// List of outgoing messages
+		struct message
+		{
+			s32 sock_id;
+			::sockaddr_in dst_addr;
+			std::vector<u8> data;
+			u64 seq;
+			std::chrono::time_point<std::chrono::system_clock> initial_sendtime;
+		};
+		std::map<std::chrono::time_point<std::chrono::system_clock>, message> msgs; // (wakeup time, msg)
+		// List of rtts
+		struct rtt_info
+		{
+			unsigned long num_retries          = 0;
+			std::chrono::milliseconds rtt_time = 50ms;
+		};
+		std::unordered_map<s32, rtt_info> rtts; // (sock_id, rtt)
+	};
+
+struct nt_p2p_port
+{
+	// Real socket where P2P packets are received/sent
+	lv2_socket::socket_type p2p_socket = 0;
+	u16 port;
+
+	shared_mutex bound_p2p_vports_mutex;
+	// For DGRAM_P2P sockets(vport, sock_id)
+	std::map<u16, s32> bound_p2p_vports{};
+	// For STREAM_P2P sockets(key, sock_id)
+	// key is ( (src_vport) << 48 | (dst_vport) << 32 | addr ) with src_vport and addr being 0 for listening sockets
+	std::map<u64, s32> bound_p2p_streams{};
+
+	// Queued messages from RPCN
+	shared_mutex s_rpcn_mutex;
+	std::vector<std::vector<u8>> rpcn_msgs{};
+	// Queued signaling messages
+	shared_mutex s_sign_mutex;
+	std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> sign_msgs{};
+
+	std::array<u8, 65535> p2p_recv_data{};
+
+	nt_p2p_port(u16 port) : port(port)
+	{
+		// Creates and bind P2P Socket
+		p2p_socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+
+		if (p2p_socket == -1)
+			sys_net.fatal("Failed to create DGRAM socket for P2P socket!");
+
+#ifdef _WIN32
+		u_long _true = 1;
+		::ioctlsocket(p2p_socket, FIONBIO, &_true);
+#else
+		::fcntl(p2p_socket, F_SETFL, ::fcntl(p2p_socket, F_GETFL, 0) | O_NONBLOCK);
+#endif
+
+		u32 optval = 131072;
+		if (setsockopt(p2p_socket, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<const char*>(&optval), sizeof(optval)) != 0)
+			sys_net.fatal("Error setsockopt SO_RCVBUF on P2P socket");
+
+		::sockaddr_in p2p_saddr{};
+		p2p_saddr.sin_family      = AF_INET;
+		p2p_saddr.sin_port        = std::bit_cast<u16, be_t<u16>>(port); // htons(port);
+		p2p_saddr.sin_addr.s_addr = 0; // binds to 0.0.0.0
+		const auto ret_bind       = ::bind(p2p_socket, reinterpret_cast<sockaddr*>(&p2p_saddr), sizeof(p2p_saddr));
+
+		if (ret_bind == -1)
+			sys_net.fatal("Failed to bind DGRAM socket to %d for P2P!", port);
+
+		sys_net.notice("P2P port %d was bound!", port);
+	}
+
+	~nt_p2p_port()
+	{
+		if (p2p_socket)
+		{
+#ifdef _WIN32
+			::closesocket(p2p_socket);
+#else
+			::close(p2p_socket);
+#endif
+		}
+	}
+
+	static u16 tcp_checksum(const u16* buffer, std::size_t size)
+	{
+		u32 cksum = 0;
+		while (size > 1)
+		{
+			cksum += *buffer++;
+			size -= sizeof(u16);
+		}
+		if (size)
+			cksum += *reinterpret_cast<const u8 *>(buffer);
+
+		cksum = (cksum >> 16) + (cksum & 0xffff);
+		cksum += (cksum >> 16);
+		return static_cast<u16>(~cksum);
+	}
+
+	static std::vector<u8> generate_u2s_packet(const lv2_socket::p2ps_i::encapsulated_tcp& header, const u8 *data, const u32 datasize)
+	{
+		const u32 packet_size = (sizeof(u16) + sizeof(lv2_socket::p2ps_i::encapsulated_tcp) + datasize);
+		ASSERT(packet_size < 65535); // packet size shouldn't be bigger than possible UDP payload
+		std::vector<u8> packet(packet_size);
+		u8 *packet_data = packet.data();
+
+		*reinterpret_cast<le_t<u16> *>(packet_data) = header.dst_port;
+		memcpy(packet_data+sizeof(u16), &header, sizeof(lv2_socket::p2ps_i::encapsulated_tcp));
+		if(datasize)
+			memcpy(packet_data+sizeof(u16)+sizeof(lv2_socket::p2ps_i::encapsulated_tcp), data, datasize);
+		
+		auto* hdr_ptr = reinterpret_cast<lv2_socket::p2ps_i::encapsulated_tcp *>(packet_data+sizeof(u16));
+		hdr_ptr->checksum = 0;
+		hdr_ptr->checksum = tcp_checksum(reinterpret_cast<u16 *>(hdr_ptr), sizeof(lv2_socket::p2ps_i::encapsulated_tcp) + datasize);
+
+		return packet;
+	}
+
+	static void send_u2s_packet(lv2_socket &sock, s32 sock_id, std::vector<u8> data, const ::sockaddr_in* dst, u32 seq = 0, bool require_ack = true)
+	{
+		sys_net.trace("Sending U2S packet on socket %d(id:%d): data(%d, seq %d, require_ack %d) to %s:%d", sock.socket, sock_id, data.size(), seq, require_ack, inet_ntoa(dst->sin_addr), std::bit_cast<u16, be_t<u16>>(dst->sin_port));
+		if (sendto(sock.socket, reinterpret_cast<char *>(data.data()), data.size(), 0, reinterpret_cast<const sockaddr*>(dst), sizeof(sockaddr_in)) == -1)
+		{
+			sys_net.error("Attempting to send a u2s packet failed(%s), closing socket!", get_last_error(false));
+			sock.p2ps.status = lv2_socket::p2ps_i::stream_status::stream_closed;
+			return;
+		}
+
+		// Adds to tcp timeout monitor to resend the message until an ack is received
+		if (require_ack)
+		{
+			auto tcpm = g_fxo->get<named_thread<tcp_timeout_monitor>>();
+			tcpm->add_message(sock_id, dst, std::move(data), seq);
+		}
+	}
+
+	void dump_packet(lv2_socket::p2ps_i::encapsulated_tcp* tcph)
+	{
+		const std::string result = fmt::format("src_port: %d\ndst_port: %d\nflags: %d\nseq: %d\nack: %d\nlen: %d", tcph->src_port, tcph->dst_port, tcph->flags, tcph->seq, tcph->ack, tcph->length);
+		sys_net.trace("PACKET DUMP:\n%s", result);
+	}
+
+	bool handle_connected(s32 sock_id, lv2_socket::p2ps_i::encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr)
+	{
+		const auto sock = idm::check<lv2_socket>(sock_id, [&](lv2_socket& sock) -> bool
+		{
+			std::lock_guard lock(sock.mutex);
+
+			if (sock.p2ps.status != lv2_socket::p2ps_i::stream_status::stream_connected && sock.p2ps.status != lv2_socket::p2ps_i::stream_status::stream_handshaking)
+				return false;
+			
+			dump_packet(tcp_header);
+
+			if (tcp_header->flags == lv2_socket::p2ps_i::ACK)
+			{
+				auto tcpm = g_fxo->get<named_thread<tcp_timeout_monitor>>();
+				tcpm->confirm_data_received(sock_id, tcp_header->ack);
+			}
+
+			auto send_ack = [&]()
+			{
+				auto final_ack = sock.p2ps.data_beg_seq;
+				while (sock.p2ps.received_data.count(final_ack))
+				{
+					final_ack += sock.p2ps.received_data.at(final_ack).size();
+				}
+				sock.p2ps.data_available = final_ack - sock.p2ps.data_beg_seq;
+
+				lv2_socket::p2ps_i::encapsulated_tcp send_hdr;
+				send_hdr.src_port = tcp_header->dst_port;
+				send_hdr.dst_port = tcp_header->src_port;
+				send_hdr.flags    = lv2_socket::p2ps_i::ACK;
+				send_hdr.ack      = final_ack;
+				auto packet       = generate_u2s_packet(send_hdr, nullptr, 0);
+				sys_net.trace("Sent ack %d", final_ack);
+				send_u2s_packet(sock, sock_id, std::move(packet), reinterpret_cast<::sockaddr_in*>(op_addr), 0, false);
+			};
+
+			if (sock.p2ps.status == lv2_socket::p2ps_i::stream_status::stream_handshaking)
+			{
+				// Only expect SYN|ACK
+				if (tcp_header->flags == (lv2_socket::p2ps_i::SYN | lv2_socket::p2ps_i::ACK))
+				{
+					sys_net.trace("Received SYN|ACK, status is now connected");
+					sock.p2ps.data_beg_seq = tcp_header->seq + 1;
+					sock.p2ps.status       = lv2_socket::p2ps_i::stream_status::stream_connected;
+					send_ack();
+				}
+
+				return true;
+			}
+			else if (sock.p2ps.status == lv2_socket::p2ps_i::stream_status::stream_connected)
+			{
+				if (tcp_header->seq < sock.p2ps.data_beg_seq)
+				{
+					// Data has already been processed
+					sys_net.trace("Data has already been processed");
+					if (tcp_header->flags != lv2_socket::p2ps_i::ACK && tcp_header->flags != lv2_socket::p2ps_i::RST)
+						send_ack();
+					return true;
+				}
+
+				switch (tcp_header->flags)
+				{
+				case lv2_socket::p2ps_i::PSH:
+				case 0:
+				{
+					if (!sock.p2ps.received_data.count(tcp_header->seq))
+					{
+						// New data
+						sock.p2ps.received_data.emplace(tcp_header->seq, std::vector<u8>(data, data + tcp_header->length));
+					}
+					else
+					{
+						sys_net.trace("Data was not new!");
+					}
+
+					send_ack();
+					return true;
+				}
+				case lv2_socket::p2ps_i::RST:
+				case lv2_socket::p2ps_i::FIN:
+				{
+					sock.p2ps.status = lv2_socket::p2ps_i::stream_status::stream_closed;
+					return false;
+				}
+				default:
+				{
+					sys_net.error("Unknown U2S TCP flag received");
+					return true;
+				}
+				}
+			}
+
+			return true;
+		});
+
+		if (!sock || !sock.ret)
+			return false;
+		
+		return true;
+	}
+
+	bool handle_listening(s32 sock_id, lv2_socket::p2ps_i::encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr)
+	{
+		auto sock = idm::get<lv2_socket>(sock_id);
+		if (!sock)
+			return false;
+
+		std::lock_guard lock(sock->mutex);
+
+		if (sock->p2ps.status != lv2_socket::p2ps_i::stream_status::stream_listening)
+			return false;
+
+		// Only valid packet
+		if (tcp_header->flags == lv2_socket::p2ps_i::SYN && sock->p2ps.backlog.size() < sock->p2ps.max_backlog)
+		{
+			// Yes, new connection and a backlog is available, create a new lv2_socket for it and send SYN|ACK
+			// Prepare reply packet
+			sys_net.notice("Received connection on listening STREAM-P2P socket!");
+			lv2_socket::p2ps_i::encapsulated_tcp send_hdr;
+			send_hdr.src_port = tcp_header->dst_port;
+			send_hdr.dst_port = tcp_header->src_port;
+			send_hdr.flags    = lv2_socket::p2ps_i::SYN | lv2_socket::p2ps_i::ACK;
+			send_hdr.ack      = tcp_header->seq + 1;
+			// Generates random starting SEQ
+			send_hdr.seq      = rand();
+
+			// Create new socket
+			auto sock_lv2               = std::make_shared<lv2_socket>(0, SYS_NET_SOCK_STREAM_P2P, SYS_NET_AF_INET);
+			sock_lv2->socket            = sock->socket;
+			sock_lv2->p2p.port          = sock->p2p.port;
+			sock_lv2->p2p.vport         = sock->p2p.vport;
+			sock_lv2->p2ps.op_addr      = reinterpret_cast<struct sockaddr_in*>(op_addr)->sin_addr.s_addr;
+			sock_lv2->p2ps.op_port      = std::bit_cast<u16, be_t<u16>>((reinterpret_cast<struct sockaddr_in*>(op_addr)->sin_port));
+			sock_lv2->p2ps.op_vport     = tcp_header->src_port;
+			sock_lv2->p2ps.cur_seq      = send_hdr.seq + 1;
+			sock_lv2->p2ps.data_beg_seq = send_hdr.ack;
+			sock_lv2->p2ps.status       = lv2_socket::p2ps_i::stream_status::stream_connected;
+			const s32 new_sock_id       = idm::import_existing<lv2_socket>(sock_lv2);
+			const u64 key_connected     = (reinterpret_cast<struct sockaddr_in*>(op_addr)->sin_addr.s_addr) | (static_cast<u64>(tcp_header->src_port) << 48) | (static_cast<u64>(tcp_header->dst_port) << 32);
+			bound_p2p_streams.emplace(key_connected, new_sock_id);
+
+			auto packet = generate_u2s_packet(send_hdr, nullptr, 0);
+			{
+				std::lock_guard lock(sock_lv2->mutex);
+				send_u2s_packet(*sock_lv2, new_sock_id, std::move(packet), reinterpret_cast<::sockaddr_in*>(op_addr), send_hdr.seq);
+			}
+
+			sock->p2ps.backlog.push(new_sock_id);
+		}
+		else if (tcp_header->flags == lv2_socket::p2ps_i::SYN)
+		{
+			// Send a RST packet on backlog full
+			sys_net.trace("Backlog was full, sent a RST packet");
+			lv2_socket::p2ps_i::encapsulated_tcp send_hdr;
+			send_hdr.src_port = tcp_header->dst_port;
+			send_hdr.dst_port = tcp_header->src_port;
+			send_hdr.flags    = lv2_socket::p2ps_i::RST;
+			auto packet       = generate_u2s_packet(send_hdr, nullptr, 0);
+			send_u2s_packet(*sock, sock_id, std::move(packet), reinterpret_cast<::sockaddr_in*>(op_addr), 0, false);
+		}
+
+		// Ignore other packets?
+
+		return true;
+	}
+
+	bool recv_data()
+	{
+		::sockaddr_storage native_addr;
+		::socklen_t native_addrlen = sizeof(native_addr);
+		const auto recv_res        = ::recvfrom(p2p_socket, reinterpret_cast<char*>(p2p_recv_data.data()), p2p_recv_data.size(), 0, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
+
+		if (recv_res == -1)
+		{
+			auto lerr = get_last_error(false);
+			if (lerr != SYS_NET_EINPROGRESS && lerr != SYS_NET_EWOULDBLOCK)
+				sys_net.error("Error recvfrom on P2P socket: %d", lerr);
+
+			return false;
+		}
+
+		if (recv_res < static_cast<s32>(sizeof(u16)))
+		{
+			sys_net.error("Received badly formed packet on P2P port(no vport)!");
+			return true;
+		}
+
+		u16 dst_vport = reinterpret_cast<le_t<u16>&>(p2p_recv_data[0]);
+
+		if (dst_vport == 0) // Reserved for messages from RPCN server
+		{
+			std::vector<u8> rpcn_msg(recv_res - sizeof(u16));
+			memcpy(rpcn_msg.data(), p2p_recv_data.data() + sizeof(u16), recv_res - sizeof(u16));
+
+			std::lock_guard lock(s_rpcn_mutex);
+			rpcn_msgs.push_back(std::move(rpcn_msg));
+			return true;
+		}
+
+		if (dst_vport == 65535) // Reserved for signaling
+		{
+			std::vector<u8> sign_msg(recv_res - sizeof(u16));
+			memcpy(sign_msg.data(), p2p_recv_data.data() + sizeof(u16), recv_res - sizeof(u16));
+
+			std::pair<std::pair<u32, u16>, std::vector<u8>> msg;
+			msg.first.first = reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr;
+			msg.first.second = std::bit_cast<u16, be_t<u16>>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+			msg.second = std::move(sign_msg);
+
+			{
+				std::lock_guard lock(s_sign_mutex);
+				sign_msgs.push_back(std::move(msg));
+			}
+
+			const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
+			sigh->wake_up();
+
+			return true;
+		}
+
+		{
+			std::lock_guard lock(bound_p2p_vports_mutex);
+			if (bound_p2p_vports.count(dst_vport))
+			{
+				sys_net_sockaddr_in_p2p p2p_addr{};
+
+				p2p_addr.sin_len    = sizeof(sys_net_sockaddr_in);
+				p2p_addr.sin_family = SYS_NET_AF_INET;
+				p2p_addr.sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
+				p2p_addr.sin_vport  = dst_vport; // That is weird stuff
+				p2p_addr.sin_port = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+
+				std::vector<u8> p2p_data(recv_res - sizeof(u16));
+				memcpy(p2p_data.data(), p2p_recv_data.data() + sizeof(u16), recv_res - sizeof(u16));
+
+				const auto sock = idm::check<lv2_socket>(bound_p2p_vports.at(dst_vport), [&](lv2_socket& sock)
+				{
+					std::lock_guard lock(sock.mutex);
+					ASSERT(sock.type == SYS_NET_SOCK_DGRAM_P2P);
+
+					sock.p2p.data.push(std::make_pair(std::move(p2p_addr), std::move(p2p_data)));
+					sys_net.trace("Received a P2P packet for vport %d and saved it", dst_vport);
+				});
+
+				// Should not happen in theory
+				if (!sock)
+					bound_p2p_vports.erase(dst_vport);
+
+				return true;
+			}
+		}
+
+		// Not directed at a bound DGRAM_P2P vport so check if the packet is a STREAM-P2P packet
+
+		const auto sp_size = recv_res - sizeof(u16);
+		u8 *sp_data = p2p_recv_data.data() + sizeof(u16);
+
+		if (sp_size < sizeof(lv2_socket::p2ps_i::encapsulated_tcp))
+		{
+			sys_net.trace("Received P2P packet targeted at unbound vport(likely) or invalid");
+			return true;
+		}
+
+		auto* tcp_header = reinterpret_cast<lv2_socket::p2ps_i::encapsulated_tcp*>(sp_data);
+		
+		// Validate signature & length
+		if (tcp_header->signature != lv2_socket::p2ps_i::U2S_sig)
+		{
+			sys_net.trace("Received P2P packet targeted at unbound vport");
+			return true;
+		}
+
+		if (tcp_header->length != (sp_size - sizeof(lv2_socket::p2ps_i::encapsulated_tcp)))
+		{
+			sys_net.error("Received STREAM-P2P packet tcp length didn't match packet length");
+			return true;
+		}
+
+		// Sanity check
+		if (tcp_header->dst_port != dst_vport)
+		{
+			sys_net.error("Received STREAM-P2P packet with dst_port != vport");
+			return true;
+		}
+
+		// Validate checksum
+		u16 given_checksum   = tcp_header->checksum;
+		tcp_header->checksum = 0;
+		if (given_checksum != nt_p2p_port::tcp_checksum(reinterpret_cast<const u16*>(sp_data), sp_size))
+		{
+			sys_net.error("Checksum is invalid, dropping packet!");
+			return true;
+		}
+
+		// The packet is valid, check if it's bound
+		const u64 key_connected = (reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr) | (static_cast<u64>(tcp_header->src_port) << 48) | (static_cast<u64>(tcp_header->dst_port) << 32);
+		const u64 key_listening = (static_cast<u64>(tcp_header->dst_port) << 32);
+
+		{
+			std::lock_guard lock(bound_p2p_vports_mutex);
+			if (bound_p2p_streams.count(key_connected))
+			{
+				const auto sock_id = bound_p2p_streams.at(key_connected);
+				sys_net.trace("Received packet for connected STREAM-P2P socket(s=%d)", sock_id);
+				handle_connected(sock_id, tcp_header, sp_data + sizeof(lv2_socket::p2ps_i::encapsulated_tcp), &native_addr);
+				return true;
+			}
+
+			if(bound_p2p_streams.count(key_listening))
+			{
+				const auto sock_id = bound_p2p_streams.at(key_listening);
+				sys_net.trace("Received packet for listening STREAM-P2P socket(s=%d)", sock_id);
+				handle_listening(sock_id, tcp_header, sp_data + sizeof(lv2_socket::p2ps_i::encapsulated_tcp), &native_addr);
+				return true;
+			}
+		}
+
+		sys_net.trace("Received a STREAM-P2P packet with no bound target");
+		return true;
+	}
+};
+
 struct network_thread
 {
 	std::vector<ppu_thread*> s_to_awake;
-
 	shared_mutex s_nw_mutex;
+
+	shared_mutex list_p2p_ports_mutex;
+	std::map<u16, nt_p2p_port> list_p2p_ports{};	
 
 	static constexpr auto thread_name = "Network Thread";
 
@@ -262,6 +858,8 @@ struct network_thread
 		WSADATA wsa_data;
 		WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #endif
+		if (g_cfg.net.psn_status == np_psn_status::rpcn)
+			list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(3658), std::forward_as_tuple(3658));
 	}
 
 	~network_thread()
@@ -284,6 +882,8 @@ struct network_thread
 		bool was_connecting[lv2_socket::id_count]{};
 #endif
 
+		::pollfd p2p_fd[lv2_socket::id_count]{};
+
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			// Wait with 1ms timeout
@@ -292,6 +892,45 @@ struct network_thread
 #else
 			::poll(fds, socklist.size(), 1);
 #endif
+
+			// Check P2P sockets for incoming packets(timeout could probably be set at 0)
+			{
+				std::lock_guard lock(list_p2p_ports_mutex);
+				std::memset(p2p_fd, 0, sizeof(p2p_fd));
+				auto num_p2p_sockets = 0;
+				for (const auto& p2p_port : list_p2p_ports)
+				{
+					p2p_fd[num_p2p_sockets].events  = POLLIN;
+					p2p_fd[num_p2p_sockets].revents = 0;
+					p2p_fd[num_p2p_sockets].fd      = p2p_port.second.p2p_socket;
+					num_p2p_sockets++;
+				}
+
+				if (num_p2p_sockets != 0)
+				{
+#ifdef _WIN32
+					const auto ret_p2p = WSAPoll(p2p_fd, num_p2p_sockets, 1);
+#else
+					const auto ret_p2p = ::poll(p2p_fd, num_p2p_sockets, 1);
+#endif
+					if (ret_p2p > 0)
+					{
+						auto fd_index = 0;
+						for (auto& p2p_port : list_p2p_ports)
+						{
+							if ((p2p_fd[fd_index].revents & POLLIN) == POLLIN || (p2p_fd[fd_index].revents & POLLRDNORM) == POLLRDNORM)
+							{
+								while(p2p_port.second.recv_data());
+							}
+							fd_index++;
+						}
+					}
+					else if (ret_p2p < 0)
+					{
+						sys_net.error("[P2P] Error poll on master P2P socket: %d", get_last_error(false));
+					}
+				}
+			}
 
 			std::lock_guard lock(s_nw_mutex);
 
@@ -382,25 +1021,81 @@ struct network_thread
 
 using network_context = named_thread<network_thread>;
 
+// Used by RPCN to send signaling packets to RPCN server(for UDP hole punching)
+s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& addr)
+{
+	s32 res       = 0;
+	const auto nc = g_fxo->get<network_context>();
+	{
+		std::lock_guard list_lock(nc->list_p2p_ports_mutex);
+		auto& def_port = nc->list_p2p_ports.at(3658);
+
+		res = ::sendto(def_port.p2p_socket, reinterpret_cast<const char*>(data.data()), data.size(), 0, reinterpret_cast<const sockaddr*>(&addr), sizeof(sockaddr_in));
+	}
+
+	return res;
+}
+
+std::vector<std::vector<u8>> get_rpcn_msgs()
+{
+	auto msgs     = std::vector<std::vector<u8>>();
+	const auto nc = g_fxo->get<network_context>();
+	{
+		std::lock_guard list_lock(nc->list_p2p_ports_mutex);
+		auto& def_port = nc->list_p2p_ports.at(3658);
+		{
+			std::lock_guard lock(def_port.s_rpcn_mutex);
+			msgs               = std::move(def_port.rpcn_msgs);
+			def_port.rpcn_msgs.clear();
+		}
+	}
+
+	return msgs;
+}
+
+std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> get_sign_msgs()
+{
+	auto msgs     = std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>>();
+	const auto nc = g_fxo->get<network_context>();
+	{
+		std::lock_guard list_lock(nc->list_p2p_ports_mutex);
+		auto& def_port = nc->list_p2p_ports.at(3658);
+		{
+			std::lock_guard lock(def_port.s_sign_mutex);
+			msgs = std::move(def_port.sign_msgs);
+			def_port.sign_msgs.clear();
+		}
+	}
+
+	return msgs;
+}
+
+
 lv2_socket::lv2_socket(lv2_socket::socket_type s, s32 s_type, s32 family)
 	: socket(s), type{s_type}, family{family}
 {
-	// Set non-blocking
+	if (socket)
+	{
+		// Set non-blocking
 #ifdef _WIN32
-	u_long _true = 1;
-	::ioctlsocket(socket, FIONBIO, &_true);
+		u_long _true = 1;
+		::ioctlsocket(socket, FIONBIO, &_true);
 #else
-	::fcntl(socket, F_SETFL, ::fcntl(socket, F_GETFL, 0) | O_NONBLOCK);
+		::fcntl(socket, F_SETFL, ::fcntl(socket, F_GETFL, 0) | O_NONBLOCK);
 #endif
+	}
 }
 
 lv2_socket::~lv2_socket()
 {
+	if (type != SYS_NET_SOCK_DGRAM_P2P && type != SYS_NET_SOCK_STREAM_P2P)
+	{
 #ifdef _WIN32
-	::closesocket(socket);
+		::closesocket(socket);
 #else
-	::close(socket);
+		::close(socket);
 #endif
+	}
 }
 
 error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen)
@@ -419,9 +1114,38 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 	::socklen_t native_addrlen = sizeof(native_addr);
 	s32 result = 0;
 
+	bool p2ps = false;
+
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
 	{
 		std::lock_guard lock(sock.mutex);
+
+		if (sock.type == SYS_NET_SOCK_STREAM_P2P)
+		{
+			if (sock.p2ps.backlog.size() == 0)
+			{
+				result = SYS_NET_EWOULDBLOCK;
+				return false;
+			}
+
+			sys_net.trace("Found a socket in backlog!");
+
+			p2ps = true;
+			result = sock.p2ps.backlog.front();
+			sock.p2ps.backlog.pop();
+
+			if (addr)
+			{
+				sys_net_sockaddr_in_p2p *addr_p2p = reinterpret_cast<sys_net_sockaddr_in_p2p *>(addr.get_ptr());
+				addr_p2p->sin_family = AF_INET;
+				addr_p2p->sin_addr = std::bit_cast<be_t<u32>, u32>(sock.p2ps.op_addr);
+				addr_p2p->sin_port = std::bit_cast<be_t<u16>, u16>(sock.p2ps.op_vport);
+				addr_p2p->sin_vport = std::bit_cast<be_t<u16>, u16>(sock.p2ps.op_port);
+				addr_p2p->sin_len = sizeof(sys_net_sockaddr_in_p2p);
+			}
+
+			return true;
+		}
 
 		//if (!(sock.events & lv2_socket::poll::read))
 		{
@@ -476,6 +1200,11 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 		}
 
 		return -sys_net_error{result};
+	}
+
+	if (p2ps)
+	{
+		return not_an_error(result);
 	}
 
 	if (!sock.ret)
@@ -574,12 +1303,68 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 			return SYS_NET_EAFNOSUPPORT;
 		}
 
-		if (sock.type == SYS_NET_SOCK_DGRAM_P2P)
+		if (sock.type == SYS_NET_SOCK_DGRAM_P2P || sock.type == SYS_NET_SOCK_STREAM_P2P)
 		{
-			const u16 daport = reinterpret_cast<const sys_net_sockaddr_in*>(addr_buf)->sin_port;
-			const u16 davport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr_buf)->sin_vport;
-			sys_net.warning("Trying to bind %s:%d:%d", name.sin_addr, daport, davport);
-			name.sin_port = std::bit_cast<u16, be_t<u16>>(daport + davport); // htons(daport + davport)
+			auto psa_in_p2p = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(psa_in);
+			u16 p2p_port, p2p_vport;
+			if (sock.type == SYS_NET_SOCK_DGRAM_P2P)
+			{
+				p2p_port  = psa_in_p2p->sin_port;
+				p2p_vport = psa_in_p2p->sin_vport;
+			}
+			else
+			{
+				// For SYS_NET_SOCK_STREAM_P2P sockets, the port is the "fake" tcp port and the vport is the udp port it's bound to
+				p2p_port  = psa_in_p2p->sin_vport;
+				p2p_vport = psa_in_p2p->sin_port;
+			}
+
+			sys_net.notice("[P2P] %s, Socket bind to %s:%d:%d", sock.type, inet_ntoa(name.sin_addr), p2p_port, p2p_vport);
+
+			if (p2p_port != 3658)
+			{
+				sys_net.warning("[P2P] Attempting to bind a socket to a port != 3658");
+			}
+			ASSERT(p2p_vport != 0);
+
+			lv2_socket::socket_type real_socket{};
+
+			const auto nc = g_fxo->get<network_context>();
+			{
+				std::lock_guard list_lock(nc->list_p2p_ports_mutex);
+				if (nc->list_p2p_ports.count(p2p_port) == 0)
+				{
+					nc->list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(p2p_port), std::forward_as_tuple(p2p_port));
+				}
+
+				auto& pport = nc->list_p2p_ports.at(p2p_port);
+				real_socket = pport.p2p_socket;
+				{
+					std::lock_guard lock(pport.bound_p2p_vports_mutex);
+					if (sock.type == SYS_NET_SOCK_DGRAM_P2P)
+					{
+						if (pport.bound_p2p_vports.count(p2p_vport) != 0)
+						{
+							return sys_net_error::SYS_NET_EADDRINUSE;
+						}
+						pport.bound_p2p_vports.insert(std::make_pair(p2p_vport, s));
+					}
+					else
+					{
+						const u64 key = (static_cast<u64>(p2p_vport) << 32);
+						pport.bound_p2p_streams.emplace(key, s);
+					}
+				}
+			}
+
+			{
+				std::lock_guard lock(sock.mutex);
+				sock.p2p.port  = p2p_port;
+				sock.p2p.vport = p2p_vport;
+				sock.socket    = real_socket;
+			}
+
+			return {};
 		}
 		else
 		{
@@ -646,26 +1431,96 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 
 	::socklen_t namelen  = sizeof(name);
 
-	sys_net.warning("Attempting to connect on %s:%d", name.sin_addr, std::bit_cast<be_t<u16>, u16>(name.sin_port)); // ntohs(name.sin_port)
+	sys_net.notice("Attempting to connect on %s:%d", name.sin_addr, std::bit_cast<be_t<u16>, u16>(name.sin_port)); // ntohs(name.sin_port)
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
 	{
+		if (sock.type == SYS_NET_SOCK_STREAM_P2P)
+		{
+			lv2_socket::p2ps_i::encapsulated_tcp send_hdr;
+			std::vector<u8> packet;
+			const auto psa_in_p2p = reinterpret_cast<sys_net_sockaddr_in_p2p*>(addr_buf.buf);
+			{
+				std::lock_guard lock(sock.mutex);
+				// This is purposefully inverted, not a bug
+				const u16 dst_vport = psa_in_p2p->sin_port;
+				const u16 dst_port  = psa_in_p2p->sin_vport;
+
+				lv2_socket::socket_type real_socket{};
+
+				const auto nc = g_fxo->get<network_context>();
+				{
+					std::lock_guard list_lock(nc->list_p2p_ports_mutex);
+					if (!nc->list_p2p_ports.count(sock.p2p.port))
+						nc->list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(sock.p2p.port), std::forward_as_tuple(sock.p2p.port));
+
+					auto& pport = nc->list_p2p_ports.at(sock.p2p.port);
+					real_socket = pport.p2p_socket;
+					{
+						std::lock_guard lock(pport.bound_p2p_vports_mutex);
+						if (sock.p2p.vport == 0)
+						{
+							// Unassigned vport, assigns one
+							sys_net.warning("vport was unassigned before connect!");
+							u16 found_vport = 30000;
+							while (true)
+							{
+								found_vport++;
+								if (pport.bound_p2p_vports.count(found_vport))
+									continue;
+								if (pport.bound_p2p_streams.count(static_cast<u64>(found_vport) << 32))
+									continue;
+
+								break;
+							}
+							sock.p2p.vport = found_vport;
+						}
+						const u64 key = name.sin_addr.s_addr | (static_cast<u64>(sock.p2p.vport) << 32) | (static_cast<u64>(dst_vport) << 48);
+						pport.bound_p2p_streams.emplace(key, s);
+					}
+				}
+
+				sock.socket = real_socket;
+
+				send_hdr.src_port = sock.p2p.vport;
+				send_hdr.dst_port = dst_vport;
+				send_hdr.flags    = lv2_socket::p2ps_i::SYN;
+				send_hdr.seq      = rand();
+
+				// sock.socket            = p2p_socket;
+				sock.p2ps.op_addr      = name.sin_addr.s_addr;
+				sock.p2ps.op_port      = dst_port;
+				sock.p2ps.op_vport     = dst_vport;
+				sock.p2ps.cur_seq      = send_hdr.seq + 1;
+				sock.p2ps.data_beg_seq = 0;
+				sock.p2ps.data_available = 0;
+				sock.p2ps.received_data.clear();
+				sock.p2ps.status       = lv2_socket::p2ps_i::stream_status::stream_handshaking;
+
+				packet = nt_p2p_port::generate_u2s_packet(send_hdr, nullptr, 0);
+				name.sin_port = std::bit_cast<u16>(psa_in_p2p->sin_vport); // not a bug
+				nt_p2p_port::send_u2s_packet(sock, s, std::move(packet), reinterpret_cast<::sockaddr_in*>(&name), send_hdr.seq);
+			}
+
+			return true;
+		}
+
 		std::lock_guard lock(sock.mutex);
 
-		if (_addr->sa_family == 0 && !psa_in->sin_port && !psa_in->sin_addr)
+		if (psa_in->sin_port == 53)
 		{
 			const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-			// Hack for DNS (8.8.8.8:53)
+			// Hack for DNS
 			name.sin_port        = std::bit_cast<u16, be_t<u16>>(53);
-			name.sin_addr.s_addr = nph->get_dns();
+			name.sin_addr.s_addr = nph->get_dns_ip();
 
 			// Overwrite arg (probably used to validate recvfrom addr)
 			psa_in->sin_family = SYS_NET_AF_INET;
 			psa_in->sin_port   = 53;
-			psa_in->sin_addr   = nph->get_dns();
+			psa_in->sin_addr   = nph->get_dns_ip();
 			addr_buf.changed = true;
-			sys_net.warning("sys_net_bnet_connect: using DNS...");
+			sys_net.notice("sys_net_bnet_connect: using DNS...");
 
 			nph->add_dns_spy(s);
 		}
@@ -815,13 +1670,12 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 
 	::sockaddr_storage native_addr;
 	::socklen_t native_addrlen = sizeof(native_addr);
-	s32 type = 0;
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
 	{
 		std::lock_guard lock(sock.mutex);
 
-		type = sock.type;
+		ASSERT(sock.type != SYS_NET_SOCK_DGRAM_P2P);
 
 		if (::getpeername(sock.socket, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen) == 0)
 		{
@@ -853,16 +1707,6 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 	paddr->sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
 	paddr->sin_zero   = 0;
 
-	if (type == SYS_NET_SOCK_DGRAM_P2P)
-	{
-		vm::ptr<sys_net_sockaddr_in_p2p> paddr_p2p = vm::cast(addr.addr());
-		paddr_p2p->sin_vport                       = paddr_p2p->sin_port - 3658;
-		paddr_p2p->sin_port                        = 3658;
-		struct in_addr rep;
-		rep.s_addr = htonl(paddr->sin_addr);
-		sys_net.error("Reporting P2P socket address as %s:%d:%d", rep, paddr_p2p->sin_port, paddr_p2p->sin_vport);
-	}
-
 	return CELL_OK;
 }
 
@@ -881,9 +1725,15 @@ error_code sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 	::sockaddr_storage native_addr;
 	::socklen_t native_addrlen = sizeof(native_addr);
 
+	lv2_socket_type type;
+	u16 p2p_vport;
+
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
 	{
 		std::lock_guard lock(sock.mutex);
+
+		type = sock.type;
+		p2p_vport = sock.p2p.vport;
 
 		if (::getsockname(sock.socket, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen) == 0)
 		{
@@ -913,6 +1763,15 @@ error_code sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 	paddr->sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
 	paddr->sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
 	paddr->sin_zero   = 0;
+
+	if (type == SYS_NET_SOCK_DGRAM_P2P)
+	{
+		vm::ptr<sys_net_sockaddr_in_p2p> paddr_p2p = vm::cast(addr.addr());
+		paddr_p2p->sin_vport                       = p2p_vport;
+		struct in_addr rep;
+		rep.s_addr = htonl(paddr->sin_addr);
+		sys_net.trace("[P2P] Reporting socket address as %s:%d:%d", rep, paddr_p2p->sin_port, paddr_p2p->sin_vport);
+	}
 
 	return CELL_OK;
 }
@@ -1158,7 +2017,15 @@ error_code sys_net_bnet_listen(ppu_thread& ppu, s32 s, s32 backlog)
 	{
 		std::lock_guard lock(sock.mutex);
 
-		if (::listen(sock.socket, backlog) == 0)
+		ASSERT(sock.type == SYS_NET_SOCK_STREAM_P2P || sock.type == SYS_NET_SOCK_STREAM);
+
+		if (sock.type == SYS_NET_SOCK_STREAM_P2P)
+		{
+			sock.p2ps.status = lv2_socket::p2ps_i::stream_status::stream_listening;
+			sock.p2ps.max_backlog = backlog;
+			return {};
+		}
+		else if (::listen(sock.socket, backlog) == 0)
 		{
 			return {};
 		}
@@ -1201,7 +2068,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 	::sockaddr_storage native_addr;
 	::socklen_t native_addrlen = sizeof(native_addr);
 	sys_net_error result{};
-	std::string _buf;
+	std::vector<u8> _buf;
 
 	if (flags & SYS_NET_MSG_PEEK)
 	{
@@ -1233,7 +2100,70 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 				native_addr.ss_family = AF_INET;
 				(reinterpret_cast<::sockaddr_in*>(&native_addr))->sin_port = std::bit_cast<u16, be_t<u16>>(53); // htons(53)
-				(reinterpret_cast<::sockaddr_in*>(&native_addr))->sin_addr.s_addr = nph->get_dns();
+				(reinterpret_cast<::sockaddr_in*>(&native_addr))->sin_addr.s_addr = nph->get_dns_ip();
+
+				return true;
+			}
+
+			if (sock.type == SYS_NET_SOCK_DGRAM_P2P)
+			{
+				sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", sock.p2p.vport, sock.p2p.data.size());
+
+				if (sock.p2p.data.empty())
+				{
+					result = SYS_NET_EWOULDBLOCK;
+					return false;
+				}
+
+				const auto& p2p_data = sock.p2p.data.front();
+				native_result = std::min(len, static_cast<u32>(p2p_data.second.size()));
+				memcpy(buf.get_ptr(), p2p_data.second.data(), native_result);
+
+				if (addr)
+				{
+					*paddrlen = sizeof(sys_net_sockaddr_in);
+					memcpy(addr.get_ptr(), &p2p_data.first, addr.size());
+				}
+
+				sock.p2p.data.pop();
+
+				return true;
+			}
+
+			if (sock.type == SYS_NET_SOCK_STREAM_P2P)
+			{
+				if (!sock.p2ps.data_available)
+				{
+					result = SYS_NET_EWOULDBLOCK;
+					return false;
+				}
+
+				const u32 to_give = std::min(sock.p2ps.data_available, len);
+				sys_net.trace("STREAM-P2P socket had %d available, given %d", sock.p2ps.data_available, to_give);
+
+				u32 left_to_give = to_give;
+				while (left_to_give)
+				{
+					auto& cur_data = sock.p2ps.received_data.begin()->second;
+					auto to_give_for_this_packet = std::min(static_cast<u32>(cur_data.size()), left_to_give);
+					memcpy(reinterpret_cast<u8 *>(buf.get_ptr()) + (to_give - left_to_give), cur_data.data(), to_give_for_this_packet);
+					if (cur_data.size() != to_give_for_this_packet)
+					{
+						auto amount_left = cur_data.size() - to_give_for_this_packet;
+						std::vector<u8> new_vec(amount_left);
+						memcpy(new_vec.data(), cur_data.data() + to_give_for_this_packet, amount_left);
+						auto new_key = (sock.p2ps.received_data.begin()->first) + to_give_for_this_packet;
+						sock.p2ps.received_data.emplace(new_key, std::move(new_vec));
+					}
+
+					sock.p2ps.received_data.erase(sock.p2ps.received_data.begin());
+
+					left_to_give -= to_give_for_this_packet;
+				}
+
+				sock.p2ps.data_available -= to_give;
+				sock.p2ps.data_beg_seq += to_give;
+				native_result = to_give;
 
 				return true;
 			}
@@ -1279,7 +2209,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 		{
 			if (events & lv2_socket::poll::read)
 			{
-				native_result = ::recvfrom(sock.socket, _buf.data(), len, native_flags, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
+				native_result = ::recvfrom(sock.socket, reinterpret_cast<char *>(_buf.data()), len, native_flags, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
 
 				if (native_result >= 0 || (result = get_last_error(!sock.so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0)))
 				{
@@ -1299,7 +2229,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 	if (!sock)
 	{
 		if (type == SYS_NET_SOCK_DGRAM_P2P)
-			sys_net.error("Error recvfrom(bad socket)");
+			sys_net.error("[P2P] Error recvfrom(bad socket)");
 		return -SYS_NET_EBADF;
 	}
 
@@ -1311,7 +2241,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 		}
 
 		if (type == SYS_NET_SOCK_DGRAM_P2P)
-			sys_net.error("Error recvfrom(result early): %d", result);
+			sys_net.error("[P2P] Error recvfrom(result early): %d", result);
 
 		return -result;
 	}
@@ -1331,18 +2261,18 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 		if (result)
 		{
 			if (type == SYS_NET_SOCK_DGRAM_P2P)
-				sys_net.error("Error recvfrom(result): %d", result);
+				sys_net.error("[P2P] Error recvfrom(result): %d", result);
 			return -result;
 		}
 
 		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
 		{
 			if (type == SYS_NET_SOCK_DGRAM_P2P)
-				sys_net.error("Error recvfrom(interrupted)");
+				sys_net.error("[P2P] Error recvfrom(interrupted)");
 			return -SYS_NET_EINTR;
 		}
 
-		std::memcpy(buf.get_ptr(), _buf.c_str(), len);
+		std::memcpy(buf.get_ptr(), _buf.data(), len);
 	}
 
 	if (ppu.is_stopped())
@@ -1350,8 +2280,8 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 		return 0;
 	}
 
-	// TODO
-	if (addr)
+	// addr is set earlier for P2P socket
+	if (addr && type != SYS_NET_SOCK_DGRAM_P2P && type != SYS_NET_SOCK_STREAM_P2P)
 	{
 		verify(HERE), native_addr.ss_family == AF_INET;
 
@@ -1364,22 +2294,11 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 		paddr->sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
 		paddr->sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
 		paddr->sin_zero   = 0;
-
-		if (type == SYS_NET_SOCK_DGRAM_P2P)
-		{
-			vm::ptr<sys_net_sockaddr_in_p2p> paddr_p2p = vm::cast(addr.addr());
-			paddr_p2p->sin_vport                       = paddr_p2p->sin_port - 3658;
-			paddr_p2p->sin_port                        = 3658;
-
-			const u16 daport  = reinterpret_cast<sys_net_sockaddr_in*>(addr.get_ptr())->sin_port;
-			const u16 davport = reinterpret_cast<sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
-			sys_net.error("Received a P2P packet from %s:%d:%d", reinterpret_cast<::sockaddr_in*>(&native_addr)->sin_addr, daport, davport);
-		}
 	}
 
 	// Length
-	if (type == SYS_NET_SOCK_DGRAM_P2P)
-		sys_net.error("Ok recvfrom: %d", native_result);
+	if (type == SYS_NET_SOCK_DGRAM_P2P || type == SYS_NET_SOCK_STREAM_P2P)
+		sys_net.trace("[P2P] %s Ok recvfrom: %d", type, native_result);
 
 	return not_an_error(native_result);
 }
@@ -1428,7 +2347,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 	int native_flags = 0;
 	int native_result = -1;
 	::sockaddr_in name{};
-	std::string _buf;
+	std::vector<u8> _buf;
 
 	if (idm::check<lv2_socket>(s))
 	{
@@ -1439,15 +2358,13 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		return -SYS_NET_EBADF;
 	}
 
-	// Used by DGRAM_P2P socket
-	u16 davport = 0;
-
 	if (addr)
 	{
-		davport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
 		name.sin_family      = AF_INET;
 		name.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
 		name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
+
+		sys_net.trace("Sending to %s:%d", inet_ntoa(name.sin_addr), psa_in->sin_port);
 	}
 
 	::socklen_t namelen = sizeof(name);
@@ -1458,25 +2375,81 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		native_flags |= MSG_WAITALL;
 	}
 
+	std::vector<u8> p2p_data;
+	char *data = reinterpret_cast<char *>(_buf.data());
+	u32 data_len = len;
+
 	s32 type        = 0;
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
 	{
-		type = sock.type;
-		if (sock.type == SYS_NET_SOCK_DGRAM_P2P && addr)
-		{
-			const u16 daport = std::bit_cast<be_t<u16>, u16>(name.sin_port);
-			sys_net.error("Sending a P2P packet to %s:%d:%d", name.sin_addr, daport, davport);
-			name.sin_port = std::bit_cast<u16, be_t<u16>>(daport + davport); // htons(daport + davport)
-		}
-
 		std::lock_guard lock(sock.mutex);
+		type = sock.type;
+
+		if (type == SYS_NET_SOCK_DGRAM_P2P)
+		{
+			ASSERT(addr);
+			ASSERT(sock.socket); // ensures it has been bound
+			ASSERT(len <= (65535 - sizeof(u16))); // catch games using full payload for future fragmentation implementation if necessary
+			const u16 p2p_port  = reinterpret_cast<const sys_net_sockaddr_in*>(addr.get_ptr())->sin_port;
+			const u16 p2p_vport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
+
+			sys_net.trace("[P2P] Sending a packet to %s:%d:%d", inet_ntoa(name.sin_addr), p2p_port, p2p_vport);
+
+			p2p_data.resize(len + sizeof(u16));
+			reinterpret_cast<le_t<u16>&>(p2p_data[0]) = p2p_vport;
+			memcpy(p2p_data.data()+sizeof(u16), _buf.data(), len);
+
+			data = reinterpret_cast<char *>(p2p_data.data());
+			data_len = len + sizeof(u16);
+		}
+		else if (type == SYS_NET_SOCK_STREAM_P2P)
+		{
+			constexpr s64 max_data_len = (65535 - (sizeof(u16) + sizeof(lv2_socket::p2ps_i::encapsulated_tcp)));
+
+			// Prepare address
+			name.sin_family = AF_INET;
+			name.sin_port        = std::bit_cast<u16, be_t<u16>>(sock.p2ps.op_port);
+			name.sin_addr.s_addr = sock.p2ps.op_addr;
+			// Prepares encapsulated tcp
+			lv2_socket::p2ps_i::encapsulated_tcp tcp_header;
+			tcp_header.src_port = sock.p2p.vport;
+			tcp_header.dst_port = sock.p2ps.op_vport;
+			// chop it up
+			std::vector<std::vector<u8>> stream_packets;
+			s64 cur_total_len = len;
+			while(cur_total_len > 0)
+			{
+				s64 cur_data_len;
+				if (cur_total_len >= max_data_len)
+					cur_data_len = max_data_len;
+				else
+					cur_data_len = cur_total_len;
+
+				tcp_header.length = cur_data_len;
+				tcp_header.seq = sock.p2ps.cur_seq;
+
+				auto packet       = nt_p2p_port::generate_u2s_packet(tcp_header, &_buf[len - cur_total_len], cur_data_len);
+				nt_p2p_port::send_u2s_packet(sock, s, std::move(packet), &name, tcp_header.seq);
+
+				cur_total_len -= cur_data_len;
+				sock.p2ps.cur_seq += cur_data_len;
+			}
+	
+			native_result = len;
+			return true;
+		}
 
 		//if (!(sock.events & lv2_socket::poll::write))
 		{
 			const auto nph = g_fxo->get<named_thread<np_handler>>();
+			if (addr && type == SYS_NET_SOCK_DGRAM && psa_in->sin_port == 53)
+			{
+				nph->add_dns_spy(s);
+			}
+
 			if (nph->is_dns(s))
 			{
-				const s32 ret_analyzer = nph->analyze_dns_packet(s, reinterpret_cast<const u8*>(_buf.c_str()), len);
+				const s32 ret_analyzer = nph->analyze_dns_packet(s, reinterpret_cast<const u8*>(_buf.data()), len);
 				// Check if the packet is intercepted
 				if (ret_analyzer >= 0)
 				{
@@ -1485,10 +2458,14 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 				}
 			}
 
-			native_result = ::sendto(sock.socket, _buf.c_str(), len, native_flags, addr ? reinterpret_cast<struct sockaddr*>(&name) : nullptr, addr ? namelen : 0);
+			native_result = ::sendto(sock.socket, data, data_len, native_flags, addr ? reinterpret_cast<struct sockaddr*>(&name) : nullptr, addr ? namelen : 0);
 
 			if (native_result >= 0)
 			{
+				if (sock.type == SYS_NET_SOCK_DGRAM_P2P)
+				{
+					native_result -= sizeof(u16);
+				}
 				return true;
 			}
 
@@ -1506,7 +2483,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		{
 			if (events & lv2_socket::poll::write)
 			{
-				native_result = ::sendto(sock.socket, _buf.c_str(), len, native_flags, addr ? reinterpret_cast<struct sockaddr*>(&name) : nullptr, addr ? namelen : 0);
+				native_result = ::sendto(sock.socket, data, data_len, native_flags, addr ? reinterpret_cast<struct sockaddr*>(&name) : nullptr, addr ? namelen : 0);
 
 				if (native_result >= 0 || (result = get_last_error(!sock.so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0)))
 				{
@@ -1525,16 +2502,11 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 	if (!sock)
 	{
-		if (type == SYS_NET_SOCK_DGRAM_P2P)
-			sys_net.error("Error sendto(bad socket)");
 		return -SYS_NET_EBADF;
 	}
 
 	if (!sock.ret && result)
 	{
-		if (type == SYS_NET_SOCK_DGRAM_P2P)
-			sys_net.error("Error sendto(early result): %d", result);
-
 		if (result == SYS_NET_EWOULDBLOCK)
 		{
 			return not_an_error(-result);
@@ -1556,22 +2528,14 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 		if (result)
 		{
-			if (type == SYS_NET_SOCK_DGRAM_P2P)
-				sys_net.error("Error sendto(result): %d", result);
 			return -result;
 		}
 
 		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
 		{
-			if (type == SYS_NET_SOCK_DGRAM_P2P)
-				sys_net.error("Error sendto(interrupted)");
 			return -SYS_NET_EINTR;
 		}
 	}
-
-	// Length
-	if (type == SYS_NET_SOCK_DGRAM_P2P)
-		sys_net.error("Ok sendto: %d", native_result);
 
 	return not_an_error(native_result);
 }
@@ -1581,20 +2545,45 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 	ppu.state += cpu_flag::wait;
 
 	sys_net.warning("sys_net_bnet_setsockopt(s=%d, level=0x%x, optname=0x%x, optval=*0x%x, optlen=%u)", s, level, optname, optval, optlen);
+	switch(optlen)
+	{
+		case 1:
+			sys_net.warning("optval: 0x%02X", *reinterpret_cast<const u8 *>(optval.get_ptr()));
+			break;
+		case 2:
+			sys_net.warning("optval: 0x%04X", *reinterpret_cast<const be_t<u16> *>(optval.get_ptr()));
+			break;
+		case 4:
+			sys_net.warning("optval: 0x%08X", *reinterpret_cast<const be_t<u32> *>(optval.get_ptr()));
+			break;
+		case 8:
+			sys_net.warning("optval: 0x%016X", *reinterpret_cast<const be_t<u64> *>(optval.get_ptr()));
+			break;
+	}
 
 	int native_int = 0;
 	int native_level = -1;
 	int native_opt = -1;
 	const void* native_val = &native_int;
 	::socklen_t native_len = sizeof(int);
-	::timeval native_timeo;
 	::linger native_linger;
+
+#ifdef _WIN32
+	u32 native_timeo;
+#else
+	::timeval native_timeo;
+#endif
 
 	std::vector<char> optval_buf(vm::_ptr<char>(optval.addr()), vm::_ptr<char>(optval.addr() + optlen));
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
 	{
 		std::lock_guard lock(sock.mutex);
+
+		if (sock.type == SYS_NET_SOCK_DGRAM_P2P || sock.type == SYS_NET_SOCK_STREAM_P2P)
+		{
+			return {};
+		}		
 
 		if (optlen >= sizeof(s32))
 		{
@@ -1683,8 +2672,13 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 				native_opt = optname == SYS_NET_SO_SNDTIMEO ? SO_SNDTIMEO : SO_RCVTIMEO;
 				native_val = &native_timeo;
 				native_len = sizeof(native_timeo);
+#ifdef _WIN32
+				native_timeo = ::narrow<int>(reinterpret_cast<sys_net_timeval*>(optval_buf.data())->tv_sec) * 1000;
+				native_timeo += ::narrow<int>(reinterpret_cast<sys_net_timeval*>(optval_buf.data())->tv_usec) / 1000;
+#else
 				native_timeo.tv_sec = ::narrow<int>(reinterpret_cast<sys_net_timeval*>(optval_buf.data())->tv_sec);
 				native_timeo.tv_usec = ::narrow<int>(reinterpret_cast<sys_net_timeval*>(optval_buf.data())->tv_usec);
+#endif 
 				break;
 			}
 			case SYS_NET_SO_LINGER:
@@ -1785,6 +2779,12 @@ error_code sys_net_bnet_shutdown(ppu_thread& ppu, s32 s, s32 how)
 	{
 		std::lock_guard lock(sock.mutex);
 
+		// Shutdown of P2P socket is always successful
+		if (sock.type == SYS_NET_SOCK_DGRAM_P2P)
+		{
+			return {};
+		}
+
 #ifdef _WIN32
 		const int native_how =
 			how == SYS_NET_SHUT_RD ? SD_RECEIVE :
@@ -1827,41 +2827,51 @@ error_code sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protoc
 		sys_net.error("sys_net_bnet_socket(): unknown family (%d)", family);
 	}
 
-	if (type != SYS_NET_SOCK_STREAM && type != SYS_NET_SOCK_DGRAM && type != SYS_NET_SOCK_DGRAM_P2P)
+	if (type != SYS_NET_SOCK_STREAM && type != SYS_NET_SOCK_DGRAM && type != SYS_NET_SOCK_DGRAM_P2P && type != SYS_NET_SOCK_STREAM_P2P)
 	{
 		sys_net.error("sys_net_bnet_socket(): unsupported type (%d)", type);
 		return -SYS_NET_EPROTONOSUPPORT;
 	}
 
-	const int native_domain = AF_INET;
+	lv2_socket::socket_type native_socket = 0;
 
-	const int native_type =
-		type == SYS_NET_SOCK_STREAM ? SOCK_STREAM :
-		type == SYS_NET_SOCK_DGRAM ? SOCK_DGRAM :
-		type == SYS_NET_SOCK_DGRAM_P2P ? SOCK_DGRAM : SOCK_RAW;
-
-	int native_proto =
-		protocol == SYS_NET_IPPROTO_IP ? IPPROTO_IP :
-		protocol == SYS_NET_IPPROTO_ICMP ? IPPROTO_ICMP :
-		protocol == SYS_NET_IPPROTO_IGMP ? IPPROTO_IGMP :
-		protocol == SYS_NET_IPPROTO_TCP ? IPPROTO_TCP :
-		protocol == SYS_NET_IPPROTO_UDP ? IPPROTO_UDP :
-		protocol == SYS_NET_IPPROTO_ICMPV6 ? IPPROTO_ICMPV6 : 0;
-
-	if (native_domain == AF_UNSPEC && type == SYS_NET_SOCK_DGRAM)
+	if (type != SYS_NET_SOCK_DGRAM_P2P && type != SYS_NET_SOCK_STREAM_P2P)
 	{
-		//Windows gets all errory if you try a unspec socket with protocol 0
-		native_proto = IPPROTO_UDP;
+		const int native_domain = AF_INET;
+
+		const int native_type =
+			type == SYS_NET_SOCK_STREAM ? SOCK_STREAM :
+			type == SYS_NET_SOCK_DGRAM ? SOCK_DGRAM : SOCK_RAW;
+
+		int native_proto =
+			protocol == SYS_NET_IPPROTO_IP ? IPPROTO_IP :
+			protocol == SYS_NET_IPPROTO_ICMP ? IPPROTO_ICMP :
+			protocol == SYS_NET_IPPROTO_IGMP ? IPPROTO_IGMP :
+			protocol == SYS_NET_IPPROTO_TCP ? IPPROTO_TCP :
+			protocol == SYS_NET_IPPROTO_UDP ? IPPROTO_UDP :
+			protocol == SYS_NET_IPPROTO_ICMPV6 ? IPPROTO_ICMPV6 : 0;
+
+		if (native_domain == AF_UNSPEC && type == SYS_NET_SOCK_DGRAM)
+		{
+			// Windows gets all errory if you try a unspec socket with protocol 0
+			native_proto = IPPROTO_UDP;
+		}
+
+		native_socket = ::socket(native_domain, native_type, native_proto);
+
+		if (native_socket == -1)
+		{
+			return -get_last_error(false);
+		}
 	}
 
-	const auto native_socket = ::socket(native_domain, native_type, native_proto);
-
-	if (native_socket == -1)
+	auto sock_lv2 = std::make_shared<lv2_socket>(native_socket, type, family);
+	if (type == SYS_NET_SOCK_STREAM_P2P)
 	{
-		return -get_last_error(false);
+		sock_lv2->p2p.port = 3658; // Default value if unspecified later
 	}
 
-	const s32 s = idm::import_existing<lv2_socket>(std::make_shared<lv2_socket>(native_socket, type, family));
+	const s32 s = idm::import_existing<lv2_socket>(sock_lv2);
 
 	if (s == id_manager::id_traits<lv2_socket>::invalid)
 	{
@@ -1886,6 +2896,20 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 
 	if (!sock->queue.empty())
 		sys_net.error("CLOSE");
+
+	// If it's a bound socket we "close" the vport
+	if (sock->type == SYS_NET_SOCK_DGRAM_P2P && sock->p2p.port && sock->p2p.vport)
+	{
+		const auto nc = g_fxo->get<network_context>();
+		{
+			std::lock_guard lock(nc->list_p2p_ports_mutex);
+			auto& p2p_port = nc->list_p2p_ports.at(sock->p2p.port);
+			{
+				std::lock_guard lock(p2p_port.bound_p2p_vports_mutex);
+				p2p_port.bound_p2p_vports.erase(sock->p2p.vport);
+			}
+		}
+	}
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 	nph->remove_dns_spy(s);
@@ -1935,18 +2959,58 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 			if (auto sock = idm::check_unlocked<lv2_socket>(fds_buf[i].fd))
 			{
-				// Check for fake packet for dns interceptions
-				const auto nph = g_fxo->get<named_thread<np_handler>>();
-				if (fds_buf[i].events & SYS_NET_POLLIN && nph->is_dns(fds_buf[i].fd) && nph->is_dns_queue(fds_buf[i].fd))
-					fds_buf[i].revents |= SYS_NET_POLLIN;
+				if (sock->type == SYS_NET_SOCK_DGRAM_P2P)
+				{
+					std::lock_guard lock(sock->mutex);
+					ASSERT(sock->p2p.vport);
+					sys_net.trace("[P2P] poll checking for 0x%X", fds[i].events);
+					// Check if it's a bound P2P socket
+					if ((fds[i].events & SYS_NET_POLLIN) && !sock->p2p.data.empty())
+					{
+						sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", sock->p2p.vport, sock->p2p.data.size());
+						fds_buf[i].revents |= SYS_NET_POLLIN;
+					}
 
-				if (fds_buf[i].events & ~(SYS_NET_POLLIN | SYS_NET_POLLOUT | SYS_NET_POLLERR))
-					sys_net.error("sys_net_bnet_poll(fd=%d): events=0x%x", fds[i].fd, fds[i].events);
-				_fds[i].fd = sock->socket;
-				if (fds_buf[i].events & SYS_NET_POLLIN)
-					_fds[i].events |= POLLIN;
-				if (fds_buf[i].events & SYS_NET_POLLOUT)
-					_fds[i].events |= POLLOUT;
+					if (fds[i].events & SYS_NET_POLLOUT)
+						fds_buf[i].revents |= SYS_NET_POLLOUT;
+
+					if (fds_buf[i].revents)
+						signaled++;
+				}
+				else if (sock->type == SYS_NET_SOCK_STREAM_P2P)
+				{
+					std::lock_guard lock(sock->mutex);
+					sys_net.trace("[P2PS] poll checking for 0x%X", fds[i].events);
+					if (sock->p2ps.status == lv2_socket::p2ps_i::stream_status::stream_connected)
+					{
+						if ((fds[i].events & SYS_NET_POLLIN) && sock->p2ps.data_available)
+						{
+							sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", sock->p2p.vport, sock->p2p.data.size());
+							fds_buf[i].revents |= SYS_NET_POLLIN;
+						}
+
+						if (fds[i].events & SYS_NET_POLLOUT)
+							fds_buf[i].revents |= SYS_NET_POLLOUT;
+
+						if (fds_buf[i].revents)
+							signaled++;
+					}
+				}
+				else 
+				{
+					// Check for fake packet for dns interceptions
+					const auto nph = g_fxo->get<named_thread<np_handler>>();
+					if (fds_buf[i].events & SYS_NET_POLLIN && nph->is_dns(fds_buf[i].fd) && nph->is_dns_queue(fds_buf[i].fd))
+						fds_buf[i].revents |= SYS_NET_POLLIN;
+
+					if (fds_buf[i].events & ~(SYS_NET_POLLIN | SYS_NET_POLLOUT | SYS_NET_POLLERR))
+						sys_net.warning("sys_net_bnet_poll(fd=%d): events=0x%x", fds[i].fd, fds[i].events);
+					_fds[i].fd = sock->socket;
+					if (fds_buf[i].events & SYS_NET_POLLIN)
+						_fds[i].events |= POLLIN;
+					if (fds_buf[i].events & SYS_NET_POLLOUT)
+						_fds[i].events |= POLLOUT;
+				}
 #ifdef _WIN32
 				connecting[i] = sock->is_connecting;
 #endif
@@ -2133,11 +3197,26 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 
 			if (auto sock = idm::check_unlocked<lv2_socket>((lv2_socket::id_base & -1024) + i))
 			{
-				_fds[i].fd = sock->socket;
-				if (selected & lv2_socket::poll::read)
-					_fds[i].events |= POLLIN;
-				if (selected & lv2_socket::poll::write)
-					_fds[i].events |= POLLOUT;
+
+				if (sock->type != SYS_NET_SOCK_DGRAM_P2P)
+				{
+					_fds[i].fd = sock->socket;
+					if (selected & lv2_socket::poll::read)
+						_fds[i].events |= POLLIN;
+					if (selected & lv2_socket::poll::write)
+						_fds[i].events |= POLLOUT;
+				}
+				else
+				{
+					std::lock_guard lock(sock->mutex);
+					// Check if it's a bound P2P socket
+					if ((selected & lv2_socket::poll::read) && sock->p2p.vport && !sock->p2p.data.empty())
+					{
+						sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", sock->p2p.vport, sock->p2p.data.size());
+						rread.set(i);
+						signaled++;
+					}
+				}
 #ifdef _WIN32
 				connecting[i] = sock->is_connecting;
 #endif
@@ -2348,23 +3427,13 @@ error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 	case 9:
 	{
 		constexpr auto nameserver = "nameserver \0"sv;
-		constexpr auto default_ip = "192.168.1.1\0"sv;
 
-		char buffer[nameserver.size() + 80];
+		char buffer[nameserver.size() + 80]{};
 		std::memcpy(buffer, nameserver.data(), nameserver.size());
 
 		const auto nph = g_fxo->get<named_thread<np_handler>>();
-		if (nph->get_dns())
-		{
-			struct sockaddr_in serv;
-			std::memset(&serv, 0, sizeof(serv));
-			serv.sin_addr.s_addr = nph->get_dns();
-			inet_ntop(AF_INET, &serv.sin_addr, buffer + nameserver.size() - 1, sizeof(buffer) - nameserver.size());
-		}
-		else
-		{
-			std::memcpy(buffer + nameserver.size() - 1, default_ip.data(), default_ip.size());
-		}
+		const auto dns_str = np_handler::ip_to_string(nph->get_dns_ip());
+		std::memcpy(buffer + nameserver.size() - 1, dns_str.data(), dns_str.size());
 
 		std::string_view name{buffer};
 		vm::static_ptr_cast<net_infoctl_cmd_9_t>(arg)->zero = 0;

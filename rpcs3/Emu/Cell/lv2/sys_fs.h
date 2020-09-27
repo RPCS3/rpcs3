@@ -3,9 +3,9 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Utilities/File.h"
-#include "Utilities/mutex.h"
 
 #include <string>
+#include <mutex>
 
 // Open Flags
 enum : s32
@@ -134,7 +134,8 @@ enum class lv2_mp_flag
 enum class lv2_file_type
 {
 	regular = 0,
-	npdrm,
+	sdata,
+	edata,
 };
 
 struct lv2_fs_mount_point
@@ -143,8 +144,16 @@ struct lv2_fs_mount_point
 	const u32 block_size = 4096;
 	const bs_t<lv2_mp_flag> flags{};
 
-	shared_mutex mutex;
+	mutable std::recursive_mutex mutex;
 };
+
+extern lv2_fs_mount_point g_mp_sys_dev_hdd0;
+extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
+extern lv2_fs_mount_point g_mp_sys_dev_usb;
+extern lv2_fs_mount_point g_mp_sys_dev_bdvd;
+extern lv2_fs_mount_point g_mp_sys_app_home;
+extern lv2_fs_mount_point g_mp_sys_host_root;
+extern lv2_fs_mount_point g_mp_sys_dev_flash;
 
 struct lv2_fs_object
 {
@@ -181,45 +190,67 @@ struct lv2_fs_object
 		name[filename.size()] = 0;
 		return name;
 	}
+
+	virtual std::string to_string() const { return {}; }
 };
 
 struct lv2_file final : lv2_fs_object
 {
-	const fs::file file;
+	fs::file file;
 	const s32 mode;
 	const s32 flags;
+	std::string real_path;
 	const lv2_file_type type;
 
 	// Stream lock
 	atomic_t<u32> lock{0};
 
-	lv2_file(std::string_view filename, fs::file&& file, s32 mode, s32 flags, lv2_file_type type = {})
+	// Some variables for convinience of data restoration
+	struct save_restore_t
+	{
+		u64 seek_pos;
+		u64 atime;
+		u64 mtime;
+	} restore_data{};
+
+	lv2_file(std::string_view filename, fs::file&& file, s32 mode, s32 flags, const std::string& real_path, lv2_file_type type = {})
 		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
+		, real_path(real_path)
 		, type(type)
 	{
 	}
 
-	lv2_file(const lv2_file& host, fs::file&& file, s32 mode, s32 flags, lv2_file_type type = {})
+	lv2_file(const lv2_file& host, fs::file&& file, s32 mode, s32 flags, const std::string& real_path, lv2_file_type type = {})
 		: lv2_fs_object(host.mp, host.name.data())
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
+		, real_path(real_path)
 		, type(type)
 	{
 	}
+
+	struct open_raw_result_t
+	{
+		CellError error;
+		fs::file file;
+	};
 
 	struct open_result_t
 	{
 		CellError error;
 		std::string ppath;
+		std::string real_path;
 		fs::file file;
+		lv2_file_type type;
 	};
 
 	// Open a file with wrapped logic of sys_fs_open
-	static open_result_t open(std::string_view path, s32 flags, s32 mode, const void* arg = {}, u64 size = 0);
+	static open_raw_result_t open_raw(const std::string& path, s32 flags, s32 mode, lv2_file_type type = lv2_file_type::regular, const lv2_fs_mount_point* mp = nullptr);
+	static open_result_t open(std::string_view vpath, s32 flags, s32 mode, const void* arg = {}, u64 size = 0);
 
 	// File reading with intermediate buffer
 	static u64 op_read(const fs::file& file, vm::ptr<void> buf, u64 size);
@@ -242,6 +273,19 @@ struct lv2_file final : lv2_fs_object
 
 	// Make file view from lv2_file object (for MSELF support)
 	static fs::file make_view(const std::shared_ptr<lv2_file>& _file, u64 offset);
+
+	virtual std::string to_string() const override
+	{
+		std::string_view type_s;
+		switch (type)
+		{
+		case lv2_file_type::regular: type_s = "Regular file"; break;
+		case lv2_file_type::sdata: type_s = "SDATA"; break;
+		case lv2_file_type::edata: type_s = "EDATA"; break;
+		}
+
+		return fmt::format(u8"%s, “%s”, Mode: 0x%x, Flags: 0x%x", type_s, name.data(), mode, flags);
+	}
 };
 
 struct lv2_dir final : lv2_fs_object
@@ -266,6 +310,11 @@ struct lv2_dir final : lv2_fs_object
 		}
 
 		return nullptr;
+	}
+
+	virtual std::string to_string() const override
+	{
+		return fmt::format(u8"Directory, “%s”, Entries: %u/%u", name.data(), std::min<u64>(pos, entries.size()), entries.size());
 	}
 };
 

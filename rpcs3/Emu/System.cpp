@@ -79,6 +79,11 @@ atomic_t<u32> g_progr_fdone{0};
 atomic_t<u32> g_progr_ptotal{0};
 atomic_t<u32> g_progr_pdone{0};
 
+namespace
+{
+	struct progress_dialog_server;
+}
+
 template<>
 void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 {
@@ -117,6 +122,7 @@ void Emulator::Init()
 
 	idm::init();
 	g_fxo->reset();
+	g_fxo->init<named_thread<progress_dialog_server>>();
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
@@ -760,7 +766,7 @@ std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const 
 
 				if (entry.is_directory && fs::is_file(sfo_path))
 				{
-					const auto psf           = psf::load_object(fs::file(sfo_path));
+					const auto psf = psf::load_object(fs::file(sfo_path));
 					const auto serial = psf::get_string(psf, "TITLE_ID");
 					if (serial == title_id)
 					{
@@ -917,8 +923,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		m_title_id = std::string(psf::get_string(_psf, "TITLE_ID"));
 		m_cat = std::string(psf::get_string(_psf, "CATEGORY"));
 
-		m_app_version = std::string(psf::get_string(_psf, "APP_VER", "Unknown"));
+		const auto version_app  = psf::get_string(_psf, "APP_VER", "Unknown");
 		const auto version_disc = psf::get_string(_psf, "VERSION", "Unknown");
+		m_app_version           = version_app == "Unknown" ? version_disc : version_app;
 
 		if (!_psf.empty() && m_cat.empty())
 		{
@@ -929,7 +936,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		sys_log.notice("Title: %s", GetTitle());
 		sys_log.notice("Serial: %s", GetTitleID());
 		sys_log.notice("Category: %s", GetCat());
-		sys_log.notice("Version: %s / %s", GetAppVersion(), version_disc);
+		sys_log.notice("Version: APP_VER=%s VERSION=%s", version_app, version_disc);
 
 		if (!add_only && !force_global_config && m_config_override_path.empty())
 		{
@@ -1442,7 +1449,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		if (!disc_sfo_dir.empty() && fs::is_file(disc_sfo_dir))
 		{
-			const auto bdvd_title = psf::get_string(psf::load_object(fs::file{ disc_sfo_dir }), "TITLE");
+			const auto psf_obj = psf::load_object(fs::file{ disc_sfo_dir });
+			const auto bdvd_title = psf::get_string(psf_obj, "TITLE");
 
 			if (!bdvd_title.empty() && bdvd_title != m_title)
 			{
@@ -2012,5 +2020,3 @@ void stx::manual_fixed_typemap<void>::destroy_reporter(const char* name, unsigne
 }
 
 Emulator Emu;
-
-named_thread<progress_dialog_server> g_progress_dlg_server;

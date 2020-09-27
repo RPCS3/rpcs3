@@ -156,7 +156,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	if (!src)
 	{
-		auto [fs_error, ppath, lv2_file] = lv2_file::open(vpath, 0, 0);
+		auto [fs_error, ppath, path0, lv2_file, type] = lv2_file::open(vpath, 0, 0);
 
 		if (fs_error)
 		{

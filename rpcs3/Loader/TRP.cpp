@@ -1,5 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Emu/VFS.h"
+#include "Emu/System.h"
+#include "Emu/Cell/lv2/sys_fs.h"
 #include "TRP.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
@@ -15,27 +17,65 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 {
 	if (!trp_f)
 	{
+		fs::g_tls_error = fs::error::noent;
 		return false;
 	}
 
+	fs::g_tls_error = {};
+
 	const std::string& local_path = vfs::get(dest);
 
-	if (!fs::is_dir(local_path) && !fs::create_dir(local_path))
+	const auto temp = vfs::host::hash_path(local_path, Emu.GetHddDir()) + '/';
+
+	if (!fs::create_dir(temp))
 	{
 		return false;
 	}
 
+	// Save TROPUSR.DAT
+	fs::copy_file(local_path + "/TROPUSR.DAT", temp + "/TROPUSR.DAT", false);
+
 	std::vector<char> buffer(65536);
 
+	bool success = true;
 	for (const TRPEntry& entry : m_entries)
 	{
 		trp_f.seek(entry.offset);
 		buffer.resize(entry.size);
-		if (!trp_f.read(buffer)) continue; // ???
-		fs::file(local_path + '/' + entry.name, fs::rewrite).write(buffer);
+		if (!trp_f.read(buffer))
+		{
+			trp_log.error("Failed to read TRPEntry at: offset=0x%x, size=0x%x", entry.offset, entry.size);
+			continue; // ???
+		}
+
+		// Create the file in the temporary directory
+		success = fs::write_file(temp + vfs::escape(entry.name), fs::create + fs::excl, buffer);	
+		if (!success)
+		{
+			break;
+		}
 	}
 
-	return true;
+	if (success)
+	{
+		success = vfs::host::remove_all(local_path, Emu.GetHddDir(), &g_mp_sys_dev_hdd0, true) || !fs::is_dir(local_path);
+
+		if (success)
+		{
+			// Atomically create trophy data (overwrite existing data)
+			success = fs::rename(temp, local_path, false);
+		}
+	}
+
+	if (!success)
+	{
+		// Remove temporary directory manually on failure (removed automatically on success)
+		auto old_error = fs::g_tls_error; 
+		fs::remove_all(temp);
+		fs::g_tls_error = old_error;
+	}
+
+	return success;
 }
 
 bool TRPLoader::LoadHeader(bool show)

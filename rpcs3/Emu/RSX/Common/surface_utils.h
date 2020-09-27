@@ -276,6 +276,16 @@ namespace rsx
 			return format_info.gcm_depth_format;
 		}
 
+		u32 get_gcm_format() const
+		{
+			return
+			(
+				is_depth_surface() ?
+					get_compatible_gcm_format(format_info.gcm_depth_format).first :
+					get_compatible_gcm_format(format_info.gcm_color_format).first
+			);
+		}
+
 		bool dirty() const
 		{
 			return (state_flags != rsx::surface_state_flags::ready) || !old_contents.empty();

@@ -167,6 +167,11 @@ void GLGSRender::update_draw_state()
 		gl_state.depth_bounds(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
 	}
 
+	if (gl::get_driver_caps().NV_depth_buffer_float_supported)
+	{
+		gl_state.depth_range(rsx::method_registers.clip_min(), rsx::method_registers.clip_max());
+	}
+
 	gl_state.enable(rsx::method_registers.dither_enabled(), GL_DITHER);
 
 	if (gl_state.enable(rsx::method_registers.stencil_test_enabled(), GL_STENCIL_TEST))
@@ -252,14 +257,14 @@ void GLGSRender::update_draw_state()
 	//NV4097_SET_TWO_SIDE_LIGHT_EN
 	//NV4097_SET_FLAT_SHADE_OP
 	//NV4097_SET_EDGE_FLAG
-
-
-
 	//NV4097_SET_COLOR_KEY_COLOR
 	//NV4097_SET_SHADER_CONTROL
 	//NV4097_SET_ZMIN_MAX_CONTROL
 	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
+
+	// For OGL Z range is updated every draw as it is separate from viewport config
+	m_graphics_state &= ~(rsx::pipeline_state::zclip_config_state_dirty);
 
 	m_frame_stats.setup_time += m_profiler.duration();
 }

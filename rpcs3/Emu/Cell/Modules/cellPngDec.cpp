@@ -432,8 +432,10 @@ error_code pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc
 	// Depending on the source type, get the first 8 bytes
 	if (source->srcSelect == CELL_PNGDEC_FILE)
 	{
+		const auto real_path = vfs::get(stream->source.fileName.get_ptr());
+
 		// Open a file stream
-		fs::file file_stream(vfs::get(stream->source.fileName.get_ptr()));
+		fs::file file_stream(real_path);
 
 		// Check if opening of the PNG file failed
 		if (!file_stream)
@@ -450,7 +452,7 @@ error_code pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc
 		}
 
 		// Get the file descriptor
-		buffer->fd = idm::make<lv2_fs_object, lv2_file>(stream->source.fileName.get_ptr(), std::move(file_stream), 0, 0);
+		buffer->fd = idm::make<lv2_fs_object, lv2_file>(stream->source.fileName.get_ptr(), std::move(file_stream), 0, 0, real_path);
 
 		// Indicate that we need to read from a file stream
 		buffer->file = true;
