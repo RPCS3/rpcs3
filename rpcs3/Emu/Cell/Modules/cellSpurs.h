@@ -254,6 +254,26 @@ enum CellSpursEventFlagDirection
 	CELL_SPURS_EVENT_FLAG_LAST = CELL_SPURS_EVENT_FLAG_ANY2ANY,
 };
 
+enum CellSpursJobOpcode : u64
+{
+	CELL_SPURS_JOB_OPCODE_NOP          = 0,
+	CELL_SPURS_JOB_OPCODE_RESET_PC     = 1,
+	CELL_SPURS_JOB_OPCODE_SYNC         = 2 | (0 << 3),
+	CELL_SPURS_JOB_OPCODE_LWSYNC       = 2 | (2 << 3),
+	CELL_SPURS_JOB_OPCODE_SYNC_LABEL   = 2 | (1 << 3),
+	CELL_SPURS_JOB_OPCODE_LWSYNC_LABEL = 2 | (3 << 3),
+	CELL_SPURS_JOB_OPCODE_NEXT         = 3,
+	CELL_SPURS_JOB_OPCODE_CALL         = 4,
+	CELL_SPURS_JOB_OPCODE_FLUSH        = 5,
+	CELL_SPURS_JOB_OPCODE_JOBLIST      = 6,
+	CELL_SPURS_JOB_OPCODE_ABORT        = 7 | (0 << 3),
+	CELL_SPURS_JOB_OPCODE_GUARD        = 7 | (1 << 3),
+	CELL_SPURS_JOB_OPCODE_SET_LABEL    = 7 | (2 << 3),
+	CELL_SPURS_JOB_OPCODE_RET          = 7 | (14 << 3),
+	CELL_SPURS_JOB_OPCODE_END          = 7 | (15 << 3),
+	CELL_SPURS_JOB_OPCODE_JTS          = 0x800000000ull | CELL_SPURS_JOB_OPCODE_LWSYNC,
+};
+
 // Event flag constants
 enum SpursEventFlagConstants
 {
