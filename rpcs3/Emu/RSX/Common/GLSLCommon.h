@@ -284,16 +284,18 @@ namespace glsl
 		"	return (swap)? _set_bits(y, x, 8, 8) : _set_bits(x, y, 8, 8);\n"
 		"}\n\n"
 
+		// NOTE: (int(n) or int(n)) is broken on some NVIDIA and INTEL hardware when the sign bit is involved.
+		// See https://github.com/RPCS3/rpcs3/issues/8990
 		"vec4 sext(const in ivec4 bits)\n"
 		"{\n"
 		"	// convert raw 16 bit values into signed 32-bit float4 counterpart\n"
 		"	bvec4 sign_check = lessThan(bits, ivec4(0x8000));\n"
-		"	return _select(bits | ivec4(0xFFFF0000), bits, sign_check);\n"
+		"	return _select(bits - 65536, bits, sign_check);\n"
 		"}\n\n"
 
 		"float sext(const in int bits)\n"
 		"{\n"
-		"	return (bits < 0x8000) ? float(bits) : float(bits | 0xFFFF0000); \n"
+		"	return (bits < 0x8000) ? float(bits) : float(bits - 65536); \n"
 		"}\n\n"
 
 		"vec4 fetch_attribute(const in attribute_desc desc, const in int vertex_id, usamplerBuffer input_stream)\n"
