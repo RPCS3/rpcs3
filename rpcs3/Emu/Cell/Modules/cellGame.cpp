@@ -487,7 +487,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	{
 		if (fs::is_file(vfs::get(dir + "/PARAM.SFO")))
 		{
-			init.cancel();		
+			init.cancel();
 			return CELL_GAME_ERROR_BROKEN;
 		}
 	}
@@ -927,6 +927,7 @@ enum class strkey_flag : u32
 struct string_key_info
 {
 	std::string_view name;
+	u32 max_size = 0;
 	bs_t<strkey_flag> flags;
 };
 
@@ -934,33 +935,33 @@ static string_key_info get_param_string_key(s32 id)
 {
 	switch (id)
 	{
-	case CELL_GAME_PARAMID_TITLE:                    return {"TITLE", strkey_flag::set}; // TODO: Is this value correct?
-	case CELL_GAME_PARAMID_TITLE_DEFAULT:            return {"TITLE", strkey_flag::set};
-	case CELL_GAME_PARAMID_TITLE_JAPANESE:           return {"TITLE_00", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_ENGLISH:            return {"TITLE_01", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_FRENCH:             return {"TITLE_02", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_SPANISH:            return {"TITLE_03", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_GERMAN:             return {"TITLE_04", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_ITALIAN:            return {"TITLE_05", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_DUTCH:              return {"TITLE_06", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_PORTUGUESE:         return {"TITLE_07", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_RUSSIAN:            return {"TITLE_08", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_KOREAN:             return {"TITLE_09", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_CHINESE_T:          return {"TITLE_10", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_CHINESE_S:          return {"TITLE_11", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_FINNISH:            return {"TITLE_12", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_SWEDISH:            return {"TITLE_13", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_DANISH:             return {"TITLE_14", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_NORWEGIAN:          return {"TITLE_15", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_POLISH:             return {"TITLE_16", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL:  return {"TITLE_17", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_ENGLISH_UK:         return {"TITLE_18", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_TURKISH:            return {"TITLE_19", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE:                    return {"TITLE", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set}; // TODO: Is this value correct?
+	case CELL_GAME_PARAMID_TITLE_DEFAULT:            return {"TITLE", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set};
+	case CELL_GAME_PARAMID_TITLE_JAPANESE:           return {"TITLE_00", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_ENGLISH:            return {"TITLE_01", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_FRENCH:             return {"TITLE_02", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_SPANISH:            return {"TITLE_03", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_GERMAN:             return {"TITLE_04", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_ITALIAN:            return {"TITLE_05", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_DUTCH:              return {"TITLE_06", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_PORTUGUESE:         return {"TITLE_07", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_RUSSIAN:            return {"TITLE_08", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_KOREAN:             return {"TITLE_09", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_CHINESE_T:          return {"TITLE_10", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_CHINESE_S:          return {"TITLE_11", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_FINNISH:            return {"TITLE_12", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_SWEDISH:            return {"TITLE_13", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_DANISH:             return {"TITLE_14", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_NORWEGIAN:          return {"TITLE_15", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_POLISH:             return {"TITLE_16", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL:  return {"TITLE_17", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_ENGLISH_UK:         return {"TITLE_18", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_TURKISH:            return {"TITLE_19", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
 
-	case CELL_GAME_PARAMID_TITLE_ID:                 return {"TITLE_ID", strkey_flag::read_only};
-	case CELL_GAME_PARAMID_VERSION:                  return {"VERSION", strkey_flag::get + strkey_flag::read_only};
-	case CELL_GAME_PARAMID_PS3_SYSTEM_VER:           return {"PS3_SYSTEM_VER"}; // TODO
-	case CELL_GAME_PARAMID_APP_VER:                  return {"APP_VER", strkey_flag::read_only};
+	case CELL_GAME_PARAMID_TITLE_ID:                 return {"TITLE_ID", CELL_GAME_SYSP_TITLEID_SIZE, strkey_flag::read_only};
+	case CELL_GAME_PARAMID_VERSION:                  return {"VERSION", CELL_GAME_SYSP_VERSION_SIZE, strkey_flag::get + strkey_flag::read_only};
+	case CELL_GAME_PARAMID_PS3_SYSTEM_VER:           return {"PS3_SYSTEM_VER", CELL_GAME_SYSP_PS3_SYSTEM_VER_SIZE}; // TODO
+	case CELL_GAME_PARAMID_APP_VER:                  return {"APP_VER", CELL_GAME_SYSP_APP_VER_SIZE, strkey_flag::read_only};
 	}
 
 	return {};
@@ -1039,14 +1040,7 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
 
-	u32 max_size = CELL_GAME_SYSP_TITLE_SIZE;
-
-	switch (id)
-	{
-	case CELL_GAME_PARAMID_VERSION:        max_size = CELL_GAME_SYSP_VERSION_SIZE; break; // ??
-	}
-
-	psf::assign(prm->sfo, std::string(key.name), psf::string(max_size, buf.get_ptr()));
+	psf::assign(prm->sfo, std::string(key.name), psf::string(key.max_size, buf.get_ptr()));
 
 	return CELL_OK;
 }
