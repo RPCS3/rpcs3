@@ -5,6 +5,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_fs.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
@@ -172,10 +173,27 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
 
-	std::string dir = dirName.get_ptr();
+	std::string game_dir = dirName.get_ptr();
 
 	// TODO: Find error code
-	verify(HERE), dir.size() == 9;
+	verify(HERE), game_dir.size() == 9;
+
+	const std::string dir = "/dev_hdd0/game/" + game_dir;
+
+	psf::registry sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+
+	const u32 new_data = sfo.empty() && !fs::is_file(vfs::get(dir + "/PARAM.SFO")) ? CELL_GAMEDATA_ISNEWDATA_YES : CELL_GAMEDATA_ISNEWDATA_NO;
+
+	if (!new_data)
+	{
+		const auto cat = psf::get_string(sfo, "CATEGORY", "");
+		if (cat != "HG")
+		{
+			return CELL_GAMEDATA_ERROR_BROKEN;
+		}
+	}
+
+	const std::string usrdir = dir + "/USRDIR";
 
 	vm::var<CellHddGameCBResult> result;
 	vm::var<CellHddGameStatGet> get;
@@ -191,13 +209,13 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	get->ctime = 0; // TODO
 	get->mtime = 0; // TODO
 	get->sizeKB = CELL_HDDGAME_SIZEKB_NOTCALC;
-	strcpy_trunc(get->contentInfoPath, "/dev_hdd0/game/" + dir);
-	strcpy_trunc(get->hddGamePath, "/dev_hdd0/game/" + dir + "/USRDIR");
+	strcpy_trunc(get->contentInfoPath, dir);
+	strcpy_trunc(get->hddGamePath, usrdir);
 
 	vm::var<CellHddGameSystemFileParam> setParam;
 	set->setParam = setParam;
 
-	const std::string& local_dir = vfs::get("/dev_hdd0/game/" + dir);
+	const std::string& local_dir = vfs::get(dir);
 
 	if (!fs::is_dir(local_dir))
 	{
@@ -228,14 +246,107 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 	funcStat(ppu, result, get, set);
 
-	if (result->result != u32{CELL_HDDGAME_CBRESULT_OK} && result->result != u32{CELL_HDDGAME_CBRESULT_OK_CANCEL})
+	std::string error_msg;
+
+	switch (result->result)
 	{
-		return CELL_HDDGAME_ERROR_CBRESULT;
+	case CELL_HDDGAME_CBRESULT_OK:
+	{
+		// Game confirmed that it wants to create directory
+		const auto setParam = set->setParam;
+
+		if (new_data)
+		{
+			if (!setParam)
+			{
+				return CELL_GAMEDATA_ERROR_PARAM;
+			}
+
+			if (!fs::create_path(vfs::get(usrdir)))
+			{
+				return {CELL_GAME_ERROR_ACCESS_ERROR, usrdir};
+			}
+		}
+
+		if (setParam)
+		{
+			if (new_data)
+			{
+				psf::assign(sfo, "CATEGORY", psf::string(3, "HG"));
+			}
+
+			psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, setParam->titleId));
+			psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->title));
+			psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, setParam->dataVersion));
+			psf::assign(sfo, "PARENTAL_LEVEL", +setParam->parentalLevel);
+			psf::assign(sfo, "RESOLUTION", +setParam->resolution);
+			psf::assign(sfo, "SOUND_FORMAT", +setParam->soundFormat);
+
+			for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
+			{
+				if (!setParam->titleLang[i][0])
+				{
+					continue;
+				}
+
+				psf::assign(sfo, fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->titleLang[i]));
+			}
+
+			psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite), sfo);
+		}
+		return CELL_OK;
+	}
+	case CELL_HDDGAME_CBRESULT_OK_CANCEL:
+		cellGame.warning("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_OK_CANCEL");
+		return CELL_OK;
+
+	case CELL_HDDGAME_CBRESULT_ERR_NOSPACE:
+		cellGame.error("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_ERR_NOSPACE. Space Needed: %d KB", result->errNeedSizeKB);
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_NOSPACE, fmt::format("%d", result->errNeedSizeKB).c_str());
+		break;
+
+	case CELL_HDDGAME_CBRESULT_ERR_BROKEN:
+		cellGame.error("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_ERR_BROKEN");
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_BROKEN, game_dir.c_str());
+		break;
+
+	case CELL_HDDGAME_CBRESULT_ERR_NODATA:
+		cellGame.error("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_ERR_NODATA");
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_NODATA, game_dir.c_str());
+		break;
+
+	case CELL_HDDGAME_CBRESULT_ERR_INVALID:
+		cellGame.error("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_ERR_INVALID. Error message: %s", result->invalidMsg);
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_INVALID, result->invalidMsg.get_ptr());
+		break;
+
+	default:
+		cellGame.error("cellHddGameCheck(): callback returned unknown error (code=0x%x). Error message: %s", result->invalidMsg);
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_INVALID, result->invalidMsg.get_ptr());
+		break;
 	}
 
-	// TODO ?
+	if (errDialog == CELL_GAMEDATA_ERRDIALOG_ALWAYS) // Maybe != CELL_GAMEDATA_ERRDIALOG_NONE
+	{
+		// Yield before a blocking dialog is being spawned
+		lv2_obj::sleep(ppu);
 
-	return CELL_OK;
+		// Get user confirmation by opening a blocking dialog
+		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON, vm::make_str(error_msg));
+
+		// Reschedule after a blocking dialog returns
+		if (ppu.check_state())
+		{
+			return 0;
+		}
+
+		if (res != CELL_OK)
+		{
+			return CELL_GAMEDATA_ERROR_INTERNAL;
+		}
+	}
+
+	return CELL_HDDGAME_ERROR_CBRESULT;
 }
 
 error_code cellHddGameCheck2(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
@@ -593,14 +704,8 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
 
-	// TODO: output errors (errDialog)
-
-	const std::string dir = "/dev_hdd0/game/"s + dirName.get_ptr();
-	const std::string usrdir = dir + "/USRDIR";
-
-	vm::var<CellGameDataCBResult> cbResult;
-	vm::var<CellGameDataStatGet>  cbGet;
-	vm::var<CellGameDataStatSet>  cbSet;
+	const std::string game_dir = dirName.get_ptr();
+	const std::string dir = "/dev_hdd0/game/"s + game_dir;
 
 	psf::registry sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 
@@ -614,6 +719,12 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 			return CELL_GAMEDATA_ERROR_BROKEN;
 		}
 	}
+
+	const std::string usrdir = dir + "/USRDIR";
+
+	vm::var<CellGameDataCBResult> cbResult;
+	vm::var<CellGameDataStatGet> cbGet;
+	vm::var<CellGameDataStatSet> cbSet;
 
 	cbGet->isNewData = new_data;
 
@@ -644,15 +755,15 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
 
+	std::string error_msg;
+
 	switch (cbResult->result)
 	{
 	case CELL_GAMEDATA_CBRESULT_OK_CANCEL:
 	{
-		// TODO: do not process game data(directory)
 		cellGame.warning("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_OK_CANCEL");
 		return CELL_OK;
 	}
-
 	case CELL_GAMEDATA_CBRESULT_OK:
 	{
 		// Game confirmed that it wants to create directory
@@ -685,7 +796,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 			for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 			{
-				if (!cbSet->setParam->titleLang[i][0])
+				if (!setParam->titleLang[i][0])
 				{
 					continue;
 				}
@@ -698,26 +809,53 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 		return CELL_OK;
 	}
-	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE: // TODO: process errors, error message and needSizeKB result
-		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NOSPACE");
-		return CELL_GAMEDATA_ERROR_CBRESULT;
+	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE:
+		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NOSPACE. Space Needed: %d KB", cbResult->errNeedSizeKB);
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_NOSPACE, fmt::format("%d", cbResult->errNeedSizeKB).c_str());
+		break;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_BROKEN:
 		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_BROKEN");
-		return CELL_GAMEDATA_ERROR_CBRESULT;
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_BROKEN, game_dir.c_str());
+		break;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_NODATA:
 		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NODATA");
-		return CELL_GAMEDATA_ERROR_CBRESULT;
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_NODATA, game_dir.c_str());
+		break;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_INVALID:
-		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_INVALID");
-		return CELL_GAMEDATA_ERROR_CBRESULT;
+		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_INVALID. Error message: %s", cbResult->invalidMsg);
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_INVALID, cbResult->invalidMsg.get_ptr());
+		break;
 
 	default:
-		cellGame.error("cellGameDataCheckCreate2(): callback returned unknown error (code=0x%x)");
-		return CELL_GAMEDATA_ERROR_CBRESULT;
+		cellGame.error("cellGameDataCheckCreate2(): callback returned unknown error (code=0x%x). Error message: %s", cbResult->invalidMsg);
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_INVALID, cbResult->invalidMsg.get_ptr());
+		break;
 	}
+
+	if (errDialog == CELL_GAMEDATA_ERRDIALOG_ALWAYS) // Maybe != CELL_GAMEDATA_ERRDIALOG_NONE
+	{
+		// Yield before a blocking dialog is being spawned
+		lv2_obj::sleep(ppu);
+
+		// Get user confirmation by opening a blocking dialog
+		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON, vm::make_str(error_msg));
+
+		// Reschedule after a blocking dialog returns
+		if (ppu.check_state())
+		{
+			return 0;
+		}
+
+		if (res != CELL_OK)
+		{
+			return CELL_GAMEDATA_ERROR_INTERNAL;
+		}
+	}
+
+	return CELL_GAMEDATA_ERROR_CBRESULT;
 }
 
 error_code cellGameDataCheckCreate(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
