@@ -156,6 +156,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			apply_configs(false);
 		}
+		else if (button == ui->buttonBox->button(QDialogButtonBox::RestoreDefaults))
+		{
+			m_emu_settings->RestoreDefaults();
+		}
 	});
 
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
@@ -402,7 +406,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->multithreadedRSX, emu_settings_type::MultithreadedRSX);
 	SubscribeTooltip(ui->multithreadedRSX, tooltips.settings.multithreaded_rsx);
-	connect(ui->multithreadedRSX, &QCheckBox::clicked, [this](bool checked)
+	connect(ui->multithreadedRSX, &QCheckBox::toggled, [this](bool checked)
 	{
 		ui->disableVertexCache->setEnabled(!checked);
 	});
@@ -410,13 +414,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->strictModeRendering, emu_settings_type::StrictRenderingMode);
 	SubscribeTooltip(ui->strictModeRendering, tooltips.settings.strict_rendering_mode);
-	const auto onStrictRenderingMode = [this](bool checked)
+	const auto on_strict_rendering_mode = [this](bool checked)
 	{
 		ui->gb_resolutionScale->setEnabled(!checked);
 		ui->gb_minimumScalableDimension->setEnabled(!checked);
 		ui->gb_anisotropicFilter->setEnabled(!checked);
 	};
-	connect(ui->strictModeRendering, &QCheckBox::clicked, this, onStrictRenderingMode);
+	connect(ui->strictModeRendering, &QCheckBox::toggled, this, on_strict_rendering_mode);
 
 	// Radio buttons
 	
@@ -617,7 +621,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
-	onStrictRenderingMode(ui->strictModeRendering->isChecked());
+	on_strict_rendering_mode(ui->strictModeRendering->isChecked());
 	fix_gl_legacy(ui->renderBox->currentText()); // Init
 	connect(ui->renderBox, &QComboBox::currentTextChanged, fix_gl_legacy);
 
@@ -779,11 +783,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->enableBuffering, emu_settings_type::EnableBuffering);
 	SubscribeTooltip(ui->enableBuffering, tooltips.settings.enable_buffering);
-	connect(ui->enableBuffering, &QCheckBox::clicked, enable_buffering_options);
+	connect(ui->enableBuffering, &QCheckBox::toggled, enable_buffering_options);
 
 	m_emu_settings->EnhanceCheckBox(ui->enableTimeStretching, emu_settings_type::EnableTimeStretching);
 	SubscribeTooltip(ui->enableTimeStretching, tooltips.settings.enable_time_stretching);
-	connect(ui->enableTimeStretching, &QCheckBox::clicked, enable_time_stretching_options);
+	connect(ui->enableTimeStretching, &QCheckBox::toggled, enable_time_stretching_options);
 
 	enable_buffering(ui->audioOutBox->currentIndex());
 
@@ -1019,11 +1023,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		std::sort(vec.begin(), vec.end(), [](const std::string &str1, const std::string &str2) { return str1 < str2; });
 	};
 
-	std::vector<std::string> loadedLibs = m_emu_settings->GetLoadedLibraries();
+	std::vector<std::string> loaded_libs = m_emu_settings->GetLoadedLibraries();
 
-	sort_string_vector(loadedLibs);
+	sort_string_vector(loaded_libs);
 
-	for (const auto& lib : loadedLibs)
+	for (const auto& lib : loaded_libs)
 	{
 		QListWidgetItem* item = new QListWidgetItem(qstr(lib), ui->lleList);
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
@@ -1033,13 +1037,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const std::string lle_dir = g_cfg.vfs.get_dev_flash() + "sys/external/";
 
-	std::unordered_set<std::string> set(loadedLibs.begin(), loadedLibs.end());
+	std::unordered_set<std::string> set(loaded_libs.begin(), loaded_libs.end());
 	std::vector<std::string> lle_module_list_unselected;
 
 	for (const auto& prxf : fs::dir(lle_dir))
 	{
 		// List found unselected modules
-		if (prxf.is_directory || (prxf.name.substr(std::max<size_t>(size_t(3), prxf.name.length()) - 4)) != "sprx")
+		if (prxf.is_directory || (prxf.name.substr(std::max(3ULL, prxf.name.length()) - 4)) != "sprx")
 		{
 			continue;
 		}
@@ -1061,9 +1065,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	ui->searchBox->setPlaceholderText(tr("Search libraries", "Library search box"));
 
-	auto on_lib_button_clicked = [this](int ind)
+	auto on_lib_button_toggled = [this](int id, bool checked)
 	{
-		if (ind != static_cast<int>(lib_loading_type::liblv2only))
+		if (!checked)
+		{
+			return;
+		}
+		if (id != static_cast<int>(lib_loading_type::liblv2only))
 		{
 			ui->searchBox->setEnabled(true);
 			ui->lleList->setEnabled(true);
@@ -1105,7 +1113,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	};
 
 	// Events
-	connect(lib_mode_bg, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), on_lib_button_clicked);
+	connect(lib_mode_bg, static_cast<void(QButtonGroup::*)(int, bool)>(&QButtonGroup::buttonToggled), on_lib_button_toggled);
 	connect(ui->searchBox, &QLineEdit::textChanged, on_search_box_text_changed);
 
 	// enable multiselection (there must be a better way)
@@ -1117,9 +1125,24 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	});
 
+	connect(m_emu_settings.get(), &emu_settings::RestoreDefaultsSignal, this, [this]()
+	{
+		for (int i = 0; i < ui->lleList->count(); ++i)
+		{
+			ui->lleList->item(i)->setCheckState(Qt::CheckState::Unchecked);
+		}
+		for (const auto& libname : m_emu_settings->GetLoadedLibraries())
+		{
+			for (auto item : ui->lleList->findItems(qstr(libname), Qt::MatchFlag::MatchExactly))
+			{
+				item->setCheckState(Qt::CheckState::Checked);
+			}
+		}
+	});
+
 	if (const int lib_mode_button_id = lib_mode_bg->checkedId(); lib_mode_button_id >= 0)
 	{
-		on_lib_button_clicked(lib_mode_button_id);
+		on_lib_button_toggled(lib_mode_button_id, true);
 	}
 
 	//    ______                 _       _               _______    _
@@ -1167,7 +1190,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->perfOverlayCenterX, emu_settings_type::PerfOverlayCenterX);
 	SubscribeTooltip(ui->perfOverlayCenterX, tooltips.settings.perf_overlay_center_x);
-	connect(ui->perfOverlayCenterX, &QCheckBox::clicked, [this](bool checked)
+	connect(ui->perfOverlayCenterX, &QCheckBox::toggled, [this](bool checked)
 	{
 		ui->perfOverlayMarginX->setEnabled(!checked);
 	});
@@ -1175,7 +1198,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->perfOverlayCenterY, emu_settings_type::PerfOverlayCenterY);
 	SubscribeTooltip(ui->perfOverlayCenterY, tooltips.settings.perf_overlay_center_y);
-	connect(ui->perfOverlayCenterY, &QCheckBox::clicked, [this](bool checked)
+	connect(ui->perfOverlayCenterY, &QCheckBox::toggled, [this](bool checked)
 	{
 		ui->perfOverlayMarginY->setEnabled(!checked);
 	});
@@ -1211,7 +1234,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->perfOverlayFrametimeGraphEnabled->setEnabled(enabled);
 	};
 	enable_perf_overlay_options(ui->perfOverlayEnabled->isChecked());
-	connect(ui->perfOverlayEnabled, &QCheckBox::clicked, enable_perf_overlay_options);
+	connect(ui->perfOverlayEnabled, &QCheckBox::toggled, enable_perf_overlay_options);
 
 	m_emu_settings->EnhanceCheckBox(ui->shaderLoadBgEnabled, emu_settings_type::ShaderLoadBgEnabled);
 	SubscribeTooltip(ui->shaderLoadBgEnabled, tooltips.settings.shader_load_bg_enabled);
@@ -1223,7 +1246,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->shaderLoadBgBlur->setEnabled(enabled);
 	};
 	enable_shader_loader_options(ui->shaderLoadBgEnabled->isChecked());
-	connect(ui->shaderLoadBgEnabled, &QCheckBox::clicked, enable_shader_loader_options);
+	connect(ui->shaderLoadBgEnabled, &QCheckBox::toggled, enable_shader_loader_options);
 
 	// Sliders
 
@@ -1260,25 +1283,25 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->gs_hideMouseOnIdle_widget, tooltips.settings.hide_mouse_on_idle);
 
 		ui->gs_disableMouse->setChecked(m_gui_settings->GetValue(gui::gs_disableMouse).toBool());
-		connect(ui->gs_disableMouse, &QCheckBox::clicked, [this](bool val)
+		connect(ui->gs_disableMouse, &QCheckBox::toggled, [this](bool checked)
 		{
-			m_gui_settings->SetValue(gui::gs_disableMouse, val);
+			m_gui_settings->SetValue(gui::gs_disableMouse, checked);
 		});
 
 		ui->gs_disableKbHotkeys->setChecked(m_gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool());
-		connect(ui->gs_disableKbHotkeys, &QCheckBox::clicked, [this](bool val)
+		connect(ui->gs_disableKbHotkeys, &QCheckBox::toggled, [this](bool checked)
 		{
-			m_gui_settings->SetValue(gui::gs_disableKbHotkeys, val);
+			m_gui_settings->SetValue(gui::gs_disableKbHotkeys, checked);
 		});
 
 		ui->gs_showMouseInFullscreen->setChecked(m_gui_settings->GetValue(gui::gs_showMouseFs).toBool());
-		connect(ui->gs_showMouseInFullscreen, &QCheckBox::clicked, [this](bool val)
+		connect(ui->gs_showMouseInFullscreen, &QCheckBox::toggled, [this](bool checked)
 		{
-			m_gui_settings->SetValue(gui::gs_showMouseFs, val);
+			m_gui_settings->SetValue(gui::gs_showMouseFs, checked);
 		});
 
 		ui->gs_hideMouseOnIdle->setChecked(m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool());
-		connect(ui->gs_hideMouseOnIdle, &QCheckBox::clicked, [this](bool checked)
+		connect(ui->gs_hideMouseOnIdle, &QCheckBox::toggled, [this](bool checked)
 		{
 			m_gui_settings->SetValue(gui::gs_hideMouseIdle, checked);
 			ui->gs_hideMouseOnIdleTime->setEnabled(checked);
@@ -1301,18 +1324,18 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->gs_width->setValue(std::min(width, screen.width()));
 		ui->gs_height->setValue(std::min(height, screen.height()));
 
-		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=, this](bool val)
+		connect(ui->gs_resizeOnBoot, &QCheckBox::toggled, [this](bool checked)
 		{
-			m_gui_settings->SetValue(gui::gs_resize, val);
-			ui->gs_width->setEnabled(val);
-			ui->gs_height->setEnabled(val);
+			m_gui_settings->SetValue(gui::gs_resize, checked);
+			ui->gs_width->setEnabled(checked);
+			ui->gs_height->setEnabled(checked);
 		});
-		connect(ui->gs_width, &QSpinBox::editingFinished, [=, this]()
+		connect(ui->gs_width, &QSpinBox::editingFinished, [this]()
 		{
 			ui->gs_width->setValue(std::min(ui->gs_width->value(), QGuiApplication::primaryScreen()->size().width()));
 			m_gui_settings->SetValue(gui::gs_width, ui->gs_width->value());
 		});
-		connect(ui->gs_height, &QSpinBox::editingFinished, [=, this]()
+		connect(ui->gs_height, &QSpinBox::editingFinished, [this]()
 		{
 			ui->gs_height->setValue(std::min(ui->gs_height->value(), QGuiApplication::primaryScreen()->size().height()));
 			m_gui_settings->SetValue(gui::gs_height, ui->gs_height->value());
@@ -1469,7 +1492,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->discordState->setEnabled(m_use_discord);
 		ui->discordState->setText(m_discord_state);
 
-		connect(ui->useRichPresence, &QCheckBox::clicked, [this](bool checked)
+		connect(ui->useRichPresence, &QCheckBox::toggled, [this](bool checked)
 		{
 			ui->discordState->setEnabled(checked);
 			ui->label_discordState->setEnabled(checked);
@@ -1602,33 +1625,33 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			QDesktopServices::openUrl(m_gui_settings->GetSettingsDir());
 		});
 
-		connect(ui->cb_show_welcome, &QCheckBox::clicked, [this](bool val)
+		connect(ui->cb_show_welcome, &QCheckBox::toggled, [this](bool checked)
 		{
-			m_gui_settings->SetValue(gui::ib_show_welcome, val);
+			m_gui_settings->SetValue(gui::ib_show_welcome, checked);
 		});
-		connect(ui->cb_show_exit_game, &QCheckBox::clicked, [this](bool val)
+		connect(ui->cb_show_exit_game, &QCheckBox::toggled, [this](bool checked)
 		{
-			m_gui_settings->SetValue(gui::ib_confirm_exit, val);
+			m_gui_settings->SetValue(gui::ib_confirm_exit, checked);
 		});
-		connect(ui->cb_show_boot_game, &QCheckBox::clicked, [this](bool val)
+		connect(ui->cb_show_boot_game, &QCheckBox::toggled, [this](bool checked)
 		{
-			m_gui_settings->SetValue(gui::ib_confirm_boot, val);
+			m_gui_settings->SetValue(gui::ib_confirm_boot, checked);
 		});
-		connect(ui->cb_show_pkg_install, &QCheckBox::clicked, [this](bool val)
+		connect(ui->cb_show_pkg_install, &QCheckBox::toggled, [this](bool checked)
 		{
-			m_gui_settings->SetValue(gui::ib_pkg_success, val);
+			m_gui_settings->SetValue(gui::ib_pkg_success, checked);
 		});
-		connect(ui->cb_show_pup_install, &QCheckBox::clicked, [this](bool val)
+		connect(ui->cb_show_pup_install, &QCheckBox::toggled, [this](bool checked)
 		{
-			m_gui_settings->SetValue(gui::ib_pup_success, val);
+			m_gui_settings->SetValue(gui::ib_pup_success, checked);
 		});
 
-		connect(ui->cb_custom_colors, &QCheckBox::clicked, [this](bool val)
+		connect(ui->cb_custom_colors, &QCheckBox::toggled, [this](bool checked)
 		{
-			m_gui_settings->SetValue(gui::m_enableUIColors, val);
-			ui->pb_gl_icon_color->setEnabled(val);
-			ui->pb_sd_icon_color->setEnabled(val);
-			ui->pb_tr_icon_color->setEnabled(val);
+			m_gui_settings->SetValue(gui::m_enableUIColors, checked);
+			ui->pb_gl_icon_color->setEnabled(checked);
+			ui->pb_sd_icon_color->setEnabled(checked);
+			ui->pb_tr_icon_color->setEnabled(checked);
 			Q_EMIT GuiRepaintRequest();
 		});
 		auto color_dialog = [&](const gui_save& color, const QString& title, QPushButton *button)

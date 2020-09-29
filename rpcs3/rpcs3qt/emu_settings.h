@@ -86,9 +86,16 @@ public:
 	/** Get a localized and therefore freely adjustable version of the string used in config.yml.*/
 	QString GetLocalizedSetting(const QString& original, emu_settings_type type, int index) const;
 
+	/** Resets the current settings to the global default. This includes all connected widgets. */
+	void RestoreDefaults();
+
+Q_SIGNALS:
+	void RestoreDefaultsSignal();
+
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
+
 private:
 	YAML::Node m_defaultSettings; // The default settings as a YAML node.
 	YAML::Node m_currentSettings; // The current settings as a YAML node.
