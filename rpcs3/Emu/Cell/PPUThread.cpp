@@ -1186,7 +1186,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 		if (ppu.use_full_rdata)
 		{
-			mov_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128))
+			mov_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128));
 		}
 
 		if ((vm::reservation_acquire(addr, sizeof(T)) & mask_res) == ppu.rtime) [[likely]]
