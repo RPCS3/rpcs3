@@ -74,7 +74,7 @@ extern atomic_t<u32> g_progr_ptotal;
 extern atomic_t<u32> g_progr_pdone;
 
 // Should be of the same type
-using spu_rdata_t = decltype(ppu_thread::full_rdata);
+using spu_rdata_t = decltype(ppu_thread::rdata);
 
 extern void mov_rdata(spu_rdata_t& _dst, const spu_rdata_t& _src);
 extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs);
@@ -1182,12 +1182,11 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			continue;
 		}
 
-		const u64 rdata = data;
+		const auto rdata = data.load();
 
 		if (ppu.use_full_rdata)
 		{
-			mov_rdata(ppu.full_rdata, vm::_ref<spu_rdata_t>(addr & -128));
-			reinterpret_cast<be_t<u64>&>(ppu.full_rdata[addr & 0x78]) = rdata; // Must match with rdata and must be of atomic 64-bits load
+			mov_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128))
 		}
 
 		if ((vm::reservation_acquire(addr, sizeof(T)) & mask_res) == ppu.rtime) [[likely]]
@@ -1197,8 +1196,8 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 				ppu_log.warning("%s took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
 			}
 
-			ppu.rdata = rdata;
-			return static_cast<T>(ppu.rdata << data_off >> size_off);
+			std::memcpy(&ppu.rdata[addr & 0x78], &rdata, 8); // Store atomic 64bits of rdata
+			return static_cast<T>(rdata << data_off >> size_off);
 		}
 	}
 }
@@ -1514,7 +1513,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	auto& data = vm::_ref<atomic_be_t<u64>>(addr & -8);
 	auto& res = vm::reservation_acquire(addr, sizeof(T));
-	const u64 old_data = ppu.rdata;
+	const u64 old_data = reinterpret_cast<be_t<u64>&>(ppu.rdata[addr & 0x78]);
 	const u64 rtime = ppu.rtime;
 
 	if constexpr (sizeof(T) == sizeof(u32))
@@ -1564,7 +1563,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		{
 			if (g_use_rtm) [[likely]]
 			{
-				switch (ppu_stcx_accurate_tx(addr & -8, rtime, ppu.full_rdata, reg_value))
+				switch (ppu_stcx_accurate_tx(addr & -8, rtime, ppu.rdata, reg_value))
 				{
 				case 0:
 				{
@@ -1581,7 +1580,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				cpu_thread::suspend_all cpu_lock(&ppu);
 
 				// Give up if PUTLLUC happened
-				if (res == (rtime | 1) && cmp_rdata(ppu.full_rdata, vm::_ref<spu_rdata_t>(addr & -128)))
+				if (res == (rtime | 1) && cmp_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128)))
 				{
 					data.release(reg_value);
 					res.release(rtime + 128);
@@ -1616,7 +1615,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				// TODO: vm::check_addr
 				vm::writer_lock lock(addr);
 
-				if (cmp_rdata(ppu.full_rdata, super_data))
+				if (cmp_rdata(ppu.rdata, super_data))
 				{
 					data.release(reg_value);
 					res.release(rtime + 128);
@@ -1665,7 +1664,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			return false;
 		}
 
-		if (!vm::reservation_trylock(res, ppu.rtime))
+		if (!vm::reservation_trylock(res, rtime))
 		{
 			return false;
 		}
