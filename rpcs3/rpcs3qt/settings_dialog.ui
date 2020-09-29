@@ -3521,7 +3521,7 @@
              </widget>
             </item>
             <item>
-             <spacer name="verticalSpacer">
+             <spacer name="verticalSpacerDebugCore">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
               </property>
@@ -3537,7 +3537,50 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="debug_spacer_widget" native="true"/>
+          <widget class="QWidget" name="debug_more_stuff" native="true">
+           <layout class="QVBoxLayout" name="debug_more_stuff_layout">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QGroupBox" name="gb_accurate_ppu_128">
+              <property name="title">
+               <string>Accurate PPU 128 Reservations</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_accurate_ppu_128_layout">
+               <item>
+                <widget class="QComboBox" name="combo_accurate_ppu_128"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacerDebugMore">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
          </item>
         </layout>
        </item>

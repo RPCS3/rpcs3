@@ -239,7 +239,7 @@
                   <height>85</height>
                  </rect>
                 </property>
-                <layout class="QVBoxLayout" name="scrollAreaWidgetContents_notes">
+                <layout class="QVBoxLayout" name="scrollAreaWidgetContents_notes_layout">
                  <property name="spacing">
                   <number>0</number>
                  </property>
