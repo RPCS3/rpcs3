@@ -57,10 +57,12 @@ std::array<std::string, 4> microphone_creator::get_selection_list() const
 
 std::string microphone_creator::set_device(u32 num, const QString& text)
 {
+	ensure(num < m_sel_list.size());
+
 	if (text == get_none())
-		m_sel_list[num - 1] = "";
+		m_sel_list[num].clear();
 	else
-		m_sel_list[num - 1] = text.toStdString();
+		m_sel_list[num] = text.toStdString();
 
 	return m_sel_list[0] + "@@@" + m_sel_list[1] + "@@@" + m_sel_list[2] + "@@@" + m_sel_list[3] + "@@@";
 }
