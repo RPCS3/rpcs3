@@ -126,6 +126,14 @@ void Emulator::Init()
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
+
+	// Not all renderers are known at compile time, so set a provided default if possible
+	if (m_default_renderer == video_renderer::vulkan && !m_default_graphics_adapter.empty())
+	{
+		g_cfg.video.renderer.set(m_default_renderer);
+		g_cfg.video.vk.adapter.from_string(m_default_graphics_adapter);
+	}
+
 	g_cfg_defaults = g_cfg.to_string();
 
 	// Reload override configuration set via command line
