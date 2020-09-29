@@ -257,7 +257,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 
 		if (is_ranged)
 		{
-			index = combobox->findData(selected_q);
+			index = combobox->findData(qstr(def));
 		}
 		else
 		{
