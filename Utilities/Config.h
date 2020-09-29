@@ -203,6 +203,11 @@ namespace cfg
 			return m_value;
 		}
 
+		void set(T value)
+		{
+			m_value = value;
+		}
+
 		void from_default() override
 		{
 			m_value = def;

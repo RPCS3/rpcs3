@@ -21,7 +21,7 @@ inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 // Emit sorted YAML
 namespace
 {
-	static NEVER_INLINE void emitData(YAML::Emitter& out, const YAML::Node& node)
+	static NEVER_INLINE void emit_data(YAML::Emitter& out, const YAML::Node& node)
 	{
 		// TODO
 		out << node;
@@ -63,6 +63,19 @@ emu_settings::emu_settings()
 	: QObject()
 	, m_render_creator(new render_creator(this))
 {
+	if (!m_render_creator)
+	{
+		fmt::throw_exception("emu_settings::emu_settings() render_creator is null");
+	}
+
+	// Make Vulkan default setting if it is supported
+	if (m_render_creator->Vulkan.supported && !m_render_creator->Vulkan.adapters.empty())
+	{
+		const std::string adapter = sstr(m_render_creator->Vulkan.adapters.at(0));
+		cfg_log.notice("Setting the default renderer to Vulkan. Default GPU: '%s')", adapter);
+		Emu.SetDefaultRenderer(video_renderer::vulkan);
+		Emu.SetDefaultGraphicsAdapter(adapter);
+	}
 }
 
 emu_settings::~emu_settings()
@@ -149,7 +162,7 @@ void emu_settings::LoadSettings(const std::string& title_id)
 void emu_settings::SaveSettings()
 {
 	YAML::Emitter out;
-	emitData(out, m_currentSettings);
+	emit_data(out, m_currentSettings);
 
 	std::string config_name;
 
