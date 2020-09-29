@@ -578,7 +578,7 @@ void main_window::InstallPackages(QStringList file_paths)
 
 		if (!info.is_valid)
 		{
-			QMessageBox::warning(this, QObject::tr("Invalid package!"), QObject::tr("The selected package is invalid!\n\nPath:\n%0").arg(file_path));
+			QMessageBox::warning(this, tr("Invalid package!"), tr("The selected package is invalid!\n\nPath:\n%0").arg(file_path));
 			return;
 		}
 
