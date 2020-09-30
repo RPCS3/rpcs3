@@ -1247,7 +1247,6 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			// RawSPU MMIO
 			auto thread = idm::get<named_thread<spu_thread>>(find_raw_spu((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
 
-			u32 value;
 			if (!thread)
 			{
 				// Access Violation
@@ -1255,7 +1254,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			else if ((eal - RAW_SPU_BASE_ADDR) % RAW_SPU_OFFSET + args.size - 1 < SPU_LS_SIZE) // LS access
 			{
 			}
-			else if (args.size == 4 && is_get && thread->read_reg(eal, value))
+			else if (u32 value; args.size == 4 && is_get && thread->read_reg(eal, value))
 			{
 				_ref<u32>(lsa) = value;
 				return;
