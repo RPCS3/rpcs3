@@ -64,7 +64,7 @@ class ppu_thread : public cpu_thread
 public:
 	static const u32 id_base = 0x01000000; // TODO (used to determine thread type)
 	static const u32 id_step = 1;
-	static const u32 id_count = 2048;
+	static const u32 id_count = 100;
 	static constexpr std::pair<u32, u32> id_invl_range = {12, 12};
 
 	virtual std::string dump_all() const override;
