@@ -23,6 +23,7 @@ namespace vfs
 	// Functions in this namespace operate on host filepaths, similar to fs::
 	namespace host
 	{
+		// For internal use (don't use)
 		std::string hash_path(const std::string& path, const std::string& dev_root);
 
 		// Call fs::rename with retry on access error
