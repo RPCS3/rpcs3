@@ -712,12 +712,11 @@ std::string vfs::host::hash_path(const std::string& path, const std::string& dev
 
 bool vfs::host::rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite)
 {
-	// Lock mount point, close file descriptors, retry 
+	// Lock mount point, close file descriptors, retry
 	const auto from0 = std::string_view(from).substr(0, from.find_last_not_of(fs::delim) + 1);
 	const auto escaped_from = fs::escape_path(from);
 
-	// Lock app_home as well because it could be in the same drive as current mount point (TODO)
-	std::scoped_lock lock(mp->mutex, g_mp_sys_app_home.mutex);
+	std::lock_guard lock(mp->mutex);
 
 	auto check_path = [&](std::string_view path)
 	{
@@ -728,7 +727,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 	{
 		if (check_path(fs::escape_path(file.real_path)))
 		{
-			verify(HERE), file.mp == mp || file.mp == &g_mp_sys_app_home;
+			verify(HERE), file.mp == mp;
 			file.restore_data.seek_pos = file.file.pos();
 			file.file.close(); // Actually close it!
 		}

@@ -10,11 +10,11 @@
 
 LOG_CHANNEL(sys_fs);
 
+lv2_fs_mount_point g_mp_sys_dev_root;
 lv2_fs_mount_point g_mp_sys_dev_hdd0;
 lv2_fs_mount_point g_mp_sys_dev_hdd1{512, 32768, lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_usb{512, 4096, lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_bdvd{2048, 65536, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_app_home{512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_host_root{512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_flash{512, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
 
@@ -53,28 +53,77 @@ bool verify_mself(const fs::file& mself_file)
 
 lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 {
-	const auto mp_begin = filename.find_first_not_of('/');
+	std::string_view mp_name, vpath = filename;
 
-	if (mp_begin + 1)
+	for (std::size_t depth = 0;;)
 	{
-		const auto mp_name = filename.substr(mp_begin, filename.find_first_of('/', mp_begin) - mp_begin);
+		// Skip one or more '/'
+		const auto pos = vpath.find_first_not_of('/');
 
+		if (pos == 0)
+		{
+			// Relative path (TODO)
+			break;
+		}
+
+		if (pos == umax)
+		{
+			break;
+		}
+
+		// Get fragment name
+		const auto name = vpath.substr(pos, vpath.find_first_of('/', pos) - pos);
+		vpath.remove_prefix(name.size() + pos);
+
+		// Process special directories
+		if (name == "."sv)
+		{
+			// Keep current
+			continue;
+		}
+
+		if (name == ".."sv)
+		{
+			// Root parent is root
+			if (depth == 0)
+			{
+				continue;
+			}
+
+			depth--;
+			continue;
+		}
+
+		if (depth++ == 0)
+		{
+			// Save mountpoint name
+			mp_name = name;
+		}
+	}
+
+	if (!mp_name.empty())
+	{
+		if (mp_name == "dev_hdd0"sv)
+			return &g_mp_sys_dev_hdd0;
 		if (mp_name == "dev_hdd1"sv)
 			return &g_mp_sys_dev_hdd1;
 		if (mp_name.starts_with("dev_usb"sv))
 			return &g_mp_sys_dev_usb;
 		if (mp_name == "dev_bdvd"sv)
 			return &g_mp_sys_dev_bdvd;
-		if (mp_name == "app_home"sv)
-			return &g_mp_sys_app_home;
+		if (mp_name == "app_home"sv && filename.data() != Emu.argv[0].data())
+			return lv2_fs_object::get_mp(Emu.argv[0]);
 		if (mp_name == "host_root"sv)
 			return &g_mp_sys_host_root;
 		if (mp_name == "dev_flash"sv)
 			return &g_mp_sys_dev_flash;
+
+		// Default
+		return &g_mp_sys_dev_hdd0;
 	}
 
-	// Default
-	return &g_mp_sys_dev_hdd0;
+	// Default fallback
+	return &g_mp_sys_dev_root;
 }
 
 u64 lv2_file::op_read(const fs::file& file, vm::ptr<void> buf, u64 size)
@@ -1902,7 +1951,7 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 	}
 
 	// HACK: Hopefully nothing uses this value or once at max because its hacked here:
-	// The total size can change based on the size of the directory 
+	// The total size can change based on the size of the directory
 	*total_free = *avail_free + fs::get_dir_size(local_path, mp->sector_size);
 
 	return CELL_OK;

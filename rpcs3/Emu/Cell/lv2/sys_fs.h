@@ -149,11 +149,6 @@ struct lv2_fs_mount_point
 
 extern lv2_fs_mount_point g_mp_sys_dev_hdd0;
 extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
-extern lv2_fs_mount_point g_mp_sys_dev_usb;
-extern lv2_fs_mount_point g_mp_sys_dev_bdvd;
-extern lv2_fs_mount_point g_mp_sys_app_home;
-extern lv2_fs_mount_point g_mp_sys_host_root;
-extern lv2_fs_mount_point g_mp_sys_dev_flash;
 
 struct lv2_fs_object
 {
