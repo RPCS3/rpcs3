@@ -11,12 +11,12 @@
 LOG_CHANNEL(sys_fs);
 
 lv2_fs_mount_point g_mp_sys_dev_root;
-lv2_fs_mount_point g_mp_sys_dev_hdd0;
-lv2_fs_mount_point g_mp_sys_dev_hdd1{512, 32768, lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_dev_usb{512, 4096, lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_dev_bdvd{2048, 65536, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_host_root{512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_dev_flash{512, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_hdd0{"/dev_hdd0"};
+lv2_fs_mount_point g_mp_sys_dev_hdd1{"/dev_hdd1", 512, 32768, lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_usb{"", 512, 4096, lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_bdvd{"", 2048, 65536, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_host_root{"", 512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_flash{"", 512, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
 
 bool verify_mself(const fs::file& mself_file)
 {
@@ -494,7 +494,7 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 
 	const auto mp = lv2_fs_object::get_mp(path);
 
-	if (vpath.find_first_not_of('/') == umax)
+	if (mp == &g_mp_sys_host_root)
 	{
 		return {CELL_EISDIR, path};
 	}
@@ -503,7 +503,6 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 	{
 		return {CELL_ENOTMOUNTED, path};
 	}
-
 
 	lv2_file_type type = lv2_file_type::regular;
 
@@ -869,7 +868,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
 
-	if (vpath.find_first_not_of('/') == umax)
+	if (mp == &g_mp_sys_dev_root)
 	{
 		sb->mode = CELL_FS_S_IFDIR | 0711;
 		sb->uid = -1;
@@ -1010,7 +1009,9 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == umax)
+	const auto mp = lv2_fs_object::get_mp(vpath);
+
+	if (mp == &g_mp_sys_dev_root)
 	{
 		return {CELL_EEXIST, path};
 	}
@@ -1019,8 +1020,6 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 	{
 		return {CELL_ENOTMOUNTED, path};
 	}
-
-	const auto mp = lv2_fs_object::get_mp(vpath);
 
 	if (mp->flags & lv2_mp_flag::read_only)
 	{
@@ -1057,7 +1056,10 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 	const std::string_view vto = to.get_ptr();
 	const std::string local_to = vfs::get(vto);
 
-	if (vfrom.find_first_not_of('/') == umax || vto.find_first_not_of('/') == umax)
+	const auto mp = lv2_fs_object::get_mp(vfrom);
+	const auto mp_to = lv2_fs_object::get_mp(vto);
+
+	if (mp == &g_mp_sys_dev_root || mp_to == &g_mp_sys_dev_root)
 	{
 		return CELL_EPERM;
 	}
@@ -1067,9 +1069,7 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 		return CELL_ENOTMOUNTED;
 	}
 
-	const auto mp = lv2_fs_object::get_mp(vfrom);
-
-	if (mp != lv2_fs_object::get_mp(vto))
+	if (mp != mp_to)
 	{
 		return CELL_EXDEV;
 	}
@@ -1113,7 +1113,9 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == umax)
+	const auto mp = lv2_fs_object::get_mp(vpath);
+
+	if (mp == &g_mp_sys_dev_root)
 	{
 		return {CELL_EPERM, path};
 	}
@@ -1122,8 +1124,6 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 	{
 		return {CELL_ENOTMOUNTED, path};
 	}
-
-	const auto mp = lv2_fs_object::get_mp(vpath);
 
 	if (mp->flags & lv2_mp_flag::read_only)
 	{
@@ -1163,9 +1163,9 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	const std::size_t dev_start = vpath.find_first_not_of('/');
+	const auto mp = lv2_fs_object::get_mp(vpath);
 
-	if (dev_start == umax)
+	if (mp == &g_mp_sys_dev_root)
 	{
 		return {CELL_EISDIR, path};
 	}
@@ -1180,8 +1180,6 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 		return {CELL_EISDIR, path};
 	}
 
-	const auto mp = lv2_fs_object::get_mp(vpath);
-
 	if (mp->flags & lv2_mp_flag::read_only)
 	{
 		return {CELL_EROFS, path};
@@ -1189,10 +1187,8 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 
 	std::lock_guard lock(mp->mutex);
 
-	// Size of "/dev_hdd0"-alike substring
-	const std::size_t dev_size  = vpath.find_first_of('/', dev_start);
-
-	if (!vfs::host::unlink(local_path, vfs::get(vpath.substr(0, dev_size))))
+	// Provide default mp root or use parent directory if not available (such as host_root)
+	if (!vfs::host::unlink(local_path, vfs::get(mp->root.empty() ? vpath.substr(0, vpath.find_last_of('/')) : mp->root)))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
@@ -1788,7 +1784,9 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == umax)
+	const auto mp = lv2_fs_object::get_mp(vpath);
+
+	if (mp == &g_mp_sys_dev_root)
 	{
 		return {CELL_EISDIR, path};
 	}
@@ -1797,8 +1795,6 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 	{
 		return {CELL_ENOTMOUNTED, path};
 	}
-
-	const auto mp = lv2_fs_object::get_mp(vpath);
 
 	if (mp->flags & lv2_mp_flag::read_only)
 	{
@@ -1973,7 +1969,9 @@ error_code sys_fs_utime(ppu_thread& ppu, vm::cptr<char> path, vm::cptr<CellFsUti
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == umax)
+	const auto mp = lv2_fs_object::get_mp(vpath);
+
+	if (mp == &g_mp_sys_dev_root)
 	{
 		return {CELL_EISDIR, path};
 	}
@@ -1982,8 +1980,6 @@ error_code sys_fs_utime(ppu_thread& ppu, vm::cptr<char> path, vm::cptr<CellFsUti
 	{
 		return {CELL_ENOTMOUNTED, path};
 	}
-
-	const auto mp = lv2_fs_object::get_mp(vpath);
 
 	if (mp->flags & lv2_mp_flag::read_only)
 	{

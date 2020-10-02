@@ -140,6 +140,7 @@ enum class lv2_file_type
 
 struct lv2_fs_mount_point
 {
+	const std::string_view root;
 	const u32 sector_size = 512;
 	const u32 block_size = 4096;
 	const bs_t<lv2_mp_flag> flags{};
