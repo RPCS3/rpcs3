@@ -2179,8 +2179,14 @@ bool spu_thread::process_mfc_cmd()
 			std::this_thread::yield();
 		}
 
-		auto& dst = _ref<spu_rdata_t>(ch_mfc_cmd.lsa & 0x3ff80);
+		alignas(64) spu_rdata_t temp;
 		u64 ntime;
+
+		if (raddr)
+		{
+			// Save rdata from previous reservation
+			mov_rdata(temp, rdata);
+		}
 
 		for (u64 i = 0;; [&]()
 		{
@@ -2216,7 +2222,7 @@ bool spu_thread::process_mfc_cmd()
 				continue;
 			}
 
-			mov_rdata(dst, data);
+			mov_rdata(rdata, data);
 
 			if (u64 time0 = vm::reservation_acquire(addr, 128);
 				ntime != time0)
@@ -2226,7 +2232,7 @@ bool spu_thread::process_mfc_cmd()
 				continue;
 			}
 
-			if (g_cfg.core.spu_accurate_getllar && !cmp_rdata(dst, data))
+			if (g_cfg.core.spu_accurate_getllar && !cmp_rdata(rdata, data))
 			{
 				i += 2;
 				continue;
@@ -2238,7 +2244,7 @@ bool spu_thread::process_mfc_cmd()
 		if (raddr && raddr != addr)
 		{
 			// Last check for event before we replace the reservation with a new one
-			if ((vm::reservation_acquire(raddr, 128) & (-128 | vm::dma_lockb)) != rtime || !cmp_rdata(rdata, vm::_ref<spu_rdata_t>(raddr)))
+			if ((vm::reservation_acquire(raddr, 128) & (-128 | vm::dma_lockb)) != rtime || !cmp_rdata(temp, vm::_ref<spu_rdata_t>(raddr)))
 			{
 				set_events(SPU_EVENT_LR);
 			}
@@ -2246,7 +2252,7 @@ bool spu_thread::process_mfc_cmd()
 		else if (raddr == addr)
 		{
 			// Lost previous reservation on polling
-			if (ntime != rtime || !cmp_rdata(rdata, dst))
+			if (ntime != rtime || !cmp_rdata(rdata, temp))
 			{
 				set_events(SPU_EVENT_LR);
 			}
@@ -2254,7 +2260,7 @@ bool spu_thread::process_mfc_cmd()
 
 		raddr = addr;
 		rtime = ntime;
-		mov_rdata(rdata, dst);
+		mov_rdata(_ref<spu_rdata_t>(ch_mfc_cmd.lsa & 0x3ff80), rdata);
 
 		ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 		return true;
