@@ -29,6 +29,7 @@ enum class emu_settings_type
 	AccurateRSXAccess,
 	AccurateXFloat,
 	AccuratePPU128Loop,
+	NumPPUThreads,
 	SetDAZandFTZ,
 	SPUBlockSize,
 	SPUCache,
@@ -193,6 +194,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AccuratePPU128Loop,       { "Core", "Accurate PPU 128-byte Reservation Op Max Length"}},
 	{ emu_settings_type::PerformanceReport,        { "Core", "Enable Performance Report"}},
 	{ emu_settings_type::FullWidthAVX512,          { "Core", "Full Width AVX-512"}},
+	{ emu_settings_type::NumPPUThreads,            { "Core", "PPU Threads"}},
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   { "Video", "Renderer"}},

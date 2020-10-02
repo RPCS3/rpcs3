@@ -3685,6 +3685,18 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_num_ppu_threads">
+              <property name="title">
+               <string>PPU Thread Count</string>
+              </property>
+              <layout class="QVBoxLayout" name="vbl_num_ppu_threads">
+               <item>
+                <widget class="QComboBox" name="combo_num_ppu_threads"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <spacer name="verticalSpacerDebugMore">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
