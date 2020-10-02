@@ -811,12 +811,22 @@ struct alignas(128) CellSpursTaskset
 
 	CHECK_SIZE(TaskInfo, 48);
 
-	be_t<v128> running;                          // 0x00
-	be_t<v128> ready;                            // 0x10
-	be_t<v128> pending_ready;                    // 0x20
-	be_t<v128> enabled;                          // 0x30
-	be_t<v128> signalled;                        // 0x40
-	be_t<v128> waiting;                          // 0x50
+	struct atomic_tasks_bitset
+	{
+		atomic_be_t<u32> values[4];
+
+		u32 get_bit(u32 bit) const
+		{
+			return values[bit / 32] & ((1u << 31) >> (bit % 32));
+		}
+	};
+
+	atomic_tasks_bitset running;                 // 0x00
+	atomic_tasks_bitset ready;                   // 0x10
+	atomic_tasks_bitset pending_ready;           // 0x20
+	atomic_tasks_bitset enabled;                 // 0x30
+	atomic_tasks_bitset signalled;               // 0x40
+	atomic_tasks_bitset waiting;                 // 0x50
 	vm::bptr<CellSpurs, u64> spurs;              // 0x60
 	be_t<u64> args;                              // 0x68
 	u8 enable_clear_ls;                          // 0x70
