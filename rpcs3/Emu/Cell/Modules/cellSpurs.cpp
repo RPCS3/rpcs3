@@ -3700,15 +3700,37 @@ s32 _spurs::create_task(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id,
 	// TODO: Verify the ELF header is proper and all its load segments are at address >= 0x3000
 
 	u32 tmp_task_id;
-	for (tmp_task_id = 0; tmp_task_id < CELL_SPURS_MAX_TASK; tmp_task_id++)
 	{
-		if (!taskset->enabled.value()._bit[tmp_task_id])
+		auto addr = taskset.ptr(&CellSpursTaskset::enabled).addr();
+		auto [res, rtime] = vm::reservation_lock(addr, 16, vm::dma_lockb);
+
+		// NOTE: Realfw processes this using 4 32-bits atomic loops
+		// But here its processed within a single 128-bit atomic op
+		vm::_ref<atomic_be_t<v128>>(addr).fetch_op([&](be_t<v128>& value)
 		{
-			auto enabled              = taskset->enabled.value();
-			enabled._bit[tmp_task_id] = true;
-			taskset->enabled        = enabled;
-			break;
-		}
+			auto value0 = value.value();
+
+			if (auto pos = std::countl_one(+value0._u64[0]); pos != 64)
+			{
+				tmp_task_id = pos;
+				value0._u64[0] |= (1ull << 63) >> pos;
+				value = value0;
+				return true;
+			}
+
+			if (auto pos = std::countl_one(+value0._u64[1]); pos != 64)
+			{
+				tmp_task_id = pos + 64;
+				value0._u64[1] |= (1ull << 63) >> pos;
+				value = value0;
+				return true;
+			}
+
+			tmp_task_id = CELL_SPURS_MAX_TASK;
+			return false;
+		});
+
+		res.release(rtime + 128);
 	}
 
 	if (tmp_task_id >= CELL_SPURS_MAX_TASK)
@@ -3730,13 +3752,14 @@ s32 _spurs::create_task(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id,
 
 s32 _spurs::task_start(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, u32 taskId)
 {
-	auto pendingReady         = taskset->pending_ready.value();
-	pendingReady._bit[taskId] = true;
-	taskset->pending_ready  = pendingReady;
+	auto [res, rtime] = vm::reservation_lock(taskset.ptr(&CellSpursTaskset::pending_ready).addr(), 16, vm::dma_lockb);
+	taskset->pending_ready.values[taskId / 32] |= (1u << 31) >> (taskId % 32);
+	res.release(rtime + 128);
 
-	cellSpursSendWorkloadSignal(ppu, taskset->spurs, taskset->wid);
+	auto spurs = +taskset->spurs;
+	ppu_execute<&cellSpursSendWorkloadSignal>(ppu, spurs, +taskset->wid);
 
-	if (s32 rc = cellSpursWakeUp(ppu, taskset->spurs))
+	if (s32 rc = ppu_execute<&cellSpursWakeUp>(ppu, spurs))
 	{
 		if (rc + 0u == CELL_SPURS_POLICY_MODULE_ERROR_STAT)
 		{
@@ -3782,6 +3805,8 @@ s32 cellSpursCreateTask(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, vm::
 
 s32 _cellSpursSendSignal(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, u32 taskId)
 {
+	cellSpurs.trace("_cellSpursSendSignal(taskset=*0x%x, taskId=0x%x)", taskset, taskId);
+
 	if (!taskset)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -3797,30 +3822,59 @@ s32 _cellSpursSendSignal(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, u32
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	be_t<v128> _0(v128::from32(0));
-	bool disabled = taskset->enabled.value()._bit[taskId];
-	auto invalid  = (taskset->ready & taskset->pending_ready) != _0 || (taskset->running & taskset->waiting) != _0 || disabled ||
-					((taskset->running | taskset->ready | taskset->pending_ready | taskset->waiting | taskset->signalled) & ~taskset->enabled) != _0;
-
-	if (invalid)
+	int signal;
+	for (;;)
 	{
-		return CELL_SPURS_TASK_ERROR_SRCH;
+		const u32 addr = taskset.ptr(&CellSpursTaskset::signalled).ptr(&decltype(CellSpursTaskset::signalled)::values, taskId / 32).addr();
+		u32 signalled = ppu_lwarx(ppu, addr);
+
+		const u32 running = taskset->running.values[taskId / 32];
+		const u32 ready = taskset->ready.values[taskId / 32];
+		const u32 waiting = taskset->waiting.values[taskId / 32];
+		const u32 enabled = taskset->enabled.values[taskId / 32];
+		const u32 pready = taskset->pending_ready.values[taskId / 32];
+
+		const u32 mask = (1u << 31) >> (taskId % 32);
+
+		if ((running & waiting) || (ready & pready) ||
+    		((signalled | waiting | pready | running | ready) & ~enabled) || !(enabled & mask))
+		{
+			// Error conditions:
+			// 1) Cannot have a waiting bit and running bit set at the same time
+			// 2) Cannot have a read bit and pending_ready bit at the same time
+			// 3) Any disabled bit in enabled mask must be not set
+			// 4) Specified task must be enabled
+			signal = -1;
+		}
+		else
+		{
+			signal = !!(~signalled & waiting & mask);
+			signalled |= (signal ? mask : 0);
+		}
+
+		if (ppu_stwcx(ppu, addr, signalled))
+		{
+			break;
+		}
 	}
 
-	auto shouldSignal      = ((taskset->waiting & ~taskset->signalled) & be_t<v128>(v128::fromBit(taskId))) != _0 ? true : false;
-	auto signalled         = taskset->signalled.value();
-	signalled._bit[taskId] = true;
-	taskset->signalled   = signalled;
-	if (shouldSignal)
+	switch (signal)
 	{
-		cellSpursSendWorkloadSignal(ppu, taskset->spurs, taskset->wid);
-		auto rc = cellSpursWakeUp(ppu, taskset->spurs);
+	case 0: break;
+	case 1:
+	{
+		auto spurs = +taskset->spurs;
+
+		ppu_execute<&cellSpursSendWorkloadSignal>(ppu, spurs, +taskset->wid);
+		auto rc = ppu_execute<&cellSpursWakeUp>(ppu, spurs);
 		if (rc + 0u == CELL_SPURS_POLICY_MODULE_ERROR_STAT)
 		{
 			return CELL_SPURS_TASK_ERROR_STAT;
 		}
 
-		ASSERT(rc == CELL_OK);
+		return rc;
+	}
+	default: return CELL_SPURS_TASK_ERROR_SRCH;
 	}
 
 	return CELL_OK;
