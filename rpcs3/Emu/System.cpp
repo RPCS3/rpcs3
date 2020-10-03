@@ -298,6 +298,7 @@ void Emulator::Init()
 
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
 	make_path_verbose(fs::get_config_dir() + "captures/");
+	make_path_verbose(fs::get_cache_dir() + "spu_progs/");
 
 	// Initialize patch engine
 	g_fxo->init<patch_engine>()->append_global_patches();
