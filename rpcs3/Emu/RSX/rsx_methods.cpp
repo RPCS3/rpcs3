@@ -425,11 +425,15 @@ namespace rsx
 				const u32 load = rsx::method_registers.transform_constant_load();
 
 				u32 rcount = count;
-				if (const u32 max = (load + reg) * 4 + count + subreg; max > 468 * 4)
+				if (const u32 max = (load + reg) * 4 + count + subreg, limit = 468 * 4; max > limit)
 				{
 					// Ignore addresses outside the usable [0, 467] range
 					rsx_log.warning("Invalid transform register index (load=%u, index=%u, count=%u)", load, index, count);
-					rcount -= max - (468 * 4);
+
+					if ((max - count) < limit)
+						rcount -= max - limit;
+					else
+						rcount = 0;
 				}
 
 				const auto values = &rsx::method_registers.transform_constants[load + reg][subreg];
