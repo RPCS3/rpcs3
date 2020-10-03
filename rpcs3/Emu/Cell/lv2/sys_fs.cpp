@@ -11,6 +11,7 @@
 LOG_CHANNEL(sys_fs);
 
 lv2_fs_mount_point g_mp_sys_dev_root;
+lv2_fs_mount_point g_mp_sys_no_device;
 lv2_fs_mount_point g_mp_sys_dev_hdd0{"/dev_hdd0"};
 lv2_fs_mount_point g_mp_sys_dev_hdd1{"/dev_hdd1", 512, 32768, lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_usb{"", 512, 4096, lv2_mp_flag::no_uid_gid};
@@ -63,7 +64,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 		if (pos == 0)
 		{
 			// Relative path (TODO)
-			break;
+			return &g_mp_sys_no_device;
 		}
 
 		if (pos == umax)
