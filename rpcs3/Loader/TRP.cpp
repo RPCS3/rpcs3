@@ -1,7 +1,5 @@
 ﻿#include "stdafx.h"
 #include "Emu/VFS.h"
-#include "Emu/System.h"
-#include "Emu/Cell/lv2/sys_fs.h"
 #include "TRP.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
@@ -25,7 +23,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 
 	const std::string& local_path = vfs::get(dest);
 
-	const auto temp = vfs::host::hash_path(local_path, Emu.GetHddDir()) + '/';
+	const auto temp = fmt::format(u8"%s.＄temp＄%u", local_path, __rdtsc());
 
 	if (!fs::create_dir(temp))
 	{
@@ -49,7 +47,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 		}
 
 		// Create the file in the temporary directory
-		success = fs::write_file(temp + vfs::escape(entry.name), fs::create + fs::excl, buffer);	
+		success = fs::write_file(temp + '/' + vfs::escape(entry.name), fs::create + fs::excl, buffer);
 		if (!success)
 		{
 			break;
@@ -58,7 +56,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 
 	if (success)
 	{
-		success = vfs::host::remove_all(local_path, Emu.GetHddDir(), &g_mp_sys_dev_hdd0, true) || !fs::is_dir(local_path);
+		success = fs::remove_all(local_path) || !fs::is_dir(local_path);
 
 		if (success)
 		{
@@ -70,7 +68,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 	if (!success)
 	{
 		// Remove temporary directory manually on failure (removed automatically on success)
-		auto old_error = fs::g_tls_error; 
+		auto old_error = fs::g_tls_error;
 		fs::remove_all(temp);
 		fs::g_tls_error = old_error;
 	}
