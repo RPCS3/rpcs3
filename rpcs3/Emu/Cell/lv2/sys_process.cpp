@@ -24,6 +24,7 @@
 #include "sys_timer.h"
 #include "sys_trace.h"
 #include "sys_fs.h"
+#include "sys_vm.h"
 #include "sys_spu.h"
 
 // Check all flags known to be related to extended permissions (TODO)
@@ -188,22 +189,72 @@ error_code sys_process_get_id2(u32 object, vm::ptr<u32> buffer, u32 size, vm::pt
 	return process_get_id(object, buffer, size, set_size);
 }
 
-error_code process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
+CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 {
 	if (!flags || flags & ~(SYS_MEMORY_ACCESS_RIGHT_SPU_THR | SYS_MEMORY_ACCESS_RIGHT_RAW_SPU))
 	{
 		return CELL_EINVAL;
 	}
 
-	// TODO
-	return CELL_OK;
+	// TODO: respect sys_mmapper region's access rights
+	switch (addr >> 28)
+	{
+	case 0x0: // Main memory
+	case 0x1: // Main memory
+	case 0x2: // User 64k (sys_memory)
+	case 0xc: // RSX Local memory
+	case 0xe: // RawSPU MMIO
+		break;
+
+	case 0xf: // Private SPU MMIO
+	{
+		if (flags & SYS_MEMORY_ACCESS_RIGHT_RAW_SPU)
+		{
+			// Cannot be accessed by RawSPU
+			return CELL_EPERM;
+		}
+
+		break;
+	}
+
+	case 0xd: // PPU Stack area
+		return CELL_EPERM;
+	default:
+	{
+		if (auto vm0 = idm::get<sys_vm_t>(sys_vm_t::find_id(addr & -0x1000'0000)))
+		{
+			// sys_vm area was not covering the address specified but made a reservation on the entire 256mb region 
+			if (vm0->addr + vm0->size - 1 < addr)
+			{
+				return CELL_EINVAL;
+			}
+
+			// sys_vm memory is not allowed
+			return CELL_EPERM;
+		}
+
+		if (!vm::get(vm::any, addr & -0x1000'0000))
+		{
+			return CELL_EINVAL;
+		}
+
+		break;
+	}
+	}
+
+	return {};
 }
 
 error_code sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 {
 	sys_process.warning("sys_process_is_spu_lock_line_reservation_address(addr=0x%x, flags=0x%llx)", addr, flags);
 
-	return process_is_spu_lock_line_reservation_address(addr, flags);
+	if (auto err = process_is_spu_lock_line_reservation_address(addr, flags))
+	{
+		return err;
+	}
+
+	return CELL_OK;
 }
 
 error_code _sys_process_get_paramsfo(vm::ptr<char> buffer)
