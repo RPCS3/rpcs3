@@ -136,6 +136,25 @@ void fmt_class_string<CellSpursJobError>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<SpursWorkloadState>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+		case SPURS_WKL_STATE_NON_EXISTENT: return "Non-existent";
+		case SPURS_WKL_STATE_PREPARING: return "Preparing";
+		case SPURS_WKL_STATE_RUNNABLE: return "Runnable";
+		case SPURS_WKL_STATE_SHUTTING_DOWN: return "In-shutdown";
+		case SPURS_WKL_STATE_REMOVABLE: return "Removable";
+		case SPURS_WKL_STATE_INVALID: break;
+		}
+
+		return unknown;
+	});
+}
+
 extern u64 ppu_ldarx(ppu_thread&, u32);
 extern u32 ppu_lwarx(ppu_thread&, u32);
 extern bool ppu_stwcx(ppu_thread&, u32, u32);
@@ -761,15 +780,13 @@ s32 _spurs::wakeup_shutdown_completion_waiter(ppu_thread& ppu, vm::ptr<CellSpurs
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
 
-	const u8 wklState = wid < CELL_SPURS_MAX_WORKLOAD ? spurs->wklState1[wid] : spurs->wklState2[wid & 0x0F];
-
-	if (wklState != SPURS_WKL_STATE_REMOVABLE)
+	if (spurs->wklState(wid) != SPURS_WKL_STATE_REMOVABLE)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
 	const auto wklF     = wid < CELL_SPURS_MAX_WORKLOAD ? &spurs->wklF1[wid]     : &spurs->wklF2[wid & 0x0F];
-	const auto wklEvent = wid < CELL_SPURS_MAX_WORKLOAD ? &spurs->wklEvent1[wid] : &spurs->wklEvent2[wid & 0x0F];
+	const auto wklEvent = &spurs->wklEvent(wid);
 
 	if (wklF->hook)
 	{
@@ -2255,7 +2272,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 	{
 		verify(HERE), (spurs->wklCurrentContention[wnum] & 0xf) == 0;
 		verify(HERE), (spurs->wklPendingContention[wnum] & 0xf) == 0;
-		spurs->wklState1[wnum] = 1;
+		spurs->wklState1[wnum] = SPURS_WKL_STATE_PREPARING;
 		spurs->wklStatus1[wnum] = 0;
 		spurs->wklEvent1[wnum] = 0;
 		spurs->wklInfo1[wnum].addr = pm;
@@ -2291,7 +2308,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 	{
 		verify(HERE), (spurs->wklCurrentContention[index] & 0xf0) == 0;
 		verify(HERE), (spurs->wklPendingContention[index] & 0xf0) == 0;
-		spurs->wklState2[index] = 1;
+		spurs->wklState2[index] = SPURS_WKL_STATE_PREPARING;
 		spurs->wklStatus2[index] = 0;
 		spurs->wklEvent2[index] = 0;
 		spurs->wklInfo2[index].addr = pm;
@@ -2370,7 +2387,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 	});
 
 	verify(HERE), (res_wkl <= 31);
-	spurs->wklState(wnum).exchange(2);
+	spurs->wklState(wnum).exchange(SPURS_WKL_STATE_RUNNABLE);
 	spurs->sysSrvMsgUpdateWorkload.exchange(0xff);
 	spurs->sysSrvMessage.exchange(0xff);
 	return CELL_OK;
@@ -2555,7 +2572,7 @@ s32 cellSpursReadyCountStore(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid,
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
 
-	if (spurs->exception || spurs->wklState(wid) != 2)
+	if (spurs->exception || spurs->wklState(wid) != SPURS_WKL_STATE_RUNNABLE)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
@@ -2591,7 +2608,7 @@ s32 cellSpursReadyCountSwap(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid, 
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
 
-	if (spurs->exception || spurs->wklState(wid) != 2)
+	if (spurs->exception || spurs->wklState(wid) != SPURS_WKL_STATE_RUNNABLE)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
@@ -2629,7 +2646,7 @@ s32 cellSpursReadyCountCompareAndSwap(ppu_thread& ppu, vm::ptr<CellSpurs> spurs,
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
 
-	if (spurs->exception || spurs->wklState(wid) != 2)
+	if (spurs->exception || spurs->wklState(wid) != SPURS_WKL_STATE_RUNNABLE)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
@@ -2669,7 +2686,7 @@ s32 cellSpursReadyCountAdd(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid, v
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
 
-	if (spurs->exception || spurs->wklState(wid) != 2)
+	if (spurs->exception || spurs->wklState(wid) != SPURS_WKL_STATE_RUNNABLE)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}

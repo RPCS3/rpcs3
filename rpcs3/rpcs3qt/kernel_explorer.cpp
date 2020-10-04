@@ -29,6 +29,7 @@
 #include "Emu/Cell/lv2/sys_vm.h"
 #include "Emu/Cell/lv2/sys_net.h"
 #include "Emu/Cell/lv2/sys_fs.h"
+#include "Emu/Cell/Modules/cellSpurs.h"
 
 #include "Emu/RSX/RSXThread.h"
 
@@ -50,6 +51,7 @@ enum kernel_item_type : int
 	root,
 	node,
 	volatile_node,
+	solid_node,
 	leaf
 };
 
@@ -126,6 +128,20 @@ static QTreeWidgetItem* add_volatile_node(QTreeWidget* tree, QTreeWidgetItem *pa
 	if (!node)
 	{
 		node = add_child(parent, base_text, column, kernel_item_type::volatile_node);
+	}
+	if (node)
+	{
+		node->setText(0, text.isEmpty() ? base_text : text);
+	}
+	return node;
+}
+
+static QTreeWidgetItem* add_solid_node(QTreeWidget* tree, QTreeWidgetItem *parent, const QString& base_text, const QString& text = "", int column = 0)
+{
+	QTreeWidgetItem* node = find_first_node(tree, parent, base_text + ".*");
+	if (!node)
+	{
+		node = add_child(parent, base_text, column, kernel_item_type::solid_node);
 	}
 	if (node)
 	{
@@ -251,6 +267,7 @@ void kernel_explorer::Update()
 						}
 						[[fallthrough]];
 					}
+					case kernel_item_type::solid_node:
 					case kernel_item_type::node:
 					case kernel_item_type::root:
 					default:
@@ -480,7 +497,65 @@ void kernel_explorer::Update()
 
 	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
 	{
-		add_leaf(find_node(m_tree, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), +tg.prio, tg.type)));
+		QTreeWidgetItem* spu_tree = add_solid_node(m_tree, find_node(m_tree, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), +tg.prio, tg.type)));
+
+		if (tg.name.ends_with("CellSpursKernelGroup"sv))
+		{
+			vm::ptr<CellSpurs> pspurs{};
+
+			for (const auto& thread : tg.threads)
+			{
+				if (thread)
+				{
+					// Find SPURS structure address
+					const u64 arg = tg.args[thread->index][1];
+
+					if (!pspurs)
+					{
+						if (arg < UINT32_MAX && arg % 0x80 == 0 && vm::check_addr(arg, pspurs.size()))
+						{
+							pspurs.set(static_cast<u32>(arg));
+						}
+						else
+						{
+							break;
+						}
+					}
+					else if (pspurs.addr() != arg)
+					{
+						pspurs = {};
+						break;
+					}
+				}
+			}
+
+			CellSpurs spurs{};
+
+			if (pspurs && pspurs.try_read(spurs))
+			{
+				const QString branch_name = "SPURS";
+				const u32 wklEnabled = spurs.wklEnabled;
+				QTreeWidgetItem* spurs_tree = add_solid_node(m_tree, spu_tree, branch_name, branch_name + qstr(fmt::format(", Instance: *0x%x, LWMutex: 0x%x, LWCond: 0x%x"
+					, pspurs, spurs.mutex.sleep_queue, spurs.cond.lwcond_queue)));
+
+				for (u32 i = 1; i; i <<= 1)
+				{
+					if (!(wklEnabled & i))
+					{
+						continue;
+					}
+
+					const u32 wid = std::countr_zero(i);
+					const u32 ready_count = spurs.readyCount(wid);
+					const auto state = spurs.wklState(wid).load();
+					add_leaf(spurs_tree, qstr(fmt::format("Workload %u, Name: %s, State: %s, ReadyCnt: %u", wid, +spurs.wklName(wid).nameInstance, state, ready_count)));
+				}
+			}
+			else
+			{
+				// TODO: Might be old CellSpurs structure which is smaller
+			}
+		}
 	});
 
 	QTreeWidgetItem* rsx_context_node = find_node(m_tree, additional_nodes::rsx_contexts);
@@ -504,7 +579,7 @@ void kernel_explorer::Update()
 		}
 
 		const QString branch_name = "RSX Context 0x55555555";
-		QTreeWidgetItem* rsx_tree = add_volatile_node(m_tree, rsx_context_node, branch_name,
+		QTreeWidgetItem* rsx_tree = add_solid_node(m_tree, rsx_context_node, branch_name,
 			branch_name + qstr(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", context_info->memory_size >> 20, base, context_info->device_addr, +vm::_ref<RsxDriverInfo>(context_info->driver_info).handlers)));
 
 		QTreeWidgetItem* io_tree = add_volatile_node(m_tree, rsx_tree, tr("IO-EA Table"));
@@ -611,7 +686,7 @@ void kernel_explorer::Update()
 				continue;
 			}
 
-			switch (node->data(0, kernel_item_role::type_role).toInt())
+			switch (int type = node->data(0, kernel_item_role::type_role).toInt())
 			{
 			case kernel_item_type::leaf:
 			{
@@ -619,6 +694,7 @@ void kernel_explorer::Update()
 				break;
 			}
 			case kernel_item_type::node:
+			case kernel_item_type::solid_node:
 			case kernel_item_type::volatile_node:
 			{
 				const int count = final_touches(node);
@@ -633,7 +709,7 @@ void kernel_explorer::Update()
 				}
 
 				// Hide node if it has no children
-				node->setHidden(count <= 0);
+				node->setHidden(type != kernel_item_type::solid_node && count <= 0);
 				break;
 			}
 			case kernel_item_type::root:
