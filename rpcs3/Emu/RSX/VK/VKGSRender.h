@@ -9,6 +9,7 @@
 #include "VKProgramBuffer.h"
 #include "VKFramebuffer.h"
 #include "VKShaderInterpreter.h"
+#include "VKQueryPool.h"
 #include "../GCM.h"
 
 #include <thread>
@@ -397,7 +398,7 @@ private:
 
 	//Vulkan internals
 	vk::command_pool m_command_buffer_pool;
-	vk::occlusion_query_pool m_occlusion_query_pool;
+	std::unique_ptr<vk::query_pool_manager> m_occlusion_query_manager;
 	bool m_occlusion_query_active = false;
 	rsx::reports::occlusion_query_info *m_active_query_info = nullptr;
 	std::vector<vk::occlusion_data> m_occlusion_map;

@@ -943,14 +943,14 @@ void VKGSRender::end()
 
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_load_occluson_task)
 	{
-		u32 occlusion_id = m_occlusion_query_pool.find_free_slot(*m_current_command_buffer);
+		u32 occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
 		if (occlusion_id == UINT32_MAX)
 		{
 			// Force flush
 			rsx_log.error("[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
 			ZCULL_control::sync(this);
 
-			occlusion_id = m_occlusion_query_pool.find_free_slot(*m_current_command_buffer);
+			occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
 			if (occlusion_id == UINT32_MAX)
 			{
 				//rsx_log.error("Occlusion pool overflow");
@@ -959,7 +959,7 @@ void VKGSRender::end()
 		}
 
 		// Begin query
-		m_occlusion_query_pool.begin_query(*m_current_command_buffer, occlusion_id);
+		m_occlusion_query_manager->begin_query(*m_current_command_buffer, occlusion_id);
 
 		auto &data = m_occlusion_map[m_active_query_info->driver_handle];
 		data.indices.push_back(occlusion_id);

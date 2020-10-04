@@ -42,6 +42,7 @@ namespace rsx
 	//Base for resources with reference counting
 	class ref_counted
 	{
+	protected:
 		atomic_t<s32> ref_count{ 0 }; // References held
 		atomic_t<u8> idle_time{ 0 };  // Number of times the resource has been tagged idle
 
