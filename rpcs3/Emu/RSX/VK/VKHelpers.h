@@ -3224,193 +3224,33 @@ public:
 		}
 	};
 
-	class occlusion_query_pool
+	class query_pool : public rsx::ref_counted
 	{
-		struct query_slot_info
-		{
-			bool any_passed;
-			bool active;
-			bool ready;
-		};
-
-		VkQueryPool query_pool = VK_NULL_HANDLE;
-		vk::render_device* owner = nullptr;
-
-		std::deque<u32> available_slots;
-		std::vector<query_slot_info> query_slot_status;
-
-		inline bool poke_query(query_slot_info& query, u32 index, VkQueryResultFlags flags)
-		{
-			// Query is ready if:
-			// 1. Any sample has been determined to have passed the Z test
-			// 2. The backend has fully processed the query and found no hits
-
-			u32 result[2] = { 0, 0 };
-			switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, flags | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
-			{
-			case VK_SUCCESS:
-			{
-				if (result[0])
-				{
-					query.any_passed = true;
-					query.ready = true;
-					return true;
-				}
-				else if (result[1])
-				{
-					query.any_passed = false;
-					query.ready = true;
-					return true;
-				}
-
-				return false;
-			}
-			case VK_NOT_READY:
-			{
-				if (result[0])
-				{
-					query.any_passed = true;
-					query.ready = true;
-					return true;
-				}
-
-				return false;
-			}
-			default:
-				die_with_error(HERE, error);
-				return false;
-			}
-		}
+		VkQueryPool m_query_pool;
+		VkDevice m_device;
 
 	public:
-
-		void create(vk::render_device &dev, u32 num_entries)
+		query_pool(VkDevice dev, VkQueryType type, u32 size)
+			: m_query_pool(VK_NULL_HANDLE), m_device(dev)
 		{
-			VkQueryPoolCreateInfo info = {};
+			VkQueryPoolCreateInfo info{};
 			info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-			info.queryType = VK_QUERY_TYPE_OCCLUSION;
-			info.queryCount = num_entries;
+			info.queryType = type;
+			info.queryCount = size;
+			vkCreateQueryPool(dev, &info, nullptr, &m_query_pool);
 
-			CHECK_RESULT(vkCreateQueryPool(dev, &info, nullptr, &query_pool));
-			owner = &dev;
-
-			// From spec: "After query pool creation, each query must be reset before it is used."
-			query_slot_status.resize(num_entries, {});
+			// Take 'size' references on this object
+			ref_count.release(static_cast<s32>(size));
 		}
 
-		void destroy()
+		~query_pool()
 		{
-			if (query_pool)
-			{
-				vkDestroyQueryPool(*owner, query_pool, nullptr);
-
-				owner = nullptr;
-				query_pool = VK_NULL_HANDLE;
-			}
+			vkDestroyQueryPool(m_device, m_query_pool, nullptr);
 		}
 
-		void initialize(vk::command_buffer &cmd)
+		operator VkQueryPool()
 		{
-			const u32 count = ::size32(query_slot_status);
-			vkCmdResetQueryPool(cmd, query_pool, 0, count);
-
-			query_slot_info value{};
-			std::fill(query_slot_status.begin(), query_slot_status.end(), value);
-
-			for (u32 n = 0; n < count; ++n)
-			{
-				available_slots.push_back(n);
-			}
-		}
-
-		void begin_query(vk::command_buffer &cmd, u32 index)
-		{
-			verify(HERE), query_slot_status[index].active == false;
-
-			vkCmdBeginQuery(cmd, query_pool, index, 0);//VK_QUERY_CONTROL_PRECISE_BIT);
-			query_slot_status[index].active = true;
-		}
-
-		void end_query(vk::command_buffer &cmd, u32 index)
-		{
-			vkCmdEndQuery(cmd, query_pool, index);
-		}
-
-		bool check_query_status(u32 index)
-		{
-			return poke_query(query_slot_status[index], index, VK_QUERY_RESULT_PARTIAL_BIT);
-		}
-
-		u32 get_query_result(u32 index)
-		{
-			// Check for cached result
-			auto& query_info = query_slot_status[index];
-
-			while (!query_info.ready)
-			{
-				poke_query(query_info, index, VK_QUERY_RESULT_PARTIAL_BIT);
-			}
-
-			return query_info.any_passed ? 1 : 0;
-		}
-
-		void get_query_result_indirect(vk::command_buffer &cmd, u32 index, VkBuffer dst, VkDeviceSize dst_offset)
-		{
-			vkCmdCopyQueryPoolResults(cmd, query_pool, index, 1, dst, dst_offset, 4, VK_QUERY_RESULT_WAIT_BIT);
-		}
-
-		void reset_query(vk::command_buffer &/*cmd*/, u32 index)
-		{
-			if (query_slot_status[index].active)
-			{
-				// Actual reset is handled later on demand
-				available_slots.push_back(index);
-			}
-		}
-
-		template<template<class> class _List>
-		void reset_queries(vk::command_buffer &cmd, _List<u32> &list)
-		{
-			for (const auto index : list)
-				reset_query(cmd, index);
-		}
-
-		void reset_all(vk::command_buffer &cmd)
-		{
-			for (u32 n = 0; n < query_slot_status.size(); n++)
-			{
-				if (query_slot_status[n].active)
-					reset_query(cmd, n);
-			}
-		}
-
-		u32 find_free_slot(vk::command_buffer& cmd)
-		{
-			if (available_slots.empty())
-			{
-				return ~0u;
-			}
-
-			const u32 result = available_slots.front();
-			if (query_slot_status[result].active)
-			{
-				// Trigger reset if round robin allocation has gone back to the first item
-				if (vk::is_renderpass_open(cmd))
-				{
-					vk::end_renderpass(cmd);
-				}
-
-				// At this point, the first available slot is not reset which means they're all active
-				for (auto It = available_slots.cbegin(); It != available_slots.cend(); ++It)
-				{
-					const auto index = *It;
-					vkCmdResetQueryPool(cmd, query_pool, index, 1);
-					query_slot_status[index] = {};
-				}
-			}
-
-			available_slots.pop_front();
-			return result;
+			return m_query_pool;
 		}
 	};
 

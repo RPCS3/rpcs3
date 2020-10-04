@@ -443,6 +443,7 @@ if(TARGET 3rdparty_vulkan)
 		RSX/VK/VKMemAlloc.cpp
 		RSX/VK/VKPresent.cpp
 		RSX/VK/VKProgramPipeline.cpp
+		RSX/VK/VKQueryPool.cpp
 		RSX/VK/VKRenderPass.cpp
 		RSX/VK/VKResolveHelper.cpp
 		RSX/VK/VKResourceManager.cpp
