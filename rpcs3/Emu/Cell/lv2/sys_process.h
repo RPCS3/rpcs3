@@ -54,7 +54,9 @@ extern ps3_process_info_t  g_ps3_process_info;
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);
-error_code process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);
+
+enum CellError : u32;
+CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);
 
 // SysCalls
 s32 sys_process_getpid();
