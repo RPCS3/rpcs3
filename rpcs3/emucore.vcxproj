@@ -97,6 +97,7 @@
     </ClCompile>
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
     <ClCompile Include="Emu\Audio\AudioBackend.cpp" />
+    <ClCompile Include="Emu\Io\interception.cpp" />
     <ClCompile Include="Emu\Io\KeyboardHandler.cpp" />
     <ClCompile Include="Emu\Io\pad_config.cpp" />
     <ClCompile Include="Emu\Io\pad_config_types.cpp" />
@@ -486,6 +487,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h" />
     <ClInclude Include="Emu\Cell\Modules\cellStorage.h" />
     <ClInclude Include="Emu\Io\GHLtar.h" />
+    <ClInclude Include="Emu\Io\interception.h" />
     <ClInclude Include="Emu\Io\pad_types.h" />
     <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="Emu\Io\pad_config.h" />

@@ -2,9 +2,8 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Io/interception.h"
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
-
-#include "Input/pad_thread.h"
 
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
@@ -201,10 +200,10 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 			g_fxo->get<msg_info>()->remove();
 		}
 
-		pad::SetIntercepted(false);
+		input::SetIntercepted(false);
 	};
 
-	pad::SetIntercepted(true);
+	input::SetIntercepted(true);
 
 	auto& ppu = *get_current_cpu_thread();
 	lv2_obj::sleep(ppu);
@@ -482,7 +481,7 @@ error_code cellMsgDialogAbort()
 
 	g_fxo->get<msg_dlg_thread>()->wait_until = 0;
 	g_fxo->get<msg_info>()->remove(); // this shouldn't call on_close
-	pad::SetIntercepted(false);       // so we need to reenable the pads here
+	input::SetIntercepted(false);     // so we need to reenable the pads here
 
 	return CELL_OK;
 }
