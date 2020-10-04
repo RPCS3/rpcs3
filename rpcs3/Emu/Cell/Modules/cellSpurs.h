@@ -145,7 +145,7 @@ enum SpursFlags1 : u8
 	SF1_EXIT_IF_NO_WORK = 0x80,
 };
 
-enum SpursWorkloadConstants : u32
+enum SpursWorkloadState : u8
 {
 	// Workload states
 	SPURS_WKL_STATE_NON_EXISTENT    = 0,
@@ -154,7 +154,10 @@ enum SpursWorkloadConstants : u32
 	SPURS_WKL_STATE_SHUTTING_DOWN   = 3,
 	SPURS_WKL_STATE_REMOVABLE       = 4,
 	SPURS_WKL_STATE_INVALID         = 5,
+};
 
+enum SpursImgAddrConstants : u32
+{
 	// Image addresses
 	SPURS_IMG_ADDR_SYS_SRV_WORKLOAD = 0x100,
 	SPURS_IMG_ADDR_TASKSET_PM       = 0x200,
@@ -537,7 +540,7 @@ struct alignas(128) CellSpurs
 	atomic_t<u8> wklFlagReceiver;                       // 0x77
 	atomic_be_t<u16> wklSignal2;                        // 0x78 Bitset for 16..32 wids
 	u8 x7A[6];                                          // 0x7A
-	atomic_t<u8> wklState1[0x10];                       // 0x80 SPURS_WKL_STATE_*
+	atomic_t<SpursWorkloadState> wklState1[0x10];       // 0x80
 	u8 wklStatus1[0x10];                                // 0x90
 	atomic_t<u8> wklEvent1[0x10];                       // 0xA0
 	atomic_be_t<u32> wklEnabled;                        // 0xB0
@@ -563,7 +566,7 @@ struct alignas(128) CellSpurs
 
 	atomic_t<SrvTraceSyncVar> sysSrvTrace;              // 0xCC
 
-	atomic_t<u8> wklState2[0x10];                       // 0xD0 SPURS_WKL_STATE_*
+	atomic_t<SpursWorkloadState> wklState2[0x10];       // 0xD0
 	u8 wklStatus2[0x10];                                // 0xE0
 	atomic_t<u8> wklEvent2[0x10];                       // 0xF0
 	_sub_str1 wklF1[0x10];                              // 0x100
@@ -615,7 +618,7 @@ struct alignas(128) CellSpurs
 	_sub_str4 wklH2[0x10];                              // 0x1A00
 	u8 unknown_[0x2000 - 0x1B00];
 
-	atomic_t<u8>& wklState(const u32 wid)
+	atomic_t<SpursWorkloadState>& wklState(u32 wid)
 	{
 		if (wid & 0x10)
 		{
@@ -624,6 +627,18 @@ struct alignas(128) CellSpurs
 		else
 		{
 			return wklState1[wid & 0xf];
+		}
+	}
+
+	atomic_t<u8>& wklEvent(u32 wid)
+	{
+		if (wid & 0x10)
+		{
+			return wklEvent2[wid & 0xf];
+		}
+		else
+		{
+			return wklEvent1[wid & 0xf];
 		}
 	}
 
@@ -636,6 +651,18 @@ struct alignas(128) CellSpurs
 		else
 		{
 			return wklIdleSpuCountOrReadyCount2[wid & 0xf];
+		}
+	}
+
+	_sub_str4& wklName(u32 wid)
+	{
+		if (wid & 0x10)
+		{
+			return wklH2[wid & 0xf];
+		}
+		else
+		{
+			return wklH1[wid & 0xf];
 		}
 	}
 };
