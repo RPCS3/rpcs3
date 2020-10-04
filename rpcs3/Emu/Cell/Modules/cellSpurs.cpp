@@ -3849,7 +3849,7 @@ s32 _cellSpursSendSignal(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, u32
 		else
 		{
 			signal = !!(~signalled & waiting & mask);
-			signalled |= (signal ? mask : 0);
+			signalled |= mask;
 		}
 
 		if (ppu_stwcx(ppu, addr, signalled))
