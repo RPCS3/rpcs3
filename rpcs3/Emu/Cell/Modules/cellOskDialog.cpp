@@ -2,8 +2,8 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Io/interception.h"
 #include "Emu/RSX/Overlays/overlay_osk.h"
-#include "Input/pad_thread.h"
 
 #include "cellSysutil.h"
 #include "cellOskDialog.h"
@@ -152,7 +152,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			return false;
 		}))
 		{
-			pad::SetIntercepted(false);
+			input::SetIntercepted(false);
 			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
 			return;
 		}
@@ -227,7 +227,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
 		}
 
-		pad::SetIntercepted(false);
+		input::SetIntercepted(false);
 	};
 
 	osk->on_osk_input_entered = [wptr = std::weak_ptr<OskDialogBase>(osk)]()
@@ -240,7 +240,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		}
 	};
 
-	pad::SetIntercepted(true);
+	input::SetIntercepted(true);
 
 	Emu.CallAfter([=, &result]()
 	{

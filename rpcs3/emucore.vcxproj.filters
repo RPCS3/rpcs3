@@ -974,6 +974,9 @@
     <ClCompile Include="Emu\perf_meter.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\interception.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1872,6 +1875,9 @@
     </ClInclude>
     <ClInclude Include="Emu\perf_meter.hpp">
       <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\interception.h">
+      <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

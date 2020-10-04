@@ -3,9 +3,8 @@
 
 #include <Emu/System.h>
 #include <Emu/IdManager.h>
+#include "Emu/Io/interception.h"
 #include <Emu/RSX/Overlays/overlay_save_dialog.h>
-
-#include "Input/pad_thread.h"
 
 s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet)
 {
@@ -26,7 +25,7 @@ s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries,
 	atomic_t<bool> dlg_result(false);
 	atomic_t<s32> selection;
 
-	pad::SetIntercepted(true);
+	input::SetIntercepted(true);
 
 	Emu.CallAfter([&]()
 	{
@@ -41,7 +40,7 @@ s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries,
 		thread_ctrl::wait_for(1000);
 	}
 
-	pad::SetIntercepted(false);
+	input::SetIntercepted(false);
 
 	return selection.load();
 }

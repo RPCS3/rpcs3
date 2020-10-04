@@ -356,6 +356,7 @@ target_link_libraries(rpcs3_emu
 
 # Io
 target_sources(rpcs3_emu PRIVATE
+	Io/interception.cpp
 	Io/KeyboardHandler.cpp
 	Io/pad_config.cpp
 	Io/pad_config_types.cpp

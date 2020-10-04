@@ -35,11 +35,6 @@ enum
 	CELL_KB_ARRANGEMENT_106_KANA = CELL_KB_MAPPING_106_KANA,
 };
 
-enum
-{
-	CELL_KB_INFO_INTERCEPTED = 1
-};
-
 struct CellKbInfo
 {
 	be_t<u32> max_connect;
