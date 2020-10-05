@@ -1138,7 +1138,7 @@ void pad_settings_dialog::ChangeInputType()
 	bool force_enable = false; // enable configs even with disconnected devices
 	const int player = ui->tabWidget->currentIndex();
 	const bool is_ldd_pad = GetIsLddPad(player);
-	
+
 	std::string handler;
 	std::string device;
 	std::string profile;

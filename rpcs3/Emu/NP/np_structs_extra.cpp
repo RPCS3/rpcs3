@@ -160,7 +160,12 @@ namespace extra_nps
 		sceNp2.warning("maxSlot: %d", room->maxSlot);
 
 		sceNp2.warning("members: *0x%x", room->memberList.members);
-		print_room_member_data_internal(room->memberList.members.get_ptr());
+		auto cur_member = room->memberList.members;
+		while (cur_member)
+		{
+			print_room_member_data_internal(cur_member.get_ptr());
+			cur_member = cur_member->next;
+		}
 		sceNp2.warning("membersNum: %d", room->memberList.membersNum);
 		sceNp2.warning("me: *0x%x", room->memberList.me);
 		sceNp2.warning("owner: *0x%x", room->memberList.owner);

@@ -17,6 +17,7 @@
 #include "GLTexture.h"
 #include "../Common/TextureUtils.h"
 #include "../Common/texture_cache.h"
+#include "../Common/BufferUtils.h"
 
 class GLGSRender;
 
@@ -187,6 +188,12 @@ namespace gl
 						mem_info.image_size_in_bytes = src->pitch() * src->height();
 						mem_info.memory_required = 0;
 
+						if (pack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
+						{
+							// D32FS8 can be read back as D24S8 or D32S8X24. In case of the latter, double memory requirements
+							mem_info.image_size_in_bytes *= 2;
+						}
+
 						void* out_offset = copy_image_to_buffer(pack_info, src, &scratch_mem, 0, { {}, src->size3D() }, &mem_info);
 
 						glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
@@ -351,11 +358,13 @@ namespace gl
 				}
 				case gl::texture::type::uint_24_8:
 				{
+					// Swap bytes on D24S8 does not swap the whole dword, just shuffles the 3 bytes for D24
+					// In this regard, D24S8 is the same structure on both PC and PS3, but the endianness of the whole block is reversed on PS3
 					verify(HERE), pack_unpack_swap_bytes == false;
 					verify(HERE), real_pitch == (width * 4);
 					if (rsx_pitch == real_pitch) [[likely]]
 					{
-						rsx::convert_le_d24x8_to_be_d24x8(dst, dst, valid_length / 4, 1);
+						stream_data_to_memory_swapped_u32<true>(dst, dst, valid_length / 4, 4);
 					}
 					else
 					{
@@ -363,7 +372,7 @@ namespace gl
 						u8* data = static_cast<u8*>(dst);
 						for (u32 row = 0; row < num_rows; ++row)
 						{
-							rsx::convert_le_d24x8_to_be_d24x8(data, data, width, 1);
+							stream_data_to_memory_swapped_u32<true>(data, data, width, 4);
 							data += rsx_pitch;
 						}
 					}

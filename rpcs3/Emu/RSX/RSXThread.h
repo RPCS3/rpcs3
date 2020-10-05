@@ -25,6 +25,7 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/IdManager.h"
+#include "Emu/system_config.h"
 
 extern u64 get_guest_system_time();
 extern u64 get_system_time();
@@ -79,14 +80,16 @@ namespace rsx
 		fragment_texture_state_dirty = 0x80, // Fragment texture parameters changed
 		vertex_texture_state_dirty = 0x100,  // Fragment texture parameters changed
 		scissor_config_state_dirty = 0x200,  // Scissor region changed
+		zclip_config_state_dirty = 0x400,    // Viewport Z clip changed
 
-		scissor_setup_invalid = 0x400,       // Scissor configuration is broken
-		scissor_setup_clipped = 0x800,       // Scissor region is cropped by viewport constraint
+		scissor_setup_invalid = 0x800,       // Scissor configuration is broken
+		scissor_setup_clipped = 0x1000,      // Scissor region is cropped by viewport constraint
 
-		polygon_stipple_pattern_dirty = 0x1000,  // Rasterizer stippling pattern changed
-		line_stipple_pattern_dirty = 0x2000,     // Line stippling pattern changed
+		polygon_stipple_pattern_dirty = 0x2000,  // Rasterizer stippling pattern changed
+		line_stipple_pattern_dirty = 0x4000,     // Line stippling pattern changed
 
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
+		invalidate_zclip_bits = vertex_state_dirty | zclip_config_state_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
 		all_dirty = ~0u
 	};
@@ -968,5 +971,25 @@ namespace rsx
 	inline thread* get_current_renderer()
 	{
 		return g_fxo->get<rsx::thread>();
+	}
+
+	// Returns nullptr if rsx does not need pausing on reservations op, rsx ptr otherwise
+	inline thread* get_rsx_if_needs_res_pause(u32 addr)
+	{
+		if (!g_cfg.core.rsx_accurate_res_access) [[likely]]
+		{
+			return {};
+		}
+
+		const auto render = get_current_renderer();
+
+		ASSUME(render);
+
+		if (render->iomap_table.io[addr >> 20].load() == umax) [[likely]]
+		{
+			return {};
+		}
+
+		return render;
 	}
 }

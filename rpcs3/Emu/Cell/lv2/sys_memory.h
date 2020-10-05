@@ -59,14 +59,15 @@ struct lv2_memory_container
 	}
 
 	// Try to get specified amount of "physical" memory
-	u32 take(u32 amount)
+	// Values greater than UINT32_MAX will fail
+	u32 take(u64 amount)
 	{
 		auto [_, result] = used.fetch_op([&](u32& value) -> u32
 		{
 			if (size - value >= amount)
 			{
-				value += amount;
-				return amount;
+				value += static_cast<u32>(amount);
+				return static_cast<u32>(amount);
 			}
 
 			return 0;

@@ -15,6 +15,13 @@ bool cfg_input::load(const std::string& title_id)
 	{
 		return from_string(cfg_file.to_string());
 	}
+	else
+	{
+		// Add keyboard by default
+		player[0]->handler.from_string(fmt::format("%s", pad_handler::keyboard));
+		player[0]->device.from_string(pad::keyboard_device_name.data());
+	}
+
 	return false;
 }
 
@@ -32,7 +39,7 @@ void cfg_input::save(const std::string& title_id)
 }
 
 
-bool pad_config::exist()
+bool pad_config::exist() const
 {
 	return fs::is_file(cfg_name);
 }
@@ -47,7 +54,7 @@ bool pad_config::load()
 	return false;
 }
 
-void pad_config::save()
+void pad_config::save() const
 {
 	fs::file(cfg_name, fs::rewrite).write(to_string());
 }

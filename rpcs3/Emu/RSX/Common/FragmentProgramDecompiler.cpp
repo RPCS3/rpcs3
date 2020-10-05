@@ -191,7 +191,7 @@ std::string FragmentProgramDecompiler::AddReg(u32 index, bool fp16)
 	const std::string type_name = (fp16 && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
 	const std::string reg_name = std::string(fp16 ? "h" : "r") + std::to_string(index);
 
-	return m_parr.AddParam(PF_PARAM_NONE, type_name, reg_name, type_name + "(0., 0., 0., 0.)");
+	return m_parr.AddParam(PF_PARAM_NONE, type_name, reg_name, type_name + "(0.)");
 }
 
 bool FragmentProgramDecompiler::HasReg(u32 index, bool fp16)
@@ -255,12 +255,12 @@ std::string FragmentProgramDecompiler::AddTex()
 
 std::string FragmentProgramDecompiler::AddType3()
 {
-	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "src3", getFloatTypeName(4) + "(1., 1., 1., 1.)");
+	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "src3", getFloatTypeName(4) + "(1.)");
 }
 
 std::string FragmentProgramDecompiler::AddX2d()
 {
-	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "x2d", getFloatTypeName(4) + "(0., 0., 0., 0.)");
+	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "x2d", getFloatTypeName(4) + "(0.)");
 }
 
 std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 precision)
@@ -366,6 +366,7 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 std::string FragmentProgramDecompiler::GetRawCond()
 {
 	static constexpr std::string_view f = "xyzw";
+	const auto zero = getFloatTypeName(4) + "(0.)";
 
 	std::string swizzle, cond;
 	swizzle.reserve(5);
@@ -381,17 +382,17 @@ std::string FragmentProgramDecompiler::GetRawCond()
 	}
 
 	if (src0.exec_if_gr && src0.exec_if_eq)
-		cond = compareFunction(COMPARE::FUNCTION_SGE, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
+		cond = compareFunction(COMPARE::FUNCTION_SGE, AddCond() + swizzle, zero);
 	else if (src0.exec_if_lt && src0.exec_if_eq)
-		cond = compareFunction(COMPARE::FUNCTION_SLE, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
+		cond = compareFunction(COMPARE::FUNCTION_SLE, AddCond() + swizzle, zero);
 	else if (src0.exec_if_gr && src0.exec_if_lt)
-		cond = compareFunction(COMPARE::FUNCTION_SNE, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
+		cond = compareFunction(COMPARE::FUNCTION_SNE, AddCond() + swizzle, zero);
 	else if (src0.exec_if_gr)
-		cond = compareFunction(COMPARE::FUNCTION_SGT, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
+		cond = compareFunction(COMPARE::FUNCTION_SGT, AddCond() + swizzle, zero);
 	else if (src0.exec_if_lt)
-		cond = compareFunction(COMPARE::FUNCTION_SLT, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
+		cond = compareFunction(COMPARE::FUNCTION_SLT, AddCond() + swizzle, zero);
 	else //if(src0.exec_if_eq)
-		cond = compareFunction(COMPARE::FUNCTION_SEQ, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
+		cond = compareFunction(COMPARE::FUNCTION_SEQ, AddCond() + swizzle, zero);
 
 	return cond;
 }
@@ -698,7 +699,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 	const bool fp16_out = !(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
 	const std::string float4_type = (fp16_out && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
-	const std::string init_value = float4_type + "(0., 0., 0., 0.)";
+	const std::string init_value = float4_type + "(0.)";
 	std::array<std::string, 4> output_register_names;
 	std::array<u32, 4> ouput_register_indices = { 0, 2, 3, 4 };
 	bool shader_is_valid = false;
@@ -769,7 +770,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 		"{\n"
 		"	// Treat NaNs as 0\n"
 		"	bvec4 nans = isnan(x);\n"
-		"	x = _select(x, $float4(0., 0., 0., 0.), nans);\n"
+		"	x = _select(x, $float4(0.), nans);\n"
 		"	return clamp(x, _min, _max);\n"
 		"}\n\n";
 
@@ -780,7 +781,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 			"{\n"
 			"	// Treat NaNs as 0\n"
 			"	bvec4 nans = isnan(x);\n"
-			"	x = _select(x, $half4(0., 0., 0., 0.), nans);\n"
+			"	x = _select(x, $half4(0.), nans);\n"
 			"	return clamp(x, $half_t(_min), $half_t(_max));\n"
 			"}\n\n";
 		}
@@ -791,31 +792,25 @@ std::string FragmentProgramDecompiler::BuildCode()
 	if (!device_props.has_native_half_support)
 	{
 		// Accurate float to half clamping (preserves IEEE-754 NaN)
-		std::string clamp_func =
-		"$float4 clamp16($float4 x)\n"
-		"{\n";
-
+		std::string clamp_func;
 		if (glsl)
 		{
 			clamp_func +=
-			"	uvec4 bits = floatBitsToUint(x);\n"
-			"	uvec4 extend = uvec4(0x7f800000);\n"
-			"	bvec4 test = equal(bits & extend, extend);\n"
-			"	vec4 clamped = clamp(x, -65504., +65504.);\n"
-			"	return _select(clamped, x, test);\n";
+			"vec2 clamp16(vec2 val){ return unpackHalf2x16(packHalf2x16(val)); }\n"
+			"vec4 clamp16(vec4 val){ return vec4(clamp16(val.xy), clamp16(val.zw)); }\n\n";
 		}
 		else
 		{
 			clamp_func +=
+			"$float4 clamp16($float4 x)\n"
+			"{\n"
 			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
 			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
 			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
 			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
-			"	return x;\n";
+			"	return x;\n"
+			"}\n\n";
 		}
-
-		clamp_func +=
-		"}\n\n";
 
 		OS << Format(clamp_func);
 	}

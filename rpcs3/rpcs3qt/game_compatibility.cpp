@@ -16,7 +16,7 @@ game_compatibility::game_compatibility(std::shared_ptr<gui_settings> settings, Q
 	, m_gui_settings(settings)
 {
 	m_filepath = m_gui_settings->GetSettingsDir() + "/compat_database.dat";
-	m_downloader = new downloader("Compat Update", parent);
+	m_downloader = new downloader(parent);
 	RequestCompatibility();
 
 	connect(m_downloader, &downloader::signal_download_error, this, &game_compatibility::handle_download_error);

@@ -13,6 +13,7 @@
 #include <QStringList>
 #include <QComboBox>
 #include <QSpinBox>
+#include <QDateTimeEdit>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -36,6 +37,9 @@ public:
 
 	/** Connects a check box with the target settings type*/
 	void EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type);
+
+	/** Connects a date time edit box with the target settings type*/
+	void EnhanceDateTimeEdit(QDateTimeEdit* date_time_edit, emu_settings_type type, const QString& format, bool use_calendar, bool as_offset_from_now, int offset_update_time=0);
 
 	/** Connects a slider with the target settings type*/
 	void EnhanceSlider(QSlider* slider, emu_settings_type type);

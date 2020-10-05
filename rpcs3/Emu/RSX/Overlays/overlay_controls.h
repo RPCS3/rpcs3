@@ -5,6 +5,8 @@
 #include "overlay_utils.h"
 #include "overlay_fonts.h"
 
+#include "Emu/localized_string.h"
+
 #include <string>
 #include <vector>
 #include <memory>
@@ -440,6 +442,11 @@ namespace rsx
 			{
 				this->text = text;
 				is_compiled = false;
+			}
+
+			virtual void set_text(localized_string_id id)
+			{
+				set_text(get_localized_u32string(id));
 			}
 
 			virtual void set_font(const char* font_name, u16 font_size)
@@ -1045,7 +1052,7 @@ namespace rsx
 
 		struct edit_text : public label
 		{
-			enum direction
+			enum class direction
 			{
 				up,
 				down,

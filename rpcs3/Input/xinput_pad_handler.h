@@ -40,6 +40,14 @@ struct SCP_EXTN
 	float SCP_PS;
 };
 
+struct SCP_DS3_ACCEL
+{
+	unsigned short SCP_ACCEL_X;
+	unsigned short SCP_ACCEL_Z;
+	unsigned short SCP_ACCEL_Y;
+	unsigned short SCP_GYRO;
+};
+
 class xinput_pad_handler final : public PadHandlerBase
 {
 	// These are all the possible buttons on a standard xbox 360 or xbox one controller
@@ -103,6 +111,7 @@ public:
 
 private:
 	typedef DWORD (WINAPI * PFN_XINPUTGETEXTENDED)(DWORD, SCP_EXTN *);
+	typedef DWORD (WINAPI * PFN_XINPUTGETCUSTOMDATA)(DWORD, DWORD, void *);
 	typedef DWORD (WINAPI * PFN_XINPUTGETSTATE)(DWORD, XINPUT_STATE *);
 	typedef DWORD (WINAPI * PFN_XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
 	typedef DWORD (WINAPI * PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION *);
@@ -115,6 +124,7 @@ private:
 	bool is_init{ false };
 	HMODULE library{ nullptr };
 	PFN_XINPUTGETEXTENDED xinputGetExtended{ nullptr };
+	PFN_XINPUTGETCUSTOMDATA xinputGetCustomData{ nullptr };
 	PFN_XINPUTGETSTATE xinputGetState{ nullptr };
 	PFN_XINPUTSETSTATE xinputSetState{ nullptr };
 	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation{ nullptr };

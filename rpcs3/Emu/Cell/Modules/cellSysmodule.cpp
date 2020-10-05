@@ -3,9 +3,10 @@
 
 LOG_CHANNEL(cellSysmodule);
 
+constexpr auto CELL_SYSMODULE_LOADED = CELL_OK;
+
 enum CellSysmoduleError : u32
 {
-	CELL_SYSMODULE_LOADED                     = CELL_OK,
 	CELL_SYSMODULE_ERROR_DUPLICATED           = 0x80012001,
 	CELL_SYSMODULE_ERROR_UNKNOWN              = 0x80012002,
 	CELL_SYSMODULE_ERROR_UNLOADED             = 0x80012003,

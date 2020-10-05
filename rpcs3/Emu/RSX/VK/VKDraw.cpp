@@ -108,15 +108,27 @@ void VKGSRender::update_draw_state()
 
 	if (m_device->get_depth_bounds_support())
 	{
+		f32 bounds_min, bounds_max;
 		if (rsx::method_registers.depth_bounds_test_enabled())
 		{
-			//Update depth bounds min/max
-			vkCmdSetDepthBounds(*m_current_command_buffer, rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
+			// Update depth bounds min/max
+			bounds_min = rsx::method_registers.depth_bounds_min();
+			bounds_max = rsx::method_registers.depth_bounds_max();
 		}
 		else
 		{
-			vkCmdSetDepthBounds(*m_current_command_buffer, 0.f, 1.f);
+			// Avoid special case where min=max and depth bounds (incorrectly) fails
+			bounds_min = std::min(0.f, rsx::method_registers.clip_min());
+			bounds_max = std::max(1.f, rsx::method_registers.clip_max());
 		}
+
+		if (!m_device->get_unrestricted_depth_range_support())
+		{
+			bounds_min = std::clamp(bounds_min, 0.f, 1.f);
+			bounds_max = std::clamp(bounds_max, 0.f, 1.f);
+		}
+
+		vkCmdSetDepthBounds(*m_current_command_buffer, bounds_min, bounds_max);
 	}
 
 	bind_viewport();
@@ -172,20 +184,8 @@ void VKGSRender::load_texture_env()
 
 				if (texture_format >= CELL_GCM_TEXTURE_DEPTH24_D8 && texture_format <= CELL_GCM_TEXTURE_DEPTH16_FLOAT)
 				{
-					if (m_device->get_formats_support().d24_unorm_s8)
-					{
-						// NOTE:
-						// The nvidia-specific format D24S8 has a special way of doing depth comparison that matches the PS3
-						// In case of projected shadow lookup the result of the divide operation has its Z clamped to [0-1] before comparison
-						// Most other wide formats (Z bits > 16) do not behave this way and depth greater than 1 is possible due to the use of floating point as storage
-						// Compare operations for these formats (such as D32_SFLOAT) are therefore emulated for correct results
-
-						// NOTE2:
-						// To improve reusability, DEPTH16 shadow ops are also emulated if D24S8 support is not available
-
-						compare_enabled = VK_TRUE;
-						depth_compare_mode = vk::get_compare_func(rsx::method_registers.fragment_textures[i].zfunc(), true);
-					}
+					compare_enabled = VK_TRUE;
+					depth_compare_mode = vk::get_compare_func(rsx::method_registers.fragment_textures[i].zfunc(), true);
 				}
 
 				const int aniso_override_level = g_cfg.video.anisotropic_level_override;

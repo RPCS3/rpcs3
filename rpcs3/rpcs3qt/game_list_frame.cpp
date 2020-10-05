@@ -576,7 +576,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				QString note        = m_persistent_settings->GetValue(gui::persistent::notes, serial, "").toString();
 				QString title       = m_persistent_settings->GetValue(gui::persistent::titles, serial, "").toString().simplified();
 				QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
-				int playtime        = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toInt();
+				quint64 playtime    = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
 
 				// Read deprecated gui_setting values first for backwards compatibility (older than January 12th 2020).
 				// Restrict this to empty persistent settings to keep continuity.
@@ -586,7 +586,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				}
 				if (playtime <= 0)
 				{
-					playtime = m_gui_settings->GetValue(gui::persistent::playtime, serial, 0).toInt();
+					playtime = m_gui_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
 				}
 				// Deprecated values older than August 2nd 2020
 				if (note.isEmpty())
@@ -1980,7 +1980,7 @@ void game_list_frame::PopulateGameList()
 		}
 
 		// Playtimes
-		const qint64 elapsed_ms = m_persistent_settings->GetPlaytime(serial);
+		const quint64 elapsed_ms = m_persistent_settings->GetPlaytime(serial);
 
 		// Last played (support outdated values)
 		QDate last_played;

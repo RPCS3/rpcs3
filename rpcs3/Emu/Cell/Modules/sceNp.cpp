@@ -22,6 +22,7 @@ void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 	{
 		switch (error)
 		{
+			STR_CASE(GAME_ERR_NOT_XMBBUY_CONTENT);
 			STR_CASE(SCE_NP_ERROR_NOT_INITIALIZED);
 			STR_CASE(SCE_NP_ERROR_ALREADY_INITIALIZED);
 			STR_CASE(SCE_NP_ERROR_INVALID_ARGUMENT);
@@ -335,6 +336,20 @@ void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 			STR_CASE(SCE_NP_CORE_SERVER_ERROR_RESOURCE_CONSTRAINT);
 			STR_CASE(SCE_NP_CORE_SERVER_ERROR_SYSTEM_SHUTDOWN);
 			STR_CASE(SCE_NP_CORE_SERVER_ERROR_UNSUPPORTED_CLIENT_VERSION);
+			STR_CASE(SCE_NP_DRM_INSTALL_ERROR_FORMAT);
+			STR_CASE(SCE_NP_DRM_INSTALL_ERROR_CHECK);
+			STR_CASE(SCE_NP_DRM_INSTALL_ERROR_UNSUPPORTED);
+			STR_CASE(SCE_NP_DRM_SERVER_ERROR_SERVICE_IS_END);
+			STR_CASE(SCE_NP_DRM_SERVER_ERROR_SERVICE_STOP_TEMPORARILY);
+			STR_CASE(SCE_NP_DRM_SERVER_ERROR_SERVICE_IS_BUSY);
+			STR_CASE(SCE_NP_DRM_SERVER_ERROR_INVALID_USER_CREDENTIAL);
+			STR_CASE(SCE_NP_DRM_SERVER_ERROR_INVALID_PRODUCT_ID);
+			STR_CASE(SCE_NP_DRM_SERVER_ERROR_ACCOUNT_IS_CLOSED);
+			STR_CASE(SCE_NP_DRM_SERVER_ERROR_ACCOUNT_IS_SUSPENDED);
+			STR_CASE(SCE_NP_DRM_SERVER_ERROR_ACTIVATED_CONSOLE_IS_FULL);
+			STR_CASE(SCE_NP_DRM_SERVER_ERROR_CONSOLE_NOT_ACTIVATED);
+			STR_CASE(SCE_NP_DRM_SERVER_ERROR_PRIMARY_CONSOLE_CANNOT_CHANGED);
+			STR_CASE(SCE_NP_DRM_SERVER_ERROR_UNKNOWN);
 			STR_CASE(SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED);
 			STR_CASE(SCE_NP_SIGNALING_ERROR_ALREADY_INITIALIZED);
 			STR_CASE(SCE_NP_SIGNALING_ERROR_OUT_OF_MEMORY);
@@ -625,7 +640,7 @@ error_code sceNpDrmProcessExitSpawn2(ppu_thread& ppu, vm::cptr<u8> klicensee, vm
 
 error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm::ptr<SceNpBasicEventHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.todo("sceNpBasicRegisterHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
+	sceNp.warning("sceNpBasicRegisterHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -2501,9 +2516,9 @@ error_code sceNpManagerGetNetworkTime(vm::ptr<CellRtcTick> pTick)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	// FIXME: Get the network time
 	auto now    = std::chrono::system_clock::now();
-	pTick->tick = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+	// That's assuming epoch is unix epoch which is not actually standardized, god I hate you C++ std
+	pTick->tick = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count() + (62135596800 * 1000 * 1000);
 
 	return CELL_OK;
 }
@@ -2811,7 +2826,7 @@ error_code sceNpManagerGetPsHandle()
 
 error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serviceId, vm::cptr<void> cookie, u32 cookieSize, vm::cptr<char> entitlementId, u32 consumedCount)
 {
-	sceNp.todo("sceNpManagerRequestTicket(npId=*0x%x, serviceId=%s, cookie=*0x%x, cookieSize=%d, entitlementId=%s, consumedCount=%d)", npId, serviceId, cookie, cookieSize, entitlementId, consumedCount);
+	sceNp.error("sceNpManagerRequestTicket(npId=*0x%x, serviceId=%s, cookie=*0x%x, cookieSize=%d, entitlementId=%s, consumedCount=%d)", npId, serviceId, cookie, cookieSize, entitlementId, consumedCount);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -2820,7 +2835,7 @@ error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serv
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!serviceId || !cookie || cookieSize > SCE_NP_COOKIE_MAX_SIZE || !entitlementId)
+	if (!npId || !serviceId || cookieSize > SCE_NP_COOKIE_MAX_SIZE)
 	{
 		return SCE_NP_AUTH_EINVALID_ARGUMENT;
 	}
@@ -2834,6 +2849,8 @@ error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serv
 	{
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
+
+	nph->req_ticket(0x00020001, npId.get_ptr(), serviceId.get_ptr(), reinterpret_cast<const u8 *>(cookie.get_ptr()), cookieSize, entitlementId.get_ptr(), consumedCount);
 
 	return CELL_OK;
 }
@@ -2851,7 +2868,7 @@ error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTick
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!serviceId || !cookie || cookieSize > SCE_NP_COOKIE_MAX_SIZE || !entitlementId)
+	if (!npId || !serviceId || cookieSize > SCE_NP_COOKIE_MAX_SIZE)
 	{
 		return SCE_NP_AUTH_EINVALID_ARGUMENT;
 	}
@@ -2866,12 +2883,14 @@ error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTick
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
+	nph->req_ticket(0x00020001, npId.get_ptr(), serviceId.get_ptr(), reinterpret_cast<const u8 *>(cookie.get_ptr()), cookieSize, entitlementId.get_ptr(), consumedCount);
+
 	return CELL_OK;
 }
 
 error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u32> bufferSize)
 {
-	sceNp.todo("sceNpManagerGetTicket(buffer=*0x%x, bufferSize=*0x%x)", buffer, bufferSize);
+	sceNp.error("sceNpManagerGetTicket(buffer=*0x%x, bufferSize=*0x%x)", buffer, bufferSize);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -2884,6 +2903,21 @@ error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u32> bufferSize)
 	{
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
+
+	const auto& ticket = nph->get_ticket();
+
+	if (!buffer)
+	{
+		*bufferSize = static_cast<u32>(ticket.size());
+		return CELL_OK;
+	}
+
+	if (*bufferSize < ticket.size())
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	memcpy(buffer.get_ptr(), ticket.data(), ticket.size());
 
 	return CELL_OK;
 }
@@ -3268,7 +3302,7 @@ error_code sceNpScoreCreateTransactionCtx(s32 titleCtxId)
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	return CELL_OK;
+	return not_an_error(nph->create_score_transaction_context(titleCtxId));
 }
 
 error_code sceNpScoreDestroyTransactionCtx(s32 transId)
@@ -4346,6 +4380,9 @@ error_code sceNpSignalingCreateCtx(vm::ptr<SceNpId> npId, vm::ptr<SceNpSignaling
 
 	*ctx_id = nph->create_signaling_context(npId, handler, arg);
 
+	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh->set_sig_cb(*ctx_id, handler, arg);
+
 	return CELL_OK;
 }
 
@@ -4370,7 +4407,7 @@ error_code sceNpSignalingDestroyCtx(u32 ctx_id)
 
 error_code sceNpSignalingAddExtendedHandler(u32 ctx_id, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.todo("sceNpSignalingAddExtendedHandler(ctx_id=%d, handler=*0x%x, arg=*0x%x)", ctx_id, handler, arg);
+	sceNp.warning("sceNpSignalingAddExtendedHandler(ctx_id=%d, handler=*0x%x, arg=*0x%x)", ctx_id, handler, arg);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -4378,6 +4415,9 @@ error_code sceNpSignalingAddExtendedHandler(u32 ctx_id, vm::ptr<SceNpSignalingHa
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
+
+	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh->set_ext_sig_cb(ctx_id, handler, arg);
 
 	return CELL_OK;
 }
@@ -4420,9 +4460,9 @@ error_code sceNpSignalingGetCtxOpt(u32 ctx_id, s32 optname, vm::ptr<s32> optval)
 	return CELL_OK;
 }
 
-error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, u32 conn_id)
+error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, vm::ptr<u32> conn_id)
 {
-	sceNp.todo("sceNpSignalingActivateConnection(ctx_id=%d, npId=*0x%x, conn_id=%d)", ctx_id, npId, conn_id);
+	sceNp.warning("sceNpSignalingActivateConnection(ctx_id=%d, npId=*0x%x, conn_id=%d)", ctx_id, npId, conn_id);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -4435,6 +4475,12 @@ error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, u
 	{
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
+
+	if (strncmp(nph->get_npid().handle.data, npId->handle.data, 16) == 0)
+		return SCE_NP_SIGNALING_ERROR_OWN_NP_ID;
+
+	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
+	*conn_id = sigh->init_sig_infos(npId.get_ptr());
 
 	return CELL_OK;
 }
@@ -4469,7 +4515,7 @@ error_code sceNpSignalingTerminateConnection(u32 ctx_id, u32 conn_id)
 
 error_code sceNpSignalingGetConnectionStatus(u32 ctx_id, u32 conn_id, vm::ptr<s32> conn_status, vm::ptr<np_in_addr> peer_addr, vm::ptr<np_in_port_t> peer_port)
 {
-	sceNp.todo("sceNpSignalingGetConnectionStatus(ctx_id=%d, conn_id=%d, conn_status=*0x%x, peer_addr=*0x%x, peer_port=*0x%x)", ctx_id, conn_id, conn_status, peer_addr, peer_port);
+	sceNp.warning("sceNpSignalingGetConnectionStatus(ctx_id=%d, conn_id=%d, conn_status=*0x%x, peer_addr=*0x%x, peer_port=*0x%x)", ctx_id, conn_id, conn_status, peer_addr, peer_port);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -4482,6 +4528,15 @@ error_code sceNpSignalingGetConnectionStatus(u32 ctx_id, u32 conn_id, vm::ptr<s3
 	{
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
+
+	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
+	const auto si   = sigh->get_sig_infos(conn_id);
+
+	*conn_status = si.connStatus;
+	if (peer_addr)
+		(*peer_addr).np_s_addr = si.addr; // infos.addr is already BE
+	if (peer_port)
+		*peer_port = si.port;
 
 	return CELL_OK;
 }
@@ -4545,7 +4600,7 @@ error_code sceNpSignalingGetConnectionFromPeerAddress(u32 ctx_id, vm::ptr<np_in_
 
 error_code sceNpSignalingGetLocalNetInfo(u32 ctx_id, vm::ptr<SceNpSignalingNetInfo> info)
 {
-	sceNp.todo("sceNpSignalingGetLocalNetInfo(ctx_id=%d, info=*0x%x)", ctx_id, info);
+	sceNp.warning("sceNpSignalingGetLocalNetInfo(ctx_id=%d, info=*0x%x)", ctx_id, info);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -4554,9 +4609,8 @@ error_code sceNpSignalingGetLocalNetInfo(u32 ctx_id, vm::ptr<SceNpSignalingNetIn
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!info)
+	if (!info || info->size != sizeof(SceNpSignalingNetInfo))
 	{
-		// TODO: check info->size
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
 

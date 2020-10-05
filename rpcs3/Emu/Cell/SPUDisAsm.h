@@ -56,7 +56,7 @@ static constexpr const char* spu_ch_name[128] =
 	"ch41", "ch42", "ch43", "ch44", "ch45", "ch46", "ch47", "ch48",
 	"ch49", "ch50", "ch51", "ch52", "ch53", "ch54", "ch55", "ch56",
 	"ch57", "ch58", "ch59", "ch60", "ch61", "ch62", "ch63", "ch64",
-	"ch65", "ch66", "ch67", "ch68", "ch69", "ch70", "ch71", "ch72",
+	"ch65", "ch66", "ch67", "ch68", "SPU_Set_Bkmk_Tag", "SPU_PM_Start_Ev", "SPU_PM_Stop_Ev", "ch72",
 	"ch73", "ch74", "ch75", "ch76", "ch77", "ch78", "ch79", "ch80",
 	"ch81", "ch82", "ch83", "ch84", "ch85", "ch86", "ch87", "ch88",
 	"ch89", "ch90", "ch91", "ch92", "ch93", "ch94", "ch95", "ch96",

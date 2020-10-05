@@ -273,7 +273,7 @@ namespace vm
 	{
 		if (auto& ptr = g_tls_locked)
 		{
-			*ptr = nullptr;
+			ptr->release(nullptr);
 			ptr = nullptr;
 
 			if (cpu.state & cpu_flag::memory)
@@ -805,7 +805,7 @@ namespace vm
 			vm::writer_lock lock(0);
 
 			// Deallocate all memory
-			for (auto it = m_map.begin(), end = m_map.end(); !m_common && it != end;)
+			for (auto it = m_map.begin(), end = m_map.end(); it != end;)
 			{
 				const auto next = std::next(it);
 				const auto size = it->second.first;

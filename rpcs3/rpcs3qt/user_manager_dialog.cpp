@@ -460,7 +460,7 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 	connect(show_dir_act, &QAction::triggered, [=, this]()
 	{
 		QString path = qstr(m_user_list[key].GetUserDir());
-		QDesktopServices::openUrl(QUrl("file:///" + path));
+		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 	});
 
 	connect(user_id_act, &QAction::triggered, this, [=, this] {OnSort(0); });

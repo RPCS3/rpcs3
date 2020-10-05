@@ -8,16 +8,19 @@
 #include <QCheckBox>
 #include <QMessageBox>
 #include <QTimer>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 #include "ui_patch_manager_dialog.h"
 #include "patch_manager_dialog.h"
 #include "table_item_delegate.h"
 #include "gui_settings.h"
+#include "downloader.h"
 #include "qt_utils.h"
 #include "Utilities/File.h"
 #include "util/logs.hpp"
 
-LOG_CHANNEL(patch_log);
+LOG_CHANNEL(patch_log, "PAT");
 
 enum patch_column : int
 {
@@ -68,6 +71,10 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	ui->cb_enable_legacy_patches->setChecked(m_legacy_patches_enabled);
 	ui->cb_owned_games_only->setChecked(m_show_owned_games_only);
 
+	ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setText(tr("Download latest patches"));
+
+	m_downloader = new downloader(this);
+
 	// Create connects
 	connect(ui->patch_filter, &QLineEdit::textChanged, this, &patch_manager_dialog::filter_patches);
 	connect(ui->patch_tree, &QTreeWidget::currentItemChanged, this, &patch_manager_dialog::handle_item_selected);
@@ -86,6 +93,23 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 		else if (button == ui->buttonBox->button(QDialogButtonBox::Apply))
 		{
 			save_config();
+		}
+		else if (button == ui->buttonBox->button(QDialogButtonBox::RestoreDefaults))
+		{
+			download_update();
+		}
+	});
+	connect(m_downloader, &downloader::signal_download_error, this, [this](const QString& /*error*/)
+	{
+		QMessageBox::warning(this, tr("Patch downloader"), tr("An error occurred during the download process.\nCheck the log for more information."));
+	});
+	connect(m_downloader, &downloader::signal_download_finished, this, [this](const QByteArray& data)
+	{
+		const bool result_json = handle_json(data);
+
+		if (!result_json)
+		{
+			QMessageBox::warning(this, tr("Patch downloader"), tr("An error occurred during the download process.\nCheck the log for more information."));
 		}
 	});
 }
@@ -724,7 +748,7 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 		patch_engine::patch_map patches;
 		std::stringstream log_message;
 
-		if (patch_engine::load(patches, path, true, &log_message))
+		if (patch_engine::load(patches, path, "", true, &log_message))
 		{
 			patch_log.success("Successfully validated patch file %s", path);
 
@@ -804,4 +828,149 @@ void patch_manager_dialog::dragMoveEvent(QDragMoveEvent* event)
 void patch_manager_dialog::dragLeaveEvent(QDragLeaveEvent* event)
 {
 	event->accept();
+}
+
+void patch_manager_dialog::download_update()
+{
+	patch_log.notice("Patch download triggered");
+
+	const std::string path = patch_engine::get_patches_path() + "patch.yml";
+	std::string url        = "https://rpcs3.net/compatibility?patch&api=v1&v=" + patch_engine_version;
+
+	if (fs::is_file(path))
+	{
+		if (fs::file patch_file{path})
+		{
+			const std::string hash = downloader::get_hash(patch_file.to_string().c_str(), patch_file.size(), true);
+			url += "&sha256=" + hash;
+		}
+		else
+		{
+			patch_log.error("Could not open patch file: %s (%s)", path, fs::g_tls_error);
+			return;
+		}
+	}
+
+	m_downloader->start(url, true, true, tr("Downloading latest patches"));
+}
+
+bool patch_manager_dialog::handle_json(const QByteArray& data)
+{
+	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
+	const int return_code       = json_data["return_code"].toInt(-255);
+
+	if (return_code < 0)
+	{
+		std::string error_message;
+		switch (return_code)
+		{
+		case -1: error_message = "No patches found for the specified version"; break;
+		case -2: error_message = "Server Error - Maintenance Mode"; break;
+		case -3: error_message = "Server Error - Illegal Search"; break;
+		case -255: error_message = "Server Error - Return code not found"; break;
+		default: error_message = "Server Error - Unknown Error"; break;
+		}
+
+		if (return_code != -1)
+			patch_log.error("Patch download error: %s return code: %d", error_message, return_code);
+		else
+			patch_log.warning("Patch download error: %s return code: %d", error_message, return_code);
+
+		return false;
+	}
+
+	if (return_code == 1)
+	{
+		patch_log.notice("Patch download: No newer patches found");
+		QMessageBox::information(this, tr("Download successful"), tr("Your patch file is already up to date."));
+		return true;
+	}
+
+	if (return_code != 0)
+	{
+		patch_log.error("Patch download error: unknown return code: %d", return_code);
+		return false;
+	}
+
+	const QJsonValue& version_obj = json_data["version"];
+
+	if (!version_obj.isString())
+	{
+		patch_log.error("JSON doesn't contain version");
+		return false;
+	}
+
+	if (const std::string version = version_obj.toString().toStdString();
+		version != patch_engine_version)
+	{
+		patch_log.error("JSON contains wrong version: %s (needed: %s)", version, patch_engine_version);
+		return false;
+	}
+
+	const QJsonValue& hash_obj = json_data["sha256"];
+
+	if (!hash_obj.isString())
+	{
+		patch_log.error("JSON doesn't contain sha256");
+		return false;
+	}
+
+	const QJsonValue& patch = json_data["patch"];
+
+	if (!patch.isString() || patch.toString().isEmpty())
+	{
+		patch_log.error("JSON doesn't contain patch");
+		return false;
+	}
+
+	patch_engine::patch_map patches;
+	std::stringstream log_message;
+
+	const std::string content = patch.toString().toStdString();
+
+	if (hash_obj.toString().toStdString() != downloader::get_hash(content.c_str(), content.size(), true))
+	{
+		patch_log.error("JSON content does not match the provided checksum");
+		return false;
+	}
+
+	if (patch_engine::load(patches, "From Download", content, true, &log_message))
+	{
+		patch_log.notice("Successfully validated downloaded patch file");
+		const std::string path = patch_engine::get_patches_path() + "patch.yml";
+
+		// Back up current patch file if possible
+		if (fs::is_file(path))
+		{
+			if (const std::string back_up_path = path + ".old";
+				!fs::rename(path, back_up_path, true))
+			{
+				patch_log.error("Could not back up current patches to %s (%s)", back_up_path, fs::g_tls_error);
+				return false;
+			}
+		}
+
+		// Overwrite current patch file
+		if (fs::file patch_file = fs::file(path, fs::rewrite))
+		{
+			patch_file.write(content);
+		}
+		else
+		{
+			patch_log.error("Could not save new patches to %s (%s)", path, fs::g_tls_error);
+			return false;
+		}
+
+		refresh();
+
+		patch_log.success("Successfully downloaded latest patch file");
+		QMessageBox::information(this, tr("Download successful"), tr("Your patch file is now up to date"));
+	}
+	else
+	{
+		patch_log.error("Errors found in downloaded patch file");
+		QMessageBox::critical(this, tr("Validation failed"), tr("Errors were found in the downloaded patch file.\n\nLog:\n%0").arg(QString::fromStdString(log_message.str())));
+	}
+
+	return true;
 }

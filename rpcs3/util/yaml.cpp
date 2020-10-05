@@ -36,12 +36,12 @@ std::pair<YAML::Node, std::string> yaml_load(const std::string& from)
 	{
 		result = YAML::Load(from);
 	}
-	catch(const std::exception& e)
+	catch (const std::exception& e)
 	{
-		return{YAML::Node(), std::string("YAML exception: ") + e.what()};
+		return {YAML::Node(), std::string("YAML exception: ") + e.what()};
 	}
 
-	return{result, ""};
+	return {result, ""};
 }
 
 template <typename T>

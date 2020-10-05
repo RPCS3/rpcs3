@@ -540,6 +540,8 @@ enum
 	SCE_NP_MANAGER_STATUS_ONLINE          = 3,
 };
 
+#define SCE_NP_MANAGER_EVENT_GOT_TICKET 255
+
 // Event types
 enum
 {
@@ -1042,7 +1044,7 @@ struct SceNpEntitlementId
 };
 
 // Callback for getting the connection status
-using SceNpManagerCallback = void(s32 event, s32 result, u32 arg_addr);
+using SceNpManagerCallback = void(s32 event, s32 result, vm::ptr<void> arg);
 
 // Score data unique to the application
 struct SceNpScoreGameInfo
@@ -1318,7 +1320,7 @@ struct SceNpScoreRecordOptParam
 using SceNpCustomMenuEventHandler = s32(s32 retCode, u32 index, vm::cptr<SceNpId> npid, SceNpCustomMenuSelectedType type, vm::ptr<void> arg);
 using SceNpBasicEventHandler = s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg);
 using SceNpCommerceHandler = void(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, vm::ptr<void> arg);
-using SceNpSignalingHandler = void(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, u32 arg_addr);
+using SceNpSignalingHandler = void(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, vm::ptr<void> arg);
 using SceNpFriendlistResultHandler = s32(s32 retCode, vm::ptr<void> arg);
 using SceNpMatchingHandler = void(u32 ctx_id, u32 req_id, s32 event, s32 error_code, vm::ptr<void> arg);
 using SceNpMatchingGUIHandler = void(u32 ctx_id, s32 event, s32 error_code, vm::ptr<void> arg);

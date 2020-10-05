@@ -120,6 +120,8 @@ enum CommandType : u16
 	SetRoomDataInternal,
 	PingRoomOwner,
 	SendRoomMessage,
+	RequestSignalingInfos,
+	RequestTicket,
 };
 
 class rpcn_client
@@ -173,6 +175,8 @@ public:
 	bool set_roomdata_internal(u32 req_id, const SceNpMatching2SetRoomDataInternalRequest* req);
 	bool ping_room_owner(u32 req_id, u64 room_id);
 	bool send_room_message(u32 req_id, const SceNpMatching2SendRoomMessageRequest* req);
+	bool req_sign_infos(u32 req_id, const std::string& npid);
+	bool req_ticket(u32 req_id, const std::string& service_id);
 
 	const std::string& get_online_name() const
 	{

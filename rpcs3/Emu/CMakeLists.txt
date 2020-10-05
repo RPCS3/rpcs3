@@ -1,5 +1,6 @@
 ﻿add_library(rpcs3_emu
 	IdManager.cpp
+	localized_string.cpp
 	System.cpp
 	system_config.cpp
 	system_config_types.cpp
@@ -364,6 +365,7 @@ target_sources(rpcs3_emu PRIVATE
 target_sources(rpcs3_emu PRIVATE
 	NP/fb_helpers.cpp
 	NP/np_handler.cpp
+	NP/signaling_handler.cpp
 	NP/np_structs_extra.cpp
 	NP/rpcn_client.cpp
 	NP/rpcn_config.cpp

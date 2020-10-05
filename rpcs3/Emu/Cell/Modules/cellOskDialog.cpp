@@ -244,7 +244,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	Emu.CallAfter([=, &result]()
 	{
-		osk->Create("On Screen Keyboard", message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel);
+		osk->Create(get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE), message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel);
 		result = true;
 	});
 

@@ -5,6 +5,9 @@
 #include "Emu/Io/KeyboardHandler.h"
 #include "cellKb.h"
 
+extern void libio_sys_config_init();
+extern void libio_sys_config_end();
+
 LOG_CHANNEL(sys_io);
 
 template<>
@@ -42,6 +45,7 @@ error_code cellKbInit(u32 max_connect)
 	if (max_connect == 0 || max_connect > CELL_KB_MAX_KEYBOARDS)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
+	libio_sys_config_init();
 	handler->Init(std::min(max_connect, 7u));
 
 	return CELL_OK;
@@ -59,6 +63,7 @@ error_code cellKbEnd()
 		return CELL_KB_ERROR_UNINITIALIZED;
 
 	// TODO
+	libio_sys_config_end();
 	return CELL_OK;
 }
 

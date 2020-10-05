@@ -101,6 +101,7 @@ protected:
 
 private:
 	QWindow* m_target = nullptr;
+	bool m_mouse_move_used = false;
 	bool get_mouse_lock_state();
 
 	std::vector<std::shared_ptr<Pad>> bindings;

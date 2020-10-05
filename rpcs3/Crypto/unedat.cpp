@@ -714,14 +714,20 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 			// Make sure we don't have an empty RIF key.
 			if (key == v128{})
 			{
-				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file!");
+				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file! (local activation)");
 				return 1;
 			}
 		}
 		else if ((NPD.license & 0x1) == 0x1)      // Type 1: Use network activation.
 		{
-			edat_log.error("EDAT: Network license not supported!");
-			return 1;
+			memcpy(&key, rifkey, 0x10);
+
+			// Make sure we don't have an empty RIF key.
+			if (key == v128{})
+			{
+				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file! (network activation)");
+				return 1;
+			}
 		}
 
 		if (verbose)
@@ -916,13 +922,17 @@ bool EDATADecrypter::ReadHeader()
 
 			if (dec_key == v128{})
 			{
-				edat_log.warning("EDAT: Empty Dec key!");
+				edat_log.warning("EDAT: Empty Dec key for local actívation!");
 			}
 		}
 		else if ((npdHeader.license & 0x1) == 0x1)      // Type 1: Use network activation.
 		{
-			edat_log.error("EDAT: Network license not supported!");
-			return false;
+			dec_key = std::move(rif_key);
+
+			if (dec_key == v128{})
+			{
+				edat_log.warning("EDAT: Empty Dec key for network activation!");
+			}
 		}
 	}
 

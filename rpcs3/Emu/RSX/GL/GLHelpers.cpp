@@ -167,7 +167,7 @@ namespace gl
 	  glDebugMessageCallback(log_debug, nullptr);
 	}
 
-	capabilities &get_driver_caps()
+	const capabilities& get_driver_caps()
 	{
 		if (!g_driver_caps.initialized)
 			g_driver_caps.initialize();

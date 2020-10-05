@@ -1601,8 +1601,11 @@ namespace rsx
 						{
 							// We can have the correct data in cached_texture but it needs decoding before it can be sampled.
 							// Usually a sign of a game bug where the developer forgot to mark the texture correctly the first time we see it.
-							rsx_log.error("A texture was found in cache for address 0x%x, but swizzle flag does not match", attr.address);
-							continue;
+							// TODO: This section should execute under an exclusive lock, but we're not actually modifying any object references, only flags
+							rsx_log.warning("A texture was found in cache for address 0x%x, but swizzle flag does not match", attr.address);
+							cached_texture->unprotect();
+							cached_texture->set_dirty(true);
+							return {};
 						}
 
 						return{ cached_texture->get_view(encoded_remap, remap), cached_texture->get_context(), cached_texture->get_format_class(), scale, cached_texture->get_image_type() };
@@ -2336,7 +2339,6 @@ namespace rsx
 
 					if (use_null_region)
 					{
-
 						// Attach to existing region
 						cached_dest = surface;
 
@@ -2805,15 +2807,20 @@ namespace rsx
 			if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format) !=
 				helpers::is_gcm_depth_format(typeless_info.dst_gcm_format))
 			{
-				if (!typeless_info.src_is_typeless && !typeless_info.dst_is_typeless)
+				// Make the depth side typeless because the other side is guaranteed to be color
+				if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format))
 				{
-					// Make the depth side typeless
-					if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format))
+					// SRC is depth, transfer must be done typelessly
+					if (!typeless_info.src_is_typeless)
 					{
 						typeless_info.src_is_typeless = true;
 						typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, false);
 					}
-					else
+				}
+				else
+				{
+					// DST is depth, transfer must be done typelessly
+					if (!typeless_info.dst_is_typeless)
 					{
 						typeless_info.dst_is_typeless = true;
 						typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, false);

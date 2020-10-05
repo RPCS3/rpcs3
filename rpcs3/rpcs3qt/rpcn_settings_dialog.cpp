@@ -37,6 +37,7 @@ rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 	QPushButton* btn_chg_pass = new QPushButton(tr("Set Password"));
 	QLabel *label_token       = new QLabel(tr("Token:"));
 	m_edit_token              = new QLineEdit();
+	m_edit_token->setMaxLength(16);
 
 	QPushButton* btn_create = new QPushButton(tr("Create Account"), this);
 	QPushButton* btn_save     = new QPushButton(tr("Save"), this);
@@ -151,6 +152,12 @@ bool rpcn_settings_dialog::save_config()
 	if (!validate(npid))
 	{
 		QMessageBox::critical(this, tr("Invalid character"), tr("NPID must be between 3 and 16 characters and can only contain '-', '_' or alphanumeric characters."), QMessageBox::Ok);
+		return false;
+	}
+
+	if (!token.empty() && token.size() != 16)
+	{
+		QMessageBox::critical(this, tr("Invalid token"), tr("The token you have received should be 16 characters long."), QMessageBox::Ok);
 		return false;
 	}
 

@@ -467,10 +467,8 @@ namespace gl
 			return nullptr;
 		case 2:
 			return get_compute_task<gl::cs_shuffle_16>();
-			break;
 		case 4:
 			return get_compute_task<gl::cs_shuffle_32>();
-			break;
 		default:
 			fmt::throw_exception("Unsupported format");
 		}
@@ -951,33 +949,19 @@ namespace gl
 		auto pack_info = get_format_type(src);
 		auto unpack_info = get_format_type(dst);
 
-		if (!caps.ARB_compute_shader_supported)
+		// D32FS8 can be read back as D24S8 or D32S8X24. In case of the latter, double memory requirements
+		if (pack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
 		{
-			auto remove_depth_transformation = [](const texture* tex, pixel_buffer_layout& pack_info)
-			{
-				if (tex->aspect() & image_aspect::depth)
-				{
-					switch (pack_info.type)
-					{
-					case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:
-						pack_info.type = GL_UNSIGNED_INT_24_8;
-						break;
-					case GL_FLOAT:
-						pack_info.type = GL_HALF_FLOAT;
-						break;
-					}
-				}
-			};
-
-			remove_depth_transformation(src, pack_info);
-			remove_depth_transformation(dst, unpack_info);
+			src_mem.image_size_in_bytes *= 2;
 		}
 
-		// Start pack operation
-		void* transfer_offset = nullptr;
+		if (unpack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
+		{
+			dst_mem.image_size_in_bytes *= 2;
+		}
+
 		if (caps.ARB_compute_shader_supported) [[likely]]
 		{
-			// Apply transformation
 			bool skip_transform = false;
 			if ((src->aspect() | dst->aspect()) == gl::image_aspect::color)
 			{
@@ -989,21 +973,20 @@ namespace gl
 
 			if (skip_transform) [[likely]]
 			{
-				const bool old_swap_bytes = pack_info.swap_bytes;
+				// Disable byteswap to make the transport operation passthrough
 				pack_info.swap_bytes = false;
-
-				copy_image_to_buffer(pack_info, src, &g_typeless_transfer_buffer, 0, src_region, &src_mem);
-				pack_info.swap_bytes = old_swap_bytes;
-			}
-			else
-			{
-				void* data_ptr = copy_image_to_buffer(pack_info, src, &g_typeless_transfer_buffer, 0, src_region, &src_mem);
-				copy_buffer_to_image(unpack_info, &g_typeless_transfer_buffer, dst, data_ptr, 0, dst_region, &dst_mem);
+				unpack_info.swap_bytes = false;
 			}
 
+			void* data_ptr = copy_image_to_buffer(pack_info, src, &g_typeless_transfer_buffer, 0, src_region, &src_mem);
+			copy_buffer_to_image(unpack_info, &g_typeless_transfer_buffer, dst, data_ptr, 0, dst_region, &dst_mem);
+
+			// Cleanup
 			// NOTE: glBindBufferRange also binds the buffer to the old-school target.
 			// Unbind it to avoid glitching later
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
+			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 		}
 		else
 		{
@@ -1014,26 +997,72 @@ namespace gl
 				g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
 			}
 
+			// Simplify pack/unpack information to something OpenGL can natively digest
+			auto remove_depth_transformation = [](const texture* tex, pixel_buffer_layout& pack_info)
+			{
+				if (tex->aspect() & image_aspect::depth)
+				{
+					switch (pack_info.type)
+					{
+					case GL_UNSIGNED_INT_24_8:
+						pack_info.swap_bytes = false;
+						break;
+					case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:
+						pack_info.type = GL_UNSIGNED_INT_24_8;
+						pack_info.swap_bytes = false;
+						break;
+					case GL_FLOAT:
+						pack_info.type = GL_HALF_FLOAT;
+						break;
+					}
+				}
+			};
+
+			remove_depth_transformation(src, pack_info);
+			remove_depth_transformation(dst, unpack_info);
+
+			// Attempt to compensate for the lack of compute shader modifiers
+			// If crossing the aspect boundary between color and depth
+			// and one image is depth, invert byteswap for the other one to compensate
+			const auto cross_aspect_test = (image_aspect::color | image_aspect::depth);
+			const auto test = (src->aspect() | dst->aspect()) & cross_aspect_test;
+			if (test == cross_aspect_test)
+			{
+				if (src->aspect() & image_aspect::depth)
+				{
+					// Source is depth, modify unpack rule
+					if (pack_info.size == 4 && unpack_info.size == 4)
+					{
+						unpack_info.swap_bytes = !unpack_info.swap_bytes;
+					}
+				}
+				else
+				{
+					// Dest is depth, modify pack rule
+					if (pack_info.size == 4 && unpack_info.size == 4)
+					{
+						pack_info.swap_bytes = !pack_info.swap_bytes;
+					}
+				}
+			}
+
+			// Start pack operation
 			pixel_pack_settings pack_settings{};
 			pack_settings.swap_bytes(pack_info.swap_bytes);
 
 			g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
 			src->copy_to(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), 0, src_region, pack_settings);
-		}
 
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
-		// Start unpack operation
-		pixel_unpack_settings unpack_settings{};
-
-		if (!caps.ARB_compute_shader_supported) [[unlikely]]
-		{
+			// Start unpack operation
+			pixel_unpack_settings unpack_settings{};
 			unpack_settings.swap_bytes(unpack_info.swap_bytes);
-		}
 
-		g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
-		dst->copy_from(transfer_offset, static_cast<texture::format>(unpack_info.format), static_cast<texture::type>(unpack_info.type), 0, dst_region, unpack_settings);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
+			g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
+			dst->copy_from(nullptr, static_cast<texture::format>(unpack_info.format), static_cast<texture::type>(unpack_info.type), 0, dst_region, unpack_settings);
+			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
+		}
 	}
 
 	void copy_typeless(texture* dst, const texture* src)

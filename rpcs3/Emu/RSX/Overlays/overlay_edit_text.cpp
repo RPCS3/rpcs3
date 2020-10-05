@@ -33,7 +33,7 @@ namespace rsx
 		{
 			switch (dir)
 			{
-			case left:
+			case direction::left:
 			{
 				if (caret_position)
 				{
@@ -42,7 +42,7 @@ namespace rsx
 				}
 				break;
 			}
-			case right:
+			case direction::right:
 			{
 				if (caret_position < text.length())
 				{
@@ -51,7 +51,7 @@ namespace rsx
 				}
 				break;
 			}
-			case up:
+			case direction::up:
 			{
 				const size_t current_line_start = get_line_start(text, caret_position);
 				if (current_line_start == 0)
@@ -70,7 +70,7 @@ namespace rsx
 				refresh();
 				break;
 			}
-			case down:
+			case direction::down:
 			{
 				const size_t current_line_end = get_line_end(text, caret_position);
 				if (current_line_end == text.length())

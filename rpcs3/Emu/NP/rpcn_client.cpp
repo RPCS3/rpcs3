@@ -33,7 +33,7 @@
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 
-#define RPCN_PROTOCOL_VERSION 7
+#define RPCN_PROTOCOL_VERSION 9
 #define RPCN_HEADER_SIZE 9
 
 rpcn_client::rpcn_client(bool in_config)
@@ -398,7 +398,7 @@ bool rpcn_client::create_user(const std::string& npid, const std::string& passwo
 }
 
 s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& addr);
-std::queue<std::vector<u8>> get_rpcn_msgs();
+std::vector<std::vector<u8>> get_rpcn_msgs();
 
 bool rpcn_client::manage_connection()
 {
@@ -412,14 +412,12 @@ bool rpcn_client::manage_connection()
 
 		auto rpcn_msgs = get_rpcn_msgs();
 
-		while (!rpcn_msgs.empty())
+		for (const auto& msg : rpcn_msgs)
 		{
-			const auto& msg = rpcn_msgs.front();
-
 			if (msg.size() == 6)
 			{
-				addr_sig = reinterpret_cast<const u32&>(msg[0]);
-				port_sig = reinterpret_cast<const u16&>(msg[4]);
+				addr_sig = reinterpret_cast<const le_t<u32>&>(msg[0]);
+				port_sig = reinterpret_cast<const be_t<u16>&>(msg[4]);
 
 				in_addr orig{};
 				orig.s_addr = addr_sig;
@@ -430,8 +428,6 @@ bool rpcn_client::manage_connection()
 			{
 				rpcn_log.error("Received faulty RPCN UDP message!");
 			}
-
-			rpcn_msgs.pop();
 		}
 
 		// Send a packet every 5 seconds and then every 500 ms until reply is received
@@ -440,7 +436,10 @@ bool rpcn_client::manage_connection()
 			std::vector<u8> ping(9);
 			ping[0]                                 = 1;
 			*reinterpret_cast<le_t<s64>*>(&ping[1]) = user_id;
-			send_packet_from_p2p_port(ping, addr_rpcn_udp);
+			if (send_packet_from_p2p_port(ping, addr_rpcn_udp) == -1)
+			{
+				rpcn_log.error("Failed to send ping to rpcn!");
+			}
 			last_ping_time = now;
 		}
 	}
@@ -1050,6 +1049,30 @@ bool rpcn_client::send_room_message(u32 req_id, const SceNpMatching2SendRoomMess
 	memcpy(data.data() + sizeof(u32), buf, bufsize);
 
 	if (!forge_send(CommandType::SendRoomMessage, req_id, data))
+		return false;
+
+	return true;
+}
+
+bool rpcn_client::req_sign_infos(u32 req_id, const std::string& npid)
+{
+	std::vector<u8> data{};
+	std::copy(npid.begin(), npid.end(), std::back_inserter(data));
+	data.push_back(0);
+
+	if (!forge_send(CommandType::RequestSignalingInfos, req_id, data))
+		return false;
+
+	return true;
+}
+
+bool rpcn_client::req_ticket(u32 req_id, const std::string& service_id)
+{
+	std::vector<u8> data{};
+	std::copy(service_id.begin(), service_id.end(), std::back_inserter(data));
+	data.push_back(0);
+
+	if (!forge_send(CommandType::RequestTicket, req_id, data))
 		return false;
 
 	return true;

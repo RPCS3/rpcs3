@@ -10,13 +10,7 @@
 
 #include "Emu/NP/rpcn_client.h"
 #include "generated/np2_structs_generated.h"
-
-struct signaling_info
-{
-	int connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
-	u32 addr = 0;
-	u16 port = 0;
-};
+#include "signaling_handler.h"
 
 class np_handler
 {
@@ -55,8 +49,8 @@ public:
 		UserJoinedRoom,
 		UserLeftRoom,
 		RoomDestroyed,
-		SignalP2PEstablished,
-		_SignalP2PDisconnected,
+		SignalP2PConnect,
+		_SignalP2PDisconnect,
 		RoomMessageReceived,
 	};
 
@@ -87,9 +81,6 @@ public:
 	vm::ptr<SceNpMatching2RoomEventCallback> room_event_cb{}; // Room events
 	u16 room_event_cb_ctx = 0;
 	vm::ptr<void> room_event_cb_arg{};
-	vm::ptr<SceNpMatching2SignalingCallback> signal_event_cb{}; // Room events
-	u16 signal_event_cb_ctx = 0;
-	vm::ptr<void> signal_event_cb_arg{};
 	vm::ptr<SceNpMatching2RoomMessageCallback> room_msg_cb{};
 	u16 room_msg_cb_ctx = 0;
 	vm::ptr<void> room_msg_cb_arg{};
@@ -111,6 +102,21 @@ public:
 	};
 	s32 create_score_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
 	bool destroy_score_context(s32 ctx_id);
+
+	struct score_transaction_ctx
+	{
+		score_transaction_ctx(s32 score_context_id)
+		{
+			this->score_context_id = score_context_id;
+		}
+
+		static const u32 id_base  = 1;
+		static const u32 id_step  = 1;
+		static const u32 id_count = 32;
+		s32 score_context_id = 0;
+	};
+	s32 create_score_transaction_context(s32 score_context_id);
+	bool destroy_score_transaction_context(s32 ctx_id);
 
 	// Match2 related
 	struct match2_ctx
@@ -230,10 +236,14 @@ public:
 	u32 send_room_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomMessageRequest* req);
 
 	u32 get_match2_event(SceNpMatching2EventKey event_key, u8* dest, u32 size);
-	const signaling_info& get_peer_infos(u16 context_id, u64 room_id, u16 member_id);
 
 	// Misc stuff
+	void req_ticket(u32 version, const SceNpId *npid, const char *service_id, const u8 *cookie, u32 cookie_size, const char *entitlement_id, u32 consumed_count);
+	const std::vector<u8>& get_ticket() { return current_ticket; }
 	u32 add_players_to_history(vm::cptr<SceNpId> npids, u32 count);
+
+	// For signaling
+	void req_sign_infos(const std::string& npid, u32 conn_id);
 
 	static constexpr std::string_view thread_name = "NP Handler Thread";
 
@@ -246,7 +256,7 @@ protected:
 	void notif_user_joined_room(std::vector<u8>& data);
 	void notif_user_left_room(std::vector<u8>& data);
 	void notif_room_destroyed(std::vector<u8>& data);
-	void notif_p2p_established(std::vector<u8>& data);
+	void notif_p2p_connect(std::vector<u8>& data);
 	void notif_room_message_received(std::vector<u8>& data);
 
 	// Reply handlers
@@ -260,6 +270,8 @@ protected:
 	bool reply_set_roomdata_internal(u32 req_id, std::vector<u8>& reply_data);
 	bool reply_get_ping_info(u32 req_id, std::vector<u8>& reply_data);
 	bool reply_send_room_message(u32 req_id, std::vector<u8>& reply_data);
+	bool reply_req_sign_infos(u32 req_id, std::vector<u8>& reply_data);
+	bool reply_req_ticket(u32 req_id, std::vector<u8>& reply_data);
 
 	// Helper functions(fb=>np2)
 	void BinAttr_to_SceNpMatching2BinAttr(const flatbuffers::Vector<flatbuffers::Offset<BinAttr>>* fb_attr, vm::ptr<SceNpMatching2BinAttr> binattr_info);
@@ -279,11 +291,14 @@ protected:
 	};
 	u32 generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam);
 
-	std::map<u32, callback_info> pending_requests;
+	std::unordered_map<u32, callback_info> pending_requests;
+	std::unordered_map<u32, u32> pending_sign_infos_requests;
 
 protected:
 	bool is_connected  = false;
 	bool is_psn_active = false;
+
+	std::vector<u8> current_ticket;
 
 	// IP & DNS info
 	be_t<u32> local_ip_addr{};
@@ -306,14 +321,8 @@ protected:
 	std::map<u32, u32> mpool_allocs{}; // offset/size
 	vm::addr_t allocate(u32 size);
 
-	// Memory pool static objects( room_id , internals )
-	std::map<u64, vm::ptr<SceNpMatching2RoomDataInternal>> room_infos;
-
-	// Signal P2P infos (room_id / user_id)
-	std::map<u64, std::map<u16, signaling_info>> p2p_info{};
-
 	// Requests(reqEventKey : data)
-	std::map<u32, std::vector<u8>> match2_req_results{};
+	std::unordered_map<u32, std::vector<u8>> match2_req_results{};
 	atomic_t<u16> match2_low_reqid_cnt = 1;
 	atomic_t<u32> match2_event_cnt     = 1;
 	u32 get_req_id(u16 app_req)

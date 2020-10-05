@@ -195,8 +195,8 @@ namespace vk
 			real_pitch = internal_bpp * transfer_width;
 			rsx_pitch = pitch;
 
-			const bool is_depth_stencil = !!(src->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT);
-			if (is_depth_stencil || pack_unpack_swap_bytes)
+			const bool require_format_conversion = !!(src->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || src->format() == VK_FORMAT_D32_SFLOAT;
+			if (require_format_conversion || pack_unpack_swap_bytes)
 			{
 				const auto section_length = valid_range.length();
 				const auto transfer_pitch = real_pitch;
@@ -209,10 +209,10 @@ namespace vk
 				region.imageSubresource = { src->aspect(), 0, 0, 1 };
 				region.imageOffset = { src_area.x1, src_area.y1, 0 };
 				region.imageExtent = { transfer_width, transfer_height, 1 };
-				vk::copy_image_to_buffer(cmd, src, working_buffer, region, (is_depth_stencil && pack_unpack_swap_bytes));
+				vk::copy_image_to_buffer(cmd, src, working_buffer, region, (require_format_conversion && pack_unpack_swap_bytes));
 
-				// NOTE: For depth-stencil formats, copying to buffer and byteswap are combined into one step above
-				if (pack_unpack_swap_bytes && !is_depth_stencil)
+				// NOTE: For depth/stencil formats, copying to buffer and byteswap are combined into one step above
+				if (pack_unpack_swap_bytes && !require_format_conversion)
 				{
 					const auto texel_layout = vk::get_format_element_size(src->format());
 					const auto elem_size = texel_layout.first;
@@ -228,18 +228,22 @@ namespace vk
 					}
 					else
 					{
-						fmt::throw_exception("Unreachable" HERE);
+						verify(HERE), get_context() == rsx::texture_upload_context::dma;
+						shuffle_kernel = nullptr;
 					}
 
-					vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
-						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+					if (shuffle_kernel)
+					{
+						vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
+							VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+							VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
-					shuffle_kernel->run(cmd, working_buffer, task_length);
+						shuffle_kernel->run(cmd, working_buffer, task_length);
 
-					vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
-						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+						vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
+							VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+							VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+					}
 				}
 
 				if (rsx_pitch == real_pitch) [[likely]]

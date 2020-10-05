@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Emu/VFS.h"
+#include "Emu/localized_string.h"
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_process.h"
@@ -135,6 +136,11 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 
 		for (const auto& entry2 : fs::dir(base_dir + entry.name))
 		{
+			if (entry2.is_directory)
+			{
+				continue;
+			}
+
 			save_entry.size += entry2.size;
 		}
 
@@ -199,13 +205,13 @@ static error_code select_and_delete(ppu_thread& ppu)
 		const std::string info = entry.title + "\n" + entry.subtitle + "\n" + entry.details;
 
 		// Reusable display message string
-		std::string msg = "Do you really want to delete this entry?\n\n" + info;
+		std::string msg = get_localized_string(localized_string_id::CELL_SAVEDATA_DELETE_CONFIRMATION, info.c_str());
 
 		// Yield before a blocking dialog is being spawned
 		lv2_obj::sleep(ppu);
 
 		// Get user confirmation by opening a blocking dialog
-		error_code res  = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(msg));
+		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(msg));
 
 		// Reschedule after a blocking dialog returns
 		if (ppu.check_state())
@@ -235,7 +241,7 @@ static error_code select_and_delete(ppu_thread& ppu)
 			}
 
 			// Update display message
-			msg = "Successfully removed entry!\n\n" + info;
+			msg = get_localized_string(localized_string_id::CELL_SAVEDATA_DELETE_SUCCESS, info.c_str());
 			cellSaveData.success("%s", msg);
 
 			// Yield before blocking dialog is being spawned
@@ -264,16 +270,16 @@ static error_code display_callback_result_error_message(ppu_thread& ppu, const C
 	switch (result.result)
 	{
 	case CELL_SAVEDATA_CBRESULT_ERR_NOSPACE:
-		msg = fmt::format("Error - Insufficient free space\n\nSpace needed: %d KB", result.errNeedSizeKB);
+		msg = get_localized_string(localized_string_id::CELL_SAVEDATA_CB_NO_SPACE, fmt::format("%d", result.errNeedSizeKB).c_str());
 		break;
 	case CELL_SAVEDATA_CBRESULT_ERR_FAILURE:
-		msg = "Error - Failed to save or load";
+		msg = get_localized_string(localized_string_id::CELL_SAVEDATA_CB_FAILURE);
 		break;
 	case CELL_SAVEDATA_CBRESULT_ERR_BROKEN:
-		msg = "Error - Save data corrupted";
+		msg = get_localized_string(localized_string_id::CELL_SAVEDATA_CB_BROKEN);
 		break;
 	case CELL_SAVEDATA_CBRESULT_ERR_NODATA:
-		msg = "Error - Save data cannot be found";
+		msg = get_localized_string(localized_string_id::CELL_SAVEDATA_CB_NO_DATA);
 		break;
 	case CELL_SAVEDATA_CBRESULT_ERR_INVALID:
 		if (result.invalidMsg)
@@ -303,19 +309,21 @@ static error_code display_callback_result_error_message(ppu_thread& ppu, const C
 	return CELL_SAVEDATA_ERROR_CBRESULT;
 }
 
-static std::string get_confirmation_message(u32 operation)
+static std::string get_confirmation_message(u32 operation, const SaveDataEntry& entry)
 {
+	const std::string info = entry.title + "\n" + entry.subtitle + "\n" + entry.details;
+
 	if (operation == SAVEDATA_OP_LIST_DELETE || operation == SAVEDATA_OP_FIXED_DELETE)
 	{
-		return "Delete this entry?";
+		return get_localized_string(localized_string_id::CELL_SAVEDATA_DELETE, info.c_str());
 	}
 	else if (operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_FIXED_LOAD)
 	{
-		return "Load this entry?";
+		return get_localized_string(localized_string_id::CELL_SAVEDATA_LOAD, info.c_str());
 	}
 	else if (operation == SAVEDATA_OP_LIST_SAVE || operation == SAVEDATA_OP_FIXED_SAVE)
 	{
-		return "Overwrite this entry?";
+		return get_localized_string(localized_string_id::CELL_SAVEDATA_OVERWRITE, info.c_str());
 	}
 
 	return "";
@@ -640,6 +648,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 						for (const auto& entry2 : fs::dir(base_dir + entry.name))
 						{
+							if (entry2.is_directory)
+							{
+								continue;
+							}
+
 							save_entry2.size += entry2.size;
 						}
 
@@ -951,7 +964,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				fs::remove_all(old_path);
 
 				// Remove savedata by renaming
-				if (!vfs::host::rename(del_path, old_path, false))
+				if (!vfs::host::rename(del_path, old_path, &g_mp_sys_dev_hdd0, false))
 				{
 					fmt::throw_exception("Failed to move directory %s (%s)", del_path, fs::g_tls_error);
 				}
@@ -1000,7 +1013,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			// UI returns -1 for new save games
 			if (selected == -1)
 			{
-				message = "Create new Save Data?";
+				message = get_localized_string(localized_string_id::CELL_SAVEDATA_CREATE_CONFIRMATION);
 				save_entry.dirName = listSet->newData->dirName.get_ptr();
 				save_entry.escaped = vfs::escape(save_entry.dirName);
 			}
@@ -1008,7 +1021,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				// Get information from the selected entry
 				SaveDataEntry entry = save_entries[selected];
-				message = get_confirmation_message(operation) + "\n\n" + entry.title + "\n" + entry.subtitle + "\n" + entry.details;
+				message = get_confirmation_message(operation, entry);
 			}
 
 			// Yield before a blocking dialog is being spawned
@@ -1128,13 +1141,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 				if (selected == -1)
 				{
-					message = "Create new Save Data?";
+					message = get_localized_string(localized_string_id::CELL_SAVEDATA_CREATE_CONFIRMATION);
 				}
 				else
 				{
 					// Get information from the selected entry
 					SaveDataEntry entry = save_entries[selected];
-					message = get_confirmation_message(operation) + "\n\n" + entry.title + "\n" + entry.subtitle + "\n" + entry.details;
+					message = get_confirmation_message(operation, entry);
 				}
 
 				// Yield before a blocking dialog is being spawned
@@ -1904,13 +1917,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		fs::remove_all(old_path);
 
 		// Backup old savedata
-		if (!vfs::host::rename(dir_path, old_path, false))
+		if (!vfs::host::rename(dir_path, old_path, &g_mp_sys_dev_hdd0, false))
 		{
 			fmt::throw_exception("Failed to move directory %s (%s)", dir_path, fs::g_tls_error);
 		}
 
 		// Commit new savedata
-		if (!vfs::host::rename(new_path, dir_path, false))
+		if (!vfs::host::rename(new_path, dir_path, &g_mp_sys_dev_hdd0, false))
 		{
 			// TODO: handle the case when only commit failed at the next save load
 			fmt::throw_exception("Failed to move directory %s (%s)", new_path, fs::g_tls_error);

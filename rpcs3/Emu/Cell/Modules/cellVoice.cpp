@@ -858,6 +858,9 @@ error_code cellVoiceReadFromOPort(u32 ops, vm::ptr<void> data, vm::ptr<u32> size
 
 	if (!oport || oport->info.portType <= CELLVOICE_PORTTYPE_IN_VOICE)
 		return CELL_VOICE_ERROR_TOPOLOGY;
+	
+	if (size)
+		*size = 0;
 
 	return CELL_OK;
 }
