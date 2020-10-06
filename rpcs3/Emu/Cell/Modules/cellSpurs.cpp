@@ -160,32 +160,6 @@ extern u32 ppu_lwarx(ppu_thread&, u32);
 extern bool ppu_stwcx(ppu_thread&, u32, u32);
 extern bool ppu_stdcx(ppu_thread&, u32, u64);
 
-bool do_atomic_128_load(cpu_thread& cpu, u32 addr, void* dst)
-{
-	verify(HERE), (addr % 128) == 0;
-
-	while (!cpu.test_stopped())
-	{
-		const u64 rtime = vm::reservation_acquire(addr, 128);
-
-		if (rtime % 128)
-		{
-			continue;
-		}
-
-		std::memcpy(dst, vm::base(addr), 128);
-
-		if (rtime != vm::reservation_acquire(addr, 128))
-		{
-			continue;
-		}
-
-		return true;
-	}
-
-	return false;
-}
-
 error_code sys_spu_image_close(ppu_thread&, vm::ptr<sys_spu_image> img);
 
 //----------------------------------------------------------------------------
@@ -2516,7 +2490,7 @@ s32 cellSpursShutdownWorkload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid
 
 	if (wid >= (spurs->flags1 & SF1_32_WORKLOADS ? CELL_SPURS_MAX_WORKLOAD2 : CELL_SPURS_MAX_WORKLOAD))
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
- 
+
 	if (spurs->exception)
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 
@@ -4393,7 +4367,7 @@ s32 _spurs::check_job_chain_attribute(u32 sdkVer, vm::cptr<u64> jcEntry, u16 siz
 {
 	if (!jcEntry)
 		return CELL_SPURS_JOB_ERROR_NULL_POINTER;
-	
+
 	if (!jcEntry.aligned())
 		return CELL_SPURS_JOB_ERROR_ALIGN;
 
@@ -4592,13 +4566,12 @@ s32 cellSpursGetJobChainInfo(ppu_thread& ppu, vm::ptr<CellSpursJobChain> jobChai
 		return err;
 	}
 
-	CellSpursJobChain data;
-
 	// Read the commands queue atomically
-	if (!do_atomic_128_load(ppu, jobChain.addr(), &data))
+	CellSpursJobChain data;
+	vm::reservation_peek(ppu, vm::unsafe_ptr_cast<CellSpursJobChain_x00>(jobChain), [&](const CellSpursJobChain_x00& jch)
 	{
-		return 0;
-	}
+		std::memcpy(&data, &jch, sizeof(jch));
+	});
 
 	info->linkRegister[0] = +data.linkRegister[0];
 	info->linkRegister[1] = +data.linkRegister[1];
@@ -4896,48 +4869,25 @@ s32 cellSpursAddUrgentCommand(ppu_thread& ppu, vm::ptr<CellSpursJobChain> jobCha
 	if (jobChain->workloadId >= CELL_SPURS_MAX_WORKLOAD2)
 		return CELL_SPURS_JOB_ERROR_INVAL;
 
-	for (u32 i = 0;;)
+	s32 result = CELL_OK;
+
+	vm::reservation_op(vm::unsafe_ptr_cast<CellSpursJobChain_x00>(jobChain), [&](CellSpursJobChain_x00& jch)
 	{
-		if (i >= std::size(jobChain->urgentCmds))
+		for (auto& cmd : jch.urgentCmds)
 		{
-			// Exausted all slots
-			return CELL_SPURS_JOB_ERROR_BUSY;
-		}
-
-		u64 currCmd = ppu_ldarx(ppu, jobChain.ptr(&CellSpursJobChain::urgentCmds, i).addr());
-		std::atomic_thread_fence(std::memory_order_acq_rel);
-
-		bool found = false;
-		bool reset = false;
-
-		if (!currCmd)
-		{
-			if (i != 0 && !jobChain->urgentCmds[i - 1])
+			if (!cmd)
 			{
-				// Restart search, someone emptied out the previous one
-				reset = true;
-			}
-			else
-			{
-				found = true;
-				currCmd = newCmd;
+				cmd = newCmd;
+				return true;
 			}
 		}
 
-		if (reset || !ppu_stdcx(ppu, jobChain.ptr(&CellSpursJobChain::urgentCmds, i).addr(), currCmd))
-		{
-			// Someone modified the job chain or the previous slot is empty, restart search
-			i = 0;
-			continue;
-		}
+		// Considered unlikely so unoptimized
+		result = CELL_SPURS_JOB_ERROR_BUSY;
+		return false;
+	});
 
-		if (found)
-			break;
-
-		i++;
-	}
-
-	return CELL_OK;
+	return result;
 }
 
 s32 cellSpursAddUrgentCall(ppu_thread& ppu, vm::ptr<CellSpursJobChain> jobChain, vm::ptr<u64> commandList)

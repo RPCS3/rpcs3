@@ -465,6 +465,25 @@ struct alignas(128) CellSpursJobChain
 	u8 unk5[0x100 - 0xA8];
 };
 
+struct alignas(128) CellSpursJobChain_x00
+{
+	vm::bcptr<u64, u64> pc;                                                      // 0x00
+	vm::bcptr<u64, u64> linkRegister[3];                                         // 0x08
+	u8 unk0[0x3];                                                                // 0x20
+	b8 isHalted;                                                                 // 0x23
+	b8 autoReadyCount;                                                           // 0x24
+	u8 unk1[0x7];                                                                // 0x25
+	u8 val2C;                                                                    // 0x2C
+	u8 val2D;                                                                    // 0x2D
+	u8 val2E;                                                                    // 0x2E
+	u8 val2F;                                                                    // 0x2F
+	be_t<u64> urgentCmds[4];                                                     // 0x30
+	u8 unk2[0x22];                                                               // 0x50
+	be_t<u16> maxGrabbedJob;                                                     // 0x72
+	be_t<u32> workloadId;                                                        // 0x74
+	vm::bptr<CellSpurs, u64> spurs;                                              // 0x78
+};
+
 struct CellSpursJobChainInfo
 {
 	be_t<u64> urgentCommandSlot[4];                                                 // 0x00
@@ -494,7 +513,7 @@ struct alignas(8) CellSpursJobChainAttribute
 	be_t<u32> maxGrabbedJob;          // 0x0E
 	u8 priorities[8];                 // 0x10
 	be_t<u32> maxContention;          // 0x18
-	b8 autoSpuCount;                  // 0x1C 
+	b8 autoSpuCount;                  // 0x1C
 	u8 padding[3];                    // 0x1D
 	be_t<u32> tag1;                   // 0x20
 	be_t<u32> tag2;                   // 0x24
@@ -1031,7 +1050,7 @@ struct alignas(16) CellSpursTaskBinInfo
 
 struct alignas(128) CellSpursBarrier
 {
-	be_t<u32> zero;                     // 0x00 
+	be_t<u32> zero;                     // 0x00
 	be_t<u32> remained;                 // 0x04
 	u8 unk0[0x34 - 0x8];
 	vm::bptr<CellSpursTaskset> taskset; // 0x34
