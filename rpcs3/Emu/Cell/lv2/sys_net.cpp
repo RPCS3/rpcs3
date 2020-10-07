@@ -282,12 +282,25 @@ public:
 	{
 		std::lock_guard lock(data_mutex);
 		rtts[sock_id].num_retries = 0;
-		// TODO: reduce RTT?
+
+		const auto now = std::chrono::system_clock::now();
+
 		for (auto it = msgs.begin(); it != msgs.end();)
 		{
 			auto& msg = it->second;
 			if (msg.sock_id == sock_id && msg.seq < ack)
 			{
+				// Decreases RTT if msg is early
+				if (now < it->first)
+				{
+					const auto actual_rtt = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second.initial_sendtime);
+					const auto cur_rtt = rtts[sock_id].rtt_time;
+					if (cur_rtt > actual_rtt)
+					{
+						rtts[sock_id].rtt_time = (actual_rtt + cur_rtt) / 2;
+					}
+
+				}
 				it = msgs.erase(it);
 				continue;
 			}
