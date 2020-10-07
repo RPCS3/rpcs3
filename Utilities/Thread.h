@@ -7,6 +7,8 @@
 #include <string>
 #include <memory>
 #include <string_view>
+#include <thread>
+#include <chrono>
 
 #include "mutex.h"
 #include "cond.h"
@@ -225,9 +227,63 @@ public:
 	}
 
 	// Wait once with timeout. May spuriously return false.
+	template <bool accurate = false>
 	static inline void wait_for(u64 usec, bool alert = true)
 	{
-		_wait_for(usec, alert);
+		if constexpr (!accurate)
+		{
+			_wait_for(usec, alert);
+			return;
+		}
+
+		if (!usec)
+		{
+			return;
+		}
+
+		using namespace std::chrono_literals;
+
+		const auto until = std::chrono::time_point_cast<decltype(1us)>(std::chrono::steady_clock::now()) + decltype(1us)(usec);
+
+		while (true)
+		{
+#ifdef __linux__
+			// NOTE: Assumption that timer initialization has succeeded
+			u64 host_min_quantum = usec <= 1000 ? 10 : 50;
+#else
+			// Host scheduler quantum for windows (worst case)
+			// NOTE: On ps3 this function has very high accuracy
+			constexpr u64 host_min_quantum = 500;
+#endif
+			if (usec >= host_min_quantum)
+			{
+#ifdef __linux__
+				// Do not wait for the last quantum to avoid loss of accuracy
+				_wait_for(usec - ((usec % host_min_quantum) + host_min_quantum), alert);
+#else
+				// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
+				_wait_for(usec - (usec % host_min_quantum), alert);
+#endif
+			}
+			// TODO: Determine best value for yield delay
+			else if (usec >= host_min_quantum / 2)
+			{
+				std::this_thread::yield();
+			}
+			else
+			{
+				busy_wait(100);
+			}
+
+			const auto current = std::chrono::time_point_cast<decltype(1us)>(std::chrono::steady_clock::now());
+
+			if (current >= until)
+			{
+				break;
+			}
+
+			usec = (until - current).count();
+		}
 	}
 
 	// Wait.

@@ -2701,6 +2701,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 				vm::reservation_notifier(raddr, 128).wait<UINT64_MAX & -128>(rtime, atomic_wait_timeout{100'000});
 			}
 
+			wakeup_delay();
 			check_state();
 			return events.events & mask1;
 		}
@@ -2717,6 +2718,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			thread_ctrl::wait_for(100);
 		}
 
+		wakeup_delay();
 		check_state();
 		return events.events & mask1;
 	}
@@ -2758,6 +2760,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 			}
 
 			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
+			wakeup_delay();
 			check_state();
 			return true;
 		}
@@ -3269,6 +3272,8 @@ bool spu_thread::stop_and_signal(u32 code)
 				break;
 			}
 		}
+
+		wakeup_delay();
 
 		std::lock_guard lock(group->mutex);
 

@@ -22,6 +22,7 @@
 #include "Capture/rsx_trace.h"
 #include "Capture/rsx_replay.h"
 
+#include "Emu/system_config.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/IdManager.h"
 #include "Emu/system_config.h"
@@ -647,7 +648,13 @@ namespace rsx
 		bool is_fifo_idle() const;
 		void flush_fifo();
 		void recover_fifo();
-		static void fifo_wake_delay(u64 div = 1);
+
+		static inline void fifo_wake_delay(u32 div = 1)
+		{
+			// Some cases do not need full delay
+			thread_ctrl::wait_for<true>(::aligned_div(+g_cfg.video.driver_wakeup_delay, div), false);
+		}
+
 		u32 get_fifo_cmd() const;
 
 		// Performance approximation counters
