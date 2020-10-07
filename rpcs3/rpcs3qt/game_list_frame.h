@@ -121,7 +121,7 @@ private:
 	QString GetLastPlayedBySerial(const QString& serial);
 	std::string GetCacheDirBySerial(const std::string& serial);
 	std::string GetDataDirBySerial(const std::string& serial);
-	std::string CurrentSelectionIconPath();
+	std::string CurrentSelectionPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
 
 	game_info GetGameInfoByMode(const QTableWidgetItem* item);
