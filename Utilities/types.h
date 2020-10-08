@@ -269,14 +269,20 @@ class b8
 public:
 	b8() = default;
 
-	constexpr b8(bool value)
+	constexpr b8(bool value) noexcept
 		: m_value(value)
 	{
 	}
 
-	constexpr operator bool() const
+	constexpr operator bool() const noexcept
 	{
 		return m_value != 0;
+	}
+
+	constexpr bool set(bool value) noexcept
+	{
+		m_value = value;
+		return value;
 	}
 };
 

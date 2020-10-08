@@ -535,21 +535,36 @@ void kernel_explorer::Update()
 			{
 				const QString branch_name = "SPURS";
 				const u32 wklEnabled = spurs.wklEnabled;
-				QTreeWidgetItem* spurs_tree = add_solid_node(m_tree, spu_tree, branch_name, branch_name + qstr(fmt::format(", Instance: *0x%x, LWMutex: 0x%x, LWCond: 0x%x"
-					, pspurs, spurs.mutex.sleep_queue, spurs.cond.lwcond_queue)));
+				QTreeWidgetItem* spurs_tree = add_solid_node(m_tree, spu_tree, branch_name, branch_name + qstr(fmt::format(", Instance: *0x%x, LWMutex: 0x%x, LWCond: 0x%x, wklEnabled: 0x%x"
+					, pspurs, spurs.mutex.sleep_queue, spurs.cond.lwcond_queue, wklEnabled)));
 
-				for (u32 i = 1; i; i <<= 1)
+				const u32 signal_mask = u32{spurs.wklSignal1} << 16 | spurs.wklSignal2;
+
+				for (u32 wid = 0; wid < CELL_SPURS_MAX_WORKLOAD2; wid++)
 				{
-					if (!(wklEnabled & i))
+					if (!(wklEnabled & (0x80000000u >> wid)))
 					{
 						continue;
 					}
 
-					const u32 wid = std::countr_zero(i);
+					const auto state = spurs.wklState(wid).raw();
+
+					if (state == SPURS_WKL_STATE_NON_EXISTENT)
+					{
+						continue;
+					}
+
 					const u32 ready_count = spurs.readyCount(wid);
-					const auto state = spurs.wklState(wid).load();
-					add_leaf(spurs_tree, qstr(fmt::format("Workload %u, Name: %s, State: %s, ReadyCnt: %u", wid, +spurs.wklName(wid).nameInstance, state, ready_count)));
+					const auto& name = spurs.wklName(wid);
+					const u8 evt = spurs.wklEvent(wid);
+					const u8 status = spurs.wklStatus(wid);
+					const auto has_signal = (signal_mask & (0x80000000u >> wid)) ? "Signalled"sv : "No Signal"sv;
+
+					add_leaf(spurs_tree, qstr(fmt::format("Work.%u, class: %s, %s, %s, Status: %#x, Event: %#x, %s, ReadyCnt: %u", wid, +name.nameClass, +name.nameInstance, state, status, evt, has_signal, ready_count)));
 				}
+
+				add_leaf(spurs_tree, qstr(fmt::format("Handler Info: PPU0: 0x%x, PPU1: 0x%x, DirtyState: %u, Waiting: %u, Exiting: %u", spurs.ppu0, spurs.ppu1
+					, +spurs.handlerDirty, +spurs.handlerWaiting, +spurs.handlerExiting)));
 			}
 			else
 			{

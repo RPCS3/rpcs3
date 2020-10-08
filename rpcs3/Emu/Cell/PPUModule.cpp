@@ -712,7 +712,7 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 		}
 
 		// Segment info dump
-		std::vector<std::string> names;
+		std::string name;
 		std::string dump;
 
 		std::size_t applied = 0;
@@ -738,24 +738,15 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 
 			else if (prog.p_type == 0x4u /* NOTE */ && prog.p_filesz > 0u)
 			{
-				std::unique_ptr<u8[]> buf(new u8[prog.p_filesz + 0x15]{0});
-				std::memcpy(buf.get(), (elf_header + prog.p_offset), prog.p_filesz);
-
-				sha1_update(&sha2, buf.get(), prog.p_filesz);
+				sha1_update(&sha2, (elf_header + prog.p_offset), prog.p_filesz);
 
 				// We assume that the string SPUNAME exists 0x14 bytes into the NOTE segment
-				// If NOTE section is not big enough for a whole string it will get truncated
-				// If NOTE section is too small to contain a name it won't extract a name
-				names.emplace_back(reinterpret_cast<char*>(buf.get() + 0x14));
+				name = reinterpret_cast<char*>(elf_header + prog.p_offset + 0x14);
 
-				if (!names.back().empty())
+				if (!name.empty())
 				{
-					fmt::append(dump, "\n\tSPUNAME: '%s'", names.back());
-				}
-				else
-				{
-					names.resize(names.size() - 1);
-				}		
+					fmt::append(dump, "\n\tSPUNAME: '%s'", name);
+				}	
 			}
 		}
 
@@ -772,14 +763,7 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 
 		if (g_cfg.core.spu_debug)
 		{
-			std::string final_name;
-			for (const auto& name : names)
-			{
-				final_name += vfs::escape(name, true);
-				final_name += '-'; // Each name proceeded by '-' and also the last one
-			}
-
-			fs::file dump_file(fs::get_cache_dir() + "/spu_progs/" + final_name + hash.substr(4), fs::rewrite);
+			fs::file dump_file(fs::get_cache_dir() + "/spu_progs/" + vfs::escape(name.substr(name.find_last_of('/') + 1)) + '_' + hash.substr(4) + ".elf", fs::rewrite);
 			obj.save(dump_file);
 		}
 

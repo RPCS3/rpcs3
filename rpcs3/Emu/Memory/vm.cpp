@@ -13,6 +13,7 @@
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/RSX/GSRender.h"
+#include "Emu/Cell/SPURecompiler.h"
 #include <atomic>
 #include <thread>
 #include <deque>
@@ -467,6 +468,52 @@ namespace vm
 
 				std::this_thread::yield();
 			}
+		}
+	}
+
+	void reservation_op_internal(u32 addr, std::function<bool()> func)
+	{
+		const auto _cpu = get_current_cpu_thread();
+
+		// Acknowledge contender if necessary (TODO: check)
+		_cpu->state += cpu_flag::wait;
+
+		{
+			cpu_thread::suspend_all cpu_lock(_cpu);
+
+			// Wait to acquire PUTLLUC lock
+			while (vm::reservation_acquire(addr, 128).bts(std::countr_zero<u32>(vm::putlluc_lockb)))
+			{
+				busy_wait(100);
+			}
+
+			if (func())
+			{
+				// Success, release PUTLLUC and PUTLLC locks if necessary
+				vm::reservation_acquire(addr, 128) += 63;
+			}
+			else
+			{
+				// Fake update (TODO)
+				vm::reservation_acquire(addr, 128) += 63;
+			}
+		}
+
+		vm::reservation_notifier(addr, 128).notify_all();
+	}
+
+	void reservation_escape_internal()
+	{
+		const auto _cpu = get_current_cpu_thread();
+
+		if (_cpu && _cpu->id_type() == 1)
+		{
+			thread_ctrl::emergency_exit("vm::reservation_escape");
+		}
+
+		if (_cpu && _cpu->id_type() == 2)
+		{
+			spu_runtime::g_escape(static_cast<spu_thread*>(_cpu));
 		}
 	}
 
