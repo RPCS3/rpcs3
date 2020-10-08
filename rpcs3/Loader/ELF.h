@@ -113,7 +113,7 @@ struct elf_prog final : elf_phdr<en_t, sz_t>
 		base::p_vaddr = vaddr;
 		base::p_memsz = memsz;
 		base::p_align = align;
-		base::p_filesz = static_cast<sz_t>(bin.size());
+		base::p_filesz = static_cast<sz_t>(this->bin.size());
 		base::p_paddr = 0;
 		base::p_offset = -1;
 	}

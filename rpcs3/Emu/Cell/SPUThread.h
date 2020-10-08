@@ -770,6 +770,8 @@ public:
 
 	void fast_call(u32 ls_addr);
 
+	bool capture_local_storage() const;
+
 	// Convert specified SPU LS address to a pointer of specified (possibly converted to BE) type
 	template<typename T>
 	to_be_t<T>* _ptr(u32 lsa) const
