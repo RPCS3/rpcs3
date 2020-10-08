@@ -1,11 +1,14 @@
 ﻿#include "stdafx.h"
 #include "Utilities/JIT.h"
 #include "Utilities/asm.h"
+#include "Utilities/date_time.h"
 #include "Utilities/sysinfo.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Memory/vm_reservation.h"
 
+#include "Loader/ELF.h"
+#include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/PPUThread.h"
@@ -3512,6 +3515,111 @@ void spu_thread::fast_call(u32 ls_addr)
 	pc = old_pc;
 	gpr[0]._u32[3] = old_lr;
 	gpr[1]._u32[3] = old_stack;
+}
+
+bool spu_thread::capture_local_storage() const
+{
+	struct aligned_delete
+	{
+		void operator()(u8* ptr)
+		{
+			::operator delete(ptr, std::align_val_t{64});
+		}
+	};
+
+	std::unique_ptr<u8, aligned_delete> ls_copy(static_cast<u8*>(::operator new(SPU_LS_SIZE, std::align_val_t{64})));
+	const auto ls_ptr = ls_copy.get();
+	std::memcpy(ls_ptr, _ptr<void>(0), SPU_LS_SIZE);
+
+	std::bitset<SPU_LS_SIZE / 512> found;
+	alignas(64) constexpr spu_rdata_t zero{};
+
+	// Scan Local Storage in 512-byte blocks for non-zero blocks
+	for (s32 i = 0; i < SPU_LS_SIZE;)
+	{
+		if (!cmp_rdata(zero, *reinterpret_cast<const spu_rdata_t*>(ls_ptr + i)))
+		{
+			found.set(i / 512);
+			i = ::align(i + 1u, 512);
+		}
+		else
+		{
+			i += sizeof(spu_rdata_t);
+		}
+	}
+
+	spu_exec_object spu_exec;
+
+	// Now save the data in sequential segments
+	for (s32 i = 0, found_first = -1; i <= SPU_LS_SIZE; i += 512)
+	{
+		if (i == SPU_LS_SIZE || !found[i / 512])
+		{
+			if (auto begin = std::exchange(found_first, -1); begin != -1)
+			{
+				// Save data as an executable segment, even the SPU stack
+				auto& prog = spu_exec.progs.emplace_back(SYS_SPU_SEGMENT_TYPE_COPY, 0x7, begin + 0u, i - begin + 0u, 512
+					, std::vector<uchar>(ls_ptr + begin, ls_ptr + i));
+
+				prog.p_paddr = prog.p_vaddr;
+				spu_log.success("Segment: p_type=0x%x, p_vaddr=0x%x, p_filesz=0x%x, p_memsz=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz);
+			}
+
+			continue;
+		}
+
+		if (found_first == -1)
+		{
+			found_first = i;
+		}
+	}
+
+	std::string name;
+
+	if (get_type() == spu_type::threaded)
+	{
+		name = *spu_tname.load();
+
+		if (name.empty())
+		{
+			// TODO: Maybe add thread group name here
+			fmt::append(name, "SPU.%u", lv2_id);	
+		}
+	}
+	else
+	{
+		fmt::append(name, "RawSPU.%u", lv2_id);
+	}
+
+	spu_exec.header.e_entry = pc;
+
+	name = vfs::escape(name, true);
+	std::replace(name.begin(), name.end(), ' ', '_');
+
+	auto get_filename = [&]() -> std::string
+	{
+		return fs::get_cache_dir() + "spu_progs/" + Emu.GetTitleID() + "_" + vfs::escape(name, true) + '_' + date_time::current_time_narrow() + "_capture.elf";
+	};
+
+	auto elf_path = get_filename();
+	fs::file dump_file(elf_path, fs::create + fs::excl + fs::write);
+
+	if (!dump_file)
+	{
+		// Wait 1 second so current_time_narrow() will return a different string
+		std::this_thread::sleep_for(1s);
+
+		if (elf_path = get_filename(); !dump_file.open(elf_path, fs::create + fs::excl + fs::write))
+		{
+			spu_log.error("Failed to create '%s' (error=%s)", elf_path, fs::g_tls_error);
+			return false;
+		}
+	}
+
+	spu_exec.save(dump_file);
+
+	spu_log.success("SPU Local Storage image saved to '%s'", elf_path);
+	return true;
 }
 
 spu_function_logger::spu_function_logger(spu_thread& spu, const char* func)
