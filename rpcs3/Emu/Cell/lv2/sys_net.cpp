@@ -2642,7 +2642,7 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 
 		if (optlen >= sizeof(s32))
 		{
-			std::memcpy(&native_int, optval_buf.data(), sizeof(s32));
+			native_int = *reinterpret_cast<be_t<s32> *>(optval_buf.data());
 		}
 		else
 		{
