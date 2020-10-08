@@ -1845,9 +1845,10 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 
 	const vm::addr_t ls_addr{verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, vm::spu))};
 
-	const u32 tid = idm::make<named_thread<spu_thread>>(fmt::format("RawSPU[0x%x] ", index), ls_addr, nullptr, index, "", index);
+	const auto spu = idm::make_ptr<named_thread<spu_thread>>(fmt::format("RawSPU[0x%x] ", index), ls_addr, nullptr, index, "", index);
+	verify("RawSPU" HERE), spu.operator bool();
 
-	spu_thread::g_raw_spu_id[index] = verify("RawSPU ID" HERE, tid);
+	spu_thread::g_raw_spu_id[index] = spu->id;
 
 	*id = index;
 
