@@ -12,6 +12,7 @@ enum class cpu_flag : u32
 	exit, // Irreversible exit
 	wait, // Indicates waiting state, set by the thread itself
 	pause, // Thread suspended by suspend_all technique
+	pause2, // Used by suspend_all internally
 	suspend, // Thread suspended
 	ret, // Callback return requested
 	signal, // Thread received a signal (HLE)

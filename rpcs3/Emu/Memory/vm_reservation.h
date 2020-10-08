@@ -10,11 +10,11 @@ extern bool g_use_rtm;
 
 namespace vm
 {
-	enum reservation_lock_bit : u64
+	enum : u64
 	{
-		stcx_lockb = 1 << 0, // Exclusive conditional reservation lock
-		dma_lockb = 1 << 5, // Exclusive unconditional reservation lock
-		putlluc_lockb = 1 << 6, // Exclusive unconditional reservation lock
+		rsrv_lock_mask = 127,
+		rsrv_unique_lock = 64,
+		rsrv_shared_mask = 63,
 	};
 
 	// Get reservation status for further atomic update: last update timestamp
@@ -42,11 +42,13 @@ namespace vm
 		return *reinterpret_cast<atomic_t<u64>*>(g_reservations + (addr & 0xff80) / 2);
 	}
 
-	u64 reservation_lock_internal(u32, atomic_t<u64>&, u64);
+	u64 reservation_lock_internal(u32, atomic_t<u64>&);
 
-	inline bool reservation_trylock(atomic_t<u64>& res, u64 rtime, u64 lock_bits = stcx_lockb)
+	void reservation_shared_lock_internal(atomic_t<u64>&);
+
+	inline bool reservation_try_lock(atomic_t<u64>& res, u64 rtime)
 	{
-		if (res.compare_and_swap_test(rtime, rtime + lock_bits)) [[likely]]
+		if (res.compare_and_swap_test(rtime, rtime | rsrv_unique_lock)) [[likely]]
 		{
 			return true;
 		}
@@ -54,16 +56,16 @@ namespace vm
 		return false;
 	}
 
-	inline std::pair<atomic_t<u64>&, u64> reservation_lock(u32 addr, u32 size, u64 lock_bits = stcx_lockb)
+	inline std::pair<atomic_t<u64>&, u64> reservation_lock(u32 addr)
 	{
-		auto res = &vm::reservation_acquire(addr, size);
+		auto res = &vm::reservation_acquire(addr, 1);
 		auto rtime = res->load();
 
-		if (rtime & 127 || !reservation_trylock(*res, rtime, lock_bits)) [[unlikely]]
+		if (rtime & 127 || !reservation_try_lock(*res, rtime)) [[unlikely]]
 		{
 			static atomic_t<u64> no_lock{};
 
-			rtime = reservation_lock_internal(addr, *res, lock_bits);
+			rtime = reservation_lock_internal(addr, *res);
 
 			if (rtime == umax)
 			{
@@ -95,6 +97,7 @@ namespace vm
 
 			// Stage 1: single optimistic transaction attempt
 			unsigned status = _XBEGIN_STARTED;
+			u64 _old = 0;
 
 #ifndef _MSC_VER
 			__asm__ goto ("xbegin %l[stage2];" ::: "memory" : stage2);
@@ -103,6 +106,15 @@ namespace vm
 			if (status == _XBEGIN_STARTED)
 #endif
 			{
+				if (res & rsrv_unique_lock)
+				{
+#ifndef _MSC_VER
+					__asm__ volatile ("xabort $0;" ::: "memory");
+#else
+					_xabort(0);
+#endif
+				}
+
 				if constexpr (std::is_void_v<std::invoke_result_t<F, T&>>)
 				{
 					res += 128;
@@ -161,10 +173,10 @@ namespace vm
 			}
 
 			// Stage 2: try to lock reservation first
-			res += stcx_lockb;
+			_old = res.fetch_add(1);
 
 			// Start lightened transaction (TODO: tweaking)
-			while (true)
+			while (!(_old & rsrv_unique_lock))
 			{
 #ifndef _MSC_VER
 				__asm__ goto ("xbegin %l[retry];" ::: "memory" : retry);
@@ -263,11 +275,8 @@ namespace vm
 			}
 		}
 
-
-		// Perform under heavyweight lock
-		auto& res = vm::reservation_acquire(addr, 128);
-
-		res += stcx_lockb;
+		// Perform heavyweight lock
+		auto [res, rtime] = vm::reservation_lock(addr);
 
 		// Write directly if the op cannot fail
 		if constexpr (std::is_void_v<std::invoke_result_t<F, T&>>)
@@ -294,12 +303,12 @@ namespace vm
 				{
 					// If operation succeeds, write the data back
 					*sptr = buf;
-					res += 127;
+					res.release(rtime + 128);
 				}
 				else
 				{
 					// Operation failed, no memory has been modified
-					res -= 1;
+					res.release(rtime);
 					return std::invoke_result_t<F, T&>();
 				}
 			}
@@ -361,6 +370,47 @@ namespace vm
 					return res;
 				}
 			}
+		}
+	}
+
+	template <bool Ack = false, typename T, typename F>
+	SAFE_BUFFERS inline auto reservation_light_op(T& data, F op)
+	{
+		// Optimized real ptr -> vm ptr conversion, simply UB if out of range
+		const u32 addr = static_cast<u32>(reinterpret_cast<const u8*>(&data) - g_base_addr);
+
+		// Use "super" pointer to prevent access violation handling during atomic op
+		const auto sptr = vm::get_super_ptr<T>(addr);
+
+		// "Lock" reservation
+		auto& res = vm::reservation_acquire(addr, 128);
+
+		if (res.fetch_add(1) & vm::rsrv_unique_lock) [[unlikely]]
+		{
+			vm::reservation_shared_lock_internal(res);
+		}
+
+		if constexpr (std::is_void_v<std::invoke_result_t<F, T&>>)
+		{
+			std::invoke(op, *sptr);
+			res += 127;
+
+			if constexpr (Ack)
+			{
+				res.notify_all();
+			}
+		}
+		else
+		{
+			auto result = std::invoke(op, *sptr);
+			res += 127;
+
+			if constexpr (Ack)
+			{
+				res.notify_all();
+			}
+
+			return result;
 		}
 	}
 } // namespace vm

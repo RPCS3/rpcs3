@@ -561,6 +561,22 @@ struct alignas(128) CellSpursJobGuard
 
 CHECK_SIZE_ALIGN(CellSpursJobGuard, 128, 128);
 
+struct alignas(128) CellSpursJobGuard_x00
+{
+	be_t<u32> ncount0;                    // 0x00
+	be_t<u32> ncount1;                    // 0x04
+	vm::bptr<CellSpursJobChain> jobChain; // 0x0C
+	be_t<u32> unk0;
+	be_t<u32> requestSpuCount;            // 0x10
+	be_t<u32> unk1[3];
+	be_t<u32> autoReset;                  // 0x20
+	be_t<u32> unk2[3];
+	be_t<u32> zero;                       // 0x30
+	u8 unk3[0x80 - 0x34];
+};
+
+CHECK_SIZE_ALIGN(CellSpursJobGuard_x00, 128, 128);
+
 // Core CellSpurs structures
 struct alignas(128) CellSpurs
 {

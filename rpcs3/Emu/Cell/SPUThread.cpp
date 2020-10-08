@@ -378,11 +378,11 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	// Begin transaction
 	build_transaction_enter(c, fall, x86::r12, 4);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
+	c.test(x86::eax, vm::rsrv_unique_lock);
+	c.jnz(skip);
 	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail);
-	c.test(x86::qword_ptr(x86::rbx), 127);
-	c.jnz(skip);
 
 	if (s_tsx_avx)
 	{
@@ -461,15 +461,19 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 
 	Label fall2 = c.newLabel();
 	Label fail2 = c.newLabel();
+	Label fail3 = c.newLabel();
 
 	// Lightened transaction: only compare and swap data
 	c.bind(next);
 
 	// Try to "lock" reservation
-	c.mov(x86::rax, x86::r13);
-	c.add(x86::r13, 1);
-	c.lock().cmpxchg(x86::qword_ptr(x86::rbx), x86::r13);
-	c.jne(fail);
+	c.mov(x86::eax, 1);
+	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
+	c.test(x86::eax, vm::rsrv_unique_lock);
+	c.jnz(fail3);
+	c.and_(x86::rax, -128);
+	c.cmp(x86::rax, x86::r13);
+	c.jne(fail2);
 
 	build_transaction_enter(c, fall2, x86::r12, 666);
 
@@ -533,6 +537,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.bind(fall2);
 	c.sar(x86::eax, 24);
 	c.js(fail2);
+	c.bind(fail3);
 	c.mov(x86::eax, 2);
 	c.jmp(_ret);
 
@@ -644,7 +649,7 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 
 	// Begin transaction
 	build_transaction_enter(c, fall, x86::r12, 8);
-	c.test(x86::dword_ptr(x86::rbx), 127);
+	c.test(x86::dword_ptr(x86::rbx), vm::rsrv_unique_lock);
 	c.jnz(skip);
 
 	if (s_tsx_avx)
@@ -688,14 +693,15 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	c.xor_(x86::rbp, 0xf80);
 
 	Label fall2 = c.newLabel();
-	Label fail2 = c.newLabel();
 
 	// Lightened transaction
 	c.bind(next);
 
-	// Try to acquire "PUTLLUC lock"
-	c.lock().bts(x86::qword_ptr(x86::rbx), std::countr_zero<u32>(vm::putlluc_lockb));
-	c.jc(fail2);
+	// Lock reservation
+	c.mov(x86::eax, 1);
+	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
+	c.test(x86::eax, vm::rsrv_unique_lock);
+	c.jnz(fall2);
 
 	build_transaction_enter(c, fall2, x86::r12, 666);
 
@@ -719,16 +725,12 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	}
 
 	c.xend();
-	c.lock().add(x86::qword_ptr(x86::rbx), 64);
+	c.lock().add(x86::qword_ptr(x86::rbx), 127);
 	c.mov(x86::eax, 1);
 	c.jmp(_ret);
 
-	c.bind(fail2);
-	c.xor_(x86::eax, x86::eax);
-	c.jmp(_ret);
-
 	c.bind(fall2);
-	c.mov(x86::eax, 2);
+	c.xor_(x86::eax, x86::eax);
 	//c.jmp(_ret);
 
 	c.bind(_ret);
@@ -1415,30 +1417,30 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		{
 		case 1:
 		{
-			auto [res, time0] = vm::reservation_lock(eal, 1, vm::dma_lockb);
+			auto [res, time0] = vm::reservation_lock(eal);
 			*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
-			res.release(time0 + 128);
+			res += 64;
 			break;
 		}
 		case 2:
 		{
-			auto [res, time0] = vm::reservation_lock(eal, 2, vm::dma_lockb);
+			auto [res, time0] = vm::reservation_lock(eal);
 			*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
-			res.release(time0 + 128);
+			res += 64;
 			break;
 		}
 		case 4:
 		{
-			auto [res, time0] = vm::reservation_lock(eal, 4, vm::dma_lockb);
+			auto [res, time0] = vm::reservation_lock(eal);
 			*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
-			res.release(time0 + 128);
+			res += 64;
 			break;
 		}
 		case 8:
 		{
-			auto [res, time0] = vm::reservation_lock(eal, 8, vm::dma_lockb);
+			auto [res, time0] = vm::reservation_lock(eal);
 			*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
-			res.release(time0 + 128);
+			res += 64;
 			break;
 		}
 		default:
@@ -1463,7 +1465,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					}
 
 					// Lock each cache line execlusively
-					auto [res, time0] = vm::reservation_lock(eal, size0, vm::dma_lockb);
+					auto [res, time0] = vm::reservation_lock(eal);
 
 					switch (size0)
 					{
@@ -1491,7 +1493,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					}
 					}
 
-					res.release(time0 + 128);
+					res += 64;
 
 					if (size == size0)
 					{
@@ -1505,7 +1507,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			if (((eal & 127) + size) <= 128)
 			{
 				// Lock one cache line
-				auto [res, time0] = vm::reservation_lock(eal, 128);
+				auto [res, time0] = vm::reservation_lock(eal);
 
 				while (size)
 				{
@@ -1516,7 +1518,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					size -= 16;
 				}
 
-				res.release(time0);
+				res += 64;
 				break;
 			}
 
@@ -1848,21 +1850,34 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 				cpu_thread::suspend_all cpu_lock(this);
 
-				// Give up if PUTLLUC happened
-				if (res == (rtime | 1))
+				// Obtain unique lock
+				while (res.bts(std::countr_zero<u32>(vm::rsrv_unique_lock)))
+				{
+					busy_wait(100);
+
+					// Give up if reservation has been updated
+					if ((res & -128) != rtime)
+					{
+						res -= 1;
+						if (render) render->unpause();
+						return false;
+					}
+				}
+
+				if ((res & -128) == rtime)
 				{
 					auto& data = vm::_ref<spu_rdata_t>(addr);
 
 					if (cmp_rdata(rdata, data))
 					{
 						mov_rdata(data, to_write);
-						res += 127;
+						res += 63;
 						if (render) render->unpause();
 						return true;
 					}
 				}
 
-				res -= 1;
+				res -= (vm::rsrv_unique_lock | 1);
 				if (render) render->unpause();
 				return false;
 			}
@@ -1872,8 +1887,27 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			}
 		}
 
-		if (!vm::reservation_trylock(res, rtime))
+		while (res.bts(std::countr_zero<u32>(vm::rsrv_unique_lock)))
 		{
+			// Give up if reservation has been updated
+			if ((res & -128) != rtime)
+			{
+				return false;
+			}
+
+			if (state && check_state())
+			{
+				return false;
+			}
+			else
+			{
+				busy_wait(100);
+			}
+		}
+
+		if ((res & -128) != rtime)
+		{
+			res -= vm::rsrv_unique_lock;
 			return false;
 		}
 
@@ -1914,7 +1948,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		if (raddr)
 		{
 			// Last check for event before we clear the reservation
-			if (raddr == addr || rtime != (vm::reservation_acquire(raddr, 128) & (-128 | vm::dma_lockb)) || !cmp_rdata(rdata, vm::_ref<spu_rdata_t>(raddr)))
+			if (raddr == addr || rtime != (vm::reservation_acquire(raddr, 128) & -128) || !cmp_rdata(rdata, vm::_ref<spu_rdata_t>(raddr)))
 			{
 				set_events(SPU_EVENT_LR);
 			}
@@ -1937,38 +1971,17 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 		if (render) render->pause();
 
-		if (result == 2)
+		if (result == 0)
 		{
 			cpu_thread::suspend_all cpu_lock(cpu);
 
-			if (vm::reservation_acquire(addr, 128) & 64)
-			{
-				// Wait for PUTLLC to complete
-				while (vm::reservation_acquire(addr, 128) & 63)
-				{
-					busy_wait(100);
-				}
-
-				mov_rdata(vm::_ref<spu_rdata_t>(addr), *static_cast<const spu_rdata_t*>(to_write));
-				vm::reservation_acquire(addr, 128) += 64;
-			}
-		}
-		else if (result == 0)
-		{
-			cpu_thread::suspend_all cpu_lock(cpu);
-
-			while (vm::reservation_acquire(addr, 128).bts(std::countr_zero<u32>(vm::putlluc_lockb)))
-			{
-				busy_wait(100);
-			}
-
-			while (vm::reservation_acquire(addr, 128) & 63)
+			while (vm::reservation_acquire(addr, 128).bts(std::countr_zero<u32>(vm::rsrv_unique_lock)))
 			{
 				busy_wait(100);
 			}
 
 			mov_rdata(vm::_ref<spu_rdata_t>(addr), *static_cast<const spu_rdata_t*>(to_write));
-			vm::reservation_acquire(addr, 128) += 64;
+			vm::reservation_acquire(addr, 128) += 63;
 		}
 
 		if (render) render->unpause();
@@ -1977,7 +1990,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 	else
 	{
 		auto& data = vm::_ref<spu_rdata_t>(addr);
-		auto [res, time0] = vm::reservation_lock(addr, 128);
+		auto [res, time0] = vm::reservation_lock(addr);
 
 		*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
@@ -2247,7 +2260,7 @@ bool spu_thread::process_mfc_cmd()
 		if (raddr && raddr != addr)
 		{
 			// Last check for event before we replace the reservation with a new one
-			if ((vm::reservation_acquire(raddr, 128) & (-128 | vm::dma_lockb)) != rtime || !cmp_rdata(temp, vm::_ref<spu_rdata_t>(raddr)))
+			if ((vm::reservation_acquire(raddr, 128) & -128) != rtime || !cmp_rdata(temp, vm::_ref<spu_rdata_t>(raddr)))
 			{
 				set_events(SPU_EVENT_LR);
 			}
@@ -3583,7 +3596,7 @@ bool spu_thread::capture_local_storage() const
 		if (name.empty())
 		{
 			// TODO: Maybe add thread group name here
-			fmt::append(name, "SPU.%u", lv2_id);	
+			fmt::append(name, "SPU.%u", lv2_id);
 		}
 	}
 	else

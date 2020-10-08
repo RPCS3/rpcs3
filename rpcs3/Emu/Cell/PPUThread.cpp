@@ -946,7 +946,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 
 		if (_this->current_function && vm::read32(cia) != ppu_instructions::SC(0))
 		{
-			return fmt::format("PPU[0x%x] Thread (%s) [HLE:0x%08x, LR:0x%08x]", _this->id, *name_cache.get(), cia, _this->lr);	
+			return fmt::format("PPU[0x%x] Thread (%s) [HLE:0x%08x, LR:0x%08x]", _this->id, *name_cache.get(), cia, _this->lr);
 		}
 
 		return fmt::format("PPU[0x%x] Thread (%s) [0x%08x]", _this->id, *name_cache.get(), cia);
@@ -1103,7 +1103,6 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 	const u64 data_off = (addr & 7) * 8;
 
 	ppu.raddr = addr;
-	const u64 mask_res = g_use_rtm ? (-128 | vm::dma_lockb) : -1;
 
 	if (const s32 max = g_cfg.core.ppu_128_reservations_loop_max_length)
 	{
@@ -1160,7 +1159,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 	for (u64 count = 0;; [&]()
 	{
 		if (ppu.state)
-		{ 
+		{
 			ppu.check_state();
 		}
 		else if (++count < 20) [[likely]]
@@ -1175,7 +1174,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}())
 	{
-		ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & mask_res;
+		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
 
 		if (ppu.rtime & 127)
 		{
@@ -1189,7 +1188,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			mov_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128));
 		}
 
-		if ((vm::reservation_acquire(addr, sizeof(T)) & mask_res) == ppu.rtime) [[likely]]
+		if (vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime) [[likely]]
 		{
 			if (count >= 15) [[unlikely]]
 			{
@@ -1218,6 +1217,7 @@ const auto ppu_stcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rda
 
 	Label fall = c.newLabel();
 	Label fail = c.newLabel();
+	Label fail2 = c.newLabel();
 
 	// Prepare registers
 	c.mov(x86::r10, imm_ptr(+vm::g_reservations));
@@ -1234,7 +1234,9 @@ const auto ppu_stcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rda
 	// Begin transaction
 	build_transaction_enter(c, fall, args[0], 16);
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
-	c.and_(x86::rax, -128 | vm::dma_lockb);
+	c.test(x86::eax, vm::rsrv_unique_lock);
+	c.jnz(fail2);
+	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, args[1]);
 	c.jne(fail);
 	c.cmp(x86::qword_ptr(x86::r11), args[2]);
@@ -1249,6 +1251,7 @@ const auto ppu_stcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rda
 	c.bind(fall);
 	c.sar(x86::eax, 24);
 	c.js(fail);
+	c.bind(fail2);
 	c.mov(x86::eax, 2);
 	c.ret();
 
@@ -1324,11 +1327,11 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	// Begin transaction
 	build_transaction_enter(c, fall, x86::r12, 4);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
+	c.test(x86::eax, vm::rsrv_unique_lock);
+	c.jnz(skip);
 	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail);
-	c.test(x86::qword_ptr(x86::rbx), 127);
-	c.jnz(skip);
 
 	if (s_tsx_avx)
 	{
@@ -1394,15 +1397,19 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 
 	Label fall2 = c.newLabel();
 	Label fail2 = c.newLabel();
+	Label fail3 = c.newLabel();
 
 	// Lightened transaction: only compare and swap data
 	c.bind(next);
 
 	// Try to "lock" reservation
-	c.mov(x86::rax, x86::r13);
-	c.add(x86::r13, 1);
-	c.lock().cmpxchg(x86::qword_ptr(x86::rbx), x86::r13);
-	c.jne(fail);
+	c.mov(x86::eax, x86::r13);
+	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
+	c.test(x86::eax, vm::rsrv_unique_lock);
+	c.jnz(fail3);
+	c.and_(x86::rax, -128);
+	c.cmp(x86::rax, x86::r13);
+	c.jne(fail2);
 
 	build_transaction_enter(c, fall2, x86::r12, 666);
 
@@ -1453,6 +1460,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.bind(fall2);
 	c.sar(x86::eax, 24);
 	c.js(fail2);
+	c.bind(fail3);
 	c.mov(x86::eax, 2);
 	c.jmp(_ret);
 
@@ -1579,20 +1587,51 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 				cpu_thread::suspend_all cpu_lock(&ppu);
 
-				// Give up if PUTLLUC happened
-				if (res == (rtime | 1) && cmp_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128)))
+				// Obtain unique lock
+				while (res.bts(std::countr_zero<u32>(vm::rsrv_unique_lock)))
+				{
+					busy_wait(100);
+
+					// Give up if reservation has been updated
+					if ((res & -128) != rtime)
+					{
+						res -= 1;
+						return false;
+					}
+				}
+
+				if ((res & -128) == rtime && cmp_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128)))
 				{
 					data.release(reg_value);
-					res.release(rtime + 128);
+					res += 63;
 					return true;
 				}
 
-				res.release(rtime);
+				res -= (vm::rsrv_unique_lock + 1);
 				return false;
 			}
 
-			if (!vm::reservation_trylock(res, rtime))
+			while (res.bts(std::countr_zero<u32>(vm::rsrv_unique_lock)))
 			{
+				// Give up if reservation has been updated
+				if ((res & -128) != rtime)
+				{
+					return false;
+				}
+
+				if (ppu.state && ppu.check_state())
+				{
+					return false;
+				}
+				else
+				{
+					busy_wait(100);
+				}
+			}
+
+			if ((res & -128) != rtime)
+			{
+				res -= vm::rsrv_unique_lock;
 				return false;
 			}
 
@@ -1654,24 +1693,64 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			default: break;
 			}
 
-			if (res == rtime && vm::reservation_trylock(res, rtime))
+			if (res.fetch_add(1) & vm::rsrv_unique_lock)
 			{
-				const bool ret = data.compare_and_swap_test(old_data, reg_value);
-				res.release(rtime + 128);
-				return ret;
+				res -= 1;
+				return false;
 			}
 
+			if (data.compare_and_swap_test(old_data, reg_value))
+			{
+				res += 127;
+				return true;
+			}
+
+			res -= 1;
 			return false;
 		}
 
-		if (!vm::reservation_trylock(res, rtime))
+		while (true)
 		{
-			return false;
+			auto [_old, _ok] = res.fetch_op([&](u64& r)
+			{
+				if ((r & -128) != rtime || (r & vm::rsrv_unique_lock))
+				{
+					return false;
+				}
+
+				r += 1;
+				return true;
+			});
+
+			// Give up if reservation has been updated
+			if ((_old & -128) != rtime)
+			{
+				return false;
+			}
+
+			if (_ok)
+			{
+				break;
+			}
+
+			if (ppu.state && ppu.check_state())
+			{
+				return false;
+			}
+			else
+			{
+				busy_wait(100);
+			}
 		}
 
-		const bool ret = data.compare_and_swap_test(old_data, reg_value);
-		res.release(rtime + 128);
-		return ret;
+		if (data.compare_and_swap_test(old_data, reg_value))
+		{
+			res += 127;
+			return true;
+		}
+
+		res -=1;
+		return false;
 	}())
 	{
 		res.notify_all();

@@ -441,11 +441,11 @@ namespace vm
 		g_mutex.unlock();
 	}
 
-	u64 reservation_lock_internal(u32 addr, atomic_t<u64>& res, u64 lock_bits)
+	u64 reservation_lock_internal(u32 addr, atomic_t<u64>& res)
 	{
 		for (u64 i = 0;; i++)
 		{
-			if (u64 rtime = res; !(rtime & 127) && reservation_trylock(res, rtime, lock_bits)) [[likely]]
+			if (u64 rtime = res; !(rtime & 127) && reservation_try_lock(res, rtime)) [[likely]]
 			{
 				return rtime;
 			}
@@ -471,6 +471,30 @@ namespace vm
 		}
 	}
 
+	void reservation_shared_lock_internal(atomic_t<u64>& res)
+	{
+		for (u64 i = 0;; i++)
+		{
+			if (!(res & rsrv_unique_lock)) [[likely]]
+			{
+				return;
+			}
+
+			if (auto cpu = get_current_cpu_thread(); cpu && cpu->state)
+			{
+				cpu->check_state();
+			}
+			else if (i < 15)
+			{
+				busy_wait(500);
+			}
+			else
+			{
+				std::this_thread::yield();
+			}
+		}
+	}
+
 	void reservation_op_internal(u32 addr, std::function<bool()> func)
 	{
 		const auto _cpu = get_current_cpu_thread();
@@ -481,15 +505,15 @@ namespace vm
 		{
 			cpu_thread::suspend_all cpu_lock(_cpu);
 
-			// Wait to acquire PUTLLUC lock
-			while (vm::reservation_acquire(addr, 128).bts(std::countr_zero<u32>(vm::putlluc_lockb)))
+			// Wait to acquire unique lock
+			while (vm::reservation_acquire(addr, 128).bts(std::countr_zero<u32>(vm::rsrv_unique_lock)))
 			{
 				busy_wait(100);
 			}
 
 			if (func())
 			{
-				// Success, release PUTLLUC and PUTLLC locks if necessary
+				// Success, release all locks if necessary
 				vm::reservation_acquire(addr, 128) += 63;
 			}
 			else

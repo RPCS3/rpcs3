@@ -151,14 +151,14 @@ namespace rsx
 			// TODO: Check if possible to write on reservations
 			if (!g_use_rtm && rsx->label_addr >> 28 != addr >> 28) [[likely]]
 			{
-				res = &vm::reservation_lock(addr, 4).first;
+				res = &vm::reservation_lock(addr).first;
 			}
 
 			vm::_ref<RsxSemaphore>(addr).val = arg;
 
 			if (res)
 			{
-				res->release(*res + 127);
+				res += 127;
 			}
 
 			vm::reservation_notifier(addr, 4).notify_all();
@@ -818,7 +818,7 @@ namespace rsx
 				case CELL_GCM_FUNC_ADD_SIGNED:
 				case CELL_GCM_FUNC_REVERSE_ADD_SIGNED:
 					break;
-			
+
 				default:
 				{
 					// Ignore invalid values as a whole
@@ -1513,7 +1513,7 @@ namespace rsx
 			const auto data_length = in_pitch * (line_count - 1) + line_length;
 
 			rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
-	
+
 			if (const auto result = rsx->read_barrier(read_address, data_length, !is_block_transfer);
 				result == rsx::result_zcull_intr)
 			{

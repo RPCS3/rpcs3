@@ -2536,9 +2536,10 @@ s32 cellSpursShutdownWorkload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid
 		return CELL_OK;
 	}
 
-	auto [res, rtime] = vm::reservation_lock(vm::get_addr(&spurs->wklEvent(wid)), 1, vm::dma_lockb);
-	const auto old = spurs->wklEvent(wid).fetch_or(1);
-	res.release(rtime + (old & 1 ? 0 : 128));
+	const auto old = vm::reservation_light_op(spurs->wklEvent(wid), [](atomic_t<u8>& v)
+	{
+		return v.fetch_or(1);
+	});
 
 	if (old & 0x12 && !(old & 1) && sys_event_port_send(spurs->eventPort, 0, 0, (1u << 31) >> wid))
 	{
@@ -2693,9 +2694,11 @@ s32 cellSpursReadyCountStore(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid,
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	auto [res, rtime] = vm::reservation_lock(spurs.addr(), 128, vm::dma_lockb);
-	spurs->readyCount(wid).release(static_cast<u8>(value));
-	res.store(rtime + 128);
+	vm::reservation_light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
+	{
+		v.release(static_cast<u8>(value));
+	});
+
 	return CELL_OK;
 }
 
@@ -2729,11 +2732,11 @@ s32 cellSpursReadyCountSwap(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid, 
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	auto [res, rtime] = vm::reservation_lock(spurs.addr(), 128, vm::dma_lockb);
-	u32 temp = spurs->readyCount(wid).exchange(static_cast<u8>(swap));
-	res.release(rtime + 128);
+	*old = vm::reservation_light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
+	{
+		return v.exchange(static_cast<u8>(swap));
+	});
 
-	*old = temp;
 	return CELL_OK;
 }
 
@@ -2769,9 +2772,10 @@ s32 cellSpursReadyCountCompareAndSwap(ppu_thread& ppu, vm::ptr<CellSpurs> spurs,
 
 	u8 temp = static_cast<u8>(compare);
 
-	auto [res, rtime] = vm::reservation_lock(spurs.addr(), 128, vm::dma_lockb);
-	spurs->readyCount(wid).compare_exchange(temp, static_cast<u8>(swap));
-	res.release(rtime + 128);
+	vm::reservation_light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
+	{
+		v.compare_exchange(temp, static_cast<u8>(swap));
+	});
 
 	*old = temp;
 	return CELL_OK;
@@ -2807,17 +2811,15 @@ s32 cellSpursReadyCountAdd(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid, v
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	auto [res, rtime] = vm::reservation_lock(spurs.addr(), 128, vm::dma_lockb);
-
-	u32 temp = spurs->readyCount(wid).fetch_op([&](u8& val)
+	*old = vm::reservation_light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
 	{
-		const s32 _new = val + value;
-		val = static_cast<u8>(std::clamp<s32>(_new, 0, 0xFF));
+		return v.fetch_op([&](u8& val)
+		{
+			const s32 _new = val + value;
+			val = static_cast<u8>(std::clamp<s32>(_new, 0, 255));
+		});
 	});
 
-	res.release(rtime + 128);
-
-	*old = temp;
 	return CELL_OK;
 }
 
@@ -3833,13 +3835,12 @@ s32 _spurs::create_task(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id,
 	// TODO: Verify the ELF header is proper and all its load segments are at address >= 0x3000
 
 	u32 tmp_task_id;
-	{
-		auto addr = taskset.ptr(&CellSpursTaskset::enabled).addr();
-		auto [res, rtime] = vm::reservation_lock(addr, 16, vm::dma_lockb);
 
+	vm::reservation_light_op(vm::_ref<atomic_be_t<v128>>(taskset.ptr(&CellSpursTaskset::enabled).addr()), [&](atomic_be_t<v128>& ptr)
+	{
 		// NOTE: Realfw processes this using 4 32-bits atomic loops
 		// But here its processed within a single 128-bit atomic op
-		vm::_ref<atomic_be_t<v128>>(addr).fetch_op([&](be_t<v128>& value)
+		ptr.fetch_op([&](be_t<v128>& value)
 		{
 			auto value0 = value.value();
 
@@ -3862,9 +3863,7 @@ s32 _spurs::create_task(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id,
 			tmp_task_id = CELL_SPURS_MAX_TASK;
 			return false;
 		});
-
-		res.release(rtime + 128);
-	}
+	});
 
 	if (tmp_task_id >= CELL_SPURS_MAX_TASK)
 	{
@@ -3885,9 +3884,10 @@ s32 _spurs::create_task(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id,
 
 s32 _spurs::task_start(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, u32 taskId)
 {
-	auto [res, rtime] = vm::reservation_lock(taskset.ptr(&CellSpursTaskset::pending_ready).addr(), 16, vm::dma_lockb);
-	taskset->pending_ready.values[taskId / 32] |= (1u << 31) >> (taskId % 32);
-	res.release(rtime + 128);
+	vm::reservation_light_op(taskset->pending_ready, [&](CellSpursTaskset::atomic_tasks_bitset& v)
+	{
+		v.values[taskId / 32] |= (1u << 31) >> (taskId % 32);
+	});
 
 	auto spurs = +taskset->spurs;
 	ppu_execute<&cellSpursSendWorkloadSignal>(ppu, spurs, +taskset->wid);
@@ -4706,24 +4706,22 @@ s32 cellSpursJobGuardNotify(ppu_thread& ppu, vm::ptr<CellSpursJobGuard> jobGuard
 	if (!jobGuard.aligned())
 		return CELL_SPURS_JOB_ERROR_ALIGN;
 
-	auto [res, rtime] = vm::reservation_lock(jobGuard.addr(), 128, vm::dma_lockb);
-
 	u32 allow_jobchain_run = 0; // Affects cellSpursJobChainRun execution
+	u32 old = 0;
 
-	auto [old, ok] = jobGuard->ncount0.fetch_op([&](be_t<u32>& value)
+	const bool ok = vm::reservation_op(vm::unsafe_ptr_cast<CellSpursJobGuard_x00>(jobGuard), [&](CellSpursJobGuard_x00& jg)
 	{
-		allow_jobchain_run = jobGuard->zero;
+		allow_jobchain_run = jg.zero;
+		old = jg.ncount0;
 
-		if (!value)
+		if (!jg.ncount0)
 		{
 			return false;
 		}
 
-		--value;
+		jg.ncount0--;
 		return true;
 	});
-
-	res.release(rtime + (ok ? 128 : 0));
 
 	if (!ok)
 	{
@@ -4759,9 +4757,11 @@ s32 cellSpursJobGuardReset(vm::ptr<CellSpursJobGuard> jobGuard)
 	if (!jobGuard.aligned())
 		return CELL_SPURS_JOB_ERROR_ALIGN;
 
-	auto [res, rtime] = vm::reservation_lock(jobGuard.addr(), 128, vm::dma_lockb);
-	jobGuard->ncount0 = jobGuard->ncount1;
-	res.release(rtime + 128);
+	vm::reservation_light_op(jobGuard->ncount0, [&](atomic_be_t<u32>& ncount0)
+	{
+		ncount0 = jobGuard->ncount1;
+	});
+
 	return CELL_OK;
 }
 
@@ -4844,9 +4844,11 @@ s32 cellSpursJobSetMaxGrab(vm::ptr<CellSpursJobChain> jobChain, u32 maxGrabbedJo
 	if ((spurs->wklEnabled & (0x80000000u >> wid)) == 0u)
 		return CELL_SPURS_JOB_ERROR_STAT;
 
-	auto [res, rtime] = vm::reservation_lock(jobChain.addr(), 128, vm::dma_lockb);
-	jobChain->maxGrabbedJob.release(static_cast<u16>(maxGrabbedJob));
-	res.store(rtime + 128);
+	vm::reservation_light_op(jobChain->maxGrabbedJob, [&](atomic_be_t<u16>& v)
+	{
+		v.release(static_cast<u16>(maxGrabbedJob));
+	});
+
 	return CELL_OK;
 }
 
