@@ -201,7 +201,7 @@ asmjit::JitRuntime& asmjit::get_global_runtime()
 	return g_rt;
 }
 
-void asmjit::build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fallback, const asmjit::X86Gp& ctr, uint less_than)
+asmjit::Label asmjit::build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fallback, const asmjit::X86Gp& ctr, uint less_than)
 {
 	Label fall = c.newLabel();
 	Label begin = c.newLabel();
@@ -234,7 +234,10 @@ void asmjit::build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fall
 	c.jae(fallback);
 	c.align(kAlignCode, 16);
 	c.bind(begin);
-	c.xbegin(fall);
+	return fall;
+
+	// xbegin should be issued manually, allows to add more check before entering transaction
+	//c.xbegin(fall);
 }
 
 void asmjit::build_transaction_abort(asmjit::X86Assembler& c, unsigned char code)

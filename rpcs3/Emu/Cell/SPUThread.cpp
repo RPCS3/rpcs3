@@ -376,7 +376,8 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	}
 
 	// Begin transaction
-	build_transaction_enter(c, fall, x86::r12, 4);
+	Label tx0 = build_transaction_enter(c, fall, x86::r12, 4);
+	c.xbegin(tx0);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
 	c.test(x86::eax, vm::rsrv_unique_lock);
 	c.jnz(skip);
@@ -450,7 +451,6 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.bind(fall);
 	c.sar(x86::eax, 24);
 	c.js(fail);
-	c.lock().bts(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::wait));
 
 	// Touch memory if transaction failed without RETRY flag on the first attempt
 	c.cmp(x86::r12, 1);
@@ -471,11 +471,14 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
 	c.test(x86::eax, vm::rsrv_unique_lock);
 	c.jnz(fail3);
+	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
+	c.jc(fail3);
 	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail2);
 
-	build_transaction_enter(c, fall2, x86::r12, 666);
+	Label tx1 = build_transaction_enter(c, fall2, x86::r12, 666);
+	c.xbegin(tx1);
 
 	if (s_tsx_avx)
 	{
@@ -648,7 +651,8 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	}
 
 	// Begin transaction
-	build_transaction_enter(c, fall, x86::r12, 8);
+	Label tx0 = build_transaction_enter(c, fall, x86::r12, 8);
+	c.xbegin(tx0);
 	c.test(x86::dword_ptr(x86::rbx), vm::rsrv_unique_lock);
 	c.jnz(skip);
 
@@ -683,7 +687,6 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	//c.jmp(fall);
 
 	c.bind(fall);
-	c.lock().bts(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::wait));
 
 	// Touch memory if transaction failed without RETRY flag on the first attempt
 	c.cmp(x86::r12, 1);
@@ -703,7 +706,12 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	c.test(x86::eax, vm::rsrv_unique_lock);
 	c.jnz(fall2);
 
-	build_transaction_enter(c, fall2, x86::r12, 666);
+	Label tx1 = build_transaction_enter(c, fall2, x86::r12, 666);
+
+	// Check pause flag
+	c.bt(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::pause));
+	c.jc(fall2);
+	c.xbegin(tx1);
 
 	if (s_tsx_avx)
 	{
@@ -1848,38 +1856,26 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 				if (render) render->pause();
 
-				cpu_thread::suspend_all cpu_lock(this);
-
-				// Obtain unique lock
-				while (res.bts(std::countr_zero<u32>(vm::rsrv_unique_lock)))
+				const bool ok = cpu_thread::suspend_all(this, [&]()
 				{
-					busy_wait(100);
-
-					// Give up if reservation has been updated
-					if ((res & -128) != rtime)
+					if ((res & -128) == rtime)
 					{
-						res -= 1;
-						if (render) render->unpause();
-						return false;
+						auto& data = vm::_ref<spu_rdata_t>(addr);
+
+						if (cmp_rdata(rdata, data))
+						{
+							mov_rdata(data, to_write);
+							res += 127;
+							return true;
+						}
 					}
-				}
 
-				if ((res & -128) == rtime)
-				{
-					auto& data = vm::_ref<spu_rdata_t>(addr);
+					res -= 1;
+					return false;
+				});
 
-					if (cmp_rdata(rdata, data))
-					{
-						mov_rdata(data, to_write);
-						res += 63;
-						if (render) render->unpause();
-						return true;
-					}
-				}
-
-				res -= (vm::rsrv_unique_lock | 1);
 				if (render) render->unpause();
-				return false;
+				return ok;
 			}
 			case 1: return true;
 			case 0: return false;
@@ -1973,15 +1969,11 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 		if (result == 0)
 		{
-			cpu_thread::suspend_all cpu_lock(cpu);
-
-			while (vm::reservation_acquire(addr, 128).bts(std::countr_zero<u32>(vm::rsrv_unique_lock)))
+			cpu_thread::suspend_all(cpu, [&]
 			{
-				busy_wait(100);
-			}
-
-			mov_rdata(vm::_ref<spu_rdata_t>(addr), *static_cast<const spu_rdata_t*>(to_write));
-			vm::reservation_acquire(addr, 128) += 63;
+				mov_rdata(vm::_ref<spu_rdata_t>(addr), *static_cast<const spu_rdata_t*>(to_write));
+				vm::reservation_acquire(addr, 128) += 127;
+			});
 		}
 
 		if (render) render->unpause();

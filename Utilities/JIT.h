@@ -56,7 +56,7 @@ namespace asmjit
 	asmjit::JitRuntime& get_global_runtime();
 
 	// Emit xbegin and adjacent loop, return label at xbegin
-	void build_transaction_enter(X86Assembler& c, Label fallback, const X86Gp& ctr, uint less_than);
+	[[nodiscard]] asmjit::Label build_transaction_enter(X86Assembler& c, Label fallback, const X86Gp& ctr, uint less_than);
 
 	// Emit xabort
 	void build_transaction_abort(X86Assembler& c, unsigned char code);

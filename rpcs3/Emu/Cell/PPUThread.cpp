@@ -1275,7 +1275,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	}
 
 	// Begin transaction
-	build_transaction_enter(c, fall, x86::r12, 4);
+	Label tx0 = build_transaction_enter(c, fall, x86::r12, 4);
+	c.xbegin(tx0);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
 	c.test(x86::eax, vm::rsrv_unique_lock);
 	c.jnz(skip);
@@ -1336,7 +1337,6 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.bind(fall);
 	c.sar(x86::eax, 24);
 	c.js(fail);
-	c.lock().bts(x86::dword_ptr(args[2], ::offset32(&ppu_thread::state) - ::offset32(&ppu_thread::rdata)), static_cast<u32>(cpu_flag::wait));
 
 	// Touch memory if transaction failed without RETRY flag on the first attempt
 	c.cmp(x86::r12, 1);
@@ -1361,7 +1361,14 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail2);
 
-	build_transaction_enter(c, fall2, x86::r12, 666);
+	Label tx1 = build_transaction_enter(c, fall2, x86::r12, 666);
+	c.bt(x86::dword_ptr(args[2], ::offset32(&ppu_thread::state) - ::offset32(&ppu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
+	c.jc(fail3);
+	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
+	c.and_(x86::rax, -128);
+	c.cmp(x86::rax, x86::r13);
+	c.jne(fail2);
+	c.xbegin(tx1);
 
 	if (s_tsx_avx)
 	{
@@ -1535,30 +1542,18 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				default: break;
 				}
 
-				cpu_thread::suspend_all cpu_lock(&ppu);
-
-				// Obtain unique lock
-				while (res.bts(std::countr_zero<u32>(vm::rsrv_unique_lock)))
+				return cpu_thread::suspend_all(&ppu, [&]
 				{
-					busy_wait(100);
-
-					// Give up if reservation has been updated
-					if ((res & -128) != rtime)
+					if ((res & -128) == rtime && cmp_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128)))
 					{
-						res -= 1;
-						return false;
+						data.release(reg_value);
+						res += 127;
+						return true;
 					}
-				}
 
-				if ((res & -128) == rtime && cmp_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128)))
-				{
-					data.release(reg_value);
-					res += 63;
-					return true;
-				}
-
-				res -= (vm::rsrv_unique_lock + 1);
-				return false;
+					res -= 1;
+					return false;
+				});
 			}
 
 			while (res.bts(std::countr_zero<u32>(vm::rsrv_unique_lock)))
