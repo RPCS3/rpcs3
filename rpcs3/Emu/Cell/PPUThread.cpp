@@ -1211,56 +1211,6 @@ extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
 
-const auto ppu_stcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rdata, u64 value)>([](asmjit::X86Assembler& c, auto& args)
-{
-	using namespace asmjit;
-
-	Label fall = c.newLabel();
-	Label fail = c.newLabel();
-	Label fail2 = c.newLabel();
-
-	// Prepare registers
-	c.mov(x86::r10, imm_ptr(+vm::g_reservations));
-	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
-	c.mov(x86::r11, x86::qword_ptr(x86::rax));
-	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
-	c.and_(args[0].r32(), 0xff80);
-	c.shr(args[0].r32(), 1);
-	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
-	c.xor_(args[0].r32(), args[0].r32());
-	c.bswap(args[2]);
-	c.bswap(args[3]);
-
-	// Begin transaction
-	build_transaction_enter(c, fall, args[0], 16);
-	c.mov(x86::rax, x86::qword_ptr(x86::r10));
-	c.test(x86::eax, vm::rsrv_unique_lock);
-	c.jnz(fail2);
-	c.and_(x86::rax, -128);
-	c.cmp(x86::rax, args[1]);
-	c.jne(fail);
-	c.cmp(x86::qword_ptr(x86::r11), args[2]);
-	c.jne(fail);
-	c.mov(x86::qword_ptr(x86::r11), args[3]);
-	c.sub(x86::qword_ptr(x86::r10), -128);
-	c.xend();
-	c.mov(x86::eax, 1);
-	c.ret();
-
-	// Return 2 after transaction failure
-	c.bind(fall);
-	c.sar(x86::eax, 24);
-	c.js(fail);
-	c.bind(fail2);
-	c.mov(x86::eax, 2);
-	c.ret();
-
-	c.bind(fail);
-	build_transaction_abort(c, 0xff);
-	c.xor_(x86::eax, x86::eax);
-	c.ret();
-});
-
 const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const void* _old, u64 _new)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
@@ -1679,20 +1629,6 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 		if (g_use_rtm) [[likely]]
 		{
-			switch (ppu_stcx_tx(addr, rtime, old_data, reg_value))
-			{
-			case 0:
-			{
-				// Reservation lost
-				return false;
-			}
-			case 1:
-			{
-				return true;
-			}
-			default: break;
-			}
-
 			if (res.fetch_add(1) & vm::rsrv_unique_lock)
 			{
 				res -= 1;
