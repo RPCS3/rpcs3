@@ -205,6 +205,7 @@ static sys_net_error get_last_error(bool is_blocking, int native_error = 0)
 		ERROR_CASE(ENOTCONN);
 		ERROR_CASE(ECONNRESET);
 		ERROR_CASE(EADDRINUSE);
+		ERROR_CASE(EISCONN);
 	default: sys_net.error("Unknown/illegal socket error: %d", native_error);
 	}
 
