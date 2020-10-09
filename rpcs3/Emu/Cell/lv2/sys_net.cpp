@@ -175,26 +175,33 @@ void windows_poll(pollfd* fds, unsigned long nfds, int timeout, bool* connecting
 #endif
 
 // Error helper functions
+static int get_native_error()
+{
+	int native_error = 0;
+#ifdef _WIN32
+	native_error = WSAGetLastError();
+#else
+	native_error = errno;
+#endif
+
+	return native_error;
+}
+
 static sys_net_error get_last_error(bool is_blocking, int native_error = 0)
 {
 	// Convert the error code for socket functions to a one for sys_net
-	sys_net_error result;
+	sys_net_error result{};
 	const char* name{};
 
-#ifdef _WIN32
 	if (!native_error)
 	{
-		native_error = WSAGetLastError();
+		native_error = get_native_error();
 	}
 
+#ifdef _WIN32
 	switch (native_error)
 #define ERROR_CASE(error) case WSA ## error: result = SYS_NET_ ## error; name = #error; break;
 #else
-	if (!native_error)
-	{
-		native_error = errno;
-	}
-
 	switch (native_error)
 #define ERROR_CASE(error) case error: result = SYS_NET_ ## error; name = #error; break;
 #endif
@@ -1797,6 +1804,18 @@ error_code sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 
 			return {};
 		}
+		#ifdef _WIN32
+		else
+		{
+			// windows doesn't support getsockname for sockets that are not bound
+			if (get_native_error() == WSAEINVAL)
+			{
+				memset(&native_addr, 0, native_addrlen);
+				native_addr.ss_family = AF_INET;
+				return {};
+			}
+		}
+		#endif
 
 		return get_last_error(false);
 	});
