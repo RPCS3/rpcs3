@@ -1591,11 +1591,6 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				return false;
 			}
 
-			if (!vm::reservation_trylock(res, rtime))
-			{
-				return false;
-			}
-
 			// Align address: we do not need the lower 7 bits anymore
 			addr &= -128;
 
@@ -1613,16 +1608,14 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			{
 				// Full lock (heavyweight)
 				// TODO: vm::check_addr
-				vm::writer_lock lock(addr);
+				vm::writer_lock lock(addr, rtime);
 
-				if (cmp_rdata(ppu.rdata, super_data))
+				if (lock && cmp_rdata(ppu.rdata, super_data))
 				{
 					data.release(reg_value);
-					res.release(rtime + 128);
 					return true;
 				}
 
-				res.release(rtime);
 				return false;
 			}();
 

@@ -1872,11 +1872,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			}
 		}
 
-		if (!vm::reservation_trylock(res, rtime))
-		{
-			return false;
-		}
-
 		vm::_ref<atomic_t<u32>>(addr) += 0;
 
 		const auto render = rsx::get_rsx_if_needs_res_pause(addr);
@@ -1887,17 +1882,14 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		const bool success = [&]()
 		{
 			// Full lock (heavyweight)
-			// TODO: vm::check_addr
-			vm::writer_lock lock(addr);
+			vm::writer_lock lock(addr, rtime);
 
-			if (cmp_rdata(rdata, super_data))
+			if (lock && cmp_rdata(rdata, super_data))
 			{
 				mov_rdata(super_data, to_write);
-				res.release(rtime + 128);
 				return true;
 			}
 
-			res.release(rtime);
 			return false;
 		}();
 
@@ -1977,8 +1969,6 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 	else
 	{
 		auto& data = vm::_ref<spu_rdata_t>(addr);
-		auto [res, time0] = vm::reservation_lock(addr, 128);
-
 		*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
 		const auto render = rsx::get_rsx_if_needs_res_pause(addr);
@@ -1988,10 +1978,10 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 		auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
 		{
 			// Full lock (heavyweight)
-			// TODO: vm::check_addr
-			vm::writer_lock lock(addr);
+			vm::writer_lock lock(addr, UINT64_MAX); // rtime comparison cannot fail with this value
+
+			AUDIT(lock.operator bool());
 			mov_rdata(super_data, *static_cast<const spu_rdata_t*>(to_write));
-			res.release(time0 + 128);
 		}
 
 		if (render) render->unpause();

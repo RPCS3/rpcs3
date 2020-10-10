@@ -28,6 +28,34 @@ void shared_mutex::imp_lock_shared(u32 val)
 	lock_downgrade();
 }
 
+void shared_mutex::imp_lock_shared(u32 val, u32 max_readers)
+{
+	verify("shared_mutex underflow" HERE), val < c_err;
+
+	for (int i = 0; i < 10; i++)
+	{
+		busy_wait();
+
+		if (try_lock_shared(max_readers))
+		{
+			return;
+		}
+	}
+
+	// Acquire writer lock and downgrade
+	const u32 old = m_value.fetch_add(c_one);
+
+	if (old == 0)
+	{
+		lock_downgrade();
+		return;
+	}
+
+	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one < c_sig;
+	imp_wait();
+	lock_downgrade();
+}
+
 void shared_mutex::imp_unlock_shared(u32 old)
 {
 	verify("shared_mutex underflow" HERE), old - 1 < c_err;
@@ -211,30 +239,44 @@ void shared_mutex::imp_lock_upgrade()
 
 void shared_mutex::imp_lock_unlock()
 {
-	u32 _max = 1;
+	u32 old = m_value;
+
+	if (!old || old & c_sig)
+	{
+		return;
+	}
 
 	for (int i = 0; i < 30; i++)
 	{
 		const u32 val = m_value;
 
-		if (val % c_one == 0 && (val / c_one < _max || val >= c_sig))
+		if (!val || val / c_one < old / c_one || val & c_sig || static_cast<bool>(val % c_one) != static_cast<bool>(old % c_one))
 		{
 			// Return if have cought a state where:
 			// 1) Mutex is free
 			// 2) Total number of waiters decreased since last check
 			// 3) Signal bit is set (if used on the platform)
+			// 4) Mutex was acquired by readers at some point but now not
 			return;
 		}
 
-		_max = val / c_one;
+		old = val;
 
 		busy_wait(1500);
 	}
 
 	// Lock and unlock
-	if (!m_value.fetch_add(c_one))
+	if (!m_value.fetch_op([&](u32& val)
 	{
-		unlock();
+		if (!val || val / c_one < old / c_one || val & c_sig || (val % c_one == 0 && old % c_one))
+		{
+			return false;
+		}
+
+		val += c_one;
+		return true;
+	}).second)
+	{
 		return;
 	}
 
