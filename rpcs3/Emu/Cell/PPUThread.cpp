@@ -1176,15 +1176,20 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 	{
 		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
 
-		if (ppu.rtime & 127)
+		if (ppu.rtime & vm::rsrv_unique_lock)
 		{
 			continue;
 		}
 
-		const auto rdata = data.load();
+		const be_t<u64> rdata = data.load();
 
 		if (ppu.use_full_rdata)
 		{
+			if (ppu.rtime & 127)
+			{
+				continue;
+			}
+
 			mov_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128));
 		}
 
@@ -1195,7 +1200,20 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 				ppu_log.warning("%s took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
 			}
 
-			std::memcpy(&ppu.rdata[addr & 0x78], &rdata, 8); // Store atomic 64bits of rdata
+			if (!ppu.use_full_rdata)
+			{
+				if (data.load() != rdata)
+				{
+					continue;
+				}
+
+				// Clear some possible lock bits which are permitted
+				ppu.rtime &= -128;
+
+				// Store only 64 bits of reservation data
+				std::memcpy(&ppu.rdata[addr & 0x78], &rdata, 8);
+			}
+
 			return static_cast<T>(rdata << data_off >> size_off);
 		}
 	}
