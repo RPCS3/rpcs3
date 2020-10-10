@@ -605,6 +605,13 @@ bool cpu_thread::check_state() noexcept
 
 		if (escape)
 		{
+			if (s_tls_thread_slot == umax)
+			{
+				// Restore thread in the suspend list
+				std::lock_guard lock(g_fxo->get<cpu_counter>()->cpu_suspend_lock);
+				s_tls_thread_slot = g_fxo->get<cpu_counter>()->add(this, true);
+			}
+
 			return retval;
 		}
 
@@ -612,6 +619,15 @@ bool cpu_thread::check_state() noexcept
 		{
 			cpu_sleep();
 			cpu_sleep_called = true;
+
+			if (s_tls_thread_slot != umax)
+			{
+				// Exclude inactive threads from the suspend list (optimization)
+				std::lock_guard lock(g_fxo->get<cpu_counter>()->cpu_suspend_lock);
+				g_fxo->get<cpu_counter>()->remove(this);
+				s_tls_thread_slot = -1;
+			}
+
 			continue;
 		}
 
