@@ -9,6 +9,9 @@
 	title.cpp
 )
 
+# prevent WolfSSL from warning about not having harden options
+add_compile_definitions(WC_NO_HARDEN)
+
 target_link_libraries(rpcs3_emu
 	PRIVATE
 		3rdparty::zlib 3rdparty::yaml-cpp
