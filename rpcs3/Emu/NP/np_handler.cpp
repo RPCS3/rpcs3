@@ -174,20 +174,23 @@ std::string np_handler::ip_to_string(u32 ip_addr)
 
 void np_handler::string_to_npid(const char* str, SceNpId* npid)
 {
-	strncpy(npid->handle.data, str, sizeof(npid->handle.data));
+	strncpy(npid->handle.data, str, sizeof(npid->handle.data)-1);
+	npid->handle.data[sizeof(npid->handle.data)-1] = '\0';
 	npid->handle.term = 0;
 	npid->reserved[0] = 1;
 }
 
 void np_handler::string_to_online_name(const char* str, SceNpOnlineName* online_name)
 {
-	strncpy(online_name->data, str, sizeof(online_name->data));
+	strncpy(online_name->data, str, sizeof(online_name->data)-1);
+	online_name->data[sizeof(online_name->data)-1] = '\0';
 	online_name->term = 0;
 }
 
 void np_handler::string_to_avatar_url(const char* str, SceNpAvatarUrl* avatar_url)
 {
-	strncpy(avatar_url->data, str, sizeof(avatar_url->data));
+	strncpy(avatar_url->data, str, sizeof(avatar_url->data)-1);
+	avatar_url->data[sizeof(avatar_url->data)-1] = '\0';
 	avatar_url->term = 0;
 }
 
