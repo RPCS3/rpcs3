@@ -1176,7 +1176,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			continue;
 		}
 
-		const be_t<u64> rdata = data.load();
+		be_t<u64> rdata;
 
 		if (ppu.use_full_rdata)
 		{
@@ -1186,6 +1186,10 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			}
 
 			mov_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128));
+		}
+		else
+		{
+			rdata = data.load();
 		}
 
 		if (vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime) [[likely]]
@@ -1211,6 +1215,11 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 				// Store only 64 bits of reservation data
 				std::memcpy(&ppu.rdata[addr & 0x78], &rdata, 8);
+			}
+			else
+			{
+				// Load relevant 64 bits of reservation data
+				std::memcpy(&rdata, &ppu.rdata[addr & 0x78], 8);
 			}
 
 			return static_cast<T>(rdata << data_off >> size_off);
