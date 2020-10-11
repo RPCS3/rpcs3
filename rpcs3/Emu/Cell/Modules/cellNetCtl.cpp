@@ -193,8 +193,7 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 	if (code == CELL_NET_CTL_INFO_ETHER_ADDR)
 	{
-		// dummy values set
-		std::memset(info->ether_addr.data, 0xFF, sizeof(info->ether_addr.data));
+		memcpy(info->ether_addr.data, nph->get_ether_addr().data(), 6);
 		return CELL_OK;
 	}
 

@@ -17,6 +17,7 @@ class np_handler
 public:
 	np_handler();
 
+	const std::array<u8, 6>& get_ether_addr() const;
 	u32 get_local_ip_addr() const;
 	u32 get_public_ip_addr() const;
 	u32 get_dns_ip() const;
@@ -31,6 +32,7 @@ public:
 
 	// Public helpers
 	static std::string ip_to_string(u32 addr);
+	static std::string ether_to_string(std::array<u8, 6>& ether);
 	// Helpers for setting various structures from string
 	static void string_to_npid(const char* str, SceNpId* npid);
 	static void string_to_online_name(const char* str, SceNpOnlineName* online_name);
@@ -250,6 +252,7 @@ public:
 protected:
 	// Various generic helpers
 	bool discover_ip_address();
+	bool discover_ether_address();
 	bool error_and_disconnect(const std::string& error_msg);
 
 	// Notification handlers
@@ -301,6 +304,7 @@ protected:
 	std::vector<u8> current_ticket;
 
 	// IP & DNS info
+	std::array<u8, 6> ether_address{};
 	be_t<u32> local_ip_addr{};
 	be_t<u32> public_ip_addr{};
 	be_t<u32> dns_ip = 0x08080808;
