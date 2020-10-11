@@ -1230,7 +1230,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		}
 	};
 
-	if (!d_size || 0 - addr < d_size)
+	if (d_size && 0 - addr < d_size)
 	{
 		sig_log.error("Invalid d_size (0x%llx)", d_size);
 		report_opcode();
@@ -1240,7 +1240,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 	// get length of data being accessed
 	size_t a_size = get_x64_access_size(context, op, reg, d_size, i_size);
 
-	if (!a_size || 0 - addr < a_size)
+	if (a_size && 0 - addr < a_size)
 	{
 		sig_log.error("Invalid a_size (0x%llx)", a_size);
 		report_opcode();
