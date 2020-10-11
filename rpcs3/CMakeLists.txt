@@ -107,7 +107,7 @@ if(UNIX)
 endif()
 
 if(WIN32)
-	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib setupapi.lib)
+	target_link_libraries(rpcs3 ws2_32.lib Iphlpapi.lib Winmm.lib Psapi.lib gdi32.lib setupapi.lib)
 else()
 	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS})
 endif()

@@ -29,6 +29,7 @@
 #include <chrono>
 
 LOG_CHANNEL(sys_net);
+LOG_CHANNEL(sys_net_dump);
 
 template<>
 void fmt_class_string<sys_net_error>::format(std::string& out, u64 arg)
@@ -177,7 +178,7 @@ void windows_poll(pollfd* fds, unsigned long nfds, int timeout, bool* connecting
 // Error helper functions
 static int get_native_error()
 {
-	int native_error = 0;
+	int native_error;
 #ifdef _WIN32
 	native_error = WSAGetLastError();
 #else
@@ -2247,7 +2248,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 			if (native_result >= 0)
 			{
-				if (sys_net.enabled == logs::level::trace)
+				if (sys_net_dump.enabled == logs::level::trace)
 				{
 					std::string datrace;
 					const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
@@ -2263,7 +2264,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 						datrace += hex[(dabuf[index]) & 15];
 						datrace += ' ';
 					}
-					sys_net.trace("DNS RESULT: %s", datrace);
+					sys_net.trace("recvfrom dump: %s", datrace);
 				}
 
 				return true;
