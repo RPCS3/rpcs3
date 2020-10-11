@@ -1209,11 +1209,10 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 				// Clear some possible lock bits which are permitted
 				ppu.rtime &= -128;
-
-				// Store only 64 bits of reservation data
-				std::memcpy(&ppu.rdata[addr & 0x78], &rdata, 8);
 			}
 
+			// Store only 64 bits of reservation data
+			std::memcpy(&ppu.rdata[addr & 0x78], &rdata, 8);
 			return static_cast<T>(rdata << data_off >> size_off);
 		}
 	}
