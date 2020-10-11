@@ -1197,13 +1197,17 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 			if (!ppu.use_full_rdata)
 			{
+				if (ppu.rtime & vm::rsrv_shared_mask)
+				{
+					// Let the ongoing operation some tiny time to complete
+					busy_wait(100);
+					ppu.rtime &= ~vm::rsrv_shared_mask;
+				}
+
 				if (data.load() != rdata)
 				{
 					continue;
 				}
-
-				// Clear some possible lock bits which are permitted
-				ppu.rtime &= -128;
 
 				// Store only 64 bits of reservation data
 				std::memcpy(&ppu.rdata[addr & 0x78], &rdata, 8);
