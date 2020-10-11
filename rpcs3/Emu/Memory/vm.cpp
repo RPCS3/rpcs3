@@ -80,15 +80,25 @@ namespace vm
 	// Memory pages
 	std::array<memory_page, 0x100000000 / 4096> g_pages{};
 
-	void reservation_update(u32 addr, u32 size, bool lsb)
+	std::pair<bool, u64> try_reservation_update(u32 addr)
+	{
+		// Update reservation info with new timestamp
+		auto& res = reservation_acquire(addr, 1);
+		const u64 rtime = res;
+
+		return {!(rtime & vm::rsrv_unique_lock) && res.compare_and_swap_test(rtime, rtime + 128), rtime};
+	}
+
+	void reservation_update(u32 addr)
 	{
 		u64 old = UINT64_MAX;
 		const auto cpu = get_current_cpu_thread();
 
 		while (true)
 		{
-			const auto [ok, rtime] = try_reservation_update(addr, size, lsb);
-			if (ok || old / 128 < rtime / 128)
+			const auto [ok, rtime] = try_reservation_update(addr);
+
+			if (ok || (old & -128) < (rtime & -128))
 			{
 				return;
 			}

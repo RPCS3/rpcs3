@@ -4487,7 +4487,7 @@ bool ppu_interpreter::STW(ppu_thread& ppu, ppu_opcode_t op)
 	//Insomniac engine v3 & v4 (newer R&C, Fuse, Resitance 3)
 	if (value == 0xAAAAAAAA) [[unlikely]]
 	{
-		vm::reservation_update(vm::cast(addr, HERE), 128);
+		vm::reservation_update(vm::cast(addr, HERE));
 	}
 
 	return true;

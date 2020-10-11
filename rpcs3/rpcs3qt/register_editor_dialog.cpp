@@ -240,7 +240,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		// Invalid integer
 		value.clear();
 	}
-	
+
 	if (!cpu || value.empty())
 	{
 	}
@@ -251,7 +251,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		if (reg >= ppu_r0 && reg <= ppu_v31)
 		{
 			const u32 reg_index = reg % 32;
-	
+
 			if ((reg >= ppu_r0 && reg <= ppu_r31) || (reg >= ppu_f0 && reg <= ppu_f31))
 			{
 				if (u64 reg_value; check_res(std::from_chars(value.c_str() + 16, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
@@ -306,7 +306,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		}
 		else if (reg == RESERVATION_LOST)
 		{
-			if (u32 raddr = ppu.raddr) vm::reservation_update(raddr, 128);
+			if (u32 raddr = ppu.raddr) vm::reservation_update(raddr);
 			return;
 		}
 	}
@@ -357,7 +357,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		}
 		else if (reg == RESERVATION_LOST)
 		{
-			if (u32 raddr = spu.raddr) vm::reservation_update(raddr, 128);
+			if (u32 raddr = spu.raddr) vm::reservation_update(raddr);
 			return;
 		}
 	}
