@@ -495,7 +495,7 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 
 	const auto mp = lv2_fs_object::get_mp(path);
 
-	if (mp == &g_mp_sys_host_root)
+	if (mp == &g_mp_sys_dev_root)
 	{
 		return {CELL_EISDIR, path};
 	}
