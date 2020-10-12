@@ -1378,16 +1378,18 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					continue;
 				}
 
-				if (raddr == (eal & -128) && time0 != rtime)
-				{
-					// Validate rtime for read data
-					set_events(SPU_EVENT_LR);
-					raddr = 0;
-				}
+				const auto cpu = static_cast<spu_thread*>(get_current_cpu_thread());
 
 				alignas(64) u8 temp[128];
-				u8* dst0 = (eal & -128) == raddr ? temp : dst;
+				u8* dst0 = cpu && cpu->id_type() != 1 && (eal & -128) == cpu->raddr ? temp : dst;
 
+				if (dst0 == +temp && time0 != cpu->rtime)
+				{
+					// Validate rtime for read data
+					cpu->set_events(SPU_EVENT_LR);
+					cpu->raddr = 0;
+				}
+	
 				switch (size0)
 				{
 				case 1:
@@ -1439,16 +1441,16 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					continue;
 				}
 
-				if (raddr == (eal & -128))
+				if (dst0 == +temp)
 				{
 					// Write to LS
 					std::memcpy(dst, dst0, size0);
 
 					// Validate data
-					if (std::memcmp(dst0, &rdata[eal & 127], size0) != 0)
+					if (std::memcmp(dst0, &cpu->rdata[eal & 127], size0) != 0)
 					{
-						set_events(SPU_EVENT_LR);
-						raddr = 0;
+						cpu->set_events(SPU_EVENT_LR);
+						cpu->raddr = 0;
 					}
 				}
 
