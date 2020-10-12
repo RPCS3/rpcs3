@@ -889,7 +889,13 @@ void cpu_thread::stop_all() noexcept
 		std::this_thread::sleep_for(10ms);
 	}
 
-	sys_log.notice("All CPU threads have been stopped.");
+	sys_log.notice("All CPU threads have been stopped. [+: %u; suspends: %u]", +g_threads_created, +g_suspend_counter);
+
+	std::lock_guard lock(g_fxo->get<cpu_counter>()->cpu_suspend_lock);
+
+	g_threads_deleted -= g_threads_created.load();
+	g_threads_created = 0;
+	g_suspend_counter = 0;
 }
 
 void cpu_thread::flush_profilers() noexcept
