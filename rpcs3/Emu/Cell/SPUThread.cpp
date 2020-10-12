@@ -1378,7 +1378,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					continue;
 				}
 
-				if (ppu.raddr == (eal & -128) && time0 != rtime)
+				if (raddr == (eal & -128) && time0 != rtime)
 				{
 					// Validate rtime for read data
 					set_events(SPU_EVENT_LR);
