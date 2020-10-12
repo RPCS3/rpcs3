@@ -1421,7 +1421,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					auto src1 = src;
 					auto size1 = size0;
 
-					while (_size)
+					while (size1)
 					{
 						*reinterpret_cast<v128*>(dst1) = *reinterpret_cast<const v128*>(src1);
 
