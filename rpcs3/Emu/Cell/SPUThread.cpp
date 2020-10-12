@@ -1434,7 +1434,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				}
 				}
 
-				if (time0 != vm::reservation_acquire(eal, size0) || (size0 == 128 && !cmp_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src))))
+				if (time0 != vm::reservation_acquire(eal, size0) || (size0 == 128 && !cmp_rdata(*reinterpret_cast<spu_rdata_t*>(dst0), *reinterpret_cast<const spu_rdata_t*>(src))))
 				{
 					continue;
 				}
