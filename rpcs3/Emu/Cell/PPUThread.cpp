@@ -1194,11 +1194,6 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 		if (vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime) [[likely]]
 		{
-			if (count >= 15) [[unlikely]]
-			{
-				ppu_log.warning("%s took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
-			}
-
 			if (!ppu.use_full_rdata)
 			{
 				if (ppu.rtime & vm::rsrv_shared_mask)
@@ -1220,6 +1215,11 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			{
 				// Load relevant 64 bits of reservation data
 				std::memcpy(&rdata, &ppu.rdata[addr & 0x78], 8);
+			}
+
+			if (count >= 15) [[unlikely]]
+			{
+				ppu_log.warning("%s took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
 			}
 
 			return static_cast<T>(rdata << data_off >> size_off);

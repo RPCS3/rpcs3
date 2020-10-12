@@ -2352,6 +2352,11 @@ bool spu_thread::process_mfc_cmd()
 				continue;
 			}
 
+			if (i >= 25) [[unlikely]]
+			{
+				spu_log.warning("GETLLAR took too long: %u", i);
+			}
+
 			break;
 		}
 
