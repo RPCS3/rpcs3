@@ -1378,46 +1378,56 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					continue;
 				}
 
+				if (ppu.raddr == (eal & -128) && time0 != rtime)
+				{
+					// Validate rtime for read data
+					set_events(SPU_EVENT_LR);
+					raddr = 0;
+				}
+
+				alignas(64) u8 temp[128];
+				u8* dst0 = (eal & -128) == raddr ? temp : dst;
+
 				switch (size0)
 				{
 				case 1:
 				{
-					*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
+					*reinterpret_cast<u8*>(dst0) = *reinterpret_cast<const u8*>(src);
 					break;
 				}
 				case 2:
 				{
-					*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
+					*reinterpret_cast<u16*>(dst0) = *reinterpret_cast<const u16*>(src);
 					break;
 				}
 				case 4:
 				{
-					*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
+					*reinterpret_cast<u32*>(dst0) = *reinterpret_cast<const u32*>(src);
 					break;
 				}
 				case 8:
 				{
-					*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
+					*reinterpret_cast<u64*>(dst0) = *reinterpret_cast<const u64*>(src);
 					break;
 				}
 				case 128:
 				{
-					mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
+					mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst0), *reinterpret_cast<const spu_rdata_t*>(src));
 					break;
 				}
 				default:
 				{
-					auto _dst = dst;
-					auto _src = src;
-					auto _size = size0;
+					auto dst1 = dst0;
+					auto src1 = src;
+					auto size1 = size0;
 
 					while (_size)
 					{
-						*reinterpret_cast<v128*>(_dst) = *reinterpret_cast<const v128*>(_src);
+						*reinterpret_cast<v128*>(dst1) = *reinterpret_cast<const v128*>(src1);
 
-						_dst += 16;
-						_src += 16;
-						_size -= 16;
+						dst1 += 16;
+						src1 += 16;
+						size1 -= 16;
 					}
 
 					break;
@@ -1427,6 +1437,19 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				if (time0 != vm::reservation_acquire(eal, size0) || (size0 == 128 && !cmp_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src))))
 				{
 					continue;
+				}
+
+				if (raddr == (eal & -128))
+				{
+					// Write to LS
+					std::memcpy(dst, dst0, size0);
+
+					// Validate data
+					if (std::memcmp(dst0, &rdata[eal & 127], size0) != 0)
+					{
+						set_events(SPU_EVENT_LR);
+						raddr = 0;
+					}
 				}
 
 				break;
