@@ -1248,15 +1248,79 @@ void spu_thread::push_snr(u32 number, u32 value)
 	// Get channel
 	const auto channel = number & 1 ? &ch_snr2 : &ch_snr1;
 
-	// Check corresponding SNR register settings
-	if ((snr_config >> number) & 1)
+	// Prepare some data
+	const u32 event_bit = SPU_EVENT_S1 >> (number & 1);
+	const u32 bitor_bit = (snr_config >> number) & 1;
+
+	if (g_use_rtm)
 	{
-		channel->push_or(value);
+		bool channel_notify = false;
+		bool thread_notify = false;
+
+		const bool ok = utils::tx_start([&]
+		{
+			channel_notify = (channel->data.raw() & spu_channel::bit_wait) != 0;
+			thread_notify = (channel->data.raw() & spu_channel::bit_count) == 0;
+
+			if (bitor_bit)
+			{
+				channel->data.raw() &= ~spu_channel::bit_wait;
+				channel->data.raw() |= spu_channel::bit_count | value;
+			}
+			else
+			{
+				channel->data.raw() = spu_channel::bit_count | value;
+			}
+
+			if (thread_notify)
+			{
+				ch_events.raw().events |= event_bit;
+
+				if (ch_events.raw().mask & event_bit)
+				{
+					ch_events.raw().count = 1;
+					thread_notify = ch_events.raw().waiting != 0;
+				}
+				else
+				{
+					thread_notify = false;
+				}
+			}
+		});
+
+		if (ok)
+		{
+			if (channel_notify)
+				channel->data.notify_one();
+			if (thread_notify)
+				this->notify();
+
+			return;
+		}
+	}
+
+	// Lock event channel in case it needs event notification
+	ch_events.atomic_op([](ch_events_t& ev)
+	{
+		ev.locks++;
+	});
+
+	// Check corresponding SNR register settings
+	if (bitor_bit)
+	{
+		if (channel->push_or(value))
+			set_events(event_bit);
 	}
 	else
 	{
-		channel->push(value);
+		if (channel->push(value))
+			set_events(event_bit);
 	}
+
+	ch_events.atomic_op([](ch_events_t& ev)
+	{
+		ev.locks--;
+	});
 }
 
 void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
@@ -1389,7 +1453,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					cpu->set_events(SPU_EVENT_LR);
 					cpu->raddr = 0;
 				}
-	
+
 				switch (size0)
 				{
 				case 1:
@@ -2465,6 +2529,7 @@ spu_thread::ch_events_t spu_thread::get_events(u32 mask_hint, bool waiting, bool
 		fmt::throw_exception("SPU Events not implemented (mask=0x%x)" HERE, mask1);
 	}
 
+retry:
 	u32 collect = 0;
 
 	// Check reservation status and set SPU_EVENT_LR if lost
@@ -2490,7 +2555,7 @@ spu_thread::ch_events_t spu_thread::get_events(u32 mask_hint, bool waiting, bool
 		set_events(collect);
 	}
 
-	return ch_events.fetch_op([&](ch_events_t& events)
+	auto [res, ok] = ch_events.fetch_op([&](ch_events_t& events)
 	{
 		if (!reading)
 			return false;
@@ -2499,7 +2564,15 @@ spu_thread::ch_events_t spu_thread::get_events(u32 mask_hint, bool waiting, bool
 
 		events.count = false;
 		return true;
-	}).first;
+	});
+
+	if (reading && res.locks && mask_hint & (SPU_EVENT_S1 | SPU_EVENT_S2))
+	{
+		busy_wait(100);
+		goto retry;
+	}
+
+	return res;
 }
 
 void spu_thread::set_events(u32 bits)
@@ -2520,8 +2593,7 @@ void spu_thread::set_events(u32 bits)
 		return false;
 	}))
 	{
-		// Preserved for external events implementation
-		//notify();
+		notify();
 	}
 }
 
