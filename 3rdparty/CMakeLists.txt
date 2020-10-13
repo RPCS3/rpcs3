@@ -106,6 +106,36 @@ endif()
 add_subdirectory(pugixml EXCLUDE_FROM_ALL)
 
 
+# libusb
+if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
+	pkg_check_modules(LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0>=1.0 )
+	CMAKE_DEPENDENT_OPTION( USE_SYS_LIBUSB "Use system libusb-1.0 as shared library" ON
+			"LIBUSB_FOUND" OFF)
+else()
+	pkg_check_modules(LIBUSB IMPORTED_TARGET libusb-1.0>=1.0 )
+	CMAKE_DEPENDENT_OPTION( USE_SYS_LIBUSB "Use system libusb-1.0 as shared library" OFF
+			"LIBUSB_FOUND" OFF)
+endif()
+if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
+	# Always use system libusb as reference implementation isn't supported
+	add_library(usb-1.0-shared INTERFACE)
+	target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
+elseif(MSVC)
+	# Windows time.h defines timespec but doesn't add any flag for it, which makes libusb attempt to define it again
+	add_definitions(-DHAVE_STRUCT_TIMESPEC=1)
+	add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
+else()
+	if(USE_SYS_LIBUSB)
+		# we have the system libusb and have selected to use it
+		add_library(usb-1.0-shared INTERFACE)
+		target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
+	else()
+		# we don't have the system libusb, so we compile from submodule
+		add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
+	endif()
+endif()
+
+
 # hidapi
 add_library(3rdparty_hidapi INTERFACE)
 target_include_directories(3rdparty_hidapi INTERFACE hidapi/hidapi)
@@ -133,24 +163,11 @@ else()
 endif()
 
 
-# libusb
-if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
-	# Always use system libusb as reference implementation isn't supported
-	add_library(usb-1.0-static INTERFACE)
-	target_link_libraries(usb-1.0-static INTERFACE usb)
-elseif(MSVC)
-	# Windows time.h defines timespec but doesn't add any flag for it, which makes libusb attempt to define it again
-	add_definitions(-DHAVE_STRUCT_TIMESPEC=1)
-	add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
-else()
-	add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
-endif()
-
-
 # yaml-cpp
 # We don't want to install yaml-cpp but its cmake file doesn't have option
 # to disable it...
 # So we just install it to a different directory
+set(YAML_CPP_INSTALL OFF CACHE BOOL "Don't install YAML")
 set(CMAKE_INSTALL_PREFIX_OLD ${CMAKE_INSTALL_PREFIX})
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/yaml-cpp_install)
 
@@ -460,7 +477,11 @@ else()
 endif()
 
 # add nice ALIAS targets for ease of use
-add_library(3rdparty::libusb ALIAS usb-1.0-static)
+if(USE_SYS_LIBUSB)
+	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
+else()
+	add_library(3rdparty::libusb ALIAS usb-1.0-static)
+endif()
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::7z ALIAS 3rdparty_7z)
 add_library(3rdparty::flatbuffers ALIAS 3rdparty_flatbuffers)
