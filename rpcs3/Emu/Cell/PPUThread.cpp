@@ -1648,24 +1648,6 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		// Aligned 8-byte reservations will be used here
 		addr &= -8;
 
-		if (g_use_rtm) [[likely]]
-		{
-			if (res.fetch_add(1) & vm::rsrv_unique_lock)
-			{
-				res -= 1;
-				return false;
-			}
-
-			if (data.compare_and_swap_test(old_data, reg_value))
-			{
-				res += 127;
-				return true;
-			}
-
-			res -= 1;
-			return false;
-		}
-
 		while (true)
 		{
 			auto [_old, _ok] = res.fetch_op([&](u64& r)
