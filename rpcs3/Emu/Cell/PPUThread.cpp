@@ -78,6 +78,7 @@ using spu_rdata_t = decltype(ppu_thread::rdata);
 
 extern void mov_rdata(spu_rdata_t& _dst, const spu_rdata_t& _src);
 extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs);
+extern u32(*const spu_getllar_tx)(u32 raddr, void* rdata, cpu_thread* _cpu, u64 rtime);
 
 // Verify AVX availability for TSX transactions
 static const bool s_tsx_avx = utils::has_avx();
@@ -1178,21 +1179,32 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 		be_t<u64> rdata;
 
+		u64 test_mask = ~vm::rsrv_shared_mask;
+
 		if (ppu.use_full_rdata)
 		{
 			if (ppu.rtime & 127)
 			{
-				continue;
+				// Try to use TSX to obtain data atomically
+				if (!g_use_rtm || !spu_getllar_tx(addr & -128, ppu.rdata, &ppu, ppu.rtime))
+				{
+					continue;
+				}
 			}
+			else
+			{
+				mov_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128));
 
-			mov_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128));
+				// Check all bit changes
+				test_mask = -1;
+			}
 		}
 		else
 		{
 			rdata = data.load();
 		}
 
-		if (vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime) [[likely]]
+		if ((vm::reservation_acquire(addr, sizeof(T)) & test_mask) == (ppu.rtime & test_mask)) [[likely]]
 		{
 			if (!ppu.use_full_rdata)
 			{
@@ -1200,7 +1212,6 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 				{
 					// Let the ongoing operation some tiny time to complete
 					busy_wait(100);
-					ppu.rtime &= ~vm::rsrv_shared_mask;
 				}
 
 				if (data.load() != rdata)
@@ -1221,6 +1232,8 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			{
 				ppu_log.warning("%s took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
 			}
+
+			ppu.rtime &= ~vm::rsrv_shared_mask;
 
 			return static_cast<T>(rdata << data_off >> size_off);
 		}

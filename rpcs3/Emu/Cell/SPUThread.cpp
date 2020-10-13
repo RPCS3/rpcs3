@@ -789,6 +789,127 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	c.ret();
 });
 
+const extern auto spu_getllar_tx = build_function_asm<u32(*)(u32 raddr, void* rdata, cpu_thread* _cpu, u64 rtime)>([](asmjit::X86Assembler& c, auto& args)
+{
+	using namespace asmjit;
+
+	Label fall = c.newLabel();
+	Label _ret = c.newLabel();
+
+	//if (utils::has_avx() && !s_tsx_avx)
+	//{
+	//	c.vzeroupper();
+	//}
+
+	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
+	c.push(x86::rbp);
+	c.push(x86::r13);
+	c.push(x86::r12);
+	c.push(x86::rbx);
+	c.sub(x86::rsp, 40);
+#ifdef _WIN32
+	if (!s_tsx_avx)
+	{
+		c.movups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
+		c.movups(x86::oword_ptr(x86::rsp, 16), x86::xmm7);
+	}
+#endif
+
+	// Prepare registers
+	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
+	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
+	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
+	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
+	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
+	c.xor_(x86::r12d, x86::r12d);
+	c.mov(x86::r13, args[1]);
+
+	// Begin transaction
+	Label tx0 = build_transaction_enter(c, fall, x86::r12, 8);
+
+	// Check pause flag
+	c.bt(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::pause));
+	c.jc(fall);
+	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
+	c.and_(x86::rax, -128);
+	c.cmp(x86::rax, args[3]);
+	c.jne(fall);
+	c.xbegin(tx0);
+
+	// Just read data to registers
+	if (s_tsx_avx)
+	{
+		c.vmovups(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
+		c.vmovups(x86::ymm1, x86::yword_ptr(x86::rbp, 32));
+		c.vmovups(x86::ymm2, x86::yword_ptr(x86::rbp, 64));
+		c.vmovups(x86::ymm3, x86::yword_ptr(x86::rbp, 96));
+	}
+	else
+	{
+		c.movaps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
+		c.movaps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
+		c.movaps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
+		c.movaps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
+		c.movaps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
+		c.movaps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
+		c.movaps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
+		c.movaps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
+	}
+
+	c.xend();
+
+	// Store data
+	if (s_tsx_avx)
+	{
+		c.vmovaps(x86::yword_ptr(args[1], 0), x86::ymm0);
+		c.vmovaps(x86::yword_ptr(args[1], 32), x86::ymm1);
+		c.vmovaps(x86::yword_ptr(args[1], 64), x86::ymm2);
+		c.vmovaps(x86::yword_ptr(args[1], 96), x86::ymm3);
+	}
+	else
+	{
+		c.movaps(x86::oword_ptr(args[1], 0), x86::xmm0);
+		c.movaps(x86::oword_ptr(args[1], 16), x86::xmm1);
+		c.movaps(x86::oword_ptr(args[1], 32), x86::xmm2);
+		c.movaps(x86::oword_ptr(args[1], 48), x86::xmm3);
+		c.movaps(x86::oword_ptr(args[1], 64), x86::xmm4);
+		c.movaps(x86::oword_ptr(args[1], 80), x86::xmm5);
+		c.movaps(x86::oword_ptr(args[1], 96), x86::xmm6);
+		c.movaps(x86::oword_ptr(args[1], 112), x86::xmm7);
+	}
+
+	c.mov(x86::eax, 1);
+	c.jmp(_ret);
+
+	c.bind(fall);
+	c.xor_(x86::eax, x86::eax);
+	//c.jmp(_ret);
+
+	c.bind(_ret);
+
+#ifdef _WIN32
+	if (!s_tsx_avx)
+	{
+		c.movups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
+		c.movups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
+	}
+#endif
+
+	if (s_tsx_avx)
+	{
+		c.vzeroupper();
+	}
+
+	c.add(x86::rsp, 40);
+	c.pop(x86::rbx);
+	c.pop(x86::r12);
+	c.pop(x86::r13);
+	c.pop(x86::rbp);
+	c.ret();
+});
+
 void spu_int_ctrl_t::set(u64 ints)
 {
 	// leave only enabled interrupts
@@ -2338,7 +2459,7 @@ bool spu_thread::process_mfc_cmd()
 		{
 			ntime = vm::reservation_acquire(addr, 128);
 
-			if (ntime & 127)
+			if (ntime & vm::rsrv_unique_lock)
 			{
 				// There's an on-going reservation store, wait
 				continue;
@@ -2346,11 +2467,27 @@ bool spu_thread::process_mfc_cmd()
 
 			mov_rdata(rdata, data);
 
-			if (u64 time0 = vm::reservation_acquire(addr, 128);
-				ntime != time0)
+			u64 test_mask = -1;
+
+			if (ntime & 127)
+			{
+				// Try to use TSX to obtain data atomically
+				if (!g_use_rtm || !spu_getllar_tx(addr, rdata, this, ntime))
+				{
+					// See previous ntime check.
+					continue;
+				}
+				else
+				{
+					// If succeeded, only need to check unique lock bit
+					test_mask = ~vm::rsrv_shared_mask;
+				}
+			}
+
+			if (u64 time0 = vm::reservation_acquire(addr, 128); (ntime & test_mask) != (time0 & test_mask))
 			{
 				// Reservation data has been modified recently
-				if (time0 & 127) i += 12;
+				if (time0 & vm::rsrv_unique_lock) i += 12;
 				continue;
 			}
 
@@ -2360,7 +2497,7 @@ bool spu_thread::process_mfc_cmd()
 				continue;
 			}
 
-			if (i >= 25) [[unlikely]]
+			if (i >= 40) [[unlikely]]
 			{
 				spu_log.warning("GETLLAR took too long: %u", i);
 			}
