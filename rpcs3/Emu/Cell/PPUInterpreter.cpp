@@ -81,6 +81,59 @@ inline void ppu_fpcc_set(ppu_thread& ppu, const T& a, const T& b, const bool rc,
 	}
 }
 
+// Validate read data in case does not match reservation
+template <typename T>
+FORCE_INLINE auto ppu_feed_data(ppu_thread& ppu, u64 addr)
+{
+	static_assert(sizeof(T) <= 128, "Incompatible type-size, break down into smaller loads");
+
+	auto value = vm::_ref<T>(vm::cast(addr, HERE));
+
+	if (!ppu.use_full_rdata)
+	{
+		return value;
+	}
+
+	const u32 raddr = ppu.raddr;
+
+	if (addr / 128 > raddr / 128 || (addr + sizeof(T) - 1) / 128 < raddr / 128)
+	{
+		// Out of range or reservation does not exist
+		return value;
+	}
+
+	if (sizeof(T) == 1 || addr / 128 == (addr + sizeof(T) - 1) / 128)
+	{
+		// Optimized comparison
+		if (std::memcmp(&value, &ppu.rdata[addr & 127], sizeof(T)))
+		{
+			// Reservation was lost
+			ppu.raddr = 0;
+		}
+	}
+	else
+	{
+		alignas(16) std::byte buffer[sizeof(T)];
+		std::memcpy(buffer, &value, sizeof(value)); // Put in memory explicitly (ensure the compiler won't do it beforehand)
+
+		const std::byte* src;
+		u32 size;
+		u32 offs = 0;
+		
+		if (raddr / 128 == addr / 128)
+			src = &ppu.rdata[addr & 127], size = std::min<u32>(128 - (addr % 128), sizeof(T));
+		else
+			src = &ppu.rdata[0], size = (addr + u32{sizeof(T)}) % 127, offs = sizeof(T) - size;
+
+		if (std::memcmp(buffer + offs, src, size))
+		{
+			ppu.raddr = 0;
+		}
+	}
+
+	return value;
+}
+
 // Compare 16 packed unsigned bytes (greater than)
 inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
 {
@@ -3375,14 +3428,14 @@ bool ppu_interpreter::LWARX(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LDX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = vm::read64(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u64>(ppu, addr);
 	return true;
 }
 
 bool ppu_interpreter::LWZX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = vm::read32(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u32>(ppu, addr);
 	return true;
 }
 
@@ -3453,7 +3506,7 @@ bool ppu_interpreter::SUBF(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LDUX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = ppu.gpr[op.ra] + ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = vm::read64(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u64>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -3466,7 +3519,7 @@ bool ppu_interpreter::DCBST(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LWZUX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = ppu.gpr[op.ra] + ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = vm::read32(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u32>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -3539,14 +3592,14 @@ bool ppu_interpreter::DCBF(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LBZX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = vm::read8(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u8>(ppu, addr);
 	return true;
 }
 
 bool ppu_interpreter::LVX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = (op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb]) & ~0xfull;
-	ppu.vr[op.vd] = vm::_ref<v128>(vm::cast(addr, HERE));
+	ppu.vr[op.vd] = ppu_feed_data<v128>(ppu, addr);
 	return true;
 }
 
@@ -3562,7 +3615,7 @@ bool ppu_interpreter::NEG(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LBZUX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = ppu.gpr[op.ra] + ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = vm::read8(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u8>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -3825,7 +3878,7 @@ bool ppu_interpreter::DCBT(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LHZX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = vm::read16(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u16>(ppu, addr);
 	return true;
 }
 
@@ -3844,7 +3897,7 @@ bool ppu_interpreter::ECIWX(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LHZUX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = vm::read16(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u16>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -3878,7 +3931,7 @@ bool ppu_interpreter::MFSPR(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LWAX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = static_cast<s32>(vm::read32(vm::cast(addr, HERE)));
+	ppu.gpr[op.rd] = ppu_feed_data<s32>(ppu, addr);
 	return true;
 }
 
@@ -3890,14 +3943,14 @@ bool ppu_interpreter::DST(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LHAX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = static_cast<s16>(vm::read16(vm::cast(addr, HERE)));
+	ppu.gpr[op.rd] = ppu_feed_data<s16>(ppu, addr);
 	return true;
 }
 
 bool ppu_interpreter::LVXL(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = (op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb]) & ~0xfull;
-	ppu.vr[op.vd] = vm::_ref<v128>(vm::cast(addr, HERE));
+	ppu.vr[op.vd] = ppu_feed_data<v128>(ppu, addr);
 	return true;
 }
 
@@ -3918,7 +3971,7 @@ bool ppu_interpreter::MFTB(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LWAUX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = static_cast<s32>(vm::read32(vm::cast(addr, HERE)));
+	ppu.gpr[op.rd] = ppu_feed_data<s32>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -3931,7 +3984,7 @@ bool ppu_interpreter::DSTST(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LHAUX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = static_cast<s16>(vm::read16(vm::cast(addr, HERE)));
+	ppu.gpr[op.rd] = ppu_feed_data<s16>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -4065,7 +4118,7 @@ bool ppu_interpreter::LVLX(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LDBRX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = vm::_ref<le_t<u64>>(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<le_t<u64>>(ppu, addr);
 	return true;
 }
 
@@ -4075,14 +4128,14 @@ bool ppu_interpreter::LSWX(ppu_thread& ppu, ppu_opcode_t op)
 	u32 count = ppu.xer.cnt & 0x7f;
 	for (; count >= 4; count -= 4, addr += 4, op.rd = (op.rd + 1) & 31)
 	{
-		ppu.gpr[op.rd] = vm::_ref<u32>(vm::cast(addr, HERE));
+		ppu.gpr[op.rd] = ppu_feed_data<u32>(ppu, addr);
 	}
 	if (count)
 	{
 		u32 value = 0;
 		for (u32 byte = 0; byte < count; byte++)
 		{
-			u32 byte_value = vm::_ref<u8>(vm::cast(addr + byte, HERE));
+			u32 byte_value = ppu_feed_data<u8>(ppu, addr + byte);
 			value |= byte_value << ((3 ^ byte) * 8);
 		}
 		ppu.gpr[op.rd] = value;
@@ -4093,14 +4146,14 @@ bool ppu_interpreter::LSWX(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LWBRX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = vm::_ref<le_t<u32>>(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<le_t<u32>>(ppu, addr);
 	return true;
 }
 
 bool ppu_interpreter::LFSX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.fpr[op.frd] = vm::_ref<f32>(vm::cast(addr, HERE));
+	ppu.fpr[op.frd] = ppu_feed_data<f32>(ppu, addr);
 	return true;
 }
 
@@ -4136,7 +4189,7 @@ bool ppu_interpreter::LSWI(ppu_thread& ppu, ppu_opcode_t op)
 	{
 		if (N > 3)
 		{
-			ppu.gpr[reg] = vm::read32(vm::cast(addr, HERE));
+			ppu.gpr[reg] = ppu_feed_data<u32>(ppu, addr);
 			addr += 4;
 			N -= 4;
 		}
@@ -4147,7 +4200,7 @@ bool ppu_interpreter::LSWI(ppu_thread& ppu, ppu_opcode_t op)
 			while (N > 0)
 			{
 				N = N - 1;
-				buf |= vm::read8(vm::cast(addr, HERE)) << (i * 8);
+				buf |= ppu_feed_data<u8>(ppu, addr) << (i * 8);
 				addr++;
 				i--;
 			}
@@ -4161,7 +4214,7 @@ bool ppu_interpreter::LSWI(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LFSUX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = ppu.gpr[op.ra] + ppu.gpr[op.rb];
-	ppu.fpr[op.frd] = vm::_ref<f32>(vm::cast(addr, HERE));
+	ppu.fpr[op.frd] = ppu_feed_data<f32>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -4175,14 +4228,14 @@ bool ppu_interpreter::SYNC(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LFDX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.fpr[op.frd] = vm::_ref<f64>(vm::cast(addr, HERE));
+	ppu.fpr[op.frd] = ppu_feed_data<f64>(ppu, addr);
 	return true;
 }
 
 bool ppu_interpreter::LFDUX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = ppu.gpr[op.ra] + ppu.gpr[op.rb];
-	ppu.fpr[op.frd] = vm::_ref<f64>(vm::cast(addr, HERE));
+	ppu.fpr[op.frd] = ppu_feed_data<f64>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -4303,7 +4356,7 @@ bool ppu_interpreter::LVLXL(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LHBRX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = vm::_ref<le_t<u16>>(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<le_t<u16>>(ppu, addr);
 	return true;
 }
 
@@ -4451,14 +4504,14 @@ bool ppu_interpreter::DCBZ(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LWZ(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	ppu.gpr[op.rd] = vm::read32(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u32>(ppu, addr);
 	return true;
 }
 
 bool ppu_interpreter::LWZU(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = ppu.gpr[op.ra] + op.simm16;
-	ppu.gpr[op.rd] = vm::read32(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u32>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -4466,14 +4519,14 @@ bool ppu_interpreter::LWZU(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LBZ(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	ppu.gpr[op.rd] = vm::read8(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u8>(ppu, addr);
 	return true;
 }
 
 bool ppu_interpreter::LBZU(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = ppu.gpr[op.ra] + op.simm16;
-	ppu.gpr[op.rd] = vm::read8(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u8>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -4519,14 +4572,14 @@ bool ppu_interpreter::STBU(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LHZ(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	ppu.gpr[op.rd] = vm::read16(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u16>(ppu, addr);
 	return true;
 }
 
 bool ppu_interpreter::LHZU(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = ppu.gpr[op.ra] + op.simm16;
-	ppu.gpr[op.rd] = vm::read16(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u16>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -4534,14 +4587,14 @@ bool ppu_interpreter::LHZU(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LHA(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	ppu.gpr[op.rd] = static_cast<s16>(vm::read16(vm::cast(addr, HERE)));
+	ppu.gpr[op.rd] = ppu_feed_data<s16>(ppu, addr);
 	return true;
 }
 
 bool ppu_interpreter::LHAU(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = ppu.gpr[op.ra] + op.simm16;
-	ppu.gpr[op.rd] = static_cast<s16>(vm::read16(vm::cast(addr, HERE)));
+	ppu.gpr[op.rd] = ppu_feed_data<s16>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -4566,7 +4619,7 @@ bool ppu_interpreter::LMW(ppu_thread& ppu, ppu_opcode_t op)
 	u64 addr = op.ra ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
 	for (u32 i = op.rd; i<32; ++i, addr += 4)
 	{
-		ppu.gpr[i] = vm::read32(vm::cast(addr, HERE));
+		ppu.gpr[i] = ppu_feed_data<u32>(ppu, addr);
 	}
 	return true;
 }
@@ -4584,14 +4637,14 @@ bool ppu_interpreter::STMW(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LFS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	ppu.fpr[op.frd] = vm::_ref<f32>(vm::cast(addr, HERE));
+	ppu.fpr[op.frd] = ppu_feed_data<f32>(ppu, addr);
 	return true;
 }
 
 bool ppu_interpreter::LFSU(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = ppu.gpr[op.ra] + op.simm16;
-	ppu.fpr[op.frd] = vm::_ref<f32>(vm::cast(addr, HERE));
+	ppu.fpr[op.frd] = ppu_feed_data<f32>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -4599,14 +4652,14 @@ bool ppu_interpreter::LFSU(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LFD(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	ppu.fpr[op.frd] = vm::_ref<f64>(vm::cast(addr, HERE));
+	ppu.fpr[op.frd] = ppu_feed_data<f64>(ppu, addr);
 	return true;
 }
 
 bool ppu_interpreter::LFDU(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = ppu.gpr[op.ra] + op.simm16;
-	ppu.fpr[op.frd] = vm::_ref<f64>(vm::cast(addr, HERE));
+	ppu.fpr[op.frd] = ppu_feed_data<f64>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -4644,14 +4697,14 @@ bool ppu_interpreter::STFDU(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LD(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = (op.simm16 & ~3) + (op.ra ? ppu.gpr[op.ra] : 0);
-	ppu.gpr[op.rd] = vm::read64(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u64>(ppu, addr);
 	return true;
 }
 
 bool ppu_interpreter::LDU(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = ppu.gpr[op.ra] + (op.simm16 & ~3);
-	ppu.gpr[op.rd] = vm::read64(vm::cast(addr, HERE));
+	ppu.gpr[op.rd] = ppu_feed_data<u64>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	return true;
 }
@@ -4659,7 +4712,7 @@ bool ppu_interpreter::LDU(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LWA(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = (op.simm16 & ~3) + (op.ra ? ppu.gpr[op.ra] : 0);
-	ppu.gpr[op.rd] = static_cast<s32>(vm::read32(vm::cast(addr, HERE)));
+	ppu.gpr[op.rd] = ppu_feed_data<s32>(ppu, addr);
 	return true;
 }
 

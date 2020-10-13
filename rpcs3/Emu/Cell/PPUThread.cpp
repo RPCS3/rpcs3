@@ -174,6 +174,43 @@ void ppu_recompiler_fallback(ppu_thread& ppu)
 	}
 }
 
+void ppu_reservation_fallback(ppu_thread& ppu)
+{
+	const auto& table = g_ppu_interpreter_fast.get_table();
+
+	const u32 min_hle = ppu_function_manager::addr ? ppu_function_manager::addr : UINT32_MAX;
+	const u32 max_hle = min_hle + ppu_function_manager::get().size() * 8 - 1;
+
+	while (true)
+	{
+		// Run instructions in interpreter
+		const u32 op = vm::read32(ppu.cia);
+
+		if (op == ppu.cia && ppu.cia >= min_hle && ppu.cia <= max_hle)
+		{
+			// HLE function
+			// ppu.raddr = 0;
+			return;
+		}
+
+		if (table[ppu_decode(op)](ppu, {op})) [[likely]]
+		{
+			ppu.cia += 4;
+		}
+
+		if (!ppu.raddr || !ppu.use_full_rdata)
+		{
+			// We've escaped from reservation, return.
+			return;
+		}
+
+		if (ppu.test_stopped())
+		{
+			return;
+		}
+	}
+}
+
 static std::unordered_map<u32, u32>* s_ppu_toc;
 
 static bool ppu_check_toc(ppu_thread& ppu, ppu_opcode_t op)
@@ -1770,6 +1807,7 @@ extern void ppu_initialize(const ppu_module& info)
 			{ "__stvrx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_stvrx) : reinterpret_cast<u64>(sse_cellbe_stvrx_v0) },
 			{ "__dcbz", reinterpret_cast<u64>(+[](u32 addr){ alignas(64) static constexpr u8 z[128]{}; do_cell_atomic_128_store(addr, z); }) },
 			{ "__resupdate", reinterpret_cast<u64>(vm::reservation_update) },
+			{ "__resinterp", reinterpret_cast<u64>(ppu_reservation_fallback) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
@@ -2052,7 +2090,7 @@ extern void ppu_initialize(const ppu_module& info)
 			{
 				settings += ppu_settings::accurate_cache_line_stores;
 			}
-			if (g_cfg.core.ppu_128_reservations_loop_max_length > 0)
+			if (g_cfg.core.ppu_128_reservations_loop_max_length)
 			{
 				settings += ppu_settings::reservations_128_byte;
 			}
