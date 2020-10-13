@@ -32,8 +32,7 @@
 	ignore = dirty
 [submodule "3rdparty/hidapi"]
 	path = 3rdparty/hidapi
-	url = https://github.com/RPCS3/hidapi
-	branch = master
+	url = https://github.com/libusb/hidapi
 	ignore = dirty
 [submodule "3rdparty/pugixml"]
 	path = 3rdparty/pugixml

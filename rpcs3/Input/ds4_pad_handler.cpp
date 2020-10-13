@@ -609,7 +609,7 @@ int ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 		outputBuf[76] = (crcCalc >> 16) & 0xFF;
 		outputBuf[77] = (crcCalc >> 24) & 0xFF;
 
-		return hid_write_control(device->hidDevice, outputBuf.data(), DS4_OUTPUT_REPORT_0x11_SIZE);
+		return hid_write(device->hidDevice, outputBuf.data(), DS4_OUTPUT_REPORT_0x11_SIZE);
 	}
 	else
 	{
