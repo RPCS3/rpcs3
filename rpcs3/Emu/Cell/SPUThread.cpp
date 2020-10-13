@@ -833,7 +833,7 @@ const extern auto spu_getllar_tx = build_function_asm<u32(*)(u32 raddr, void* rd
 	c.bt(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::pause));
 	c.jc(fall);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.and_(x86::rax, -128);
+	c.and_(x86::rax, ~vm::rsrv_shared_mask);
 	c.cmp(x86::rax, args[3]);
 	c.jne(fall);
 	c.xbegin(tx0);
@@ -2472,7 +2472,7 @@ bool spu_thread::process_mfc_cmd()
 			if (ntime & 127)
 			{
 				// Try to use TSX to obtain data atomically
-				if (!g_use_rtm || !spu_getllar_tx(addr, rdata, this, ntime))
+				if (!g_use_rtm || !spu_getllar_tx(addr, rdata, this, ntime & -128))
 				{
 					// See previous ntime check.
 					continue;
@@ -2497,7 +2497,7 @@ bool spu_thread::process_mfc_cmd()
 				continue;
 			}
 
-			if (i >= 40) [[unlikely]]
+			if (g_use_rtm && i >= 15) [[unlikely]]
 			{
 				spu_log.warning("GETLLAR took too long: %u", i);
 			}

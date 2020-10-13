@@ -1186,7 +1186,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			if (ppu.rtime & 127)
 			{
 				// Try to use TSX to obtain data atomically
-				if (!g_use_rtm || !spu_getllar_tx(addr & -128, ppu.rdata, &ppu, ppu.rtime))
+				if (!g_use_rtm || !spu_getllar_tx(addr & -128, ppu.rdata, &ppu, ppu.rtime & -128))
 				{
 					continue;
 				}
