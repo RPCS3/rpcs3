@@ -144,7 +144,7 @@ public:
 		{
 			suspend_work work{&op, nullptr, [](void* func, void*)
 			{
-				(*static_cast<F*>(func))();
+				std::invoke(*static_cast<F*>(func));
 			}};
 
 			work.push(_this);
@@ -156,7 +156,7 @@ public:
 
 			suspend_work work{&op, &result, [](void* func, void* res_buf)
 			{
-				*static_cast<std::invoke_result_t<F>*>(res_buf) = (*static_cast<F*>(func))();
+				*static_cast<std::invoke_result_t<F>*>(res_buf) = std::invoke(*static_cast<F*>(func));
 			}};
 
 			work.push(_this);
