@@ -1628,11 +1628,11 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				if (cmp_rdata(ppu.rdata, super_data))
 				{
 					data.release(reg_value);
-					res.release(rtime + 128);
+					res += 64;
 					return true;
 				}
 
-				res.release(rtime);
+				res -= 64;
 				return false;
 			}();
 

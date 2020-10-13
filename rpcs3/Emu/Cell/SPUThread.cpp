@@ -2029,11 +2029,11 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			if (cmp_rdata(rdata, super_data))
 			{
 				mov_rdata(super_data, to_write);
-				res.release(rtime + 128);
+				res += 64;
 				return true;
 			}
 
-			res.release(rtime);
+			res -= 64;
 			return false;
 		}();
 
@@ -2102,7 +2102,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			// TODO: vm::check_addr
 			vm::writer_lock lock(addr);
 			mov_rdata(super_data, *static_cast<const spu_rdata_t*>(to_write));
-			res.release(time0 + 128);
+			res += 64;
 		}
 
 		if (render) render->unpause();

@@ -158,7 +158,7 @@ namespace rsx
 
 			if (res)
 			{
-				res += 127;
+				res += 64;
 			}
 
 			vm::reservation_notifier(addr, 4).notify_all();
