@@ -495,6 +495,14 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.jne(fail2);
 
 	Label tx1 = build_transaction_enter(c, fall2, x86::r12, 666);
+
+	// Check pause flag
+	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
+	c.jc(fail3);
+	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
+	c.and_(x86::rax, -128);
+	c.cmp(x86::rax, x86::r13);
+	c.jne(fail2);
 	c.xbegin(tx1);
 
 	if (s_tsx_avx)
