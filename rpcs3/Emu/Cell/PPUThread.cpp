@@ -1648,7 +1648,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		// Aligned 8-byte reservations will be used here
 		addr &= -8;
 
-		while (true)
+		for (u64 count = 0;; count++)
 		{
 			auto [_old, _ok] = res.fetch_op([&](u64& r)
 			{
@@ -1669,6 +1669,11 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 			if (_ok)
 			{
+				if (count >= 20)
+				{
+					ppu_log.notice("%s took too long (%u):", sizeof(T) == 4 ? "STWCX" : "STDCX", count);
+				}
+
 				break;
 			}
 
