@@ -2179,7 +2179,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		if (raddr)
 		{
 			// Last check for event before we clear the reservation
-			if (raddr == addr || rtime != (vm::reservation_acquire(raddr, 128) & -128) || !cmp_rdata(rdata, vm::_ref<spu_rdata_t>(raddr)))
+			if (raddr == addr || rtime != vm::reservation_acquire(raddr, 128) || !cmp_rdata(rdata, vm::_ref<spu_rdata_t>(raddr)))
 			{
 				set_events(SPU_EVENT_LR);
 			}
@@ -2508,7 +2508,7 @@ bool spu_thread::process_mfc_cmd()
 		if (raddr && raddr != addr)
 		{
 			// Last check for event before we replace the reservation with a new one
-			if ((vm::reservation_acquire(raddr, 128) & -128) != rtime || !cmp_rdata(temp, vm::_ref<spu_rdata_t>(raddr)))
+			if (vm::reservation_acquire(raddr, 128) != rtime || !cmp_rdata(temp, vm::_ref<spu_rdata_t>(raddr)))
 			{
 				set_events(SPU_EVENT_LR);
 			}
