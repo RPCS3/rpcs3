@@ -1595,27 +1595,20 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				});
 			}
 
-			while (res.bts(std::countr_zero<u32>(vm::rsrv_unique_lock)))
+			auto [_oldd, _ok] = res.fetch_op([&](u64& r)
 			{
-				// Give up if reservation has been updated
-				if ((res & -128) != rtime)
+				if ((r & -128) != rtime || (r & 127))
 				{
 					return false;
 				}
 
-				if (ppu.state && ppu.check_state())
-				{
-					return false;
-				}
-				else
-				{
-					busy_wait(100);
-				}
-			}
+				r += vm::rsrv_unique_lock;
+				return true;
+			});
 
-			if ((res & -128) != rtime)
+			if (!_ok)
 			{
-				res -= vm::rsrv_unique_lock;
+				// Already locked or updated: give up
 				return false;
 			}
 
@@ -1661,43 +1654,22 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		// Aligned 8-byte reservations will be used here
 		addr &= -8;
 
-		for (u64 count = 0;; count++)
+		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
 		{
-			auto [_old, _ok] = res.fetch_op([&](u64& r)
-			{
-				if ((r & -128) != rtime || (r & vm::rsrv_unique_lock))
-				{
-					return false;
-				}
-
-				r += 1;
-				return true;
-			});
-
-			// Give up if reservation has been updated
-			if ((_old & -128) != rtime)
+			if ((r & -128) != rtime || (r & 127))
 			{
 				return false;
 			}
 
-			if (_ok)
-			{
-				if (count >= 20)
-				{
-					ppu_log.notice("%s took too long (%u):", sizeof(T) == 4 ? "STWCX" : "STDCX", count);
-				}
+			// Despite using shared lock, doesn't allow other shared locks (TODO)
+			r += 1;
+			return true;
+		});
 
-				break;
-			}
-
-			if (ppu.state && ppu.check_state())
-			{
-				return false;
-			}
-			else
-			{
-				busy_wait(100);
-			}
+		// Give up if reservation has been locked or updated
+		if (!_ok)
+		{
+			return false;
 		}
 
 		if (data.compare_and_swap_test(old_data, reg_value))
@@ -1706,7 +1678,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			return true;
 		}
 
-		res -=1;
+		res -= 1;
 		return false;
 	}())
 	{

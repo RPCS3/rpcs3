@@ -2118,27 +2118,20 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			}
 		}
 
-		while (res.bts(std::countr_zero<u32>(vm::rsrv_unique_lock)))
+		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
 		{
-			// Give up if reservation has been updated
-			if ((res & -128) != rtime)
+			if ((r & -128) != rtime || (r & 127))
 			{
 				return false;
 			}
 
-			if (state && check_state())
-			{
-				return false;
-			}
-			else
-			{
-				busy_wait(100);
-			}
-		}
+			r += vm::rsrv_unique_lock;
+			return true;
+		});
 
-		if ((res & -128) != rtime)
+		if (!_ok)
 		{
-			res -= vm::rsrv_unique_lock;
+			// Already locked or updated: give up
 			return false;
 		}
 
