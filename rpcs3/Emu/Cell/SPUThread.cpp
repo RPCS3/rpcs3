@@ -396,9 +396,8 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	Label tx0 = build_transaction_enter(c, fall, x86::r12, 4);
 	c.xbegin(tx0);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.test(x86::eax, vm::rsrv_unique_lock);
+	c.test(x86::eax, 127);
 	c.jnz(skip);
-	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail);
 
@@ -488,7 +487,8 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
 	c.test(x86::eax, vm::rsrv_unique_lock);
 	c.jnz(fail3);
-	c.and_(x86::rax, -128);
+
+	// Allow only first shared lock to proceed
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail2);
 
