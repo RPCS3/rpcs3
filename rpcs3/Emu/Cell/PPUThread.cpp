@@ -1289,6 +1289,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.and_(x86::rbx, -128 / 2);
+	c.and_(args[0].r32(), 63);
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
 	c.bswap(args[3]);
@@ -1356,12 +1357,10 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 
 	c.jnz(fail);
 
-	c.mov(x86::rax, x86::rbp);
-	c.shl(args[0], 1);
-	c.or_(x86::rax, args[0]);
-	c.mov(x86::qword_ptr(x86::rax), args[3]);
-	c.shr(args[0], 1);
+	// Store 8 bytes
+	c.mov(x86::qword_ptr(x86::rbp, args[0], 1, 0), args[3]);
 
+	// Update reservation
 	c.sub(x86::qword_ptr(x86::rbx), -128);
 	c.xend();
 	c.mov(x86::eax, 1);
@@ -1401,6 +1400,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.jne(fail2);
 
 	Label tx1 = build_transaction_enter(c, fall2, x86::r12, 666);
+
+	// Check pause flag
 	c.bt(x86::dword_ptr(args[2], ::offset32(&ppu_thread::state) - ::offset32(&ppu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
 	c.jc(fail3);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
@@ -1442,11 +1443,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 
 	c.jnz(fail2);
 
-	c.mov(x86::rax, x86::rbp);
-	c.shl(args[0], 1);
-	c.or_(x86::rax, args[0]);
-	c.mov(x86::qword_ptr(x86::rax), args[3]);
-	c.shr(args[0], 1);
+	// Store 8 bytes
+	c.mov(x86::qword_ptr(x86::rbp, args[0], 1, 0), args[3]);
 
 	c.xend();
 	c.lock().add(x86::qword_ptr(x86::rbx), 127);
@@ -1474,23 +1472,10 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.bind(_ret);
 
 #ifdef _WIN32
-	if (s_tsx_avx)
+	if (!s_tsx_avx)
 	{
 		c.vmovups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
 		c.vmovups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
-	}
-	else
-	{
-		c.movups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
-		c.movups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
-		c.movups(x86::xmm8, x86::oword_ptr(x86::rsp, 32));
-		c.movups(x86::xmm9, x86::oword_ptr(x86::rsp, 48));
-		c.movups(x86::xmm10, x86::oword_ptr(x86::rsp, 64));
-		c.movups(x86::xmm11, x86::oword_ptr(x86::rsp, 80));
-		c.movups(x86::xmm12, x86::oword_ptr(x86::rsp, 96));
-		c.movups(x86::xmm13, x86::oword_ptr(x86::rsp, 112));
-		c.movups(x86::xmm14, x86::oword_ptr(x86::rsp, 128));
-		c.movups(x86::xmm15, x86::oword_ptr(x86::rsp, 144));
 	}
 #endif
 
