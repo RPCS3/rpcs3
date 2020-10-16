@@ -33,6 +33,7 @@
 [submodule "3rdparty/hidapi"]
 	path = 3rdparty/hidapi
 	url = https://github.com/libusb/hidapi
+	branch = cmake-support
 	ignore = dirty
 [submodule "3rdparty/pugixml"]
 	path = 3rdparty/pugixml

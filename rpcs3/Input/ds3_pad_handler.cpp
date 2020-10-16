@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "ds3_pad_handler.h"
 #include "Emu/Io/pad_config.h"
 
@@ -62,7 +62,11 @@ ds3_pad_handler::~ds3_pad_handler()
 			hid_close(controller->handle);
 		}
 	}
-	hid_exit();
+
+	if (hid_exit() != 0)
+	{
+		ds3_log.warning("Failed to exit hidapi for the DS3 pad handler");
+	}
 }
 
 bool ds3_pad_handler::init_usb()

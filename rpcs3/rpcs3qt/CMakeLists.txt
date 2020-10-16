@@ -103,7 +103,7 @@ target_link_libraries(rpcs3_ui
 		rpcs3_emu
 		3rdparty::zlib 3rdparty::pugixml
 		3rdparty::discord-rpc
-		3rdparty::hidapi
+		hidapi
 		3rdparty::libusb
 		3rdparty::libpng
 		3rdparty::7z
