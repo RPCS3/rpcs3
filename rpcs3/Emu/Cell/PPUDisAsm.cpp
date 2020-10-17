@@ -1529,7 +1529,7 @@ void PPUDisAsm::MTOCRF(ppu_opcode_t op)
 
 void PPUDisAsm::STDX(ppu_opcode_t op)
 {
-	DisAsm_R3("stdx.", op.rs, op.ra, op.rb);
+	DisAsm_R3("stdx", op.rs, op.ra, op.rb);
 }
 
 void PPUDisAsm::STWCX(ppu_opcode_t op)
