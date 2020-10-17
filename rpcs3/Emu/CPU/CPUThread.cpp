@@ -811,6 +811,9 @@ void cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		// Extract queue and reverse element order (FILO to FIFO) (TODO: maybe leave order as is?)
 		auto* head = queue.exchange(nullptr);
 
+		s8 min_prio = head->prio;
+		s8 max_prio = head->prio;
+
 		if (auto* prev = head->next)
 		{
 			head->next = nullptr;
@@ -821,14 +824,26 @@ void cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 				prev->next = head;
 
 				head = std::exchange(prev, pre2);
+
+				// Fill priority range
+				min_prio = std::min<s8>(min_prio, head->prio);
+				max_prio = std::max<s8>(max_prio, head->prio);
 			}
 			while (prev);
 		}
 
 		// Execute all stored workload
-		for (; head; head = head->next)
+		for (s32 prio = max_prio; prio >= min_prio; prio--)
 		{
-			head->exec(head->func_ptr, head->res_buf);
+			// ... according to priorities
+			for (auto work = head; work; work = work->next)
+			{
+				// Properly sorting single-linked list may require to optimize the loop
+				if (work->prio == prio)
+				{
+					work->exec(work->func_ptr, work->res_buf);
+				}
+			}
 		}
 
 		// Finalization

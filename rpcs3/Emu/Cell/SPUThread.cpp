@@ -2200,7 +2200,8 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 		if (result == 0)
 		{
-			cpu_thread::suspend_all(cpu, [&]
+			// Execute with increased priority
+			cpu_thread::suspend_all<+1>(cpu, [&]
 			{
 				mov_rdata(vm::_ref<spu_rdata_t>(addr), *static_cast<const spu_rdata_t*>(to_write));
 				vm::reservation_acquire(addr, 128) += 127;
