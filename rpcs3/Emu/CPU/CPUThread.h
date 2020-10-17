@@ -136,7 +136,7 @@ public:
 		suspend_work* next;
 
 		// Internal method
-		void push(cpu_thread* _this) noexcept;
+		bool push(cpu_thread* _this, bool cancel_if_not_suspended = false) noexcept;
 	};
 
 	// Suspend all threads and execute op (may be executed by other thread than caller!)
@@ -164,6 +164,21 @@ public:
 
 			work.push(_this);
 			return result;
+		}
+	}
+
+	// Push the workload only if threads are being suspended by suspend_all()
+	template <s8 Prio = 0, typename F>
+	static bool if_suspended(cpu_thread* _this, F op)
+	{
+		static_assert(std::is_void_v<std::invoke_result_t<F>>, "Unimplemented (must return void)");
+		{
+			suspend_work work{Prio, &op, nullptr, [](void* func, void*)
+			{
+				std::invoke(*static_cast<F*>(func));
+			}};
+
+			return work.push(_this, true);
 		}
 	}
 

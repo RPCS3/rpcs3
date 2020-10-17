@@ -739,7 +739,7 @@ std::string cpu_thread::dump_misc() const
 	return fmt::format("Type: %s\n" "State: %s\n", typeid(*this).name(), state.load());
 }
 
-void cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
+bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspended) noexcept
 {
 	// Can't allow pre-set wait bit (it'd be a problem)
 	verify(HERE), !_this || !(_this->state & cpu_flag::wait);
@@ -757,6 +757,12 @@ void cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 	{
 		// Load current head
 		next = queue.load();
+
+		if (!next && cancel_if_not_suspended) [[unlikely]]
+		{
+			// Give up if not suspended
+			return false;
+		}
 
 		if (!_this && next)
 		{
@@ -869,10 +875,11 @@ void cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		}
 
 		_this->check_state();
-		return;
+		return true;
 	}
 
 	g_suspend_counter.notify_all();
+	return true;
 }
 
 void cpu_thread::stop_all() noexcept

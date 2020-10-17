@@ -2428,11 +2428,23 @@ bool spu_thread::process_mfc_cmd()
 			mov_rdata(temp, rdata);
 		}
 
-		for (u64 i = 0;; [&]()
+		for (u64 i = 0; i != umax; [&]()
 		{
 			if (state & cpu_flag::pause)
 			{
-				check_state();
+				verify(HERE), cpu_thread::if_suspended<-1>(this, [&]
+				{
+					// Guaranteed success
+					ntime = vm::reservation_acquire(addr, 128);
+					mov_rdata(rdata, *vm::get_super_ptr<spu_rdata_t>(addr));
+				});
+
+				// Exit loop
+				if ((ntime & 127) == 0)
+				{
+					i = -1;
+					return;
+				}
 			}
 
 			if (++i < 25) [[likely]]

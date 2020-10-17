@@ -1189,10 +1189,27 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		ppu.use_full_rdata = false;
 	}
 
-	for (u64 count = 0;; [&]()
+	for (u64 count = 0; count != umax; [&]()
 	{
 		if (ppu.state)
 		{
+			if (ppu.state & cpu_flag::pause)
+			{
+				verify(HERE), cpu_thread::if_suspended<-1>(&ppu, [&]()
+				{
+					// Guaranteed success
+					ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & -128;
+					mov_rdata(ppu.rdata, *vm::get_super_ptr<spu_rdata_t>(addr & -128));
+				});
+
+				// Exit loop
+				if ((ppu.rtime & 127) == 0)
+				{
+					count = -1;
+					return;
+				}
+			}
+
 			ppu.check_state();
 		}
 		else if (++count < 20) [[likely]]
@@ -1275,6 +1292,10 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			return static_cast<T>(rdata << data_off >> size_off);
 		}
 	}
+
+	be_t<u64> rdata;
+	std::memcpy(&rdata, &ppu.rdata[addr & 0x78], 8);
+	return static_cast<T>(rdata << data_off >> size_off);
 }
 
 extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr)
