@@ -676,7 +676,7 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	// Begin transaction
 	Label tx0 = build_transaction_enter(c, fall, x86::r12, 8);
 	c.xbegin(tx0);
-	c.test(x86::dword_ptr(x86::rbx), vm::rsrv_unique_lock);
+	c.test(x86::qword_ptr(x86::rbx), vm::rsrv_unique_lock);
 	c.jnz(skip);
 
 	if (s_tsx_avx)
