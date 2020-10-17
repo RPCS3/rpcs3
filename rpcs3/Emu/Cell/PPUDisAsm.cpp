@@ -1328,7 +1328,18 @@ void PPUDisAsm::MFOCRF(ppu_opcode_t op)
 {
 	if (op.l11)
 	{
-		DisAsm_R1_IMM("mfocrf", op.rd, op.crm);
+		const u8 crm = static_cast<u8>(op.crm);
+		const int cr = std::countl_zero<u8>(crm);
+
+		if (cr >= 8 || crm & (crm - 1))
+		{
+			// Note: invalid form
+			DisAsm_R1_IMM("mfocrf", op.rd, crm);
+		}
+		else
+		{
+			DisAsm_R1_CR1("mfocrf", op.rd, cr);
+		}
 	}
 	else
 	{
@@ -1495,13 +1506,24 @@ void PPUDisAsm::ADDE(ppu_opcode_t op)
 
 void PPUDisAsm::MTOCRF(ppu_opcode_t op)
 {
-	if (op.l11)
+	const u8 crm = static_cast<u8>(op.crm);
+
+	if (!op.l11 && crm == 0xff)
 	{
-		DisAsm_INT1_R1("mtocrf", op.crm, op.rs);
+		DisAsm_R1("mtcr", op.rs);
+		return;
+	}
+
+	const int cr = std::countl_zero<u8>(crm);
+	const auto name = op.l11 ? "mtocrf" : "mtcrf";
+
+	if (cr >= 8 || crm & (crm - 1))
+	{
+		DisAsm_INT1_R1(name, crm, op.rs);
 	}
 	else
 	{
-		DisAsm_INT1_R1("mtcrf", op.crm, op.rs);
+		DisAsm_CR1_R1(name, cr, op.rs);
 	}
 }
 
