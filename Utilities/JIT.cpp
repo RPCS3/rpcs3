@@ -194,10 +194,75 @@ void jit_runtime::finalize() noexcept
 	std::memcpy(alloc(s_data_init.size(), 1, false), s_data_init.data(), s_data_init.size());
 }
 
-asmjit::JitRuntime& asmjit::get_global_runtime()
+asmjit::Runtime& asmjit::get_global_runtime()
 {
+	// 16 MiB for internal needs
+	static constexpr u64 size = 1024 * 1024 * 16;
+
+	struct custom_runtime final : asmjit::HostRuntime
+	{
+		custom_runtime() noexcept
+		{
+			// Search starting in first 2 GiB of memory
+			for (u64 addr = size;; addr += size)
+			{
+				if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr)))
+				{
+					m_pos.raw() = static_cast<std::byte*>(ptr);
+					break;
+				}
+			}
+
+			// Initialize "end" pointer
+			m_max = m_pos + size;
+
+			// Make memory writable + executable
+			utils::memory_commit(m_pos, size, utils::protection::wx);
+		}
+
+		asmjit::Error _add(void** dst, asmjit::CodeHolder* code) noexcept override
+		{
+			std::size_t codeSize = code->getCodeSize();
+			if (!codeSize) [[unlikely]]
+			{
+				*dst = nullptr;
+				return asmjit::kErrorNoCodeGenerated;
+			}
+
+			void* p = m_pos.fetch_add(::align(codeSize, 4096));
+			if (!p || m_pos > m_max) [[unlikely]]
+			{
+				*dst = nullptr;
+				return asmjit::kErrorNoVirtualMemory;
+			}
+
+			std::size_t relocSize = code->relocate(p);
+			if (!relocSize) [[unlikely]]
+			{
+				*dst = nullptr;
+				return asmjit::kErrorInvalidState;
+			}
+
+			utils::memory_protect(p, ::align(codeSize, 4096), utils::protection::rx);
+			flush(p, relocSize);
+			*dst = p;
+
+			return asmjit::kErrorOk;
+		}
+
+		asmjit::Error _release(void* ptr) noexcept override
+		{
+			return asmjit::kErrorOk;
+		}
+
+	private:
+		atomic_t<std::byte*> m_pos{};
+
+		std::byte* m_max{};
+	};
+
 	// Magic static
-	static asmjit::JitRuntime g_rt;
+	static custom_runtime g_rt;
 	return g_rt;
 }
 
