@@ -639,7 +639,12 @@ struct alignas(128) CellSpurs
 		be_t<u32> size;                    // 0x10 Size of the executable
 		atomic_t<u8> uniqueId;             // 0x14 Unique id of the workload. It is the same for all workloads with the same addr.
 		u8 pad[3];
-		u8 priority[8];                    // 0x18 Priority of the workload on each SPU
+
+		union
+		{
+			atomic_t<u64> prio64;
+			u8 priority[8];                // 0x18 Priority of the workload on each SPU
+		};
 	};
 
 	CHECK_SIZE(WorkloadInfo, 32);
@@ -719,6 +724,7 @@ struct alignas(128) CellSpurs
 	atomic_t<u8> handlerDirty;                          // 0xD64
 	atomic_t<u8> handlerWaiting;                        // 0xD65
 	atomic_t<u8> handlerExiting;                        // 0xD66
+	u8 xD67;                                            // 0xD67
 	atomic_be_t<u32> enableEH;                          // 0xD68
 	be_t<u32> exception;                                // 0xD6C
 	sys_spu_image spuImg;                               // 0xD70
