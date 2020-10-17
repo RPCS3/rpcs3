@@ -1427,7 +1427,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.bind(next);
 
 	// Try to "lock" reservation
-	c.mov(x86::eax, x86::r13);
+	c.mov(x86::eax, 1);
 	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
 	c.test(x86::eax, vm::rsrv_unique_lock);
 	c.jnz(fail3);
