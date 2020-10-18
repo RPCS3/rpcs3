@@ -820,6 +820,18 @@ struct alignas(128) CellSpurs
 			return wklH1[wid & 0xf];
 		}
 	}
+
+	WorkloadInfo& wklInfo(u32 wid)
+	{
+		if (wid & 0x10)
+		{
+			return wklInfo2[wid & 0xf];
+		}
+		else
+		{
+			return wklInfo1[wid & 0xf];
+		}
+	}
 };
 
 CHECK_SIZE_ALIGN(CellSpurs, 0x2000, 128);
