@@ -560,7 +560,19 @@ void kernel_explorer::Update()
 					const u8 status = spurs.wklStatus(wid);
 					const auto has_signal = (signal_mask & (0x80000000u >> wid)) ? "Signalled"sv : "No Signal"sv;
 
-					add_leaf(spurs_tree, qstr(fmt::format("Work.%u, class: %s, %s, %s, Status: %#x, Event: %#x, %s, ReadyCnt: %u", wid, +name.nameClass, +name.nameInstance, state, status, evt, has_signal, ready_count)));
+					QTreeWidgetItem* wkl_tree = add_solid_node(m_tree, spurs_tree, qstr(fmt::format("Work.%u", wid)), qstr(fmt::format("Work.%u, class: %s, %s, %s, Status: %#x, Event: %#x, %s, ReadyCnt: %u", wid, +name.nameClass, +name.nameInstance, state, status, evt, has_signal, ready_count)));
+
+					auto contention = [&](u8 v)
+					{
+						if (wid >= CELL_SPURS_MAX_WORKLOAD)
+							return (v >> 4);
+						else
+							return v & 0xf;
+					};
+
+					const auto& winfo = spurs.wklInfo(wid);
+					add_leaf(wkl_tree, qstr(fmt::format("Contention: %u/%u (pending: %u), Image: *0x%x (size: 0x%x), Priority (BE64): %016x", contention(spurs.wklCurrentContention[wid % 16])
+						, contention(spurs.wklMaxContention[wid % 16]), contention(spurs.wklPendingContention[wid % 16]), +winfo.addr, winfo.size, std::bit_cast<be_t<u64>>(winfo.priority))));
 				}
 
 				add_leaf(spurs_tree, qstr(fmt::format("Handler Info: PPU0: 0x%x, PPU1: 0x%x, DirtyState: %u, Waiting: %u, Exiting: %u", spurs.ppu0, spurs.ppu1
