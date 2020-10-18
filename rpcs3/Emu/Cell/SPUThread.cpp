@@ -2176,6 +2176,11 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			}
 		}
 
+		if (!vm::check_addr(addr, 1, vm::page_writable))
+		{
+			vm::_ref<atomic_t<u8>>(addr) += 0; // Access violate
+		}
+
 		raddr = 0;
 		return false;
 	}
