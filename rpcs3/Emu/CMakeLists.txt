@@ -7,6 +7,7 @@
 	VFS.cpp
 	GDB.cpp
 	title.cpp
+	perf_meter.cpp
 )
 
 # prevent WolfSSL from warning about not having harden options

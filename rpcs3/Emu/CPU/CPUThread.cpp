@@ -8,6 +8,7 @@
 #include "Emu/GDB.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/perf_meter.hpp"
 
 #include <thread>
 #include <unordered_map>
@@ -775,6 +776,9 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 
 	if (!next)
 	{
+		// Monitor the performance only of the actual suspend processing owner
+		perf_meter<"SUSPEND"_u64> perf0;
+
 		// First thread to push the work to the workload list pauses all threads and processes it
 		std::lock_guard lock(ctr->cpu_suspend_lock);
 
@@ -911,13 +915,12 @@ void cpu_thread::stop_all() noexcept
 		std::this_thread::sleep_for(10ms);
 	}
 
-	sys_log.notice("All CPU threads have been stopped. [+: %u; suspends: %u]", +g_threads_created, +g_suspend_counter);
+	sys_log.notice("All CPU threads have been stopped. [+: %u]", +g_threads_created);
 
 	std::lock_guard lock(g_fxo->get<cpu_counter>()->cpu_suspend_lock);
 
 	g_threads_deleted -= g_threads_created.load();
 	g_threads_created = 0;
-	g_suspend_counter = 0;
 }
 
 void cpu_thread::flush_profilers() noexcept

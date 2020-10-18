@@ -10,6 +10,7 @@
 #include "Loader/ELF.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
+#include "Emu/perf_meter.hpp"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
@@ -2055,11 +2056,16 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 
 bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 {
+	perf_meter<"PUTLLC-"_u64> perf0;
+	perf_meter<"PUTLLC+"_u64> perf1 = perf0;
+
 	// Store conditionally
 	const u32 addr = args.eal & -128;
 
 	if ([&]()
 	{
+		perf_meter<"PUTLLC."_u64> perf2 = perf0;
+
 		if (raddr != addr)
 		{
 			return false;
@@ -2163,6 +2169,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 	{
 		vm::reservation_notifier(addr, 128).notify_all();
 		raddr = 0;
+		perf0.reset();
 		return true;
 	}
 	else
@@ -2182,12 +2189,15 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		}
 
 		raddr = 0;
+		perf1.reset();
 		return false;
 	}
 }
 
 void do_cell_atomic_128_store(u32 addr, const void* to_write)
 {
+	perf_meter<"STORE128"_u64> perf0;
+
 	const auto cpu = get_current_cpu_thread();
 
 	if (g_use_rtm) [[likely]]
@@ -2237,6 +2247,8 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 {
+	perf_meter<"PUTLLUC"_u64> perf0;
+
 	const u32 addr = args.eal & -128;
 
 	if (raddr && addr == raddr)
@@ -2419,6 +2431,8 @@ bool spu_thread::process_mfc_cmd()
 			std::this_thread::yield();
 		}
 
+		perf_meter<"GETLLAR"_u64> perf0;
+
 		alignas(64) spu_rdata_t temp;
 		u64 ntime;
 
@@ -2506,9 +2520,9 @@ bool spu_thread::process_mfc_cmd()
 				continue;
 			}
 
-			if (g_use_rtm && i >= 15) [[unlikely]]
+			if (g_use_rtm && i >= 15 && g_cfg.core.perf_report) [[unlikely]]
 			{
-				spu_log.warning("GETLLAR took too long: %u", i);
+				perf_log.warning("GETLLAR: took too long: %u", i);
 			}
 
 			break;

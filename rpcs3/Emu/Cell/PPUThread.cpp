@@ -3,6 +3,7 @@
 #include "Utilities/sysinfo.h"
 #include "Utilities/JIT.h"
 #include "Crypto/sha1.h"
+#include "Emu/perf_meter.hpp"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/VFS.h"
@@ -1282,9 +1283,9 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 				std::memcpy(&rdata, &ppu.rdata[addr & 0x78], 8);
 			}
 
-			if (count >= 15) [[unlikely]]
+			if (count >= 15 && g_cfg.core.perf_report) [[unlikely]]
 			{
-				ppu_log.warning("%s took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
+				perf_log.warning("%s: took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
 			}
 
 			ppu.rtime &= ~vm::rsrv_shared_mask;
@@ -1553,6 +1554,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 template <typename T>
 static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
+	perf_meter<"STCX"_u32> perf0;
+
 	if (addr % sizeof(T))
 	{
 		fmt::throw_exception("PPU %s: Unaligned address: 0x%08x" HERE, sizeof(T) == 4 ? "STWCX" : "STDCX", addr);

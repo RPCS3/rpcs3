@@ -53,7 +53,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_accurate_xfloat{ this, "Accurate xfloat", false };
 		cfg::_bool spu_approx_xfloat{ this, "Approximate xfloat", true };
 		cfg::_bool llvm_accurate_dfma{ this, "LLVM Accurate DFMA", true }; // Enable accurate double-precision FMA for CPUs which do not support it natively
-		cfg::_bool llvm_ppu_jm_handling{ this, "PPU LLVM Java Mode Handling", false }; // Respect current Java Mode for alti-vec ops by PPU LLVM 
+		cfg::_bool llvm_ppu_jm_handling{ this, "PPU LLVM Java Mode Handling", false }; // Respect current Java Mode for alti-vec ops by PPU LLVM
 		cfg::_int<-1, 14> ppu_128_reservations_loop_max_length{ this, "Accurate PPU 128-byte Reservation Op Max Length", 0, true }; // -1: Always accurate, 0: Never accurate, 1-14: max accurate loop length
 		cfg::_bool llvm_ppu_accurate_vector_nan{ this, "PPU LLVM Accurate Vector NaN values", false };
 		cfg::_int<-64, 64> stub_ppu_traps{ this, "Stub PPU Traps", 0, true }; // Hack, skip PPU traps for rare cases where the trap is continueable (specify relative instructions to skip)
@@ -73,6 +73,9 @@ struct cfg_root : cfg::node
 #else
 			sleep_timers_accuracy_level::_usleep, true };
 #endif
+
+		cfg::uint64 perf_report_threshold{this, "Performance Report Threshold", 500, true}; // In µs, 0.5ms = default, 0 = everything
+		cfg::_bool perf_report{this, "Enable Performance Report", false, true}; // Show certain perf-related logs
 	} core{ this };
 
 	struct node_vfs : cfg::node

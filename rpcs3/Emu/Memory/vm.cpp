@@ -14,7 +14,7 @@
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/RSX/GSRender.h"
 #include "Emu/Cell/SPURecompiler.h"
-#include <atomic>
+#include "Emu/perf_meter.hpp"
 #include <thread>
 #include <deque>
 
@@ -391,6 +391,8 @@ namespace vm
 
 		if (addr >= 0x10000)
 		{
+			perf_meter<"SUSPEND"_u64> perf0;
+
 			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
 			{
 				if (auto ptr = +*lock; ptr && !(ptr->state & cpu_flag::memory))
