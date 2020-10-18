@@ -782,6 +782,15 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 		// First thread to push the work to the workload list pauses all threads and processes it
 		std::lock_guard lock(ctr->cpu_suspend_lock);
 
+		// Try to prefetch cpu->state earlier
+		for_all_cpu([&](cpu_thread* cpu)
+		{
+			if (cpu != _this)
+			{
+				_m_prefetchw(&cpu->state);
+			}
+		});
+
 		// Copy of thread bits
 		decltype(ctr->cpu_copy_bits) copy2{};
 
@@ -803,8 +812,6 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 				copy2[index / 64] &= ~(1ull << (index % 64));
 			}
 		});
-
-		busy_wait(500);
 
 		while (std::accumulate(std::begin(ctr->cpu_copy_bits), std::end(ctr->cpu_copy_bits), u64{0}, std::bit_or()))
 		{
@@ -841,6 +848,13 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 			}
 			while (prev);
 		}
+
+		for_all_cpu<true>([&](cpu_thread* cpu)
+		{
+			_m_prefetchw(&cpu->state);
+		});
+
+		_m_prefetchw(&g_suspend_counter);
 
 		// Execute all stored workload
 		for (s32 prio = max_prio; prio >= min_prio; prio--)
