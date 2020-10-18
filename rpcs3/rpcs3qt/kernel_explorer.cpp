@@ -564,7 +564,7 @@ void kernel_explorer::Update()
 
 					auto contention = [&](u8 v)
 					{
-						if (wid > CELL_SPURS_MAX_WORKLOAD)
+						if (wid >= CELL_SPURS_MAX_WORKLOAD)
 							return (v >> 4);
 						else
 							return v & 0xf;
