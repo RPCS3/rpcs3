@@ -285,6 +285,10 @@ asmjit::Label asmjit::build_transaction_enter(asmjit::X86Assembler& c, asmjit::L
 		c.test(x86::eax, _XABORT_EXPLICIT);
 		c.jnz(fallback);
 
+		// Don't repeat on weird zero status
+		c.test(x86::eax, x86::eax);
+		c.jz(fallback);
+
 		// Count an attempt without RETRY flag as 65 normal attempts and continue
 		c.push(x86::rax);
 		c.not_(x86::eax);
