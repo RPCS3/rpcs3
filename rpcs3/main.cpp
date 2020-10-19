@@ -164,16 +164,18 @@ struct pause_on_fatal final : logs::listener
 	}
 };
 
-const char* arg_headless   = "headless";
-const char* arg_no_gui     = "no-gui";
-const char* arg_high_dpi   = "hidpi";
-const char* arg_rounding   = "dpi-rounding";
-const char* arg_styles     = "styles";
-const char* arg_style      = "style";
-const char* arg_stylesheet = "stylesheet";
-const char* arg_config     = "config";
-const char* arg_error      = "error";
-const char* arg_updating   = "updating";
+const char* arg_headless     = "headless";
+const char* arg_no_gui       = "no-gui";
+const char* arg_high_dpi     = "hidpi";
+const char* arg_rounding     = "dpi-rounding";
+const char* arg_styles       = "styles";
+const char* arg_style        = "style";
+const char* arg_stylesheet   = "stylesheet";
+const char* arg_config       = "config";
+const char* arg_error        = "error";
+const char* arg_updating     = "updating";
+const char* arg_game         = "game self";
+const char* arg_game_args    = "game args";
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {
@@ -408,9 +410,8 @@ int main(int argc, char** argv)
 
 	// Command line args
 	QCommandLineParser parser;
+	parser.setOptionsAfterPositionalArgumentsMode(QCommandLineParser::ParseAsPositionalArguments);
 	parser.setApplicationDescription("Welcome to RPCS3 command line.");
-	parser.addPositionalArgument("(S)ELF", "Path for directly executing a (S)ELF");
-	parser.addPositionalArgument("[Args...]", "Optional args for the executable");
 
 	const QCommandLineOption help_option    = parser.addHelpOption();
 	const QCommandLineOption version_option = parser.addVersionOption();
@@ -421,10 +422,11 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
 	parser.addOption(QCommandLineOption(arg_style, "Loads a custom style.", "style", ""));
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
-	const QCommandLineOption config_option(arg_config, "Forces the emulator to use this configuration file.", "path", "");
-	parser.addOption(config_option);
+	parser.addOption(QCommandLineOption(arg_config, "Forces the emulator to use this configuration file.", "path", ""));
 	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
+	parser.addPositionalArgument(arg_game, "Path for directly executing a game", "[game self]");
+	parser.addPositionalArgument(arg_game_args, "Optional args for the game", "[game args]");
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
@@ -474,7 +476,7 @@ int main(int argc, char** argv)
 
 	if (parser.isSet(arg_config))
 	{
-		config_override_path = parser.value(config_option).toStdString();
+		config_override_path = parser.value(arg_config).toStdString();
 
 		if (!fs::is_file(config_override_path))
 		{
@@ -497,16 +499,12 @@ int main(int argc, char** argv)
 		// Propagate command line arguments
 		std::vector<std::string> argv;
 
-		if (args.length() > 1)
+		// we skip the first entry (which should be the game)
+		for (int i = 1; i < args.length(); i++)
 		{
-			argv.emplace_back();
-
-			for (int i = 1; i < args.length(); i++)
-			{
-				const std::string arg = args[i].toStdString();
-				argv.emplace_back(arg);
-				sys_log.notice("Optional command line argument %d: %s", i, arg);
-			}
+			const std::string arg = args[i].toStdString();
+			argv.emplace_back(arg);
+			sys_log.notice("Optional command line argument %d: %s", i, arg);
 		}
 
 		// Ugly workaround
