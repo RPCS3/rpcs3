@@ -1511,14 +1511,14 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 
 	c.xend();
 	c.lock().add(x86::qword_ptr(x86::rbx), 127);
-	c.mov(x86::eax, 1);
+	c.lea(x86::rax, x86::qword_ptr(x86::r12, 1));
 	c.jmp(_ret);
 
 	c.bind(fall2);
 	c.sar(x86::eax, 24);
 	c.js(fail2);
 	c.bind(fail3);
-	c.mov(x86::eax, 2);
+	c.mov(x86::eax, -1);
 	c.jmp(_ret);
 
 	c.bind(fail);
@@ -1617,18 +1617,26 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		{
 			if (g_use_rtm) [[likely]]
 			{
-				switch (ppu_stcx_accurate_tx(addr & -8, rtime, ppu.rdata, reg_value))
+				switch (u32 count = ppu_stcx_accurate_tx(addr & -8, rtime, ppu.rdata, reg_value))
 				{
 				case 0:
 				{
 					// Reservation lost
 					return false;
 				}
-				case 1:
+				case UINT32_MAX:
 				{
+					break;
+				}
+				default:
+				{
+					if (count > 60 && g_cfg.core.perf_report) [[unlikely]]
+					{
+						perf_log.warning("STCX: took too long: %u", count);
+					}
+
 					return true;
 				}
-				default: break;
 				}
 
 				return cpu_thread::suspend_all(&ppu, [&]

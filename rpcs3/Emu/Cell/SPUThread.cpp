@@ -562,14 +562,14 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 
 	c.xend();
 	c.lock().add(x86::qword_ptr(x86::rbx), 127);
-	c.mov(x86::eax, 1);
+	c.lea(x86::rax, x86::qword_ptr(x86::r12, 1));
 	c.jmp(_ret);
 
 	c.bind(fall2);
 	c.sar(x86::eax, 24);
 	c.js(fail2);
 	c.bind(fail3);
-	c.mov(x86::eax, 2);
+	c.mov(x86::eax, -1);
 	c.jmp(_ret);
 
 	c.bind(fail);
@@ -766,7 +766,7 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 
 	c.xend();
 	c.lock().add(x86::qword_ptr(x86::rbx), 127);
-	c.mov(x86::eax, 1);
+	c.lea(x86::rax, x86::qword_ptr(x86::r12, 1));
 	c.jmp(_ret);
 
 	c.bind(fall2);
@@ -2095,9 +2095,9 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 		if (g_use_rtm) [[likely]]
 		{
-			switch (spu_putllc_tx(addr, rtime, rdata, to_write))
+			switch (u32 count = spu_putllc_tx(addr, rtime, rdata, to_write))
 			{
-			case 2:
+			case UINT32_MAX:
 			{
 				const auto render = rsx::get_rsx_if_needs_res_pause(addr);
 
@@ -2124,9 +2124,16 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 				if (render) render->unpause();
 				return ok;
 			}
-			case 1: return true;
 			case 0: return false;
-			default: ASSUME(0);
+			default:
+			{
+				if (count > 60 && g_cfg.core.perf_report) [[unlikely]]
+				{
+					perf_log.warning("PUTLLC: took too long: %u", count);
+				}
+
+				return true;
+			}
 			}
 		}
 
@@ -2224,6 +2231,10 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 				mov_rdata(vm::_ref<spu_rdata_t>(addr), *static_cast<const spu_rdata_t*>(to_write));
 				vm::reservation_acquire(addr, 128) += 127;
 			});
+		}
+		else if (result > 60 && g_cfg.core.perf_report) [[unlikely]]
+		{
+			perf_log.warning("STORE128: took too long: %u", result);
 		}
 
 		if (render) render->unpause();
