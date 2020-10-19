@@ -7,8 +7,6 @@
 #include "IdManager.h"
 #include <array>
 #include <cmath>
-#include <thread>
-#include <unordered_map>
 
 LOG_CHANNEL(perf_log, "PERF");
 
@@ -55,7 +53,13 @@ class perf_stat final : public perf_stat_base
 		~perf_stat_local()
 		{
 			// Update on thread exit
-			g_fxo->get<perf_stat>()->perf_stat_base::push(m_log);
+			if (m_log[0])
+			{
+				if (auto* pfs = g_fxo->get<perf_stat>())
+				{
+					pfs->perf_stat_base::push(m_log);
+				}
+			}
 		}
 	} g_tls_perf_stat;
 
