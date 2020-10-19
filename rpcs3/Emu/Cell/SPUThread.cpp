@@ -2488,8 +2488,6 @@ bool spu_thread::process_mfc_cmd()
 				continue;
 			}
 
-			mov_rdata(rdata, data);
-
 			u64 test_mask = -1;
 
 			if (ntime & 127)
@@ -2505,6 +2503,10 @@ bool spu_thread::process_mfc_cmd()
 					// If succeeded, only need to check unique lock bit
 					test_mask = ~vm::rsrv_shared_mask;
 				}
+			}
+			else
+			{
+				mov_rdata(rdata, data);
 			}
 
 			if (u64 time0 = vm::reservation_acquire(addr, 128); (ntime & test_mask) != (time0 & test_mask))
