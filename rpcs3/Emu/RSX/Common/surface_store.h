@@ -374,6 +374,7 @@ namespace rsx
 					auto &object = storage[e.first];
 
 					ensure(object);
+
 					if (!surface->old_contents.empty()) [[unlikely]]
 					{
 						surface->read_barrier(cmd);

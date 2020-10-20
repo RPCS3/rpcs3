@@ -350,9 +350,15 @@ namespace gl
 			baseclass::on_section_resources_destroyed();
 		}
 
-		void sync_surface_memory()
+		void sync_surface_memory(const std::vector<cached_texture_section*>& surfaces)
 		{
-			gl::as_rtt(vram_texture)->sync_tag();
+			auto rtt = gl::as_rtt(vram_texture);
+			rtt->sync_tag();
+
+			for (auto& surface : surfaces)
+			{
+				rtt->inherit_surface_contents(gl::as_rtt(surface->vram_texture));
+			}
 		}
 
 		bool exists() const
