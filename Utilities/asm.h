@@ -4,7 +4,7 @@
 
 namespace utils
 {
-	// Transaction helper (Max = max attempts) (result = pair of success and op result, which is only meaningful on success)
+	// Transaction helper (Max = max attempts) (result = pair of success and op result)
 	template <uint Max = 10, typename F, typename R = std::invoke_result_t<F>>
 	inline auto tx_start(F op)
 	{
@@ -48,9 +48,8 @@ namespace utils
 #ifndef _MSC_VER
 			__asm__ volatile ("movl %%eax, %0;" : "=r" (status) :: "memory");
 #endif
-			if (!(status & _XABORT_RETRY)) [[unlikely]]
+			if (!status) [[unlikely]]
 			{
-				// In order to abort transaction, tx_abort() can be used, so there is no need for "special" return value
 				break;
 			}
 		}
@@ -64,18 +63,6 @@ namespace utils
 			return std::make_pair(false, R());
 		}
 	};
-
-	// Special function to abort transaction
-	[[noreturn]] FORCE_INLINE void tx_abort()
-	{
-#ifndef _MSC_VER
-		__asm__ volatile ("xabort $0;" ::: "memory");
-		__builtin_unreachable();
-#else
-		_xabort(0);
-		__assume(0);
-#endif
-	}
 
 
 // Rotate helpers
