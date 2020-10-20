@@ -321,6 +321,17 @@ namespace vk
 			rsx_pitch = pitch;
 		}
 
+		void sync_surface_memory(const std::vector<cached_texture_section*>& surfaces)
+		{
+			auto rtt = vk::as_rtt(vram_texture);
+			rtt->sync_tag();
+
+			for (auto& surface : surfaces)
+			{
+				rtt->inherit_surface_contents(vk::as_rtt(surface->vram_texture));
+			}
+		}
+
 		bool is_synchronized() const
 		{
 			return synchronized;

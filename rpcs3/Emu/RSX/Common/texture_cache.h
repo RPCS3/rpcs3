@@ -515,6 +515,34 @@ namespace rsx
 				}
 			}
 
+			// Resync any exclusions that do not require flushing
+			std::vector<section_storage_type*> surfaces_to_inherit;
+			for (auto& surface : data.sections_to_exclude)
+			{
+				if (surface->get_context() != texture_upload_context::framebuffer_storage)
+				{
+					continue;
+				}
+
+				// Check for any 'newer' flushed overlaps. Memory must be re-acquired to avoid holding stale contents
+				// Note that the surface cache inheritance will minimize the impact
+				surfaces_to_inherit.clear();
+
+				for (auto& flushed_surface : data.sections_to_flush)
+				{
+					if (flushed_surface->get_context() != texture_upload_context::framebuffer_storage ||
+						flushed_surface->last_write_tag <= surface->last_write_tag ||
+						!flushed_surface->get_confirmed_range().overlaps(surface->get_confirmed_range()))
+					{
+						continue;
+					}
+
+					surfaces_to_inherit.push_back(flushed_surface);
+				}
+
+				surface->sync_surface_memory(surfaces_to_inherit);
+			}
+
 			data.flushed = true;
 		}
 
