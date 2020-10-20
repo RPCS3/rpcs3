@@ -214,7 +214,13 @@ namespace
 	};
 }
 #elif defined(_WIN32)
-using sema_handle = std::uint16_t;
+namespace
+{
+	struct alignas(64) sema_handle
+	{
+		atomic_t<u64> sema;
+	};
+}
 #else
 namespace
 {
@@ -560,18 +566,41 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 			}
 		}
 #elif defined(_WIN32) && !defined(USE_POSIX)
-		LARGE_INTEGER qw;
-		qw.QuadPart = -static_cast<s64>(timeout / 100);
-
-		if (timeout % 100)
+		if (wutex::WaitOnAddress)
 		{
-			// Round up to closest 100ns unit
-			qw.QuadPart -= 1;
+			if (s_sema_list[sema_id].sema.try_dec(0))
+			{
+				fallback = true;
+			}
+			else
+			{
+				const DWORD time_ms = timeout + 1 ? INFINITE : (timeout > (UINT32_MAX - 1) * 1000'000 ? (UINT32_MAX - 1) : timeout / 1000'000);
+
+				sema_handle _cmp{};
+
+				wutex::WaitOnAddress(&s_sema_list[sema_id].sema, &_cmp.sema, sizeof(_cmp.sema), time_ms);
+
+				if (s_sema_list[sema_id].sema.try_dec(0))
+				{
+					fallback = true;
+				}
+			}
 		}
-
-		if (!NtWaitForKeyedEvent(nullptr, &s_sema_list[sema_id], false, timeout + 1 ? &qw : nullptr))
+		else
 		{
-			fallback = true;
+			LARGE_INTEGER qw;
+			qw.QuadPart = -static_cast<s64>(timeout / 100);
+
+			if (timeout % 100)
+			{
+				// Round up to closest 100ns unit
+				qw.QuadPart -= 1;
+			}
+
+			if (!NtWaitForKeyedEvent(nullptr, &s_sema_list[sema_id], false, timeout + 1 ? &qw : nullptr))
+			{
+				fallback = true;
+			}
 		}
 #elif defined(USE_POSIX)
 		struct timespec ts;
@@ -671,11 +700,21 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 			fallback = true;
 		}
 #elif defined(_WIN32) && !defined(USE_POSIX)
-		static LARGE_INTEGER instant{};
-
-		if (!NtWaitForKeyedEvent(nullptr, &s_sema_list[sema_id], false, &instant))
+		if (wutex::WaitOnAddress)
 		{
-			fallback = true;
+			if (s_sema_list[sema_id].sema.try_dec(0))
+			{
+				fallback = true;
+			}
+		}
+		else
+		{
+			static LARGE_INTEGER instant{};
+
+			if (!NtWaitForKeyedEvent(nullptr, &s_sema_list[sema_id], false, &instant))
+			{
+				fallback = true;
+			}
 		}
 #elif defined(USE_POSIX)
 		if (sem_trywait(&s_sema_list[sema_id]) == 0)
@@ -772,7 +811,15 @@ void atomic_storage_futex::notify_one(const void* data)
 		s_sema_list[sema_id].sema++;
 		futex(&s_sema_list[sema_id].sema, FUTEX_WAKE_PRIVATE, 1);
 #elif defined(_WIN32)
-		NtReleaseKeyedEvent(nullptr, &s_sema_list[sema_id], 1, nullptr);
+		if (wutex::WaitOnAddress)
+		{
+			s_sema_list[sema_id].sema++;
+			wutex::WakeByAddressSingle(&s_sema_list[sema_id].sema);
+		}
+		else
+		{
+			NtReleaseKeyedEvent(nullptr, &s_sema_list[sema_id], 1, nullptr);
+		}
 #else
 		dumb_sema& sema = *s_sema_list[sema_id];
 
@@ -830,9 +877,17 @@ void atomic_storage_futex::notify_all(const void* data)
 	s_sema_list[sema_id].sema += count;
 	futex(&s_sema_list[sema_id].sema, FUTEX_WAKE_PRIVATE, 0x7fff'ffff);
 #elif defined(_WIN32)
-	for (u32 i = 0; i < count; i++)
+	if (wutex::WaitOnAddress)
 	{
-		NtReleaseKeyedEvent(nullptr, &s_sema_list[sema_id], count, nullptr);
+		s_sema_list[sema_id].sema += count;
+		wutex::WakeByAddressAll(&s_sema_list[sema_id].sema);
+	}
+	else
+	{
+		for (u32 i = 0; i < count; i++)
+		{
+			NtReleaseKeyedEvent(nullptr, &s_sema_list[sema_id], count, nullptr);
+		}
 	}
 #else
 	if (count)

@@ -818,11 +818,15 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 			// Check only CPUs which haven't acknowledged their waiting state yet
 			for_all_cpu<true>([&](cpu_thread* cpu, u64 index)
 			{
+				verify(HERE), cpu->state & cpu_flag::pause;
+
 				if (cpu->state & cpu_flag::wait)
 				{
 					ctr->cpu_copy_bits[index / 64] &= ~(1ull << (index % 64));
 				}
 			});
+
+			_mm_pause();
 		}
 
 		// Extract queue and reverse element order (FILO to FIFO) (TODO: maybe leave order as is?)
