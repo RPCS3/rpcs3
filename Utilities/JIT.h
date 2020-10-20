@@ -55,11 +55,8 @@ namespace asmjit
 	// Should only be used to build global functions
 	asmjit::Runtime& get_global_runtime();
 
-	// Emit xbegin and adjacent loop, return label at xbegin
+	// Emit xbegin and adjacent loop, return label at xbegin (don't use xabort please)
 	[[nodiscard]] asmjit::Label build_transaction_enter(X86Assembler& c, Label fallback, const X86Gp& ctr, uint less_than);
-
-	// Emit xabort
-	void build_transaction_abort(X86Assembler& c, unsigned char code);
 }
 
 // Build runtime function with asmjit::X86Assembler
