@@ -350,6 +350,11 @@ namespace gl
 			baseclass::on_section_resources_destroyed();
 		}
 
+		void sync_surface_memory()
+		{
+			gl::as_rtt(vram_texture)->sync_tag();
+		}
+
 		bool exists() const
 		{
 			return (vram_texture != nullptr);

@@ -319,6 +319,11 @@ namespace vk
 			rsx_pitch = pitch;
 		}
 
+		void sync_surface_memory()
+		{
+			vk::as_rtt(vram_texture)->sync_tag();
+		}
+
 		bool is_synchronized() const
 		{
 			return synchronized;

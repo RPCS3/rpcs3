@@ -515,6 +515,15 @@ namespace rsx
 				}
 			}
 
+			// Resync any exclusions that do not require flushing
+			for (auto& surface : data.sections_to_exclude)
+			{
+				if (surface->get_context() == texture_upload_context::framebuffer_storage)
+				{
+					surface->sync_surface_memory();
+				}
+			}
+
 			data.flushed = true;
 		}
 
