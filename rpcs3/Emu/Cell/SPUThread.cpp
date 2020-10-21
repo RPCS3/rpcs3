@@ -308,7 +308,7 @@ namespace spu
 	}
 }
 
-const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const void* _old, const void* _new)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void* _old, const void* _new)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -352,7 +352,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 
 	// Prepare registers
 	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
-	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
+	c.mov(x86::rax, imm_ptr(&vm::g_sudo_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
@@ -360,7 +360,8 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.and_(args[0].r32(), 0xff80);
 	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
-	c.xor_(x86::r12d, x86::r12d);
+	c.prefetchw(x86::byte_ptr(x86::rbx));
+	c.mov(x86::r12d, 1);
 	c.mov(x86::r13, args[1]);
 
 	// Prepare data
@@ -396,7 +397,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	}
 
 	// Begin transaction
-	Label tx0 = build_transaction_enter(c, fall, x86::r12, 4);
+	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 4);
 	c.xbegin(tx0);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
 	c.test(x86::eax, 127);
@@ -458,22 +459,46 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 
 	c.sub(x86::qword_ptr(x86::rbx), -128);
 	c.xend();
-	c.mov(x86::eax, 1);
+	c.mov(x86::eax, x86::r12d);
+	c.jmp(_ret);
+
+	// XABORT is expensive so finish with xend instead
+	c.bind(fail);
+
+	// Load old data (unused)
+	if (s_tsx_avx)
+	{
+		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
+		c.vmovaps(x86::ymm1, x86::yword_ptr(x86::rbp, 32));
+		c.vmovaps(x86::ymm2, x86::yword_ptr(x86::rbp, 64));
+		c.vmovaps(x86::ymm3, x86::yword_ptr(x86::rbp, 96));
+	}
+	else
+	{
+		c.movaps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
+		c.movaps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
+		c.movaps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
+		c.movaps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
+		c.movaps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
+		c.movaps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
+		c.movaps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
+		c.movaps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
+	}
+
+	c.xend();
+	c.xor_(x86::eax, x86::eax);
 	c.jmp(_ret);
 
 	c.bind(skip);
-	c.xor_(x86::eax, x86::eax);
-	c.xor_(x86::r12d, x86::r12d);
-	build_transaction_abort(c, 0);
+	c.xend();
+	c.mov(x86::eax, _XABORT_EXPLICIT);
 	//c.jmp(fall);
 
 	c.bind(fall);
-	c.sar(x86::eax, 24);
-	c.js(fail);
 
-	// Touch memory if transaction failed without RETRY flag on the first attempt
-	c.cmp(x86::r12, 1);
-	c.jne(next);
+	// Touch memory if transaction failed with status 0
+	c.test(x86::eax, x86::eax);
+	c.jnz(next);
 	c.xor_(x86::rbp, 0xf80);
 	c.lock().add(x86::dword_ptr(x86::rbp), 0);
 	c.xor_(x86::rbp, 0xf80);
@@ -495,13 +520,13 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail2);
 
-	Label tx1 = build_transaction_enter(c, fall2, x86::r12, 666);
+	Label tx1 = build_transaction_enter(c, fall2, x86::r12d, 666);
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 
 	// Check pause flag
 	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
-	c.jc(fail3);
+	c.jc(fall2);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
 	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, x86::r13);
@@ -539,7 +564,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 		c.ptest(x86::xmm0, x86::xmm0);
 	}
 
-	c.jnz(fail2);
+	c.jnz(fail3);
 
 	if (s_tsx_avx)
 	{
@@ -562,23 +587,40 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 
 	c.xend();
 	c.lock().add(x86::qword_ptr(x86::rbx), 127);
-	c.lea(x86::rax, x86::qword_ptr(x86::r12, 1));
+	c.mov(x86::eax, x86::r12d);
 	c.jmp(_ret);
 
-	c.bind(fall2);
-	c.sar(x86::eax, 24);
-	c.js(fail2);
+	// XABORT is expensive so try to finish with xend instead
 	c.bind(fail3);
+
+	// Load old data (unused)
+	if (s_tsx_avx)
+	{
+		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
+		c.vmovaps(x86::ymm1, x86::yword_ptr(x86::rbp, 32));
+		c.vmovaps(x86::ymm2, x86::yword_ptr(x86::rbp, 64));
+		c.vmovaps(x86::ymm3, x86::yword_ptr(x86::rbp, 96));
+	}
+	else
+	{
+		c.movaps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
+		c.movaps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
+		c.movaps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
+		c.movaps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
+		c.movaps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
+		c.movaps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
+		c.movaps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
+		c.movaps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
+	}
+
+	c.xend();
+	c.jmp(fail2);
+
+	c.bind(fall2);
 	c.mov(x86::eax, -1);
 	c.jmp(_ret);
 
-	c.bind(fail);
-	build_transaction_abort(c, 0xff);
-	c.xor_(x86::eax, x86::eax);
-	c.jmp(_ret);
-
 	c.bind(fail2);
-	build_transaction_abort(c, 0xff);
 	c.lock().sub(x86::qword_ptr(x86::rbx), 1);
 	c.xor_(x86::eax, x86::eax);
 	//c.jmp(_ret);
@@ -649,7 +691,7 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 
 	// Prepare registers
 	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
-	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
+	c.mov(x86::rax, imm_ptr(&vm::g_sudo_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
@@ -657,7 +699,8 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	c.and_(args[0].r32(), 0xff80);
 	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
-	c.xor_(x86::r12d, x86::r12d);
+	c.prefetchw(x86::byte_ptr(x86::rbx));
+	c.mov(x86::r12d, 1);
 	c.mov(x86::r13, args[1]);
 
 	// Prepare data
@@ -681,7 +724,7 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	}
 
 	// Begin transaction
-	Label tx0 = build_transaction_enter(c, fall, x86::r12, 8);
+	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 8);
 	c.xbegin(tx0);
 	c.test(x86::qword_ptr(x86::rbx), vm::rsrv_unique_lock);
 	c.jnz(skip);
@@ -711,16 +754,14 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	c.jmp(_ret);
 
 	c.bind(skip);
-	c.xor_(x86::eax, x86::eax);
-	c.xor_(x86::r12d, x86::r12d);
-	build_transaction_abort(c, 0);
+	c.xend();
 	//c.jmp(fall);
 
 	c.bind(fall);
 
-	// Touch memory if transaction failed without RETRY flag on the first attempt
-	c.cmp(x86::r12, 1);
-	c.jne(next);
+	// Touch memory if transaction failed with status 0
+	c.test(x86::eax, x86::eax);
+	c.jnz(next);
 	c.xor_(x86::rbp, 0xf80);
 	c.lock().add(x86::dword_ptr(x86::rbp), 0);
 	c.xor_(x86::rbp, 0xf80);
@@ -736,7 +777,7 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	c.test(x86::eax, vm::rsrv_unique_lock);
 	c.jnz(fall2);
 
-	Label tx1 = build_transaction_enter(c, fall2, x86::r12, 666);
+	Label tx1 = build_transaction_enter(c, fall2, x86::r12d, 666);
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 
@@ -766,7 +807,7 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 
 	c.xend();
 	c.lock().add(x86::qword_ptr(x86::rbx), 127);
-	c.lea(x86::rax, x86::qword_ptr(x86::r12, 1));
+	c.mov(x86::eax, x86::r12d);
 	c.jmp(_ret);
 
 	c.bind(fall2);
@@ -824,17 +865,17 @@ const extern auto spu_getllar_tx = build_function_asm<u32(*)(u32 raddr, void* rd
 
 	// Prepare registers
 	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
-	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
+	c.mov(x86::rax, imm_ptr(&vm::g_sudo_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.and_(args[0].r32(), 0xff80);
 	c.shr(args[0].r32(), 1);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
-	c.xor_(x86::r12d, x86::r12d);
+	c.mov(x86::r12d, 1);
 	c.mov(x86::r13, args[1]);
 
 	// Begin transaction
-	Label tx0 = build_transaction_enter(c, fall, x86::r12, 8);
+	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 8);
 
 	// Check pause flag
 	c.bt(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::pause));

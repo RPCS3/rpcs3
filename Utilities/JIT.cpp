@@ -272,33 +272,13 @@ asmjit::Label asmjit::build_transaction_enter(asmjit::X86Assembler& c, asmjit::L
 	Label begin = c.newLabel();
 	c.jmp(begin);
 	c.bind(fall);
+	c.add(ctr, 1);
 
-	if (less_than < 65)
-	{
-		c.add(ctr, 1);
-		c.test(x86::eax, _XABORT_RETRY);
-		c.jz(fallback);
-	}
-	else
-	{
-		// Don't repeat on explicit XABORT instruction (workaround)
-		c.test(x86::eax, _XABORT_EXPLICIT);
-		c.jnz(fallback);
+	// Don't repeat on zero status (may indicate syscall or interrupt)
+	c.test(x86::eax, x86::eax);
+	c.jz(fallback);
 
-		// Don't repeat on weird zero status
-		c.test(x86::eax, x86::eax);
-		c.jz(fallback);
-
-		// Count an attempt without RETRY flag as 65 normal attempts and continue
-		c.push(x86::rax);
-		c.not_(x86::eax);
-		c.and_(x86::eax, _XABORT_RETRY);
-		c.shl(x86::eax, 5);
-		c.add(x86::eax, 1); // eax = RETRY ? 1 : 65
-		c.add(ctr, x86::rax);
-		c.pop(x86::rax);
-	}
-
+	// Other bad statuses are ignored regardless of repeat flag (TODO)
 	c.cmp(ctr, less_than);
 	c.jae(fallback);
 	c.align(kAlignCode, 16);
@@ -307,13 +287,6 @@ asmjit::Label asmjit::build_transaction_enter(asmjit::X86Assembler& c, asmjit::L
 
 	// xbegin should be issued manually, allows to add more check before entering transaction
 	//c.xbegin(fall);
-}
-
-void asmjit::build_transaction_abort(asmjit::X86Assembler& c, unsigned char code)
-{
-	c.db(0xc6);
-	c.db(0xf8);
-	c.db(code);
 }
 
 #ifdef LLVM_AVAILABLE
