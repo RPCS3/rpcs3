@@ -565,7 +565,7 @@ const std::array<std::pair<ppu_function_t, std::string_view>, 1024> g_ppu_syscal
 	null_func,//BIND_SYSC(sys_ubsd_...),                    //555 (0x22B)
 	BIND_SYSC(sys_usbd_get_device_speed),                   //556 (0x22C)
 	null_func,//BIND_SYSC(sys_ubsd_...),                    //557 (0x22D)
-	null_func,//BIND_SYSC(sys_ubsd_...),                    //558 (0x22E)
+	BIND_SYSC(sys_usbd_unregister_extra_ldd),               //558 (0x22E)
 	BIND_SYSC(sys_usbd_register_extra_ldd),                 //559 (0x22F)
 	null_func,//BIND_SYSC(sys_...),                         //560 (0x230)  ROOT
 	null_func,//BIND_SYSC(sys_...),                         //561 (0x231)  ROOT

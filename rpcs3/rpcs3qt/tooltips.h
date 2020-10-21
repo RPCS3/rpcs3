@@ -181,6 +181,8 @@ public:
 		const QString camera            = tr("Camera support is not implemented, leave this on null.");
 		const QString camera_type       = tr("Camera support is not implemented, leave this on unknown.");
 		const QString move              = tr("PlayStation Move support.\nFake: Experimental! This maps Move controls to DS3 controller mappings.\nMouse: Emulate PSMove with Mouse handler.");
+		const QString ghltar_emu        = tr("Emulate Guitar Hero Live Guitar.\nIf checked, emulated device will be present.\nIf unchecked, emulated device will not be present.");
+		const QString skylander_emu     = tr("Emulate Skylander Portal.\nIf checked, emulated device will be present.\nIf unchecked, emulated device will not be present.");
 
 		// network
 

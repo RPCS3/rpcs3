@@ -1,8 +1,10 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_usbd.h"
 
+#include <algorithm>
 #include <queue>
 #include <thread>
+#include <unordered_set>
 #include "Emu/Memory/vm.h"
 
 #include "Emu/Cell/PPUThread.h"
@@ -14,6 +16,7 @@
 #include "Emu/Io/GHLtar.h"
 
 #include <libusb.h>
+#include <xxhash.h>
 
 LOG_CHANNEL(sys_usbd);
 
@@ -35,6 +38,15 @@ void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
 	fmt::append(out, "TR[r:%d][sz:%d] => %s", +transfer.status, transfer.actual_length, datrace);
 }
 
+enum : u16
+{
+	USBD_VID_ANY = 0x0000
+};
+enum : u16
+{
+	USBD_PID_ANY = 0x0000
+};
+
 struct UsbLdd
 {
 	std::string name;
@@ -50,6 +62,24 @@ struct UsbPipe
 	u8 endpoint = 0;
 };
 
+// template specializations to allow us to use libusb_device_descriptors in unordered_map/unordered_set containers.
+namespace std {
+	template<> struct hash<libusb_device_descriptor>
+	{
+		std::size_t operator()(const libusb_device_descriptor& f) const
+		{
+			return XXH3_64bits(&f, sizeof(libusb_device_descriptor));
+		}
+	};
+	template<> struct equal_to<libusb_device_descriptor>
+	{
+		bool operator() (libusb_device_descriptor const& data1, libusb_device_descriptor const& data2) const
+		{
+			return memcmp(&data1, &data2, sizeof(libusb_device_descriptor))==0;
+		}
+	};
+}
+
 class usb_handler_thread
 {
 public:
@@ -64,7 +94,8 @@ public:
 
 	// LDDs handling functions
 	u32 add_ldd(vm::ptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max);
-	void check_devices_vs_ldds();
+	u32 remove_ldd(vm::ptr<char> s_product, u16 slen_product);
+	void advise_ldd_of_devices(UsbLdd& ldd);
 
 	// Pipe functions
 	u32 open_pipe(u32 device_handle, u8 endpoint);
@@ -95,6 +126,10 @@ public:
 
 private:
 	void send_message(u32 message, u32 tr_id);
+	void perform_device_scan(bool force_scan);
+	void advise_ldds_of_attach(std::shared_ptr<usb_device> dev);
+	void advise_ldds_of_detach(std::shared_ptr<usb_device> dev);
+	void close_pipes_for_device(std::shared_ptr<usb_device> dev);
 
 private:
 	// Counters for device IDs, transfer IDs and pipe IDs
@@ -104,6 +139,60 @@ private:
 
 	// List of device drivers
 	std::vector<UsbLdd> ldds;
+
+	// list of libusb device paths the last time we scanned
+	std::unordered_set<libusb_device_descriptor> device_scan_list;
+
+	// USB device allow_list, only items on this list will be configured for rpcs3 libusb control
+	// tuple elements are: VID, PID_min, PID_max, name, emulation instantiator
+	const std::set<std::tuple<u16, u16, u16, std::string_view, u16(*)(void), std::shared_ptr<usb_device>(*)(void)>> device_allow_list
+	{
+		{0x1430, 0x0150, 0x0150, "Skylanders Portal", &usb_device_skylander_emu::get_num_emu_devices, &usb_device_skylander_emu::make_instance},
+
+		{0x0E6F, 0x0241, 0x0241, "Lego Dimensions Portal", nullptr, nullptr},
+		{0x0E6F, 0x0129, 0x0129, "Disney Infinity Portal", nullptr, nullptr},
+
+		{0x1415, 0x0000, 0x0000, "Singstar Microphone", nullptr, nullptr},
+		{0x12BA, 0x00FF, 0x00FF, "Rocksmith Guitar Adapter", nullptr, nullptr},
+		{0x12BA, 0x0100, 0x0100, "Guitar Hero Guitar", nullptr, nullptr},
+		{0x12BA, 0x0120, 0x0120, "Guitar Hero Drums", nullptr, nullptr},
+		{0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar", &usb_device_ghltar_emu::get_num_emu_devices, &usb_device_ghltar_emu::make_instance},
+
+		{0x12BA, 0x0140, 0x0140, "DJ Hero Turntable", nullptr, nullptr},
+		{0x12BA, 0x0200, 0x020F, "Harmonix Guitar", nullptr, nullptr},
+		{0x12BA, 0x0210, 0x021F, "Harmonix Drums", nullptr, nullptr},
+		{0x12BA, 0x2330, 0x233F, "Harmonix Keyboard", nullptr, nullptr},
+		{0x12BA, 0x2430, 0x243F, "Harmonix Button Guitar", nullptr, nullptr},
+		{0x12BA, 0x2530, 0x253F, "Harmonix Real Guitar", nullptr, nullptr},
+
+		// GT5 Wheels&co
+		{0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b", nullptr, nullptr},
+		{0x044F, 0xB653, 0xB653, "Thrustmaster RGT FFB Pro", nullptr, nullptr},
+		{0x044F, 0xB65A, 0xB65A, "Thrustmaster F430", nullptr, nullptr},
+		{0x044F, 0xB65D, 0xB65D, "Thrustmaster FFB", nullptr, nullptr},
+		{0x044F, 0xB65E, 0xB65E, "Thrustmaster TRS", nullptr, nullptr},
+		{0x044F, 0xB660, 0xB660, "Thrustmaster T500 RS Gear Shift", nullptr, nullptr},
+
+		// Buzz controllers
+		{0x054C, 0x1000, 0x1040, "buzzer0", nullptr, nullptr},
+		{0x054C, 0x0001, 0x0041, "buzzer1", nullptr, nullptr},
+		{0x054C, 0x0042, 0x0042, "buzzer2", nullptr, nullptr},
+		{0x046D, 0xC220, 0xC220, "buzzer9", nullptr, nullptr},
+
+		// GCon3 Gun
+		{0x0B9A, 0x0800, 0x0800, "guncon3", nullptr, nullptr},
+
+		// PSP Devices
+		{0x054C, 0x01C8, 0x01C8, "PSP Type A", nullptr, nullptr},
+		{0x054C, 0x01C9, 0x01C9, "PSP Type B", nullptr, nullptr},
+		{0x054C, 0x01CA, 0x01CA, "PSP Type C", nullptr, nullptr},
+		{0x054C, 0x01CB, 0x01CB, "PSP Type D", nullptr, nullptr},
+		{0x054C, 0x02D2, 0x02D2, "PSP Slim", nullptr, nullptr},
+
+		// Sony Stereo Headsets
+		{0x12BA, 0x0032, 0x0032, "Wireless Stereo Headset", nullptr, nullptr},
+		{0x12BA, 0x0042, 0x0042, "Wireless Stereo Headset", nullptr, nullptr},
+	};
 
 	// List of pipes
 	std::map<u32, UsbPipe> open_pipes;
@@ -117,6 +206,7 @@ private:
 	std::vector<std::shared_ptr<usb_device>> usb_devices;
 
 	libusb_context* ctx = nullptr;
+	libusb_hotplug_callback_handle hotplug_callback_handle = 0;
 };
 
 void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
@@ -135,129 +225,64 @@ usb_handler_thread::usb_handler_thread()
 	if (libusb_init(&ctx) < 0)
 		return;
 
-	// look if any device which we could be interested in is actually connected
-	libusb_device** list = nullptr;
-	ssize_t ndev = libusb_get_device_list(ctx, &list);
-
-	bool found_skylander = false;
-	bool found_ghltar    = false;
-
-	for (ssize_t index = 0; index < ndev; index++)
-	{
-		libusb_device_descriptor desc;
-		libusb_get_device_descriptor(list[index], &desc);
-
-		// clang-format off
-		auto check_device = [&](const u16 id_vendor, const u16 id_product_min, const u16 id_product_max, const char* s_name) -> bool
-		{
-			if (desc.idVendor == id_vendor && desc.idProduct >= id_product_min && desc.idProduct <= id_product_max)
-			{
-				sys_usbd.success("Found device: %s", s_name);
-				libusb_ref_device(list[index]);
-				std::shared_ptr<usb_device_passthrough> usb_dev = std::make_shared<usb_device_passthrough>(list[index], desc);
-				usb_devices.push_back(usb_dev);
-				return true;
-			}
-			return false;
-		};
-		// clang-format on
-
-		if (check_device(0x1430, 0x0150, 0x0150, "Skylanders Portal"))
-		{
-			found_skylander = true;
-		}
-
-		check_device(0x0E6F, 0x0241, 0x0241, "Lego Dimensions Portal");
-		check_device(0x0E6F, 0x0129, 0x0129, "Disney Infinity Portal");
-
-		check_device(0x1415, 0x0000, 0x0000, "Singstar Microphone");
-		check_device(0x12BA, 0x0100, 0x0100, "Guitar Hero Guitar");
-		check_device(0x12BA, 0x0120, 0x0120, "Guitar Hero Drums");
-		if (check_device(0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar"))
-		{
-			found_ghltar = true;
-		}
-
-		check_device(0x12BA, 0x0140, 0x0140, "DJ Hero Turntable");
-		check_device(0x12BA, 0x0200, 0x020F, "Harmonix Guitar");
-		check_device(0x12BA, 0x0210, 0x021F, "Harmonix Drums");
-		check_device(0x12BA, 0x2330, 0x233F, "Harmonix Keyboard");
-		check_device(0x12BA, 0x2430, 0x243F, "Harmonix Button Guitar");
-		check_device(0x12BA, 0x2530, 0x253F, "Harmonix Real Guitar");
-
-		// GT5 Wheels&co
-		check_device(0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b");
-		check_device(0x044F, 0xB653, 0xB653, "Thrustmaster RGT FFB Pro");
-		check_device(0x044F, 0xB65A, 0xB65A, "Thrustmaster F430");
-		check_device(0x044F, 0xB65D, 0xB65D, "Thrustmaster FFB");
-		check_device(0x044F, 0xB65E, 0xB65E, "Thrustmaster TRS");
-		check_device(0x044F, 0xB660, 0xB660, "Thrustmaster T500 RS Gear Shift");
-
-		// Buzz controllers
-		check_device(0x054C, 0x1000, 0x1040, "buzzer0");
-		check_device(0x054C, 0x0001, 0x0041, "buzzer1");
-		check_device(0x054C, 0x0042, 0x0042, "buzzer2");
-		check_device(0x046D, 0xC220, 0xC220, "buzzer9");
-
-		// GCon3 Gun
-		check_device(0x0B9A, 0x0800, 0x0800, "guncon3");
-	}
-
-	libusb_free_device_list(list, 1);
-
-	if (!found_skylander)
-	{
-		sys_usbd.notice("Adding emulated skylander");
-		usb_devices.push_back(std::make_shared<usb_device_skylander>());
-	}
-
-	if (!found_ghltar)
-	{
-		sys_usbd.notice("Adding emulated GHLtar");
-		usb_devices.push_back(std::make_shared<usb_device_ghltar>());
-	}
-
 	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
 	{
 		transfers[index].transfer    = libusb_alloc_transfer(8);
 		transfers[index].transfer_id = index;
 	}
+
 }
 
 usb_handler_thread::~usb_handler_thread()
 {
+	timeval lusb_tv{ 0, 200 };
+	// first we cancel any transfers that might be in progress
+	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
+	{
+		libusb_cancel_transfer(transfers[index].transfer);
+
+		// and transfer cancellation is async, so we need to process
+		// any events that may have triggered from cancelling them
+		libusb_handle_events_timeout_completed(ctx, &lusb_tv, nullptr);
+
+		libusb_free_transfer(transfers[index].transfer);
+	}
+
 	// Ensures shared_ptr<usb_device> are all cleared before terminating libusb
 	handled_devices.clear();
 	open_pipes.clear();
+
 	usb_devices.clear();
 
-	if (ctx)
-		libusb_exit(ctx);
-
-	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
-	{
-		if (transfers[index].transfer)
-			libusb_free_transfer(transfers[index].transfer);
-	}
+	libusb_exit(ctx);
 }
 
 void usb_handler_thread::operator()()
 {
 	timeval lusb_tv{0, 200};
+	u64 usb_hotplug_timeout = 0;
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		// Todo: Hotplug here?
-
 		// Process asynchronous requests that are pending
 		libusb_handle_events_timeout_completed(ctx, &lusb_tv, nullptr);
+
+		// 'Hotplug' scan here
+		if (get_system_time() > usb_hotplug_timeout)
+		{
+			// If we did the hotplug scan each cycle the game performance was significantly degraded, so we only perform this scan
+			// every 4 seconds.  True hotplug events would be better than this scanning, but libusb hotplug isn't supported under
+			// Windows or FreeBSD
+			perform_device_scan(false);
+			usb_hotplug_timeout = get_system_time() + 4'000'000ull;
+		}
 
 		// Process fake transfers
 		if (!fake_transfers.empty())
 		{
 			std::lock_guard lock(this->mutex);
 
-			u64 timestamp = get_system_time() - Emu.GetPauseTime();
+			const u64 timestamp = get_system_time() - Emu.GetPauseTime();
 
 			for (auto it = fake_transfers.begin(); it != fake_transfers.end();)
 			{
@@ -282,12 +307,123 @@ void usb_handler_thread::operator()()
 			}
 		}
 
-		// If there is no handled devices usb thread is not actively needed
+		// If there are no handled devices the usb thread is not actively needed, so we can sleep here for a while
 		if (handled_devices.empty())
 			std::this_thread::sleep_for(500ms);
 		else
 			std::this_thread::sleep_for(200us);
 	}
+}
+
+void usb_handler_thread::perform_device_scan(bool force_scan)
+{
+	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
+	std::lock_guard lock(usbh->mutex);
+
+	std::unordered_set<libusb_device_descriptor> detach_scan{ device_scan_list };
+
+	// look if any device which we could be interested in is actually connected
+	libusb_device** list = nullptr;
+	ssize_t ndev = libusb_get_device_list(ctx, &list);
+	if (ndev != static_cast<ssize_t>(device_scan_list.size()) || force_scan) // we will skip the more expensive scan if we have the same number of devices as last time
+	{
+		for (ssize_t index = 0; index < ndev; index++)
+		{
+			libusb_device_descriptor desc;
+			int rc = libusb_get_device_descriptor(list[index], &desc);
+			if (rc != LIBUSB_SUCCESS)
+			{
+				sys_usbd.error("Error obtaining device descriptor: %s", libusb_strerror(rc));
+				continue;
+			}
+			if (!device_scan_list.contains(desc))
+			{
+				for (const auto& [id_vendor, id_product_min, id_product_max, s_name, emulate, fn_make_instance] : device_allow_list)
+				{
+					// attach
+					if (desc.idVendor == id_vendor
+						&& desc.idProduct >= id_product_min
+						&& desc.idProduct <= id_product_max)
+					{
+						sys_usbd.success("Found device: %s", std::basic_string(s_name));
+						auto usb_dev = std::make_shared<usb_device_passthrough>(std::string(s_name), list[index], desc);
+						usb_devices.push_back(usb_dev);
+						advise_ldds_of_attach(usb_dev);
+					}
+				}
+				device_scan_list.emplace(desc);
+			}
+
+			if (detach_scan.contains(desc))
+				detach_scan.erase(desc);
+		}
+
+		for (auto& item : detach_scan)
+		{
+			// detach
+			for (auto dev = usb_devices.begin(); dev != usb_devices.end(); )
+			{
+				auto usb_dev = dynamic_cast<usb_device_passthrough*>(dev->get());
+				if (!usb_dev)
+					continue;
+
+				libusb_device_descriptor desc;
+				usb_dev->get_descriptor(&desc);
+
+				if (desc.idVendor == item.idVendor
+					&& desc.idProduct == item.idProduct
+					&& desc.iSerialNumber == item.iSerialNumber)
+				{
+					sys_usbd.success("Removing device: %s", usb_dev->get_name());
+					//cancel_outstanding_transfers(*dev);
+					advise_ldds_of_detach(*dev);
+					close_pipes_for_device(*dev);
+					dev = usb_devices.erase(dev);
+				}
+				else
+					++dev;
+			}
+
+			device_scan_list.erase(item);
+		}
+
+
+		// we'll get a copy of the allow_list for devices we might emulate, and will then remove any that we already have in our usb_devices.
+		auto emulate_device_check_list{ device_allow_list };
+		for (const auto& dev : usb_devices)
+		{
+			for (auto itr = emulate_device_check_list.begin(); itr != emulate_device_check_list.end(); ) {
+				u16 idVendor = dev->device._device.idVendor;
+				u16 idProduct = dev->device._device.idProduct;
+				if (std::get<4>(*itr) == nullptr  /* number of emulated devices function */
+					|| (idVendor == std::get<0>(*itr)
+						&& idProduct >= std::get<1>(*itr)
+						&& idProduct <= std::get<2>(*itr))
+					)
+				{
+					itr = emulate_device_check_list.erase(itr);
+				}
+				else
+				{
+					++itr;
+				}
+			}
+		}
+		for (const auto& [id_vendor, id_product_min, id_product_max, s_name, emulate, fn_make_instance] : emulate_device_check_list)
+		{
+			// TODO: the call to emulate() here should really be replaced by a counting of the number of emulated devices above
+			// and then a creation of the number of devices required below...
+			if (emulate && (emulate() > 0) && fn_make_instance)
+			{
+				sys_usbd.success("Emulating device: %s", std::basic_string(s_name));
+				auto usb_dev = fn_make_instance();
+				usb_devices.emplace_back(usb_dev);
+				advise_ldds_of_attach(usb_dev);
+			}
+		}
+	}
+
+	libusb_free_device_list(list, 1);
 }
 
 void usb_handler_thread::send_message(u32 message, u32 tr_id)
@@ -354,8 +490,19 @@ u32 usb_handler_thread::add_ldd(vm::ptr<char> s_product, u16 slen_product, u16 i
 	new_ldd.id_product_min = id_product_min;
 	new_ldd.id_product_max = id_product_max;
 	ldds.push_back(new_ldd);
-
+	advise_ldd_of_devices(new_ldd);
 	return ::size32(ldds); // TODO: to check
+}
+
+u32 usb_handler_thread::remove_ldd(vm::ptr<char> s_product, u16 slen_product)
+{
+	const auto itr = std::find_if(ldds.begin(), ldds.end(), [&](const auto& val) { return (strcmp(val.name.data(), s_product.get_ptr()) == 0); });
+	if (itr != ldds.end())
+	{
+		ldds.erase(itr);
+		return CELL_OK;
+	}
+	return CELL_ESRCH; // TODO: to check
 }
 
 u32 usb_handler_thread::open_pipe(u32 device_handle, u8 endpoint)
@@ -379,33 +526,81 @@ const UsbPipe& usb_handler_thread::get_pipe(u32 pipe_id) const
 	return open_pipes.at(pipe_id);
 }
 
-void usb_handler_thread::check_devices_vs_ldds()
+void usb_handler_thread::advise_ldd_of_devices(UsbLdd& ldd)
 {
 	for (const auto& dev : usb_devices)
 	{
 		if (dev->assigned_number)
 			continue;
-		
-		for (const auto& ldd : ldds)
+
+		if ((dev->device._device.idVendor == ldd.id_vendor || ldd.id_vendor == USBD_VID_ANY) &&
+			((dev->device._device.idProduct >= ldd.id_product_min && dev->device._device.idProduct <= ldd.id_product_max) || (ldd.id_product_min == USBD_PID_ANY && ldd.id_product_max == USBD_PID_ANY)))
 		{
-			if (dev->device._device.idVendor == ldd.id_vendor && dev->device._device.idProduct >= ldd.id_product_min && dev->device._device.idProduct <= ldd.id_product_max)
-			{
-				if (!dev->open_device())
-				{
-					sys_usbd.error("Failed to open device for LDD(VID:0x%x PID:0x%x)", dev->device._device.idVendor, dev->device._device.idProduct);
-					continue;
-				}
+			if (!dev->open_device())
+				continue;
 
-				dev->read_descriptors();
-				dev->assigned_number = dev_counter++; // assign current dev_counter, and atomically increment
+			dev->read_descriptors();
+			dev->assigned_number = dev_counter++; // assign current dev_counter, and atomically increment
 
-				sys_usbd.success("Ldd device matchup for <%s>, assigned as handled_device=0x%x", ldd.name, dev->assigned_number);
+			sys_usbd.success("Ldd device matchup for <%s>, VID:0x%04X PID:0x%04X SN:0x%04X assigned as handled_device=%i, ATTACHED", ldd.name,
+				dev->device._device.idVendor, dev->device._device.idProduct, dev->device._device.iSerialNumber, dev->assigned_number);
 
-				handled_devices.emplace(dev->assigned_number, std::pair(UsbInternalDevice{0x00, narrow<u8>(dev->assigned_number), 0x02, 0x40}, dev));
-				send_message(SYS_USBD_ATTACH, dev->assigned_number);
-			}
+			handled_devices.emplace(dev->assigned_number, std::pair(UsbInternalDevice{ 0x00, narrow<u8>(dev->assigned_number), 0x02, 0x40 }, dev));
+			send_message(SYS_USBD_ATTACH, dev->assigned_number);
 		}
 	}
+}
+
+void usb_handler_thread::advise_ldds_of_attach(std::shared_ptr<usb_device> dev)
+{
+	if (dev->assigned_number)
+		return;
+
+	for (const auto& ldd : ldds)
+	{
+		if ((dev->device._device.idVendor == ldd.id_vendor || ldd.id_vendor == USBD_VID_ANY) &&
+			((dev->device._device.idProduct >= ldd.id_product_min && dev->device._device.idProduct <= ldd.id_product_max) || (ldd.id_product_min == USBD_PID_ANY && ldd.id_product_max == USBD_PID_ANY)))
+		{
+			if (!dev->open_device())
+				continue;
+
+			dev->read_descriptors();
+			dev->assigned_number = dev_counter++; // assign current dev_counter, and atomically increment
+
+			sys_usbd.success("Ldd device matchup for <%s>, VID:0x%04X PID:0x%04X SN:0x%04X assigned as handled_device=%i, ATTACHED", ldd.name,
+				dev->device._device.idVendor, dev->device._device.idProduct, dev->device._device.iSerialNumber, dev->assigned_number);
+
+			handled_devices.emplace(dev->assigned_number, std::pair(UsbInternalDevice{ 0x00, narrow<u8>(dev->assigned_number), 0x02, 0x40 }, dev));
+			send_message(SYS_USBD_ATTACH, dev->assigned_number);
+		}
+	}
+}
+
+void usb_handler_thread::advise_ldds_of_detach(std::shared_ptr<usb_device> dev)
+{
+	if (!dev->assigned_number)
+		return;
+
+	for (const auto& ldd : ldds)
+	{
+		if ((dev->device._device.idVendor == ldd.id_vendor || ldd.id_vendor == USBD_VID_ANY) &&
+			((dev->device._device.idProduct >= ldd.id_product_min && dev->device._device.idProduct <= ldd.id_product_max) || (ldd.id_product_min == USBD_PID_ANY && ldd.id_product_max == USBD_PID_ANY)))
+		{
+			send_message(SYS_USBD_DETACH, dev->assigned_number);
+			sys_usbd.success("Ldd device matchup for <%s>, VID:0x%04X PID:0x%04X SN:0x%04X formerly assigned as handled_device=%i, DETACHED", ldd.name,
+				dev->device._device.idVendor, dev->device._device.idProduct, dev->device._device.iSerialNumber, dev->assigned_number);
+
+			handled_devices.erase(dev->assigned_number);
+		}
+	}
+}
+
+void usb_handler_thread::close_pipes_for_device(std::shared_ptr<usb_device> dev)
+{
+	std::erase_if(open_pipes, [&](const auto& val)
+		{
+			return (val.second.device.get() == dev.get());
+		});
 }
 
 bool usb_handler_thread::get_event(vm::ptr<u64>& arg1, vm::ptr<u64>& arg2, vm::ptr<u64>& arg3)
@@ -500,7 +695,7 @@ error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 
 error_code sys_usbd_get_device_list(u32 handle, vm::ptr<UsbInternalDevice> device_list, u32 max_devices)
 {
-	sys_usbd.warning("sys_usbd_get_device_list(handle=0x%x, device_list=*0x%x, max_devices=0x%x)", handle, device_list, max_devices);
+	sys_usbd.warning("sys_usbd_get_device_list(handle=0x%x, device_list=*0x%x, max_devices=%i)", handle, device_list, max_devices);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
@@ -508,7 +703,6 @@ error_code sys_usbd_get_device_list(u32 handle, vm::ptr<UsbInternalDevice> devic
 	if (!usbh->is_init)
 		return CELL_EINVAL;
 
-	// TODO: was std::min<s32>
 	u32 i_tocopy = std::min<u32>(max_devices, ::size32(usbh->handled_devices));
 
 	for (u32 index = 0; index < i_tocopy; index++)
@@ -521,7 +715,7 @@ error_code sys_usbd_get_device_list(u32 handle, vm::ptr<UsbInternalDevice> devic
 
 error_code sys_usbd_register_extra_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max)
 {
-	sys_usbd.warning("sys_usbd_register_extra_ldd(handle=0x%x, s_product=%s, slen_product=0x%x, id_vendor=0x%x, id_product_min=0x%x, id_product_max=0x%x)", handle, s_product, slen_product, id_vendor,
+	sys_usbd.warning("sys_usbd_register_extra_ldd(handle=0x%x, s_product=%s, slen_product=0x%04X, id_vendor=0x%04X, id_product_min=0x%04X, id_product_max=0x%04X)", handle, s_product, slen_product, id_vendor,
 	    id_product_min, id_product_max);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -531,20 +725,19 @@ error_code sys_usbd_register_extra_ldd(u32 handle, vm::ptr<char> s_product, u16 
 		return CELL_EINVAL;
 
 	s32 res = usbh->add_ldd(s_product, slen_product, id_vendor, id_product_min, id_product_max);
-	usbh->check_devices_vs_ldds();
 
 	return not_an_error(res); // To check
 }
 
 error_code sys_usbd_get_descriptor_size(u32 handle, u32 device_handle)
 {
-	sys_usbd.trace("sys_usbd_get_descriptor_size(handle=0x%x, deviceNumber=0x%x)", handle, device_handle);
+	sys_usbd.trace("sys_usbd_get_descriptor_size(handle=0x%x, deviceNumber=%i)", handle, device_handle);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
 	std::lock_guard lock(usbh->mutex);
 
-	if (!usbh->is_init || !usbh->handled_devices.count(device_handle))
+	if (!usbh->is_init || !usbh->handled_devices.contains(device_handle))
 	{
 		return CELL_EINVAL;
 	}
@@ -554,13 +747,13 @@ error_code sys_usbd_get_descriptor_size(u32 handle, u32 device_handle)
 
 error_code sys_usbd_get_descriptor(u32 handle, u32 device_handle, vm::ptr<void> descriptor, u32 desc_size)
 {
-	sys_usbd.trace("sys_usbd_get_descriptor(handle=0x%x, deviceNumber=0x%x, descriptor=0x%x, desc_size=0x%x)", handle, device_handle, descriptor, desc_size);
+	sys_usbd.trace("sys_usbd_get_descriptor(handle=0x%x, deviceNumber=%i, descriptor=0x%x, desc_size=%i)", handle, device_handle, descriptor, desc_size);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
 	std::lock_guard lock(usbh->mutex);
 
-	if (!usbh->is_init || !usbh->handled_devices.count(device_handle))
+	if (!usbh->is_init || !usbh->handled_devices.contains(device_handle))
 	{
 		return CELL_EINVAL;
 	}
@@ -574,26 +767,31 @@ error_code sys_usbd_get_descriptor(u32 handle, u32 device_handle, vm::ptr<void> 
 // This function is used for psp(cellUsbPspcm), dongles in ps3 arcade cabinets(PS3A-USJ), ps2 cam(eyetoy), generic usb camera?(sample_usb2cam)
 error_code sys_usbd_register_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product)
 {
-	// slightly hacky way of getting Namco GCon3 gun to work.
-	// The register_ldd appears to be a more promiscuous mode function, where all device 'inserts' would be presented to the cellUsbd for Probing.
-	// Unsure how many more devices might need similar treatment (i.e. just a compare and force VID/PID add), or if it's worth adding a full promiscuous
-	// capability
-	if (strcmp(s_product.get_ptr(), "guncon3") == 0)
-	{
-		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
-		sys_usbd_register_extra_ldd(handle, s_product, slen_product, 0x0B9A, 0x0800, 0x0800);
-	}
-	else
-	{
-		sys_usbd.todo("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x)", handle, s_product, slen_product);
-	}
-	return CELL_OK;
+	sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=%i)", handle, s_product, slen_product);
+	return sys_usbd_register_extra_ldd(handle, s_product, slen_product, USBD_VID_ANY, USBD_PID_ANY, USBD_PID_ANY);
 }
 
-error_code sys_usbd_unregister_ldd()
+error_code sys_usbd_unregister_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product)
 {
-	sys_usbd.todo("sys_usbd_unregister_ldd()");
-	return CELL_OK;
+	sys_usbd.warning("sys_usbd_unregister_ldd(handle=0x%x, s_product=%s, slen_product=%i)", handle, s_product, slen_product);
+
+	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
+
+	std::lock_guard lock(usbh->mutex);
+	if (!usbh->is_init)
+		return CELL_EINVAL;
+
+	const s32 res = usbh->remove_ldd(s_product, slen_product);
+
+	return not_an_error(res); // To check
+}
+
+error_code sys_usbd_unregister_extra_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product)
+{
+	// it seems that this should do something different than sys_usbd_unregister_ldd... but not sure what, so for now we'll just do
+	// the same
+	sys_usbd.todo("sys_usbd_unregister_extra_ldd(handle=0x%x, s_product=%s, slen_product=%i)", handle, s_product, slen_product);
+	return sys_usbd_unregister_ldd(handle, s_product, slen_product);
 }
 
 // TODO: determine what the unknown params are
@@ -605,7 +803,7 @@ error_code sys_usbd_open_pipe(u32 handle, u32 device_handle, u32 unk1, u64 unk2,
 
 	std::lock_guard lock(usbh->mutex);
 
-	if (!usbh->is_init || !usbh->handled_devices.count(device_handle))
+	if (!usbh->is_init || !usbh->handled_devices.contains(device_handle))
 	{
 		return CELL_EINVAL;
 	}
@@ -615,13 +813,13 @@ error_code sys_usbd_open_pipe(u32 handle, u32 device_handle, u32 unk1, u64 unk2,
 
 error_code sys_usbd_open_default_pipe(u32 handle, u32 device_handle)
 {
-	sys_usbd.trace("sys_usbd_open_default_pipe(handle=0x%x, device_handle=0x%x)", handle, device_handle);
+	sys_usbd.trace("sys_usbd_open_default_pipe(handle=0x%x, device_handle=%i)", handle, device_handle);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
 	std::lock_guard lock(usbh->mutex);
 
-	if (!usbh->is_init || !usbh->handled_devices.count(device_handle))
+	if (!usbh->is_init || !usbh->handled_devices.contains(device_handle))
 	{
 		return CELL_EINVAL;
 	}
@@ -699,9 +897,9 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 	return CELL_OK;
 }
 
-error_code sys_usbd_detect_event()
+error_code sys_usbd_detect_event(u32 handle)
 {
-	sys_usbd.todo("sys_usbd_detect_event()");
+	sys_usbd.todo("sys_usbd_detect_event(handle=0x%x)", handle);
 	return CELL_OK;
 }
 
@@ -713,10 +911,10 @@ error_code sys_usbd_attach(u32 handle)
 
 error_code sys_usbd_transfer_data(u32 handle, u32 id_pipe, vm::ptr<u8> buf, u32 buf_size, vm::ptr<UsbDeviceRequest> request, u32 type_transfer)
 {
-	sys_usbd.trace("sys_usbd_transfer_data(handle=0x%x, id_pipe=0x%x, buf=*0x%x, buf_length=0x%x, request=*0x%x, type=0x%x)", handle, id_pipe, buf, buf_size, request, type_transfer);
+	sys_usbd.trace("sys_usbd_transfer_data(handle=0x%x, id_pipe=0x%x, buf=*0x%x, buf_length=%i, request=*0x%x, type=0x%x)", handle, id_pipe, buf, buf_size, request, type_transfer);
 	if (sys_usbd.enabled == logs::level::trace && request)
 	{
-		sys_usbd.trace("RequestType:0x%x, Request:0x%x, wValue:0x%x, wIndex:0x%x, wLength:0x%x", request->bmRequestType, request->bRequest, request->wValue, request->wIndex, request->wLength);
+		sys_usbd.trace("RequestType:0x%x, Request:0x%x, wValue:0x%x, wIndex:0x%x, wLength:%i", request->bmRequestType, request->bRequest, request->wValue, request->wIndex, request->wLength);
 		if ((request->bmRequestType & 0x80) == 0 && buf && buf_size != 0)
 		{
 			std::string datrace;
@@ -840,15 +1038,27 @@ error_code sys_usbd_get_isochronous_transfer_status(u32 handle, u32 id_transfer,
 	return CELL_OK;
 }
 
-error_code sys_usbd_get_device_location()
+error_code sys_usbd_get_device_location(u32 handle, u32 device_handle, vm::ptr<u8> location)
 {
-	sys_usbd.todo("sys_usbd_get_device_location()");
+	sys_usbd.warning("sys_usbd_get_device_location(handle=0x%x, deviceNumber=%i, location=0x%x)", handle, device_handle, location);
+
+	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
+
+	std::lock_guard lock(usbh->mutex);
+
+	if (!usbh->is_init || !usbh->handled_devices.contains(device_handle) || !location)
+	{
+		return CELL_EINVAL;
+	}
+
+	usbh->handled_devices[device_handle].second->get_device_location(location.get_ptr());
+
 	return CELL_OK;
 }
 
-error_code sys_usbd_send_event()
+error_code sys_usbd_send_event(u32 handle)
 {
-	sys_usbd.todo("sys_usbd_send_event()");
+	sys_usbd.todo("sys_usbd_send_event(handle=0x%x)", handle);
 	return CELL_OK;
 }
 
@@ -868,20 +1078,31 @@ error_code sys_usbd_event_port_send(u32 handle, u64 arg1, u64 arg2, u64 arg3)
 	return CELL_OK;
 }
 
-error_code sys_usbd_allocate_memory()
+error_code sys_usbd_allocate_memory(u32 handle, vm::pptr<void> ptr, size_t size)
 {
-	sys_usbd.todo("sys_usbd_allocate_memory()");
+	sys_usbd.fatal("sys_usbd_allocate_memory(handle=0x%x, ptr=0x%x, size=%ul)", handle, ptr, size);
 	return CELL_OK;
 }
 
-error_code sys_usbd_free_memory()
+error_code sys_usbd_free_memory(u32 handle, vm::ptr<void> ptr)
 {
-	sys_usbd.todo("sys_usbd_free_memory()");
+	sys_usbd.fatal("sys_usbd_free_memory((handle=0x%x, ptr=0x%x)", handle, ptr);
 	return CELL_OK;
 }
 
-error_code sys_usbd_get_device_speed()
+error_code sys_usbd_get_device_speed(u32 handle, u32 device_handle, vm::ptr<u8> speed)
 {
-	sys_usbd.todo("sys_usbd_get_device_speed()");
+	sys_usbd.warning("sys_usbd_get_device_speed(handle=0x%x, deviceNumber=%i, speed=0x%x)", handle, device_handle, speed);
+
+	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
+
+	std::lock_guard lock(usbh->mutex);
+
+	if (!usbh->is_init || !usbh->handled_devices.contains(device_handle) || !speed)
+	{
+		return CELL_EINVAL;
+	}
+
+	usbh->handled_devices[device_handle].second->get_device_speed(speed.get_ptr());
 	return CELL_OK;
 }

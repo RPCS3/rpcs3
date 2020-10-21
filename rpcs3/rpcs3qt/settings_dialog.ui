@@ -1264,7 +1264,7 @@
       </attribute>
       <layout class="QVBoxLayout" name="inputTab_layout">
        <item>
-        <layout class="QHBoxLayout" name="inputTabLayoutTop" stretch="1,1,1">
+        <layout class="QHBoxLayout" name="inputTabLayout1" stretch="1,1,1">
          <item>
           <widget class="QGroupBox" name="gb_keyboard_handler">
            <property name="title">
@@ -1304,7 +1304,7 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="inputTabLayoutBottom" stretch="1,1,1">
+        <layout class="QHBoxLayout" name="inputTabLayout2" stretch="1,1,1">
          <item>
           <widget class="QGroupBox" name="gb_mouse_handler">
            <property name="title">
@@ -1331,6 +1331,45 @@
          </item>
          <item>
           <widget class="QWidget" name="inputTabSpacerWidget" native="true"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="inputTabLayout3" stretch="1,1,1">
+         <item>
+          <widget class="QGroupBox" name="gb_ghltar_emulate">
+           <property name="title">
+            <string>Guitar Hero Live Guitar Emulate</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_mouse_handler_layout_2">
+            <item>
+             <widget class="QCheckBox" name="ghltarEmulateBox">
+              <property name="text">
+               <string>Emulate Device</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="gb_skylander_emulate">
+           <property name="title">
+            <string>Skylander Emulate</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_camera_setting_layout_2">
+            <item>
+             <widget class="QCheckBox" name="skylanderEmulateBox">
+              <property name="text">
+               <string>Emulate Device</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="inputTabSpacerWidget_2" native="true"/>
          </item>
         </layout>
        </item>

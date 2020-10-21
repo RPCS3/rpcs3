@@ -114,6 +114,8 @@ enum class emu_settings_type
 	Camera,
 	CameraType,
 	Move,
+	GHLtarEmulate,
+	SkylanderEmulate,
 
 	// Misc
 	ExitRPCS3OnFinish,
@@ -252,11 +254,13 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MicrophoneDevices,       { "Audio", "Microphone Devices" }},
 
 	// Input / Output
-	{ emu_settings_type::KeyboardHandler, { "Input/Output", "Keyboard"}},
-	{ emu_settings_type::MouseHandler,    { "Input/Output", "Mouse"}},
-	{ emu_settings_type::Camera,          { "Input/Output", "Camera"}},
-	{ emu_settings_type::CameraType,      { "Input/Output", "Camera type"}},
-	{ emu_settings_type::Move,            { "Input/Output", "Move" }},
+	{ emu_settings_type::KeyboardHandler,  { "Input/Output", "Keyboard"}},
+	{ emu_settings_type::MouseHandler,     { "Input/Output", "Mouse"}},
+	{ emu_settings_type::Camera,           { "Input/Output", "Camera"}},
+	{ emu_settings_type::CameraType,       { "Input/Output", "Camera type"}},
+	{ emu_settings_type::Move,             { "Input/Output", "Move" }},
+	{ emu_settings_type::GHLtarEmulate,    { "Input/Output", "Guitar Hero Live"}},
+	{ emu_settings_type::SkylanderEmulate, { "Input/Output", "Skylander"}},
 
 	// Misc
 	{ emu_settings_type::ExitRPCS3OnFinish,         { "Miscellaneous", "Exit RPCS3 when process finishes" }},

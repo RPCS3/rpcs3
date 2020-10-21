@@ -245,6 +245,8 @@ struct cfg_root : cfg::node
 		cfg::_enum<camera_handler> camera{ this, "Camera", camera_handler::null };
 		cfg::_enum<fake_camera_type> camera_type{ this, "Camera type", fake_camera_type::unknown };
 		cfg::_enum<move_handler> move{ this, "Move", move_handler::null };
+		cfg::_bool ghltar_emulate{ this, "Guitar Hero Live", false, true };
+		cfg::_bool skylander_emulate{ this, "Skylander", false, true };
 	} io{ this };
 
 	struct node_sys : cfg::node

@@ -19,6 +19,11 @@
 
 struct UsbTransfer;
 
+enum
+{
+	MAX_USB_PATH_LEN = 7
+};
+
 // Usb descriptors
 enum : u8
 {
@@ -167,12 +172,21 @@ struct UsbDescriptorNode
 class usb_device
 {
 public:
+	usb_device(std::string name);
+	virtual ~usb_device() = default;
 	virtual bool open_device() = 0;
 
 	virtual void read_descriptors();
 
 	virtual bool set_configuration(u8 cfg_num);
 	virtual bool set_interface(u8 int_num);
+
+	virtual bool get_device_location(u8* location);
+	virtual bool get_device_speed(u8* speed);
+	std::string get_name()
+	{
+		return name;
+	};
 
 	virtual void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) = 0;
 	virtual void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)                                                     = 0;
@@ -190,18 +204,24 @@ protected:
 
 protected:
 	static u64 get_timestamp();
+	std::string name;
 };
 
 class usb_device_passthrough : public usb_device
 {
 public:
-	usb_device_passthrough(libusb_device* _device, libusb_device_descriptor& desc);
+	usb_device_passthrough(std::string name, libusb_device* _device, libusb_device_descriptor& desc);
 	~usb_device_passthrough();
 
 	bool open_device() override;
 	void read_descriptors() override;
 	bool set_configuration(u8 cfg_num) override;
 	bool set_interface(u8 int_num) override;
+
+	bool get_device_location(u8* location) override;
+	bool get_device_speed(u8* speed) override;
+	bool get_descriptor(libusb_device_descriptor* desc);
+
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;
 	void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer) override;
 	void isochronous_transfer(UsbTransfer* transfer) override;
@@ -214,8 +234,10 @@ protected:
 class usb_device_emulated : public usb_device
 {
 public:
-	usb_device_emulated();
-	usb_device_emulated(const UsbDeviceDescriptor& _device);
+	usb_device_emulated(std::string name);
+	usb_device_emulated(std::string name, const UsbDeviceDescriptor& _device);
+
+	static std::shared_ptr<usb_device> make_instance();
 
 	bool open_device() override;
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;
@@ -225,7 +247,13 @@ public:
 	// Emulated specific functions
 	void add_string(char* str);
 	s32 get_descriptor(u8 type, u8 index, u8* ptr, u32 max_size);
+	static u16 get_num_emu_devices();
 
 protected:
 	std::vector<std::string> strings;
+	virtual u8 claim_next_available_instance_num();
+	virtual void release_instance_num(u8 instance);
+private:
+	static inline u32 emulated_instances; // bit field for currently existing instances of emulated devices
 };
+

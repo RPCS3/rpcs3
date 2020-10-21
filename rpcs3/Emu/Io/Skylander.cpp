@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Skylander.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
+#include "Emu/system_config.h"
 
 LOG_CHANNEL(skylander_log, "skylander");
 
@@ -38,9 +39,10 @@ void sky_portal::sky_save()
 	}
 }
 
-usb_device_skylander::usb_device_skylander()
+usb_device_skylander_emu::usb_device_skylander_emu() : usb_device_emulated("Emulated USB Skylanders Portal")
 {
-	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x20, 0x1430, 0x0150, 0x0100, 0x01, 0x02, 0x00, 0x01});
+	instance_num  = claim_next_available_instance_num();
+	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x20, 0x1430, 0x0150, 0x0100, 0x01, 0x02, instance_num, 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0029, 0x01, 0x01, 0x00, 0x80, 0x96}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE, UsbDeviceInterface{0x00, 0x00, 0x02, 0x03, 0x00, 0x00, 0x00}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID, UsbDeviceHID{0x0111, 0x00, 0x01, 0x22, 0x001d}));
@@ -48,11 +50,24 @@ usb_device_skylander::usb_device_skylander()
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x01, 0x03, 0x0020, 0x01}));
 }
 
-usb_device_skylander::~usb_device_skylander()
+usb_device_skylander_emu::~usb_device_skylander_emu()
 {
+	release_instance_num(instance_num);
 }
 
-void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
+std::shared_ptr<usb_device> usb_device_skylander_emu::make_instance()
+{
+	return std::make_shared<usb_device_skylander_emu>();
+}
+
+u16 usb_device_skylander_emu::get_num_emu_devices()
+{
+	//TODO: we should really support more than just one Skylander portal
+	// but at the moment this is just an enable / disable boolean we (implicitly) cast to an int
+	return g_cfg.io.skylander_emulate.get();
+}
+
+void usb_device_skylander_emu::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
 	transfer->fake = true;
 
@@ -145,7 +160,7 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 	}
 }
 
-void usb_device_skylander::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
+void usb_device_skylander_emu::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {
 	verify(HERE), buf_size == 0x20;
 

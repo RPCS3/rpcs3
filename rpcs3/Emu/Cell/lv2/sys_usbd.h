@@ -32,6 +32,13 @@ enum SysUsbdEvents : u32
 	SYS_USBD_TERMINATE         = 0x04,
 };
 
+enum SysUsbdSpeed : u8
+{
+	SYS_USBD_DEVICE_SPEED_LS  = 0x00,
+	SYS_USBD_DEVICE_SPEED_FS  = 0x01,
+	SYS_USBD_DEVICE_SPEED_HS  = 0x02,
+};
+
 // PS3 internal structures
 struct UsbInternalDevice
 {
@@ -64,21 +71,22 @@ error_code sys_usbd_get_device_list(u32 handle, vm::ptr<UsbInternalDevice> devic
 error_code sys_usbd_get_descriptor_size(u32 handle, u32 device_handle);
 error_code sys_usbd_get_descriptor(u32 handle, u32 device_handle, vm::ptr<void> descriptor, u32 desc_size);
 error_code sys_usbd_register_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product);
-error_code sys_usbd_unregister_ldd();
+error_code sys_usbd_unregister_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product);
 error_code sys_usbd_open_pipe(u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 unk3, u32 endpoint, u64 unk4);
 error_code sys_usbd_open_default_pipe(u32 handle, u32 device_handle);
 error_code sys_usbd_close_pipe(u32 handle, u32 pipe_handle);
 error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1, vm::ptr<u64> arg2, vm::ptr<u64> arg3);
-error_code sys_usbd_detect_event();
+error_code sys_usbd_detect_event(u32 handle);
 error_code sys_usbd_attach(u32 handle);
 error_code sys_usbd_transfer_data(u32 handle, u32 id_pipe, vm::ptr<u8> buf, u32 buf_size, vm::ptr<UsbDeviceRequest> request, u32 type_transfer);
 error_code sys_usbd_isochronous_transfer_data(u32 handle, u32 id_pipe, vm::ptr<UsbDeviceIsoRequest> iso_request);
 error_code sys_usbd_get_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<u32> result, vm::ptr<u32> count);
 error_code sys_usbd_get_isochronous_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<UsbDeviceIsoRequest> request, vm::ptr<u32> result);
-error_code sys_usbd_get_device_location();
-error_code sys_usbd_send_event();
+error_code sys_usbd_get_device_location(u32 handle, u32 device_handle, vm::ptr<u8> location);
+error_code sys_usbd_send_event(u32 handle);
 error_code sys_usbd_event_port_send(u32 handle, u64 arg1, u64 arg2, u64 arg3);
-error_code sys_usbd_allocate_memory();
-error_code sys_usbd_free_memory();
-error_code sys_usbd_get_device_speed();
+error_code sys_usbd_allocate_memory(u32 handle, vm::pptr<void> ptr, size_t size);
+error_code sys_usbd_free_memory(u32 handle, vm::ptr<void> ptr);
+error_code sys_usbd_get_device_speed(u32 handle, u32 device_handle, vm::ptr<u8> speed);
 error_code sys_usbd_register_extra_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max);
+error_code sys_usbd_unregister_extra_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product);

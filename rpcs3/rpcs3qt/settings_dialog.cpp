@@ -821,6 +821,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->moveBox, emu_settings_type::Move);
 	SubscribeTooltip(ui->gb_move_handler, tooltips.settings.move);
 
+	m_emu_settings->EnhanceCheckBox(ui->ghltarEmulateBox, emu_settings_type::GHLtarEmulate);
+	SubscribeTooltip(ui->gb_ghltar_emulate, tooltips.settings.ghltar_emu);
+
+	m_emu_settings->EnhanceCheckBox(ui->skylanderEmulateBox, emu_settings_type::SkylanderEmulate);
+	SubscribeTooltip(ui->gb_skylander_emulate, tooltips.settings.skylander_emu);
+
+
 	//     _____           _                   _______    _
 	//    / ____|         | |                 |__   __|  | |
 	//   | (___  _   _ ___| |_ ___ _ __ ___      | | __ _| |__
