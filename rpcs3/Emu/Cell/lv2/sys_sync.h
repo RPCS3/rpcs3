@@ -334,7 +334,7 @@ public:
 #else
 			// Host scheduler quantum for windows (worst case)
 			// NOTE: On ps3 this function has very high accuracy
-			constexpr u64 host_min_quantum = 500;
+			constexpr u64 host_min_quantum = 1000;
 #endif
 			// TODO: Tune for other non windows operating sytems
 

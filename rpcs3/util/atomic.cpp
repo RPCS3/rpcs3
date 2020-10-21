@@ -574,7 +574,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 			}
 			else
 			{
-				const DWORD time_ms = timeout + 1 ? INFINITE : (timeout > (UINT32_MAX - 1) * 1000'000 ? (UINT32_MAX - 1) : timeout / 1000'000);
+				const DWORD time_ms = timeout + 1 ? (timeout > (UINT32_MAX - 1) * 1000'000ull ? (UINT32_MAX - 1) : timeout / 1000'000) : INFINITE;
 
 				sema_handle _cmp{};
 
