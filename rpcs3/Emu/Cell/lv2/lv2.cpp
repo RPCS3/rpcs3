@@ -667,7 +667,7 @@ const std::array<std::pair<ppu_function_t, std::string_view>, 1024> g_ppu_syscal
 	NULL_FUNC(sys_rsxaudio_prepare_process),                //656 (0x290)
 	NULL_FUNC(sys_rsxaudio_start_process),                  //657 (0x291)
 	NULL_FUNC(sys_rsxaudio_stop_process),                   //658 (0x292)
-	NULL_FUNC(sys_rsxaudio_),                               //659 (0x293)
+	null_func, //BIND_SYSC(sys_rsxaudio_...),               //659 (0x293)
 
 	uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, //660-665  UNS
 
