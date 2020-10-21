@@ -501,7 +501,7 @@ namespace rsx
 #ifdef __linux__
 			constexpr u32 host_min_quantum = 50;
 #else
-			constexpr u32 host_min_quantum = 1000;
+			constexpr u32 host_min_quantum = 500;
 #endif
 			u64 start_time = get_system_time();
 
@@ -2543,7 +2543,7 @@ namespace rsx
 #else
 			// Host scheduler quantum for windows (worst case)
 			// NOTE: On ps3 this function has very high accuracy
-			constexpr u64 host_min_quantum = 1000;
+			constexpr u64 host_min_quantum = 500;
 #endif
 			if (remaining >= host_min_quantum)
 			{
