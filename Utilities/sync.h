@@ -28,14 +28,6 @@ DYNAMIC_IMPORT("ntdll.dll", NtWaitForKeyedEvent, NTSTATUS(HANDLE, PVOID Key, BOO
 DYNAMIC_IMPORT("ntdll.dll", NtReleaseKeyedEvent, NTSTATUS(HANDLE, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtWaitForSingleObject, NTSTATUS(HANDLE Handle, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtDelayExecution, NTSTATUS(BOOLEAN Alertable, PLARGE_INTEGER DelayInterval));
-
-namespace wutex
-{
-	DYNAMIC_IMPORT("API-MS-Win-Core-Synch-l1-2-0.dll", WaitOnAddress, BOOL(volatile VOID* Address, PVOID CompareAddress, SIZE_T AddressSize, DWORD dwMilliseconds));
-	DYNAMIC_IMPORT("API-MS-Win-Core-Synch-l1-2-0.dll", WakeByAddressSingle, BOOL(PVOID Address));
-	DYNAMIC_IMPORT("API-MS-Win-Core-Synch-l1-2-0.dll", WakeByAddressAll, BOOL(PVOID Address));
-}
-
 #endif
 
 #ifndef __linux__
