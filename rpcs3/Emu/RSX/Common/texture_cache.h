@@ -515,6 +515,15 @@ namespace rsx
 				}
 			}
 
+			// Resync flushed surfaces. This avoids any pending inherits randomly failing because of memory testing
+			for (auto& surface : data.sections_to_flush)
+			{
+				if (surface->get_context() == texture_upload_context::framebuffer_storage)
+				{
+					surface->sync_surface_memory({});
+				}
+			}
+
 			// Resync any exclusions that do not require flushing
 			std::vector<section_storage_type*> surfaces_to_inherit;
 			for (auto& surface : data.sections_to_exclude)

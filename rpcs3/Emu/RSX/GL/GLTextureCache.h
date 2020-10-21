@@ -355,9 +355,30 @@ namespace gl
 			auto rtt = gl::as_rtt(vram_texture);
 			rtt->sync_tag();
 
-			for (auto& surface : surfaces)
+			if (rtt->old_contents.empty()) [[likely]]
 			{
-				rtt->inherit_surface_contents(gl::as_rtt(surface->vram_texture));
+				for (auto& surface : surfaces)
+				{
+					rtt->inherit_surface_contents(gl::as_rtt(surface->vram_texture));
+				}
+			}
+			else
+			{
+				for (auto& surface : surfaces)
+				{
+					const auto src_rtt = gl::as_rtt(surface->vram_texture);
+					if (std::any_of(rtt->old_contents.begin(), rtt->old_contents.end(),
+						[&src_rtt](const auto& region)
+						{
+							return (region.source == src_rtt);
+						}
+					))
+					{
+						continue;
+					}
+
+					rtt->inherit_surface_contents(src_rtt);
+				}
 			}
 		}
 

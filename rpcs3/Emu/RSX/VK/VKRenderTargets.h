@@ -492,8 +492,8 @@ namespace vk
 			const auto dst_bpp = get_bpp();
 
 			unsigned first = prepare_rw_barrier_for_transfer(this);
+			const bool accept_all = (last_use_tag && test());
 			bool optimize_copy = true;
-			bool any_valid_writes = false;
 			u64  newest_tag = 0;
 
 			for (auto i = first; i < old_contents.size(); ++i)
@@ -502,12 +502,10 @@ namespace vk
 				auto src_texture = static_cast<vk::render_target*>(section.source);
 				src_texture->read_barrier(cmd);
 
-				if (src_texture->test()) [[likely]]
+				if (!accept_all && !src_texture->test()) [[likely]]
 				{
-					any_valid_writes = true;
-				}
-				else
-				{
+					// If this surface is intact, accept all incoming data as it is guaranteed to be safe
+					// If this surface has not been initialized or is dirty, do not add more dirty data to it
 					continue;
 				}
 
@@ -570,21 +568,14 @@ namespace vk
 				newest_tag = src_texture->last_use_tag;
 			}
 
-			if (!any_valid_writes) [[unlikely]]
+			if (!newest_tag) [[unlikely]]
 			{
-				rsx_log.warning("Surface at 0x%x inherited stale references", base_addr);
-
+				// Underlying memory has been modified and we could not find valid data to fill it
 				clear_rw_barrier();
-				shuffle_tag();
 
-				if (!read_access)
-				{
-					// This will be modified either way
-					state_flags |= rsx::surface_state_flags::erase_bkgnd;
-					memory_barrier(cmd, access);
-				}
-
-				return;
+				state_flags |= rsx::surface_state_flags::erase_bkgnd;
+				initialize_memory(cmd, read_access);
+				ensure(state_flags == rsx::surface_state_flags::ready);
 			}
 
 			// NOTE: Optimize flag relates to stencil resolve/unresolve for NVIDIA.
