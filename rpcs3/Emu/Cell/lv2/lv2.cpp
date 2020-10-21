@@ -214,7 +214,7 @@ const std::array<std::pair<ppu_function_t, std::string_view>, 1024> g_ppu_syscal
 	BIND_SYSC(_sys_lwcond_signal_all),                      //116 (0x074)
 	BIND_SYSC(_sys_lwmutex_unlock2),                        //117 (0x075)
 	BIND_SYSC(sys_event_flag_clear),                        //118 (0x076)
-	NULL_FUNC(sys_time_get_rtc),                            //119 (0x077)  ROOT
+	BIND_SYSC(sys_time_get_rtc),                            //119 (0x077)  ROOT
 	BIND_SYSC(sys_rwlock_create),                           //120 (0x078)
 	BIND_SYSC(sys_rwlock_destroy),                          //121 (0x079)
 	BIND_SYSC(sys_rwlock_rlock),                            //122 (0x07A)
@@ -424,9 +424,9 @@ const std::array<std::pair<ppu_function_t, std::string_view>, 1024> g_ppu_syscal
 	NULL_FUNC(sys_game_get_temperature),                    //383 (0x17F)  ROOT
 	NULL_FUNC(sys_sm_get_tzpb),                             //384 (0x180)  ROOT
 	NULL_FUNC(sys_sm_request_led),                          //385 (0x181)  ROOT
-	NULL_FUNC(sys_sm_control_led),                          //386 (0x182)  ROOT
+	BIND_SYSC(sys_sm_control_led),                          //386 (0x182)  ROOT
 	NULL_FUNC(sys_sm_get_system_info),                      //387 (0x183)  DBG
-	NULL_FUNC(sys_sm_ring_buzzer),                          //388 (0x184)  ROOT
+	BIND_SYSC(sys_sm_ring_buzzer2),                         //388 (0x184)  ROOT
 	NULL_FUNC(sys_sm_set_fan_policy),                       //389 (0x185)  PM
 	NULL_FUNC(sys_sm_request_error_log),                    //390 (0x186)  ROOT
 	NULL_FUNC(sys_sm_request_be_count),                     //391 (0x187)  ROOT
@@ -779,12 +779,12 @@ const std::array<std::pair<ppu_function_t, std::string_view>, 1024> g_ppu_syscal
 	BIND_SYSC(sys_fs_chmod),                                //834 (0x342)
 	BIND_SYSC(sys_fs_chown),                                //835 (0x343)
 	NULL_FUNC(sys_fs_newfs),                                //836 (0x344)
-	NULL_FUNC(sys_fs_mount),                                //837 (0x345)
+	BIND_SYSC(sys_fs_mount),                                //837 (0x345)
 	NULL_FUNC(sys_fs_unmount),                              //838 (0x346)
 	NULL_FUNC(sys_fs_sync),                                 //839 (0x347)
 	BIND_SYSC(sys_fs_disk_free),                            //840 (0x348)
-	NULL_FUNC(sys_fs_get_mount_info_size),                  //841 (0x349)
-	NULL_FUNC(sys_fs_get_mount_info),                       //842 (0x34A)
+	BIND_SYSC(sys_fs_get_mount_info_size),                  //841 (0x349)
+	BIND_SYSC(sys_fs_get_mount_info),                       //842 (0x34A)
 	NULL_FUNC(sys_fs_get_fs_info_size),                     //843 (0x34B)
 	NULL_FUNC(sys_fs_get_fs_info),                          //844 (0x34C)
 	BIND_SYSC(sys_fs_mapped_allocate),                      //845 (0x34D)
@@ -796,20 +796,20 @@ const std::array<std::pair<ppu_function_t, std::string_view>, 1024> g_ppu_syscal
 
 	NULL_FUNC(sys_ss_get_cache_of_analog_sunset_flag),      //860 (0x35C)  AUTHID
 	NULL_FUNC(sys_ss_protected_file_db),                    //861  ROOT
-	NULL_FUNC(sys_ss_virtual_trm_manager),                  //862  ROOT
-	NULL_FUNC(sys_ss_update_manager),                       //863  ROOT
+	BIND_SYSC(sys_ss_virtual_trm_manager),                  //862  ROOT
+	BIND_SYSC(sys_ss_update_manager),                       //863  ROOT
 	NULL_FUNC(sys_ss_sec_hw_framework),                     //864  DBG
 	BIND_SYSC(sys_ss_random_number_generator),              //865 (0x361)
 	BIND_SYSC(sys_ss_secure_rtc),                           //866  ROOT
-	NULL_FUNC(sys_ss_appliance_info_manager),               //867  ROOT
+	BIND_SYSC(sys_ss_appliance_info_manager),               //867  ROOT
 	BIND_SYSC(sys_ss_individual_info_manager),              //868  ROOT / DBG  AUTHID
 	NULL_FUNC(sys_ss_factory_data_manager),                 //869  ROOT
 	BIND_SYSC(sys_ss_get_console_id),                       //870 (0x366)
 	BIND_SYSC(sys_ss_access_control_engine),                //871 (0x367)  DBG
 	BIND_SYSC(sys_ss_get_open_psid),                        //872 (0x368)
-	NULL_FUNC(sys_ss_get_cache_of_product_mode),            //873 (0x369)
-	NULL_FUNC(sys_ss_get_cache_of_flash_ext_flag),          //874 (0x36A)
-	NULL_FUNC(sys_ss_get_boot_device),                      //875 (0x36B)
+	BIND_SYSC(sys_ss_get_cache_of_product_mode),            //873 (0x369)
+	BIND_SYSC(sys_ss_get_cache_of_flash_ext_flag),          //874 (0x36A)
+	BIND_SYSC(sys_ss_get_boot_device),                      //875 (0x36B)
 	NULL_FUNC(sys_ss_disc_access_control),                  //876 (0x36C)
 	null_func, //BIND_SYSC(sys_ss_~utoken_if),              //877 (0x36D)  ROOT
 	NULL_FUNC(sys_ss_ad_sign),                              //878 (0x36E)
