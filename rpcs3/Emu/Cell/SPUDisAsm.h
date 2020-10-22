@@ -481,6 +481,13 @@ public:
 	}
 	void SHLQBYI(spu_opcode_t op)
 	{
+		if (!op.si7)
+		{
+			// Made-up mnemonic: as MR on PPU
+			DisAsm("mr", spu_reg_name[op.rt], spu_reg_name[op.ra]);
+			return;
+		}
+
 		DisAsm("shlqbyi", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si7);
 	}
 	void NOP(spu_opcode_t op)
@@ -811,6 +818,13 @@ public:
 	//0 - 7
 	void ORI(spu_opcode_t op)
 	{
+		if (!op.si10)
+		{
+			// Made-up mnemonic: as MR on PPU
+			DisAsm("mr", spu_reg_name[op.rt], spu_reg_name[op.ra]);
+			return;
+		}
+
 		DisAsm("ori", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si10);
 	}
 	void ORHI(spu_opcode_t op)
