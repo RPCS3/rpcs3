@@ -571,8 +571,8 @@ void kernel_explorer::Update()
 					};
 
 					const auto& winfo = spurs.wklInfo(wid);
-					add_leaf(wkl_tree, qstr(fmt::format("Contention: %u/%u (pending: %u), Image: *0x%x (size: 0x%x), Priority (BE64): %016x", contention(spurs.wklCurrentContention[wid % 16])
-						, contention(spurs.wklMaxContention[wid % 16]), contention(spurs.wklPendingContention[wid % 16]), +winfo.addr, winfo.size, std::bit_cast<be_t<u64>>(winfo.priority))));
+					add_leaf(wkl_tree, qstr(fmt::format("Contention: %u/%u (pending: %u), Image: *0x%x (size: 0x%x, arg: 0x%x), Priority (BE64): %016x", contention(spurs.wklCurrentContention[wid % 16])
+						, contention(spurs.wklMaxContention[wid % 16]), contention(spurs.wklPendingContention[wid % 16]), +winfo.addr, winfo.size, winfo.arg, std::bit_cast<be_t<u64>>(winfo.priority))));
 				}
 
 				add_leaf(spurs_tree, qstr(fmt::format("Handler Info: PPU0: 0x%x, PPU1: 0x%x, DirtyState: %u, Waiting: %u, Exiting: %u", spurs.ppu0, spurs.ppu1
