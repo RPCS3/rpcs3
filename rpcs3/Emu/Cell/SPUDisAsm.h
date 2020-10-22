@@ -157,6 +157,7 @@ private:
 
 public:
 	u32 disasm(u32 pc) override;
+	std::pair<bool, v128> try_get_const_value(u32 reg, u32 pc = -1) const;
 
 	//0 - 10
 	void STOP(spu_opcode_t op)
@@ -303,10 +304,9 @@ public:
 	{
 		DisAsm("mtspr", spu_spreg_name[op.ra], spu_reg_name[op.rt]);
 	}
-	void WRCH(spu_opcode_t op)
-	{
-		DisAsm("wrch", spu_ch_name[op.ra], spu_reg_name[op.rt]);
-	}
+
+	void WRCH(spu_opcode_t op);
+
 	void BIZ(spu_opcode_t op)
 	{
 		DisAsm("biz", op.de, spu_reg_name[op.rt], spu_reg_name[op.ra]);
@@ -810,10 +810,8 @@ public:
 	{
 		DisAsm("ilh", spu_reg_name[op.rt], op.i16);
 	}
-	void IOHL(spu_opcode_t op)
-	{
-		DisAsm("iohl", spu_reg_name[op.rt], op.i16);
-	}
+
+	void IOHL(spu_opcode_t op);
 
 	//0 - 7
 	void ORI(spu_opcode_t op)
