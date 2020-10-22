@@ -136,16 +136,13 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	{
 		if (const auto cpu = this->cpu.lock())
 		{
-			if (m_btn_run->text() == RunString && cpu->state.test_and_reset(cpu_flag::dbg_pause))
+			// Alter dbg_pause bit state (disable->enable, enable->disable)
+			const auto old = cpu->state.xor_fetch(cpu_flag::dbg_pause);
+
+			// Notify only if no pause flags are set after this change
+			if (!(old & (cpu_flag::dbg_pause + cpu_flag::dbg_global_pause)))
 			{
-				if (!(cpu->state & (cpu_flag::dbg_pause + cpu_flag::dbg_global_pause)))
-				{
-					cpu->notify();
-				}
-			}
-			else
-			{
-				cpu->state += cpu_flag::dbg_pause;
+				cpu->notify();
 			}
 		}
 		UpdateUI();
