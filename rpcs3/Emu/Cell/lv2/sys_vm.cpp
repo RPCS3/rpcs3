@@ -19,11 +19,8 @@ sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, lv2_memory_container* ct, u32 psize)
 
 sys_vm_t::~sys_vm_t()
 {
-	// Debug build : gcc and clang can not find the static var if retrieved directly in "release" function
-	constexpr auto invalid = id_manager::id_traits<sys_vm_t>::invalid;
-
 	// Free ID
-	g_ids[addr >> 28].release(invalid);
+	g_ids[addr >> 28].release(id_manager::id_traits<sys_vm_t>::invalid);
 }
 
 LOG_CHANNEL(sys_vm);
