@@ -311,6 +311,7 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 
 			if (_this->m_state >= thread_state::aborting)
 			{
+				_this->m_state_notifier.store(data);
 				return false;
 			}
 

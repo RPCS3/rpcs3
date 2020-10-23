@@ -1915,7 +1915,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 	return CELL_OK;
 }
 
-template <bool isolated = false> 
+template <bool isolated = false>
 error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 {
 	const u32 idm_id = spu_thread::find_raw_spu(id);
