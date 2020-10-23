@@ -431,6 +431,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 		if (fallback)
 		{
 			// Restart waiting
+			verify(HERE), sema->load() == 2;
 			sema->release(1);
 			fallback = false;
 		}
@@ -546,7 +547,62 @@ void atomic_storage_futex::notify_all(const void* data)
 		return;
 	}
 
-	for (u64 bits = slot->sema_bits; bits; bits &= bits - 1)
+#if defined(_WIN32) && !defined(USE_FUTEX)
+	if (true)
+	{
+		// Make a copy to filter out waiters that fail some checks
+		u64 copy = slot->sema_bits.load();
+
+		// Used for making non-blocking syscall
+		LARGE_INTEGER instant{};
+
+		for (u64 bits = copy; bits; bits &= bits - 1)
+		{
+			const u32 id = std::countr_zero(bits);
+
+			const auto sema = &slot->sema_data[id];
+
+			if (sema->load() == 1 && sema->compare_and_swap_test(1, 2))
+			{
+				// Waiters locked for notification
+				continue;
+			}
+
+			// Remove the bit from next stage
+			copy &= ~(1ull << id);
+		}
+
+		// If only one waiter exists, there is no point in trying to optimize
+		if (copy & (copy - 1))
+		{
+			for (u64 bits = copy; bits; bits &= bits - 1)
+			{
+				const u32 id = std::countr_zero(bits);
+
+				const auto sema = &slot->sema_data[id];
+
+				if (NtReleaseKeyedEvent(nullptr, sema, 1, &instant))
+				{
+					// Failed to notify immediately
+					continue;
+				}
+
+				// Remove the bit from next stage
+				copy &= ~(1ull << id);
+			}
+		}
+
+		// Proceed with remaining bits using "normal" blocking waiting
+		for (u64 bits = copy; bits; bits &= bits - 1)
+		{
+			NtReleaseKeyedEvent(nullptr, &slot->sema_data[std::countr_zero(bits)], 1, nullptr);
+		}
+
+		return;
+	}
+#endif
+
+	for (u64 bits = slot->sema_bits.load(); bits; bits &= bits - 1)
 	{
 		const auto sema = &slot->sema_data[std::countr_zero(bits)];
 
