@@ -418,7 +418,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->strictModeRendering, &QCheckBox::clicked, this, onStrictRenderingMode);
 
 	// Radio buttons
-	
+
 	SubscribeTooltip(ui->rb_legacy_recompiler, tooltips.settings.legacy_shader_recompiler);
 	SubscribeTooltip(ui->rb_async_recompiler, tooltips.settings.async_shader_recompiler);
 	SubscribeTooltip(ui->rb_async_with_shader_interpreter, tooltips.settings.async_with_shader_interpreter);
@@ -1742,6 +1742,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings_type::HookStaticFuncs);
 	SubscribeTooltip(ui->hookStFunc, tooltips.settings.hook_static_functions);
+
+	m_emu_settings->EnhanceCheckBox(ui->perfReport, emu_settings_type::PerformanceReport);
+	SubscribeTooltip(ui->perfReport, tooltips.settings.enable_performance_report);
 
 	// Comboboxes
 

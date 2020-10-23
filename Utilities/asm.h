@@ -4,6 +4,67 @@
 
 namespace utils
 {
+	// Transaction helper (Max = max attempts) (result = pair of success and op result)
+	template <uint Max = 10, typename F, typename R = std::invoke_result_t<F>>
+	inline auto tx_start(F op)
+	{
+		uint status = -1;
+
+		for (uint i = 0; i < Max; i++)
+		{
+#ifndef _MSC_VER
+			__asm__ goto ("xbegin %l[retry];" ::: "memory" : retry);
+#else
+			status = _xbegin();
+
+			if (status != _XBEGIN_STARTED) [[unlikely]]
+			{
+				goto retry;
+			}
+#endif
+
+			if constexpr (std::is_void_v<R>)
+			{
+				std::invoke(op);
+#ifndef _MSC_VER
+				__asm__ volatile ("xend;" ::: "memory");
+#else
+				_xend();
+#endif
+				return true;
+			}
+			else
+			{
+				auto result = std::invoke(op);
+#ifndef _MSC_VER
+				__asm__ volatile ("xend;" ::: "memory");
+#else
+				_xend();
+#endif
+				return std::make_pair(true, std::move(result));
+			}
+
+			retry:
+#ifndef _MSC_VER
+			__asm__ volatile ("movl %%eax, %0;" : "=r" (status) :: "memory");
+#endif
+			if (!status) [[unlikely]]
+			{
+				break;
+			}
+		}
+
+		if constexpr (std::is_void_v<R>)
+		{
+			return false;
+		}
+		else
+		{
+			return std::make_pair(false, R());
+		}
+	};
+
+
 // Rotate helpers
 #if defined(__GNUG__)
 

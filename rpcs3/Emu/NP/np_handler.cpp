@@ -16,12 +16,19 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <WS2tcpip.h>
+#include <iphlpapi.h>
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <net/if.h> 
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+#endif
+
+#ifdef __FreeBSD__
+#include <ifaddrs.h>
+#include <net/if_dl.h>
 #endif
 
 LOG_CHANNEL(sys_net);
@@ -43,6 +50,13 @@ np_handler::np_handler()
 		if (!discover_ip_address())
 		{
 			nph_log.error("Failed to discover local IP!");
+			is_connected = false;
+			is_psn_active = false;
+		}
+
+		if (!discover_ether_address())
+		{
+			nph_log.error("Failed to discover ethernet address!");
 			is_connected = false;
 			is_psn_active = false;
 		}
@@ -113,7 +127,95 @@ bool np_handler::discover_ip_address()
 	// Set public address to local discovered address for now, may be updated later;
 	public_ip_addr = local_ip_addr;
 
+	nph_log.notice("IP was determined to be %s", ip_to_string(local_ip_addr));
+
 	return true;
+}
+
+bool np_handler::discover_ether_address()
+{
+#ifdef __FreeBSD__
+	ifaddrs* ifap;
+
+	if (getifaddrs(&ifap) == 0)
+	{
+		ifaddrs* p;
+		for (p = ifap; p; p = p->ifa_next)
+		{
+			if (p->ifa_addr->sa_family == AF_LINK)
+			{
+				sockaddr_dl* sdp = reinterpret_cast<sockaddr_dl*>(p->ifa_addr);
+				memcpy(ether_address.data(), sdp->sdl_data + sdp->sdl_nlen, 6);
+				freeifaddrs(ifap);
+				nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
+				return true;
+			}
+		}
+		freeifaddrs(ifap);
+	}
+#elif defined(_WIN32)
+	std::vector<u8> adapter_infos(sizeof(IP_ADAPTER_INFO));
+	ULONG size_infos = sizeof(IP_ADAPTER_INFO);
+
+    if (GetAdaptersInfo(reinterpret_cast<PIP_ADAPTER_INFO>(adapter_infos.data()), &size_infos) == ERROR_BUFFER_OVERFLOW)
+		adapter_infos.resize(size_infos);
+
+    if (GetAdaptersInfo(reinterpret_cast<PIP_ADAPTER_INFO>(adapter_infos.data()), &size_infos) == NO_ERROR && size_infos)
+	{
+		PIP_ADAPTER_INFO info = reinterpret_cast<PIP_ADAPTER_INFO>(adapter_infos.data());
+		memcpy(ether_address.data(), info[0].Address, 6);
+		nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
+		return true;
+	}
+#else
+	ifreq ifr;
+	ifconf ifc;
+	char buf[1024];
+	int success = 0;
+
+	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+	if (sock == -1)
+		return false;
+
+	ifc.ifc_len = sizeof(buf);
+	ifc.ifc_buf = buf;
+	if (ioctl(sock, SIOCGIFCONF, &ifc) == -1)
+		return false;
+
+	ifreq* it              = ifc.ifc_req;
+	const ifreq* const end = it + (ifc.ifc_len / sizeof(ifreq));
+
+	for (; it != end; ++it)
+	{
+		strcpy(ifr.ifr_name, it->ifr_name);
+		if (ioctl(sock, SIOCGIFFLAGS, &ifr) == 0)
+		{
+			if (!(ifr.ifr_flags & IFF_LOOPBACK))
+			{
+				if (ioctl(sock, SIOCGIFHWADDR, &ifr) == 0)
+				{
+					success = 1;
+					break;
+				}
+			}
+		}
+	}
+
+	if (success)
+	{
+		memcpy(ether_address.data(), ifr.ifr_hwaddr.sa_data, 6);
+		nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
+
+		return true;
+	}
+#endif
+
+	return false;
+}
+
+const std::array<u8, 6>& np_handler::get_ether_addr() const
+{
+	return ether_address;
 }
 
 u32 np_handler::get_local_ip_addr() const
@@ -170,6 +272,11 @@ std::string np_handler::ip_to_string(u32 ip_addr)
 	result = inet_ntoa(addr);
 
 	return result;
+}
+
+std::string np_handler::ether_to_string(std::array<u8, 6>& ether)
+{
+	return fmt::format("%02X:%02X:%02X:%02X:%02X:%02X", ether[0], ether[1], ether[2], ether[3], ether[4], ether[5]);
 }
 
 void np_handler::string_to_npid(const char* str, SceNpId* npid)
@@ -960,7 +1067,7 @@ void np_handler::notif_user_joined_room(std::vector<u8>& data)
 	SceNpMatching2RoomMemberUpdateInfo* notif_data = reinterpret_cast<SceNpMatching2RoomMemberUpdateInfo*>(allocate_req_result(event_key, sizeof(SceNpMatching2RoomMemberUpdateInfo)));
 	RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(update_info, notif_data);
 
-	rpcn_log.notice("Received notification that user %s(%d) joined the room", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId);
+	rpcn_log.notice("Received notification that user %s(%d) joined the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
 	extra_nps::print_room_member_data_internal(notif_data->roomMemberDataInternal.get_ptr());
 
 	sysutil_register_cb([room_event_cb = this->room_event_cb, room_id, event_key, room_event_cb_ctx = this->room_event_cb_ctx, room_event_cb_arg = this->room_event_cb_arg](ppu_thread& cb_ppu) -> s32 {
@@ -987,7 +1094,7 @@ void np_handler::notif_user_left_room(std::vector<u8>& data)
 	SceNpMatching2RoomMemberUpdateInfo* notif_data = reinterpret_cast<SceNpMatching2RoomMemberUpdateInfo*>(allocate_req_result(event_key, sizeof(SceNpMatching2RoomMemberUpdateInfo)));
 	RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(update_info, notif_data);
 
-	rpcn_log.notice("Received notification that user %s(%d) left the room", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId);
+	rpcn_log.notice("Received notification that user %s(%d) left the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
 	extra_nps::print_room_member_data_internal(notif_data->roomMemberDataInternal.get_ptr());
 
 	sysutil_register_cb([room_event_cb = this->room_event_cb, room_event_cb_ctx = this->room_event_cb_ctx, room_id, event_key, room_event_cb_arg = this->room_event_cb_arg](ppu_thread& cb_ppu) -> s32 {
@@ -1014,6 +1121,8 @@ void np_handler::notif_room_destroyed(std::vector<u8>& data)
 	SceNpMatching2RoomUpdateInfo* notif_data = reinterpret_cast<SceNpMatching2RoomUpdateInfo*>(allocate_req_result(event_key, sizeof(SceNpMatching2RoomUpdateInfo)));
 	RoomUpdateInfo_to_SceNpMatching2RoomUpdateInfo(update_info, notif_data);
 
+	rpcn_log.notice("Received notification that room(%d) was destroyed", room_id);
+
 	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
 	sigh->disconnect_sig2_users(room_id);
 
@@ -1035,6 +1144,8 @@ void np_handler::notif_p2p_connect(std::vector<u8>& data)
 	const u16 member_id  = reinterpret_cast<le_t<u16>&>(data[8]);
 	const u16 port_p2p   = reinterpret_cast<be_t<u16>&>(data[10]);
 	const u32 addr_p2p   = reinterpret_cast<le_t<u32>&>(data[12]);
+
+	rpcn_log.notice("Received notification to connect to member(%d) of room(%d): %s:%d", member_id, room_id, ip_to_string(addr_p2p), port_p2p);
 
 	// Attempt Signaling
 	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
@@ -1060,6 +1171,8 @@ void np_handler::notif_room_message_received(std::vector<u8>& data)
 	auto message_info                        = flatbuffers::GetRoot<RoomMessageInfo>(message_info_raw.data());
 	SceNpMatching2RoomMessageInfo* notif_data = reinterpret_cast<SceNpMatching2RoomMessageInfo*>(allocate_req_result(event_key, sizeof(SceNpMatching2RoomMessageInfo)));
 	RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(message_info, notif_data);
+
+	rpcn_log.notice("Received notification of a room message from member(%d) in room(%d)", member_id, room_id);
 
 	if (room_msg_cb)
 	{

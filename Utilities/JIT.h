@@ -53,18 +53,15 @@ struct jit_runtime final : asmjit::HostRuntime
 namespace asmjit
 {
 	// Should only be used to build global functions
-	asmjit::JitRuntime& get_global_runtime();
+	asmjit::Runtime& get_global_runtime();
 
-	// Emit xbegin and adjacent loop, return label at xbegin
-	void build_transaction_enter(X86Assembler& c, Label fallback, const X86Gp& ctr, uint less_than);
-
-	// Emit xabort
-	void build_transaction_abort(X86Assembler& c, unsigned char code);
+	// Emit xbegin and adjacent loop, return label at xbegin (don't use xabort please)
+	[[nodiscard]] asmjit::Label build_transaction_enter(X86Assembler& c, Label fallback, const X86Gp& ctr, uint less_than);
 }
 
 // Build runtime function with asmjit::X86Assembler
 template <typename FT, typename F>
-FT build_function_asm(F&& builder)
+inline FT build_function_asm(F&& builder)
 {
 	using namespace asmjit;
 
@@ -89,6 +86,7 @@ FT build_function_asm(F&& builder)
 
 	X86Assembler compiler(&code);
 	builder(std::ref(compiler), args);
+	ASSERT(compiler.getLastError() == 0);
 
 	FT result;
 
@@ -135,14 +133,8 @@ class jit_compiler final
 	// Local LLVM context
 	llvm::LLVMContext m_context;
 
-	// JIT Event Listener
-	std::unique_ptr<struct EventListener> m_jit_el;
-
 	// Execution instance
 	std::unique_ptr<llvm::ExecutionEngine> m_engine;
-
-	// Link table
-	std::unordered_map<std::string, u64> m_link;
 
 	// Arch
 	std::string m_cpu;
@@ -182,12 +174,6 @@ public:
 
 	// Get CPU info
 	static std::string cpu(const std::string& _cpu);
-
-	// Check JIT purpose
-	bool is_primary() const
-	{
-		return !m_link.empty();
-	}
 };
 
 #endif

@@ -166,10 +166,10 @@ void VKGSRender::queue_swap_request()
 	m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
 	m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
 	m_current_command_buffer->reset();
+	m_current_command_buffer->begin();
 
 	// Set up new pointers for the next frame
 	advance_queued_frames();
-	open_command_buffer();
 }
 
 void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resources)

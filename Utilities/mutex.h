@@ -12,17 +12,12 @@ class shared_mutex final
 		c_one = 1u << 14, // Fixed-point 1.0 value (one writer, max_readers = c_one - 1)
 		c_sig = 1u << 30,
 		c_err = 1u << 31,
-		c_vip = 1u << 7,
 	};
 
 	atomic_t<u32> m_value{};
 
 	void imp_lock_shared(u32 val);
 	void imp_unlock_shared(u32 old);
-	void imp_lock_low(u32 val);
-	void imp_unlock_low(u32 old);
-	void imp_lock_vip(u32 val);
-	void imp_unlock_vip(u32 old);
 	void imp_wait();
 	void imp_signal();
 	void imp_lock(u32 val);
@@ -85,64 +80,6 @@ public:
 		if (value >= c_one) [[unlikely]]
 		{
 			imp_unlock_shared(value);
-		}
-	}
-
-	bool try_lock_low()
-	{
-		const u32 value = m_value.load();
-
-		// Conditional increment
-		return value < c_vip - 1 && m_value.compare_and_swap_test(value, value + 1);
-	}
-
-	void lock_low()
-	{
-		const u32 value = m_value.load();
-
-		if (value >= c_vip - 1 || !m_value.compare_and_swap_test(value, value + 1)) [[unlikely]]
-		{
-			imp_lock_low(value);
-		}
-	}
-
-	void unlock_low()
-	{
-		// Unconditional decrement (can result in broken state)
-		const u32 value = m_value.fetch_sub(1);
-
-		if (value >= c_one) [[unlikely]]
-		{
-			imp_unlock_low(value);
-		}
-	}
-
-	bool try_lock_vip()
-	{
-		const u32 value = m_value.load();
-
-		// Conditional increment
-		return (value < c_one - 1 || value & (c_one - c_vip)) && (value % c_vip) == 0 && m_value.compare_and_swap_test(value, value + c_vip);
-	}
-
-	void lock_vip()
-	{
-		const u32 value = m_value.load();
-
-		if ((value >= c_one - 1 && !(value & (c_one - c_vip))) || (value % c_vip) || !m_value.compare_and_swap_test(value, value + c_vip)) [[unlikely]]
-		{
-			imp_lock_vip(value);
-		}
-	}
-
-	void unlock_vip()
-	{
-		// Unconditional decrement (can result in broken state)
-		const u32 value = m_value.fetch_sub(c_vip);
-
-		if (value >= c_one) [[unlikely]]
-		{
-			imp_unlock_vip(value);
 		}
 	}
 
@@ -214,12 +151,6 @@ public:
 		m_value -= c_one - 1;
 	}
 
-	void lock_downgrade_to_vip()
-	{
-		// Convert to vip lock (can result in broken state)
-		m_value -= c_one - c_vip;
-	}
-
 	// Optimized wait for lockability without locking, relaxed
 	void lock_unlock()
 	{
@@ -240,12 +171,9 @@ public:
 	{
 		return m_value.load() < c_one - 1;
 	}
-
-	// Special purpose logic
-	bool downgrade_unique_vip_lock_to_low_or_unlock();
 };
 
-// Simplified shared (reader) lock implementation. Mutually incompatible with low_lock and vip_lock.
+// Simplified shared (reader) lock implementation.
 class reader_lock final
 {
 	shared_mutex& m_mutex;
@@ -281,49 +209,5 @@ public:
 	~reader_lock()
 	{
 		m_upgraded ? m_mutex.unlock() : m_mutex.unlock_shared();
-	}
-};
-
-// Special shared (reader) lock, mutually exclusive with vip locks. Mutually incompatible with normal shared (reader) lock.
-class low_lock final
-{
-	shared_mutex& m_mutex;
-
-public:
-	low_lock(const low_lock&) = delete;
-
-	low_lock& operator=(const low_lock&) = delete;
-
-	explicit low_lock(shared_mutex& mutex)
-		: m_mutex(mutex)
-	{
-		m_mutex.lock_low();
-	}
-
-	~low_lock()
-	{
-		m_mutex.unlock_low();
-	}
-};
-
-// Special shared (reader) lock, mutually exclusive with low locks. Mutually incompatible with normal shared (reader) lock.
-class vip_lock final
-{
-	shared_mutex& m_mutex;
-
-public:
-	vip_lock(const vip_lock&) = delete;
-
-	vip_lock& operator=(const vip_lock&) = delete;
-
-	explicit vip_lock(shared_mutex& mutex)
-		: m_mutex(mutex)
-	{
-		m_mutex.lock_vip();
-	}
-
-	~vip_lock()
-	{
-		m_mutex.unlock_vip();
 	}
 };

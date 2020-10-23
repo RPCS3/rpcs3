@@ -147,21 +147,33 @@ namespace rsx
 			const u32 addr = get_address(offset, ctxt, HERE);
 
 			atomic_t<u64>* res{};
+			bool upd = false;
 
 			// TODO: Check if possible to write on reservations
-			if (!g_use_rtm && rsx->label_addr >> 28 != addr >> 28) [[likely]]
+			if (rsx->label_addr >> 28 != addr >> 28)
 			{
-				res = &vm::reservation_lock(addr, 4).first;
+				if (g_use_rtm)
+				{
+					upd = true;
+				}
+				else
+				{
+					res = &vm::reservation_lock(addr).first;
+				}
 			}
 
 			vm::_ref<RsxSemaphore>(addr).val = arg;
 
 			if (res)
 			{
-				res->release(*res + 127);
+				res->fetch_add(64);
+				res->notify_all();
 			}
-
-			vm::reservation_notifier(addr, 4).notify_all();
+			else if (upd)
+			{
+				// TODO: simply writing semaphore from RSX thread is wrong on TSX path
+				vm::reservation_update(addr);
+			}
 		}
 	}
 
@@ -818,7 +830,7 @@ namespace rsx
 				case CELL_GCM_FUNC_ADD_SIGNED:
 				case CELL_GCM_FUNC_REVERSE_ADD_SIGNED:
 					break;
-			
+
 				default:
 				{
 					// Ignore invalid values as a whole
@@ -1513,7 +1525,7 @@ namespace rsx
 			const auto data_length = in_pitch * (line_count - 1) + line_length;
 
 			rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
-	
+
 			if (const auto result = rsx->read_barrier(read_address, data_length, !is_block_transfer);
 				result == rsx::result_zcull_intr)
 			{

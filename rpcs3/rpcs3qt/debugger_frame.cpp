@@ -136,16 +136,13 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	{
 		if (const auto cpu = this->cpu.lock())
 		{
-			if (m_btn_run->text() == RunString && cpu->state.test_and_reset(cpu_flag::dbg_pause))
+			// Alter dbg_pause bit state (disable->enable, enable->disable)
+			const auto old = cpu->state.xor_fetch(cpu_flag::dbg_pause);
+
+			// Notify only if no pause flags are set after this change
+			if (!(old & (cpu_flag::dbg_pause + cpu_flag::dbg_global_pause)))
 			{
-				if (!(cpu->state & (cpu_flag::dbg_pause + cpu_flag::dbg_global_pause)))
-				{
-					cpu->notify();
-				}
-			}
-			else
-			{
-				cpu->state += cpu_flag::dbg_pause;
+				cpu->notify();
 			}
 		}
 		UpdateUI();
@@ -234,7 +231,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 	const u32 pc = m_debugger_list->m_pc + i * 4;
 
-	if (QApplication::keyboardModifiers() & Qt::ControlModifier)
+	const auto modifiers = QApplication::keyboardModifiers();
+
+	if (modifiers & Qt::ControlModifier)
 	{
 		switch (event->key())
 		{
@@ -261,7 +260,21 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			dlg->show();
 			return;
 		}
+		case Qt::Key_S:
+		{
+			if (modifiers & Qt::AltModifier)
+			{
+				const auto cpu = this->cpu.lock();
 
+				if (!cpu || cpu->id_type() == 1)
+				{
+					return;
+				}
+
+				static_cast<spu_thread*>(cpu.get())->capture_local_storage();
+			}
+			return;
+		}
 		case Qt::Key_F10:
 		{
 			DoStep(true);
@@ -336,6 +349,8 @@ void debugger_frame::UpdateUI()
 	}
 }
 
+Q_DECLARE_METATYPE(std::weak_ptr<cpu_thread>);
+
 void debugger_frame::UpdateUnitList()
 {
 	const u64 threads_created = cpu_thread::g_threads_created;
@@ -357,9 +372,11 @@ void debugger_frame::UpdateUnitList()
 	m_choice_units->clear();
 	m_choice_units->addItem(NoThreadString);
 
-	const auto on_select = [&](u32, cpu_thread& cpu)
+	const auto on_select = [&](u32 id, cpu_thread& cpu)
 	{
-		QVariant var_cpu = QVariant::fromValue<void*>(&cpu);
+		QVariant var_cpu = QVariant::fromValue<std::weak_ptr<cpu_thread>>(
+			id >> 24 == 1 ? static_cast<std::weak_ptr<cpu_thread>>(idm::get_unlocked<named_thread<ppu_thread>>(id)) : idm::get_unlocked<named_thread<spu_thread>>(id));
+
 		m_choice_units->addItem(qstr(cpu.get_name()), var_cpu);
 		if (old_cpu == var_cpu) m_choice_units->setCurrentIndex(m_choice_units->count() - 1);
 	};
@@ -389,21 +406,24 @@ void debugger_frame::OnSelectUnit()
 
 	if (!m_no_thread_selected)
 	{
-		const auto on_select = [&](u32, cpu_thread& cpu)
+		if (const auto cpu0 = m_choice_units->currentData().value<std::weak_ptr<cpu_thread>>().lock())
 		{
-			cpu_thread* data = static_cast<cpu_thread*>(m_choice_units->currentData().value<void*>());
-			return data == &cpu;
-		};
-
-		if (auto ppu = idm::select<named_thread<ppu_thread>>(on_select))
-		{
-			m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
-			cpu = ppu.ptr;
-		}
-		else if (auto spu1 = idm::select<named_thread<spu_thread>>(on_select))
-		{
-			m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
-			cpu = spu1.ptr;
+			if (cpu0->id_type() == 1)
+			{
+				if (cpu0.get() == idm::check<named_thread<ppu_thread>>(cpu0->id))
+				{
+					cpu = cpu0;
+					m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
+				}
+			}
+			else
+			{
+				if (cpu0.get() == idm::check<named_thread<spu_thread>>(cpu0->id))
+				{
+					cpu = cpu0;
+					m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
+				}
+			}
 		}
 	}
 

@@ -124,6 +124,9 @@ private:
 	void signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event);
 
 private:
+	void start_sig_nl(u32 conn_id, u32 addr, u16 port);
+
+private:
 	bool validate_signaling_packet(const signaling_packet* sp);
 	void reschedule_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd, std::chrono::time_point<std::chrono::system_clock> new_timepoint);
 	void retire_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd);

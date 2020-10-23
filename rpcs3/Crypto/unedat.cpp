@@ -692,7 +692,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 		}
 
 		// Perform header validation (EDAT only).
-		char real_file_name[MAX_PATH];
+		char real_file_name[CRYPTO_MAX_PATH];
 		extract_file_name(input_file_name, real_file_name);
 		if (!validate_npd_hashes(real_file_name, devklic, &NPD, verbose))
 		{
@@ -798,7 +798,7 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 	}
 
 	// Perform header validation (EDAT only).
-	char real_file_name[MAX_PATH];
+	char real_file_name[CRYPTO_MAX_PATH];
 	extract_file_name(input_file_name.c_str(), real_file_name);
 	if (!validate_npd_hashes(real_file_name, custom_klic, &NPD, false))
 	{
