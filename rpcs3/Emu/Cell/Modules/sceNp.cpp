@@ -2702,6 +2702,12 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
+	memset(countryCode.get_ptr(), 0, sizeof(countryCode));
+	countryCode->data[0] = 'u';
+	countryCode->data[1] = 's';
+
+	*language = CELL_SYSUTIL_LANG_ENGLISH_US;
+
 	return CELL_OK;
 }
 
@@ -4462,7 +4468,7 @@ error_code sceNpSignalingGetCtxOpt(u32 ctx_id, s32 optname, vm::ptr<s32> optval)
 
 error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, vm::ptr<u32> conn_id)
 {
-	sceNp.warning("sceNpSignalingActivateConnection(ctx_id=%d, npId=*0x%x, conn_id=%d)", ctx_id, npId, conn_id);
+	sceNp.warning("sceNpSignalingActivateConnection(ctx_id=%d, npId=*0x%x, conn_id=*0x%x)", ctx_id, npId, conn_id);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 

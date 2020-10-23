@@ -75,7 +75,7 @@ enum : u32
 	SPU_EVENT_SN = 0x2,    // MFC List Command stall-and-notify event
 	SPU_EVENT_TG = 0x1,    // MFC Tag Group status update event
 
-	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN, // Mask of implemented events
+	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN | SPU_EVENT_S1 | SPU_EVENT_S2, // Mask of implemented events
 	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN,
 
 	SPU_EVENT_INTR_TEST = SPU_EVENT_INTR_IMPLEMENTED,
@@ -187,7 +187,7 @@ public:
 	}
 
 	// Push performing bitwise OR with previous value, may require notification
-	void push_or(u32 value)
+	bool push_or(u32 value)
 	{
 		const u64 old = data.fetch_op([value](u64& data)
 		{
@@ -199,6 +199,8 @@ public:
 		{
 			data.notify_one();
 		}
+
+		return (old & bit_count) == 0;
 	}
 
 	bool push_and(u32 value)
@@ -207,12 +209,16 @@ public:
 	}
 
 	// Push unconditionally (overwriting previous value), may require notification
-	void push(u32 value)
+	bool push(u32 value)
 	{
-		if (data.exchange(bit_count | value) & bit_wait)
+		const u64 old = data.exchange(bit_count | value);
+
+		if (old & bit_wait)
 		{
 			data.notify_one();
 		}
+
+		return (old & bit_count) == 0;
 	}
 
 	// Returns true on success
@@ -694,6 +700,7 @@ public:
 	{
 		u64 all;
 		bf_t<u64, 0, 16> events;
+		bf_t<u64, 16, 8> locks;
 		bf_t<u64, 30, 1> waiting;
 		bf_t<u64, 31, 1> count;
 		bf_t<u64, 32, 32> mask;
@@ -769,6 +776,8 @@ public:
 	void halt();
 
 	void fast_call(u32 ls_addr);
+
+	bool capture_local_storage() const;
 
 	// Convert specified SPU LS address to a pointer of specified (possibly converted to BE) type
 	template<typename T>

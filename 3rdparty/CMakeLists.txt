@@ -106,6 +106,36 @@ endif()
 add_subdirectory(pugixml EXCLUDE_FROM_ALL)
 
 
+# libusb
+if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
+	pkg_check_modules(LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0>=1.0 )
+	CMAKE_DEPENDENT_OPTION( USE_SYS_LIBUSB "Use system libusb-1.0 as shared library" ON
+			"LIBUSB_FOUND" OFF)
+else()
+	pkg_check_modules(LIBUSB IMPORTED_TARGET libusb-1.0>=1.0 )
+	CMAKE_DEPENDENT_OPTION( USE_SYS_LIBUSB "Use system libusb-1.0 as shared library" OFF
+			"LIBUSB_FOUND" OFF)
+endif()
+if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
+	# Always use system libusb as reference implementation isn't supported
+	add_library(usb-1.0-shared INTERFACE)
+	target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
+elseif(MSVC)
+	# Windows time.h defines timespec but doesn't add any flag for it, which makes libusb attempt to define it again
+	add_definitions(-DHAVE_STRUCT_TIMESPEC=1)
+	add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
+else()
+	if(USE_SYS_LIBUSB)
+		# we have the system libusb and have selected to use it
+		add_library(usb-1.0-shared INTERFACE)
+		target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
+	else()
+		# we don't have the system libusb, so we compile from submodule
+		add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
+	endif()
+endif()
+
+
 # hidapi
 add_library(3rdparty_hidapi INTERFACE)
 target_include_directories(3rdparty_hidapi INTERFACE hidapi/hidapi)
@@ -133,24 +163,11 @@ else()
 endif()
 
 
-# libusb
-if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
-	# Always use system libusb as reference implementation isn't supported
-	add_library(usb-1.0-static INTERFACE)
-	target_link_libraries(usb-1.0-static INTERFACE usb)
-elseif(MSVC)
-	# Windows time.h defines timespec but doesn't add any flag for it, which makes libusb attempt to define it again
-	add_definitions(-DHAVE_STRUCT_TIMESPEC=1)
-	add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
-else()
-	add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
-endif()
-
-
 # yaml-cpp
 # We don't want to install yaml-cpp but its cmake file doesn't have option
 # to disable it...
 # So we just install it to a different directory
+set(YAML_CPP_INSTALL OFF CACHE BOOL "Don't install YAML")
 set(CMAKE_INSTALL_PREFIX_OLD ${CMAKE_INSTALL_PREFIX})
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/yaml-cpp_install)
 
@@ -426,12 +443,13 @@ if(USE_SYSTEM_WOLFSSL)
 	target_include_directories(wolfssl INTERFACE WolfSSL_INCLUDE_DIRS)
 else()
 	SET(BUILD_TESTS NO CACHE BOOL "Build test applications")
-	add_definitions(-DHAVE_FFDHE_2048 -DTFM_TIMING_RESISTANT -DECC_TIMING_RESISTANT 
-					-DWC_RSA_BLINDING -DHAVE_AESGCM -DWOLFSSL_SHA512 -DWOLFSSL_SHA384 -DNO_DSA -DHAVE_ECC -DTFM_ECC256 -DECC_SHAMIR 
-					-DNO_RC4 -DNO_HC128 -DNO_RABBIT -DWOLFSSL_SHA224 -DWOLFSSL_SHA3 -DWOLFSSL_SHAKE256 -DHAVE_POLY1305 
-					-DHAVE_ONE_TIME_AUTH -DHAVE_CHACHA -DHAVE_HASHDRBG -DHAVE_TLS_EXTENSIONS -DHAVE_SNI -DHAVE_SUPPORTED_CURVES 
-					-DHAVE_EXTENDED_MASTER -DNO_RC4 -DHAVE_ENCRYPT_THEN_MAC -DNO_PSK -DNO_MD4 
-					-DWC_NO_ASYNC_THREADING -DOPENSSL_EXTRA -DWOLFSSL_DES_ECB)
+	add_compile_definitions(HAVE_FFDHE_2048 TFM_TIMING_RESISTANT ECC_TIMING_RESISTANT
+					WC_RSA_BLINDING HAVE_AESGCM WOLFSSL_SHA512 WOLFSSL_SHA384 NO_DSA HAVE_ECC TFM_ECC256 ECC_SHAMIR
+					NO_RC4 NO_HC128 NO_RABBIT WOLFSSL_SHA224 WOLFSSL_SHA3 WOLFSSL_SHAKE256 HAVE_POLY1305
+					HAVE_ONE_TIME_AUTH HAVE_CHACHA HAVE_HASHDRBG HAVE_TLS_EXTENSIONS HAVE_SNI HAVE_SUPPORTED_CURVES
+					HAVE_EXTENDED_MASTER NO_RC4 HAVE_ENCRYPT_THEN_MAC NO_PSK NO_MD4
+					WC_NO_ASYNC_THREADING OPENSSL_EXTRA WOLFSSL_DES_ECB WC_NO_HARDEN)
+	set(ENABLED_HARDEN OFF CACHE BOOL "Disable Harden")
 	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 	target_include_directories(wolfssl INTERFACE "wolfssl/")
 	# This is needed for CURL
@@ -459,7 +477,11 @@ else()
 endif()
 
 # add nice ALIAS targets for ease of use
-add_library(3rdparty::libusb ALIAS usb-1.0-static)
+if(USE_SYS_LIBUSB)
+	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
+else()
+	add_library(3rdparty::libusb ALIAS usb-1.0-static)
+endif()
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::7z ALIAS 3rdparty_7z)
 add_library(3rdparty::flatbuffers ALIAS 3rdparty_flatbuffers)

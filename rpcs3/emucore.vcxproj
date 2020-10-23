@@ -107,6 +107,7 @@
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp" />
     <ClCompile Include="Emu\system_config_types.cpp" />
+    <ClCompile Include="Emu\perf_meter.cpp" />
     <ClCompile Include="Emu\title.cpp" />
     <ClCompile Include="Emu\system_config.cpp" />
     <ClCompile Include="Emu\NP\fb_helpers.cpp" />
@@ -758,6 +759,7 @@
     <ClInclude Include="Emu\RSX\rsx_methods.h" />
     <ClInclude Include="Emu\RSX\rsx_utils.h" />
     <ClInclude Include="Emu\System.h" />
+    <ClInclude Include="Emu\perf_meter.hpp" />
     <ClInclude Include="Emu\GDB.h" />
     <ClInclude Include="Loader\ELF.h" />
     <ClInclude Include="Loader\PSF.h" />

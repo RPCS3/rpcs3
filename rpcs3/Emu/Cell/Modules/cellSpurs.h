@@ -277,6 +277,14 @@ enum CellSpursJobOpcode : u64
 	CELL_SPURS_JOB_OPCODE_JTS          = 0x800000000ull | CELL_SPURS_JOB_OPCODE_LWSYNC,
 };
 
+enum CellSpursJobChainRevision : u32
+{
+	CELL_SPURS_JOB_REVISION_0 = 0,
+	CELL_SPURS_JOB_REVISION_1 = 1,
+	CELL_SPURS_JOB_REVISION_2 = 2,
+	CELL_SPURS_JOB_REVISION_3 = 3,
+};
+
 // Event flag constants
 enum SpursEventFlagConstants
 {
@@ -446,23 +454,49 @@ struct alignas(128) CellSpursJobChain
 	u8 unk0[0x3];                                                                // 0x20
 	b8 isHalted;                                                                 // 0x23
 	b8 autoReadyCount;                                                           // 0x24
-	u8 unk1[0x7];                                                                // 0x25
+	u8 unk1[0x3];                                                                // 0x25
+	u8 initSpuCount;                                                             // 0x28
+	u8 unk5;                                                                     // 0x29
+	u8 tag1;                                                                     // 0x2A
+	u8 tag2;                                                                     // 0x2B
 	u8 val2C;                                                                    // 0x2C
-	u8 val2D;                                                                    // 0x2D
+	u8 jmVer;                                                                    // 0x2D
 	u8 val2E;                                                                    // 0x2E
 	u8 val2F;                                                                    // 0x2F
 	atomic_be_t<u64> urgentCmds[4];                                              // 0x30
-	u8 unk2[0x22];                                                               // 0x50
+	u8 unk2[0x20];                                                               // 0x50
+	be_t<u16> sizeJobDescriptor;                                                 // 0x70
 	atomic_be_t<u16> maxGrabbedJob;                                              // 0x72
 	be_t<u32> workloadId;                                                        // 0x74
 	vm::bptr<CellSpurs, u64> spurs;                                              // 0x78
 	be_t<s32> error;                                                             // 0x80
 	be_t<u32> unk3;                                                              // 0x84
 	vm::bptr<void, u64> cause;                                                   // 0x88
-	u8 unk4[0x8];                                                                // 0x90
+	be_t<u32> sdkVer;                                                            // 0x90
+	u8 jobMemoryCheck;                                                           // 0x94 (unlike Attribute::jobMmeoryCheck it is not a boolean but a bitset it seems)
+	u8 unk4[0x3];                                                                // 0x95
 	vm::bptr<CellSpursJobChainExceptionEventHandler, u64> exceptionEventHandler; // 0x98
 	vm::bptr<void, u64> exceptionEventHandlerArgument;                           // 0xA0
-	u8 unk5[0x100 - 0xA8];
+	u8 unk6[0x100 - 0xA8];
+};
+
+struct alignas(128) CellSpursJobChain_x00
+{
+	vm::bcptr<u64, u64> pc;                                                      // 0x00
+	vm::bcptr<u64, u64> linkRegister[3];                                         // 0x08
+	u8 unk0[0x3];                                                                // 0x20
+	b8 isHalted;                                                                 // 0x23
+	b8 autoReadyCount;                                                           // 0x24
+	u8 unk1[0x7];                                                                // 0x25
+	u8 val2C;                                                                    // 0x2C
+	u8 val2D;                                                                    // 0x2D
+	u8 val2E;                                                                    // 0x2E
+	u8 val2F;                                                                    // 0x2F
+	be_t<u64> urgentCmds[4];                                                     // 0x30
+	u8 unk2[0x22];                                                               // 0x50
+	be_t<u16> maxGrabbedJob;                                                     // 0x72
+	be_t<u32> workloadId;                                                        // 0x74
+	vm::bptr<CellSpurs, u64> spurs;                                              // 0x78
 };
 
 struct CellSpursJobChainInfo
@@ -491,10 +525,10 @@ struct alignas(8) CellSpursJobChainAttribute
 	be_t<u32> sdkVer;                 // 0x04
 	vm::bcptr<u64> jobChainEntry;     // 0x08
 	be_t<u16> sizeJobDescriptor;      // 0x0C
-	be_t<u32> maxGrabbedJob;          // 0x0E
+	be_t<u16> maxGrabbedJob;          // 0x0E
 	u8 priorities[8];                 // 0x10
 	be_t<u32> maxContention;          // 0x18
-	b8 autoSpuCount;                  // 0x1C 
+	b8 autoSpuCount;                  // 0x1C
 	u8 padding[3];                    // 0x1D
 	be_t<u32> tag1;                   // 0x20
 	be_t<u32> tag2;                   // 0x24
@@ -542,6 +576,22 @@ struct alignas(128) CellSpursJobGuard
 
 CHECK_SIZE_ALIGN(CellSpursJobGuard, 128, 128);
 
+struct alignas(128) CellSpursJobGuard_x00
+{
+	be_t<u32> ncount0;                    // 0x00
+	be_t<u32> ncount1;                    // 0x04
+	vm::bptr<CellSpursJobChain> jobChain; // 0x0C
+	be_t<u32> unk0;
+	be_t<u32> requestSpuCount;            // 0x10
+	be_t<u32> unk1[3];
+	be_t<u32> autoReset;                  // 0x20
+	be_t<u32> unk2[3];
+	be_t<u32> zero;                       // 0x30
+	u8 unk3[0x80 - 0x34];
+};
+
+CHECK_SIZE_ALIGN(CellSpursJobGuard_x00, 128, 128);
+
 // Core CellSpurs structures
 struct alignas(128) CellSpurs
 {
@@ -549,7 +599,7 @@ struct alignas(128) CellSpurs
 	{
 		u8 unk0[0x20]; // 0x00 - SPU exception handler 0x08 - SPU exception handler args
 		be_t<u64> sem; // 0x20
-		be_t<u32> x28; // 0x28
+		atomic_be_t<u32> x28; // 0x28
 		be_t<u32> x2C; // 0x2C
 		vm::bptr<CellSpursShutdownCompletionEventHook, u64> hook; // 0x30
 		vm::bptr<void, u64> hookArg; // 0x38
@@ -694,6 +744,11 @@ struct alignas(128) CellSpurs
 	_sub_str4 wklH2[0x10];                              // 0x1A00
 	u8 unknown_[0x2000 - 0x1B00];
 
+	u32 max_workloads() const
+	{
+		return (flags1 & SF1_32_WORKLOADS ? CELL_SPURS_MAX_WORKLOAD2 : CELL_SPURS_MAX_WORKLOAD);
+	}
+
 	atomic_t<SpursWorkloadState>& wklState(u32 wid)
 	{
 		if (wid & 0x10)
@@ -742,6 +797,18 @@ struct alignas(128) CellSpurs
 		}
 	}
 
+	_sub_str1& wklSyncInfo(u32 wid)
+	{
+		if (wid & 0x10)
+		{
+			return wklF2[wid & 0xf];
+		}
+		else
+		{
+			return wklF1[wid & 0xf];
+		}
+	}
+
 	_sub_str4& wklName(u32 wid)
 	{
 		if (wid & 0x10)
@@ -751,6 +818,18 @@ struct alignas(128) CellSpurs
 		else
 		{
 			return wklH1[wid & 0xf];
+		}
+	}
+
+	WorkloadInfo& wklInfo(u32 wid)
+	{
+		if (wid & 0x10)
+		{
+			return wklInfo2[wid & 0xf];
+		}
+		else
+		{
+			return wklInfo1[wid & 0xf];
 		}
 	}
 };
@@ -822,6 +901,33 @@ struct alignas(128) CellSpursEventFlag
 };
 
 CHECK_SIZE_ALIGN(CellSpursEventFlag, 128, 128);
+
+struct alignas(128) CellSpursEventFlag_x00
+{
+	struct alignas(8) ControlSyncVar
+	{
+		be_t<u16> events;                // 0x00 Event bits
+		be_t<u16> spuTaskPendingRecv;    // 0x02 A bit is set to 1 when the condition of the SPU task using the slot are met and back to 0 when the SPU task unblocks
+		be_t<u16> ppuWaitMask;           // 0x04 Wait mask for blocked PPU thread
+		u8 ppuWaitSlotAndMode;           // 0x06 Top 4 bits: Wait slot number of the blocked PPU threads, Bottom 4 bits: Wait mode of the blocked PPU thread
+		u8 ppuPendingRecv;               // 0x07 Set to 1 when the blocked PPU thread's conditions are met and back to 0 when the PPU thread is unblocked
+	};
+
+	ControlSyncVar ctrl;                 // 0x00
+	be_t<u16> spuTaskUsedWaitSlots;      // 0x08 A bit is set to 1 if the wait slot corresponding to the bit is used by an SPU task and 0 otherwise
+	be_t<u16> spuTaskWaitMode;           // 0x0A A bit is set to 1 if the wait mode for the SPU task corresponding to the bit is AND and 0 otherwise
+	u8 spuPort;                          // 0x0C
+	u8 isIwl;                            // 0x0D
+	u8 direction;                        // 0x0E
+	u8 clearMode;                        // 0x0F
+	be_t<u16> spuTaskWaitMask[16];       // 0x10 Wait mask for blocked SPU tasks
+	be_t<u16> pendingRecvTaskEvents[16]; // 0x30 The value of event flag when the wait condition for the thread/task was met
+	u8 waitingTaskId[16];                // 0x50 Task id of waiting SPU threads
+	u8 waitingTaskWklId[16];             // 0x60 Workload id of waiting SPU threads
+	be_t<u64> addr;                      // 0x70
+	be_t<u32> eventPortId;               // 0x78
+	be_t<u32> eventQueueId;              // 0x7C
+};
 
 using CellSpursLFQueue = CellSyncLFQueue;
 
@@ -962,6 +1068,39 @@ struct alignas(128) CellSpursTaskset
 
 CHECK_SIZE_ALIGN(CellSpursTaskset, 128 * 50, 128);
 
+struct alignas(128) spurs_taskset_signal_op
+{
+	be_t<u32> running[4];            // 0x00
+	be_t<u32> ready[4];              // 0x10
+	be_t<u32> pending_ready[4];      // 0x20
+	be_t<u32> enabled[4];            // 0x30
+	be_t<u32> signalled[4];          // 0x40
+	be_t<u32> waiting[4];            // 0x50
+	vm::bptr<CellSpurs, u64> spurs;  // 0x60
+	be_t<u64> args;                  // 0x68
+	u8 enable_clear_ls;              // 0x70
+	u8 x71;                          // 0x71
+	u8 wkl_flag_wait_task;           // 0x72
+	u8 last_scheduled_task;          // 0x73
+	be_t<u32> wid;                   // 0x74
+	be_t<u64> x78;                   // 0x78
+};
+
+struct alignas(128) spurs_wkl_state_op
+{
+	SpursWorkloadState wklState1[0x10]; // 0x00
+	u8 wklStatus1[0x10];                // 0x10
+	u8 wklEvent1[0x10];                 // 0x20
+	be_t<u32> wklEnabled;               // 0x30
+	be_t<u32> wklMskB;                  // 0x34
+	u8 uns[0x5];                        // 0x38
+	u8 sysSrvMsgUpdateWorkload;         // 0x3D
+	u8 uns2[0x12];                      // 0x3E
+	SpursWorkloadState wklState2[0x10]; // 0x50
+	u8 wklStatus2[0x10];                // 0x60
+	u8 wklEvent2[0x10];                 // 0x70
+};
+
 struct alignas(128) CellSpursTaskset2
 {
 	struct TaskInfo
@@ -1031,7 +1170,7 @@ struct alignas(16) CellSpursTaskBinInfo
 
 struct alignas(128) CellSpursBarrier
 {
-	be_t<u32> zero;                     // 0x00 
+	be_t<u32> zero;                     // 0x00
 	be_t<u32> remained;                 // 0x04
 	u8 unk0[0x34 - 0x8];
 	vm::bptr<CellSpursTaskset> taskset; // 0x34

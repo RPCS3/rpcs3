@@ -1431,7 +1431,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 		// Find the number of tasks that have become ready since the last iteration
 		{
 			auto newlyReadyTasks = v128::andnot(ready, signalled | pready);
-		
+
 			// TODO: Optimize this shit with std::popcount when it's known to be fixed
 			for (auto i = 0; i < 128; i++)
 			{
@@ -1597,14 +1597,14 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 	{
 		auto spurs = kernelCtxt->spurs;
 
-		auto [res, rtime] = vm::reservation_lock(spurs.addr(), 128, vm::dma_lockb);
-		spurs->readyCount(kernelCtxt->wklCurrentId).fetch_op([&](u8& val)
+		vm::reservation_light_op(spurs->readyCount(kernelCtxt->wklCurrentId), [&](atomic_t<u8>& val)
 		{
-			const s32 _new = val + numNewlyReadyTasks;
-			val = static_cast<u8>(std::clamp<s32>(_new, 0, 0xFF));
+			val.fetch_op([&](u8& val)
+			{
+				const s32 _new = val + numNewlyReadyTasks;
+				val = static_cast<u8>(std::clamp<s32>(_new, 0, 0xFF));
+			});
 		});
-
-		res.release(rtime + 128);
 	}
 
 	return rc;

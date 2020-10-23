@@ -219,6 +219,14 @@ private:
 	{
 		Write(fmt::format("%s%s cr%d,r%d,r%d", FixOp(op), (rc ? "." : ""), cr0, r0, r1));
 	}
+	void DisAsm_CR1_R1(const std::string& op, u32 cr0, u32 r0)
+	{
+		Write(fmt::format("%s cr%d,r%d", FixOp(op), cr0, r0));
+	}
+	void DisAsm_R1_CR1(const std::string& op, u32 r0, u32 cr0)
+	{
+		Write(fmt::format("%s r%d,cr%d", FixOp(op), r0, cr0));
+	}
 	void DisAsm_CR1_R2(const std::string& op, u32 cr0, u32 r0, u32 r1)
 	{
 		DisAsm_CR1_R2_RC(op, cr0, r0, r1, false);

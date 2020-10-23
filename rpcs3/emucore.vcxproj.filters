@@ -971,6 +971,9 @@
     <ClCompile Include="Emu\localized_string.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\perf_meter.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1865,6 +1868,9 @@
       <Filter>Emu</Filter>
     </ClInclude>
     <ClInclude Include="Emu\localized_string_id.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\perf_meter.hpp">
       <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>

@@ -7,7 +7,11 @@
 	VFS.cpp
 	GDB.cpp
 	title.cpp
+	perf_meter.cpp
 )
+
+# prevent WolfSSL from warning about not having harden options
+add_compile_definitions(WC_NO_HARDEN)
 
 target_link_libraries(rpcs3_emu
 	PRIVATE

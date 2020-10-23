@@ -1230,7 +1230,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		}
 	};
 
-	if ((d_size | (d_size + addr)) >= 0x100000000ull)
+	if (0x1'0000'0000ull - addr < d_size)
 	{
 		sig_log.error("Invalid d_size (0x%llx)", d_size);
 		report_opcode();
@@ -1240,7 +1240,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 	// get length of data being accessed
 	size_t a_size = get_x64_access_size(context, op, reg, d_size, i_size);
 
-	if ((a_size | (a_size + addr)) >= 0x100000000ull)
+	if (0x1'0000'0000ull - addr < a_size)
 	{
 		sig_log.error("Invalid a_size (0x%llx)", a_size);
 		report_opcode();
@@ -1248,20 +1248,26 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 	}
 
 	// check if address is RawSPU MMIO register
-	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
+	do if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
 		auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
 
 		if (!thread)
 		{
-			return false;
+			break;
 		}
 
-		if (a_size != 4 || !d_size || !i_size)
+		if (!a_size || !d_size || !i_size)
 		{
 			sig_log.error("Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", +op, +reg, d_size, a_size, i_size);
 			report_opcode();
 			return false;
+		}
+
+		if (a_size != 4)
+		{
+			// Might be unimplemented, such as writing MFC proxy EAL+EAH using 64-bit store
+			break;
 		}
 
 		switch (op)
@@ -1342,7 +1348,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		RIP(context) += i_size;
 		g_tls_fault_spu++;
 		return true;
-	}
+	} while (0);
 
 	if (vm::check_addr(addr, std::max(1u, ::narrow<u32>(d_size)), is_writing ? vm::page_writable : vm::page_readable))
 	{
@@ -1515,7 +1521,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			if (!access_violation_recovered)
 			{
 				vm_log.notice("\n%s", cpu->dump_all());
-				vm_log.error("Access violation %s location 0x%x (%s)", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
+				vm_log.error("Access violation %s location 0x%x (%s) [type=u%u]", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory", d_size * 8);
 			}
 
 			// TODO:
@@ -1552,7 +1558,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 	// Do not log any further access violations in this case.
 	if (!access_violation_recovered)
 	{
-		vm_log.fatal("Access violation %s location 0x%x (%s)", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
+		vm_log.fatal("Access violation %s location 0x%x (%s) [type=u%u]", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory", d_size * 8);
 	}
 
 	while (Emu.IsPaused())

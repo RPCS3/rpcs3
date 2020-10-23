@@ -6,6 +6,7 @@ if (CMAKE_USE_PTHREADS_INIT)
 endif()
 
 if (WIN32 OR "${CMAKE_SYSTEM_NAME}" STREQUAL "CYGWIN")
+	add_compile_definitions(PLATFORM_WINDOWS=1)
 	set(OS_WINDOWS 1 CACHE INTERNAL "controls config.h macro definition" FORCE)
 
 	# Enable MingW support for RC language (for CMake pre-2.8)
@@ -22,9 +23,9 @@ if (WIN32 OR "${CMAKE_SYSTEM_NAME}" STREQUAL "CYGWIN")
 	endif()
 
 	list(APPEND PLATFORM_SRC
-		poll_windows.c
+		events_windows.c
 		windows_usbdk.c
-		windows_nt_common.c
+		windows_common.c
 		windows_winusb.c
 		threads_windows.c
 	)
@@ -36,13 +37,14 @@ if (WIN32 OR "${CMAKE_SYSTEM_NAME}" STREQUAL "CYGWIN")
 	endif()
 elseif (APPLE)
 	# Apple != OSX alone
+	add_compile_definitions(PLATFORM_POSIX=1 HAVE_CLOCK_GETTIME)
 	set(OS_DARWIN 1 CACHE INTERNAL "controls config.h macro definition" FORCE)
 
 	if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
 		set(PLATFORM_SRC
 			darwin_usb.c
 			threads_posix.c
-			poll_posix.c
+			events_posix.c
 		)
 
 		find_package(IOKit REQUIRED)
@@ -72,6 +74,7 @@ int main()
 	endif()
 elseif (UNIX)
 	# Unix is for all *NIX systems including OSX
+	add_compile_definitions(PLATFORM_POSIX=1 HAVE_CLOCK_GETTIME)
 	if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 		set(OS_LINUX 1 CACHE INTERNAL "controls config.h macro definition" FORCE)
 
@@ -79,7 +82,7 @@ elseif (UNIX)
 			linux_usbfs.c
 			linux_netlink.c
 			threads_posix.c
-			poll_posix.c
+			events_posix.c
 		)
 
 		list(APPEND LIBUSB_LIBRARIES rt)
