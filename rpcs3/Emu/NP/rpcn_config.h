@@ -2,8 +2,6 @@
 
 #include "Utilities/Config.h"
 
-LOG_CHANNEL(rpcn_cfg, "RPCN Config");
-
 struct cfg_rpcn : cfg::node
 {
 	cfg::string host{this, "Host", "np.rpcs3.net"};

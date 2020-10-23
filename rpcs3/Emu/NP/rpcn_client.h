@@ -143,6 +143,7 @@ class rpcn_client
 		ErrorLogin,
 		ErrorCreate,
 		AlreadyLoggedIn,
+		AlreadyJoined,
 		DbFail,
 		NotFound,
 		Unsupported,
@@ -163,18 +164,18 @@ public:
 	void abort();
 
 	// Synchronous requests
-	bool get_server_list(u32 req_id, const std::string& communication_id, std::vector<u16>& server_list);
+	bool get_server_list(u32 req_id, const SceNpCommunicationId& communication_id, std::vector<u16>& server_list);
 	// Asynchronous requests
-	bool get_world_list(u32 req_id, u16 server_id);
-	bool createjoin_room(u32 req_id, const SceNpMatching2CreateJoinRoomRequest* req);
-	bool join_room(u32 req_id, const SceNpMatching2JoinRoomRequest* req);
-	bool leave_room(u32 req_id, const SceNpMatching2LeaveRoomRequest* req);
-	bool search_room(u32 req_id, const SceNpMatching2SearchRoomRequest* req);
-	bool set_roomdata_external(u32 req_id, const SceNpMatching2SetRoomDataExternalRequest* req);
-	bool get_roomdata_internal(u32 req_id, const SceNpMatching2GetRoomDataInternalRequest* req);
-	bool set_roomdata_internal(u32 req_id, const SceNpMatching2SetRoomDataInternalRequest* req);
-	bool ping_room_owner(u32 req_id, u64 room_id);
-	bool send_room_message(u32 req_id, const SceNpMatching2SendRoomMessageRequest* req);
+	bool get_world_list(u32 req_id, const SceNpCommunicationId& communication_id, u16 server_id);
+	bool createjoin_room(u32 req_id,const SceNpCommunicationId& communication_id, const SceNpMatching2CreateJoinRoomRequest* req);
+	bool join_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2JoinRoomRequest* req);
+	bool leave_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2LeaveRoomRequest* req);
+	bool search_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SearchRoomRequest* req);
+	bool set_roomdata_external(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataExternalRequest* req);
+	bool get_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomDataInternalRequest* req);
+	bool set_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataInternalRequest* req);
+	bool ping_room_owner(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id);
+	bool send_room_message(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendRoomMessageRequest* req);
 	bool req_sign_infos(u32 req_id, const std::string& npid);
 	bool req_ticket(u32 req_id, const std::string& service_id);
 

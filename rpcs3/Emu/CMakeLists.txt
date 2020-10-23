@@ -365,6 +365,7 @@ target_sources(rpcs3_emu PRIVATE
 # Np
 target_sources(rpcs3_emu PRIVATE
 	NP/fb_helpers.cpp
+	NP/np_contexts.cpp
 	NP/np_handler.cpp
 	NP/signaling_handler.cpp
 	NP/np_structs_extra.cpp

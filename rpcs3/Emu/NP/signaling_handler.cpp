@@ -630,5 +630,15 @@ void signaling_handler::set_sig2_infos(u64 room_id, u16 member_id, s32 status, u
 signaling_info signaling_handler::get_sig2_infos(u64 room_id, u16 member_id)
 {
 	std::lock_guard lock(data_mutex);
+
+	if (!sig2_peers[room_id][member_id])
+	{
+		sig2_peers[room_id][member_id] = std::make_shared<signaling_info>();
+		auto& peer = sig2_peers[room_id][member_id];
+		peer->room_id = room_id;
+		peer->member_id = member_id;
+		peer->version = 2;
+	}
+
 	return *sig2_peers[room_id][member_id];
 }

@@ -112,6 +112,7 @@
     <ClCompile Include="Emu\title.cpp" />
     <ClCompile Include="Emu\system_config.cpp" />
     <ClCompile Include="Emu\NP\fb_helpers.cpp" />
+    <ClCompile Include="Emu\NP\np_contexts.cpp" />
     <ClCompile Include="Emu\NP\np_handler.cpp" />
     <ClCompile Include="Emu\NP\signaling_handler.cpp" />
     <ClCompile Include="Emu\NP\np_structs_extra.cpp" />
