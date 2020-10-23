@@ -3646,7 +3646,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 				if (thread.get() != this)
 				{
-					thread_ctrl::raw_notify(*thread);
+					thread_ctrl::notify(*thread);
 				}
 			}
 		}
