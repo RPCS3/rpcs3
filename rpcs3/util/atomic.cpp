@@ -39,6 +39,40 @@ static constexpr u64 s_slot_mask = ~(s_waiter_mask | s_pointer_mask | s_collisio
 template <u64 Mask>
 static constexpr u64 one_v = Mask & (0 - Mask);
 
+// Callback for wait() function, returns false if wait should return
+static thread_local bool(*s_tls_wait_cb)(const void* data) = [](const void*){ return true; };
+
+// Compare data in memory with old value, and return true if they are equal
+template <bool CheckCb = true, bool CheckData = true>
+static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value, u64 mask)
+{
+	if constexpr (CheckCb)
+	{
+		if (!s_tls_wait_cb(data))
+		{
+			return false;
+		}
+	}
+
+	if constexpr (CheckData)
+	{
+		if (!data)
+		{
+			return false;
+		}
+	}
+
+	switch (size)
+	{
+	case 1: return (reinterpret_cast<const atomic_t<u8>*>(data)->load() & mask) == (old_value & mask);
+	case 2: return (reinterpret_cast<const atomic_t<u16>*>(data)->load() & mask) == (old_value & mask);
+	case 4: return (reinterpret_cast<const atomic_t<u32>*>(data)->load() & mask) == (old_value & mask);
+	case 8: return (reinterpret_cast<const atomic_t<u64>*>(data)->load() & mask) == (old_value & mask);
+	}
+
+	return false;
+}
+
 namespace
 {
 	struct sync_var
@@ -341,25 +375,6 @@ static bool sema_get(u32 id)
 	return false;
 }
 
-static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value, u64 mask)
-{
-	switch (size)
-	{
-	case 1: return (reinterpret_cast<const atomic_t<u8>*>(data)->load() & mask) == (old_value & mask);
-	case 2: return (reinterpret_cast<const atomic_t<u16>*>(data)->load() & mask) == (old_value & mask);
-	case 4: return (reinterpret_cast<const atomic_t<u32>*>(data)->load() & mask) == (old_value & mask);
-	case 8: return (reinterpret_cast<const atomic_t<u64>*>(data)->load() & mask) == (old_value & mask);
-	}
-
-	return false;
-}
-
-// Callback for wait() function, returns false if wait should return
-static thread_local bool(*s_tls_wait_cb)(const void* data) = [](const void*)
-{
-	return true;
-};
-
 void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value, u64 timeout, u64 mask)
 {
 	if (!timeout)
@@ -539,7 +554,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 	bool fallback = false;
 
-	if (sema_id && s_tls_wait_cb(data) && ptr_cmp(data, size, old_value, mask))
+	if (sema_id && ptr_cmp(data, size, old_value, mask))
 	{
 #ifdef USE_FUTEX
 		struct timespec ts;
