@@ -3873,60 +3873,16 @@ void spu_thread::fast_call(u32 ls_addr)
 
 bool spu_thread::capture_local_storage() const
 {
-	struct aligned_delete
-	{
-		void operator()(u8* ptr)
-		{
-			::operator delete(ptr, std::align_val_t{64});
-		}
-	};
-
-	std::unique_ptr<u8, aligned_delete> ls_copy(static_cast<u8*>(::operator new(SPU_LS_SIZE, std::align_val_t{64})));
-	const auto ls_ptr = ls_copy.get();
-	std::memcpy(ls_ptr, _ptr<void>(0), SPU_LS_SIZE);
-
-	std::bitset<SPU_LS_SIZE / 512> found;
-	alignas(64) constexpr spu_rdata_t zero{};
-
-	// Scan Local Storage in 512-byte blocks for non-zero blocks
-	for (s32 i = 0; i < SPU_LS_SIZE;)
-	{
-		if (!cmp_rdata(zero, *reinterpret_cast<const spu_rdata_t*>(ls_ptr + i)))
-		{
-			found.set(i / 512);
-			i = ::align(i + 1u, 512);
-		}
-		else
-		{
-			i += sizeof(spu_rdata_t);
-		}
-	}
-
 	spu_exec_object spu_exec;
 
-	// Now save the data in sequential segments
-	for (s32 i = 0, found_first = -1; i <= SPU_LS_SIZE; i += 512)
-	{
-		if (i == SPU_LS_SIZE || !found[i / 512])
-		{
-			if (auto begin = std::exchange(found_first, -1); begin != -1)
-			{
-				// Save data as an executable segment, even the SPU stack
-				auto& prog = spu_exec.progs.emplace_back(SYS_SPU_SEGMENT_TYPE_COPY, 0x7, begin + 0u, i - begin + 0u, 512
-					, std::vector<uchar>(ls_ptr + begin, ls_ptr + i));
+	// Save data as an executable segment, even the SPU stack
+	// In the past, an optimization was made here to save only non-zero chunks of data
+	// But Ghidra didn't like accessing memory out of chunks (pretty common)
+	// So it has been reverted
+	auto& prog = spu_exec.progs.emplace_back(SYS_SPU_SEGMENT_TYPE_COPY, 0x7, 0, SPU_LS_SIZE, 8, std::vector<uchar>(ls, ls + SPU_LS_SIZE));
 
-				prog.p_paddr = prog.p_vaddr;
-				spu_log.success("Segment: p_type=0x%x, p_vaddr=0x%x, p_filesz=0x%x, p_memsz=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz);
-			}
-
-			continue;
-		}
-
-		if (found_first == -1)
-		{
-			found_first = i;
-		}
-	}
+	prog.p_paddr = prog.p_vaddr;
+	spu_log.success("Segment: p_type=0x%x, p_vaddr=0x%x, p_filesz=0x%x, p_memsz=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz);
 
 	std::string name;
 
