@@ -75,6 +75,12 @@ static s32 spursTasksetProcessSyscall(spu_thread& spu, u32 syscallNum, u32 args)
 static void spursTasksetInit(spu_thread& spu, u32 pollStatus);
 static s32 spursTasksetLoadElf(spu_thread& spu, u32* entryPoint, u32* lowestLoadAddr, u64 elfAddr, bool skipWriteableSegments);
 
+//
+// SPURS jobchain policy module functions
+//
+bool spursJobChainEntry(spu_thread& spu);
+void spursJobchainPopUrgentCommand(spu_thread& spu);
+
 //----------------------------------------------------------------------------
 // SPURS utility functions
 //----------------------------------------------------------------------------
@@ -2045,4 +2051,55 @@ s32 spursTasksetLoadElf(spu_thread& spu, u32* entryPoint, u32* lowestLoadAddr, u
 	if (lowestLoadAddr) *lowestLoadAddr = _lowestLoadAddr;
 
 	return CELL_OK;
+}
+
+//----------------------------------------------------------------------------
+// SPURS taskset policy module functions
+//----------------------------------------------------------------------------
+bool spursJobChainEntry(spu_thread& spu)
+{
+	const auto ctxt = spu._ptr<SpursJobChainContext>(0x4a00);
+	auto kernelCtxt = spu._ptr<SpursKernelContext>(spu.gpr[3]._u32[3]);
+
+	auto arg = spu.gpr[4]._u64[1];
+	auto pollStatus = spu.gpr[5]._u32[3];
+
+	// TODO
+	return false;
+}
+
+void spursJobchainPopUrgentCommand(spu_thread& spu)
+{
+	const auto ctxt = spu._ptr<SpursJobChainContext>(0x4a00);
+	const auto jc = vm::unsafe_ptr_cast<CellSpursJobChain_x00>(+ctxt->jobChain);
+
+	const bool alterQueue = ctxt->unkFlag0;
+	vm::reservation_op(jc, [&](CellSpursJobChain_x00& op)
+	{
+		const auto ls = reinterpret_cast<CellSpursJobChain_x00*>(ctxt->tempAreaJobChain);
+
+		struct alignas(16) { v128 first, second; } data;
+		std::memcpy(&data, &op.urgentCmds, sizeof(op.urgentCmds));
+
+		if (!alterQueue)
+		{
+			// Read the queue, do not modify it
+		}
+		else
+		{
+			// Move FIFO queue contents one command up
+			data.first._u64[0] = data.first._u64[1];
+			data.first._u64[1] = data.second._u64[0];
+			data.second._u64[0] = data.second._u64[1];
+			data.second._u64[1] = 0;
+		}
+
+		// Writeback
+		std::memcpy(&ls->urgentCmds, &data, sizeof(op.urgentCmds));
+
+		std::memcpy(&ls->isHalted, &op.unk0[0], 1); // Maybe intended to set it to false
+		ls->unk5 = 0;
+		ls->sizeJobDescriptor = op.maxGrabbedJob;
+		std::memcpy(&op, ls, 128);
+	});
 }
