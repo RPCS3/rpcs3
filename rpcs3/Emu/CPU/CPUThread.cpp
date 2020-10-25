@@ -34,6 +34,7 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::stop: return "STOP";
 		case cpu_flag::exit: return "EXIT";
 		case cpu_flag::wait: return "w";
+		case cpu_flag::temp: return "t";
 		case cpu_flag::pause: return "p";
 		case cpu_flag::suspend: return "s";
 		case cpu_flag::ret: return "ret";
@@ -589,7 +590,7 @@ bool cpu_thread::check_state() noexcept
 					store = true;
 				}
 
-				retval = !cpu_can_stop;
+				retval = false;
 			}
 			else
 			{
@@ -599,7 +600,7 @@ bool cpu_thread::check_state() noexcept
 					store = true;
 				}
 
-				retval = true;
+				retval = cpu_can_stop;
 			}
 
 			if (cpu_can_stop && flags & cpu_flag::dbg_step)
