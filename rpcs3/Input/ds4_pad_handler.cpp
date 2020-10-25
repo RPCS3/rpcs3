@@ -242,7 +242,7 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 	SendVibrateData(device);
 }
 
-std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDS4Device(const std::string& padId, bool try_reconnect)
+std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDS4Device(const std::string& padId)
 {
 	if (!Init())
 		return nullptr;
@@ -260,16 +260,6 @@ std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDS4Device(const 
 		if (pad_serial == std::to_string(++i) || pad_serial == cur_control.first)
 		{
 			device = cur_control.second;
-
-			if (try_reconnect && device && !device->hidDevice)
-			{
-				device->hidDevice = hid_open_path(device->path.c_str());
-				if (device->hidDevice)
-				{
-					hid_set_nonblocking(device->hidDevice, 1);
-					ds4_log.notice("DS4 device %d reconnected", i);
-				}
-			}
 			break;
 		}
 	}
@@ -398,24 +388,40 @@ pad_preview_values ds4_pad_handler::get_preview_values(std::unordered_map<u64, u
 
 bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4Dev)
 {
+	if (!ds4Dev || !ds4Dev->hidDevice)
+	{
+		ds4_log.error("GetCalibrationData called with null device");
+		return false;
+	}
+
 	std::array<u8, 64> buf;
 	if (ds4Dev->btCon)
 	{
 		for (int tries = 0; tries < 3; ++tries)
 		{
 			buf[0] = 0x05;
+
 			if (hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x05_SIZE) <= 0)
+			{
+				ds4_log.error("GetCalibrationData: hid_get_feature_report 0x05 failed! Reason: %s", hid_error(ds4Dev->hidDevice));
 				return false;
+			}
 
 			const u8 btHdr = 0xA3;
 			const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
 			const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), (DS4_FEATURE_REPORT_0x05_SIZE - 4), crcTable, crcHdr);
 			const u32 crcReported = read_u32(&buf[DS4_FEATURE_REPORT_0x05_SIZE - 4]);
-			if (crcCalc != crcReported)
-				ds4_log.warning("Calibration CRC check failed! Will retry up to 3 times. Received 0x%x, Expected 0x%x", crcReported, crcCalc);
-			else break;
+
+			if (crcCalc == crcReported)
+				break;
+
+			ds4_log.warning("Calibration CRC check failed! Will retry up to 3 times. Received 0x%x, Expected 0x%x", crcReported, crcCalc);
+
 			if (tries == 2)
+			{
+				ds4_log.error("Calibration CRC check failed too many times!");
 				return false;
+			}
 		}
 	}
 	else
@@ -423,7 +429,7 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 		buf[0] = 0x02;
 		if (hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x02_SIZE) <= 0)
 		{
-			ds4_log.error("Failed getting calibration data report!");
+			ds4_log.error("GetCalibrationData: hid_get_feature_report 0x02 failed! Reason: %s", hid_error(ds4Dev->hidDevice));
 			return false;
 		}
 	}
@@ -461,6 +467,7 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 	if (pitchPlus <= 0 || yawPlus <= 0 || rollPlus <= 0 ||
 		pitchNeg >= 0 || yawNeg >= 0 || rollNeg >= 0)
 	{
+		ds4_log.error("GetCalibrationData: calibration data check failed! pitchPlus=%d, pitchNeg=%d, rollPlus=%d, rollNeg=%d, yawPlus=%d, yawNeg=%d", pitchPlus, pitchNeg, rollPlus, rollNeg, yawPlus, yawNeg);
 		return false;
 	}
 
@@ -502,7 +509,10 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 	for (const auto& data : ds4Dev->calibData)
 	{
 		if (data.sensDenom == 0)
+		{
+			ds4_log.error("GetCalibrationData: Failure: sensDenom == 0");
 			return false;
+		}
 	}
 
 	return true;
@@ -517,17 +527,20 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hid
 	// Let's try getting 0x81 feature report, which should will return mac address on wired, and should error on bluetooth
 	std::array<u8, 64> buf{};
 	buf[0] = 0x81;
-	if (const auto length = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x81_SIZE); length > 0)
+	if (const auto bytes_read = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x81_SIZE); bytes_read > 0)
 	{
-		if (length != DS4_FEATURE_REPORT_0x81_SIZE)
+		if (bytes_read != DS4_FEATURE_REPORT_0x81_SIZE)
 		{
 			// Controller may not be genuine. These controllers do not have feature 0x81 implemented and calibration data is in bluetooth format even in USB mode!
-			ds4_log.warning("DS4 controller may not be genuine. Workaround enabled.");
+			ds4_log.warning("CheckAddDevice: DS4 controller may not be genuine. Workaround enabled.");
 
 			// Read feature report 0x12 instead which is what the console uses.
 			buf[0] = 0x12;
 			buf[1] = 0;
-			hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x12_SIZE);
+			if (hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x12_SIZE) == -1)
+			{
+				ds4_log.error("CheckAddDevice: hid_get_feature_report 0x12 failed! Reason: %s", hid_error(ds4Dev->hidDevice));
+			}
 		}
 
 		serial = fmt::format("%x%x%x%x%x%x", buf[6], buf[5], buf[4], buf[3], buf[2], buf[1]);
@@ -542,6 +555,14 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hid
 
 	if (!GetCalibrationData(ds4Dev))
 	{
+		ds4_log.error("CheckAddDevice: GetCalibrationData failed!");
+		hid_close(hidDevice);
+		return;
+	}
+
+	if (hid_set_nonblocking(hidDevice, 1) == -1)
+	{
+		ds4_log.error("CheckAddDevice: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
 		hid_close(hidDevice);
 		return;
 	}
@@ -549,7 +570,6 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hid
 	ds4Dev->hasCalibData = true;
 	ds4Dev->path = hidDevInfo->path;
 
-	hid_set_nonblocking(hidDevice, 1);
 	controllers.emplace(serial, ds4Dev);
 }
 
@@ -569,7 +589,10 @@ ds4_pad_handler::~ds4_pad_handler()
 			hid_close(controller.second->hidDevice);
 		}
 	}
-	hid_exit();
+	if (hid_exit() != 0)
+	{
+		ds4_log.error("hid_exit failed!");
+	}
 }
 
 int ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
@@ -721,7 +744,10 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 		// tells controller to send 0x11 reports
 		std::array<u8, 64> buf_error{};
 		buf_error[0] = 0x2;
-		hid_get_feature_report(device->hidDevice, buf_error.data(), buf_error.size());
+		if (hid_get_feature_report(device->hidDevice, buf_error.data(), buf_error.size()) == -1)
+		{
+			ds4_log.error("GetRawData: hid_get_feature_report 0x2 failed! Reason: %s", hid_error(device->hidDevice));
+		}
 		return DS4DataStatus::NoNewData;
 	}
 
@@ -847,7 +873,10 @@ PadHandlerBase::connection ds4_pad_handler::update_connection(const std::shared_
 		hid_device* dev = hid_open_path(ds4_dev->path.c_str());
 		if (dev)
 		{
-			hid_set_nonblocking(dev, 1);
+			if (hid_set_nonblocking(dev, 1) == -1)
+			{
+				ds4_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", ds4_dev->path, hid_error(dev));
+			}
 			ds4_dev->hidDevice = dev;
 			if (!ds4_dev->hasCalibData)
 				ds4_dev->hasCalibData = GetCalibrationData(ds4_dev);
