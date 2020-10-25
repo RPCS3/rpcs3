@@ -2126,6 +2126,9 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		const auto& to_write = _ref<spu_rdata_t>(args.lsa & 0x3ff80);
 		auto& res = vm::reservation_acquire(addr, 128);
 
+		// TODO: Limit scope!!
+		rsx::reservation_lock rsx_lock(addr, 128);
+
 		if (!g_use_rtm && rtime != res)
 		{
 			return false;
@@ -2143,10 +2146,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			{
 			case UINT32_MAX:
 			{
-				const auto render = rsx::get_rsx_if_needs_res_pause(addr);
-
-				if (render) render->pause();
-
 				const bool ok = cpu_thread::suspend_all(this, [&]()
 				{
 					if ((res & -128) == rtime)
@@ -2165,7 +2164,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 					return false;
 				});
 
-				if (render) render->unpause();
 				return ok;
 			}
 			case 0: return false;
@@ -2200,10 +2198,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 		vm::_ref<atomic_t<u32>>(addr) += 0;
 
-		const auto render = rsx::get_rsx_if_needs_res_pause(addr);
-
-		if (render) render->pause();
-
 		auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
 		const bool success = [&]()
 		{
@@ -2222,7 +2216,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			return false;
 		}();
 
-		if (render) render->unpause();
 		return success;
 	}())
 	{
@@ -2258,14 +2251,11 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 	perf_meter<"STORE128"_u64> perf0;
 
 	const auto cpu = get_current_cpu_thread();
+	rsx::reservation_lock rsx_lock(addr, 128);
 
 	if (g_use_rtm) [[likely]]
 	{
 		const u32 result = spu_putlluc_tx(addr, to_write, cpu);
-
-		const auto render = result != 1 ? rsx::get_rsx_if_needs_res_pause(addr) : nullptr;
-
-		if (render) render->pause();
 
 		if (result == 0)
 		{
@@ -2281,7 +2271,6 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			perf_log.warning("STORE128: took too long: %u", result);
 		}
 
-		if (render) render->unpause();
 		static_cast<void>(cpu->test_stopped());
 	}
 	else
@@ -2291,10 +2280,6 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 		*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
-		const auto render = rsx::get_rsx_if_needs_res_pause(addr);
-
-		if (render) render->pause();
-
 		auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
 		{
 			// Full lock (heavyweight)
@@ -2303,8 +2288,6 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			mov_rdata(super_data, *static_cast<const spu_rdata_t*>(to_write));
 			res += 64;
 		}
-
-		if (render) render->unpause();
 	}
 }
 
@@ -2498,6 +2481,7 @@ bool spu_thread::process_mfc_cmd()
 
 		alignas(64) spu_rdata_t temp;
 		u64 ntime;
+		rsx::reservation_lock rsx_lock(addr, 128);
 
 		if (raddr)
 		{

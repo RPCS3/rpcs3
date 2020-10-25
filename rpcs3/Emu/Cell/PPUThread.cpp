@@ -1719,10 +1719,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			auto& cline_data = vm::_ref<spu_rdata_t>(addr);
 
 			data += 0;
-
-			const auto render = rsx::get_rsx_if_needs_res_pause(addr);
-
-			if (render) render->pause();
+			rsx::reservation_lock rsx_lock(addr, 128);
 
 			auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
 			const bool success = [&]()
@@ -1742,7 +1739,6 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				return false;
 			}();
 
-			if (render) render->unpause();
 			return success;
 		}
 
