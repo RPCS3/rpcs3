@@ -438,7 +438,7 @@ struct nt_p2p_port
 	shared_mutex s_sign_mutex;
 	std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> sign_msgs{};
 
-	std::array<u8, 65535> p2p_recv_data{};
+	std::array<u8, 512*1024> p2p_recv_data{};
 
 	nt_p2p_port(u16 port) : port(port)
 	{
