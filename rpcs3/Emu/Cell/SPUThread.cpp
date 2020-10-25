@@ -20,6 +20,7 @@
 #include "Emu/Cell/lv2/sys_interrupt.h"
 
 #include "Emu/Cell/SPUDisAsm.h"
+#include "Emu/Cell/SPUAnalyser.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Cell/SPURecompiler.h"
@@ -225,6 +226,8 @@ extern u64 get_system_time();
 void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
 extern thread_local u64 g_tls_fault_spu;
+
+constexpr spu_decoder<spu_itype> s_spu_itype;
 
 namespace spu
 {
@@ -3901,7 +3904,20 @@ bool spu_thread::capture_local_storage() const
 		fmt::append(name, "RawSPU.%u", lv2_id);
 	}
 
-	spu_exec.header.e_entry = pc;
+	u32 pc0 = pc;
+
+	for (; pc0; pc0 -= 4)
+	{
+		const u32 op = *std::launder(reinterpret_cast<be_t<u32, 1>*>(prog.bin.data() + pc0 - 4));
+
+		// Try to find function entry (if they are placed sequentially search for BI $LR of previous function)
+		if (!op || op == 0x35000000u || s_spu_itype.decode(op) == spu_itype::UNK)
+		{
+			break;
+		}
+	}
+
+	spu_exec.header.e_entry = pc0;
 
 	name = vfs::escape(name, true);
 	std::replace(name.begin(), name.end(), ' ', '_');
