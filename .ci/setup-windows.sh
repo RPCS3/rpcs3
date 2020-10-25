@@ -17,8 +17,7 @@ QT_WINE_URL="${QT_HOST}${QT_PREFIX}qtwinextras${QT_SUFFIX}"
 QT_DECL_URL="${QT_HOST}${QT_PREFIX}qtdeclarative${QT_SUFFIX}"
 QT_TOOL_URL="${QT_HOST}${QT_PREFIX}qttools${QT_SUFFIX}"
 LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z'
-#GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'  <- Temporarily disabled auto-builds
-GLSLANG_URL='https://www.dropbox.com/s/cg48qr4zmnn066v/glslanglibs_mt.7z'
+GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'
 VULKAN_SDK_URL="https://www.dropbox.com/s/adanclixregbp2x/VulkanSDK-${VULKAN_VER}-Installer.exe"
 
 DEP_URLS="         \
