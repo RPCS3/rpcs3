@@ -93,9 +93,9 @@ static constexpr u32 s_max_conds = 512 * 64;
 
 static std::aligned_storage_t<sizeof(cond_handle), alignof(cond_handle)> s_cond_list[s_max_conds]{};
 
-alignas(64) atomic_t<u64> s_cond_bits[s_max_conds / 64];
+atomic_t<u64, 64> s_cond_bits[s_max_conds / 64];
 
-alignas(64) atomic_t<u32> s_cond_sema{0};
+atomic_t<u32, 64> s_cond_sema{0};
 
 static u32 cond_alloc()
 {
@@ -281,7 +281,7 @@ static constexpr u32 s_slot_gcount = (s_hashtable_power > 7 ? 4096 : 256) / 64;
 alignas(64) static slot_info s_slot_list[s_slot_gcount * 64]{};
 
 // Allocation bits
-alignas(64) static atomic_t<u64> s_slot_bits[s_slot_gcount]{};
+static atomic_t<u64, 64> s_slot_bits[s_slot_gcount]{};
 
 static u64 slot_alloc()
 {
