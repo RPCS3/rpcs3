@@ -55,7 +55,7 @@ namespace vm
 	alignas(4096) atomic_t<u8> g_shareable[65536]{0};
 
 	// Memory locations
-	std::vector<std::shared_ptr<block_t>> g_locations;
+	alignas(64) std::vector<std::shared_ptr<block_t>> g_locations;
 
 	// Memory mutex core
 	shared_mutex g_mutex;
@@ -68,7 +68,12 @@ namespace vm
 
 	// Memory mutex: passive locks
 	std::array<atomic_t<cpu_thread*>, g_cfg.core.ppu_threads.max> g_locks{};
-	std::array<atomic_t<u64>, 6> g_range_locks{};
+
+	// Range lock slot allocation bits
+	atomic_t<u64> g_range_lock_bits{};
+
+	// Memory range lock slots (sparse atomics)
+	atomic_t<u64, 64> g_range_lock_set[64]{};
 
 	// Page information
 	struct memory_page
@@ -126,45 +131,131 @@ namespace vm
 		}
 	}
 
-	static atomic_t<u64>* _register_range_lock(const u64 lock_info)
+	atomic_t<u64, 64>* alloc_range_lock()
 	{
+		const auto [bits, ok] = g_range_lock_bits.fetch_op([](u64& bits)
+		{
+			if (~bits) [[likely]]
+			{
+				bits |= bits + 1;
+				return true;
+			}
+
+			return false;
+		});
+
+		if (!ok) [[unlikely]]
+		{
+			fmt::throw_exception("Out of range lock bits");
+		}
+
+		g_mutex.lock_unlock();
+
+		return &g_range_lock_set[std::countr_one(bits)];
+	}
+
+	void range_lock_internal(atomic_t<u64, 64>* range_lock, u32 begin, u32 size)
+	{
+		perf_meter<"RHW_LOCK"_u64> perf0;
+
 		while (true)
 		{
-			for (auto& lock : g_range_locks)
+			std::shared_lock lock(g_mutex);
+
+			u32 test = 0;
+
+			for (u32 i = begin / 4096, max = (begin + size - 1) / 4096; i <= max; i++)
 			{
-				if (!lock && lock.compare_and_swap_test(0, lock_info))
+				if (!(g_pages[i].flags & (vm::page_readable)))
 				{
-					return &lock;
+					test = i * 4096;
+					break;
 				}
 			}
+
+			if (test)
+			{
+				lock.unlock();
+
+				// Try tiggering a page fault (write)
+				// TODO: Read memory if needed
+				vm::_ref<atomic_t<u8>>(test) += 0;
+				continue;
+			}
+
+			range_lock->release(begin | u64{size} << 32);
+			return;
 		}
 	}
 
-	static void _lock_shareable_cache(u8 /*value*/, u32 addr /*mutable*/, u32 end /*mutable*/)
+	void free_range_lock(atomic_t<u64, 64>* range_lock) noexcept
 	{
-		// Special value to block new range locks
-		g_addr_lock = addr | u64{end - addr} << 32;
+		if (range_lock < g_range_lock_set || range_lock >= std::end(g_range_lock_set))
+		{
+			fmt::throw_exception("Invalid range lock" HERE);
+		}
 
-		// Convert to 64K-page numbers
-		addr >>= 16;
-		end >>= 16;
+		range_lock->release(0);
+
+		std::shared_lock lock(g_mutex);
+
+		// Use ptr difference to determine location
+		const auto diff = range_lock - g_range_lock_set;
+		g_range_lock_bits &= ~(1ull << diff);
+	}
+
+	template <typename F>
+	FORCE_INLINE static u64 for_all_range_locks(F func)
+	{
+		u64 result = 0;
+
+		for (u64 bits = g_range_lock_bits.load(); bits; bits &= bits - 1)
+		{
+			const u32 id = std::countr_zero(bits);
+
+			const u64 lock_val = g_range_lock_set[id].load();
+
+			if (const u32 size = static_cast<u32>(lock_val >> 32)) [[unlikely]]
+			{
+				const u32 addr = static_cast<u32>(lock_val);
+
+				result += func(addr, size);
+			}
+		}
+
+		return result;
+	}
+
+	static void _lock_shareable_cache(u8 value, u32 addr, u32 size)
+	{
+		// Block new range locks
+		g_addr_lock = addr | u64{size} << 32;
+
+		ASSUME(size);
+
+		const auto range = utils::address_range::start_length(addr, size);
 
 		// Wait for range locks to clear
-		for (auto& lock : g_range_locks)
+		while (value)
 		{
-			while (const u64 _lock = lock.load())
+			const u64 bads = for_all_range_locks([&](u32 addr2, u32 size2)
 			{
-				if (const u32 lock_page = static_cast<u32>(_lock) >> 16)
+				ASSUME(size2);
+
+				if (range.overlaps(utils::address_range::start_length(addr2, size2))) [[unlikely]]
 				{
-					if (lock_page < addr || lock_page >= end)
-					{
-						// Ignoreable range lock
-						break;
-					}
+					return 1;
 				}
 
-				_mm_pause();
+				return 0;
+			});
+
+			if (!bads)
+			{
+				return;
 			}
+
+			_mm_pause();
 		}
 	}
 
@@ -201,82 +292,6 @@ namespace vm
 
 				cpu.state += cpu_flag::wait;
 			}
-		}
-	}
-
-	atomic_t<u64>* range_lock(u32 addr, u32 end)
-	{
-		static const auto test_addr = [](u64 target, u32 addr, u32 end) -> u64
-		{
-			if (const u32 target_size = static_cast<u32>(target >> 32))
-			{
-				// Shareable info is being modified
-				const u32 target_addr = static_cast<u32>(target);
-
-				if (addr >= target_addr + target_size || end <= target_addr)
-				{
-					// Outside of the locked range: proceed normally
-					if (g_shareable[addr >> 16])
-					{
-						addr &= 0xffff;
-						end = ((end - 1) & 0xffff) + 1;
-					}
-
-					return u64{end} << 32 | addr;
-				}
-
-				return 0;
-			}
-
-			if (g_shareable[target >> 16])
-			{
-				// Target within shareable memory range
-				target &= 0xffff;
-			}
-
-			if (g_shareable[addr >> 16])
-			{
-				// Track shareable memory locks in 0x0..0xffff address range
-				addr &= 0xffff;
-				end = ((end - 1) & 0xffff) + 1;
-			}
-
-			if (addr > target || end <= target)
-			{
-				return u64{end} << 32 | addr;
-			}
-
-			return 0;
-		};
-
-		if (u64 _a1 = test_addr(g_addr_lock.load(), addr, end)) [[likely]]
-		{
-			// Optimistic path (hope that address range is not locked)
-			const auto _ret = _register_range_lock(_a1);
-
-			if (_a1 == test_addr(g_addr_lock.load(), addr, end) && !!(g_pages[addr / 4096].flags & page_readable)) [[likely]]
-			{
-				return _ret;
-			}
-
-			*_ret = 0;
-		}
-
-		while (true)
-		{
-			std::shared_lock lock(g_mutex);
-
-			if (!(g_pages[addr / 4096].flags & page_readable))
-			{
-				lock.unlock();
-
-				// Try tiggering a page fault (write)
-				// TODO: Read memory if needed
-				vm::_ref<atomic_t<u8>>(addr) += 0;
-				continue;
-			}
-
-			return _register_range_lock(test_addr(UINT32_MAX, addr, end));
 		}
 	}
 
@@ -401,7 +416,7 @@ namespace vm
 				}
 			}
 
-			g_addr_lock = addr;
+			g_addr_lock = addr | (u64{128} << 32);
 
 			if (g_shareable[addr >> 16])
 			{
@@ -409,26 +424,34 @@ namespace vm
 				addr = addr & 0xffff;
 			}
 
-			for (auto& lock : g_range_locks)
+			const auto range = utils::address_range::start_length(addr, 128);
+
+			while (true)
 			{
-				while (true)
+				const u64 bads = for_all_range_locks([&](u32 addr2, u32 size2)
 				{
-					const u64 value = lock;
-
-					// Test beginning address
-					if (static_cast<u32>(value) > addr)
+					// TODO (currently not possible): handle 2 64K pages (inverse range), or more pages
+					if (g_shareable[addr2 >> 16])
 					{
-						break;
+						addr2 &= 0xffff;
 					}
 
-					// Test end address
-					if (static_cast<u32>(value >> 32) <= addr)
+					ASSUME(size2);
+
+					if (range.overlaps(utils::address_range::start_length(addr2, size2))) [[unlikely]]
 					{
-						break;
+						return 1;
 					}
 
-					_mm_pause();
+					return 0;
+				});
+
+				if (!bads) [[likely]]
+				{
+					break;
 				}
+
+				_mm_pause();
 			}
 
 			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
@@ -538,7 +561,7 @@ namespace vm
 		}
 	}
 
-	static void _page_map(u32 addr, u8 flags, u32 size, utils::shm* shm)
+	static void _page_map(u32 addr, u8 flags, u32 size, utils::shm* shm, std::pair<const u32, std::pair<u32, std::shared_ptr<utils::shm>>>* (*search_shm)(vm::block_t* block, utils::shm* shm))
 	{
 		if (!size || (size | addr) % 4096 || flags & page_allocated)
 		{
@@ -553,13 +576,38 @@ namespace vm
 			}
 		}
 
-		if (shm && shm->flags() != 0)
+		if (shm && shm->flags() != 0 && shm->info++)
 		{
-			_lock_shareable_cache(1, addr, addr + size);
+			// Memory mirror found, map its range as shareable
+			_lock_shareable_cache(1, addr, size);
 
 			for (u32 i = addr / 65536; i < addr / 65536 + size / 65536; i++)
 			{
-				g_shareable[i] = 1;
+				g_shareable[i].release(1);
+			}
+
+			// Check ref counter (using unused member info for it)
+			if (shm->info == 2)
+			{
+				// Find another mirror and map it as shareable too
+				for (auto& ploc : g_locations)
+				{
+					if (auto loc = ploc.get())
+					{
+						if (auto pp = search_shm(loc, shm))
+						{
+							auto& [size2, ptr] = pp->second;
+
+							// Relock cache
+							_lock_shareable_cache(1, pp->first, size2);
+
+							for (u32 i = pp->first / 65536; i < pp->first / 65536 + size2 / 65536; i++)
+							{
+								g_shareable[i].release(1);
+							}
+						}
+					}
+				}
 			}
 
 			// Unlock
@@ -702,13 +750,14 @@ namespace vm
 			}
 		}
 
-		if (g_shareable[addr >> 16])
+		if (shm && shm->flags() != 0 && (--shm->info || g_shareable[addr >> 16]))
 		{
-			_lock_shareable_cache(0, addr, addr + size);
+			// Remove mirror from shareable cache
+			_lock_shareable_cache(0, addr, size);
 
 			for (u32 i = addr / 65536; i < addr / 65536 + size / 65536; i++)
 			{
-				g_shareable[i] = 0;
+				g_shareable[i].release(0);
 			}
 
 			// Unlock
@@ -844,8 +893,28 @@ namespace vm
 			verify(HERE), !g_pages[addr / 4096 + size / 4096 - 1].flags.exchange(page_allocated);
 		}
 
-		// Map "real" memory pages
-		_page_map(page_addr, flags, page_size, shm.get());
+		// Map "real" memory pages; provide a function to search for mirrors with private member access
+		_page_map(page_addr, flags, page_size, shm.get(), [](vm::block_t* _this, utils::shm* shm)
+		{
+			decltype(m_map)::value_type* result = nullptr;
+
+			// Check eligibility
+			if (!_this || !(SYS_MEMORY_PAGE_SIZE_MASK & _this->flags) || _this->addr < 0x20000000 || _this->addr >= 0xC0000000)
+			{
+				return result;
+			}
+
+			for (auto& pp : _this->m_map)
+			{
+				if (pp.second.second.get() == shm)
+				{
+					// Found match
+					return &pp;
+				}
+			}
+
+			return result;
+		});
 
 		// Add entry
 		m_map[addr] = std::make_pair(size, std::move(shm));
@@ -1368,7 +1437,8 @@ namespace vm
 
 			std::memset(g_reservations, 0, sizeof(g_reservations));
 			std::memset(g_shareable, 0, sizeof(g_shareable));
-			std::memset(g_range_locks.data(), 0, sizeof(g_range_locks));
+			std::memset(g_range_lock_set, 0, sizeof(g_range_lock_set));
+			g_range_lock_bits = 0;
 		}
 	}
 

@@ -81,5 +81,8 @@ namespace utils
 		{
 			return m_flags;
 		}
+
+		// Another userdata
+		u64 info = 0;
 	};
 }
