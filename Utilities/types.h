@@ -242,7 +242,7 @@ namespace fmt
 	const fmt_type_info* get_type_info();
 }
 
-template <typename T>
+template <typename T, std::size_t Align>
 class atomic_t;
 
 // Extract T::simple_type if available, remove cv qualifiers

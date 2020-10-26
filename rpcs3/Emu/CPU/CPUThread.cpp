@@ -34,6 +34,7 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::stop: return "STOP";
 		case cpu_flag::exit: return "EXIT";
 		case cpu_flag::wait: return "w";
+		case cpu_flag::temp: return "t";
 		case cpu_flag::pause: return "p";
 		case cpu_flag::suspend: return "s";
 		case cpu_flag::ret: return "ret";
@@ -531,6 +532,7 @@ bool cpu_thread::check_state() noexcept
 	}
 
 	bool cpu_sleep_called = false;
+	bool cpu_can_stop = true;
 	bool escape, retval;
 	u64 susp_ctr = -1;
 
@@ -549,6 +551,14 @@ bool cpu_thread::check_state() noexcept
 			else
 			{
 				susp_ctr = -1;
+			}
+
+			if (flags & cpu_flag::temp)
+			{
+				// Sticky flag, indicates check_state() is not allowed to return true
+				flags -= cpu_flag::temp;
+				cpu_can_stop = false;
+				store = true;
 			}
 
 			if (flags & cpu_flag::signal)
@@ -590,11 +600,12 @@ bool cpu_thread::check_state() noexcept
 					store = true;
 				}
 
-				retval = true;
+				retval = cpu_can_stop;
 			}
 
-			if (flags & cpu_flag::dbg_step)
+			if (cpu_can_stop && flags & cpu_flag::dbg_step)
 			{
+				// Can't process dbg_step if we only paused temporarily
 				flags += cpu_flag::dbg_pause;
 				flags -= cpu_flag::dbg_step;
 				store = true;

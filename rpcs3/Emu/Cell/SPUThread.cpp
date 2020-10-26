@@ -242,7 +242,7 @@ namespace spu
 
 			if (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
 			{
-				spu.state += cpu_flag::wait;
+				spu.state += cpu_flag::wait + cpu_flag::temp;
 
 				if (timeout_ms > 0)
 				{
@@ -271,10 +271,7 @@ namespace spu
 					busy_wait(count);
 				}
 
-				if (spu.test_stopped())
-				{
-					spu_runtime::g_escape(&spu);
-				}
+				verify(HERE), !spu.check_state();
 			}
 
 			atomic_instruction_table[pc_offset]++;
@@ -2516,13 +2513,14 @@ bool spu_thread::process_mfc_cmd()
 			{
 				if (g_use_rtm)
 				{
-					state += cpu_flag::wait;
+					state += cpu_flag::wait + cpu_flag::temp;
 				}
 
 				std::this_thread::yield();
 
-				if (test_stopped())
+				if (g_use_rtm)
 				{
+					verify(HERE), !check_state();
 				}
 			}
 		}())
@@ -2888,7 +2886,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 	{
 		if (channel.get_count() == 0)
 		{
-			state += cpu_flag::wait;
+			state += cpu_flag::wait + cpu_flag::temp;
 		}
 
 		for (int i = 0; i < 10 && channel.get_count() == 0; i++)

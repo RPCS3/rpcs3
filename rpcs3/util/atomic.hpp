@@ -18,7 +18,7 @@ enum class atomic_wait_timeout : u64
 struct atomic_storage_futex
 {
 private:
-	template <typename T>
+	template <typename T, std::size_t Align>
 	friend class atomic_t;
 
 	static void wait(const void* data, std::size_t size, u64 old_value, u64 timeout, u64 mask);
@@ -674,7 +674,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 };
 
 // Atomic type with lock-free and standard layout guarantees (and appropriate limitations)
-template <typename T>
+template <typename T, std::size_t Align = alignof(T)>
 class atomic_t
 {
 protected:
@@ -684,7 +684,7 @@ protected:
 
 	static_assert(alignof(type) == sizeof(type), "atomic_t<> error: unexpected alignment, use alignas() if necessary");
 
-	type m_data;
+	alignas(Align) type m_data;
 
 public:
 	atomic_t() noexcept = default;
