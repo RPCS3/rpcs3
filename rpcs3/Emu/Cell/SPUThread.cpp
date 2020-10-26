@@ -2651,17 +2651,9 @@ bool spu_thread::process_mfc_cmd()
 			}
 			else
 			{
-				if (g_use_rtm)
-				{
-					state += cpu_flag::wait + cpu_flag::temp;
-				}
-
+				state += cpu_flag::wait + cpu_flag::temp;
 				std::this_thread::yield();
-
-				if (g_use_rtm)
-				{
-					verify(HERE), !check_state();
-				}
+				!check_state();
 			}
 		}())
 		{

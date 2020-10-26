@@ -261,13 +261,15 @@ namespace vm
 
 	void passive_lock(cpu_thread& cpu)
 	{
+		bool ok = true;
+
 		if (!g_tls_locked || *g_tls_locked != &cpu) [[unlikely]]
 		{
 			_register_lock(&cpu);
 
-			if (cpu.state) [[likely]]
+			if (cpu.state & cpu_flag::memory) [[likely]]
 			{
-				cpu.state -= cpu_flag::wait + cpu_flag::memory;
+				cpu.state -= cpu_flag::memory;
 			}
 
 			if (g_mutex.is_lockable())
@@ -275,22 +277,20 @@ namespace vm
 				return;
 			}
 
-			cpu.state += cpu_flag::wait;
+			ok = false;
 		}
 
-		if (cpu.state & cpu_flag::wait)
+		if (!ok || cpu.state & cpu_flag::memory)
 		{
 			while (true)
 			{
 				g_mutex.lock_unlock();
-				cpu.state -= cpu_flag::wait + cpu_flag::memory;
+				cpu.state -= cpu_flag::memory;
 
 				if (g_mutex.is_lockable()) [[likely]]
 				{
 					return;
 				}
-
-				cpu.state += cpu_flag::wait;
 			}
 		}
 	}
@@ -345,7 +345,7 @@ namespace vm
 
 		if (cpu)
 		{
-			if (!g_tls_locked || *g_tls_locked != cpu)
+			if (!g_tls_locked || *g_tls_locked != cpu || cpu->state & cpu_flag::wait)
 			{
 				cpu = nullptr;
 			}
@@ -392,7 +392,7 @@ namespace vm
 
 		if (cpu)
 		{
-			if (!g_tls_locked || *g_tls_locked != cpu)
+			if (!g_tls_locked || *g_tls_locked != cpu || cpu->state & cpu_flag::wait)
 			{
 				cpu = nullptr;
 			}

@@ -1219,9 +1219,9 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 		else
 		{
-			ppu.state += cpu_flag::wait + cpu_flag::temp;
+			ppu.state += cpu_flag::wait;
 			std::this_thread::yield();
-			verify(HERE), !ppu.check_state();
+			ppu.check_state();
 		}
 	}())
 	{

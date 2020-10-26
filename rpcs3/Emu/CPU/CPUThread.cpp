@@ -578,10 +578,11 @@ bool cpu_thread::check_state() noexcept
 				susp_ctr = -1;
 			}
 
-			if (flags & cpu_flag::temp)
+			if (flags & cpu_flag::temp) [[unlikely]]
 			{
 				// Sticky flag, indicates check_state() is not allowed to return true
 				flags -= cpu_flag::temp;
+				flags -= cpu_flag::wait;
 				cpu_can_stop = false;
 				store = true;
 			}
@@ -619,7 +620,7 @@ bool cpu_thread::check_state() noexcept
 			}
 			else
 			{
-				if (!(flags & cpu_flag::wait))
+				if (cpu_can_stop && !(flags & cpu_flag::wait))
 				{
 					flags += cpu_flag::wait;
 					store = true;
@@ -649,6 +650,8 @@ bool cpu_thread::check_state() noexcept
 				s_tls_thread_slot = g_fxo->get<cpu_counter>()->add(this, true);
 			}
 
+			verify(HERE), cpu_can_stop || !retval;
+			verify(HERE), cpu_can_stop || !(state & cpu_flag::wait);
 			return retval;
 		}
 
@@ -657,7 +660,7 @@ bool cpu_thread::check_state() noexcept
 			cpu_sleep();
 			cpu_sleep_called = true;
 
-			if (s_tls_thread_slot != umax)
+			if (cpu_can_stop && s_tls_thread_slot != umax)
 			{
 				// Exclude inactive threads from the suspend list (optimization)
 				std::lock_guard lock(g_fxo->get<cpu_counter>()->cpu_suspend_lock);
