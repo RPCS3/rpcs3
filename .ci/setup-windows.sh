@@ -75,8 +75,7 @@ for url in $DEP_URLS; do
     case "$url" in
     *qt*) checksum=$(curl -L "${url}.sha1"); algo="sha1"; outDir='C:\Qt\' ;;
     *llvm*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="." ;;
-    #*glslang*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="./lib/Release - LLVM-x64" ;; <- Temporarily disabled auto-build
-    *glslang*) checksum=$(curl -L 'https://www.dropbox.com/s/hwnatk68n70jap0/glslanglibs_mt.7z.sha256'); algo="sha256"; outDir="./lib/Release - LLVM-x64" ;;
+    *glslang*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="./lib/Release - LLVM-x64" ;;
     *Vulkan*)
         # Vulkan setup needs to be run in batch environment
         # Need to subshell this or else it doesn't wait
