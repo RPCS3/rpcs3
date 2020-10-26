@@ -4,29 +4,24 @@ Localized::Localized()
 {
 }
 
-QString Localized::GetVerboseTimeByMs(qint64 elapsed_ms, bool show_days) const
+QString Localized::GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days) const
 {
-	if (elapsed_ms <= 0)
-	{
-		return tr("Never played");
-	}
+	const quint64 elapsed_seconds = (elapsed_ms / 1000) + ((elapsed_ms % 1000) > 0 ? 1 : 0);
+	quint64 hours = elapsed_seconds / 3600;
 
-	const qint64 elapsed_seconds = (elapsed_ms / 1000) + ((elapsed_ms % 1000) > 0 ? 1 : 0);
-	qint64 hours = elapsed_seconds / 3600;
-
-	qint64 days = 0;
+	quint64 days = 0;
 	if (show_days)
 	{
 		days = hours / 24;
 		hours = hours % 24;
 	}
-	const qint64 minutes = (elapsed_seconds % 3600) / 60;
-	const qint64 seconds = (elapsed_seconds % 3600) % 60;
+	const quint64 minutes = (elapsed_seconds % 3600) / 60;
+	const quint64 seconds = (elapsed_seconds % 3600) % 60;
 
-	QString str_days = tr("%Ln day(s)", "", days);
-	QString str_hours = tr("%Ln hour(s)", "", hours);
-	QString str_minutes = tr("%Ln minute(s)", "", minutes);
-	QString str_seconds = tr("%Ln second(s)", "", seconds);
+	const QString str_days    = tr("%Ln day(s)", "", days);
+	const QString str_hours   = tr("%Ln hour(s)", "", hours);
+	const QString str_minutes = tr("%Ln minute(s)", "", minutes);
+	const QString str_seconds = tr("%Ln second(s)", "", seconds);
 
 	if (days != 0)
 	{

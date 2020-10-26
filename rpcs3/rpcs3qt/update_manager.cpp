@@ -175,12 +175,24 @@ bool update_manager::handle_json(bool automatic, bool check_only, const QByteArr
 
 	if (hash_found)
 	{
-		m_update_message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 old.\n\nDo you want to update?")
-			.arg(current["version"].toString())
-			.arg(cur_str)
-			.arg(latest["version"].toString())
-			.arg(lts_str)
-			.arg(localized.GetVerboseTimeByMs(diff_msec, true));
+		if (diff_msec < 0)
+		{
+			// This usually means that the current version was marked as broken and won't be shipped anymore, so we need to downgrade to avoid certain bugs.
+			m_update_message = tr("A better version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nBetter version: %2 (%3)\n\nDo you want to update?")
+				.arg(current["version"].toString())
+				.arg(cur_str)
+				.arg(latest["version"].toString())
+				.arg(lts_str);
+		}
+		else
+		{
+			m_update_message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 old.\n\nDo you want to update?")
+				.arg(current["version"].toString())
+				.arg(cur_str)
+				.arg(latest["version"].toString())
+				.arg(lts_str)
+				.arg(localized.GetVerboseTimeByMs(diff_msec, true));
+		}
 	}
 	else
 	{
