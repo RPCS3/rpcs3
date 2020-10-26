@@ -46,7 +46,11 @@ static thread_local void(*s_tls_notify_cb)(const void* data, u64 progress) = [](
 
 // Compare data in memory with old value, and return true if they are equal
 template <bool CheckCb = true, bool CheckData = true>
-static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value, u64 mask)
+static inline bool
+#ifdef _WIN32
+__vectorcall
+#endif
+ptr_cmp(const void* data, std::size_t size, __m128i old128, __m128i mask128)
 {
 	if constexpr (CheckCb)
 	{
@@ -64,12 +68,27 @@ static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value, u6
 		}
 	}
 
+	const u64 old_value = _mm_cvtsi128_si64(old128);
+	const u64 mask = _mm_cvtsi128_si64(mask128);
+
 	switch (size)
 	{
 	case 1: return (reinterpret_cast<const atomic_t<u8>*>(data)->load() & mask) == (old_value & mask);
 	case 2: return (reinterpret_cast<const atomic_t<u16>*>(data)->load() & mask) == (old_value & mask);
 	case 4: return (reinterpret_cast<const atomic_t<u32>*>(data)->load() & mask) == (old_value & mask);
 	case 8: return (reinterpret_cast<const atomic_t<u64>*>(data)->load() & mask) == (old_value & mask);
+	case 16:
+	{
+		const auto v0 = _mm_load_si128(reinterpret_cast<const __m128i*>(data));
+		const auto v1 = _mm_xor_si128(v0, old128);
+		const auto v2 = _mm_and_si128(v1, mask128);
+		const auto v3 = _mm_packs_epi16(v2, v2);
+
+		if (_mm_cvtsi128_si64(v3) == 0)
+		{
+			return true;
+		}
+	}
 	}
 
 	return false;
@@ -411,7 +430,11 @@ static void slot_free(std::uintptr_t iptr, sync_var* loc, u64 lv = 0)
 	}
 }
 
-SAFE_BUFFERS void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value, u64 timeout, u64 mask)
+SAFE_BUFFERS void
+#ifdef _WIN32
+__vectorcall
+#endif
+atomic_storage_futex::wait(const void* data, std::size_t size, __m128i old_value, u64 timeout, __m128i mask)
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 

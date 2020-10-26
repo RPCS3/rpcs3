@@ -21,7 +21,11 @@ private:
 	template <typename T, std::size_t Align>
 	friend class atomic_t;
 
-	static void wait(const void* data, std::size_t size, u64 old_value, u64 timeout, u64 mask);
+	static void
+#ifdef _WIN32
+	__vectorcall
+#endif
+	wait(const void* data, std::size_t size, __m128i old128, u64 timeout, __m128i mask128);
 	static void notify_one(const void* data);
 	static void notify_all(const void* data);
 
@@ -1141,10 +1145,36 @@ public:
 		return atomic_storage<type>::btr(m_data, bit);
 	}
 
-	template <u64 Mask = 0xffffffffffffffff>
+	// Timeout is discouraged
 	void wait(type old_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf) const noexcept
 	{
-		atomic_storage_futex::wait(&m_data, sizeof(T), std::bit_cast<get_uint_t<sizeof(T)>>(old_value), static_cast<u64>(timeout), Mask);
+		if constexpr (sizeof(T) <= 8)
+		{
+			const __m128i old = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(old_value));
+			atomic_storage_futex::wait(&m_data, sizeof(T), old, static_cast<u64>(timeout), _mm_set1_epi64x(-1));
+		}
+		else if constexpr (sizeof(T) == 16)
+		{
+			const __m128i old = std::bit_cast<__m128i>(old_value);
+			atomic_storage_futex::wait(&m_data, sizeof(T), old, static_cast<u64>(timeout), _mm_set1_epi64x(-1));
+		}
+	}
+
+	// Overload with mask (only selected bits are checked), timeout is discouraged
+	void wait(type old_value, type mask_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf)
+	{
+		if constexpr (sizeof(T) <= 8)
+		{
+			const __m128i old = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(old_value));
+			const __m128i mask = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(mask_value));
+			atomic_storage_futex::wait(&m_data, sizeof(T), old, static_cast<u64>(timeout), mask);
+		}
+		else if constexpr (sizeof(T) == 16)
+		{
+			const __m128i old = std::bit_cast<__m128i>(old_value);
+			const __m128i mask = std::bit_cast<__m128i>(mask_value);
+			atomic_storage_futex::wait(&m_data, sizeof(T), old, static_cast<u64>(timeout), mask);
+		}
 	}
 
 	void notify_one() noexcept
