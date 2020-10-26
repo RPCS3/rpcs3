@@ -727,7 +727,7 @@ private:
 				const auto current_version = props.driverVersion & ~0x3fffu; // Clear patch and revision fields
 				if (current_version < threshold_version)
 				{
-					rsx_log.error("Your current NVIDIA graphics driver version %s has known issues and is unsupported. Update to the lastest NVIDIA driver.",
+					rsx_log.error("Your current NVIDIA graphics driver version %s has known issues and is unsupported. Update to the latest NVIDIA driver.",
 						get_driver_version());
 				}
 			}
