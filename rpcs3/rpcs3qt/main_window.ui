@@ -248,6 +248,7 @@
     <property name="title">
      <string>Utilities</string>
     </property>
+    <addaction name="actionLog_Viewer"/>
     <addaction name="toolsCgDisasmAct"/>
     <addaction name="toolskernel_explorerAct"/>
     <addaction name="toolsmemory_viewerAct"/>
@@ -1108,6 +1109,11 @@
    </property>
    <property name="toolTip">
     <string>Configure RPCN</string>
+   </property>
+  </action>
+  <action name="actionLog_Viewer">
+   <property name="text">
+    <string>Log Viewer</string>
    </property>
   </action>
  </widget>

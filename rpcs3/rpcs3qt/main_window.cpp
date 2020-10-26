@@ -13,6 +13,7 @@
 #include "rpcn_settings_dialog.h"
 #include "auto_pause_settings_dialog.h"
 #include "cg_disasm_window.h"
+#include "log_viewer.h"
 #include "memory_string_searcher.h"
 #include "memory_viewer_panel.h"
 #include "rsx_debugger.h"
@@ -1830,6 +1831,12 @@ void main_window::CreateConnects()
 	{
 		cg_disasm_window* cgdw = new cg_disasm_window(m_gui_settings);
 		cgdw->show();
+	});
+
+	connect(ui->actionLog_Viewer, &QAction::triggered, [this]
+	{
+		log_viewer* viewer = new log_viewer(m_gui_settings);
+		viewer->show();
 	});
 
 	connect(ui->toolskernel_explorerAct, &QAction::triggered, [this]

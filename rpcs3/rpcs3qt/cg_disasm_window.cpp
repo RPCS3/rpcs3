@@ -63,13 +63,13 @@ cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgu
 
 void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 {
-	QMenu myMenu;
+	QMenu menu;
 	QAction* clear = new QAction(tr("&Clear"));
 	QAction* open = new QAction(tr("Open &Cg binary program"));
 
-	myMenu.addAction(open);
-	myMenu.addSeparator();
-	myMenu.addAction(clear);
+	menu.addAction(open);
+	menu.addSeparator();
+	menu.addAction(clear);
 
 	connect(clear, &QAction::triggered, [this]()
 	{
@@ -79,9 +79,10 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 
 	connect(open, &QAction::triggered, [this]()
 	{
-		QString filePath = QFileDialog::getOpenFileName(this, tr("Select Cg program object"), m_path_last, tr("Cg program objects (*.fpo;*.vpo);;"));
-		if (filePath == NULL) return;
-		m_path_last = filePath;
+		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Cg program object"), m_path_last, tr("Cg program objects (*.fpo;*.vpo);;"));
+		if (file_path.isEmpty())
+			return;
+		m_path_last = file_path;
 		ShowDisasm();
 	});
 
@@ -102,7 +103,7 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 		origin = mapToGlobal(pos);
 	}
 
-	myMenu.exec(origin);
+	menu.exec(origin);
 }
 
 void cg_disasm_window::ShowDisasm()

@@ -1,4 +1,5 @@
 #include "syntax_highlighter.h"
+#include "qt_utils.h"
 
 Highlighter::Highlighter(QTextDocument *parent) : QSyntaxHighlighter(parent)
 {
@@ -14,7 +15,7 @@ void Highlighter::addRule(const QString &pattern, const QBrush &brush)
 
 void Highlighter::highlightBlock(const QString &text)
 {
-	foreach (const HighlightingRule &rule, highlightingRules)
+	for (const HighlightingRule &rule : highlightingRules)
 	{
 		QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
 		while (matchIterator.hasNext())
@@ -34,8 +35,8 @@ void Highlighter::highlightBlock(const QString &text)
 
 	while (startIndex >= 0)
 	{
-		QRegularExpressionMatch match = commentEndExpression.match(text, startIndex);
-		int endIndex = match.capturedStart();
+		const QRegularExpressionMatch match = commentEndExpression.match(text, startIndex);
+		const int endIndex = match.capturedStart();
 		int commentLength = 0;
 
 		if (endIndex == -1)
@@ -52,6 +53,18 @@ void Highlighter::highlightBlock(const QString &text)
 	}
 }
 
+LogHighlighter::LogHighlighter(QTextDocument* parent) : Highlighter(parent)
+{
+	//addRule("^[^·].*$", gui::utils::get_label_color("log_level_always")); // unused for now
+	addRule("^·F.*$", gui::utils::get_label_color("log_level_fatal"));
+	addRule("^·E.*$", gui::utils::get_label_color("log_level_error"));
+	addRule("^·U.*$", gui::utils::get_label_color("log_level_todo"));
+	addRule("^·S.*$", gui::utils::get_label_color("log_level_success"));
+	addRule("^·W.*$", gui::utils::get_label_color("log_level_warning"));
+	addRule("^·!.*$", gui::utils::get_label_color("log_level_notice"));
+	addRule("^·T.*$", gui::utils::get_label_color("log_level_trace"));
+}
+
 AsmHighlighter::AsmHighlighter(QTextDocument *parent) : Highlighter(parent)
 {
 	addRule("^[A-Z0-9]+",             Qt::darkBlue);    // Instructions
@@ -65,7 +78,7 @@ AsmHighlighter::AsmHighlighter(QTextDocument *parent) : Highlighter(parent)
 
 GlslHighlighter::GlslHighlighter(QTextDocument *parent) : Highlighter(parent)
 {
-	QStringList keywordPatterns = QStringList()
+	const QStringList keywordPatterns = QStringList()
 		// Selection-Iteration-Jump Statements:
 		<< "if"     << "else"  << "switch"   << "case"    << "default"
 		<< "for"    << "while" << "do"       << "foreach" //?
@@ -155,7 +168,7 @@ GlslHighlighter::GlslHighlighter(QTextDocument *parent) : Highlighter(parent)
 		<< "r16_snorm"      << "r32ui"
 		<< "r8_snorm"       << "r16ui";
 
-	foreach (const QString &pattern, keywordPatterns)
+	for (const QString &pattern : keywordPatterns)
 		addRule("\\b" + pattern + "\\b",   Qt::darkBlue);    // normal words like: soka, nani, or gomen
 
 	addRule("\\bGL_(?:[A-Z]|_)+\\b",       Qt::darkMagenta); // constants like: GL_OMAE_WA_MOU_SHINDEIRU

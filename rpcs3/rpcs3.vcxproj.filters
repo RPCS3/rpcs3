@@ -1090,6 +1090,21 @@
     <ClCompile Include="rpcs3qt\custom_table_widget_item.cpp">
       <Filter>Gui\custom items</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\log_viewer.cpp">
+      <Filter>Gui\log</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_log_viewer.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_log_viewer.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_log_viewer.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_log_viewer.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1426,6 +1441,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\localized_emu.h">
       <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\log_viewer.h">
+      <Filter>Gui\log</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
