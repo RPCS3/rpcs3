@@ -41,6 +41,9 @@ static constexpr u64 one_v = Mask & (0 - Mask);
 // Callback for wait() function, returns false if wait should return
 static thread_local bool(*s_tls_wait_cb)(const void* data) = [](const void*){ return true; };
 
+// Callback for notification functions for optimizations
+static thread_local void(*s_tls_notify_cb)(const void* data, u64 progress) = [](const void*, u64){};
+
 // Compare data in memory with old value, and return true if they are equal
 template <bool CheckCb = true, bool CheckData = true>
 static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value, u64 mask)
@@ -682,11 +685,17 @@ SAFE_BUFFERS void atomic_storage_futex::wait(const void* data, std::size_t size,
 }
 
 // Platform specific wake-up function
-static inline bool alert_sema(atomic_t<u32>* sema)
+static inline bool alert_sema(atomic_t<u32>* sema, const void* data, u64 progress)
 {
 #ifdef USE_FUTEX
 	if (sema->load() == 1 && sema->compare_and_swap_test(1, 2))
 	{
+		if (!progress)
+		{
+			// Imminent notification
+			s_tls_notify_cb(data, 0);
+		}
+
 		// Use "wake all" arg for robustness, only 1 thread is expected
 		futex(sema, FUTEX_WAKE_PRIVATE, 0x7fff'ffff);
 		return true;
@@ -713,6 +722,12 @@ static inline bool alert_sema(atomic_t<u32>* sema)
 		{
 			if (auto cond = cond_get(cond_id))
 			{
+				if (!progress)
+				{
+					// Imminent notification
+					s_tls_notify_cb(data, 0);
+				}
+
 				// Not super efficient: locking is required to avoid lost notifications
 				cond->mtx.lock();
 				cond->mtx.unlock();
@@ -738,8 +753,15 @@ static inline bool alert_sema(atomic_t<u32>* sema)
 		// Check if tid is neither 0 nor -1
 		if (tid + 1 > 1 && sema->compare_and_swap_test(tid, -1))
 		{
+			if (!progress)
+			{
+				// Imminent notification
+				s_tls_notify_cb(data, 0);
+			}
+
 			if (NtAlertThreadByThreadId(tid) == NTSTATUS_SUCCESS)
 			{
+				// Could be some dead thread otherwise
 				return true;
 			}
 		}
@@ -749,6 +771,12 @@ static inline bool alert_sema(atomic_t<u32>* sema)
 
 	if (sema->load() == 1 && sema->compare_and_swap_test(1, 2))
 	{
+		if (!progress)
+		{
+			// Imminent notification
+			s_tls_notify_cb(data, 0);
+		}
+
 		// Can wait in rare cases, which is its annoying weakness
 		NtReleaseKeyedEvent(nullptr, sema, 1, nullptr);
 		return true;
@@ -763,6 +791,22 @@ void atomic_storage_futex::set_wait_callback(bool(*cb)(const void* data))
 	if (cb)
 	{
 		s_tls_wait_cb = cb;
+	}
+	else
+	{
+		s_tls_wait_cb = [](const void*){ return true; };
+	}
+}
+
+void atomic_storage_futex::set_notify_callback(void(*cb)(const void*, u64))
+{
+	if (cb)
+	{
+		s_tls_notify_cb = cb;
+	}
+	else
+	{
+		s_tls_notify_cb = [](const void*, u64){};
 	}
 }
 
@@ -785,15 +829,20 @@ void atomic_storage_futex::notify_one(const void* data)
 		return;
 	}
 
+	u64 progress = 0;
+
 	for (u64 bits = slot->sema_bits; bits; bits &= bits - 1)
 	{
 		const auto sema = &slot->sema_data[std::countr_zero(bits)];
 
-		if (alert_sema(sema))
+		if (alert_sema(sema, data, progress))
 		{
+			s_tls_notify_cb(data, ++progress);
 			break;
 		}
 	}
+
+	s_tls_notify_cb(data, -1);
 }
 
 void atomic_storage_futex::notify_all(const void* data)
@@ -806,6 +855,8 @@ void atomic_storage_futex::notify_all(const void* data)
 	{
 		return;
 	}
+
+	u64 progress = 0;
 
 #if defined(_WIN32) && !defined(USE_FUTEX)
 	if (!NtAlertThreadByThreadId)
@@ -825,6 +876,12 @@ void atomic_storage_futex::notify_all(const void* data)
 			if (sema->load() == 1 && sema->compare_and_swap_test(1, 2))
 			{
 				// Waiters locked for notification
+				if (bits == copy)
+				{
+					// Notify imminent notification
+					s_tls_notify_cb(data, 0);
+				}
+
 				continue;
 			}
 
@@ -847,6 +904,8 @@ void atomic_storage_futex::notify_all(const void* data)
 					continue;
 				}
 
+				s_tls_notify_cb(data, ++progress);
+
 				// Remove the bit from next stage
 				copy &= ~(1ull << id);
 			}
@@ -856,8 +915,10 @@ void atomic_storage_futex::notify_all(const void* data)
 		for (u64 bits = copy; bits; bits &= bits - 1)
 		{
 			NtReleaseKeyedEvent(nullptr, &slot->sema_data[std::countr_zero(bits)], 1, nullptr);
+			s_tls_notify_cb(data, ++progress);
 		}
 
+		s_tls_notify_cb(data, -1);
 		return;
 	}
 #endif
@@ -866,9 +927,12 @@ void atomic_storage_futex::notify_all(const void* data)
 	{
 		const auto sema = &slot->sema_data[std::countr_zero(bits)];
 
-		if (alert_sema(sema))
+		if (alert_sema(sema, data, progress))
 		{
+			s_tls_notify_cb(data, ++progress);
 			continue;
 		}
 	}
+
+	s_tls_notify_cb(data, -1);
 }

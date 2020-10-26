@@ -446,6 +446,29 @@ void cpu_thread::operator()()
 		return;
 	}
 
+	atomic_storage_futex::set_notify_callback([](const void*, u64 progress)
+	{
+		static thread_local bool wait_set = false;
+
+		cpu_thread* _cpu = get_current_cpu_thread();
+
+		// Wait flag isn't set asynchronously so this should be thread-safe
+		if (progress == 0 && !(_cpu->state & cpu_flag::wait))
+		{
+			// Operation just started and syscall is imminent
+			_cpu->state += cpu_flag::wait + cpu_flag::temp;
+			wait_set = true;
+			return;
+		}
+
+		if (progress == umax && std::exchange(wait_set, false))
+		{
+			// Operation finished: need to clean wait flag
+			verify(HERE), !_cpu->check_state();
+			return;
+		}
+	});
+
 	static thread_local struct thread_cleanup_t
 	{
 		cpu_thread* _this;
@@ -468,6 +491,8 @@ void cpu_thread::operator()()
 			{
 				ptr->compare_and_swap(_this, nullptr);
 			}
+
+			atomic_storage_futex::set_notify_callback(nullptr);
 
 			g_fxo->get<cpu_counter>()->remove(_this, s_tls_thread_slot);
 

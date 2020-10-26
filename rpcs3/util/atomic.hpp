@@ -27,6 +27,7 @@ private:
 
 public:
 	static void set_wait_callback(bool(*cb)(const void* data));
+	static void set_notify_callback(void(*cb)(const void* data, u64 progress));
 	static void raw_notify(const void* data);
 };
 
