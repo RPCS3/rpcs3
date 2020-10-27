@@ -294,7 +294,7 @@ void log_frame::CreateAndConnectActions()
 		m_stack_log = checked;
 	});
 
-	m_TTYAct = new QAction(tr("TTY"), this);
+	m_TTYAct = new QAction(tr("Enable TTY"), this);
 	m_TTYAct->setCheckable(true);
 	connect(m_TTYAct, &QAction::triggered, [this](bool checked)
 	{
@@ -318,8 +318,6 @@ void log_frame::CreateAndConnectActions()
 		menu->addActions(m_logLevels->actions());
 		menu->addSeparator();
 		menu->addAction(m_stackAct_log);
-		menu->addSeparator();
-		menu->addAction(m_TTYAct);
 		menu->exec(m_log->viewport()->mapToGlobal(pos));
 	});
 
@@ -328,6 +326,7 @@ void log_frame::CreateAndConnectActions()
 		QMenu* menu = m_tty->createStandardContextMenu();
 		menu->addAction(m_clearTTYAct);
 		menu->addSeparator();
+		menu->addAction(m_TTYAct);
 		menu->addAction(m_stackAct_tty);
 		menu->addSeparator();
 		menu->addActions(m_tty_channel_acts->actions());
