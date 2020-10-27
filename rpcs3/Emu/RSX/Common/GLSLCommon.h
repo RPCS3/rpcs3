@@ -583,21 +583,42 @@ namespace glsl
 
 		if (props.domain == glsl::program_domain::glsl_vertex_program && props.emulate_zclip_transform)
 		{
-			OS <<
-			"double rcp_precise(double x)\n"
-			"{\n"
-			"	double scaled = x * 0.0009765625;\n"
-			"	double inv = 1.0 / scaled;\n"
-			"	return inv * 0.0009765625;\n"
-			"}\n"
-			"\n"
-			"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
-			"{\n";
-
-			if (!props.emulate_depth_clip_only)
+			if (props.emulate_depth_clip_only)
+			{
+				// Declare rcp_precise. Requires f64 support in the drivers.
+				// This is required to handle precision drift during division for extended depth range.
+				OS <<
+				"double rcp_precise(double x)\n"
+				"{\n"
+				"	double scaled = x * 0.0009765625;\n"
+				"	double inv = 1.0 / scaled;\n"
+				"	return inv * 0.0009765625;\n"
+				"}\n"
+				"\n"
+				// Technically the depth value here is the 'final' depth that should be stored in the Z buffer.
+				// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
+				"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
+				"{\n"
+				"	if (far_plane != 0.0)\n"
+				"	{\n"
+				"		double z_range = (far_plane > near_plane)? (far_plane - near_plane) : far_plane;\n"
+				"		double inv_range = rcp_precise(z_range);\n"
+				"		float d = float(pos.z * rcp_precise(pos.w));\n"
+				"		float new_d = (d - near_plane) * float(inv_range);\n"
+				"		return vec4(pos.x, pos.y, (new_d * pos.w), pos.w);\n"
+				"	}\n"
+				"	else\n"
+				"	{\n"
+				"		return pos;\n" // Only values where Z=0 can ever pass this clip
+				"	}\n"
+				"}\n\n";
+			}
+			else
 			{
 				OS <<
-				"	float d = float(pos.z * rcp_precise(pos.w));\n"
+				"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
+				"{\n"
+				"	float d = float(pos.z / pos.w);\n"
 				"	if (d < 0.f && d >= near_plane)\n"
 				"	{\n"
 				"		// Clamp\n"
@@ -613,29 +634,9 @@ namespace glsl
 				"		return pos;\n"
 				"	}\n"
 				"\n"
-				"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n";
+				"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n"
+				"}\n\n";
 			}
-			else
-			{
-				// Technically the depth value here is the 'final' depth that should be stored in the Z buffer.
-				// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
-				OS <<
-				"	if (far_plane != 0.0)\n"
-				"	{\n"
-				"		double z_range = (far_plane > near_plane)? (far_plane - near_plane) : far_plane;\n"
-				"		double inv_range = rcp_precise(z_range);\n"
-				"		float d = float(pos.z * rcp_precise(pos.w));\n"
-				"		float new_d = (d - near_plane) * float(inv_range);\n"
-				"		return vec4(pos.x, pos.y, (new_d * pos.w), pos.w);\n"
-				"	}\n"
-				"	else\n"
-				"	{\n"
-				"		return pos;\n" // Only values where Z=0 can ever pass this clip
-				"	}\n";
-			}
-
-			OS <<
-			"}\n\n";
 
 			return;
 		}

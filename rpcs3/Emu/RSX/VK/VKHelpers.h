@@ -715,6 +715,22 @@ private:
 				// See https://bugs.freedesktop.org/show_bug.cgi?id=110970
 				rsx_log.fatal("RADV drivers have a major driver bug with LLVM 8.0.0 resulting in no visual output. Upgrade to LLVM version 8.0.1 or greater to avoid this issue.");
 			}
+			else if (get_driver_vendor() == driver_vendor::NVIDIA)
+			{
+#ifdef _WIN32
+				// SPIRV bugs were fixed in 452.28 for windows
+				const u32 threshold_version = (452u >> 22) | (28 >> 14);
+#else
+				// SPIRV bugs were fixed in 450.56 for linux/BSD
+				const u32 threshold_version = (450u >> 22) | (56 >> 14);
+#endif
+				const auto current_version = props.driverVersion & ~0x3fffu; // Clear patch and revision fields
+				if (current_version < threshold_version)
+				{
+					rsx_log.error("Your current NVIDIA graphics driver version %s has known issues and is unsupported. Update to the latest NVIDIA driver.",
+						get_driver_version());
+				}
+			}
 
 			if (get_chip_class() == chip_class::AMD_vega)
 			{
