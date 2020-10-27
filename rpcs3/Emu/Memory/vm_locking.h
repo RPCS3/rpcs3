@@ -13,6 +13,8 @@ namespace vm
 
 	extern atomic_t<u64> g_addr_lock;
 
+	extern atomic_t<u8> g_shareable[];
+
 	// Register reader
 	void passive_lock(cpu_thread& cpu);
 
@@ -28,7 +30,14 @@ namespace vm
 		const u64 lock_addr = static_cast<u32>(lock_val); // -> u64
 		const u32 lock_size = static_cast<u32>(lock_val >> 32);
 
-		if (u64{begin} + size <= lock_addr || begin >= lock_addr + lock_size) [[likely]]
+		u64 addr = begin;
+
+		if (g_shareable[begin >> 16])
+		{
+			addr = addr & 0xffff;
+		}
+
+		if (addr + size <= lock_addr || addr >= lock_addr + lock_size) [[likely]]
 		{
 			// Optimistic locking
 			range_lock->release(begin | (u64{size} << 32));

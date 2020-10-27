@@ -236,7 +236,7 @@ namespace vm
 		const auto range = utils::address_range::start_length(addr, size);
 
 		// Wait for range locks to clear
-		while (value)
+		while (true)
 		{
 			const u64 bads = for_all_range_locks([&](u32 addr2, u32 size2)
 			{
@@ -416,13 +416,13 @@ namespace vm
 				}
 			}
 
-			g_addr_lock = addr | (u64{128} << 32);
-
 			if (g_shareable[addr >> 16])
 			{
 				// Reservation address in shareable memory range
 				addr = addr & 0xffff;
 			}
+
+			g_addr_lock = addr | (u64{128} << 32);
 
 			const auto range = utils::address_range::start_length(addr, 128);
 
@@ -691,10 +691,11 @@ namespace vm
 		}
 
 		u8 start_value = 0xff;
+		u8 shareable = 0;
 
 		for (u32 start = addr / 4096, end = start + size / 4096, i = start; i < end + 1; i++)
 		{
-			u8 new_val = 0xff;
+			u32 new_val = 0xff;
 
 			if (i < end)
 			{
@@ -702,22 +703,42 @@ namespace vm
 				new_val |= flags_set;
 				new_val &= ~flags_clear;
 
-				g_pages[i].flags.release(new_val);
-				new_val &= (page_readable | page_writable);
+				shareable = g_shareable[i / 16];
 			}
 
-			if (new_val != start_value)
+			if (new_val != start_value || g_shareable[i / 16] != shareable)
 			{
 				if (u32 page_size = (i - start) * 4096)
 				{
-					const auto protection = start_value & page_writable ? utils::protection::rw : (start_value & page_readable ? utils::protection::ro : utils::protection::no);
-					utils::memory_protect(g_base_addr + start * 4096, page_size, protection);
+					// Protect range locks from observing changes in memory protection
+					if (shareable)
+					{
+						// Unoptimized
+						_lock_shareable_cache(2, 0, 0x10000);
+					}
+					else
+					{
+						_lock_shareable_cache(2, start * 4096, page_size);
+					}
+
+					for (u32 j = start; j < i; j++)
+					{
+						g_pages[j].flags.release(new_val);
+					}
+
+					if ((new_val ^ start_value) & (page_readable | page_writable))
+					{
+						const auto protection = start_value & page_writable ? utils::protection::rw : (start_value & page_readable ? utils::protection::ro : utils::protection::no);
+						utils::memory_protect(g_base_addr + start * 4096, page_size, protection);
+					}
 				}
 
 				start_value = new_val;
 				start = i;
 			}
 		}
+
+		g_addr_lock.release(0);
 
 		return true;
 	}
@@ -753,26 +774,28 @@ namespace vm
 			size += 4096;
 		}
 
-		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
-		{
-			if (!(g_pages[i].flags.exchange(0) & page_allocated))
-			{
-				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)" HERE, addr, size, i * 4096);
-			}
-		}
-
 		if (shm && shm->flags() != 0 && (--shm->info || g_shareable[addr >> 16]))
 		{
 			// Remove mirror from shareable cache
-			_lock_shareable_cache(0, addr, size);
+			_lock_shareable_cache(3, 0, 0x10000);
 
 			for (u32 i = addr / 65536; i < addr / 65536 + size / 65536; i++)
 			{
 				g_shareable[i].release(0);
 			}
+		}
 
-			// Unlock
-			g_addr_lock.release(0);
+		// Protect range locks from actual memory protection changes
+		_lock_shareable_cache(3, addr, size);
+
+		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		{
+			if (!(g_pages[i].flags & page_allocated))
+			{
+				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)" HERE, addr, size, i * 4096);
+			}
+
+			g_pages[i].flags.release(0);
 		}
 
 		// Notify rsx to invalidate range
@@ -804,6 +827,9 @@ namespace vm
 		{
 			utils::memory_decommit(g_stat_addr + addr, size);
 		}
+
+		// Unlock
+		g_addr_lock.release(0);
 
 		return size;
 	}
