@@ -639,18 +639,18 @@ template <typename T>
 struct atomic_storage<T, 16> : atomic_storage<T, 0>
 {
 #ifdef _MSC_VER
+	static inline T load(const T& dest)
+	{
+		__m128i val = _mm_load_si128(reinterpret_cast<const __m128i*>(&dest));
+		std::atomic_thread_fence(std::memory_order_acquire);
+		return std::bit_cast<T>(val);
+	}
+
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
 		struct alignas(16) llong2 { llong ll[2]; };
 		const llong2 _exch = std::bit_cast<llong2>(exch);
 		return _InterlockedCompareExchange128(reinterpret_cast<volatile llong*>(&dest), _exch.ll[1], _exch.ll[0], reinterpret_cast<llong*>(&comp)) != 0;
-	}
-
-	static inline T load(const T& dest)
-	{
-		struct alignas(16) llong2 { llong ll[2]; } result{};
-		_InterlockedCompareExchange128(reinterpret_cast<volatile llong*>(&const_cast<T&>(dest)), result.ll[1], result.ll[0], result.ll);
-		return std::bit_cast<T>(result);
 	}
 
 	static inline T exchange(T& dest, T value)
@@ -671,7 +671,76 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 
 	static inline void release(T& dest, T value)
 	{
+		std::atomic_thread_fence(std::memory_order_release);
+		_mm_store_si128(reinterpret_cast<__m128i*>(&dest), std::bit_cast<__m128i>(value));
+	}
+#else
+	static inline T load(const T& dest)
+	{
+		__m128i val = _mm_load_si128(reinterpret_cast<const __m128i*>(&dest));
+		__atomic_thread_fence(__ATOMIC_ACQUIRE);
+		return std::bit_cast<T>(val);
+	}
+
+	static inline bool compare_exchange(T& dest, T& comp, T exch)
+	{
+		bool result;
+		ullong cmp_lo = 0;
+		ullong cmp_hi = 0;
+		ullong exc_lo = 0;
+		ullong exc_hi = 0;
+
+		if constexpr (std::is_same_v<T, u128> || std::is_same_v<T, s128>)
+		{
+			cmp_lo = comp;
+			cmp_hi = comp >> 64;
+			exc_lo = exch;
+			exc_hi = exch >> 64;
+		}
+		else
+		{
+			std::memcpy(&cmp_lo, reinterpret_cast<char*>(&comp) + 0, 8);
+			std::memcpy(&cmp_hi, reinterpret_cast<char*>(&comp) + 8, 8);
+			std::memcpy(&exc_lo, reinterpret_cast<char*>(&exch) + 0, 8);
+			std::memcpy(&exc_hi, reinterpret_cast<char*>(&exch) + 8, 8);
+		}
+
+		__asm__ volatile("lock cmpxchg16b %1;"
+			: "=@ccz" (result)
+			, "+m" (dest)
+			, "+d" (cmp_hi)
+			, "+a" (cmp_lo)
+			: "c" (exc_hi)
+			, "b" (exc_lo)
+			: "cc");
+
+		if constexpr (std::is_same_v<T, u128> || std::is_same_v<T, s128>)
+		{
+			comp = T{cmp_hi} << 64 | cmp_lo;
+		}
+		else
+		{
+			std::memcpy(reinterpret_cast<char*>(&comp) + 0, &cmp_lo, 8);
+			std::memcpy(reinterpret_cast<char*>(&comp) + 8, &cmp_hi, 8);
+		}
+
+		return result;
+	}
+
+	static inline T exchange(T& dest, T value)
+	{
+		return std::bit_cast<T>(__sync_lock_test_and_set(reinterpret_cast<u128*>(&dest), std::bit_cast<u128>(value)));
+	}
+
+	static inline void store(T& dest, T value)
+	{
 		exchange(dest, value);
+	}
+
+	static inline void release(T& dest, T value)
+	{
+		__atomic_thread_fence(__ATOMIC_RELEASE);
+		_mm_store_si128(reinterpret_cast<__m128i*>(&dest), std::bit_cast<__m128i>(value));
 	}
 #endif
 

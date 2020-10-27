@@ -1573,7 +1573,10 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	}
 
 	// Keep src point to const
-	auto [dst, src] = [&]() -> std::pair<u8*, const u8*>
+	u8* dst = nullptr;
+	const u8* src = nullptr;
+
+	std::tie(dst, src) = [&]() -> std::pair<u8*, const u8*>
 	{
 		u8* dst = vm::_ptr<u8>(eal);
 		u8* src = _ptr<u8>(lsa);
@@ -1596,6 +1599,15 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 	if ((!g_use_rtm && !is_get) || g_cfg.core.spu_accurate_dma)  [[unlikely]]
 	{
+		perf_meter<"ADMA_GET"_u64> perf_get;
+		perf_meter<"ADMA_PUT"_u64> perf_put = perf_get;
+
+		if (!g_cfg.core.spu_accurate_dma) [[likely]]
+		{
+			perf_put.reset();
+			perf_get.reset();
+		}
+
 		for (u32 size = args.size, size0; is_get;
 			size -= size0, dst += size0, src += size0, eal += size0)
 		{
@@ -1613,7 +1625,9 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				}
 				else
 				{
+					state += cpu_flag::wait + cpu_flag::temp;
 					std::this_thread::yield();
+					check_state();
 				}
 			}())
 			{
@@ -1728,8 +1742,102 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					continue;
 				}
 
-				// Lock each cache line execlusively
-				auto [res, time0] = vm::reservation_lock(eal);
+				// Lock each cache line
+				auto& res = vm::reservation_acquire(eal, size0);
+
+				// Lock each bit corresponding to a byte being written, using some free space in reservation memory
+				auto* bits = reinterpret_cast<atomic_t<u128>*>(vm::g_reservations + (eal & 0xff80) / 2 + 16);
+
+				// Get writing mask
+				const u128 wmask = (~u128{} << (eal & 127)) & (~u128{} >> (127 - ((eal + size0 - 1) & 127)));
+				//const u64 start = (eal & 127) / 2;
+				//const u64 _end_ = ((eal + size0 - 1) & 127) / 2;
+				//const u64 wmask = (UINT64_MAX << start) & (UINT64_MAX >> (63 - _end_));
+
+				u128 old = 0;
+
+				for (u64 i = 0; i != umax; [&]()
+				{
+					if (state & cpu_flag::pause)
+					{
+						cpu_thread::if_suspended(this, [&]
+						{
+							std::memcpy(dst, src, size0);
+							res += 128;
+						});
+
+						// Exit loop and function
+						i = -1;
+						bits = nullptr;
+						return;
+					}
+					else if (++i < 10)
+					{
+						busy_wait(500);
+					}
+					else
+					{
+						// Wait
+						state += cpu_flag::wait + cpu_flag::temp;
+						bits->wait(old, wmask);
+						check_state();
+					}
+				}())
+				{
+					// Completed in suspend_all()
+					if (!bits)
+					{
+						break;
+					}
+
+					bool ok = false;
+
+					std::tie(old, ok) = bits->fetch_op([&](auto& v)
+					{
+						if (v & wmask)
+						{
+							return false;
+						}
+
+						v |= wmask;
+						return true;
+					});
+
+					if (ok) [[likely]]
+					{
+						break;
+					}
+				}
+
+				if (!bits)
+				{
+					if (size == size0)
+					{
+						break;
+					}
+
+					continue;
+				}
+
+				// Lock reservation (shared)
+				auto [_oldd, _ok] = res.fetch_op([&](u64& r)
+				{
+					if (r & vm::rsrv_unique_lock)
+					{
+						return false;
+					}
+
+					r += 1;
+					return true;
+				});
+
+				if (!_ok)
+				{
+					vm::reservation_shared_lock_internal(res);
+				}
+
+				// Obtain range lock as normal store
+				vm::range_lock(range_lock, eal, size0);
 
 				switch (size0)
 				{
@@ -1777,7 +1885,17 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				}
 				}
 
-				res += 64;
+				range_lock->release(0);
+
+				res += 127;
+
+				// Release bits and notify
+				bits->atomic_op([&](auto& v)
+				{
+					v &= ~wmask;
+				});
+
+				bits->notify_all();
 
 				if (size == size0)
 				{
@@ -1785,9 +1903,11 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				}
 			}
 
-			std::atomic_thread_fence(std::memory_order_seq_cst);
+			//std::atomic_thread_fence(std::memory_order_seq_cst);
 			return;
 		}
+
+		perf_meter<"DMA_PUT"_u64> perf2;
 
 		switch (u32 size = args.size)
 		{
@@ -2587,7 +2707,7 @@ bool spu_thread::process_mfc_cmd()
 				continue;
 			}
 
-			if (g_use_rtm && i >= 15 && g_cfg.core.perf_report) [[unlikely]]
+			if (i >= 15 && g_cfg.core.perf_report) [[unlikely]]
 			{
 				perf_log.warning("GETLLAR: took too long: %u", i);
 			}

@@ -1199,7 +1199,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 				verify(HERE), cpu_thread::if_suspended<-1>(&ppu, [&]()
 				{
 					// Guaranteed success
-					ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & -128;
+					ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
 					mov_rdata(ppu.rdata, *vm::get_super_ptr<spu_rdata_t>(addr & -128));
 				});
 

@@ -87,11 +87,11 @@ namespace vm
 		// Use 128-byte aligned addr
 		const u32 addr = static_cast<u32>(ptr.addr()) & -128;
 
+		auto& res = vm::reservation_acquire(addr, 128);
+		_m_prefetchw(&res);
+
 		if (g_use_rtm)
 		{
-			auto& res = vm::reservation_acquire(addr, 128);
-			_m_prefetchw(&res);
-
 			// Stage 1: single optimistic transaction attempt
 			unsigned status = _XBEGIN_STARTED;
 			unsigned count = 0;
@@ -267,15 +267,15 @@ namespace vm
 			}
 		}
 
-		// Perform heavyweight lock
-		auto [res, rtime] = vm::reservation_lock(addr);
+		// Lock reservation and perform heavyweight lock
+		reservation_shared_lock_internal(res);
 
 		if constexpr (std::is_void_v<std::invoke_result_t<F, T&>>)
 		{
 			{
 				vm::writer_lock lock(addr);
 				std::invoke(op, *sptr);
-				res += 64;
+				res += 127;
 			}
 
 			if constexpr (Ack)
@@ -290,11 +290,11 @@ namespace vm
 
 				if ((result = std::invoke(op, *sptr)))
 				{
-					res += 64;
+					res += 127;
 				}
 				else
 				{
-					res -= 64;
+					res -= 1;
 				}
 			}
 
@@ -313,9 +313,6 @@ namespace vm
 	{
 		// Atomic operation will be performed on aligned 128 bytes of data, so the data size and alignment must comply
 		static_assert(sizeof(T) <= 128 && alignof(T) == sizeof(T), "vm::reservation_peek: unsupported type");
-
-		// Use "super" pointer to prevent access violation handling during atomic op
-		const auto sptr = vm::get_super_ptr<const T>(static_cast<u32>(ptr.addr()));
 
 		// Use 128-byte aligned addr
 		const u32 addr = static_cast<u32>(ptr.addr()) & -128;
@@ -340,7 +337,7 @@ namespace vm
 			// Observe data non-atomically and make sure no reservation updates were made
 			if constexpr (std::is_void_v<std::invoke_result_t<F, const T&>>)
 			{
-				std::invoke(op, *sptr);
+				std::invoke(op, *ptr);
 
 				if (rtime == vm::reservation_acquire(addr, 128))
 				{
@@ -349,7 +346,7 @@ namespace vm
 			}
 			else
 			{
-				auto res = std::invoke(op, *sptr);
+				auto res = std::invoke(op, *ptr);
 
 				if (rtime == vm::reservation_acquire(addr, 128))
 				{
@@ -371,7 +368,18 @@ namespace vm
 		// "Lock" reservation
 		auto& res = vm::reservation_acquire(addr, 128);
 
-		if (res.fetch_add(1) & vm::rsrv_unique_lock) [[unlikely]]
+		auto [_old, _ok] = res.fetch_op([&](u64& r)
+		{
+			if (r & vm::rsrv_unique_lock)
+			{
+				return false;
+			}
+
+			r += 1;
+			return true;
+		});
+
+		if (!_ok) [[unlikely]]
 		{
 			vm::reservation_shared_lock_internal(res);
 		}

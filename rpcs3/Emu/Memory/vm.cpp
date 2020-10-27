@@ -510,7 +510,18 @@ namespace vm
 	{
 		for (u64 i = 0;; i++)
 		{
-			if (!(res & rsrv_unique_lock)) [[likely]]
+			auto [_oldd, _ok] = res.fetch_op([&](u64& r)
+			{
+				if (r & rsrv_unique_lock)
+				{
+					return false;
+				}
+
+				r += 1;
+				return true;
+			});
+
+			if (_ok) [[likely]]
 			{
 				return;
 			}
