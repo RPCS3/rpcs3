@@ -228,23 +228,61 @@ static const std::string rsx_fp_op_names[] =
 
 struct RSXFragmentProgram
 {
-	void *addr;
-	u32 offset;
-	u32 ucode_length;
-	u32 total_length;
-	u32 ctrl;
-	u16 unnormalized_coords;
-	u16 redirected_textures;
-	u16 shadow_textures;
-	bool two_sided_lighting;
-	u32 texture_dimensions;
-	u32 texcoord_control_mask;
+	struct data_storage_helper
+	{
+		void* data_ptr = nullptr;
+		std::vector<char> local_storage;
+
+		data_storage_helper() = default;
+
+		data_storage_helper(void* ptr)
+		{
+			data_ptr = ptr;
+			local_storage.clear();
+		}
+
+		data_storage_helper(const data_storage_helper& other)
+		{
+			if (other.data_ptr == other.local_storage.data())
+			{
+				local_storage = other.local_storage;
+				data_ptr = local_storage.data();
+			}
+			else
+			{
+				data_ptr = other.data_ptr;
+				local_storage.clear();
+			}
+		}
+
+		void deep_copy(u32 max_length)
+		{
+			if (local_storage.empty() && data_ptr)
+			{
+				local_storage.resize(max_length);
+				std::memcpy(local_storage.data(), data_ptr, max_length);
+				data_ptr = local_storage.data();
+			}
+		}
+
+	} mutable data;
+
+	u32 offset = 0;
+	u32 ucode_length = 0;
+	u32 total_length = 0;
+	u32 ctrl = 0;
+	u16 unnormalized_coords = 0;
+	u16 redirected_textures = 0;
+	u16 shadow_textures = 0;
+	bool two_sided_lighting = false;
+	u32 texture_dimensions = 0;
+	u32 texcoord_control_mask = 0;
 
 	float texture_scale[16][4];
 	u8 textures_alpha_kill[16];
 	u8 textures_zfunc[16];
 
-	bool valid;
+	bool valid = false;
 
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const
 	{
@@ -264,6 +302,26 @@ struct RSXFragmentProgram
 
 	RSXFragmentProgram()
 	{
-		memset(this, 0, sizeof(RSXFragmentProgram));
+		std::memset(texture_scale, 0, sizeof(float) * 16 * 4);
+		std::memset(textures_alpha_kill, 0, sizeof(u8) * 16);
+		std::memset(textures_zfunc, 0, sizeof(u8) * 16);
+	}
+
+	static RSXFragmentProgram clone(const RSXFragmentProgram& prog)
+	{
+		auto result = prog;
+		result.clone_data();
+		return result;
+	}
+
+	void* get_data() const
+	{
+		return data.data_ptr;
+	}
+
+	void clone_data() const
+	{
+		verify(HERE), ucode_length;
+		data.deep_copy(ucode_length);
 	}
 };

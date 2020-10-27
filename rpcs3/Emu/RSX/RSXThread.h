@@ -826,10 +826,6 @@ namespace rsx
 		 */
 		virtual void do_local_task(FIFO_state state);
 
-		virtual void on_decompiler_init() {}
-		virtual void on_decompiler_exit() {}
-		virtual bool on_decompiler_task() { return false; }
-
 		virtual void emit_geometry(u32) {}
 
 		void run_FIFO();

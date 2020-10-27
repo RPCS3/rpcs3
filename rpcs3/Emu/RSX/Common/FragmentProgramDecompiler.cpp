@@ -217,7 +217,7 @@ std::string FragmentProgramDecompiler::AddConst()
 		return name;
 	}
 
-	auto data = reinterpret_cast<be_t<u32>*>(static_cast<char*>(m_prog.addr) + m_size + 4 * sizeof(u32));
+	auto data = reinterpret_cast<be_t<u32>*>(static_cast<char*>(m_prog.get_data()) + m_size + 4 * sizeof(u32));
 	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);
 	u32 y = GetData(data[1]);
@@ -1118,7 +1118,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 
 std::string FragmentProgramDecompiler::Decompile()
 {
-	auto data = static_cast<be_t<u32>*>(m_prog.addr);
+	auto data = static_cast<be_t<u32>*>(m_prog.get_data());
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;

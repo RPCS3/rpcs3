@@ -423,7 +423,7 @@ size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragment
 {
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
 	size_t hash = 0xCBF29CE484222325ULL;
-	const void* instbuffer = program.addr;
+	const void* instbuffer = program.get_data();
 	size_t instIndex = 0;
 	while (true)
 	{
@@ -475,8 +475,8 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 			return false;
 	}
 
-	const void* instBuffer1 = binary1.addr;
-	const void* instBuffer2 = binary2.addr;
+	const void* instBuffer1 = binary1.get_data();
+	const void* instBuffer2 = binary2.get_data();
 	size_t instIndex = 0;
 	while (true)
 	{

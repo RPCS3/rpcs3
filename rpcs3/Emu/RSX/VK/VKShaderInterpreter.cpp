@@ -484,7 +484,6 @@ namespace vk
 		VkPipelineColorBlendStateCreateInfo cs = properties.state.cs;
 		cs.pAttachments = properties.state.att_state;
 
-		VkPipeline pipeline;
 		VkGraphicsPipelineCreateInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		info.pVertexInputState = &vi;
@@ -502,8 +501,9 @@ namespace vk
 		info.basePipelineHandle = VK_NULL_HANDLE;
 		info.renderPass = vk::get_renderpass(m_device, properties.renderpass_key);
 
-		CHECK_RESULT(vkCreateGraphicsPipelines(m_device, nullptr, 1, &info, NULL, &pipeline));
-		return new vk::glsl::program(m_device, pipeline, m_shared_pipeline_layout, m_vs_inputs, m_fs_inputs);
+		auto compiler = vk::get_pipe_compiler();
+		auto program = compiler->compile(info, m_shared_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE, {}, m_vs_inputs, m_fs_inputs);
+		return program.release();
 	}
 
 	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, VkDescriptorSet descriptor_set)
