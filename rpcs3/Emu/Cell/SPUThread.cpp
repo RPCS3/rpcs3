@@ -271,7 +271,7 @@ namespace spu
 					busy_wait(count);
 				}
 
-				spu.check_state();
+				verify(HERE), !spu.check_state();
 			}
 
 			atomic_instruction_table[pc_offset]++;
