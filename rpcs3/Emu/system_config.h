@@ -152,6 +152,7 @@ struct cfg_root : cfg::node
 		cfg::_int<50, 800> resolution_scale_percent{ this, "Resolution Scale", 100 };
 		cfg::_int<0, 16> anisotropic_level_override{ this, "Anisotropic Filter Override", 0, true };
 		cfg::_int<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16 };
+		cfg::_int<0, 16> shader_compiler_threads_count{ this, "Shader Compiler Threads", 0 };
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
 		cfg::_int<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 1, true };
 		cfg::_int<1, 1800> vblank_rate{ this, "Vblank Rate", 60, true }; // Changing this from 60 may affect game speed in unexpected ways

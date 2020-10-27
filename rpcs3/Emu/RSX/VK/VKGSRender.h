@@ -22,7 +22,7 @@ namespace vk
 	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<VkFormat>;
 	using null_vertex_cache = vertex_cache;
 
-	using shader_cache = rsx::shaders_cache<vk::pipeline_props, VKProgramBuffer>;
+	using shader_cache = rsx::shaders_cache<vk::pipeline_props, vk::program_cache>;
 
 	struct vertex_upload_info
 	{
@@ -390,7 +390,7 @@ public:
 	std::unique_ptr<vk::shader_cache> m_shaders_cache;
 
 private:
-	std::unique_ptr<VKProgramBuffer> m_prog_buffer;
+	std::unique_ptr<vk::program_cache> m_prog_buffer;
 
 	std::unique_ptr<vk::swapchain_base> m_swapchain;
 	vk::context m_thread_context;
@@ -573,6 +573,4 @@ protected:
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
 	void on_semaphore_acquire_wait() override;
-
-	bool on_decompiler_task() override;
 };

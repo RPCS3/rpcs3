@@ -65,8 +65,6 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-    <ClCompile />
-    <ClCompile />
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>
@@ -80,6 +78,7 @@
     <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
     <ClInclude Include="Emu\RSX\GL\GLExecutionState.h" />
     <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
+    <ClInclude Include="Emu\RSX\GL\GLPipelineCompiler.h" />
     <ClInclude Include="Emu\RSX\GL\GLTextOut.h" />
     <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h" />
     <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h" />
@@ -99,6 +98,7 @@
     <ClCompile Include="Emu\RSX\GL\GLDraw.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLPipelineCompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLHelpers.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLPresent.cpp" />

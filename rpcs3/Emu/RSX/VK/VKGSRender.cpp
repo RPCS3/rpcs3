@@ -473,7 +473,10 @@ VKGSRender::VKGSRender() : GSRender()
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, memory_map.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
+	int thread_count = g_cfg.video.shader_compiler_threads_count;
+	if (!thread_count) thread_count = -1;
 	vk::initialize_compiler_context();
+	vk::initialize_pipe_compiler(thread_count);
 
 	if (g_cfg.video.overlay)
 	{
@@ -482,7 +485,7 @@ VKGSRender::VKGSRender() : GSRender()
 		m_text_writer->init(*m_device, vk::get_renderpass(*m_device, key));
 	}
 
-	m_prog_buffer = std::make_unique<VKProgramBuffer>
+	m_prog_buffer = std::make_unique<vk::program_cache>
 	(
 		[this](const vk::pipeline_props& props, const RSXVertexProgram& vp, const RSXFragmentProgram& fp)
 		{
@@ -561,8 +564,9 @@ VKGSRender::~VKGSRender()
 	m_texture_cache.destroy();
 
 	//Shaders
-	vk::finalize_compiler_context();
-	m_prog_buffer->clear();
+	vk::destroy_pipe_compiler();      // Ensure no pending shaders being compiled
+	vk::finalize_compiler_context();  // Shut down the glslang compiler
+	m_prog_buffer->clear();           // Delete shader objects
 	m_shader_interpreter.destroy();
 
 	m_persistent_attribute_storage.reset();
@@ -1629,7 +1633,7 @@ bool VKGSRender::load_program()
 		vertex_program.skip_vertex_input_check = true;
 		fragment_program.unnormalized_coords = 0;
 		m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
-			shadermode != shader_mode::recompiler, true, *m_device, pipeline_layout).get();
+			shadermode != shader_mode::recompiler, true, *m_device, pipeline_layout);
 
 		vk::leave_uninterruptible();
 
@@ -1815,8 +1819,7 @@ void VKGSRender::load_program_env()
 			control_masks[0] = rsx::method_registers.shader_control();
 			control_masks[1] = current_fragment_program.texture_dimensions;
 
-			const auto fp_data = static_cast<u8*>(current_fragment_program.addr) + current_fp_metadata.program_start_offset;
-			std::memcpy(fp_buf + 16, fp_data, current_fp_metadata.program_ucode_length);
+			std::memcpy(fp_buf + 16, current_fragment_program.get_data(), current_fragment_program.ucode_length);
 			m_fragment_instructions_buffer.unmap();
 
 			m_fragment_instructions_buffer_info = { m_fragment_instructions_buffer.heap->value, fp_mapping, fp_block_length };
@@ -2498,9 +2501,4 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 void VKGSRender::end_conditional_rendering()
 {
 	thread::end_conditional_rendering();
-}
-
-bool VKGSRender::on_decompiler_task()
-{
-	return m_prog_buffer->async_update(8, *m_device, pipeline_layout).first;
 }

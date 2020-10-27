@@ -6,6 +6,7 @@
 #include "VKFramebuffer.h"
 #include "VKResourceManager.h"
 #include "VKRenderPass.h"
+#include "VKPipelineCompiler.h"
 
 #include "../Overlays/overlays.h"
 
@@ -233,7 +234,6 @@ namespace vk
 			vp.scissorCount = 1;
 			vp.viewportCount = 1;
 
-			VkPipeline pipeline;
 			VkGraphicsPipelineCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 			info.pVertexInputState = &vi;
@@ -251,9 +251,8 @@ namespace vk
 			info.basePipelineHandle = VK_NULL_HANDLE;
 			info.renderPass = render_pass;
 
-			CHECK_RESULT(vkCreateGraphicsPipelines(*m_device, nullptr, 1, &info, NULL, &pipeline));
-
-			auto program = std::make_unique<vk::glsl::program>(*m_device, pipeline, m_pipeline_layout, get_vertex_inputs(), get_fragment_inputs());
+			auto compiler = vk::get_pipe_compiler();
+			auto program = compiler->compile(info, m_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE, {}, get_vertex_inputs(), get_fragment_inputs());
 			auto result = program.get();
 			m_program_cache[storage_key] = std::move(program);
 

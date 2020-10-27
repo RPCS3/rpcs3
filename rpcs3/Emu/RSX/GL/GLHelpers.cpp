@@ -23,6 +23,18 @@ namespace gl
 		return tls_primary_context_thread;
 	}
 
+	void flush_command_queue(fence& fence_obj)
+	{
+		if (is_primary_context_thread())
+		{
+			fence_obj.check_signaled();
+		}
+		else
+		{
+			glFlush();
+		}
+	}
+
 	GLenum draw_mode(rsx::primitive_type in)
 	{
 		switch (in)

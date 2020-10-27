@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "VKHelpers.h"
+#include "VKPipelineCompiler.h"
 #include "VKRenderPass.h"
 #include "Utilities/StrUtil.h"
 #include "Emu/IdManager.h"
@@ -177,10 +178,8 @@ namespace vk
 				info.basePipelineIndex = -1;
 				info.basePipelineHandle = VK_NULL_HANDLE;
 
-				VkPipeline pipeline;
-				vkCreateComputePipelines(*get_current_renderer(), nullptr, 1, &info, nullptr, &pipeline);
-
-				m_program = std::make_unique<vk::glsl::program>(*get_current_renderer(), pipeline, m_pipeline_layout);
+				auto compiler = vk::get_pipe_compiler();
+				m_program = compiler->compile(info, m_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE);
 				declare_inputs();
 			}
 

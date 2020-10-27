@@ -51,12 +51,15 @@ namespace gl
 	else\
 		gl##func##EXT(texture_name, target, __VA_ARGS__);
 
+	class fence;
+
 	void enable_debugging();
 	bool is_primitive_native(rsx::primitive_type in);
 	GLenum draw_mode(rsx::primitive_type in);
 
 	void set_primary_context_thread();
 	bool is_primary_context_thread();
+	void flush_command_queue(fence& fence_obj);
 
 	// Texture helpers
 	std::array<GLenum, 4> apply_swizzle_remap(const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap);
@@ -76,8 +79,8 @@ namespace gl
 	class fence
 	{
 		GLsync m_value = nullptr;
-		GLenum flags = GL_SYNC_FLUSH_COMMANDS_BIT;
-		bool signaled = false;
+		mutable GLenum flags = GL_SYNC_FLUSH_COMMANDS_BIT;
+		mutable bool signaled = false;
 
 	public:
 
@@ -104,12 +107,12 @@ namespace gl
 			create();
 		}
 
-		bool is_empty()
+		bool is_empty() const
 		{
 			return (m_value == nullptr);
 		}
 
-		bool check_signaled()
+		bool check_signaled() const
 		{
 			verify(HERE), m_value != nullptr;
 
@@ -2222,6 +2225,8 @@ public:
 			::glsl::program_domain type;
 			GLuint m_id = GL_NONE;
 
+			fence m_compiled_fence;
+
 		public:
 			shader() = default;
 
@@ -2245,10 +2250,7 @@ public:
 			{
 				type = type_;
 				source = src;
-			}
 
-			shader& compile()
-			{
 				GLenum shader_type;
 				switch (type)
 				{
@@ -2266,6 +2268,10 @@ public:
 				}
 
 				m_id = glCreateShader(shader_type);
+			}
+
+			shader& compile()
+			{
 				const char* str = source.c_str();
 				const GLint length = ::narrow<GLint>(source.length());
 
@@ -2310,6 +2316,8 @@ public:
 					rsx_log.fatal("Compilation failed: %s", error_msg);
 				}
 
+				m_compiled_fence.create();
+				flush_command_queue(m_compiled_fence);
 				return *this;
 			}
 
@@ -2332,6 +2340,11 @@ public:
 				return source;
 			}
 
+			fence get_compile_fence_sync() const
+			{
+				return m_compiled_fence;
+			}
+
 			void set_id(uint id)
 			{
 				m_id = id;
@@ -2345,6 +2358,19 @@ public:
 			explicit operator bool() const
 			{
 				return created();
+			}
+		};
+
+		class shader_view : public shader
+		{
+		public:
+			shader_view(GLuint id) : shader(id)
+			{
+			}
+
+			~shader_view()
+			{
+				set_id(0);
 			}
 		};
 
@@ -2548,11 +2574,7 @@ public:
 					}
 
 					m_fence.create();
-
-					if (!is_primary_context_thread())
-					{
-						glFlush();
-					}
+					flush_command_queue(m_fence);
 				}
 			}
 
@@ -2637,18 +2659,6 @@ public:
 				return glGetUniformLocation(m_id, name.c_str());
 			}
 
-			program& operator += (const shader& rhs)
-			{
-				return attach(rhs);
-			}
-
-			program& operator += (std::initializer_list<shader> shaders)
-			{
-				for (auto &shader : shaders)
-					*this += shader;
-				return *this;
-			}
-
 			program() = default;
 			program(const program&) = delete;
 			program(program&& program_)
@@ -2680,19 +2690,6 @@ public:
 			{
 				swap(rhs);
 				return *this;
-			}
-		};
-
-		class shader_view : public shader
-		{
-		public:
-			shader_view(GLuint id) : shader(id)
-			{
-			}
-
-			~shader_view()
-			{
-				set_id(0);
 			}
 		};
 

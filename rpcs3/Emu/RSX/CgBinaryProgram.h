@@ -310,7 +310,7 @@ public:
 				u32 ctrl = (vmfprog.outputFromH0 ? 0 : 0x40) | (vmfprog.depthReplace ? 0xe : 0);
 				std::vector<rsx::texture_dimension_extended> td;
 				RSXFragmentProgram prog;
-				prog.ucode_length = 0, prog.addr = vm::base(ptr + vmprog.ucode), prog.offset = 0, prog.ctrl = ctrl;
+				prog.ucode_length = 0, prog.data = vm::base(ptr + vmprog.ucode), prog.offset = 0, prog.ctrl = ctrl;
 				GLFragmentDecompilerThread(m_glsl_shader, param_array, prog, size).Task();
 				vm::close();
 			}

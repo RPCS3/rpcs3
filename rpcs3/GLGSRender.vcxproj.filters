@@ -13,6 +13,7 @@
     <ClCompile Include="Emu\RSX\GL\GLRenderTargets.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLShaderInterpreter.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexBuffers.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLPipelineCompiler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
@@ -31,5 +32,6 @@
     <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
     <ClInclude Include="Emu\RSX\GL\GLExecutionState.h" />
     <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
+    <ClInclude Include="Emu\RSX\GL\GLPipelineCompiler.h" />
   </ItemGroup>
 </Project>

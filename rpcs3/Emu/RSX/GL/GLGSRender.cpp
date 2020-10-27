@@ -59,10 +59,35 @@ void GLGSRender::on_init_thread()
 	m_context = m_frame->make_context();
 
 	const auto shadermode = g_cfg.video.shadermode.get();
-
-	if (shadermode == shader_mode::async_recompiler || shadermode == shader_mode::async_with_interpreter)
+	if (shadermode != shader_mode::recompiler)
 	{
-		m_decompiler_context = m_frame->make_context();
+		auto context_create_func = [m_frame = m_frame]()
+		{
+			return m_frame->make_context();
+		};
+
+		auto context_bind_func = [m_frame = m_frame](draw_context_t ctx)
+		{
+			m_frame->set_current(ctx);
+		};
+
+		auto context_destroy_func = [m_frame = m_frame](draw_context_t ctx)
+		{
+			m_frame->delete_context(ctx);
+		};
+
+		int thread_count = g_cfg.video.shader_compiler_threads_count;
+		if (!thread_count) thread_count = -1;
+		gl::initialize_pipe_compiler(context_create_func, context_bind_func, context_destroy_func, thread_count);
+	}
+	else
+	{
+		auto null_context_create_func = []() -> draw_context_t
+		{
+			return nullptr;
+		};
+
+		gl::initialize_pipe_compiler(null_context_create_func, {}, {}, 1);
 	}
 
 	// Bind primary context to main RSX thread
@@ -341,6 +366,8 @@ void GLGSRender::on_exit()
 	{
 		gl::g_typeless_transfer_buffer.remove();
 	}
+
+	gl::destroy_pipe_compiler();
 
 	m_prog_buffer.clear();
 	m_rtts.destroy();
@@ -651,7 +678,7 @@ bool GLGSRender::load_program()
 	{
 		void* pipeline_properties = nullptr;
 		m_program = m_prog_buffer.get_graphics_pipeline(current_vertex_program, current_fragment_program, pipeline_properties,
-			shadermode != shader_mode::recompiler, true).get();
+			shadermode != shader_mode::recompiler, true);
 
 		if (m_prog_buffer.check_cache_missed())
 		{
@@ -836,8 +863,7 @@ void GLGSRender::load_program_env()
 			// Bind textures
 			m_shader_interpreter.update_fragment_textures(fs_sampler_state, current_fp_metadata.referenced_textures_mask, reinterpret_cast<u32*>(fp_buf + 16));
 
-			const auto fp_data = static_cast<u8*>(current_fragment_program.addr) + current_fp_metadata.program_start_offset;
-			std::memcpy(fp_buf + 80, fp_data, current_fp_metadata.program_ucode_length);
+			std::memcpy(fp_buf + 80, current_fragment_program.get_data(), current_fragment_program.ucode_length);
 
 			m_fragment_instructions_buffer->bind_range(GL_INTERPRETER_FRAGMENT_BLOCK, fp_mapping.second, fp_block_length);
 			m_fragment_instructions_buffer->notify();
@@ -1069,21 +1095,4 @@ void GLGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 		//Discard is being called on an active query, close it
 		glEndQuery(GL_ANY_SAMPLES_PASSED);
 	}
-}
-
-void GLGSRender::on_decompiler_init()
-{
-	// Bind decompiler context to this thread
-	m_frame->set_current(m_decompiler_context);
-}
-
-void GLGSRender::on_decompiler_exit()
-{
-	// Cleanup
-	m_frame->delete_context(m_decompiler_context);
-}
-
-bool GLGSRender::on_decompiler_task()
-{
-	return m_prog_buffer.async_update(8).first;
 }
