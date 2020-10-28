@@ -1970,7 +1970,7 @@ bool thread_base::finalize(thread_state result_state) noexcept
 
 void thread_base::finalize() noexcept
 {
-	atomic_storage_futex::set_wait_callback([](const void*){ return true; });
+	atomic_storage_futex::set_wait_callback(nullptr);
 	g_tls_log_prefix = []() -> std::string { return {}; };
 	thread_ctrl::g_tls_this_thread = nullptr;
 }

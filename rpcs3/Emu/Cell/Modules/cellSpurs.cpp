@@ -2401,19 +2401,19 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 		spurs->wklIdleSpuCountOrReadyCount2[wnum] = 0;
 	}
 
+	vm::reservation_light_op(spurs->wklMaxContention[index], [&](atomic_t<u8>& data)
 	{
-		auto [res, rtime] = vm::reservation_lock(spurs.addr());
-
-		spurs->wklMaxContention[index].atomic_op([wnum, maxContention](u8& v)
+		data.atomic_op([&](u8& v)
 		{
 			v &= (wnum <= 15 ? ~0xf : ~0xf0);
 			v |= (maxContention > 8 ? 8 : maxContention) << 4;
 		});
-		(wnum <= 15 ? spurs->wklSignal1 : spurs->wklSignal2).fetch_and(~(0x8000 >> index));
+	});
 
-		res.release(rtime + 128);
-		res.notify_all();
-	}
+	vm::reservation_light_op<true>((wnum <= 15 ? spurs->wklSignal1 : spurs->wklSignal2), [&](atomic_be_t<u16>& data)
+	{
+		data &= ~(0x8000 >> index);
+	});
 
 	spurs->wklFlagReceiver.compare_and_swap(wnum, 0xff);
 

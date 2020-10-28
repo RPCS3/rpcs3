@@ -339,10 +339,6 @@ target_link_libraries(rpcs3_emu
 	PRIVATE
 		3rdparty::stblib 3rdparty::libpng)
 
-if(CMAKE_COMPILER_IS_GNUCXX)
-	target_link_libraries(rpcs3_emu PUBLIC -latomic)
-endif()
-
 
 # CPU
 target_sources(rpcs3_emu PRIVATE

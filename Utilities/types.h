@@ -304,6 +304,11 @@ struct alignas(16) u128
 	{
 	}
 
+	constexpr explicit operator bool() const noexcept
+	{
+		return !!(lo | hi);
+	}
+
 	friend u128 operator+(const u128& l, const u128& r)
 	{
 		u128 value;
@@ -381,6 +386,28 @@ struct alignas(16) u128
 	{
 		u128 value = *this;
 		_subborrow_u64(_subborrow_u64(0, 1, lo, &lo), 0, hi, &hi);
+		return value;
+	}
+
+	u128 operator<<(u128 shift_value)
+	{
+		const u64 v0 = lo << (shift_value.lo & 63);
+		const u64 v1 = __shiftleft128(lo, hi, shift_value.lo);
+
+		u128 value;
+		value.lo = (shift_value.lo & 64) ? 0 : v0;
+		value.hi = (shift_value.lo & 64) ? v0 : v1;
+		return value;
+	}
+
+	u128 operator>>(u128 shift_value)
+	{
+		const u64 v0 = hi >> (shift_value.lo & 63);
+		const u64 v1 = __shiftright128(lo, hi, shift_value.lo);
+
+		u128 value;
+		value.lo = (shift_value.lo & 64) ? v0 : v1;
+		value.hi = (shift_value.lo & 64) ? 0 : v0;
 		return value;
 	}
 
