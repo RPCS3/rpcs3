@@ -1378,10 +1378,14 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 
 	// Begin transaction
 	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 4);
+	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&ppu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
+	c.mov(x86::eax, _XABORT_EXPLICIT);
+	c.jc(fall);
 	c.xbegin(tx0);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.test(x86::eax, 127);
+	c.test(x86::eax, vm::rsrv_unique_lock);
 	c.jnz(skip);
+	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail);
 
@@ -1479,7 +1483,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.mov(x86::eax, 1);
 	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
 	c.test(x86::eax, vm::rsrv_unique_lock);
-	c.jnz(fall2);
+	c.jnz(fail2);
 
 	// Allow only first shared lock to proceed
 	c.cmp(x86::rax, x86::r13);
@@ -1493,6 +1497,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.bt(x86::dword_ptr(args[2], ::offset32(&ppu_thread::state) - ::offset32(&ppu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
 	c.jc(fall2);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
+	c.test(x86::rax, 127 - 1);
+	c.jnz(fall2);
 	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail2);
@@ -1681,7 +1687,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				}
 				}
 
-				return cpu_thread::suspend_all(&ppu, [&]
+				return cpu_thread::suspend_all<+1>(&ppu, [&]
 				{
 					if ((res & -128) == rtime && cmp_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128)))
 					{
