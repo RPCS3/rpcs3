@@ -268,32 +268,33 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 			}
 		}
 
-		if (setParam)
-		{
-			if (new_data)
-			{
-				psf::assign(sfo, "CATEGORY", psf::string(3, "HG"));
-			}
+		// Nuked until correctly reversed engineered
+		// if (setParam)
+		// {
+		// 	if (new_data)
+		// 	{
+		// 		psf::assign(sfo, "CATEGORY", psf::string(3, "HG"));
+		// 	}
 
-			psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, setParam->titleId));
-			psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->title));
-			psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, setParam->dataVersion));
-			psf::assign(sfo, "PARENTAL_LEVEL", +setParam->parentalLevel);
-			psf::assign(sfo, "RESOLUTION", +setParam->resolution);
-			psf::assign(sfo, "SOUND_FORMAT", +setParam->soundFormat);
+		// 	psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, setParam->titleId));
+		// 	psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->title));
+		// 	psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, setParam->dataVersion));
+		// 	psf::assign(sfo, "PARENTAL_LEVEL", +setParam->parentalLevel);
+		// 	psf::assign(sfo, "RESOLUTION", +setParam->resolution);
+		// 	psf::assign(sfo, "SOUND_FORMAT", +setParam->soundFormat);
 
-			for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
-			{
-				if (!setParam->titleLang[i][0])
-				{
-					continue;
-				}
+		// 	for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
+		// 	{
+		// 		if (!setParam->titleLang[i][0])
+		// 		{
+		// 			continue;
+		// 		}
 
-				psf::assign(sfo, fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->titleLang[i]));
-			}
+		// 		psf::assign(sfo, fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->titleLang[i]));
+		// 	}
 
-			psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite), sfo);
-		}
+		// 	psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite), sfo);
+		// }
 		return CELL_OK;
 	}
 	case CELL_HDDGAME_CBRESULT_OK_CANCEL:
