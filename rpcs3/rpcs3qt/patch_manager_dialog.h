@@ -36,7 +36,7 @@ class patch_manager_dialog : public QDialog
 	const QString tr_all_versions = tr("All versions");
 
 public:
-	explicit patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::unordered_map<std::string, std::set<std::string>> games, QWidget* parent = nullptr);
+	explicit patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::unordered_map<std::string, std::set<std::string>> games, const std::string& search_term, QWidget* parent = nullptr);
 	~patch_manager_dialog();
 
 	int exec() override;
