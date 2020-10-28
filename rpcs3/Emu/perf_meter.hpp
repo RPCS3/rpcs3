@@ -177,7 +177,7 @@ public:
 		// Print in microseconds
 		if (static_cast<u64>(diff * 1000'000.) >= g_cfg.core.perf_report_threshold)
 		{
-			perf_log.notice("%s: %.3fµs", perf_name<ShortName>.data(), diff * 1000'000.);
+			perf_log.notice(u8"%s: %.3fµs", perf_name<ShortName>.data(), diff * 1000'000.);
 		}
 
 		// TODO: handle push(), currently ignored

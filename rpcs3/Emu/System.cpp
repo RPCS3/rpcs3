@@ -451,9 +451,17 @@ const bool Emulator::SetUsr(const std::string& user)
 
 const std::string Emulator::GetBackgroundPicturePath() const
 {
-	std::string path = m_sfo_dir + "/PIC1.PNG";
+	// Try to find a custom icon first
+	std::string path = fs::get_config_dir() + "/Icons/game_icons/" + Emu.GetTitleID() + "/PIC1.PNG";
 
-	if (!fs::exists(path))
+	if (fs::is_file(path))
+	{
+		return path;
+	}
+
+	path = m_sfo_dir + "/PIC1.PNG";
+
+	if (!fs::is_file(path))
 	{
 		const std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
 
@@ -467,12 +475,12 @@ const std::string Emulator::GetBackgroundPicturePath() const
 			// Fallback to PIC1.PNG in disc dir
 			path = disc_dir + "/PIC1.PNG";
 
-			if (!fs::exists(path))
+			if (!fs::is_file(path))
 			{
 				// Fallback to ICON0.PNG in update dir
 				path = m_sfo_dir + "/ICON0.PNG";
 
-				if (!fs::exists(path))
+				if (!fs::is_file(path))
 				{
 					// Fallback to ICON0.PNG in disc dir
 					path = disc_dir + "/ICON0.PNG";

@@ -439,14 +439,20 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string
 {
 	std::shared_ptr<PadDevice> pad_device = get_device(device);
 	if (!pad_device)
+	{
+		input_log.error("PadHandlerBase::bindPadToDevice: no PadDevice found for device '%s'", device);
 		return false;
+	}
 
 	const int index = static_cast<int>(bindings.size());
 	m_pad_configs[index].load();
 	pad_device->config = &m_pad_configs[index];
 	pad_config* profile = pad_device->config;
 	if (profile == nullptr)
+	{
+		input_log.error("PadHandlerBase::bindPadToDevice: no profile found for device %d '%s'", index, device);
 		return false;
+	}
 
 	std::array<u32, button::button_count> mapping = get_mapped_key_codes(pad_device, profile);
 

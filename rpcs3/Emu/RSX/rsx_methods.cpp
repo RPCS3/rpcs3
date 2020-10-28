@@ -940,10 +940,13 @@ namespace rsx
 				{
 					// Bit cast - optimize to mem copy
 
-					const auto dst = vm::_ptr<u8>(get_address(dst_offset + (x * 4) + (out_pitch * y), dst_dma, HERE));
-					const auto src = vm::_ptr<const u8>(get_address(src_offset, CELL_GCM_LOCATION_MAIN, HERE));
+					const auto dst_address = get_address(dst_offset + (x * 4) + (out_pitch * y), dst_dma, HERE);
+					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN, HERE);
+					const auto dst = vm::_ptr<u8>(dst_address);
+					const auto src = vm::_ptr<const u8>(src_address);
 
 					const u32 data_length = count * 4;
+					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
 
 					if (rsx->fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) [[unlikely]]
 					{
@@ -971,8 +974,13 @@ namespace rsx
 				}
 				case blit_engine::transfer_destination_format::r5g6b5:
 				{
-					const auto dst = vm::_ptr<u16>(get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, HERE));
-					const auto src = vm::_ptr<const u32>(get_address(src_offset, CELL_GCM_LOCATION_MAIN, HERE));
+					const auto dst_address = get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, HERE);
+					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN, HERE);
+					const auto dst = vm::_ptr<u16>(dst_address);
+					const auto src = vm::_ptr<const u32>(src_address);
+
+					const auto data_length = count * 2;
+					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
 
 					auto convert = [](u32 input) -> u16
 					{
@@ -1162,8 +1170,6 @@ namespace rsx
 
 			const u32 src_line_length = (in_w * in_bpp);
 
-			//auto res = vm::passive_lock(dst_address, dst_address + (in_pitch * (in_h - 1) + src_line_length));
-
 			if (is_block_transfer && (clip_h == 1 || (in_pitch == out_pitch && src_line_length == in_pitch)))
 			{
 				const u32 nb_lines = std::min(clip_h, in_h);
@@ -1222,6 +1228,9 @@ namespace rsx
 					method_registers.blit_engine_ds_dx(), method_registers.blit_engine_dt_dy());
 				return;
 			}
+
+			// Lock here. RSX cannot execute any locking operations from this point, including ZCULL read barriers
+			auto res = ::rsx::reservation_lock<true>(dst_address, out_pitch * out_h, src_address, in_pitch * in_h);
 
 			if (!g_cfg.video.force_cpu_blit_processing && (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER))
 			{
@@ -1522,29 +1531,30 @@ namespace rsx
 			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch + 0u == line_length);
 			const auto read_address = get_address(src_offset, src_dma, HERE);
 			const auto write_address = get_address(dst_offset, dst_dma, HERE);
-			const auto data_length = in_pitch * (line_count - 1) + line_length;
+			const auto read_length = in_pitch * (line_count - 1) + line_length;
+			const auto write_length = out_pitch * (line_count - 1) + line_length;
 
-			rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
-
-			if (const auto result = rsx->read_barrier(read_address, data_length, !is_block_transfer);
+			rsx->invalidate_fragment_program(dst_dma, dst_offset, write_length);
+	
+			if (const auto result = rsx->read_barrier(read_address, read_length, !is_block_transfer);
 				result == rsx::result_zcull_intr)
 			{
 				// This transfer overlaps will zcull data pool
-				if (rsx->copy_zcull_stats(read_address, data_length, write_address) == data_length)
+				if (rsx->copy_zcull_stats(read_address, read_length, write_address) == write_length)
 				{
 					// All writes deferred
 					return;
 				}
 			}
 
-			//auto res = vm::passive_lock(write_address, data_length + write_address);
+			auto res = ::rsx::reservation_lock<true>(write_address, write_length, read_address, read_length);
 
 			u8 *dst = vm::_ptr<u8>(write_address);
 			const u8 *src = vm::_ptr<u8>(read_address);
 
 			const bool is_overlapping = dst_dma == src_dma && [&]() -> bool
 			{
-				const u32 src_max = src_offset + data_length;
+				const u32 src_max = src_offset + read_length;
 				const u32 dst_max = dst_offset + (out_pitch * (line_count - 1) + line_length);
 				return (src_offset >= dst_offset && src_offset < dst_max) ||
 				 (dst_offset >= src_offset && dst_offset < src_max);
@@ -1554,7 +1564,7 @@ namespace rsx
 			{
 				if (is_block_transfer)
 				{
-					std::memmove(dst, src, line_length * line_count);
+					std::memmove(dst, src, read_length);
 				}
 				else
 				{
@@ -1582,7 +1592,7 @@ namespace rsx
 			{
 				if (is_block_transfer)
 				{
-					std::memcpy(dst, src, line_length * line_count);
+					std::memcpy(dst, src, read_length);
 				}
 				else
 				{

@@ -61,6 +61,13 @@ protected:
 	static std::string SignedHex(T value)
 	{
 		const auto v = static_cast<std::make_signed_t<T>>(value);
+
+		if (v == std::numeric_limits<std::make_signed_t<T>>::min())
+		{
+			// for INTx_MIN
+			return fmt::format("-0x%x", v);
+		}
+
 		const auto av = std::abs(v);
 
 		if (av < 10)

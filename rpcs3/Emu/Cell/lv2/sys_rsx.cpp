@@ -314,6 +314,10 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 		sys_rsx.warning("sys_rsx_context_iomap(): RSX is not idle while mapping io");
 	}
 
+	// Wait until we have no active RSX locks and reserve iomap for use. Must do so before acquiring vm lock to avoid deadlocks
+	vm::temporary_unlock(*get_current_cpu_thread());
+	rsx::reservation_lock<true> rsx_lock(ea, size);
+
 	vm::reader_lock rlock;
 
 	for (u32 addr = ea, end = ea + size; addr < end; addr += 0x100000)
@@ -326,6 +330,7 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 
 	io >>= 20, ea >>= 20, size >>= 20;
 
+	render->pause();
 	std::scoped_lock lock(g_fxo->get<lv2_rsx_config>()->mutex);
 
 	for (u32 i = 0; i < size; i++)
@@ -339,6 +344,7 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 		table.io[ea + i].release((io + i) << 20);
 	}
 
+	render->unpause();
 	return CELL_OK;
 }
 

@@ -492,10 +492,10 @@ template <typename T>
 using to_le_t = typename to_se<T, std::endian::big == std::endian::native>::type;
 
 // BE/LE aliases for atomic_t
-template <typename T>
-using atomic_be_t = atomic_t<be_t<T>>;
-template <typename T>
-using atomic_le_t = atomic_t<le_t<T>>;
+template <typename T, std::size_t Align = alignof(T)>
+using atomic_be_t = atomic_t<be_t<T>, Align>;
+template <typename T, std::size_t Align = alignof(T)>
+using atomic_le_t = atomic_t<le_t<T>, Align>;
 
 template <typename T, bool Se, std::size_t Align>
 struct fmt_unveil<se_t<T, Se, Align>, void>

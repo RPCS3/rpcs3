@@ -65,6 +65,14 @@ private:
 		case localized_string_id::CELL_GAME_ERROR_DIR_NAME: return tr("Directory name: %0", "Game Error").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_GAME_DATA_EXIT_BROKEN: return tr("There has been an error!\n\nPlease remove the game data for this title.", "Game Error");
 		case localized_string_id::CELL_HDD_GAME_EXIT_BROKEN: return tr("There has been an error!\n\nPlease reinstall the HDD boot game.", "Game Error");
+		case localized_string_id::CELL_HDD_GAME_CHECK_NOSPACE: return tr("Not enough space to create HDD boot game.\nSpace Needed: %0 KB", "HDD Game Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_HDD_GAME_CHECK_BROKEN: return tr("HDD boot game %0 is corrupt!", "HDD Game Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_HDD_GAME_CHECK_NODATA: return tr("HDD boot game %0 could not be found!", "HDD Game Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_HDD_GAME_CHECK_INVALID: return tr("Error: %0", "HDD Game Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_GAMEDATA_CHECK_NOSPACE: return tr("Not enough space to create game data.\nSpace Needed: %0 KB", "Gamedata Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_GAMEDATA_CHECK_BROKEN: return tr("The game data in %0 is corrupt!", "Gamedata Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_GAMEDATA_CHECK_NODATA: return tr("The game data in %0 could not be found!", "Gamedata Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_GAMEDATA_CHECK_INVALID: return tr("Error: %0", "Gamedata Check Error").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010001: return tr("The resource is temporarily unavailable.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010002: return tr("Invalid argument or flag.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010003: return tr("The feature is not yet implemented.\n(%0)", "Error code").arg(std::forward<Args>(args)...);

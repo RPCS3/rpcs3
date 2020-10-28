@@ -20,6 +20,7 @@
 #include "Emu/Cell/lv2/sys_interrupt.h"
 
 #include "Emu/Cell/SPUDisAsm.h"
+#include "Emu/Cell/SPUAnalyser.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Cell/SPURecompiler.h"
@@ -226,6 +227,8 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
 extern thread_local u64 g_tls_fault_spu;
 
+constexpr spu_decoder<spu_itype> s_spu_itype;
+
 namespace spu
 {
 	namespace scheduler
@@ -239,7 +242,7 @@ namespace spu
 
 			if (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
 			{
-				spu.state += cpu_flag::wait;
+				spu.state += cpu_flag::wait + cpu_flag::temp;
 
 				if (timeout_ms > 0)
 				{
@@ -268,10 +271,7 @@ namespace spu
 					busy_wait(count);
 				}
 
-				if (spu.test_stopped())
-				{
-					spu_runtime::g_escape(&spu);
-				}
+				verify(HERE), !spu.check_state();
 			}
 
 			atomic_instruction_table[pc_offset]++;
@@ -2123,6 +2123,9 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		const auto& to_write = _ref<spu_rdata_t>(args.lsa & 0x3ff80);
 		auto& res = vm::reservation_acquire(addr, 128);
 
+		// TODO: Limit scope!!
+		rsx::reservation_lock rsx_lock(addr, 128);
+
 		if (!g_use_rtm && rtime != res)
 		{
 			return false;
@@ -2140,10 +2143,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			{
 			case UINT32_MAX:
 			{
-				const auto render = rsx::get_rsx_if_needs_res_pause(addr);
-
-				if (render) render->pause();
-
 				const bool ok = cpu_thread::suspend_all(this, [&]()
 				{
 					if ((res & -128) == rtime)
@@ -2162,7 +2161,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 					return false;
 				});
 
-				if (render) render->unpause();
 				return ok;
 			}
 			case 0: return false;
@@ -2197,10 +2195,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 		vm::_ref<atomic_t<u32>>(addr) += 0;
 
-		const auto render = rsx::get_rsx_if_needs_res_pause(addr);
-
-		if (render) render->pause();
-
 		auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
 		const bool success = [&]()
 		{
@@ -2219,7 +2213,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			return false;
 		}();
 
-		if (render) render->unpause();
 		return success;
 	}())
 	{
@@ -2255,14 +2248,11 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 	perf_meter<"STORE128"_u64> perf0;
 
 	const auto cpu = get_current_cpu_thread();
+	rsx::reservation_lock rsx_lock(addr, 128);
 
 	if (g_use_rtm) [[likely]]
 	{
 		const u32 result = spu_putlluc_tx(addr, to_write, cpu);
-
-		const auto render = result != 1 ? rsx::get_rsx_if_needs_res_pause(addr) : nullptr;
-
-		if (render) render->pause();
 
 		if (result == 0)
 		{
@@ -2278,7 +2268,6 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			perf_log.warning("STORE128: took too long: %u", result);
 		}
 
-		if (render) render->unpause();
 		static_cast<void>(cpu->test_stopped());
 	}
 	else
@@ -2288,10 +2277,6 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 		*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
-		const auto render = rsx::get_rsx_if_needs_res_pause(addr);
-
-		if (render) render->pause();
-
 		auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
 		{
 			// Full lock (heavyweight)
@@ -2300,8 +2285,6 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			mov_rdata(super_data, *static_cast<const spu_rdata_t*>(to_write));
 			res += 64;
 		}
-
-		if (render) render->unpause();
 	}
 }
 
@@ -2473,7 +2456,7 @@ bool spu_thread::process_mfc_cmd()
 	}
 
 	spu::scheduler::concurrent_execution_watchdog watchdog(*this);
-	spu_log.trace("DMAC: [%s]", ch_mfc_cmd);
+	spu_log.trace("DMAC: (%s)", ch_mfc_cmd);
 
 	switch (ch_mfc_cmd.cmd)
 	{
@@ -2495,6 +2478,7 @@ bool spu_thread::process_mfc_cmd()
 
 		alignas(64) spu_rdata_t temp;
 		u64 ntime;
+		rsx::reservation_lock rsx_lock(addr, 128);
 
 		if (raddr)
 		{
@@ -2529,13 +2513,14 @@ bool spu_thread::process_mfc_cmd()
 			{
 				if (g_use_rtm)
 				{
-					state += cpu_flag::wait;
+					state += cpu_flag::wait + cpu_flag::temp;
 				}
 
 				std::this_thread::yield();
 
-				if (test_stopped())
+				if (g_use_rtm)
 				{
+					verify(HERE), !check_state();
 				}
 			}
 		}())
@@ -2848,7 +2833,7 @@ void spu_thread::set_interrupt_status(bool enable)
 
 u32 spu_thread::get_ch_count(u32 ch)
 {
-	spu_log.trace("get_ch_count(ch=%d [%s])", ch, ch < 128 ? spu_ch_name[ch] : "???");
+	if (ch < 128) spu_log.trace("get_ch_count(ch=%s)", spu_ch_name[ch]);
 
 	switch (ch)
 	{
@@ -2889,19 +2874,19 @@ u32 spu_thread::get_ch_count(u32 ch)
 	}
 
 	verify(HERE), ch < 128u;
-	spu_log.error("Unknown/illegal channel in RCHCNT (ch=%d [%s])", ch, spu_ch_name[ch]);
+	spu_log.error("Unknown/illegal channel in RCHCNT (ch=%s)", spu_ch_name[ch]);
 	return 0; // Default count
 }
 
 s64 spu_thread::get_ch_value(u32 ch)
 {
-	spu_log.trace("get_ch_value(ch=%d [%s])", ch, ch < 128 ? spu_ch_name[ch] : "???");
+	if (ch < 128) spu_log.trace("get_ch_value(ch=%s)", spu_ch_name[ch]);
 
 	auto read_channel = [&](spu_channel& channel) -> s64
 	{
 		if (channel.get_count() == 0)
 		{
-			state += cpu_flag::wait;
+			state += cpu_flag::wait + cpu_flag::temp;
 		}
 
 		for (int i = 0; i < 10 && channel.get_count() == 0; i++)
@@ -3090,7 +3075,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 bool spu_thread::set_ch_value(u32 ch, u32 value)
 {
-	spu_log.trace("set_ch_value(ch=%d [%s], value=0x%x)", ch, ch < 128 ? spu_ch_name[ch] : "???", value);
+	if (ch < 128) spu_log.trace("set_ch_value(ch=%s, value=0x%x)", spu_ch_name[ch], value);
 
 	switch (ch)
 	{
@@ -3646,7 +3631,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 				if (thread.get() != this)
 				{
-					thread_ctrl::raw_notify(*thread);
+					thread_ctrl::notify(*thread);
 				}
 			}
 		}
@@ -3873,60 +3858,16 @@ void spu_thread::fast_call(u32 ls_addr)
 
 bool spu_thread::capture_local_storage() const
 {
-	struct aligned_delete
-	{
-		void operator()(u8* ptr)
-		{
-			::operator delete(ptr, std::align_val_t{64});
-		}
-	};
-
-	std::unique_ptr<u8, aligned_delete> ls_copy(static_cast<u8*>(::operator new(SPU_LS_SIZE, std::align_val_t{64})));
-	const auto ls_ptr = ls_copy.get();
-	std::memcpy(ls_ptr, _ptr<void>(0), SPU_LS_SIZE);
-
-	std::bitset<SPU_LS_SIZE / 512> found;
-	alignas(64) constexpr spu_rdata_t zero{};
-
-	// Scan Local Storage in 512-byte blocks for non-zero blocks
-	for (s32 i = 0; i < SPU_LS_SIZE;)
-	{
-		if (!cmp_rdata(zero, *reinterpret_cast<const spu_rdata_t*>(ls_ptr + i)))
-		{
-			found.set(i / 512);
-			i = ::align(i + 1u, 512);
-		}
-		else
-		{
-			i += sizeof(spu_rdata_t);
-		}
-	}
-
 	spu_exec_object spu_exec;
 
-	// Now save the data in sequential segments
-	for (s32 i = 0, found_first = -1; i <= SPU_LS_SIZE; i += 512)
-	{
-		if (i == SPU_LS_SIZE || !found[i / 512])
-		{
-			if (auto begin = std::exchange(found_first, -1); begin != -1)
-			{
-				// Save data as an executable segment, even the SPU stack
-				auto& prog = spu_exec.progs.emplace_back(SYS_SPU_SEGMENT_TYPE_COPY, 0x7, begin + 0u, i - begin + 0u, 512
-					, std::vector<uchar>(ls_ptr + begin, ls_ptr + i));
+	// Save data as an executable segment, even the SPU stack
+	// In the past, an optimization was made here to save only non-zero chunks of data
+	// But Ghidra didn't like accessing memory out of chunks (pretty common)
+	// So it has been reverted
+	auto& prog = spu_exec.progs.emplace_back(SYS_SPU_SEGMENT_TYPE_COPY, 0x7, 0, SPU_LS_SIZE, 8, std::vector<uchar>(ls, ls + SPU_LS_SIZE));
 
-				prog.p_paddr = prog.p_vaddr;
-				spu_log.success("Segment: p_type=0x%x, p_vaddr=0x%x, p_filesz=0x%x, p_memsz=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz);
-			}
-
-			continue;
-		}
-
-		if (found_first == -1)
-		{
-			found_first = i;
-		}
-	}
+	prog.p_paddr = prog.p_vaddr;
+	spu_log.success("Segment: p_type=0x%x, p_vaddr=0x%x, p_filesz=0x%x, p_memsz=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz);
 
 	std::string name;
 
@@ -3945,7 +3886,20 @@ bool spu_thread::capture_local_storage() const
 		fmt::append(name, "RawSPU.%u", lv2_id);
 	}
 
-	spu_exec.header.e_entry = pc;
+	u32 pc0 = pc;
+
+	for (; pc0; pc0 -= 4)
+	{
+		const u32 op = *std::launder(reinterpret_cast<be_t<u32, 1>*>(prog.bin.data() + pc0 - 4));
+
+		// Try to find function entry (if they are placed sequentially search for BI $LR of previous function)
+		if (!op || op == 0x35000000u || s_spu_itype.decode(op) == spu_itype::UNK)
+		{
+			break;
+		}
+	}
+
+	spu_exec.header.e_entry = pc0;
 
 	name = vfs::escape(name, true);
 	std::replace(name.begin(), name.end(), ' ', '_');

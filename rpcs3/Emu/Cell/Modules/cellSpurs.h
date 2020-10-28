@@ -465,8 +465,8 @@ struct alignas(128) CellSpursJobChain
 	u8 val2F;                                                                    // 0x2F
 	atomic_be_t<u64> urgentCmds[4];                                              // 0x30
 	u8 unk2[0x20];                                                               // 0x50
-	be_t<u16> sizeJobDescriptor;                                                 // 0x70
-	atomic_be_t<u16> maxGrabbedJob;                                              // 0x72
+	atomic_be_t<u16> maxGrabbedJob;                                              // 0x70
+	be_t<u16> sizeJobDescriptor;                                                 // 0x72
 	be_t<u32> workloadId;                                                        // 0x74
 	vm::bptr<CellSpurs, u64> spurs;                                              // 0x78
 	be_t<s32> error;                                                             // 0x80
@@ -487,14 +487,19 @@ struct alignas(128) CellSpursJobChain_x00
 	u8 unk0[0x3];                                                                // 0x20
 	b8 isHalted;                                                                 // 0x23
 	b8 autoReadyCount;                                                           // 0x24
-	u8 unk1[0x7];                                                                // 0x25
+	u8 unk1[0x3];                                                                // 0x25
+	u8 initSpuCount;                                                             // 0x28
+	u8 unk5;                                                                     // 0x29
+	u8 tag1;                                                                     // 0x2A
+	u8 tag2;                                                                     // 0x2B
 	u8 val2C;                                                                    // 0x2C
-	u8 val2D;                                                                    // 0x2D
+	u8 jmVer;                                                                    // 0x2D
 	u8 val2E;                                                                    // 0x2E
 	u8 val2F;                                                                    // 0x2F
 	be_t<u64> urgentCmds[4];                                                     // 0x30
-	u8 unk2[0x22];                                                               // 0x50
-	be_t<u16> maxGrabbedJob;                                                     // 0x72
+	u8 unk2[0x20];                                                               // 0x50
+	be_t<u16> maxGrabbedJob;                                                     // 0x70
+	be_t<u16> sizeJobDescriptor;                                                 // 0x72
 	be_t<u32> workloadId;                                                        // 0x74
 	vm::bptr<CellSpurs, u64> spurs;                                              // 0x78
 };
@@ -639,7 +644,12 @@ struct alignas(128) CellSpurs
 		be_t<u32> size;                    // 0x10 Size of the executable
 		atomic_t<u8> uniqueId;             // 0x14 Unique id of the workload. It is the same for all workloads with the same addr.
 		u8 pad[3];
-		u8 priority[8];                    // 0x18 Priority of the workload on each SPU
+
+		union
+		{
+			atomic_t<u64> prio64;
+			u8 priority[8];                // 0x18 Priority of the workload on each SPU
+		};
 	};
 
 	CHECK_SIZE(WorkloadInfo, 32);
@@ -719,6 +729,7 @@ struct alignas(128) CellSpurs
 	atomic_t<u8> handlerDirty;                          // 0xD64
 	atomic_t<u8> handlerWaiting;                        // 0xD65
 	atomic_t<u8> handlerExiting;                        // 0xD66
+	u8 xD67;                                            // 0xD67
 	atomic_be_t<u32> enableEH;                          // 0xD68
 	be_t<u32> exception;                                // 0xD6C
 	sys_spu_image spuImg;                               // 0xD70
@@ -1250,6 +1261,17 @@ struct SpursTasksetContext
 };
 
 CHECK_SIZE(SpursTasksetContext, 0x900);
+
+struct SpursJobChainContext
+{
+	u8 tempAreaJobChain[0x80];                      // 0x4A00
+	u8 unk0[3];                                     // 0x4A80
+	b8 unkFlag0;                                    // 0x4A83
+	u8 unk1[0x10];                                  // 0x4A84
+	vm::bptr<CellSpursJobChain> jobChain;           // 0x4A94
+
+	// TODO
+};
 
 class SpursModuleExit
 {

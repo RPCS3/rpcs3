@@ -555,7 +555,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 				GameInfo game;
 				game.path         = dir;
-				game.icon_path    = sfo_dir + "/ICON0.PNG";
 				game.serial       = std::string(psf::get_string(psf, "TITLE_ID", ""));
 				game.name         = std::string(psf::get_string(psf, "TITLE", cat_unknown_localized));
 				game.app_ver      = std::string(psf::get_string(psf, "APP_VER", cat_unknown_localized));
@@ -567,6 +566,12 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
 				game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
 				game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
+				game.icon_path    = fs::get_config_dir() + "/Icons/game_icons/" + game.serial + "/ICON0.PNG";
+
+				if (!fs::is_file(game.icon_path))
+				{
+					game.icon_path = sfo_dir + "/ICON0.PNG";
+				}
 
 				mutex_cat.lock();
 
@@ -1900,7 +1905,7 @@ void game_list_frame::PopulateGameList()
 {
 	int selected_row = -1;
 
-	std::string selected_item = CurrentSelectionIconPath();
+	std::string selected_item = CurrentSelectionPath();
 
 	m_game_list->clearSelection();
 	m_game_list->clearContents();
@@ -2008,10 +2013,10 @@ void game_list_frame::PopulateGameList()
 		m_game_list->setItem(row, gui::column_sound,      new custom_table_widget_item(GetStringFromU32(game->info.sound_format, localized.sound.format, true)));
 		m_game_list->setItem(row, gui::column_parental,   new custom_table_widget_item(GetStringFromU32(game->info.parental_lvl, localized.parental.level), Qt::UserRole, game->info.parental_lvl));
 		m_game_list->setItem(row, gui::column_last_play,  new custom_table_widget_item(locale.toString(last_played, gui::persistent::last_played_date_format_new), Qt::UserRole, last_played));
-		m_game_list->setItem(row, gui::column_playtime,   new custom_table_widget_item(localized.GetVerboseTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
+		m_game_list->setItem(row, gui::column_playtime,   new custom_table_widget_item(elapsed_ms == 0 ? tr("Never played") : localized.GetVerboseTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
 		m_game_list->setItem(row, gui::column_compat,     compat_item);
 
-		if (selected_item == game->info.icon_path)
+		if (selected_item == game->info.path + game->info.icon_path)
 		{
 			selected_row = row;
 		}
@@ -2028,7 +2033,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 	int r = 0;
 	int c = 0;
 
-	const std::string selected_item = CurrentSelectionIconPath();
+	const std::string selected_item = CurrentSelectionPath();
 
 	m_game_grid->deleteLater();
 
@@ -2087,7 +2092,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 			m_game_grid->item(r, c)->setToolTip(tr("%0 [%1]").arg(title).arg(serial));
 		}
 
-		if (selected_item == app->info.icon_path)
+		if (selected_item == app->info.path + app->info.icon_path)
 		{
 			m_game_grid->setCurrentCell(r, c);
 		}
@@ -2128,7 +2133,7 @@ bool game_list_frame::SearchMatchesApp(const QString& name, const QString& seria
 	return true;
 }
 
-std::string game_list_frame::CurrentSelectionIconPath()
+std::string game_list_frame::CurrentSelectionPath()
 {
 	std::string selection;
 
@@ -2158,7 +2163,7 @@ std::string game_list_frame::CurrentSelectionIconPath()
 			auto game = var.value<game_info>();
 			if (game)
 			{
-				selection = game->info.icon_path;
+				selection = game->info.path + game->info.icon_path;
 			}
 		}
 	}

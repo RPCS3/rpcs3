@@ -244,43 +244,58 @@ namespace gui
 		// Loads the app icon from path and embeds it centered into an empty square icon
 		QIcon get_app_icon_from_path(const std::string& path, const std::string& title_id)
 		{
-			// get Icon for the gs_frame from path. this handles presumably all possible use cases
-			const QString qpath = qstr(path);
-			const std::string path_list[] = { path, sstr(qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep)),
-			                                  sstr(qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep)) };
+			// Try to find custom icon first
+			std::string icon_path = fs::get_config_dir() + "/Icons/game_icons/" + title_id + "/ICON0.PNG";
+			bool found_file       = fs::is_file(icon_path);
 
-			for (const std::string& pth : path_list)
+			if (!found_file)
 			{
-				if (!fs::is_dir(pth))
+				// Get Icon for the gs_frame from path. this handles presumably all possible use cases
+				const QString qpath = qstr(path);
+				const std::string path_list[] = { path, sstr(qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep)),
+					                              sstr(qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep)) };
+
+				for (const std::string& pth : path_list)
 				{
-					continue;
-				}
+					if (!fs::is_dir(pth))
+					{
+						continue;
+					}
 
-				const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(pth, Emu.GetUsr(), title_id);
-				const std::string ico = sfo_dir + "/ICON0.PNG";
-				if (fs::is_file(ico))
-				{
-					// load the image from path. It will most likely be a rectangle
-					QImage source = QImage(qstr(ico));
-					const int edge_max = std::max(source.width(), source.height());
+					const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(pth, Emu.GetUsr(), title_id);
+					icon_path = sfo_dir + "/ICON0.PNG";
+					found_file = fs::is_file(icon_path);
 
-					// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
-					QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
-					QImage dest = QImage(edge_max, edge_max, format);
-					dest.fill(Qt::transparent);
-
-					// get the location to draw the source image centered within the dest image.
-					const QPoint dest_pos = source.width() > source.height() ? QPoint(0, (source.width() - source.height()) / 2) : QPoint((source.height() - source.width()) / 2, 0);
-
-					// Paint the source into/over the dest
-					QPainter painter(&dest);
-					painter.setRenderHint(QPainter::SmoothPixmapTransform);
-					painter.drawImage(dest_pos, source);
-					painter.end();
-
-					return QIcon(QPixmap::fromImage(dest));
+					if (found_file)
+					{
+						break;
+					}
 				}
 			}
+
+			if (found_file)
+			{
+				// load the image from path. It will most likely be a rectangle
+				QImage source = QImage(qstr(icon_path));
+				const int edge_max = std::max(source.width(), source.height());
+
+				// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
+				QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
+				QImage dest = QImage(edge_max, edge_max, format);
+				dest.fill(Qt::transparent);
+
+				// get the location to draw the source image centered within the dest image.
+				const QPoint dest_pos = source.width() > source.height() ? QPoint(0, (source.width() - source.height()) / 2) : QPoint((source.height() - source.width()) / 2, 0);
+
+				// Paint the source into/over the dest
+				QPainter painter(&dest);
+				painter.setRenderHint(QPainter::SmoothPixmapTransform);
+				painter.drawImage(dest_pos, source);
+				painter.end();
+
+				return QIcon(QPixmap::fromImage(dest));
+			}
+
 			// if nothing was found reset the icon to default
 			return QApplication::windowIcon();
 		}

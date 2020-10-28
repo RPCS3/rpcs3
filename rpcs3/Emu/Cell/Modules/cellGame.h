@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Cell/ErrorCodes.h"
 
@@ -73,6 +73,8 @@ enum
 
 	CELL_GAME_SIZEKB_NOTCALC = -1,
 
+	CELL_GAME_THEMEINSTALL_BUFSIZE_MIN = 4096,
+
 	CELL_GAME_ATTRIBUTE_PATCH               = 0x1,
 	CELL_GAME_ATTRIBUTE_APP_HOME            = 0x2,
 	CELL_GAME_ATTRIBUTE_DEBUG               = 0x4,
@@ -87,6 +89,7 @@ enum
 
 	CELL_GAME_DISCTYPE_OTHER = 0,
 	CELL_GAME_DISCTYPE_PS3   = 1,
+	CELL_GAME_DISCTYPE_PS2   = 2,
 };
 
 //Parameter IDs of PARAM.SFO
@@ -137,6 +140,25 @@ enum
 	CELL_GAME_ERRDIALOG_NOSPACE_EXIT         = 102,
 };
 
+enum // CellGameResolution
+{
+	CELL_GAME_RESOLUTION_480   = 0x01,
+	CELL_GAME_RESOLUTION_576   = 0x02,
+	CELL_GAME_RESOLUTION_720   = 0x04,
+	CELL_GAME_RESOLUTION_1080  = 0x08,
+	CELL_GAME_RESOLUTION_480SQ = 0x10,
+	CELL_GAME_RESOLUTION_576SQ = 0x20,
+};
+
+enum // CellGameSoundFormat
+{
+	CELL_GAME_SOUNDFORMAT_2LPCM    = 0x01,
+	CELL_GAME_SOUNDFORMAT_51LPCM   = 0x04,
+	CELL_GAME_SOUNDFORMAT_71LPCM   = 0x10,
+	CELL_GAME_SOUNDFORMAT_51DDENC  = 0x102,
+	CELL_GAME_SOUNDFORMAT_51DTSENC = 0x202,
+};
+
 struct CellGameContentSize
 {
 	be_t<s32> hddFreeSizeKB;
@@ -157,8 +179,8 @@ struct CellGameDataCBResult
 {
 	be_t<s32> result;
 	be_t<s32> errNeedSizeKB;
-	be_t<u32> invalidMsg_addr;
-	be_t<u32> reserved;
+	vm::bptr<char> invalidMsg;
+	vm::bptr<void> reserved;
 };
 
 enum // old consts
@@ -304,7 +326,7 @@ struct CellHddGameSystemFileParam
 
 struct CellHddGameCBResult
 {
-	be_t<u32> result;
+	be_t<s32> result;
 	be_t<s32> errNeedSizeKB;
 	vm::bptr<char> invalidMsg;
 	vm::bptr<void> reserved;
