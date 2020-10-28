@@ -398,10 +398,14 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 
 	// Begin transaction
 	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 4);
+	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
+	c.mov(x86::eax, _XABORT_EXPLICIT);
+	c.jc(fall);
 	c.xbegin(tx0);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.test(x86::eax, 127);
+	c.test(x86::eax, vm::rsrv_unique_lock);
 	c.jnz(skip);
+	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail);
 
@@ -506,19 +510,19 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 	Label fall2 = c.newLabel();
 	Label fail2 = c.newLabel();
 	Label fail3 = c.newLabel();
+	Label fail4 = c.newLabel();
 
 	// Lightened transaction: only compare and swap data
 	c.bind(next);
 
 	// Try to "lock" reservation
-	c.mov(x86::eax, 1);
-	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
-	c.test(x86::eax, vm::rsrv_unique_lock);
-	c.jnz(fail3);
-
-	// Allow only first shared lock to proceed
+	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
+	c.and_(x86::r13, -128);
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail2);
+	c.add(x86::r13, vm::rsrv_unique_lock);
+	c.lock().cmpxchg(x86::qword_ptr(x86::rbx), x86::r13);
+	c.jnz(next);
 
 	Label tx1 = build_transaction_enter(c, fall2, x86::r12d, 666);
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
@@ -528,9 +532,10 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
 	c.jc(fall2);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.and_(x86::rax, -128);
+	c.test(x86::eax, vm::rsrv_shared_mask);
+	c.jnz(fall2);
 	c.cmp(x86::rax, x86::r13);
-	c.jne(fail2);
+	c.jne(fail4);
 	c.xbegin(tx1);
 
 	if (s_tsx_avx)
@@ -586,7 +591,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 	}
 
 	c.xend();
-	c.lock().add(x86::qword_ptr(x86::rbx), 127);
+	c.lock().add(x86::qword_ptr(x86::rbx), 64);
 	c.mov(x86::eax, x86::r12d);
 	c.jmp(_ret);
 
@@ -620,8 +625,11 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 	c.mov(x86::eax, -1);
 	c.jmp(_ret);
 
+	c.bind(fail4);
+	c.lock().sub(x86::qword_ptr(x86::rbx), vm::rsrv_unique_lock);
+	//c.jmp(fail2);
+
 	c.bind(fail2);
-	c.lock().sub(x86::qword_ptr(x86::rbx), 1);
 	c.xor_(x86::eax, x86::eax);
 	//c.jmp(_ret);
 
@@ -772,10 +780,7 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	c.bind(next);
 
 	// Lock reservation
-	c.mov(x86::eax, 1);
-	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
-	c.test(x86::eax, vm::rsrv_unique_lock);
-	c.jnz(fall2);
+	c.lock().add(x86::qword_ptr(x86::rbx), 1);
 
 	Label tx1 = build_transaction_enter(c, fall2, x86::r12d, 666);
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
@@ -783,6 +788,9 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 
 	// Check pause flag
 	c.bt(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::pause));
+	c.jc(fall2);
+	// Check contention
+	c.test(x86::qword_ptr(x86::rbx), 127 - 1);
 	c.jc(fall2);
 	c.xbegin(tx1);
 
@@ -2292,12 +2300,12 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 						if (cmp_rdata(rdata, data))
 						{
 							mov_rdata(data, to_write);
-							res += 127;
+							res += 64;
 							return true;
 						}
 					}
 
-					res -= 1;
+					res -= vm::rsrv_unique_lock;
 					return false;
 				});
 
@@ -2397,7 +2405,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 		if (result == 0)
 		{
 			// Execute with increased priority
-			cpu_thread::suspend_all<+1>(cpu, [&]
+			cpu_thread::suspend_all<0>(cpu, [&]
 			{
 				mov_rdata(vm::_ref<spu_rdata_t>(addr), *static_cast<const spu_rdata_t*>(to_write));
 				vm::reservation_acquire(addr, 128) += 127;
