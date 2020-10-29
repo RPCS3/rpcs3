@@ -1564,7 +1564,7 @@ void spu_thread::push_snr(u32 number, u32 value)
 	});
 }
 
-void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
+void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls)
 {
 	const bool is_get = (args.cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_START_MASK)) == MFC_GET_CMD;
 
@@ -1572,7 +1572,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	u32 lsa = args.lsa & 0x3ffff;
 
 	// SPU Thread Group MMIO (LS and SNR) and RawSPU MMIO
-	if (eal >= RAW_SPU_BASE_ADDR)
+	if (_this && eal >= RAW_SPU_BASE_ADDR)
 	{
 		const u32 index = (eal - SYS_SPU_THREAD_BASE_LOW) / SYS_SPU_THREAD_OFFSET; // thread number in group
 		const u32 offset = (eal - SYS_SPU_THREAD_BASE_LOW) % SYS_SPU_THREAD_OFFSET; // LS offset or MMIO register
@@ -1591,10 +1591,10 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			}
 			else if (u32 value; args.size == 4 && is_get && thread->read_reg(eal, value))
 			{
-				_ref<u32>(lsa) = value;
+				_this->_ref<u32>(lsa) = value;
 				return;
 			}
-			else if (args.size == 4 && !is_get && thread->write_reg(eal, args.cmd != MFC_SDCRZ_CMD ? +_ref<u32>(lsa) : 0))
+			else if (args.size == 4 && !is_get && thread->write_reg(eal, args.cmd != MFC_SDCRZ_CMD ? + _this->_ref<u32>(lsa) : 0))
 			{
 				return;
 			}
@@ -1603,13 +1603,13 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				fmt::throw_exception("Invalid RawSPU MMIO offset (cmd=[%s])" HERE, args);
 			}
 		}
-		else if (get_type() >= spu_type::raw)
+		else if (_this->get_type() >= spu_type::raw)
 		{
 			// Access Violation
 		}
-		else if (group && group->threads_map[index] != -1)
+		else if (_this->group && _this->group->threads_map[index] != -1)
 		{
-			auto& spu = static_cast<spu_thread&>(*group->threads[group->threads_map[index]]);
+			auto& spu = static_cast<spu_thread&>(*_this->group->threads[_this->group->threads_map[index]]);
 
 			if (offset + args.size - 1 < SPU_LS_SIZE) // LS access
 			{
@@ -1617,7 +1617,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			}
 			else if (!is_get && args.size == 4 && (offset == SYS_SPU_THREAD_SNR1 || offset == SYS_SPU_THREAD_SNR2))
 			{
-				spu.push_snr(SYS_SPU_THREAD_SNR2 == offset, args.cmd != MFC_SDCRZ_CMD ? +_ref<u32>(lsa) : 0);
+				spu.push_snr(SYS_SPU_THREAD_SNR2 == offset, args.cmd != MFC_SDCRZ_CMD ? +_this->_ref<u32>(lsa) : 0);
 				return;
 			}
 			else
@@ -1636,12 +1636,15 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	const u8* src = nullptr;
 
 	// Cleanup: if PUT or GET happens after PUTLLC failure, it's too complicated and it's easier to just give up
-	last_faddr = 0;
+	if (_this)
+	{
+		_this->last_faddr = 0;
+	}
 
 	std::tie(dst, src) = [&]() -> std::pair<u8*, const u8*>
 	{
 		u8* dst = vm::_ptr<u8>(eal);
-		u8* src = _ptr<u8>(lsa);
+		u8* src = ls + lsa;
 
 		if (is_get)
 		{
@@ -1670,16 +1673,36 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			perf_get.reset();
 		}
 
-		for (u32 size = args.size, size0; is_get;
-			size -= size0, dst += size0, src += size0, eal += size0)
+		cpu_thread* _cpu = _this ? _this : get_current_cpu_thread();
+
+		atomic_t<u64, 64>* range_lock = nullptr;
+
+		if (!_this) [[unlikely]]
+		{
+			if (_cpu->id_type() == 2)
+			{
+				// Use range_lock of current SPU thread for range locks
+				range_lock = static_cast<spu_thread*>(_cpu)->range_lock;
+			}
+			else
+			{
+				goto plain_access;
+			}
+		}
+		else
+		{
+			range_lock = _this->range_lock;
+		}
+
+		for (u32 size = args.size, size0; is_get; size -= size0, dst += size0, src += size0, eal += size0)
 		{
 			size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
 
 			for (u64 i = 0;; [&]()
 			{
-				if (state)
+				if (_cpu->state)
 				{
-					check_state();
+					_cpu->check_state();
 				}
 				else if (++i < 25) [[likely]]
 				{
@@ -1687,9 +1710,9 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				}
 				else
 				{
-					state += cpu_flag::wait + cpu_flag::temp;
+					_cpu->state += cpu_flag::wait + cpu_flag::temp;
 					std::this_thread::yield();
-					check_state();
+					_cpu->check_state();
 				}
 			}())
 			{
@@ -1820,9 +1843,9 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 				for (u64 i = 0; i != umax; [&]()
 				{
-					if (state & cpu_flag::pause)
+					if (_cpu->state & cpu_flag::pause)
 					{
-						cpu_thread::if_suspended(this, [&]
+						cpu_thread::if_suspended(_cpu, [&]
 						{
 							std::memcpy(dst, src, size0);
 							res += 128;
@@ -1840,9 +1863,9 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					else
 					{
 						// Wait
-						state += cpu_flag::wait + cpu_flag::temp;
+						_cpu->state += cpu_flag::wait + cpu_flag::temp;
 						bits->wait(old, wmask);
-						check_state();
+						_cpu->check_state();
 					}
 				}())
 				{
@@ -2103,6 +2126,8 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		return;
 	}
 
+plain_access:
+
 	switch (u32 size = args.size)
 	{
 	case 1:
@@ -2269,7 +2294,7 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 			transfer.lsa  = args.lsa | (addr & 0xf);
 			transfer.size = size;
 
-			do_dma_transfer(transfer);
+			do_dma_transfer(this, transfer, ls);
 			const u32 add_size = std::max<u32>(size, 16);
 			args.lsa += add_size;
 		}
@@ -2615,7 +2640,7 @@ void spu_thread::do_mfc(bool wait)
 		}
 		else if (args.size)
 		{
-			do_dma_transfer(args);
+			do_dma_transfer(this, args, ls);
 		}
 
 		removed++;
@@ -2909,7 +2934,7 @@ bool spu_thread::process_mfc_cmd()
 			{
 				if (ch_mfc_cmd.size)
 				{
-					do_dma_transfer(ch_mfc_cmd);
+					do_dma_transfer(this, ch_mfc_cmd, ls);
 				}
 
 				return true;
