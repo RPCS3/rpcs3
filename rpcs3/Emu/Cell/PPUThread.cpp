@@ -1199,7 +1199,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 				verify(HERE), cpu_thread::if_suspended<-1>(&ppu, [&]()
 				{
 					// Guaranteed success
-					ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & -128;
+					ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
 					mov_rdata(ppu.rdata, *vm::get_super_ptr<spu_rdata_t>(addr & -128));
 				});
 
@@ -1219,9 +1219,9 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 		else
 		{
-			ppu.state += cpu_flag::wait + cpu_flag::temp;
+			ppu.state += cpu_flag::wait;
 			std::this_thread::yield();
-			verify(HERE), !ppu.check_state();
+			ppu.check_state();
 		}
 	}())
 	{
@@ -1263,10 +1263,10 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		{
 			if (!ppu.use_full_rdata)
 			{
-				if (ppu.rtime & vm::rsrv_shared_mask)
+				if (ppu.rtime & 127)
 				{
 					// Let the ongoing operation some tiny time to complete
-					busy_wait(100);
+					busy_wait(200);
 				}
 
 				if (data.load() != rdata)

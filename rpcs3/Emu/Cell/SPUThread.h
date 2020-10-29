@@ -678,6 +678,9 @@ public:
 	alignas(64) std::byte rdata[128]{};
 	u32 raddr = 0;
 
+	// Range Lock pointer
+	atomic_t<u64, 64>* range_lock{};
+
 	u32 srr0;
 	u32 ch_tag_upd;
 	u32 ch_tag_mask;

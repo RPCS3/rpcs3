@@ -446,6 +446,29 @@ void cpu_thread::operator()()
 		return;
 	}
 
+	atomic_storage_futex::set_notify_callback([](const void*, u64 progress)
+	{
+		static thread_local bool wait_set = false;
+
+		cpu_thread* _cpu = get_current_cpu_thread();
+
+		// Wait flag isn't set asynchronously so this should be thread-safe
+		if (progress == 0 && !(_cpu->state & cpu_flag::wait))
+		{
+			// Operation just started and syscall is imminent
+			_cpu->state += cpu_flag::wait + cpu_flag::temp;
+			wait_set = true;
+			return;
+		}
+
+		if (progress == umax && std::exchange(wait_set, false))
+		{
+			// Operation finished: need to clean wait flag
+			verify(HERE), !_cpu->check_state();
+			return;
+		}
+	});
+
 	static thread_local struct thread_cleanup_t
 	{
 		cpu_thread* _this;
@@ -468,6 +491,8 @@ void cpu_thread::operator()()
 			{
 				ptr->compare_and_swap(_this, nullptr);
 			}
+
+			atomic_storage_futex::set_notify_callback(nullptr);
 
 			g_fxo->get<cpu_counter>()->remove(_this, s_tls_thread_slot);
 
@@ -553,10 +578,11 @@ bool cpu_thread::check_state() noexcept
 				susp_ctr = -1;
 			}
 
-			if (flags & cpu_flag::temp)
+			if (flags & cpu_flag::temp) [[unlikely]]
 			{
 				// Sticky flag, indicates check_state() is not allowed to return true
 				flags -= cpu_flag::temp;
+				flags -= cpu_flag::wait;
 				cpu_can_stop = false;
 				store = true;
 			}
@@ -594,7 +620,7 @@ bool cpu_thread::check_state() noexcept
 			}
 			else
 			{
-				if (!(flags & cpu_flag::wait))
+				if (cpu_can_stop && !(flags & cpu_flag::wait))
 				{
 					flags += cpu_flag::wait;
 					store = true;
@@ -624,6 +650,8 @@ bool cpu_thread::check_state() noexcept
 				s_tls_thread_slot = g_fxo->get<cpu_counter>()->add(this, true);
 			}
 
+			verify(HERE), cpu_can_stop || !retval;
+			verify(HERE), cpu_can_stop || !(state & cpu_flag::wait);
 			return retval;
 		}
 
@@ -632,7 +660,7 @@ bool cpu_thread::check_state() noexcept
 			cpu_sleep();
 			cpu_sleep_called = true;
 
-			if (s_tls_thread_slot != umax)
+			if (cpu_can_stop && s_tls_thread_slot != umax)
 			{
 				// Exclude inactive threads from the suspend list (optimization)
 				std::lock_guard lock(g_fxo->get<cpu_counter>()->cpu_suspend_lock);

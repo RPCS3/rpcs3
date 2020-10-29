@@ -1368,6 +1368,9 @@ spu_thread::~spu_thread()
 		g_raw_spu_id[index] = 0;
 		g_raw_spu_ctr--;
 	}
+
+	// Free range lock
+	vm::free_range_lock(range_lock);
 }
 
 spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)
@@ -1418,6 +1421,8 @@ spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::str
 	{
 		cpu_init();
 	}
+
+	range_lock = vm::alloc_range_lock();
 }
 
 void spu_thread::push_snr(u32 number, u32 value)
@@ -1568,7 +1573,10 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	}
 
 	// Keep src point to const
-	auto [dst, src] = [&]() -> std::pair<u8*, const u8*>
+	u8* dst = nullptr;
+	const u8* src = nullptr;
+
+	std::tie(dst, src) = [&]() -> std::pair<u8*, const u8*>
 	{
 		u8* dst = vm::_ptr<u8>(eal);
 		u8* src = _ptr<u8>(lsa);
@@ -1591,6 +1599,15 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 	if ((!g_use_rtm && !is_get) || g_cfg.core.spu_accurate_dma)  [[unlikely]]
 	{
+		perf_meter<"ADMA_GET"_u64> perf_get;
+		perf_meter<"ADMA_PUT"_u64> perf_put = perf_get;
+
+		if (!g_cfg.core.spu_accurate_dma) [[likely]]
+		{
+			perf_put.reset();
+			perf_get.reset();
+		}
+
 		for (u32 size = args.size, size0; is_get;
 			size -= size0, dst += size0, src += size0, eal += size0)
 		{
@@ -1608,7 +1625,9 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				}
 				else
 				{
+					state += cpu_flag::wait + cpu_flag::temp;
 					std::this_thread::yield();
+					check_state();
 				}
 			}())
 			{
@@ -1704,101 +1723,227 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			}
 		}
 
-		switch (u32 size = args.size)
+		if (g_cfg.core.spu_accurate_dma) [[unlikely]]
 		{
-		case 1:
-		{
-			auto [res, time0] = vm::reservation_lock(eal);
-			*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
-			res += 64;
-			break;
-		}
-		case 2:
-		{
-			auto [res, time0] = vm::reservation_lock(eal);
-			*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
-			res += 64;
-			break;
-		}
-		case 4:
-		{
-			auto [res, time0] = vm::reservation_lock(eal);
-			*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
-			res += 64;
-			break;
-		}
-		case 8:
-		{
-			auto [res, time0] = vm::reservation_lock(eal);
-			*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
-			res += 64;
-			break;
-		}
-		default:
-		{
-			if (g_cfg.core.spu_accurate_dma)
+			for (u32 size0, size = args.size;; size -= size0, dst += size0, src += size0, eal += size0)
 			{
-				for (u32 size0;; size -= size0, dst += size0, src += size0, eal += size0)
+				size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
+
+				if (size0 == 128u && g_cfg.core.accurate_cache_line_stores)
 				{
-					size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
-
-					if (size0 == 128u && g_cfg.core.accurate_cache_line_stores)
-					{
-						// As atomic as PUTLLUC
-						do_cell_atomic_128_store(eal, src);
-
-						if (size == size0)
-						{
-							break;
-						}
-
-						continue;
-					}
-
-					// Lock each cache line execlusively
-					auto [res, time0] = vm::reservation_lock(eal);
-
-					switch (size0)
-					{
-					case 128:
-					{
-						mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
-						break;
-					}
-					default:
-					{
-						auto _dst = dst;
-						auto _src = src;
-						auto _size = size0;
-
-						while (_size)
-						{
-							*reinterpret_cast<v128*>(_dst) = *reinterpret_cast<const v128*>(_src);
-
-							_dst += 16;
-							_src += 16;
-							_size -= 16;
-						}
-
-						break;
-					}
-					}
-
-					res += 64;
+					// As atomic as PUTLLUC
+					do_cell_atomic_128_store(eal, src);
 
 					if (size == size0)
 					{
 						break;
 					}
+
+					continue;
 				}
 
-				break;
+				// Lock each cache line
+				auto& res = vm::reservation_acquire(eal, size0);
+
+				// Lock each bit corresponding to a byte being written, using some free space in reservation memory
+				auto* bits = reinterpret_cast<atomic_t<u128>*>(vm::g_reservations + (eal & 0xff80) / 2 + 16);
+
+				// Get writing mask
+				const u128 wmask = (~u128{} << (eal & 127)) & (~u128{} >> (127 - ((eal + size0 - 1) & 127)));
+				//const u64 start = (eal & 127) / 2;
+				//const u64 _end_ = ((eal + size0 - 1) & 127) / 2;
+				//const u64 wmask = (UINT64_MAX << start) & (UINT64_MAX >> (63 - _end_));
+
+				u128 old = 0;
+
+				for (u64 i = 0; i != umax; [&]()
+				{
+					if (state & cpu_flag::pause)
+					{
+						cpu_thread::if_suspended(this, [&]
+						{
+							std::memcpy(dst, src, size0);
+							res += 128;
+						});
+
+						// Exit loop and function
+						i = -1;
+						bits = nullptr;
+						return;
+					}
+					else if (++i < 10)
+					{
+						busy_wait(500);
+					}
+					else
+					{
+						// Wait
+						state += cpu_flag::wait + cpu_flag::temp;
+						bits->wait(old, wmask);
+						check_state();
+					}
+				}())
+				{
+					// Completed in suspend_all()
+					if (!bits)
+					{
+						break;
+					}
+
+					bool ok = false;
+
+					std::tie(old, ok) = bits->fetch_op([&](auto& v)
+					{
+						if (v & wmask)
+						{
+							return false;
+						}
+
+						v |= wmask;
+						return true;
+					});
+
+					if (ok) [[likely]]
+					{
+						break;
+					}
+				}
+
+				if (!bits)
+				{
+					if (size == size0)
+					{
+						break;
+					}
+
+					continue;
+				}
+
+				// Lock reservation (shared)
+				auto [_oldd, _ok] = res.fetch_op([&](u64& r)
+				{
+					if (r & vm::rsrv_unique_lock)
+					{
+						return false;
+					}
+
+					r += 1;
+					return true;
+				});
+
+				if (!_ok)
+				{
+					vm::reservation_shared_lock_internal(res);
+				}
+
+				// Obtain range lock as normal store
+				vm::range_lock(range_lock, eal, size0);
+
+				switch (size0)
+				{
+				case 1:
+				{
+					*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
+					break;
+				}
+				case 2:
+				{
+					*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
+					break;
+				}
+				case 4:
+				{
+					*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
+					break;
+				}
+				case 8:
+				{
+					*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
+					break;
+				}
+				case 128:
+				{
+					mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
+					break;
+				}
+				default:
+				{
+					auto _dst = dst;
+					auto _src = src;
+					auto _size = size0;
+
+					while (_size)
+					{
+						*reinterpret_cast<v128*>(_dst) = *reinterpret_cast<const v128*>(_src);
+
+						_dst += 16;
+						_src += 16;
+						_size -= 16;
+					}
+
+					break;
+				}
+				}
+
+				range_lock->release(0);
+
+				res += 127;
+
+				// Release bits and notify
+				bits->atomic_op([&](auto& v)
+				{
+					v &= ~wmask;
+				});
+
+				bits->notify_all();
+
+				if (size == size0)
+				{
+					break;
+				}
 			}
 
+			//std::atomic_thread_fence(std::memory_order_seq_cst);
+			return;
+		}
+
+		perf_meter<"DMA_PUT"_u64> perf2;
+
+		switch (u32 size = args.size)
+		{
+		case 1:
+		{
+			vm::range_lock(range_lock, eal, 1);
+			*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
+			range_lock->release(0);
+			break;
+		}
+		case 2:
+		{
+			vm::range_lock(range_lock, eal, 2);
+			*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
+			range_lock->release(0);
+			break;
+		}
+		case 4:
+		{
+			vm::range_lock(range_lock, eal, 4);
+			*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
+			range_lock->release(0);
+			break;
+		}
+		case 8:
+		{
+			vm::range_lock(range_lock, eal, 8);
+			*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
+			range_lock->release(0);
+			break;
+		}
+		default:
+		{
 			if (((eal & 127) + size) <= 128)
 			{
-				// Lock one cache line
-				auto [res, time0] = vm::reservation_lock(eal);
+				vm::range_lock(range_lock, eal, size);
 
 				while (size)
 				{
@@ -1809,14 +1954,14 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					size -= 16;
 				}
 
-				res += 64;
+				range_lock->release(0);
 				break;
 			}
 
 			u32 range_addr = eal & -128;
 			u32 range_end = ::align(eal + size, 128);
 
-			// Handle the case of crossing 64K page borders
+			// Handle the case of crossing 64K page borders (TODO: maybe split in 4K fragments?)
 			if (range_addr >> 16 != (range_end - 1) >> 16)
 			{
 				u32 nexta = range_end & -65536;
@@ -1824,7 +1969,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				size -= size0;
 
 				// Split locking + transfer in two parts (before 64K border, and after it)
-				const auto lock = vm::range_lock(range_addr, nexta);
+				vm::range_lock(range_lock, range_addr, size0);
 
 				// Avoid unaligned stores in mov_rdata_avx
 				if (reinterpret_cast<u64>(dst) & 0x10)
@@ -1854,11 +1999,11 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					size0 -= 16;
 				}
 
-				lock->release(0);
+				range_lock->release(0);
 				range_addr = nexta;
 			}
 
-			const auto lock = vm::range_lock(range_addr, range_end);
+			vm::range_lock(range_lock, range_addr, range_end - range_addr);
 
 			// Avoid unaligned stores in mov_rdata_avx
 			if (reinterpret_cast<u64>(dst) & 0x10)
@@ -1888,14 +2033,9 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				size -= 16;
 			}
 
-			lock->release(0);
+			range_lock->release(0);
 			break;
 		}
-		}
-
-		if (g_cfg.core.spu_accurate_dma)
-		{
-			std::atomic_thread_fence(std::memory_order_seq_cst);
 		}
 
 		return;
@@ -2511,17 +2651,9 @@ bool spu_thread::process_mfc_cmd()
 			}
 			else
 			{
-				if (g_use_rtm)
-				{
-					state += cpu_flag::wait + cpu_flag::temp;
-				}
-
+				state += cpu_flag::wait + cpu_flag::temp;
 				std::this_thread::yield();
-
-				if (g_use_rtm)
-				{
-					verify(HERE), !check_state();
-				}
+				!check_state();
 			}
 		}())
 		{
@@ -2567,7 +2699,7 @@ bool spu_thread::process_mfc_cmd()
 				continue;
 			}
 
-			if (g_use_rtm && i >= 15 && g_cfg.core.perf_report) [[unlikely]]
+			if (i >= 15 && g_cfg.core.perf_report) [[unlikely]]
 			{
 				perf_log.warning("GETLLAR: took too long: %u", i);
 			}
@@ -3040,7 +3172,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					return -1;
 				}
 
-				vm::reservation_notifier(raddr, 128).wait<UINT64_MAX & -128>(rtime, atomic_wait_timeout{100'000});
+				vm::reservation_notifier(raddr, 128).wait(rtime, -128, atomic_wait_timeout{100'000});
 			}
 
 			check_state();

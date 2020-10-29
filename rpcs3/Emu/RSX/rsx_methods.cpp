@@ -146,34 +146,13 @@ namespace rsx
 
 			const u32 addr = get_address(offset, ctxt, HERE);
 
-			atomic_t<u64>* res{};
-			bool upd = false;
-
 			// TODO: Check if possible to write on reservations
 			if (rsx->label_addr >> 28 != addr >> 28)
 			{
-				if (g_use_rtm)
-				{
-					upd = true;
-				}
-				else
-				{
-					res = &vm::reservation_lock(addr).first;
-				}
+				rsx_log.fatal("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 			}
 
 			vm::_ref<RsxSemaphore>(addr).val = arg;
-
-			if (res)
-			{
-				res->fetch_add(64);
-				res->notify_all();
-			}
-			else if (upd)
-			{
-				// TODO: simply writing semaphore from RSX thread is wrong on TSX path
-				vm::reservation_update(addr);
-			}
 		}
 	}
 
@@ -1535,7 +1514,7 @@ namespace rsx
 			const auto write_length = out_pitch * (line_count - 1) + line_length;
 
 			rsx->invalidate_fragment_program(dst_dma, dst_offset, write_length);
-	
+
 			if (const auto result = rsx->read_barrier(read_address, read_length, !is_block_transfer);
 				result == rsx::result_zcull_intr)
 			{
