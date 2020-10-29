@@ -24,6 +24,8 @@ LOG_CHANNEL(sys_log, "SYS");
 
 static thread_local u64 s_tls_thread_slot = -1;
 
+extern thread_local void(*g_tls_log_control)(const char* fmt, u64 progress);
+
 template <>
 void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 {
@@ -469,6 +471,26 @@ void cpu_thread::operator()()
 		}
 	});
 
+	g_tls_log_control = [](const char* fmt, u64 progress)
+	{
+		static thread_local bool wait_set = false;
+
+		cpu_thread* _cpu = get_current_cpu_thread();
+
+		if (progress == 0 && !(_cpu->state & cpu_flag::wait))
+		{
+			_cpu->state += cpu_flag::wait + cpu_flag::temp;
+			wait_set = true;
+			return;
+		}
+
+		if (progress == umax && std::exchange(wait_set, false))
+		{
+			verify(HERE), !_cpu->check_state();
+			return;
+		}
+	};
+
 	static thread_local struct thread_cleanup_t
 	{
 		cpu_thread* _this;
@@ -493,6 +515,8 @@ void cpu_thread::operator()()
 			}
 
 			atomic_storage_futex::set_notify_callback(nullptr);
+
+			g_tls_log_control = [](const char*, u64){};
 
 			g_fxo->get<cpu_counter>()->remove(_this, s_tls_thread_slot);
 

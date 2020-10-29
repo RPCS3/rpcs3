@@ -31,6 +31,9 @@ static std::string empty_string()
 // Thread-specific log prefix provider
 thread_local std::string(*g_tls_log_prefix)() = &empty_string;
 
+// Another thread-specific callback
+thread_local void(*g_tls_log_control)(const char* fmt, u64 progress) = [](const char*, u64){};
+
 template<>
 void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
 {
@@ -314,6 +317,9 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	// Get timestamp
 	const u64 stamp = get_stamp();
 
+	// Notify start operation
+	g_tls_log_control(fmt, 0);
+
 	// Get text, extract va_args
 	/*constinit thread_local*/ std::string text;
 	/*constinit thread_local*/ std::basic_string<u64> args;
@@ -361,6 +367,9 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 		lis->log(stamp, *this, prefix, text);
 		lis = lis->m_next;
 	}
+
+	// Notify end operation
+	g_tls_log_control(fmt, -1);
 }
 
 logs::file_writer::file_writer(const std::string& name, u64 max_size)
