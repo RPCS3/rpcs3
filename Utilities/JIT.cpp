@@ -266,29 +266,6 @@ asmjit::Runtime& asmjit::get_global_runtime()
 	return g_rt;
 }
 
-asmjit::Label asmjit::build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fallback, const asmjit::X86Gp& ctr, uint less_than)
-{
-	Label fall = c.newLabel();
-	Label begin = c.newLabel();
-	c.jmp(begin);
-	c.bind(fall);
-	c.add(ctr, 1);
-
-	// Don't repeat on zero status (may indicate syscall or interrupt)
-	c.test(x86::eax, x86::eax);
-	c.jz(fallback);
-
-	// Other bad statuses are ignored regardless of repeat flag (TODO)
-	c.cmp(ctr, less_than);
-	c.jae(fallback);
-	c.align(kAlignCode, 16);
-	c.bind(begin);
-	return fall;
-
-	// xbegin should be issued manually, allows to add more check before entering transaction
-	//c.xbegin(fall);
-}
-
 #ifdef LLVM_AVAILABLE
 
 #include <unordered_map>

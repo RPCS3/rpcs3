@@ -397,7 +397,10 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 	}
 
 	// Begin transaction
-	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 4);
+	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 4, [&]()
+	{
+		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx) - ::offset32(&spu_thread::rdata)), 1);
+	});
 	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
 	c.mov(x86::eax, _XABORT_EXPLICIT);
 	c.jc(fall);
@@ -463,6 +466,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 
 	c.sub(x86::qword_ptr(x86::rbx), -128);
 	c.xend();
+	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
 	c.mov(x86::eax, x86::r12d);
 	c.jmp(_ret);
 
@@ -491,10 +495,12 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 
 	c.xend();
 	c.xor_(x86::eax, x86::eax);
+	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
 	c.jmp(_ret);
 
 	c.bind(skip);
 	c.xend();
+	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
 	c.mov(x86::eax, _XABORT_EXPLICIT);
 	//c.jmp(fall);
 
@@ -524,7 +530,10 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail2);
 
-	Label tx1 = build_transaction_enter(c, fall2, x86::r12d, 666);
+	Label tx1 = build_transaction_enter(c, fall2, x86::r12d, 666, [&]()
+	{
+		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx) - ::offset32(&spu_thread::rdata)), 1);
+	});
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 
@@ -592,6 +601,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 	}
 
 	c.xend();
+	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
 	c.lock().add(x86::qword_ptr(x86::rbx), 127);
 	c.mov(x86::eax, x86::r12d);
 	c.jmp(_ret);
@@ -620,6 +630,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 	}
 
 	c.xend();
+	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
 	c.jmp(fail2);
 
 	c.bind(fall2);
@@ -730,7 +741,10 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	}
 
 	// Begin transaction
-	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 8);
+	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 8, [&]()
+	{
+		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx)), 1);
+	});
 	c.xbegin(tx0);
 	c.test(x86::qword_ptr(x86::rbx), vm::rsrv_unique_lock);
 	c.jnz(skip);
@@ -756,11 +770,13 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 
 	c.sub(x86::qword_ptr(x86::rbx), -128);
 	c.xend();
+	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx)), 1);
 	c.mov(x86::eax, 1);
 	c.jmp(_ret);
 
 	c.bind(skip);
 	c.xend();
+	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx)), 1);
 	//c.jmp(fall);
 
 	c.bind(fall);
@@ -783,7 +799,11 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	c.test(x86::eax, vm::rsrv_unique_lock);
 	c.jnz(fall2);
 
-	Label tx1 = build_transaction_enter(c, fall2, x86::r12d, 666);
+	Label tx1 = build_transaction_enter(c, fall2, x86::r12d, 666, [&]()
+	{
+		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx)), 1);
+	});
+
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 
@@ -815,6 +835,7 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	}
 
 	c.xend();
+	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx)), 1);
 	c.lock().add(x86::qword_ptr(x86::rbx), 127);
 	c.mov(x86::eax, x86::r12d);
 	c.jmp(_ret);
@@ -884,7 +905,10 @@ const extern auto spu_getllar_tx = build_function_asm<u32(*)(u32 raddr, void* rd
 	c.mov(x86::r13, args[1]);
 
 	// Begin transaction
-	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 8);
+	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 8, [&]()
+	{
+		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx)), 1);
+	});
 
 	// Check pause flag
 	c.bt(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::pause));
@@ -916,6 +940,7 @@ const extern auto spu_getllar_tx = build_function_asm<u32(*)(u32 raddr, void* rd
 	}
 
 	c.xend();
+	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx)), 1);
 
 	// Store data
 	if (s_tsx_avx)

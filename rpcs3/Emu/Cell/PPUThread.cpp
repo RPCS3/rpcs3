@@ -1377,7 +1377,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	}
 
 	// Begin transaction
-	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 4);
+	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 4, []{});
 	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&ppu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
 	c.mov(x86::eax, _XABORT_EXPLICIT);
 	c.jc(fall);
@@ -1489,7 +1489,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail2);
 
-	Label tx1 = build_transaction_enter(c, fall2, x86::r12d, 666);
+	Label tx1 = build_transaction_enter(c, fall2, x86::r12d, 666, []{});
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 

@@ -753,6 +753,9 @@ public:
 
 	u64 saved_native_sp = 0; // Host thread's stack pointer for emulated longjmp
 
+	u64 ftx = 0; // Failed transactions
+	u64 stx = 0; // Succeeded transactions (pure counters)
+
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
 	const char* current_func{}; // Current STOP or RDCH blocking function
