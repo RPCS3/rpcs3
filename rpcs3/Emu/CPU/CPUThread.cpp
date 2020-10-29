@@ -592,14 +592,10 @@ bool cpu_thread::check_state() noexcept
 		{
 			bool store = false;
 
-			// Easy way obtain suspend counter
 			if (flags & cpu_flag::pause && !(flags & cpu_flag::wait))
 			{
+				// Save value before state is saved and cpu_flag::wait is observed
 				susp_ctr = g_suspend_counter;
-			}
-			else
-			{
-				susp_ctr = -1;
 			}
 
 			if (flags & cpu_flag::temp) [[unlikely]]
@@ -710,18 +706,38 @@ bool cpu_thread::check_state() noexcept
 			// If only cpu_flag::pause was set, wait on suspend counter instead
 			if (state0 & cpu_flag::pause)
 			{
+				if (state0 & cpu_flag::wait)
+				{
+					// Otherwise, value must be reliable because cpu_flag::wait hasn't been observed yet
+					susp_ctr = -1;
+				}
+
 				// Hard way
-				if (susp_ctr == umax)
+				if (susp_ctr == umax) [[unlikely]]
 				{
 					g_fxo->get<cpu_counter>()->cpu_suspend_lock.lock_unlock();
 					continue;
 				}
 
 				// Wait for current suspend_all operation
-				while (busy_wait(), g_suspend_counter == susp_ctr)
+				for (u64 i = 0;; i++)
 				{
-					g_suspend_counter.wait(susp_ctr);
+					if (i < 20)
+					{
+						busy_wait(300);
+					}
+					else
+					{
+						g_suspend_counter.wait(susp_ctr);
+					}
+
+					if (!(state & cpu_flag::pause))
+					{
+						break;
+					}
 				}
+
+				susp_ctr = -1;
 			}
 		}
 	}
@@ -808,9 +824,6 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 	// Can't allow pre-set wait bit (it'd be a problem)
 	verify(HERE), !_this || !(_this->state & cpu_flag::wait);
 
-	// Value must be reliable because cpu_flag::wait hasn't been observed only (but not if pause is set)
-	const u64 susp_ctr = g_suspend_counter;
-
 	// cpu_counter object
 	const auto ctr = g_fxo->get<cpu_counter>();
 
@@ -881,8 +894,6 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 			// Check only CPUs which haven't acknowledged their waiting state yet
 			for_all_cpu<true>([&](cpu_thread* cpu, u64 index)
 			{
-				verify(HERE), cpu->state & cpu_flag::pause;
-
 				if (cpu->state & cpu_flag::wait)
 				{
 					ctr->cpu_copy_bits[index / 64] &= ~(1ull << (index % 64));
@@ -951,14 +962,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 	else
 	{
 		// Seems safe to set pause on self because wait flag hasn't been observed yet
-		_this->state += cpu_flag::pause + cpu_flag::wait;
-
-		// Subscribe for notification broadcast
-		while (busy_wait(), g_suspend_counter == susp_ctr)
-		{
-			g_suspend_counter.wait(susp_ctr);
-		}
-
+		_this->state += cpu_flag::pause + cpu_flag::temp;
 		_this->check_state();
 		return true;
 	}
