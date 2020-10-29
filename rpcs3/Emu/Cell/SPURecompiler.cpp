@@ -5985,6 +5985,8 @@ public:
 						call("spu_memcpy", +spu_memcpy, dst, src, zext<u32>(size).eval(m_ir));
 					}
 
+					// Disable certain thing
+					m_ir->CreateStore(m_ir->getInt32(0), spu_ptr<u32>(&spu_thread::last_faddr));
 					m_ir->CreateBr(next);
 					break;
 				}
@@ -7128,7 +7130,7 @@ public:
 				set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<u32[4]>(op.rb), get_vr<u32[4]>(op.ra)));
 				return;
 			}
-			
+
 			bool sel_16 = true;
 			for (u32 i = 0; i < 8; i++)
 			{
@@ -7144,7 +7146,7 @@ public:
 				set_vr(op.rt4, select(bitcast<s16[8]>(c) != 0, get_vr<u16[8]>(op.rb), get_vr<u16[8]>(op.ra)));
 				return;
 			}
-			
+
 			bool sel_8 = true;
 			for (u32 i = 0; i < 16; i++)
 			{

@@ -756,6 +756,12 @@ public:
 	u64 ftx = 0; // Failed transactions
 	u64 stx = 0; // Succeeded transactions (pure counters)
 
+	u64 last_ftsc = 0;
+	u64 last_ftime = 0;
+	u32 last_faddr = 0;
+	u64 last_fail = 0;
+	u64 last_succ = 0;
+
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
 	const char* current_func{}; // Current STOP or RDCH blocking function

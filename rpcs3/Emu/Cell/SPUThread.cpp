@@ -317,6 +317,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 	Label _ret = c.newLabel();
 	Label skip = c.newLabel();
 	Label next = c.newLabel();
+	Label load = c.newLabel();
 
 	//if (utils::has_avx() && !s_tsx_avx)
 	//{
@@ -473,7 +474,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 	// XABORT is expensive so finish with xend instead
 	c.bind(fail);
 
-	// Load old data (unused)
+	// Load old data to store back in rdata
 	if (s_tsx_avx)
 	{
 		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
@@ -494,9 +495,8 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 	}
 
 	c.xend();
-	c.xor_(x86::eax, x86::eax);
 	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
-	c.jmp(_ret);
+	c.jmp(load);
 
 	c.bind(skip);
 	c.xend();
@@ -609,7 +609,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 	// XABORT is expensive so try to finish with xend instead
 	c.bind(fail3);
 
-	// Load old data (unused)
+	// Load previous data to store back to rdata
 	if (s_tsx_avx)
 	{
 		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
@@ -639,6 +639,28 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, void*
 
 	c.bind(fail2);
 	c.lock().sub(x86::qword_ptr(x86::rbx), 1);
+	c.bind(load);
+
+	// Store previous data back to rdata
+	if (s_tsx_avx)
+	{
+		c.vmovaps(x86::yword_ptr(args[2], 0), x86::ymm0);
+		c.vmovaps(x86::yword_ptr(args[2], 32), x86::ymm1);
+		c.vmovaps(x86::yword_ptr(args[2], 64), x86::ymm2);
+		c.vmovaps(x86::yword_ptr(args[2], 96), x86::ymm3);
+	}
+	else
+	{
+		c.movaps(x86::oword_ptr(args[2], 0), x86::xmm0);
+		c.movaps(x86::oword_ptr(args[2], 16), x86::xmm1);
+		c.movaps(x86::oword_ptr(args[2], 32), x86::xmm2);
+		c.movaps(x86::oword_ptr(args[2], 48), x86::xmm3);
+		c.movaps(x86::oword_ptr(args[2], 64), x86::xmm4);
+		c.movaps(x86::oword_ptr(args[2], 80), x86::xmm5);
+		c.movaps(x86::oword_ptr(args[2], 96), x86::xmm6);
+		c.movaps(x86::oword_ptr(args[2], 112), x86::xmm7);
+	}
+
 	c.xor_(x86::eax, x86::eax);
 	//c.jmp(_ret);
 
@@ -1405,6 +1427,9 @@ spu_thread::~spu_thread()
 
 	// Free range lock
 	vm::free_range_lock(range_lock);
+
+	perf_log.notice("Perf stats for transactions: success %u, failure %u", stx, ftx);
+	perf_log.notice("Perf stats for PUTLLC reload: successs %u, failure %u", last_succ, last_fail);
 }
 
 spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)
@@ -1609,6 +1634,9 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	// Keep src point to const
 	u8* dst = nullptr;
 	const u8* src = nullptr;
+
+	// Cleanup: if PUT or GET happens after PUTLLC failure, it's too complicated and it's easier to just give up
+	last_faddr = 0;
 
 	std::tie(dst, src) = [&]() -> std::pair<u8*, const u8*>
 	{
@@ -2319,10 +2347,10 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			{
 				const bool ok = cpu_thread::suspend_all<+1>(this, [&]()
 				{
+					auto& data = *vm::get_super_ptr<spu_rdata_t>(addr);
+
 					if ((res & -128) == rtime)
 					{
-						auto& data = vm::_ref<spu_rdata_t>(addr);
-
 						if (cmp_rdata(rdata, data))
 						{
 							mov_rdata(data, to_write);
@@ -2331,13 +2359,31 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 						}
 					}
 
+					// Save previous data
+					mov_rdata(rdata, data);
 					res -= 1;
 					return false;
 				});
 
-				return ok;
+				if (ok)
+				{
+					break;
+				}
+
+				[[fallthrough]];
 			}
-			case 0: return false;
+			case 0:
+			{
+				if (addr == last_faddr)
+				{
+					last_fail++;
+				}
+
+				last_faddr = addr;
+				last_ftime = res.load() & -128;
+				last_ftsc = __rdtsc();
+				return false;
+			}
 			default:
 			{
 				if (count > 60 && g_cfg.core.perf_report) [[unlikely]]
@@ -2345,9 +2391,17 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 					perf_log.warning("PUTLLC: took too long: %u", count);
 				}
 
-				return true;
+				break;
 			}
 			}
+
+			if (addr == last_faddr)
+			{
+				last_succ++;
+			}
+
+			last_faddr = 0;
+			return true;
 		}
 
 		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
@@ -2639,16 +2693,42 @@ bool spu_thread::process_mfc_cmd()
 		return true;
 	case MFC_GETLLAR_CMD:
 	{
+		perf_meter<"GETLLAR"_u64> perf0;
+
 		const u32 addr = ch_mfc_cmd.eal & -128;
 		const auto& data = vm::_ref<spu_rdata_t>(addr);
+
+		if (addr == last_faddr)
+		{
+			// TODO: make this configurable and possible to disable
+			spu_log.trace(u8"GETLLAR after fail: addr=0x%x, time=%u c", last_faddr, (perf0.get() - last_ftsc));
+		}
+
+		if (addr == last_faddr && perf0.get() - last_ftsc < 1000 && (vm::reservation_acquire(addr, 128) & -128) == last_ftime)
+		{
+			rtime = last_ftime;
+			raddr = last_faddr;
+			mov_rdata(_ref<spu_rdata_t>(ch_mfc_cmd.lsa & 0x3ff80), rdata);
+
+			ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
+			return true;
+		}
+		else
+		{
+			// Silent failure
+			last_faddr = 0;
+		}
 
 		if (addr == raddr && !g_use_rtm && g_cfg.core.spu_getllar_polling_detection && rtime == vm::reservation_acquire(addr, 128) && cmp_rdata(rdata, data))
 		{
 			// Spinning, might as well yield cpu resources
 			std::this_thread::yield();
-		}
 
-		perf_meter<"GETLLAR"_u64> perf0;
+			// Reset perf
+			perf_meter<'x'> dummy;
+			perf0 = dummy;
+			dummy.reset();
+		}
 
 		alignas(64) spu_rdata_t temp;
 		u64 ntime;
@@ -2768,14 +2848,22 @@ bool spu_thread::process_mfc_cmd()
 
 	case MFC_PUTLLC_CMD:
 	{
-		ch_atomic_stat.set_value(do_putllc(ch_mfc_cmd) ? MFC_PUTLLC_SUCCESS : MFC_PUTLLC_FAILURE);
-		return true;
+		if (do_putllc(ch_mfc_cmd))
+		{
+			ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS);
+		}
+		else
+		{
+			ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
+		}
+
+		return !test_stopped();
 	}
 	case MFC_PUTLLUC_CMD:
 	{
 		do_putlluc(ch_mfc_cmd);
 		ch_atomic_stat.set_value(MFC_PUTLLUC_SUCCESS);
-		return true;
+		return !test_stopped();
 	}
 	case MFC_PUTQLLUC_CMD:
 	{
