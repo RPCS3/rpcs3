@@ -1142,6 +1142,8 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	ppu.raddr = addr;
 
+	u32 addr_mask = -1;
+
 	if (const s32 max = g_cfg.core.ppu_128_reservations_loop_max_length)
 	{
 		// If we use it in HLE it means we want the accurate version
@@ -1152,7 +1154,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			if ((cia & 0xffff) >= 0x10000u - max * 4)
 			{
 				// Do not cross 64k boundary
-				return true;
+				return false;
 			}
 
 			const auto inst = vm::_ptr<const nse_t<u32>>(cia);
@@ -1188,12 +1190,44 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 			return true;
 		}();
+
+		if (ppu.use_full_rdata)
+		{
+			addr_mask = -128;
+		}
 	}
 	else
 	{
 		ppu.use_full_rdata = false;
 	}
 
+	if ((addr & addr_mask) == (ppu.last_faddr & addr_mask))
+	{
+		ppu_log.trace(u8"LARX after fail: addr=0x%x, faddr=0x%x, time=%u c", addr, ppu.last_faddr, (perf0.get() - ppu.last_ftsc));
+	}
+
+	if ((addr & addr_mask) == (ppu.last_faddr & addr_mask) && (perf0.get() - ppu.last_ftsc) < 600 && (vm::reservation_acquire(addr, sizeof(T)) & -128) == ppu.last_ftime)
+	{
+		be_t<u64> rdata;
+		std::memcpy(&rdata, &ppu.rdata[addr & 0x78], 8);
+
+		if (rdata == data.load())
+		{
+			ppu.rtime = ppu.last_ftime;
+			ppu.raddr = ppu.last_faddr;
+			return static_cast<T>(rdata << data_off >> size_off);
+		}
+
+		ppu.last_fail++;
+		ppu.last_faddr = 0;
+	}
+	else
+	{
+		// Silent failure
+		ppu.last_faddr = 0;
+	}
+
+	// Skip loop if already loaded
 	for (u64 count = 0; count != umax; [&]()
 	{
 		if (ppu.state)
@@ -1322,6 +1356,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	Label _ret = c.newLabel();
 	Label skip = c.newLabel();
 	Label next = c.newLabel();
+	Label load = c.newLabel();
 
 	//if (utils::has_avx() && !s_tsx_avx)
 	//{
@@ -1437,7 +1472,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	// XABORT is expensive so finish with xend instead
 	c.bind(fail);
 
-	// Load old data (unused)
+	// Load old data to store back in rdata
 	if (s_tsx_avx)
 	{
 		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
@@ -1458,8 +1493,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	}
 
 	c.xend();
-	c.xor_(x86::eax, x86::eax);
-	c.jmp(_ret);
+	c.jmp(load);
 
 	c.bind(skip);
 	c.xend();
@@ -1551,7 +1585,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	// XABORT is expensive so try to finish with xend instead
 	c.bind(fail3);
 
-	// Load old data (unused)
+	// Load old data to store back in rdata
 	if (s_tsx_avx)
 	{
 		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
@@ -1580,6 +1614,28 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 
 	c.bind(fail2);
 	c.lock().sub(x86::qword_ptr(x86::rbx), 1);
+	c.bind(load);
+
+	// Store previous data back to rdata
+	if (s_tsx_avx)
+	{
+		c.vmovaps(x86::yword_ptr(args[2], 0), x86::ymm0);
+		c.vmovaps(x86::yword_ptr(args[2], 32), x86::ymm1);
+		c.vmovaps(x86::yword_ptr(args[2], 64), x86::ymm2);
+		c.vmovaps(x86::yword_ptr(args[2], 96), x86::ymm3);
+	}
+	else
+	{
+		c.movaps(x86::oword_ptr(args[2], 0), x86::xmm0);
+		c.movaps(x86::oword_ptr(args[2], 16), x86::xmm1);
+		c.movaps(x86::oword_ptr(args[2], 32), x86::xmm2);
+		c.movaps(x86::oword_ptr(args[2], 48), x86::xmm3);
+		c.movaps(x86::oword_ptr(args[2], 64), x86::xmm4);
+		c.movaps(x86::oword_ptr(args[2], 80), x86::xmm5);
+		c.movaps(x86::oword_ptr(args[2], 96), x86::xmm6);
+		c.movaps(x86::oword_ptr(args[2], 112), x86::xmm7);
+	}
+
 	c.xor_(x86::eax, x86::eax);
 	//c.jmp(_ret);
 
@@ -1666,14 +1722,42 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			{
 				switch (u32 count = ppu_stcx_accurate_tx(addr & -8, rtime, ppu.rdata, std::bit_cast<u64>(new_data)))
 				{
-				case 0:
-				{
-					// Reservation lost
-					return false;
-				}
 				case UINT32_MAX:
 				{
-					break;
+					const bool ok = cpu_thread::suspend_all<+1>(&ppu, [&]
+					{
+						auto& all_data = *vm::get_super_ptr<spu_rdata_t>(addr & -128);
+
+						if ((res & -128) == rtime && cmp_rdata(ppu.rdata, all_data))
+						{
+							data.release(new_data);
+							res += 127;
+							return true;
+						}
+
+						mov_rdata(ppu.rdata, all_data);
+						res -= 1;
+						return false;
+					});
+
+					if (ok)
+					{
+						break;
+					}
+
+					[[fallthrough]];
+				}
+				case 0:
+				{
+					if (ppu.last_faddr == addr)
+					{
+						ppu.last_fail++;
+					}
+
+					ppu.last_faddr = addr;
+					ppu.last_ftime = res.load() & -128;
+					ppu.last_ftsc = __rdtsc();
+					return false;
 				}
 				default:
 				{
@@ -1682,22 +1766,17 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 						perf_log.warning("STCX: took too long: %u", count);
 					}
 
-					return true;
+					break;
 				}
 				}
 
-				return cpu_thread::suspend_all<+1>(&ppu, [&]
+				if (ppu.last_faddr == addr)
 				{
-					if ((res & -128) == rtime && cmp_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128)))
-					{
-						data.release(new_data);
-						res += 127;
-						return true;
-					}
+					ppu.last_succ++;
+				}
 
-					res -= 1;
-					return false;
-				});
+				ppu.last_faddr = 0;
+				return true;
 			}
 
 			auto [_oldd, _ok] = res.fetch_op([&](u64& r)
@@ -1749,6 +1828,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 		if (new_data == old_data)
 		{
+			ppu.last_faddr = 0;
 			return res.compare_and_swap_test(rtime, rtime + 128);
 		}
 
@@ -1770,6 +1850,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		// Give up if reservation has been locked or updated
 		if (!_ok)
 		{
+			ppu.last_faddr = 0;
 			return false;
 		}
 
@@ -1780,11 +1861,34 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			return true;
 		}
 
-		res -= 1;
+		const u64 old_rtime = res.fetch_sub(1);
+
+		// TODO: disabled with this setting on, since it's dangerous to mix
+		if (!g_cfg.core.ppu_128_reservations_loop_max_length)
+		{
+			// Store old_data on failure
+			if (ppu.last_faddr == addr)
+			{
+				ppu.last_fail++;
+			}
+
+			ppu.last_faddr = addr;
+			ppu.last_ftime = old_rtime & -128;
+			ppu.last_ftsc = __rdtsc();
+			std::memcpy(&ppu.rdata[addr & 0x78], &old_data, 8);
+		}
+
 		return false;
 	}())
 	{
 		res.notify_all();
+
+		if (addr == ppu.last_faddr)
+		{
+			ppu.last_succ++;
+		}
+
+		ppu.last_faddr = 0;
 		return true;
 	}
 
