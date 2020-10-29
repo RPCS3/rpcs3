@@ -854,6 +854,8 @@ ppu_thread::~ppu_thread()
 	{
 		dct->used -= stack_size;
 	}
+
+	perf_log.notice("Perf stats for STCX reload: successs %u, failure %u", last_succ, last_fail);
 }
 
 ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u32 prio, int detached)
@@ -1123,6 +1125,8 @@ static void ppu_trace(u64 addr)
 template <typename T>
 static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 {
+	perf_meter<"LARX"_u32> perf0;
+
 	// Do not allow stores accessed from the same cache line to past reservation load
 	std::atomic_thread_fence(std::memory_order_seq_cst);
 
@@ -1354,7 +1358,6 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.and_(args[0].r32(), 63);
 	c.mov(x86::r12d, 1);
 	c.mov(x86::r13, args[1]);
-	c.bswap(args[3]);
 
 	// Prepare data
 	if (s_tsx_avx)
@@ -1615,25 +1618,21 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	auto& data = vm::_ref<atomic_be_t<u64>>(addr & -8);
 	auto& res = vm::reservation_acquire(addr, sizeof(T));
-	const u64 old_data = reinterpret_cast<be_t<u64>&>(ppu.rdata[addr & 0x78]);
 	const u64 rtime = ppu.rtime;
+
+	be_t<u64> old_data = 0;
+	std::memcpy(&old_data, &ppu.rdata[addr & 0x78], sizeof(old_data));
+	be_t<u64> new_data = old_data;
 
 	if constexpr (sizeof(T) == sizeof(u32))
 	{
 		// Rebuild reg_value to be 32-bits of new data and 32-bits of old data
-		union bf64
-		{
-			u64 all;
-			bf_t<u64, 0, 32> low;
-			bf_t<u64, 32, 32> high;
-		} bf{old_data};
-
-		if (addr & 4)
-			bf.low = static_cast<u32>(reg_value);
-		else
-			bf.high = static_cast<u32>(reg_value);
-
-		reg_value = bf.all;
+		const be_t<u32> reg32 = static_cast<u32>(reg_value);
+		std::memcpy(reinterpret_cast<char*>(&new_data) + (addr & 4), &reg32, sizeof(u32));
+	}
+	else
+	{
+		new_data = reg_value;
 	}
 
 	// Test if store address is on the same aligned 8-bytes memory as load
@@ -1665,7 +1664,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		{
 			if (g_use_rtm) [[likely]]
 			{
-				switch (u32 count = ppu_stcx_accurate_tx(addr & -8, rtime, ppu.rdata, reg_value))
+				switch (u32 count = ppu_stcx_accurate_tx(addr & -8, rtime, ppu.rdata, std::bit_cast<u64>(new_data)))
 				{
 				case 0:
 				{
@@ -1691,7 +1690,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				{
 					if ((res & -128) == rtime && cmp_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128)))
 					{
-						data.release(reg_value);
+						data.release(new_data);
 						res += 127;
 						return true;
 					}
@@ -1736,7 +1735,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 				if (cmp_rdata(ppu.rdata, super_data))
 				{
-					data.release(reg_value);
+					data.release(new_data);
 					res += 64;
 					return true;
 				}
@@ -1748,7 +1747,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			return success;
 		}
 
-		if (reg_value == old_data)
+		if (new_data == old_data)
 		{
 			return res.compare_and_swap_test(rtime, rtime + 128);
 		}
@@ -1774,7 +1773,8 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			return false;
 		}
 
-		if (data.compare_and_swap_test(old_data, reg_value))
+		// Store previous value in old_data on failure
+		if (data.compare_exchange(old_data, new_data))
 		{
 			res += 127;
 			return true;

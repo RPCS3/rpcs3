@@ -219,6 +219,12 @@ public:
 	// Thread name
 	stx::atomic_cptr<std::string> ppu_tname;
 
+	u64 last_ftsc = 0;
+	u64 last_ftime = 0;
+	u32 last_faddr = 0;
+	u64 last_fail = 0;
+	u64 last_succ = 0;
+
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();
 	void fast_call(u32 addr, u32 rtoc);
