@@ -31,13 +31,13 @@ jobs:
     displayName: ccache
 
   - bash: |
-      docker pull --quiet rpcs3/rpcs3-travis-xenial:1.5
+      docker pull --quiet rpcs3/rpcs3-travis-xenial:1.6
       docker run                      \
         -v $(pwd):/rpcs3              \
         --env-file .ci/travis.env \
         -v $CCACHE_DIR:/root/.ccache  \
         -v $BUILD_ARTIFACTSTAGINGDIRECTORY:/root/artifacts \
-        rpcs3/rpcs3-travis-xenial:1.5 \
+        rpcs3/rpcs3-travis-xenial:1.6 \
         /rpcs3/.ci/build-linux.sh
     displayName: Docker setup and build
 
@@ -51,8 +51,8 @@ jobs:
     QT_VER: '5.14.2'
     QT_DATE: '202003291224'
     QTDIR: C:\Qt\$(QT_VER)\msvc2017_64
-    VULKAN_VER: '1.2.148.1'
-    VULKAN_SDK_SHA: '5dbeafbc75c334811720fb50bd6ed7c9afd42afd31cad6be0b84cd8383aa9472'
+    VULKAN_VER: '1.2.154.1'
+    VULKAN_SDK_SHA: 'b64471f3a720e649c1fae6535ea83b8c642655ebed1485bfdf15bf4d88f746d9'
     VULKAN_SDK: C:\VulkanSDK\$(VULKAN_VER)
     CACHE_DIR: ./cache
 
