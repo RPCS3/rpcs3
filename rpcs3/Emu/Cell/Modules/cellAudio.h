@@ -5,6 +5,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/AudioDumper.h"
+#include "Emu/system_config_types.h"
 
 struct lv2_event_queue;
 
@@ -306,10 +307,7 @@ public:
 		return buffer[num].get();
 	}
 
-	u64 get_timestamp() const
-	{
-		return get_system_time() - Emu.GetPauseTime();
-	}
+	u64 get_timestamp() const;
 
 	float* get_current_buffer() const
 	{

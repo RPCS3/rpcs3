@@ -2,6 +2,7 @@
 #include "sys_vm.h"
 
 #include "Emu/IdManager.h"
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Memory/vm_locking.h"
 

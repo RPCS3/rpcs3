@@ -1,6 +1,4 @@
-#pragma once
-
-#include "Emu/Cell/ErrorCodes.h"
+﻿#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 

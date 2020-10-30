@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"

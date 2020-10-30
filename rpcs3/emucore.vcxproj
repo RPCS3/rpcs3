@@ -502,6 +502,8 @@
     <ClInclude Include="Emu\NP\rpcn_config.h" />
     <ClInclude Include="Emu\RSX\Common\ShaderInterpreter.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
+    <ClInclude Include="Emu\RSX\display.h" />
+    <ClInclude Include="Emu\RSX\GSFrameBase.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_fonts.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_message_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_osk.h" />

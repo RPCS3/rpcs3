@@ -2,6 +2,11 @@
 #include "pad_config.h"
 #include "Emu/System.h"
 
+cfg_input::cfg_input()
+	: cfg_name(fs::get_config_dir() + "/config_input.yml")
+{
+}
+
 bool cfg_input::load(const std::string& title_id)
 {
 	cfg_name = Emulator::GetCustomInputConfigPath(title_id);

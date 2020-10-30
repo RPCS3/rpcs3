@@ -16,10 +16,10 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
-#include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Capture/rsx_replay.h"
 
 #include "Loader/PSF.h"

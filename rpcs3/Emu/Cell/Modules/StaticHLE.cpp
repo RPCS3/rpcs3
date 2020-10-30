@@ -1,5 +1,7 @@
 ﻿#include "stdafx.h"
 #include "StaticHLE.h"
+#include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/PPUOpcodes.h"
 
 LOG_CHANNEL(static_hle);
 

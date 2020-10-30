@@ -1,8 +1,7 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Cell/PPUAnalyser.h"
 #include "sys_sync.h"
-#include "Emu/Cell/ErrorCodes.h"
 
 struct lv2_overlay final : lv2_obj, ppu_module
 {

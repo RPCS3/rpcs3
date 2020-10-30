@@ -1,13 +1,16 @@
 ﻿#include "stdafx.h"
 #include "sys_usbd.h"
+#include "sys_ppu_thread.h"
+#include "sys_sync.h"
 
 #include <queue>
 #include <thread>
+#include "Emu/System.h"
 #include "Emu/Memory/vm.h"
+#include "Emu/IdManager.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
-#include "sys_ppu_thread.h"
 
 #include "Emu/Io/usb_device.h"
 #include "Emu/Io/Skylander.h"

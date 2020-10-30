@@ -3,8 +3,7 @@
 #include "qt_utils.h"
 #include "memory_viewer_panel.h"
 #include "table_item_delegate.h"
-
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/RSXThread.h"
 
 #include <QHBoxLayout>
 #include <QHeaderView>

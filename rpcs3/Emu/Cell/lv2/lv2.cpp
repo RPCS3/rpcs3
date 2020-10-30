@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Memory/vm_ptr.h"
 
 #include "Emu/Cell/PPUFunction.h"

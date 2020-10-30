@@ -10,7 +10,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
 #include "Emu/system_config.h"
-#include "Emu/System.h"
 
 #include <deque>
 #include <thread>

@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "Emu/localized_string.h"
 #include "Emu/Cell/lv2/sys_fs.h"

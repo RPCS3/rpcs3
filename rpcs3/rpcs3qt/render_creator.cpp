@@ -13,6 +13,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <thread>
 
 LOG_CHANNEL(cfg_log, "CFG");
 
