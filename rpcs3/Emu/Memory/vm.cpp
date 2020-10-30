@@ -226,11 +226,8 @@ namespace vm
 		return result;
 	}
 
-	static void _lock_shareable_cache(u8 value, u32 addr, u32 size)
+	void clear_range_locks(u32 addr, u32 size)
 	{
-		// Block new range locks
-		g_addr_lock = addr | u64{size} << 32;
-
 		ASSUME(size);
 
 		const auto range = utils::address_range::start_length(addr, size);
@@ -257,6 +254,14 @@ namespace vm
 
 			_mm_pause();
 		}
+	}
+
+	static void _lock_shareable_cache(u8 value, u32 addr, u32 size)
+	{
+		// Block new range locks
+		g_addr_lock = addr | u64{size} << 32;
+
+		clear_range_locks(addr, size);
 	}
 
 	void passive_lock(cpu_thread& cpu)

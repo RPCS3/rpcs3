@@ -1985,7 +1985,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				}
 
 				// Obtain range lock as normal store
-				vm::range_lock(range_lock, eal, size0);
+				vm::range_lock(res, range_lock, eal, size0);
 
 				switch (size0)
 				{
@@ -2057,32 +2057,35 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 		perf_meter<"DMA_PUT"_u64> perf2;
 
+		// TODO: split range-locked stores in cache lines for consistency
+		auto& res = vm::reservation_acquire(eal, args.size);
+
 		switch (u32 size = args.size)
 		{
 		case 1:
 		{
-			vm::range_lock(range_lock, eal, 1);
+			vm::range_lock(res, range_lock, eal, 1);
 			*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
 			range_lock->release(0);
 			break;
 		}
 		case 2:
 		{
-			vm::range_lock(range_lock, eal, 2);
+			vm::range_lock(res, range_lock, eal, 2);
 			*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
 			range_lock->release(0);
 			break;
 		}
 		case 4:
 		{
-			vm::range_lock(range_lock, eal, 4);
+			vm::range_lock(res, range_lock, eal, 4);
 			*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
 			range_lock->release(0);
 			break;
 		}
 		case 8:
 		{
-			vm::range_lock(range_lock, eal, 8);
+			vm::range_lock(res, range_lock, eal, 8);
 			*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
 			range_lock->release(0);
 			break;
@@ -2091,7 +2094,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		{
 			if (((eal & 127) + size) <= 128)
 			{
-				vm::range_lock(range_lock, eal, size);
+				vm::range_lock(res, range_lock, eal, size);
 
 				while (size)
 				{
@@ -2117,7 +2120,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				size -= size0;
 
 				// Split locking + transfer in two parts (before 64K border, and after it)
-				vm::range_lock(range_lock, range_addr, size0);
+				vm::range_lock(res, range_lock, range_addr, size0);
 
 				// Avoid unaligned stores in mov_rdata_avx
 				if (reinterpret_cast<u64>(dst) & 0x10)
@@ -2151,7 +2154,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				range_addr = nexta;
 			}
 
-			vm::range_lock(range_lock, range_addr, range_end - range_addr);
+			vm::range_lock(res, range_lock, range_addr, range_end - range_addr);
 
 			// Avoid unaligned stores in mov_rdata_avx
 			if (reinterpret_cast<u64>(dst) & 0x10)
@@ -2510,6 +2513,9 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			// Already locked or updated: give up
 			return false;
 		}
+
+		// Wait for range locks to clear
+		vm::clear_range_locks(addr, 128);
 
 		vm::_ref<atomic_t<u32>>(addr) += 0;
 

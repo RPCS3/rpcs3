@@ -24,7 +24,7 @@ namespace vm
 	void range_lock_internal(atomic_t<u64, 64>* range_lock, u32 begin, u32 size);
 
 	// Lock memory range
-	FORCE_INLINE void range_lock(atomic_t<u64, 64>* range_lock, u32 begin, u32 size)
+	FORCE_INLINE void range_lock(atomic_t<u64>& res, atomic_t<u64, 64>* range_lock, u32 begin, u32 size)
 	{
 		const u64 lock_val = g_addr_lock.load();
 		const u64 lock_addr = static_cast<u32>(lock_val); // -> u64
@@ -37,14 +37,14 @@ namespace vm
 			addr = addr & 0xffff;
 		}
 
-		if (addr + size <= lock_addr || addr >= lock_addr + lock_size) [[likely]]
+		if ((addr + size <= lock_addr || addr >= lock_addr + lock_size) && !(res.load() & 127)) [[likely]]
 		{
 			// Optimistic locking
 			range_lock->release(begin | (u64{size} << 32));
 
 			const u64 new_lock_val = g_addr_lock.load();
 
-			if (!new_lock_val || new_lock_val == lock_val) [[likely]]
+			if ((!new_lock_val || new_lock_val == lock_val) && !(res.load() & 127)) [[likely]]
 			{
 				return;
 			}
@@ -55,6 +55,9 @@ namespace vm
 		// Fallback to slow path
 		range_lock_internal(range_lock, begin, size);
 	}
+
+	// Wait for all range locks to release in specified range
+	void clear_range_locks(u32 addr, u32 size);
 
 	// Release it
 	void free_range_lock(atomic_t<u64, 64>*) noexcept;
