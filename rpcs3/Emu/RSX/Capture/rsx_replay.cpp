@@ -168,7 +168,7 @@ namespace rsx
 		}
 	}
 
-	void rsx_replay_thread::on_task()
+	void rsx_replay_thread::cpu_task()
 	{
 		be_t<u32> context_id = allocate_context();
 
@@ -238,10 +238,5 @@ namespace rsx
 			// random pause to not destroy gpu
 			std::this_thread::sleep_for(10ms);
 		}
-	}
-
-	void rsx_replay_thread::operator()()
-	{
-		on_task();
 	}
 }

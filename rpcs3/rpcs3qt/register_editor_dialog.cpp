@@ -111,7 +111,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 			m_register_combo->addItem("Priority", +PPU_PRIO);
 			//m_register_combo->addItem("Priority 2", +PPU_PRIO2);
 		}
-		else
+		else if (_cpu->id_type() == 2)
 		{
 			for (int i = spu_r0; i <= spu_r127; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i % 128)), i);
 			m_register_combo->addItem("MFC Pending Events", +MFC_PEVENTS);
@@ -184,7 +184,7 @@ void register_editor_dialog::updateRegister(int reg)
 		else if (reg == RESERVATION_LOST) str = sstr(ppu.raddr ? tr("Lose reservation on OK") : tr("Reservation is inactive"));
 		else if (reg == PC) str = fmt::format("%08x", ppu.cia);
 	}
-	else
+	else if (cpu->id_type() == 2)
 	{
 		const auto& spu = *static_cast<const spu_thread*>(cpu.get());
 
@@ -310,7 +310,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 			return;
 		}
 	}
-	else
+	else if (cpu->id_type() == 2)
 	{
 		auto& spu = *static_cast<spu_thread*>(cpu);
 

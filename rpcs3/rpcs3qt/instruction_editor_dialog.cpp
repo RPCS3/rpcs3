@@ -24,7 +24,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	setMinimumSize(300, sizeHint().height());
 
 	const auto cpu = _cpu.get();
-	m_cpu_offset = cpu->id_type() != 1 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
+	m_cpu_offset = cpu->id_type() == 2 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
 	QString instruction = qstr(fmt::format("%08x", *reinterpret_cast<be_t<u32>*>(m_cpu_offset + m_pc)));
 
 	QVBoxLayout* vbox_panel(new QVBoxLayout());

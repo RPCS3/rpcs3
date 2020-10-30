@@ -266,7 +266,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			{
 				const auto cpu = this->cpu.lock();
 
-				if (!cpu || cpu->id_type() == 1)
+				if (!cpu || cpu->id_type() != 2)
 				{
 					return;
 				}
@@ -298,7 +298,17 @@ u32 debugger_frame::GetPc() const
 		return 0;
 	}
 
-	return cpu->id_type() == 1 ? static_cast<ppu_thread*>(cpu.get())->cia : static_cast<spu_thread*>(cpu.get())->pc;
+	if (cpu->id_type() == 1)
+	{
+		return static_cast<ppu_thread*>(cpu.get())->cia;
+	}
+
+	if (cpu->id_type() == 2)
+	{
+		return static_cast<spu_thread*>(cpu.get())->pc;
+	}
+
+	return 0;
 }
 
 void debugger_frame::UpdateUI()
@@ -416,7 +426,7 @@ void debugger_frame::OnSelectUnit()
 					m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
 				}
 			}
-			else
+			else if (cpu0->id_type() == 2)
 			{
 				if (cpu0.get() == idm::check<named_thread<spu_thread>>(cpu0->id))
 				{

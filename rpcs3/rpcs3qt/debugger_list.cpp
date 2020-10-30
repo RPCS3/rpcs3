@@ -43,7 +43,17 @@ u32 debugger_list::GetPc() const
 		return 0;
 	}
 
-	return cpu->id_type() == 1 ? static_cast<ppu_thread*>(cpu.get())->cia : static_cast<spu_thread*>(cpu.get())->pc;
+	if (cpu->id_type() == 1)
+	{
+		return static_cast<ppu_thread*>(cpu.get())->cia;
+	}
+
+	if (cpu->id_type() == 2)
+	{
+		return static_cast<spu_thread*>(cpu.get())->pc;
+	}
+
+	return 0;
 }
 
 u32 debugger_list::GetCenteredAddress(u32 address) const

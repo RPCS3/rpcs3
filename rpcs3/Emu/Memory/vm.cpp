@@ -570,13 +570,15 @@ namespace vm
 
 		if (_cpu && _cpu->id_type() == 1)
 		{
-			thread_ctrl::emergency_exit("vm::reservation_escape");
+			// TODO: PPU g_escape
 		}
 
 		if (_cpu && _cpu->id_type() == 2)
 		{
 			spu_runtime::g_escape(static_cast<spu_thread*>(_cpu));
 		}
+
+		thread_ctrl::emergency_exit("vm::reservation_escape");
 	}
 
 	static void _page_map(u32 addr, u8 flags, u32 size, utils::shm* shm, std::pair<const u32, std::pair<u32, std::shared_ptr<utils::shm>>>* (*search_shm)(vm::block_t* block, utils::shm* shm))

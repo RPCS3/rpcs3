@@ -1419,7 +1419,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			{
 				data2 = (SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD << 32) | cpu->id;
 			}
-			else
+			else if (cpu->id_type() == 2)
 			{
 				const auto& spu = static_cast<spu_thread&>(*cpu);
 

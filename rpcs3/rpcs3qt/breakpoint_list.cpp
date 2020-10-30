@@ -63,7 +63,7 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 	m_breakpoint_handler->AddBreakpoint(pc);
 
 	const auto cpu = this->cpu.lock();
-	const auto cpu_offset = cpu->id_type() != 1 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
+	const auto cpu_offset = cpu->id_type() == 2 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
 	m_disasm->offset = cpu_offset;
 
 	m_disasm->disasm(m_disasm->dump_pc = pc);
