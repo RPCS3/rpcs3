@@ -109,6 +109,26 @@ void fmt_class_string<CellSysutilLang>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<CellSysutilLicenseArea>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](CellSysutilLicenseArea value)
+	{
+		switch (value)
+		{
+		case CELL_SYSUTIL_LICENSE_AREA_J: return "SCEJ";
+		case CELL_SYSUTIL_LICENSE_AREA_A: return "SCEA";
+		case CELL_SYSUTIL_LICENSE_AREA_E: return "SCEE";
+		case CELL_SYSUTIL_LICENSE_AREA_H: return "SCEH";
+		case CELL_SYSUTIL_LICENSE_AREA_K: return "SCEK";
+		case CELL_SYSUTIL_LICENSE_AREA_C: return "SCH";
+		case CELL_SYSUTIL_LICENSE_AREA_OTHER: return "Other";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<CellSysutilParamId>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto value)

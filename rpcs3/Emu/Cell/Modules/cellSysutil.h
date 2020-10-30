@@ -210,15 +210,15 @@ enum
 };
 
 // License areas
-enum
+enum CellSysutilLicenseArea : s32 // Made up name
 {
-	CELL_SYSUTIL_LICENSE_AREA_J = 0,
-	CELL_SYSUTIL_LICENSE_AREA_A = 1,
-	CELL_SYSUTIL_LICENSE_AREA_E = 2,
-	CELL_SYSUTIL_LICENSE_AREA_H = 3,
-	CELL_SYSUTIL_LICENSE_AREA_K = 4,
-	CELL_SYSUTIL_LICENSE_AREA_C = 5,
-	CELL_SYSUTIL_LICENSE_AREA_OTHER = 100,
+	CELL_SYSUTIL_LICENSE_AREA_J = 0,       // SCEJ (Japan)
+	CELL_SYSUTIL_LICENSE_AREA_A = 1,       // SCEA (North America, South America, Canada, Brazil)
+	CELL_SYSUTIL_LICENSE_AREA_E = 2,       // SCEE (UK, Europe, Eastern Europe, Oceania, Russia)
+	CELL_SYSUTIL_LICENSE_AREA_H = 3,       // SCEH (Hong Kong, Taiwan, Southeast Asia)
+	CELL_SYSUTIL_LICENSE_AREA_K = 4,       // SCEK (Korea)
+	CELL_SYSUTIL_LICENSE_AREA_C = 5,       // SCH  (China)
+	CELL_SYSUTIL_LICENSE_AREA_OTHER = 100, // Other
 };
 
 enum
