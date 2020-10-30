@@ -149,8 +149,6 @@ namespace vm
 			fmt::throw_exception("Out of range lock bits");
 		}
 
-		g_mutex.lock_unlock();
-
 		return &g_range_lock_set[std::countr_one(bits)];
 	}
 
@@ -196,8 +194,6 @@ namespace vm
 		}
 
 		range_lock->release(0);
-
-		std::shared_lock lock(g_mutex);
 
 		// Use ptr difference to determine location
 		const auto diff = range_lock - g_range_lock_set;
