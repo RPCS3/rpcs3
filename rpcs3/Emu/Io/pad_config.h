@@ -3,7 +3,6 @@
 #include "pad_config_types.h"
 
 #include "Utilities/Config.h"
-#include "Utilities/File.h"
 
 namespace pad
 {
@@ -22,7 +21,9 @@ struct cfg_player final : cfg::node
 
 struct cfg_input final : cfg::node
 {
-	std::string cfg_name = fs::get_config_dir() + "/config_input.yml";
+	cfg_input();
+
+	std::string cfg_name;
 
 	cfg_player player1{ this, "Player 1 Input", pad_handler::null };
 	cfg_player player2{ this, "Player 2 Input", pad_handler::null };

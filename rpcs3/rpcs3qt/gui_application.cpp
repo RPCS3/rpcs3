@@ -30,7 +30,6 @@
 
 #include <clocale>
 
-#include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
 

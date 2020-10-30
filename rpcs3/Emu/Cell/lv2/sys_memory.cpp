@@ -4,6 +4,7 @@
 #include "Utilities/VirtualMemory.h"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/CPU/CPUThread.h"
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
 #include <shared_mutex>
 

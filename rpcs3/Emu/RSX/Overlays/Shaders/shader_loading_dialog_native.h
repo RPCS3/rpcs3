@@ -1,7 +1,8 @@
 ﻿#pragma once
 
 #include "shader_loading_dialog.h"
-#include "../../GSRender.h"
+
+class GSRender;
 
 namespace rsx
 {
@@ -9,6 +10,8 @@ namespace rsx
 	{
 		class message_dialog;
 	}
+
+	class thread;
 
 	struct shader_loading_dialog_native : rsx::shader_loading_dialog
 	{

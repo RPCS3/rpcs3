@@ -5,12 +5,15 @@
 #include "Utilities/Timer.h"
 #include "Utilities/date_time.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
+#include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
 
 #include <QCoreApplication>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <string>
+#include <thread>
 
 #include "png.h"
 

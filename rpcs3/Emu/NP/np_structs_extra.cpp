@@ -1,6 +1,5 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/NP/rpcn_client.h"
 #include "np_structs_extra.h"
 
 LOG_CHANNEL(sceNp2);

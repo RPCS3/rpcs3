@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Emu/VFS.h"
+#include "Emu/Memory/vm_ptr.h"
 
 // Return Codes
 enum CellScreenShotError : u32

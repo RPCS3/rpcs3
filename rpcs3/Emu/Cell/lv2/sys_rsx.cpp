@@ -2,8 +2,8 @@
 #include "sys_rsx.h"
 
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/RSX/GSRender.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/RSX/RSXThread.h"
 #include "sys_event.h"
 
 
