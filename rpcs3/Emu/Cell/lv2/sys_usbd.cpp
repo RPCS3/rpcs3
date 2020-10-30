@@ -385,7 +385,7 @@ void usb_handler_thread::check_devices_vs_ldds()
 	{
 		if (dev->assigned_number)
 			continue;
-		
+
 		for (const auto& ldd : ldds)
 		{
 			if (dev->device._device.idVendor == ldd.id_vendor && dev->device._device.idProduct >= ldd.id_product_min && dev->device._device.idProduct <= ldd.id_product_max)
@@ -458,8 +458,10 @@ UsbTransfer& usb_handler_thread::get_transfer(u32 transfer_id)
 	return transfers[transfer_id];
 }
 
-error_code sys_usbd_initialize(vm::ptr<u32> handle)
+error_code sys_usbd_initialize(ppu_thread& ppu, vm::ptr<u32> handle)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.warning("sys_usbd_initialize(handle=*0x%x)", handle);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -477,6 +479,8 @@ error_code sys_usbd_initialize(vm::ptr<u32> handle)
 
 error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.warning("sys_usbd_finalize(handle=0x%x)", handle);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -498,8 +502,10 @@ error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 	return CELL_OK;
 }
 
-error_code sys_usbd_get_device_list(u32 handle, vm::ptr<UsbInternalDevice> device_list, u32 max_devices)
+error_code sys_usbd_get_device_list(ppu_thread& ppu, u32 handle, vm::ptr<UsbInternalDevice> device_list, u32 max_devices)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.warning("sys_usbd_get_device_list(handle=0x%x, device_list=*0x%x, max_devices=0x%x)", handle, device_list, max_devices);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -519,8 +525,10 @@ error_code sys_usbd_get_device_list(u32 handle, vm::ptr<UsbInternalDevice> devic
 	return not_an_error(i_tocopy);
 }
 
-error_code sys_usbd_register_extra_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max)
+error_code sys_usbd_register_extra_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.warning("sys_usbd_register_extra_ldd(handle=0x%x, s_product=%s, slen_product=0x%x, id_vendor=0x%x, id_product_min=0x%x, id_product_max=0x%x)", handle, s_product, slen_product, id_vendor,
 	    id_product_min, id_product_max);
 
@@ -536,8 +544,10 @@ error_code sys_usbd_register_extra_ldd(u32 handle, vm::ptr<char> s_product, u16 
 	return not_an_error(res); // To check
 }
 
-error_code sys_usbd_get_descriptor_size(u32 handle, u32 device_handle)
+error_code sys_usbd_get_descriptor_size(ppu_thread& ppu, u32 handle, u32 device_handle)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.trace("sys_usbd_get_descriptor_size(handle=0x%x, deviceNumber=0x%x)", handle, device_handle);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -552,8 +562,10 @@ error_code sys_usbd_get_descriptor_size(u32 handle, u32 device_handle)
 	return not_an_error(usbh->handled_devices[device_handle].second->device.get_size());
 }
 
-error_code sys_usbd_get_descriptor(u32 handle, u32 device_handle, vm::ptr<void> descriptor, u32 desc_size)
+error_code sys_usbd_get_descriptor(ppu_thread& ppu, u32 handle, u32 device_handle, vm::ptr<void> descriptor, u32 desc_size)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.trace("sys_usbd_get_descriptor(handle=0x%x, deviceNumber=0x%x, descriptor=0x%x, desc_size=0x%x)", handle, device_handle, descriptor, desc_size);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -572,8 +584,10 @@ error_code sys_usbd_get_descriptor(u32 handle, u32 device_handle, vm::ptr<void> 
 }
 
 // This function is used for psp(cellUsbPspcm), dongles in ps3 arcade cabinets(PS3A-USJ), ps2 cam(eyetoy), generic usb camera?(sample_usb2cam)
-error_code sys_usbd_register_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_product)
+error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_product, u16 slen_product)
 {
+	ppu.state += cpu_flag::wait;
+
 	// slightly hacky way of getting Namco GCon3 gun to work.
 	// The register_ldd appears to be a more promiscuous mode function, where all device 'inserts' would be presented to the cellUsbd for Probing.
 	// Unsure how many more devices might need similar treatment (i.e. just a compare and force VID/PID add), or if it's worth adding a full promiscuous
@@ -581,7 +595,7 @@ error_code sys_usbd_register_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_p
 	if (strcmp(s_product.get_ptr(), "guncon3") == 0)
 	{
 		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
-		sys_usbd_register_extra_ldd(handle, s_product, slen_product, 0x0B9A, 0x0800, 0x0800);
+		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0800, 0x0800);
 	}
 	else
 	{
@@ -590,15 +604,17 @@ error_code sys_usbd_register_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_p
 	return CELL_OK;
 }
 
-error_code sys_usbd_unregister_ldd()
+error_code sys_usbd_unregister_ldd(ppu_thread& ppu)
 {
 	sys_usbd.todo("sys_usbd_unregister_ldd()");
 	return CELL_OK;
 }
 
 // TODO: determine what the unknown params are
-error_code sys_usbd_open_pipe(u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 unk3, u32 endpoint, u64 unk4)
+error_code sys_usbd_open_pipe(ppu_thread& ppu, u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 unk3, u32 endpoint, u64 unk4)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.warning("sys_usbd_open_pipe(handle=0x%x, device_handle=0x%x, unk1=0x%x, unk2=0x%x, unk3=0x%x, endpoint=0x%x, unk4=0x%x)", handle, device_handle, unk1, unk2, unk3, endpoint, unk4);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -613,8 +629,10 @@ error_code sys_usbd_open_pipe(u32 handle, u32 device_handle, u32 unk1, u64 unk2,
 	return not_an_error(usbh->open_pipe(device_handle, static_cast<u8>(endpoint)));
 }
 
-error_code sys_usbd_open_default_pipe(u32 handle, u32 device_handle)
+error_code sys_usbd_open_default_pipe(ppu_thread& ppu, u32 handle, u32 device_handle)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.trace("sys_usbd_open_default_pipe(handle=0x%x, device_handle=0x%x)", handle, device_handle);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -629,8 +647,10 @@ error_code sys_usbd_open_default_pipe(u32 handle, u32 device_handle)
 	return not_an_error(usbh->open_pipe(device_handle, 0));
 }
 
-error_code sys_usbd_close_pipe(u32 handle, u32 pipe_handle)
+error_code sys_usbd_close_pipe(ppu_thread& ppu, u32 handle, u32 pipe_handle)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.todo("sys_usbd_close_pipe(handle=0x%x, pipe_handle=0x%x)", handle, pipe_handle);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -655,6 +675,8 @@ error_code sys_usbd_close_pipe(u32 handle, u32 pipe_handle)
 // *arg1 == 1 || *arg1 == 2 will send a sys_event to internal CellUsbd event queue with same parameters as received and loop(attach and detach event)
 error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1, vm::ptr<u64> arg2, vm::ptr<u64> arg3)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.trace("sys_usbd_receive_event(handle=%u, arg1=*0x%x, arg2=*0x%x, arg3=*0x%x)", handle, arg1, arg2, arg3);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -699,21 +721,28 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 	return CELL_OK;
 }
 
-error_code sys_usbd_detect_event()
+error_code sys_usbd_detect_event(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.todo("sys_usbd_detect_event()");
 	return CELL_OK;
 }
 
-error_code sys_usbd_attach(u32 handle)
+error_code sys_usbd_attach(ppu_thread& ppu, u32 handle)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.todo("sys_usbd_attach(handle=0x%x)", handle);
 	return CELL_OK;
 }
 
-error_code sys_usbd_transfer_data(u32 handle, u32 id_pipe, vm::ptr<u8> buf, u32 buf_size, vm::ptr<UsbDeviceRequest> request, u32 type_transfer)
+error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::ptr<u8> buf, u32 buf_size, vm::ptr<UsbDeviceRequest> request, u32 type_transfer)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.trace("sys_usbd_transfer_data(handle=0x%x, id_pipe=0x%x, buf=*0x%x, buf_length=0x%x, request=*0x%x, type=0x%x)", handle, id_pipe, buf, buf_size, request, type_transfer);
+
 	if (sys_usbd.enabled == logs::level::trace && request)
 	{
 		sys_usbd.trace("RequestType:0x%x, Request:0x%x, wValue:0x%x, wIndex:0x%x, wLength:0x%x", request->bmRequestType, request->bRequest, request->wValue, request->wIndex, request->wLength);
@@ -778,8 +807,10 @@ error_code sys_usbd_transfer_data(u32 handle, u32 id_pipe, vm::ptr<u8> buf, u32 
 	return not_an_error(id_transfer);
 }
 
-error_code sys_usbd_isochronous_transfer_data(u32 handle, u32 id_pipe, vm::ptr<UsbDeviceIsoRequest> iso_request)
+error_code sys_usbd_isochronous_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::ptr<UsbDeviceIsoRequest> iso_request)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.todo("sys_usbd_isochronous_transfer_data(handle=0x%x, id_pipe=0x%x, iso_request=*0x%x)", handle, id_pipe, iso_request);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -802,8 +833,10 @@ error_code sys_usbd_isochronous_transfer_data(u32 handle, u32 id_pipe, vm::ptr<U
 	return not_an_error(id_transfer);
 }
 
-error_code sys_usbd_get_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<u32> result, vm::ptr<u32> count)
+error_code sys_usbd_get_transfer_status(ppu_thread& ppu, u32 handle, u32 id_transfer, u32 unk1, vm::ptr<u32> result, vm::ptr<u32> count)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.trace("sys_usbd_get_transfer_status(handle=0x%x, id_transfer=0x%x, unk1=0x%x, result=*0x%x, count=*0x%x)", handle, id_transfer, unk1, result, count);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -821,8 +854,10 @@ error_code sys_usbd_get_transfer_status(u32 handle, u32 id_transfer, u32 unk1, v
 	return CELL_OK;
 }
 
-error_code sys_usbd_get_isochronous_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<UsbDeviceIsoRequest> request, vm::ptr<u32> result)
+error_code sys_usbd_get_isochronous_transfer_status(ppu_thread& ppu, u32 handle, u32 id_transfer, u32 unk1, vm::ptr<UsbDeviceIsoRequest> request, vm::ptr<u32> result)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.todo("sys_usbd_get_isochronous_transfer_status(handle=0x%x, id_transfer=0x%x, unk1=0x%x, request=*0x%x, result=*0x%x)", handle, id_transfer, unk1, request, result);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -840,20 +875,26 @@ error_code sys_usbd_get_isochronous_transfer_status(u32 handle, u32 id_transfer,
 	return CELL_OK;
 }
 
-error_code sys_usbd_get_device_location()
+error_code sys_usbd_get_device_location(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.todo("sys_usbd_get_device_location()");
 	return CELL_OK;
 }
 
-error_code sys_usbd_send_event()
+error_code sys_usbd_send_event(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.todo("sys_usbd_send_event()");
 	return CELL_OK;
 }
 
-error_code sys_usbd_event_port_send(u32 handle, u64 arg1, u64 arg2, u64 arg3)
+error_code sys_usbd_event_port_send(ppu_thread& ppu, u32 handle, u64 arg1, u64 arg2, u64 arg3)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.warning("sys_usbd_event_port_send(handle=0x%x, arg1=0x%x, arg2=0x%x, arg3=0x%x)", handle, arg1, arg2, arg3);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -868,20 +909,26 @@ error_code sys_usbd_event_port_send(u32 handle, u64 arg1, u64 arg2, u64 arg3)
 	return CELL_OK;
 }
 
-error_code sys_usbd_allocate_memory()
+error_code sys_usbd_allocate_memory(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.todo("sys_usbd_allocate_memory()");
 	return CELL_OK;
 }
 
-error_code sys_usbd_free_memory()
+error_code sys_usbd_free_memory(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.todo("sys_usbd_free_memory()");
 	return CELL_OK;
 }
 
-error_code sys_usbd_get_device_speed()
+error_code sys_usbd_get_device_speed(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_usbd.todo("sys_usbd_get_device_speed()");
 	return CELL_OK;
 }
