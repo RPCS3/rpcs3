@@ -1433,9 +1433,6 @@
         <layout class="QHBoxLayout" name="systemTabLayout2" stretch="1,1,1">
          <item>
           <widget class="QGroupBox" name="gb_console_region">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
            <property name="title">
             <string>Console Region</string>
            </property>

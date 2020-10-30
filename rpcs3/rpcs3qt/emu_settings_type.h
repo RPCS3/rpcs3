@@ -132,6 +132,7 @@ enum class emu_settings_type
 	PSNStatus,
 
 	// System
+	LicenseArea,
 	Language,
 	KeyboardType,
 	EnterButtonAssignment,
@@ -276,6 +277,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::PSNStatus,      { "Net", "PSN status"}},
 
 	// System
+	{ emu_settings_type::LicenseArea,           { "System", "License Area"}},
 	{ emu_settings_type::Language,              { "System", "Language"}},
 	{ emu_settings_type::KeyboardType,          { "System", "Keyboard Type"} },
 	{ emu_settings_type::EnterButtonAssignment, { "System", "Enter button assignment"}},

@@ -8,6 +8,7 @@
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 
 #include "util/yaml.hpp"
 
@@ -900,6 +901,18 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case audio_downmix::downmix_to_stereo: return tr("Downmix to Stereo", "Audio downmix");
 		case audio_downmix::downmix_to_5_1: return tr("Downmix to 5.1", "Audio downmix");
 		case audio_downmix::use_application_settings: return tr("Use application settings", "Audio downmix");
+		}
+		break;
+	case emu_settings_type::LicenseArea:
+		switch (static_cast<CellSysutilLicenseArea>(index))
+		{
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_J: return tr("Japan", "License Area");
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_A: return tr("America", "License Area");
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_E: return tr("Europe, Oceania, Middle East, Russia", "License Area");
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_H: return tr("Southeast Asia", "License Area");
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_K: return tr("Korea", "License Area");
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_C: return tr("China", "License Area");
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_OTHER: return tr("Other", "License Area");
 		}
 		break;
 	default:
