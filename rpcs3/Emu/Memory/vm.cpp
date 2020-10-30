@@ -550,17 +550,19 @@ namespace vm
 
 	void reservation_op_internal(u32 addr, std::function<bool()> func)
 	{
-		auto& res = vm::reservation_acquire(addr, 128);
+		auto& res = vm::reservation_acquire(addr, 1);
+		auto* ptr = vm::get_super_ptr(addr & -128);
 
-		cpu_thread::suspend_all(get_current_cpu_thread(), {&res}, [&]
+		cpu_thread::suspend_all(get_current_cpu_thread(), {ptr, ptr + 64, &res}, [&]
 		{
 			if (func())
 			{
-				// Success, release all locks if necessary
+				// Success, release the lock and progress
 				res += 127;
 			}
 			else
 			{
+				// Only release the lock on failure
 				res -= 1;
 			}
 		});

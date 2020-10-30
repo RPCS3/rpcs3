@@ -2074,7 +2074,7 @@ void spursJobchainPopUrgentCommand(spu_thread& spu)
 	const auto jc = vm::unsafe_ptr_cast<CellSpursJobChain_x00>(+ctxt->jobChain);
 
 	const bool alterQueue = ctxt->unkFlag0;
-	vm::reservation_op(jc, [&](CellSpursJobChain_x00& op)
+	vm::reservation_op(spu, jc, [&](CellSpursJobChain_x00& op)
 	{
 		const auto ls = reinterpret_cast<CellSpursJobChain_x00*>(ctxt->tempAreaJobChain);
 

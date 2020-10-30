@@ -73,6 +73,11 @@ public:
 		return !!(state & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause));
 	}
 
+	bool has_pause_flag() const
+	{
+		return !!(state & cpu_flag::pause);
+	}
+
 	// Check thread type
 	u32 id_type() const
 	{

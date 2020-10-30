@@ -2,15 +2,18 @@
 
 #include "types.h"
 
+extern bool g_use_rtm;
+extern u64 g_rtm_tx_limit1;
+
 namespace utils
 {
-	// Transaction helper (Max = max attempts) (result = pair of success and op result)
-	template <uint Max = 10, typename F, typename R = std::invoke_result_t<F>>
+	// Transaction helper (result = pair of success and op result, or just bool)
+	template <typename F, typename R = std::invoke_result_t<F>>
 	inline auto tx_start(F op)
 	{
 		uint status = -1;
 
-		for (uint i = 0; i < Max; i++)
+		for (auto stamp0 = __rdtsc(), stamp1 = stamp0; g_use_rtm && stamp1 - stamp0 <= g_rtm_tx_limit1; stamp1 = __rdtsc())
 		{
 #ifndef _MSC_VER
 			__asm__ goto ("xbegin %l[retry];" ::: "memory" : retry);
