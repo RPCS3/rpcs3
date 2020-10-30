@@ -75,7 +75,7 @@ u32 gcmGetLocalMemorySize(u32 sdk_version)
 	return 0x0E000000; // 224MB
 }
 
-error_code gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict);
+error_code gcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size, bool is_strict);
 
 u32 gcmIoOffsetToAddress(u32 ioOffset)
 {
@@ -369,7 +369,7 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 		render->main_mem_size = 0x10000000;
 	}
 
-	if (gcmMapEaIoAddress(ioAddress, 0, ioSize, false) != CELL_OK)
+	if (gcmMapEaIoAddress(ppu, ioAddress, 0, ioSize, false) != CELL_OK)
 	{
 		return CELL_GCM_ERROR_FAILURE;
 	}
@@ -950,14 +950,14 @@ error_code cellGcmIoOffsetToAddress(u32 ioOffset, vm::ptr<u32> address)
 	return CELL_OK;
 }
 
-error_code gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
+error_code gcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size, bool is_strict)
 {
 	if (!size || (ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF))
 	{
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	if (auto error = sys_rsx_context_iomap(0x55555555, io, ea, size, 0xe000000000000800ull | (u64{is_strict} << 60)))
+	if (auto error = sys_rsx_context_iomap(ppu, 0x55555555, io, ea, size, 0xe000000000000800ull | (u64{is_strict} << 60)))
 	{
 		return error;
 	}
@@ -977,17 +977,17 @@ error_code gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 	return CELL_OK;
 }
 
-error_code cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size)
+error_code cellGcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size)
 {
 	cellGcmSys.warning("cellGcmMapEaIoAddress(ea=0x%x, io=0x%x, size=0x%x)", ea, io, size);
 
 	const auto cfg = g_fxo->get<gcm_config>();
 	std::lock_guard lock(cfg->gcmio_mutex);
 
-	return gcmMapEaIoAddress(ea, io, size, false);
+	return gcmMapEaIoAddress(ppu, ea, io, size, false);
 }
 
-error_code cellGcmMapEaIoAddressWithFlags(u32 ea, u32 io, u32 size, u32 flags)
+error_code cellGcmMapEaIoAddressWithFlags(ppu_thread& ppu, u32 ea, u32 io, u32 size, u32 flags)
 {
 	cellGcmSys.warning("cellGcmMapEaIoAddressWithFlags(ea=0x%x, io=0x%x, size=0x%x, flags=0x%x)", ea, io, size, flags);
 
@@ -996,7 +996,7 @@ error_code cellGcmMapEaIoAddressWithFlags(u32 ea, u32 io, u32 size, u32 flags)
 	const auto cfg = g_fxo->get<gcm_config>();
 	std::lock_guard lock(cfg->gcmio_mutex);
 
-	return gcmMapEaIoAddress(ea, io, size, true);
+	return gcmMapEaIoAddress(ppu, ea, io, size, true);
 }
 
 error_code cellGcmMapLocalMemory(vm::ptr<u32> address, vm::ptr<u32> size)
@@ -1016,7 +1016,7 @@ error_code cellGcmMapLocalMemory(vm::ptr<u32> address, vm::ptr<u32> size)
 	return CELL_GCM_ERROR_FAILURE;
 }
 
-error_code cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
+error_code cellGcmMapMainMemory(ppu_thread& ppu, u32 ea, u32 size, vm::ptr<u32> offset)
 {
 	cellGcmSys.warning("cellGcmMapMainMemory(ea=0x%x, size=0x%x, offset=*0x%x)", ea, size, offset);
 
@@ -1034,7 +1034,7 @@ error_code cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 			{
 				io <<= 20;
 
-				if (auto error = gcmMapEaIoAddress(ea, io, size, false))
+				if (auto error = gcmMapEaIoAddress(ppu, ea, io, size, false))
 				{
 					return error;
 				}
@@ -1074,11 +1074,11 @@ error_code cellGcmReserveIoMapSize(u32 size)
 	return CELL_OK;
 }
 
-error_code GcmUnmapIoAddress(gcm_config* cfg, u32 io)
+error_code GcmUnmapIoAddress(ppu_thread& ppu, gcm_config* cfg, u32 io)
 {
 	if (u32 ea = cfg->offsetTable.eaAddress[io >>= 20], size = cfg->IoMapTable[ea]; size)
 	{
-		if (auto error = sys_rsx_context_iounmap(0x55555555, io, size << 20))
+		if (auto error = sys_rsx_context_iounmap(ppu, 0x55555555, io, size << 20))
 		{
 			return error;
 		}
@@ -1098,7 +1098,7 @@ error_code GcmUnmapIoAddress(gcm_config* cfg, u32 io)
 	return CELL_GCM_ERROR_FAILURE;
 }
 
-error_code cellGcmUnmapEaIoAddress(u32 ea)
+error_code cellGcmUnmapEaIoAddress(ppu_thread& ppu, u32 ea)
 {
 	cellGcmSys.warning("cellGcmUnmapEaIoAddress(ea=0x%x)", ea);
 
@@ -1116,20 +1116,20 @@ error_code cellGcmUnmapEaIoAddress(u32 ea)
 	if (const u32 io = cfg->offsetTable.ioAddress[ea] << 20;
 		io < rsx::get_current_renderer()->main_mem_size)
 	{
-		return GcmUnmapIoAddress(cfg, io);
+		return GcmUnmapIoAddress(ppu, cfg, io);
 	}
 
 	return CELL_GCM_ERROR_FAILURE;
 }
 
-error_code cellGcmUnmapIoAddress(u32 io)
+error_code cellGcmUnmapIoAddress(ppu_thread& ppu, u32 io)
 {
 	cellGcmSys.warning("cellGcmUnmapIoAddress(io=0x%x)", io);
 
 	const auto cfg = g_fxo->get<gcm_config>();
 	std::lock_guard lock(cfg->gcmio_mutex);
 
-	return GcmUnmapIoAddress(cfg, io);
+	return GcmUnmapIoAddress(ppu, cfg, io);
 }
 
 error_code cellGcmUnreserveIoMapSize(u32 size)
