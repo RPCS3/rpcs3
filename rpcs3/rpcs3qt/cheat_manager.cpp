@@ -319,7 +319,7 @@ std::vector<u32> cheat_engine::search(const T value, const std::vector<u32>& to_
 	if (Emu.IsStopped())
 		return {};
 
-	cpu_thread::suspend_all(nullptr, [&]
+	cpu_thread::suspend_all(nullptr, {}, [&]
 	{
 		if (!to_filter.empty())
 		{
@@ -362,7 +362,7 @@ T cheat_engine::get_value(const u32 offset, bool& success)
 		return 0;
 	}
 
-	return cpu_thread::suspend_all(nullptr, [&]() -> T
+	return cpu_thread::suspend_all(nullptr, {}, [&]() -> T
 	{
 		if (!vm::check_addr(offset, sizeof(T)))
 		{
@@ -386,7 +386,7 @@ bool cheat_engine::set_value(const u32 offset, const T value)
 		return false;
 	}
 
-	return cpu_thread::suspend_all(nullptr, [&]
+	return cpu_thread::suspend_all(nullptr, {}, [&]
 	{
 		if (!vm::check_addr(offset, sizeof(T)))
 		{

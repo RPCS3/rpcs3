@@ -78,6 +78,7 @@ extern atomic_t<u32> g_progr_pdone;
 using spu_rdata_t = decltype(ppu_thread::rdata);
 
 extern void mov_rdata(spu_rdata_t& _dst, const spu_rdata_t& _src);
+extern void mov_rdata_nt(spu_rdata_t& _dst, const spu_rdata_t& _src);
 extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs);
 extern u32(*const spu_getllar_tx)(u32 raddr, void* rdata, cpu_thread* _cpu, u64 rtime);
 
@@ -1234,12 +1235,16 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		{
 			if (ppu.state & cpu_flag::pause)
 			{
-				verify(HERE), cpu_thread::if_suspended<-1>(&ppu, [&]()
+				auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr & -128);
+
+				verify(HERE), cpu_thread::if_suspended<-1>(&ppu, {}, [&]()
 				{
 					// Guaranteed success
 					ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-					mov_rdata(ppu.rdata, *vm::get_super_ptr<spu_rdata_t>(addr & -128));
+					mov_rdata_nt(ppu.rdata, sdata);
 				});
+
+				_mm_mfence();
 
 				// Exit loop
 				if ((ppu.rtime & 127) == 0)
@@ -1724,18 +1729,19 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				{
 				case UINT32_MAX:
 				{
-					const bool ok = cpu_thread::suspend_all<+1>(&ppu, [&]
-					{
-						auto& all_data = *vm::get_super_ptr<spu_rdata_t>(addr & -128);
+					auto& all_data = *vm::get_super_ptr<spu_rdata_t>(addr & -128);
+					auto& sdata = *vm::get_super_ptr<atomic_be_t<u64>>(addr & -8);
 
+					const bool ok = cpu_thread::suspend_all<+1>(&ppu, {all_data, all_data + 64, &res}, [&]
+					{
 						if ((res & -128) == rtime && cmp_rdata(ppu.rdata, all_data))
 						{
-							data.release(new_data);
+							sdata.release(new_data);
 							res += 127;
 							return true;
 						}
 
-						mov_rdata(ppu.rdata, all_data);
+						mov_rdata_nt(ppu.rdata, all_data);
 						res -= 1;
 						return false;
 					});
@@ -1754,6 +1760,8 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 						ppu.last_fail++;
 					}
 
+					_m_prefetchw(ppu.rdata);
+					_m_prefetchw(ppu.rdata + 64);
 					ppu.last_faddr = addr;
 					ppu.last_ftime = res.load() & -128;
 					ppu.last_ftsc = __rdtsc();

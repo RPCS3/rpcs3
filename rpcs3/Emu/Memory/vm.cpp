@@ -543,16 +543,18 @@ namespace vm
 
 	void reservation_op_internal(u32 addr, std::function<bool()> func)
 	{
-		cpu_thread::suspend_all(get_current_cpu_thread(), [&]
+		auto& res = vm::reservation_acquire(addr, 128);
+
+		cpu_thread::suspend_all(get_current_cpu_thread(), {&res}, [&]
 		{
 			if (func())
 			{
 				// Success, release all locks if necessary
-				vm::reservation_acquire(addr, 128) += 127;
+				res += 127;
 			}
 			else
 			{
-				vm::reservation_acquire(addr, 128) -= 1;
+				res -= 1;
 			}
 		});
 	}

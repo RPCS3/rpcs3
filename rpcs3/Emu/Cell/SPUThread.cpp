@@ -220,6 +220,69 @@ extern void mov_rdata(spu_rdata_t& _dst, const spu_rdata_t& _src)
 	_mm_storeu_si128(reinterpret_cast<__m128i*>(_dst + 112), v3);
 }
 
+static FORCE_INLINE void mov_rdata_nt_avx(__m256i* dst, const __m256i* src)
+{
+#ifdef _MSC_VER
+	_mm256_stream_si256(dst + 0, _mm256_load_si256(src + 0));
+	_mm256_stream_si256(dst + 1, _mm256_load_si256(src + 1));
+	_mm256_stream_si256(dst + 2, _mm256_load_si256(src + 2));
+	_mm256_stream_si256(dst + 3, _mm256_load_si256(src + 3));
+#else
+	__asm__(
+		"vmovdqa 0*32(%[src]), %%ymm0;" // load
+		"vmovntdq %%ymm0, 0*32(%[dst]);" // store
+		"vmovdqa 1*32(%[src]), %%ymm0;"
+		"vmovntdq %%ymm0, 1*32(%[dst]);"
+		"vmovdqa 2*32(%[src]), %%ymm0;"
+		"vmovntdq %%ymm0, 2*32(%[dst]);"
+		"vmovdqa 3*32(%[src]), %%ymm0;"
+		"vmovntdq %%ymm0, 3*32(%[dst]);"
+#ifndef __AVX__
+		"vzeroupper" // Don't need in AVX mode (should be emitted automatically)
+#endif
+		:
+		: [src] "r" (src)
+		, [dst] "r" (dst)
+#ifdef __AVX__
+		: "ymm0" // Clobber ymm0 register (acknowledge its modification)
+#else
+		: "xmm0" // ymm0 is "unknown" if not compiled in AVX mode, so clobber xmm0 only
+#endif
+	);
+#endif
+}
+
+extern void mov_rdata_nt(spu_rdata_t& _dst, const spu_rdata_t& _src)
+{
+#ifndef __AVX__
+	if (s_tsx_avx) [[likely]]
+#endif
+	{
+		mov_rdata_nt_avx(reinterpret_cast<__m256i*>(_dst), reinterpret_cast<const __m256i*>(_src));
+		return;
+	}
+
+	{
+		const __m128i v0 = _mm_load_si128(reinterpret_cast<const __m128i*>(_src + 0));
+		const __m128i v1 = _mm_load_si128(reinterpret_cast<const __m128i*>(_src + 16));
+		const __m128i v2 = _mm_load_si128(reinterpret_cast<const __m128i*>(_src + 32));
+		const __m128i v3 = _mm_load_si128(reinterpret_cast<const __m128i*>(_src + 48));
+		_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 0), v0);
+		_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 16), v1);
+		_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 32), v2);
+		_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 48), v3);
+	}
+
+	const __m128i v0 = _mm_load_si128(reinterpret_cast<const __m128i*>(_src + 64));
+	const __m128i v1 = _mm_load_si128(reinterpret_cast<const __m128i*>(_src + 80));
+	const __m128i v2 = _mm_load_si128(reinterpret_cast<const __m128i*>(_src + 96));
+	const __m128i v3 = _mm_load_si128(reinterpret_cast<const __m128i*>(_src + 112));
+	_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 64), v0);
+	_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 80), v1);
+	_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 96), v2);
+	_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 112), v3);
+}
+
 extern u64 get_timebased_time();
 extern u64 get_system_time();
 
@@ -1845,7 +1908,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				{
 					if (_cpu->state & cpu_flag::pause)
 					{
-						cpu_thread::if_suspended(_cpu, [&]
+						cpu_thread::if_suspended(_cpu, {dst, dst + 64, &res}, [&]
 						{
 							std::memcpy(dst, src, size0);
 							res += 128;
@@ -2370,10 +2433,10 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			{
 			case UINT32_MAX:
 			{
-				const bool ok = cpu_thread::suspend_all<+1>(this, [&]()
-				{
-					auto& data = *vm::get_super_ptr<spu_rdata_t>(addr);
+				auto& data = *vm::get_super_ptr<spu_rdata_t>(addr);
 
+				const bool ok = cpu_thread::suspend_all<+1>(this, {data, data + 64, &res}, [&]()
+				{
 					if ((res & -128) == rtime)
 					{
 						if (cmp_rdata(rdata, data))
@@ -2385,7 +2448,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 					}
 
 					// Save previous data
-					mov_rdata(rdata, data);
+					mov_rdata_nt(rdata, data);
 					res -= 1;
 					return false;
 				});
@@ -2404,6 +2467,8 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 					last_fail++;
 				}
 
+				_m_prefetchw(rdata);
+				_m_prefetchw(rdata + 64);
 				last_faddr = addr;
 				last_ftime = res.load() & -128;
 				last_ftsc = __rdtsc();
@@ -2509,11 +2574,13 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 		if (result == 0)
 		{
-			// Execute with increased priority
-			cpu_thread::suspend_all<0>(cpu, [&]
+			auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr);
+			auto& res = vm::reservation_acquire(addr, 128);
+
+			cpu_thread::suspend_all<0>(cpu, {&res}, [&]
 			{
-				mov_rdata(vm::_ref<spu_rdata_t>(addr), *static_cast<const spu_rdata_t*>(to_write));
-				vm::reservation_acquire(addr, 128) += 127;
+				mov_rdata_nt(sdata, *static_cast<const spu_rdata_t*>(to_write));
+				res += 127;
 			});
 		}
 		else if (result > 60 && g_cfg.core.perf_report) [[unlikely]]
@@ -2767,12 +2834,16 @@ bool spu_thread::process_mfc_cmd()
 		{
 			if (state & cpu_flag::pause)
 			{
-				verify(HERE), cpu_thread::if_suspended<-1>(this, [&]
+				auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr);
+
+				verify(HERE), cpu_thread::if_suspended<-1>(this, {}, [&]
 				{
 					// Guaranteed success
 					ntime = vm::reservation_acquire(addr, 128);
-					mov_rdata(rdata, *vm::get_super_ptr<spu_rdata_t>(addr));
+					mov_rdata_nt(rdata, sdata);
 				});
+
+				_mm_mfence();
 
 				// Exit loop
 				if ((ntime & 127) == 0)

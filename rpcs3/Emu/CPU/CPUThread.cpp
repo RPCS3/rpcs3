@@ -889,7 +889,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 			}
 		});
 
-		while (std::accumulate(std::begin(ctr->cpu_copy_bits), std::end(ctr->cpu_copy_bits), u64{0}, std::bit_or()))
+		while (true)
 		{
 			// Check only CPUs which haven't acknowledged their waiting state yet
 			for_all_cpu<true>([&](cpu_thread* cpu, u64 index)
@@ -899,6 +899,11 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 					ctr->cpu_copy_bits[index / 64] &= ~(1ull << (index % 64));
 				}
 			});
+
+			if (!std::accumulate(std::begin(ctr->cpu_copy_bits), std::end(ctr->cpu_copy_bits), u64{0}, std::bit_or()))
+			{
+				break;
+			}
 
 			_mm_pause();
 		}
@@ -927,12 +932,19 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 			while (prev);
 		}
 
+		// Execute prefetch hint(s)
+		for (auto work = head; work; work = work->next)
+		{
+			for (u32 i = 0; i < work->prf_size; i++)
+			{
+				_m_prefetchw(work->prf_list[0]);
+			}
+		}
+
 		for_all_cpu<true>([&](cpu_thread* cpu)
 		{
 			_m_prefetchw(&cpu->state);
 		});
-
-		_m_prefetchw(&g_suspend_counter);
 
 		// Execute all stored workload
 		for (s32 prio = max_prio; prio >= min_prio; prio--)
@@ -947,6 +959,9 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 				}
 			}
 		}
+
+		// Not sure if needed, may be overkill. Some workloads may execute instructions with non-temporal hint.
+		_mm_sfence();
 
 		// Finalization
 		g_suspend_counter++;
