@@ -1228,117 +1228,26 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		ppu.last_faddr = 0;
 	}
 
-	// Skip loop if already loaded
-	for (u64 count = 0; count != umax; [&]()
-	{
-		if (ppu.state)
-		{
-			if (ppu.state & cpu_flag::pause)
-			{
-				auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr & -128);
-
-				verify(HERE), cpu_thread::if_suspended<-1>(&ppu, {}, [&]()
-				{
-					// Guaranteed success
-					ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-					mov_rdata_nt(ppu.rdata, sdata);
-				});
-
-				_mm_mfence();
-
-				// Exit loop
-				if ((ppu.rtime & 127) == 0)
-				{
-					count = -1;
-					return;
-				}
-			}
-
-			ppu.check_state();
-		}
-		else if (++count < 20) [[likely]]
-		{
-			busy_wait(300);
-		}
-		else
-		{
-			ppu.state += cpu_flag::wait;
-			std::this_thread::yield();
-			ppu.check_state();
-		}
-	}())
-	{
-		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-
-		if (ppu.rtime & vm::rsrv_unique_lock)
-		{
-			continue;
-		}
-
-		be_t<u64> rdata;
-
-		u64 test_mask = ~vm::rsrv_shared_mask;
-
-		if (ppu.use_full_rdata)
-		{
-			if (ppu.rtime & 127)
-			{
-				// Try to use TSX to obtain data atomically
-				if (!g_use_rtm || !spu_getllar_tx(addr & -128, ppu.rdata, &ppu, ppu.rtime & -128))
-				{
-					continue;
-				}
-			}
-			else
-			{
-				mov_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128));
-
-				// Check all bit changes
-				test_mask = -1;
-			}
-		}
-		else
-		{
-			rdata = data.load();
-		}
-
-		if ((vm::reservation_acquire(addr, sizeof(T)) & test_mask) == (ppu.rtime & test_mask)) [[likely]]
-		{
-			if (!ppu.use_full_rdata)
-			{
-				if (ppu.rtime & 127)
-				{
-					// Let the ongoing operation some tiny time to complete
-					busy_wait(200);
-				}
-
-				if (data.load() != rdata)
-				{
-					continue;
-				}
-
-				// Store only 64 bits of reservation data
-				std::memcpy(&ppu.rdata[addr & 0x78], &rdata, 8);
-			}
-			else
-			{
-				// Load relevant 64 bits of reservation data
-				std::memcpy(&rdata, &ppu.rdata[addr & 0x78], 8);
-			}
-
-			if (count >= 15 && g_cfg.core.perf_report) [[unlikely]]
-			{
-				perf_log.warning("%s: took too long: %u", sizeof(T) == 4 ? "LWARX" : "LDARX", count);
-			}
-
-			ppu.rtime &= ~vm::rsrv_shared_mask;
-
-			return static_cast<T>(rdata << data_off >> size_off);
-		}
-	}
+	ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & -128;
 
 	be_t<u64> rdata;
-	std::memcpy(&rdata, &ppu.rdata[addr & 0x78], 8);
+
+	if (!ppu.use_full_rdata)
+	{
+		rdata = data.load();
+
+		// Store only 64 bits of reservation data
+		std::memcpy(&ppu.rdata[addr & 0x78], &rdata, 8);
+	}
+	else
+	{
+		mov_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128));
+		std::atomic_thread_fence(std::memory_order_acquire);
+
+		// Load relevant 64 bits of reservation data
+		std::memcpy(&rdata, &ppu.rdata[addr & 0x78], 8);
+	}
+
 	return static_cast<T>(rdata << data_off >> size_off);
 }
 
