@@ -1693,6 +1693,12 @@ void Emulator::Run(bool start_playtime)
 		cpu.notify();
 	});
 
+	if (auto thr = g_fxo->get<named_thread<rsx::rsx_replay_thread>>())
+	{
+		thr->state -= cpu_flag::stop;
+		thread_ctrl::notify(*thr);
+	}
+
 	if (g_cfg.misc.prevent_display_sleep)
 	{
 		disable_display_sleep();
