@@ -1603,7 +1603,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 	{
 		auto spurs = kernelCtxt->spurs;
 
-		vm::reservation_light_op(spurs->readyCount(kernelCtxt->wklCurrentId), [&](atomic_t<u8>& val)
+		vm::light_op(spurs->readyCount(kernelCtxt->wklCurrentId), [&](atomic_t<u8>& val)
 		{
 			val.fetch_op([&](u8& val)
 			{

@@ -309,10 +309,10 @@ namespace vm
 
 	// Read memory value in pseudo-atomic manner
 	template <typename CPU, typename T, typename AT = u32, typename F>
-	SAFE_BUFFERS inline auto reservation_peek(CPU&& cpu, _ptr_base<T, AT> ptr, F op)
+	SAFE_BUFFERS inline auto peek_op(CPU&& cpu, _ptr_base<T, AT> ptr, F op)
 	{
 		// Atomic operation will be performed on aligned 128 bytes of data, so the data size and alignment must comply
-		static_assert(sizeof(T) <= 128 && alignof(T) == sizeof(T), "vm::reservation_peek: unsupported type");
+		static_assert(sizeof(T) <= 128 && alignof(T) == sizeof(T), "vm::peek_op: unsupported type");
 
 		// Use 128-byte aligned addr
 		const u32 addr = static_cast<u32>(ptr.addr()) & -128;
@@ -357,7 +357,7 @@ namespace vm
 	}
 
 	template <bool Ack = false, typename T, typename F>
-	SAFE_BUFFERS inline auto reservation_light_op(T& data, F op)
+	SAFE_BUFFERS inline auto light_op(T& data, F op)
 	{
 		// Optimized real ptr -> vm ptr conversion, simply UB if out of range
 		const u32 addr = static_cast<u32>(reinterpret_cast<const u8*>(&data) - g_base_addr);

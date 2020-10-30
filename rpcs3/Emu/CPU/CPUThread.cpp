@@ -671,7 +671,6 @@ bool cpu_thread::check_state() noexcept
 			}
 
 			verify(HERE), cpu_can_stop || !retval;
-			verify(HERE), cpu_can_stop || Emu.IsStopped() || !(state & cpu_flag::wait);
 			return retval;
 		}
 
