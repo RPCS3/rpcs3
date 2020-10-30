@@ -2750,9 +2750,7 @@ bool spu_thread::process_mfc_cmd()
 			std::this_thread::yield();
 
 			// Reset perf
-			perf_meter<'x'> dummy;
-			perf0 = dummy;
-			dummy.reset();
+			perf0.restart();
 		}
 
 		alignas(64) spu_rdata_t temp;

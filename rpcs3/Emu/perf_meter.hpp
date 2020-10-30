@@ -83,18 +83,17 @@ template <auto ShortName, auto... SubEvents>
 class perf_meter
 {
 	// Initialize array (possibly only 1 element) with timestamp
-	u64 m_timestamps[1 + sizeof...(SubEvents)] = {__rdtsc()};
+	u64 m_timestamps[1 + sizeof...(SubEvents)];
 
 public:
-	SAFE_BUFFERS perf_meter() noexcept
+	SAFE_BUFFERS FORCE_INLINE perf_meter() noexcept
 	{
-		m_timestamps[0] = __rdtsc();
-		std::memset(m_timestamps + 1, 0, sizeof(m_timestamps) - sizeof(u64));
+		restart();
 	}
 
 	// Copy first timestamp
 	template <auto SN, auto... S>
-	SAFE_BUFFERS perf_meter(const perf_meter<SN, S...>& r) noexcept
+	SAFE_BUFFERS FORCE_INLINE perf_meter(const perf_meter<SN, S...>& r) noexcept
 	{
 		m_timestamps[0] = r.get();
 		std::memset(m_timestamps + 1, 0, sizeof(m_timestamps) - sizeof(u64));
@@ -147,9 +146,16 @@ public:
 	}
 
 	// Disable this counter
-	SAFE_BUFFERS void reset() noexcept
+	SAFE_BUFFERS FORCE_INLINE void reset() noexcept
 	{
 		m_timestamps[0] = 0;
+	}
+
+	// Re-initialize first timestamp
+	SAFE_BUFFERS FORCE_INLINE void restart() noexcept
+	{
+		m_timestamps[0] = __rdtsc();
+		std::memset(m_timestamps + 1, 0, sizeof(m_timestamps) - sizeof(u64));
 	}
 
 	SAFE_BUFFERS ~perf_meter()
