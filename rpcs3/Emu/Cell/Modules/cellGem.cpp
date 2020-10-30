@@ -505,7 +505,7 @@ error_code cellGemEnableMagnetometer2()
 	return CELL_OK;
 }
 
-error_code cellGemEnd()
+error_code cellGemEnd(ppu_thread& ppu)
 {
 	cellGem.warning("cellGemEnd()");
 
@@ -517,7 +517,7 @@ error_code cellGemEnd()
 	{
 		if (u32 addr = gem->memory_ptr)
 		{
-			sys_memory_free(addr);
+			sys_memory_free(ppu, addr);
 		}
 
 		return CELL_OK;
@@ -950,7 +950,7 @@ error_code cellGemHSVtoRGB(f32 h, f32 s, f32 v, vm::ptr<f32> r, vm::ptr<f32> g, 
 	return CELL_OK;
 }
 
-error_code cellGemInit(vm::cptr<CellGemAttribute> attribute)
+error_code cellGemInit(ppu_thread& ppu, vm::cptr<CellGemAttribute> attribute)
 {
 	cellGem.warning("cellGemInit(attribute=*0x%x)", attribute);
 
@@ -973,7 +973,7 @@ error_code cellGemInit(vm::cptr<CellGemAttribute> attribute)
 		vm::var<u32> addr(0);
 
 		// Decrease memory stats
-		if (sys_memory_allocate(GemGetMemorySize(attribute->max_connect), SYS_MEMORY_PAGE_SIZE_64K, +addr) != CELL_OK)
+		if (sys_memory_allocate(ppu, GemGetMemorySize(attribute->max_connect), SYS_MEMORY_PAGE_SIZE_64K, +addr) != CELL_OK)
 		{
 			return CELL_GEM_ERROR_RESOURCE_ALLOCATION_FAILED;
 		}

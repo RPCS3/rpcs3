@@ -33,7 +33,7 @@ namespace rsx
 		const auto contextInfo = vm::ptr<rsx_context>::make(contextAddr);
 
 		// 'fake' initialize usermemory
-		sys_memory_allocate(buffer_size, SYS_MEMORY_PAGE_SIZE_1M, contextInfo.ptr(&rsx_context::user_addr));
+		sys_memory_allocate(*this, buffer_size, SYS_MEMORY_PAGE_SIZE_1M, contextInfo.ptr(&rsx_context::user_addr));
 		verify(HERE), (user_mem_addr = contextInfo->user_addr) != 0;
 
 		if (sys_rsx_device_map(*this, contextInfo.ptr(&rsx_context::dev_addr), vm::null, 0x8) != CELL_OK)
