@@ -92,7 +92,7 @@ public:
 	std::string get_name() const;
 
 	// Get CPU state dump (everything)
-	virtual std::string dump_all() const = 0;
+	virtual std::string dump_all() const;
 
 	// Get CPU register dump
 	virtual std::string dump_regs() const;
@@ -111,12 +111,6 @@ public:
 
 	// Callback for cpu_flag::suspend
 	virtual void cpu_sleep() {}
-
-	// Callback for cpu_flag::memory
-	virtual void cpu_mem() {}
-
-	// Callback for vm::temporary_unlock
-	virtual void cpu_unmem() {}
 
 	// Callback for cpu_flag::ret
 	virtual void cpu_return() {}

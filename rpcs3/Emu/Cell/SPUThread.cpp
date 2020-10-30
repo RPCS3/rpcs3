@@ -1453,16 +1453,6 @@ void spu_thread::cpu_task()
 	}
 }
 
-void spu_thread::cpu_mem()
-{
-	//vm::passive_lock(*this);
-}
-
-void spu_thread::cpu_unmem()
-{
-	//state.test_and_set(cpu_flag::memory);
-}
-
 spu_thread::~spu_thread()
 {
 	{
@@ -3537,7 +3527,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				std::lock_guard lock(group->mutex);
 
 				// Use the syscall to set flag
-				const auto res = ch_in_mbox.get_count() ? CELL_EBUSY : 0u + sys_event_flag_set(data, 1ull << flag);
+				const auto res = ch_in_mbox.get_count() ? CELL_EBUSY : 0u + sys_event_flag_set(*this, data, 1ull << flag);
 
 				if (res == CELL_EBUSY)
 				{
@@ -3562,7 +3552,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				spu_log.trace("sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
 				// Use the syscall to set flag
-				sys_event_flag_set(data, 1ull << flag);
+				sys_event_flag_set(*this, data, 1ull << flag);
 				return true;
 			}
 			else

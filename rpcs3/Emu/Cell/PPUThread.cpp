@@ -5,6 +5,7 @@
 #include "Crypto/sha1.h"
 #include "Emu/perf_meter.hpp"
 #include "Emu/Memory/vm_reservation.h"
+#include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/VFS.h"
 #include "PPUThread.h"
@@ -748,19 +749,18 @@ void ppu_thread::cpu_task()
 
 void ppu_thread::cpu_sleep()
 {
-	raddr = 0; // Clear reservation
-	vm::temporary_unlock(*this);
+	// Clear reservation
+	raddr = 0;
+
+	// Setup wait flag and memory flags to relock itself
+	state += cpu_flag::wait + cpu_flag::memory;
+
+	if (auto ptr = vm::g_tls_locked)
+	{
+		ptr->compare_and_swap(this, nullptr);
+	}
+
 	lv2_obj::awake(this);
-}
-
-void ppu_thread::cpu_mem()
-{
-	vm::passive_lock(*this);
-}
-
-void ppu_thread::cpu_unmem()
-{
-	state.test_and_set(cpu_flag::memory);
 }
 
 void ppu_thread::exec_task()

@@ -244,9 +244,9 @@ error_code sys_event_flag_trywait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode,
 	return CELL_OK;
 }
 
-error_code sys_event_flag_set(u32 id, u64 bitptn)
+error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 {
-	vm::temporary_unlock();
+	cpu.state += cpu_flag::wait;
 
 	// Warning: may be called from SPU thread.
 	sys_event_flag.trace("sys_event_flag_set(id=0x%x, bitptn=0x%llx)", id, bitptn);

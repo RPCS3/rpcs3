@@ -74,8 +74,6 @@ public:
 	virtual std::string dump_misc() const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_sleep() override;
-	virtual void cpu_mem() override;
-	virtual void cpu_unmem() override;
 	virtual ~ppu_thread() override;
 
 	ppu_thread(const ppu_thread_params&, std::string_view name, u32 prio, int detached = 0);
