@@ -342,16 +342,22 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			}
 		}
 	}
-	const int res_index = ui->resBox->findData("1280x720");
-	if (res_index >= 0)
+	for (int i = 0; i < ui->resBox->count(); i++)
 	{
-		// Rename the default resolution for users
-		ui->resBox->setItemText(res_index, tr("1280x720 (Recommended)", "Resolution"));
+		const QVariantList var_list = ui->resBox->itemData(i).toList();
+		ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
 
-		// Set the current selection to the default if the original setting wasn't valid
-		if (saved_index_removed)
+		if (var_list[0].toString() == "1280x720")
 		{
-			ui->resBox->setCurrentIndex(res_index);
+			// Rename the default resolution for users
+			ui->resBox->setItemText(i, tr("1280x720 (Recommended)", "Resolution"));
+
+			// Set the current selection to the default if the original setting wasn't valid
+			if (saved_index_removed)
+			{
+				ui->resBox->setCurrentIndex(i);
+			}
+			break;
 		}
 	}
 
