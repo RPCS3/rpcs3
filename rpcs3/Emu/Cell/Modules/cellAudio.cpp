@@ -1220,7 +1220,7 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 	{
 		return CELL_AUDIO_ERROR_PORT_FULL;
 	}
-	
+
 	// TODO: is this necessary in any way? (Based on libaudio.prx)
 	//const u64 num_channels_non_0 = std::max<u64>(1, num_channels);
 
@@ -1491,7 +1491,7 @@ error_code cellAudioSetPortLevel(u32 portNum, float level)
 	return CELL_OK;
 }
 
-static error_code AudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key, u32 queue_type)
+static error_code AudioCreateNotifyEventQueue(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<u64> key, u32 queue_type)
 {
 	vm::var<sys_event_queue_attribute_t> attr;
 	attr->protocol = SYS_SYNC_FIFO;
@@ -1507,7 +1507,7 @@ static error_code AudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key,
 		// So check initialization as well
 		const u32 queue_depth = g_fxo->get<cell_audio>()->init && g_ps3_process_info.sdk_ver <= 0x35FFFF ? 2 : 8;
 
-		if (CellError res{sys_event_queue_create(id, attr, key_value, queue_depth) + 0u})
+		if (CellError res{sys_event_queue_create(ppu, id, attr, key_value, queue_depth) + 0u})
 		{
 			if (res != CELL_EEXIST)
 			{
@@ -1524,14 +1524,14 @@ static error_code AudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key,
 	return CELL_AUDIO_ERROR_EVENT_QUEUE;
 }
 
-error_code cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
+error_code cellAudioCreateNotifyEventQueue(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<u64> key)
 {
 	cellAudio.warning("cellAudioCreateNotifyEventQueue(id=*0x%x, key=*0x%x)", id, key);
 
-	return AudioCreateNotifyEventQueue(id, key, SYS_PPU_QUEUE);
+	return AudioCreateNotifyEventQueue(ppu, id, key, SYS_PPU_QUEUE);
 }
 
-error_code cellAudioCreateNotifyEventQueueEx(vm::ptr<u32> id, vm::ptr<u64> key, u32 iFlags)
+error_code cellAudioCreateNotifyEventQueueEx(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<u64> key, u32 iFlags)
 {
 	cellAudio.warning("cellAudioCreateNotifyEventQueueEx(id=*0x%x, key=*0x%x, iFlags=0x%x)", id, key, iFlags);
 
@@ -1541,7 +1541,7 @@ error_code cellAudioCreateNotifyEventQueueEx(vm::ptr<u32> id, vm::ptr<u64> key, 
 	}
 
 	const u32 queue_type = (iFlags & CELL_AUDIO_CREATEEVENTFLAG_SPU) ? SYS_SPU_QUEUE : SYS_PPU_QUEUE;
-	return AudioCreateNotifyEventQueue(id, key, queue_type);
+	return AudioCreateNotifyEventQueue(ppu, id, key, queue_type);
 }
 
 error_code AudioSetNotifyEventQueue(u64 key, u32 iFlags)

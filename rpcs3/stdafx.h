@@ -30,8 +30,6 @@ namespace std { inline namespace literals { inline namespace chrono_literals {}}
 #include <cstdlib>
 #include <cstring>
 #include <climits>
-#include <exception>
-#include <stdexcept>
 #include <string>
 #include <memory>
 #include <vector>

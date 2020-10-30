@@ -22,7 +22,6 @@
 #include <sstream>
 #include <thread>
 #include <unordered_set>
-#include <exception>
 #include <cfenv>
 
 class GSRender;

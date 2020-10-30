@@ -509,7 +509,7 @@ bool _spurs::is_libprof_loaded()
 
 s32 _spurs::create_lv2_eq(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u32> queueId, vm::ptr<u8> port, s32 size, const sys_event_queue_attribute_t& attr)
 {
-	if (s32 rc = sys_event_queue_create(queueId, vm::make_var(attr), SYS_EVENT_QUEUE_LOCAL, size))
+	if (s32 rc = sys_event_queue_create(ppu, queueId, vm::make_var(attr), SYS_EVENT_QUEUE_LOCAL, size))
 	{
 		return rc;
 	}
@@ -895,7 +895,7 @@ s32 _spurs::create_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 p
 		return rc;
 	}
 
-	if (s32 rc = sys_event_port_create(spurs.ptr(&CellSpurs::eventPort), SYS_EVENT_PORT_LOCAL, SYS_EVENT_PORT_NO_NAME))
+	if (s32 rc = sys_event_port_create(ppu, spurs.ptr(&CellSpurs::eventPort), SYS_EVENT_PORT_LOCAL, SYS_EVENT_PORT_NO_NAME))
 	{
 		if (s32 rc2 = _spurs::detach_lv2_eq(spurs, spurs->spuPort, true))
 		{
@@ -906,7 +906,7 @@ s32 _spurs::create_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 p
 		return CELL_SPURS_CORE_ERROR_AGAIN;
 	}
 
-	if (s32 rc = sys_event_port_connect_local(spurs->eventPort, spurs->eventQueue))
+	if (s32 rc = sys_event_port_connect_local(ppu, spurs->eventPort, spurs->eventQueue))
 	{
 		sys_event_port_destroy(ppu, spurs->eventPort);
 
@@ -3523,10 +3523,10 @@ s32 cellSpursEventFlagAttachLv2EventQueue(ppu_thread& ppu, vm::ptr<CellSpursEven
 	{
 		vm::var<u32> eventPortId;
 
-		s32 rc = sys_event_port_create(eventPortId, SYS_EVENT_PORT_LOCAL, 0);
+		s32 rc = sys_event_port_create(ppu, eventPortId, SYS_EVENT_PORT_LOCAL, 0);
 		if (rc == CELL_OK)
 		{
-			rc = sys_event_port_connect_local(*eventPortId, *eventQueueId);
+			rc = sys_event_port_connect_local(ppu, *eventPortId, *eventQueueId);
 			if (rc == CELL_OK)
 			{
 				eventFlag->eventPortId = *eventPortId;

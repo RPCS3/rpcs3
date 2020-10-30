@@ -7,7 +7,6 @@
 
 #include <map>
 #include <atomic>
-#include <exception>
 
 namespace rsx
 {
@@ -43,7 +42,7 @@ namespace rsx
 		if (sys_rsx_memory_allocate(contextInfo.ptr(&rsx_context::mem_handle), contextInfo.ptr(&rsx_context::mem_addr), 0x0F900000, 0, 0, 0, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_memory_allocate failed!");
 
-		if (sys_rsx_context_allocate(contextInfo.ptr(&rsx_context::context_id), contextInfo.ptr(&rsx_context::dma_addr), contextInfo.ptr(&rsx_context::driver_info), contextInfo.ptr(&rsx_context::reports_addr), contextInfo->mem_handle, 0) != CELL_OK)
+		if (sys_rsx_context_allocate(*this, contextInfo.ptr(&rsx_context::context_id), contextInfo.ptr(&rsx_context::dma_addr), contextInfo.ptr(&rsx_context::driver_info), contextInfo.ptr(&rsx_context::reports_addr), contextInfo->mem_handle, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
 
 		get_current_renderer()->main_mem_size = buffer_size;

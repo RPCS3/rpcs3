@@ -70,7 +70,7 @@ error_code cellVoiceConnectIPortToOPort(u32 ips, u32 ops)
 	return CELL_OK;
 }
 
-error_code cellVoiceCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
+error_code cellVoiceCreateNotifyEventQueue(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<u64> key)
 {
 	cellVoice.warning("cellVoiceCreateNotifyEventQueue(id=*0x%x, key=*0x%x)", id, key);
 
@@ -90,7 +90,7 @@ error_code cellVoiceCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 	{
 		// Create an event queue "bruteforcing" an available key
 		const u64 key_value = 0x80004d494f323285ull + i;
-		if (CellError res{sys_event_queue_create(id, attr, key_value, 0x40) + 0u})
+		if (CellError res{sys_event_queue_create(ppu, id, attr, key_value, 0x40) + 0u})
 		{
 			if (res != CELL_EEXIST)
 			{
@@ -858,7 +858,7 @@ error_code cellVoiceReadFromOPort(u32 ops, vm::ptr<void> data, vm::ptr<u32> size
 
 	if (!oport || oport->info.portType <= CELLVOICE_PORTTYPE_IN_VOICE)
 		return CELL_VOICE_ERROR_TOPOLOGY;
-	
+
 	if (size)
 		*size = 0;
 

@@ -68,7 +68,7 @@ void lv2_rsx_config::send_event(u64 data1, u64 event_flags, u64 data3) const
 		{
 			rsx->on_semaphore_acquire_wait();
 		}
-		
+
 		// Wait a bit before resending event
 		thread_ctrl::wait_for(100);
 
@@ -161,8 +161,10 @@ error_code sys_rsx_memory_free(u32 mem_handle)
  * @param mem_ctx (IN): mem_ctx given by sys_rsx_memory_allocate
  * @param system_mode (IN):
  */
-error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_control, vm::ptr<u64> lpar_driver_info, vm::ptr<u64> lpar_reports, u64 mem_ctx, u64 system_mode)
+error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_control, vm::ptr<u64> lpar_driver_info, vm::ptr<u64> lpar_reports, u64 mem_ctx, u64 system_mode)
 {
+	cpu.state += cpu_flag::wait;
+
 	sys_rsx.warning("sys_rsx_context_allocate(context_id=*0x%x, lpar_dma_control=*0x%x, lpar_driver_info=*0x%x, lpar_reports=*0x%x, mem_ctx=0x%llx, system_mode=0x%llx)",
 		context_id, lpar_dma_control, lpar_driver_info, lpar_reports, mem_ctx, system_mode);
 
@@ -247,10 +249,10 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	attr->type = SYS_PPU_QUEUE;
 	attr->name_u64 = 0;
 
-	sys_event_port_create(vm::get_addr(&driverInfo.handler_queue), SYS_EVENT_PORT_LOCAL, 0);
+	sys_event_port_create(cpu, vm::get_addr(&driverInfo.handler_queue), SYS_EVENT_PORT_LOCAL, 0);
 	rsx_cfg->rsx_event_port = driverInfo.handler_queue;
-	sys_event_queue_create(vm::get_addr(&driverInfo.handler_queue), attr, 0, 0x20);
-	sys_event_port_connect_local(rsx_cfg->rsx_event_port, driverInfo.handler_queue);
+	sys_event_queue_create(cpu, vm::get_addr(&driverInfo.handler_queue), attr, 0, 0x20);
+	sys_event_port_connect_local(cpu, rsx_cfg->rsx_event_port, driverInfo.handler_queue);
 
 	rsx_cfg->dma_address = vm::cast(*lpar_dma_control, HERE);
 

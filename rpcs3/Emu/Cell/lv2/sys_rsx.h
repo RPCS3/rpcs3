@@ -3,6 +3,8 @@
 #include "Utilities/mutex.h"
 #include "Emu/Memory/vm_ptr.h"
 
+class cpu_thread;
+
 struct RsxDriverInfo
 {
 	be_t<u32> version_driver;     // 0x0
@@ -141,7 +143,7 @@ error_code sys_rsx_device_open();
 error_code sys_rsx_device_close();
 error_code sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_addr, u32 size, u64 flags, u64 a5, u64 a6, u64 a7);
 error_code sys_rsx_memory_free(u32 mem_handle);
-error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_control, vm::ptr<u64> lpar_driver_info, vm::ptr<u64> lpar_reports, u64 mem_ctx, u64 system_mode);
+error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_control, vm::ptr<u64> lpar_driver_info, vm::ptr<u64> lpar_reports, u64 mem_ctx, u64 system_mode);
 error_code sys_rsx_context_free(u32 context_id);
 error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags);
 error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size);

@@ -709,8 +709,8 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 	}
 
 	vm::var<u32> port_id(0);
-	error_code res = sys_event_port_create(port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
-	sys_event_port_connect_local(*port_id, event_queue_id);
+	error_code res = sys_event_port_create(ppu, port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
+	sys_event_port_connect_local(ppu, *port_id, event_queue_id);
 
 	if (res + 0u == CELL_EAGAIN)
 	{
