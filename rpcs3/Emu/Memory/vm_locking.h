@@ -11,7 +11,24 @@ namespace vm
 
 	extern thread_local atomic_t<cpu_thread*>* g_tls_locked;
 
-	extern atomic_t<u64> g_addr_lock;
+	enum range_lock_flags : u64
+	{
+		/* flags (3 bits) */
+
+		range_readable = 1ull << 32,
+		range_writable = 2ull << 32,
+		range_executable = 4ull << 32,
+		range_all_mask = 7ull << 32,
+
+		/* flag combinations with special meaning */
+
+		range_normal = 3ull << 32, // R+W
+		range_updated = 2ull << 32, // R+W as well but do not
+		range_allocated = 4ull << 32, // No safe access
+		range_deallocated = 0, // No safe access
+	};
+
+	extern atomic_t<u64> g_range_lock;
 
 	extern atomic_t<u8> g_shareable[];
 
@@ -26,9 +43,9 @@ namespace vm
 	// Lock memory range
 	FORCE_INLINE void range_lock(atomic_t<u64>& res, atomic_t<u64, 64>* range_lock, u32 begin, u32 size)
 	{
-		const u64 lock_val = g_addr_lock.load();
+		const u64 lock_val = g_range_lock.load();
 		const u64 lock_addr = static_cast<u32>(lock_val); // -> u64
-		const u32 lock_size = static_cast<u32>(lock_val >> 32);
+		const u32 lock_size = static_cast<u32>(lock_val >> 35);
 
 		u64 addr = begin;
 
@@ -42,7 +59,7 @@ namespace vm
 			// Optimistic locking
 			range_lock->release(begin | (u64{size} << 32));
 
-			const u64 new_lock_val = g_addr_lock.load();
+			const u64 new_lock_val = g_range_lock.load();
 
 			if ((!new_lock_val || new_lock_val == lock_val) && !(res.load() & 127)) [[likely]]
 			{
