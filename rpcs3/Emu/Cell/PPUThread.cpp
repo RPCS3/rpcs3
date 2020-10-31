@@ -1799,6 +1799,8 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		// Aligned 8-byte reservations will be used here
 		addr &= -8;
 
+		const u64 lock_bits = g_cfg.core.spu_accurate_dma ? vm::rsrv_unique_lock : 1;
+
 		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
 		{
 			if ((r & -128) != rtime || (r & 127))
@@ -1807,7 +1809,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			}
 
 			// Despite using shared lock, doesn't allow other shared locks (TODO)
-			r += 1;
+			r += lock_bits;
 			return true;
 		});
 
@@ -1821,11 +1823,11 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		// Store previous value in old_data on failure
 		if (data.compare_exchange(old_data, new_data))
 		{
-			res += 127;
+			res += 128 - lock_bits;
 			return true;
 		}
 
-		const u64 old_rtime = res.fetch_sub(1);
+		const u64 old_rtime = res.fetch_sub(lock_bits);
 
 		// TODO: disabled with this setting on, since it's dangerous to mix
 		if (!g_cfg.core.ppu_128_reservations_loop_max_length)
