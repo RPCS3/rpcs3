@@ -4,7 +4,6 @@
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Memory/vm.h"
 #include "MFC.h"
-#include "Emu/Memory/vm.h"
 #include "Utilities/BEType.h"
 
 #include <map>

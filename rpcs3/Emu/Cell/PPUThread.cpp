@@ -1216,6 +1216,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		{
 			ppu.rtime = ppu.last_ftime;
 			ppu.raddr = ppu.last_faddr;
+			ppu.last_ftime = 0;
 			return static_cast<T>(rdata << data_off >> size_off);
 		}
 
@@ -1261,7 +1262,7 @@ extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
 
-const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const void* _old, u64 _new)>([](asmjit::X86Assembler& c, auto& args)
+const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, const void* _old, u64 _new)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -1282,6 +1283,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.push(x86::r13);
 	c.push(x86::r12);
 	c.push(x86::rbx);
+	c.push(x86::r14);
+	c.push(x86::r15);
 	c.sub(x86::rsp, 40);
 #ifdef _WIN32
 	if (!s_tsx_avx)
@@ -1292,6 +1295,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 #endif
 
 	// Prepare registers
+	build_swap_rdx_with(c, args, x86::r12);
 	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
 	c.mov(x86::rax, imm_ptr(&vm::g_sudo_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
@@ -1305,7 +1309,6 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.and_(x86::rbx, -128 / 2);
 	c.prefetchw(x86::byte_ptr(x86::rbx));
 	c.and_(args[0].r32(), 63);
-	c.mov(x86::r12d, 1);
 	c.mov(x86::r13, args[1]);
 
 	// Prepare data
@@ -1328,8 +1331,20 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 		c.movaps(x86::xmm7, x86::oword_ptr(args[2], 112));
 	}
 
+	// Alloc r14 to stamp0
+	const auto stamp0 = x86::r14;
+	const auto stamp1 = x86::r15;
+	build_get_tsc(c, stamp0);
+
 	// Begin transaction
-	Label tx0 = build_transaction_enter(c, fall, x86::r12d, 4, []{});
+	Label tx0 = build_transaction_enter(c, fall, [&]()
+	{
+		build_get_tsc(c, stamp1);
+		c.sub(stamp1, stamp0);
+		c.cmp(stamp1, imm_ptr(&g_rtm_tx_limit1));
+		c.xor_(x86::eax, x86::eax);
+		c.jae(fall);
+	});
 	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&ppu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
 	c.mov(x86::eax, _XABORT_EXPLICIT);
 	c.jc(fall);
@@ -1380,7 +1395,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	// Update reservation
 	c.sub(x86::qword_ptr(x86::rbx), -128);
 	c.xend();
-	c.mov(x86::eax, x86::r12d);
+	build_get_tsc(c);
+	c.sub(x86::rax, stamp0);
 	c.jmp(_ret);
 
 	// XABORT is expensive so finish with xend instead
@@ -1411,6 +1427,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 
 	c.bind(skip);
 	c.xend();
+	build_get_tsc(c, stamp1);
 	c.mov(x86::eax, _XABORT_EXPLICIT);
 	//c.jmp(fall);
 
@@ -1436,11 +1453,28 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.test(x86::eax, vm::rsrv_unique_lock);
 	c.jnz(fail2);
 
-	// Allow only first shared lock to proceed
+	// Check if already updated
+	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail2);
 
-	Label tx1 = build_transaction_enter(c, fall2, x86::r12d, 666, []{});
+	// Exclude some time spent on touching memory: stamp1 contains last success or failure
+	c.mov(x86::rax, stamp1);
+	c.sub(x86::rax, stamp0);
+	c.cmp(x86::rax, imm_ptr(&g_rtm_tx_limit2));
+	c.jae(fall2);
+	build_get_tsc(c, stamp1);
+	c.sub(stamp1, x86::rax);
+
+	Label tx1 = build_transaction_enter(c, fall2, [&]()
+	{
+		build_get_tsc(c);
+		c.sub(x86::rax, stamp1);
+		c.cmp(x86::rax, imm_ptr(&g_rtm_tx_limit2));
+		c.jae(fall2);
+		c.test(x86::qword_ptr(x86::rbx), 127 - 1);
+		c.jnz(fall2);
+	});
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 
@@ -1448,8 +1482,6 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.bt(x86::dword_ptr(args[2], ::offset32(&ppu_thread::state) - ::offset32(&ppu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
 	c.jc(fall2);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.test(x86::rax, 127 - 1);
-	c.jnz(fall2);
 	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, x86::r13);
 	c.jne(fail2);
@@ -1493,7 +1525,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 
 	c.xend();
 	c.lock().add(x86::qword_ptr(x86::rbx), 127);
-	c.mov(x86::eax, x86::r12d);
+	build_get_tsc(c);
+	c.sub(x86::rax, stamp0);
 	c.jmp(_ret);
 
 	// XABORT is expensive so try to finish with xend instead
@@ -1523,7 +1556,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	c.jmp(fail2);
 
 	c.bind(fall2);
-	c.mov(x86::eax, -1);
+	c.mov(x86::rax, -1);
 	c.jmp(_ret);
 
 	c.bind(fail2);
@@ -1550,6 +1583,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 		c.movaps(x86::oword_ptr(args[2], 112), x86::xmm7);
 	}
 
+	c.mov(x86::rax, -1);
+	c.mov(x86::qword_ptr(args[2], ::offset32(&spu_thread::last_ftime) - ::offset32(&spu_thread::rdata)), x86::rax);
 	c.xor_(x86::eax, x86::eax);
 	//c.jmp(_ret);
 
@@ -1569,6 +1604,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime
 	}
 
 	c.add(x86::rsp, 40);
+	c.pop(x86::r15);
+	c.pop(x86::r14);
 	c.pop(x86::rbx);
 	c.pop(x86::r12);
 	c.pop(x86::r13);
@@ -1634,9 +1671,9 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		{
 			if (g_use_rtm) [[likely]]
 			{
-				switch (u32 count = ppu_stcx_accurate_tx(addr & -8, rtime, ppu.rdata, std::bit_cast<u64>(new_data)))
+				switch (u64 count = ppu_stcx_accurate_tx(addr & -8, rtime, ppu.rdata, std::bit_cast<u64>(new_data)))
 				{
-				case UINT32_MAX:
+				case UINT64_MAX:
 				{
 					auto& all_data = *vm::get_super_ptr<spu_rdata_t>(addr & -128);
 					auto& sdata = *vm::get_super_ptr<atomic_be_t<u64>>(addr & -8);
@@ -1660,6 +1697,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 						break;
 					}
 
+					ppu.last_ftime = -1;
 					[[fallthrough]];
 				}
 				case 0:
@@ -1667,6 +1705,12 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 					if (ppu.last_faddr == addr)
 					{
 						ppu.last_fail++;
+					}
+
+					if (ppu.last_ftime != umax)
+					{
+						ppu.last_faddr = 0;
+						return false;
 					}
 
 					_m_prefetchw(ppu.rdata);
@@ -1678,9 +1722,9 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				}
 				default:
 				{
-					if (count > 60 && g_cfg.core.perf_report) [[unlikely]]
+					if (count > 20000 && g_cfg.core.perf_report) [[unlikely]]
 					{
-						perf_log.warning("STCX: took too long: %u", count);
+						perf_log.warning(u8"STCX: took too long: %.3fµs (%u c)", count / (utils::get_tsc_freq() / 1000'000.), count);
 					}
 
 					break;

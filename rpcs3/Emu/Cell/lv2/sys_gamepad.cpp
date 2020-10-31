@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "sys_gamepad.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 LOG_CHANNEL(sys_gamepad);
 

@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "overlay_perf_metrics.h"
-#include "../GSRender.h"
-
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/PPUThread.h"

@@ -2,6 +2,7 @@
 #include "VKHelpers.h"
 #include "VKRenderPass.h"
 #include "Utilities/StrUtil.h"
+#include "Emu/IdManager.h"
 
 #define VK_MAX_COMPUTE_TASKS 4096   // Max number of jobs per frame
 

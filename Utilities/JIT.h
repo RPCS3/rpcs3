@@ -57,30 +57,67 @@ namespace asmjit
 
 	// Emit xbegin and adjacent loop, return label at xbegin (don't use xabort please)
 	template <typename F>
-	[[nodiscard]] inline asmjit::Label build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fallback, const asmjit::X86Gp& ctr, uint less_than, F func)
+	[[nodiscard]] inline asmjit::Label build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fallback, F func)
 	{
 		Label fall = c.newLabel();
 		Label begin = c.newLabel();
 		c.jmp(begin);
 		c.bind(fall);
 
-		// First invoked after failure
-		func();
-
-		c.add(ctr, 1);
-
 		// Don't repeat on zero status (may indicate syscall or interrupt)
 		c.test(x86::eax, x86::eax);
 		c.jz(fallback);
 
+		// First invoked after failure (can fallback to proceed, or jump anywhere else)
+		func();
+
 		// Other bad statuses are ignored regardless of repeat flag (TODO)
-		c.cmp(ctr, less_than);
-		c.jae(fallback);
 		c.align(kAlignCode, 16);
 		c.bind(begin);
 		return fall;
 
 		// xbegin should be issued manually, allows to add more check before entering transaction
+	}
+
+	// Helper to spill RDX (EDX) register for RDTSC
+	inline void build_swap_rdx_with(asmjit::X86Assembler& c, std::array<X86Gp, 4>& args, const asmjit::X86Gp& with)
+	{
+#ifdef _WIN32
+		c.xchg(args[1], with);
+		args[1] = with;
+#else
+		c.xchg(args[2], with);
+		args[2] = with;
+#endif
+	}
+
+	// Get full RDTSC value into chosen register (clobbers rax/rdx or saves only rax with other target)
+	inline void build_get_tsc(asmjit::X86Assembler& c, const asmjit::X86Gp& to = asmjit::x86::rax)
+	{
+		if (&to != &x86::rax && &to != &x86::rdx)
+		{
+			// Swap to save its contents
+			c.xchg(x86::rax, to);
+		}
+
+		c.rdtsc();
+		c.shl(x86::rdx, 32);
+
+		if (&to == &x86::rax)
+		{
+			c.or_(x86::rax, x86::rdx);
+		}
+		else if (&to == &x86::rdx)
+		{
+			c.or_(x86::rdx, x86::rax);
+		}
+		else
+		{
+			// Swap back, maybe there is more effective way to do it
+			c.xchg(x86::rax, to);
+			c.mov(to.r32(), to.r32());
+			c.or_(to.r64(), x86::rdx);
+		}
 	}
 }
 

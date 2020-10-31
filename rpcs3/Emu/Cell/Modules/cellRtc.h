@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Utilities/BEType.h"
+#include "Emu/Memory/vm_ptr.h"
 
 // Return Codes
 enum CellRtcError

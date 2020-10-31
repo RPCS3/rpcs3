@@ -14,12 +14,13 @@
 #include <X11/Xutil.h>
 #endif
 
-#include "Emu/RSX/GSRender.h"
 #include "VulkanAPI.h"
 #include "VKCommonDecompiler.h"
 #include "../GCM.h"
 #include "../Common/ring_buffer_helper.h"
 #include "../Common/TextureUtils.h"
+#include "../display.h"
+#include "../rsx_utils.h"
 
 #include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
 

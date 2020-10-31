@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/Cell/lv2/sys_sync.h"

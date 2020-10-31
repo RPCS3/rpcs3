@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/Cell/PPUModule.h"
@@ -291,7 +292,7 @@ namespace _spurs
 namespace _spurs
 {
 	// Add workload
-	s32 add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<void> pm, u32 size, u64 data, const u8(&priorityTable)[8], u32 minContention, u32 maxContention, vm::cptr<char> nameClass, vm::cptr<char> nameInstance, vm::ptr<CellSpursShutdownCompletionEventHook> hook, vm::ptr<void> hookArg);
+	s32 add_workload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<void> pm, u32 size, u64 data, const u8(&priorityTable)[8], u32 minContention, u32 maxContention, vm::cptr<char> nameClass, vm::cptr<char> nameInstance, vm::ptr<CellSpursShutdownCompletionEventHook> hook, vm::ptr<void> hookArg);
 }
 
 //s32 _cellSpursWorkloadAttributeInitialize(vm::ptr<CellSpursWorkloadAttribute> attr, u32 revision, u32 sdkVersion, vm::cptr<void> pm, u32 size, u64 data, vm::cptr<u8[8]> priority, u32 minCnt, u32 maxCnt);
@@ -1748,7 +1749,7 @@ s32 cellSpursSetMaxContention(vm::ptr<CellSpurs> spurs, u32 wid, u32 maxContenti
 		maxContention = CELL_SPURS_MAX_SPU;
 	}
 
-	vm::reservation_light_op(spurs->wklMaxContention[wid % CELL_SPURS_MAX_WORKLOAD], [&](atomic_t<u8>& value)
+	vm::light_op(spurs->wklMaxContention[wid % CELL_SPURS_MAX_WORKLOAD], [&](atomic_t<u8>& value)
 	{
 		value &= wid < CELL_SPURS_MAX_WORKLOAD ? 0xF0 : 0x0F;
 		value |= wid < CELL_SPURS_MAX_WORKLOAD ? maxContention : maxContention << 4;
@@ -1800,9 +1801,9 @@ s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 wid, vm::cptr<u8[8]> pr
 		return CELL_SPURS_CORE_ERROR_INVAL;
 	}
 
-	vm::reservation_light_op(spurs->wklInfo(wid).prio64, [&](atomic_t<u64>& v){ v.release(prio); });
-	vm::reservation_light_op(spurs->sysSrvMsgUpdateWorkload, [](atomic_t<u8>& v){ v.release(0xff); });
-	vm::reservation_light_op(spurs->sysSrvMessage, [](atomic_t<u8>& v){ v.release(0xff); });
+	vm::light_op(spurs->wklInfo(wid).prio64, [&](atomic_t<u64>& v){ v.release(prio); });
+	vm::light_op(spurs->sysSrvMsgUpdateWorkload, [](atomic_t<u8>& v){ v.release(0xff); });
+	vm::light_op(spurs->sysSrvMessage, [](atomic_t<u8>& v){ v.release(0xff); });
 	return CELL_OK;
 }
 
@@ -1829,9 +1830,9 @@ s32 cellSpursSetPriority(vm::ptr<CellSpurs> spurs, u32 wid, u32 spuId, u32 prior
 	if (spurs->exception)
 		return CELL_SPURS_CORE_ERROR_STAT;
 
-	vm::reservation_light_op(spurs->wklInfo(wid).priority[spuId], [&](u8& v){ atomic_storage<u8>::release(v, priority); });
-	vm::reservation_light_op(spurs->sysSrvMsgUpdateWorkload, [&](atomic_t<u8>& v){ v.bts(spuId); });
-	vm::reservation_light_op(spurs->sysSrvMessage, [&](atomic_t<u8>& v){ v.bts(spuId); });
+	vm::light_op(spurs->wklInfo(wid).priority[spuId], [&](u8& v){ atomic_storage<u8>::release(v, priority); });
+	vm::light_op(spurs->sysSrvMsgUpdateWorkload, [&](atomic_t<u8>& v){ v.bts(spuId); });
+	vm::light_op(spurs->sysSrvMessage, [&](atomic_t<u8>& v){ v.bts(spuId); });
 	return CELL_OK;
 }
 
@@ -2294,7 +2295,7 @@ s32 cellSpursWorkloadAttributeSetShutdownCompletionEventHook(vm::ptr<CellSpursWo
 	return CELL_OK;
 }
 
-s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<void> pm, u32 size, u64 data, const u8(&priorityTable)[8], u32 minContention, u32 maxContention, vm::cptr<char> nameClass, vm::cptr<char> nameInstance, vm::ptr<CellSpursShutdownCompletionEventHook> hook, vm::ptr<void> hookArg)
+s32 _spurs::add_workload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<void> pm, u32 size, u64 data, const u8(&priorityTable)[8], u32 minContention, u32 maxContention, vm::cptr<char> nameClass, vm::cptr<char> nameInstance, vm::ptr<CellSpursShutdownCompletionEventHook> hook, vm::ptr<void> hookArg)
 {
 	if (!spurs || !wid || !pm)
 	{
@@ -2318,7 +2319,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 
 	u32 wnum;
 	const u32 wmax = spurs->flags1 & SF1_32_WORKLOADS ? CELL_SPURS_MAX_WORKLOAD2 : CELL_SPURS_MAX_WORKLOAD; // TODO: check if can be changed
-	vm::reservation_light_op(spurs->wklEnabled, [&](atomic_be_t<u32>& value)
+	vm::light_op(spurs->wklEnabled, [&](atomic_be_t<u32>& value)
 	{
 		wnum = std::countl_one<u32>(value); // found empty position
 		if (wnum < wmax)
@@ -2401,7 +2402,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 		spurs->wklIdleSpuCountOrReadyCount2[wnum] = 0;
 	}
 
-	vm::reservation_light_op(spurs->wklMaxContention[index], [&](atomic_t<u8>& data)
+	vm::light_op(spurs->wklMaxContention[index], [&](atomic_t<u8>& data)
 	{
 		data.atomic_op([&](u8& v)
 		{
@@ -2410,7 +2411,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 		});
 	});
 
-	vm::reservation_light_op<true>((wnum <= 15 ? spurs->wklSignal1 : spurs->wklSignal2), [&](atomic_be_t<u16>& data)
+	vm::light_op<true>((wnum <= 15 ? spurs->wklSignal1 : spurs->wklSignal2), [&](atomic_be_t<u16>& data)
 	{
 		data &= ~(0x8000 >> index);
 	});
@@ -2419,7 +2420,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 
 	u32 res_wkl;
 	const auto wkl = &spurs->wklInfo(wnum);
-	vm::reservation_op(vm::unsafe_ptr_cast<spurs_wkl_state_op>(spurs.ptr(&CellSpurs::wklState1)), [&](spurs_wkl_state_op& op)
+	vm::reservation_op(ppu, vm::unsafe_ptr_cast<spurs_wkl_state_op>(spurs.ptr(&CellSpurs::wklState1)), [&](spurs_wkl_state_op& op)
 	{
 		const u32 mask = op.wklMskB & ~(0x80000000u >> wnum);
 		res_wkl = 0;
@@ -2449,18 +2450,18 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 	});
 
 	verify(HERE), (res_wkl <= 31);
-	vm::reservation_light_op(spurs->sysSrvMsgUpdateWorkload, [](atomic_t<u8>& v){ v.release(0xff); });
-	vm::reservation_light_op(spurs->sysSrvMessage, [](atomic_t<u8>& v){ v.release(0xff); });
+	vm::light_op(spurs->sysSrvMsgUpdateWorkload, [](atomic_t<u8>& v){ v.release(0xff); });
+	vm::light_op(spurs->sysSrvMessage, [](atomic_t<u8>& v){ v.release(0xff); });
 	return CELL_OK;
 }
 
 /// Add workload
-s32 cellSpursAddWorkload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<void> pm, u32 size, u64 data, vm::cptr<u8[8]> priority, u32 minCnt, u32 maxCnt)
+s32 cellSpursAddWorkload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<void> pm, u32 size, u64 data, vm::cptr<u8[8]> priority, u32 minCnt, u32 maxCnt)
 {
 	cellSpurs.warning("cellSpursAddWorkload(spurs=*0x%x, wid=*0x%x, pm=*0x%x, size=0x%x, data=0x%llx, priority=*0x%x, minCnt=0x%x, maxCnt=0x%x)",
 		spurs, wid, pm, size, data, priority, minCnt, maxCnt);
 
-	return _spurs::add_workload(spurs, wid, pm, size, data, *priority, minCnt, maxCnt, vm::null, vm::null, vm::null, vm::null);
+	return _spurs::add_workload(ppu, spurs, wid, pm, size, data, *priority, minCnt, maxCnt, vm::null, vm::null, vm::null, vm::null);
 }
 
 /// Add workload
@@ -2483,7 +2484,7 @@ s32 cellSpursAddWorkloadWithAttribute(ppu_thread& ppu, vm::ptr<CellSpurs> spurs,
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
 
-	return _spurs::add_workload(spurs, wid, attr->pm, attr->size, attr->data, attr->priority, attr->minContention, attr->maxContention, attr->nameClass, attr->nameInstance, attr->hook, attr->hookArg);
+	return _spurs::add_workload(ppu, spurs, wid, attr->pm, attr->size, attr->data, attr->priority, attr->minContention, attr->maxContention, attr->nameClass, attr->nameInstance, attr->hook, attr->hookArg);
 }
 
 /// Request workload shutdown
@@ -2505,7 +2506,7 @@ s32 cellSpursShutdownWorkload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid
 
 	bool send_event;
 	s32 rc, old_state;
-	if (!vm::reservation_op(vm::unsafe_ptr_cast<spurs_wkl_state_op>(spurs.ptr(&CellSpurs::wklState1)), [&](spurs_wkl_state_op& op)
+	if (!vm::reservation_op(ppu, vm::unsafe_ptr_cast<spurs_wkl_state_op>(spurs.ptr(&CellSpurs::wklState1)), [&](spurs_wkl_state_op& op)
 	{
 		auto& state = wid < CELL_SPURS_MAX_WORKLOAD ? op.wklState1[wid] : op.wklState2[wid % 16];
 
@@ -2544,7 +2545,7 @@ s32 cellSpursShutdownWorkload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid
 
 	if (old_state == SPURS_WKL_STATE_SHUTTING_DOWN)
 	{
-		vm::reservation_light_op(spurs->sysSrvMessage, [&](atomic_t<u8>& v){ v.release(0xff); });
+		vm::light_op(spurs->sysSrvMessage, [&](atomic_t<u8>& v){ v.release(0xff); });
 		return CELL_OK;
 	}
 
@@ -2578,7 +2579,7 @@ s32 cellSpursWaitForWorkloadShutdown(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, 
 
 	auto& info = spurs->wklSyncInfo(wid);
 
-	const bool ok = vm::reservation_light_op(info.x28, [](atomic_be_t<u32>& state)
+	const bool ok = vm::light_op(info.x28, [](atomic_be_t<u32>& state)
 	{
 		return state.fetch_op([](be_t<u32>& val)
 		{
@@ -2597,7 +2598,7 @@ s32 cellSpursWaitForWorkloadShutdown(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, 
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	const bool wait_sema = vm::reservation_light_op<true>(spurs->wklEvent(wid), [](atomic_t<u8>& event)
+	const bool wait_sema = vm::light_op<true>(spurs->wklEvent(wid), [](atomic_t<u8>& event)
 	{
 		return event.fetch_op([](u8& event)
 		{
@@ -2662,7 +2663,7 @@ s32 cellSpursRemoveWorkload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid)
 	}
 
 	s32 rc;
-	vm::reservation_op(vm::unsafe_ptr_cast<spurs_wkl_state_op>(spurs.ptr(&CellSpurs::wklState1)), [&](spurs_wkl_state_op& op)
+	vm::reservation_op(ppu, vm::unsafe_ptr_cast<spurs_wkl_state_op>(spurs.ptr(&CellSpurs::wklState1)), [&](spurs_wkl_state_op& op)
 	{
 		auto& state = wid < CELL_SPURS_MAX_WORKLOAD ? op.wklState1[wid] : op.wklState2[wid % 16];
 
@@ -2749,7 +2750,7 @@ s32 cellSpursSendWorkloadSignal(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 w
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	vm::reservation_light_op<true>(wid < CELL_SPURS_MAX_WORKLOAD ? spurs->wklSignal1 : spurs->wklSignal2, [&](atomic_be_t<u16>& sig)
+	vm::light_op<true>(wid < CELL_SPURS_MAX_WORKLOAD ? spurs->wklSignal1 : spurs->wklSignal2, [&](atomic_be_t<u16>& sig)
 	{
 		sig |= 0x8000 >> (wid % 16);
 	});
@@ -2806,7 +2807,7 @@ s32 cellSpursReadyCountStore(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid,
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	vm::reservation_light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
+	vm::light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
 	{
 		v.release(static_cast<u8>(value));
 	});
@@ -2844,7 +2845,7 @@ s32 cellSpursReadyCountSwap(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid, 
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	*old = vm::reservation_light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
+	*old = vm::light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
 	{
 		return v.exchange(static_cast<u8>(swap));
 	});
@@ -2884,7 +2885,7 @@ s32 cellSpursReadyCountCompareAndSwap(ppu_thread& ppu, vm::ptr<CellSpurs> spurs,
 
 	u8 temp = static_cast<u8>(compare);
 
-	vm::reservation_light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
+	vm::light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
 	{
 		v.compare_exchange(temp, static_cast<u8>(swap));
 	});
@@ -2923,7 +2924,7 @@ s32 cellSpursReadyCountAdd(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid, v
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	*old = vm::reservation_light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
+	*old = vm::light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
 	{
 		return v.fetch_op([&](u8& val)
 		{
@@ -3039,7 +3040,7 @@ s32 _cellSpursWorkloadFlagReceiver(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u3
 	};
 
 	s32 res;
-	vm::reservation_op(vm::unsafe_ptr_cast<wklFlagOp>(spurs), [&](wklFlagOp& val)
+	vm::reservation_op(ppu, vm::unsafe_ptr_cast<wklFlagOp>(spurs), [&](wklFlagOp& val)
 	{
 		if (is_set)
 		{
@@ -3188,7 +3189,7 @@ s32 cellSpursEventFlagSet(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFlag
 	u16  pendingRecv;
 	u16  pendingRecvTaskEvents[16];
 
-	vm::reservation_op(vm::unsafe_ptr_cast<CellSpursEventFlag_x00>(eventFlag), [bits, &send, &ppuWaitSlot, &ppuEvents, &pendingRecv, &pendingRecvTaskEvents](CellSpursEventFlag_x00& eventFlag)
+	vm::reservation_op(ppu, vm::unsafe_ptr_cast<CellSpursEventFlag_x00>(eventFlag), [bits, &send, &ppuWaitSlot, &ppuEvents, &pendingRecv, &pendingRecvTaskEvents](CellSpursEventFlag_x00& eventFlag)
 	{
 		send        = false;
 		ppuWaitSlot = 0;
@@ -3959,7 +3960,7 @@ s32 _spurs::create_task(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id,
 
 	u32 tmp_task_id;
 
-	vm::reservation_light_op(vm::_ref<atomic_be_t<v128>>(taskset.ptr(&CellSpursTaskset::enabled).addr()), [&](atomic_be_t<v128>& ptr)
+	vm::light_op(vm::_ref<atomic_be_t<v128>>(taskset.ptr(&CellSpursTaskset::enabled).addr()), [&](atomic_be_t<v128>& ptr)
 	{
 		// NOTE: Realfw processes this using 4 32-bits atomic loops
 		// But here its processed within a single 128-bit atomic op
@@ -4007,7 +4008,7 @@ s32 _spurs::create_task(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id,
 
 s32 _spurs::task_start(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, u32 taskId)
 {
-	vm::reservation_light_op(taskset->pending_ready, [&](CellSpursTaskset::atomic_tasks_bitset& v)
+	vm::light_op(taskset->pending_ready, [&](CellSpursTaskset::atomic_tasks_bitset& v)
 	{
 		v.values[taskId / 32] |= (1u << 31) >> (taskId % 32);
 	});
@@ -4080,7 +4081,7 @@ s32 _cellSpursSendSignal(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, u32
 
 	int signal;
 
-	vm::reservation_op(vm::unsafe_ptr_cast<spurs_taskset_signal_op>(taskset), [&](spurs_taskset_signal_op& op)
+	vm::reservation_op(ppu, vm::unsafe_ptr_cast<spurs_taskset_signal_op>(taskset), [&](spurs_taskset_signal_op& op)
 	{
 		const u32 signalled = op.signalled[taskId / 32];
 		const u32 running = op.running[taskId / 32];
@@ -4830,7 +4831,7 @@ s32 cellSpursGetJobChainInfo(ppu_thread& ppu, vm::ptr<CellSpursJobChain> jobChai
 
 	// Read the commands queue atomically
 	CellSpursJobChain data;
-	vm::reservation_peek(ppu, vm::unsafe_ptr_cast<CellSpursJobChain_x00>(jobChain), [&](const CellSpursJobChain_x00& jch)
+	vm::peek_op(ppu, vm::unsafe_ptr_cast<CellSpursJobChain_x00>(jobChain), [&](const CellSpursJobChain_x00& jch)
 	{
 		std::memcpy(&data, &jch, sizeof(jch));
 	});
@@ -4971,7 +4972,7 @@ s32 cellSpursJobGuardNotify(ppu_thread& ppu, vm::ptr<CellSpursJobGuard> jobGuard
 	u32 allow_jobchain_run = 0; // Affects cellSpursJobChainRun execution
 	u32 old = 0;
 
-	const bool ok = vm::reservation_op(vm::unsafe_ptr_cast<CellSpursJobGuard_x00>(jobGuard), [&](CellSpursJobGuard_x00& jg)
+	const bool ok = vm::reservation_op(ppu, vm::unsafe_ptr_cast<CellSpursJobGuard_x00>(jobGuard), [&](CellSpursJobGuard_x00& jg)
 	{
 		allow_jobchain_run = jg.zero;
 		old = jg.ncount0;
@@ -5019,7 +5020,7 @@ s32 cellSpursJobGuardReset(vm::ptr<CellSpursJobGuard> jobGuard)
 	if (!jobGuard.aligned())
 		return CELL_SPURS_JOB_ERROR_ALIGN;
 
-	vm::reservation_light_op(jobGuard->ncount0, [&](atomic_be_t<u32>& ncount0)
+	vm::light_op(jobGuard->ncount0, [&](atomic_be_t<u32>& ncount0)
 	{
 		ncount0 = jobGuard->ncount1;
 	});
@@ -5106,7 +5107,7 @@ s32 cellSpursJobSetMaxGrab(vm::ptr<CellSpursJobChain> jobChain, u32 maxGrabbedJo
 	if ((spurs->wklEnabled & (0x80000000u >> wid)) == 0u)
 		return CELL_SPURS_JOB_ERROR_STAT;
 
-	vm::reservation_light_op(jobChain->maxGrabbedJob, [&](atomic_be_t<u16>& v)
+	vm::light_op(jobChain->maxGrabbedJob, [&](atomic_be_t<u16>& v)
 	{
 		v.release(static_cast<u16>(maxGrabbedJob));
 	});
@@ -5135,7 +5136,7 @@ s32 cellSpursAddUrgentCommand(ppu_thread& ppu, vm::ptr<CellSpursJobChain> jobCha
 
 	s32 result = CELL_OK;
 
-	vm::reservation_op(vm::unsafe_ptr_cast<CellSpursJobChain_x00>(jobChain), [&](CellSpursJobChain_x00& jch)
+	vm::reservation_op(ppu, vm::unsafe_ptr_cast<CellSpursJobChain_x00>(jobChain), [&](CellSpursJobChain_x00& jch)
 	{
 		for (auto& cmd : jch.urgentCmds)
 		{

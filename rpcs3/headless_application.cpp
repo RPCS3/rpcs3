@@ -1,6 +1,5 @@
 ﻿#include "headless_application.h"
 
-#include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/Cell/Modules/cellOskDialog.h"

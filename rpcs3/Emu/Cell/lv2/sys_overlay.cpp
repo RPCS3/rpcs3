@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"

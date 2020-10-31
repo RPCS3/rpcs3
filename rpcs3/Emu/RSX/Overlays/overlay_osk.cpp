@@ -2,6 +2,7 @@
 #include "overlay_osk.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 LOG_CHANNEL(osk, "OSK");
 

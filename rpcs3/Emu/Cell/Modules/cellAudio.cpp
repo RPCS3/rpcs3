@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_process.h"
@@ -155,6 +156,11 @@ f32 audio_ringbuffer::set_frequency_ratio(f32 new_ratio)
 		//cellAudio.trace("set_frequency_ratio(%1.2f) -> %1.2f", new_ratio, frequency_ratio);
 	}
 	return frequency_ratio;
+}
+
+u64 audio_ringbuffer::get_timestamp() const
+{
+	return get_system_time() - Emu.GetPauseTime();
 }
 
 void audio_ringbuffer::enqueue(const float* in_buffer)

@@ -16,10 +16,10 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
-#include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Capture/rsx_replay.h"
 
 #include "Loader/PSF.h"
@@ -55,7 +55,9 @@ LOG_CHANNEL(sys_log, "SYS");
 
 stx::manual_fixed_typemap<void> g_fixed_typemap;
 
-bool g_use_rtm;
+bool g_use_rtm = false;
+u64 g_rtm_tx_limit1 = 0;
+u64 g_rtm_tx_limit2 = 0;
 
 std::string g_cfg_defaults;
 
@@ -1019,6 +1021,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 		}
 
+		if (g_use_rtm)
+		{
+			// Update supplementary settings
+			const f64 _1ns = utils::get_tsc_freq() / 1000'000'000.;
+			g_rtm_tx_limit1 = g_cfg.core.tx_limit1_ns * _1ns;
+			g_rtm_tx_limit2 = g_cfg.core.tx_limit2_ns * _1ns;
+		}
+
 		// Load patches from different locations
 		g_fxo->get<patch_engine>()->append_title_patches(m_title_id);
 
@@ -1754,8 +1764,8 @@ void Emulator::Resume()
 	// Print and reset debug data collected
 	if (m_state == system_state::paused && g_cfg.core.ppu_debug)
 	{
-		PPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
-		dis_asm.offset = vm::g_base_addr;
+		PPUDisAsm dis_asm(CPUDisAsm_DumpMode);
+		dis_asm.offset = vm::g_sudo_addr;
 
 		std::string dump;
 

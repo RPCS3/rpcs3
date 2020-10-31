@@ -3144,7 +3144,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 {
-	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
+	SPUDisAsm dis_asm(CPUDisAsm_DumpMode);
 	dis_asm.offset = reinterpret_cast<const u8*>(result.data.data()) - result.lower_bound;
 
 	std::string hash;

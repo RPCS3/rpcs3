@@ -1603,7 +1603,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 	{
 		auto spurs = kernelCtxt->spurs;
 
-		vm::reservation_light_op(spurs->readyCount(kernelCtxt->wklCurrentId), [&](atomic_t<u8>& val)
+		vm::light_op(spurs->readyCount(kernelCtxt->wklCurrentId), [&](atomic_t<u8>& val)
 		{
 			val.fetch_op([&](u8& val)
 			{
@@ -2074,7 +2074,7 @@ void spursJobchainPopUrgentCommand(spu_thread& spu)
 	const auto jc = vm::unsafe_ptr_cast<CellSpursJobChain_x00>(+ctxt->jobChain);
 
 	const bool alterQueue = ctxt->unkFlag0;
-	vm::reservation_op(jc, [&](CellSpursJobChain_x00& op)
+	vm::reservation_op(spu, jc, [&](CellSpursJobChain_x00& op)
 	{
 		const auto ls = reinterpret_cast<CellSpursJobChain_x00*>(ctxt->tempAreaJobChain);
 
