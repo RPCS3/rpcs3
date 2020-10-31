@@ -2038,7 +2038,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				}
 
 				// Obtain range lock as normal store
-				vm::range_lock(res, range_lock, eal, size0);
+				vm::range_lock(nullptr, range_lock, eal, size0);
 
 				switch (size0)
 				{
@@ -2111,7 +2111,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		perf_meter<"DMA_PUT"_u64> perf2;
 
 		// TODO: split range-locked stores in cache lines for consistency
-		auto& res = vm::reservation_acquire(eal, args.size);
+		auto res = &vm::reservation_acquire(eal, args.size);
 
 		switch (u32 size = args.size)
 		{
@@ -2573,9 +2573,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			// Already locked or updated: give up
 			return false;
 		}
-
-		// Wait for range locks to clear
-		vm::clear_range_locks(addr, 128);
 
 		vm::_ref<atomic_t<u32>>(addr) += 0;
 

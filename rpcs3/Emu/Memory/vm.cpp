@@ -152,12 +152,44 @@ namespace vm
 		return &g_range_lock_set[std::countr_one(bits)];
 	}
 
-	void range_lock_internal(atomic_t<u64, 64>* range_lock, u32 begin, u32 size)
+	void range_lock_internal(atomic_t<u64>* res, atomic_t<u64, 64>* range_lock, u32 begin, u32 size)
 	{
 		perf_meter<"RHW_LOCK"_u64> perf0;
 
 		while (true)
 		{
+			const u64 lock_val = g_range_lock.load();
+			const u64 lock_addr = static_cast<u32>(lock_val); // -> u64
+			const u32 lock_size = static_cast<u32>(lock_val >> 35);
+			const u64 res_val = res ? res->load() & 127 : 0;
+
+			u64 addr = begin;
+
+			if (g_shareable[begin >> 16])
+			{
+				addr = addr & 0xffff;
+			}
+
+			if ((addr + size <= lock_addr || addr >= lock_addr + lock_size) && !res_val) [[likely]]
+			{
+				range_lock->store(begin | (u64{size} << 32));
+
+				const u64 new_lock_val = g_range_lock.load();
+				const u64 new_res_val = res ? res->load() & 127 : 0;
+
+				if (!new_lock_val && !new_res_val) [[likely]]
+				{
+					return;
+				}
+
+				if (new_lock_val == lock_val && !new_res_val) [[likely]]
+				{
+					return;
+				}
+
+				range_lock->release(0);
+			}
+
 			std::shared_lock lock(g_mutex);
 
 			u32 test = 0;
@@ -180,9 +212,6 @@ namespace vm
 				vm::_ref<atomic_t<u8>>(test) += 0;
 				continue;
 			}
-
-			range_lock->release(begin | u64{size} << 32);
-			return;
 		}
 	}
 

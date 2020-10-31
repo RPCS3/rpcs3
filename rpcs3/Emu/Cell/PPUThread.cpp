@@ -1760,9 +1760,6 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			// Align address: we do not need the lower 7 bits anymore
 			addr &= -128;
 
-			// Wait for range locks to clear
-			vm::clear_range_locks(addr, 128);
-
 			// Cache line data
 			auto& cline_data = vm::_ref<spu_rdata_t>(addr);
 
