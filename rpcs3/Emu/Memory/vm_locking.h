@@ -18,14 +18,15 @@ namespace vm
 		range_readable = 1ull << 32,
 		range_writable = 2ull << 32,
 		range_executable = 4ull << 32,
-		range_all_mask = 7ull << 32,
+		range_mask = 7ull << 32,
 
 		/* flag combinations with special meaning */
 
 		range_normal = 3ull << 32, // R+W
-		range_updated = 2ull << 32, // R+W as well but do not
-		range_allocated = 4ull << 32, // No safe access
-		range_deallocated = 0, // No safe access
+		range_locked = 2ull << 32, // R+W as well but do not
+		range_sharing = 4ull << 32, // Range being registered as shared, flags are unchanged
+		range_allocation = 0, // Allocation, no safe access
+		range_deallocation = 6ull << 32, // Deallocation, no safe access
 	};
 
 	extern atomic_t<u64> g_range_lock;
@@ -46,11 +47,12 @@ namespace vm
 		const u64 lock_val = g_range_lock.load();
 		const u64 lock_addr = static_cast<u32>(lock_val); // -> u64
 		const u32 lock_size = static_cast<u32>(lock_val >> 35);
+		const u64 lock_bits = lock_val & range_mask;
 		const u64 res_val = res ? res->load() & 127 : 0;
 
 		u64 addr = begin;
 
-		if (g_shareable[begin >> 16])
+		if (g_shareable[begin >> 16] || lock_bits == range_sharing)
 		{
 			addr = addr & 0xffff;
 		}
