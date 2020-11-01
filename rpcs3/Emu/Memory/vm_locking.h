@@ -23,7 +23,7 @@ namespace vm
 		/* flag combinations with special meaning */
 
 		range_normal = 3ull << 32, // R+W
-		range_locked = 2ull << 32, // R+W as well but do not
+		range_locked = 2ull << 32, // R+W as well, the only range flag that should block by address
 		range_sharing = 4ull << 32, // Range being registered as shared, flags are unchanged
 		range_allocation = 0, // Allocation, no safe access
 		range_deallocation = 6ull << 32, // Deallocation, no safe access
@@ -52,12 +52,13 @@ namespace vm
 
 		u64 addr = begin;
 
-		if (g_shareable[begin >> 16] || lock_bits == range_sharing)
+		// Only used for range_locked and is reliable in this case
+		if (g_shareable[begin >> 16])
 		{
 			addr = addr & 0xffff;
 		}
 
-		if ((addr + size <= lock_addr || addr >= lock_addr + lock_size) && !res_val) [[likely]]
+		if ((lock_bits != range_locked || addr + size <= lock_addr || addr >= lock_addr + lock_size) && !res_val) [[likely]]
 		{
 			// Optimistic locking
 			range_lock->store(begin | (u64{size} << 32));
@@ -81,9 +82,6 @@ namespace vm
 		// Fallback to slow path
 		range_lock_internal(res, range_lock, begin, size);
 	}
-
-	// Wait for all range locks to release in specified range
-	void clear_range_locks(u32 addr, u32 size);
 
 	// Release it
 	void free_range_lock(atomic_t<u64, 64>*) noexcept;

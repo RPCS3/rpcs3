@@ -2104,8 +2104,8 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 		perf_meter<"DMA_PUT"_u64> perf2;
 
-		// TODO: split range-locked stores in cache lines for consistency
-		auto res = &vm::reservation_acquire(eal, args.size);
+		// Temporarily disabled, may be removed at all
+		atomic_t<u64>* res = nullptr;
 
 		switch (u32 size = args.size)
 		{

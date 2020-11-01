@@ -156,7 +156,14 @@ namespace vm
 	{
 		perf_meter<"RHW_LOCK"_u64> perf0;
 
-		while (true)
+		auto _cpu = get_current_cpu_thread();
+
+		if (_cpu)
+		{
+			_cpu->state += cpu_flag::wait + cpu_flag::temp;
+		}
+
+		for (u64 i = 0;; i++)
 		{
 			const u64 lock_val = g_range_lock.load();
 			const u64 lock_addr = static_cast<u32>(lock_val); // -> u64
@@ -166,12 +173,13 @@ namespace vm
 
 			u64 addr = begin;
 
-			if (g_shareable[begin >> 16] || lock_bits == range_sharing)
+			// Only useful for range_locked, and is reliable in this case
+			if (g_shareable[begin >> 16])
 			{
 				addr = addr & 0xffff;
 			}
 
-			if ((addr + size <= lock_addr || addr >= lock_addr + lock_size) && !res_val) [[likely]]
+			if ((lock_bits != range_locked || addr + size <= lock_addr || addr >= lock_addr + lock_size) && !res_val) [[likely]]
 			{
 				range_lock->store(begin | (u64{size} << 32));
 
@@ -180,18 +188,28 @@ namespace vm
 
 				if (!new_lock_val && !new_res_val) [[likely]]
 				{
-					return;
+					break;
 				}
 
 				if (new_lock_val == lock_val && !new_res_val) [[likely]]
 				{
-					return;
+					break;
 				}
 
 				range_lock->release(0);
 			}
 
-			std::shared_lock lock(g_mutex);
+			std::shared_lock lock(g_mutex, std::try_to_lock);
+
+			if (!lock && i < 15)
+			{
+				busy_wait(200);
+				continue;
+			}
+			else if (!lock)
+			{
+				lock.lock();
+			}
 
 			u32 test = 0;
 
@@ -213,6 +231,14 @@ namespace vm
 				vm::_ref<atomic_t<u8>>(test) += 0;
 				continue;
 			}
+
+			range_lock->release(begin | (u64{size} << 32));
+			break;
+		}
+
+		if (_cpu)
+		{
+			_cpu->check_state();
 		}
 	}
 
@@ -252,36 +278,6 @@ namespace vm
 		return result;
 	}
 
-	void clear_range_locks(u32 addr, u32 size)
-	{
-		ASSUME(size);
-
-		const auto range = utils::address_range::start_length(addr, size);
-
-		// Wait for range locks to clear
-		while (true)
-		{
-			const u64 bads = for_all_range_locks([&](u32 addr2, u32 size2)
-			{
-				ASSUME(size2);
-
-				if (range.overlaps(utils::address_range::start_length(addr2, size2))) [[unlikely]]
-				{
-					return 1;
-				}
-
-				return 0;
-			});
-
-			if (!bads)
-			{
-				return;
-			}
-
-			_mm_pause();
-		}
-	}
-
 	static void _lock_shareable_cache(u64 flags, u32 addr, u32 size)
 	{
 		// Can't do 512 MiB or more at once
@@ -290,10 +286,8 @@ namespace vm
 			fmt::throw_exception("Failed to lock range (flags=0x%x, addr=0x%x, size=0x%x)" HERE, flags >> 32, addr, size);
 		}
 
-		// Block new range locks
+		// Block or signal new range locks
 		g_range_lock = addr | u64{size} << 35 | flags;
-
-		clear_range_locks(addr, size);
 	}
 
 	void passive_lock(cpu_thread& cpu)
