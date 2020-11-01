@@ -1338,8 +1338,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 	{
 		build_get_tsc(c, stamp1);
 		c.sub(stamp1, stamp0);
-		c.cmp(stamp1, imm_ptr(&g_rtm_tx_limit1));
 		c.xor_(x86::eax, x86::eax);
+		c.cmp(stamp1, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit1)));
 		c.jae(fall);
 	});
 	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&ppu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
@@ -1458,7 +1458,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 	// Exclude some time spent on touching memory: stamp1 contains last success or failure
 	c.mov(x86::rax, stamp1);
 	c.sub(x86::rax, stamp0);
-	c.cmp(x86::rax, imm_ptr(&g_rtm_tx_limit2));
+	c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
 	c.jae(fall2);
 	build_get_tsc(c, stamp1);
 	c.sub(stamp1, x86::rax);
@@ -1467,7 +1467,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 	{
 		build_get_tsc(c);
 		c.sub(x86::rax, stamp1);
-		c.cmp(x86::rax, imm_ptr(&g_rtm_tx_limit2));
+		c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
 		c.jae(fall2);
 		c.test(x86::qword_ptr(x86::rbx), 127 - 1);
 		c.jnz(fall2);
