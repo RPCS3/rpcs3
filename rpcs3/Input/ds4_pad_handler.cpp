@@ -246,17 +246,12 @@ std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDS4Device(const 
 	if (!Init())
 		return nullptr;
 
-	usz pos = padId.find(m_name_string);
-	if (pos == umax)
-		return nullptr;
-
-	std::string pad_serial = padId.substr(pos + 9);
 	std::shared_ptr<DS4Device> device = nullptr;
 
-	int i = 0; // Controllers 1-n in GUI
+	// Controllers 1-n in GUI
 	for (auto& cur_control : controllers)
 	{
-		if (pad_serial == std::to_string(++i) || pad_serial == cur_control.first)
+		if (padId == cur_control.first)
 		{
 			device = cur_control.second;
 			break;
@@ -524,11 +519,26 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 	return true;
 }
 
-void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo)
+void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial)
 {
+	std::shared_ptr<DS4Device> ds4_dev;
+
+	for (auto& controller : controllers)
+	{
+		if (!controller.second || !controller.second->hidDevice)
+		{
+			ds4_dev = controller.second;
+			break;
+		}
+	}
+
+	if (!ds4_dev)
+	{
+		return;
+	}
+
 	std::string serial;
-	std::shared_ptr<DS4Device> ds4Dev = std::make_shared<DS4Device>();
-	ds4Dev->hidDevice = hidDevice;
+	ds4_dev->hidDevice = hidDevice;
 	// There isnt a nice 'portable' way with hidapi to detect bt vs wired as the pid/vid's are the same
 	// Let's try getting 0x81 feature report, which should will return mac address on wired, and should error on bluetooth
 	std::array<u8, 64> buf{};
@@ -545,7 +555,7 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hid
 			buf[1] = 0;
 			if (hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x12_SIZE) == -1)
 			{
-				ds4_log.error("CheckAddDevice: hid_get_feature_report 0x12 failed! Reason: %s", hid_error(ds4Dev->hidDevice));
+				ds4_log.error("CheckAddDevice: hid_get_feature_report 0x12 failed! Reason: %s", hid_error(hidDevice));
 			}
 		}
 
@@ -553,13 +563,12 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hid
 	}
 	else
 	{
-		ds4Dev->btCon = true;
-		std::wstring_view wideSerial(hidDevInfo->serial_number);
-		for (wchar_t ch : wideSerial)
+		ds4_dev->btCon = true;
+		for (wchar_t ch : wide_serial)
 			serial += static_cast<uchar>(ch);
 	}
 
-	if (!GetCalibrationData(ds4Dev))
+	if (!GetCalibrationData(ds4_dev))
 	{
 		ds4_log.error("CheckAddDevice: GetCalibrationData failed!");
 		hid_close(hidDevice);
@@ -573,17 +582,17 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hid
 		return;
 	}
 
-	ds4Dev->hasCalibData = true;
-	ds4Dev->path = hidDevInfo->path;
+	ds4_dev->hasCalibData = true;
+	ds4_dev->path         = path;
 
-	controllers.emplace(serial, ds4Dev);
+	send_output_report(ds4_dev);
 }
 
 ds4_pad_handler::~ds4_pad_handler()
 {
 	for (auto& controller : controllers)
 	{
-		if (controller.second->hidDevice)
+		if (controller.second && controller.second->hidDevice)
 		{
 			// Disable blinking and vibration
 			controller.second->smallVibrate = 0;
@@ -603,7 +612,7 @@ ds4_pad_handler::~ds4_pad_handler()
 
 int ds4_pad_handler::send_output_report(const std::shared_ptr<DS4Device>& device)
 {
-	if (!device)
+	if (!device || !device->hidDevice)
 		return -2;
 
 	auto config = device->config;
@@ -656,39 +665,72 @@ int ds4_pad_handler::send_output_report(const std::shared_ptr<DS4Device>& device
 	}
 }
 
-bool ds4_pad_handler::Init()
+void ds4_pad_handler::enumerate_devices()
 {
-	if (is_init)
-		return true;
+	std::set<std::string> device_paths;
+	std::map<std::string, std::wstring_view> serials;
 
-	const int res = hid_init();
-	if (res != 0)
-		fmt::throw_exception("hidapi-init error.threadproc");
-
-	// get all the possible controllers at start
-	bool warn_about_drivers = false;
 	for (auto pid : ds4Pids)
 	{
-		hid_device_info* devInfo = hid_enumerate(DS4_VID, pid);
-		hid_device_info* head = devInfo;
-		while (devInfo)
+		hid_device_info* dev_info = hid_enumerate(DS4_VID, pid);
+		hid_device_info* head     = dev_info;
+		while (dev_info)
 		{
-			if (controllers.size() >= MAX_GAMEPADS)
-				break;
+			ensure(dev_info->path != nullptr);
+			device_paths.insert(dev_info->path);
+			serials[dev_info->path] = dev_info->serial_number ? std::wstring_view(dev_info->serial_number) : std::wstring_view{};
+			dev_info = dev_info->next;
+		}
+		hid_free_enumeration(head);
+	}
 
-			hid_device* dev = hid_open_path(devInfo->path);
+	if (m_last_enumerated_devices == device_paths)
+	{
+		return;
+	}
+
+	m_last_enumerated_devices = device_paths;
+
+	// Scrap devices that are not in the new list
+	for (auto it = controllers.begin(); it != controllers.end(); ++it)
+	{
+		if (it->second && !it->second->path.empty() && !device_paths.contains(it->second->path))
+		{
+			hid_close(it->second->hidDevice);
+			pad_config* config = it->second->config;
+			it->second.reset(new DS4Device());
+			it->second->config = config;
+		}
+	}
+
+	bool warn_about_drivers = false;
+
+	// Find and add new devices
+	for (const auto& path : device_paths)
+	{
+		// Check if we already have this controller
+		const auto it_found = std::find_if(controllers.cbegin(), controllers.cend(), [path](const auto& c) { return c.second && c.second->path == path; });
+
+		if (it_found == controllers.cend())
+		{
+			// Check if we have at least one virtual controller left
+			const auto it_free = std::find_if(controllers.cbegin(), controllers.cend(), [](const auto& c) { return !c.second || !c.second->hidDevice; });
+			if (it_free == controllers.cend())
+			{
+				break;
+			}
+
+			hid_device* dev = hid_open_path(path.c_str());
 			if (dev)
 			{
-				CheckAddDevice(dev, devInfo);
+				CheckAddDevice(dev, path, serials[path]);
 			}
 			else
 			{
 				ds4_log.error("hid_open_path failed! Reason: %s", hid_error(dev));
 				warn_about_drivers = true;
 			}
-			devInfo = devInfo->next;
 		}
-		hid_free_enumeration(head);
 	}
 
 	if (warn_about_drivers)
@@ -698,17 +740,51 @@ bool ds4_pad_handler::Init()
 		ds4_log.error("Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
 #endif
 	}
-	else if (controllers.empty())
-	{
-		ds4_log.warning("No controllers found!");
-	}
 	else
 	{
-		ds4_log.success("Controllers found: %d", controllers.size());
+		const size_t count = std::count_if(controllers.cbegin(), controllers.cend(), [](const auto& c) { return c.second && c.second->hidDevice; });
+		if (count > 0)
+		{
+			ds4_log.success("Controllers found: %d", count);
+		}
+		else
+		{
+			ds4_log.warning("No controllers found!");
+		}
 	}
+}
+
+bool ds4_pad_handler::Init()
+{
+	if (is_init)
+		return true;
+
+	const int res = hid_init();
+	if (res != 0)
+		fmt::throw_exception("hidapi-init error.threadproc");
+
+	for (size_t i = 1; i <= MAX_GAMEPADS; i++) // Controllers 1-n in GUI
+	{
+		controllers.emplace(m_name_string + std::to_string(i), std::make_shared<DS4Device>());
+	}
+
+	enumerate_devices();
 
 	is_init = true;
 	return true;
+}
+
+void ds4_pad_handler::ThreadProc()
+{
+	const auto now = std::chrono::system_clock::now();
+	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_enumeration).count();
+	if (elapsed > 2000)
+	{
+		m_last_enumeration = now;
+		enumerate_devices();
+	}
+
+	PadHandlerBase::ThreadProc();
 }
 
 std::vector<std::string> ds4_pad_handler::ListDevices()
@@ -718,9 +794,9 @@ std::vector<std::string> ds4_pad_handler::ListDevices()
 	if (!Init())
 		return ds4_pads_list;
 
-	for (usz i = 1; i <= controllers.size(); ++i) // Controllers 1-n in GUI
+	for (const auto& controller : controllers) // Controllers 1-n in GUI
 	{
-		ds4_pads_list.emplace_back(m_name_string + std::to_string(i));
+		ds4_pads_list.emplace_back(controller.first);
 	}
 
 	return ds4_pads_list;
@@ -809,7 +885,7 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 std::shared_ptr<PadDevice> ds4_pad_handler::get_device(const std::string& device)
 {
 	std::shared_ptr<DS4Device> ds4device = GetDS4Device(device);
-	if (ds4device == nullptr || ds4device->hidDevice == nullptr)
+	if (ds4device == nullptr)
 		return nullptr;
 
 	return ds4device;
@@ -870,7 +946,7 @@ u32 ds4_pad_handler::get_battery_color(u8 battery_level, int brightness)
 PadHandlerBase::connection ds4_pad_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
 	auto ds4_dev = std::static_pointer_cast<DS4Device>(device);
-	if (!ds4_dev)
+	if (!ds4_dev || ds4_dev->path.empty())
 		return connection::disconnected;
 
 	if (ds4_dev->hidDevice == nullptr)
