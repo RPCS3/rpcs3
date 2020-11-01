@@ -152,7 +152,7 @@ namespace vm
 		return &g_range_lock_set[std::countr_one(bits)];
 	}
 
-	void range_lock_internal(atomic_t<u64>* res, atomic_t<u64, 64>* range_lock, u32 begin, u32 size)
+	void range_lock_internal(atomic_t<u64, 64>* range_lock, u32 begin, u32 size)
 	{
 		perf_meter<"RHW_LOCK"_u64> perf0;
 
@@ -168,30 +168,22 @@ namespace vm
 			const u64 lock_val = g_range_lock.load();
 			const u64 lock_addr = static_cast<u32>(lock_val); // -> u64
 			const u32 lock_size = static_cast<u32>(lock_val >> 35);
-			const u64 lock_bits = lock_val & range_mask;
-			const u64 res_val = res ? res->load() & 127 : 0;
 
 			u64 addr = begin;
 
-			// Only useful for range_locked, and is reliable in this case
-			if (g_shareable[begin >> 16])
+			// See range_lock()
+			if (g_shareable[begin >> 16] | (((lock_val >> 32) & (range_full_mask >> 32)) ^ (range_locked >> 32)))
 			{
 				addr = addr & 0xffff;
 			}
 
-			if ((lock_bits != range_locked || addr + size <= lock_addr || addr >= lock_addr + lock_size) && !res_val) [[likely]]
+			if (addr + size <= lock_addr || addr >= lock_addr + lock_size) [[likely]]
 			{
 				range_lock->store(begin | (u64{size} << 32));
 
 				const u64 new_lock_val = g_range_lock.load();
-				const u64 new_res_val = res ? res->load() & 127 : 0;
 
-				if (!new_lock_val && !new_res_val) [[likely]]
-				{
-					break;
-				}
-
-				if (new_lock_val == lock_val && !new_res_val) [[likely]]
+				if (!(new_lock_val | (new_lock_val != lock_val))) [[likely]]
 				{
 					break;
 				}
@@ -820,7 +812,7 @@ namespace vm
 		}
 
 		// Protect range locks from actual memory protection changes
-		_lock_shareable_cache(range_deallocation, addr, size);
+		_lock_shareable_cache(range_allocation, addr, size);
 
 		if (shm && shm->flags() != 0 && g_shareable[addr >> 16])
 		{
