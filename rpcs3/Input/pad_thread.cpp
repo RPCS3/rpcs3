@@ -104,7 +104,7 @@ void pad_thread::Init()
 		const bool is_ldd_pad = pad_settings[i].ldd_handle == static_cast<s32>(i);
 		const auto handler_type = is_ldd_pad ? pad_handler::null : g_cfg_input.player[i]->handler.get();
 
-		if (handlers.count(handler_type) != 0)
+		if (handlers.contains(handler_type))
 		{
 			cur_pad_handler = handlers[handler_type];
 		}

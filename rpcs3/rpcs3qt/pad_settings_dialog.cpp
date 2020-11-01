@@ -102,7 +102,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	connect(ui->chooseHandler, &QComboBox::currentTextChanged, this, &pad_settings_dialog::ChangeInputType);
 
 	// Combobox: Devices
-	connect(ui->chooseDevice, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+	connect(ui->chooseDevice, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
 		if (index < 0)
 		{
@@ -119,7 +119,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	});
 
 	// Combobox: Profiles
-	connect(ui->chooseProfile, &QComboBox::currentTextChanged, [this](const QString& prof)
+	connect(ui->chooseProfile, &QComboBox::currentTextChanged, this, [this](const QString& prof)
 	{
 		if (prof.isEmpty())
 		{
@@ -136,7 +136,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	});
 
 	// Pushbutton: Add Profile
-	connect(ui->b_addProfile, &QAbstractButton::clicked, [this]()
+	connect(ui->b_addProfile, &QAbstractButton::clicked, this, [this]()
 	{
 		const int i = ui->tabWidget->currentIndex();
 
@@ -175,7 +175,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 
 	ui->buttonBox->button(QDialogButtonBox::Reset)->setText(tr("Filter Noise"));
 
-	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
+	connect(ui->buttonBox, &QDialogButtonBox::clicked, this, [this](QAbstractButton* button)
 	{
 		if (button == ui->buttonBox->button(QDialogButtonBox::Save))
 		{
@@ -304,7 +304,7 @@ void pad_settings_dialog::InitButtons()
 
 	connect(m_pad_buttons, &QButtonGroup::idClicked, this, &pad_settings_dialog::OnPadButtonClicked);
 
-	connect(&m_timer, &QTimer::timeout, [this]()
+	connect(&m_timer, &QTimer::timeout, this, [this]()
 	{
 		if (--m_seconds <= 0)
 		{
@@ -314,7 +314,7 @@ void pad_settings_dialog::InitButtons()
 		m_pad_buttons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(m_seconds));
 	});
 
-	connect(ui->chb_vibration_large, &QCheckBox::clicked, [this](bool checked)
+	connect(ui->chb_vibration_large, &QCheckBox::clicked, this, [this](bool checked)
 	{
 		if (!checked)
 		{
@@ -330,7 +330,7 @@ void pad_settings_dialog::InitButtons()
 		});
 	});
 
-	connect(ui->chb_vibration_small, &QCheckBox::clicked, [this](bool checked)
+	connect(ui->chb_vibration_small, &QCheckBox::clicked, this, [this](bool checked)
 	{
 		if (!checked)
 		{
@@ -346,7 +346,7 @@ void pad_settings_dialog::InitButtons()
 		});
 	});
 
-	connect(ui->chb_vibration_switch, &QCheckBox::clicked, [this](bool checked)
+	connect(ui->chb_vibration_switch, &QCheckBox::clicked, this, [this](bool checked)
 	{
 		checked ? SetPadData(m_min_force, m_max_force)
 		        : SetPadData(m_max_force, m_min_force);
@@ -363,18 +363,18 @@ void pad_settings_dialog::InitButtons()
 		});
 	});
 
-	connect(ui->slider_stick_left, &QSlider::valueChanged, [&](int value)
+	connect(ui->slider_stick_left, &QSlider::valueChanged, this, [&](int value)
 	{
 		RepaintPreviewLabel(ui->preview_stick_left, value, ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
 	});
 
-	connect(ui->slider_stick_right, &QSlider::valueChanged, [&](int value)
+	connect(ui->slider_stick_right, &QSlider::valueChanged, this, [&](int value)
 	{
 		RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
 	});
 
 	// Open LED settings
-	connect(ui->b_led_settings, &QPushButton::clicked, [this]()
+	connect(ui->b_led_settings, &QPushButton::clicked, this, [this]()
 	{
 		// Allow LED battery indication while the dialog is open
 		m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, m_handler_cfg.led_battery_indicator.get(), m_handler_cfg.led_battery_indicator_brightness);
@@ -462,7 +462,7 @@ void pad_settings_dialog::InitButtons()
 	};
 
 	// Use timer to get button input
-	connect(&m_timer_input, &QTimer::timeout, [this, callback, fail_callback]()
+	connect(&m_timer_input, &QTimer::timeout, this, [this, callback, fail_callback]()
 	{
 		const std::vector<std::string> buttons =
 		{
@@ -475,7 +475,7 @@ void pad_settings_dialog::InitButtons()
 	});
 
 	// Use timer to refresh pad connection status
-	connect(&m_timer_pad_refresh, &QTimer::timeout, [this]()
+	connect(&m_timer_pad_refresh, &QTimer::timeout, this, [this]()
 	{
 		for (int i = 0; i < ui->chooseDevice->count(); i++)
 		{
@@ -1193,6 +1193,7 @@ void pad_settings_dialog::ChangeInputType()
 
 	// Get this player's current handler and it's currently available devices
 	m_handler = GetHandler(g_cfg_input.player[player]->handler);
+	ensure(m_handler);
 	const auto device_list = m_handler->ListDevices();
 
 	// Localized tooltips

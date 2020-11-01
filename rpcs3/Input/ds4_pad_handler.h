@@ -99,7 +99,7 @@ class ds4_pad_handler final : public PadHandlerBase
 	const std::array<u16, 3> ds4Pids = { { 0xBA0, 0x5C4, 0x09CC } };
 
 	// pseudo 'controller id' to keep track of unique controllers
-	std::unordered_map<std::string, std::shared_ptr<DS4Device>> controllers;
+	std::map<std::string, std::shared_ptr<DS4Device>> controllers;
 	CRCPP::CRC::Table<u32, 32> crcTable{ CRCPP::CRC::CRC_32() };
 
 public:
@@ -107,6 +107,7 @@ public:
 	~ds4_pad_handler();
 
 	bool Init() override;
+	void ThreadProc() override;
 
 	std::vector<std::string> ListDevices() override;
 	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
@@ -116,6 +117,9 @@ public:
 private:
 	bool is_init = false;
 	DS4DataStatus status;
+	std::chrono::system_clock::time_point m_last_enumeration;
+	std::set<std::string> m_last_enumerated_devices;
+	void enumerate_devices();
 	u32 get_battery_color(u8 battery_level, int brightness);
 
 private:
@@ -124,7 +128,7 @@ private:
 	DS4DataStatus GetRawData(const std::shared_ptr<DS4Device>& ds4Device);
 	// This function gets us usuable buffer from the rawbuffer of padData
 	bool GetCalibrationData(const std::shared_ptr<DS4Device>& ds4Device);
-	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
+	void CheckAddDevice(hid_device* hidDevice, std::string_view path, std::wstring_view serial);
 	int send_output_report(const std::shared_ptr<DS4Device>& device);
 	inline s16 ApplyCalibration(s32 rawValue, const DS4CalibData& calibData)
 	{
