@@ -192,9 +192,6 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>([](asmjit::
 	c.push(x86::rax);
 #endif
 
-	// Load tr_all function pointer to call actual compiled function
-	c.mov(x86::rax, asmjit::imm_ptr(spu_runtime::tr_all));
-
 	// Save native stack pointer for longjmp emulation
 	c.mov(x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)), x86::rsp);
 
@@ -209,7 +206,7 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>([](asmjit::
 		c.vzeroupper();
 	}
 
-	c.call(x86::rax);
+	c.call(asmjit::imm_ptr(spu_runtime::tr_all));
 
 	if (utils::has_avx())
 	{

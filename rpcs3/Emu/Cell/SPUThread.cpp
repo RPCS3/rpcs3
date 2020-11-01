@@ -416,15 +416,13 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 
 	// Prepare registers
 	build_swap_rdx_with(c, args, x86::r12);
-	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
-	c.mov(x86::rax, imm_ptr(&vm::g_sudo_addr));
-	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbp, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 	c.and_(args[0].r32(), 0xff80);
 	c.shr(args[0].r32(), 1);
-	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
+	c.lea(x86::rbx, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
 	c.prefetchw(x86::byte_ptr(x86::rbx));
 	c.mov(x86::r13, args[1]);
 
@@ -821,15 +819,13 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 
 	// Prepare registers
 	build_swap_rdx_with(c, args, x86::r12);
-	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
-	c.mov(x86::rax, imm_ptr(&vm::g_sudo_addr));
-	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbp, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 	c.and_(args[0].r32(), 0xff80);
 	c.shr(args[0].r32(), 1);
-	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
+	c.lea(x86::rbx, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
 	c.prefetchw(x86::byte_ptr(x86::rbx));
 	c.mov(x86::r13, args[1]);
 
@@ -1034,13 +1030,11 @@ const extern auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rd
 
 	// Prepare registers
 	build_swap_rdx_with(c, args, x86::r12);
-	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
-	c.mov(x86::rax, imm_ptr(&vm::g_sudo_addr));
-	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbp, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.and_(args[0].r32(), 0xff80);
 	c.shr(args[0].r32(), 1);
-	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
+	c.lea(x86::rbx, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
 	c.mov(x86::r13, args[1]);
 
 	// Alloc args[0] to stamp0

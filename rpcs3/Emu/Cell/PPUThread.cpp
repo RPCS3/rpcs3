@@ -81,7 +81,6 @@ using spu_rdata_t = decltype(ppu_thread::rdata);
 extern void mov_rdata(spu_rdata_t& _dst, const spu_rdata_t& _src);
 extern void mov_rdata_nt(spu_rdata_t& _dst, const spu_rdata_t& _src);
 extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs);
-extern u32(*const spu_getllar_tx)(u32 raddr, void* rdata, cpu_thread* _cpu, u64 rtime);
 
 // Verify AVX availability for TSX transactions
 static const bool s_tsx_avx = utils::has_avx();
@@ -1296,16 +1295,14 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 
 	// Prepare registers
 	build_swap_rdx_with(c, args, x86::r12);
-	c.mov(x86::rbx, imm_ptr(+vm::g_reservations));
-	c.mov(x86::rax, imm_ptr(&vm::g_sudo_addr));
-	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbp, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.and_(x86::rbp, -128);
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 	c.movzx(args[0].r32(), args[0].r16());
 	c.shr(args[0].r32(), 1);
-	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
+	c.lea(x86::rbx, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
 	c.and_(x86::rbx, -128 / 2);
 	c.prefetchw(x86::byte_ptr(x86::rbx));
 	c.and_(args[0].r32(), 63);
