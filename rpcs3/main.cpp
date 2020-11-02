@@ -521,3 +521,55 @@ int main(int argc, char** argv)
 	// run event loop (maybe only needed for the gui application)
 	return app->exec();
 }
+
+// Temporarily, this is code from std for prebuilt LLVM. I don't understand why this is necessary.
+// From the same MSVC 19.27.29112.0, LLVM libs depend on these, but RPCS3 gets linker errors.
+#ifdef _WIN32
+extern "C"
+{
+	int __stdcall __std_init_once_begin_initialize(void** ppinit, ulong f, int* fp, void** lpc) noexcept
+	{
+		return InitOnceBeginInitialize(reinterpret_cast<LPINIT_ONCE>(ppinit), f, fp, lpc);
+	}
+
+	int __stdcall __std_init_once_complete(void** ppinit, ulong f, void* lpc) noexcept
+	{
+		return InitOnceComplete(reinterpret_cast<LPINIT_ONCE>(ppinit), f, lpc);
+	}
+
+	size_t __stdcall __std_get_string_size_without_trailing_whitespace(const char* str, size_t size) noexcept
+	{
+		while (size)
+		{
+			switch (str[size - 1])
+			{
+			case 0:
+			case ' ':
+			case '\n':
+			case '\r':
+			case '\t':
+			{
+				size--;
+				continue;
+			}
+			}
+
+			break;
+		}
+
+		return size;
+	}
+
+	size_t __stdcall __std_system_error_allocate_message(const unsigned long msg_id, char** ptr_str) noexcept
+	{
+		return __std_get_string_size_without_trailing_whitespace(*ptr_str, FormatMessageA(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			nullptr, msg_id, 0, reinterpret_cast<char*>(ptr_str), 0, nullptr));
+	}
+
+	void __stdcall __std_system_error_deallocate_message(char* s) noexcept
+	{
+		LocalFree(s);
+	}
+}
+#endif

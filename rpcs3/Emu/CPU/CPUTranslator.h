@@ -363,7 +363,7 @@ struct llvm_value_t<T[N]> : llvm_value_t<std::conditional_t<(std::extent_v<T> > 
 		}
 		else if constexpr (N > 1)
 		{
-			return llvm::VectorType::get(base::get_type(context), N);
+			return llvm::VectorType::get(base::get_type(context), N, false);
 		}
 		else
 		{
@@ -2283,9 +2283,11 @@ struct llvm_splat
 
 		if (auto i = llvm::dyn_cast_or_null<llvm::ShuffleVectorInst>(value))
 		{
-			if (llvm::isa<llvm::ConstantAggregateZero>(i->getOperand(2)))
+			if (llvm::isa<llvm::ConstantAggregateZero>(i->getOperand(1)) || llvm::isa<llvm::UndefValue>(i->getOperand(1)))
 			{
-				if (auto j = llvm::dyn_cast<llvm::InsertElementInst>(i->getOperand(0)))
+				static constexpr int zero_array[llvm_value_t<U>::is_vector]{};
+
+				if (auto j = llvm::dyn_cast<llvm::InsertElementInst>(i->getOperand(0)); j && i->getShuffleMask().equals(zero_array))
 				{
 					if (llvm::cast<llvm::ConstantInt>(j->getOperand(2))->isZero())
 					{
@@ -2311,7 +2313,7 @@ struct llvm_zshuffle
 	using type = std::remove_extent_t<T>[N];
 
 	llvm_expr_t<A1> a1;
-	u32 index_array[N];
+	int index_array[N];
 
 	static_assert(llvm_value_t<T>::is_vector, "llvm_zshuffle<>: invalid type");
 
@@ -2334,7 +2336,7 @@ struct llvm_zshuffle
 
 			if (auto z = llvm::dyn_cast<llvm::ConstantAggregateZero>(i->getOperand(1)); z && z->getType() == v1->getType())
 			{
-				if (llvm::ConstantDataVector::get(value->getContext(), index_array) == i->getOperand(2))
+				if (i->getShuffleMask().equals(index_array))
 				{
 					if (auto r1 = a1.match(v1); v1)
 					{
@@ -2356,7 +2358,7 @@ struct llvm_shuffle2
 
 	llvm_expr_t<A1> a1;
 	llvm_expr_t<A2> a2;
-	u32 index_array[N];
+	int index_array[N];
 
 	static_assert(llvm_value_t<T>::is_vector, "llvm_shuffle2<>: invalid type");
 
@@ -2382,7 +2384,7 @@ struct llvm_shuffle2
 
 			if (v1->getType() == v2->getType() && v1->getType() == llvm_value_t<T>::get_type(v1->getContext()))
 			{
-				if (llvm::ConstantDataVector::get(value->getContext(), index_array) == i->getOperand(2))
+				if (i->getShuffleMask().equals(index_array))
 				{
 					if (auto r1 = a1.match(v1); v1)
 					{
@@ -2423,7 +2425,7 @@ protected:
 	// Allow FMA
 	bool m_use_fma = false;
 
-	// Allow Icelake tier AVX-512 
+	// Allow Icelake tier AVX-512
 	bool m_use_avx512_icl = false;
 
 	// IR builder
@@ -2665,13 +2667,13 @@ public:
 	template <typename T, typename... Args, typename = std::enable_if_t<llvm_zshuffle<sizeof...(Args), T>::is_ok>>
 	static auto zshuffle(T&& v, Args... indices)
 	{
-		return llvm_zshuffle<sizeof...(Args), T>{std::forward<T>(v), {static_cast<u32>(indices)...}};
+		return llvm_zshuffle<sizeof...(Args), T>{std::forward<T>(v), {static_cast<int>(indices)...}};
 	}
 
 	template <typename T, typename U, typename... Args, typename = std::enable_if_t<llvm_shuffle2<sizeof...(Args), T, U>::is_ok>>
 	static auto shuffle2(T&& v1, U&& v2, Args... indices)
 	{
-		return llvm_shuffle2<sizeof...(Args), T, U>{std::forward<T>(v1), std::forward<U>(v2), {static_cast<u32>(indices)...}};
+		return llvm_shuffle2<sizeof...(Args), T, U>{std::forward<T>(v1), std::forward<U>(v2), {static_cast<int>(indices)...}};
 	}
 
 	// Average: (a + b + 1) >> 1
@@ -2685,7 +2687,7 @@ public:
 		const auto cast_op = result.is_sint ? llvm::Instruction::SExt : llvm::Instruction::ZExt;
 		llvm::Type* cast_to = m_ir->getIntNTy(result.esize * 2);
 		if constexpr (result.is_vector != 0)
-			cast_to = llvm::VectorType::get(cast_to, result.is_vector);
+			cast_to = llvm::VectorType::get(cast_to, result.is_vector, false);
 
 		const auto axt = m_ir->CreateCast(cast_op, a.eval(m_ir), cast_to);
 		const auto bxt = m_ir->CreateCast(cast_op, b.eval(m_ir), cast_to);
@@ -2752,7 +2754,7 @@ public:
 	{
 		value_t<typename T::type> result;
 		const auto av = a.eval(m_ir);
-		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rcp.ps", av->getType(), av->getType()).getCallee(), {av});
+		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rcp.ps", av->getType(), av->getType()), {av});
 		return result;
 	}
 
@@ -2761,7 +2763,7 @@ public:
 	{
 		value_t<typename T::type> result;
 		const auto av = a.eval(m_ir);
-		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rsqrt.ps", av->getType(), av->getType()).getCallee(), {av});
+		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rsqrt.ps", av->getType(), av->getType()), {av});
 		return result;
 	}
 
@@ -2771,7 +2773,7 @@ public:
 		value_t<typename T::type> result;
 		const auto av = a.eval(m_ir);
 		const auto bv = b.eval(m_ir);
-		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.max.ps", av->getType(), av->getType(), av->getType()).getCallee(), {av, bv});
+		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.max.ps", av->getType(), av->getType(), av->getType()), {av, bv});
 		return result;
 	}
 
@@ -2781,7 +2783,7 @@ public:
 		value_t<typename T::type> result;
 		const auto av = a.eval(m_ir);
 		const auto bv = b.eval(m_ir);
-		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.min.ps", av->getType(), av->getType(), av->getType()).getCallee(), {av, bv});
+		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.min.ps", av->getType(), av->getType(), av->getType()), {av, bv});
 		return result;
 	}
 
@@ -2930,7 +2932,7 @@ struct fmt_unveil<llvm::TypeSize, void>
 template <>
 inline llvm::Type* cpu_translator::get_type<__m128i>()
 {
-	return llvm::VectorType::get(llvm::Type::getInt8Ty(m_context), 16);
+	return llvm::VectorType::get(llvm::Type::getInt8Ty(m_context), 16, false);
 }
 
 #ifndef _MSC_VER

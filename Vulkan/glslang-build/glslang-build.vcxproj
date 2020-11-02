@@ -38,7 +38,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros">
     <CmakeGenerator>"Visual Studio $(VisualStudioVersion.Substring(0,2))"</CmakeGenerator>
-    <CmakeCLI>cmake -G $(CmakeGenerator) -A x64 -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DCMAKE_CXX_STANDARD=20 -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT ../glslang</CmakeCLI>
+    <CmakeCLI>cmake -G $(CmakeGenerator) -A x64 -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT ../glslang</CmakeCLI>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <NMakeBuildCommandLine>$(CmakeCLI)

@@ -192,9 +192,6 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>([](asmjit::
 	c.push(x86::rax);
 #endif
 
-	// Load tr_all function pointer to call actual compiled function
-	c.mov(x86::rax, asmjit::imm_ptr(spu_runtime::tr_all));
-
 	// Save native stack pointer for longjmp emulation
 	c.mov(x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)), x86::rsp);
 
@@ -209,7 +206,7 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>([](asmjit::
 		c.vzeroupper();
 	}
 
-	c.call(x86::rax);
+	c.call(asmjit::imm_ptr(spu_runtime::tr_all));
 
 	if (utils::has_avx())
 	{
@@ -3421,14 +3418,14 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	}
 
 	// Create tail call to the function chunk (non-tail calls are just out of question)
-	void tail_chunk(llvm::Value* chunk, llvm::Value* base_pc = nullptr)
+	void tail_chunk(llvm::FunctionCallee callee, llvm::Value* base_pc = nullptr)
 	{
-		if (!chunk && !g_cfg.core.spu_verification)
+		if (!callee && !g_cfg.core.spu_verification)
 		{
 			// Disable patchpoints if verification is disabled
-			chunk = m_dispatch;
+			callee = m_dispatch;
 		}
-		else if (!chunk)
+		else if (!callee)
 		{
 			// Create branch patchpoint if chunk == nullptr
 			verify(HERE), m_finfo, !m_finfo->fn || m_function == m_finfo->chunk;
@@ -3447,12 +3444,13 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				return;
 			}
 
-			chunk = ppfunc;
+			callee = ppfunc;
 			base_pc = m_ir->getInt32(0);
 		}
 
-		auto call = m_ir->CreateCall(chunk, {m_thread, m_lsptr, base_pc ? base_pc : m_base_pc});
-		auto func = m_finfo ? m_finfo->chunk : llvm::cast<llvm::Function>(chunk);
+		verify(HERE), callee;
+		auto call = m_ir->CreateCall(callee, {m_thread, m_lsptr, base_pc ? base_pc : m_base_pc});
+		auto func = m_finfo ? m_finfo->chunk : llvm::dyn_cast<llvm::Function>(callee.getCallee());
 		call->setCallingConv(func->getCallingConv());
 		call->setTailCall();
 
@@ -4344,7 +4342,7 @@ public:
 
 			for (u32 j = starta; j < end; j += 32)
 			{
-				u32 indices[8];
+				int indices[8];
 				bool holes = false;
 				bool data = false;
 
@@ -4376,7 +4374,7 @@ public:
 				// Mask if necessary
 				if (holes)
 				{
-					vls = m_ir->CreateShuffleVector(vls, ConstantVector::getSplat(8, m_ir->getInt32(0)), indices);
+					vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), indices);
 				}
 
 				// Perform bitwise comparison and accumulate
@@ -4422,7 +4420,8 @@ public:
 		// Proceed to the next code
 		if (entry_chunk->chunk->getReturnType() != get_type<void>())
 		{
-			const auto next_call = m_ir->CreateCall(m_ir->CreateBitCast(entry_call, main_func->getType()), {m_thread, m_lsptr, m_ir->getInt64(0)});
+			const auto f_ptr = m_ir->CreateBitCast(entry_call, main_func->getType());
+			const auto next_call = m_ir->CreateCall({main_func->getFunctionType(), f_ptr}, {m_thread, m_lsptr, m_ir->getInt64(0)});
 			next_call->setCallingConv(main_func->getCallingConv());
 			next_call->setTailCall();
 		}
@@ -4459,7 +4458,8 @@ public:
 
 		if (entry_chunk->chunk->getReturnType() == get_type<void>())
 		{
-			const auto next_call = m_ir->CreateCall(m_ir->CreateBitCast(dispatcher, main_func->getType()), {m_thread, m_lsptr, m_ir->getInt64(0)});
+			const auto f_ptr = m_ir->CreateBitCast(dispatcher, main_func->getType());
+			const auto next_call = m_ir->CreateCall({main_func->getFunctionType(), f_ptr}, {m_thread, m_lsptr, m_ir->getInt64(0)});
 			next_call->setCallingConv(main_func->getCallingConv());
 			next_call->setTailCall();
 			m_ir->CreateRetVoid();
@@ -4914,7 +4914,7 @@ public:
 
 		// Decode (shift) and load function pointer
 		const auto first = m_ir->CreateLoad(m_ir->CreateGEP(m_ir->CreateBitCast(m_interp_table, if_pptr), m_ir->CreateLShr(m_interp_op, 32u - m_interp_magn)));
-		const auto call0 = m_ir->CreateCall(first, {m_lsptr, m_thread, m_interp_pc, m_interp_op, m_interp_table, m_interp_7f0, m_interp_regs});
+		const auto call0 = m_ir->CreateCall({if_type, first}, {m_lsptr, m_thread, m_interp_pc, m_interp_op, m_interp_table, m_interp_7f0, m_interp_regs});
 		call0->setCallingConv(CallingConv::GHC);
 		m_ir->CreateRetVoid();
 
@@ -5128,7 +5128,7 @@ public:
 							}
 
 							const auto arg3 = UndefValue::get(get_type<u32>());
-							const auto _ret = m_ir->CreateCall(fret, {m_lsptr, m_thread, m_interp_pc, arg3, m_interp_table, m_interp_7f0, m_interp_regs});
+							const auto _ret = m_ir->CreateCall({if_type, fret}, {m_lsptr, m_thread, m_interp_pc, arg3, m_interp_table, m_interp_7f0, m_interp_regs});
 							_ret->setCallingConv(CallingConv::GHC);
 							_ret->setTailCall();
 							m_ir->CreateRetVoid();
@@ -5152,7 +5152,7 @@ public:
 								m_interp_regs = _ptr(m_thread, get_reg_offset(0));
 							}
 
-							const auto ncall = m_ir->CreateCall(next_if, {m_lsptr, m_thread, m_interp_pc, next_op, m_interp_table, m_interp_7f0, m_interp_regs});
+							const auto ncall = m_ir->CreateCall({if_type, next_if}, {m_lsptr, m_thread, m_interp_pc, next_op, m_interp_table, m_interp_7f0, m_interp_regs});
 							ncall->setCallingConv(CallingConv::GHC);
 							ncall->setTailCall();
 							m_ir->CreateRetVoid();
@@ -8408,7 +8408,9 @@ public:
 			// Clear stack mirror and return by tail call to the provided return address
 			m_ir->CreateStore(splat<u64[2]>(-1).eval(m_ir), m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), get_type<u64(*)[2]>()));
 			const auto targ = m_ir->CreateAdd(m_ir->CreateLShr(_ret, 32), get_segment_base());
-			tail_chunk(m_ir->CreateIntToPtr(targ, m_finfo->chunk->getFunctionType()->getPointerTo()), m_ir->CreateTrunc(m_ir->CreateLShr(link, 32), get_type<u32>()));
+			const auto type = m_finfo->chunk->getFunctionType();
+			const auto fval = m_ir->CreateIntToPtr(targ, type->getPointerTo());
+			tail_chunk({type, fval}, m_ir->CreateTrunc(m_ir->CreateLShr(link, 32), get_type<u32>()));
 			m_ir->SetInsertPoint(fail);
 		}
 
@@ -8423,7 +8425,7 @@ public:
 
 			const auto ad64 = m_ir->CreateZExt(ad32, get_type<u64>());
 			const auto pptr = m_ir->CreateGEP(m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(ad64, 2, "", true)});
-			tail_chunk(m_ir->CreateLoad(pptr));
+			tail_chunk({m_dispatch->getFunctionType(), m_ir->CreateLoad(pptr)});
 			m_ir->SetInsertPoint(fail);
 		}
 
