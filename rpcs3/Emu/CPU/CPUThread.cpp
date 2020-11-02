@@ -575,11 +575,6 @@ cpu_thread::cpu_thread(u32 id)
 
 bool cpu_thread::check_state() noexcept
 {
-	if (state & cpu_flag::dbg_pause)
-	{
-		g_fxo->get<gdb_server>()->pause_from(this);
-	}
-
 	bool cpu_sleep_called = false;
 	bool cpu_can_stop = true;
 	bool escape, retval;
@@ -692,6 +687,11 @@ bool cpu_thread::check_state() noexcept
 
 		if (state0 & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause))
 		{
+			if (state0 & cpu_flag::dbg_pause)
+			{
+				g_fxo->get<gdb_server>()->pause_from(this);
+			}
+
 			thread_ctrl::wait();
 		}
 		else
