@@ -374,9 +374,16 @@ int main(int argc, char** argv)
 		os.m.ch  = nullptr;
 		os.m.sev = logs::level::notice;
 		os.stamp = 0;
-		os.text = utils::get_OS_version();
+		os.text  = utils::get_OS_version();
 
-		logs::set_init({std::move(ver), std::move(os)});
+		// Write Qt version
+		logs::stored_message qt;
+		qt.m.ch  = nullptr;
+		qt.m.sev = (strcmp(QT_VERSION_STR, qVersion()) != 0) ? logs::level::error : logs::level::notice;
+		qt.stamp = 0;
+		qt.text  = fmt::format("Qt version: Compiled against Qt %s | Run-time uses Qt %s", QT_VERSION_STR, qVersion());
+
+		logs::set_init({std::move(ver), std::move(os), std::move(qt)});
 	}
 
 #ifdef _WIN32
