@@ -754,7 +754,7 @@ private:
 					return driver_vendor::AMD;
 				}
 
-				if (gpu_name.find("NVIDIA") != umax || gpu_name.find("GeForce") != umax)
+				if (gpu_name.find("NVIDIA") != umax || gpu_name.find("GeForce") != umax || gpu_name.find("Quadro") != umax)
 				{
 					return driver_vendor::NVIDIA;
 				}
