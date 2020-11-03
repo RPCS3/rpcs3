@@ -6,6 +6,7 @@
 #include "VKRenderPass.h"
 #include "VKResourceManager.h"
 #include "VKCommandStream.h"
+#include "Emu/Memory/vm_locking.h"
 
 namespace vk
 {

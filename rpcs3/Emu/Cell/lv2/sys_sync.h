@@ -4,7 +4,6 @@
 #include "Utilities/sema.h"
 #include "Utilities/cond.h"
 
-#include "Emu/Memory/vm_locking.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
@@ -156,26 +155,12 @@ private:
 	static bool awake_unlocked(cpu_thread*, s32 prio = enqueue_cmd);
 
 public:
-	static void sleep(cpu_thread& cpu, const u64 timeout = 0)
-	{
-		vm::temporary_unlock(cpu);
-		std::lock_guard{g_mutex}, sleep_unlocked(cpu, timeout);
-		g_to_awake.clear();
-	}
+	static void sleep(cpu_thread& cpu, const u64 timeout = 0);
 
-	static inline bool awake(cpu_thread* const thread, s32 prio = enqueue_cmd)
-	{
-		vm::temporary_unlock();
-		std::lock_guard lock(g_mutex);
-		return awake_unlocked(thread, prio);
-	}
+	static bool awake(cpu_thread* const thread, s32 prio = enqueue_cmd);
 
 	// Returns true on successful context switch, false otherwise
-	static bool yield(cpu_thread& thread)
-	{
-		vm::temporary_unlock(thread);
-		return awake(&thread, yield_cmd);
-	}
+	static bool yield(cpu_thread& thread);
 
 	static void set_priority(cpu_thread& thread, s32 prio)
 	{

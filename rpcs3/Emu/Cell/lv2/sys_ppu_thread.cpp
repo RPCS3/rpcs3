@@ -6,6 +6,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUCallback.h"
+#include "Emu/Memory/vm_locking.h"
 #include "sys_event.h"
 #include "sys_process.h"
 #include "sys_mmapper.h"

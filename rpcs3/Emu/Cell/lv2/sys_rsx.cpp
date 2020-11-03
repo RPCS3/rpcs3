@@ -3,6 +3,7 @@
 
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/RSXThread.h"
 #include "sys_event.h"
 

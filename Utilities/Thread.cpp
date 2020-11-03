@@ -74,6 +74,7 @@
 
 #include "sync.h"
 #include "util/logs.hpp"
+#include "Emu/Memory/vm_locking.h"
 
 LOG_CHANNEL(sig_log, "SIG");
 LOG_CHANNEL(sys_log, "SYS");

@@ -166,29 +166,29 @@ namespace vm
 		for (u64 i = 0;; i++)
 		{
 			const u64 lock_val = g_range_lock.load();
+			const u64 is_shared = g_shareable[begin >> 16].load();
 			const u64 lock_addr = static_cast<u32>(lock_val); // -> u64
 			const u32 lock_size = static_cast<u32>(lock_val >> 35);
 
 			u64 addr = begin;
 
-			// See range_lock()
-			if (g_shareable[begin >> 16] | (((lock_val >> 32) & (range_full_mask >> 32)) ^ (range_locked >> 32)))
+			if (is_shared)
 			{
 				addr = addr & 0xffff;
 			}
 
-			if (addr + size <= lock_addr || addr >= lock_addr + lock_size) [[likely]]
+			if ((lock_val & range_full_mask) != range_locked || addr + size <= lock_addr || addr >= lock_addr + lock_size) [[likely]]
 			{
 				range_lock->store(begin | (u64{size} << 32));
 
 				const u64 new_lock_val = g_range_lock.load();
 
-				if (!(new_lock_val | (new_lock_val != lock_val))) [[likely]]
+				if (!new_lock_val || new_lock_val == lock_val) [[likely]]
 				{
 					break;
 				}
 
-				range_lock->release(0);
+				range_lock->store(0);
 			}
 
 			std::shared_lock lock(g_mutex, std::try_to_lock);

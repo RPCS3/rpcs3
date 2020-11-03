@@ -4,6 +4,7 @@
 #include "GLGSRender.h"
 #include "GLCompute.h"
 #include "GLVertexProgram.h"
+#include "Emu/Memory/vm_locking.h"
 
 #define DUMP_VERTEX_DATA 0
 

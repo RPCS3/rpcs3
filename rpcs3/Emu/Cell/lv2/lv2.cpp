@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Memory/vm_locking.h"
 
 #include "Emu/Cell/PPUFunction.h"
 #include "Emu/Cell/ErrorCodes.h"
@@ -1113,6 +1114,26 @@ DECLARE(lv2_obj::g_pending);
 DECLARE(lv2_obj::g_waiting);
 
 thread_local DECLARE(lv2_obj::g_to_awake);
+
+void lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
+{
+	vm::temporary_unlock(cpu);
+	std::lock_guard{g_mutex}, sleep_unlocked(cpu, timeout);
+	g_to_awake.clear();
+}
+
+bool lv2_obj::awake(cpu_thread* const thread, s32 prio)
+{
+	vm::temporary_unlock();
+	std::lock_guard lock(g_mutex);
+	return awake_unlocked(thread, prio);
+}
+
+bool lv2_obj::yield(cpu_thread& thread)
+{
+	vm::temporary_unlock(thread);
+	return awake(&thread, yield_cmd);
+}
 
 void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 {
