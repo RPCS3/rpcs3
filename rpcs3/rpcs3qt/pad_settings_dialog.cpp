@@ -910,6 +910,10 @@ bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 		}
 		break;
 	}
+	default:
+	{
+		break;
+	}
 	}
 
 	return QDialog::eventFilter(object, event);

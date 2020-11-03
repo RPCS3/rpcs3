@@ -80,7 +80,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 				// Aligned stack assumption
 				if (op0.ra == 1u)
 				{
-					u32 size;
+					u32 size = 0;
 
 					switch (type)
 					{
@@ -88,6 +88,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 					case spu_itype::CHD: size = 2; break;
 					case spu_itype::CWD: size = 4; break;
 					case spu_itype::CDD: size = 8; break;
+					default: ASSUME(0);
 					}
 
 					const u32 index = (~op0.i7 & 0xf) / size;
@@ -99,6 +100,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 					case 2: res._u16[index] = 0x0203; break;
 					case 4: res._u32[index] = 0x00010203; break;
 					case 8: res._u64[index] = 0x0001020304050607ull; break;
+					default: ASSUME(0);
 					}
 
 					return {true, res};
@@ -112,7 +114,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 
 				for (s32 i = 0; i < 16; i++)
 				{
-					res._u8[i] = (op0.i16 & (1 << i)) ? 0xFF : 0x00; 
+					res._u8[i] = (op0.i16 & (1 << i)) ? 0xFF : 0x00;
 				}
 
 				return { true, res };
