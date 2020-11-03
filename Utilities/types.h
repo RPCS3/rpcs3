@@ -49,7 +49,7 @@
 #endif
 
 #define SAFE_BUFFERS __attribute__((no_stack_protector))
-#define NEVER_INLINE __attribute__((noinline))
+#define NEVER_INLINE __attribute__((noinline)) inline
 #define FORCE_INLINE __attribute__((always_inline)) inline
 #define RESTRICT __restrict__
 
