@@ -270,16 +270,26 @@ namespace vm
 		return result;
 	}
 
-	static void _lock_shareable_cache(u64 flags, u32 addr, u32 size)
+	static void _lock_main_range_lock(u64 flags, u32 addr, u32 size)
 	{
-		// Can't do 512 MiB or more at once
-		if (size >= 1024 * 1024 * 512)
+		// Shouldn't really happen
+		if (size == 0)
+		{
+			vm_log.warning("Tried to lock empty range (flags=0x%x, addr=0x%x)" HERE, flags >> 32, addr);
+			g_range_lock.release(0);
+			return;
+		}
+
+		// Limit to 256 MiB at once; make sure if it operates on big amount of data, it's page-aligned
+		if (size > 256 * 1024 * 1024 || (size > 65536 && size % 4096))
 		{
 			fmt::throw_exception("Failed to lock range (flags=0x%x, addr=0x%x, size=0x%x)" HERE, flags >> 32, addr, size);
 		}
 
 		// Block or signal new range locks
 		g_range_lock = addr | u64{size} << 35 | flags;
+
+
 	}
 
 	void passive_lock(cpu_thread& cpu)
@@ -603,6 +613,8 @@ namespace vm
 
 	static void _page_map(u32 addr, u8 flags, u32 size, utils::shm* shm, std::pair<const u32, std::pair<u32, std::shared_ptr<utils::shm>>>* (*search_shm)(vm::block_t* block, utils::shm* shm))
 	{
+		perf_meter<"PAGE_MAP"_u64> perf0;
+
 		if (!size || (size | addr) % 4096 || flags & page_allocated)
 		{
 			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
@@ -615,6 +627,9 @@ namespace vm
 				fmt::throw_exception("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)" HERE, addr, size, flags, i * 4096);
 			}
 		}
+
+		// Lock range being mapped
+		_lock_main_range_lock(range_allocation, addr, size);
 
 		if (shm && shm->flags() != 0 && shm->info++)
 		{
@@ -630,9 +645,6 @@ namespace vm
 						{
 							auto& [size2, ptr] = pp->second;
 
-							// Lock range being marked as shared
-							_lock_shareable_cache(range_sharing, pp->first, size2);
-
 							for (u32 i = pp->first / 65536; i < pp->first / 65536 + size2 / 65536; i++)
 							{
 								g_shareable[i].release(1);
@@ -644,13 +656,7 @@ namespace vm
 				// Unsharing only happens on deallocation currently, so make sure all further refs are shared
 				shm->info = UINT32_MAX;
 			}
-		}
 
-		// Lock range being mapped
-		_lock_shareable_cache(range_allocation, addr, size);
-
-		if (shm && shm->flags() != 0 && shm->info >= 2)
-		{
 			// Map range as shareable
 			for (u32 i = addr / 65536; i < addr / 65536 + size / 65536; i++)
 			{
@@ -700,6 +706,8 @@ namespace vm
 
 	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)
 	{
+		perf_meter<"PAGE_PRO"_u64> perf0;
+
 		vm::writer_lock lock(0);
 
 		if (!size || (size | addr) % 4096)
@@ -744,7 +752,7 @@ namespace vm
 			{
 				const u8 old_val = g_pages[start].flags;
 
-				if (u32 page_size = (i - start) * 4096)
+				if (u32 page_size = (i - start) * 4096; page_size && old_val != start_value)
 				{
 					u64 safe_bits = 0;
 
@@ -756,7 +764,7 @@ namespace vm
 						safe_bits |= range_executable;
 
 					// Protect range locks from observing changes in memory protection
-					_lock_shareable_cache(safe_bits, start * 4096, page_size);
+					_lock_main_range_lock(safe_bits, start * 4096, page_size);
 
 					for (u32 j = start; j < i; j++)
 					{
@@ -768,6 +776,10 @@ namespace vm
 						const auto protection = start_value & page_writable ? utils::protection::rw : (start_value & page_readable ? utils::protection::ro : utils::protection::no);
 						utils::memory_protect(g_base_addr + start * 4096, page_size, protection);
 					}
+				}
+				else
+				{
+					g_range_lock.release(0);
 				}
 
 				start_value = new_val;
@@ -782,6 +794,8 @@ namespace vm
 
 	static u32 _page_unmap(u32 addr, u32 max_size, utils::shm* shm)
 	{
+		perf_meter<"PAGE_UNm"_u64> perf0;
+
 		if (!max_size || (max_size | addr) % 4096)
 		{
 			fmt::throw_exception("Invalid arguments (addr=0x%x, max_size=0x%x)" HERE, addr, max_size);
@@ -812,7 +826,7 @@ namespace vm
 		}
 
 		// Protect range locks from actual memory protection changes
-		_lock_shareable_cache(range_allocation, addr, size);
+		_lock_main_range_lock(range_allocation, addr, size);
 
 		if (shm && shm->flags() != 0 && g_shareable[addr >> 16])
 		{

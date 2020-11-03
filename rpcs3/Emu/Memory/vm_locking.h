@@ -24,8 +24,7 @@ namespace vm
 
 		range_normal = 3ull << 32, // R+W, testing as mask for zero can check no access
 		range_locked = 2ull << 32, // R+W as well, the only range flag that should block by address
-		range_sharing = 6ull << 32, // Range being registered as shared, flags are unchanged
-		range_allocation = 0, // Allocation, no safe access
+		range_allocation = 0, // Allocation, no safe access, g_shareable may change at ANY location
 	};
 
 	extern atomic_t<u64> g_range_lock;
