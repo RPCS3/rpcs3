@@ -602,7 +602,7 @@ bool cpu_thread::check_state() noexcept
 				store = true;
 			}
 
-			if (flags & cpu_flag::signal)
+			if (cpu_can_stop && flags & cpu_flag::signal)
 			{
 				flags -= cpu_flag::signal;
 				cpu_sleep_called = false;
@@ -612,8 +612,8 @@ bool cpu_thread::check_state() noexcept
 			// Atomically clean wait flag and escape
 			if (!(flags & (cpu_flag::exit + cpu_flag::dbg_global_stop + cpu_flag::ret + cpu_flag::stop)))
 			{
-				// Check pause flags which hold thread inside check_state
-				if (flags & (cpu_flag::pause + cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::memory))
+				// Check pause flags which hold thread inside check_state (ignore suspend on cpu_flag::temp)
+				if (flags & (cpu_flag::pause + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::memory + (cpu_can_stop ? cpu_flag::suspend : cpu_flag::pause)))
 				{
 					if (!(flags & cpu_flag::wait))
 					{
@@ -669,12 +669,12 @@ bool cpu_thread::check_state() noexcept
 			return retval;
 		}
 
-		if (!cpu_sleep_called && state0 & cpu_flag::suspend)
+		if (cpu_can_stop && !cpu_sleep_called && state0 & cpu_flag::suspend)
 		{
 			cpu_sleep();
 			cpu_sleep_called = true;
 
-			if (cpu_can_stop && s_tls_thread_slot != umax)
+			if (s_tls_thread_slot != umax)
 			{
 				// Exclude inactive threads from the suspend list (optimization)
 				std::lock_guard lock(g_fxo->get<cpu_counter>()->cpu_suspend_lock);
@@ -685,7 +685,7 @@ bool cpu_thread::check_state() noexcept
 			continue;
 		}
 
-		if (state0 & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause))
+		if (state0 & ((cpu_can_stop ? cpu_flag::suspend : cpu_flag::dbg_pause) + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause))
 		{
 			if (state0 & cpu_flag::dbg_pause)
 			{
