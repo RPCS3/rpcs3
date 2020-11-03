@@ -388,7 +388,7 @@ int main(int argc, char** argv)
 		// Write OS version
 		logs::stored_message os;
 		os.m.ch  = nullptr;
-		os.m.sev = logs::level::notice;
+		os.m.sev = logs::level::always;
 		os.stamp = 0;
 		os.text  = utils::get_OS_version();
 
