@@ -112,6 +112,7 @@ namespace utils
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
 		verify(HERE), ::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1;
+		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1;
 #endif
 	}
 
@@ -120,7 +121,13 @@ namespace utils
 #ifdef _WIN32
 		verify(HERE), ::VirtualFree(pointer, size, MEM_DECOMMIT);
 #else
+		const u64 ptr64 = reinterpret_cast<u64>(pointer);
 		verify(HERE), ::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1);
+#ifdef MADV_FREE
+		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_FREE) != -1;
+#else
+		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_DONTNEED) != -1;
+#endif
 #endif
 	}
 
@@ -130,7 +137,14 @@ namespace utils
 		memory_decommit(pointer, size);
 		memory_commit(pointer, size, prot);
 #else
+		const u64 ptr64 = reinterpret_cast<u64>(pointer);
+#ifdef MADV_FREE
+		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_FREE) != -1;
+#else
+		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_DONTNEED) != -1;
+#endif
 		verify(HERE), ::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1);
+		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1;
 #endif
 	}
 
@@ -178,7 +192,9 @@ namespace utils
 		verify(HERE), m_file >= 0;
 		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
 #else
-		while ((m_file = ::shm_open("/rpcs3-mem1", O_RDWR | O_CREAT | O_EXCL, S_IWUSR | S_IRUSR)) == -1)
+		const std::string name = "/rpcs3-mem-" + std::to_string(reinterpret_cast<u64>(this));
+
+		while ((m_file = ::shm_open(name.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IWUSR | S_IRUSR)) == -1)
 		{
 			if (errno == EMFILE)
 			{
@@ -188,7 +204,7 @@ namespace utils
 			verify(HERE), errno == EEXIST;
 		}
 
-		verify(HERE), ::shm_unlink("/rpcs3-mem1") >= 0;
+		verify(HERE), ::shm_unlink(name.c_str()) >= 0;
 		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
 #endif
 	}

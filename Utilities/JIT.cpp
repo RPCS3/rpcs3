@@ -88,9 +88,7 @@ static u8* add_jit_memory(std::size_t size, uint align)
 
 	if (olda != newa) [[unlikely]]
 	{
-#ifdef CAN_OVERCOMMIT
-		madvise(pointer + olda, newa - olda, MADV_WILLNEED);
-#else
+#ifndef CAN_OVERCOMMIT
 		// Commit more memory
 		utils::memory_commit(pointer + olda, newa - olda, Prot);
 #endif
