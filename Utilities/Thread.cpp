@@ -1900,14 +1900,15 @@ void thread_base::initialize(void (*error_cb)(), bool(*wait_cb)(const void*))
 
 void thread_base::notify_abort() noexcept
 {
-	m_signal.try_inc();
+	u64 tid = m_thread.load();
+#ifdef _WIN32
+	tid = GetThreadId(reinterpret_cast<HANDLE>(tid));
+#endif
 
 	while (auto ptr = m_state_notifier.load())
 	{
 		// Since this function is not perfectly implemented, run it in a loop
-		atomic_storage_futex::raw_notify(ptr);
-
-		if (m_state_notifier.load() == ptr)
+		if (atomic_storage_futex::raw_notify(ptr, tid))
 		{
 			break;
 		}

@@ -2090,7 +2090,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 					v &= ~wmask;
 				});
 
-				bits->notify_all();
+				bits->notify_all(wmask);
 
 				if (size == size0)
 				{
@@ -2588,7 +2588,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		return success;
 	}())
 	{
-		vm::reservation_notifier(addr, 128).notify_all();
+		vm::reservation_notifier(addr, 128).notify_all(-128);
 		raddr = 0;
 		perf0.reset();
 		return true;
@@ -2683,7 +2683,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	}
 
 	do_cell_atomic_128_store(addr, _ptr<spu_rdata_t>(args.lsa & 0x3ff80));
-	vm::reservation_notifier(addr, 128).notify_all();
+	vm::reservation_notifier(addr, 128).notify_all(-128);
 }
 
 void spu_thread::do_mfc(bool wait)

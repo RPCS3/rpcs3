@@ -126,7 +126,7 @@ namespace vm
 					_xend();
 #endif
 					if constexpr (Ack)
-						res.notify_all();
+						res.notify_all(-128);
 					return;
 				}
 				else
@@ -140,7 +140,7 @@ namespace vm
 						_xend();
 #endif
 						if constexpr (Ack)
-							res.notify_all();
+							res.notify_all(-128);
 						return result;
 					}
 					else
@@ -201,7 +201,7 @@ namespace vm
 #endif
 					res += 127;
 					if (Ack)
-						res.notify_all();
+						res.notify_all(-128);
 					return;
 				}
 				else
@@ -215,7 +215,7 @@ namespace vm
 #endif
 						res += 127;
 						if (Ack)
-							res.notify_all();
+							res.notify_all(-128);
 						return result;
 					}
 					else
@@ -250,7 +250,7 @@ namespace vm
 				});
 
 				if constexpr (Ack)
-					res.notify_all();
+					res.notify_all(-128);
 				return;
 			}
 			else
@@ -270,7 +270,7 @@ namespace vm
 				});
 
 				if (Ack && result)
-					res.notify_all();
+					res.notify_all(-128);
 				return result;
 			}
 		}
@@ -287,7 +287,7 @@ namespace vm
 			}
 
 			if constexpr (Ack)
-				res.notify_all();
+				res.notify_all(-128);
 			return;
 		}
 		else
@@ -307,7 +307,7 @@ namespace vm
 			}
 
 			if (Ack && result)
-				res.notify_all();
+				res.notify_all(-128);
 			return result;
 		}
 	}
@@ -399,7 +399,7 @@ namespace vm
 
 			if constexpr (Ack)
 			{
-				res.notify_all();
+				res.notify_all(-128);
 			}
 		}
 		else
@@ -409,7 +409,7 @@ namespace vm
 
 			if constexpr (Ack)
 			{
-				res.notify_all();
+				res.notify_all(-128);
 			}
 
 			return result;
