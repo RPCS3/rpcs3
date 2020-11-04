@@ -966,6 +966,23 @@ void ppu_thread::cpu_sleep()
 	lv2_obj::awake(this);
 }
 
+void ppu_thread::cpu_on_stop()
+{
+	if (current_function)
+	{
+		if (start_time)
+		{
+			ppu_log.warning("'%s' aborted (%fs)", current_function, (get_guest_system_time() - start_time) / 1000000.);
+		}
+		else
+		{
+			ppu_log.warning("'%s' aborted", current_function);
+		}
+
+		current_function = {};
+	}
+}
+
 void ppu_thread::exec_task()
 {
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
@@ -1133,20 +1150,18 @@ cmd64 ppu_thread::cmd_wait()
 {
 	while (true)
 	{
-		if (state) [[unlikely]]
-		{
-			if (is_stopped())
-			{
-				return cmd64{};
-			}
-		}
-
 		if (cmd64 result = cmd_queue[cmd_queue.peek()].exchange(cmd64{}))
 		{
 			return result;
 		}
 
-		thread_ctrl::wait();
+		if (is_stopped())
+		{
+			return {};
+		}
+
+		thread_ctrl::wait_on(cmd_notify, 0);
+		cmd_notify = 0;
 	}
 }
 
@@ -1200,18 +1215,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	{
 		if (std::uncaught_exceptions())
 		{
-			if (current_function)
-			{
-				if (start_time)
-				{
-					ppu_log.warning("'%s' aborted (%fs)", current_function, (get_guest_system_time() - start_time) / 1000000.);
-				}
-				else
-				{
-					ppu_log.warning("'%s' aborted", current_function);
-				}
-			}
-
+			cpu_on_stop();
 			current_function = old_func;
 		}
 		else

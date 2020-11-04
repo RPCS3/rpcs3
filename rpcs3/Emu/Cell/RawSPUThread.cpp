@@ -20,7 +20,7 @@ inline void try_start(spu_thread& spu)
 	}).second)
 	{
 		spu.state -= cpu_flag::stop;
-		thread_ctrl::notify(static_cast<named_thread<spu_thread>&>(spu));
+		spu.state.notify_one(cpu_flag::stop);
 	}
 };
 

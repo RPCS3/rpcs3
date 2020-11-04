@@ -90,7 +90,7 @@ namespace rsx
 
 						while (rsx->is_paused())
 						{
-							rsx->cpu_wait();
+							rsx->cpu_wait({});
 						}
 
 						// Reset
@@ -107,7 +107,7 @@ namespace rsx
 					}
 				}
 
-				rsx->cpu_wait();
+				rsx->cpu_wait({});
 			}
 
 			rsx->fifo_wake_delay();
@@ -1608,7 +1608,8 @@ namespace rsx
 				{ ppu_cmd::sleep, 0 }
 			});
 
-			thread_ctrl::notify(*rsx->intr_thread);
+			rsx->intr_thread->cmd_notify++;
+			rsx->intr_thread->cmd_notify.notify_one();
 		}
 	}
 

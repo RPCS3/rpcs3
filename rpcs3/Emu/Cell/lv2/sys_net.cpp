@@ -1349,14 +1349,19 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 
 	if (!sock.ret)
 	{
-		while (!ppu.state.test_and_reset(cpu_flag::signal))
+		while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 		{
-			if (ppu.is_stopped())
+			if (is_stopped(state))
 			{
-				return 0;
+				return {};
 			}
 
-			thread_ctrl::wait();
+			if (state & cpu_flag::signal)
+			{
+				break;
+			}
+
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 
 		if (result)
@@ -1377,7 +1382,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 
 	if (ppu.is_stopped())
 	{
-		return 0;
+		return {};
 	}
 
 	auto newsock = std::make_shared<lv2_socket>(native_socket, 0, 0);
@@ -1777,14 +1782,19 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 
 	if (!sock.ret)
 	{
-		while (!ppu.state.test_and_reset(cpu_flag::signal))
+		while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 		{
-			if (ppu.is_stopped())
+			if (is_stopped(state))
 			{
-				return 0;
+				return {};
 			}
 
-			thread_ctrl::wait();
+			if (state & cpu_flag::signal)
+			{
+				break;
+			}
+
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 
 		if (result)
@@ -2458,14 +2468,19 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 	if (!sock.ret)
 	{
-		while (!ppu.state.test_and_reset(cpu_flag::signal))
+		while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 		{
-			if (ppu.is_stopped())
+			if (is_stopped(state))
 			{
-				return 0;
+				return {};
 			}
 
-			thread_ctrl::wait();
+			if (state & cpu_flag::signal)
+			{
+				break;
+			}
+
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 
 		if (result)
@@ -2487,7 +2502,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 	if (ppu.is_stopped())
 	{
-		return 0;
+		return {};
 	}
 
 	// addr is set earlier for P2P socket
@@ -2734,14 +2749,16 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 	if (!sock.ret)
 	{
-		while (!ppu.state.test_and_reset(cpu_flag::signal))
+		while (true)
 		{
-			if (ppu.is_stopped())
+			const auto state = ppu.state.fetch_sub(cpu_flag::signal);
+
+			if (is_stopped(state) || state & cpu_flag::signal)
 			{
-				return 0;
+				break;
 			}
 
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 
 		if (result)
@@ -3349,11 +3366,16 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		lv2_obj::sleep(ppu, timeout);
 	}
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state))
 		{
-			return 0;
+			return {};
+		}
+
+		if (state & cpu_flag::signal)
+		{
+			break;
 		}
 
 		if (timeout)
@@ -3363,7 +3385,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return 0;
+					return {};
 				}
 
 				std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
@@ -3379,7 +3401,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 
@@ -3568,11 +3590,16 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 		return -SYS_NET_EINVAL;
 	}
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state))
 		{
-			return 0;
+			return {};
+		}
+
+		if (state & cpu_flag::signal)
+		{
+			break;
 		}
 
 		if (timeout)
@@ -3582,7 +3609,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return 0;
+					return {};
 				}
 
 				std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
@@ -3598,13 +3625,8 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
-	}
-
-	if (ppu.is_stopped())
-	{
-		return 0;
 	}
 
 	if (readfds)

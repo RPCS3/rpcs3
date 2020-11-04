@@ -3070,14 +3070,14 @@ bool spu_thread::process_mfc_cmd()
 	// Stall infinitely if MFC queue is full
 	while (mfc_size >= 16) [[unlikely]]
 	{
-		state += cpu_flag::wait;
+		auto old = state.add_fetch(cpu_flag::wait);
 
-		if (is_stopped())
+		if (is_stopped(old))
 		{
 			return false;
 		}
 
-		thread_ctrl::wait();
+		thread_ctrl::wait_on(state, old);;
 	}
 
 	spu::scheduler::concurrent_execution_watchdog watchdog(*this);
@@ -3672,12 +3672,14 @@ s64 spu_thread::get_ch_value(u32 ch)
 				return out;
 			}
 
-			if (is_stopped())
+			auto old = +state;
+
+			if (is_stopped(old))
 			{
 				return -1;
 			}
 
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(state, old);
 		}
 	}
 
@@ -3773,17 +3775,18 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 			for (; !events.count; events = get_events(mask1, false, true))
 			{
-				if (is_paused())
+				const auto old = state.add_fetch(cpu_flag::wait);
+
+				if (is_stopped(old))
+				{
+					return -1;
+				}
+
+				if (is_paused(old))
 				{
 					// Ensure reservation data won't change while paused for debugging purposes
 					check_state();
-				}
-
-				state += cpu_flag::wait;
-
-				if (is_stopped())
-				{
-					return -1;
+					continue;
 				}
 
 				vm::reservation_notifier(raddr, 128).wait(rtime, -128, atomic_wait_timeout{100'000});
@@ -3795,19 +3798,20 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		for (; !events.count; events = get_events(mask1, true, true))
 		{
-			if (is_paused())
-			{
-				check_state();
-			}
+			const auto old = state.add_fetch(cpu_flag::wait);
 
-			state += cpu_flag::wait;
-
-			if (is_stopped())
+			if (is_stopped(old))
 			{
 				return -1;
 			}
 
-			thread_ctrl::wait_for(100);
+			if (is_paused(old))
+			{
+				check_state();
+				continue;
+			}
+
+			thread_ctrl::wait_on(state, old, 100);
 		}
 
 		check_state();
@@ -4209,7 +4213,7 @@ bool spu_thread::stop_and_signal(u32 code)
 	case 0x001:
 	{
 		state += cpu_flag::wait;
-		thread_ctrl::wait_for(1000); // hack
+		std::this_thread::sleep_for(1ms); // hack
 		check_state();
 		return true;
 	}
@@ -4260,12 +4264,14 @@ bool spu_thread::stop_and_signal(u32 code)
 				_state >= SPU_THREAD_GROUP_STATUS_WAITING && _state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED;
 				_state = group->run_state)
 			{
-				if (is_stopped())
+				const auto old = state.load();
+
+				if (is_stopped(old))
 				{
 					return false;
 				}
 
-				thread_ctrl::wait();
+				thread_ctrl::wait_on(state, old);;
 			}
 
 			reader_lock rlock(id_manager::g_mutex);
@@ -4337,23 +4343,21 @@ bool spu_thread::stop_and_signal(u32 code)
 			}
 		}
 
-		while (true)
+		while (auto old = state.fetch_sub(cpu_flag::signal))
 		{
-			if (is_stopped())
+			if (is_stopped(old))
 			{
 				// The thread group cannot be stopped while waiting for an event
-				ensure(!(state & cpu_flag::stop));
+				ensure(!(old & cpu_flag::stop));
 				return false;
 			}
 
-			if (!state.test_and_reset(cpu_flag::signal))
-			{
-				thread_ctrl::wait();
-			}
-			else
+			if (old & cpu_flag::signal)
 			{
 				break;
 			}
+
+			thread_ctrl::wait_on(state, old);;
 		}
 
 		std::lock_guard lock(group->mutex);
@@ -4375,7 +4379,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 				if (thread.get() != this)
 				{
-					thread_ctrl::notify(*thread);
+					thread->state.notify_one(cpu_flag::suspend);
 				}
 			}
 		}
@@ -4476,12 +4480,14 @@ bool spu_thread::stop_and_signal(u32 code)
 				_state >= SPU_THREAD_GROUP_STATUS_WAITING && _state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED;
 				_state = group->run_state)
 			{
-				if (is_stopped())
+				const auto old = +state;
+
+				if (is_stopped(old))
 				{
 					return false;
 				}
 
-				thread_ctrl::wait();
+				thread_ctrl::wait_on(state, old);;
 			}
 
 			std::lock_guard lock(group->mutex);
@@ -4515,12 +4521,8 @@ bool spu_thread::stop_and_signal(u32 code)
 						return true;
 					});
 
-					while (thread.get() != this && thread->state & cpu_flag::wait)
-					{
-						// TODO: replace with proper solution
-						if (atomic_wait_engine::raw_notify(nullptr, thread_ctrl::get_native_id(*thread)))
-							break;
-					}
+					if (thread.get() != this)
+						thread_ctrl::notify(*thread);
 				}
 			}
 

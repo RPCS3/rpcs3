@@ -657,7 +657,7 @@ namespace rsx
 		u32 get_fifo_cmd() const;
 	
 		std::string dump_regs() const override;
-		void cpu_wait() override;
+		void cpu_wait(bs_t<cpu_flag> old) override;
 
 		// Performance approximation counters
 		struct

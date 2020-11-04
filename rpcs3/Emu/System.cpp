@@ -582,7 +582,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 
 	auto replay_thr = g_fxo->init<named_thread<rsx::rsx_replay_thread>>("RSX Replay"sv, std::move(frame));
 	replay_thr->state -= cpu_flag::stop;
-	thread_ctrl::notify(*replay_thr);
+	replay_thr->state.notify_one(cpu_flag::stop);
 
 	return true;
 }
@@ -1697,16 +1697,16 @@ void Emulator::Run(bool start_playtime)
 	ConfigureLogs();
 
 	// Run main thread
-	idm::check<named_thread<ppu_thread>>(ppu_thread::id_base, [](cpu_thread& cpu)
+	idm::check<named_thread<ppu_thread>>(ppu_thread::id_base, [](named_thread<ppu_thread>& cpu)
 	{
-		cpu.state -= cpu_flag::stop;
-		cpu.notify();
+		ensure(cpu.state.test_and_reset(cpu_flag::stop));
+		cpu.state.notify_one(cpu_flag::stop);
 	});
 
 	if (auto thr = g_fxo->get<named_thread<rsx::rsx_replay_thread>>())
 	{
 		thr->state -= cpu_flag::stop;
-		thread_ctrl::notify(*thr);
+		thr->state.notify_one(cpu_flag::stop);
 	}
 
 	if (g_cfg.misc.prevent_display_sleep)
@@ -1811,7 +1811,7 @@ void Emulator::Resume()
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.state -= cpu_flag::dbg_global_pause;
-		cpu.notify();
+		cpu.state.notify_one(cpu_flag::dbg_global_pause);
 	};
 
 	idm::select<named_thread<ppu_thread>>(on_select);

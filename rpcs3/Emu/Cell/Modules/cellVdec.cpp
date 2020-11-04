@@ -673,7 +673,7 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 	});
 
 	thrd->state -= cpu_flag::stop;
-	thread_ctrl::notify(*thrd);
+	thrd->state.notify_one(cpu_flag::stop);
 
 	return CELL_OK;
 }
