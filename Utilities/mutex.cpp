@@ -59,14 +59,14 @@ void shared_mutex::imp_wait()
 			break;
 		}
 
-		m_value.wait(old);
+		m_value.wait(old, c_sig);
 	}
 }
 
 void shared_mutex::imp_signal()
 {
 	m_value += c_sig;
-	m_value.notify_one();
+	m_value.notify_one(c_sig);
 }
 
 void shared_mutex::imp_lock(u32 val)
