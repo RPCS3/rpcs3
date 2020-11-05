@@ -392,7 +392,7 @@ struct alignas(16) u128
 	u128 operator<<(u128 shift_value)
 	{
 		const u64 v0 = lo << (shift_value.lo & 63);
-		const u64 v1 = __shiftleft128(lo, hi, shift_value.lo);
+		const u64 v1 = __shiftleft128(lo, hi, static_cast<uchar>(shift_value.lo));
 
 		u128 value;
 		value.lo = (shift_value.lo & 64) ? 0 : v0;
@@ -403,7 +403,7 @@ struct alignas(16) u128
 	u128 operator>>(u128 shift_value)
 	{
 		const u64 v0 = hi >> (shift_value.lo & 63);
-		const u64 v1 = __shiftright128(lo, hi, shift_value.lo);
+		const u64 v1 = __shiftright128(lo, hi, static_cast<uchar>(shift_value.lo));
 
 		u128 value;
 		value.lo = (shift_value.lo & 64) ? v0 : v1;
