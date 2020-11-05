@@ -448,7 +448,7 @@ void cpu_thread::operator()()
 		return;
 	}
 
-	atomic_storage_futex::set_notify_callback([](const void*, u64 progress)
+	atomic_wait_engine::set_notify_callback([](const void*, u64 progress)
 	{
 		static thread_local bool wait_set = false;
 
@@ -514,7 +514,7 @@ void cpu_thread::operator()()
 				ptr->compare_and_swap(_this, nullptr);
 			}
 
-			atomic_storage_futex::set_notify_callback(nullptr);
+			atomic_wait_engine::set_notify_callback(nullptr);
 
 			g_tls_log_control = [](const char*, u64){};
 

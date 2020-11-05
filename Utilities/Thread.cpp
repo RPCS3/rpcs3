@@ -1848,7 +1848,7 @@ void thread_base::initialize(void (*error_cb)(), bool(*wait_cb)(const void*))
 	thread_ctrl::g_tls_error_callback = error_cb;
 
 	// Initialize atomic wait callback
-	atomic_storage_futex::set_wait_callback(wait_cb);
+	atomic_wait_engine::set_wait_callback(wait_cb);
 
 	g_tls_log_prefix = []
 	{
@@ -1908,7 +1908,7 @@ void thread_base::notify_abort() noexcept
 	while (auto ptr = m_state_notifier.load())
 	{
 		// Since this function is not perfectly implemented, run it in a loop
-		if (atomic_storage_futex::raw_notify(ptr, tid))
+		if (atomic_wait_engine::raw_notify(ptr, tid))
 		{
 			break;
 		}
@@ -1973,7 +1973,7 @@ bool thread_base::finalize(thread_state result_state) noexcept
 
 void thread_base::finalize() noexcept
 {
-	atomic_storage_futex::set_wait_callback(nullptr);
+	atomic_wait_engine::set_wait_callback(nullptr);
 	g_tls_log_prefix = []() -> std::string { return {}; };
 	thread_ctrl::g_tls_this_thread = nullptr;
 }

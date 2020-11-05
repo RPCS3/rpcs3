@@ -108,6 +108,15 @@ cmp_mask(u32 size1, __m128i mask1, __m128i val1, u32 size2, __m128i mask2, __m12
 		return true;
 	}
 
+	// Compare only masks, new value is not available in this mode
+	if ((size1 | size2) == umax)
+	{
+		// Simple mask overlap
+		const auto v0 = _mm_and_si128(mask1, mask2);
+		const auto v1 = _mm_packs_epi16(v0, v0);
+		return _mm_cvtsi128_si64(v1) != 0;
+	}
+
 	// Generate masked value inequality bits
 	const auto v0 = _mm_and_si128(_mm_and_si128(mask1, mask2), _mm_xor_si128(val1, val2));
 
@@ -137,7 +146,7 @@ cmp_mask(u32 size1, __m128i mask1, __m128i val1, u32 size2, __m128i mask2, __m12
 	return true;
 }
 
-namespace
+namespace atomic_wait
 {
 	// Essentially a fat semaphore
 	struct alignas(64) cond_handle
@@ -184,7 +193,7 @@ namespace
 }
 
 // Max allowed thread number is chosen to fit in 16 bits
-static std::aligned_storage_t<sizeof(cond_handle), alignof(cond_handle)> s_cond_list[UINT16_MAX]{};
+static std::aligned_storage_t<sizeof(atomic_wait::cond_handle), alignof(atomic_wait::cond_handle)> s_cond_list[UINT16_MAX]{};
 
 // Used to allow concurrent notifying
 static atomic_t<u16> s_cond_refs[UINT16_MAX + 1]{};
@@ -234,7 +243,7 @@ static u32 cond_alloc()
 			const u32 id = group * 64 + std::countr_one(bits);
 
 			// Construct inplace before it can be used
-			new (s_cond_list + id) cond_handle();
+			new (s_cond_list + id) atomic_wait::cond_handle();
 
 			// Add first reference
 			verify(HERE), !s_cond_refs[id]++;
@@ -248,11 +257,11 @@ static u32 cond_alloc()
 	return 0;
 }
 
-static cond_handle* cond_get(u32 cond_id)
+static atomic_wait::cond_handle* cond_get(u32 cond_id)
 {
 	if (cond_id - 1 < u32{UINT16_MAX}) [[likely]]
 	{
-		return std::launder(reinterpret_cast<cond_handle*>(s_cond_list + (cond_id - 1)));
+		return std::launder(reinterpret_cast<atomic_wait::cond_handle*>(s_cond_list + (cond_id - 1)));
 	}
 
 	return nullptr;
@@ -322,7 +331,7 @@ static u32 cond_lock(atomic_t<u16>* sema)
 	return 0;
 }
 
-namespace
+namespace atomic_wait
 {
 #define MAX_THREADS (56)
 
@@ -407,16 +416,16 @@ namespace
 }
 
 // Main hashtable for atomic wait.
-alignas(128) static sync_var s_hashtable[s_hashtable_size]{};
+alignas(128) static atomic_wait::sync_var s_hashtable[s_hashtable_size]{};
 
-namespace
+namespace atomic_wait
 {
 	struct slot_info
 	{
 		constexpr slot_info() noexcept = default;
 
 		// Branch extension
-		sync_var branch[48 - s_hashtable_power]{};
+		atomic_wait::sync_var branch[48 - s_hashtable_power]{};
 	};
 }
 
@@ -424,7 +433,7 @@ namespace
 #define MAX_SLOTS (4096)
 
 // Array of slot branch objects
-alignas(128) static slot_info s_slot_list[MAX_SLOTS]{};
+alignas(128) static atomic_wait::slot_info s_slot_list[MAX_SLOTS]{};
 
 // Allocation bits
 static atomic_t<u64, 64> s_slot_bits[MAX_SLOTS / 64]{};
@@ -482,7 +491,7 @@ static u64 slot_alloc()
 
 #undef MAX_SLOTS
 
-static sync_var* slot_get(std::uintptr_t iptr, sync_var* loc, u64 lv = 0)
+static atomic_wait::sync_var* slot_get(std::uintptr_t iptr, atomic_wait::sync_var* loc, u64 lv = 0)
 {
 	if (!loc)
 	{
@@ -523,7 +532,7 @@ static void slot_free(u64 id)
 	s_slot_sema--;
 }
 
-static void slot_free(std::uintptr_t iptr, sync_var* loc, u64 lv = 0)
+static void slot_free(std::uintptr_t iptr, atomic_wait::sync_var* loc, u64 lv = 0)
 {
 	const u64 value = loc->addr_ref.load();
 
@@ -568,7 +577,7 @@ SAFE_BUFFERS void
 #ifdef _WIN32
 __vectorcall
 #endif
-atomic_storage_futex::wait(const void* data, u32 size, __m128i old_value, u64 timeout, __m128i mask)
+atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 timeout, __m128i mask)
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
@@ -576,7 +585,7 @@ atomic_storage_futex::wait(const void* data, u32 size, __m128i old_value, u64 ti
 	u64 slot_a = -1;
 
 	// Found slot object
-	sync_var* slot = nullptr;
+	atomic_wait::sync_var* slot = nullptr;
 
 	auto install_op = [&](u64& value) -> u64
 	{
@@ -616,7 +625,7 @@ atomic_storage_futex::wait(const void* data, u32 size, __m128i old_value, u64 ti
 	// Search detail
 	u64 lv = 0;
 
-	for (sync_var* ptr = &s_hashtable[iptr % s_hashtable_size];;)
+	for (atomic_wait::sync_var* ptr = &s_hashtable[iptr % s_hashtable_size];;)
 	{
 		auto [_old, ok] = ptr->addr_ref.fetch_op(install_op);
 
@@ -899,7 +908,7 @@ alert_sema(atomic_t<u16>* sema, const void* data, u64 info, u32 size, __m128i ma
 	return ok;
 }
 
-void atomic_storage_futex::set_wait_callback(bool(*cb)(const void* data))
+void atomic_wait_engine::set_wait_callback(bool(*cb)(const void* data))
 {
 	if (cb)
 	{
@@ -911,7 +920,7 @@ void atomic_storage_futex::set_wait_callback(bool(*cb)(const void* data))
 	}
 }
 
-void atomic_storage_futex::set_notify_callback(void(*cb)(const void*, u64))
+void atomic_wait_engine::set_notify_callback(void(*cb)(const void*, u64))
 {
 	if (cb)
 	{
@@ -923,7 +932,7 @@ void atomic_storage_futex::set_notify_callback(void(*cb)(const void*, u64))
 	}
 }
 
-bool atomic_storage_futex::raw_notify(const void* data, u64 thread_id)
+bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
@@ -965,7 +974,7 @@ void
 #ifdef _WIN32
 __vectorcall
 #endif
-atomic_storage_futex::notify_one(const void* data, u32 size, __m128i mask, __m128i new_value)
+atomic_wait_engine::notify_one(const void* data, u32 size, __m128i mask, __m128i new_value)
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
@@ -998,7 +1007,7 @@ SAFE_BUFFERS void
 #ifdef _WIN32
 __vectorcall
 #endif
-atomic_storage_futex::notify_all(const void* data, u32 size, __m128i mask, __m128i new_value)
+atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i new_value)
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 

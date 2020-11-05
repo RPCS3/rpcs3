@@ -14,8 +14,16 @@ enum class atomic_wait_timeout : u64
 	inf = 0xffffffffffffffff,
 };
 
+// Unused externally
+namespace atomic_wait
+{
+	struct sync_var;
+	struct slot_info;
+	struct sema_handle;
+}
+
 // Helper for waitable atomics (as in C++20 std::atomic)
-struct atomic_storage_futex
+struct atomic_wait_engine
 {
 private:
 	template <typename T, std::size_t Align>
@@ -1242,12 +1250,12 @@ public:
 		if constexpr (sizeof(T) <= 8)
 		{
 			const __m128i old = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(old_value));
-			atomic_storage_futex::wait(&m_data, sizeof(T), old, static_cast<u64>(timeout), _mm_set1_epi64x(-1));
+			atomic_wait_engine::wait(&m_data, sizeof(T), old, static_cast<u64>(timeout), _mm_set1_epi64x(-1));
 		}
 		else if constexpr (sizeof(T) == 16)
 		{
 			const __m128i old = std::bit_cast<__m128i>(old_value);
-			atomic_storage_futex::wait(&m_data, sizeof(T), old, static_cast<u64>(timeout), _mm_set1_epi64x(-1));
+			atomic_wait_engine::wait(&m_data, sizeof(T), old, static_cast<u64>(timeout), _mm_set1_epi64x(-1));
 		}
 	}
 
@@ -1258,73 +1266,87 @@ public:
 		{
 			const __m128i old = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(old_value));
 			const __m128i mask = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(mask_value));
-			atomic_storage_futex::wait(&m_data, sizeof(T), old, static_cast<u64>(timeout), mask);
+			atomic_wait_engine::wait(&m_data, sizeof(T), old, static_cast<u64>(timeout), mask);
 		}
 		else if constexpr (sizeof(T) == 16)
 		{
 			const __m128i old = std::bit_cast<__m128i>(old_value);
 			const __m128i mask = std::bit_cast<__m128i>(mask_value);
-			atomic_storage_futex::wait(&m_data, sizeof(T), old, static_cast<u64>(timeout), mask);
+			atomic_wait_engine::wait(&m_data, sizeof(T), old, static_cast<u64>(timeout), mask);
 		}
 	}
 
 	void notify_one() noexcept
 	{
-		if constexpr (sizeof(T) <= 8)
-		{
-			const __m128i _new = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(load()));
-			atomic_storage_futex::notify_one(&m_data, sizeof(T), _mm_set1_epi64x(-1), _new);
-		}
-		else if constexpr (sizeof(T) == 16)
-		{
-			const __m128i _new = std::bit_cast<__m128i>(load());
-			atomic_storage_futex::notify_one(&m_data, sizeof(T), _mm_set1_epi64x(-1), _new);
-		}
+		atomic_wait_engine::notify_one(&m_data, -1, _mm_set1_epi64x(-1), _mm_setzero_si128());
 	}
 
+	// Notify with mask, allowing to not wake up thread which doesn't wait on this mask
 	void notify_one(type mask_value) noexcept
 	{
 		if constexpr (sizeof(T) <= 8)
 		{
 			const __m128i mask = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(mask_value));
-			const __m128i _new = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(load()));
-			atomic_storage_futex::notify_one(&m_data, sizeof(T), mask, _new);
+			atomic_wait_engine::notify_one(&m_data, -1, mask, _mm_setzero_si128());
 		}
 		else if constexpr (sizeof(T) == 16)
 		{
 			const __m128i mask = std::bit_cast<__m128i>(mask_value);
-			const __m128i _new = std::bit_cast<__m128i>(load());
-			atomic_storage_futex::notify_one(&m_data, sizeof(T), mask, _new);
+			atomic_wait_engine::notify_one(&m_data, -1, mask, _mm_setzero_si128());
+		}
+	}
+
+	// Notify with mask and value, allowing to not wake up thread which doesn't wait on them
+	void notify_one(type mask_value, type new_value) noexcept
+	{
+		if constexpr (sizeof(T) <= 8)
+		{
+			const __m128i mask = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(mask_value));
+			const __m128i _new = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(new_value));
+			atomic_wait_engine::notify_one(&m_data, sizeof(T), mask, _new);
+		}
+		else if constexpr (sizeof(T) == 16)
+		{
+			const __m128i mask = std::bit_cast<__m128i>(mask_value);
+			const __m128i _new = std::bit_cast<__m128i>(new_value);
+			atomic_wait_engine::notify_one(&m_data, sizeof(T), mask, _new);
 		}
 	}
 
 	void notify_all() noexcept
 	{
-		if constexpr (sizeof(T) <= 8)
-		{
-			const __m128i _new = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(load()));
-			atomic_storage_futex::notify_all(&m_data, sizeof(T), _mm_set1_epi64x(-1), _new);
-		}
-		else if constexpr (sizeof(T) == 16)
-		{
-			const __m128i _new = std::bit_cast<__m128i>(load());
-			atomic_storage_futex::notify_all(&m_data, sizeof(T), _mm_set1_epi64x(-1), _new);
-		}
+		atomic_wait_engine::notify_all(&m_data, -1, _mm_set1_epi64x(-1), _mm_setzero_si128());
 	}
 
+	// Notify all threads with mask, allowing to not wake up threads which don't wait on them
 	void notify_all(type mask_value) noexcept
 	{
 		if constexpr (sizeof(T) <= 8)
 		{
 			const __m128i mask = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(mask_value));
-			const __m128i _new = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(load()));
-			atomic_storage_futex::notify_all(&m_data, sizeof(T), mask, _new);
+			atomic_wait_engine::notify_all(&m_data, -1, mask, _mm_setzero_si128());
 		}
 		else if constexpr (sizeof(T) == 16)
 		{
 			const __m128i mask = std::bit_cast<__m128i>(mask_value);
-			const __m128i _new = std::bit_cast<__m128i>(load());
-			atomic_storage_futex::notify_all(&m_data, sizeof(T), mask, _new);
+			atomic_wait_engine::notify_all(&m_data, -1, mask, _mm_setzero_si128());
+		}
+	}
+
+	// Notify all threads with mask and value, allowing to not wake up threads which don't wait on them
+	void notify_all(type mask_value, type new_value) noexcept
+	{
+		if constexpr (sizeof(T) <= 8)
+		{
+			const __m128i mask = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(mask_value));
+			const __m128i _new = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(new_value));
+			atomic_wait_engine::notify_all(&m_data, sizeof(T), mask, _new);
+		}
+		else if constexpr (sizeof(T) == 16)
+		{
+			const __m128i mask = std::bit_cast<__m128i>(mask_value);
+			const __m128i _new = std::bit_cast<__m128i>(new_value);
+			atomic_wait_engine::notify_all(&m_data, sizeof(T), mask, _new);
 		}
 	}
 };
