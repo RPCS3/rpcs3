@@ -30,6 +30,7 @@
 #include <cfenv>
 #include <atomic>
 #include <thread>
+#include <shared_mutex>
 
 using spu_rdata_t = decltype(spu_thread::rdata);
 

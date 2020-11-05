@@ -82,7 +82,7 @@ error_code sys_timer_destroy(ppu_thread& ppu, u32 timer_id)
 
 	const auto timer = idm::withdraw<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer) -> CellError
 	{
-		if (std::shared_lock lock(timer.mutex); lv2_event_queue::check(timer.port))
+		if (reader_lock lock(timer.mutex); lv2_event_queue::check(timer.port))
 		{
 			return CELL_EISCONN;
 		}

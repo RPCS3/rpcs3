@@ -6,7 +6,6 @@
 #include "vm_var.h"
 
 #include "Utilities/mutex.h"
-#include "Utilities/cond.h"
 #include "Utilities/Thread.h"
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/address_range.h"
@@ -17,6 +16,7 @@
 #include "Emu/perf_meter.hpp"
 #include <thread>
 #include <deque>
+#include <shared_mutex>
 
 LOG_CHANNEL(vm_log, "VM");
 

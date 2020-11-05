@@ -40,7 +40,7 @@ struct lv2_timer_context : lv2_obj
 
 	void get_information(sys_timer_information_t& info)
 	{
-		std::shared_lock lock(mutex);
+		reader_lock lock(mutex);
 
 		if (state == SYS_TIMER_STATE_RUN)
 		{

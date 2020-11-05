@@ -2,7 +2,6 @@
 
 #include "types.h"
 #include "util/atomic.hpp"
-#include <shared_mutex>
 
 // Lightweight condition variable
 class cond_variable

@@ -986,7 +986,7 @@ error_code cellSearchPrepareFile(vm::cptr<char> path)
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	std::shared_lock lock(search->links_mutex);
+	reader_lock lock(search->links_mutex);
 	auto found = search->content_links.find(path.get_ptr());
 	if (found != search->content_links.end())
 	{

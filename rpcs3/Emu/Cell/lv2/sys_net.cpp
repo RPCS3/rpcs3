@@ -27,6 +27,7 @@
 
 #include <limits>
 #include <chrono>
+#include <shared_mutex>
 
 LOG_CHANNEL(sys_net);
 LOG_CHANNEL(sys_net_dump);
@@ -545,7 +546,7 @@ struct nt_p2p_port
 		memcpy(packet_data+sizeof(u16), &header, sizeof(lv2_socket::p2ps_i::encapsulated_tcp));
 		if(datasize)
 			memcpy(packet_data+sizeof(u16)+sizeof(lv2_socket::p2ps_i::encapsulated_tcp), data, datasize);
-		
+
 		auto* hdr_ptr = reinterpret_cast<lv2_socket::p2ps_i::encapsulated_tcp *>(packet_data+sizeof(u16));
 		hdr_ptr->checksum = 0;
 		hdr_ptr->checksum = tcp_checksum(reinterpret_cast<u16 *>(hdr_ptr), sizeof(lv2_socket::p2ps_i::encapsulated_tcp) + datasize);
@@ -585,7 +586,7 @@ struct nt_p2p_port
 
 			if (sock.p2ps.status != lv2_socket::p2ps_i::stream_status::stream_connected && sock.p2ps.status != lv2_socket::p2ps_i::stream_status::stream_handshaking)
 				return false;
-			
+
 			dump_packet(tcp_header);
 
 			if (tcp_header->flags == lv2_socket::p2ps_i::ACK)
@@ -695,7 +696,7 @@ struct nt_p2p_port
 
 		if (!sock || !sock.ret)
 			return false;
-		
+
 		return true;
 	}
 
@@ -882,7 +883,7 @@ struct nt_p2p_port
 		}
 
 		auto* tcp_header = reinterpret_cast<lv2_socket::p2ps_i::encapsulated_tcp*>(sp_data);
-		
+
 		// Validate signature & length
 		if (tcp_header->signature != lv2_socket::p2ps_i::U2S_sig)
 		{
@@ -946,7 +947,7 @@ struct network_thread
 	shared_mutex s_nw_mutex;
 
 	shared_mutex list_p2p_ports_mutex;
-	std::map<u16, nt_p2p_port> list_p2p_ports{};	
+	std::map<u16, nt_p2p_port> list_p2p_ports{};
 
 	static constexpr auto thread_name = "Network Thread";
 
@@ -2562,7 +2563,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 				cur_total_len -= cur_data_len;
 				sock.p2ps.cur_seq += cur_data_len;
 			}
-	
+
 			native_result = len;
 			return true;
 		}
@@ -2711,7 +2712,7 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 		if (sock.type == SYS_NET_SOCK_DGRAM_P2P || sock.type == SYS_NET_SOCK_STREAM_P2P)
 		{
 			return {};
-		}		
+		}
 
 		if (optlen >= sizeof(s32))
 		{
@@ -2806,7 +2807,7 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 #else
 				native_timeo.tv_sec = ::narrow<int>(reinterpret_cast<sys_net_timeval*>(optval_buf.data())->tv_sec);
 				native_timeo.tv_usec = ::narrow<int>(reinterpret_cast<sys_net_timeval*>(optval_buf.data())->tv_usec);
-#endif 
+#endif
 				break;
 			}
 			case SYS_NET_SO_LINGER:
@@ -3134,7 +3135,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 							signaled++;
 					}
 				}
-				else 
+				else
 				{
 					// Check for fake packet for dns interceptions
 					const auto nph = g_fxo->get<named_thread<np_handler>>();

@@ -750,7 +750,7 @@ error_code cellGemGetInfo(vm::ptr<CellGemInfo> info)
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	std::shared_lock lock(gem->mtx);
+	reader_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -798,7 +798,7 @@ error_code cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::pt
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	std::shared_lock lock(gem->mtx);
+	reader_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -824,7 +824,7 @@ error_code cellGemGetRumble(u32 gem_num, vm::ptr<u8> rumble)
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	std::shared_lock lock(gem->mtx);
+	reader_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -847,7 +847,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	std::shared_lock lock(gem->mtx);
+	reader_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -889,7 +889,7 @@ error_code cellGemGetStatusFlags(u32 gem_num, vm::ptr<u64> flags)
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	std::shared_lock lock(gem->mtx);
+	reader_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -912,7 +912,7 @@ error_code cellGemGetTrackerHue(u32 gem_num, vm::ptr<u32> hue)
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	std::shared_lock lock(gem->mtx);
+	reader_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{

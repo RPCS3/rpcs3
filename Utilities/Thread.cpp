@@ -1397,7 +1397,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		{
 			if (auto mem = vm::get(vm::any, addr))
 			{
-				std::shared_lock lock(pf_entries->mutex);
+				reader_lock lock(pf_entries->mutex);
 
 				for (const auto& entry : pf_entries->entries)
 				{

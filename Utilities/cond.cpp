@@ -50,10 +50,10 @@ void cond_variable::imp_wake(u32 _count) noexcept
 	if (_count > 1 || ((_old + (c_signal_mask & (0 - c_signal_mask))) & c_signal_mask) == c_signal_mask)
 	{
 		// Resort to notify_all if signal count reached max
-		m_value.notify_all();
+		m_value.notify_all(c_signal_mask);
 	}
 	else
 	{
-		m_value.notify_one();
+		m_value.notify_one(c_signal_mask);
 	}
 }

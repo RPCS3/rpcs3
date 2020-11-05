@@ -6,7 +6,6 @@
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
-#include <shared_mutex>
 
 LOG_CHANNEL(sys_memory);
 
@@ -162,7 +161,7 @@ error_code sys_memory_free(cpu_thread& cpu, u32 addr)
 	}
 
 	const auto size = verify(HERE, vm::dealloc(addr));
-	std::shared_lock{id_manager::g_mutex}, ct->used -= size;
+	reader_lock{id_manager::g_mutex}, ct->used -= size;
 	return CELL_OK;
 }
 

@@ -593,7 +593,7 @@ error_code sys_ppu_thread_get_page_fault_context(ppu_thread& ppu, u32 thread_id,
 
 	// We can only get a context if the thread is being suspended for a page fault.
 	auto pf_events = g_fxo->get<page_fault_event_entries>();
-	std::shared_lock lock(pf_events->pf_mutex);
+	reader_lock lock(pf_events->pf_mutex);
 
 	const auto evt = pf_events->events.find(thread.ptr.get());
 	if (evt == pf_events->events.end())

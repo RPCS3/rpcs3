@@ -463,7 +463,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -619,7 +619,7 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -675,7 +675,7 @@ error_code sceNpTrophySetSoundLevel(u32 context, u32 handle, u32 level, u64 opti
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -698,7 +698,7 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -810,7 +810,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -896,7 +896,7 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -1057,7 +1057,7 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -1085,7 +1085,7 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -1125,7 +1125,7 @@ error_code sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer,
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -1175,7 +1175,7 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
