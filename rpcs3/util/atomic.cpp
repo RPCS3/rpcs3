@@ -22,11 +22,11 @@ static constexpr uint s_hashtable_power = 16;
 // Total number of entries, should be a power of 2.
 static constexpr std::uintptr_t s_hashtable_size = 1u << s_hashtable_power;
 
-// Pointer mask without bits used as hash, assuming signed 48-bit pointers.
-static constexpr u64 s_pointer_mask = s_hashtable_power > 7 ? 0xffff'ffff'ffff & ~((s_hashtable_size - 1)) : 0xffff'ffff'ffff;
+// Pointer mask without bits used as hash, assuming 47-bit pointers.
+static constexpr u64 s_pointer_mask = s_hashtable_power > 7 ? 0x7fff'ffff'ffff & ~((s_hashtable_size - 1)) : 0x7fff'ffff'ffff;
 
-// Max number of waiters is 32767.
-static constexpr u64 s_waiter_mask = s_hashtable_power > 7 ? 0x7fff'0000'0000'0000 : 0x7f00'0000'0000'0000;
+// Max number of waiters is 65535.
+static constexpr u64 s_waiter_mask = s_hashtable_power > 7 ? 0x7fff'8000'0000'0000 : 0x7f80'0000'0000'0000;
 
 // Bit indicates that more than one.
 static constexpr u64 s_collision_bit = 0x8000'0000'0000'0000;
