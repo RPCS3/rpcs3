@@ -1,8 +1,6 @@
 ﻿#include "stdafx.h"
 #include "VKHelpers.h"
 #include "../GCM.h"
-#include "../RSXThread.h"
-#include "../RSXTexture.h"
 #include "../rsx_utils.h"
 #include "VKFormats.h"
 #include "VKCompute.h"

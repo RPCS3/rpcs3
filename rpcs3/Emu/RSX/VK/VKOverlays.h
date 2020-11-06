@@ -9,6 +9,8 @@
 
 #include "../Overlays/overlays.h"
 
+#include "Utilities/hash.h"
+
 #define VK_OVERLAY_MAX_DRAW_CALLS 1024
 
 namespace vk

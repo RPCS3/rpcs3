@@ -4,6 +4,7 @@
 #include "memory_viewer_panel.h"
 #include "table_item_delegate.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/gcm_printing.h"
 
 #include <QHBoxLayout>
 #include <QHeaderView>

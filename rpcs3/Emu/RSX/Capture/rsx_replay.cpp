@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "rsx_replay.h"
 
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/RSX/RSXThread.h"

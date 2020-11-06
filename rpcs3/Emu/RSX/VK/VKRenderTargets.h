@@ -3,10 +3,7 @@
 #include "stdafx.h"
 #include "VKHelpers.h"
 #include "VKFormats.h"
-#include "../GCM.h"
 #include "../Common/surface_store.h"
-#include "../Common/TextureUtils.h"
-#include "../Common/texture_cache_utils.h"
 
 namespace vk
 {
