@@ -16,6 +16,7 @@
 #include <linux/futex.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <fcntl.h>
 #endif
 #include <algorithm>
 #include <ctime>

@@ -17,9 +17,141 @@ enum class atomic_wait_timeout : u64
 // Unused externally
 namespace atomic_wait
 {
+	constexpr uint max_list = 8;
+
 	struct sync_var;
 	struct slot_info;
 	struct sema_handle;
+
+	struct info
+	{
+		const void* data;
+		u32 size;
+		__m128i old;
+		__m128i mask;
+
+		template <typename T>
+		constexpr void set_value(T value)
+		{
+			static_assert((sizeof(T) & (sizeof(T) - 1)) == 0);
+			static_assert(sizeof(T) <= 16);
+
+			if constexpr (sizeof(T) <= 8)
+			{
+				old = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>, T>(value));
+			}
+			else if constexpr (sizeof(T) == 16)
+			{
+				old = std::bit_cast<__m128i>(value);
+			}
+		}
+
+		void set_value()
+		{
+			old = _mm_setzero_si128();
+		}
+
+		template <typename T>
+		constexpr void set_mask(T value)
+		{
+			static_assert((sizeof(T) & (sizeof(T) - 1)) == 0);
+			static_assert(sizeof(T) <= 16);
+
+			if constexpr (sizeof(T) <= 8)
+			{
+				mask = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>, T>(value));
+			}
+			else if constexpr (sizeof(T) == 16)
+			{
+				mask = std::bit_cast<__m128i>(value);
+			}
+		}
+
+		void set_mask()
+		{
+			mask = _mm_set1_epi64x(-1);
+		}
+	};
+
+	template <uint Max, typename... T>
+	class list
+	{
+		static_assert(Max <= max_list, "Too many elements in the atomic wait list.");
+
+		// Null-terminated list of wait info
+		info m_info[Max + 1]{};
+
+	public:
+		constexpr list() noexcept = default;
+
+		constexpr list(const list&) noexcept = default;
+
+		constexpr list& operator=(const list&) noexcept = default;
+
+		template <typename... U, std::size_t... Align>
+		constexpr list(atomic_t<U, Align>&... vars)
+			: m_info{{&vars.raw(), sizeof(U), _mm_setzero_si128(), _mm_set1_epi64x(-1)}...}
+		{
+			static_assert(sizeof...(U) <= Max);
+		}
+
+		template <typename... U>
+		constexpr list& values(U... values)
+		{
+			static_assert(sizeof...(U) <= Max);
+
+			auto* ptr = m_info;
+			((ptr++)->template set_value<T>(values), ...);
+			return *this;
+		}
+
+		template <typename... U>
+		constexpr list& masks(T... masks)
+		{
+			static_assert(sizeof...(U) <= Max);
+
+			auto* ptr = m_info;
+			((ptr++)->template set_mask<T>(masks), ...);
+			return *this;
+		}
+
+		template <uint Index, typename T2, std::size_t Align, typename U>
+		constexpr void set(atomic_t<T2, Align>& var, U value)
+		{
+			static_assert(Index < Max);
+
+			m_info[Index].data = &var.raw();
+			m_info[Index].size = sizeof(T2);
+			m_info[Index].template set_value<T2>(value);
+			m_info[Index].mask = _mm_set1_epi64x(-1);
+		}
+
+		template <uint Index, typename T2, std::size_t Align, typename U, typename V>
+		constexpr void set(atomic_t<T2, Align>& var, U value, V mask)
+		{
+			static_assert(Index < Max);
+
+			m_info[Index].data = &var.raw();
+			m_info[Index].size = sizeof(T2);
+			m_info[Index].template set_value<T2>(value);
+			m_info[Index].template set_mask<T2>(mask);
+		}
+
+		// Timeout is discouraged
+		void wait(atomic_wait_timeout timeout = atomic_wait_timeout::inf);
+
+		// Same as wait
+		void start()
+		{
+			wait();
+		}
+	};
+
+	template <typename... T, std::size_t... Align>
+	list(atomic_t<T, Align>&... vars) -> list<sizeof...(T), T...>;
+
+	// RDTSC with adjustment for being unique
+	u64 get_unique_tsc();
 }
 
 // Helper for waitable atomics (as in C++20 std::atomic)
@@ -29,11 +161,14 @@ private:
 	template <typename T, std::size_t Align>
 	friend class atomic_t;
 
+	template <uint Max, typename... T>
+	friend class atomic_wait::list;
+
 	static void
 #ifdef _WIN32
 	__vectorcall
 #endif
-	wait(const void* data, u32 size, __m128i old128, u64 timeout, __m128i mask128);
+	wait(const void* data, u32 size, __m128i old128, u64 timeout, __m128i mask128, atomic_wait::info* extension = nullptr);
 
 	static void
 #ifdef _WIN32
@@ -52,6 +187,14 @@ public:
 	static void set_notify_callback(void(*cb)(const void* data, u64 progress));
 	static bool raw_notify(const void* data, u64 thread_id = 0);
 };
+
+template <uint Max, typename... T>
+void atomic_wait::list<Max, T...>::wait(atomic_wait_timeout timeout)
+{
+	static_assert(Max, "Cannot initiate atomic wait with empty list.");
+
+	atomic_wait_engine::wait(m_info[0].data, m_info[0].size, m_info[0].old, static_cast<u64>(timeout), m_info[0].mask, m_info + 1);
+}
 
 // Helper class, provides access to compiler-specific atomic intrinsics
 template <typename T, std::size_t Size = sizeof(T)>
