@@ -636,11 +636,14 @@ static void slot_free(std::uintptr_t iptr, atomic_wait::sync_var* loc, u64 lv = 
 	}
 }
 
-SAFE_BUFFERS void
-#ifdef _WIN32
-__vectorcall
-#endif
-atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 timeout, __m128i mask)
+static void slot_free(atomic_wait::sync_var* slot, const void* data)
+{
+	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
+
+	slot_free(iptr, &s_hashtable[iptr % s_hashtable_size]);
+}
+
+static atomic_wait::sync_var* slot_alloc(const void* data)
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
@@ -704,14 +707,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 		if (!ok)
 		{
 			// Expected only on top level
-			if (timeout + 1 || ptr_cmp<false>(data, size, old_value, mask))
-			{
-				return;
-			}
-
-			// TODO
-			busy_wait(30000);
-			continue;
+			return nullptr;
 		}
 
 		if (!_old || (_old & s_pointer_mask) == (iptr & s_pointer_mask))
@@ -737,6 +733,19 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 		lv = eq_bits + 1;
 	}
 
+	return slot;
+}
+
+SAFE_BUFFERS void
+#ifdef _WIN32
+__vectorcall
+#endif
+atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 timeout, __m128i mask)
+{
+	const auto slot = slot_alloc(data);
+
+	verify(HERE), slot;
+
 	const u32 cond_id = cond_alloc();
 
 	if (cond_id == 0)
@@ -751,7 +760,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 		if (timeout + 1 || ptr_cmp<false>(data, size, old_value, mask))
 		{
 			cond_free(cond_id);
-			slot_free(iptr, &s_hashtable[iptr % s_hashtable_size]);
+			slot_free(slot, data);
 			return;
 		}
 
@@ -912,7 +921,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 
 	slot->sema_free(sema);
 
-	slot_free(iptr, &s_hashtable[iptr % s_hashtable_size]);
+	slot_free(slot, data);
 
 	s_tls_wait_cb(nullptr);
 }
