@@ -977,6 +977,67 @@ void atomic_wait_engine::set_notify_callback(void(*cb)(const void*, u64))
 
 bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 {
+	// Special operation mode. Note that this is not atomic.
+	if (!data)
+	{
+		// Special path: search thread_id without pointer information
+		for (u32 i = 1; i < UINT16_MAX; i++)
+		{
+			const auto [_, ok] = s_cond_refs[i].fetch_op([&](u32& ref)
+			{
+				if (!ref)
+				{
+					// Skip dead semaphores
+					return false;
+				}
+
+				if (thread_id)
+				{
+					u64 tid = 0;
+					std::memcpy(&tid, &cond_get(i)->tid, sizeof(tid));
+
+					if (tid != thread_id)
+					{
+						// Check thread first without locking (memory may be uninitialized)
+						return false;
+					}
+				}
+
+				if (ref < UINT32_MAX)
+				{
+					// Need to busy loop otherwise (TODO)
+					ref++;
+				}
+
+				return true;
+			});
+
+			if (ok) [[unlikely]]
+			{
+				const auto cond = cond_get(i);
+
+				if (!thread_id || cond->tid == thread_id)
+				{
+					if (cond->forced_wakeup())
+					{
+						cond->alert_native();
+
+						if (thread_id)
+						{
+							// Only if thread_id is speficied, stop only it and return true.
+							cond_free(i);
+							return true;
+						}
+					}
+				}
+
+				cond_free(i);
+			}
+		}
+
+		return false;
+	}
+
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
 	const auto slot = slot_get(iptr, &s_hashtable[(iptr) % s_hashtable_size]);
