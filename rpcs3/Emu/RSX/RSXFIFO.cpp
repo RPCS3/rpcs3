@@ -3,6 +3,7 @@
 #include "RSXFIFO.h"
 #include "RSXThread.h"
 #include "Capture/rsx_capture.h"
+#include "Emu/Cell/lv2/sys_rsx.h"
 
 namespace rsx
 {
@@ -12,6 +13,11 @@ namespace rsx
 		{
 			m_ctrl = pctrl->ctrl;
 			m_iotable = &pctrl->iomap_table;
+		}
+
+		void FIFO_control::sync_get()
+		{
+			m_ctrl->get.release(m_internal_get);
 		}
 
 		void FIFO_control::inc_get(bool wait)

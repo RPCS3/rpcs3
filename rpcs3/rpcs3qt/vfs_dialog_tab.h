@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "stdafx.h"
-#include "Utilities/Config.h"
 
 #include "gui_settings.h"
 #include "emu_settings.h"
@@ -9,6 +8,11 @@
 
 #include <QListWidget>
 #include <QLabel>
+
+namespace cfg
+{
+	class string;
+}
 
 struct vfs_settings_info
 {

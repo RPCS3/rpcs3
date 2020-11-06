@@ -1,8 +1,6 @@
 ﻿#pragma once
 
 #include "Emu/CPU/CPUThread.h"
-#include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/RSX/rsx_methods.h"
 
 #include <cereal/types/vector.hpp>
