@@ -185,6 +185,63 @@ namespace atomic_wait
 			// Prevent collision between normal wake-up and forced one
 			return ok && _old == 1;
 		}
+
+		void alert_native()
+		{
+#ifdef USE_FUTEX
+			// Use "wake all" arg for robustness, only 1 thread is expected
+			futex(&sync, FUTEX_WAKE_PRIVATE, 0x7fff'ffff);
+#elif defined(USE_STD)
+			// Not super efficient: locking is required to avoid lost notifications
+			mtx.lock();
+			mtx.unlock();
+			cond.notify_all();
+#elif defined(_WIN32)
+			if (NtWaitForAlertByThreadId)
+			{
+				// Sets some sticky alert bit, at least I believe so
+				NtAlertThreadByThreadId(tid);
+			}
+			else
+			{
+				// Can wait in rare cases, which is its annoying weakness
+				NtReleaseKeyedEvent(nullptr, &sync, 1, nullptr);
+			}
+#endif
+		}
+
+		bool try_alert_native()
+		{
+#if defined(USE_FUTEX)
+			return false;
+#elif defined(USE_STD)
+			// Optimistic non-blocking path
+			if (mtx.try_lock())
+			{
+				mtx.unlock();
+				cond.notify_all();
+				return true;
+			}
+
+			return false;
+#elif defined(_WIN32)
+			if (NtAlertThreadByThreadId)
+			{
+				// Don't notify prematurely with this API
+				return false;
+			}
+
+			static LARGE_INTEGER instant{};
+
+			if (NtReleaseKeyedEvent(nullptr, &sync, 1, &instant) != NTSTATUS_SUCCESS)
+			{
+				// Failed to notify immediately
+				return false;
+			}
+
+			return true;
+#endif
+		}
 	};
 
 #ifndef USE_STD
@@ -800,7 +857,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 		}
 		else
 		{
-			if (NtWaitForKeyedEvent(nullptr, sema, false, timeout + 1 ? &qw : nullptr) == NTSTATUS_SUCCESS)
+			if (NtWaitForKeyedEvent(nullptr, &cond->sync, false, timeout + 1 ? &qw : nullptr) == NTSTATUS_SUCCESS)
 			{
 				// Error code assumed to be timeout
 				fallback = true;
@@ -836,7 +893,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 			continue;
 		}
 
-		if (!NtWaitForKeyedEvent(nullptr, sema, false, &instant))
+		if (!NtWaitForKeyedEvent(nullptr, &cond->sync, false, &instant))
 		{
 			// Succeeded in obtaining an event without waiting
 			break;
@@ -885,27 +942,7 @@ alert_sema(atomic_t<u16>* sema, const void* data, u64 info, u32 size, __m128i ma
 		if ((!size && cond->forced_wakeup()) || (size && cond->sync.load() == 1 && cond->sync.compare_and_swap_test(1, 2)))
 		{
 			ok = true;
-
-#ifdef USE_FUTEX
-			// Use "wake all" arg for robustness, only 1 thread is expected
-			futex(&cond->sync, FUTEX_WAKE_PRIVATE, 0x7fff'ffff);
-#elif defined(USE_STD)
-			// Not super efficient: locking is required to avoid lost notifications
-			cond->mtx.lock();
-			cond->mtx.unlock();
-			cond->cond.notify_all();
-#elif defined(_WIN32)
-			if (NtWaitForAlertByThreadId)
-			{
-				// Sets some sticky alert bit, at least I believe so
-				NtAlertThreadByThreadId(cond->tid);
-			}
-			else
-			{
-				// Can wait in rare cases, which is its annoying weakness
-				NtReleaseKeyedEvent(nullptr, sema, 1, nullptr);
-			}
-#endif
+			cond->alert_native();
 		}
 	}
 
@@ -1070,68 +1107,21 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 			{
 				const u32 id = std::countr_zero(bits);
 
-				const auto sema = slot->get_sema(id);
-				const auto cond = cond_get(lock_ids[id]);
-
-#if defined(USE_FUTEX)
-				continue;
-#elif defined(USE_STD)
-				// Optimistic non-blocking path
-				if (cond->mtx.try_lock())
+				if (cond_get(lock_ids[id])->try_alert_native())
 				{
-					cond->mtx.unlock();
-					cond->cond.notify_all();
-				}
-				else
-				{
-					continue;
-				}
-#elif defined(_WIN32)
-				if (NtAlertThreadByThreadId)
-				{
-					continue;
-				}
+					s_tls_notify_cb(data, ++progress);
 
-				static LARGE_INTEGER instant{};
-
-				if (NtReleaseKeyedEvent(nullptr, sema, 1, &instant) != NTSTATUS_SUCCESS)
-				{
-					// Failed to notify immediately
-					continue;
+					// Remove the bit from next stage
+					copy &= ~(1ull << id);
 				}
-#endif
-				s_tls_notify_cb(data, ++progress);
-
-				// Remove the bit from next stage
-				copy &= ~(1ull << id);
 			}
 		}
 
 		// Proceed with remaining bits using "normal" blocking waiting
 		for (u64 bits = copy; bits; bits &= bits - 1)
 		{
-			const u32 id = std::countr_zero(bits);
+			cond_get(lock_ids[std::countr_zero(bits)])->alert_native();
 
-			const auto sema = slot->get_sema(id);
-			const auto cond = cond_get(lock_ids[id]);
-
-#if defined(USE_FUTEX)
-			// Always alerted (result isn't meaningful here)
-			futex(&cond->sync, FUTEX_WAKE_PRIVATE, 0x7fff'ffff);
-#elif defined(USE_STD)
-			cond->mtx.lock();
-			cond->mtx.unlock();
-			cond->cond.notify_all();
-#elif defined(_WIN32)
-			if (NtAlertThreadByThreadId)
-			{
-				NtAlertThreadByThreadId(cond->tid);
-			}
-			else
-			{
-				NtReleaseKeyedEvent(nullptr, sema, 1, nullptr);
-			}
-#endif
 			s_tls_notify_cb(data, ++progress);
 		}
 
