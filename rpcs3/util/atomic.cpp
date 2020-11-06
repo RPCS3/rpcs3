@@ -1198,7 +1198,12 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 		// Cleanup locked notifiers
 		for (u64 bits = lock; bits; bits &= bits - 1)
 		{
-			cond_free(lock_ids[std::countr_zero(bits)]);
+			const u32 id = std::countr_zero(bits);
+
+			if (u32 cond_id = lock_ids[id])
+			{
+				cond_free(cond_id);
+			}
 		}
 
 		s_tls_notify_cb(data, -1);
