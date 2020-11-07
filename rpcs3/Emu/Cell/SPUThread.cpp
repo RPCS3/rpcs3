@@ -1269,17 +1269,19 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 	{
 		v128 lr = _ref<v128>(sp + 16);
 
-		auto is_invalid = [](v128 v)
+		auto is_invalid = [this](v128 v)
 		{
-			const u32 addr = v._u32[3];
+			const u32 addr = v._u32[3] & 0x3FFFC;
 
 			if (v != v128::from32r(addr))
 			{
-				// Non-zero lower words are invalid (because BRSL-like instructions generate only zeroes)
+				// 1) Non-zero lower words are invalid (because BRSL-like instructions generate only zeroes)
+				// 2) Bits normally masked out by indirect braches are considered invalid
 				return true;
 			}
 
-			return !!(addr & ~0x3FFFC);
+			const u32 op = _ref<u32>(addr);
+			return s_spu_itype.decode(op) == spu_itype::UNK || !op;
 		};
 
 		if (is_invalid(lr))
