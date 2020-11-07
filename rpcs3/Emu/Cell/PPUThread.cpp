@@ -591,7 +591,13 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 		auto is_invalid = [](u64 addr)
 		{
-			return (addr > UINT32_MAX || addr % 4 || !vm::check_addr(static_cast<u32>(addr), 1, vm::page_executable));
+			if (addr > UINT32_MAX || addr % 4 || !vm::check_addr(static_cast<u32>(addr), 1, vm::page_executable))
+			{
+				return true;
+			}
+
+			// Ignore HLE stop address
+			return addr == ppu_function_manager::addr + 8;
 		};
 
 		if (is_invalid(addr))
