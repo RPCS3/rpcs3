@@ -538,7 +538,7 @@ std::string ppu_thread::dump_callstack() const
 	for (const auto& sp : dump_callstack_list())
 	{
 		// TODO: function addresses too
-		fmt::append(ret, "> from 0x%08x (r1=0x%08x)\n", sp.first, sp.second);
+		fmt::append(ret, "> from 0x%08x (sp=0x%08x)\n", sp.first, sp.second);
 	}
 
 	return ret;
@@ -579,17 +579,39 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 	std::vector<std::pair<u32, u32>> call_stack_list;
 
+	bool first = true;
+
 	for (
-		u64 sp = *vm::get_super_ptr<u64>(stack_ptr);
+		u64 sp = r1;
 		sp % 0x10 == 0u && sp >= stack_min && sp <= stack_max - ppu_stack_start_offset;
 		sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp))
 		)
 	{
-		const u64 addr = *vm::get_super_ptr<u64>(static_cast<u32>(sp + 16));
+		u64 addr = *vm::get_super_ptr<u64>(static_cast<u32>(sp + 16));
 
-		if (addr > UINT32_MAX || addr % 4 || !vm::check_addr(static_cast<u32>(addr), 1, vm::page_executable))
+		auto is_invalid = [](u64 addr)
 		{
-			break;
+			return (addr > UINT32_MAX || addr % 4 || !vm::check_addr(static_cast<u32>(addr), 1, vm::page_executable));
+		};
+
+		if (is_invalid(addr))
+		{
+			if (std::exchange(first, false))
+			{
+				// Function hasn't saved LR, could be because it's a leaf function
+				// Use LR directly instead
+				addr = lr;
+
+				if (is_invalid(addr))
+				{
+					// Skip it, workaround
+					continue;
+				}
+			}
+			else
+			{
+				break;
+			}
 		}
 
 		// TODO: function addresses too

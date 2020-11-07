@@ -1245,12 +1245,68 @@ std::string spu_thread::dump_regs() const
 
 std::string spu_thread::dump_callstack() const
 {
-	return {};
+	std::string ret;
+
+	fmt::append(ret, "Call stack:\n=========\n0x%08x (0x0) called\n", pc);
+
+	for (const auto& sp : dump_callstack_list())
+	{
+		// TODO: function addresses too
+		fmt::append(ret, "> from 0x%08x (sp=0x%08x)\n", sp.first, sp.second);
+	}
+
+	return ret;
 }
 
 std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 {
-	return {};
+	std::vector<std::pair<u32, u32>> call_stack_list;
+
+	bool first = true;
+
+	// Declare first 128-bytes as invalid for stack (common values such as 0 do not make sense here)
+	for (u32 sp = gpr[1]._u32[3]; (sp & ~0x3FFF0) == 0u && sp >= 0x80u; sp = _ref<u32>(sp))
+	{
+		v128 lr = _ref<v128>(sp + 16);
+
+		auto is_invalid = [](v128 v)
+		{
+			const u32 addr = v._u32[3];
+
+			if (v != v128::from32r(addr))
+			{
+				// Non-zero lower words are invalid (because BRSL-like instructions generate only zeroes)
+				return true;
+			}
+
+			return !!(addr & ~0x3FFFC);
+		};
+
+		if (is_invalid(lr))
+		{
+			if (std::exchange(first, false))
+			{
+				// Function hasn't saved LR, could be because it's a leaf function
+				// Use LR directly instead
+				lr = gpr[0];
+
+				if (is_invalid(lr))
+				{
+					// Skip it, workaround
+					continue;
+				}
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		// TODO: function addresses too
+		call_stack_list.emplace_back(lr._u32[3], sp);
+	}
+
+	return call_stack_list;
 }
 
 std::string spu_thread::dump_misc() const

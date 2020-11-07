@@ -792,7 +792,7 @@ public:
 	template<typename T>
 	to_be_t<T>* _ptr(u32 lsa) const
 	{
-		return reinterpret_cast<to_be_t<T>*>(ls + lsa);
+		return reinterpret_cast<to_be_t<T>*>(ls + (lsa % SPU_LS_SIZE));
 	}
 
 	// Convert specified SPU LS address to a reference of specified (possibly converted to BE) type
