@@ -110,18 +110,18 @@ ptr_cmp(const void* data, u32 size, __m128i old128, __m128i mask128, atomic_wait
 }
 
 // Returns true if mask overlaps, or the argument is invalid
-static bool
+static u32
 #ifdef _WIN32
 __vectorcall
 #endif
 cmp_mask(u32 size1, __m128i mask1, __m128i val1, u32 size2, __m128i mask2, __m128i val2)
 {
-	// In force wake up, one of the size arguments is zero
+	// In force wake up, one of the size arguments is zero (obsolete)
 	const u32 size = std::min(size1, size2);
 
 	if (!size) [[unlikely]]
 	{
-		return true;
+		return 2;
 	}
 
 	// Compare only masks, new value is not available in this mode
@@ -130,7 +130,7 @@ cmp_mask(u32 size1, __m128i mask1, __m128i val1, u32 size2, __m128i mask2, __m12
 		// Simple mask overlap
 		const auto v0 = _mm_and_si128(mask1, mask2);
 		const auto v1 = _mm_packs_epi16(v0, v0);
-		return _mm_cvtsi128_si64(v1) != 0;
+		return _mm_cvtsi128_si64(v1) ? 1 : 0;
 	}
 
 	// Generate masked value inequality bits
@@ -143,14 +143,14 @@ cmp_mask(u32 size1, __m128i mask1, __m128i val1, u32 size2, __m128i mask2, __m12
 
 		if (!(_mm_cvtsi128_si64(v0) & mask))
 		{
-			return false;
+			return 0;
 		}
 	}
 	else if (size == 16)
 	{
 		if (!_mm_cvtsi128_si64(_mm_packs_epi16(v0, v0)))
 		{
-			return false;
+			return 0;
 		}
 	}
 	else
@@ -159,7 +159,8 @@ cmp_mask(u32 size1, __m128i mask1, __m128i val1, u32 size2, __m128i mask2, __m12
 		std::abort();
 	}
 
-	return true;
+	// Use force wake-up
+	return 2;
 }
 
 static atomic_t<u64> s_min_tsc{0};
@@ -203,6 +204,23 @@ namespace atomic_wait
 
 			// Prevent collision between normal wake-up and forced one
 			return ok && _old == 1;
+		}
+
+		bool wakeup(u32 cmp_res)
+		{
+			if (cmp_res == 1) [[likely]]
+			{
+				return sync == 1 && sync.compare_and_swap_test(1, 2);
+			}
+
+			if (cmp_res > 1) [[unlikely]]
+			{
+				// TODO.
+				// Used when notify function is provided with enforced new value.
+				return forced_wakeup();
+			}
+
+			return false;
 		}
 
 		void alert_native()
@@ -1064,7 +1082,9 @@ alert_sema(atomic_t<u16>* sema, const void* data, u64 info, u32 size, __m128i ma
 
 	bool ok = false;
 
-	if (cond->sync && (!size ? (!info || cond->tid == info) : (cond->ptr == data && cmp_mask(size, mask, new_value, cond->size, cond->mask, cond->oldv))))
+	u32 cmp_res = 0;
+
+	if (cond->sync && (!size ? (!info || cond->tid == info) : (cond->ptr == data && ((cmp_res = cmp_mask(size, mask, new_value, cond->size, cond->mask, cond->oldv))))))
 	{
 		// Redirect if necessary
 		const auto _old = cond;
@@ -1072,7 +1092,7 @@ alert_sema(atomic_t<u16>* sema, const void* data, u64 info, u32 size, __m128i ma
 
 		if (_new && _new->tsc0 == _old->tsc0)
 		{
-			if ((!size && _new->forced_wakeup()) || (size && _new->sync.load() == 1 && _new->sync.compare_and_swap_test(1, 2)))
+			if ((!size && _new->forced_wakeup()) || (size && _new->wakeup(cmp_res)))
 			{
 				ok = true;
 				_new->alert_native();
@@ -1296,7 +1316,9 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 
 				verify(HERE), cond;
 
-				if (cond->sync && cond->ptr == data && cmp_mask(size, mask, new_value, cond->size, cond->mask, cond->oldv))
+				u32 cmp_res = 0;
+
+				if (cond->sync && cond->ptr == data && ((cmp_res = cmp_mask(size, mask, new_value, cond->size, cond->mask, cond->oldv))))
 				{
 					const auto _old = cond;
 					const auto _new = _old->link ? cond_id_lock(_old->link) : _old;
@@ -1306,7 +1328,7 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 						lock_id2[id] = _old->link;
 					}
 
-					if (_new && _new->tsc0 == _old->tsc0 && _new->sync.load() == 1 && _new->sync.compare_and_swap_test(1, 2))
+					if (_new && _new->tsc0 == _old->tsc0 && _new->wakeup(cmp_res))
 					{
 						// Ok.
 						continue;
