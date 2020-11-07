@@ -4,7 +4,7 @@
 #include "version.h"
 #include "Emu/System.h"
 
-LOG_CHANNEL(patch_log);
+LOG_CHANNEL(patch_log, "PAT");
 
 namespace config_key
 {
