@@ -2737,6 +2737,8 @@ error_code sceNpManagerGetAccountAge(vm::ptr<s32> age)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
+	*age = 18;
+
 	return CELL_OK;
 }
 
@@ -2807,7 +2809,7 @@ error_code sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 
 error_code sceNpManagerGetCachedInfo(CellSysutilUserId userId, vm::ptr<SceNpManagerCacheParam> param)
 {
-	sceNp.todo("sceNpManagerGetChatRestrictionFlag(userId=%d, param=*0x%x)", userId, param);
+	sceNp.todo("sceNpManagerGetCachedInfo(userId=%d, param=*0x%x)", userId, param);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
