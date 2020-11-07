@@ -13,18 +13,20 @@ namespace vm
 
 	enum range_lock_flags : u64
 	{
-		/* flags (3 bits) */
+		/* flags (3 bits, RWX) */
 
-		range_readable = 1ull << 32,
-		range_writable = 2ull << 32,
-		range_executable = 4ull << 32,
-		range_full_mask = 7ull << 32,
+		range_readable = 4ull << 61,
+		range_writable = 2ull << 61,
+		range_executable = 1ull << 61,
+		range_full_mask = 7ull << 61,
 
 		/* flag combinations with special meaning */
 
-		range_normal = 3ull << 32, // R+W, testing as mask for zero can check no access
-		range_locked = 2ull << 32, // R+W as well, the only range flag that should block by address
+		range_locked = 1ull << 61, // R+W as well, but being exclusively accessed (size extends addr)
 		range_allocation = 0, // Allocation, no safe access, g_shareable may change at ANY location
+
+		range_pos = 61,
+		range_bits = 3,
 	};
 
 	extern atomic_t<u64> g_range_lock;
@@ -40,27 +42,35 @@ namespace vm
 	void range_lock_internal(atomic_t<u64, 64>* range_lock, u32 begin, u32 size);
 
 	// Lock memory range
-	template <bool TouchMem = true>
-	FORCE_INLINE void range_lock(atomic_t<u64, 64>* range_lock, u32 begin, u32 size)
+	template <bool TouchMem = true, uint Size = 0>
+	FORCE_INLINE void range_lock(atomic_t<u64, 64>* range_lock, u32 begin, u32 _size)
 	{
+		const u32 size = Size ? Size : _size;
 		const u64 lock_val = g_range_lock.load();
 		#ifndef _MSC_VER
 		__asm__(""); // Tiny barrier
 		#endif
 		const u64 is_shared = g_shareable[begin >> 16].load();
-		const u64 lock_addr = static_cast<u32>(lock_val); // -> u64
-		const u32 lock_size = static_cast<u32>(lock_val >> 35);
+
+		u64 lock_addr = static_cast<u32>(lock_val); // -> u64
+		u32 lock_size = static_cast<u32>(lock_val << range_bits >> (32 + range_bits));
 
 		u64 addr = begin;
 
 		// Optimization: if range_locked is not used, the addr check will always pass
 		// Otherwise, g_shareable is unchanged and its value is reliable to read
-		if (is_shared)
+		if ((lock_val >> range_pos) == (range_locked >> range_pos)) [[likely]]
 		{
-			addr = addr & 0xffff;
+			lock_size = 128;
+
+			if (TouchMem && is_shared) [[unlikely]]
+			{
+				addr = addr & 0xffff;
+				lock_addr = lock_val << range_bits >> range_bits;
+			}
 		}
 
-		if (addr + size <= lock_addr || addr >= lock_addr + lock_size || (TouchMem && ((lock_val >> 32) ^ (range_locked >> 32)) & (range_full_mask >> 32))) [[likely]]
+		if (addr + size <= lock_addr || addr >= lock_addr + lock_size) [[likely]]
 		{
 			// Optimistic locking.
 			// Note that we store the range we will be accessing, without any clamping.
@@ -77,7 +87,7 @@ namespace vm
 						range_lock->release(0);
 					}
 				}
-	
+
 				return;
 			}
 

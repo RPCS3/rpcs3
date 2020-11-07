@@ -167,17 +167,24 @@ namespace vm
 		{
 			const u64 lock_val = g_range_lock.load();
 			const u64 is_shared = g_shareable[begin >> 16].load();
-			const u64 lock_addr = static_cast<u32>(lock_val); // -> u64
-			const u32 lock_size = static_cast<u32>(lock_val >> 35);
+
+			u64 lock_addr = static_cast<u32>(lock_val); // -> u64
+			u32 lock_size = static_cast<u32>(lock_val << range_bits >> (range_bits + 32));
 
 			u64 addr = begin;
 
-			if (is_shared)
+			if ((lock_val & range_full_mask) == range_locked) [[likely]]
 			{
-				addr = addr & 0xffff;
+				lock_size = 128;
+
+				if (is_shared)
+				{
+					addr = addr & 0xffff;
+					lock_addr = lock_val << 3 >> 3;
+				}
 			}
 
-			if ((lock_val & range_full_mask) != range_locked || addr + size <= lock_addr || addr >= lock_addr + lock_size) [[likely]]
+			if (addr + size <= lock_addr || addr >= lock_addr + lock_size) [[likely]]
 			{
 				range_lock->store(begin | (u64{size} << 32));
 
@@ -249,11 +256,11 @@ namespace vm
 	}
 
 	template <typename F>
-	FORCE_INLINE static u64 for_all_range_locks(F func)
+	FORCE_INLINE static u64 for_all_range_locks(u64 input, F func)
 	{
-		u64 result = 0;
+		u64 result = input;
 
-		for (u64 bits = g_range_lock_bits.load(); bits; bits &= bits - 1)
+		for (u64 bits = input; bits; bits &= bits - 1)
 		{
 			const u32 id = std::countr_zero(bits);
 
@@ -263,8 +270,13 @@ namespace vm
 			{
 				const u32 addr = static_cast<u32>(lock_val);
 
-				result += func(addr, size);
+				if (func(addr, size)) [[unlikely]]
+				{
+					continue;
+				}
 			}
+
+			result &= ~(1ull << id);
 		}
 
 		return result;
@@ -287,20 +299,20 @@ namespace vm
 		}
 
 		// Block or signal new range locks
-		g_range_lock = addr | u64{size} << 35 | flags;
+		g_range_lock = addr | u64{size} << 32 | flags;
+
+		_mm_prefetch(g_range_lock_set + 0, _MM_HINT_T0);
+		_mm_prefetch(g_range_lock_set + 2, _MM_HINT_T0);
+		_mm_prefetch(g_range_lock_set + 4, _MM_HINT_T0);
 
 		const auto range = utils::address_range::start_length(addr, size);
 
-		while (true)
-		{
-			const u64 bads = for_all_range_locks([&](u32 addr2, u32 size2)
-			{
-				// TODO (currently not possible): handle 2 64K pages (inverse range), or more pages
-				if (g_shareable[addr2 >> 16])
-				{
-					addr2 &= 0xffff;
-				}
+		u64 to_clear = g_range_lock_bits.load();
 
+		while (to_clear)
+		{
+			to_clear = for_all_range_locks(to_clear, [&](u32 addr2, u32 size2)
+			{
 				ASSUME(size2);
 
 				if (range.overlaps(utils::address_range::start_length(addr2, size2))) [[unlikely]]
@@ -311,7 +323,7 @@ namespace vm
 				return 0;
 			});
 
-			if (!bads) [[likely]]
+			if (!to_clear) [[likely]]
 			{
 				break;
 			}
@@ -477,22 +489,28 @@ namespace vm
 				}
 			}
 
-			if (g_shareable[addr >> 16])
+			if (g_shareable[addr >> 16]) [[unlikely]]
 			{
 				// Reservation address in shareable memory range
 				addr = addr & 0xffff;
 			}
 
-			g_range_lock = addr | (u64{128} << 35) | range_locked;
+			g_range_lock = addr | range_locked;
+
+			_mm_prefetch(g_range_lock_set + 0, _MM_HINT_T0);
+			_mm_prefetch(g_range_lock_set + 2, _MM_HINT_T0);
+			_mm_prefetch(g_range_lock_set + 4, _MM_HINT_T0);
 
 			const auto range = utils::address_range::start_length(addr, 128);
 
+			u64 to_clear = g_range_lock_bits.load();
+
 			while (true)
 			{
-				const u64 bads = for_all_range_locks([&](u32 addr2, u32 size2)
+				to_clear = for_all_range_locks(to_clear, [&](u32 addr2, u32 size2)
 				{
 					// TODO (currently not possible): handle 2 64K pages (inverse range), or more pages
-					if (g_shareable[addr2 >> 16])
+					if (g_shareable[addr2 >> 16]) [[unlikely]]
 					{
 						addr2 &= 0xffff;
 					}
@@ -507,7 +525,7 @@ namespace vm
 					return 0;
 				});
 
-				if (!bads) [[likely]]
+				if (!to_clear) [[likely]]
 				{
 					break;
 				}

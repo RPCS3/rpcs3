@@ -2167,28 +2167,28 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		{
 		case 1:
 		{
-			vm::range_lock(range_lock, eal, 1);
+			vm::range_lock<true, 1>(range_lock, eal, 1);
 			*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
 			range_lock->release(0);
 			break;
 		}
 		case 2:
 		{
-			vm::range_lock(range_lock, eal, 2);
+			vm::range_lock<true, 2>(range_lock, eal, 2);
 			*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
 			range_lock->release(0);
 			break;
 		}
 		case 4:
 		{
-			vm::range_lock(range_lock, eal, 4);
+			vm::range_lock<true, 4>(range_lock, eal, 4);
 			*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
 			range_lock->release(0);
 			break;
 		}
 		case 8:
 		{
-			vm::range_lock(range_lock, eal, 8);
+			vm::range_lock<true, 8>(range_lock, eal, 8);
 			*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
 			range_lock->release(0);
 			break;
