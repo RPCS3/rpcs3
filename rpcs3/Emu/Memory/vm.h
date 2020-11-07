@@ -3,9 +3,13 @@
 #include <map>
 #include <memory>
 #include "Utilities/types.h"
-#include "Utilities/VirtualMemory.h"
 #include "Utilities/StrFmt.h"
 #include "Utilities/BEType.h"
+
+namespace utils
+{
+	class shm;
+}
 
 namespace vm
 {

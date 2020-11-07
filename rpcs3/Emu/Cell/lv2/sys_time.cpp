@@ -3,7 +3,8 @@
 
 #include "Emu/system_config.h"
 #include "Emu/Cell/ErrorCodes.h"
-#include "Utilities/asm.h"
+
+#include "util/asm.hpp"
 
 #ifdef _WIN32
 

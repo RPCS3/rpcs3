@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Utilities/VirtualMemory.h"
 #include "Utilities/sysinfo.h"
 #include "Utilities/JIT.h"
 #include "Crypto/sha1.h"
@@ -64,7 +63,7 @@
 #include <thread>
 #include <cfenv>
 #include <cctype>
-#include <string>
+#include "util/vm.hpp"
 
 const bool s_use_ssse3 = utils::has_ssse3();
 

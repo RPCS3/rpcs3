@@ -73,6 +73,7 @@
 #endif
 
 #include "sync.h"
+#include "util/vm.hpp"
 #include "util/logs.hpp"
 #include "Emu/Memory/vm_locking.h"
 

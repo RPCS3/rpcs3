@@ -1,6 +1,5 @@
 ﻿#include "stdafx.h"
 #include "Utilities/JIT.h"
-#include "Utilities/asm.h"
 #include "Utilities/date_time.h"
 #include "Utilities/sysinfo.h"
 #include "Emu/Memory/vm.h"
@@ -31,6 +30,8 @@
 #include <atomic>
 #include <thread>
 #include <shared_mutex>
+#include "util/vm.hpp"
+#include "util/asm.hpp"
 
 using spu_rdata_t = decltype(spu_thread::rdata);
 

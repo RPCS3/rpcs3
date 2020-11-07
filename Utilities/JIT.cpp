@@ -5,7 +5,7 @@
 #include "util/logs.hpp"
 #include "mutex.h"
 #include "sysinfo.h"
-#include "VirtualMemory.h"
+#include "util/vm.hpp"
 #include <immintrin.h>
 #include <zlib.h>
 

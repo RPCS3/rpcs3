@@ -7,7 +7,6 @@
 
 #include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
-#include "Utilities/VirtualMemory.h"
 #include "Utilities/address_range.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/lv2/sys_memory.h"
@@ -17,6 +16,9 @@
 #include <thread>
 #include <deque>
 #include <shared_mutex>
+
+#include "util/vm.hpp"
+#include "util/asm.hpp"
 
 LOG_CHANNEL(vm_log, "VM");
 
@@ -301,9 +303,9 @@ namespace vm
 		// Block or signal new range locks
 		g_range_lock = addr | u64{size} << 32 | flags;
 
-		_mm_prefetch(g_range_lock_set + 0, _MM_HINT_T0);
-		_mm_prefetch(g_range_lock_set + 2, _MM_HINT_T0);
-		_mm_prefetch(g_range_lock_set + 4, _MM_HINT_T0);
+		utils::prefetch_read(g_range_lock_set + 0);
+		utils::prefetch_read(g_range_lock_set + 2);
+		utils::prefetch_read(g_range_lock_set + 4);
 
 		const auto range = utils::address_range::start_length(addr, size);
 
@@ -497,9 +499,9 @@ namespace vm
 
 			g_range_lock = addr | range_locked;
 
-			_mm_prefetch(g_range_lock_set + 0, _MM_HINT_T0);
-			_mm_prefetch(g_range_lock_set + 2, _MM_HINT_T0);
-			_mm_prefetch(g_range_lock_set + 4, _MM_HINT_T0);
+			utils::prefetch_read(g_range_lock_set + 0);
+			utils::prefetch_read(g_range_lock_set + 2);
+			utils::prefetch_read(g_range_lock_set + 4);
 
 			const auto range = utils::address_range::start_length(addr, 128);
 

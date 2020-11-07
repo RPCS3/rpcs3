@@ -8,6 +8,11 @@
 
 struct lv2_memory_container;
 
+namespace utils
+{
+	class shm;
+}
+
 struct lv2_memory : lv2_obj
 {
 	static const u32 id_base = 0x08000000;

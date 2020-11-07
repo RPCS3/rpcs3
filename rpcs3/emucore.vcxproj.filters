@@ -188,7 +188,7 @@
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\VirtualMemory.cpp">
+    <ClCompile Include="util\vm_native.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\SPURecompiler.cpp">
@@ -1165,7 +1165,10 @@
     <ClInclude Include="Emu\Cell\Common.h">
       <Filter>Emu\Cell</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\VirtualMemory.h">
+    <ClInclude Include="util\vm.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\asm.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUASMJITRecompiler.h">

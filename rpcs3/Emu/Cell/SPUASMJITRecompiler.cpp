@@ -8,9 +8,10 @@
 #include "SPUThread.h"
 #include "SPUInterpreter.h"
 #include "Utilities/sysinfo.h"
-#include "Utilities/asm.h"
 #include "PPUAnalyser.h"
 #include "Crypto/sha1.h"
+
+#include "util/asm.hpp"
 
 #include <cmath>
 #include <mutex>

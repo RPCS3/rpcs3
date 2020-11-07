@@ -174,7 +174,7 @@
     </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\version.cpp" />
-    <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
+    <ClCompile Include="util\vm_native.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_config.cpp" />
     <ClCompile Include="Crypto\md5.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">NotUsing</PrecompiledHeader>
@@ -550,7 +550,8 @@
     <ClInclude Include="..\Utilities\Timer.h" />
     <ClInclude Include="..\Utilities\types.h" />
     <ClInclude Include="..\Utilities\version.h" />
-    <ClInclude Include="..\Utilities\VirtualMemory.h" />
+    <ClInclude Include="util\vm.hpp" />
+    <ClInclude Include="util\asm.hpp" />
     <ClInclude Include="Crypto\aes.h" />
     <ClInclude Include="Crypto\aesni.h" />
     <ClInclude Include="Crypto\ec.h" />

@@ -1,11 +1,12 @@
 ﻿#include "stdafx.h"
 #include "sys_memory.h"
 
-#include "Utilities/VirtualMemory.h"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
+
+#include "util/vm.hpp"
 
 LOG_CHANNEL(sys_memory);
 

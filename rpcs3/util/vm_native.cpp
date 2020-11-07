@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "util/logs.hpp"
-#include "VirtualMemory.h"
+#include "util/vm.hpp"
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -183,6 +183,7 @@ namespace utils
 	shm::shm(u32 size, u32 flags)
 		: m_size(::align(size, 0x10000))
 		, m_flags(flags)
+		, m_ptr(0)
 	{
 #ifdef _WIN32
 		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, m_size, NULL);
@@ -211,6 +212,8 @@ namespace utils
 
 	shm::~shm()
 	{
+		this->unmap_self();
+
 #ifdef _WIN32
 		::CloseHandle(m_handle);
 #else
@@ -284,6 +287,16 @@ namespace utils
 		return this->map(target, prot);
 	}
 
+	u8* shm::map_self(protection prot)
+	{
+		if (!m_ptr)
+		{
+			m_ptr = this->map(nullptr, prot);
+		}
+
+		return static_cast<u8*>(m_ptr);
+	}
+
 	void shm::unmap(void* ptr) const
 	{
 #ifdef _WIN32
@@ -324,5 +337,14 @@ namespace utils
 			return;
 		}
 #endif
+	}
+
+	void shm::unmap_self()
+	{
+		if (m_ptr)
+		{
+			this->unmap(m_ptr);
+			m_ptr = nullptr;
+		}
 	}
 }

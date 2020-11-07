@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "types.h"
+#include "Utilities/types.h"
 
 extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit1;
@@ -67,9 +67,16 @@ namespace utils
 		}
 	};
 
-
-// Rotate helpers
 #if defined(__GNUG__)
+
+	inline void prefetch_read(const void* ptr)
+	{
+#if __has_builtin(__builtin_prefetch)
+		return __builtin_prefetch(ptr);
+#else
+		__asm__ volatile ("prefetcht0 0(%[ptr])" : : [ptr] "r" (ptr));
+#endif
+	}
 
 	inline u8 rol8(u8 x, u8 n)
 	{
@@ -200,6 +207,11 @@ namespace utils
 	}
 
 #elif defined(_MSC_VER)
+	inline void prefetch_read(const void* ptr)
+	{
+		return _mm_prefetch(reinterpret_cast<const char*>(ptr), _MM_HINT_T0);
+	}
+
 	inline u8 rol8(u8 x, u8 n)
 	{
 		return _rotl8(x, n);

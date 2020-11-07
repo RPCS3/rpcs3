@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "Utilities/types.h"
 
 namespace utils
 {
@@ -49,6 +49,7 @@ namespace utils
 #endif
 		u32 m_size;
 		u32 m_flags;
+		void* m_ptr;
 
 	public:
 		explicit shm(u32 size, u32 flags = 0);
@@ -65,11 +66,23 @@ namespace utils
 		// Map shared memory over reserved memory region, which is unsafe (non-atomic) under Win32
 		u8* map_critical(void* ptr, protection prot = protection::rw);
 
+		// Map shared memory into its own storage (not mapped by default)
+		u8* map_self(protection prot = protection::rw);
+
 		// Unmap shared memory
 		void unmap(void* ptr) const;
 
 		// Unmap shared memory, undoing map_critical
 		void unmap_critical(void* ptr);
+
+		// Unmap shared memory, undoing map_self()
+		void unmap_self();
+
+		// Get memory mapped by map_self()
+		u8* get() const
+		{
+			return reinterpret_cast<u8*>(m_ptr);
+		}
 
 		u32 size() const
 		{

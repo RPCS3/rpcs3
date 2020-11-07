@@ -39,6 +39,7 @@ target_sources(rpcs3_emu PRIVATE
 	../util/logs.cpp
 	../util/yaml.cpp
 	../util/cereal.cpp
+	../util/vm_native.cpp
 	../../Utilities/bin_patch.cpp
 	../../Utilities/cheat_info.cpp
 	../../Utilities/cond.cpp
@@ -54,7 +55,6 @@ target_sources(rpcs3_emu PRIVATE
 	../../Utilities/sysinfo.cpp
 	../../Utilities/Thread.cpp
 	../../Utilities/version.cpp
-	../../Utilities/VirtualMemory.cpp
 )
 
 target_include_directories(rpcs3_emu PUBLIC "${CMAKE_SOURCE_DIR}")

@@ -4,13 +4,14 @@
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/system_config.h"
 #include "PPUThread.h"
-#include "Utilities/asm.h"
 #include "Utilities/sysinfo.h"
 #include "Emu/Cell/Common.h"
 
 #include <atomic>
 #include <bit>
 #include <cmath>
+
+#include "util/asm.hpp"
 
 #if !defined(_MSC_VER) && defined(__clang__)
 #pragma GCC diagnostic push
@@ -119,7 +120,7 @@ FORCE_INLINE auto ppu_feed_data(ppu_thread& ppu, u64 addr)
 		const std::byte* src;
 		u32 size;
 		u32 offs = 0;
-		
+
 		if (raddr / 128 == addr / 128)
 			src = &ppu.rdata[addr & 127], size = std::min<u32>(128 - (addr % 128), sizeof(T));
 		else

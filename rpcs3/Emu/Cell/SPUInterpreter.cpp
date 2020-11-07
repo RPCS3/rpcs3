@@ -3,9 +3,10 @@
 
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
-#include "Utilities/asm.h"
 #include "SPUThread.h"
 #include "Emu/Cell/Common.h"
+
+#include "util/asm.hpp"
 
 #include <cmath>
 #include <cfenv>
