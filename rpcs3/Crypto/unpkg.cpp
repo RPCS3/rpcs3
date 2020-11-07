@@ -30,6 +30,18 @@ package_reader::package_reader(const std::string& path)
 	}
 
 	m_is_valid = read_metadata();
+
+	if (!m_is_valid)
+	{
+		return;
+	}
+
+	const bool param_sfo_found = read_param_sfo();
+
+	if (!param_sfo_found)
+	{
+		pkg_log.notice("PKG does not contain a PARAM.SFO");
+	}
 }
 
 package_reader::~package_reader()
@@ -476,12 +488,11 @@ bool package_reader::decrypt_data()
 	return true;
 }
 
-// TODO: maybe also check if VERSION matches
-package_error package_reader::check_target_app_version()
+bool package_reader::read_param_sfo()
 {
 	if (!decrypt_data())
 	{
-		return package_error::other;
+		return false;
 	}
 
 	std::vector<PKGEntry> entries(header.file_count);
@@ -500,7 +511,7 @@ package_error package_reader::check_target_app_version()
 
 		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : dec_key.data());
 
-		const std::string name{ reinterpret_cast<char*>(buf.get()), entry.name_size };
+		const std::string name{reinterpret_cast<char*>(buf.get()), entry.name_size};
 
 		// We're looking for the PARAM.SFO file, if there is any
 		if (name != "PARAM.SFO")
@@ -518,130 +529,143 @@ package_error package_reader::check_target_app_version()
 				if (decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : dec_key.data()) != block_size)
 				{
 					pkg_log.error("Failed to decrypt PARAM.SFO file");
-					return package_error::other;
+					return false;
 				}
 
 				if (tmp.write(buf.get(), block_size) != block_size)
 				{
 					pkg_log.error("Failed to write to temporary PARAM.SFO file");
-					return package_error::other;
+					return false;
 				}
 			}
 
 			tmp.seek(0);
 
-			const auto psf = psf::load_object(tmp);
+			m_psf = psf::load_object(tmp);
 
-			const auto category = psf::get_string(psf, "CATEGORY", "");
-			const auto title_id = psf::get_string(psf, "TITLE_ID", "");
-			const auto app_ver = psf::get_string(psf, "APP_VER", "");
-			const auto target_app_ver = psf::get_string(psf, "TARGET_APP_VER", "");
-
-			if (category != "GD")
-			{
-				// We allow anything that isn't an update for now
-				return package_error::no_error;
-			}
-
-			if (title_id.empty())
-			{
-				// Let's allow packages without ID for now
-				return package_error::no_error;
-			}
-
-			if (app_ver.empty())
-			{
-				if (!target_app_ver.empty())
-				{
-					// Let's see if this case exists
-					pkg_log.fatal("Trying to install an unversioned patch with a target app version (%s). Please contact a developer!", target_app_ver);
-				}
-
-				// This is probably not a version dependant patch, so we may install the package
-				return package_error::no_error;
-			}
-
-			const fs::file installed_sfo_file(Emu.GetHddDir() + "game/" + std::string(title_id) + "/PARAM.SFO");
-			if (!installed_sfo_file)
-			{
-				if (!target_app_ver.empty())
-				{
-					// We are unable to compare anything with the target app version
-					pkg_log.error("A target app version is required (%s), but no PARAM.SFO was found for %s", target_app_ver, title_id);
-					return package_error::app_version;
-				}
-
-				// There is nothing we need to compare, so we may install the package
-				return package_error::no_error;
-			}
-
-			const auto installed_psf = psf::load_object(installed_sfo_file);
-
-			const auto installed_title_id = psf::get_string(installed_psf, "TITLE_ID", "");
-			const auto installed_app_ver = psf::get_string(installed_psf, "APP_VER", "");
-
-			if (title_id != installed_title_id || installed_app_ver.empty())
-			{
-				// Let's allow this package for now
-				return package_error::no_error;
-			}
-
-			std::add_pointer_t<char> ev0, ev1;
-			const double old_version = std::strtod(installed_app_ver.data(), &ev0);
-
-			if (installed_app_ver.data() + installed_app_ver.size() != ev0)
-			{
-				pkg_log.error("Failed to convert the installed app version to double (%s)", installed_app_ver);
-				return package_error::other;
-			}
-
-			if (target_app_ver.empty())
-			{
-				// This is most likely the first patch. Let's make sure its version is high enough for the installed game.
-
-				const double new_version = std::strtod(app_ver.data(), &ev1);
-
-				if (app_ver.data() + app_ver.size() != ev1)
-				{
-					pkg_log.error("Failed to convert the package's app version to double (%s)", app_ver);
-					return package_error::other;
-				}
-
-				if (new_version >= old_version)
-				{
-					// Yay! The patch has a higher or equal version than the installed game.
-					return package_error::no_error;
-				}
-
-				pkg_log.error("The new app version (%s) is smaller than the installed app version (%s)", app_ver, installed_app_ver);
-				return package_error::app_version;
-			}
-
-			// Check if the installed app version matches the target app version
-
-			const double target_version = std::strtod(target_app_ver.data(), &ev1);
-
-			if (target_app_ver.data() + target_app_ver.size() != ev1)
-			{
-				pkg_log.error("Failed to convert the package's target app version to double (%s)", target_app_ver);
-				return package_error::other;
-			}
-
-			if (target_version == old_version)
-			{
-				// Yay! This patch is for the installed game version.
-				return package_error::no_error;
-			}
-
-			pkg_log.error("The installed app version (%s) does not match the target app version (%s)", installed_app_ver, target_app_ver);
-			return package_error::app_version;
+			return true;
 		}
+		else
+		{
+			pkg_log.error("Failed to create temporary PARAM.SFO file");
+			return false;
+		}
+	}
 
-		pkg_log.error("Failed to create temporary PARAM.SFO file");
+	return false;
+}
+
+// TODO: maybe also check if VERSION matches
+package_error package_reader::check_target_app_version()
+{
+	if (!m_is_valid)
+	{
 		return package_error::other;
 	}
 
-	return package_error::no_error;
+	const auto category       = psf::get_string(m_psf, "CATEGORY", "");
+	const auto title_id       = psf::get_string(m_psf, "TITLE_ID", "");
+	const auto app_ver        = psf::get_string(m_psf, "APP_VER", "");
+	const auto target_app_ver = psf::get_string(m_psf, "TARGET_APP_VER", "");
+
+	if (category != "GD")
+	{
+		// We allow anything that isn't an update for now
+		return package_error::no_error;
+	}
+
+	if (title_id.empty())
+	{
+		// Let's allow packages without ID for now
+		return package_error::no_error;
+	}
+
+	if (app_ver.empty())
+	{
+		if (!target_app_ver.empty())
+		{
+			// Let's see if this case exists
+			pkg_log.fatal("Trying to install an unversioned patch with a target app version (%s). Please contact a developer!", target_app_ver);
+		}
+
+		// This is probably not a version dependant patch, so we may install the package
+		return package_error::no_error;
+	}
+
+	const fs::file installed_sfo_file(Emu.GetHddDir() + "game/" + std::string(title_id) + "/PARAM.SFO");
+	if (!installed_sfo_file)
+	{
+		if (!target_app_ver.empty())
+		{
+			// We are unable to compare anything with the target app version
+			pkg_log.error("A target app version is required (%s), but no PARAM.SFO was found for %s", target_app_ver, title_id);
+			return package_error::app_version;
+		}
+
+		// There is nothing we need to compare, so we may install the package
+		return package_error::no_error;
+	}
+
+	const auto installed_psf = psf::load_object(installed_sfo_file);
+
+	const auto installed_title_id = psf::get_string(installed_psf, "TITLE_ID", "");
+	const auto installed_app_ver  = psf::get_string(installed_psf, "APP_VER", "");
+
+	if (title_id != installed_title_id || installed_app_ver.empty())
+	{
+		// Let's allow this package for now
+		return package_error::no_error;
+	}
+
+	std::add_pointer_t<char> ev0, ev1;
+	const double old_version = std::strtod(installed_app_ver.data(), &ev0);
+
+	if (installed_app_ver.data() + installed_app_ver.size() != ev0)
+	{
+		pkg_log.error("Failed to convert the installed app version to double (%s)", installed_app_ver);
+		return package_error::other;
+	}
+
+	if (target_app_ver.empty())
+	{
+		// This is most likely the first patch. Let's make sure its version is high enough for the installed game.
+
+		const double new_version = std::strtod(app_ver.data(), &ev1);
+
+		if (app_ver.data() + app_ver.size() != ev1)
+		{
+			pkg_log.error("Failed to convert the package's app version to double (%s)", app_ver);
+			return package_error::other;
+		}
+
+		if (new_version >= old_version)
+		{
+			// Yay! The patch has a higher or equal version than the installed game.
+			return package_error::no_error;
+		}
+
+		pkg_log.error("The new app version (%s) is smaller than the installed app version (%s)", app_ver, installed_app_ver);
+		return package_error::app_version;
+	}
+
+	// Check if the installed app version matches the target app version
+
+	const double target_version = std::strtod(target_app_ver.data(), &ev1);
+
+	if (target_app_ver.data() + target_app_ver.size() != ev1)
+	{
+		pkg_log.error("Failed to convert the package's target app version to double (%s)", target_app_ver);
+		return package_error::other;
+	}
+
+	if (target_version == old_version)
+	{
+		// Yay! This patch is for the installed game version.
+		return package_error::no_error;
+	}
+
+	pkg_log.error("The installed app version (%s) does not match the target app version (%s)", installed_app_ver, target_app_ver);
+	return package_error::app_version;
 }
 
 bool package_reader::extract_data(atomic_t<double>& sync)

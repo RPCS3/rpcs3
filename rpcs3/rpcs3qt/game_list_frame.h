@@ -25,7 +25,7 @@ struct gui_game_info
 {
 	GameInfo info;
 	QString localized_category;
-	compat_status compat;
+	compat::status compat;
 	QPixmap icon;
 	QPixmap pxmap;
 	bool hasCustomConfig;
@@ -40,7 +40,7 @@ class game_list_frame : public custom_dock_widget
 	Q_OBJECT
 
 public:
-	explicit game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent = nullptr);
+	explicit game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent = nullptr);
 	~game_list_frame();
 
 	/** Fix columns with width smaller than the minimal section size */
@@ -68,6 +68,8 @@ public:
 	void RepaintIcons(const bool& from_settings = false);
 
 	void SetShowHidden(bool show);
+
+	game_compatibility* GetGameCompatibility() const { return m_game_compat; };
 
 	QList<game_info> GetGameInfo() const;
 
