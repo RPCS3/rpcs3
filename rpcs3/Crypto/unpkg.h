@@ -1,12 +1,13 @@
-#pragma once
+﻿#pragma once
 
+#include "Loader/PSF.h"
 #include <sstream>
 #include <iomanip>
 
 // Constants
 enum
 {
-	PKG_HEADER_SIZE  = 0xC0, //sizeof(pkg_header) + sizeof(pkg_unk_checksum)
+	PKG_HEADER_SIZE  = 0xC0, // sizeof(pkg_header) + sizeof(pkg_unk_checksum)
 	PKG_HEADER_SIZE2 = 0x280,
 };
 
@@ -303,10 +304,12 @@ public:
 
 	package_error check_target_app_version();
 	bool extract_data(atomic_t<double>& sync);
+	psf::registry get_psf() const { return m_psf; }
 
 private:
 	bool read_header();
 	bool read_metadata();
+	bool read_param_sfo();
 	bool decrypt_data();
 	void archive_seek(const s64 new_offset, const fs::seek_mode damode = fs::seek_set);
 	u64 archive_read(void* data_ptr, const u64 num_bytes);
@@ -327,4 +330,5 @@ private:
 
 	PKGHeader header{};
 	PKGMetaData metadata{};
+	psf::registry m_psf;
 };

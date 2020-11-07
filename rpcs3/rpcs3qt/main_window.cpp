@@ -511,7 +511,63 @@ void main_window::InstallPackages(QStringList file_paths)
 	else if (file_paths.count() == 1)
 	{
 		// This can currently only happen by drag and drop.
-		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(file_paths.front()),
+		const QString file_path = file_paths.front();
+		package_reader reader(file_path.toStdString());
+		psf::registry psf = reader.get_psf();
+		const std::string title_id(psf::get_string(psf, "TITLE_ID"));
+
+		// TODO: localization of title and changelog
+		std::string title_key = "TITLE";
+		std::string changelog_key = "paramhip";
+		//std::string cat(psf::get_string(psf, "CATEGORY"));
+		QString version = qstr(std::string(psf::get_string(psf, "APP_VER")));
+		QString title = qstr(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first
+		QString changelog;
+
+		if (game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr)
+		{
+			compat::status info = compat->GetCompatibility(title_id);
+			if (!info.patch_sets.empty())
+			{
+				// We currently only handle the first patch set
+				for (const auto& package : info.patch_sets.front().packages)
+				{
+					if (sstr(version) == package.version)
+					{
+						if (const std::string localized_title = package.get_title(title_key); !localized_title.empty())
+						{
+							title = qstr(localized_title);
+						}
+
+						if (const std::string localized_changelog = package.get_changelog(changelog_key); !localized_changelog.empty())
+						{
+							changelog = qstr(localized_changelog);
+						}
+
+						break;
+					}
+				}
+			}
+		}
+
+		if (!changelog.isEmpty())
+		{
+			changelog = tr("\n\nChangelog:\n%0").arg(changelog);
+		}
+
+		if (!version.isEmpty())
+		{
+			version = tr("\nVersion %0").arg(version);
+		}
+
+		if (title.isEmpty())
+		{
+			QFileInfo file_info(file_path);
+			title = file_info.fileName();
+		}
+
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0%1%2")
+			.arg(title).arg(version).arg(changelog),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
 			gui_log.notice("PKG: Cancelled installation from drop. File: %s", sstr(file_paths.front()));

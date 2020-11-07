@@ -4,6 +4,7 @@
 
 #include <QApplication>
 #include <QMessageBox>
+#include <QJsonArray>
 #include <QJsonDocument>
 
 LOG_CHANNEL(compat_log, "Compat");
@@ -112,7 +113,7 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 		QJsonObject json_result = json_results[key].toObject();
 
 		// Retrieve compatibility information from json
-		compat_status status = Status_Data.at(json_result.value("status").toString("NoResult"));
+		compat::status status = Status_Data.at(json_result.value("status").toString("NoResult"));
 
 		// Add date if possible
 		status.date = json_result.value("date").toString();
@@ -120,8 +121,63 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 		// Add latest version if possible
 		status.latest_version = json_result.value("update").toString();
 
+		// Add patchsets if possible
+		if (const QJsonValue patchsets_value = json_result.value("patchsets"); patchsets_value.isArray())
+		{
+			for (const QJsonValue& patch_set : patchsets_value.toArray())
+			{
+				compat::pkg_patchset set;
+				set.tag_id         = patch_set["tag_id"].toString().toStdString();
+				set.popup          = patch_set["popup"].toBool();
+				set.signoff        = patch_set["signoff"].toBool();
+				set.popup_delay    = patch_set["popup_delay"].toInt();
+				set.min_system_ver = patch_set["min_system_ver"].toString().toStdString();
+
+				if (const QJsonValue packages_value = patch_set["packages"]; packages_value.isArray())
+				{
+					for (const QJsonValue& package : packages_value.toArray())
+					{
+						compat::pkg_package pkg;
+						pkg.version        = package["version"].toString().toStdString();
+						pkg.size           = package["size"].toInt();
+						pkg.sha1sum        = package["sha1sum"].toString().toStdString();
+						pkg.ps3_system_ver = package["ps3_system_ver"].toString().toStdString();
+						pkg.drm_type       = package["drm_type"].toString().toStdString();
+
+						if (const QJsonValue changelogs_value = package["changelogs"]; changelogs_value.isArray())
+						{
+							for (const QJsonValue& changelog : changelogs_value.toArray())
+							{
+								compat::pkg_changelog chl;
+								chl.type    = changelog["type"].toString().toStdString();
+								chl.content = changelog["content"].toString().toStdString();
+
+								pkg.changelogs.push_back(std::move(chl));
+							}
+						}
+
+						if (const QJsonValue titles_value = package["titles"]; titles_value.isArray())
+						{
+							for (const QJsonValue& title : titles_value.toArray())
+							{
+								compat::pkg_title ttl;
+								ttl.type  = title["type"].toString().toStdString();
+								ttl.title = title["title"].toString().toStdString();
+
+								pkg.titles.push_back(std::move(ttl));
+							}
+						}
+
+						set.packages.push_back(std::move(pkg));
+					}
+				}
+
+				status.patch_sets.push_back(std::move(set));
+			}
+		}
+
 		// Add status to map
-		m_compat_database.emplace(std::pair<std::string, compat_status>(sstr(key), status));
+		m_compat_database.emplace(std::pair<std::string, compat::status>(sstr(key), status));
 	}
 
 	return true;
@@ -146,7 +202,7 @@ void game_compatibility::RequestCompatibility(bool online)
 			return;
 		}
 
-		QByteArray data = file.readAll();
+		const QByteArray data = file.readAll();
 		file.close();
 
 		compat_log.notice("Finished reading database from file: %s", sstr(m_filepath));
@@ -166,7 +222,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	Q_EMIT DownloadStarted();
 }
 
-compat_status game_compatibility::GetCompatibility(const std::string& title_id)
+compat::status game_compatibility::GetCompatibility(const std::string& title_id)
 {
 	if (m_compat_database.empty())
 	{
@@ -180,7 +236,7 @@ compat_status game_compatibility::GetCompatibility(const std::string& title_id)
 	return Status_Data.at("NoResult");
 }
 
-compat_status game_compatibility::GetStatusData(const QString& status)
+compat::status game_compatibility::GetStatusData(const QString& status)
 {
 	return Status_Data.at(status);
 }
