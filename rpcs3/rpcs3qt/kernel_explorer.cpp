@@ -196,6 +196,8 @@ void kernel_explorer::Update()
 
 	const std::unordered_map<u32, QString> tree_item_names =
 	{
+		{ process_info                   , tr("Process Info")},
+
 		{ SYS_MEM_OBJECT                 , tr("Shared Memory")},
 		{ virtual_memory                 , tr("Virtual Memory")},
 		{ SYS_MUTEX_OBJECT               , tr("Mutexes")},
@@ -287,7 +289,7 @@ void kernel_explorer::Update()
 	root->setText(0, qstr(fmt::format("Process 0x%08x: Total Memory Usage: 0x%x/0x%x (%0.2f/%0.2f MB)", process_getpid(), total_memory_usage, dct->size, 1. * total_memory_usage / (1024 * 1024)
 		, 1. * dct->size / (1024 * 1024))));
 
-	// TODO: FileSystem
+	add_solid_node(m_tree, find_node(m_tree, additional_nodes::process_info), qstr(fmt::format("Process Info, Sdk Version 0x%08x: PPC SEG: %#x, SFO Categeory: %s", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat())));
 
 	idm::select<lv2_obj>([&](u32 id, lv2_obj& obj)
 	{
@@ -418,12 +420,12 @@ void kernel_explorer::Update()
 			}
 			else
 			{
-				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Wq: %zu (Couldn't extract control data)", id, lv2_obj::name64(lwm.name), lwm.protocol, lwm.sq.size())));
+				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x, Wq: %zu (Couldn't extract control data)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lwm.signaled, lwm.sq.size())));
 				break;
 			}
 
-			add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Wq: %zu", id, lv2_obj::name64(lwm.name), lwm.protocol,
-					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, lwm.sq.size())));
+			add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Wq: %zu", id, lv2_obj::name64(lwm.name), lwm.protocol,
+					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, +lwm.signaled, lwm.sq.size())));
 			break;
 		}
 		case SYS_TIMER_OBJECT:
@@ -696,8 +698,6 @@ void kernel_explorer::Update()
 	{
 		add_leaf(find_node(m_tree, additional_nodes::file_descriptors), qstr(fmt::format("FD %u: %s", id, fo.to_string())));
 	});
-
-	// RawSPU Threads (TODO)
 
 	std::function<int(QTreeWidgetItem*)> final_touches;
 	final_touches = [&final_touches](QTreeWidgetItem* item) -> int
