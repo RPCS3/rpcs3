@@ -1265,7 +1265,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 	bool first = true;
 
 	// Declare first 128-bytes as invalid for stack (common values such as 0 do not make sense here)
-	for (u32 sp = gpr[1]._u32[3]; (sp & ~0x3FFF0) == 0u && sp >= 0x80u; sp = _ref<u32>(sp))
+	for (u32 sp = gpr[1]._u32[3]; (sp & 0xF) == 0u && sp >= 0x80u && sp <= 0x3FFE0u; sp = _ref<u32>(sp), first = false)
 	{
 		v128 lr = _ref<v128>(sp + 16);
 
@@ -1281,12 +1281,12 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 			}
 
 			const u32 op = _ref<u32>(addr);
-			return s_spu_itype.decode(op) == spu_itype::UNK || !op;
+			return s_spu_itype.decode(op) == spu_itype::UNK || !op || !addr;
 		};
 
 		if (is_invalid(lr))
 		{
-			if (std::exchange(first, false))
+			if (first)
 			{
 				// Function hasn't saved LR, could be because it's a leaf function
 				// Use LR directly instead
