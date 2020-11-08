@@ -1736,6 +1736,8 @@ void spu_thread::push_snr(u32 number, u32 value)
 
 void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls)
 {
+	perf_meter<"DMA"_u32> perf_;
+
 	const bool is_get = (args.cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_START_MASK)) == MFC_GET_CMD;
 
 	u32 eal = args.eal;
@@ -1834,14 +1836,8 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 	if ((!g_use_rtm && !is_get) || g_cfg.core.spu_accurate_dma)  [[unlikely]]
 	{
-		perf_meter<"ADMA_GET"_u64> perf_get;
-		perf_meter<"ADMA_PUT"_u64> perf_put = perf_get;
-
-		if (!g_cfg.core.spu_accurate_dma) [[likely]]
-		{
-			perf_put.reset();
-			perf_get.reset();
-		}
+		perf_meter<"ADMA_GET"_u64> perf_get = perf_;
+		perf_meter<"ADMA_PUT"_u64> perf_put = perf_;
 
 		cpu_thread* _cpu = _this ? _this : get_current_cpu_thread();
 
@@ -1863,6 +1859,8 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		{
 			range_lock = _this->range_lock;
 		}
+
+		_m_prefetchw(range_lock);
 
 		for (u32 size = args.size, size0; is_get; size -= size0, dst += size0, src += size0, eal += size0)
 		{
@@ -2161,8 +2159,13 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 			//std::atomic_thread_fence(std::memory_order_seq_cst);
 			return;
 		}
+		else
+		{
+			perf_put.reset();
+			perf_get.reset();
+		}
 
-		perf_meter<"DMA_PUT"_u64> perf2;
+		perf_meter<"DMA_PUT"_u64> perf2 = perf_;
 
 		switch (u32 size = args.size)
 		{

@@ -167,6 +167,8 @@ namespace vm
 
 		for (u64 i = 0;; i++)
 		{
+			range_lock->store(begin | (u64{size} << 32));
+
 			const u64 lock_val = g_range_lock.load();
 			const u64 is_share = g_shmem[begin >> 16].load();
 
@@ -188,17 +190,17 @@ namespace vm
 
 			if (addr + size <= lock_addr || addr >= lock_addr + lock_size) [[likely]]
 			{
-				range_lock->store(begin | (u64{size} << 32));
-
 				const u64 new_lock_val = g_range_lock.load();
 
 				if (!new_lock_val || new_lock_val == lock_val) [[likely]]
 				{
 					break;
 				}
-
-				range_lock->release(0);
 			}
+
+			// Wait a bit before accessing g_mutex
+			range_lock->store(0);
+			busy_wait(200);
 
 			std::shared_lock lock(g_mutex, std::try_to_lock);
 

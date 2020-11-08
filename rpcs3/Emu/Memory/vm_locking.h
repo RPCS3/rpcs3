@@ -41,13 +41,20 @@ namespace vm
 
 	void range_lock_internal(atomic_t<u64, 64>* range_lock, u32 begin, u32 size);
 
-	// Lock memory range
+	// Lock memory range ignoring memory protection (Size!=0 also implies aligned begin)
 	template <uint Size = 0>
 	FORCE_INLINE void range_lock(atomic_t<u64, 64>* range_lock, u32 begin, u32 _size)
 	{
+		// Optimistic locking.
+		// Note that we store the range we will be accessing, without any clamping.
+		range_lock->store(begin | (u64{_size} << 32));
+
+		// Old-style conditional constexpr
 		const u32 size = Size ? Size : _size;
+
 		const u64 lock_val = g_range_lock.load();
 		const u64 is_share = g_shmem[begin >> 16].load();
+
 		#ifndef _MSC_VER
 		__asm__(""); // Tiny barrier
 		#endif
@@ -59,7 +66,7 @@ namespace vm
 
 		// Optimization: if range_locked is not used, the addr check will always pass
 		// Otherwise, g_shmem is unchanged and its value is reliable to read
-		if ((lock_val >> range_pos) == (range_locked >> range_pos)) [[likely]]
+		if ((lock_val >> range_pos) == (range_locked >> range_pos))
 		{
 			lock_size = 128;
 
@@ -72,19 +79,15 @@ namespace vm
 
 		if (addr + size <= lock_addr || addr >= lock_addr + lock_size) [[likely]]
 		{
-			// Optimistic locking.
-			// Note that we store the range we will be accessing, without any clamping.
-			range_lock->store(begin | (u64{size} << 32));
-
 			const u64 new_lock_val = g_range_lock.load();
 
 			if (!new_lock_val || new_lock_val == lock_val) [[likely]]
 			{
 				return;
 			}
-
-			range_lock->release(0);
 		}
+
+		range_lock->release(0);
 
 		// Fallback to slow path
 		range_lock_internal(range_lock, begin, size);
