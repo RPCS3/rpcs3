@@ -42,7 +42,7 @@ namespace vm
 	void range_lock_internal(atomic_t<u64, 64>* range_lock, u32 begin, u32 size);
 
 	// Lock memory range
-	template <bool TouchMem = true, uint Size = 0>
+	template <uint Size = 0>
 	FORCE_INLINE void range_lock(atomic_t<u64, 64>* range_lock, u32 begin, u32 _size)
 	{
 		const u32 size = Size ? Size : _size;
@@ -63,7 +63,7 @@ namespace vm
 		{
 			lock_size = 128;
 
-			if (TouchMem && is_share) [[unlikely]]
+			if (is_share) [[unlikely]]
 			{
 				addr = static_cast<u16>(begin) | is_share;
 				lock_addr = lock_val;
@@ -80,30 +80,10 @@ namespace vm
 
 			if (!new_lock_val || new_lock_val == lock_val) [[likely]]
 			{
-				if constexpr (!TouchMem)
-				{
-					if (!vm::check_addr(begin, size, vm::page_writable))
-					{
-						range_lock->release(0);
-					}
-				}
-
 				return;
 			}
 
 			range_lock->release(0);
-
-			if constexpr (!TouchMem)
-			{
-				return;
-			}
-		}
-
-		if constexpr (!TouchMem)
-		{
-			// Give up
-			range_lock->release(0);
-			return;
 		}
 
 		// Fallback to slow path
