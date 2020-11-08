@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
-#include "Emu/Memory/vm_reservation.h"
 #include "rsx_utils.h"
 #include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"

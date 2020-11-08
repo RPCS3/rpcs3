@@ -53,8 +53,8 @@ namespace vm
 	// Reservation stats
 	alignas(4096) u8 g_reservations[65536 / 128 * 64]{0};
 
-	// Shareable memory bits
-	alignas(4096) atomic_t<u8> g_shareable[65536]{0};
+	// Pointers to shared memory mirror or zeros for "normal" memory
+	alignas(4096) atomic_t<u64> g_shmem[65536]{0};
 
 	// Memory locations
 	alignas(64) std::vector<std::shared_ptr<block_t>> g_locations;
@@ -168,7 +168,7 @@ namespace vm
 		for (u64 i = 0;; i++)
 		{
 			const u64 lock_val = g_range_lock.load();
-			const u64 is_shared = g_shareable[begin >> 16].load();
+			const u64 is_share = g_shmem[begin >> 16].load();
 
 			u64 lock_addr = static_cast<u32>(lock_val); // -> u64
 			u32 lock_size = static_cast<u32>(lock_val << range_bits >> (range_bits + 32));
@@ -179,10 +179,10 @@ namespace vm
 			{
 				lock_size = 128;
 
-				if (is_shared)
+				if (is_share)
 				{
-					addr = addr & 0xffff;
-					lock_addr = lock_val << 3 >> 3;
+					addr = static_cast<u16>(addr) | is_share;
+					lock_addr = lock_val;
 				}
 			}
 
@@ -491,10 +491,12 @@ namespace vm
 				}
 			}
 
-			if (g_shareable[addr >> 16]) [[unlikely]]
+			u64 addr1 = addr;
+
+			if (u64 is_shared = g_shmem[addr >> 16]) [[unlikely]]
 			{
 				// Reservation address in shareable memory range
-				addr = addr & 0xffff;
+				addr1 = static_cast<u16>(addr) | is_shared;
 			}
 
 			g_range_lock = addr | range_locked;
@@ -503,23 +505,21 @@ namespace vm
 			utils::prefetch_read(g_range_lock_set + 2);
 			utils::prefetch_read(g_range_lock_set + 4);
 
-			const auto range = utils::address_range::start_length(addr, 128);
-
 			u64 to_clear = g_range_lock_bits.load();
+
+			u64 point = addr1 / 128;
 
 			while (true)
 			{
-				to_clear = for_all_range_locks(to_clear, [&](u32 addr2, u32 size2)
+				to_clear = for_all_range_locks(to_clear, [&](u64 addr2, u32 size2)
 				{
 					// TODO (currently not possible): handle 2 64K pages (inverse range), or more pages
-					if (g_shareable[addr2 >> 16]) [[unlikely]]
+					if (u64 is_shared = g_shmem[addr2 >> 16]) [[unlikely]]
 					{
-						addr2 &= 0xffff;
+						addr2 = static_cast<u16>(addr2) | is_shared;
 					}
 
-					ASSUME(size2);
-
-					if (range.overlaps(utils::address_range::start_length(addr2, size2))) [[unlikely]]
+					if (point - (addr2 / 128) <= (addr2 + size2 - 1) / 128 - (addr2 / 128)) [[unlikely]]
 					{
 						return 1;
 					}
@@ -684,6 +684,15 @@ namespace vm
 			// Check ref counter (using unused member info for it)
 			if (shm->info == 2)
 			{
+				// Allocate shm object for itself
+				u64 shm_self = reinterpret_cast<u64>(shm->map_self()) ^ range_locked;
+
+				// Pre-set range-locked flag (real pointers are 47 bits)
+				// 1. To simplify range_lock logic
+				// 2. To make sure it never overlaps with 32-bit addresses
+				// Also check that it's aligned (lowest 16 bits)
+				verify(HERE), (shm_self & 0xffff'8000'0000'ffff) == range_locked;
+
 				// Find another mirror and map it as shareable too
 				for (auto& ploc : g_locations)
 				{
@@ -695,7 +704,10 @@ namespace vm
 
 							for (u32 i = pp->first / 65536; i < pp->first / 65536 + size2 / 65536; i++)
 							{
-								g_shareable[i].release(1);
+								g_shmem[i].release(shm_self);
+
+								// Advance to the next position
+								shm_self += 0x10000;
 							}
 						}
 					}
@@ -705,10 +717,16 @@ namespace vm
 				shm->info = UINT32_MAX;
 			}
 
+			// Obtain existing pointer
+			u64 shm_self = reinterpret_cast<u64>(shm->get()) ^ range_locked;
+
+			// Check (see above)
+			verify(HERE), (shm_self & 0xffff'8000'0000'ffff) == range_locked;
+
 			// Map range as shareable
 			for (u32 i = addr / 65536; i < addr / 65536 + size / 65536; i++)
 			{
-				g_shareable[i].release(1);
+				g_shmem[i].release(std::exchange(shm_self, shm_self + 0x10000));
 			}
 		}
 
@@ -876,13 +894,13 @@ namespace vm
 		// Protect range locks from actual memory protection changes
 		_lock_main_range_lock(range_allocation, addr, size);
 
-		if (shm && shm->flags() != 0 && g_shareable[addr >> 16])
+		if (shm && shm->flags() != 0 && g_shmem[addr >> 16])
 		{
 			shm->info--;
 
 			for (u32 i = addr / 65536; i < addr / 65536 + size / 65536; i++)
 			{
-				g_shareable[i].release(0);
+				g_shmem[i].release(0);
 			}
 		}
 
@@ -1571,7 +1589,7 @@ namespace vm
 			};
 
 			std::memset(g_reservations, 0, sizeof(g_reservations));
-			std::memset(g_shareable, 0, sizeof(g_shareable));
+			std::memset(g_shmem, 0, sizeof(g_shmem));
 			std::memset(g_range_lock_set, 0, sizeof(g_range_lock_set));
 			g_range_lock_bits = 0;
 		}

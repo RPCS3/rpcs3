@@ -23,7 +23,7 @@ namespace vm
 		/* flag combinations with special meaning */
 
 		range_locked = 1ull << 61, // R+W as well, but being exclusively accessed (size extends addr)
-		range_allocation = 0, // Allocation, no safe access, g_shareable may change at ANY location
+		range_allocation = 0, // Allocation, no safe access, g_shmem may change at ANY location
 
 		range_pos = 61,
 		range_bits = 3,
@@ -31,7 +31,7 @@ namespace vm
 
 	extern atomic_t<u64> g_range_lock;
 
-	extern atomic_t<u8> g_shareable[];
+	extern atomic_t<u64> g_shmem[];
 
 	// Register reader
 	void passive_lock(cpu_thread& cpu);
@@ -47,10 +47,10 @@ namespace vm
 	{
 		const u32 size = Size ? Size : _size;
 		const u64 lock_val = g_range_lock.load();
+		const u64 is_share = g_shmem[begin >> 16].load();
 		#ifndef _MSC_VER
 		__asm__(""); // Tiny barrier
 		#endif
-		const u64 is_shared = g_shareable[begin >> 16].load();
 
 		u64 lock_addr = static_cast<u32>(lock_val); // -> u64
 		u32 lock_size = static_cast<u32>(lock_val << range_bits >> (32 + range_bits));
@@ -58,15 +58,15 @@ namespace vm
 		u64 addr = begin;
 
 		// Optimization: if range_locked is not used, the addr check will always pass
-		// Otherwise, g_shareable is unchanged and its value is reliable to read
+		// Otherwise, g_shmem is unchanged and its value is reliable to read
 		if ((lock_val >> range_pos) == (range_locked >> range_pos)) [[likely]]
 		{
 			lock_size = 128;
 
-			if (TouchMem && is_shared) [[unlikely]]
+			if (TouchMem && is_share) [[unlikely]]
 			{
-				addr = addr & 0xffff;
-				lock_addr = lock_val << range_bits >> range_bits;
+				addr = static_cast<u16>(begin) | is_share;
+				lock_addr = lock_val;
 			}
 		}
 
