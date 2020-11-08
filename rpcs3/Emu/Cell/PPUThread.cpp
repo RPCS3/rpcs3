@@ -584,7 +584,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 	for (
 		u64 sp = r1;
 		sp % 0x10 == 0u && sp >= stack_min && sp <= stack_max - ppu_stack_start_offset;
-		sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp), first = false)
+		sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp)), first = false
 		)
 	{
 		u64 addr = *vm::get_super_ptr<u64>(static_cast<u32>(sp + 16));
