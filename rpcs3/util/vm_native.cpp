@@ -2,6 +2,7 @@
 #include "util/logs.hpp"
 #include "util/vm.hpp"
 #ifdef _WIN32
+#include "util/dyn_lib.hpp"
 #include <Windows.h>
 #else
 #include <sys/mman.h>
@@ -30,6 +31,11 @@ static int memfd_create_(const char *name, uint flags)
 
 namespace utils
 {
+#ifdef _WIN32
+	DYNAMIC_IMPORT("KernelBase.dll", VirtualAlloc2, PVOID(HANDLE Process, PVOID Base, SIZE_T Size, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
+	DYNAMIC_IMPORT("KernelBase.dll", MapViewOfFile3, PVOID(HANDLE Handle, HANDLE Process, PVOID Base, ULONG64 Off, SIZE_T ViewSize, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
+#endif
+
 	// Convert memory protection (internal)
 	static auto operator +(protection prot)
 	{
