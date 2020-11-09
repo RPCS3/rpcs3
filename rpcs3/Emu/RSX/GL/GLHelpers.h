@@ -13,6 +13,7 @@
 #include "../Common/GLSLTypes.h"
 
 #include "Emu/system_config.h"
+#include "Utilities/mutex.h"
 #include "Utilities/geometry.h"
 #include "util/logs.hpp"
 
@@ -2226,6 +2227,40 @@ public:
 			GLuint m_id = GL_NONE;
 
 			fence m_compiled_fence;
+			fence m_init_fence;
+
+			shared_mutex m_compile_lock;
+			atomic_t<bool> m_is_compiled{};
+
+			void precompile()
+			{
+				const char* str = source.c_str();
+				const GLint length = ::narrow<GLint>(source.length());
+
+				if (g_cfg.video.log_programs)
+				{
+					std::string base_name;
+					switch (type)
+					{
+					case ::glsl::program_domain::glsl_vertex_program:
+						base_name = "shaderlog/VertexProgram";
+						break;
+					case ::glsl::program_domain::glsl_fragment_program:
+						base_name = "shaderlog/FragmentProgram";
+						break;
+					case ::glsl::program_domain::glsl_compute_program:
+						base_name = "shaderlog/ComputeProgram";
+						break;
+					}
+
+					fs::file(fs::get_cache_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str);
+				}
+
+				glShaderSource(m_id, 1, &str, &length);
+
+				m_init_fence.create();
+				flush_command_queue(m_init_fence);
+			}
 
 		public:
 			shader() = default;
@@ -2268,33 +2303,21 @@ public:
 				}
 
 				m_id = glCreateShader(shader_type);
+				precompile();
 			}
 
 			shader& compile()
 			{
-				const char* str = source.c_str();
-				const GLint length = ::narrow<GLint>(source.length());
-
-				if (g_cfg.video.log_programs)
+				std::lock_guard lock(m_compile_lock);
+				if (m_is_compiled)
 				{
-					std::string base_name;
-					switch (type)
-					{
-					case ::glsl::program_domain::glsl_vertex_program:
-						base_name = "shaderlog/VertexProgram";
-						break;
-					case ::glsl::program_domain::glsl_fragment_program:
-						base_name = "shaderlog/FragmentProgram";
-						break;
-					case ::glsl::program_domain::glsl_compute_program:
-						base_name = "shaderlog/ComputeProgram";
-						break;
-					}
-
-					fs::file(fs::get_cache_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str);
+					// Another thread compiled this already
+					return *this;
 				}
 
-				glShaderSource(m_id, 1, &str, &length);
+				verify(HERE), !m_init_fence.is_empty(); // Do not attempt to compile a shader_view!!
+				m_init_fence.server_wait_sync();
+
 				glCompileShader(m_id);
 
 				GLint status = GL_FALSE;
@@ -2318,6 +2341,8 @@ public:
 
 				m_compiled_fence.create();
 				flush_command_queue(m_compiled_fence);
+
+				m_is_compiled = true;
 				return *this;
 			}
 
@@ -2353,6 +2378,11 @@ public:
 			bool created() const
 			{
 				return m_id != GL_NONE;
+			}
+
+			bool compiled() const
+			{
+				return m_is_compiled;
 			}
 
 			explicit operator bool() const

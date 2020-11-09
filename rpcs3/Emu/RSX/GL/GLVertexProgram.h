@@ -59,7 +59,6 @@ public:
 	gl::glsl::shader shader;
 
 	void Decompile(const RSXVertexProgram& prog);
-	void Compile();
 
 private:
 	void Delete();

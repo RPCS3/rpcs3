@@ -47,7 +47,6 @@ namespace gl
 				}
 
 				auto result = int_compile_graphics_pipe(
-					job.vp_handle, job.fp_handle,
 					job.post_create_func,
 					job.post_link_func);
 
@@ -59,41 +58,33 @@ namespace gl
 	}
 
 	std::unique_ptr<glsl::program> pipe_compiler::compile(
-		GLuint vp_handle, GLuint fp_handle,
 		op_flags flags,
-		callback_t post_create_func,
-		callback_t post_link_func,
-		callback_t completion_callback_func)
+		build_callback_t post_create_func,
+		build_callback_t post_link_func,
+		storage_callback_t completion_callback_func)
 	{
 		if (flags == COMPILE_INLINE)
 		{
-			return int_compile_graphics_pipe(vp_handle, fp_handle, post_create_func, post_link_func);
+			return int_compile_graphics_pipe(post_create_func, post_link_func);
 		}
 
-		m_work_queue.push(vp_handle, fp_handle, post_create_func, post_link_func, completion_callback_func);
+		m_work_queue.push(post_create_func, post_link_func, completion_callback_func);
 		return {};
 	}
 
 	std::unique_ptr<glsl::program> pipe_compiler::int_compile_graphics_pipe(
-		GLuint vp_handle, GLuint fp_handle,
-		callback_t post_create_func,
-		callback_t post_link_func)
+		build_callback_t post_create_func,
+		build_callback_t post_link_func)
 	{
 		auto result = std::make_unique<glsl::program>();
 		result->create();
 
 		if (post_create_func)
 		{
-			post_create_func(result);
+			post_create_func(result.get());
 		}
 
-		result->link();
-
-		if (post_link_func)
-		{
-			post_link_func(result);
-		}
-
+		result->link(post_link_func);
 		return result;
 	}
 

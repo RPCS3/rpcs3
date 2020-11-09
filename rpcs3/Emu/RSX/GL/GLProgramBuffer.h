@@ -18,14 +18,12 @@ struct GLTraits
 	void recompile_fragment_program(const RSXFragmentProgram &RSXFP, fragment_program_type& fragmentProgramData, size_t /*ID*/)
 	{
 		fragmentProgramData.Decompile(RSXFP);
-		fragmentProgramData.Compile();
 	}
 
 	static
 	void recompile_vertex_program(const RSXVertexProgram &RSXVP, vertex_program_type& vertexProgramData, size_t /*ID*/)
 	{
 		vertexProgramData.Decompile(RSXVP);
-		vertexProgramData.Compile();
 	}
 
 	static
@@ -44,25 +42,21 @@ struct GLTraits
 		auto compiler = gl::get_pipe_compiler();
 		auto flags = (compile_async) ? gl::pipe_compiler::COMPILE_DEFERRED : gl::pipe_compiler::COMPILE_INLINE;
 
-		gl::fence vp_fence, fp_fence;
-		if (compile_async)
+		auto post_create_func = [vp = &vertexProgramData.shader, fp = &fragmentProgramData.shader]
+		(gl::glsl::program* program)
 		{
-			vp_fence = vertexProgramData.shader.get_compile_fence_sync();
-			fp_fence = fragmentProgramData.shader.get_compile_fence_sync();
-		}
-
-		auto post_create_func = [vp_id = vertexProgramData.id, fp_id = fragmentProgramData.id, vp_fence, fp_fence]
-		(std::unique_ptr<gl::glsl::program>& program)
-		{
-			if (!vp_fence.is_empty())
+			if (!vp->compiled())
 			{
-				// Force server threads to wait for the compilation to finish
-				vp_fence.server_wait_sync();
-				fp_fence.server_wait_sync();
+				const_cast<gl::glsl::shader*>(vp)->compile();
 			}
 
-			program->attach(gl::glsl::shader_view(vp_id))
-				.attach(gl::glsl::shader_view(fp_id))
+			if (!fp->compiled())
+			{
+				const_cast<gl::glsl::shader*>(fp)->compile();
+			}
+
+			program->attach(*vp)
+				.attach(*fp)
 				.bind_fragment_data_location("ocol0", 0)
 				.bind_fragment_data_location("ocol1", 1)
 				.bind_fragment_data_location("ocol2", 2)
@@ -71,12 +65,12 @@ struct GLTraits
 			if (g_cfg.video.log_programs)
 			{
 				rsx_log.notice("*** prog id = %d", program->id());
-				rsx_log.notice("*** vp id = %d", vp_id);
-				rsx_log.notice("*** fp id = %d", fp_id);
+				rsx_log.notice("*** vp id = %d", vp->id());
+				rsx_log.notice("*** fp id = %d", fp->id());
 			}
 		};
 
-		auto post_link_func = [](std::unique_ptr<gl::glsl::program>& program)
+		auto post_link_func = [](gl::glsl::program* program)
 		{
 			// Program locations are guaranteed to not change after linking
 			// Texture locations are simply bound to the TIUs so this can be done once
@@ -110,9 +104,7 @@ struct GLTraits
 			program->uniforms[1] = GL_STREAM_BUFFER_START + 1;
 		};
 
-		auto pipeline = compiler->compile(vertexProgramData.id, fragmentProgramData.id,
-			flags, post_create_func, post_link_func, callback);
-
+		auto pipeline = compiler->compile(flags, post_create_func, post_link_func, callback);
 		return callback(pipeline);
 	}
 };
