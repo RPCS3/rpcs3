@@ -587,10 +587,19 @@ bool cpu_thread::check_state() noexcept
 		{
 			bool store = false;
 
-			if (flags & cpu_flag::pause && !(flags & cpu_flag::wait))
+			if (flags & cpu_flag::pause)
 			{
 				// Save value before state is saved and cpu_flag::wait is observed
 				susp_ctr = g_suspend_counter;
+
+				if (susp_ctr & 1 && flags & cpu_flag::wait)
+				{
+					susp_ctr = -1;
+				}
+			}
+			else
+			{
+				susp_ctr = -1;
 			}
 
 			if (flags & cpu_flag::temp) [[unlikely]]
@@ -705,29 +714,16 @@ bool cpu_thread::check_state() noexcept
 			// If only cpu_flag::pause was set, wait on suspend counter instead
 			if (state0 & cpu_flag::pause)
 			{
-				if (state0 & cpu_flag::wait)
-				{
-					// Otherwise, value must be reliable because cpu_flag::wait hasn't been observed yet
-					susp_ctr = -1;
-				}
-
-				// Hard way
-				if (susp_ctr == umax) [[unlikely]]
-				{
-					g_fxo->get<cpu_counter>()->cpu_suspend_lock.lock_unlock();
-					continue;
-				}
-
 				// Wait for current suspend_all operation
 				for (u64 i = 0;; i++)
 				{
-					if (i < 20)
+					if (i < 20 || susp_ctr & 1)
 					{
 						busy_wait(300);
 					}
-					else
+					else if (g_suspend_counter.load() >> 1 >= susp_ctr >> 1)
 					{
-						g_suspend_counter.wait(susp_ctr);
+						g_suspend_counter.wait(susp_ctr, -2);
 					}
 
 					if (!(state & cpu_flag::pause))
@@ -907,6 +903,8 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 			_mm_pause();
 		}
 
+		g_suspend_counter++;
+
 		// Extract queue and reverse element order (FILO to FIFO) (TODO: maybe leave order as is?)
 		auto* head = queue.exchange(nullptr);
 
@@ -959,11 +957,8 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 			}
 		}
 
-		// Not sure if needed, may be overkill. Some workloads may execute instructions with non-temporal hint.
-		_mm_sfence();
-
-		// Finalization
-		g_suspend_counter++;
+		// Finalization (second increment)
+		verify(HERE), g_suspend_counter++ & 1;
 
 		// Exact bitset for flag pause removal
 		std::memcpy(ctr->cpu_copy_bits, copy2, sizeof(copy2));

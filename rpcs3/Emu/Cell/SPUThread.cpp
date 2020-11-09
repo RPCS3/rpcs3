@@ -1996,18 +1996,22 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				{
 					if (_cpu->state & cpu_flag::pause)
 					{
-						cpu_thread::if_suspended<0>(_cpu, {dst, dst + 64, &res}, [&]
+						const bool ok = cpu_thread::if_suspended<0>(_cpu, {dst, dst + 64, &res}, [&]
 						{
 							std::memcpy(dst, src, size0);
 							res += 128;
 						});
 
-						// Exit loop and function
-						i = -1;
-						bits = nullptr;
-						return;
+						if (ok)
+						{
+							// Exit loop and function
+							i = -1;
+							bits = nullptr;
+							return;
+						}
 					}
-					else if (++i < 10)
+
+					if (++i < 10)
 					{
 						busy_wait(500);
 					}
@@ -2941,18 +2945,17 @@ bool spu_thread::process_mfc_cmd()
 			{
 				auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr);
 
-				cpu_thread::if_suspended<0>(this, {}, [&]
+				const bool ok = cpu_thread::if_suspended<0>(this, {&ntime}, [&]
 				{
 					// Guaranteed success
 					ntime = vm::reservation_acquire(addr, 128);
 					mov_rdata_nt(rdata, sdata);
 				});
 
-				_mm_mfence();
-
 				// Exit loop
-				if ((ntime & 127) == 0)
+				if (ok && (ntime & 127) == 0)
 				{
+					_mm_mfence();
 					i = -1;
 					return;
 				}
