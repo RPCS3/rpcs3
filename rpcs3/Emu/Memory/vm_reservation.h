@@ -160,12 +160,6 @@ namespace vm
 #endif
 			stamp1 = __rdtsc();
 
-			// Touch memory if transaction failed with status 0
-			if (!status)
-			{
-				reinterpret_cast<atomic_t<u8>*>(sptr)->fetch_add(0);
-			}
-
 			// Stage 2: try to lock reservation first
 			_old = res.fetch_add(1);
 

@@ -770,6 +770,10 @@ namespace vm
 
 		// Unlock
 		g_range_lock.release(0);
+
+		perf_meter<"PAGE_LCK"_u64> perf1;
+
+		utils::memory_lock(g_base_addr + addr, size);
 	}
 
 	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)

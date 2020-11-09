@@ -292,6 +292,7 @@ int main(int argc, char** argv)
 #ifdef _WIN32
 	ULONG64 intro_cycles{};
 	QueryThreadCycleTime(GetCurrentThread(), &intro_cycles);
+	verify("SetProcessWorkingSetSize" HERE), SetProcessWorkingSetSize(GetCurrentProcess(), 0x60000000, 0x80000000); // 2GiB
 #elif defined(RUSAGE_THREAD)
 	struct ::rusage intro_stats{};
 	::getrusage(RUSAGE_THREAD, &intro_stats);
