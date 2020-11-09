@@ -180,6 +180,15 @@ namespace utils
 #endif
 	}
 
+	void memory_lock(void* pointer, std::size_t size)
+	{
+#ifdef _WIN32
+		verify("VirtualLock" HERE), ::VirtualLock(pointer, size);
+#else
+		verify("mlock" HERE), !::mlock(pointer, size);
+#endif
+	}
+
 	shm::shm(u32 size, u32 flags)
 		: m_size(::align(size, 0x10000))
 		, m_flags(flags)
