@@ -15,7 +15,8 @@ namespace gl
 			COMPILE_DEFERRED = 2
 		};
 
-		using callback_t = std::function<void(std::unique_ptr<glsl::program>&)>;
+		using storage_callback_t = std::function<void(std::unique_ptr<glsl::program>&)>;
+		using build_callback_t = std::function<void(glsl::program*)>;
 
 		pipe_compiler();
 		~pipe_compiler();
@@ -26,11 +27,10 @@ namespace gl
 			std::function<void(draw_context_t)> context_destroy_func);
 
 		std::unique_ptr<glsl::program> compile(
-			GLuint vp_handle, GLuint fp_handle,
 			op_flags flags,
-			callback_t post_create_func = {},
-			callback_t post_link_func = {},
-			callback_t completion_callback = {});
+			build_callback_t post_create_func = {},
+			build_callback_t post_link_func = {},
+			storage_callback_t completion_callback = {});
 
 		void operator()();
 
@@ -38,14 +38,12 @@ namespace gl
 
 		struct pipe_compiler_job
 		{
-			GLuint vp_handle;
-			GLuint fp_handle;
-			callback_t post_create_func;
-			callback_t post_link_func;
-			callback_t completion_callback;
+			build_callback_t post_create_func;
+			build_callback_t post_link_func;
+			storage_callback_t completion_callback;
 
-			pipe_compiler_job(GLuint vp, GLuint fp, callback_t post_create, callback_t post_link, callback_t completion)
-				: vp_handle(vp), fp_handle(fp), post_create_func(post_create), post_link_func(post_link), completion_callback(completion)
+			pipe_compiler_job(build_callback_t post_create, build_callback_t post_link, storage_callback_t completion)
+				: post_create_func(post_create), post_link_func(post_link), completion_callback(completion)
 			{}
 		};
 
@@ -58,7 +56,7 @@ namespace gl
 		std::function<void(draw_context_t context)> m_context_destroy_func;
 
 		std::unique_ptr<glsl::program> int_compile_graphics_pipe(
-			GLuint vp_handle, GLuint fp_handle, callback_t post_create_func, callback_t post_link_func);
+			build_callback_t post_create_func, build_callback_t post_link_func);
 	};
 
 	void initialize_pipe_compiler(

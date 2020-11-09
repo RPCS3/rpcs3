@@ -358,6 +358,9 @@ void GLGSRender::on_init_thread()
 
 void GLGSRender::on_exit()
 {
+	// Destroy internal RSX state, may call upon this->do_local_task
+	GSRender::on_exit();
+
 	// Globals
 	// TODO: Move these
 	gl::destroy_compute_tasks();
@@ -491,10 +494,6 @@ void GLGSRender::on_exit()
 		query.driver_handle = 0;
 	}
 
-	glFlush();
-	glFinish();
-
-	GSRender::on_exit();
 	zcull_ctrl.release();
 }
 
