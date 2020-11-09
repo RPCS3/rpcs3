@@ -40,11 +40,11 @@ target_sources(rpcs3_emu PRIVATE
 	../util/yaml.cpp
 	../util/cereal.cpp
 	../util/vm_native.cpp
+	../util/dyn_lib.cpp
 	../../Utilities/bin_patch.cpp
 	../../Utilities/cheat_info.cpp
 	../../Utilities/cond.cpp
 	../../Utilities/Config.cpp
-	../../Utilities/dynamic_library.cpp
 	../../Utilities/File.cpp
 	../../Utilities/JIT.cpp
 	../../Utilities/LUrlParser.cpp

@@ -734,7 +734,7 @@
     <ClCompile Include="Emu\IdManager.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\dynamic_library.cpp">
+    <ClCompile Include="util\dyn_lib.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\version.cpp">
@@ -1561,7 +1561,7 @@
     <ClInclude Include="Emu\RSX\rsx_cache.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\dynamic_library.h">
+    <ClInclude Include="util\dyn_lib.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\version.h">

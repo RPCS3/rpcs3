@@ -4,7 +4,7 @@
 
 #include "types.h"
 #include "util/atomic.hpp"
-#include "dynamic_library.h"
+#include "util/dyn_lib.hpp"
 
 #ifdef _WIN32
 #define NOMINMAX
