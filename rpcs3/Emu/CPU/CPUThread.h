@@ -124,7 +124,7 @@ public:
 	struct suspend_work
 	{
 		// Task priority
-		s8 prio;
+		u8 prio;
 
 		// Size of prefetch list workload
 		u32 prf_size;
@@ -144,7 +144,7 @@ public:
 	};
 
 	// Suspend all threads and execute op (may be executed by other thread than caller!)
-	template <s8 Prio = 0, typename F>
+	template <u8 Prio = 0, typename F>
 	static auto suspend_all(cpu_thread* _this, std::initializer_list<void*> hints, F op)
 	{
 		if constexpr (std::is_void_v<std::invoke_result_t<F>>)
@@ -172,7 +172,7 @@ public:
 	}
 
 	// Push the workload only if threads are being suspended by suspend_all()
-	template <s8 Prio = 0, typename F>
+	template <u8 Prio = 0, typename F>
 	static bool if_suspended(cpu_thread* _this, std::initializer_list<void*> hints, F op)
 	{
 		static_assert(std::is_void_v<std::invoke_result_t<F>>, "Unimplemented (must return void)");

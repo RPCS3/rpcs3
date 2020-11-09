@@ -2013,7 +2013,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				{
 					if (_cpu->state & cpu_flag::pause)
 					{
-						cpu_thread::if_suspended(_cpu, {dst, dst + 64, &res}, [&]
+						cpu_thread::if_suspended<0>(_cpu, {dst, dst + 64, &res}, [&]
 						{
 							std::memcpy(dst, src, size0);
 							res += 128;
@@ -2545,7 +2545,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			{
 				auto& data = *vm::get_super_ptr<spu_rdata_t>(addr);
 
-				const bool ok = cpu_thread::suspend_all<+1>(this, {data, data + 64, &res}, [&]()
+				const bool ok = cpu_thread::suspend_all<+3>(this, {data, data + 64, &res}, [&]()
 				{
 					if ((res & -128) == rtime)
 					{
@@ -2698,7 +2698,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr);
 			auto& res = vm::reservation_acquire(addr, 128);
 
-			cpu_thread::suspend_all<0>(cpu, {&res}, [&]
+			cpu_thread::suspend_all<+2>(cpu, {&res}, [&]
 			{
 				mov_rdata_nt(sdata, *static_cast<const spu_rdata_t*>(to_write));
 				res += 127;
@@ -2958,7 +2958,7 @@ bool spu_thread::process_mfc_cmd()
 			{
 				auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr);
 
-				verify(HERE), cpu_thread::if_suspended<-1>(this, {}, [&]
+				cpu_thread::if_suspended<0>(this, {}, [&]
 				{
 					// Guaranteed success
 					ntime = vm::reservation_acquire(addr, 128);

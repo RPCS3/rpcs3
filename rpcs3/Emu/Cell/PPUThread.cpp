@@ -1703,7 +1703,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 					auto& all_data = *vm::get_super_ptr<spu_rdata_t>(addr & -128);
 					auto& sdata = *vm::get_super_ptr<atomic_be_t<u64>>(addr & -8);
 
-					const bool ok = cpu_thread::suspend_all<+1>(&ppu, {all_data, all_data + 64, &res}, [&]
+					const bool ok = cpu_thread::suspend_all<+3>(&ppu, {all_data, all_data + 64, &res}, [&]
 					{
 						if ((res & -128) == rtime && cmp_rdata(ppu.rdata, all_data))
 						{

@@ -910,8 +910,8 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 		// Extract queue and reverse element order (FILO to FIFO) (TODO: maybe leave order as is?)
 		auto* head = queue.exchange(nullptr);
 
-		s8 min_prio = head->prio;
-		s8 max_prio = head->prio;
+		u8 min_prio = head->prio;
+		u8 max_prio = head->prio;
 
 		if (auto* prev = head->next)
 		{
@@ -925,8 +925,8 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 				head = std::exchange(prev, pre2);
 
 				// Fill priority range
-				min_prio = std::min<s8>(min_prio, head->prio);
-				max_prio = std::max<s8>(max_prio, head->prio);
+				min_prio = std::min<u8>(min_prio, head->prio);
+				max_prio = std::max<u8>(max_prio, head->prio);
 			}
 			while (prev);
 		}
