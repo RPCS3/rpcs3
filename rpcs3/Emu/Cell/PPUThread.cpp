@@ -11,6 +11,7 @@
 #include "PPUInterpreter.h"
 #include "PPUAnalyser.h"
 #include "PPUModule.h"
+#include "PPUDisAsm.h"
 #include "SPURecompiler.h"
 #include "lv2/sys_sync.h"
 #include "lv2/sys_prx.h"
@@ -482,7 +483,11 @@ std::string ppu_thread::dump_regs() const
 				}
 				else
 				{
-					fmt::append(ret, " -> function-code");
+					PPUDisAsm dis_asm(CPUDisAsm_NormalMode);
+					dis_asm.offset = vm::g_sudo_addr;
+					dis_asm.dump_pc = reg;
+					dis_asm.disasm(reg);
+					fmt::append(ret, " -> %s", dis_asm.last_opcode);
 				}
 			}
 			else if (std::isprint(static_cast<u8>(buf_tmp[0])) && std::isprint(static_cast<u8>(buf_tmp[1])) && std::isprint(static_cast<u8>(buf_tmp[2])))

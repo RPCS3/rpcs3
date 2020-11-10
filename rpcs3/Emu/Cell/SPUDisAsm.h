@@ -97,7 +97,11 @@ private:
 private:
 	std::string& FixOp(std::string& op)
 	{
-		op.append(std::max<int>(10 - ::narrow<int>(op.size()), 0),' ');
+		if (m_mode != CPUDisAsm_NormalMode)
+		{
+			op.append(std::max<int>(10 - ::narrow<int>(op.size()), 0), ' ');
+		}
+
 		return op;
 	}
 	void DisAsm(const char* op)
