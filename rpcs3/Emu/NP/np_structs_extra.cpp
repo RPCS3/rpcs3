@@ -64,6 +64,10 @@ namespace extra_nps
 		sceNp2.warning("flagAttr: 0x%x", req->flagAttr);
 		sceNp2.warning("roomBinAttrInternal: *0x%x", req->roomBinAttrInternal);
 		sceNp2.warning("roomBinAttrInternalNum: %d", req->roomBinAttrInternalNum);
+
+		for (u32 i = 0; i < req->roomBinAttrInternalNum; i++)
+			print_bin_attr(&req->roomBinAttrInternal[i]);
+
 		sceNp2.warning("roomSearchableIntAttrExternal: *0x%x", req->roomSearchableIntAttrExternal);
 		sceNp2.warning("roomSearchableIntAttrExternalNum: %d", req->roomSearchableIntAttrExternalNum);
 		sceNp2.warning("roomSearchableBinAttrExternal: *0x%x", req->roomSearchableBinAttrExternal);

@@ -12,6 +12,7 @@
 #include "np_structs_extra.h"
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
+#include "Emu/NP/np_contexts.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -281,9 +282,10 @@ std::string np_handler::ether_to_string(std::array<u8, 6>& ether)
 
 void np_handler::string_to_npid(const char* str, SceNpId* npid)
 {
+	memset(npid, 0, sizeof(SceNpId));
 	strncpy(npid->handle.data, str, sizeof(npid->handle.data));
 	npid->handle.term = 0;
-	npid->reserved[0] = 1;
+	// npid->reserved[0] = 1;
 }
 
 void np_handler::string_to_online_name(const char* str, SceNpOnlineName* online_name)
@@ -363,8 +365,6 @@ void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 
 void np_handler::terminate_NP()
 {
-	// is_psn_active = false;
-
 	// Reset memory pool
 	mpool.set(0);
 	mpool_size  = 0;
@@ -380,6 +380,9 @@ void np_handler::terminate_NP()
 
 vm::addr_t np_handler::allocate(u32 size)
 {
+	if (!size)
+		return vm::cast(static_cast<u64>(0));
+
 	// Align allocs
 	const u32 alloc_size = ::align(size, 4);
 	if (alloc_size > mpool_avail)
@@ -425,13 +428,15 @@ std::vector<SceNpMatching2ServerId> np_handler::get_match2_server_list(SceNpMatc
 {
 	std::vector<SceNpMatching2ServerId> server_list{};
 
-	if (g_cfg.net.psn_status == np_psn_status::rpcn)
+	if (g_cfg.net.psn_status != np_psn_status::rpcn)
 	{
-		if (!rpcn.get_server_list(get_req_id(0), idm::get<match2_ctx>(ctx_id)->communicationId.data, server_list))
-		{
-			rpcn_log.error("Disconnecting from RPCN!");
-			is_psn_active = false;
-		}
+		return server_list;
+	}
+
+	if (!rpcn.get_server_list(get_req_id(0), get_match2_context(ctx_id)->communicationId, server_list))
+	{
+		rpcn_log.error("Disconnecting from RPCN!");
+		is_psn_active = false;
 	}
 
 	return server_list;
@@ -478,7 +483,7 @@ u32 np_handler::get_world_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMat
 {
 	u32 req_id = generate_callback_info(ctx_id, optParam);
 
-	if (!rpcn.get_world_list(req_id, server_id))
+	if (!rpcn.get_world_list(req_id, get_match2_context(ctx_id)->communicationId, server_id))
 	{
 		rpcn_log.error("Disconnecting from RPCN!");
 		is_psn_active = false;
@@ -491,7 +496,7 @@ u32 np_handler::create_join_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpM
 {
 	u32 req_id = generate_callback_info(ctx_id, optParam);
 
-	if (!rpcn.createjoin_room(req_id, req))
+	if (!rpcn.createjoin_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 	{
 		rpcn_log.error("Disconnecting from RPCN!");
 		is_psn_active = false;
@@ -504,7 +509,7 @@ u32 np_handler::join_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching
 {
 	u32 req_id = generate_callback_info(ctx_id, optParam);
 
-	if (!rpcn.join_room(req_id, req))
+	if (!rpcn.join_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 	{
 		rpcn_log.error("Disconnecting from RPCN!");
 		is_psn_active = false;
@@ -517,7 +522,7 @@ u32 np_handler::leave_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatchin
 {
 	u32 req_id = generate_callback_info(ctx_id, optParam);
 
-	if (!rpcn.leave_room(req_id, req))
+	if (!rpcn.leave_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 	{
 		rpcn_log.error("Disconnecting from RPCN!");
 		is_psn_active = false;
@@ -530,7 +535,7 @@ u32 np_handler::search_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatchi
 {
 	u32 req_id = generate_callback_info(ctx_id, optParam);
 
-	if (!rpcn.search_room(req_id, req))
+	if (!rpcn.search_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 	{
 		rpcn_log.error("Disconnecting from RPCN!");
 		is_psn_active = false;
@@ -545,7 +550,7 @@ u32 np_handler::set_roomdata_external(SceNpMatching2ContextId ctx_id, vm::cptr<S
 
 	extra_nps::print_set_roomdata_ext_req(req);
 
-	if (!rpcn.set_roomdata_external(req_id, req))
+	if (!rpcn.set_roomdata_external(req_id, get_match2_context(ctx_id)->communicationId, req))
 	{
 		rpcn_log.error("Disconnecting from RPCN!");
 		is_psn_active = false;
@@ -558,7 +563,7 @@ u32 np_handler::get_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<S
 {
 	u32 req_id = generate_callback_info(ctx_id, optParam);
 
-	if (!rpcn.get_roomdata_internal(req_id, req))
+	if (!rpcn.get_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 	{
 		rpcn_log.error("Disconnecting from RPCN!");
 		is_psn_active = false;
@@ -573,7 +578,7 @@ u32 np_handler::set_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<S
 
 	extra_nps::print_set_roomdata_int_req(req);
 
-	if (!rpcn.set_roomdata_internal(req_id, req))
+	if (!rpcn.set_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 	{
 		rpcn_log.error("Disconnecting from RPCN!");
 		is_psn_active = false;
@@ -586,7 +591,7 @@ u32 np_handler::get_ping_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatc
 {
 	u32 req_id = generate_callback_info(ctx_id, optParam);
 
-	if (!rpcn.ping_room_owner(req_id, req->roomId))
+	if (!rpcn.ping_room_owner(req_id, get_match2_context(ctx_id)->communicationId, req->roomId))
 	{
 		rpcn_log.error("Disconnecting from RPCN!");
 		is_psn_active = false;
@@ -599,7 +604,7 @@ u32 np_handler::send_room_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNp
 {
 	u32 req_id = generate_callback_info(ctx_id, optParam);
 
-	if (!rpcn.send_room_message(req_id, req))
+	if (!rpcn.send_room_message(req_id, get_match2_context(ctx_id)->communicationId, req))
 	{
 		rpcn_log.error("Disconnecting from RPCN!");
 		is_psn_active = false;
@@ -1308,77 +1313,6 @@ s32 np_handler::analyze_dns_packet(s32 s, const u8* buf, u32 len)
 	}
 
 	return -1;
-}
-
-s32 np_handler::create_score_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
-{
-	return static_cast<s32>(idm::make<score_ctx>(communicationId, passphrase));
-}
-bool np_handler::destroy_score_context(s32 ctx_id)
-{
-	return idm::remove<score_ctx>(static_cast<u32>(ctx_id));
-}
-
-s32 np_handler::create_score_transaction_context(s32 score_context_id)
-{
-	return static_cast<s32>(idm::make<score_transaction_ctx>(score_context_id));
-}
-bool np_handler::destroy_score_transaction_context(s32 ctx_id)
-{
-	return idm::remove<score_transaction_ctx>(static_cast<u32>(ctx_id));
-}
-
-u16 np_handler::create_match2_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
-{
-	return static_cast<u16>(idm::make<match2_ctx>(communicationId, passphrase));
-}
-bool np_handler::destroy_match2_context(u16 ctx_id)
-{
-	return idm::remove<match2_ctx>(static_cast<u32>(ctx_id));
-}
-std::shared_ptr<np_handler::match2_ctx> np_handler::get_match2_context(u16 ctx_id)
-{
-	return idm::get_unlocked<match2_ctx>(ctx_id);
-}
-
-s32 np_handler::create_lookup_title_context(vm::cptr<SceNpCommunicationId> communicationId)
-{
-	return static_cast<s32>(idm::make<lookup_title_ctx>(communicationId));
-}
-bool np_handler::destroy_lookup_title_context(s32 ctx_id)
-{
-	return idm::remove<lookup_title_ctx>(static_cast<u32>(ctx_id));
-}
-
-s32 np_handler::create_lookup_transaction_context(s32 lt_ctx)
-{
-	return static_cast<s32>(idm::make<lookup_transaction_ctx>(lt_ctx));
-}
-bool np_handler::destroy_lookup_transaction_context(s32 ctx_id)
-{
-	return idm::remove<lookup_transaction_ctx>(static_cast<u32>(ctx_id));
-}
-
-s32 np_handler::create_commerce2_context(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg)
-{
-	return static_cast<s32>(idm::make<commerce2_ctx>(version, npid, handler, arg));
-}
-bool np_handler::destroy_commerce2_context(s32 ctx_id)
-{
-	return idm::remove<commerce2_ctx>(static_cast<u32>(ctx_id));
-}
-std::shared_ptr<np_handler::commerce2_ctx> np_handler::get_commerce2_context(u16 ctx_id)
-{
-	return idm::get_unlocked<commerce2_ctx>(ctx_id);
-}
-
-s32 np_handler::create_signaling_context(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg)
-{
-	return static_cast<s32>(idm::make<signaling_ctx>(npid, handler, arg));
-}
-bool np_handler::destroy_signaling_context(s32 ctx_id)
-{
-	return idm::remove<signaling_ctx>(static_cast<u32>(ctx_id));
 }
 
 bool np_handler::error_and_disconnect(const std::string& error_msg)

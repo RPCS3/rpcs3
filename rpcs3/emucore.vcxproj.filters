@@ -926,6 +926,9 @@
     <ClCompile Include="Emu\NP\fb_helpers.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\NP\np_contexts.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\NP\np_handler.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>

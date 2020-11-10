@@ -12,6 +12,7 @@
 #include "cellSysutil.h"
 
 #include "Emu/NP/np_handler.h"
+#include "Emu/NP/np_contexts.h"
 
 LOG_CHANNEL(sceNp);
 
@@ -1955,7 +1956,7 @@ error_code sceNpLookupTerm()
 
 error_code sceNpLookupCreateTitleCtx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpId> selfNpId)
 {
-	sceNp.warning("sceNpLookupCreateTitleCtx(communicationId=*0x%x, selfNpId=0x%x)", communicationId, selfNpId);
+	sceNp.warning("sceNpLookupCreateTitleCtx(communicationId=*0x%x(%s), selfNpId=0x%x)", communicationId, communicationId->data, selfNpId);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -1969,7 +1970,7 @@ error_code sceNpLookupCreateTitleCtx(vm::cptr<SceNpCommunicationId> communicatio
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	return not_an_error(nph->create_lookup_title_context(communicationId));
+	return not_an_error(create_lookup_title_context(communicationId));
 }
 
 error_code sceNpLookupDestroyTitleCtx(s32 titleCtxId)
@@ -1983,7 +1984,7 @@ error_code sceNpLookupDestroyTitleCtx(s32 titleCtxId)
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph->destroy_lookup_title_context(titleCtxId))
+	if (!destroy_lookup_title_context(titleCtxId))
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 
 	return CELL_OK;
@@ -2005,7 +2006,7 @@ error_code sceNpLookupCreateTransactionCtx(s32 titleCtxId)
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	return not_an_error(nph->create_lookup_transaction_context(titleCtxId));
+	return not_an_error(create_lookup_transaction_context(titleCtxId));
 }
 
 error_code sceNpLookupDestroyTransactionCtx(s32 transId)
@@ -2019,7 +2020,7 @@ error_code sceNpLookupDestroyTransactionCtx(s32 transId)
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph->destroy_lookup_transaction_context(transId))
+	if (!destroy_lookup_transaction_context(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -2426,7 +2427,9 @@ error_code sceNpLookupTitleSmallStorageAsync(s32 transId, vm::ptr<void> data, u6
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
+	// TSS are game specific data we don't have access to, set buf to 0, return size 0
 	std::memset(data.get_ptr(), 0, maxSize);
+	*contentLength = 0;
 
 	return CELL_OK;
 }
@@ -3274,7 +3277,7 @@ error_code sceNpScoreCreateTitleCtx(vm::cptr<SceNpCommunicationId> communication
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	return not_an_error(nph->create_score_context(communicationId, passphrase));
+	return not_an_error(create_score_context(communicationId, passphrase));
 }
 
 error_code sceNpScoreDestroyTitleCtx(s32 titleCtxId)
@@ -3288,7 +3291,7 @@ error_code sceNpScoreDestroyTitleCtx(s32 titleCtxId)
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph->destroy_score_context(titleCtxId))
+	if (!destroy_score_context(titleCtxId))
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 
 	return CELL_OK;
@@ -3310,7 +3313,7 @@ error_code sceNpScoreCreateTransactionCtx(s32 titleCtxId)
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	return not_an_error(nph->create_score_transaction_context(titleCtxId));
+	return not_an_error(create_score_transaction_context(titleCtxId));
 }
 
 error_code sceNpScoreDestroyTransactionCtx(s32 transId)
@@ -4386,7 +4389,7 @@ error_code sceNpSignalingCreateCtx(vm::ptr<SceNpId> npId, vm::ptr<SceNpSignaling
 	//	return SCE_NP_SIGNALING_ERROR_CTX_MAX;
 	//}
 
-	*ctx_id = nph->create_signaling_context(npId, handler, arg);
+	*ctx_id = create_signaling_context(npId, handler, arg);
 
 	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
 	sigh->set_sig_cb(*ctx_id, handler, arg);
@@ -4405,7 +4408,7 @@ error_code sceNpSignalingDestroyCtx(u32 ctx_id)
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph->destroy_signaling_context(ctx_id))
+	if (!destroy_signaling_context(ctx_id))
 	{
 		return SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND;
 	}
@@ -4740,10 +4743,10 @@ error_code sceNpUtilCmpNpIdInOrder(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2,
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
-	{
-		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
-	}
+	// if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
+	// {
+	// 	return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+	// }
 
 	if (s32 res = strncmp(id1->handle.data, id2->handle.data, 16))
 	{
@@ -4787,10 +4790,10 @@ error_code sceNpUtilCmpOnlineId(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2)
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
-	{
-		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
-	}
+	// if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
+	// {
+	// 	return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+	// }
 
 	if (strncmp(id1->handle.data, id2->handle.data, 16) != 0)
 	{
