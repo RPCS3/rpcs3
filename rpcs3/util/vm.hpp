@@ -40,7 +40,7 @@ namespace utils
 	void memory_protect(void* pointer, std::size_t size, protection prot);
 
 	// Lock pages in memory
-	void memory_lock(void* pointer, std::size_t size);
+	bool memory_lock(void* pointer, std::size_t size);
 
 	// Shared memory handle
 	class shm

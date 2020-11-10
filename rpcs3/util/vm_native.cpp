@@ -186,12 +186,12 @@ namespace utils
 #endif
 	}
 
-	void memory_lock(void* pointer, std::size_t size)
+	bool memory_lock(void* pointer, std::size_t size)
 	{
 #ifdef _WIN32
-		verify("VirtualLock" HERE), ::VirtualLock(pointer, size);
+		return ::VirtualLock(pointer, size);
 #else
-		verify("mlock" HERE), !::mlock(pointer, size);
+		return !::mlock(pointer, size);
 #endif
 	}
 
