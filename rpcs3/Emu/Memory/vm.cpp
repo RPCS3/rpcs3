@@ -936,6 +936,7 @@ namespace vm
 		if (!shm)
 		{
 			utils::memory_protect(g_base_addr + addr, size, utils::protection::no);
+			std::memset(g_sudo_addr + addr, 0, size);
 		}
 		else
 		{
