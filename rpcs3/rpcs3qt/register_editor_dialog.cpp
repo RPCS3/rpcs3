@@ -299,7 +299,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 				if (reg == PPU_CR) ppu.cr.unpack(reg_value);
 				else if (reg == PPU_VRSAVE) ppu.vrsave = reg_value;
 				else if (reg == PPU_PRIO && !sys_ppu_thread_set_priority(ppu, ppu.id, reg_value)) {}
-				else if (reg == PC && reg_value % 4 == 0 && vm::check_addr(reg_value, 4, vm::page_executable)) ppu.cia = reg_value & -4;
+				else if (reg == PC && reg_value % 4 == 0 && vm::check_addr(reg_value, vm::page_executable)) ppu.cia = reg_value & -4;
 				else ok = false;
 				if (ok) return;
 			}

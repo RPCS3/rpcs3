@@ -52,6 +52,13 @@ namespace vm
 		// Old-style conditional constexpr
 		const u32 size = Size ? Size : _size;
 
+		if (size <= 4096u && !((begin | size) & (size - 1)) ? !vm::check_addr(begin) : !vm::check_addr(begin, vm::page_readable, size))
+		{
+			range_lock->release(0);
+			range_lock_internal(range_lock, begin, _size);
+			return;
+		}
+
 		const u64 lock_val = g_range_lock.load();
 		const u64 is_share = g_shmem[begin >> 16].load();
 

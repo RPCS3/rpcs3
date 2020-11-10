@@ -2115,7 +2115,7 @@ namespace rsx
 				}
 				else
 				{
-					if (!vm::check_addr(write_end, (heuristic_end - write_end), vm::page_info_t::page_allocated))
+					if (!vm::check_addr(write_end, vm::page_readable, (heuristic_end - write_end)))
 					{
 						// Enforce strict allocation size!
 						return false;
