@@ -1194,9 +1194,49 @@ std::string spu_thread::dump_regs() const
 {
 	std::string ret;
 
-	for (u32 i = 0; i < 128; i++)
+	for (u32 i = 0; i < 128; i++, ret += '\n')
 	{
-		fmt::append(ret, "r%d: %s\n", i, gpr[i]);
+		fmt::append(ret, "r%d: ", i);
+
+		const auto r = gpr[i];
+
+		if (auto [size, dst, src] = SPUDisAsm::try_get_insert_mask_info(r); size)
+		{
+			// Special: insertation masks
+
+			const std::string_view type =
+				size == 1 ? "byte" :
+				size == 2 ? "half" :
+				size == 4 ? "word" :
+				size == 8 ? "dword" : "error";
+
+			if ((size >= 4u && !src) || (size == 2u && src == 1u) || (size == 1u && src == 3u))
+			{
+				fmt::append(ret, "insert -> %s[%u]", type, dst);
+				continue;
+			}
+		}
+
+		const u32 i3 = r._u32[3];
+
+		if (v128::from32p(i3) == r)
+		{
+			// Shortand formatting
+			fmt::append(ret, "0x%08x$", i3);
+		}
+		else
+		{
+			fmt::append(ret, "%s", r);
+		}
+
+		if (i3 >= 0x80 && is_exec_code(i3))
+		{
+			SPUDisAsm dis_asm(CPUDisAsm_NormalMode);
+			dis_asm.offset = ls;
+			dis_asm.dump_pc = i3;
+			dis_asm.disasm(i3);
+			fmt::append(ret, " -> %s", dis_asm.last_opcode);
+		}
 	}
 
 	const auto events = ch_events.load();
@@ -1264,8 +1304,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 				return true;
 			}
 
-			const u32 op = _ref<u32>(addr);
-			return s_spu_itype.decode(op) == spu_itype::UNK || !op || !addr;
+			return !addr || !is_exec_code(addr);
 		};
 
 		if (is_invalid(lr))
@@ -2861,6 +2900,34 @@ bool spu_thread::check_mfc_interrupts(u32 next_pc)
 	}
 
 	return false;
+}
+
+bool spu_thread::is_exec_code(u32 addr) const
+{
+	if (addr & ~0x3FFFC)
+	{
+		return false;
+	}
+
+	for (u32 i = 0; i < 30; i++)
+	{
+		const u32 addr0 = addr + (i * 4);
+		const u32 op = _ref<u32>(addr0);
+		const auto type = s_spu_itype.decode(op);
+
+		if (type == spu_itype::UNK || !op)
+		{
+			return false;
+		}
+
+		if (type & spu_itype::branch)
+		{
+			// TODO
+			break;
+		}
+	}
+
+	return true;
 }
 
 u32 spu_thread::get_mfc_completed()
