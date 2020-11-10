@@ -52,11 +52,32 @@ namespace vm
 	// Address type
 	enum addr_t : u32 {};
 
+	// Page information
+	struct memory_page
+	{
+		// Memory flags
+		atomic_t<u8> flags;
+	};
+
 	// Change memory protection of specified memory region
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
 
 	// Check flags for specified memory range (unsafe)
-	bool check_addr(u32 addr, u32 size = 1, u8 flags = page_readable);
+	bool check_addr(u32 addr, u8 flags, u32 size);
+
+	template <u32 Size = 1>
+	bool check_addr(u32 addr, u8 flags = page_readable)
+	{
+		extern std::array<memory_page, 0x100000000 / 4096> g_pages;
+
+		if (Size - 1 >= 4095u || Size & (Size - 1) || addr % Size)
+		{
+			// TODO
+			return check_addr(addr, flags, Size);
+		}
+
+		return !(~g_pages[addr / 4096].flags & (flags | page_allocated)); 
+	}
 
 	// Search and map memory in specified memory location (min alignment is 0x10000)
 	u32 alloc(u32 size, memory_location_t location, u32 align = 0x10000);

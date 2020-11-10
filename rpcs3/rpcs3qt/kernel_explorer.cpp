@@ -514,7 +514,7 @@ void kernel_explorer::Update()
 
 					if (!pspurs)
 					{
-						if (arg < UINT32_MAX && arg % 0x80 == 0 && vm::check_addr(arg, pspurs.size()))
+						if (arg < UINT32_MAX && arg % 0x80 == 0 && vm::check_addr(arg, vm::page_readable, pspurs.size()))
 						{
 							pspurs.set(static_cast<u32>(arg));
 						}

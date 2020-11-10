@@ -126,14 +126,14 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 				item(i)->setBackground(default_background);
 			}
 
-			if (!is_spu && !vm::check_addr(pc, 4))
+			if (!is_spu && !vm::check_addr(pc))
 			{
 				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
 				count = 4;
 				continue;
 			}
 
-			if (!is_spu && !vm::check_addr(pc, 4, vm::page_executable))
+			if (!is_spu && !vm::check_addr(pc, vm::page_executable))
 			{
 				const u32 data = *vm::get_super_ptr<atomic_be_t<u32>>(pc);
 				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,

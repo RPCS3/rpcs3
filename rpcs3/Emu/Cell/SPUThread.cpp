@@ -2699,7 +2699,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			}
 		}
 
-		if (!vm::check_addr(addr, 1, vm::page_writable))
+		if (!vm::check_addr(addr, vm::page_writable))
 		{
 			vm::_ref<atomic_t<u8>>(addr) += 0; // Access violate
 		}
@@ -3296,7 +3296,7 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data)
 			if ((lock_val >> vm::range_pos) == (vm::range_locked >> vm::range_pos))
 			{
 				// All page flags are untouched and can be read safely
-				if (!vm::check_addr(addr, 128))
+				if (!vm::check_addr(addr))
 				{
 					// Assume our memory is being (de)allocated
 					range_lock->release(0);
@@ -3327,7 +3327,7 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data)
 		if (lock_addr + lock_size <= addr || lock_addr >= addr + 128)
 		{
 			// We are outside locked range, so page flags are unaffected
-			if (!vm::check_addr(addr, 128))
+			if (!vm::check_addr(addr))
 			{
 				range_lock->release(0);
 				break;

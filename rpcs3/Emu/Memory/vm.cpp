@@ -77,13 +77,6 @@ namespace vm
 	// Memory range lock slots (sparse atomics)
 	atomic_t<u64, 64> g_range_lock_set[64]{};
 
-	// Page information
-	struct memory_page
-	{
-		// Memory flags
-		atomic_t<u8> flags;
-	};
-
 	// Memory pages
 	std::array<memory_page, 0x100000000 / 4096> g_pages{};
 
@@ -192,7 +185,7 @@ namespace vm
 			{
 				const u64 new_lock_val = g_range_lock.load();
 
-				if (!new_lock_val || new_lock_val == lock_val) [[likely]]
+				if (vm::check_addr(begin, vm::page_readable, size) && (!new_lock_val || new_lock_val == lock_val)) [[likely]]
 				{
 					break;
 				}
@@ -960,10 +953,15 @@ namespace vm
 		return size;
 	}
 
-	bool check_addr(u32 addr, u32 size, u8 flags)
+	bool check_addr(u32 addr, u8 flags, u32 size)
 	{
+		if (size == 0)
+		{
+			return true;
+		}
+
 		// Overflow checking
-		if (addr + size < addr && (addr + size) != 0)
+		if (0x10000'0000ull - addr < size)
 		{
 			return false;
 		}
@@ -971,12 +969,28 @@ namespace vm
 		// Always check this flag
 		flags |= page_allocated;
 
-		for (u32 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max; i++)
+		for (u32 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max;)
 		{
-			if ((g_pages[i].flags & flags) != flags) [[unlikely]]
+			auto state = +g_pages[i].flags;
+
+			if (~state & flags) [[unlikely]]
 			{
 				return false;
 			}
+
+			if (state & page_1m_size)
+			{
+				i = ::align(i + 1, 0x100000 / 4096);
+				continue;
+			}
+
+			if (state & page_64k_size)
+			{
+				i = ::align(i + 1, 0x10000 / 4096);
+				continue;
+			}
+
+			i++;
 		}
 
 		return true;
@@ -1534,12 +1548,7 @@ namespace vm
 	{
 		vm::reader_lock lock;
 
-		if (size == 0)
-		{
-			return true;
-		}
-
-		if (vm::check_addr(addr, size, is_write ? page_writable : page_readable))
+		if (vm::check_addr(addr, is_write ? page_writable : page_readable, size))
 		{
 			void* src = vm::g_sudo_addr + addr;
 			void* dst = ptr;

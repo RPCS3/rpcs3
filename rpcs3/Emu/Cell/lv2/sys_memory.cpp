@@ -179,7 +179,7 @@ error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_
 		return CELL_EINVAL;
 	}
 
-	if (!vm::check_addr(attr.addr(), attr.size()))
+	if (!vm::check_addr(attr.addr(), vm::page_readable, attr.size()))
 	{
 		return CELL_EFAULT;
 	}
@@ -187,11 +187,11 @@ error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_
 	attr->attribute = 0x40000ull; // SYS_MEMORY_PROT_READ_WRITE (TODO)
 	attr->access_right = addr >> 28 == 0xdu ? SYS_MEMORY_ACCESS_RIGHT_PPU_THR : SYS_MEMORY_ACCESS_RIGHT_ANY;// (TODO)
 
-	if (vm::check_addr(addr, 1, vm::page_1m_size))
+	if (vm::check_addr(addr, vm::page_1m_size))
 	{
 		attr->page_size = 0x100000;
 	}
-	else if (vm::check_addr(addr, 1, vm::page_64k_size))
+	else if (vm::check_addr(addr, vm::page_64k_size))
 	{
 		attr->page_size = 0x10000;
 	}
