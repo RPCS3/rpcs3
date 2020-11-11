@@ -1789,6 +1789,10 @@ static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 	report_fatal_error(msg);
 }
 
+void sigpipe_signaling_handler(int)
+{
+}
+
 const bool s_exception_handler_set = []() -> bool
 {
 	struct ::sigaction sa;
@@ -1799,6 +1803,13 @@ const bool s_exception_handler_set = []() -> bool
 	if (::sigaction(SIGSEGV, &sa, NULL) == -1)
 	{
 		std::fprintf(stderr, "sigaction(SIGSEGV) failed (%d).\n", errno);
+		std::abort();
+	}
+
+	sa.sa_handler = sigpipe_signaling_handler;
+	if (::sigaction(SIGPIPE, &sa, NULL) == -1)
+	{
+		std::fprintf(stderr, "sigaction(SIGPIPE) failed (%d).\n", errno);
 		std::abort();
 	}
 
