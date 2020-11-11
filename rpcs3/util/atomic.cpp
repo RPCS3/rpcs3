@@ -66,8 +66,10 @@ ptr_cmp(const void* data, u32 _size, __m128i old128, __m128i mask128, atomic_wai
 		u64 old_value = _mm_cvtsi128_si64(old128);
 		u64 mask = _mm_cvtsi128_si64(mask128) & (UINT64_MAX >> ((64 - size * 8) & 63));
 
-		switch (size)
+		// Don't load memory on empty mask
+		switch (mask ? size : 0)
 		{
+		case 0: break;
 		case 1: new_value = reinterpret_cast<const atomic_t<u8>*>(data)->load(); break;
 		case 2: new_value = reinterpret_cast<const atomic_t<u16>*>(data)->load(); break;
 		case 4: new_value = reinterpret_cast<const atomic_t<u32>*>(data)->load(); break;
@@ -169,9 +171,15 @@ ptr_cmp(const void* data, u32 _size, __m128i old128, __m128i mask128, atomic_wai
 	}
 	else if (size == 16 && (flag == op::eq || flag == (op::eq | op_flag::inverse)))
 	{
-		u128 new_value = atomic_storage<u128>::load(*reinterpret_cast<const u128*>(data));
+		u128 new_value = 0;
 		u128 old_value = std::bit_cast<u128>(old128);
 		u128 mask = std::bit_cast<u128>(mask128);
+
+		// Don't load memory on empty mask
+		if (mask) [[likely]]
+		{
+			new_value = atomic_storage<u128>::load(*reinterpret_cast<const u128*>(data));
+		}
 
 		// TODO
 		result = !((old_value ^ new_value) & mask);
