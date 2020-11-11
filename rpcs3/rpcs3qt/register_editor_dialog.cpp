@@ -174,7 +174,11 @@ void register_editor_dialog::updateRegister(int reg)
 			if (reg >= ppu_r0 && reg <= ppu_r31) str = fmt::format("%016llx", ppu.gpr[reg_index]);
 			else if (reg >= ppu_ff0 && reg <= ppu_ff31) str = fmt::format("%g", ppu.fpr[reg_index]);
 			else if (reg >= ppu_f0 && reg <= ppu_f31) str = fmt::format("%016llx", std::bit_cast<u64>(ppu.fpr[reg_index]));
-			else if (reg >= ppu_v0 && reg <= ppu_v31)  str = fmt::format("%016llx%016llx", ppu.vr[reg_index]._u64[1], ppu.vr[reg_index]._u64[0]);
+			else if (reg >= ppu_v0 && reg <= ppu_v31)
+			{
+				const auto r = ppu.vr[reg_index];
+				str = r == v128::from32p(r._u32[0]) ? fmt::format("%08x$", r._u32[0]) : fmt::format("%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+			}
 		}
 		else if (reg == PPU_CR)  str = fmt::format("%08x", ppu.cr.pack());
 		else if (reg == PPU_LR)  str = fmt::format("%016llx", ppu.lr);
@@ -191,7 +195,8 @@ void register_editor_dialog::updateRegister(int reg)
 		if (reg >= spu_r0 && reg <= spu_r127)
 		{
 			const u32 reg_index = reg % 128;
-			str = fmt::format("%016llx%016llx", spu.gpr[reg_index]._u64[1], spu.gpr[reg_index]._u64[0]);
+			const auto r = spu.gpr[reg_index];
+			str = r == v128::from32p(r._u32[0]) ? fmt::format("%08x$", r._u32[0]) : fmt::format("%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
 		}
 		else if (reg == MFC_PEVENTS) str = fmt::format("%08x", +spu.ch_events.load().events);
 		else if (reg == MFC_EVENTS_MASK) str = fmt::format("%08x", +spu.ch_events.load().mask);
@@ -221,24 +226,23 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		return res.ec == std::errc() && res.ptr == end;
 	};
 
-	if (auto len = value.size(); len < 32 && !(reg >= ppu_ff0 && reg <= ppu_ff31))
+	auto pad = [&](u32 size)
 	{
-		const bool is_int = !value.empty() && std::isxdigit(value[0]);
+		if (value.empty() || value.size() > size)
+		{
+			value.clear();
+			return;
+		}
 
+		value.insert(0, size - value.size(), '0');
+	};
+
+	if (!(reg >= ppu_ff0 && reg <= ppu_ff31))
+	{
 		if (value.starts_with("0x") || value.starts_with("0X"))
 		{
 			value = value.substr(2);
 		}
-
-		if (is_int)
-		{
-			value.insert(0, 32 - len, '0');
-		}
-	}
-	else if (value.size() > 32u && !(reg >= ppu_ff0 && reg <= ppu_ff31))
-	{
-		// Invalid integer
-		value.clear();
 	}
 
 	if (!cpu || value.empty())
@@ -254,7 +258,9 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 
 			if ((reg >= ppu_r0 && reg <= ppu_r31) || (reg >= ppu_f0 && reg <= ppu_f31))
 			{
-				if (u64 reg_value; check_res(std::from_chars(value.c_str() + 16, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
+				pad(16);
+
+				if (u64 reg_value; check_res(std::from_chars(value.c_str(), value.c_str() + 16, reg_value, 16), value.c_str() + 16))
 				{
 					if (reg >= ppu_r0 && reg <= ppu_r31) ppu.gpr[reg_index] = reg_value;
 					else if (reg >= ppu_f0 && reg <= ppu_f31) ppu.fpr[reg_index] = std::bit_cast<f64>(reg_value);
@@ -272,6 +278,21 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 			}
 			else if (reg >= ppu_v0 && reg <= ppu_v31)
 			{
+				if (value.ends_with("$"))
+				{
+					pad(9);
+
+					if (u32 broadcast; check_res(std::from_chars(value.c_str(), value.c_str() + 8, broadcast, 16), value.c_str() + 8))
+					{
+						ppu.vr[reg_index] = v128::from32p(broadcast);
+						return;
+					}
+				}
+
+				value.erase(std::remove_if(value.begin(), value.end(), [](uchar c){ return std::isspace(c); }), value.end());
+
+				pad(32);
+
 				u64 reg_value0, reg_value1;
 
 				if (check_res(std::from_chars(value.c_str(), value.c_str() + 16, reg_value0, 16), value.c_str() + 16) &&
@@ -284,7 +305,9 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		}
 		else if (reg == PPU_LR || reg == PPU_CTR)
 		{
-			if (u64 reg_value; check_res(std::from_chars(value.c_str() + 16, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
+			pad(16);
+
+			if (u64 reg_value; check_res(std::from_chars(value.c_str(), value.c_str() + 16, reg_value, 16), value.c_str() + 16))
 			{
 				if (reg == PPU_LR) ppu.lr = reg_value;
 				else if (reg == PPU_CTR) ppu.ctr = reg_value;
@@ -293,7 +316,9 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		}
 		else if (reg == PPU_CR || reg == PPU_VRSAVE || reg == PPU_PRIO || reg == PC)
 		{
-			if (u32 reg_value; check_res(std::from_chars(value.c_str() + 24, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
+			pad(8);
+
+			if (u32 reg_value; check_res(std::from_chars(value.c_str(), value.c_str() + 8, reg_value, 16), value.c_str() + 8))
 			{
 				bool ok = true;
 				if (reg == PPU_CR) ppu.cr.unpack(reg_value);
@@ -317,6 +342,22 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		if (reg >= spu_r0 && reg <= spu_r127)
 		{
 			const u32 reg_index = reg % 128;
+
+			if (value.ends_with("$"))
+			{
+				pad(9);
+
+				if (u32 broadcast; check_res(std::from_chars(value.c_str(), value.c_str() + 8, broadcast, 16), value.c_str() + 8))
+				{
+					spu.gpr[reg_index] = v128::from32p(broadcast);
+					return;
+				}
+			}
+
+			value.erase(std::remove_if(value.begin(), value.end(), [](uchar c){ return std::isspace(c); }), value.end());
+
+			pad(32);
+
 			u64 reg_value0, reg_value1;
 
 			if (check_res(std::from_chars(value.c_str(), value.c_str() + 16, reg_value0, 16), value.c_str() + 16) &&
@@ -345,8 +386,14 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		else if (reg == SPU_SNR1 || reg == SPU_SNR2 || reg == SPU_OUT_MBOX || reg == SPU_OUT_INTR_MBOX)
 		{
 			const bool count = (value != "empty");
+
+			if (count)
+			{
+				pad(8);
+			}
+
 			if (u32 reg_value = 0;
-				!count || check_res(std::from_chars(value.c_str() + 24, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
+				!count || check_res(std::from_chars(value.c_str(), value.c_str() + 8, reg_value, 16), value.c_str() + 8))
 			{
 				if (reg == SPU_SNR1) spu.ch_snr1.set_value(reg_value, count);
 				else if (reg == SPU_SNR2) spu.ch_snr2.set_value(reg_value, count);
