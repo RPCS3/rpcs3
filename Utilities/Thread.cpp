@@ -1353,7 +1353,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		return true;
 	} while (0);
 
-	if (vm::check_addr(addr, std::max(1u, ::narrow<u32>(d_size)), is_writing ? vm::page_writable : vm::page_readable))
+	if (vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable))
 	{
 		if (cpu && cpu->test_stopped())
 		{
@@ -1378,7 +1378,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			return false;
 		}
 
-		if (area->flags & 0x100 || (is_writing && vm::check_addr(addr, std::max(1u, ::narrow<u32>(d_size)))))
+		if (area->flags & 0x100 || (is_writing && vm::check_addr(addr)))
 		{
 			// For 4kb pages or read only memory
 			utils::memory_protect(vm::base(addr & -0x1000), 0x1000, utils::protection::rw);
@@ -1386,7 +1386,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		}
 
 		area->falloc(addr & -0x10000, 0x10000);
-		return vm::check_addr(addr, std::max(1u, ::narrow<u32>(d_size)), is_writing ? vm::page_writable : vm::page_readable);
+		return vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable);
 	};
 
 	if (cpu)
@@ -1436,12 +1436,12 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			u64 data3;
 			{
 				vm::reader_lock rlock;
-				if (vm::check_addr(addr, std::max(1u, ::narrow<u32>(d_size)), is_writing ? vm::page_writable : vm::page_readable))
+				if (vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable))
 				{
 					// Memory was allocated inbetween, retry
 					return true;
 				}
-				else if (vm::check_addr(addr, std::max(1u, ::narrow<u32>(d_size))))
+				else if (vm::check_addr(addr))
 				{
 					data3 = SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY; // TODO
 				}
