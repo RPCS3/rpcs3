@@ -1163,21 +1163,20 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 	s_tls_wait_cb(nullptr);
 }
 
-static bool
+template <bool TryAlert = false>
+static u32
 #ifdef _WIN32
 __vectorcall
 #endif
-alert_sema(u32 cond_id, const void* data, u64 info, u32 size, __m128i mask, __m128i new_value)
+alert_sema(u32 cond_id, const void* data, u64 tid, u32 size, __m128i mask, __m128i new_value)
 {
 	verify(HERE), cond_id;
 
 	const auto cond = s_cond_list + cond_id;
 
-	bool ok = false;
+	u32 ok = 0;
 
-	u32 cmp_res = 0;
-
-	if (cond->sync && (!size ? (!info || cond->tid == info) : (cond->ptr == data && ((cmp_res = cmp_mask(size, mask, new_value, cond->size | (cond->flag << 8), cond->mask, cond->oldv))))))
+	if (cond->sync && (!size ? (!tid || cond->tid == tid) : (cond->ptr == data && cmp_mask(size, mask, new_value, cond->size | (cond->flag << 8), cond->mask, cond->oldv))))
 	{
 		// Redirect if necessary
 		const auto _old = cond;
@@ -1185,10 +1184,33 @@ alert_sema(u32 cond_id, const void* data, u64 info, u32 size, __m128i mask, __m1
 
 		if (_new && _new->tsc0 == _old->tsc0)
 		{
-			if ((!size && _new->forced_wakeup()) || (size && _new->wakeup(cmp_res)))
+			if ((!size && _new->forced_wakeup()) || (size && _new->wakeup(size == umax ? 1 : 2)))
 			{
-				ok = true;
-				_new->alert_native();
+				ok = cond_id;
+
+				if constexpr (TryAlert)
+				{
+					if (!_new->try_alert_native())
+					{
+						if (_new != _old)
+						{
+							// Keep base cond for another attempt, free only secondary cond
+							ok = ~_old->link;
+							cond_free(cond_id);
+							return ok;
+						}
+						else
+						{
+							// Keep cond for another attempt
+							ok = ~cond_id;
+							return ok;
+						}
+					}
+				}
+				else
+				{
+					_new->alert_native();
+				}
 			}
 		}
 
@@ -1347,7 +1369,7 @@ atomic_wait_engine::notify_one(const void* data, u32 size, __m128i mask, __m128i
 
 	root->slot_search(data, 0, [&](u32 cond_id)
 	{
-		if (alert_sema(cond_id, data, progress, size, mask, new_value))
+		if (alert_sema(cond_id, data, -1, size, mask, new_value))
 		{
 			s_tls_notify_cb(data, ++progress);
 			return true;
@@ -1373,15 +1395,40 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 
 	u64 progress = 0;
 
+	// Array count for batch notification
+	u32 count = 0;
+
+	// Array itself.
+	u16 cond_ids[UINT16_MAX + 1];
+
 	root->slot_search(data, 0, [&](u32 cond_id)
 	{
-		if (alert_sema(cond_id, data, progress, size, mask, new_value))
+		u32 res = alert_sema<true>(cond_id, data, -1, size, mask, new_value);
+
+		if (res <= UINT16_MAX)
 		{
-			s_tls_notify_cb(data, ++progress);
+			if (res)
+			{
+				s_tls_notify_cb(data, ++progress);
+			}
+		}
+		else
+		{
+			// Add to the end of the "stack"
+			cond_ids[UINT16_MAX - count++] = ~res;
 		}
 
 		return false;
 	});
+
+	// Cleanup
+	for (u32 i = 0; i < count; i++)
+	{
+		const u32 cond_id = cond_ids[UINT16_MAX - i];
+		s_cond_list[cond_id].alert_native();
+		s_tls_notify_cb(data, ++progress);
+		cond_free(cond_id);
+	}
 
 	s_tls_notify_cb(data, -1);
 }
