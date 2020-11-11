@@ -513,9 +513,24 @@ std::string ppu_thread::dump_regs() const
 		fmt::append(ret, "f%d%s: %.6G\n", i, i <= 9 ? " " : "", fpr[i]);
 	}
 
-	for (uint i = 0; i < 32; ++i)
+	for (uint i = 0; i < 32; ++i, ret += '\n')
 	{
-		fmt::append(ret, "v%d%s: %s [x: %g y: %g z: %g w: %g]\n", i, i <= 9 ? " " : "", vr[i], vr[i]._f[3], vr[i]._f[2], vr[i]._f[1], vr[i]._f[0]);
+		fmt::append(ret, "v%d%s: ", i, i <= 9 ? " " : "");
+ 
+		const auto r = vr[i];
+		const u32 i3 = r.u32r[0];
+
+		if (v128::from32p(i3) == r)
+		{
+			// Shortand formatting
+			fmt::append(ret, "%08x", i3);
+			fmt::append(ret, " [x: %g]", r.fr[0]);
+		}
+		else
+		{
+			fmt::append(ret, "%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+			fmt::append(ret, " [x: %g y: %g z: %g w: %g]", r.fr[0], r.fr[1], r.fr[2], r.fr[3]);
+		}
 	}
 
 	fmt::append(ret, "CR: 0x%08x\n", cr.pack());

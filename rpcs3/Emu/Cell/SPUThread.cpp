@@ -1202,7 +1202,7 @@ std::string spu_thread::dump_regs() const
 
 		if (auto [size, dst, src] = SPUDisAsm::try_get_insert_mask_info(r); size)
 		{
-			// Special: insertation masks
+			// Special: insertion masks
 
 			const std::string_view type =
 				size == 1 ? "byte" :
@@ -1222,12 +1222,14 @@ std::string spu_thread::dump_regs() const
 		if (v128::from32p(i3) == r)
 		{
 			// Shortand formatting
-			fmt::append(ret, "0x%08x$", i3);
+			fmt::append(ret, "%08x", i3);
 		}
 		else
 		{
-			fmt::append(ret, "%s", r);
+			fmt::append(ret, "%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
 		}
+
+		// TODO: SPU floats fomatting
 
 		if (i3 >= 0x80 && is_exec_code(i3))
 		{
