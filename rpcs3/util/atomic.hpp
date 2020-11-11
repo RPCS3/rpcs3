@@ -19,8 +19,7 @@ namespace atomic_wait
 {
 	constexpr uint max_list = 8;
 
-	struct sync_var;
-	struct slot_info;
+	struct root_info;
 	struct sema_handle;
 
 	struct info
