@@ -542,6 +542,7 @@ std::array<u32, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped
 	mapping[button::rs_right] = FindKeyCode(button_list, profile->rs_right);
 	mapping[button::rs_down]  = FindKeyCode(button_list, profile->rs_down);
 	mapping[button::rs_up]    = FindKeyCode(button_list, profile->rs_up);
+	mapping[button::ps]       = FindKeyCode(button_list, profile->ps);
 
 	return mapping;
 }
