@@ -23,7 +23,7 @@
 #include "endian.hpp"
 
 // Total number of entries, should be a power of 2.
-static constexpr std::size_t s_hashtable_size = 1u << 18;
+static constexpr std::size_t s_hashtable_size = 1u << 17;
 
 // Reference counter combined with shifted pointer (which is assumed to be 47 bit)
 static constexpr std::uintptr_t s_ref_mask = (1u << 17) - 1;
@@ -696,12 +696,25 @@ cond_id_lock(u32 cond_id, __m128i mask, u64 thread_id = 0, std::uintptr_t iptr =
 	return nullptr;
 }
 
+namespace
+{
+	struct alignas(16) slot_allocator
+	{
+		u64 ref : 16 = 0;
+		u64 low : 48 = 0;
+		u64 high = 0;
+
+		constexpr slot_allocator() noexcept = default;
+	};
+}
+
 namespace atomic_wait
 {
-	// Need to spare 16 bits for max distance
-	static constexpr u64 max_threads = 48;
+	// Need to spare 16 bits for ref counter
+	static constexpr u64 max_threads = 112;
 
-	static constexpr u64 thread_mask = (1ull << max_threads) - 1;
+	// Can only allow extended allocations go as far as this (about 585)
+	static constexpr u64 max_distance = UINT16_MAX / max_threads;
 
 	// Thread list
 	struct alignas(64) root_info
@@ -709,7 +722,7 @@ namespace atomic_wait
 		constexpr root_info() noexcept = default;
 
 		// Allocation bits (least significant)
-		atomic_t<u64> bits{};
+		atomic_t<slot_allocator> bits{};
 
 		// Allocation pool, pointers to allocated semaphores
 		atomic_t<u16> slots[max_threads]{};
@@ -720,9 +733,6 @@ namespace atomic_wait
 		// For collision statistics (bit difference stick flags)
 		atomic_t<u32> diff_lz{}, diff_tz{}, diff_pop{};
 
-		// Total reference counter
-		atomic_t<u64> threads{};
-
 		atomic_t<u16>* slot_alloc(std::uintptr_t ptr) noexcept;
 
 		root_info* slot_free(atomic_t<u16>* slot) noexcept;
@@ -731,7 +741,7 @@ namespace atomic_wait
 		auto slot_search(std::uintptr_t iptr, u64 thread_id, __m128i mask, F func) noexcept;
 	};
 
-	static_assert(sizeof(root_info) == 128);
+	static_assert(sizeof(root_info) == 256);
 }
 
 // Main hashtable for atomic wait.
@@ -758,66 +768,79 @@ u64 atomic_wait::get_unique_tsc()
 
 atomic_t<u16>* atomic_wait::root_info::slot_alloc(std::uintptr_t ptr) noexcept
 {
-	if (!threads.try_inc(UINT16_MAX + 1))
+	auto slot = bits.atomic_op([this](slot_allocator& bits) -> atomic_t<u16>*
 	{
-		fmt::raw_error("Thread limit " STRINGIZE(UINT16_MAX) " reached in a single hashtable slot.");
-		return nullptr;
-	}
-
-	auto* _this = this;
-
-	u64 limit = 0;
-
-	while (true)
-	{
-		const auto [_bits, ok] = _this->bits.fetch_op([](u64& bits)
+		// Increment reference counter
+		if (bits.ref == UINT16_MAX)
 		{
-			// Check free slot
-			if (~bits & thread_mask)
+			fmt::raw_error("Thread limit " STRINGIZE(UINT16_MAX) " reached for a single hashtable slot.");
+			return nullptr;
+		}
+
+		bits.ref++;
+
+		// Check free slots
+		if (~bits.high)
+		{
+			// Set lowest clear bit
+			const u32 id = std::countr_one(bits.high);
+			bits.high |= bits.high + 1;
+			return this->slots + id;
+		}
+
+		if (~bits.low << 16)
+		{
+			const u32 id = std::countr_one(bits.low);
+			bits.low |= bits.low + 1;
+			return this->slots + 64 + id;
+		}
+
+		return nullptr;
+	});
+
+	u32 limit = 0;
+
+	for (auto* _this = this + 1; !slot;)
+	{
+		auto [_old, slot2] = _this->bits.fetch_op([_this](slot_allocator& bits) -> atomic_t<u16>*
+		{
+			if (~bits.high)
 			{
-				// Set lowest clear bit
-				bits |= bits + 1;
-				return true;
+				const u32 id = std::countr_one(bits.high);
+				bits.high |= bits.high + 1;
+				return _this->slots + id;
 			}
 
-			return false;
+			if (~bits.low << 16)
+			{
+				const u32 id = std::countr_one(bits.low);
+				bits.low |= bits.low + 1;
+				return _this->slots + 64 + id;
+			}
+
+			return nullptr;
 		});
 
-		if (ok)
+		if (slot2)
 		{
-			const u32 slot_n = std::countr_one(_bits);
-			{
-				const u16 v = _this->slots[slot_n].load();
-			}
-
-			return &_this->slots[slot_n];
+			slot = slot2;
+			break;
 		}
 
 		// Keep trying adjacent slots in the hashtable, they are often free due to alignment.
 		_this++;
 		limit++;
 
+		if (limit == max_distance) [[unlikely]]
+		{
+			fmt::raw_error("Distance limit (585) exceeded for the atomic wait hashtable.");
+			return nullptr;
+		}
+
 		if (_this == std::end(s_hashtable)) [[unlikely]]
 		{
 			_this = s_hashtable;
 		}
-	}
-
-	if (limit)
-	{
-		// Make slot "extended"
-		bits.fetch_op([&](u64& val)
-		{
-			if ((val >> max_threads) >= limit) [[likely]]
-			{
-				return false;
-			}
-
-			// Replace with max value
-			val &= thread_mask;
-			val |= limit << max_threads;
-			return true;
-		});
 	}
 
 	u32 ptr32 = static_cast<u32>(ptr >> 16);
@@ -856,6 +879,8 @@ atomic_t<u16>* atomic_wait::root_info::slot_alloc(std::uintptr_t ptr) noexcept
 
 		diff_pop |= 1u << static_cast<u8>((diff >> 16) + diff - 1);
 	}
+
+	return slot;
 }
 
 atomic_wait::root_info* atomic_wait::root_info::slot_free(atomic_t<u16>* slot) noexcept
@@ -880,7 +905,9 @@ atomic_wait::root_info* atomic_wait::root_info::slot_free(atomic_t<u16>* slot) n
 		return nullptr;
 	}
 
-	verify(HERE), slot == &_this->slots[slot - _this->slots];
+	const u32 diff = static_cast<u32>(slot - _this->slots);
+
+	verify(HERE), slot == &_this->slots[diff];
 
 	const u32 cond_id = slot->exchange(0);
 
@@ -889,37 +916,39 @@ atomic_wait::root_info* atomic_wait::root_info::slot_free(atomic_t<u16>* slot) n
 		cond_free(cond_id);
 	}
 
-	_this->bits &= ~(1ull << (slot - _this->slots));
-
-	auto cnt = this->threads--;
-
-	verify(HERE), cnt;
-
-	if (cnt > 1)
+	if (_this != this)
 	{
-		return _this;
-	}
-
-	// Only the last waiter does opportunistic cleanup attempt
-	while (this->threads < max_threads)
-	{
-		auto [old, ok] = this->bits.fetch_op([this](u64& val)
+		// Reset allocation bit in the adjacent hashtable slot
+		_this->bits.atomic_op([diff](slot_allocator& bits)
 		{
-			if (!val || !(~val & thread_mask) || this->threads >= max_threads)
+			if (diff < 64)
 			{
-				return false;
+				bits.high &= ~(1ull << diff);
 			}
-
-			// Try to clean distance mask
-			val &= thread_mask;
-			return true;
+			else
+			{
+				bits.low &= ~(1ull << (diff - 64));
+			}
 		});
-
-		if (!old || ok)
-		{
-			break;
-		}
 	}
+
+	// Reset reference counter
+	bits.atomic_op([&](slot_allocator& bits)
+	{
+		verify(HERE), bits.ref--;
+
+		if (_this == this)
+		{
+			if (diff < 64)
+			{
+				bits.high &= ~(1ull << diff);
+			}
+			else
+			{
+				bits.low &= ~(1ull << (diff - 64));
+			}
+		}
+	});
 
 	return _this;
 }
@@ -927,30 +956,44 @@ atomic_wait::root_info* atomic_wait::root_info::slot_free(atomic_t<u16>* slot) n
 template <typename F>
 FORCE_INLINE auto atomic_wait::root_info::slot_search(std::uintptr_t iptr, u64 thread_id, __m128i mask, F func) noexcept
 {
-	const u64 bits_val = this->bits.load();
-	const u64 max_order = bits_val >> max_threads;
+	u32 index = 0;
+	u32 total = 0;
+	u64 limit = 0;
 
-	auto* _this = this;
-
-	u32 order = 0;
-
-	u64 new_val = bits_val & thread_mask;
-
-	while (new_val)
+	for (auto* _this = this;;)
 	{
-		u32 cond_ids[max_threads];
-		u32 cond_max = 0;
+		const auto bits = _this->bits.load();
 
-		for (u64 bits = new_val; bits; bits &= bits - 1)
+		u16 cond_ids[max_threads];
+		u32 cond_count = 0;
+
+		u64 high_val = bits.high;
+		u64 low_val = bits.low;
+
+		if (_this == this)
 		{
-			if (const u32 cond_id = _this->slots[std::countr_zero(bits)])
+			limit = bits.ref;
+		}
+
+		for (u64 bits = high_val; bits; bits &= bits - 1)
+		{
+			if (u16 cond_id = _this->slots[std::countr_zero(bits)])
 			{
 				utils::prefetch_read(s_cond_list + cond_id);
-				cond_ids[cond_max++] = cond_id;
+				cond_ids[cond_count++] = cond_id;
 			}
 		}
 
-		for (u32 i = 0; i < cond_max; i++)
+		for (u64 bits = low_val; bits; bits &= bits - 1)
+		{
+			if (u16 cond_id = _this->slots[std::countr_zero(bits)])
+			{
+				utils::prefetch_read(s_cond_list + cond_id);
+				cond_ids[cond_count++] = cond_id;
+			}
+		}
+
+		for (u32 i = 0; i < cond_count; i++)
 		{
 			if (cond_id_lock(cond_ids[i], mask, thread_id, iptr))
 			{
@@ -961,10 +1004,17 @@ FORCE_INLINE auto atomic_wait::root_info::slot_search(std::uintptr_t iptr, u64 t
 			}
 		}
 
-		_this++;
-		order++;
+		total += cond_count;
 
-		if (order >= max_order)
+		if (total >= limit)
+		{
+			return;
+		}
+
+		_this++;
+		index++;
+
+		if (index == max_distance)
 		{
 			return;
 		}
@@ -973,8 +1023,6 @@ FORCE_INLINE auto atomic_wait::root_info::slot_search(std::uintptr_t iptr, u64 t
 		{
 			_this = s_hashtable;
 		}
-
-		new_val = _this->bits.load() & thread_mask;
 	}
 }
 
