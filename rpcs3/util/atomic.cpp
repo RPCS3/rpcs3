@@ -28,11 +28,17 @@ static constexpr std::size_t s_hashtable_size = 1u << 17;
 // Reference counter combined with shifted pointer (which is assumed to be 47 bit)
 static constexpr std::uintptr_t s_ref_mask = (1u << 17) - 1;
 
+// Fix for silly on-first-use initializer
+static constexpr auto s_null_wait_cb = [](const void*){ return true; };
+
 // Callback for wait() function, returns false if wait should return
-static thread_local bool(*s_tls_wait_cb)(const void* data) = [](const void*){ return true; };
+static thread_local bool(*s_tls_wait_cb)(const void* data) = s_null_wait_cb;
+
+// Fix for silly on-first-use initializer
+static constexpr auto s_null_notify_cb = [](const void*, u64){};
 
 // Callback for notification functions for optimizations
-static thread_local void(*s_tls_notify_cb)(const void* data, u64 progress) = [](const void*, u64){};
+static thread_local void(*s_tls_notify_cb)(const void* data, u64 progress) = s_null_notify_cb;
 
 static inline bool operator &(atomic_wait::op lhs, atomic_wait::op_flag rhs)
 {
