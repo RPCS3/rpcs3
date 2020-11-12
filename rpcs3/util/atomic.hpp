@@ -1435,7 +1435,8 @@ public:
 		if constexpr (sizeof(T) <= 8)
 		{
 			const __m128i old = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>>(old_value));
-			atomic_wait_engine::wait(&m_data, sizeof(T) | (static_cast<u8>(Flags) << 8), old, static_cast<u64>(timeout), _mm_set1_epi64x(-1));
+			const __m128i mask = _mm_cvtsi64_si128(UINT64_MAX >> ((64 - sizeof(T) * 8) & 63));
+			atomic_wait_engine::wait(&m_data, sizeof(T) | (static_cast<u8>(Flags) << 8), old, static_cast<u64>(timeout), mask);
 		}
 		else if constexpr (sizeof(T) == 16)
 		{
@@ -1464,7 +1465,14 @@ public:
 
 	void notify_one() noexcept
 	{
-		atomic_wait_engine::notify_one(&m_data, -1, _mm_set1_epi64x(-1), _mm_setzero_si128());
+		if constexpr (sizeof(T) <= 8)
+		{
+			atomic_wait_engine::notify_one(&m_data, -1, _mm_cvtsi64_si128(UINT64_MAX >> ((64 - sizeof(T) * 8) & 63)), _mm_setzero_si128());
+		}
+		else if constexpr (sizeof(T) == 16)
+		{
+			atomic_wait_engine::notify_one(&m_data, -1, _mm_set1_epi64x(-1), _mm_setzero_si128());
+		}
 	}
 
 	// Notify with mask, allowing to not wake up thread which doesn't wait on this mask
@@ -1501,7 +1509,14 @@ public:
 
 	void notify_all() noexcept
 	{
-		atomic_wait_engine::notify_all(&m_data, -1, _mm_set1_epi64x(-1), _mm_setzero_si128());
+		if constexpr (sizeof(T) <= 8)
+		{
+			atomic_wait_engine::notify_all(&m_data, -1, _mm_cvtsi64_si128(UINT64_MAX >> ((64 - sizeof(T) * 8) & 63)), _mm_setzero_si128());
+		}
+		else if constexpr (sizeof(T) == 16)
+		{
+			atomic_wait_engine::notify_all(&m_data, -1, _mm_set1_epi64x(-1), _mm_setzero_si128());
+		}
 	}
 
 	// Notify all threads with mask, allowing to not wake up threads which don't wait on them

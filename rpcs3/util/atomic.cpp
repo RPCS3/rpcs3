@@ -642,7 +642,7 @@ static atomic_wait::cond_handle*
 #ifdef _WIN32
 __vectorcall
 #endif
-cond_id_lock(u32 cond_id, __m128i mask, u64 thread_id = 0, std::uintptr_t iptr = 0)
+cond_id_lock(u32 cond_id, u32 size, __m128i mask, u64 thread_id = 0, std::uintptr_t iptr = 0)
 {
 	if (cond_id - 1 < u32{UINT16_MAX})
 	{
@@ -678,8 +678,7 @@ cond_id_lock(u32 cond_id, __m128i mask, u64 thread_id = 0, std::uintptr_t iptr =
 					return false;
 				}
 			}
-
-			if (_mm_cvtsi128_si64(_mm_packs_epi16(mask12, mask12)) == 0)
+			else if (size && _mm_cvtsi128_si64(_mm_packs_epi16(mask12, mask12)) == 0)
 			{
 				return false;
 			}
@@ -744,7 +743,7 @@ namespace atomic_wait
 		root_info* slot_free(atomic_t<u16>* slot) noexcept;
 
 		template <typename F>
-		auto slot_search(std::uintptr_t iptr, u64 thread_id, __m128i mask, F func) noexcept;
+		auto slot_search(std::uintptr_t iptr, u32 size, u64 thread_id, __m128i mask, F func) noexcept;
 	};
 
 	static_assert(sizeof(root_info) == 256);
@@ -960,7 +959,7 @@ atomic_wait::root_info* atomic_wait::root_info::slot_free(atomic_t<u16>* slot) n
 }
 
 template <typename F>
-FORCE_INLINE auto atomic_wait::root_info::slot_search(std::uintptr_t iptr, u64 thread_id, __m128i mask, F func) noexcept
+FORCE_INLINE auto atomic_wait::root_info::slot_search(std::uintptr_t iptr, u32 size, u64 thread_id, __m128i mask, F func) noexcept
 {
 	u32 index = 0;
 	u32 total = 0;
@@ -1001,7 +1000,7 @@ FORCE_INLINE auto atomic_wait::root_info::slot_search(std::uintptr_t iptr, u64 t
 
 		for (u32 i = 0; i < cond_count; i++)
 		{
-			if (cond_id_lock(cond_ids[i], mask, thread_id, iptr))
+			if (cond_id_lock(cond_ids[i], size, mask, thread_id, iptr))
 			{
 				if (func(cond_ids[i]))
 				{
@@ -1300,7 +1299,7 @@ alert_sema(u32 cond_id, const void* data, u64 tid, u32 size, __m128i mask, __m12
 	{
 		// Redirect if necessary
 		const auto _old = cond;
-		const auto _new = _old->link ? cond_id_lock(_old->link, _mm_set1_epi64x(-1)) : _old;
+		const auto _new = _old->link ? cond_id_lock(_old->link, 0, _mm_set1_epi64x(-1)) : _old;
 
 		if (_new && _new->tsc0 == _old->tsc0)
 		{
@@ -1454,7 +1453,7 @@ bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 
 	u64 progress = 0;
 
-	root->slot_search(iptr, thread_id, _mm_set1_epi64x(-1), [&](u32 cond_id)
+	root->slot_search(iptr, 0, thread_id, _mm_set1_epi64x(-1), [&](u32 cond_id)
 	{
 		// Forced notification
 		if (alert_sema(cond_id, data, thread_id, 0, _mm_setzero_si128(), _mm_setzero_si128()))
@@ -1492,7 +1491,7 @@ atomic_wait_engine::notify_one(const void* data, u32 size, __m128i mask, __m128i
 
 	u64 progress = 0;
 
-	root->slot_search(iptr, 0, mask, [&](u32 cond_id)
+	root->slot_search(iptr, size, 0, mask, [&](u32 cond_id)
 	{
 		if (alert_sema(cond_id, data, -1, size, mask, new_value))
 		{
@@ -1526,7 +1525,7 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 	// Array itself.
 	u16 cond_ids[UINT16_MAX + 1];
 
-	root->slot_search(iptr, 0, mask, [&](u32 cond_id)
+	root->slot_search(iptr, size, 0, mask, [&](u32 cond_id)
 	{
 		u32 res = alert_sema<true>(cond_id, data, -1, size, mask, new_value);
 
