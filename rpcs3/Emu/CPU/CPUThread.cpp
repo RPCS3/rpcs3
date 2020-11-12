@@ -324,6 +324,12 @@ struct cpu_counter
 		// Unregister and wait if necessary
 		_this->state += cpu_flag::wait;
 
+		if (slot >= std::size(cpu_array))
+		{
+			sys_log.fatal("Index out of bounds (%u)." HERE, slot);
+			return;
+		}
+
 		std::lock_guard lock(cpu_suspend_lock);
 
 		if (!cpu_array[slot].compare_and_swap_test(_this, nullptr))
@@ -344,7 +350,7 @@ struct cpu_counter
 
 		if (index >= std::size(cpu_array))
 		{
-			sys_log.fatal("Index out of bounds (%u).", index);
+			sys_log.fatal("Index out of bounds (%u)." HERE, index);
 			return;
 		}
 
@@ -493,14 +499,8 @@ void cpu_thread::operator()()
 
 	static thread_local struct thread_cleanup_t
 	{
-		cpu_thread* _this;
+		cpu_thread* _this = nullptr;
 		std::string name;
-
-		thread_cleanup_t(cpu_thread* _this)
-			: _this(_this)
-			, name(thread_ctrl::get_name())
-		{
-		}
 
 		void cleanup()
 		{
@@ -520,6 +520,8 @@ void cpu_thread::operator()()
 
 			g_fxo->get<cpu_counter>()->remove(_this, s_tls_thread_slot);
 
+			s_tls_thread_slot = -1;
+
 			_this = nullptr;
 		}
 
@@ -531,7 +533,10 @@ void cpu_thread::operator()()
 				cleanup();
 			}
 		}
-	} cleanup{this};
+	} cleanup;
+
+	cleanup._this = this;
+	cleanup.name = thread_ctrl::get_name();
 
 	// Check thread status
 	while (!(state & (cpu_flag::exit + cpu_flag::dbg_global_stop)) && thread_ctrl::state() != thread_state::aborting)

@@ -91,6 +91,7 @@ struct thread_thread_name<T, std::void_t<decltype(named_thread<T>::thread_name)>
 // Thread base class
 class thread_base
 {
+public:
 	// Native thread entry point function type
 #ifdef _WIN32
 	using native_entry = uint(__stdcall*)(void* arg);
@@ -98,6 +99,7 @@ class thread_base
 	using native_entry = void*(*)(void* arg);
 #endif
 
+private:
 	// Thread handle (platform-specific)
 	atomic_t<std::uintptr_t> m_thread{0};
 
@@ -129,7 +131,10 @@ class thread_base
 	bool finalize(thread_state result) noexcept;
 
 	// Cleanup after possibly deleting the thread instance
-	static void finalize() noexcept;
+	static void finalize(u64 _self) noexcept;
+
+	// Set name for debugger
+	static void set_name(std::string);
 
 	friend class thread_ctrl;
 
@@ -287,9 +292,11 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 		if (_this->entry_point())
 		{
 			delete _this;
+			thread::finalize(0);
+			return 0;
 		}
 
-		thread::finalize();
+		thread::finalize(_this->thread::m_thread);
 		return 0;
 	}
 
