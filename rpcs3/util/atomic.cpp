@@ -1556,3 +1556,20 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 
 	s_tls_notify_cb(data, -1);
 }
+
+namespace atomic_wait
+{
+	extern void parse_hashtable(bool(*cb)(u64 id, u16 refs, u32 ptr, u32 stats))
+	{
+		for (u64 i = 0; i < s_hashtable_size; i++)
+		{
+			const auto root = &s_hashtable[i];
+			const auto slot = root->bits.load();
+
+			if (cb(i, static_cast<u16>(slot.ref), root->first_ptr.load(), root->diff_lz | root->diff_tz | root->diff_pop))
+			{
+				break;
+			}
+		}
+	}
+}

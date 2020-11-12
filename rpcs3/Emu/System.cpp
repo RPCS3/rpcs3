@@ -86,6 +86,11 @@ namespace
 	struct progress_dialog_server;
 }
 
+namespace atomic_wait
+{
+	extern void parse_hashtable(bool(*cb)(u64 id, u16 refs, u32 ptr, u32 stats));
+}
+
 template<>
 void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 {
@@ -1874,6 +1879,35 @@ void Emulator::Stop(bool restart)
 	vm::close();
 
 	jit_runtime::finalize();
+
+	static u64 aw_refs = 0;
+	static u64 aw_colm = 0;
+	static u64 aw_colc = 0;
+	static u64 aw_used = 0;
+
+	aw_refs = 0;
+	aw_colm = 0;
+	aw_colc = 0;
+	aw_used = 0;
+
+	atomic_wait::parse_hashtable([](u64 id, u16 refs, u32 ptr, u32 stats) -> bool
+	{
+		aw_refs += refs;
+		aw_used += ptr != 0;
+
+		stats = (stats & 0xaaaaaaaa) / 2 + (stats & 0x55555555);
+		stats = (stats & 0xcccccccc) / 4 + (stats & 0x33333333);
+		stats = (stats & 0xf0f0f0f0) / 16 + (stats & 0xf0f0f0f);
+		stats = (stats & 0xff00ff00) / 256 + (stats & 0xff00ff);
+		stats = (stats >> 16) + (stats & 0xffff);
+
+		aw_colm = std::max<u64>(aw_colm, stats);
+		aw_colc += stats != 0;
+
+		return false;
+	});
+
+	sys_log.notice("Atomic wait hashtable stats: [in_use=%u, used=%u, max_collision_weight=%u, total_collisions=%u]", aw_refs, aw_used, aw_colm, aw_colc);
 
 	if (restart)
 	{
