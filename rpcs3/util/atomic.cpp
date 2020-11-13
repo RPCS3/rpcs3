@@ -1391,7 +1391,7 @@ bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 			{
 				for (u64 bits = s_cond_bits[i / 64]; bits; bits &= bits - 1)
 				{
-					utils::prefetch_read(s_cond_list + i + std::countl_zero(bits));
+					utils::prefetch_read(s_cond_list + i + std::countr_zero(bits));
 				}
 			}
 
