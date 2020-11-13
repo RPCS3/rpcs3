@@ -206,6 +206,30 @@ namespace utils
 		return r;
 	}
 
+	inline u32 ctz128(u128 arg)
+	{
+		if (u64 lo = static_cast<u64>(arg))
+		{
+			return std::countr_zero<u64>(lo);
+		}
+		else
+		{
+			return std::countr_zero<u64>(arg >> 64) + 64;
+		}
+	}
+
+	inline u32 clz128(u128 arg)
+	{
+		if (u64 hi = static_cast<u64>(arg >> 64))
+		{
+			return std::countl_zero<u64>(hi);
+		}
+		else
+		{
+			return std::countl_zero<u64>(arg) + 64;
+		}
+	}
+
 #elif defined(_MSC_VER)
 	inline void prefetch_read(const void* ptr)
 	{
@@ -286,6 +310,30 @@ namespace utils
 		}
 
 		return r;
+	}
+
+	inline u32 ctz128(u128 arg)
+	{
+		if (!arg.lo)
+		{
+			return std::countr_zero(arg.hi) + 64u;
+		}
+		else
+		{
+			return std::countr_zero(arg.lo);
+		}
+	}
+
+	inline u32 clz128(u128 arg)
+	{
+		if (arg.hi)
+		{
+			return std::countl_zero(arg.hi);
+		}
+		else
+		{
+			return std::countl_zero(arg.lo) + 64;
+		}
 	}
 #endif
 } // namespace utils

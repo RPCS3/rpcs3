@@ -522,6 +522,8 @@ void cpu_thread::operator()()
 
 			s_tls_thread_slot = -1;
 
+			g_tls_current_cpu_thread = nullptr;
+
 			_this = nullptr;
 		}
 

@@ -128,7 +128,7 @@ private:
 	void notify_abort() noexcept;
 
 	// Called at the thread end, returns true if needs destruction
-	bool finalize(thread_state result) noexcept;
+	u64 finalize(thread_state result) noexcept;
 
 	// Cleanup after possibly deleting the thread instance
 	static void finalize(u64 _self) noexcept;
@@ -286,21 +286,28 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 	static inline void* entry_point(void* arg)
 #endif
 	{
+		if (auto _this = thread_ctrl::get_current())
+		{
+			arg = _this;
+		}
+
 		const auto _this = static_cast<named_thread*>(static_cast<thread*>(arg));
 
 		// Perform self-cleanup if necessary
-		if (_this->entry_point())
+		u64 _self = _this->entry_point();
+
+		if (!_self)
 		{
 			delete _this;
 			thread::finalize(0);
 			return 0;
 		}
 
-		thread::finalize(_this->thread::m_thread);
+		thread::finalize(_self);
 		return 0;
 	}
 
-	bool entry_point()
+	u64 entry_point()
 	{
 		auto tls_error_cb = []()
 		{
