@@ -224,7 +224,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	const auto cpu = this->cpu.lock();
 	int i = m_debugger_list->currentRow();
 
-	if (!isActiveWindow() || i < 0 || !cpu || m_no_thread_selected)
+	if (!isActiveWindow() || !cpu || m_no_thread_selected)
 	{
 		return;
 	}
@@ -250,6 +250,11 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		{
 		case Qt::Key_E:
 		{
+			if (i < 0)
+			{
+				return;
+			}
+
 			instruction_editor_dialog* dlg = new instruction_editor_dialog(this, pc, cpu, m_disasm.get());
 			dlg->show();
 			return;
@@ -266,7 +271,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		}
 		case Qt::Key_R:
 		{
-			register_editor_dialog* dlg = new register_editor_dialog(this, pc, cpu, m_disasm.get());
+			register_editor_dialog* dlg = new register_editor_dialog(this, cpu, m_disasm.get());
 			dlg->show();
 			return;
 		}
