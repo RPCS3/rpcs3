@@ -764,6 +764,8 @@ public:
 	const char* current_func{}; // Current STOP or RDCH blocking function
 	u64 start_time{}; // Starting time of STOP or RDCH bloking function
 
+	atomic_t<u8> debugger_float_mode = 0;
+
 	void push_snr(u32 number, u32 value);
 	static void do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls);
 	bool do_dma_check(const spu_mfc_cmd& args);

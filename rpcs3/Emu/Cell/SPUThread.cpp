@@ -1194,9 +1194,11 @@ std::string spu_thread::dump_regs() const
 {
 	std::string ret;
 
+	const bool floats_only = debugger_float_mode.load();
+
 	for (u32 i = 0; i < 128; i++, ret += '\n')
 	{
-		fmt::append(ret, "r%d: ", i);
+		fmt::append(ret, "%s: ", spu_reg_name[i]);
 
 		const auto r = gpr[i];
 
@@ -1217,9 +1219,25 @@ std::string spu_thread::dump_regs() const
 			}
 		}
 
-		const u32 i3 = r._u32[3];
+		auto to_f64 = [](u32 bits)
+		{
+			const u32 abs = bits & 0x7fff'ffff;
+			constexpr u32 mask = (1 << 23) - 1;
+			return std::copysign(abs <= mask ? 0 : std::exp2(static_cast<int>(abs >> 23) - 127) * (1.0 + (abs & mask) / f64{mask + 1}), bits >> 31 ? -1 : 1);
+		};
 
-		if (v128::from32p(i3) == r)
+		const double array[]{to_f64(r.u32r[0]), to_f64(r.u32r[1]), to_f64(r.u32r[2]), to_f64(r.u32r[3])};
+
+		const u32 i3 = r._u32[3];
+		const bool is_packed = v128::from32p(i3) == r;
+
+		if (floats_only)
+		{
+			fmt::append(ret, "%s, %s, %s, %s", array[0], array[1], array[2], array[3]);
+			continue;
+		}
+
+		if (is_packed)
 		{
 			// Shortand formatting
 			fmt::append(ret, "%08x", i3);
@@ -1229,8 +1247,6 @@ std::string spu_thread::dump_regs() const
 			fmt::append(ret, "%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
 		}
 
-		// TODO: SPU floats fomatting
-
 		if (i3 >= 0x80 && is_exec_code(i3))
 		{
 			SPUDisAsm dis_asm(CPUDisAsm_NormalMode);
@@ -1238,6 +1254,18 @@ std::string spu_thread::dump_regs() const
 			dis_asm.dump_pc = i3;
 			dis_asm.disasm(i3);
 			fmt::append(ret, " -> %s", dis_asm.last_opcode);
+		}
+
+		if (std::any_of(std::begin(array), std::end(array), [](f64 v){ return v != 0; }))
+		{
+			if (is_packed)
+			{
+				fmt::append(ret, " (%s)", array[0]);
+			}
+			else
+			{
+				fmt::append(ret, " (%s, %s, %s, %s)", array[0], array[1], array[2], array[3]);
+			}
 		}
 	}
 

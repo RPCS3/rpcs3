@@ -254,6 +254,16 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			dlg->show();
 			return;
 		}
+		case Qt::Key_F:
+		{
+			if (cpu->id_type() != 2)
+			{
+				return;
+			}
+
+			static_cast<spu_thread*>(cpu.get())->debugger_float_mode ^= 1; // Switch mode
+			return;
+		}
 		case Qt::Key_R:
 		{
 			register_editor_dialog* dlg = new register_editor_dialog(this, pc, cpu, m_disasm.get());
@@ -264,9 +274,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		{
 			if (modifiers & Qt::AltModifier)
 			{
-				const auto cpu = this->cpu.lock();
-
-				if (!cpu || cpu->id_type() != 2)
+				if (cpu->id_type() != 2)
 				{
 					return;
 				}
