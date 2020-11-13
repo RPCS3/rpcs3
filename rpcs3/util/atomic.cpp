@@ -532,7 +532,10 @@ static atomic_wait::cond_handle s_cond_list[UINT16_MAX + 1]{};
 static atomic_t<u64, 64> s_cond_bits[(UINT16_MAX + 1) / 64]{};
 
 // Allocation semaphore
-static atomic_t<u32, 64> s_cond_sema{0};
+static atomic_t<u32> s_cond_sema{0};
+
+// Max possible search distance (max i in loop)
+static atomic_t<u32> s_cond_max{0};
 
 static u32
 #ifdef _WIN32
@@ -548,16 +551,7 @@ cond_alloc(std::uintptr_t iptr, __m128i mask)
 		return 0;
 	}
 
-	// Diversify search start points to reduce contention and increase immediate success chance
-#ifdef _WIN32
-	const u32 start = GetCurrentProcessorNumber();
-#elif __linux__
-	const u32 start = sched_getcpu();
-#else
-	const u32 start = __rdtsc();
-#endif
-
-	for (u32 i = start;; i++)
+	for (u32 i = 0;; i++)
 	{
 		const u32 group = i % ::size32(s_cond_bits);
 
@@ -587,6 +581,18 @@ cond_alloc(std::uintptr_t iptr, __m128i mask)
 			// Initialize new "semaphore"
 			s_cond_list[id].mask = mask;
 			s_cond_list[id].init(iptr);
+
+			// Update some stats
+			s_cond_max.fetch_op([i](u32& val)
+			{
+				if (val < i)
+				{
+					val = i;
+					return true;
+				}
+
+				return false;
+			});
 
 			return id;
 		}
@@ -1373,9 +1379,33 @@ bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 	// Special operation mode. Note that this is not atomic.
 	if (!data)
 	{
-		// Special path: search thread_id without pointer information
-		for (u32 i = 1; i <= UINT16_MAX; i++)
+		if (!s_cond_sema)
 		{
+			return false;
+		}
+
+		// Special path: search thread_id without pointer information
+		for (u32 i = 1; i < (s_cond_max + 1) * 64; i++)
+		{
+			if ((i & 63) == 0)
+			{
+				for (u64 bits = s_cond_bits[i / 64]; bits; bits &= bits - 1)
+				{
+					utils::prefetch_read(s_cond_list + i + std::countl_zero(bits));
+				}
+			}
+
+			if (!s_cond_bits[i / 64])
+			{
+				i |= 63;
+				continue;
+			}
+
+			if (~s_cond_bits[i / 64] & (1ull << i))
+			{
+				continue;
+			}
+
 			const auto cond = s_cond_list + i;
 
 			const auto [old, ok] = cond->ptr_ref.fetch_op([&](u64& val)
