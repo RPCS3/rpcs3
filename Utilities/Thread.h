@@ -119,7 +119,7 @@ private:
 	atomic_t<u64> m_cycles = 0;
 
 	// Start thread
-	void start(native_entry);
+	void start(native_entry, void(*)());
 
 	// Called at the thread start
 	void initialize(void (*error_cb)(), bool(*wait_cb)(const void*));
@@ -135,6 +135,9 @@ private:
 
 	// Set name for debugger
 	static void set_name(std::string);
+
+	// Make trampoline with stack fix
+	static void(*make_trampoline(native_entry))();
 
 	friend class thread_ctrl;
 
@@ -359,6 +362,8 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 		return thread::finalize(thread_state::finished);
 	}
 
+	static inline void(*trampoline)() = thread::make_trampoline(entry_point);
+
 	friend class thread_ctrl;
 
 public:
@@ -368,7 +373,7 @@ public:
 		: Context()
 		, thread(Context::thread_name)
 	{
-		thread::start(&named_thread::entry_point);
+		thread::start(&named_thread::entry_point, trampoline);
 	}
 
 	// Normal forwarding constructor
@@ -377,7 +382,7 @@ public:
 		: Context(std::forward<Args>(args)...)
 		, thread(name)
 	{
-		thread::start(&named_thread::entry_point);
+		thread::start(&named_thread::entry_point, trampoline);
 	}
 
 	// Lambda constructor, also the implicit deduction guide candidate
@@ -385,7 +390,7 @@ public:
 		: Context(std::forward<Context>(f))
 		, thread(name)
 	{
-		thread::start(&named_thread::entry_point);
+		thread::start(&named_thread::entry_point, trampoline);
 	}
 
 	named_thread(const named_thread&) = delete;
