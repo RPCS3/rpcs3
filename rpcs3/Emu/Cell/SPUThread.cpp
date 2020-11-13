@@ -4385,8 +4385,12 @@ bool spu_thread::stop_and_signal(u32 code)
 						return true;
 					});
 
-					if (thread.get() != this)
-						thread_ctrl::raw_notify(*thread);
+					while (thread.get() != this && thread->state & cpu_flag::wait)
+					{
+						// TODO: replace with proper solution
+						if (atomic_wait_engine::raw_notify(nullptr, thread_ctrl::get_native_id(*thread)))
+							break;
+					}
 				}
 			}
 

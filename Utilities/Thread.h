@@ -33,10 +33,11 @@ enum class thread_class : u32
 
 enum class thread_state : u32
 {
-	created,  // Initial state
-	aborting, // The thread has been joined in the destructor or explicitly aborted
-	errored, // Set after the emergency_exit call
-	finished  // Final state, always set at the end of thread execution
+	created = 0,  // Initial state
+	aborting = 1, // The thread has been joined in the destructor or explicitly aborted
+	errored = 2, // Set after the emergency_exit call
+	finished = 3,  // Final state, always set at the end of thread execution
+	mask = 3
 };
 
 class need_wakeup {};
@@ -101,31 +102,19 @@ public:
 
 private:
 	// Thread handle (platform-specific)
-	atomic_t<std::uintptr_t> m_thread{0};
+	atomic_t<u64> m_thread{0};
 
-	// Thread playtoy, that shouldn't be used
-	atomic_t<u32> m_signal{0};
-
-	// Thread state
-	atomic_t<thread_state> m_state = thread_state::created;
-
-	// Thread state notification info
-	atomic_t<const void*> m_state_notifier{nullptr};
+	// Thread state and cycles
+	atomic_t<u64> m_sync{0};
 
 	// Thread name
 	stx::atomic_cptr<std::string> m_tname;
-
-	//
-	atomic_t<u64> m_cycles = 0;
 
 	// Start thread
 	void start(native_entry, void(*)());
 
 	// Called at the thread start
-	void initialize(void (*error_cb)(), bool(*wait_cb)(const void*));
-
-	// May be called in destructor
-	void notify_abort() noexcept;
+	void initialize(void (*error_cb)());
 
 	// Called at the thread end, returns true if needs destruction
 	u64 finalize(thread_state result) noexcept;
@@ -158,6 +147,9 @@ public:
 
 	// Notify the thread
 	void notify();
+
+	// Get thread id
+	u64 get_native_id() const;
 };
 
 // Collection of global function for current thread
@@ -220,15 +212,15 @@ public:
 	}
 
 	template <typename T>
-	static void raw_notify(named_thread<T>& thread)
+	static u64 get_native_id(named_thread<T>& thread)
 	{
-		static_cast<thread_base&>(thread).notify_abort();
+		return static_cast<thread_base&>(thread).get_native_id();
 	}
 
 	// Read current state
 	static inline thread_state state()
 	{
-		return g_tls_this_thread->m_state;
+		return static_cast<thread_state>(g_tls_this_thread->m_sync & 3);
 	}
 
 	// Wait once with timeout. May spuriously return false.
@@ -312,40 +304,13 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 
 	u64 entry_point()
 	{
-		auto tls_error_cb = []()
+		thread::initialize([]()
 		{
 			if constexpr (!result::empty)
 			{
 				// Construct using default constructor in the case of failure
 				new (static_cast<result*>(static_cast<named_thread*>(thread_ctrl::get_current()))->get()) typename result::type();
 			}
-		};
-
-		thread::initialize(tls_error_cb, [](const void* data)
-		{
-			const auto _this = thread_ctrl::get_current();
-
-			if (_this->m_state >= thread_state::aborting)
-			{
-				_this->m_state_notifier.store(data);
-				return false;
-			}
-
-			if (!data)
-			{
-				_this->m_state_notifier.release(data);
-				return true;
-			}
-
-			_this->m_state_notifier.store(data);
-
-			if (_this->m_state >= thread_state::aborting)
-			{
-				_this->m_state_notifier.release(nullptr);
-				return false;
-			}
-
-			return true;
 		});
 
 		if constexpr (result::empty)
@@ -422,7 +387,7 @@ public:
 	// Access thread state
 	operator thread_state() const
 	{
-		return thread::m_state.load();
+		return static_cast<thread_state>(thread::m_sync.load() & 3);
 	}
 
 	// Try to abort by assigning thread_state::aborting (UB if assigning different state)
@@ -430,11 +395,11 @@ public:
 	{
 		ASSUME(s == thread_state::aborting);
 
-		if (s == thread_state::aborting && thread::m_state.compare_and_swap_test(thread_state::created, s))
+		if (s == thread_state::aborting && thread::m_sync.fetch_op([](u64& v){ return !(v & 3) && (v |= 1); }).second)
 		{
 			if (s == thread_state::aborting)
 			{
-				thread::notify_abort();
+				thread::m_sync.notify_one(1);
 			}
 
 			if constexpr (std::is_base_of_v<need_wakeup, Context>)

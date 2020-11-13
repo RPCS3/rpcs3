@@ -29,13 +29,13 @@ static constexpr std::size_t s_hashtable_size = 1u << 17;
 static constexpr std::uintptr_t s_ref_mask = (1u << 17) - 1;
 
 // Fix for silly on-first-use initializer
-static constexpr auto s_null_wait_cb = [](const void*){ return true; };
+static bool s_null_wait_cb(const void*, u64, u64){ return true; };
 
 // Callback for wait() function, returns false if wait should return
-static thread_local bool(*s_tls_wait_cb)(const void* data) = s_null_wait_cb;
+static thread_local bool(*s_tls_wait_cb)(const void* data, u64 attempts, u64 stamp0) = s_null_wait_cb;
 
 // Fix for silly on-first-use initializer
-static constexpr auto s_null_notify_cb = [](const void*, u64){};
+static void s_null_notify_cb(const void*, u64){};
 
 // Callback for notification functions for optimizations
 static thread_local void(*s_tls_notify_cb)(const void* data, u64 progress) = s_null_notify_cb;
@@ -46,21 +46,12 @@ static inline bool operator &(atomic_wait::op lhs, atomic_wait::op_flag rhs)
 }
 
 // Compare data in memory with old value, and return true if they are equal
-template <bool CheckCb = true>
 static NEVER_INLINE bool
 #ifdef _WIN32
 __vectorcall
 #endif
 ptr_cmp(const void* data, u32 _size, __m128i old128, __m128i mask128, atomic_wait::info* ext = nullptr)
 {
-	if constexpr (CheckCb)
-	{
-		if (!s_tls_wait_cb(data))
-		{
-			return false;
-		}
-	}
-
 	using atomic_wait::op;
 	using atomic_wait::op_flag;
 
@@ -210,7 +201,7 @@ ptr_cmp(const void* data, u32 _size, __m128i old128, __m128i mask128, atomic_wai
 		{
 			for (auto e = ext; e->data; e++)
 			{
-				if (!ptr_cmp<false>(e->data, e->size, e->old, e->mask))
+				if (!ptr_cmp(e->data, e->size, e->old, e->mask))
 				{
 					return false;
 				}
@@ -1021,6 +1012,11 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 {
 	const auto stamp0 = atomic_wait::get_unique_tsc();
 
+	if (!s_tls_wait_cb(data, 0, stamp0))
+	{
+		return;
+	}
+
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data) & (~s_ref_mask >> 17);
 
 	const auto root = &s_hashtable[iptr % s_hashtable_size];
@@ -1126,6 +1122,8 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 	bool fallback = false;
 #endif
 
+	u64 attempts = 0;
+
 	while (ptr_cmp(data, size, old_value, mask, ext))
 	{
 #ifdef USE_FUTEX
@@ -1213,6 +1211,11 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 			// TODO: reduce timeout instead
 			break;
 		}
+
+		if (!s_tls_wait_cb(data, ++attempts, stamp0))
+		{
+			break;
+		}
 	}
 
 	while (!fallback)
@@ -1261,7 +1264,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 
 	verify(HERE), root == root->slot_free(iptr, slot);
 
-	s_tls_wait_cb(nullptr);
+	s_tls_wait_cb(data, -1, stamp0);
 }
 
 template <bool TryAlert = false>
@@ -1326,7 +1329,7 @@ alert_sema(u32 cond_id, const void* data, u64 tid, u32 size, __m128i mask, __m12
 	return ok;
 }
 
-void atomic_wait_engine::set_wait_callback(bool(*cb)(const void* data))
+void atomic_wait_engine::set_wait_callback(bool(*cb)(const void*, u64, u64))
 {
 	if (cb)
 	{
@@ -1334,7 +1337,7 @@ void atomic_wait_engine::set_wait_callback(bool(*cb)(const void* data))
 	}
 	else
 	{
-		s_tls_wait_cb = [](const void*){ return true; };
+		s_tls_wait_cb = s_null_wait_cb;
 	}
 }
 
@@ -1346,7 +1349,7 @@ void atomic_wait_engine::set_notify_callback(void(*cb)(const void*, u64))
 	}
 	else
 	{
-		s_tls_notify_cb = [](const void*, u64){};
+		s_tls_notify_cb = s_null_notify_cb;
 	}
 }
 

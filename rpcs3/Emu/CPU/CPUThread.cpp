@@ -1015,8 +1015,6 @@ void cpu_thread::stop_all() noexcept
 	}
 	else
 	{
-		std::lock_guard lock(g_fxo->get<cpu_counter>()->cpu_suspend_lock);
-
 		auto on_stop = [](u32, cpu_thread& cpu)
 		{
 			cpu.state += cpu_flag::dbg_global_stop;

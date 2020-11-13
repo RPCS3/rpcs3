@@ -239,7 +239,7 @@ private:
 	notify_all(const void* data, u32 size, __m128i mask128, __m128i val128);
 
 public:
-	static void set_wait_callback(bool(*cb)(const void* data));
+	static void set_wait_callback(bool(*cb)(const void* data, u64 attempts, u64 stamp0));
 	static void set_notify_callback(void(*cb)(const void* data, u64 progress));
 	static bool raw_notify(const void* data, u64 thread_id = 0);
 };
