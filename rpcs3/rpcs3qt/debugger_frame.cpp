@@ -329,10 +329,10 @@ void debugger_frame::UpdateUI()
 
 	if (!cpu)
 	{
-		if (m_last_pc != umax || m_last_stat)
+		if (m_last_pc != umax || !m_last_query_state.empty())
 		{
+			m_last_query_state.clear();
 			m_last_pc = -1;
-			m_last_stat = 0;
 			DoUpdate();
 		}
 
@@ -343,15 +343,18 @@ void debugger_frame::UpdateUI()
 	else
 	{
 		const auto cia = GetPc();
-		const auto state = cpu->state.load();
-
-		if (m_last_pc != cia || m_last_stat != static_cast<u32>(state))
+		const auto size_context = cpu->id_type() == 1 ? sizeof(ppu_thread) : sizeof(spu_thread);
+		
+		if (m_last_pc != cia || m_last_query_state.size() != size_context || std::memcmp(m_last_query_state.data(), cpu.get(), size_context))
 		{
+			// Copy thread data
+			m_last_query_state.resize(size_context);
+			std::memcpy(m_last_query_state.data(), cpu.get(), size_context);
+
 			m_last_pc = cia;
-			m_last_stat = static_cast<u32>(state);
 			DoUpdate();
 
-			if (state & cpu_flag::dbg_pause)
+			if (cpu->state & cpu_flag::dbg_pause)
 			{
 				m_btn_run->setText(RunString);
 				m_btn_step->setEnabled(true);
