@@ -94,15 +94,19 @@ namespace gl
 		std::function<void(draw_context_t)> context_destroy_func,
 		int num_worker_threads)
 	{
-		if (num_worker_threads == -1)
+		if (num_worker_threads == 0)
 		{
 			// Select optimal number of compiler threads
 			const auto hw_threads = std::thread::hardware_concurrency();
-			if (hw_threads >= 12)
+			if (hw_threads > 12)
+			{
+				num_worker_threads = 6;
+			}
+			else if (hw_threads > 8)
 			{
 				num_worker_threads = 4;
 			}
-			else if (hw_threads >= 8)
+			else if (hw_threads == 8)
 			{
 				num_worker_threads = 2;
 			}
