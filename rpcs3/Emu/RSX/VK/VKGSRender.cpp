@@ -473,10 +473,8 @@ VKGSRender::VKGSRender() : GSRender()
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, memory_map.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
-	int thread_count = g_cfg.video.shader_compiler_threads_count;
-	if (!thread_count) thread_count = -1;
 	vk::initialize_compiler_context();
-	vk::initialize_pipe_compiler(thread_count);
+	vk::initialize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
 
 	if (g_cfg.video.overlay)
 	{
