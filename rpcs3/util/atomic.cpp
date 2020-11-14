@@ -724,7 +724,7 @@ namespace atomic_wait
 	// Need to spare 16 bits for ref counter
 	static constexpr u64 max_threads = 112;
 
-	// Can only allow extended allocations go as far as this (about 585)
+	// (Arbitrary, not justified) Can only allow extended allocations go as far as this (about 585)
 	static constexpr u64 max_distance = UINT16_MAX / max_threads;
 
 	// Thread list
@@ -746,7 +746,7 @@ namespace atomic_wait
 
 		atomic_t<u16>* slot_alloc(std::uintptr_t ptr) noexcept;
 
-		root_info* slot_free(atomic_t<u16>* slot) noexcept;
+		root_info* slot_free(std::uintptr_t ptr, atomic_t<u16>* slot) noexcept;
 
 		template <typename F>
 		auto slot_search(std::uintptr_t iptr, u32 size, u64 thread_id, __m128i mask, F func) noexcept;
@@ -779,42 +779,23 @@ u64 atomic_wait::get_unique_tsc()
 
 atomic_t<u16>* atomic_wait::root_info::slot_alloc(std::uintptr_t ptr) noexcept
 {
-	auto slot = bits.atomic_op([this](slot_allocator& bits) -> atomic_t<u16>*
-	{
-		// Increment reference counter
-		if (bits.ref == UINT16_MAX)
-		{
-			fmt::raw_error("Thread limit " STRINGIZE(UINT16_MAX) " reached for a single hashtable slot.");
-			return nullptr;
-		}
-
-		bits.ref++;
-
-		// Check free slots
-		if (~bits.high)
-		{
-			// Set lowest clear bit
-			const u32 id = std::countr_one(bits.high);
-			bits.high |= bits.high + 1;
-			return this->slots + id;
-		}
-
-		if (~bits.low << 16)
-		{
-			const u32 id = std::countr_one(bits.low);
-			bits.low |= bits.low + 1;
-			return this->slots + 64 + id;
-		}
-
-		return nullptr;
-	});
+	atomic_t<u16>* slot = nullptr;
 
 	u32 limit = 0;
 
-	for (auto* _this = this + 1; !slot;)
+	for (auto* _this = this;;)
 	{
-		auto [_old, slot2] = _this->bits.fetch_op([_this](slot_allocator& bits) -> atomic_t<u16>*
+		slot = _this->bits.atomic_op([_this](slot_allocator& bits) -> atomic_t<u16>*
 		{
+			// Increment reference counter on every hashtable slot we attempt to allocate on
+			if (bits.ref == UINT16_MAX)
+			{
+				fmt::raw_error("Thread limit " STRINGIZE(UINT16_MAX) " reached for a single hashtable slot.");
+				return nullptr;
+			}
+
+			bits.ref++;
+
 			if (~bits.high)
 			{
 				const u32 id = std::countr_one(bits.high);
@@ -832,9 +813,8 @@ atomic_t<u16>* atomic_wait::root_info::slot_alloc(std::uintptr_t ptr) noexcept
 			return nullptr;
 		});
 
-		if (slot2)
+		if (slot)
 		{
-			slot = slot2;
 			break;
 		}
 
@@ -894,7 +874,7 @@ atomic_t<u16>* atomic_wait::root_info::slot_alloc(std::uintptr_t ptr) noexcept
 	return slot;
 }
 
-atomic_wait::root_info* atomic_wait::root_info::slot_free(atomic_t<u16>* slot) noexcept
+atomic_wait::root_info* atomic_wait::root_info::slot_free(std::uintptr_t, atomic_t<u16>* slot) noexcept
 {
 	const auto begin = reinterpret_cast<std::uintptr_t>(std::begin(s_hashtable));
 
@@ -927,39 +907,38 @@ atomic_wait::root_info* atomic_wait::root_info::slot_free(atomic_t<u16>* slot) n
 		cond_free(cond_id);
 	}
 
-	if (_this != this)
+	for (auto entry = this;;)
 	{
-		// Reset allocation bit in the adjacent hashtable slot
-		_this->bits.atomic_op([diff](slot_allocator& bits)
+		// Reset reference counter and allocation bit in every slot
+		bits.atomic_op([&](slot_allocator& bits)
 		{
-			if (diff < 64)
+			verify(HERE), bits.ref--;
+
+			if (_this == entry)
 			{
-				bits.high &= ~(1ull << diff);
-			}
-			else
-			{
-				bits.low &= ~(1ull << (diff - 64));
+				if (diff < 64)
+				{
+					bits.high &= ~(1ull << diff);
+				}
+				else
+				{
+					bits.low &= ~(1ull << (diff - 64));
+				}
 			}
 		});
-	}
 
-	// Reset reference counter
-	bits.atomic_op([&](slot_allocator& bits)
-	{
-		verify(HERE), bits.ref--;
-
-		if (_this == this)
+		if (_this == entry)
 		{
-			if (diff < 64)
-			{
-				bits.high &= ~(1ull << diff);
-			}
-			else
-			{
-				bits.low &= ~(1ull << (diff - 64));
-			}
+			break;
 		}
-	});
+
+		entry++;
+
+		if (entry == std::end(s_hashtable)) [[unlikely]]
+		{
+			entry = s_hashtable;
+		}
+	}
 
 	return _this;
 }
@@ -969,7 +948,6 @@ FORCE_INLINE auto atomic_wait::root_info::slot_search(std::uintptr_t iptr, u32 s
 {
 	u32 index = 0;
 	u32 total = 0;
-	u64 limit = 0;
 
 	for (auto* _this = this;;)
 	{
@@ -983,7 +961,10 @@ FORCE_INLINE auto atomic_wait::root_info::slot_search(std::uintptr_t iptr, u32 s
 
 		if (_this == this)
 		{
-			limit = bits.ref;
+			if (bits.ref == 0)
+			{
+				return;
+			}
 		}
 
 		for (u64 bits = high_val; bits; bits &= bits - 1)
@@ -1016,11 +997,6 @@ FORCE_INLINE auto atomic_wait::root_info::slot_search(std::uintptr_t iptr, u32 s
 		}
 
 		total += cond_count;
-
-		if (total >= limit)
-		{
-			return;
-		}
 
 		_this++;
 		index++;
@@ -1280,10 +1256,10 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 	// Release resources in reverse order
 	for (u32 i = ext_size - 1; i != umax; i--)
 	{
-		verify(HERE), root_ext[i] == root_ext[i]->slot_free(slot_ext[i]);
+		verify(HERE), root_ext[i] == root_ext[i]->slot_free(iptr_ext[i], slot_ext[i]);
 	}
 
-	verify(HERE), root == root->slot_free(slot);
+	verify(HERE), root == root->slot_free(iptr, slot);
 
 	s_tls_wait_cb(nullptr);
 }
