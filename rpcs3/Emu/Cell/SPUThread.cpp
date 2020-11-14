@@ -1223,7 +1223,7 @@ std::string spu_thread::dump_regs() const
 		{
 			const u32 abs = bits & 0x7fff'ffff;
 			constexpr u32 mask = (1 << 23) - 1;
-			return std::copysign(abs <= mask ? 0 : std::exp2(static_cast<int>(abs >> 23) - 127) * (1.0 + (abs & mask) / f64{mask + 1}), bits >> 31 ? -1 : 1);
+			return std::copysign(abs <= mask ? 0 : std::ldexp(1.0 + (abs & mask) / f64{mask + 1}, static_cast<int>(abs >> 23) - 127), bits >> 31 ? -1 : 1);
 		};
 
 		const double array[]{to_f64(r.u32r[0]), to_f64(r.u32r[1]), to_f64(r.u32r[2]), to_f64(r.u32r[3])};
@@ -1233,7 +1233,7 @@ std::string spu_thread::dump_regs() const
 
 		if (floats_only)
 		{
-			fmt::append(ret, "%s, %s, %s, %s", array[0], array[1], array[2], array[3]);
+			fmt::append(ret, "%g, %g, %g, %g", array[0], array[1], array[2], array[3]);
 			continue;
 		}
 
@@ -1260,11 +1260,11 @@ std::string spu_thread::dump_regs() const
 		{
 			if (is_packed)
 			{
-				fmt::append(ret, " (%s)", array[0]);
+				fmt::append(ret, " (%g)", array[0]);
 			}
 			else
 			{
-				fmt::append(ret, " (%s, %s, %s, %s)", array[0], array[1], array[2], array[3]);
+				fmt::append(ret, " (%g, %g, %g, %g)", array[0], array[1], array[2], array[3]);
 			}
 		}
 	}
