@@ -349,7 +349,7 @@ void debugger_frame::UpdateUI()
 	{
 		const auto cia = GetPc();
 		const auto size_context = cpu->id_type() == 1 ? sizeof(ppu_thread) : sizeof(spu_thread);
-		
+
 		if (m_last_pc != cia || m_last_query_state.size() != size_context || std::memcmp(m_last_query_state.data(), cpu.get(), size_context))
 		{
 			// Copy thread data
