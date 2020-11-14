@@ -1222,8 +1222,8 @@ std::string spu_thread::dump_regs() const
 		auto to_f64 = [](u32 bits)
 		{
 			const u32 abs = bits & 0x7fff'ffff;
-			constexpr u32 mask = (1 << 23) - 1;
-			return std::copysign(abs <= mask ? 0 : std::ldexp(1.0 + (abs & mask) / f64{mask + 1}, static_cast<int>(abs >> 23) - 127), bits >> 31 ? -1 : 1);
+			constexpr u32 scale = (1 << 23);
+			return std::copysign(abs < scale ? 0 : std::ldexp((scale + (abs % scale)) / f64{scale}, static_cast<int>(abs >> 23) - 127), bits >> 31 ? -1 : 1);
 		};
 
 		const double array[]{to_f64(r.u32r[0]), to_f64(r.u32r[1]), to_f64(r.u32r[2]), to_f64(r.u32r[3])};
