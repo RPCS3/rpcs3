@@ -182,17 +182,24 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
+	const char* media_dir;
+
 	switch (type)
 	{
 	case CELL_SEARCH_LISTSEARCHTYPE_MUSIC_ALBUM:
 	case CELL_SEARCH_LISTSEARCHTYPE_MUSIC_GENRE:
 	case CELL_SEARCH_LISTSEARCHTYPE_MUSIC_ARTIST:
+	case CELL_SEARCH_LISTSEARCHTYPE_MUSIC_PLAYLIST:
+		media_dir = "music";
+		break;
 	case CELL_SEARCH_LISTSEARCHTYPE_PHOTO_YEAR:
 	case CELL_SEARCH_LISTSEARCHTYPE_PHOTO_MONTH:
 	case CELL_SEARCH_LISTSEARCHTYPE_PHOTO_ALBUM:
 	case CELL_SEARCH_LISTSEARCHTYPE_PHOTO_PLAYLIST:
+		media_dir = "photo";
+		break;
 	case CELL_SEARCH_LISTSEARCHTYPE_VIDEO_ALBUM:
-	case CELL_SEARCH_LISTSEARCHTYPE_MUSIC_PLAYLIST:
+		media_dir = "video";
 		break;
 	default:
 		return CELL_SEARCH_ERROR_PARAM;
@@ -223,11 +230,135 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 
 	const u32 id = *outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, content_map = g_fxo->get<ContentIdMap>()](ppu_thread& ppu) -> s32
 	{
+		auto curr_search = idm::get<search_object_t>(id);
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId = id;
-		resultParam->resultNum = 0; // TODO
+		resultParam->searchId  = id;
+		resultParam->resultNum = 0; // Set again later
+
+		std::function<void(const std::string&)> searchInFolder = [&, type](const std::string& vpath)
+		{
+			// TODO: this is just a workaround. On a real PS3 the playlists seem to be stored in dev_hdd0/mms/db/metadata_db_hdd
+			for (auto&& item : fs::dir(vfs::get(vpath)))
+			{
+				item.name = vfs::unescape(item.name);
+
+				if (item.name == "." || item.name == "..")
+				{
+					continue;
+				}
+
+				if (!item.is_directory)
+				{
+					continue;
+				}
+
+				// TODO - Identify sorting method and insert the appropriate values where applicable
+				const std::string item_path(vpath + "/" + item.name);
+
+				// Count files
+				u32 numOfItems = 0;
+				for (auto&& file : fs::dir(vfs::get(item_path)))
+				{
+					file.name = vfs::unescape(file.name);
+
+					if (file.name == "." || file.name == ".." || file.is_directory)
+					{
+						continue;
+					}
+
+					numOfItems++;
+				}
+
+				const u64 hash = std::hash<std::string>()(item_path);
+				auto found = content_map->find(hash);
+				if (found == content_map->end()) // content isn't yet being tracked
+				{
+					auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
+
+					std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
+					if (item_path.length() > CELL_SEARCH_PATH_LEN_MAX)
+					{
+						// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
+						std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
+						strcpy_trunc(curr_find->infoPath.contentPath, link);
+
+						std::lock_guard lock(search->links_mutex);
+						search->content_links.emplace(std::move(link), item_path);
+					}
+					else
+					{
+						strcpy_trunc(curr_find->infoPath.contentPath, item_path);
+					}
+
+					if (item.name.size() > CELL_SEARCH_TITLE_LEN_MAX)
+					{
+						item.name.resize(CELL_SEARCH_TITLE_LEN_MAX);
+					}
+
+					switch (type)
+					{
+					case CELL_SEARCH_LISTSEARCHTYPE_MUSIC_ALBUM:
+					case CELL_SEARCH_LISTSEARCHTYPE_MUSIC_GENRE:
+					case CELL_SEARCH_LISTSEARCHTYPE_MUSIC_ARTIST:
+					case CELL_SEARCH_LISTSEARCHTYPE_MUSIC_PLAYLIST:
+					{
+						curr_find->type = CELL_SEARCH_CONTENTTYPE_MUSICLIST;
+						CellSearchMusicListInfo& info = curr_find->data.music_list;
+						info.listType = type; // CellSearchListType matches CellSearchListSearchType
+						info.numOfItems = numOfItems;
+						info.duration = 0;
+						strcpy_trunc(info.title, item.name);
+						strcpy_trunc(info.artistName, "ARTIST NAME");
+						break;
+					}
+					case CELL_SEARCH_LISTSEARCHTYPE_PHOTO_YEAR:
+					case CELL_SEARCH_LISTSEARCHTYPE_PHOTO_MONTH:
+					case CELL_SEARCH_LISTSEARCHTYPE_PHOTO_ALBUM:
+					case CELL_SEARCH_LISTSEARCHTYPE_PHOTO_PLAYLIST:
+					{
+						curr_find->type = CELL_SEARCH_CONTENTTYPE_PHOTOLIST;
+						CellSearchPhotoListInfo& info = curr_find->data.photo_list;
+						info.listType = type; // CellSearchListType matches CellSearchListSearchType
+						info.numOfItems = numOfItems;
+						strcpy_trunc(info.title, item.name);
+						break;
+					}
+					case CELL_SEARCH_LISTSEARCHTYPE_VIDEO_ALBUM:
+					{
+						curr_find->type = CELL_SEARCH_CONTENTTYPE_VIDEOLIST;
+						CellSearchVideoListInfo& info = curr_find->data.video_list;
+						info.listType = type; // CellSearchListType matches CellSearchListSearchType
+						info.numOfItems = numOfItems;
+						info.duration = 0;
+						strcpy_trunc(info.title, item.name);
+						break;
+					}
+					default:
+					{
+						break; 
+					}
+					}
+
+					content_map->emplace(hash, curr_find);
+					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
+
+					cellSearch.notice("cellSearchStartListSearch(): Content ID: %08X   Path: \"%s\"", hash, item_path);
+				}
+				else // list is already stored and tracked
+				{
+					// TODO
+					// Perform checks to see if the identified list has been modified since last checked
+					// In which case, update the stored content's properties
+					// auto content_found = &content_map->at(content_id);
+					curr_search->content_ids.emplace_back(found->first, found->second);
+				}
+			}
+		};
+
+		searchInFolder(fmt::format("/dev_hdd0/%s", media_dir));
+		resultParam->resultNum = ::narrow<s32>(curr_search->content_ids.size());
 
 		search->state.store(search_state::idle);
 		search->func(ppu, CELL_SEARCH_EVENT_LISTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -286,13 +417,162 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
+	const auto content_map = g_fxo->get<ContentIdMap>();
+	auto found = content_map->find(*reinterpret_cast<const u64*>(listId->data));
+	if (found == content_map->end())
+	{
+		// content ID not found, perform a search first
+		return CELL_SEARCH_ERROR_CONTENT_NOT_FOUND;
+	}
+
+	CellSearchContentSearchType type = CELL_SEARCH_CONTENTSEARCHTYPE_NONE;
+
+	const auto& content_info = found->second;
+	switch (content_info->type)
+	{
+	case CELL_SEARCH_CONTENTTYPE_MUSICLIST:
+		type = CELL_SEARCH_CONTENTSEARCHTYPE_MUSIC_ALL;
+		break;
+	case CELL_SEARCH_CONTENTTYPE_PHOTOLIST:
+		type = CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL;
+		break;
+	case CELL_SEARCH_CONTENTTYPE_VIDEOLIST:
+		type = CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL;
+		break;
+	case CELL_SEARCH_CONTENTTYPE_MUSIC:
+	case CELL_SEARCH_CONTENTTYPE_PHOTO:
+	case CELL_SEARCH_CONTENTTYPE_VIDEO:
+	case CELL_SEARCH_CONTENTTYPE_SCENE:
+	default:
+		return CELL_SEARCH_ERROR_NOT_LIST;
+	}
+
 	const u32 id = *outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, list_path = std::string(content_info->infoPath.contentPath)](ppu_thread& ppu) -> s32
 	{
+		auto curr_search = idm::get<search_object_t>(id);
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = id;
-		resultParam->resultNum = 0; // TODO
+		resultParam->resultNum = 0; // Set again later
+
+		std::function<void(const std::string&)> searchInFolder = [&, type](const std::string& vpath)
+		{
+			for (auto&& item : fs::dir(vfs::get(vpath)))
+			{
+				item.name = vfs::unescape(item.name);
+
+				if (item.name == "." || item.name == ".." || item.is_directory)
+				{
+					continue;
+				}
+
+				// TODO
+				// Perform first check that file is of desired type. For example, don't wanna go
+				// identifying "AlbumArt.jpg" as an MP3. Hrm... Postpone this thought. Do games
+				// perform their own checks? DIVA ignores anything without the MP3 extension.
+
+				// TODO - Identify sorting method and insert the appropriate values where applicable
+				const std::string item_path(vpath + "/" + item.name);
+
+				const u64 hash = std::hash<std::string>()(item_path);
+				auto found = content_map->find(hash);
+				if (found == content_map->end()) // content isn't yet being tracked
+				{
+					auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
+
+					std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
+					if (item_path.length() > CELL_SEARCH_PATH_LEN_MAX )
+					{
+						// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
+						std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
+						strcpy_trunc(curr_find->infoPath.contentPath, link);
+
+						std::lock_guard lock(search->links_mutex);
+						search->content_links.emplace(std::move(link), item_path);
+					}
+					else
+					{
+						strcpy_trunc(curr_find->infoPath.contentPath, item_path);
+					}
+					// TODO - curr_find.infoPath.thumbnailPath
+					if (type == CELL_SEARCH_CONTENTSEARCHTYPE_MUSIC_ALL)
+					{
+						curr_find->type = CELL_SEARCH_CONTENTTYPE_MUSIC;
+						CellSearchMusicInfo& info = curr_find->data.music;
+						// TODO - Some kinda file music analysis and assign the values as such
+						info.duration = 0;
+						info.size = item.size;
+						info.importedDate = 0;
+						info.lastPlayedDate = 0;
+						info.releasedYear = 0;
+						info.trackNumber = 0;
+						info.bitrate = 0;
+						info.samplingRate = 0;
+						info.quantizationBitrate = 0;
+						info.playCount = 0;
+						info.drmEncrypted = 0;
+						info.codec = 0;  // CellSearchCodec
+						info.status = 0; // CellSearchContentStatus
+						strcpy_trunc(info.title, item.name.substr(0, ext_offset)); // it'll do for the moment...
+						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
+						strcpy_trunc(info.artistName, "ARTIST NAME");
+						strcpy_trunc(info.genreName, "GENRE NAME");
+					}
+					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL)
+					{
+						curr_find->type = CELL_SEARCH_CONTENTTYPE_PHOTO;
+						CellSearchPhotoInfo& info = curr_find->data.photo;
+						// TODO - Some kinda file photo analysis and assign the values as such
+						info.size = item.size;
+						info.importedDate = 0;
+						info.takenDate = 0;
+						info.width = 0;
+						info.height = 0;
+						info.orientation = 0;  // CellSearchOrientation
+						info.codec = 0;        // CellSearchCodec
+						info.status = 0;       // CellSearchContentStatus
+						strcpy_trunc(info.title, item.name.substr(0, ext_offset));
+						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
+					}
+					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL)
+					{
+						curr_find->type = CELL_SEARCH_CONTENTTYPE_VIDEO;
+						CellSearchVideoInfo& info = curr_find->data.video;
+						// TODO - Some kinda file video analysis and assign the values as such
+						info.duration = 0;
+						info.size = item.size;
+						info.importedDate = 0;
+						info.takenDate = 0;
+						info.videoBitrate = 0;
+						info.audioBitrate = 0;
+						info.playCount = 0;
+						info.drmEncrypted = 0;
+						info.videoCodec = 0; // CellSearchCodec
+						info.audioCodec = 0; // CellSearchCodec
+						info.status = 0;     // CellSearchContentStatus
+						strcpy_trunc(info.title, item.name.substr(0, ext_offset)); // it'll do for the moment...
+						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
+					}
+
+					content_map->emplace(hash, curr_find);
+					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
+
+					cellSearch.notice("cellSearchStartContentSearchInList(): Content ID: %08X   Path: \"%s\"", hash, item_path);
+				}
+				else // file is already stored and tracked
+				{
+					// TODO
+					// Perform checks to see if the identified file has been modified since last checked
+					// In which case, update the stored content's properties
+					// auto content_found = &content_map->at(content_id);
+					curr_search->content_ids.emplace_back(found->first, found->second);
+				}
+			}
+		};
+
+		searchInFolder(list_path);
+		resultParam->resultNum = ::narrow<s32>(curr_search->content_ids.size());
 
 		search->state.store(search_state::idle);
 		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_INLIST_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
