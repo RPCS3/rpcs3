@@ -1049,7 +1049,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 			}
 
 			iptr_ext[ext_size] = reinterpret_cast<std::uintptr_t>(e->data) & (~s_ref_mask >> 17);
-			root_ext[ext_size] = &s_hashtable[iptr & s_hashtable_size];
+			root_ext[ext_size] = &s_hashtable[iptr_ext[ext_size] % s_hashtable_size];
 			ext_size++;
 		}
 	}
