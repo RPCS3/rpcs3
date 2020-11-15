@@ -76,7 +76,7 @@ namespace vm
 			return check_addr(addr, flags, Size);
 		}
 
-		return !(~g_pages[addr / 4096].flags & (flags | page_allocated)); 
+		return !(~g_pages[addr / 4096].flags & (flags | page_allocated));
 	}
 
 	// Search and map memory in specified memory location (min alignment is 0x10000)
@@ -90,6 +90,9 @@ namespace vm
 
 	// dealloc() with no return value and no exceptions
 	void dealloc_verbose_nothrow(u32 addr, memory_location_t location = any) noexcept;
+
+	// utils::memory_lock wrapper for locking sudo memory
+	void lock_sudo(u32 addr, u32 size);
 
 	// Object that handles memory allocations inside specific constant bounds ("location")
 	class block_t final
@@ -113,7 +116,7 @@ namespace vm
 		const u64 flags; // Currently unused
 
 		// Search and map memory (min alignment is 0x10000)
-		u32 alloc(u32 size, u32 align = 0x10000, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
+		u32 alloc(u32 size, const std::shared_ptr<utils::shm>* = nullptr, u32 align = 0x10000, u64 flags = 0);
 
 		// Try to map memory at fixed location
 		u32 falloc(u32 addr, u32 size, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
@@ -122,7 +125,7 @@ namespace vm
 		u32 dealloc(u32 addr, const std::shared_ptr<utils::shm>* = nullptr);
 
 		// Get memory at specified address (if size = 0, addr assumed exact)
-		std::pair<u32, std::shared_ptr<utils::shm>> get(u32 addr, u32 size = 0);
+		std::pair<u32, std::shared_ptr<utils::shm>> peek(u32 addr, u32 size = 0);
 
 		// Get allocated memory count
 		u32 used();

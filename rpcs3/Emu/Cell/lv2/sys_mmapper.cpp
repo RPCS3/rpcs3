@@ -20,6 +20,10 @@ lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, lv2_memory_container* ct)
 	, ct(ct)
 	, shm(std::make_shared<utils::shm>(size, 1 /* shareable flag */))
 {
+#ifndef _WIN32
+	// Optimization that's useless on Windows :puke:
+	utils::memory_lock(shm->map_self(), size);
+#endif
 }
 
 template<> DECLARE(ipc_manager<lv2_memory, u64>::g_ipc) {};
@@ -588,6 +592,7 @@ error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, 
 		return CELL_EBUSY;
 	}
 
+	vm::lock_sudo(addr, mem->size);
 	return CELL_OK;
 }
 
@@ -627,7 +632,7 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 		return mem.ret;
 	}
 
-	const u32 addr = area->alloc(mem->size, mem->align, &mem->shm, mem->align == 0x10000 ? SYS_MEMORY_PAGE_SIZE_64K : SYS_MEMORY_PAGE_SIZE_1M);
+	const u32 addr = area->alloc(mem->size, &mem->shm, mem->align, mem->align == 0x10000 ? SYS_MEMORY_PAGE_SIZE_64K : SYS_MEMORY_PAGE_SIZE_1M);
 
 	if (!addr)
 	{
@@ -635,6 +640,7 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 		return CELL_ENOMEM;
 	}
 
+	vm::lock_sudo(addr, mem->size);
 	*alloc_addr = addr;
 	return CELL_OK;
 }
@@ -652,7 +658,7 @@ error_code sys_mmapper_unmap_shared_memory(ppu_thread& ppu, u32 addr, vm::ptr<u3
 		return {CELL_EINVAL, addr};
 	}
 
-	const auto shm = area->get(addr);
+	const auto shm = area->peek(addr);
 
 	if (!shm.second)
 	{
