@@ -2661,6 +2661,14 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 			if (nph->is_dns(s))
 			{
 				const s32 ret_analyzer = nph->analyze_dns_packet(s, reinterpret_cast<const u8*>(_buf.data()), len);
+				
+				// If we're not connected just never send the packet and pretend we did
+				if (!nph->get_net_status())
+				{
+					native_result = data_len;
+					return true;
+				}
+
 				// Check if the packet is intercepted
 				if (ret_analyzer >= 0)
 				{

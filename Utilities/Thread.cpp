@@ -6,6 +6,7 @@
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Thread.h"
+#include "Utilities/JIT.h"
 #include "sysinfo.h"
 #include <typeinfo>
 #include <thread>
@@ -39,6 +40,7 @@
 #endif
 #ifdef __linux__
 #include <sys/timerfd.h>
+#include <unistd.h>
 #endif
 
 #if defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
@@ -72,9 +74,9 @@
 # endif
 #endif
 
-#include "sync.h"
 #include "util/vm.hpp"
 #include "util/logs.hpp"
+#include "util/asm.hpp"
 #include "Emu/Memory/vm_locking.h"
 
 LOG_CHANNEL(sig_log, "SIG");
@@ -84,6 +86,8 @@ LOG_CHANNEL(vm_log, "VM");
 thread_local u64 g_tls_fault_all = 0;
 thread_local u64 g_tls_fault_rsx = 0;
 thread_local u64 g_tls_fault_spu = 0;
+thread_local u64 g_tls_wait_time = 0;
+thread_local u64 g_tls_wait_fail = 0;
 extern thread_local std::string(*g_tls_log_prefix)();
 
 template <>
@@ -1842,8 +1846,42 @@ thread_local DECLARE(thread_ctrl::g_tls_error_callback) = nullptr;
 
 DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
 
-void thread_base::start(native_entry entry)
+static atomic_t<u128, 64> s_thread_bits{0};
+
+static atomic_t<thread_base**> s_thread_pool[128]{};
+
+void thread_base::start(native_entry entry, void(*trampoline)())
 {
+	for (u128 bits = s_thread_bits.load(); bits; bits &= bits - 1)
+	{
+		const u32 pos = utils::ctz128(bits);
+
+		if (!s_thread_pool[pos])
+		{
+			continue;
+		}
+
+		thread_base** tls = s_thread_pool[pos].exchange(nullptr);
+
+		if (!tls)
+		{
+			continue;
+		}
+
+		// Send "this" and entry point
+		m_thread = reinterpret_cast<u64>(trampoline);
+		atomic_storage<thread_base*>::release(*tls, this);
+		s_thread_pool[pos].notify_all();
+
+		// Wait for actual "m_thread" in return
+		while (m_thread == reinterpret_cast<u64>(trampoline))
+		{
+			busy_wait(300);
+		}
+
+		return;
+	}
+
 #ifdef _WIN32
 	m_thread = ::_beginthreadex(nullptr, 0, entry, this, CREATE_SUSPENDED, nullptr);
 	verify("thread_ctrl::start" HERE), m_thread, ::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1;
@@ -1852,23 +1890,37 @@ void thread_base::start(native_entry entry)
 #endif
 }
 
-void thread_base::initialize(void (*error_cb)(), bool(*wait_cb)(const void*))
+void thread_base::initialize(void (*error_cb)())
 {
 	// Initialize TLS variables
 	thread_ctrl::g_tls_this_thread = this;
 
 	thread_ctrl::g_tls_error_callback = error_cb;
 
-	// Initialize atomic wait callback
-	atomic_wait_engine::set_wait_callback(wait_cb);
-
 	g_tls_log_prefix = []
 	{
 		return thread_ctrl::get_name_cached();
 	};
 
-	std::string name = thread_ctrl::get_name_cached();
+	atomic_wait_engine::set_wait_callback([](const void*, u64 attempts, u64 stamp0) -> bool
+	{
+		if (attempts == umax)
+		{
+			g_tls_wait_time += __rdtsc() - stamp0;
+		}
+		else if (attempts > 1)
+		{
+			g_tls_wait_fail += attempts - 1;
+		}
 
+		return true;
+	});
+
+	set_name(thread_ctrl::get_name_cached());
+}
+
+void thread_base::set_name(std::string name)
+{
 #ifdef _MSC_VER
 	struct THREADNAME_INFO
 	{
@@ -1910,24 +1962,7 @@ void thread_base::initialize(void (*error_cb)(), bool(*wait_cb)(const void*))
 #endif
 }
 
-void thread_base::notify_abort() noexcept
-{
-	u64 tid = m_thread.load();
-#ifdef _WIN32
-	tid = GetThreadId(reinterpret_cast<HANDLE>(tid));
-#endif
-
-	while (auto ptr = m_state_notifier.load())
-	{
-		// Since this function is not perfectly implemented, run it in a loop
-		if (atomic_wait_engine::raw_notify(ptr, tid))
-		{
-			break;
-		}
-	}
-}
-
-bool thread_base::finalize(thread_state result_state) noexcept
+u64 thread_base::finalize(thread_state result_state) noexcept
 {
 	// Report pending errors
 	error_code::error_report(0, 0, 0, 0);
@@ -1965,29 +2000,113 @@ bool thread_base::finalize(thread_state result_state) noexcept
 		return thread_ctrl::get_name_cached();
 	};
 
-	sig_log.notice("Thread time: %fs (%fGc); Faults: %u [rsx:%u, spu:%u]; [soft:%u hard:%u]; Switches:[vol:%u unvol:%u]",
+	sig_log.notice("Thread time: %fs (%fGc); Faults: %u [rsx:%u, spu:%u]; [soft:%u hard:%u]; Switches:[vol:%u unvol:%u]; Wait:[%.3fs, spur:%u]",
 		time / 1000000000.,
 		cycles / 1000000000.,
 		g_tls_fault_all,
 		g_tls_fault_rsx,
 		g_tls_fault_spu,
-		fsoft, fhard, ctxvol, ctxinv);
+		fsoft, fhard, ctxvol, ctxinv,
+		g_tls_wait_time / (utils::get_tsc_freq() / 1.),
+		g_tls_wait_fail);
 
-	// Return true if need to delete thread object
-	const bool ok = m_state.exchange(result_state) <= thread_state::aborting;
+	atomic_wait_engine::set_wait_callback(nullptr);
+
+	const u64 _self = m_thread;
+	m_thread.release(0);
+
+	// Return true if need to delete thread object (no)
+	const bool ok = 0 == (3 & ~m_sync.fetch_op([&](u64& v)
+	{
+		v &= -4;
+		v |= static_cast<u32>(result_state);
+	}));
 
 	// Signal waiting threads
-	m_state.notify_all();
+	m_sync.notify_all(2);
 
 	// No detached thread supported atm
-	return !ok;
+	return _self;
 }
 
-void thread_base::finalize() noexcept
+void thread_base::finalize(u64 _self) noexcept
 {
 	atomic_wait_engine::set_wait_callback(nullptr);
 	g_tls_log_prefix = []() -> std::string { return {}; };
 	thread_ctrl::g_tls_this_thread = nullptr;
+
+	if (!_self)
+	{
+		return;
+	}
+
+	// Try to add self to thread pool
+	const auto [bits, ok] = s_thread_bits.fetch_op([](u128& bits)
+	{
+		if (~bits) [[likely]]
+		{
+			// Set lowest clear bit
+			bits |= bits + 1;
+			return true;
+		}
+
+		return false;
+	});
+
+	if (!ok)
+	{
+#ifdef _WIN32
+		_endthread();
+#else
+		pthread_detach(reinterpret_cast<pthread_t>(_self));
+		pthread_exit(0);
+#endif
+		return;
+	}
+
+	set_name("..pool");
+
+	// Obtain id from atomic op
+	const u32 pos = utils::ctz128(~bits);
+	const auto tls = &thread_ctrl::g_tls_this_thread;
+	s_thread_pool[pos] = tls;
+
+	while (s_thread_pool[pos] == tls || !atomic_storage<thread_base*>::load(*tls))
+	{
+		s_thread_pool[pos].wait(tls);
+	}
+
+	// Free thread pool slot
+	s_thread_bits.atomic_op([pos](u128& val)
+	{
+		val &= ~(u128(1) << pos);
+	});
+
+	// Restore thread id
+	const auto _this = atomic_storage<thread_base*>::load(*tls);
+	const auto entry = _this->m_thread.exchange(_self);
+	_this->m_thread.notify_one();
+
+	// Hack return address to avoid tail call
+#ifdef _MSC_VER
+	*static_cast<u64*>(_AddressOfReturnAddress()) = entry;
+#else
+	static_cast<u64*>(__builtin_frame_address(0))[1] = entry;
+#endif
+	//reinterpret_cast<native_entry>(entry)(_this);
+}
+
+void (*thread_base::make_trampoline(native_entry entry))()
+{
+	return build_function_asm<void(*)()>([&](asmjit::X86Assembler& c, auto& args)
+	{
+		using namespace asmjit;
+
+		// Revert effect of ret instruction (fix stack alignment)
+		c.mov(x86::rax, imm_ptr(entry));
+		c.sub(x86::rsp, 8);
+		c.jmp(x86::rax);
+	});
 }
 
 void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
@@ -2039,12 +2158,13 @@ void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 	}
 #endif
 
-	if (_this->m_signal && _this->m_signal.exchange(0))
+	if (_this->m_sync.btr(2))
 	{
 		return;
 	}
 
-	_this->m_signal.wait(0, atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
+	// Wait for signal and thread state abort
+	_this->m_sync.wait(0, 4 + 1, atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
 }
 
 std::string thread_ctrl::get_name_cached()
@@ -2073,35 +2193,64 @@ thread_base::thread_base(std::string_view name)
 
 thread_base::~thread_base()
 {
-	if (m_thread)
+	if (u64 handle = m_thread.exchange(0))
 	{
 #ifdef _WIN32
-		CloseHandle(reinterpret_cast<HANDLE>(m_thread.raw()));
+		CloseHandle(reinterpret_cast<HANDLE>(handle));
 #else
-		pthread_detach(reinterpret_cast<pthread_t>(m_thread.raw()));
+		pthread_detach(reinterpret_cast<pthread_t>(handle));
 #endif
 	}
 }
 
 bool thread_base::join() const
 {
-	for (auto state = m_state.load(); state != thread_state::finished && state != thread_state::errored;)
+	// Hacked for too sleepy threads (1ms) TODO: make sure it's unneeded and remove
+	const auto timeout = Emu.IsStopped() ? atomic_wait_timeout{1'000'000} : atomic_wait_timeout::inf;
+
+	bool warn = false;
+	auto stamp0 = __rdtsc();
+
+	for (u64 i = 0; (m_sync & 3) <= 1; i++)
 	{
-		m_state.wait(state);
-		state = m_state;
+		m_sync.wait(0, 2, timeout);
+
+		if (m_sync & 2)
+		{
+			break;
+		}
+
+		if (i > 20 && Emu.IsStopped())
+		{
+			stamp0 = __rdtsc();
+			atomic_wait_engine::raw_notify(0, get_native_id());
+			stamp0 = __rdtsc() - stamp0;
+			warn = true;
+		}
 	}
 
-	return m_state.load() == thread_state::finished;
+	if (warn)
+	{
+		sig_log.error(u8"Thread [%s] is too sleepy. Took %.3fµs to wake it up!", *m_tname.load(), stamp0 / (utils::get_tsc_freq() / 1000000.));
+	}
+
+	return (m_sync & 3) == 3;
 }
 
 void thread_base::notify()
 {
-	// Increment with saturation
-	if (m_signal.try_inc())
-	{
-		// Considered impossible to have a situation when not notified
-		m_signal.notify_all();
-	}
+	// Set notification
+	m_sync |= 4;
+	m_sync.notify_one(4);
+}
+
+u64 thread_base::get_native_id() const
+{
+#ifdef _WIN32
+	return GetThreadId(reinterpret_cast<HANDLE>(m_thread.load()));
+#else
+	return m_thread.load();
+#endif
 }
 
 u64 thread_base::get_cycles()
@@ -2127,7 +2276,7 @@ u64 thread_base::get_cycles()
 	{
 		cycles = static_cast<u64>(thread_time.tv_sec) * 1'000'000'000 + thread_time.tv_nsec;
 #endif
-		if (const u64 old_cycles = m_cycles.exchange(cycles))
+		if (const u64 old_cycles = m_sync.fetch_op([&](u64& v){ v &= 7; v |= (cycles << 3); }) >> 3)
 		{
 			return cycles - old_cycles;
 		}
@@ -2137,7 +2286,7 @@ u64 thread_base::get_cycles()
 	}
 	else
 	{
-		return m_cycles;
+		return m_sync >> 3;
 	}
 }
 
@@ -2164,16 +2313,23 @@ void thread_ctrl::emergency_exit(std::string_view reason)
 	{
 		g_tls_error_callback();
 
-		if (_this->finalize(thread_state::errored))
+		u64 _self = _this->finalize(thread_state::errored);
+
+		if (!_self)
 		{
 			delete _this;
 		}
 
-		thread_base::finalize();
+		thread_base::finalize(0);
 
 #ifdef _WIN32
-		_endthreadex(0);
+		_endthread();
 #else
+		if (_self)
+		{
+			pthread_detach(reinterpret_cast<pthread_t>(_self));
+		}
+
 		pthread_exit(0);
 #endif
 	}

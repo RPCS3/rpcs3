@@ -516,7 +516,7 @@ std::string ppu_thread::dump_regs() const
 	for (uint i = 0; i < 32; ++i, ret += '\n')
 	{
 		fmt::append(ret, "v%d%s: ", i, i <= 9 ? " " : "");
- 
+
 		const auto r = vr[i];
 		const u32 i3 = r.u32r[0];
 
@@ -800,7 +800,7 @@ void ppu_thread::cpu_sleep()
 	raddr = 0;
 
 	// Setup wait flag and memory flags to relock itself
-	state += cpu_flag::wait + cpu_flag::memory;
+	state += g_use_rtm ? cpu_flag::wait : cpu_flag::wait + cpu_flag::memory;
 
 	if (auto ptr = vm::g_tls_locked)
 	{

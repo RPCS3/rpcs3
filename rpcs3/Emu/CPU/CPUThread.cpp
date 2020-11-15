@@ -24,6 +24,9 @@ LOG_CHANNEL(sys_log, "SYS");
 
 static thread_local u64 s_tls_thread_slot = -1;
 
+// Suspend counter stamp
+static thread_local u64 s_tls_sctr = -1;
+
 extern thread_local void(*g_tls_log_control)(const char* fmt, u64 progress);
 
 template <>
@@ -324,6 +327,12 @@ struct cpu_counter
 		// Unregister and wait if necessary
 		_this->state += cpu_flag::wait;
 
+		if (slot >= std::size(cpu_array))
+		{
+			sys_log.fatal("Index out of bounds (%u)." HERE, slot);
+			return;
+		}
+
 		std::lock_guard lock(cpu_suspend_lock);
 
 		if (!cpu_array[slot].compare_and_swap_test(_this, nullptr))
@@ -344,7 +353,7 @@ struct cpu_counter
 
 		if (index >= std::size(cpu_array))
 		{
-			sys_log.fatal("Index out of bounds (%u).", index);
+			sys_log.fatal("Index out of bounds (%u)." HERE, index);
 			return;
 		}
 
@@ -493,14 +502,8 @@ void cpu_thread::operator()()
 
 	static thread_local struct thread_cleanup_t
 	{
-		cpu_thread* _this;
+		cpu_thread* _this = nullptr;
 		std::string name;
-
-		thread_cleanup_t(cpu_thread* _this)
-			: _this(_this)
-			, name(thread_ctrl::get_name())
-		{
-		}
 
 		void cleanup()
 		{
@@ -520,6 +523,10 @@ void cpu_thread::operator()()
 
 			g_fxo->get<cpu_counter>()->remove(_this, s_tls_thread_slot);
 
+			s_tls_thread_slot = -1;
+
+			g_tls_current_cpu_thread = nullptr;
+
 			_this = nullptr;
 		}
 
@@ -531,7 +538,10 @@ void cpu_thread::operator()()
 				cleanup();
 			}
 		}
-	} cleanup{this};
+	} cleanup;
+
+	cleanup._this = this;
+	cleanup.name = thread_ctrl::get_name();
 
 	// Check thread status
 	while (!(state & (cpu_flag::exit + cpu_flag::dbg_global_stop)) && thread_ctrl::state() != thread_state::aborting)
@@ -578,7 +588,6 @@ bool cpu_thread::check_state() noexcept
 	bool cpu_sleep_called = false;
 	bool cpu_can_stop = true;
 	bool escape, retval;
-	u64 susp_ctr = -1;
 
 	while (true)
 	{
@@ -590,16 +599,26 @@ bool cpu_thread::check_state() noexcept
 			if (flags & cpu_flag::pause)
 			{
 				// Save value before state is saved and cpu_flag::wait is observed
-				susp_ctr = g_suspend_counter;
-
-				if (susp_ctr & 1 && flags & cpu_flag::wait)
+				if (s_tls_sctr == umax)
 				{
-					susp_ctr = -1;
+					u64 ctr = g_suspend_counter;
+
+					if (flags & cpu_flag::wait)
+					{
+						if ((ctr & 3) == 2)
+						{
+							s_tls_sctr = ctr;
+						}
+					}
+					else
+					{
+						s_tls_sctr = ctr;
+					}
 				}
 			}
 			else
 			{
-				susp_ctr = -1;
+				s_tls_sctr = -1;
 			}
 
 			if (flags & cpu_flag::temp) [[unlikely]]
@@ -717,22 +736,22 @@ bool cpu_thread::check_state() noexcept
 				// Wait for current suspend_all operation
 				for (u64 i = 0;; i++)
 				{
-					if (i < 20 || susp_ctr & 1)
+					u64 ctr = g_suspend_counter;
+
+					if (i < 20 || ctr & 1)
 					{
 						busy_wait(300);
 					}
-					else if (g_suspend_counter.load() >> 1 >= susp_ctr >> 1)
+					else if (ctr >> 2 == s_tls_sctr >> 2)
 					{
-						g_suspend_counter.wait(susp_ctr, -2);
+						g_suspend_counter.wait(ctr, -4);
 					}
-
-					if (!(state & cpu_flag::pause))
+					else
 					{
+						s_tls_sctr = -1;
 						break;
 					}
 				}
-
-				susp_ctr = -1;
 			}
 		}
 	}
@@ -862,6 +881,9 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 			}
 		});
 
+		// Initialization (first increment)
+		g_suspend_counter += 2;
+
 		// Copy of thread bits
 		decltype(ctr->cpu_copy_bits) copy2{};
 
@@ -903,6 +925,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 			_mm_pause();
 		}
 
+		// Second increment: all threads paused
 		g_suspend_counter++;
 
 		// Extract queue and reverse element order (FILO to FIFO) (TODO: maybe leave order as is?)
@@ -957,7 +980,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 			}
 		}
 
-		// Finalization (second increment)
+		// Finalization (last increment)
 		verify(HERE), g_suspend_counter++ & 1;
 
 		// Exact bitset for flag pause removal
@@ -971,8 +994,10 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspen
 	else
 	{
 		// Seems safe to set pause on self because wait flag hasn't been observed yet
-		_this->state += cpu_flag::pause + cpu_flag::temp;
+		s_tls_sctr = g_suspend_counter;
+		_this->state += cpu_flag::pause + cpu_flag::wait + cpu_flag::temp;
 		_this->check_state();
+		s_tls_sctr = -1;
 		return true;
 	}
 
@@ -990,8 +1015,6 @@ void cpu_thread::stop_all() noexcept
 	}
 	else
 	{
-		std::lock_guard lock(g_fxo->get<cpu_counter>()->cpu_suspend_lock);
-
 		auto on_stop = [](u32, cpu_thread& cpu)
 		{
 			cpu.state += cpu_flag::dbg_global_stop;

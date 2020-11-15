@@ -1021,9 +1021,11 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	for (auto& thread : group->threads)
 	{
-		if (thread && group->running)
+		while (thread && group->running && thread->state & cpu_flag::wait)
 		{
-			thread_ctrl::raw_notify(*thread);
+			// TODO: replace with proper solution
+			if (atomic_wait_engine::raw_notify(nullptr, thread_ctrl::get_native_id(*thread)))
+				break;
 		}
 	}
 

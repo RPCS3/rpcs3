@@ -2619,6 +2619,13 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 					return false;
 				});
 
+				const u64 count2 = __rdtsc() - perf2.get();
+
+				if (count2 > 20000 && g_cfg.core.perf_report) [[unlikely]]
+				{
+					perf_log.warning(u8"PUTLLC: took too long: %.3fµs (%u c) (addr=0x%x) (S)", count2 / (utils::get_tsc_freq() / 1000'000.), count2, addr);
+				}
+
 				if (ok)
 				{
 					break;
@@ -2651,7 +2658,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			{
 				if (count > 20000 && g_cfg.core.perf_report) [[unlikely]]
 				{
-					perf_log.warning(u8"PUTLLC: took too long: %.3fµs (%u c)", count / (utils::get_tsc_freq() / 1000'000.), count);
+					perf_log.warning(u8"PUTLLC: took too long: %.3fµs (%u c) (addr = 0x%x)", count / (utils::get_tsc_freq() / 1000'000.), count, addr);
 				}
 
 				break;
@@ -2747,7 +2754,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 	if (g_use_rtm) [[likely]]
 	{
-		const u64 result = spu_putlluc_tx(addr, to_write, cpu);
+		u64 result = spu_putlluc_tx(addr, to_write, cpu);
 
 		if (result == 0)
 		{
@@ -2760,9 +2767,15 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 				res += 127;
 			});
 		}
-		else if (result > 20000 && g_cfg.core.perf_report) [[unlikely]]
+
+		if (!result)
 		{
-			perf_log.warning(u8"STORE128: took too long: %.3fµs (%u c)", result / (utils::get_tsc_freq() / 1000'000.), result);
+			result = __rdtsc() - perf0.get();
+		}
+
+		if (result > 20000 && g_cfg.core.perf_report) [[unlikely]]
+		{
+			perf_log.warning(u8"STORE128: took too long: %.3fµs (%u c) (addr=0x%x)", result / (utils::get_tsc_freq() / 1000'000.), result, addr);
 		}
 
 		static_cast<void>(cpu->test_stopped());
@@ -4413,8 +4426,12 @@ bool spu_thread::stop_and_signal(u32 code)
 						return true;
 					});
 
-					if (thread.get() != this)
-						thread_ctrl::raw_notify(*thread);
+					while (thread.get() != this && thread->state & cpu_flag::wait)
+					{
+						// TODO: replace with proper solution
+						if (atomic_wait_engine::raw_notify(nullptr, thread_ctrl::get_native_id(*thread)))
+							break;
+					}
 				}
 			}
 

@@ -72,24 +72,25 @@ namespace atomic_wait
 		__m128i mask;
 
 		template <typename T>
-		constexpr void set_value(T value)
+		static constexpr __m128i get_value(T value = T{})
 		{
 			static_assert((sizeof(T) & (sizeof(T) - 1)) == 0);
 			static_assert(sizeof(T) <= 16);
 
 			if constexpr (sizeof(T) <= 8)
 			{
-				old = _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>, T>(value));
+				return _mm_cvtsi64_si128(std::bit_cast<get_uint_t<sizeof(T)>, T>(value));
 			}
 			else if constexpr (sizeof(T) == 16)
 			{
-				old = std::bit_cast<__m128i>(value);
+				return std::bit_cast<__m128i>(value);
 			}
 		}
 
-		void set_value()
+		template <typename T>
+		constexpr void set_value(T value = T{})
 		{
-			old = _mm_setzero_si128();
+			old = get_value<T>();
 		}
 
 		template <typename T>
@@ -108,9 +109,23 @@ namespace atomic_wait
 			}
 		}
 
-		void set_mask()
+		template <typename T>
+		constexpr void set_mask()
 		{
-			mask = _mm_set1_epi64x(-1);
+			mask = get_mask<T>();
+		}
+
+		template <typename T>
+		static constexpr __m128i get_mask()
+		{
+			if constexpr (sizeof(T) <= 8)
+			{
+				return _mm_cvtsi64_si128(UINT64_MAX >> ((64 - sizeof(T) * 8) & 63));
+			}
+			else
+			{
+				return _mm_set1_epi64x(-1);
+			}
 		}
 	};
 
@@ -131,7 +146,7 @@ namespace atomic_wait
 
 		template <typename... U, std::size_t... Align>
 		constexpr list(atomic_t<U, Align>&... vars)
-			: m_info{{&vars.raw(), sizeof(U), _mm_setzero_si128(), _mm_set1_epi64x(-1)}...}
+			: m_info{{&vars.raw(), sizeof(U), info::get_value<U>(), info::get_mask<U>()}...}
 		{
 			static_assert(sizeof...(U) <= Max);
 		}
@@ -164,7 +179,7 @@ namespace atomic_wait
 			m_info[Index].data = &var.raw();
 			m_info[Index].size = sizeof(T2) | (static_cast<u8>(Flags) << 8);
 			m_info[Index].template set_value<T2>(value);
-			m_info[Index].mask = _mm_set1_epi64x(-1);
+			m_info[Index].template set_mask<T2>();
 		}
 
 		template <uint Index, op Flags = op::eq, typename T2, std::size_t Align, typename U, typename V>
@@ -224,7 +239,7 @@ private:
 	notify_all(const void* data, u32 size, __m128i mask128, __m128i val128);
 
 public:
-	static void set_wait_callback(bool(*cb)(const void* data));
+	static void set_wait_callback(bool(*cb)(const void* data, u64 attempts, u64 stamp0));
 	static void set_notify_callback(void(*cb)(const void* data, u64 progress));
 	static bool raw_notify(const void* data, u64 thread_id = 0);
 };
@@ -1447,7 +1462,7 @@ public:
 
 	// Overload with mask (only selected bits are checked), timeout is discouraged
 	template <atomic_wait::op Flags = atomic_wait::op::eq>
-	void wait(type old_value, type mask_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf)
+	void wait(type old_value, type mask_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf) const noexcept
 	{
 		if constexpr (sizeof(T) <= 8)
 		{

@@ -766,7 +766,11 @@ namespace vm
 
 		perf_meter<"PAGE_LCK"_u64> perf1;
 
-		if (!utils::memory_lock(g_sudo_addr + addr, size))
+		if (!g_use_rtm)
+		{
+			perf1.reset();
+		}
+		else if (!utils::memory_lock(g_sudo_addr + addr, size))
 		{
 			vm_log.error("Failed to lock memory. Consider increasing your system limits.\n"
 				"addr=0x%x, size=0x%x, shm=%d, shm:[f=%d,l=%u]", addr, size, +!!shm, shm ? shm->flags() : 0, shm ? shm->info : 0);
