@@ -399,8 +399,6 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		sys_spu.warning("Unimplemented SPU Thread options (0x%x)", option);
 	}
 
-	const vm::addr_t ls_addr{verify("SPU LS" HERE, vm::alloc(SPU_LS_SIZE, vm::main))};
-
 	const u32 inited = group->init;
 
 	const u32 tid = (inited << 24) | (group_id & 0xffffff);
@@ -414,7 +412,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 			fmt::append(full_name, "%s ", thread_name);
 		}
 
-		const auto spu = std::make_shared<named_thread<spu_thread>>(full_name, ls_addr, group.get(), spu_num, thread_name, tid, false, option);
+		const auto spu = std::make_shared<named_thread<spu_thread>>(full_name, group.get(), spu_num, thread_name, tid, false, option);
 		group->threads[inited] = spu;
 		group->threads_map[spu_num] = static_cast<s8>(inited);
 		return spu;
@@ -683,6 +681,9 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 	{
 		if (auto thread = t.get())
 		{
+			// Deallocate LS
+			vm::get(vm::spu)->dealloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (thread->id & 0xffffff), &thread->shm);
+
 			// Remove ID from IDM (destruction will occur in group destructor)
 			idm::remove<named_thread<spu_thread>>(thread->id);
 		}
@@ -1845,9 +1846,7 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 			index = 0;
 	}
 
-	const vm::addr_t ls_addr{verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, vm::spu))};
-
-	const u32 tid = idm::make<named_thread<spu_thread>>(fmt::format("RawSPU[0x%x] ", index), ls_addr, nullptr, index, "", index);
+	const u32 tid = idm::make<named_thread<spu_thread>>(fmt::format("RawSPU[0x%x] ", index), nullptr, index, "", index);
 
 	spu_thread::g_raw_spu_id[index] = verify("RawSPU ID" HERE, tid);
 
@@ -1893,9 +1892,9 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 			index = 0;
 	}
 
-	const vm::addr_t ls_addr{verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, vm::spu))};
+	const vm::addr_t ls_addr{RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index};
 
-	const auto thread = idm::make_ptr<named_thread<spu_thread>>(fmt::format("IsoSPU[0x%x] ", index), ls_addr, nullptr, index, "", index, true);
+	const auto thread = idm::make_ptr<named_thread<spu_thread>>(fmt::format("IsoSPU[0x%x] ", index), nullptr, index, "", index, true);
 
 	thread->gpr[3] = v128::from64(0, arg1);
 	thread->gpr[4] = v128::from64(0, arg2);

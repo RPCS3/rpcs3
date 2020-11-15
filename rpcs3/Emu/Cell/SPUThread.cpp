@@ -1384,6 +1384,8 @@ std::string spu_thread::dump_misc() const
 		fmt::append(ret, "...chunk-0x%05x", (name & 0xffff) * 4);
 	}
 
+	const u32 offset = group ? SPU_FAKE_BASE_ADDR + (id & 0xffffff) * SPU_LS_SIZE : RAW_SPU_BASE_ADDR + index * RAW_SPU_OFFSET;
+
 	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
 	fmt::append(ret, "\nLocal Storage: 0x%08x..0x%08x", offset, offset + 0x3ffff);
 
@@ -1624,16 +1626,19 @@ void spu_thread::cpu_task()
 spu_thread::~spu_thread()
 {
 	{
-		const auto [_, shm] = vm::get(vm::any, offset)->get(offset);
+		vm::writer_lock(0);
 
 		for (s32 i = -1; i < 2; i++)
 		{
 			// Unmap LS mirrors
 			shm->unmap_critical(ls + (i * SPU_LS_SIZE));
 		}
+	}
 
-		// Deallocate Local Storage
-		vm::dealloc_verbose_nothrow(offset);
+	if (!group)
+	{
+		// Deallocate local storage (thread groups are handled in sys_spu.cpp)
+		vm::dealloc_verbose_nothrow(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, vm::spu);
 	}
 
 	// Release LS mirrors area
@@ -1653,13 +1658,24 @@ spu_thread::~spu_thread()
 	perf_log.notice("Perf stats for PUTLLC reload: successs %u, failure %u", last_succ, last_fail);
 }
 
-spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)
+spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)
 	: cpu_thread(idm::last_id())
 	, index(index)
+	, shm(std::make_shared<utils::shm>(SPU_LS_SIZE))
 	, ls([&]()
 	{
-		const auto [_, shm] = vm::get(vm::any, _ls)->get(_ls);
 		const auto addr = static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 5));
+
+		if (!group)
+		{
+			vm::get(vm::spu)->falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, &shm);
+		}
+		else
+		{
+			vm::get(vm::spu)->falloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (cpu_thread::id & 0xffffff), SPU_LS_SIZE, &shm);
+		}
+
+		vm::writer_lock(0);
 
 		for (u32 i = 1; i < 4; i++)
 		{
@@ -1672,7 +1688,6 @@ spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::str
 		return addr + (SPU_LS_SIZE * 2);
 	}())
 	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
-	, offset(_ls)
 	, group(group)
 	, option(option)
 	, lv2_id(lv2_id)
@@ -1837,7 +1852,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 			if (offset + args.size - 1 < SPU_LS_SIZE) // LS access
 			{
-				eal = spu.offset + offset; // redirect access
+				eal = SPU_FAKE_BASE_ADDR * (spu.id & 0xffffff) + offset; // redirect access
 			}
 			else if (!is_get && args.size == 4 && (offset == SYS_SPU_THREAD_SNR1 || offset == SYS_SPU_THREAD_SNR2))
 			{

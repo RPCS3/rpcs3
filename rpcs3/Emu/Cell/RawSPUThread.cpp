@@ -28,7 +28,7 @@ inline void try_start(spu_thread& spu)
 
 bool spu_thread::read_reg(const u32 addr, u32& value)
 {
-	const u32 offset = addr - this->offset - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - (RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index) - RAW_SPU_PROB_OFFSET;
 
 	spu_log.trace("RawSPU[%u]: Read32(0x%x, offset=0x%x)", index, addr, offset);
 
@@ -165,7 +165,7 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 
 bool spu_thread::write_reg(const u32 addr, const u32 value)
 {
-	const u32 offset = addr - this->offset - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - (RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index) - RAW_SPU_PROB_OFFSET;
 
 	spu_log.trace("RawSPU[%u]: Write32(0x%x, offset=0x%x, value=0x%x)", index, addr, offset, value);
 
@@ -321,7 +321,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 
 void spu_load_exec(const spu_exec_object& elf)
 {
-	auto ls0 = vm::cast(vm::falloc(RAW_SPU_BASE_ADDR, SPU_LS_SIZE, vm::spu));
+	auto ls0 = vm::addr_t{RAW_SPU_BASE_ADDR};
 
 	spu_thread::g_raw_spu_ctr++;
 
@@ -333,7 +333,7 @@ void spu_load_exec(const spu_exec_object& elf)
 		}
 	}
 
-	auto spu = idm::make_ptr<named_thread<spu_thread>>("TEST_SPU", ls0, nullptr, 0, "", 0);
+	auto spu = idm::make_ptr<named_thread<spu_thread>>("TEST_SPU", nullptr, 0, "", 0);
 
 	spu_thread::g_raw_spu_id[0] = spu->id;
 

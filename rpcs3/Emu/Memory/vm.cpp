@@ -1313,10 +1313,10 @@ namespace vm
 			return {addr, nullptr};
 		}
 
-		// Special path
+		// Special case
 		if (m_common)
 		{
-			return {this->addr, m_common};
+			return {addr, nullptr};
 		}
 
 		// Range check
