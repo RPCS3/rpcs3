@@ -569,22 +569,21 @@ cond_alloc(std::uintptr_t iptr, __m128i mask)
 				continue;
 			}
 
-			// Initialize new "semaphore"
-			s_cond_list[id].mask = mask;
-			s_cond_list[id].init(iptr);
-
 			// Update some stats
-			s_cond_max.fetch_op([i](u32& val)
+			s_cond_max.fetch_op([group](u32& val)
 			{
-				if (val < i)
+				if (val < group) [[unlikely]]
 				{
-					val = i;
+					val = group;
 					return true;
 				}
 
 				return false;
 			});
 
+			// Initialize new "semaphore"
+			s_cond_list[id].mask = mask;
+			s_cond_list[id].init(iptr);
 			return id;
 		}
 	}
@@ -1176,6 +1175,11 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 		{
 			if (!cond->set_sleep())
 			{
+				if (cond->sync == 3)
+				{
+					break;
+				}
+
 				fallback = false;
 				break;
 			}
