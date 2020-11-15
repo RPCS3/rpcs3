@@ -229,7 +229,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		return;
 	}
 
-	const u32 pc = m_debugger_list->m_pc + i * 4;
+	const u32 pc = i >= 0 ? m_debugger_list->m_pc + i * 4 : GetPc();
 
 	const auto modifiers = QApplication::keyboardModifiers();
 
@@ -250,11 +250,6 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		{
 		case Qt::Key_E:
 		{
-			if (i < 0)
-			{
-				return;
-			}
-
 			instruction_editor_dialog* dlg = new instruction_editor_dialog(this, pc, cpu, m_disasm.get());
 			dlg->show();
 			return;
