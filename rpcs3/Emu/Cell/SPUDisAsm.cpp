@@ -218,6 +218,12 @@ typename SPUDisAsm::insert_mask_info SPUDisAsm::try_get_insert_mask_info(v128 ma
 		return {};
 	}
 
+	if (size == 16)
+	{
+		// 0x0, 0x1, 0x2, .. 0xE, 0xF is not allowed
+		return {};
+	}
+
 	// [type size, dst index, src index]
 	return {size, first / size, src_first / size};
 }

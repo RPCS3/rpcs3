@@ -224,12 +224,12 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	const auto cpu = this->cpu.lock();
 	int i = m_debugger_list->currentRow();
 
-	if (!isActiveWindow() || i < 0 || !cpu || m_no_thread_selected)
+	if (!isActiveWindow() || !cpu || m_no_thread_selected)
 	{
 		return;
 	}
 
-	const u32 pc = m_debugger_list->m_pc + i * 4;
+	const u32 pc = i >= 0 ? m_debugger_list->m_pc + i * 4 : GetPc();
 
 	const auto modifiers = QApplication::keyboardModifiers();
 
@@ -254,9 +254,19 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			dlg->show();
 			return;
 		}
+		case Qt::Key_F:
+		{
+			if (cpu->id_type() != 2)
+			{
+				return;
+			}
+
+			static_cast<spu_thread*>(cpu.get())->debugger_float_mode ^= 1; // Switch mode
+			return;
+		}
 		case Qt::Key_R:
 		{
-			register_editor_dialog* dlg = new register_editor_dialog(this, pc, cpu, m_disasm.get());
+			register_editor_dialog* dlg = new register_editor_dialog(this, cpu, m_disasm.get());
 			dlg->show();
 			return;
 		}
@@ -264,9 +274,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		{
 			if (modifiers & Qt::AltModifier)
 			{
-				const auto cpu = this->cpu.lock();
-
-				if (!cpu || cpu->id_type() != 2)
+				if (cpu->id_type() != 2)
 				{
 					return;
 				}
@@ -321,10 +329,10 @@ void debugger_frame::UpdateUI()
 
 	if (!cpu)
 	{
-		if (m_last_pc != umax || m_last_stat)
+		if (m_last_pc != umax || !m_last_query_state.empty())
 		{
+			m_last_query_state.clear();
 			m_last_pc = -1;
-			m_last_stat = 0;
 			DoUpdate();
 		}
 
@@ -335,15 +343,18 @@ void debugger_frame::UpdateUI()
 	else
 	{
 		const auto cia = GetPc();
-		const auto state = cpu->state.load();
+		const auto size_context = cpu->id_type() == 1 ? sizeof(ppu_thread) : sizeof(spu_thread);
 
-		if (m_last_pc != cia || m_last_stat != static_cast<u32>(state))
+		if (m_last_pc != cia || m_last_query_state.size() != size_context || std::memcmp(m_last_query_state.data(), cpu.get(), size_context))
 		{
+			// Copy thread data
+			m_last_query_state.resize(size_context);
+			std::memcpy(m_last_query_state.data(), cpu.get(), size_context);
+
 			m_last_pc = cia;
-			m_last_stat = static_cast<u32>(state);
 			DoUpdate();
 
-			if (state & cpu_flag::dbg_pause)
+			if (cpu->state & cpu_flag::dbg_pause)
 			{
 				m_btn_run->setText(RunString);
 				m_btn_step->setEnabled(true);
