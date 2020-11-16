@@ -2702,3 +2702,27 @@ u64 thread_ctrl::get_thread_affinity_mask()
 	return -1;
 #endif
 }
+
+std::pair<void*, std::size_t> thread_ctrl::get_thread_stack()
+{
+#ifdef _WIN32
+	ULONG_PTR _min = 0;
+	ULONG_PTR _max = 0;
+	GetCurrentThreadStackLimits(&_min, &_max);
+	const std::size_t ssize = _max - _min;
+	const auto saddr = reinterpret_cast<void*>(_min);
+#else
+	void* saddr = 0;
+	std::size_t ssize = 0;
+	pthread_attr_t attr;
+#ifdef __linux__
+	pthread_getattr_np(pthread_self(), &attr);
+	pthread_attr_getstack(&attr, &saddr, &ssize);
+#else
+	pthread_attr_get_np(pthread_self(), &attr);
+	pthread_attr_getstackaddr(&attr, &saddr);
+	pthread_attr_getstacksize(&attr, &ssize);
+#endif
+#endif
+	return {saddr, ssize};
+}

@@ -262,6 +262,9 @@ public:
 	// Miscellaneous
 	static u64 get_thread_affinity_mask();
 
+	// Get current thread stack addr and size
+	static std::pair<void*, std::size_t> get_thread_stack();
+
 private:
 	// Miscellaneous
 	static const u64 process_affinity_mask;
