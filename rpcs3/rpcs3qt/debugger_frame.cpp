@@ -483,7 +483,7 @@ void debugger_frame::WritePanels()
 
 	int loc;
 
-	loc = m_regs->verticalScrollBar()->value();
+	loc = m_misc_state->verticalScrollBar()->value();
 	m_misc_state->clear();
 	m_misc_state->setText(qstr(cpu->dump_misc()));
 	m_misc_state->verticalScrollBar()->setValue(loc);
