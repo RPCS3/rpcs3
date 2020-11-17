@@ -345,8 +345,9 @@ namespace vk
 
 		bool matches_dimensions(u16 _width, u16 _height) const
 		{
-			//Use forward scaling to account for rounding and clamping errors
-			return (rsx::apply_resolution_scale(_width, true) == width()) && (rsx::apply_resolution_scale(_height, true) == height());
+			// Use forward scaling to account for rounding and clamping errors
+			const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(_width, _height);
+			return (scaled_w == width()) && (scaled_h == height());
 		}
 
 		void texture_barrier(vk::command_buffer& cmd)
@@ -644,11 +645,13 @@ namespace rsx
 			}
 
 			std::unique_ptr<vk::render_target> rtt;
+			const auto [width_, height_] = rsx::apply_resolution_scale<true>(static_cast<u16>(width), static_cast<u16>(height));
+
 			rtt = std::make_unique<vk::render_target>(device, device.get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
-				static_cast<uint32_t>(rsx::apply_resolution_scale(static_cast<u16>(width), true)), static_cast<uint32_t>(rsx::apply_resolution_scale(static_cast<u16>(height), true)), 1, 1, 1,
+				static_cast<uint32_t>(width_), static_cast<uint32_t>(height_), 1, 1, 1,
 				static_cast<VkSampleCountFlagBits>(samples),
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -702,11 +705,13 @@ namespace rsx
 			}
 
 			std::unique_ptr<vk::render_target> ds;
+			const auto [width_, height_] = rsx::apply_resolution_scale<true>(static_cast<u16>(width), static_cast<u16>(height));
+
 			ds = std::make_unique<vk::render_target>(device, device.get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
-				static_cast<uint32_t>(rsx::apply_resolution_scale(static_cast<u16>(width), true)), static_cast<uint32_t>(rsx::apply_resolution_scale(static_cast<u16>(height), true)), 1, 1, 1,
+				static_cast<uint32_t>(width_), static_cast<uint32_t>(height_), 1, 1, 1,
 				static_cast<VkSampleCountFlagBits>(samples),
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -738,8 +743,8 @@ namespace rsx
 		{
 			if (!sink)
 			{
-				const auto new_w = rsx::apply_resolution_scale(prev.width, true, ref->get_surface_width(rsx::surface_metrics::pixels));
-				const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height(rsx::surface_metrics::pixels));
+				const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(prev.width, prev.height,
+					ref->get_surface_width(rsx::surface_metrics::pixels), ref->get_surface_height(rsx::surface_metrics::pixels));
 
 				auto& dev = cmd.get_command_pool().get_owner();
 				sink = std::make_unique<vk::render_target>(dev, dev.get_memory_mapping().device_local,
