@@ -1868,11 +1868,11 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 			{
 				if (is_get)
 				{
-					std::memmove(this->ls + offset, spu.ls + offset, args.size); // memmove for cases which transfers happen in the same SPU for now
+					std::memmove(_this->ls + offset, spu.ls + offset, args.size); // memmove for cases which transfers happen in the same SPU for now
 				}
 				else if (args.cmd != MFC_SDCRZ_CMD)
 				{
-					std::memmove(spu.ls + offset, this->ls + offset, args.size);
+					std::memmove(spu.ls + offset, _this->ls + offset, args.size);
 				}
 				else
 				{
