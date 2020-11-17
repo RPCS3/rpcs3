@@ -2,6 +2,9 @@
 #include "gui_settings.h"
 #include "downloader.h"
 
+#include "Crypto/unpkg.h"
+#include "Loader/PSF.h"
+
 #include <QApplication>
 #include <QMessageBox>
 #include <QJsonArray>
@@ -239,4 +242,54 @@ compat::status game_compatibility::GetCompatibility(const std::string& title_id)
 compat::status game_compatibility::GetStatusData(const QString& status)
 {
 	return Status_Data.at(status);
+}
+
+compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, game_compatibility* compat)
+{
+	package_reader reader(pkg_path.toStdString());
+	psf::registry psf = reader.get_psf();
+
+	// TODO: localization of title and changelog
+	std::string title_key     = "TITLE";
+	std::string changelog_key = "paramhip";
+
+	compat::package_info info;
+	info.path     = pkg_path;
+	info.title_id = qstr(std::string(psf::get_string(psf, "TITLE_ID", "Unknown")));
+	info.version  = qstr(std::string(psf::get_string(psf, "APP_VER")));
+	info.title    = qstr(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first
+
+	if (compat)
+	{
+		compat::status stat = compat->GetCompatibility(sstr(info.title_id));
+		if (!stat.patch_sets.empty())
+		{
+			// We currently only handle the first patch set
+			for (const auto& package : stat.patch_sets.front().packages)
+			{
+				if (sstr(info.version) == package.version)
+				{
+					if (const std::string localized_title = package.get_title(title_key); !localized_title.empty())
+					{
+						info.title= qstr(localized_title);
+					}
+
+					if (const std::string localized_changelog = package.get_changelog(changelog_key); !localized_changelog.empty())
+					{
+						info.changelog = qstr(localized_changelog);
+					}
+
+					break;
+				}
+			}
+		}
+	}
+
+	if (info.title.isEmpty())
+	{
+		const QFileInfo file_info(pkg_path);
+		info.title = file_info.fileName();
+	}
+
+	return info;
 }

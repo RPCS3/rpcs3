@@ -27,6 +27,11 @@ struct gui_game_info;
 
 enum class game_boot_result : u32;
 
+namespace compat
+{
+	struct package_info;
+}
+
 namespace Ui
 {
 	class main_window;
@@ -135,7 +140,7 @@ private:
 	static bool InstallRapFile(const QString& path, const std::string& filename);
 
 	void InstallPackages(QStringList file_paths = QStringList());
-	void HandlePackageInstallation(QStringList file_paths = QStringList());
+	void HandlePackageInstallation(const std::vector<compat::package_info>& packages);
 
 	void InstallPup(QString filePath = "");
 	void HandlePupInstallation(QString file_path = "");

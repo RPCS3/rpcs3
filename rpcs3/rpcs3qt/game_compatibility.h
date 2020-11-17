@@ -10,18 +10,21 @@ class gui_settings;
 
 namespace compat
 {
+	/** Represents the "title" json object */
 	struct pkg_title
 	{
 		std::string type; // TITLE or TITLE_08 etc. (system languages)
 		std::string title; // The Last of Arse
 	};
 
+	/** Represents the "changelog" json object */
 	struct pkg_changelog
 	{
 		std::string type; // paramhip or paramhip_08 etc. (system languages)
 		std::string content; // "This system software update improves system performance."
 	};
 
+	/** Represents the "package" json object */
 	struct pkg_package
 	{
 		std::string version; // 01.04
@@ -63,6 +66,7 @@ namespace compat
 		}
 	};
 
+	/** Represents the "patchset" json object */
 	struct pkg_patchset
 	{
 		std::string tag_id; // BLES01269_T7
@@ -73,6 +77,7 @@ namespace compat
 		std::vector<pkg_package> packages;
 	};
 
+	/** Represents the json object that contains an app's information and some additional info that is used in the GUI */
 	struct status
 	{
 		int index;
@@ -82,6 +87,16 @@ namespace compat
 		QString tooltip;
 		QString latest_version;
 		std::vector<pkg_patchset> patch_sets;
+	};
+
+	/** Concicely represents a specific pkg's localized information for use in the GUI */
+	struct package_info
+	{
+		QString path;      // File path
+		QString title_id;  // TEST12345
+		QString title;     // Localized
+		QString changelog; // Localized, may be empty
+		QString version;   // May be empty
 	};
 }
 
@@ -121,6 +136,9 @@ public:
 
 	/** Returns the data for the requested status */
 	compat::status GetStatusData(const QString& status);
+
+	/** Returns package information like title, version, changelog etc. */
+	static compat::package_info GetPkgInfo(const QString& pkg_path, game_compatibility* compat);
 
 Q_SIGNALS:
 	void DownloadStarted();
