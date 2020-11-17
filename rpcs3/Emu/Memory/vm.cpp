@@ -1104,6 +1104,28 @@ namespace vm
 			return result;
 		});
 
+		// Fill stack guards with STACKGRD
+		if (this->flags & 0x10)
+		{
+			auto fill64 = [](u8* ptr, u64 data, std::size_t count)
+			{
+				u64* target = reinterpret_cast<u64*>(ptr);
+
+#ifdef _MSC_VER
+				__stosq(target, data, count);
+#else
+				for (std::size_t i = 0; i < count; i++)
+				{
+					target[i] = data;
+				}
+#endif
+			};
+
+			const u32 enda = addr + size - 4096;
+			fill64(g_sudo_addr + addr, "STACKGRD"_u64, 4096 / sizeof(u64));
+			fill64(g_sudo_addr + enda, "UNDERFLO"_u64, 4096 / sizeof(u64));
+		}
+
 		// Add entry
 		m_map[addr] = std::make_pair(size, std::move(shm));
 
@@ -1292,6 +1314,13 @@ namespace vm
 
 			// Unmap "real" memory pages
 			verify(HERE), size == _page_unmap(addr, size, found->second.second.get());
+
+			// Clear stack guards
+			if (flags & 0x10)
+			{
+				std::memset(g_sudo_addr + addr - 4096, 0, 4096);
+				std::memset(g_sudo_addr + addr + size, 0, 4096);
+			}
 
 			// Remove entry
 			m_map.erase(found);
