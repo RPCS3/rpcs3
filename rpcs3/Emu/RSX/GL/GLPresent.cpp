@@ -48,8 +48,9 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 				surface->read_barrier(cmd);
 				image = section.surface->get_surface(rsx::surface_access::read);
 
-				info->width = rsx::apply_resolution_scale(std::min(surface_width, static_cast<u16>(info->width)), true);
-				info->height = rsx::apply_resolution_scale(std::min(surface_height, static_cast<u16>(info->height)), true);
+				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
+					std::min(surface_width, static_cast<u16>(info->width)),
+					std::min(surface_height, static_cast<u16>(info->height)));
 			}
 		}
 	}
@@ -154,7 +155,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (avconfig->_3d) [[unlikely]]
 		{
-			const auto min_expected_height = rsx::apply_resolution_scale(buffer_height + 30, true);
+			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip_->height() < min_expected_height)
 			{
 				// Get image for second eye
@@ -168,7 +169,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			else
 			{
 				// Account for possible insets
-				buffer_height = std::min<u32>(image_to_flip_->height() - min_expected_height, rsx::apply_resolution_scale(buffer_height, true));
+				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
+				buffer_height = std::min<u32>(image_to_flip_->height() - min_expected_height, scaled_buffer_height);
 			}
 		}
 

@@ -952,8 +952,9 @@ VkDescriptorSet VKGSRender::allocate_descriptor_set()
 
 void VKGSRender::set_viewport()
 {
-	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
-	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
+	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
+		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
+
 	const auto zclip_near = rsx::method_registers.clip_min();
 	const auto zclip_far = rsx::method_registers.clip_max();
 
@@ -2187,8 +2188,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
-	const auto fbo_width = rsx::apply_resolution_scale(m_framebuffer_layout.width, true);
-	const auto fbo_height = rsx::apply_resolution_scale(m_framebuffer_layout.height, true);
+	const auto [fbo_width, fbo_height] = rsx::apply_resolution_scale<true>(m_framebuffer_layout.width, m_framebuffer_layout.height);
 
 	if (m_draw_fbo)
 	{
