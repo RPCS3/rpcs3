@@ -53,6 +53,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<tsx_usage> enable_TSX{ this, "Enable TSX", has_rtm() ? tsx_usage::enabled : tsx_usage::disabled }; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
 		cfg::_bool spu_accurate_xfloat{ this, "Accurate xfloat", false };
 		cfg::_bool spu_approx_xfloat{ this, "Approximate xfloat", true };
+		cfg::_bool spu_debug_local_storage{ this, "SPU LS Debug", true }; // Hack for debugging, causes minor inaccuracies in relation to vm::spu memory layout.
 		cfg::_bool llvm_accurate_dfma{ this, "LLVM Accurate DFMA", true }; // Enable accurate double-precision FMA for CPUs which do not support it natively
 		cfg::_bool llvm_ppu_jm_handling{ this, "PPU LLVM Java Mode Handling", false }; // Respect current Java Mode for alti-vec ops by PPU LLVM
 		cfg::_int<-1, 14> ppu_128_reservations_loop_max_length{ this, "Accurate PPU 128-byte Reservation Op Max Length", 0, true }; // -1: Always accurate, 0: Never accurate, 1-14: max accurate loop length
