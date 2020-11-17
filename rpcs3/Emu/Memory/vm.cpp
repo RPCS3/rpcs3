@@ -1173,7 +1173,7 @@ namespace vm
 			return 0;
 		}
 
-		u8 pflags = page_readable | page_writable;
+		u8 pflags = flags & 0x1000 ? 0 : page_readable | page_writable;
 
 		if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
 		{
@@ -1230,7 +1230,7 @@ namespace vm
 			return 0;
 		}
 
-		u8 pflags = page_readable | page_writable;
+		u8 pflags = flags & 0x1000 ? 0 : page_readable | page_writable;
 
 		if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
 		{
