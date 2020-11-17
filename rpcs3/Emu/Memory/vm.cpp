@@ -733,11 +733,17 @@ namespace vm
 			rsxthr->on_notify_memory_mapped(addr, size);
 		}
 
+		auto prot = utils::protection::rw;
+		if (~flags & page_writable)
+			prot = utils::protection::ro;
+		if (~flags & page_readable)
+			prot = utils::protection::no;
+
 		if (!shm)
 		{
-			utils::memory_protect(g_base_addr + addr, size, utils::protection::rw);
+			utils::memory_protect(g_base_addr + addr, size, prot);
 		}
-		else if (shm->map_critical(g_base_addr + addr) != g_base_addr + addr || shm->map_critical(g_sudo_addr + addr) != g_sudo_addr + addr)
+		else if (shm->map_critical(g_base_addr + addr, prot) != g_base_addr + addr || shm->map_critical(g_sudo_addr + addr) != g_sudo_addr + addr)
 		{
 			fmt::throw_exception("Memory mapping failed - blame Windows (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
 		}
