@@ -1,3 +1,8 @@
+#ifdef _WIN32
+// This is to avoid inclusion of winsock.h from windows.h header which creates conflicts with inclusion of winsock2.h later
+#define _WINSOCKAPI_
+#endif
+
 #include "gui_application.h"
 
 #include "qt_utils.h"
@@ -23,6 +28,8 @@
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
 #include "osk_dialog_frame.h"
+#include "recvmessage_dialog_frame.h"
+#include "sendmessage_dialog_frame.h"
 #include "stylesheets.h"
 
 #include <QScreen>
@@ -346,6 +353,8 @@ void gui_application::InitializeCallbacks()
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
+	callbacks.get_sendmessage_dialog = [this]() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
+	callbacks.get_recvmessage_dialog = [this]() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
 	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
 	callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };

@@ -184,8 +184,8 @@ enum class np_internet_status
 enum np_psn_status
 {
 	disabled,
-	fake,
-	rpcn,
+	psn_fake,
+	psn_rpcn,
 };
 
 enum class shader_mode

@@ -1041,8 +1041,8 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		switch (static_cast<np_psn_status>(index))
 		{
 		case np_psn_status::disabled: return tr("Disconnected", "PSN Status");
-		case np_psn_status::fake: return tr("Simulated", "PSN Status");
-		case np_psn_status::rpcn: return tr("RPCN", "PSN Status");
+		case np_psn_status::psn_fake: return tr("Simulated", "PSN Status");
+		case np_psn_status::psn_rpcn: return tr("RPCN", "PSN Status");
 		}
 		break;
 	case emu_settings_type::SleepTimersAccuracy:

@@ -247,8 +247,8 @@ void fmt_class_string<np_psn_status>::format(std::string& out, u64 arg)
 		switch (value)
 		{
 		case np_psn_status::disabled: return "Disconnected";
-		case np_psn_status::fake: return "Simulated";
-		case np_psn_status::rpcn: return "RPCN";
+		case np_psn_status::psn_fake: return "Simulated";
+		case np_psn_status::psn_rpcn: return "RPCN";
 		}
 
 		return unknown;
