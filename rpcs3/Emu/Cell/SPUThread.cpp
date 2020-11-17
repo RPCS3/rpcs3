@@ -1384,10 +1384,19 @@ std::string spu_thread::dump_misc() const
 		fmt::append(ret, "...chunk-0x%05x", (name & 0xffff) * 4);
 	}
 
-	const u32 offset = group ? SPU_FAKE_BASE_ADDR + (id & 0xffffff) * SPU_LS_SIZE : RAW_SPU_BASE_ADDR + index * RAW_SPU_OFFSET;
+	const u64 offset = !group ? RAW_SPU_BASE_ADDR + index * RAW_SPU_OFFSET :
+		(g_cfg.core.spu_debug_local_storage ? SPU_FAKE_BASE_ADDR + u64{id & 0xffffff} * SPU_LS_SIZE : UINT64_MAX);
 
 	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
-	fmt::append(ret, "\nLocal Storage: 0x%08x..0x%08x", offset, offset + 0x3ffff);
+
+	if (offset < RAW_SPU_BASE_ADDR)
+	{
+		fmt::append(ret, "\nLocal Storage: 0x%08x..0x%08x", offset, offset + 0x3ffff);
+	}
+	else
+	{
+		fmt::append(ret, "\nLocal Storage: N/A");
+	}
 
 	if (const u64 _time = start_time)
 	{
