@@ -636,7 +636,7 @@ public:
 
 	static const u32 id_base = 0x02000000; // TODO (used to determine thread type)
 	static const u32 id_step = 1;
-	static const u32 id_count = (0xF0000000 - SPU_FAKE_BASE_ADDR) / SPU_LS_SIZE;
+	static const u32 id_count = 255 * 6 + 5;
 
 	spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated = false, u32 option = 0);
 
