@@ -681,8 +681,13 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 	{
 		if (auto thread = t.get())
 		{
-			// Deallocate LS
-			vm::get(vm::spu)->dealloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (thread->id & 0xffffff), &thread->shm);
+			const u64 faddr = SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * u64{thread->id & 0xffffff};
+
+			if (faddr < RAW_SPU_BASE_ADDR && g_cfg.core.spu_debug_local_storage)
+			{
+				// Deallocate LS
+				vm::get(vm::spu)->dealloc(static_cast<u32>(faddr), &thread->shm);
+			}
 
 			// Remove ID from IDM (destruction will occur in group destructor)
 			idm::remove<named_thread<spu_thread>>(thread->id);
