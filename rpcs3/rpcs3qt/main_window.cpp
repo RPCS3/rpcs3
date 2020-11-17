@@ -512,62 +512,26 @@ void main_window::InstallPackages(QStringList file_paths)
 	{
 		// This can currently only happen by drag and drop.
 		const QString file_path = file_paths.front();
-		package_reader reader(file_path.toStdString());
-		psf::registry psf = reader.get_psf();
-		const std::string title_id(psf::get_string(psf, "TITLE_ID"));
 
-		// TODO: localization of title and changelog
-		std::string title_key = "TITLE";
-		std::string changelog_key = "paramhip";
-		//std::string cat(psf::get_string(psf, "CATEGORY"));
-		QString version = qstr(std::string(psf::get_string(psf, "APP_VER")));
-		QString title = qstr(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first
-		QString changelog;
+		compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
 
-		if (game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr)
+		if (!info.title_id.isEmpty())
 		{
-			compat::status info = compat->GetCompatibility(title_id);
-			if (!info.patch_sets.empty())
-			{
-				// We currently only handle the first patch set
-				for (const auto& package : info.patch_sets.front().packages)
-				{
-					if (sstr(version) == package.version)
-					{
-						if (const std::string localized_title = package.get_title(title_key); !localized_title.empty())
-						{
-							title = qstr(localized_title);
-						}
-
-						if (const std::string localized_changelog = package.get_changelog(changelog_key); !localized_changelog.empty())
-						{
-							changelog = qstr(localized_changelog);
-						}
-
-						break;
-					}
-				}
-			}
+			info.title_id = tr("\n%0").arg(info.title_id);
 		}
 
-		if (!changelog.isEmpty())
+		if (!info.changelog.isEmpty())
 		{
-			changelog = tr("\n\nChangelog:\n%0").arg(changelog);
+			info.changelog = tr("\n\nChangelog:\n%0").arg(info.changelog);
 		}
 
-		if (!version.isEmpty())
+		if (!info.version.isEmpty())
 		{
-			version = tr("\nVersion %0").arg(version);
+			info.version = tr("\nVersion %0").arg(info.version);
 		}
 
-		if (title.isEmpty())
-		{
-			QFileInfo file_info(file_path);
-			title = file_info.fileName();
-		}
-
-		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0%1%2")
-			.arg(title).arg(version).arg(changelog),
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0%1%2%3")
+			.arg(info.title).arg(info.title_id).arg(info.version).arg(info.changelog),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
 			gui_log.notice("PKG: Cancelled installation from drop. File: %s", sstr(file_paths.front()));
@@ -599,32 +563,34 @@ void main_window::InstallPackages(QStringList file_paths)
 		return;
 	}
 
+	std::vector<compat::package_info> infos;
+
 	// Let the user choose the packages to install and select the order in which they shall be installed.
 	if (file_paths.size() > 1)
 	{
-		pkg_install_dialog dlg(file_paths, this);
-		connect(&dlg, &QDialog::accepted, [&file_paths, &dlg]()
+		pkg_install_dialog dlg(file_paths, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr, this);
+		connect(&dlg, &QDialog::accepted, [&infos, &dlg]()
 		{
-			file_paths = dlg.GetPathsToInstall();
+			infos = dlg.GetPathsToInstall();
 		});
 		dlg.exec();
 	}
 
-	if (file_paths.empty())
+	if (infos.empty())
 	{
 		return;
 	}
 
 	// Handle the actual installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
-	QTimer::singleShot(0, [this, file_paths]()
+	QTimer::singleShot(0, [this, packages = std::move(infos)]()
 	{
-		HandlePackageInstallation(file_paths);
+		HandlePackageInstallation(packages);
 	});
 }
 
-void main_window::HandlePackageInstallation(QStringList file_paths)
+void main_window::HandlePackageInstallation(const std::vector<compat::package_info>& packages)
 {
-	if (file_paths.isEmpty())
+	if (packages.empty())
 	{
 		return;
 	}
@@ -644,7 +610,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 
 	bool cancelled = false;
 
-	for (int i = 0, count = file_paths.count(); i < count; i++)
+	for (size_t i = 0, count = packages.size(); i < count; i++)
 	{
 		progress = 0.;
 
@@ -655,7 +621,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		Emu.SetForceBoot(true);
 		Emu.Stop();
 
-		const QString file_path = file_paths.at(i);
+		const QString file_path = packages.at(i).path;
 		const QFileInfo file_info(file_path);
 		const std::string path = sstr(file_path);
 		const std::string file_name = sstr(file_info.fileName());
