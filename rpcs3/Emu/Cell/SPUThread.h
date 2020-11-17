@@ -14,6 +14,11 @@ struct lv2_event_queue;
 struct lv2_spu_group;
 struct lv2_int_tag;
 
+namespace utils
+{
+	class shm;
+}
+
 // JIT Block
 using spu_function_t = void(*)(spu_thread&, void*, u8*);
 
@@ -157,6 +162,8 @@ enum : u32
 	RAW_SPU_OFFSET      = 0x00100000,
 	RAW_SPU_LS_OFFSET   = 0x00000000,
 	RAW_SPU_PROB_OFFSET = 0x00040000,
+
+	SPU_FAKE_BASE_ADDR  = 0xE8000000,
 };
 
 struct spu_channel
@@ -629,9 +636,9 @@ public:
 
 	static const u32 id_base = 0x02000000; // TODO (used to determine thread type)
 	static const u32 id_step = 1;
-	static const u32 id_count = 2048;
+	static const u32 id_count = (0xF0000000 - SPU_FAKE_BASE_ADDR) / SPU_LS_SIZE;
 
-	spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated = false, u32 option = 0);
+	spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated = false, u32 option = 0);
 
 	u32 pc = 0;
 
@@ -730,10 +737,10 @@ public:
 	atomic_t<u32> last_exit_status; // Value to be written in exit_status after checking group termination
 
 	const u32 index; // SPU index
+	std::shared_ptr<utils::shm> shm; // SPU memory
 	const std::add_pointer_t<u8> ls; // SPU LS pointer
 	const spu_type thread_type;
 private:
-	const u32 offset; // SPU LS offset
 	lv2_spu_group* const group; // SPU Thread Group (only safe to access in the spu thread itself)
 public:
 	const u32 option; // sys_spu_thread_initialize option

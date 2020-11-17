@@ -77,6 +77,7 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 	{
 		// Alloc all memory (shall not fail)
 		verify(HERE), area->alloc(vsize);
+		vm::lock_sudo(area->addr, vsize);
 
 		idm::make<sys_vm_t>(area->addr, vsize, ct, psize);
 

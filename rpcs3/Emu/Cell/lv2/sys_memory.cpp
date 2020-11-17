@@ -58,12 +58,13 @@ error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32
 
 	if (const auto area = vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, ::align(size, 0x10000000), 0x401))
 	{
-		if (u32 addr = area->alloc(size, align))
+		if (u32 addr = area->alloc(size, nullptr, align))
 		{
 			verify(HERE), !g_fxo->get<sys_memory_address_table>()->addrs[addr >> 16].exchange(dct);
 
 			if (alloc_addr)
 			{
+				vm::lock_sudo(addr, size);
 				*alloc_addr = addr;
 				return CELL_OK;
 			}
@@ -134,6 +135,7 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid
 
 			if (alloc_addr)
 			{
+				vm::lock_sudo(addr, size);
 				*alloc_addr = addr;
 				return CELL_OK;
 			}
