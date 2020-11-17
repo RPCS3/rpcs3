@@ -4,6 +4,7 @@
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/SPUThread.h"
 #include "Emu/IdManager.h"
 
 #include "util/vm.hpp"
@@ -176,7 +177,7 @@ error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_
 
 	vm::reader_lock rlock;
 
-	if (!vm::check_addr(addr))
+	if (!vm::check_addr(addr) || addr >= SPU_FAKE_BASE_ADDR)
 	{
 		return CELL_EINVAL;
 	}
