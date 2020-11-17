@@ -1672,7 +1672,12 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 		}
 		else
 		{
-			vm::get(vm::spu)->falloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (cpu_thread::id & 0xffffff), SPU_LS_SIZE, &shm);
+			const u64 faddr = SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * u64{cpu_thread::id & 0xffffff};
+
+			if (faddr < RAW_SPU_BASE_ADDR && g_cfg.core.spu_debug_local_storage)
+			{
+				vm::get(vm::spu)->falloc(static_cast<u32>(faddr), SPU_LS_SIZE, &shm);
+			}
 		}
 
 		vm::writer_lock(0);
@@ -1850,9 +1855,22 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		{
 			auto& spu = static_cast<spu_thread&>(*_this->group->threads[_this->group->threads_map[index]]);
 
-			if (offset + args.size - 1 < SPU_LS_SIZE) // LS access
+			if (offset <= SPU_LS_SIZE - args.size) // LS access
 			{
-				eal = SPU_FAKE_BASE_ADDR * (spu.id & 0xffffff) + offset; // redirect access
+				if (is_get);
+				{
+					std::memmove(this->ls + offset, spu.ls + offset, size); // memmove for cases which transfers happen in the same SPU for now
+				}
+				else if (args.cmd != MFC_SDCRZ_CMD)
+				{
+					std::memmove(spu.ls + offset, this->ls + offset, size);
+				}
+				else
+				{
+					std::memset(spu.ls + offset, 0, size);
+				}
+
+				return;
 			}
 			else if (!is_get && args.size == 4 && (offset == SYS_SPU_THREAD_SNR1 || offset == SYS_SPU_THREAD_SNR2))
 			{
