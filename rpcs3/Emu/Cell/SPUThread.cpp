@@ -1866,7 +1866,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 			if (offset <= SPU_LS_SIZE - args.size) // LS access
 			{
-				if (is_get);
+				if (is_get)
 				{
 					std::memmove(this->ls + offset, spu.ls + offset, size); // memmove for cases which transfers happen in the same SPU for now
 				}
