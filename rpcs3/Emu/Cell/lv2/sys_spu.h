@@ -262,6 +262,8 @@ struct lv2_spu_group
 	static const u32 id_count = 255;
 	static constexpr std::pair<u32, u32> id_invl_range = {0, 8};
 
+	static_assert(spu_thread::id_count == id_count * 6 + 5);
+
 	const std::string name;
 	const u32 id;
 	const u32 max_num;
