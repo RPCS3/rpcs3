@@ -6949,19 +6949,16 @@ public:
 
 	void ANDI(spu_opcode_t op)
 	{
-		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s32[4]>(op.ra) & get_imm<s32[4]>(op.si10));
 	}
 
 	void ANDHI(spu_opcode_t op)
 	{
-		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s16[8]>(op.ra) & get_imm<s16[8]>(op.si10));
 	}
 
 	void ANDBI(spu_opcode_t op)
 	{
-		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s8[16]>(op.ra) & get_imm<s8[16]>(op.si10));
 	}
 
