@@ -167,6 +167,15 @@ table LeaveRoomRequest {
     optData:PresenceOptionData;
 }
 
+table GetRoomDataExternalListRequest {
+    roomIds:[uint64];
+    attrIds:[uint16];
+}
+
+table GetRoomDataExternalListResponse {
+    rooms:[RoomDataExternal];
+}
+
 table SetRoomDataExternalRequest {
     roomId:uint64;
     roomSearchableIntAttrExternal:[IntAttr];
@@ -222,4 +231,20 @@ table RoomMessageInfo {
     dst:[uint16];
     srcMember:UserInfo2;
     msg:[uint8];
+}
+
+table MessageDetails {
+    communicationId:string;
+    msgId:uint64;
+    mainType:uint16;
+    subType:uint16;
+    msgFeatures:uint32;
+    subject:string;
+    body:string;
+    data:[uint8];
+}
+
+table SendMessageRequest {
+    message:[uint8] (nested_flatbuffer: "MessageDetails");
+    npids:[string];
 }

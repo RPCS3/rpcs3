@@ -3,6 +3,8 @@
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Io/interception.h"
+#include "Utilities/StrUtil.h"
 
 #include "sysPrxForUser.h"
 #include "Emu/IdManager.h"
@@ -396,6 +398,11 @@ void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 	});
 }
 
+void message_data::print() const
+{
+	sceNp.notice("commId: %s, msgId: %d, mainType: %d, subType: %d, subject: %s, body: %s, data_size: %d", static_cast<const char *>(commId.data), msgId, mainType, subType, subject, body, data.size());
+}
+
 error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 {
 	sceNp.warning("sceNpInit(poolsize=0x%x, poolptr=*0x%x)", poolsize, poolptr);
@@ -629,7 +636,7 @@ error_code sceNpDrmProcessExitSpawn2(ppu_thread& ppu, vm::cptr<u8> klicensee, vm
 
 error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm::ptr<SceNpBasicEventHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.warning("sceNpBasicRegisterHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
+	sceNp.warning("sceNpBasicRegisterHandler(context=*0x%x(%s), handler=*0x%x, arg=*0x%x)", context, context ? static_cast<const char *>(context->data) : "", handler, arg);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -638,13 +645,21 @@ error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm:
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
+	}
+
 	if (!context || !handler)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	nph.basic_handler = handler;
-	nph.basic_handler_arg = arg;
+	memcpy(&nph.basic_handler.context, context.get_ptr(), sizeof(nph.basic_handler.context));
+	nph.basic_handler.handler_func = handler;
+	nph.basic_handler.handler_arg = arg;
+	nph.basic_handler.registered = true;
+	nph.basic_handler.context_sensitive = false;
 
 	return CELL_OK;
 }
@@ -660,10 +675,21 @@ error_code sceNpBasicRegisterContextSensitiveHandler(vm::cptr<SceNpCommunication
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
+	}
+
 	if (!context || !handler)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
+
+	memcpy(&nph.basic_handler.context, context.get_ptr(), sizeof(nph.basic_handler.context));
+	nph.basic_handler.handler_func = handler;
+	nph.basic_handler.handler_arg = arg;
+	nph.basic_handler.registered = true;
+	nph.basic_handler.context_sensitive = true;
 
 	return CELL_OK;
 }
@@ -678,6 +704,13 @@ error_code sceNpBasicUnregisterHandler()
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
+	nph.basic_handler.registered = false;
 
 	return CELL_OK;
 }
@@ -775,7 +808,18 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u64 
 
 error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpBasicSendMessageGui(msg=*0x%x, containerId=%d)", msg, containerId);
+	sceNp.warning("sceNpBasicSendMessageGui(msg=*0x%x, containerId=%d)", msg, containerId);
+
+	if (msg)
+	{
+		sceNp.notice("sceNpBasicSendMessageGui: msgId: %d, mainType: %d, subType: %d, msgFeatures: %d, count: %d", msg->msgId, msg->mainType, msg->subType, msg->msgFeatures, msg->count);
+		for (u32 i = 0; i < msg->count; i++)
+		{
+			sceNp.trace("sceNpBasicSendMessageGui: NpId[%d] = %s", i, static_cast<char*>(&msg->npids[i].handle.data[0]));
+		}
+		sceNp.notice("sceNpBasicSendMessageGui: subject: %s", msg->subject);
+		sceNp.notice("sceNpBasicSendMessageGui: body: %s", msg->body);
+	}
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -784,7 +828,13 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!msg || msg->count > SCE_NP_BASIC_SEND_MESSAGE_MAX_RECIPIENTS || msg->npids.handle.data[0] == '\0' || !(msg->msgFeatures & SCE_NP_BASIC_MESSAGE_FEATURES_ALL_FEATURES))
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
+	if (!msg || msg->count > SCE_NP_BASIC_SEND_MESSAGE_MAX_RECIPIENTS || (msg->msgFeatures & ~SCE_NP_BASIC_MESSAGE_FEATURES_ALL_FEATURES) ||
+		msg->mainType > SCE_NP_BASIC_MESSAGE_MAIN_TYPE_URL_ATTACHMENT || msg->msgId != 0ull)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
@@ -798,6 +848,82 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 	{
 		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
 	}
+
+	// Prepare message data
+	message_data msg_data = {
+		.commId      = nph.basic_handler.context,
+		.msgId       = msg->msgId,
+		.mainType    = msg->mainType,
+		.subType     = msg->subType,
+		.msgFeatures = msg->msgFeatures};
+	std::set<std::string> npids;
+
+	for (u32 i = 0; i < msg->count; i++)
+	{
+		npids.insert(std::string(msg->npids[i].handle.data));
+	}
+
+	if (msg->subject)
+	{
+		msg_data.subject = std::string(msg->subject.get_ptr());
+	}
+
+	if (msg->body)
+	{
+		msg_data.body = std::string(msg->body.get_ptr());
+	}
+
+	if (msg->size)
+	{
+		msg_data.data.assign(msg->data.get_ptr(), msg->data.get_ptr() + msg->size);
+	}
+
+	atomic_t<bool> wake_up = false;
+	bool result            = false;
+
+	input::SetIntercepted(true);
+
+	Emu.CallAfter([=, &wake_up, &result, msg_data = std::move(msg_data), npids = std::move(npids)]() mutable
+		{
+			auto send_dlg = Emu.GetCallbacks().get_sendmessage_dialog();
+			result  = send_dlg->Exec(msg_data, npids);
+			wake_up = true;
+			wake_up.notify_one();
+		});
+
+	while (!wake_up && !Emu.IsStopped())
+	{
+		thread_ctrl::wait_on(wake_up, false);
+	}
+
+	input::SetIntercepted(false);
+
+	s32 callback_result = result ? 0 : -1;
+	s32 event           = 0;
+
+	switch (msg->mainType)
+	{
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT:
+		event = SCE_NP_BASIC_EVENT_SEND_ATTACHMENT_RESULT;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_GENERAL:
+		event = SCE_NP_BASIC_EVENT_SEND_MESSAGE_RESULT;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_ADD_FRIEND:
+		event = SCE_NP_BASIC_EVENT_ADD_FRIEND_RESULT;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE:
+		event = SCE_NP_BASIC_EVENT_SEND_INVITATION_RESULT;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA:
+		event = SCE_NP_BASIC_EVENT_SEND_CUSTOM_DATA_RESULT;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_URL_ATTACHMENT:
+		event = SCE_NP_BASIC_EVENT_SEND_URL_ATTACHMENT_RESULT;
+		break;
+	}
+
+	nph.send_basic_event(event, callback_result, 0);
 
 	return CELL_OK;
 }
@@ -845,15 +971,20 @@ error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
 	return CELL_OK;
 }
 
-error_code sceNpBasicRecvMessageAttachmentLoad(u32 id, vm::ptr<void> buffer, vm::ptr<u64> size)
+error_code sceNpBasicRecvMessageAttachmentLoad(u32 id, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
-	sceNp.todo("sceNpBasicRecvMessageAttachmentLoad(id=%d, buffer=*0x%x, size=*0x%x)", id, buffer, size);
+	sceNp.warning("sceNpBasicRecvMessageAttachmentLoad(id=%d, buffer=*0x%x, size=*0x%x)", id, buffer, size);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!buffer || !size)
@@ -861,9 +992,23 @@ error_code sceNpBasicRecvMessageAttachmentLoad(u32 id, vm::ptr<void> buffer, vm:
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (id > SCE_NP_BASIC_SELECTED_MESSAGE_DATA)
+	const auto opt_msg = nph.get_message(id);
+	if (!opt_msg)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_DATA_ID;
+	}
+
+	const auto msg_pair = opt_msg.value();
+	const auto msg = msg_pair->second;
+
+	const u32 orig_size = *size;
+	const u32 size_to_copy = std::min(static_cast<u32>(msg.data.size()), orig_size);
+	memcpy(buffer.get_ptr(), msg.data.data(), size_to_copy);
+
+	*size = size_to_copy;
+	if (size_to_copy < msg.data.size())
+	{
+		return SCE_NP_BASIC_ERROR_DATA_LOST;
 	}
 
 	return CELL_OK;
@@ -871,7 +1016,7 @@ error_code sceNpBasicRecvMessageAttachmentLoad(u32 id, vm::ptr<void> buffer, vm:
 
 error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpBasicRecvMessageCustom(mainType=%d, recvOptions=%d, containerId=%d)", mainType, recvOptions, containerId);
+	sceNp.warning("sceNpBasicRecvMessageCustom(mainType=%d, recvOptions=%d, containerId=%d)", mainType, recvOptions, containerId);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -880,10 +1025,65 @@ error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!(recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_ALL_OPTIONS))
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
+	if ((recvOptions & ~SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_ALL_OPTIONS))
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
+
+	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED
+
+	atomic_t<bool> wake_up = false;
+	bool result            = false;
+
+	input::SetIntercepted(true);
+
+	SceNpBasicMessageRecvAction recv_result;
+	u64 chosen_msg_id;
+
+	Emu.CallAfter([=, &wake_up, &result, &recv_result, &chosen_msg_id]()
+		{
+			auto recv_dlg          = Emu.GetCallbacks().get_recvmessage_dialog();
+			result  = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
+			wake_up = true;
+			wake_up.notify_one();
+		});
+
+	while (!wake_up && !Emu.IsStopped())
+	{
+		thread_ctrl::wait_on(wake_up, false);
+	}
+
+	input::SetIntercepted(false);
+
+	if (!result)
+	{
+		return SCE_NP_BASIC_ERROR_CANCEL;
+	}
+
+	const auto msg_pair = nph.get_message(chosen_msg_id).value();
+	const auto& msg     = msg_pair->second;
+
+	const u32 event_to_send = (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE) ? SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT : SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT;
+	np_handler::basic_event to_add{};
+	to_add.event = event_to_send;
+	strcpy_trunc(to_add.from.userId.handle.data, msg_pair->first);
+	strcpy_trunc(to_add.from.name.data, msg_pair->first);
+	to_add.data.resize(sizeof(SceNpBasicExtendedAttachmentData));
+	SceNpBasicExtendedAttachmentData* att_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(to_add.data.data());
+	att_data->flags                            = 0; // ?
+	att_data->msgId                            = chosen_msg_id;
+	att_data->data.id                          = static_cast<u32>(chosen_msg_id);
+	att_data->data.size                        = static_cast<u32>(msg.data.size());
+	att_data->userAction                       = recv_result;
+	att_data->markedAsUsed                     = (recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE) ? 0 : 1;
+
+	nph.queue_basic_event(to_add);
+	nph.send_basic_event(event_to_send, 0, 0);
 
 	return CELL_OK;
 }
@@ -972,8 +1172,7 @@ error_code sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 		return SCE_NP_ERROR_ID_NOT_FOUND;
 	}
 
-	// TODO: Check if there are any friends
-	*count = 0;
+	*count = nph.get_num_friends();
 
 	return CELL_OK;
 }
@@ -1258,7 +1457,7 @@ error_code sceNpBasicGetBlockListEntryCount(vm::ptr<u32> count)
 	}
 
 	// TODO: Check if there are block lists
-	*count = 0;
+	*count = nph.get_num_blocks();
 
 	return CELL_OK;
 }
@@ -1560,15 +1759,19 @@ error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, v
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	if (!event || !from || !data || !size)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	// TODO: Check for other error and pass other events
 	//*event = SCE_NP_BASIC_EVENT_OFFLINE; // This event only indicates a contact is offline, not the current status of the connection
 
-	return not_an_error(SCE_NP_BASIC_ERROR_NO_EVENT);
+	return nph.get_basic_event(event, from, data, size);
 }
 
 error_code sceNpCommerceCreateCtx(u32 version, vm::ptr<SceNpId> npId, vm::ptr<SceNpCommerceHandler> handler, vm::ptr<void> arg, vm::ptr<u32> ctx_id)
@@ -2913,10 +3116,10 @@ error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u32> bufferSize)
 	}
 
 	const auto& ticket = nph.get_ticket();
+	*bufferSize = static_cast<u32>(ticket.size());
 
 	if (!buffer)
 	{
-		*bufferSize = static_cast<u32>(ticket.size());
 		return CELL_OK;
 	}
 

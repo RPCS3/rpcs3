@@ -7,7 +7,7 @@ else()
 	# TODO(cjj19970505@live.cn)
 	# OPENSSL_EXTRA, WOLFSSL_DES_ECB and HAVE_SNI are unconfigurable from CMake cache.
 	# but they do have it in a TODO list (wolfssl/CMakeList, 1021)
-	add_compile_definitions(OPENSSL_EXTRA WOLFSSL_DES_ECB HAVE_SNI)
+	add_compile_definitions(OPENSSL_EXTRA WOLFSSL_DES_ECB HAVE_SNI HAVE_WRITE_DUP)
 
 	set(WOLFSSL_TLS13 "no" CACHE INTERNAL "")
 	set(WOLFSSL_SHA224 "yes" CACHE INTERNAL "")

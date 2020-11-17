@@ -2350,7 +2350,7 @@ void game_list_frame::PopulateGameList()
 		compat_item->setToolTip(game->compat.tooltip);
 		if (!game->compat.color.isEmpty())
 		{
-			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color, devicePixelRatioF() * 2));
+			compat_item->setData(Qt::DecorationRole, gui::utils::circle_pixmap(game->compat.color, devicePixelRatioF() * 2));
 		}
 
 		// Version
