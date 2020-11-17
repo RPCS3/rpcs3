@@ -20,9 +20,6 @@ namespace atomic_wait
 	// Max number of simultaneous atomic variables to wait on (can be extended if really necessary)
 	constexpr uint max_list = 8;
 
-	struct root_info;
-	struct sema_handle;
-
 	enum class op : u8
 	{
 		eq, // Wait while value is bitwise equal to

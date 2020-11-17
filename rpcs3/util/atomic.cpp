@@ -746,7 +746,7 @@ namespace atomic_wait
 }
 
 // Main hashtable for atomic wait.
-alignas(64) static atomic_wait::root_info s_hashtable[s_hashtable_size]{};
+static atomic_wait::root_info s_hashtable[s_hashtable_size]{};
 
 u64 atomic_wait::get_unique_tsc()
 {
