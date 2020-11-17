@@ -14,18 +14,16 @@ namespace stx
 	static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big);
 
 	template<class T, std::size_t... N>
-	constexpr T bswap_impl(T i, std::index_sequence<N...>)
+	FORCE_INLINE constexpr T bswap_impl(T i, std::index_sequence<N...>)
 	{
-		return static_cast<T>(((((i >> (N * 8)) & T{UINT8_MAX}) <<
-				((sizeof(T) - 1 - N) * 8)) | ...));
+		return static_cast<T>(((((i >> (N * 8)) & T{UINT8_MAX}) << ((sizeof(T) - 1 - N) * 8)) | ...));
 	};
 
 	template<class T, class U = typename std::make_unsigned<T>::type>
-	constexpr U bswap(T i)
+	FORCE_INLINE constexpr U bswap(T i)
 	{
 		return bswap_impl<U>(i, std::make_index_sequence<sizeof(T)>{});
 	}
-
 
 	template <typename T, std::size_t Align = alignof(T), std::size_t Size = sizeof(T)>
 	struct se_storage
