@@ -172,10 +172,6 @@ bool package_reader::read_metadata()
 	{
 		return false;
 	}
-	//if (!m_is_valid)
-	//{
-	//	return false;
-	//}
 
 	// Read title ID and use it as an installation directory
 	m_install_dir.resize(9);
@@ -211,7 +207,6 @@ bool package_reader::read_metadata()
 			{
 				pkg_log.error("Metadata: DRM Type size mismatch (0x%x)", packet.size);
 			}
-
 			break;
 		}
 		case 0x2:
@@ -226,7 +221,6 @@ bool package_reader::read_metadata()
 			{
 				pkg_log.error("Metadata: Content Type size mismatch (0x%x)", packet.size);
 			}
-
 			break;
 		}
 		case 0x3:
@@ -348,7 +342,6 @@ bool package_reader::read_metadata()
 			{
 				pkg_log.error("Metadata: Install Dir size mismatch (0x%x)", packet.size);
 			}
-
 			break;
 		}
 		case 0xB:
@@ -438,6 +431,7 @@ bool package_reader::read_metadata()
 			{
 				pkg_log.error("Metadata: Version info size mismatch (0x%x)", packet.size);
 			}
+			break;
 		}
 		case 0x12: // PSVita stuff
 		{
