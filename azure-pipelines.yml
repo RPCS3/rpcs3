@@ -101,7 +101,6 @@ jobs:
         maximumCpuCount: true
         platform: x64
         configuration: 'Release - LLVM'
-        msbuildArgs: '/p:VCToolsVersion=14.25.28610'
       displayName: Compile RPCS3
 
     - bash: .ci/deploy-windows.sh
