@@ -738,13 +738,16 @@ bool cpu_thread::check_state() noexcept
 				{
 					u64 ctr = g_suspend_counter;
 
-					if (i < 20 || ctr & 1)
+					if (ctr >> 2 == s_tls_sctr >> 2)
 					{
-						busy_wait(300);
-					}
-					else if (ctr >> 2 == s_tls_sctr >> 2)
-					{
-						g_suspend_counter.wait(ctr, -4);
+						if (i < 20 || ctr & 1)
+						{
+							busy_wait(300);
+						}
+						else
+						{
+							g_suspend_counter.wait(ctr, -4);
+						}
 					}
 					else
 					{
