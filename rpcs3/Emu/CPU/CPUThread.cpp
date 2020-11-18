@@ -836,7 +836,7 @@ std::string cpu_thread::dump_misc() const
 	return fmt::format("Type: %s\n" "State: %s\n", typeid(*this).name(), state.load());
 }
 
-bool cpu_thread::suspend_work::push(cpu_thread* _this, bool cancel_if_not_suspended) noexcept
+bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 {
 	// Can't allow pre-set wait bit (it'd be a problem)
 	verify(HERE), !_this || !(_this->state & cpu_flag::wait);
