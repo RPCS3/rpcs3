@@ -565,15 +565,21 @@ void main_window::InstallPackages(QStringList file_paths)
 
 	std::vector<compat::package_info> infos;
 
-	// Let the user choose the packages to install and select the order in which they shall be installed.
+	game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
+
 	if (file_paths.size() > 1)
 	{
-		pkg_install_dialog dlg(file_paths, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr, this);
+		// Let the user choose the packages to install and select the order in which they shall be installed.
+		pkg_install_dialog dlg(file_paths, compat, this);
 		connect(&dlg, &QDialog::accepted, [&infos, &dlg]()
 		{
 			infos = dlg.GetPathsToInstall();
 		});
 		dlg.exec();
+	}
+	else
+	{
+		infos.push_back(game_compatibility::GetPkgInfo(file_paths.front(), compat));
 	}
 
 	if (infos.empty())
@@ -614,16 +620,38 @@ void main_window::HandlePackageInstallation(const std::vector<compat::package_in
 	{
 		progress = 0.;
 
+		const compat::package_info& package = packages.at(i);
+		QString app_info = package.title; // This should always be non-empty
+
+		if (!package.title_id.isEmpty() || !package.version.isEmpty())
+		{
+			app_info += QStringLiteral("\n");
+
+			if (!package.title_id.isEmpty())
+			{
+				app_info += package.title_id;
+			}
+
+			if (!package.version.isEmpty())
+			{
+				if (!package.title_id.isEmpty())
+				{
+					app_info += " ";
+				}
+
+				app_info += tr("v.%0", "Package version for install progress dialog").arg(package.version);
+			}
+		}
+
 		pdlg.SetValue(0);
-		pdlg.setLabelText(tr("Installing package (%0/%1), please wait...").arg(i + 1).arg(count));
+		pdlg.setLabelText(tr("Installing package (%0/%1), please wait...\n\n%2").arg(i + 1).arg(count).arg(app_info));
 		pdlg.show();
 
 		Emu.SetForceBoot(true);
 		Emu.Stop();
 
-		const QString file_path = packages.at(i).path;
-		const QFileInfo file_info(file_path);
-		const std::string path = sstr(file_path);
+		const QFileInfo file_info(package.path);
+		const std::string path      = sstr(package.path);
 		const std::string file_name = sstr(file_info.fileName());
 
 		// Run PKG unpacking asynchronously
@@ -671,7 +699,7 @@ void main_window::HandlePackageInstallation(const std::vector<compat::package_in
 		if (worker())
 		{
 			m_game_list_frame->Refresh(true);
-			gui_log.success("Successfully installed %s.", file_name);
+			gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", file_name, sstr(package.title_id), sstr(package.title), sstr(package.version));
 
 			if (i == (count - 1))
 			{
@@ -685,12 +713,12 @@ void main_window::HandlePackageInstallation(const std::vector<compat::package_in
 				if (error == package_error::app_version)
 				{
 					gui_log.error("Cannot install %s.", file_name);
-					QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(file_path));
+					QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(package.path));
 				}
 				else
 				{
 					gui_log.error("Failed to install %s.", file_name);
-					QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!").arg(file_path));
+					QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!").arg(package.path));
 				}
 			}
 			return;
