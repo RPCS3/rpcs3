@@ -1,8 +1,10 @@
-// Copyright (C) 2014       Hykem <hykem@hotmail.com>
+﻿// Copyright (C) 2014       Hykem <hykem@hotmail.com>
 // Licensed under the terms of the GNU GPL, version 3
 // http://www.gnu.org/licenses/gpl-3.0.txt
 
 #include "utils.h"
+#include "aes.h"
+#include "sha1.h"
 #include <cstring>
 #include <stdio.h>
 #include <time.h>

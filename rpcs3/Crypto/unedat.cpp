@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "key_vault.h"
 #include "unedat.h"
+#include "sha1.h"
+#include "lz.h"
+#include "ec.h"
 
 #include "Utilities/mutex.h"
 #include <cmath>
