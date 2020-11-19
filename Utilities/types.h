@@ -333,21 +333,21 @@ struct alignas(16) u128
 	friend u128 operator-(const u128& l, const u128& r)
 	{
 		u128 value;
-		_subborrow_u64(_subborrow_u64(0, r.lo, l.lo, &value.lo), r.hi, l.hi, &value.hi);
+		_subborrow_u64(_subborrow_u64(0, l.lo, r.lo, &value.lo), l.hi, r.hi, &value.hi);
 		return value;
 	}
 
 	friend u128 operator-(const u128& l, u64 r)
 	{
 		u128 value;
-		_subborrow_u64(_subborrow_u64(0, r, l.lo, &value.lo), 0, l.hi, &value.hi);
+		_subborrow_u64(_subborrow_u64(0, l.lo, r, &value.lo), l.hi, 0, &value.hi);
 		return value;
 	}
 
 	friend u128 operator-(u64 l, const u128& r)
 	{
 		u128 value;
-		_subborrow_u64(_subborrow_u64(0, r.lo, l, &value.lo), r.hi, 0, &value.hi);
+		_subborrow_u64(_subborrow_u64(0, l, r.lo, &value.lo), 0, r.hi, &value.hi);
 		return value;
 	}
 
@@ -359,7 +359,7 @@ struct alignas(16) u128
 	u128 operator-() const
 	{
 		u128 value;
-		_subborrow_u64(_subborrow_u64(0, lo, 0, &value.lo), hi, 0, &value.hi);
+		_subborrow_u64(_subborrow_u64(0, 0, lo, &value.lo), 0, hi, &value.hi);
 		return value;
 	}
 
@@ -378,14 +378,14 @@ struct alignas(16) u128
 
 	u128& operator--()
 	{
-		_subborrow_u64(_subborrow_u64(0, 1, lo, &lo), 0, hi, &hi);
+		_subborrow_u64(_subborrow_u64(0, lo, 1, &lo), hi, 0, &hi);
 		return *this;
 	}
 
 	u128 operator--(int)
 	{
 		u128 value = *this;
-		_subborrow_u64(_subborrow_u64(0, 1, lo, &lo), 0, hi, &hi);
+		_subborrow_u64(_subborrow_u64(0, lo, 1, &lo), hi, 0, &hi);
 		return value;
 	}
 

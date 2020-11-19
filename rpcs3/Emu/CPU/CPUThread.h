@@ -125,6 +125,8 @@ public:
 	{
 		// Task priority
 		u8 prio;
+		bool cancel_if_not_suspended;
+		bool was_posted;
 
 		// Size of prefetch list workload
 		u32 prf_size;
@@ -140,16 +142,21 @@ public:
 		suspend_work* next;
 
 		// Internal method
-		bool push(cpu_thread* _this, bool cancel_if_not_suspended = false) noexcept;
+		bool push(cpu_thread* _this) noexcept;
+
+		// Called after suspend_post
+		void post() noexcept;
 	};
 
 	// Suspend all threads and execute op (may be executed by other thread than caller!)
 	template <u8 Prio = 0, typename F>
 	static auto suspend_all(cpu_thread* _this, std::initializer_list<void*> hints, F op)
 	{
+		constexpr u8 prio = Prio > 3 ? 3 : Prio;
+
 		if constexpr (std::is_void_v<std::invoke_result_t<F>>)
 		{
-			suspend_work work{Prio, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
+			suspend_work work{prio, false, false, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
 			{
 				std::invoke(*static_cast<F*>(func));
 			}};
@@ -161,7 +168,7 @@ public:
 		{
 			std::invoke_result_t<F> result;
 
-			suspend_work work{Prio, ::size32(hints), hints.begin(), &op, &result, [](void* func, void* res_buf)
+			suspend_work work{prio, false, false, ::size32(hints), hints.begin(), &op, &result, [](void* func, void* res_buf)
 			{
 				*static_cast<std::invoke_result_t<F>*>(res_buf) = std::invoke(*static_cast<F*>(func));
 			}};
@@ -171,18 +178,34 @@ public:
 		}
 	}
 
+	template <u8 Prio = 0, typename F>
+	static suspend_work suspend_post(cpu_thread* _this, std::initializer_list<void*> hints, F& op)
+	{
+		constexpr u8 prio = Prio > 3 ? 3 : Prio;
+
+		static_assert(std::is_void_v<std::invoke_result_t<F>>, "cpu_thread::suspend_post only supports void as return type");
+
+		return suspend_work{prio, false, true, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
+		{
+			std::invoke(*static_cast<F*>(func));
+		}};
+	}
+
 	// Push the workload only if threads are being suspended by suspend_all()
 	template <u8 Prio = 0, typename F>
 	static bool if_suspended(cpu_thread* _this, std::initializer_list<void*> hints, F op)
 	{
-		static_assert(std::is_void_v<std::invoke_result_t<F>>, "Unimplemented (must return void)");
+		constexpr u8 prio = Prio > 3 ? 3 : Prio;
+
+		static_assert(std::is_void_v<std::invoke_result_t<F>>, "cpu_thread::if_suspended only supports void as return type");
+
 		{
-			suspend_work work{Prio, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
+			suspend_work work{prio, true, false, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
 			{
 				std::invoke(*static_cast<F*>(func));
 			}};
 
-			return work.push(_this, true);
+			return work.push(_this);
 		}
 	}
 

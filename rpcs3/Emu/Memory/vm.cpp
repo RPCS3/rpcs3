@@ -1114,10 +1114,10 @@ namespace vm
 #ifdef _MSC_VER
 				__stosq(target, data, count);
 #else
-				for (std::size_t i = 0; i < count; i++)
-				{
-					target[i] = data;
-				}
+				__asm__ ("mov %0, %%rdi; mov %1, %%rax; mov %2, %%rcx; rep stosq;"
+					:
+					: "r" (ptr), "r" (data), "r" (count)
+					: "rdi", "rax", "rcx", "memory");
 #endif
 			};
 
