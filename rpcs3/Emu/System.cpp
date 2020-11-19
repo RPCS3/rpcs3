@@ -1494,7 +1494,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Check game updates
 		const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN";
 
-		if (disc.empty() && !bdvd_dir.empty() && fs::is_file(hdd0_boot))
+		if (disc.empty() && !bdvd_dir.empty() && m_path != hdd0_boot && fs::is_file(hdd0_boot))
 		{
 			// Booting game update
 			sys_log.success("Updates found at /dev_hdd0/game/%s/!", m_title_id);
