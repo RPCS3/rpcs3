@@ -10,6 +10,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/perf_meter.hpp"
 
+#include "util/asm.hpp"
 #include <thread>
 #include <unordered_map>
 #include <map>
@@ -254,7 +255,7 @@ thread_local cpu_thread* g_tls_current_cpu_thread = nullptr;
 static atomic_t<u64, 64> s_cpu_counter{0};
 
 // List of posted tasks for suspend_all
-static atomic_t<cpu_thread::suspend_work*> s_cpu_work[64]{};
+static atomic_t<cpu_thread::suspend_work*> s_cpu_work[128]{};
 
 // Linked list of pushed tasks for suspend_all
 static atomic_t<cpu_thread::suspend_work*> s_pushed{};
@@ -263,10 +264,10 @@ static atomic_t<cpu_thread::suspend_work*> s_pushed{};
 static shared_mutex s_cpu_lock;
 
 // Bit allocator for threads which need to be suspended
-static atomic_t<u64> s_cpu_bits{};
+static atomic_t<u128> s_cpu_bits{};
 
 // List of active threads which need to be suspended
-static atomic_t<cpu_thread*> s_cpu_list[64]{};
+static atomic_t<cpu_thread*> s_cpu_list[128]{};
 
 namespace cpu_counter
 {
@@ -278,7 +279,7 @@ namespace cpu_counter
 
 		for (u64 i = 0;; i++)
 		{
-			const auto [bits, ok] = s_cpu_bits.fetch_op([](u64& bits) -> u64
+			const auto [bits, ok] = s_cpu_bits.fetch_op([](u128& bits)
 			{
 				if (~bits) [[likely]]
 				{
@@ -293,7 +294,7 @@ namespace cpu_counter
 			if (ok) [[likely]]
 			{
 				// Get actual slot number
-				id = std::countr_one(bits);
+				id = utils::ctz128(~bits);
 
 				// Register thread
 				if (s_cpu_list[id].compare_and_swap_test(nullptr, _this)) [[likely]]
@@ -318,6 +319,14 @@ namespace cpu_counter
 		s_tls_thread_slot = id;
 	}
 
+	static void remove_cpu_bit(u32 bit)
+	{
+		s_cpu_bits.atomic_op([=](u128& val)
+		{
+			val &= ~(u128{1} << (bit % 128));
+		});
+	}
+
 	void remove(cpu_thread* _this) noexcept
 	{
 		// Unregister and wait if necessary
@@ -339,31 +348,31 @@ namespace cpu_counter
 			return;
 		}
 
-		s_cpu_bits &= ~(1ull << (slot % 64));
+		remove_cpu_bit(slot);
 
 		s_tls_thread_slot = -1;
 	}
 
 	template <typename F>
-	u64 for_all_cpu(/*mutable*/ u64 copy, F func) noexcept
+	u128 for_all_cpu(/*mutable*/ u128 copy, F func) noexcept
 	{
-		for (u64 bits = copy; bits; bits &= bits - 1)
+		for (u128 bits = copy; bits; bits &= bits - 1)
 		{
-			const u32 index = std::countr_zero(bits);
+			const u32 index = utils::ctz128(bits);
 
 			if (cpu_thread* cpu = s_cpu_list[index].load())
 			{
 				if constexpr (std::is_invocable_v<F, cpu_thread*, u32>)
 				{
 					if (!func(cpu, index))
-						copy &= ~(1ull << index);
+						copy &= ~(u128{1} << index);
 					continue;
 				}
 
 				if constexpr (std::is_invocable_v<F, cpu_thread*>)
 				{
 					if (!func(cpu))
-						copy &= ~(1ull << index);
+						copy &= ~(u128{1} << index);
 					continue;
 				}
 
@@ -371,7 +380,7 @@ namespace cpu_counter
 			}
 			else
 			{
-				copy &= ~(1ull << index);
+				copy &= ~(u128{1} << index);
 			}
 		}
 
@@ -847,7 +856,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		// First thread to push the work to the workload list pauses all threads and processes it
 		std::lock_guard lock(s_cpu_lock);
 
-		u64 copy = s_cpu_bits.load();
+		u128 copy = s_cpu_bits.load();
 
 		// Try to prefetch cpu->state earlier
 		copy = cpu_counter::for_all_cpu(copy, [&](cpu_thread* cpu)
@@ -865,7 +874,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		g_suspend_counter += 2;
 
 		// Copy snapshot for finalization
-		u64 copy2 = copy;
+		u128 copy2 = copy;
 
 		copy = cpu_counter::for_all_cpu(copy, [&](cpu_thread* cpu, u32 index)
 		{
