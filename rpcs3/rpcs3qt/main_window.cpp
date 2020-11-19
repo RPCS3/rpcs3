@@ -607,6 +607,7 @@ void main_window::HandlePackageInstallation(const std::vector<compat::package_in
 	}
 
 	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package, please wait..."), tr("Cancel"), 0, 1000, false, this);
+	pdlg.setAutoClose(false);
 	pdlg.show();
 
 	// Synchronization variable
@@ -680,7 +681,7 @@ void main_window::HandlePackageInstallation(const std::vector<compat::package_in
 
 			// Update progress window
 			double pval = progress;
-			if (pval < 0) pval += 1.;
+			if (pval < 0.) pval += 1.;
 			pdlg.SetValue(static_cast<int>(pval * pdlg.maximum()));
 			QCoreApplication::processEvents();
 		}
