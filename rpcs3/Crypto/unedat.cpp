@@ -542,7 +542,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	return 0;
 }
 
-int validate_dev_klic(const u8* klicensee, NPD_HEADER *npd)
+bool validate_dev_klic(const u8* klicensee, NPD_HEADER *npd)
 {
 	unsigned char dev[0x60] = { 0 };
 
@@ -564,24 +564,24 @@ int validate_dev_klic(const u8* klicensee, NPD_HEADER *npd)
 	if (!klic)
 	{
 		// Allow empty dev hash.
-		return 1;
+		return true;
 	}
-	else
-	{
-		// Generate klicensee xor key.
-		u128 key = klic ^ std::bit_cast<u128>(NP_OMAC_KEY_2);
 
-		// Hash with generated key and compare with dev_hash.
-		return cmac_hash_compare(reinterpret_cast<uchar*>(&key), 0x10, dev, 0x60, npd->dev_hash, 0x10);
-	}
+	// Generate klicensee xor key.
+	u128 key = klic ^ std::bit_cast<u128>(NP_OMAC_KEY_2);
+
+	// Hash with generated key and compare with dev_hash.
+	return cmac_hash_compare(reinterpret_cast<uchar*>(&key), 0x10, dev, 0x60, npd->dev_hash, 0x10);
 }
 
-int validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *npd, bool verbose)
+bool validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *npd, bool verbose)
 {
-	int title_hash_result = 0;
-	int dev_hash_result = 0;
+	if (!file_name)
+	{
+		fmt::throw_exception("Empty filename");
+	}
 
-	const s32 file_name_length = ::narrow<s32>(std::strlen(file_name));
+	const usz file_name_length = std::strlen(file_name);
 	const usz buf_len = 0x30 + file_name_length;
 
 	std::unique_ptr<u8[]> buf(new u8[buf_len]);
@@ -604,7 +604,7 @@ int validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *
 
 	// Hash with NPDRM_OMAC_KEY_3 and compare with title_hash.
 	// Try to ignore case sensivity with file extension
-	title_hash_result =
+	const bool title_hash_result =
 		cmac_hash_compare(const_cast<u8*>(NP_OMAC_KEY_3), 0x10, buf.get(), buf_len, npd->title_hash, 0x10) ||
 		cmac_hash_compare(const_cast<u8*>(NP_OMAC_KEY_3), 0x10, buf_lower.get(), buf_len, npd->title_hash, 0x10) ||
 		cmac_hash_compare(const_cast<u8*>(NP_OMAC_KEY_3), 0x10, buf_upper.get(), buf_len, npd->title_hash, 0x10);
@@ -617,10 +617,9 @@ int validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *
 			edat_log.warning("EDAT: NPD title hash is invalid!");
 	}
 
+	const bool dev_hash_result = validate_dev_klic(klicensee, npd);
 
-	dev_hash_result = validate_dev_klic(klicensee, npd);
-
-	return (title_hash_result && dev_hash_result);
+	return title_hash_result && dev_hash_result;
 }
 
 void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& EDAT)
@@ -913,7 +912,7 @@ bool EDATADecrypter::ReadHeader()
 	else
 	{
 		// verify key
-		if (validate_dev_klic(reinterpret_cast<uchar*>(&dev_key), &npdHeader) == 0)
+		if (!validate_dev_klic(reinterpret_cast<uchar*>(&dev_key), &npdHeader))
 		{
 			edat_log.error("EDAT: Failed validating klic");
 			return false;
