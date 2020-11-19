@@ -255,9 +255,15 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 
 	compat::package_info info;
 	info.path     = pkg_path;
+	info.title    = qstr(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first
 	info.title_id = qstr(std::string(psf::get_string(psf, "TITLE_ID", "Unknown")));
 	info.version  = qstr(std::string(psf::get_string(psf, "APP_VER")));
-	info.title    = qstr(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first
+
+	if (info.version.isEmpty())
+	{
+		// Fallback to VERSION
+		info.version = qstr(std::string(psf::get_string(psf, "VERSION")));
+	}
 
 	if (compat)
 	{
