@@ -86,9 +86,9 @@ namespace ppu_func_detail
 	template<typename T, u32 g_count, u32 f_count, u32 v_count>
 	struct bind_arg<T, ARG_CONTEXT, g_count, f_count, v_count>
 	{
-		static_assert(std::is_same<std::decay_t<T>, ppu_thread>::value, "Invalid function argument type for ARG_CONTEXT");
+		static_assert(std::is_base_of<std::decay_t<T>, ppu_thread>::value, "Invalid function argument type for ARG_CONTEXT");
 
-		static FORCE_INLINE ppu_thread& get_arg(ppu_thread& ppu)
+		static FORCE_INLINE T& get_arg(ppu_thread& ppu)
 		{
 			return ppu;
 		}
@@ -184,7 +184,7 @@ namespace ppu_func_detail
 		// TODO: check calculations
 		const bool is_float = std::is_floating_point<T>::value;
 		const bool is_vector = std::is_same<std::decay_t<T>, v128>::value;
-		const bool is_context = std::is_same<std::decay_t<T>, ppu_thread>::value;
+		const bool is_context = std::is_base_of<std::decay_t<T>, ppu_thread>::value;
 		const bool is_variadic = std::is_same<std::decay_t<T>, ppu_va_args_t>::value;
 		const bool is_general = !is_float && !is_vector && !is_context && !is_variadic;
 

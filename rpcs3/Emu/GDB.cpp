@@ -641,7 +641,7 @@ bool gdb_thread::cmd_write_memory(gdb_cmd& cmd)
 	u32 len = hex_to_u32(cmd.data.substr(s + 1, s2 - s - 1));
 	const char* data_ptr = (cmd.data.c_str()) + s2 + 1;
 	for (u32 i = 0; i < len; ++i) {
-		if (vm::check_addr(addr + i, 1, vm::page_writable)) {
+		if (vm::check_addr(addr + i, vm::page_writable)) {
 			u8 val;
 			int res = sscanf_s(data_ptr, "%02hhX", &val);
 			if (!res) {

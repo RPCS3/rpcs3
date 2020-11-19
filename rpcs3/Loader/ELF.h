@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "../../Utilities/types.h"
 #include "../../Utilities/File.h"
@@ -113,7 +113,7 @@ struct elf_prog final : elf_phdr<en_t, sz_t>
 		base::p_vaddr = vaddr;
 		base::p_memsz = memsz;
 		base::p_align = align;
-		base::p_filesz = static_cast<sz_t>(bin.size());
+		base::p_filesz = static_cast<sz_t>(this->bin.size());
 		base::p_paddr = 0;
 		base::p_offset = -1;
 	}
@@ -293,7 +293,7 @@ public:
 		header.e_curver = 1;
 		header.e_os_abi = OS != elf_os::none ? OS : this->header.e_os_abi;
 		header.e_abi_ver = this->header.e_abi_ver;
-		header.e_type = Type != elf_type::none ? Type : this->header.e_type;
+		header.e_type = Type != elf_type::none ? Type : static_cast<elf_type>(this->header.e_type);
 		header.e_machine = Machine;
 		header.e_version = 1;
 		header.e_entry = this->header.e_entry;

@@ -708,19 +708,22 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desir
 
 void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 {
-	if (m_handler->m_type != pad_handler::keyboard)
+	if (m_button_id == button_ids::id_pad_begin)
 	{
+		// We are not remapping a button, so pass the event to the base class.
+		QDialog::keyPressEvent(keyEvent);
 		return;
 	}
 
-	if (m_button_id == button_ids::id_pad_begin)
+	if (m_handler->m_type != pad_handler::keyboard)
 	{
+		// Do nothing, we don't want to interfere with the ongoing remapping.
 		return;
 	}
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 	}
 	else
 	{
@@ -733,19 +736,22 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 
 void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 {
-	if (m_handler->m_type != pad_handler::keyboard)
+	if (m_button_id == button_ids::id_pad_begin)
 	{
+		// We are not remapping a button, so pass the event to the base class.
+		QDialog::mouseReleaseEvent(event);
 		return;
 	}
 
-	if (m_button_id == button_ids::id_pad_begin)
+	if (m_handler->m_type != pad_handler::keyboard)
 	{
+		// Do nothing, we don't want to interfere with the ongoing remapping.
 		return;
 	}
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 	}
 	else
 	{
@@ -758,19 +764,22 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 
 void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 {
-	if (m_handler->m_type != pad_handler::keyboard)
+	if (m_button_id == button_ids::id_pad_begin)
 	{
+		// We are not remapping a button, so pass the event to the base class.
+		QDialog::wheelEvent(event);
 		return;
 	}
 
-	if (m_button_id == button_ids::id_pad_begin)
+	if (m_handler->m_type != pad_handler::keyboard)
 	{
+		// Do nothing, we don't want to interfere with the ongoing remapping.
 		return;
 	}
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 		return;
 	}
 
@@ -813,21 +822,24 @@ void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 	ReactivateButtons();
 }
 
-void pad_settings_dialog::mouseMoveEvent(QMouseEvent* /*event*/)
+void pad_settings_dialog::mouseMoveEvent(QMouseEvent* event)
 {
-	if (m_handler->m_type != pad_handler::keyboard)
+	if (m_button_id == button_ids::id_pad_begin)
 	{
+		// We are not remapping a button, so pass the event to the base class.
+		QDialog::mouseMoveEvent(event);
 		return;
 	}
 
-	if (m_button_id == button_ids::id_pad_begin)
+	if (m_handler->m_type != pad_handler::keyboard)
 	{
+		// Do nothing, we don't want to interfere with the ongoing remapping.
 		return;
 	}
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		cfg_log.notice("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
 	}
 	else
 	{
@@ -865,33 +877,43 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* /*event*/)
 
 bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 {
-	// Disabled buttons should not absorb mouseclicks
-	if (event->type() == QEvent::MouseButtonRelease)
+	switch (event->type())
 	{
+	case QEvent::MouseButtonRelease:
+	{
+		// Disabled buttons should not absorb mouseclicks
 		event->ignore();
+		break;
 	}
-	if (event->type() == QEvent::MouseMove)
+	case QEvent::MouseMove:
 	{
 		mouseMoveEvent(static_cast<QMouseEvent*>(event));
+		break;
 	}
-
-	if (event->type() == QEvent::Enter || event->type() == QEvent::Leave)
+	case QEvent::Enter:
 	{
 		if (ui->l_description && m_descriptions.contains(object))
 		{
-			if (event->type() == QEvent::Enter)
+			// Check for visibility when entering a widget (needed in case of overlapping widgets in a QStackedWidget for example)
+			if (const auto widget = qobject_cast<QWidget*>(object); widget && widget->isVisible())
 			{
-				// Check for visibility when entering a widget (needed in case of overlapping widgets in a QStackedWidget for example)
-				if (const auto widget = qobject_cast<QWidget*>(object); widget && widget->isVisible())
-				{
-					ui->l_description->setText(m_descriptions[object]);
-				}
-			}
-			else if (event->type() == QEvent::Leave)
-			{
-				ui->l_description->setText(m_description);
+				ui->l_description->setText(m_descriptions[object]);
 			}
 		}
+		break;
+	}
+	case QEvent::Leave:
+	{
+		if (ui->l_description && m_descriptions.contains(object))
+		{
+			ui->l_description->setText(m_description);
+		}
+		break;
+	}
+	default:
+	{
+		break;
+	}
 	}
 
 	return QDialog::eventFilter(object, event);
@@ -1138,7 +1160,7 @@ void pad_settings_dialog::ChangeInputType()
 	bool force_enable = false; // enable configs even with disconnected devices
 	const int player = ui->tabWidget->currentIndex();
 	const bool is_ldd_pad = GetIsLddPad(player);
-	
+
 	std::string handler;
 	std::string device;
 	std::string profile;

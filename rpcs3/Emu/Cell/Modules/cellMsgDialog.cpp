@@ -1,10 +1,10 @@
 ﻿#include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Io/interception.h"
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
-
-#include "Input/pad_thread.h"
 
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
@@ -201,10 +201,10 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 			g_fxo->get<msg_info>()->remove();
 		}
 
-		pad::SetIntercepted(false);
+		input::SetIntercepted(false);
 	};
 
-	pad::SetIntercepted(true);
+	input::SetIntercepted(true);
 
 	auto& ppu = *get_current_cpu_thread();
 	lv2_obj::sleep(ppu);
@@ -349,75 +349,75 @@ error_code cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallba
 {
 	cellSysutil.warning("cellMsgDialogOpenErrorCode(errorCode=0x%x, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", errorCode, callback, userData, extParam);
 
-	std::string error;
+	localized_string_id string_id = localized_string_id::INVALID;
 
 	switch (errorCode)
 	{
-	case 0x80010001: error = "The resource is temporarily unavailable."; break;
-	case 0x80010002: error = "Invalid argument or flag."; break;
-	case 0x80010003: error = "The feature is not yet implemented."; break;
-	case 0x80010004: error = "Memory allocation failed."; break;
-	case 0x80010005: error = "The resource with the specified identifier does not exist."; break;
-	case 0x80010006: error = "The file does not exist."; break;
-	case 0x80010007: error = "The file is in unrecognized format / The file is not a valid ELF file."; break;
-	case 0x80010008: error = "Resource deadlock is avoided."; break;
-	case 0x80010009: error = "Operation not permitted."; break;
-	case 0x8001000A: error = "The device or resource is busy."; break;
-	case 0x8001000B: error = "The operation is timed out."; break;
-	case 0x8001000C: error = "The operation is aborted."; break;
-	case 0x8001000D: error = "Invalid memory access."; break;
-	case 0x8001000F: error = "State of the target thread is invalid."; break;
-	case 0x80010010: error = "Alignment is invalid."; break;
-	case 0x80010011: error = "Shortage of the kernel resources."; break;
-	case 0x80010012: error = "The file is a directory."; break;
-	case 0x80010013: error = "Operation cancelled."; break;
-	case 0x80010014: error = "Entry already exists."; break;
-	case 0x80010015: error = "Port is already connected."; break;
-	case 0x80010016: error = "Port is not connected."; break;
-	case 0x80010017: error = "Failure in authorizing SELF. Program authentication fail."; break;
-	case 0x80010018: error = "The file is not MSELF."; break;
-	case 0x80010019: error = "System version error."; break;
-	case 0x8001001A: error = "Fatal system error occurred while authorizing SELF. SELF auth failure."; break;
-	case 0x8001001B: error = "Math domain violation."; break;
-	case 0x8001001C: error = "Math range violation."; break;
-	case 0x8001001D: error = "Illegal multi-byte sequence in input."; break;
-	case 0x8001001E: error = "File position error."; break;
-	case 0x8001001F: error = "Syscall was interrupted."; break;
-	case 0x80010020: error = "File too large."; break;
-	case 0x80010021: error = "Too many links."; break;
-	case 0x80010022: error = "File table overflow."; break;
-	case 0x80010023: error = "No space left on device."; break;
-	case 0x80010024: error = "Not a TTY."; break;
-	case 0x80010025: error = "Broken pipe."; break;
-	case 0x80010026: error = "Read-only filesystem."; break;
-	case 0x80010027: error = "Illegal seek."; break;
-	case 0x80010028: error = "Arg list too long."; break;
-	case 0x80010029: error = "Access violation."; break;
-	case 0x8001002A: error = "Invalid file descriptor."; break;
-	case 0x8001002B: error = "Filesystem mounting failed."; break;
-	case 0x8001002C: error = "Too many files open."; break;
-	case 0x8001002D: error = "No device."; break;
-	case 0x8001002E: error = "Not a directory."; break;
-	case 0x8001002F: error = "No such device or IO."; break;
-	case 0x80010030: error = "Cross-device link error."; break;
-	case 0x80010031: error = "Bad Message."; break;
-	case 0x80010032: error = "In progress."; break;
-	case 0x80010033: error = "Message size error."; break;
-	case 0x80010034: error = "Name too long."; break;
-	case 0x80010035: error = "No lock."; break;
-	case 0x80010036: error = "Not empty."; break;
-	case 0x80010037: error = "Not supported."; break;
-	case 0x80010038: error = "File-system specific error."; break;
-	case 0x80010039: error = "Overflow occured."; break;
-	case 0x8001003A: error = "Filesystem not mounted."; break;
-	case 0x8001003B: error = "Not SData."; break;
-	case 0x8001003C: error = "Incorrect version in sys_load_param."; break;
-	case 0x8001003D: error = "Pointer is null."; break;
-	case 0x8001003E: error = "Pointer is null."; break;
-	default: error = "An error has occurred."; break;
+	case 0x80010001: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010001; break; // The resource is temporarily unavailable.
+	case 0x80010002: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010002; break; // Invalid argument or flag.
+	case 0x80010003: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010003; break; // The feature is not yet implemented.
+	case 0x80010004: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010004; break; // Memory allocation failed.
+	case 0x80010005: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010005; break; // The resource with the specified identifier does not exist.
+	case 0x80010006: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010006; break; // The file does not exist.
+	case 0x80010007: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010007; break; // The file is in unrecognized format / The file is not a valid ELF file.
+	case 0x80010008: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010008; break; // Resource deadlock is avoided.
+	case 0x80010009: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010009; break; // Operation not permitted.
+	case 0x8001000A: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001000A; break; // The device or resource is busy.
+	case 0x8001000B: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001000B; break; // The operation is timed out.
+	case 0x8001000C: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001000C; break; // The operation is aborted.
+	case 0x8001000D: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001000D; break; // Invalid memory access.
+	case 0x8001000F: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001000F; break; // State of the target thread is invalid.
+	case 0x80010010: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010010; break; // Alignment is invalid.
+	case 0x80010011: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010011; break; // Shortage of the kernel resources.
+	case 0x80010012: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010012; break; // The file is a directory.
+	case 0x80010013: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010013; break; // Operation cancelled.
+	case 0x80010014: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010014; break; // Entry already exists.
+	case 0x80010015: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010015; break; // Port is already connected.
+	case 0x80010016: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010016; break; // Port is not connected.
+	case 0x80010017: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010017; break; // Failure in authorizing SELF. Program authentication fail.
+	case 0x80010018: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010018; break; // The file is not MSELF.
+	case 0x80010019: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010019; break; // System version error.
+	case 0x8001001A: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001001A; break; // Fatal system error occurred while authorizing SELF. SELF auth failure.
+	case 0x8001001B: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001001B; break; // Math domain violation.
+	case 0x8001001C: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001001C; break; // Math range violation.
+	case 0x8001001D: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001001D; break; // Illegal multi-byte sequence in input.
+	case 0x8001001E: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001001E; break; // File position error.
+	case 0x8001001F: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001001F; break; // Syscall was interrupted.
+	case 0x80010020: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010020; break; // File too large.
+	case 0x80010021: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010021; break; // Too many links.
+	case 0x80010022: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010022; break; // File table overflow.
+	case 0x80010023: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010023; break; // No space left on device.
+	case 0x80010024: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010024; break; // Not a TTY.
+	case 0x80010025: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010025; break; // Broken pipe.
+	case 0x80010026: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010026; break; // Read-only filesystem.
+	case 0x80010027: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010027; break; // Illegal seek.
+	case 0x80010028: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010028; break; // Arg list too long.
+	case 0x80010029: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010029; break; // Access violation.
+	case 0x8001002A: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001002A; break; // Invalid file descriptor.
+	case 0x8001002B: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001002B; break; // Filesystem mounting failed.
+	case 0x8001002C: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001002C; break; // Too many files open.
+	case 0x8001002D: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001002D; break; // No device.
+	case 0x8001002E: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001002E; break; // Not a directory.
+	case 0x8001002F: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001002F; break; // No such device or IO.
+	case 0x80010030: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010030; break; // Cross-device link error.
+	case 0x80010031: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010031; break; // Bad Message.
+	case 0x80010032: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010032; break; // In progress.
+	case 0x80010033: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010033; break; // Message size error.
+	case 0x80010034: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010034; break; // Name too long.
+	case 0x80010035: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010035; break; // No lock.
+	case 0x80010036: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010036; break; // Not empty.
+	case 0x80010037: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010037; break; // Not supported.
+	case 0x80010038: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010038; break; // File-system specific error.
+	case 0x80010039: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_80010039; break; // Overflow occured.
+	case 0x8001003A: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001003A; break; // Filesystem not mounted.
+	case 0x8001003B: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001003B; break; // Not SData.
+	case 0x8001003C: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001003C; break; // Incorrect version in sys_load_param.
+	case 0x8001003D: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001003D; break; // Pointer is null.
+	case 0x8001003E: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001003E; break; // Pointer is null.
+	default:         string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_DEFAULT;  break; // An error has occurred.
 	}
 
-	error.append(fmt::format("\n(%08x)", errorCode));
+	const std::string error = get_localized_string(string_id, fmt::format("%08x", errorCode).c_str());
 
 	return cellMsgDialogOpen2(CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, vm::make_str(error), callback, userData, extParam);
 }
@@ -482,7 +482,7 @@ error_code cellMsgDialogAbort()
 
 	g_fxo->get<msg_dlg_thread>()->wait_until = 0;
 	g_fxo->get<msg_info>()->remove(); // this shouldn't call on_close
-	pad::SetIntercepted(false);       // so we need to reenable the pads here
+	input::SetIntercepted(false);     // so we need to reenable the pads here
 
 	return CELL_OK;
 }

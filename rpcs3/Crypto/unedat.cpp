@@ -692,7 +692,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 		}
 
 		// Perform header validation (EDAT only).
-		char real_file_name[MAX_PATH];
+		char real_file_name[CRYPTO_MAX_PATH];
 		extract_file_name(input_file_name, real_file_name);
 		if (!validate_npd_hashes(real_file_name, devklic, &NPD, verbose))
 		{
@@ -714,14 +714,20 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 			// Make sure we don't have an empty RIF key.
 			if (key == v128{})
 			{
-				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file!");
+				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file! (local activation)");
 				return 1;
 			}
 		}
 		else if ((NPD.license & 0x1) == 0x1)      // Type 1: Use network activation.
 		{
-			edat_log.error("EDAT: Network license not supported!");
-			return 1;
+			memcpy(&key, rifkey, 0x10);
+
+			// Make sure we don't have an empty RIF key.
+			if (key == v128{})
+			{
+				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file! (network activation)");
+				return 1;
+			}
 		}
 
 		if (verbose)
@@ -792,7 +798,7 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 	}
 
 	// Perform header validation (EDAT only).
-	char real_file_name[MAX_PATH];
+	char real_file_name[CRYPTO_MAX_PATH];
 	extract_file_name(input_file_name.c_str(), real_file_name);
 	if (!validate_npd_hashes(real_file_name, custom_klic, &NPD, false))
 	{
@@ -916,13 +922,17 @@ bool EDATADecrypter::ReadHeader()
 
 			if (dec_key == v128{})
 			{
-				edat_log.warning("EDAT: Empty Dec key!");
+				edat_log.warning("EDAT: Empty Dec key for local actívation!");
 			}
 		}
 		else if ((npdHeader.license & 0x1) == 0x1)      // Type 1: Use network activation.
 		{
-			edat_log.error("EDAT: Network license not supported!");
-			return false;
+			dec_key = std::move(rif_key);
+
+			if (dec_key == v128{})
+			{
+				edat_log.warning("EDAT: Empty Dec key for network activation!");
+			}
 		}
 	}
 

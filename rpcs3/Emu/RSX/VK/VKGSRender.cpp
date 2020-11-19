@@ -6,6 +6,7 @@
 #include "VKRenderPass.h"
 #include "VKResourceManager.h"
 #include "VKCommandStream.h"
+#include "Emu/Memory/vm_locking.h"
 
 namespace vk
 {
@@ -408,7 +409,7 @@ VKGSRender::VKGSRender() : GSRender()
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
 
 	//Occlusion
-	m_occlusion_query_pool.create((*m_device), OCCLUSION_MAX_POOL_SIZE);
+	m_occlusion_query_manager = std::make_unique<vk::query_pool_manager>(*m_device, VK_QUERY_TYPE_OCCLUSION, OCCLUSION_MAX_POOL_SIZE);
 	m_occlusion_map.resize(occlusion_query_count);
 
 	for (u32 n = 0; n < occlusion_query_count; ++n)
@@ -519,8 +520,6 @@ VKGSRender::VKGSRender() : GSRender()
 
 	vk::get_overlay_pass<vk::ui_overlay_renderer>()->init(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
 
-	m_occlusion_query_pool.initialize(*m_current_command_buffer);
-
 	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 	{
 		m_shader_interpreter.init(*m_device);
@@ -625,7 +624,7 @@ VKGSRender::~VKGSRender()
 	vkDestroyDescriptorSetLayout(*m_device, descriptor_layouts, nullptr);
 
 	//Queries
-	m_occlusion_query_pool.destroy();
+	m_occlusion_query_manager.reset();
 	m_cond_render_buffer.reset();
 
 	//Command buffer
@@ -953,8 +952,9 @@ VkDescriptorSet VKGSRender::allocate_descriptor_set()
 
 void VKGSRender::set_viewport()
 {
-	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
-	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
+	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
+		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
+
 	const auto zclip_near = rsx::method_registers.clip_min();
 	const auto zclip_far = rsx::method_registers.clip_max();
 
@@ -1965,7 +1965,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_open_query)
 	{
 		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
-		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
+		m_occlusion_query_manager->end_query(*m_current_command_buffer, open_query);
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
 	}
 
@@ -2188,8 +2188,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
-	const auto fbo_width = rsx::apply_resolution_scale(m_framebuffer_layout.width, true);
-	const auto fbo_height = rsx::apply_resolution_scale(m_framebuffer_layout.height, true);
+	const auto [fbo_width, fbo_height] = rsx::apply_resolution_scale<true>(m_framebuffer_layout.width, m_framebuffer_layout.height);
 
 	if (m_draw_fbo)
 	{
@@ -2267,7 +2266,7 @@ void VKGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 	{
 		// End query
 		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
-		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
+		m_occlusion_query_manager->end_query(*m_current_command_buffer, open_query);
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
 	}
 
@@ -2291,7 +2290,7 @@ bool VKGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 		return false;
 
 	u32 oldest = data.indices.front();
-	return m_occlusion_query_pool.check_query_status(oldest);
+	return m_occlusion_query_manager->check_query_status(oldest);
 }
 
 void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* query)
@@ -2322,7 +2321,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 		for (const auto occlusion_id : data.indices)
 		{
 			// We only need one hit
-			if (auto value = m_occlusion_query_pool.get_query_result(occlusion_id))
+			if (auto value = m_occlusion_query_manager->get_query_result(occlusion_id))
 			{
 				query->result = 1;
 				break;
@@ -2330,7 +2329,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 		}
 	}
 
-	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);
+	m_occlusion_query_manager->free_queries(*m_current_command_buffer, data.indices);
 	data.indices.clear();
 }
 
@@ -2345,7 +2344,7 @@ void VKGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 	if (data.indices.empty())
 		return;
 
-	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);
+	m_occlusion_query_manager->free_queries(*m_current_command_buffer, data.indices);
 	data.indices.clear();
 }
 
@@ -2356,7 +2355,7 @@ void VKGSRender::emergency_query_cleanup(vk::command_buffer* commands)
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_open_query)
 	{
 		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
-		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
+		m_occlusion_query_manager->end_query(*m_current_command_buffer, open_query);
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
 	}
 }
@@ -2427,7 +2426,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		if (query_info.indices.size() == 1)
 		{
 			const auto& index = query_info.indices.front();
-			m_occlusion_query_pool.get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
+			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
 
 			vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, dst_stage,
@@ -2457,7 +2456,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		auto& query_info = m_occlusion_map[sources[i]->driver_handle];
 		for (const auto& index : query_info.indices)
 		{
-			m_occlusion_query_pool.get_query_result_indirect(*m_current_command_buffer, index, scratch->value, dst_offset);
+			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, scratch->value, dst_offset);
 			dst_offset += 4;
 		}
 	}

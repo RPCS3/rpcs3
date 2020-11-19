@@ -1,13 +1,13 @@
 ﻿#include "stdafx.h"
 #include "rsx_replay.h"
 
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/Cell/lv2/sys_memory.h"
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/RSXThread.h"
 
 #include <map>
 #include <atomic>
-#include <exception>
 
 namespace rsx
 {
@@ -34,21 +34,21 @@ namespace rsx
 		const auto contextInfo = vm::ptr<rsx_context>::make(contextAddr);
 
 		// 'fake' initialize usermemory
-		sys_memory_allocate(buffer_size, SYS_MEMORY_PAGE_SIZE_1M, contextInfo.ptr(&rsx_context::user_addr));
+		sys_memory_allocate(*this, buffer_size, SYS_MEMORY_PAGE_SIZE_1M, contextInfo.ptr(&rsx_context::user_addr));
 		verify(HERE), (user_mem_addr = contextInfo->user_addr) != 0;
 
-		if (sys_rsx_device_map(contextInfo.ptr(&rsx_context::dev_addr), vm::null, 0x8) != CELL_OK)
+		if (sys_rsx_device_map(*this, contextInfo.ptr(&rsx_context::dev_addr), vm::null, 0x8) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_device_map failed!");
 
-		if (sys_rsx_memory_allocate(contextInfo.ptr(&rsx_context::mem_handle), contextInfo.ptr(&rsx_context::mem_addr), 0x0F900000, 0, 0, 0, 0) != CELL_OK)
+		if (sys_rsx_memory_allocate(*this, contextInfo.ptr(&rsx_context::mem_handle), contextInfo.ptr(&rsx_context::mem_addr), 0x0F900000, 0, 0, 0, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_memory_allocate failed!");
 
-		if (sys_rsx_context_allocate(contextInfo.ptr(&rsx_context::context_id), contextInfo.ptr(&rsx_context::dma_addr), contextInfo.ptr(&rsx_context::driver_info), contextInfo.ptr(&rsx_context::reports_addr), contextInfo->mem_handle, 0) != CELL_OK)
+		if (sys_rsx_context_allocate(*this, contextInfo.ptr(&rsx_context::context_id), contextInfo.ptr(&rsx_context::dma_addr), contextInfo.ptr(&rsx_context::driver_info), contextInfo.ptr(&rsx_context::reports_addr), contextInfo->mem_handle, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
 
 		get_current_renderer()->main_mem_size = buffer_size;
 
-		if (sys_rsx_context_iomap(contextInfo->context_id, 0, user_mem_addr, buffer_size, 0xf000000000000800ull) != CELL_OK)
+		if (sys_rsx_context_iomap(*this, contextInfo->context_id, 0, user_mem_addr, buffer_size, 0xf000000000000800ull) != CELL_OK)
 			fmt::throw_exception("Capture Replay: rsx io mapping failed!");
 
 		return contextInfo->context_id;
@@ -168,7 +168,7 @@ namespace rsx
 		}
 	}
 
-	void rsx_replay_thread::on_task()
+	void rsx_replay_thread::cpu_task()
 	{
 		be_t<u32> context_id = allocate_context();
 
@@ -238,10 +238,5 @@ namespace rsx
 			// random pause to not destroy gpu
 			std::this_thread::sleep_for(10ms);
 		}
-	}
-
-	void rsx_replay_thread::operator()()
-	{
-		on_task();
 	}
 }

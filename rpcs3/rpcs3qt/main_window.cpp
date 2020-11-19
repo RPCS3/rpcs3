@@ -507,6 +507,8 @@ void main_window::InstallPackages(QStringList file_paths)
 		}
 
 		file_paths.append(paths);
+		const QFileInfo file_info(file_paths[0]);
+		m_gui_settings->SetValue(gui::fd_install_pkg, file_info.path());
 	}
 	else if (file_paths.count() == 1)
 	{
@@ -533,8 +535,6 @@ void main_window::InstallPackages(QStringList file_paths)
 		{
 			gui_log.error("Could not copy rap file: %s", rapname);
 		}
-
-		m_gui_settings->SetValue(gui::fd_install_pkg, file_info.path());
 	}
 
 	// Find remaining package files
@@ -1649,7 +1649,7 @@ void main_window::CreateConnects()
 				}
 			}
 		}
-		patch_manager_dialog patch_manager(m_gui_settings, games, this);
+		patch_manager_dialog patch_manager(m_gui_settings, games, "", this);
 		patch_manager.exec();
  	});
 

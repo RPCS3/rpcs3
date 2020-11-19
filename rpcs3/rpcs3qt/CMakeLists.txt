@@ -1,4 +1,7 @@
-﻿set(SRC_FILES
+﻿# prevent WolfSSL from warning about not having harden options
+add_compile_definitions(WC_NO_HARDEN)
+
+set(SRC_FILES
 	about_dialog.cpp
 	auto_pause_settings_dialog.cpp
 	breakpoint_handler.cpp
@@ -28,6 +31,7 @@
 	instruction_editor_dialog.cpp
 	kernel_explorer.cpp
 	localized.cpp
+	localized_emu.h
 	log_frame.cpp
 	main_window.cpp
 	memory_string_searcher.cpp

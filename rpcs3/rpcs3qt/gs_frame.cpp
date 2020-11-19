@@ -5,12 +5,15 @@
 #include "Utilities/Timer.h"
 #include "Utilities/date_time.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
+#include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
 
 #include <QCoreApplication>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <string>
+#include <thread>
 
 #include "png.h"
 
@@ -37,6 +40,8 @@
 #endif
 
 LOG_CHANNEL(screenshot);
+
+extern std::atomic<bool> g_user_asked_for_frame_capture;
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -198,6 +203,13 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 				Emu.Resume();
 				return;
 			}
+		}
+		break;
+	case Qt::Key_C:
+		if (keyEvent->modifiers() == Qt::AltModifier && !m_disable_kb_hotkeys)
+		{
+			g_user_asked_for_frame_capture = true;
+			return;
 		}
 		break;
 	case Qt::Key_F12:

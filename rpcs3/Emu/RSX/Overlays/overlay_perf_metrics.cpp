@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "overlay_perf_metrics.h"
-#include "../GSRender.h"
-
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/PPUThread.h"
@@ -139,7 +138,6 @@ namespace rsx
 		void perf_metrics_overlay::reset_transforms()
 		{
 			const u16 perf_overlay_padding = m_font_size / 2;
-			const u16 graphs_padding = m_font_size * 2;
 
 			const u16 fps_graph_h = 60;
 			const u16 frametime_graph_h = 45;
@@ -154,17 +152,14 @@ namespace rsx
 
 				if (m_framerate_graph_enabled)
 				{
-					bottom_margin += fps_graph_h;
-
-					if (m_frametime_graph_enabled)
-					{
-						bottom_margin += graphs_padding;
-					}
+					m_fps_graph.set_size(m_fps_graph.w, fps_graph_h);
+					bottom_margin += m_fps_graph.get_height();
 				}
 
 				if (m_frametime_graph_enabled)
 				{
-					bottom_margin += frametime_graph_h;
+					m_frametime_graph.set_size(m_frametime_graph.w, frametime_graph_h);
+					bottom_margin += m_frametime_graph.get_height();
 				}
 			}
 
@@ -186,27 +181,21 @@ namespace rsx
 				// Position the graphs within the body
 				const u16 graphs_width = m_body.w;
 				const u16 body_left = m_body.x;
-				const u16 body_bottom = m_body.y + m_body.h + perf_overlay_padding;
+				u16 y_offset = m_body.y + m_body.h + perf_overlay_padding;
 
 				if (m_framerate_graph_enabled)
 				{
 					m_fps_graph.update();
-					m_fps_graph.set_pos(body_left, body_bottom);
+					m_fps_graph.set_pos(body_left, y_offset);
 					m_fps_graph.set_size(graphs_width, fps_graph_h);
+
+					y_offset += m_fps_graph.get_height();
 				}
 
 				if (m_frametime_graph_enabled)
 				{
 					m_frametime_graph.update();
-
-					u16 y_offset{};
-
-					if (m_framerate_graph_enabled)
-					{
-						y_offset = m_fps_graph.get_height();
-					}
-
-					m_frametime_graph.set_pos(body_left, body_bottom + y_offset);
+					m_frametime_graph.set_pos(body_left, y_offset);
 					m_frametime_graph.set_size(graphs_width, frametime_graph_h);
 				}
 			}

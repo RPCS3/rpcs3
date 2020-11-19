@@ -23,7 +23,7 @@ void call_stack_list::HandleUpdate(std::vector<std::pair<u32, u32>> call_stack)
 
 	for (const auto& addr : call_stack)
 	{
-		const QString call_stack_item_text = qstr(fmt::format("0x%08llx (r1=0x%08llx)", addr.first, addr.second));
+		const QString call_stack_item_text = qstr(fmt::format("0x%08llx (sp=0x%08llx)", addr.first, addr.second));
 		QListWidgetItem* callStackItem = new QListWidgetItem(call_stack_item_text);
 		callStackItem->setData(Qt::UserRole, { addr.first });
 		addItem(callStackItem);

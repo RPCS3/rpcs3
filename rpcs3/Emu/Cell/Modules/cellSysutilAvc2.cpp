@@ -318,7 +318,16 @@ error_code cellSysutilAvc2SetStreamPriority(u8 priority)
 
 error_code cellSysutilAvc2LeaveChatRequest()
 {
-	cellSysutilAvc2.todo("cellSysutilAvc2LeaveChatRequest()");
+	cellSysutilAvc2.notice("cellSysutilAvc2LeaveChatRequest()");
+
+	if (avc2_cb)
+	{
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+			avc2_cb(cb_ppu, CELL_AVC2_EVENT_LEAVE_SUCCEEDED, 0, avc2_cb_arg);
+			return 0;
+		});
+	}
+
 	return CELL_OK;
 }
 

@@ -242,7 +242,7 @@ error_code sys_spu_image_open(ppu_thread& ppu, vm::ptr<sys_spu_image> img, vm::c
 
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
-	auto [fs_error, ppath, file] = lv2_file::open(path.get_ptr(), 0, 0);
+	auto [fs_error, ppath, path0, file, type] = lv2_file::open(path.get_ptr(), 0, 0);
 
 	if (fs_error)
 	{
@@ -399,8 +399,6 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		sys_spu.warning("Unimplemented SPU Thread options (0x%x)", option);
 	}
 
-	const vm::addr_t ls_addr{verify("SPU LS" HERE, vm::alloc(SPU_LS_SIZE, vm::main))};
-
 	const u32 inited = group->init;
 
 	const u32 tid = (inited << 24) | (group_id & 0xffffff);
@@ -414,7 +412,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 			fmt::append(full_name, "%s ", thread_name);
 		}
 
-		const auto spu = std::make_shared<named_thread<spu_thread>>(full_name, ls_addr, group.get(), spu_num, thread_name, tid, false, option);
+		const auto spu = std::make_shared<named_thread<spu_thread>>(full_name, group.get(), spu_num, thread_name, tid, false, option);
 		group->threads[inited] = spu;
 		group->threads_map[spu_num] = static_cast<s8>(inited);
 		return spu;
@@ -683,6 +681,9 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 	{
 		if (auto thread = t.get())
 		{
+			// Deallocate LS
+			vm::get(vm::spu)->dealloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (thread->id & 0xffffff), &thread->shm);
+
 			// Remove ID from IDM (destruction will occur in group destructor)
 			idm::remove<named_thread<spu_thread>>(thread->id);
 		}
@@ -756,7 +757,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 		if (thread && ran_threads--)
 		{
 			thread->state -= cpu_flag::stop;
-			thread_ctrl::raw_notify(*thread);
+			thread_ctrl::notify(*thread);
 		}
 	}
 
@@ -906,7 +907,7 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 		if (thread)
 		{
 			thread->state -= cpu_flag::suspend;
-			thread_ctrl::raw_notify(*thread);
+			thread_ctrl::notify(*thread);
 		}
 	}
 
@@ -1005,15 +1006,27 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	{
 		if (thread)
 		{
-			thread->state += cpu_flag::stop + cpu_flag::ret;
+			thread->state.fetch_op([](bs_t<cpu_flag>& flags)
+			{
+				if (flags & cpu_flag::stop)
+				{
+					// In case the thread raised the ret flag itself at some point do not raise it again
+					return false;
+				}
+
+				flags += cpu_flag::stop + cpu_flag::ret;
+				return true;
+			});
 		}
 	}
 
 	for (auto& thread : group->threads)
 	{
-		if (thread && group->running)
+		while (thread && group->running && thread->state & cpu_flag::wait)
 		{
-			thread_ctrl::raw_notify(*thread);
+			// TODO: replace with proper solution
+			if (atomic_wait_engine::raw_notify(nullptr, thread_ctrl::get_native_id(*thread)))
+				break;
 		}
 	}
 
@@ -1833,9 +1846,7 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 			index = 0;
 	}
 
-	const vm::addr_t ls_addr{verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, vm::spu))};
-
-	const u32 tid = idm::make<named_thread<spu_thread>>(fmt::format("RawSPU[0x%x] ", index), ls_addr, nullptr, index, "", index);
+	const u32 tid = idm::make<named_thread<spu_thread>>(fmt::format("RawSPU[0x%x] ", index), nullptr, index, "", index);
 
 	spu_thread::g_raw_spu_id[index] = verify("RawSPU ID" HERE, tid);
 
@@ -1881,9 +1892,9 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 			index = 0;
 	}
 
-	const vm::addr_t ls_addr{verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, vm::spu))};
+	const vm::addr_t ls_addr{RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index};
 
-	const auto thread = idm::make_ptr<named_thread<spu_thread>>(fmt::format("IsoSPU[0x%x] ", index), ls_addr, nullptr, index, "", index, true);
+	const auto thread = idm::make_ptr<named_thread<spu_thread>>(fmt::format("IsoSPU[0x%x] ", index), nullptr, index, "", index, true);
 
 	thread->gpr[3] = v128::from64(0, arg1);
 	thread->gpr[4] = v128::from64(0, arg2);
@@ -1905,7 +1916,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 	return CELL_OK;
 }
 
-template <bool isolated = false> 
+template <bool isolated = false>
 error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 {
 	const u32 idm_id = spu_thread::find_raw_spu(id);

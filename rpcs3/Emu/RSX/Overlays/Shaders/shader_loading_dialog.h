@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Emu/Cell/Modules/cellMsgDialog.h"
+class MsgDialogBase;
 
 namespace rsx
 {

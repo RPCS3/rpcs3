@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "Utilities/VirtualMemory.h"
 #include "Utilities/hash.h"
 #include "Utilities/File.h"
 #include "Utilities/lockless.h"
@@ -14,6 +13,9 @@
 #include "rsx_utils.h"
 #include <thread>
 #include <chrono>
+
+
+#include "util/vm.hpp"
 
 namespace rsx
 {

@@ -1,12 +1,12 @@
 ﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "Utilities/VirtualMemory.h"
 #include "Utilities/bin_patch.h"
 #include "Utilities/StrUtil.h"
 #include "Crypto/sha1.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
+#include "Emu/System.h"
 #include "Emu/VFS.h"
 
 #include "Emu/Cell/PPUOpcodes.h"
@@ -25,7 +25,6 @@
 
 LOG_CHANNEL(ppu_loader);
 
-extern void ppu_initialize_syscalls();
 extern std::string ppu_get_function_name(const std::string& _module, u32 fnid);
 extern std::string ppu_get_variable_name(const std::string& _module, u32 vnid);
 extern void ppu_register_range(u32 addr, u32 size);
@@ -130,8 +129,6 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 	{
 		return;
 	}
-
-	ppu_initialize_syscalls();
 
 	const std::initializer_list<const ppu_static_module*> registered
 	{
@@ -530,6 +527,9 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 					const u32 _entry = vm::read32(faddr);
 					const u32 target = ppu_function_manager::addr + 8 * _sf->index;
 
+					// Set exported function
+					flink.export_addr = target;
+
 					if ((target <= _entry && _entry - target <= 0x2000000) || (target > _entry && target - _entry < 0x2000000))
 					{
 						// Use relative branch
@@ -692,6 +692,96 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* l
 	}
 
 	return result;
+}
+
+static void ppu_check_patch_spu_images(const ppu_segment& seg)
+{
+	const std::string_view seg_view{vm::get_super_ptr<char>(seg.addr), seg.size};
+
+	for (std::size_t i = seg_view.find("\177ELF"); i < seg.size; i = seg_view.find("\177ELF", i + 4))
+	{
+		const auto elf_header = vm::get_super_ptr<u8>(seg.addr + i);
+
+		// Try to load SPU image
+		const spu_exec_object obj(fs::file(elf_header, seg.size - i));
+
+		if (obj != elf_error::ok)
+		{
+			// This address does not have an SPU elf
+			continue;
+		}
+
+		// Segment info dump
+		std::string name;
+		std::string dump;
+
+		std::size_t applied = 0;
+
+		// Executable hash
+		sha1_context sha2;
+		sha1_starts(&sha2);
+		u8 sha1_hash[20];
+
+		for (const auto& prog : obj.progs)
+		{
+			// Only hash the data, we are not loading it
+			sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_vaddr), sizeof(prog.p_vaddr));
+			sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_memsz), sizeof(prog.p_memsz));
+			sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_filesz), sizeof(prog.p_filesz));
+
+			fmt::append(dump, "\n\tSegment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, p_offset=0x%llx", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_offset);
+
+			if (prog.p_type == 0x1u /* LOAD */ && prog.p_filesz > 0u)
+			{
+				sha1_update(&sha2, (elf_header + prog.p_offset), prog.p_filesz);
+			}
+
+			else if (prog.p_type == 0x4u /* NOTE */ && prog.p_filesz > 0u)
+			{
+				sha1_update(&sha2, (elf_header + prog.p_offset), prog.p_filesz);
+
+				// We assume that the string SPUNAME exists 0x14 bytes into the NOTE segment
+				name = reinterpret_cast<char*>(elf_header + prog.p_offset + 0x14);
+
+				if (!name.empty())
+				{
+					fmt::append(dump, "\n\tSPUNAME: '%s'", name);
+				}
+			}
+		}
+
+		sha1_finish(&sha2, sha1_hash);
+
+		// Format patch name
+		std::string hash("SPU-0000000000000000000000000000000000000000");
+		for (u32 i = 0; i < sizeof(sha1_hash); i++)
+		{
+			constexpr auto pal = "0123456789abcdef";
+			hash[4 + i * 2] = pal[sha1_hash[i] >> 4];
+			hash[5 + i * 2] = pal[sha1_hash[i] & 15];
+		}
+
+		if (g_cfg.core.spu_debug)
+		{
+			fs::file dump_file(fs::get_cache_dir() + "/spu_progs/" + vfs::escape(name.substr(name.find_last_of('/') + 1)) + '_' + hash.substr(4) + ".elf", fs::rewrite);
+			obj.save(dump_file);
+		}
+
+		// Try to patch each segment, will only succeed if the address exists in SPU local storage
+		for (const auto& prog : obj.progs)
+		{
+			// Apply the patch
+			applied += g_fxo->get<patch_engine>()->apply_with_ls_check(hash, (elf_header + prog.p_offset), prog.p_filesz, prog.p_vaddr);
+
+			if (!Emu.GetTitleID().empty())
+			{
+				// Alternative patch
+				applied += g_fxo->get<patch_engine>()->apply_with_ls_check(Emu.GetTitleID() + '-' + hash, (elf_header + prog.p_offset), prog.p_filesz, prog.p_vaddr);
+			}
+		}
+
+		ppu_loader.success("SPU executable hash: %s (<- %u)%s", hash, applied, dump);
+	}
 }
 
 std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::string& path)
@@ -966,6 +1056,12 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
+	// Embedded SPU elf patching
+	for (const auto& seg : prx->segs)
+	{
+		ppu_check_patch_spu_images(seg);
+	}
+
 	ppu_loader.success("PRX library hash: %s (<- %u)", hash, applied);
 
 	if (Emu.IsReady() && g_fxo->get<ppu_module>()->segs.empty())
@@ -1133,77 +1229,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	ppu_initialize_modules(link);
 
 	// Embedded SPU elf patching
-	for (u32 i = _main->segs[0].addr; i < (_main->segs[0].addr + _main->segs[0].size); i += 128)
+	for (const auto& seg : _main->segs)
 	{
-		uchar* elf_header = vm::_ptr<u8>(i);
-		const spu_exec_object obj(fs::file(vm::base(vm::cast(i, HERE)), (_main->segs[0].addr + _main->segs[0].size) - i));
-
-		if (obj != elf_error::ok)
-		{
-			// This address does not have an SPU elf
-			continue;
-		}
-
-		// Segment info dump
-		std::string dump;
-
-		applied = 0;
-
-		// Executable hash
-		sha1_context sha2;
-		sha1_starts(&sha2);
-		u8 sha1_hash[20];
-
-		for (const auto& prog : obj.progs)
-		{
-			// Only hash the data, we are not loading it
-			sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_vaddr), sizeof(prog.p_vaddr));
-			sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_memsz), sizeof(prog.p_memsz));
-			sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_filesz), sizeof(prog.p_filesz));
-
-			fmt::append(dump, "\n\tSegment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, p_offset=0x%llx", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_offset);
-
-			if (prog.p_type == 0x1u /* LOAD */ && prog.p_filesz > 0u)
-			{
-				sha1_update(&sha2, (elf_header + prog.p_offset), prog.p_filesz);
-			}
-
-			else if (prog.p_type == 0x4u /* NOTE */ && prog.p_filesz > 0u)
-			{
-				sha1_update(&sha2, (elf_header + prog.p_offset), prog.p_filesz);
-
-				// We assume that the string SPUNAME exists 0x14 bytes into the NOTE segment
-				const auto spu_name = reinterpret_cast<const char*>(elf_header + prog.p_offset + 0x14);
-				fmt::append(dump, "\n\tSPUNAME: '%s'", spu_name);
-			}
-		}
-
-		sha1_finish(&sha2, sha1_hash);
-
-		// Format patch name
-		std::string hash("SPU-0000000000000000000000000000000000000000");
-		for (u32 i = 0; i < sizeof(sha1_hash); i++)
-		{
-			constexpr auto pal = "0123456789abcdef";
-			hash[4 + i * 2] = pal[sha1_hash[i] >> 4];
-			hash[5 + i * 2] = pal[sha1_hash[i] & 15];
-		}
-
-		// Try to patch each segment, will only succeed if the address exists in SPU local storage
-		for (const auto& prog : obj.progs)
-		{
-			// Apply the patch
-			applied += g_fxo->get<patch_engine>()->apply_with_ls_check(hash, (elf_header + prog.p_offset), prog.p_filesz, prog.p_vaddr);
-
-			if (!Emu.GetTitleID().empty())
-			{
-				// Alternative patch
-				applied += g_fxo->get<patch_engine>()->apply_with_ls_check(Emu.GetTitleID() + '-' + hash, (elf_header + prog.p_offset), prog.p_filesz, prog.p_vaddr);
-			}
-		}
-
-		ppu_loader.success("SPU executable hash: %s (<- %u)%s", hash, applied, dump);
-
+		ppu_check_patch_spu_images(seg);
 	}
 
 	// Static HLE patching
@@ -1697,6 +1725,12 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 	{
 		// Alternative patch
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+	}
+
+	// Embedded SPU elf patching
+	for (const auto& seg : ovlm->segs)
+	{
+		ppu_check_patch_spu_images(seg);
 	}
 
 	ppu_loader.success("OVL executable hash: %s (<- %u)", hash, applied);

@@ -322,26 +322,12 @@ std::shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name,
 
 std::string fs::get_parent_dir(const std::string& path)
 {
-	// Search upper bound (set to the last character, npos for empty string)
-	auto last = path.size() - 1;
+	// Get (basically) processed path
+	const auto real_path = fs::escape_path(path);
 
-#ifdef _WIN32
-	const auto& delim = "/\\";
-#else
-	const auto& delim = "/";
-#endif
+	const auto pos = real_path.find_last_of(delim);
 
-	while (true)
-	{
-		const auto pos = path.find_last_of(delim, last, sizeof(delim) - 1);
-
-		// Contiguous slashes are ignored at the end
-		if (std::exchange(last, pos - 1) != pos)
-		{
-			// Return empty string if the path doesn't contain at least 2 elements
-			return path.substr(0, pos != umax && path.find_last_not_of(delim, pos, sizeof(delim) - 1) != umax ? pos : 0);
-		}
-	}
+	return real_path.substr(0, pos == umax ? 0 : pos);
 }
 
 bool fs::stat(const std::string& path, stat_t& info)
@@ -352,14 +338,40 @@ bool fs::stat(const std::string& path, stat_t& info)
 	}
 
 #ifdef _WIN32
-	WIN32_FIND_DATA attrs;
 	std::string_view epath = path;
 
 	// '/' and '\\' Not allowed by FindFirstFileExW at the end of path but we should allow it
-	if (auto not_del = epath.find_last_not_of("/\\"); not_del != umax && not_del != epath.size() - 1)
+	if (auto not_del = epath.find_last_not_of(delim); not_del != umax && not_del != epath.size() - 1)
 	{
-		epath.remove_suffix(path.size() - 1 - not_del);
+		epath.remove_suffix(epath.size() - 1 - not_del);
 	}
+
+	// Handle drives specially
+	if (epath.find_first_of(delim) == umax && epath.ends_with(':'))
+	{
+		WIN32_FILE_ATTRIBUTE_DATA attrs;
+
+		// Must end with a delimiter
+		if (!GetFileAttributesExW(to_wchar(std::string(epath) + '/').get(), GetFileExInfoStandard, &attrs))
+		{
+			g_tls_error = to_error(GetLastError());
+			return false;	
+		}
+
+		info.is_directory = true; // Handle drives as directories
+		info.is_writable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
+		info.size = attrs.nFileSizeLow | (u64{attrs.nFileSizeHigh} << 32);
+		info.atime = to_time(attrs.ftLastAccessTime);
+		info.mtime = to_time(attrs.ftLastWriteTime);
+		info.ctime = info.mtime;
+
+		if (info.atime < info.mtime)
+			info.atime = info.mtime;
+
+		return true;
+	}
+
+	WIN32_FIND_DATA attrs;
 
 	// Allowed by FindFirstFileExW but we should not allow it
 	if (epath.ends_with("*"))
@@ -385,7 +397,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 		~close_t() { FindClose(handle); }
 	};
 
-	for (close_t find_manage{handle}; attrs.cFileName != wpath_view.substr(wpath_view.find_last_of(L"/\\") + 1);)
+	for (close_t find_manage{handle}; attrs.cFileName != wpath_view.substr(wpath_view.find_last_of(wdelim) + 1);)
 	{
 		if (!FindNextFileW(handle, &attrs))
 		{
@@ -855,7 +867,7 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 
 #ifdef _WIN32
 	// Open the file
-	const auto handle = CreateFileW(to_wchar(path).get(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	const auto handle = CreateFileW(to_wchar(path).get(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		g_tls_error = to_error(GetLastError());
@@ -941,7 +953,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		disp = mode & fs::trunc ? TRUNCATE_EXISTING : OPEN_EXISTING;
 	}
 
-	DWORD share = 0;
+	DWORD share = FILE_SHARE_DELETE;
 	if (!(mode & fs::unread) || !(mode & fs::write))
 	{
 		share |= FILE_SHARE_READ;
@@ -949,7 +961,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 	if (!(mode & (fs::lock + fs::unread)) || !(mode & fs::write))
 	{
-		share |= FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+		share |= FILE_SHARE_WRITE;
 	}
 
 	const HANDLE handle = CreateFileW(to_wchar(path).get(), access, share, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -1588,6 +1600,110 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 	}
 
 	return true;
+}
+
+std::string fs::escape_path(std::string_view path)
+{
+	std::string real; real.resize(path.size());
+
+	auto get_char = [&](std::size_t& from, std::size_t& to, std::size_t count)
+	{
+		std::memcpy(&real[to], &path[from], count);
+		from += count, to += count;
+	};
+
+	std::size_t i = 0, j = -1, pos_nondelim = 0, after_delim = 0;
+
+	if (i < path.size())
+	{
+		j = 0;
+	}
+
+	for (; i < path.size();)
+	{
+		real[j] = path[i];
+#ifdef _Win32
+		if (real[j] == '\\')
+		{
+			real[j] = '/';
+		}
+#endif
+		// If the current character was preceeded by a delimiter special treatment is required:
+		// If another deleimiter is encountered, remove it (do not write it to output string)
+		// Otherwise test if it is a "." or ".." sequence.
+		if (std::exchange(after_delim, path[i] == delim[0] || path[i] == delim[1]))
+		{
+			if (!after_delim)
+			{
+				if (real[j] == '.')
+				{
+					if (i + 1 == path.size())
+					{
+						break;
+					}
+
+					get_char(i, j, 1);
+
+					switch (real[j])
+					{
+					case '.':
+					{
+						bool remove_element = true;
+						std::size_t k = 1;
+
+						for (; k + i != path.size(); k++)
+						{
+							switch (path[i + k])
+							{
+							case '.': continue;
+							case delim[0]: case delim[1]: break;
+							default: remove_element = false; break;
+							}
+						}
+
+						if (remove_element)
+						{
+							if (i == 1u)
+							{
+								j = pos_nondelim;
+								real[j] = '\0';// Ensure termination at this posistion
+								after_delim = true;
+								i += k;
+								continue;
+							}
+						}
+
+						get_char(i, j, k);
+						continue;
+					}
+					case '/':
+					{
+						i++;
+						after_delim = true;
+						continue;
+					}
+					default: get_char(i, j, 1); continue;
+					}
+				}
+
+				pos_nondelim = j;
+				get_char(i, j, 1);
+			}
+			else
+			{
+				i++;
+			}
+		}
+		else
+		{
+			get_char(i, j, 1);
+		}
+	}
+
+	if (j != umax && (real[j] == delim[0] || real[j] == delim[1])) j--; // Do not include a delmiter at the end
+
+	real.resize(j + 1);
+	return real;
 }
 
 u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)

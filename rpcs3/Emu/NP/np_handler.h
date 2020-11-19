@@ -17,6 +17,7 @@ class np_handler
 public:
 	np_handler();
 
+	const std::array<u8, 6>& get_ether_addr() const;
 	u32 get_local_ip_addr() const;
 	u32 get_public_ip_addr() const;
 	u32 get_dns_ip() const;
@@ -31,6 +32,7 @@ public:
 
 	// Public helpers
 	static std::string ip_to_string(u32 addr);
+	static std::string ether_to_string(std::array<u8, 6>& ether);
 	// Helpers for setting various structures from string
 	static void string_to_npid(const char* str, SceNpId* npid);
 	static void string_to_online_name(const char* str, SceNpOnlineName* online_name);
@@ -85,140 +87,6 @@ public:
 	u16 room_msg_cb_ctx = 0;
 	vm::ptr<void> room_msg_cb_arg{};
 
-	// Score related
-	struct score_ctx
-	{
-		score_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
-		{
-			memcpy(&this->communicationId, communicationId.get_ptr(), sizeof(SceNpCommunicationId));
-			memcpy(&this->passphrase, passphrase.get_ptr(), sizeof(SceNpCommunicationPassphrase));
-		}
-
-		static const u32 id_base  = 1;
-		static const u32 id_step  = 1;
-		static const u32 id_count = 32;
-		SceNpCommunicationId communicationId{};
-		SceNpCommunicationPassphrase passphrase{};
-	};
-	s32 create_score_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
-	bool destroy_score_context(s32 ctx_id);
-
-	struct score_transaction_ctx
-	{
-		score_transaction_ctx(s32 score_context_id)
-		{
-			this->score_context_id = score_context_id;
-		}
-
-		static const u32 id_base  = 1;
-		static const u32 id_step  = 1;
-		static const u32 id_count = 32;
-		s32 score_context_id = 0;
-	};
-	s32 create_score_transaction_context(s32 score_context_id);
-	bool destroy_score_transaction_context(s32 ctx_id);
-
-	// Match2 related
-	struct match2_ctx
-	{
-		match2_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
-		{
-			memcpy(&this->communicationId, communicationId.get_ptr(), sizeof(SceNpCommunicationId));
-			memcpy(&this->passphrase, passphrase.get_ptr(), sizeof(SceNpCommunicationPassphrase));
-		}
-
-		static const u32 id_base  = 1;
-		static const u32 id_step  = 1;
-		static const u32 id_count = 255;
-
-		SceNpCommunicationId communicationId{};
-		SceNpCommunicationPassphrase passphrase{};
-
-		vm::ptr<SceNpMatching2ContextCallback> context_callback{};
-		vm::ptr<void> context_callback_param{};
-
-		SceNpMatching2RequestOptParam default_match2_optparam{};
-	};
-	u16 create_match2_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
-	std::shared_ptr<match2_ctx> get_match2_context(u16 ctx_id);
-	bool destroy_match2_context(u16 ctx_id);
-
-	struct lookup_title_ctx
-	{
-		lookup_title_ctx(vm::cptr<SceNpCommunicationId> communicationId)
-		{
-			memcpy(&this->communicationId, communicationId.get_ptr(), sizeof(SceNpCommunicationId));
-		}
-
-		static const u32 id_base  = 1;
-		static const u32 id_step  = 1;
-		static const u32 id_count = 32;
-
-		SceNpCommunicationId communicationId{};
-		SceNpCommunicationPassphrase passphrase{};
-	};
-	s32 create_lookup_title_context(vm::cptr<SceNpCommunicationId> communicationId);
-	bool destroy_lookup_title_context(s32 ctx_id);
-
-	struct lookup_transaction_ctx
-	{
-		lookup_transaction_ctx(s32 lt_ctx)
-		{
-			this->lt_ctx = lt_ctx;
-		}
-
-		static const u32 id_base  = 1;
-		static const u32 id_step  = 1;
-		static const u32 id_count = 32;
-
-		s32 lt_ctx = 0;
-	};
-	s32 create_lookup_transaction_context(s32 lt_ctx);
-	bool destroy_lookup_transaction_context(s32 ctx_id);
-
-	struct commerce2_ctx
-	{
-		commerce2_ctx(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg)
-		{
-			this->version = version;
-			memcpy(&this->npid, npid.get_ptr(), sizeof(SceNpId));
-			this->context_callback = handler;
-			this->context_callback_param = arg;
-		}
-
-		static const u32 id_base  = 1;
-		static const u32 id_step  = 1;
-		static const u32 id_count = 32;
-
-		u32 version{};
-		SceNpId npid{};
-		vm::ptr<SceNpCommerce2Handler> context_callback{};
-		vm::ptr<void> context_callback_param{};
-	};
-	s32 create_commerce2_context(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg);
-	std::shared_ptr<commerce2_ctx> get_commerce2_context(u16 ctx_id);
-	bool destroy_commerce2_context(s32 ctx_id);
-
-	struct signaling_ctx
-	{
-		signaling_ctx(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg)
-		{
-			memcpy(&this->npid, npid.get_ptr(), sizeof(SceNpId));
-			this->handler = handler;
-			this->arg = arg;
-		}
-
-		static const u32 id_base  = 1;
-		static const u32 id_step  = 1;
-		static const u32 id_count = 32;
-
-		SceNpId npid{};
-		vm::ptr<SceNpSignalingHandler> handler{};
-		vm::ptr<void> arg{};
-	};
-	s32 create_signaling_context(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg);
-	bool destroy_signaling_context(s32 ctx_id);
-
 	// Synchronous requests
 	std::vector<SceNpMatching2ServerId> get_match2_server_list(SceNpMatching2ContextId);
 	// Asynchronous requests
@@ -250,6 +118,7 @@ public:
 protected:
 	// Various generic helpers
 	bool discover_ip_address();
+	bool discover_ether_address();
 	bool error_and_disconnect(const std::string& error_msg);
 
 	// Notification handlers
@@ -301,6 +170,7 @@ protected:
 	std::vector<u8> current_ticket;
 
 	// IP & DNS info
+	std::array<u8, 6> ether_address{};
 	be_t<u32> local_ip_addr{};
 	be_t<u32> public_ip_addr{};
 	be_t<u32> dns_ip = 0x08080808;

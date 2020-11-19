@@ -1,11 +1,82 @@
 ﻿#pragma once
 
-#include "types.h"
+#include "Utilities/types.h"
+
+extern bool g_use_rtm;
+extern u64 g_rtm_tx_limit1;
 
 namespace utils
 {
-// Rotate helpers
+	// Transaction helper (result = pair of success and op result, or just bool)
+	template <typename F, typename R = std::invoke_result_t<F>>
+	inline auto tx_start(F op)
+	{
+		uint status = -1;
+
+		for (auto stamp0 = __rdtsc(), stamp1 = stamp0; g_use_rtm && stamp1 - stamp0 <= g_rtm_tx_limit1; stamp1 = __rdtsc())
+		{
+#ifndef _MSC_VER
+			__asm__ goto ("xbegin %l[retry];" ::: "memory" : retry);
+#else
+			status = _xbegin();
+
+			if (status != _XBEGIN_STARTED) [[unlikely]]
+			{
+				goto retry;
+			}
+#endif
+
+			if constexpr (std::is_void_v<R>)
+			{
+				std::invoke(op);
+#ifndef _MSC_VER
+				__asm__ volatile ("xend;" ::: "memory");
+#else
+				_xend();
+#endif
+				return true;
+			}
+			else
+			{
+				auto result = std::invoke(op);
+#ifndef _MSC_VER
+				__asm__ volatile ("xend;" ::: "memory");
+#else
+				_xend();
+#endif
+				return std::make_pair(true, std::move(result));
+			}
+
+			retry:
+#ifndef _MSC_VER
+			__asm__ volatile ("movl %%eax, %0;" : "=r" (status) :: "memory");
+#endif
+			if (!status) [[unlikely]]
+			{
+				break;
+			}
+		}
+
+		if constexpr (std::is_void_v<R>)
+		{
+			return false;
+		}
+		else
+		{
+			return std::make_pair(false, R());
+		}
+	};
+
 #if defined(__GNUG__)
+
+	inline void prefetch_read(const void* ptr)
+	{
+#if __has_builtin(__builtin_prefetch)
+		return __builtin_prefetch(ptr);
+#else
+		__asm__ volatile ("prefetcht0 0(%[ptr])" : : [ptr] "r" (ptr));
+#endif
+	}
 
 	inline u8 rol8(u8 x, u8 n)
 	{
@@ -135,7 +206,36 @@ namespace utils
 		return r;
 	}
 
+	inline u32 ctz128(u128 arg)
+	{
+		if (u64 lo = static_cast<u64>(arg))
+		{
+			return std::countr_zero<u64>(lo);
+		}
+		else
+		{
+			return std::countr_zero<u64>(arg >> 64) + 64;
+		}
+	}
+
+	inline u32 clz128(u128 arg)
+	{
+		if (u64 hi = static_cast<u64>(arg >> 64))
+		{
+			return std::countl_zero<u64>(hi);
+		}
+		else
+		{
+			return std::countl_zero<u64>(arg) + 64;
+		}
+	}
+
 #elif defined(_MSC_VER)
+	inline void prefetch_read(const void* ptr)
+	{
+		return _mm_prefetch(reinterpret_cast<const char*>(ptr), _MM_HINT_T0);
+	}
+
 	inline u8 rol8(u8 x, u8 n)
 	{
 		return _rotl8(x, n);
@@ -210,6 +310,30 @@ namespace utils
 		}
 
 		return r;
+	}
+
+	inline u32 ctz128(u128 arg)
+	{
+		if (!arg.lo)
+		{
+			return std::countr_zero(arg.hi) + 64u;
+		}
+		else
+		{
+			return std::countr_zero(arg.lo);
+		}
+	}
+
+	inline u32 clz128(u128 arg)
+	{
+		if (arg.hi)
+		{
+			return std::countl_zero(arg.hi);
+		}
+		else
+		{
+			return std::countl_zero(arg.lo) + 64;
+		}
 	}
 #endif
 } // namespace utils

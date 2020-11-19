@@ -18,9 +18,6 @@
     <Filter Include="Emu\Io">
       <UniqueIdentifier>{1df5b438-f263-4ff4-9b86-a9ea368f2106}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\HDD">
-      <UniqueIdentifier>{28902cf4-4fa6-428b-ab94-6b410fd5077f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Emu\CPU">
       <UniqueIdentifier>{037247b4-0370-4193-a25d-bc9d075bf0a7}</UniqueIdentifier>
     </Filter>
@@ -191,7 +188,7 @@
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\VirtualMemory.cpp">
+    <ClCompile Include="util\vm_native.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\SPURecompiler.cpp">
@@ -737,7 +734,7 @@
     <ClCompile Include="Emu\IdManager.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\dynamic_library.cpp">
+    <ClCompile Include="util\dyn_lib.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\version.cpp">
@@ -929,6 +926,9 @@
     <ClCompile Include="Emu\NP\fb_helpers.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\NP\np_contexts.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\NP\np_handler.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
@@ -967,6 +967,15 @@
     </ClCompile>
     <ClCompile Include="Emu\NP\rpcn_config.cpp">
       <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\localized_string.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\perf_meter.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\interception.cpp">
+      <Filter>Emu\Io</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1159,7 +1168,10 @@
     <ClInclude Include="Emu\Cell\Common.h">
       <Filter>Emu\Cell</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\VirtualMemory.h">
+    <ClInclude Include="util\vm.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\asm.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUASMJITRecompiler.h">
@@ -1552,7 +1564,7 @@
     <ClInclude Include="Emu\RSX\rsx_cache.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\dynamic_library.h">
+    <ClInclude Include="util\dyn_lib.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\version.h">
@@ -1857,6 +1869,24 @@
     </ClInclude>
     <ClInclude Include="Emu\NP\rpcn_config.h">
       <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\localized_string.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\localized_string_id.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\perf_meter.hpp">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\interception.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GSFrameBase.h">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\display.h">
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

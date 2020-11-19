@@ -21,12 +21,13 @@ enum class emu_settings_type
 	MaxLLVMThreads,
 	EnableTSX,
 	AccurateGETLLAR,
-	AccuratePUTLLUC,
 	AccurateSpuDMA,
+	AccurateClineStores,
 	AccurateLLVMdfma,
 	AccurateVectorNaN,
 	AccurateRSXAccess,
 	AccurateXFloat,
+	AccuratePPU128Loop,
 	SetDAZandFTZ,
 	SPUBlockSize,
 	SPUCache,
@@ -35,6 +36,7 @@ enum class emu_settings_type
 	MaxSPURSThreads,
 	SleepTimersAccuracy,
 	ClocksScale,
+	PerformanceReport,
 
 	// Graphics
 	Renderer,
@@ -130,12 +132,14 @@ enum class emu_settings_type
 	PSNStatus,
 
 	// System
+	LicenseArea,
 	Language,
 	KeyboardType,
 	EnterButtonAssignment,
 	EnableHostRoot,
 	LimitCacheSize,
 	MaximumCacheSize,
+	ConsoleTimeOffset,
 
 	// Virtual File System
 	emulatorLocation,
@@ -162,8 +166,8 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MaxLLVMThreads,           { "Core", "Max LLVM Compile Threads"}},
 	{ emu_settings_type::EnableTSX,                { "Core", "Enable TSX"}},
 	{ emu_settings_type::AccurateGETLLAR,          { "Core", "Accurate GETLLAR"}},
-	{ emu_settings_type::AccuratePUTLLUC,          { "Core", "Accurate PUTLLUC"}},
 	{ emu_settings_type::AccurateSpuDMA,           { "Core", "Accurate SPU DMA"}},
+	{ emu_settings_type::AccurateClineStores,      { "Core", "Accurate Cache Line Stores"}},
 	{ emu_settings_type::AccurateLLVMdfma,         { "Core", "LLVM Accurate DFMA"}},
 	{ emu_settings_type::AccurateVectorNaN,        { "Core", "PPU LLVM Accurate Vector NaN values"}},
 	{ emu_settings_type::AccurateRSXAccess,        { "Core", "Accurate RSX reservation access"}},
@@ -175,6 +179,8 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MaxSPURSThreads,          { "Core", "Max SPURS Threads"}},
 	{ emu_settings_type::SleepTimersAccuracy,      { "Core", "Sleep Timers Accuracy"}},
 	{ emu_settings_type::ClocksScale,              { "Core", "Clocks scale"}},
+	{ emu_settings_type::AccuratePPU128Loop,       { "Core", "Accurate PPU 128-byte Reservation Op Max Length"}},
+	{ emu_settings_type::PerformanceReport,        { "Core", "Enable Performance Report"}},
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   { "Video", "Renderer"}},
@@ -271,12 +277,14 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::PSNStatus,      { "Net", "PSN status"}},
 
 	// System
+	{ emu_settings_type::LicenseArea,           { "System", "License Area"}},
 	{ emu_settings_type::Language,              { "System", "Language"}},
 	{ emu_settings_type::KeyboardType,          { "System", "Keyboard Type"} },
 	{ emu_settings_type::EnterButtonAssignment, { "System", "Enter button assignment"}},
 	{ emu_settings_type::EnableHostRoot,        { "VFS", "Enable /host_root/"}},
 	{ emu_settings_type::LimitCacheSize,        { "VFS", "Limit disk cache size"}},
 	{ emu_settings_type::MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
+	{ emu_settings_type::ConsoleTimeOffset,     { "System", "Console time offset (s)"}},
 
 	// Virtual File System
 	{ emu_settings_type::emulatorLocation,   { "VFS", "$(EmulatorDir)"}},

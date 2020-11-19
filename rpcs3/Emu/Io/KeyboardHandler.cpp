@@ -165,3 +165,24 @@ bool KeyboardHandlerBase::IsMetaKey(u32 code)
 		|| code == Key_Super_L
 		|| code == Key_Super_R;
 }
+
+void KeyboardHandlerBase::SetIntercepted(bool intercepted)
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+
+	m_info.info = intercepted ? CELL_KB_INFO_INTERCEPTED : 0;
+
+	if (intercepted)
+	{
+		for (Keyboard& keyboard : m_keyboards)
+		{
+			keyboard.m_data.mkey = 0;
+			keyboard.m_data.len  = 0;
+
+			for (auto& keycode : keyboard.m_data.keycode)
+			{
+				keycode.first = CELL_KEYC_NO_EVENT;
+			}
+		}
+	}
+}

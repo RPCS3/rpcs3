@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "Utilities/StrFmt.h"
 
 namespace program_common
 {

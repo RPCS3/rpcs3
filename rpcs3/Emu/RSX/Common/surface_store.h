@@ -1,10 +1,8 @@
 ﻿#pragma once
 
-#include "Emu/Memory/vm.h"
 #include "surface_utils.h"
-#include "../GCM.h"
+#include "../gcm_enums.h"
 #include "../rsx_utils.h"
-#include "Utilities/span.h"
 #include <list>
 
 namespace rsx

@@ -56,7 +56,7 @@ static constexpr const char* spu_ch_name[128] =
 	"ch41", "ch42", "ch43", "ch44", "ch45", "ch46", "ch47", "ch48",
 	"ch49", "ch50", "ch51", "ch52", "ch53", "ch54", "ch55", "ch56",
 	"ch57", "ch58", "ch59", "ch60", "ch61", "ch62", "ch63", "ch64",
-	"ch65", "ch66", "ch67", "ch68", "ch69", "ch70", "ch71", "ch72",
+	"ch65", "ch66", "ch67", "ch68", "SPU_Set_Bkmk_Tag", "SPU_PM_Start_Ev", "SPU_PM_Stop_Ev", "ch72",
 	"ch73", "ch74", "ch75", "ch76", "ch77", "ch78", "ch79", "ch80",
 	"ch81", "ch82", "ch83", "ch84", "ch85", "ch86", "ch87", "ch88",
 	"ch89", "ch90", "ch91", "ch92", "ch93", "ch94", "ch95", "ch96",
@@ -97,7 +97,11 @@ private:
 private:
 	std::string& FixOp(std::string& op)
 	{
-		op.append(std::max<int>(10 - ::narrow<int>(op.size()), 0),' ');
+		if (m_mode != CPUDisAsm_NormalMode)
+		{
+			op.append(std::max<int>(10 - ::narrow<int>(op.size()), 0), ' ');
+		}
+
 		return op;
 	}
 	void DisAsm(const char* op)
@@ -157,6 +161,16 @@ private:
 
 public:
 	u32 disasm(u32 pc) override;
+	std::pair<bool, v128> try_get_const_value(u32 reg, u32 pc = -1) const;
+
+	struct insert_mask_info
+	{
+		u32 type_size;
+		u32 dst_index;
+		u32 src_index;
+	};
+
+	static insert_mask_info try_get_insert_mask_info(v128 mask);
 
 	//0 - 10
 	void STOP(spu_opcode_t op)
@@ -303,10 +317,9 @@ public:
 	{
 		DisAsm("mtspr", spu_spreg_name[op.ra], spu_reg_name[op.rt]);
 	}
-	void WRCH(spu_opcode_t op)
-	{
-		DisAsm("wrch", spu_ch_name[op.ra], spu_reg_name[op.rt]);
-	}
+
+	void WRCH(spu_opcode_t op);
+
 	void BIZ(spu_opcode_t op)
 	{
 		DisAsm("biz", op.de, spu_reg_name[op.rt], spu_reg_name[op.ra]);
@@ -481,6 +494,13 @@ public:
 	}
 	void SHLQBYI(spu_opcode_t op)
 	{
+		if (!op.si7)
+		{
+			// Made-up mnemonic: as MR on PPU
+			DisAsm("mr", spu_reg_name[op.rt], spu_reg_name[op.ra]);
+			return;
+		}
+
 		DisAsm("shlqbyi", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si7);
 	}
 	void NOP(spu_opcode_t op)
@@ -803,14 +823,19 @@ public:
 	{
 		DisAsm("ilh", spu_reg_name[op.rt], op.i16);
 	}
-	void IOHL(spu_opcode_t op)
-	{
-		DisAsm("iohl", spu_reg_name[op.rt], op.i16);
-	}
+
+	void IOHL(spu_opcode_t op);
 
 	//0 - 7
 	void ORI(spu_opcode_t op)
 	{
+		if (!op.si10)
+		{
+			// Made-up mnemonic: as MR on PPU
+			DisAsm("mr", spu_reg_name[op.rt], spu_reg_name[op.ra]);
+			return;
+		}
+
 		DisAsm("ori", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si10);
 	}
 	void ORHI(spu_opcode_t op)
@@ -947,6 +972,27 @@ public:
 	}
 	void SHUFB(spu_opcode_t op)
 	{
+		const auto [is_const, value] = try_get_const_value(op.rc);
+
+		if (is_const)
+		{
+			const auto [size, dst, src] = try_get_insert_mask_info(value);
+
+			if (size)
+			{
+				if ((size >= 4u && !src) || (size == 2u && src == 1u) || (size == 1u && src == 3u))
+				{
+					// Comment insertion pattern for CWD-alike instruction
+					DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], fmt::format("%s #i%u[%u]", spu_reg_name[op.rc], size * 8, dst).c_str());
+					return;
+				}
+
+				// Comment insertion pattern for unknown instruction formations
+				DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], fmt::format("%s #i%u[%u] = [%u]", spu_reg_name[op.rc], size * 8, dst, src).c_str());
+				return;
+			}
+		}
+
 		DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], spu_reg_name[op.rc]);
 	}
 	void MPYA(spu_opcode_t op)

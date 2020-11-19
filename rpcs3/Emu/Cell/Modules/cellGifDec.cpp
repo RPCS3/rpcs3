@@ -78,11 +78,12 @@ error_code cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc sr
 	case CELL_GIFDEC_FILE:
 	{
 		// Get file descriptor and size
-		fs::file file_s(vfs::get(src->fileName.get_ptr()));
+		const auto real_path = vfs::get(src->fileName.get_ptr());
+		fs::file file_s(real_path);
 		if (!file_s) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
 		current_subHandle.fileSize = file_s.size();
-		current_subHandle.fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0);
+		current_subHandle.fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
 		break;
 	}
 	}

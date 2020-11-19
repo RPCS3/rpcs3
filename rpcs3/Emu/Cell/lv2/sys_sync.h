@@ -2,15 +2,12 @@
 
 #include "Utilities/mutex.h"
 #include "Utilities/sema.h"
-#include "Utilities/cond.h"
 
-#include "Emu/Memory/vm_locking.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
 #include "Emu/system_config.h"
-#include "Emu/System.h"
 
 #include <deque>
 #include <thread>
@@ -157,26 +154,14 @@ private:
 	static bool awake_unlocked(cpu_thread*, s32 prio = enqueue_cmd);
 
 public:
-	static void sleep(cpu_thread& cpu, const u64 timeout = 0)
-	{
-		vm::temporary_unlock(cpu);
-		std::lock_guard{g_mutex}, sleep_unlocked(cpu, timeout);
-		g_to_awake.clear();
-	}
+	static constexpr u64 max_timeout = UINT64_MAX / 1000;
 
-	static inline bool awake(cpu_thread* const thread, s32 prio = enqueue_cmd)
-	{
-		vm::temporary_unlock();
-		std::lock_guard lock(g_mutex);
-		return awake_unlocked(thread, prio);
-	}
+	static void sleep(cpu_thread& cpu, const u64 timeout = 0);
+
+	static bool awake(cpu_thread* const thread, s32 prio = enqueue_cmd);
 
 	// Returns true on successful context switch, false otherwise
-	static bool yield(cpu_thread& thread)
-	{
-		vm::temporary_unlock(thread);
-		return awake(&thread, yield_cmd);
-	}
+	static bool yield(cpu_thread& thread);
 
 	static void set_priority(cpu_thread& thread, s32 prio)
 	{
@@ -305,19 +290,19 @@ public:
 		}
 	}
 
-	template<bool is_usleep = false, bool scale = true>
+	template <bool IsUsleep = false, bool Scale = true>
 	static bool wait_timeout(u64 usec, cpu_thread* const cpu = {})
 	{
-		static_assert(UINT64_MAX / cond_variable::max_timeout >= 100, "max timeout is not valid for scaling");
+		static_assert(UINT64_MAX / max_timeout >= 100, "max timeout is not valid for scaling");
 
-		if constexpr (scale)
+		if constexpr (Scale)
 		{
 			// Scale time
 			usec = std::min<u64>(usec, UINT64_MAX / 100) * 100 / g_cfg.core.clocks_scale;
 		}
 
 		// Clamp
-		usec = std::min<u64>(usec, cond_variable::max_timeout);
+		usec = std::min<u64>(usec, max_timeout);
 
 		extern u64 get_system_time();
 
@@ -330,7 +315,7 @@ public:
 			remaining = usec - passed;
 #ifdef __linux__
 			// NOTE: Assumption that timer initialization has succeeded
-			u64 host_min_quantum = is_usleep && remaining <= 1000 ? 10 : 50;
+			u64 host_min_quantum = IsUsleep && remaining <= 1000 ? 10 : 50;
 #else
 			// Host scheduler quantum for windows (worst case)
 			// NOTE: On ps3 this function has very high accuracy
@@ -338,9 +323,9 @@ public:
 #endif
 			// TODO: Tune for other non windows operating sytems
 
-			if (g_cfg.core.sleep_timers_accuracy < (is_usleep ? sleep_timers_accuracy_level::_usleep : sleep_timers_accuracy_level::_all_timers))
+			if (g_cfg.core.sleep_timers_accuracy < (IsUsleep ? sleep_timers_accuracy_level::_usleep : sleep_timers_accuracy_level::_all_timers))
 			{
-				thread_ctrl::wait_for(remaining, !is_usleep);
+				thread_ctrl::wait_for(remaining, !IsUsleep);
 			}
 			else
 			{
@@ -348,10 +333,10 @@ public:
 				{
 #ifdef __linux__
 					// Do not wait for the last quantum to avoid loss of accuracy
-					thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum), !is_usleep);
+					thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum), !IsUsleep);
 #else
 					// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
-					thread_ctrl::wait_for(remaining - (remaining % host_min_quantum), !is_usleep);
+					thread_ctrl::wait_for(remaining - (remaining % host_min_quantum), !IsUsleep);
 #endif
 				}
 				else

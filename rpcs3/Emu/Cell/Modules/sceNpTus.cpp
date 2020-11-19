@@ -340,6 +340,8 @@ error_code sceNpTusWaitAsync(s32 transId, vm::ptr<s32> result)
 {
 	sceNpTus.todo("sceNpTusWaitAsync(transId=%d, result=*0x%x)", transId, result);
 
+	*result = 0;
+
 	const bool processing_completed = true;
 	return not_an_error(processing_completed ? 0 : 1);
 }
@@ -347,6 +349,8 @@ error_code sceNpTusWaitAsync(s32 transId, vm::ptr<s32> result)
 error_code sceNpTusPollAsync(s32 transId, vm::ptr<s32> result)
 {
 	sceNpTus.todo("sceNpTusPollAsync(transId=%d, result=*0x%x)", transId, result);
+
+	*result = 0;
 
 	const bool processing_completed = true;
 	return not_an_error(processing_completed ? 0 : 1);
@@ -1437,6 +1441,11 @@ error_code sceNpTusGetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNp
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
+
+	memcpy(&dataStatus->ownerId, targetNpId.get_ptr(), sizeof(SceNpId));
+	memcpy(&dataStatus->lastChangedAuthorId, targetNpId.get_ptr(), sizeof(SceNpId));
+	dataStatus->hasData = 0;
+	dataStatus->dataSize = 0;
 
 	return CELL_OK;
 }

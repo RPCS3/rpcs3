@@ -342,25 +342,54 @@ error_code cellFsGetFreeSize(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> 
 {
 	cellFs.todo("cellFsGetFreeSize(path=%s, block_size=*0x%x, block_count=*0x%x)", path, block_size, block_count);
 
-	if (block_size)
-	{
-		*block_size = 0;
-	}
-
-	if (block_count)
-	{
-		*block_count = 0;
-	}
-
 	if (!path || !block_size || !block_count)
 	{
 		return CELL_EFAULT;
 	}
 
-	fs::device_stat info;
-	fs::statfs(vfs::get(path.get_ptr()), info);
-	*block_size  = 4096;
-	*block_count = info.avail_free / 4096;
+	*block_size = 0;
+	*block_count = 0;
+
+	vm::var<lv2_file_c0000002> op;
+	op->_vtable = vm::cast(0xfae12000);
+	op->op = 0xC0000002;
+	op->out_code = 0x80010003;
+	op->path = path;
+
+	if (!std::strncmp(path.get_ptr(), "/dev_hdd0", 9))
+	{
+		sys_fs_fcntl(ppu, -1, 0xC0000002, op, sizeof(*op));
+		*block_count = op->out_block_count;
+		*block_size = op->out_block_size;
+	}
+	else
+	{
+		vm::var<u64> _block_size, avail;
+
+		if (auto err = sys_fs_disk_free(ppu, path, vm::var<u64>{}, avail))
+		{
+			if (err + 0u == CELL_EPERM)
+			{
+				return not_an_error(CELL_EINVAL);
+			}
+
+			return err;
+		}
+
+		if (!*avail)
+		{
+			return CELL_ENOTDIR;
+		}
+
+		if (auto err = cellFsGetBlockSize(ppu, path, vm::var<u64>{}, _block_size))
+		{
+			return err;
+		}
+
+		*block_count = *avail / *_block_size;
+		*block_size = *_block_size;
+	}
+
 	return CELL_OK;
 }
 

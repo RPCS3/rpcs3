@@ -1,8 +1,6 @@
 ﻿#include "stdafx.h"
 #include "VKHelpers.h"
 #include "../GCM.h"
-#include "../RSXThread.h"
-#include "../RSXTexture.h"
 #include "../rsx_utils.h"
 #include "VKFormats.h"
 #include "VKCompute.h"
@@ -1061,19 +1059,22 @@ namespace vk
 
 			if (format != src->format())
 			{
-				const auto internal_width = src->width() * xfer_info.src_scaling_hint;
-				const auto aspect = vk::get_aspect_flags(format);
+				// Normalize input region (memory optimization)
+				const auto old_src_area = src_area;
+				src_area.y2 -= src_area.y1;
+				src_area.y1 = 0;
+				src_area.x2 = static_cast<int>(src_area.width() * xfer_info.src_scaling_hint);
+				src_area.x1 = 0;
 
 				// Transfer bits from src to typeless src
-				real_src = vk::get_typeless_helper(format, rsx::classify_format(xfer_info.src_gcm_format), static_cast<u32>(internal_width), src->height());
-				vk::change_image_layout(cmd, real_src, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect, 0, 1, 0, 1 });
-
-				vk::copy_image_typeless(cmd, src, real_src, { 0, 0, static_cast<s32>(src->width()), static_cast<s32>(src->height()) }, { 0, 0, static_cast<s32>(internal_width), static_cast<s32>(src->height()) }, 1);
-
-				src_area.x1 = static_cast<u16>(src_area.x1 * xfer_info.src_scaling_hint);
-				src_area.x2 = static_cast<u16>(src_area.x2 * xfer_info.src_scaling_hint);
+				real_src = vk::get_typeless_helper(format, rsx::classify_format(xfer_info.src_gcm_format), src_area.width(), src_area.height());
+				real_src->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				vk::copy_image_typeless(cmd, src, real_src, old_src_area, src_area, 1);
 			}
 		}
+
+		// Save output region descriptor
+		const auto old_dst_area = dst_area;
 
 		if (xfer_info.dst_is_typeless)
 		{
@@ -1083,18 +1084,37 @@ namespace vk
 
 			if (format != dst->format())
 			{
-				const auto internal_width = dst->width() * xfer_info.dst_scaling_hint;
-				const auto aspect = vk::get_aspect_flags(format);
+				// Normalize output region (memory optimization)
+				dst_area.y2 -= dst_area.y1;
+				dst_area.y1 = 0;
+				dst_area.x2 = static_cast<int>(dst_area.width() * xfer_info.dst_scaling_hint);
+				dst_area.x1 = 0;
 
-				// Transfer bits from dst to typeless dst
-				real_dst = vk::get_typeless_helper(format, rsx::classify_format(xfer_info.dst_gcm_format), static_cast<u32>(internal_width), dst->height());
-				vk::change_image_layout(cmd, real_dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect, 0, 1, 0, 1 });
+				// Account for possibility where SRC is typeless and DST is typeless and both map to the same format
+				auto required_height = dst_area.height();
+				if (real_src != src && real_src->format() == format)
+				{
+					required_height += src_area.height();
 
-				vk::copy_image_typeless(cmd, dst, real_dst, { 0, 0, static_cast<s32>(dst->width()), static_cast<s32>(dst->height()) }, { 0, 0, static_cast<s32>(internal_width), static_cast<s32>(dst->height()) }, 1);
+					// Move the dst area just below the src area
+					dst_area.y1 += src_area.y2;
+					dst_area.y2 += src_area.y2;
+				}
 
-				dst_area.x1 = static_cast<u16>(dst_area.x1 * xfer_info.dst_scaling_hint);
-				dst_area.x2 = static_cast<u16>(dst_area.x2 * xfer_info.dst_scaling_hint);
+				real_dst = vk::get_typeless_helper(format, rsx::classify_format(xfer_info.dst_gcm_format), dst_area.width(), required_height);
 			}
+		}
+
+		// Prepare typeless resources for the operation if needed
+		if (real_src != src)
+		{
+			const auto layout = ((real_src == real_dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			real_src->change_layout(cmd, layout);
+		}
+
+		if (real_dst != dst && real_dst != real_src)
+		{
+			real_dst->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		}
 
 		// Checks
@@ -1134,8 +1154,7 @@ namespace vk
 
 		if (real_dst != dst)
 		{
-			auto internal_width = dst->width() * xfer_info.dst_scaling_hint;
-			vk::copy_image_typeless(cmd, real_dst, dst, { 0, 0, static_cast<s32>(internal_width), static_cast<s32>(dst->height()) }, { 0, 0, static_cast<s32>(dst->width()), static_cast<s32>(dst->height()) }, 1);
+			vk::copy_image_typeless(cmd, real_dst, dst, dst_area, old_dst_area, 1);
 		}
 	}
 }

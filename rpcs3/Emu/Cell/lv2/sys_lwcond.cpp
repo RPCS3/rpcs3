@@ -358,8 +358,8 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 					break;
 				}
 
-				std::shared_lock lock2(mutex->mutex);
-				
+				reader_lock lock2(mutex->mutex);
+
 				if (std::find(mutex->sq.cbegin(), mutex->sq.cend(), &ppu) == mutex->sq.cend())
 				{
 					break;

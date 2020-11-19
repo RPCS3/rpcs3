@@ -5,6 +5,7 @@
 #include "Utilities/address_range.h"
 #include "TextureUtils.h"
 #include "../rsx_utils.h"
+#include "Emu/Memory/vm.h"
 
 #define ENABLE_SURFACE_CACHE_DEBUG 0
 
@@ -84,10 +85,14 @@ namespace rsx
 				if (g_cfg.video.resolution_scale_percent != 100)
 				{
 					auto src = static_cast<T>(source);
-					src_w = rsx::apply_resolution_scale(src_w, true, src->get_surface_width(rsx::surface_metrics::pixels));
-					src_h = rsx::apply_resolution_scale(src_h, true, src->get_surface_height(rsx::surface_metrics::pixels));
-					dst_w = rsx::apply_resolution_scale(dst_w, true, target_surface->get_surface_width(rsx::surface_metrics::pixels));
-					dst_h = rsx::apply_resolution_scale(dst_h, true, target_surface->get_surface_height(rsx::surface_metrics::pixels));
+
+					std::tie(src_w, src_h) = rsx::apply_resolution_scale<true>(src_w, src_h,
+						src->get_surface_width(rsx::surface_metrics::pixels),
+						src->get_surface_height(rsx::surface_metrics::pixels));
+
+					std::tie(dst_w, dst_h) = rsx::apply_resolution_scale<true>(dst_w, dst_h,
+						target_surface->get_surface_width(rsx::surface_metrics::pixels),
+						target_surface->get_surface_height(rsx::surface_metrics::pixels));
 				}
 
 				width = src_w;
@@ -274,6 +279,16 @@ namespace rsx
 		rsx::surface_depth_format2 get_surface_depth_format() const
 		{
 			return format_info.gcm_depth_format;
+		}
+
+		u32 get_gcm_format() const
+		{
+			return
+			(
+				is_depth_surface() ?
+					get_compatible_gcm_format(format_info.gcm_depth_format).first :
+					get_compatible_gcm_format(format_info.gcm_color_format).first
+			);
 		}
 
 		bool dirty() const
@@ -473,11 +488,8 @@ namespace rsx
 			// Apply resolution scale if needed
 			if (g_cfg.video.resolution_scale_percent != 100)
 			{
-				auto src_width = rsx::apply_resolution_scale(slice.width, true, slice.source->width());
-				auto src_height = rsx::apply_resolution_scale(slice.height, true, slice.source->height());
-
-				auto dst_width = rsx::apply_resolution_scale(slice.width, true, slice.target->width());
-				auto dst_height = rsx::apply_resolution_scale(slice.height, true, slice.target->height());
+				auto [src_width, src_height] = rsx::apply_resolution_scale<true>(slice.width, slice.height, slice.source->width(), slice.source->height());
+				auto [dst_width, dst_height] = rsx::apply_resolution_scale<true>(slice.width, slice.height, slice.target->width(), slice.target->height());
 
 				slice.transfer_scale_x *= f32(dst_width) / src_width;
 				slice.transfer_scale_y *= f32(dst_height) / src_height;
@@ -485,10 +497,8 @@ namespace rsx
 				slice.width = src_width;
 				slice.height = src_height;
 
-				slice.src_x = rsx::apply_resolution_scale(slice.src_x, false, slice.source->width());
-				slice.src_y = rsx::apply_resolution_scale(slice.src_y, false, slice.source->height());
-				slice.dst_x = rsx::apply_resolution_scale(slice.dst_x, false, slice.target->width());
-				slice.dst_y = rsx::apply_resolution_scale(slice.dst_y, false, slice.target->height());
+				std::tie(slice.src_x, slice.src_y) = rsx::apply_resolution_scale<false>(slice.src_x, slice.src_y, slice.source->width(), slice.source->height());
+				std::tie(slice.dst_x, slice.dst_y) = rsx::apply_resolution_scale<false>(slice.dst_x, slice.dst_y, slice.target->width(), slice.target->height());
 			}
 		}
 

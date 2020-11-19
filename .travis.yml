@@ -10,8 +10,8 @@ jobs:
           services: docker
           cache: ccache
           compiler: gcc
-          install: "docker pull rpcs3/rpcs3-travis-xenial:1.5"
-          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .ci/travis.env rpcs3/rpcs3-travis-xenial:1.5 /rpcs3/.ci/build-linux.sh'
+          install: "docker pull rpcs3/rpcs3-travis-xenial:1.6"
+          script: 'travis_wait 30 docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .ci/travis.env rpcs3/rpcs3-travis-xenial:1.6 /rpcs3/.ci/build-linux.sh'
         - os: linux
           dist: xenial
           env:
@@ -20,13 +20,13 @@ jobs:
           services: docker
           cache: ccache
           compiler: clang
-          install: "docker pull rpcs3/rpcs3-travis-xenial:1.5"
-          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .ci/travis.env rpcs3/rpcs3-travis-xenial:1.5 /rpcs3/.ci/build-linux.sh'
-        # - os: freebsd
-        #   compiler: clang
-        #   cache: ccache
-        #   install: "./.ci/install-freebsd.sh"
-        #   script: "./.ci/build-freebsd.sh"
+          install: "docker pull rpcs3/rpcs3-travis-xenial:1.6"
+          script: 'travis_wait 30 docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .ci/travis.env rpcs3/rpcs3-travis-xenial:1.6 /rpcs3/.ci/build-linux.sh'
+        - os: freebsd
+          compiler: clang
+          cache: ccache
+          install: "./.ci/install-freebsd.sh"
+          script: "./.ci/build-freebsd.sh"
         # - os: osx
         #   osx_image: xcode11.3
         #   addons:

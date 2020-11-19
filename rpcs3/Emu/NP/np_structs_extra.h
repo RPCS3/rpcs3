@@ -1,9 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "Emu/Memory/vm_ptr.h"
-#include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
-#include "Emu/NP/rpcn_client.h"
 
 namespace extra_nps
 {

@@ -3,6 +3,7 @@
 #include <QApplication>
 
 #include "Emu/system_config.h"
+#include "Emu/Io/interception.h"
 
 #ifdef _WIN32
 #include "windows.h"
@@ -25,8 +26,8 @@ void basic_keyboard_handler::Init(const u32 max_connect)
 	memset(&m_info, 0, sizeof(KbInfo));
 	m_info.max_connect = max_connect;
 	m_info.now_connect = std::min(::size32(m_keyboards), max_connect);
-	m_info.info = 0; // Ownership of keyboard data: 0=Application, 1=System
-	m_info.status[0] = CELL_KB_STATUS_CONNECTED; // (TODO: Support for more keyboards)
+	m_info.info        = input::g_intercepted ? CELL_KB_INFO_INTERCEPTED : 0; // Ownership of keyboard data: 0=Application, 1=System
+	m_info.status[0]   = CELL_KB_STATUS_CONNECTED; // (TODO: Support for more keyboards)
 }
 
 basic_keyboard_handler::basic_keyboard_handler() : QObject()
@@ -52,7 +53,7 @@ void basic_keyboard_handler::SetTargetWindow(QWindow* target)
 
 bool basic_keyboard_handler::eventFilter(QObject* target, QEvent* ev)
 {
-	if (!ev)
+	if (!ev || input::g_intercepted)
 	{
 		return false;
 	}

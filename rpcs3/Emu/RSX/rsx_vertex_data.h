@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "gcm_enums.h"
-#include "rsx_decode.h"
 
 #include "Utilities/types.h"
 #include "rsx_utils.h"

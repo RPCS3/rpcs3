@@ -3,6 +3,7 @@
 
 #include "basic_mouse_handler.h"
 #include "rpcs3qt/gs_frame.h"
+#include "Emu/Io/interception.h"
 
 LOG_CHANNEL(input_log, "Input");
 
@@ -12,14 +13,14 @@ void basic_mouse_handler::Init(const u32 max_connect)
 	memset(&m_info, 0, sizeof(MouseInfo));
 	m_info.max_connect = max_connect;
 	m_info.now_connect = std::min(::size32(m_mice), max_connect);
-	m_info.info = 0; // Ownership of mouse data: 0=Application, 1=System
+	m_info.info = input::g_intercepted ? CELL_MOUSE_INFO_INTERCEPTED : 0; // Ownership of mouse data: 0=Application, 1=System
 	for (u32 i = 1; i < max_connect; i++)
 	{
 		m_info.status[i] = CELL_MOUSE_STATUS_DISCONNECTED;
 		m_info.mode[i] = CELL_MOUSE_INFO_TABLET_MOUSE_MODE;
 		m_info.tablet_is_supported[i] = CELL_MOUSE_INFO_TABLET_NOT_SUPPORTED;
 	}
-	m_info.status[0] = CELL_MOUSE_STATUS_CONNECTED;										// (TODO: Support for more mice)
+	m_info.status[0] = CELL_MOUSE_STATUS_CONNECTED; // (TODO: Support for more mice)
 	m_info.vendor_id[0] = 0x1234;
 	m_info.product_id[0] = 0x1234;
 }
@@ -46,6 +47,11 @@ void basic_mouse_handler::SetTargetWindow(QWindow* target)
 
 bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 {
+	if (!ev || input::g_intercepted)
+	{
+		return false;
+	}
+
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load to ensure events still occur
 	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
 	if (!m_target || !m_target->isVisible() || target == m_target)

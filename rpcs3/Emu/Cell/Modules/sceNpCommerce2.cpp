@@ -7,6 +7,7 @@
 #include "cellSysutil.h"
 
 #include "Emu/NP/np_handler.h"
+#include "Emu/NP/np_contexts.h"
 
 LOG_CHANNEL(sceNpCommerce2);
 
@@ -98,7 +99,7 @@ error_code sceNpCommerce2CreateCtx(u32 version, vm::cptr<SceNpId> npId, vm::ptr<
 	sceNpCommerce2.warning("sceNpCommerce2CreateCtx(version=%d, npId=*0x%x, handler=*0x%x, arg=*0x%x, ctx_id=*0x%x)", version, npId, handler, arg, ctx_id);
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-	*ctx_id = nph->create_commerce2_context(version, npId, handler, arg);
+	*ctx_id = create_commerce2_context(version, npId, handler, arg);
 
 	return CELL_OK;
 }
@@ -108,7 +109,7 @@ s32 sceNpCommerce2DestroyCtx(u32 ctx_id)
 	sceNpCommerce2.warning("sceNpCommerce2DestroyCtx(ctx_id=%d)", ctx_id);
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-	nph->destroy_commerce2_context(ctx_id);
+	destroy_commerce2_context(ctx_id);
 	
 	return CELL_OK;
 }
@@ -119,7 +120,7 @@ s32 sceNpCommerce2EmptyStoreCheckStart(u32 ctx_id, s32 store_check_type, vm::cpt
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-	const auto ctx = nph->get_commerce2_context(ctx_id);
+	const auto ctx = get_commerce2_context(ctx_id);
 
 	if (ctx->context_callback)
 	{
@@ -150,7 +151,7 @@ s32 sceNpCommerce2CreateSessionStart(u32 ctx_id)
 	sceNpCommerce2.warning("sceNpCommerce2CreateSessionStart(ctx_id=%d)", ctx_id);
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-	const auto ctx = nph->get_commerce2_context(ctx_id);
+	const auto ctx = get_commerce2_context(ctx_id);
 
 	if (ctx->context_callback)
 	{

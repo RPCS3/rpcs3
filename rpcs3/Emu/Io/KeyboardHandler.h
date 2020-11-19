@@ -31,9 +31,9 @@ struct KbInfo
 
 struct KbData
 {
-	u32 led;
-	u32 mkey;
-	s32 len;
+	u32 led;  // Active led lights
+	u32 mkey; // Active key modifiers
+	s32 len;  // Number of key codes (0 means no data available)
 	std::pair<u16, u32> keycode[CELL_KB_MAX_KEYCODES];
 
 	KbData()
@@ -99,6 +99,7 @@ public:
 	virtual ~KeyboardHandlerBase() = default;
 
 	void Key(u32 code, bool pressed);
+	void SetIntercepted(bool intercepted);
 
 	bool IsMetaKey(u32 code);
 

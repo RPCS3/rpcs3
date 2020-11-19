@@ -14,15 +14,15 @@
 #include "Overlays/overlay_perf_metrics.h"
 #include "Utilities/date_time.h"
 #include "Utilities/span.h"
-#include "Utilities/asm.h"
 #include "Utilities/StrUtil.h"
 
 #include <cereal/archives/binary.hpp>
 
+#include "util/asm.hpp"
+
 #include <sstream>
 #include <thread>
 #include <unordered_set>
-#include <exception>
 #include <cfenv>
 
 class GSRender;
@@ -1518,10 +1518,8 @@ namespace rsx
 			framebuffer_status_valid = true;
 		}
 
-		region.x1 = rsx::apply_resolution_scale(x1, false);
-		region.x2 = rsx::apply_resolution_scale(x2, true);
-		region.y1 = rsx::apply_resolution_scale(y1, false);
-		region.y2 = rsx::apply_resolution_scale(y2, true);
+		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(x1, y1);
+		std::tie(region.x2, region.y2) = rsx::apply_resolution_scale<true>(x2, y2);
 
 		return true;
 	}
@@ -2397,6 +2395,7 @@ namespace rsx
 			}
 		}
 
+		rsx::reservation_lock<true> lock(sink, 16);
 		vm::_ref<atomic_t<CellGcmReportData>>(sink).store({ timestamp(), value, 0});
 	}
 
@@ -3258,6 +3257,7 @@ namespace rsx
 				break;
 			}
 
+			rsx::reservation_lock<true> lock(sink, 16);
 			vm::_ref<atomic_t<CellGcmReportData>>(sink).store({ timestamp, value, 0});
 		}
 

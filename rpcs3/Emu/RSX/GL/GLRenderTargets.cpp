@@ -454,9 +454,6 @@ void gl::render_target::clear_memory(gl::command_context& cmd)
 void gl::render_target::load_memory(gl::command_context& cmd)
 {
 	const bool is_swizzled = (raster_type == rsx::surface_raster_type::swizzle);
-	const u32 gcm_format = is_depth_surface() ?
-		get_compatible_gcm_format(format_info.gcm_depth_format).first :
-		get_compatible_gcm_format(format_info.gcm_color_format).first;
 
 	rsx::subresource_layout subres{};
 	subres.width_in_block = subres.width_in_texel = surface_width * samples_x;
@@ -468,12 +465,12 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	// TODO: MSAA support
 	if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 	{
-		gl::upload_texture(this, gcm_format, is_swizzled, { subres });
+		gl::upload_texture(this, get_gcm_format(), is_swizzled, { subres });
 	}
 	else
 	{
-		auto tmp = std::make_unique<gl::texture>(GL_TEXTURE_2D, subres.width_in_block, subres.height_in_block, 1, 1, static_cast<GLenum>(get_internal_format()));
-		gl::upload_texture(tmp.get(), gcm_format, is_swizzled, { subres });
+		auto tmp = std::make_unique<gl::texture>(GL_TEXTURE_2D, subres.width_in_block, subres.height_in_block, 1, 1, static_cast<GLenum>(get_internal_format()), format_class());
+		gl::upload_texture(tmp.get(), get_gcm_format(), is_swizzled, { subres });
 
 		gl::g_hw_blitter->scale_image(cmd, tmp.get(), this,
 			{ 0, 0, subres.width_in_block, subres.height_in_block },
@@ -542,6 +539,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 				typeless_info.src_is_typeless = true;
 				typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
 				typeless_info.src_native_format_override = static_cast<u32>(get_internal_format());
+				typeless_info.src_gcm_format = src_texture->get_gcm_format();
 				typeless_info.src_scaling_hint = static_cast<f32>(src_bpp) / dst_bpp;
 			}
 		}

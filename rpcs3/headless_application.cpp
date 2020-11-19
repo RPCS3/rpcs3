@@ -1,6 +1,5 @@
 ﻿#include "headless_application.h"
 
-#include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/Cell/Modules/cellOskDialog.h"
@@ -97,6 +96,9 @@ void headless_application::InitializeCallbacks()
 	callbacks.on_resume = []() {};
 	callbacks.on_stop   = []() {};
 	callbacks.on_ready  = []() {};
+
+	callbacks.get_localized_string    = [](localized_string_id, const char*) -> std::string { return {}; };
+	callbacks.get_localized_u32string = [](localized_string_id, const char*) -> std::u32string { return {}; };
 
 	Emu.SetCallbacks(std::move(callbacks));
 }

@@ -319,35 +319,36 @@ std::vector<u32> cheat_engine::search(const T value, const std::vector<u32>& to_
 	if (Emu.IsStopped())
 		return {};
 
-	cpu_thread::suspend_all cpu_lock(nullptr);
-
-	if (!to_filter.empty())
+	cpu_thread::suspend_all(nullptr, {}, [&]
 	{
-		for (const auto& off : to_filter)
+		if (!to_filter.empty())
 		{
-			if (vm::check_addr(off, sizeof(T)))
+			for (const auto& off : to_filter)
 			{
-				if (*vm::get_super_ptr<T>(off) == value_swapped)
-					results.push_back(off);
-			}
-		}
-	}
-	else
-	{
-		// Looks through mapped memory
-		for (u32 page_start = 0x10000; page_start < 0xF0000000; page_start += 4096)
-		{
-			if (vm::check_addr(page_start))
-			{
-				// Assumes the values are aligned
-				for (u32 index = 0; index < 4096; index += sizeof(T))
+				if (vm::check_addr<sizeof(T)>(off))
 				{
-					if (*vm::get_super_ptr<T>(page_start + index) == value_swapped)
-						results.push_back(page_start + index);
+					if (*vm::get_super_ptr<T>(off) == value_swapped)
+						results.push_back(off);
 				}
 			}
 		}
-	}
+		else
+		{
+			// Looks through mapped memory
+			for (u32 page_start = 0x10000; page_start < 0xF0000000; page_start += 4096)
+			{
+				if (vm::check_addr(page_start))
+				{
+					// Assumes the values are aligned
+					for (u32 index = 0; index < 4096; index += sizeof(T))
+					{
+						if (*vm::get_super_ptr<T>(page_start + index) == value_swapped)
+							results.push_back(page_start + index);
+					}
+				}
+			}
+		}
+	});
 
 	return results;
 }
@@ -361,19 +362,17 @@ T cheat_engine::get_value(const u32 offset, bool& success)
 		return 0;
 	}
 
-	cpu_thread::suspend_all cpu_lock(nullptr);
-
-	if (!vm::check_addr(offset, sizeof(T)))
+	return cpu_thread::suspend_all(nullptr, {}, [&]() -> T
 	{
-		success = false;
-		return 0;
-	}
+		if (!vm::check_addr<sizeof(T)>(offset))
+		{
+			success = false;
+			return 0;
+		}
 
-	success = true;
-
-	T ret_value = *vm::get_super_ptr<T>(offset);
-
-	return ret_value;
+		success = true;
+		return *vm::get_super_ptr<T>(offset);
+	});
 }
 
 template <typename T>
@@ -382,55 +381,61 @@ bool cheat_engine::set_value(const u32 offset, const T value)
 	if (Emu.IsStopped())
 		return false;
 
-	cpu_thread::suspend_all cpu_lock(nullptr);
-
-	if (!vm::check_addr(offset, sizeof(T)))
+	if (!vm::check_addr<sizeof(T)>(offset))
 	{
 		return false;
 	}
 
-	*vm::get_super_ptr<T>(offset) = value;
-
-	const bool exec_code_at_start = vm::check_addr(offset, 1, vm::page_executable);
-	const bool exec_code_at_end = [&]()
+	return cpu_thread::suspend_all(nullptr, {}, [&]
 	{
-		if constexpr (sizeof(T) == 1)
+		if (!vm::check_addr<sizeof(T)>(offset))
 		{
-			return exec_code_at_start;
-		}
-		else
-		{
-			return vm::check_addr(offset + sizeof(T) - 1, 1, vm::page_executable);
-		}
-	}();
-
-	if (exec_code_at_end || exec_code_at_start)
-	{
-		extern void ppu_register_function_at(u32, u32, ppu_function_t);
-
-		u32 addr = offset, size = sizeof(T);
-
-		if (exec_code_at_end && exec_code_at_start)
-		{
-			size = align<u32>(addr + size, 4) - (addr & -4);
-			addr &= -4;
-		}
-		else if (exec_code_at_end)
-		{
-			size -= align<u32>(size - 4096 + (addr & 4095), 4);
-			addr = align<u32>(addr, 4096);
-		}
-		else if (exec_code_at_start)
-		{
-			size = align<u32>(4096 - (addr & 4095), 4);
-			addr &= -4;
+			return false;
 		}
 
-		// Reinitialize executable code
-		ppu_register_function_at(addr, size, nullptr);
-	}
+		*vm::get_super_ptr<T>(offset) = value;
 
-	return true;
+		const bool exec_code_at_start = vm::check_addr(offset, vm::page_executable);
+		const bool exec_code_at_end = [&]()
+		{
+			if constexpr (sizeof(T) == 1)
+			{
+				return exec_code_at_start;
+			}
+			else
+			{
+				return vm::check_addr(offset + sizeof(T) - 1, vm::page_executable);
+			}
+		}();
+
+		if (exec_code_at_end || exec_code_at_start)
+		{
+			extern void ppu_register_function_at(u32, u32, ppu_function_t);
+
+			u32 addr = offset, size = sizeof(T);
+
+			if (exec_code_at_end && exec_code_at_start)
+			{
+				size = align<u32>(addr + size, 4) - (addr & -4);
+				addr &= -4;
+			}
+			else if (exec_code_at_end)
+			{
+				size -= align<u32>(size - 4096 + (addr & 4095), 4);
+				addr = align<u32>(addr, 4096);
+			}
+			else if (exec_code_at_start)
+			{
+				size = align<u32>(4096 - (addr & 4095), 4);
+				addr &= -4;
+			}
+
+			// Reinitialize executable code
+			ppu_register_function_at(addr, size, nullptr);
+		}
+
+		return true;
+	});
 }
 
 bool cheat_engine::is_addr_safe(const u32 offset)

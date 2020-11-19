@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // Copyright (C) 2014       Hykem <hykem@hotmail.com>
 // Licensed under the terms of the GNU GPL, version 3
@@ -6,13 +6,13 @@
 
 #include "../../Utilities/types.h"
 
-#define MAX_PATH 4096
-
 #include <stdlib.h>
 #include "aes.h"
 #include "sha1.h"
 #include "lz.h"
 #include "ec.h"
+
+enum { CRYPTO_MAX_PATH = 4096 };
 
 // Auxiliary functions (endian swap, xor, and file name).
 inline u16 swap16(u16 i)
@@ -42,7 +42,7 @@ inline u64 swap64(u64 i)
 #endif
 }
 
-char* extract_file_name(const char* file_path, char real_file_name[MAX_PATH]);
+char* extract_file_name(const char* file_path, char real_file_name[CRYPTO_MAX_PATH]);
 
 // Hex string conversion auxiliary functions.
 u64 hex_to_u64(const char* hex_str);

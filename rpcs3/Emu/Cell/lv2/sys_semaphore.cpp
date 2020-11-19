@@ -46,6 +46,11 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 		return error;
 	}
 
+	if (ppu.test_stopped())
+	{
+		return {};
+	}
+
 	*sem_id = idm::last_id();
 	return CELL_OK;
 }
@@ -281,6 +286,11 @@ error_code sys_semaphore_get_value(ppu_thread& ppu, u32 sem_id, vm::ptr<s32> cou
 	if (!count)
 	{
 		return CELL_EFAULT;
+	}
+
+	if (ppu.test_stopped())
+	{
+		return {};
 	}
 
 	*count = sema.ret;

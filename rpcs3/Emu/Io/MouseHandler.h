@@ -41,6 +41,11 @@ enum MouseButtonCodes
 	CELL_MOUSE_BUTTON_8 = 0x00000080,
 };
 
+enum
+{
+	CELL_MOUSE_INFO_INTERCEPTED = 1
+};
+
 static const u32 MAX_MICE = 127;
 static const u32 MOUSE_MAX_DATA_LIST_NUM = 8;
 static const u32 MOUSE_MAX_CODES = 64;
@@ -248,6 +253,21 @@ public:
 			rawdata.len++;*/
 
 			datalist.push_back(new_data);
+		}
+	}
+
+	void SetIntercepted(bool intercepted)
+	{
+		std::lock_guard lock(mutex);
+
+		m_info.info = intercepted ? CELL_MOUSE_INFO_INTERCEPTED : 0;
+
+		if (intercepted)
+		{
+			for (Mouse& mouse : m_mice)
+			{
+				mouse = {};
+			}
 		}
 	}
 

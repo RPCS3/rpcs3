@@ -52,7 +52,7 @@ enum node_level : int
 	patch_level
 };
 
-patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::unordered_map<std::string, std::set<std::string>> games, QWidget* parent)
+patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::unordered_map<std::string, std::set<std::string>> games, const std::string& search_term, QWidget* parent)
 	: QDialog(parent)
 	, m_gui_settings(gui_settings)
 	, m_owned_games(std::move(games))
@@ -68,6 +68,7 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	m_show_owned_games_only = m_gui_settings->GetValue(gui::pm_show_owned).toBool();
 
 	// Initialize gui controls
+	ui->patch_filter->setText(QString::fromStdString(search_term));
 	ui->cb_enable_legacy_patches->setChecked(m_legacy_patches_enabled);
 	ui->cb_owned_games_only->setChecked(m_show_owned_games_only);
 

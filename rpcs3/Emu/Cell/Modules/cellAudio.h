@@ -5,6 +5,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/AudioDumper.h"
+#include "Emu/system_config_types.h"
 
 struct lv2_event_queue;
 
@@ -64,6 +65,7 @@ enum
 	CELL_AUDIO_PORTATTR_OUT_PERSONAL_2 = 0x0000000004000000ULL,
 	CELL_AUDIO_PORTATTR_OUT_PERSONAL_3 = 0x0000000008000000ULL,
 	CELL_AUDIO_PORTATTR_OUT_SECONDARY  = 0x0000000000000001ULL,
+	CELL_AUDIO_PORTATTR_OUT_STREAM1    = 0x0000000000000001ULL,
 
 	CELL_AUDIO_STATUS_CLOSE            = 0x1010,
 	CELL_AUDIO_STATUS_READY            = 1,
@@ -305,10 +307,7 @@ public:
 		return buffer[num].get();
 	}
 
-	u64 get_timestamp() const
-	{
-		return get_system_time() - Emu.GetPauseTime();
-	}
+	u64 get_timestamp() const;
 
 	float* get_current_buffer() const
 	{

@@ -2,6 +2,9 @@
 <ui version="4.0">
  <class>settings_dialog</class>
  <widget class="QDialog" name="settings_dialog">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -1430,9 +1433,6 @@
         <layout class="QHBoxLayout" name="systemTabLayout2" stretch="1,1,1">
          <item>
           <widget class="QGroupBox" name="gb_console_region">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
            <property name="title">
             <string>Console Region</string>
            </property>
@@ -1444,7 +1444,61 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="systemTabSpacerWidget1" native="true"/>
+          <widget class="QGroupBox" name="gb_console_time">
+           <property name="title">
+            <string>Console Time</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_2">
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout">
+              <item>
+               <widget class="QDateTimeEdit" name="console_time_edit">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>10</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="wrapping">
+                 <bool>false</bool>
+                </property>
+                <property name="frame">
+                 <bool>true</bool>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+                <property name="readOnly">
+                 <bool>false</bool>
+                </property>
+                <property name="buttonSymbols">
+                 <enum>QAbstractSpinBox::UpDownArrows</enum>
+                </property>
+                <property name="accelerated">
+                 <bool>true</bool>
+                </property>
+                <property name="showGroupSeparator" stdset="0">
+                 <bool>false</bool>
+                </property>
+                <property name="calendarPopup">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="console_time_reset">
+                <property name="text">
+                 <string>Set to Now</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
          </item>
          <item>
           <widget class="QWidget" name="systemTabSpacerWidget2" native="true"/>
@@ -3443,16 +3497,16 @@
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="accuratePUTLLUC">
+             <widget class="QCheckBox" name="accurateSpuDMA">
               <property name="text">
-               <string>Accurate PUTLLUC</string>
+               <string>Accurate SPU DMA</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="accurateSpuDMA">
+             <widget class="QCheckBox" name="accurateClineStores">
               <property name="text">
-               <string>Accurate SPU DMA</string>
+               <string>Accurate Cache Line Stores</string>
               </property>
              </widget>
             </item>
@@ -3464,7 +3518,14 @@
              </widget>
             </item>
             <item>
-             <spacer name="verticalSpacer">
+             <widget class="QCheckBox" name="perfReport">
+              <property name="text">
+               <string>Enable Performance Report</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacerDebugCore">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
               </property>
@@ -3480,7 +3541,50 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="debug_spacer_widget" native="true"/>
+          <widget class="QWidget" name="debug_more_stuff" native="true">
+           <layout class="QVBoxLayout" name="debug_more_stuff_layout">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QGroupBox" name="gb_accurate_ppu_128">
+              <property name="title">
+               <string>Accurate PPU 128 Reservations</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_accurate_ppu_128_layout">
+               <item>
+                <widget class="QComboBox" name="combo_accurate_ppu_128"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacerDebugMore">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
          </item>
         </layout>
        </item>

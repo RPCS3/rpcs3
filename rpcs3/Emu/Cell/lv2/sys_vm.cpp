@@ -2,6 +2,7 @@
 #include "sys_vm.h"
 
 #include "Emu/IdManager.h"
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Memory/vm_locking.h"
 
@@ -19,11 +20,8 @@ sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, lv2_memory_container* ct, u32 psize)
 
 sys_vm_t::~sys_vm_t()
 {
-	// Debug build : gcc and clang can not find the static var if retrieved directly in "release" function
-	constexpr auto invalid = id_manager::id_traits<sys_vm_t>::invalid;
-
 	// Free ID
-	g_ids[addr >> 28].release(invalid);
+	g_ids[addr >> 28].release(id_manager::id_traits<sys_vm_t>::invalid);
 }
 
 LOG_CHANNEL(sys_vm);
@@ -79,6 +77,7 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 	{
 		// Alloc all memory (shall not fail)
 		verify(HERE), area->alloc(vsize);
+		vm::lock_sudo(area->addr, vsize);
 
 		idm::make<sys_vm_t>(area->addr, vsize, ct, psize);
 

@@ -1,8 +1,9 @@
-#pragma once
+﻿#pragma once
 
-#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/IdManager.h"
+
+class cpu_thread;
 
 enum : u32
 {
@@ -59,14 +60,15 @@ struct lv2_memory_container
 	}
 
 	// Try to get specified amount of "physical" memory
-	u32 take(u32 amount)
+	// Values greater than UINT32_MAX will fail
+	u32 take(u64 amount)
 	{
 		auto [_, result] = used.fetch_op([&](u32& value) -> u32
 		{
 			if (size - value >= amount)
 			{
-				value += amount;
-				return amount;
+				value += static_cast<u32>(amount);
+				return static_cast<u32>(amount);
 			}
 
 			return 0;
@@ -88,12 +90,12 @@ struct sys_memory_user_memory_stat_t
 };
 
 // SysCalls
-error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr);
-error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr);
-error_code sys_memory_free(u32 start_addr);
-error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr);
-error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info);
-error_code sys_memory_get_user_memory_stat(vm::ptr<sys_memory_user_memory_stat_t> mem_stat);
-error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size);
-error_code sys_memory_container_destroy(u32 cid);
-error_code sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid);
+error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32> alloc_addr);
+error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr);
+error_code sys_memory_free(cpu_thread& cpu, u32 start_addr);
+error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_page_attr_t> attr);
+error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_info_t> mem_info);
+error_code sys_memory_get_user_memory_stat(cpu_thread& cpu, vm::ptr<sys_memory_user_memory_stat_t> mem_stat);
+error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 size);
+error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid);
+error_code sys_memory_container_get_size(cpu_thread& cpu, vm::ptr<sys_memory_info_t> mem_info, u32 cid);

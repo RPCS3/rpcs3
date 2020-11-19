@@ -2,8 +2,6 @@
 
 #include "types.h"
 
-#include <exception>
-#include <stdexcept>
 #include <string>
 
 namespace fmt

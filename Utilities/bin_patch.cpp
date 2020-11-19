@@ -4,7 +4,7 @@
 #include "version.h"
 #include "Emu/System.h"
 
-LOG_CHANNEL(patch_log);
+LOG_CHANNEL(patch_log, "PAT");
 
 namespace config_key
 {
@@ -546,11 +546,6 @@ bool patch_engine::read_patch_node(patch_info& info, YAML::Node node, const YAML
 	}
 
 	return is_valid;
-}
-
-void patch_engine::append(const std::string& patch)
-{
-	load(m_map, patch);
 }
 
 void patch_engine::append_global_patches()

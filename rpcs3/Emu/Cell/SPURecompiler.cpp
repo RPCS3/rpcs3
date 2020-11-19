@@ -192,9 +192,6 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>([](asmjit::
 	c.push(x86::rax);
 #endif
 
-	// Load tr_all function pointer to call actual compiled function
-	c.mov(x86::rax, asmjit::imm_ptr(spu_runtime::tr_all));
-
 	// Save native stack pointer for longjmp emulation
 	c.mov(x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)), x86::rsp);
 
@@ -209,7 +206,7 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>([](asmjit::
 		c.vzeroupper();
 	}
 
-	c.call(x86::rax);
+	c.call(asmjit::imm_ptr(spu_runtime::tr_all));
 
 	if (utils::has_avx())
 	{
@@ -3144,7 +3141,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 {
-	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
+	SPUDisAsm dis_asm(CPUDisAsm_DumpMode);
 	dis_asm.offset = reinterpret_cast<const u8*>(result.data.data()) - result.lower_bound;
 
 	std::string hash;
@@ -3421,14 +3418,14 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	}
 
 	// Create tail call to the function chunk (non-tail calls are just out of question)
-	void tail_chunk(llvm::Value* chunk, llvm::Value* base_pc = nullptr)
+	void tail_chunk(llvm::FunctionCallee callee, llvm::Value* base_pc = nullptr)
 	{
-		if (!chunk && !g_cfg.core.spu_verification)
+		if (!callee && !g_cfg.core.spu_verification)
 		{
 			// Disable patchpoints if verification is disabled
-			chunk = m_dispatch;
+			callee = m_dispatch;
 		}
-		else if (!chunk)
+		else if (!callee)
 		{
 			// Create branch patchpoint if chunk == nullptr
 			verify(HERE), m_finfo, !m_finfo->fn || m_function == m_finfo->chunk;
@@ -3447,12 +3444,13 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				return;
 			}
 
-			chunk = ppfunc;
+			callee = ppfunc;
 			base_pc = m_ir->getInt32(0);
 		}
 
-		auto call = m_ir->CreateCall(chunk, {m_thread, m_lsptr, base_pc ? base_pc : m_base_pc});
-		auto func = m_finfo ? m_finfo->chunk : llvm::cast<llvm::Function>(chunk);
+		verify(HERE), callee;
+		auto call = m_ir->CreateCall(callee, {m_thread, m_lsptr, base_pc ? base_pc : m_base_pc});
+		auto func = m_finfo ? m_finfo->chunk : llvm::dyn_cast<llvm::Function>(callee.getCallee());
 		call->setCallingConv(func->getCallingConv());
 		call->setTailCall();
 
@@ -4344,7 +4342,7 @@ public:
 
 			for (u32 j = starta; j < end; j += 32)
 			{
-				u32 indices[8];
+				int indices[8];
 				bool holes = false;
 				bool data = false;
 
@@ -4376,7 +4374,7 @@ public:
 				// Mask if necessary
 				if (holes)
 				{
-					vls = m_ir->CreateShuffleVector(vls, ConstantVector::getSplat(8, m_ir->getInt32(0)), indices);
+					vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), indices);
 				}
 
 				// Perform bitwise comparison and accumulate
@@ -4422,7 +4420,8 @@ public:
 		// Proceed to the next code
 		if (entry_chunk->chunk->getReturnType() != get_type<void>())
 		{
-			const auto next_call = m_ir->CreateCall(m_ir->CreateBitCast(entry_call, main_func->getType()), {m_thread, m_lsptr, m_ir->getInt64(0)});
+			const auto f_ptr = m_ir->CreateBitCast(entry_call, main_func->getType());
+			const auto next_call = m_ir->CreateCall({main_func->getFunctionType(), f_ptr}, {m_thread, m_lsptr, m_ir->getInt64(0)});
 			next_call->setCallingConv(main_func->getCallingConv());
 			next_call->setTailCall();
 		}
@@ -4459,7 +4458,8 @@ public:
 
 		if (entry_chunk->chunk->getReturnType() == get_type<void>())
 		{
-			const auto next_call = m_ir->CreateCall(m_ir->CreateBitCast(dispatcher, main_func->getType()), {m_thread, m_lsptr, m_ir->getInt64(0)});
+			const auto f_ptr = m_ir->CreateBitCast(dispatcher, main_func->getType());
+			const auto next_call = m_ir->CreateCall({main_func->getFunctionType(), f_ptr}, {m_thread, m_lsptr, m_ir->getInt64(0)});
 			next_call->setCallingConv(main_func->getCallingConv());
 			next_call->setTailCall();
 			m_ir->CreateRetVoid();
@@ -4914,7 +4914,7 @@ public:
 
 		// Decode (shift) and load function pointer
 		const auto first = m_ir->CreateLoad(m_ir->CreateGEP(m_ir->CreateBitCast(m_interp_table, if_pptr), m_ir->CreateLShr(m_interp_op, 32u - m_interp_magn)));
-		const auto call0 = m_ir->CreateCall(first, {m_lsptr, m_thread, m_interp_pc, m_interp_op, m_interp_table, m_interp_7f0, m_interp_regs});
+		const auto call0 = m_ir->CreateCall({if_type, first}, {m_lsptr, m_thread, m_interp_pc, m_interp_op, m_interp_table, m_interp_7f0, m_interp_regs});
 		call0->setCallingConv(CallingConv::GHC);
 		m_ir->CreateRetVoid();
 
@@ -5128,7 +5128,7 @@ public:
 							}
 
 							const auto arg3 = UndefValue::get(get_type<u32>());
-							const auto _ret = m_ir->CreateCall(fret, {m_lsptr, m_thread, m_interp_pc, arg3, m_interp_table, m_interp_7f0, m_interp_regs});
+							const auto _ret = m_ir->CreateCall({if_type, fret}, {m_lsptr, m_thread, m_interp_pc, arg3, m_interp_table, m_interp_7f0, m_interp_regs});
 							_ret->setCallingConv(CallingConv::GHC);
 							_ret->setTailCall();
 							m_ir->CreateRetVoid();
@@ -5152,7 +5152,7 @@ public:
 								m_interp_regs = _ptr(m_thread, get_reg_offset(0));
 							}
 
-							const auto ncall = m_ir->CreateCall(next_if, {m_lsptr, m_thread, m_interp_pc, next_op, m_interp_table, m_interp_7f0, m_interp_regs});
+							const auto ncall = m_ir->CreateCall({if_type, next_if}, {m_lsptr, m_thread, m_interp_pc, next_op, m_interp_table, m_interp_7f0, m_interp_regs});
 							ncall->setCallingConv(CallingConv::GHC);
 							ncall->setTailCall();
 							m_ir->CreateRetVoid();
@@ -5387,11 +5387,6 @@ public:
 
 	static u32 exec_read_events(spu_thread* _spu)
 	{
-		if (const u32 events = _spu->get_events(_spu->ch_event_mask))
-		{
-			return events;
-		}
-
 		// TODO
 		return exec_rdch(_spu, SPU_RdEventStat);
 	}
@@ -5490,7 +5485,7 @@ public:
 		}
 		case SPU_RdEventMask:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_event_mask));
+			res.value = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
 			break;
 		}
 		case SPU_RdEventStat:
@@ -5524,7 +5519,7 @@ public:
 
 	static u32 exec_get_events(spu_thread* _spu, u32 mask)
 	{
-		return _spu->get_events(mask);
+		return _spu->get_events(mask).count;
 	}
 
 	llvm::Value* get_rchcnt(u32 off, u64 inv = 0)
@@ -5602,9 +5597,33 @@ public:
 		}
 		case SPU_RdEventStat:
 		{
-			res.value = call("spu_get_events", &exec_get_events, m_thread, m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_event_mask)));
-			res.value = m_ir->CreateICmpNE(res.value, m_ir->getInt32(0));
-			res.value = m_ir->CreateZExt(res.value, get_type<u32>());
+			const auto mask = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
+			res.value = call("spu_get_events", &exec_get_events, m_thread, mask);
+			break;
+		}
+
+		// Channels with a constant count of 1:
+		case SPU_WrEventMask:
+		case SPU_WrEventAck:
+		case SPU_WrDec:
+		case SPU_RdDec:
+		case SPU_RdEventMask:
+		case SPU_RdMachStat:
+		case SPU_WrSRR0:
+		case SPU_RdSRR0:
+		case SPU_Set_Bkmk_Tag:
+		case SPU_PM_Start_Ev:
+		case SPU_PM_Stop_Ev:
+		case MFC_RdTagMask:
+		case MFC_LSA:
+		case MFC_EAH:
+		case MFC_EAL:
+		case MFC_Size:
+		case MFC_TagID:
+		case MFC_WrTagMask:
+		case MFC_WrListStallAck:
+		{
+			res.value = m_ir->getInt32(1);
 			break;
 		}
 
@@ -5966,6 +5985,8 @@ public:
 						call("spu_memcpy", +spu_memcpy, dst, src, zext<u32>(size).eval(m_ir));
 					}
 
+					// Disable certain thing
+					m_ir->CreateStore(m_ir->getInt32(0), spu_ptr<u32>(&spu_thread::last_faddr));
 					m_ir->CreateBr(next);
 					break;
 				}
@@ -6097,19 +6118,9 @@ public:
 			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_dec_value));
 			return;
 		}
-		case SPU_WrEventMask:
-		{
-			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_event_mask))->setVolatile(true);
-			return;
-		}
-		case SPU_WrEventAck:
-		{
-			// "Collect" events before final acknowledgment
-			call("spu_get_events", &exec_get_events, m_thread, val.value);
-			m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::And, spu_ptr<u32>(&spu_thread::ch_event_stat), eval(~val).value, llvm::AtomicOrdering::Release);
-			return;
-		}
-		case 69:
+		case SPU_Set_Bkmk_Tag:
+		case SPU_PM_Start_Ev:
+		case SPU_PM_Stop_Ev:
 		{
 			return;
 		}
@@ -6938,19 +6949,19 @@ public:
 
 	void ANDI(spu_opcode_t op)
 	{
-		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
+		if (!m_interp_magn && op.si10 == -1) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s32[4]>(op.ra) & get_imm<s32[4]>(op.si10));
 	}
 
 	void ANDHI(spu_opcode_t op)
 	{
-		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
+		if (!m_interp_magn && op.si10 == -1) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s16[8]>(op.ra) & get_imm<s16[8]>(op.si10));
 	}
 
 	void ANDBI(spu_opcode_t op)
 	{
-		if (!m_interp_magn && !op.si10) return set_vr(op.rt, get_vr(op.ra));
+		if (!m_interp_magn && static_cast<s8>(op.si10) == -1) return set_vr(op.rt, get_vr(op.ra));
 		set_vr(op.rt, get_vr<s8[16]>(op.ra) & get_imm<s8[16]>(op.si10));
 	}
 
@@ -7119,7 +7130,7 @@ public:
 				set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<u32[4]>(op.rb), get_vr<u32[4]>(op.ra)));
 				return;
 			}
-			
+
 			bool sel_16 = true;
 			for (u32 i = 0; i < 8; i++)
 			{
@@ -7135,7 +7146,7 @@ public:
 				set_vr(op.rt4, select(bitcast<s16[8]>(c) != 0, get_vr<u16[8]>(op.rb), get_vr<u16[8]>(op.ra)));
 				return;
 			}
-			
+
 			bool sel_8 = true;
 			for (u32 i = 0; i < 16; i++)
 			{
@@ -7633,7 +7644,7 @@ public:
 	void FA(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) + get_vr<f64[4]>(op.rb) + fsplat<f64[4]>(0.));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) + get_vr<f64[4]>(op.rb));
 		else
 			set_vr(op.rt, get_vr<f32[4]>(op.ra) + get_vr<f32[4]>(op.rb));
 	}
@@ -7641,7 +7652,7 @@ public:
 	void FS(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) - get_vr<f64[4]>(op.rb) + fsplat<f64[4]>(0.));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) - get_vr<f64[4]>(op.rb));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto b = eval(clamp_smax(get_vr<f32[4]>(op.rb))); // for #4478
@@ -7654,7 +7665,7 @@ public:
 	void FM(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb) + fsplat<f64[4]>(0.));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = get_vr<f32[4]>(op.ra);
@@ -7814,7 +7825,7 @@ public:
 	{
 		// See FMA.
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(eval(-get_vr<f64[4]>(op.ra)), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)) + fsplat<f64[4]>(0.));
+			set_vr(op.rt4, fmuladd(eval(-get_vr<f64[4]>(op.ra)), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = eval(clamp_smax(get_vr<f32[4]>(op.ra)));
@@ -7829,7 +7840,7 @@ public:
 	{
 		// Hardware FMA produces the same result as multiple + add on the limited double range (xfloat).
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)) + fsplat<f64[4]>(0.));
+			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = get_vr<f32[4]>(op.ra);
@@ -7848,7 +7859,7 @@ public:
 	{
 		// See FMA.
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))) + fsplat<f64[4]>(0.));
+			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))));
 		else if (g_cfg.core.spu_approx_xfloat)
 		{
 			const auto a = eval(clamp_smax(get_vr<f32[4]>(op.ra)));
@@ -8280,7 +8291,7 @@ public:
 	{
 		_spu->set_interrupt_status(true);
 
-		if ((_spu->ch_event_mask & _spu->ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
+		if (_spu->ch_events.load().count)
 		{
 			_spu->interrupts_enabled = false;
 			_spu->srr0 = addr;
@@ -8397,7 +8408,9 @@ public:
 			// Clear stack mirror and return by tail call to the provided return address
 			m_ir->CreateStore(splat<u64[2]>(-1).eval(m_ir), m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), get_type<u64(*)[2]>()));
 			const auto targ = m_ir->CreateAdd(m_ir->CreateLShr(_ret, 32), get_segment_base());
-			tail_chunk(m_ir->CreateIntToPtr(targ, m_finfo->chunk->getFunctionType()->getPointerTo()), m_ir->CreateTrunc(m_ir->CreateLShr(link, 32), get_type<u32>()));
+			const auto type = m_finfo->chunk->getFunctionType();
+			const auto fval = m_ir->CreateIntToPtr(targ, type->getPointerTo());
+			tail_chunk({type, fval}, m_ir->CreateTrunc(m_ir->CreateLShr(link, 32), get_type<u32>()));
 			m_ir->SetInsertPoint(fail);
 		}
 
@@ -8412,7 +8425,7 @@ public:
 
 			const auto ad64 = m_ir->CreateZExt(ad32, get_type<u64>());
 			const auto pptr = m_ir->CreateGEP(m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(ad64, 2, "", true)});
-			tail_chunk(m_ir->CreateLoad(pptr));
+			tail_chunk({m_dispatch->getFunctionType(), m_ir->CreateLoad(pptr)});
 			m_ir->SetInsertPoint(fail);
 		}
 
@@ -8586,7 +8599,8 @@ public:
 		if (m_block) m_block->block_end = m_ir->GetInsertBlock();
 		const auto addr = eval(extract(get_vr(op.ra), 3) & 0x3fffc);
 		set_link(op);
-		const auto res = call("spu_get_events", &exec_get_events, m_thread, m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_event_mask)));
+		const auto mask = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
+		const auto res = call("spu_get_events", &exec_get_events, m_thread, mask);
 		const auto target = add_block_indirect(op, addr);
 		m_ir->CreateCondBr(m_ir->CreateICmpNE(res, m_ir->getInt32(0)), target, add_block_next());
 	}

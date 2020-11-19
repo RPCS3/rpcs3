@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
-#include "Emu/Memory/vm_reservation.h"
 #include "rsx_utils.h"
 #include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"
@@ -146,22 +145,13 @@ namespace rsx
 
 			const u32 addr = get_address(offset, ctxt, HERE);
 
-			atomic_t<u64>* res{};
-
 			// TODO: Check if possible to write on reservations
-			if (!g_use_rtm && rsx->label_addr >> 28 != addr >> 28) [[likely]]
+			if (rsx->label_addr >> 28 != addr >> 28)
 			{
-				res = &vm::reservation_lock(addr, 4).first;
+				rsx_log.fatal("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 			}
 
 			vm::_ref<RsxSemaphore>(addr).val = arg;
-
-			if (res)
-			{
-				res->release(*res + 127);
-			}
-
-			vm::reservation_notifier(addr, 4).notify_all();
 		}
 	}
 
@@ -434,11 +424,15 @@ namespace rsx
 				const u32 load = rsx::method_registers.transform_constant_load();
 
 				u32 rcount = count;
-				if (const u32 max = (load + reg) * 4 + count + subreg; max > 468 * 4)
+				if (const u32 max = (load + reg) * 4 + count + subreg, limit = 468 * 4; max > limit)
 				{
 					// Ignore addresses outside the usable [0, 467] range
 					rsx_log.warning("Invalid transform register index (load=%u, index=%u, count=%u)", load, index, count);
-					rcount -= max - (468 * 4);
+
+					if ((max - count) < limit)
+						rcount -= max - limit;
+					else
+						rcount = 0;
 				}
 
 				const auto values = &rsx::method_registers.transform_constants[load + reg][subreg];
@@ -818,7 +812,7 @@ namespace rsx
 				case CELL_GCM_FUNC_ADD_SIGNED:
 				case CELL_GCM_FUNC_REVERSE_ADD_SIGNED:
 					break;
-			
+
 				default:
 				{
 					// Ignore invalid values as a whole
@@ -928,10 +922,13 @@ namespace rsx
 				{
 					// Bit cast - optimize to mem copy
 
-					const auto dst = vm::_ptr<u8>(get_address(dst_offset + (x * 4) + (out_pitch * y), dst_dma, HERE));
-					const auto src = vm::_ptr<const u8>(get_address(src_offset, CELL_GCM_LOCATION_MAIN, HERE));
+					const auto dst_address = get_address(dst_offset + (x * 4) + (out_pitch * y), dst_dma, HERE);
+					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN, HERE);
+					const auto dst = vm::_ptr<u8>(dst_address);
+					const auto src = vm::_ptr<const u8>(src_address);
 
 					const u32 data_length = count * 4;
+					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
 
 					if (rsx->fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) [[unlikely]]
 					{
@@ -959,8 +956,13 @@ namespace rsx
 				}
 				case blit_engine::transfer_destination_format::r5g6b5:
 				{
-					const auto dst = vm::_ptr<u16>(get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, HERE));
-					const auto src = vm::_ptr<const u32>(get_address(src_offset, CELL_GCM_LOCATION_MAIN, HERE));
+					const auto dst_address = get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, HERE);
+					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN, HERE);
+					const auto dst = vm::_ptr<u16>(dst_address);
+					const auto src = vm::_ptr<const u32>(src_address);
+
+					const auto data_length = count * 2;
+					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
 
 					auto convert = [](u32 input) -> u16
 					{
@@ -1150,8 +1152,6 @@ namespace rsx
 
 			const u32 src_line_length = (in_w * in_bpp);
 
-			//auto res = vm::passive_lock(dst_address, dst_address + (in_pitch * (in_h - 1) + src_line_length));
-
 			if (is_block_transfer && (clip_h == 1 || (in_pitch == out_pitch && src_line_length == in_pitch)))
 			{
 				const u32 nb_lines = std::min(clip_h, in_h);
@@ -1210,6 +1210,9 @@ namespace rsx
 					method_registers.blit_engine_ds_dx(), method_registers.blit_engine_dt_dy());
 				return;
 			}
+
+			// Lock here. RSX cannot execute any locking operations from this point, including ZCULL read barriers
+			auto res = ::rsx::reservation_lock<true>(dst_address, out_pitch * out_h, src_address, in_pitch * in_h);
 
 			if (!g_cfg.video.force_cpu_blit_processing && (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER))
 			{
@@ -1510,29 +1513,30 @@ namespace rsx
 			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch + 0u == line_length);
 			const auto read_address = get_address(src_offset, src_dma, HERE);
 			const auto write_address = get_address(dst_offset, dst_dma, HERE);
-			const auto data_length = in_pitch * (line_count - 1) + line_length;
+			const auto read_length = in_pitch * (line_count - 1) + line_length;
+			const auto write_length = out_pitch * (line_count - 1) + line_length;
 
-			rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
-	
-			if (const auto result = rsx->read_barrier(read_address, data_length, !is_block_transfer);
+			rsx->invalidate_fragment_program(dst_dma, dst_offset, write_length);
+
+			if (const auto result = rsx->read_barrier(read_address, read_length, !is_block_transfer);
 				result == rsx::result_zcull_intr)
 			{
 				// This transfer overlaps will zcull data pool
-				if (rsx->copy_zcull_stats(read_address, data_length, write_address) == data_length)
+				if (rsx->copy_zcull_stats(read_address, read_length, write_address) == write_length)
 				{
 					// All writes deferred
 					return;
 				}
 			}
 
-			//auto res = vm::passive_lock(write_address, data_length + write_address);
+			auto res = ::rsx::reservation_lock<true>(write_address, write_length, read_address, read_length);
 
 			u8 *dst = vm::_ptr<u8>(write_address);
 			const u8 *src = vm::_ptr<u8>(read_address);
 
 			const bool is_overlapping = dst_dma == src_dma && [&]() -> bool
 			{
-				const u32 src_max = src_offset + data_length;
+				const u32 src_max = src_offset + read_length;
 				const u32 dst_max = dst_offset + (out_pitch * (line_count - 1) + line_length);
 				return (src_offset >= dst_offset && src_offset < dst_max) ||
 				 (dst_offset >= src_offset && dst_offset < src_max);
@@ -1542,7 +1546,7 @@ namespace rsx
 			{
 				if (is_block_transfer)
 				{
-					std::memmove(dst, src, line_length * line_count);
+					std::memmove(dst, src, read_length);
 				}
 				else
 				{
@@ -1570,7 +1574,7 @@ namespace rsx
 			{
 				if (is_block_transfer)
 				{
-					std::memcpy(dst, src, line_length * line_count);
+					std::memcpy(dst, src, read_length);
 				}
 				else
 				{

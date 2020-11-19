@@ -503,7 +503,11 @@ std::shared_ptr<signaling_info> signaling_handler::get_signaling_ptr(const signa
 void signaling_handler::start_sig(u32 conn_id, u32 addr, u16 port)
 {
 	std::lock_guard lock(data_mutex);
+	start_sig_nl(conn_id, addr, port);
+}
 
+void signaling_handler::start_sig_nl(u32 conn_id, u32 addr, u16 port)
+{
 	auto& sent_packet   = sig1_packet;
 	sent_packet.command = signal_connect;
 
@@ -593,7 +597,7 @@ u32 signaling_handler::init_sig_infos(const SceNpId* npid)
 		{
 			sign_log.trace("Activating already peer activated connection");
 			sig1_peers[conn_id]->ext_status = ext_sign_mutual;
-			start_sig(conn_id, sig1_peers[conn_id]->addr, sig1_peers[conn_id]->port);
+			start_sig_nl(conn_id, sig1_peers[conn_id]->addr, sig1_peers[conn_id]->port);
 			signal_sig_callback(conn_id, SCE_NP_SIGNALING_EVENT_ESTABLISHED);
 			signal_ext_sig_callback(conn_id, SCE_NP_SIGNALING_EVENT_EXT_MUTUAL_ACTIVATED);
 		}
@@ -626,5 +630,15 @@ void signaling_handler::set_sig2_infos(u64 room_id, u16 member_id, s32 status, u
 signaling_info signaling_handler::get_sig2_infos(u64 room_id, u16 member_id)
 {
 	std::lock_guard lock(data_mutex);
+
+	if (!sig2_peers[room_id][member_id])
+	{
+		sig2_peers[room_id][member_id] = std::make_shared<signaling_info>();
+		auto& peer = sig2_peers[room_id][member_id];
+		peer->room_id = room_id;
+		peer->member_id = member_id;
+		peer->version = 2;
+	}
+
 	return *sig2_peers[room_id][member_id];
 }

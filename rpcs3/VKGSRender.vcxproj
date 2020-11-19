@@ -34,6 +34,7 @@
     <ClInclude Include="Emu\RSX\VK\VKHelpers.h" />
     <ClInclude Include="Emu\RSX\VK\VKOverlays.h" />
     <ClInclude Include="Emu\RSX\VK\VKProgramBuffer.h" />
+    <ClInclude Include="Emu\RSX\VK\VKQueryPool.h" />
     <ClInclude Include="Emu\RSX\VK\VKRenderPass.h" />
     <ClInclude Include="Emu\RSX\VK\VKRenderTargets.h" />
     <ClInclude Include="Emu\RSX\VK\VKResolveHelper.h" />
@@ -56,6 +57,7 @@
     <ClCompile Include="Emu\RSX\VK\VKHelpers.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKPresent.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKProgramPipeline.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKQueryPool.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKRenderPass.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKResolveHelper.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKResourceManager.cpp" />

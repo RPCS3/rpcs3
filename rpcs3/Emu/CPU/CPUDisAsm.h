@@ -7,7 +7,7 @@ enum CPUDisAsmMode
 {
 	CPUDisAsm_DumpMode,
 	CPUDisAsm_InterpreterMode,
-	//CPUDisAsm_NormalMode,
+	CPUDisAsm_NormalMode,
 	CPUDisAsm_CompilerElfMode,
 };
 
@@ -21,24 +21,36 @@ protected:
 		switch(m_mode)
 		{
 			case CPUDisAsm_DumpMode:
+			{
 				last_opcode = fmt::format("\t%08x:\t%02x %02x %02x %02x\t%s\n", dump_pc,
 					offset[dump_pc],
 					offset[dump_pc + 1],
 					offset[dump_pc + 2],
 					offset[dump_pc + 3], value);
-			break;
+				break;
+			}
 
 			case CPUDisAsm_InterpreterMode:
+			{
 				last_opcode = fmt::format("[%08x]  %02x %02x %02x %02x: %s", dump_pc,
 					offset[dump_pc],
 					offset[dump_pc + 1],
 					offset[dump_pc + 2],
 					offset[dump_pc + 3], value);
-			break;
+				break;
+			}
 
 			case CPUDisAsm_CompilerElfMode:
-				last_opcode = value + "\n";
-			break;
+			{
+				last_opcode = value + '\n';
+				break;
+			}
+			case CPUDisAsm_NormalMode:
+			{
+				last_opcode = value;
+				break;
+			}
+			default: ASSUME(0);
 		}
 	}
 
@@ -61,6 +73,13 @@ protected:
 	static std::string SignedHex(T value)
 	{
 		const auto v = static_cast<std::make_signed_t<T>>(value);
+
+		if (v == std::numeric_limits<std::make_signed_t<T>>::min())
+		{
+			// for INTx_MIN
+			return fmt::format("-0x%x", v);
+		}
+
 		const auto av = std::abs(v);
 
 		if (av < 10)
@@ -72,9 +91,13 @@ protected:
 		return fmt::format("%s%s", v < 0 ? "-" : "", av);
 	}
 
-	static std::string FixOp(std::string op)
+	std::string FixOp(std::string op) const
 	{
-		op.resize(std::max<std::size_t>(op.length(), 10), ' ');
+		if (m_mode != CPUDisAsm_NormalMode)
+		{
+			op.resize(std::max<std::size_t>(op.length(), 10), ' ');
+		}
+
 		return op;
 	}
 

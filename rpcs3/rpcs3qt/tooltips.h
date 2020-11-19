@@ -77,8 +77,8 @@ public:
 		const QString spu_debug                    = tr("Creates SPU logs.\nOnly useful to developers.\nNever use this.");
 		const QString set_daz_and_ftz              = tr("Sets special MXCSR flags to debug errors in SSE operations.\nOnly used in PPU thread when it's not precise.\nOnly useful to developers.\nNever use this.");
 		const QString accurate_getllar             = tr("Accurately processes SPU MFC_GETLLAR operation.");
-		const QString accurate_putlluc             = tr("Accurately processes SPU MFC_PUTLLUC operation.");
 		const QString accurate_spu_dma             = tr("Accurately processes SPU DMA operations.");
+		const QString accurate_cache_line_stores   = tr("Accurately processes PPU DCBZ instruction.\nIn addition, when combined with Accurate SPU DMA, SPU PUT cache line accesses will be processed atomically.");
 		const QString accurate_llvm_dfma           = tr("Provides extra accuracy on FMA instructions at the cost of performance.\nWhile disabling it might give a decent performance boost if your CPU doesn't support FMA, it may also introduce subtle bugs that otherwise do not occur.\nYou can't disable it if your CPU supports FMA.");
 		const QString accurate_vector_nan          = tr("Forces the floating point NaN (Not A Number) values outputted from PPU vector instructions to be accurate to the real hardware. (0x7FC00000)");
 		const QString accurate_rsx_access          = tr("Forces RSX pauses on SPU MFC_GETLLAR and SPU MFC_PUTLLUC operations.");
@@ -96,6 +96,8 @@ public:
 		const QString strict_texture_flushing      = tr("Forces texture flushing even in situations where it is not necessary/correct. Known to cause visual artifacts, but useful for debugging certain texture cache issues.");
 		const QString disable_native_fp16          = tr("Disables hardware half-float support which is known to cause problems in some rare cases on some GPUs.");
 		const QString enable_3d                    = tr("Enables 3D stereo rendering.\nNote that only anaglyph viewing is supported at the moment.");
+		const QString accurate_ppu_128_loop        = tr("When enabled, PPU atomic operations will operate on entire cache line data, as opposed to a single 64bit block of memory when disabled.\nNumerical values control whether or not to enable the accurate version based on the atomic operation's length.");
+		const QString enable_performance_report    = tr("Measure certain events and print a chart after the emulator is stopped. Don't enable if not asked to.");
 
 		// emulator
 
@@ -189,11 +191,13 @@ public:
 
 		// system
 
+		const QString license_area            = tr("The console region defines the license area of the PS3.\nDepending on the license area, some games may not work.");
 		const QString system_language         = tr("Some games may fail to boot if the system language is not available in the game itself.\nOther games will switch language automatically to what is selected here.\nIt is recommended leaving this on a language supported by the game.");
 		const QString keyboard_type           = tr("Sets the used keyboard layout.\nCurrently only US, Japanese and German layouts are fully supported at this moment.");
 		const QString enter_button_assignment = tr("The button used for enter/accept/confirm in system dialogs.\nChange this to use the Circle button instead, which is the default configuration on Japanese systems and in many Japanese games.\nIn these cases having the cross button assigned can often lead to confusion.");
 		const QString enable_host_root        = tr("Required for some Homebrew.\nIf unsure, don't use this option.");
 		const QString limit_cache_size        = tr("Automatically removes older files from disk cache on boot if it grows larger than the specified value.\nGames can use the cache folder to temporarily store data outside of system memory. It is not used for long-term storage.");
+		const QString console_time_offset     = tr("Sets the time to be used within the console. This will be applied as an offset that tracks wall clock time.\nCan be reset to current wallclock time by clicking \"Set to Now\".");
 	} settings;
 
 	const struct gamepad_settings

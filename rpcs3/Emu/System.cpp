@@ -16,10 +16,10 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
-#include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Capture/rsx_replay.h"
 
 #include "Loader/PSF.h"
@@ -55,7 +55,9 @@ LOG_CHANNEL(sys_log, "SYS");
 
 stx::manual_fixed_typemap<void> g_fixed_typemap;
 
-bool g_use_rtm;
+bool g_use_rtm = false;
+u64 g_rtm_tx_limit1 = 0;
+u64 g_rtm_tx_limit2 = 0;
 
 std::string g_cfg_defaults;
 
@@ -82,6 +84,11 @@ atomic_t<u32> g_progr_pdone{0};
 namespace
 {
 	struct progress_dialog_server;
+}
+
+namespace atomic_wait
+{
+	extern void parse_hashtable(bool(*cb)(u64 id, u16 refs, u32 ptr, u32 stats));
 }
 
 template<>
@@ -127,6 +134,14 @@ void Emulator::Init()
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
+
+	// Not all renderers are known at compile time, so set a provided default if possible
+	if (m_default_renderer == video_renderer::vulkan && !m_default_graphics_adapter.empty())
+	{
+		g_cfg.video.renderer.set(m_default_renderer);
+		g_cfg.video.vk.adapter.from_string(m_default_graphics_adapter);
+	}
+
 	g_cfg_defaults = g_cfg.to_string();
 
 	// Reload override configuration set via command line
@@ -291,6 +306,7 @@ void Emulator::Init()
 
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
 	make_path_verbose(fs::get_config_dir() + "captures/");
+	make_path_verbose(fs::get_cache_dir() + "spu_progs/");
 
 	// Initialize patch engine
 	g_fxo->init<patch_engine>()->append_global_patches();
@@ -443,9 +459,17 @@ const bool Emulator::SetUsr(const std::string& user)
 
 const std::string Emulator::GetBackgroundPicturePath() const
 {
-	std::string path = m_sfo_dir + "/PIC1.PNG";
+	// Try to find a custom icon first
+	std::string path = fs::get_config_dir() + "/Icons/game_icons/" + Emu.GetTitleID() + "/PIC1.PNG";
 
-	if (!fs::exists(path))
+	if (fs::is_file(path))
+	{
+		return path;
+	}
+
+	path = m_sfo_dir + "/PIC1.PNG";
+
+	if (!fs::is_file(path))
 	{
 		const std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
 
@@ -459,12 +483,12 @@ const std::string Emulator::GetBackgroundPicturePath() const
 			// Fallback to PIC1.PNG in disc dir
 			path = disc_dir + "/PIC1.PNG";
 
-			if (!fs::exists(path))
+			if (!fs::is_file(path))
 			{
 				// Fallback to ICON0.PNG in update dir
 				path = m_sfo_dir + "/ICON0.PNG";
 
-				if (!fs::exists(path))
+				if (!fs::is_file(path))
 				{
 					// Fallback to ICON0.PNG in disc dir
 					path = disc_dir + "/ICON0.PNG";
@@ -924,8 +948,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		m_title_id = std::string(psf::get_string(_psf, "TITLE_ID"));
 		m_cat = std::string(psf::get_string(_psf, "CATEGORY"));
 
-		m_app_version = std::string(psf::get_string(_psf, "APP_VER", "Unknown"));
+		const auto version_app  = psf::get_string(_psf, "APP_VER", "Unknown");
 		const auto version_disc = psf::get_string(_psf, "VERSION", "Unknown");
+		m_app_version           = version_app == "Unknown" ? version_disc : version_app;
 
 		if (!_psf.empty() && m_cat.empty())
 		{
@@ -936,7 +961,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		sys_log.notice("Title: %s", GetTitle());
 		sys_log.notice("Serial: %s", GetTitleID());
 		sys_log.notice("Category: %s", GetCat());
-		sys_log.notice("Version: %s / %s", GetAppVersion(), version_disc);
+		sys_log.notice("Version: APP_VER=%s VERSION=%s", version_app, version_disc);
 
 		if (!add_only && !force_global_config && m_config_override_path.empty())
 		{
@@ -1000,6 +1025,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				sys_log.warning("TSX forced by User");
 			}
+		}
+
+		if (g_use_rtm)
+		{
+			// Update supplementary settings
+			const f64 _1ns = utils::get_tsc_freq() / 1000'000'000.;
+			g_rtm_tx_limit1 = g_cfg.core.tx_limit1_ns * _1ns;
+			g_rtm_tx_limit2 = g_cfg.core.tx_limit2_ns * _1ns;
 		}
 
 		// Load patches from different locations
@@ -1644,7 +1677,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		if ((m_force_boot || g_cfg.misc.autostart) && IsReady())
 		{
-			Run(true);
+			if (ppu_exec == elf_error::ok)
+			{
+				Run(true);
+			}
+
 			m_force_boot = false;
 		}
 		else if (IsPaused())
@@ -1688,14 +1725,18 @@ void Emulator::Run(bool start_playtime)
 
 	ConfigureLogs();
 
-	auto on_select = [](u32, cpu_thread& cpu)
+	// Run main thread
+	idm::check<named_thread<ppu_thread>>(ppu_thread::id_base, [](cpu_thread& cpu)
 	{
 		cpu.state -= cpu_flag::stop;
 		cpu.notify();
-	};
+	});
 
-	idm::select<named_thread<ppu_thread>>(on_select);
-	idm::select<named_thread<spu_thread>>(on_select);
+	if (auto thr = g_fxo->get<named_thread<rsx::rsx_replay_thread>>())
+	{
+		thr->state -= cpu_flag::stop;
+		thread_ctrl::notify(*thr);
+	}
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{
@@ -1752,8 +1793,8 @@ void Emulator::Resume()
 	// Print and reset debug data collected
 	if (m_state == system_state::paused && g_cfg.core.ppu_debug)
 	{
-		PPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
-		dis_asm.offset = vm::g_base_addr;
+		PPUDisAsm dis_asm(CPUDisAsm_DumpMode);
+		dis_asm.offset = vm::g_sudo_addr;
 
 		std::string dump;
 
@@ -1861,11 +1902,36 @@ void Emulator::Stop(bool restart)
 
 	vm::close();
 
-#ifdef LLVM_AVAILABLE
-	extern void jit_finalize();
-	jit_finalize();
-#endif
 	jit_runtime::finalize();
+
+	static u64 aw_refs = 0;
+	static u64 aw_colm = 0;
+	static u64 aw_colc = 0;
+	static u64 aw_used = 0;
+
+	aw_refs = 0;
+	aw_colm = 0;
+	aw_colc = 0;
+	aw_used = 0;
+
+	atomic_wait::parse_hashtable([](u64 id, u16 refs, u32 ptr, u32 stats) -> bool
+	{
+		aw_refs += refs;
+		aw_used += ptr != 0;
+
+		stats = (stats & 0xaaaaaaaa) / 2 + (stats & 0x55555555);
+		stats = (stats & 0xcccccccc) / 4 + (stats & 0x33333333);
+		stats = (stats & 0xf0f0f0f0) / 16 + (stats & 0xf0f0f0f);
+		stats = (stats & 0xff00ff00) / 256 + (stats & 0xff00ff);
+		stats = (stats >> 16) + (stats & 0xffff);
+
+		aw_colm = std::max<u64>(aw_colm, stats);
+		aw_colc += stats != 0;
+
+		return false;
+	});
+
+	sys_log.notice("Atomic wait hashtable stats: [in_use=%u, used=%u, max_collision_weight=%u, total_collisions=%u]", aw_refs, aw_used, aw_colm, aw_colc);
 
 	if (restart)
 	{

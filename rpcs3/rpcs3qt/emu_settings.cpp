@@ -3,9 +3,12 @@
 
 #include <QMessageBox>
 #include <QLineEdit>
+#include <QTimer>
+#include <QCalendarWidget>
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 
 #include "util/yaml.hpp"
 
@@ -19,7 +22,7 @@ inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 // Emit sorted YAML
 namespace
 {
-	static NEVER_INLINE void emitData(YAML::Emitter& out, const YAML::Node& node)
+	static NEVER_INLINE void emit_data(YAML::Emitter& out, const YAML::Node& node)
 	{
 		// TODO
 		out << node;
@@ -61,6 +64,19 @@ emu_settings::emu_settings()
 	: QObject()
 	, m_render_creator(new render_creator(this))
 {
+	if (!m_render_creator)
+	{
+		fmt::throw_exception("emu_settings::emu_settings() render_creator is null");
+	}
+
+	// Make Vulkan default setting if it is supported
+	if (m_render_creator->Vulkan.supported && !m_render_creator->Vulkan.adapters.empty())
+	{
+		const std::string adapter = sstr(m_render_creator->Vulkan.adapters.at(0));
+		cfg_log.notice("Setting the default renderer to Vulkan. Default GPU: '%s')", adapter);
+		Emu.SetDefaultRenderer(video_renderer::vulkan);
+		Emu.SetDefaultGraphicsAdapter(adapter);
+	}
 }
 
 emu_settings::~emu_settings()
@@ -147,7 +163,7 @@ void emu_settings::LoadSettings(const std::string& title_id)
 void emu_settings::SaveSettings()
 {
 	YAML::Emitter out;
-	emitData(out, m_currentSettings);
+	emit_data(out, m_currentSettings);
 
 	std::string config_name;
 
@@ -219,6 +235,22 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 		}
 	}
 
+	// Since the QComboBox has localised strings, we can't just findText / findData, so we need to manually iterate through it to find our index
+	auto find_index = [&](const QString& value)
+	{
+		for (int i = 0; i < combobox->count(); i++)
+		{
+			const QVariantList var_list = combobox->itemData(i).toList();
+			ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
+
+			if (value == var_list[0].toString())
+			{
+				return i;
+			}
+		}
+		return -1;
+	};
+
 	const std::string selected = GetSetting(type);
 	const QString selected_q = qstr(selected);
 	int index = -1;
@@ -229,30 +261,27 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 	}
 	else
 	{
-		for (int i = 0; i < combobox->count(); i++)
-		{
-			const QVariantList var_list = combobox->itemData(i).toList();
-			ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
-
-			if (selected_q == var_list[0].toString())
-			{
-				index = i;
-				break;
-			}
-		}
+		index = find_index(selected_q);
 	}
 
 	if (index == -1)
 	{
 		const std::string def = GetSettingDefault(type);
 		cfg_log.error("EnhanceComboBox '%s' tried to set an invalid value: %s. Setting to default: %s", cfg_adapter::get_setting_name(type), selected, def);
-		combobox->setCurrentIndex(combobox->findData(qstr(def)));
+
+		if (is_ranged)
+		{
+			index = combobox->findData(selected_q);
+		}
+		else
+		{
+			index = find_index(qstr(def));
+		}
+
 		m_broken_types.insert(type);
 	}
-	else
-	{
-		combobox->setCurrentIndex(index);
-	}
+
+	combobox->setCurrentIndex(index);
 
 	connect(combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=, this](int index)
 	{
@@ -304,6 +333,123 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 	{
 		const std::string str = val != 0 ? "true" : "false";
 		SetSetting(type, str);
+	});
+}
+
+void emu_settings::EnhanceDateTimeEdit(QDateTimeEdit* date_time_edit, emu_settings_type type, const QString& format, bool use_calendar, bool as_offset_from_now, int offset_update_time)
+{
+	if (!date_time_edit)
+	{
+		cfg_log.fatal("EnhanceDateTimeEdit '%s' was used with an invalid object", cfg_adapter::get_setting_name(type));
+		return;
+	}
+
+	date_time_edit->setDisplayFormat(format);
+	date_time_edit->setCalendarPopup(use_calendar);
+
+	if (as_offset_from_now)
+	{
+		// If using offset from now, then we disable the keyboard tracking to reduce the numebr of events that occur (since for each event we will lose focus)
+		date_time_edit->setKeyboardTracking(false);
+
+		bool ok_def = false, ok_min = false, ok_max = false;
+		const QStringList range = GetSettingOptions(type);
+		const s64 def = qstr(GetSettingDefault(type)).toLongLong(&ok_def);
+		const s64 min = range.first().toLongLong(&ok_min);
+		const s64 max = range.last().toLongLong(&ok_max);
+		if (!ok_def || !ok_min || !ok_max)
+		{
+			cfg_log.fatal("EnhanceDateTimeEdit '%s' was used with an invalid emu_settings_type", cfg_adapter::get_setting_name(type));
+			return;
+		}
+
+		bool ok_sel = false;
+		s64 val = qstr(GetSetting(type)).toLongLong(&ok_sel);
+		if (!ok_sel || val < min || val > max)
+		{
+			cfg_log.error("EnhanceDateTimeEdit '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", cfg_adapter::get_setting_name(type), val, def, min, max);
+			val = def;
+			m_broken_types.insert(type);
+			SetSetting(type, std::to_string(def));
+		}
+
+		// we'll capture the DateTime once, and apply the min/max and offset against it here.
+		const QDateTime now = QDateTime::currentDateTime();
+
+		// we set the allowed limits
+		date_time_edit->setDateTimeRange(now.addSecs(min), now.addSecs(max));
+
+		// we add the offset, and set the control to have this datetime value
+		const QDateTime date_time = now.addSecs(val);
+		date_time_edit->setDateTime(date_time);
+
+		// if we have an invalid update time then we won't run the update timer
+		if (offset_update_time > 0)
+		{
+			QTimer* console_time_update = new QTimer(date_time_edit);
+			connect(console_time_update, &QTimer::timeout, [this, date_time_edit, min, max]()
+			{
+				if (!date_time_edit->hasFocus() && (!date_time_edit->calendarPopup() || !date_time_edit->calendarWidget()->hasFocus()))
+				{
+					const auto now   = QDateTime::currentDateTime();
+					const s64 offset = qstr(GetSetting(emu_settings_type::ConsoleTimeOffset)).toLongLong();
+					date_time_edit->setDateTime(now.addSecs(offset));
+					date_time_edit->setDateTimeRange(now.addSecs(min), now.addSecs(max));
+				}
+			});
+
+			console_time_update->start(offset_update_time);
+		}
+	}
+	else
+	{
+		auto str                = qstr(GetSettingDefault(type));
+		const QStringList range = GetSettingOptions(type);
+		const auto def          = QDateTime::fromString(str, Qt::ISODate);
+		const auto min          = QDateTime::fromString(range.first(), Qt::ISODate);
+		const auto max          = QDateTime::fromString(range.last(), Qt::ISODate);
+		if (!def.isValid() || !min.isValid() || !max.isValid())
+		{
+			cfg_log.fatal("EnhanceDateTimeEdit '%s' was used with an invalid emu_settings_type", cfg_adapter::get_setting_name(type));
+			return;
+		}
+
+		str = qstr(GetSetting(type));
+		auto val = QDateTime::fromString(str, Qt::ISODate);
+		if (!val.isValid() || val < min || val > max)
+		{
+			cfg_log.error("EnhanceDateTimeEdit '%s' tried to set an invalid value: %s. Setting to default: %s Allowed range: [%s, %s]",
+				cfg_adapter::get_setting_name(type), val.toString(Qt::ISODate).toStdString(), def.toString(Qt::ISODate).toStdString(),
+				min.toString(Qt::ISODate).toStdString(), max.toString(Qt::ISODate).toStdString());
+			val = def;
+			m_broken_types.insert(type);
+			SetSetting(type, sstr(def.toString(Qt::ISODate)));
+		}
+
+		// we set the allowed limits
+		date_time_edit->setDateTimeRange(min, max);
+
+		// set the date_time value to the control
+		date_time_edit->setDateTime(val);
+	}
+
+	connect(date_time_edit, &QDateTimeEdit::dateTimeChanged, [date_time_edit, type, as_offset_from_now, this](const QDateTime& datetime)
+	{
+		if (as_offset_from_now)
+		{
+			// offset will be applied in seconds
+			const s64 offset = QDateTime::currentDateTime().secsTo(datetime);
+			SetSetting(type, std::to_string(offset));
+
+			// HACK: We are only looking at whether the control has focus to prevent the time from updating dynamically, so we
+			// clear the focus, so that this dynamic updating isn't suppressed.
+			date_time_edit->clearFocus();
+		}
+		else
+		{
+			// date time will be written straight into settings
+			SetSetting(type, sstr(datetime.toString(Qt::ISODate)));
+		}
 	});
 }
 
@@ -755,6 +901,18 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case audio_downmix::downmix_to_stereo: return tr("Downmix to Stereo", "Audio downmix");
 		case audio_downmix::downmix_to_5_1: return tr("Downmix to 5.1", "Audio downmix");
 		case audio_downmix::use_application_settings: return tr("Use application settings", "Audio downmix");
+		}
+		break;
+	case emu_settings_type::LicenseArea:
+		switch (static_cast<CellSysutilLicenseArea>(index))
+		{
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_J: return tr("Japan", "License Area");
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_A: return tr("America", "License Area");
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_E: return tr("Europe, Oceania, Middle East, Russia", "License Area");
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_H: return tr("Southeast Asia", "License Area");
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_K: return tr("Korea", "License Area");
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_C: return tr("China", "License Area");
+		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_OTHER: return tr("Other", "License Area");
 		}
 		break;
 	default:

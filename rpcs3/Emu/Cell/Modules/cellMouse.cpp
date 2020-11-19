@@ -6,6 +6,9 @@
 
 #include "cellMouse.h"
 
+extern void libio_sys_config_init();
+extern void libio_sys_config_end();
+
 LOG_CHANNEL(sys_io);
 
 template<>
@@ -45,6 +48,7 @@ error_code cellMouseInit(u32 max_connect)
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
+	libio_sys_config_init();
 	handler->Init(std::min(max_connect, 7u));
 
 	return CELL_OK;
@@ -99,6 +103,7 @@ error_code cellMouseEnd()
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
 
 	// TODO
+	libio_sys_config_end();
 	return CELL_OK;
 }
 
@@ -124,9 +129,13 @@ error_code cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 	info->max_connect = current_info.max_connect;
 	info->now_connect = current_info.now_connect;
 	info->info = current_info.info;
-	for (u32 i=0; i<CELL_MAX_MICE; i++)	info->vendor_id[i] = current_info.vendor_id[i];
-	for (u32 i=0; i<CELL_MAX_MICE; i++)	info->product_id[i] = current_info.product_id[i];
-	for (u32 i=0; i<CELL_MAX_MICE; i++)	info->status[i] = current_info.status[i];
+
+	for (u32 i = 0; i < CELL_MAX_MICE; i++)
+	{
+		info->vendor_id[i]  = current_info.vendor_id[i];
+		info->product_id[i] = current_info.product_id[i];
+		info->status[i]     = current_info.status[i];
+	}
 
 	return CELL_OK;
 }

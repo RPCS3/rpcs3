@@ -48,6 +48,7 @@ cmake ..                                               \
     -DCMAKE_CXX_FLAGS="$CFLAGS"                        \
     -DCMAKE_AR="$AR"                                   \
     -DCMAKE_RANLIB="$RANLIB"                           \
+    -DUSE_SYSTEM_CURL=ON                               \
     -G Ninja
 
 ninja; build_status=$?;

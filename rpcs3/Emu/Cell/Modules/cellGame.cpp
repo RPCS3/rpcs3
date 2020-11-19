@@ -1,8 +1,12 @@
 ﻿#include "stdafx.h"
+#include "Emu/localized_string.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_fs.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
@@ -125,6 +129,7 @@ struct content_permission final
 	stx::init_mutex init;
 
 	atomic_t<u32> can_create = 0;
+	atomic_t<bool> exists = false;
 	atomic_t<bool> restrict_sfo_params = true;
 
 	content_permission() = default;
@@ -132,6 +137,16 @@ struct content_permission final
 	content_permission(const content_permission&) = delete;
 
 	content_permission& operator=(const content_permission&) = delete;
+
+	void reset()
+	{
+		dir.clear();
+		sfo.clear();
+		temp.clear();
+		can_create = 0;
+		exists = false;
+		restrict_sfo_params = true;
+	}
 
 	~content_permission()
 	{
@@ -159,10 +174,27 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
 
-	std::string dir = dirName.get_ptr();
+	std::string game_dir = dirName.get_ptr();
 
 	// TODO: Find error code
-	verify(HERE), dir.size() == 9;
+	verify(HERE), game_dir.size() == 9;
+
+	const std::string dir = "/dev_hdd0/game/" + game_dir;
+
+	psf::registry sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+
+	const u32 new_data = sfo.empty() && !fs::is_file(vfs::get(dir + "/PARAM.SFO")) ? CELL_GAMEDATA_ISNEWDATA_YES : CELL_GAMEDATA_ISNEWDATA_NO;
+
+	if (!new_data)
+	{
+		const auto cat = psf::get_string(sfo, "CATEGORY", "");
+		if (cat != "HG")
+		{
+			return CELL_GAMEDATA_ERROR_BROKEN;
+		}
+	}
+
+	const std::string usrdir = dir + "/USRDIR";
 
 	vm::var<CellHddGameCBResult> result;
 	vm::var<CellHddGameStatGet> get;
@@ -178,13 +210,13 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	get->ctime = 0; // TODO
 	get->mtime = 0; // TODO
 	get->sizeKB = CELL_HDDGAME_SIZEKB_NOTCALC;
-	strcpy_trunc(get->contentInfoPath, "/dev_hdd0/game/" + dir);
-	strcpy_trunc(get->hddGamePath, "/dev_hdd0/game/" + dir + "/USRDIR");
+	strcpy_trunc(get->contentInfoPath, dir);
+	strcpy_trunc(get->hddGamePath, usrdir);
 
 	vm::var<CellHddGameSystemFileParam> setParam;
 	set->setParam = setParam;
 
-	const std::string& local_dir = vfs::get("/dev_hdd0/game/" + dir);
+	const std::string& local_dir = vfs::get(dir);
 
 	if (!fs::is_dir(local_dir))
 	{
@@ -215,20 +247,116 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 	funcStat(ppu, result, get, set);
 
-	if (result->result != u32{CELL_HDDGAME_CBRESULT_OK} && result->result != u32{CELL_HDDGAME_CBRESULT_OK_CANCEL})
+	std::string error_msg;
+
+	switch (result->result)
 	{
-		return CELL_HDDGAME_ERROR_CBRESULT;
+	case CELL_HDDGAME_CBRESULT_OK:
+	{
+		// Game confirmed that it wants to create directory
+		const auto setParam = set->setParam;
+
+		if (new_data)
+		{
+			if (!setParam)
+			{
+				return CELL_GAMEDATA_ERROR_PARAM;
+			}
+
+			if (!fs::create_path(vfs::get(usrdir)))
+			{
+				return {CELL_GAME_ERROR_ACCESS_ERROR, usrdir};
+			}
+		}
+
+		// Nuked until correctly reversed engineered
+		// if (setParam)
+		// {
+		// 	if (new_data)
+		// 	{
+		// 		psf::assign(sfo, "CATEGORY", psf::string(3, "HG"));
+		// 	}
+
+		// 	psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, setParam->titleId));
+		// 	psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->title));
+		// 	psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, setParam->dataVersion));
+		// 	psf::assign(sfo, "PARENTAL_LEVEL", +setParam->parentalLevel);
+		// 	psf::assign(sfo, "RESOLUTION", +setParam->resolution);
+		// 	psf::assign(sfo, "SOUND_FORMAT", +setParam->soundFormat);
+
+		// 	for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
+		// 	{
+		// 		if (!setParam->titleLang[i][0])
+		// 		{
+		// 			continue;
+		// 		}
+
+		// 		psf::assign(sfo, fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->titleLang[i]));
+		// 	}
+
+		// 	psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite), sfo);
+		// }
+		return CELL_OK;
+	}
+	case CELL_HDDGAME_CBRESULT_OK_CANCEL:
+		cellGame.warning("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_OK_CANCEL");
+		return CELL_OK;
+
+	case CELL_HDDGAME_CBRESULT_ERR_NOSPACE:
+		cellGame.error("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_ERR_NOSPACE. Space Needed: %d KB", result->errNeedSizeKB);
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_NOSPACE, fmt::format("%d", result->errNeedSizeKB).c_str());
+		break;
+
+	case CELL_HDDGAME_CBRESULT_ERR_BROKEN:
+		cellGame.error("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_ERR_BROKEN");
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_BROKEN, game_dir.c_str());
+		break;
+
+	case CELL_HDDGAME_CBRESULT_ERR_NODATA:
+		cellGame.error("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_ERR_NODATA");
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_NODATA, game_dir.c_str());
+		break;
+
+	case CELL_HDDGAME_CBRESULT_ERR_INVALID:
+		cellGame.error("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_ERR_INVALID. Error message: %s", result->invalidMsg);
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_INVALID, fmt::format("%s", result->invalidMsg).c_str());
+		break;
+
+	default:
+		cellGame.error("cellHddGameCheck(): callback returned unknown error (code=0x%x). Error message: %s", result->invalidMsg);
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_INVALID, fmt::format("%s", result->invalidMsg).c_str());
+		break;
 	}
 
-	// TODO ?
+	if (errDialog == CELL_GAMEDATA_ERRDIALOG_ALWAYS) // Maybe != CELL_GAMEDATA_ERRDIALOG_NONE
+	{
+		// Yield before a blocking dialog is being spawned
+		lv2_obj::sleep(ppu);
 
-	return CELL_OK;
+		// Get user confirmation by opening a blocking dialog
+		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON, vm::make_str(error_msg));
+
+		// Reschedule after a blocking dialog returns
+		if (ppu.check_state())
+		{
+			return 0;
+		}
+
+		if (res != CELL_OK)
+		{
+			return CELL_GAMEDATA_ERROR_INTERNAL;
+		}
+	}
+
+	return CELL_HDDGAME_ERROR_CBRESULT;
 }
 
-error_code cellHddGameCheck2()
+error_code cellHddGameCheck2(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
-	cellGame.todo("cellHddGameCheck2()");
-	return CELL_OK;
+	cellGame.trace("cellHddGameCheck2()");
+
+	// Identical function
+	return cellHddGameCheck(ppu, version, dirName, errDialog, funcStat, container);
 }
 
 error_code cellHddGameGetSizeKB(vm::ptr<u32> size)
@@ -271,7 +399,7 @@ error_code cellHddGameSetSystemVer(vm::cptr<char> systemVersion)
 error_code cellHddGameExitBroken()
 {
 	cellGame.warning("cellHddGameExitBroken()");
-	return open_exit_dialog("There has been an error!\n\nPlease reinstall the HDD boot game.", true);
+	return open_exit_dialog(get_localized_string(localized_string_id::CELL_HDD_GAME_EXIT_BROKEN), true);
 }
 
 error_code cellGameDataGetSizeKB(vm::ptr<u32> size)
@@ -319,7 +447,7 @@ error_code cellGameDataSetSystemVer(vm::cptr<char> systemVersion)
 error_code cellGameDataExitBroken()
 {
 	cellGame.warning("cellGameDataExitBroken()");
-	return open_exit_dialog("There has been an error!\n\nPlease remove the game data for this title.", true);
+	return open_exit_dialog(get_localized_string(localized_string_id::CELL_GAME_DATA_EXIT_BROKEN), true);
 }
 
 error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
@@ -384,9 +512,8 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 
 	perm->dir = std::move(dir);
 	perm->sfo = std::move(sfo);
-
-	perm->temp.clear();
-	perm->can_create = 0;
+	perm->restrict_sfo_params = *type == u32{CELL_GAME_GAMETYPE_HDD}; // Ratchet & Clank: All 4 One (PSN versions) rely on this error checking (TODO: Needs proper hw tests)
+	perm->exists = true;
 
 	return CELL_OK;
 }
@@ -421,11 +548,10 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 		size->sysSizeKB = 0; // TODO
 	}
 
+	perm->restrict_sfo_params = false;
 	perm->dir = Emu.GetTitleID();
 	perm->sfo = std::move(sfo);
-
-	perm->temp.clear();
-	perm->can_create = 0;
+	perm->exists = true;
 
 	return CELL_OK;
 }
@@ -452,11 +578,31 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	const auto perm = g_fxo->get<content_permission>();
 
-	const auto init = perm->init.init();
+	auto init = perm->init.init();
 
 	if (!init)
 	{
 		return CELL_GAME_ERROR_BUSY;
+	}
+
+	auto sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+
+	if (psf::get_string(sfo, "CATEGORY") != [&]()
+	{
+		switch (type)
+		{
+		case CELL_GAME_GAMETYPE_HDD: return "HG"sv;
+		case CELL_GAME_GAMETYPE_GAMEDATA: return "GD"sv;
+		case CELL_GAME_GAMETYPE_DISC: return "DG"sv;
+		default: ASSUME(0);
+		}
+	}())
+	{
+		if (fs::is_file(vfs::get(dir + "/PARAM.SFO")))
+		{
+			init.cancel();
+			return CELL_GAME_ERROR_BROKEN;
+		}
 	}
 
 	if (size)
@@ -470,8 +616,6 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	}
 
 	perm->dir = std::move(name);
-	perm->sfo.clear();
-	perm->temp.clear();
 
 	if (type == CELL_GAME_GAMETYPE_GAMEDATA)
 	{
@@ -480,13 +624,14 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	perm->restrict_sfo_params = false;
 
-	if (!fs::is_dir(vfs::get(dir)))
+	if (sfo.empty())
 	{
 		cellGame.warning("cellGameDataCheck(): directory '%s' not found", dir);
 		return not_an_error(CELL_GAME_RET_NONE);
 	}
 
-	perm->sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+	perm->exists = true;
+	perm->sfo = std::move(sfo);
 	return CELL_OK;
 }
 
@@ -510,8 +655,9 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 
 	const std::string dir = perm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + perm->dir;
 
-	if (perm->can_create && perm->temp.empty() && !fs::is_dir(vfs::get(dir)))
+	if (perm->temp.empty() && !perm->exists)
 	{
+		perm->reset();
 		strcpy_trunc(*contentInfoPath, "");
 		strcpy_trunc(*usrdirPath, "");
 		return CELL_OK;
@@ -523,7 +669,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		psf::save_object(fs::file(perm->temp + "/PARAM.SFO", fs::rewrite), perm->sfo);
 
 		// Make temporary directory persistent (atomically)
-		if (vfs::host::rename(perm->temp, vfs::get(dir), false))
+		if (vfs::host::rename(perm->temp, vfs::get(dir), &g_mp_sys_dev_hdd0, false))
 		{
 			cellGame.success("cellGameContentPermit(): directory '%s' has been created", dir);
 
@@ -535,6 +681,14 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 			cellGame.error("cellGameContentPermit(): failed to initialize directory '%s' (%s)", dir, fs::g_tls_error);
 		}
 	}
+	else if (perm->can_create)
+	{
+		// Update PARAM.SFO
+		psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite), perm->sfo);
+	}
+
+	// Cleanup
+	perm->reset();
 
 	strcpy_trunc(*contentInfoPath, dir);
 	strcpy_trunc(*usrdirPath, dir + "/USRDIR");
@@ -552,14 +706,8 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
 
-	// TODO: output errors (errDialog)
-
-	const std::string dir = "/dev_hdd0/game/"s + dirName.get_ptr();
-	const std::string usrdir = dir + "/USRDIR";
-
-	vm::var<CellGameDataCBResult> cbResult;
-	vm::var<CellGameDataStatGet>  cbGet;
-	vm::var<CellGameDataStatSet>  cbSet;
+	const std::string game_dir = dirName.get_ptr();
+	const std::string dir = "/dev_hdd0/game/"s + game_dir;
 
 	psf::registry sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 
@@ -573,6 +721,12 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 			return CELL_GAMEDATA_ERROR_BROKEN;
 		}
 	}
+
+	const std::string usrdir = dir + "/USRDIR";
+
+	vm::var<CellGameDataCBResult> cbResult;
+	vm::var<CellGameDataStatGet> cbGet;
+	vm::var<CellGameDataStatSet> cbSet;
 
 	cbGet->isNewData = new_data;
 
@@ -603,15 +757,15 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
 
+	std::string error_msg;
+
 	switch (cbResult->result)
 	{
 	case CELL_GAMEDATA_CBRESULT_OK_CANCEL:
 	{
-		// TODO: do not process game data(directory)
 		cellGame.warning("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_OK_CANCEL");
 		return CELL_OK;
 	}
-
 	case CELL_GAMEDATA_CBRESULT_OK:
 	{
 		// Game confirmed that it wants to create directory
@@ -644,7 +798,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 			for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 			{
-				if (!cbSet->setParam->titleLang[i][0])
+				if (!setParam->titleLang[i][0])
 				{
 					continue;
 				}
@@ -657,26 +811,53 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 		return CELL_OK;
 	}
-	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE: // TODO: process errors, error message and needSizeKB result
-		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NOSPACE");
-		return CELL_GAMEDATA_ERROR_CBRESULT;
+	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE:
+		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NOSPACE. Space Needed: %d KB", cbResult->errNeedSizeKB);
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_NOSPACE, fmt::format("%d", cbResult->errNeedSizeKB).c_str());
+		break;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_BROKEN:
 		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_BROKEN");
-		return CELL_GAMEDATA_ERROR_CBRESULT;
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_BROKEN, game_dir.c_str());
+		break;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_NODATA:
 		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NODATA");
-		return CELL_GAMEDATA_ERROR_CBRESULT;
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_NODATA, game_dir.c_str());
+		break;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_INVALID:
-		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_INVALID");
-		return CELL_GAMEDATA_ERROR_CBRESULT;
+		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_INVALID. Error message: %s", cbResult->invalidMsg);
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_INVALID, fmt::format("%s", cbResult->invalidMsg).c_str());
+		break;
 
 	default:
-		cellGame.error("cellGameDataCheckCreate2(): callback returned unknown error (code=0x%x)");
-		return CELL_GAMEDATA_ERROR_CBRESULT;
+		cellGame.error("cellGameDataCheckCreate2(): callback returned unknown error (code=0x%x). Error message: %s", cbResult->invalidMsg);
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_INVALID, fmt::format("%s", cbResult->invalidMsg).c_str());
+		break;
 	}
+
+	if (errDialog == CELL_GAMEDATA_ERRDIALOG_ALWAYS) // Maybe != CELL_GAMEDATA_ERRDIALOG_NONE
+	{
+		// Yield before a blocking dialog is being spawned
+		lv2_obj::sleep(ppu);
+
+		// Get user confirmation by opening a blocking dialog
+		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON, vm::make_str(error_msg));
+
+		// Reschedule after a blocking dialog returns
+		if (ppu.check_state())
+		{
+			return 0;
+		}
+
+		if (res != CELL_OK)
+		{
+			return CELL_GAMEDATA_ERROR_INTERNAL;
+		}
+	}
+
+	return CELL_GAMEDATA_ERROR_CBRESULT;
 }
 
 error_code cellGameDataCheckCreate(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
@@ -691,6 +872,11 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 {
 	cellGame.error("cellGameCreateGameData(init=*0x%x, tmp_contentInfoPath=*0x%x, tmp_usrdirPath=*0x%x)", init, tmp_contentInfoPath, tmp_usrdirPath);
 
+	if (!init)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
+
 	const auto prm = g_fxo->get<content_permission>();
 
 	const auto _init = prm->init.access();
@@ -703,6 +889,11 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 	if (!prm->can_create)
 	{
 		return CELL_GAME_ERROR_NOTSUPPORTED;
+	}
+
+	if (prm->exists)
+	{
+		return CELL_GAME_ERROR_EXIST;
 	}
 
 	std::string dirname = "_GDATA_" + std::to_string(steady_clock::now().time_since_epoch().count());
@@ -743,14 +934,83 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 
 error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 {
-	cellGame.todo("cellGameDeleteGameData(dirName=%s)", dirName);
+	cellGame.warning("cellGameDeleteGameData(dirName=%s)", dirName);
 
 	if (!dirName)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
 
-	return CELL_OK;
+	const std::string name = dirName.get_ptr();
+	const std::string dir = vfs::get("/dev_hdd0/game/"s + name);
+
+	const auto prm = g_fxo->get<content_permission>();
+
+	auto remove_gd = [&]() -> error_code
+	{
+		if (Emu.GetCat() == "GD" && Emu.GetDir().substr(Emu.GetDir().find_last_of('/') + 1) == vfs::escape(name))
+		{
+			// Boot patch cannot delete its own directory
+			return CELL_GAME_ERROR_NOTSUPPORTED;
+		}
+
+		psf::registry sfo = psf::load_object(fs::file(dir + "/PARAM.SFO"));
+
+		if (psf::get_string(sfo, "CATEGORY") != "GD" && fs::is_file(dir + "/PARAM.SFO"))
+		{
+			return CELL_GAME_ERROR_NOTSUPPORTED;
+		}
+
+		if (sfo.empty())
+		{
+			// Nothing to remove
+			return CELL_GAME_ERROR_NOTFOUND;
+		}
+
+		if (auto id = psf::get_string(sfo, "TITLE_ID"); !id.empty() && id != Emu.GetTitleID())
+		{
+			cellGame.error("cellGameDeleteGameData(%s): Attempts to delete GameData with TITLE ID which does not match the program's (%s)", id, Emu.GetTitleID());
+		}
+
+		// Actually remove game data
+		if (!vfs::host::remove_all(dir, Emu.GetHddDir(), &g_mp_sys_dev_hdd0, true))
+		{
+			return {CELL_GAME_ERROR_ACCESS_ERROR, dir};
+		}
+
+		return CELL_OK;
+	};
+
+	while (true)
+	{
+		// Obtain exclusive lock and cancel init
+		auto _init = prm->init.init();
+
+		if (!_init)
+		{
+			// Or access it
+			if (auto access = prm->init.access(); access)
+			{
+				// Cannot remove it when it is accessed by cellGameDataCheck
+				// If it is HG data then resort to remove_gd for ERROR_BROKEN
+				if (prm->dir == name && prm->can_create)
+				{
+					return CELL_GAME_ERROR_NOTSUPPORTED;
+				}
+
+				return remove_gd();
+			}
+			else
+			{
+				// Reacquire lock
+				continue;
+			}
+		}
+
+		auto err = remove_gd();
+		_init.cancel();
+		return err;
+	}
 }
 
 error_code cellGameGetParamInt(s32 id, vm::ptr<s32> value)
@@ -807,6 +1067,7 @@ enum class strkey_flag : u32
 struct string_key_info
 {
 	std::string_view name;
+	u32 max_size = 0;
 	bs_t<strkey_flag> flags;
 };
 
@@ -814,33 +1075,33 @@ static string_key_info get_param_string_key(s32 id)
 {
 	switch (id)
 	{
-	case CELL_GAME_PARAMID_TITLE:                    return {"TITLE", strkey_flag::set}; // TODO: Is this value correct?
-	case CELL_GAME_PARAMID_TITLE_DEFAULT:            return {"TITLE", strkey_flag::set};
-	case CELL_GAME_PARAMID_TITLE_JAPANESE:           return {"TITLE_00", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_ENGLISH:            return {"TITLE_01", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_FRENCH:             return {"TITLE_02", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_SPANISH:            return {"TITLE_03", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_GERMAN:             return {"TITLE_04", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_ITALIAN:            return {"TITLE_05", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_DUTCH:              return {"TITLE_06", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_PORTUGUESE:         return {"TITLE_07", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_RUSSIAN:            return {"TITLE_08", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_KOREAN:             return {"TITLE_09", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_CHINESE_T:          return {"TITLE_10", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_CHINESE_S:          return {"TITLE_11", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_FINNISH:            return {"TITLE_12", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_SWEDISH:            return {"TITLE_13", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_DANISH:             return {"TITLE_14", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_NORWEGIAN:          return {"TITLE_15", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_POLISH:             return {"TITLE_16", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL:  return {"TITLE_17", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_ENGLISH_UK:         return {"TITLE_18", strkey_flag::set + strkey_flag::get};
-	case CELL_GAME_PARAMID_TITLE_TURKISH:            return {"TITLE_19", strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE:                    return {"TITLE", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set}; // TODO: Is this value correct?
+	case CELL_GAME_PARAMID_TITLE_DEFAULT:            return {"TITLE", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set};
+	case CELL_GAME_PARAMID_TITLE_JAPANESE:           return {"TITLE_00", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_ENGLISH:            return {"TITLE_01", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_FRENCH:             return {"TITLE_02", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_SPANISH:            return {"TITLE_03", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_GERMAN:             return {"TITLE_04", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_ITALIAN:            return {"TITLE_05", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_DUTCH:              return {"TITLE_06", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_PORTUGUESE:         return {"TITLE_07", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_RUSSIAN:            return {"TITLE_08", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_KOREAN:             return {"TITLE_09", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_CHINESE_T:          return {"TITLE_10", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_CHINESE_S:          return {"TITLE_11", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_FINNISH:            return {"TITLE_12", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_SWEDISH:            return {"TITLE_13", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_DANISH:             return {"TITLE_14", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_NORWEGIAN:          return {"TITLE_15", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_POLISH:             return {"TITLE_16", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL:  return {"TITLE_17", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_ENGLISH_UK:         return {"TITLE_18", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
+	case CELL_GAME_PARAMID_TITLE_TURKISH:            return {"TITLE_19", CELL_GAME_SYSP_TITLE_SIZE, strkey_flag::set + strkey_flag::get};
 
-	case CELL_GAME_PARAMID_TITLE_ID:                 return {"TITLE_ID", strkey_flag::read_only};
-	case CELL_GAME_PARAMID_VERSION:                  return {"VERSION", strkey_flag::get + strkey_flag::read_only};
-	case CELL_GAME_PARAMID_PS3_SYSTEM_VER:           return {"PS3_SYSTEM_VER"}; // TODO
-	case CELL_GAME_PARAMID_APP_VER:                  return {"APP_VER", strkey_flag::read_only};
+	case CELL_GAME_PARAMID_TITLE_ID:                 return {"TITLE_ID", CELL_GAME_SYSP_TITLEID_SIZE, strkey_flag::read_only};
+	case CELL_GAME_PARAMID_VERSION:                  return {"VERSION", CELL_GAME_SYSP_VERSION_SIZE, strkey_flag::get + strkey_flag::read_only};
+	case CELL_GAME_PARAMID_PS3_SYSTEM_VER:           return {"PS3_SYSTEM_VER", CELL_GAME_SYSP_PS3_SYSTEM_VER_SIZE}; // TODO
+	case CELL_GAME_PARAMID_APP_VER:                  return {"APP_VER", CELL_GAME_SYSP_APP_VER_SIZE, strkey_flag::read_only};
 	}
 
 	return {};
@@ -891,7 +1152,7 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 
 error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 {
-	cellGame.warning("cellGameSetParamString(id=%d, buf=*0x%x)", id, buf);
+	cellGame.warning("cellGameSetParamString(id=%d, buf=*0x%x %s)", id, buf, buf);
 
 	if (!buf)
 	{
@@ -914,19 +1175,12 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 		return CELL_GAME_ERROR_INVALID_ID;
 	}
 
-	if (key.flags & strkey_flag::read_only || (key.flags & strkey_flag::set && prm->restrict_sfo_params))
+	if (!prm->can_create || key.flags & strkey_flag::read_only || (key.flags & strkey_flag::set && prm->restrict_sfo_params))
 	{
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
 
-	u32 max_size = CELL_GAME_SYSP_TITLE_SIZE;
-
-	switch (id)
-	{
-	case CELL_GAME_PARAMID_VERSION:        max_size = CELL_GAME_SYSP_VERSION_SIZE; break; // ??
-	}
-
-	psf::assign(prm->sfo, std::string(key.name), psf::string(max_size, buf.get_ptr()));
+	psf::assign(prm->sfo, std::string(key.name), psf::string(key.max_size, buf.get_ptr()));
 
 	return CELL_OK;
 }
@@ -939,6 +1193,9 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
+
+	// Always reset to 0 at start
+	*size = 0;
 
 	const auto prm = g_fxo->get<content_permission>();
 
@@ -959,7 +1216,6 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 
 		if (!fs::exists(local_dir))
 		{
-			*size = 0;
 			return CELL_OK;
 		}
 		else
@@ -1002,26 +1258,36 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 {
 	cellGame.warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName=%s)", type, errNeedSizeKB, dirName);
 
-	std::string errorName;
+	std::string error_msg;
+
 	switch (type)
 	{
-	case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:      errorName = "Game data is corrupted. The application will continue.";          break;
-	case CELL_GAME_ERRDIALOG_BROKEN_HDDGAME:       errorName = "HDD boot game is corrupted. The application will continue.";      break;
-	case CELL_GAME_ERRDIALOG_NOSPACE:              errorName = "Not enough available space. The application will continue.";      break;
-	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA: errorName = "Game data is corrupted. The application will be terminated.";     break;
-	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_HDDGAME:  errorName = "HDD boot game is corrupted. The application will be terminated."; break;
-	case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:         errorName = "Not enough available space. The application will be terminated."; break;
-	default: return CELL_GAME_ERROR_PARAM;
-	}
-
-	std::string errorMsg;
-	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
-	{
-		errorMsg = fmt::format("ERROR: %s\nSpace needed: %d KB", errorName, errNeedSizeKB);
-	}
-	else
-	{
-		errorMsg = fmt::format("ERROR: %s", errorName);
+	case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:
+		// Game data is corrupted. The application will continue.
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_BROKEN_GAMEDATA);
+		break;
+	case CELL_GAME_ERRDIALOG_BROKEN_HDDGAME:
+		// HDD boot game is corrupted. The application will continue.
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_BROKEN_HDDGAME);
+		break;
+	case CELL_GAME_ERRDIALOG_NOSPACE:
+		// Not enough available space. The application will continue.
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_NOSPACE, fmt::format("%d", errNeedSizeKB).c_str());
+		break;
+	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA:
+		// Game data is corrupted. The application will be terminated.
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_BROKEN_EXIT_GAMEDATA);
+		break;
+	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_HDDGAME:
+		// HDD boot game is corrupted. The application will be terminated.
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_BROKEN_EXIT_HDDGAME);
+		break;
+	case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:
+		// Not enough available space. The application will be terminated.
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_NOSPACE_EXIT, fmt::format("%d", errNeedSizeKB).c_str());
+		break;
+	default:
+		return CELL_GAME_ERROR_PARAM;
 	}
 
 	if (dirName)
@@ -1031,10 +1297,10 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 			return CELL_GAME_ERROR_PARAM;
 		}
 
-		errorMsg += fmt::format("\nDirectory name: %s", dirName);
+		error_msg += "\n" + get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, fmt::format("%s", dirName).c_str());
 	}
 
-	return open_exit_dialog(errorMsg, type > CELL_GAME_ERRDIALOG_NOSPACE);
+	return open_exit_dialog(error_msg, type > CELL_GAME_ERRDIALOG_NOSPACE);
 }
 
 error_code cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileName, u32 option)

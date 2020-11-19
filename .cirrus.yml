@@ -3,9 +3,9 @@ env:
 
 freebsd_task:
   matrix:
-    - name: FreeBSD 12.2 (snapshot)
+    - name: FreeBSD 12.2
       freebsd_instance:
-        image_family: freebsd-12-1-snap
+        image_family: freebsd-12-2
         cpu: 8
         memory: 8G
   env:

@@ -11,6 +11,7 @@ enum class cpu_flag : u32
 	stop, // Thread not running (HLE, initial state)
 	exit, // Irreversible exit
 	wait, // Indicates waiting state, set by the thread itself
+	temp, // Indicates that the thread cannot properly return after next check_state()
 	pause, // Thread suspended by suspend_all technique
 	suspend, // Thread suspended
 	ret, // Callback return requested
@@ -27,9 +28,6 @@ enum class cpu_flag : u32
 
 class cpu_thread
 {
-	// PPU cache backward compatibility hack
-	char dummy[sizeof(std::shared_ptr<void>) - 8];
-
 public:
 	u64 block_hash = 0;
 
@@ -75,6 +73,11 @@ public:
 		return !!(state & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause));
 	}
 
+	bool has_pause_flag() const
+	{
+		return !!(state & cpu_flag::pause);
+	}
+
 	// Check thread type
 	u32 id_type() const
 	{
@@ -88,13 +91,13 @@ private:
 
 public:
 	// Thread stats for external observation
-	static atomic_t<u64> g_threads_created, g_threads_deleted;
+	static atomic_t<u64> g_threads_created, g_threads_deleted, g_suspend_counter;
 
 	// Get thread name (as assigned to named_thread)
 	std::string get_name() const;
 
 	// Get CPU state dump (everything)
-	virtual std::string dump_all() const = 0;
+	virtual std::string dump_all() const;
 
 	// Get CPU register dump
 	virtual std::string dump_regs() const;
@@ -114,26 +117,74 @@ public:
 	// Callback for cpu_flag::suspend
 	virtual void cpu_sleep() {}
 
-	// Callback for cpu_flag::memory
-	virtual void cpu_mem() {}
-
-	// Callback for vm::temporary_unlock
-	virtual void cpu_unmem() {}
-
 	// Callback for cpu_flag::ret
 	virtual void cpu_return() {}
 
-	// Thread locker
-	class suspend_all
+	// For internal use
+	struct suspend_work
 	{
-		cpu_thread* m_this;
+		// Task priority
+		u8 prio;
 
-	public:
-		suspend_all(cpu_thread* _this) noexcept;
-		suspend_all(const suspend_all&) = delete;
-		suspend_all& operator=(const suspend_all&) = delete;
-		~suspend_all();
+		// Size of prefetch list workload
+		u32 prf_size;
+		void* const* prf_list;
+
+		void* func_ptr;
+		void* res_buf;
+
+		// Type-erased op executor
+		void (*exec)(void* func, void* res);
+
+		// Next object in the linked list
+		suspend_work* next;
+
+		// Internal method
+		bool push(cpu_thread* _this, bool cancel_if_not_suspended = false) noexcept;
 	};
+
+	// Suspend all threads and execute op (may be executed by other thread than caller!)
+	template <u8 Prio = 0, typename F>
+	static auto suspend_all(cpu_thread* _this, std::initializer_list<void*> hints, F op)
+	{
+		if constexpr (std::is_void_v<std::invoke_result_t<F>>)
+		{
+			suspend_work work{Prio, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
+			{
+				std::invoke(*static_cast<F*>(func));
+			}};
+
+			work.push(_this);
+			return;
+		}
+		else
+		{
+			std::invoke_result_t<F> result;
+
+			suspend_work work{Prio, ::size32(hints), hints.begin(), &op, &result, [](void* func, void* res_buf)
+			{
+				*static_cast<std::invoke_result_t<F>*>(res_buf) = std::invoke(*static_cast<F*>(func));
+			}};
+
+			work.push(_this);
+			return result;
+		}
+	}
+
+	// Push the workload only if threads are being suspended by suspend_all()
+	template <u8 Prio = 0, typename F>
+	static bool if_suspended(cpu_thread* _this, std::initializer_list<void*> hints, F op)
+	{
+		static_assert(std::is_void_v<std::invoke_result_t<F>>, "Unimplemented (must return void)");
+		{
+			suspend_work work{Prio, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
+			{
+				std::invoke(*static_cast<F*>(func));
+			}};
+
+			return work.push(_this, true);
+		}
+	}
 
 	// Stop all threads with cpu_flag::dbg_global_stop
 	static void stop_all() noexcept;

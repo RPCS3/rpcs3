@@ -48,7 +48,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>./wolfssl;./wolfssl/IDE/WIN;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WOLFSSL_LIB;WOLFSSL_USER_SETTINGS;CYASSL_USER_SETTINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WOLFSSL_LIB;WOLFSSL_DES_ECB;HAVE_FFDHE_2048;TFM_TIMING_RESISTANT;ECC_TIMING_RESISTANT;WC_RSA_BLINDING;HAVE_AESGCM;WOLFSSL_SHA512;WOLFSSL_SHA384;NO_DSA;HAVE_ECC;TFM_ECC256;ECC_SHAMIR;NO_RC4;NO_HC128;NO_RABBIT;WOLFSSL_SHA224;WOLFSSL_SHA3;WOLFSSL_SHAKE256;HAVE_POLY1305;HAVE_ONE_TIME_AUTH;HAVE_CHACHA;HAVE_HASHDRBG;HAVE_TLS_EXTENSIONS;HAVE_SNI;HAVE_SUPPORTED_CURVES;HAVE_EXTENDED_MASTER;NO_RC4;HAVE_ENCRYPT_THEN_MAC;NO_PSK;NO_MD4;WC_NO_ASYNC_THREADING;OPENSSL_EXTRA;WOLFSSL_USER_SETTINGS;CYASSL_USER_SETTINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <PrecompiledHeader>
       </PrecompiledHeader>
@@ -62,7 +62,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>./wolfssl;./wolfssl/IDE/WIN;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WOLFSSL_LIB;WOLFSSL_USER_SETTINGS;CYASSL_USER_SETTINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WOLFSSL_LIB;WOLFSSL_DES_ECB;HAVE_FFDHE_2048;TFM_TIMING_RESISTANT;NO_DSA;TFM_ECC256;NO_RC4;NO_HC128;NO_RABBIT;WOLFSSL_SHA224;WOLFSSL_SHA3;WOLFSSL_SHAKE256;HAVE_POLY1305;HAVE_ONE_TIME_AUTH;HAVE_CHACHA;HAVE_HASHDRBG;HAVE_SNI;HAVE_ENCRYPT_THEN_MAC;NO_MD4;WC_NO_ASYNC_THREADING;WOLFSSL_USER_SETTINGS;CYASSL_USER_SETTINGS;WC_NO_HARDEN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
       </PrecompiledHeader>

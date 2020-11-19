@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "stdafx.h"
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/GSFrameBase.h"
 
 #include <QWindow>
 #include <QPaintEvent>

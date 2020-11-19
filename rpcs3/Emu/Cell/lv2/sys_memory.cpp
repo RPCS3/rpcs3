@@ -1,11 +1,13 @@
 ﻿#include "stdafx.h"
 #include "sys_memory.h"
 
-#include "Utilities/VirtualMemory.h"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/CPU/CPUThread.h"
+#include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/SPUThread.h"
 #include "Emu/IdManager.h"
-#include <shared_mutex>
+
+#include "util/vm.hpp"
 
 LOG_CHANNEL(sys_memory);
 
@@ -19,9 +21,9 @@ struct sys_memory_address_table
 
 // Todo: fix order of error checks
 
-error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
+error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 {
-	vm::temporary_unlock();
+	cpu.state += cpu_flag::wait;
 
 	sys_memory.warning("sys_memory_allocate(size=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, flags, alloc_addr);
 
@@ -57,18 +59,19 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 
 	if (const auto area = vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, ::align(size, 0x10000000), 0x401))
 	{
-		if (u32 addr = area->alloc(size, align))
+		if (u32 addr = area->alloc(size, nullptr, align))
 		{
 			verify(HERE), !g_fxo->get<sys_memory_address_table>()->addrs[addr >> 16].exchange(dct);
 
 			if (alloc_addr)
 			{
+				vm::lock_sudo(addr, size);
 				*alloc_addr = addr;
 				return CELL_OK;
 			}
 
 			// Dealloc using the syscall
-			sys_memory_free(addr);
+			sys_memory_free(cpu, addr);
 			return CELL_EFAULT;
 		}
 	}
@@ -77,9 +80,9 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	return CELL_ENOMEM;
 }
 
-error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr)
+error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr)
 {
-	vm::temporary_unlock();
+	cpu.state += cpu_flag::wait;
 
 	sys_memory.warning("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, cid, flags, alloc_addr);
 
@@ -133,12 +136,13 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 
 			if (alloc_addr)
 			{
+				vm::lock_sudo(addr, size);
 				*alloc_addr = addr;
 				return CELL_OK;
 			}
 
 			// Dealloc using the syscall
-			sys_memory_free(addr);
+			sys_memory_free(cpu, addr);
 			return CELL_EFAULT;
 		}
 	}
@@ -147,9 +151,9 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 	return CELL_ENOMEM;
 }
 
-error_code sys_memory_free(u32 addr)
+error_code sys_memory_free(cpu_thread& cpu, u32 addr)
 {
-	vm::temporary_unlock();
+	cpu.state += cpu_flag::wait;
 
 	sys_memory.warning("sys_memory_free(addr=0x%x)", addr);
 
@@ -161,36 +165,36 @@ error_code sys_memory_free(u32 addr)
 	}
 
 	const auto size = verify(HERE, vm::dealloc(addr));
-	std::shared_lock{id_manager::g_mutex}, ct->used -= size;
+	reader_lock{id_manager::g_mutex}, ct->used -= size;
 	return CELL_OK;
 }
 
-error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr)
+error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_page_attr_t> attr)
 {
-	vm::temporary_unlock();
+	cpu.state += cpu_flag::wait;
 
 	sys_memory.trace("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
 
 	vm::reader_lock rlock;
 
-	if (!vm::check_addr(addr))
+	if (!vm::check_addr(addr) || addr >= SPU_FAKE_BASE_ADDR)
 	{
 		return CELL_EINVAL;
 	}
 
-	if (!vm::check_addr(attr.addr(), attr.size()))
+	if (!vm::check_addr(attr.addr(), vm::page_readable, attr.size()))
 	{
 		return CELL_EFAULT;
 	}
 
 	attr->attribute = 0x40000ull; // SYS_MEMORY_PROT_READ_WRITE (TODO)
-	attr->access_right = 0xFull; // SYS_MEMORY_ACCESS_RIGHT_ANY (TODO)
+	attr->access_right = addr >> 28 == 0xdu ? SYS_MEMORY_ACCESS_RIGHT_PPU_THR : SYS_MEMORY_ACCESS_RIGHT_ANY;// (TODO)
 
-	if (vm::check_addr(addr, 1, vm::page_1m_size))
+	if (vm::check_addr(addr, vm::page_1m_size))
 	{
 		attr->page_size = 0x100000;
 	}
-	else if (vm::check_addr(addr, 1, vm::page_64k_size))
+	else if (vm::check_addr(addr, vm::page_64k_size))
 	{
 		attr->page_size = 0x10000;
 	}
@@ -203,9 +207,9 @@ error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr
 	return CELL_OK;
 }
 
-error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
+error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_info_t> mem_info)
 {
-	vm::temporary_unlock();
+	cpu.state += cpu_flag::wait;
 
 	sys_memory.warning("sys_memory_get_user_memory_size(mem_info=*0x%x)", mem_info);
 
@@ -226,18 +230,18 @@ error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 	return CELL_OK;
 }
 
-error_code sys_memory_get_user_memory_stat(vm::ptr<sys_memory_user_memory_stat_t> mem_stat)
+error_code sys_memory_get_user_memory_stat(cpu_thread& cpu, vm::ptr<sys_memory_user_memory_stat_t> mem_stat)
 {
-	vm::temporary_unlock();
+	cpu.state += cpu_flag::wait;
 
 	sys_memory.todo("sys_memory_get_user_memory_stat(mem_stat=*0x%x)", mem_stat);
 
 	return CELL_OK;
 }
 
-error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
+error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 size)
 {
-	vm::temporary_unlock();
+	cpu.state += cpu_flag::wait;
 
 	sys_memory.warning("sys_memory_container_create(cid=*0x%x, size=0x%x)", cid, size);
 
@@ -270,9 +274,9 @@ error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 	return CELL_EAGAIN;
 }
 
-error_code sys_memory_container_destroy(u32 cid)
+error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid)
 {
-	vm::temporary_unlock();
+	cpu.state += cpu_flag::wait;
 
 	sys_memory.warning("sys_memory_container_destroy(cid=0x%x)", cid);
 
@@ -305,9 +309,9 @@ error_code sys_memory_container_destroy(u32 cid)
 	return CELL_OK;
 }
 
-error_code sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
+error_code sys_memory_container_get_size(cpu_thread& cpu, vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 {
-	vm::temporary_unlock();
+	cpu.state += cpu_flag::wait;
 
 	sys_memory.warning("sys_memory_container_get_size(mem_info=*0x%x, cid=0x%x)", mem_info, cid);
 

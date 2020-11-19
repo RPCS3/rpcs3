@@ -5,10 +5,11 @@
 #include "sys_ppu_thread.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Memory/vm_var.h"
-#include "Utilities/VirtualMemory.h"
 #include "sys_memory.h"
 #include "sys_sync.h"
 #include "sys_process.h"
+
+#include "util/vm.hpp"
 
 LOG_CHANNEL(sys_mmapper);
 
@@ -19,17 +20,21 @@ lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, lv2_memory_container* ct)
 	, ct(ct)
 	, shm(std::make_shared<utils::shm>(size, 1 /* shareable flag */))
 {
+#ifndef _WIN32
+	// Optimization that's useless on Windows :puke:
+	utils::memory_lock(shm->map_self(), size);
+#endif
 }
 
 template<> DECLARE(ipc_manager<lv2_memory, u64>::g_ipc) {};
 
 template <bool exclusive = false>
-error_code create_lv2_shm(bool pshared, u64 ipc_key, u32 size, u32 align, u64 flags, lv2_memory_container* ct)
+error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 flags, lv2_memory_container* ct)
 {
 	if (auto error = lv2_obj::create<lv2_memory>(pshared ? SYS_SYNC_PROCESS_SHARED : SYS_SYNC_NOT_PROCESS_SHARED, ipc_key, exclusive ? SYS_SYNC_NEWLY_CREATED : SYS_SYNC_NOT_CARE, [&]()
 	{
 		return std::make_shared<lv2_memory>(
-			size,
+			static_cast<u32>(size),
 			align,
 			flags,
 			ct);
@@ -45,7 +50,7 @@ error_code sys_mmapper_allocate_address(ppu_thread& ppu, u64 size, u64 flags, u6
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_mmapper.error("sys_mmapper_allocate_address(size=0x%llx, flags=0x%llx, alignment=0x%llx, alloc_addr=*0x%x)", size, flags, alignment, alloc_addr);
+	sys_mmapper.error("sys_mmapper_allocate_address(size=0x%x, flags=0x%x, alignment=0x%x, alloc_addr=*0x%x)", size, flags, alignment, alloc_addr);
 
 	if (size % 0x10000000)
 	{
@@ -98,11 +103,11 @@ error_code sys_mmapper_allocate_fixed_address(ppu_thread& ppu)
 	return CELL_OK;
 }
 
-error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u32 size, u64 flags, vm::ptr<u32> mem_id)
+error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u64 size, u64 flags, vm::ptr<u32> mem_id)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_mmapper.warning("sys_mmapper_allocate_shared_memory(ipc_key=0x%llx, size=0x%x, flags=0x%llx, mem_id=*0x%x)", ipc_key, size, flags, mem_id);
+	sys_mmapper.warning("sys_mmapper_allocate_shared_memory(ipc_key=0x%x, size=0x%x, flags=0x%x, mem_id=*0x%x)", ipc_key, size, flags, mem_id);
 
 	if (size == 0)
 	{
@@ -155,11 +160,11 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u32 
 	return CELL_OK;
 }
 
-error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u64 ipc_key, u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id)
+error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u64 ipc_key, u64 size, u32 cid, u64 flags, vm::ptr<u32> mem_id)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_mmapper.warning("sys_mmapper_allocate_shared_memory_from_container(ipc_key=0x%llx, size=0x%x, cid=0x%x, flags=0x%llx, mem_id=*0x%x)", ipc_key, size, cid, flags, mem_id);
+	sys_mmapper.warning("sys_mmapper_allocate_shared_memory_from_container(ipc_key=0x%x, size=0x%x, cid=0x%x, flags=0x%x, mem_id=*0x%x)", ipc_key, size, cid, flags, mem_id);
 
 	if (size == 0)
 	{
@@ -225,7 +230,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 	return CELL_OK;
 }
 
-error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, u32 size, u32 flags, vm::ptr<mmapper_unk_entry_struct0> entries, s32 entry_count, vm::ptr<u32> mem_id)
+error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, u64 size, u32 flags, vm::ptr<mmapper_unk_entry_struct0> entries, s32 entry_count, vm::ptr<u32> mem_id)
 {
 	ppu.state += cpu_flag::wait;
 
@@ -280,7 +285,7 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 			const u64 type = entries[i].type;
 
 			// The whole structure contents are unknown
-			sys_mmapper.todo("sys_mmapper_allocate_shared_memory_ext(): entry type = 0x%llx", type);
+			sys_mmapper.todo("sys_mmapper_allocate_shared_memory_ext(): entry type = 0x%x", type);
 
 			switch (type)
 			{
@@ -329,7 +334,7 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 	return CELL_OK;
 }
 
-error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu, u64 ipc_key, u32 size, u64 flags, u32 cid, vm::ptr<mmapper_unk_entry_struct0> entries, s32 entry_count, vm::ptr<u32> mem_id)
+error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu, u64 ipc_key, u64 size, u64 flags, u32 cid, vm::ptr<mmapper_unk_entry_struct0> entries, s32 entry_count, vm::ptr<u32> mem_id)
 {
 	ppu.state += cpu_flag::wait;
 
@@ -379,7 +384,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu
 		{
 			const u64 type = entries[i].type;
 
-			sys_mmapper.todo("sys_mmapper_allocate_shared_memory_from_container_ext(): entry type = 0x%llx", type);
+			sys_mmapper.todo("sys_mmapper_allocate_shared_memory_from_container_ext(): entry type = 0x%x", type);
 
 			switch (type)
 			{
@@ -445,7 +450,7 @@ error_code sys_mmapper_change_address_access_right(ppu_thread& ppu, u32 addr, u6
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_mmapper.todo("sys_mmapper_change_address_access_right(addr=0x%x, flags=0x%llx)", addr, flags);
+	sys_mmapper.todo("sys_mmapper_change_address_access_right(addr=0x%x, flags=0x%x)", addr, flags);
 
 	return CELL_OK;
 }
@@ -544,7 +549,7 @@ error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, 
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_mmapper.warning("sys_mmapper_map_shared_memory(addr=0x%x, mem_id=0x%x, flags=0x%llx)", addr, mem_id, flags);
+	sys_mmapper.warning("sys_mmapper_map_shared_memory(addr=0x%x, mem_id=0x%x, flags=0x%x)", addr, mem_id, flags);
 
 	const auto area = vm::get(vm::any, addr);
 
@@ -587,6 +592,7 @@ error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, 
 		return CELL_EBUSY;
 	}
 
+	vm::lock_sudo(addr, mem->size);
 	return CELL_OK;
 }
 
@@ -594,7 +600,7 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_mmapper.warning("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%llx, alloc_addr=*0x%x)", start_addr, mem_id, flags, alloc_addr);
+	sys_mmapper.warning("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%x, alloc_addr=*0x%x)", start_addr, mem_id, flags, alloc_addr);
 
 	const auto area = vm::get(vm::any, start_addr);
 
@@ -626,7 +632,7 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 		return mem.ret;
 	}
 
-	const u32 addr = area->alloc(mem->size, mem->align, &mem->shm, mem->align == 0x10000 ? SYS_MEMORY_PAGE_SIZE_64K : SYS_MEMORY_PAGE_SIZE_1M);
+	const u32 addr = area->alloc(mem->size, &mem->shm, mem->align, mem->align == 0x10000 ? SYS_MEMORY_PAGE_SIZE_64K : SYS_MEMORY_PAGE_SIZE_1M);
 
 	if (!addr)
 	{
@@ -634,6 +640,7 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 		return CELL_ENOMEM;
 	}
 
+	vm::lock_sudo(addr, mem->size);
 	*alloc_addr = addr;
 	return CELL_OK;
 }
@@ -651,7 +658,7 @@ error_code sys_mmapper_unmap_shared_memory(ppu_thread& ppu, u32 addr, vm::ptr<u3
 		return {CELL_EINVAL, addr};
 	}
 
-	const auto shm = area->get(addr);
+	const auto shm = area->peek(addr);
 
 	if (!shm.second)
 	{
@@ -709,8 +716,8 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 	}
 
 	vm::var<u32> port_id(0);
-	error_code res = sys_event_port_create(port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
-	sys_event_port_connect_local(*port_id, event_queue_id);
+	error_code res = sys_event_port_create(ppu, port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
+	sys_event_port_connect_local(ppu, *port_id, event_queue_id);
 
 	if (res + 0u == CELL_EAGAIN)
 	{

@@ -3,7 +3,8 @@
 
 #include "Emu/system_config.h"
 #include "Emu/Cell/ErrorCodes.h"
-#include "Utilities/asm.h"
+
+#include "util/asm.hpp"
 
 #ifdef _WIN32
 
@@ -207,7 +208,8 @@ error_code sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	// get time since Epoch in nanoseconds
 	const u64 time = s_time_aux_info.start_ftime * 100u + (diff * g_cfg.core.clocks_scale / 100u);
 
-	*sec  = time / 1000000000ull;
+	// scale to seconds, and add the console time offset (which might be negative)
+	*sec = (time / 1000000000ull) + g_cfg.sys.console_time_offset;
 
 	if (!nsec)
 	{
@@ -221,7 +223,8 @@ error_code sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 
 	if (g_cfg.core.clocks_scale == 100)
 	{
-		*sec  = ts.tv_sec;
+		// get the seconds from the system clock, and add the console time offset (which might be negative)
+		*sec  = ts.tv_sec + g_cfg.sys.console_time_offset;
 
 		if (!nsec)
 		{
@@ -252,8 +255,8 @@ error_code sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	// Scale nanocseconds
 	tv_nsec = stv_nsec + (tv_nsec * g_cfg.core.clocks_scale / 100);
 
-	// Scale seconds and add from nanoseconds / 1'000'000'000
-	*sec  = stv_sec + (tv_sec * g_cfg.core.clocks_scale / 100u) + (tv_nsec / 1000000000ull);
+	// Scale seconds and add from nanoseconds / 1'000'000'000, and add the console time offset (which might be negative)
+	*sec = stv_sec + (tv_sec * g_cfg.core.clocks_scale / 100u) + (tv_nsec / 1000000000ull) + g_cfg.sys.console_time_offset;
 
 	if (!nsec)
 	{

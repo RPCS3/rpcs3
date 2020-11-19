@@ -2,6 +2,7 @@
 #include "overlay_osk.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 LOG_CHANNEL(osk, "OSK");
 
@@ -227,27 +228,27 @@ namespace rsx
 
 			m_btn_cancel.set_pos(frame_x, frame_y + frame_h + 10);
 			m_btn_cancel.set_size(140, 30);
-			m_btn_cancel.set_text("Cancel");
+			m_btn_cancel.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_CANCEL);
 			m_btn_cancel.set_text_vertical_adjust(5);
 
 			m_btn_space.set_pos(frame_x + 100, frame_y + frame_h + 10);
 			m_btn_space.set_size(100, 30);
-			m_btn_space.set_text("Space");
+			m_btn_space.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SPACE);
 			m_btn_space.set_text_vertical_adjust(5);
 
 			m_btn_delete.set_pos(frame_x + 200, frame_y + frame_h + 10);
 			m_btn_delete.set_size(100, 30);
-			m_btn_delete.set_text("Backspace");
+			m_btn_delete.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_BACKSPACE);
 			m_btn_delete.set_text_vertical_adjust(5);
 
 			m_btn_shift.set_pos(frame_x + 320, frame_y + frame_h + 10);
 			m_btn_shift.set_size(80, 30);
-			m_btn_shift.set_text("Shift");
+			m_btn_shift.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SHIFT);
 			m_btn_shift.set_text_vertical_adjust(5);
 
 			m_btn_accept.set_pos(frame_x + 400, frame_y + frame_h + 10);
 			m_btn_accept.set_size(100, 30);
-			m_btn_accept.set_text("Accept");
+			m_btn_accept.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ACCEPT);
 			m_btn_accept.set_text_vertical_adjust(5);
 
 			m_update = true;
@@ -662,12 +663,10 @@ namespace rsx
 
 		std::u32string osk_dialog::get_placeholder()
 		{
-			if (m_password_mode)
-			{
-				return U"[Enter Password]";
-			}
-
-			return U"[Enter Text]";
+			const localized_string_id id = m_password_mode
+				? localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ENTER_PASSWORD
+				: localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ENTER_TEXT;
+			return get_localized_u32string(id);
 		}
 
 		void osk_dialog::update()

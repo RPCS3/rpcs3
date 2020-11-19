@@ -4,6 +4,7 @@
 #include "GLGSRender.h"
 #include "GLCompute.h"
 #include "GLVertexProgram.h"
+#include "Emu/Memory/vm_locking.h"
 
 #define DUMP_VERTEX_DATA 0
 
@@ -31,8 +32,9 @@ extern CellGcmContextData current_context;
 void GLGSRender::set_viewport()
 {
 	// NOTE: scale offset matrix already contains the viewport transformation
-	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
-	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
+	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
+		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
+
 	glViewport(0, 0, clip_width, clip_height);
 }
 
