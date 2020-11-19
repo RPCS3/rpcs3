@@ -3,6 +3,7 @@
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
+#include "Emu/perf_meter.hpp"
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUCallback.h"
@@ -1797,6 +1798,8 @@ void Emulator::Resume()
 		ppu_log.notice("[RESUME] Dumping instruction stats:%s", dump);
 	}
 
+	perf_stat_base::report();
+
 	// Try to resume
 	if (!m_state.compare_and_swap_test(system_state::paused, system_state::running))
 	{
@@ -1879,6 +1882,8 @@ void Emulator::Stop(bool restart)
 	vm::close();
 
 	jit_runtime::finalize();
+
+	perf_stat_base::report();
 
 	static u64 aw_refs = 0;
 	static u64 aw_colm = 0;
