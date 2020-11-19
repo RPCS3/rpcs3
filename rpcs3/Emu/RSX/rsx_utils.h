@@ -14,6 +14,8 @@ extern "C"
 #include <libavutil/pixfmt.h>
 }
 
+#define RSX_SURFACE_DIMENSION_IGNORED 1
+
 namespace rsx
 {
 	// Import address_range utilities
@@ -586,33 +588,54 @@ namespace rsx
 		return g_cfg.video.strict_rendering_mode ? 100 : g_cfg.video.resolution_scale_percent;
 	}
 
-	static inline const u16 apply_resolution_scale(u16 value, bool clamp, u16 ref = 0)
+	template <bool clamp = false>
+	static inline const std::pair<u16, u16> apply_resolution_scale(u16 width, u16 height, u16 ref_width = 0, u16 ref_height = 0)
 	{
-		if (ref == 0)
-			ref = value;
-
-		if (ref <= g_cfg.video.min_scalable_dimension)
-			return value;
-
-		else if (clamp)
-			return static_cast<u16>(std::max((get_resolution_scale_percent() * value) / 100, 1));
+		u16 ref;
+		if (width > height) [[likely]]
+		{
+			ref = (ref_width) ? ref_width : width;
+		}
 		else
-			return static_cast<u16>((get_resolution_scale_percent() * value) / 100);
+		{
+			ref = (ref_height) ? ref_height : height;
+		}
+
+		if (ref > g_cfg.video.min_scalable_dimension)
+		{
+			// Upscale both width and height
+			width = (get_resolution_scale_percent() * width) / 100;
+			height = (get_resolution_scale_percent() * height) / 100;
+
+			if constexpr (clamp)
+			{
+				width = std::max<u16>(width, 1);
+				height = std::max<u16>(height, 1);
+			}
+		}
+
+		return { width, height };
 	}
 
-	static inline const u16 apply_inverse_resolution_scale(u16 value, bool clamp)
+	template <bool clamp = false>
+	static inline const std::pair<u16, u16> apply_inverse_resolution_scale(u16 width, u16 height)
 	{
-		u16 result = value;
+		// Inverse scale
+		auto width_ = (width * 100) / get_resolution_scale_percent();
+		auto height_ = (height * 100) / get_resolution_scale_percent();
 
 		if (clamp)
-			result = static_cast<u16>(std::max((value * 100) / get_resolution_scale_percent(), 1));
-		else
-			result = static_cast<u16>((value * 100) / get_resolution_scale_percent());
+		{
+			width_ = std::max<u16>(width_, 1);
+			height_ = std::max<u16>(height_, 1);
+		}
 
-		if (result <= g_cfg.video.min_scalable_dimension)
-			return value;
+		if (std::max(width_, height_) > g_cfg.video.min_scalable_dimension)
+		{
+			return { width_, height_ };
+		}
 
-		return result;
+		return { width, height };
 	}
 
 	/**

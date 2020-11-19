@@ -287,8 +287,8 @@ namespace rsx
 
 				// How much of this slice to read?
 				int rebased = int(section.dst_area.y) - slice_begin;
-				const auto src_x = section.src_area.x;
-				const auto dst_x = section.dst_area.x;
+				auto src_x = section.src_area.x;
+				auto dst_x = section.dst_area.x;
 				auto src_y = section.src_area.y;
 				auto dst_y = section.dst_area.y;
 
@@ -306,20 +306,22 @@ namespace rsx
 				const auto h = std::min(section_end, slice_end) - dst_y;
 				dst_y = (dst_y - slice_begin);
 
-				const auto src_width = rsx::apply_resolution_scale(section.src_area.width, true);
-				const auto src_height = rsx::apply_resolution_scale(h, true);
-				const auto dst_width = rsx::apply_resolution_scale(section.dst_area.width, true);
+				const auto [src_width, src_height] = rsx::apply_resolution_scale<true>(section.src_area.width, h, attr.width, attr.height);
+				const auto [dst_width, unused] = rsx::apply_resolution_scale<true>(section.dst_area.width, RSX_SURFACE_DIMENSION_IGNORED, attr.width, RSX_SURFACE_DIMENSION_IGNORED);
 				const auto dst_height = src_height;
+
+				std::tie(src_x, src_y) = rsx::apply_resolution_scale<false>(src_x, src_y, attr.width, attr.height);
+				std::tie(dst_x, dst_y) = rsx::apply_resolution_scale<false>(dst_x, dst_y, attr.width, attr.height);
 
 				out.push_back
 				({
 					section.surface->get_surface(rsx::surface_access::read),
 					surface_transform::identity,
 					0,
-					rsx::apply_resolution_scale(src_x, true),
-					rsx::apply_resolution_scale(src_y, true),
-					rsx::apply_resolution_scale(dst_x, true),
-					rsx::apply_resolution_scale(dst_y, true),
+					static_cast<u16>(src_x),
+					static_cast<u16>(src_y),
+					static_cast<u16>(dst_x),
+					static_cast<u16>(dst_y),
 					slice,
 					src_width, src_height,
 					dst_width, dst_height
@@ -365,20 +367,23 @@ namespace rsx
 				if (scaling)
 				{
 					// Since output is upscaled, also upscale on dst
+					const auto [_dst_x, _dst_y] = rsx::apply_resolution_scale<false>(static_cast<u16>(std::get<1>(clipped).x), static_cast<u16>(dst_y - slice_begin), attr.width, attr.height);
+					const auto [_dst_w, _dst_h] = rsx::apply_resolution_scale<true>(dst_w, height, attr.width, attr.height);
+
 					out.push_back
 					({
 						section->get_raw_texture(),
 						surface_transform::identity,
 						0,
-						static_cast<u16>(std::get<0>(clipped).x),                                     // src.x
-						static_cast<u16>(std::get<0>(clipped).y),                                     // src.y
-						rsx::apply_resolution_scale(static_cast<u16>(std::get<1>(clipped).x), true),  // dst.x
-						rsx::apply_resolution_scale(static_cast<u16>(dst_y - slice_begin), true),     // dst.y
+						static_cast<u16>(std::get<0>(clipped).x),   // src.x
+						static_cast<u16>(std::get<0>(clipped).y),   // src.y
+						_dst_x,                                     // dst.x
+						_dst_y,                                     // dst.y
 						slice,
 						src_w,
 						height,
-						rsx::apply_resolution_scale(dst_w, true),
-						rsx::apply_resolution_scale(height, true),
+						_dst_w,
+						_dst_h,
 						});
 				}
 				else
@@ -539,8 +544,7 @@ namespace rsx
 					attr2.height < surface_height ||
 					force_convert)
 				{
-					const auto scaled_w = rsx::apply_resolution_scale(attr2.width, true);
-					const auto scaled_h = rsx::apply_resolution_scale(attr2.height, true);
+					const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(attr2.width, attr2.height);
 
 					const auto format_class = (force_convert) ? classify_format(attr2.gcm_format) : texptr->format_class();
 					const auto command = surface_is_rop_target ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
@@ -557,8 +561,7 @@ namespace rsx
 						texptr->format_class(), scale, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target };
 			}
 
-			const auto scaled_w = rsx::apply_resolution_scale(attr2.width, true);
-			const auto scaled_h = rsx::apply_resolution_scale(attr2.height, true);
+			const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(attr2.width, attr2.height);
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d)
 			{
@@ -643,8 +646,7 @@ namespace rsx
 			}
 
 			// If this method was called, there is no easy solution, likely means atlas gather is needed
-			auto scaled_w = rsx::apply_resolution_scale(attr2.width, true);
-			auto scaled_h = rsx::apply_resolution_scale(attr2.height, true);
+			const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale(attr2.width, attr2.height);
 			const auto format_class = classify_format(attr2.gcm_format);
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap)
@@ -717,8 +719,7 @@ namespace rsx
 				// Calculate transfer dimensions from attr
 				if (level.upload_context == rsx::texture_upload_context::framebuffer_storage) [[likely]]
 				{
-					mip.src_w = rsx::apply_resolution_scale(attr.width, true);
-					mip.src_h = rsx::apply_resolution_scale(attr.height, true);
+					std::tie(mip.src_w, mip.src_h) = rsx::apply_resolution_scale<true>(attr.width, attr.height);
 				}
 				else
 				{
@@ -763,8 +764,7 @@ namespace rsx
 			if (apply_upscaling)
 			{
 				auto& mip = sections.back();
-				mip.dst_w = rsx::apply_resolution_scale(mip.dst_w, true, level0_attr.width);
-				mip.dst_h = rsx::apply_resolution_scale(mip.dst_h, true, level0_attr.height);
+				std::tie(mip.dst_w, mip.dst_h) = rsx::apply_resolution_scale<true>(mip.dst_w, mip.dst_h, level0_attr.width, level0_attr.height);
 			}
 
 			return true;
