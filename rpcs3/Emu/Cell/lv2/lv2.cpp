@@ -1115,9 +1115,15 @@ DECLARE(lv2_obj::g_waiting);
 
 thread_local DECLARE(lv2_obj::g_to_awake);
 
+namespace cpu_counter
+{
+	void remove(cpu_thread*) noexcept;
+}
+
 void lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 {
 	vm::temporary_unlock(cpu);
+	cpu_counter::remove(&cpu);
 	std::lock_guard{g_mutex}, sleep_unlocked(cpu, timeout);
 	g_to_awake.clear();
 }
