@@ -296,9 +296,9 @@ struct alignas(16) u128
 {
 	u64 lo, hi;
 
-	u128() = default;
+	u128() noexcept = default;
 
-	constexpr u128(u64 l)
+	constexpr u128(u64 l) noexcept
 		: lo(l)
 		, hi(0)
 	{
@@ -309,167 +309,204 @@ struct alignas(16) u128
 		return !!(lo | hi);
 	}
 
-	friend u128 operator+(const u128& l, const u128& r)
+	constexpr explicit operator u64() const noexcept
 	{
-		u128 value;
-		_addcarry_u64(_addcarry_u64(0, r.lo, l.lo, &value.lo), r.hi, l.hi, &value.hi);
+		return lo;
+	}
+
+	constexpr friend u128 operator+(const u128& l, const u128& r)
+	{
+		u128 value = l;
+		value += r;
 		return value;
 	}
 
-	friend u128 operator+(const u128& l, u64 r)
+	constexpr friend u128 operator-(const u128& l, const u128& r)
 	{
-		u128 value;
-		_addcarry_u64(_addcarry_u64(0, r, l.lo, &value.lo), l.hi, 0, &value.hi);
+		u128 value = l;
+		value -= r;
 		return value;
 	}
 
-	friend u128 operator+(u64 l, const u128& r)
-	{
-		u128 value;
-		_addcarry_u64(_addcarry_u64(0, r.lo, l, &value.lo), 0, r.hi, &value.hi);
-		return value;
-	}
-
-	friend u128 operator-(const u128& l, const u128& r)
-	{
-		u128 value;
-		_subborrow_u64(_subborrow_u64(0, l.lo, r.lo, &value.lo), l.hi, r.hi, &value.hi);
-		return value;
-	}
-
-	friend u128 operator-(const u128& l, u64 r)
-	{
-		u128 value;
-		_subborrow_u64(_subborrow_u64(0, l.lo, r, &value.lo), l.hi, 0, &value.hi);
-		return value;
-	}
-
-	friend u128 operator-(u64 l, const u128& r)
-	{
-		u128 value;
-		_subborrow_u64(_subborrow_u64(0, l, r.lo, &value.lo), 0, r.hi, &value.hi);
-		return value;
-	}
-
-	u128 operator+() const
+	constexpr u128 operator+() const
 	{
 		return *this;
 	}
 
-	u128 operator-() const
+	constexpr u128 operator-() const
 	{
-		u128 value;
-		_subborrow_u64(_subborrow_u64(0, 0, lo, &value.lo), 0, hi, &value.hi);
+		u128 value{};
+		value -= *this;
 		return value;
 	}
 
-	u128& operator++()
+	constexpr u128& operator++()
 	{
-		_addcarry_u64(_addcarry_u64(0, 1, lo, &lo), 0, hi, &hi);
+		*this += 1;
 		return *this;
 	}
 
-	u128 operator++(int)
+	constexpr u128 operator++(int)
 	{
 		u128 value = *this;
-		_addcarry_u64(_addcarry_u64(0, 1, lo, &lo), 0, hi, &hi);
+		*this += 1;
 		return value;
 	}
 
-	u128& operator--()
+	constexpr u128& operator--()
 	{
-		_subborrow_u64(_subborrow_u64(0, lo, 1, &lo), hi, 0, &hi);
+		*this -= 1;
 		return *this;
 	}
 
-	u128 operator--(int)
+	constexpr u128 operator--(int)
 	{
 		u128 value = *this;
-		_subborrow_u64(_subborrow_u64(0, lo, 1, &lo), hi, 0, &hi);
+		*this -= 1;
 		return value;
 	}
 
-	u128 operator<<(u128 shift_value)
+	constexpr u128 operator<<(u128 shift_value) const
 	{
-		const u64 v0 = lo << (shift_value.lo & 63);
-		const u64 v1 = __shiftleft128(lo, hi, static_cast<uchar>(shift_value.lo));
-
-		u128 value;
-		value.lo = (shift_value.lo & 64) ? 0 : v0;
-		value.hi = (shift_value.lo & 64) ? v0 : v1;
+		u128 value = *this;
+		value <<= shift_value;
 		return value;
 	}
 
-	u128 operator>>(u128 shift_value)
+	constexpr u128 operator>>(u128 shift_value) const
 	{
-		const u64 v0 = hi >> (shift_value.lo & 63);
-		const u64 v1 = __shiftright128(lo, hi, static_cast<uchar>(shift_value.lo));
-
-		u128 value;
-		value.lo = (shift_value.lo & 64) ? v0 : v1;
-		value.hi = (shift_value.lo & 64) ? 0 : v0;
+		u128 value = *this;
+		value >>= shift_value;
 		return value;
 	}
 
-	u128 operator~() const
+	constexpr u128 operator~() const
 	{
-		u128 value;
+		u128 value{};
 		value.lo = ~lo;
 		value.hi = ~hi;
 		return value;
 	}
 
-	friend u128 operator&(const u128& l, const u128& r)
+	constexpr friend u128 operator&(const u128& l, const u128& r)
 	{
-		u128 value;
+		u128 value{};
 		value.lo = l.lo & r.lo;
 		value.hi = l.hi & r.hi;
 		return value;
 	}
 
-	friend u128 operator|(const u128& l, const u128& r)
+	constexpr friend u128 operator|(const u128& l, const u128& r)
 	{
-		u128 value;
+		u128 value{};
 		value.lo = l.lo | r.lo;
 		value.hi = l.hi | r.hi;
 		return value;
 	}
 
-	friend u128 operator^(const u128& l, const u128& r)
+	constexpr friend u128 operator^(const u128& l, const u128& r)
 	{
-		u128 value;
+		u128 value{};
 		value.lo = l.lo ^ r.lo;
 		value.hi = l.hi ^ r.hi;
 		return value;
 	}
 
-	u128& operator+=(const u128& r)
+	constexpr u128& operator+=(const u128& r)
 	{
-		_addcarry_u64(_addcarry_u64(0, r.lo, lo, &lo), r.hi, hi, &hi);
+		if (std::is_constant_evaluated())
+		{
+			lo += r.lo;
+			hi += r.hi + (lo < r.lo);
+		}
+		else
+		{
+			_addcarry_u64(_addcarry_u64(0, r.lo, lo, &lo), r.hi, hi, &hi);
+		}
+
 		return *this;
 	}
 
-	u128& operator+=(uint64_t r)
+	constexpr u128& operator-=(const u128& r)
 	{
-		_addcarry_u64(_addcarry_u64(0, r, lo, &lo), 0, hi, &hi);
+		if (std::is_constant_evaluated())
+		{
+			hi -= r.hi + (lo < r.lo);
+			lo -= r.lo;
+		}
+		else
+		{
+			_subborrow_u64(_subborrow_u64(0, lo, r.lo, &lo), hi, r.hi, &hi);
+		}
+
 		return *this;
 	}
 
-	u128& operator&=(const u128& r)
+	constexpr u128& operator<<=(const u128& r)
+	{
+		if (std::is_constant_evaluated())
+		{
+			if (r.hi == 0 && r.lo < 64)
+			{
+				hi = (hi << r.lo) | (lo >> (64 - r.lo));
+				lo = (lo << r.lo);
+				return *this;
+			}
+			else if (r.hi == 0 && r.lo < 128)
+			{
+				hi = (lo << (r.lo - 64));
+				lo = 0;
+				return *this;
+			}
+		}
+
+		const u64 v0 = lo << (r.lo & 63);
+		const u64 v1 = __shiftleft128(lo, hi, static_cast<uchar>(r.lo));
+		lo = (r.lo & 64) ? 0 : v0;
+		hi = (r.lo & 64) ? v0 : v1;
+		return *this;
+	}
+
+	constexpr u128& operator>>=(const u128& r)
+	{
+		if (std::is_constant_evaluated())
+		{
+			if (r.hi == 0 && r.lo < 64)
+			{
+				lo = (lo >> r.lo) | (hi << (64 - r.lo));
+				hi = (hi >> r.lo);
+				return *this;
+			}
+			else if (r.hi == 0 && r.lo < 128)
+			{
+				lo = (hi >> (r.lo - 64));
+				hi = 0;
+				return *this;
+			}
+		}
+
+		const u64 v0 = hi >> (r.lo & 63);
+		const u64 v1 = __shiftright128(lo, hi, static_cast<uchar>(r.lo));
+		lo = (r.lo & 64) ? v0 : v1;
+		hi = (r.lo & 64) ? 0 : v0;
+		return *this;
+	}
+
+	constexpr u128& operator&=(const u128& r)
 	{
 		lo &= r.lo;
 		hi &= r.hi;
 		return *this;
 	}
 
-	u128& operator|=(const u128& r)
+	constexpr u128& operator|=(const u128& r)
 	{
 		lo |= r.lo;
 		hi |= r.hi;
 		return *this;
 	}
 
-	u128& operator^=(const u128& r)
+	constexpr u128& operator^=(const u128& r)
 	{
 		lo ^= r.lo;
 		hi ^= r.hi;
