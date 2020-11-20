@@ -516,17 +516,33 @@ namespace atomic_wait
 #endif
 }
 
+// Produce u128 value that repeats val 8 times
+static constexpr u128 dup8(u32 val)
+{
+	const u32 shift = 32 - std::countl_zero(val);
+
+	const u128 it0 = u128{val};
+	const u128 it1 = it0 | (it0 << shift);
+	const u128 it2 = it1 | (it1 << (shift * 2));
+	const u128 it3 = it2 | (it2 << (shift * 4));
+
+	return it3;
+}
+
+// Semaphore tree root (level 1) - split in 8 parts (8192 in each)
+static atomic_t<u128> s_cond_sem1{1};
+
+// Semaphore tree (level 2) - split in 8 parts (1024 in each)
+static atomic_t<u128> s_cond_sem2[8]{{1}};
+
+// Semaphore tree (level 3) - split in 16 parts (128 in each)
+static atomic_t<u128> s_cond_sem3[64]{{1}};
+
+// Allocation bits (level 4) - guarantee 1 free bit
+static atomic_t<u64> s_cond_bits[(UINT16_MAX + 1) / 64]{1};
+
 // Max allowed thread number is chosen to fit in 16 bits
 static atomic_wait::cond_handle s_cond_list[UINT16_MAX + 1]{};
-
-// Allocation bits
-static atomic_t<u64, 64> s_cond_bits[(UINT16_MAX + 1) / 64]{};
-
-// Allocation semaphore
-static atomic_t<u32> s_cond_sema{0};
-
-// Max possible search distance (max i in loop)
-static atomic_t<u32> s_cond_max{0};
 
 static u32
 #ifdef _WIN32
@@ -534,63 +550,65 @@ __vectorcall
 #endif
 cond_alloc(std::uintptr_t iptr, __m128i mask)
 {
-	// Determine whether there is a free slot or not
-	if (!s_cond_sema.try_inc(UINT16_MAX + 1))
+	const u32 level1 = s_cond_sem1.atomic_op([](u128& val) -> u32
 	{
-		// Temporarily placed here
-		fmt::raw_error("Thread semaphore limit " STRINGIZE(UINT16_MAX) " reached in atomic wait.");
-		return 0;
-	}
+		constexpr u128 max_mask = dup8(8192);
 
-	for (u32 i = 0;; i++)
-	{
-		const u32 group = i % ::size32(s_cond_bits);
+		// Leave only bits indicating sub-semaphore is full, find free one
+		const u32 pos = utils::ctz128(~val & max_mask);
 
-		const auto [bits, ok] = s_cond_bits[group].fetch_op([](u64& bits)
+		if (pos == 128) [[unlikely]]
 		{
-			if (~bits)
-			{
-				// Set lowest clear bit
-				bits |= bits + 1;
-				return true;
-			}
+			// No free space
+			return -1;
+		}
 
-			return false;
+		val += u128{1} << (pos / 14 * 14);
+
+		return pos / 14;
+	});
+
+	// Determine whether there is a free slot or not
+	if (level1 < 8) [[likely]]
+	{
+		const u32 level2 = level1 * 8 + s_cond_sem2[level1].atomic_op([](u128& val)
+		{
+			constexpr u128 max_mask = dup8(1024);
+
+			const u32 pos = utils::ctz128(~val & max_mask);
+
+			val += u128{1} << (pos / 11 * 11);
+
+			return pos / 11;
 		});
 
-		if (ok) [[likely]]
+		const u32 level3 = level2 * 16 + s_cond_sem3[level2].atomic_op([](u128& val)
 		{
-			// Find lowest clear bit
-			const u32 id = group * 64 + std::countr_one(bits);
+			constexpr u128 max_mask = dup8(64) | (dup8(64) << 56);
 
-			if (id == 0) [[unlikely]]
-			{
-				// Special case, set bit and continue
-				continue;
-			}
+			const u32 pos = utils::ctz128(~val & max_mask);
 
-			// Update some stats
-			s_cond_max.fetch_op([group](u32& val)
-			{
-				if (val < group) [[unlikely]]
-				{
-					val = group;
-					return true;
-				}
+			val += u128{1} << (pos / 7 * 7);
 
-				return false;
-			});
+			return pos / 7;
+		});
 
-			// Initialize new "semaphore"
-			s_cond_list[id].mask = mask;
-			s_cond_list[id].init(iptr);
-			return id;
-		}
+		const u64 bits = s_cond_bits[level3].fetch_op([](u64& bits)
+		{
+			// Set lowest clear bit
+			bits |= bits + 1;
+		});
+
+		// Find lowest clear bit (before it was set in fetch_op)
+		const u32 id = level3 * 64 + std::countr_one(bits);
+
+		// Initialize new "semaphore"
+		s_cond_list[id].mask = mask;
+		s_cond_list[id].init(iptr);
+		return id;
 	}
 
-	// Unreachable
-	std::abort();
-	return 0;
+	fmt::raw_error("Thread semaphore limit " STRINGIZE(UINT16_MAX) " reached in atomic wait.");
 }
 
 static void cond_free(u32 cond_id)
@@ -627,11 +645,31 @@ static void cond_free(u32 cond_id)
 	// Call the destructor if necessary
 	cond->destroy();
 
-	// Remove the allocation bit
+	const u32 level3 = cond_id / 64 % 16;
+	const u32 level2 = cond_id / 1024 % 8;
+	const u32 level1 = cond_id / 8192 % 8;
+
+	_m_prefetchw(s_cond_sem3 + level2);
+	_m_prefetchw(s_cond_sem2 + level1);
+	_m_prefetchw(&s_cond_sem1);
+
+	// Release the semaphore tree in the reverse order
 	s_cond_bits[cond_id / 64] &= ~(1ull << (cond_id % 64));
 
-	// Release the semaphore
-	verify(HERE), s_cond_sema--;
+	s_cond_sem3[level2].atomic_op([&](u128& val)
+	{
+		val -= u128{1} << (level3 * 7);
+	});
+
+	s_cond_sem2[level1].atomic_op([&](u128& val)
+	{
+		val -= u128{1} << (level2 * 11);
+	});
+
+	s_cond_sem1.atomic_op([&](u128& val)
+	{
+		val -= u128{1} << (level1 * 14);
+	});
 }
 
 static atomic_wait::cond_handle*
@@ -1371,13 +1409,21 @@ bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 	// Special operation mode. Note that this is not atomic.
 	if (!data)
 	{
-		if (!s_cond_sema)
+		// Extract total amount of allocated bits (but hard to tell which level4 slots are occupied)
+		const auto sem = s_cond_sem1.load();
+
+		u32 total = 0;
+
+		for (u32 i = 0; i < 8; i++)
 		{
-			return false;
+			if ((sem >> (i * 14)) & (8192 + 8191))
+			{
+				total = (i + 1) * 8192;
+			}
 		}
 
 		// Special path: search thread_id without pointer information
-		for (u32 i = 1; i < (s_cond_max + 1) * 64; i++)
+		for (u32 i = 1; i <= total; i++)
 		{
 			if ((i & 63) == 0)
 			{
