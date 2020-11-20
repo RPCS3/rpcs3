@@ -734,12 +734,14 @@ namespace atomic_wait
 		// For collision statistics (bit difference stick flags)
 		atomic_t<u32> diff_lz{}, diff_tz{}, diff_pop{};
 
-		atomic_t<u16>* slot_alloc(std::uintptr_t ptr) noexcept;
+		static atomic_t<u16>* slot_alloc(std::uintptr_t ptr) noexcept;
 
-		root_info* slot_free(std::uintptr_t ptr, atomic_t<u16>* slot) noexcept;
+		static void slot_free(std::uintptr_t ptr, atomic_t<u16>* slot) noexcept;
 
 		template <typename F>
-		auto slot_search(std::uintptr_t iptr, u32 size, u64 thread_id, __m128i mask, F func) noexcept;
+		static auto slot_search(std::uintptr_t iptr, u32 size, u64 thread_id, __m128i mask, F func) noexcept;
+
+		void register_collisions(std::uintptr_t ptr);
 	};
 
 	static_assert(sizeof(root_info) == 256);
@@ -747,6 +749,37 @@ namespace atomic_wait
 
 // Main hashtable for atomic wait.
 static atomic_wait::root_info s_hashtable[s_hashtable_size]{};
+
+namespace
+{
+	struct hash_engine
+	{
+		// Must be very lightweight
+		std::minstd_rand rnd;
+
+		// Pointer to the current hashtable slot
+		atomic_wait::root_info* current;
+
+		// Initialize
+		hash_engine(std::uintptr_t iptr)
+			: rnd(static_cast<u32>(iptr >> 15))
+			, current(&s_hashtable[((rnd() >> 1) + iptr) % s_hashtable_size])
+		{
+		}
+
+		// Advance
+		void operator++(int) noexcept
+		{
+			current = &s_hashtable[(rnd() >> 1) % s_hashtable_size];
+		}
+
+		// Access current
+		atomic_wait::root_info* operator ->() const noexcept
+		{
+			return current;
+		}
+	};
+}
 
 u64 atomic_wait::get_unique_tsc()
 {
@@ -773,9 +806,9 @@ atomic_t<u16>* atomic_wait::root_info::slot_alloc(std::uintptr_t ptr) noexcept
 
 	u32 limit = 0;
 
-	for (auto* _this = this;;)
+	for (hash_engine _this(ptr);; _this++)
 	{
-		slot = _this->bits.atomic_op([_this](slot_allocator& bits) -> atomic_t<u16>*
+		slot = _this->bits.atomic_op([&](slot_allocator& bits) -> atomic_t<u16>*
 		{
 			// Increment reference counter on every hashtable slot we attempt to allocate on
 			if (bits.ref == UINT16_MAX)
@@ -803,13 +836,14 @@ atomic_t<u16>* atomic_wait::root_info::slot_alloc(std::uintptr_t ptr) noexcept
 			return nullptr;
 		});
 
+		_this->register_collisions(ptr);
+
 		if (slot)
 		{
 			break;
 		}
 
 		// Keep trying adjacent slots in the hashtable, they are often free due to alignment.
-		_this++;
 		limit++;
 
 		if (limit == max_distance) [[unlikely]]
@@ -817,13 +851,13 @@ atomic_t<u16>* atomic_wait::root_info::slot_alloc(std::uintptr_t ptr) noexcept
 			fmt::raw_error("Distance limit (585) exceeded for the atomic wait hashtable.");
 			return nullptr;
 		}
-
-		if (_this == std::end(s_hashtable)) [[unlikely]]
-		{
-			_this = s_hashtable;
-		}
 	}
 
+	return slot;
+}
+
+void atomic_wait::root_info::register_collisions(std::uintptr_t ptr)
+{
 	u32 ptr32 = static_cast<u32>(ptr >> 16);
 	u32 first = first_ptr.load();
 
@@ -860,11 +894,9 @@ atomic_t<u16>* atomic_wait::root_info::slot_alloc(std::uintptr_t ptr) noexcept
 
 		diff_pop |= 1u << static_cast<u8>((diff >> 16) + diff - 1);
 	}
-
-	return slot;
 }
 
-atomic_wait::root_info* atomic_wait::root_info::slot_free(std::uintptr_t, atomic_t<u16>* slot) noexcept
+void atomic_wait::root_info::slot_free(std::uintptr_t iptr, atomic_t<u16>* slot) noexcept
 {
 	const auto begin = reinterpret_cast<std::uintptr_t>(std::begin(s_hashtable));
 
@@ -875,7 +907,7 @@ atomic_wait::root_info* atomic_wait::root_info::slot_free(std::uintptr_t, atomic
 	if (ptr >= sizeof(s_hashtable))
 	{
 		fmt::raw_error("Failed to find slot in hashtable slot deallocation." HERE);
-		return nullptr;
+		return;
 	}
 
 	root_info* _this = &s_hashtable[ptr / sizeof(root_info)];
@@ -883,7 +915,7 @@ atomic_wait::root_info* atomic_wait::root_info::slot_free(std::uintptr_t, atomic
 	if (!(slot >= _this->slots && slot < std::end(_this->slots)))
 	{
 		fmt::raw_error("Failed to find slot in hashtable slot deallocation." HERE);
-		return nullptr;
+		return;
 	}
 
 	const u32 diff = static_cast<u32>(slot - _this->slots);
@@ -897,14 +929,14 @@ atomic_wait::root_info* atomic_wait::root_info::slot_free(std::uintptr_t, atomic
 		cond_free(cond_id);
 	}
 
-	for (auto entry = this;;)
+	for (hash_engine curr(iptr);; curr++)
 	{
 		// Reset reference counter and allocation bit in every slot
-		bits.atomic_op([&](slot_allocator& bits)
+		curr->bits.atomic_op([&](slot_allocator& bits)
 		{
 			verify(HERE), bits.ref--;
 
-			if (_this == entry)
+			if (_this == curr.current)
 			{
 				if (diff < 64)
 				{
@@ -917,20 +949,11 @@ atomic_wait::root_info* atomic_wait::root_info::slot_free(std::uintptr_t, atomic
 			}
 		});
 
-		if (_this == entry)
+		if (_this == curr.current)
 		{
 			break;
 		}
-
-		entry++;
-
-		if (entry == std::end(s_hashtable)) [[unlikely]]
-		{
-			entry = s_hashtable;
-		}
 	}
-
-	return _this;
 }
 
 template <typename F>
@@ -939,23 +962,20 @@ FORCE_INLINE auto atomic_wait::root_info::slot_search(std::uintptr_t iptr, u32 s
 	u32 index = 0;
 	u32 total = 0;
 
-	for (auto* _this = this;;)
+	for (hash_engine _this(iptr);; _this++)
 	{
 		const auto bits = _this->bits.load();
+
+		if (bits.ref == 0) [[likely]]
+		{
+			return;
+		}
 
 		u16 cond_ids[max_threads];
 		u32 cond_count = 0;
 
 		u64 high_val = bits.high;
 		u64 low_val = bits.low;
-
-		if (_this == this)
-		{
-			if (bits.ref == 0)
-			{
-				return;
-			}
-		}
 
 		for (u64 bits = high_val; bits; bits &= bits - 1)
 		{
@@ -988,17 +1008,11 @@ FORCE_INLINE auto atomic_wait::root_info::slot_search(std::uintptr_t iptr, u32 s
 
 		total += cond_count;
 
-		_this++;
 		index++;
 
 		if (index == max_distance)
 		{
 			return;
-		}
-
-		if (_this >= std::end(s_hashtable))
-		{
-			_this = s_hashtable;
 		}
 	}
 }
@@ -1018,13 +1032,9 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data) & (~s_ref_mask >> 17);
 
-	const auto root = &s_hashtable[iptr % s_hashtable_size];
-
 	uint ext_size = 0;
 
 	std::uintptr_t iptr_ext[atomic_wait::max_list - 1]{};
-
-	atomic_wait::root_info* root_ext[atomic_wait::max_list - 1]{};
 
 	if (ext) [[unlikely]]
 	{
@@ -1044,7 +1054,6 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 			}
 
 			iptr_ext[ext_size] = reinterpret_cast<std::uintptr_t>(e->data) & (~s_ref_mask >> 17);
-			root_ext[ext_size] = &s_hashtable[iptr_ext[ext_size] % s_hashtable_size];
 			ext_size++;
 		}
 	}
@@ -1058,7 +1067,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 		cond_id_ext[i] = cond_alloc(iptr_ext[i], ext[i].mask);
 	}
 
-	const auto slot = root->slot_alloc(iptr);
+	const auto slot = atomic_wait::root_info::slot_alloc(iptr);
 
 	std::array<atomic_t<u16>*, atomic_wait::max_list - 1> slot_ext{};
 
@@ -1067,7 +1076,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 	for (u32 i = 0; i < ext_size; i++)
 	{
 		// Allocate slot for cond id location
-		slot_ext[i] = root_ext[i]->slot_alloc(iptr_ext[i]);
+		slot_ext[i] = atomic_wait::root_info::slot_alloc(iptr_ext[i]);
 
 		// Get pointers to the semaphores
 		cond_ext[i] = s_cond_list + cond_id_ext[i];
@@ -1263,10 +1272,10 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 	// Release resources in reverse order
 	for (u32 i = ext_size - 1; i != umax; i--)
 	{
-		verify(HERE), root_ext[i] == root_ext[i]->slot_free(iptr_ext[i], slot_ext[i]);
+		atomic_wait::root_info::slot_free(iptr_ext[i], slot_ext[i]);
 	}
 
-	verify(HERE), root == root->slot_free(iptr, slot);
+	atomic_wait::root_info::slot_free(iptr, slot);
 
 	s_tls_wait_cb(data, -1, stamp0);
 }
@@ -1460,13 +1469,11 @@ bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data) & (~s_ref_mask >> 17);
 
-	auto* const root = &s_hashtable[iptr % s_hashtable_size];
-
 	s_tls_notify_cb(data, 0);
 
 	u64 progress = 0;
 
-	root->slot_search(iptr, 0, thread_id, _mm_set1_epi64x(-1), [&](u32 cond_id)
+	atomic_wait::root_info::slot_search(iptr, 0, thread_id, _mm_set1_epi64x(-1), [&](u32 cond_id)
 	{
 		// Forced notification
 		if (alert_sema(cond_id, data, thread_id, 0, _mm_setzero_si128(), _mm_setzero_si128()))
@@ -1498,13 +1505,11 @@ atomic_wait_engine::notify_one(const void* data, u32 size, __m128i mask, __m128i
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data) & (~s_ref_mask >> 17);
 
-	auto* const root = &s_hashtable[iptr % s_hashtable_size];
-
 	s_tls_notify_cb(data, 0);
 
 	u64 progress = 0;
 
-	root->slot_search(iptr, size, 0, mask, [&](u32 cond_id)
+	atomic_wait::root_info::slot_search(iptr, size, 0, mask, [&](u32 cond_id)
 	{
 		if (alert_sema(cond_id, data, -1, size, mask, new_value))
 		{
@@ -1526,8 +1531,6 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data) & (~s_ref_mask >> 17);
 
-	auto* const root = &s_hashtable[iptr % s_hashtable_size];
-
 	s_tls_notify_cb(data, 0);
 
 	u64 progress = 0;
@@ -1538,7 +1541,7 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 	// Array itself.
 	u16 cond_ids[UINT16_MAX + 1];
 
-	root->slot_search(iptr, size, 0, mask, [&](u32 cond_id)
+	atomic_wait::root_info::slot_search(iptr, size, 0, mask, [&](u32 cond_id)
 	{
 		u32 res = alert_sema<true>(cond_id, data, -1, size, mask, new_value);
 
