@@ -529,6 +529,9 @@ static constexpr u128 dup8(u32 val)
 	return it3;
 }
 
+// Free or put in specified tls slot
+static void cond_free(u32 cond_id, u32 tls_slot);
+
 // Semaphore tree root (level 1) - split in 8 parts (8192 in each)
 static atomic_t<u128> s_cond_sem1{1};
 
@@ -544,12 +547,50 @@ static atomic_t<u64> s_cond_bits[(UINT16_MAX + 1) / 64]{1};
 // Max allowed thread number is chosen to fit in 16 bits
 static atomic_wait::cond_handle s_cond_list[UINT16_MAX + 1]{};
 
+namespace
+{
+	struct tls_cond_handler
+	{
+		u16 cond[4]{};
+
+		constexpr tls_cond_handler() noexcept = default;
+
+		~tls_cond_handler()
+		{
+			for (u32 cond_id : cond)
+			{
+				if (cond_id)
+				{
+					// Set fake refctr
+					s_cond_list[cond_id].ptr_ref.release(1);
+					cond_free(cond_id, -1);
+				}
+			}
+		}
+	};
+}
+
+// TLS storage for few allocaded "semaphores" to allow skipping initialization
+static thread_local tls_cond_handler s_tls_conds{};
+
 static u32
 #ifdef _WIN32
 __vectorcall
 #endif
-cond_alloc(std::uintptr_t iptr, __m128i mask)
+cond_alloc(std::uintptr_t iptr, __m128i mask, u32 tls_slot = -1)
 {
+	// Try to get cond from tls slot instead
+	u16* ptls = tls_slot >= std::size(s_tls_conds.cond) ? nullptr : s_tls_conds.cond + tls_slot;
+
+	if (ptls && *ptls) [[likely]]
+	{
+		// Fast reinitialize
+		const u32 id = std::exchange(*ptls, 0);
+		s_cond_list[id].mask = mask;
+		s_cond_list[id].ptr_ref.release((iptr << 17) | 1);
+		return id;
+	}
+
 	const u32 level1 = s_cond_sem1.atomic_op([](u128& val) -> u32
 	{
 		constexpr u128 max_mask = dup8(8192);
@@ -611,9 +652,9 @@ cond_alloc(std::uintptr_t iptr, __m128i mask)
 	fmt::raw_error("Thread semaphore limit " STRINGIZE(UINT16_MAX) " reached in atomic wait.");
 }
 
-static void cond_free(u32 cond_id)
+static void cond_free(u32 cond_id, u32 tls_slot = -1)
 {
-	if (cond_id - 1 >= u32{UINT16_MAX})
+	if (cond_id - 1 >= u32{UINT16_MAX}) [[unlikely]]
 	{
 		fprintf(stderr, "cond_free(): bad id %u" HERE "\n", cond_id);
 		std::abort();
@@ -639,6 +680,17 @@ static void cond_free(u32 cond_id)
 
 	if (!last)
 	{
+		return;
+	}
+
+	u16* ptls = tls_slot >= std::size(s_tls_conds.cond) ? nullptr : s_tls_conds.cond + tls_slot;
+
+	if (ptls && !*ptls) [[likely]]
+	{
+		// Fast finalization
+		cond->sync.release(0);
+		cond->mask = _mm_setzero_si128();
+		*ptls = static_cast<u16>(cond_id);
 		return;
 	}
 
@@ -774,7 +826,7 @@ namespace atomic_wait
 
 		static atomic_t<u16>* slot_alloc(std::uintptr_t ptr) noexcept;
 
-		static void slot_free(std::uintptr_t ptr, atomic_t<u16>* slot) noexcept;
+		static void slot_free(std::uintptr_t ptr, atomic_t<u16>* slot, u32 tls_slot) noexcept;
 
 		template <typename F>
 		static auto slot_search(std::uintptr_t iptr, u32 size, u64 thread_id, __m128i mask, F func) noexcept;
@@ -934,7 +986,7 @@ void atomic_wait::root_info::register_collisions(std::uintptr_t ptr)
 	}
 }
 
-void atomic_wait::root_info::slot_free(std::uintptr_t iptr, atomic_t<u16>* slot) noexcept
+void atomic_wait::root_info::slot_free(std::uintptr_t iptr, atomic_t<u16>* slot, u32 tls_slot) noexcept
 {
 	const auto begin = reinterpret_cast<std::uintptr_t>(std::begin(s_hashtable));
 
@@ -964,7 +1016,7 @@ void atomic_wait::root_info::slot_free(std::uintptr_t iptr, atomic_t<u16>* slot)
 
 	if (cond_id)
 	{
-		cond_free(cond_id);
+		cond_free(cond_id, tls_slot);
 	}
 
 	for (hash_engine curr(iptr);; curr++)
@@ -1096,13 +1148,13 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 		}
 	}
 
-	const u32 cond_id = cond_alloc(iptr, mask);
+	const u32 cond_id = cond_alloc(iptr, mask, 0);
 
 	u32 cond_id_ext[atomic_wait::max_list - 1]{};
 
 	for (u32 i = 0; i < ext_size; i++)
 	{
-		cond_id_ext[i] = cond_alloc(iptr_ext[i], ext[i].mask);
+		cond_id_ext[i] = cond_alloc(iptr_ext[i], ext[i].mask, i + 1);
 	}
 
 	const auto slot = atomic_wait::root_info::slot_alloc(iptr);
@@ -1310,10 +1362,10 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 	// Release resources in reverse order
 	for (u32 i = ext_size - 1; i != umax; i--)
 	{
-		atomic_wait::root_info::slot_free(iptr_ext[i], slot_ext[i]);
+		atomic_wait::root_info::slot_free(iptr_ext[i], slot_ext[i], i + 1);
 	}
 
-	atomic_wait::root_info::slot_free(iptr, slot);
+	atomic_wait::root_info::slot_free(iptr, slot, 0);
 
 	s_tls_wait_cb(data, -1, stamp0);
 }
