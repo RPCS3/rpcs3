@@ -55,7 +55,7 @@ namespace gl
 	bool is_primitive_native(rsx::primitive_type in);
 	GLenum draw_mode(rsx::primitive_type in);
 
-	void set_primary_context_thread();
+	void set_primary_context_thread(bool = true);
 	bool is_primary_context_thread();
 
 	// Texture helpers
