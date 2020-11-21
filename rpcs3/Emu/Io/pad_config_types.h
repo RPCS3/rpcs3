@@ -8,6 +8,7 @@ enum class pad_handler
 	keyboard,
 	ds3,
 	ds4,
+	dualsense,
 #ifdef _WIN32
 	xinput,
 	mm,
