@@ -493,6 +493,8 @@ void GLGSRender::on_exit()
 	}
 
 	zcull_ctrl.release();
+
+	gl::set_primary_context_thread(false);
 }
 
 void GLGSRender::clear_surface(u32 arg)

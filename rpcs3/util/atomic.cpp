@@ -12,8 +12,6 @@
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
-#include <iterator>
-#include <memory>
 #include <cstdlib>
 #include <cstdint>
 #include <array>

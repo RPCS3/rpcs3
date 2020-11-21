@@ -111,22 +111,22 @@ private:
 	stx::atomic_cptr<std::string> m_tname;
 
 	// Start thread
-	void start(native_entry, void(*)());
+	void start(native_entry);
 
 	// Called at the thread start
 	void initialize(void (*error_cb)());
 
-	// Called at the thread end, returns true if needs destruction
+	// Called at the thread end, returns self handle
 	u64 finalize(thread_state result) noexcept;
 
 	// Cleanup after possibly deleting the thread instance
-	static void finalize(u64 _self) noexcept;
+	static u64 finalize(u64 _self) noexcept;
 
 	// Set name for debugger
 	static void set_name(std::string);
 
-	// Make trampoline with stack fix
-	static void(*make_trampoline(native_entry))();
+	// Make entry point
+	static native_entry make_trampoline(u64(*)(thread_base*));
 
 	friend class thread_ctrl;
 
@@ -277,35 +277,12 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 	using result = result_storage_t<Context>;
 	using thread = thread_base;
 
-	// Type-erased thread entry point
-#ifdef _WIN32
-	static inline uint __stdcall entry_point(void* arg)
-#else
-	static inline void* entry_point(void* arg)
-#endif
+	static u64 entry_point(thread_base* _base)
 	{
-		if (auto _this = thread_ctrl::get_current())
-		{
-			arg = _this;
-		}
-
-		const auto _this = static_cast<named_thread*>(static_cast<thread*>(arg));
-
-		// Perform self-cleanup if necessary
-		u64 _self = _this->entry_point();
-
-		if (!_self)
-		{
-			delete _this;
-			thread::finalize(0);
-			return 0;
-		}
-
-		thread::finalize(_self);
-		return 0;
+		return static_cast<named_thread*>(_base)->entry_point2();
 	}
 
-	u64 entry_point()
+	u64 entry_point2()
 	{
 		thread::initialize([]()
 		{
@@ -330,7 +307,7 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 		return thread::finalize(thread_state::finished);
 	}
 
-	static inline void(*trampoline)() = thread::make_trampoline(entry_point);
+	static inline thread::native_entry trampoline = thread::make_trampoline(entry_point);
 
 	friend class thread_ctrl;
 
@@ -341,7 +318,7 @@ public:
 		: Context()
 		, thread(Context::thread_name)
 	{
-		thread::start(&named_thread::entry_point, trampoline);
+		thread::start(trampoline);
 	}
 
 	// Normal forwarding constructor
@@ -350,7 +327,7 @@ public:
 		: Context(std::forward<Args>(args)...)
 		, thread(name)
 	{
-		thread::start(&named_thread::entry_point, trampoline);
+		thread::start(trampoline);
 	}
 
 	// Lambda constructor, also the implicit deduction guide candidate
@@ -358,7 +335,7 @@ public:
 		: Context(std::forward<Context>(f))
 		, thread(name)
 	{
-		thread::start(&named_thread::entry_point, trampoline);
+		thread::start(trampoline);
 	}
 
 	named_thread(const named_thread&) = delete;

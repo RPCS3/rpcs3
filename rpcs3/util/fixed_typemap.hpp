@@ -101,6 +101,7 @@ namespace stx
 			std::swap(m_list, x.m_list);
 			std::swap(m_order, x.m_order);
 			std::swap(m_init_count, x.m_init_count);
+			return *this;
 		}
 
 		~manual_fixed_typemap()
