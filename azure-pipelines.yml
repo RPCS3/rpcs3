@@ -21,6 +21,8 @@ jobs:
   variables:
     CCACHE_DIR: $(Pipeline.Workspace)/ccache
     IS_AZURE: true
+    UPLOAD_COMMIT_HASH: d812f1254a1157c80fd402f94446310560f54e5f
+    UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-linux"
   pool:
     vmImage: 'ubuntu-latest'
   steps:
@@ -40,12 +42,16 @@ jobs:
         rpcs3/rpcs3-travis-xenial:1.6 \
         /rpcs3/.ci/build-linux.sh
     displayName: Docker setup and build
-    env:
-      GITHUB_TOKEN: $(RPCS3-Token)
 
   - publish: $(Build.ArtifactStagingDirectory)
     condition: and(succeeded(), eq(variables['COMPILER'], 'gcc'))
     artifact: RPCS3 for Linux
+
+  - bash: .ci/github-upload.sh
+    condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['COMPILER'], 'gcc'))
+    displayName: Push build to GitHub
+    env:
+      RPCS3_TOKEN: $(RPCS3-Token)
 
 - job: Windows_Build
   variables:
@@ -57,6 +63,8 @@ jobs:
     VULKAN_SDK_SHA: 'b64471f3a720e649c1fae6535ea83b8c642655ebed1485bfdf15bf4d88f746d9'
     VULKAN_SDK: C:\VulkanSDK\$(VULKAN_VER)
     CACHE_DIR: ./cache
+    UPLOAD_COMMIT_HASH: 7d09e3be30805911226241afbb14f8cdc2eb054e
+    UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-win"
 
   pool:
     vmImage: "windows-latest"
@@ -103,7 +111,7 @@ jobs:
       condition: succeeded()
       artifact: RPCS3 for Windows
 
-    - bash: .ci/github-upload-windows.sh
+    - bash: .ci/github-upload.sh
       condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
       displayName: Push build to GitHub
       env:

@@ -41,7 +41,6 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     COMM_HASH="$(git rev-parse --short=8 HEAD)"
     RPCS3_APPIMAGE="rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_linux64.AppImage"
 
-    curl -sLO https://github.com/hcorion/uploadtool/raw/master/upload.sh
     mv ./RPCS3*.AppImage "$RPCS3_APPIMAGE"
 
     # If we're building using Azure Pipelines, let's copy over the AppImage artifact
@@ -50,16 +49,9 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     fi
 
     FILESIZE=$(stat -c %s ./rpcs3*.AppImage)
-    SHA256SUM=$(sha256sum ./rpcs3*.AppImage)
-    if [ -n "$GITHUB_TOKEN" ]; then
-        unset TRAVIS_REPO_SLUG
-        REPO_SLUG=RPCS3/rpcs3-binaries-linux \
-            UPLOADTOOL_BODY="$SHA256SUM;${FILESIZE}B"\
-            RELEASE_NAME=build-${TRAVIS_COMMIT}\
-            RELEASE_TITLE=${COMM_TAG}-${COMM_COUNT}\
-            REPO_COMMIT=d812f1254a1157c80fd402f94446310560f54e5f\
-            bash upload.sh rpcs3*.AppImage
-    fi
+    SHA256SUM=$(sha256sum ./rpcs3*.AppImage | awk '{ print $1 }')
+    echo "${SHA256SUM};${FILESIZE}B" > /rpcs3/GitHubReleaseMessage.txt
+    
 fi
 
 if [ "$DEPLOY_PPA" = "true" ]; then
