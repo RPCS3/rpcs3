@@ -11,6 +11,13 @@ namespace
 
 	const u32 DUALSENSE_ACC_RES_PER_G = 8192;
 	const u32 DUALSENSE_GYRO_RES_PER_DEG_S = 1024;
+	const u32 DUALSENSE_BLUETOOTH_REPORT_SIZE = 78;
+	const u32 DUALSENSE_USB_REPORT_SIZE = 48;
+
+	inline u32 read_u32(const void* buf)
+	{
+		return *reinterpret_cast<const u32*>(buf);
+	}
 }
 
 dualsense_pad_handler::dualsense_pad_handler()
@@ -245,7 +252,7 @@ dualsense_pad_handler::DualSenseDataStatus dualsense_pad_handler::GetRawData(con
 	switch (buf[0])
 	{
 	case 0x01:
-		if (res == 78)
+		if (res == DUALSENSE_BLUETOOTH_REPORT_SIZE)
 		{
 			device->dataMode = DualSenseDataMode::Simple;
 			device->btCon = true;
@@ -259,10 +266,22 @@ dualsense_pad_handler::DualSenseDataStatus dualsense_pad_handler::GetRawData(con
 		}
 		break;
 	case 0x31:
+	{
 		device->dataMode = DualSenseDataMode::Enhanced;
 		device->btCon = true;
 		offset = 2;
+
+		const u8 btHdr = 0xA1;
+		const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
+		const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), (DUALSENSE_BLUETOOTH_REPORT_SIZE - 4), crcTable, crcHdr);
+		const u32 crcReported = read_u32(&buf[DUALSENSE_BLUETOOTH_REPORT_SIZE - 4]);
+		if (crcCalc != crcReported)
+		{
+			dualsense_log.warning("Data packet CRC check failed, ignoring! Received 0x%x, Expected 0x%x", crcReported, crcCalc);
+			return DualSenseDataStatus::NoNewData;
+		}
 		break;
+	}
 	default:
 		return DualSenseDataStatus::NoNewData;
 	}
@@ -623,8 +642,7 @@ int dualsense_pad_handler::SendVibrateData(const std::shared_ptr<DualSenseDevice
 
 	if (device->btCon)
 	{
-		const u32 reportSize = 78;
-		std::array<u8, reportSize> outputBuf{};
+		std::array<u8, DUALSENSE_BLUETOOTH_REPORT_SIZE> outputBuf{};
 		outputBuf[0] = 0x31;
 		outputBuf[1] = 0x02;
 		outputBuf[2] |= 0x03;
@@ -634,26 +652,25 @@ int dualsense_pad_handler::SendVibrateData(const std::shared_ptr<DualSenseDevice
 
 		const u8 btHdr    = 0xA2;
 		const u32 crcHdr  = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
-		const u32 crcCalc = CRCPP::CRC::Calculate(outputBuf.data(), (reportSize - 4), crcTable, crcHdr);
+		const u32 crcCalc = CRCPP::CRC::Calculate(outputBuf.data(), (DUALSENSE_BLUETOOTH_REPORT_SIZE - 4), crcTable, crcHdr);
 
 		outputBuf[74] = (crcCalc >> 0) & 0xFF;
 		outputBuf[75] = (crcCalc >> 8) & 0xFF;
 		outputBuf[76] = (crcCalc >> 16) & 0xFF;
 		outputBuf[77] = (crcCalc >> 24) & 0xFF;
 
-		return hid_write(device->hidDevice, outputBuf.data(), reportSize);
+		return hid_write(device->hidDevice, outputBuf.data(), DUALSENSE_BLUETOOTH_REPORT_SIZE);
 	}
 	else
 	{
-		const u32 reportSize = 48;
-		std::array<u8, reportSize> outputBuf{};
+		std::array<u8, DUALSENSE_USB_REPORT_SIZE> outputBuf{};
 		outputBuf[0] = 0x02;
 		outputBuf[1] |= 0x03;
 
 		outputBuf[3] = device->smallVibrate;
 		outputBuf[4] = device->largeVibrate;
 
-		return hid_write(device->hidDevice, outputBuf.data(), reportSize);
+		return hid_write(device->hidDevice, outputBuf.data(), DUALSENSE_USB_REPORT_SIZE);
 	}
 }
 
