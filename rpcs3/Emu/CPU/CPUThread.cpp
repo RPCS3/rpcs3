@@ -329,10 +329,16 @@ namespace cpu_counter
 
 	void remove(cpu_thread* _this) noexcept
 	{
+		// Return if not registered
+		const u32 slot = s_tls_thread_slot;
+
+		if (slot == umax)
+		{
+			return;
+		}
+
 		// Unregister and wait if necessary
 		verify(HERE), _this->state & cpu_flag::wait;
-
-		u32 slot = s_tls_thread_slot;
 
 		if (slot >= std::size(s_cpu_list))
 		{
