@@ -45,6 +45,12 @@ jobs:
     condition: and(succeeded(), eq(variables['COMPILER'], 'gcc'))
     artifact: RPCS3 for Linux
 
+  - bash: .ci/deploy-linux.sh
+    condition: and(eq(variables['COMPILER'], 'gcc'), ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    displayName: Push build to GitHub
+    env:
+      RPCS3_TOKEN: $(RPCS3-Token)
+
 - job: Windows_Build
   variables:
     COMPILER: msvc
