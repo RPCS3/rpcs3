@@ -1963,13 +1963,11 @@ void Emulator::Stop(bool restart)
 	}
 
 	m_force_boot = false;
-	Init();
 }
 
 bool Emulator::Quit(bool force_quit)
 {
 	m_force_boot = false;
-	Emu.Stop();
 
 	// Deinitialize object manager to prevent any hanging objects at program exit
 	*g_fxo = {};
