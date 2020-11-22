@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Emu/Io/PadHandler.h"
+#include "Utilities/CRC.h"
 #include "hidapi.h"
 
 class dualsense_pad_handler final : public PadHandlerBase
@@ -62,12 +63,16 @@ class dualsense_pad_handler final : public PadHandlerBase
 		bool btCon{ false };
 		DualSenseDataMode dataMode{ DualSenseDataMode::Simple };
 		std::array<u8, 64> padData{};
+		bool newVibrateData{true};
+		u8 largeVibrate{0};
+		u8 smallVibrate{0};
 	};
 
 	const u16 DUALSENSE_VID = 0x054C;
 	const u16 DUALSENSE_PID = 0x0CE6;
 
 	std::unordered_map<std::string, std::shared_ptr<DualSenseDevice>> controllers;
+	CRCPP::CRC::Table<u32, 32> crcTable{CRCPP::CRC::CRC_32()};
 
 public:
 	dualsense_pad_handler();
@@ -88,6 +93,7 @@ private:
 	DualSenseDataStatus GetRawData(const std::shared_ptr<DualSenseDevice>& dualsenseDevice);
 
 	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
+	int SendVibrateData(const std::shared_ptr<DualSenseDevice>& device);
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 	bool get_is_left_trigger(u64 keyCode) override;
 	bool get_is_right_trigger(u64 keyCode) override;
@@ -96,4 +102,5 @@ private:
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 	pad_preview_values get_preview_values(std::unordered_map<u64, u16> data) override;
+	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
 };

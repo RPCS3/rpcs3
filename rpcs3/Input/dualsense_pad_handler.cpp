@@ -58,7 +58,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 
 	// Set capabilities
 	b_has_config = true;
-	b_has_rumble = false;
+	b_has_rumble = true;
 	b_has_deadzones = true;
 	b_has_led = false;
 	b_has_battery = false;
@@ -598,11 +598,90 @@ dualsense_pad_handler::~dualsense_pad_handler()
 	{
 		if (controller.second->hidDevice)
 		{
+			// Disable vibration
+			controller.second->smallVibrate = 0;
+			controller.second->largeVibrate = 0;
+			SendVibrateData(controller.second);
+
 			hid_close(controller.second->hidDevice);
 		}
 	}
 	if (hid_exit() != 0)
 	{
 		dualsense_log.error("hid_exit failed!");
+	}
+}
+
+int dualsense_pad_handler::SendVibrateData(const std::shared_ptr<DualSenseDevice>& device)
+{
+	if (!device)
+		return -2;
+
+	auto p_profile = device->config;
+	if (p_profile == nullptr)
+		return -2; // hid_write and hid_write_control return -1 on error
+
+	if (device->btCon)
+	{
+		const u32 reportSize = 78;
+		std::array<u8, reportSize> outputBuf{};
+		outputBuf[0] = 0x31;
+		outputBuf[1] = 0x02;
+		outputBuf[2] |= 0x03;
+
+		outputBuf[4] = device->smallVibrate;
+		outputBuf[5] = device->largeVibrate;
+
+		const u8 btHdr    = 0xA2;
+		const u32 crcHdr  = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
+		const u32 crcCalc = CRCPP::CRC::Calculate(outputBuf.data(), (reportSize - 4), crcTable, crcHdr);
+
+		outputBuf[74] = (crcCalc >> 0) & 0xFF;
+		outputBuf[75] = (crcCalc >> 8) & 0xFF;
+		outputBuf[76] = (crcCalc >> 16) & 0xFF;
+		outputBuf[77] = (crcCalc >> 24) & 0xFF;
+
+		return hid_write(device->hidDevice, outputBuf.data(), reportSize);
+	}
+	else
+	{
+		const u32 reportSize = 48;
+		std::array<u8, reportSize> outputBuf{};
+		outputBuf[0] = 0x02;
+		outputBuf[1] |= 0x03;
+
+		outputBuf[3] = device->smallVibrate;
+		outputBuf[4] = device->largeVibrate;
+
+		return hid_write(device->hidDevice, outputBuf.data(), reportSize);
+	}
+}
+
+void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+{
+	auto dualsense_dev = std::static_pointer_cast<DualSenseDevice>(device);
+	if (!dualsense_dev || !pad)
+		return;
+
+	auto profile = dualsense_dev->config;
+
+	// Attempt to send rumble no matter what
+	int idx_l = profile->switch_vibration_motors ? 1 : 0;
+	int idx_s = profile->switch_vibration_motors ? 0 : 1;
+
+	int speed_large = profile->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
+	int speed_small = profile->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
+
+	dualsense_dev->newVibrateData |= dualsense_dev->largeVibrate != speed_large || dualsense_dev->smallVibrate != speed_small;
+
+	dualsense_dev->largeVibrate = speed_large;
+	dualsense_dev->smallVibrate = speed_small;
+
+	if (dualsense_dev->newVibrateData)
+	{
+		if (SendVibrateData(dualsense_dev) >= 0)
+		{
+			dualsense_dev->newVibrateData = false;
+		}
 	}
 }
