@@ -2035,9 +2035,11 @@ u64 thread_base::finalize(u64 _self) noexcept
 	g_tls_wait_fail = 0;
 	g_tls_access_violation_recovered = false;
 
+	const auto fake_self = reinterpret_cast<thread_base*>(_self);
+
 	atomic_wait_engine::set_wait_callback(nullptr);
 	g_tls_log_prefix = []() -> std::string { return {}; };
-	thread_ctrl::g_tls_this_thread = nullptr;
+	thread_ctrl::g_tls_this_thread = fake_self;
 
 	if (!_self)
 	{
@@ -2046,6 +2048,43 @@ u64 thread_base::finalize(u64 _self) noexcept
 
 	// Try to add self to thread pool
 	set_name("..pool");
+
+	static constexpr u64 s_stop_bit = 0x8000'0000'0000'0000ull;
+
+	static atomic_t<u64> s_pool_ctr = []
+	{
+		std::atexit([]
+		{
+			s_pool_ctr |= s_stop_bit;
+
+			while (u64 remains = s_pool_ctr & ~s_stop_bit)
+			{
+				for (u32 i = 0; i < std::size(s_thread_pool); i++)
+				{
+					if (thread_base** ptls = s_thread_pool[i].exchange(nullptr))
+					{
+						// Extract thread handle
+						const u64 _self = reinterpret_cast<u64>(*ptls);
+
+						// Wake up a thread and make sure it's joined
+						s_thread_pool[i].notify_all();
+
+#ifdef _WIN32
+						const HANDLE handle = reinterpret_cast<HANDLE>(_self);
+						WaitForSingleObject(handle, INFINITE);
+						CloseHandle(handle);
+#else
+						pthread_join(reinterpret_cast<pthread_t>(_self), nullptr);
+#endif
+					}
+				}
+			}
+		});
+
+		return 0;
+	}();
+
+	s_pool_ctr++;
 
 	u32 pos = -1;
 
@@ -2075,9 +2114,18 @@ u64 thread_base::finalize(u64 _self) noexcept
 	const auto tls = &thread_ctrl::g_tls_this_thread;
 	s_thread_pool[pos] = tls;
 
-	while (s_thread_pool[pos] == tls || !atomic_storage<thread_base*>::load(*tls))
+	atomic_wait::list<2> list{};
+	list.set<0>(s_pool_ctr, 0, s_stop_bit);
+	list.set<1>(s_thread_pool[pos], tls);
+
+	while (s_thread_pool[pos] == tls || atomic_storage<thread_base*>::load(*tls) == fake_self)
 	{
-		s_thread_pool[pos].wait(tls);
+		list.wait();
+
+		if (s_pool_ctr & s_stop_bit)
+		{
+			break;
+		}
 	}
 
 	// Free thread pool slot
@@ -2087,6 +2135,11 @@ u64 thread_base::finalize(u64 _self) noexcept
 	});
 
 	s_thread_bits.notify_one();
+
+	if (--s_pool_ctr & s_stop_bit)
+	{
+		return 0;
+	}
 
 	// Restore thread id
 	const auto _this = atomic_storage<thread_base*>::load(*tls);
@@ -2218,7 +2271,9 @@ thread_base::~thread_base()
 	if ((m_sync & 3) == 2)
 	{
 #ifdef _WIN32
-		CloseHandle(reinterpret_cast<HANDLE>(m_thread.load()));
+		const HANDLE handle0 = reinterpret_cast<HANDLE>(m_thread.load());
+		WaitForSingleObject(handle0, INFINITE);
+		CloseHandle(handle0);
 #else
 		pthread_join(reinterpret_cast<pthread_t>(m_thread.load()), nullptr);
 #endif
