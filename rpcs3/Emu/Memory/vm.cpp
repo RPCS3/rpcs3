@@ -289,8 +289,8 @@ namespace vm
 			return;
 		}
 
-		// Limit to 256 MiB at once; make sure if it operates on big amount of data, it's page-aligned
-		if (size > 256 * 1024 * 1024 || (size > 65536 && size % 4096))
+		// Limit to <512 MiB at once; make sure if it operates on big amount of data, it's page-aligned
+		if (size >= 512 * 1024 * 1024 || (size > 65536 && size % 4096))
 		{
 			fmt::throw_exception("Failed to lock range (flags=0x%x, addr=0x%x, size=0x%x)" HERE, flags >> 32, addr, size);
 		}
@@ -827,8 +827,6 @@ namespace vm
 						safe_bits |= range_readable;
 					if (old_val & start_value & page_writable && safe_bits & range_readable)
 						safe_bits |= range_writable;
-					if (old_val & start_value & page_executable && safe_bits & range_readable)
-						safe_bits |= range_executable;
 
 					// Protect range locks from observing changes in memory protection
 					_lock_main_range_lock(safe_bits, start * 4096, page_size);
