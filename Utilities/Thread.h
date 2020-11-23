@@ -100,6 +100,8 @@ public:
 	using native_entry = void*(*)(void* arg);
 #endif
 
+	const native_entry entry_point;
+
 private:
 	// Thread handle (platform-specific)
 	atomic_t<u64> m_thread{0};
@@ -111,7 +113,7 @@ private:
 	stx::atomic_cptr<std::string> m_tname;
 
 	// Start thread
-	void start(native_entry);
+	void start();
 
 	// Called at the thread start
 	void initialize(void (*error_cb)());
@@ -120,7 +122,7 @@ private:
 	u64 finalize(thread_state result) noexcept;
 
 	// Cleanup after possibly deleting the thread instance
-	static u64 finalize(u64 _self) noexcept;
+	static native_entry finalize(u64 _self) noexcept;
 
 	// Set name for debugger
 	static void set_name(std::string);
@@ -134,7 +136,7 @@ private:
 	friend class named_thread;
 
 protected:
-	thread_base(std::string_view name);
+	thread_base(native_entry, std::string_view name);
 
 	~thread_base();
 
@@ -316,26 +318,26 @@ public:
 	template <bool Valid = std::is_default_constructible_v<Context> && thread_thread_name<Context>(), typename = std::enable_if_t<Valid>>
 	named_thread()
 		: Context()
-		, thread(Context::thread_name)
+		, thread(trampoline, Context::thread_name)
 	{
-		thread::start(trampoline);
+		thread::start();
 	}
 
 	// Normal forwarding constructor
 	template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<Context, Args&&...>>>
 	named_thread(std::string_view name, Args&&... args)
 		: Context(std::forward<Args>(args)...)
-		, thread(name)
+		, thread(trampoline, name)
 	{
-		thread::start(trampoline);
+		thread::start();
 	}
 
 	// Lambda constructor, also the implicit deduction guide candidate
 	named_thread(std::string_view name, Context&& f)
 		: Context(std::forward<Context>(f))
-		, thread(name)
+		, thread(trampoline, name)
 	{
-		thread::start(trampoline);
+		thread::start();
 	}
 
 	named_thread(const named_thread&) = delete;

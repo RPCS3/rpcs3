@@ -1849,7 +1849,7 @@ static atomic_t<u128, 64> s_thread_bits{0};
 
 static atomic_t<thread_base**> s_thread_pool[128]{};
 
-void thread_base::start(native_entry entry)
+void thread_base::start()
 {
 	for (u128 bits = s_thread_bits.load(); bits; bits &= bits - 1)
 	{
@@ -1867,22 +1867,20 @@ void thread_base::start(native_entry entry)
 			continue;
 		}
 
-		// Send "this" and entry point
-		const u64 entry_val = reinterpret_cast<u64>(entry);
-		m_thread = entry_val;
-		atomic_storage<thread_base*>::release(*tls, this);
+		// Receive "that" native thread handle, sent "this" thread_base
+		const u64 _self = reinterpret_cast<u64>(atomic_storage<thread_base*>::load(*tls));
+		m_thread.release(_self);
+		verify(HERE), _self != reinterpret_cast<u64>(this);
+		atomic_storage<thread_base*>::store(*tls, this);
 		s_thread_pool[pos].notify_all();
-
-		// Wait for actual "m_thread" in return
-		m_thread.wait(entry_val);
 		return;
 	}
 
 #ifdef _WIN32
-	m_thread = ::_beginthreadex(nullptr, 0, entry, this, CREATE_SUSPENDED, nullptr);
+	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
 	verify("thread_ctrl::start" HERE), m_thread, ::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1;
 #else
-	verify("thread_ctrl::start" HERE), pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), nullptr, entry, this) == 0;
+	verify("thread_ctrl::start" HERE), pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), nullptr, entry_point, this) == 0;
 #endif
 }
 
@@ -2026,7 +2024,7 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 	return m_thread;
 }
 
-u64 thread_base::finalize(u64 _self) noexcept
+thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 {
 	g_tls_fault_all = 0;
 	g_tls_fault_rsx = 0;
@@ -2043,7 +2041,7 @@ u64 thread_base::finalize(u64 _self) noexcept
 
 	if (!_self)
 	{
-		return 0;
+		return nullptr;
 	}
 
 	// Try to add self to thread pool
@@ -2138,17 +2136,14 @@ u64 thread_base::finalize(u64 _self) noexcept
 
 	if (--s_pool_ctr & s_stop_bit)
 	{
-		return 0;
+		return nullptr;
 	}
 
-	// Restore thread id
+	// Restore thread base
 	const auto _this = atomic_storage<thread_base*>::load(*tls);
-	const auto entry = _this->m_thread.exchange(_self);
-	verify(HERE), entry != _self;
-	_this->m_thread.notify_one();
 
 	// Return new entry
-	return entry;
+	return _this->entry_point;
 }
 
 thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* _base))
@@ -2166,7 +2161,7 @@ thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* 
 
 		// Call finalize, return if zero
 		c.mov(args[0], x86::rax);
-		c.call(imm_ptr<u64(*)(u64)>(finalize));
+		c.call(imm_ptr<native_entry(*)(u64)>(finalize));
 		c.test(x86::rax, x86::rax);
 		c.jz(_ret);
 
@@ -2260,8 +2255,9 @@ std::string thread_ctrl::get_name_cached()
 	return *name_cache;
 }
 
-thread_base::thread_base(std::string_view name)
-	: m_tname(stx::shared_cptr<std::string>::make(name))
+thread_base::thread_base(native_entry entry, std::string_view name)
+	: entry_point(entry)
+	, m_tname(stx::shared_cptr<std::string>::make(name))
 {
 }
 
