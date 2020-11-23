@@ -373,6 +373,45 @@ namespace spu
 	}
 }
 
+std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
+{
+	std::array<u32, 2> res{spu_branch_target(pc + 4), UINT32_MAX};
+
+	switch (const auto type = s_spu_itype.decode(op.opcode))
+	{
+	case spu_itype::BR:
+	case spu_itype::BRA:
+	case spu_itype::BRNZ:
+	case spu_itype::BRZ:
+	case spu_itype::BRHNZ:
+	case spu_itype::BRHZ:
+	case spu_itype::BRSL:
+	case spu_itype::BRASL:
+	{
+		const int index = (type == spu_itype::BR || type == spu_itype::BRA || type == spu_itype::BRSL || type == spu_itype::BRASL ? 0 : 1);
+		res[index] = (spu_branch_target(type == spu_itype::BRASL || type == spu_itype::BRA ? 0 : pc, op.i16));
+		break;
+	}
+	case spu_itype::IRET:
+	case spu_itype::BI:
+	case spu_itype::BISLED:
+	case spu_itype::BISL:
+	case spu_itype::BIZ:
+	case spu_itype::BINZ:
+	case spu_itype::BIHZ:
+	case spu_itype::BIHNZ: // TODO (detect constant address branches, such as for interrupts enable/disable pattern)
+
+	case spu_itype::UNK:
+	{
+		res[0] = UINT32_MAX;
+		break;
+	}
+	default: break;
+	}
+
+	return res;
+}
+
 const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void* _old, const void* _new)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
