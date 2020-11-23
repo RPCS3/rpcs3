@@ -88,7 +88,7 @@ namespace atomic_wait
 		template <typename T>
 		constexpr void set_value(T value = T{})
 		{
-			old = get_value<T>();
+			old = get_value<T>(value);
 		}
 
 		template <typename T>
@@ -146,13 +146,13 @@ namespace atomic_wait
 		constexpr list(atomic_t<U, Align>&... vars)
 			: m_info{{&vars.raw(), sizeof(U), info::get_value<U>(), info::get_mask<U>()}...}
 		{
-			static_assert(sizeof...(U) <= Max);
+			static_assert(sizeof...(U) == Max, "Inconsistent amount of atomics.");
 		}
 
 		template <typename... U>
 		constexpr list& values(U... values)
 		{
-			static_assert(sizeof...(U) <= Max);
+			static_assert(sizeof...(U) == Max, "Inconsistent amount of values.");
 
 			auto* ptr = m_info;
 			((ptr++)->template set_value<T>(values), ...);
@@ -160,9 +160,9 @@ namespace atomic_wait
 		}
 
 		template <typename... U>
-		constexpr list& masks(T... masks)
+		constexpr list& masks(U... masks)
 		{
-			static_assert(sizeof...(U) <= Max);
+			static_assert(sizeof...(U) <= Max, "Too many masks.");
 
 			auto* ptr = m_info;
 			((ptr++)->template set_mask<T>(masks), ...);
