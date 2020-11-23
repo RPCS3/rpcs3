@@ -84,6 +84,8 @@ public:
 		return id >> 24;
 	}
 
+	u32 get_pc() const;
+
 	void notify();
 
 private:

@@ -66,7 +66,6 @@ public:
 	void UpdateUI();
 	void UpdateUnitList();
 
-	u32 GetPc() const;
 	void DoUpdate();
 	void WritePanels();
 	void EnableButtons(bool enable);

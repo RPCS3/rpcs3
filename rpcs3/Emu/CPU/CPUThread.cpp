@@ -809,6 +809,28 @@ std::string cpu_thread::get_name() const
 	}
 }
 
+u32 cpu_thread::get_pc() const
+{
+	const u32* pc = nullptr;
+
+	switch (id_type())
+	{
+	case 1:
+	{
+		pc = &static_cast<const ppu_thread*>(this)->cia;
+		break;
+	}
+	case 2:
+	{
+		pc = &static_cast<const spu_thread*>(this)->pc;
+		break;
+	}
+	default: break;
+	}
+
+	return pc ? atomic_storage<u32>::load(*pc) : UINT32_MAX;
+}
+
 std::string cpu_thread::dump_all() const
 {
 	return {};

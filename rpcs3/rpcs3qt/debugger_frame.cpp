@@ -229,7 +229,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		return;
 	}
 
-	const u32 pc = i >= 0 ? m_debugger_list->m_pc + i * 4 : GetPc();
+	const u32 pc = i >= 0 ? m_debugger_list->m_pc + i * 4 : cpu->get_pc();
 
 	const auto modifiers = QApplication::keyboardModifiers();
 
@@ -297,28 +297,6 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	}
 }
 
-u32 debugger_frame::GetPc() const
-{
-	const auto cpu = this->cpu.lock();
-
-	if (!cpu)
-	{
-		return 0;
-	}
-
-	if (cpu->id_type() == 1)
-	{
-		return static_cast<ppu_thread*>(cpu.get())->cia;
-	}
-
-	if (cpu->id_type() == 2)
-	{
-		return static_cast<spu_thread*>(cpu.get())->pc;
-	}
-
-	return 0;
-}
-
 void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
@@ -342,7 +320,7 @@ void debugger_frame::UpdateUI()
 	}
 	else
 	{
-		const auto cia = GetPc();
+		const auto cia = cpu->get_pc();
 		const auto size_context = cpu->id_type() == 1 ? sizeof(ppu_thread) : sizeof(spu_thread);
 
 		if (m_last_pc != cia || m_last_query_state.size() != size_context || std::memcmp(m_last_query_state.data(), cpu.get(), size_context))
@@ -460,7 +438,7 @@ void debugger_frame::OnSelectUnit()
 void debugger_frame::DoUpdate()
 {
 	// Check if we need to disable a step over bp
-	if (m_last_step_over_breakpoint != umax && GetPc() == m_last_step_over_breakpoint)
+	if (auto cpu0 = cpu.lock(); cpu0 && m_last_step_over_breakpoint != umax && cpu0->get_pc() == m_last_step_over_breakpoint)
 	{
 		m_breakpoint_handler->RemoveBreakpoint(m_last_step_over_breakpoint);
 		m_last_step_over_breakpoint = -1;
@@ -541,7 +519,8 @@ void debugger_frame::ShowGotoAddressDialog()
 
 	if (cpu)
 	{
-		unsigned long pc = cpu ? GetPc() : 0x0;
+		// -1 turns into 0
+		u32 pc = ::align<u32>(cpu->get_pc(), 4);
 		address_preview_label->setText(QString("Address: 0x%1").arg(pc, 8, 16, QChar('0')));
 		expression_input->setPlaceholderText(QString("0x%1").arg(pc, 8, 16, QChar('0')));
 	}
@@ -572,7 +551,8 @@ void debugger_frame::ShowGotoAddressDialog()
 
 	if (diag->exec() == QDialog::Accepted)
 	{
-		u32 address = cpu ? GetPc() : 0x0;
+		// -1 turns into 0
+		u32 address = ::align<u32>(cpu ? cpu->get_pc() : 0, 4);
 
 		if (expression_input->text().isEmpty())
 		{
@@ -613,7 +593,8 @@ void debugger_frame::ClearCallStack()
 
 void debugger_frame::ShowPC()
 {
-	m_debugger_list->ShowAddress(GetPc());
+	const auto cpu0 = cpu.lock();
+	m_debugger_list->ShowAddress(cpu0 ? cpu0->get_pc() : 0);
 }
 
 void debugger_frame::DoStep(bool stepOver)
@@ -632,7 +613,7 @@ void debugger_frame::DoStep(bool stepOver)
 		{
 			if (should_step_over)
 			{
-				u32 current_instruction_pc = GetPc();
+				u32 current_instruction_pc = cpu->get_pc();
 
 				// Set breakpoint on next instruction
 				u32 next_instruction_pc = current_instruction_pc + 4;

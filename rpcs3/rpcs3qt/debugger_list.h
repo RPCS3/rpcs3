@@ -38,7 +38,6 @@ private:
 	/**
 	* It really upsetted me I had to copy this code to make debugger_list/frame not circularly dependent.
 	*/
-	u32 GetPc() const;
 	u32 GetCenteredAddress(u32 address) const;
 
 	std::shared_ptr<gui_settings> xgui_settings;
