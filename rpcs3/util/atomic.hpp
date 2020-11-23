@@ -42,7 +42,6 @@ namespace atomic_wait
 		byteswap = 1 << 6, // Perform byteswap on both arguments and masks when applicable
 	};
 
-	constexpr op_flag op_ne = {};
 	constexpr op_flag op_be = std::endian::native == std::endian::little ? op_flag::byteswap : op_flag{0};
 	constexpr op_flag op_le = std::endian::native == std::endian::little ? op_flag{0} : op_flag::byteswap;
 
@@ -60,6 +59,8 @@ namespace atomic_wait
 	{
 		return op{static_cast<u8>(static_cast<u8>(lhs) | static_cast<u8>(rhs))};
 	}
+
+	constexpr op op_ne = op::eq | op_flag::inverse;
 
 	struct info
 	{
