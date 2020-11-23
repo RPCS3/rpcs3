@@ -160,6 +160,8 @@ bool dualsense_pad_handler::Init()
 
 void dualsense_pad_handler::init_config(pad_config* cfg, const std::string& name)
 {
+	if (!cfg) return;
+
 	// Set this profile's save location
 	cfg->cfg_name = name;
 
@@ -472,6 +474,10 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 		keyBuffer[DualSenseKeyCodes::L2] = buf[7];
 		keyBuffer[DualSenseKeyCodes::R2] = buf[8];
 
+		data = buf[6] & 0x03;
+		keyBuffer[DualSenseKeyCodes::PSButton] = ((data & 0x01) != 0) ? 255 : 0;
+		keyBuffer[DualSenseKeyCodes::TouchPad] = ((data & 0x02) != 0) ? 255 : 0; 
+
 		return keyBuffer;
 	}
 
@@ -569,6 +575,10 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 	keyBuffer[DualSenseKeyCodes::L2] = buf[4];
 	keyBuffer[DualSenseKeyCodes::R2] = buf[5];
 
+	data = buf[9] & 0x03;
+	keyBuffer[DualSenseKeyCodes::PSButton] = ((data & 0x01) != 0) ? 255 : 0;
+	keyBuffer[DualSenseKeyCodes::TouchPad] = ((data & 0x02) != 0) ? 255 : 0; 
+
 	return keyBuffer;
 }
 
@@ -604,11 +614,11 @@ std::shared_ptr<dualsense_pad_handler::DualSenseDevice> dualsense_pad_handler::G
 
 std::shared_ptr<PadDevice> dualsense_pad_handler::get_device(const std::string& device)
 {
-	std::shared_ptr<DualSenseDevice> dualsensedevice = GetDualSenseDevice(device);
-	if (dualsensedevice == nullptr || dualsensedevice->hidDevice == nullptr)
+	std::shared_ptr<DualSenseDevice> dualsense_dev = GetDualSenseDevice(device);
+	if (dualsense_dev == nullptr || dualsense_dev->hidDevice == nullptr)
 		return nullptr;
 
-	return dualsensedevice;
+	return dualsense_dev;
 }
 
 dualsense_pad_handler::~dualsense_pad_handler()
