@@ -72,6 +72,8 @@ constexpr u32 ppu_decode(u32 inst)
 	return ((inst >> 26) | (inst << 6)) & 0x1ffff; // Rotate + mask
 }
 
+std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op);
+
 // PPU decoder object. D provides functions. T is function pointer type returned.
 template <typename D, typename T = decltype(&D::UNK)>
 class ppu_decoder

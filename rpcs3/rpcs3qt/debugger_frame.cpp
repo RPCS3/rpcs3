@@ -283,6 +283,37 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			}
 			return;
 		}
+		case Qt::Key_N:
+		{
+			// Next instruction according to code flow
+			// Known branch targets are selected over next PC for conditional branches
+			// Indirect branches (unknown targets, such as function return) do not proceed to any instruction
+			std::array<u32, 2> res{UINT32_MAX, UINT32_MAX};
+
+			switch (cpu->id_type())
+			{
+			case 2:
+			{
+				res = op_branch_targets(pc, spu_opcode_t{static_cast<spu_thread*>(cpu.get())->_ref<u32>(pc)});
+				break;
+			}
+			case 1:
+			{
+				be_t<ppu_opcode_t> op{};
+
+				if (vm::try_access(pc, &op, 4, false))
+					res = op_branch_targets(pc, op);
+
+				break;
+			}
+			default: break;
+			}
+
+			if (auto pos = std::basic_string_view<u32>(res.data(), 2).find_last_not_of(UINT32_MAX); pos != umax)
+				m_debugger_list->ShowAddress(res[pos] - std::max(i, 0) * 4, true);
+
+			return;
+		}
 		case Qt::Key_F10:
 		{
 			DoStep(true);

@@ -134,7 +134,7 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 
 void debugger_list::keyPressEvent(QKeyEvent* event)
 {
-	if (!isActiveWindow() || currentRow() < 0 || !this->cpu.lock())
+	if (!isActiveWindow())
 	{
 		return;
 	}

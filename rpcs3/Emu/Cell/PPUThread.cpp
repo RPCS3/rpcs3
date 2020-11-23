@@ -422,6 +422,31 @@ extern bool ppu_patch(u32 addr, u32 value)
 	return true;
 }
 
+std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
+{
+	std::array<u32, 2> res{pc + 4, UINT32_MAX};
+
+	switch (const auto type = g_ppu_itype.decode(op.opcode))
+	{
+	case ppu_itype::B:
+	case ppu_itype::BC:
+	{
+		res[type == ppu_itype::BC ? 1 : 0] = ((op.aa ? 0 : pc) + (type == ppu_itype::B ? +op.bt24 : +op.bt14));
+		break;
+	}
+	case ppu_itype::BCCTR:
+	case ppu_itype::BCLR:
+	case ppu_itype::UNK:
+	{
+		res[0] = UINT32_MAX;
+		break;
+	}
+	default: break;
+	}
+
+	return res;
+}
+
 std::string ppu_thread::dump_all() const
 {
 	std::string ret = cpu_thread::dump_misc();
