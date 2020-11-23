@@ -1608,6 +1608,15 @@ bool VKGSRender::load_program()
 			rsx::method_registers.msaa_enabled(),
 			rsx::method_registers.msaa_alpha_to_coverage_enabled(),
 			alpha_to_one_enable);
+
+		if (const auto chip_family = vk::get_chip_family();
+			chip_family == vk::chip_class::AMD_navi1x ||
+			chip_family == vk::chip_class::AMD_navi2x)
+		{
+			// NAVI family has a GPU bug with MSAA where shading rate is not correctly initialized if left disabled
+			// Manually initialize it and set it to spec default (full shading)
+			properties.state.set_multisample_shading_rate(1.f);
+		}
 	}
 
 	properties.renderpass_key = m_current_renderpass_key;
