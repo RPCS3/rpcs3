@@ -1668,12 +1668,12 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 
 		if (!group)
 		{
-			vm::get(vm::spu)->falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, &shm);
+			verify(HERE), vm::get(vm::spu)->falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, &shm);
 		}
 		else
 		{
 			// 0x1000 indicates falloc to allocate page with no access rights in base memory
-			vm::get(vm::spu)->falloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (cpu_thread::id & 0xffffff), SPU_LS_SIZE, &shm, 0x1000);
+			verify(HERE), vm::get(vm::spu)->falloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (cpu_thread::id & 0xffffff), SPU_LS_SIZE, &shm, 0x1000);
 		}
 
 		vm::writer_lock(0);
@@ -1811,6 +1811,23 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 	u32 eal = args.eal;
 	u32 lsa = args.lsa & 0x3ffff;
 
+	// Keep src point to const
+	u8* dst = nullptr;
+	const u8* src = nullptr;
+
+	std::tie(dst, src) = [&]() -> std::pair<u8*, const u8*>
+	{
+		u8* dst = vm::_ptr<u8>(eal);
+		u8* src = ls + lsa;
+
+		if (is_get)
+		{
+			std::swap(src, dst);
+		}
+
+		return {dst, src};
+	}();
+
 	// SPU Thread Group MMIO (LS and SNR) and RawSPU MMIO
 	if (_this && eal >= RAW_SPU_BASE_ADDR)
 	{
@@ -1851,9 +1868,13 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		{
 			auto& spu = static_cast<spu_thread&>(*_this->group->threads[_this->group->threads_map[index]]);
 
-			if (offset + args.size - 1 < SPU_LS_SIZE) // LS access
+			if (offset + args.size <= SPU_LS_SIZE) // LS access
 			{
-				eal = SPU_FAKE_BASE_ADDR * (spu.id & 0xffffff) + offset; // redirect access
+				// redirect access
+				if (auto ptr = spu.ls + offset; is_get)
+					src = ptr;
+				else
+					dst = ptr;
 			}
 			else if (!is_get && args.size == 4 && (offset == SYS_SPU_THREAD_SNR1 || offset == SYS_SPU_THREAD_SNR2))
 			{
@@ -1871,28 +1892,11 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		}
 	}
 
-	// Keep src point to const
-	u8* dst = nullptr;
-	const u8* src = nullptr;
-
 	// Cleanup: if PUT or GET happens after PUTLLC failure, it's too complicated and it's easier to just give up
 	if (_this)
 	{
 		_this->last_faddr = 0;
 	}
-
-	std::tie(dst, src) = [&]() -> std::pair<u8*, const u8*>
-	{
-		u8* dst = vm::_ptr<u8>(eal);
-		u8* src = ls + lsa;
-
-		if (is_get)
-		{
-			std::swap(src, dst);
-		}
-
-		return {dst, src};
-	}();
 
 	// It is so rare that optimizations are not implemented (TODO)
 	alignas(64) static constexpr u8 zero_buf[0x10000]{};
