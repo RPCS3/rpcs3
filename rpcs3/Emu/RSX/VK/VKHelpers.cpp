@@ -31,8 +31,9 @@ namespace vk
 		table.add(0x66A0, 0x66AF, chip_class::AMD_vega); // Vega20
 		table.add(0x15DD, chip_class::AMD_vega); // Raven Ridge
 		table.add(0x15D8, chip_class::AMD_vega); // Raven Ridge
-		table.add(0x7310, 0x731F, chip_class::AMD_navi); // Navi10
-		table.add(0x7340, 0x734F, chip_class::AMD_navi); // Navi14
+		table.add(0x7310, 0x731F, chip_class::AMD_navi1x); // Navi10
+		table.add(0x7340, 0x734F, chip_class::AMD_navi1x); // Navi14
+		table.add(0x73A0, 0x73BF, chip_class::AMD_navi2x); // Sienna cichlid
 
 		return table;
 	}();
