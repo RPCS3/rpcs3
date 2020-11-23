@@ -292,6 +292,9 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (g_cfg.video.overlay)
 	{
+		// Disable depth test
+		gl_state.depth_func(GL_ALWAYS);
+
 		gl::screen.bind();
 		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
 
