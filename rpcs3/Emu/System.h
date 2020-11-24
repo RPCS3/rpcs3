@@ -83,7 +83,12 @@ class Emulator final
 	u32 m_usrid{1};
 
 	bool m_force_global_config = false;
+
+	// This flag should be adjusted before each Stop() or each BootGame() and similar because:
+	// 1. It forces an application to boot immediately by calling Run() in Load().
+	// 2. It signifies that we don't want to exit on Stop(), for example if we want to transition to another application.
 	bool m_force_boot = false;
+
 	bool m_has_gui = true;
 
 public:
