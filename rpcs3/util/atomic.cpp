@@ -680,15 +680,17 @@ static void cond_free(u32 cond_id, u32 tls_slot = -1)
 	}
 
 	// Call the destructor if necessary
-	cond->destroy();
+	utils::prefetch_write(s_cond_bits + cond_id / 64);
 
 	const u32 level3 = cond_id / 64 % 16;
 	const u32 level2 = cond_id / 1024 % 8;
 	const u32 level1 = cond_id / 8192 % 8;
 
-	_m_prefetchw(s_cond_sem3 + level2);
-	_m_prefetchw(s_cond_sem2 + level1);
-	_m_prefetchw(&s_cond_sem1);
+	utils::prefetch_write(s_cond_sem3 + level2);
+	utils::prefetch_write(s_cond_sem2 + level1);
+	utils::prefetch_write(&s_cond_sem1);
+
+	cond->destroy();
 
 	// Release the semaphore tree in the reverse order
 	s_cond_bits[cond_id / 64] &= ~(1ull << (cond_id % 64));

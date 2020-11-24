@@ -2139,6 +2139,7 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 	}
 
 	// Return new entry point
+	utils::prefetch_exec((*tls)->entry_point);
 	return (*tls)->entry_point;
 }
 

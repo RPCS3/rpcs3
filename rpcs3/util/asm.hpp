@@ -67,16 +67,51 @@ namespace utils
 		}
 	};
 
-#if defined(__GNUG__)
-
-	inline void prefetch_read(const void* ptr)
+	// Try to prefetch to Level 2 cache since it's not split to data/code on most processors
+	template <typename T>
+	constexpr void prefetch_exec(T func)
 	{
-#if __has_builtin(__builtin_prefetch)
-		return __builtin_prefetch(ptr);
+		if (std::is_constant_evaluated())
+		{
+			return;
+		}
+
+		const u64 value = reinterpret_cast<u64>(func);
+		const void* ptr = reinterpret_cast<const void*>(value);
+
+#ifdef _MSC_VER
+		return _mm_prefetch(reinterpret_cast<const char*>(ptr), _MM_HINT_T1);
 #else
-		__asm__ volatile ("prefetcht0 0(%[ptr])" : : [ptr] "r" (ptr));
+		return __builtin_prefetch(ptr, 0, 2);
 #endif
 	}
+
+	// Try to prefetch to Level 1 cache
+	constexpr void prefetch_read(const void* ptr)
+	{
+		if (std::is_constant_evaluated())
+		{
+			return;
+		}
+
+#ifdef _MSC_VER
+		return _mm_prefetch(reinterpret_cast<const char*>(ptr), _MM_HINT_T0);
+#else
+		return __builtin_prefetch(ptr, 0, 3);
+#endif
+	}
+
+	constexpr void prefetch_write(void* ptr)
+	{
+		if (std::is_constant_evaluated())
+		{
+			return;
+		}
+
+		return _m_prefetchw(ptr);
+	}
+
+#if defined(__GNUG__)
 
 	inline u8 rol8(u8 x, u8 n)
 	{
@@ -231,11 +266,6 @@ namespace utils
 	}
 
 #elif defined(_MSC_VER)
-	inline void prefetch_read(const void* ptr)
-	{
-		return _mm_prefetch(reinterpret_cast<const char*>(ptr), _MM_HINT_T0);
-	}
-
 	inline u8 rol8(u8 x, u8 n)
 	{
 		return _rotl8(x, n);

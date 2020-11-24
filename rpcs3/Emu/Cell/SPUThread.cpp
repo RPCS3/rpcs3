@@ -1932,7 +1932,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 			range_lock = _this->range_lock;
 		}
 
-		_m_prefetchw(range_lock);
+		utils::prefetch_write(range_lock);
 
 		for (u32 size = args.size, size0; is_get; size -= size0, dst += size0, src += size0, eal += size0)
 		{
@@ -2667,8 +2667,8 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 					return false;
 				}
 
-				_m_prefetchw(rdata);
-				_m_prefetchw(rdata + 64);
+				utils::prefetch_read(rdata);
+				utils::prefetch_read(rdata + 64);
 				last_faddr = addr;
 				last_ftime = res.load() & -128;
 				last_ftsc = __rdtsc();

@@ -64,6 +64,7 @@
 #include <thread>
 #include <cfenv>
 #include <cctype>
+#include "util/asm.hpp"
 #include "util/vm.hpp"
 
 const bool s_use_ssse3 = utils::has_ssse3();
@@ -1749,8 +1750,8 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 						return false;
 					}
 
-					_m_prefetchw(ppu.rdata);
-					_m_prefetchw(ppu.rdata + 64);
+					utils::prefetch_read(ppu.rdata);
+					utils::prefetch_read(ppu.rdata + 64);
 					ppu.last_faddr = addr;
 					ppu.last_ftime = res.load() & -128;
 					ppu.last_ftsc = __rdtsc();

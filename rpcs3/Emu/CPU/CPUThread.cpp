@@ -869,7 +869,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		{
 			if (cpu != _this)
 			{
-				_m_prefetchw(&cpu->state);
+				utils::prefetch_write(&cpu->state);
 				return true;
 			}
 
@@ -946,13 +946,13 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		{
 			for (u32 i = 0; i < work->prf_size; i++)
 			{
-				_m_prefetchw(work->prf_list[0]);
+				utils::prefetch_write(work->prf_list[0]);
 			}
 		}
 
 		cpu_counter::for_all_cpu(copy2, [&](cpu_thread* cpu)
 		{
-			_m_prefetchw(&cpu->state);
+			utils::prefetch_write(&cpu->state);
 			return true;
 		});
 
