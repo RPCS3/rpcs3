@@ -288,7 +288,7 @@ struct atomic_storage
 
 	static inline void store(T& dest, T value)
 	{
-		__atomic_store(&dest, &value, __ATOMIC_SEQ_CST);
+		static_cast<void>(exchange(dest, value));
 	}
 
 	static inline void release(T& dest, T value)
