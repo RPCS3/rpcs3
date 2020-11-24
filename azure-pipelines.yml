@@ -36,7 +36,7 @@ jobs:
       docker pull --quiet rpcs3/rpcs3-travis-xenial:1.6
       docker run                      \
         -v $(pwd):/rpcs3              \
-        --env-file .ci/travis.env \
+        --env-file .ci/docker.env \
         -v $CCACHE_DIR:/root/.ccache  \
         -v $BUILD_ARTIFACTSTAGINGDIRECTORY:/root/artifacts \
         rpcs3/rpcs3-travis-xenial:1.6 \

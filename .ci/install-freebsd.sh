@@ -8,11 +8,6 @@ sed -i '' 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
 export ASSUME_ALWAYS_YES=true
 pkg info # debug
 
-# Prefer newer Clang on TravisCI (see also .ci/install-freebsd.sh)
-if [ -n "$TRAVIS" ]; then
-	pkg install llvm11
-fi
-
 # Mandatory dependencies (qt5-dbus and qt5-gui are pulled via qt5-widgets)
 pkg install git ccache cmake ninja qt5-qmake qt5-buildtools qt5-widgets qt5-concurrent glew openal-soft ffmpeg
 
