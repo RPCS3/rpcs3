@@ -682,7 +682,7 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 		if (auto thread = t.get())
 		{
 			// Deallocate LS
-			vm::get(vm::spu)->dealloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (thread->id & 0xffffff), &thread->shm);
+			verify(HERE), vm::get(vm::spu)->dealloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (thread->id & 0xffffff), &thread->shm);
 
 			// Remove ID from IDM (destruction will occur in group destructor)
 			idm::remove<named_thread<spu_thread>>(thread->id);

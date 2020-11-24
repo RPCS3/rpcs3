@@ -32,11 +32,8 @@ static bool s_null_wait_cb(const void*, u64, u64){ return true; };
 // Callback for wait() function, returns false if wait should return
 static thread_local bool(*s_tls_wait_cb)(const void* data, u64 attempts, u64 stamp0) = s_null_wait_cb;
 
-// Fix for silly on-first-use initializer
-static void s_null_notify_cb(const void*, u64){};
-
 // Callback for notification functions for optimizations
-static thread_local void(*s_tls_notify_cb)(const void* data, u64 progress) = s_null_notify_cb;
+static thread_local void(*s_tls_notify_cb)(const void* data, u64 progress) = nullptr;
 
 static inline bool operator &(atomic_wait::op lhs, atomic_wait::op_flag rhs)
 {
@@ -1427,14 +1424,7 @@ void atomic_wait_engine::set_wait_callback(bool(*cb)(const void*, u64, u64))
 
 void atomic_wait_engine::set_notify_callback(void(*cb)(const void*, u64))
 {
-	if (cb)
-	{
-		s_tls_notify_cb = cb;
-	}
-	else
-	{
-		s_tls_notify_cb = s_null_notify_cb;
-	}
+	s_tls_notify_cb = cb;
 }
 
 bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
@@ -1548,7 +1538,8 @@ bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data) & (~s_ref_mask >> 17);
 
-	s_tls_notify_cb(data, 0);
+	if (s_tls_notify_cb)
+		s_tls_notify_cb(data, 0);
 
 	u64 progress = 0;
 
@@ -1557,7 +1548,8 @@ bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 		// Forced notification
 		if (alert_sema(cond_id, data, thread_id, 0, _mm_setzero_si128(), _mm_setzero_si128()))
 		{
-			s_tls_notify_cb(data, ++progress);
+			if (s_tls_notify_cb)
+				s_tls_notify_cb(data, ++progress);
 
 			if (thread_id == 0)
 			{
@@ -1571,7 +1563,8 @@ bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 		return false;
 	});
 
-	s_tls_notify_cb(data, -1);
+	if (s_tls_notify_cb)
+		s_tls_notify_cb(data, -1);
 
 	return progress != 0;
 }
@@ -1584,7 +1577,8 @@ atomic_wait_engine::notify_one(const void* data, u32 size, __m128i mask, __m128i
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data) & (~s_ref_mask >> 17);
 
-	s_tls_notify_cb(data, 0);
+	if (s_tls_notify_cb)
+		s_tls_notify_cb(data, 0);
 
 	u64 progress = 0;
 
@@ -1592,14 +1586,16 @@ atomic_wait_engine::notify_one(const void* data, u32 size, __m128i mask, __m128i
 	{
 		if (alert_sema(cond_id, data, -1, size, mask, new_value))
 		{
-			s_tls_notify_cb(data, ++progress);
+			if (s_tls_notify_cb)
+				s_tls_notify_cb(data, ++progress);
 			return true;
 		}
 
 		return false;
 	});
 
-	s_tls_notify_cb(data, -1);
+	if (s_tls_notify_cb)
+		s_tls_notify_cb(data, -1);
 }
 
 SAFE_BUFFERS void
@@ -1610,7 +1606,8 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data) & (~s_ref_mask >> 17);
 
-	s_tls_notify_cb(data, 0);
+	if (s_tls_notify_cb)
+		s_tls_notify_cb(data, 0);
 
 	u64 progress = 0;
 
@@ -1628,7 +1625,8 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 		{
 			if (res)
 			{
-				s_tls_notify_cb(data, ++progress);
+				if (s_tls_notify_cb)
+					s_tls_notify_cb(data, ++progress);
 			}
 		}
 		else
@@ -1645,11 +1643,13 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 	{
 		const u32 cond_id = cond_ids[UINT16_MAX - i];
 		s_cond_list[cond_id].alert_native();
-		s_tls_notify_cb(data, ++progress);
+		if (s_tls_notify_cb)
+				s_tls_notify_cb(data, ++progress);
 		cond_free(cond_id);
 	}
 
-	s_tls_notify_cb(data, -1);
+	if (s_tls_notify_cb)
+		s_tls_notify_cb(data, -1);
 }
 
 namespace atomic_wait

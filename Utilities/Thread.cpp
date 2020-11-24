@@ -1872,7 +1872,7 @@ void thread_base::start()
 		m_thread.release(_self);
 		verify(HERE), _self != reinterpret_cast<u64>(this);
 		atomic_storage<thread_base*>::store(*tls, this);
-		s_thread_pool[pos].notify_all();
+		s_thread_pool[pos].notify_one();
 		return;
 	}
 
@@ -2035,7 +2035,6 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 
 	const auto fake_self = reinterpret_cast<thread_base*>(_self);
 
-	atomic_wait_engine::set_wait_callback(nullptr);
 	g_tls_log_prefix = []() -> std::string { return {}; };
 	thread_ctrl::g_tls_this_thread = fake_self;
 
@@ -2065,7 +2064,7 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 						const u64 _self = reinterpret_cast<u64>(*ptls);
 
 						// Wake up a thread and make sure it's joined
-						s_thread_pool[i].notify_all();
+						s_thread_pool[i].notify_one();
 
 #ifdef _WIN32
 						const HANDLE handle = reinterpret_cast<HANDLE>(_self);
@@ -2139,11 +2138,8 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 		return nullptr;
 	}
 
-	// Restore thread base
-	const auto _this = atomic_storage<thread_base*>::load(*tls);
-
-	// Return new entry
-	return _this->entry_point;
+	// Return new entry point
+	return (*tls)->entry_point;
 }
 
 thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* _base))
