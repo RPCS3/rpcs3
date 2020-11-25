@@ -15,6 +15,7 @@
 
 #ifdef __linux__
 #include <sys/syscall.h>
+#include <linux/memfd.h>
 
 #ifdef __NR_memfd_create
 #elif __x86_64__
@@ -216,7 +217,19 @@ namespace utils
 		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, m_size, NULL);
 		verify(HERE), m_handle != INVALID_HANDLE_VALUE;
 #elif __linux__
-		m_file = ::memfd_create_("", 0);
+		m_file = -1;
+#ifdef MFD_HUGETLB
+		// Try to use 2MB pages for 2M-aligned shm
+		if (m_size % 0x200000 == 0 && flags & 2)
+		{
+			m_file = ::memfd_create_("2M", MFD_HUGETLB | MFD_HUGE_2MB);
+		}
+#endif
+		if (m_file == -1)
+		{
+			m_file = ::memfd_create_("", 0);
+		}
+
 		verify(HERE), m_file >= 0;
 		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
 #else
