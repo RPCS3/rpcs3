@@ -69,7 +69,7 @@ static u8* add_jit_memory(std::size_t size, uint align)
 		// Check the necessity to commit more memory
 		if (_new > olda) [[unlikely]]
 		{
-			newa = ::align(_new, 0x100000);
+			newa = ::align(_new, 0x200000);
 		}
 
 		ctr += _new - (ctr & 0xffff'ffff);
@@ -310,8 +310,8 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 	// 256 MiB for code or data
 	static constexpr u64 c_max_size = 0x20000000 / 2;
 
-	// Allocation unit
-	static constexpr u64 c_page_size = 4096;
+	// Allocation unit (2M)
+	static constexpr u64 c_page_size = 2 * 1024 * 1024;
 
 	// Reserve 512 MiB
 	u8* const ptr = static_cast<u8*>(utils::memory_reserve(c_max_size * 2));
