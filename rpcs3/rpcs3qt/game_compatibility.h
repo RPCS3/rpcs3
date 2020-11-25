@@ -89,6 +89,14 @@ namespace compat
 		std::vector<pkg_patchset> patch_sets;
 	};
 
+	// The type of the package. In the future this should signify the proper PKG_CONTENT_TYPE.
+	enum class package_type
+	{
+		update,
+		dlc,
+		other
+	};
+
 	/** Concicely represents a specific pkg's localized information for use in the GUI */
 	struct package_info
 	{
@@ -99,7 +107,8 @@ namespace compat
 		QString version;     // May be empty
 		QString category;    // HG, DG, GD etc.
 		QString local_cat;   // Localized category
-		bool is_dlc = false; // Distinguish between update and DLC if category is GD
+
+		package_type type = package_type::other; // The type of package (Update, DLC or other)
 	};
 }
 

@@ -69,14 +69,14 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 			accumulated_info = info.title_id;
 		}
 
-		if (info.category == "GD")
+		if (info.type != compat::package_type::other)
 		{
 			if (!accumulated_info.isEmpty())
 			{
 				accumulated_info += ", ";
 			}
 
-			if (info.is_dlc)
+			if (info.type == compat::package_type::dlc)
 			{
 				accumulated_info += tr("DLC", "Package type info (DLC)");
 			}
