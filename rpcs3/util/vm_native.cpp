@@ -111,7 +111,7 @@ namespace utils
 
 #ifdef MADV_HUGEPAGE
 		if (orig_size % 0x200000 == 0)
-			verify(HERE), ::madvise(ptr, orig_size, MADV_HUGEPAGE) != -1;
+			::madvise(ptr, orig_size, MADV_HUGEPAGE);
 #endif
 
 		return ptr;
@@ -161,7 +161,7 @@ namespace utils
 
 #ifdef MADV_HUGEPAGE
 		if (size % 0x200000 == 0)
-			verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_HUGEPAGE) != -1;
+			::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_HUGEPAGE);
 #endif
 #endif
 	}
