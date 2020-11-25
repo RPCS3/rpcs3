@@ -49,6 +49,8 @@ evdev_joystick_handler::~evdev_joystick_handler()
 
 void evdev_joystick_handler::init_config(pad_config* cfg, const std::string& name)
 {
+	if (!cfg) return;
+
 	// Set this profile's save location
 	cfg->cfg_name = name;
 

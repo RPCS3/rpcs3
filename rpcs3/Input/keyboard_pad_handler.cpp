@@ -33,6 +33,8 @@ keyboard_pad_handler::keyboard_pad_handler()
 
 void keyboard_pad_handler::init_config(pad_config* cfg, const std::string& name)
 {
+	if (!cfg) return;
+
 	// Set this profile's save location
 	cfg->cfg_name = name;
 
