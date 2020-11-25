@@ -574,12 +574,19 @@ void main_window::InstallPackages(QStringList file_paths)
 	// Find remaining package files
 	file_paths = file_paths.filter(QRegExp(".*\\.pkg", Qt::CaseInsensitive));
 
-	if (file_paths.isEmpty())
+	if (!file_paths.isEmpty())
 	{
-		return;
+		// Handle further installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
+		QTimer::singleShot(0, [this, paths = std::move(file_paths)]()
+		{
+			HandlePackageInstallation(paths);
+		});
 	}
+}
 
-	std::vector<compat::package_info> infos;
+void main_window::HandlePackageInstallation(QStringList file_paths)
+{
+	std::vector<compat::package_info> packages;
 
 	game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
 
@@ -587,31 +594,17 @@ void main_window::InstallPackages(QStringList file_paths)
 	{
 		// Let the user choose the packages to install and select the order in which they shall be installed.
 		pkg_install_dialog dlg(file_paths, compat, this);
-		connect(&dlg, &QDialog::accepted, [&infos, &dlg]()
+		connect(&dlg, &QDialog::accepted, [&packages, &dlg]()
 		{
-			infos = dlg.GetPathsToInstall();
+			packages = dlg.GetPathsToInstall();
 		});
 		dlg.exec();
 	}
 	else
 	{
-		infos.push_back(game_compatibility::GetPkgInfo(file_paths.front(), compat));
+		packages.push_back(game_compatibility::GetPkgInfo(file_paths.front(), compat));
 	}
 
-	if (infos.empty())
-	{
-		return;
-	}
-
-	// Handle the actual installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
-	QTimer::singleShot(0, [this, packages = std::move(infos)]()
-	{
-		HandlePackageInstallation(packages);
-	});
-}
-
-void main_window::HandlePackageInstallation(const std::vector<compat::package_info>& packages)
-{
 	if (packages.empty())
 	{
 		return;
