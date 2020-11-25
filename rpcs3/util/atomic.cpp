@@ -1231,8 +1231,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 				break;
 			}
 		}
-
-		if (timeout + 1)
+		else if (timeout + 1)
 		{
 			cond->cv->wait_for(lock, std::chrono::nanoseconds(timeout));
 		}
@@ -1258,15 +1257,11 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 				{
 					break;
 				}
-
-				fallback = false;
-				break;
 			}
 
 			fallback = false;
 		}
-
-		if (NtWaitForAlertByThreadId)
+		else if (NtWaitForAlertByThreadId)
 		{
 			switch (DWORD status = NtWaitForAlertByThreadId(cond, timeout + 1 ? &qw : nullptr))
 			{
