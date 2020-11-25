@@ -1350,7 +1350,7 @@ static u32
 #ifdef _WIN32
 __vectorcall
 #endif
-alert_sema(u32 cond_id, const void* data, u64 tid, u32 size, __m128i mask, __m128i new_value)
+alert_sema(u32 cond_id, const void* data, u64 tid, u32 size, __m128i mask, __m128i phantom)
 {
 	verify(HERE), cond_id;
 
@@ -1358,7 +1358,7 @@ alert_sema(u32 cond_id, const void* data, u64 tid, u32 size, __m128i mask, __m12
 
 	u32 ok = 0;
 
-	if (!size ? (!tid || cond->tid == tid) : cmp_mask(size, mask, new_value, cond->size | (cond->flag << 8), cond->mask, cond->oldv))
+	if (!size ? (!tid || cond->tid == tid) : cmp_mask(size, mask, phantom, cond->size | (cond->flag << 8), cond->mask, cond->oldv))
 	{
 		// Redirect if necessary
 		const auto _old = cond;
@@ -1599,7 +1599,7 @@ SAFE_BUFFERS void
 #ifdef _WIN32
 __vectorcall
 #endif
-atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i new_value)
+atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask)
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data) & (~s_ref_mask >> 17);
 
@@ -1616,7 +1616,7 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask, __m128i
 
 	root_info::slot_search(iptr, size, 0, mask, [&](u32 cond_id)
 	{
-		u32 res = alert_sema<true>(cond_id, data, -1, size, mask, new_value);
+		u32 res = alert_sema<true>(cond_id, data, -1, size, mask, _mm_setzero_si128());
 
 		if (res <= UINT16_MAX)
 		{

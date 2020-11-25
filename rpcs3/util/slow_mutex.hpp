@@ -18,16 +18,16 @@ public:
 		{
 			const u8 prev = m_value.fetch_op([](u8& val)
 			{
-				if (val == umax) [[unlikely]]
+				if ((val & 0x7f) == 0x7f) [[unlikely]]
 					return;
 
 				val++;
 			});
 
-			if (prev == umax) [[unlikely]]
+			if ((prev & 0x7f) == 0x7f) [[unlikely]]
 			{
 				// Keep trying until counter can be incremented
-				m_value.wait(0xff, 0x01);
+				m_value.wait(0x7f, 0x7f);
 			}
 			else if (prev == 0)
 			{
@@ -41,8 +41,9 @@ public:
 			}
 		}
 
-		// Wait for 7 bits to become 0, which could only mean one thing
-		m_value.wait<atomic_wait::op_ne>(0, 0xfe);
+		// Wait for signal bit
+		m_value.wait(0, 0x80);
+		m_value &= ~0x80;
 	}
 
 	bool try_lock() noexcept
@@ -63,13 +64,17 @@ public:
 			fmt::raw_error("I tried to unlock unlocked mutex." HERE);
 		}
 
-		// Normal notify with forced value (ignoring real waiter count)
-		m_value.notify_one(0xfe, 0);
+		// Set signal and notify
+		if (prev & 0x7f)
+		{
+			m_value |= 0x80;
+			m_value.notify_one(0x80);
+		}
 
-		if (prev == umax) [[unlikely]]
+		if ((prev & 0x7f) == 0x7f) [[unlikely]]
 		{
 			// Overflow notify: value can be incremented
-			m_value.notify_one(0x01, 0);
+			m_value.notify_one(0x7f);
 		}
 	}
 
