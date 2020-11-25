@@ -72,8 +72,23 @@ class perf_stat final : public perf_stat_base
 	} g_tls_perf_stat;
 
 public:
-	static void push(u64 ns) noexcept
+	static NEVER_INLINE void push(u64 start_time) noexcept
 	{
+		// Event end
+		const u64 end_time = (_mm_lfence(), __rdtsc());
+
+		// Compute difference in seconds
+		const f64 diff = (end_time - start_time) * 1. / utils::get_tsc_freq();
+
+		// Register perf stat in nanoseconds
+		const u64 ns = static_cast<u64>(diff * 1000'000'000.);
+
+		// Print in microseconds
+		if (static_cast<u64>(diff * 1000'000.) >= g_cfg.core.perf_report_threshold)
+		{
+			perf_log.notice(u8"%s: %.3fµs", perf_name<ShortName>.data(), diff * 1000'000.);
+		}
+
 		auto& data = g_tls_perf_stat.m_log;
 		data[0] += ns != 0;
 		data[64 - std::countl_zero(ns)]++;
@@ -174,20 +189,8 @@ public:
 			return;
 		}
 
-		// Event end
-		const u64 end_time = __rdtsc();
-
-		// Compute difference in seconds
-		const f64 diff = (end_time - m_timestamps[0]) * 1. / utils::get_tsc_freq();
-
 		// Register perf stat in nanoseconds
-		perf_stat<ShortName>::push(static_cast<u64>(diff * 1000'000'000.));
-
-		// Print in microseconds
-		if (static_cast<u64>(diff * 1000'000.) >= g_cfg.core.perf_report_threshold)
-		{
-			perf_log.notice(u8"%s: %.3fµs", perf_name<ShortName>.data(), diff * 1000'000.);
-		}
+		perf_stat<ShortName>::push(m_timestamps[0]);
 
 		// TODO: handle push(), currently ignored
 	}
