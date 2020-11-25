@@ -515,9 +515,9 @@ void main_window::InstallPackages(QStringList file_paths)
 
 		compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
 
-		if (info.category == "GD")
+		if (info.type != compat::package_type::other)
 		{
-			if (info.is_dlc)
+			if (info.type == compat::package_type::dlc)
 			{
 				info.local_cat = tr("\nDLC", "Block for package type (DLC)");
 			}

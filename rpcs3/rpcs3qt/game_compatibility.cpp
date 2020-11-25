@@ -274,10 +274,19 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 			info.local_cat = data_cat->second;
 		}
 
-		// Update packages always seem to have an APP_VER, so let's assume it's a DLC otherwise.
-		if (info.category == "GD" && info.version.isEmpty())
+		if (info.category == "GD")
 		{
-			info.is_dlc = true;
+			// For now let's assume that PS3 Game Data packages are always updates or DLC.
+			// Update packages always seem to have an APP_VER, so let's say it's a DLC otherwise.
+			// Ideally this would simply be the package content type, but I am too lazy to implement this right now.
+			if (info.version.isEmpty())
+			{
+				info.type = compat::package_type::dlc;
+			}
+			else
+			{
+				info.type = compat::package_type::update;
+			}
 		}
 	}
 
@@ -306,6 +315,9 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 					{
 						info.changelog = qstr(localized_changelog);
 					}
+
+					// This should be an update since it was found in a patch set
+					info.type = compat::package_type::update;
 
 					break;
 				}
