@@ -515,23 +515,39 @@ void main_window::InstallPackages(QStringList file_paths)
 
 		compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
 
-		if (!info.title_id.isEmpty())
+		if (info.category == "GD")
 		{
-			info.title_id = tr("\n%0").arg(info.title_id);
+			if (info.is_dlc)
+			{
+				info.local_cat = tr("\nDLC", "Block for package type (DLC)");
+			}
+			else
+			{
+				info.local_cat = tr("\nUpdate", "Block for package type (Update)");
+			}
+		}
+		else if (!info.local_cat.isEmpty())
+		{
+			info.local_cat = tr("\n%0", "Block for package type").arg(info.local_cat);
 		}
 
-		if (!info.changelog.isEmpty())
+		if (!info.title_id.isEmpty())
 		{
-			info.changelog = tr("\n\nChangelog:\n%0").arg(info.changelog);
+			info.title_id = tr("\n%0", "Block for Title ID").arg(info.title_id);
 		}
 
 		if (!info.version.isEmpty())
 		{
-			info.version = tr("\nVersion %0").arg(info.version);
+			info.version = tr("\nVersion %0", "Block for Version").arg(info.version);
 		}
 
-		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0%1%2%3")
-			.arg(info.title).arg(info.title_id).arg(info.version).arg(info.changelog),
+		if (!info.changelog.isEmpty())
+		{
+			info.changelog = tr("\n\nChangelog:\n%0", "Block for Changelog").arg(info.changelog);
+		}
+
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0%1%2%3%4")
+			.arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version).arg(info.changelog),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
 			gui_log.notice("PKG: Cancelled installation from drop. File: %s", sstr(file_paths.front()));

@@ -92,11 +92,14 @@ namespace compat
 	/** Concicely represents a specific pkg's localized information for use in the GUI */
 	struct package_info
 	{
-		QString path;      // File path
-		QString title_id;  // TEST12345
-		QString title;     // Localized
-		QString changelog; // Localized, may be empty
-		QString version;   // May be empty
+		QString path;        // File path
+		QString title_id;    // TEST12345
+		QString title;       // Localized
+		QString changelog;   // Localized, may be empty
+		QString version;     // May be empty
+		QString category;    // HG, DG, GD etc.
+		QString local_cat;   // Localized category
+		bool is_dlc = false; // Distinguish between update and DLC if category is GD
 	};
 }
 

@@ -1,6 +1,7 @@
 #include "game_compatibility.h"
 #include "gui_settings.h"
 #include "downloader.h"
+#include "localized.h"
 
 #include "Crypto/unpkg.h"
 #include "Loader/PSF.h"
@@ -256,8 +257,29 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 	compat::package_info info;
 	info.path     = pkg_path;
 	info.title    = qstr(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first
-	info.title_id = qstr(std::string(psf::get_string(psf, "TITLE_ID", "Unknown")));
+	info.title_id = qstr(std::string(psf::get_string(psf, "TITLE_ID")));
+	info.category = qstr(std::string(psf::get_string(psf, "CATEGORY")));
 	info.version  = qstr(std::string(psf::get_string(psf, "APP_VER")));
+
+	if (!info.category.isEmpty())
+	{
+		const Localized localized;
+
+		if (const auto boot_cat = localized.category.cat_boot.find(info.category); boot_cat != localized.category.cat_boot.end())
+		{
+			info.local_cat = boot_cat->second;
+		}
+		else if (const auto data_cat = localized.category.cat_data.find(info.category); data_cat != localized.category.cat_data.end())
+		{
+			info.local_cat = data_cat->second;
+		}
+
+		// Update packages always seem to have an APP_VER, so let's assume it's a DLC otherwise.
+		if (info.category == "GD" && info.version.isEmpty())
+		{
+			info.is_dlc = true;
+		}
+	}
 
 	if (info.version.isEmpty())
 	{

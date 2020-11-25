@@ -59,24 +59,65 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 	{
 		const compat::package_info info = game_compatibility::GetPkgInfo(path, compat);
 
+		// We have to build our complicated localized string in some annoying manner
+		QString accumulated_info;
+		QString additional_info;
 		QString tooltip;
-		QString version = info.version;
+
+		if (!info.title_id.isEmpty())
+		{
+			accumulated_info = info.title_id;
+		}
+
+		if (info.category == "GD")
+		{
+			if (!accumulated_info.isEmpty())
+			{
+				accumulated_info += ", ";
+			}
+
+			if (info.is_dlc)
+			{
+				accumulated_info += tr("DLC", "Package type info (DLC)");
+			}
+			else
+			{
+				accumulated_info += tr("Update", "Package type info (Update)");
+			}
+		}
+		else if (!info.local_cat.isEmpty())
+		{
+			if (!accumulated_info.isEmpty())
+			{
+				accumulated_info += ", ";
+			}
+			accumulated_info += tr("%0", "Package type info").arg(info.local_cat);
+		}
+
+		if (!info.version.isEmpty())
+		{
+			if (!accumulated_info.isEmpty())
+			{
+				accumulated_info += ", ";
+			}
+			accumulated_info += tr("v.%0", "Version info").arg(info.version);
+		}
 
 		if (info.changelog.isEmpty())
 		{
-			tooltip = tr("No info");
+			tooltip = tr("No info", "Changelog info placeholder");
 		}
 		else
 		{
-			tooltip = tr("Changelog:\n\n%0").arg(info.changelog);
+			tooltip = tr("Changelog:\n\n%0", "Changelog info").arg(info.changelog);
 		}
 
-		if (!version.isEmpty())
+		if (!accumulated_info.isEmpty())
 		{
-			version = tr("v.%0").arg(info.version);
+			additional_info = tr(" (%0)", "Additional info").arg(accumulated_info);
 		}
 
-		const QString text = tr("%0 (%1 %2)").arg(info.title).arg(info.title_id).arg(version);
+		const QString text = tr("%0%1", "Package text").arg(info.title).arg(additional_info);
 
 		QListWidgetItem* item = new numbered_widget_item(text, m_dir_list);
 		item->setData(Roles::FullPathRole, info.path);
