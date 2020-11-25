@@ -1027,8 +1027,8 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 			entry.second.text = qstr(entry.second.key);
 		}
 
-		// The button has to contain at least a space, because it would be square'ish otherwise
-		m_padButtons->button(entry.first)->setText(entry.second.text.isEmpty() ? QStringLiteral(" ") : entry.second.text);
+		// The button has to contain at least one character, because it would be square'ish otherwise
+		m_padButtons->button(entry.first)->setText(entry.second.text.isEmpty() ? QStringLiteral("-") : entry.second.text);
 	}
 }
 
@@ -1401,7 +1401,11 @@ void pad_settings_dialog::ChangeProfile()
 	}
 
 	// Load new config
-	m_handler_cfg.load();
+	if (m_handler->m_type != pad_handler::null && !m_handler_cfg.load())
+	{
+		cfg_log.error("Could not load pad config file '%s'", m_handler_cfg.cfg_name);
+		m_handler_cfg.from_default();
+	}
 
 	// Reload the buttons with the new handler and profile
 	ReloadButtons();
