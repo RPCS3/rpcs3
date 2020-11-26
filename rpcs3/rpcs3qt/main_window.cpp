@@ -714,14 +714,14 @@ void main_window::InstallPup(QString file_path)
 void main_window::InstallFirmware(QString file_path)
 {
 	// Command-line based firmware install
-        if (!file_path.isEmpty())
-        {
-                // Handle the actual installation with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
-                QTimer::singleShot(0, [this, file_path]()
-                {
-                        HandlePupInstallation(file_path);
-                });
-        }
+	if (!file_path.isEmpty())
+	{
+		// Handle the actual installation with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
+		QTimer::singleShot(0, [this, file_path]()
+		{
+			HandlePupInstallation(file_path);
+		});
+	}
 }
 
 void main_window::HandlePupInstallation(QString file_path)
