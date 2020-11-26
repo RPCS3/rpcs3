@@ -17,6 +17,7 @@
 #include "rpcs3qt/gui_application.h"
 #include "rpcs3qt/fatal_error_dialog.h"
 #include "rpcs3qt/curl_handle.h"
+#include "rpcs3qt/main_window.h"
 
 #include "headless_application.h"
 #include "Utilities/sema.h"
@@ -205,6 +206,7 @@ constexpr auto arg_config     = "config";
 constexpr auto arg_q_debug    = "qDebug";
 constexpr auto arg_error      = "error";
 constexpr auto arg_updating   = "updating";
+constexpr auto arg_installfw  = "installfw";
 constexpr auto arg_commit_db  = "get-commit-db";
 
 int find_arg(std::string arg, int& argc, char* argv[])
@@ -507,6 +509,8 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
 	const QCommandLineOption config_option(arg_config, "Forces the emulator to use this configuration file.", "path", "");
 	parser.addOption(config_option);
+	const QCommandLineOption installfw_option(arg_installfw, "Forces the emulator to install this firmware file.", "path", "");
+	parser.addOption(installfw_option);
 	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
 	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
@@ -763,6 +767,32 @@ int main(int argc, char** argv)
 		}
 
 		Emu.SetConfigOverride(config_override_path);
+	}
+
+	std::string firmware_path;
+
+	// Force install firmware first if specified through command-line
+	if (parser.isSet(arg_installfw))
+	{
+		firmware_path = parser.value(installfw_option).toStdString();
+		if (!fs::is_file(firmware_path))
+		{
+			report_fatal_error(fmt::format("No firmware file found: %s", firmware_path));
+			return 1;
+		}
+		else
+		{
+			if (auto gui_app = qobject_cast<gui_application*>(app.data()))
+			{
+				main_window* main_window = gui_app->m_main_window;
+				if (!main_window)
+				{
+					report_fatal_error("Cannot install firmware, exiting !");
+					return 1;
+				}
+				main_window->HandlePupInstallation(QString::fromStdString(firmware_path));
+			}
+		}
 	}
 
 	for (const auto& opt : parser.optionNames())
