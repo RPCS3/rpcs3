@@ -536,7 +536,7 @@ int main(int argc, char** argv)
 		if (!fs::is_file(firmware_path))
 		{
 			report_fatal_error(fmt::format("No firmware file found: %s", firmware_path));
-			return 0;
+			return 1;
 		}
 	}
 
@@ -549,7 +549,7 @@ int main(int argc, char** argv)
 			if (!main_window)
 			{
 				report_fatal_error("Cannot install firmware, exiting !");
-				return 0;
+				return 1;
 			}
 			main_window->InstallFirmware(QString::fromStdString(firmware_path));
 		}
