@@ -2010,7 +2010,10 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 
 	atomic_wait_engine::set_wait_callback(nullptr);
 
-	// Return true if need to delete thread object (no)
+	// Avoid race with the destructor
+	const u64 _self = m_thread;
+
+	// Set result state (errored or finalized)
 	const bool ok = 0 == (3 & ~m_sync.fetch_op([&](u64& v)
 	{
 		v &= -4;
@@ -2020,8 +2023,7 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 	// Signal waiting threads
 	m_sync.notify_all(2);
 
-	// No detached thread supported atm
-	return m_thread;
+	return _self;
 }
 
 thread_base::native_entry thread_base::finalize(u64 _self) noexcept
