@@ -202,8 +202,20 @@ void msg_dialog_frame::ProgressBarSetMsg(u32 index, const std::string& msg)
 {
 	if (m_dialog)
 	{
-		if (index == 0 && m_text1) m_text1->setText(qstr(msg));
-		if (index == 1 && m_text2) m_text2->setText(qstr(msg));
+		if (index == 0)
+		{
+			if (m_text1)
+			{
+				m_text1->setText(qstr(msg));
+			}
+		}
+		else if (index == 1)
+		{
+			if (m_text2)
+			{
+				m_text2->setText(qstr(msg));
+			}
+		}
 	}
 }
 
@@ -214,14 +226,19 @@ void msg_dialog_frame::ProgressBarReset(u32 index)
 		return;
 	}
 
-	if (index == 0 && m_gauge1)
+	if (index == 0)
 	{
-		m_gauge1->setValue(0);
+		if (m_gauge1)
+		{
+			m_gauge1->setValue(0);
+		}
 	}
-
-	if (index == 1 && m_gauge2)
+	else if (index == 1)
 	{
-		m_gauge2->setValue(0);
+		if (m_gauge2)
+		{
+			m_gauge2->setValue(0);
+		}
 	}
 
 	if (index == taskbar_index + 0u)
@@ -244,14 +261,19 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 		return;
 	}
 
-	if (index == 0 && m_gauge1)
+	if (index == 0)
 	{
-		m_gauge1->setValue(std::min(m_gauge1->value() + static_cast<int>(delta), m_gauge1->maximum()));
+		if (m_gauge1)
+		{
+			m_gauge1->setValue(std::min(m_gauge1->value() + static_cast<int>(delta), m_gauge1->maximum()));
+		}
 	}
-
-	if (index == 1 && m_gauge2)
+	else if (index == 1)
 	{
-		m_gauge2->setValue(std::min(m_gauge2->value() + static_cast<int>(delta), m_gauge2->maximum()));
+		if (m_gauge2)
+		{
+			m_gauge2->setValue(std::min(m_gauge2->value() + static_cast<int>(delta), m_gauge2->maximum()));
+		}
 	}
 
 	if (index == taskbar_index + 0u || taskbar_index == -1)
@@ -275,14 +297,19 @@ void msg_dialog_frame::ProgressBarSetValue(u32 index, u32 value)
 		return;
 	}
 
-	if (index == 0 && m_gauge1)
+	if (index == 0)
 	{
-		m_gauge1->setValue(std::min(static_cast<int>(value), m_gauge1->maximum()));
+		if (m_gauge1)
+		{
+			m_gauge1->setValue(std::min(static_cast<int>(value), m_gauge1->maximum()));
+		}
 	}
-
-	if (index == 1 && m_gauge2)
+	else if (index == 1)
 	{
-		m_gauge2->setValue(std::min(static_cast<int>(value), m_gauge2->maximum()));
+		if (m_gauge2)
+		{
+			m_gauge2->setValue(std::min(static_cast<int>(value), m_gauge2->maximum()));
+		}
 	}
 
 	if (index == taskbar_index + 0u || taskbar_index == -1)
@@ -306,14 +333,19 @@ void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
 		return;
 	}
 
-	if (index == 0 && m_gauge1)
+	if (index == 0)
 	{
-		m_gauge1->setMaximum(limit);
+		if (m_gauge1)
+		{
+			m_gauge1->setMaximum(limit);
+		}
 	}
-
-	if (index == 1 && m_gauge2)
+	else if (index == 1)
 	{
-		m_gauge2->setMaximum(limit);
+		if (m_gauge2)
+		{
+			m_gauge2->setMaximum(limit);
+		}
 	}
 
 	[[maybe_unused]] bool set_taskbar_limit = false;
