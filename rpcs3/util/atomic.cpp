@@ -21,7 +21,7 @@
 #include "endian.hpp"
 
 // Total number of entries, should be a power of 2.
-static constexpr std::size_t s_hashtable_size = 1u << 17;
+static constexpr std::size_t s_hashtable_size = 1u << 16;
 
 // Reference counter combined with shifted pointer (which is assumed to be 47 bit)
 static constexpr std::uintptr_t s_ref_mask = (1u << 17) - 1;
@@ -778,16 +778,19 @@ namespace
 {
 	struct alignas(16) slot_allocator
 	{
-		u64 ref : 16;
-		u64 low : 48;
-		u64 high;
+		u64 ref : 16; // Ref counter
+		u64 bits: 24; // Allocated bits
+		u64 prio: 24; // Reserved
+
+		u64 maxc: 17; // Collision counter
+		u64 iptr: 47; // First pointer to use slot (to count used slots)
 	};
 
 	// Need to spare 16 bits for ref counter
-	static constexpr u64 max_threads = 112;
+	static constexpr u64 max_threads = 24;
 
-	// (Arbitrary, not justified) Can only allow extended allocations go as far as this (about 585)
-	static constexpr u64 max_distance = UINT16_MAX / max_threads;
+	// (Arbitrary, not justified) Can only allow extended allocations go as far as this
+	static constexpr u64 max_distance = 500;
 
 	// Thread list
 	struct alignas(64) root_info
@@ -798,12 +801,6 @@ namespace
 		// Allocation pool, pointers to allocated semaphores
 		atomic_t<u16> slots[max_threads];
 
-		// For collision statistics (32 middle bits)
-		atomic_t<u32> first_ptr;
-
-		// For collision statistics (bit difference stick flags)
-		atomic_t<u32> diff_lz, diff_tz, diff_pop;
-
 		static atomic_t<u16>* slot_alloc(std::uintptr_t ptr) noexcept;
 
 		static void slot_free(std::uintptr_t ptr, atomic_t<u16>* slot, u32 tls_slot) noexcept;
@@ -811,10 +808,11 @@ namespace
 		template <typename F>
 		static auto slot_search(std::uintptr_t iptr, u32 size, u64 thread_id, __m128i mask, F func) noexcept;
 
-		void register_collisions(std::uintptr_t ptr);
+		// Somehow update information about collisions (TODO)
+		void register_collisions(std::uintptr_t ptr, u64 max_coll);
 	};
 
-	static_assert(sizeof(root_info) == 256);
+	static_assert(sizeof(root_info) == 64);
 }
 
 // Main hashtable for atomic wait.
@@ -887,26 +885,22 @@ atomic_t<u16>* root_info::slot_alloc(std::uintptr_t ptr) noexcept
 				return nullptr;
 			}
 
+			if (bits.iptr == 0)
+				bits.iptr = ptr;
+			if (bits.maxc == 0 && bits.iptr != ptr && bits.ref)
+				bits.maxc = 1;
+
 			bits.ref++;
 
-			if (~bits.high)
+			if (bits.bits != (1ull << max_threads) - 1)
 			{
-				const u32 id = std::countr_one(bits.high);
-				bits.high |= bits.high + 1;
+				const u32 id = std::countr_one(bits.bits);
+				bits.bits |= bits.bits + 1;
 				return _this->slots + id;
-			}
-
-			if (~bits.low << 16)
-			{
-				const u32 id = std::countr_one(bits.low);
-				bits.low |= bits.low + 1;
-				return _this->slots + 64 + id;
 			}
 
 			return nullptr;
 		});
-
-		_this->register_collisions(ptr);
 
 		if (slot)
 		{
@@ -918,7 +912,7 @@ atomic_t<u16>* root_info::slot_alloc(std::uintptr_t ptr) noexcept
 
 		if (limit == max_distance) [[unlikely]]
 		{
-			fmt::raw_error("Distance limit (585) exceeded for the atomic wait hashtable.");
+			fmt::raw_error("Distance limit (500) exceeded for the atomic wait hashtable.");
 			return nullptr;
 		}
 	}
@@ -926,44 +920,17 @@ atomic_t<u16>* root_info::slot_alloc(std::uintptr_t ptr) noexcept
 	return slot;
 }
 
-void root_info::register_collisions(std::uintptr_t ptr)
+void root_info::register_collisions(std::uintptr_t ptr, u64 max_coll)
 {
-	u32 ptr32 = static_cast<u32>(ptr >> 16);
-	u32 first = first_ptr.load();
-
-	if (!first && first != ptr32)
+	bits.atomic_op([&](slot_allocator& bits)
 	{
-		// Register first used pointer
-		first = first_ptr.compare_and_swap(0, ptr32);
-	}
-
-	if (first && first != ptr32)
-	{
-		// Difference bits between pointers
-		u32 diff = first ^ ptr32;
-
-		// The most significant different bit
-		u32 diff1 = std::countl_zero(diff);
-
-		if (diff1 < 32)
-		{
-			diff_lz |= 1u << diff1;
-		}
-
-		u32 diff2 = std::countr_zero(diff);
-
-		if (diff2 < 32)
-		{
-			diff_tz |= 1u << diff2;
-		}
-
-		diff = (diff & 0xaaaaaaaa) / 2 + (diff & 0x55555555);
-		diff = (diff & 0xcccccccc) / 4 + (diff & 0x33333333);
-		diff = (diff & 0xf0f0f0f0) / 16 + (diff & 0x0f0f0f0f);
-		diff = (diff & 0xff00ff00) / 256 + (diff & 0x00ff00ff);
-
-		diff_pop |= 1u << static_cast<u8>((diff >> 16) + diff - 1);
-	}
+		if (bits.iptr == 0)
+			bits.iptr = ptr;
+		if (bits.maxc == 0 && bits.iptr != ptr)
+			bits.maxc = 1;
+		if (bits.maxc < max_coll)
+			bits.maxc = max_coll;
+	});
 }
 
 void root_info::slot_free(std::uintptr_t iptr, atomic_t<u16>* slot, u32 tls_slot) noexcept
@@ -1008,14 +975,7 @@ void root_info::slot_free(std::uintptr_t iptr, atomic_t<u16>* slot, u32 tls_slot
 
 			if (_this == curr.current)
 			{
-				if (diff < 64)
-				{
-					bits.high &= ~(1ull << diff);
-				}
-				else
-				{
-					bits.low &= ~(1ull << (diff - 64));
-				}
+				bits.bits &= ~(1ull << diff);
 			}
 		});
 
@@ -1044,19 +1004,9 @@ FORCE_INLINE auto root_info::slot_search(std::uintptr_t iptr, u32 size, u64 thre
 		u16 cond_ids[max_threads];
 		u32 cond_count = 0;
 
-		u64 high_val = bits.high;
-		u64 low_val = bits.low;
+		u64 bits_val = bits.bits;
 
-		for (u64 bits = high_val; bits; bits &= bits - 1)
-		{
-			if (u16 cond_id = _this->slots[std::countr_zero(bits)])
-			{
-				utils::prefetch_read(s_cond_list + cond_id);
-				cond_ids[cond_count++] = cond_id;
-			}
-		}
-
-		for (u64 bits = low_val; bits; bits &= bits - 1)
+		for (u64 bits = bits_val; bits; bits &= bits - 1)
 		{
 			if (u16 cond_id = _this->slots[std::countr_zero(bits)])
 			{
@@ -1651,14 +1601,14 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask)
 
 namespace atomic_wait
 {
-	extern void parse_hashtable(bool(*cb)(u64 id, u16 refs, u32 ptr, u32 stats))
+	extern void parse_hashtable(bool(*cb)(u64 id, u32 refs, u64 ptr, u32 max_coll))
 	{
 		for (u64 i = 0; i < s_hashtable_size; i++)
 		{
 			const auto root = &s_hashtable[i];
 			const auto slot = root->bits.load();
 
-			if (cb(i, static_cast<u16>(slot.ref), root->first_ptr.load(), root->diff_lz | root->diff_tz | root->diff_pop))
+			if (cb(i, static_cast<u32>(slot.ref), slot.iptr, static_cast<u32>(slot.maxc)))
 			{
 				break;
 			}
