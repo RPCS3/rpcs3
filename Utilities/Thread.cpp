@@ -1786,7 +1786,9 @@ static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 
 	if (IsDebuggerPresent())
 	{
-		__asm("int3;");
+		// Convert to SIGTRAP
+		raise(SIGTRAP);
+		return;
 	}
 
 	report_fatal_error(msg);
