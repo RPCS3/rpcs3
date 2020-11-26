@@ -2,7 +2,7 @@
 
 #include "types.h"
 #include "util/atomic.hpp"
-#include "util/shared_cptr.hpp"
+#include "util/shared_ptr.hpp"
 
 #include <string>
 #include <memory>
@@ -110,7 +110,7 @@ private:
 	atomic_t<u64> m_sync{0};
 
 	// Thread name
-	stx::atomic_cptr<std::string> m_tname;
+	atomic_ptr<std::string> m_tname;
 
 	// Start thread
 	void start();
@@ -191,14 +191,14 @@ public:
 	// Set current thread name (not recommended)
 	static void set_name(std::string_view name)
 	{
-		g_tls_this_thread->m_tname.store(stx::shared_cptr<std::string>::make(name));
+		g_tls_this_thread->m_tname.store(make_single<std::string>(name));
 	}
 
 	// Set thread name (not recommended)
 	template <typename T>
 	static void set_name(named_thread<T>& thread, std::string_view name)
 	{
-		static_cast<thread_base&>(thread).m_tname.store(stx::shared_cptr<std::string>::make(name));
+		static_cast<thread_base&>(thread).m_tname.store(make_single<std::string>(name));
 	}
 
 	template <typename T>

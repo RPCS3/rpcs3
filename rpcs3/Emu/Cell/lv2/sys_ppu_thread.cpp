@@ -548,7 +548,7 @@ error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> 
 	const auto pname = name.get_ptr();
 
 	// Make valid name
-	auto _name = stx::shared_cptr<std::string>::make(pname, std::find(pname, pname + max_size, '\0'));
+	auto _name = make_single<std::string>(pname, std::find(pname, pname + max_size, '\0'));
 
 	// thread_ctrl name is not changed (TODO)
 	sys_ppu_thread.warning(u8"sys_ppu_thread_rename(): Thread renamed to “%s”", *_name);

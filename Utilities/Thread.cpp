@@ -2242,7 +2242,7 @@ std::string thread_ctrl::get_name_cached()
 		return {};
 	}
 
-	static thread_local stx::shared_cptr<std::string> name_cache;
+	static thread_local shared_ptr<std::string> name_cache;
 
 	if (!_this->m_tname.is_equal(name_cache)) [[unlikely]]
 	{
@@ -2254,7 +2254,7 @@ std::string thread_ctrl::get_name_cached()
 
 thread_base::thread_base(native_entry entry, std::string_view name)
 	: entry_point(entry)
-	, m_tname(stx::shared_cptr<std::string>::make(name))
+	, m_tname(make_single<std::string>(name))
 {
 }
 

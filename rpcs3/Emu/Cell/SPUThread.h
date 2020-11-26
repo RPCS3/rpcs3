@@ -747,7 +747,7 @@ public:
 	const u32 lv2_id; // The actual id that is used by syscalls
 
 	// Thread name
-	stx::atomic_cptr<std::string> spu_tname;
+	atomic_ptr<std::string> spu_tname;
 
 	std::unique_ptr<class spu_recompiler_base> jit; // Recompiler instance
 

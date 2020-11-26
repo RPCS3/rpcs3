@@ -915,7 +915,7 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	, joiner(detached != 0 ? ppu_join_status::detached : ppu_join_status::joinable)
 	, entry_func(param.entry)
 	, start_time(get_guest_system_time())
-	, ppu_tname(stx::shared_cptr<std::string>::make(name))
+	, ppu_tname(make_single<std::string>(name))
 {
 	gpr[1] = stack_addr + stack_size - ppu_stack_start_offset;
 
@@ -1020,7 +1020,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	{
 		const auto _this = static_cast<ppu_thread*>(get_current_cpu_thread());
 
-		static thread_local stx::shared_cptr<std::string> name_cache;
+		static thread_local shared_ptr<std::string> name_cache;
 
 		if (!_this->ppu_tname.is_equal(name_cache)) [[unlikely]]
 		{

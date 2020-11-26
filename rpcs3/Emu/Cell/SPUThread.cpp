@@ -1572,7 +1572,7 @@ void spu_thread::cpu_task()
 	{
 		const auto cpu = static_cast<spu_thread*>(get_current_cpu_thread());
 
-		static thread_local stx::shared_cptr<std::string> name_cache;
+		static thread_local shared_ptr<std::string> name_cache;
 
 		if (!cpu->spu_tname.is_equal(name_cache)) [[unlikely]]
 		{
@@ -1692,7 +1692,7 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	, group(group)
 	, option(option)
 	, lv2_id(lv2_id)
-	, spu_tname(stx::shared_cptr<std::string>::make(name))
+	, spu_tname(make_single<std::string>(name))
 {
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
 	{

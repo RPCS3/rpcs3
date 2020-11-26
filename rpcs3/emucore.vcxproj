@@ -130,9 +130,6 @@
     <ClCompile Include="util\cereal.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="util\shared_cptr.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="util\fixed_typemap.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -778,7 +775,7 @@
     <ClInclude Include="restore_new.h" />
     <ClInclude Include="rpcs3_version.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="util\shared_cptr.hpp" />
+    <ClInclude Include="util\shared_ptr.hpp" />
     <ClInclude Include="util\typeindices.hpp" />
     <ClInclude Include="util\yaml.hpp" />
   </ItemGroup>

@@ -215,7 +215,7 @@ public:
 	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
 
 	// Thread name
-	stx::atomic_cptr<std::string> ppu_tname;
+	atomic_ptr<std::string> ppu_tname;
 
 	u64 last_ftsc = 0;
 	u64 last_ftime = 0;
