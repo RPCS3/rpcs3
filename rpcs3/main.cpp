@@ -530,6 +530,7 @@ int main(int argc, char** argv)
 
 	std::string firmware_path;
 
+	// Force install firmware first if specified through command-line
 	if (parser.isSet(arg_installfw))
 	{
 		firmware_path = parser.value(installfw_option).toStdString();
@@ -538,20 +539,18 @@ int main(int argc, char** argv)
 			report_fatal_error(fmt::format("No firmware file found: %s", firmware_path));
 			return 1;
 		}
-	}
-
-	// Force install firmware first if specified through command-line
-	if (fs::is_file(firmware_path))
-	{
-		if (auto gui_app = qobject_cast<gui_application*>(app.data()))
+		else
 		{
-			main_window* main_window = gui_app->m_main_window;
-			if (!main_window)
+			if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 			{
-				report_fatal_error("Cannot install firmware, exiting !");
-				return 1;
+				main_window* main_window = gui_app->m_main_window;
+				if (!main_window)
+				{
+					report_fatal_error("Cannot install firmware, exiting !");
+					return 1;
+				}
+				main_window->InstallFirmware(QString::fromStdString(firmware_path));
 			}
-			main_window->InstallFirmware(QString::fromStdString(firmware_path));
 		}
 	}
 
