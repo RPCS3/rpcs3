@@ -6,12 +6,21 @@
 
 namespace stx
 {
+	template <typename T, typename U>
+	constexpr bool is_same_ptr() noexcept
+	{
+		// Should be possible if constexpr bit_cast is available?
+		// Otherwise I hope it will compile in null code anyway.
+		const auto u = reinterpret_cast<U*>(0x11223344556);
+		return static_cast<T*>(u) == static_cast<void*>(u);
+	}
+
 	// TODO
 	template <typename T, typename U>
 	constexpr bool is_same_ptr_v = true;
 
 	template <typename T, typename U>
-	constexpr bool is_same_ptr_cast_v = std::is_convertible_v<U, T> && is_same_ptr_v<T, U>;
+	constexpr bool is_same_ptr_cast_v = std::is_same_v<T, U> || std::is_convertible_v<U, T> && is_same_ptr_v<T, U>;
 
 	template <typename T>
 	class single_ptr;
@@ -31,63 +40,62 @@ namespace stx
 	struct shared_counter
 	{
 		// Stored destructor
-		void (*destroy)(void* ptr);
+		void (*destroy)(shared_counter* _this);
 
 		// Reference counter
-		atomic_t<std::size_t> refs{0};
+		atomic_t<std::size_t> refs{1};
 	};
 
-	template <typename T>
-	class unique_data
+	template <std::size_t Size, std::size_t Align, typename = void>
+	struct align_filler
 	{
-	public:
-		T data;
-
-		template <typename... Args>
-		explicit constexpr unique_data(Args&&... args) noexcept
-			: data(std::forward<Args>(args)...)
-		{
-		}
 	};
 
-	template <typename T>
-	class unique_data<T[]>
+	template <std::size_t Size, std::size_t Align>
+	struct align_filler<Size, Align, std::enable_if_t<(Align > Size)>>
 	{
-		std::size_t count;
+		char dummy[Align - Size];
 	};
 
 	// Control block with data and reference counter
 	template <typename T>
-	class alignas(T) shared_data final : public shared_counter, public unique_data<T>
+	class alignas(T) shared_data final : align_filler<sizeof(shared_counter), alignof(T)>
 	{
 	public:
-		using data_type = T;
+		shared_counter m_ctr;
+
+		T m_data;
 
 		template <typename... Args>
 		explicit constexpr shared_data(Args&&... args) noexcept
-			: shared_counter{}
-			, unique_data<T>(std::forward<Args>(args)...)
+			: m_ctr{}
+			, m_data(std::forward<Args>(args)...)
 		{
 		}
 	};
 
 	template <typename T>
-	class alignas(T) shared_data<T[]> final : public shared_counter, public unique_data<T>
+	class alignas(T) shared_data<T[]> final : align_filler<sizeof(shared_counter) + sizeof(std::size_t), alignof(T)>
 	{
 	public:
-		using data_type = T;
+		std::size_t m_count;
+
+		shared_counter m_ctr;
+
+		constexpr shared_data() noexcept = default;
 	};
 
-	// Simplified unique pointer (well, not simplified, std::unique_ptr is preferred)
+	// Simplified unique pointer. Wwell, not simplified, std::unique_ptr is preferred.
+	// This one is shared_ptr counterpart, it has a control block with refs = 1.
 	template <typename T>
 	class single_ptr
 	{
 		std::remove_extent_t<T>* m_ptr{};
 
-		shared_data<T>* d() const noexcept
+		shared_counter* d() const noexcept
 		{
 			// Shared counter, deleter, should be at negative offset
-			return std::launder(static_cast<shared_data<T>*>(reinterpret_cast<unique_data<T>*>(m_ptr)));
+			return std::launder(reinterpret_cast<shared_counter*>(reinterpret_cast<u64>(m_ptr) - sizeof(shared_counter)));
 		}
 
 		template <typename U>
@@ -117,6 +125,7 @@ namespace stx
 		single_ptr(single_ptr<U>&& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			r.m_ptr = nullptr;
 		}
 
@@ -142,6 +151,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		single_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			m_ptr = r.m_ptr;
 			r.m_ptr = nullptr;
 			return *this;
@@ -151,7 +161,8 @@ namespace stx
 		{
 			if (m_ptr) [[likely]]
 			{
-				d()->destroy(d());
+				const auto o = d();
+				o->destroy(o);
 				m_ptr = nullptr;
 			}
 		}
@@ -203,42 +214,80 @@ namespace stx
 		{
 			return m_ptr != nullptr;
 		}
+
+		// "Moving" "static cast"
+		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr_v<U, T>>>
+		explicit operator single_ptr<U>() && noexcept
+		{
+			verify(HERE), is_same_ptr<U, T>();
+
+			single_ptr<U> r;
+			r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
+			return r;
+		}
 	};
 
 	template <typename T, bool Init = true, typename... Args>
 	static std::enable_if_t<!(std::is_unbounded_array_v<T>) && (Init || !sizeof...(Args)), single_ptr<T>> make_single(Args&&... args) noexcept
 	{
+		static_assert(offsetof(shared_data<T>, m_data) - offsetof(shared_data<T>, m_ctr) == sizeof(shared_counter));
+
+		using etype = std::remove_extent_t<T>;
+
 		shared_data<T>* ptr = nullptr;
 
-		if constexpr (Init)
+		if constexpr (Init && !std::is_array_v<T>)
 		{
 			ptr = new shared_data<T>(std::forward<Args>(args)...);
 		}
 		else
 		{
 			ptr = new shared_data<T>;
+
+			if constexpr (Init && std::is_array_v<T>)
+			{
+				// Weird case, destroy and reinitialize every fixed array arg (fill)
+				for (auto& e : ptr->m_data)
+				{
+					e.~etype();
+					new (&e) etype(std::forward<Args>(args)...);
+				}
+			}
 		}
 
-		ptr->destroy = [](void* p)
+		ptr->m_ctr.destroy = [](shared_counter* _this)
 		{
-			delete static_cast<shared_data<T>*>(p);
+			delete reinterpret_cast<shared_data<T>*>(reinterpret_cast<u64>(_this) - offsetof(shared_data<T>, m_ctr));
 		};
 
 		single_ptr<T> r;
-		reinterpret_cast<std::remove_extent_t<T>*&>(r) = &ptr->data;
+
+		if constexpr (std::is_array_v<T>)
+		{
+			reinterpret_cast<etype*&>(r) = +ptr->m_data;
+		}
+		else
+		{
+			reinterpret_cast<etype*&>(r) = &ptr->m_data;
+		}
+
 		return r;
 	}
 
 	template <typename T, bool Init = true>
 	static std::enable_if_t<std::is_unbounded_array_v<T>, single_ptr<T>> make_single(std::size_t count) noexcept
 	{
-		const std::size_t size = sizeof(shared_data<T>) + count * sizeof(std::remove_extent_t<T>);
+		static_assert(sizeof(shared_data<T>) - offsetof(shared_data<T>, m_ctr) == sizeof(shared_counter));
+
+		using etype = std::remove_extent_t<T>;
+
+		const std::size_t size = sizeof(shared_data<T>) + count * sizeof(etype);
 
 		std::byte* bytes = nullptr;
 
-		if constexpr (alignof(std::remove_extent_t<T>) > (__STDCPP_DEFAULT_NEW_ALIGNMENT__))
+		if constexpr (alignof(etype) > (__STDCPP_DEFAULT_NEW_ALIGNMENT__))
 		{
-			bytes = new (std::align_val_t{alignof(std::remove_extent_t<T>)}) std::byte[size];
+			bytes = new (std::align_val_t{alignof(etype)}) std::byte[size];
 		}
 		else
 		{
@@ -249,7 +298,7 @@ namespace stx
 		shared_data<T>* ptr = new (reinterpret_cast<shared_data<T>*>(bytes)) shared_data<T>();
 
 		// Initialize array next to the control block
-		T arr = reinterpret_cast<T>(ptr + 1);
+		etype* arr = reinterpret_cast<etype*>(bytes + sizeof(shared_data<T>));
 
 		if constexpr (Init)
 		{
@@ -262,21 +311,23 @@ namespace stx
 
 		ptr->m_count = count;
 
-		ptr->destroy = [](void* p)
+		ptr->m_ctr.destroy = [](shared_counter* _this)
 		{
-			shared_data<T>* ptr = static_cast<shared_data<T>*>(p);
+			shared_data<T>* ptr = reinterpret_cast<shared_data<T>*>(reinterpret_cast<u64>(_this) - offsetof(shared_data<T>, m_ctr));
 
-			std::destroy_n(std::launder(reinterpret_cast<T>(ptr + 1)), ptr->m_count);
+			std::byte* bytes = reinterpret_cast<std::byte*>(ptr);
+
+			std::destroy_n(std::launder(reinterpret_cast<etype*>(bytes + sizeof(shared_data<T>))), ptr->m_count);
 
 			ptr->~shared_data<T>();
 
-			if constexpr (alignof(std::remove_extent_t<T>) > (__STDCPP_DEFAULT_NEW_ALIGNMENT__))
+			if constexpr (alignof(etype) > (__STDCPP_DEFAULT_NEW_ALIGNMENT__))
 			{
-				::operator delete[](reinterpret_cast<std::byte*>(p), std::align_val_t{alignof(std::remove_extent_t<T>)});
+				::operator delete[](bytes, std::align_val_t{alignof(etype)});
 			}
 			else
 			{
-				delete[] reinterpret_cast<std::byte*>(p);
+				delete[] bytes;
 			}
 		};
 
@@ -291,10 +342,10 @@ namespace stx
 	{
 		std::remove_extent_t<T>* m_ptr{};
 
-		shared_data<T>* d() const noexcept
+		shared_counter* d() const noexcept
 		{
 			// Shared counter, deleter, should be at negative offset
-			return std::launder(static_cast<shared_data<T>*>(reinterpret_cast<unique_data<T>*>(m_ptr)));
+			return std::launder(reinterpret_cast<shared_counter*>(reinterpret_cast<u64>(m_ptr) - sizeof(shared_counter)));
 		}
 
 		template <typename U>
@@ -320,6 +371,7 @@ namespace stx
 		shared_ptr(const shared_ptr<U>& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			if (m_ptr)
 				d()->refs++;
 		}
@@ -334,6 +386,7 @@ namespace stx
 		shared_ptr(shared_ptr<U>&& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			r.m_ptr = nullptr;
 		}
 
@@ -341,6 +394,7 @@ namespace stx
 		shared_ptr(single_ptr<U>&& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			r.m_ptr = nullptr;
 		}
 
@@ -358,6 +412,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_ptr& operator=(const shared_ptr<U>& r) noexcept
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			shared_ptr(r).swap(*this);
 			return *this;
 		}
@@ -371,6 +426,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_ptr& operator=(shared_ptr<U>&& r) noexcept
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			shared_ptr(std::move(r)).swap(*this);
 			return *this;
 		}
@@ -378,6 +434,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			shared_ptr(std::move(r)).swap(*this);
 			return *this;
 		}
@@ -385,22 +442,33 @@ namespace stx
 		// Set to null
 		void reset() noexcept
 		{
-			if (m_ptr && !--d()->refs) [[unlikely]]
+			const auto o = d();
+
+			if (m_ptr && !--o->refs) [[unlikely]]
 			{
-				d()->destroy(d());
+				o->destroy(o);
 				m_ptr = nullptr;
 			}
 		}
 
 		// Converts to unique (single) ptr if reference is 1, otherwise returns null. Nullifies self.
-		explicit operator single_ptr<T>() && noexcept
+		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr_v<U, T>>>
+		explicit operator single_ptr<U>() && noexcept
 		{
-			if (m_ptr && !--d()->refs)
+			verify(HERE), is_same_ptr<U, T>();
+
+			const auto o = d();
+
+			if (m_ptr && !--o->refs)
 			{
-				d()->refs.release(1);
-				return {std::move(*this)};
+				// Convert last reference to single_ptr instance.
+				o->refs.release(1);
+				single_ptr<T> r;
+				r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
+				return r;
 			}
 
+			// Otherwise, both pointers are gone. Didn't seem right to do it in the constructor.
 			m_ptr = nullptr;
 			return {};
 		}
@@ -465,16 +533,30 @@ namespace stx
 			return m_ptr != nullptr;
 		}
 
+		// Basic "static cast" support
 		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr_v<U, T>>>
-		explicit operator shared_ptr<U>() const noexcept
+		explicit operator shared_ptr<U>() const& noexcept
 		{
+			verify(HERE), is_same_ptr<U, T>();
+
 			if (m_ptr)
 			{
 				d()->refs++;
 			}
 
 			shared_ptr<U> r;
-			r.m_ptr = m_ptr;
+			r.m_ptr = static_cast<decltype(r.m_ptr)>(m_ptr);
+			return r;
+		}
+
+		// "Moving" "static cast"
+		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr_v<U, T>>>
+		explicit operator shared_ptr<U>() && noexcept
+		{
+			verify(HERE), is_same_ptr<U, T>();
+
+			shared_ptr<U> r;
+			r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
 			return r;
 		}
 	};
@@ -497,12 +579,12 @@ namespace stx
 	{
 		mutable atomic_t<uptr> m_val{0};
 
-		static shared_data<T>* d(uptr val)
+		static shared_counter* d(uptr val)
 		{
-			return std::launder(static_cast<shared_data<T>*>(reinterpret_cast<unique_data<T>*>(val >> c_ref_size)));
+			return std::launder(reinterpret_cast<shared_counter*>((val >> c_ref_size) - sizeof(shared_counter)));
 		}
 
-		shared_data<T>* d() const noexcept
+		shared_counter* d() const noexcept
 		{
 			return d(m_val);
 		}
@@ -529,6 +611,8 @@ namespace stx
 		atomic_ptr(const shared_ptr<U>& r) noexcept
 			: m_val(reinterpret_cast<uptr>(r.m_ptr) << c_ref_size)
 		{
+			verify(HERE), is_same_ptr<T, U>();
+
 			// Obtain a ref + as many refs as an atomic_ptr can additionally reference
 			if (m_val)
 				d()->refs += c_ref_mask + 1;
@@ -538,6 +622,7 @@ namespace stx
 		atomic_ptr(shared_ptr<U>&& r) noexcept
 			: m_val(reinterpret_cast<uptr>(r.m_ptr) << c_ref_size)
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			r.m_ptr = nullptr;
 
 			if (m_val)
@@ -548,6 +633,7 @@ namespace stx
 		atomic_ptr(single_ptr<U>&& r) noexcept
 			: m_val(reinterpret_cast<uptr>(r.m_ptr) << c_ref_size)
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			r.m_ptr = nullptr;
 
 			if (m_val)
@@ -557,10 +643,11 @@ namespace stx
 		~atomic_ptr()
 		{
 			const uptr v = m_val.raw();
+			const auto o = d(v);
 
-			if (v && !d(v)->refs.sub_fetch(c_ref_mask + 1 - (v & c_ref_mask)))
+			if (v >> c_ref_size && !o->refs.sub_fetch(c_ref_mask + 1 - (v & c_ref_mask)))
 			{
-				d(v)->destroy(d(v));
+				o->destroy(o);
 			}
 		}
 
@@ -574,6 +661,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		atomic_ptr& operator=(const shared_ptr<U>& r) noexcept
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			store(r);
 			return *this;
 		}
@@ -581,6 +669,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		atomic_ptr& operator=(shared_ptr<U>&& r) noexcept
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			store(std::move(r));
 			return *this;
 		}
@@ -588,6 +677,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		atomic_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
+			verify(HERE), is_same_ptr<T, U>();
 			store(std::move(r));
 			return *this;
 		}
@@ -616,6 +706,7 @@ namespace stx
 
 			// Set referenced pointer
 			r.m_ptr = std::launder(reinterpret_cast<element_type*>(prev >> c_ref_size));
+			r.d()->refs++;
 
 			// Dereference if same pointer
 			m_val.fetch_op([prev = prev](uptr& val)
@@ -651,19 +742,23 @@ namespace stx
 
 		[[nodiscard]] shared_type exchange(shared_type value) noexcept
 		{
-			atomic_ptr old;
-
 			if (value.m_ptr)
 			{
 				// Consume value and add refs
 				value.d()->refs += c_ref_mask;
-				old.m_val.raw() += 1;
 			}
 
+			atomic_ptr old;
 			old.m_val.raw() += m_val.exchange(reinterpret_cast<uptr>(std::exchange(value.m_ptr, nullptr)) << c_ref_size);
 
 			shared_type r;
-			r.m_ptr = old.m_val >> c_ref_size;
+			r.m_ptr = std::launder(reinterpret_cast<element_type*>(old.m_val >> c_ref_size));
+
+			if (old.m_val.raw())
+			{
+				old.m_val.raw()++;
+			}
+
 			return r;
 		}
 
