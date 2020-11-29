@@ -1484,8 +1484,8 @@ namespace rsx
 			framebuffer_status_valid = true;
 		}
 
-		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(x1, y1);
-		std::tie(region.x2, region.y2) = rsx::apply_resolution_scale<true>(x2, y2);
+		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(x1, y1, m_framebuffer_layout.width, m_framebuffer_layout.height);
+		std::tie(region.x2, region.y2) = rsx::apply_resolution_scale<true>(x2, y2, m_framebuffer_layout.width, m_framebuffer_layout.height);
 
 		return true;
 	}
@@ -1766,8 +1766,6 @@ namespace rsx
 			// Set high word of the control mask to store point sprite control
 			result.texcoord_control_mask |= u32(method_registers.point_sprite_control_mask()) << 16;
 		}
-
-		const auto resolution_scale = rsx::get_resolution_scale();
 
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{

@@ -2758,48 +2758,24 @@ namespace rsx
 				}
 			}
 
-			if (rsx::get_resolution_scale_percent() != 100)
-			{
-				const f32 resolution_scale = rsx::get_resolution_scale();
-				if (src_is_render_target)
-				{
-					if (src_subres.surface->get_surface_width(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
-					{
-						src_area.x1 = static_cast<u16>(src_area.x1 * resolution_scale);
-						src_area.x2 = static_cast<u16>(src_area.x2 * resolution_scale);
-					}
-
-					if (src_subres.surface->get_surface_height(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
-					{
-						src_area.y1 = static_cast<u16>(src_area.y1 * resolution_scale);
-						src_area.y2 = static_cast<u16>(src_area.y2 * resolution_scale);
-					}
-				}
-
-				if (dst_is_render_target)
-				{
-					if (dst_subres.surface->get_surface_width(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
-					{
-						dst_area.x1 = static_cast<u16>(dst_area.x1 * resolution_scale);
-						dst_area.x2 = static_cast<u16>(dst_area.x2 * resolution_scale);
-					}
-
-					if (dst_subres.surface->get_surface_height(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
-					{
-						dst_area.y1 = static_cast<u16>(dst_area.y1 * resolution_scale);
-						dst_area.y2 = static_cast<u16>(dst_area.y2 * resolution_scale);
-					}
-				}
-			}
-
 			if (src_is_render_target)
 			{
+				const auto surface_width = src_subres.surface->get_surface_width(rsx::surface_metrics::pixels);
+				const auto surface_height = src_subres.surface->get_surface_height(rsx::surface_metrics::pixels);
+				std::tie(src_area.x1, src_area.y1) = rsx::apply_resolution_scale<false>(src_area.x1, src_area.y1, surface_width, surface_height);
+				std::tie(src_area.x2, src_area.y2) = rsx::apply_resolution_scale<true>(src_area.x2, src_area.y2, surface_width, surface_height);
+
 				// The resource is of surface type; possibly disabled AA emulation
 				src_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer, src_area);
 			}
 
 			if (dst_is_render_target)
 			{
+				const auto surface_width = dst_subres.surface->get_surface_width(rsx::surface_metrics::pixels);
+				const auto surface_height = dst_subres.surface->get_surface_height(rsx::surface_metrics::pixels);
+				std::tie(dst_area.x1, dst_area.y1) = rsx::apply_resolution_scale<false>(dst_area.x1, dst_area.y1, surface_width, surface_height);
+				std::tie(dst_area.x2, dst_area.y2) = rsx::apply_resolution_scale<true>(dst_area.x2, dst_area.y2, surface_width, surface_height);
+
 				// The resource is of surface type; possibly disabled AA emulation
 				dst_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer, dst_area);
 			}
