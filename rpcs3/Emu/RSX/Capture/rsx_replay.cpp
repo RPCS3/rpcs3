@@ -238,5 +238,7 @@ namespace rsx
 			// random pause to not destroy gpu
 			std::this_thread::sleep_for(10ms);
 		}
+
+		get_current_cpu_thread()->state += (cpu_flag::exit + cpu_flag::wait);
 	}
 }
