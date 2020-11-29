@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
 #include <cstdint>
 #include <memory>
@@ -9,10 +9,12 @@ namespace stx
 	template <typename T, typename U>
 	constexpr bool is_same_ptr() noexcept
 	{
-		// Should be possible if constexpr bit_cast is available?
+		// I would like to make it a trait if there is some trick.
+		// And believe it shall possible with constexpr bit_cast.
 		// Otherwise I hope it will compile in null code anyway.
 		const auto u = reinterpret_cast<U*>(0x11223344556);
-		return static_cast<T*>(u) == static_cast<void*>(u);
+		const volatile void* x = u;
+		return static_cast<T*>(u) == x;
 	}
 
 	// TODO
