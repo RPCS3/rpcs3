@@ -1,4 +1,4 @@
-#pragma once
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
 #ifdef MSVC_CRT_MEMLEAK_DETECTION
 	#define _CRTDBG_MAP_ALLOC

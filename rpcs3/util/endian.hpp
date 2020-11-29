@@ -1,5 +1,4 @@
-﻿#ifndef ENDIAN_HPP_GUARD
-#define ENDIAN_HPP_GUARD
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
 #include <cstdint>
 #include "Utilities/types.h"
@@ -492,5 +491,3 @@ public:
 		}
 	};
 }
-
-#endif // ENDIAN_HPP_GUARD
