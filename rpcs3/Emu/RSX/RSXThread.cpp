@@ -1360,6 +1360,7 @@ namespace rsx
 		{
 		case NV4097_SET_DEPTH_TEST_ENABLE:
 		case NV4097_SET_DEPTH_MASK:
+		case NV4097_SET_DEPTH_FUNC:
 		{
 			evaluate_depth_buffer_state();
 
