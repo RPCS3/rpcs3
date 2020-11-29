@@ -591,15 +591,9 @@ namespace rsx
 	template <bool clamp = false>
 	static inline const std::pair<u16, u16> apply_resolution_scale(u16 width, u16 height, u16 ref_width = 0, u16 ref_height = 0)
 	{
-		u16 ref;
-		if (width > height) [[likely]]
-		{
-			ref = (ref_width) ? ref_width : width;
-		}
-		else
-		{
-			ref = (ref_height) ? ref_height : height;
-		}
+		ref_width = (ref_width)? ref_width : width;
+		ref_height = (ref_height)? ref_height : height;
+		const u16 ref = std::max(ref_width, ref_height);
 
 		if (ref > g_cfg.video.min_scalable_dimension)
 		{
