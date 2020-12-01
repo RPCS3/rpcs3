@@ -600,13 +600,13 @@ namespace stx
 
 		constexpr atomic_ptr() noexcept = default;
 
-		constexpr atomic_ptr(std::nullptr_t) noexcept {}
-
-		explicit atomic_ptr(T value) noexcept
+		// Optimized value construct
+		template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<T, Args...>>>
+		explicit atomic_ptr(Args&&... args) noexcept
 		{
-			auto r = make_single<T>(std::move(value));
+			shared_type r = make_single<T>(std::forward<Args>(args)...);
 			m_val = reinterpret_cast<uptr>(std::exchange(r.m_ptr, nullptr)) << c_ref_size;
-			d()->refs += c_ref_mask;
+			d()->refs.raw() += c_ref_mask;
 		}
 
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
@@ -653,10 +653,14 @@ namespace stx
 			}
 		}
 
-		atomic_ptr& operator=(T value) noexcept
+		// Optimized value assignment
+		atomic_ptr& operator=(std::remove_cv_t<T> value) noexcept
 		{
-			// TODO: does it make sense?
-			store(make_single<T>(std::move(value)));
+			shared_type r = make_single<T>(std::move(value));
+			r.d()->refs += c_ref_mask;
+
+			atomic_ptr old;
+			old.m_val.raw() = m_val.exchange(reinterpret_cast<uptr>(std::exchange(r.m_ptr, nullptr)) << c_ref_size);
 			return *this;
 		}
 
@@ -725,9 +729,19 @@ namespace stx
 			return r;
 		}
 
-		void store(T value) noexcept
+		operator shared_type() const noexcept
 		{
-			store(make_single<T>(std::move(value)));
+			return load();
+		}
+
+		template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<T, Args...>>>
+		void store(Args&&... args) noexcept
+		{
+			shared_type r = make_single<T>(std::forward<Args>(args)...);
+			r.d()->refs.raw() += c_ref_mask;
+
+			atomic_ptr old;
+			old.m_val.raw() = m_val.exchange(reinterpret_cast<uptr>(std::exchange(r.m_ptr, nullptr)) << c_ref_size);
 		}
 
 		void store(shared_type value) noexcept
@@ -742,6 +756,20 @@ namespace stx
 			old.m_val.raw() = m_val.exchange(reinterpret_cast<uptr>(std::exchange(value.m_ptr, nullptr)) << c_ref_size);
 		}
 
+		template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<T, Args...>>>
+		[[nodiscard]] shared_type exchange(Args&&... args) noexcept
+		{
+			shared_type r = make_single<T>(std::forward<Args>(args)...);
+			r.d()->refs.raw() += c_ref_mask;
+
+			atomic_ptr old;
+			old.m_val.raw() += m_val.exchange(reinterpret_cast<uptr>(r.m_ptr) << c_ref_size);
+			old.m_val.raw() += 1;
+
+			r.m_ptr = std::launder(reinterpret_cast<element_type*>(old.m_val >> c_ref_size));
+			return r;
+		}
+
 		[[nodiscard]] shared_type exchange(shared_type value) noexcept
 		{
 			if (value.m_ptr)
@@ -751,18 +779,36 @@ namespace stx
 			}
 
 			atomic_ptr old;
-			old.m_val.raw() += m_val.exchange(reinterpret_cast<uptr>(std::exchange(value.m_ptr, nullptr)) << c_ref_size);
+			old.m_val.raw() += m_val.exchange(reinterpret_cast<uptr>(value.m_ptr) << c_ref_size);
+			old.m_val.raw() += 1;
 
-			shared_type r;
-			r.m_ptr = std::launder(reinterpret_cast<element_type*>(old.m_val >> c_ref_size));
-
-			if (old.m_val.raw())
-			{
-				old.m_val.raw()++;
-			}
-
-			return r;
+			value.m_ptr = std::launder(reinterpret_cast<element_type*>(old.m_val >> c_ref_size));
+			return value;
 		}
+
+		// bool compare_exchange(shared_type& cmp_and_old, shared_type exch)
+		// {
+		// }
+
+		// template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
+		// shared_type compare_and_swap(const shared_ptr<U>& cmp, shared_type exch)
+		// {
+		// }
+
+		// template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
+		// bool compare_and_swap_test(const shared_ptr<U>& cmp, shared_type exch)
+		// {
+		// }
+
+		// template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
+		// shared_type compare_and_swap(const single_ptr<U>& cmp, shared_type exch)
+		// {
+		// }
+
+		// template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
+		// bool compare_and_swap_test(const single_ptr<U>& cmp, shared_type exch)
+		// {
+		// }
 
 		// Simple atomic load is much more effective than load(), but it's a non-owning reference
 		const volatile void* observe() const noexcept
@@ -775,12 +821,14 @@ namespace stx
 			return m_val != 0;
 		}
 
-		bool is_equal(const shared_ptr<T>& r) const noexcept
+		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
+		bool is_equal(const shared_ptr<U>& r) const noexcept
 		{
 			return observe() == r.get();
 		}
 
-		bool is_equal(const single_ptr<T>& r) const noexcept
+		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
+		bool is_equal(const single_ptr<U>& r) const noexcept
 		{
 			return observe() == r.get();
 		}
