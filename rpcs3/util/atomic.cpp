@@ -1301,7 +1301,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 	s_tls_wait_cb(data, -1, stamp0);
 }
 
-template <bool TryAlert = false>
+template <bool NoAlert = false>
 static u32
 #ifdef _WIN32
 __vectorcall
@@ -1322,30 +1322,24 @@ alert_sema(u32 cond_id, const void* data, u64 tid, u32 size, __m128i mask, __m12
 
 		if (_new && _new->tsc0 == _old->tsc0)
 		{
-			if ((!size && _new->forced_wakeup()) || (size && _new->wakeup(size == umax ? 1 : 2)))
+			if constexpr (NoAlert)
 			{
-				ok = cond_id;
-
-				if constexpr (TryAlert)
+				if (_new != _old)
 				{
-					if (!_new->try_alert_native())
-					{
-						if (_new != _old)
-						{
-							// Keep base cond for another attempt, free only secondary cond
-							ok = ~_old->link;
-							cond_free(cond_id);
-							return ok;
-						}
-						else
-						{
-							// Keep cond for another attempt
-							ok = ~cond_id;
-							return ok;
-						}
-					}
+					// Keep base cond for actual alert attempt, free only secondary cond
+					ok = ~_old->link;
+					cond_free(cond_id);
+					return ok;
 				}
 				else
+				{
+					ok = ~cond_id;
+					return ok;
+				}
+			}
+			else if ((!size && _new->forced_wakeup()) || (size && _new->wakeup(size == umax ? 1 : 2)))
+			{
+				ok = cond_id;
 				{
 					_new->alert_native();
 				}
@@ -1568,37 +1562,68 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask)
 	u32 count = 0;
 
 	// Array itself.
-	u16 cond_ids[UINT16_MAX + 1];
+	u32 cond_ids[max_threads * max_distance + 128];
 
 	root_info::slot_search(iptr, size, 0, mask, [&](u32 cond_id)
 	{
 		u32 res = alert_sema<true>(cond_id, data, -1, size, mask, _mm_setzero_si128());
 
-		if (res <= UINT16_MAX)
-		{
-			if (res)
-			{
-				if (s_tls_notify_cb)
-					s_tls_notify_cb(data, ++progress);
-			}
-		}
-		else
+		if (res && ~res <= UINT16_MAX)
 		{
 			// Add to the end of the "stack"
-			cond_ids[UINT16_MAX - count++] = ~res;
+			*(std::end(cond_ids) - ++count) = ~res;
 		}
 
 		return false;
 	});
 
-	// Cleanup
+	// Try alert
 	for (u32 i = 0; i < count; i++)
 	{
-		const u32 cond_id = cond_ids[UINT16_MAX - i];
-		s_cond_list[cond_id].alert_native();
-		if (s_tls_notify_cb)
+		const u32 cond_id = *(std::end(cond_ids) - i - 1);
+
+		if (!s_cond_list[cond_id].wakeup(1))
+		{
+			*(std::end(cond_ids) - i - 1) = ~cond_id;
+		}
+	}
+
+	// Second stage (non-blocking alert attempts)
+	if (count > 1)
+	{
+		for (u32 i = 0; i < count; i++)
+		{
+			const u32 cond_id = *(std::end(cond_ids) - i - 1);
+
+			if (cond_id <= UINT16_MAX)
+			{
+				if (s_cond_list[cond_id].try_alert_native())
+				{
+					if (s_tls_notify_cb)
+						s_tls_notify_cb(data, ++progress);
+					*(std::end(cond_ids) - i - 1) = ~cond_id;
+				}
+			}
+		}
+	}
+
+	// Final stage and cleanup
+	for (u32 i = 0; i < count; i++)
+	{
+		const u32 cond_id = *(std::end(cond_ids) - i - 1);
+
+		if (cond_id <= UINT16_MAX)
+		{
+			s_cond_list[cond_id].alert_native();
+			if (s_tls_notify_cb)
 				s_tls_notify_cb(data, ++progress);
-		cond_free(cond_id);
+			*(std::end(cond_ids) - i - 1) = ~cond_id;
+		}
+	}
+
+	for (u32 i = 0; i < count; i++)
+	{
+		cond_free(~*(std::end(cond_ids) - i - 1));
 	}
 
 	if (s_tls_notify_cb)
