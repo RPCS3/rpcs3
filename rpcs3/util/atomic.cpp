@@ -20,8 +20,8 @@
 #include "asm.hpp"
 #include "endian.hpp"
 
-// Total number of entries, should be a power of 2.
-static constexpr std::size_t s_hashtable_size = 1u << 16;
+// Total number of entries.
+static constexpr std::size_t s_hashtable_size = 1u << 17;
 
 // Reference counter combined with shifted pointer (which is assumed to be 47 bit)
 static constexpr std::uintptr_t s_ref_mask = (1u << 17) - 1;
@@ -778,11 +778,12 @@ namespace
 {
 	struct alignas(16) slot_allocator
 	{
-		u64 ref : 16; // Ref counter
+		u64 maxc: 5; // Collision counter
+		u64 maxd: 11; // Distance counter
 		u64 bits: 24; // Allocated bits
 		u64 prio: 24; // Reserved
 
-		u64 maxc: 17; // Collision counter
+		u64 ref : 17; // Ref counter
 		u64 iptr: 47; // First pointer to use slot (to count used slots)
 	};
 
@@ -807,9 +808,6 @@ namespace
 
 		template <typename F>
 		static auto slot_search(std::uintptr_t iptr, u32 size, u64 thread_id, __m128i mask, F func) noexcept;
-
-		// Somehow update information about collisions (TODO)
-		void register_collisions(std::uintptr_t ptr, u64 max_coll);
 	};
 
 	static_assert(sizeof(root_info) == 64);
@@ -822,29 +820,48 @@ namespace
 {
 	struct hash_engine
 	{
-		// Must be very lightweight
-		std::minstd_rand rnd;
+		// Pseudo-RNG, seeded with input pointer
+		using rng = std::linear_congruential_engine<u64, 2862933555777941757, 3037000493, 0>;
+
+		const u64 init;
+
+		// Subpointers
+		u16 r0;
+		u16 r1;
 
 		// Pointer to the current hashtable slot
-		root_info* current;
+		u32 id;
 
-		// Initialize
-		hash_engine(std::uintptr_t iptr)
-			: rnd(static_cast<u32>(iptr >> 15))
-			, current(&s_hashtable[((rnd() >> 1) + iptr) % s_hashtable_size])
+		// Initialize: PRNG on iptr, split into two 16 bit chunks, choose first chunk
+		explicit hash_engine(std::uintptr_t iptr)
+			: init(rng(iptr)())
+			, r0(static_cast<u16>(init >> 48))
+			, r1(static_cast<u16>(init >> 32))
+			, id(static_cast<u32>(init) >> 31 ? r0 : r1 + 0x10000)
 		{
 		}
 
-		// Advance
+		// Advance: linearly to prevent self-collisions, but always switch between two big 2^16 chunks
 		void operator++(int) noexcept
 		{
-			current = &s_hashtable[(rnd() >> 1) % s_hashtable_size];
+			if (id >= 0x10000)
+			{
+				id = r0++;
+			}
+			else
+			{
+				id = r1++ + 0x10000;
+			}
 		}
 
-		// Access current
+		root_info* current() const noexcept
+		{
+			return &s_hashtable[id];
+		}
+
 		root_info* operator ->() const noexcept
 		{
-			return current;
+			return current();
 		}
 	};
 }
@@ -889,6 +906,8 @@ atomic_t<u16>* root_info::slot_alloc(std::uintptr_t ptr) noexcept
 				bits.iptr = ptr;
 			if (bits.maxc == 0 && bits.iptr != ptr && bits.ref)
 				bits.maxc = 1;
+			if (bits.maxd < limit)
+				bits.maxd = limit;
 
 			bits.ref++;
 
@@ -918,19 +937,6 @@ atomic_t<u16>* root_info::slot_alloc(std::uintptr_t ptr) noexcept
 	}
 
 	return slot;
-}
-
-void root_info::register_collisions(std::uintptr_t ptr, u64 max_coll)
-{
-	bits.atomic_op([&](slot_allocator& bits)
-	{
-		if (bits.iptr == 0)
-			bits.iptr = ptr;
-		if (bits.maxc == 0 && bits.iptr != ptr)
-			bits.maxc = 1;
-		if (bits.maxc < max_coll)
-			bits.maxc = max_coll;
-	});
 }
 
 void root_info::slot_free(std::uintptr_t iptr, atomic_t<u16>* slot, u32 tls_slot) noexcept
@@ -973,13 +979,13 @@ void root_info::slot_free(std::uintptr_t iptr, atomic_t<u16>* slot, u32 tls_slot
 		{
 			verify(HERE), bits.ref--;
 
-			if (_this == curr.current)
+			if (_this == curr.current())
 			{
 				bits.bits &= ~(1ull << diff);
 			}
 		});
 
-		if (_this == curr.current)
+		if (_this == curr.current())
 		{
 			break;
 		}
