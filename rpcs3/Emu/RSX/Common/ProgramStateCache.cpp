@@ -466,15 +466,6 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 		binary1.shadow_textures != binary2.shadow_textures || binary1.redirected_textures != binary2.redirected_textures)
 		return false;
 
-	for (u8 index = 0; index < 16; ++index)
-	{
-		if (binary1.textures_alpha_kill[index] != binary2.textures_alpha_kill[index])
-			return false;
-
-		if (binary1.textures_zfunc[index] != binary2.textures_zfunc[index])
-			return false;
-	}
-
 	const void* instBuffer1 = binary1.get_data();
 	const void* instBuffer2 = binary2.get_data();
 	size_t instIndex = 0;

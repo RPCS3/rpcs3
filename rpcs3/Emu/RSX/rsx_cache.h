@@ -414,8 +414,8 @@ namespace rsx
 			u16 fp_lighting_flags;
 			u16 fp_shadow_textures;
 			u16 fp_redirected_textures;
-			u16 fp_alphakill_mask;
-			u64 fp_zfunc_mask;
+			u16 unused_0;             // Retained for binary compatibility
+			u64 unused_1;             // Retained for binary compatibility
 
 			pipeline_storage_type pipeline_properties;
 		};
@@ -665,8 +665,6 @@ namespace rsx
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_lighting_flags);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_shadow_textures);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_redirected_textures);
-			state_hash ^= rpcs3::hash_base<u16>(data.fp_alphakill_mask);
-			state_hash ^= rpcs3::hash_base<u64>(data.fp_zfunc_mask);
 
 			std::string pipeline_file_name = fmt::format("%llX+%llX+%llX+%llX.bin", data.vertex_program_hash, data.fragment_program_hash, data.pipeline_storage_hash, state_hash);
 			std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "/" + pipeline_file_name;
@@ -740,12 +738,6 @@ namespace rsx
 			fp.shadow_textures = data.fp_shadow_textures;
 			fp.redirected_textures = data.fp_redirected_textures;
 
-			for (u8 index = 0; index < 16; ++index)
-			{
-				fp.textures_alpha_kill[index] = (data.fp_alphakill_mask & (1 << index))? 1: 0;
-				fp.textures_zfunc[index] = (data.fp_zfunc_mask >> (index << 2)) & 0xF;
-			}
-
 			return std::make_tuple(pipeline, vp, fp);
 		}
 
@@ -789,12 +781,6 @@ namespace rsx
 			data_block.fp_lighting_flags = u16(fp.two_sided_lighting);
 			data_block.fp_shadow_textures = fp.shadow_textures;
 			data_block.fp_redirected_textures = fp.redirected_textures;
-
-			for (u8 index = 0; index < 16; ++index)
-			{
-				data_block.fp_alphakill_mask |= u32(fp.textures_alpha_kill[index] & 0x1) << index;
-				data_block.fp_zfunc_mask |= u64(fp.textures_zfunc[index] & 0xF) << (index << 2);
-			}
 
 			return data_block;
 		}

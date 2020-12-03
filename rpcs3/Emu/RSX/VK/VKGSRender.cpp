@@ -1467,7 +1467,7 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 
 bool VKGSRender::load_program()
 {
-	if ((m_interpreter_state = (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)))
+	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
 		verify(HERE), current_fragment_program.valid;

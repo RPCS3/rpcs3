@@ -481,7 +481,7 @@ namespace rsx
 				stream_data_to_memory_swapped_u32<true>(&rsx::method_registers.transform_program[load_pos * 4 + index % 4]
 					, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount, 4);
 
-				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_ucode_dirty;
 				rsx::method_registers.transform_program_load_set(load_pos + ((rcount + index % 4) / 4));
 				rsx->fifo_ctrl->skip_methods(count - 1);
 			}
@@ -491,7 +491,7 @@ namespace rsx
 		{
 			if (method_registers.registers[reg] != method_registers.register_previous_value)
 			{
-				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_ucode_dirty;
 			}
 		}
 
@@ -499,7 +499,7 @@ namespace rsx
 		{
 			if (method_registers.registers[reg] != method_registers.register_previous_value)
 			{
-				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty | rsx::pipeline_state::fragment_program_dirty;
+				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
 			}
 		}
 
@@ -683,7 +683,7 @@ namespace rsx
 
 		void set_shader_program_dirty(thread* rsx, u32, u32)
 		{
-			rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+			rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
 		}
 
 		void set_surface_dirty_bit(thread* rsx, u32 reg, u32 arg)
@@ -863,7 +863,7 @@ namespace rsx
 
 				if (rsx->current_fp_metadata.referenced_textures_mask & (1 << index))
 				{
-					rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+					rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
 				}
 			}
 		};
@@ -877,7 +877,7 @@ namespace rsx
 
 				if (rsx->current_vp_metadata.referenced_textures_mask & (1 << index))
 				{
-					rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+					rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
 				}
 			}
 		};
@@ -3156,6 +3156,10 @@ namespace rsx
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
 		bind<NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
+		bind<NV4097_SET_SHADER_CONTROL, nv4097::notify_state_changed<fragment_program_state_dirty>>();
+		bind_array<NV4097_SET_TEX_COORD_CONTROL, 1, 10, nv4097::notify_state_changed<fragment_program_state_dirty>>();
+		bind<NV4097_SET_TWO_SIDE_LIGHT_EN, nv4097::notify_state_changed<fragment_program_state_dirty>>();
+		bind<NV4097_SET_POINT_SPRITE_CONTROL, nv4097::notify_state_changed<fragment_program_state_dirty>>();
 		bind<NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start>();
 		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
 		bind<NV4097_SET_VERTEX_DATA_BASE_OFFSET, nv4097::set_vertex_base_offset>();
