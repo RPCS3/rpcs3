@@ -1059,11 +1059,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			sys_log.notice("Hdd1: %s", vfs::get("/dev_hdd1"));
 		}
 
-		if (!fs::is_file(g_cfg.vfs.get_dev_flash() + "sys/external/liblv2.sprx"))
-		{
-			return game_boot_result::firmware_missing;
-		}
-
 		// Special boot mode (directory scan)
 		if (!add_only && fs::is_dir(m_path))
 		{
@@ -1682,6 +1677,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		{
 			if (ppu_exec == elf_error::ok)
 			{
+				if (!fs::is_file(g_cfg.vfs.get_dev_flash() + "sys/external/liblv2.sprx"))
+				{
+					if (!GetCallbacks().on_missing_fw())
+					{
+						Stop();
+						return game_boot_result::firmware_missing;
+					}
+				}
+
 				Run(true);
 			}
 

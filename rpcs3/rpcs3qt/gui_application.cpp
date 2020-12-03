@@ -344,6 +344,11 @@ void gui_application::InitializeCallbacks()
 	callbacks.on_stop   = [this]() { OnEmulatorStop(); };
 	callbacks.on_ready  = [this]() { OnEmulatorReady(); };
 
+	callbacks.on_missing_fw = [this]()
+	{
+		return m_gui_settings->GetBootConfirmation(m_main_window, gui::ib_confirm_fw);
+	};
+
 	callbacks.handle_taskbar_progress = [this](s32 type, s32 value)
 	{
 		if (m_game_window)

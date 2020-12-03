@@ -1387,26 +1387,27 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Initialize process
 	std::vector<std::shared_ptr<lv2_prx>> loaded_modules;
 
-	// Get LLE module list
+	// Module list to load at startup
 	std::set<std::string> load_libs;
 
-	if (g_cfg.core.lib_loading == lib_loading_type::manual)
+	if ((g_cfg.core.lib_loading != lib_loading_type::hybrid && g_cfg.core.lib_loading != lib_loading_type::manual) || g_cfg.core.load_libraries.get_set().count("liblv2.sprx"))
 	{
-		// Load required set of modules (lib_loading_type::both processed in sys_prx.cpp)
-		load_libs = g_cfg.core.load_libraries.get_set();
+		// Will load libsysmodule.sprx internally
+		load_libs.emplace("liblv2.sprx");
 	}
-	else
+	else if (g_cfg.core.lib_loading == lib_loading_type::hybrid)
 	{
-		if (g_cfg.core.lib_loading != lib_loading_type::hybrid || g_cfg.core.load_libraries.get_set().count("liblv2.sprx"))
-		{
-			// Will load libsysmodule.sprx internally
-			load_libs.emplace("liblv2.sprx");
-		}
-		else
-		{
-			// Load only libsysmodule.sprx
-			load_libs.emplace("libsysmodule.sprx");
-		}
+		// Load only libsysmodule.sprx
+		load_libs.emplace("libsysmodule.sprx");
+	}
+
+	const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
+
+	if (!fs::is_file(lle_dir + "liblv2.sprx"))
+	{
+		ppu_loader.error("PS3 firmware is not installed or the installed firmware is invalid."
+			"\nYou should install the PS3 Firmware (Menu: File -> Install Firmware)."
+			"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
 	}
 
 	// Program entry
@@ -1414,15 +1415,6 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	if (!load_libs.empty())
 	{
-		const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
-
-		if (!fs::is_dir(lle_dir) || !fs::is_file(lle_dir + "libsysmodule.sprx"))
-		{
-			ppu_loader.error("PS3 firmware is not installed or the installed firmware is invalid."
-				"\nYou should install the PS3 Firmware (Menu: File -> Install Firmware)."
-				"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
-		}
-
 		for (const auto& name : load_libs)
 		{
 			const ppu_prx_object obj = decrypt_self(fs::file(lle_dir + name));
@@ -1455,7 +1447,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			}
 			else
 			{
-				fmt::throw_exception("Failed to load /dev_flash/sys/external/%s: %s", name, obj.get_error());
+				ppu_loader.error("Failed to load /dev_flash/sys/external/%s: %s (forcing HLE implementation)", name, obj.get_error());
 			}
 		}
 	}

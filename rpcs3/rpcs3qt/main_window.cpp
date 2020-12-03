@@ -300,10 +300,6 @@ void main_window::OnPlayOrPause()
 
 void main_window::show_boot_error(game_boot_result status)
 {
-	if (status == game_boot_result::no_errors)
-	{
-		return;
-	}
 	QString message;
 	switch (status)
 	{
@@ -325,9 +321,9 @@ void main_window::show_boot_error(game_boot_result status)
 	case game_boot_result::file_creation_error:
 		message = tr("The emulator could not create files required for booting.");
 		break;
-	case game_boot_result::firmware_missing:
-		message = tr("Firmware has not been installed. Install firmware with the \"File > Install Firmware\" menu option.");
-		break;
+	case game_boot_result::firmware_missing: // Handled elsewhere
+	case game_boot_result::no_errors:
+		return;
 	case game_boot_result::generic_error:
 	default:
 		message = tr("Unknown error.");
