@@ -451,6 +451,12 @@ namespace rsx
 			// Wait for startup (TODO)
 			while (m_rsx_thread_exiting)
 			{
+				// Wait for external pause events
+				if (external_interrupt_lock)
+				{
+					wait_pause();
+				}
+
 				thread_ctrl::wait_for(1000);
 
 				if (Emu.IsStopped())
@@ -1938,6 +1944,7 @@ namespace rsx
 
 	void thread::init(u32 ctrlAddress)
 	{
+		dma_address = ctrlAddress;
 		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 
