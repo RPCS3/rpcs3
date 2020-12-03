@@ -3,6 +3,10 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/IdManager.h"
+#include "Utilities/Thread.h"
+
+#include <thread>
 
 namespace rsx
 {
@@ -29,12 +33,12 @@ namespace rsx
 			progress_1.back_color = color4f(0.25f, 0.f, 0.f, 0.85f);
 			progress_2.back_color = color4f(0.25f, 0.f, 0.f, 0.85f);
 
-			btn_ok.set_text("Yes");
+			btn_ok.set_text(localized_string_id::RSX_OVERLAYS_MSG_DIALOG_YES);
 			btn_ok.set_size(140, 30);
 			btn_ok.set_pos(545, 420);
 			btn_ok.set_font("Arial", 16);
 
-			btn_cancel.set_text("No");
+			btn_cancel.set_text(localized_string_id::RSX_OVERLAYS_MSG_DIALOG_NO);
 			btn_cancel.set_size(140, 30);
 			btn_cancel.set_pos(685, 420);
 			btn_cancel.set_font("Arial", 16);
@@ -197,13 +201,13 @@ namespace rsx
 				if (interactive)
 				{
 					btn_cancel.set_pos(585, btn_cancel.y);
-					btn_cancel.set_text("Cancel");
+					btn_cancel.set_text(localized_string_id::RSX_OVERLAYS_MSG_DIALOG_CANCEL);
 					cancel_only = true;
 				}
 				break;
 			case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK:
 				btn_ok.set_pos(600, btn_ok.y);
-				btn_ok.set_text("OK");
+				btn_ok.set_text(localized_string_id::RSX_OVERLAYS_MSG_DIALOG_OK);
 				interactive = true;
 				ok_only     = true;
 				break;

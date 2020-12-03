@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "GLGSRender.h"
+#include "Emu/Cell/Modules/cellVideoOut.h"
 
 LOG_CHANNEL(screenshot);
 
@@ -9,7 +10,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 
 	// Check the surface store first
 	gl::command_context cmd = { gl_state };
-	const auto format_bpp = get_format_block_size_in_bytes(info->format);
+	const auto format_bpp = rsx::get_format_block_size_in_bytes(info->format);
 	const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd,
 		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::read);
 
@@ -47,8 +48,9 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 				surface->read_barrier(cmd);
 				image = section.surface->get_surface(rsx::surface_access::read);
 
-				info->width = rsx::apply_resolution_scale(std::min(surface_width, static_cast<u16>(info->width)), true);
-				info->height = rsx::apply_resolution_scale(std::min(surface_height, static_cast<u16>(info->height)), true);
+				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
+					std::min(surface_width, static_cast<u16>(info->width)),
+					std::min(surface_height, static_cast<u16>(info->height)));
 			}
 		}
 	}
@@ -76,7 +78,21 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 		const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
 		m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
-		m_flip_tex_color->copy_from(vm::base(info->address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
+		gl::texture::format fmt;
+		switch (avconfig->format)
+		{
+		default:
+			rsx_log.error("Unhandled video output format 0x%x", avconfig->format);
+			[[fallthrough]];
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+			fmt = gl::texture::format::bgra;
+			break;
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+			fmt = gl::texture::format::rgba;
+			break;
+		}
+
+		m_flip_tex_color->copy_from(vm::base(info->address), fmt, gl::texture::type::uint_8_8_8_8, unpack_settings);
 		image = m_flip_tex_color.get();
 	}
 
@@ -139,7 +155,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (avconfig->_3d) [[unlikely]]
 		{
-			const auto min_expected_height = rsx::apply_resolution_scale(buffer_height + 30, true);
+			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip_->height() < min_expected_height)
 			{
 				// Get image for second eye
@@ -153,7 +169,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			else
 			{
 				// Account for possible insets
-				buffer_height = std::min<u32>(image_to_flip_->height() - min_expected_height, rsx::apply_resolution_scale(buffer_height, true));
+				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
+				buffer_height = std::min<u32>(image_to_flip_->height() - min_expected_height, scaled_buffer_height);
 			}
 		}
 
@@ -205,14 +222,14 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			pack_settings.apply();
 
 			if (gl::get_driver_caps().ARB_dsa_supported)
-				glGetTextureImage(image_to_flip, 0, GL_BGRA, GL_UNSIGNED_BYTE, buffer_height * buffer_width * 4, sshot_frame.data());
+				glGetTextureImage(image_to_flip, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer_height * buffer_width * 4, sshot_frame.data());
 			else
-				glGetTextureImageEXT(image_to_flip, GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, sshot_frame.data());
+				glGetTextureImageEXT(image_to_flip, GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, sshot_frame.data());
 
 			if (GLenum err; (err = glGetError()) != GL_NO_ERROR)
 				screenshot.error("Failed to capture image: 0x%x", err);
 			else
-				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
+				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, false);
 		}
 
 		const areai screen_area = coordi({}, { static_cast<int>(buffer_width), static_cast<int>(buffer_height) });
@@ -275,6 +292,9 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (g_cfg.video.overlay)
 	{
+		// Disable depth test
+		gl_state.depth_func(GL_ALWAYS);
+
 		gl::screen.bind();
 		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
 

@@ -15,7 +15,7 @@ template<> DECLARE(ipc_manager<lv2_event_flag, u64>::g_ipc) {};
 
 error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event_flag.warning("sys_event_flag_create(id=*0x%x, attr=*0x%x, init=0x%llx)", id, attr, init);
 
@@ -63,7 +63,7 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 
 error_code sys_event_flag_destroy(ppu_thread& ppu, u32 id)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event_flag.warning("sys_event_flag_destroy(id=0x%x)", id);
 
@@ -92,7 +92,7 @@ error_code sys_event_flag_destroy(ppu_thread& ppu, u32 id)
 
 error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event_flag.trace("sys_event_flag_wait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x, timeout=0x%llx)", id, bitptn, mode, result, timeout);
 
@@ -208,7 +208,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 error_code sys_event_flag_trywait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event_flag.trace("sys_event_flag_trywait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x)", id, bitptn, mode, result);
 
@@ -244,9 +244,9 @@ error_code sys_event_flag_trywait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode,
 	return CELL_OK;
 }
 
-error_code sys_event_flag_set(u32 id, u64 bitptn)
+error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 {
-	vm::temporary_unlock();
+	cpu.state += cpu_flag::wait;
 
 	// Warning: may be called from SPU thread.
 	sys_event_flag.trace("sys_event_flag_set(id=0x%x, bitptn=0x%llx)", id, bitptn);
@@ -335,7 +335,7 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 
 error_code sys_event_flag_clear(ppu_thread& ppu, u32 id, u64 bitptn)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event_flag.trace("sys_event_flag_clear(id=0x%x, bitptn=0x%llx)", id, bitptn);
 
@@ -354,7 +354,7 @@ error_code sys_event_flag_clear(ppu_thread& ppu, u32 id, u64 bitptn)
 
 error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event_flag.trace("sys_event_flag_cancel(id=0x%x, num=*0x%x)", id, num);
 
@@ -406,7 +406,7 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 
 error_code sys_event_flag_get(ppu_thread& ppu, u32 id, vm::ptr<u64> flags)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_event_flag.trace("sys_event_flag_get(id=0x%x, flags=*0x%x)", id, flags);
 

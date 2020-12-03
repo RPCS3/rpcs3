@@ -1,15 +1,14 @@
-#pragma once
+﻿#pragma once
 
 #include "types.h"
 #include "util/atomic.hpp"
-#include "util/shared_cptr.hpp"
+#include "util/shared_ptr.hpp"
 
 #include <string>
 #include <memory>
 #include <string_view>
 
 #include "mutex.h"
-#include "cond.h"
 #include "lockless.h"
 
 // Report error and call std::abort(), defined in main.cpp
@@ -34,11 +33,14 @@ enum class thread_class : u32
 
 enum class thread_state : u32
 {
-	created,  // Initial state
-	aborting, // The thread has been joined in the destructor or explicitly aborted
-	errored, // Set after the emergency_exit call
-	finished  // Final state, always set at the end of thread execution
+	created = 0,  // Initial state
+	aborting = 1, // The thread has been joined in the destructor or explicitly aborted
+	errored = 2, // Set after the emergency_exit call
+	finished = 3,  // Final state, always set at the end of thread execution
+	mask = 3
 };
+
+class need_wakeup {};
 
 template <class Context>
 class named_thread;
@@ -90,6 +92,7 @@ struct thread_thread_name<T, std::void_t<decltype(named_thread<T>::thread_name)>
 // Thread base class
 class thread_base
 {
+public:
 	// Native thread entry point function type
 #ifdef _WIN32
 	using native_entry = uint(__stdcall*)(void* arg);
@@ -97,38 +100,35 @@ class thread_base
 	using native_entry = void*(*)(void* arg);
 #endif
 
+	const native_entry entry_point;
+
+private:
 	// Thread handle (platform-specific)
-	atomic_t<std::uintptr_t> m_thread{0};
+	atomic_t<u64> m_thread{0};
 
-	// Thread playtoy, that shouldn't be used
-	atomic_t<u32> m_signal{0};
-
-	// Thread state
-	atomic_t<thread_state> m_state = thread_state::created;
-
-	// Thread state notification info
-	atomic_t<const void*> m_state_notifier{nullptr};
+	// Thread state and cycles
+	atomic_t<u64> m_sync{0};
 
 	// Thread name
-	stx::atomic_cptr<std::string> m_tname;
-
-	//
-	atomic_t<u64> m_cycles = 0;
+	atomic_ptr<std::string> m_tname;
 
 	// Start thread
-	void start(native_entry);
+	void start();
 
 	// Called at the thread start
-	void initialize(void (*error_cb)(), bool(*wait_cb)(const void*));
+	void initialize(void (*error_cb)());
 
-	// May be called in destructor
-	void notify_abort() noexcept;
-
-	// Called at the thread end, returns true if needs destruction
-	bool finalize(thread_state result) noexcept;
+	// Called at the thread end, returns self handle
+	u64 finalize(thread_state result) noexcept;
 
 	// Cleanup after possibly deleting the thread instance
-	static void finalize() noexcept;
+	static native_entry finalize(u64 _self) noexcept;
+
+	// Set name for debugger
+	static void set_name(std::string);
+
+	// Make entry point
+	static native_entry make_trampoline(u64(*)(thread_base*));
 
 	friend class thread_ctrl;
 
@@ -136,7 +136,7 @@ class thread_base
 	friend class named_thread;
 
 protected:
-	thread_base(std::string_view name);
+	thread_base(native_entry, std::string_view name);
 
 	~thread_base();
 
@@ -149,6 +149,9 @@ public:
 
 	// Notify the thread
 	void notify();
+
+	// Get thread id
+	u64 get_native_id() const;
 };
 
 // Collection of global function for current thread
@@ -188,14 +191,14 @@ public:
 	// Set current thread name (not recommended)
 	static void set_name(std::string_view name)
 	{
-		g_tls_this_thread->m_tname.store(stx::shared_cptr<std::string>::make(name));
+		g_tls_this_thread->m_tname.store(make_single<std::string>(name));
 	}
 
 	// Set thread name (not recommended)
 	template <typename T>
 	static void set_name(named_thread<T>& thread, std::string_view name)
 	{
-		static_cast<thread_base&>(thread).m_tname.store(stx::shared_cptr<std::string>::make(name));
+		static_cast<thread_base&>(thread).m_tname.store(make_single<std::string>(name));
 	}
 
 	template <typename T>
@@ -210,10 +213,16 @@ public:
 		static_cast<thread_base&>(thread).notify();
 	}
 
+	template <typename T>
+	static u64 get_native_id(named_thread<T>& thread)
+	{
+		return static_cast<thread_base&>(thread).get_native_id();
+	}
+
 	// Read current state
 	static inline thread_state state()
 	{
-		return g_tls_this_thread->m_state;
+		return static_cast<thread_state>(g_tls_this_thread->m_sync & 3);
 	}
 
 	// Wait once with timeout. May spuriously return false.
@@ -255,6 +264,9 @@ public:
 	// Miscellaneous
 	static u64 get_thread_affinity_mask();
 
+	// Get current thread stack addr and size
+	static std::pair<void*, std::size_t> get_thread_stack();
+
 private:
 	// Miscellaneous
 	static const u64 process_affinity_mask;
@@ -267,59 +279,20 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 	using result = result_storage_t<Context>;
 	using thread = thread_base;
 
-	// Type-erased thread entry point
-#ifdef _WIN32
-	static inline uint __stdcall entry_point(void* arg)
-#else
-	static inline void* entry_point(void* arg)
-#endif
+	static u64 entry_point(thread_base* _base)
 	{
-		const auto _this = static_cast<named_thread*>(static_cast<thread*>(arg));
-
-		// Perform self-cleanup if necessary
-		if (_this->entry_point())
-		{
-			delete _this;
-		}
-
-		thread::finalize();
-		return 0;
+		return static_cast<named_thread*>(_base)->entry_point2();
 	}
 
-	bool entry_point()
+	u64 entry_point2()
 	{
-		auto tls_error_cb = []()
+		thread::initialize([]()
 		{
 			if constexpr (!result::empty)
 			{
 				// Construct using default constructor in the case of failure
 				new (static_cast<result*>(static_cast<named_thread*>(thread_ctrl::get_current()))->get()) typename result::type();
 			}
-		};
-
-		thread::initialize(tls_error_cb, [](const void* data)
-		{
-			const auto _this = thread_ctrl::get_current();
-
-			if (_this->m_state >= thread_state::aborting)
-			{
-				return false;
-			}
-
-			_this->m_state_notifier.release(data);
-
-			if (!data)
-			{
-				return true;
-			}
-
-			if (_this->m_state >= thread_state::aborting)
-			{
-				_this->m_state_notifier.release(nullptr);
-				return false;
-			}
-
-			return true;
 		});
 
 		if constexpr (result::empty)
@@ -336,6 +309,8 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 		return thread::finalize(thread_state::finished);
 	}
 
+	static inline thread::native_entry trampoline = thread::make_trampoline(entry_point);
+
 	friend class thread_ctrl;
 
 public:
@@ -343,26 +318,26 @@ public:
 	template <bool Valid = std::is_default_constructible_v<Context> && thread_thread_name<Context>(), typename = std::enable_if_t<Valid>>
 	named_thread()
 		: Context()
-		, thread(Context::thread_name)
+		, thread(trampoline, Context::thread_name)
 	{
-		thread::start(&named_thread::entry_point);
+		thread::start();
 	}
 
 	// Normal forwarding constructor
 	template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<Context, Args&&...>>>
 	named_thread(std::string_view name, Args&&... args)
 		: Context(std::forward<Args>(args)...)
-		, thread(name)
+		, thread(trampoline, name)
 	{
-		thread::start(&named_thread::entry_point);
+		thread::start();
 	}
 
 	// Lambda constructor, also the implicit deduction guide candidate
 	named_thread(std::string_view name, Context&& f)
 		: Context(std::forward<Context>(f))
-		, thread(name)
+		, thread(trampoline, name)
 	{
-		thread::start(&named_thread::entry_point);
+		thread::start();
 	}
 
 	named_thread(const named_thread&) = delete;
@@ -394,7 +369,7 @@ public:
 	// Access thread state
 	operator thread_state() const
 	{
-		return thread::m_state.load();
+		return static_cast<thread_state>(thread::m_sync.load() & 3);
 	}
 
 	// Try to abort by assigning thread_state::aborting (UB if assigning different state)
@@ -402,11 +377,16 @@ public:
 	{
 		ASSUME(s == thread_state::aborting);
 
-		if (s == thread_state::aborting && thread::m_state.compare_and_swap_test(thread_state::created, s))
+		if (s == thread_state::aborting && thread::m_sync.fetch_op([](u64& v){ return !(v & 3) && (v |= 1); }).second)
 		{
 			if (s == thread_state::aborting)
 			{
-				thread::notify_abort();
+				thread::m_sync.notify_one(1);
+			}
+
+			if constexpr (std::is_base_of_v<need_wakeup, Context>)
+			{
+				this->wake_up();
 			}
 		}
 

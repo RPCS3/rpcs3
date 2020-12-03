@@ -298,7 +298,7 @@ void memory_viewer_panel::ShowMemory()
 		{
 			u32 addr = m_addr + row * m_colcount + col;
 
-			if (vm::check_addr(addr))
+			if (vm::check_addr(addr, 0))
 			{
 				const u8 rmem = *vm::get_super_ptr<u8>(addr);
 				t_mem_hex_str += qstr(fmt::format("%02x ", rmem));
@@ -342,7 +342,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 {
 	std::shared_lock rlock(vm::g_mutex);
 
-	if (!vm::check_addr(addr, width * height * 4))
+	if (!vm::check_addr(addr, 0, width * height * 4))
 	{
 		return;
 	}

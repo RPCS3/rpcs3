@@ -1,13 +1,9 @@
 ﻿#pragma once
 
 #include "Utilities/types.h"
-#include "Utilities/lockless.h"
-#include "Utilities/Thread.h"
 #include "Utilities/address_range.h"
-#include "gcm_enums.h"
 
 #include <vector>
-#include <thread>
 
 namespace rsx
 {

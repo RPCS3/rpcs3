@@ -3,7 +3,6 @@
 #include "unedat.h"
 
 #include "Utilities/mutex.h"
-#include "util/endian.hpp"
 #include <cmath>
 
 LOG_CHANNEL(edat_log, "EDAT");
@@ -577,14 +576,32 @@ int validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *
 	int dev_hash_result = 0;
 
 	const s32 file_name_length = ::narrow<s32>(std::strlen(file_name), HERE);
-	std::unique_ptr<u8[]> buf(new u8[0x30 + file_name_length]);
+	const std::size_t buf_len = 0x30 + file_name_length;
+
+	std::unique_ptr<u8[]> buf(new u8[buf_len]);
+	std::unique_ptr<u8[]> buf_lower(new u8[buf_len]);
+	std::unique_ptr<u8[]> buf_upper(new u8[buf_len]);
 
 	// Build the title buffer (content_id + file_name).
-	memcpy(buf.get(), npd->content_id, 0x30);
-	memcpy(buf.get() + 0x30, file_name, file_name_length);
+	std::memcpy(buf.get(), npd->content_id, 0x30);
+	std::memcpy(buf.get() + 0x30, file_name, file_name_length);
+
+	std::memcpy(buf_lower.get(), buf.get(), buf_len);
+	std::memcpy(buf_upper.get(), buf.get(), buf_len);
+
+	for (std::size_t i = std::basic_string_view<u8>(buf.get() + 0x30, file_name_length).find_last_of('.'); i < buf_len; i++)
+	{
+		const u8 c = static_cast<u8>(buf[i]);
+		buf_upper[i] = std::toupper(c);
+		buf_lower[i] = std::tolower(c);
+	}
 
 	// Hash with NPDRM_OMAC_KEY_3 and compare with title_hash.
-	title_hash_result = cmac_hash_compare(NP_OMAC_KEY_3, 0x10, buf.get(), 0x30 + file_name_length, npd->title_hash, 0x10);
+	// Try to ignore case sensivity with file extension
+	title_hash_result =
+		cmac_hash_compare(NP_OMAC_KEY_3, 0x10, buf.get(), buf_len, npd->title_hash, 0x10) ||
+		cmac_hash_compare(NP_OMAC_KEY_3, 0x10, buf_lower.get(), buf_len, npd->title_hash, 0x10) ||
+		cmac_hash_compare(NP_OMAC_KEY_3, 0x10, buf_upper.get(), buf_len, npd->title_hash, 0x10);
 
 	if (verbose)
 	{
@@ -675,7 +692,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 		}
 
 		// Perform header validation (EDAT only).
-		char real_file_name[MAX_PATH];
+		char real_file_name[CRYPTO_MAX_PATH];
 		extract_file_name(input_file_name, real_file_name);
 		if (!validate_npd_hashes(real_file_name, devklic, &NPD, verbose))
 		{
@@ -697,14 +714,20 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 			// Make sure we don't have an empty RIF key.
 			if (key == v128{})
 			{
-				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file!");
+				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file! (local activation)");
 				return 1;
 			}
 		}
 		else if ((NPD.license & 0x1) == 0x1)      // Type 1: Use network activation.
 		{
-			edat_log.error("EDAT: Network license not supported!");
-			return 1;
+			memcpy(&key, rifkey, 0x10);
+
+			// Make sure we don't have an empty RIF key.
+			if (key == v128{})
+			{
+				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file! (network activation)");
+				return 1;
+			}
 		}
 
 		if (verbose)
@@ -775,7 +798,7 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 	}
 
 	// Perform header validation (EDAT only).
-	char real_file_name[MAX_PATH];
+	char real_file_name[CRYPTO_MAX_PATH];
 	extract_file_name(input_file_name.c_str(), real_file_name);
 	if (!validate_npd_hashes(real_file_name, custom_klic, &NPD, false))
 	{
@@ -899,13 +922,17 @@ bool EDATADecrypter::ReadHeader()
 
 			if (dec_key == v128{})
 			{
-				edat_log.warning("EDAT: Empty Dec key!");
+				edat_log.warning("EDAT: Empty Dec key for local activation!");
 			}
 		}
 		else if ((npdHeader.license & 0x1) == 0x1)      // Type 1: Use network activation.
 		{
-			edat_log.error("EDAT: Network license not supported!");
-			return false;
+			dec_key = std::move(rif_key);
+
+			if (dec_key == v128{})
+			{
+				edat_log.warning("EDAT: Empty Dec key for network activation!");
+			}
 		}
 	}
 

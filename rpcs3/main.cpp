@@ -17,7 +17,7 @@
 #include "Utilities/sema.h"
 #ifdef _WIN32
 #include <windows.h>
-#include "Utilities/dynamic_library.h"
+#include "util/dyn_lib.hpp"
 DYNAMIC_IMPORT("ntdll.dll", NtQueryTimerResolution, NTSTATUS(PULONG MinimumResolution, PULONG MaximumResolution, PULONG CurrentResolution));
 DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution));
 #else
@@ -48,6 +48,7 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 static semaphore<> s_qt_init;
 
+static atomic_t<bool> s_headless = false;
 static atomic_t<char*> s_argv0;
 
 #ifndef _WIN32
@@ -55,9 +56,16 @@ extern char **environ;
 #endif
 
 LOG_CHANNEL(sys_log, "SYS");
+LOG_CHANNEL(q_debug, "QDEBUG");
 
 [[noreturn]] extern void report_fatal_error(const std::string& text)
 {
+	if (s_headless)
+	{
+		fprintf(stderr, "RPCS3: %s\n", text.c_str());
+		std::abort();
+	}
+
 	const bool local = s_qt_init.try_lock();
 
 	// Possibly created and assigned here
@@ -164,6 +172,8 @@ const char* arg_rounding   = "dpi-rounding";
 const char* arg_styles     = "styles";
 const char* arg_style      = "style";
 const char* arg_stylesheet = "stylesheet";
+const char* arg_config     = "config";
+const char* arg_q_debug    = "qDebug";
 const char* arg_error      = "error";
 const char* arg_updating   = "updating";
 
@@ -186,6 +196,12 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 	if (qEnvironmentVariable("DISPLAY", "").isEmpty())
 	{
 		qputenv("DISPLAY", ":0");
+	}
+
+	// Set QT_AUTO_SCREEN_SCALE_FACTOR to 0. This value is deprecated but still seems to make problems on some distros
+	if (!qEnvironmentVariable("QT_AUTO_SCREEN_SCALE_FACTOR", "").isEmpty())
+	{
+		qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", "0");
 	}
 #endif
 
@@ -253,6 +269,20 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 	}
 
 	return new gui_application(argc, argv);
+}
+
+void log_q_debug(QtMsgType type, const QMessageLogContext& context, const QString& msg)
+{
+	Q_UNUSED(context);
+
+	switch (type)
+	{
+	case QtDebugMsg: q_debug.trace("%s", msg.toStdString()); break;
+	case QtInfoMsg: q_debug.notice("%s", msg.toStdString()); break;
+	case QtWarningMsg: q_debug.warning("%s", msg.toStdString()); break;
+	case QtCriticalMsg: q_debug.error("%s", msg.toStdString()); break;
+	case QtFatalMsg: q_debug.fatal("%s", msg.toStdString()); break;
+	}
 }
 
 
@@ -327,6 +357,14 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+#ifdef _WIN32
+	if (!SetProcessWorkingSetSize(GetCurrentProcess(), 0x80000000, 0xC0000000)) // 2-3 GiB
+	{
+		report_fatal_error("Not enough memory for RPCS3 process.");
+		return 2;
+	}
+#endif
+
 	std::unique_ptr<logs::listener> log_file;
 	{
 		// Check free space
@@ -358,11 +396,18 @@ int main(int argc, char** argv)
 		// Write OS version
 		logs::stored_message os;
 		os.m.ch  = nullptr;
-		os.m.sev = logs::level::notice;
+		os.m.sev = logs::level::always;
 		os.stamp = 0;
-		os.text = utils::get_OS_version();
+		os.text  = utils::get_OS_version();
 
-		logs::set_init({std::move(ver), std::move(os)});
+		// Write Qt version
+		logs::stored_message qt;
+		qt.m.ch  = nullptr;
+		qt.m.sev = (strcmp(QT_VERSION_STR, qVersion()) != 0) ? logs::level::error : logs::level::notice;
+		qt.stamp = 0;
+		qt.text  = fmt::format("Qt version: Compiled against Qt %s | Run-time uses Qt %s", QT_VERSION_STR, qVersion());
+
+		logs::set_init({std::move(ver), std::move(os), std::move(qt)});
 	}
 
 #ifdef _WIN32
@@ -375,8 +420,17 @@ int main(int argc, char** argv)
 	struct ::rlimit rlim;
 	rlim.rlim_cur = 4096;
 	rlim.rlim_max = 4096;
+#ifdef RLIMIT_NOFILE
 	if (::setrlimit(RLIMIT_NOFILE, &rlim) != 0)
-		std::fprintf(stderr, "Failed to set max open file limit (4096).");
+		std::fprintf(stderr, "Failed to set max open file limit (4096).\n");
+#endif
+
+	rlim.rlim_cur = 0x80000000;
+	rlim.rlim_max = 0x80000000;
+#ifdef RLIMIT_MEMLOCK
+	if (::setrlimit(RLIMIT_MEMLOCK, &rlim) != 0)
+		std::fprintf(stderr, "Failed to set RLIMIT_MEMLOCK size to 2 GiB. Try to update your system configuration.\n");
+#endif
 	// Work around crash on startup on KDE: https://bugs.kde.org/show_bug.cgi?id=401637
 	setenv( "KDE_DEBUG", "1", 0 );
 #endif
@@ -398,8 +452,8 @@ int main(int argc, char** argv)
 	parser.addPositionalArgument("(S)ELF", "Path for directly executing a (S)ELF");
 	parser.addPositionalArgument("[Args...]", "Optional args for the executable");
 
-	const QCommandLineOption helpOption    = parser.addHelpOption();
-	const QCommandLineOption versionOption = parser.addVersionOption();
+	const QCommandLineOption help_option    = parser.addHelpOption();
+	const QCommandLineOption version_option = parser.addVersionOption();
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
@@ -407,12 +461,21 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
 	parser.addOption(QCommandLineOption(arg_style, "Loads a custom style.", "style", ""));
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
+	const QCommandLineOption config_option(arg_config, "Forces the emulator to use this configuration file.", "path", "");
+	parser.addOption(config_option);
+	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
+	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
-	if (parser.isSet(versionOption) || parser.isSet(helpOption))
+	if (parser.isSet(version_option) || parser.isSet(help_option))
 		return 0;
+
+	if (parser.isSet(arg_q_debug))
+	{
+		qInstallMessageHandler(log_q_debug);
+	}
 
 	if (parser.isSet(arg_styles))
 	{
@@ -438,6 +501,7 @@ int main(int argc, char** argv)
 	}
 	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
 	{
+		s_headless = true;
 		headless_app->Init();
 	}
 
@@ -452,10 +516,30 @@ int main(int argc, char** argv)
 	}
 #endif
 
-	QStringList args = parser.positionalArguments();
+	std::string config_override_path;
 
-	if (args.length() > 0)
+	if (parser.isSet(arg_config))
 	{
+		config_override_path = parser.value(config_option).toStdString();
+
+		if (!fs::is_file(config_override_path))
+		{
+			report_fatal_error(fmt::format("No config file found: %s", config_override_path));
+			return 0;
+		}
+
+		Emu.SetConfigOverride(config_override_path);
+	}
+
+	for (const auto& opt : parser.optionNames())
+	{
+		sys_log.notice("Option passed via command line: %s = %s", opt.toStdString(), parser.value(opt).toStdString());
+	}
+
+	if (const QStringList args = parser.positionalArguments(); !args.isEmpty())
+	{
+		sys_log.notice("Booting application from command line: %s", args.at(0).toStdString());
+
 		// Propagate command line arguments
 		std::vector<std::string> argv;
 
@@ -465,12 +549,14 @@ int main(int argc, char** argv)
 
 			for (int i = 1; i < args.length(); i++)
 			{
-				argv.emplace_back(args[i].toStdString());
+				const std::string arg = args[i].toStdString();
+				argv.emplace_back(arg);
+				sys_log.notice("Optional command line argument %d: %s", i, arg);
 			}
 		}
 
 		// Ugly workaround
-		QTimer::singleShot(2, [path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
+		QTimer::singleShot(2, [config_override_path, path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
 		{
 			Emu.argv = std::move(argv);
 			Emu.SetForceBoot(true);
@@ -481,3 +567,55 @@ int main(int argc, char** argv)
 	// run event loop (maybe only needed for the gui application)
 	return app->exec();
 }
+
+// Temporarily, this is code from std for prebuilt LLVM. I don't understand why this is necessary.
+// From the same MSVC 19.27.29112.0, LLVM libs depend on these, but RPCS3 gets linker errors.
+#ifdef _WIN32
+extern "C"
+{
+	int __stdcall __std_init_once_begin_initialize(void** ppinit, ulong f, int* fp, void** lpc) noexcept
+	{
+		return InitOnceBeginInitialize(reinterpret_cast<LPINIT_ONCE>(ppinit), f, fp, lpc);
+	}
+
+	int __stdcall __std_init_once_complete(void** ppinit, ulong f, void* lpc) noexcept
+	{
+		return InitOnceComplete(reinterpret_cast<LPINIT_ONCE>(ppinit), f, lpc);
+	}
+
+	size_t __stdcall __std_get_string_size_without_trailing_whitespace(const char* str, size_t size) noexcept
+	{
+		while (size)
+		{
+			switch (str[size - 1])
+			{
+			case 0:
+			case ' ':
+			case '\n':
+			case '\r':
+			case '\t':
+			{
+				size--;
+				continue;
+			}
+			}
+
+			break;
+		}
+
+		return size;
+	}
+
+	size_t __stdcall __std_system_error_allocate_message(const unsigned long msg_id, char** ptr_str) noexcept
+	{
+		return __std_get_string_size_without_trailing_whitespace(*ptr_str, FormatMessageA(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			nullptr, msg_id, 0, reinterpret_cast<char*>(ptr_str), 0, nullptr));
+	}
+
+	void __stdcall __std_system_error_deallocate_message(char* s) noexcept
+	{
+		LocalFree(s);
+	}
+}
+#endif

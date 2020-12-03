@@ -1,8 +1,9 @@
 ﻿#include "stdafx.h"
 #include "overlays.h"
 #include "overlay_message_dialog.h"
-#include "../GSRender.h"
 #include "Input/pad_thread.h"
+#include "Emu/Io/interception.h"
+#include "Emu/RSX/RSXThread.h"
 
 LOG_CHANNEL(overlays);
 
@@ -58,7 +59,7 @@ namespace rsx
 
 			input_timer.Start();
 
-			pad::SetIntercepted(true);
+			input::SetIntercepted(true);
 
 			while (!exit)
 			{
@@ -205,7 +206,7 @@ namespace rsx
 
 			if (stop_pad_interception)
 			{
-				pad::SetIntercepted(false);
+				input::SetIntercepted(false);
 			}
 
 			if (on_close && use_callback)

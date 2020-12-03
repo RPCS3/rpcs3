@@ -1,5 +1,6 @@
 ﻿#include "progress_dialog.h"
 
+#include <QCoreApplication>
 #include <QLabel>
 
 #ifdef _WIN32
@@ -37,7 +38,11 @@ progress_dialog::progress_dialog(const QString &windowTitle, const QString &labe
 progress_dialog::~progress_dialog()
 {
 #ifdef _WIN32
-	m_tb_progress->hide();
+	// QWinTaskbarProgress::hide() will crash if the application is already about to close, even if the object is not null.
+	if (!QCoreApplication::closingDown())
+	{
+		m_tb_progress->hide();
+	}
 #elif HAVE_QTDBUS
 	UpdateProgress(0);
 #endif

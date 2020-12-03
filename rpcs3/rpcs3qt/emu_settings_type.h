@@ -21,11 +21,13 @@ enum class emu_settings_type
 	MaxLLVMThreads,
 	EnableTSX,
 	AccurateGETLLAR,
-	AccuratePUTLLUC,
+	AccurateSpuDMA,
+	AccurateClineStores,
 	AccurateLLVMdfma,
 	AccurateVectorNaN,
 	AccurateRSXAccess,
 	AccurateXFloat,
+	AccuratePPU128Loop,
 	SetDAZandFTZ,
 	SPUBlockSize,
 	SPUCache,
@@ -34,6 +36,7 @@ enum class emu_settings_type
 	MaxSPURSThreads,
 	SleepTimersAccuracy,
 	ClocksScale,
+	PerformanceReport,
 
 	// Graphics
 	Renderer,
@@ -68,6 +71,7 @@ enum class emu_settings_type
 	DisableOnDiskShaderCache,
 	DisableVulkanMemAllocator,
 	ShaderMode,
+	ShaderCompilerNumThreads,
 	MultithreadedRSX,
 	VBlankRate,
 	RelaxedZCULL,
@@ -96,7 +100,7 @@ enum class emu_settings_type
 	AudioRenderer,
 	DumpToFile,
 	ConvertTo16Bit,
-	DownmixStereo,
+	AudioChannels,
 	MasterVolume,
 	EnableBuffering,
 	AudioBufferDuration,
@@ -127,15 +131,16 @@ enum class emu_settings_type
 	DNSAddress,
 	IpSwapList,
 	PSNStatus,
-	PSNNPID,
 
 	// System
+	LicenseArea,
 	Language,
 	KeyboardType,
 	EnterButtonAssignment,
 	EnableHostRoot,
 	LimitCacheSize,
 	MaximumCacheSize,
+	ConsoleTimeOffset,
 
 	// Virtual File System
 	emulatorLocation,
@@ -162,7 +167,8 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MaxLLVMThreads,           { "Core", "Max LLVM Compile Threads"}},
 	{ emu_settings_type::EnableTSX,                { "Core", "Enable TSX"}},
 	{ emu_settings_type::AccurateGETLLAR,          { "Core", "Accurate GETLLAR"}},
-	{ emu_settings_type::AccuratePUTLLUC,          { "Core", "Accurate PUTLLUC"}},
+	{ emu_settings_type::AccurateSpuDMA,           { "Core", "Accurate SPU DMA"}},
+	{ emu_settings_type::AccurateClineStores,      { "Core", "Accurate Cache Line Stores"}},
 	{ emu_settings_type::AccurateLLVMdfma,         { "Core", "LLVM Accurate DFMA"}},
 	{ emu_settings_type::AccurateVectorNaN,        { "Core", "PPU LLVM Accurate Vector NaN values"}},
 	{ emu_settings_type::AccurateRSXAccess,        { "Core", "Accurate RSX reservation access"}},
@@ -174,6 +180,8 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MaxSPURSThreads,          { "Core", "Max SPURS Threads"}},
 	{ emu_settings_type::SleepTimersAccuracy,      { "Core", "Sleep Timers Accuracy"}},
 	{ emu_settings_type::ClocksScale,              { "Core", "Clocks scale"}},
+	{ emu_settings_type::AccuratePPU128Loop,       { "Core", "Accurate PPU 128-byte Reservation Op Max Length"}},
+	{ emu_settings_type::PerformanceReport,        { "Core", "Enable Performance Report"}},
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   { "Video", "Renderer"}},
@@ -204,6 +212,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DisableOnDiskShaderCache,   { "Video", "Disable On-Disk Shader Cache"}},
 	{ emu_settings_type::DisableVulkanMemAllocator,  { "Video", "Disable Vulkan Memory Allocator"}},
 	{ emu_settings_type::ShaderMode,                 { "Video", "Shader Mode"}},
+	{ emu_settings_type::ShaderCompilerNumThreads,   { "Video", "Shader Compiler Threads"}},
 	{ emu_settings_type::MultithreadedRSX,           { "Video", "Multithreaded RSX"}},
 	{ emu_settings_type::RelaxedZCULL,               { "Video", "Relaxed ZCULL Sync"}},
 	{ emu_settings_type::AnisotropicFilterOverride,  { "Video", "Anisotropic Filter Override"}},
@@ -236,7 +245,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AudioRenderer,           { "Audio", "Renderer"}},
 	{ emu_settings_type::DumpToFile,              { "Audio", "Dump to file"}},
 	{ emu_settings_type::ConvertTo16Bit,          { "Audio", "Convert to 16 bit"}},
-	{ emu_settings_type::DownmixStereo,           { "Audio", "Downmix to Stereo"}},
+	{ emu_settings_type::AudioChannels,           { "Audio", "Audio Channels"}},
 	{ emu_settings_type::MasterVolume,            { "Audio", "Master Volume"}},
 	{ emu_settings_type::EnableBuffering,         { "Audio", "Enable Buffering"}},
 	{ emu_settings_type::AudioBufferDuration,     { "Audio", "Desired Audio Buffer Duration"}},
@@ -268,15 +277,16 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DNSAddress,     { "Net", "DNS address"}},
 	{ emu_settings_type::IpSwapList,     { "Net", "IP swap list"}},
 	{ emu_settings_type::PSNStatus,      { "Net", "PSN status"}},
-	{ emu_settings_type::PSNNPID,        { "Net", "NPID"}},
 
 	// System
+	{ emu_settings_type::LicenseArea,           { "System", "License Area"}},
 	{ emu_settings_type::Language,              { "System", "Language"}},
 	{ emu_settings_type::KeyboardType,          { "System", "Keyboard Type"} },
 	{ emu_settings_type::EnterButtonAssignment, { "System", "Enter button assignment"}},
 	{ emu_settings_type::EnableHostRoot,        { "VFS", "Enable /host_root/"}},
 	{ emu_settings_type::LimitCacheSize,        { "VFS", "Limit disk cache size"}},
 	{ emu_settings_type::MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
+	{ emu_settings_type::ConsoleTimeOffset,     { "System", "Console time offset (s)"}},
 
 	// Virtual File System
 	{ emu_settings_type::emulatorLocation,   { "VFS", "$(EmulatorDir)"}},

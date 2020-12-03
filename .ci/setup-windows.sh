@@ -18,7 +18,7 @@ QT_DECL_URL="${QT_HOST}${QT_PREFIX}qtdeclarative${QT_SUFFIX}"
 QT_TOOL_URL="${QT_HOST}${QT_PREFIX}qttools${QT_SUFFIX}"
 LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z'
 GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'
-VULKAN_SDK_URL="https://www.dropbox.com/s/4xppf4rz8v2gd8x/VulkanSDK-${VULKAN_VER}-Installer.exe"
+VULKAN_SDK_URL="https://www.dropbox.com/s/kn005de7gsv5whe/VulkanSDK-1.2.154.1-Installer.exe"
 
 DEP_URLS="         \
     $QT_BASE_URL   \

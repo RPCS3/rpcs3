@@ -8,32 +8,7 @@
 #include <QComboBox>
 #include <QPushButton>
 
-enum class cheat_type : u8
-{
-	unsigned_8_cheat,
-	unsigned_16_cheat,
-	unsigned_32_cheat,
-	unsigned_64_cheat,
-	signed_8_cheat,
-	signed_16_cheat,
-	signed_32_cheat,
-	signed_64_cheat,
-	max
-};
-
-constexpr u8 cheat_type_max = static_cast<u8>(cheat_type::max);
-
-struct cheat_info
-{
-	std::string game;
-	std::string description;
-	cheat_type type = cheat_type::max;
-	u32 offset{};
-	std::string red_script;
-
-	bool from_str(const std::string& cheat_line);
-	std::string to_str() const;
-};
+#include "Utilities/cheat_info.h"
 
 class cheat_engine
 {
@@ -67,7 +42,7 @@ public:
 	std::map<std::string, std::map<u32, cheat_info>> cheats;
 
 private:
-	const std::string cheats_filename = "/cheats.yml";
+	const std::string m_cheats_filename = "cheats.yml";
 };
 
 class cheat_manager_dialog : public QDialog
@@ -86,7 +61,7 @@ protected:
 	void do_the_search();
 
 	template <typename T>
-	T convert_from_QString(QString& str, bool& success);
+	T convert_from_QString(const QString& str, bool& success);
 
 	template <typename T>
 	bool convert_and_search();
@@ -94,18 +69,18 @@ protected:
 	std::pair<bool, bool> convert_and_set(u32 offset);
 
 protected:
-	QTableWidget* tbl_cheats;
-	QListWidget* lst_search;
+	QTableWidget* tbl_cheats = nullptr;
+	QListWidget* lst_search = nullptr;
 
-	QLineEdit* edt_value_final;
-	QPushButton* btn_apply;
+	QLineEdit* edt_value_final = nullptr;
+	QPushButton* btn_apply = nullptr;
 
-	QLineEdit* edt_cheat_search_value;
-	QComboBox* cbx_cheat_search_type;
+	QLineEdit* edt_cheat_search_value = nullptr;
+	QComboBox* cbx_cheat_search_type = nullptr;
 
-	QPushButton* btn_filter_results;
+	QPushButton* btn_filter_results = nullptr;
 
-	u32 current_offset;
+	u32 current_offset{};
 	std::vector<u32> offsets_found;
 
 	cheat_engine g_cheat;

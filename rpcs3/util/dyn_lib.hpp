@@ -53,40 +53,42 @@ namespace utils
 	template <typename R, typename... Args>
 	struct dynamic_import<R(Args...)>
 	{
-		R (*ptr)(Args...);
+		atomic_t<std::uintptr_t> ptr;
 		const char* const lib;
 		const char* const name;
 
 		// Constant initialization
-		constexpr dynamic_import(const char* lib, const char* name)
-		    : ptr(nullptr)
+		constexpr dynamic_import(const char* lib, const char* name) noexcept
+		    : ptr(-1)
 		    , lib(lib)
 		    , name(name)
 		{
 		}
 
-		void init()
+		void init() noexcept
 		{
-			if (!ptr)
-			{
-				// TODO: atomic
-				ptr = reinterpret_cast<R (*)(Args...)>(get_proc_address(lib, name));
-			}
+			ptr.release(reinterpret_cast<std::uintptr_t>(get_proc_address(lib, name)));
 		}
 
-		operator bool()
+		operator bool() noexcept
 		{
-			init();
+			if (ptr == umax) [[unlikely]]
+			{
+				init();
+			}
 
-			return ptr;
+			return ptr != 0;
 		}
 
 		// Caller
-		R operator()(Args... args)
+		R operator()(Args... args) noexcept
 		{
-			init();
+			if (ptr == umax) [[unlikely]]
+			{
+				init();
+			}
 
-			return ptr(args...);
+			return reinterpret_cast<R (*)(Args...)>(ptr.load())(args...);
 		}
 	};
 }

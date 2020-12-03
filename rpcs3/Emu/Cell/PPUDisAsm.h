@@ -35,7 +35,7 @@ private:
 	}
 	void DisAsm_V3_UIMM(const std::string& op, u32 v0, u32 v1, u32 v2, u32 uimm)
 	{
-		Write(fmt::format("%s v%d,v%d,v%d,%u #%x", FixOp(op), v0, v1, v2, uimm, uimm));
+		Write(fmt::format("%s v%d,v%d,v%d,%s", FixOp(op), v0, v1, v2, uimm));
 	}
 	void DisAsm_V3(const std::string& op, u32 v0, u32 v1, u32 v2)
 	{
@@ -43,7 +43,7 @@ private:
 	}
 	void DisAsm_V2_UIMM(const std::string& op, u32 v0, u32 v1, u32 uimm)
 	{
-		Write(fmt::format("%s v%d,v%d,%u #%x", FixOp(op), v0, v1, uimm, uimm));
+		Write(fmt::format("%s v%d,v%d,%s", FixOp(op), v0, v1, uimm));
 	}
 	void DisAsm_V2(const std::string& op, u32 v0, u32 v1)
 	{
@@ -51,7 +51,7 @@ private:
 	}
 	void DisAsm_V1_SIMM(const std::string& op, u32 v0, s32 simm)
 	{
-		Write(fmt::format("%s v%d,%d #%x", FixOp(op), v0, simm, simm));
+		Write(fmt::format("%s v%d,%s", FixOp(op), v0, SignedHex(simm)));
 	}
 	void DisAsm_V1(const std::string& op, u32 v0)
 	{
@@ -75,7 +75,7 @@ private:
 	}
 	void DisAsm_INT1_R1_IMM(const std::string& op, u32 i0, u32 r0, s32 imm0)
 	{
-		Write(fmt::format("%s %d,r%d,%d #%x", FixOp(op), i0, r0, imm0, imm0));
+		Write(fmt::format("%s %d,r%d,%s", FixOp(op), i0, r0, SignedHex(imm0)));
 	}
 	void DisAsm_INT1_R1_RC(const std::string& op, u32 i0, u32 r0, u32 rc)
 	{
@@ -119,11 +119,11 @@ private:
 	{
 		if(m_mode == CPUDisAsm_CompilerElfMode)
 		{
-			Write(fmt::format("%s f%d,r%d,%d #%x", FixOp(op + (rc ? "." : "")), f0, r0, imm0, imm0));
+			Write(fmt::format("%s f%d,r%d,%s", FixOp(op + (rc ? "." : "")), f0, r0, SignedHex(imm0)));
 			return;
 		}
 
-		Write(fmt::format("%s f%d,%d(r%d) #%x", FixOp(op + (rc ? "." : "")), f0, imm0, r0, imm0));
+		Write(fmt::format("%s f%d,%s(r%d)", FixOp(op + (rc ? "." : "")), f0, SignedHex(imm0), r0));
 	}
 	void DisAsm_F1_IMM_R1(const std::string& op, u32 f0, s32 imm0, u32 r0)
 	{
@@ -197,15 +197,15 @@ private:
 	{
 		if(m_mode == CPUDisAsm_CompilerElfMode)
 		{
-			Write(fmt::format("%s r%d,r%d,%d  #%x", FixOp(op), r0, r1, imm0, imm0));
+			Write(fmt::format("%s r%d,r%d,%s", FixOp(op), r0, r1, SignedHex(imm0)));
 			return;
 		}
 
-		Write(fmt::format("%s r%d,%d(r%d)  #%x", FixOp(op), r0, imm0, r1, imm0));
+		Write(fmt::format("%s r%d,%s(r%d)", FixOp(op), r0, SignedHex(imm0), r1));
 	}
 	void DisAsm_R1_IMM(const std::string& op, u32 r0, s32 imm0)
 	{
-		Write(fmt::format("%s r%d,%d  #%x", FixOp(op), r0, imm0, imm0));
+		Write(fmt::format("%s r%d,%s", FixOp(op), r0, SignedHex(imm0)));
 	}
 	void DisAsm_IMM_R1(const std::string& op, s32 imm0, u32 r0)
 	{
@@ -213,11 +213,19 @@ private:
 	}
 	void DisAsm_CR1_R1_IMM(const std::string& op, u32 cr0, u32 r0, s32 imm0)
 	{
-		Write(fmt::format("%s cr%d,r%d,%d  #%x", FixOp(op), cr0, r0, imm0, imm0));
+		Write(fmt::format("%s cr%d,r%d,%s", FixOp(op), cr0, r0, SignedHex(imm0)));
 	}
 	void DisAsm_CR1_R2_RC(const std::string& op, u32 cr0, u32 r0, u32 r1, u32 rc)
 	{
 		Write(fmt::format("%s%s cr%d,r%d,r%d", FixOp(op), (rc ? "." : ""), cr0, r0, r1));
+	}
+	void DisAsm_CR1_R1(const std::string& op, u32 cr0, u32 r0)
+	{
+		Write(fmt::format("%s cr%d,r%d", FixOp(op), cr0, r0));
+	}
+	void DisAsm_R1_CR1(const std::string& op, u32 r0, u32 cr0)
+	{
+		Write(fmt::format("%s r%d,cr%d", FixOp(op), r0, cr0));
 	}
 	void DisAsm_CR1_R2(const std::string& op, u32 cr0, u32 r0, u32 r1)
 	{

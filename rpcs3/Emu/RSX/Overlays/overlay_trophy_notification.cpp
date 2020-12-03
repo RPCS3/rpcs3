@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "overlay_trophy_notification.h"
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/RSX/RSXThread.h"
 
 namespace rsx
@@ -47,7 +48,7 @@ namespace rsx
 			text_view.align_text(overlay_element::text_align::center);
 			text_view.back_color.a = 0.f;
 
-			sliding_animation.duration = 1.5;
+			sliding_animation.duration = 1.5f;
 			sliding_animation.type = animation_type::ease_in_out_cubic;
 			sliding_animation.current = { -f32(frame.w), 0, 0 };
 			sliding_animation.end = { 0, 0, 0};
@@ -118,18 +119,17 @@ namespace rsx
 				image.set_raw_image(icon_info.get());
 			}
 
-			std::string trophy_message;
+			localized_string_id string_id = localized_string_id::INVALID;
 			switch (trophy.trophyGrade)
 			{
-			case SCE_NP_TROPHY_GRADE_BRONZE: trophy_message = "bronze"; break;
-			case SCE_NP_TROPHY_GRADE_SILVER: trophy_message = "silver"; break;
-			case SCE_NP_TROPHY_GRADE_GOLD: trophy_message = "gold"; break;
-			case SCE_NP_TROPHY_GRADE_PLATINUM: trophy_message = "platinum"; break;
+			case SCE_NP_TROPHY_GRADE_BRONZE: string_id = localized_string_id::RSX_OVERLAYS_TROPHY_BRONZE; break;
+			case SCE_NP_TROPHY_GRADE_SILVER: string_id = localized_string_id::RSX_OVERLAYS_TROPHY_SILVER; break;
+			case SCE_NP_TROPHY_GRADE_GOLD: string_id = localized_string_id::RSX_OVERLAYS_TROPHY_GOLD; break;
+			case SCE_NP_TROPHY_GRADE_PLATINUM: string_id = localized_string_id::RSX_OVERLAYS_TROPHY_PLATINUM; break;
 			default: break;
 			}
 
-			trophy_message = "You have earned the " + trophy_message + " trophy\n" + trophy.name;
-			text_view.set_text(trophy_message);
+			text_view.set_text(get_localized_u32string(string_id, trophy.name));
 			text_view.auto_resize();
 
 			// Resize background to cover the text

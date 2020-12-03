@@ -505,7 +505,7 @@ error_code cellGemEnableMagnetometer2()
 	return CELL_OK;
 }
 
-error_code cellGemEnd()
+error_code cellGemEnd(ppu_thread& ppu)
 {
 	cellGem.warning("cellGemEnd()");
 
@@ -517,7 +517,7 @@ error_code cellGemEnd()
 	{
 		if (u32 addr = gem->memory_ptr)
 		{
-			sys_memory_free(addr);
+			sys_memory_free(ppu, addr);
 		}
 
 		return CELL_OK;
@@ -750,7 +750,7 @@ error_code cellGemGetInfo(vm::ptr<CellGemInfo> info)
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	std::shared_lock lock(gem->mtx);
+	reader_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -798,7 +798,7 @@ error_code cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::pt
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	std::shared_lock lock(gem->mtx);
+	reader_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -824,7 +824,7 @@ error_code cellGemGetRumble(u32 gem_num, vm::ptr<u8> rumble)
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	std::shared_lock lock(gem->mtx);
+	reader_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -847,7 +847,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	std::shared_lock lock(gem->mtx);
+	reader_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -889,7 +889,7 @@ error_code cellGemGetStatusFlags(u32 gem_num, vm::ptr<u64> flags)
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	std::shared_lock lock(gem->mtx);
+	reader_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -912,7 +912,7 @@ error_code cellGemGetTrackerHue(u32 gem_num, vm::ptr<u32> hue)
 
 	const auto gem = g_fxo->get<gem_config>();
 
-	std::shared_lock lock(gem->mtx);
+	reader_lock lock(gem->mtx);
 
 	if (!gem->state)
 	{
@@ -950,7 +950,7 @@ error_code cellGemHSVtoRGB(f32 h, f32 s, f32 v, vm::ptr<f32> r, vm::ptr<f32> g, 
 	return CELL_OK;
 }
 
-error_code cellGemInit(vm::cptr<CellGemAttribute> attribute)
+error_code cellGemInit(ppu_thread& ppu, vm::cptr<CellGemAttribute> attribute)
 {
 	cellGem.warning("cellGemInit(attribute=*0x%x)", attribute);
 
@@ -973,7 +973,7 @@ error_code cellGemInit(vm::cptr<CellGemAttribute> attribute)
 		vm::var<u32> addr(0);
 
 		// Decrease memory stats
-		if (sys_memory_allocate(GemGetMemorySize(attribute->max_connect), SYS_MEMORY_PAGE_SIZE_64K, +addr) != CELL_OK)
+		if (sys_memory_allocate(ppu, GemGetMemorySize(attribute->max_connect), SYS_MEMORY_PAGE_SIZE_64K, +addr) != CELL_OK)
 		{
 			return CELL_GEM_ERROR_RESOURCE_ALLOCATION_FAILED;
 		}

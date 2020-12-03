@@ -11,16 +11,21 @@ namespace gl
 	capabilities g_driver_caps;
 	const fbo screen{};
 
-	thread_local bool tls_primary_context_thread = false;
+	static thread_local bool s_tls_primary_context_thread = false;
 
-	void set_primary_context_thread()
+	void set_primary_context_thread(bool value)
 	{
-		tls_primary_context_thread = true;
+		s_tls_primary_context_thread = value;
 	}
 
 	bool is_primary_context_thread()
 	{
-		return tls_primary_context_thread;
+		return s_tls_primary_context_thread;
+	}
+
+	void flush_command_queue(fence& fence_obj)
+	{
+		fence_obj.check_signaled();
 	}
 
 	GLenum draw_mode(rsx::primitive_type in)
@@ -167,7 +172,7 @@ namespace gl
 	  glDebugMessageCallback(log_debug, nullptr);
 	}
 
-	capabilities &get_driver_caps()
+	const capabilities& get_driver_caps()
 	{
 		if (!g_driver_caps.initialized)
 			g_driver_caps.initialize();
@@ -631,12 +636,11 @@ namespace gl
 
 		switch (const auto fmt = dst->get_internal_format())
 		{
-		case texture::internal_format::depth:
 		case texture::internal_format::depth16:
+		case texture::internal_format::depth32f:
 			clear_mask = GL_DEPTH_BUFFER_BIT;
 			attachment = GL_DEPTH_ATTACHMENT;
 			break;
-		case texture::internal_format::depth_stencil:
 		case texture::internal_format::depth24_stencil8:
 		case texture::internal_format::depth32f_stencil8:
 			clear_mask = GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;

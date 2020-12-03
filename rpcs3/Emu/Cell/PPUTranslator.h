@@ -52,9 +52,9 @@ class PPUTranslator final : public cpu_translator
 
 	llvm::Value* m_mtocr_table{};
 
-	llvm::Value* m_globals[173];
+	llvm::Value* m_globals[175];
 	llvm::Value** const m_g_cr = m_globals + 99;
-	llvm::Value* m_locals[173];
+	llvm::Value* m_locals[175];
 	llvm::Value** const m_gpr = m_locals + 3;
 	llvm::Value** const m_fpr = m_locals + 35;
 	llvm::Value** const m_vr = m_locals + 67;
@@ -77,6 +77,7 @@ class PPUTranslator final : public cpu_translator
 	DEF_VALUE(m_cnt, m_g_cnt, 170) // XER.CNT
 	DEF_VALUE(m_sat, m_g_sat, 171) // VSCR.SAT bit, sticky saturation flag
 	DEF_VALUE(m_nj, m_g_nj, 172) // VSCR.NJ bit, non-Java mode
+	DEF_VALUE(m_jm_mask, m_g_jm_mask, 174) // Java-Mode helper mask
 
 #undef DEF_VALUE
 public:
@@ -102,15 +103,14 @@ public:
 	}
 
 	llvm::Value* VecHandleNan(llvm::Value* val);
+	llvm::Value* VecHandleDenormal(llvm::Value* val);
+	llvm::Value* VecHandleResult(llvm::Value* val);
 
 	template <typename T>
-	auto vec_handle_nan(T&& expr)
+	auto vec_handle_result(T&& expr)
 	{
 		value_t<typename T::type> result;
-		if (g_cfg.core.llvm_ppu_accurate_vector_nan)
-			result.value = VecHandleNan(expr.eval(m_ir));
-		else
-			result.value = expr.eval(m_ir);
+		result.value = VecHandleResult(expr.eval(m_ir));
 		return result;
 	}
 
@@ -317,7 +317,7 @@ public:
 	llvm::CallInst* Call(llvm::Type* ret, llvm::AttributeList attr, llvm::StringRef name, Args... args)
 	{
 		// Call the function
-		return m_ir->CreateCall(m_module->getOrInsertFunction(name, attr, ret, args->getType()...).getCallee(), {args...});
+		return m_ir->CreateCall(m_module->getOrInsertFunction(name, attr, ret, args->getType()...), {args...});
 	}
 
 	// Call a function

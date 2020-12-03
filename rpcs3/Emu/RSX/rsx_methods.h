@@ -88,6 +88,7 @@ namespace rsx
 		// Add a new draw command
 		void append_draw_command(const draw_range_t& range)
 		{
+			current_range_index = draw_command_ranges.size();
 			draw_command_ranges.push_back(range);
 		}
 
@@ -97,6 +98,7 @@ namespace rsx
 			auto range_It = draw_command_ranges.begin();
 			std::advance(range_It, index);
 
+			current_range_index = index;
 			draw_command_ranges.insert(range_It, range);
 
 			// Update all barrier draw ids after this one
@@ -146,20 +148,18 @@ namespace rsx
 			if (type == primitive_restart_barrier)
 			{
 				// Rasterization flow barrier
-				const auto& last = draw_command_ranges.back();
+				const auto& last = draw_command_ranges[current_range_index];
 				const auto address = last.first + last.count;
 
-				const auto command_index = draw_command_ranges.size() - 1;
-				_do_barrier_insert({ command_index, 0, address, arg, 0, type });
+				_do_barrier_insert({ current_range_index, 0, address, arg, 0, type });
 			}
 			else
 			{
 				// Execution dependency barrier
 				append_draw_command({});
-				const auto command_index = draw_command_ranges.size() - 1;
 
-				_do_barrier_insert({ command_index, get_system_time(), ~0u, arg, 0, type });
-				last_execution_barrier_index = command_index;
+				_do_barrier_insert({ current_range_index, get_system_time(), ~0u, arg, 0, type });
+				last_execution_barrier_index = current_range_index;
 			}
 		}
 
@@ -168,6 +168,9 @@ namespace rsx
 		 */
 		void compile()
 		{
+			// End draw call append mode
+			current_range_index = ~0u;
+
 			// TODO
 		}
 
@@ -182,7 +185,7 @@ namespace rsx
 
 			if (!draw_command_ranges.empty())
 			{
-				auto& last = draw_command_ranges.back();
+				auto& last = draw_command_ranges[current_range_index];
 
 				if (last.count == 0)
 				{
@@ -1305,9 +1308,17 @@ namespace rsx
 			return decode<NV4097_SET_SURFACE_FORMAT>().color_fmt();
 		}
 
-		surface_depth_format surface_depth_fmt() const
+		surface_depth_format2 surface_depth_fmt() const
 		{
-			return decode<NV4097_SET_SURFACE_FORMAT>().depth_fmt();
+			const auto base_fmt = decode<NV4097_SET_SURFACE_FORMAT>().depth_fmt();
+			if (!depth_buffer_float_enabled()) [[likely]]
+			{
+				return static_cast<surface_depth_format2>(base_fmt);
+			}
+
+			return base_fmt == surface_depth_format::z16 ?
+				surface_depth_format2::z16_float :
+				surface_depth_format2::z24s8_float;
 		}
 
 		surface_raster_type surface_type() const
@@ -1635,57 +1646,57 @@ namespace rsx
 			registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD] = value;
 		}
 
-		u32 transform_constant_load()
+		u32 transform_constant_load() const
 		{
 			return registers[NV4097_SET_TRANSFORM_CONSTANT_LOAD];
 		}
 
-		u32 transform_branch_bits()
+		u32 transform_branch_bits() const
 		{
 			return registers[NV4097_SET_TRANSFORM_BRANCH_BITS];
 		}
 
-		u16 msaa_sample_mask()
+		u16 msaa_sample_mask() const
 		{
 			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_sample_mask();
 		}
 
-		bool msaa_enabled()
+		bool msaa_enabled() const
 		{
 			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_enabled();
 		}
 
-		bool msaa_alpha_to_coverage_enabled()
+		bool msaa_alpha_to_coverage_enabled() const
 		{
 			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_alpha_to_coverage();
 		}
 
-		bool msaa_alpha_to_one_enabled()
+		bool msaa_alpha_to_one_enabled() const
 		{
 			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_alpha_to_one();
 		}
 
-		bool depth_clamp_enabled()
+		bool depth_clamp_enabled() const
 		{
 			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clamp_enabled();
 		}
 
-		bool depth_clip_enabled()
+		bool depth_clip_enabled() const
 		{
 			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clip_enabled();
 		}
 
-		bool depth_clip_ignore_w()
+		bool depth_clip_ignore_w() const
 		{
 			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clip_ignore_w();
 		}
 
-		bool framebuffer_srgb_enabled()
+		bool framebuffer_srgb_enabled() const
 		{
 			return decode<NV4097_SET_SHADER_PACKER>().srgb_output_enabled();
 		}
 
-		bool depth_buffer_float_enabled()
+		bool depth_buffer_float_enabled() const
 		{
 			return decode<NV4097_SET_CONTROL0>().depth_float();
 		}

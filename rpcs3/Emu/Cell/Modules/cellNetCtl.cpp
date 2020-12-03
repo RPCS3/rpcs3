@@ -177,7 +177,7 @@ error_code cellNetCtlDelHandler(s32 hid)
 
 error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
-	cellNetCtl.todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
+	cellNetCtl.warning("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -193,8 +193,7 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 	if (code == CELL_NET_CTL_INFO_ETHER_ADDR)
 	{
-		// dummy values set
-		std::memset(info->ether_addr.data, 0xFF, sizeof(info->ether_addr.data));
+		memcpy(info->ether_addr.data, nph->get_ether_addr().data(), 6);
 		return CELL_OK;
 	}
 
@@ -203,25 +202,21 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		return CELL_NET_CTL_ERROR_NOT_CONNECTED;
 	}
 
-	if (code == CELL_NET_CTL_INFO_MTU)
+	switch (code)
 	{
-		info->mtu = 1500;
-	}
-	else if (code == CELL_NET_CTL_INFO_LINK)
-	{
-		info->link = CELL_NET_CTL_LINK_CONNECTED;
-	}
-	else if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
-	{
-		strcpy_trunc(info->ip_address, nph->get_ip());
-	}
-	else if (code == CELL_NET_CTL_INFO_NETMASK)
-	{
-		strcpy_trunc(info->netmask, "255.255.255.255");
-	}
-	else if (code == CELL_NET_CTL_INFO_HTTP_PROXY_CONFIG)
-	{
-		info->http_proxy_config = 0;
+	case CELL_NET_CTL_INFO_DEVICE: info->device = CELL_NET_CTL_DEVICE_WIRED; break;
+	// case CELL_NET_CTL_INFO_ETHER_ADDR: std::memset(info->ether_addr.data, 0xFF, sizeof(info->ether_addr.data)); break;
+	case CELL_NET_CTL_INFO_MTU: info->mtu = 1500; break;
+	case CELL_NET_CTL_INFO_LINK: info->link = CELL_NET_CTL_LINK_CONNECTED; break;
+	case CELL_NET_CTL_INFO_LINK_TYPE: info->link_type = CELL_NET_CTL_LINK_TYPE_10BASE_FULL; break;
+	case CELL_NET_CTL_INFO_IP_CONFIG: info->ip_config = CELL_NET_CTL_IP_STATIC; break;
+	case CELL_NET_CTL_INFO_DEFAULT_ROUTE: strcpy_trunc(info->default_route, "192.168.1.1"); break;
+	case CELL_NET_CTL_INFO_PRIMARY_DNS: strcpy_trunc(info->primary_dns, np_handler::ip_to_string(nph->get_dns_ip())); break;
+	case CELL_NET_CTL_INFO_SECONDARY_DNS: strcpy_trunc(info->secondary_dns, np_handler::ip_to_string(nph->get_dns_ip())); break;
+	case CELL_NET_CTL_INFO_IP_ADDRESS: strcpy_trunc(info->ip_address, np_handler::ip_to_string(nph->get_local_ip_addr())); break;
+	case CELL_NET_CTL_INFO_NETMASK: strcpy_trunc(info->netmask, "255.255.255.255"); break;
+	case CELL_NET_CTL_INFO_HTTP_PROXY_CONFIG: info->http_proxy_config = 0; break;
+	default: cellNetCtl.error("Unsupported request: %s", InfoCodeToName(code)); break;
 	}
 
 	return CELL_OK;
@@ -306,7 +301,6 @@ error_code cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogR
 	result->result = nph->get_net_status() == CELL_NET_CTL_STATE_IPObtained ? 0 : CELL_NET_CTL_ERROR_DIALOG_CANCELED;
 
 	sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
-
 	return CELL_OK;
 }
 
@@ -330,6 +324,10 @@ error_code cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 	{
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
+
+	natInfo->nat_type = CELL_NET_CTL_NATINFO_NAT_TYPE_2;
+	natInfo->stun_status = CELL_NET_CTL_NATINFO_STUN_OK;
+	natInfo->upnp_status = CELL_NET_CTL_NATINFO_UPNP_NO;
 
 	return CELL_OK;
 }
@@ -466,7 +464,6 @@ error_code cellGameUpdateCheckStartWithoutDialogAsyncEx(vm::ptr<CellGameUpdateCa
 	});
 	return CELL_OK;
 }
-
 
 DECLARE(ppu_module_manager::cellNetCtl)("cellNetCtl", []()
 {

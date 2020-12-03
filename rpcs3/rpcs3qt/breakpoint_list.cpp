@@ -63,8 +63,8 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 	m_breakpoint_handler->AddBreakpoint(pc);
 
 	const auto cpu = this->cpu.lock();
-	const u32 cpu_offset = cpu->id_type() != 1 ? static_cast<spu_thread&>(*cpu).offset : 0;
-	m_disasm->offset = vm::_ptr<u8>(cpu_offset);
+	const auto cpu_offset = cpu->id_type() == 2 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
+	m_disasm->offset = cpu_offset;
 
 	m_disasm->disasm(m_disasm->dump_pc = pc);
 
@@ -96,7 +96,7 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc)
 	{
 		const auto cpu = this->cpu.lock();
 
-		if (cpu->id_type() == 1 && vm::check_addr(loc, 1, vm::page_allocated | vm::page_executable))
+		if (cpu->id_type() == 1 && vm::check_addr(loc, vm::page_allocated | vm::page_executable))
 		{
 			AddBreakpoint(loc);
 		}

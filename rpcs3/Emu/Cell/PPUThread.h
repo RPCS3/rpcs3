@@ -36,6 +36,11 @@ enum class ppu_syscall_code : u64
 {
 };
 
+enum : u32
+{
+	ppu_stack_start_offset = 0x70,
+};
+
 // ppu function descriptor
 struct ppu_func_opd_t
 {
@@ -59,18 +64,16 @@ class ppu_thread : public cpu_thread
 public:
 	static const u32 id_base = 0x01000000; // TODO (used to determine thread type)
 	static const u32 id_step = 1;
-	static const u32 id_count = 2048;
+	static const u32 id_count = 100;
 	static constexpr std::pair<u32, u32> id_invl_range = {12, 12};
 
 	virtual std::string dump_all() const override;
 	virtual std::string dump_regs() const override;
 	virtual std::string dump_callstack() const override;
-	virtual std::vector<u32> dump_callstack_list() const override;
+	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 	virtual std::string dump_misc() const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_sleep() override;
-	virtual void cpu_mem() override;
-	virtual void cpu_unmem() override;
 	virtual ~ppu_thread() override;
 
 	ppu_thread(const ppu_thread_params&, std::string_view name, u32 prio, int detached = 0);
@@ -181,11 +184,15 @@ public:
 			exception, the corresponding element in the target vr is cleared to '0'. In both cases, the '0'
 			has the same sign as the denormalized or underflowing value.
 	*/
-	bool nj = false;
+	bool nj = true;
+
+	// Optimization: precomputed java-mode mask for handling denormals
+	u32 jm_mask = 0x7f80'0000;
 
 	u32 raddr{0}; // Reservation addr
 	u64 rtime{0};
-	u64 rdata{0}; // Reservation data
+	alignas(64) std::byte rdata[128]{}; // Reservation data
+	bool use_full_rdata{};
 
 	atomic_t<s32> prio{0}; // Thread priority (0..3071)
 	const u32 stack_size; // Stack size
@@ -208,7 +215,13 @@ public:
 	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
 
 	// Thread name
-	stx::atomic_cptr<std::string> ppu_tname;
+	atomic_ptr<std::string> ppu_tname;
+
+	u64 last_ftsc = 0;
+	u64 last_ftime = 0;
+	u32 last_faddr = 0;
+	u64 last_fail = 0;
+	u64 last_succ = 0;
 
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();

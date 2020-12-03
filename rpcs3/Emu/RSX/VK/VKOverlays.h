@@ -6,8 +6,11 @@
 #include "VKFramebuffer.h"
 #include "VKResourceManager.h"
 #include "VKRenderPass.h"
+#include "VKPipelineCompiler.h"
 
 #include "../Overlays/overlays.h"
+
+#include "Utilities/hash.h"
 
 #define VK_OVERLAY_MAX_DRAW_CALLS 1024
 
@@ -231,7 +234,6 @@ namespace vk
 			vp.scissorCount = 1;
 			vp.viewportCount = 1;
 
-			VkPipeline pipeline;
 			VkGraphicsPipelineCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 			info.pVertexInputState = &vi;
@@ -249,9 +251,8 @@ namespace vk
 			info.basePipelineHandle = VK_NULL_HANDLE;
 			info.renderPass = render_pass;
 
-			CHECK_RESULT(vkCreateGraphicsPipelines(*m_device, nullptr, 1, &info, NULL, &pipeline));
-
-			auto program = std::make_unique<vk::glsl::program>(*m_device, pipeline, m_pipeline_layout, get_vertex_inputs(), get_fragment_inputs());
+			auto compiler = vk::get_pipe_compiler();
+			auto program = compiler->compile(info, m_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE, {}, get_vertex_inputs(), get_fragment_inputs());
 			auto result = program.get();
 			m_program_cache[storage_key] = std::move(program);
 
@@ -1027,8 +1028,7 @@ namespace vk
 			// Coverage sampling disabled, but actually report correct number of samples
 			renderpass_config.set_multisample_state(target->samples(), 0xFFFF, false, false, false);
 
-			overlay_pass::run(cmd, { 0, 0, target->width(), target->height() }, target,
-				target->get_view(0xAAE4, rsx::default_remap_vector), render_pass);
+			overlay_pass::run(cmd, { 0, 0, target->width(), target->height() }, target, std::vector<vk::image_view*>{}, render_pass);
 		}
 	};
 

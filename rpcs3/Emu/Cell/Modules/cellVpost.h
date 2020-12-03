@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -21,7 +21,7 @@ extern "C"
 #include "Utilities/BEType.h"
 
 // Error Codes
-enum
+enum CellVpostError : u32
 {
 	CELL_VPOST_ERROR_Q_ARG_CFG_NULL              = 0x80610410,
 	CELL_VPOST_ERROR_Q_ARG_CFG_INVALID           = 0x80610411,

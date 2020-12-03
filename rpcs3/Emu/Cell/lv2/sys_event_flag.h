@@ -118,7 +118,7 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 error_code sys_event_flag_destroy(ppu_thread& ppu, u32 id);
 error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout);
 error_code sys_event_flag_trywait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result);
-error_code sys_event_flag_set(u32 id, u64 bitptn);
+error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn);
 error_code sys_event_flag_clear(ppu_thread& ppu, u32 id, u64 bitptn);
 error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num);
 error_code sys_event_flag_get(ppu_thread& ppu, u32 id, vm::ptr<u64> flags);

@@ -31,6 +31,9 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
@@ -48,8 +51,8 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>curl\include;curl\lib;wolfssl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HAVE_SNI;NDEBUG;BUILDING_LIBCURL;CURL_STATICLIB;USE_WOLFSSL;USE_IPV6;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>curl\include;curl\lib;curl_extra;wolfssl;wolfssl\wolfssl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_SNI;NDEBUG;BUILDING_LIBCURL;CURL_STATICLIB;USE_WOLFSSL;USE_IPV6;SIZEOF_LONG=4;SIZEOF_LONG_LONG=8;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <WarningLevel>Level4</WarningLevel>
@@ -94,6 +97,7 @@
     <ClCompile Include="curl\lib\dict.c" />
     <ClCompile Include="curl\lib\doh.c" />
     <ClCompile Include="curl\lib\dotdot.c" />
+    <ClCompile Include="curl\lib\dynbuf.c" />
     <ClCompile Include="curl\lib\easy.c" />
     <ClCompile Include="curl\lib\escape.c" />
     <ClCompile Include="curl\lib\file.c" />
@@ -132,6 +136,7 @@
     <ClCompile Include="curl\lib\memdebug.c" />
     <ClCompile Include="curl\lib\mime.c" />
     <ClCompile Include="curl\lib\mprintf.c" />
+    <ClCompile Include="curl\lib\mqtt.c" />
     <ClCompile Include="curl\lib\multi.c" />
     <ClCompile Include="curl\lib\netrc.c" />
     <ClCompile Include="curl\lib\non-ascii.c" />
@@ -175,6 +180,7 @@
     <ClCompile Include="curl\lib\url.c" />
     <ClCompile Include="curl\lib\urlapi.c" />
     <ClCompile Include="curl\lib\version.c" />
+    <ClCompile Include="curl\lib\version_win32.c" />
     <ClCompile Include="curl\lib\warnless.c" />
     <ClCompile Include="curl\lib\wildcard.c" />
     <ClCompile Include="curl\lib\x509asn1.c" />
@@ -192,12 +198,14 @@
     <ClCompile Include="curl\lib\vauth\vauth.c" />
     <ClCompile Include="curl\lib\vquic\ngtcp2.c" />
     <ClCompile Include="curl\lib\vquic\quiche.c" />
+    <ClCompile Include="curl\lib\vquic\vquic.c" />
     <ClCompile Include="curl\lib\vssh\libssh.c" />
     <ClCompile Include="curl\lib\vssh\libssh2.c" />
     <ClCompile Include="curl\lib\vssh\wolfssh.c" />
     <ClCompile Include="curl\lib\vtls\bearssl.c" />
     <ClCompile Include="curl\lib\vtls\gskit.c" />
     <ClCompile Include="curl\lib\vtls\gtls.c" />
+    <ClCompile Include="curl\lib\vtls\keylog.c" />
     <ClCompile Include="curl\lib\vtls\mbedtls.c" />
     <ClCompile Include="curl\lib\vtls\mbedtls_threadlock.c" />
     <ClCompile Include="curl\lib\vtls\mesalink.c" />
@@ -271,6 +279,7 @@
     <ClInclude Include="curl\lib\dict.h" />
     <ClInclude Include="curl\lib\doh.h" />
     <ClInclude Include="curl\lib\dotdot.h" />
+    <ClInclude Include="curl\lib\dynbuf.h" />
     <ClInclude Include="curl\lib\easyif.h" />
     <ClInclude Include="curl\lib\escape.h" />
     <ClInclude Include="curl\lib\file.h" />
@@ -297,6 +306,7 @@
     <ClInclude Include="curl\lib\llist.h" />
     <ClInclude Include="curl\lib\memdebug.h" />
     <ClInclude Include="curl\lib\mime.h" />
+    <ClInclude Include="curl\lib\mqtt.h" />
     <ClInclude Include="curl\lib\multihandle.h" />
     <ClInclude Include="curl\lib\multiif.h" />
     <ClInclude Include="curl\lib\netrc.h" />
@@ -316,6 +326,7 @@
     <ClInclude Include="curl\lib\setopt.h" />
     <ClInclude Include="curl\lib\setup-os400.h" />
     <ClInclude Include="curl\lib\setup-vms.h" />
+    <ClInclude Include="curl\lib\setup-win32.h" />
     <ClInclude Include="curl\lib\share.h" />
     <ClInclude Include="curl\lib\sigpipe.h" />
     <ClInclude Include="curl\lib\slist.h" />
@@ -339,6 +350,7 @@
     <ClInclude Include="curl\lib\url.h" />
     <ClInclude Include="curl\lib\urlapi-int.h" />
     <ClInclude Include="curl\lib\urldata.h" />
+    <ClInclude Include="curl\lib\version_win32.h" />
     <ClInclude Include="curl\lib\warnless.h" />
     <ClInclude Include="curl\lib\wildcard.h" />
     <ClInclude Include="curl\lib\x509asn1.h" />
@@ -347,11 +359,13 @@
     <ClInclude Include="curl\lib\vauth\vauth.h" />
     <ClInclude Include="curl\lib\vquic\ngtcp2.h" />
     <ClInclude Include="curl\lib\vquic\quiche.h" />
+    <ClInclude Include="curl\lib\vquic\vquic.h" />
     <ClInclude Include="curl\lib\vssh\ssh.h" />
     <ClInclude Include="curl\lib\vssh\wolfssh.h" />
     <ClInclude Include="curl\lib\vtls\bearssl.h" />
     <ClInclude Include="curl\lib\vtls\gskit.h" />
     <ClInclude Include="curl\lib\vtls\gtls.h" />
+    <ClInclude Include="curl\lib\vtls\keylog.h" />
     <ClInclude Include="curl\lib\vtls\mbedtls.h" />
     <ClInclude Include="curl\lib\vtls\mbedtls_threadlock.h" />
     <ClInclude Include="curl\lib\vtls\mesalink.h" />

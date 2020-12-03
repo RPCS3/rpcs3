@@ -6,35 +6,7 @@
 #include "VKRenderPass.h"
 #include "VKResourceManager.h"
 #include "VKCommandStream.h"
-
-namespace
-{
-	u32 get_max_depth_value(rsx::surface_depth_format format)
-	{
-		switch (format)
-		{
-		case rsx::surface_depth_format::z16: return 0xFFFF;
-		case rsx::surface_depth_format::z24s8: return 0xFFFFFF;
-		default:
-			ASSUME(0);
-			break;
-		}
-		fmt::throw_exception("Unknown depth format" HERE);
-	}
-
-	u8 get_pixel_size(rsx::surface_depth_format format)
-	{
-		switch (format)
-		{
-		case rsx::surface_depth_format::z16: return 2;
-		case rsx::surface_depth_format::z24s8: return 4;
-		default:
-			ASSUME(0);
-			break;
-		}
-		fmt::throw_exception("Unknown depth format" HERE);
-	}
-}
+#include "Emu/Memory/vm_locking.h"
 
 namespace vk
 {
@@ -42,11 +14,8 @@ namespace vk
 
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format)
 	{
-		const VkComponentMapping abgr = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A };
 		const VkComponentMapping o_rgb = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_ONE };
 		const VkComponentMapping z_rgb = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_ZERO };
-		const VkComponentMapping o_bgr = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ONE };
-		const VkComponentMapping z_bgr = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ZERO };
 
 		switch (color_format)
 		{
@@ -57,13 +26,13 @@ namespace vk
 			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map());
 
 		case rsx::surface_color_format::a8b8g8r8:
-			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, abgr);
+			return std::make_pair(VK_FORMAT_R8G8B8A8_UNORM, vk::default_component_map());
 
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
-			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, o_bgr);
+			return std::make_pair(VK_FORMAT_R8G8B8A8_UNORM, o_rgb);
 
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
-			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, z_bgr);
+			return std::make_pair(VK_FORMAT_R8G8B8A8_UNORM, z_rgb);
 
 		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
 			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, z_rgb);
@@ -440,7 +409,7 @@ VKGSRender::VKGSRender() : GSRender()
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
 
 	//Occlusion
-	m_occlusion_query_pool.create((*m_device), OCCLUSION_MAX_POOL_SIZE);
+	m_occlusion_query_manager = std::make_unique<vk::query_pool_manager>(*m_device, VK_QUERY_TYPE_OCCLUSION, OCCLUSION_MAX_POOL_SIZE);
 	m_occlusion_map.resize(occlusion_query_count);
 
 	for (u32 n = 0; n < occlusion_query_count; ++n)
@@ -505,6 +474,7 @@ VKGSRender::VKGSRender() : GSRender()
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
 	vk::initialize_compiler_context();
+	vk::initialize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
 
 	if (g_cfg.video.overlay)
 	{
@@ -513,7 +483,7 @@ VKGSRender::VKGSRender() : GSRender()
 		m_text_writer->init(*m_device, vk::get_renderpass(*m_device, key));
 	}
 
-	m_prog_buffer = std::make_unique<VKProgramBuffer>
+	m_prog_buffer = std::make_unique<vk::program_cache>
 	(
 		[this](const vk::pipeline_props& props, const RSXVertexProgram& vp, const RSXFragmentProgram& fp)
 		{
@@ -550,8 +520,6 @@ VKGSRender::VKGSRender() : GSRender()
 			m_texture_upload_buffer_ring_info);
 
 	vk::get_overlay_pass<vk::ui_overlay_renderer>()->init(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
-
-	m_occlusion_query_pool.initialize(*m_current_command_buffer);
 
 	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 	{
@@ -594,8 +562,9 @@ VKGSRender::~VKGSRender()
 	m_texture_cache.destroy();
 
 	//Shaders
-	vk::finalize_compiler_context();
-	m_prog_buffer->clear();
+	vk::destroy_pipe_compiler();      // Ensure no pending shaders being compiled
+	vk::finalize_compiler_context();  // Shut down the glslang compiler
+	m_prog_buffer->clear();           // Delete shader objects
 	m_shader_interpreter.destroy();
 
 	m_persistent_attribute_storage.reset();
@@ -657,7 +626,7 @@ VKGSRender::~VKGSRender()
 	vkDestroyDescriptorSetLayout(*m_device, descriptor_layouts, nullptr);
 
 	//Queries
-	m_occlusion_query_pool.destroy();
+	m_occlusion_query_manager.reset();
 	m_cond_render_buffer.reset();
 
 	//Command buffer
@@ -785,6 +754,26 @@ void VKGSRender::on_semaphore_acquire_wait()
 	{
 		do_local_task(rsx::FIFO_state::lock_wait);
 	}
+}
+
+bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
+{
+	ASSERT(!vk::is_uninterruptible() && rsx::get_current_renderer()->is_current_thread());
+	bool released = m_texture_cache.handle_memory_pressure(severity);
+
+	if (severity <= rsx::problem_severity::moderate)
+	{
+		released |= m_rtts.handle_memory_pressure(*m_current_command_buffer, severity);
+		return released;
+	}
+
+	if (released && severity >= rsx::problem_severity::fatal)
+	{
+		// Imminent crash, full GPU sync is the least of our problems
+		flush_command_queue(true);
+	}
+
+	return released;
 }
 
 void VKGSRender::notify_tile_unbound(u32 tile)
@@ -965,16 +954,30 @@ VkDescriptorSet VKGSRender::allocate_descriptor_set()
 
 void VKGSRender::set_viewport()
 {
-	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
-	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
+	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
+		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
+
+	const auto zclip_near = rsx::method_registers.clip_min();
+	const auto zclip_far = rsx::method_registers.clip_max();
 
 	//NOTE: The scale_offset matrix already has viewport matrix factored in
 	m_viewport.x = 0;
 	m_viewport.y = 0;
 	m_viewport.width = clip_width;
 	m_viewport.height = clip_height;
-	m_viewport.minDepth = 0.f;
-	m_viewport.maxDepth = 1.f;
+
+	if (m_device->get_unrestricted_depth_range_support())
+	{
+		m_viewport.minDepth = zclip_near;
+		m_viewport.maxDepth = zclip_far;
+	}
+	else
+	{
+		m_viewport.minDepth = 0.f;
+		m_viewport.maxDepth = 1.f;
+	}
+
+	m_graphics_state &= ~(rsx::pipeline_state::zclip_config_state_dirty);
 }
 
 void VKGSRender::set_scissor(bool clip_viewport)
@@ -991,6 +994,17 @@ void VKGSRender::set_scissor(bool clip_viewport)
 
 void VKGSRender::bind_viewport()
 {
+	if (m_graphics_state & rsx::pipeline_state::zclip_config_state_dirty)
+	{
+		if (m_device->get_unrestricted_depth_range_support())
+		{
+			m_viewport.minDepth = rsx::method_registers.clip_min();
+			m_viewport.maxDepth = rsx::method_registers.clip_max();
+		}
+
+		m_graphics_state &= ~(rsx::pipeline_state::zclip_config_state_dirty);
+	}
+
 	vkCmdSetViewport(*m_current_command_buffer, 0, 1, &m_viewport);
 	vkCmdSetScissor(*m_current_command_buffer, 0, 1, &m_scissor);
 }
@@ -1072,7 +1086,7 @@ void VKGSRender::clear_surface(u32 mask)
 		{
 			u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
-			u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
+			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
 			float depth_clear = static_cast<float>(clear_depth) / max_depth_value;
 
 			depth_stencil_clear_values.depthStencil.depth = depth_clear;
@@ -1081,7 +1095,7 @@ void VKGSRender::clear_surface(u32 mask)
 			depth_stencil_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
 		}
 
-		if (surface_depth_format == rsx::surface_depth_format::z24s8)
+		if (is_depth_stencil_format(surface_depth_format))
 		{
 			if (mask & 0x2)
 			{
@@ -1202,8 +1216,7 @@ void VKGSRender::clear_surface(u32 mask)
 							if (require_mem_load) rtt->write_barrier(*m_current_command_buffer);
 
 							// Add a barrier to ensure previous writes are visible; also transitions into GENERAL layout
-							const auto old_layout = rtt->current_layout;
-							vk::insert_texture_barrier(*m_current_command_buffer, rtt, VK_IMAGE_LAYOUT_GENERAL);
+							rtt->push_barrier(*m_current_command_buffer, VK_IMAGE_LAYOUT_GENERAL);
 
 							if (!renderpass)
 							{
@@ -1213,8 +1226,7 @@ void VKGSRender::clear_surface(u32 mask)
 							}
 
 							attachment_clear_pass->run(*m_current_command_buffer, rtt, region.rect, renderpass);
-
-							rtt->change_layout(*m_current_command_buffer, old_layout);
+							rtt->pop_layout(*m_current_command_buffer);
 						}
 						else
 							fmt::throw_exception("Unreachable" HERE);
@@ -1596,6 +1608,15 @@ bool VKGSRender::load_program()
 			rsx::method_registers.msaa_enabled(),
 			rsx::method_registers.msaa_alpha_to_coverage_enabled(),
 			alpha_to_one_enable);
+
+		if (const auto chip_family = vk::get_chip_family();
+			chip_family == vk::chip_class::AMD_navi1x ||
+			chip_family == vk::chip_class::AMD_navi2x)
+		{
+			// NAVI family has a GPU bug with MSAA where shading rate is not correctly initialized if left disabled
+			// Manually initialize it and set it to spec default (full shading)
+			properties.state.set_multisample_shading_rate(1.f);
+		}
 	}
 
 	properties.renderpass_key = m_current_renderpass_key;
@@ -1619,7 +1640,7 @@ bool VKGSRender::load_program()
 		vertex_program.skip_vertex_input_check = true;
 		fragment_program.unnormalized_coords = 0;
 		m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
-			shadermode != shader_mode::recompiler, true, *m_device, pipeline_layout).get();
+			shadermode != shader_mode::recompiler, true, *m_device, pipeline_layout);
 
 		vk::leave_uninterruptible();
 
@@ -1805,8 +1826,7 @@ void VKGSRender::load_program_env()
 			control_masks[0] = rsx::method_registers.shader_control();
 			control_masks[1] = current_fragment_program.texture_dimensions;
 
-			const auto fp_data = static_cast<u8*>(current_fragment_program.addr) + current_fp_metadata.program_start_offset;
-			std::memcpy(fp_buf + 16, fp_data, current_fp_metadata.program_ucode_length);
+			std::memcpy(fp_buf + 16, current_fragment_program.get_data(), current_fragment_program.ucode_length);
 			m_fragment_instructions_buffer.unmap();
 
 			m_fragment_instructions_buffer_info = { m_fragment_instructions_buffer.heap->value, fp_mapping, fp_block_length };
@@ -1955,7 +1975,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_open_query)
 	{
 		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
-		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
+		m_occlusion_query_manager->end_query(*m_current_command_buffer, open_query);
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
 	}
 
@@ -2010,7 +2030,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_rtts.prepare_render_target(*m_current_command_buffer,
 		m_framebuffer_layout.color_format, m_framebuffer_layout.depth_format,
 		m_framebuffer_layout.width, m_framebuffer_layout.height,
-		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode,
+		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode, m_framebuffer_layout.raster_type,
 		m_framebuffer_layout.color_addresses, m_framebuffer_layout.zeta_address,
 		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch,
 		(*m_device), *m_current_command_buffer);
@@ -2050,8 +2070,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_depth_surface_info.width = m_framebuffer_layout.width;
 		m_depth_surface_info.height = m_framebuffer_layout.height;
 		m_depth_surface_info.depth_format = m_framebuffer_layout.depth_format;
-		m_depth_surface_info.depth_buffer_float = m_framebuffer_layout.depth_float;
-		m_depth_surface_info.bpp = (m_framebuffer_layout.depth_format == rsx::surface_depth_format::z16? 2 : 4);
+		m_depth_surface_info.bpp = get_format_block_size_in_bytes(m_framebuffer_layout.depth_format);
 		m_depth_surface_info.samples = samples;
 	}
 
@@ -2078,7 +2097,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
 	{
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-		ds->set_depth_render_mode(!m_framebuffer_layout.depth_float);
 		m_fbo_images.push_back(ds);
 
 		m_depth_surface_info.address = m_framebuffer_layout.zeta_address;
@@ -2092,6 +2110,16 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_dma_transfer)
 	{
 		flush_command_queue();
+	}
+
+	if (!m_rtts.superseded_surfaces.empty())
+	{
+		for (auto& surface : m_rtts.superseded_surfaces)
+		{
+			m_texture_cache.discard_framebuffer_memory_region(*m_current_command_buffer, surface->get_memory_range());
+		}
+
+		m_rtts.superseded_surfaces.clear();
 	}
 
 	const auto color_fmt_info = get_compatible_gcm_format(m_framebuffer_layout.color_format);
@@ -2170,8 +2198,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
-	const auto fbo_width = rsx::apply_resolution_scale(m_framebuffer_layout.width, true);
-	const auto fbo_height = rsx::apply_resolution_scale(m_framebuffer_layout.height, true);
+	const auto [fbo_width, fbo_height] = rsx::apply_resolution_scale<true>(m_framebuffer_layout.width, m_framebuffer_layout.height);
 
 	if (m_draw_fbo)
 	{
@@ -2249,7 +2276,7 @@ void VKGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 	{
 		// End query
 		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
-		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
+		m_occlusion_query_manager->end_query(*m_current_command_buffer, open_query);
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
 	}
 
@@ -2273,7 +2300,7 @@ bool VKGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 		return false;
 
 	u32 oldest = data.indices.front();
-	return m_occlusion_query_pool.check_query_status(oldest);
+	return m_occlusion_query_manager->check_query_status(oldest);
 }
 
 void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* query)
@@ -2304,7 +2331,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 		for (const auto occlusion_id : data.indices)
 		{
 			// We only need one hit
-			if (auto value = m_occlusion_query_pool.get_query_result(occlusion_id))
+			if (auto value = m_occlusion_query_manager->get_query_result(occlusion_id))
 			{
 				query->result = 1;
 				break;
@@ -2312,7 +2339,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 		}
 	}
 
-	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);
+	m_occlusion_query_manager->free_queries(*m_current_command_buffer, data.indices);
 	data.indices.clear();
 }
 
@@ -2327,7 +2354,7 @@ void VKGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 	if (data.indices.empty())
 		return;
 
-	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);
+	m_occlusion_query_manager->free_queries(*m_current_command_buffer, data.indices);
 	data.indices.clear();
 }
 
@@ -2338,7 +2365,7 @@ void VKGSRender::emergency_query_cleanup(vk::command_buffer* commands)
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_open_query)
 	{
 		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
-		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
+		m_occlusion_query_manager->end_query(*m_current_command_buffer, open_query);
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
 	}
 }
@@ -2409,7 +2436,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		if (query_info.indices.size() == 1)
 		{
 			const auto& index = query_info.indices.front();
-			m_occlusion_query_pool.get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
+			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
 
 			vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, dst_stage,
@@ -2439,7 +2466,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		auto& query_info = m_occlusion_map[sources[i]->driver_handle];
 		for (const auto& index : query_info.indices)
 		{
-			m_occlusion_query_pool.get_query_result_indirect(*m_current_command_buffer, index, scratch->value, dst_offset);
+			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, scratch->value, dst_offset);
 			dst_offset += 4;
 		}
 	}
@@ -2481,9 +2508,4 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 void VKGSRender::end_conditional_rendering()
 {
 	thread::end_conditional_rendering();
-}
-
-bool VKGSRender::on_decompiler_task()
-{
-	return m_prog_buffer->async_update(8, *m_device, pipeline_layout).first;
 }

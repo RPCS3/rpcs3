@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
 #include <cstdint>
 #include "Utilities/types.h"
@@ -12,6 +12,20 @@
 namespace stx
 {
 	static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big);
+
+#ifdef _MSC_VER
+	template<class T, std::size_t... N>
+	static constexpr T bswap_impl(T i, std::index_sequence<N...>)
+	{
+		return static_cast<T>(((((i >> (N * 8)) & T{UINT8_MAX}) << ((sizeof(T) - 1 - N) * 8)) | ...));
+	};
+
+	template<class T, class U = typename std::make_unsigned<T>::type>
+	static constexpr U bswap(T i)
+	{
+		return bswap_impl<U>(i, std::make_index_sequence<sizeof(T)>{});
+	}
+#endif
 
 	template <typename T, std::size_t Align = alignof(T), std::size_t Size = sizeof(T)>
 	struct se_storage
@@ -42,6 +56,11 @@ namespace stx
 #if defined(__GNUG__)
 			return __builtin_bswap16(src);
 #else
+			if (std::is_constant_evaluated())
+			{
+				return stx::bswap(src);
+			}
+
 			return _byteswap_ushort(src);
 #endif
 		}
@@ -57,6 +76,11 @@ namespace stx
 #if defined(__GNUG__)
 			return __builtin_bswap32(src);
 #else
+			if (std::is_constant_evaluated())
+			{
+				return stx::bswap(src);
+			}
+
 			return _byteswap_ulong(src);
 #endif
 		}
@@ -72,6 +96,11 @@ namespace stx
 #if defined(__GNUG__)
 			return __builtin_bswap64(src);
 #else
+			if (std::is_constant_evaluated())
+			{
+				return stx::bswap(src);
+			}
+
 			return _byteswap_uint64(src);
 #endif
 		}
@@ -139,7 +168,7 @@ namespace stx
 		static_assert(!std::is_array<type>::value, "se_t<> error: invalid type (array)");
 		static_assert(sizeof(type) == alignof(type), "se_t<> error: unexpected alignment");
 
-		static stype to_data(type value) noexcept
+		static constexpr stype to_data(type value) noexcept
 		{
 			if constexpr (Swap)
 			{
@@ -166,16 +195,16 @@ namespace stx
 		using under = decltype(int_or_enum());
 
 	public:
-		se_t() = default;
+		constexpr se_t() = default;
 
-		se_t(const se_t& right) = default;
+		constexpr se_t(const se_t& right) = default;
 
-		se_t(type value) noexcept
+		constexpr se_t(type value) noexcept
 			: m_data(to_data(value))
 		{
 		}
 
-		type value() const noexcept
+		constexpr type value() const noexcept
 		{
 			if constexpr (Swap)
 			{
@@ -187,14 +216,14 @@ namespace stx
 			}
 		}
 
-		type get() const noexcept
+		constexpr type get() const noexcept
 		{
 			return value();
 		}
 
-		se_t& operator=(const se_t&) = default;
+		constexpr se_t& operator=(const se_t&) = default;
 
-		se_t& operator=(type value) noexcept
+		constexpr se_t& operator=(type value) noexcept
 		{
 			m_data = to_data(value);
 			return *this;
@@ -202,13 +231,13 @@ namespace stx
 
 		using simple_type = simple_t<T>;
 
-		operator type() const noexcept
+		constexpr operator type() const noexcept
 		{
 			return value();
 		}
 
 #ifdef _MSC_VER
-		explicit operator bool() const noexcept
+		explicit constexpr operator bool() const noexcept
 		{
 			static_assert(!type{});
 			static_assert(!std::is_floating_point_v<type>);
@@ -216,7 +245,7 @@ namespace stx
 		}
 #endif
 
-		auto operator~() const noexcept
+		constexpr auto operator~() const noexcept
 		{
 			if constexpr ((std::is_integral_v<T> || std::is_enum_v<T>) && std::is_convertible_v<T, int>)
 			{
@@ -232,13 +261,13 @@ namespace stx
 private:
 		// Compatible bit pattern cast
 		template <typename To, typename Test = int, typename T2>
-		static To right_arg_cast(const T2& rhs) noexcept
+		static constexpr To right_arg_cast(const T2& rhs) noexcept
 		{
 			return std::bit_cast<To>(static_cast<se_t<To, Swap>>(rhs));
 		}
 
 		template <typename To, typename Test = int, typename R, std::size_t Align2>
-		static To right_arg_cast(const se_t<R, Swap, Align2>& rhs) noexcept
+		static constexpr To right_arg_cast(const se_t<R, Swap, Align2>& rhs) noexcept
 		{
 			if constexpr ((std::is_integral_v<R> || std::is_enum_v<R>) && std::is_convertible_v<R, Test> && sizeof(R) == sizeof(T))
 			{
@@ -253,7 +282,7 @@ private:
 
 public:
 		template <typename T2, typename = decltype(+std::declval<const T2&>())>
-		bool operator==(const T2& rhs) const noexcept
+		constexpr bool operator==(const T2& rhs) const noexcept
 		{
 			using R = simple_t<T2>;
 
@@ -280,7 +309,7 @@ public:
 #if __cpp_impl_three_way_comparison >= 201711
 #else
 		template <typename T2, typename = decltype(+std::declval<const T2&>())>
-		bool operator!=(const T2& rhs) const noexcept
+		constexpr bool operator!=(const T2& rhs) const noexcept
 		{
 			return !operator==<T2>(rhs);
 		}
@@ -305,7 +334,7 @@ private:
 
 public:
 		template <typename T2>
-		auto operator&(const T2& rhs) const noexcept
+		constexpr auto operator&(const T2& rhs) const noexcept
 		{
 			if constexpr (check_args_for_bitwise_op<T2>())
 			{
@@ -318,7 +347,7 @@ public:
 		}
 
 		template <typename T2>
-		auto operator|(const T2& rhs) const noexcept
+		constexpr auto operator|(const T2& rhs) const noexcept
 		{
 			if constexpr (check_args_for_bitwise_op<T2>())
 			{
@@ -331,7 +360,7 @@ public:
 		}
 
 		template <typename T2>
-		auto operator^(const T2& rhs) const noexcept
+		constexpr auto operator^(const T2& rhs) const noexcept
 		{
 			if constexpr (check_args_for_bitwise_op<T2>())
 			{
@@ -344,42 +373,42 @@ public:
 		}
 
 		template <typename T1>
-		se_t& operator+=(const T1& rhs)
+		constexpr se_t& operator+=(const T1& rhs)
 		{
 			*this = value() + rhs;
 			return *this;
 		}
 
 		template <typename T1>
-		se_t& operator-=(const T1& rhs)
+		constexpr se_t& operator-=(const T1& rhs)
 		{
 			*this = value() - rhs;
 			return *this;
 		}
 
 		template <typename T1>
-		se_t& operator*=(const T1& rhs)
+		constexpr se_t& operator*=(const T1& rhs)
 		{
 			*this = value() * rhs;
 			return *this;
 		}
 
 		template <typename T1>
-		se_t& operator/=(const T1& rhs)
+		constexpr se_t& operator/=(const T1& rhs)
 		{
 			*this = value() / rhs;
 			return *this;
 		}
 
 		template <typename T1>
-		se_t& operator%=(const T1& rhs)
+		constexpr se_t& operator%=(const T1& rhs)
 		{
 			*this = value() % rhs;
 			return *this;
 		}
 
 		template <typename T1>
-		se_t& operator&=(const T1& rhs)
+		constexpr se_t& operator&=(const T1& rhs)
 		{
 			if constexpr (std::is_integral_v<T>)
 			{
@@ -392,7 +421,7 @@ public:
 		}
 
 		template <typename T1>
-		se_t& operator|=(const T1& rhs)
+		constexpr se_t& operator|=(const T1& rhs)
 		{
 			if constexpr (std::is_integral_v<T>)
 			{
@@ -405,7 +434,7 @@ public:
 		}
 
 		template <typename T1>
-		se_t& operator^=(const T1& rhs)
+		constexpr se_t& operator^=(const T1& rhs)
 		{
 			if constexpr (std::is_integral_v<T>)
 			{
@@ -418,34 +447,34 @@ public:
 		}
 
 		template <typename T1>
-		se_t& operator<<=(const T1& rhs)
+		constexpr se_t& operator<<=(const T1& rhs)
 		{
 			*this = value() << rhs;
 			return *this;
 		}
 
 		template <typename T1>
-		se_t& operator>>=(const T1& rhs)
+		constexpr se_t& operator>>=(const T1& rhs)
 		{
 			*this = value() >> rhs;
 			return *this;
 		}
 
-		se_t& operator++()
+		constexpr se_t& operator++()
 		{
 			T value = *this;
 			*this = ++value;
 			return *this;
 		}
 
-		se_t& operator--()
+		constexpr se_t& operator--()
 		{
 			T value = *this;
 			*this = --value;
 			return *this;
 		}
 
-		T operator++(int)
+		constexpr T operator++(int)
 		{
 			T value = *this;
 			T result = value++;
@@ -453,7 +482,7 @@ public:
 			return result;
 		}
 
-		T operator--(int)
+		constexpr T operator--(int)
 		{
 			T value = *this;
 			T result = value--;

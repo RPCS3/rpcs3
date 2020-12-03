@@ -2,7 +2,6 @@
 
 #include "stdafx.h"
 
-#include <exception>
 #include <string>
 #include <functional>
 #include <vector>
@@ -17,6 +16,7 @@
 #include "GLTexture.h"
 #include "../Common/TextureUtils.h"
 #include "../Common/texture_cache.h"
+#include "../Common/BufferUtils.h"
 
 class GLGSRender;
 
@@ -95,6 +95,11 @@ namespace gl
 				ASSERT(!managed_texture);
 			}
 
+			if (auto rtt = dynamic_cast<gl::render_target*>(image))
+			{
+				swizzled = (rtt->raster_type != rsx::surface_raster_type::linear);
+			}
+
 			flushed = false;
 			synchronized = false;
 			sync_timestamp = 0ull;
@@ -146,9 +151,7 @@ namespace gl
 		void dma_transfer(gl::command_context& /*cmd*/, gl::texture* src, const areai& /*src_area*/, const utils::address_range& /*valid_range*/, u32 pitch)
 		{
 			init_buffer(src);
-
 			glGetError();
-			pbo.bind(buffer::target::pixel_pack);
 
 			if (context == rsx::texture_upload_context::dma)
 			{
@@ -156,25 +159,74 @@ namespace gl
 				const auto format_info = gl::get_format_type(src->get_internal_format());
 				format = static_cast<gl::texture::format>(format_info.format);
 				type = static_cast<gl::texture::type>(format_info.type);
+				pack_unpack_swap_bytes = format_info.swap_bytes;
+			}
 
-				if ((src->aspect() & gl::image_aspect::stencil) == 0)
+			real_pitch = src->pitch();
+			rsx_pitch = pitch;
+
+			bool use_driver_pixel_transform = true;
+			if (get_driver_caps().ARB_compute_shader_supported) [[likely]]
+			{
+				if (src->aspect() & image_aspect::depth)
 				{
-					pack_unpack_swap_bytes = format_info.swap_bytes;
-				}
-				else
-				{
-					// Z24S8 decode is done on the CPU for now
-					pack_unpack_swap_bytes = false;
+					buffer scratch_mem;
+
+					// Invoke compute
+					if (auto error = glGetError(); !error) [[likely]]
+					{
+						pixel_buffer_layout pack_info{};
+						image_memory_requirements mem_info{};
+
+						pack_info.format = static_cast<GLenum>(format);
+						pack_info.type = static_cast<GLenum>(type);
+						pack_info.size = (src->aspect() & image_aspect::stencil) ? 4 : 2;
+						pack_info.swap_bytes = true;
+
+						mem_info.image_size_in_texels = src->width() * src->height();
+						mem_info.image_size_in_bytes = src->pitch() * src->height();
+						mem_info.memory_required = 0;
+
+						if (pack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
+						{
+							// D32FS8 can be read back as D24S8 or D32S8X24. In case of the latter, double memory requirements
+							mem_info.image_size_in_bytes *= 2;
+						}
+
+						void* out_offset = copy_image_to_buffer(pack_info, src, &scratch_mem, 0, { {}, src->size3D() }, &mem_info);
+
+						glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
+						glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+
+						real_pitch = pack_info.size * src->width();
+						const u64 data_length = pack_info.size * mem_info.image_size_in_texels;
+						scratch_mem.copy_to(&pbo, reinterpret_cast<u64>(out_offset), 0, data_length);
+					}
+					else
+					{
+						rsx_log.error("Memory transfer failed with error 0x%x. Format=0x%x, Type=0x%x", error, static_cast<u32>(format), static_cast<u32>(type));
+					}
+
+					scratch_mem.remove();
+					use_driver_pixel_transform = false;
 				}
 			}
 
-			pixel_pack_settings pack_settings;
-			pack_settings.alignment(1);
-			pack_settings.swap_bytes(pack_unpack_swap_bytes);
+			if (use_driver_pixel_transform)
+			{
+				if (src->aspect() & image_aspect::stencil)
+				{
+					pack_unpack_swap_bytes = false;
+				}
 
-			src->copy_to(nullptr, format, type, pack_settings);
-			real_pitch = src->pitch();
-			rsx_pitch = pitch;
+				pbo.bind(buffer::target::pixel_pack);
+
+				pixel_pack_settings pack_settings;
+				pack_settings.alignment(1);
+				pack_settings.swap_bytes(pack_unpack_swap_bytes);
+
+				src->copy_to(nullptr, format, type, pack_settings);
+			}
 
 			if (auto error = glGetError())
 			{
@@ -292,29 +344,26 @@ namespace gl
 			const u32 valid_length = valid_range.second;
 			void *dst = get_ptr(get_section_base() + valid_offset);
 
-			if (pack_unpack_swap_bytes)
+			if (!gl::get_driver_caps().ARB_compute_shader_supported)
 			{
-				// Shuffle
-				// TODO: Do this with a compute shader
 				switch (type)
 				{
 				case gl::texture::type::sbyte:
 				case gl::texture::type::ubyte:
 				{
-					if (pack_unpack_swap_bytes)
-					{
-						// byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
-						rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, align(valid_length, rsx_pitch) / rsx_pitch);
-					}
+					// byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
+					verify(HERE), !pack_unpack_swap_bytes;
 					break;
 				}
 				case gl::texture::type::uint_24_8:
 				{
+					// Swap bytes on D24S8 does not swap the whole dword, just shuffles the 3 bytes for D24
+					// In this regard, D24S8 is the same structure on both PC and PS3, but the endianness of the whole block is reversed on PS3
 					verify(HERE), pack_unpack_swap_bytes == false;
 					verify(HERE), real_pitch == (width * 4);
 					if (rsx_pitch == real_pitch) [[likely]]
 					{
-						rsx::convert_le_d24x8_to_be_d24x8(dst, dst, valid_length / 4, 1);
+						stream_data_to_memory_swapped_u32<true>(dst, dst, valid_length / 4, 4);
 					}
 					else
 					{
@@ -322,7 +371,7 @@ namespace gl
 						u8* data = static_cast<u8*>(dst);
 						for (u32 row = 0; row < num_rows; ++row)
 						{
-							rsx::convert_le_d24x8_to_be_d24x8(data, data, width, 1);
+							stream_data_to_memory_swapped_u32<true>(data, data, width, 4);
 							data += rsx_pitch;
 						}
 					}
@@ -330,6 +379,31 @@ namespace gl
 				}
 				default:
 					break;
+				}
+			}
+
+			if (is_swizzled())
+			{
+				// This format is completely worthless to CPU processing algorithms where cache lines on die are linear.
+				// If this is happening, usually it means it was not a planned readback (e.g shared pages situation)
+				rsx_log.warning("[Performance warning] CPU readback of swizzled data");
+
+				// Read-modify-write to avoid corrupting already resident memory outside texture region
+				std::vector<u8> tmp_data(rsx_pitch * height);
+				std::memcpy(tmp_data.data(), dst, tmp_data.size());
+
+				switch (type)
+				{
+				case gl::texture::type::uint_8_8_8_8:
+				case gl::texture::type::uint_24_8:
+					rsx::convert_linear_swizzle<u32, false>(tmp_data.data(), dst, width, height, rsx_pitch);
+					break;
+				case gl::texture::type::ushort_5_6_5:
+				case gl::texture::type::ushort:
+					rsx::convert_linear_swizzle<u16, false>(tmp_data.data(), dst, width, height, rsx_pitch);
+					break;
+				default:
+					rsx_log.error("Unexpected swizzled texture format 0x%x", static_cast<u32>(format));
 				}
 			}
 
@@ -485,14 +559,14 @@ namespace gl
 		}
 
 		gl::texture_view* create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_type, u32 gcm_format,
-				u16 x, u16 y, u16 width, u16 height, const rsx::texture_channel_remap_t& remap, bool copy)
+				u16 x, u16 y, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap, bool copy)
 		{
 			if (sized_internal_fmt == GL_NONE)
 			{
 				sized_internal_fmt = gl::get_sized_internal_format(gcm_format);
 			}
 
-			std::unique_ptr<gl::texture> dst = std::make_unique<gl::viewable_image>(dst_type, width, height, 1, 1, sized_internal_fmt);
+			std::unique_ptr<gl::texture> dst = std::make_unique<gl::viewable_image>(dst_type, width, height, depth, mipmaps, sized_internal_fmt, rsx::classify_format(gcm_format));
 
 			if (copy)
 			{
@@ -706,57 +780,31 @@ namespace gl
 		gl::texture_view* create_temporary_subresource_view(gl::command_context &cmd, gl::texture** src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
 				const rsx::texture_channel_remap_t& remap_vector) override
 		{
-			return create_temporary_subresource_impl(cmd, *src, GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h, remap_vector, true);
+			return create_temporary_subresource_impl(cmd, *src, GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h, 1, 1, remap_vector, true);
 		}
 
 		gl::texture_view* create_temporary_subresource_view(gl::command_context &cmd, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
 				const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			return create_temporary_subresource_impl(cmd, src, static_cast<GLenum>(src->get_internal_format()),
-					GL_TEXTURE_2D, gcm_format, x, y, w, h, remap_vector, true);
+					GL_TEXTURE_2D, gcm_format, x, y, w, h, 1, 1, remap_vector, true);
 		}
 
-		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& /*remap_vector*/) override
+		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& remap_vector) override
 		{
-			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
-			std::unique_ptr<gl::texture> dst_image = std::make_unique<gl::viewable_image>(GL_TEXTURE_CUBE_MAP, size, size, 1, 1, ifmt);
-			auto view = std::make_unique<gl::texture_view>(dst_image.get(), GL_TEXTURE_CUBE_MAP, ifmt);
+			auto _template = get_template_from_collection_impl(sources);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_3D, gcm_format, 0, 0, size, size, 1, 1, remap_vector, false);
 
-			//Empty GL_ERROR
-			glGetError();
-
-			copy_transfer_regions_impl(cmd, dst_image.get(), sources);
-
-			if (GLenum err = glGetError())
-			{
-				rsx_log.warning("Failed to copy image subresource with GL error 0x%X", err);
-				return nullptr;
-			}
-
-			auto result = view.get();
-			m_temporary_surfaces.emplace_back(dst_image, view);
+			copy_transfer_regions_impl(cmd, result->image(), sources);
 			return result;
 		}
 
-		gl::texture_view* generate_3d_from_2d_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& /*remap_vector*/) override
+		gl::texture_view* generate_3d_from_2d_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& remap_vector) override
 		{
-			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
-			std::unique_ptr<gl::texture> dst_image = std::make_unique<gl::viewable_image>(GL_TEXTURE_3D, width, height, depth, 1, ifmt);
-			auto view = std::make_unique<gl::texture_view>(dst_image.get(), GL_TEXTURE_3D, ifmt);
+			auto _template = get_template_from_collection_impl(sources);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_3D, gcm_format, 0, 0, width, height, depth, 1, remap_vector, false);
 
-			//Empty GL_ERROR
-			glGetError();
-
-			copy_transfer_regions_impl(cmd, dst_image.get(), sources);
-
-			if (GLenum err = glGetError())
-			{
-				rsx_log.warning("Failed to copy image subresource with GL error 0x%X", err);
-				return nullptr;
-			}
-
-			auto result = view.get();
-			m_temporary_surfaces.emplace_back(dst_image, view);
+			copy_transfer_regions_impl(cmd, result->image(), sources);
 			return result;
 		}
 
@@ -764,30 +812,21 @@ namespace gl
 				const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			auto _template = get_template_from_collection_impl(sections_to_copy);
-			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, 1, 1, remap_vector, false);
 
 			copy_transfer_regions_impl(cmd, result->image(), sections_to_copy);
 			return result;
 		}
 
-		gl::texture_view* generate_2d_mipmaps_from_images(gl::command_context& cmd, u32 /*gcm_format*/, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
+		gl::texture_view* generate_2d_mipmaps_from_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
 			const rsx::texture_channel_remap_t& remap_vector) override
 		{
-			const auto _template = sections_to_copy.front().src;
-			const GLenum ifmt = static_cast<GLenum>(_template->get_internal_format());
-			const u8 mipmaps = ::narrow<u8>(sections_to_copy.size());
-			const auto swizzle = _template->get_native_component_layout();
+			const auto mipmaps = ::narrow<u8>(sections_to_copy.size());
+			auto _template = get_template_from_collection_impl(sections_to_copy);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, 1, mipmaps, remap_vector, false);
 
-			auto image_ptr = new gl::viewable_image(GL_TEXTURE_2D, width, height, 1, mipmaps, ifmt);
-			image_ptr->set_native_component_layout(swizzle);
-
-			copy_transfer_regions_impl(cmd, image_ptr, sections_to_copy);
-
-			auto view = image_ptr->get_view(get_remap_encoding(remap_vector), remap_vector);
-
-			std::unique_ptr<gl::texture> dst_image(image_ptr);
-			m_temporary_surfaces.emplace_back(dst_image);
-			return view;
+			copy_transfer_regions_impl(cmd, result->image(), sections_to_copy);
+			return result;
 		}
 
 		void release_temporary_subresource(gl::texture_view* view) override
@@ -818,7 +857,7 @@ namespace gl
 		}
 
 		cached_texture_section* create_new_texture(gl::command_context&, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
-			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags) override
+			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::texture_create_flags flags) override
 		{
 			auto image = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
 
@@ -834,6 +873,7 @@ namespace gl
 			cached.set_context(context);
 			cached.set_image_type(type);
 			cached.set_gcm_format(gcm_format);
+			cached.set_swizzled(swizzled);
 
 			cached.create(width, height, depth, mipmaps, image, pitch, true);
 			cached.set_dirty(false);
@@ -899,13 +939,12 @@ namespace gl
 		}
 
 		cached_texture_section* upload_image_from_cpu(gl::command_context &cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
-			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool input_swizzled) override
+			rsx::texture_upload_context context, const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool input_swizzled) override
 		{
-			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type,
+			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type, input_swizzled,
 				rsx::texture_create_flags::default_component_order);
 
-			gl::upload_texture(section->get_raw_texture()->id(), gcm_format, width, height, depth, mipmaps,
-					input_swizzled, type, subresource_layout);
+			gl::upload_texture(section->get_raw_texture(), gcm_format, input_swizzled, subresource_layout);
 
 			section->last_write_tag = rsx::get_shared_tag();
 			return section;
@@ -964,13 +1003,12 @@ namespace gl
 			case CELL_GCM_TEXTURE_DEPTH24_D8:
 			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 				return (ifmt == gl::texture::internal_format::depth24_stencil8 ||
-						ifmt == gl::texture::internal_format::depth32f_stencil8 ||
-						ifmt == gl::texture::internal_format::depth_stencil);
+						ifmt == gl::texture::internal_format::depth32f_stencil8);
 			case CELL_GCM_TEXTURE_X16:
 			case CELL_GCM_TEXTURE_DEPTH16:
 			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 				return (ifmt == gl::texture::internal_format::depth16 ||
-						ifmt == gl::texture::internal_format::depth);
+						ifmt == gl::texture::internal_format::depth32f);
 			}
 		}
 

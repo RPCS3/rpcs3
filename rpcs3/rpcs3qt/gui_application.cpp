@@ -8,11 +8,14 @@
 #include "persistent_settings.h"
 #include "gs_frame.h"
 #include "gl_gs_frame.h"
+#include "display_sleep_control.h"
+#include "localized_emu.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
 #endif
 
+#include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/RSX/Overlays/overlay_perf_metrics.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
@@ -26,6 +29,13 @@
 #include <QDirIterator>
 
 #include <clocale>
+
+#include "Emu/RSX/Null/NullGSRender.h"
+#include "Emu/RSX/GL/GLGSRender.h"
+
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+#include "Emu/RSX/VK/VKGSRender.h"
+#endif
 
 LOG_CHANNEL(gui_log, "GUI");
 
@@ -48,8 +58,14 @@ void gui_application::Init()
 	m_gui_settings.reset(new gui_settings());
 	m_persistent_settings.reset(new persistent_settings());
 
+	// Get deprecated active user (before August 2nd 2020)
+	QString active_user = m_gui_settings->GetValue(gui::um_active_user).toString();
+
+	// Get active user with deprecated active user as fallback
+	active_user = m_persistent_settings->GetCurrentUser(active_user.isEmpty() ? "00000001" : active_user);
+
 	// Force init the emulator
-	InitializeEmulator(m_gui_settings->GetCurrentUser().toStdString(), true, m_show_gui);
+	InitializeEmulator(active_user.toStdString(), true, m_show_gui);
 
 	// Create the main window
 	if (m_show_gui)
@@ -267,17 +283,53 @@ void gui_application::InitializeCallbacks()
 {
 	EmuCallbacks callbacks = CreateCallbacks();
 
-	callbacks.exit = [this](bool force_quit)
+	callbacks.exit = [this](bool force_quit) -> bool
 	{
 		// Close rpcs3 if closed in no-gui mode
 		if (force_quit || !m_main_window)
 		{
+			if (m_main_window)
+			{
+				// Close main window in order to save its window state
+				m_main_window->close();
+			}
 			quit();
+			return true;
 		}
+
+		return false;
 	};
 	callbacks.call_after = [this](std::function<void()> func)
 	{
 		RequestCallAfter(std::move(func));
+	};
+
+	callbacks.init_gs_render = []()
+	{
+		switch (video_renderer type = g_cfg.video.renderer)
+		{
+		case video_renderer::null:
+		{
+			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
+			break;
+		}
+		case video_renderer::opengl:
+		{
+			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
+			break;
+		}
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+		case video_renderer::vulkan:
+		{
+			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
+			break;
+		}
+#endif
+		default:
+		{
+			fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+		}
+		}
 	};
 
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
@@ -304,6 +356,16 @@ void gui_application::InitializeCallbacks()
 			default: gui_log.fatal("Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value); break;
 			}
 		}
+	};
+
+	callbacks.get_localized_string = [](localized_string_id id, const char* args) -> std::string
+	{
+		return localized_emu::get_string(id, args);
+	};
+
+	callbacks.get_localized_u32string = [](localized_string_id id, const char* args) -> std::u32string
+	{
+		return localized_emu::get_u32string(id, args);
 	};
 
 	Emu.SetCallbacks(std::move(callbacks));
@@ -343,8 +405,7 @@ void gui_application::UpdatePlaytime()
 		return;
 	}
 
-	const qint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.restart();
-	m_persistent_settings->SetPlaytime(serial, playtime);
+	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart());
 	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
 }
 
@@ -362,8 +423,7 @@ void gui_application::StopPlaytime()
 		return;
 	}
 
-	const qint64 playtime = m_persistent_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
-	m_persistent_settings->SetPlaytime(serial, playtime);
+	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart());
 	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
 	m_timer_playtime.invalidate();
 }
@@ -452,7 +512,20 @@ void gui_application::OnChangeStyleSheetRequest(const QString& path)
 
 void gui_application::OnEmuSettingsChange()
 {
+	if (Emu.IsRunning())
+	{
+		if (g_cfg.misc.prevent_display_sleep)
+		{
+			enable_display_sleep();
+		}
+		else
+		{
+			disable_display_sleep();
+		}
+	}
+
 	Emu.ConfigureLogs();
+	audio::configure_audio();
 	rsx::overlays::reset_performance_overlay();
 }
 

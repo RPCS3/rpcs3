@@ -1,11 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "cellVpost.h"
 
 #include "Emu/Memory/vm_ptr.h"
 
 // Error Codes
-enum
+enum CellSailError : u32
 {
 	CELL_SAIL_ERROR_INVALID_ARG        = 0x80610701,
 	CELL_SAIL_ERROR_INVALID_STATE      = 0x80610702,

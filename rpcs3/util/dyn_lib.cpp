@@ -1,5 +1,5 @@
 ﻿#include "stdafx.h"
-#include "dynamic_library.h"
+#include "dyn_lib.hpp"
 
 #ifdef _WIN32
 	#include <Windows.h>

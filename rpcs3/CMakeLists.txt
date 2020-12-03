@@ -83,7 +83,7 @@ set_target_properties(rpcs3
 		AUTOUIC ON)
 
 target_link_libraries(rpcs3 rpcs3_emu rpcs3_ui)
-target_link_libraries(rpcs3 3rdparty::discord-rpc 3rdparty::qt5 3rdparty::hidapi 3rdparty::libusb)
+target_link_libraries(rpcs3 3rdparty::discord-rpc 3rdparty::qt5 3rdparty::hidapi 3rdparty::libusb 3rdparty::wolfssl)
 target_link_libraries(rpcs3 ${ADDITIONAL_LIBS})
 
 # Win resource file
@@ -107,7 +107,7 @@ if(UNIX)
 endif()
 
 if(WIN32)
-	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib setupapi.lib)
+	target_link_libraries(rpcs3 ws2_32.lib Iphlpapi.lib Winmm.lib Psapi.lib gdi32.lib setupapi.lib)
 else()
 	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS})
 endif()

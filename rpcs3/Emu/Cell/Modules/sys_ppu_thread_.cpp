@@ -125,6 +125,8 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 
 error_code sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname)
 {
+	ppu.state += cpu_flag::wait;
+
 	sysPrxForUser.warning("sys_ppu_thread_create(thread_id=*0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=%s)",
 		thread_id, entry, arg, prio, stacksize, flags, threadname);
 
@@ -137,7 +139,7 @@ error_code sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 en
 	}
 
 	// Call the syscall
-	if (error_code res = _sys_ppu_thread_create(thread_id, vm::make_var(ppu_thread_param_t{ vm::cast(entry), tls_addr + 0x7030 }), arg, 0, prio, stacksize, flags, threadname))
+	if (error_code res = _sys_ppu_thread_create(ppu, thread_id, vm::make_var(ppu_thread_param_t{ vm::cast(entry), tls_addr + 0x7030 }), arg, 0, prio, stacksize, flags, threadname))
 	{
 		return res;
 	}

@@ -1,5 +1,4 @@
-﻿#ifndef BETYPE_H_GUARD
-#define BETYPE_H_GUARD
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
 #include "types.h"
 #include "util/endian.hpp"
@@ -492,10 +491,10 @@ template <typename T>
 using to_le_t = typename to_se<T, std::endian::big == std::endian::native>::type;
 
 // BE/LE aliases for atomic_t
-template <typename T>
-using atomic_be_t = atomic_t<be_t<T>>;
-template <typename T>
-using atomic_le_t = atomic_t<le_t<T>>;
+template <typename T, std::size_t Align = alignof(T)>
+using atomic_be_t = atomic_t<be_t<T>, Align>;
+template <typename T, std::size_t Align = alignof(T)>
+using atomic_le_t = atomic_t<le_t<T>, Align>;
 
 template <typename T, bool Se, std::size_t Align>
 struct fmt_unveil<se_t<T, Se, Align>, void>
@@ -508,4 +507,5 @@ struct fmt_unveil<se_t<T, Se, Align>, void>
 	}
 };
 
-#endif // BETYPE_H_GUARD
+static_assert(be_t<u16>(1) + be_t<u32>(2) + be_t<u64>(3) == 6);
+static_assert(le_t<u16>(1) + le_t<u32>(2) + le_t<u64>(3) == 6);

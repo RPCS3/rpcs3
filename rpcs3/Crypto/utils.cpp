@@ -8,6 +8,7 @@
 #include <time.h>
 #include "Utilities/StrUtil.h"
 #include "Utilities/span.h"
+#include "Utilities/File.h"
 
 #include <memory>
 #include <string>
@@ -120,16 +121,16 @@ void cmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_
 	aes_cmac(&ctx, in_len, in, hash);
 }
 
-char* extract_file_name(const char* file_path, char real_file_name[MAX_PATH])
+char* extract_file_name(const char* file_path, char real_file_name[CRYPTO_MAX_PATH])
 {
 	std::string_view v(file_path);
 
-	if (auto pos = v.find_last_of("/\\"); pos != umax)
+	if (auto pos = v.find_last_of(fs::delim); pos != umax)
 	{
 		v.remove_prefix(pos + 1);
 	}
 
-	gsl::span r(real_file_name, MAX_PATH);
+	gsl::span r(real_file_name, CRYPTO_MAX_PATH);
 	strcpy_trunc(r, v);
 	return real_file_name;
 }

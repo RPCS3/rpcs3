@@ -3,7 +3,11 @@
 #include "pad_config_types.h"
 
 #include "Utilities/Config.h"
-#include "Utilities/File.h"
+
+namespace pad
+{
+	constexpr static std::string_view keyboard_device_name = "Keyboard";
+}
 
 struct cfg_player final : cfg::node
 {
@@ -17,9 +21,11 @@ struct cfg_player final : cfg::node
 
 struct cfg_input final : cfg::node
 {
-	std::string cfg_name = fs::get_config_dir() + "/config_input.yml";
+	cfg_input();
 
-	cfg_player player1{ this, "Player 1 Input", pad_handler::keyboard };
+	std::string cfg_name;
+
+	cfg_player player1{ this, "Player 1 Input", pad_handler::null };
 	cfg_player player2{ this, "Player 2 Input", pad_handler::null };
 	cfg_player player3{ this, "Player 3 Input", pad_handler::null };
 	cfg_player player4{ this, "Player 4 Input", pad_handler::null };
@@ -27,7 +33,7 @@ struct cfg_input final : cfg::node
 	cfg_player player6{ this, "Player 6 Input", pad_handler::null };
 	cfg_player player7{ this, "Player 7 Input", pad_handler::null };
 
-	cfg_player* player[7]{ &player1, &player2, &player3, &player4, &player5, &player6, &player7 }; // Thanks gcc! 
+	cfg_player* player[7]{ &player1, &player2, &player3, &player4, &player5, &player6, &player7 }; // Thanks gcc!
 
 	bool load(const std::string& title_id = "");
 	void save(const std::string& title_id = "");
@@ -69,7 +75,8 @@ struct pad_config final : cfg::node
 	cfg::_int<0, 1000000> rstickdeadzone{ this, "Right Stick Deadzone", 0 };
 	cfg::_int<0, 1000000> ltriggerthreshold{ this, "Left Trigger Threshold", 0 };
 	cfg::_int<0, 1000000> rtriggerthreshold{ this, "Right Trigger Threshold", 0 };
-	cfg::_int<0, 1000000> padsquircling{ this, "Pad Squircling Factor", 0 };
+	cfg::_int<0, 1000000> lpadsquircling{ this, "Left Pad Squircling Factor", 0 };
+	cfg::_int<0, 1000000> rpadsquircling{ this, "Right Pad Squircling Factor", 0 };
 
 	cfg::_int<0, 255> colorR{ this, "Color Value R", 0 };
 	cfg::_int<0, 255> colorG{ this, "Color Value G", 0 };
@@ -97,9 +104,9 @@ struct pad_config final : cfg::node
 	cfg::_int<0, 65535> vendor_id{ this, "Vendor ID", 0 };
 	cfg::_int<0, 65535> product_id{ this, "Product ID", 0 };
 
-	bool exist();
+	bool exist() const;
 	bool load();
-	void save();
+	void save() const;
 };
 
 extern cfg_input g_cfg_input;

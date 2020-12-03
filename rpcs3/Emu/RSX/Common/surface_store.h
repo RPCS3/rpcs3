@@ -1,10 +1,8 @@
 ﻿#pragma once
 
-#include "Emu/Memory/vm.h"
 #include "surface_utils.h"
-#include "../GCM.h"
+#include "../gcm_enums.h"
 #include "../rsx_utils.h"
-#include "Utilities/span.h"
 #include <list>
 
 namespace rsx
@@ -52,6 +50,8 @@ namespace rsx
 		bool m_invalidate_on_write = false;
 		bool m_skip_write_updates = false;
 
+		rsx::surface_raster_type m_active_raster_type = rsx::surface_raster_type::linear;
+
 	public:
 		std::pair<u8, u8> m_bound_render_targets_config = {};
 		std::array<std::pair<u32, surface_type>, 4> m_bound_render_targets = {};
@@ -60,6 +60,9 @@ namespace rsx
 
 		// List of sections derived from a section that has been split and invalidated
 		std::vector<surface_type> orphaned_surfaces;
+
+		// List of sections that have been wholly inherited and invalidated
+		std::vector<surface_type> superseded_surfaces;
 
 		std::list<surface_storage_type> invalidated_resources;
 		u64 cache_tag = 1ull; // Use 1 as the start since 0 is default tag on new surfaces
@@ -410,6 +413,7 @@ namespace rsx
 
 					invalidate(object);
 					storage.erase(e.first);
+					superseded_surfaces.push_back(surface);
 				}
 			}
 		}
@@ -644,7 +648,7 @@ namespace rsx
 		surface_type bind_address_as_depth_stencil(
 			command_list_type command_list,
 			u32 address,
-			surface_depth_format depth_format,
+			surface_depth_format2 depth_format,
 			surface_antialiasing antialias,
 			size_t width, size_t height, size_t pitch,
 			Args&&... extra_params)
@@ -652,51 +656,8 @@ namespace rsx
 			return bind_surface_address<true>(
 				command_list, address, depth_format, antialias,
 				width, height, pitch,
-				depth_format == rsx::surface_depth_format::z16? 2 : 4,
+				get_format_block_size_in_bytes(depth_format),
 				std::forward<Args>(extra_params)...);
-		}
-
-		bool check_memory_overload(u64 max_safe_memory) const
-		{
-			if (m_active_memory_used <= max_safe_memory) [[likely]]
-			{
-				return false;
-			}
-			else
-			{
-				rsx_log.warning("Surface cache is using too much memory! (%dM)", m_active_memory_used / 0x100000);
-				return true;
-			}
-		}
-
-		void handle_memory_overload(command_list_type cmd)
-		{
-			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data)
-			{
-				for (auto It = data.begin(); It != data.end();)
-				{
-					auto surface = Traits::get(It->second);
-					if (surface->dirty())
-					{
-						// Force memory barrier to release some resources
-						surface->memory_barrier(cmd, rsx::surface_access::read);
-					}
-					else if (!surface->test())
-					{
-						// Remove this
-						invalidate(It->second);
-						It = data.erase(It);
-					}
-					else
-					{
-						++It;
-					}
-				}
-			};
-
-			// Try and find old surfaces to remove
-			process_list_function(m_render_targets_storage);
-			process_list_function(m_depth_stencil_storage);
 		}
 
 	public:
@@ -707,10 +668,11 @@ namespace rsx
 		template <typename ...Args>
 		void prepare_render_target(
 			command_list_type command_list,
-			surface_color_format color_format, surface_depth_format depth_format,
+			surface_color_format color_format, surface_depth_format2 depth_format,
 			u32 clip_horizontal_reg, u32 clip_vertical_reg,
 			surface_target set_surface_target,
 			surface_antialiasing antialias,
+			surface_raster_type raster_type,
 			const std::array<u32, 4> &surface_addresses, u32 address_z,
 			const std::array<u32, 4> &surface_pitch, u32 zeta_pitch,
 			Args&&... extra_params)
@@ -720,6 +682,7 @@ namespace rsx
 
 			cache_tag = rsx::get_shared_tag();
 			m_invalidate_on_write = (antialias != rsx::surface_antialiasing::center_1_sample);
+			m_active_raster_type = raster_type;
 			m_bound_buffers_count = 0;
 
 			// Make previous RTTs sampleable
@@ -1034,7 +997,7 @@ namespace rsx
 					auto& surface = m_bound_render_targets[i].second;
 					if (surface->last_use_tag != write_tag)
 					{
-						m_bound_render_targets[i].second->on_write(write_tag);
+						m_bound_render_targets[i].second->on_write(write_tag, surface_state_flags::require_resolve, m_active_raster_type);
 					}
 					else if (m_invalidate_on_write)
 					{
@@ -1050,7 +1013,7 @@ namespace rsx
 				auto& surface = m_bound_depth_stencil.second;
 				if (surface->last_use_tag != write_tag)
 				{
-					m_bound_depth_stencil.second->on_write(write_tag);
+					m_bound_depth_stencil.second->on_write(write_tag, surface_state_flags::require_resolve, m_active_raster_type);
 				}
 				else if (m_invalidate_on_write)
 				{
@@ -1117,6 +1080,53 @@ namespace rsx
 					ds.second->state_flags |= rsx::surface_state_flags::erase_bkgnd;
 				}
 			}
+		}
+
+		bool check_memory_usage(u64 max_safe_memory) const
+		{
+			if (m_active_memory_used <= max_safe_memory) [[likely]]
+			{
+				return false;
+			}
+			else
+			{
+				rsx_log.warning("Surface cache is using too much memory! (%dM)", m_active_memory_used / 0x100000);
+				return true;
+			}
+		}
+
+		bool handle_memory_pressure(command_list_type cmd, problem_severity /*severity*/)
+		{
+			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data)
+			{
+				for (auto It = data.begin(); It != data.end();)
+				{
+					auto surface = Traits::get(It->second);
+					if (surface->dirty())
+					{
+						// Force memory barrier to release some resources
+						surface->memory_barrier(cmd, rsx::surface_access::read);
+					}
+					else if (!surface->test())
+					{
+						// Remove this
+						invalidate(It->second);
+						It = data.erase(It);
+					}
+					else
+					{
+						++It;
+					}
+				}
+			};
+
+			const auto old_usage = m_active_memory_used;
+
+			// Try and find old surfaces to remove
+			process_list_function(m_render_targets_storage);
+			process_list_function(m_depth_stencil_storage);
+
+			return (m_active_memory_used < old_usage);
 		}
 	};
 }

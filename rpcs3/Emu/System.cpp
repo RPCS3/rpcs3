@@ -3,6 +3,7 @@
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
+#include "Emu/perf_meter.hpp"
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUCallback.h"
@@ -16,10 +17,10 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
-#include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Capture/rsx_replay.h"
 
 #include "Loader/PSF.h"
@@ -55,7 +56,9 @@ LOG_CHANNEL(sys_log, "SYS");
 
 stx::manual_fixed_typemap<void> g_fixed_typemap;
 
-bool g_use_rtm;
+bool g_use_rtm = false;
+u64 g_rtm_tx_limit1 = 0;
+u64 g_rtm_tx_limit2 = 0;
 
 std::string g_cfg_defaults;
 
@@ -79,6 +82,16 @@ atomic_t<u32> g_progr_fdone{0};
 atomic_t<u32> g_progr_ptotal{0};
 atomic_t<u32> g_progr_pdone{0};
 
+namespace
+{
+	struct progress_dialog_server;
+}
+
+namespace atomic_wait
+{
+	extern void parse_hashtable(bool(*cb)(u64 id, u32 refs, u64 ptr, u32 stats));
+}
+
 template<>
 void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 {
@@ -95,6 +108,7 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 		case game_boot_result::decryption_error: return "Failed to decrypt content";
 		case game_boot_result::file_creation_error: return "Could not create important files";
 		case game_boot_result::firmware_missing: return "Firmware is missing";
+		case game_boot_result::unsupported_disc_type: return "This disc type is not supported yet";
 		}
 		return unknown;
 	});
@@ -117,22 +131,61 @@ void Emulator::Init()
 
 	idm::init();
 	g_fxo->reset();
+	g_fxo->init<named_thread<progress_dialog_server>>();
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
+
+	// Not all renderers are known at compile time, so set a provided default if possible
+	if (m_default_renderer == video_renderer::vulkan && !m_default_graphics_adapter.empty())
+	{
+		g_cfg.video.renderer.set(m_default_renderer);
+		g_cfg.video.vk.adapter.from_string(m_default_graphics_adapter);
+	}
+
 	g_cfg_defaults = g_cfg.to_string();
 
-	// Reload global configuration
-	const auto cfg_path = fs::get_config_dir() + "/config.yml";
-
-	if (const fs::file cfg_file{cfg_path, fs::read + fs::create})
+	// Reload override configuration set via command line
+	if (!m_config_override_path.empty())
 	{
-		g_cfg.from_string(cfg_file.to_string());
-		g_cfg.name = cfg_path;
+		if (const fs::file cfg_file{m_config_override_path, fs::read + fs::create})
+		{
+			if (!g_cfg.from_string(cfg_file.to_string()))
+			{
+				sys_log.fatal("Failed to apply config override: %s. Proceeding with regular configuration.", m_config_override_path);
+				m_config_override_path.clear();
+			}
+			else
+			{
+				sys_log.success("Applied config override: %s", m_config_override_path);
+				g_cfg.name = m_config_override_path;
+			}
+		}
+		else
+		{
+			sys_log.fatal("Failed to access config override: %s (%s). Proceeding with regular configuration.", m_config_override_path, fs::g_tls_error);
+			m_config_override_path.clear();
+		}
 	}
-	else
+
+	// Reload global configuration
+	if (m_config_override_path.empty())
 	{
-		sys_log.fatal("Failed to access global config: %s (%s)", cfg_path, fs::g_tls_error);
+		const auto cfg_path = fs::get_config_dir() + "/config.yml";
+
+		if (const fs::file cfg_file{cfg_path, fs::read + fs::create})
+		{
+			if (!g_cfg.from_string(cfg_file.to_string()))
+			{
+				sys_log.fatal("Failed to apply global config: %s", cfg_path);
+			}
+
+			g_cfg.name = cfg_path;
+		}
+		else
+		{
+			sys_log.fatal("Failed to access global config: %s (%s)", cfg_path, fs::g_tls_error);
+		}
 	}
 
 	// Create directories (can be disabled if necessary)
@@ -151,6 +204,7 @@ void Emulator::Init()
 	};
 
 	const std::string save_path = dev_hdd0 + "home/" + m_usr + "/savedata/";
+	const std::string user_path = dev_hdd0 + "home/" + m_usr + "/localusername";
 
 	if (g_cfg.vfs.init_dirs)
 	{
@@ -168,11 +222,11 @@ void Emulator::Init()
 		make_path_verbose(save_path);
 		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/trophy/");
 
-		if (!fs::write_file(dev_hdd0 + "home/" + m_usr + "/localusername", fs::create + fs::excl + fs::write, "User"s))
+		if (!fs::write_file(user_path, fs::create + fs::excl + fs::write, "User"s))
 		{
 			if (fs::g_tls_error != fs::error::exist)
 			{
-				sys_log.fatal("Failed to create file: %shome/%s/localusername (%s)", dev_hdd0, m_usr, fs::g_tls_error);
+				sys_log.fatal("Failed to create file: %s (%s)", user_path, fs::g_tls_error);
 			}
 		}
 
@@ -180,6 +234,41 @@ void Emulator::Init()
 		make_path_verbose(dev_hdd0 + "savedata/");
 		make_path_verbose(dev_hdd0 + "savedata/vmc/");
 		make_path_verbose(dev_hdd1 + "caches/");
+	}
+
+	// Log user
+	if (m_usr.empty())
+	{
+		sys_log.fatal("No user configured");
+	}
+	else
+	{
+		std::string username;
+
+		if (const fs::file file = fs::file(user_path))
+		{
+			if (const std::string localusername = file.to_string(); !localusername.empty())
+			{
+				username = localusername;
+			}
+			else
+			{
+				sys_log.warning("Empty username in file: '%s'. Consider setting a username for user '%s' in the user manager.", user_path, m_usr);
+			}
+		}
+		else
+		{
+			sys_log.error("Could not read file: '%s'", user_path);
+		}
+
+		if (username.empty())
+		{
+			sys_log.notice("Logged in as user '%s'", m_usr);
+		}
+		else
+		{
+			sys_log.notice("Logged in as user '%s' with the username '%s'", m_usr, username);
+		}
 	}
 
 	// Fixup savedata
@@ -218,6 +307,7 @@ void Emulator::Init()
 
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
 	make_path_verbose(fs::get_config_dir() + "captures/");
+	make_path_verbose(fs::get_cache_dir() + "spu_progs/");
 
 	// Initialize patch engine
 	g_fxo->init<patch_engine>()->append_global_patches();
@@ -370,9 +460,17 @@ const bool Emulator::SetUsr(const std::string& user)
 
 const std::string Emulator::GetBackgroundPicturePath() const
 {
-	std::string path = m_sfo_dir + "/PIC1.PNG";
+	// Try to find a custom icon first
+	std::string path = fs::get_config_dir() + "/Icons/game_icons/" + Emu.GetTitleID() + "/PIC1.PNG";
 
-	if (!fs::exists(path))
+	if (fs::is_file(path))
+	{
+		return path;
+	}
+
+	path = m_sfo_dir + "/PIC1.PNG";
+
+	if (!fs::is_file(path))
 	{
 		const std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
 
@@ -386,12 +484,12 @@ const std::string Emulator::GetBackgroundPicturePath() const
 			// Fallback to PIC1.PNG in disc dir
 			path = disc_dir + "/PIC1.PNG";
 
-			if (!fs::exists(path))
+			if (!fs::is_file(path))
 			{
 				// Fallback to ICON0.PNG in update dir
 				path = m_sfo_dir + "/ICON0.PNG";
 
-				if (!fs::exists(path))
+				if (!fs::is_file(path))
 				{
 					// Fallback to ICON0.PNG in disc dir
 					path = disc_dir + "/ICON0.PNG";
@@ -455,7 +553,9 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	GetCallbacks().on_run(false);
 	m_state = system_state::running;
 
-	g_fxo->init<named_thread<rsx::rsx_replay_thread>>("RSX Replay"sv, std::move(frame));
+	auto replay_thr = g_fxo->init<named_thread<rsx::rsx_replay_thread>>("RSX Replay"sv, std::move(frame));
+	replay_thr->state -= cpu_flag::stop;
+	thread_ctrl::notify(*replay_thr);
 
 	return true;
 }
@@ -694,8 +794,8 @@ std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const 
 
 				if (entry.is_directory && fs::is_file(sfo_path))
 				{
-					const auto psf           = psf::load_object(fs::file(sfo_path));
-					const std::string serial = get_string(psf, "TITLE_ID");
+					const auto psf = psf::load_object(fs::file(sfo_path));
+					const auto serial = psf::get_string(psf, "TITLE_ID");
 					if (serial == title_id)
 					{
 						return game_path + "/" + entry.name;
@@ -709,8 +809,9 @@ std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const 
 
 	const auto psf = psf::load_object(fs::file(game_path + "/PARAM.SFO"));
 
-	const std::string category   = get_string(psf, "CATEGORY");
-	const std::string content_id = get_string(psf, "CONTENT_ID");
+	const auto category = psf::get_string(psf, "CATEGORY");
+	const auto content_id = std::string(psf::get_string(psf, "CONTENT_ID"));
+
 	if (category == "HG" && !content_id.empty())
 	{
 		// This is a trial game. Check if the user has a RAP file to unlock it.
@@ -846,12 +947,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			_psf = psf::load_object(fs::file(m_sfo_dir + "/PARAM.SFO"));
 		}
 
-		m_title = psf::get_string(_psf, "TITLE", m_path.substr(m_path.find_last_of('/') + 1));
-		m_title_id = psf::get_string(_psf, "TITLE_ID");
-		m_cat = psf::get_string(_psf, "CATEGORY");
+		m_title = std::string(psf::get_string(_psf, "TITLE", std::string_view(m_path).substr(m_path.find_last_of('/') + 1)));
+		m_title_id = std::string(psf::get_string(_psf, "TITLE_ID"));
+		m_cat = std::string(psf::get_string(_psf, "CATEGORY"));
 
-		const std::string version_app  = psf::get_string(_psf, "APP_VER", "Unknown");
-		const std::string version_disc = psf::get_string(_psf, "VERSION", "Unknown");
+		const auto version_app  = psf::get_string(_psf, "APP_VER", "Unknown");
+		const auto version_disc = psf::get_string(_psf, "VERSION", "Unknown");
+		m_app_version           = version_app == "Unknown" ? version_disc : version_app;
 
 		if (!_psf.empty() && m_cat.empty())
 		{
@@ -862,9 +964,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		sys_log.notice("Title: %s", GetTitle());
 		sys_log.notice("Serial: %s", GetTitleID());
 		sys_log.notice("Category: %s", GetCat());
-		sys_log.notice("Version: %s / %s", version_app, version_disc);
+		sys_log.notice("Version: APP_VER=%s VERSION=%s", version_app, version_disc);
 
-		if (!add_only && !force_global_config)
+		if (!add_only && !force_global_config && m_config_override_path.empty())
 		{
 			const std::string config_path_new = GetCustomConfigPath(m_title_id);
 			const std::string config_path_old = GetCustomConfigPath(m_title_id, true);
@@ -873,22 +975,37 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			if (fs::file cfg_file{ config_path_old })
 			{
 				sys_log.notice("Applying custom config: %s", config_path_old);
-				g_cfg.from_string(cfg_file.to_string());
+
+				if (!g_cfg.from_string(cfg_file.to_string()))
+				{
+					sys_log.fatal("Failed to apply custom config: %s", config_path_old);
+				}
 			}
 
 			// Load custom config-2
 			if (fs::file cfg_file{ config_path_new })
 			{
 				sys_log.notice("Applying custom config: %s", config_path_new);
-				g_cfg.from_string(cfg_file.to_string());
-				g_cfg.name = config_path_new;
+
+				if (g_cfg.from_string(cfg_file.to_string()))
+				{
+					g_cfg.name = config_path_new;
+				}
+				else
+				{
+					sys_log.fatal("Failed to apply custom config: %s", config_path_new);
+				}
 			}
 
 			// Load custom config-3
 			if (fs::file cfg_file{ m_path + ".yml" })
 			{
 				sys_log.notice("Applying custom config: %s.yml", m_path);
-				g_cfg.from_string(cfg_file.to_string());
+
+				if (!g_cfg.from_string(cfg_file.to_string()))
+				{
+					sys_log.fatal("Failed to apply custom config: %s.yml", m_path);
+				}
 			}
 		}
 
@@ -911,6 +1028,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				sys_log.warning("TSX forced by User");
 			}
+		}
+
+		if (g_use_rtm)
+		{
+			// Update supplementary settings
+			const f64 _1ns = utils::get_tsc_freq() / 1000'000'000.;
+			g_rtm_tx_limit1 = g_cfg.core.tx_limit1_ns * _1ns;
+			g_rtm_tx_limit2 = g_cfg.core.tx_limit2_ns * _1ns;
 		}
 
 		// Load patches from different locations
@@ -1121,38 +1246,59 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 
 		// Detect boot location
-		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
-		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
-		const std::size_t game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
-		const std::size_t bdvd_pos = m_cat == "DG" && bdvd_dir.empty() && disc.empty() ? elf_dir.rfind("/USRDIR") - game_dir_size : 0;
-		const bool from_hdd0_game = m_path.find(hdd0_game) != umax;
+		constexpr size_t game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
+		const std::string hdd0_game    = vfs::get("/dev_hdd0/game/");
+		const std::string hdd0_disc    = vfs::get("/dev_hdd0/disc/");
+		const bool from_hdd0_game      = m_path.find(hdd0_game) != umax;
 
-		if (bdvd_pos && from_hdd0_game)
+		// Mount /dev_bdvd/ if necessary
+		if (bdvd_dir.empty() && disc.empty())
 		{
-			// Booting disc game from wrong location
-			sys_log.error("Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
+			if (const size_t usrdir_pos = elf_dir.rfind("/USRDIR"); usrdir_pos != umax)
+			{
+				const std::string main_dir = elf_dir.substr(0, usrdir_pos);
 
-			// Move and retry from correct location
-			if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../", false))
-			{
-				sys_log.success("Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
-				return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load(m_title_id, add_only, force_global_config);
-			}
-			else
-			{
-				sys_log.error("Failed to move disc game %s to /dev_hdd0/disc/ (%s)", m_title_id, fs::g_tls_error);
-				return game_boot_result::wrong_disc_location;
+				if (const std::string sfb_dir = fs::get_parent_dir(main_dir);
+					!sfb_dir.empty() && fs::is_file(sfb_dir + "/PS3_DISC.SFB"))
+				{
+					if (from_hdd0_game)
+					{
+						// Booting disc game from wrong location
+						sys_log.error("Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
+
+						// Move and retry from correct location
+						if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../", false))
+						{
+							sys_log.success("Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
+							return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load(m_title_id, add_only, force_global_config);
+						}
+						else
+						{
+							sys_log.error("Failed to move disc game %s to /dev_hdd0/disc/ (%s)", m_title_id, fs::g_tls_error);
+							return game_boot_result::wrong_disc_location;
+						}
+					}
+
+					bdvd_dir = sfb_dir + "/";
+
+					// Find game dir
+					if (const std::string main_dir_name = main_dir.substr(main_dir.find_last_of("/\\") + 1);
+						main_dir_name.size() == game_dir_size)
+					{
+						m_game_dir = main_dir_name;
+					}
+					else
+					{
+						// Show an error and reset game dir for now
+						m_game_dir = "PS3_GAME";
+						sys_log.error("Could not find proper game dir path for %s", elf_dir);
+						return game_boot_result::unsupported_disc_type;
+					}
+				}
 			}
 		}
 
-		// Booting disc game
-		if (bdvd_pos)
-		{
-			// Mount /dev_bdvd/ if necessary
-			bdvd_dir = elf_dir.substr(0, bdvd_pos);
-			m_game_dir = elf_dir.substr(bdvd_pos, game_dir_size);
-		}
-		else if (!is_disc_patch)
+		if (bdvd_dir.empty() && !is_disc_patch)
 		{
 			// Reset original disc game dir if this is neither disc nor disc patch
 			m_game_dir = "PS3_GAME";
@@ -1184,13 +1330,16 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			vfs::mount("/dev_bdvd/PS3_GAME", bdvd_dir + m_game_dir + "/");
 			sys_log.notice("Game: %s", vfs::get("/dev_bdvd/PS3_GAME"));
 
-			if (!sfb_file.open(vfs::get("/dev_bdvd/PS3_DISC.SFB")) || sfb_file.size() < 4 || sfb_file.read<u32>() != ".SFB"_u32)
+			const auto sfb_path = vfs::get("/dev_bdvd/PS3_DISC.SFB");
+
+			if (!sfb_file.open(sfb_path) || sfb_file.size() < 4 || sfb_file.read<u32>() != ".SFB"_u32)
 			{
-				sys_log.error("Invalid disc directory for the disc game %s", m_title_id);
+				sys_log.error("Invalid disc directory for the disc game %s. (%s)", m_title_id, sfb_path);
 				return game_boot_result::invalid_file_or_folder;
 			}
 
-			const std::string bdvd_title_id = psf::get_string(psf::load_object(fs::file{vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")}), "TITLE_ID");
+			const auto game_psf = psf::load_object(fs::file{vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")});
+			const auto bdvd_title_id = psf::get_string(game_psf, "TITLE_ID");
 
 			if (bdvd_title_id != m_title_id)
 			{
@@ -1347,7 +1496,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Check game updates
 		const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN";
 
-		if (disc.empty() && m_cat == "DG" && fs::is_file(hdd0_boot))
+		if (disc.empty() && !bdvd_dir.empty() && m_path != hdd0_boot && fs::is_file(hdd0_boot))
 		{
 			// Booting game update
 			sys_log.success("Updates found at /dev_hdd0/game/%s/!", m_title_id);
@@ -1359,7 +1508,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		if (!disc_sfo_dir.empty() && fs::is_file(disc_sfo_dir))
 		{
-			const std::string bdvd_title = psf::get_string(psf::load_object(fs::file{ disc_sfo_dir }), "TITLE");
+			const auto psf_obj = psf::load_object(fs::file{ disc_sfo_dir });
+			const auto bdvd_title = psf::get_string(psf_obj, "TITLE");
 
 			if (!bdvd_title.empty() && bdvd_title != m_title)
 			{
@@ -1530,7 +1680,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		if ((m_force_boot || g_cfg.misc.autostart) && IsReady())
 		{
-			Run(true);
+			if (ppu_exec == elf_error::ok)
+			{
+				Run(true);
+			}
+
 			m_force_boot = false;
 		}
 		else if (IsPaused())
@@ -1574,14 +1728,18 @@ void Emulator::Run(bool start_playtime)
 
 	ConfigureLogs();
 
-	auto on_select = [](u32, cpu_thread& cpu)
+	// Run main thread
+	idm::check<named_thread<ppu_thread>>(ppu_thread::id_base, [](cpu_thread& cpu)
 	{
 		cpu.state -= cpu_flag::stop;
 		cpu.notify();
-	};
+	});
 
-	idm::select<named_thread<ppu_thread>>(on_select);
-	idm::select<named_thread<spu_thread>>(on_select);
+	if (auto thr = g_fxo->get<named_thread<rsx::rsx_replay_thread>>())
+	{
+		thr->state -= cpu_flag::stop;
+		thread_ctrl::notify(*thr);
+	}
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{
@@ -1618,10 +1776,8 @@ bool Emulator::Pause()
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
 
-	if (g_cfg.misc.prevent_display_sleep)
-	{
-		enable_display_sleep();
-	}
+	// Always Enable display sleep, not only if it was prevented.
+	enable_display_sleep();
 
 	return true;
 }
@@ -1640,8 +1796,8 @@ void Emulator::Resume()
 	// Print and reset debug data collected
 	if (m_state == system_state::paused && g_cfg.core.ppu_debug)
 	{
-		PPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
-		dis_asm.offset = vm::g_base_addr;
+		PPUDisAsm dis_asm(CPUDisAsm_DumpMode);
+		dis_asm.offset = vm::g_sudo_addr;
 
 		std::string dump;
 
@@ -1667,6 +1823,8 @@ void Emulator::Resume()
 
 		ppu_log.notice("[RESUME] Dumping instruction stats:%s", dump);
 	}
+
+	perf_stat_base::report();
 
 	// Try to resume
 	if (!m_state.compare_and_swap_test(system_state::paused, system_state::running))
@@ -1733,9 +1891,6 @@ void Emulator::Stop(bool restart)
 		}
 	});
 
-	const bool full_stop = !restart && !m_force_boot;
-	const bool do_exit   = full_stop && g_cfg.misc.autoexit;
-
 	sys_log.notice("Stopping emulator...");
 
 	GetCallbacks().on_stop();
@@ -1752,24 +1907,32 @@ void Emulator::Stop(bool restart)
 
 	vm::close();
 
-	if (do_exit)
-	{
-		GetCallbacks().exit(true);
-	}
-	else
-	{
-		if (full_stop)
-		{
-			GetCallbacks().exit(false);
-		}
-		Init();
-	}
-
-#ifdef LLVM_AVAILABLE
-	extern void jit_finalize();
-	jit_finalize();
-#endif
 	jit_runtime::finalize();
+
+	perf_stat_base::report();
+
+	static u64 aw_refs = 0;
+	static u64 aw_colm = 0;
+	static u64 aw_colc = 0;
+	static u64 aw_used = 0;
+
+	aw_refs = 0;
+	aw_colm = 0;
+	aw_colc = 0;
+	aw_used = 0;
+
+	atomic_wait::parse_hashtable([](u64 id, u32 refs, u64 ptr, u32 maxc) -> bool
+	{
+		aw_refs += refs != 0;
+		aw_used += ptr != 0;
+
+		aw_colm = std::max<u64>(aw_colm, maxc);
+		aw_colc += maxc != 0;
+
+		return false;
+	});
+
+	sys_log.notice("Atomic wait hashtable stats: [in_use=%u, used=%u, max_collision_weight=%u, total_collisions=%u]", aw_refs, aw_used, aw_colm, aw_colc);
 
 	if (restart)
 	{
@@ -1787,12 +1950,28 @@ void Emulator::Stop(bool restart)
 	klic.clear();
 	hdd1.clear();
 
+	// Always Enable display sleep, not only if it was prevented.
+	enable_display_sleep();
+
+	if (!m_force_boot)
+	{
+		if (Quit(g_cfg.misc.autoexit.get()))
+		{
+			return;
+		}
+	}
+
+	m_force_boot = false;
+}
+
+bool Emulator::Quit(bool force_quit)
+{
 	m_force_boot = false;
 
-	if (g_cfg.misc.prevent_display_sleep)
-	{
-		enable_display_sleep();
-	}
+	// Deinitialize object manager to prevent any hanging objects at program exit
+	*g_fxo = {};
+
+	return GetCallbacks().exit(force_quit);
 }
 
 std::string Emulator::GetFormattedTitle(double fps) const
@@ -1802,6 +1981,7 @@ std::string Emulator::GetFormattedTitle(double fps) const
 	title_data.title = GetTitle();
 	title_data.title_id = GetTitleID();
 	title_data.renderer = g_cfg.video.renderer.to_string();
+	title_data.vulkan_adapter = g_cfg.video.vk.adapter.to_string();
 	title_data.fps = fps;
 
 	return rpcs3::get_formatted_title(title_data);
@@ -1934,5 +2114,3 @@ void stx::manual_fixed_typemap<void>::destroy_reporter(const char* name, unsigne
 }
 
 Emulator Emu;
-
-named_thread<progress_dialog_server> g_progress_dlg_server;

@@ -11,7 +11,7 @@ LOG_CHANNEL(sys_lwcond);
 
 error_code _sys_lwcond_create(ppu_thread& ppu, vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_lwcond.warning(u8"_sys_lwcond_create(lwcond_id=*0x%x, lwmutex_id=0x%x, control=*0x%x, name=0x%llx (“%s”))", lwcond_id, lwmutex_id, control, name, lv2_obj::name64(std::bit_cast<be_t<u64>>(name)));
 
@@ -43,7 +43,7 @@ error_code _sys_lwcond_create(ppu_thread& ppu, vm::ptr<u32> lwcond_id, u32 lwmut
 
 error_code _sys_lwcond_destroy(ppu_thread& ppu, u32 lwcond_id)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_lwcond.warning("_sys_lwcond_destroy(lwcond_id=0x%x)", lwcond_id);
 
@@ -70,11 +70,11 @@ error_code _sys_lwcond_destroy(ppu_thread& ppu, u32 lwcond_id)
 	return CELL_OK;
 }
 
-error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mode)
+error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u64 ppu_thread_id, u32 mode)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
-	sys_lwcond.trace("_sys_lwcond_signal(lwcond_id=0x%x, lwmutex_id=0x%x, ppu_thread_id=0x%x, mode=%d)", lwcond_id, lwmutex_id, ppu_thread_id, mode);
+	sys_lwcond.trace("_sys_lwcond_signal(lwcond_id=0x%x, lwmutex_id=0x%x, ppu_thread_id=0x%llx, mode=%d)", lwcond_id, lwmutex_id, ppu_thread_id, mode);
 
 	// Mode 1: lwmutex was initially owned by the calling thread
 	// Mode 2: lwmutex was not owned by the calling thread and waiter hasn't been increased
@@ -87,16 +87,19 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> int
 	{
-		if (ppu_thread_id != umax)
+		ppu_thread* cpu = nullptr;
+
+		if (ppu_thread_id != UINT32_MAX)
 		{
-			if (const auto cpu = idm::check_unlocked<named_thread<ppu_thread>>(ppu_thread_id);
-				!cpu || cpu->joiner == ppu_join_status::exited)
+			cpu = idm::check_unlocked<named_thread<ppu_thread>>(static_cast<u32>(ppu_thread_id));
+
+			if (!cpu || cpu->joiner == ppu_join_status::exited)
 			{
 				return -1;
 			}
 		}
 
-		lv2_lwmutex* mutex;
+		lv2_lwmutex* mutex = nullptr;
 
 		if (mode != 2)
 		{
@@ -112,24 +115,8 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 		{
 			std::lock_guard lock(cond.mutex);
 
-			cpu_thread* result = nullptr;
-
-			if (ppu_thread_id != umax)
-			{
-				for (auto cpu : cond.sq)
-				{
-					if (cpu->id == ppu_thread_id)
-					{
-						verify(HERE), cond.unqueue(cond.sq, cpu);
-						result = cpu;
-						break;
-					}
-				}
-			}
-			else
-			{
-				result = cond.schedule<ppu_thread>(cond.sq, cond.protocol);
-			}
+			auto result = cpu ? cond.unqueue(cond.sq, cpu) :
+				cond.schedule<ppu_thread>(cond.sq, cond.protocol);
 
 			if (result)
 			{
@@ -177,7 +164,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 	if (!cond.ret)
 	{
-		if (ppu_thread_id == umax)
+		if (ppu_thread_id == UINT32_MAX)
 		{
 			if (mode == 3)
 			{
@@ -197,7 +184,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u32 mode)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_lwcond.trace("_sys_lwcond_signal_all(lwcond_id=0x%x, lwmutex_id=0x%x, mode=%d)", lwcond_id, lwmutex_id, mode);
 
@@ -282,7 +269,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u64 timeout)
 {
-	vm::temporary_unlock(ppu);
+	ppu.state += cpu_flag::wait;
 
 	sys_lwcond.trace("_sys_lwcond_queue_wait(lwcond_id=0x%x, lwmutex_id=0x%x, timeout=0x%llx)", lwcond_id, lwmutex_id, timeout);
 
@@ -371,8 +358,8 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 					break;
 				}
 
-				std::shared_lock lock2(mutex->mutex);
-				
+				reader_lock lock2(mutex->mutex);
+
 				if (std::find(mutex->sq.cbegin(), mutex->sq.cend(), &ppu) == mutex->sq.cend())
 				{
 					break;

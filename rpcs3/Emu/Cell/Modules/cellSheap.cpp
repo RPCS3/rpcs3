@@ -1,10 +1,10 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(cellSheap);
 
 // Return Codes
-enum
+enum CellSheapError : u32
 {
 	CELL_SHEAP_ERROR_INVAL    = 0x80410302,
 	CELL_SHEAP_ERROR_BUSY     = 0x8041030A,
@@ -12,109 +12,126 @@ enum
 	CELL_SHEAP_ERROR_SHORTAGE = 0x80410312,
 };
 
-s32 cellSheapInitialize()
+template <>
+void fmt_class_string<CellSheapError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_SHEAP_ERROR_INVAL);
+			STR_CASE(CELL_SHEAP_ERROR_BUSY);
+			STR_CASE(CELL_SHEAP_ERROR_ALIGN);
+			STR_CASE(CELL_SHEAP_ERROR_SHORTAGE);
+		}
+
+		return unknown;
+	});
+}
+
+error_code cellSheapInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellSheapAllocate()
+error_code cellSheapAllocate()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellSheapFree()
+error_code cellSheapFree()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellSheapQueryMax()
+error_code cellSheapQueryMax()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellSheapQueryFree()
+error_code cellSheapQueryFree()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapInitialize()
+error_code cellKeySheapInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapBufferNew()
+error_code cellKeySheapBufferNew()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapBufferDelete()
+error_code cellKeySheapBufferDelete()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapMutexNew()
+error_code cellKeySheapMutexNew()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapMutexDelete()
+error_code cellKeySheapMutexDelete()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapBarrierNew()
+error_code cellKeySheapBarrierNew()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapBarrierDelete()
+error_code cellKeySheapBarrierDelete()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapSemaphoreNew()
+error_code cellKeySheapSemaphoreNew()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapSemaphoreDelete()
+error_code cellKeySheapSemaphoreDelete()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapRwmNew()
+error_code cellKeySheapRwmNew()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapRwmDelete()
+error_code cellKeySheapRwmDelete()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapQueueNew()
+error_code cellKeySheapQueueNew()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-s32 cellKeySheapQueueDelete()
+error_code cellKeySheapQueueDelete()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;

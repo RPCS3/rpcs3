@@ -9,6 +9,7 @@
 #include "VKProgramBuffer.h"
 #include "VKFramebuffer.h"
 #include "VKShaderInterpreter.h"
+#include "VKQueryPool.h"
 #include "../GCM.h"
 
 #include <thread>
@@ -21,7 +22,7 @@ namespace vk
 	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<VkFormat>;
 	using null_vertex_cache = vertex_cache;
 
-	using shader_cache = rsx::shaders_cache<vk::pipeline_props, VKProgramBuffer>;
+	using shader_cache = rsx::shaders_cache<vk::pipeline_props, vk::program_cache>;
 
 	struct vertex_upload_info
 	{
@@ -389,7 +390,7 @@ public:
 	std::unique_ptr<vk::shader_cache> m_shaders_cache;
 
 private:
-	std::unique_ptr<VKProgramBuffer> m_prog_buffer;
+	std::unique_ptr<vk::program_cache> m_prog_buffer;
 
 	std::unique_ptr<vk::swapchain_base> m_swapchain;
 	vk::context m_thread_context;
@@ -397,7 +398,7 @@ private:
 
 	//Vulkan internals
 	vk::command_pool m_command_buffer_pool;
-	vk::occlusion_query_pool m_occlusion_query_pool;
+	std::unique_ptr<vk::query_pool_manager> m_occlusion_query_manager;
 	bool m_occlusion_query_active = false;
 	rsx::reports::occlusion_query_info *m_active_query_info = nullptr;
 	std::vector<vk::occlusion_data> m_occlusion_map;
@@ -546,6 +547,9 @@ public:
 	// External callback in case we need to suddenly submit a commandlist unexpectedly, e.g in a violation handler
 	void emergency_query_cleanup(vk::command_buffer* commands);
 
+	// External callback to handle out of video memory problems
+	bool on_vram_exhausted(rsx::problem_severity severity);
+
 	// Conditional rendering
 	void begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources) override;
 	void end_conditional_rendering() override;
@@ -569,6 +573,4 @@ protected:
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
 	void on_semaphore_acquire_wait() override;
-
-	bool on_decompiler_task() override;
 };

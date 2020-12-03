@@ -244,7 +244,6 @@ enum SceNpError : u32
 	SCE_NP_COMMUNITY_SERVER_ERROR_UNSPECIFIED                         = 0x8002a4ff,
 
 	// DRM
-	SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND                  = 0x80029521,
 	SCE_NP_DRM_ERROR_OUT_OF_MEMORY                      = 0x80029501,
 	SCE_NP_DRM_ERROR_INVALID_PARAM                      = 0x80029502,
 	SCE_NP_DRM_ERROR_SERVER_RESPONSE                    = 0x80029509,
@@ -260,10 +259,32 @@ enum SceNpError : u32
 	SCE_NP_DRM_ERROR_DIFFERENT_DRM_TYPE                 = 0x8002951d,
 	SCE_NP_DRM_ERROR_SERVICE_NOT_STARTED                = 0x8002951e,
 	SCE_NP_DRM_ERROR_BUSY                               = 0x80029520,
+	SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND                  = 0x80029521,
 	SCE_NP_DRM_ERROR_IO                                 = 0x80029525,
 	SCE_NP_DRM_ERROR_FORMAT                             = 0x80029530,
 	SCE_NP_DRM_ERROR_FILENAME                           = 0x80029533,
 	SCE_NP_DRM_ERROR_K_LICENSEE                         = 0x80029534,
+
+	// DRM Server
+	SCE_NP_DRM_SERVER_ERROR_SERVICE_IS_END                 = 0x80029700,
+	SCE_NP_DRM_SERVER_ERROR_SERVICE_STOP_TEMPORARILY       = 0x80029701,
+	SCE_NP_DRM_SERVER_ERROR_SERVICE_IS_BUSY                = 0x80029702,
+	SCE_NP_DRM_SERVER_ERROR_INVALID_USER_CREDENTIAL        = 0x80029721,
+	SCE_NP_DRM_SERVER_ERROR_INVALID_PRODUCT_ID             = 0x80029722,
+	SCE_NP_DRM_SERVER_ERROR_ACCOUNT_IS_CLOSED              = 0x80029730,
+	SCE_NP_DRM_SERVER_ERROR_ACCOUNT_IS_SUSPENDED           = 0x80029731,
+	SCE_NP_DRM_SERVER_ERROR_ACTIVATED_CONSOLE_IS_FULL      = 0x80029750,
+	SCE_NP_DRM_SERVER_ERROR_CONSOLE_NOT_ACTIVATED          = 0x80029751,
+	SCE_NP_DRM_SERVER_ERROR_PRIMARY_CONSOLE_CANNOT_CHANGED = 0x80029752,
+	SCE_NP_DRM_SERVER_ERROR_UNKNOWN                        = 0x80029780,
+
+	// DRM Install
+	SCE_NP_DRM_INSTALL_ERROR_FORMAT      = 0x80029563,
+	SCE_NP_DRM_INSTALL_ERROR_CHECK       = 0x80029564,
+	SCE_NP_DRM_INSTALL_ERROR_UNSUPPORTED = 0x80029566,
+
+	// Game purchase processing
+	GAME_ERR_NOT_XMBBUY_CONTENT = 0x80028F81,
 
 	// Auth
 	SCE_NP_AUTH_EINVAL            = 0x8002a002,
@@ -500,7 +521,13 @@ enum
 
 enum
 {
-	SCE_NP_DRM_OPEN_FLAG = 2
+	SCE_NP_DRM_OPEN_FLAG = 2,
+};
+
+enum : u64
+{
+	SCE_NP_DRM_EXITSPAWN2_EXIT_WO_FINI = 0x4000000000000000ULL,
+	SCE_NP_DRM_TIME_INFO_ENDLESS       = 0x7FFFFFFFFFFFFFFFULL
 };
 
 // NP Manager Utility statuses
@@ -512,6 +539,8 @@ enum
 	SCE_NP_MANAGER_STATUS_LOGGING_IN      = 2,
 	SCE_NP_MANAGER_STATUS_ONLINE          = 3,
 };
+
+#define SCE_NP_MANAGER_EVENT_GOT_TICKET 255
 
 // Event types
 enum
@@ -1015,7 +1044,7 @@ struct SceNpEntitlementId
 };
 
 // Callback for getting the connection status
-using SceNpManagerCallback = void(s32 event, s32 result, u32 arg_addr);
+using SceNpManagerCallback = void(s32 event, s32 result, vm::ptr<void> arg);
 
 // Score data unique to the application
 struct SceNpScoreGameInfo
@@ -1291,7 +1320,7 @@ struct SceNpScoreRecordOptParam
 using SceNpCustomMenuEventHandler = s32(s32 retCode, u32 index, vm::cptr<SceNpId> npid, SceNpCustomMenuSelectedType type, vm::ptr<void> arg);
 using SceNpBasicEventHandler = s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg);
 using SceNpCommerceHandler = void(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, vm::ptr<void> arg);
-using SceNpSignalingHandler = void(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, u32 arg_addr);
+using SceNpSignalingHandler = void(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, vm::ptr<void> arg);
 using SceNpFriendlistResultHandler = s32(s32 retCode, vm::ptr<void> arg);
 using SceNpMatchingHandler = void(u32 ctx_id, u32 req_id, s32 event, s32 error_code, vm::ptr<void> arg);
 using SceNpMatchingGUIHandler = void(u32 ctx_id, s32 event, s32 error_code, vm::ptr<void> arg);

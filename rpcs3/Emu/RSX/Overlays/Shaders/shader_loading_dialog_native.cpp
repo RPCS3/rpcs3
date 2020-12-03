@@ -1,6 +1,8 @@
 ﻿#include "stdafx.h"
 #include "shader_loading_dialog_native.h"
 #include "../overlay_message_dialog.h"
+#include "../../GSRender.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 namespace rsx
 {

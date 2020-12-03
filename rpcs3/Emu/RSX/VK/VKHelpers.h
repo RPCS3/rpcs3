@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "stdafx.h"
-#include <exception>
 #include <string>
 #include <functional>
 #include <vector>
@@ -15,12 +14,13 @@
 #include <X11/Xutil.h>
 #endif
 
-#include "Emu/RSX/GSRender.h"
 #include "VulkanAPI.h"
 #include "VKCommonDecompiler.h"
 #include "../GCM.h"
 #include "../Common/ring_buffer_helper.h"
 #include "../Common/TextureUtils.h"
+#include "../display.h"
+#include "../rsx_utils.h"
 
 #include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
 
@@ -35,6 +35,9 @@
 
 #define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
 #define GENERAL_WAIT_TIMEOUT  2000000ull  // 2 seconds
+
+//using enum rsx::format_class;
+using namespace ::rsx::format_class_;
 
 namespace rsx
 {
@@ -82,7 +85,8 @@ namespace vk
 		AMD_gcn_generic,
 		AMD_polaris,
 		AMD_vega,
-		AMD_navi,
+		AMD_navi1x,
+		AMD_navi2x,
 		NV_generic,
 		NV_kepler,
 		NV_maxwell,
@@ -92,7 +96,7 @@ namespace vk
 		NV_ampere
 	};
 
-	enum // special remap_encoding enums
+	enum : u32// special remap_encoding enums
 	{
 		VK_REMAP_IDENTITY = 0xCAFEBABE,             // Special view encoding to return an identity image view
 		VK_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF     // Special encoding for multisampled images; returns a multisampled image view
@@ -145,7 +149,7 @@ namespace vk
 
 	VkSampler null_sampler();
 	image_view* null_image_view(vk::command_buffer&, VkImageViewType type);
-	image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height);
+	image* get_typeless_helper(VkFormat format, rsx::format_class format_class, u32 requested_width, u32 requested_height);
 	buffer* get_scratch_buffer(u32 min_required_size = 0);
 	data_heap* get_upload_heap();
 
@@ -171,6 +175,8 @@ namespace vk
 	void vmm_notify_memory_allocated(void* handle, u32 memory_type, u64 memory_size);
 	void vmm_notify_memory_freed(void* handle);
 	void vmm_reset();
+	void vmm_check_memory_usage();
+	bool vmm_handle_memory_pressure(rsx::problem_severity severity);
 
 	/**
 	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
@@ -178,7 +184,7 @@ namespace vk
 	* dst_image must be in TRANSFER_DST_OPTIMAL layout and upload_buffer have TRANSFER_SRC_BIT usage flag.
 	*/
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
-		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
+		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align = 0);
 
 	//Other texture management helpers
@@ -190,16 +196,15 @@ namespace vk
 	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
 
 	void copy_image_typeless(const command_buffer &cmd, image *src, image *dst, const areai& src_rect, const areai& dst_rect,
-		u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
-		VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
+		u32 mipmaps, VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
-	void copy_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
-			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
+	void copy_image(const vk::command_buffer& cmd, vk::image* src, vk::image* dst,
+			const areai& src_rect, const areai& dst_rect, u32 mipmaps,
 			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
-	void copy_scaled_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
-			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags aspect, bool compatible_formats,
-			VkFilter filter = VK_FILTER_LINEAR, VkFormat src_format = VK_FORMAT_UNDEFINED, VkFormat dst_format = VK_FORMAT_UNDEFINED);
+	void copy_scaled_image(const vk::command_buffer& cmd, vk::image* src, vk::image* dst,
+			const areai& src_rect, const areai& dst_rect, u32 mipmaps,
+			bool compatible_formats, VkFilter filter = VK_FILTER_LINEAR);
 
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 
@@ -267,10 +272,12 @@ namespace vk
 		bool d24_unorm_s8;
 		bool d32_sfloat_s8;
 		bool bgra8_linear;
+		bool argb8_linear;
 	};
 
 	struct gpu_shader_types_support
 	{
+		bool allow_float64;
 		bool allow_float16;
 		bool allow_int8;
 	};
@@ -323,6 +330,7 @@ namespace vk
 		virtual void unmap(mem_handle_t mem_handle) = 0;
 		virtual VkDeviceMemory get_vk_device_memory(mem_handle_t mem_handle) = 0;
 		virtual u64 get_vk_device_memory_offset(mem_handle_t mem_handle) = 0;
+		virtual f32 get_memory_usage() = 0;
 
 	protected:
 		VkDevice m_device;
@@ -337,6 +345,9 @@ namespace vk
 	public:
 		mem_allocator_vma(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev)
 		{
+			// Initialize stats pool
+			std::fill(stats.begin(), stats.end(), VmaBudget{});
+
 			VmaAllocatorCreateInfo allocatorInfo = {};
 			allocatorInfo.physicalDevice = pdev;
 			allocatorInfo.device = dev;
@@ -361,7 +372,26 @@ namespace vk
 			mem_req.size = block_sz;
 			mem_req.alignment = alignment;
 			create_info.memoryTypeBits = 1u << memory_type_index;
-			CHECK_RESULT(vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr));
+
+			if (VkResult result = vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr);
+				result != VK_SUCCESS)
+			{
+				if (result == VK_ERROR_OUT_OF_DEVICE_MEMORY &&
+					vmm_handle_memory_pressure(rsx::problem_severity::fatal))
+				{
+					// If we just ran out of VRAM, attempt to release resources and try again
+					result = vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr);
+				}
+
+				if (result != VK_SUCCESS)
+				{
+					die_with_error(HERE, result);
+				}
+				else
+				{
+					rsx_log.warning("Renderer ran out of video memory but successfully recovered.");
+				}
+			}
 
 			vmm_notify_memory_allocated(vma_alloc, memory_type_index, block_sz);
 			return vma_alloc;
@@ -405,8 +435,28 @@ namespace vk
 			return alloc_info.offset;
 		}
 
+		f32 get_memory_usage() override
+		{
+			vmaGetBudget(m_allocator, stats.data());
+
+			float max_usage = 0.f;
+			for (const auto& info : stats)
+			{
+				if (!info.budget)
+				{
+					break;
+				}
+
+				const float this_usage = (info.usage * 100.f) / info.budget;
+				max_usage = std::max(max_usage, this_usage);
+			}
+
+			return max_usage;
+		}
+
 	private:
 		VmaAllocator m_allocator;
+		std::array<VmaBudget, VK_MAX_MEMORY_HEAPS> stats;
 	};
 
 	// Memory Allocator - built-in Vulkan device memory allocate/free
@@ -426,7 +476,26 @@ namespace vk
 			info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 			info.allocationSize = block_sz;
 			info.memoryTypeIndex = memory_type_index;
-			CHECK_RESULT(vkAllocateMemory(m_device, &info, nullptr, &memory));
+
+			if (VkResult result = vkAllocateMemory(m_device, &info, nullptr, &memory);
+				result != VK_SUCCESS)
+			{
+				if (result == VK_ERROR_OUT_OF_DEVICE_MEMORY &&
+					vmm_handle_memory_pressure(rsx::problem_severity::fatal))
+				{
+					// If we just ran out of VRAM, attempt to release resources and try again
+					result = vkAllocateMemory(m_device, &info, nullptr, &memory);
+				}
+
+				if (result != VK_SUCCESS)
+				{
+					die_with_error(HERE, result);
+				}
+				else
+				{
+					rsx_log.warning("Renderer ran out of video memory but successfully recovered.");
+				}
+			}
 
 			vmm_notify_memory_allocated(memory, memory_type_index, block_sz);
 			return memory;
@@ -458,6 +527,11 @@ namespace vk
 		u64 get_vk_device_memory_offset(mem_handle_t /*mem_handle*/) override
 		{
 			return 0;
+		}
+
+		f32 get_memory_usage() override
+		{
+			return 0.f;
 		}
 
 	private:
@@ -562,9 +636,10 @@ namespace vk
 		std::unordered_map<VkFormat, VkFormatProperties> format_properties;
 		gpu_shader_types_support shader_types_support{};
 		VkPhysicalDeviceDriverPropertiesKHR driver_properties{};
+
 		bool stencil_export_support = false;
 		bool conditional_render_support = false;
-		bool host_query_reset_support = false;
+		bool unrestricted_depth_range_support = false;
 
 		friend class render_device;
 private:
@@ -608,6 +683,7 @@ private:
 				verify("vkGetInstanceProcAddress failed to find entry point!" HERE), getPhysicalDeviceFeatures2KHR;
 				getPhysicalDeviceFeatures2KHR(dev, &features2);
 
+				shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
 				shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
 				shader_types_support.allow_int8 = !!shader_support_info.shaderInt8;
 				features = features2.features;
@@ -615,7 +691,7 @@ private:
 
 			stencil_export_support = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 			conditional_render_support = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
-			host_query_reset_support = device_extensions.is_supported(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
+			unrestricted_depth_range_support = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 		}
 
 	public:
@@ -631,7 +707,7 @@ private:
 			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
 			get_physical_device_features(allow_extensions);
 
-			rsx_log.notice("Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
+			rsx_log.always("Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
 
 			if (get_driver_vendor() == driver_vendor::RADV &&
 				get_name().find("LLVM 8.0.0") != umax)
@@ -639,6 +715,22 @@ private:
 				// Serious driver bug causing black screens
 				// See https://bugs.freedesktop.org/show_bug.cgi?id=110970
 				rsx_log.fatal("RADV drivers have a major driver bug with LLVM 8.0.0 resulting in no visual output. Upgrade to LLVM version 8.0.1 or greater to avoid this issue.");
+			}
+			else if (get_driver_vendor() == driver_vendor::NVIDIA)
+			{
+#ifdef _WIN32
+				// SPIRV bugs were fixed in 452.28 for windows
+				const u32 threshold_version = (452u >> 22) | (28 >> 14);
+#else
+				// SPIRV bugs were fixed in 450.56 for linux/BSD
+				const u32 threshold_version = (450u >> 22) | (56 >> 14);
+#endif
+				const auto current_version = props.driverVersion & ~0x3fffu; // Clear patch and revision fields
+				if (current_version < threshold_version)
+				{
+					rsx_log.error("Your current NVIDIA graphics driver version %s has known issues and is unsupported. Update to the latest NVIDIA driver.",
+						get_driver_version());
+				}
 			}
 
 			if (get_chip_class() == chip_class::AMD_vega)
@@ -663,7 +755,7 @@ private:
 					return driver_vendor::AMD;
 				}
 
-				if (gpu_name.find("NVIDIA") != umax || gpu_name.find("GeForce") != umax)
+				if (gpu_name.find("NVIDIA") != umax || gpu_name.find("GeForce") != umax || gpu_name.find("Quadro") != umax)
 				{
 					return driver_vendor::NVIDIA;
 				}
@@ -791,7 +883,6 @@ private:
 		// Exported device endpoints
 		PFN_vkCmdBeginConditionalRenderingEXT cmdBeginConditionalRenderingEXT = nullptr;
 		PFN_vkCmdEndConditionalRenderingEXT cmdEndConditionalRenderingEXT = nullptr;
-		PFN_vkResetQueryPoolEXT resetQueryPoolEXT = nullptr;
 
 	public:
 		render_device() = default;
@@ -831,9 +922,9 @@ private:
 				requested_extensions.push_back(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
 			}
 
-			if (pgpu->host_query_reset_support)
+			if (pgpu->unrestricted_depth_range_support)
 			{
-				requested_extensions.push_back(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
+				requested_extensions.push_back(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 			}
 
 			enabled_features.robustBufferAccess = VK_TRUE;
@@ -844,6 +935,7 @@ private:
 			enabled_features.depthBounds = VK_TRUE;
 			enabled_features.wideLines = VK_TRUE;
 			enabled_features.largePoints = VK_TRUE;
+			enabled_features.shaderFloat64 = VK_TRUE;
 
 			if (g_cfg.video.antialiasing_level != msaa_level::none)
 			{
@@ -872,6 +964,12 @@ private:
 			enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
 			// Optionally disable unsupported stuff
+			if (!pgpu->features.shaderFloat64)
+			{
+				rsx_log.error("Your GPU does not support double precision floats in shaders. Graphics may not work correctly.");
+				enabled_features.shaderFloat64 = VK_FALSE;
+			}
+
 			if (!pgpu->features.depthBounds)
 			{
 				rsx_log.error("Your GPU does not support depth bounds testing. Graphics may not work correctly.");
@@ -924,11 +1022,6 @@ private:
 			{
 				cmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT"));
 				cmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
-			}
-
-			if (pgpu->host_query_reset_support)
-			{
-				resetQueryPoolEXT = reinterpret_cast<PFN_vkResetQueryPoolEXT>(vkGetDeviceProcAddr(dev, "vkResetQueryPoolEXT"));
 			}
 
 			memory_map = vk::get_memory_mapping(pdev);
@@ -1041,9 +1134,9 @@ private:
 			return pgpu->conditional_render_support;
 		}
 
-		bool get_host_query_reset_support() const
+		bool get_unrestricted_depth_range_support() const
 		{
-			return pgpu->host_query_reset_support;
+			return pgpu->unrestricted_depth_range_support;
 		}
 
 		mem_allocator_base* get_allocator() const
@@ -1315,6 +1408,7 @@ private:
 		std::stack<VkImageLayout> m_layout_stack;
 		VkImageAspectFlags m_storage_aspect = 0;
 
+		rsx::format_class m_format_class = RSX_FORMAT_CLASS_UNDEFINED;
 	public:
 		VkImage value = VK_NULL_HANDLE;
 		VkComponentMapping native_component_map = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
@@ -1333,7 +1427,8 @@ private:
 			VkImageLayout initial_layout,
 			VkImageTiling tiling,
 			VkImageUsageFlags usage,
-			VkImageCreateFlags image_flags)
+			VkImageCreateFlags image_flags,
+			rsx::format_class format_class = RSX_FORMAT_CLASS_UNDEFINED)
 			: current_layout(initial_layout)
 			, m_device(dev)
 		{
@@ -1367,6 +1462,20 @@ private:
 			CHECK_RESULT(vkBindImageMemory(m_device, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset()));
 
 			m_storage_aspect = get_aspect_flags(format);
+
+			if (format_class == RSX_FORMAT_CLASS_UNDEFINED)
+			{
+				if (m_storage_aspect != VK_IMAGE_ASPECT_COLOR_BIT)
+				{
+					rsx_log.error("Depth/stencil textures must have format class explicitly declared");
+				}
+				else
+				{
+					format_class = RSX_FORMAT_CLASS_COLOR;
+				}
+			}
+
+			m_format_class = format_class;
 		}
 
 		// TODO: Ctor that uses a provided memory heap
@@ -1419,10 +1528,21 @@ private:
 			return m_storage_aspect;
 		}
 
+		rsx::format_class format_class() const
+		{
+			return m_format_class;
+		}
+
 		void push_layout(VkCommandBuffer cmd, VkImageLayout layout)
 		{
 			m_layout_stack.push(current_layout);
 			change_image_layout(cmd, this, layout);
+		}
+
+		void push_barrier(VkCommandBuffer cmd, VkImageLayout layout)
+		{
+			m_layout_stack.push(current_layout);
+			insert_texture_barrier(cmd, this, layout);
 		}
 
 		void pop_layout(VkCommandBuffer cmd)
@@ -2752,10 +2872,13 @@ public:
 
 			CHECK_RESULT(createDebugReportCallback(m_instance, &dbgCreateInfo, NULL, &m_debugger));
 		}
-
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast"
+#endif
 		bool createInstance(const char *app_name, bool fast = false)
 		{
-			//Initialize a vulkan instance
+			// Initialize a vulkan instance
 			VkApplicationInfo app = {};
 
 			app.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -2765,7 +2888,7 @@ public:
 			app.engineVersion = 0;
 			app.apiVersion = VK_API_VERSION_1_0;
 
-			//Set up instance information
+			// Set up instance information
 
 			std::vector<const char *> extensions;
 			std::vector<const char *> layers;
@@ -2835,7 +2958,9 @@ public:
 
 			return true;
 		}
-
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 		void makeCurrentInstance()
 		{
 			// Register some global states
@@ -3116,193 +3241,33 @@ public:
 		}
 	};
 
-	class occlusion_query_pool
+	class query_pool : public rsx::ref_counted
 	{
-		struct query_slot_info
-		{
-			bool any_passed;
-			bool active;
-			bool ready;
-		};
-
-		VkQueryPool query_pool = VK_NULL_HANDLE;
-		vk::render_device* owner = nullptr;
-
-		std::deque<u32> available_slots;
-		std::vector<query_slot_info> query_slot_status;
-
-		inline bool poke_query(query_slot_info& query, u32 index, VkQueryResultFlags flags)
-		{
-			// Query is ready if:
-			// 1. Any sample has been determined to have passed the Z test
-			// 2. The backend has fully processed the query and found no hits
-
-			u32 result[2] = { 0, 0 };
-			switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, flags | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
-			{
-			case VK_SUCCESS:
-			{
-				if (result[0])
-				{
-					query.any_passed = true;
-					query.ready = true;
-					return true;
-				}
-				else if (result[1])
-				{
-					query.any_passed = false;
-					query.ready = true;
-					return true;
-				}
-
-				return false;
-			}
-			case VK_NOT_READY:
-			{
-				if (result[0])
-				{
-					query.any_passed = true;
-					query.ready = true;
-					return true;
-				}
-
-				return false;
-			}
-			default:
-				die_with_error(HERE, error);
-				return false;
-			}
-		}
+		VkQueryPool m_query_pool;
+		VkDevice m_device;
 
 	public:
-
-		void create(vk::render_device &dev, u32 num_entries)
+		query_pool(VkDevice dev, VkQueryType type, u32 size)
+			: m_query_pool(VK_NULL_HANDLE), m_device(dev)
 		{
-			VkQueryPoolCreateInfo info = {};
+			VkQueryPoolCreateInfo info{};
 			info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-			info.queryType = VK_QUERY_TYPE_OCCLUSION;
-			info.queryCount = num_entries;
+			info.queryType = type;
+			info.queryCount = size;
+			vkCreateQueryPool(dev, &info, nullptr, &m_query_pool);
 
-			CHECK_RESULT(vkCreateQueryPool(dev, &info, nullptr, &query_pool));
-			owner = &dev;
-
-			// From spec: "After query pool creation, each query must be reset before it is used."
-			query_slot_status.resize(num_entries, {});
+			// Take 'size' references on this object
+			ref_count.release(static_cast<s32>(size));
 		}
 
-		void destroy()
+		~query_pool()
 		{
-			if (query_pool)
-			{
-				vkDestroyQueryPool(*owner, query_pool, nullptr);
-
-				owner = nullptr;
-				query_pool = VK_NULL_HANDLE;
-			}
+			vkDestroyQueryPool(m_device, m_query_pool, nullptr);
 		}
 
-		void initialize(vk::command_buffer &cmd)
+		operator VkQueryPool()
 		{
-			const u32 count = ::size32(query_slot_status);
-			vkCmdResetQueryPool(cmd, query_pool, 0, count);
-
-			query_slot_info value{};
-			std::fill(query_slot_status.begin(), query_slot_status.end(), value);
-
-			for (u32 n = 0; n < count; ++n)
-			{
-				available_slots.push_back(n);
-			}
-		}
-
-		void begin_query(vk::command_buffer &cmd, u32 index)
-		{
-			verify(HERE), query_slot_status[index].active == false;
-
-			vkCmdBeginQuery(cmd, query_pool, index, 0);//VK_QUERY_CONTROL_PRECISE_BIT);
-			query_slot_status[index].active = true;
-		}
-
-		void end_query(vk::command_buffer &cmd, u32 index)
-		{
-			vkCmdEndQuery(cmd, query_pool, index);
-		}
-
-		bool check_query_status(u32 index)
-		{
-			return poke_query(query_slot_status[index], index, VK_QUERY_RESULT_PARTIAL_BIT);
-		}
-
-		u32 get_query_result(u32 index)
-		{
-			// Check for cached result
-			auto& query_info = query_slot_status[index];
-
-			while (!query_info.ready)
-			{
-				poke_query(query_info, index, VK_QUERY_RESULT_PARTIAL_BIT);
-			}
-
-			return query_info.any_passed ? 1 : 0;
-		}
-
-		void get_query_result_indirect(vk::command_buffer &cmd, u32 index, VkBuffer dst, VkDeviceSize dst_offset)
-		{
-			vkCmdCopyQueryPoolResults(cmd, query_pool, index, 1, dst, dst_offset, 4, VK_QUERY_RESULT_WAIT_BIT);
-		}
-
-		void reset_query(vk::command_buffer &/*cmd*/, u32 index)
-		{
-			if (query_slot_status[index].active)
-			{
-				// Actual reset is handled later on demand
-				available_slots.push_back(index);
-			}
-		}
-
-		template<template<class> class _List>
-		void reset_queries(vk::command_buffer &cmd, _List<u32> &list)
-		{
-			for (const auto index : list)
-				reset_query(cmd, index);
-		}
-
-		void reset_all(vk::command_buffer &cmd)
-		{
-			for (u32 n = 0; n < query_slot_status.size(); n++)
-			{
-				if (query_slot_status[n].active)
-					reset_query(cmd, n);
-			}
-		}
-
-		u32 find_free_slot(vk::command_buffer& cmd)
-		{
-			if (available_slots.empty())
-			{
-				return ~0u;
-			}
-
-			const u32 result = available_slots.front();
-			if (query_slot_status[result].active)
-			{
-				// Trigger reset if round robin allocation has gone back to the first item
-				if (vk::is_renderpass_open(cmd))
-				{
-					vk::end_renderpass(cmd);
-				}
-
-				// At this point, the first available slot is not reset which means they're all active
-				for (auto It = available_slots.cbegin(); It != available_slots.cend(); ++It)
-				{
-					const auto index = *It;
-					vkCmdResetQueryPool(cmd, query_pool, index, 1);
-					query_slot_status[index] = {};
-				}
-			}
-
-			available_slots.pop_front();
-			return result;
+			return m_query_pool;
 		}
 	};
 

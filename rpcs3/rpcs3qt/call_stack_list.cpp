@@ -17,15 +17,15 @@ void call_stack_list::UpdateCPUData(std::weak_ptr<cpu_thread> cpu, std::shared_p
 	this->cpu = cpu;
 }
 
-void call_stack_list::HandleUpdate(std::vector<u32> call_stack)
+void call_stack_list::HandleUpdate(std::vector<std::pair<u32, u32>> call_stack)
 {
 	clear();
 
-	for (auto addr : call_stack)
+	for (const auto& addr : call_stack)
 	{
-		const QString call_stack_item_text = qstr(fmt::format("0x%08llx", addr));
+		const QString call_stack_item_text = qstr(fmt::format("0x%08llx (sp=0x%08llx)", addr.first, addr.second));
 		QListWidgetItem* callStackItem = new QListWidgetItem(call_stack_item_text);
-		callStackItem->setData(Qt::UserRole, { addr });
+		callStackItem->setData(Qt::UserRole, { addr.first });
 		addItem(callStackItem);
 	}
 }

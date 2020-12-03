@@ -69,6 +69,11 @@ public:
 
 	void SetShowHidden(bool show);
 
+	QList<game_info> GetGameInfo() const;
+
+	// Returns the visible version string in the game list
+	static std::string GetGameVersion(const game_info& game);
+
 public Q_SLOTS:
 	void BatchCreatePPUCaches();
 	void BatchRemovePPUCaches();
@@ -116,22 +121,22 @@ private:
 	QString GetLastPlayedBySerial(const QString& serial);
 	std::string GetCacheDirBySerial(const std::string& serial);
 	std::string GetDataDirBySerial(const std::string& serial);
-	std::string CurrentSelectionIconPath();
+	std::string CurrentSelectionPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
 
 	game_info GetGameInfoByMode(const QTableWidgetItem* item);
 	game_info GetGameInfoFromItem(const QTableWidgetItem* item);
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
-	QMainWindow* m_game_dock;
-	QStackedWidget* m_central_widget;
+	QMainWindow* m_game_dock = nullptr;
+	QStackedWidget* m_central_widget = nullptr;
 
 	// Game Grid
-	game_list_grid* m_game_grid;
+	game_list_grid* m_game_grid = nullptr;
 
 	// Game List
-	game_list* m_game_list;
-	std::unique_ptr<game_compatibility> m_game_compat;
+	game_list* m_game_list = nullptr;
+	game_compatibility* m_game_compat = nullptr;
 	QList<QAction*> m_columnActs;
 	Qt::SortOrder m_col_sort_order;
 	int m_sort_column;

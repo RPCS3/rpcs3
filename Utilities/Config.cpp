@@ -380,7 +380,7 @@ void cfg::_bool::from_default()
 
 void cfg::string::from_default()
 {
-	m_value = m_value.make(def);
+	m_value = def;
 }
 
 void cfg::set_entry::from_default()

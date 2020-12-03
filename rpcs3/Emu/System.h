@@ -8,6 +8,9 @@
 u64 get_system_time();
 u64 get_guest_system_time();
 
+enum class localized_string_id;
+enum class video_renderer;
+
 enum class system_state
 {
 	running,
@@ -27,6 +30,7 @@ enum class game_boot_result : u32
 	decryption_error,
 	file_creation_error,
 	firmware_missing,
+	unsupported_disc_type
 };
 
 struct EmuCallbacks
@@ -37,7 +41,7 @@ struct EmuCallbacks
 	std::function<void()> on_resume;
 	std::function<void()> on_stop;
 	std::function<void()> on_ready;
-	std::function<void(bool)> exit; // (force_quit) close RPCS3
+	std::function<bool(bool)> exit; // (force_quit) close RPCS3
 	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit
 	std::function<void()> init_kb_handler;
 	std::function<void()> init_mouse_handler;
@@ -49,6 +53,8 @@ struct EmuCallbacks
 	std::function<std::shared_ptr<class OskDialogBase>()> get_osk_dialog;
 	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
 	std::function<std::unique_ptr<class TrophyNotificationBase>()> get_trophy_notification_dialog;
+	std::function<std::string(localized_string_id, const char*)> get_localized_string;
+	std::function<std::u32string(localized_string_id, const char*)> get_localized_u32string;
 };
 
 class Emulator final
@@ -60,10 +66,15 @@ class Emulator final
 	atomic_t<u64> m_pause_start_time{0}; // set when paused
 	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
 
+	video_renderer m_default_renderer;
+	std::string m_default_graphics_adapter;
+
+	std::string m_config_override_path;
 	std::string m_path;
 	std::string m_path_old;
 	std::string m_title_id;
 	std::string m_title;
+	std::string m_app_version;
 	std::string m_cat;
 	std::string m_dir;
 	std::string m_sfo_dir;
@@ -72,7 +83,12 @@ class Emulator final
 	u32 m_usrid{1};
 
 	bool m_force_global_config = false;
+
+	// This flag should be adjusted before each Stop() or each BootGame() and similar because:
+	// 1. It forces an application to boot immediately by calling Run() in Load().
+	// 2. It signifies that we don't want to exit on Stop(), for example if we want to transition to another application.
 	bool m_force_boot = false;
+
 	bool m_has_gui = true;
 
 public:
@@ -129,6 +145,11 @@ public:
 	const std::string GetTitleAndTitleID() const
 	{
 		return m_title + (m_title_id.empty() ? "" : " [" + m_title_id + "]");
+	}
+
+	const std::string& GetAppVersion() const
+	{
+		return m_app_version;
 	}
 
 	const std::string& GetCat() const
@@ -196,6 +217,7 @@ public:
 	void Resume();
 	void Stop(bool restart = false);
 	void Restart() { Stop(true); }
+	bool Quit(bool force_quit);
 
 	bool IsRunning() const { return m_state == system_state::running; }
 	bool IsPaused()  const { return m_state == system_state::paused; }
@@ -205,6 +227,10 @@ public:
 
 	bool HasGui() const { return m_has_gui; }
 	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
+
+	void SetDefaultRenderer(video_renderer renderer) { m_default_renderer = renderer; }
+	void SetDefaultGraphicsAdapter(std::string adapter) { m_default_graphics_adapter = std::move(adapter); }
+	void SetConfigOverride(std::string path) { m_config_override_path = std::move(path); }
 
 	std::string GetFormattedTitle(double fps) const;
 
@@ -220,3 +246,5 @@ private:
 extern Emulator Emu;
 
 extern bool g_use_rtm;
+extern u64 g_rtm_tx_limit1;
+extern u64 g_rtm_tx_limit2;

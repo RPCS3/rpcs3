@@ -96,7 +96,17 @@ bool ds3_pad_handler::Init()
 #ifdef _WIN32
 		u8 buf[0xFF];
 		buf[0] = 0xF2;
-		if (handle && (hid_get_feature_report(handle, buf, 0xFF) >= 0))
+		bool got_report = false;
+		if (handle)
+		{
+			got_report = hid_get_feature_report(handle, buf, 0xFF) >= 0;
+			if (!got_report)
+			{
+				buf[0] = 0;
+				got_report = hid_get_feature_report(handle, buf, 0xFF) >= 0;
+			}
+		}
+		if (got_report)
 #else
 		if(handle)
 #endif
@@ -104,6 +114,9 @@ bool ds3_pad_handler::Init()
 			std::shared_ptr<ds3_device> ds3dev = std::make_shared<ds3_device>();
 			ds3dev->device = hid_info->path;
 			ds3dev->handle = handle;
+#ifdef _WIN32
+			ds3dev->report_id = buf[0];
+#endif
 			controllers.emplace_back(ds3dev);
 		}
 		else
@@ -231,6 +244,8 @@ std::shared_ptr<ds3_pad_handler::ds3_device> ds3_pad_handler::get_ds3_device(con
 
 void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
 {
+	if (!cfg) return;
+
 	// Set this profile's save location
 	cfg->cfg_name = name;
 
@@ -262,11 +277,12 @@ void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l3.def = button_list.at(DS3KeyCodes::L3);
 
 	// Set default misc variables
-	cfg->lstickdeadzone.def = 40; // between 0 and 255
-	cfg->rstickdeadzone.def = 40; // between 0 and 255
+	cfg->lstickdeadzone.def    = 40; // between 0 and 255
+	cfg->rstickdeadzone.def    = 40; // between 0 and 255
 	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
 	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
-	cfg->padsquircling.def = 0;
+	cfg->lpadsquircling.def    = 0;
+	cfg->rpadsquircling.def    = 0;
 
 	// Set color value
 	cfg->colorR.def = 0;
@@ -285,7 +301,7 @@ ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_d
 	auto& dbuf = ds3dev->buf;
 
 #ifdef _WIN32
-	dbuf[0] = 0xF2;
+	dbuf[0] = ds3dev->report_id;
 	int result = hid_get_feature_report(ds3dev->handle, dbuf, sizeof(dbuf));
 #else
 	int result = hid_read(ds3dev->handle, dbuf, sizeof(dbuf));
@@ -294,7 +310,7 @@ ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_d
 	if (result > 0)
 	{
 #ifdef _WIN32
-		if(dbuf[0] == 0xF2)
+		if (dbuf[0] == ds3dev->report_id)
 #else
 		if (dbuf[0] == 0x01 && dbuf[1] != 0xFF)
 #endif

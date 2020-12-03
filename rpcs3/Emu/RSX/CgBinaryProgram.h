@@ -213,15 +213,7 @@ public:
 
 	std::string GetCgParamName(u32 offset) const
 	{
-		std::stringstream str_stream;
-		std::string name;
-		while (m_buffer[offset] != 0)
-		{
-			str_stream << m_buffer[offset];
-			offset++;
-		}
-		name += str_stream.str();
-		return name;
+		return std::string(reinterpret_cast<char*>(&m_buffer[offset]));
 	}
 
 	std::string GetCgParamRes(u32 /*offset*/) const
@@ -233,15 +225,7 @@ public:
 
 	std::string GetCgParamSemantic(u32 offset) const
 	{
-		std::stringstream str_stream;
-		std::string semantic;
-		while (m_buffer[offset] != 0)
-		{
-			str_stream << m_buffer[offset];
-			offset++;
-		}
-		semantic += str_stream.str();
-		return semantic;
+		return std::string(reinterpret_cast<char*>(&m_buffer[offset]));
 	}
 
 	std::string GetCgParamValue(u32 offset, u32 end_offset) const
@@ -326,7 +310,7 @@ public:
 				u32 ctrl = (vmfprog.outputFromH0 ? 0 : 0x40) | (vmfprog.depthReplace ? 0xe : 0);
 				std::vector<rsx::texture_dimension_extended> td;
 				RSXFragmentProgram prog;
-				prog.ucode_length = 0, prog.addr = vm::base(ptr + vmprog.ucode), prog.offset = 0, prog.ctrl = ctrl;
+				prog.ucode_length = 0, prog.data = vm::base(ptr + vmprog.ucode), prog.offset = 0, prog.ctrl = ctrl;
 				GLFragmentDecompilerThread(m_glsl_shader, param_array, prog, size).Task();
 				vm::close();
 			}

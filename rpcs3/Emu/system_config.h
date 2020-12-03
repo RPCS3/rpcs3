@@ -4,6 +4,7 @@
 #include "Utilities/Config.h"
 
 enum CellNetCtlState : s32;
+enum CellSysutilLicenseArea : s32;
 enum CellSysutilLang : s32;
 enum CellKbMappingType : s32;
 
@@ -35,14 +36,16 @@ struct cfg_root : cfg::node
 		cfg::_bool set_daz_and_ftz{ this, "Set DAZ and FTZ", false };
 		cfg::_enum<spu_decoder_type> spu_decoder{ this, "SPU Decoder", spu_decoder_type::llvm };
 		cfg::_bool lower_spu_priority{ this, "Lower SPU thread priority" };
+		cfg::_bool spu_getllar_polling_detection{ this, "SPU GETLLAR polling detection", false, true };
 		cfg::_bool spu_debug{ this, "SPU Debug" };
 		cfg::_int<0, 6> preferred_spu_threads{ this, "Preferred SPU Threads", 0, true }; // Number of hardware threads dedicated to heavy simultaneous spu tasks
 		cfg::_int<0, 16> spu_delay_penalty{ this, "SPU delay penalty", 3 }; // Number of milliseconds to block a thread if a virtual 'core' isn't free
-		cfg::_bool spu_loop_detection{ this, "SPU loop detection", true }; // Try to detect wait loops and trigger thread yield
+		cfg::_bool spu_loop_detection{ this, "SPU loop detection", true, true }; // Try to detect wait loops and trigger thread yield
 		cfg::_int<0, 6> max_spurs_threads{ this, "Max SPURS Threads", 6 }; // HACK. If less then 6, max number of running SPURS threads in each thread group.
 		cfg::_enum<spu_block_size_type> spu_block_size{ this, "SPU Block Size", spu_block_size_type::safe };
-		cfg::_bool spu_accurate_getllar{ this, "Accurate GETLLAR", false };
-		cfg::_bool spu_accurate_putlluc{ this, "Accurate PUTLLUC", false };
+		cfg::_bool spu_accurate_getllar{ this, "Accurate GETLLAR", false, true };
+		cfg::_bool spu_accurate_dma{ this, "Accurate SPU DMA", false };
+		cfg::_bool accurate_cache_line_stores{ this, "Accurate Cache Line Stores", false };
 		cfg::_bool rsx_accurate_res_access{this, "Accurate RSX reservation access", false, true};
 		cfg::_bool spu_verification{ this, "SPU Verification", true }; // Should be enabled
 		cfg::_bool spu_cache{ this, "SPU Cache", true };
@@ -51,6 +54,8 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_accurate_xfloat{ this, "Accurate xfloat", false };
 		cfg::_bool spu_approx_xfloat{ this, "Approximate xfloat", true };
 		cfg::_bool llvm_accurate_dfma{ this, "LLVM Accurate DFMA", true }; // Enable accurate double-precision FMA for CPUs which do not support it natively
+		cfg::_bool llvm_ppu_jm_handling{ this, "PPU LLVM Java Mode Handling", false }; // Respect current Java Mode for alti-vec ops by PPU LLVM
+		cfg::_int<-1, 14> ppu_128_reservations_loop_max_length{ this, "Accurate PPU 128-byte Reservation Op Max Length", 0, true }; // -1: Always accurate, 0: Never accurate, 1-14: max accurate loop length
 		cfg::_bool llvm_ppu_accurate_vector_nan{ this, "PPU LLVM Accurate Vector NaN values", false };
 		cfg::_int<-64, 64> stub_ppu_traps{ this, "Stub PPU Traps", 0, true }; // Hack, skip PPU traps for rare cases where the trap is continueable (specify relative instructions to skip)
 
@@ -61,6 +66,8 @@ struct cfg_root : cfg::node
 		cfg::_bool hle_lwmutex{ this, "HLE lwmutex" }; // Force alternative lwmutex/lwcond implementation
 		cfg::uint64 spu_llvm_lower_bound{ this, "SPU LLVM Lower Bound" };
 		cfg::uint64 spu_llvm_upper_bound{ this, "SPU LLVM Upper Bound", 0xffffffffffffffff };
+		cfg::uint64 tx_limit1_ns{this, "TSX Transaction First Limit", 800}; // In nanoseconds
+		cfg::uint64 tx_limit2_ns{this, "TSX Transaction Second Limit", 2000}; // In nanoseconds
 
 		cfg::_int<10, 3000> clocks_scale{ this, "Clocks scale", 100, true }; // Changing this from 100 (percentage) may affect game speed in unexpected ways
 		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{ this, "Sleep Timers Accuracy",
@@ -69,6 +76,9 @@ struct cfg_root : cfg::node
 #else
 			sleep_timers_accuracy_level::_usleep, true };
 #endif
+
+		cfg::uint64 perf_report_threshold{this, "Performance Report Threshold", 500, true}; // In µs, 0.5ms = default, 0 = everything
+		cfg::_bool perf_report{this, "Enable Performance Report", false, true}; // Show certain perf-related logs
 	} core{ this };
 
 	struct node_vfs : cfg::node
@@ -142,6 +152,7 @@ struct cfg_root : cfg::node
 		cfg::_int<50, 800> resolution_scale_percent{ this, "Resolution Scale", 100 };
 		cfg::_int<0, 16> anisotropic_level_override{ this, "Anisotropic Filter Override", 0, true };
 		cfg::_int<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16 };
+		cfg::_int<0, 16> shader_compiler_threads_count{ this, "Shader Compiler Threads", 0 };
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
 		cfg::_int<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 1, true };
 		cfg::_int<1, 1800> vblank_rate{ this, "Vblank Rate", 60, true }; // Changing this from 60 may affect game speed in unexpected ways
@@ -208,23 +219,23 @@ struct cfg_root : cfg::node
 
 		cfg::_enum<audio_renderer> renderer{ this, "Renderer",
 #ifdef _WIN32
-			audio_renderer::xaudio };
+			audio_renderer::xaudio, true };
 #elif HAVE_FAUDIO
-			audio_renderer::faudio };
+			audio_renderer::faudio, true };
 #else
-			audio_renderer::openal };
+			audio_renderer::openal, true };
 #endif
 
 		cfg::_bool dump_to_file{ this, "Dump to file" };
-		cfg::_bool convert_to_u16{ this, "Convert to 16 bit" };
-		cfg::_bool downmix_to_2ch{ this, "Downmix to Stereo", true };
-		cfg::_int<1, 128> startt{ this, "Start Threshold", 1 }; // TODO: used only by ALSA, should probably be removed once ALSA is upgraded
+		cfg::_bool convert_to_u16{ this, "Convert to 16 bit", false, true };
+		cfg::_enum<audio_downmix> audio_channel_downmix{ this, "Audio Channels", audio_downmix::downmix_to_stereo, true };
+		cfg::_int<1, 128> start_threshold{ this, "Start Threshold", 1, true }; // TODO: used only by ALSA, should probably be removed once ALSA is upgraded
 		cfg::_int<0, 200> volume{ this, "Master Volume", 100, true };
-		cfg::_bool enable_buffering{ this, "Enable Buffering", true };
-		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 100 };
-		cfg::_int<1, 1000> sampling_period_multiplier{ this, "Sampling Period Multiplier", 100 };
-		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false };
-		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75 };
+		cfg::_bool enable_buffering{ this, "Enable Buffering", true, true };
+		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 100, true };
+		cfg::_int<1, 1000> sampling_period_multiplier{ this, "Sampling Period Multiplier", 100, true };
+		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false, true };
+		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
 		cfg::string microphone_devices{ this, "Microphone Devices", ";;;;" };
 	} audio{ this };
@@ -244,9 +255,11 @@ struct cfg_root : cfg::node
 	{
 		node_sys(cfg::node* _this) : cfg::node(_this, "System") {}
 
+		cfg::_enum<CellSysutilLicenseArea> license_area{ this, "License Area", CellSysutilLicenseArea{1} }; // CELL_SYSUTIL_LICENSE_AREA_A
 		cfg::_enum<CellSysutilLang> language{ this, "Language", CellSysutilLang{1} }; // CELL_SYSUTIL_LANG_ENGLISH_US
 		cfg::_enum<CellKbMappingType> keyboard_type{ this, "Keyboard Type", CellKbMappingType{0} }; // CELL_KB_MAPPING_101 = US
 		cfg::_enum<enter_button_assign> enter_button_assignment{ this, "Enter button assignment", enter_button_assign::cross };
+		cfg::_int<-60*60*24*365*100LL, 60*60*24*365*100LL> console_time_offset{ this, "Console time offset (s)", 0 }; // console time offset, limited to +/-100years
 
 	} sys{ this };
 
@@ -260,7 +273,6 @@ struct cfg_root : cfg::node
 		cfg::string swap_list{this, "IP swap list", ""};
 
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
-		cfg::string psn_npid{this, "NPID", ""};
 	} net{this};
 
 	struct node_misc : cfg::node
@@ -270,7 +282,7 @@ struct cfg_root : cfg::node
 		cfg::_bool autostart{ this, "Automatically start games after boot", true, true };
 		cfg::_bool autoexit{ this, "Exit RPCS3 when process finishes", false, true };
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode", false, true };
-		cfg::_bool prevent_display_sleep{ this, "Prevent display sleep while running games", true };
+		cfg::_bool prevent_display_sleep{ this, "Prevent display sleep while running games", true, true };
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true, true };
 		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true, true };
 		cfg::_bool use_native_interface{ this, "Use native user interface", true };

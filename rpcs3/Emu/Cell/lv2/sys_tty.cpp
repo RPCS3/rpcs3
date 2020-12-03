@@ -92,7 +92,7 @@ error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwrit
 
 	std::string msg;
 
-	if (static_cast<s32>(len) > 0 && vm::check_addr(buf.addr(), len))
+	if (static_cast<s32>(len) > 0 && vm::check_addr(buf.addr(), vm::page_readable, len))
 	{
 		msg.resize(len);
 

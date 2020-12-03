@@ -29,6 +29,7 @@
 #include "Emu/Cell/lv2/sys_vm.h"
 #include "Emu/Cell/lv2/sys_net.h"
 #include "Emu/Cell/lv2/sys_fs.h"
+#include "Emu/Cell/Modules/cellSpurs.h"
 
 #include "Emu/RSX/RSXThread.h"
 
@@ -50,6 +51,7 @@ enum kernel_item_type : int
 	root,
 	node,
 	volatile_node,
+	solid_node,
 	leaf
 };
 
@@ -134,6 +136,20 @@ static QTreeWidgetItem* add_volatile_node(QTreeWidget* tree, QTreeWidgetItem *pa
 	return node;
 }
 
+static QTreeWidgetItem* add_solid_node(QTreeWidget* tree, QTreeWidgetItem *parent, const QString& base_text, const QString& text = "", int column = 0)
+{
+	QTreeWidgetItem* node = find_first_node(tree, parent, base_text + ".*");
+	if (!node)
+	{
+		node = add_child(parent, base_text, column, kernel_item_type::solid_node);
+	}
+	if (node)
+	{
+		node->setText(0, text.isEmpty() ? base_text : text);
+	}
+	return node;
+}
+
 kernel_explorer::kernel_explorer(QWidget* parent) : QDialog(parent)
 {
 	setWindowTitle(tr("Kernel Explorer"));
@@ -180,6 +196,8 @@ void kernel_explorer::Update()
 
 	const std::unordered_map<u32, QString> tree_item_names =
 	{
+		{ process_info                   , tr("Process Info")},
+
 		{ SYS_MEM_OBJECT                 , tr("Shared Memory")},
 		{ virtual_memory                 , tr("Virtual Memory")},
 		{ SYS_MUTEX_OBJECT               , tr("Mutexes")},
@@ -251,6 +269,7 @@ void kernel_explorer::Update()
 						}
 						[[fallthrough]];
 					}
+					case kernel_item_type::solid_node:
 					case kernel_item_type::node:
 					case kernel_item_type::root:
 					default:
@@ -270,7 +289,7 @@ void kernel_explorer::Update()
 	root->setText(0, qstr(fmt::format("Process 0x%08x: Total Memory Usage: 0x%x/0x%x (%0.2f/%0.2f MB)", process_getpid(), total_memory_usage, dct->size, 1. * total_memory_usage / (1024 * 1024)
 		, 1. * dct->size / (1024 * 1024))));
 
-	// TODO: FileSystem
+	add_solid_node(m_tree, find_node(m_tree, additional_nodes::process_info), qstr(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat())));
 
 	idm::select<lv2_obj>([&](u32 id, lv2_obj& obj)
 	{
@@ -382,13 +401,17 @@ void kernel_explorer::Update()
 				switch (const u32 owner = lwm_data.vars.owner)
 				{
 				case lwmutex_free: owner_str = "free"; break;
-				//case lwmutex_dead: owner_str = "dead"; break;
+				case lwmutex_dead: owner_str = "dead"; break;
 				case lwmutex_reserved: owner_str = "reserved"; break;
 				default:
 				{
-					if (owner >= ppu_thread::id_base && owner <= ppu_thread::id_base + ppu_thread::id_step - 1)
+					if (idm::check_unlocked<named_thread<ppu_thread>>(owner))
 					{
 						owner_str = fmt::format("0x%x", owner);
+					}
+					else
+					{
+						fmt::append(owner_str, " (0x%x)", owner);
 					}
 
 					break;
@@ -397,12 +420,12 @@ void kernel_explorer::Update()
 			}
 			else
 			{
-				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Wq: %zu (Couldn't extract control data)", id, lv2_obj::name64(lwm.name), lwm.protocol, lwm.sq.size())));
+				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x, Wq: %zu (Couldn't extract control data)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lwm.signaled, lwm.sq.size())));
 				break;
 			}
 
-			add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Wq: %zu", id, lv2_obj::name64(lwm.name), lwm.protocol,
-					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, lwm.sq.size())));
+			add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Wq: %zu", id, lv2_obj::name64(lwm.name), lwm.protocol,
+					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, +lwm.signaled, lwm.sq.size())));
 			break;
 		}
 		case SYS_TIMER_OBJECT:
@@ -471,23 +494,97 @@ void kernel_explorer::Update()
 
 	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
 	{
-		std::string_view type = "threaded";
-
-		if (spu.is_isolated)
-		{
-			type = "isolated";
-		}
-		else if (spu.offset >= RAW_SPU_BASE_ADDR)
-		{
-			type = "raw";
-		}
-
-		add_leaf(find_node(m_tree, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), type)));
+		add_leaf(find_node(m_tree, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type())));
 	});
 
 	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
 	{
-		add_leaf(find_node(m_tree, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), +tg.prio, tg.type)));
+		QTreeWidgetItem* spu_tree = add_solid_node(m_tree, find_node(m_tree, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), +tg.prio, tg.type)));
+
+		if (tg.name.ends_with("CellSpursKernelGroup"sv))
+		{
+			vm::ptr<CellSpurs> pspurs{};
+
+			for (const auto& thread : tg.threads)
+			{
+				if (thread)
+				{
+					// Find SPURS structure address
+					const u64 arg = tg.args[thread->index][1];
+
+					if (!pspurs)
+					{
+						if (arg < UINT32_MAX && arg % 0x80 == 0 && vm::check_addr(arg, vm::page_readable, pspurs.size()))
+						{
+							pspurs.set(static_cast<u32>(arg));
+						}
+						else
+						{
+							break;
+						}
+					}
+					else if (pspurs.addr() != arg)
+					{
+						pspurs = {};
+						break;
+					}
+				}
+			}
+
+			CellSpurs spurs{};
+
+			if (pspurs && pspurs.try_read(spurs))
+			{
+				const QString branch_name = "SPURS";
+				const u32 wklEnabled = spurs.wklEnabled;
+				QTreeWidgetItem* spurs_tree = add_solid_node(m_tree, spu_tree, branch_name, branch_name + qstr(fmt::format(", Instance: *0x%x, LWMutex: 0x%x, LWCond: 0x%x, wklEnabled: 0x%x"
+					, pspurs, spurs.mutex.sleep_queue, spurs.cond.lwcond_queue, wklEnabled)));
+
+				const u32 signal_mask = u32{spurs.wklSignal1} << 16 | spurs.wklSignal2;
+
+				for (u32 wid = 0; wid < CELL_SPURS_MAX_WORKLOAD2; wid++)
+				{
+					if (!(wklEnabled & (0x80000000u >> wid)))
+					{
+						continue;
+					}
+
+					const auto state = spurs.wklState(wid).raw();
+
+					if (state == SPURS_WKL_STATE_NON_EXISTENT)
+					{
+						continue;
+					}
+
+					const u32 ready_count = spurs.readyCount(wid);
+					const auto& name = spurs.wklName(wid);
+					const u8 evt = spurs.wklEvent(wid);
+					const u8 status = spurs.wklStatus(wid);
+					const auto has_signal = (signal_mask & (0x80000000u >> wid)) ? "Signalled"sv : "No Signal"sv;
+
+					QTreeWidgetItem* wkl_tree = add_solid_node(m_tree, spurs_tree, qstr(fmt::format("Work.%u", wid)), qstr(fmt::format("Work.%u, class: %s, %s, %s, Status: %#x, Event: %#x, %s, ReadyCnt: %u", wid, +name.nameClass, +name.nameInstance, state, status, evt, has_signal, ready_count)));
+
+					auto contention = [&](u8 v)
+					{
+						if (wid >= CELL_SPURS_MAX_WORKLOAD)
+							return (v >> 4);
+						else
+							return v & 0xf;
+					};
+
+					const auto& winfo = spurs.wklInfo(wid);
+					add_leaf(wkl_tree, qstr(fmt::format("Contention: %u/%u (pending: %u), Image: *0x%x (size: 0x%x, arg: 0x%x), Priority (BE64): %016x", contention(spurs.wklCurrentContention[wid % 16])
+						, contention(spurs.wklMaxContention[wid % 16]), contention(spurs.wklPendingContention[wid % 16]), +winfo.addr, winfo.size, winfo.arg, std::bit_cast<be_t<u64>>(winfo.priority))));
+				}
+
+				add_leaf(spurs_tree, qstr(fmt::format("Handler Info: PPU0: 0x%x, PPU1: 0x%x, DirtyState: %u, Waiting: %u, Exiting: %u", spurs.ppu0, spurs.ppu1
+					, +spurs.handlerDirty, +spurs.handlerWaiting, +spurs.handlerExiting)));
+			}
+			else
+			{
+				// TODO: Might be old CellSpurs structure which is smaller
+			}
+		}
 	});
 
 	QTreeWidgetItem* rsx_context_node = find_node(m_tree, additional_nodes::rsx_contexts);
@@ -511,8 +608,8 @@ void kernel_explorer::Update()
 		}
 
 		const QString branch_name = "RSX Context 0x55555555";
-		QTreeWidgetItem* rsx_tree = add_volatile_node(m_tree, rsx_context_node, branch_name,
-			branch_name + qstr(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x", context_info->memory_size >> 20, base, context_info->device_addr)));
+		QTreeWidgetItem* rsx_tree = add_solid_node(m_tree, rsx_context_node, branch_name,
+			branch_name + qstr(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", context_info->memory_size >> 20, base, context_info->device_addr, +vm::_ref<RsxDriverInfo>(context_info->driver_info).handlers)));
 
 		QTreeWidgetItem* io_tree = add_volatile_node(m_tree, rsx_tree, tr("IO-EA Table"));
 		QTreeWidgetItem* zc_tree = add_volatile_node(m_tree, rsx_tree, tr("Zcull Bindings"));
@@ -599,10 +696,8 @@ void kernel_explorer::Update()
 
 	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& fo)
 	{
-		add_leaf(find_node(m_tree, additional_nodes::file_descriptors), qstr(fmt::format(u8"FD %u: “%s”", id, fo.name.data())));
+		add_leaf(find_node(m_tree, additional_nodes::file_descriptors), qstr(fmt::format("FD %u: %s", id, fo.to_string())));
 	});
-
-	// RawSPU Threads (TODO)
 
 	std::function<int(QTreeWidgetItem*)> final_touches;
 	final_touches = [&final_touches](QTreeWidgetItem* item) -> int
@@ -618,7 +713,7 @@ void kernel_explorer::Update()
 				continue;
 			}
 
-			switch (node->data(0, kernel_item_role::type_role).toInt())
+			switch (int type = node->data(0, kernel_item_role::type_role).toInt())
 			{
 			case kernel_item_type::leaf:
 			{
@@ -626,6 +721,7 @@ void kernel_explorer::Update()
 				break;
 			}
 			case kernel_item_type::node:
+			case kernel_item_type::solid_node:
 			case kernel_item_type::volatile_node:
 			{
 				const int count = final_touches(node);
@@ -640,7 +736,7 @@ void kernel_explorer::Update()
 				}
 
 				// Hide node if it has no children
-				node->setHidden(count <= 0);
+				node->setHidden(type != kernel_item_type::solid_node && count <= 0);
 				break;
 			}
 			case kernel_item_type::root:

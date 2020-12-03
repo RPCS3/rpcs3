@@ -48,17 +48,16 @@ cmake ..                                               \
     -DCMAKE_CXX_FLAGS="$CFLAGS"                        \
     -DCMAKE_AR="$AR"                                   \
     -DCMAKE_RANLIB="$RANLIB"                           \
+    -DUSE_SYSTEM_CURL=ON                               \
     -G Ninja
 
 ninja; build_status=$?;
 
 cd ..
 
-# If it compiled succesfully let's deploy depending on the build pipeline (Travis, Azure Pipelines).
-# Travis only deploys on master, and it publishes to GitHub releases. Azure publishes PRs as artifacts
-# only.
-{   [ "$IS_AZURE" = "true" ] ||
-    { [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ]; };
+# If it compiled succesfully let's deploy depending on the build pipeline (Azure Pipelines).
+# Azure publishes PRs as artifacts only.
+{   [ "$IS_AZURE" = "true" ];
 } && SHOULD_DEPLOY="true" || SHOULD_DEPLOY="false"
 
 if [ "$build_status" -eq 0 ] && [ "$SHOULD_DEPLOY" = "true" ]; then

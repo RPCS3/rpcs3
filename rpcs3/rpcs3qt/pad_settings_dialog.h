@@ -9,6 +9,7 @@
 #include "Emu/Io/pad_config.h"
 #include "Emu/GameInfo.h"
 
+class gui_settings;
 class PadHandlerBase;
 
 namespace Ui
@@ -87,7 +88,7 @@ class pad_settings_dialog : public QDialog
 	const QString Disconnected_suffix = tr(" (disconnected)");
 
 public:
-	explicit pad_settings_dialog(QWidget *parent = nullptr, const GameInfo *game = nullptr);
+	explicit pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget *parent = nullptr, const GameInfo *game = nullptr);
 	~pad_settings_dialog();
 
 public Q_SLOTS:
@@ -101,15 +102,15 @@ private Q_SLOTS:
 	void HandleDeviceClassChange(int index);
 	/** Save the Pad Configuration to the current Pad Handler Config File */
 	void SaveProfile();
-	void SaveExit();
-	void CancelExit();
 
 private:
 	Ui::pad_settings_dialog *ui;
 	std::string m_title_id;
+	std::shared_ptr<gui_settings> m_gui_settings;
 
-	// TabWidget
-	QTabWidget* m_tabs = nullptr;
+	// Tooltips
+	QString m_description;
+	QHash<QObject*, QString> m_descriptions;
 
 	// Capabilities
 	bool m_enable_buttons{ false };
@@ -124,10 +125,10 @@ private:
 	std::map<int /*id*/, pad_button /*info*/> m_cfg_entries;
 
 	// Real time stick values
-	int lx = 0;
-	int ly = 0;
-	int rx = 0;
-	int ry = 0;
+	int m_lx = 0;
+	int m_ly = 0;
+	int m_rx = 0;
+	int m_ry = 0;
 
 	// Rumble
 	s32 m_min_force = 0;
@@ -154,11 +155,14 @@ private:
 	// Input timer. Its Callback handles the input
 	QTimer m_timer_input;
 
+	void SaveExit();
+	void CancelExit();
+
 	// Set vibrate data while keeping the current color
 	void SetPadData(u32 large_motor, u32 small_motor);
 
 	/** Update all the Button Labels with current button mapping */
-	void UpdateLabel(bool is_reset = false);
+	void UpdateLabels(bool is_reset = false);
 	void SwitchPadInfo(const std::string& name, bool is_connected);
 
 	/** Enable/Disable Buttons while trying to remap an other */
@@ -173,7 +177,7 @@ private:
 	void ChangeProfile();
 
 	/** Repaints a stick deadzone preview label */
-	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y);
+	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier);
 
 	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
 
@@ -181,6 +185,15 @@ private:
 
 	/** Checks if the port at the given index is already reserved by the application as custom controller (ldd pad) */
 	bool GetIsLddPad(int index) const;
+
+	/** Resizes the dialog. We need to do this because the main scroll area can't determine the size on its own. */
+	void ResizeDialog();
+
+	/** Register a widget for tooltips */
+	void SubscribeTooltip(QObject* object, const QString& tooltip);
+
+	/** Used to keep all tooltip subscriptions in one place. */
+	void SubscribeTooltips();
 
 protected:
 	/** Handle keyboard handler input */

@@ -117,7 +117,7 @@ private:
 	u32 get_battery_color(u8 battery_level, int brightness);
 
 private:
-	std::shared_ptr<DS4Device> GetDS4Device(const std::string& padId, bool try_reconnect = false);
+	std::shared_ptr<DS4Device> GetDS4Device(const std::string& padId);
 	// Copies data into padData if status is NewData, otherwise buffer is untouched
 	DS4DataStatus GetRawData(const std::shared_ptr<DS4Device>& ds4Device);
 	// This function gets us usuable buffer from the rawbuffer of padData

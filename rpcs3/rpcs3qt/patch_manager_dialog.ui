@@ -40,23 +40,16 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="cb_owned_games_only">
+           <property name="text">
+            <string>Only show owned games</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QCheckBox" name="cb_enable_legacy_patches">
            <property name="text">
             <string>Enable Legacy Patches</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pb_collapse_all">
-           <property name="text">
-            <string>Collapse All</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pb_expand_all">
-           <property name="text">
-            <string>Expand All</string>
            </property>
           </widget>
          </item>
@@ -66,6 +59,9 @@
         <widget class="QTreeWidget" name="patch_tree">
          <property name="contextMenuPolicy">
           <enum>Qt::CustomContextMenu</enum>
+         </property>
+         <property name="indentation">
+          <number>20</number>
          </property>
          <property name="headerHidden">
           <bool>true</bool>
@@ -86,26 +82,7 @@
          <property name="title">
           <string>Patch Information</string>
          </property>
-         <layout class="QVBoxLayout" name="patch_info_gb_layout">
-          <item>
-           <widget class="QGroupBox" name="gb_hash">
-            <property name="title">
-             <string>Hash</string>
-            </property>
-            <layout class="QVBoxLayout" name="hash_layout">
-             <item>
-              <widget class="QLabel" name="label_hash">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="wordWrap">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
+         <layout class="QVBoxLayout" name="patch_info_gb_layout" stretch="0,0,0,0,0,0,0,1,0">
           <item>
            <widget class="QGroupBox" name="gb_title">
             <property name="title">
@@ -126,13 +103,48 @@
            </widget>
           </item>
           <item>
-           <widget class="QGroupBox" name="gb_serials">
+           <widget class="QGroupBox" name="gb_serial">
             <property name="title">
-             <string>Serials</string>
+             <string>Serial</string>
             </property>
-            <layout class="QVBoxLayout" name="serials_layout">
+            <layout class="QVBoxLayout" name="serial_layout">
              <item>
-              <widget class="QLabel" name="label_serials">
+              <widget class="QLabel" name="label_serial">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_app_version">
+            <property name="title">
+             <string>Game Version</string>
+            </property>
+            <layout class="QVBoxLayout" name="layout_app_version">
+             <item>
+              <widget class="QLabel" name="label_app_version">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_hash">
+            <property name="title">
+             <string>Hash</string>
+            </property>
+            <layout class="QVBoxLayout" name="hash_layout">
+             <item>
+              <widget class="QLabel" name="label_hash">
                <property name="text">
                 <string/>
                </property>
@@ -208,13 +220,56 @@
             </property>
             <layout class="QVBoxLayout" name="notes_layout">
              <item>
-              <widget class="QLabel" name="label_notes">
-               <property name="text">
-                <string/>
+              <widget class="QScrollArea" name="scrollArea_notes">
+               <property name="frameShape">
+                <enum>QFrame::NoFrame</enum>
                </property>
-               <property name="wordWrap">
+               <property name="lineWidth">
+                <number>0</number>
+               </property>
+               <property name="widgetResizable">
                 <bool>true</bool>
                </property>
+               <widget class="QWidget" name="scrollAreaWidgetContents_notes">
+                <property name="geometry">
+                 <rect>
+                  <x>0</x>
+                  <y>0</y>
+                  <width>127</width>
+                  <height>85</height>
+                 </rect>
+                </property>
+                <layout class="QVBoxLayout" name="scrollAreaWidgetContents_notes_layout">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_notes">
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                   </property>
+                   <property name="wordWrap">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
               </widget>
              </item>
             </layout>
@@ -246,7 +301,7 @@
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
-      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel|QDialogButtonBox::Save</set>
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel|QDialogButtonBox::RestoreDefaults|QDialogButtonBox::Save</set>
      </property>
     </widget>
    </item>

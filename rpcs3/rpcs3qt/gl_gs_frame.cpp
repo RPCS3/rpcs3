@@ -1,6 +1,8 @@
 ﻿#include "stdafx.h"
 #include "gl_gs_frame.h"
 
+#include "Emu/system_config.h"
+
 #include <QOpenGLContext>
 #include <QOffscreenSurface>
 
@@ -12,7 +14,7 @@ gl_gs_frame::gl_gs_frame(const QRect& geometry, const QIcon& appIcon, const std:
 	m_format.setMajorVersion(4);
 	m_format.setMinorVersion(3);
 	m_format.setProfile(QSurfaceFormat::CoreProfile);
-	m_format.setDepthBufferSize(16);
+	m_format.setDepthBufferSize(0);
 	m_format.setSwapBehavior(QSurfaceFormat::SwapBehavior::DoubleBuffer);
 	if (g_cfg.video.debug_output)
 	{

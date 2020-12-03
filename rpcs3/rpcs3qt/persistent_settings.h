@@ -12,11 +12,17 @@ namespace gui
 		// Entry names
 		const QString playtime    = "Playtime";
 		const QString last_played = "LastPlayed";
+		const QString notes       = "Notes";
+		const QString titles      = "Titles";
 
 		// Date format
 		const QString last_played_date_format_old    = "MMMM d yyyy";
 		const QString last_played_date_format_new    = "MMMM d, yyyy";
 		const Qt::DateFormat last_played_date_format = Qt::DateFormat::ISODate;
+
+		// GUI Saves
+		const gui_save save_notes  = gui_save(savedata, "notes",       QVariantMap());
+		const gui_save active_user = gui_save(users,    "active_user", "");
 	}
 }
 
@@ -28,13 +34,16 @@ class persistent_settings : public settings
 public:
 	explicit persistent_settings(QObject* parent = nullptr);
 
+	QString GetCurrentUser(const QString& fallback) const;
+
 public Q_SLOTS:
-	void SetPlaytime(const QString& serial, const qint64& elapsed);
-	qint64 GetPlaytime(const QString& serial);
+	void SetPlaytime(const QString& serial, quint64 playtime);
+	void AddPlaytime(const QString& serial, quint64 elapsed);
+	quint64 GetPlaytime(const QString& serial);
 
 	void SetLastPlayed(const QString& serial, const QString& date);
 	QString GetLastPlayed(const QString& serial);
 private:
-	QMap<QString, qint64> m_playtime;
+	QMap<QString, quint64> m_playtime;
 	QMap<QString, QString> m_last_played;
 };

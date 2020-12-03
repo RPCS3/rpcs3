@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -152,6 +153,28 @@ void fmt_class_string<SceNpTrophyError>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+template <>
+void fmt_class_string<SceNpCommunicationSignature>::format(std::string& out, u64 arg)
+{
+	const auto& sign = get_object(arg);
+
+	// Format as a C byte array for ease of use
+	fmt::append(out, "{ ");
+
+	for (std::size_t i = 0;; i++)
+	{
+		if (i == std::size(sign.data) - 1)
+		{
+			fmt::append(out, "0x%02X", sign.data[i]);
+			break;
+		}
+
+		fmt::append(out, "0x%02X, ", sign.data[i]);
+	}
+
+	fmt::append(out, " }");
 }
 
 // Helpers
@@ -322,19 +345,6 @@ error_code sceNpTrophyAbortHandle(u32 handle)
 	return CELL_OK;
 }
 
-void deleteTerminateChar(char* myStr, char _char) {
-
-	char *del = &myStr[strlen(myStr)];
-
-	while (del > myStr && *del != _char)
-		del--;
-
-	if (*del == _char)
-		*del = '\0';
-
-	return;
-}
-
 error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpCommunicationSignature> commSign, u64 options)
 {
 	sceNpTrophy.warning("sceNpTrophyCreateContext(context=*0x%x, commId=*0x%x, commSign=*0x%x, options=0x%llx)", context, commId, commSign, options);
@@ -343,6 +353,8 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	{
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
+
+	sceNpTrophy.notice("sceNpTrophyCreateContext(): commSign = %s", *commSign);
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
@@ -369,33 +381,37 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 		return SCE_NP_TROPHY_ERROR_INVALID_NP_COMM_ID;
 	}
 
-	// generate trophy context name
-	std::string name;
-	sceNpTrophy.warning("sceNpTrophyCreateContext term=%s data=%s num=%d", commId->term, commId->data, commId->num);
-	if (commId->term)
+	// NOTE: commId->term is unused in our code (at least until someone finds out if we need to account for it)
+
+	// generate trophy context name, limited to 9 characters
+	std::string_view name_sv(commId->data, 9);
+
+	// resize the name if it was shorter than expected
+	if (const auto pos = name_sv.find_first_of('\0'); pos != std::string_view::npos)
 	{
-		char trimchar[10];
-		strcpy_trunc(trimchar, commId->data);
-		deleteTerminateChar(trimchar, commId->term);
-		name = fmt::format("%s_%02d", trimchar, commId->num);
-	}
-	else
-	{
-		name = fmt::format("%s_%02d", commId->data, commId->num);
+		name_sv = name_sv.substr(0, pos);
 	}
 
+	sceNpTrophy.warning("sceNpTrophyCreateContext(): data='%s' term='%c' (0x%x) num=%d", name_sv, commId->term, commId->term, commId->num);
+
+	// append the commId number as "_xx"
+	const std::string name = fmt::format("%s_%02d", name_sv, commId->num);
+
 	// open trophy pack file
-	fs::file stream(vfs::get(Emu.GetDir() + "TROPDIR/" + name + "/TROPHY.TRP"));
+	std::string trophy_path = vfs::get(Emu.GetDir() + "TROPDIR/" + name + "/TROPHY.TRP");
+	fs::file stream(trophy_path);
 
 	if (!stream && Emu.GetCat() == "GD")
 	{
-		stream.open(vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + name + "/TROPHY.TRP"));
+		sceNpTrophy.warning("sceNpTrophyCreateContext failed to open trophy file from boot path: '%s'", trophy_path);
+		trophy_path = vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + name + "/TROPHY.TRP");
+		stream.open(trophy_path);
 	}
 
 	// check if exists and opened
 	if (!stream)
 	{
-		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
+		return {SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, trophy_path};
 	}
 
 	// create trophy context
@@ -447,7 +463,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -506,7 +522,21 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		}
 	}
 
+	// TODO: Callbacks
+	// From RE-ing a game's state machine, it seems the possible order is one of the following:
+	// * Install (Not installed)  - Setup - Progress * ? - Finalize - Complete - Installed
+	// * Reinstall (Corrupted)    - Setup - Progress * ? - Finalize - Complete - Installed
+	// * Update (Required update) - Setup - Progress * ? - Finalize - Complete - Installed
+	// * Installed
+
 	const std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name;
+
+	// The callback is called once and then if it returns >= 0 the cb is called through events(coming from vsh) that are passed to the CB through cellSysutilCheckCallback
+	if (statusCb(ppu, context, fs::is_dir(vfs::get(trophyPath)) ? SCE_NP_TROPHY_STATUS_INSTALLED : SCE_NP_TROPHY_STATUS_NOT_INSTALLED, 0, 0, arg) < 0)
+	{
+		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
+	}
+
 	if (!trp.Install(trophyPath))
 	{
 		sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to install trophy context '%s' (%s)", trophyPath, fs::g_tls_error);
@@ -518,20 +548,6 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	const std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
 	tropusr->Load(trophyUsrPath, trophyConfPath);
 	ctxt->tropusr.reset(tropusr);
-
-	// TODO: Callbacks
-	// From RE-ing a game's state machine, it seems the possible order is one of the following:
-	// * Install (Not installed)  - Setup - Progress * ? - Finalize - Complete - Installed
-	// * Reinstall (Corrupted)    - Setup - Progress * ? - Finalize - Complete - Installed
-	// * Update (Required update) - Setup - Progress * ? - Finalize - Complete - Installed
-	// * Installed
-	// We will go with the easy path of Installed, and that's it.
-
-	// The callback is called once and then if it returns >= 0 the cb is called through events(coming from vsh) that are passed to the CB through cellSysutilCheckCallback
-	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 0, 0, arg) < 0)
-	{
-		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
-	}
 
 	// This emulates vsh sending the events and ensures that not 2 events are processed at once
 	const std::pair<u32, s32> statuses[] =
@@ -603,7 +619,7 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -659,7 +675,7 @@ error_code sceNpTrophySetSoundLevel(u32 context, u32 handle, u32 level, u64 opti
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -682,7 +698,7 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -794,7 +810,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -880,7 +896,7 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -1041,7 +1057,7 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -1069,7 +1085,7 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -1109,7 +1125,7 @@ error_code sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer,
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{
@@ -1159,7 +1175,7 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager->mtx);
 
 	if (!trophy_manager->is_initialized)
 	{

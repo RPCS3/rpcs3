@@ -3,8 +3,8 @@
 #include "qt_utils.h"
 #include "memory_viewer_panel.h"
 #include "table_item_delegate.h"
-
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/gcm_printing.h"
 
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -611,16 +611,13 @@ void rsx_debugger::GetMemory()
 		if (const u32 ea = rsx::get_current_renderer()->iomap_table.get_addr(addr);
 			ea + 1)
 		{
-			u32 cmd = *vm::get_super_ptr<u32>(ea);
-			u32 count = (cmd >> 18) & 0x7ff;
+			const u32 cmd = *vm::get_super_ptr<u32>(ea);
+			const u32 count = cmd & RSX_METHOD_NON_METHOD_CMD_MASK ? 0 : (cmd >> 18) & 0x7ff;
+
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
 			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr)));
 			m_list_commands->setItem(i, 3, new QTableWidgetItem(QString::number(count)));
-
-			if(!(cmd & RSX_METHOD_NON_METHOD_CMD_MASK))
-			{
-				addr += 4 * count;
-			}
+			addr += 4 * count;
 		}
 		else
 		{
@@ -665,7 +662,7 @@ void rsx_debugger::GetBuffers()
 		const u32 width  = buffers[bufferId].width;
 		const u32 height = buffers[bufferId].height;
 
-		if(!vm::check_addr(RSXbuffer_addr, width * height * 4))
+		if (!vm::check_addr(RSXbuffer_addr, vm::page_readable, width * height * 4))
 			continue;
 
 		const auto RSXbuffer = vm::get_super_ptr<const u8>(RSXbuffer_addr);
@@ -911,7 +908,7 @@ void rsx_debugger::SetPC(const uint pc)
 
 void rsx_debugger::PerformJump(u32 address)
 {
-	if (!vm::check_addr(address, 4))
+	if (!vm::check_addr(address))
 		return;
 
 	u32 cmd = *vm::get_super_ptr<u32>(address);

@@ -12,6 +12,7 @@
 #include "debugger_frame.h"
 #include "log_frame.h"
 #include "settings_dialog.h"
+#include "rpcn_settings_dialog.h"
 #include "auto_pause_settings_dialog.h"
 #include "cg_disasm_window.h"
 #include "memory_string_searcher.h"
@@ -66,10 +67,13 @@ main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared
 
 	// We have to setup the ui before using a translation
 	ui->setupUi(this);
+
+	setAttribute(Qt::WA_DeleteOnClose);
 }
 
 main_window::~main_window()
 {
+	SaveWindowState();
 	delete ui;
 }
 
@@ -176,10 +180,49 @@ void main_window::Init()
 	// Fix possible hidden game list columns. The game list has to be visible already. Use this after show()
 	m_game_list_frame->FixNarrowColumns();
 
-#if defined(_WIN32) || defined(__linux__)
-	if (m_gui_settings->GetValue(gui::m_check_upd_start).toBool())
+	// RPCS3 Updater
+
+	QMenu* download_menu = new QMenu(tr("Update Available!"));
+
+	QAction *download_action = new QAction(tr("Download Update"), download_menu);
+	connect(download_action, &QAction::triggered, this, [this]
 	{
-		m_updater.check_for_updates(true, this);
+		m_updater.update();
+	});
+
+	download_menu->addAction(download_action);
+
+#ifdef _WIN32
+	// Use a menu at the top right corner to indicate the new version.
+	QMenuBar *corner_bar = new QMenuBar(ui->menuBar);
+	m_download_menu_action = corner_bar->addMenu(download_menu);
+	ui->menuBar->setCornerWidget(corner_bar);
+	ui->menuBar->cornerWidget()->setVisible(false);
+#else
+	// Append a menu to the right of the regular menus to indicate the new version.
+	// Some distros just can't handle corner widgets at the moment.
+	m_download_menu_action = ui->menuBar->addMenu(download_menu);
+#endif
+
+	ASSERT(m_download_menu_action);
+	m_download_menu_action->setVisible(false);
+
+	connect(&m_updater, &update_manager::signal_update_available, this, [this](bool update_available)
+	{
+		if (m_download_menu_action)
+		{
+			m_download_menu_action->setVisible(update_available);
+		}
+		if (ui->menuBar && ui->menuBar->cornerWidget())
+		{
+			ui->menuBar->cornerWidget()->setVisible(update_available);
+		}
+	});
+
+#if defined(_WIN32) || defined(__linux__)
+	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != "false")
+	{
+		m_updater.check_for_updates(true, update_value != "true", this);
 	}
 #endif
 }
@@ -440,20 +483,36 @@ void main_window::BootRsxCapture(std::string path)
 	}
 }
 
-void main_window::InstallPackages(QStringList file_paths, bool show_confirm)
+bool main_window::InstallRapFile(const QString& path, const std::string& filename)
+{
+	if (path.isEmpty() || filename.empty())
+	{
+		return false;
+	}
+	return fs::copy_file(sstr(path), Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + filename, true);
+}
+
+void main_window::InstallPackages(QStringList file_paths)
 {
 	if (file_paths.isEmpty())
 	{
+		// If this function was called without a path, ask the user for files to install.
 		const QString path_last_pkg = m_gui_settings->GetValue(gui::fd_install_pkg).toString();
-		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_pkg, tr("PKG files (*.pkg);;All files (*.*)"));
+		const QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select packages and/or rap files to install"),
+			path_last_pkg, tr("All relevant (*.pkg *.rap);;Package files (*.pkg);;Rap files (*.rap);;All files (*.*)"));
 
-		if (!file_path.isEmpty())
+		if (paths.isEmpty())
 		{
-			file_paths.append(file_path);
+			return;
 		}
+
+		file_paths.append(paths);
+		const QFileInfo file_info(file_paths[0]);
+		m_gui_settings->SetValue(gui::fd_install_pkg, file_info.path());
 	}
-	else if (show_confirm)
+	else if (file_paths.count() == 1)
 	{
+		// This can currently only happen by drag and drop.
 		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(file_paths.front()),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
@@ -462,14 +521,51 @@ void main_window::InstallPackages(QStringList file_paths, bool show_confirm)
 		}
 	}
 
-	if (!file_paths.isEmpty())
+	// Install rap files if available
+	for (const auto& rap : file_paths.filter(QRegExp(".*\\.rap")))
 	{
-		// Handle the actual installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
-		QTimer::singleShot(0, [this, file_paths]()
+		const QFileInfo file_info(rap);
+		const std::string rapname = sstr(file_info.fileName());
+
+		if (InstallRapFile(rap, rapname))
 		{
-			HandlePackageInstallation(file_paths);
-		});
+			gui_log.success("Successfully copied rap file: %s", rapname);
+		}
+		else
+		{
+			gui_log.error("Could not copy rap file: %s", rapname);
+		}
 	}
+
+	// Find remaining package files
+	file_paths = file_paths.filter(QRegExp(".*\\.pkg", Qt::CaseInsensitive));
+
+	if (file_paths.isEmpty())
+	{
+		return;
+	}
+
+	// Let the user choose the packages to install and select the order in which they shall be installed.
+	if (file_paths.size() > 1)
+	{
+		pkg_install_dialog dlg(file_paths, this);
+		connect(&dlg, &QDialog::accepted, [&file_paths, &dlg]()
+		{
+			file_paths = dlg.GetPathsToInstall();
+		});
+		dlg.exec();
+	}
+
+	if (file_paths.empty())
+	{
+		return;
+	}
+
+	// Handle the actual installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
+	QTimer::singleShot(0, [this, file_paths]()
+	{
+		HandlePackageInstallation(file_paths);
+	});
 }
 
 void main_window::HandlePackageInstallation(QStringList file_paths)
@@ -509,8 +605,6 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		const QFileInfo file_info(file_path);
 		const std::string path = sstr(file_path);
 		const std::string file_name = sstr(file_info.fileName());
-
-		m_gui_settings->SetValue(gui::fd_install_pkg, file_info.path());
 
 		// Run PKG unpacking asynchronously
 		named_thread worker("PKG Installer", [path, &progress, &error]
@@ -639,14 +733,14 @@ void main_window::HandlePupInstallation(QString file_path)
 	if (!pup_f)
 	{
 		gui_log.error("Error opening PUP file %s", path);
-		QMessageBox::critical(this, tr("Failure!"), tr("The selected firmware file couldn't be opened."));
+		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The selected firmware file couldn't be opened."));
 		return;
 	}
 
 	if (pup_f.size() < sizeof(PUPHeader))
 	{
 		gui_log.error("Too small PUP file: %llu", pup_f.size());
-		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file size is invalid."));
+		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The provided file is empty."));
 		return;
 	}
 
@@ -656,8 +750,8 @@ void main_window::HandlePupInstallation(QString file_path)
 
 	if (header.header_length + header.data_length != pup_f.size())
 	{
-		gui_log.error("Firmware size mismatch, expected: %llu, actual: %llu + %llu", pup_f.size(), header.header_length, header.data_length);
-		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file is corrupted."));
+		gui_log.error("Firmware size mismatch, expected: %llu + %llu, actual: %llu", header.header_length, header.data_length, pup_f.size());
+		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The provided file is incomplete. Try redownloading it."));
 		return;
 	}
 
@@ -665,14 +759,14 @@ void main_window::HandlePupInstallation(QString file_path)
 	if (!pup)
 	{
 		gui_log.error("Error while installing firmware: PUP file is invalid.");
-		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file is invalid."));
+		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The provided file is corrupted."));
 		return;
 	}
 
 	if (!pup.validate_hashes())
 	{
-		gui_log.error("Error while installing firmware: Hash check failed. ");
-		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file contents are invalid."));
+		gui_log.error("Error while installing firmware: Hash check failed.");
+		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The provided file's contents are corrupted."));
 		return;
 	}
 
@@ -724,7 +818,7 @@ void main_window::HandlePupInstallation(QString file_path)
 				if (dev_flash_tar_f.size() < 3)
 				{
 					gui_log.error("Error while installing firmware: PUP contents are invalid.");
-					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP contents are invalid."));
+					QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: Firmware could not be decompressed"));
 					progress = -1;
 				}
 
@@ -732,7 +826,7 @@ void main_window::HandlePupInstallation(QString file_path)
 				if (!dev_flash_tar.extract(g_cfg.vfs.get_dev_flash(), "dev_flash/"))
 				{
 					gui_log.error("Error while installing firmware: TAR contents are invalid.");
-					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: TAR contents are invalid."));
+					QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: Firmware contents could not be extracted."));
 					progress = -1;
 				}
 
@@ -1212,7 +1306,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	}
 
 	// connect boot
-	connect(act, &QAction::triggered, [=, this]() {BootRecentAction(act); });
+	connect(act, &QAction::triggered, [act, this]() {BootRecentAction(act); });
 
 	return act;
 }
@@ -1485,14 +1579,23 @@ void main_window::CreateConnects()
 	connect(ui->confAudioAct,  &QAction::triggered, [=, this]() { open_settings(2); });
 	connect(ui->confIOAct,     &QAction::triggered, [=, this]() { open_settings(3); });
 	connect(ui->confSystemAct, &QAction::triggered, [=, this]() { open_settings(4); });
+	connect(ui->confAdvAct,    &QAction::triggered, [=, this]() { open_settings(6); });
+	connect(ui->confEmuAct,    &QAction::triggered, [=, this]() { open_settings(7); });
+	connect(ui->confGuiAct,    &QAction::triggered, [=, this]() { open_settings(8); });
 
 	auto open_pad_settings = [this]
 	{
-		pad_settings_dialog dlg(this);
+		pad_settings_dialog dlg(m_gui_settings, this);
 		dlg.exec();
 	};
 
 	connect(ui->confPadsAct, &QAction::triggered, open_pad_settings);
+
+	connect(ui->confRPCNAct, &QAction::triggered, [this]()
+	{
+		rpcn_settings_dialog dlg(this);
+		dlg.exec();
+	});
 
 	connect(ui->confAutopauseManagerAct, &QAction::triggered, [this]()
 	{
@@ -1509,7 +1612,7 @@ void main_window::CreateConnects()
 
 	connect(ui->confSavedataManagerAct, &QAction::triggered, [this]
 	{
-		save_manager_dialog* save_manager = new save_manager_dialog(m_gui_settings);
+		save_manager_dialog* save_manager = new save_manager_dialog(m_gui_settings, m_persistent_settings);
 		connect(this, &main_window::RequestTrophyManagerRepaint, save_manager, &save_manager_dialog::HandleRepaintUiRequest);
 		save_manager->show();
 	});
@@ -1535,13 +1638,24 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Game_Patches, &QAction::triggered, [this]
 	{
-		patch_manager_dialog patch_manager(m_gui_settings, this);
+		std::unordered_map<std::string, std::set<std::string>> games;
+		if (m_game_list_frame)
+		{
+			for (const auto& game : m_game_list_frame->GetGameInfo())
+			{
+				if (game)
+				{
+					games[game->info.serial].insert(game_list_frame::GetGameVersion(game));
+				}
+			}
+		}
+		patch_manager_dialog patch_manager(m_gui_settings, games, "", this);
 		patch_manager.exec();
  	});
 
 	connect(ui->actionManage_Users, &QAction::triggered, [this]
 	{
-		user_manager_dialog user_manager(m_gui_settings, this);
+		user_manager_dialog user_manager(m_gui_settings, m_persistent_settings, this);
 		user_manager.exec();
 		m_game_list_frame->Refresh(true); // New user may have different games unlocked.
 	});
@@ -1664,7 +1778,7 @@ void main_window::CreateConnects()
 			QMessageBox::warning(this, tr("Auto-updater"), tr("Please stop the emulation before trying to update."));
 			return;
 		}
-		m_updater.check_for_updates(false, this);
+		m_updater.check_for_updates(false, false, this);
 	});
 
 	connect(ui->aboutAct, &QAction::triggered, [this]
@@ -2102,7 +2216,7 @@ void main_window::mouseDoubleClickEvent(QMouseEvent *event)
 	}
 }
 
-/** Override the Qt close event to have the emulator stop and the application die.  May add a warning dialog in future.
+/** Override the Qt close event to have the emulator stop and the application die.
 */
 void main_window::closeEvent(QCloseEvent* closeEvent)
 {
@@ -2112,17 +2226,12 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 		return;
 	}
 
-	// Cleanly stop the emulator.
-	Emu.Stop();
-
-	SaveWindowState();
-
-	// I need the gui settings to sync, and that means having the destructor called as guiSetting's parent is main_window.
-	setAttribute(Qt::WA_DeleteOnClose);
-	QMainWindow::close();
-
-	// It's possible to have other windows open, like games.  So, force the application to die.
-	QApplication::quit();
+	// Cleanly stop and quit the emulator.
+	if (!Emu.IsStopped())
+	{
+		Emu.Stop();
+	}
+	Emu.Quit(true);
 }
 
 /**
@@ -2247,23 +2356,7 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_pkg: // install the packages
 	{
-		if (drop_paths.count() > 1)
-		{
-			pkg_install_dialog dlg(drop_paths, this);
-			connect(&dlg, &QDialog::accepted, [this, &dlg]()
-			{
-				const QStringList paths = dlg.GetPathsToInstall();
-				if (!paths.isEmpty())
-				{
-					InstallPackages(paths, false);
-				}
-			});
-			dlg.exec();
-		}
-		else
-		{
-			InstallPackages(drop_paths, true);
-		}
+		InstallPackages(drop_paths);
 		break;
 	}
 	case drop_type::drop_pup: // install the firmware
@@ -2273,22 +2366,28 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_rap: // import rap files to exdata dir
 	{
+		int installed_rap_count = 0;
+
 		for (const auto& rap : drop_paths)
 		{
 			const std::string rapname = sstr(QFileInfo(rap).fileName());
 
-			if (!fs::copy_file(sstr(rap), Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + rapname, false))
+			if (InstallRapFile(rap, rapname))
 			{
-				gui_log.warning("Could not copy rap file by drop: %s", rapname);
+				gui_log.success("Successfully copied rap file by drop: %s", rapname);
+				installed_rap_count++;
 			}
 			else
 			{
-				gui_log.success("Successfully copied rap file by drop: %s", rapname);
+				gui_log.error("Could not copy rap file by drop: %s", rapname);
 			}
 		}
 
-		// Refresh game list since we probably unlocked some games now.
-		m_game_list_frame->Refresh(true);
+		if (installed_rap_count > 0)
+		{
+			// Refresh game list since we probably unlocked some games now.
+			m_game_list_frame->Refresh(true);
+		}
 		break;
 	}
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)

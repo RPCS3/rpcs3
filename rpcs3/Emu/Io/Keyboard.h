@@ -4,6 +4,11 @@
 
 enum
 {
+	CELL_KB_INFO_INTERCEPTED = 1
+};
+
+enum
+{
 	CELL_KB_MAX_KEYCODES  = 62,
 	CELL_KB_MAX_KEYBOARDS = 127,
 };

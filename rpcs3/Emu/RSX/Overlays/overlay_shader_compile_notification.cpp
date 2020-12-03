@@ -12,7 +12,7 @@ namespace rsx
 			const u16 pos_y = g_cfg.video.shader_compilation_hint.pos_y;
 
 			m_text.set_font("Arial", 16);
-			m_text.set_text("Compiling shaders");
+			m_text.set_text(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS);
 			m_text.auto_resize();
 			m_text.set_pos(pos_x, pos_y);
 

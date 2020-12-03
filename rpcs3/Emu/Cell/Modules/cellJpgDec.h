@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/BEType.h"
 
 //Return Codes
-enum
+enum CellJpgDecError : u32
 {
 	CELL_JPGDEC_ERROR_HEADER        = 0x80611101,
 	CELL_JPGDEC_ERROR_STREAM_FORMAT = 0x80611102,

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "sys_sync.h"
 
@@ -161,26 +161,26 @@ enum : u64
 
 // SysCalls
 
-error_code sys_prx_get_ppu_guid();
-error_code _sys_prx_load_module_by_fd(s32 fd, u64 offset, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
-error_code _sys_prx_load_module_on_memcontainer_by_fd(s32 fd, u64 offset, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
-error_code _sys_prx_load_module_list(s32 count, vm::cpptr<char, u32, u64> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list);
-error_code _sys_prx_load_module_list_on_memcontainer(s32 count, vm::cpptr<char, u32, u64> path_list, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list);
-error_code _sys_prx_load_module_on_memcontainer(vm::cptr<char> path, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
-error_code _sys_prx_load_module(vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
-error_code _sys_prx_start_module(u32 id, u64 flags, vm::ptr<sys_prx_start_stop_module_option_t> pOpt);
-error_code _sys_prx_stop_module(u32 id, u64 flags, vm::ptr<sys_prx_start_stop_module_option_t> pOpt);
-error_code _sys_prx_unload_module(u32 id, u64 flags, vm::ptr<sys_prx_unload_module_option_t> pOpt);
-error_code _sys_prx_register_module();
-error_code _sys_prx_query_module();
-error_code _sys_prx_register_library(vm::ptr<void> library);
-error_code _sys_prx_unregister_library(vm::ptr<void> library);
-error_code _sys_prx_link_library();
-error_code _sys_prx_unlink_library();
-error_code _sys_prx_query_library();
-error_code _sys_prx_get_module_list(u64 flags, vm::ptr<sys_prx_get_module_list_option_t> pInfo);
-error_code _sys_prx_get_module_info(u32 id, u64 flags, vm::ptr<sys_prx_module_info_option_t> pOpt);
-error_code _sys_prx_get_module_id_by_name(vm::cptr<char> name, u64 flags, vm::ptr<sys_prx_get_module_id_by_name_option_t> pOpt);
-error_code _sys_prx_get_module_id_by_address(u32 addr);
-error_code _sys_prx_start();
-error_code _sys_prx_stop();
+error_code sys_prx_get_ppu_guid(ppu_thread& ppu);
+error_code _sys_prx_load_module_by_fd(ppu_thread& ppu, s32 fd, u64 offset, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
+error_code _sys_prx_load_module_on_memcontainer_by_fd(ppu_thread& ppu, s32 fd, u64 offset, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
+error_code _sys_prx_load_module_list(ppu_thread& ppu, s32 count, vm::cpptr<char, u32, u64> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list);
+error_code _sys_prx_load_module_list_on_memcontainer(ppu_thread& ppu, s32 count, vm::cpptr<char, u32, u64> path_list, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list);
+error_code _sys_prx_load_module_on_memcontainer(ppu_thread& ppu, vm::cptr<char> path, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
+error_code _sys_prx_load_module(ppu_thread& ppu, vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
+error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_prx_start_stop_module_option_t> pOpt);
+error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_prx_start_stop_module_option_t> pOpt);
+error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_prx_unload_module_option_t> pOpt);
+error_code _sys_prx_register_module(ppu_thread& ppu);
+error_code _sys_prx_query_module(ppu_thread& ppu);
+error_code _sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> library);
+error_code _sys_prx_unregister_library(ppu_thread& ppu, vm::ptr<void> library);
+error_code _sys_prx_link_library(ppu_thread& ppu);
+error_code _sys_prx_unlink_library(ppu_thread& ppu);
+error_code _sys_prx_query_library(ppu_thread& ppu);
+error_code _sys_prx_get_module_list(ppu_thread& ppu, u64 flags, vm::ptr<sys_prx_get_module_list_option_t> pInfo);
+error_code _sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_prx_module_info_option_t> pOpt);
+error_code _sys_prx_get_module_id_by_name(ppu_thread& ppu, vm::cptr<char> name, u64 flags, vm::ptr<sys_prx_get_module_id_by_name_option_t> pOpt);
+error_code _sys_prx_get_module_id_by_address(ppu_thread& ppu, u32 addr);
+error_code _sys_prx_start(ppu_thread& ppu);
+error_code _sys_prx_stop(ppu_thread& ppu);

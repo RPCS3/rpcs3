@@ -3,9 +3,10 @@
 
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
-#include "Utilities/asm.h"
 #include "SPUThread.h"
 #include "Emu/Cell/Common.h"
+
+#include "util/asm.hpp"
 
 #include <cmath>
 #include <cfenv>
@@ -518,7 +519,7 @@ bool spu_interpreter::BISLED(spu_thread& spu, spu_opcode_t op)
 	const u32 target = spu_branch_target(spu.gpr[op.ra]._u32[3]);
 	spu.gpr[op.rt] = v128::from32r(spu_branch_target(spu.pc + 4));
 
-	if (spu.get_events())
+	if (spu.get_events().count)
 	{
 		spu.pc = target;
 		set_interrupt_status(spu, op);

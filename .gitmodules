@@ -65,10 +65,13 @@
 	ignore = dirty
 [submodule "3rdparty/curl"]
 	path = 3rdparty/curl
-	url = https://github.com/RipleyTom/curl.git
+	url = https://github.com/curl/curl.git
 	ignore = dirty
 [submodule "3rdparty/wolfssl"]
 	path = 3rdparty/wolfssl
-	url = https://github.com/RipleyTom/wolfssl.git
+	url = https://github.com/wolfSSL/wolfssl.git
 	ignore = dirty
-
+[submodule "3rdparty/flatbuffers"]
+	path = 3rdparty/flatbuffers
+	url = https://github.com/google/flatbuffers.git
+	ignore = dirty

@@ -1,6 +1,6 @@
 ﻿#include "stdafx.h"
 #include "VKGSRender.h"
-
+#include "Emu/Cell/Modules/cellVideoOut.h"
 
 void VKGSRender::reinitialize_swapchain()
 {
@@ -104,6 +104,9 @@ void VKGSRender::advance_queued_frames()
 	// Check all other frames for completion and clear resources
 	check_present_status();
 
+	// Run video memory balancer
+	vk::vmm_check_memory_usage();
+
 	// m_rtts storage is double buffered and should be safe to tag on frame boundary
 	m_rtts.free_invalidated(*m_current_command_buffer);
 
@@ -163,10 +166,10 @@ void VKGSRender::queue_swap_request()
 	m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
 	m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
 	m_current_command_buffer->reset();
+	m_current_command_buffer->begin();
 
 	// Set up new pointers for the next frame
 	advance_queued_frames();
-	open_command_buffer();
 }
 
 void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resources)
@@ -272,7 +275,7 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 	vk::image* image_to_flip = nullptr;
 
 	// Check the surface store first
-	const auto format_bpp = get_format_block_size_in_bytes(info->format);
+	const auto format_bpp = rsx::get_format_block_size_in_bytes(info->format);
 	const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer,
 		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::read);
 
@@ -310,8 +313,9 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 				surface->read_barrier(*m_current_command_buffer);
 				image_to_flip = section.surface->get_surface(rsx::surface_access::read);
 
-				info->width = rsx::apply_resolution_scale(std::min(surface_width, static_cast<u16>(info->width)), true);
-				info->height = rsx::apply_resolution_scale(std::min(surface_height, static_cast<u16>(info->height)), true);
+				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
+					std::min(surface_width, static_cast<u16>(info->width)),
+					std::min(surface_height, static_cast<u16>(info->height)));
 			}
 		}
 	}
@@ -344,8 +348,22 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 			flush_command_queue();
 		}
 
+		VkFormat format;
+		switch (avconfig->format)
+		{
+		default:
+			rsx_log.error("Unhandled video output format 0x%x", avconfig->format);
+			[[fallthrough]];
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+			format = VK_FORMAT_B8G8R8A8_UNORM;
+			break;
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+			format = VK_FORMAT_R8G8B8A8_UNORM;
+			break;
+		}
+
 		m_texture_cache.invalidate_range(*m_current_command_buffer, range, rsx::invalidation_cause::read);
-		image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, info->address, info->width, info->height, info->pitch);
+		image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, format, info->address, info->width, info->height, info->pitch);
 	}
 
 	return image_to_flip;
@@ -452,7 +470,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (avconfig->_3d) [[unlikely]]
 		{
-			const auto min_expected_height = rsx::apply_resolution_scale(buffer_height + 30, true);
+			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
 			{
 				// Get image for second eye
@@ -466,7 +484,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			else
 			{
 				// Account for possible insets
-				buffer_height = std::min<u32>(image_to_flip->height() - min_expected_height, rsx::apply_resolution_scale(buffer_height, true));
+				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
+				buffer_height = std::min<u32>(image_to_flip->height() - min_expected_height, scaled_buffer_height);
 			}
 		}
 
@@ -584,8 +603,26 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (calibration_src.empty()) [[likely]]
 		{
-			vk::copy_scaled_image(*m_current_command_buffer, image_to_flip->value, target_image, image_to_flip->current_layout, target_layout,
-				{ 0, 0, static_cast<s32>(buffer_width), static_cast<s32>(buffer_height) }, aspect_ratio, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);
+			// Do raw transfer here as there is no image object associated with textures owned by the driver (TODO)
+			const areai dst_rect = aspect_ratio;
+			VkImageBlit rgn = {};
+
+			rgn.srcSubresource = { image_to_flip->aspect(), 0, 0, 1 };
+			rgn.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+			rgn.srcOffsets[0] = { 0, 0, 0 };
+			rgn.srcOffsets[1] = { s32(buffer_width), s32(buffer_height), 1 };
+			rgn.dstOffsets[0] = { dst_rect.x1, dst_rect.y1, 0 };
+			rgn.dstOffsets[1] = { dst_rect.x2, dst_rect.y2, 1 };
+
+			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			if (target_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+			{
+				vk::change_image_layout(*m_current_command_buffer, target_image, target_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+				target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			}
+
+			vkCmdBlitImage(*m_current_command_buffer, image_to_flip->value, image_to_flip->current_layout, target_image, target_layout, 1, &rgn, VK_FILTER_LINEAR);
+			image_to_flip->pop_layout(*m_current_command_buffer);
 		}
 		else
 		{
@@ -642,7 +679,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			memcpy(sshot_frame.data(), src, sshot_size);
 			sshot_vkbuf.unmap();
 
-			m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
+			const bool is_bgra = image_to_flip->format() == VK_FORMAT_B8G8R8A8_UNORM;
+			m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, is_bgra);
 		}
 	}
 

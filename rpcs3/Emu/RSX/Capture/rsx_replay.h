@@ -1,7 +1,6 @@
 ﻿#pragma once
 
-#include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/CPU/CPUThread.h"
 #include "Emu/RSX/rsx_methods.h"
 
 #include <cereal/types/vector.hpp>
@@ -181,7 +180,7 @@ namespace rsx
 	};
 
 
-	class rsx_replay_thread
+	class rsx_replay_thread : public cpu_thread
 	{
 		struct rsx_context
 		{
@@ -209,12 +208,12 @@ namespace rsx
 
 	public:
 		rsx_replay_thread(std::unique_ptr<frame_capture_data>&& frame_data)
-			:frame(std::move(frame_data))
+			: cpu_thread(0)
+			, frame(std::move(frame_data))
 		{
 		}
 
-		void on_task();
-		void operator()();
+		void cpu_task() override;
 	private:
 		be_t<u32> allocate_context();
 		std::vector<u32> alloc_write_fifo(be_t<u32> context_id);

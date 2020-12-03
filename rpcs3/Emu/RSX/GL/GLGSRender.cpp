@@ -4,21 +4,9 @@
 #include "GLGSRender.h"
 #include "GLCompute.h"
 #include "GLVertexProgram.h"
+#include "Emu/Memory/vm_locking.h"
 
 #define DUMP_VERTEX_DATA 0
-
-namespace
-{
-	u32 get_max_depth_value(rsx::surface_depth_format format)
-	{
-		switch (format)
-		{
-		case rsx::surface_depth_format::z16: return 0xFFFF;
-		case rsx::surface_depth_format::z24s8: return 0xFFFFFF;
-		}
-		fmt::throw_exception("Unknown depth format" HERE);
-	}
-}
 
 u64 GLGSRender::get_cycles()
 {
@@ -44,8 +32,9 @@ extern CellGcmContextData current_context;
 void GLGSRender::set_viewport()
 {
 	// NOTE: scale offset matrix already contains the viewport transformation
-	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
-	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
+	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
+		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
+
 	glViewport(0, 0, clip_width, clip_height);
 }
 
@@ -70,10 +59,33 @@ void GLGSRender::on_init_thread()
 	m_context = m_frame->make_context();
 
 	const auto shadermode = g_cfg.video.shadermode.get();
-
-	if (shadermode == shader_mode::async_recompiler || shadermode == shader_mode::async_with_interpreter)
+	if (shadermode != shader_mode::recompiler)
 	{
-		m_decompiler_context = m_frame->make_context();
+		auto context_create_func = [m_frame = m_frame]()
+		{
+			return m_frame->make_context();
+		};
+
+		auto context_bind_func = [m_frame = m_frame](draw_context_t ctx)
+		{
+			m_frame->set_current(ctx);
+		};
+
+		auto context_destroy_func = [m_frame = m_frame](draw_context_t ctx)
+		{
+			m_frame->delete_context(ctx);
+		};
+
+		gl::initialize_pipe_compiler(context_create_func, context_bind_func, context_destroy_func, g_cfg.video.shader_compiler_threads_count);
+	}
+	else
+	{
+		auto null_context_create_func = []() -> draw_context_t
+		{
+			return nullptr;
+		};
+
+		gl::initialize_pipe_compiler(null_context_create_func, {}, {}, 1);
 	}
 
 	// Bind primary context to main RSX thread
@@ -344,6 +356,9 @@ void GLGSRender::on_init_thread()
 
 void GLGSRender::on_exit()
 {
+	// Destroy internal RSX state, may call upon this->do_local_task
+	GSRender::on_exit();
+
 	// Globals
 	// TODO: Move these
 	gl::destroy_compute_tasks();
@@ -352,6 +367,8 @@ void GLGSRender::on_exit()
 	{
 		gl::g_typeless_transfer_buffer.remove();
 	}
+
+	gl::destroy_pipe_compiler();
 
 	m_prog_buffer.clear();
 	m_rtts.destroy();
@@ -475,11 +492,9 @@ void GLGSRender::on_exit()
 		query.driver_handle = 0;
 	}
 
-	glFlush();
-	glFinish();
-
-	GSRender::on_exit();
 	zcull_ctrl.release();
+
+	gl::set_primary_context_thread(false);
 }
 
 void GLGSRender::clear_surface(u32 arg)
@@ -510,21 +525,21 @@ void GLGSRender::clear_surface(u32 arg)
 		rsx::method_registers.scissor_height() < rsx::method_registers.surface_clip_height();
 
 	bool update_color = false, update_z = false;
-	rsx::surface_depth_format surface_depth_format = rsx::method_registers.surface_depth_fmt();
+	rsx::surface_depth_format2 surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & 0x3)
 	{
 		if (arg & 0x1)
 		{
 			u32 max_depth_value = get_max_depth_value(surface_depth_format);
-			u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
+			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
 
 			gl_state.depth_mask(GL_TRUE);
 			gl_state.clear_depth(f32(clear_depth) / max_depth_value);
 			mask |= GLenum(gl::buffers::depth);
 		}
 
-		if (surface_depth_format == rsx::surface_depth_format::z24s8)
+		if (is_depth_stencil_format(surface_depth_format))
 		{
 			if (arg & 0x2)
 			{
@@ -597,6 +612,10 @@ void GLGSRender::clear_surface(u32 arg)
 			colormask = rsx::get_abgr8_colormask(colormask);
 			break;
 		}
+		default:
+		{
+			break;
+		}
 		}
 
 		if (colormask)
@@ -658,7 +677,7 @@ bool GLGSRender::load_program()
 	{
 		void* pipeline_properties = nullptr;
 		m_program = m_prog_buffer.get_graphics_pipeline(current_vertex_program, current_fragment_program, pipeline_properties,
-			shadermode != shader_mode::recompiler, true).get();
+			shadermode != shader_mode::recompiler, true);
 
 		if (m_prog_buffer.check_cache_missed())
 		{
@@ -843,8 +862,7 @@ void GLGSRender::load_program_env()
 			// Bind textures
 			m_shader_interpreter.update_fragment_textures(fs_sampler_state, current_fp_metadata.referenced_textures_mask, reinterpret_cast<u32*>(fp_buf + 16));
 
-			const auto fp_data = static_cast<u8*>(current_fragment_program.addr) + current_fp_metadata.program_start_offset;
-			std::memcpy(fp_buf + 80, fp_data, current_fp_metadata.program_ucode_length);
+			std::memcpy(fp_buf + 80, current_fragment_program.get_data(), current_fragment_program.ucode_length);
 
 			m_fragment_instructions_buffer->bind_range(GL_INTERPRETER_FRAGMENT_BLOCK, fp_mapping.second, fp_block_length);
 			m_fragment_instructions_buffer->notify();
@@ -1076,21 +1094,4 @@ void GLGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 		//Discard is being called on an active query, close it
 		glEndQuery(GL_ANY_SAMPLES_PASSED);
 	}
-}
-
-void GLGSRender::on_decompiler_init()
-{
-	// Bind decompiler context to this thread
-	m_frame->set_current(m_decompiler_context);
-}
-
-void GLGSRender::on_decompiler_exit()
-{
-	// Cleanup
-	m_frame->delete_context(m_decompiler_context);
-}
-
-bool GLGSRender::on_decompiler_task()
-{
-	return m_prog_buffer.async_update(8).first;
 }

@@ -14,6 +14,8 @@ extern "C"
 #include <libavutil/pixfmt.h>
 }
 
+#define RSX_SURFACE_DIMENSION_IGNORED 1
+
 namespace rsx
 {
 	// Import address_range utilities
@@ -31,9 +33,18 @@ namespace rsx
 
 	extern atomic_t<u64> g_rsx_shared_tag;
 
+	enum class problem_severity : u8
+	{
+		low,
+		moderate,
+		severe,
+		fatal
+	};
+
 	//Base for resources with reference counting
 	class ref_counted
 	{
+	protected:
 		atomic_t<s32> ref_count{ 0 }; // References held
 		atomic_t<u8> idle_time{ 0 };  // Number of times the resource has been tagged idle
 
@@ -106,8 +117,7 @@ namespace rsx
 		u32 pitch = 0;
 
 		rsx::surface_color_format color_format;
-		rsx::surface_depth_format depth_format;
-		bool depth_buffer_float;
+		rsx::surface_depth_format2 depth_format;
 
 		u16 width = 0;
 		u16 height = 0;
@@ -237,18 +247,17 @@ namespace rsx
 		}
 	}
 
-	//
-	static inline u32 floor_log2(u32 value)
+	static constexpr u32 floor_log2(u32 value)
 	{
 		return value <= 1 ? 0 : std::countl_zero(value) ^ 31;
 	}
 
-	static inline u32 ceil_log2(u32 value)
+	static constexpr u32 ceil_log2(u32 value)
 	{
-		return value <= 1 ? 0 : std::countl_zero((value - 1) << 1) ^ 31;
+		return floor_log2(value) + u32{!!(value & (value - 1))};
 	}
 
-	static inline u32 next_pow2(u32 x)
+	static constexpr u32 next_pow2(u32 x)
 	{
 		if (x <= 2) return x;
 
@@ -440,17 +449,11 @@ namespace rsx
 		}
 	}
 
-	void scale_image_nearest(void* dst, const void* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 element_size, u8 samples_u, u8 samples_v, bool swap_bytes = false);
-
 	void convert_scale_image(u8 *dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
 		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear);
 
 	void clip_image(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch);
 	void clip_image_may_overlap(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch, u8* buffer);
-
-	void convert_le_f32_to_be_d24(void *dst, void *src, u32 row_length_in_texels, u32 num_rows);
-	void convert_le_d24x8_to_be_d24x8(void *dst, void *src, u32 row_length_in_texels, u32 num_rows);
-	void convert_le_d24x8_to_le_f32(void *dst, void *src, u32 row_length_in_texels, u32 num_rows);
 
 	std::array<float, 4> get_constant_blend_colors();
 
@@ -577,7 +580,7 @@ namespace rsx
 
 	static inline const f32 get_resolution_scale()
 	{
-		return g_cfg.video.strict_rendering_mode? 1.f : (g_cfg.video.resolution_scale_percent / 100.f);
+		return g_cfg.video.strict_rendering_mode ? 1.f : (g_cfg.video.resolution_scale_percent / 100.f);
 	}
 
 	static inline const int get_resolution_scale_percent()
@@ -585,33 +588,48 @@ namespace rsx
 		return g_cfg.video.strict_rendering_mode ? 100 : g_cfg.video.resolution_scale_percent;
 	}
 
-	static inline const u16 apply_resolution_scale(u16 value, bool clamp, u16 ref = 0)
+	template <bool clamp = false>
+	static inline const std::pair<u16, u16> apply_resolution_scale(u16 width, u16 height, u16 ref_width = 0, u16 ref_height = 0)
 	{
-		if (ref == 0)
-			ref = value;
+		ref_width = (ref_width)? ref_width : width;
+		ref_height = (ref_height)? ref_height : height;
+		const u16 ref = std::max(ref_width, ref_height);
 
-		if (ref <= g_cfg.video.min_scalable_dimension)
-			return value;
+		if (ref > g_cfg.video.min_scalable_dimension)
+		{
+			// Upscale both width and height
+			width = (get_resolution_scale_percent() * width) / 100;
+			height = (get_resolution_scale_percent() * height) / 100;
 
-		else if (clamp)
-			return static_cast<u16>(std::max((get_resolution_scale_percent() * value) / 100, 1));
-		else
-			return static_cast<u16>((get_resolution_scale_percent() * value) / 100);
+			if constexpr (clamp)
+			{
+				width = std::max<u16>(width, 1);
+				height = std::max<u16>(height, 1);
+			}
+		}
+
+		return { width, height };
 	}
 
-	static inline const u16 apply_inverse_resolution_scale(u16 value, bool clamp)
+	template <bool clamp = false>
+	static inline const std::pair<u16, u16> apply_inverse_resolution_scale(u16 width, u16 height)
 	{
-		u16 result = value;
+		// Inverse scale
+		auto width_ = (width * 100) / get_resolution_scale_percent();
+		auto height_ = (height * 100) / get_resolution_scale_percent();
 
 		if (clamp)
-			result = static_cast<u16>(std::max((value * 100) / get_resolution_scale_percent(), 1));
-		else
-			result = static_cast<u16>((value * 100) / get_resolution_scale_percent());
+		{
+			width_ = std::max<u16>(width_, 1);
+			height_ = std::max<u16>(height_, 1);
+		}
 
-		if (result <= g_cfg.video.min_scalable_dimension)
-			return value;
+		if (std::max(width_, height_) > g_cfg.video.min_scalable_dimension)
+		{
+			return { width_, height_ };
+		}
 
-		return result;
+		return { width, height };
 	}
 
 	/**

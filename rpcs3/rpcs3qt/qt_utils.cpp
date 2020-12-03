@@ -197,22 +197,22 @@ namespace gui
 				return;
 
 			int item_count = table->rowCount();
-			bool is_empty = item_count < 1;
+			const bool is_empty = item_count < 1;
 			if (is_empty)
 				table->insertRow(0);
 
-			int item_height = table->rowHeight(0);
+			const int item_height = table->rowHeight(0);
 			if (is_empty)
 			{
 				table->clearContents();
 				table->setRowCount(0);
 			}
 
-			int available_height = table->rect().height() - table->horizontalHeader()->height() - table->frameWidth() * 2;
+			const int available_height = table->rect().height() - table->horizontalHeader()->height() - table->frameWidth() * 2;
 			if (available_height < item_height || item_height < 1)
 				return;
 
-			int new_item_count = available_height / item_height;
+			const int new_item_count = available_height / item_height;
 			if (new_item_count == item_count)
 				return;
 
@@ -244,43 +244,58 @@ namespace gui
 		// Loads the app icon from path and embeds it centered into an empty square icon
 		QIcon get_app_icon_from_path(const std::string& path, const std::string& title_id)
 		{
-			// get Icon for the gs_frame from path. this handles presumably all possible use cases
-			const QString qpath = qstr(path);
-			const std::string path_list[] = { path, sstr(qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep)),
-			                                  sstr(qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep)) };
+			// Try to find custom icon first
+			std::string icon_path = fs::get_config_dir() + "/Icons/game_icons/" + title_id + "/ICON0.PNG";
+			bool found_file       = fs::is_file(icon_path);
 
-			for (const std::string& pth : path_list)
+			if (!found_file)
 			{
-				if (!fs::is_dir(pth))
+				// Get Icon for the gs_frame from path. this handles presumably all possible use cases
+				const QString qpath = qstr(path);
+				const std::string path_list[] = { path, sstr(qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep)),
+					                              sstr(qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep)) };
+
+				for (const std::string& pth : path_list)
 				{
-					continue;
-				}
+					if (!fs::is_dir(pth))
+					{
+						continue;
+					}
 
-				const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(pth, Emu.GetUsr(), title_id);
-				const std::string ico = sfo_dir + "/ICON0.PNG";
-				if (fs::is_file(ico))
-				{
-					// load the image from path. It will most likely be a rectangle
-					QImage source = QImage(qstr(ico));
-					const int edge_max = std::max(source.width(), source.height());
+					const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(pth, Emu.GetUsr(), title_id);
+					icon_path = sfo_dir + "/ICON0.PNG";
+					found_file = fs::is_file(icon_path);
 
-					// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
-					QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
-					QImage dest = QImage(edge_max, edge_max, format);
-					dest.fill(Qt::transparent);
-
-					// get the location to draw the source image centered within the dest image.
-					const QPoint dest_pos = source.width() > source.height() ? QPoint(0, (source.width() - source.height()) / 2) : QPoint((source.height() - source.width()) / 2, 0);
-
-					// Paint the source into/over the dest
-					QPainter painter(&dest);
-					painter.setRenderHint(QPainter::SmoothPixmapTransform);
-					painter.drawImage(dest_pos, source);
-					painter.end();
-
-					return QIcon(QPixmap::fromImage(dest));
+					if (found_file)
+					{
+						break;
+					}
 				}
 			}
+
+			if (found_file)
+			{
+				// load the image from path. It will most likely be a rectangle
+				QImage source = QImage(qstr(icon_path));
+				const int edge_max = std::max(source.width(), source.height());
+
+				// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
+				QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
+				QImage dest = QImage(edge_max, edge_max, format);
+				dest.fill(Qt::transparent);
+
+				// get the location to draw the source image centered within the dest image.
+				const QPoint dest_pos = source.width() > source.height() ? QPoint(0, (source.width() - source.height()) / 2) : QPoint((source.height() - source.width()) / 2, 0);
+
+				// Paint the source into/over the dest
+				QPainter painter(&dest);
+				painter.setRenderHint(QPainter::SmoothPixmapTransform);
+				painter.drawImage(dest_pos, source);
+				painter.end();
+
+				return QIcon(QPixmap::fromImage(dest));
+			}
+
 			// if nothing was found reset the icon to default
 			return QApplication::windowIcon();
 		}
@@ -300,13 +315,13 @@ namespace gui
 				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to reveal POSIX file \"" + path + "\"" });
 				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to activate" });
 #else
-		// open parent directory
-				QDesktopServices::openUrl(QUrl("file:///" + qstr(fs::get_parent_dir(spath))));
+				// open parent directory
+				QDesktopServices::openUrl(QUrl::fromLocalFile(qstr(fs::get_parent_dir(spath))));
 #endif
 				return;
 			}
 
-			QDesktopServices::openUrl(QUrl("file:///" + path));
+			QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 		}
 
 		void open_dir(const QString& path)
@@ -341,7 +356,7 @@ namespace gui
 					{
 						bool match = true;
 
-						for (const auto [role, data] : criteria)
+						for (const auto& [role, data] : criteria)
 						{
 							if (item->data(0, role) != data)
 							{
@@ -382,9 +397,73 @@ namespace gui
 		{
 			if (parent)
 			{
-				for (int i = 0; i < parent->childCount(); i++)
+				for (int i = parent->childCount() - 1; i >= 0; i--)
 				{
 					parent->removeChild(parent->child(i));
+				}
+			}
+		}
+
+		void remove_children(QTreeWidgetItem* parent, const QList<QPair<int /*role*/, QVariant /*data*/>>& criteria, bool recursive)
+		{
+			if (parent)
+			{
+				for (int i = parent->childCount() - 1; i >= 0; i--)
+				{
+					if (auto item = parent->child(i))
+					{
+						bool match = true;
+
+						for (const auto& [role, data] : criteria)
+						{
+							if (item->data(0, role) != data)
+							{
+								match = false;
+								break;
+							}
+						}
+
+						if (!match)
+						{
+							parent->removeChild(item);
+						}
+						else if (recursive)
+						{
+							remove_children(item, criteria, recursive);
+						}
+					}
+				}
+			}
+		}
+
+		void sort_tree_item(QTreeWidgetItem* item, Qt::SortOrder sort_order, bool recursive)
+		{
+			if (item)
+			{
+				item->sortChildren(0, sort_order);
+
+				if (recursive)
+				{
+					for (int i = 0; i < item->childCount(); i++)
+					{
+						sort_tree_item(item->child(i), sort_order, recursive);
+					}
+				}
+			}
+		}
+
+		void sort_tree(QTreeWidget* tree, Qt::SortOrder sort_order, bool recursive)
+		{
+			if (tree)
+			{
+				tree->sortByColumn(0, sort_order);
+
+				if (recursive)
+				{
+					for (int i = 0; i < tree->topLevelItemCount(); i++)
+					{
+						sort_tree_item(tree->topLevelItem(i), sort_order, recursive);
+					}
 				}
 			}
 		}

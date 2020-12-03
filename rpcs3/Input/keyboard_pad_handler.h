@@ -93,12 +93,17 @@ public:
 	u32 GetKeyCode(const std::string& keyName);
 	u32 GetKeyCode(const QString& keyName);
 
+	static int native_scan_code_from_string(const std::string& key);
+	static std::string native_scan_code_to_string(int native_scan_code);
+
 protected:
 	void Key(const u32 code, bool pressed, u16 value = 255);
-	int GetModifierCode(QKeyEvent* e);
 
 private:
 	QWindow* m_target = nullptr;
+	bool m_mouse_move_used = false;
+	bool get_mouse_lock_state();
+
 	std::vector<std::shared_ptr<Pad>> bindings;
 
 	// Button Movements

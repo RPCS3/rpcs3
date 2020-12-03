@@ -1,123 +1,123 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(cellSysutil);
 
-s32 cellSysutilAvcByeRequest()
+error_code cellSysutilAvcByeRequest()
 {
 	cellSysutil.todo("cellSysutilAvcByeRequest()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcCancelByeRequest()
+error_code cellSysutilAvcCancelByeRequest()
 {
 	cellSysutil.todo("cellSysutilAvcCancelByeRequest()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcCancelJoinRequest()
+error_code cellSysutilAvcCancelJoinRequest()
 {
 	cellSysutil.todo("cellSysutilAvcCancelJoinRequest()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcEnumPlayers()
+error_code cellSysutilAvcEnumPlayers()
 {
 	cellSysutil.todo("cellSysutilAvcEnumPlayers()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcGetAttribute()
+error_code cellSysutilAvcGetAttribute()
 {
 	cellSysutil.todo("cellSysutilAvcGetAttribute()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcGetLayoutMode()
+error_code cellSysutilAvcGetLayoutMode()
 {
 	cellSysutil.todo("cellSysutilAvcGetLayoutMode()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcGetShowStatus()
+error_code cellSysutilAvcGetShowStatus()
 {
 	cellSysutil.todo("cellSysutilAvcGetShowStatus()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcGetSpeakerVolumeLevel()
+error_code cellSysutilAvcGetSpeakerVolumeLevel()
 {
 	cellSysutil.todo("cellSysutilAvcGetSpeakerVolumeLevel()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcGetVideoMuting()
+error_code cellSysutilAvcGetVideoMuting()
 {
 	cellSysutil.todo("cellSysutilAvcGetVideoMuting()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcGetVoiceMuting()
+error_code cellSysutilAvcGetVoiceMuting()
 {
 	cellSysutil.todo("cellSysutilAvcGetVoiceMuting()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcHidePanel()
+error_code cellSysutilAvcHidePanel()
 {
 	cellSysutil.todo("cellSysutilAvcHidePanel()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcJoinRequest()
+error_code cellSysutilAvcJoinRequest()
 {
 	cellSysutil.todo("cellSysutilAvcJoinRequest()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcLoadAsync()
+error_code cellSysutilAvcLoadAsync()
 {
 	cellSysutil.todo("cellSysutilAvcLoadAsync()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcSetAttribute()
+error_code cellSysutilAvcSetAttribute()
 {
 	cellSysutil.todo("cellSysutilAvcSetAttribute()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcSetLayoutMode()
+error_code cellSysutilAvcSetLayoutMode()
 {
 	cellSysutil.todo("cellSysutilAvcSetLayoutMode()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcSetSpeakerVolumeLevel()
+error_code cellSysutilAvcSetSpeakerVolumeLevel()
 {
 	cellSysutil.todo("cellSysutilAvcSetSpeakerVolumeLevel()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcSetVideoMuting()
+error_code cellSysutilAvcSetVideoMuting()
 {
 	cellSysutil.todo("cellSysutilAvcSetVideoMuting()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcSetVoiceMuting()
+error_code cellSysutilAvcSetVoiceMuting()
 {
 	cellSysutil.todo("cellSysutilAvcSetVoiceMuting()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcShowPanel()
+error_code cellSysutilAvcShowPanel()
 {
 	cellSysutil.todo("cellSysutilAvcShowPanel()");
 	return CELL_OK;
 }
 
-s32 cellSysutilAvcUnloadAsync()
+error_code cellSysutilAvcUnloadAsync()
 {
 	cellSysutil.todo("cellSysutilAvcUnloadAsync()");
 	return CELL_OK;

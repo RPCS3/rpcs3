@@ -8,7 +8,7 @@
 
 inline void try_start(spu_thread& spu)
 {
-	std::shared_lock lock(spu.run_ctrl_mtx);
+	reader_lock lock(spu.run_ctrl_mtx);
 
 	if (spu.status_npc.fetch_op([](typename spu_thread::status_npc_sync_var& value)
 	{
@@ -28,7 +28,9 @@ inline void try_start(spu_thread& spu)
 
 bool spu_thread::read_reg(const u32 addr, u32& value)
 {
-	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - (RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index) - RAW_SPU_PROB_OFFSET;
+
+	spu_log.trace("RawSPU[%u]: Read32(0x%x, offset=0x%x)", index, addr, offset);
 
 	switch (offset)
 	{
@@ -88,7 +90,7 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 			if (cmd.size)
 			{
 				// Perform transfer immediately
-				do_dma_transfer(cmd);
+				do_dma_transfer(nullptr, cmd, ls);
 			}
 
 			if (cmd.cmd & MFC_START_MASK)
@@ -121,7 +123,7 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 
 	case SPU_Out_MBox_offs:
 	{
-		value = ch_out_mbox.pop(*this);
+		value = ch_out_mbox.pop();
 		return true;
 	}
 
@@ -157,19 +159,21 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 	}
 	}
 
-	spu_log.error("RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
+	spu_log.error("RawSPU[%u]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
 	return false;
 }
 
 bool spu_thread::write_reg(const u32 addr, const u32 value)
 {
-	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - (RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index) - RAW_SPU_PROB_OFFSET;
+
+	spu_log.trace("RawSPU[%u]: Write32(0x%x, offset=0x%x, value=0x%x)", index, addr, offset, value);
 
 	switch (offset)
 	{
 	case MFC_LSA_offs:
 	{
-		if (value >= 0x40000)
+		if (value >= SPU_LS_SIZE)
 		{
 			break;
 		}
@@ -258,7 +262,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 			if (get_current_cpu_thread() == this)
 			{
 				// TODO
-				state += cpu_flag::stop;
+				state += cpu_flag::stop + cpu_flag::ret;
 				return true;
 			}
 
@@ -266,7 +270,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 
 			if (status_npc.load().status & SPU_STATUS_RUNNING)
 			{
-				state += cpu_flag::stop;
+				state += cpu_flag::stop + cpu_flag::ret;
 
 				for (status_npc_sync_var old; (old = status_npc).status & SPU_STATUS_RUNNING;)
 				{
@@ -311,25 +315,28 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 	}
 	}
 
-	spu_log.error("RawSPUThread[%d]: Write32(0x%x, value=0x%x): unknown/illegal offset (0x%x)", index, addr, value, offset);
+	spu_log.error("RawSPU[%u]: Write32(0x%x, value=0x%x): unknown/illegal offset (0x%x)", index, addr, value, offset);
 	return false;
 }
 
 void spu_load_exec(const spu_exec_object& elf)
 {
-	auto ls0 = vm::cast(vm::falloc(RAW_SPU_BASE_ADDR, 0x80000, vm::spu));
-	auto spu = idm::make_ptr<named_thread<spu_thread>>("TEST_SPU", ls0, nullptr, 0, "", 0);
+	auto ls0 = vm::addr_t{RAW_SPU_BASE_ADDR};
 
 	spu_thread::g_raw_spu_ctr++;
-	spu_thread::g_raw_spu_id[0] = spu->id;
 
 	for (const auto& prog : elf.progs)
 	{
 		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
 		{
-			std::memcpy(vm::base(spu->offset + prog.p_vaddr), prog.bin.data(), prog.p_filesz);
+			std::memcpy(vm::base(ls0 + prog.p_vaddr), prog.bin.data(), prog.p_filesz);
 		}
 	}
 
+	auto spu = idm::make_ptr<named_thread<spu_thread>>("TEST_SPU", nullptr, 0, "", 0);
+
+	spu_thread::g_raw_spu_id[0] = spu->id;
+
 	spu->status_npc = {SPU_STATUS_RUNNING, elf.header.e_entry};
+	atomic_storage<u32>::release(spu->pc, elf.header.e_entry);
 }

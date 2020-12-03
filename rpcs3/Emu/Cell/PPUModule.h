@@ -101,8 +101,6 @@ class ppu_module_manager final
 {
 	friend class ppu_static_module;
 
-	static std::unordered_map<std::string, ppu_static_module*>& access();
-
 	static void register_module(ppu_static_module*);
 
 	static ppu_static_function& access_static_function(const char* _module, u32 fnid);
@@ -161,9 +159,10 @@ public:
 		return info;
 	}
 
-	static const auto& get()
+	// We need this to deal with the enumeration over all ppu_static_modules that happens in ppu_initialize_modules
+	static const std::unordered_map<std::string, ppu_static_module*>& get()
 	{
-		return access();
+		return s_module_map;
 	}
 
 	static const ppu_static_module cellAdec;
@@ -273,6 +272,9 @@ public:
 	static const ppu_static_module sys_libc;
 	static const ppu_static_module sys_lv2dbg;
 	static const ppu_static_module static_hle;
+
+private:
+	inline static std::unordered_map<std::string, ppu_static_module*> s_module_map;
 };
 
 template <auto* Func>

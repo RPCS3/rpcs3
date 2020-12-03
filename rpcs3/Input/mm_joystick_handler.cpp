@@ -32,6 +32,8 @@ mm_joystick_handler::~mm_joystick_handler()
 
 void mm_joystick_handler::init_config(pad_config* cfg, const std::string& name)
 {
+	if (!cfg) return;
+
 	// Set this profile's save location
 	cfg->cfg_name = name;
 
@@ -67,7 +69,8 @@ void mm_joystick_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->rstickdeadzone.def    = 0; // between 0 and 255
 	cfg->ltriggerthreshold.def = 0; // between 0 and 255
 	cfg->rtriggerthreshold.def = 0; // between 0 and 255
-	cfg->padsquircling.def     = 8000;
+	cfg->lpadsquircling.def    = 8000;
+	cfg->rpadsquircling.def    = 8000;
 
 	// apply defaults
 	cfg->from_default();
@@ -182,7 +185,11 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 		blacklist.clear();
 
 	if (!Init())
-		return fail_callback(padId);
+	{
+		if (fail_callback)
+			fail_callback(padId);
+		return;
+	}
 
 	static std::string cur_pad = "";
 	static int id = -1;
@@ -194,7 +201,9 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 		if (id < 0)
 		{
 			input_log.error("MMJOY get_next_button_press for device [%s] failed with id = %d", padId, id);
-			return fail_callback(padId);
+			if (fail_callback)
+				fail_callback(padId);
+			return;
 		}
 	}
 
@@ -210,7 +219,9 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 	{
 	case JOYERR_UNPLUGGED:
 	{
-		return fail_callback(padId);
+		if (fail_callback)
+			fail_callback(padId);
+		return;
 	}
 	case JOYERR_NOERROR:
 	{
@@ -309,10 +320,13 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 			preview_values[5] = data[find_key(buttons[9])] - data[find_key(buttons[8])];
 		}
 
-		if (pressed_button.first > 0)
-			return callback(pressed_button.first, pressed_button.second, padId, 0, preview_values);
-		else
-			return callback(0, "", padId, 0, preview_values);
+		if (callback)
+		{
+			if (pressed_button.first > 0)
+				return callback(pressed_button.first, pressed_button.second, padId, 0, preview_values);
+			else
+				return callback(0, "", padId, 0, preview_values);
+		}
 
 		break;
 	}
@@ -462,11 +476,11 @@ bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev)
 std::shared_ptr<PadDevice> mm_joystick_handler::get_device(const std::string& device)
 {
 	if (!Init())
-		return false;
+		return nullptr;
 
 	int id = GetIDByName(device);
 	if (id < 0)
-		return false;
+		return nullptr;
 
 	std::shared_ptr<MMJOYDevice> joy_device = std::make_shared<MMJOYDevice>(m_devices.at(id));
 	return joy_device;

@@ -20,6 +20,8 @@
     <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKMemAlloc.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKCommandStream.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKQueryPool.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKPipelineCompiler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
@@ -42,5 +44,7 @@
     <ClInclude Include="Emu\RSX\VK\VKVertexProgram.h" />
     <ClInclude Include="Emu\RSX\VK\VulkanAPI.h" />
     <ClInclude Include="Emu\RSX\VK\VKCommandStream.h" />
+    <ClInclude Include="Emu\RSX\VK\VKQueryPool.h" />
+    <ClInclude Include="Emu\RSX\VK\VKPipelineCompiler.h" />
   </ItemGroup>
 </Project>

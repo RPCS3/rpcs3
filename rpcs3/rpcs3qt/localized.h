@@ -17,15 +17,15 @@ public:
 
 	Localized();
 
-	QString GetVerboseTimeByMs(qint64 elapsed_ms, bool show_days = false) const;
+	QString GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days = false) const;
 
 	const struct category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 	{
 		// PS3 bootable
-		const QString app_music = tr("App Music");
-		const QString app_photo = tr("App Photo");
-		const QString app_tv    = tr("App TV");
-		const QString app_video = tr("App Video");
+		const QString app_music = tr("Music App");
+		const QString app_photo = tr("Photo App");
+		const QString app_tv    = tr("TV App");
+		const QString app_video = tr("Video App");
 		const QString bc_video  = tr("Broadcast Video");
 		const QString disc_game = tr("Disc Game");
 		const QString hdd_game  = tr("HDD Game");

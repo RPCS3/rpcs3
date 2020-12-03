@@ -5,6 +5,7 @@
 #include "Utilities/address_range.h"
 #include "TextureUtils.h"
 #include "../rsx_utils.h"
+#include "Emu/Memory/vm.h"
 
 #define ENABLE_SURFACE_CACHE_DEBUG 0
 
@@ -84,10 +85,14 @@ namespace rsx
 				if (g_cfg.video.resolution_scale_percent != 100)
 				{
 					auto src = static_cast<T>(source);
-					src_w = rsx::apply_resolution_scale(src_w, true, src->get_surface_width(rsx::surface_metrics::pixels));
-					src_h = rsx::apply_resolution_scale(src_h, true, src->get_surface_height(rsx::surface_metrics::pixels));
-					dst_w = rsx::apply_resolution_scale(dst_w, true, target_surface->get_surface_width(rsx::surface_metrics::pixels));
-					dst_h = rsx::apply_resolution_scale(dst_h, true, target_surface->get_surface_height(rsx::surface_metrics::pixels));
+
+					std::tie(src_w, src_h) = rsx::apply_resolution_scale<true>(src_w, src_h,
+						src->get_surface_width(rsx::surface_metrics::pixels),
+						src->get_surface_height(rsx::surface_metrics::pixels));
+
+					std::tie(dst_w, dst_h) = rsx::apply_resolution_scale<true>(dst_w, dst_h,
+						target_surface->get_surface_width(rsx::surface_metrics::pixels),
+						target_surface->get_surface_height(rsx::surface_metrics::pixels));
 				}
 
 				width = src_w;
@@ -135,10 +140,9 @@ namespace rsx
 		u8  samples_x = 1;
 		u8  samples_y = 1;
 
-		format_type format_class = format_type::color;
-
 		std::unique_ptr<typename std::remove_pointer<image_storage_type>::type> resolve_surface;
 		surface_sample_layout sample_layout = surface_sample_layout::null;
+		surface_raster_type raster_type = surface_raster_type::linear;
 
 		flags32_t memory_usage_flags = surface_usage_flags::unknown;
 		flags32_t state_flags = surface_state_flags::ready;
@@ -148,7 +152,7 @@ namespace rsx
 		union
 		{
 			rsx::surface_color_format gcm_color_format;
-			rsx::surface_depth_format gcm_depth_format;
+			rsx::surface_depth_format2 gcm_depth_format;
 		}
 		format_info;
 
@@ -262,17 +266,9 @@ namespace rsx
 			format_info.gcm_color_format = format;
 		}
 
-		void set_format(rsx::surface_depth_format format)
+		void set_format(rsx::surface_depth_format2 format)
 		{
 			format_info.gcm_depth_format = format;
-		}
-
-		void set_depth_render_mode(bool integer)
-		{
-			if (is_depth_surface())
-			{
-				format_class = (integer) ? format_type::depth_uint : format_type::depth_float;
-			}
 		}
 
 		rsx::surface_color_format get_surface_color_format() const
@@ -280,14 +276,19 @@ namespace rsx
 			return format_info.gcm_color_format;
 		}
 
-		rsx::surface_depth_format get_surface_depth_format() const
+		rsx::surface_depth_format2 get_surface_depth_format() const
 		{
 			return format_info.gcm_depth_format;
 		}
 
-		rsx::format_type get_format_type() const
+		u32 get_gcm_format() const
 		{
-			return format_class;
+			return
+			(
+				is_depth_surface() ?
+					get_compatible_gcm_format(format_info.gcm_depth_format).first :
+					get_compatible_gcm_format(format_info.gcm_color_format).first
+			);
 		}
 
 		bool dirty() const
@@ -487,11 +488,8 @@ namespace rsx
 			// Apply resolution scale if needed
 			if (g_cfg.video.resolution_scale_percent != 100)
 			{
-				auto src_width = rsx::apply_resolution_scale(slice.width, true, slice.source->width());
-				auto src_height = rsx::apply_resolution_scale(slice.height, true, slice.source->height());
-
-				auto dst_width = rsx::apply_resolution_scale(slice.width, true, slice.target->width());
-				auto dst_height = rsx::apply_resolution_scale(slice.height, true, slice.target->height());
+				auto [src_width, src_height] = rsx::apply_resolution_scale<true>(slice.width, slice.height, slice.source->width(), slice.source->height());
+				auto [dst_width, dst_height] = rsx::apply_resolution_scale<true>(slice.width, slice.height, slice.target->width(), slice.target->height());
 
 				slice.transfer_scale_x *= f32(dst_width) / src_width;
 				slice.transfer_scale_y *= f32(dst_height) / src_height;
@@ -499,14 +497,14 @@ namespace rsx
 				slice.width = src_width;
 				slice.height = src_height;
 
-				slice.src_x = rsx::apply_resolution_scale(slice.src_x, false, slice.source->width());
-				slice.src_y = rsx::apply_resolution_scale(slice.src_y, false, slice.source->height());
-				slice.dst_x = rsx::apply_resolution_scale(slice.dst_x, false, slice.target->width());
-				slice.dst_y = rsx::apply_resolution_scale(slice.dst_y, false, slice.target->height());
+				std::tie(slice.src_x, slice.src_y) = rsx::apply_resolution_scale<false>(slice.src_x, slice.src_y, slice.source->width(), slice.source->height());
+				std::tie(slice.dst_x, slice.dst_y) = rsx::apply_resolution_scale<false>(slice.dst_x, slice.dst_y, slice.target->width(), slice.target->height());
 			}
 		}
 
-		void on_write(u64 write_tag = 0, rsx::surface_state_flags resolve_flags = surface_state_flags::require_resolve)
+		void on_write(u64 write_tag = 0,
+			rsx::surface_state_flags resolve_flags = surface_state_flags::require_resolve,
+			surface_raster_type type = rsx::surface_raster_type::undefined)
 		{
 			if (write_tag)
 			{
@@ -529,11 +527,18 @@ namespace rsx
 			{
 				clear_rw_barrier();
 			}
+
+			if (type != rsx::surface_raster_type::undefined)
+			{
+				raster_type = type;
+			}
 		}
 
-		void on_write_copy(u64 write_tag = 0, bool keep_optimizations = false)
+		void on_write_copy(u64 write_tag = 0,
+			bool keep_optimizations = false,
+			surface_raster_type type = rsx::surface_raster_type::undefined)
 		{
-			on_write(write_tag, rsx::surface_state_flags::require_unresolve);
+			on_write(write_tag, rsx::surface_state_flags::require_unresolve, type);
 
 			if (!keep_optimizations && is_depth_surface())
 			{

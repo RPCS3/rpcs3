@@ -8,6 +8,7 @@
 #include <vector>
 #include <utility>
 #include <functional>
+#include <queue>
 
 // Error codes
 enum sys_net_error : s32
@@ -355,6 +356,68 @@ struct lv2_socket final
 
 	const lv2_socket_type type;
 	const lv2_socket_family family;
+
+	// SYS_NET_SOCK_DGRAM_P2P and SYS_NET_SOCK_STREAM_P2P socket specific information
+	struct p2p_i
+	{
+		// Port(actual bound port) and Virtual Port(indicated by u16 at the start of the packet)
+		u16 port = 0, vport = 0;
+		// Queue containing received packets from network_thread for SYS_NET_SOCK_DGRAM_P2P sockets
+		std::queue<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>> data{};
+	} p2p;
+
+	struct p2ps_i
+	{
+		enum tcp_flags : u8
+		{
+			FIN = (1 << 0),
+			SYN = (1 << 1),
+			RST = (1 << 2),
+			PSH = (1 << 3),
+			ACK = (1 << 4),
+			URG = (1 << 5),
+			ECE = (1 << 6),
+			CWR = (1 << 7),
+		};
+
+		static constexpr be_t<u32> U2S_sig = (static_cast<u32>('U') << 24 | static_cast<u32>('2') << 16 | static_cast<u32>('S') << 8 | static_cast<u32>('0'));
+		static constexpr std::size_t MAX_RECEIVED_BUFFER = (1024*1024*10);
+
+		// P2P stream socket specific
+		struct encapsulated_tcp
+		{
+			be_t<u32> signature = lv2_socket::p2ps_i::U2S_sig; // Signature to verify it's P2P Stream data
+			be_t<u32> length = 0; // Length of data
+			be_t<u64> seq = 0; // This should be u32 but changed to u64 for simplicity
+			be_t<u64> ack = 0;
+			be_t<u16> src_port = 0; // fake source tcp port
+			be_t<u16> dst_port = 0; // fake dest tcp port(should be == vport)
+			be_t<u16> checksum = 0;
+			u8 flags = 0;
+		};
+
+		enum stream_status
+		{
+			stream_closed, // Default when port is not listening nor connected
+			stream_listening, // Stream is listening, accepting SYN packets
+			stream_handshaking, // Currently handshaking
+			stream_connected, // This is an established connection(after tcp handshake)
+		};
+
+		stream_status status = stream_status::stream_closed;
+
+		std::size_t max_backlog = 0; // set on listen
+		std::queue<s32> backlog;
+
+		u16 op_port = 0, op_vport = 0;
+		u32 op_addr = 0;
+
+		u64 data_beg_seq = 0; // Seq of first byte of received_data
+		u32 data_available = 0; // Amount of continuous data available(calculated on ACK send)
+		std::map<u64, std::vector<u8>> received_data; // holds seq/data of data received
+
+		u32 cur_seq = 0; // SEQ of next packet to be sent
+	} p2ps;
 
 	// Value keepers
 #ifdef _WIN32

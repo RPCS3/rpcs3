@@ -2,7 +2,6 @@
 
 #include <QMessageBox>
 
-#include "Utilities/Config.h"
 #include "Utilities/Thread.h"
 
 #if defined(_WIN32) || defined(HAVE_VULKAN)
@@ -13,6 +12,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <thread>
 
 LOG_CHANNEL(cfg_log, "CFG");
 

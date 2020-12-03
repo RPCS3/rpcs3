@@ -2,6 +2,7 @@
 #include "pad_thread.h"
 #include "Emu/Io/pad_config.h"
 #include "Input/product_info.h"
+#include "rpcs3qt/gs_frame.h"
 
 #include <QApplication>
 
@@ -32,6 +33,8 @@ keyboard_pad_handler::keyboard_pad_handler()
 
 void keyboard_pad_handler::init_config(pad_config* cfg, const std::string& name)
 {
+	if (!cfg) return;
+
 	// Set this profile's save location
 	cfg->cfg_name = name;
 
@@ -132,35 +135,6 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 	}
 }
 
-int keyboard_pad_handler::GetModifierCode(QKeyEvent* e)
-{
-	switch (e->key())
-	{
-	case Qt::Key_Control:
-	case Qt::Key_Alt:
-	case Qt::Key_AltGr:
-	case Qt::Key_Shift:
-	case Qt::Key_Meta:
-	case Qt::Key_NumLock:
-		return 0;
-	default:
-		break;
-	}
-
-	if (e->modifiers() == Qt::ControlModifier)
-		return Qt::ControlModifier;
-	else if (e->modifiers() == Qt::AltModifier)
-		return Qt::AltModifier;
-	else if (e->modifiers() == Qt::MetaModifier)
-		return Qt::MetaModifier;
-	else if (e->modifiers() == Qt::ShiftModifier)
-		return Qt::ShiftModifier;
-	else if (e->modifiers() == Qt::KeypadModifier)
-		return Qt::KeypadModifier;
-
-	return 0;
-}
-
 bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 {
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
@@ -219,9 +193,8 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 		return;
 	}
 
-	auto handleKey = [this, pressed, event]()
+	auto handle_key = [this, pressed, event]()
 	{
-		const QString name = qstr(GetKeyName(event));
 		QStringList list = GetKeyNames(event);
 		if (list.isEmpty())
 			return;
@@ -229,6 +202,8 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 		const bool is_num_key = list.contains("Num");
 		if (is_num_key)
 			list.removeAll("Num");
+
+		const QString name = qstr(GetKeyName(event));
 
 		// TODO: Edge case: switching numlock keeps numpad keys pressed due to now different modifier
 
@@ -246,24 +221,26 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 	};
 
 	// We need to ignore keys when using rpcs3 keyboard shortcuts
+	// NOTE: needs to be updated with gs_frame::keyPressEvent
 	switch (event->key())
 	{
 	case Qt::Key_Escape:
+	case Qt::Key_F12:
 		break;
 	case Qt::Key_L:
 	case Qt::Key_Return:
 		if (event->modifiers() != Qt::AltModifier)
-			handleKey();
+			handle_key();
 		break;
 	case Qt::Key_P:
 	case Qt::Key_S:
 	case Qt::Key_R:
 	case Qt::Key_E:
 		if (event->modifiers() != Qt::ControlModifier)
-			handleKey();
+			handle_key();
 		break;
 	default:
-		handleKey();
+		handle_key();
 		break;
 	}
 	event->ignore();
@@ -339,14 +316,27 @@ void keyboard_pad_handler::mouseReleaseEvent(QMouseEvent* event)
 	event->ignore();
 }
 
+bool keyboard_pad_handler::get_mouse_lock_state()
+{
+	if (auto game_frame = dynamic_cast<gs_frame*>(m_target))
+		return game_frame->get_mouse_lock_state();
+	return false;
+}
+
 void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 {
+	if (!m_mouse_move_used)
+	{
+		event->ignore();
+		return;
+	}
+
 	static int movement_x = 0;
 	static int movement_y = 0;
 	static int last_pos_x = 0;
 	static int last_pos_y = 0;
 
-	if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen && m_target->isActive())
+	if (m_target && m_target->isActive() && get_mouse_lock_state())
 	{
 		// get the screen dimensions
 		const QSize screen = m_target->size();
@@ -453,7 +443,7 @@ void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
 std::vector<std::string> keyboard_pad_handler::ListDevices()
 {
 	std::vector<std::string> list_devices;
-	list_devices.emplace_back("Keyboard");
+	list_devices.emplace_back(pad::keyboard_device_name);
 	return list_devices;
 }
 
@@ -499,6 +489,12 @@ QStringList keyboard_pad_handler::GetKeyNames(const QKeyEvent* keyEvent)
 		list.append(QKeySequence(keyEvent->key() | Qt::KeypadModifier).toString(QKeySequence::NativeText));
 	}
 
+	// Handle special cases
+	if (const std::string name = native_scan_code_to_string(keyEvent->nativeScanCode()); !name.empty())
+	{
+		list.append(qstr(name));
+	}
+
 	switch (keyEvent->key())
 	{
 	case Qt::Key_Alt:
@@ -527,6 +523,12 @@ QStringList keyboard_pad_handler::GetKeyNames(const QKeyEvent* keyEvent)
 
 std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 {
+	// Handle special cases first
+	if (const std::string name = native_scan_code_to_string(keyEvent->nativeScanCode()); !name.empty())
+	{
+		return name;
+	}
+
 	switch (keyEvent->key())
 	{
 	case Qt::Key_Alt:
@@ -561,6 +563,8 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 {
 	if (keyName.isEmpty())
 		return 0;
+	else if (const int native_scan_code = native_scan_code_from_string(sstr(keyName)); native_scan_code >= 0)
+		return Qt::Key_unknown + native_scan_code; // Special cases that can't be expressed with Qt::Key
 	else if (keyName == "Alt")
 		return Qt::Key_Alt;
 	else if (keyName == "AltGr")
@@ -573,19 +577,61 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 		return Qt::Key_Meta;
 
 	QKeySequence seq(keyName);
-	u32 keyCode = 0;
+	u32 key_code = 0;
 
 	if (seq.count() == 1)
-		keyCode = seq[0];
+		key_code = seq[0];
 	else
 		input_log.notice("GetKeyCode(%s): seq.count() = %d", sstr(keyName), seq.count());
 
-	return keyCode;
+	return key_code;
+}
+
+int keyboard_pad_handler::native_scan_code_from_string(const std::string& key)
+{
+	// NOTE: Qt throws a Ctrl key at us when using Alt Gr, so there is no point in distinguishing left and right Alt at the moment
+#ifdef _WIN32
+	if (key == "Shift Left")
+		return 42;
+	else if (key == "Shift Right")
+		return 54;
+	else if (key == "Ctrl Left")
+		return 29;
+	else if (key == "Ctrl Right")
+		return 285;
+#else
+		// TODO
+#endif
+	return -1;
+}
+
+std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_code)
+{
+	switch (native_scan_code)
+	{
+#ifdef _WIN32
+	// NOTE: the other Qt function "nativeVirtualKey" does not distinguish between VK_SHIFT and VK_RSHIFT key in Qt at the moment
+	// NOTE: Qt throws a Ctrl key at us when using Alt Gr, so there is no point in distinguishing left and right Alt at the moment
+	case 42:
+		return "Shift Left";
+	case 54:
+		return "Shift Right";
+	case 29:
+		return "Ctrl Left";
+	case 285:
+		return "Ctrl Right";
+#else
+	// TODO
+	// NOTE for MacOs: nativeScanCode may not work
+#endif
+	default:
+		return "";
+	}
 }
 
 bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
 {
-	if (device != "Keyboard")
+	if (device != pad::keyboard_device_name)
 		return false;
 
 	const int index = static_cast<int>(bindings.size());
@@ -594,6 +640,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	if (p_profile == nullptr)
 		return false;
 
+	m_mouse_move_used = false;
 	m_deadzone_x = p_profile->mouse_deadzone_x;
 	m_deadzone_y = p_profile->mouse_deadzone_y;
 	m_multi_x = p_profile->mouse_acceleration_x / 100.0;
@@ -603,13 +650,15 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	m_analog_lerp_factor  = p_profile->analog_lerp_factor / 100.0f;
 	m_trigger_lerp_factor = p_profile->trigger_lerp_factor / 100.0f;
 
-	auto find_key = [&](const cfg::string& name)
+	const auto find_key = [this](const cfg::string& name)
 	{
 		int key = FindKeyCode(mouse_list, name, false);
 		if (key < 0)
 			key = GetKeyCode(name);
 		if (key < 0)
 			key = 0;
+		else if (!m_mouse_move_used && (key == mouse::move_left || key == mouse::move_right || key == mouse::move_up || key == mouse::move_down))
+			m_mouse_move_used = true;
 		return key;
 	};
 

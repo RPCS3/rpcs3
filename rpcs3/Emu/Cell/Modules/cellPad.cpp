@@ -8,6 +8,9 @@
 #include "Input/product_info.h"
 #include "cellPad.h"
 
+extern void libio_sys_config_init();
+extern void libio_sys_config_end();
+
 LOG_CHANNEL(sys_io);
 
 template<>
@@ -61,6 +64,7 @@ error_code cellPadInit(u32 max_connect)
 	if (max_connect == 0 || max_connect > CELL_MAX_PADS)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
+	libio_sys_config_init();
 	config->max_connect = std::min<u32>(max_connect, CELL_PAD_MAX_PORT_NUM);
 	config->port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
 	return CELL_OK;
@@ -77,6 +81,7 @@ error_code cellPadEnd()
 	if (!config->max_connect.exchange(0))
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
+	libio_sys_config_end();
 	return CELL_OK;
 }
 

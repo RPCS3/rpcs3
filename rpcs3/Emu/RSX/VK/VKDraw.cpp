@@ -108,15 +108,27 @@ void VKGSRender::update_draw_state()
 
 	if (m_device->get_depth_bounds_support())
 	{
+		f32 bounds_min, bounds_max;
 		if (rsx::method_registers.depth_bounds_test_enabled())
 		{
-			//Update depth bounds min/max
-			vkCmdSetDepthBounds(*m_current_command_buffer, rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
+			// Update depth bounds min/max
+			bounds_min = rsx::method_registers.depth_bounds_min();
+			bounds_max = rsx::method_registers.depth_bounds_max();
 		}
 		else
 		{
-			vkCmdSetDepthBounds(*m_current_command_buffer, 0.f, 1.f);
+			// Avoid special case where min=max and depth bounds (incorrectly) fails
+			bounds_min = std::min(0.f, rsx::method_registers.clip_min());
+			bounds_max = std::max(1.f, rsx::method_registers.clip_max());
 		}
+
+		if (!m_device->get_unrestricted_depth_range_support())
+		{
+			bounds_min = std::clamp(bounds_min, 0.f, 1.f);
+			bounds_max = std::clamp(bounds_max, 0.f, 1.f);
+		}
+
+		vkCmdSetDepthBounds(*m_current_command_buffer, bounds_min, bounds_max);
 	}
 
 	bind_viewport();
@@ -172,20 +184,8 @@ void VKGSRender::load_texture_env()
 
 				if (texture_format >= CELL_GCM_TEXTURE_DEPTH24_D8 && texture_format <= CELL_GCM_TEXTURE_DEPTH16_FLOAT)
 				{
-					if (m_device->get_formats_support().d24_unorm_s8)
-					{
-						// NOTE:
-						// The nvidia-specific format D24S8 has a special way of doing depth comparison that matches the PS3
-						// In case of projected shadow lookup the result of the divide operation has its Z clamped to [0-1] before comparison
-						// Most other wide formats (Z bits > 16) do not behave this way and depth greater than 1 is possible due to the use of floating point as storage
-						// Compare operations for these formats (such as D32_SFLOAT) are therefore emulated for correct results
-
-						// NOTE2:
-						// To improve reusability, DEPTH16 shadow ops are also emulated if D24S8 support is not available
-
-						compare_enabled = VK_TRUE;
-						depth_compare_mode = vk::get_compare_func(rsx::method_registers.fragment_textures[i].zfunc(), true);
-					}
+					compare_enabled = VK_TRUE;
+					depth_compare_mode = vk::get_compare_func(rsx::method_registers.fragment_textures[i].zfunc(), true);
 				}
 
 				const int aniso_override_level = g_cfg.video.anisotropic_level_override;
@@ -198,7 +198,7 @@ void VKGSRender::load_texture_env()
 
 				// Check if non-point filtering can even be used on this format
 				bool can_sample_linear;
-				if (sampler_state->format_class == rsx::format_type::color) [[likely]]
+				if (sampler_state->format_class == RSX_FORMAT_CLASS_COLOR) [[likely]]
 				{
 					// Most PS3-like formats can be linearly filtered without problem
 					can_sample_linear = true;
@@ -943,14 +943,14 @@ void VKGSRender::end()
 
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_load_occluson_task)
 	{
-		u32 occlusion_id = m_occlusion_query_pool.find_free_slot(*m_current_command_buffer);
+		u32 occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
 		if (occlusion_id == UINT32_MAX)
 		{
 			// Force flush
 			rsx_log.error("[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
 			ZCULL_control::sync(this);
 
-			occlusion_id = m_occlusion_query_pool.find_free_slot(*m_current_command_buffer);
+			occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
 			if (occlusion_id == UINT32_MAX)
 			{
 				//rsx_log.error("Occlusion pool overflow");
@@ -959,7 +959,7 @@ void VKGSRender::end()
 		}
 
 		// Begin query
-		m_occlusion_query_pool.begin_query(*m_current_command_buffer, occlusion_id);
+		m_occlusion_query_manager->begin_query(*m_current_command_buffer, occlusion_id);
 
 		auto &data = m_occlusion_map[m_active_query_info->driver_handle];
 		data.indices.push_back(occlusion_id);

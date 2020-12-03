@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
-#include "Emu/Cell/ErrorCodes.h"
 #include "sys_memory.h"
 
 #include <array>

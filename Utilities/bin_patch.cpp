@@ -2,11 +2,14 @@
 #include "File.h"
 #include "Config.h"
 #include "version.h"
+#include "Emu/System.h"
 
-LOG_CHANNEL(patch_log);
+LOG_CHANNEL(patch_log, "PAT");
 
-static const std::string patch_engine_version = "1.1";
-static const std::string yml_key_enable_legacy_patches = "Enable Legacy Patches";
+namespace config_key
+{
+	static const std::string enable_legacy_patches = "Enable Legacy Patches";
+}
 
 template <>
 void fmt_class_string<YAML::NodeType::value>::format(std::string& out, u64 arg)
@@ -54,7 +57,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 
 patch_engine::patch_engine()
 {
-	const std::string patches_path = fs::get_config_dir() + "patches/";
+	const std::string patches_path = get_patches_path();
 
 	if (!fs::create_path(patches_path))
 	{
@@ -70,7 +73,7 @@ std::string patch_engine::get_patch_config_path()
 
 	if (!fs::create_path(config_dir))
 	{
-		patch_log.error("Could not create path: %s", patch_path);
+		patch_log.error("Could not create path: %s (%s)", patch_path, fs::g_tls_error);
 	}
 
 	return patch_path;
@@ -79,9 +82,14 @@ std::string patch_engine::get_patch_config_path()
 #endif
 }
 
+std::string patch_engine::get_patches_path()
+{
+	return fs::get_config_dir() + "patches/";
+}
+
 std::string patch_engine::get_imported_patch_path()
 {
-	return fs::get_config_dir() + "patches/imported_patch.yml";
+	return get_patches_path() + "imported_patch.yml";
 }
 
 static void append_log_message(std::stringstream* log_messages, const std::string& message)
@@ -90,19 +98,24 @@ static void append_log_message(std::stringstream* log_messages, const std::strin
 		*log_messages << message << std::endl;
 };
 
-bool patch_engine::load(patch_map& patches_map, const std::string& path, bool importing, std::stringstream* log_messages)
+bool patch_engine::load(patch_map& patches_map, const std::string& path, std::string content, bool importing, std::stringstream* log_messages)
 {
-	// Load patch file
-	fs::file file{ path };
-
-	if (!file)
+	if (content.empty())
 	{
-		// Do nothing
-		return true;
+		// Load patch file
+		fs::file file{path};
+
+		if (!file)
+		{
+			// Do nothing
+			return true;
+		}
+
+		content = file.to_string();
 	}
 
 	// Interpret yaml nodes
-	auto [root, error] = yaml_load(file.to_string());
+	auto [root, error] = yaml_load(content);
 
 	if (!error.empty() || !root)
 	{
@@ -112,8 +125,8 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 	}
 
 	// Load patch config to determine which patches are enabled
-	bool enable_legacy_patches;
-	patch_config_map patch_config;
+	bool enable_legacy_patches = false;
+	patch_map patch_config;
 
 	if (!importing)
 	{
@@ -123,24 +136,24 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 	std::string version;
 	bool is_legacy_patch = false;
 
-	if (const auto version_node = root["Version"])
+	if (const auto version_node = root[patch_key::version])
 	{
 		version = version_node.Scalar();
 
 		if (version != patch_engine_version)
 		{
-			append_log_message(log_messages, fmt::format("Error: Patch engine target version %s does not match file version %s", patch_engine_version, version));
-			patch_log.error("Patch engine target version %s does not match file version %s in %s", patch_engine_version, version, path);
+			append_log_message(log_messages, fmt::format("Error: File version %s does not match patch engine target version %s (file: %s)", version, patch_engine_version, path));
+			patch_log.error("File version %s does not match patch engine target version %s (file: %s)", version, patch_engine_version, path);
 			return false;
 		}
 
 		// We don't need the Version node in local memory anymore
-		root.remove("Version");
+		root.remove(patch_key::version);
 	}
 	else if (importing)
 	{
-		append_log_message(log_messages, fmt::format("Error: Patch engine target version %s does not match file version %s", patch_engine_version, version));
-		patch_log.error("Patch engine version %s: No 'Version' entry found for file %s", patch_engine_version, path);
+		append_log_message(log_messages, fmt::format("Error: No '%s' entry found. Patch engine version = %s (file: %s)", patch_key::version, patch_engine_version, path));
+		patch_log.error("No '%s' entry found. Patch engine version = %s (file: %s)", patch_key::version, patch_engine_version, path);
 		return false;
 	}
 	else
@@ -161,7 +174,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 		{
 			struct patch_info info{};
 			info.hash        = main_key;
-			info.enabled     = enable_legacy_patches;
+			info.is_enabled  = enable_legacy_patches;
 			info.is_legacy   = true;
 			info.source_path = path;
 
@@ -189,108 +202,187 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, bool im
 		}
 
 		// Skip Anchors
-		if (main_key == "Anchors")
+		if (main_key == patch_key::anchors)
 		{
 			continue;
 		}
 
-		if (const auto patches_node = pair.second["Patches"])
+		// Find or create an entry matching the key/hash in our map
+		auto& container = patches_map[main_key];
+		container.is_legacy = false;
+		container.hash      = main_key;
+		container.version   = version;
+
+		// Go through each patch
+		for (auto patches_entry : pair.second)
 		{
-			if (const auto yml_type = patches_node.Type(); yml_type != YAML::NodeType::Map)
+			// Each key in "Patches" is also the patch description
+			const std::string& description = patches_entry.first.Scalar();
+
+			// Compile patch information
+
+			if (const auto yml_type = patches_entry.second.Type(); yml_type != YAML::NodeType::Map)
 			{
-				append_log_message(log_messages, fmt::format("Error: Skipping Patches: expected Map, found %s (key: %s)", yml_type, main_key));
-				patch_log.error("Skipping Patches: expected Map, found %s (key: %s, file: %s)", yml_type, main_key, path);
+				append_log_message(log_messages, fmt::format("Error: Skipping Patch key %s: expected Map, found %s (key: %s)", description, yml_type, main_key));
+				patch_log.error("Skipping Patch key %s: expected Map, found %s (key: %s, file: %s)", description, yml_type, main_key, path);
 				is_valid = false;
 				continue;
 			}
 
-			// Find or create an entry matching the key/hash in our map
-			auto& container = patches_map[main_key];
-			container.is_legacy = false;
-			container.hash      = main_key;
-			container.version   = version;
+			struct patch_info info {};
+			info.description = description;
+			info.hash        = main_key;
+			info.version     = version;
+			info.source_path = path;
 
-			// Go through each patch
-			for (auto patches_entry : patches_node)
+			if (const auto games_node = patches_entry.second[patch_key::games])
 			{
-				// Each key in "Patches" is also the patch description
-				const std::string description = patches_entry.first.Scalar();
-
-				// Find out if this patch was enabled in the patch config
-				const bool enabled = patch_config[main_key][description];
-
-				// Compile patch information
-
-				if (const auto yml_type = patches_entry.second.Type(); yml_type != YAML::NodeType::Map)
+				if (const auto yml_type = games_node.Type(); yml_type != YAML::NodeType::Map)
 				{
-					append_log_message(log_messages, fmt::format("Error: Skipping Patch key %s: expected Map, found %s (key: %s)", description, yml_type, main_key));
-					patch_log.error("Skipping Patch key %s: expected Map, found %s (key: %s, file: %s)", description, yml_type, main_key, path);
+					append_log_message(log_messages, fmt::format("Error: Skipping Games key: expected Map, found %s (patch: %s, key: %s)", yml_type, description, main_key));
+					patch_log.error("Skipping Games key: expected Map, found %s (patch: %s, key: %s, file: %s)", yml_type, description, main_key, path);
 					is_valid = false;
 					continue;
 				}
 
-				struct patch_info info {};
-				info.enabled     = enabled;
-				info.description = description;
-				info.hash        = main_key;
-				info.version     = version;
-				info.source_path = path;
-
-				if (const auto title_node = patches_entry.second["Game Title"])
+				for (const auto game_node : games_node)
 				{
-					info.title = title_node.Scalar();
-				}
+					const std::string& title = game_node.first.Scalar();
 
-				if (const auto serials_node = patches_entry.second["Serials"])
+					if (const auto yml_type = game_node.second.Type(); yml_type != YAML::NodeType::Map)
+					{
+						append_log_message(log_messages, fmt::format("Error: Skipping %s: expected Map, found %s (patch: %s, key: %s)", title, yml_type, description, main_key));
+						patch_log.error("Skipping %s: expected Map, found %s (patch: %s, key: %s, file: %s)", title, yml_type, description, main_key, path);
+						is_valid = false;
+						continue;
+					}
+
+					const bool title_is_all_key = title == patch_key::all;
+
+					for (const auto serial_node : game_node.second)
+					{
+						const std::string& serial = serial_node.first.Scalar();
+
+						if (serial == patch_key::all)
+						{
+							if (!title_is_all_key)
+							{
+								append_log_message(log_messages, fmt::format("Error: Using '%s' as serial is not allowed for titles other than '%s' (title: %s, patch: %s, key: %s)", patch_key::all, patch_key::all, title, description, main_key));
+								patch_log.error("Error: Using '%s' as serial is not allowed for titles other than '%s' (title: %s, patch: %s, key: %s, file: %s)", patch_key::all, patch_key::all, title, description, main_key, path);
+								is_valid = false;
+								continue;
+							}
+						}
+						else if (title_is_all_key)
+						{
+							append_log_message(log_messages, fmt::format("Error: Only '%s' is allowed as serial if the title is '%s' (serial: %s, patch: %s, key: %s)", patch_key::all, patch_key::all, serial, description, main_key));
+							patch_log.error("Error: Only '%s' is allowed as serial if the title is '%s' (serial: %s, patch: %s, key: %s, file: %s)", patch_key::all, patch_key::all, serial, description, main_key, path);
+							is_valid = false;
+							continue;
+						}
+
+						if (const auto yml_type = serial_node.second.Type(); yml_type != YAML::NodeType::Sequence)
+						{
+							append_log_message(log_messages, fmt::format("Error: Skipping %s: expected Sequence, found %s (title: %s, patch: %s, key: %s)", serial, title, yml_type, description, main_key));
+							patch_log.error("Skipping %s: expected Sequence, found %s (title: %s, patch: %s, key: %s, file: %s)", serial, title, yml_type, description, main_key, path);
+							is_valid = false;
+							continue;
+						}
+
+						patch_engine::patch_app_versions app_versions;
+
+						for (const auto version : serial_node.second)
+						{
+							const auto& app_version = version.Scalar();
+
+							// Find out if this patch was enabled in the patch config
+							const bool enabled = patch_config[main_key].patch_info_map[description].titles[title][serial][app_version];
+
+							app_versions.emplace(version.Scalar(), enabled);
+						}
+
+						if (app_versions.empty())
+						{
+							append_log_message(log_messages, fmt::format("Error: Skipping %s: empty Sequence (title: %s, patch: %s, key: %s)", serial, title, description, main_key));
+							patch_log.error("Skipping %s: empty Sequence (title: %s, patch: %s, key: %s, file: %s)", serial, title, description, main_key, path);
+							is_valid = false;
+						}
+						else
+						{
+							info.titles[title][serial] = app_versions;
+						}
+					}
+				}
+			}
+
+			if (const auto author_node = patches_entry.second[patch_key::author])
+			{
+				info.author = author_node.Scalar();
+			}
+
+			if (const auto patch_version_node = patches_entry.second[patch_key::patch_version])
+			{
+				info.patch_version = patch_version_node.Scalar();
+			}
+
+			if (const auto notes_node = patches_entry.second[patch_key::notes])
+			{
+				if (notes_node.IsSequence())
 				{
-					info.serials = serials_node.Scalar();
+					for (const auto note : notes_node)
+					{
+						if (note && note.IsScalar())
+						{
+							info.notes += note.Scalar();
+						}
+						else
+						{
+							append_log_message(log_messages, fmt::format("Error: Skipping sequenced Note (patch: %s, key: %s)", description, main_key));
+							patch_log.error("Skipping sequenced Note (patch: %s, key: %s, file: %s)", description, main_key, path);
+							is_valid = false;
+						}
+					}
 				}
-
-				if (const auto author_node = patches_entry.second["Author"])
-				{
-					info.author = author_node.Scalar();
-				}
-
-				if (const auto patch_version_node = patches_entry.second["Patch Version"])
-				{
-					info.patch_version = patch_version_node.Scalar();
-				}
-
-				if (const auto notes_node = patches_entry.second["Notes"])
+				else
 				{
 					info.notes = notes_node.Scalar();
 				}
-
-				if (const auto patch_node = patches_entry.second["Patch"])
-				{
-					if (!read_patch_node(info, patch_node, root, log_messages))
-					{
-						is_valid = false;
-					}
-				}
-
-				// Skip this patch if a higher patch version already exists
-				if (container.patch_info_map.find(description) != container.patch_info_map.end())
-				{
-					bool ok;
-					const auto existing_version  = container.patch_info_map[description].patch_version;
-					const bool version_is_bigger = utils::compare_versions(info.patch_version, existing_version, ok) > 0;
-
-					if (!ok || !version_is_bigger)
-					{
-						patch_log.warning("A higher or equal patch version already exists ('%s' vs '%s') for %s: %s (in file %s)", info.patch_version, existing_version, main_key, description, path);
-						append_log_message(log_messages, fmt::format("A higher or equal patch version already exists ('%s' vs '%s') for %s: %s (in file %s)", info.patch_version, existing_version, main_key, description, path));
-						continue;
-					}
-					else if (!importing)
-					{
-						patch_log.warning("A lower patch version was found ('%s' vs '%s') for %s: %s (in file %s)", existing_version, info.patch_version, main_key, description,  container.patch_info_map[description].source_path);
-					}
-				}
-
-				// Insert patch information
-				container.patch_info_map[description] = info;
 			}
+
+			if (const auto patch_group_node = patches_entry.second[patch_key::group])
+			{
+				info.patch_group = patch_group_node.Scalar();
+			}
+
+			if (const auto patch_node = patches_entry.second[patch_key::patch])
+			{
+				if (!read_patch_node(info, patch_node, root, log_messages))
+				{
+					is_valid = false;
+				}
+			}
+
+			// Skip this patch if a higher patch version already exists
+			if (container.patch_info_map.find(description) != container.patch_info_map.end())
+			{
+				bool ok;
+				const auto existing_version  = container.patch_info_map[description].patch_version;
+				const bool version_is_bigger = utils::compare_versions(info.patch_version, existing_version, ok) > 0;
+
+				if (!ok || !version_is_bigger)
+				{
+					patch_log.warning("A higher or equal patch version already exists ('%s' vs '%s') for %s: %s (in file %s)", info.patch_version, existing_version, main_key, description, path);
+					append_log_message(log_messages, fmt::format("A higher or equal patch version already exists ('%s' vs '%s') for %s: %s (in file %s)", info.patch_version, existing_version, main_key, description, path));
+					continue;
+				}
+				else if (!importing)
+				{
+					patch_log.warning("A lower patch version was found ('%s' vs '%s') for %s: %s (in file %s)", existing_version, info.patch_version, main_key, description,  container.patch_info_map[description].source_path);
+				}
+			}
+
+			// Insert patch information
+			container.patch_info_map[description] = info;
 		}
 	}
 
@@ -456,18 +548,13 @@ bool patch_engine::read_patch_node(patch_info& info, YAML::Node node, const YAML
 	return is_valid;
 }
 
-void patch_engine::append(const std::string& patch)
-{
-	load(m_map, patch);
-}
-
 void patch_engine::append_global_patches()
 {
 	// Legacy patch.yml
 	load(m_map, fs::get_config_dir() + "patch.yml");
 
 	// New patch.yml
-	load(m_map, fs::get_config_dir() + "patches/patch.yml");
+	load(m_map, get_patches_path() + "patch.yml");
 
 	// Imported patch.yml
 	load(m_map, get_imported_patch_path());
@@ -484,21 +571,114 @@ void patch_engine::append_title_patches(const std::string& title_id)
 	load(m_map, fs::get_config_dir() + "data/" + title_id + "/patch.yml");
 
 	// New patch.yml
-	load(m_map, fs::get_config_dir() + "patches/" +  title_id + "_patch.yml");
+	load(m_map, get_patches_path() + title_id + "_patch.yml");
 }
 
-std::size_t patch_engine::apply(const std::string& name, u8* dst) const
+std::size_t patch_engine::apply(const std::string& name, u8* dst)
 {
 	return apply_patch<false>(name, dst, 0, 0);
 }
 
-std::size_t patch_engine::apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr) const
+std::size_t patch_engine::apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
 {
 	return apply_patch<true>(name, dst, filesz, ls_addr);
 }
 
 template <bool check_local_storage>
-std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr) const
+static std::size_t apply_modification(const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 ls_addr)
+{
+	size_t applied = 0;
+
+	for (const auto& p : patch.data_list)
+	{
+		u32 offset = p.offset;
+
+		if constexpr (check_local_storage)
+		{
+			if (offset < ls_addr || offset >= (ls_addr + filesz))
+			{
+				// This patch is out of range for this segment
+				continue;
+			}
+			
+			offset -= ls_addr;
+		}
+
+		auto ptr = dst + offset;
+
+		switch (p.type)
+		{
+		case patch_type::invalid:
+		case patch_type::load:
+		{
+			// Invalid in this context
+			continue;
+		}
+		case patch_type::byte:
+		{
+			*ptr = static_cast<u8>(p.value.long_value);
+			break;
+		}
+		case patch_type::le16:
+		{
+			*reinterpret_cast<le_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
+			break;
+		}
+		case patch_type::le32:
+		{
+			*reinterpret_cast<le_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
+			break;
+		}
+		case patch_type::lef32:
+		{
+			*reinterpret_cast<le_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
+			break;
+		}
+		case patch_type::le64:
+		{
+			*reinterpret_cast<le_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
+			break;
+		}
+		case patch_type::lef64:
+		{
+			*reinterpret_cast<le_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
+			break;
+		}
+		case patch_type::be16:
+		{
+			*reinterpret_cast<be_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
+			break;
+		}
+		case patch_type::be32:
+		{
+			*reinterpret_cast<be_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
+			break;
+		}
+		case patch_type::bef32:
+		{
+			*reinterpret_cast<be_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
+			break;
+		}
+		case patch_type::be64:
+		{
+			*reinterpret_cast<be_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
+			break;
+		}
+		case patch_type::bef64:
+		{
+			*reinterpret_cast<be_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
+			break;
+		}
+		}
+
+		++applied;
+	}
+
+	return applied;
+}
+
+template <bool check_local_storage>
+std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
 {
 	if (m_map.find(name) == m_map.cend())
 	{
@@ -507,112 +687,126 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 
 	size_t applied_total = 0;
 	const auto& container = m_map.at(name);
+	const auto serial = Emu.GetTitleID();
+	const auto app_version = Emu.GetAppVersion();
 
-	// Apply modifications sequentially
+	// Different containers in order to seperate the patches
+	std::vector<patch_engine::patch_info> legacy_patches;
+	std::vector<patch_engine::patch_info> patches_for_this_serial_and_this_version;
+	std::vector<patch_engine::patch_info> patches_for_this_serial_and_all_versions;
+	std::vector<patch_engine::patch_info> patches_for_all_serials_and_this_version;
+	std::vector<patch_engine::patch_info> patches_for_all_serials_and_all_versions;
+
+	// Sort patches into different vectors based on their serial and version
 	for (const auto& [description, patch] : container.patch_info_map)
 	{
-		if (!patch.enabled)
+		// Find out if this legacy patch is enabled
+		if (patch.is_legacy)
 		{
+			if (patch.is_enabled)
+			{
+				legacy_patches.push_back(patch);
+			}
+
 			continue;
 		}
 
-		size_t applied = 0;
-
-		for (const auto& p : patch.data_list)
+		// Find out if this patch is enabled
+		for (const auto& [title, serials] : patch.titles)
 		{
-			u32 offset = p.offset;
+			bool is_all_serials = false;
+			bool is_all_versions = false;
 
-			if constexpr (check_local_storage)
+			std::string found_serial;
+
+			if (serials.find(serial) != serials.end())
 			{
-				if (offset < ls_addr || offset >= (ls_addr + filesz))
-				{
-					// This patch is out of range for this segment
-					continue;
-				}
-				
-				offset -= ls_addr;
+				found_serial = serial;
+			}
+			else if (serials.find(patch_key::all) != serials.end())
+			{
+				found_serial = patch_key::all;
+				is_all_serials = true;
 			}
 
-			auto ptr = dst + offset;
-
-			switch (p.type)
+			if (found_serial.empty())
 			{
-			case patch_type::invalid:
-			case patch_type::load:
-			{
-				// Invalid in this context
 				continue;
 			}
-			case patch_type::byte:
+
+			const auto& app_versions = serials.at(found_serial);
+			std::string found_app_version;
+
+			if (app_versions.find(app_version) != app_versions.end())
 			{
-				*ptr = static_cast<u8>(p.value.long_value);
-				break;
+				found_app_version = app_version;
 			}
-			case patch_type::le16:
+			else if (app_versions.find(patch_key::all) != app_versions.end())
 			{
-				*reinterpret_cast<le_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
-				break;
-			}
-			case patch_type::le32:
-			{
-				*reinterpret_cast<le_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
-				break;
-			}
-			case patch_type::lef32:
-			{
-				*reinterpret_cast<le_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
-				break;
-			}
-			case patch_type::le64:
-			{
-				*reinterpret_cast<le_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
-				break;
-			}
-			case patch_type::lef64:
-			{
-				*reinterpret_cast<le_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
-				break;
-			}
-			case patch_type::be16:
-			{
-				*reinterpret_cast<be_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
-				break;
-			}
-			case patch_type::be32:
-			{
-				*reinterpret_cast<be_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
-				break;
-			}
-			case patch_type::bef32:
-			{
-				*reinterpret_cast<be_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
-				break;
-			}
-			case patch_type::be64:
-			{
-				*reinterpret_cast<be_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
-				break;
-			}
-			case patch_type::bef64:
-			{
-				*reinterpret_cast<be_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
-				break;
-			}
+				found_app_version = patch_key::all;
+				is_all_versions = true;
 			}
 
-			++applied;
+			if (!found_app_version.empty() && app_versions.at(found_app_version))
+			{
+				// This patch is enabled
+				if (is_all_serials)
+				{
+					if (is_all_versions)
+					{
+						patches_for_all_serials_and_all_versions.push_back(patch);
+					}
+					else
+					{
+						patches_for_all_serials_and_this_version.push_back(patch);
+					}
+				}
+				else if (is_all_versions)
+				{
+					patches_for_this_serial_and_all_versions.push_back(patch);
+				}
+				else
+				{
+					patches_for_this_serial_and_this_version.push_back(patch);
+				}
+
+				break;
+			}
+		}
+	}
+
+	// Sort specific patches in front of global patches
+	std::vector<patch_engine::patch_info> sorted_patches;
+	sorted_patches.insert(sorted_patches.end(), legacy_patches.begin(), legacy_patches.end());
+	sorted_patches.insert(sorted_patches.end(), patches_for_this_serial_and_this_version.begin(), patches_for_this_serial_and_this_version.end());
+	sorted_patches.insert(sorted_patches.end(), patches_for_this_serial_and_all_versions.begin(), patches_for_this_serial_and_all_versions.end());
+	sorted_patches.insert(sorted_patches.end(), patches_for_all_serials_and_this_version.begin(), patches_for_all_serials_and_this_version.end());
+	sorted_patches.insert(sorted_patches.end(), patches_for_all_serials_and_all_versions.begin(), patches_for_all_serials_and_all_versions.end());
+
+	// Apply modifications sequentially
+	for (const auto& patch : sorted_patches)
+	{
+		if (!patch.patch_group.empty())
+		{
+			if (m_applied_groups.contains(patch.patch_group))
+			{
+				continue;
+			}
+
+			m_applied_groups.insert(patch.patch_group);
 		}
 
-		if (container.is_legacy)
+		const size_t applied = apply_modification<check_local_storage>(patch, dst, filesz, ls_addr);
+		applied_total += applied;
+
+		if (patch.is_legacy)
 		{
-			patch_log.notice("Applied legacy patch (hash='%s')(<- %d)", name, applied);
+			patch_log.success("Applied legacy patch (hash='%s')(<- %d)", patch.hash, applied);
 		}
 		else
 		{
-			patch_log.notice("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %d)", name, description, patch.author, patch.patch_version, patch.version, applied);
+			patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %d)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied);
 		}
-
-		applied_total += applied;
 	}
 
 	return applied_total;
@@ -626,7 +820,7 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 	fs::file file(path, fs::rewrite);
 	if (!file)
 	{
-		patch_log.fatal("Failed to open patch config file %s", path);
+		patch_log.fatal("Failed to open patch config file %s (%s)", path, fs::g_tls_error);
 		return;
 	}
 
@@ -634,10 +828,10 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 	out << YAML::BeginMap;
 
 	// Save "Enable Legacy Patches"
-	out << yml_key_enable_legacy_patches << enable_legacy_patches;
+	out << config_key::enable_legacy_patches << enable_legacy_patches;
 
-	// Save 'enabled' state per hash and description
-	patch_config_map config_map;
+	// Save 'enabled' state per hash, description, serial and app_version
+	patch_map config_map;
 
 	for (const auto& [hash, container] : patches_map)
 	{
@@ -648,23 +842,62 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 
 		for (const auto& [description, patch] : container.patch_info_map)
 		{
-			config_map[hash][description] = patch.enabled;
+			if (patch.is_legacy)
+			{
+				continue;
+			}
+
+			for (const auto& [title, serials] : patch.titles)
+			{
+				for (const auto& [serial, app_versions] : serials)
+				{
+					for (const auto& [app_version, enabled] : app_versions)
+					{
+						if (enabled)
+						{
+							config_map[hash].patch_info_map[description].titles[title][serial][app_version] = true;
+						}
+					}
+				}
+			}
 		}
 
-		if (config_map[hash].size() > 0)
+		if (const auto& enabled_patches = config_map[hash].patch_info_map; enabled_patches.size() > 0)
 		{
-			out << hash;
-			out << YAML::BeginMap;
+			out << hash << YAML::BeginMap;
 
-			for (const auto& [description, enabled] : config_map[hash])
+			for (const auto& [description, patch] : enabled_patches)
 			{
-				out << description;
-				out << enabled;
+				const auto& titles = patch.titles;
+
+				out << description << YAML::BeginMap;
+
+				for (const auto& [title, serials] : titles)
+				{
+					out << title << YAML::BeginMap;
+
+					for (const auto& [serial, app_versions] : serials)
+					{
+						out << serial << YAML::BeginMap;
+
+						for (const auto& [app_version, enabled] : app_versions)
+						{
+							out << app_version << enabled;
+						}
+
+						out << YAML::EndMap;
+					}
+
+					out << YAML::EndMap;
+				}
+
+				out << YAML::EndMap;
 			}
 
 			out << YAML::EndMap;
 		}
 	}
+
 	out << YAML::EndMap;
 
 	file.write(out.c_str(), out.size());
@@ -713,9 +946,18 @@ static void append_patches(patch_engine::patch_map& existing_patches, const patc
 				continue;
 			}
 
+			for (const auto& [title, new_serials] : new_info.titles)
+			{
+				for (const auto& [serial, new_app_versions] : new_serials)
+				{
+					if (!new_app_versions.empty())
+					{
+						info.titles[title][serial].insert(new_app_versions.begin(), new_app_versions.end());
+					}
+				}
+			}
+
 			if (!new_info.patch_version.empty()) info.patch_version = new_info.patch_version;
-			if (!new_info.title.empty())         info.title         = new_info.title;
-			if (!new_info.serials.empty())       info.serials       = new_info.serials;
 			if (!new_info.author.empty())        info.author        = new_info.author;
 			if (!new_info.notes.empty())         info.notes         = new_info.notes;
 			if (!new_info.data_list.empty())     info.data_list     = new_info.data_list;
@@ -731,14 +973,14 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 	fs::file file(path, fs::rewrite);
 	if (!file)
 	{
-		patch_log.fatal("save_patches: Failed to open patch file %s", path);
-		append_log_message(log_messages, fmt::format("Failed to open patch file %s", path));
+		patch_log.fatal("save_patches: Failed to open patch file %s (%s)", path, fs::g_tls_error);
+		append_log_message(log_messages, fmt::format("Failed to open patch file %s (%s)", path, fs::g_tls_error));
 		return false;
 	}
 
 	YAML::Emitter out;
 	out << YAML::BeginMap;
-	out << "Version" << patch_engine_version;
+	out << patch_key::version << patch_engine_version;
 
 	for (const auto& [hash, container] : patches)
 	{
@@ -749,21 +991,39 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 
 		out << YAML::Newline << YAML::Newline;
 		out << hash << YAML::BeginMap;
-		out << "Patches" << YAML::BeginMap;
 
-		for (auto [description, info] : container.patch_info_map)
+		for (const auto& [description, info] : container.patch_info_map)
 		{
-			out << description;
-			out << YAML::BeginMap;
+			out << description << YAML::BeginMap;
+			out << patch_key::games << YAML::BeginMap;
 
-			if (!info.title.empty())         out << "Game Title"    << info.title;
-			if (!info.serials.empty())       out << "Serials"       << info.serials;
-			if (!info.author.empty())        out << "Author"        << info.author;
-			if (!info.patch_version.empty()) out << "Patch Version" << info.patch_version;
-			if (!info.notes.empty())         out << "Notes"         << info.notes;
+			for (const auto& [title, serials] : info.titles)
+			{
+				out << title << YAML::BeginMap;
 
-			out << "Patch";
-			out << YAML::BeginSeq;
+				for (const auto& [serial, app_versions] : serials)
+				{
+					out << serial << YAML::BeginSeq;
+
+					for (const auto& app_version : app_versions)
+					{
+						out << app_version.first;
+					}
+
+					out << YAML::EndSeq;
+				}
+
+				out << YAML::EndMap;
+			}
+
+			out << YAML::EndMap;
+
+			if (!info.author.empty())        out << patch_key::author        << info.author;
+			if (!info.patch_version.empty()) out << patch_key::patch_version << info.patch_version;
+			if (!info.patch_group.empty())   out << patch_key::group         << info.patch_group;
+			if (!info.notes.empty())         out << patch_key::notes         << info.notes;
+
+			out << patch_key::patch << YAML::BeginSeq;
 
 			for (const auto& data : info.data_list)
 			{
@@ -786,7 +1046,6 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 		}
 
 		out << YAML::EndMap;
-		out << YAML::EndMap;
 	}
 
 	out << YAML::EndMap;
@@ -800,7 +1059,7 @@ bool patch_engine::import_patches(const patch_engine::patch_map& patches, const 
 {
 	patch_engine::patch_map existing_patches;
 
-	if (load(existing_patches, path, true, log_messages))
+	if (load(existing_patches, path, "", true, log_messages))
 	{
 		append_patches(existing_patches, patches, count, total, log_messages);
 		return count == 0 || save_patches(existing_patches, path, log_messages);
@@ -830,11 +1089,11 @@ bool patch_engine::remove_patch(const patch_info& info)
 	return false;
 }
 
-patch_engine::patch_config_map patch_engine::load_config(bool& enable_legacy_patches)
+patch_engine::patch_map patch_engine::load_config(bool& enable_legacy_patches)
 {
 	enable_legacy_patches = true; // Default to true
 
-	patch_config_map config_map;
+	patch_map config_map;
 
 	const std::string path = get_patch_config_path();
 	patch_log.notice("Loading patch config file %s", path);
@@ -850,16 +1109,15 @@ patch_engine::patch_config_map patch_engine::load_config(bool& enable_legacy_pat
 		}
 
 		// Try to load "Enable Legacy Patches" (default to true)
-		if (auto enable_legacy_node = root[yml_key_enable_legacy_patches])
+		if (auto enable_legacy_node = root[config_key::enable_legacy_patches])
 		{
 			enable_legacy_patches = enable_legacy_node.as<bool>(true);
-			root.remove(yml_key_enable_legacy_patches); // Remove the node in order to skip it in the next part
+			root.remove(config_key::enable_legacy_patches); // Remove the node in order to skip it in the next part
 		}
 
-		for (auto pair : root)
+		for (const auto pair : root)
 		{
-			auto& hash = pair.first.Scalar();
-			auto& data = config_map[hash];
+			const auto& hash = pair.first.Scalar();
 
 			if (const auto yml_type = pair.second.Type(); yml_type != YAML::NodeType::Map)
 			{
@@ -867,12 +1125,44 @@ patch_engine::patch_config_map patch_engine::load_config(bool& enable_legacy_pat
 				continue;
 			}
 
-			for (auto patch : pair.second)
+			for (const auto patch : pair.second)
 			{
-				const auto description = patch.first.Scalar();
-				const auto enabled     = patch.second.as<bool>(false);
+				const auto& description = patch.first.Scalar();
 
-				data[description] = enabled;
+				if (const auto yml_type = patch.second.Type(); yml_type != YAML::NodeType::Map)
+				{
+					patch_log.error("Error loading patch %s: expected Map, found %s (hash: %s, file: %s)", description, yml_type, hash, path);
+					continue;
+				}
+
+				for (const auto title_node : patch.second)
+				{
+					const auto& title = title_node.first.Scalar();
+
+					if (const auto yml_type = title_node.second.Type(); yml_type != YAML::NodeType::Map)
+					{
+						patch_log.error("Error loading %s: expected Map, found %s (description: %s, hash: %s, file: %s)", title, yml_type, description, hash, path);
+						continue;
+					}
+
+					for (const auto serial_node : title_node.second)
+					{
+						const auto& serial = serial_node.first.Scalar();
+
+						if (const auto yml_type = serial_node.second.Type(); yml_type != YAML::NodeType::Map)
+						{
+							patch_log.error("Error loading %s: expected Map, found %s (title: %s, description: %s, hash: %s, file: %s)", serial, yml_type, title, description, hash, path);
+							continue;
+						}
+
+						for (const auto app_version_node : serial_node.second)
+						{
+							const auto& app_version = app_version_node.first.Scalar();
+							const bool enabled = app_version_node.second.as<bool>(false);
+							config_map[hash].patch_info_map[description].titles[title][serial][app_version] = enabled;
+						}
+					}
+				}
 			}
 		}
 	}

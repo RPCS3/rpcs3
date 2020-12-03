@@ -28,19 +28,38 @@ namespace vk
 		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_B8G8R8A8_UNORM, &props);
 		result.bgra8_linear = !!(props.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
 
+		// Check if device supports RGBA8 format
+		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_R8G8B8A8_UNORM, &props);
+		if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) ||
+			!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) ||
+			!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT))
+		{
+			// Non-fatal. Most games use BGRA layout due to legacy reasons as old GPUs typically supported BGRA and RGBA was emulated.
+			rsx_log.error("Your GPU and/or driver does not support RGBA8 format. This can cause problems in some rare games that use this memory layout.");
+		}
+
+		result.argb8_linear = !!(props.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
 		return result;
 	}
 
-	VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support, rsx::surface_depth_format format)
+	VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support, rsx::surface_depth_format2 format)
 	{
 		switch (format)
 		{
-		case rsx::surface_depth_format::z16: return VK_FORMAT_D16_UNORM;
-		case rsx::surface_depth_format::z24s8:
+		case rsx::surface_depth_format2::z16_uint:
+			return VK_FORMAT_D16_UNORM;
+		case rsx::surface_depth_format2::z16_float:
+			return VK_FORMAT_D32_SFLOAT;
+		case rsx::surface_depth_format2::z24s8_uint:
 		{
 			if (support.d24_unorm_s8) return VK_FORMAT_D24_UNORM_S8_UINT;
 			if (support.d32_sfloat_s8) return VK_FORMAT_D32_SFLOAT_S8_UINT;
 			fmt::throw_exception("No hardware support for z24s8" HERE);
+		}
+		case rsx::surface_depth_format2::z24s8_float:
+		{
+			if (support.d32_sfloat_s8) return VK_FORMAT_D32_SFLOAT_S8_UINT;
+			fmt::throw_exception("No hardware support for z24s8_float" HERE);
 		}
 		default:
 			break;
@@ -241,9 +260,9 @@ namespace vk
 		case CELL_GCM_TEXTURE_G8B8: return VK_FORMAT_R8G8_UNORM;
 		case CELL_GCM_TEXTURE_R6G5B5: return VK_FORMAT_R5G6B5_UNORM_PACK16; // Expand, discard high bit?
 		case CELL_GCM_TEXTURE_DEPTH24_D8: return support.d24_unorm_s8? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT;
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return support.d24_unorm_s8 ? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT;
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return VK_FORMAT_D32_SFLOAT_S8_UINT;
 		case CELL_GCM_TEXTURE_DEPTH16: return VK_FORMAT_D16_UNORM;
-		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return VK_FORMAT_D16_UNORM;
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return VK_FORMAT_D32_SFLOAT;
 		case CELL_GCM_TEXTURE_X16: return VK_FORMAT_R16_UNORM;
 		case CELL_GCM_TEXTURE_Y16_X16: return VK_FORMAT_R16G16_UNORM;
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return VK_FORMAT_R16G16_SFLOAT;
@@ -316,6 +335,7 @@ namespace vk
 		case VK_FORMAT_R32G32B32A32_SFLOAT:
 			return 16;
 		case VK_FORMAT_D16_UNORM:
+		case VK_FORMAT_D32_SFLOAT:
 			return 2;
 		case VK_FORMAT_D32_SFLOAT_S8_UINT: //TODO: Translate to D24S8
 		case VK_FORMAT_D24_UNORM_S8_UINT:
@@ -377,6 +397,7 @@ namespace vk
 			return{ 4, 1 };
 		//Depth
 		case VK_FORMAT_D16_UNORM:
+		case VK_FORMAT_D32_SFLOAT:
 			return{ 2, 1 };
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		case VK_FORMAT_D24_UNORM_S8_UINT:
@@ -395,10 +416,11 @@ namespace vk
 			//8-bit
 		case VK_FORMAT_R8_UNORM:
 		case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
-		case VK_FORMAT_R8G8B8A8_UNORM:
 			return{ false, 1 };
 		case VK_FORMAT_B8G8R8A8_UNORM:
+		case VK_FORMAT_R8G8B8A8_UNORM:
 		case VK_FORMAT_B8G8R8A8_SRGB:
+		case VK_FORMAT_R8G8B8A8_SRGB:
 			return{ true, 4 };
 			//16-bit
 		case VK_FORMAT_R16_UINT:
@@ -429,6 +451,7 @@ namespace vk
 			return{ false, 1 };
 			//Depth
 		case VK_FORMAT_D16_UNORM:
+		case VK_FORMAT_D32_SFLOAT:
 			return{ true, 2 };
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		case VK_FORMAT_D24_UNORM_S8_UINT:
@@ -466,5 +489,17 @@ namespace vk
 		}
 
 		return false;
+	}
+
+	bool formats_are_bitcast_compatible(image* image1, image* image2)
+	{
+		if (const u32 transfer_class = image1->format_class() | image2->format_class();
+			transfer_class & RSX_FORMAT_CLASS_DEPTH_FLOAT_MASK)
+		{
+			// If any one of the two images is a depth float, the other must match exactly or bust
+			return (image1->format_class() == image2->format_class());
+		}
+
+		return formats_are_bitcast_compatible(image1->format(), image2->format());
 	}
 }

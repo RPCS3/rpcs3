@@ -121,7 +121,6 @@ private:
 	std::list<gl::work_item> work_queue;
 
 	GLProgramBuffer m_prog_buffer;
-	draw_context_t m_decompiler_context;
 
 	//buffer
 	gl::fbo* m_draw_fbo = nullptr;
@@ -198,8 +197,4 @@ protected:
 
 	std::array<std::vector<std::byte>, 4> copy_render_targets_to_memory() override;
 	std::array<std::vector<std::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
-
-	void on_decompiler_init() override;
-	void on_decompiler_exit() override;
-	bool on_decompiler_task() override;
 };

@@ -21,6 +21,7 @@ class kernel_explorer : public QDialog
 		spu_thread_groups,
 		rsx_contexts,
 		file_descriptors,
+		process_info,
 	};
 
 public:

@@ -43,7 +43,17 @@ u32 debugger_list::GetPc() const
 		return 0;
 	}
 
-	return cpu->id_type() == 1 ? static_cast<ppu_thread*>(cpu.get())->cia : static_cast<spu_thread*>(cpu.get())->pc;
+	if (cpu->id_type() == 1)
+	{
+		return static_cast<ppu_thread*>(cpu.get())->cia;
+	}
+
+	if (cpu->id_type() == 2)
+	{
+		return static_cast<spu_thread*>(cpu.get())->pc;
+	}
+
+	return 0;
 }
 
 u32 debugger_list::GetCenteredAddress(u32 address) const
@@ -92,10 +102,10 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 	else
 	{
 		const bool is_spu = cpu->id_type() != 1;
-		const u32 cpu_offset = is_spu ? static_cast<spu_thread&>(*cpu).offset : 0;
+		const auto cpu_offset = cpu->id_type() != 1 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
 		const u32 address_limits = (is_spu ? 0x3fffc : ~3);
 		m_pc &= address_limits;
-		m_disasm->offset = vm::get_super_ptr(cpu_offset);
+		m_disasm->offset = cpu_offset;
 		u32 pc = m_pc;
 
 		for (uint i = 0, count = 4; i<m_item_count; ++i, pc = (pc + count) & address_limits)
@@ -116,16 +126,16 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 				item(i)->setBackground(default_background);
 			}
 
-			if (!vm::check_addr(cpu_offset + pc, 4))
+			if (!is_spu && !vm::check_addr(pc))
 			{
 				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
 				count = 4;
 				continue;
 			}
 
-			if (!is_spu && !vm::check_addr(cpu_offset + pc, 4, vm::page_executable))
+			if (!is_spu && !vm::check_addr(pc, vm::page_executable))
 			{
-				const u32 data = *vm::get_super_ptr<atomic_be_t<u32>>(cpu_offset + pc);
+				const u32 data = *vm::get_super_ptr<atomic_be_t<u32>>(pc);
 				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
 				static_cast<u8>(data >> 24),
 				static_cast<u8>(data >> 16),
@@ -153,10 +163,10 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 	switch (event->key())
 	{
-	case Qt::Key_PageUp:   ShowAddress(m_pc - (m_item_count * 2) * 4); return;
-	case Qt::Key_PageDown: ShowAddress(m_pc); return;
-	case Qt::Key_Up:       ShowAddress(m_pc - (m_item_count + 1) * 4); return;
-	case Qt::Key_Down:     ShowAddress(m_pc - (m_item_count - 1) * 4); return;
+	case Qt::Key_PageUp:   ShowAddress(m_pc - (m_item_count * 4), true); return;
+	case Qt::Key_PageDown: ShowAddress(m_pc + (m_item_count * 4), true); return;
+	case Qt::Key_Up:       ShowAddress(m_pc - 4, true); return;
+	case Qt::Key_Down:     ShowAddress(m_pc + 4, true); return;
 	default: break;
 	}
 }

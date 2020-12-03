@@ -1,10 +1,9 @@
 ﻿#pragma once
 
 #include "Utilities/types.h"
-#include "util/atomic.hpp"
+#include "Emu/RSX/gcm_enums.h"
 
-#include "rsx_utils.h"
-#include "Emu/Cell/lv2/sys_rsx.h"
+struct RsxDmaControl;
 
 namespace rsx
 {
@@ -131,7 +130,7 @@ namespace rsx
 
 			u32 get_pos() const { return m_internal_get; }
 			u32 last_cmd() const { return m_cmd; }
-			void sync_get() { m_ctrl->get.release(m_internal_get); }
+			void sync_get();
 			u32 get_current_arg_ptr() const { return m_args_ptr; };
 			u32 get_remaining_args_count() const { return m_remaining_commands; }
 			void inc_get(bool wait);

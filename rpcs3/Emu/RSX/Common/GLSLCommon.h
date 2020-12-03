@@ -213,44 +213,17 @@ namespace glsl
 
 	static void insert_vertex_input_fetch(std::stringstream& OS, glsl_rules rules, bool glsl4_compliant=true)
 	{
-		std::string vertex_id_name = (rules == glsl_rules_opengl4) ? "gl_VertexID" : "gl_VertexIndex";
+		std::string vertex_id_name = (rules != glsl_rules_spirv) ? "gl_VertexID" : "gl_VertexIndex";
 
 		//Actually decode a vertex attribute from a raw byte stream
 		OS <<
-		"struct attribute_desc\n"
-		"{\n"
-		"	uint type;\n"
-		"	uint attribute_size;\n"
-		"	uint starting_offset;\n"
-		"	uint stride;\n"
-		"	uint frequency;\n"
-		"	bool swap_bytes;\n"
-		"	bool is_volatile;\n"
-		"	bool modulo;\n"
-		"};\n\n"
-
-		"uint get_bits(const in uint x, const in uint y, const in uint z, const in uint w, const in bool swap)\n"
-		"{\n"
-		"	if (swap) return (w | z << 8 | y << 16 | x << 24);\n"
-		"	return (x | y << 8 | z << 16 | w << 24);\n"
-		"}\n\n"
-
-		"uint get_bits(const in uint x, const in uint y, const in bool swap)\n"
-		"{\n"
-		"	if (swap) return (y | x << 8);\n"
-		"	return (x | y << 8);\n"
-		"}\n\n"
-
-		"int preserve_sign_s16(const in uint bits)\n"
-		"{\n"
-		"	//convert raw 16 bit value into signed 32-bit integer counterpart\n"
-		"	if ((bits & 0x8000u) == 0)\n"
-		"		return int(bits);\n"
-		"	else\n"
-		"		return int(bits | 0xFFFF0000u);\n"
-		"}\n\n"
-
-		"#define get_s16(v, s) preserve_sign_s16(get_bits(v, s))\n\n";
+		"#define VTX_FMT_SNORM16 0\n"
+		"#define VTX_FMT_FLOAT32 1\n"
+		"#define VTX_FMT_FLOAT16 2\n"
+		"#define VTX_FMT_UNORM8  3\n"
+		"#define VTX_FMT_SINT16  4\n"
+		"#define VTX_FMT_COMP32  5\n"
+		"#define VTX_FMT_UINT8   6\n\n";
 
 		// For intel GPUs which cannot access vectors in indexed mode (driver bug? or glsl version too low?)
 		// Note: Tested on Mesa iris with HD 530 and compilant path works fine, may be a bug on Windows proprietary drivers
@@ -266,9 +239,8 @@ namespace glsl
 			"		case 2: vector.z = scalar; return;\n"
 			"		case 3: vector.w = scalar; return;\n"
 			"	}\n"
-			"}\n";
+			"}\n\n"
 
-			OS <<
 			"uint ref(const in uvec4 vector, const in int index)\n"
 			"{\n"
 			"	switch(index)\n"
@@ -278,7 +250,7 @@ namespace glsl
 			"		case 2: return vector.z;\n"
 			"		case 3: return vector.w;\n"
 			"	}\n"
-			"}\n";
+			"}\n\n";
 		}
 		else
 		{
@@ -288,73 +260,109 @@ namespace glsl
 		}
 
 		OS <<
+		"struct attribute_desc\n"
+		"{\n"
+		"	uint type;\n"
+		"	uint attribute_size;\n"
+		"	uint starting_offset;\n"
+		"	uint stride;\n"
+		"	uint frequency;\n"
+		"	bool swap_bytes;\n"
+		"	bool is_volatile;\n"
+		"	bool modulo;\n"
+		"};\n\n"
+
+		"uint gen_bits(const in uint x, const in uint y, const in uint z, const in uint w, const in bool swap)\n"
+		"{\n"
+		"	return (swap) ?\n"
+		"		_set_bits(_set_bits(_set_bits(w, z, 8, 8), y, 16, 8), x, 24, 8) :\n"
+		"		_set_bits(_set_bits(_set_bits(x, y, 8, 8), z, 16, 8), w, 24, 8);\n"
+		"}\n\n"
+
+		"uint gen_bits(const in uint x, const in uint y, const in bool swap)\n"
+		"{\n"
+		"	return (swap)? _set_bits(y, x, 8, 8) : _set_bits(x, y, 8, 8);\n"
+		"}\n\n"
+
+		// NOTE: (int(n) or int(n)) is broken on some NVIDIA and INTEL hardware when the sign bit is involved.
+		// See https://github.com/RPCS3/rpcs3/issues/8990
+		"vec4 sext(const in ivec4 bits)\n"
+		"{\n"
+		"	// convert raw 16 bit values into signed 32-bit float4 counterpart\n"
+		"	bvec4 sign_check = lessThan(bits, ivec4(0x8000));\n"
+		"	return _select(bits - 65536, bits, sign_check);\n"
+		"}\n\n"
+
+		"float sext(const in int bits)\n"
+		"{\n"
+		"	return (bits < 0x8000) ? float(bits) : float(bits - 65536); \n"
+		"}\n\n"
+
 		"vec4 fetch_attribute(const in attribute_desc desc, const in int vertex_id, usamplerBuffer input_stream)\n"
 		"{\n"
-		"	vec4 result = vec4(0., 0., 0., 1.);\n"
-		"	vec4 scale = vec4(1.);\n"
-		"	bool reverse_order = false;\n"
-		"\n"
 		"	const int elem_size_table[] = { 2, 4, 2, 1, 2, 4, 1 };\n"
+		"	const float scaling_table[] = { 32768., 1., 1., 255., 1., 32767., 1. };\n"
 		"	const int elem_size = elem_size_table[desc.type];\n"
-		"	uvec4 tmp;\n"
-		"\n"
-		"	int n;\n"
-		"	int i = int((vertex_id * desc.stride) + desc.starting_offset);\n"
-		"\n"
+		"	const vec4 scale = scaling_table[desc.type].xxxx;\n\n"
+
+		"	uvec4 tmp, result = uvec4(0u);\n"
+		"	vec4 ret;\n"
+		"	int n, i = int((vertex_id * desc.stride) + desc.starting_offset);\n\n"
+
 		"	for (n = 0; n < desc.attribute_size; n++)\n"
 		"	{\n"
 		"		tmp.x = texelFetch(input_stream, i++).x;\n"
 		"		if (elem_size == 2)\n"
 		"		{\n"
 		"			tmp.y = texelFetch(input_stream, i++).x;\n"
-		"			tmp.x = get_bits(tmp.x, tmp.y, desc.swap_bytes);\n"
+		"			tmp.x = gen_bits(tmp.x, tmp.y, desc.swap_bytes);\n"
 		"		}\n"
 		"		else if (elem_size == 4)\n"
 		"		{\n"
 		"			tmp.y = texelFetch(input_stream, i++).x;\n"
 		"			tmp.z = texelFetch(input_stream, i++).x;\n"
 		"			tmp.w = texelFetch(input_stream, i++).x;\n"
-		"			tmp.x = get_bits(tmp.x, tmp.y, tmp.z, tmp.w, desc.swap_bytes);\n"
-		"		}\n"
-		"\n"
-		"		switch (desc.type)\n"
-		"		{\n"
-		"		case 0:\n"
-		"			//signed normalized 16-bit\n"
-		"			mov(scale, n, 32767.);\n"
-		"		case 4:\n"
-		"			//signed word\n"
-		"			mov(result, n, preserve_sign_s16(tmp.x));\n"
-		"			break;\n"
-		"		case 1:\n"
-		"			//float\n"
-		"			mov(result, n, uintBitsToFloat(tmp.x));\n"
-		"			break;\n"
-		"		case 2:\n"
-		"			//half\n"
-		"			mov(result, n, unpackHalf2x16(tmp.x).x);\n"
-		"			break;\n"
-		"		case 3:\n"
-		"			//unsigned byte\n"
-		"			mov(scale, n, 255.);\n"
-		"		case 6:\n"
-		"			//ub256\n"
-		"			mov(result, n, tmp.x);\n"
-		"			reverse_order = desc.swap_bytes;\n"
-		"			break;\n"
-		"		case 5:\n"
-		"			//cmp\n"
-		"			result.x = preserve_sign_s16((tmp.x & 0x7FFu) << 5);\n"
-		"			result.y = preserve_sign_s16(((tmp.x >> 11) & 0x7FFu) << 5);\n"
-		"			result.z = preserve_sign_s16(((tmp.x >> 22) & 0x3FFu) << 6);\n"
-		"			result.w = 1.;\n"
-		"			scale = vec4(32767., 32767., 32767., 1.);\n"
-		"			break;\n"
-		"		}\n"
+		"			tmp.x = gen_bits(tmp.x, tmp.y, tmp.z, tmp.w, desc.swap_bytes);\n"
+		"		}\n\n"
+
+		"		mov(result, n, tmp.x);\n"
+		"	}\n\n"
+
+		"	// Actual decoding step is done in vector space, outside the loop\n"
+		"	if (desc.type == VTX_FMT_SNORM16 || desc.type == VTX_FMT_SINT16)\n"
+		"	{\n"
+		"		ret = sext(ivec4(result));\n"
 		"	}\n"
-		"\n"
-		"	result /= scale;\n"
-		"	return (reverse_order)? result.wzyx: result;\n"
+		"	else if (desc.type == VTX_FMT_FLOAT32)\n"
+		"	{\n"
+		"		ret = uintBitsToFloat(result);\n"
+		"	}\n"
+		"	else if (desc.type == VTX_FMT_FLOAT16)\n"
+		"	{\n"
+		"		tmp.x = _set_bits(result.x, result.y, 16, 16);\n"
+		"		tmp.y = _set_bits(result.z, result.w, 16, 16);\n"
+		"		ret.xy = unpackHalf2x16(tmp.x);\n"
+		"		ret.zw = unpackHalf2x16(tmp.y);\n"
+		"	}\n"
+		"	else if (desc.type == VTX_FMT_UINT8 || desc.type == VTX_FMT_UNORM8)\n"
+		"	{\n"
+		"		ret = vec4(desc.swap_bytes? result.wzyx : result);\n"
+		"	}\n"
+		"	else //if (desc.type == VTX_FMT_COMP32)\n"
+		"	{\n"
+		"		result = uvec4(_get_bits(result.x, 0, 11),\n"
+		"			_get_bits(result.x, 11, 11),\n"
+		"			_get_bits(result.x, 22, 10),\n"
+		"			uint(scale.x));\n"
+		"		ret = sext(ivec4(result) << ivec4(5, 5, 6, 0));\n"
+		"	}\n\n"
+
+		"	if (desc.attribute_size < 4)\n"
+		"	{\n"
+		"		ret.w = scale.x;\n"
+		"	}\n\n"
+
+		"	return ret / scale; \n"
 		"}\n\n"
 
 		"attribute_desc fetch_desc(const in int location)\n"
@@ -368,7 +376,7 @@ namespace glsl
 		"	// [32-60] starting offset\n"
 		"	// [60-61] swap bytes flag\n"
 		"	// [61-62] volatile flag\n"
-		"	// [62-63] modulo enable flag\n";
+		"	// [62-63] modulo enable flag\n\n";
 
 		if (rules == glsl_rules_opengl4)
 		{
@@ -378,7 +386,7 @@ namespace glsl
 			"	int sub_block = (location & 1) << 1;\n"
 			"	uvec2 attrib = uvec2(\n"
 			"		ref(input_attributes_blob[block], sub_block + 0),\n"
-			"		ref(input_attributes_blob[block], sub_block + 1));\n";
+			"		ref(input_attributes_blob[block], sub_block + 1));\n\n";
 		}
 		else
 		{
@@ -389,25 +397,20 @@ namespace glsl
 
 		OS <<
 		"	attribute_desc result;\n"
-		"	result.stride = attrib.x & 0xFFu;\n"
-		"	result.frequency = (attrib.x >> 8) & 0xFFFFu;\n"
-		"	result.type = (attrib.x >> 24) & 0x7u;\n"
-		"	result.attribute_size = (attrib.x >> 27) & 0x7u;\n"
-		"	result.starting_offset = (attrib.y & 0x1FFFFFFFu);\n"
-		"	result.swap_bytes = ((attrib.y >> 29) & 0x1u) != 0;\n"
-		"	result.is_volatile = ((attrib.y >> 30) & 0x1u) != 0;\n"
-		"	result.modulo = ((attrib.y >> 31) & 0x1u) != 0;\n"
+		"	result.stride = _get_bits(attrib.x, 0, 8);\n"
+		"	result.frequency = _get_bits(attrib.x, 8, 16);\n"
+		"	result.type = _get_bits(attrib.x, 24, 3);\n"
+		"	result.attribute_size = _get_bits(attrib.x, 27, 3);\n"
+		"	result.starting_offset = _get_bits(attrib.y, 0, 29);\n"
+		"	result.swap_bytes = _test_bit(attrib.y, 29);\n"
+		"	result.is_volatile = _test_bit(attrib.y, 30);\n"
+		"	result.modulo = _test_bit(attrib.y, 31);\n"
 		"	return result;\n"
 		"}\n\n"
 
 		"vec4 read_location(const in int location)\n"
 		"{\n"
 		"	attribute_desc desc = fetch_desc(location);\n"
-		"	if (desc.attribute_size == 0)\n"
-		"	{\n"
-		"		//default value\n"
-		"		return vec4(0., 0., 0., 1.);\n"
-		"	}\n\n"
 		"	int vertex_id = " << vertex_id_name << " - int(vertex_base_index);\n"
 		"	if (desc.frequency == 0)\n"
 		"	{\n"
@@ -421,8 +424,8 @@ namespace glsl
 		"	else\n"
 		"	{\n"
 		"		vertex_id /= int(desc.frequency); \n"
-		"	}\n"
-		"\n"
+		"	}\n\n"
+
 		"	if (desc.is_volatile)\n"
 		"		return fetch_attribute(desc, vertex_id, volatile_input_stream);\n"
 		"	else\n"
@@ -433,14 +436,16 @@ namespace glsl
 	static void insert_rop_init(std::ostream& OS)
 	{
 		OS <<
-		"	if ((rop_control & (1u << 9)) != 0)\n"
+		"	if (_test_bit(rop_control, 9))\n"
 		"	{\n"
 		"		// Convert x,y to linear address\n"
-		"		uvec2 stipple_coord = uvec2(gl_FragCoord.xy) % uvec2(32u, 32u);\n"
-		"		uint address = stipple_coord.y * 32u + stipple_coord.x;\n"
-		"		uint mask = (1u << (address & 31u));\n\n"
+		"		const ivec2 stipple_coord = ivec2(gl_FragCoord.xy) % ivec2(32, 32);\n"
+		"		const int address = stipple_coord.y * 32 + stipple_coord.x;\n"
+		"		const int bit_offset = (address & 31);\n"
+		"		const int word_index = _get_bits(address, 7, 3);\n"
+		"		const int sub_index = _get_bits(address, 5, 2);\n\n"
 
-		"		if ((stipple_pattern[address >> 7u][(address >> 5u) & 3u] & mask) == 0u)\n"
+		"		if (_test_bit(stipple_pattern[word_index][sub_index], bit_offset))\n"
 		"		{\n"
 		"			_kill();\n"
 		"		}\n"
@@ -462,26 +467,26 @@ namespace glsl
 			"	{\n"
 			"		discard;\n"
 			"	}\n"
-			"	else if ((rop_control & 0xFFu) != 0)\n";
+			"	else if (_get_bits(rop_control, 0, 8) != 0)\n";
 		}
 		else
 		{
-			OS << "	if ((rop_control & 0xFFu) != 0)\n";
+			OS << "	if (_get_bits(rop_control, 0, 8) != 0)\n";
 		}
 
 		OS <<
 		"	{\n"
-		"		bool alpha_test = (rop_control & 0x1u) > 0;\n"
-		"		uint alpha_func = ((rop_control >> 16) & 0x7u);\n";
+		"		const bool alpha_test = _test_bit(rop_control, 0);\n"
+		"		const uint alpha_func = _get_bits(rop_control, 16, 3);\n";
 
 		if (!props.fp32_outputs)
 		{
-			OS << "		bool srgb_convert = (rop_control & 0x2u) > 0;\n\n";
+			OS << "		const bool srgb_convert = _test_bit(rop_control, 1);\n\n";
 		}
 
 		if (props.emulate_coverage_tests)
 		{
-			OS << "		bool a2c_enabled = (rop_control & 0x10u) > 0;\n";
+			OS << "		const bool a2c_enabled = _test_bit(rop_control, 4);\n";
 		}
 
 		OS <<
@@ -539,6 +544,9 @@ namespace glsl
 	{
 		OS << "#define _select mix\n";
 		OS << "#define _saturate(x) clamp(x, 0., 1.)\n";
+		OS << "#define _get_bits(x, off, count) bitfieldExtract(x, off, count)\n";
+		OS << "#define _set_bits(x, y, off, count) bitfieldInsert(x, y, off, count)\n";
+		OS << "#define _test_bit(x, y) (_get_bits(x, y, 1) != 0)\n";
 		OS << "#define _rand(seed) fract(sin(dot(seed.xy, vec2(12.9898f, 78.233f))) * 43758.5453f)\n\n";
 
 		if (props.domain == glsl::program_domain::glsl_fragment_program)
@@ -573,31 +581,67 @@ namespace glsl
 			"}\n\n";
 		}
 
-		if (props.domain == glsl::program_domain::glsl_vertex_program)
+		if (props.domain == glsl::program_domain::glsl_vertex_program && props.emulate_zclip_transform)
 		{
-			OS <<
-			"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
-			"{\n"
-			"	float d = pos.z / pos.w;\n"
-			"	if (d < 0.f && d >= near_plane)\n"
-			"		d = 0.f;\n" //force clamp negative values
-			"	else if (d > 1.f && d <= far_plane)\n"
-			"		d = min(1., 0.99 + (0.01 * (pos.z - near_plane) / (far_plane - near_plane)));\n"
-			"	else\n"
-			"		return pos; //d = (0.99 * d);\n" //range compression for normal values is disabled until a solution to ops comparing z is found
-			"\n"
-			"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n"
-			"}\n\n";
+			if (props.emulate_depth_clip_only)
+			{
+				// Declare rcp_precise. Requires f64 support in the drivers.
+				// This is required to handle precision drift during division for extended depth range.
+				OS <<
+				"double rcp_precise(double x)\n"
+				"{\n"
+				"	double scaled = x * 0.0009765625;\n"
+				"	double inv = 1.0 / scaled;\n"
+				"	return inv * 0.0009765625;\n"
+				"}\n"
+				"\n"
+				// Technically the depth value here is the 'final' depth that should be stored in the Z buffer.
+				// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
+				"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
+				"{\n"
+				"	if (far_plane != 0.0)\n"
+				"	{\n"
+				"		double z_range = (far_plane > near_plane)? (far_plane - near_plane) : far_plane;\n"
+				"		double inv_range = rcp_precise(z_range);\n"
+				"		float d = float(pos.z * rcp_precise(pos.w));\n"
+				"		float new_d = (d - near_plane) * float(inv_range);\n"
+				"		return vec4(pos.x, pos.y, (new_d * pos.w), pos.w);\n"
+				"	}\n"
+				"	else\n"
+				"	{\n"
+				"		return pos;\n" // Only values where Z=0 can ever pass this clip
+				"	}\n"
+				"}\n\n";
+			}
+			else
+			{
+				OS <<
+				"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
+				"{\n"
+				"	float d = float(pos.z / pos.w);\n"
+				"	if (d < 0.f && d >= near_plane)\n"
+				"	{\n"
+				"		// Clamp\n"
+				"		d = 0.f;\n"
+				"	}\n"
+				"	else if (d > 1.f && d <= far_plane)\n"
+				"	{\n"
+				"		// Compress Z and store towards highest end of the range\n"
+				"		d = min(1., 0.99 + (0.01 * (pos.z - near_plane) / (far_plane - near_plane)));\n"
+				"	}\n"
+				"	else\n"
+				"	{\n"
+				"		return pos;\n"
+				"	}\n"
+				"\n"
+				"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n"
+				"}\n\n";
+			}
 
 			return;
 		}
 
 		program_common::insert_compare_op(OS, props.low_precision_tests);
-
-		if (props.require_shadow_ops && props.emulate_shadow_compare)
-		{
-			program_common::insert_compare_op_vector(OS);
-		}
 
 		if (props.emulate_coverage_tests)
 		{
@@ -605,7 +649,7 @@ namespace glsl
 			OS <<
 			"bool coverage_test_passes(const in vec4 _sample, const in uint control)\n"
 			"{\n"
-			"	if ((control & 0x1u) == 0) return false;\n"
+			"	if (!_test_bit(control, 0)) return false;\n"
 			"\n"
 			"	float random  = _rand(gl_FragCoord);\n"
 			"	return (_sample.a > random);\n"
@@ -635,18 +679,18 @@ namespace glsl
 			"	if (depth_float == 0)\n"
 			"		value = uint(depth_value * 16777215.);\n"
 			"	else\n"
-			"		value = (floatBitsToUint(depth_value) >> 7) & 0xffffff;\n"
+			"		value = _get_bits(floatBitsToUint(depth_value), 7, 24);\n"
 			"\n"
-			"	uint b = (value & 0xff);\n"
-			"	uint g = (value >> 8) & 0xff;\n"
-			"	uint r = (value >> 16) & 0xff;\n"
+			"	uint b = _get_bits(value, 0, 8);\n"
+			"	uint g = _get_bits(value, 8, 8);\n"
+			"	uint r = _get_bits(value, 16, 8);\n"
 			"	return vec4(float(g)/255., float(b)/255., 1., float(r)/255.);\n"
 			"}\n\n"
 
 			"vec4 remap_vector(const in vec4 color, const in uint remap)\n"
 			"{\n"
 			"	vec4 result;\n"
-			"	if ((remap & 0xFF) == 0xE4)\n"
+			"	if (_get_bits(remap, 0, 8) == 0xE4)\n"
 			"	{\n"
 			"		result = color;\n"
 			"	}\n"
@@ -663,7 +707,7 @@ namespace glsl
 			"		result.b = color[remap_channel.b];\n"
 			"	}\n\n"
 
-			"	if ((remap >> 8) == 0xAA)\n"
+			"	if (_get_bits(remap, 8, 8) == 0xAA)\n"
 			"		return result;\n\n"
 
 			"	uvec4 remap_select = uvec4(remap) >> uvec4(10, 12, 14, 8);\n"
@@ -686,23 +730,6 @@ namespace glsl
 
 		if (props.require_texture_ops)
 		{
-			if (props.require_shadow_ops && props.emulate_shadow_compare)
-			{
-				OS <<
-				"vec4 shadowCompare(sampler2D tex, const in vec3 p, const in uint func)\n"
-				"{\n"
-				"	vec4 samples = textureGather(tex, p.xy).xxxx;\n"
-				"	vec4 ref = clamp(p.z, 0., 1.).xxxx;\n"
-				"	vec4 filtered = vec4(comparison_passes(samples, ref, func));\n"
-				"	return filtered * dot(filtered, vec4(0.25f));\n"
-				"}\n\n"
-
-				"vec4 shadowCompareProj(sampler2D tex, const in vec4 p, const in uint func)\n"
-				"{\n"
-				"	return shadowCompare(tex, p.xyz / p.w, func);\n"
-				"}\n\n";
-			}
-
 			OS <<
 
 #ifdef __APPLE__
@@ -736,7 +763,7 @@ namespace glsl
 			"		return rgba;\n"
 			"	}\n"
 			"\n"
-			"	if ((control_bits & 0x10u) != 0)\n"
+			"	if (_test_bit(control_bits, 4))\n"
 			"	{\n"
 			"		// Alphakill\n"
 			"		if (rgba.a < 0.000001)\n"
@@ -746,7 +773,7 @@ namespace glsl
 			"		}\n"
 			"	}\n"
 			"\n"
-			"	if ((control_bits & 0x20u) != 0)\n"
+			"	if (_test_bit(control_bits, 5))\n"
 			"	{\n"
 			"		// Renormalize to 8-bit (PS3) accuracy\n"
 			"		rgba = floor(rgba * 255.);\n"
@@ -812,8 +839,8 @@ namespace glsl
 			if (props.emulate_shadow_compare)
 			{
 				OS <<
-				"#define TEX2D_SHADOW(index, coord3) shadowCompare(TEX_NAME(index), coord3 * vec3(texture_parameters[index].scale, 1.), texture_parameters[index].flags >> 8)\n"
-				"#define TEX2D_SHADOWPROJ(index, coord4) shadowCompareProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.), texture_parameters[index].flags >> 8)\n";
+				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), vec3(coord3.xy * texture_parameters[index].scale, min(float(coord3.z), 1.)))\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), vec4(coord4.xy, min(coord4.z, coord4.w), coord4.w) * vec4(texture_parameters[index].scale, 1., 1.))\n";
 			}
 			else
 			{
@@ -863,9 +890,9 @@ namespace glsl
 		case FUNCTION::FUNCTION_DPH:
 			return "$Ty(dot(vec4($0.xyz, 1.0), $1))";
 		case FUNCTION::FUNCTION_SFL:
-			return "$Ty(0., 0., 0., 0.)";
+			return "$Ty(0.)";
 		case FUNCTION::FUNCTION_STR:
-			return "$Ty(1., 1., 1., 1.)";
+			return "$Ty(1.)";
 		case FUNCTION::FUNCTION_FRACT:
 			return "fract($0)";
 		case FUNCTION::FUNCTION_REFL:

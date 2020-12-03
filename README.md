@@ -1,7 +1,6 @@
 RPCS3
 =====
 
-[![Travis (.org) branch](https://img.shields.io/travis/RPCS3/rpcs3/master?label=Travis%20CI&logo=travis)](https://travis-ci.org/RPCS3/rpcs3)
 [![Azure Build Status](https://dev.azure.com/nekotekina/nekotekina/_apis/build/status/RPCS3.rpcs3?branchName=master)](https://dev.azure.com/nekotekina/nekotekina/_build?definitionId=4&branchName=master)
 [![Cirrus CI - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20(FreeBSD)&logo=cirrus-ci)](https://cirrus-ci.com/github/RPCS3/rpcs3)
 [![RPCS3 discord server](https://img.shields.io/discord/272035812277878785?color=%237289DA&label=RPCS3%20Discord&logo=discord&logoColor=white)](https://discord.me/rpcs3)
