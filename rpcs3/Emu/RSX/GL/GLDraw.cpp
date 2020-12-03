@@ -283,8 +283,11 @@ void GLGSRender::load_texture_env()
 		surface_store_tag = m_rtts.cache_tag;
 	}
 
-	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
+		if (!(textures_ref & 1))
+			continue;
+
 		if (!fs_sampler_state[i])
 			fs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
 
@@ -309,8 +312,11 @@ void GLGSRender::load_texture_env()
 		}
 	}
 
-	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
+		if (!(textures_ref & 1))
+			continue;
+
 		if (!vs_sampler_state[i])
 			vs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
 
@@ -341,74 +347,74 @@ void GLGSRender::bind_texture_env()
 	// Bind textures and resolve external copy operations
 	gl::command_context cmd{ gl_state };
 
-	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
-		if (current_fp_metadata.referenced_textures_mask & (1 << i))
+		if (!(textures_ref & 1))
+			continue;
+
+		_SelectTexture(GL_FRAGMENT_TEXTURES_START + i);
+
+		gl::texture_view* view = nullptr;
+		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+
+		if (rsx::method_registers.fragment_textures[i].enabled() &&
+			sampler_state->validate())
 		{
-			_SelectTexture(GL_FRAGMENT_TEXTURES_START + i);
-
-			gl::texture_view* view = nullptr;
-			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-
-			if (rsx::method_registers.fragment_textures[i].enabled() &&
-				sampler_state->validate())
+			if (view = sampler_state->image_handle; !view) [[unlikely]]
 			{
-				if (view = sampler_state->image_handle; !view) [[unlikely]]
-				{
-					view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
-				}
+				view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
 			}
+		}
 
-			if (view) [[likely]]
+		if (view) [[likely]]
+		{
+			view->bind();
+
+			if (current_fragment_program.redirected_textures & (1 << i))
 			{
-				view->bind();
+				_SelectTexture(GL_STENCIL_MIRRORS_START + i);
 
-				if (current_fragment_program.redirected_textures & (1 << i))
-				{
-					_SelectTexture(GL_STENCIL_MIRRORS_START + i);
-
-					auto root_texture = static_cast<gl::viewable_image*>(view->image());
-					auto stencil_view = root_texture->get_view(0xAAE4, rsx::default_remap_vector, gl::image_aspect::stencil);
-					stencil_view->bind();
-				}
+				auto root_texture = static_cast<gl::viewable_image*>(view->image());
+				auto stencil_view = root_texture->get_view(0xAAE4, rsx::default_remap_vector, gl::image_aspect::stencil);
+				stencil_view->bind();
 			}
-			else
+		}
+		else
+		{
+			auto target = gl::get_target(current_fragment_program.get_texture_dimension(i));
+			glBindTexture(target, m_null_textures[target]->id());
+
+			if (current_fragment_program.redirected_textures & (1 << i))
 			{
-				auto target = gl::get_target(current_fragment_program.get_texture_dimension(i));
+				_SelectTexture(GL_STENCIL_MIRRORS_START + i);
 				glBindTexture(target, m_null_textures[target]->id());
-
-				if (current_fragment_program.redirected_textures & (1 << i))
-				{
-					_SelectTexture(GL_STENCIL_MIRRORS_START + i);
-					glBindTexture(target, m_null_textures[target]->id());
-				}
 			}
 		}
 	}
 
-	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
-		if (current_vp_metadata.referenced_textures_mask & (1 << i))
-		{
-			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
-			_SelectTexture(GL_VERTEX_TEXTURES_START + i);
+		if (!(textures_ref & 1))
+			continue;
 
-			if (rsx::method_registers.vertex_textures[i].enabled() &&
-				sampler_state->validate())
+		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+		_SelectTexture(GL_VERTEX_TEXTURES_START + i);
+
+		if (rsx::method_registers.vertex_textures[i].enabled() &&
+			sampler_state->validate())
+		{
+			if (sampler_state->image_handle) [[likely]]
 			{
-				if (sampler_state->image_handle) [[likely]]
-				{
-					sampler_state->image_handle->bind();
-				}
-				else
-				{
-					m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc)->bind();
-				}
+				sampler_state->image_handle->bind();
 			}
 			else
 			{
-				glBindTexture(GL_TEXTURE_2D, GL_NONE);
+				m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc)->bind();
 			}
+		}
+		else
+		{
+			glBindTexture(GL_TEXTURE_2D, GL_NONE);
 		}
 	}
 }
@@ -584,6 +590,9 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 void GLGSRender::begin()
 {
+	// Save shader state now before prefetch and loading happens
+	m_interpreter_state = (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits);
+
 	rsx::thread::begin();
 
 	if (skip_current_frame || cond_render_ctrl.disable_rendering())

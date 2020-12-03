@@ -361,14 +361,15 @@ namespace rsx
 			}
 		}
 
-		if (m_graphics_state & rsx::pipeline_state::fragment_program_dirty)
+		if (m_graphics_state & rsx::pipeline_state::fragment_program_ucode_dirty)
 		{
 			// Request for update of fragment constants if the program block is invalidated
 			m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
-
-			// Request for update of texture parameters if the program is likely to have changed
-			m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
 		}
+
+		// Preload the GPU programs for this draw call if needed
+		prefetch_vertex_program();
+		prefetch_fragment_program();
 
 		in_begin_end = true;
 	}
@@ -783,7 +784,15 @@ namespace rsx
 
 	void thread::fill_fragment_texture_parameters(void *buffer, const RSXFragmentProgram &fragment_program)
 	{
-		memcpy(buffer, fragment_program.texture_scale, 16 * 4 * sizeof(float));
+		// Copy only the relevant section
+		if (current_fp_metadata.referenced_textures_mask)
+		{
+			const auto start = std::countr_zero(current_fp_metadata.referenced_textures_mask);
+			const auto end = 16 - std::countl_zero(current_fp_metadata.referenced_textures_mask);
+			const auto mem_offset = (start * 16);
+			const auto mem_size = (end - start) * 16;
+			memcpy(static_cast<u8*>(buffer) + mem_offset, reinterpret_cast<const u8*>(fragment_program.texture_scale) + mem_offset, mem_size);
+		}
 	}
 
 	u64 thread::timestamp()
@@ -1490,15 +1499,48 @@ namespace rsx
 		return true;
 	}
 
-	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors, bool skip_textures, bool skip_vertex_inputs)
+	void thread::prefetch_fragment_program()
 	{
-		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_dirty))
+		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_ucode_dirty))
 			return;
 
-		m_graphics_state &= ~(rsx::pipeline_state::vertex_program_dirty);
+		m_graphics_state &= ~rsx::pipeline_state::fragment_program_ucode_dirty;
+
+		const auto [program_offset, program_location] = method_registers.shader_program_address();
+		auto data_ptr = vm::base(rsx::get_address(program_offset, program_location, HERE));
+		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
+
+		current_fragment_program.data = (static_cast<u8*>(data_ptr) + current_fp_metadata.program_start_offset);
+		current_fragment_program.offset = program_offset + current_fp_metadata.program_start_offset;
+		current_fragment_program.ucode_length = current_fp_metadata.program_ucode_length;
+		current_fragment_program.total_length = current_fp_metadata.program_ucode_length + current_fp_metadata.program_start_offset;
+		current_fragment_program.valid = true;
+
+		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_state_dirty))
+		{
+			// Verify current texture state is valid
+			for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+			{
+				if (!(textures_ref & 1)) continue;
+
+				if (m_textures_dirty[i])
+				{
+					m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
+					break;
+				}
+			}
+		}
+	}
+
+	void thread::prefetch_vertex_program()
+	{
+		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_ucode_dirty))
+			return;
+
+		m_graphics_state &= ~rsx::pipeline_state::vertex_program_ucode_dirty;
+
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
-		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
-		current_vertex_program.skip_vertex_input_check = skip_vertex_inputs;
+		current_vertex_program.skip_vertex_input_check = true;
 
 		current_vertex_program.rsx_vertex_inputs.clear();
 		current_vertex_program.data.reserve(512 * 4);
@@ -1512,59 +1554,38 @@ namespace rsx
 			current_vertex_program                      // [out] Program object
 		);
 
-		if (!skip_textures && current_vp_metadata.referenced_textures_mask != 0)
+		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_state_dirty))
 		{
-			for (u32 i = 0; i < rsx::limits::vertex_textures_count; ++i)
+			// Verify current texture state is valid
+			for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 			{
-				const auto &tex = rsx::method_registers.vertex_textures[i];
-				if (tex.enabled() && (current_vp_metadata.referenced_textures_mask & (1 << i)))
+				if (!(textures_ref & 1)) continue;
+
+				if (m_vertex_textures_dirty[i])
 				{
-					current_vertex_program.texture_dimensions |= (static_cast<u32>(sampler_descriptors[i]->image_type) << (i << 1));
+					m_graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
+					break;
 				}
 			}
 		}
+	}
 
-		if (!skip_vertex_inputs)
+	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors)
+	{
+		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_dirty))
+			return;
+
+		verify(HERE), !(m_graphics_state & rsx::pipeline_state::vertex_program_ucode_dirty);
+		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
+
+		for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 		{
-			const u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
-			const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
+			if (!(textures_ref & 1)) continue;
 
-			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+			const auto &tex = rsx::method_registers.vertex_textures[i];
+			if (tex.enabled() && (current_vp_metadata.referenced_textures_mask & (1 << i)))
 			{
-				bool enabled = !!(input_mask & (1 << index));
-				if (!enabled)
-					continue;
-
-				if (rsx::method_registers.vertex_arrays_info[index].size() > 0)
-				{
-					current_vertex_program.rsx_vertex_inputs.push_back(
-						{ index,
-							rsx::method_registers.vertex_arrays_info[index].size(),
-							rsx::method_registers.vertex_arrays_info[index].frequency(),
-							!!((modulo_mask >> index) & 0x1),
-							true,
-							is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
-				}
-				else if (vertex_push_buffers[index].vertex_count > 1)
-				{
-					current_vertex_program.rsx_vertex_inputs.push_back(
-						{ index,
-							vertex_push_buffers[index].size,
-							1,
-							false,
-							true,
-							is_int_type(vertex_push_buffers[index].type), 0 });
-				}
-				else if (rsx::method_registers.register_vertex_info[index].size > 0)
-				{
-					current_vertex_program.rsx_vertex_inputs.push_back(
-						{ index,
-							rsx::method_registers.register_vertex_info[index].size,
-							rsx::method_registers.register_vertex_info[index].frequency,
-							!!((modulo_mask >> index) & 0x1),
-							false,
-							is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
-				}
+				current_vertex_program.texture_dimensions |= (static_cast<u32>(sampler_descriptors[i]->image_type) << (i << 1));
 			}
 		}
 	}
@@ -1740,44 +1761,42 @@ namespace rsx
 		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_dirty))
 			return;
 
+		verify(HERE), !(m_graphics_state & rsx::pipeline_state::fragment_program_ucode_dirty);
+
 		m_graphics_state &= ~(rsx::pipeline_state::fragment_program_dirty);
-		auto &result = current_fragment_program = {};
 
-		const auto [program_offset, program_location] = method_registers.shader_program_address();
+		current_fragment_program.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
+		current_fragment_program.texcoord_control_mask = rsx::method_registers.texcoord_control_mask();
+		current_fragment_program.texture_dimensions = 0;
+		current_fragment_program.unnormalized_coords = 0;
+		current_fragment_program.two_sided_lighting = rsx::method_registers.two_side_light_en();
+		current_fragment_program.redirected_textures = 0;
+		current_fragment_program.shadow_textures = 0;
 
-		result.data = vm::base(rsx::get_address(program_offset, program_location, HERE));
-		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(result.get_data());
-
-		result.data = (static_cast<u8*>(result.get_data()) + current_fp_metadata.program_start_offset);
-		result.offset = program_offset + current_fp_metadata.program_start_offset;
-		result.ucode_length = current_fp_metadata.program_ucode_length;
-		result.total_length = result.ucode_length + current_fp_metadata.program_start_offset;
-		result.valid = true;
-		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
-		result.texcoord_control_mask = rsx::method_registers.texcoord_control_mask();
-		result.unnormalized_coords = 0;
-		result.two_sided_lighting = rsx::method_registers.two_side_light_en();
-		result.redirected_textures = 0;
-		result.shadow_textures = 0;
+		memset(current_fragment_program.texture_scale, 0, sizeof(current_fragment_program.texture_scale));
 
 		if (method_registers.current_draw_clause.primitive == primitive_type::points &&
 			method_registers.point_sprite_enabled())
 		{
 			// Set high word of the control mask to store point sprite control
-			result.texcoord_control_mask |= u32(method_registers.point_sprite_control_mask()) << 16;
+			current_fragment_program.texcoord_control_mask |= u32(method_registers.point_sprite_control_mask()) << 16;
 		}
 
-		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
+		for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 		{
-			auto &tex = rsx::method_registers.fragment_textures[i];
-			result.texture_scale[i][0] = sampler_descriptors[i]->scale_x;
-			result.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
-			result.texture_scale[i][2] = std::bit_cast<f32>(tex.remap());
+			if (!(textures_ref & 1)) continue;
 
-			if (tex.enabled() && (current_fp_metadata.referenced_textures_mask & (1 << i)))
+			auto &tex = rsx::method_registers.fragment_textures[i];
+			if (tex.enabled())
 			{
+				current_fragment_program.texture_scale[i][0] = sampler_descriptors[i]->scale_x;
+				current_fragment_program.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
+				current_fragment_program.texture_scale[i][2] = std::bit_cast<f32>(tex.remap());
+
+				m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
+
 				u32 texture_control = 0;
-				result.texture_dimensions |= (static_cast<u32>(sampler_descriptors[i]->image_type) << (i << 1));
+				current_fragment_program.texture_dimensions |= (static_cast<u32>(sampler_descriptors[i]->image_type) << (i << 1));
 
 				if (tex.alpha_kill_enabled())
 				{
@@ -1790,7 +1809,7 @@ namespace rsx
 				const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
 				if (raw_format & CELL_GCM_TEXTURE_UN)
-					result.unnormalized_coords |= (1 << i);
+					current_fragment_program.unnormalized_coords |= (1 << i);
 
 				if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)
 				{
@@ -1808,8 +1827,8 @@ namespace rsx
 						// TODO: Optionally add support for 16-bit formats (not necessary since type casts are easy with that)
 						u32 control_bits = sampler_descriptors[i]->format_class == RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32? (1u << 16) : 0u;
 						control_bits |= tex.remap() & 0xFFFF;
-						result.redirected_textures |= (1 << i);
-						result.texture_scale[i][2] = std::bit_cast<f32>(control_bits);
+						current_fragment_program.redirected_textures |= (1 << i);
+						current_fragment_program.texture_scale[i][2] = std::bit_cast<f32>(control_bits);
 						break;
 					}
 					case CELL_GCM_TEXTURE_DEPTH16:
@@ -1818,11 +1837,11 @@ namespace rsx
 					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 					{
 						const auto compare_mode = tex.zfunc();
-						if (result.textures_alpha_kill[i] == 0 &&
+						if (!tex.alpha_kill_enabled() &&
 							compare_mode < rsx::comparison_function::always &&
 							compare_mode > rsx::comparison_function::never)
 						{
-							result.shadow_textures |= (1 << i);
+							current_fragment_program.shadow_textures |= (1 << i);
 							texture_control |= u32(tex.zfunc()) << 8;
 						}
 						break;
@@ -1900,12 +1919,12 @@ namespace rsx
 #ifdef __APPLE__
 				texture_control |= (sampler_descriptors[i]->encoded_component_map() << 16);
 #endif
-				result.texture_scale[i][3] = std::bit_cast<f32>(texture_control);
+				current_fragment_program.texture_scale[i][3] = std::bit_cast<f32>(texture_control);
 			}
 		}
 
 		//Sanity checks
-		if (result.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+		if (current_fragment_program.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 		{
 			//Check that the depth stage is not disabled
 			if (!rsx::method_registers.depth_test_enabled())
@@ -1924,7 +1943,7 @@ namespace rsx
 			address_range::start_length(dst_offset, size))) [[unlikely]]
 		{
 			// Data overlaps
-			m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+			m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
 			return true;
 		}
 
