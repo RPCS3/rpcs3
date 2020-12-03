@@ -416,34 +416,77 @@ struct atomic_storage
 		return atomic_storage<T>::sub_fetch(dest, 1);
 	}
 
-	static inline bool test_and_set(T& dest, T mask)
-	{
-		return (atomic_storage<T>::fetch_or(dest, mask) & mask) != 0;
-	}
-
-	static inline bool test_and_reset(T& dest, T mask)
-	{
-		return (atomic_storage<T>::fetch_and(dest, ~mask) & mask) != 0;
-	}
-
-	static inline bool test_and_complement(T& dest, T mask)
-	{
-		return (atomic_storage<T>::fetch_xor(dest, mask) & mask) != 0;
-	}
-
 	static inline bool bts(T& dest, uint bit)
 	{
-		return atomic_storage<T>::test_and_set(dest, static_cast<T>(1) << bit);
+		uchar* dst = reinterpret_cast<uchar*>(&dest);
+
+		if constexpr (sizeof(T) < 4)
+		{
+			const uptr ptr = reinterpret_cast<uptr>(dst);
+
+			// Align the bit up and pointer down
+			bit = bit + (ptr & 3) * 8;
+			dst = reinterpret_cast<T*>(ptr & -4);
+		}
+
+#ifdef _MSC_VER
+		return _interlockedbittestandset((long*)dst, bit) != 0;
+#else
+		bool result;
+		__asm__ volatile ("lock btsl %2, 0(%1)\n" : "=@ccc" (result) : "r" (dst), "Ir" (bit) : "cc", "memory");
+		return result;
+#endif
 	}
 
 	static inline bool btr(T& dest, uint bit)
 	{
-		return atomic_storage<T>::test_and_reset(dest, static_cast<T>(1) << bit);
+		uchar* dst = reinterpret_cast<uchar*>(&dest);
+
+		if constexpr (sizeof(T) < 4)
+		{
+			const uptr ptr = reinterpret_cast<uptr>(dst);
+
+			// Align the bit up and pointer down
+			bit = bit + (ptr & 3) * 8;
+			dst = reinterpret_cast<T*>(ptr & -4);
+		}
+
+#ifdef _MSC_VER
+		return _interlockedbittestandreset((long*)dst, bit) != 0;
+#else
+		bool result;
+		__asm__ volatile ("lock btrl %2, 0(%1)\n" : "=@ccc" (result) : "r" (dst), "Ir" (bit) : "cc", "memory");
+		return result;
+#endif
 	}
 
 	static inline bool btc(T& dest, uint bit)
 	{
-		return atomic_storage<T>::test_and_complement(dest, static_cast<T>(1) << bit);
+		uchar* dst = reinterpret_cast<uchar*>(&dest);
+
+		if constexpr (sizeof(T) < 4)
+		{
+			const uptr ptr = reinterpret_cast<uptr>(dst);
+
+			// Align the bit up and pointer down
+			bit = bit + (ptr & 3) * 8;
+			dst = reinterpret_cast<T*>(ptr & -4);
+		}
+
+#ifdef _MSC_VER
+		while (true)
+		{
+			// Keep trying until we actually invert desired bit
+			if (!_bittest((long*)dst, bit) && !_interlockedbittestandset((long*)dst, bit))
+				return false;
+			if (_interlockedbittestandreset((long*)dst, bit))
+				return true;
+		}
+#else
+		bool result;
+		__asm__ volatile ("lock btcl %2, 0(%1)\n" : "=@ccc" (result) : "r" (dst), "Ir" (bit) : "cc", "memory");
+		return result;
+#endif
 	}
 };
 
@@ -586,30 +629,6 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 		const short r = _InterlockedDecrement16(reinterpret_cast<volatile short*>(&dest));
 		return std::bit_cast<T>(r);
 	}
-#else
-	static inline bool bts(T& dest, uint bit)
-	{
-		bool result;
-		ushort _bit = static_cast<ushort>(bit);
-		__asm__("lock btsw %2, %0\n" : "+m" (dest), "=@ccc" (result) : "Ir" (_bit) : "cc");
-		return result;
-	}
-
-	static inline bool btr(T& dest, uint bit)
-	{
-		bool result;
-		ushort _bit = static_cast<ushort>(bit);
-		__asm__("lock btrw %2, %0\n": "+m" (dest), "=@ccc" (result) : "Ir" (_bit) : "cc");
-		return result;
-	}
-
-	static inline bool btc(T& dest, uint bit)
-	{
-		bool result;
-		ushort _bit = static_cast<ushort>(bit);
-		__asm__("lock btcw %2, %0\n": "+m" (dest), "=@ccc" (result) : "Ir" (_bit) : "cc");
-		return result;
-	}
 #endif
 };
 
@@ -700,37 +719,6 @@ struct atomic_storage<T, 4> : atomic_storage<T, 0>
 		const long r = _InterlockedDecrement(reinterpret_cast<volatile long*>(&dest));
 		return std::bit_cast<T>(r);
 	}
-
-	static inline bool bts(T& dest, uint bit)
-	{
-		return _interlockedbittestandset(reinterpret_cast<volatile long*>(&dest), bit) != 0;
-	}
-
-	static inline bool btr(T& dest, uint bit)
-	{
-		return _interlockedbittestandreset(reinterpret_cast<volatile long*>(&dest), bit) != 0;
-	}
-#else
-	static inline bool bts(T& dest, uint bit)
-	{
-		bool result;
-		__asm__("lock btsl %2, %0\n" : "+m" (dest), "=@ccc" (result) : "Ir" (bit) : "cc");
-		return result;
-	}
-
-	static inline bool btr(T& dest, uint bit)
-	{
-		bool result;
-		__asm__("lock btrl %2, %0\n" : "+m" (dest), "=@ccc" (result) : "Ir" (bit) : "cc");
-		return result;
-	}
-
-	static inline bool btc(T& dest, uint bit)
-	{
-		bool result;
-		__asm__("lock btcl %2, %0\n" : "+m" (dest), "=@ccc" (result) : "Ir" (bit) : "cc");
-		return result;
-	}
 #endif
 };
 
@@ -820,40 +808,6 @@ struct atomic_storage<T, 8> : atomic_storage<T, 0>
 	{
 		const llong r = _InterlockedDecrement64(reinterpret_cast<volatile llong*>(&dest));
 		return std::bit_cast<T>(r);
-	}
-
-	static inline bool bts(T& dest, uint bit)
-	{
-		return _interlockedbittestandset64(reinterpret_cast<volatile llong*>(&dest), bit) != 0;
-	}
-
-	static inline bool btr(T& dest, uint bit)
-	{
-		return _interlockedbittestandreset64(reinterpret_cast<volatile llong*>(&dest), bit) != 0;
-	}
-#else
-	static inline bool bts(T& dest, uint bit)
-	{
-		bool result;
-		ullong _bit = bit;
-		__asm__("lock btsq %2, %0\n" : "+m" (dest), "=@ccc" (result) : "Ir" (_bit) : "cc");
-		return result;
-	}
-
-	static inline bool btr(T& dest, uint bit)
-	{
-		bool result;
-		ullong _bit = bit;
-		__asm__("lock btrq %2, %0\n" : "+m" (dest), "=@ccc" (result) : "Ir" (_bit) : "cc");
-		return result;
-	}
-
-	static inline bool btc(T& dest, uint bit)
-	{
-		bool result;
-		ullong _bit = bit;
-		__asm__("lock btcq %2, %0\n" : "+m" (dest), "=@ccc" (result) : "Ir" (_bit) : "cc");
-		return result;
 	}
 #endif
 };
@@ -1431,14 +1385,19 @@ public:
 		}
 	}
 
-	bool bts(uint bit)
+	bool bit_test_set(uint bit)
 	{
-		return atomic_storage<type>::bts(m_data, bit);
+		return atomic_storage<type>::bts(m_data, bit & (sizeof(T) * 8 - 1));
 	}
 
-	bool btr(uint bit)
+	bool bit_test_reset(uint bit)
 	{
-		return atomic_storage<type>::btr(m_data, bit);
+		return atomic_storage<type>::btr(m_data, bit & (sizeof(T) * 8 - 1));
+	}
+
+	bool bit_test_invert(uint bit)
+	{
+		return atomic_storage<type>::btc(m_data, bit & (sizeof(T) * 8 - 1));
 	}
 
 	// Timeout is discouraged

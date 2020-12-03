@@ -2228,7 +2228,7 @@ void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 	}
 #endif
 
-	if (_this->m_sync.btr(2))
+	if (_this->m_sync.bit_test_reset(2))
 	{
 		return;
 	}

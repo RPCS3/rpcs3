@@ -604,7 +604,7 @@ s32 _spurs::detach_lv2_eq(vm::ptr<CellSpurs> spurs, u8 spuPort, bool spursCreate
 
 	if (!spursCreated)
 	{
-		if (!spurs->spuPortBits.btr(spuPort) && _spurs::get_sdk_version() >= 0x180000)
+		if (!spurs->spuPortBits.bit_test_reset(spuPort) && _spurs::get_sdk_version() >= 0x180000)
 		{
 			return CELL_SPURS_CORE_ERROR_SRCH;
 		}
@@ -1831,8 +1831,8 @@ s32 cellSpursSetPriority(vm::ptr<CellSpurs> spurs, u32 wid, u32 spuId, u32 prior
 		return CELL_SPURS_CORE_ERROR_STAT;
 
 	vm::light_op(spurs->wklInfo(wid).priority[spuId], [&](u8& v){ atomic_storage<u8>::release(v, priority); });
-	vm::light_op(spurs->sysSrvMsgUpdateWorkload, [&](atomic_t<u8>& v){ v.bts(spuId); });
-	vm::light_op(spurs->sysSrvMessage, [&](atomic_t<u8>& v){ v.bts(spuId); });
+	vm::light_op(spurs->sysSrvMsgUpdateWorkload, [&](atomic_t<u8>& v){ v.bit_test_set(spuId); });
+	vm::light_op(spurs->sysSrvMessage, [&](atomic_t<u8>& v){ v.bit_test_set(spuId); });
 	return CELL_OK;
 }
 
