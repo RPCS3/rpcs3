@@ -254,9 +254,9 @@ void atomic_wait::list<Max, T...>::wait(atomic_wait_timeout timeout)
 template <typename T, std::size_t Size = sizeof(T)>
 struct atomic_storage
 {
-	static_assert(sizeof(T) <= 16 && sizeof(T) == alignof(T), "atomic_storage<> error: invalid type");
-
 	/* First part: Non-MSVC intrinsics */
+
+	using type = get_uint_t<sizeof(T)>;
 
 #ifndef _MSC_VER
 
@@ -270,19 +270,19 @@ struct atomic_storage
 
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
-		return __atomic_compare_exchange(&dest, &comp, &exch, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+		return __atomic_compare_exchange(reinterpret_cast<type*>(&dest), reinterpret_cast<type*>(&comp), reinterpret_cast<type*>(&exch), false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 	}
 
 	static inline bool compare_exchange_hle_acq(T& dest, T& comp, T exch)
 	{
 		static_assert(sizeof(T) == 4 || sizeof(T) == 8);
-		return __atomic_compare_exchange(&dest, &comp, &exch, false, s_hle_ack, s_hle_ack);
+		return __atomic_compare_exchange(reinterpret_cast<type*>(&dest), reinterpret_cast<type*>(&comp), reinterpret_cast<type*>(&exch), false, s_hle_ack, s_hle_ack);
 	}
 
 	static inline T load(const T& dest)
 	{
 		T result;
-		__atomic_load(&dest, &result, __ATOMIC_SEQ_CST);
+		__atomic_load(reinterpret_cast<const type*>(&dest), reinterpret_cast<type*>(&result), __ATOMIC_SEQ_CST);
 		return result;
 	}
 
@@ -293,13 +293,13 @@ struct atomic_storage
 
 	static inline void release(T& dest, T value)
 	{
-		__atomic_store(&dest, &value, __ATOMIC_RELEASE);
+		__atomic_store(reinterpret_cast<type*>(&dest), reinterpret_cast<type*>(&value), __ATOMIC_RELEASE);
 	}
 
 	static inline T exchange(T& dest, T value)
 	{
 		T result;
-		__atomic_exchange(&dest, &value, &result, __ATOMIC_SEQ_CST);
+		__atomic_exchange(reinterpret_cast<type*>(&dest), reinterpret_cast<type*>(&value), reinterpret_cast<type*>(&result), __ATOMIC_SEQ_CST);
 		return result;
 	}
 
@@ -909,6 +909,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 
 	static inline T exchange(T& dest, T value)
 	{
+		__atomic_thread_fence(__ATOMIC_ACQ_REL);
 		return std::bit_cast<T>(__sync_lock_test_and_set(reinterpret_cast<u128*>(&dest), std::bit_cast<u128>(value)));
 	}
 
@@ -929,7 +930,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 };
 
 // Atomic type with lock-free and standard layout guarantees (and appropriate limitations)
-template <typename T, std::size_t Align = alignof(T)>
+template <typename T, std::size_t Align = sizeof(T)>
 class atomic_t
 {
 protected:
@@ -937,11 +938,22 @@ protected:
 
 	using ptr_rt = std::conditional_t<std::is_pointer_v<type>, ullong, type>;
 
-	static_assert(alignof(type) == sizeof(type), "atomic_t<> error: unexpected alignment, use alignas() if necessary");
+	static_assert((Align & (Align - 1)) == 0, "atomic_t<> error: unexpected Align parameter (not power of 2).");
+	static_assert(Align % sizeof(type) == 0, "atomic_t<> error: invalid type, must be power of 2.");
+	static_assert(sizeof(type) <= 16, "atomic_t<> error: invalid type, too big (max supported size is 16).");
+	static_assert(Align >= sizeof(type), "atomic_t<> error: bad args, specify bigger alignment if necessary.");
+
+	static_assert(std::is_trivially_copyable_v<type>);
+	static_assert(std::is_copy_constructible_v<type>);
+	static_assert(std::is_move_constructible_v<type>);
+	static_assert(std::is_copy_assignable_v<type>);
+	static_assert(std::is_move_assignable_v<type>);
 
 	alignas(Align) type m_data;
 
 public:
+	static constexpr std::size_t align = Align;
+
 	atomic_t() noexcept = default;
 
 	atomic_t(const atomic_t&) = delete;

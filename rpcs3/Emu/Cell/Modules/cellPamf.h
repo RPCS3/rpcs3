@@ -410,7 +410,7 @@ bool squeue_test_exit();
 template<typename T, u32 sq_size = 256>
 class squeue_t
 {
-	struct alignas(8) squeue_sync_var_t
+	struct squeue_sync_var_t
 	{
 		struct
 		{

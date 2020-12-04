@@ -38,7 +38,7 @@ enum
 	CELL_AUDIO_BLOCK_SAMPLES           = 256,
 
 	CELL_AUDIO_CREATEEVENTFLAG_SPU     = 0x00000001,
-	
+
 	CELL_AUDIO_EVENT_MIX               = 0,
 	CELL_AUDIO_EVENT_HEADPHONE         = 1,
 
@@ -144,7 +144,7 @@ struct audio_port
 	u32 size;
 	u64 timestamp; // copy of global timestamp
 
-	struct alignas(8) level_set_t
+	struct level_set_t
 	{
 		float value;
 		float inc;

@@ -539,6 +539,12 @@ struct alignas(16) s128
 CHECK_SIZE_ALIGN(u128, 16, 16);
 CHECK_SIZE_ALIGN(s128, 16, 16);
 
+template <>
+struct get_int_impl<16>
+{
+	using utype = u128;
+};
+
 // Return magic value for any unsigned type
 constexpr inline struct umax_helper
 {
