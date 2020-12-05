@@ -53,11 +53,7 @@ namespace vm
 	enum addr_t : u32 {};
 
 	// Page information
-	struct memory_page
-	{
-		// Memory flags
-		atomic_t<u8> flags;
-	};
+	using memory_page = atomic_t<u8>;
 
 	// Change memory protection of specified memory region
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
@@ -76,7 +72,7 @@ namespace vm
 			return check_addr(addr, flags, Size);
 		}
 
-		return !(~g_pages[addr / 4096].flags & (flags | page_allocated));
+		return !(~g_pages[addr / 4096] & (flags | page_allocated));
 	}
 
 	// Search and map memory in specified memory location (min alignment is 0x10000)
