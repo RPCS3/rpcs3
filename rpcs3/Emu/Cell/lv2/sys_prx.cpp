@@ -21,7 +21,7 @@ extern void ppu_initialize(const ppu_module&);
 
 LOG_CHANNEL(sys_prx);
 
-static const std::unordered_map<std::string_view, int> s_prx_list
+extern const std::unordered_map<std::string_view, int> g_prx_list
 {
 	{ "libaacenc.sprx", 0 },
 	{ "libaacenc_spurs.sprx", 0 },
@@ -201,7 +201,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	bool ignore = false;
 
 	constexpr std::string_view firmware_sprx_dir = "/dev_flash/sys/external/";
-	const bool is_firmware_sprx = vpath0.starts_with(firmware_sprx_dir) && s_prx_list.count(std::string_view(vpath0).substr(firmware_sprx_dir.size()));
+	const bool is_firmware_sprx = vpath0.starts_with(firmware_sprx_dir) && g_prx_list.count(std::string_view(vpath0).substr(firmware_sprx_dir.size()));
 
 	if (is_firmware_sprx)
 	{
@@ -211,10 +211,10 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		if (g_cfg.core.lib_loading != lib_loading_type::liblv2list && g_cfg.core.lib_loading != lib_loading_type::manual)
 		{
 			// Override list setting condition for liblv2only
-			// For the other modes s_prx_list is a second condition which filters HLE selected libs by list setting
+			// For the other modes g_prx_list is a second condition which filters HLE selected libs by list setting
 			if (ignore || g_cfg.core.lib_loading == lib_loading_type::liblv2only)
 			{
-				ignore = s_prx_list.at(name) != 0;
+				ignore = g_prx_list.at(name) != 0;
 			}
 		}
 	}
@@ -222,7 +222,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	{
 		// Special case (currently unused): HLE for files outside of "/dev_flash/sys/external/"
 		// Have to specify full path for them
-		ignore = s_prx_list.count(vpath0) && s_prx_list.at(vpath0);
+		ignore = g_prx_list.count(vpath0) && g_prx_list.at(vpath0);
 	}
 
 	auto hle_load = [&]()
