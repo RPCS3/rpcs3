@@ -64,7 +64,7 @@ set(CMAKE_C_FLAGS -w)
 set(LLVM_ENABLE_WARNINGS OFF CACHE BOOL "")
 
 if(MSVC)
-	add_compile_options(/wd4530) # C++ exception handler used, but unwind semantics are not enabled
+	add_compile_options(/wd4530 /utf-8) # C++ exception handler used, but unwind semantics are not enabled
 endif()
 
 add_subdirectory(Vulkan EXCLUDE_FROM_ALL)
