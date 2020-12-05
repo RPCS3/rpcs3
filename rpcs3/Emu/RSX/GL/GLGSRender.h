@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Emu/RSX/GSRender.h"
 #include "GLHelpers.h"
 #include "GLTexture.h"

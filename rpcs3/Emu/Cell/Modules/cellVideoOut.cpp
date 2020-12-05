@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/system_config_types.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUModule.h"

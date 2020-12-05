@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKFragmentProgram.h"
 #include "VKCommonDecompiler.h"
 #include "VKHelpers.h"

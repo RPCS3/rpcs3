@@ -1,4 +1,4 @@
-﻿#include <QApplication>
+#include <QApplication>
 #include <QCursor>
 
 #include "basic_mouse_handler.h"

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "VKHelpers.h"
 #include "../rsx_utils.h"
 #include "Utilities/hash.h"

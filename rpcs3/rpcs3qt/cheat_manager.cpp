@@ -1,4 +1,4 @@
-﻿#include <QHBoxLayout>
+#include <QHBoxLayout>
 #include <QGroupBox>
 #include <QLabel>
 #include <QMessageBox>

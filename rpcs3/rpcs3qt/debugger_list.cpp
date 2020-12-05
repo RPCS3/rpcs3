@@ -1,4 +1,4 @@
-﻿#include "debugger_list.h"
+#include "debugger_list.h"
 #include "gui_settings.h"
 #include "breakpoint_handler.h"
 

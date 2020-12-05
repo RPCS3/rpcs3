@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "persistent_settings.h"
 
 LOG_CHANNEL(cfg_log, "CFG");

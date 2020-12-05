@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../RSXTexture.h"
 #include "Utilities/span.h"

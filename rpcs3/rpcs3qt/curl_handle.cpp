@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "curl_handle.h"
 #include "Emu/System.h"
 

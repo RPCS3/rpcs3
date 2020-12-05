@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "key_vault.h"
 #include "zlib.h"

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLFragmentProgram.h"
 
 #include "Emu/System.h"

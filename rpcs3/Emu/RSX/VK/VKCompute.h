@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "VKHelpers.h"
 #include "VKPipelineCompiler.h"
 #include "VKRenderPass.h"

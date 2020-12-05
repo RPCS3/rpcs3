@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKCommonDecompiler.h"
 
 #ifdef _MSC_VER

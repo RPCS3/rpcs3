@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include <thread>
 #include "Emu/system_config.h"
 #include "np_handler.h"

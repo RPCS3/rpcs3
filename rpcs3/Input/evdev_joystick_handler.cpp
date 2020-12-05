@@ -1,4 +1,4 @@
-﻿// This makes debugging on windows less painful
+// This makes debugging on windows less painful
 //#define HAVE_LIBEVDEV
 
 #ifdef HAVE_LIBEVDEV

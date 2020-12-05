@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "AudioDumper.h"
 
 #include "Utilities/date_time.h"

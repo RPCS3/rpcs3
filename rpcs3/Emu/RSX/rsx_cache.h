@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Utilities/hash.h"
 #include "Utilities/File.h"
 #include "Utilities/lockless.h"

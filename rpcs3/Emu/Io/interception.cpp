@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "interception.h"
 #include "KeyboardHandler.h"
 #include "MouseHandler.h"

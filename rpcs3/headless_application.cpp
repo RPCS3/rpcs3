@@ -1,4 +1,4 @@
-﻿#include "headless_application.h"
+#include "headless_application.h"
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"

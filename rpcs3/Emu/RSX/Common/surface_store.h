@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "surface_utils.h"
 #include "../gcm_enums.h"

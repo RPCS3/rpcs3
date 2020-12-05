@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rsx_replay.h"
 
 #include "Emu/Cell/ErrorCodes.h"

@@ -1,4 +1,4 @@
-﻿#include "gs_frame.h"
+#include "gs_frame.h"
 #include "gui_settings.h"
 
 #include "Utilities/Config.h"

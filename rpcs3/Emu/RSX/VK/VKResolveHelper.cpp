@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "VKResolveHelper.h"
 #include "VKRenderPass.h"

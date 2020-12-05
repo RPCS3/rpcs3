@@ -1,4 +1,4 @@
-﻿#include <QPushButton>
+#include <QPushButton>
 #include <QDialogButtonBox>
 #include <QGuiApplication>
 #include <QScreen>

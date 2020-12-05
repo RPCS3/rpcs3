@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_event_flag.h"
 
 #include "Emu/IdManager.h"

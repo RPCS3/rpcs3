@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../CPU/CPUThread.h"
 #include "../Memory/vm_ptr.h"

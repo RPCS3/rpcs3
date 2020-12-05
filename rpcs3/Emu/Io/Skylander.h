@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Io/usb_device.h"
 #include <queue>

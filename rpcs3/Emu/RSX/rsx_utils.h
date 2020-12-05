@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../system_config.h"
 #include "Utilities/address_range.h"

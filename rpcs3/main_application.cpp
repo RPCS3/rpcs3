@@ -1,4 +1,4 @@
-﻿#include "main_application.h"
+#include "main_application.h"
 
 #include "Input/pad_thread.h"
 #include "Emu/System.h"

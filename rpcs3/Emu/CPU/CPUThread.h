@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../Utilities/Thread.h"
 #include "../Utilities/bit_set.h"

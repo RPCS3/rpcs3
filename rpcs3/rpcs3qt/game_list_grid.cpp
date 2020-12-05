@@ -1,4 +1,4 @@
-﻿#include "game_list_grid.h"
+#include "game_list_grid.h"
 #include "game_list_grid_delegate.h"
 #include "qt_utils.h"
 

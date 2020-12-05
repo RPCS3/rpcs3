@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "RSXThread.h"
 
 #include "Emu/Cell/PPUCallback.h"

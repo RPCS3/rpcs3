@@ -1,4 +1,4 @@
-﻿#include <string>
+#include <string>
 #include "Utilities/Thread.h"
 
 namespace cereal

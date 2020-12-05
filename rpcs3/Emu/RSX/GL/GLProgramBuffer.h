@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "GLVertexProgram.h"
 #include "GLFragmentProgram.h"
 #include "GLHelpers.h"

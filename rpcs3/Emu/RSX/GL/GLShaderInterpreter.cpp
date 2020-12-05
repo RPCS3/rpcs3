@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLShaderInterpreter.h"
 #include "GLGSRender.h"
 #include "GLVertexProgram.h"

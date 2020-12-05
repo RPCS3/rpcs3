@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Utilities/types.h"
 #include "Utilities/address_range.h"

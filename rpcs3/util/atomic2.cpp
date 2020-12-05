@@ -1,4 +1,4 @@
-﻿#include "atomic2.hpp"
+#include "atomic2.hpp"
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
 

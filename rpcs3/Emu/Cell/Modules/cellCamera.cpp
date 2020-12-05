@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "cellCamera.h"
 
 #include "Emu/System.h"

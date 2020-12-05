@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Utilities/types.h"
 #include "Utilities/geometry.h"
 #include "overlay_utils.h"

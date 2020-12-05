@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <sstream>
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GL/GLVertexProgram.h"

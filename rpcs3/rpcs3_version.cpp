@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rpcs3_version.h"
 #include "git-version.h"
 #include "Utilities/StrUtil.h"

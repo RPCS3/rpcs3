@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_time.h"
 
 #include "Emu/system_config.h"

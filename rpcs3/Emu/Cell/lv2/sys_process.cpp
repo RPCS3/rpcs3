@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_process.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/System.h"

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "cg_disasm_window.h"
 #include "gui_settings.h"

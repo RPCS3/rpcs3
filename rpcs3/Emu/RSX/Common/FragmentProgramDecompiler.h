@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "ShaderParam.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include <sstream>

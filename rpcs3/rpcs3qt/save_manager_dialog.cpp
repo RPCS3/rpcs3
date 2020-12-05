@@ -1,4 +1,4 @@
-﻿#include "save_manager_dialog.h"
+#include "save_manager_dialog.h"
 
 #include "custom_table_widget_item.h"
 #include "qt_utils.h"

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Utilities/sysinfo.h"
 #include "Utilities/JIT.h"
 #include "Crypto/sha1.h"

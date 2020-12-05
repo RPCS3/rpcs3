@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Utilities/bin_patch.h"

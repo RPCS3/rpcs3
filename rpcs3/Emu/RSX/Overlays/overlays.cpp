@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlays.h"
 #include "overlay_message_dialog.h"
 #include "Input/pad_thread.h"

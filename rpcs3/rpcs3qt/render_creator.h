@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "emu_settings_type.h"
 

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Crypto/unself.h"
 #include "Emu/Memory/vm_ptr.h"

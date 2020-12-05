@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "PSF.h"
 
 LOG_CHANNEL(psf_log, "PSF");

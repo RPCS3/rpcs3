@@ -1,4 +1,4 @@
-﻿#include "input_dialog.h"
+#include "input_dialog.h"
 
 #include <QVBoxLayout>
 #include <QDialogButtonBox>

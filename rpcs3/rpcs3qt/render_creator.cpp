@@ -1,4 +1,4 @@
-﻿#include "render_creator.h"
+#include "render_creator.h"
 
 #include <QMessageBox>
 

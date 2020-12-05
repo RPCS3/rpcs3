@@ -1,4 +1,4 @@
-﻿#include "pad_led_settings_dialog.h"
+#include "pad_led_settings_dialog.h"
 
 #include <QColorDialog>
 #include <QPainter>

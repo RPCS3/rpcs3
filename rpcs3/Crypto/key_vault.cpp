@@ -1,4 +1,4 @@
-﻿#include "utils.h"
+#include "utils.h"
 #include "aes.h"
 #include "key_vault.h"
 #include "util/logs.hpp"

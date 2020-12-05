@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "IdManager.h"
 #include "System.h"
 #include "VFS.h"

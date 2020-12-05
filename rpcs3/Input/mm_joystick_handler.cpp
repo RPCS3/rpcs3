@@ -1,4 +1,4 @@
-﻿#ifdef _WIN32
+#ifdef _WIN32
 #include "mm_joystick_handler.h"
 #include "Emu/Io/pad_config.h"
 
