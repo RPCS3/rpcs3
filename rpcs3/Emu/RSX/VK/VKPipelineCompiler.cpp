@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKPipelineCompiler.h"
 #include "VKRenderPass.h"
 #include "Utilities/Thread.h"

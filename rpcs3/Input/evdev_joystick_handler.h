@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #ifdef HAVE_LIBEVDEV
 
 #include "stdafx.h"

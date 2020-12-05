@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLGSRender.h"
 
 color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_format color_format)

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLTexture.h"
 #include "GLCompute.h"
 #include "GLRenderTargets.h"

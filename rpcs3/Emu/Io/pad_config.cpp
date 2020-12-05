@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "pad_config.h"
 #include "Emu/System.h"
 

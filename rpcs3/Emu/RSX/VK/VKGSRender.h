@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Emu/RSX/GSRender.h"
 #include "VKHelpers.h"
 #include "VKTextureCache.h"

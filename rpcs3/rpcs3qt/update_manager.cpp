@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "update_manager.h"
 #include "progress_dialog.h"
 #include "localized.h"

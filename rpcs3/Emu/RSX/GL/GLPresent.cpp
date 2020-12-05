@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLGSRender.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 

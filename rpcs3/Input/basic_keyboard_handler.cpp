@@ -1,4 +1,4 @@
-﻿#include "basic_keyboard_handler.h"
+#include "basic_keyboard_handler.h"
 
 #include <QApplication>
 

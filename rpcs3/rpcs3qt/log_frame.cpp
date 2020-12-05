@@ -1,4 +1,4 @@
-﻿#include "log_frame.h"
+#include "log_frame.h"
 #include "qt_utils.h"
 #include "gui_settings.h"
 

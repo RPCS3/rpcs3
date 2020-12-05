@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_memory.h"
 
 #include "Emu/Memory/vm_locking.h"

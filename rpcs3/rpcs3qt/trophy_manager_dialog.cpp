@@ -1,4 +1,4 @@
-﻿#include "trophy_manager_dialog.h"
+#include "trophy_manager_dialog.h"
 #include "custom_table_widget_item.h"
 #include "table_item_delegate.h"
 #include "qt_utils.h"

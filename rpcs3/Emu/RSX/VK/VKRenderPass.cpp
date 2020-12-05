@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "Utilities/mutex.h"
 #include "VKRenderPass.h"

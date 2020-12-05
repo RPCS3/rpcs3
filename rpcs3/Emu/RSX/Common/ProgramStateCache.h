@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "Emu/RSX/RSXVertexProgram.h"

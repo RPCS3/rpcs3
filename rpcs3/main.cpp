@@ -1,4 +1,4 @@
-﻿// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
+// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
 #include <iostream>

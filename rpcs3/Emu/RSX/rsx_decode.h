@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Utilities/types.h"
 #include "Utilities/BitField.h"
 #include "Utilities/StrFmt.h"

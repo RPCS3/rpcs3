@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Utilities/File.h"
 #include "util/logs.hpp"

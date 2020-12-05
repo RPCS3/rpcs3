@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "sys_sync.h"
 #include "sys_mutex.h"

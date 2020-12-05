@@ -1,4 +1,4 @@
-﻿#include "debugger_frame.h"
+#include "debugger_frame.h"
 #include "register_editor_dialog.h"
 #include "instruction_editor_dialog.h"
 #include "gui_settings.h"

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "../Overlays/overlay_shader_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "VKGSRender.h"

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "PPUDisAsm.h"
 #include "PPUFunction.h"
 

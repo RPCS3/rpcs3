@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "SPUDisAsm.h"
 #include "SPUAnalyser.h"
 #include "SPUThread.h"

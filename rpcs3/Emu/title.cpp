@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "title.h"
 #include "rpcs3_version.h"
 #include "Utilities/sysinfo.h"

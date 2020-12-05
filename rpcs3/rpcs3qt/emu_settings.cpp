@@ -1,4 +1,4 @@
-﻿#include "emu_settings.h"
+#include "emu_settings.h"
 #include "config_adapter.h"
 
 #include <QMessageBox>

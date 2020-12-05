@@ -1,4 +1,4 @@
-﻿#include "gui_application.h"
+#include "gui_application.h"
 
 #include "qt_utils.h"
 #include "welcome_dialog.h"

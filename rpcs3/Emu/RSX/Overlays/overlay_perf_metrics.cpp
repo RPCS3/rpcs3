@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_perf_metrics.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPUThread.h"

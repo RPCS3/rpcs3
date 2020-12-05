@@ -1,4 +1,4 @@
-﻿#ifdef LLVM_AVAILABLE
+#ifdef LLVM_AVAILABLE
 
 #include "Emu/system_config.h"
 #include "PPUTranslator.h"

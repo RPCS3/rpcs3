@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "RSXTexture.h"
 
 #include "rsx_methods.h"

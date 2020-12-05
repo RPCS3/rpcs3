@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_ppu_thread.h"
 
 #include "Emu/IdManager.h"

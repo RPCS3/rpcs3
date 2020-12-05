@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "../Common/FragmentProgramDecompiler.h"
 #include "../Common/GLSLTypes.h"
 #include "Emu/RSX/RSXFragmentProgram.h"

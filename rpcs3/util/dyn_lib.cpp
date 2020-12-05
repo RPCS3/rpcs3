@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "dyn_lib.hpp"
 
 #ifdef _WIN32

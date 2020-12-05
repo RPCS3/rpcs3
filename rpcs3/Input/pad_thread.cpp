@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "pad_thread.h"
 #include "product_info.h"
 #include "ds3_pad_handler.h"

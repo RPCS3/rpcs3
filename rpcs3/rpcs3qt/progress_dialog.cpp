@@ -1,4 +1,4 @@
-﻿#include "progress_dialog.h"
+#include "progress_dialog.h"
 
 #include <QCoreApplication>
 #include <QLabel>

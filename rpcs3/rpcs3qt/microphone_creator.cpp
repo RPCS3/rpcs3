@@ -1,4 +1,4 @@
-﻿#include "microphone_creator.h"
+#include "microphone_creator.h"
 
 #include "Utilities/StrUtil.h"
 

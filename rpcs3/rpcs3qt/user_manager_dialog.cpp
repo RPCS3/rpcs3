@@ -1,4 +1,4 @@
-﻿#include <QRegExpValidator>
+#include <QRegExpValidator>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QEvent>

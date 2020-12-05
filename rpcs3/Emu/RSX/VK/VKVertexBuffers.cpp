@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKGSRender.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"

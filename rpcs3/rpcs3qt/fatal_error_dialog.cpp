@@ -1,4 +1,4 @@
-﻿#include "fatal_error_dialog.h"
+#include "fatal_error_dialog.h"
 
 #include <QLayout>
 #include <QTextDocument>

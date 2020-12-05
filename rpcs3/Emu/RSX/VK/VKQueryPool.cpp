@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKQueryPool.h"
 #include "VKResourceManager.h"
 

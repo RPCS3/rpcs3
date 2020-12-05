@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/localized_string.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"

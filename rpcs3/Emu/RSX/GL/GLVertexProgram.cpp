@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLVertexProgram.h"
 
 #include "Emu/System.h"

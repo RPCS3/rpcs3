@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_net.h"
 
 #include "Emu/IdManager.h"

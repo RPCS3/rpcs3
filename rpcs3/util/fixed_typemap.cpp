@@ -1,4 +1,4 @@
-﻿#include "fixed_typemap.hpp"
+#include "fixed_typemap.hpp"
 
 #include <algorithm>
 

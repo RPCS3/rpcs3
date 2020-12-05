@@ -1,4 +1,4 @@
-﻿#include "keyboard_pad_handler.h"
+#include "keyboard_pad_handler.h"
 #include "pad_thread.h"
 #include "Emu/Io/pad_config.h"
 #include "Input/product_info.h"

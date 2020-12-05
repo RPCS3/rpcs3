@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Emu/RSX/RSXVertexProgram.h"
 #include <vector>
 #include <set>

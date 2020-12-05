@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "PPUInterpreter.h"
 
 #include "Emu/Memory/vm_reservation.h"

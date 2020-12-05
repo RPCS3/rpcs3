@@ -1,4 +1,4 @@
-﻿#include "register_editor_dialog.h"
+#include "register_editor_dialog.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"

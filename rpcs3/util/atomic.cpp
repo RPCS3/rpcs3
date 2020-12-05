@@ -1,4 +1,4 @@
-﻿#include "atomic.hpp"
+#include "atomic.hpp"
 
 #if defined(__linux__)
 #define USE_FUTEX

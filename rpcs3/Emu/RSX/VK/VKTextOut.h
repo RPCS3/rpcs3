@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "VKHelpers.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"

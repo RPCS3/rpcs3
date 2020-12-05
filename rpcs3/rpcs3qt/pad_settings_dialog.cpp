@@ -1,4 +1,4 @@
-﻿#include <QCheckBox>
+#include <QCheckBox>
 #include <QGroupBox>
 #include <QPushButton>
 #include <QVBoxLayout>

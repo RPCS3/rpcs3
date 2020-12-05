@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "system_config_types.h"
 #include "Utilities/Config.h"

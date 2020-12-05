@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "ds4_pad_handler.h"
 #include "Emu/Io/pad_config.h"
 

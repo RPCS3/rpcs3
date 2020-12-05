@@ -1,4 +1,4 @@
-﻿#include "util/logs.hpp"
+#include "util/logs.hpp"
 #include "Utilities/File.h"
 #include "Utilities/mutex.h"
 #include "Utilities/Thread.h"

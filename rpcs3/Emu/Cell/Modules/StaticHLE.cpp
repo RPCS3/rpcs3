@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "StaticHLE.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUOpcodes.h"

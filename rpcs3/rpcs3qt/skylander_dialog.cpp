@@ -1,4 +1,4 @@
-﻿#include <mutex>
+#include <mutex>
 #include "Utilities/File.h"
 #include "Crypto/md5.h"
 #include "Crypto/aes.h"

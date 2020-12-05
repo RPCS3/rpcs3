@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../rsx_cache.h"
 #include "texture_cache_predictor.h"

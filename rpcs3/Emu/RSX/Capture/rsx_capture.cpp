@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rsx_capture.h"
 #include "Emu/RSX/Common/BufferUtils.h"
 #include "Emu/RSX/Common/TextureUtils.h"

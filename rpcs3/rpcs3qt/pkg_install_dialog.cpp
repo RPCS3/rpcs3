@@ -1,4 +1,4 @@
-﻿#include "pkg_install_dialog.h"
+#include "pkg_install_dialog.h"
 
 #include <QDialogButtonBox>
 #include <QPushButton>

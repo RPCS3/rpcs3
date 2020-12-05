@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/VFS.h"
 #include "TRP.h"
 #include "Crypto/sha1.h"

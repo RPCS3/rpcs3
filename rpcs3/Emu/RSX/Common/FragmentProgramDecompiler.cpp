@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "../rsx_methods.h"
 #include "FragmentProgramDecompiler.h"

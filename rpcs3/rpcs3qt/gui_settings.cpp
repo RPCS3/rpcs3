@@ -1,4 +1,4 @@
-﻿#include "gui_settings.h"
+#include "gui_settings.h"
 
 #include "qt_utils.h"
 #include "localized.h"

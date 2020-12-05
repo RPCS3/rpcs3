@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_utils.h"
 
 LOG_CHANNEL(overlays);

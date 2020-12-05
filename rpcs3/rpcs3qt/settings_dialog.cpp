@@ -1,4 +1,4 @@
-﻿#include <QButtonGroup>
+#include <QButtonGroup>
 #include <QDialogButtonBox>
 #include <QFontMetrics>
 #include <QPushButton>

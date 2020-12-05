@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "vm_locking.h"
 #include "vm_ptr.h"
 #include "vm_ref.h"

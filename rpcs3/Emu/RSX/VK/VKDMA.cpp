@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKHelpers.h"
 #include "VKResourceManager.h"
 #include "VKDMA.h"

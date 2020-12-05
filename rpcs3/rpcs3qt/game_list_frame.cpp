@@ -1,4 +1,4 @@
-﻿#include "game_list_frame.h"
+#include "game_list_frame.h"
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "pad_settings_dialog.h"

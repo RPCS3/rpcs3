@@ -1,4 +1,4 @@
-﻿#include "gcm_enums.h"
+#include "gcm_enums.h"
 #include "Utilities/StrFmt.h"
 
 rsx::vertex_base_type rsx::to_vertex_base_type(u8 in)

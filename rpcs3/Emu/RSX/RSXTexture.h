@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "gcm_enums.h"
 
 namespace rsx

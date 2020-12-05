@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLPipelineCompiler.h"
 #include "Utilities/Thread.h"
 

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 // Copyright (C) 2014       Hykem <hykem@hotmail.com>
 // Licensed under the terms of the GNU GPL, version 3

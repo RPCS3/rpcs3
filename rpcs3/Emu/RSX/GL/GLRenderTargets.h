@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "../Common/surface_store.h"
 #include "GLHelpers.h"
 #include "../rsx_utils.h"

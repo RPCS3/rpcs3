@@ -1,4 +1,4 @@
-﻿#include "screenshot_preview.h"
+#include "screenshot_preview.h"
 #include "qt_utils.h"
 
 #include <QAction>

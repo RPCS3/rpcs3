@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "CPUThread.h"
 
 #include "Emu/System.h"

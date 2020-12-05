@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKShaderInterpreter.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"

@@ -1,4 +1,4 @@
-﻿#ifndef HAVE_FAUDIO
+#ifndef HAVE_FAUDIO
 #error "FAudio support disabled but still being built."
 #endif
 
