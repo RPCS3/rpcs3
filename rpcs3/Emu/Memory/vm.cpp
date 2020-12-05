@@ -211,7 +211,7 @@ namespace vm
 
 			for (u32 i = begin / 4096, max = (begin + size - 1) / 4096; i <= max; i++)
 			{
-				if (!(g_pages[i].flags & (vm::page_readable)))
+				if (!(g_pages[i] & (vm::page_readable)))
 				{
 					test = i * 4096;
 					break;
@@ -572,7 +572,7 @@ namespace vm
 			else
 			{
 				// TODO: Accurate locking in this case
-				if (!(g_pages[addr / 4096].flags & page_writable))
+				if (!(g_pages[addr / 4096] & page_writable))
 				{
 					return -1;
 				}
@@ -665,7 +665,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_pages[i].flags)
+			if (g_pages[i])
 			{
 				fmt::throw_exception("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)" HERE, addr, size, flags, i * 4096);
 			}
@@ -761,7 +761,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_pages[i].flags.exchange(flags | page_allocated))
+			if (g_pages[i].exchange(flags | page_allocated))
 			{
 				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)" HERE, addr, size, flags, i * 4096);
 			}
@@ -790,7 +790,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if ((g_pages[i].flags & flags_test) != (flags_test | page_allocated))
+			if ((g_pages[i] & flags_test) != (flags_test | page_allocated))
 			{
 				return false;
 			}
@@ -810,14 +810,14 @@ namespace vm
 
 			if (i < end)
 			{
-				new_val = g_pages[i].flags;
+				new_val = g_pages[i];
 				new_val |= flags_set;
 				new_val &= ~flags_clear;
 			}
 
 			if (new_val != start_value)
 			{
-				const u8 old_val = g_pages[start].flags;
+				const u8 old_val = g_pages[start];
 
 				if (u32 page_size = (i - start) * 4096; page_size && old_val != start_value)
 				{
@@ -833,7 +833,7 @@ namespace vm
 
 					for (u32 j = start; j < i; j++)
 					{
-						g_pages[j].flags.release(start_value);
+						g_pages[j].release(start_value);
 					}
 
 					if ((old_val ^ start_value) & (page_readable | page_writable))
@@ -872,19 +872,19 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + max_size / 4096; i++)
 		{
-			if ((g_pages[i].flags & page_allocated) == 0)
+			if ((g_pages[i] & page_allocated) == 0)
 			{
 				break;
 			}
 
 			if (size == 0)
 			{
-				is_exec = !!(g_pages[i].flags & page_executable);
+				is_exec = !!(g_pages[i] & page_executable);
 			}
 			else
 			{
 				// Must be consistent
-				verify(HERE), is_exec == !!(g_pages[i].flags & page_executable);
+				verify(HERE), is_exec == !!(g_pages[i] & page_executable);
 			}
 
 			size += 4096;
@@ -905,12 +905,12 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (!(g_pages[i].flags & page_allocated))
+			if (!(g_pages[i] & page_allocated))
 			{
 				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)" HERE, addr, size, i * 4096);
 			}
 
-			g_pages[i].flags.release(0);
+			g_pages[i].release(0);
 		}
 
 		// Notify rsx to invalidate range
@@ -967,7 +967,7 @@ namespace vm
 
 		for (u32 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max;)
 		{
-			auto state = +g_pages[i].flags;
+			auto state = +g_pages[i];
 
 			if (~state & flags) [[unlikely]]
 			{
@@ -1063,7 +1063,7 @@ namespace vm
 		// Check if memory area is already mapped
 		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
 		{
-			if (g_pages[i].flags)
+			if (g_pages[i])
 			{
 				return false;
 			}
@@ -1075,8 +1075,8 @@ namespace vm
 		if (this->flags & 0x10)
 		{
 			// Mark overflow/underflow guard pages as allocated
-			verify(HERE), !g_pages[addr / 4096].flags.exchange(page_allocated);
-			verify(HERE), !g_pages[addr / 4096 + size / 4096 - 1].flags.exchange(page_allocated);
+			verify(HERE), !g_pages[addr / 4096].exchange(page_allocated);
+			verify(HERE), !g_pages[addr / 4096 + size / 4096 - 1].exchange(page_allocated);
 		}
 
 		// Map "real" memory pages; provide a function to search for mirrors with private member access
@@ -1306,8 +1306,8 @@ namespace vm
 			if (flags & 0x10)
 			{
 				// Clear guard pages
-				verify(HERE), g_pages[addr / 4096 - 1].flags.exchange(0) == page_allocated;
-				verify(HERE), g_pages[addr / 4096 + size / 4096].flags.exchange(0) == page_allocated;
+				verify(HERE), g_pages[addr / 4096 - 1].exchange(0) == page_allocated;
+				verify(HERE), g_pages[addr / 4096 + size / 4096].exchange(0) == page_allocated;
 			}
 
 			// Unmap "real" memory pages
@@ -1437,7 +1437,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_pages[i].flags)
+			if (g_pages[i])
 			{
 				fmt::throw_exception("Unexpected pages allocated (current_addr=0x%x)" HERE, i * 4096);
 			}
