@@ -1146,7 +1146,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 	std::unique_lock lock(*cond->mtx.get());
 #else
 	if (ext_size)
-		_mm_mfence();
+		atomic_fence_seq_cst();
 #endif
 
 	// Can skip unqueue process if true

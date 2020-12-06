@@ -141,14 +141,14 @@ bool spu_interpreter::LNOP(spu_thread& spu, spu_opcode_t op)
 // This instruction must be used following a store instruction that modifies the instruction stream.
 bool spu_interpreter::SYNC(spu_thread& spu, spu_opcode_t op)
 {
-	std::atomic_thread_fence(std::memory_order_seq_cst);
+	atomic_fence_seq_cst();
 	return true;
 }
 
 // This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
 bool spu_interpreter::DSYNC(spu_thread& spu, spu_opcode_t op)
 {
-	std::atomic_thread_fence(std::memory_order_seq_cst);
+	atomic_fence_seq_cst();
 	return true;
 }
 

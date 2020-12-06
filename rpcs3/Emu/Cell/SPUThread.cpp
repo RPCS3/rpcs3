@@ -2277,7 +2277,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				}
 			}
 
-			//std::atomic_thread_fence(std::memory_order_seq_cst);
+			//atomic_fence_seq_cst();
 			return;
 		}
 		else
@@ -2904,7 +2904,7 @@ void spu_thread::do_mfc(bool wait)
 			if (&args - mfc_queue <= removed)
 			{
 				// Remove barrier-class command if it's the first in the queue
-				std::atomic_thread_fence(std::memory_order_seq_cst);
+				atomic_fence_seq_cst();
 				removed++;
 				return true;
 			}
@@ -3130,7 +3130,7 @@ bool spu_thread::process_mfc_cmd()
 				// Exit loop
 				if (ok && (ntime & 127) == 0)
 				{
-					_mm_mfence();
+					atomic_fence_seq_cst();
 					i = -1;
 					return;
 				}
@@ -3352,7 +3352,7 @@ bool spu_thread::process_mfc_cmd()
 	{
 		if (mfc_size == 0)
 		{
-			std::atomic_thread_fence(std::memory_order_seq_cst);
+			atomic_fence_seq_cst();
 		}
 		else
 		{
@@ -4420,7 +4420,7 @@ bool spu_thread::stop_and_signal(u32 code)
 			fmt::throw_exception("STOP code 0x100: Out_MBox is not empty" HERE);
 		}
 
-		std::atomic_thread_fence(std::memory_order_seq_cst);
+		atomic_fence_seq_cst();
 		return true;
 	}
 

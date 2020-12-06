@@ -3029,7 +3029,7 @@ s32 _cellSpursWorkloadFlagReceiver(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u3
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 
 	struct alignas(128) wklFlagOp
 	{

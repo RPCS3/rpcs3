@@ -85,7 +85,7 @@ error_code cellSyncMutexLock(ppu_thread& ppu, vm::ptr<CellSyncMutex> mutex)
 		}
 	}
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 	return CELL_OK;
 }
 
@@ -194,7 +194,7 @@ error_code cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 
 	if (!barrier->ctrl.atomic_op(&CellSyncBarrier::try_notify))
 	{
@@ -218,7 +218,7 @@ error_code cellSyncBarrierWait(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barrier
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 
 	while (!barrier->ctrl.atomic_op(&CellSyncBarrier::try_wait))
 	{
@@ -245,7 +245,7 @@ error_code cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 
 	if (!barrier->ctrl.atomic_op(&CellSyncBarrier::try_wait))
 	{
@@ -279,7 +279,7 @@ error_code cellSyncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer,
 	rwm->size = buffer_size;
 	rwm->buffer = buffer;
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 
 	return CELL_OK;
 }
@@ -451,7 +451,7 @@ error_code cellSyncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buf
 	queue->depth = depth;
 	queue->buffer = buffer;
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 
 	return CELL_OK;
 }
@@ -863,7 +863,7 @@ error_code cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cptr<vo
 			}
 		}
 
-		std::atomic_thread_fence(std::memory_order_acq_rel);
+		atomic_fence_acq_rel();
 	}
 	else
 	{

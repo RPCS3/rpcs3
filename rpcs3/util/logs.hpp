@@ -1,12 +1,12 @@
 #pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
 #include <cstdint>
-#include <atomic>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 #include <initializer_list>
+#include "util/atomic.hpp"
 #include "Utilities/StrFmt.h"
 
 namespace logs
@@ -51,7 +51,7 @@ namespace logs
 	class listener
 	{
 		// Next listener (linked list)
-		std::atomic<listener*> m_next{};
+		atomic_t<listener*> m_next{};
 
 		friend struct message;
 
@@ -76,7 +76,7 @@ namespace logs
 		const char* const name;
 
 		// The lowest logging level enabled for this channel (used for early filtering)
-		std::atomic<level> enabled;
+		atomic_t<level> enabled;
 
 		// Initialize channel
 		constexpr channel(const char* name) noexcept
@@ -90,7 +90,7 @@ namespace logs
 		template <typename CharT, std::size_t N, typename... Args>\
 		void _sev(const CharT(&fmt)[N], const Args&... args)\
 		{\
-			if (level::_sev <= enabled.load(std::memory_order_relaxed)) [[unlikely]]\
+			if (level::_sev <= enabled.observe()) [[unlikely]]\
 			{\
 				if constexpr (sizeof...(Args) > 0)\
 				{\

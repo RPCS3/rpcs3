@@ -3156,7 +3156,7 @@ bool ppu_interpreter::CRANDC(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::ISYNC(ppu_thread& ppu, ppu_opcode_t op)
 {
-	std::atomic_thread_fence(std::memory_order_acquire);
+	atomic_fence_acquire();
 	return true;
 }
 
@@ -4222,7 +4222,7 @@ bool ppu_interpreter::LFSUX(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::SYNC(ppu_thread& ppu, ppu_opcode_t op)
 {
-	std::atomic_thread_fence(std::memory_order_seq_cst);
+	atomic_fence_seq_cst();
 	return true;
 }
 
@@ -4432,7 +4432,7 @@ bool ppu_interpreter::SRADI(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::EIEIO(ppu_thread& ppu, ppu_opcode_t op)
 {
-	std::atomic_thread_fence(std::memory_order_seq_cst);
+	atomic_fence_seq_cst();
 	return true;
 }
 

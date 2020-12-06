@@ -5,7 +5,59 @@
 #include <mutex>
 
 #ifdef _MSC_VER
-#include <atomic>
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+
+FORCE_INLINE void atomic_fence_consume()
+{
+#ifdef _MSC_VER
+	_ReadWriteBarrier();
+#else
+	__atomic_thread_fence(__ATOMIC_CONSUME);
+#endif
+}
+
+FORCE_INLINE void atomic_fence_acquire()
+{
+#ifdef _MSC_VER
+	_ReadWriteBarrier();
+#else
+	__atomic_thread_fence(__ATOMIC_ACQUIRE);
+#endif
+}
+
+FORCE_INLINE void atomic_fence_release()
+{
+#ifdef _MSC_VER
+	_ReadWriteBarrier();
+#else
+	__atomic_thread_fence(__ATOMIC_RELEASE);
+#endif
+}
+
+FORCE_INLINE void atomic_fence_acq_rel()
+{
+#ifdef _MSC_VER
+	_ReadWriteBarrier();
+#else
+	__atomic_thread_fence(__ATOMIC_ACQ_REL);
+#endif
+}
+
+FORCE_INLINE void atomic_fence_seq_cst()
+{
+#ifdef _MSC_VER
+	_ReadWriteBarrier();
+	_InterlockedOr(static_cast<long*>(_AddressOfReturnAddress()), 0);
+	_ReadWriteBarrier();
+#else
+	__asm__ volatile ("lock orl $0, 0(%%esp);" ::: "cc", "memory");
+#endif
+}
+
+#ifdef _MSC_VER
+#pragma warning(pop)
 #endif
 
 // Wait timeout extension (in nanoseconds)
@@ -286,6 +338,13 @@ struct atomic_storage
 		return result;
 	}
 
+	static inline T observe(const T& dest)
+	{
+		T result;
+		__atomic_load(reinterpret_cast<const type*>(&dest), reinterpret_cast<type*>(&result), __ATOMIC_RELAXED);
+		return result;
+	}
+
 	static inline void store(T& dest, T value)
 	{
 		static_cast<void>(exchange(dest, value));
@@ -506,17 +565,23 @@ struct atomic_storage<T, 1> : atomic_storage<T, 0>
 
 	static inline T load(const T& dest)
 	{
-		std::atomic_thread_fence(std::memory_order_acquire);
+		atomic_fence_acquire();
 		const char value = *reinterpret_cast<const volatile char*>(&dest);
-		std::atomic_thread_fence(std::memory_order_acquire);
+		atomic_fence_acquire();
+		return std::bit_cast<T>(value);
+	}
+
+	static inline T observe(const T& dest)
+	{
+		const char value = *reinterpret_cast<const volatile char*>(&dest);
 		return std::bit_cast<T>(value);
 	}
 
 	static inline void release(T& dest, T value)
 	{
-		std::atomic_thread_fence(std::memory_order_release);
+		atomic_fence_release();
 		*reinterpret_cast<volatile char*>(&dest) = std::bit_cast<char>(value);
-		std::atomic_thread_fence(std::memory_order_release);
+		atomic_fence_release();
 	}
 
 	static inline T exchange(T& dest, T value)
@@ -570,17 +635,23 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 
 	static inline T load(const T& dest)
 	{
-		std::atomic_thread_fence(std::memory_order_acquire);
+		atomic_fence_acquire();
 		const short value = *reinterpret_cast<const volatile short*>(&dest);
-		std::atomic_thread_fence(std::memory_order_acquire);
+		atomic_fence_acquire();
+		return std::bit_cast<T>(value);
+	}
+
+	static inline T observe(const T& dest)
+	{
+		const short value = *reinterpret_cast<const volatile short*>(&dest);
 		return std::bit_cast<T>(value);
 	}
 
 	static inline void release(T& dest, T value)
 	{
-		std::atomic_thread_fence(std::memory_order_release);
+		atomic_fence_release();
 		*reinterpret_cast<volatile short*>(&dest) = std::bit_cast<short>(value);
-		std::atomic_thread_fence(std::memory_order_release);
+		atomic_fence_release();
 	}
 
 	static inline T exchange(T& dest, T value)
@@ -654,17 +725,23 @@ struct atomic_storage<T, 4> : atomic_storage<T, 0>
 
 	static inline T load(const T& dest)
 	{
-		std::atomic_thread_fence(std::memory_order_acquire);
+		atomic_fence_acquire();
 		const long value = *reinterpret_cast<const volatile long*>(&dest);
-		std::atomic_thread_fence(std::memory_order_acquire);
+		atomic_fence_acquire();
+		return std::bit_cast<T>(value);
+	}
+
+	static inline T observe(const T& dest)
+	{
+		const long value = *reinterpret_cast<const volatile long*>(&dest);
 		return std::bit_cast<T>(value);
 	}
 
 	static inline void release(T& dest, T value)
 	{
-		std::atomic_thread_fence(std::memory_order_release);
+		atomic_fence_release();
 		*reinterpret_cast<volatile long*>(&dest) = std::bit_cast<long>(value);
-		std::atomic_thread_fence(std::memory_order_release);
+		atomic_fence_release();
 	}
 
 	static inline T exchange(T& dest, T value)
@@ -744,17 +821,23 @@ struct atomic_storage<T, 8> : atomic_storage<T, 0>
 
 	static inline T load(const T& dest)
 	{
-		std::atomic_thread_fence(std::memory_order_acquire);
+		atomic_fence_acquire();
 		const llong value = *reinterpret_cast<const volatile llong*>(&dest);
-		std::atomic_thread_fence(std::memory_order_acquire);
+		atomic_fence_acquire();
+		return std::bit_cast<T>(value);
+	}
+
+	static inline T observe(const T& dest)
+	{
+		const llong value = *reinterpret_cast<const volatile llong*>(&dest);
 		return std::bit_cast<T>(value);
 	}
 
 	static inline void release(T& dest, T value)
 	{
-		std::atomic_thread_fence(std::memory_order_release);
+		atomic_fence_release();
 		*reinterpret_cast<volatile llong*>(&dest) = std::bit_cast<llong>(value);
-		std::atomic_thread_fence(std::memory_order_release);
+		atomic_fence_release();
 	}
 
 	static inline T exchange(T& dest, T value)
@@ -818,9 +901,18 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 #ifdef _MSC_VER
 	static inline T load(const T& dest)
 	{
-		std::atomic_thread_fence(std::memory_order_acquire);
+		atomic_fence_acquire();
 		__m128i val = _mm_load_si128(reinterpret_cast<const __m128i*>(&dest));
-		std::atomic_thread_fence(std::memory_order_acquire);
+		atomic_fence_acquire();
+		return std::bit_cast<T>(val);
+	}
+
+	static inline T observe(const T& dest)
+	{
+		// Barriers are kept intentionally
+		atomic_fence_acquire();
+		__m128i val = _mm_load_si128(reinterpret_cast<const __m128i*>(&dest));
+		atomic_fence_acquire();
 		return std::bit_cast<T>(val);
 	}
 
@@ -844,18 +936,29 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 
 	static inline void store(T& dest, T value)
 	{
-		exchange(dest, value);
+		atomic_fence_acq_rel();
+		_mm_store_si128(reinterpret_cast<__m128i*>(&dest), std::bit_cast<__m128i>(value));
+		atomic_fence_seq_cst();
 	}
 
 	static inline void release(T& dest, T value)
 	{
-		std::atomic_thread_fence(std::memory_order_release);
+		atomic_fence_release();
 		_mm_store_si128(reinterpret_cast<__m128i*>(&dest), std::bit_cast<__m128i>(value));
-		std::atomic_thread_fence(std::memory_order_release);
+		atomic_fence_release();
 	}
 #else
 	static inline T load(const T& dest)
 	{
+		__atomic_thread_fence(__ATOMIC_ACQUIRE);
+		__m128i val = _mm_load_si128(reinterpret_cast<const __m128i*>(&dest));
+		__atomic_thread_fence(__ATOMIC_ACQUIRE);
+		return std::bit_cast<T>(val);
+	}
+
+	static inline T observe(const T& dest)
+	{
+		// Barriers are kept intentionally
 		__atomic_thread_fence(__ATOMIC_ACQUIRE);
 		__m128i val = _mm_load_si128(reinterpret_cast<const __m128i*>(&dest));
 		__atomic_thread_fence(__ATOMIC_ACQUIRE);
@@ -915,7 +1018,9 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 
 	static inline void store(T& dest, T value)
 	{
-		exchange(dest, value);
+		__atomic_thread_fence(__ATOMIC_ACQ_REL);
+		_mm_store_si128(reinterpret_cast<__m128i*>(&dest), std::bit_cast<__m128i>(value));
+		atomic_fence_seq_cst();
 	}
 
 	static inline void release(T& dest, T value)
@@ -1073,6 +1178,12 @@ public:
 	operator simple_type() const
 	{
 		return atomic_storage<type>::load(m_data);
+	}
+
+	// Relaxed load
+	type observe() const
+	{
+		return atomic_storage<type>::observe(m_data);
 	}
 
 	// Atomically write data

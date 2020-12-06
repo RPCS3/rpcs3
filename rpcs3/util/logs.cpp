@@ -168,7 +168,7 @@ namespace logs
 
 		for (auto&& pair : get_logger()->channels)
 		{
-			pair.second->enabled.store(level::notice, std::memory_order_relaxed);
+			pair.second->enabled.release(level::notice);
 		}
 	}
 
@@ -178,7 +178,7 @@ namespace logs
 
 		for (auto&& pair : get_logger()->channels)
 		{
-			pair.second->enabled.store(level::always, std::memory_order_relaxed);
+			pair.second->enabled.release(level::always);
 		}
 	}
 
@@ -190,7 +190,7 @@ namespace logs
 
 		while (found.first != found.second)
 		{
-			found.first->second->enabled.store(value, std::memory_order_relaxed);
+			found.first->second->enabled.release(value);
 			found.first++;
 		}
 	}
@@ -203,7 +203,7 @@ namespace logs
 
 		if (found.first != found.second)
 		{
-			return found.first->second->enabled.load(std::memory_order_relaxed);
+			return found.first->second->enabled.observe();
 		}
 		else
 		{
@@ -275,7 +275,7 @@ logs::listener::~listener()
 
 		for (auto&& pair : logger->channels)
 		{
-			pair.second->enabled.store(level::always, std::memory_order_relaxed);
+			pair.second->enabled.release(level::always);
 		}
 	}
 }
@@ -290,7 +290,7 @@ void logs::listener::add(logs::listener* _new)
 	// Install new listener at the end of linked list
 	listener* null = nullptr;
 
-	while (lis->m_next || !lis->m_next.compare_exchange_strong(null, _new))
+	while (lis->m_next || !lis->m_next.compare_exchange(null, _new))
 	{
 		lis = lis->m_next;
 		null = nullptr;

@@ -1208,7 +1208,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 	perf_meter<"LARX"_u32> perf0;
 
 	// Do not allow stores accessed from the same cache line to past reservation load
-	std::atomic_thread_fence(std::memory_order_seq_cst);
+	atomic_fence_seq_cst();
 
 	if (addr % sizeof(T))
 	{
@@ -1322,7 +1322,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 	else
 	{
 		mov_rdata(ppu.rdata, vm::_ref<spu_rdata_t>(addr & -128));
-		std::atomic_thread_fence(std::memory_order_acquire);
+		atomic_fence_acquire();
 
 		// Load relevant 64 bits of reservation data
 		std::memcpy(&rdata, &ppu.rdata[addr & 0x78], 8);
