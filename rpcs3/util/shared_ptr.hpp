@@ -205,6 +205,11 @@ namespace stx
 			}
 		}
 
+		operator element_type*() const noexcept
+		{
+			return m_ptr;
+		}
+
 		explicit constexpr operator bool() const noexcept
 		{
 			return m_ptr != nullptr;
@@ -521,6 +526,11 @@ namespace stx
 			}
 		}
 
+		operator element_type*() const noexcept
+		{
+			return m_ptr;
+		}
+
 		explicit constexpr operator bool() const noexcept
 		{
 			return m_ptr != nullptr;
@@ -729,11 +739,6 @@ namespace stx
 			}
 
 			return r;
-		}
-
-		operator shared_type() const noexcept
-		{
-			return load();
 		}
 
 		// Atomically inspect pointer with the possibility to reference it if necessary

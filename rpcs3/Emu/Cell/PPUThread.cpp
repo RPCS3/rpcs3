@@ -1049,7 +1049,13 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 
 		if (!_this->ppu_tname.is_equal(name_cache)) [[unlikely]]
 		{
-			name_cache = _this->ppu_tname.load();
+			_this->ppu_tname.peek_op([&](const shared_ptr<std::string>& ptr)
+			{
+				if (ptr != name_cache)
+				{
+					name_cache = ptr;
+				}
+			});
 		}
 
 		const auto cia = _this->cia;

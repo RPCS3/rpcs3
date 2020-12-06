@@ -2250,7 +2250,13 @@ std::string thread_ctrl::get_name_cached()
 
 	if (!_this->m_tname.is_equal(name_cache)) [[unlikely]]
 	{
-		name_cache = _this->m_tname.load();
+		_this->m_tname.peek_op([&](const shared_ptr<std::string>& ptr)
+		{
+			if (ptr != name_cache)
+			{
+				name_cache = ptr;
+			}
+		});
 	}
 
 	return *name_cache;

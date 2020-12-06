@@ -1615,7 +1615,13 @@ void spu_thread::cpu_task()
 
 		if (!cpu->spu_tname.is_equal(name_cache)) [[unlikely]]
 		{
-			name_cache = cpu->spu_tname.load();
+			cpu->spu_tname.peek_op([&](const shared_ptr<std::string>& ptr)
+			{
+				if (ptr != name_cache)
+				{
+					name_cache = ptr;
+				}
+			});
 		}
 
 		const auto type = cpu->get_type();
