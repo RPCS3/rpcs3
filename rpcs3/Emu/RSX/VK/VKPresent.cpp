@@ -645,7 +645,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			direct_fbo->release();
 		}
 
-		if (m_frame->screenshot_toggle == true)
+		if (m_frame->screenshot_toggle)
 		{
 			m_frame->screenshot_toggle = false;
 

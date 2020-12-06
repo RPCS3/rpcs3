@@ -192,7 +192,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 				});
 
 				// wait for check callback
-				while (done == false)
+				while (!done)
 				{
 					std::this_thread::yield();
 				}

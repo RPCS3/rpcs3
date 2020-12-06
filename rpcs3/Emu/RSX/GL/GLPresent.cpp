@@ -212,7 +212,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (image_to_flip)
 	{
-		if (m_frame->screenshot_toggle == true)
+		if (m_frame->screenshot_toggle)
 		{
 			m_frame->screenshot_toggle = false;
 

@@ -1629,3 +1629,93 @@ public:
 		}
 	}
 };
+
+template <std::size_t Align>
+class atomic_t<bool, Align> : private atomic_t<uchar, Align>
+{
+	using base = atomic_t<uchar, Align>;
+
+public:
+	static constexpr std::size_t align = Align;
+
+	using simple_type = bool;
+
+	atomic_t() noexcept = default;
+
+	atomic_t(const atomic_t&) = delete;
+
+	atomic_t& operator =(const atomic_t&) = delete;
+
+	constexpr atomic_t(bool value) noexcept
+		: base(value)
+	{
+	}
+
+	bool load() const noexcept
+	{
+		return base::load() != 0;
+	}
+
+	operator bool() const noexcept
+	{
+		return base::load() != 0;
+	}
+
+	bool observe() const noexcept
+	{
+		return base::observe() != 0;
+	}
+
+	void store(bool value)
+	{
+		base::store(value);
+	}
+
+	bool operator =(bool value)
+	{
+		base::store(value);
+		return value;
+	}
+
+	void release(bool value)
+	{
+		base::release(value);
+	}
+
+	bool exchange(bool value)
+	{
+		return base::exchange(value) != 0;
+	}
+
+	bool test_and_set()
+	{
+		return base::exchange(1) != 0;
+	}
+
+	bool test_and_reset()
+	{
+		return base::exchange(0) != 0;
+	}
+
+	bool test_and_invert()
+	{
+		return base::fetch_xor(1) != 0;
+	}
+
+	// Timeout is discouraged
+	template <atomic_wait::op Flags = atomic_wait::op::eq>
+	void wait(bool old_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf) const noexcept
+	{
+		base::template wait<Flags>(old_value, 1, timeout);
+	}
+
+	void notify_one() noexcept
+	{
+		base::notify_one(1);
+	}
+
+	void notify_all() noexcept
+	{
+		base::notify_all(1);
+	}
+};

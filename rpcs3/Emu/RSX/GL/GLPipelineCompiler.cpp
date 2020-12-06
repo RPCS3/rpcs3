@@ -40,7 +40,7 @@ namespace gl
 		{
 			for (auto&& job : m_work_queue.pop_all())
 			{
-				if (m_context_ready.compare_and_swap_test(false, true))
+				if (!m_context_ready.test_and_set())
 				{
 					// Bind context on first use
 					m_context_bind_func(m_context);
