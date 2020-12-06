@@ -27,7 +27,6 @@
 
 #include <cmath>
 #include <cfenv>
-#include <atomic>
 #include <thread>
 #include <shared_mutex>
 #include "util/vm.hpp"
@@ -298,14 +297,14 @@ namespace spu
 {
 	namespace scheduler
 	{
-		std::array<std::atomic<u8>, 65536> atomic_instruction_table = {};
+		std::array<atomic_t<u8>, 65536> atomic_instruction_table = {};
 		constexpr u32 native_jiffy_duration_us = 1500; //About 1ms resolution with a half offset
 
 		void acquire_pc_address(spu_thread& spu, u32 pc, u32 timeout_ms, u32 max_concurrent_instructions)
 		{
 			const u32 pc_offset = pc >> 2;
 
-			if (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
+			if (atomic_instruction_table[pc_offset].observe() >= max_concurrent_instructions)
 			{
 				spu.state += cpu_flag::wait + cpu_flag::temp;
 
@@ -315,7 +314,7 @@ namespace spu
 					const u64 start = get_system_time();
 					auto remaining = timeout;
 
-					while (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
+					while (atomic_instruction_table[pc_offset].observe() >= max_concurrent_instructions)
 					{
 						if (remaining >= native_jiffy_duration_us)
 							std::this_thread::sleep_for(1ms);
@@ -332,7 +331,7 @@ namespace spu
 				else
 				{
 					//Slight pause if function is overburdened
-					const auto count = atomic_instruction_table[pc_offset].load(std::memory_order_consume) * 100ull;
+					const auto count = atomic_instruction_table[pc_offset].observe() * 100ull;
 					busy_wait(count);
 				}
 

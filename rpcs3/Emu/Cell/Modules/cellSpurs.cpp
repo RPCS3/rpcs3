@@ -15,8 +15,6 @@
 #include "sysPrxForUser.h"
 #include "cellSpurs.h"
 
-#include <atomic>
-
 LOG_CHANNEL(cellSpurs);
 
 template <>

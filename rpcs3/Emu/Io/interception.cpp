@@ -7,7 +7,7 @@
 
 namespace input
 {
-	std::atomic<bool> g_intercepted{false};
+	atomic_t<bool> g_intercepted{false};
 
 	void SetIntercepted(bool intercepted)
 	{

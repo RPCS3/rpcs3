@@ -4,8 +4,6 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "cellSync.h"
 
-#include <atomic>
-
 LOG_CHANNEL(cellSync);
 
 template<>

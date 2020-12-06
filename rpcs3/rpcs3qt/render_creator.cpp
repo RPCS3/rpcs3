@@ -8,7 +8,6 @@
 #include "Emu/RSX/VK/VKHelpers.h"
 #endif
 
-#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
@@ -25,7 +24,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 	// plugged in. This whole contraption is for showing an error message in case that happens, so that user has
 	// some idea about why the emulator window isn't showing up.
 
-	static std::atomic<bool> was_called = false;
+	static atomic_t<bool> was_called = false;
 	if (was_called.exchange(true))
 		fmt::throw_exception("Render_Creator cannot be created more than once" HERE);
 

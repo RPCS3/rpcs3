@@ -41,7 +41,7 @@
 
 LOG_CHANNEL(screenshot);
 
-extern std::atomic<bool> g_user_asked_for_frame_capture;
+extern atomic_t<bool> g_user_asked_for_frame_capture;
 
 constexpr auto qstr = QString::fromStdString;
 

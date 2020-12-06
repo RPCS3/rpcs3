@@ -7,7 +7,6 @@
 #include "Utilities/sysinfo.h"
 #include "Emu/Cell/Common.h"
 
-#include <atomic>
 #include <bit>
 #include <cmath>
 

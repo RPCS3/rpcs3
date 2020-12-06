@@ -4,8 +4,6 @@
 
 #include "Utilities/BEType.h"
 
-#include <atomic>
-
 error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr);
 error_code sceNpTerm();
 

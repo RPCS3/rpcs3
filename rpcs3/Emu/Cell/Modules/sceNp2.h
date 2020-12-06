@@ -4,8 +4,6 @@
 
 #include "Emu/Memory/vm_ptr.h"
 
-#include <atomic>
-
 // Error codes
 enum SceNpMatching2Error : u32
 {

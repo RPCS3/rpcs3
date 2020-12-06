@@ -29,7 +29,7 @@ class GSRender;
 
 #define CMD_DEBUG 0
 
-std::atomic<bool> g_user_asked_for_frame_capture = false;
+atomic_t<bool> g_user_asked_for_frame_capture = false;
 rsx::frame_trace_data frame_debug;
 rsx::frame_capture_data frame_capture;
 

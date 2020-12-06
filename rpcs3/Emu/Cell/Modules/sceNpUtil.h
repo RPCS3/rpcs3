@@ -1,7 +1,5 @@
 #pragma once
 
-#include <atomic>
-
 enum
 {
 	SCE_NP_UTIL_BANDWIDTH_TEST_STATUS_NONE = 0,
@@ -20,5 +18,5 @@ struct SceNpUtilBandwidthTestResult
 
 struct sce_np_util_manager
 {
-	std::atomic<bool> is_initialized = false;
+	atomic_t<bool> is_initialized = false;
 };

@@ -7,7 +7,6 @@
 #include "Emu/RSX/RSXThread.h"
 
 #include <map>
-#include <atomic>
 
 namespace rsx
 {

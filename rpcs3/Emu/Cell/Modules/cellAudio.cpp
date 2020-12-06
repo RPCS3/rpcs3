@@ -5,7 +5,6 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "cellAudio.h"
-#include <atomic>
 #include <cmath>
 
 LOG_CHANNEL(cellAudio);

@@ -25,7 +25,6 @@
 #include <QMenu>
 #include <QVBoxLayout>
 #include <QTimer>
-#include <atomic>
 
 constexpr auto qstr = QString::fromStdString;
 

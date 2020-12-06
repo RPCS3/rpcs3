@@ -5,7 +5,6 @@
 #include "cellRtc.h"
 #include "sceNp.h"
 
-#include <atomic>
 #include <map>
 
 // Constants for TUS functions and structures
@@ -136,7 +135,7 @@ private:
 
 public:
 	std::mutex mtx;
-	std::atomic<bool> is_initialized = false;
+	atomic_t<bool> is_initialized = false;
 
 	s32 add_title_context();
 	bool check_title_context_id(s32 titleCtxId);

@@ -557,7 +557,7 @@ namespace vk
 
 		//Stuff that has been dereferenced goes into these
 		std::list<temporary_storage> m_temporary_storage;
-		std::atomic<u32> m_temporary_memory_size = { 0 };
+		atomic_t<u32> m_temporary_memory_size = { 0 };
 
 		void clear()
 		{

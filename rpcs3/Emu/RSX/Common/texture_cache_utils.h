@@ -6,8 +6,6 @@
 
 #include <list>
 #include <unordered_set>
-#include <atomic>
-
 
 namespace rsx
 {
@@ -324,9 +322,9 @@ namespace rsx
 		address_range range = {};
 		block_container_type sections = {};
 		unowned_container_type unowned; // pointers to sections from other blocks that overlap this block
-		std::atomic<u32> exists_count = 0;
-		std::atomic<u32> locked_count = 0;
-		std::atomic<u32> unreleased_count = 0;
+		atomic_t<u32> exists_count = 0;
+		atomic_t<u32> locked_count = 0;
+		atomic_t<u32> unreleased_count = 0;
 		ranged_storage_type *m_storage = nullptr;
 
 		inline void add_owned_section_overlaps(section_storage_type &section)
@@ -567,8 +565,8 @@ namespace rsx
 		bool m_purging = false;
 
 	public:
-		std::atomic<u32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
-		std::atomic<u64> m_texture_memory_in_use = { 0 };
+		atomic_t<u32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
+		atomic_t<u64> m_texture_memory_in_use = { 0 };
 
 		// Constructor
 		ranged_storage(texture_cache_type *tex_cache) :

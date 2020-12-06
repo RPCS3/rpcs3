@@ -11,7 +11,6 @@
 #include "sysPrxForUser.h"
 
 #include <thread>
-#include <atomic>
 
 LOG_CHANNEL(cellGcmSys);
 

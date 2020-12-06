@@ -52,7 +52,7 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-extern std::atomic<bool> g_user_asked_for_frame_capture;
+extern atomic_t<bool> g_user_asked_for_frame_capture;
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 

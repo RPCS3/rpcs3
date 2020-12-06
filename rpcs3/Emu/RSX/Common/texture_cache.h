@@ -3,8 +3,6 @@
 #include "texture_cache_predictor.h"
 #include "texture_cache_helpers.h"
 
-#include <atomic>
-
 extern u64 get_system_time();
 
 #define RSX_GCM_FORMAT_IGNORED 0
@@ -279,7 +277,7 @@ namespace rsx
 		std::vector<image_view_type> m_uncached_subresources;
 		predictor_type m_predictor;
 
-		std::atomic<u64> m_cache_update_tag = {0};
+		atomic_t<u64> m_cache_update_tag = {0};
 
 		address_range read_only_range;
 		address_range no_access_range;
@@ -298,10 +296,10 @@ namespace rsx
 		const u32 m_max_zombie_objects = 64; //Limit on how many texture objects to keep around for reuse after they are invalidated
 
 		//Other statistics
-		std::atomic<u32> m_flushes_this_frame = { 0 };
-		std::atomic<u32> m_misses_this_frame  = { 0 };
-		std::atomic<u32> m_speculations_this_frame = { 0 };
-		std::atomic<u32> m_unavoidable_hard_faults_this_frame = { 0 };
+		atomic_t<u32> m_flushes_this_frame = { 0 };
+		atomic_t<u32> m_misses_this_frame  = { 0 };
+		atomic_t<u32> m_speculations_this_frame = { 0 };
+		atomic_t<u32> m_unavoidable_hard_faults_this_frame = { 0 };
 		static const u32 m_predict_max_flushes_per_frame = 50; // Above this number the predictions are disabled
 
 		// Invalidation
@@ -621,7 +619,7 @@ namespace rsx
 		}
 
 		// Return a set containing all sections that should be flushed/unprotected/reprotected
-		std::atomic<u64> m_last_section_cache_tag = 0;
+		atomic_t<u64> m_last_section_cache_tag = 0;
 		intersecting_set get_intersecting_set(const address_range &fault_range)
 		{
 			AUDIT(fault_range.is_page_range());
@@ -876,7 +874,7 @@ namespace rsx
 				{
 					// There is something to flush, but we've been asked to defer it
 					result.num_flushable = static_cast<int>(result.sections_to_flush.size());
-					result.cache_tag = m_cache_update_tag.load(std::memory_order_consume);
+					result.cache_tag = m_cache_update_tag.load();
 					return result;
 				}
 				else if (has_flushables || has_unprotectables)
@@ -1275,7 +1273,7 @@ namespace rsx
 			AUDIT(data.cause.deferred_flush());
 			AUDIT(!data.flushed);
 
-			if (m_cache_update_tag.load(std::memory_order_consume) == data.cache_tag)
+			if (m_cache_update_tag.load() == data.cache_tag)
 			{
 				//1. Write memory to cpu side
 				flush_set(cmd, data, std::forward<Args>(extras)...);
@@ -2836,7 +2834,7 @@ namespace rsx
 		{
 			if (!m_flush_always_cache.empty())
 			{
-				if (m_cache_update_tag.load(std::memory_order_consume) != m_flush_always_update_timestamp)
+				if (m_cache_update_tag.load() != m_flush_always_update_timestamp)
 				{
 					std::lock_guard lock(m_cache_mutex);
 					bool update_tag = false;
@@ -2856,7 +2854,7 @@ namespace rsx
 					}
 
 					if (update_tag) update_cache_tag();
-					m_flush_always_update_timestamp = m_cache_update_tag.load(std::memory_order_consume);
+					m_flush_always_update_timestamp = m_cache_update_tag.load();
 
 #ifdef TEXTURE_CACHE_DEBUG
 					// Check that the cache has the correct protections

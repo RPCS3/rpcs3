@@ -34,7 +34,7 @@ private:
 
 	u64 m_frames = 0;
 	QString m_window_title;
-	std::atomic<bool> m_show_mouse = true;
+	atomic_t<bool> m_show_mouse = true;
 	bool m_disable_mouse = false;
 	bool m_disable_kb_hotkeys = false;
 	bool m_mouse_hide_and_lock = false;

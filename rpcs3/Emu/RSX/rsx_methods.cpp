@@ -8,7 +8,6 @@
 #include "Emu/RSX/Common/BufferUtils.h"
 
 #include <thread>
-#include <atomic>
 
 namespace rsx
 {

@@ -4,8 +4,6 @@
 
 #include "Emu/Cell/RawSPUThread.h"
 
-#include <atomic>
-
 inline void try_start(spu_thread& spu)
 {
 	reader_lock lock(spu.run_ctrl_mtx);
