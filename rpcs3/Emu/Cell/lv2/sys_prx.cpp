@@ -21,67 +21,150 @@ extern void ppu_initialize(const ppu_module&);
 
 LOG_CHANNEL(sys_prx);
 
-static const std::unordered_map<std::string, int> s_prx_ignore
+extern const std::unordered_map<std::string_view, int> g_prx_list
 {
-	{ "/dev_flash/sys/external/libaudio.sprx", 0 },
-	{ "/dev_flash/sys/external/libcamera.sprx", 0 },
-	{ "/dev_flash/sys/external/libgem.sprx", 0 },
-	{ "/dev_flash/sys/external/libio.sprx", 0 },
-	{ "/dev_flash/sys/external/libmedi.sprx", 0 },
-	{ "/dev_flash/sys/external/libmic.sprx", 0 },
-	{ "/dev_flash/sys/external/libnetctl.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_ap.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_authdialog.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_avc_ext.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_avc2.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_avconf_ext.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_bgdl.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_cross_controller.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_dec_psnvideo.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_dtcp_ip.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_game.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_game_exec.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_imejp.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_misc.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_music.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_music_decode.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_music_export.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_np.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_np_clans.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_np_commerce2.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_np_eula.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_np_installer.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_np_sns.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_np_trophy.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_np_tus.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_np_util.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_np2.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_oskdialog_ext.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_pesm.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_photo_decode.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_photo_export.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_photo_export2.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_photo_import.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_photo_network_sharing.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_print.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_rec.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_remoteplay.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_rtcalarm.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_savedata.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_savedata_psp.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_screenshot.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_search.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_storagedata.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_subdisplay.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_syschat.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_sysconf_ext.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_userinfo.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_video_export.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_video_player.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_video_upload.sprx", 0 },
-	{ "/dev_flash/sys/external/libvdec.sprx", 0 },
-	{ "/dev_flash/sys/external/libvoice.sprx", 0 },
+	{ "libaacenc.sprx", 0 },
+	{ "libaacenc_spurs.sprx", 0 },
+	{ "libac3dec.sprx", 0 },
+	{ "libac3dec2.sprx", 0 },
+	{ "libadec.sprx", 0 },
+	{ "libadec2.sprx", 0 },
+	{ "libadec_internal.sprx", 0 },
+	{ "libad_async.sprx", 0 },
+	{ "libad_billboard_util.sprx", 0 },
+	{ "libad_core.sprx", 0 },
+	{ "libapostsrc_mini.sprx", 0 },
+	{ "libasfparser2_astd.sprx", 0 },
+	{ "libat3dec.sprx", 0 },
+	{ "libat3multidec.sprx", 0 },
+	{ "libatrac3multi.sprx", 0 },
+	{ "libatrac3plus.sprx", 0 },
+	{ "libatxdec.sprx", 0 },
+	{ "libatxdec2.sprx", 0 },
+	{ "libaudio.sprx", 1 },
+	{ "libavcdec.sprx", 0 },
+	{ "libavcenc.sprx", 0 },
+	{ "libavcenc_small.sprx", 0 },
+	{ "libavchatjpgdec.sprx", 0 },
+	{ "libbeisobmf.sprx", 0 },
+	{ "libbemp2sys.sprx", 0 },
+	{ "libcamera.sprx", 1 },
+	{ "libcelp8dec.sprx", 0 },
+	{ "libcelp8enc.sprx", 0 },
+	{ "libcelpdec.sprx", 0 },
+	{ "libcelpenc.sprx", 0 },
+	{ "libddpdec.sprx", 0 },
+	{ "libdivxdec.sprx", 0 },
+	{ "libdmux.sprx", 0 },
+	{ "libdmuxpamf.sprx", 0 },
+	{ "libdtslbrdec.sprx", 0 },
+	{ "libfiber.sprx", 0 },
+	{ "libfont.sprx", 0 },
+	{ "libfontFT.sprx", 0 },
+	{ "libfreetype.sprx", 0 },
+	{ "libfreetypeTT.sprx", 0 },
+	{ "libfs.sprx", 0 },
+	{ "libfs_155.sprx", 0 },
+	{ "libgcm_sys.sprx", 0 },
+	{ "libgem.sprx", 1 },
+	{ "libgifdec.sprx", 0 },
+	{ "libhttp.sprx", 0 },
+	{ "libio.sprx", 1 },
+	{ "libjpgdec.sprx", 0 },
+	{ "libjpgenc.sprx", 0 },
+	{ "libkey2char.sprx", 0 },
+	{ "libl10n.sprx", 0 },
+	{ "liblv2.sprx", 0 },
+	{ "liblv2coredump.sprx", 0 },
+	{ "liblv2dbg_for_cex.sprx", 0 },
+	{ "libm2bcdec.sprx", 0 },
+	{ "libm4aacdec.sprx", 0 },
+	{ "libm4aacdec2ch.sprx", 0 },
+	{ "libm4hdenc.sprx", 0 },
+	{ "libm4venc.sprx", 0 },
+	{ "libmedi.sprx", 1 },
+	{ "libmic.sprx", 1 },
+	{ "libmp3dec.sprx", 0 },
+	{ "libmp4.sprx", 0 },
+	{ "libmpl1dec.sprx", 0 },
+	{ "libmvcdec.sprx", 0 },
+	{ "libnet.sprx", 0 },
+	{ "libnetctl.sprx", 1 },
+	{ "libpamf.sprx", 0 },
+	{ "libpngdec.sprx", 0 },
+	{ "libpngenc.sprx", 0 },
+	{ "libresc.sprx", 0 },
+	{ "librtc.sprx", 0 },
+	{ "librudp.sprx", 0 },
+	{ "libsail.sprx", 0 },
+	{ "libsail_avi.sprx", 0 },
+	{ "libsail_rec.sprx", 0 },
+	{ "libsjvtd.sprx", 0 },
+	{ "libsmvd2.sprx", 0 },
+	{ "libsmvd4.sprx", 0 },
+	{ "libspurs_jq.sprx", 0 },
+	{ "libsre.sprx", 0 },
+	{ "libssl.sprx", 0 },
+	{ "libsvc1d.sprx", 0 },
+	{ "libsync2.sprx", 0 },
+	{ "libsysmodule.sprx", 0 },
+	{ "libsysutil.sprx", 1 },
+	{ "libsysutil_ap.sprx", 1 },
+	{ "libsysutil_authdialog.sprx", 1 },
+	{ "libsysutil_avc2.sprx", 1 },
+	{ "libsysutil_avconf_ext.sprx", 1 },
+	{ "libsysutil_avc_ext.sprx", 1 },
+	{ "libsysutil_bgdl.sprx", 1 },
+	{ "libsysutil_cross_controller.sprx", 1 },
+	{ "libsysutil_dec_psnvideo.sprx", 1 },
+	{ "libsysutil_dtcp_ip.sprx", 1 },
+	{ "libsysutil_game.sprx", 1 },
+	{ "libsysutil_game_exec.sprx", 1 },
+	{ "libsysutil_imejp.sprx", 1 },
+	{ "libsysutil_misc.sprx", 1 },
+	{ "libsysutil_music.sprx", 1 },
+	{ "libsysutil_music_decode.sprx", 1 },
+	{ "libsysutil_music_export.sprx", 1 },
+	{ "libsysutil_np.sprx", 1 },
+	{ "libsysutil_np2.sprx", 1 },
+	{ "libsysutil_np_clans.sprx", 1 },
+	{ "libsysutil_np_commerce2.sprx", 1 },
+	{ "libsysutil_np_eula.sprx", 1 },
+	{ "libsysutil_np_installer.sprx", 1 },
+	{ "libsysutil_np_sns.sprx", 1 },
+	{ "libsysutil_np_trophy.sprx", 1 },
+	{ "libsysutil_np_tus.sprx", 1 },
+	{ "libsysutil_np_util.sprx", 1 },
+	{ "libsysutil_oskdialog_ext.sprx", 1 },
+	{ "libsysutil_pesm.sprx", 1 },
+	{ "libsysutil_photo_decode.sprx", 1 },
+	{ "libsysutil_photo_export.sprx", 1 },
+	{ "libsysutil_photo_export2.sprx", 1 },
+	{ "libsysutil_photo_import.sprx", 1 },
+	{ "libsysutil_photo_network_sharing.sprx", 1 },
+	{ "libsysutil_print.sprx", 1 },
+	{ "libsysutil_rec.sprx", 1 },
+	{ "libsysutil_remoteplay.sprx", 1 },
+	{ "libsysutil_rtcalarm.sprx", 1 },
+	{ "libsysutil_savedata.sprx", 1 },
+	{ "libsysutil_savedata_psp.sprx", 1 },
+	{ "libsysutil_screenshot.sprx", 1 },
+	{ "libsysutil_search.sprx", 1 },
+	{ "libsysutil_storagedata.sprx", 1 },
+	{ "libsysutil_subdisplay.sprx", 1 },
+	{ "libsysutil_syschat.sprx", 1 },
+	{ "libsysutil_sysconf_ext.sprx", 1 },
+	{ "libsysutil_userinfo.sprx", 1 },
+	{ "libsysutil_video_export.sprx", 1 },
+	{ "libsysutil_video_player.sprx", 1 },
+	{ "libsysutil_video_upload.sprx", 1 },
+	{ "libusbd.sprx", 0 },
+	{ "libusbpspcm.sprx", 0 },
+	{ "libvdec.sprx", 1 },
+	{ "libvoice.sprx", 1 },
+	{ "libvpost.sprx", 0 },
+	{ "libvpost2.sprx", 0 },
+	{ "libwmadec.sprx", 0 },
 };
 
 static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, fs::file src = {})
@@ -101,17 +184,13 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		fmt::throw_exception("sys_prx: Unimplemented fixed address allocations" HERE);
 	}
 
-	std::string name = vpath.substr(vpath.find_last_of('/') + 1);
-	std::string path = vfs::get(vpath);
+	std::string vpath0;
+	const std::string path = vfs::get(vpath, nullptr, &vpath0);
+	const std::string name = vpath0.substr(vpath0.find_last_of('/') + 1);
 
 	const auto existing = idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& prx)
 	{
-		if (prx.name == name && prx.path == path)
-		{
-			return true;
-		}
-
-		return false;
+		return prx.path == path;
 	});
 
 	if (existing)
@@ -121,28 +200,32 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	bool ignore = false;
 
-	if (g_cfg.core.lib_loading == lib_loading_type::liblv2list)
+	constexpr std::string_view firmware_sprx_dir = "/dev_flash/sys/external/";
+	const bool is_firmware_sprx = vpath0.starts_with(firmware_sprx_dir) && g_prx_list.count(std::string_view(vpath0).substr(firmware_sprx_dir.size()));
+
+	if (is_firmware_sprx)
 	{
-		if (vpath.starts_with("/dev_flash/sys/external/") && vpath != "/dev_flash/sys/external/libsysmodule.sprx"sv)
+		// First condition, LLE for selected libs
+		ignore = g_cfg.core.load_libraries.get_set().count(name) == 0;
+
+		if (g_cfg.core.lib_loading != lib_loading_type::liblv2list && g_cfg.core.lib_loading != lib_loading_type::manual)
 		{
-			ignore = g_cfg.core.load_libraries.get_set().count(name) == 0;
+			// Override list setting condition for liblv2only
+			// For the other modes g_prx_list is a second condition which filters HLE selected libs by list setting
+			if (ignore || g_cfg.core.lib_loading == lib_loading_type::liblv2only)
+			{
+				ignore = g_prx_list.at(name) != 0;
+			}
 		}
 	}
-	else
+	else if (vpath0.starts_with("/"))
 	{
-		ignore = s_prx_ignore.count(vpath) != 0;
+		// Special case (currently unused): HLE for files outside of "/dev_flash/sys/external/"
+		// Have to specify full path for them
+		ignore = g_prx_list.count(vpath0) && g_prx_list.at(vpath0);
 	}
 
-	if (ignore && (g_cfg.core.lib_loading == lib_loading_type::hybrid || g_cfg.core.lib_loading == lib_loading_type::liblv2both))
-	{
-		// Ignore ignore list if the library is selected in 'both' mode
-		if (g_cfg.core.load_libraries.get_set().count(name) != 0)
-		{
-			ignore = false;
-		}
-	}
-
-	if (ignore)
+	auto hle_load = [&]()
 	{
 		const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
 
@@ -152,6 +235,11 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		sys_prx.warning(u8"Ignored module: “%s” (id=0x%x)", vpath, idm::last_id());
 
 		return not_an_error(idm::last_id());
+	};
+
+	if (ignore)
+	{
+		return hle_load();
 	}
 
 	if (!src)
@@ -160,6 +248,12 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 		if (fs_error)
 		{
+			if (fs_error + 0u == CELL_ENOENT && is_firmware_sprx)
+			{
+				sys_prx.error(u8"firmware SPRX not found: “%s” (forcing HLE implementation)", vpath, idm::last_id());
+				return hle_load();
+			}
+
 			return {fs_error, vpath};
 		}
 

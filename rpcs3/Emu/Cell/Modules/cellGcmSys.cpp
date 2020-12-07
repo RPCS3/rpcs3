@@ -1077,7 +1077,7 @@ error_code GcmUnmapIoAddress(ppu_thread& ppu, gcm_config* cfg, u32 io)
 {
 	if (u32 ea = cfg->offsetTable.eaAddress[io >>= 20], size = cfg->IoMapTable[ea]; size)
 	{
-		if (auto error = sys_rsx_context_iounmap(ppu, 0x55555555, io, size << 20))
+		if (auto error = sys_rsx_context_iounmap(ppu, 0x55555555, io << 20, size << 20))
 		{
 			return error;
 		}
