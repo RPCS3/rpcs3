@@ -41,7 +41,7 @@ Ubuntu is usually horrendously out of date, and some packages need to be downloa
 Ubuntu usually does not have a new enough Qt package to suit rpcs3's needs. There is a PPA available to work around this. Run the following:
 ```
 . /etc/os-release
-sudo add-apt-repository ppa:beineri/opt-qt-5.15.1-$UBUNTU_CODENAME
+sudo add-apt-repository ppa:beineri/opt-qt-5.15.2-$UBUNTU_CODENAME
 sudo apt-get update
 sudo apt-get install qt515-meta-minimal qt515svg
 . /opt/qt515/bin/qt515-env.sh >/dev/null 2>&1
