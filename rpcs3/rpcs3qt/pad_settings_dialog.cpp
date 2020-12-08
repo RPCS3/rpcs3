@@ -301,7 +301,7 @@ void pad_settings_dialog::InitButtons()
 	m_padButtons->addButton(ui->b_refresh, button_ids::id_refresh);
 	m_padButtons->addButton(ui->b_addProfile, button_ids::id_add_profile);
 
-	connect(m_padButtons, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &pad_settings_dialog::OnPadButtonClicked);
+	connect(m_padButtons, &QButtonGroup::idClicked, this, &pad_settings_dialog::OnPadButtonClicked);
 
 	connect(&m_timer, &QTimer::timeout, [this]()
 	{
@@ -1260,7 +1260,7 @@ void pad_settings_dialog::ChangeInputType()
 	{
 		if (is_ldd_pad)
 		{
-			ui->chooseDevice->addItem(tr("Custom Controller"));
+			ui->chooseDevice->setPlaceholderText(tr("Custom Controller"));
 			break;
 		}
 		[[fallthrough]];
@@ -1277,9 +1277,6 @@ void pad_settings_dialog::ChangeInputType()
 
 	// Handle empty device list
 	bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && ui->chooseDevice->count() > 0);
-	ui->chooseDevice->setEnabled(config_enabled);
-	ui->chooseClass->setEnabled(config_enabled);
-	ui->chooseProduct->setEnabled(config_enabled);
 
 	if (config_enabled)
 	{
@@ -1306,7 +1303,7 @@ void pad_settings_dialog::ChangeInputType()
 
 		if (profiles.isEmpty())
 		{
-			QString def_name = "Default Profile";
+			const QString def_name = "Default Profile";
 			if (CreateConfigFile(profile_dir, def_name))
 			{
 				ui->chooseProfile->addItem(def_name);
@@ -1327,21 +1324,24 @@ void pad_settings_dialog::ChangeInputType()
 	}
 	else
 	{
-		ui->chooseProfile->addItem(tr("No Profiles"));
+		ui->chooseProfile->setPlaceholderText(tr("No Profiles"));
 
 		if (ui->chooseDevice->count() == 0)
 		{
-			ui->chooseDevice->addItem(tr("No Device Detected"), -1);
+			ui->chooseDevice->setPlaceholderText(tr("No Device Detected"));
 		}
 	}
 
-	// enable configuration and profile list if possible
+	// Enable configuration and profile list if possible
 	SwitchButtons(config_enabled && m_handler->m_type == pad_handler::keyboard);
-	ui->b_addProfile->setEnabled(config_enabled);
-	ui->chooseProfile->setEnabled(config_enabled);
 
 	ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(!is_ldd_pad);
-	ui->chooseHandler->setEnabled(!is_ldd_pad);
+	ui->b_addProfile->setEnabled(config_enabled);
+	ui->chooseProfile->setEnabled(config_enabled && ui->chooseProfile->count() > 0);
+	ui->chooseDevice->setEnabled(config_enabled && ui->chooseDevice->count() > 0);
+	ui->chooseClass->setEnabled(config_enabled && ui->chooseClass->count() > 0);
+	ui->chooseProduct->setEnabled(config_enabled && ui->chooseProduct->count() > 0);
+	ui->chooseHandler->setEnabled(!is_ldd_pad && ui->chooseHandler->count() > 0);
 }
 
 void pad_settings_dialog::ChangeProfile()
