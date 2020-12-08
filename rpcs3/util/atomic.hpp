@@ -52,7 +52,7 @@ FORCE_INLINE void atomic_fence_seq_cst()
 	_InterlockedOr(static_cast<long*>(_AddressOfReturnAddress()), 0);
 	_ReadWriteBarrier();
 #else
-	__asm__ volatile ("lock orl $0, 0(%%esp);" ::: "cc", "memory");
+	__asm__ volatile ("lock orl $0, 0(%%rsp);" ::: "cc", "memory");
 #endif
 }
 
