@@ -1310,7 +1310,7 @@ void spu_recompiler::LNOP(spu_opcode_t op)
 void spu_recompiler::SYNC(spu_opcode_t op)
 {
 	// This instruction must be used following a store instruction that modifies the instruction stream.
-	c->lock().or_(asmjit::x86::dword_ptr(asmjit::x86::esp), 0);
+	c->lock().or_(asmjit::x86::dword_ptr(asmjit::x86::rsp), 0);
 
 	if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 	{
@@ -1325,7 +1325,7 @@ void spu_recompiler::SYNC(spu_opcode_t op)
 void spu_recompiler::DSYNC(spu_opcode_t op)
 {
 	// This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
-	c->lock().or_(asmjit::x86::dword_ptr(asmjit::x86::esp), 0);
+	c->lock().or_(asmjit::x86::dword_ptr(asmjit::x86::rsp), 0);
 }
 
 void spu_recompiler::MFSPR(spu_opcode_t op)
