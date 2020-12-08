@@ -21,7 +21,7 @@ extern void ppu_initialize(const ppu_module&);
 
 LOG_CHANNEL(sys_prx);
 
-extern const std::unordered_map<std::string_view, int> g_prx_list
+extern const std::map<std::string_view, int> g_prx_list
 {
 	{ "libaacenc.sprx", 0 },
 	{ "libaacenc_spurs.sprx", 0 },
@@ -205,17 +205,20 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	if (is_firmware_sprx)
 	{
-		// First condition, LLE for selected libs
-		ignore = g_cfg.core.load_libraries.get_set().count(name) == 0;
-
-		if (g_cfg.core.lib_loading != lib_loading_type::liblv2list && g_cfg.core.lib_loading != lib_loading_type::manual)
+		if (g_cfg.core.libraries_control.get_set().count(name + ":lle"))
 		{
-			// Override list setting condition for liblv2only
-			// For the other modes g_prx_list is a second condition which filters HLE selected libs by list setting
-			if (ignore || g_cfg.core.lib_loading == lib_loading_type::liblv2only)
-			{
-				ignore = g_prx_list.at(name) != 0;
-			}
+			// Force LLE
+			ignore = false;
+		}
+		else if (g_cfg.core.libraries_control.get_set().count(name + ":hle"))
+		{
+			// Force HLE
+			ignore = true;
+		}
+		else
+		{
+			// Use list
+			ignore = g_prx_list.at(name) != 0;
 		}
 	}
 	else if (vpath0.starts_with("/"))

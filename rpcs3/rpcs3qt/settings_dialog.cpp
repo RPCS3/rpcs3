@@ -44,6 +44,8 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 inline QString qsv(std::string_view sv) { return QString(sv.data()); }
 
+extern const std::map<std::string_view, int> g_prx_list;
+
 settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, const int& tab_index, QWidget *parent, const GameInfo* game)
 	: QDialog(parent)
 	, m_tab_index(tab_index)
@@ -104,16 +106,28 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const auto apply_configs = [this, use_discord_old = m_use_discord, discord_state_old = m_discord_state](bool do_exit)
 	{
-		std::set<std::string> selectedlle;
+		std::set<std::string> selected;
 		for (int i = 0; i < ui->lleList->count(); ++i)
 		{
 			const auto& item = ui->lleList->item(i);
 			if (item->checkState() != Qt::CheckState::Unchecked)
 			{
-				selectedlle.emplace(sstr(item->text()));
+				// suffix indicates forced HLE mode
+				selected.emplace(sstr(item->text()) + ":hle");
 			}
 		}
-		std::vector<std::string> selected_ls = std::vector<std::string>(selectedlle.begin(), selectedlle.end());
+
+		for (int i = 0; i < ui->hleList->count(); ++i)
+		{
+			const auto& item = ui->hleList->item(i);
+			if (item->checkState() != Qt::CheckState::Unchecked)
+			{
+				// suffix indicates forced LLE mode
+				selected.emplace(sstr(item->text()) + ":lle");
+			}
+		}
+
+		std::vector<std::string> selected_ls(selected.begin(), selected.end());
 		m_emu_settings->SaveSelectedLibraries(selected_ls);
 		m_emu_settings->SaveSettings();
 
@@ -1012,78 +1026,60 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.wake_up_delay);
 	}
 
-	// lib options tool tips
-	SubscribeTooltip(ui->lib_manu, tooltips.settings.libraries_manual);
-	SubscribeTooltip(ui->lib_both, tooltips.settings.libraries_both);
-	SubscribeTooltip(ui->lib_lv2,  tooltips.settings.libraries_liblv2);
-	SubscribeTooltip(ui->lib_lv2b, tooltips.settings.libraries_liblv2both);
-	SubscribeTooltip(ui->lib_lv2l, tooltips.settings.libraries_liblv2list);
-
-	// creating this in ui file keeps scrambling the order...
-	QButtonGroup *lib_mode_bg = new QButtonGroup(this);
-	lib_mode_bg->addButton(ui->lib_manu, static_cast<int>(lib_loading_type::manual));
-	lib_mode_bg->addButton(ui->lib_both, static_cast<int>(lib_loading_type::hybrid));
-	lib_mode_bg->addButton(ui->lib_lv2,  static_cast<int>(lib_loading_type::liblv2only));
-	lib_mode_bg->addButton(ui->lib_lv2b, static_cast<int>(lib_loading_type::liblv2both));
-	lib_mode_bg->addButton(ui->lib_lv2l, static_cast<int>(lib_loading_type::liblv2list));
-
-	m_emu_settings->EnhanceRadioButton(lib_mode_bg, emu_settings_type::LibLoadOptions);
-
-	std::vector<std::string> loadedLibs = m_emu_settings->GetLoadedLibraries();
+	std::vector<std::string> loadedLibs = m_emu_settings->GetLibrariesControl();
 
 	std::set<std::string_view> set(loadedLibs.begin(), loadedLibs.end());
 
-	for (const auto& lib : set)
-	{
-		QListWidgetItem* item = new QListWidgetItem(qsv(lib), ui->lleList);
-		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
-		item->setCheckState(Qt::Checked); // AND initialize check state
-		ui->lleList->addItem(item);
-	}
-
-	extern const std::unordered_map<std::string_view, int> g_prx_list;
-
 	for (const auto& lib : g_prx_list)
 	{
-		if (set.count(lib.first))
-		{
-			continue;
-		}
+		// -1: Override LLE
+		// 1: Override HLE
+		// 0: No override
+		const int res = static_cast<int>(set.count(std::string(lib.first) + ":hle") - set.count(std::string(lib.first) + ":lle"));
 
-		QListWidgetItem* item = new QListWidgetItem(qsv(lib.first), ui->lleList);
+		const auto list = (lib.second ? ui->hleList : ui->lleList);
+
+		QListWidgetItem* item = new QListWidgetItem(qsv(lib.first), list);
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
-		item->setCheckState(Qt::Unchecked); // AND initialize check state
-		ui->lleList->addItem(item);
+
+		// If no override selected (res=0), checkbox is unchecked
+		// Otherwise if the override does not match the default behaviour, checkbox is checked 
+		item->setCheckState(res && res != (lib.second * 2 - 1) ? Qt::Checked : Qt::Unchecked); // AND initialize check state
+
+		item->setToolTip(!lib.second ? tooltips.settings.lib_default_lle :
+			(lib.first.starts_with("libsysutil") ? tr("Do not touch libsysutil libs, development purposes only, will cause game crashes.") : tooltips.settings.lib_default_hle));
+
+		list->addItem(item);
 	}
 
+	SubscribeTooltip(ui->lleList, tooltips.settings.lle_list);
+	SubscribeTooltip(ui->hleList, tooltips.settings.hle_list);
 	ui->searchBox->setPlaceholderText(tr("Search libraries", "Library search box"));
 
-	auto on_lib_button_clicked = [this](int id)
-	{
-		const bool enableLibs = id != static_cast<int>(lib_loading_type::liblv2only);
-		ui->searchBox->setEnabled(enableLibs);
-		ui->lleList->setEnabled(enableLibs);
-	};
-
-	auto on_search_box_text_changed = [this](QString text)
+	auto on_lib_state_changed = [this](QString text)
 	{
 		const QString search_term = text.toLower();
-		std::vector<QListWidgetItem*> items;
+		std::vector<QListWidgetItem*> items, items2;
 
-		// duplicate current items, we need clones to preserve checkstates
-		for (int i = 0; i < ui->lleList->count(); i++)
+		// Take current items
+		while (ui->lleList->count())
 		{
-			items.push_back(ui->lleList->item(i)->clone());
+			items.push_back(ui->lleList->takeItem(0));
+		}
+
+		while (ui->hleList->count())
+		{
+			items2.push_back(ui->hleList->takeItem(0));
 		}
 
 		// sort items: checked items first then alphabetical order
-		std::sort(items.begin(), items.end(), [](QListWidgetItem *i1, QListWidgetItem *i2)
+		const auto func = [](QListWidgetItem *i1, QListWidgetItem *i2)
 		{
 			return (i1->checkState() != i2->checkState()) ? (i1->checkState() > i2->checkState()) : (i1->text() < i2->text());
-		});
-
-		// refill library list
-		ui->lleList->clear();
+		};
+		
+		std::sort(items.begin(), items.end(), func);
+		std::sort(items2.begin(), items2.end(), func);
 
 		for (uint i = 0; i < items.size(); i++)
 		{
@@ -1092,11 +1088,35 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			// only show items filtered for search text
 			ui->lleList->setRowHidden(i, !items[i]->text().contains(search_term));
 		}
+
+		for (uint i = 0; i < items2.size(); i++)
+		{
+			ui->hleList->addItem(items2[i]);
+
+			// only show items filtered for search text
+			ui->hleList->setRowHidden(i, !items2[i]->text().contains(search_term));
+		}
 	};
 
+	// Sort libs 
+	on_lib_state_changed({});
+
 	// Events
-	connect(lib_mode_bg, &QButtonGroup::idClicked, on_lib_button_clicked);
-	connect(ui->searchBox, &QLineEdit::textChanged, on_search_box_text_changed);
+	connect(ui->searchBox, &QLineEdit::textChanged, on_lib_state_changed);
+	connect(ui->resetLleList, &QAbstractButton::clicked, [this, on_lib_state_changed]()
+	{
+		for (int i = 0; i < ui->lleList->count(); i++)
+		{
+			ui->lleList->item(i)->setCheckState(Qt::Unchecked);
+		}
+
+		for (int i = 0; i < ui->hleList->count(); i++)
+		{
+			ui->hleList->item(i)->setCheckState(Qt::Unchecked);
+		}
+
+		on_lib_state_changed(ui->searchBox->text());
+	});
 
 	// enable multiselection (there must be a better way)
 	connect(ui->lleList, &QListWidget::itemChanged, [this](QListWidgetItem* item)
@@ -1107,10 +1127,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	});
 
-	if (const int lib_mode_button_id = lib_mode_bg->checkedId(); lib_mode_button_id >= 0)
+	connect(ui->hleList, &QListWidget::itemChanged, [this](QListWidgetItem* item)
 	{
-		on_lib_button_clicked(lib_mode_button_id);
-	}
+		for (auto cb : ui->hleList->selectedItems())
+		{
+			cb->setCheckState(item->checkState());
+		}
+	});
 
 	//    ______                 _       _               _______    _
 	//   |  ____|               | |     | |             |__   __|  | |

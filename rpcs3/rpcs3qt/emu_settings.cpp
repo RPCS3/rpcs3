@@ -603,6 +603,7 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 	}
 
 	const QString selected    = qstr(GetSetting(type));
+	const QString def         = qstr(GetSettingDefault(type));
 	const QStringList options = GetSettingOptions(type);
 
 	if (button_group->buttons().count() < options.size())
@@ -611,15 +612,23 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 		return;
 	}
 
+	bool found = false;
+	int def_pos = -1;
+
 	for (int i = 0; i < options.count(); i++)
 	{
 		const QString localized_setting = GetLocalizedSetting(options[i], type, i);
 
 		button_group->button(i)->setText(localized_setting);
 
-		if (options[i] == selected)
+		if (!found && options[i] == selected)
 		{
+			found = true;
 			button_group->button(i)->setChecked(true);
+		}
+		else if (def_pos == -1 && options[i] == def)
+		{
+			def_pos = i;
 		}
 
 		connect(button_group->button(i), &QAbstractButton::clicked, [=, this]()
@@ -627,16 +636,27 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 			SetSetting(type, sstr(options[i]));
 		});
 	}
+
+	if (!found)
+	{
+		ensure(def_pos >= 0);
+
+		cfg_log.error("EnhanceRadioButton '%s' tried to set an invalid value: %s. Setting to default: %s.", cfg_adapter::get_setting_name(type), sstr(selected), sstr(def));
+		m_broken_types.insert(type);
+
+		// Select the default option on invalid setting string
+		button_group->button(def_pos)->setChecked(true);
+	}
 }
 
-std::vector<std::string> emu_settings::GetLoadedLibraries()
+std::vector<std::string> emu_settings::GetLibrariesControl()
 {
-	return m_currentSettings["Core"]["Load libraries"].as<std::vector<std::string>, std::initializer_list<std::string>>({});
+	return m_currentSettings["Core"]["Libraries Control"].as<std::vector<std::string>, std::initializer_list<std::string>>({});
 }
 
 void emu_settings::SaveSelectedLibraries(const std::vector<std::string>& libs)
 {
-	m_currentSettings["Core"]["Load libraries"] = libs;
+	m_currentSettings["Core"]["Libraries Control"] = libs;
 }
 
 QStringList emu_settings::GetSettingOptions(emu_settings_type type) const
@@ -858,16 +878,6 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case screen_quadrant::top_right: return tr("Top Right", "Performance overlay position");
 		case screen_quadrant::bottom_left: return tr("Bottom Left", "Performance overlay position");
 		case screen_quadrant::bottom_right: return tr("Bottom Right", "Performance overlay position");
-		}
-		break;
-	case emu_settings_type::LibLoadOptions:
-		switch (static_cast<lib_loading_type>(index))
-		{
-		case lib_loading_type::manual: return tr("Manually load selected libraries", "Libraries");
-		case lib_loading_type::hybrid: return tr("Load automatic and manual selection", "Libraries");
-		case lib_loading_type::liblv2only: return tr("Load liblv2.sprx only", "Libraries");
-		case lib_loading_type::liblv2both: return tr("Load liblv2.sprx and manual selection", "Libraries");
-		case lib_loading_type::liblv2list: return tr("Load liblv2.sprx and strict selection", "Libraries");
 		}
 		break;
 	case emu_settings_type::PPUDecoder:

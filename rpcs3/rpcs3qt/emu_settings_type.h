@@ -10,7 +10,6 @@ enum class emu_settings_type
 	// Core
 	PPUDecoder,
 	SPUDecoder,
-	LibLoadOptions,
 	HookStaticFuncs,
 	EnableThreadScheduler,
 	LowerSPUThreadPrio,
@@ -156,7 +155,6 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	// Core Tab
 	{ emu_settings_type::PPUDecoder,               { "Core", "PPU Decoder"}},
 	{ emu_settings_type::SPUDecoder,               { "Core", "SPU Decoder"}},
-	{ emu_settings_type::LibLoadOptions,           { "Core", "Lib Loader"}},
 	{ emu_settings_type::HookStaticFuncs,          { "Core", "Hook static functions"}},
 	{ emu_settings_type::EnableThreadScheduler,    { "Core", "Enable thread scheduler"}},
 	{ emu_settings_type::LowerSPUThreadPrio,       { "Core", "Lower SPU thread priority"}},
