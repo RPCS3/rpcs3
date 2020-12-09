@@ -417,3 +417,46 @@ u32 utils::get_thread_count()
 	return ::sysconf(_SC_NPROCESSORS_ONLN);
 #endif
 }
+
+u32 utils::get_cpu_family()
+{
+	static const u32 g_value = []()
+	{
+		const u32 reg_value = get_cpuid(0x00000001, 0)[0]; // Processor feature info
+		const u32 base_value = (reg_value >> 8) & 0xF;
+
+		if (base_value == 0xF) [[likely]]
+		{
+			const u32 extended_value = (reg_value >> 20) & 0xFF;
+			return base_value + extended_value;
+		}
+		else
+		{
+			return base_value;
+		}
+	}();
+
+	return g_value;
+}
+
+u32 utils::get_cpu_model()
+{
+	static const u32 g_value = []()
+	{
+		const u32 reg_value = get_cpuid(0x00000001, 0)[0]; // Processor feature info
+		const u32 base_value = (reg_value >> 4) & 0xF;
+
+		if (const auto base_family_id = (reg_value >> 8) & 0xF;
+			base_family_id == 0x6 || base_family_id == 0xF) [[likely]]
+		{
+			const u32 extended_value = (reg_value >> 16) & 0xF;
+			return base_value + (extended_value << 4);
+		}
+		else
+		{
+			return base_value;
+		}
+	}();
+
+	return g_value;
+}
