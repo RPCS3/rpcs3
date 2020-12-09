@@ -1409,6 +1409,41 @@ private:
 		VkImageAspectFlags m_storage_aspect = 0;
 
 		rsx::format_class m_format_class = RSX_FORMAT_CLASS_UNDEFINED;
+
+		void validate(const vk::render_device& dev, const VkImageCreateInfo& info) const
+		{
+			const auto gpu_limits = dev.gpu().get_limits();
+			uint32_t longest_dim, dim_limit;
+
+			switch (info.imageType)
+			{
+			case VK_IMAGE_TYPE_1D:
+				longest_dim = info.extent.width;
+				dim_limit = gpu_limits.maxImageDimension1D;
+				break;
+			case VK_IMAGE_TYPE_2D:
+				longest_dim = std::max(info.extent.width, info.extent.height);
+				dim_limit = (info.flags == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)? gpu_limits.maxImageDimensionCube : gpu_limits.maxImageDimension2D;
+				break;
+			case VK_IMAGE_TYPE_3D:
+				longest_dim = std::max({ info.extent.width, info.extent.height, info.extent.depth });
+				dim_limit = gpu_limits.maxImageDimension3D;
+				break;
+			default:
+				fmt::throw_exception("Unreachable" HERE);
+			}
+
+			if (longest_dim > dim_limit)
+			{
+				// Longest dimension exceeds the limit. Can happen when using MSAA + very high resolution scaling
+				// Just kill the application at this point.
+				fmt::throw_exception(
+					"The renderer requested an image larger than the limit allowed for by your GPU hardware. "
+					"Turn down your resolution scale and/or disable MSAA to fit within the image budget."
+					HERE);
+			}
+		}
+
 	public:
 		VkImage value = VK_NULL_HANDLE;
 		VkComponentMapping native_component_map = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
@@ -1445,6 +1480,7 @@ private:
 			info.initialLayout = initial_layout;
 			info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+			validate(dev, info);
 			CHECK_RESULT(vkCreateImage(m_device, &info, nullptr, &value));
 
 			VkMemoryRequirements memory_req;
