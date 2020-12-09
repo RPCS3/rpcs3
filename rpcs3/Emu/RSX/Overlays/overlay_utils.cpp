@@ -100,7 +100,7 @@ void process_multibyte(const std::string s, F&& func)
 			u_code = (u32(code & 0x7) << 18) | (u32(s[index + 1] & 0x3F) << 12) | (u32(s[index + 2] & 0x3F) << 6) | u32(s[index + 3] & 0x3F);
 			break;
 		default:
-			fmt::throw_exception("Unreachable" HERE);
+			fmt::throw_exception("Unreachable");
 		}
 
 		index += extra_bytes;

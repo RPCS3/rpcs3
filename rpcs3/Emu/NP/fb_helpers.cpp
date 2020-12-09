@@ -199,7 +199,7 @@ u16 np_handler::RoomDataInternal_to_SceNpMatching2RoomDataInternal(const RoomDat
 					found                  = true;
 				}
 			}
-			ASSERT(found);
+			ensure(found);
 		}
 
 		member_info->natType  = member->natType();
@@ -377,7 +377,7 @@ void np_handler::RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(const RoomMess
 		break;
 	}
 	case SCE_NP_MATCHING2_CASTTYPE_MULTICAST_TEAM: sce_mi->dst->multicastTargetTeamId = mi->dst()->Get(0); break;
-	default: ASSERT(false);
+	default: ensure(false);
 	}
 
 	if (auto src_member = mi->srcMember())

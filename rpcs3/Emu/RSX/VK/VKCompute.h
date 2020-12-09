@@ -899,7 +899,7 @@ namespace vk
 				}
 				else
 				{
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 				}
 			}
 

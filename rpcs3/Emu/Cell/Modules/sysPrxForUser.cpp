@@ -141,7 +141,7 @@ error_code cellSysconfPs1emu_EFDDAF6C()
 
 error_code sys_lv2coredump_D725F320()
 {
-	fmt::raw_error(__func__);
+	fmt::throw_exception("Unknown, unimplemented.");
 }
 
 error_code sys_crash_dump_get_user_log_area(u8 index, vm::ptr<sys_crash_dump_log_area_info_t> entry)

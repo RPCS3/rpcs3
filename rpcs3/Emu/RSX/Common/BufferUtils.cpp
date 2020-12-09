@@ -798,7 +798,7 @@ namespace
 				}
 				else
 				{
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 				}
 
 				remaining -= written;
@@ -986,7 +986,7 @@ namespace
 				}
 				else
 				{
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 				}
 			}
 
@@ -1150,7 +1150,7 @@ bool is_primitive_native(rsx::primitive_type draw_mode)
 		break;
 	}
 
-	fmt::throw_exception("Wrong primitive type" HERE);
+	fmt::throw_exception("Wrong primitive type");
 }
 
 bool is_primitive_disjointed(rsx::primitive_type draw_mode)
@@ -1196,7 +1196,7 @@ u32 get_index_type_size(rsx::index_array_type type)
 	case rsx::index_array_type::u16: return sizeof(u16);
 	case rsx::index_array_type::u32: return sizeof(u32);
 	}
-	fmt::throw_exception("Wrong index type" HERE);
+	fmt::throw_exception("Wrong index type");
 }
 
 void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned count)
@@ -1237,12 +1237,12 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	case rsx::primitive_type::line_strip:
 	case rsx::primitive_type::triangles:
 	case rsx::primitive_type::triangle_strip:
-		fmt::throw_exception("Native primitive type doesn't require expansion" HERE);
+		fmt::throw_exception("Native primitive type doesn't require expansion");
 	case rsx::primitive_type::invalid:
 		break;
 	}
 
-	fmt::throw_exception("Tried to load invalid primitive type" HERE);
+	fmt::throw_exception("Tried to load invalid primitive type");
 }
 
 
@@ -1288,7 +1288,7 @@ namespace
 			return expand_indexed_quads<T>(src, dst, restart_index_enabled, restart_index);
 		}
 		default:
-			fmt::throw_exception("Unknown draw mode (0x%x)" HERE, static_cast<u8>(draw_mode));
+			fmt::throw_exception("Unknown draw mode (0x%x)", static_cast<u8>(draw_mode));
 		}
 	}
 }
@@ -1311,7 +1311,7 @@ std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<std::byte> 
 			as_const_span<const be_t<u32>>(src_ptr), draw_mode, restart_index_enabled, restart_index, expands);
 	}
 	default:
-		fmt::throw_exception("Unreachable" HERE);
+		fmt::throw_exception("Unreachable");
 	}
 }
 

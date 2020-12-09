@@ -95,7 +95,7 @@ error_code cellRudpInit(vm::ptr<CellRudpAllocator> allocator)
 		{
 			if (!vm::dealloc(ptr.addr(), vm::main))
 			{
-				fmt::throw_exception("Memory deallocation failed (ptr=0x%x)" HERE, ptr);
+				fmt::throw_exception("Memory deallocation failed (ptr=0x%x)", ptr);
 			}
 		};
 	}

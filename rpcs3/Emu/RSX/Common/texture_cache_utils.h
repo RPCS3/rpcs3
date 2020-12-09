@@ -103,7 +103,7 @@ namespace rsx
 			else if (cause == deferred_write)
 				return write;
 			else
-				fmt::throw_exception("Unreachable " HERE);
+				fmt::throw_exception("Unreachable");
 		}
 
 		constexpr invalidation_cause defer() const
@@ -114,7 +114,7 @@ namespace rsx
 			else if (cause == write)
 				return deferred_write;
 			else
-				fmt::throw_exception("Unreachable " HERE);
+				fmt::throw_exception("Unreachable");
 		}
 
 		constexpr invalidation_cause() : cause(invalid) {}
@@ -282,7 +282,7 @@ namespace rsx
 				next_array();
 			}
 
-			ASSERT(m_capacity > 0 && m_array_idx < array_size && m_data_it != m_data.end());
+			ensure(m_capacity > 0 && m_array_idx < array_size && m_data_it != m_data.end());
 
 			value_type *dest = &((*m_data_it)[m_array_idx++]);
 			new (dest) value_type(std::forward<Args>(args)...);
@@ -457,7 +457,7 @@ namespace rsx
 			(void)section; // silence unused warning without _AUDIT
 			AUDIT(!section.is_locked());
 			u32 prev_locked = locked_count--;
-			ASSERT(prev_locked > 0);
+			ensure(prev_locked > 0);
 		}
 
 		inline void on_section_range_valid(section_storage_type &section)
@@ -493,7 +493,7 @@ namespace rsx
 			AUDIT(!section.exists());
 
 			u32 prev_exists = exists_count--;
-			ASSERT(prev_exists > 0);
+			ensure(prev_exists > 0);
 
 			if (prev_exists == 1)
 			{
@@ -504,7 +504,7 @@ namespace rsx
 		void on_section_released(const section_storage_type &/*section*/)
 		{
 			u32 prev_unreleased = unreleased_count--;
-			ASSERT(prev_unreleased > 0);
+			ensure(prev_unreleased > 0);
 		}
 
 		void on_section_unreleased(const section_storage_type &/*section*/)
@@ -660,7 +660,7 @@ namespace rsx
 						if (!tex.is_unreleased())
 							continue;
 
-						ASSERT(!tex.is_locked());
+						ensure(!tex.is_locked());
 
 						tex.destroy();
 					}
@@ -699,7 +699,7 @@ namespace rsx
 							continue;
 						}
 
-						ASSERT(!tex.is_locked() && tex.exists());
+						ensure(!tex.is_locked() && tex.exists());
 						tex.destroy();
 						any_released = true;
 					}
@@ -725,7 +725,7 @@ namespace rsx
 		void on_section_released(const section_storage_type &/*section*/)
 		{
 			u32 prev_unreleased = m_unreleased_texture_objects--;
-			ASSERT(prev_unreleased > 0);
+			ensure(prev_unreleased > 0);
 		}
 
 		void on_section_unreleased(const section_storage_type &/*section*/)
@@ -742,7 +742,7 @@ namespace rsx
 		{
 			u64 size = section.get_section_size();
 			u64 prev_size = m_texture_memory_in_use.fetch_sub(size);
-			ASSERT(prev_size >= size);
+			ensure(prev_size >= size);
 		}
 
 		void on_ranged_block_first_section_created(block_type& block)
@@ -1140,8 +1140,8 @@ namespace rsx
 			triggered_exists_callbacks = false;
 
 			AUDIT(valid_range());
-			ASSERT(!is_locked());
-			ASSERT(is_managed());
+			ensure(!is_locked());
+			ensure(is_managed());
 
 			// Set dirty
 			set_dirty(true);
@@ -1445,7 +1445,7 @@ namespace rsx
 		{
 			AUDIT(synchronized);
 
-			ASSERT(real_pitch > 0);
+			ensure(real_pitch > 0);
 
 			// Calculate valid range
 			const auto valid_range  = get_confirmed_range();
@@ -1481,7 +1481,7 @@ namespace rsx
 			// Obtain pointers to the source and destination memory regions
 			u8 *src = static_cast<u8*>(derived()->map_synchronized(mapped_offset, mapped_length));
 			u32 dst = valid_range.start;
-			ASSERT(src != nullptr);
+			ensure(src != nullptr);
 
 			// Copy from src to dst
 			if (real_pitch >= rsx_pitch || valid_length <= rsx_pitch)
@@ -1516,7 +1516,7 @@ namespace rsx
 			if (flushed) return;
 
 			// Sanity checks
-			ASSERT(exists());
+			ensure(exists());
 			AUDIT(is_locked());
 
 			// If we are fully inside the flush exclusions regions, we just mark ourselves as flushed and return
@@ -1529,7 +1529,7 @@ namespace rsx
 			}
 
 			// NOTE: Hard faults should have been pre-processed beforehand
-			ASSERT(synchronized);
+			ensure(synchronized);
 
 			// Copy flush result to guest memory
 			imp_flush();

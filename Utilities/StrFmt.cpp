@@ -242,13 +242,32 @@ void fmt_class_string<v128>::format(std::string& out, u64 arg)
 	fmt::append(out, "0x%016llx%016llx", vec._u64[1], vec._u64[0]);
 }
 
-namespace fmt
+template <>
+void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
 {
-	void raw_error(const char* msg)
+	const src_loc& loc = get_object(arg);
+
+	if (loc.col != umax)
 	{
-		thread_ctrl::emergency_exit(msg);
+		fmt::append(out, "\n(in file %s:%s[:%s]", loc.file, loc.line, loc.col);
+	}
+	else
+	{
+		fmt::append(out, "\n(in file %s:%s", loc.file, loc.line);
 	}
 
+	if (loc.func && *loc.func)
+	{
+		fmt::append(out, ", in function %s)", loc.func);
+	}
+	else
+	{
+		out += ')';
+	}
+}
+
+namespace fmt
+{
 	void raw_verify_error(const src_loc& loc)
 	{
 		std::string out{"Verification failed"};
@@ -266,24 +285,7 @@ namespace fmt
 		}
 #endif
 
-		if (loc.col != umax)
-		{
-			fmt::append(out, "\n(in file %s:%s[:%s]", loc.file, loc.line, loc.col);
-		}
-		else
-		{
-			fmt::append(out, "\n(in file %s:%s", loc.file, loc.line);
-		}
-
-		if (loc.func && *loc.func)
-		{
-			fmt::append(out, ", in function %s)", loc.func);
-		}
-		else
-		{
-			out += ')';
-		}
-
+		fmt::append(out, "%s", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
@@ -298,31 +300,15 @@ namespace fmt
 			out += ")";
 		}
 
-		if (loc.col != umax)
-		{
-			fmt::append(out, "\n(in file %s:%s[:%s]", loc.file, loc.line, loc.col);
-		}
-		else
-		{
-			fmt::append(out, "\n(in file %s:%s", loc.file, loc.line);
-		}
-
-		if (loc.func && *loc.func)
-		{
-			fmt::append(out, ", in function %s)", loc.func);
-		}
-		else
-		{
-			out += ')';
-		}
-
+		fmt::append(out, "%s", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
-	void raw_throw_exception(const char* fmt, const fmt_type_info* sup, const u64* args)
+	void raw_throw_exception(const src_loc& loc, const char* fmt, const fmt_type_info* sup, const u64* args)
 	{
 		std::string out;
 		raw_append(out, fmt, sup, args);
+		fmt::append(out, "%s", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 

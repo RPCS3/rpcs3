@@ -302,7 +302,7 @@ public:
 			case 3:
 				return other_var + ".xyz";
 			default:
-				fmt::throw_exception("Unreachable" HERE);
+				fmt::throw_exception("Unreachable");
 			}
 		}
 		else
@@ -366,7 +366,7 @@ struct vertex_reg_info
 		case xall:
 			return (val && val != check_mask_value);
 		default:
-			fmt::throw_exception("Unreachable" HERE);
+			fmt::throw_exception("Unreachable");
 		}
 	}
 

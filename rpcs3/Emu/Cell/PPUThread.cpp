@@ -752,7 +752,7 @@ void ppu_thread::cpu_task()
 		{
 			if (arg >= 32)
 			{
-				fmt::throw_exception("Invalid ppu_cmd::set_gpr arg (0x%x)" HERE, arg);
+				fmt::throw_exception("Invalid ppu_cmd::set_gpr arg (0x%x)", arg);
 			}
 
 			gpr[arg % 32] = cmd_get(1).as<u64>();
@@ -763,7 +763,7 @@ void ppu_thread::cpu_task()
 		{
 			if (arg > 8)
 			{
-				fmt::throw_exception("Unsupported ppu_cmd::set_args size (0x%x)" HERE, arg);
+				fmt::throw_exception("Unsupported ppu_cmd::set_args size (0x%x)", arg);
 			}
 
 			for (u32 i = 0; i < arg; i++)
@@ -814,7 +814,7 @@ void ppu_thread::cpu_task()
 		}
 		default:
 		{
-			fmt::throw_exception("Unknown ppu_cmd(0x%x)" HERE, static_cast<u32>(type));
+			fmt::throw_exception("Unknown ppu_cmd(0x%x)", static_cast<u32>(type));
 		}
 		}
 	}
@@ -1024,8 +1024,8 @@ cmd64 ppu_thread::cmd_wait()
 
 be_t<u64>* ppu_thread::get_stack_arg(s32 i, u64 align)
 {
-	if (align != 1 && align != 2 && align != 4 && align != 8 && align != 16) fmt::throw_exception("Unsupported alignment: 0x%llx" HERE, align);
-	return vm::_ptr<u64>(vm::cast((gpr[1] + 0x30 + 0x8 * (i - 1)) & (0 - align), HERE));
+	if (align != 1 && align != 2 && align != 4 && align != 8 && align != 16) fmt::throw_exception("Unsupported alignment: 0x%llx", align);
+	return vm::_ptr<u64>(vm::cast((gpr[1] + 0x30 + 0x8 * (i - 1)) & (0 - align)));
 }
 
 void ppu_thread::fast_call(u32 addr, u32 rtoc)
@@ -1107,13 +1107,13 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 	{
 		ppu_thread& context = static_cast<ppu_thread&>(*cpu);
 
-		const u32 old_pos = vm::cast(context.gpr[1], HERE);
+		const u32 old_pos = vm::cast(context.gpr[1]);
 		context.gpr[1] -= align(size + 4, 8); // room minimal possible size
 		context.gpr[1] &= ~(u64{align_v} - 1); // fix stack alignment
 
 		if (old_pos >= context.stack_addr && old_pos < context.stack_addr + context.stack_size && context.gpr[1] < context.stack_addr)
 		{
-			fmt::throw_exception("Stack overflow (size=0x%x, align=0x%x, SP=0x%llx, stack=*0x%x)" HERE, size, align_v, old_pos, context.stack_addr);
+			fmt::throw_exception("Stack overflow (size=0x%x, align=0x%x, SP=0x%llx, stack=*0x%x)", size, align_v, old_pos, context.stack_addr);
 		}
 		else
 		{
@@ -1124,7 +1124,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 		}
 	}
 
-	fmt::throw_exception("Invalid thread" HERE);
+	fmt::throw_exception("Invalid thread");
 }
 
 void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
@@ -1143,7 +1143,7 @@ void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
 		return;
 	}
 
-	ppu_log.error("Invalid thread" HERE);
+	ppu_log.error("Invalid thread");
 }
 
 extern u64 get_timebased_time();
@@ -1174,7 +1174,7 @@ void ppu_trap(ppu_thread& ppu, u64 addr)
 	// If stubbing is enabled, check current instruction and the following
 	if (!add || !vm::check_addr(ppu.cia, vm::page_executable) || !vm::check_addr(ppu.cia + add, vm::page_executable))
 	{
-		fmt::throw_exception("PPU Trap!" HERE);
+		fmt::throw_exception("PPU Trap!");
 	}
 
 	ppu_log.error("PPU Trap: Stubbing %d instructions %s.", std::abs(static_cast<s32>(add) / 4), add >> 31 ? "backwards" : "forwards");
@@ -1212,7 +1212,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	if (addr % sizeof(T))
 	{
-		fmt::throw_exception("PPU %s: Unaligned address: 0x%08x" HERE, sizeof(T) == 4 ? "LWARX" : "LDARX", addr);
+		fmt::throw_exception("PPU %s: Unaligned address: 0x%08x", sizeof(T) == 4 ? "LWARX" : "LDARX", addr);
 	}
 
 	// Always load aligned 64-bit value
@@ -1688,7 +1688,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	if (addr % sizeof(T))
 	{
-		fmt::throw_exception("PPU %s: Unaligned address: 0x%08x" HERE, sizeof(T) == 4 ? "STWCX" : "STDCX", addr);
+		fmt::throw_exception("PPU %s: Unaligned address: 0x%08x", sizeof(T) == 4 ? "STWCX" : "STDCX", addr);
 	}
 
 	auto& data = vm::_ref<atomic_be_t<u64>>(addr & -8);

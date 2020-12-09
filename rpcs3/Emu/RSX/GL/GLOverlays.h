@@ -544,7 +544,7 @@ namespace gl
 					primitives = GL_LINE_STRIP;
 					break;
 				default:
-					fmt::throw_exception("Unexpected primitive type %d" HERE, static_cast<s32>(type));
+					fmt::throw_exception("Unexpected primitive type %d", static_cast<s32>(type));
 			}
 		}
 

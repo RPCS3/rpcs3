@@ -1410,7 +1410,7 @@ namespace gl
 			switch (target)
 			{
 			default:
-				fmt::throw_exception("Invalid image target 0x%X" HERE, target);
+				fmt::throw_exception("Invalid image target 0x%X", target);
 			case GL_TEXTURE_1D:
 				glTexStorage1D(target, mipmaps, sized_format, width);
 				height = depth = 1;
@@ -1495,7 +1495,7 @@ namespace gl
 
 				if (!m_pitch)
 				{
-					fmt::throw_exception("Unhandled GL format 0x%X" HERE, sized_format);
+					fmt::throw_exception("Unhandled GL format 0x%X", sized_format);
 				}
 
 				if (format_class == RSX_FORMAT_CLASS_UNDEFINED)
@@ -1677,7 +1677,7 @@ namespace gl
 		void copy_from(buffer &buf, u32 gl_format_type, u32 offset, u32 length)
 		{
 			if (get_target() != target::textureBuffer)
-				fmt::throw_exception("OpenGL error: texture cannot copy from buffer" HERE);
+				fmt::throw_exception("OpenGL error: texture cannot copy from buffer");
 
 			DSA_CALL(TextureBufferRange, m_id, GL_TEXTURE_BUFFER, gl_format_type, buf.id(), offset, length);
 		}
@@ -2253,7 +2253,7 @@ public:
 						break;
 					}
 
-					fs::file(fs::get_cache_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str);
+					fs::file(fs::get_cache_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str, length);
 				}
 
 				glShaderSource(m_id, 1, &str, &length);

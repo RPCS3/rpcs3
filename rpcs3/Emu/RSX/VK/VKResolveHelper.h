@@ -236,7 +236,7 @@ namespace vk
 			switch (msaa_image->samples())
 			{
 			case 1:
-				fmt::throw_exception("MSAA input not multisampled!" HERE);
+				fmt::throw_exception("MSAA input not multisampled!");
 			case 2:
 				samples_x = 2;
 				samples_y = 1;
@@ -245,7 +245,7 @@ namespace vk
 				samples_x = samples_y = 2;
 				break;
 			default:
-				fmt::throw_exception("Unsupported sample count %d" HERE, msaa_image->samples());
+				fmt::throw_exception("Unsupported sample count %d", msaa_image->samples());
 			}
 
 			static_parameters[0] = samples_x;

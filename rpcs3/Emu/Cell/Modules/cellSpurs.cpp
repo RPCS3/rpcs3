@@ -613,13 +613,13 @@ s32 _spurs::detach_lv2_eq(vm::ptr<CellSpurs> spurs, u8 spuPort, bool spursCreate
 
 void _spurs::handler_wait_ready(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 {
-	ASSERT(ppu_execute<&sys_lwmutex_lock>(ppu, spurs.ptr(&CellSpurs::mutex), 0) == 0);
+	ensure(ppu_execute<&sys_lwmutex_lock>(ppu, spurs.ptr(&CellSpurs::mutex), 0) == 0);
 
 	while (true)
 	{
 		if (spurs->handlerExiting)
 		{
-			ASSERT(ppu_execute<&sys_lwmutex_unlock>(ppu, spurs.ptr(&CellSpurs::mutex)) == 0);
+			ensure(ppu_execute<&sys_lwmutex_unlock>(ppu, spurs.ptr(&CellSpurs::mutex)) == 0);
 
 			return sys_ppu_thread_exit(ppu, 0);
 		}
@@ -676,14 +676,14 @@ void _spurs::handler_wait_ready(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 		spurs->handlerWaiting = 1;
 		if (spurs->handlerDirty == 0)
 		{
-			ASSERT(ppu_execute<&sys_lwcond_wait>(ppu, spurs.ptr(&CellSpurs::cond), 0) == 0);
+			ensure(ppu_execute<&sys_lwcond_wait>(ppu, spurs.ptr(&CellSpurs::cond), 0) == 0);
 		}
 
 		spurs->handlerWaiting = 0;
 	}
 
 	// If we reach here then a runnable workload was found
-	ASSERT(ppu_execute<&sys_lwmutex_unlock>(ppu, spurs.ptr(&CellSpurs::mutex)) == 0);
+	ensure(ppu_execute<&sys_lwmutex_unlock>(ppu, spurs.ptr(&CellSpurs::mutex)) == 0);
 }
 
 void _spurs::handler_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
@@ -700,7 +700,7 @@ void _spurs::handler_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 			_spurs::handler_wait_ready(ppu, spurs);
 		}
 
-		ASSERT(sys_spu_thread_group_start(ppu, spurs->spuTG) == 0);
+		ensure(sys_spu_thread_group_start(ppu, spurs->spuTG) == 0);
 
 		if (s32 rc = sys_spu_thread_group_join(ppu, spurs->spuTG, vm::null, vm::null); rc + 0u != CELL_EFAULT)
 		{
@@ -709,7 +709,7 @@ void _spurs::handler_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 				return sys_ppu_thread_exit(ppu, 0);
 			}
 
-			ASSERT(rc + 0u == CELL_EFAULT);
+			ensure(rc + 0u == CELL_EFAULT);
 		}
 
 		if ((spurs->flags1 & SF1_EXIT_IF_NO_WORK) == 0)
@@ -813,7 +813,7 @@ void _spurs::event_helper_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 	while (true)
 	{
-		ASSERT(sys_event_queue_receive(ppu, spurs->eventQueue, vm::null, 0) == 0);
+		ensure(sys_event_queue_receive(ppu, spurs->eventQueue, vm::null, 0) == 0);
 
 		const u64 event_src   = ppu.gpr[4];
 		const u64 event_data1 = ppu.gpr[5];
@@ -862,26 +862,26 @@ void _spurs::event_helper_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 				{
 					if (shutdownMask & (0x80000000u >> wid))
 					{
-						ASSERT(_spurs::wakeup_shutdown_completion_waiter(ppu, spurs, wid) == 0);
+						ensure(_spurs::wakeup_shutdown_completion_waiter(ppu, spurs, wid) == 0);
 					}
 
 					if ((spurs->flags1 & SF1_32_WORKLOADS) && (shutdownMask & (0x8000 >> wid)))
 					{
-						ASSERT(_spurs::wakeup_shutdown_completion_waiter(ppu, spurs, wid + 0x10) == 0);
+						ensure(_spurs::wakeup_shutdown_completion_waiter(ppu, spurs, wid + 0x10) == 0);
 					}
 				}
 			}
 			else if (data0 == 2)
 			{
-				ASSERT(sys_semaphore_post(ppu, static_cast<u32>(spurs->semPrv), 1) == 0);
+				ensure(sys_semaphore_post(ppu, static_cast<u32>(spurs->semPrv), 1) == 0);
 			}
 			else if (data0 == 3)
 			{
-				ASSERT(_spurs::invoke_event_handlers(ppu, spurs.ptr(&CellSpurs::eventPortMux)) == 0);
+				ensure(_spurs::invoke_event_handlers(ppu, spurs.ptr(&CellSpurs::eventPortMux)) == 0);
 			}
 			else
 			{
-				fmt::throw_exception("data0=0x%x" HERE, data0);
+				fmt::throw_exception("data0=0x%x", data0);
 			}
 		}
 	}
@@ -971,7 +971,7 @@ s32 _spurs::finalize_spu(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 	{
 		while (true)
 		{
-			ASSERT(sys_spu_thread_group_join(ppu, spurs->spuTG, vm::null, vm::null) + 0u == CELL_EFAULT);
+			ensure(sys_spu_thread_group_join(ppu, spurs->spuTG, vm::null, vm::null) + 0u == CELL_EFAULT);
 
 			if (s32 rc = sys_spu_thread_group_destroy(ppu, spurs->spuTG))
 			{
@@ -980,7 +980,7 @@ s32 _spurs::finalize_spu(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 					continue;
 				}
 
-				ASSERT(rc == CELL_OK);
+				ensure(rc == CELL_OK);
 			}
 
 			break;
@@ -994,7 +994,7 @@ s32 _spurs::finalize_spu(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 		}
 	}
 
-	ASSERT(ppu_execute<&sys_spu_image_close>(ppu, spurs.ptr(&CellSpurs::spuImg)) == 0);
+	ensure(ppu_execute<&sys_spu_image_close>(ppu, spurs.ptr(&CellSpurs::spuImg)) == 0);
 
 	return CELL_OK;
 }
@@ -1018,19 +1018,19 @@ s32 _spurs::stop_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 	spurs->ppu1 = 0xFFFFFFFF;
 
-	ASSERT(sys_event_port_disconnect(ppu, spurs->eventPort) == 0);
-	ASSERT(sys_event_port_destroy(ppu, spurs->eventPort) == 0);
-	ASSERT(_spurs::detach_lv2_eq(spurs, spurs->spuPort, true) == 0);
-	ASSERT(sys_event_queue_destroy(ppu, spurs->eventQueue, SYS_EVENT_QUEUE_DESTROY_FORCE) == 0);
+	ensure(sys_event_port_disconnect(ppu, spurs->eventPort) == 0);
+	ensure(sys_event_port_destroy(ppu, spurs->eventPort) == 0);
+	ensure(_spurs::detach_lv2_eq(spurs, spurs->spuPort, true) == 0);
+	ensure(sys_event_queue_destroy(ppu, spurs->eventQueue, SYS_EVENT_QUEUE_DESTROY_FORCE) == 0);
 
 	return CELL_OK;
 }
 
 s32 _spurs::signal_to_handler_thread(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 {
-	ASSERT(ppu_execute<&sys_lwmutex_lock>(ppu, spurs.ptr(&CellSpurs::mutex), 0) == 0);
-	ASSERT(ppu_execute<&sys_lwcond_signal>(ppu, spurs.ptr(&CellSpurs::cond)) == 0);
-	ASSERT(ppu_execute<&sys_lwmutex_unlock>(ppu, spurs.ptr(&CellSpurs::mutex)) == 0);
+	ensure(ppu_execute<&sys_lwmutex_lock>(ppu, spurs.ptr(&CellSpurs::mutex), 0) == 0);
+	ensure(ppu_execute<&sys_lwcond_signal>(ppu, spurs.ptr(&CellSpurs::cond)) == 0);
+	ensure(ppu_execute<&sys_lwmutex_unlock>(ppu, spurs.ptr(&CellSpurs::mutex)) == 0);
 
 	return CELL_OK;
 }
@@ -1042,7 +1042,7 @@ s32 _spurs::join_handler_thread(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	ASSERT(sys_ppu_thread_join(ppu, static_cast<u32>(spurs->ppu0), vm::var<u64>{}) == 0);
+	ensure(sys_ppu_thread_join(ppu, static_cast<u32>(spurs->ppu0), vm::var<u64>{}) == 0);
 
 	spurs->ppu0 = 0xFFFFFFFF;
 	return CELL_OK;
@@ -1328,7 +1328,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	// Enable the default system workload if required
 	if (flags & SAF_SYSTEM_WORKLOAD_ENABLED)
 	{
-		ASSERT(_spurs::add_default_syswkl(spurs, swlPriority, swlMaxSpu, swlIsPreem) == 0);
+		ensure(_spurs::add_default_syswkl(spurs, swlPriority, swlMaxSpu, swlIsPreem) == 0);
 		return CELL_OK;
 	}
 	else if (flags & SAF_EXIT_IF_NO_WORK)
@@ -1965,7 +1965,7 @@ s32 cellSpursGetInfo(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursInfo> info)
 	info->spursHandlerThread1 = spurs->ppu1;
 	info->traceBufferSize = spurs->traceDataSize;
 
-	const auto trace_addr = vm::cast(spurs->traceBuffer.addr(), HERE);
+	const auto trace_addr = vm::cast(spurs->traceBuffer.addr());
 	info->traceBuffer = vm::addr_t{trace_addr & ~3};
 	info->traceMode = trace_addr & 3;
 
@@ -2018,7 +2018,7 @@ void _spurs::trace_status_update(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 	if (init)
 	{
 		spurs->sysSrvMessage = 0xff;
-		ASSERT(sys_semaphore_wait(ppu, static_cast<u32>(spurs->semPrv), 0) == 0);
+		ensure(sys_semaphore_wait(ppu, static_cast<u32>(spurs->semPrv), 0) == 0);
 	}
 }
 
@@ -3257,7 +3257,7 @@ s32 cellSpursEventFlagSet(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFlag
 		// Signal the PPU thread to be woken up
 		eventFlag->pendingRecvTaskEvents[ppuWaitSlot] = ppuEvents;
 
-		ASSERT(sys_event_port_send(eventFlag->eventPortId, 0, 0, 0) == 0);
+		ensure(sys_event_port_send(eventFlag->eventPortId, 0, 0, 0) == 0);
 	}
 
 	if (pendingRecv)
@@ -3271,11 +3271,11 @@ s32 cellSpursEventFlagSet(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFlag
 				vm::var<vm::ptr<CellSpursTaskset>> taskset;
 				if (eventFlag->isIwl)
 				{
-					cellSpursLookUpTasksetAddress(ppu, vm::cast(eventFlag->addr, HERE), taskset, eventFlag->waitingTaskWklId[i]);
+					cellSpursLookUpTasksetAddress(ppu, vm::cast(eventFlag->addr), taskset, eventFlag->waitingTaskWklId[i]);
 				}
 				else
 				{
-					*taskset = vm::cast(eventFlag->addr, HERE);
+					*taskset = vm::cast(eventFlag->addr);
 				}
 
 				auto rc = _cellSpursSendSignal(ppu, *taskset, eventFlag->waitingTaskId[i]);
@@ -3284,7 +3284,7 @@ s32 cellSpursEventFlagSet(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFlag
 					return CELL_SPURS_TASK_ERROR_FATAL;
 				}
 
-				ASSERT(rc == CELL_OK);
+				ensure(rc == CELL_OK);
 			}
 		}
 	}
@@ -3430,7 +3430,7 @@ s32 _spurs::event_flag_wait(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFl
 	if (recv)
 	{
 		// Block till something happens
-		ASSERT(sys_event_queue_receive(ppu, eventFlag->eventQueueId, vm::null, 0) == 0);
+		ensure(sys_event_queue_receive(ppu, eventFlag->eventQueueId, vm::null, 0) == 0);
 
 		s32 i = 0;
 		if (eventFlag->direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
@@ -3490,11 +3490,11 @@ s32 cellSpursEventFlagAttachLv2EventQueue(ppu_thread& ppu, vm::ptr<CellSpursEven
 	vm::ptr<CellSpurs> spurs;
 	if (eventFlag->isIwl == 1)
 	{
-		spurs = vm::cast(eventFlag->addr, HERE);
+		spurs = vm::cast(eventFlag->addr);
 	}
 	else
 	{
-		auto taskset = vm::ptr<CellSpursTaskset>::make(vm::cast(eventFlag->addr, HERE));
+		auto taskset = vm::ptr<CellSpursTaskset>::make(vm::cast(eventFlag->addr));
 		spurs = taskset->spurs;
 	}
 
@@ -3583,11 +3583,11 @@ s32 cellSpursEventFlagDetachLv2EventQueue(ppu_thread& ppu, vm::ptr<CellSpursEven
 	vm::ptr<CellSpurs> spurs;
 	if (eventFlag->isIwl == 1)
 	{
-		spurs = vm::cast(eventFlag->addr, HERE);
+		spurs = vm::cast(eventFlag->addr);
 	}
 	else
 	{
-		auto taskset = vm::ptr<CellSpursTaskset>::make(vm::cast(eventFlag->addr, HERE));
+		auto taskset = vm::ptr<CellSpursTaskset>::make(vm::cast(eventFlag->addr));
 		spurs = taskset->spurs;
 	}
 
@@ -3660,7 +3660,7 @@ s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	taskset->set(eventFlag->isIwl ? 0u : vm::cast(eventFlag->addr, HERE));
+	taskset->set(eventFlag->isIwl ? 0u : vm::cast(eventFlag->addr));
 	return CELL_OK;
 }
 
@@ -4022,7 +4022,7 @@ s32 _spurs::task_start(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, u32 t
 		}
 		else
 		{
-			ASSERT(rc == CELL_OK);
+			ensure(rc == CELL_OK);
 		}
 	}
 
@@ -4411,7 +4411,7 @@ s32 cellSpursLookUpTasksetAddress(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm:
 		return rc ^ 0x100;
 	}
 
-	*taskset = vm::cast(*data, HERE);
+	*taskset = vm::cast(*data);
 	return CELL_OK;
 }
 
@@ -4434,7 +4434,7 @@ s32 cellSpursTasksetGetSpursAddress(vm::cptr<CellSpursTaskset> taskset, vm::ptr<
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	*spurs = vm::cast(taskset->spurs.addr(), HERE);
+	*spurs = vm::cast(taskset->spurs.addr());
 	return CELL_OK;
 }
 

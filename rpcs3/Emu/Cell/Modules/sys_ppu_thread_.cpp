@@ -185,7 +185,7 @@ void sys_ppu_thread_exit(ppu_thread& ppu, u64 val)
 	ensure(!sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm));
 
 	// Deallocate TLS
-	ppu_free_tls(vm::cast(ppu.gpr[13], HERE) - 0x7030);
+	ppu_free_tls(vm::cast(ppu.gpr[13]) - 0x7030);
 
 	// Call the syscall
 	_sys_ppu_thread_exit(ppu, val);
@@ -265,7 +265,7 @@ error_code sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih)
 	}
 
 	// Deallocate TLS
-	ppu_free_tls(vm::cast(*r13, HERE) - 0x7030);
+	ppu_free_tls(vm::cast(*r13) - 0x7030);
 	return CELL_OK;
 }
 

@@ -328,7 +328,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 
 	[[noreturn]] static void null()
 	{
-		fmt::throw_exception("Null function" HERE);
+		fmt::throw_exception("Null function");
 	}
 
 	llvm::JITSymbol findSymbol(const std::string& name) override

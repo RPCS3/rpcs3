@@ -124,7 +124,7 @@ audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 	backend->Open(cfg.num_allocated_buffers);
 	backend_open = true;
 
-	ASSERT(!get_backend_playing());
+	ensure(!get_backend_playing());
 }
 
 audio_ringbuffer::~audio_ringbuffer()
@@ -146,7 +146,7 @@ f32 audio_ringbuffer::set_frequency_ratio(f32 new_ratio)
 {
 	if (!has_capability(AudioBackend::SET_FREQUENCY_RATIO))
 	{
-		ASSERT(new_ratio == 1.0f);
+		ensure(new_ratio == 1.0f);
 		frequency_ratio = 1.0f;
 	}
 	else
@@ -229,7 +229,7 @@ void audio_ringbuffer::play()
 
 	playing = true;
 
-	ASSERT(enqueued_samples > 0);
+	ensure(enqueued_samples > 0);
 
 	play_timestamp = get_timestamp();
 	backend->Play();
@@ -1053,7 +1053,7 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 		}
 		else
 		{
-			fmt::throw_exception("Unknown channel count (port=%u, channel=%d)" HERE, port.number, port.num_channels);
+			fmt::throw_exception("Unknown channel count (port=%u, channel=%d)", port.number, port.num_channels);
 		}
 	}
 

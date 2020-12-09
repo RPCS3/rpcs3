@@ -62,7 +62,7 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		{ ::gl::texture::channel::a, ::gl::texture::channel::b, ::gl::texture::channel::g, ::gl::texture::channel::r } };
 
 	default:
-		fmt::throw_exception("Unsupported surface color format 0x%x" HERE, static_cast<u32>(color_format));
+		fmt::throw_exception("Unsupported surface color format 0x%x", static_cast<u32>(color_format));
 	}
 }
 
@@ -84,7 +84,7 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 		return{ ::gl::texture::type::float32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
 
 	default:
-		fmt::throw_exception("Unsupported depth format 0x%x" HERE, static_cast<u32>(depth_format));
+		fmt::throw_exception("Unsupported depth format 0x%x", static_cast<u32>(depth_format));
 	}
 }
 
@@ -95,7 +95,7 @@ u8 rsx::internals::get_pixel_size(rsx::surface_depth_format format)
 	case rsx::surface_depth_format::z16: return 2;
 	case rsx::surface_depth_format::z24s8: return 4;
 	}
-	fmt::throw_exception("Unknown depth format" HERE);
+	fmt::throw_exception("Unknown depth format");
 }
 
 namespace

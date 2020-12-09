@@ -1044,7 +1044,7 @@ bool rpcn_client::send_room_message(u32 req_id, const SceNpCommunicationId& comm
 			dst.push_back(req->dst.multicastTargetTeamId);
 			break;
 		default:
-			ASSERT(false);
+			ensure(false);
 			break;
 	}
 
@@ -1154,6 +1154,6 @@ bool rpcn_client::is_abort()
 
 void rpcn_client::abort()
 {
-	ASSERT(in_config);
+	ensure(in_config);
 	abort_config = true;
 }

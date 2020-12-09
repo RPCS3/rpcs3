@@ -42,7 +42,7 @@ namespace vk
 			return false;
 		}
 		default:
-			die_with_error(HERE, error);
+			die_with_error(error);
 			return false;
 		}
 	}

@@ -54,7 +54,7 @@ void sys_spu_image::load(const fs::file& stream)
 
 	if (obj != elf_error::ok)
 	{
-		fmt::throw_exception("Failed to load SPU image: %s" HERE, obj.get_error());
+		fmt::throw_exception("Failed to load SPU image: %s", obj.get_error());
 	}
 
 	for (const auto& shdr : obj.shdrs)
@@ -87,7 +87,7 @@ void sys_spu_image::load(const fs::file& stream)
 
 	if (nsegs <= 0 || nsegs > 0x20 || sys_spu_image::fill(segs, nsegs, obj.progs, src) != nsegs)
 	{
-		fmt::throw_exception("Failed to load SPU segments (%d)" HERE, nsegs);
+		fmt::throw_exception("Failed to load SPU segments (%d)", nsegs);
 	}
 
 	// Write ID and save entry
@@ -2244,7 +2244,7 @@ error_code raw_spu_set_spu_cfg(u32 id, u32 value)
 {
 	if (value > 3)
 	{
-		fmt::throw_exception("Unexpected value (0x%x)" HERE, value);
+		fmt::throw_exception("Unexpected value (0x%x)", value);
 	}
 
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));

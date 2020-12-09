@@ -86,12 +86,12 @@ namespace rsx
 
 				//-------------------------
 				// It is illegal to have only exclusions except when reading from a range with only RO sections
-				ASSERT(flush_and_unprotect_count > 0 || exclude_count == 0 || cause.is_read());
+				ensure(flush_and_unprotect_count > 0 || exclude_count == 0 || cause.is_read());
 				if (flush_and_unprotect_count == 0 && exclude_count > 0)
 				{
 					// double-check that only RO sections exists
 					for (auto *tex : sections_to_exclude)
-						ASSERT(tex->get_protection() == utils::protection::ro);
+						ensure(tex->get_protection() == utils::protection::ro);
 				}
 
 				//-------------------------
@@ -106,10 +106,10 @@ namespace rsx
 				const u16 min_flush_or_unprotect = min_overlap_fault;
 
 				// we must flush or unprotect *all* sections that partially overlap the fault range
-				ASSERT(flush_and_unprotect_count >= min_flush_or_unprotect);
+				ensure(flush_and_unprotect_count >= min_flush_or_unprotect);
 
 				// result must contain *all* sections that overlap (completely or partially) the invalidation range
-				ASSERT(flush_and_unprotect_count + exclude_count >= min_overlap_invalidate);
+				ensure(flush_and_unprotect_count + exclude_count >= min_overlap_invalidate);
 			}
 
 			void check_post_sanity() const
@@ -572,7 +572,7 @@ namespace rsx
 					}
 					else
 					{
-						fmt::throw_exception("Unreachable" HERE);
+						fmt::throw_exception("Unreachable");
 					}
 				}
 
@@ -857,7 +857,7 @@ namespace rsx
 						continue;
 					}
 
-					fmt::throw_exception("Unreachable " HERE);
+					fmt::throw_exception("Unreachable");
 				}
 
 
@@ -1005,7 +1005,7 @@ namespace rsx
 #ifndef TEXTURE_CACHE_DEBUG
 							return &tex;
 #else
-							ASSERT(res == nullptr);
+							ensure(res == nullptr);
 							res = &tex;
 #endif
 						}
@@ -1119,9 +1119,9 @@ namespace rsx
 			else
 			{
 				// Re-using clean fbo region
-				ASSERT(region.matches(rsx_range));
-				ASSERT(region.get_context() == texture_upload_context::framebuffer_storage);
-				ASSERT(region.get_image_type() == rsx::texture_dimension_extended::texture_dimension_2d);
+				ensure(region.matches(rsx_range));
+				ensure(region.get_context() == texture_upload_context::framebuffer_storage);
+				ensure(region.get_image_type() == rsx::texture_dimension_extended::texture_dimension_2d);
 			}
 
 			region.create(width, height, 1, 1, image, pitch, false, std::forward<Args>(extras)...);
@@ -1451,7 +1451,7 @@ namespace rsx
 			default:
 			{
 				//Throw
-				fmt::throw_exception("Invalid deferred command op 0x%X" HERE, static_cast<u32>(desc.op));
+				fmt::throw_exception("Invalid deferred command op 0x%X", static_cast<u32>(desc.op));
 			}
 			}
 
@@ -1747,7 +1747,7 @@ namespace rsx
 		{
 			image_section_attributes_t attributes{};
 			texture_cache_search_options options{};
-			attributes.address = rsx::get_address(tex.offset(), tex.location(), HERE);
+			attributes.address = rsx::get_address(tex.offset(), tex.location());
 			attributes.gcm_format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 			attributes.bpp = get_format_block_size_in_bytes(attributes.gcm_format);
 			attributes.width = tex.width();

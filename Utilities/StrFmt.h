@@ -289,13 +289,23 @@ namespace fmt
 	}
 
 	// Internal exception message formatting template, must be explicitly specialized or instantiated in cpp to minimize code bloat
-	[[noreturn]] void raw_throw_exception(const char*, const fmt_type_info*, const u64*);
+	[[noreturn]] void raw_throw_exception(const src_loc&, const char*, const fmt_type_info*, const u64*);
 
 	// Throw exception with formatting
-	template <typename... Args>
-	[[noreturn]] SAFE_BUFFERS FORCE_INLINE void throw_exception(const char* fmt, const Args&... args)
+	template <typename CharT, std::size_t N, typename... Args>
+	struct throw_exception
 	{
-		static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
-		raw_throw_exception(fmt, type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
-	}
+		[[noreturn]] SAFE_BUFFERS FORCE_INLINE throw_exception(const CharT(&fmt)[N], const Args&... args,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION())
+		{
+			static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
+			raw_throw_exception({line, col, file, func}, reinterpret_cast<const char*>(fmt), type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
+		}
+	};
+
+	template <typename CharT, std::size_t N, typename... Args>
+	throw_exception(const CharT(&)[N], const Args&...) -> throw_exception<CharT, N, Args...>;
 }

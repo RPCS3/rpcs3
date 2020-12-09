@@ -91,7 +91,7 @@ void VKGSRender::present(vk::frame_context_t *ctx)
 			swapchain_unavailable = true;
 			break;
 		default:
-			vk::die_with_error(HERE, error);
+			vk::die_with_error(error);
 		}
 	}
 
@@ -464,7 +464,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		present_info.height = buffer_height;
 		present_info.pitch = buffer_pitch;
 		present_info.format = av_format;
-		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL, HERE);
+		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 		image_to_flip = get_present_source(&present_info, avconfig);
 
@@ -477,7 +477,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffers[info.buffer].offset;
 				present_info.width = buffer_width;
 				present_info.height = buffer_height;
-				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL, HERE);
+				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL);
 
 				image_to_flip2 = get_present_source(&present_info, avconfig);
 			}
@@ -526,7 +526,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			reinitialize_swapchain();
 			continue;
 		default:
-			vk::die_with_error(HERE, status);
+			vk::die_with_error(status);
 		}
 
 		if (should_reinitialize_swapchain)

@@ -106,7 +106,7 @@ namespace rsx {
 			case utils::protection::no: return "NA";
 			case utils::protection::ro: return "RO";
 			case utils::protection::rw: return "RW";
-			default: fmt::throw_exception("Unreachable " HERE);
+			default: fmt::throw_exception("Unreachable");
 			}
 		}
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "atomic.hpp"
+#include "Utilities/StrFmt.h"
 #include <mutex>
 
 // Pessimistic mutex for slow operation, does not spin wait, occupies only one byte
@@ -61,7 +62,7 @@ public:
 
 		if (prev == 0) [[unlikely]]
 		{
-			fmt::raw_error("I tried to unlock unlocked mutex." HERE);
+			fmt::throw_exception("I tried to unlock unlocked mutex.");
 		}
 
 		// Set signal and notify

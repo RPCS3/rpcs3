@@ -204,7 +204,7 @@ void main_window::Init()
 	m_download_menu_action = ui->menuBar->addMenu(download_menu);
 #endif
 
-	ASSERT(m_download_menu_action);
+	ensure(m_download_menu_action);
 	m_download_menu_action->setVisible(false);
 
 	connect(&m_updater, &update_manager::signal_update_available, this, [this](bool update_available)

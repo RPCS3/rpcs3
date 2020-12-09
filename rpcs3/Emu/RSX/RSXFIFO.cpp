@@ -496,7 +496,7 @@ namespace rsx
 			}
 
 			// If we reached here, this is likely an error
-			fmt::throw_exception("Unexpected command 0x%x" HERE, cmd);
+			fmt::throw_exception("Unexpected command 0x%x", cmd);
 		}
 
 		if (const auto state = performance_counters.state;
@@ -603,7 +603,7 @@ namespace rsx
 				}
 				default:
 				{
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 				}
 				}
 

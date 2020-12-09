@@ -181,7 +181,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 			return CELL_ENOSYS;
 		}
 
-		fmt::throw_exception("sys_prx: Unimplemented fixed address allocations" HERE);
+		fmt::throw_exception("sys_prx: Unimplemented fixed address allocations");
 	}
 
 	std::string vpath0;
@@ -328,7 +328,7 @@ static error_code prx_load_module_list(ppu_thread& ppu, s32 count, vm::cpptr<cha
 			return CELL_ENOSYS;
 		}
 
-		fmt::throw_exception("sys_prx: Unimplemented fixed address allocations" HERE);
+		fmt::throw_exception("sys_prx: Unimplemented fixed address allocations");
 	}
 
 	for (s32 i = 0; i < count; ++i)
@@ -492,7 +492,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		case PRX_STATE_STARTING: return CELL_PRX_ERROR_ERROR; // Internal error
 		case PRX_STATE_STARTED: break;
 		default:
-			fmt::throw_exception("Invalid prx state (%d)" HERE, old);
+			fmt::throw_exception("Invalid prx state (%d)", old);
 		}
 
 		pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
@@ -529,7 +529,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		case PRX_STATE_STARTING: return CELL_PRX_ERROR_ERROR; // Internal error
 		case PRX_STATE_STARTED: break;
 		default:
-			fmt::throw_exception("Invalid prx state (%d)" HERE, old);
+			fmt::throw_exception("Invalid prx state (%d)", old);
 		}
 
 		if (pOpt->cmd == 4u)

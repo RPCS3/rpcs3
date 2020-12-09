@@ -61,7 +61,7 @@ namespace rsx
 						rsx::get_current_renderer()->renderctl(job.aux_param0, job.src);
 						break;
 					}
-					default: ASSUME(0); fmt::throw_exception("Unreachable" HERE);
+					default: ASSUME(0); fmt::throw_exception("Unreachable");
 					}
 
 					m_processed_count.release(m_processed_count + 1);
@@ -225,7 +225,7 @@ namespace rsx
 			break;
 		default:
 			ASSUME(0);
-			fmt::throw_exception("Unreachable" HERE);
+			fmt::throw_exception("Unreachable");
 		}
 
 		const uintptr_t addr = uintptr_t(address);

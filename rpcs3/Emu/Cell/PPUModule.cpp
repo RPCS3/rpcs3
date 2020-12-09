@@ -909,7 +909,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 				const auto& rel = reinterpret_cast<const ppu_prx_relocation_info&>(prog.bin[i]);
 
 				ppu_reloc _rel;
-				const u32 raddr = _rel.addr = vm::cast(prx->segs.at(rel.index_addr).addr + rel.offset, HERE);
+				const u32 raddr = _rel.addr = vm::cast(prx->segs.at(rel.index_addr).addr + rel.offset);
 				const u32 rtype = _rel.type = rel.type;
 				const u64 rdata = _rel.data = rel.index_value == 0xFF ? rel.ptr.addr().value() : prx->segs.at(rel.index_value).addr + rel.ptr.addr();
 				prx->relocs.emplace_back(_rel);
@@ -1008,7 +1008,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		};
 
 		// Access library information (TODO)
-		const vm::cptr<ppu_prx_library_info> lib_info = vm::cast(prx->segs[0].addr + elf.progs[0].p_paddr - elf.progs[0].p_offset, HERE);
+		const vm::cptr<ppu_prx_library_info> lib_info = vm::cast(prx->segs[0].addr + elf.progs[0].p_paddr - elf.progs[0].p_offset);
 		const std::string lib_name = lib_info->name;
 
 		strcpy_trunc(prx->module_info_name, lib_name);
@@ -1164,7 +1164,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 				if (!vm::falloc(addr, size))
 				{
-					fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)" HERE, addr, size);
+					fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
 				}
 			}
 
@@ -1279,7 +1279,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 		case 0x00000007: // TLS
 		{
-			tls_vaddr = vm::cast(prog.p_vaddr, HERE);
+			tls_vaddr = vm::cast(prog.p_vaddr);
 			tls_fsize = ::narrow<u32>(prog.p_filesz);
 			tls_vsize = ::narrow<u32>(prog.p_memsz);
 
@@ -1304,7 +1304,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 					//be_t<u32> crash_dump_param_addr;
 				};
 
-				const auto& info = vm::_ref<process_param_t>(vm::cast(prog.p_vaddr, HERE));
+				const auto& info = vm::_ref<process_param_t>(vm::cast(prog.p_vaddr));
 
 				if (info.size < sizeof(process_param_t))
 				{
@@ -1359,7 +1359,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 					be_t<u32> unk2;
 				};
 
-				const auto& proc_prx_param = vm::_ref<const ppu_proc_prx_param_t>(vm::cast(prog.p_vaddr, HERE));
+				const auto& proc_prx_param = vm::_ref<const ppu_proc_prx_param_t>(vm::cast(prog.p_vaddr));
 
 				ppu_loader.notice("* libent_start = *0x%x", proc_prx_param.libent_start);
 				ppu_loader.notice("* libstub_start = *0x%x", proc_prx_param.libstub_start);
@@ -1478,7 +1478,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		// Additional segment for fixed allocations
 		if (!vm::map(0x30000000, 0x10000000, 0x200))
 		{
-			fmt::throw_exception("Failed to map ppc_seg's segment!" HERE);
+			fmt::throw_exception("Failed to map ppc_seg's segment!");
 		}
 	}
 
@@ -1646,7 +1646,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 		ppu_loader.notice("** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
 		ppu_segment _seg;
-		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr, HERE);
+		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr);
 		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz);
 		const u32 type = _seg.type = prog.p_type;
 		const u32 flag = _seg.flags = prog.p_flags;
@@ -1748,7 +1748,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 											//and a lot of zeros.
 				};
 
-				const auto& info = vm::_ref<process_param_t>(vm::cast(prog.p_vaddr, HERE));
+				const auto& info = vm::_ref<process_param_t>(vm::cast(prog.p_vaddr));
 
 				if (info.size < sizeof(process_param_t))
 				{
@@ -1786,7 +1786,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 					be_t<u32> unk2;
 				};
 
-				const auto& proc_prx_param = vm::_ref<const ppu_proc_prx_param_t>(vm::cast(prog.p_vaddr, HERE));
+				const auto& proc_prx_param = vm::_ref<const ppu_proc_prx_param_t>(vm::cast(prog.p_vaddr));
 
 				ppu_loader.notice("* libent_start = *0x%x", proc_prx_param.libent_start);
 				ppu_loader.notice("* libstub_start = *0x%x", proc_prx_param.libstub_start);

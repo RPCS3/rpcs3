@@ -270,7 +270,7 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		frame = new gs_frame(frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
-	default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+	default: fmt::throw_exception("Invalid video renderer: %s", type);
 	}
 
 	m_game_window = frame;
@@ -327,7 +327,7 @@ void gui_application::InitializeCallbacks()
 #endif
 		default:
 		{
-			fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+			fmt::throw_exception("Invalid video renderer: %s", type);
 		}
 		}
 	};

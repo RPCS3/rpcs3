@@ -377,7 +377,7 @@ void signaling_handler::wake_up()
 
 void signaling_handler::update_si_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port)
 {
-	ASSERT(si);
+	ensure(si);
 
 	if (si->addr != new_addr || si->port != new_port)
 	{
@@ -399,7 +399,7 @@ void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s3
 	if (si->connStatus == SCE_NP_SIGNALING_CONN_STATUS_PENDING && new_status == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE)
 	{
 		si->connStatus = SCE_NP_SIGNALING_CONN_STATUS_ACTIVE;
-		ASSERT(si->version == 1u || si->version == 2u);
+		ensure(si->version == 1u || si->version == 2u);
 		if (si->version == 1u)
 			signal_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_ESTABLISHED);
 		else
@@ -411,7 +411,7 @@ void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s3
 	if ((si->connStatus == SCE_NP_SIGNALING_CONN_STATUS_PENDING || si->connStatus == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE) && new_status == SCE_NP_SIGNALING_CONN_STATUS_INACTIVE)
 	{
 		si->connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
-		ASSERT(si->version == 1u || si->version == 2u);
+		ensure(si->version == 1u || si->version == 2u);
 		if (si->version == 1u)
 			signal_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_DEAD);
 		else
@@ -557,7 +557,7 @@ void signaling_handler::disconnect_sig2_users(u64 room_id)
 
 u32 signaling_handler::create_sig_infos(const SceNpId* npid)
 {
-	ASSERT(npid->handle.term == 0);
+	ensure(npid->handle.term == 0);
 	std::string npid_str(reinterpret_cast<const char*>(npid->handle.data));
 
 	if (npid_to_conn_id.count(npid_str))

@@ -26,7 +26,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 
 	static atomic_t<bool> was_called = false;
 	if (was_called.exchange(true))
-		fmt::throw_exception("Render_Creator cannot be created more than once" HERE);
+		fmt::throw_exception("Render_Creator cannot be created more than once");
 
 	static std::mutex mtx;
 	static std::condition_variable cond;

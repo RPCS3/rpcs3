@@ -757,7 +757,7 @@ error_code cellGcmGetCurrentDisplayBufferId(vm::ptr<u8> id)
 
 	if ((*id = rsx::get_current_renderer()->current_display_buffer) > UINT8_MAX)
 	{
-		fmt::throw_exception("Unexpected" HERE);
+		fmt::throw_exception("Unexpected");
 	}
 
 	return CELL_OK;

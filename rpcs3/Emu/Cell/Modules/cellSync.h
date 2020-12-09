@@ -194,7 +194,7 @@ struct alignas(32) CellSyncQueue
 
 		if (data.next > depth || data.count > depth)
 		{
-			fmt::throw_exception("Invalid queue pointers" HERE);
+			fmt::throw_exception("Invalid queue pointers");
 		}
 
 		return depth;

@@ -42,7 +42,7 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
-	u32 get_address(u32 offset, u32 location, const char* from)
+	u32 get_address(u32 offset, u32 location, u32 line, u32 col, const char* file, const char* func)
 	{
 		const auto render = get_current_renderer();
 		std::string_view msg;
@@ -135,8 +135,7 @@ namespace rsx
 		}
 		}
 
-		// Assume 'from' contains new line at start
-		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, from);
+		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc{line, col, file, func});
 	}
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
@@ -156,7 +155,7 @@ namespace rsx
 			default:
 				break;
 			}
-			fmt::throw_exception("Wrong vector size" HERE);
+			fmt::throw_exception("Wrong vector size");
 		case vertex_base_type::f: return sizeof(f32) * size;
 		case vertex_base_type::sf:
 			switch (size)
@@ -170,7 +169,7 @@ namespace rsx
 			default:
 				break;
 			}
-			fmt::throw_exception("Wrong vector size" HERE);
+			fmt::throw_exception("Wrong vector size");
 		case vertex_base_type::ub:
 			switch (size)
 			{
@@ -183,13 +182,13 @@ namespace rsx
 			default:
 				break;
 			}
-			fmt::throw_exception("Wrong vector size" HERE);
+			fmt::throw_exception("Wrong vector size");
 		case vertex_base_type::cmp: return 4;
 		case vertex_base_type::ub256: ensure(size == 4); return sizeof(u8) * 4;
 		default:
 			break;
 		}
-		fmt::throw_exception("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!" HERE, static_cast<u8>(type));
+		fmt::throw_exception("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", static_cast<u8>(type));
 	}
 
 	void tiled_region::write(const void *src, u32 width, u32 height, u32 pitch)
@@ -851,7 +850,7 @@ namespace rsx
 		const u32 type_size = get_index_type_size(type);
 
 		// Force aligned indices as realhw
-		const u32 address = (0 - type_size) & get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location(), HERE);
+		const u32 address = (0 - type_size) & get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
 
 		const bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
 		const u32 primitive_restart_index = rsx::method_registers.restart_index();
@@ -884,7 +883,7 @@ namespace rsx
 			return draw_inlined_array{};
 		}
 
-		fmt::throw_exception("ill-formed draw command" HERE);
+		fmt::throw_exception("ill-formed draw command");
 	}
 
 	void thread::do_local_task(FIFO_state state)
@@ -943,10 +942,10 @@ namespace rsx
 		};
 		return
 		{
-			rsx::get_address(offset_color[0], context_dma_color[0], HERE),
-			rsx::get_address(offset_color[1], context_dma_color[1], HERE),
-			rsx::get_address(offset_color[2], context_dma_color[2], HERE),
-			rsx::get_address(offset_color[3], context_dma_color[3], HERE),
+			rsx::get_address(offset_color[0], context_dma_color[0]),
+			rsx::get_address(offset_color[1], context_dma_color[1]),
+			rsx::get_address(offset_color[2], context_dma_color[2]),
+			rsx::get_address(offset_color[3], context_dma_color[3]),
 		};
 	}
 
@@ -954,7 +953,7 @@ namespace rsx
 	{
 		u32 m_context_dma_z = rsx::method_registers.surface_z_dma();
 		u32 offset_zeta = rsx::method_registers.surface_z_offset();
-		return rsx::get_address(offset_zeta, m_context_dma_z, HERE);
+		return rsx::get_address(offset_zeta, m_context_dma_z);
 	}
 
 	void thread::get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout)
@@ -1090,7 +1089,7 @@ namespace rsx
 			m_framebuffer_state_contested = color_buffer_unused || depth_buffer_unused;
 			break;
 		default:
-			fmt::throw_exception("Unknown framebuffer context 0x%x" HERE, static_cast<u32>(context));
+			fmt::throw_exception("Unknown framebuffer context 0x%x", static_cast<u32>(context));
 		}
 
 		// Swizzled render does tight packing of bytes
@@ -1225,7 +1224,7 @@ namespace rsx
 			// Tested with Turbo: Super stunt squad that only changes the window offset to declare new framebuffers
 			// Sampling behavior clearly indicates the addresses are expected to have changed
 			if (auto clip_type = rsx::method_registers.window_clip_type())
-				rsx_log.error("Unknown window clip type 0x%X" HERE, clip_type);
+				rsx_log.error("Unknown window clip type 0x%X", clip_type);
 
 			for (const auto &index : rsx::utility::get_rtt_indexes(layout.target))
 			{
@@ -1513,7 +1512,7 @@ namespace rsx
 		m_graphics_state &= ~rsx::pipeline_state::fragment_program_ucode_dirty;
 
 		const auto [program_offset, program_location] = method_registers.shader_program_address();
-		auto data_ptr = vm::base(rsx::get_address(program_offset, program_location, HERE));
+		auto data_ptr = vm::base(rsx::get_address(program_offset, program_location));
 		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
 
 		current_fragment_program.data = (static_cast<u8*>(data_ptr) + current_fp_metadata.program_start_offset);
@@ -1758,7 +1757,7 @@ namespace rsx
 		for (auto &info : result.interleaved_blocks)
 		{
 			//Calculate real data address to be used during upload
-			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info.base_offset), info.memory_location, HERE);
+			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info.base_offset), info.memory_location);
 		}
 	}
 
@@ -1810,7 +1809,7 @@ namespace rsx
 					texture_control |= (1 << 4);
 				}
 
-				const u32 texaddr = rsx::get_address(tex.offset(), tex.location(), HERE);
+				const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 				const u32 raw_format = tex.format();
 				const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
@@ -1993,7 +1992,7 @@ namespace rsx
 
 	tiled_region thread::get_tiled_address(u32 offset, u32 location)
 	{
-		u32 address = get_address(offset, location, HERE);
+		u32 address = get_address(offset, location);
 
 		GcmTileInfo *tile = find_tile(offset, location);
 		u32 base = 0;
@@ -2001,7 +2000,7 @@ namespace rsx
 		if (tile)
 		{
 			base = offset - tile->offset;
-			address = get_address(tile->offset, location, HERE);
+			address = get_address(tile->offset, location);
 		}
 
 		return{ address, base, tile, vm::_ptr<u8>(address) };
@@ -2343,7 +2342,7 @@ namespace rsx
 						rsx::to_surface_depth_format(zcull.zFormat) == m_depth_surface_info.depth_format &&
 						rsx::to_surface_antialiasing(zcull.aaFormat) == rsx::method_registers.surface_antialias())
 					{
-						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL, HERE);
+						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL);
 						if (rsx_address == zeta_address)
 						{
 							zcull_surface_active = true;
@@ -2488,7 +2487,7 @@ namespace rsx
 			if (current_time - cmd_info.timestamp < 2'000'000u)
 			{
 				// Probably hopeless
-				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings." HERE);
+				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings.");
 			}
 
 			// Erase the last command from history, keep the size of the queue the same

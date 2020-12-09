@@ -767,7 +767,7 @@ namespace vk
 					renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_LINE_STRIP);
 					break;
 				default:
-					fmt::throw_exception("Unexpected primitive type %d" HERE, static_cast<s32>(type));
+					fmt::throw_exception("Unexpected primitive type %d", static_cast<s32>(type));
 			}
 		}
 

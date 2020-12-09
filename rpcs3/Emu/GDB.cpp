@@ -220,7 +220,7 @@ int gdb_thread::read(void* buf, int cnt)
 			}
 
 			GDB.error("Error during socket read.");
-			fmt::throw_exception("Error during socket read" HERE);
+			fmt::throw_exception("Error during socket read");
 		}
 		return result;
 	}
@@ -232,7 +232,7 @@ char gdb_thread::read_char()
 	char result;
 	int cnt = read(&result, 1);
 	if (!cnt) {
-		fmt::throw_exception("Tried to read char, but no data was available" HERE);
+		fmt::throw_exception("Tried to read char, but no data was available");
 	}
 	return result;
 }
@@ -261,7 +261,7 @@ bool gdb_thread::try_read_cmd(gdb_cmd& out_cmd)
 			c = read_char();
 		}
 		if (c != '$') {
-			fmt::throw_exception("Expected start of packet character '$', got '%c' instead" HERE, c);
+			fmt::throw_exception("Expected start of packet character '$', got '%c' instead", c);
 		}
 	}
 	//clear packet data
@@ -516,7 +516,7 @@ void gdb_thread::wait_with_interrupts()
 			}
 
 			GDB.error("Error during socket read.");
-			fmt::throw_exception("Error during socket read" HERE);
+			fmt::throw_exception("Error during socket read");
 		} else if (c == 0x03) {
 			paused = true;
 		}

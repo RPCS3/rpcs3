@@ -3713,7 +3713,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		case s_reg_mfc_size:
 			return get_type<u16>();
 		default:
-			fmt::throw_exception("get_reg_type(%u): invalid register index" HERE, index);
+			fmt::throw_exception("get_reg_type(%u): invalid register index", index);
 		}
 	}
 
@@ -3731,7 +3731,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		case s_reg_mfc_tag: return ::offset32(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::tag);
 		case s_reg_mfc_size: return ::offset32(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::size);
 		default:
-			fmt::throw_exception("get_reg_offset(%u): invalid register index" HERE, index);
+			fmt::throw_exception("get_reg_offset(%u): invalid register index", index);
 		}
 	}
 
@@ -4781,7 +4781,7 @@ public:
 				fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
 			}
 
-			fmt::raw_error("Compilation failed");
+			fmt::throw_exception("Compilation failed");
 		}
 
 		if (g_cfg.core.spu_debug)
@@ -4836,7 +4836,7 @@ public:
 			// Execute interpreter instruction
 			const u32 op = *reinterpret_cast<const be_t<u32>*>(_spu->_ptr<u8>(0) + _spu->pc);
 			if (!g_spu_interpreter_fast.decode(op)(*_spu, {op}))
-				spu_log.fatal("Bad instruction" HERE);
+				spu_log.fatal("Bad instruction");
 
 			// Swap state
 			for (u32 i = 0; i < s_gpr.size(); ++i)
@@ -5211,7 +5211,7 @@ public:
 				fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
 			}
 
-			fmt::raw_error("Compilation failed");
+			fmt::throw_exception("Compilation failed");
 		}
 
 		if (g_cfg.core.spu_debug)
@@ -5280,7 +5280,7 @@ public:
 
 	static void exec_unk(spu_thread* _spu, u32 op)
 	{
-		fmt::throw_exception("Unknown/Illegal instruction (0x%08x)" HERE, op);
+		fmt::throw_exception("Unknown/Illegal instruction (0x%08x)", op);
 	}
 
 	void UNK(spu_opcode_t op_unk)

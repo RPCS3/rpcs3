@@ -72,7 +72,7 @@ void headless_application::InitializeCallbacks()
 		}
 		default:
 		{
-			fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+			fmt::throw_exception("Invalid video renderer: %s", type);
 		}
 		}
 	};

@@ -266,7 +266,7 @@ void usb_handler_thread::operator()()
 			{
 				auto transfer = *it;
 
-				ASSERT(transfer->busy && transfer->fake);
+				ensure(transfer->busy && transfer->fake);
 
 				if (transfer->expected_time > timestamp)
 				{

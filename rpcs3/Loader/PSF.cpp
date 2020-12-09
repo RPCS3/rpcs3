@@ -98,7 +98,7 @@ namespace psf
 			return sizeof(u32);
 		}
 
-		fmt::throw_exception("Invalid format (0x%x)" HERE, m_type);
+		fmt::throw_exception("Invalid format (0x%x)", m_type);
 	}
 
 	registry load_object(const fs::file& stream)
@@ -259,7 +259,7 @@ namespace psf
 			}
 			else
 			{
-				fmt::throw_exception("Invalid entry format (key='%s', fmt=0x%x)" HERE, entry.first, fmt);
+				fmt::throw_exception("Invalid entry format (key='%s', fmt=0x%x)", entry.first, fmt);
 			}
 		}
 	}

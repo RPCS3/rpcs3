@@ -43,7 +43,7 @@ namespace gl
 		case rsx::primitive_type::quad_strip: return GL_TRIANGLE_STRIP;
 		case rsx::primitive_type::polygon: return GL_TRIANGLES;
 		default:
-			fmt::throw_exception("unknown primitive type" HERE);
+			fmt::throw_exception("unknown primitive type");
 		}
 	}
 
@@ -471,7 +471,7 @@ namespace gl
 		case rsx::primitive_type::polygon:
 			return false;
 		default:
-			fmt::throw_exception("unknown primitive type" HERE);
+			fmt::throw_exception("unknown primitive type");
 		}
 	}
 

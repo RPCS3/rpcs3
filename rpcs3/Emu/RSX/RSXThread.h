@@ -82,7 +82,7 @@ namespace rsx
 		template<bool IsFullLock>
 		void unlock(u32 addr, u32 len) noexcept
 		{
-			ASSERT(len >= 1);
+			ensure(len >= 1);
 			const u32 end = addr + len - 1;
 
 			for (u32 block = (addr >> 20); block <= (end >> 20); ++block)
@@ -172,8 +172,11 @@ namespace rsx
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
-	// TODO: Replace with std::source_location in c++20
-	u32 get_address(u32 offset, u32 location, const char* from);
+	u32 get_address(u32 offset, u32 location,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION());
 
 	struct tiled_region
 	{
@@ -352,7 +355,7 @@ namespace rsx
 				}
 				default:
 				{
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 				}
 				}
 			}

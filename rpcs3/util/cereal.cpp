@@ -1,10 +1,10 @@
 #include <string>
-#include "Utilities/Thread.h"
+#include "Utilities/StrFmt.h"
 
 namespace cereal
 {
 	[[noreturn]] void throw_exception(const std::string& err)
 	{
-		report_fatal_error(err);
+		fmt::throw_exception("%s", err);
 	}
 }

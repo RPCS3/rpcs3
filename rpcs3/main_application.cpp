@@ -124,7 +124,7 @@ EmuCallbacks main_application::CreateCallbacks()
 #ifdef HAVE_FAUDIO
 		case audio_renderer::faudio: result = std::make_shared<FAudioBackend>(); break;
 #endif
-		default: fmt::throw_exception("Invalid audio renderer: %s" HERE, type);
+		default: fmt::throw_exception("Invalid audio renderer: %s", type);
 		}
 
 		if (!result->Initialized())

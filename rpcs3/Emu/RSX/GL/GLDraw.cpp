@@ -17,7 +17,7 @@ namespace gl
 		case rsx::comparison_function::greater_or_equal: return GL_GEQUAL;
 		case rsx::comparison_function::always: return GL_ALWAYS;
 		}
-		fmt::throw_exception("Unsupported comparison op 0x%X" HERE, static_cast<u32>(op));
+		fmt::throw_exception("Unsupported comparison op 0x%X", static_cast<u32>(op));
 	}
 
 	GLenum stencil_op(rsx::stencil_op op)
@@ -33,7 +33,7 @@ namespace gl
 		case rsx::stencil_op::incr_wrap: return GL_INCR_WRAP;
 		case rsx::stencil_op::decr_wrap: return GL_DECR_WRAP;
 		}
-		fmt::throw_exception("Unsupported stencil op 0x%X" HERE, static_cast<u32>(op));
+		fmt::throw_exception("Unsupported stencil op 0x%X", static_cast<u32>(op));
 	}
 
 	GLenum blend_equation(rsx::blend_equation op)
@@ -79,7 +79,7 @@ namespace gl
 		case rsx::blend_factor::constant_alpha: return GL_CONSTANT_ALPHA;
 		case rsx::blend_factor::one_minus_constant_alpha: return GL_ONE_MINUS_CONSTANT_ALPHA;
 		}
-		fmt::throw_exception("Unsupported blend factor 0x%X" HERE, static_cast<u32>(op));
+		fmt::throw_exception("Unsupported blend factor 0x%X", static_cast<u32>(op));
 	}
 
 	GLenum logic_op(rsx::logic_op op)
@@ -103,7 +103,7 @@ namespace gl
 		case rsx::logic_op::logic_nand: return GL_NAND;
 		case rsx::logic_op::logic_set: return GL_SET;
 		}
-		fmt::throw_exception("Unsupported logic op 0x%X" HERE, static_cast<u32>(op));
+		fmt::throw_exception("Unsupported logic op 0x%X", static_cast<u32>(op));
 	}
 
 	GLenum front_face(rsx::front_face op)
@@ -117,7 +117,7 @@ namespace gl
 		case rsx::front_face::cw: return GL_CCW;
 		case rsx::front_face::ccw: return GL_CW;
 		}
-		fmt::throw_exception("Unsupported front face 0x%X" HERE, static_cast<u32>(op));
+		fmt::throw_exception("Unsupported front face 0x%X", static_cast<u32>(op));
 	}
 
 	GLenum cull_face(rsx::cull_face op)
@@ -128,7 +128,7 @@ namespace gl
 		case rsx::cull_face::back: return GL_BACK;
 		case rsx::cull_face::front_and_back: return GL_FRONT_AND_BACK;
 		}
-		fmt::throw_exception("Unsupported cull face 0x%X" HERE, static_cast<u32>(op));
+		fmt::throw_exception("Unsupported cull face 0x%X", static_cast<u32>(op));
 	}
 }
 
@@ -459,7 +459,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 			for (auto &info : m_vertex_layout.interleaved_blocks)
 			{
 				const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
-				info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location, HERE);
+				info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location);
 			}
 		}
 	}

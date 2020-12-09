@@ -388,10 +388,10 @@ void Buffer::ShowWindowed()
 	if (m_isTex)
 	{
 		/*	u8 location = render->textures[m_cur_texture].location();
-			if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location, HERE))
+			if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location))
 				&& render->textures[m_cur_texture].width() && render->textures[m_cur_texture].height())
 				memory_viewer_panel::ShowImage(this,
-					rsx::get_address(render->textures[m_cur_texture].offset(), location, HERE), 1,
+					rsx::get_address(render->textures[m_cur_texture].offset(), location), 1,
 					render->textures[m_cur_texture].width(),
 					render->textures[m_cur_texture].height(), false);*/
 	}
@@ -452,7 +452,7 @@ namespace
 		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
 		case rsx::surface_color_format::w32z32y32x32:
 		default:
-			fmt::throw_exception("Unsupported format for display" HERE);
+			fmt::throw_exception("Unsupported format for display");
 		}
 	}
 
@@ -707,7 +707,7 @@ void rsx_debugger::GetBuffers()
 	if(location > 1)
 		return;
 
-	u32 TexBuffer_addr = rsx::get_address(offset, location, HERE);
+	u32 TexBuffer_addr = rsx::get_address(offset, location);
 
 	if(!vm::check_addr(TexBuffer_addr))
 		return;

@@ -208,7 +208,7 @@ namespace glsl
 			}
 		}
 
-		fmt::throw_exception("Unknown compare function" HERE);
+		fmt::throw_exception("Unknown compare function");
 	}
 
 	static void insert_vertex_input_fetch(std::stringstream& OS, glsl_rules rules, bool glsl4_compliant=true)

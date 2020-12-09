@@ -54,17 +54,17 @@ namespace vk
 		{
 			if (support.d24_unorm_s8) return VK_FORMAT_D24_UNORM_S8_UINT;
 			if (support.d32_sfloat_s8) return VK_FORMAT_D32_SFLOAT_S8_UINT;
-			fmt::throw_exception("No hardware support for z24s8" HERE);
+			fmt::throw_exception("No hardware support for z24s8");
 		}
 		case rsx::surface_depth_format2::z24s8_float:
 		{
 			if (support.d32_sfloat_s8) return VK_FORMAT_D32_SFLOAT_S8_UINT;
-			fmt::throw_exception("No hardware support for z24s8_float" HERE);
+			fmt::throw_exception("No hardware support for z24s8_float");
 		}
 		default:
 			break;
 		}
-		fmt::throw_exception("Invalid format (0x%x)" HERE, static_cast<u32>(format));
+		fmt::throw_exception("Invalid format (0x%x)", static_cast<u32>(format));
 	}
 
 	minification_filter get_min_filter(rsx::texture_minify_filter min_filter)
@@ -82,7 +82,7 @@ namespace vk
 			ASSUME(0);
 			break;
 		}
-		fmt::throw_exception("Invalid min filter" HERE);
+		fmt::throw_exception("Invalid min filter");
 	}
 
 	VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter)
@@ -96,7 +96,7 @@ namespace vk
 			ASSUME(0);
 			break;
 		}
-		fmt::throw_exception("Invalid mag filter (0x%x)" HERE, static_cast<u32>(mag_filter));
+		fmt::throw_exception("Invalid mag filter (0x%x)", static_cast<u32>(mag_filter));
 	}
 
 	VkBorderColor get_border_color(u32 color)
@@ -150,7 +150,7 @@ namespace vk
 			ASSUME(0);
 			break;
 		}
-		fmt::throw_exception("unhandled texture clamp mode" HERE);
+		fmt::throw_exception("unhandled texture clamp mode");
 	}
 
 	float max_aniso(rsx::texture_max_anisotropy gcm_aniso)
@@ -170,7 +170,7 @@ namespace vk
 			break;
 		}
 
-		fmt::throw_exception("Texture anisotropy error: bad max aniso (%d)" HERE, static_cast<u32>(gcm_aniso));
+		fmt::throw_exception("Texture anisotropy error: bad max aniso (%d)", static_cast<u32>(gcm_aniso));
 	}
 
 
@@ -239,7 +239,7 @@ namespace vk
 			mapping = { VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
 
 		default:
-			fmt::throw_exception("Invalid or unsupported component mapping for texture format (0x%x)" HERE, format);
+			fmt::throw_exception("Invalid or unsupported component mapping for texture format (0x%x)", format);
 		}
 
 		return mapping;
@@ -279,7 +279,7 @@ namespace vk
 		default:
 			break;
 		}
-		fmt::throw_exception("Invalid or unsupported sampler format for texture format (0x%x)" HERE, format);
+		fmt::throw_exception("Invalid or unsupported sampler format for texture format (0x%x)", format);
 	}
 
 	VkFormat get_compatible_srgb_format(VkFormat rgb_format)
@@ -460,7 +460,7 @@ namespace vk
 			break;
 		}
 
-		fmt::throw_exception("Unknown vkFormat 0x%x" HERE, static_cast<u32>(format));
+		fmt::throw_exception("Unknown vkFormat 0x%x", static_cast<u32>(format));
 	}
 
 	bool formats_are_bitcast_compatible(VkFormat format1, VkFormat format2)

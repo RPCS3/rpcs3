@@ -1220,7 +1220,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 			else
 			{
-				fmt::throw_exception("Invalid savedata selected" HERE);
+				fmt::throw_exception("Invalid savedata selected");
 			}
 		}
 	}

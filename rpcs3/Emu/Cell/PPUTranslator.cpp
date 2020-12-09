@@ -4629,7 +4629,7 @@ Value* PPUTranslator::GetVr(u32 vr, VrType type)
 	case VrType::vi16: _type = GetType<u16[8]>(); break;
 	case VrType::vf  : _type = GetType<f32[4]>(); break;
 	case VrType::i128: _type = GetType<u128>(); break;
-	default: report_fatal_error("GetVr(): invalid type");
+	default: ensure(false);
 	}
 
 	return bitcast(value, _type);
@@ -4709,8 +4709,7 @@ void PPUTranslator::SetFPRF(Value* value, bool set_cr)
 {
 	const bool is32 =
 		value->getType()->isFloatTy() ? true :
-		value->getType()->isDoubleTy() ? false :
-		(report_fatal_error("SetFPRF(): invalid value type"), false);
+		value->getType()->isDoubleTy() ? false : ensure(false);
 
 	//const auto zero = ConstantFP::get(value->getType(), 0.0);
 	//const auto is_nan = m_ir->CreateFCmpUNO(value, zero);

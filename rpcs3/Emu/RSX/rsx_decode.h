@@ -4165,7 +4165,7 @@ struct transform_constant_helper
 				subreg == 2 ? "z" :
 				"w";
 		};
-		
+
 		return "TransformConstant[base + " + std::to_string(reg) + "]." + get_subreg_name(subreg) + " = " + std::to_string(decoded_values.constant_value());
 	}
 };
@@ -4357,9 +4357,9 @@ struct vertex_array_helper
 			case rsx::vertex_base_type::cmp: return "CMP";
 			case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
 			}
-			fmt::throw_exception("Unexpected enum found" HERE);
+			fmt::throw_exception("Unexpected enum found");
 		};
-		
+
 		return "Vertex array " + std::to_string(index) + ": Type = " + print_vertex_attribute_format(decoded_values.type()) +
 			" size = " + std::to_string(decoded_values.size()) +
 			" stride = " + std::to_string(decoded_values.stride()) +

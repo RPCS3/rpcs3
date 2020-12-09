@@ -242,7 +242,7 @@ namespace vm
 	{
 		if (range_lock < g_range_lock_set || range_lock >= std::end(g_range_lock_set))
 		{
-			fmt::throw_exception("Invalid range lock" HERE);
+			fmt::throw_exception("Invalid range lock");
 		}
 
 		range_lock->release(0);
@@ -284,7 +284,7 @@ namespace vm
 		// Shouldn't really happen
 		if (size == 0)
 		{
-			vm_log.warning("Tried to lock empty range (flags=0x%x, addr=0x%x)" HERE, flags >> 32, addr);
+			vm_log.warning("Tried to lock empty range (flags=0x%x, addr=0x%x)", flags >> 32, addr);
 			g_range_lock.release(0);
 			return;
 		}
@@ -292,7 +292,7 @@ namespace vm
 		// Limit to <512 MiB at once; make sure if it operates on big amount of data, it's page-aligned
 		if (size >= 512 * 1024 * 1024 || (size > 65536 && size % 4096))
 		{
-			fmt::throw_exception("Failed to lock range (flags=0x%x, addr=0x%x, size=0x%x)" HERE, flags >> 32, addr, size);
+			fmt::throw_exception("Failed to lock range (flags=0x%x, addr=0x%x, size=0x%x)", flags >> 32, addr, size);
 		}
 
 		// Block or signal new range locks
@@ -660,14 +660,14 @@ namespace vm
 
 		if (!size || (size | addr) % 4096 || flags & page_allocated)
 		{
-			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
 			if (g_pages[i])
 			{
-				fmt::throw_exception("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)" HERE, addr, size, flags, i * 4096);
+				fmt::throw_exception("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
 		}
 
@@ -763,7 +763,7 @@ namespace vm
 		{
 			if (g_pages[i].exchange(flags | page_allocated))
 			{
-				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)" HERE, addr, size, flags, i * 4096);
+				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
 		}
 
@@ -779,7 +779,7 @@ namespace vm
 
 		if (!size || (size | addr) % 4096)
 		{
-			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
 
 		const u8 flags_both = flags_set & flags_clear;
@@ -863,7 +863,7 @@ namespace vm
 
 		if (!max_size || (max_size | addr) % 4096)
 		{
-			fmt::throw_exception("Invalid arguments (addr=0x%x, max_size=0x%x)" HERE, addr, max_size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, max_size=0x%x)", addr, max_size);
 		}
 
 		// Determine deallocation size
@@ -907,7 +907,7 @@ namespace vm
 		{
 			if (!(g_pages[i] & page_allocated))
 			{
-				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)" HERE, addr, size, i * 4096);
+				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * 4096);
 			}
 
 			g_pages[i].release(0);
@@ -998,7 +998,7 @@ namespace vm
 
 		if (!block)
 		{
-			fmt::throw_exception("Invalid memory location (%u)" HERE, +location);
+			fmt::throw_exception("Invalid memory location (%u)", +location);
 		}
 
 		return block->alloc(size, nullptr, align);
@@ -1010,7 +1010,7 @@ namespace vm
 
 		if (!block)
 		{
-			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, +location, addr);
+			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)", +location, addr);
 		}
 
 		return block->falloc(addr, size);
@@ -1022,7 +1022,7 @@ namespace vm
 
 		if (!block)
 		{
-			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, +location, addr);
+			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)", +location, addr);
 		}
 
 		return block->dealloc(addr);
@@ -1184,7 +1184,7 @@ namespace vm
 		// Check alignment (it's page allocation, so passing small values there is just silly)
 		if (align < min_page_size || align != (0x80000000u >> std::countl_zero(align)))
 		{
-			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)" HERE, size, align);
+			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)", size, align);
 		}
 
 		// Return if size is invalid
@@ -1427,7 +1427,7 @@ namespace vm
 	{
 		if (!size || (size | addr) % 4096)
 		{
-			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
 
 		if (!_test_map(addr, size))
@@ -1439,7 +1439,7 @@ namespace vm
 		{
 			if (g_pages[i])
 			{
-				fmt::throw_exception("Unexpected pages allocated (current_addr=0x%x)" HERE, i * 4096);
+				fmt::throw_exception("Unexpected pages allocated (current_addr=0x%x)", i * 4096);
 			}
 		}
 
@@ -1492,7 +1492,7 @@ namespace vm
 		// Check alignment
 		if (align < 0x10000 || align != (0x80000000u >> std::countl_zero(align)))
 		{
-			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)" HERE, size, align);
+			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)", size, align);
 		}
 
 		// Return if size is invalid

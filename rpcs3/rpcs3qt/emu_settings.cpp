@@ -241,7 +241,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 		for (int i = 0; i < combobox->count(); i++)
 		{
 			const QVariantList var_list = combobox->itemData(i).toList();
-			ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
+			ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
 
 			if (value == var_list[0].toString())
 			{
@@ -292,7 +292,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 		else
 		{
 			const QVariantList var_list = combobox->itemData(index).toList();
-			ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
+			ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
 			SetSetting(type, sstr(var_list[0]));
 		}
 	});
@@ -650,7 +650,7 @@ std::string emu_settings::GetSettingDefault(emu_settings_type type) const
 	{
 		return node.Scalar();
 	}
-	
+
 	cfg_log.fatal("GetSettingDefault(type=%d) could not retrieve the requested node", static_cast<int>(type));
 	return "";
 }

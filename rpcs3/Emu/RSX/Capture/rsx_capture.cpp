@@ -53,7 +53,7 @@ namespace rsx
 			// capture fragment shader mem
 			const auto [program_offset, program_location] = method_registers.shader_program_address();
 
-			const u32 addr          = get_address(program_offset, program_location, HERE);
+			const u32 addr          = get_address(program_offset, program_location);
 			const auto program_info = program_hash_util::fragment_program_utils::analyse_fragment_program(vm::base(addr));
 			const u32 program_start = program_info.program_start_offset;
 			const u32 ucode_size    = program_info.program_ucode_length;
@@ -74,7 +74,7 @@ namespace rsx
 				if (!tex.enabled())
 					continue;
 
-				const u32 texaddr = get_address(tex.offset(), tex.location(), HERE);
+				const u32 texaddr = get_address(tex.offset(), tex.location());
 				auto layout       = get_subresources_layout(tex);
 
 				// todo: dont use this function and just get size somehow
@@ -100,7 +100,7 @@ namespace rsx
 				if (!tex.enabled())
 					continue;
 
-				const u32 texaddr = get_address(tex.offset(), tex.location(), HERE);
+				const u32 texaddr = get_address(tex.offset(), tex.location());
 				auto layout       = get_subresources_layout(tex);
 
 				// todo: dont use this function and just get size somehow
@@ -138,7 +138,7 @@ namespace rsx
 					const u32 base_address    = get_vertex_offset_from_base(method_registers.vertex_data_base_offset(), info.offset() & 0x7fffffff);
 					const u32 memory_location = info.offset() >> 31;
 
-					const u32 addr       = get_address(base_address, memory_location, HERE);
+					const u32 addr       = get_address(base_address, memory_location);
 					const u32 vertSize   = get_vertex_type_size_on_host(info.type(), info.size());
 					const u32 vertStride = info.stride();
 
@@ -170,7 +170,7 @@ namespace rsx
 
 				const auto index_type = method_registers.index_type();
 				const u32 type_size   = get_index_type_size(index_type);
-				const u32 base_addr   = get_address(base_address, memory_location, HERE) & (0 - type_size);
+				const u32 base_addr   = get_address(base_address, memory_location) & (0 - type_size);
 
 				// manually parse index buffer and copy vertex buffer
 				u32 min_index = 0xFFFFFFFF, max_index = 0;
@@ -247,7 +247,7 @@ namespace rsx
 						const u32 base_address    = get_vertex_offset_from_base(method_registers.vertex_data_base_offset(), (info.offset() & 0x7fffffff));
 						const u32 memory_location = info.offset() >> 31;
 
-						const u32 addr     = get_address(base_address, memory_location, HERE);
+						const u32 addr     = get_address(base_address, memory_location);
 						const u32 vertSize = get_vertex_type_size_on_host(info.type(), info.size());
 						const u32 bufferSize = vertStride * (max_index - min_index + 1) + vertSize;
 
@@ -300,7 +300,7 @@ namespace rsx
 			block.offset = src_offset + in_offset;
 			block.location = src_dma & 0xf;
 
-			const auto src_address = rsx::get_address(block.offset, block.location, HERE);
+			const auto src_address = rsx::get_address(block.offset, block.location);
 			u8* pixels_src = vm::_ptr<u8>(src_address);
 
 			const u32 src_size = in_pitch * (in_h - 1) + (in_w * in_bpp);
@@ -323,7 +323,7 @@ namespace rsx
 
 			u32 src_offset = method_registers.nv0039_input_offset();
 			u32 src_dma    = method_registers.nv0039_input_location();
-			u32 src_addr   = get_address(src_offset, src_dma, HERE);
+			u32 src_addr   = get_address(src_offset, src_dma);
 
 			rsx->read_barrier(src_addr, in_pitch * (line_count - 1) + line_length, true);
 

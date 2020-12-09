@@ -148,7 +148,7 @@ inline FT build_function_asm(F&& builder)
 
 	X86Assembler compiler(&code);
 	builder(std::ref(compiler), args);
-	ASSERT(compiler.getLastError() == 0);
+	ensure(compiler.getLastError() == 0);
 
 	FT result;
 

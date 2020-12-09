@@ -97,7 +97,7 @@ namespace vk
 		case rsx::logic_op::logic_nand: return VK_LOGIC_OP_NAND;
 		case rsx::logic_op::logic_set: return VK_LOGIC_OP_SET;
 		default:
-			fmt::throw_exception("Unknown logic op 0x%x" HERE, static_cast<u32>(op));
+			fmt::throw_exception("Unknown logic op 0x%x", static_cast<u32>(op));
 		}
 	}
 
@@ -121,7 +121,7 @@ namespace vk
 		case rsx::blend_factor::one_minus_constant_color: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
 		case rsx::blend_factor::src_alpha_saturate: return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
 		default:
-			fmt::throw_exception("Unknown blend factor 0x%x" HERE, static_cast<u32>(factor));
+			fmt::throw_exception("Unknown blend factor 0x%x", static_cast<u32>(factor));
 		}
 	}
 
@@ -142,7 +142,7 @@ namespace vk
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
 		case rsx::blend_equation::max: return VK_BLEND_OP_MAX;
 		default:
-			fmt::throw_exception("Unknown blend op: 0x%x" HERE, static_cast<u32>(op));
+			fmt::throw_exception("Unknown blend op: 0x%x", static_cast<u32>(op));
 		}
 	}
 
@@ -159,7 +159,7 @@ namespace vk
 		case rsx::stencil_op::incr_wrap: return VK_STENCIL_OP_INCREMENT_AND_WRAP;
 		case rsx::stencil_op::decr_wrap: return VK_STENCIL_OP_DECREMENT_AND_WRAP;
 		default:
-			fmt::throw_exception("Unknown stencil op: 0x%x" HERE, static_cast<u32>(op));
+			fmt::throw_exception("Unknown stencil op: 0x%x", static_cast<u32>(op));
 		}
 	}
 
@@ -170,7 +170,7 @@ namespace vk
 		case rsx::front_face::cw: return VK_FRONT_FACE_CLOCKWISE;
 		case rsx::front_face::ccw: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		default:
-			fmt::throw_exception("Unknown front face value: 0x%x" HERE, static_cast<u32>(ffv));
+			fmt::throw_exception("Unknown front face value: 0x%x", static_cast<u32>(ffv));
 		}
 	}
 
@@ -182,7 +182,7 @@ namespace vk
 		case rsx::cull_face::front: return VK_CULL_MODE_FRONT_BIT;
 		case rsx::cull_face::front_and_back: return VK_CULL_MODE_FRONT_AND_BACK;
 		default:
-			fmt::throw_exception("Unknown cull face value: 0x%x" HERE, static_cast<u32>(cfv));
+			fmt::throw_exception("Unknown cull face value: 0x%x", static_cast<u32>(cfv));
 		}
 	}
 }
@@ -758,7 +758,7 @@ void VKGSRender::on_semaphore_acquire_wait()
 
 bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 {
-	ASSERT(!vk::is_uninterruptible() && rsx::get_current_renderer()->is_current_thread());
+	ensure(!vk::is_uninterruptible() && rsx::get_current_renderer()->is_current_thread());
 	bool released = m_texture_cache.handle_memory_pressure(severity);
 
 	if (severity <= rsx::problem_severity::moderate)
@@ -781,7 +781,7 @@ void VKGSRender::notify_tile_unbound(u32 tile)
 	//TODO: Handle texture writeback
 	if (false)
 	{
-		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location, HERE);
+		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
 		on_notify_memory_unmapped(addr, tiles[tile].size);
 		m_rtts.invalidate_surface_address(addr, false);
 	}
@@ -1229,7 +1229,7 @@ void VKGSRender::clear_surface(u32 mask)
 							rtt->pop_layout(*m_current_command_buffer);
 						}
 						else
-							fmt::throw_exception("Unreachable" HERE);
+							fmt::throw_exception("Unreachable");
 					}
 				}
 
@@ -1688,7 +1688,7 @@ void VKGSRender::load_program_env()
 {
 	if (!m_program)
 	{
-		fmt::throw_exception("Unreachable right now" HERE);
+		fmt::throw_exception("Unreachable right now");
 	}
 
 	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
@@ -2227,7 +2227,7 @@ void VKGSRender::renderctl(u32 request_code, void* args)
 		break;
 	}
 	default:
-		fmt::throw_exception("Unhandled request code 0x%x" HERE, request_code);
+		fmt::throw_exception("Unhandled request code 0x%x", request_code);
 	}
 }
 

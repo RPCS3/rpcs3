@@ -900,14 +900,19 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 #endif
 }
 
-void fs::file::xnull() const
+[[noreturn]] void fs::xnull(const src_loc& loc)
 {
-	fmt::throw_exception("fs::file is null");
+	fmt::throw_exception("Null object.%s", loc);
 }
 
-void fs::file::xfail() const
+[[noreturn]] void fs::xfail(const src_loc& loc)
 {
-	fmt::throw_exception("Unexpected fs::error %s", g_tls_error);
+	fmt::throw_exception("Unexpected fs::error %s%s", g_tls_error, loc);
+}
+
+[[noreturn]] void fs::xovfl()
+{
+	fmt::throw_exception("Stream overflow.");
 }
 
 fs::file::file(const std::string& path, bs_t<open_mode> mode)
@@ -1056,7 +1061,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				whence == seek_set ? FILE_BEGIN :
 				whence == seek_cur ? FILE_CURRENT :
 				whence == seek_end ? FILE_END :
-				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
+				(fmt::throw_exception("Invalid whence (0x%x)", whence), 0);
 
 			if (!SetFilePointerEx(m_handle, pos, &pos, mode))
 			{
@@ -1194,7 +1199,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				whence == seek_set ? SEEK_SET :
 				whence == seek_cur ? SEEK_CUR :
 				whence == seek_end ? SEEK_END :
-				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
+				(fmt::throw_exception("Invalid whence (0x%x)", whence), 0);
 
 			const auto result = ::lseek(m_fd, offset, mode);
 
@@ -1316,11 +1321,6 @@ fs::native_handle fs::file::get_handle() const
 #else
 	return -1;
 #endif
-}
-
-void fs::dir::xnull() const
-{
-	fmt::throw_exception("fs::dir is null");
 }
 
 bool fs::dir::open(const std::string& path)

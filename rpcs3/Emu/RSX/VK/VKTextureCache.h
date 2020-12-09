@@ -47,7 +47,7 @@ namespace vk
 		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image *image, u32 rsx_pitch, bool managed, u32 gcm_format, bool pack_swap_bytes = false)
 		{
 			auto new_texture = static_cast<vk::viewable_image*>(image);
-			ASSERT(!exists() || !is_managed() || vram_texture == new_texture);
+			ensure(!exists() || !is_managed() || vram_texture == new_texture);
 			vram_texture = new_texture;
 
 			ensure(rsx_pitch);
@@ -112,7 +112,7 @@ namespace vk
 			m_tex_cache->on_section_destroyed(*this);
 
 			vram_texture = nullptr;
-			ASSERT(!managed_texture);
+			ensure(!managed_texture);
 			release_dma_resources();
 
 			baseclass::on_section_resources_destroyed();
@@ -130,13 +130,13 @@ namespace vk
 
 		vk::image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
 		{
-			ASSERT(vram_texture != nullptr);
+			ensure(vram_texture != nullptr);
 			return vram_texture->get_view(remap_encoding, remap);
 		}
 
 		vk::image_view* get_raw_view()
 		{
-			ASSERT(vram_texture != nullptr);
+			ensure(vram_texture != nullptr);
 			return vram_texture->get_view(0xAAE4, rsx::default_remap_vector);
 		}
 
@@ -157,7 +157,7 @@ namespace vk
 				return VK_FORMAT_R32_UINT;
 			}
 
-			ASSERT(vram_texture != nullptr);
+			ensure(vram_texture != nullptr);
 			return vram_texture->format();
 		}
 
@@ -324,7 +324,7 @@ namespace vk
 
 		void copy_texture(vk::command_buffer& cmd, bool miss)
 		{
-			ASSERT(exists());
+			ensure(exists());
 
 			if (!miss) [[likely]]
 			{
@@ -785,7 +785,7 @@ namespace vk
 					}
 					else
 					{
-						fmt::throw_exception("Unreachable" HERE);
+						fmt::throw_exception("Unreachable");
 					}
 
 					if (_dst != dst) [[unlikely]]
@@ -1162,7 +1162,7 @@ namespace vk
 			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect_flags, 0, mipmaps, 0, layer });
 
 			cached_texture_section& region = *find_cached_texture(rsx_range, gcm_format, true, true, width, height, section_depth);
-			ASSERT(!region.is_locked());
+			ensure(!region.is_locked());
 
 			// New section, we must prepare it
 			region.reset(rsx_range);
@@ -1200,7 +1200,7 @@ namespace vk
 		cached_texture_section* create_nul_section(vk::command_buffer& cmd, const utils::address_range& rsx_range, bool memory_load) override
 		{
 			auto& region = *find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, true, false);
-			ASSERT(!region.is_locked());
+			ensure(!region.is_locked());
 
 			// Prepare section
 			region.reset(rsx_range);
@@ -1477,7 +1477,7 @@ namespace vk
 				linear_format_supported = m_formats_support.argb8_linear;
 				break;
 			default:
-				rsx_log.error("Unsupported VkFormat 0x%x" HERE, static_cast<u32>(format));
+				rsx_log.error("Unsupported VkFormat 0x%x", static_cast<u32>(format));
 				return nullptr;
 			}
 

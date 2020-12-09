@@ -109,7 +109,7 @@ namespace rsx
 	protected:
 		void invalidate_range()
 		{
-			ASSERT(!locked);
+			ensure(!locked);
 
 			cpu_range.invalidate();
 			confirmed_range.invalidate();
@@ -174,7 +174,7 @@ namespace rsx
 				else
 				{
 					confirmed_range = address_range::start_length(cpu_range.start + new_confirm.first, new_confirm.second);
-					ASSERT(!locked || locked_range.inside(confirmed_range.to_page_range()));
+					ensure(!locked || locked_range.inside(confirmed_range.to_page_range()));
 				}
 
 				ensure(confirmed_range.inside(cpu_range));

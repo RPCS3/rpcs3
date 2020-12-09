@@ -1088,7 +1088,7 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 			{
 				ensure((queue->push3.compare_and_swap_test(old2, push3)));
 				ensure((fpSendSignal));
-				return not_an_error(fpSendSignal(ppu, vm::cast(queue->m_eaSignal.addr(), HERE), var6));
+				return not_an_error(fpSendSignal(ppu, vm::cast(queue->m_eaSignal.addr()), var6));
 			}
 			else
 			{
@@ -1159,7 +1159,7 @@ error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> qu
 	const s32 depth = queue->m_depth;
 	const s32 size = queue->m_size;
 	const s32 pos = *position;
-	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1ull) + size * (pos >= depth ? pos - depth : pos), HERE);
+	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1ull) + size * (pos >= depth ? pos - depth : pos));
 	std::memcpy(vm::base(addr), buffer.get_ptr(), size);
 
 	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
@@ -1388,7 +1388,7 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 			{
 				ensure((queue->pop3.compare_and_swap_test(old2, pop3)));
 				ensure((fpSendSignal));
-				return not_an_error(fpSendSignal(ppu, vm::cast(queue->m_eaSignal.addr(), HERE), var6));
+				return not_an_error(fpSendSignal(ppu, vm::cast(queue->m_eaSignal.addr()), var6));
 			}
 			else
 			{
@@ -1459,7 +1459,7 @@ error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> que
 	const s32 depth = queue->m_depth;
 	const s32 size = queue->m_size;
 	const s32 pos = *position;
-	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1) + size * (pos >= depth ? pos - depth : pos), HERE);
+	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1) + size * (pos >= depth ? pos - depth : pos));
 	std::memcpy(buffer.get_ptr(), vm::base(addr), size);
 
 	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)

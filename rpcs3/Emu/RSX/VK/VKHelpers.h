@@ -46,7 +46,7 @@ namespace rsx
 
 namespace vk
 {
-#define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) vk::die_with_error(HERE, _res); }
+#define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) vk::die_with_error(_res); }
 
 	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
 	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
@@ -244,7 +244,11 @@ namespace vk
 	// TODO: Move queries out of the renderer!
 	void do_query_cleanup(vk::command_buffer& cmd);
 
-	void die_with_error(const char* faulting_addr, VkResult error_code);
+	void die_with_error(VkResult error_code,
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION(),
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN());
 
 	struct pipeline_binding_table
 	{
@@ -385,7 +389,7 @@ namespace vk
 
 				if (result != VK_SUCCESS)
 				{
-					die_with_error(HERE, result);
+					die_with_error(result);
 				}
 				else
 				{
@@ -489,7 +493,7 @@ namespace vk
 
 				if (result != VK_SUCCESS)
 				{
-					die_with_error(HERE, result);
+					die_with_error(result);
 				}
 				else
 				{
@@ -845,7 +849,7 @@ private:
 				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, queue_props.data());
 			}
 
-			if (queue >= queue_props.size()) fmt::throw_exception("Bad queue index passed to get_queue_properties (%u)" HERE, queue);
+			if (queue >= queue_props.size()) fmt::throw_exception("Bad queue index passed to get_queue_properties (%u)", queue);
 			return queue_props[queue];
 		}
 
@@ -1430,7 +1434,7 @@ private:
 				dim_limit = gpu_limits.maxImageDimension3D;
 				break;
 			default:
-				fmt::throw_exception("Unreachable" HERE);
+				fmt::throw_exception("Unreachable");
 			}
 
 			if (longest_dim > dim_limit)
@@ -1439,8 +1443,7 @@ private:
 				// Just kill the application at this point.
 				fmt::throw_exception(
 					"The renderer requested an image larger than the limit allowed for by your GPU hardware. "
-					"Turn down your resolution scale and/or disable MSAA to fit within the image budget."
-					HERE);
+					"Turn down your resolution scale and/or disable MSAA to fit within the image budget.");
 			}
 		}
 
@@ -1491,7 +1494,7 @@ private:
 				//Suggested memory type is incompatible with this memory type.
 				//Go through the bitset and test for requested props.
 				if (!dev.get_compatible_memory_type(memory_req.memoryTypeBits, access_flags, &memory_type_index))
-					fmt::throw_exception("No compatible memory type was found!" HERE);
+					fmt::throw_exception("No compatible memory type was found!");
 			}
 
 			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, memory_type_index);
@@ -1819,7 +1822,7 @@ private:
 				//Suggested memory type is incompatible with this memory type.
 				//Go through the bitset and test for requested props.
 				if (!dev.get_compatible_memory_type(memory_reqs.memoryTypeBits, access_flags, &memory_type_index))
-					fmt::throw_exception("No compatible memory type was found!" HERE);
+					fmt::throw_exception("No compatible memory type was found!");
 			}
 
 			memory = std::make_unique<memory_block>(m_device, memory_reqs.size, memory_reqs.alignment, memory_type_index);
@@ -2451,7 +2454,7 @@ public:
 			if (!XMatchVisualInfo(display, DefaultScreen(display), bit_depth, TrueColor, &visual))
 #pragma GCC diagnostic pop
 			{
-				rsx_log.error("Could not find matching visual info!" HERE);
+				rsx_log.error("Could not find matching visual info!");
 				return false;
 			}
 
@@ -2611,7 +2614,7 @@ public:
 			u32 nb_swap_images = 0;
 			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
 
-			if (!nb_swap_images) fmt::throw_exception("Driver returned 0 images for swapchain" HERE);
+			if (!nb_swap_images) fmt::throw_exception("Driver returned 0 images for swapchain");
 
 			std::vector<VkImage> vk_images;
 			vk_images.resize(nb_swap_images);
@@ -3157,7 +3160,7 @@ public:
 
 			if (graphicsQueueNodeIndex == UINT32_MAX)
 			{
-				rsx_log.fatal("Failed to find a suitable graphics queue" HERE);
+				rsx_log.fatal("Failed to find a suitable graphics queue");
 				return nullptr;
 			}
 
@@ -3192,7 +3195,7 @@ public:
 			}
 			else
 			{
-				if (!formatCount) fmt::throw_exception("Format count is zero!" HERE);
+				if (!formatCount) fmt::throw_exception("Format count is zero!");
 				format = surfFormats[0].format;
 
 				//Prefer BGRA8_UNORM to avoid sRGB compression (RADV)
@@ -3586,7 +3589,7 @@ public:
 						type == ::glsl::program_domain::glsl_fragment_program ? "fragment" : "compute";
 
 					rsx_log.notice("%s", m_source);
-					fmt::throw_exception("Failed to compile %s shader" HERE, shader_type);
+					fmt::throw_exception("Failed to compile %s shader", shader_type);
 				}
 
 				VkShaderModuleCreateInfo vs_info;

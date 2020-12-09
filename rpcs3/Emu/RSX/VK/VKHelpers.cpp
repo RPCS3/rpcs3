@@ -220,8 +220,8 @@ namespace vk
 			}
 		}
 
-		if (result.device_local == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support device local memory" HERE);
-		if (result.host_visible_coherent == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support host coherent device local memory" HERE);
+		if (result.device_local == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support device local memory");
+		if (result.host_visible_coherent == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support host coherent device local memory");
 		return result;
 	}
 
@@ -963,7 +963,7 @@ namespace vk
 				case VK_NOT_READY:
 					continue;
 				default:
-					die_with_error(HERE, status);
+					die_with_error(status);
 					return status;
 				}
 			}
@@ -984,7 +984,7 @@ namespace vk
 			case VK_EVENT_RESET:
 				break;
 			default:
-				die_with_error(HERE, status);
+				die_with_error(status);
 				return status;
 			}
 
@@ -1016,7 +1016,11 @@ namespace vk
 		renderer->emergency_query_cleanup(&cmd);
 	}
 
-	void die_with_error(const char* faulting_addr, VkResult error_code)
+	void die_with_error(VkResult error_code,
+		const char* file,
+		const char* func,
+		u32 line,
+		u32 col)
 	{
 		std::string error_message;
 		int severity = 0; //0 - die, 1 - warn, 2 - nothing
@@ -1100,7 +1104,7 @@ namespace vk
 			error_message = "Invalid external handle (VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR)";
 			break;
 		default:
-			error_message = fmt::format("Unknown Code (%Xh, %d)%s", static_cast<s32>(error_code), static_cast<s32>(error_code), faulting_addr);
+			error_message = fmt::format("Unknown Code (%Xh, %d)%s", static_cast<s32>(error_code), static_cast<s32>(error_code), src_loc{line, col, file, func});
 			break;
 		}
 
@@ -1108,9 +1112,9 @@ namespace vk
 		{
 		default:
 		case 0:
-			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s%s", error_message.c_str(), faulting_addr);
+			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s%s", error_message, src_loc{line, col, file, func});
 		case 1:
-			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message.c_str(), faulting_addr);
+			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message, src_loc{line, col, file, func});
 			break;
 		case 2:
 			break;

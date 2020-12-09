@@ -34,7 +34,6 @@
 #define SAFE_BUFFERS __declspec(safebuffers)
 #define NEVER_INLINE __declspec(noinline)
 #define FORCE_INLINE __forceinline
-#define RESTRICT __restrict
 
 #else // not _MSC_VER
 
@@ -51,7 +50,6 @@
 #define SAFE_BUFFERS __attribute__((no_stack_protector))
 #define NEVER_INLINE __attribute__((noinline)) inline
 #define FORCE_INLINE __attribute__((always_inline)) inline
-#define RESTRICT __restrict__
 
 #endif // _MSC_VER
 
@@ -63,25 +61,14 @@
 // Variant pattern matching helper
 #define MATCH(arg, ...) constexpr(std::is_same_v<std::decay_t<decltype(arg)>, __VA_ARGS__>)
 
-#define CONCATENATE_DETAIL(x, y) x ## y
-#define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
-
-#define STRINGIZE_DETAIL(x) #x ""
-#define STRINGIZE(x) STRINGIZE_DETAIL(x)
-
-#define HERE "\n(in file " __FILE__ ":" STRINGIZE(__LINE__) ")"
-
 #define DECLARE(...) decltype(__VA_ARGS__) __VA_ARGS__
 
 #define STR_CASE(...) case __VA_ARGS__: return #__VA_ARGS__
 
-
-#define ASSERT(...) ((__VA_ARGS__) ? void() : fmt::raw_error("Assertion failed: " STRINGIZE(__VA_ARGS__) HERE))
-
 #if defined(_DEBUG) || defined(_AUDIT)
-#define AUDIT(...) ASSERT(__VA_ARGS__)
+#define AUDIT(...) (static_cast<void>(ensure(__VA_ARGS__)))
 #else
-#define AUDIT(...) ((void)0)
+#define AUDIT(...) (static_cast<void>(0))
 #endif
 
 #if __cpp_lib_bit_cast >= 201806L
@@ -777,7 +764,6 @@ struct src_loc
 
 namespace fmt
 {
-	[[noreturn]] void raw_error(const char* msg);
 	[[noreturn]] void raw_verify_error(const src_loc& loc);
 	[[noreturn]] void raw_narrow_error(const src_loc& loc, const fmt_type_info* sup, u64 arg);
 }

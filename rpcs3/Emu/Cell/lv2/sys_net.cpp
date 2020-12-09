@@ -538,7 +538,7 @@ struct nt_p2p_port
 	static std::vector<u8> generate_u2s_packet(const lv2_socket::p2ps_i::encapsulated_tcp& header, const u8 *data, const u32 datasize)
 	{
 		const u32 packet_size = (sizeof(u16) + sizeof(lv2_socket::p2ps_i::encapsulated_tcp) + datasize);
-		ASSERT(packet_size < 65535); // packet size shouldn't be bigger than possible UDP payload
+		ensure(packet_size < 65535); // packet size shouldn't be bigger than possible UDP payload
 		std::vector<u8> packet(packet_size);
 		u8 *packet_data = packet.data();
 
@@ -856,7 +856,7 @@ struct nt_p2p_port
 				const auto sock = idm::check<lv2_socket>(bound_p2p_vports.at(dst_vport), [&](lv2_socket& sock)
 				{
 					std::lock_guard lock(sock.mutex);
-					ASSERT(sock.type == SYS_NET_SOCK_DGRAM_P2P);
+					ensure(sock.type == SYS_NET_SOCK_DGRAM_P2P);
 
 					sock.p2p.data.push(std::make_pair(std::move(p2p_addr), std::move(p2p_data)));
 					sys_net.trace("Received a P2P packet for vport %d and saved it", dst_vport);
@@ -1471,7 +1471,7 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 			{
 				sys_net.warning("[P2P] Attempting to bind a socket to a port != 3658");
 			}
-			ASSERT(p2p_vport != 0);
+			ensure(p2p_vport != 0);
 
 			lv2_socket::socket_type real_socket{};
 
@@ -1821,7 +1821,7 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 	{
 		std::lock_guard lock(sock.mutex);
 
-		ASSERT(sock.type != SYS_NET_SOCK_DGRAM_P2P);
+		ensure(sock.type != SYS_NET_SOCK_DGRAM_P2P);
 
 		if (::getpeername(sock.socket, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen) == 0)
 		{
@@ -2175,7 +2175,7 @@ error_code sys_net_bnet_listen(ppu_thread& ppu, s32 s, s32 backlog)
 	{
 		std::lock_guard lock(sock.mutex);
 
-		ASSERT(sock.type == SYS_NET_SOCK_STREAM_P2P || sock.type == SYS_NET_SOCK_STREAM);
+		ensure(sock.type == SYS_NET_SOCK_STREAM_P2P || sock.type == SYS_NET_SOCK_STREAM);
 
 		if (sock.type == SYS_NET_SOCK_STREAM_P2P)
 		{
@@ -2251,7 +2251,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 			if (nph->is_dns(s) && nph->is_dns_queue(s))
 			{
 				const auto packet = nph->get_dns_packet(s);
-				ASSERT(packet.size() < len);
+				ensure(packet.size() < len);
 
 				memcpy(buf.get_ptr(), packet.data(), packet.size());
 				native_result = ::narrow<int>(packet.size());
@@ -2598,9 +2598,9 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 		if (type == SYS_NET_SOCK_DGRAM_P2P)
 		{
-			ASSERT(addr);
-			ASSERT(sock.socket); // ensures it has been bound
-			ASSERT(len <= (65535 - sizeof(u16))); // catch games using full payload for future fragmentation implementation if necessary
+			ensure(addr);
+			ensure(sock.socket); // ensures it has been bound
+			ensure(len <= (65535 - sizeof(u16))); // catch games using full payload for future fragmentation implementation if necessary
 			const u16 p2p_port  = reinterpret_cast<const sys_net_sockaddr_in*>(addr.get_ptr())->sin_port;
 			const u16 p2p_vport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
 
@@ -3208,7 +3208,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 				if (sock->type == SYS_NET_SOCK_DGRAM_P2P)
 				{
 					std::lock_guard lock(sock->mutex);
-					ASSERT(sock->p2p.vport);
+					ensure(sock->p2p.vport);
 					sys_net.trace("[P2P] poll checking for 0x%X", fds[i].events);
 					// Check if it's a bound P2P socket
 					if ((fds[i].events & SYS_NET_POLLIN) && !sock->p2p.data.empty())

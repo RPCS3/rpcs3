@@ -75,7 +75,7 @@ namespace rsx
 
 		void osk_dialog::update_panel()
 		{
-			ASSERT(m_panel_index < m_panels.size());
+			ensure(m_panel_index < m_panels.size());
 
 			const auto& panel = m_panels[m_panel_index];
 

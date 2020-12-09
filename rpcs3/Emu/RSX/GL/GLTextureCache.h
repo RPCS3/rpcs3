@@ -83,7 +83,7 @@ namespace gl
 				gl::texture::format gl_format = gl::texture::format::rgba, gl::texture::type gl_type = gl::texture::type::ubyte, bool swap_bytes = false)
 		{
 			auto new_texture = static_cast<gl::viewable_image*>(image);
-			ASSERT(!exists() || !is_managed() || vram_texture == new_texture);
+			ensure(!exists() || !is_managed() || vram_texture == new_texture);
 			vram_texture = new_texture;
 
 			if (read_only)
@@ -92,7 +92,7 @@ namespace gl
 			}
 			else
 			{
-				ASSERT(!managed_texture);
+				ensure(!managed_texture);
 			}
 
 			if (auto rtt = dynamic_cast<gl::render_target*>(image))
@@ -252,7 +252,7 @@ namespace gl
 
 		void copy_texture(gl::command_context& cmd, bool miss)
 		{
-			ASSERT(exists());
+			ensure(exists());
 
 			if (!miss) [[likely]]
 			{
@@ -633,7 +633,7 @@ namespace gl
 				return{ GL_BLUE, GL_ALPHA, GL_RED, GL_GREEN };
 			}
 			default:
-				fmt::throw_exception("Unknown texture create flags" HERE);
+				fmt::throw_exception("Unknown texture create flags");
 			}
 		}
 
@@ -865,7 +865,7 @@ namespace gl
 			image->set_native_component_layout(swizzle);
 
 			auto& cached = *find_cached_texture(rsx_range, gcm_format, true, true, width, height, depth, mipmaps);
-			ASSERT(!cached.is_locked());
+			ensure(!cached.is_locked());
 
 			// Prepare section
 			cached.reset(rsx_range);
@@ -911,7 +911,7 @@ namespace gl
 					break;
 				}
 				default:
-					fmt::throw_exception("Unexpected gcm format 0x%X" HERE, gcm_format);
+					fmt::throw_exception("Unexpected gcm format 0x%X", gcm_format);
 				}
 
 				//NOTE: Protection is handled by the caller
@@ -926,7 +926,7 @@ namespace gl
 		cached_texture_section* create_nul_section(gl::command_context& /*cmd*/, const utils::address_range& rsx_range, bool /*memory_load*/) override
 		{
 			auto& cached = *find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, true, false);
-			ASSERT(!cached.is_locked());
+			ensure(!cached.is_locked());
 
 			// Prepare section
 			cached.reset(rsx_range);

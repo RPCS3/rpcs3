@@ -347,7 +347,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	for (int i = 0; i < ui->resBox->count(); i++)
 	{
 		const QVariantList var_list = ui->resBox->itemData(i).toList();
-		ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
+		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
 
 		if (var_list[0].toString() == "1280x720")
 		{
@@ -658,7 +658,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	auto enable_buffering = [this, enable_buffering_options](int index)
 	{
 		const QVariantList var_list = ui->audioOutBox->itemData(index).toList();
-		ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
+		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
 		const QString text = var_list[0].toString();
 		const bool enabled = text == "XAudio2" || text == "OpenAL" || text == "FAudio";
 		ui->enableBuffering->setEnabled(enabled);
@@ -675,7 +675,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 
 		const QVariantList var_list = ui->microphoneBox->itemData(index).toList();
-		ASSERT(var_list.size() == 2 && var_list[1].canConvert<int>());
+		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
 		const int handler_id = var_list[1].toInt();
 		int max = 0;
 

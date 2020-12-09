@@ -728,7 +728,7 @@ void GLGSRender::load_program_env()
 {
 	if (!m_program)
 	{
-		fmt::throw_exception("Unreachable right now" HERE);
+		fmt::throw_exception("Unreachable right now");
 	}
 
 	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
@@ -1042,7 +1042,7 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	// TODO: Handle texture writeback
 	if (false)
 	{
-		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location, HERE);
+		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
 		on_notify_memory_unmapped(addr, tiles[tile].size);
 		m_rtts.invalidate_surface_address(addr, false);
 	}

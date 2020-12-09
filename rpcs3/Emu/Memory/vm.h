@@ -173,12 +173,11 @@ namespace vm
 	template<>
 	struct cast_impl<u32>
 	{
-		static vm::addr_t cast(u32 addr, const char* /*loc*/)
-		{
-			return static_cast<vm::addr_t>(addr);
-		}
-
-		static vm::addr_t cast(u32 addr)
+		static vm::addr_t cast(u32 addr,
+			u32 line,
+			u32 col,
+			const char* file,
+			const char* func)
 		{
 			return static_cast<vm::addr_t>(addr);
 		}
@@ -187,12 +186,11 @@ namespace vm
 	template<>
 	struct cast_impl<u64>
 	{
-		static vm::addr_t cast(u64 addr, const char* /*loc*/)
-		{
-			return static_cast<vm::addr_t>(static_cast<u32>(addr));
-		}
-
-		static vm::addr_t cast(u64 addr)
+		static vm::addr_t cast(u64 addr,
+			u32 line,
+			u32 col,
+			const char* file,
+			const char* func)
 		{
 			return static_cast<vm::addr_t>(static_cast<u32>(addr));
 		}
@@ -201,27 +199,24 @@ namespace vm
 	template<typename T, bool Se>
 	struct cast_impl<se_t<T, Se>>
 	{
-		static vm::addr_t cast(const se_t<T, Se>& addr, const char* loc)
+		static vm::addr_t cast(const se_t<T, Se>& addr,
+			u32 line,
+			u32 col,
+			const char* file,
+			const char* func)
 		{
-			return cast_impl<T>::cast(addr, loc);
-		}
-
-		static vm::addr_t cast(const se_t<T, Se>& addr)
-		{
-			return cast_impl<T>::cast(addr);
+			return cast_impl<T>::cast(addr, line, col, file, func);
 		}
 	};
 
 	template<typename T>
-	vm::addr_t cast(const T& addr, const char* loc)
+	vm::addr_t cast(const T& addr,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION())
 	{
-		return cast_impl<T>::cast(addr, loc);
-	}
-
-	template<typename T>
-	vm::addr_t cast(const T& addr)
-	{
-		return cast_impl<T>::cast(addr);
+		return cast_impl<T>::cast(addr, line, col, file, func);
 	}
 
 	// Convert specified PS3/PSV virtual memory address to a pointer for common access

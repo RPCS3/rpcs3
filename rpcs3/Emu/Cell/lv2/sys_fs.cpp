@@ -357,7 +357,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 
 	if (!open_mode)
 	{
-		fmt::throw_exception("lv2_file::open_raw(): Invalid or unimplemented flags: %#o" HERE, flags);
+		fmt::throw_exception("lv2_file::open_raw(): Invalid or unimplemented flags: %#o", flags);
 	}
 
 	std::lock_guard lock(mp->mutex);

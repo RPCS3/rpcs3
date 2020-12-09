@@ -117,12 +117,12 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 			return {true, result};
 		}
 
-		fmt::throw_exception("[0x%x, %u] Not a vector" HERE, a, b);
+		fmt::throw_exception("[0x%x, %u] Not a vector", a, b);
 	}
 
 	if (auto v = llvm::cast<llvm::VectorType>(t); v->getScalarSizeInBits() * v->getNumElements() != 128)
 	{
-		fmt::throw_exception("[0x%x, %u] Bad vector size: i%ux%u" HERE, a, b, v->getScalarSizeInBits(), v->getNumElements());
+		fmt::throw_exception("[0x%x, %u] Bad vector size: i%ux%u", a, b, v->getScalarSizeInBits(), v->getNumElements());
 	}
 
 	const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(c);
@@ -137,10 +137,10 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 		if (llvm::isa<llvm::ConstantExpr>(c))
 		{
 			// Sorry, if we cannot evaluate it we cannot use it
-			fmt::throw_exception("[0x%x, %u] Constant Expression!" HERE, a, b);
+			fmt::throw_exception("[0x%x, %u] Constant Expression!", a, b);
 		}
 
-		fmt::throw_exception("[0x%x, %u] Unexpected constant type" HERE, a, b);
+		fmt::throw_exception("[0x%x, %u] Unexpected constant type", a, b);
 	}
 
 	const auto sct = t->getScalarType();
@@ -189,7 +189,7 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 	}
 	else
 	{
-		fmt::throw_exception("[0x%x, %u] Unexpected vector element type" HERE, a, b);
+		fmt::throw_exception("[0x%x, %u] Unexpected vector element type", a, b);
 	}
 
 	return {true, result};
@@ -233,7 +233,7 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t)
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const f64*>(v._bytes), 2));
 	}
 
-	fmt::raw_error("No supported constant type" HERE);
+	fmt::throw_exception("No supported constant type");
 }
 
 #endif

@@ -757,7 +757,7 @@ namespace rsx
 			if (_It != m_depth_stencil_storage.end())
 				return Traits::get(_It->second);
 
-			fmt::throw_exception("Unreachable" HERE);
+			fmt::throw_exception("Unreachable");
 		}
 
 		surface_type get_color_surface_at(u32 address)

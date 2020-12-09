@@ -402,7 +402,7 @@ namespace vk
 						}
 						else
 						{
-							fmt::throw_exception("Unreachable" HERE);
+							fmt::throw_exception("Unreachable");
 						}
 					}
 
@@ -673,7 +673,7 @@ namespace vk
 					break;
 				}
 				default:
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 					break;
 				}
 			}
@@ -965,7 +965,7 @@ namespace vk
 			}
 			else
 			{
-				fmt::throw_exception("Unreachable" HERE);
+				fmt::throw_exception("Unreachable");
 			}
 		}
 

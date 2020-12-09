@@ -33,7 +33,7 @@ namespace vk
 		case rsx::comparison_function::not_equal: return VK_COMPARE_OP_NOT_EQUAL;
 		case rsx::comparison_function::always: return VK_COMPARE_OP_ALWAYS;
 		default:
-			fmt::throw_exception("Unknown compare op: 0x%x" HERE, static_cast<u32>(op));
+			fmt::throw_exception("Unknown compare op: 0x%x", static_cast<u32>(op));
 		}
 	}
 }
@@ -722,7 +722,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		for (auto &info : m_vertex_layout.interleaved_blocks)
 		{
 			const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
-			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location, HERE);
+			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location);
 		}
 	}
 

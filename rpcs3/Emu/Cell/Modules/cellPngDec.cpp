@@ -174,7 +174,7 @@ void pngDecError(png_structp png_ptr, png_const_charp error_message)
 {
 	cellPngDec.error("%s", error_message);
 	// we can't return here or libpng blows up
-	report_fatal_error("Fatal Error in libpng");
+	fmt::throw_exception("Fatal Error in libpng: %s", error_message);
 }
 
 // Custom warning handler for libpng
@@ -337,7 +337,7 @@ error_code pngDecCreate(ppu_thread& ppu, PPHandle png_handle, PThreadInParam thr
 	// Check if partial image decoding is used
 	if (extra_thread_out_param)
 	{
-		fmt::throw_exception("Partial image decoding is not supported." HERE);
+		fmt::throw_exception("Partial image decoding is not supported.");
 	}
 
 	// Allocate memory for the decoder handle
@@ -411,7 +411,7 @@ error_code pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc
 	// Check for if the buffer structure allocation failed
 	if (!buffer)
 	{
-		fmt::throw_exception("Memory allocation for the PNG buffer structure failed." HERE);
+		fmt::throw_exception("Memory allocation for the PNG buffer structure failed.");
 	}
 
 	// We might not be reading from a file stream
@@ -426,7 +426,7 @@ error_code pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc
 	// Need to test it somewhere
 	if (stream->source.fileOffset != 0)
 	{
-		fmt::throw_exception("Non-0 file offset not supported." HERE);
+		fmt::throw_exception("Non-0 file offset not supported.");
 	}
 
 	// Depending on the source type, get the first 8 bytes
@@ -486,7 +486,7 @@ error_code pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc
 	// Check if the creation of the structure failed
 	if (!stream->info_ptr)
 	{
-		fmt::throw_exception("Creation of png_infop failed." HERE);
+		fmt::throw_exception("Creation of png_infop failed.");
 	}
 
 	// We must indicate, that we allocated more memory
@@ -570,7 +570,7 @@ error_code pngDecSetParameter(PStream stream, PInParam in_param, POutParam out_p
 {
 	if (in_param->outputPackFlag == CELL_PNGDEC_1BYTE_PER_NPIXEL)
 	{
-		fmt::throw_exception("Packing not supported! (%d)" HERE, in_param->outputPackFlag);
+		fmt::throw_exception("Packing not supported! (%d)", in_param->outputPackFlag);
 	}
 
 	// flag to keep unknown chunks
@@ -703,7 +703,7 @@ error_code pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::pt
 	// Log this for now
 	if (bytes_per_line < stream->out_param.outputWidthByte)
 	{
-		fmt::throw_exception("Bytes per line less than expected output! Got: %d, expected: %d" HERE, bytes_per_line, stream->out_param.outputWidthByte);
+		fmt::throw_exception("Bytes per line less than expected output! Got: %d, expected: %d", bytes_per_line, stream->out_param.outputWidthByte);
 	}
 
 	// partial decoding

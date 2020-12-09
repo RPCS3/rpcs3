@@ -88,7 +88,7 @@ public:
 
 		if (!can_alloc<Alignment>(size) && !grow(aligned_put_pos + alloc_size))
 		{
-			fmt::throw_exception("[%s] Working buffer not big enough, buffer_length=%d allocated=%d requested=%d guard=%d largest_pool=%d" HERE,
+			fmt::throw_exception("[%s] Working buffer not big enough, buffer_length=%d allocated=%d requested=%d guard=%d largest_pool=%d",
 					m_name, m_size, m_current_allocated_size, size, m_min_guard_size, m_largest_allocated_pool);
 		}
 
@@ -139,7 +139,7 @@ public:
 		else if (m_get_pos > m_put_pos)
 			m_current_allocated_size = (m_put_pos + (m_size - m_get_pos - 1));
 		else
-			fmt::throw_exception("m_put_pos == m_get_pos!" HERE);
+			fmt::throw_exception("m_put_pos == m_get_pos!");
 	}
 
 	size_t size() const

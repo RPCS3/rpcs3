@@ -11,9 +11,6 @@
 #include "mutex.h"
 #include "lockless.h"
 
-// Report error and call std::abort(), defined in main.cpp
-[[noreturn]] void report_fatal_error(const std::string&);
-
 // Hardware core layout
 enum class native_core_arrangement : u32
 {

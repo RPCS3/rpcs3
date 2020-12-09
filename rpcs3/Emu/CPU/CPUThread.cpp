@@ -339,7 +339,7 @@ namespace cpu_counter
 
 		if (slot >= std::size(s_cpu_list))
 		{
-			sys_log.fatal("Index out of bounds (%u)." HERE, slot);
+			sys_log.fatal("Index out of bounds (%u).", slot);
 			return;
 		}
 
@@ -771,7 +771,7 @@ void cpu_thread::notify()
 	}
 	else
 	{
-		fmt::throw_exception("Invalid cpu_thread type" HERE);
+		fmt::throw_exception("Invalid cpu_thread type");
 	}
 }
 
@@ -788,7 +788,7 @@ void cpu_thread::abort()
 	}
 	else
 	{
-		fmt::throw_exception("Invalid cpu_thread type" HERE);
+		fmt::throw_exception("Invalid cpu_thread type");
 	}
 }
 
@@ -805,7 +805,7 @@ std::string cpu_thread::get_name() const
 	}
 	else
 	{
-		fmt::throw_exception("Invalid cpu_thread type" HERE);
+		fmt::throw_exception("Invalid cpu_thread type");
 	}
 }
 
@@ -1057,7 +1057,7 @@ void cpu_thread::flush_profilers() noexcept
 {
 	if (!g_fxo->get<cpu_profiler>())
 	{
-		profiler.fatal("cpu_thread::flush_profilers() has been called incorrectly." HERE);
+		profiler.fatal("cpu_thread::flush_profilers() has been called incorrectly.");
 		return;
 	}
 

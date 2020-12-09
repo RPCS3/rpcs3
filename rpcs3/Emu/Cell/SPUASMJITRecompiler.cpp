@@ -940,7 +940,7 @@ spu_recompiler::XmmLink spu_recompiler::XmmAlloc() // get empty xmm register
 		if (v) return{ v };
 	}
 
-	fmt::throw_exception("Out of Xmm Vars" HERE);
+	fmt::throw_exception("Out of Xmm Vars");
 }
 
 spu_recompiler::XmmLink spu_recompiler::XmmGet(s8 reg, XmmType type) // get xmm register with specific SPU reg
@@ -952,7 +952,7 @@ spu_recompiler::XmmLink spu_recompiler::XmmGet(s8 reg, XmmType type) // get xmm 
 	case XmmType::Int: c->movdqa(result, SPU_OFF_128(gpr, reg)); break;
 	case XmmType::Float: c->movaps(result, SPU_OFF_128(gpr, reg)); break;
 	case XmmType::Double: c->movapd(result, SPU_OFF_128(gpr, reg)); break;
-	default: fmt::throw_exception("Invalid XmmType" HERE);
+	default: fmt::throw_exception("Invalid XmmType");
 	}
 
 	return result;
@@ -1252,7 +1252,7 @@ void spu_recompiler::UNK(spu_opcode_t op)
 	auto gate = [](spu_thread* _spu, u32 op)
 	{
 		_spu->state += cpu_flag::dbg_pause;
-		spu_log.fatal("Unknown/Illegal instruction (0x%08x)" HERE, op);
+		spu_log.fatal("Unknown/Illegal instruction (0x%08x)", op);
 		spu_runtime::g_escape(_spu);
 	};
 
