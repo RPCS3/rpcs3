@@ -2498,7 +2498,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 
 	if (const auto thread_count = std::thread::hardware_concurrency())
 	{
-		const u64 all_cores_mask = thread_count < 64 ? UINT64_MAX >> (64 - thread_count): UINT64_MAX;
+		const u64 all_cores_mask = get_process_affinity_mask();
 
 		switch (g_native_core_layout)
 		{
@@ -2509,105 +2509,140 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 		}
 		case native_core_arrangement::amd_ccx:
 		{
-			u64 spu_mask, ppu_mask, rsx_mask;
-			const auto system_id = utils::get_cpu_brand();
-			if (thread_count >= 32)
+			if (thread_count <= 8)
 			{
-				if (system_id.find("3950X") != umax)
+				// Single CCX or not enough threads, do nothing
+				return all_cores_mask;
+			}
+
+			u64 spu_mask, ppu_mask, rsx_mask;
+			spu_mask = ppu_mask = rsx_mask = all_cores_mask; // Fallback, in case someone is messing with core config
+
+			const auto system_id = utils::get_cpu_brand();
+			const auto family_id = utils::get_cpu_family();
+			const auto model_id = utils::get_cpu_model();
+
+			switch (family_id)
+			{
+			case 0x17: // Zen, Zen+, Zen2
+			case 0x18: // Dhyana core (Zen)
+			{
+				if (model_id > 0x30)
 				{
-					// zen2
-					// Ryzen 9 3950X
-					// Assign threads 9-32
-					ppu_mask = 0b11111111000000000000000000000000;
-					spu_mask = 0b00000000111111110000000000000000;
-					rsx_mask = 0b00000000000000001111111100000000;
-				}
-				else if (system_id.find("2970WX") != umax)
-				{
-					// zen+
-					// Threadripper 2970WX
-					// Assign threads 9-24
-					ppu_mask = 0b000000111111000000000000;
-					spu_mask = ppu_mask;
-					rsx_mask = 0b111111000000000000000000;
+					// Zen2 (models 49, 96, 113, 144)
+					// Much improved inter-CCX latency
+					switch (thread_count)
+					{
+					case 128:
+					case 64:
+					case 48:
+					case 32:
+						// TR 3000 series, or R9 3950X, Assign threads 9-32
+						ppu_mask = 0b11111111000000000000000000000000;
+						spu_mask = 0b00000000111111110000000000000000;
+						rsx_mask = 0b00000000000000001111111100000000;
+						break;
+					case 24:
+						// 3900X, Assign threads 7-22
+						ppu_mask = 0b111111000000000000000000;
+						spu_mask = 0b000000111111000000000000;
+						rsx_mask = 0b000000000000111111000000;
+						break;
+					case 16:
+						// 3700, 3800 family, Assign threads 1-16
+						ppu_mask = 0b0000000011110000;
+						spu_mask = 0b1111111100000000;
+						rsx_mask = 0b0000000000001111;
+						break;
+					case 12:
+						// 3600 family, Assign threads 1-12
+						ppu_mask = 0b000000111000;
+						spu_mask = 0b111111000000;
+						rsx_mask = 0b000000000111;
+						break;
+					default:
+						break;
+					}
 				}
 				else
 				{
-					// zen(+)
-					// Threadripper 1950X/2950X/2990WX
-					// Assign threads 17-32
-					ppu_mask = 0b00000000111111110000000000000000;
-					spu_mask = ppu_mask;
-					rsx_mask = 0b11111111000000000000000000000000;
+					// Zen, Zen+ (models 1, 8(+), 17, 24(+), 32)
+					switch (thread_count)
+					{
+					case 64:
+						// TR 2990WX, Assign threads 17-32
+						ppu_mask = 0b00000000111111110000000000000000;
+						spu_mask = ppu_mask;
+						rsx_mask = 0b11111111000000000000000000000000;
+						break;
+					case 48:
+						// TR 2970WX, Assign threads 9-24
+						ppu_mask = 0b000000111111000000000000;
+						spu_mask = ppu_mask;
+						rsx_mask = 0b111111000000000000000000;
+						break;
+					case 32:
+						// TR 2950X, TR 1950X, Assign threads 17-32
+						ppu_mask = 0b00000000111111110000000000000000;
+						spu_mask = ppu_mask;
+						rsx_mask = 0b11111111000000000000000000000000;
+						break;
+					case 24:
+						// TR 1920X, 2920X, Assign threads 13-24
+						ppu_mask = 0b000000111111000000000000;
+						spu_mask = ppu_mask;
+						rsx_mask = 0b111111000000000000000000;
+						break;
+					case 16:
+						// 1700, 1800, 2700, TR 1900X family
+						ppu_mask = 0b1111111100000000;
+						spu_mask = ppu_mask;
+						rsx_mask = 0b0000000000111100;
+						break;
+					case 12:
+						// 1600, 2600 family, Assign threads 3-12
+						ppu_mask = 0b111111000000;
+						spu_mask = ppu_mask;
+						rsx_mask = 0b000000111100;
+						break;
+					default:
+						break;
+					}
 				}
-
+				break;
 			}
-			else if (thread_count == 24)
+			case 0x19: // Zen3
 			{
-				if (system_id.find("3900X") != umax)
+				// Single-CCX architecture, just disable SMT if wide enough
+				// CCX now holds upto 16 threads
+				// Lack of hw availability makes testing difficult
+				switch (thread_count)
 				{
-					// zen2
-					// Ryzen 9 3900X
-					// Assign threads 7-22
+				case 24:
+					// 5900X, Use same scheduler as 3900X
+					// Unverified on windows, may be worse than just disabling SMT and scheduler
 					ppu_mask = 0b111111000000000000000000;
 					spu_mask = 0b000000111111000000000000;
 					rsx_mask = 0b000000000000111111000000;
+					break;
+				default:
+					if (thread_count >= 16)
+					{
+						// Verified by more than one windows user on 16-thread CPU
+						ppu_mask = spu_mask = rsx_mask = (0b10101010101010101010101010101010 & all_cores_mask);
+					}
+					else
+					{
+						ppu_mask = spu_mask = rsx_mask = all_cores_mask;
+					}
+					break;
 				}
-				else
-				{
-					// zen(+)
-					// Threadripper 1920X/2920X
-					// Assign threads 13-24
-					ppu_mask = 0b000000111111000000000000;
-					spu_mask = ppu_mask;
-					rsx_mask = 0b111111000000000000000000;
-				}
+				break;
 			}
-			else if (thread_count == 16)
+			default:
 			{
-				if (system_id.find("3700X") != umax || system_id.find("3800X") != umax)
-				{
-					// Ryzen 7 3700/3800 (x)
-					// Assign threads 1-16
-					ppu_mask = 0b0000000011110000;
-					spu_mask = 0b1111111100000000;
-					rsx_mask = 0b0000000000001111;
-				}
-				else
-				{
-					// zen(+)
-					// Ryzen 7, Threadripper
-					// Assign threads 3-16
-					ppu_mask = 0b1111111100000000;
-					spu_mask = ppu_mask;
-					rsx_mask = 0b0000000000111100;
-				}
+				break;
 			}
-			else if (thread_count == 12)
-			{
-				if (system_id.find("3600") != umax)
-				{
-					// zen2
-					// R5 3600 (x)
-					// Assign threads 1-12
-					ppu_mask = 0b000000111000;
-					spu_mask = 0b111111000000;
-					rsx_mask = 0b000000000111;
-				}
-				else
-				{
-					// zen(+)
-					// R5 1600/2600 (x)
-					// Assign threads 3-12
-					ppu_mask = 0b111111000000;
-					spu_mask = ppu_mask;
-					rsx_mask = 0b000000111100;
-				}
-			}
-			else
-			{
-				// R5 & R3 don't seem to improve performance no matter how these are shuffled
-				ppu_mask = spu_mask = rsx_mask = 0b11111111 & all_cores_mask;
 			}
 
 			switch (group)
