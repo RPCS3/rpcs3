@@ -104,7 +104,7 @@ namespace gl
 			synchronized = false;
 			sync_timestamp = 0ull;
 
-			verify(HERE), rsx_pitch;
+			ensure(rsx_pitch);
 
 			this->rsx_pitch = rsx_pitch;
 			this->width = w;
@@ -327,7 +327,7 @@ namespace gl
 
 			m_fence.wait_for_signal();
 
-			verify(HERE), (offset + size) <= pbo.size();
+			ensure(offset + GLsizeiptr{size} <= pbo.size());
 			pbo.bind(buffer::target::pixel_pack);
 
 			return glMapBufferRange(GL_PIXEL_PACK_BUFFER, offset, size, GL_MAP_READ_BIT);
@@ -352,15 +352,15 @@ namespace gl
 				case gl::texture::type::ubyte:
 				{
 					// byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
-					verify(HERE), !pack_unpack_swap_bytes;
+					ensure(!pack_unpack_swap_bytes);
 					break;
 				}
 				case gl::texture::type::uint_24_8:
 				{
 					// Swap bytes on D24S8 does not swap the whole dword, just shuffles the 3 bytes for D24
 					// In this regard, D24S8 is the same structure on both PC and PS3, but the endianness of the whole block is reversed on PS3
-					verify(HERE), pack_unpack_swap_bytes == false;
-					verify(HERE), real_pitch == (width * 4);
+					ensure(pack_unpack_swap_bytes == false);
+					ensure(real_pitch == (width * 4));
 					if (rsx_pitch == real_pitch) [[likely]]
 					{
 						stream_data_to_memory_swapped_u32<true>(dst, dst, valid_length / 4, 4);
@@ -708,7 +708,7 @@ namespace gl
 				}
 				else
 				{
-					verify(HERE), dst_image->get_target() == gl::texture::target::texture2D;
+					ensure(dst_image->get_target() == gl::texture::target::texture2D);
 
 					auto _blitter = gl::g_hw_blitter;
 					const areai src_rect = { src_x, src_y, src_x + src_w, src_y + src_h };
@@ -958,7 +958,7 @@ namespace gl
 			const auto swizzle = get_component_mapping(gcm_format, flags);
 			auto image = static_cast<gl::viewable_image*>(section.get_raw_texture());
 
-			verify(HERE), image != nullptr;
+			ensure(image);
 			image->set_native_component_layout(swizzle);
 
 			section.set_view_flags(flags);

@@ -348,7 +348,7 @@ public:
 			m_offset = prog.ucode;
 
 			u32* vdata = reinterpret_cast<u32*>(&m_buffer[m_offset]);
-			verify(HERE), (m_buffer_size - m_offset) % sizeof(u32) == 0;
+			ensure((m_buffer_size - m_offset) % sizeof(u32) == 0);
 			for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 			{
 				vdata[i] = std::bit_cast<u32, be_t<u32>>(vdata[i]);

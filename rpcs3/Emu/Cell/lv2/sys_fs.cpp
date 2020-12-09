@@ -207,7 +207,7 @@ struct lv2_file::file_view : fs::file_base
 		const u64 old_pos = m_file->file.pos();
 		const u64 new_pos = m_file->file.seek(m_off + m_pos);
 		const u64 result = m_file->file.read(buffer, size);
-		verify(HERE), old_pos == m_file->file.seek(old_pos);
+		ensure(old_pos == m_file->file.seek(old_pos));
 
 		m_pos += result;
 		return result;
@@ -1306,7 +1306,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			? file->op_read(arg->buf, arg->size)
 			: file->op_write(arg->buf, arg->size);
 
-		verify(HERE), old_pos == file->file.seek(old_pos);
+		ensure(old_pos == file->file.seek(old_pos));
 
 		arg->out_code = CELL_OK;
 		return CELL_OK;

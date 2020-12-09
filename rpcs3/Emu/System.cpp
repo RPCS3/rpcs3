@@ -1074,7 +1074,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			// Force lib loading mode
 			g_cfg.core.lib_loading.from_string("Manually load selected libraries");
-			verify(HERE), g_cfg.core.lib_loading == lib_loading_type::manual;
+			ensure(g_cfg.core.lib_loading == lib_loading_type::manual);
 			g_cfg.core.load_libraries.from_default();
 
 			// Fake arg (workaround)
@@ -1180,7 +1180,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				else
 				{
 					// Workaround for analyser glitches
-					verify(HERE), vm::falloc(0x10000, 0xf0000, vm::main);
+					ensure(vm::falloc(0x10000, 0xf0000, vm::main));
 				}
 
 				atomic_t<std::size_t> fnext = 0;

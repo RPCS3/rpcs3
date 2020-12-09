@@ -125,7 +125,8 @@ namespace vk
 
 		void run(VkCommandBuffer cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image)
 		{
-			verify(HERE), msaa_image->samples() > 1, resolve_image->samples() == 1;
+			ensure(msaa_image->samples() > 1);
+			ensure(resolve_image->samples() == 1);
 
 			multisampled = msaa_image;
 			resolve = resolve_image;

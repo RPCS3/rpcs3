@@ -125,7 +125,7 @@ namespace stx
 		single_ptr(single_ptr<U>&& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			r.m_ptr = nullptr;
 		}
 
@@ -146,7 +146,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		single_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			m_ptr = r.m_ptr;
 			r.m_ptr = nullptr;
 			return *this;
@@ -219,7 +219,7 @@ namespace stx
 		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr_v<U, T>>>
 		explicit operator single_ptr<U>() && noexcept
 		{
-			verify(HERE), is_same_ptr<U, T>();
+			ensure(is_same_ptr<U, T>());
 
 			single_ptr<U> r;
 			r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
@@ -369,7 +369,7 @@ namespace stx
 		shared_ptr(const shared_ptr<U>& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			if (m_ptr)
 				d()->refs++;
 		}
@@ -384,7 +384,7 @@ namespace stx
 		shared_ptr(shared_ptr<U>&& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			r.m_ptr = nullptr;
 		}
 
@@ -392,7 +392,7 @@ namespace stx
 		shared_ptr(single_ptr<U>&& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			r.m_ptr = nullptr;
 		}
 
@@ -410,7 +410,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_ptr& operator=(const shared_ptr<U>& r) noexcept
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			shared_ptr(r).swap(*this);
 			return *this;
 		}
@@ -424,7 +424,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_ptr& operator=(shared_ptr<U>&& r) noexcept
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			shared_ptr(std::move(r)).swap(*this);
 			return *this;
 		}
@@ -432,7 +432,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			shared_ptr(std::move(r)).swap(*this);
 			return *this;
 		}
@@ -453,7 +453,7 @@ namespace stx
 		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr_v<U, T>>>
 		explicit operator single_ptr<U>() && noexcept
 		{
-			verify(HERE), is_same_ptr<U, T>();
+			ensure(is_same_ptr<U, T>());
 
 			const auto o = d();
 
@@ -540,7 +540,7 @@ namespace stx
 		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr_v<U, T>>>
 		explicit operator shared_ptr<U>() const& noexcept
 		{
-			verify(HERE), is_same_ptr<U, T>();
+			ensure(is_same_ptr<U, T>());
 
 			if (m_ptr)
 			{
@@ -556,7 +556,7 @@ namespace stx
 		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr_v<U, T>>>
 		explicit operator shared_ptr<U>() && noexcept
 		{
-			verify(HERE), is_same_ptr<U, T>();
+			ensure(is_same_ptr<U, T>());
 
 			shared_ptr<U> r;
 			r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
@@ -614,7 +614,7 @@ namespace stx
 		atomic_ptr(const shared_ptr<U>& r) noexcept
 			: m_val(reinterpret_cast<uptr>(r.m_ptr) << c_ref_size)
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 
 			// Obtain a ref + as many refs as an atomic_ptr can additionally reference
 			if (m_val)
@@ -625,7 +625,7 @@ namespace stx
 		atomic_ptr(shared_ptr<U>&& r) noexcept
 			: m_val(reinterpret_cast<uptr>(r.m_ptr) << c_ref_size)
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			r.m_ptr = nullptr;
 
 			if (m_val)
@@ -636,7 +636,7 @@ namespace stx
 		atomic_ptr(single_ptr<U>&& r) noexcept
 			: m_val(reinterpret_cast<uptr>(r.m_ptr) << c_ref_size)
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			r.m_ptr = nullptr;
 
 			if (m_val)
@@ -668,7 +668,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		atomic_ptr& operator=(const shared_ptr<U>& r) noexcept
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			store(r);
 			return *this;
 		}
@@ -676,7 +676,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		atomic_ptr& operator=(shared_ptr<U>&& r) noexcept
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			store(std::move(r));
 			return *this;
 		}
@@ -684,7 +684,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		atomic_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 			store(std::move(r));
 			return *this;
 		}
@@ -948,7 +948,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_type compare_and_swap(const shared_ptr<U>& cmp, shared_type exch)
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 
 			shared_type old = cmp;
 
@@ -966,7 +966,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		bool compare_and_swap_test(const shared_ptr<U>& cmp, shared_type exch)
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 
 			const uptr _old = reinterpret_cast<uptr>(cmp.m_ptr);
 			const uptr _new = reinterpret_cast<uptr>(exch.m_ptr);
@@ -1007,7 +1007,7 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_type compare_and_swap(const single_ptr<U>& cmp, shared_type exch)
 		{
-			verify(HERE), is_same_ptr<T, U>();
+			ensure(is_same_ptr<T, U>());
 
 			shared_type old = cmp;
 

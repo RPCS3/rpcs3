@@ -351,7 +351,7 @@ namespace rsx
 
 		void initialize(u32 _index, ranged_storage_type *storage)
 		{
-			verify(HERE), m_storage == nullptr && storage != nullptr;
+			ensure(m_storage == nullptr && storage != nullptr);
 			AUDIT(index < num_blocks);
 
 			m_storage = storage;
@@ -1052,7 +1052,7 @@ namespace rsx
 
 		void initialize(ranged_storage_block_type *block)
 		{
-			verify(HERE), m_block == nullptr && m_tex_cache == nullptr && m_storage == nullptr;
+			ensure(m_block == nullptr && m_tex_cache == nullptr && m_storage == nullptr);
 			m_block = block;
 			m_storage = &block->get_storage();
 			m_tex_cache = &block->get_texture_cache();

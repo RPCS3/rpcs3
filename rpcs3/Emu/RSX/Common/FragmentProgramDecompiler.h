@@ -66,7 +66,7 @@ struct temp_register
 	bool requires_gather(u8 channel) const
 	{
 		//Data fetched from the single precision register requires merging of the two half registers
-		verify(HERE), channel < 4;
+		ensure(channel < 4);
 		if (aliased_h0 && channel < 2)
 		{
 			return last_write_half[channel];

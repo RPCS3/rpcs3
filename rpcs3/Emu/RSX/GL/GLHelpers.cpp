@@ -553,7 +553,7 @@ namespace gl
 			}
 		}
 
-		verify("Incompatible source and destination format!" HERE), real_src->aspect() == real_dst->aspect();
+		ensure(real_src->aspect() == real_dst->aspect());
 
 		const bool is_depth_copy = (real_src->aspect() != image_aspect::color);
 		const filter interp = (linear_interpolation && !is_depth_copy) ? filter::linear : filter::nearest;

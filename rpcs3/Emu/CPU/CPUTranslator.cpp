@@ -85,7 +85,7 @@ llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type)
 
 	if (const auto c1 = llvm::dyn_cast<llvm::Constant>(val))
 	{
-		return verify(HERE, llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, type, m_module->getDataLayout()));
+		return ensure(llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, type, m_module->getDataLayout()));
 	}
 
 	return m_ir->CreateBitCast(val, type);
@@ -203,8 +203,8 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t)
 		return llvm::ConstantInt::get(t, llvm::APInt(128, llvm::makeArrayRef(reinterpret_cast<const u64*>(v._bytes), 2)));
 	}
 
-	verify(HERE), t->isVectorTy();
-	verify(HERE), 128 == t->getScalarSizeInBits() * llvm::cast<llvm::VectorType>(t)->getNumElements();
+	ensure(t->isVectorTy());
+	ensure(128 == t->getScalarSizeInBits() * llvm::cast<llvm::VectorType>(t)->getNumElements());
 
 	const auto sct = t->getScalarType();
 

@@ -473,7 +473,7 @@ namespace vk
 		vp.scissorCount = 1;
 
 		VkPipelineMultisampleStateCreateInfo ms = properties.state.ms;
-		verify("Multisample state mismatch!" HERE), ms.rasterizationSamples == VkSampleCountFlagBits((properties.renderpass_key >> 16) & 0xF);
+		ensure(ms.rasterizationSamples == VkSampleCountFlagBits((properties.renderpass_key >> 16) & 0xF)); // "Multisample state mismatch!"
 		if (ms.rasterizationSamples != VK_SAMPLE_COUNT_1_BIT)
 		{
 			// Update the sample mask pointer

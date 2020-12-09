@@ -836,7 +836,7 @@ error_code cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 str
 					u32 buffer = vm::alloc(size, vm::main);
 					auto bufPtr = vm::cptr<PamfHeader>::make(buffer);
 					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
-					verify(HERE), f.read(buf, size) == size;
+					ensure(f.read(buf, size) == size);
 					u32 sp_ = vm::alloc(sizeof(CellPamfReader), vm::main);
 					auto sp = vm::ptr<CellPamfReader>::make(sp_);
 					u32 reader = cellPamfReaderInitialize(sp, bufPtr, size, 0);

@@ -150,13 +150,13 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 					break;
 				}
 
-				verify(HERE), 0 > sem->val.fetch_op([](s32& val)
+				ensure(0 > sem->val.fetch_op([](s32& val)
 				{
 					if (val < 0)
 					{
 						val++;
 					}
-				});
+				}));
 
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
@@ -255,7 +255,7 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 
 		for (s32 i = 0; i < to_awake; i++)
 		{
-			sem->append(verify(HERE, sem->schedule<ppu_thread>(sem->sq, sem->protocol)));
+			sem->append((ensure(sem->schedule<ppu_thread>(sem->sq, sem->protocol))));
 		}
 
 		if (to_awake > 0)

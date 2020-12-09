@@ -49,7 +49,7 @@ namespace vk
 
 	query_pool_manager::query_pool_manager(vk::render_device& dev, VkQueryType type, u32 num_entries)
 	{
-		verify(HERE), num_entries > 0;
+		ensure(num_entries > 0);
 
 		owner = &dev;
 		query_type = type;
@@ -72,7 +72,7 @@ namespace vk
 
 	void query_pool_manager::allocate_new_pool(vk::command_buffer& cmd)
 	{
-		verify(HERE), !m_current_query_pool;
+		ensure(!m_current_query_pool);
 
 		const u32 count = ::size32(query_slot_status);
 		m_current_query_pool = std::make_unique<query_pool>(*owner, query_type, count);
@@ -124,7 +124,7 @@ namespace vk
 
 	void query_pool_manager::begin_query(vk::command_buffer& cmd, u32 index)
 	{
-		verify(HERE), query_slot_status[index].active == false;
+		ensure(query_slot_status[index].active == false);
 
 		auto& query_info = query_slot_status[index];
 		query_info.pool = m_current_query_pool.get();
@@ -166,7 +166,7 @@ namespace vk
 		// Release reference and discard
 		auto& query = query_slot_status[index];
 
-		verify(HERE), query.active;
+		ensure(query.active);
 		query.pool->release();
 
 		if (!query.pool->has_refs())
@@ -206,4 +206,3 @@ namespace vk
 		return ~0u;
 	}
 }
-

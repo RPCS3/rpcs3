@@ -41,7 +41,7 @@ namespace vk
 
 		program& program::load_uniforms(const std::vector<program_input>& inputs)
 		{
-			verify("Cannot change uniforms in already linked program!" HERE), !linked;
+			ensure(!linked); // "Cannot change uniforms in already linked program!"
 
 			for (auto &item : inputs)
 			{
@@ -133,7 +133,7 @@ namespace vk
 
 		void program::bind_uniform(const VkDescriptorImageInfo & image_descriptor, int texture_unit, ::glsl::program_domain domain, VkDescriptorSet &descriptor_set, bool is_stencil_mirror)
 		{
-			verify("Unsupported program domain" HERE, domain != ::glsl::program_domain::glsl_compute_program);
+			ensure(domain != ::glsl::program_domain::glsl_compute_program);
 
 			u32 binding;
 			if (domain == ::glsl::program_domain::glsl_fragment_program)

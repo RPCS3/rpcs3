@@ -503,7 +503,7 @@ namespace gl
 		}
 		else if (pack_info.type == GL_FLOAT)
 		{
-			verify(HERE), mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 4);
+			ensure(mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 4));
 			mem_info->memory_required = (mem_info->image_size_in_texels * 6);
 			initialize_scratch_mem();
 
@@ -513,7 +513,7 @@ namespace gl
 		}
 		else if (pack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
 		{
-			verify(HERE), mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 8);
+			ensure(mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 8));
 			mem_info->memory_required = (mem_info->image_size_in_texels * 12);
 			initialize_scratch_mem();
 

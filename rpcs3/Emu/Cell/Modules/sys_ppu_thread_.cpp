@@ -172,7 +172,7 @@ void sys_ppu_thread_exit(ppu_thread& ppu, u64 val)
 	sysPrxForUser.trace("sys_ppu_thread_exit(val=0x%llx)", val);
 
 	// Call registered atexit functions
-	verify(HERE), !sys_lwmutex_lock(ppu, g_ppu_atexit_lwm, 0);
+	ensure(!sys_lwmutex_lock(ppu, g_ppu_atexit_lwm, 0));
 
 	for (auto ptr : *g_ppu_atexit)
 	{
@@ -182,7 +182,7 @@ void sys_ppu_thread_exit(ppu_thread& ppu, u64 val)
 		}
 	}
 
-	verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
+	ensure(!sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm));
 
 	// Deallocate TLS
 	ppu_free_tls(vm::cast(ppu.gpr[13], HERE) - 0x7030);
@@ -239,7 +239,7 @@ void sys_ppu_thread_once(ppu_thread& ppu, vm::ptr<s32> once_ctrl, vm::ptr<void()
 {
 	sysPrxForUser.notice("sys_ppu_thread_once(once_ctrl=*0x%x, init=*0x%x)", once_ctrl, init);
 
-	verify(HERE), sys_mutex_lock(ppu, *g_ppu_once_mutex, 0) == CELL_OK;
+	ensure(sys_mutex_lock(ppu, *g_ppu_once_mutex, 0) == CELL_OK);
 
 	if (*once_ctrl == SYS_PPU_THREAD_ONCE_INIT)
 	{
@@ -248,7 +248,7 @@ void sys_ppu_thread_once(ppu_thread& ppu, vm::ptr<s32> once_ctrl, vm::ptr<void()
 		*once_ctrl = SYS_PPU_THREAD_DONE_INIT;
 	}
 
-	verify(HERE), sys_mutex_unlock(ppu, *g_ppu_once_mutex) == CELL_OK;
+	ensure(sys_mutex_unlock(ppu, *g_ppu_once_mutex) == CELL_OK);
 }
 
 error_code sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih)

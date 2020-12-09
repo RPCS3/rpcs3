@@ -126,7 +126,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 
 	u32 reg_index = dst.fp16 ? dst.dest_reg >> 1 : dst.dest_reg;
 
-	verify(HERE), reg_index < temp_registers.size();
+	ensure(reg_index < temp_registers.size());
 
 	if (dst.opcode == RSX_FP_OPCODE_MOV &&
 		src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP &&
@@ -174,7 +174,7 @@ std::string FragmentProgramDecompiler::GetMask()
 {
 	std::string ret;
 	ret.reserve(5);
-	
+
 	static constexpr std::string_view dst_mask = "xyzw";
 
 	ret += '.';
@@ -1266,7 +1266,7 @@ std::string FragmentProgramDecompiler::Decompile()
 
 		if (dst.end) break;
 
-		verify(HERE), m_offset % sizeof(u32) == 0;
+		ensure(m_offset % sizeof(u32) == 0);
 		data += m_offset / sizeof(u32);
 	}
 

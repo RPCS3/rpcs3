@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_ppu_thread.h"
 
 #include "Emu/IdManager.h"
@@ -159,7 +159,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	const u64 vret = thread->gpr[3];
 
 	// Cleanup
-	verify(HERE), idm::remove_verify<named_thread<ppu_thread>>(thread_id, std::move(thread.ptr));
+	ensure(idm::remove_verify<named_thread<ppu_thread>>(thread_id, std::move(thread.ptr)));
 
 	if (!vptr)
 	{
@@ -221,7 +221,7 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 
 	if (thread.ret == CELL_EAGAIN)
 	{
-		verify(HERE), idm::remove<named_thread<ppu_thread>>(thread_id);
+		ensure(idm::remove<named_thread<ppu_thread>>(thread_id));
 	}
 
 	return CELL_OK;

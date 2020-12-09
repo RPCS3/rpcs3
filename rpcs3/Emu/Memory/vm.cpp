@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "vm_locking.h"
 #include "vm_ptr.h"
 #include "vm_ref.h"
@@ -686,7 +686,7 @@ namespace vm
 				// 1. To simplify range_lock logic
 				// 2. To make sure it never overlaps with 32-bit addresses
 				// Also check that it's aligned (lowest 16 bits)
-				verify(HERE), (shm_self & 0xffff'8000'0000'ffff) == range_locked;
+				ensure((shm_self & 0xffff'8000'0000'ffff) == range_locked);
 
 				// Find another mirror and map it as shareable too
 				for (auto& ploc : g_locations)
@@ -716,7 +716,7 @@ namespace vm
 			u64 shm_self = reinterpret_cast<u64>(shm->get()) ^ range_locked;
 
 			// Check (see above)
-			verify(HERE), (shm_self & 0xffff'8000'0000'ffff) == range_locked;
+			ensure((shm_self & 0xffff'8000'0000'ffff) == range_locked);
 
 			// Map range as shareable
 			for (u32 i = addr / 65536; i < addr / 65536 + size / 65536; i++)
@@ -884,7 +884,7 @@ namespace vm
 			else
 			{
 				// Must be consistent
-				verify(HERE), is_exec == !!(g_pages[i] & page_executable);
+				ensure(is_exec == !!(g_pages[i] & page_executable));
 			}
 
 			size += 4096;
@@ -1049,8 +1049,8 @@ namespace vm
 	{
 		perf_meter<"PAGE_LCK"_u64> perf;
 
-		verify("lock_sudo" HERE), addr % 4096 == 0;
-		verify("lock_sudo" HERE), size % 4096 == 0;
+		ensure(addr % 4096 == 0);
+		ensure(size % 4096 == 0);
 
 		if (!utils::memory_lock(g_sudo_addr + addr, size))
 		{
@@ -1075,8 +1075,8 @@ namespace vm
 		if (this->flags & 0x10)
 		{
 			// Mark overflow/underflow guard pages as allocated
-			verify(HERE), !g_pages[addr / 4096].exchange(page_allocated);
-			verify(HERE), !g_pages[addr / 4096 + size / 4096 - 1].exchange(page_allocated);
+			ensure(!g_pages[addr / 4096].exchange(page_allocated));
+			ensure(!g_pages[addr / 4096 + size / 4096 - 1].exchange(page_allocated));
 		}
 
 		// Map "real" memory pages; provide a function to search for mirrors with private member access
@@ -1208,7 +1208,7 @@ namespace vm
 		std::shared_ptr<utils::shm> shm;
 
 		if (m_common)
-			verify(HERE), !src;
+			ensure(!src);
 		else if (src)
 			shm = *src;
 		else
@@ -1265,7 +1265,7 @@ namespace vm
 		std::shared_ptr<utils::shm> shm;
 
 		if (m_common)
-			verify(HERE), !src;
+			ensure(!src);
 		else if (src)
 			shm = *src;
 		else
@@ -1306,12 +1306,12 @@ namespace vm
 			if (flags & 0x10)
 			{
 				// Clear guard pages
-				verify(HERE), g_pages[addr / 4096 - 1].exchange(0) == page_allocated;
-				verify(HERE), g_pages[addr / 4096 + size / 4096].exchange(0) == page_allocated;
+				ensure(g_pages[addr / 4096 - 1].exchange(0) == page_allocated);
+				ensure(g_pages[addr / 4096 + size / 4096].exchange(0) == page_allocated);
 			}
 
 			// Unmap "real" memory pages
-			verify(HERE), size == _page_unmap(addr, size, found->second.second.get());
+			ensure(size == _page_unmap(addr, size, found->second.second.get()));
 
 			// Clear stack guards
 			if (flags & 0x10)

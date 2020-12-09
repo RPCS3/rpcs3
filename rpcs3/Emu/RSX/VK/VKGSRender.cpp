@@ -275,7 +275,7 @@ namespace
 			idx++;
 		}
 
-		verify(HERE), idx == binding_table.total_descriptor_bindings;
+		ensure(idx == binding_table.total_descriptor_bindings);
 
 		std::array<VkPushConstantRange, 1> push_constants;
 		push_constants[0].offset = 0;
@@ -671,7 +671,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		if (g_fxo->get<rsx::dma_manager>()->is_current_thread())
 		{
 			// The offloader thread cannot handle flush requests
-			verify(HERE), !(m_queue_status & flush_queue_state::deadlock);
+			ensure(!(m_queue_status & flush_queue_state::deadlock));
 
 			m_offloader_fault_range = g_fxo->get<rsx::dma_manager>()->get_fault_range(is_writing);
 			m_offloader_fault_cause = (is_writing) ? rsx::invalidation_cause::write : rsx::invalidation_cause::read;
@@ -794,7 +794,7 @@ void VKGSRender::notify_tile_unbound(u32 tile)
 
 void VKGSRender::check_heap_status(u32 flags)
 {
-	verify(HERE), flags;
+	ensure(flags);
 
 	bool heap_critical;
 	if (flags == VK_HEAP_CHECK_ALL)
@@ -917,7 +917,7 @@ void VKGSRender::check_descriptors()
 {
 	// Ease resource pressure if the number of draw calls becomes too high or we are running low on memory resources
 	const auto required_descriptors = rsx::method_registers.current_draw_clause.pass_count();
-	verify(HERE), required_descriptors < DESCRIPTOR_MAX_DRAW_CALLS;
+	ensure(required_descriptors < DESCRIPTOR_MAX_DRAW_CALLS);
 	if ((required_descriptors + m_current_frame->used_descriptors) > DESCRIPTOR_MAX_DRAW_CALLS)
 	{
 		// Should hard sync before resetting descriptors for spec compliance
@@ -932,7 +932,7 @@ VkDescriptorSet VKGSRender::allocate_descriptor_set()
 {
 	if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
 	{
-		verify(HERE), m_current_frame->used_descriptors < DESCRIPTOR_MAX_DRAW_CALLS;
+		ensure(m_current_frame->used_descriptors < DESCRIPTOR_MAX_DRAW_CALLS);
 
 		VkDescriptorSetAllocateInfo alloc_info = {};
 		alloc_info.descriptorPool = m_current_frame->descriptor_pool;
@@ -1113,7 +1113,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 			if ((mask & 0x3) != 0x3 && !require_mem_load && ds->state_flags & rsx::surface_state_flags::erase_bkgnd)
 			{
-				verify(HERE), depth_stencil_mask;
+				ensure(depth_stencil_mask);
 
 				if (!g_cfg.video.read_depth_buffer)
 				{
@@ -1349,7 +1349,7 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 
 void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
 {
-	verify(HERE), args;
+	ensure(args);
 	rsx::thread::sync_hint(hint, args);
 
 	// Occlusion queries not enabled, do nothing
@@ -1470,7 +1470,7 @@ bool VKGSRender::load_program()
 	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
-		verify(HERE), current_fragment_program.valid;
+		ensure(current_fragment_program.valid);
 
 		get_current_vertex_program(vs_sampler_state);
 
@@ -1871,7 +1871,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 
 	if (!m_vertex_layout_storage || !m_vertex_layout_storage->in_range(offset32, range32, base_offset))
 	{
-		verify("Incompatible driver (MacOS?)" HERE), m_texbuffer_view_size >= m_vertex_layout_stream_info.range;
+		ensure(m_texbuffer_view_size >= m_vertex_layout_stream_info.range);
 
 		if (m_vertex_layout_storage)
 			m_current_frame->buffer_views_to_clean.push_back(std::move(m_vertex_layout_storage));
@@ -1914,7 +1914,7 @@ void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
 
 void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkPipelineStageFlags pipeline_stage_flags)
 {
-	verify("Recursive calls to submit the current commandbuffer will cause a deadlock" HERE), !m_queue_status.test_and_set(flush_queue_state::flushing);
+	ensure(!m_queue_status.test_and_set(flush_queue_state::flushing));
 
 	// Workaround for deadlock occuring during RSX offloader fault
 	// TODO: Restructure command submission infrastructure to avoid this condition
@@ -1960,7 +1960,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 #if 0 // Currently unreachable
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_conditional_render)
 	{
-		verify(HERE), m_render_pass_open;
+		ensure(m_render_pass_open);
 		m_device->cmdEndConditionalRenderingEXT(*m_current_command_buffer);
 	}
 #endif
@@ -1987,7 +1987,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 
 	if (force_flush)
 	{
-		verify(HERE), m_current_command_buffer->submit_fence->flushed;
+		ensure(m_current_command_buffer->submit_fence->flushed);
 	}
 
 	m_queue_status.clear(flush_queue_state::flushing);
@@ -2087,7 +2087,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 			m_surface_info[index].address = m_framebuffer_layout.color_addresses[index];
 			m_surface_info[index].pitch = m_framebuffer_layout.actual_color_pitch[index];
-			verify("Pitch mismatch!" HERE), surface->rsx_pitch == m_framebuffer_layout.actual_color_pitch[index];
+			ensure(surface->rsx_pitch == m_framebuffer_layout.actual_color_pitch[index]);
 
 			m_texture_cache.notify_surface_changed(m_surface_info[index].get_memory_range(m_framebuffer_layout.aa_factors));
 			m_draw_buffers.push_back(index);
@@ -2101,7 +2101,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 		m_depth_surface_info.address = m_framebuffer_layout.zeta_address;
 		m_depth_surface_info.pitch = m_framebuffer_layout.actual_zeta_pitch;
-		verify("Pitch mismatch!" HERE), ds->rsx_pitch == m_framebuffer_layout.actual_zeta_pitch;
+		ensure(ds->rsx_pitch == m_framebuffer_layout.actual_zeta_pitch);
 
 		m_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(m_framebuffer_layout.aa_factors));
 	}
@@ -2258,7 +2258,7 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 
 void VKGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
-	verify(HERE), !m_occlusion_query_active;
+	ensure(!m_occlusion_query_active);
 
 	query->result = 0;
 	//query->sync_timestamp = get_system_time();
@@ -2269,7 +2269,7 @@ void VKGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query
 
 void VKGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
-	verify(HERE), query == m_active_query_info;
+	ensure(query == m_active_query_info);
 
 	// NOTE: flushing the queue is very expensive, do not flush just because query stopped
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_open_query)
@@ -2360,7 +2360,7 @@ void VKGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 
 void VKGSRender::emergency_query_cleanup(vk::command_buffer* commands)
 {
-	verify("Command list mismatch" HERE), commands == static_cast<vk::command_buffer*>(m_current_command_buffer);
+	ensure(commands == static_cast<vk::command_buffer*>(m_current_command_buffer));
 
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_open_query)
 	{
@@ -2372,7 +2372,7 @@ void VKGSRender::emergency_query_cleanup(vk::command_buffer* commands)
 
 void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources)
 {
-	verify(HERE), !sources.empty();
+	ensure(!sources.empty());
 
 	// Flag check whether to calculate all entries or only one
 	bool partial_eval;
@@ -2474,7 +2474,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	if (dst_offset)
 	{
 		// Fast path should have been caught above
-		verify(HERE), dst_offset > 4;
+		ensure(dst_offset > 4);
 
 		if (!partial_eval)
 		{

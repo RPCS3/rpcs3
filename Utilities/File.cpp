@@ -1,4 +1,4 @@
-﻿#include "File.h"
+#include "File.h"
 #include "mutex.h"
 #include "StrFmt.h"
 #include "BEType.h"
@@ -41,10 +41,10 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 		std::memcpy(buffer.get() + 32768 + 4, L"UNC\\", 4 * sizeof(wchar_t));
 	}
 
-	verify("to_wchar" HERE), MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get() + 32768 + (unc ? 8 : 4), size);
+	ensure(MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get() + 32768 + (unc ? 8 : 4), size)); // "to_wchar"
 
 	// Canonicalize wide path (replace '/', ".", "..", \\ repetitions, etc)
-	verify("to_wchar" HERE), GetFullPathNameW(buffer.get() + 32768, 32768, buffer.get(), nullptr) - 1 < 32768 - 1;
+	ensure(GetFullPathNameW(buffer.get() + 32768, 32768, buffer.get(), nullptr) - 1 < 32768 - 1); // "to_wchar"
 
 	return buffer;
 }
@@ -63,7 +63,7 @@ static void to_utf8(std::string& out, const wchar_t* source)
 	const int result = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &out.front(), buf_size, NULL, NULL);
 
 	// Fix the size
-	out.resize(verify("to_utf8" HERE, result) - 1);
+	out.resize(ensure(result) - 1);
 }
 
 static time_t to_time(const ULARGE_INTEGER& ft)
@@ -315,7 +315,7 @@ std::shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
 
 std::shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, const std::shared_ptr<device_base>& device)
 {
-	verify(HERE), name.starts_with("//"), name[2] != '/';
+	ensure(name.starts_with("//") && name[2] != '/');
 
 	return get_device_manager().set_device(name, device);
 }
@@ -355,7 +355,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 		if (!GetFileAttributesExW(to_wchar(std::string(epath) + '/').get(), GetFileExInfoStandard, &attrs))
 		{
 			g_tls_error = to_error(GetLastError());
-			return false;	
+			return false;
 		}
 
 		info.is_directory = true; // Handle drives as directories
@@ -404,7 +404,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 			if (const DWORD err = GetLastError(); err != ERROR_NO_MORE_FILES)
 			{
 				g_tls_error = to_error(err);
-				return false;		
+				return false;
 			}
 
 			g_tls_error = fs::error::noent;
@@ -990,7 +990,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		stat_t stat() override
 		{
 			FILE_BASIC_INFO basic_info;
-			verify("file::stat" HERE), GetFileInformationByHandleEx(m_handle, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO));
+			ensure(GetFileInformationByHandleEx(m_handle, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO))); // "file::stat"
 
 			stat_t info;
 			info.is_directory = (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
@@ -1008,7 +1008,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 		void sync() override
 		{
-			verify("file::sync" HERE), FlushFileBuffers(m_handle);
+			ensure(FlushFileBuffers(m_handle)); // "file::sync"
 		}
 
 		bool trunc(u64 length) override
@@ -1031,7 +1031,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			const int size = narrow<int>(count, "file::read" HERE);
 
 			DWORD nread;
-			verify("file::read" HERE), ReadFile(m_handle, buffer, size, &nread, NULL);
+			ensure(ReadFile(m_handle, buffer, size, &nread, NULL)); // "file::read"
 
 			return nread;
 		}
@@ -1042,7 +1042,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			const int size = narrow<int>(count, "file::write" HERE);
 
 			DWORD nwritten;
-			verify("file::write" HERE), WriteFile(m_handle, buffer, size, &nwritten, NULL);
+			ensure(WriteFile(m_handle, buffer, size, &nwritten, NULL)); // "file::write"
 
 			return nwritten;
 		}
@@ -1070,7 +1070,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		u64 size() override
 		{
 			LARGE_INTEGER size;
-			verify("file::size" HERE), GetFileSizeEx(m_handle, &size);
+			ensure(GetFileSizeEx(m_handle, &size)); // "file::size"
 
 			return size.QuadPart;
 		}
@@ -1119,7 +1119,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	if (mode & fs::trunc && mode & (fs::lock + fs::unread) && mode & fs::write)
 	{
 		// Postpone truncation in order to avoid using O_TRUNC on a locked file
-		verify(HERE), ::ftruncate(fd, 0) == 0;
+		ensure(::ftruncate(fd, 0) == 0);
 	}
 
 	class unix_file final : public file_base
@@ -1140,7 +1140,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		stat_t stat() override
 		{
 			struct ::stat file_info;
-			verify("file::stat" HERE), ::fstat(m_fd, &file_info) == 0;
+			ensure(::fstat(m_fd, &file_info) == 0); // "file::stat"
 
 			stat_t info;
 			info.is_directory = S_ISDIR(file_info.st_mode);
@@ -1158,7 +1158,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 		void sync() override
 		{
-			verify("file::sync" HERE), ::fsync(m_fd) == 0;
+			ensure(::fsync(m_fd) == 0); // "file::sync"
 		}
 
 		bool trunc(u64 length) override
@@ -1175,7 +1175,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		u64 read(void* buffer, u64 count) override
 		{
 			const auto result = ::read(m_fd, buffer, count);
-			verify("file::read" HERE), result != -1;
+			ensure(result != -1); // "file::read"
 
 			return result;
 		}
@@ -1183,7 +1183,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		u64 write(const void* buffer, u64 count) override
 		{
 			const auto result = ::write(m_fd, buffer, count);
-			verify("file::write" HERE), result != -1;
+			ensure(result != -1); // "file::write"
 
 			return result;
 		}
@@ -1210,7 +1210,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		u64 size() override
 		{
 			struct ::stat file_info;
-			verify("file::size" HERE), ::fstat(m_fd, &file_info) == 0;
+			ensure(::fstat(m_fd, &file_info) == 0); // "file::size"
 
 			return file_info.st_size;
 		}
@@ -1226,7 +1226,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			static_assert(offsetof(iovec, iov_len) == offsetof(iovec_clone, iov_len), "Weird iovec::iov_len offset");
 
 			const auto result = ::writev(m_fd, reinterpret_cast<const iovec*>(buffers), buf_count);
-			verify("file::write_gather" HERE), result != -1;
+			ensure(result != -1); // "file::write_gather"
 
 			return result;
 		}
@@ -1386,7 +1386,7 @@ bool fs::dir::open(const std::string& path)
 				add_entry(found);
 			}
 
-			verify("dir::read" HERE), ERROR_NO_MORE_FILES == GetLastError();
+			ensure(ERROR_NO_MORE_FILES == GetLastError()); // "dir::read"
 			FindClose(handle);
 		}
 

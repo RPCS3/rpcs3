@@ -259,7 +259,7 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 			{
 				rwlock->owner = 0;
 
-				verify(HERE), rwlock->rq.empty();
+				ensure(rwlock->rq.empty());
 			}
 		}
 	}

@@ -123,7 +123,7 @@ namespace rsx
 
 		void insert_command_barrier(command_barrier_type type, u32 arg)
 		{
-			verify(HERE), !draw_command_ranges.empty();
+			ensure(!draw_command_ranges.empty());
 
 			auto _do_barrier_insert = [this](barrier_t&& val)
 			{
@@ -234,7 +234,7 @@ namespace rsx
 		{
 			if (draw_command_ranges.empty())
 			{
-				verify(HERE), command == rsx::draw_command::inlined_array;
+				ensure(command == rsx::draw_command::inlined_array);
 				return 0;
 			}
 
@@ -245,7 +245,7 @@ namespace rsx
 		{
 			if (draw_command_ranges.empty())
 			{
-				verify(HERE), command == rsx::draw_command::inlined_array;
+				ensure(command == rsx::draw_command::inlined_array);
 				return 0;
 			}
 
@@ -259,11 +259,11 @@ namespace rsx
 
 			if (draw_command_ranges.empty())
 			{
-				verify(HERE), !inline_vertex_array.empty();
+				ensure(!inline_vertex_array.empty());
 				return true;
 			}
 
-			verify(HERE), current_range_index != ~0u;
+			ensure(current_range_index != ~0u);
 			for (const auto &barrier : draw_command_barriers)
 			{
 				if (barrier.draw_id != current_range_index)
@@ -285,7 +285,7 @@ namespace rsx
 		{
 			if (draw_command_ranges.empty())
 			{
-				verify(HERE), !inline_vertex_array.empty();
+				ensure(!inline_vertex_array.empty());
 				return 1u;
 			}
 
@@ -293,7 +293,7 @@ namespace rsx
 			if (draw_command_ranges.back().count == 0)
 			{
 				// Dangling barrier
-				verify(HERE), count > 1;
+				ensure(count > 1);
 				count--;
 			}
 
@@ -338,7 +338,7 @@ namespace rsx
 			if (draw_command_ranges[current_range_index].count == 0)
 			{
 				// Dangling execution barrier
-				verify(HERE), current_range_index > 0 && (current_range_index + 1) == draw_command_ranges.size();
+				ensure(current_range_index > 0 && (current_range_index + 1) == draw_command_ranges.size());
 				current_range_index = 0;
 				return false;
 			}
@@ -351,7 +351,7 @@ namespace rsx
 		 */
 		void post_execute_cleanup()
 		{
-			verify(HERE), current_range_index == 0;
+			ensure(current_range_index == 0);
 
 			if (draw_command_ranges.size() > 1)
 			{
@@ -372,13 +372,13 @@ namespace rsx
 
 		const draw_range_t& get_range() const
 		{
-			verify(HERE), current_range_index < draw_command_ranges.size();
+			ensure(current_range_index < draw_command_ranges.size());
 			return draw_command_ranges[current_range_index];
 		}
 
 		simple_array<draw_range_t> get_subranges() const
 		{
-			verify(HERE), !is_single_draw();
+			ensure(!is_single_draw());
 
 			const auto range = get_range();
 			const auto limit = range.first + range.count;
@@ -407,7 +407,8 @@ namespace rsx
 				vertex_counter += count;
 			}
 
-			verify(HERE), !ret.empty(), previous_barrier < limit;
+			ensure(!ret.empty());
+			ensure(previous_barrier < limit);
 			ret.push_back({ 0, vertex_counter, limit - previous_barrier });
 
 			return ret;

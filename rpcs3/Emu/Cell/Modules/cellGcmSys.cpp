@@ -383,7 +383,7 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 	// Create contexts
 	const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
 	const u32 rsx_ctxaddr = area ? area->alloc(0x400000) : 0;
-	verify(HERE), rsx_ctxaddr != 0;
+	ensure(rsx_ctxaddr);
 
 	g_defaultCommandBufferBegin = ioAddress;
 	g_defaultCommandBufferFragmentCount = cmdSize / (32 * 1024);
@@ -990,7 +990,7 @@ error_code cellGcmMapEaIoAddressWithFlags(ppu_thread& ppu, u32 ea, u32 io, u32 s
 {
 	cellGcmSys.warning("cellGcmMapEaIoAddressWithFlags(ea=0x%x, io=0x%x, size=0x%x, flags=0x%x)", ea, io, size, flags);
 
-	verify(HERE), flags == 2 /*CELL_GCM_IOMAP_FLAG_STRICT_ORDERING*/;
+	ensure(flags == 2 /*CELL_GCM_IOMAP_FLAG_STRICT_ORDERING*/);
 
 	const auto cfg = g_fxo->get<gcm_config>();
 	std::lock_guard lock(cfg->gcmio_mutex);
@@ -1374,7 +1374,7 @@ static std::pair<u32, u32> getNextCommandBufferBeginEnd(u32 current)
 static u32 getOffsetFromAddress(u32 address)
 {
 	const u32 upper = g_fxo->get<gcm_config>()->offsetTable.ioAddress[address >> 20]; // 12 bits
-	verify(HERE), (upper != 0xFFFF);
+	ensure(upper != 0xFFFF);
 	return (upper << 20) | (address & 0xFFFFF);
 }
 

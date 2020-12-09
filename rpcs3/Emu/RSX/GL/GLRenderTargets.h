@@ -124,7 +124,7 @@ namespace gl
 
 	static inline gl::render_target* as_rtt(gl::texture* t)
 	{
-		return verify(HERE, dynamic_cast<gl::render_target*>(t));
+		return ensure(dynamic_cast<gl::render_target*>(t));
 	}
 }
 

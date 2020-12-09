@@ -115,7 +115,7 @@ namespace gl
 
 		bool check_signaled() const
 		{
-			verify(HERE), m_value != nullptr;
+			ensure(m_value);
 
 			if (signaled)
 				return true;
@@ -145,7 +145,7 @@ namespace gl
 
 		bool wait_for_signal()
 		{
-			verify(HERE), m_value != nullptr;
+			ensure(m_value);
 
 			if (signaled == GL_FALSE)
 			{
@@ -195,7 +195,7 @@ namespace gl
 
 		void server_wait_sync() const
 		{
-			verify(HERE), m_value != nullptr;
+			ensure(m_value != nullptr);
 			glWaitSync(m_value, 0, GL_TIMEOUT_IGNORED);
 		}
 	};
@@ -721,7 +721,7 @@ namespace gl
 
 		void data(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
 		{
-			verify(HERE), m_memory_type != memory_type::local;
+			ensure(m_memory_type != memory_type::local);
 
 			target target_ = current_target();
 			save_binding_state save(target_, *this);
@@ -731,7 +731,7 @@ namespace gl
 
 		GLubyte* map(access access_)
 		{
-			verify(HERE), m_memory_type == memory_type::host_visible;
+			ensure(m_memory_type == memory_type::host_visible);
 
 			bind(current_target());
 			return reinterpret_cast<GLubyte*>(glMapBuffer(static_cast<GLenum>(current_target()), static_cast<GLenum>(access_)));
@@ -739,7 +739,7 @@ namespace gl
 
 		void unmap()
 		{
-			verify(HERE), m_memory_type == memory_type::host_visible;
+			ensure(m_memory_type == memory_type::host_visible);
 			glUnmapBuffer(static_cast<GLenum>(current_target()));
 		}
 
@@ -794,7 +794,7 @@ namespace gl
 			glBufferStorage(static_cast<GLenum>(m_target), size, data, buffer_storage_flags);
 			m_memory_mapping = glMapBufferRange(static_cast<GLenum>(m_target), 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
-			verify(HERE), m_memory_mapping != nullptr;
+			ensure(m_memory_mapping != nullptr);
 			m_data_loc = 0;
 			m_size = ::narrow<u32>(size);
 		}
@@ -894,7 +894,7 @@ namespace gl
 
 		void reserve_storage_on_heap(u32 alloc_size) override
 		{
-			verify (HERE), m_memory_mapping == nullptr;
+			ensure(m_memory_mapping == nullptr);
 
 			u32 offset = m_data_loc;
 			if (m_data_loc) offset = align(offset, 256);
@@ -927,7 +927,7 @@ namespace gl
 				m_alignment_offset = ::narrow<u32>(diff_bytes);
 			}
 
-			verify(HERE), m_mapped_bytes >= alloc_size;
+			ensure(m_mapped_bytes >= alloc_size);
 		}
 
 		std::pair<void*, u32> alloc_from_heap(u32 alloc_size, u16 alignment) override
@@ -994,7 +994,7 @@ namespace gl
 
 		void update(buffer *_buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
 		{
-			verify(HERE), _buffer->size() >= (offset + range);
+			ensure(_buffer->size() >= (offset + range));
 			m_buffer = _buffer;
 			m_offset = offset;
 			m_range = range;
@@ -1777,7 +1777,7 @@ namespace gl
 			if (aspect_flags & image_aspect::stencil)
 			{
 				constexpr u32 depth_stencil_mask = (image_aspect::depth | image_aspect::stencil);
-				verify("Invalid aspect mask combination" HERE), (aspect_flags & depth_stencil_mask) != depth_stencil_mask;
+				ensure((aspect_flags & depth_stencil_mask) != depth_stencil_mask); // "Invalid aspect mask combination"
 
 				glBindTexture(m_target, m_id);
 				glTexParameteri(m_target, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
@@ -1880,7 +1880,7 @@ public:
 				}
 			}
 
-			verify(HERE), aspect() & aspect_flags;
+			ensure(aspect() & aspect_flags);
 			auto mapping = apply_swizzle_remap(get_native_component_layout(), remap);
 			auto view = std::make_unique<texture_view>(this, mapping.data(), aspect_flags);
 			auto result = view.get();
@@ -2110,7 +2110,7 @@ public:
 			{
 				save_binding_state save(m_parent);
 
-				verify(HERE), rhs.get_target() == texture::target::texture2D;
+				ensure(rhs.get_target() == texture::target::texture2D);
 				m_parent.m_resource_bindings[m_id] = rhs.id();
 				glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs.id(), 0);
 			}
@@ -2315,7 +2315,7 @@ public:
 					return *this;
 				}
 
-				verify(HERE), !m_init_fence.is_empty(); // Do not attempt to compile a shader_view!!
+				ensure(!m_init_fence.is_empty()); // Do not attempt to compile a shader_view!!
 				m_init_fence.server_wait_sync();
 
 				glCompileShader(m_id);

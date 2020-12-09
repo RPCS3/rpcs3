@@ -387,15 +387,15 @@ void VKGSRender::bind_texture_env()
 				//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 					break;
 				case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-					verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst);
 					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 					break;
 				case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-					verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src;
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
 					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 					break;
 				case VK_IMAGE_LAYOUT_GENERAL:
-					verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
 					if (!sampler_state->is_cyclic_reference)
 					{
 						// This was used in a cyclic ref before, but is missing a barrier
@@ -426,7 +426,7 @@ void VKGSRender::bind_texture_env()
 					break;
 				case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 				case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-					verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
 					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 					break;
 				}
@@ -527,15 +527,15 @@ void VKGSRender::bind_texture_env()
 		//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-			verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
+			ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst);
 			raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-			verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src;
+			ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
 			raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			break;
 		case VK_IMAGE_LAYOUT_GENERAL:
-			verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
+			ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
 			if (!sampler_state->is_cyclic_reference)
 			{
 				// Custom barrier, see similar block in FS stage
@@ -565,7 +565,7 @@ void VKGSRender::bind_texture_env()
 			break;
 		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-			verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
+			ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
 			raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			break;
 		}
@@ -635,15 +635,15 @@ void VKGSRender::bind_interpreter_texture_env()
 					//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 					break;
 				case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-					verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst);
 					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 					break;
 				case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-					verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src;
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
 					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 					break;
 				case VK_IMAGE_LAYOUT_GENERAL:
-					verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
 					if (!sampler_state->is_cyclic_reference)
 					{
 						// This was used in a cyclic ref before, but is missing a barrier
@@ -674,7 +674,8 @@ void VKGSRender::bind_interpreter_texture_env()
 					break;
 				case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 				case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-					verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage, !sampler_state->is_cyclic_reference;
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
+					ensure(!sampler_state->is_cyclic_reference);
 					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 					break;
 				}
@@ -794,7 +795,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	// Update vertex fetch parameters
 	update_vertex_env(sub_index, upload_info);
 
-	verify(HERE), m_vertex_layout_storage;
+	ensure(m_vertex_layout_storage);
 	if (update_descriptors)
 	{
 		m_program->bind_uniform(persistent_buffer, binding_table.vertex_buffers_first_bind_slot, m_current_frame->descriptor_set);
@@ -910,7 +911,7 @@ void VKGSRender::end()
 			m_current_frame->used_descriptors = 0;
 		}
 
-		verify(HERE), !m_current_frame->swap_command_buffer;
+		ensure(!m_current_frame->swap_command_buffer);
 
 		m_current_frame->flags &= ~frame_context_state::dirty;
 	}

@@ -930,7 +930,7 @@ namespace rsx
 		}
 
 		// Mipmap, height and width aren't allowed to be zero
-		return verify("Texture params" HERE, result) * (cubemap ? 6 : 1);
+		return (ensure(result) * (cubemap ? 6 : 1));
 	}
 
 	size_t get_placed_texture_storage_size(const rsx::fragment_texture& texture, size_t row_pitch_alignment, size_t mipmap_alignment)

@@ -92,7 +92,7 @@ s16 __sys_look_ctype_table(s32 ch)
 {
 	sysPrxForUser.trace("__sys_look_ctype_table(ch=%d)", ch);
 
-	verify("__sys_look_ctype_table" HERE), ch >= -1 && ch <= 127;
+	ensure(ch >= -1 && ch <= 127); // "__sys_look_ctype_table"
 
 	return s_ctype_table[ch + 1];
 }
@@ -101,7 +101,7 @@ s32 _sys_tolower(s32 ch)
 {
 	sysPrxForUser.trace("_sys_tolower(ch=%d)", ch);
 
-	verify("_sys_tolower" HERE), ch >= -1 && ch <= 127;
+	ensure(ch >= -1 && ch <= 127); // "_sys_tolower"
 
 	return s_ctype_table[ch + 1] & 1 ? ch + 0x20 : ch;
 }
@@ -110,7 +110,7 @@ s32 _sys_toupper(s32 ch)
 {
 	sysPrxForUser.trace("_sys_toupper(ch=%d)", ch);
 
-	verify("_sys_toupper" HERE), ch >= -1 && ch <= 127;
+	ensure(ch >= -1 && ch <= 127); // "_sys_toupper"
 
 	return s_ctype_table[ch + 1] & 2 ? ch - 0x20 : ch;
 }

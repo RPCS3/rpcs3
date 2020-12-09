@@ -270,7 +270,7 @@ namespace vk
 			else
 				program = build_pipeline(key, pass);
 
-			verify(HERE), m_used_descriptors < VK_OVERLAY_MAX_DRAW_CALLS;
+			ensure(m_used_descriptors < VK_OVERLAY_MAX_DRAW_CALLS);
 
 			VkDescriptorSetAllocateInfo alloc_info = {};
 			alloc_info.descriptorPool = m_descriptor_pool;

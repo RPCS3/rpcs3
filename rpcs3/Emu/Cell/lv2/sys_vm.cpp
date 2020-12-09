@@ -76,7 +76,7 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 	if (const auto area = vm::find_map(0x10000000, 0x10000000, 2 | (flag & SYS_MEMORY_PAGE_SIZE_MASK)))
 	{
 		// Alloc all memory (shall not fail)
-		verify(HERE), area->alloc(vsize);
+		ensure(area->alloc(vsize));
 		vm::lock_sudo(area->addr, vsize);
 
 		idm::make<sys_vm_t>(area->addr, vsize, ct, psize);
@@ -117,7 +117,7 @@ error_code sys_vm_unmap(ppu_thread& ppu, u32 addr)
 	const auto vmo = idm::withdraw<sys_vm_t>(sys_vm_t::find_id(addr), [&](sys_vm_t& vmo)
 	{
 		// Free block
-		verify(HERE), vm::unmap(addr);
+		ensure(vm::unmap(addr));
 
 		// Return memory
 		vmo.ct->used -= vmo.psize;

@@ -128,7 +128,7 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 			{
 				if (cond.mutex->try_own(*cpu, cpu->id))
 				{
-					verify(HERE), !std::exchange(result, cpu);
+					ensure(!std::exchange(result, cpu));
 				}
 			}
 
@@ -169,7 +169,7 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 			{
 				if (cpu->id == thread_id)
 				{
-					verify(HERE), cond.unqueue(cond.sq, cpu);
+					ensure(cond.unqueue(cond.sq, cpu));
 
 					cond.waiters--;
 
@@ -296,7 +296,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	}
 
 	// Verify ownership
-	verify(HERE), cond->mutex->owner >> 1 == ppu.id;
+	ensure(cond->mutex->owner >> 1 == ppu.id);
 
 	// Restore the recursive value
 	cond->mutex->lock_count.release(static_cast<u32>(cond.ret));

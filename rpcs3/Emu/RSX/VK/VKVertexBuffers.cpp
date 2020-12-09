@@ -257,7 +257,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, VK_FORMAT_R8_UINT, required.first))
 			{
-				verify(HERE), cached->local_address == storage_address;
+				ensure(cached->local_address == storage_address);
 
 				in_cache = true;
 				persistent_range_base = cached->offset_in_heap;
@@ -338,7 +338,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 	{
 		if (!m_persistent_attribute_storage || !m_persistent_attribute_storage->in_range(persistent_range_base, required.first, persistent_range_base))
 		{
-			verify("Incompatible driver (MacOS?)" HERE), m_texbuffer_view_size >= required.first;
+			ensure(m_texbuffer_view_size >= required.first); // "Incompatible driver (MacOS?)"
 
 			if (m_persistent_attribute_storage)
 				m_current_frame->buffer_views_to_clean.push_back(std::move(m_persistent_attribute_storage));
@@ -354,7 +354,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 	{
 		if (!m_volatile_attribute_storage || !m_volatile_attribute_storage->in_range(volatile_range_base, required.second, volatile_range_base))
 		{
-			verify("Incompatible driver (MacOS?)" HERE), m_texbuffer_view_size >= required.second;
+			ensure(m_texbuffer_view_size >= required.second); // "Incompatible driver (MacOS?)"
 
 			if (m_volatile_attribute_storage)
 				m_current_frame->buffer_views_to_clean.push_back(std::move(m_volatile_attribute_storage));

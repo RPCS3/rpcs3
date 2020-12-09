@@ -464,7 +464,7 @@ void cpu_thread::operator()()
 		if (progress == umax && std::exchange(wait_set, false))
 		{
 			// Operation finished: need to clean wait flag
-			verify(HERE), !_cpu->check_state();
+			ensure(!_cpu->check_state());
 			return;
 		}
 	});
@@ -484,7 +484,7 @@ void cpu_thread::operator()()
 
 		if (progress == umax && std::exchange(wait_set, false))
 		{
-			verify(HERE), !_cpu->check_state();
+			ensure(!_cpu->check_state());
 			return;
 		}
 	};
@@ -693,7 +693,7 @@ bool cpu_thread::check_state() noexcept
 				cpu_counter::add(this);
 			}
 
-			verify(HERE), cpu_can_stop || !retval;
+			ensure(cpu_can_stop || !retval);
 			return retval;
 		}
 
@@ -859,7 +859,7 @@ std::string cpu_thread::dump_misc() const
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 {
 	// Can't allow pre-set wait bit (it'd be a problem)
-	verify(HERE), !_this || !(_this->state & cpu_flag::wait);
+	ensure(!_this || !(_this->state & cpu_flag::wait));
 
 	do
 	{
@@ -998,7 +998,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		}
 
 		// Finalization (last increment)
-		verify(HERE), g_suspend_counter++ & 1;
+		ensure(g_suspend_counter++ & 1);
 
 		cpu_counter::for_all_cpu(copy2, [&](cpu_thread* cpu)
 		{

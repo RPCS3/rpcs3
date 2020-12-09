@@ -183,7 +183,7 @@ namespace vk
 				declare_inputs();
 			}
 
-			verify(HERE), m_used_descriptors < VK_MAX_COMPUTE_TASKS;
+			ensure(m_used_descriptors < VK_MAX_COMPUTE_TASKS);
 
 			VkDescriptorSetAllocateInfo alloc_info = {};
 			alloc_info.descriptorPool = m_descriptor_pool;
@@ -351,7 +351,7 @@ namespace vk
 
 		void set_parameters(VkCommandBuffer cmd, const u32* params, u8 count)
 		{
-			verify(HERE), use_push_constants;
+			ensure(use_push_constants);
 			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, count * 4, params);
 		}
 
@@ -460,7 +460,7 @@ namespace vk
 			u32 parameters[4] = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
 			set_parameters(cmd, parameters, 4);
 
-			verify(HERE), stencil_offset > data_offset;
+			ensure(stencil_offset > data_offset);
 			m_ssbo_length = stencil_offset + (data_length / 4) - data_offset;
 			cs_shuffle_base::run(cmd, data, data_length, data_offset);
 		}
@@ -751,7 +751,7 @@ namespace vk
 
 		cs_deswizzle_3d()
 		{
-			verify("Unsupported block type" HERE), (sizeof(_BlockType) & 3) == 0;
+			ensure((sizeof(_BlockType) & 3) == 0); // "Unsupported block type"
 
 			ssbo_count = 2;
 			use_push_constants = true;

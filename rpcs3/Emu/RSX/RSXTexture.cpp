@@ -75,7 +75,7 @@ namespace rsx
 		else
 			max_mipmap_count = floor_log2(static_cast<u32>(std::max(width(), height()))) + 1;
 
-		return std::min(verify(HERE, mipmap()), max_mipmap_count);
+		return std::min(ensure(mipmap()), max_mipmap_count);
 	}
 
 	rsx::texture_wrap_mode fragment_texture::wrap_s() const
@@ -368,7 +368,7 @@ namespace rsx
 	u16 vertex_texture::get_exact_mipmap_count() const
 	{
 		const u16 max_mipmap_count = floor_log2(static_cast<u32>(std::max(width(), height()))) + 1;
-		return std::min(verify(HERE, mipmap()), max_mipmap_count);
+		return std::min(ensure(mipmap()), max_mipmap_count);
 	}
 
 	std::pair<std::array<u8, 4>, std::array<u8, 4>> vertex_texture::decoded_remap() const

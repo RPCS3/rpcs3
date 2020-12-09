@@ -238,7 +238,7 @@ error_code cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfig
 			config->aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
 
 			CellVideoOutResolution res;
-			verify("Invalid video configuration" HERE), _IntGetResolutionInfo(config->resolutionId, &res) == CELL_OK;
+			ensure(_IntGetResolutionInfo(config->resolutionId, &res) == CELL_OK); // "Invalid video configuration"
 
 			config->pitch = 4 * res.width;
 		}

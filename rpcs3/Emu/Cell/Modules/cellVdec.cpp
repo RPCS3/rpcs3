@@ -576,7 +576,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 
 	attr->decoderVerLower = decoderVerLower;
 	attr->decoderVerUpper = 0x4840010;
-	attr->memSize = !spec_addr ? verify(HERE, memSize) : 4 * 1024 * 1024;
+	attr->memSize = !spec_addr ? ensure(memSize) : 4 * 1024 * 1024;
 	attr->cmdDepth = 4;
 	return CELL_OK;
 }
@@ -973,7 +973,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	info->codecType = vdec->type;
 	info->startAddr = 0x00000123; // invalid value (no address for picture)
 	const int buffer_size = av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1);
-	verify(HERE), (buffer_size >= 0);
+	ensure(buffer_size >= 0);
 	info->size = align<u32>(buffer_size, 128);
 	info->auNum = 1;
 	info->auPts[0].lower = static_cast<u32>(pts);

@@ -183,7 +183,7 @@ namespace rsx
 				return;
 			}
 
-			verify(HERE), !m_remaining_commands;
+			ensure(!m_remaining_commands);
 			const u32 count = (m_cmd >> 18) & 0x7ff;
 
 			if (!count)
@@ -281,12 +281,13 @@ namespace rsx
 			else
 			{
 				// Not enabled, check if we should try enabling
-				verify(HERE), total_draw_count > 2000;
+				ensure(total_draw_count > 2000);
 				if (fifo_hint != load_unoptimizable)
 				{
 					// If its set to unoptimizable, we already tried and it did not work
 					// If it resets to load low (usually after some kind of loading screen) we can try again
-					verify("Incorrect initial state" HERE), begin_end_ctr == 0, num_collapsed == 0;
+					ensure(begin_end_ctr == 0); // "Incorrect initial state"
+					ensure(num_collapsed == 0);
 					enabled = true;
 				}
 			}
@@ -589,13 +590,13 @@ namespace rsx
 				case FIFO::EMIT_END:
 				{
 					// Emit end command to close existing scope
-					//verify(HERE), in_begin_end;
+					//ensure(in_begin_end);
 					methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
 					break;
 				}
 				case FIFO::EMIT_BARRIER:
 				{
-					//verify(HERE), in_begin_end;
+					//ensure(in_begin_end);
 					methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
 					methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, m_flattener.get_primitive());
 					break;

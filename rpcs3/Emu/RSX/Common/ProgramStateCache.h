@@ -403,7 +403,7 @@ public:
 		if (I == m_fragment_shader_cache.end())
 			return;
 
-		verify(HERE), (dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16u);
+		ensure((dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16u));
 
 		f32* dst = dst_buffer.data();
 		alignas(16) f32 tmp[4];

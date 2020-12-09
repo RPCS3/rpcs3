@@ -714,7 +714,7 @@ void _spurs::handler_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 		if ((spurs->flags1 & SF1_EXIT_IF_NO_WORK) == 0)
 		{
-			verify(HERE), (spurs->handlerExiting == 1);
+			ensure((spurs->handlerExiting == 1));
 
 			return sys_ppu_thread_exit(ppu, 0);
 		}
@@ -790,16 +790,16 @@ s32 _spurs::wakeup_shutdown_completion_waiter(ppu_thread& ppu, vm::ptr<CellSpurs
 	{
 		wklF->hook(ppu, spurs, wid, wklF->hookArg);
 
-		verify(HERE), (wklEvent->load() & 0x01);
-		verify(HERE), (wklEvent->load() & 0x02);
-		verify(HERE), (wklEvent->load() & 0x20) == 0;
+		ensure((wklEvent->load() & 0x01));
+		ensure((wklEvent->load() & 0x02));
+		ensure((wklEvent->load() & 0x20) == 0);
 		wklEvent->fetch_or(0x20);
 	}
 
 	s32 rc = CELL_OK;
 	if (!wklF->hook || wklEvent->load() & 0x10)
 	{
-		verify(HERE), (wklF->x28 == 2u);
+		ensure((wklF->x28 == 2u));
 		rc = sys_semaphore_post(ppu, static_cast<u32>(wklF->sem), 1);
 	}
 
@@ -2335,8 +2335,8 @@ s32 _spurs::add_workload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u32>
 	u32 index = wnum & 0xf;
 	if (wnum <= 15)
 	{
-		verify(HERE), (spurs->wklCurrentContention[wnum] & 0xf) == 0;
-		verify(HERE), (spurs->wklPendingContention[wnum] & 0xf) == 0;
+		ensure((spurs->wklCurrentContention[wnum] & 0xf) == 0);
+		ensure((spurs->wklPendingContention[wnum] & 0xf) == 0);
 		spurs->wklState1[wnum] = SPURS_WKL_STATE_PREPARING;
 		spurs->wklStatus1[wnum] = 0;
 		spurs->wklEvent1[wnum] = 0;
@@ -2371,8 +2371,8 @@ s32 _spurs::add_workload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u32>
 	}
 	else
 	{
-		verify(HERE), (spurs->wklCurrentContention[index] & 0xf0) == 0;
-		verify(HERE), (spurs->wklPendingContention[index] & 0xf0) == 0;
+		ensure((spurs->wklCurrentContention[index] & 0xf0) == 0);
+		ensure((spurs->wklPendingContention[index] & 0xf0) == 0);
 		spurs->wklState2[index] = SPURS_WKL_STATE_PREPARING;
 		spurs->wklStatus2[index] = 0;
 		spurs->wklEvent2[index] = 0;
@@ -2447,7 +2447,7 @@ s32 _spurs::add_workload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u32>
 		(wnum < CELL_SPURS_MAX_WORKLOAD ? op.wklState1[wnum] : op.wklState2[wnum % 16]) = SPURS_WKL_STATE_RUNNABLE;
 	});
 
-	verify(HERE), (res_wkl <= 31);
+	ensure((res_wkl <= 31));
 	vm::light_op(spurs->sysSrvMsgUpdateWorkload, [](atomic_t<u8>& v){ v.release(0xff); });
 	vm::light_op(spurs->sysSrvMessage, [](atomic_t<u8>& v){ v.release(0xff); });
 	return CELL_OK;
@@ -2612,7 +2612,7 @@ s32 cellSpursWaitForWorkloadShutdown(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, 
 
 	if (wait_sema)
 	{
-		verify(HERE), sys_semaphore_wait(ppu, static_cast<u32>(info.sem), 0) == 0;
+		ensure(sys_semaphore_wait(ppu, static_cast<u32>(info.sem), 0) == 0);
 	}
 
 	// Reverified
@@ -2657,7 +2657,7 @@ s32 cellSpursRemoveWorkload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid)
 
 	if (spurs->wklFlagReceiver == wid)
 	{
-		verify(HERE), ppu_execute<&_cellSpursWorkloadFlagReceiver>(ppu, spurs, wid, 0) == 0;
+		ensure(ppu_execute<&_cellSpursWorkloadFlagReceiver>(ppu, spurs, wid, 0) == 0);
 	}
 
 	s32 rc;

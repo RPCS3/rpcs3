@@ -2162,7 +2162,7 @@ bool ppu_interpreter::VSPLTB(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::VSPLTH(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
-	verify(HERE), (op.vuimm < 8);
+	ensure((op.vuimm < 8));
 
 	u16 hword = ppu.vr[op.vb]._u16[7 - op.vuimm];
 
@@ -2212,7 +2212,7 @@ bool ppu_interpreter::VSPLTISW(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::VSPLTW(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
-	verify(HERE), (op.vuimm < 4);
+	ensure((op.vuimm < 4));
 
 	u32 word = ppu.vr[op.vb]._u32[3 - op.vuimm];
 

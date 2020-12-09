@@ -581,7 +581,7 @@ namespace
 
 void write_vertex_array_data_to_buffer(gsl::span<std::byte> raw_dst_span, gsl::span<const std::byte> src_ptr, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, bool swap_endianness)
 {
-	verify(HERE), (vector_element_count > 0);
+	ensure((vector_element_count > 0));
 	const u32 src_read_stride = rsx::get_vertex_type_size_on_host(type, vector_element_count);
 
 	bool use_stream_no_stride = false;
@@ -1042,7 +1042,7 @@ namespace
 		T min_index = invalid_index;
 		T max_index = 0;
 
-		verify(HERE), (dst.size() >= 3 * (src.size() - 2));
+		ensure((dst.size() >= 3 * (src.size() - 2)));
 
 		u32 dst_idx = 0;
 		u32 src_idx = 0;
@@ -1093,7 +1093,7 @@ namespace
 		T min_index = index_limit<T>();
 		T max_index = 0;
 
-		verify(HERE), (4 * dst.size_bytes() >= 6 * src.size_bytes());
+		ensure((4 * dst.size_bytes() >= 6 * src.size_bytes()));
 
 		u32 dst_idx = 0;
 		u8 set_size = 0;

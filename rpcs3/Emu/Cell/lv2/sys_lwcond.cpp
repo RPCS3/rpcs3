@@ -129,7 +129,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 
 				if (mode != 2)
 				{
-					verify(HERE), !mutex->signaled;
+					ensure(!mutex->signaled);
 					std::lock_guard lock(mutex->mutex);
 
 					if (mode == 3 && !mutex->sq.empty()) [[unlikely]]
@@ -140,7 +140,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 					}
 					else if (mode == 1)
 					{
-						verify(HERE), mutex->add_waiter(result);
+						ensure(mutex->add_waiter(result));
 						result = nullptr;
 					}
 				}
@@ -229,9 +229,9 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 				if (mode == 1)
 				{
-					verify(HERE), !mutex->signaled;
+					ensure(!mutex->signaled);
 					std::lock_guard lock(mutex->mutex);
-					verify(HERE), mutex->add_waiter(cpu);
+					ensure(mutex->add_waiter(cpu));
 				}
 				else
 				{

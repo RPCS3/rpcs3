@@ -191,7 +191,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			auto rtt = std::get<1>(m_rtts.m_bound_render_targets[i]);
 			color_targets[i] = rtt->id();
 
-			verify("Pitch mismatch!" HERE), rtt->get_rsx_pitch() == m_framebuffer_layout.actual_color_pitch[i];
+			ensure(rtt->get_rsx_pitch() == m_framebuffer_layout.actual_color_pitch[i]); // "Pitch mismatch!"
 			m_surface_info[i].address = m_framebuffer_layout.color_addresses[i];
 			m_surface_info[i].pitch = m_framebuffer_layout.actual_color_pitch[i];
 			m_surface_info[i].width = m_framebuffer_layout.width;
@@ -220,7 +220,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		depth_stencil_target = ds->id();
 
-		verify("Pitch mismatch!" HERE), std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == m_framebuffer_layout.actual_zeta_pitch;
+		ensure(std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == m_framebuffer_layout.actual_zeta_pitch); // "Pitch mismatch!"
 
 		m_depth_surface_info.address = m_framebuffer_layout.zeta_address;
 		m_depth_surface_info.pitch = m_framebuffer_layout.actual_zeta_pitch;
@@ -528,7 +528,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 		if (get_internal_format() == src_texture->get_internal_format())
 		{
 			// Copy data from old contents onto this one
-			verify(HERE), src_bpp == dst_bpp;
+			ensure(src_bpp == dst_bpp);
 		}
 		else
 		{

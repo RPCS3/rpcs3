@@ -122,7 +122,7 @@ namespace gl
 		{
 			if (!enabled) return;
 
-			verify(HERE), initialized;
+			ensure(initialized);
 
 			std::vector<GLint> offsets;
 			std::vector<GLsizei> counts;

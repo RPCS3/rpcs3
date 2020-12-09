@@ -601,7 +601,7 @@ namespace vk
 			}
 			else
 			{
-				verify(HERE), pdev;
+				ensure(pdev);
 				if (vkEnumerateDeviceExtensionProperties(pdev, layer_name, &count, nullptr) != VK_SUCCESS)
 					return;
 			}
@@ -680,7 +680,7 @@ private:
 				}
 
 				auto getPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
-				verify("vkGetInstanceProcAddress failed to find entry point!" HERE), getPhysicalDeviceFeatures2KHR;
+				ensure(getPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 				getPhysicalDeviceFeatures2KHR(dev, &features2);
 
 				shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
@@ -1372,7 +1372,7 @@ private:
 			}
 
 			// Check for hanging queries to avoid driver hang
-			verify("close and submit of commandbuffer with a hanging query!" HERE), (flags & cb_has_open_query) == 0;
+			ensure((flags & cb_has_open_query) == 0); // "close and submit of commandbuffer with a hanging query!"
 
 			if (!pfence)
 			{
@@ -1547,7 +1547,7 @@ private:
 
 		void pop_layout(VkCommandBuffer cmd)
 		{
-			verify(HERE), !m_layout_stack.empty();
+			ensure(!m_layout_stack.empty());
 
 			auto layout = m_layout_stack.top();
 			m_layout_stack.pop();
@@ -1559,7 +1559,7 @@ private:
 			if (current_layout == new_layout)
 				return;
 
-			verify(HERE), m_layout_stack.empty();
+			ensure(m_layout_stack.empty());
 			change_image_layout(cmd, this, new_layout);
 		}
 
@@ -1736,7 +1736,7 @@ private:
 
 			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, aspect() & mask);
 
-			verify(HERE), range.aspectMask;
+			ensure(range.aspectMask);
 			auto view = std::make_unique<vk::image_view>(*get_current_renderer(), this, VK_IMAGE_VIEW_TYPE_MAX_ENUM, real_mapping, range);
 
 			auto result = view.get();
@@ -3190,7 +3190,7 @@ public:
 
 		void create(const vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count, u32 max_sets, u8 subpool_count)
 		{
-			verify(HERE), subpool_count;
+			ensure(subpool_count);
 
 			VkDescriptorPoolCreateInfo infos = {};
 			infos.flags = 0;
@@ -3542,7 +3542,7 @@ public:
 
 			VkShaderModule compile()
 			{
-				verify(HERE), m_handle == VK_NULL_HANDLE;
+				ensure(m_handle == VK_NULL_HANDLE);
 
 				if (!vk::compile_glsl_to_spv(m_source, type, m_compiled))
 				{
@@ -3737,7 +3737,8 @@ public:
 		{
 			if (!dirty_ranges.empty())
 			{
-				verify (HERE), shadow, heap;
+				ensure(shadow);
+				ensure(heap);
 				vkCmdCopyBuffer(cmd, shadow->value, heap->value, ::size32(dirty_ranges), dirty_ranges.data());
 				dirty_ranges.clear();
 

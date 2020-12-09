@@ -177,7 +177,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	std::string game_dir = dirName.get_ptr();
 
 	// TODO: Find error code
-	verify(HERE), game_dir.size() == 9;
+	ensure(game_dir.size() == 9);
 
 	const std::string dir = "/dev_hdd0/game/" + game_dir;
 

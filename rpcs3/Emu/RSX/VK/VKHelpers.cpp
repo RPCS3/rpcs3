@@ -468,7 +468,7 @@ namespace vk
 
 	vk::mem_allocator_base* get_current_mem_allocator()
 	{
-		verify (HERE, g_current_renderer);
+		ensure(g_current_renderer);
 		return g_current_renderer->get_allocator();
 	}
 
@@ -919,7 +919,7 @@ namespace vk
 
 	void advance_frame_counter()
 	{
-		verify(HERE), g_num_processed_frames <= g_num_total_frames;
+		ensure(g_num_processed_frames <= g_num_total_frames);
 		g_num_total_frames++;
 	}
 
@@ -1011,7 +1011,7 @@ namespace vk
 	void do_query_cleanup(vk::command_buffer& cmd)
 	{
 		auto renderer = dynamic_cast<VKGSRender*>(rsx::get_current_renderer());
-		verify(HERE), renderer;
+		ensure(renderer);
 
 		renderer->emergency_query_cleanup(&cmd);
 	}

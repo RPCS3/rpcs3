@@ -727,7 +727,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 	{
 		if (check_path(fs::escape_path(file.real_path)))
 		{
-			verify(HERE), file.mp == mp;
+			ensure(file.mp == mp);
 			file.restore_data.seek_pos = file.file.pos();
 			file.file.close(); // Actually close it!
 		}
@@ -767,7 +767,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 			// Reopen with ignored TRUNC, APPEND, CREATE and EXCL flags
 			auto res0 = lv2_file::open_raw(file.real_path, file.flags & CELL_FS_O_ACCMODE, file.mode, file.type, file.mp);
 			file.file = std::move(res0.file);
-			verify(HERE), file.file.operator bool();
+			ensure(file.file.operator bool());
 			file.file.seek(file.restore_data.seek_pos);
 		}
 	});

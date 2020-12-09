@@ -335,7 +335,7 @@ namespace spu
 					busy_wait(count);
 				}
 
-				verify(HERE), !spu.check_state();
+				ensure(!spu.check_state());
 			}
 
 			atomic_instruction_table[pc_offset]++;
@@ -1540,7 +1540,7 @@ void spu_thread::cpu_return()
 	{
 		ch_in_mbox.clear();
 
-		if (verify(HERE, group->running--) == 1)
+		if (ensure(group->running)-- == 1)
 		{
 			{
 				std::lock_guard lock(group->mutex);
@@ -1712,12 +1712,12 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 
 		if (!group)
 		{
-			verify(HERE), vm::get(vm::spu)->falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, &shm);
+			ensure(vm::get(vm::spu)->falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, &shm));
 		}
 		else
 		{
 			// 0x1000 indicates falloc to allocate page with no access rights in base memory
-			verify(HERE), vm::get(vm::spu)->falloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (cpu_thread::id & 0xffffff), SPU_LS_SIZE, &shm, 0x1000);
+			ensure(vm::get(vm::spu)->falloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (cpu_thread::id & 0xffffff), SPU_LS_SIZE, &shm, 0x1000));
 		}
 
 		vm::writer_lock(0);
@@ -1726,7 +1726,7 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 		{
 			// Map LS mirrors
 			const auto ptr = addr + (i * SPU_LS_SIZE);
-			verify(HERE), shm->map_critical(ptr) == ptr;
+			ensure(shm->map_critical(ptr) == ptr);
 		}
 
 		// Use the middle mirror
@@ -3592,7 +3592,7 @@ u32 spu_thread::get_ch_count(u32 ch)
 	default: break;
 	}
 
-	verify(HERE), ch < 128u;
+	ensure(ch < 128u);
 	spu_log.error("Unknown/illegal channel in RCHCNT (ch=%s)", spu_ch_name[ch]);
 	return 0; // Default count
 }
@@ -4310,7 +4310,7 @@ bool spu_thread::stop_and_signal(u32 code)
 			if (is_stopped())
 			{
 				// The thread group cannot be stopped while waiting for an event
-				verify(HERE), !(state & cpu_flag::stop);
+				ensure(!(state & cpu_flag::stop));
 				return false;
 			}
 

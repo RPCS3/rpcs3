@@ -1624,7 +1624,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz && (prog.p_flags & 0x2) == 0u /* W */)
 		{
 			// Set memory protection to read-only when necessary
-			verify(HERE), vm::page_protect(addr, ::align(size, 0x1000), 0, 0, vm::page_writable);
+			ensure(vm::page_protect(addr, ::align(size, 0x1000), 0, 0, vm::page_writable));
 		}
 	}
 }

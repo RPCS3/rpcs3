@@ -185,7 +185,7 @@ namespace rsx
 			}
 			fmt::throw_exception("Wrong vector size" HERE);
 		case vertex_base_type::cmp: return 4;
-		case vertex_base_type::ub256: verify(HERE), (size == 4); return sizeof(u8) * 4;
+		case vertex_base_type::ub256: ensure(size == 4); return sizeof(u8) * 4;
 		default:
 			break;
 		}
@@ -348,7 +348,7 @@ namespace rsx
 			{
 				// In this mode, it is possible to skip the cond render while the backend is still processing data.
 				// The backend guarantees that any draw calls emitted during this time will NOT generate any ROP writes
-				verify(HERE), !cond_render_ctrl.hw_cond_active;
+				ensure(!cond_render_ctrl.hw_cond_active);
 
 				// Pending evaluation, use hardware test
 				begin_conditional_rendering(cond_render_ctrl.eval_sources);
@@ -357,7 +357,7 @@ namespace rsx
 			{
 				// NOTE: eval_sources list is reversed with newest query first
 				zcull_ctrl->read_barrier(this, cond_render_ctrl.eval_address, cond_render_ctrl.eval_sources.front());
-				verify(HERE), !cond_render_ctrl.eval_pending();
+				ensure(!cond_render_ctrl.eval_pending());
 			}
 		}
 
@@ -1184,7 +1184,7 @@ namespace rsx
 				}
 			}
 
-			verify(HERE), layout.color_addresses[index];
+			ensure(layout.color_addresses[index]);
 
 			const auto packed_pitch = (layout.width * color_texel_size);
 			if (packed_render)
@@ -1581,7 +1581,7 @@ namespace rsx
 		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_dirty))
 			return;
 
-		verify(HERE), !(m_graphics_state & rsx::pipeline_state::vertex_program_ucode_dirty);
+		ensure(!(m_graphics_state & rsx::pipeline_state::vertex_program_ucode_dirty));
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
 
 		for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
@@ -1767,7 +1767,7 @@ namespace rsx
 		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_dirty))
 			return;
 
-		verify(HERE), !(m_graphics_state & rsx::pipeline_state::fragment_program_ucode_dirty);
+		ensure(!(m_graphics_state & rsx::pipeline_state::fragment_program_ucode_dirty));
 
 		m_graphics_state &= ~(rsx::pipeline_state::fragment_program_dirty);
 
@@ -2457,7 +2457,7 @@ namespace rsx
 
 		//TODO: On sync every sub-unit should finish any pending tasks
 		//Might cause zcull lockup due to zombie 'unclaimed reports' which are not forcefully removed currently
-		//verify (HERE), async_tasks_pending.load() == 0;
+		//ensure(async_tasks_pending.load() == 0);
 	}
 
 	void thread::sync_hint(FIFO_hint /*hint*/, void* args)
@@ -2875,7 +2875,7 @@ namespace rsx
 		{
 			// Frame was not queued before flipping
 			on_frame_end(buffer, true);
-			verify(HERE), m_queued_flip.pop(buffer);
+			ensure(m_queued_flip.pop(buffer));
 		}
 
 		double limit = 0.;
@@ -2976,13 +2976,13 @@ namespace rsx
 
 				if (state)
 				{
-					verify(HERE), unit_enabled && m_current_task == nullptr;
+					ensure(unit_enabled && m_current_task == nullptr);
 					allocate_new_query(ptimer);
 					begin_occlusion_query(m_current_task);
 				}
 				else
 				{
-					verify(HERE), m_current_task;
+					ensure(m_current_task);
 					if (m_current_task->num_draws)
 					{
 						end_occlusion_query(m_current_task);
@@ -3106,7 +3106,7 @@ namespace rsx
 					{
 						// Not the last one in the chain, forward the writing operation to the last writer
 						// Usually comes from truncated queries caused by disabling the testing
-						verify(HERE), It->query;
+						ensure(It->query);
 
 						It->forwarder = forwarder;
 						It->query->owned = true;
@@ -3228,7 +3228,7 @@ namespace rsx
 
 		void ZCULL_control::write(vm::addr_t sink, u64 timestamp, u32 type, u32 value)
 		{
-			verify(HERE), sink;
+			ensure(sink);
 
 			switch (type)
 			{
@@ -3323,7 +3323,7 @@ namespace rsx
 
 					if (query)
 					{
-						verify(HERE), query->pending;
+						ensure(query->pending);
 
 						const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
 						if (implemented && !result && query->num_draws)
@@ -3354,13 +3354,13 @@ namespace rsx
 
 				if (!has_unclaimed)
 				{
-					verify(HERE), processed == m_pending_writes.size();
+					ensure(processed == m_pending_writes.size());
 					m_pending_writes.clear();
 				}
 				else
 				{
 					auto remaining = m_pending_writes.size() - processed;
-					verify(HERE), remaining > 0;
+					ensure(remaining > 0);
 
 					if (remaining == 1)
 					{
@@ -3414,7 +3414,7 @@ namespace rsx
 							if (It->query->num_draws && It->query->sync_tag > m_sync_tag)
 							{
 								ptimer->sync_hint(FIFO_hint::hint_zcull_sync, It->query);
-								verify(HERE), It->query->sync_tag <= m_sync_tag;
+								ensure(It->query->sync_tag <= m_sync_tag);
 							}
 
 							break;
@@ -3439,7 +3439,7 @@ namespace rsx
 						if (elapsed > max_zcull_delay_us)
 						{
 							ptimer->sync_hint(FIFO_hint::hint_zcull_sync, front.query);
-							verify(HERE), front.query->sync_tag <= m_sync_tag;
+							ensure(front.query->sync_tag <= m_sync_tag);
 						}
 
 						return;
@@ -3475,7 +3475,7 @@ namespace rsx
 
 				if (query)
 				{
-					verify(HERE), query->pending;
+					ensure(query->pending);
 
 					const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
 					if (force_read)
@@ -3612,7 +3612,7 @@ namespace rsx
 					if (query->sync_tag > m_sync_tag) [[unlikely]]
 					{
 						ptimer->sync_hint(FIFO_hint::hint_zcull_sync, query);
-						verify(HERE), m_sync_tag >= query->sync_tag;
+						ensure(m_sync_tag >= query->sync_tag);
 					}
 				}
 
@@ -3733,7 +3733,7 @@ namespace rsx
 		{
 			if (hw_cond_active)
 			{
-				verify(HERE), enabled;
+				ensure(enabled);
 				pthr->end_conditional_rendering();
 			}
 
@@ -3747,7 +3747,7 @@ namespace rsx
 		{
 			if (hw_cond_active)
 			{
-				verify(HERE), enabled;
+				ensure(enabled);
 				pthr->end_conditional_rendering();
 			}
 
@@ -3765,7 +3765,7 @@ namespace rsx
 		{
 			if (hw_cond_active)
 			{
-				verify(HERE), enabled;
+				ensure(enabled);
 				pthr->end_conditional_rendering();
 			}
 

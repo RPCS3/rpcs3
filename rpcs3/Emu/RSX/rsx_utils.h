@@ -144,7 +144,7 @@ namespace rsx
 
 		address_range get_memory_range() const
 		{
-			verify(HERE), range.start == address;
+			ensure(range.start == address);
 			return range;
 		}
 	};
@@ -1025,7 +1025,7 @@ namespace rsx
 			if (_capacity >= size)
 				return;
 
-			verify("realloc() failed!" HERE), _data = static_cast<Ty*>(std::realloc(_data, sizeof(Ty) * size));
+			ensure(_data = static_cast<Ty*>(std::realloc(_data, sizeof(Ty) * size))); // "realloc() failed!"
 			_capacity = size;
 		}
 
@@ -1057,7 +1057,7 @@ namespace rsx
 
 		iterator insert(iterator pos, const Ty& val)
 		{
-			verify(HERE), pos >= _data;
+			ensure(pos >= _data);
 			const auto _loc = offset(pos);
 
 			if (_size >= _capacity)
@@ -1072,7 +1072,7 @@ namespace rsx
 				return pos;
 			}
 
-			verify(HERE), _loc < _size;
+			ensure(_loc < _size);
 
 			const auto remaining = (_size - _loc);
 			memmove(pos + 1, pos, remaining * sizeof(Ty));
@@ -1085,7 +1085,7 @@ namespace rsx
 
 		iterator insert(iterator pos, Ty&& val)
 		{
-			verify(HERE), pos >= _data;
+			ensure(pos >= _data);
 			const auto _loc = offset(pos);
 
 			if (_size >= _capacity)
@@ -1100,7 +1100,7 @@ namespace rsx
 				return pos;
 			}
 
-			verify(HERE), _loc < _size;
+			ensure(_loc < _size);
 
 			const u32 remaining = (_size - _loc);
 			memmove(pos + 1, pos, remaining * sizeof(Ty));

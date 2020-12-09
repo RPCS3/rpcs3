@@ -50,7 +50,7 @@ namespace vk
 			ASSERT(!exists() || !is_managed() || vram_texture == new_texture);
 			vram_texture = new_texture;
 
-			verify(HERE), rsx_pitch;
+			ensure(rsx_pitch);
 
 			width = w;
 			height = h;
@@ -98,7 +98,9 @@ namespace vk
 		{
 			// Called if a reset occurs, usually via reprotect path after a bad prediction.
 			// Discard the sync event, the next sync, if any, will properly recreate this.
-			verify(HERE), synchronized, !flushed, dma_fence;
+			ensure(synchronized);
+			ensure(!flushed);
+			ensure(dma_fence);
 			vk::get_resource_manager()->dispose(dma_fence);
 		}
 
@@ -167,7 +169,7 @@ namespace vk
 
 		void dma_transfer(vk::command_buffer& cmd, vk::image* src, const areai& src_area, const utils::address_range& valid_range, u32 pitch)
 		{
-			verify(HERE), src->samples() == 1;
+			ensure(src->samples() == 1);
 
 			if (!m_device)
 			{
@@ -228,7 +230,7 @@ namespace vk
 					}
 					else
 					{
-						verify(HERE), get_context() == rsx::texture_upload_context::dma;
+						ensure(get_context() == rsx::texture_upload_context::dma);
 						shuffle_kernel = nullptr;
 					}
 
@@ -326,7 +328,7 @@ namespace vk
 
 			if (!miss) [[likely]]
 			{
-				verify(HERE), !synchronized;
+				ensure(!synchronized);
 				baseclass::on_speculative_flush();
 			}
 			else
@@ -381,7 +383,8 @@ namespace vk
 					transfer_y = offset / rsx_pitch;
 					transfer_x = (offset % rsx_pitch) / internal_bpp;
 
-					verify(HERE), transfer_width >= transfer_x, transfer_height >= transfer_y;
+					ensure(transfer_width >= transfer_x);
+					ensure(transfer_height >= transfer_y);
 					transfer_width -= transfer_x;
 					transfer_height -= transfer_y;
 				}
@@ -390,7 +393,7 @@ namespace vk
 				{
 					const auto row_count = tail / rsx_pitch;
 
-					verify(HERE), transfer_height >= row_count;
+					ensure(transfer_height >= row_count);
 					transfer_height -= row_count;
 				}
 			}
@@ -679,7 +682,7 @@ namespace vk
 					src_w = convert_w;
 				}
 
-				verify(HERE), src_image->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || src_image->current_layout == VK_IMAGE_LAYOUT_GENERAL;
+				ensure(src_image->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || src_image->current_layout == VK_IMAGE_LAYOUT_GENERAL);
 
 				// Final aspect mask of the 'final' transfer source
 				const auto new_src_aspect = src_image->aspect();
@@ -707,7 +710,7 @@ namespace vk
 				}
 				else
 				{
-					verify(HERE), section.dst_z == 0;
+					ensure(section.dst_z == 0);
 
 					u16 dst_x = section.dst_x, dst_y = section.dst_y;
 					vk::image* _dst;
@@ -1272,7 +1275,7 @@ namespace vk
 			else
 			{
 				// Insert ordering barrier
-				verify(HERE), preferred_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				ensure(preferred_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 				insert_image_memory_barrier(cmd, image->value, image->current_layout, preferred_layout,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -1291,7 +1294,7 @@ namespace vk
 			const VkComponentMapping mapping = apply_component_mapping_flags(gcm_format, expected_flags, rsx::default_remap_vector);
 			auto image = static_cast<vk::viewable_image*>(section.get_raw_texture());
 
-			verify(HERE), image != nullptr;
+			ensure(image);
 			image->set_native_component_layout(mapping);
 
 			section.set_view_flags(expected_flags);
@@ -1373,11 +1376,11 @@ namespace vk
 				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_TRUE);
 			}
 
-			verify(HERE), cmd.flags == 0;
+			ensure(cmd.flags == 0);
 
 			if (occlusion_query_active)
 			{
-				verify(HERE), cmd.is_recording();
+				ensure(cmd.is_recording());
 				cmd.flags |= vk::command_buffer::cb_load_occluson_task;
 			}
 		}

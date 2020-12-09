@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/sysinfo.h"
 #include "Utilities/JIT.h"
 #include "Crypto/sha1.h"
@@ -1166,7 +1166,7 @@ extern void sse_cellbe_stvrx_v0(u64 addr, __m128i a);
 
 void ppu_trap(ppu_thread& ppu, u64 addr)
 {
-	verify(HERE), (addr & (~u64{UINT32_MAX} | 0x3)) == 0;
+	ensure((addr & (~u64{UINT32_MAX} | 0x3)) == 0);
 	ppu.cia = static_cast<u32>(addr);
 
 	u32 add = static_cast<u32>(g_cfg.core.stub_ppu_traps) * 4;

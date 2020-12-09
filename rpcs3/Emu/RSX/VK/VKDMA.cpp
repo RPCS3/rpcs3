@@ -24,7 +24,7 @@ namespace vk
 			return inheritance_info.parent->map_range(range);
 		}
 
-		verify(HERE), range.start >= base_address;
+		ensure(range.start >= base_address);
 		u32 start = range.start;
 		start -= base_address;
 		return allocated_memory->map(start, range.length());
@@ -44,7 +44,8 @@ namespace vk
 
 	void dma_block::init(const render_device& dev, u32 addr, size_t size)
 	{
-		verify(HERE), size, !(size % s_dma_block_length);
+		ensure(size);
+		ensure(!(size % s_dma_block_length));
 		base_address = addr;
 
 		allocated_memory = std::make_unique<vk::buffer>(dev, size,
@@ -113,7 +114,7 @@ namespace vk
 		if (!inheritance_info.parent)
 		{
 			auto bit_offset = page_offset / s_bytes_per_entry;
-			verify(HERE), (bit_offset + bits.size()) <= page_info.size();
+			ensure(bit_offset + bits.size() <= page_info.size());
 			std::memcpy(page_info.data() + bit_offset, bits.data(), bits.size());
 		}
 		else
@@ -149,7 +150,8 @@ namespace vk
 			return inheritance_info.parent->get(range);
 		}
 
-		verify(HERE), range.start >= base_address, range.end <= end();
+		ensure(range.start >= base_address);
+		ensure(range.end <= end());
 
 		// mark_dirty(range);
 		return { (range.start - base_address), allocated_memory.get() };
@@ -173,7 +175,7 @@ namespace vk
 
 	void dma_block::set_parent(command_buffer& cmd, dma_block* parent)
 	{
-		verify(HERE), parent;
+		ensure(parent);
 		if (inheritance_info.parent == parent)
 		{
 			// Nothing to do
@@ -201,7 +203,7 @@ namespace vk
 
 	void dma_block::extend(command_buffer& cmd, const render_device &dev, size_t new_size)
 	{
-		verify(HERE), allocated_memory;
+		ensure(allocated_memory);
 		if (new_size <= allocated_memory->size())
 			return;
 
@@ -308,7 +310,7 @@ namespace vk
 			}
 		}
 
-		verify(HERE), block_head;
+		ensure(block_head);
 		return block_head->get(map_range);
 	}
 

@@ -53,13 +53,13 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 		while (true)
 		{
-			verify(HERE), current_instruction < 512;
+			ensure(current_instruction < 512);
 
 			if (result.instruction_mask[current_instruction])
 			{
 				if (!fast_exit)
 				{
-					if (!has_printed_error) 
+					if (!has_printed_error)
 					{
 						// This can be harmless if a dangling RET was encountered before
 						rsx_log.error("vp_analyser: Possible infinite loop detected");
@@ -198,7 +198,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 	if (!has_branch_instruction)
 	{
-		verify(HERE), instruction_range.first == entry;
+		ensure(instruction_range.first == entry);
 		std::memcpy(dst_prog.data.data(), data + (instruction_range.first * 4), result.ucode_length);
 	}
 	else

@@ -52,7 +52,7 @@ void GLGSRender::set_scissor(bool clip_viewport)
 
 void GLGSRender::on_init_thread()
 {
-	verify(HERE), m_frame;
+	ensure(m_frame);
 
 	// NOTES: All contexts have to be created before any is bound to a thread
 	// This allows context sharing to work (both GLRCs passed to wglShareLists have to be idle or you get ERROR_BUSY)
@@ -552,7 +552,7 @@ void GLGSRender::clear_surface(u32 arg)
 
 			if ((arg & 0x3) != 0x3 && !require_mem_load && ds->dirty())
 			{
-				verify(HERE), mask;
+				ensure(mask);
 
 				// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
 				if (arg == 1)
@@ -651,7 +651,7 @@ bool GLGSRender::load_program()
 	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
-		verify(HERE), current_fragment_program.valid;
+		ensure(current_fragment_program.valid);
 
 		get_current_vertex_program(vs_sampler_state);
 
@@ -701,7 +701,7 @@ bool GLGSRender::load_program()
 		}
 		else
 		{
-			verify(HERE), m_program;
+			ensure(m_program);
 			m_program->sync();
 		}
 	}
@@ -1061,7 +1061,7 @@ void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query
 
 void GLGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
-	verify(HERE), query->active;
+	ensure(query->active);
 	glEndQuery(GL_ANY_SAMPLES_PASSED);
 }
 

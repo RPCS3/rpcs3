@@ -1,4 +1,4 @@
-﻿#include "types.h"
+#include "types.h"
 #include "JIT.h"
 #include "StrFmt.h"
 #include "File.h"

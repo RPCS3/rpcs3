@@ -57,10 +57,10 @@ namespace pad
 	{
 		if (relaxed)
 		{
-			return g_current.load();
+			return g_current.observe();
 		}
 
-		return verify(HERE, g_current.load());
+		return ensure(g_current.load());
 	}
 
 	static inline void set_enabled(bool enabled)

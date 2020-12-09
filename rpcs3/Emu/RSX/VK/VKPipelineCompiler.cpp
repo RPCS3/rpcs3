@@ -108,7 +108,7 @@ namespace vk
 		vp.scissorCount = 1;
 
 		VkPipelineMultisampleStateCreateInfo ms = create_info.state.ms;
-		verify("Multisample state mismatch!" HERE), ms.rasterizationSamples == VkSampleCountFlagBits((create_info.renderpass_key >> 16) & 0xF);
+		ensure(ms.rasterizationSamples == VkSampleCountFlagBits((create_info.renderpass_key >> 16) & 0xF)); // "Multisample state mismatch!"
 		if (ms.rasterizationSamples != VK_SAMPLE_COUNT_1_BIT)
 		{
 			// Update the sample mask pointer
@@ -160,7 +160,7 @@ namespace vk
 		const std::vector<glsl::program_input>& vs_inputs, const std::vector<glsl::program_input>& fs_inputs)
 	{
 		// It is very inefficient to defer this as all pointers need to be saved
-		verify(HERE), flags == COMPILE_INLINE;
+		ensure(flags == COMPILE_INLINE);
 		return int_compile_graphics_pipe(create_info, pipe_layout, vs_inputs, fs_inputs);
 	}
 
@@ -204,10 +204,10 @@ namespace vk
 			}
 		}
 
-		verify(HERE), num_worker_threads >= 1;
+		ensure(num_worker_threads >= 1);
 
 		const vk::render_device* dev = vk::get_current_renderer();
-		verify("Cannot initialize pipe compiler before creating a logical device" HERE), dev;
+		ensure(dev); // "Cannot initialize pipe compiler before creating a logical device"
 
 		// Create the thread pool
 		g_pipe_compilers = std::make_unique<named_thread_group<pipe_compiler>>("RSX.W", num_worker_threads);
@@ -227,7 +227,7 @@ namespace vk
 
 	pipe_compiler* get_pipe_compiler()
 	{
-		verify(HERE), g_pipe_compilers;
+		ensure(g_pipe_compilers);
 		int thread_index = g_compiler_index++;
 
 		return g_pipe_compilers.get()->begin() + (thread_index % g_num_pipe_compilers);

@@ -6,7 +6,6 @@
 #include "rsx_utils.h"
 
 #include <thread>
-#include <atomic>
 
 namespace rsx
 {
@@ -139,7 +138,7 @@ namespace rsx
 	// Backend callback
 	void dma_manager::backend_ctrl(u32 request_code, void* args)
 	{
-		verify(HERE), g_cfg.video.multithreaded_rsx;
+		ensure(g_cfg.video.multithreaded_rsx);
 
 		g_fxo->get<dma_thread>()->m_enqueued_count++;
 		g_fxo->get<dma_thread>()->m_work_queue.push(request_code, args);
@@ -192,20 +191,20 @@ namespace rsx
 
 	void dma_manager::set_mem_fault_flag()
 	{
-		verify("Access denied" HERE), is_current_thread();
+		ensure(is_current_thread()); // "Access denied"
 		m_mem_fault_flag.release(true);
 	}
 
 	void dma_manager::clear_mem_fault_flag()
 	{
-		verify("Access denied" HERE), is_current_thread();
+		ensure(is_current_thread()); // "Access denied"
 		m_mem_fault_flag.release(false);
 	}
 
 	// Fault recovery
 	utils::address_range dma_manager::get_fault_range(bool writing) const
 	{
-		const auto m_current_job = verify(HERE, g_fxo->get<dma_thread>()->m_current_job);
+		const auto m_current_job = (ensure(g_fxo->get<dma_thread>()->m_current_job));
 
 		void *address = nullptr;
 		u32 range = m_current_job->length;
@@ -216,11 +215,11 @@ namespace rsx
 			address = (writing) ? m_current_job->dst : m_current_job->src;
 			break;
 		case vector_copy:
-			verify(HERE), writing;
+			ensure(writing);
 			address = m_current_job->dst;
 			break;
 		case index_emulate:
-			verify(HERE), writing;
+			ensure(writing);
 			address = m_current_job->dst;
 			range = get_index_count(static_cast<rsx::primitive_type>(m_current_job->aux_param0), m_current_job->length);
 			break;
@@ -232,7 +231,7 @@ namespace rsx
 		const uintptr_t addr = uintptr_t(address);
 		const uintptr_t base = uintptr_t(vm::g_base_addr);
 
-		verify(HERE), addr > base;
+		ensure(addr > base);
 		return utils::address_range::start_length(u32(addr - base), range);
 	}
 }

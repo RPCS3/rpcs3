@@ -1,4 +1,4 @@
-﻿#include "StrFmt.h"
+#include "StrFmt.h"
 #include "BEType.h"
 #include "StrUtil.h"
 #include "cfmt.h"
@@ -249,7 +249,7 @@ namespace fmt
 		thread_ctrl::emergency_exit(msg);
 	}
 
-	void raw_verify_error(const char* msg, const fmt_type_info* sup, u64 arg)
+	void raw_verify_error(const src_loc& loc)
 	{
 		std::string out{"Verification failed"};
 
@@ -257,26 +257,31 @@ namespace fmt
 #ifdef _WIN32
 		if (DWORD error = GetLastError())
 		{
-			fmt::append(out, " (e=%#x)", error);
+			fmt::append(out, " (e=%#x):", error);
 		}
 #else
 		if (int error = errno)
 		{
-			fmt::append(out, " (e=%d)", error);
+			fmt::append(out, " (e=%d):", error);
 		}
 #endif
 
-		if (sup)
+		if (loc.col != umax)
 		{
-			out += " (";
-			sup->fmt_string(out, arg); // Print value
-			out += ")";
+			fmt::append(out, "\n(in file %s:%s[:%s]", loc.file, loc.line, loc.col);
+		}
+		else
+		{
+			fmt::append(out, "\n(in file %s:%s", loc.file, loc.line);
 		}
 
-		if (msg)
+		if (loc.func && *loc.func)
 		{
-			out += ": ";
-			out += msg;
+			fmt::append(out, ", in function %s)", loc.func);
+		}
+		else
+		{
+			out += ')';
 		}
 
 		thread_ctrl::emergency_exit(out);

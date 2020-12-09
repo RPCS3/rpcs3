@@ -178,8 +178,8 @@ namespace std
 #endif
 
 using steady_clock = std::conditional<
-    std::chrono::high_resolution_clock::is_steady,
-    std::chrono::high_resolution_clock, std::chrono::steady_clock>::type;
+	std::chrono::high_resolution_clock::is_steady,
+	std::chrono::high_resolution_clock, std::chrono::steady_clock>::type;
 
 // Get integral type from type size
 template <std::size_t N>
@@ -224,7 +224,7 @@ using get_sint_t = typename get_int_impl<N>::stype;
 template <typename T>
 std::remove_cvref_t<T> as_rvalue(T&& obj)
 {
-    return std::forward<T>(obj);
+	return std::forward<T>(obj);
 }
 
 // Formatting helper, type-specific preprocessing for improving safety and functionality
@@ -605,8 +605,8 @@ union alignas(2) f16
 		// See http://stackoverflow.com/a/26779139
 		// The conversion doesn't handle NaN/Inf
 		u32 raw = ((_u16 & 0x8000) << 16) |             // Sign (just moved)
-		          (((_u16 & 0x7c00) + 0x1C000) << 13) | // Exponent ( exp - 15 + 127)
-		          ((_u16 & 0x03FF) << 13);              // Mantissa
+				  (((_u16 & 0x7c00) + 0x1C000) << 13) | // Exponent ( exp - 15 + 127)
+				  ((_u16 & 0x03FF) << 13);              // Mantissa
 
 		return std::bit_cast<f32>(raw);
 	}
@@ -760,75 +760,41 @@ constexpr u64 operator""_u64(const char* s, std::size_t /*length*/)
 	}
 }
 
+#if !defined(__INTELLISENSE__) && !__has_builtin(__builtin_COLUMN) && !defined(_MSC_VER)
+constexpr unsigned __builtin_COLUMN()
+{
+	return -1;
+}
+#endif
+
+struct src_loc
+{
+	u32 line;
+	u32 col;
+	const char* file;
+	const char* func;
+};
+
 namespace fmt
 {
 	[[noreturn]] void raw_error(const char* msg);
-	[[noreturn]] void raw_verify_error(const char* msg, const fmt_type_info* sup, u64 arg);
+	[[noreturn]] void raw_verify_error(const src_loc& loc);
 	[[noreturn]] void raw_narrow_error(const char* msg, const fmt_type_info* sup, u64 arg);
 }
 
-struct verify_func
+template <typename T>
+constexpr decltype(auto) ensure(T&& arg,
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION()) noexcept
 {
-	template <typename T>
-	bool operator()(T&& value) const
+	if (std::forward<T>(arg)) [[likely]]
 	{
-		if (std::forward<T>(value))
-		{
-			return true;
-		}
-
-		return false;
-	}
-};
-
-template <uint N>
-struct verify_impl
-{
-	const char* cause;
-
-	template <typename T>
-	auto operator,(T&& value) const
-	{
-		// Verification (can be safely disabled)
-		if (!verify_func()(std::forward<T>(value)))
-		{
-			fmt::raw_verify_error(cause, nullptr, N);
-		}
-
-		return verify_impl<N + 1>{cause};
-	}
-};
-
-// Verification helper, checks several conditions delimited with comma operator
-inline auto verify(const char* cause)
-{
-	return verify_impl<0>{cause};
-}
-
-// Verification helper (returns value or lvalue reference, may require to use verify_move instead)
-template <typename F = verify_func, typename T>
-inline T verify(const char* cause, T&& value, F&& pred = F())
-{
-	if (!pred(std::forward<T>(value)))
-	{
-		using unref = std::remove_const_t<std::remove_reference_t<T>>;
-		fmt::raw_verify_error(cause, fmt::get_type_info<fmt_unveil_t<unref>>(), fmt_unveil<unref>::get(value));
+		return std::forward<T>(arg);
 	}
 
-	return std::forward<T>(value);
-}
-
-// Verification helper (must be used in return expression or in place of std::move)
-template <typename F = verify_func, typename T>
-inline std::remove_reference_t<T>&& verify_move(const char* cause, T&& value, F&& pred = F())
-{
-	if (!pred(std::forward<T>(value)))
-	{
-		using unref = std::remove_const_t<std::remove_reference_t<T>>;
-		fmt::raw_verify_error(cause, fmt::get_type_info<fmt_unveil_t<unref>>(), fmt_unveil<unref>::get(value));
-	}
-
-	return std::move(value);
+	fmt::raw_verify_error({line, col, file, func});
 }
 
 // narrow() function details

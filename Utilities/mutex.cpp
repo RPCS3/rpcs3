@@ -2,7 +2,7 @@
 
 void shared_mutex::imp_lock_shared(u32 val)
 {
-	verify("shared_mutex underflow" HERE), val < c_err;
+	ensure(val < c_err); // "shared_mutex underflow"
 
 	for (int i = 0; i < 10; i++)
 	{
@@ -23,14 +23,14 @@ void shared_mutex::imp_lock_shared(u32 val)
 		return;
 	}
 
-	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one < c_sig;
+	ensure((old % c_sig) + c_one < c_sig); // "shared_mutex overflow"
 	imp_wait();
 	lock_downgrade();
 }
 
 void shared_mutex::imp_unlock_shared(u32 old)
 {
-	verify("shared_mutex underflow" HERE), old - 1 < c_err;
+	ensure(old - 1 < c_err); // "shared_mutex underflow"
 
 	// Check reader count, notify the writer if necessary
 	if ((old - 1) % c_one == 0)
@@ -71,7 +71,7 @@ void shared_mutex::imp_signal()
 
 void shared_mutex::imp_lock(u32 val)
 {
-	verify("shared_mutex underflow" HERE), val < c_err;
+	ensure(val < c_err); // "shared_mutex underflow"
 
 	for (int i = 0; i < 10; i++)
 	{
@@ -90,13 +90,13 @@ void shared_mutex::imp_lock(u32 val)
 		return;
 	}
 
-	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one < c_sig;
+	ensure((old % c_sig) + c_one < c_sig); // "shared_mutex overflow"
 	imp_wait();
 }
 
 void shared_mutex::imp_unlock(u32 old)
 {
-	verify("shared_mutex underflow" HERE), old - c_one < c_err;
+	ensure(old - c_one < c_err); // "shared_mutex underflow"
 
 	// 1) Notify the next writer if necessary
 	// 2) Notify all readers otherwise if necessary (currently indistinguishable from writers)
@@ -121,7 +121,7 @@ void shared_mutex::imp_lock_upgrade()
 	// Convert to writer lock
 	const u32 old = m_value.fetch_add(c_one - 1);
 
-	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one - 1 < c_sig;
+	ensure((old % c_sig) + c_one - 1 < c_sig); // "shared_mutex overflow"
 
 	if (old % c_one == 1)
 	{

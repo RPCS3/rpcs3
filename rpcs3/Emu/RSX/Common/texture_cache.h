@@ -519,7 +519,7 @@ namespace rsx
 			{
 				for (auto* section : _set)
 				{
-					verify(HERE), section->is_flushed() || section->is_dirty();
+					ensure(section->is_flushed() || section->is_dirty());
 
 					section->discard(/*set_dirty*/ false);
 				}
@@ -708,7 +708,7 @@ namespace rsx
 				{
 					if (section1 == section2) count++;
 				}
-				verify(HERE), count == 1;
+				ensure(count == 1);
 			}
 #endif //TEXTURE_CACHE_DEBUG
 
@@ -739,7 +739,7 @@ namespace rsx
 			// Fast code-path for keeping the fault range protection when not flushing anything
 			if (cause.keep_fault_range_protection() && cause.skip_flush() && !trampled_set.sections.empty())
 			{
-				verify(HERE), cause != invalidation_cause::committed_as_fbo;
+				ensure(cause != invalidation_cause::committed_as_fbo);
 
 				// We discard all sections fully inside fault_range
 				for (auto &obj : trampled_set.sections)
@@ -1172,7 +1172,7 @@ namespace rsx
 				auto* region_ptr = find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, false, false);
 				if (region_ptr && region_ptr->is_locked() && region_ptr->get_context() == texture_upload_context::framebuffer_storage)
 				{
-					verify(HERE), region_ptr->get_protection() == utils::protection::no;
+					ensure(region_ptr->get_protection() == utils::protection::no);
 					region_ptr->discard(false);
 				}
 			}
@@ -1198,9 +1198,9 @@ namespace rsx
 				if (!region.is_dirty())
 				{
 					if (flags == memory_read_flags::flush_once)
-						verify(HERE), m_flush_always_cache.find(memory_range) == m_flush_always_cache.end();
+						ensure(m_flush_always_cache.find(memory_range) == m_flush_always_cache.end());
 					else
-						verify(HERE), m_flush_always_cache[memory_range] == &region;
+						ensure(m_flush_always_cache[memory_range] == &region);
 				}
 #endif // TEXTURE_CACHE_DEBUG
 				return;
@@ -1215,9 +1215,9 @@ namespace rsx
 #ifdef TEXTURE_CACHE_DEBUG
 			const auto &memory_range = section.get_section_range();
 			if (flags == memory_read_flags::flush_once)
-				verify(HERE), m_flush_always_cache[memory_range] == &section;
+				ensure(m_flush_always_cache[memory_range] == &section);
 			else
-				verify(HERE), m_flush_always_cache.find(memory_range) == m_flush_always_cache.end();
+				ensure(m_flush_always_cache.find(memory_range) == m_flush_always_cache.end());
 #endif
 			update_flush_always_cache(section, flags == memory_read_flags::flush_always);
 		}
@@ -2169,7 +2169,7 @@ namespace rsx
 					surf->get_surface_height(rsx::surface_metrics::pixels) != surf->height())
 				{
 					// Must go through a scaling operation due to resolution scaling being present
-					verify(HERE), g_cfg.video.resolution_scale_percent != 100;
+					ensure(g_cfg.video.resolution_scale_percent != 100);
 					use_null_region = false;
 				}
 			}
@@ -2410,7 +2410,7 @@ namespace rsx
 						}
 						else
 						{
-							verify(HERE), src_is_render_target;
+							ensure(src_is_render_target);
 							src_is_depth = (typeless_info.src_is_typeless) ? false : src_subres.is_depth;
 						}
 					}
@@ -2611,7 +2611,7 @@ namespace rsx
 
 			if (!cached_dest && !dst_is_render_target)
 			{
-				verify(HERE), !dest_texture;
+				ensure(!dest_texture);
 
 				// Need to calculate the minimum required size that will fit the data, anchored on the rsx_address
 				// If the application starts off with an 'inseted' section, the guessed dimensions may not fit!
@@ -2698,7 +2698,7 @@ namespace rsx
 				}
 			}
 
-			verify(HERE), cached_dest || dst_is_render_target;
+			ensure(cached_dest || dst_is_render_target);
 
 			// Invalidate any cached subresources in modified range
 			notify_surface_changed(dst_range);
@@ -2710,7 +2710,7 @@ namespace rsx
 			{
 				// Validate modified range
 				u32 mem_offset = dst_address - cached_dest->get_section_base();
-				verify(HERE), (mem_offset + dst_payload_length) <= cached_dest->get_section_size();
+				ensure((mem_offset + dst_payload_length) <= cached_dest->get_section_size());
 
 				lock.upgrade();
 
@@ -2749,7 +2749,7 @@ namespace rsx
 						else
 						{
 							// Unlikely situation, but the only one which would allow re-upload from CPU to overlap this section.
-							verify(HERE), !found->is_flushable();
+							ensure(!found->is_flushable());
 							found->discard(true);
 						}
 					}
@@ -2844,7 +2844,7 @@ namespace rsx
 						auto& section = *(It.second);
 						if (section.get_protection() != utils::protection::no)
 						{
-							verify(HERE), section.exists();
+							ensure(section.exists());
 							AUDIT(section.get_context() == texture_upload_context::framebuffer_storage);
 							AUDIT(section.get_memory_read_flags() == memory_read_flags::flush_always);
 

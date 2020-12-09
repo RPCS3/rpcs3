@@ -298,10 +298,10 @@ namespace rsx
 					src_y += delta;
 					dst_y += delta;
 
-					verify(HERE), dst_y == slice_begin;
+					ensure(dst_y == slice_begin);
 				}
 
-				verify(HERE), dst_y >= slice_begin;
+				ensure(dst_y >= slice_begin);
 
 				const auto h = std::min(section_end, slice_end) - dst_y;
 				dst_y = (dst_y - slice_begin);
@@ -538,7 +538,7 @@ namespace rsx
 				}
 
 				// Always make sure the conflict is resolved!
-				verify(HERE), is_gcm_depth_format(attr2.gcm_format) == is_depth;
+				ensure(is_gcm_depth_format(attr2.gcm_format) == is_depth);
 			}
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_2d ||
@@ -546,7 +546,7 @@ namespace rsx
 			{
 				if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
 				{
-					verify(HERE), attr.height == 1;
+					ensure(attr.height == 1);
 				}
 
 				if ((surface_is_rop_target && g_cfg.video.strict_rendering_mode) ||
@@ -574,7 +574,7 @@ namespace rsx
 						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 			}
 
-			verify(HERE), extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap;
+			ensure(extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap);
 
 			return{ texptr->get_surface(rsx::surface_access::read), deferred_request_command::cubemap_unwrap,
 					attr2, {},
@@ -591,7 +591,7 @@ namespace rsx
 			u32 encoded_remap, const texture_channel_remap_t& decoded_remap,
 			int select_hint = -1)
 		{
-			verify(HERE), (select_hint & 0x1) == select_hint;
+			ensure((select_hint & 0x1) == select_hint);
 
 			bool is_depth = (select_hint == 0) ? fbos.back().is_depth : local.back()->is_depth_texture();
 			bool aspect_mismatch = false;
@@ -679,7 +679,7 @@ namespace rsx
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
 			{
-				verify(HERE), attr.height == 1;
+				ensure(attr.height == 1);
 			}
 
 			if (!fbos.empty())

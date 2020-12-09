@@ -75,7 +75,7 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 			{
 			case 'A':
 				// Activate command
-				verify(HERE), buf_size == 2;
+				ensure(buf_size == 2);
 				q_result = {0x41, buf[1], 0xFF, 0x77, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				    0x00, 0x00};
 
@@ -83,7 +83,7 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 				break;
 			case 'C':
 				// Set LEDs colour
-				verify(HERE), buf_size == 4;
+				ensure(buf_size == 4);
 				break;
 			case 'M':
 				q_result[0] = 0x4D;
@@ -92,7 +92,7 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 				break;
 			case 'Q':
 				// Queries a block
-				verify(HERE), buf_size == 3;
+				ensure(buf_size == 3);
 
 				q_result[0] = 'Q';
 				q_result[1] = 0x10;
@@ -107,18 +107,18 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 				break;
 			case 'R':
 				// Reset
-				verify(HERE), buf_size == 2;
+				ensure(buf_size == 2);
 				q_result = {
 				    0x52, 0x02, 0x0A, 0x03, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 				q_queries.push(q_result);
 				break;
 			case 'S':
 				// ?
-				verify(HERE), buf_size == 1;
+				ensure(buf_size == 1);
 				break;
 			case 'W':
 				// Write a block
-				verify(HERE), buf_size == 19;
+				ensure(buf_size == 19);
 				q_result[0] = 'W';
 				q_result[1] = 0x10;
 				q_result[2] = buf[2];
@@ -147,7 +147,7 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 
 void usb_device_skylander::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {
-	verify(HERE), buf_size == 0x20;
+	ensure(buf_size == 0x20);
 
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;

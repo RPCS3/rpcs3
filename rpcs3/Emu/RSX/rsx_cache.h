@@ -35,7 +35,7 @@ namespace rsx
 
 	static inline void memory_protect(const address_range& range, utils::protection prot)
 	{
-		verify(HERE), range.is_page_range();
+		ensure(range.is_page_range());
 
 		//rsx_log.error("memory_protect(0x%x, 0x%x, %x)", static_cast<u32>(range.start), static_cast<u32>(range.length()), static_cast<u32>(prot));
 		utils::memory_protect(vm::base(range.start), range.length(), prot);
@@ -84,7 +84,7 @@ namespace rsx
 
 			AUDIT( (locked_range.start == page_start(range.start)) || (locked_range.start == next_page(range.start)) );
 			AUDIT( locked_range.end <= page_end(range.end) );
-			verify(HERE), locked_range.is_page_range();
+			ensure(locked_range.is_page_range());
 		}
 
 	public:
@@ -94,7 +94,7 @@ namespace rsx
 
 		void reset(const address_range &memory_range)
 		{
-			verify(HERE), memory_range.valid() && locked == false;
+			ensure(memory_range.valid() && locked == false);
 
 			cpu_range = address_range(memory_range);
 			confirmed_range.invalidate();
@@ -121,7 +121,7 @@ namespace rsx
 		{
 			if (new_prot == protection && !force) return;
 
-			verify(HERE), locked_range.is_page_range();
+			ensure(locked_range.is_page_range());
 			AUDIT( !confirmed_range.valid() || confirmed_range.inside(cpu_range) );
 
 #ifdef TEXTURE_CACHE_DEBUG
@@ -177,7 +177,7 @@ namespace rsx
 					ASSERT(!locked || locked_range.inside(confirmed_range.to_page_range()));
 				}
 
-				verify(HERE), confirmed_range.inside(cpu_range);
+				ensure(confirmed_range.inside(cpu_range));
 				init_lockable_range(confirmed_range);
 			}
 
@@ -544,7 +544,7 @@ namespace rsx
 				}
 			}
 
-			verify(HERE), processed == entry_count;
+			ensure(processed == entry_count);
 		}
 
 	public:

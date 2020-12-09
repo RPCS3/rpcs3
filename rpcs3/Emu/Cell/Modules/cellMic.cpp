@@ -363,7 +363,7 @@ bool microphone_device::has_data() const
 
 u32 microphone_device::capture_audio()
 {
-	verify(HERE), sample_size > 0;
+	ensure(sample_size > 0);
 
 	u32 num_samples = inbuf_size / sample_size;
 
@@ -412,7 +412,7 @@ void microphone_device::get_raw(const u32 num_samples)
 		}
 		break;
 	case microphone_handler::singstar:
-		verify(HERE), sample_size == 4;
+		ensure(sample_size == 4);
 
 		// Mixing the 2 mics as if channels
 		if (input_devices.size() == 2)
@@ -466,7 +466,7 @@ void microphone_device::get_dsp(const u32 num_samples)
 		}
 		break;
 	case microphone_handler::singstar:
-		verify(HERE), sample_size == 4;
+		ensure(sample_size == 4);
 
 		// Mixing the 2 mics as if channels
 		if (input_devices.size() == 2)

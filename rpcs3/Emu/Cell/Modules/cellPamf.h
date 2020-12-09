@@ -462,7 +462,8 @@ public:
 
 		while (u32 res = m_sync.atomic_op([&pos](squeue_sync_var_t& sync) -> u32
 		{
-			verify(HERE), sync.count <= sq_size, sync.position < sq_size;
+			ensure(sync.count <= sq_size);
+			ensure(sync.position < sq_size);
 
 			if (sync.push_lock)
 			{
@@ -491,7 +492,9 @@ public:
 
 		m_sync.atomic_op([](squeue_sync_var_t& sync)
 		{
-			verify(HERE), sync.count <= sq_size, sync.position < sq_size, !!sync.push_lock;
+			ensure(sync.count <= sq_size);
+			ensure(sync.position < sq_size);
+			ensure(!!sync.push_lock);
 			sync.push_lock = 0;
 			sync.count++;
 		});
@@ -522,7 +525,8 @@ public:
 
 		while (u32 res = m_sync.atomic_op([&pos](squeue_sync_var_t& sync) -> u32
 		{
-			verify(HERE), sync.count <= sq_size, sync.position < sq_size;
+			ensure(sync.count <= sq_size);
+			ensure(sync.position < sq_size);
 
 			if (!sync.count)
 			{
@@ -551,7 +555,9 @@ public:
 
 		m_sync.atomic_op([](squeue_sync_var_t& sync)
 		{
-			verify(HERE), sync.count <= sq_size, sync.position < sq_size, !!sync.pop_lock;
+			ensure(sync.count <= sq_size);
+			ensure(sync.position < sq_size);
+			ensure(!!sync.pop_lock);
 			sync.pop_lock = 0;
 			sync.position++;
 			sync.count--;
@@ -583,12 +589,13 @@ public:
 
 	bool peek(T& data, u32 start_pos, const std::function<bool()>& test_exit)
 	{
-		verify(HERE), start_pos < sq_size;
+		ensure(start_pos < sq_size);
 		u32 pos = 0;
 
 		while (u32 res = m_sync.atomic_op([&pos, start_pos](squeue_sync_var_t& sync) -> u32
 		{
-			verify(HERE), sync.count <= sq_size, sync.position < sq_size;
+			ensure(sync.count <= sq_size);
+			ensure(sync.position < sq_size);
 
 			if (sync.count <= start_pos)
 			{
@@ -617,7 +624,9 @@ public:
 
 		m_sync.atomic_op([](squeue_sync_var_t& sync)
 		{
-			verify(HERE), sync.count <= sq_size, sync.position < sq_size, !!sync.pop_lock;
+			ensure(sync.count <= sq_size);
+			ensure(sync.position < sq_size);
+			ensure(!!sync.pop_lock);
 			sync.pop_lock = 0;
 		});
 
@@ -656,7 +665,7 @@ public:
 	public:
 		T& operator [] (u32 index)
 		{
-			verify(HERE), index < m_count;
+			ensure(index < m_count);
 			index += m_pos;
 			index = index < sq_size ? index : index - sq_size;
 			return m_data[index];
@@ -669,7 +678,8 @@ public:
 
 		while (m_sync.atomic_op([&pos, &count](squeue_sync_var_t& sync) -> u32
 		{
-			verify(HERE), sync.count <= sq_size, sync.position < sq_size;
+			ensure(sync.count <= sq_size);
+			ensure(sync.position < sq_size);
 
 			if (sync.pop_lock || sync.push_lock)
 			{
@@ -691,7 +701,10 @@ public:
 
 		m_sync.atomic_op([](squeue_sync_var_t& sync)
 		{
-			verify(HERE), sync.count <= sq_size, sync.position < sq_size, !!sync.pop_lock, !!sync.push_lock;
+			ensure(sync.count <= sq_size);
+			ensure(sync.position < sq_size);
+			ensure(!!sync.pop_lock);
+			ensure(!!sync.push_lock);
 			sync.pop_lock = 0;
 			sync.push_lock = 0;
 		});
@@ -704,7 +717,8 @@ public:
 	{
 		while (m_sync.atomic_op([](squeue_sync_var_t& sync) -> u32
 		{
-			verify(HERE), sync.count <= sq_size, sync.position < sq_size;
+			ensure(sync.count <= sq_size);
+			ensure(sync.position < sq_size);
 
 			if (sync.pop_lock || sync.push_lock)
 			{

@@ -289,7 +289,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		const u32 starta = start & -64;
 		const u32 enda = ::align(end, 64);
 		const u32 sizea = (enda - starta) / 64;
-		verify(HERE), sizea;
+		ensure(sizea);
 
 		// Initialize pointers
 		c->lea(x86::rax, x86::qword_ptr(label_code));
@@ -370,7 +370,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		const u32 starta = start & -32;
 		const u32 enda = ::align(end, 32);
 		const u32 sizea = (enda - starta) / 32;
-		verify(HERE), sizea;
+		ensure(sizea);
 
 		if (sizea == 1)
 		{
@@ -492,7 +492,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		const u32 starta = start & -32;
 		const u32 enda = ::align(end, 32);
 		const u32 sizea = (enda - starta) / 32;
-		verify(HERE), sizea;
+		ensure(sizea);
 
 		if (sizea == 1)
 		{
@@ -1154,7 +1154,7 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 		const u32 end = instr_labels.rbegin()->first + 4;
 
 		// Load local indirect jump address, check local bounds
-		verify(HERE), start == m_base;
+		ensure(start == m_base);
 		Label fail = c->newLabel();
 		c->mov(qw1->r32(), *addr);
 		c->sub(qw1->r32(), pc0->r32());

@@ -959,7 +959,7 @@ error_code _cellSyncLFQueueGetPushPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQue
 			}
 		}
 
-		verify(HERE), sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK;
+		ensure(sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK);
 		var1 = 1;
 	}
 }
@@ -1051,7 +1051,7 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 
 			if (var9 > 1 && static_cast<u32>(var8) > 1)
 			{
-				verify(HERE), (16 - var2 <= 1);
+				ensure((16 - var2 <= 1));
 			}
 
 			s32 var11 = (pack >> 10) & 0x1f;
@@ -1083,11 +1083,11 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 
 		if (queue->push2.compare_and_swap_test(old, push2))
 		{
-			verify(HERE), (var2 + var4 < 16);
+			ensure((var2 + var4 < 16));
 			if (var6 != umax)
 			{
-				verify(HERE), (queue->push3.compare_and_swap_test(old2, push3));
-				verify(HERE), (fpSendSignal);
+				ensure((queue->push3.compare_and_swap_test(old2, push3)));
+				ensure((fpSendSignal));
 				return not_an_error(fpSendSignal(ppu, vm::cast(queue->m_eaSignal.addr(), HERE), var6));
 			}
 			else
@@ -1258,7 +1258,7 @@ error_code _cellSyncLFQueueGetPopPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQueu
 			}
 		}
 
-		verify(HERE), (sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK);
+		ensure((sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK));
 		var1 = 1;
 	}
 }
@@ -1356,7 +1356,7 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 
 			if (var9 > 1 && static_cast<u32>(var8) > 1)
 			{
-				verify(HERE), (16 - var2 <= 1);
+				ensure((16 - var2 <= 1));
 			}
 
 			s32 var11 = (pack >> 10) & 0x1f;
@@ -1386,8 +1386,8 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 		{
 			if (var6 != umax)
 			{
-				verify(HERE), (queue->pop3.compare_and_swap_test(old2, pop3));
-				verify(HERE), (fpSendSignal);
+				ensure((queue->pop3.compare_and_swap_test(old2, pop3)));
+				ensure((fpSendSignal));
 				return not_an_error(fpSendSignal(ppu, vm::cast(queue->m_eaSignal.addr(), HERE), var6));
 			}
 			else

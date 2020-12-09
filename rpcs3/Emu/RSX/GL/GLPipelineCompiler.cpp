@@ -116,7 +116,7 @@ namespace gl
 			}
 		}
 
-		verify(HERE), num_worker_threads >= 1;
+		ensure(num_worker_threads >= 1);
 
 		// Create the thread pool
 		g_pipe_compilers = std::make_unique<named_thread_group<pipe_compiler>>("RSX.W", num_worker_threads);
@@ -136,7 +136,7 @@ namespace gl
 
 	pipe_compiler* get_pipe_compiler()
 	{
-		verify(HERE), g_pipe_compilers;
+		ensure(g_pipe_compilers);
 		int thread_index = g_compiler_index++;
 
 		return g_pipe_compilers.get()->begin() + (thread_index % g_num_pipe_compilers);

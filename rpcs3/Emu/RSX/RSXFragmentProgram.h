@@ -317,7 +317,7 @@ struct RSXFragmentProgram
 
 	void clone_data() const
 	{
-		verify(HERE), ucode_length;
+		ensure(ucode_length);
 		data.deep_copy(ucode_length);
 	}
 };

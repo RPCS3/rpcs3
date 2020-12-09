@@ -7,7 +7,7 @@
 
 void CgBinaryDisasm::AddCodeAsm(const std::string& code)
 {
-	verify(HERE), (m_opcode < 70);
+	ensure((m_opcode < 70));
 	std::string op_name;
 
 	if (dst.dest_reg == 63)
@@ -221,7 +221,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 	{
 		ret += swizzle;
 	}
-	
+
 	if (src.neg) ret = "-" + ret;
 	if (src.abs) ret = "|" + ret + "|";
 
@@ -232,7 +232,7 @@ void CgBinaryDisasm::TaskFP()
 {
 	m_size = 0;
 	u32* data = reinterpret_cast<u32*>(&m_buffer[m_offset]);
-	verify(HERE), ((m_buffer_size - m_offset) % sizeof(u32) == 0);
+	ensure(((m_buffer_size - m_offset) % sizeof(u32) == 0));
 	for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 	{
 		// Get BE data
@@ -481,7 +481,7 @@ void CgBinaryDisasm::TaskFP()
 			break;
 		}
 
-		verify(HERE), m_step % sizeof(u32) == 0;
+		ensure(m_step % sizeof(u32) == 0);
 		data += m_step / sizeof(u32);
 	}
 }

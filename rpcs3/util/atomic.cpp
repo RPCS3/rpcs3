@@ -357,7 +357,7 @@ namespace
 			mtx.init(mtx);
 #endif
 
-			verify(HERE), !ptr_ref.exchange((iptr << 17) | 1);
+			ensure(!ptr_ref.exchange((iptr << 17) | 1));
 		}
 
 		void destroy()
@@ -650,7 +650,7 @@ static void cond_free(u32 cond_id, u32 tls_slot = -1)
 	// Dereference, destroy on last ref
 	const bool last = cond->ptr_ref.atomic_op([](u64& val)
 	{
-		verify(HERE), val & s_ref_mask;
+		ensure(val & s_ref_mask);
 
 		val--;
 
@@ -963,7 +963,7 @@ void root_info::slot_free(std::uintptr_t iptr, atomic_t<u16>* slot, u32 tls_slot
 
 	const u32 diff = static_cast<u32>(slot - _this->slots);
 
-	verify(HERE), slot == &_this->slots[diff];
+	ensure(slot == &_this->slots[diff]);
 
 	const u32 cond_id = slot->exchange(0);
 
@@ -977,7 +977,7 @@ void root_info::slot_free(std::uintptr_t iptr, atomic_t<u16>* slot, u32 tls_slot
 		// Reset reference counter and allocation bit in every slot
 		curr->bits.atomic_op([&](slot_allocator& bits)
 		{
-			verify(HERE), bits.ref--;
+			ensure(bits.ref--);
 
 			if (_this == curr.current())
 			{
@@ -1226,7 +1226,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 			default:
 			{
 				SetLastError(status);
-				fmt::raw_verify_error("Unexpected NtWaitForAlertByThreadId result.", nullptr, 0);
+				ensure(false); // Unexpected result
 			}
 			}
 		}
@@ -1308,7 +1308,7 @@ __vectorcall
 #endif
 alert_sema(u32 cond_id, const void* data, u64 tid, u32 size, __m128i mask, __m128i phantom)
 {
-	verify(HERE), cond_id;
+	ensure(cond_id);
 
 	const auto cond = s_cond_list + cond_id;
 

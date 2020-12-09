@@ -97,7 +97,7 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 			return CELL_ESRCH;
 		}
 
-		verify(HERE), a2 == static_cast<u64>(process_getpid());
+		ensure(a2 == static_cast<u64>(process_getpid()));
 		vm::write64(vm::cast(a3), authid);
 		break;
 	}

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
@@ -1872,7 +1872,7 @@ void thread_base::start()
 		// Receive "that" native thread handle, sent "this" thread_base
 		const u64 _self = reinterpret_cast<u64>(atomic_storage<thread_base*>::load(*tls));
 		m_thread.release(_self);
-		verify(HERE), _self != reinterpret_cast<u64>(this);
+		ensure(_self != reinterpret_cast<u64>(this));
 		atomic_storage<thread_base*>::store(*tls, this);
 		s_thread_pool[pos].notify_one();
 		return;
@@ -1880,9 +1880,10 @@ void thread_base::start()
 
 #ifdef _WIN32
 	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
-	verify("thread_ctrl::start" HERE), m_thread, ::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1;
+	ensure(m_thread);
+	ensure(::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1);
 #else
-	verify("thread_ctrl::start" HERE), pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), nullptr, entry_point, this) == 0;
+	ensure(pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), nullptr, entry_point, this) == 0);
 #endif
 }
 

@@ -286,7 +286,7 @@ namespace rsx
 				}
 			}
 
-			verify(HERE), _max_index >= _min_index;
+			ensure(_max_index >= _min_index);
 			return { _min_index, (_max_index - _min_index) + 1 };
 		}
 	};

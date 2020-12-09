@@ -1392,7 +1392,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 
 	if (addr)
 	{
-		verify(HERE), native_addr.ss_family == AF_INET;
+		ensure(native_addr.ss_family == AF_INET);
 
 		vm::ptr<sys_net_sockaddr_in> paddr = vm::cast(addr.addr());
 
@@ -1825,7 +1825,7 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 
 		if (::getpeername(sock.socket, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen) == 0)
 		{
-			verify(HERE), native_addr.ss_family == AF_INET;
+			ensure(native_addr.ss_family == AF_INET);
 
 			return {};
 		}
@@ -1883,7 +1883,7 @@ error_code sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 
 		if (::getsockname(sock.socket, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen) == 0)
 		{
-			verify(HERE), native_addr.ss_family == AF_INET;
+			ensure(native_addr.ss_family == AF_INET);
 
 			return {};
 		}
@@ -2494,7 +2494,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 	// addr is set earlier for P2P socket
 	if (addr && type != SYS_NET_SOCK_DGRAM_P2P && type != SYS_NET_SOCK_STREAM_P2P)
 	{
-		verify(HERE), native_addr.ss_family == AF_INET;
+		ensure(native_addr.ss_family == AF_INET);
 
 		vm::ptr<sys_net_sockaddr_in> paddr = vm::cast(addr.addr());
 
@@ -2661,7 +2661,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 			if (nph->is_dns(s))
 			{
 				const s32 ret_analyzer = nph->analyze_dns_packet(s, reinterpret_cast<const u8*>(_buf.data()), len);
-				
+
 				// If we're not connected just never send the packet and pretend we did
 				if (!nph->get_net_status())
 				{
@@ -2816,7 +2816,7 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 			}
 
 			return {};
-		}		
+		}
 
 		if (level == SYS_NET_SOL_SOCKET)
 		{
