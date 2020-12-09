@@ -135,7 +135,7 @@ DECLARE(spu_runtime::tr_all) = []
 	*raw++ = 0x48;
 	*raw++ = 0x8d;
 	*raw++ = 0x15;
-	const s32 r32 = ::narrow<s32>(reinterpret_cast<u64>(g_dispatcher) - reinterpret_cast<u64>(raw) - 4, HERE);
+	const s32 r32 = ::narrow<s32>(reinterpret_cast<u64>(g_dispatcher) - reinterpret_cast<u64>(raw) - 4);
 	std::memcpy(raw, &r32, 4);
 	raw += 4;
 
@@ -812,7 +812,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			if (w.rel32)
 			{
 				// Patch rel32 linking it to the current location if necessary
-				const s32 r32 = ::narrow<s32>(raw - w.rel32, HERE);
+				const s32 r32 = ::narrow<s32>(raw - w.rel32);
 				std::memcpy(w.rel32 - 4, &r32, 4);
 			}
 

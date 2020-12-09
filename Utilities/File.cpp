@@ -24,7 +24,7 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 	const std::size_t buf_size = source.size() + 1;
 
 	// Safe size
-	const int size = narrow<int>(buf_size, "to_wchar" HERE);
+	const int size = narrow<int>(buf_size);
 
 	// Buffer for max possible output length
 	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size + 8 + 32768]);
@@ -55,7 +55,7 @@ static void to_utf8(std::string& out, const wchar_t* source)
 	const std::size_t length = std::wcslen(source);
 
 	// Safe buffer size for max possible output length (including null terminator)
-	const int buf_size = narrow<int>(length * 3 + 1, "to_utf8" HERE);
+	const int buf_size = narrow<int>(length * 3 + 1);
 
 	// Resize buffer
 	out.resize(buf_size - 1);
@@ -1028,7 +1028,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		u64 read(void* buffer, u64 count) override
 		{
 			// TODO (call ReadFile multiple times if count is too big)
-			const int size = narrow<int>(count, "file::read" HERE);
+			const int size = narrow<int>(count);
 
 			DWORD nread;
 			ensure(ReadFile(m_handle, buffer, size, &nread, NULL)); // "file::read"
@@ -1039,7 +1039,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		u64 write(const void* buffer, u64 count) override
 		{
 			// TODO (call WriteFile multiple times if count is too big)
-			const int size = narrow<int>(count, "file::write" HERE);
+			const int size = narrow<int>(count);
 
 			DWORD nwritten;
 			ensure(WriteFile(m_handle, buffer, size, &nwritten, NULL)); // "file::write"

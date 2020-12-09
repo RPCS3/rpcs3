@@ -813,9 +813,9 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		{
 			if (prog.p_memsz)
 			{
-				const u32 mem_size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
-				const u32 file_size = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
-				const u32 init_addr = ::narrow<u32>(prog.p_vaddr, "p_vaddr" HERE);
+				const u32 mem_size = ::narrow<u32>(prog.p_memsz);
+				const u32 file_size = ::narrow<u32>(prog.p_filesz);
+				const u32 init_addr = ::narrow<u32>(prog.p_vaddr);
 
 				// Alloc segment memory
 				const u32 addr = vm::alloc(mem_size, vm::main);
@@ -1143,11 +1143,11 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		ppu_loader.notice("** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
 		ppu_segment _seg;
-		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr, HERE);
-		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
+		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr);
+		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz);
 		const u32 type = _seg.type = prog.p_type;
 		const u32 flag = _seg.flags = prog.p_flags;
-		_seg.filesz = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
+		_seg.filesz = ::narrow<u32>(prog.p_filesz);
 
 		// Hash big-endian values
 		sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_type), sizeof(prog.p_type));
@@ -1280,8 +1280,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		case 0x00000007: // TLS
 		{
 			tls_vaddr = vm::cast(prog.p_vaddr, HERE);
-			tls_fsize = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
-			tls_vsize = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
+			tls_fsize = ::narrow<u32>(prog.p_filesz);
+			tls_vsize = ::narrow<u32>(prog.p_memsz);
 
 			ppu_loader.notice("TLS info segment found: tls-image=*0x%x, image-size=0x%x, tls-size=0x%x", tls_vaddr, tls_fsize, tls_vsize);
 			break;
@@ -1647,10 +1647,10 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 
 		ppu_segment _seg;
 		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr, HERE);
-		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
+		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz);
 		const u32 type = _seg.type = prog.p_type;
 		const u32 flag = _seg.flags = prog.p_flags;
-		_seg.filesz = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
+		_seg.filesz = ::narrow<u32>(prog.p_filesz);
 
 		// Hash big-endian values
 		sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_type), sizeof(prog.p_type));

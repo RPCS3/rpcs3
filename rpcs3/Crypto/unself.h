@@ -489,7 +489,7 @@ private:
 				}
 
 				// Advance the data buffer offset by data size.
-				data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+				data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size);
 			}
 		}
 

@@ -452,7 +452,7 @@ public:
 		name.append(".gz");
 
 		z_stream zs{};
-		uLong zsz = compressBound(::narrow<u32>(obj.getBufferSize(), HERE)) + 256;
+		uLong zsz = compressBound(::narrow<u32>(obj.getBufferSize())) + 256;
 		auto zbuf = std::make_unique<uchar[]>(zsz);
 #ifndef _MSC_VER
 #pragma GCC diagnostic push

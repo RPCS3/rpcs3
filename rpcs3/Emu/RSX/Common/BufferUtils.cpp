@@ -782,7 +782,7 @@ namespace
 		{
 			T min_index, max_index;
 			u32 written;
-			u32 remaining = ::size32(src, HERE);
+			u32 remaining = ::size32(src);
 
 			if (s_use_sse4_1 && remaining >= 32)
 			{
@@ -956,7 +956,7 @@ namespace
 			T min_index = index_limit<T>();
 			T max_index = 0;
 			u32 written = 0;
-			u32 length = ::size32(src, HERE);
+			u32 length = ::size32(src);
 
 			if (length >= 32 && !skip_restart)
 			{

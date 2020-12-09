@@ -2056,7 +2056,7 @@ s32 _spurs::trace_initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<
 	spurs->traceBuffer.set(buffer.addr() | (mode & CELL_SPURS_TRACE_MODE_FLAG_WRAP_BUFFER ? 1 : 0));
 	spurs->traceMode     = mode;
 
-	u32 spuTraceDataCount = ::narrow<u32>((spurs->traceDataSize / sizeof(CellSpursTracePacket)) / spurs->nSpus, HERE);
+	u32 spuTraceDataCount = ::narrow<u32>((spurs->traceDataSize / sizeof(CellSpursTracePacket)) / spurs->nSpus);
 	for (u32 i = 0, j = 8; i < 6; i++)
 	{
 		spurs->traceStartIndex[i] = j;

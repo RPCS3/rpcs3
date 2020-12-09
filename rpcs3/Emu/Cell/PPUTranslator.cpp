@@ -409,7 +409,7 @@ void PPUTranslator::FlushRegisters()
 
 Value* PPUTranslator::Solid(Value* value)
 {
-	const u32 size = ::narrow<u32>(+value->getType()->getPrimitiveSizeInBits(), HERE);
+	const u32 size = ::narrow<u32>(+value->getType()->getPrimitiveSizeInBits());
 
 	/* Workarounds (casting bool vectors directly may produce invalid code) */
 
@@ -586,7 +586,7 @@ llvm::Value* PPUTranslator::GetMemory(llvm::Value* addr, llvm::Type* type)
 
 Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 {
-	const u32 size = ::narrow<u32>(+type->getPrimitiveSizeInBits(), HERE);
+	const u32 size = ::narrow<u32>(+type->getPrimitiveSizeInBits());
 
 	if (is_be ^ m_is_be && size > 8)
 	{
@@ -603,7 +603,7 @@ Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align)
 {
 	const auto type = value->getType();
-	const u32 size = ::narrow<u32>(+type->getPrimitiveSizeInBits(), HERE);
+	const u32 size = ::narrow<u32>(+type->getPrimitiveSizeInBits());
 
 	if (is_be ^ m_is_be && size > 8)
 	{

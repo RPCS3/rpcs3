@@ -798,10 +798,10 @@ error_code cellImeJpMoveFocusClause(CellImeJpHandle hImeJpHandle, s16 moveType)
 		manager->moveCursor(-1);
 		break;
 	case CELL_IMEJP_FOCUS_TOP:
-		manager->moveCursor(-1 * ::narrow<s8>(manager->input_string.length(), HERE));
+		manager->moveCursor(-1 * ::narrow<s8>(manager->input_string.length()));
 		break;
 	case CELL_IMEJP_FOCUS_END:
-		manager->moveCursor(::narrow<s8>(manager->input_string.length(), HERE));
+		manager->moveCursor(::narrow<s8>(manager->input_string.length()));
 		manager->moveCursor(-1);
 		break;
 	default:

@@ -287,7 +287,7 @@ namespace fmt
 		thread_ctrl::emergency_exit(out);
 	}
 
-	void raw_narrow_error(const char* msg, const fmt_type_info* sup, u64 arg)
+	void raw_narrow_error(const src_loc& loc, const fmt_type_info* sup, u64 arg)
 	{
 		std::string out{"Narrow error"};
 
@@ -298,10 +298,22 @@ namespace fmt
 			out += ")";
 		}
 
-		if (msg)
+		if (loc.col != umax)
 		{
-			out += ": ";
-			out += msg;
+			fmt::append(out, "\n(in file %s:%s[:%s]", loc.file, loc.line, loc.col);
+		}
+		else
+		{
+			fmt::append(out, "\n(in file %s:%s", loc.file, loc.line);
+		}
+
+		if (loc.func && *loc.func)
+		{
+			fmt::append(out, ", in function %s)", loc.func);
+		}
+		else
+		{
+			out += ')';
 		}
 
 		thread_ctrl::emergency_exit(out);

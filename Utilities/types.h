@@ -779,7 +779,7 @@ namespace fmt
 {
 	[[noreturn]] void raw_error(const char* msg);
 	[[noreturn]] void raw_verify_error(const src_loc& loc);
-	[[noreturn]] void raw_narrow_error(const char* msg, const fmt_type_info* sup, u64 arg);
+	[[noreturn]] void raw_narrow_error(const src_loc& loc, const fmt_type_info* sup, u64 arg);
 }
 
 template <typename T>
@@ -870,13 +870,17 @@ struct narrow_impl<From, To, std::void_t<typename From::simple_type>>
 };
 
 template <typename To = void, typename From, typename = decltype(static_cast<To>(std::declval<From>()))>
-inline To narrow(const From& value, const char* msg = nullptr)
+[[nodiscard]] constexpr To narrow(const From& value,
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION())
 {
 	// Narrow check
-	if (narrow_impl<From, To>::test(value))
+	if (narrow_impl<From, To>::test(value)) [[unlikely]]
 	{
 		// Pack value as formatting argument
-		fmt::raw_narrow_error(msg, fmt::get_type_info<fmt_unveil_t<From>>(), fmt_unveil<From>::get(value));
+		fmt::raw_narrow_error({line, col, file, func}, fmt::get_type_info<fmt_unveil_t<From>>(), fmt_unveil<From>::get(value));
 	}
 
 	return static_cast<To>(value);
@@ -884,15 +888,20 @@ inline To narrow(const From& value, const char* msg = nullptr)
 
 // Returns u32 size() for container
 template <typename CT, typename = decltype(static_cast<u32>(std::declval<CT>().size()))>
-inline u32 size32(const CT& container, const char* msg = nullptr)
+[[nodiscard]] constexpr u32 size32(const CT& container,
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION())
 {
-	return narrow<u32>(container.size(), msg);
+	return narrow<u32>(container.size(), line, col, file, func);
 }
 
 // Returns u32 size for an array
 template <typename T, std::size_t Size>
-constexpr u32 size32(const T (&)[Size], const char* msg = nullptr)
+[[nodiscard]] constexpr u32 size32(const T (&)[Size])
 {
+	static_assert(Size < UINT32_MAX, "Array is too big for 32-bit");
 	return static_cast<u32>(Size);
 }
 
