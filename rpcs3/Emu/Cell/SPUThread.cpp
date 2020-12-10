@@ -291,7 +291,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
 extern thread_local u64 g_tls_fault_spu;
 
-constexpr spu_decoder<spu_itype> s_spu_itype;
+const spu_decoder<spu_itype> s_spu_itype;
 
 namespace spu
 {

@@ -22,12 +22,12 @@ extern atomic_t<const char*> g_progr;
 extern atomic_t<u32> g_progr_ptotal;
 extern atomic_t<u32> g_progr_pdone;
 
-constexpr spu_decoder<spu_itype> s_spu_itype;
-constexpr spu_decoder<spu_iname> s_spu_iname;
-constexpr spu_decoder<spu_iflag> s_spu_iflag;
+const spu_decoder<spu_itype> s_spu_itype;
+const spu_decoder<spu_iname> s_spu_iname;
+const spu_decoder<spu_iflag> s_spu_iflag;
 
-constexpr spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise;
-constexpr spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast;
+extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise{};
+extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast;
 
 extern u64 get_timebased_time();
 
@@ -8799,7 +8799,7 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler(u
 	return std::make_unique<spu_llvm_recompiler>(magn);
 }
 
-constexpr spu_decoder<spu_llvm_recompiler> g_spu_llvm_decoder;
+const spu_decoder<spu_llvm_recompiler> g_spu_llvm_decoder;
 
 decltype(&spu_llvm_recompiler::UNK) spu_llvm_recompiler::decode(u32 op)
 {

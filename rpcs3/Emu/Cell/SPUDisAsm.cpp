@@ -3,9 +3,9 @@
 #include "SPUAnalyser.h"
 #include "SPUThread.h"
 
-constexpr spu_decoder<SPUDisAsm> s_spu_disasm;
-constexpr spu_decoder<spu_itype> s_spu_itype;
-constexpr spu_decoder<spu_iflag> s_spu_iflag;
+const spu_decoder<SPUDisAsm> s_spu_disasm;
+const spu_decoder<spu_itype> s_spu_itype;
+const spu_decoder<spu_iflag> s_spu_iflag;
 
 u32 SPUDisAsm::disasm(u32 pc)
 {

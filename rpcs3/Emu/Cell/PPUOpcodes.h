@@ -103,7 +103,7 @@ class ppu_decoder
 	};
 
 	// Fill lookup table
-	constexpr void fill_table(u32 main_op, u32 count, u32 sh, std::initializer_list<instruction_info> entries)
+	void fill_table(u32 main_op, u32 count, u32 sh, std::initializer_list<instruction_info> entries) noexcept
 	{
 		if (sh < 11)
 		{
@@ -132,7 +132,7 @@ class ppu_decoder
 	}
 
 public:
-	constexpr ppu_decoder()
+	ppu_decoder() noexcept
 	{
 		for (auto& x : m_table)
 		{
@@ -576,12 +576,12 @@ public:
 		});
 	}
 
-	const std::array<T, 0x20000>& get_table() const
+	const std::array<T, 0x20000>& get_table() const noexcept
 	{
 		return m_table;
 	}
 
-	T decode(u32 inst) const
+	T decode(u32 inst) const noexcept
 	{
 		return m_table[ppu_decode(inst)];
 	}

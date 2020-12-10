@@ -23,8 +23,8 @@
 #define SPU_OFF_16(x, ...) asmjit::x86::word_ptr(*cpu, offset32(&spu_thread::x, ##__VA_ARGS__))
 #define SPU_OFF_8(x, ...) asmjit::x86::byte_ptr(*cpu, offset32(&spu_thread::x, ##__VA_ARGS__))
 
-constexpr spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast; // TODO: avoid
-constexpr spu_decoder<spu_recompiler> s_spu_decoder;
+extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast{}; // TODO: avoid
+const spu_decoder<spu_recompiler> s_spu_decoder;
 
 extern u64 get_timebased_time();
 

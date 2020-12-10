@@ -105,9 +105,9 @@ void fmt_class_string<ppu_join_status>::format(std::string& out, u64 arg)
 	});
 }
 
-constexpr ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise;
-constexpr ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast;
-constexpr ppu_decoder<ppu_itype> g_ppu_itype;
+const ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise;
+const ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast;
+const ppu_decoder<ppu_itype> g_ppu_itype;
 
 extern void ppu_initialize();
 extern void ppu_initialize(const ppu_module& info);
