@@ -8,6 +8,10 @@
 #include <vector>
 #include <algorithm>
 
+// Workaround for type madness
+#define GET_SRC_LOC { __builtin_LINE(), __builtin_COLUMN(), __builtin_FILE(), __builtin_FUNCTION() }
+
+
 namespace fs
 {
 #ifdef _WIN32
@@ -233,226 +237,148 @@ namespace fs
 		}
 
 		// Change file size (possibly appending zero bytes)
-		bool trunc(u64 length,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		bool trunc(u64 length, const src_loc& loc = GET_SRC_LOC) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(loc);
 			return m_file->trunc(length);
 		}
 
 		// Get file information
-		stat_t stat(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		stat_t stat(const src_loc& loc = GET_SRC_LOC) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(loc);
 			return m_file->stat();
 		}
 
 		// Sync file buffers
-		void sync(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		void sync(const src_loc& loc = GET_SRC_LOC) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(loc);
 			return m_file->sync();
 		}
 
 		// Read the data from the file and return the amount of data written in buffer
-		u64 read(void* buffer, u64 count,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(), ...) const
+		u64 read(void* buffer, u64 count, const src_loc& loc = GET_SRC_LOC, ...) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(loc);
 			return m_file->read(buffer, count);
 		}
 
 		// Write the data to the file and return the amount of data actually written
-		u64 write(const void* buffer, u64 count,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(), ...) const
+		u64 write(const void* buffer, u64 count, const src_loc& loc = GET_SRC_LOC, ...) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(loc);
 			return m_file->write(buffer, count);
 		}
 
 		// Change current position, returns resulting position
-		u64 seek(s64 offset, seek_mode whence = seek_set,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		u64 seek(s64 offset, seek_mode whence = seek_set, const src_loc& loc = GET_SRC_LOC) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(loc);
 			return m_file->seek(offset, whence);
 		}
 
 		// Get file size
-		u64 size(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		u64 size(const src_loc& loc = GET_SRC_LOC) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(loc);
 			return m_file->size();
 		}
 
 		// Get current position
-		u64 pos(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		u64 pos(const src_loc& loc = GET_SRC_LOC) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(loc);
 			return m_file->seek(0, seek_cur);
 		}
 
 		// Write std::basic_string unconditionally
 		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const std::basic_string<T>& str,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const std::basic_string<T>& str, const src_loc& loc = GET_SRC_LOC) const
 		{
-			if (write(str.data(), str.size() * sizeof(T), line, col, file, func) != str.size() * sizeof(T)) xfail({line, col, file, func});
+			if (write(str.data(), str.size() * sizeof(T), loc) != str.size() * sizeof(T)) xfail(loc);
 			return *this;
 		}
 
 		// Write POD unconditionally
 		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const T& data,
-			pod_tag_t = pod_tag,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const T& data, pod_tag_t = pod_tag, const src_loc& loc = GET_SRC_LOC) const
 		{
-			if (write(std::addressof(data), sizeof(T), line, col, file, func) != sizeof(T)) xfail({line, col, file, func});
+			if (write(std::addressof(data), sizeof(T), loc) != sizeof(T)) xfail(loc);
 			return *this;
 		}
 
 		// Write POD std::vector unconditionally
 		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const std::vector<T>& vec,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const std::vector<T>& vec, const src_loc& loc = GET_SRC_LOC) const
 		{
-			if (write(vec.data(), vec.size() * sizeof(T), line, col, file, func) != vec.size() * sizeof(T)) xfail({line, col, file, func});
+			if (write(vec.data(), vec.size() * sizeof(T), loc) != vec.size() * sizeof(T)) xfail(loc);
 			return *this;
 		}
 
 		// Read std::basic_string, size must be set by resize() method
 		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::basic_string<T>& str,
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(),
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN()) const
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::basic_string<T>& str, const src_loc& loc = GET_SRC_LOC) const
 		{
-			return read(&str[0], str.size() * sizeof(T), line, col, file, func) == str.size() * sizeof(T);
+			return read(&str[0], str.size() * sizeof(T), loc) == str.size() * sizeof(T);
 		}
 
 		// Read std::basic_string
 		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::basic_string<T>& str, std::size_t size,
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(),
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN()) const
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::basic_string<T>& str, std::size_t size, const src_loc& loc = GET_SRC_LOC) const
 		{
 			str.resize(size);
-			return read(&str[0], size * sizeof(T), line, col, file, func) == size * sizeof(T);
+			return read(&str[0], size * sizeof(T), loc) == size * sizeof(T);
 		}
 
 		// Read POD, sizeof(T) is used
 		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(T& data,
-			pod_tag_t = pod_tag,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(T& data, pod_tag_t = pod_tag, const src_loc& loc = GET_SRC_LOC) const
 		{
-			return read(&data, sizeof(T), line, col, file, func) == sizeof(T);
+			return read(&data, sizeof(T), loc) == sizeof(T);
 		}
 
 		// Read POD std::vector, size must be set by resize() method
 		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec,
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(),
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN()) const
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec, const src_loc& loc = GET_SRC_LOC) const
 		{
-			return read(vec.data(), sizeof(T) * vec.size(), line, col, file, func) == sizeof(T) * vec.size();
+			return read(vec.data(), sizeof(T) * vec.size(), loc) == sizeof(T) * vec.size();
 		}
 
 		// Read POD std::vector
 		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec, std::size_t size,
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(),
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN()) const
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec, std::size_t size, const src_loc& loc = GET_SRC_LOC) const
 		{
 			vec.resize(size);
-			return read(vec.data(), sizeof(T) * size, line, col, file, func) == sizeof(T) * size;
+			return read(vec.data(), sizeof(T) * size, loc) == sizeof(T) * size;
 		}
 
 		// Read POD (experimental)
 		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, T> read(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, T> read(const src_loc& loc = GET_SRC_LOC) const
 		{
 			T result;
-			if (!read(result, pod_tag, line, col, file, func)) xfail({line, col, file, func});
+			if (!read(result, pod_tag, loc)) xfail(loc);
 			return result;
 		}
 
 		// Read full file to std::basic_string
 		template <typename T = char>
-		std::basic_string<T> to_string(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		std::basic_string<T> to_string(const src_loc& loc = GET_SRC_LOC) const
 		{
 			std::basic_string<T> result;
 			result.resize(size() / sizeof(T));
-			if (seek(0), !read(result, file, func, line, col)) xfail({line, col, file, func});
+			if (seek(0), !read(result, loc)) xfail(loc);
 			return result;
 		}
 
 		// Read full file to std::vector
 		template<typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, std::vector<T>> to_vector(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, std::vector<T>> to_vector(const src_loc& loc = GET_SRC_LOC) const
 		{
 			std::vector<T> result;
 			result.resize(size() / sizeof(T));
-			if (seek(0), !read(result, file, func, line, col)) xfail({line, col, file, func});
+			if (seek(0), !read(result, loc)) xfail(loc);
 			return result;
 		}
 
@@ -460,13 +386,9 @@ namespace fs
 		native_handle get_handle() const;
 
 		// Gathered write
-		u64 write_gather(const iovec_clone* buffers, u64 buf_count,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		u64 write_gather(const iovec_clone* buffers, u64 buf_count, const src_loc& loc = GET_SRC_LOC) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(loc);
 			return m_file->write_gather(buffers, buf_count);
 		}
 	};
@@ -510,24 +432,16 @@ namespace fs
 		}
 
 		// Get next directory entry
-		bool read(dir_entry& out,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		bool read(dir_entry& out, const src_loc& loc = GET_SRC_LOC) const
 		{
-			if (!m_dir) xnull({line, col, file, func});
+			if (!m_dir) xnull(loc);
 			return m_dir->read(out);
 		}
 
 		// Reset to the beginning
-		void rewind(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		void rewind(const src_loc& loc = GET_SRC_LOC) const
 		{
-			if (!m_dir) xnull({line, col, file, func});
+			if (!m_dir) xnull(loc);
 			return m_dir->rewind();
 		}
 
