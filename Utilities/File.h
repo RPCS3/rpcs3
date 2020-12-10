@@ -140,6 +140,14 @@ namespace fs
 
 	constexpr struct pod_tag_t{} pod_tag;
 
+	template <typename T>
+	struct not_same_type
+	{
+		using type = u32;
+	};
+
+	template<> struct not_same_type<u32>{ using type = int; };
+
 	// Get virtual device for specified path (nullptr for real path)
 	std::shared_ptr<device_base> get_virtual_device(const std::string& path);
 
@@ -418,13 +426,13 @@ namespace fs
 		// Read POD (experimental)
 		template <typename T>
 		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, T> read(
-			u32 line = __builtin_LINE(),
+			typename not_same_type<T>::type line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION()) const
 		{
 			T result;
-			if (!read(result, pod_tag, line, col, file, func)) xfail({line, col, file, func});
+			if (!read(result, pod_tag, u32(line), col, file, func)) xfail({u32(line), col, file, func});
 			return result;
 		}
 
