@@ -264,6 +264,19 @@ void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
 	{
 		out += ')';
 	}
+
+	// Print error code (may be irrelevant)
+#ifdef _WIN32
+	if (DWORD error = GetLastError())
+	{
+		fmt::append(out, " (e=0x%08x[%u])", error, error);
+	}
+#else
+	if (int error = errno)
+	{
+		fmt::append(out, " (errno=%d)", error);
+	}
+#endif
 }
 
 namespace fmt
@@ -271,27 +284,13 @@ namespace fmt
 	void raw_verify_error(const src_loc& loc)
 	{
 		std::string out{"Verification failed"};
-
-		// Print error code (may be irrelevant)
-#ifdef _WIN32
-		if (DWORD error = GetLastError())
-		{
-			fmt::append(out, " (e=%#x):", error);
-		}
-#else
-		if (int error = errno)
-		{
-			fmt::append(out, " (e=%d):", error);
-		}
-#endif
-
 		fmt::append(out, "%s", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
 	void raw_narrow_error(const src_loc& loc, const fmt_type_info* sup, u64 arg)
 	{
-		std::string out{"Narrow error"};
+		std::string out{"Narrowing error"};
 
 		if (sup)
 		{
