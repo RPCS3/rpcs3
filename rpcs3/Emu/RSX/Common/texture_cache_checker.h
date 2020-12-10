@@ -40,7 +40,7 @@ namespace rsx {
 				case utils::protection::no: return no > 0;
 				case utils::protection::ro: return no == 0 && ro > 0;
 				case utils::protection::rw: return no == 0 && ro == 0;
-				default: ASSUME(0);
+				default: fmt::throw_exception("Unreachable");
 				}
 			}
 
@@ -50,7 +50,7 @@ namespace rsx {
 				{
 				case utils::protection::no: if (no++ == UINT8_MAX) fmt::throw_exception("add(protection::no) overflow with NO==%d", UINT8_MAX); return;
 				case utils::protection::ro: if (ro++ == UINT8_MAX) fmt::throw_exception("add(protection::ro) overflow with RO==%d", UINT8_MAX); return;
-				default: ASSUME(0);
+				default: fmt::throw_exception("Unreachable");
 				}
 			}
 
@@ -60,7 +60,7 @@ namespace rsx {
 				{
 				case utils::protection::no: if (no-- == 0) fmt::throw_exception("remove(protection::no) overflow with NO==0"); return;
 				case utils::protection::ro: if (ro-- == 0) fmt::throw_exception("remove(protection::ro) overflow with RO==0"); return;
-				default: ASSUME(0);
+				default: fmt::throw_exception("Unreachable");
 				}
 			}
 		};

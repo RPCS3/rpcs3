@@ -213,7 +213,7 @@ namespace rsx
 			case section_bounds::confirmed_range:
 				return confirmed_range.valid() ? confirmed_range : cpu_range;
 			default:
-				ASSUME(0);
+				fmt::throw_exception("Unreachable");
 			}
 		}
 

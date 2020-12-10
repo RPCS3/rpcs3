@@ -29,28 +29,13 @@
 #endif
 
 #ifdef _MSC_VER
-
-#define ASSUME(...) ((__VA_ARGS__) ? void() : __assume(0))  // MSVC __assume ignores side-effects
 #define SAFE_BUFFERS __declspec(safebuffers)
 #define NEVER_INLINE __declspec(noinline)
 #define FORCE_INLINE __forceinline
-
 #else // not _MSC_VER
-
-#ifdef __clang__
-#if defined(__has_builtin) && __has_builtin(__builtin_assume)
-#define ASSUME(...) ((__VA_ARGS__) ? void() : __builtin_assume(0)) // __builtin_assume (supported by modern clang) ignores side-effects
-#endif
-#endif
-
-#ifndef ASSUME // gcc and old clang
-#define ASSUME(...) ((__VA_ARGS__) ? void() : __builtin_unreachable())  // note: the compiler will generate code to evaluate "cond" if the expression is opaque
-#endif
-
 #define SAFE_BUFFERS __attribute__((no_stack_protector))
 #define NEVER_INLINE __attribute__((noinline)) inline
 #define FORCE_INLINE __attribute__((always_inline)) inline
-
 #endif // _MSC_VER
 
 #define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")

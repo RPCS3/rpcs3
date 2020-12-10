@@ -694,7 +694,6 @@ namespace gl
 				}
 				default:
 				{
-					ASSUME(0);
 					fmt::throw_exception("Unreachable");
 				}
 				}

@@ -69,7 +69,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x1: info.first = "ble"; break;
 		case 0x2: info.first = "bne"; break;
 		case 0x3: info.first = "bns"; break;
-		default: ASSUME(0); break;
+		default: fmt::throw_exception("Unreachable");
 		}
 		break;
 	}
@@ -82,7 +82,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x1: info.first = "ble"; break;
 		case 0x2: info.first = "bne"; break;
 		case 0x3: info.first = "bns"; break;
-		default: ASSUME(0); break;
+		default: fmt::throw_exception("Unreachable");
 		}
 		break;
 	}
@@ -95,7 +95,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x1: info.first = "ble"; break;
 		case 0x2: info.first = "bne"; break;
 		case 0x3: info.first = "bns"; break;
-		default: ASSUME(0); break;
+		default: fmt::throw_exception("Unreachable");
 		}
 		break;
 	}
@@ -107,7 +107,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x1: info.first = "bgt"; break;
 		case 0x2: info.first = "beq"; break;
 		case 0x3: info.first = "bso"; break;
-		default: ASSUME(0); break;
+		default: fmt::throw_exception("Unreachable");
 		}
 		break;
 	}
@@ -120,7 +120,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x1: info.first = "bgt"; break;
 		case 0x2: info.first = "beq"; break;
 		case 0x3: info.first = "bso"; break;
-		default: ASSUME(0); break;
+		default: fmt::throw_exception("Unreachable");
 		}
 		break;
 	}
@@ -133,7 +133,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x1: info.first = "bgt"; break;
 		case 0x2: info.first = "beq"; break;
 		case 0x3: info.first = "bso"; break;
-		default: ASSUME(0); break;
+		default: fmt::throw_exception("Unreachable");
 		}
 		break;
 	}

@@ -372,8 +372,6 @@ public:
 	// Try to abort by assigning thread_state::aborting (UB if assigning different state)
 	named_thread& operator=(thread_state s)
 	{
-		ASSUME(s == thread_state::aborting);
-
 		if (s == thread_state::aborting && thread::m_sync.fetch_op([](u64& v){ return !(v & 3) && (v |= 1); }).second)
 		{
 			if (s == thread_state::aborting)

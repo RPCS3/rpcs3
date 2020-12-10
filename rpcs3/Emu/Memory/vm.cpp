@@ -310,8 +310,6 @@ namespace vm
 		{
 			to_clear = for_all_range_locks(to_clear, [&](u32 addr2, u32 size2)
 			{
-				ASSUME(size2);
-
 				if (range.overlaps(utils::address_range::start_length(addr2, size2))) [[unlikely]]
 				{
 					return 1;

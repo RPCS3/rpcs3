@@ -862,8 +862,7 @@ namespace rsx
 		case rsx::surface_antialiasing::square_rotated_4_samples:
 			return 4;
 		default:
-			ASSUME(0);
-			return 0;
+			fmt::throw_exception("Unreachable");
 		}
 	}
 
@@ -1083,7 +1082,7 @@ namespace rsx
 		case rsx::surface_depth_format2::z24s8_float:
 			return{ CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT, true };
 		default:
-			ASSUME(0);
+			fmt::throw_exception("Unreachable");
 		}
 	}
 

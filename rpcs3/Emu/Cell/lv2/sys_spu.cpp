@@ -1271,7 +1271,7 @@ error_code sys_spu_thread_write_ls(ppu_thread& ppu, u32 id, u32 lsa, u64 value, 
 	case 2: thread->_ref<u16>(lsa) = static_cast<u16>(value); break;
 	case 4: thread->_ref<u32>(lsa) = static_cast<u32>(value); break;
 	case 8: thread->_ref<u64>(lsa) = value; break;
-	default: ASSUME(0);
+	default: fmt::throw_exception("Unreachable");
 	}
 
 	return CELL_OK;
@@ -1314,7 +1314,7 @@ error_code sys_spu_thread_read_ls(ppu_thread& ppu, u32 id, u32 lsa, vm::ptr<u64>
 	case 2: *value = thread->_ref<u16>(lsa); break;
 	case 4: *value = thread->_ref<u32>(lsa); break;
 	case 8: *value = thread->_ref<u64>(lsa); break;
-	default: ASSUME(0);
+	default: fmt::throw_exception("Unreachable");
 	}
 
 	return CELL_OK;

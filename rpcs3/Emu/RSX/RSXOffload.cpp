@@ -61,7 +61,7 @@ namespace rsx
 						rsx::get_current_renderer()->renderctl(job.aux_param0, job.src);
 						break;
 					}
-					default: ASSUME(0); fmt::throw_exception("Unreachable");
+					default: fmt::throw_exception("Unreachable");
 					}
 
 					m_processed_count.release(m_processed_count + 1);
@@ -224,7 +224,6 @@ namespace rsx
 			range = get_index_count(static_cast<rsx::primitive_type>(m_current_job->aux_param0), m_current_job->length);
 			break;
 		default:
-			ASSUME(0);
 			fmt::throw_exception("Unreachable");
 		}
 

@@ -16,7 +16,7 @@ namespace vk
 			return VK_IMAGE_VIEW_TYPE_CUBE;
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 			return VK_IMAGE_VIEW_TYPE_3D;
-		default: ASSUME(0);
+		default: fmt::throw_exception("Unreachable");
 		};
 	}
 

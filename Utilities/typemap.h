@@ -372,7 +372,6 @@ namespace utils
 		template <typename D = std::remove_reference_t<T>>
 		auto get() const noexcept
 		{
-			ASSUME(m_block->m_type != 0);
 			return m_block->get_ptr<T>();
 		}
 

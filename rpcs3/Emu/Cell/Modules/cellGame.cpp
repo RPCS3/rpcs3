@@ -594,7 +594,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		case CELL_GAME_GAMETYPE_HDD: return "HG"sv;
 		case CELL_GAME_GAMETYPE_GAMEDATA: return "GD"sv;
 		case CELL_GAME_GAMETYPE_DISC: return "DG"sv;
-		default: ASSUME(0);
+		default: fmt::throw_exception("Unreachable");
 		}
 	}())
 	{

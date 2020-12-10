@@ -1662,8 +1662,7 @@ private:
 					info.viewType = VK_IMAGE_VIEW_TYPE_3D;
 					break;
 				default:
-					ASSUME(0);
-					break;
+					fmt::throw_exception("Unreachable");
 				}
 
 				info.subresourceRange.layerCount = resource->info.arrayLayers;

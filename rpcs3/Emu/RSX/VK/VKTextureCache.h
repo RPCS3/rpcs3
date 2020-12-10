@@ -1146,8 +1146,7 @@ namespace vk
 				layer = 1;
 				break;
 			default:
-				ASSUME(0);
-				break;
+				fmt::throw_exception("Unreachable");
 			}
 
 			auto *image = new vk::viewable_image(*m_device, m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,

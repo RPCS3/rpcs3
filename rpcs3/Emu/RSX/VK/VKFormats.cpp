@@ -79,9 +79,9 @@ namespace vk
 		case rsx::texture_minify_filter::linear_linear: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, true };
 		case rsx::texture_minify_filter::convolution_min: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
 		default:
-			ASSUME(0);
 			break;
 		}
+
 		fmt::throw_exception("Invalid min filter");
 	}
 
@@ -93,9 +93,9 @@ namespace vk
 		case rsx::texture_magnify_filter::linear: return VK_FILTER_LINEAR;
 		case rsx::texture_magnify_filter::convolution_mag: return VK_FILTER_LINEAR;
 		default:
-			ASSUME(0);
 			break;
 		}
+
 		fmt::throw_exception("Invalid mag filter (0x%x)", static_cast<u32>(mag_filter));
 	}
 
@@ -147,10 +147,10 @@ namespace vk
 		case rsx::texture_wrap_mode::mirror_once_border: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 		case rsx::texture_wrap_mode::mirror_once_clamp: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 		default:
-			ASSUME(0);
 			break;
 		}
-		fmt::throw_exception("unhandled texture clamp mode");
+
+		fmt::throw_exception("Unhandled texture clamp mode");
 	}
 
 	float max_aniso(rsx::texture_max_anisotropy gcm_aniso)
@@ -166,7 +166,6 @@ namespace vk
 		case rsx::texture_max_anisotropy::x12: return 12.0f;
 		case rsx::texture_max_anisotropy::x16: return 16.0f;
 		default:
-			ASSUME(0);
 			break;
 		}
 

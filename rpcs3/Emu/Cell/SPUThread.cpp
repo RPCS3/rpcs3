@@ -3516,8 +3516,6 @@ retry:
 
 void spu_thread::set_events(u32 bits)
 {
-	ASSUME(!(bits & ~0xffff));
-
 	if (ch_events.atomic_op([&](ch_events_t& events)
 	{
 		events.events |= bits;

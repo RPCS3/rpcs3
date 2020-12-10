@@ -18,7 +18,7 @@ protected:
 
 	virtual void Write(const std::string& value)
 	{
-		switch(m_mode)
+		switch (m_mode)
 		{
 			case CPUDisAsm_DumpMode:
 			{
@@ -50,7 +50,7 @@ protected:
 				last_opcode = value;
 				break;
 			}
-			default: ASSUME(0);
+			default: fmt::throw_exception("Unreachable");
 		}
 	}
 
