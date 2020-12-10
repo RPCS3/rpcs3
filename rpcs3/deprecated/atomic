@@ -1,0 +1,1 @@
+#error "STL <atomic> is deprecated, use util/atomic.hpp instead"

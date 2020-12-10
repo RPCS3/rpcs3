@@ -26,6 +26,7 @@ namespace vm
 {
 	static u8* memory_reserve_4GiB(void* _addr, u64 size = 0x100000000)
 	{
+		std::atomic<u8> test;
 		for (u64 addr = reinterpret_cast<u64>(_addr) + 0x100000000;; addr += 0x100000000)
 		{
 			if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr)))

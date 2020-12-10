@@ -22,6 +22,11 @@
 #include "../display.h"
 #include "../rsx_utils.h"
 
+#define VMA_ATOMIC_UINT32 atomic_t<u32>
+#define VMA_ATOMIC_UINT64 atomic_t<u64>
+#define compare_exchange_strong compare_exchange
+#define compare_exchange_weak compare_exchange
+
 #include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
 
 #ifdef __APPLE__

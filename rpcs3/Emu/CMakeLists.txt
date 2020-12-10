@@ -58,6 +58,8 @@ target_sources(rpcs3_emu PRIVATE
 
 target_include_directories(rpcs3_emu PUBLIC "${CMAKE_SOURCE_DIR}")
 
+target_include_directories(rpcs3_emu PRIVATE "${RPCS3_SRC_DIR}/deprecated")
+
 target_link_libraries(rpcs3_emu
 	PUBLIC
 		3rdparty::pugixml

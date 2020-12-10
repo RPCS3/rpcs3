@@ -28,6 +28,7 @@ namespace std { inline namespace literals { inline namespace chrono_literals {}}
 #include "util/logs.hpp"
 #include "util/shared_ptr.hpp"
 
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <climits>
