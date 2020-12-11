@@ -270,7 +270,7 @@ namespace fs
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(), ...) const
+			const char* func = __builtin_FUNCTION()) const
 		{
 			if (!m_file) xnull({line, col, file, func});
 			return m_file->read(buffer, count);
@@ -281,7 +281,7 @@ namespace fs
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(), ...) const
+			const char* func = __builtin_FUNCTION()) const
 		{
 			if (!m_file) xnull({line, col, file, func});
 			return m_file->write(buffer, count);
@@ -418,6 +418,7 @@ namespace fs
 		// Read POD (experimental)
 		template <typename T>
 		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, T> read(
+			pod_tag_t = pod_tag,
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),
