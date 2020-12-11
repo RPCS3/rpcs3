@@ -339,10 +339,10 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	{
 		// report back new data every ~10 ms even if the input doesn't change
 		// this is observed behaviour when using a Dualshock 3 controller
-		static std::array<std::chrono::time_point<steady_clock>, CELL_PAD_MAX_PORT_NUM> last_update = { };
-		const std::chrono::time_point<steady_clock> now = steady_clock::now();
+		static std::array<steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> last_update = { };
+		const auto now = steady_clock::now();
 
-		if (btnChanged || pad->m_buffer_cleared || (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update[port_no]).count() >= 10))
+		if (btnChanged || pad->m_buffer_cleared || now - last_update[port_no] >= 10ms)
 		{
 			data->len = CELL_PAD_LEN_CHANGE_SENSOR_ON;
 			last_update[port_no] = now;

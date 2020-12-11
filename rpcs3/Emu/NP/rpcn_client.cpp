@@ -305,7 +305,7 @@ bool rpcn_client::connect(const std::string& host)
 		return false;
 	}
 
-	last_ping_time = std::chrono::system_clock::now() - std::chrono::seconds(5);
+	last_ping_time = steady_clock::now() - 5s;
 	last_pong_time = last_ping_time;
 
 	return true;
@@ -349,9 +349,9 @@ bool rpcn_client::login(const std::string& npid, const std::string& password, co
 	// Make sure signaling works
 	if (!in_config)
 	{
-		auto start = std::chrono::system_clock::now();
+		auto start = steady_clock::now();
 
-		while (!get_addr_sig() && (std::chrono::system_clock::now() - start) < std::chrono::seconds(5))
+		while (!get_addr_sig() && steady_clock::now() - start < 5s)
 		{
 			std::this_thread::sleep_for(5ms);
 		}
@@ -409,7 +409,7 @@ bool rpcn_client::manage_connection()
 	if (authentified && !in_config)
 	{
 		// Ping the UDP Signaling Server
-		auto now = std::chrono::system_clock::now();
+		auto now = steady_clock::now();
 
 		auto rpcn_msgs = get_rpcn_msgs();
 
@@ -432,7 +432,7 @@ bool rpcn_client::manage_connection()
 		}
 
 		// Send a packet every 5 seconds and then every 500 ms until reply is received
-		if ((now - last_pong_time) > std::chrono::seconds(5) && (now - last_ping_time) > std::chrono::milliseconds(500))
+		if (now - last_pong_time > 5s && now - last_ping_time > 500ms)
 		{
 			std::vector<u8> ping(9);
 			ping[0]                                 = 1;

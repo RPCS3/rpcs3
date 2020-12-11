@@ -305,7 +305,7 @@ public:
 		{
 			std::lock_guard lock(data_mutex);
 
-			const auto now = std::chrono::system_clock::now();
+			const auto now = steady_clock::now();
 
 			message msg;
 			msg.dst_addr = *dst;
@@ -328,7 +328,7 @@ public:
 		std::lock_guard lock(data_mutex);
 		rtts[sock_id].num_retries = 0;
 
-		const auto now = std::chrono::system_clock::now();
+		const auto now = steady_clock::now();
 
 		for (auto it = msgs.begin(); it != msgs.end();)
 		{
@@ -366,7 +366,7 @@ public:
 			if (thread_ctrl::state() == thread_state::aborting)
 				return;
 
-			const auto now = std::chrono::system_clock::now();
+			const auto now = steady_clock::now();
 			// Check for messages that haven't been acked
 			std::set<s32> rtt_increased;
 			for (auto it = msgs.begin(); it != msgs.end();)
@@ -442,9 +442,9 @@ public:
 			::sockaddr_in dst_addr;
 			std::vector<u8> data;
 			u64 seq;
-			std::chrono::time_point<std::chrono::system_clock> initial_sendtime;
+			steady_clock::time_point initial_sendtime;
 		};
-		std::map<std::chrono::time_point<std::chrono::system_clock>, message> msgs; // (wakeup time, msg)
+		std::map<steady_clock::time_point, message> msgs; // (wakeup time, msg)
 		// List of rtts
 		struct rtt_info
 		{

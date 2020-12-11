@@ -17,6 +17,10 @@
 #include <limits>
 #include <array>
 
+using std::chrono::steady_clock;
+
+using namespace std::literals;
+
 #ifdef _MSC_VER
 #if !defined(__cpp_lib_bitops) && _MSC_VER < 1928
 #define __cpp_lib_bitops
@@ -42,9 +46,6 @@
 #define CHECK_ALIGN(type, align) static_assert(alignof(type) == align, "Invalid " #type " type alignment")
 #define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
 #define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
-
-// Variant pattern matching helper
-#define MATCH(arg, ...) constexpr(std::is_same_v<std::decay_t<decltype(arg)>, __VA_ARGS__>)
 
 #define DECLARE(...) decltype(__VA_ARGS__) __VA_ARGS__
 
@@ -148,10 +149,6 @@ namespace std
 	}
 }
 #endif
-
-using steady_clock = std::conditional<
-	std::chrono::high_resolution_clock::is_steady,
-	std::chrono::high_resolution_clock, std::chrono::steady_clock>::type;
 
 // Get integral type from type size
 template <std::size_t N>

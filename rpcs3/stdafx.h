@@ -13,13 +13,6 @@
 	#include "define_new_memleakdetect.h"
 #endif
 
-#pragma warning( disable : 4351 )
-
-// MSVC bug workaround
-#ifdef _MSC_VER
-namespace std { inline namespace literals { inline namespace chrono_literals {}}}
-#endif
-
 #include "Utilities/types.h"
 #include "Utilities/BEType.h"
 #include "util/atomic.hpp"
@@ -39,5 +32,3 @@ namespace std { inline namespace literals { inline namespace chrono_literals {}}
 #include <unordered_map>
 #include <algorithm>
 #include <string_view>
-
-using namespace std::literals;

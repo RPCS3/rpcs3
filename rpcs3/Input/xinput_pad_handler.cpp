@@ -492,7 +492,7 @@ void xinput_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device
 	dev->smallVibrate = speed_small;
 
 	// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse. So I'll use 20ms to be on the safe side. No lag was noticable.
-	if (dev->newVibrateData && (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - dev->last_vibration) > 20ms))
+	if (dev->newVibrateData && steady_clock::now() - dev->last_vibration > 20ms)
 	{
 		XINPUT_VIBRATION vibrate;
 		vibrate.wLeftMotorSpeed = speed_large * 257;
@@ -501,7 +501,7 @@ void xinput_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device
 		if ((*xinputSetState)(padnum, &vibrate) == ERROR_SUCCESS)
 		{
 			dev->newVibrateData = false;
-			dev->last_vibration = std::chrono::high_resolution_clock::now();
+			dev->last_vibration = steady_clock::now();
 		}
 	}
 }

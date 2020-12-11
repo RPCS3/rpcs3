@@ -92,7 +92,7 @@ class xinput_pad_handler final : public PadHandlerBase
 		bool newVibrateData{ true };
 		u16 largeVibrate{ 0 };
 		u16 smallVibrate{ 0 };
-		std::chrono::high_resolution_clock::time_point last_vibration;
+		steady_clock::time_point last_vibration;
 		bool is_scp_device{ false };
 		DWORD state{ ERROR_NOT_CONNECTED }; // holds internal controller state change
 		SCP_EXTN state_scp{ 0 };

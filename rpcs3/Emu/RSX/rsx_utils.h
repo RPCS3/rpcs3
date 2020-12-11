@@ -1195,7 +1195,7 @@ namespace rsx
 	struct profiling_timer
 	{
 		bool enabled = false;
-		std::chrono::time_point<steady_clock> last;
+		steady_clock::time_point last;
 
 		profiling_timer() = default;
 

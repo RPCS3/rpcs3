@@ -236,7 +236,7 @@ protected:
 	u32 received_version                = 0;
 
 	// UDP Signaling related
-	std::chrono::time_point<std::chrono::system_clock> last_ping_time{}, last_pong_time{};
+	steady_clock::time_point last_ping_time{}, last_pong_time{};
 
 	sockaddr_in addr_rpcn{};
 	sockaddr_in addr_rpcn_udp{};

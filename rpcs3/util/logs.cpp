@@ -137,7 +137,7 @@ namespace logs
 				QueryPerformanceCounter(&start);
 			}
 #else
-			std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+			steady_clock::time_point start = steady_clock::now();
 #endif
 
 			u64 get() const
@@ -148,7 +148,7 @@ namespace logs
 				const LONGLONG diff = now.QuadPart - start.QuadPart;
 				return diff / freq.QuadPart * 1'000'000 + diff % freq.QuadPart * 1'000'000 / freq.QuadPart;
 #else
-				return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
+				return (steady_clock::now() - start).count() / 1000;
 #endif
 			}
 		} timebase{};

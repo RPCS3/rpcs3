@@ -496,7 +496,7 @@ namespace rsx
 
 			if (nb_workers == 1)
 			{
-				std::chrono::time_point<steady_clock> last_update;
+				steady_clock::time_point last_update;
 
 				// Call the worker function directly, stoping it prematurely to be able update the screen
 				u8 inc = 10;
@@ -508,7 +508,7 @@ namespace rsx
 					worker(stop_at);
 
 					// Only update the screen at about 10fps since updating it everytime slows down the process
-					std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
+					steady_clock::time_point now = steady_clock::now();
 					processed_since_last_update += inc;
 					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (stop_at == entry_count))
 					{
