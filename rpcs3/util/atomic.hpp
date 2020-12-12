@@ -1463,7 +1463,7 @@ public:
 	}
 
 	// Conditionally decrement
-	bool try_dec(simple_type greater_than = std::numeric_limits<simple_type>::min())
+	bool try_dec(simple_type greater_than)
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
 
@@ -1486,7 +1486,7 @@ public:
 	}
 
 	// Conditionally increment
-	bool try_inc(simple_type less_than = std::numeric_limits<simple_type>::max())
+	bool try_inc(simple_type less_than)
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
 

@@ -14,7 +14,6 @@
 #include <type_traits>
 #include <utility>
 #include <chrono>
-#include <limits>
 #include <array>
 
 using std::chrono::steady_clock;
@@ -515,13 +514,13 @@ constexpr inline struct umax_helper
 	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	explicit constexpr operator T() const
 	{
-		return std::numeric_limits<S>::max();
+		return static_cast<S>(-1);
 	}
 
 	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator==(const T& rhs) const
 	{
-		return rhs == std::numeric_limits<S>::max();
+		return rhs == static_cast<S>(-1);
 	}
 
 #if __cpp_impl_three_way_comparison >= 201711 && !__INTELLISENSE__
@@ -529,7 +528,7 @@ constexpr inline struct umax_helper
 	template <typename T>
 	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator==(const T& lhs, const umax_helper& rhs)
 	{
-		return lhs == std::numeric_limits<simple_t<T>>::max();
+		return lhs == static_cast<simple_t<T>>(-1);
 	}
 #endif
 
@@ -538,13 +537,13 @@ constexpr inline struct umax_helper
 	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator!=(const T& rhs) const
 	{
-		return rhs != std::numeric_limits<S>::max();
+		return rhs != static_cast<S>(-1);
 	}
 
 	template <typename T>
 	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator!=(const T& lhs, const umax_helper& rhs)
 	{
-		return lhs != std::numeric_limits<simple_t<T>>::max();
+		return lhs != static_cast<simple_t<T>>(-1);
 	}
 #endif
 } umax;

@@ -25,7 +25,6 @@
 
 #include "Emu/NP/np_handler.h"
 
-#include <limits>
 #include <chrono>
 #include <shared_mutex>
 

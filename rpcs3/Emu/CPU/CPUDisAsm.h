@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <limits>
 #include "Utilities/StrFmt.h"
 
 enum CPUDisAsmMode

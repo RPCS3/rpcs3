@@ -132,10 +132,10 @@ private:
 		const s32 rem = calibData.sensNumer % calibData.sensDenom;
 		const s32 output = (quot * biased) + ((rem * biased) / calibData.sensDenom);
 
-		if (output > std::numeric_limits<s16>::max())
-			return std::numeric_limits<s16>::max();
-		else if (output < std::numeric_limits<s16>::min())
-			return std::numeric_limits<s16>::min();
+		if (output > INT16_MAX)
+			return INT16_MAX;
+		else if (output < INT16_MIN)
+			return INT16_MIN;
 		else return static_cast<s16>(output);
 	}
 
