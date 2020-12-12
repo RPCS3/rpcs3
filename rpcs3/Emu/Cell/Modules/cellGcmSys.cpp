@@ -33,6 +33,28 @@ void fmt_class_string<CellGcmError>::format(std::string& out, u64 arg)
 	});
 }
 
+namespace rsx
+{
+	u32 make_command(vm::bptr<u32>& dst, u32 start_register, std::initializer_list<any32> values)
+	{
+		*dst++ = start_register << 2 | static_cast<u32>(values.size()) << 18;
+
+		for (const any32& cmd : values)
+		{
+			*dst++ = cmd.as<u32>();
+		}
+
+		return u32{sizeof(u32)} * (static_cast<u32>(values.size()) + 1);
+	}
+
+	u32 make_jump(vm::bptr<u32>& dst, u32 offset)
+	{
+		*dst++ = RSX_METHOD_OLD_JUMP_CMD | offset;
+
+		return sizeof(u32);
+	}
+}
+
 extern s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 count);
 
 const u32 tiled_pitches[] = {
