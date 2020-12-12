@@ -23,6 +23,7 @@
 #include "Input/keyboard_pad_handler.h"
 #include "Input/ds3_pad_handler.h"
 #include "Input/ds4_pad_handler.h"
+#include "Input/dualsense_pad_handler.h"
 #ifdef _WIN32
 #include "Input/xinput_pad_handler.h"
 #include "Input/mm_joystick_handler.h"
@@ -1137,6 +1138,9 @@ std::shared_ptr<PadHandlerBase> pad_settings_dialog::GetHandler(pad_handler type
 	case pad_handler::ds4:
 		ret_handler = std::make_unique<ds4_pad_handler>();
 		break;
+	case pad_handler::dualsense:
+		ret_handler = std::make_unique<dualsense_pad_handler>();
+		break;
 #ifdef _WIN32
 	case pad_handler::xinput:
 		ret_handler = std::make_unique<xinput_pad_handler>();
@@ -1214,16 +1218,22 @@ void pad_settings_dialog::ChangeInputType()
 		m_description = tooltips.gamepad_settings.ds3_windows; break;
 	case pad_handler::ds4:
 		m_description = tooltips.gamepad_settings.ds4_windows; break;
+	case pad_handler::dualsense:
+		m_description = tooltips.gamepad_settings.dualsense_windows; break;
 #elif __linux__
 	case pad_handler::ds3:
 		m_description = tooltips.gamepad_settings.ds3_linux; break;
 	case pad_handler::ds4:
 		m_description = tooltips.gamepad_settings.ds4_linux; break;
+	case pad_handler::dualsense:
+		m_description = tooltips.gamepad_settings.dualsense_linux; break;
 #else
 	case pad_handler::ds3:
 		m_description = tooltips.gamepad_settings.ds3_other; break;
 	case pad_handler::ds4:
 		m_description = tooltips.gamepad_settings.ds4_other; break;
+	case pad_handler::dualsense:
+		m_description = tooltips.gamepad_settings.dualsense_other; break;
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
@@ -1246,6 +1256,7 @@ void pad_settings_dialog::ChangeInputType()
 #endif
 	case pad_handler::ds3:
 	case pad_handler::ds4:
+	case pad_handler::dualsense:
 	{
 		const QString name_string = qstr(m_handler->name_string());
 		for (size_t i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
@@ -1382,6 +1393,9 @@ void pad_settings_dialog::ChangeProfile()
 		break;
 	case pad_handler::ds4:
 		static_cast<ds4_pad_handler*>(m_handler.get())->init_config(&m_handler_cfg, cfg_name);
+		break;
+	case pad_handler::dualsense:
+		static_cast<dualsense_pad_handler*>(m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 #ifdef _WIN32
 	case pad_handler::xinput:
@@ -1595,6 +1609,7 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 		case pad_handler::keyboard: return tr("Keyboard");
 		case pad_handler::ds3: return tr("DualShock 3");
 		case pad_handler::ds4: return tr("DualShock 4");
+		case pad_handler::dualsense: return tr("DualSense");
 #ifdef _WIN32
 		case pad_handler::xinput: return tr("XInput");
 		case pad_handler::mm: return tr("MMJoystick");
