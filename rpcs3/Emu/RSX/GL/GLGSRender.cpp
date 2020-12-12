@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "../Overlays/overlay_shader_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "GLGSRender.h"
@@ -492,7 +492,7 @@ void GLGSRender::on_exit()
 		query.driver_handle = 0;
 	}
 
-	zcull_ctrl.release();
+	delete zcull_ctrl.release();
 
 	gl::set_primary_context_thread(false);
 }

@@ -81,9 +81,7 @@ namespace
 			{
 				fs::file icon = fs::file(base_dir + entry.name + "/ICON0.PNG");
 				u32 iconSize = icon.size();
-				std::vector<uchar> iconData;
-				icon.read(iconData, iconSize);
-				save_entry2.iconBuf = iconData;
+				icon.read(save_entry2.iconBuf, iconSize);
 			}
 			save_entry2.isNew = false;
 			save_entries.emplace_back(save_entry2);

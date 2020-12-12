@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKHelpers.h"
 #include "VKResourceManager.h"
 #include "VKDMA.h"
@@ -67,7 +67,7 @@ namespace vk
 		const auto word =  entry / s_pages_per_entry;
 		const auto shift = (entry % s_pages_per_entry) * s_bits_per_page;
 
-		page_info[word] &= ~(3 << shift);
+		page_info[word] &= ~(u64)3 << shift;
 		page_info[word] |= (bits << shift);
 	}
 

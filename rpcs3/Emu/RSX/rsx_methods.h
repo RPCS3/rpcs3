@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <array>
 #include <vector>
@@ -642,7 +642,7 @@ namespace rsx
 
 		u32 window_clip_vertical() const
 		{
-			return registers[NV4097_SET_WINDOW_CLIP_HORIZONTAL];
+			return registers[NV4097_SET_WINDOW_CLIP_VERTICAL];
 		}
 
 		bool depth_test_enabled() const

@@ -65,7 +65,7 @@ void microphone_creator::parse_devices(const std::string& list)
 {
 	for (u32 index = 0; index < 4; index++)
 	{
-		m_sel_list[index] = "";
+		m_sel_list[index].clear();
 	}
 
 	const auto devices_list = fmt::split(list, { "@@@" });

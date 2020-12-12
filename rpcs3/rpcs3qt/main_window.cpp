@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "main_window.h"
 #include "qt_utils.h"
@@ -192,10 +192,13 @@ void main_window::Init()
 
 	download_menu->addAction(download_action);
 
+	ASSERT(ui->menuBar);
+
 #ifdef _WIN32
 	// Use a menu at the top right corner to indicate the new version.
 	QMenuBar *corner_bar = new QMenuBar(ui->menuBar);
 	m_download_menu_action = corner_bar->addMenu(download_menu);
+
 	ui->menuBar->setCornerWidget(corner_bar);
 	ui->menuBar->cornerWidget()->setVisible(false);
 #else

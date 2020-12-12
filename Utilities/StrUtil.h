@@ -83,7 +83,7 @@ namespace fmt
 	{
 		if (source.empty())
 		{
-			return {};
+			return std::string();
 		}
 
 		std::string result;
@@ -103,7 +103,7 @@ namespace fmt
 	{
 		if (!sources.size())
 		{
-			return {};
+			return std::string();
 		}
 
 		std::string result;

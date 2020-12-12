@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "../Overlays/overlay_shader_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "VKGSRender.h"
@@ -197,7 +197,7 @@ namespace
 		size_t idx = 0;
 
 		// Vertex stream, one stream for cacheable data, one stream for transient data
-		for (int i = 0; i < 3; i++)
+		for (u8 i = 0; i < 3; i++)
 		{
 			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
 			bindings[idx].descriptorCount = 1;
@@ -266,7 +266,7 @@ namespace
 			idx++;
 		}
 
-		for (int i = 0; i < rsx::limits::vertex_textures_count; i++)
+		for (u8 i = 0; i < rsx::limits::vertex_textures_count; i++)
 		{
 			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			bindings[idx].descriptorCount = 1;
@@ -668,15 +668,16 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (result.num_flushable > 0)
 	{
-		if (g_fxo->get<rsx::dma_manager>()->is_current_thread())
+		auto manager = g_fxo->get<rsx::dma_manager>();
+		if (manager->is_current_thread())
 		{
 			// The offloader thread cannot handle flush requests
 			verify(HERE), !(m_queue_status & flush_queue_state::deadlock);
 
-			m_offloader_fault_range = g_fxo->get<rsx::dma_manager>()->get_fault_range(is_writing);
+			m_offloader_fault_range = manager->get_fault_range(is_writing);
 			m_offloader_fault_cause = (is_writing) ? rsx::invalidation_cause::write : rsx::invalidation_cause::read;
 
-			g_fxo->get<rsx::dma_manager>()->set_mem_fault_flag();
+			manager->set_mem_fault_flag();
 			m_queue_status |= flush_queue_state::deadlock;
 
 			// Wait for deadlock to clear
@@ -685,7 +686,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 				_mm_pause();
 			}
 
-			g_fxo->get<rsx::dma_manager>()->clear_mem_fault_flag();
+			manager->clear_mem_fault_flag();
 			return true;
 		}
 
@@ -1037,7 +1038,7 @@ void VKGSRender::on_init_thread()
 void VKGSRender::on_exit()
 {
 	GSRender::on_exit();
-	zcull_ctrl.release();
+	delete zcull_ctrl.release();
 }
 
 void VKGSRender::clear_surface(u32 mask)
@@ -1062,7 +1063,7 @@ void VKGSRender::clear_surface(u32 mask)
 	u32   depth_stencil_mask = 0;
 
 	std::vector<VkClearAttachment> clear_descriptors;
-	VkClearValue depth_stencil_clear_values = {}, color_clear_values = {};
+	VkClearValue depth_stencil_clear_values = {};
 
 	u16 scissor_x = static_cast<u16>(m_scissor.offset.x);
 	u16 scissor_w = static_cast<u16>(m_scissor.extent.width);
@@ -1183,6 +1184,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 			if (colormask)
 			{
+				VkClearValue color_clear_values = {};
 				color_clear_values.color.float32[0] = static_cast<float>(clear_r) / 255;
 				color_clear_values.color.float32[1] = static_cast<float>(clear_g) / 255;
 				color_clear_values.color.float32[2] = static_cast<float>(clear_b) / 255;

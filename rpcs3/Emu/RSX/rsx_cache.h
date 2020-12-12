@@ -682,7 +682,7 @@ namespace rsx
 			f.read<u32>(data, f.size() / sizeof(u32));
 
 			RSXVertexProgram vp = {};
-			vp.data = data;
+			vp.data = std::move(data);
 			vp.skip_vertex_input_check = true;
 
 			return vp;

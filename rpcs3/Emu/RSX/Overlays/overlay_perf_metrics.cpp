@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_perf_metrics.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPUThread.h"
@@ -21,7 +21,7 @@ namespace rsx
 				hex_color.erase(0, 1);
 			}
 
-			unsigned hexval = 0;
+			size_t hexval = 0;
 			const auto len = hex_color.length();
 
 			if (len != 6 && len != 8)
@@ -607,8 +607,7 @@ namespace rsx
 
 		void graph::set_font_size(u16 font_size)
 		{
-			const auto font_name = m_label.get_font()->get_name().data();
-			m_label.set_font(font_name, font_size);
+			m_label.set_font(m_label.get_font()->get_name().data(), font_size);
 		}
 
 		void graph::set_count(u32 datapoint_count)

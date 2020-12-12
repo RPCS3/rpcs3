@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 enum class ppu_decoder_type
 {
@@ -79,6 +79,7 @@ enum class audio_downmix
 {
 	no_downmix, // Surround 7.1
 	downmix_to_stereo,
+	downmix_to_3_1,
 	downmix_to_5_1,
 	use_application_settings
 };
