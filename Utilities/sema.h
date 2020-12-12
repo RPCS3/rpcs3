@@ -1,7 +1,7 @@
 #pragma once
 
 #include <mutex>
-#include "types.h"
+#include "util/types.hpp"
 #include "util/atomic.hpp"
 
 // Lightweight semaphore helper class

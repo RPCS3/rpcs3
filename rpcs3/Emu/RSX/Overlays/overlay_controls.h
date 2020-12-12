@@ -1,5 +1,6 @@
 #pragma once
-#include "Utilities/types.h"
+
+#include "util/types.hpp"
 #include "Utilities/geometry.h"
 #include "Utilities/File.h"
 #include "overlay_utils.h"

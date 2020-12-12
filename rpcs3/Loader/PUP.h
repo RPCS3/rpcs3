@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Utilities/types.h"
+#include "util/types.hpp"
 #include "../../Utilities/File.h"
 
 #include <vector>
@@ -34,7 +34,7 @@ class pup_object
 {
 	const fs::file& m_file;
 	bool isValid = true;
-	
+
 	std::vector<PUPFileEntry> m_file_tbl;
 	std::vector<PUPHashEntry> m_hash_tbl;
 

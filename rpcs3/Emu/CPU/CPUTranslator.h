@@ -24,7 +24,7 @@
 #endif
 #include "define_new_memleakdetect.h"
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "Utilities/StrFmt.h"
 #include "Utilities/BEType.h"
 #include "Utilities/BitField.h"

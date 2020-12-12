@@ -3,7 +3,7 @@
 #include "key_vault.h"
 #include "zlib.h"
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "Utilities/File.h"
 #include "util/logs.hpp"
 

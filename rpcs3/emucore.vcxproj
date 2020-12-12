@@ -548,7 +548,7 @@
     <ClInclude Include="..\Utilities\sysinfo.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
-    <ClInclude Include="..\Utilities\types.h" />
+    <ClInclude Include="util\types.hpp" />
     <ClInclude Include="..\Utilities\version.h" />
     <ClInclude Include="util\vm.hpp" />
     <ClInclude Include="util\asm.hpp" />

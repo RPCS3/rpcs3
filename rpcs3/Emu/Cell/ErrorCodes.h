@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 // Error code type (return type), implements error reporting.
 class error_code

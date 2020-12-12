@@ -17,7 +17,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Loader/PSF.h"
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "Utilities/lockless.h"
 #include "util/yaml.hpp"
 #include "Input/pad_thread.h"

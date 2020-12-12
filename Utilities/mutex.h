@@ -1,7 +1,7 @@
 #pragma once
 
 #include <mutex>
-#include "types.h"
+#include "util/types.hpp"
 #include "util/atomic.hpp"
 
 // Shared mutex with small size (u32).

@@ -3,7 +3,7 @@
 #include <QDialog>
 #include <QTreeWidget>
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 class kernel_explorer : public QDialog
 {

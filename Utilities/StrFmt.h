@@ -1,6 +1,6 @@
 #pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
-#include "types.h"
+#include "util/types.hpp"
 
 #include <string>
 

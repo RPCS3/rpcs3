@@ -21,7 +21,7 @@ Examples:
 Intersection (&) and symmetric difference (^) is also available.
 */
 
-#include "types.h"
+#include "util/types.hpp"
 #include "util/atomic.hpp"
 
 template <typename T>
