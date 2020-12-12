@@ -1355,7 +1355,7 @@ bool spursTasksetSyscallEntry(spu_thread& spu)
 		// Save task context
 		ctxt->savedContextLr = spu.gpr[0];
 		ctxt->savedContextSp = spu.gpr[1];
-		for (auto i = 0; i < 48; i++)
+		for (u8 i = 0; i < 48; i++)
 		{
 			ctxt->savedContextR80ToR127[i] = spu.gpr[80 + i];
 		}
@@ -1381,7 +1381,7 @@ void spursTasksetResumeTask(spu_thread& spu)
 	// Restore task context
 	spu.gpr[0] = ctxt->savedContextLr;
 	spu.gpr[1] = ctxt->savedContextSp;
-	for (auto i = 0; i < 48; i++)
+	for (u8 i = 0; i < 48; i++)
 	{
 		spu.gpr[80 + i] = ctxt->savedContextR80ToR127[i];
 	}
@@ -1399,7 +1399,7 @@ void spursTasksetStartTask(spu_thread& spu, CellSpursTaskArgument& taskArgs)
 	spu.gpr[3] = v128::from64r(taskArgs._u64[0], taskArgs._u64[1]);
 	spu.gpr[4]._u64[1] = taskset->args;
 	spu.gpr[4]._u64[0] = taskset->spurs.addr();
-	for (auto i = 5; i < 128; i++)
+	for (u8 i = 5; i < 128; i++)
 	{
 		spu.gpr[i].clear();
 	}
@@ -1439,7 +1439,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 			auto newlyReadyTasks = v128::andnot(ready, signalled | pready);
 
 			// TODO: Optimize this shit with std::popcount when it's known to be fixed
-			for (auto i = 0; i < 128; i++)
+			for (u8 i = 0; i < 128; i++)
 			{
 				if (newlyReadyTasks._bit[i])
 				{
@@ -1690,7 +1690,7 @@ s32 spursTasketSaveTaskContext(spu_thread& spu)
 	u32 allocLsBlocks = static_cast<u32>(taskInfo->context_save_storage_and_alloc_ls_blocks & 0x7F);
 	u32 lsBlocks = 0;
 	v128 ls_pattern = v128::from64r(taskInfo->ls_pattern._u64[0], taskInfo->ls_pattern._u64[1]);
-	for (auto i = 0; i < 128; i++)
+	for (u8 i = 0; i < 128; i++)
 	{
 		if (ls_pattern._bit[i])
 		{
@@ -1704,7 +1704,7 @@ s32 spursTasketSaveTaskContext(spu_thread& spu)
 	}
 
 	// Make sure the stack is area is specified in the ls pattern
-	for (auto i = (ctxt->savedContextSp.value()._u32[3]) >> 11; i < 128; i++)
+	for (u8 i = (ctxt->savedContextSp.value()._u32[3]) >> 11; i < 128; i++)
 	{
 		if (ls_pattern._bit[i] == false)
 		{
@@ -1724,7 +1724,7 @@ s32 spursTasketSaveTaskContext(spu_thread& spu)
 	std::memcpy(vm::base(contextSaveStorage), spu._ptr<void>(0x2C80), 0x380);
 
 	// Save LS context
-	for (auto i = 6; i < 128; i++)
+	for (u8 i = 6; i < 128; i++)
 	{
 		if (ls_pattern._bit[i])
 		{
@@ -1832,7 +1832,7 @@ void spursTasksetDispatch(spu_thread& spu)
 		// Load saved context from main memory to LS
 		const u32 contextSaveStorage = vm::cast(taskInfo->context_save_storage_and_alloc_ls_blocks & -0x80, HERE);
 		std::memcpy(spu._ptr<void>(0x2C80), vm::base(contextSaveStorage), 0x380);
-		for (auto i = 6; i < 128; i++)
+		for (u8 i = 6; i < 128; i++)
 		{
 			if (ls_pattern._bit[i])
 			{

@@ -93,7 +93,7 @@ error_code cellKbClearBuf(u32 port_no)
 	current_data.led = 0;
 	current_data.mkey = 0;
 
-	for (int i = 0; i < CELL_KB_MAX_KEYCODES; i++)
+	for (u8 i = 0; i < CELL_KB_MAX_KEYCODES; i++)
 	{
 		current_data.keycode[i] = { 0, 0 };
 	}

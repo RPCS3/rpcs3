@@ -42,7 +42,7 @@ namespace extra_nps
 	void print_presence_data(const SceNpMatching2PresenceOptionData* opt)
 	{
 		std::string dadata{};
-		for (int i = 0; i < 16; i++)
+		for (u8 i = 0; i < 16; i++)
 		{
 			dadata = fmt::format("%s %02X", dadata, opt->data[i]);
 		}

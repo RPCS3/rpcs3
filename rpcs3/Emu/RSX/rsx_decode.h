@@ -527,7 +527,7 @@ struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_INPUT_MASK>
 			"in_tc0", "in_tc1", "in_tc2", "in_tc3",
 			"in_tc4", "in_tc5", "in_tc6", "in_tc7"
 		};
-		for (unsigned i = 0; i < 16; i++)
+		for (u8 i = 0; i < 16; i++)
 			if (decoded_values.mask() & (1 << i))
 				result += input_names[i] + " ";
 		return result;
@@ -554,7 +554,7 @@ struct registers_decoder<NV4097_SET_FREQUENCY_DIVIDER_OPERATION>
 	static std::string dump(decoded_type &&decoded_values)
 	{
 		std::string result = "Frequency divider: ";
-		for (unsigned i = 0; i < 16; i++)
+		for (u8 i = 0; i < 16; i++)
 			if (decoded_values.frequency_divider_operation_mask() & (1 << i))
 				result += std::to_string(i) + " ";
 		return result;
@@ -1653,7 +1653,7 @@ struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK>
 			"tc7"
 		};
 		std::string result = "Transform program outputs:";
-		for (unsigned i = 0; i < 22; i++)
+		for (u8 i = 0; i < 22; i++)
 			if (decoded_values.output_mask() & (1 << i))
 				result += output_names[i] + " ";
 		return result;

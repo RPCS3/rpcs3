@@ -3930,7 +3930,7 @@ s32 _spurs::create_task(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id,
 		{
 			v128 ls_pattern_128 = v128::from64r(ls_pattern->_u64[0], ls_pattern->_u64[1]);
 			u32 ls_blocks       = 0;
-			for (auto i = 0; i < 128; i++)
+			for (u8 i = 0; i < 128; i++)
 			{
 				if (ls_pattern_128._bit[i])
 				{

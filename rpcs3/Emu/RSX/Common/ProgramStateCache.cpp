@@ -13,7 +13,7 @@ size_t vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgra
 	const void* instbuffer = program.data.data();
 	size_t instIndex = 0;
 	bool end = false;
-	for (unsigned i = 0; i < program.data.size() / 4; i++)
+	for (size_t i = 0; i < program.data.size() / 4; i++)
 	{
 		if (program.instruction_mask[i])
 		{
@@ -271,7 +271,7 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 	const void* instBuffer1 = binary1.data.data();
 	const void* instBuffer2 = binary2.data.data();
 	size_t instIndex = 0;
-	for (unsigned i = 0; i < binary1.data.size() / 4; i++)
+	for (size_t i = 0; i < binary1.data.size() / 4; i++)
 	{
 		const auto active = binary1.instruction_mask[instIndex];
 		if (active != binary2.instruction_mask[instIndex])

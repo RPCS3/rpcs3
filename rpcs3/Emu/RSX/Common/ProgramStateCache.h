@@ -418,7 +418,7 @@ public:
 				_mm_store_ps(tmp, _mm_castsi128_ps(shuffled_vector));
 				bool patched;
 
-				for (int i = 0; i < 4; ++i)
+				for (u8 i = 0; i < 4; ++i)
 				{
 					patched = false;
 					for (auto& e : patch_table.db)

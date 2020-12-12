@@ -233,7 +233,7 @@ namespace vk
 		uint32_t idx = 0;
 
 		// Vertex stream, one stream for cacheable data, one stream for transient data. Third stream contains vertex layout info
-		for (int i = 0; i < 3; i++)
+		for (u8 i = 0; i < 3; i++)
 		{
 			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
 			bindings[idx].descriptorCount = 1;

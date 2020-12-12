@@ -766,7 +766,7 @@ error_code cellGemGetInfo(vm::ptr<CellGemInfo> info)
 	info->max_connect = gem->attribute.max_connect;
 	info->now_connect = gem->connected_controllers;
 
-	for (int i = 0; i < CELL_GEM_MAX_NUM; i++)
+	for (u8 i = 0; i < CELL_GEM_MAX_NUM; i++)
 	{
 		info->status[i] = gem->controllers[i].status;
 		info->port[i] = gem->controllers[i].port;

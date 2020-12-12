@@ -314,7 +314,7 @@ void ControlInfo::Show()
 		if (size == 0x30)
 		{
 			std::string digest_str;
-			for (int i = 0; i < 20; i++)
+			for (u8 i = 0; i < 20; i++)
 				digest_str += fmt::format("%02x", file_digest_30.digest[i]);
 
 			self_log.notice("Digest: %s", digest_str.c_str());
@@ -324,7 +324,7 @@ void ControlInfo::Show()
 		{
 			std::string digest_str1;
 			std::string digest_str2;
-			for (int i = 0; i < 20; i++)
+			for (u8 i = 0; i < 20; i++)
 			{
 				digest_str1 += fmt::format("%02x", file_digest_40.digest1[i]);
 				digest_str2 += fmt::format("%02x", file_digest_40.digest2[i]);
@@ -341,9 +341,9 @@ void ControlInfo::Show()
 		std::string digest_str;
 		std::string invdigest_str;
 		std::string xordigest_str;
-		for (int i = 0; i < 48; i++)
+		for (u8 i = 0; i < 48; i++)
 			contentid_str += fmt::format("%02x", npdrm.content_id[i]);
-		for (int i = 0; i < 16; i++)
+		for (u8 i = 0; i < 16; i++)
 		{
 			digest_str += fmt::format("%02x", npdrm.digest[i]);
 			invdigest_str += fmt::format("%02x", npdrm.invdigest[i]);
@@ -377,7 +377,7 @@ void MetadataInfo::Show()
 	std::string key_pad_str;
 	std::string iv_str;
 	std::string iv_pad_str;
-	for (int i = 0; i < 0x10; i++)
+	for (u8 i = 0; i < 0x10; i++)
 	{
 		key_str += fmt::format("%02x", key[i]);
 		key_pad_str += fmt::format("%02x", key_pad[i]);

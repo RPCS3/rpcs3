@@ -177,7 +177,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	const u8 color_bpp = get_format_block_size_in_bytes(m_framebuffer_layout.color_format);
 	const auto samples = get_format_sample_count(m_framebuffer_layout.aa_mode);
 
-	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
+	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
 		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
 		{
@@ -271,7 +271,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		m_draw_fbo->bind();
 		m_draw_fbo->set_extents({ m_framebuffer_layout.width, m_framebuffer_layout.height });
 
-		for (int i = 0; i < 4; ++i)
+		for (u8 i = 0; i < 4; ++i)
 		{
 			if (color_targets[i])
 			{
@@ -515,7 +515,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 
 	const bool dst_is_depth = !!(aspect() & gl::image_aspect::depth);
 	const auto dst_bpp = get_bpp();
-	unsigned first = prepare_rw_barrier_for_transfer(this);
+	size_t first = prepare_rw_barrier_for_transfer(this);
 	u64 newest_tag = 0;
 
 	for (auto i = first; i < old_contents.size(); ++i)

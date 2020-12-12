@@ -25,7 +25,7 @@ namespace rsx
 			void *dst;
 			u32 length;
 			u32 aux_param0;
-			u32 aux_param1;
+			//u32 aux_param1;
 
 			transport_packet(void *_dst, void *_src, u32 len)
 				: type(op::raw_copy), src(_src), dst(_dst), length(len)

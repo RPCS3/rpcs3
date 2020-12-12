@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <array>
 #include <charconv>
@@ -221,7 +221,7 @@ public:
 				if (line == 0)
 					continue;
 
-				for (int i = 0; i < 8; ++i)
+				for (u8 i = 0; i < 8; ++i)
 				{
 					if (line & (1 << i))
 					{

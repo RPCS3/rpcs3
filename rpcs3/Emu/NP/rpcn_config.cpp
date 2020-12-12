@@ -54,7 +54,7 @@ std::string cfg_rpcn::generate_npid()
 
 	std::srand(time(nullptr));
 
-	for (int i = 0; i < 10; i++)
+	for (u8 i = 0; i < 10; i++)
 	{
 		gen_npid += list_chars[std::rand() % (sizeof(list_chars))];
 	}

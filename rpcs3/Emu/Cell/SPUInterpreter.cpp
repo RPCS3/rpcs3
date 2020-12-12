@@ -1696,7 +1696,7 @@ bool spu_interpreter::SHUFB(spu_thread& spu, spu_opcode_t op)
 	v128 res;
 
 	// Select bytes
-	for (int i = 0; i < 16; i++)
+	for (u8 i = 0; i < 16; i++)
 	{
 		res._u8[i] = reinterpret_cast<u8*>(ab)[x._u8[i]];
 	}
@@ -1911,7 +1911,7 @@ bool spu_interpreter_precise::FREST(spu_thread& spu, spu_opcode_t op)
 	fesetround(FE_TOWARDZERO);
 	const auto ra = spu.gpr[op.ra];
 	auto res = v128::fromF(_mm_rcp_ps(ra.vf));
-	for (int i = 0; i < 4; i++)
+	for (u8 i = 0; i < 4; i++)
 	{
 		const auto a = ra._f[i];
 		const int exp = fexpf(a);
@@ -1934,7 +1934,7 @@ bool spu_interpreter_precise::FREST(spu_thread& spu, spu_opcode_t op)
 bool spu_interpreter_precise::FRSQEST(spu_thread& spu, spu_opcode_t op)
 {
 	fesetround(FE_TOWARDZERO);
-	for (int i = 0; i < 4; i++)
+	for (u8 i = 0; i < 4; i++)
 	{
 		const float a = spu.gpr[op.ra]._f[i];
 		float result;
@@ -1954,7 +1954,7 @@ bool spu_interpreter_precise::FRSQEST(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter_precise::FCGT(spu_thread& spu, spu_opcode_t op)
 {
-	for (int i = 0; i < 4; i++)
+	for (u8 i = 0; i < 4; i++)
 	{
 		const u32 a = spu.gpr[op.ra]._u32[i];
 		const u32 b = spu.gpr[op.rb]._u32[i];
@@ -2141,7 +2141,7 @@ bool spu_interpreter_precise::FM(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter_precise::FCMGT(spu_thread& spu, spu_opcode_t op)
 {
-	for (int i = 0; i < 4; i++)
+	for (u8 i = 0; i < 4; i++)
 	{
 		const u32 a = spu.gpr[op.ra]._u32[i];
 		const u32 b = spu.gpr[op.rb]._u32[i];
@@ -2170,7 +2170,7 @@ enum DoubleOp
 
 static void DFASM(spu_thread& spu, spu_opcode_t op, DoubleOp operation)
 {
-	for (int i = 0; i < 2; i++)
+	for (u8 i = 0; i < 2; i++)
 	{
 		double a = spu.gpr[op.ra]._d[i];
 		double b = spu.gpr[op.rb]._d[i];
@@ -2230,7 +2230,7 @@ bool spu_interpreter_precise::DFM(spu_thread& spu, spu_opcode_t op) { DFASM(spu,
 
 static void DFMA(spu_thread& spu, spu_opcode_t op, bool neg, bool sub)
 {
-	for (int i = 0; i < 2; i++)
+	for (u8 i = 0; i < 2; i++)
 	{
 		double a = spu.gpr[op.ra]._d[i];
 		double b = spu.gpr[op.rb]._d[i];
@@ -2300,7 +2300,7 @@ bool spu_interpreter_precise::FSCRRD(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter_precise::FESD(spu_thread& spu, spu_opcode_t op)
 {
-	for (int i = 0; i < 2; i++)
+	for (u8 i = 0; i < 2; i++)
 	{
 		const float a = spu.gpr[op.ra]._f[i * 2 + 1];
 		if (std::isnan(a))
@@ -2325,7 +2325,7 @@ bool spu_interpreter_precise::FESD(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter_precise::FRDS(spu_thread& spu, spu_opcode_t op)
 {
-	for (int i = 0; i < 2; i++)
+	for (u8 i = 0; i < 2; i++)
 	{
 		SetHostRoundingMode(spu.fpscr.checkSliceRounding(i));
 		const double a = spu.gpr[op.ra]._d[i];
@@ -2361,7 +2361,7 @@ bool spu_interpreter_precise::FSCRWR(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter_precise::FCEQ(spu_thread& spu, spu_opcode_t op)
 {
-	for (int i = 0; i < 4; i++)
+	for (u8 i = 0; i < 4; i++)
 	{
 		const u32 a = spu.gpr[op.ra]._u32[i];
 		const u32 b = spu.gpr[op.rb]._u32[i];
@@ -2377,7 +2377,7 @@ bool spu_interpreter_precise::FCEQ(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter_precise::FCMEQ(spu_thread& spu, spu_opcode_t op)
 {
-	for (int i = 0; i < 4; i++)
+	for (u8 i = 0; i < 4; i++)
 	{
 		const u32 a = spu.gpr[op.ra]._u32[i];
 		const u32 b = spu.gpr[op.rb]._u32[i];
@@ -2401,7 +2401,7 @@ bool spu_interpreter_precise::FI(spu_thread& spu, spu_opcode_t op)
 bool spu_interpreter_precise::CFLTS(spu_thread& spu, spu_opcode_t op)
 {
 	const int scale = 173 - (op.i8 & 0xff); //unsigned immediate
-	for (int i = 0; i < 4; i++)
+	for (u8 i = 0; i < 4; i++)
 	{
 		const float a = spu.gpr[op.ra]._f[i];
 		float scaled;
@@ -2424,7 +2424,7 @@ bool spu_interpreter_precise::CFLTS(spu_thread& spu, spu_opcode_t op)
 bool spu_interpreter_precise::CFLTU(spu_thread& spu, spu_opcode_t op)
 {
 	const int scale = 173 - (op.i8 & 0xff); //unsigned immediate
-	for (int i = 0; i < 4; i++)
+	for (u8 i = 0; i < 4; i++)
 	{
 		const float a = spu.gpr[op.ra]._f[i];
 		float scaled;
@@ -2448,7 +2448,7 @@ bool spu_interpreter_precise::CSFLT(spu_thread& spu, spu_opcode_t op)
 {
 	fesetround(FE_TOWARDZERO);
 	const int scale = 155 - (op.i8 & 0xff); //unsigned immediate
-	for (int i = 0; i < 4; i++)
+	for (u8 i = 0; i < 4; i++)
 	{
 		const s32 a = spu.gpr[op.ra]._s32[i];
 		spu.gpr[op.rt]._f[i] = static_cast<float>(a);
@@ -2472,7 +2472,7 @@ bool spu_interpreter_precise::CUFLT(spu_thread& spu, spu_opcode_t op)
 {
 	fesetround(FE_TOWARDZERO);
 	const int scale = 155 - (op.i8 & 0xff); //unsigned immediate
-	for (int i = 0; i < 4; i++)
+	for (u8 i = 0; i < 4; i++)
 	{
 		const u32 a = spu.gpr[op.ra]._u32[i];
 		spu.gpr[op.rt]._f[i] = static_cast<float>(a);

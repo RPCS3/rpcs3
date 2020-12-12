@@ -189,7 +189,7 @@ extern SAFE_BUFFERS __m128i sse_pshufb(__m128i data, __m128i index)
 	v128 a = v128::fromV(data);
 	v128 r;
 
-	for (int i = 0; i < 16; i++)
+	for (u8 i = 0; i < 16; i++)
 	{
 		r._u8[i] = a._u8[m._u8[i]];
 	}
@@ -212,7 +212,7 @@ extern SAFE_BUFFERS __m128i sse_altivec_vperm_v0(__m128i A, __m128i B, __m128i C
 	v128 index = v128::fromV(_mm_andnot_si128(C, _mm_set1_epi8(0x1f)));
 	v128 res;
 
-	for (int i = 0; i < 16; i++)
+	for (u8 i = 0; i < 16; i++)
 	{
 		res._u8[i] = reinterpret_cast<u8*>(+ab)[index._u8[i]];
 	}

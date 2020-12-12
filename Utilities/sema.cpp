@@ -1,8 +1,8 @@
-#include "sema.h"
+﻿#include "sema.h"
 
 void semaphore_base::imp_wait()
 {
-	for (int i = 0; i < 10; i++)
+	for (u8 i = 0; i < 10; i++)
 	{
 		busy_wait();
 

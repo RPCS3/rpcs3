@@ -61,10 +61,10 @@ struct KbConfig
 struct KbButton
 {
 	u32 m_keyCode;
-	u32 m_outKeyCode;
+	u8 m_outKeyCode;
 	bool m_pressed = false;
 
-	KbButton(u32 keyCode, u32 outKeyCode)
+	KbButton(u32 keyCode, u8 outKeyCode)
 		: m_keyCode(keyCode)
 		, m_outKeyCode(outKeyCode)
 	{

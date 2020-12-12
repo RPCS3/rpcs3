@@ -300,7 +300,7 @@ ullong utils::get_tsc_freq()
 #endif
 
 		// Calibrate TSC
-		constexpr int samples = 40;
+		constexpr u8 samples = 40;
 		ullong rdtsc_data[samples];
 		ullong timer_data[samples];
 		ullong error_data[samples];
@@ -315,7 +315,7 @@ ullong utils::get_tsc_freq()
 		ullong sec_base = ts0.tv_sec;
 #endif
 
-		for (int i = 0; i < samples; i++)
+		for (u8 i = 0; i < samples; i++)
 		{
 #ifdef _WIN32
 			Sleep(1);
@@ -339,7 +339,7 @@ ullong utils::get_tsc_freq()
 
 		// Compute average TSC
 		ullong acc = 0;
-		for (int i = 0; i < samples - 1; i++)
+		for (u8 i = 0; i < samples - 1; i++)
 		{
 			acc += (rdtsc_data[i + 1] - rdtsc_data[i]) * timer_freq / (timer_data[i + 1] - timer_data[i]);
 		}

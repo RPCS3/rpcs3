@@ -1039,42 +1039,42 @@ struct color1_base
 };
 
 //specializations
-using positionu = position_base<unsigned int>;
+using positionu = position_base<uint>;
 using positioni = position_base<int>;
 using positionf = position_base<float>;
 using positiond = position_base<double>;
 
-using coordu = coord_base<unsigned int>;
+using coordu = coord_base<uint>;
 using coordi = coord_base<int>;
 using coordf = coord_base<float>;
 using coordd = coord_base<double>;
 
-using areau = area_base<unsigned int>;
+using areau = area_base<uint>;
 using areai = area_base<int>;
 using areaf = area_base<float>;
 using aread = area_base<double>;
 
-using position1u = position1_base<unsigned int>;
+using position1u = position1_base<uint>;
 using position1i = position1_base<int>;
 using position1f = position1_base<float>;
 using position1d = position1_base<double>;
 
-using position2u = position2_base<unsigned int>;
+using position2u = position2_base<uint>;
 using position2i = position2_base<int>;
 using position2f = position2_base<float>;
 using position2d = position2_base<double>;
 
-using position3u = position3_base<unsigned int>;
+using position3u = position3_base<uint>;
 using position3i = position3_base<int>;
 using position3f = position3_base<float>;
 using position3d = position3_base<double>;
 
-using position4u = position4_base<unsigned int>;
+using position4u = position4_base<uint>;
 using position4i = position4_base<int>;
 using position4f = position4_base<float>;
 using position4d = position4_base<double>;
 
-using size2u = size2_base<unsigned int>;
+using size2u = size2_base<uint>;
 using size2i = size2_base<int>;
 using size2f = size2_base<float>;
 using size2d = size2_base<double>;
@@ -1084,32 +1084,32 @@ using sizei = size2i;
 using sizef = size2f;
 using sized = size2d;
 
-using size3u = size3_base<unsigned int>;
+using size3u = size3_base<uint>;
 using size3i = size3_base<int>;
 using size3f = size3_base<float>;
 using size3d = size3_base<double>;
 
-using coord3u = coord3_base<unsigned int>;
+using coord3u = coord3_base<uint>;
 using coord3i = coord3_base<int>;
 using coord3f = coord3_base<float>;
 using coord3d = coord3_base<double>;
 
-using color4u = color4_base<unsigned int>;
+using color4u = color4_base<uint>;
 using color4i = color4_base<int>;
 using color4f = color4_base<float>;
 using color4d = color4_base<double>;
 
-using color3u = color3_base<unsigned int>;
+using color3u = color3_base<uint>;
 using color3i = color3_base<int>;
 using color3f = color3_base<float>;
 using color3d = color3_base<double>;
 
-using color2u = color2_base<unsigned int>;
+using color2u = color2_base<uint>;
 using color2i = color2_base<int>;
 using color2f = color2_base<float>;
 using color2d = color2_base<double>;
 
-using color1u = color1_base<unsigned int>;
+using color1u = color1_base<uint>;
 using color1i = color1_base<int>;
 using color1f = color1_base<float>;
 using color1d = color1_base<double>;

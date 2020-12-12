@@ -83,7 +83,7 @@ error_code cellMouseClearBuf(u32 port_no)
 	MouseRawData& raw_data = handler->GetRawData(port_no);
 	raw_data.len = 0;
 
-	for (int i = 0; i < CELL_MOUSE_MAX_CODES; i++)
+	for (u8 i = 0; i < CELL_MOUSE_MAX_CODES; i++)
 	{
 		raw_data.data[i] = 0;
 	}
@@ -383,7 +383,7 @@ error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 	data->len = current_data.len;
 	current_data.len = 0;
 
-	for (int i = 0; i < CELL_MOUSE_MAX_CODES; i++)
+	for (u8 i = 0; i < CELL_MOUSE_MAX_CODES; i++)
 	{
 		data->data[i] = current_data.data[i];
 		current_data.data[i] = 0;

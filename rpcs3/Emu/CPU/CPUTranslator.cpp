@@ -109,7 +109,7 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 		{
 			auto cv = ci->getValue();
 
-			for (int i = 0; i < 128; i++)
+			for (u8 i = 0; i < 128; i++)
 			{
 				result._bit[i] = cv[i];
 			}

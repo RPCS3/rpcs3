@@ -324,10 +324,10 @@ namespace
 		u32 full_height_in_block;
 		u32 slice_sz;
 
-		for (unsigned layer = 0; layer < layer_count; layer++)
+		for (u8 layer = 0; layer < layer_count; layer++)
 		{
 			u16 miplevel_width_in_texel = width_in_texel, miplevel_height_in_texel = height_in_texel;
-			for (unsigned mip_level = 0; mip_level < mipmap_count; mip_level++)
+			for (u16 mip_level = 0; mip_level < mipmap_count; mip_level++)
 			{
 				result.push_back({});
 				rsx::subresource_layout& current_subresource_layout = result.back();

@@ -1,5 +1,4 @@
-﻿#ifndef BETYPE_H_GUARD
-#define BETYPE_H_GUARD
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
 #include "types.h"
 #include "util/endian.hpp"
@@ -344,7 +343,7 @@ union alignas(16) v128
 #endif
 		}
 
-		for (int i = 0; i < 4; i++)
+		for (u8 i = 0; i < 4; i++)
 		{
 			a._f[i] = std::fmaf(a._f[i], b._f[i], c._f[i]);
 		}
@@ -510,5 +509,3 @@ struct fmt_unveil<se_t<T, Se, Align>, void>
 
 static_assert(be_t<u16>(1) + be_t<u32>(2) + be_t<u64>(3) == 6);
 static_assert(le_t<u16>(1) + le_t<u32>(2) + le_t<u64>(3) == 6);
-
-#endif // BETYPE_H_GUARD

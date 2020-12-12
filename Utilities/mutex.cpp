@@ -1,10 +1,10 @@
-#include "mutex.h"
+﻿#include "mutex.h"
 
 void shared_mutex::imp_lock_shared(u32 val)
 {
 	verify("shared_mutex underflow" HERE), val < c_err;
 
-	for (int i = 0; i < 10; i++)
+	for (u8 i = 0; i < 10; i++)
 	{
 		busy_wait();
 
@@ -73,7 +73,7 @@ void shared_mutex::imp_lock(u32 val)
 {
 	verify("shared_mutex underflow" HERE), val < c_err;
 
-	for (int i = 0; i < 10; i++)
+	for (u8 i = 0; i < 10; i++)
 	{
 		busy_wait();
 
@@ -108,7 +108,7 @@ void shared_mutex::imp_unlock(u32 old)
 
 void shared_mutex::imp_lock_upgrade()
 {
-	for (int i = 0; i < 10; i++)
+	for (u8 i = 0; i < 10; i++)
 	{
 		busy_wait();
 
@@ -135,7 +135,7 @@ void shared_mutex::imp_lock_unlock()
 {
 	u32 _max = 1;
 
-	for (int i = 0; i < 30; i++)
+	for (u8 i = 0; i < 30; i++)
 	{
 		const u32 val = m_value;
 
