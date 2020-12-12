@@ -4,6 +4,7 @@
 #include "Utilities/mutex.h"
 
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 #include <vector>
 #include <utility>

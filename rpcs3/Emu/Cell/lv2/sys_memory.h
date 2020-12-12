@@ -2,6 +2,7 @@
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 class cpu_thread;
 
