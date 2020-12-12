@@ -311,7 +311,7 @@ struct sys_net_linger
 struct lv2_socket final
 {
 #ifdef _WIN32
-	using socket_type = std::uintptr_t;
+	using socket_type = uptr;
 #else
 	using socket_type = int;
 #endif

@@ -567,7 +567,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 			const auto subranges = rsx::method_registers.current_draw_clause.get_subranges();
 			const auto draw_count = subranges.size();
 			const u32 type_scale = (index_type == GL_UNSIGNED_SHORT) ? 1 : 2;
-			uintptr_t index_ptr = index_offset;
+			uptr index_ptr = index_offset;
 			m_scratch_buffer.resize(draw_count * 16);
 
 			GLsizei *counts = reinterpret_cast<GLsizei*>(m_scratch_buffer.data());

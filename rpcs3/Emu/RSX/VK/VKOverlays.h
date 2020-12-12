@@ -80,7 +80,7 @@ namespace vk
 					u64 pass_value;
 					u64 config;
 				}
-				key{ reinterpret_cast<uintptr_t>(pass), static_cast<u64>(renderpass_config.ia.topology) };
+				key{ reinterpret_cast<uptr>(pass), static_cast<u64>(renderpass_config.ia.topology) };
 				return rpcs3::hash_struct(key);
 			}
 		}

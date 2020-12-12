@@ -343,7 +343,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 		return {addr, llvm::JITSymbolFlags::Exported};
 	}
 
-	u8* allocate(u64& oldp, std::uintptr_t size, uint align, utils::protection prot)
+	u8* allocate(u64& oldp, uptr size, uint align, utils::protection prot)
 	{
 		if (align > c_page_size)
 		{
@@ -374,12 +374,12 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 		return this->ptr + olda;
 	}
 
-	u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
+	u8* allocateCodeSection(uptr size, uint align, uint sec_id, llvm::StringRef sec_name) override
 	{
 		return allocate(code_ptr, size, align, utils::protection::wx);
 	}
 
-	u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
+	u8* allocateDataSection(uptr size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
 	{
 		return allocate(data_ptr, size, align, utils::protection::rw);
 	}
@@ -407,12 +407,12 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 	{
 	}
 
-	u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
+	u8* allocateCodeSection(uptr size, uint align, uint sec_id, llvm::StringRef sec_name) override
 	{
 		return jit_runtime::alloc(size, align, true);
 	}
 
-	u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
+	u8* allocateDataSection(uptr size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
 	{
 		return jit_runtime::alloc(size, align, false);
 	}

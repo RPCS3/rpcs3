@@ -19,7 +19,7 @@ struct fmt_unveil
 
 	static inline u64 get(const T& arg)
 	{
-		return reinterpret_cast<std::uintptr_t>(&arg);
+		return reinterpret_cast<uptr>(&arg);
 	}
 
 	// Temporary value container (can possibly be created by other fmt_unveil<> specializations)
@@ -30,7 +30,7 @@ struct fmt_unveil
 		// Allow implicit conversion
 		operator u64() const
 		{
-			return reinterpret_cast<std::uintptr_t>(&arg);
+			return reinterpret_cast<uptr>(&arg);
 		}
 	};
 
@@ -93,7 +93,7 @@ struct fmt_unveil<T*, void>
 
 	static inline u64 get(type arg)
 	{
-		return reinterpret_cast<std::uintptr_t>(arg);
+		return reinterpret_cast<uptr>(arg);
 	}
 };
 
@@ -104,7 +104,7 @@ struct fmt_unveil<T[N], void>
 
 	static inline u64 get(type arg)
 	{
-		return reinterpret_cast<std::uintptr_t>(arg);
+		return reinterpret_cast<uptr>(arg);
 	}
 };
 
@@ -132,7 +132,7 @@ struct fmt_class_string
 	// Helper function (converts arg to object reference)
 	static SAFE_BUFFERS FORCE_INLINE const T& get_object(u64 arg)
 	{
-		return *reinterpret_cast<const T*>(static_cast<std::uintptr_t>(arg));
+		return *reinterpret_cast<const T*>(static_cast<uptr>(arg));
 	}
 
 	// Enum -> string function type

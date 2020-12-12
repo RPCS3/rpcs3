@@ -2459,8 +2459,8 @@ void thread_ctrl::detect_cpu_layout()
 		else
 		{
 			// Iterate through the buffer until a core with hyperthreading is found
-			auto ptr = reinterpret_cast<std::uintptr_t>(buffer.data());
-			const std::uintptr_t end = ptr + buffer_size;
+			auto ptr = reinterpret_cast<uptr>(buffer.data());
+			const uptr end = ptr + buffer_size;
 
 			while (ptr < end)
 			{

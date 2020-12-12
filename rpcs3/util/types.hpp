@@ -871,7 +871,7 @@ struct pointer_hash
 {
 	std::size_t operator()(T* ptr) const
 	{
-		return reinterpret_cast<std::uintptr_t>(ptr) / Align;
+		return reinterpret_cast<uptr>(ptr) / Align;
 	}
 };
 

@@ -794,8 +794,8 @@ namespace rsx
 		{
 		public:
 			virtual ~default_vertex_cache() = default;
-			virtual storage_type* find_vertex_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/) { return nullptr; }
-			virtual void store_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
+			virtual storage_type* find_vertex_range(uptr /*local_addr*/, upload_format, u32 /*data_length*/) { return nullptr; }
+			virtual void store_range(uptr /*local_addr*/, upload_format, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
 			virtual void purge() {}
 		};
 
@@ -805,7 +805,7 @@ namespace rsx
 		template <typename upload_format>
 		struct uploaded_range
 		{
-			uintptr_t local_address;
+			uptr local_address;
 			upload_format buffer_format;
 			u32 offset_in_heap;
 			u32 data_length;
@@ -817,11 +817,11 @@ namespace rsx
 			using storage_type = uploaded_range<upload_format>;
 
 		private:
-			std::unordered_map<uintptr_t, std::vector<storage_type>> vertex_ranges;
+			std::unordered_map<uptr, std::vector<storage_type>> vertex_ranges;
 
 		public:
 
-			storage_type* find_vertex_range(uintptr_t local_addr, upload_format fmt, u32 data_length) override
+			storage_type* find_vertex_range(uptr local_addr, upload_format fmt, u32 data_length) override
 			{
 				const auto data_end = local_addr + data_length;
 
@@ -835,7 +835,7 @@ namespace rsx
 				return nullptr;
 			}
 
-			void store_range(uintptr_t local_addr, upload_format fmt, u32 data_length, u32 offset_in_heap) override
+			void store_range(uptr local_addr, upload_format fmt, u32 data_length, u32 offset_in_heap) override
 			{
 				storage_type v = {};
 				v.buffer_format = fmt;

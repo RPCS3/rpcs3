@@ -227,8 +227,8 @@ namespace rsx
 			fmt::throw_exception("Unreachable");
 		}
 
-		const uintptr_t addr = uintptr_t(address);
-		const uintptr_t base = uintptr_t(vm::g_base_addr);
+		const uptr addr = uptr(address);
+		const uptr base = uptr(vm::g_base_addr);
 
 		ensure(addr > base);
 		return utils::address_range::start_length(u32(addr - base), range);

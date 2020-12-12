@@ -2487,7 +2487,7 @@ public:
 #ifdef _WIN32
 		func->setCallingConv(llvm::CallingConv::Win64);
 #endif
-		m_engine->updateGlobalMapping({lame.data(), lame.size()}, reinterpret_cast<std::uintptr_t>(_func));
+		m_engine->updateGlobalMapping({lame.data(), lame.size()}, reinterpret_cast<uptr>(_func));
 
 		const auto inst = m_ir->CreateCall(func, {args...});
 #ifdef _WIN32

@@ -132,7 +132,7 @@ static u64 ppu_cache(u32 addr)
 		g_cfg.core.ppu_decoder == ppu_decoder_type::fast ? &g_ppu_interpreter_fast.get_table() :
 		(fmt::throw_exception("Invalid PPU decoder"), nullptr));
 
-	return reinterpret_cast<std::uintptr_t>(table[ppu_decode(vm::read32(addr))]);
+	return reinterpret_cast<uptr>(table[ppu_decode(vm::read32(addr))]);
 }
 
 static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
@@ -270,7 +270,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 	// Initialize specific function
 	if (ptr)
 	{
-		ppu_ref(addr) = reinterpret_cast<std::uintptr_t>(ptr);
+		ppu_ref(addr) = reinterpret_cast<uptr>(ptr);
 		return;
 	}
 
@@ -290,7 +290,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 	}
 
 	// Initialize interpreter cache
-	const u64 _break = reinterpret_cast<std::uintptr_t>(ppu_break);
+	const u64 _break = reinterpret_cast<uptr>(ppu_break);
 
 	while (size)
 	{
@@ -335,7 +335,7 @@ extern void ppu_breakpoint(u32 addr, bool isAdding)
 		return;
 	}
 
-	const u64 _break = reinterpret_cast<std::uintptr_t>(&ppu_break);
+	const u64 _break = reinterpret_cast<uptr>(&ppu_break);
 
 	if (isAdding)
 	{
@@ -357,7 +357,7 @@ extern void ppu_set_breakpoint(u32 addr)
 		return;
 	}
 
-	const u64 _break = reinterpret_cast<std::uintptr_t>(&ppu_break);
+	const u64 _break = reinterpret_cast<uptr>(&ppu_break);
 
 	if (ppu_ref(addr) != _break)
 	{
@@ -373,7 +373,7 @@ extern void ppu_remove_breakpoint(u32 addr)
 		return;
 	}
 
-	const auto _break = reinterpret_cast<std::uintptr_t>(&ppu_break);
+	const auto _break = reinterpret_cast<uptr>(&ppu_break);
 
 	if (ppu_ref(addr) == _break)
 	{
@@ -408,8 +408,8 @@ extern bool ppu_patch(u32 addr, u32 value)
 
 	*vm::get_super_ptr<u32>(addr) = value;
 
-	const u64 _break = reinterpret_cast<std::uintptr_t>(&ppu_break);
-	const u64 fallback = reinterpret_cast<std::uintptr_t>(&ppu_fallback);
+	const u64 _break = reinterpret_cast<uptr>(&ppu_break);
+	const u64 fallback = reinterpret_cast<uptr>(&ppu_fallback);
 
 	if (is_exec)
 	{
@@ -1990,7 +1990,7 @@ extern void ppu_initialize(const ppu_module& info)
 			if (g_cfg.core.ppu_debug && func.size && func.toc != umax)
 			{
 				s_ppu_toc->emplace(func.addr, func.toc);
-				ppu_ref(func.addr) = reinterpret_cast<std::uintptr_t>(&ppu_check_toc);
+				ppu_ref(func.addr) = reinterpret_cast<uptr>(&ppu_check_toc);
 			}
 		}
 
