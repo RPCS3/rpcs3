@@ -278,7 +278,7 @@ public:
 
 				std::string param_type = GetCgParamType(fparam.type) + " ";
 				std::string param_name = GetCgParamName(fparam.name) + " ";
-				std::string param_res = GetCgParamRes(fparam.res) + " ";
+				//std::string param_res = GetCgParamRes(fparam.res) + " ";
 				std::string param_semantic = GetCgParamSemantic(fparam.semantic) + " ";
 				std::string param_const = GetCgParamValue(fparam.embeddedConst, fparam.name);
 
@@ -308,7 +308,7 @@ public:
 				auto& vmfprog = vm::_ref<CgBinaryFragmentProgram>(ptr + vmprog.program);
 				u32 size;
 				u32 ctrl = (vmfprog.outputFromH0 ? 0 : 0x40) | (vmfprog.depthReplace ? 0xe : 0);
-				std::vector<rsx::texture_dimension_extended> td;
+				//std::vector<rsx::texture_dimension_extended> td;
 				RSXFragmentProgram prog;
 				prog.ucode_length = 0, prog.data = vm::base(ptr + vmprog.ucode), prog.offset = 0, prog.ctrl = ctrl;
 				GLFragmentDecompilerThread(m_glsl_shader, param_array, prog, size).Task();
@@ -335,7 +335,7 @@ public:
 
 				std::string param_type = GetCgParamType(vparam.type) + " ";
 				std::string param_name = GetCgParamName(vparam.name) + " ";
-				std::string param_res = GetCgParamRes(vparam.res) + " ";
+				//std::string param_res = GetCgParamRes(vparam.res) + " ";
 				std::string param_semantic = GetCgParamSemantic(vparam.semantic) + " ";
 				std::string param_const = GetCgParamValue(vparam.embeddedConst, vparam.name);
 

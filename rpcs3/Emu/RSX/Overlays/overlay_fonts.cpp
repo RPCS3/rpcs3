@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_controls.h"
 #include "Emu/system_config.h"
 
@@ -42,12 +42,10 @@ namespace rsx
 		}
 
 		font::font(const char* ttf_name, f32 size)
+		    : size_pt(size),
+			size_px(ceilf(size * 96.f / 72.f)), // Convert pt to px
+			font_name(ttf_name)
 		{
-			// Convert pt to px
-			size_px = ceilf(size * 96.f / 72.f);
-			size_pt = size;
-
-			font_name = ttf_name;
 			initialized = true;
 		}
 

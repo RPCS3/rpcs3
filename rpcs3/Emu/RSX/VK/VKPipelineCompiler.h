@@ -120,8 +120,8 @@ namespace vk
 				const std::vector<glsl::program_input>& vs_in,
 				const std::vector<glsl::program_input>& fs_in,
 				callback_t func)
+				: callback_func(func)
 			{
-				callback_func = func;
 				graphics_data = props;
 				pipe_layout = layout;
 				graphics_modules[0] = modules[0];
@@ -135,11 +135,9 @@ namespace vk
 
 			pipe_compiler_job(
 				const VkComputePipelineCreateInfo& props,
-				VkPipelineLayout layout,
-				callback_t func)
+				VkPipelineLayout layout, callback_t func)
+				: callback_func(func), compute_data(props)
 			{
-				callback_func = func;
-				compute_data = props;
 				pipe_layout = layout;
 				is_graphics_job = false;
 			}

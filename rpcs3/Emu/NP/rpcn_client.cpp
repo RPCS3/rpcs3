@@ -96,7 +96,7 @@ rpcn_client::recvn_result rpcn_client::recvn(u8* buf, std::size_t n)
 {
 	u32 num_timeouts = 0;
 
-	size_t n_recv = 0;
+	std::size_t n_recv = 0;
 	while (n_recv != n && !is_abort())
 	{
 		std::lock_guard lock(mutex_socket);
@@ -128,7 +128,7 @@ rpcn_client::recvn_result rpcn_client::recvn(u8* buf, std::size_t n)
 
 			res = 0;
 		}
-		n_recv += res;
+		n_recv += static_cast<std::size_t>(res);
 	}
 
 	return recvn_result::recvn_success;
@@ -165,7 +165,7 @@ bool rpcn_client::send_packet(const std::vector<u8>& packet)
 
 			res = 0;
 		}
-		n_sent += res;
+		n_sent += static_cast<std::size_t>(res);
 	}
 
 	return true;
@@ -499,7 +499,7 @@ bool rpcn_client::manage_connection()
 	case PacketType::Notification:
 	{
 		std::lock_guard lock(mutex_notifs);
-		notifications.push_back(std::make_pair(command, std::move(data)));
+		notifications.emplace_back(command, std::move(data));
 		break;
 	}
 	case PacketType::ServerInfo:
@@ -926,7 +926,7 @@ bool rpcn_client::set_roomdata_external(u32 req_id, const SceNpCommunicationId& 
 
 bool rpcn_client::get_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomDataInternalRequest* req)
 {
-	std::vector<u8> data{}, reply_data{};
+	std::vector<u8> data{};
 
 	flatbuffers::FlatBufferBuilder builder(1024);
 

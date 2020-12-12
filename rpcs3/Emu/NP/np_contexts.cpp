@@ -82,11 +82,11 @@ bool destroy_lookup_transaction_context(s32 ctx_id)
 }
 
 commerce2_ctx::commerce2_ctx(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg)
+    : version(version),
+    context_callback(handler),
+    context_callback_param(arg)
 {
-	this->version = version;
 	memcpy(&this->npid, npid.get_ptr(), sizeof(SceNpId));
-	this->context_callback       = handler;
-	this->context_callback_param = arg;
 }
 s32 create_commerce2_context(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg)
 {
@@ -102,10 +102,9 @@ std::shared_ptr<commerce2_ctx> get_commerce2_context(u16 ctx_id)
 }
 
 signaling_ctx::signaling_ctx(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg)
+    : handler(handler), arg(arg)
 {
 	memcpy(&this->npid, npid.get_ptr(), sizeof(SceNpId));
-	this->handler = handler;
-	this->arg     = arg;
 }
 s32 create_signaling_context(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg)
 {

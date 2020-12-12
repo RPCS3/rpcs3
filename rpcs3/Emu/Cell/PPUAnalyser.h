@@ -1231,7 +1231,6 @@ struct ppu_acontext
 			const u64 mask = tz < 64 ? ~0ull << tz : 0ull;
 
 			spec_gpr r;
-			r.bmin = 0;
 			r.bmax = mask;
 
 			// Normalize min/max for tz (TODO)

@@ -14,7 +14,7 @@ namespace stx
 		struct destroy_info
 		{
 			void** object_pointer;
-			unsigned long long created;
+			std::size_t created;
 			void(*destroy)(void*& ptr) noexcept;
 			const char* name;
 
@@ -69,16 +69,16 @@ namespace stx
 		std::unique_ptr<void*[]> m_list;
 
 		// Creation order for each object (used to reverse destruction order)
-		std::unique_ptr<unsigned long long[]> m_order;
+		std::unique_ptr<std::size_t[]> m_order;
 
 		// Used to generate creation order (increased on every construction)
-		unsigned long long m_init_count = 0;
+		std::size_t m_init_count = 0;
 
 		// Body is somewhere else if enabled
-		void init_reporter(const char* name, unsigned long long created) const noexcept;
+		void init_reporter(const char* name, std::size_t created) const noexcept;
 
 		// Body is somewhere else if enabled
-		void destroy_reporter(const char* name, unsigned long long created) const noexcept;
+		void destroy_reporter(const char* name, std::size_t created) const noexcept;
 
 	public:
 		constexpr manual_fixed_typemap() noexcept = default;
@@ -122,7 +122,7 @@ namespace stx
 			if (!m_list)
 			{
 				m_list = std::make_unique<void*[]>(total_count);
-				m_order = std::make_unique<unsigned long long[]>(total_count);
+				m_order = std::make_unique<std::size_t[]>(total_count);
 				return;
 			}
 
@@ -131,7 +131,7 @@ namespace stx
 			auto all_data = std::make_unique<destroy_info[]>(stx::typelist<typeinfo>().count());
 
 			// Actual number of created objects
-			unsigned _max = 0;
+			std::size_t _max = 0;
 
 			// Create destroy list
 			for (auto& type : stx::typelist<typeinfo>())
@@ -156,7 +156,7 @@ namespace stx
 			destroy_info::sort_by_reverse_creation_order(all_data.get(), all_data.get() + _max);
 
 			// Destroy objects in correct order
-			for (unsigned i = 0; i < _max; i++)
+			for (std::size_t i = 0; i < _max; i++)
 			{
 				if constexpr (Report)
 					destroy_reporter(all_data[i].name, all_data[i].created);

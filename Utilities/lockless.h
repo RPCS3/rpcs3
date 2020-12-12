@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "types.h"
 #include "util/atomic.hpp"
@@ -448,10 +448,8 @@ public:
 	T* push_if(F pred, Args&&... args) noexcept
 	{
 		auto _old = m_head.load();
-		auto _chk = _old;
+		auto _chk = nullptr;
 		auto item = new lf_queue_item<T>(_old, std::forward<Args>(args)...);
-
-		_chk = nullptr;
 
 		do
 		{

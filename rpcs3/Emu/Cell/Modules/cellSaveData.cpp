@@ -150,7 +150,6 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 		save_entry.ctime = entry.ctime;
 		if (fs::file icon{base_dir + entry.name + "/ICON0.PNG"})
 			save_entry.iconBuf = icon.to_vector<uchar>();
-		save_entry.isNew = false;
 
 		save_entry.escaped = std::move(entry.name);
 		save_entries.emplace_back(save_entry);
@@ -662,7 +661,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 						save_entry2.ctime = entry.ctime;
 						if (fs::file icon{base_dir + entry.name + "/ICON0.PNG"})
 							save_entry2.iconBuf = icon.to_vector<uchar>();
-						save_entry2.isNew = false;
 
 						save_entry2.escaped = std::move(entry.name);
 						save_entries.emplace_back(save_entry2);

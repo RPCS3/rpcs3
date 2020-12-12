@@ -188,7 +188,8 @@ private:
 public:
 	// Constructors (should not be used directly)
 	lv2_config_handle(std::weak_ptr<lv2_event_queue>&& _queue)
-		: queue(std::move(_queue))
+	    : idm_id(0),
+		queue(std::move(_queue))
 	{}
 
 	// Factory
@@ -239,12 +240,13 @@ public:
 
 	// Constructors (should not be used directly)
 	lv2_config_service(sys_config_service_id _id, u64 _user_id, u64 _verbosity, u32 _padding, const u8 _data[], size_t size)
-		: timestamp(get_system_time())
-		, id(_id)
-		, user_id(_user_id)
-		, verbosity(_verbosity)
-		, padding(_padding)
-		, data(&_data[0], &_data[size])
+		: idm_id(0),
+		timestamp(get_system_time()),
+		id(_id),
+		user_id(_user_id),
+		verbosity(_verbosity),
+		padding(_padding),
+		data(&_data[0], &_data[size])
 	{}
 
 	// Factory
@@ -305,11 +307,12 @@ public:
 
 	// Constructors (should not be used directly)
 	lv2_config_service_listener(std::shared_ptr<lv2_config_handle>& _handle, sys_config_service_id _service_id, u64 _min_verbosity, sys_config_service_listener_type _type, const u8 _data[], size_t size)
-		: handle(_handle)
-		, service_id(_service_id)
-		, min_verbosity(_min_verbosity)
-		, type(_type)
-		, data(&_data[0], &_data[size])
+	    : idm_id(0),
+		handle(_handle),
+		service_id(_service_id),
+		min_verbosity(_min_verbosity),
+		type(_type),
+		data(&_data[0], &_data[size])
 	{}
 
 	// Factory

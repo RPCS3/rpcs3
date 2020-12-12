@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKHelpers.h"
 #include "../GCM.h"
 #include "../rsx_utils.h"
@@ -440,13 +440,13 @@ namespace vk
 			return;
 		}
 
-		VkImageSubresourceLayers a_src = {}, a_dst = {};
+		VkImageSubresourceLayers a_src = {};
 		a_src.aspectMask = src->aspect() & src_transfer_mask;
 		a_src.baseArrayLayer = 0;
 		a_src.layerCount = 1;
 		a_src.mipLevel = 0;
 
-		a_dst = a_src;
+		VkImageSubresourceLayers a_dst = a_src;
 		a_dst.aspectMask = dst->aspect() & dst_transfer_mask;
 
 		VkImageCopy rgn = {};
@@ -490,13 +490,13 @@ namespace vk
 			const areai& src_rect, const areai& dst_rect, u32 mipmaps,
 			bool compatible_formats, VkFilter filter)
 	{
-		VkImageSubresourceLayers a_src = {}, a_dst = {};
+		VkImageSubresourceLayers a_src = {};
 		a_src.aspectMask = src->aspect();
 		a_src.baseArrayLayer = 0;
 		a_src.layerCount = 1;
 		a_src.mipLevel = 0;
 
-		a_dst = a_src;
+		VkImageSubresourceLayers a_dst = a_src;
 
 		if (vk::is_renderpass_open(cmd))
 		{
@@ -776,11 +776,11 @@ namespace vk
 
 		auto next_layer = sections.front().imageSubresource.baseArrayLayer;
 		auto next_level = sections.front().imageSubresource.mipLevel;
-		unsigned base = 0;
-		unsigned lods = 0;
+		u32 base = 0;
+		u32 lods = 0;
 
 		std::vector<std::pair<unsigned, unsigned>> packets;
-		for (unsigned i = 0; i < sections.size(); ++i)
+		for (size_t i = 0; i < sections.size(); ++i)
 		{
 			verify(HERE), sections[i].bufferRowLength;
 
@@ -808,7 +808,7 @@ namespace vk
 			packets.emplace_back(base, lods);
 		}
 
-		for (const auto &packet : packets)
+		for (const auto& packet : packets)
 		{
 			const auto& section = sections[packet.first];
 			const auto src_offset = section.bufferOffset;
@@ -817,9 +817,10 @@ namespace vk
 			dst_offset = align(dst_offset, 128);
 
 			u32 data_length = 0;
-			for (unsigned i = 0, j = packet.first; i < packet.second; ++i, ++j)
+			for (u32 i = 0, j = packet.first; i < packet.second; ++i, ++j)
 			{
-				const u32 packed_size = sections[j].imageExtent.width * sections[j].imageExtent.height * sections[j].imageExtent.depth * block_size;
+				auto extent = sections[j].imageExtent;
+				const u32 packed_size    = extent.width * extent.height * extent.depth * block_size;
 				sections[j].bufferOffset = dst_offset;
 				dst_offset += packed_size;
 				data_length += packed_size;
@@ -837,7 +838,7 @@ namespace vk
 
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
 		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align)
+		VkImageAspectFlags flags, vk::data_heap& upload_heap, u32 heap_align)
 	{
 		const bool requires_depth_processing = (dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || (format == CELL_GCM_TEXTURE_DEPTH16_FLOAT);
 		u32 block_in_pixel = rsx::get_format_block_size_in_texel(format);
