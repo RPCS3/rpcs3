@@ -6,7 +6,6 @@
 #include <climits>
 #include "gcm_enums.h"
 #include "rsx_utils.h"
-#pragma warning(disable:4503)
 
 namespace rsx
 {
@@ -43,8 +42,8 @@ struct registers_decoder
 {};
 
 // Use the smallest type by default
-template <u32 I, u32 N, typename T = get_uint_t<std::max<size_t>(static_cast<size_t>((UINTMAX_C(1) << ::ceil2(N)) / CHAR_BIT), 1)>>
-static constexpr inline T bf_decoder(const u32& bits)
+template <u32 I, u32 N, typename T = get_uint_t<(N <= 8 ? 1 : (N <= 16 ? 2 : 4))>>
+constexpr T bf_decoder(u32 bits)
 {
 	return static_cast<T>(bf_t<u32, I, N>::extract(bits));
 }

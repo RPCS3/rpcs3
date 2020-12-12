@@ -890,34 +890,3 @@ inline void busy_wait(std::size_t cycles = 3000)
 	const u64 s = __rdtsc();
 	do _mm_pause(); while (__rdtsc() - s < cycles);
 }
-
-// TODO: Remove when moving to c++20
-template <typename T>
-inline constexpr uintmax_t floor2(T value)
-{
-	value >>= 1;
-
-	for (uintmax_t i = 0;; i++, value >>= 1)
-	{
-		if (value == 0)
-		{
-			return i;
-		}
-	}
-}
-
-template <typename T>
-inline constexpr uintmax_t ceil2(T value)
-{
-	const uintmax_t ispow2 = value & (value - 1); // if power of 2 the result is 0
-
-	value >>= 1;
-
-	for (uintmax_t i = 0;; i++, value >>= 1)
-	{
-		if (value == 0)
-		{
-			return i + std::min<uintmax_t>(ispow2, 1);
-		}
-	}
-}
